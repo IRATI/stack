@@ -15,7 +15,7 @@ SUBDIRS              =				\
 EXTRA_DIST     =				\
 	bootstrap				\
 	build-aux/git-version-gen		\
-	build-aux/gitlog-to-changelog
+	build-aux/gitlog-to-changelog		\
 	LICENSE
 
 .PHONY: AUTHORS
@@ -24,8 +24,8 @@ AUTHORS:
 		rm -f AUTHORS ;						   \
 		exit 1 ;						   \
 	}
-EXTRA_DIST           += AUTHORS
-MAINTAINERCLEANFILES += AUTHORS
+EXTRA_DIST     += AUTHORS
+DISTCLEANFILES += AUTHORS
 
 .PHONY: ChangeLog
 ChangeLog:
@@ -35,8 +35,8 @@ ChangeLog:
 		rm -f ChangeLog ;			\
 		exit 1 ;				\
 	}
-EXTRA_DIST           += ChangeLog
-MAINTAINERCLEANFILES += ChangeLog
+EXTRA_DIST     += ChangeLog
+DISTCLEANFILES += ChangeLog
 
 .PHONY: NEWS
 NEWS:
@@ -46,22 +46,12 @@ NEWS:
 		rm -f NEWS ;						  \
 		exit 1 ;						  \
 	}
-EXTRA_DIST           += NEWS
-MAINTAINERCLEANFILES += NEWS
+EXTRA_DIST     += NEWS
+DISTCLEANFILES += NEWS
 
 $(top_srcdir)/.version:
 	echo $(VERSION) > $@-t && mv $@-t $@
 BUILT_SOURCES  += $(top_srcdir)/.version
 
-dist-hook: dist-repo-cleanup
+dist-hook:
 	echo $(VERSION) > $(distdir)/.tarball-version
-
-# We are using git, remove unnecessary cruft from nsis-ka (external) svn repo
-dist-repo-cleanup:
-	rm -rf `find $(distdir) -name .svn`
-
-# A workaround, to be removed ASAP
-.PHONY: png
-png:
-	rm -f src/sigmgr/signald/sigmgr/service.dot
-	$(MAKE) $(AM_FLAGS) -C  src/sigmgr/signald sigmgr/service.png

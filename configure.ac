@@ -28,6 +28,11 @@ AC_PROG_GREP
 AC_PROG_MKDIR_P
 AC_PROG_LN_S
 
+AC_PATH_PROG([FMT],  [fmt],  [/bin/false])
+AC_PATH_PROG([SORT], [sort], [/bin/false])
+AC_PATH_PROG([UNIQ], [uniq], [/bin/false])
+AC_PATH_PROG([GIT],  [git],  [/bin/false])
+
 AC_PROG_CXXCPP
 AC_PROG_CXX
 AC_PROG_CXX_C_O
