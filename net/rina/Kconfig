@@ -1,0 +1,16 @@
+#
+# RINA configuration
+#
+
+menuconfig RINA
+	bool "RINA support"
+        default y
+	help
+	  No help for the time being
+
+config RINA_DEBUG
+       bool "Enable whole stack verbose tracing messages"
+       depends on RINA
+       default y
+       help
+         No help for the time being

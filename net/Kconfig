@@ -336,6 +336,7 @@ source "net/caif/Kconfig"
 source "net/ceph/Kconfig"
 source "net/nfc/Kconfig"
 
+source "net/rina/Kconfig"
 
 endif   # if NET
 
