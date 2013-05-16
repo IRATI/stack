@@ -1,0 +1,28 @@
+#!/bin/sh
+# -*- sh -*-
+
+#
+# bootstrap
+#
+# Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
+#
+
+ME=bootstrap
+
+# Start from scratch
+rm -r -f autom4te.cache
+rm -f    aclocal.m4
+
+DIRS=". `cat configure.ac|grep AC_CONFIG_SUBDIRS|sed -e 's,^.*\[,,' -e 's,\].*,,'`"
+
+echo "${ME}: Bootstrapping $DIRS"
+
+for i in $DIRS ; do
+    echo "${ME}: Bootstrapping directory $PWD"
+    (cd $i && autoreconf -i -f -Wall $@) || {
+        echo "${ME}: Cannot reconfigure $PWD"
+        exit 1
+    }
+done
+
+echo "${ME}: Done"
