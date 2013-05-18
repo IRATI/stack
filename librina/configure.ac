@@ -58,6 +58,7 @@ AX_PKG_SWIG([2.0], [
 AC_CONFIG_FILES([
     Makefile
 
+    include/Makefile
     src/Makefile
 ])
 
