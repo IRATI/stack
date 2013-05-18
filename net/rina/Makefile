@@ -2,6 +2,4 @@
 # Makefile for the Linux RINA layer.
 #
 
-obj-$(CONFIG_ROSE) += rina.o
-
-rina-y	  := rina.o
+obj-$(CONFIG_RINA) += rina.o ipcm.o efcp.o rmt.o
