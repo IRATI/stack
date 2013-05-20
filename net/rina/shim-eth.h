@@ -14,15 +14,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "rina-shim-eth"
+#ifndef RINA_SHIM_ETH_H
+#define RINA_SHIM_ETH_H
 
-#include "shim-eth.h"
+int  shim_eth_init(void);
+void shim_eth_exit(void);
 
-int shim_eth_init(void)
-{
-        return 0;
-}
-
-void shim_eth_exit(void)
-{
-}
+#endif
