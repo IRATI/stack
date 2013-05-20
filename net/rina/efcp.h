@@ -14,15 +14,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "rina-efcp"
+#ifndef RINA_EFCP_H
+#define RINA_EFCP_H
 
-#include "efcp.h"
+int  efcp_init(void);
+void efcp_exit(void);
 
-int efcp_init(void)
-{
-        return 0;
-}
-
-void efcp_exit(void)
-{
-}
+#endif
