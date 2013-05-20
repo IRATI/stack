@@ -19,6 +19,11 @@
 #define RINA_PREFIX "rina"
 
 #include "rina.h"
+#include "ipcm.h"
+#include "efcp.h"
+#include "rmt.h"
+#include "shim-eth.h"
+#include "shim-tcp-udp.h"
 
 static __initconst const char banner[] =
         KERN_INFO
@@ -32,11 +37,29 @@ static __init int rina_init(void)
 {
         printk(banner);
 
+        ipcm_init();
+        efcp_init();
+        rmt_init();
+#ifdef CONFIG_SHIM_ETH
+        shim_eth_init();
+#endif
+#ifdef CONFIG_SHIM_TCP_UDP
+        shim_tcp_udp_init();
+#endif
         return 0;
 }
 
 static __exit void rina_exit(void)
 {
+#ifdef CONFIG_SHIM_TCP_UDP
+        shim_tcp_udp_exit();
+#endif
+#ifdef CONFIG_SHIM_ETH
+        shim_eth_exit();
+#endif
+        rmt_exit();
+        efcp_exit();
+        ipcm_exit();
 }
 
 module_init(rina_init);
