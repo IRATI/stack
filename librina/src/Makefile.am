@@ -5,7 +5,14 @@
 #
 
 librina_la_SOURCES  =				\
-	main.c
+	librina-rina				\
+	librina-common.c			\
+	librina-application.c			\
+	librina-ipc-manager.c			\
+	librina-ipc-process.c			\
+	librina-faux-sockets.c			\
+	librina-cdap.c				\
+	librina-sdu-protection.c
 
 librina_la_LDFLAGS  =
 librina_la_CPPFLAGS = -I$(top_srcdir)/include

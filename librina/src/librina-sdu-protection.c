@@ -14,12 +14,4 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <stdlib.h>
-
-#include "librina.h"
-
-/* XXX FIXME: A temporary function, it will be removed soon */
-int main(int argc, char * argv[])
-{
-        exit(0);
-}
+#include "librina-sdu-protection.h"
