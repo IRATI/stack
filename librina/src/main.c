@@ -18,6 +18,7 @@
 
 #include "librina.h"
 
+/* XXX FIXME: A temporary function, it will be removed soon */
 int main(int argc, char * argv[])
 {
         exit(0);
