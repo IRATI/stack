@@ -18,6 +18,7 @@
 
 #define RINA_PREFIX "rina"
 
+#include "logs.h"
 #include "rina.h"
 #include "ipcm.h"
 #include "efcp.h"
@@ -25,17 +26,13 @@
 #include "shim-eth.h"
 #include "shim-tcp-udp.h"
 
-static __initconst const char banner[] =
-        KERN_INFO
-	"rina: RINA stack v" RINA_VERSION_STRING "\n";
-
 MODULE_DESCRIPTION("RINA stack");
 MODULE_LICENSE("GPLv2");
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini>");
 
 static __init int rina_init(void)
 {
-        printk(banner);
+        LOG_INFO("RINA stack v" RINA_VERSION_STRING " initializing");
 
         ipcm_init();
         efcp_init();
@@ -60,6 +57,8 @@ static __exit void rina_exit(void)
         rmt_exit();
         efcp_exit();
         ipcm_exit();
+
+        LOG_INFO("unloaded");
 }
 
 module_init(rina_init);

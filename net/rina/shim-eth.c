@@ -16,7 +16,7 @@
 
 #define RINA_PREFIX "rina-shim-eth"
 
-#include "utils.h"
+#include "logs.h"
 #include "shim-eth.h"
 
 int shim_eth_init(void)

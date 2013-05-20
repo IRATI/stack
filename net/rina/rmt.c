@@ -16,7 +16,7 @@
 
 #define RINA_PREFIX "rina-rmt"
 
-#include "utils.h"
+#include "logs.h"
 #include "rmt.h"
 
 int rmt_init(void)

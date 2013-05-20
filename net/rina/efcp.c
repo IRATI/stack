@@ -16,7 +16,7 @@
 
 #define RINA_PREFIX "rina-efcp"
 
-#include "utils.h"
+#include "logs.h"
 #include "efcp.h"
 
 int efcp_init(void)

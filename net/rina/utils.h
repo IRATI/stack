@@ -17,23 +17,4 @@
 #ifndef RINA_UTILS_H
 #define RINA_UTILS_H
 
-#ifndef RINA_PREFIX
-#error You must define RINA_PREFIX before including this file
-#endif
-
-#include <linux/kernel.h>
-
-#define __LOG(PREFIX, LEVEL, FMT, ARGS...)                              \
-	do { printk(LEVEL PREFIX ": " FMT, ##ARGS); } while (0)
-
-/* Sorted by "urgency" (high to low) */
-#define LOG_EMERG(FMT, ARGS...) __LOG(RINA_PREFIX, KERN_EMERG,   FMT, ##ARGS)
-#define LOG_ALERT(FMT, ARGS...) __LOG(RINA_PREFIX, KERN_ALERT,   FMT, ##ARGS)
-#define LOG_CRIT(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_CRIT,    FMT, ##ARGS)
-#define LOG_ERR(FMT,   ARGS...) __LOG(RINA_PREFIX, KERN_ERR,     FMT, ##ARGS)
-#define LOG_WARN(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_WARNING, FMT, ##ARGS)
-#define LOG_NOTE(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_NOTICE,  FMT, ##ARGS)
-#define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_INFO,    FMT, ##ARGS)
-#define LOG_DBG(FMT,  ARGS...)  __LOG(RINA_PREFIX, KERN_DEBUG,   FMT, ##ARGS)
-
 #endif

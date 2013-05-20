@@ -16,7 +16,7 @@
 
 #define RINA_PREFIX "rina-ipcm"
 
-#include "utils.h"
+#include "logs.h"
 #include "ipcm.h"
 
 int ipcm_init()
