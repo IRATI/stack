@@ -13,3 +13,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
+#ifndef LIBRINA_H
+#define LIBRINA_H
+
+#include "librina-common.h"
+#include "librina-application.h"
+#include "librina-ipc-manager.h"
+#include "librina-ipc-process.h"
+#include "librina-faux-sockets.h"
+#include "librina-cdap.h"
+#include "librina-sdu-protection.h"
+
+#endif
