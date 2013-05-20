@@ -14,30 +14,4 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/module.h>
-
-#define RINA_PREFIX "rina"
-
-#include "rina.h"
-
-static __initconst const char banner[] =
-        KERN_INFO
-	"rina: RINA stack v" RINA_VERSION_STRING "\n";
-
-MODULE_DESCRIPTION("RINA stack");
-MODULE_LICENSE("GPLv2");
-MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini>");
-
-static __init int rina_init(void)
-{
-        printk(banner);
-
-        return 0;
-}
-
-static __exit void rina_exit(void)
-{
-}
-
-module_init(rina_init);
-module_exit(rina_exit);
+#define RINA_PREFIX "rina-shim-tcp-udp"
