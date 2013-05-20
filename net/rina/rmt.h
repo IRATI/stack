@@ -14,15 +14,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "rina-rmt"
+#ifndef RINA_RMT_H
+#define RINA_RMT_H
 
-#include "rmt.h"
+int  rmt_init(void);
+void rmt_exit(void);
 
-int rmt_init(void)
-{
-        return 0;
-}
-
-void rmt_exit(void)
-{
-}
+#endif
