@@ -14,18 +14,19 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "rina-shim-eth"
+#define RINA_PREFIX "shim-eth"
 
 #include "logs.h"
 #include "shim-eth.h"
 
 int shim_eth_init(void)
 {
-        LOG_DBG("Initialized");
+        LOG_DBG("init");
 
         return 0;
 }
 
 void shim_eth_exit(void)
 {
+        LOG_DBG("exit");
 }

@@ -14,19 +14,20 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "rina-ipcm"
+#define RINA_PREFIX "ipcm"
 
 #include "logs.h"
 #include "ipcm.h"
 
 int ipcm_init()
 {
-        LOG_DBG("Initialized");
+        LOG_DBG("init");
 
         return 0;
 }
 
 void ipcm_exit()
 {
+        LOG_DBG("exit");
 }
 

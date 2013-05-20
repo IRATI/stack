@@ -58,7 +58,7 @@ static __exit void rina_exit(void)
         efcp_exit();
         ipcm_exit();
 
-        LOG_INFO("unloaded");
+        LOG_INFO("exit");
 }
 
 module_init(rina_init);

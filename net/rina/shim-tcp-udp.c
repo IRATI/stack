@@ -14,18 +14,19 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "rina-shim-tcp-udp"
+#define RINA_PREFIX "shim-tcp-udp"
 
 #include "logs.h"
 #include "shim-tcp-udp.h"
 
 int shim_tcp_udp_init(void)
 {
-        LOG_DBG("Initialized");
+        LOG_DBG("init");
 
         return 0;
 }
 
 void shim_tcp_udp_exit(void)
 {
+        LOG_DBG("exit");
 }
