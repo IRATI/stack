@@ -16,10 +16,13 @@
 
 #define RINA_PREFIX "rina-ipcm"
 
+#include "utils.h"
 #include "ipcm.h"
 
 int ipcm_init()
 {
+        LOG_DBG("Initialized");
+
         return 0;
 }
 

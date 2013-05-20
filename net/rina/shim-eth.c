@@ -16,10 +16,13 @@
 
 #define RINA_PREFIX "rina-shim-eth"
 
+#include "utils.h"
 #include "shim-eth.h"
 
 int shim_eth_init(void)
 {
+        LOG_DBG("Initialized");
+
         return 0;
 }
 

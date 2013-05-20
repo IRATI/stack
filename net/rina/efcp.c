@@ -16,10 +16,13 @@
 
 #define RINA_PREFIX "rina-efcp"
 
+#include "utils.h"
 #include "efcp.h"
 
 int efcp_init(void)
 {
+        LOG_DBG("Initialized");
+
         return 0;
 }
 

@@ -13,19 +13,3 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-
-#define RINA_PREFIX "rina-shim-tcp-udp"
-
-#include "utils.h"
-#include "shim-tcp-udp.h"
-
-int shim_tcp_udp_init(void)
-{
-        LOG_DBG("Initialized");
-
-        return 0;
-}
-
-void shim_tcp_udp_exit(void)
-{
-}

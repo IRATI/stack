@@ -16,10 +16,13 @@
 
 #define RINA_PREFIX "rina-rmt"
 
+#include "utils.h"
 #include "rmt.h"
 
 int rmt_init(void)
 {
+        LOG_DBG("Initialized");
+
         return 0;
 }
 
