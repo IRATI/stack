@@ -64,7 +64,7 @@ typedef struct {
 } uint_range_t;
 
 /* The address of an IPC Process */
-typedef uint32_t address_t;
+typedef uint32_t   address_t;
 
 /* The id of a QoS cube */
 typedef uint32_t   qos_id_t;
@@ -76,9 +76,9 @@ typedef uint32_t   cep_id_t;
 typedef uint32_t   seq_num_t;
 
 /* A unique identifier for a local IPC Process */
-typedef int ipc_process_id_t;
+typedef int        ipc_process_id_t;
 
-/* A string describing why an operation was unsuccessful */
-typedef string_t response_reason_t;
+/* A NULL-terminated string describing why an operation was unsuccessful */
+typedef string_t   response_reason_t;
 
 #endif

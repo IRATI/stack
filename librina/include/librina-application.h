@@ -14,6 +14,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef LIBRINA_APPLICATION_H
+#define LIBRINA_APPLICATION_H
+
+#include "librina-common.h"
+
 /*
  * The librina-application library provides the native RINA API,
  * allowing applications to i) express their availability to be
@@ -38,13 +43,6 @@
  * results of the operations and SDUs available to be read
  * (event_wait and event_poll).
  */
-
-#ifndef LIBRINA_APPLICATION_H
-#define LIBRINA_APPLICATION_H
-
-#include "librina-common.h"
-
-/* TYPES */
 
 typedef struct {
         /* Contains an application process naming information */
@@ -224,11 +222,7 @@ typedef struct {
 
 typedef int (* event_filter_t)(const event_t * event);
 
-/* FUNCTIONS */
-
 /*
- * Description
- *
  * Polls for currently pending events, and returns 1 if there are any
  * pending events, or 0 if there are none available.  If 'event' is
  * not NULL, the next event is removed from the queue and stored in
