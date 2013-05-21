@@ -24,9 +24,9 @@
  * SDUs) and iv) query the DIFs available in the system and
  * their properties.
  *
- * For the “slow-path” operations, librina-application interacts
+ * For the "slow-path" operations, librina-application interacts
  * with the RINA daemons in by exchanging messages over Netlink
- * sockets. In the case of the “fast-path” operations - i.e. those
+ * sockets. In the case of the "fast-path" operations - i.e. those
  * that need to be invoked for every single SDU: read and write -
  * librina-application communicates directly with the services
  * provided by the kernel through the use of system calls.
@@ -47,16 +47,16 @@
 /* TYPES */
 
 typedef struct {
-	 /* Contains an application process naming information */
+        /* Contains an application process naming information */
 
-     /*
-      * The process_name identifies an application process within the
-      * application process namespace. This value is required, it
-      * cannot be NULL. This name has global scope (it is defined by
-      * the chain of IDD databases that are linked together), and is
-      * assigned by an authority that manages the namespace that
-      * particular application name belongs to.
-      */
+        /*
+         * The process_name identifies an application process within the
+         * application process namespace. This value is required, it
+         * cannot be NULL. This name has global scope (it is defined by
+         * the chain of IDD databases that are linked together), and is
+         * assigned by an authority that manages the namespace that
+         * particular application name belongs to.
+         */
 	string_t * process_name;
 
 	/*
@@ -69,7 +69,7 @@ typedef struct {
 	 * The entity_name identifies an application entity within the
 	 * application process. This value is optional, it may be NULL.
 	 */
-     string_t * entity_name;
+        string_t * entity_name;
 
 	/*
 	 * The entity_name identifies a particular instance of an entity
@@ -182,11 +182,11 @@ typedef struct {
 	event_type_t type;
 
 	/* This union contains the event related data */
-    union {
+        union {
 		event_flow_t         flow;
 		event_registration_t registration;
 		event_sdu_t 	   sdu;
-    } data;
+        } data;
 } event_t;
 
 typedef struct {
@@ -299,8 +299,8 @@ event_filter_t ev_get_filter(void);
  * port_id: The handle to the flow, provided by the system
  */
 port_id_t allocate_flow_request(const name_t * source,
-								const name_t * destination,
-								const flow_spec_t * flow_spec);
+                                const name_t * destination,
+                                const flow_spec_t * flow_spec);
 
 /*
  * Description
@@ -317,7 +317,7 @@ port_id_t allocate_flow_request(const name_t * source,
  * be returned to the flow requestor.
  */
 int allocate_flow_response(const port_id_t * port_id,
-						   const response_reason_t * response);
+                           const response_reason_t * response);
 
 /*
  * Description
@@ -361,7 +361,7 @@ int write_sdu(port_id_t port_id, sdu_t * sdu);
  * dif_properties: The properties of the requested DIFs.
  */
 int get_dif_properties(const name_t * dif_name,
-					   dif_properties_t * dif_properties);
+                       dif_properties_t * dif_properties);
 
 /*
  * Description
@@ -378,7 +378,7 @@ int get_dif_properties(const name_t * dif_name,
  * the application in a default one, etc.)
  */
 int register_application(const name_t * name,
-						 const name_t * dif);
+                         const name_t * dif);
 
 /*
  * Description
@@ -394,6 +394,6 @@ int register_application(const name_t * name,
  * application is currently registered at.
  */
 int unregister_application(const name_t * name,
-						   const name_t * dif);
+                           const name_t * dif);
 
 #endif
