@@ -55,11 +55,22 @@ AX_PKG_SWIG([2.0], [
     AC_MSG_ERROR([Your system lacks of SWIG (>2.0) support])
 ])
 
+AX_PROG_JAVAC
+AX_JNI_INCLUDE_DIR
+# XXX FIXME: Ugly as hell ...
+JNI_CPPFLAGS=""
+for JNI_INCLUDE_DIR in $JNI_INCLUDE_DIRS ;
+do
+        JNI_CPPFLAGS="$JNI_CPPFLAGS $JNI_INCLUDE_DIR"
+done
+AC_SUBST(JNI_CPPFLAGS, $JNI_CPPFLAGS)
+
 AC_CONFIG_FILES([
     Makefile
 
     include/Makefile
     src/Makefile
+    wrappers/Makefile
 ])
 
 AC_OUTPUT
