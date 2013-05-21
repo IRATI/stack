@@ -16,6 +16,7 @@
 
 #define RINA_PREFIX "shim-eth"
 
+#include <linux/if_ether.h>
 #include "logs.h"
 #include "shim-eth.h"
 
