@@ -5,7 +5,7 @@
 #
 
 librina_la_SOURCES  =				\
-	librina-rina				\
+	librina.c				\
 	librina-common.c			\
 	librina-application.c			\
 	librina-ipc-manager.c			\
