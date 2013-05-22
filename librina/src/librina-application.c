@@ -28,7 +28,8 @@
  *
  * event: An event informing that something happened.
  */
-int ev_poll(event_t * event){
+int ev_poll(event_t * event)
+{
 	printf("Event poll called\n");
 	return 0;
 }
@@ -45,7 +46,8 @@ int ev_poll(event_t * event){
  *
  * event: An event informing that something happened.
  */
-int ev_wait(event_t * event){
+int ev_wait(event_t * event)
+{
 	printf("Event wait called\n");
 	return 0;
 }
@@ -64,7 +66,8 @@ int ev_wait(event_t * event){
  *
  * filter: The filter to setup.
  */
-void ev_set_filter(event_filter_t filter){
+void ev_set_filter(event_filter_t filter)
+{
 	printf("Event set filter called\n");
 }
 
@@ -78,7 +81,8 @@ void ev_set_filter(event_filter_t filter){
  *
  * filter: The current filter installed.
  */
-event_filter_t ev_get_filter(void){
+event_filter_t ev_get_filter(void)
+{
 	printf("Event get filter called\n");
 
 	event_filter_t *installed_filter;
@@ -104,7 +108,8 @@ event_filter_t ev_get_filter(void){
  */
 port_id_t allocate_flow_request(const name_t * source,
                                 const name_t * destination,
-                                const flow_spec_t * flow_spec){
+                                const flow_spec_t * flow_spec)
+{
 	printf("Allocate flow request called\n");
 	port_id_t port_id = 25;
 	return port_id;
@@ -125,7 +130,8 @@ port_id_t allocate_flow_request(const name_t * source,
  * be returned to the flow requestor.
  */
 int allocate_flow_response(const port_id_t * port_id,
-                           const response_reason_t * response){
+                           const response_reason_t * response)
+{
 	printf("Allocate flow response called\n");
 	return 0;
 }
@@ -140,7 +146,8 @@ int allocate_flow_response(const port_id_t * port_id,
  *
  * port_id: The port id of the flow to be deallocated.
  */
-int deallocate_flow (port_id_t port_id){
+int deallocate_flow (port_id_t port_id)
+{
 	printf("Deallocate flow called\n");
 	return 0;
 }
@@ -156,7 +163,8 @@ int deallocate_flow (port_id_t port_id){
  * port_id: The port id of the flow.
  * sdu: The SDU to be written to the flow.
  */
-int write_sdu(port_id_t port_id, sdu_t * sdu){
+int write_sdu(port_id_t port_id, sdu_t * sdu)
+{
 	printf("Write SDU called\n");
 	return 0;
 }
@@ -178,7 +186,8 @@ int write_sdu(port_id_t port_id, sdu_t * sdu){
  * dif_properties: The properties of the requested DIFs.
  */
 int get_dif_properties(const name_t * dif_name,
-                       dif_properties_t * dif_properties){
+                       dif_properties_t * dif_properties)
+{
 	printf("Get DIF properties called\n");
 	return 0;
 }
@@ -198,7 +207,8 @@ int get_dif_properties(const name_t * dif_name,
  * the application in a default one, etc.)
  */
 int register_application(const name_t * name,
-                         const name_t * dif){
+                         const name_t * dif)
+{
 	printf("Register application called\n");
 	return 0;
 }
@@ -217,7 +227,8 @@ int register_application(const name_t * name,
  * application is currently registered at.
  */
 int unregister_application(const name_t * name,
-                           const name_t * dif){
+                           const name_t * dif)
+{
 	printf("Unregister application called\n");
 	return 0;
 }
