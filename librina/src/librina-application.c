@@ -109,3 +109,115 @@ port_id_t allocate_flow_request(const name_t * source,
 	port_id_t port_id = 25;
 	return port_id;
 }
+
+/*
+ * Description
+ *
+ * Invoked by the destination application, confirming or denying a flow
+ * allocation request.
+ *
+ * Inputs
+ *
+ * port_id: The port id of the flow, whose request is being confirmed
+ * or denied
+ * response: Indicates whether the flow is accepted or not, with an
+ * optional reason explaining why and indications if a response should
+ * be returned to the flow requestor.
+ */
+int allocate_flow_response(const port_id_t * port_id,
+                           const response_reason_t * response){
+	printf("Allocate flow response called\n");
+	return 0;
+}
+
+/*
+ * Description
+ *
+ * Causes the resources allocated to a certain flow to be released,
+ * and any state associated to the flow to be removed.
+ *
+ * Inputs
+ *
+ * port_id: The port id of the flow to be deallocated.
+ */
+int deallocate_flow (port_id_t port_id){
+	printf("Deallocate flow called\n");
+	return 0;
+}
+
+/*
+ * Description
+ *
+ * Called by an application when it wants to write an SDU to
+ * the flow.
+ *
+ * Inputs
+ *
+ * port_id: The port id of the flow.
+ * sdu: The SDU to be written to the flow.
+ */
+int write_sdu(port_id_t port_id, sdu_t * sdu){
+	printf("Write SDU called\n");
+	return 0;
+}
+
+/*
+ * Description
+ *
+ * Called by an application when it wants to know the DIFs in the
+ * system it can use, and what are their properties.
+ *
+ * Inputs
+ *
+ * dif_name: The name of the DIF whose properties the application
+ * wants to know. If no name is provided, the call will return the
+ * properties of all the DIFs available to the application.
+ *
+ * Outputs
+ *
+ * dif_properties: The properties of the requested DIFs.
+ */
+int get_dif_properties(const name_t * dif_name,
+                       dif_properties_t * dif_properties){
+	printf("Get DIF properties called\n");
+	return 0;
+}
+
+/*
+ * Description
+ *
+ * Called by an application when it wants to be advertised (and
+ * reachable) through a DIF..
+ *
+ * Inputs
+ *
+ * name: The name of the application (required).
+ * dif: The name of a DIF where the application wants to be registered.
+ * In case none is provided, the RINA software could decide for the
+ * application (e.g. register the application in all DIFs, register
+ * the application in a default one, etc.)
+ */
+int register_application(const name_t * name,
+                         const name_t * dif){
+	printf("Register application called\n");
+	return 0;
+}
+
+/*
+ * Description
+ *
+ * Called by an application when it wants to stop being advertised
+ * (and reachable) through a DIF.
+ *
+ * Inputs
+ *
+ * name: the name of the application (required)
+ * dif: the name of a DIF where the application is registered. In case
+ * none is provided, it will be unregistered from all the DIFs the
+ * application is currently registered at.
+ */
+int unregister_application(const name_t * name,
+                           const name_t * dif){
+	printf("Unregister application called\n");
+	return 0;
+}
