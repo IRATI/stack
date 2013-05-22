@@ -1,4 +1,4 @@
-/librina.stamp
-/librina_wrapper.c
+/wrap.stamp
 
+/librina_java.c
 /*.java

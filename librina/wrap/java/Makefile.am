@@ -10,25 +10,37 @@ SWIG_JAVA_FLAGS = -java
 
 SWIG_DEBUG      += -v
 
-librina.stamp: $(top_srcdir)/include/librina.i $(top_srcdir)/include/librina.h
+CLEANFILES =
+
+wrap.stamp: $(top_srcdir)/include/librina.i $(top_srcdir)/include/librina.h
 	@rm -f librina.tmp
 	@touch librina.tmp
 	$(MKDIR_P) $(builddir)/java
 	$(SWIG) $(SWIG_FLAGS) $(SWIG_JAVA_FLAGS)	\
-		-o librina_wrapper.c			\
+		-o librina_java.c			\
 		$(top_srcdir)/include/librina.i || {	\
 		rm -f librina.tmp ;			\
 		exit 1 ;				\
 	}
 	@mv -f librina.tmp $@
 
-CLEANFILES = librina_wrapper.c librina.stamp *.java
+CLEANFILES += wrap.stamp librina_java.c *.java
 
-librina_wrapper.c: librina.stamp
+librina_java.c: wrap.stamp
+CLEANFILES += librina_java.c
 
-librina_wrapper_la_SOURCES  =                       \
-        librina_wrapper.c
-librina_wrapper_la_LDFLAGS  = -module
-librina_wrapper_la_CPPFLAGS = -I$(top_srcdir)/include -I$(JNI_CPPFLAGS)
+librina_java_la_SOURCES  =			\
+        librina_java.c
+librina_java_la_LDFLAGS  = -module
+librina_java_la_CPPFLAGS = -I$(top_srcdir)/include -I$(JNI_CPPFLAGS)
 
-lib_LTLIBRARIES = librina_wrapper.la
+lib_LTLIBRARIES = librina_java.la
+
+javadir = $(datadir)/java
+#nodist_java_JAVA = *.java
+
+# To be added:
+#   To compile: javac *.java
+#   To jar:     jar cvf librina.jar *.class
+
+CLEANFILES += *.class
