@@ -13,3 +13,6 @@ nobase_include_HEADERS =			\
 	librina-faux-sockets.h			\
 	librina-cdap.h				\
 	librina-sdu-protection.h
+
+EXRA_DIST =					\
+	librina.i
