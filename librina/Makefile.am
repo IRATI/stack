@@ -12,7 +12,7 @@ BUILT_SOURCES        =
 SUBDIRS              =				\
 	include					\
 	src					\
-	wrappers
+	wrap
 
 EXTRA_DIST     =				\
 	bootstrap				\

@@ -70,8 +70,8 @@ AC_CONFIG_FILES([
 
     include/Makefile
     src/Makefile
-    wrappers/Makefile
-    wrappers/java/Makefile
+    wrap/Makefile
+    wrap/java/Makefile
 ])
 
 AC_OUTPUT
