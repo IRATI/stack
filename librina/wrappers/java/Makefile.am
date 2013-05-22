@@ -14,15 +14,15 @@ librina.stamp: $(top_srcdir)/include/librina.i $(top_srcdir)/include/librina.h
 	@rm -f librina.tmp
 	@touch librina.tmp
 	$(MKDIR_P) $(builddir)/java
-	$(SWIG) $(SWIG_FLAGS) $(SWIG_JAVA_FLAGS)		\
-		-o librina_wrapper.c -outdir $(builddir)/java	\
-		$(top_srcdir)/include/librina.i || {		\
-		rm -f librina.tmp ;				\
-		exit 1 ;					\
+	$(SWIG) $(SWIG_FLAGS) $(SWIG_JAVA_FLAGS)	\
+		-o librina_wrapper.c			\
+		$(top_srcdir)/include/librina.i || {	\
+		rm -f librina.tmp ;			\
+		exit 1 ;				\
 	}
 	@mv -f librina.tmp $@
 
-CLEANFILES = librina_wrapper.c librina.stamp librina.java librinaJNI.java java/*.java
+CLEANFILES = librina_wrapper.c librina.stamp *.java
 
 librina_wrapper.c: librina.stamp
 

@@ -1,7 +1,1 @@
-/*.l[ao]
-
-/librina.stamp
-/librina.java
-/librinaJNI.java
-/librina_wrapper.c
-/librina_wrapper.la
+*.l[ao]
