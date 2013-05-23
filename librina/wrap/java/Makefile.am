@@ -22,6 +22,7 @@ wrap.stamp: $(top_srcdir)/include/librina.i $(top_srcdir)/include/librina.h
 		-outdir ./eu/irati/librina		\
 		$(top_srcdir)/include/librina.i || {	\
 		rm -f wrap.tmp ;			\
+		rm -r -f eu/irati/librina ;		\
 		exit 1 ;				\
 	}
 	mv -f wrap.tmp $@
@@ -29,10 +30,10 @@ wrap.stamp: $(top_srcdir)/include/librina.i $(top_srcdir)/include/librina.h
 CLEANFILES += wrap.stamp wrap.tmp
 CLEANFILES += librina_java.c
 
-all-local-classes: wrap.stamp
+librina-java-classes: wrap.stamp
 	$(JAVAC) eu/irati/librina/*.java
 
-all-local-jar: all-local-classes
+librina.jar: librina-java-classes
 	$(JAR) -cvf librina.jar eu/irati/librina/*.class
 
 CLEANFILES += librina.jar
@@ -40,8 +41,6 @@ CLEANFILES += librina.jar
 javadir = $(datarootdir)/java
 
 java_DATA = librina.jar
-
-all-local: all-local-jar
 
 clean-local:
 	rm -r -f eu/irati/librina
