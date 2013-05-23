@@ -36,7 +36,7 @@ enum ipc_config_type_t {
 
 struct ipc_config_t {
 	const char *name;
-	ipc_config_type_t type;
+	enum ipc_config_type_t type;
 	/* will be interpreted based on type */
 	void *value; 
 };
