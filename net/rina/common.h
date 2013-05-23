@@ -26,14 +26,19 @@
 
 typedef uint16_t      port_id_t;
 typedef int           ipc_process_id_t;
-typedef unsigned char utf8_t;
-typedef utf8_t        string_t;
+typedef unsigned char string_t;
 typedef int           bool_t;
 typedef uint          uint_t;
 typedef uint          response_reason_t;
 
+/* This structure represents raw data */
+struct buffer_t {
+	char * data;
+	size_t size;
+}
+
 struct sdu_t {
-        buffer_t *buffer;
+        struct buffer_t *buffer;
 };
 
 struct name_t {
