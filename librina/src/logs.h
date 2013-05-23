@@ -25,7 +25,7 @@
 #endif
 
 #define __LOG(PREFIX, LEVEL, FMT, ARGS...)                              \
-        do { printf("librina-" PREFIX ": " FMT, ##ARGS); } while (0)
+        do { printf("librina-" PREFIX ": " FMT "\n", ##ARGS); } while (0)
 
 #define _S(x) #x
 

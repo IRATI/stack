@@ -32,7 +32,7 @@
  */
 int ev_poll(event_t * event)
 {
-	LOG_DBG("Event poll called\n");
+	LOG_DBG("Event poll called");
 	return 0;
 }
 
@@ -50,7 +50,7 @@ int ev_poll(event_t * event)
  */
 int ev_wait(event_t * event)
 {
-	LOG_DBG("Event wait called\n");
+	LOG_DBG("Event wait called");
 	return 0;
 }
 
@@ -70,7 +70,7 @@ int ev_wait(event_t * event)
  */
 void ev_set_filter(event_filter_t filter)
 {
-	LOG_DBG("Event set filter called\n");
+	LOG_DBG("Event set filter called");
 }
 
 /*
@@ -85,7 +85,7 @@ void ev_set_filter(event_filter_t filter)
  */
 event_filter_t ev_get_filter(void)
 {
-	LOG_DBG("Event get filter called\n");
+	LOG_DBG("Event get filter called");
 
 	event_filter_t *installed_filter;
 	installed_filter = (event_filter_t *) malloc (sizeof (event_filter_t));
@@ -112,7 +112,7 @@ port_id_t allocate_flow_request(const name_t * source,
                                 const name_t * destination,
                                 const flow_spec_t * flow_spec)
 {
-	LOG_DBG("Allocate flow request called\n");
+	LOG_DBG("Allocate flow request called");
 	port_id_t port_id = 25;
 	return port_id;
 }
@@ -134,7 +134,7 @@ port_id_t allocate_flow_request(const name_t * source,
 int allocate_flow_response(const port_id_t * port_id,
                            const response_reason_t * response)
 {
-	LOG_DBG("Allocate flow response called\n");
+	LOG_DBG("Allocate flow response called");
 	return 0;
 }
 
@@ -150,7 +150,7 @@ int allocate_flow_response(const port_id_t * port_id,
  */
 int deallocate_flow (port_id_t port_id)
 {
-	LOG_DBG("Deallocate flow called\n");
+	LOG_DBG("Deallocate flow called");
 	return 0;
 }
 
@@ -167,7 +167,7 @@ int deallocate_flow (port_id_t port_id)
  */
 int write_sdu(port_id_t port_id, sdu_t * sdu)
 {
-	LOG_DBG("Write SDU called\n");
+	LOG_DBG("Write SDU called");
 	return 0;
 }
 
@@ -190,7 +190,7 @@ int write_sdu(port_id_t port_id, sdu_t * sdu)
 int get_dif_properties(const name_t * dif_name,
                        dif_properties_t * dif_properties)
 {
-	LOG_DBG("Get DIF properties called\n");
+	LOG_DBG("Get DIF properties called");
 	return 0;
 }
 
@@ -211,7 +211,7 @@ int get_dif_properties(const name_t * dif_name,
 int register_application(const name_t * name,
                          const name_t * dif)
 {
-	LOG_DBG("Register application called\n");
+	LOG_DBG("Register application called");
 	return 0;
 }
 
@@ -231,6 +231,6 @@ int register_application(const name_t * name,
 int unregister_application(const name_t * name,
                            const name_t * dif)
 {
-	LOG_DBG("Unregister application called\n");
+	LOG_DBG("Unregister application called");
 	return 0;
 }
