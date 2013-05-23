@@ -23,10 +23,11 @@
 #define RINA_IPCM_H
 
 
-#include	<rina/ecfp.h>
-#include	<rina/rmt.h>
+#include	"common.h"
+#include	"efcp.h"
+#include	"rmt.h"
 
-typedef struct {
+struct normal_ipc_process_conf_t{
 
 	
 	/*-----------------------------------------------------------------------------
@@ -39,12 +40,13 @@ typedef struct {
 	ipc_process_address_t address;
 
 	/* The configuration of the EFCP component */
-	efcp_conf_t *efcp_config;
+	struct efcp_conf_t *efcp_config;
 
 	/* The configuration of the RMT component */
-	rmt_conf_t * rmt_config;
 
-} normal_ipc_process_conf_t;
+	struct rmt_conf_t *rmt_config;
+
+};
 
 int  kipcm_init(void);
 void kipcm_exit(void);

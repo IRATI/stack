@@ -2,6 +2,7 @@
  *  Common definition placeholder
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Leonardo Bergesio <leonardo.bergesio@i2cat.net> 
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,5 +21,7 @@
 
 #ifndef RINA_COMMON_H
 #define RINA_COMMON_H
+
+typedef unsigned int ipc_process_address_t;
 
 #endif
