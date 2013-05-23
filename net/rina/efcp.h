@@ -23,9 +23,9 @@
 #define RINA_EFCP_H
 
 struct efcp_conf_t{
-	/*-----------------------------------------------------------------------------
+	/*
 	* Configuration of the EFCP component of a normal IPC Process
-	*-----------------------------------------------------------------------------*/
+	*/
 
 	/* Length of the address fields of the PCI */
 	int address_length;

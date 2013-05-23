@@ -30,11 +30,11 @@
 struct normal_ipc_process_conf_t{
 
 	
-	/*-----------------------------------------------------------------------------
+	/*
 	 * Configuration of the kernel components of a normal IPC Process.
 	 * Defines the struct for the kernel components of a fully RINA IPC
 	 * Process.
- 	 *-----------------------------------------------------------------------------*/
+ 	 */
 
 	/* The address of the IPC Process */
 	ipc_process_address_t address;
