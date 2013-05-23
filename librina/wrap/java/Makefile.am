@@ -37,6 +37,10 @@ all-local-jar: all-local-classes
 
 CLEANFILES += librina.jar
 
+javadir = $(datarootdir)/java
+
+java_DATA = librina.jar
+
 all-local: all-local-jar
 
 clean-local:
