@@ -21,12 +21,12 @@
 #ifndef RINA_SHIM_ETH_H
 #define RINA_SHIM_ETH_H
 
-typedef utf8_t interface_name_t;
+#include "common.h"
 
 struct shim_eth_info_t {
-	name_t *name;
+	struct name_t *name;
 	uint16_t vlan_id;
-	interface_name_t *interface_name;
+	string_t *interface_name;
 };
 
 enum ipc_config_type_t {
@@ -52,8 +52,8 @@ struct shim_eth_flow_t {
 	uint64_t src_mac;
 	uint64_t dst_mac;
 	port_id_t port_id;
-	port_id_state_t port_id_state;
-	QUEUE(sdu_queue, sdu_t *);
+	enum port_id_state_t port_id_state;
+	/* QUEUE(sdu_queue, sdu_t *); */
 };
 
 /*
@@ -63,11 +63,11 @@ struct shim_eth_flow_t {
 */
 struct shim_eth_instance_t {
         /* The configuration of the shim IPC Process */
-	ipc_config_t configuration;
+	struct ipc_config_t configuration;
 	/* Pointer to the device driver data_structure */
-	device_t * device_driver;
+	/* device_t * device_driver; */
 	/* Stores the state of flows indexed by port_id */
-	HASH_TABLE(flow_to_port_id, port_id_t, shim_eth_flow_t);
+	/* HASH_TABLE(flow_to_port_id, port_id_t, shim_eth_flow_t); */
 };
 
 /*
@@ -76,17 +76,18 @@ struct shim_eth_instance_t {
 */
 struct shim_eth_t {
         /* Stores the state of shim IPC Process instances */
-	HASH_TABLE(shim_eth_instances, ipc_process_id_t, shim_eth_instance_t); 
+	/* HASH_TABLE(shim_eth_instances, ipc_process_id_t, shim_eth_instance_t); */
 };
 
-ipc_process_id_t shim_eth_create(const name_t *name, const ipc_config_t **config);
+
+ipc_process_id_t shim_eth_create(struct name_t *name, struct ipc_config_t **config);
 int shim_eth_destroy(ipc_process_id_t ipc_process_id);
-port_id_t shim_eth_allocate_flow_request(const name_t *source, const name_t *dest, const flow_spec_t *flow_spec);
-int shim_eth_allocate_flow_response(const port_id_t *port_id, const response_reason_t *response);
+port_id_t shim_eth_allocate_flow_request(struct name_t *source, struct name_t *dest, struct flow_spec_t *flow_spec);
+int shim_eth_allocate_flow_response(port_id_t *port_id, response_reason_t *response);
 int shim_eth_deallocate_flow(port_id_t port_id);
-int shim_eth_register_application(const name_t *name);
-int shim_eth_unregister_application(const name_t *name);
-int shim_eth_write_sdu(port_id_t port_id, sdu_t *sdu);
+int shim_eth_register_application(struct name_t *name);
+int shim_eth_unregister_application(struct name_t *name);
+int shim_eth_write_sdu(port_id_t port_id, struct sdu_t *sdu);
 int shim_eth_init(void);
 void shim_eth_exit(void);
 

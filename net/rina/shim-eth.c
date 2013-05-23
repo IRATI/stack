@@ -24,11 +24,7 @@
 #include "logs.h"
 #include "shim-eth.h"
 
-static struct shim_eth_t shim_eth = {
-	/* Insert hash table */
-}
-
-ipc_process_id_t shim_eth_create(const name_t *name, const ipc_config_t **config)
+ipc_process_id_t shim_eth_create(struct name_t *name, struct ipc_config_t **config)
 {
 	return 0;
 }
@@ -38,12 +34,12 @@ int shim_eth_destroy(ipc_process_id_t ipc_process_id)
 	return 0;
 }
 
-port_id_t shim_eth_allocate_flow_request(const name_t *source, const name_t *dest, const flow_spec_t *flow_spec)
+port_id_t shim_eth_allocate_flow_request(struct name_t *source, struct name_t *dest, struct flow_spec_t *flow_spec)
 {
 	return 0;
 }
 
-int shim_eth_allocate_flow_response(const port_id_t *port_id, const response_reason_t *response)
+int shim_eth_allocate_flow_response(port_id_t *port_id, response_reason_t *response)
 {
 	return 0;
 }
@@ -53,17 +49,17 @@ int shim_eth_deallocate_flow(port_id_t port_id)
 	return 0;
 }
 
-int shim_eth_register_application(const name_t *name)
+int shim_eth_register_application(struct name_t *name)
 {
 	return 0;
 }
 
-int shim_eth_unregister_application(const name_t *name)
+int shim_eth_unregister_application(struct name_t *name)
 {
 	return 0;
 }
 
-int shim_eth_write_sdu(port_id_t port_id, sdu_t *sdu)
+int shim_eth_write_sdu(port_id_t port_id, struct sdu_t *sdu)
 {
 	return 0;
 }
