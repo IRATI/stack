@@ -31,5 +31,8 @@ void ipcm_exit()
         LOG_DBG("exit");
 }
 
-SYSCALL_DEFINE3(ipc_process_create, const name_t *name, ipc_process_id_t ipcp_id, dif_type_t type);
+SYSCALL_DEFINE3(ipc_process_create, const name_t *name, ipc_process_id_t ipcp_id, dif_type_t type)
+{
+	
+}
 
