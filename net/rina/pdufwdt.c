@@ -1,5 +1,5 @@
 /*
- *  RMT (Relaying and Multiplexing Task)
+ *  PDUFWDT (PDU Forwarding Table)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,10 +18,19 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_RMT_H
-#define RINA_RMT_H
+#define RINA_PREFIX "pdu-fwd-t"
 
-int  rmt_init(void);
-void rmt_exit(void);
+#include "logs.h"
+#include "pdufwdt.h"
 
-#endif
+int pdufwdt_init(void)
+{
+        LOG_DBG("init");
+
+        return 0;
+}
+
+void pdufwdt_exit(void)
+{
+        LOG_DBG("exit");
+}

@@ -1,4 +1,8 @@
 /*
+ *  RMT (Relaying and Multiplexing Task)
+ *
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -18,15 +22,21 @@
 
 #include "logs.h"
 #include "rmt.h"
+#include "pdufwdt.h"
 
 int rmt_init(void)
 {
         LOG_DBG("init");
+
+        if (pdufwdt_init())
+                return 1;
 
         return 0;
 }
 
 void rmt_exit(void)
 {
+        pdufwdt_exit();
+
         LOG_DBG("exit");
 }
