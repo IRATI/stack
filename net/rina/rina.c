@@ -20,7 +20,7 @@
 
 #include "logs.h"
 #include "rina.h"
-#include "ipcm.h"
+#include "kipcm.h"
 #include "efcp.h"
 #include "rmt.h"
 #include "shim-eth.h"
@@ -34,7 +34,7 @@ static __init int rina_init(void)
 {
         LOG_INFO("RINA stack v" RINA_VERSION_STRING " initializing");
 
-        ipcm_init();
+        kipcm_init();
         efcp_init();
         rmt_init();
 #ifdef CONFIG_SHIM_ETH
@@ -56,7 +56,7 @@ static __exit void rina_exit(void)
 #endif
         rmt_exit();
         efcp_exit();
-        ipcm_exit();
+        kipcm_exit();
 
         LOG_INFO("exit");
 }
