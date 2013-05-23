@@ -14,6 +14,9 @@ librina_la_SOURCES  =				\
 	librina-cdap.c				\
 	librina-sdu-protection.c
 
+EXTRA_DIST =					\
+	logs.h
+
 librina_la_LDFLAGS  =
 librina_la_CPPFLAGS = -I$(top_srcdir)/include
 

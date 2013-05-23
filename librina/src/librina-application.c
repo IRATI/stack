@@ -15,8 +15,10 @@
  */
 
 #include "librina-application.h"
-#include <stdio.h>
-#include <stdlib.h>
+
+#define RINA_PREFIX "application"
+
+#include "logs.h"
 
 /*
  * Polls for currently pending events, and returns 1 if there are any
@@ -30,7 +32,7 @@
  */
 int ev_poll(event_t * event)
 {
-	printf("Event poll called\n");
+	LOG_DBG("Event poll called\n");
 	return 0;
 }
 
@@ -48,7 +50,7 @@ int ev_poll(event_t * event)
  */
 int ev_wait(event_t * event)
 {
-	printf("Event wait called\n");
+	LOG_DBG("Event wait called\n");
 	return 0;
 }
 
@@ -68,7 +70,7 @@ int ev_wait(event_t * event)
  */
 void ev_set_filter(event_filter_t filter)
 {
-	printf("Event set filter called\n");
+	LOG_DBG("Event set filter called\n");
 }
 
 /*
@@ -83,7 +85,7 @@ void ev_set_filter(event_filter_t filter)
  */
 event_filter_t ev_get_filter(void)
 {
-	printf("Event get filter called\n");
+	LOG_DBG("Event get filter called\n");
 
 	event_filter_t *installed_filter;
 	installed_filter = (event_filter_t *) malloc (sizeof (event_filter_t));
@@ -110,7 +112,7 @@ port_id_t allocate_flow_request(const name_t * source,
                                 const name_t * destination,
                                 const flow_spec_t * flow_spec)
 {
-	printf("Allocate flow request called\n");
+	LOG_DBG("Allocate flow request called\n");
 	port_id_t port_id = 25;
 	return port_id;
 }
@@ -132,7 +134,7 @@ port_id_t allocate_flow_request(const name_t * source,
 int allocate_flow_response(const port_id_t * port_id,
                            const response_reason_t * response)
 {
-	printf("Allocate flow response called\n");
+	LOG_DBG("Allocate flow response called\n");
 	return 0;
 }
 
@@ -148,7 +150,7 @@ int allocate_flow_response(const port_id_t * port_id,
  */
 int deallocate_flow (port_id_t port_id)
 {
-	printf("Deallocate flow called\n");
+	LOG_DBG("Deallocate flow called\n");
 	return 0;
 }
 
@@ -165,7 +167,7 @@ int deallocate_flow (port_id_t port_id)
  */
 int write_sdu(port_id_t port_id, sdu_t * sdu)
 {
-	printf("Write SDU called\n");
+	LOG_DBG("Write SDU called\n");
 	return 0;
 }
 
@@ -188,7 +190,7 @@ int write_sdu(port_id_t port_id, sdu_t * sdu)
 int get_dif_properties(const name_t * dif_name,
                        dif_properties_t * dif_properties)
 {
-	printf("Get DIF properties called\n");
+	LOG_DBG("Get DIF properties called\n");
 	return 0;
 }
 
@@ -209,7 +211,7 @@ int get_dif_properties(const name_t * dif_name,
 int register_application(const name_t * name,
                          const name_t * dif)
 {
-	printf("Register application called\n");
+	LOG_DBG("Register application called\n");
 	return 0;
 }
 
@@ -229,6 +231,6 @@ int register_application(const name_t * name,
 int unregister_application(const name_t * name,
                            const name_t * dif)
 {
-	printf("Unregister application called\n");
+	LOG_DBG("Unregister application called\n");
 	return 0;
 }
