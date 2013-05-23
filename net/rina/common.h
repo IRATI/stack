@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net> 
+ *    Sander Vrijders <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +23,106 @@
 #ifndef RINA_COMMON_H
 #define RINA_COMMON_H
 
-typedef unsigned int ipc_process_address_t;
+
+#include <linux/types.h>
+
+typedef uint16_t      port_id_t;
+typedef int           ipc_process_id_t;
+typedef unsigned char utf8_t;
+typedef utf8_t        string_t;
+typedef int           bool_t;
+typedef uint          uint_t;
+typedef uint          response_reason_t;
+typedef unsigned int  ipc_process_address_t;
+
+struct sdu_t {
+        buffer_t *buffer;
+};
+
+struct name_t {
+        /*
+         * The process_name identifies an application
+         * process within the application process namespace
+         *
+         * This value is required, it cannot be NULL
+         *
+         * This name has global scope (it is defined by the chain of
+         * IDD databases that are linked together), and is assigned by
+         * an authority that manages the namespace that particular
+         * application name belongs to.
+         */
+        string_t *process_name;
+        /*
+         * The process_instance identifies a particular instance of the
+         * process.
+         *
+         * This value is optional, it may be NULL
+         *
+         */
+        string_t *process_instance;
+        /*
+         * The entity_name identifies an application entity within the
+         * application process.
+         *
+         * This value is optional, it may be NULL
+         */
+        string_t *entity_name;
+        /*
+         * The entity_name identifies a particular instance of an
+         * entity within the application process.
+         *
+         * This value is optional, it may be NULL
+         */
+        string_t *entity_instance;
+};
+
+struct uint_range_t {
+        /*
+         * This structure represents a range of integer values
+         */
+        /* Minimum value */
+        uint_t min_value;
+        /* Maximum value */
+        uint_t max_value;
+};
+
+struct flow_spec_t {
+        /* This structure defines the characteristics of a flow */
+        /* Average bandwidth in bytes/s */
+        struct uint_range_t * average_bandwidth;
+        /* Average bandwidth in SDUs/s */
+        struct uint_range_t * average_sdu_bandwidth;
+        /* In milliseconds */
+        struct uint_range_t * peak_bandwidth_duration;
+        /* In milliseconds */
+        struct uint_range_t * peak_sdu_bandwidth_duration;
+        /* A value of 0 indicates 'do not care' */
+        double         undetected_bit_error_rate;
+        /* Indicates if partial delivery of SDUs is allowed or not */
+        bool_t         partial_delivery;
+        /* Indicates if SDUs have to be delivered in order */
+        bool_t         ordered_delivery;
+        /*
+         * Indicates the maximum gap allowed among SDUs, a gap of N
+         * SDUs is considered the same as all SDUs delivered.
+         * A value of -1 indicates 'Any'
+         */
+        int            max_allowable_gap;
+        /*
+         * In milliseconds, indicates the maximum delay allowed in this
+         * flow. A value of 0 indicates 'do not care'
+         */
+        uint_t         delay;
+        /*
+         * In milliseconds, indicates the maximum jitter allowed
+         * in this flow. A value of 0 indicates 'do not care'
+         */
+        uint_t         jitter;
+        /*
+         * The maximum SDU size for the flow. May influence the choice
+         * of the DIF where the flow will be created.
+         */
+        uint_t        max_sdu_size;
+};
 
 #endif
