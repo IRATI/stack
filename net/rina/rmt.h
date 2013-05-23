@@ -22,7 +22,7 @@
 #ifndef RINA_RMT_H
 #define RINA_RMT_H
 
-typedef struct {
+struct rmt_conf_t{
 	
 	/*-----------------------------------------------------------------------------
 	 * Configuration of the RMT component of a normal IPC Process
@@ -30,7 +30,7 @@ typedef struct {
 
 	/* To do, only a placeholder right now */
 
-} rmt_conf_t;
+};
 
 int  rmt_init(void);
 void rmt_exit(void);

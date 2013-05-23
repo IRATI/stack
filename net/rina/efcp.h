@@ -22,7 +22,7 @@
 #ifndef RINA_EFCP_H
 #define RINA_EFCP_H
 
-typedef struct{
+struct efcp_conf_t{
 	/*-----------------------------------------------------------------------------
 	* Configuration of the EFCP component of a normal IPC Process
 	*-----------------------------------------------------------------------------*/
@@ -45,7 +45,7 @@ typedef struct{
 	/* Length of the sequence number fields of the PCI */
 	int seq_number_length;
 
-} efcp_conf_t
+} ;
 
 
 int  efcp_init(void);
