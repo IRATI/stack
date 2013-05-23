@@ -35,7 +35,7 @@ typedef uint          response_reason_t;
 struct buffer_t {
 	char * data;
 	size_t size;
-}
+};
 
 struct sdu_t {
         struct buffer_t *buffer;
