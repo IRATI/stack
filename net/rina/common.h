@@ -86,13 +86,13 @@ struct uint_range_t {
 struct flow_spec_t {
 	/* This structure defines the characteristics of a flow */
 	/* Average bandwidth in bytes/s */
-	uint_range_t * average_bandwidth;
+	struct uint_range_t * average_bandwidth;
 	/* Average bandwidth in SDUs/s */
-	uint_range_t * average_sdu_bandwidth;
+	struct uint_range_t * average_sdu_bandwidth;
 	/* In milliseconds */
-	uint_range_t * peak_bandwidth_duration;
+	struct uint_range_t * peak_bandwidth_duration;
 	/* In milliseconds */
-	uint_range_t * peak_sdu_bandwidth_duration;
+	struct uint_range_t * peak_sdu_bandwidth_duration;
 	/* A value of 0 indicates 'do not care' */
 	double         undetected_bit_error_rate;
 	/* Indicates if partial delivery of SDUs is allowed or not */
