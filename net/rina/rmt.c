@@ -22,15 +22,21 @@
 
 #include "logs.h"
 #include "rmt.h"
+#include "pdufwdt.h"
 
 int rmt_init(void)
 {
         LOG_DBG("init");
+
+        if (pdufwdt_init())
+                return 1;
 
         return 0;
 }
 
 void rmt_exit(void)
 {
+        pdufwdt_exit();
+
         LOG_DBG("exit");
 }

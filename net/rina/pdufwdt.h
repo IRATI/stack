@@ -18,10 +18,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_RMT_H
-#define RINA_RMT_H
+#ifndef RINA_PDUFWDT_H
+#define RINA_PDUFWDT_H
 
-int  rmt_init(void);
-void rmt_exit(void);
+int  pdufwdt_init(void);
+void pdufwdt_exit(void);
 
 #endif

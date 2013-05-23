@@ -18,19 +18,19 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "rmt"
+#define RINA_PREFIX "pdu-fwd-t"
 
 #include "logs.h"
-#include "rmt.h"
+#include "pdufwdt.h"
 
-int rmt_init(void)
+int pdufwdt_init(void)
 {
         LOG_DBG("init");
 
         return 0;
 }
 
-void rmt_exit(void)
+void pdufwdt_exit(void)
 {
         LOG_DBG("exit");
 }
