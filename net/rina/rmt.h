@@ -2,6 +2,7 @@
  *  RMT (Relaying and Multiplexing Task)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Leonardo Bergesio <leonardo.bergesio@i2cat.net> 
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +21,16 @@
 
 #ifndef RINA_RMT_H
 #define RINA_RMT_H
+
+typedef struct {
+	
+	/*-----------------------------------------------------------------------------
+	 * Configuration of the RMT component of a normal IPC Process
+	 *-----------------------------------------------------------------------------*/
+
+	/* To do, only a placeholder right now */
+
+} rmt_conf_t;
 
 int  rmt_init(void);
 void rmt_exit(void);

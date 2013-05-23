@@ -2,6 +2,7 @@
  *  KIPCM (Kernel-IPC Manager)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,10 +22,37 @@
 #ifndef RINA_IPCM_H
 #define RINA_IPCM_H
 
+
+#include	<rina/ecfp.h>
+#include	<rina/rmt.h>
+
+typedef struct {
+
+	
+	/*-----------------------------------------------------------------------------
+	 * Configuration of the kernel components of a normal IPC Process.
+	 * Defines the struct for the kernel components of a fully RINA IPC
+	 * Process.
+ 	 *-----------------------------------------------------------------------------*/
+
+	/* The address of the IPC Process */
+	ipc_process_address_t address;
+
+	/* The configuration of the EFCP component */
+	efcp_conf_t *efcp_config;
+
+	/* The configuration of the RMT component */
+	rmt_conf_t * rmt_config;
+
+} normal_ipc_process_conf_t;
+typedef struct {
+
+
 int  kipcm_init(void);
 void kipcm_exit(void);
 int  kipcm_add_entry(port_id_t port_id, const flow_t *flow);
 int  kipcm_remove_entry(port_id_t port_id);
 int  kipcm_post_sdu(port_id_t port_id, const sdu_t *sdu);
+
 
 #endif
