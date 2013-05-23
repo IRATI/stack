@@ -1,4 +1,8 @@
 /*
+ *  KIPCM (Kernel-IPC Manager)
+ *
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -14,10 +18,20 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_IPCM_H
-#define RINA_IPCM_H
+#define RINA_PREFIX "kipcm"
 
-int  ipcm_init(void);
-void ipcm_exit(void);
+#include "logs.h"
+#include "kipcm.h"
 
-#endif
+int kipcm_init()
+{
+        LOG_DBG("init");
+
+        return 0;
+}
+
+void kipcm_exit()
+{
+        LOG_DBG("exit");
+}
+
