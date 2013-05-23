@@ -94,7 +94,7 @@
 
 #ifdef RINA_SHIM_ETH
 #define ETH_P_RINA      0xD1F0          /* Recursive Internet Architecture [ NOT AN OFFICIALLY REGISTERED ID ] */
-#endif RINA_SHIM_ETH
+#endif
 
 #define ETH_P_EDSA	0xDADA		/* Ethertype DSA [ NOT AN OFFICIALLY REGISTERED ID ] */
 #define ETH_P_AF_IUCV   0xFBFB		/* IBM af_iucv [ NOT AN OFFICIALLY REGISTERED ID ] */
