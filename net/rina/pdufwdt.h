@@ -1,4 +1,8 @@
 /*
+ *  PDUFWDT (PDU Forwarding Table)
+ *
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -14,20 +18,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "ipcm"
+#ifndef RINA_PDUFWDT_H
+#define RINA_PDUFWDT_H
 
-#include "logs.h"
-#include "ipcm.h"
+int  pdufwdt_init(void);
+void pdufwdt_exit(void);
 
-int ipcm_init()
-{
-        LOG_DBG("init");
-
-        return 0;
-}
-
-void ipcm_exit()
-{
-        LOG_DBG("exit");
-}
-
+#endif

@@ -1,5 +1,5 @@
 /*
- *  EFCP (Error and Flow Control Protocol)
+ *  KIPCM (Kernel-IPC Manager)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
@@ -19,36 +19,37 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_EFCP_H
-#define RINA_EFCP_H
+#ifndef RINA_IPCM_H
+#define RINA_IPCM_H
 
-typedef struct{
+
+#include	<rina/ecfp.h>
+#include	<rina/rmt.h>
+
+typedef struct {
+
+	
 	/*-----------------------------------------------------------------------------
-	* Configuration of the EFCP component of a normal IPC Process
-	*-----------------------------------------------------------------------------*/
+	 * Configuration of the kernel components of a normal IPC Process.
+	 * Defines the struct for the kernel components of a fully RINA IPC
+	 * Process.
+ 	 *-----------------------------------------------------------------------------*/
 
-	/* Length of the address fields of the PCI */
-	int address_length;
+	/* The address of the IPC Process */
+	ipc_process_address_t address;
 
-	/* Length of the port_id fields of the PCI */
-	int port_id_length;
+	/* The configuration of the EFCP component */
+	efcp_conf_t *efcp_config;
 
-	/* Length of the cep_id fields of the PCI */
-	int cep_id_length;
+	/* The configuration of the RMT component */
+	rmt_conf_t * rmt_config;
 
-	/* Length of the qos_id field of the PCI */
-	int qos_id_length;
-
-	/* Length of the length field of the PCI */
-	int length_length;
-
-	/* Length of the sequence number fields of the PCI */
-	int seq_number_length;
-
-} efcp_conf_t
+} normal_ipc_process_conf_t;
+typedef struct {
 
 
-int  efcp_init(void);
-void efcp_exit(void);
+int  kipcm_init(void);
+void kipcm_exit(void);
+
 
 #endif

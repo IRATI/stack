@@ -1,4 +1,8 @@
 /*
+ *  RINA
+ *
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -20,7 +24,7 @@
 
 #include "logs.h"
 #include "rina.h"
-#include "ipcm.h"
+#include "kipcm.h"
 #include "efcp.h"
 #include "rmt.h"
 #include "shim-eth.h"
@@ -34,7 +38,7 @@ static __init int rina_init(void)
 {
         LOG_INFO("RINA stack v" RINA_VERSION_STRING " initializing");
 
-        ipcm_init();
+        kipcm_init();
         efcp_init();
         rmt_init();
 #ifdef CONFIG_SHIM_ETH
@@ -56,7 +60,7 @@ static __exit void rina_exit(void)
 #endif
         rmt_exit();
         efcp_exit();
-        ipcm_exit();
+        kipcm_exit();
 
         LOG_INFO("exit");
 }
