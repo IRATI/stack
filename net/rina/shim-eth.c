@@ -1,4 +1,8 @@
 /*
+ *  Shim IPC Process for Ethernet
+ *
+ *    Sander Vrijders <sander.vrijders@intec.ugent.be>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -19,6 +23,10 @@
 #include <linux/if_ether.h>
 #include "logs.h"
 #include "shim-eth.h"
+
+static struct shim_eth_t shim_eth = {
+	/* Insert hash table */
+}
 
 ipc_process_id_t shim_eth_create(const name_t *name, const ipc_config_t **config)
 {
