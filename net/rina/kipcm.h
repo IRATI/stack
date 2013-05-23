@@ -45,8 +45,6 @@ typedef struct {
 	rmt_conf_t * rmt_config;
 
 } normal_ipc_process_conf_t;
-typedef struct {
-
 
 int  kipcm_init(void);
 void kipcm_exit(void);
