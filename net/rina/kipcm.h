@@ -19,8 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_IPCM_H
-#define RINA_IPCM_H
+#ifndef RINA_KIPCM_H
+#define RINA_KIPCM_H
 
 
 #include	"common.h"
