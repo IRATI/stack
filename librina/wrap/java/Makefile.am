@@ -12,6 +12,7 @@ SWIG_DEBUG      += -v
 
 CLEANFILES =
 
+# XXX FIXME: Prerequisites for this rule are broken ...
 wrap.stamp: $(top_srcdir)/include/librina.i $(top_srcdir)/include/librina.h
 	rm -f wrap.tmp
 	touch wrap.tmp
@@ -25,15 +26,18 @@ wrap.stamp: $(top_srcdir)/include/librina.i $(top_srcdir)/include/librina.h
 	}
 	mv -f wrap.tmp $@
 
+CLEANFILES += wrap.stamp wrap.tmp
+CLEANFILES += librina_java.c
+
 all-local-classes: wrap.stamp
 	$(JAVAC) eu/irati/librina/*.java
 
 all-local-jar: all-local-classes
 	$(JAR) -cvf librina.jar eu/irati/librina/*.class
 
-all-local: all-local-jar
+CLEANFILES += librina.jar
 
-CLEANFILES += wrap.stamp wrap.tmp librina_java.c
+all-local: all-local-jar
 
 clean-local:
 	rm -r -f eu/irati/librina

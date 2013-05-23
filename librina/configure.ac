@@ -71,6 +71,7 @@ AC_CONFIG_FILES([
 
     include/Makefile
     src/Makefile
+
     wrap/Makefile
     wrap/java/Makefile
 ])

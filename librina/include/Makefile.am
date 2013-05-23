@@ -14,5 +14,5 @@ nobase_include_HEADERS =			\
 	librina-cdap.h				\
 	librina-sdu-protection.h
 
-EXRA_DIST =					\
+EXTRA_DIST =					\
 	librina.i
