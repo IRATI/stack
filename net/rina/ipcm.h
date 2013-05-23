@@ -17,7 +17,9 @@
 #ifndef RINA_IPCM_H
 #define RINA_IPCM_H
 
+
 int  ipcm_init(void);
 void ipcm_exit(void);
+
 
 #endif
