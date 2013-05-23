@@ -74,6 +74,8 @@ AC_CONFIG_FILES([
 
     wrap/Makefile
     wrap/java/Makefile
+
+    test/Makefile
 ])
 
 AC_OUTPUT

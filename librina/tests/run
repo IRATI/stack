@@ -1,7 +1,0 @@
-echo "Compiling ..."
-javac -classpath '.:../.env/share/java/*' SWIGTest.java || exit 1
-
-P=`pwd`/../.env/lib
-
-echo "Running ..."
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$P CLASSPATH=`pwd`:`pwd`/.env/share/java java -classpath '.:../.env/share/java/*' SWIGTest || exit 1
