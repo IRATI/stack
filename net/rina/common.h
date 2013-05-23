@@ -24,16 +24,16 @@
 
 #include <linux/types.h>
 
-typedef uint16_t port_id_t;
-typedef int ipc_process_id_t;
+typedef uint16_t      port_id_t;
+typedef int           ipc_process_id_t;
 typedef unsigned char utf8_t;
-typedef utf8_t string_t;
-typedef int bool_t;
-typedef uint uint_t;
-typedef uint response_reason_t;
+typedef utf8_t        string_t;
+typedef int           bool_t;
+typedef uint          uint_t;
+typedef uint          response_reason_t;
 
 struct sdu_t {
-    buffer_t *buffer;
+        buffer_t *buffer;
 };
 
 struct name_t {

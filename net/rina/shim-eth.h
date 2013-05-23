@@ -24,9 +24,9 @@
 #include "common.h"
 
 struct shim_eth_info_t {
-	struct name_t *name;
-	uint16_t vlan_id;
-	string_t *interface_name;
+	struct name_t * name;
+	uint16_t        vlan_id;
+	string_t *      interface_name;
 };
 
 enum ipc_config_type_t {
@@ -35,7 +35,7 @@ enum ipc_config_type_t {
 };
 
 struct ipc_config_t {
-	const char *name;
+	const char *           name;
 	enum ipc_config_type_t type;
 	/* will be interpreted based on type */
 	void *value; 
@@ -49,9 +49,9 @@ enum port_id_state_t {
 };
 
 struct shim_eth_flow_t {
-	uint64_t src_mac;
-	uint64_t dst_mac;
-	port_id_t port_id;
+	uint64_t             src_mac;
+	uint64_t             dst_mac;
+	port_id_t            port_id;
 	enum port_id_state_t port_id_state;
 	/* QUEUE(sdu_queue, sdu_t *); */
 };
@@ -80,15 +80,19 @@ struct shim_eth_t {
 };
 
 
-ipc_process_id_t shim_eth_create(struct name_t *name, struct ipc_config_t **config);
-int shim_eth_destroy(ipc_process_id_t ipc_process_id);
-port_id_t shim_eth_allocate_flow_request(struct name_t *source, struct name_t *dest, struct flow_spec_t *flow_spec);
-int shim_eth_allocate_flow_response(port_id_t *port_id, response_reason_t *response);
-int shim_eth_deallocate_flow(port_id_t port_id);
-int shim_eth_register_application(struct name_t *name);
-int shim_eth_unregister_application(struct name_t *name);
-int shim_eth_write_sdu(port_id_t port_id, struct sdu_t *sdu);
-int shim_eth_init(void);
+ipc_process_id_t shim_eth_create(struct name_t *        name,
+                                 struct ipc_config_t ** config);
+int  shim_eth_destroy(ipc_process_id_t ipc_process_id);
+port_id_t shim_eth_allocate_flow_request(struct name_t *      source,
+                                         struct name_t *      dest,
+                                         struct flow_spec_t * flow_spec);
+int  shim_eth_allocate_flow_response(port_id_t *         port_id,
+                                     response_reason_t * response);
+int  shim_eth_deallocate_flow(port_id_t port_id);
+int  shim_eth_register_application(struct name_t *name);
+int  shim_eth_unregister_application(struct name_t *name);
+int  shim_eth_write_sdu(port_id_t port_id, struct sdu_t *sdu);
+int  shim_eth_init(void);
 void shim_eth_exit(void);
 
 #endif
