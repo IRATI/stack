@@ -62,4 +62,3 @@ SYSCALL_DEFINE3(ipc_process_create, const name_t *name, ipc_process_id_t ipcp_id
 	
 	return 0;
 }
-
