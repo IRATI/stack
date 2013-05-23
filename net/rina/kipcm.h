@@ -26,11 +26,16 @@
 #include	"common.h"
 #include	"efcp.h"
 #include	"rmt.h"
+#include	<netinet/in.h>
 
 struct normal_ipc_process_conf_t{
 
 	
+<<<<<<< HEAD
 	/*
+=======
+	/*----------------------------------------------------------------------------
+>>>>>>> 61823faa0053f2c2813b297e67c25217c4db6d4a
 	 * Configuration of the kernel components of a normal IPC Process.
 	 * Defines the struct for the kernel components of a fully RINA IPC
 	 * Process.
@@ -47,6 +52,72 @@ struct normal_ipc_process_conf_t{
 	struct rmt_conf_t *rmt_config;
 
 };
+
+struct ipc_process_shim_ethernet_conf_t{
+	
+	/*----------------------------------------------------------------------
+	 * Configuration of the kernel component of a shim Ethernet IPC 
+	 * Process
+	 *--------------------------------------------------------------------*/
+
+	/* The vlan id */
+	int vlan_id;
+
+	/* The name of the device driver of the Ethernet interface */
+	string_t *device_name;
+};
+
+struct ipc_process_shim_tcp_udp_conf_t{
+
+	
+	/*----------------------------------------------------------------------
+	 * Configuration of the kernel component of a shim TCP/UDP IPC 
+	 * Process
+	 *--------------------------------------------------------------------*/
+
+	/* The inet address the IPC process is bound to */
+	in_addr_t *inet_address;
+
+	/* The name of the DIF */
+	struct name_t *dif_name;
+};
+
+struct ipc_process_conf_t{
+	/*--........------------------------------------------------------------	
+	 * Contains the configuration of the kernel components of an IPC
+	 * Proccess.
+	 *--------------------------------------------------------------------*/
+
+	/* The DIF type discriminator */
+	dif_type_t type;
+
+	union{
+		struct normal_ipc_process_conf_t *normal_ipcp_conf;
+		struct ipc_process_shim_ethernet_conf_t *shim_eth_ipcp_conf;
+		struct ipc_process_shim_tcp_udp_conf_t *shim_tcp_udp_ipcp_conf;
+	} ipc_process_conf;
+};
+
+struct normal_ipc_process_t{
+	/*--------------------------------------------------------------------
+	* Contains all the data structures of a normal IPC Process 
+	*---------------------------------------------------------------------*/
+
+	/* The ID of the IPC Process */
+	ipc_process_id_t ipcp_id;
+
+	/* Contains the configuration of the kernel components */
+	struct normal_ipc_process_cont_t  *configuration;
+
+	/* The EFCP data structure associated to the IPC Process */
+	struct efcp_ipc_t *efcp;
+	
+	/* The RMT instance associated to the IPC Process */
+	struct rmt_instance_t *rmt;
+
+};
+
+
 
 int  kipcm_init(void);
 void kipcm_exit(void);
