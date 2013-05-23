@@ -25,7 +25,7 @@
 #include <linux/types.h>
 
 typedef uint16_t      port_id_t;
-typedef int           ipc_process_id_t;
+typedef int           ipc_process_id_t;
 typedef unsigned char utf8_t;
 typedef utf8_t        string_t;
 typedef int           bool_t;
@@ -86,40 +86,40 @@ struct uint_range_t {
 struct flow_spec_t {
 	/* This structure defines the characteristics of a flow */
 	/* Average bandwidth in bytes/s */
-	struct uint_range_t * average_bandwidth;
+	struct uint_range_t *average_bandwidth;
 	/* Average bandwidth in SDUs/s */
-	struct uint_range_t * average_sdu_bandwidth;
+	struct uint_range_t *average_sdu_bandwidth;
 	/* In milliseconds */
-	struct uint_range_t * peak_bandwidth_duration;
+	struct uint_range_t *peak_bandwidth_duration;
 	/* In milliseconds */
-	struct uint_range_t * peak_sdu_bandwidth_duration;
+	struct uint_range_t *peak_sdu_bandwidth_duration;
 	/* A value of 0 indicates 'do not care' */
-	double         undetected_bit_error_rate;
+	double               undetected_bit_error_rate;
 	/* Indicates if partial delivery of SDUs is allowed or not */
-	bool_t         partial_delivery;
+	bool_t               partial_delivery;
 	/* Indicates if SDUs have to be delivered in order */
-	bool_t         ordered_delivery;
+	bool_t               ordered_delivery;
 	/*
 	 * Indicates the maximum gap allowed among SDUs, a gap of N
 	 * SDUs is considered the same as all SDUs delivered.
 	 * A value of -1 indicates 'Any'
 	 */
-	int            max_allowable_gap;
+	int                  max_allowable_gap;
 	/*
 	 * In milliseconds, indicates the maximum delay allowed in this
 	 * flow. A value of 0 indicates 'do not care'
 	 */
-	uint_t         delay;
+	uint_t               delay;
 	/*
 	 * In milliseconds, indicates the maximum jitter allowed
 	 * in this flow. A value of 0 indicates 'do not care'
 	 */
-	uint_t         jitter;
+	uint_t              jitter;
 	/*
 	 * The maximum SDU size for the flow. May influence the choice
 	 * of the DIF where the flow will be created.
 	 */
-	uint_t        max_sdu_size;
+	uint_t              max_sdu_size;
 };
 
 #endif
