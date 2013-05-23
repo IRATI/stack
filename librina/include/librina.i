@@ -14,7 +14,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-%module librina
+%module rina
 
 %include "stdint.i"
 
