@@ -23,13 +23,8 @@
 
 int  kipcm_init(void);
 void kipcm_exit(void);
-
-/*
-* Introduced by Miquel 5.22.2013
-*/
-
-int kipc_add_entry(port_id_t port_id, const flow_t *flow);
-int kipc_remove_entry(port_id_t port_id);
-int kipc_post_sdu(port_id_t port_id, const sdu_t *sdu);
+int  kipcm_add_entry(port_id_t port_id, const flow_t *flow);
+int  kipcm_remove_entry(port_id_t port_id);
+int  kipcm_post_sdu(port_id_t port_id, const sdu_t *sdu);
 
 #endif

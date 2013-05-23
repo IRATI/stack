@@ -35,9 +35,31 @@ void kipcm_exit()
         LOG_DBG("exit");
 }
 
+int kipcm_add_entry(port_id_t port_id, const flow_t *flow)
+{
+	LOG_DBG("adding entry to the port_id_to_flow table");
+
+	return 0;
+}
+
+int kipcm_remove_entry(port_id_t port_id)
+{
+	LOG_DBG("removing entry to the port_id_to_flow table");
+
+	return 0;
+}
+
+int kipcm_post_sdu(port_id_t port_id, const sdu_t *sdu)
+{
+	LOG_DBG("removing entry to the port_id_to_flow table");
+
+	return 0;
+}
+
 SYSCALL_DEFINE3(ipc_process_create, const name_t *name, ipc_process_id_t ipcp_id, dif_type_t type)
 {
-	LOG_DBG("Syscall ipc_process_create");
+	LOG_DBG("syscall ipc_process_create");
+	
 	return 0;
 }
 
