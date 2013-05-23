@@ -1,4 +1,8 @@
 /*
+ *  Shim IPC Process for Ethernet
+ *
+ *    Sander Vrijders <sander.vrijders@intec.ugent.be>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -16,8 +20,53 @@
 
 #define RINA_PREFIX "shim-eth"
 
+#include <linux/if_ether.h>
 #include "logs.h"
 #include "shim-eth.h"
+
+ipc_process_id_t shim_eth_create(struct name_t *        name,
+                                 struct ipc_config_t ** config)
+{
+	return 0;
+}
+
+int shim_eth_destroy(ipc_process_id_t ipc_process_id)
+{
+	return 0;
+}
+
+port_id_t shim_eth_allocate_flow_request(struct name_t *      source,
+                                         struct name_t *      dest,
+                                         struct flow_spec_t * flow_spec)
+{
+	return 0;
+}
+
+int shim_eth_allocate_flow_response(port_id_t *         port_id,
+                                    response_reason_t * response)
+{
+	return 0;
+}
+
+int shim_eth_deallocate_flow(port_id_t port_id)
+{
+	return 0;
+}
+
+int shim_eth_register_application(struct name_t * name)
+{
+	return 0;
+}
+
+int shim_eth_unregister_application(struct name_t * name)
+{
+	return 0;
+}
+
+int shim_eth_write_sdu(port_id_t port_id, struct sdu_t * sdu)
+{
+	return 0;
+}
 
 int shim_eth_init(void)
 {

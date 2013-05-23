@@ -1,4 +1,8 @@
 /*
+ *  Shim IPC Process for Ethernet
+ *
+ *    Sander Vrijders <sander.vrijders@intec.ugent.be>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -17,7 +21,79 @@
 #ifndef RINA_SHIM_ETH_H
 #define RINA_SHIM_ETH_H
 
+#include "common.h"
+
+struct shim_eth_info_t {
+	struct name_t * name;
+	uint16_t        vlan_id;
+	string_t *      interface_name;
+};
+
+enum ipc_config_type_t {
+	IPC_CONFIG_INT,
+	IPC_CONFIG_UINT
+};
+
+struct ipc_config_t {
+	const char *           name;
+	enum ipc_config_type_t type;
+	/* will be interpreted based on type */
+	void *value; 
+};
+
+enum port_id_state_t {
+	PORT_STATE_NULL,
+	PORT_STATE_RECIPIENT_ALLOCATE_PENDING,
+	PORT_STATE_INITIATOR_ALLOCATE_PENDING,
+	PORT_STATE_ALLOCATED
+};
+
+struct shim_eth_flow_t {
+	uint64_t             src_mac;
+	uint64_t             dst_mac;
+	port_id_t            port_id;
+	enum port_id_state_t port_id_state;
+	/* QUEUE(sdu_queue, sdu_t *); */
+};
+
+/*
+* Contains all the information associated to an instance of a
+* shim Ethernet IPC Process, as well as pointers to the
+* functions to manipulate it
+*/
+struct shim_eth_instance_t {
+        /* The configuration of the shim IPC Process */
+	struct ipc_config_t configuration;
+	/* Pointer to the device driver data_structure */
+	/* device_t * device_driver; */
+	/* Stores the state of flows indexed by port_id */
+	/* HASH_TABLE(flow_to_port_id, port_id_t, shim_eth_flow_t); */
+};
+
+/*
+* The container for the shim IPC Process over Ethernet
+* component
+*/
+struct shim_eth_t {
+        /* Stores the state of shim IPC Process instances */
+	/* HASH_TABLE(shim_eth_instances, ipc_process_id_t, shim_eth_instance_t); */
+};
+
+
+ipc_process_id_t shim_eth_create(struct name_t *        name,
+                                 struct ipc_config_t ** config);
+int  shim_eth_destroy(ipc_process_id_t ipc_process_id);
+port_id_t shim_eth_allocate_flow_request(struct name_t *      source,
+                                         struct name_t *      dest,
+                                         struct flow_spec_t * flow_spec);
+int  shim_eth_allocate_flow_response(port_id_t *         port_id,
+                                     response_reason_t * response);
+int  shim_eth_deallocate_flow(port_id_t port_id);
+int  shim_eth_register_application(struct name_t *name);
+int  shim_eth_unregister_application(struct name_t *name);
+int  shim_eth_write_sdu(port_id_t port_id, struct sdu_t *sdu);
 int  shim_eth_init(void);
 void shim_eth_exit(void);
 
 #endif
+
