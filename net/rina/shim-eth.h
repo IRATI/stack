@@ -23,6 +23,7 @@
 
 #include "common.h"
 
+/* Holds the configuration of one shim IPC process */
 struct shim_eth_info_t {
 	struct name_t *name;
 	uint16_t vlan_id;
@@ -48,6 +49,7 @@ enum port_id_state_t {
 	PORT_STATE_ALLOCATED
 };
 
+/* Hold the information related to one flow*/
 struct shim_eth_flow_t {
 	uint64_t src_mac;
 	uint64_t dst_mac;
@@ -78,7 +80,6 @@ struct shim_eth_t {
         /* Stores the state of shim IPC Process instances */
 	/* HASH_TABLE(shim_eth_instances, ipc_process_id_t, shim_eth_instance_t); */
 };
-
 
 ipc_process_id_t shim_eth_create(struct name_t *name, struct ipc_config_t **config);
 int shim_eth_destroy(ipc_process_id_t ipc_process_id);
