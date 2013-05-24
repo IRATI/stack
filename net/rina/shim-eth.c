@@ -42,11 +42,15 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 			shim_eth_info.vlan_id = *(uint16_t *) ipc_config->value;
 			break;
 		case IPC_CONFIG_STRING:
-			shim_eth_info.interface_name = (string_t *) ipc_config->value;
+			shim_eth_info.interface_name = 
+				(string_t *) ipc_config->value;
 		}
 		++ipc_config;
 	}
-	uint nr = count++;
+	/* Unsure if I can call return count++ and count gets incremented after
+	   function call? This is a workaround, fix if possible. */ 
+	uint nr;
+	nr = count++;
 	struct shim_eth_t tmp = {
 		.shim_eth_instance.configuration = shim_eth_info;
 		.ipc_process_id = nr;
