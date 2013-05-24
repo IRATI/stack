@@ -22,6 +22,7 @@
 #define RINA_SHIM_ETH_H
 
 #include <linux/hashtable.h>
+
 #include "common.h"
 
 /* Holds the configuration of one shim IPC process */
@@ -70,8 +71,10 @@ struct shim_eth_flow_t {
 struct shim_eth_instance_t {
         /* The configuration of the shim IPC Process */
 	struct shim_eth_info_t info;
+
 	/* FIXME : Pointer to the device driver data_structure */
 	/* device_t * device_driver; */
+
 	/* FIXME : Stores the state of flows indexed by port_id */
 	/* HASH_TABLE(flow_to_port_id, port_id_t, shim_eth_flow_t); */
 };
@@ -89,16 +92,18 @@ struct shim_eth_t {
 };
 
 ipc_process_id_t shim_eth_create(struct ipc_config_t ** config);
-int  shim_eth_destroy(ipc_process_id_t ipc_process_id);
+int              shim_eth_destroy(ipc_process_id_t ipc_process_id);
+
+/* FIXME: flow_spec_t should not reach this point ..., QoS ids should suffice */
 port_id_t shim_eth_allocate_flow_request(struct name_t *      source,
                                          struct name_t *      dest,
                                          struct flow_spec_t * flow_spec);
 int  shim_eth_allocate_flow_response(port_id_t *         port_id,
                                      response_reason_t * response);
 int  shim_eth_deallocate_flow(port_id_t port_id);
-int  shim_eth_register_application(struct name_t *name);
-int  shim_eth_unregister_application(struct name_t *name);
-int  shim_eth_write_sdu(port_id_t port_id, struct sdu_t *sdu);
+int  shim_eth_register_application(struct name_t * name);
+int  shim_eth_unregister_application(struct name_t * name);
+int  shim_eth_write_sdu(port_id_t port_id, struct sdu_t * sdu);
 int  shim_eth_init(void);
 void shim_eth_exit(void);
 
