@@ -27,11 +27,11 @@
 #include	"efcp.h"
 #include	"rmt.h"
 
-typedef enum{
+/*typedef enum{
 	DIF_TYPE_NORMAL,
 	DIF_TYPE_SHIM_IP,
 	DIF_TYPE_SHIM_ETH
-} dif_type_t;
+} dif_type_t;*/
 
 
 struct normal_ipc_process_conf_t{
