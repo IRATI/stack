@@ -47,7 +47,7 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 		++ipc_config;
 	}
 	uint nr = count++;
-	struct shim_eth_t tmp {
+	struct shim_eth_t tmp = {
 		.shim_eth_instance.configuration = shim_eth_info;
 		.ipc_process_id = nr;
 		.list = LIST_HEAD_INIT(tmp.list);
