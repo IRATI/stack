@@ -23,7 +23,7 @@
 #ifndef RINA_COMMON_H
 #define RINA_COMMON_H
 
-#include		<linux/types.h>
+#include <linux/types.h>
 
 typedef unsigned int	ipc_process_address_t;
 typedef uint16_t	port_id_t;
@@ -34,11 +34,13 @@ typedef uint		uint_t;
 typedef uint		response_reason_t;
 
 
-/*-----------------------------------------------------------------------------
- * The value should be interpreted as false if the value is 0 or true otherwise.
+/*
+ * The value should be interpreted as false if the value is 0 or true
+ * otherwise.
  * This typedef should be interpreted as ISO C99 bool/_Bool and could be
  * replaced by the inclusion of stdbool.h where/when possible.
- *-----------------------------------------------------------------------------*/
+ *
+ */
 typedef int bool_t;
 
 /* This structure represents raw data */
@@ -51,11 +53,7 @@ struct sdu_t {
         struct buffer_t *buffer;
 };
 
-struct uint_range_t{
-	/*-----------------------------------------------------------------------------
-	 *  This structure represents a range of integer values
-	 *-----------------------------------------------------------------------------*/
-
+struct uint_range_t {
 	/* Minimum value */
 	uint_t min_value;
 
@@ -63,43 +61,47 @@ struct uint_range_t{
 	uint_t max_value;
 };
 
-struct name_t{
-	/*-----------------------------------------------------------------------------
+struct name_t {
+	/*
 	 * The process_name identifies an application process within the
 	 * application process namespace. This value is required, it
 	 * cannot be NULL. This name has global scope (it is defined by
 	 * the chain of IDD databases that are linked together), and is
 	 * assigned by an authority that manages the namespace that
 	 * particular application name belongs to.
-	 *-----------------------------------------------------------------------------*/
+	 *
+         */
 	string_t *process_name;
 	
 
-	/*-----------------------------------------------------------------------------
+	/*
 	 * The process_instance identifies a particular instance of the
 	 * process. This value is optional, it may be NULL.
-	 *-----------------------------------------------------------------------------*/
+	 *
+         */
 	string_t *process_instance;
 
 	
-	/*-----------------------------------------------------------------------------
-	 * The entity_name identifies an application entity within the
+	/*
+         * The entity_name identifies an application entity within the
 	 * application process. This value is optional, it may be NULL.
-	 *-----------------------------------------------------------------------------*/
+	 *
+         */
 	string_t *entity_name;
 
 	
-	/*-----------------------------------------------------------------------------
-	 * The entity_name identifies a particular instance of an entity within
+	/*
+         * The entity_name identifies a particular instance of an entity within
 	 * the application process. This value is optional, it may be NULL.
-	 *-----------------------------------------------------------------------------*/
+	 *
+         */
 	string_t *entity_instance;
 
 };
 
-
 struct flow_spec_t {
 	/* This structure defines the characteristics of a flow */
+
 	/* Average bandwidth in bytes/s */
 	struct uint_range_t *average_bandwidth;
 	/* Average bandwidth in SDUs/s */
