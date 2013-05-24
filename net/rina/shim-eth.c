@@ -24,8 +24,7 @@
 #include "logs.h"
 #include "shim-eth.h"
 
-static struct shim_eth_t shim_eth;
-INIT_LIST_HEAD(shim_eth.list);
+INIT_LIST_HEAD(shim_eth);
 static ipc_process_id_t count = 0;
 
 ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
