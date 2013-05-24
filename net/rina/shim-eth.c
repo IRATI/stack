@@ -24,12 +24,44 @@
 #include "logs.h"
 #include "shim-eth.h"
 
-ipc_process_id_t shim_eth_create(struct name_t *        name,
-                                 struct ipc_config_t ** config)
-{
-	LOG_DBG("A new shim IPC process was created");
+static struct shim_eth_t shim_eth;
+INIT_LIST_HEAD(&shim_eth->list);
+static ipc_process_id_t count = 0;
 
-	return 0;
+ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
+{
+	struct shim_eth_t *tmp;
+	tmp = kzalloc(sizeof(*tmp), GFP_ATOMIC);
+	if (!tmp) {
+		LOG_ERR("Shim process creation failed, no memory");
+		return NULL;
+	}
+	/* Retrieve configuration of IPC process from params 
+	   Might be put in its own function if this grows too large */
+	struct shim_eth_info_t shim_eth_info;
+	struct ipc_config_t *ipc_config = config[0];
+	while(ipc_config != 0){
+		switch (ipc_config->type) {
+		case IPC_CONFIG_NAME:
+			shim_eth_info.name = (struct name_t*) value;
+			break;
+		case IPC_CONFIG_UINT:
+			shim_eth_info.vlan_id = *(uint16_t *) value;
+			break;
+		case IPC_CONFIG_STRING:
+			shim_eth_info.interface_name = (string_t *) value;
+		}
+		++ipc_config;
+	}
+       
+	tmp->shim_eth_instance.configuration = shim_eth_info;
+	tmp->ipc_process_id = count++;
+	list_add(&(tmp->list), &(shim_eth.list));
+	/* FIXME: Add handler to correct interface and vlan id */
+	
+
+	LOG_DBG("A new shim IPC process was created");
+	return tmp->ipc_process_id;
 }
 
 int shim_eth_destroy(ipc_process_id_t ipc_process_id)
