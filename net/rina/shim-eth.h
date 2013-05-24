@@ -21,6 +21,7 @@
 #ifndef RINA_SHIM_ETH_H
 #define RINA_SHIM_ETH_H
 
+#include <linux/hashtable.h>
 #include "common.h"
 
 /* Holds the configuration of one shim IPC process */
@@ -31,12 +32,12 @@ struct shim_eth_info_t {
 };
 
 enum ipc_config_type_t {
-	IPC_CONFIG_INT,
-	IPC_CONFIG_UINT
+	IPC_CONFIG_NAME,
+	IPC_CONFIG_UINT,
+	IPC_CONFIG_STRING
 };
 
 struct ipc_config_t {
-	const char *           name;
 	enum ipc_config_type_t type;
 	/* will be interpreted based on type */
 	void *value; 
@@ -67,7 +68,7 @@ struct shim_eth_flow_t {
 */
 struct shim_eth_instance_t {
         /* The configuration of the shim IPC Process */
-	struct ipc_config_t configuration;
+	struct shim_eth_info_t info;
 	/* FIXME : Pointer to the device driver data_structure */
 	/* device_t * device_driver; */
 	/* FIXME : Stores the state of flows indexed by port_id */
@@ -78,13 +79,15 @@ struct shim_eth_instance_t {
 * The container for the shim IPC Process over Ethernet
 * component
 */
+/* Stores the state of shim IPC Process instances */
+/* HASH_TABLE(shim_eth_instances, ipc_process_id_t, shim_eth_instance_t); */
 struct shim_eth_t {
-        /* FIXME : Stores the state of shim IPC Process instances */
-	/* HASH_TABLE(shim_eth_instances, ipc_process_id_t, shim_eth_instance_t); */
+	ipc_process_id_t ipc_process_id;
+	struct shim_eth_instance_t shim_eth_instance;
+	struct list_head list;
 };
 
-ipc_process_id_t shim_eth_create(struct name_t *        name,
-                                 struct ipc_config_t ** config);
+ipc_process_id_t shim_eth_create(struct ipc_config_t ** config);
 int  shim_eth_destroy(ipc_process_id_t ipc_process_id);
 port_id_t shim_eth_allocate_flow_request(struct name_t *      source,
                                          struct name_t *      dest,

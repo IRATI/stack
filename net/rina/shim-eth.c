@@ -24,12 +24,49 @@
 #include "logs.h"
 #include "shim-eth.h"
 
-ipc_process_id_t shim_eth_create(struct name_t *        name,
-                                 struct ipc_config_t ** config)
-{
-	LOG_DBG("A new shim IPC process was created");
+LIST_HEAD(shim_eth);
+static ipc_process_id_t count = 0;
 
-	return 0;
+ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
+{
+        /* Unsure if I can call return count++ and count gets incremented after
+	   function call? This is a workaround, fix if possible. */ 
+	ipc_process_id_t nr = count++;
+
+	/* Retrieve configuration of IPC process from params */
+	struct shim_eth_info_t shim_eth_info;
+	struct ipc_config_t *ipc_config = config[0];
+	while(ipc_config != 0){
+		switch (ipc_config->type) {
+		case IPC_CONFIG_NAME:
+			shim_eth_info.name = (struct name_t*) ipc_config->value;
+			break;
+		case IPC_CONFIG_UINT:
+			shim_eth_info.vlan_id = *(uint16_t *) ipc_config->value;
+			break;
+		case IPC_CONFIG_STRING:
+			shim_eth_info.interface_name = 
+				(string_t *) ipc_config->value;
+		}
+		++ipc_config;
+	}
+
+	struct shim_eth_instance_t instance = {
+		.info = shim_eth_info
+	};
+	
+	struct shim_eth_t tmp = {
+		.shim_eth_instance = instance,
+		.ipc_process_id = nr,
+		.list = LIST_HEAD_INIT(tmp.list),
+	};
+       
+	list_add(&tmp.list, &shim_eth);
+	/* FIXME: Add handler to correct interface and vlan id */
+	
+
+	LOG_DBG("A new shim IPC process was created");
+	return nr;
 }
 
 int shim_eth_destroy(ipc_process_id_t ipc_process_id)
