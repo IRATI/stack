@@ -25,6 +25,7 @@
 #include "shim-eth.h"
 
 LIST_HEAD(shim_eth);
+
 static ipc_process_id_t count = 0;
 
 ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
@@ -39,10 +40,12 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 	while(ipc_config != 0){
 		switch (ipc_config->type) {
 		case IPC_CONFIG_NAME:
-			shim_eth_info.name = (struct name_t*) ipc_config->value;
+			shim_eth_info.name =
+                                (struct name_t *) ipc_config->value;
 			break;
 		case IPC_CONFIG_UINT:
-			shim_eth_info.vlan_id = *(uint16_t *) ipc_config->value;
+			shim_eth_info.vlan_id =
+                                * (uint16_t *) ipc_config->value;
 			break;
 		case IPC_CONFIG_STRING:
 			shim_eth_info.interface_name = 
@@ -63,7 +66,6 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
        
 	list_add(&tmp.list, &shim_eth);
 	/* FIXME: Add handler to correct interface and vlan id */
-	
 
 	LOG_DBG("A new shim IPC process was created");
 	return nr;
