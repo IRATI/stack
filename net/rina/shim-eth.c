@@ -50,9 +50,13 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 		}
 		++ipc_config;
 	}
+
+	struct shim_eth_instance_t tmp2 = {
+		.configuration = shim_eth_info;
+	}
 	
 	struct shim_eth_t tmp = {
-		.shim_eth_instance.configuration = shim_eth_info;
+		.shim_eth_instance = tmp2;
 		.ipc_process_id = nr;
 		.list = LIST_HEAD_INIT(tmp.list);
 	}
