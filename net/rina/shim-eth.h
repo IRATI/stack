@@ -58,14 +58,15 @@ struct shim_eth_flow_t {
 	enum port_id_state_t port_id_state;
 	/* FIXME : Will probably be a sk_buff_head or a linked list 
 	   holding only the SDUs */
+
         /* QUEUE(sdu_queue, sdu_t *); */
 };
 
 /*
-* Contains all the information associated to an instance of a
-* shim Ethernet IPC Process, as well as pointers to the
-* functions to manipulate it
-*/
+ * Contains all the information associated to an instance of a
+ * shim Ethernet IPC Process, as well as pointers to the
+ * functions to manipulate it
+ */
 struct shim_eth_instance_t {
         /* The configuration of the shim IPC Process */
 	struct shim_eth_info_t info;
@@ -76,9 +77,9 @@ struct shim_eth_instance_t {
 };
 
 /*
-* The container for the shim IPC Process over Ethernet
-* component
-*/
+ * The container for the shim IPC Process over Ethernet
+ * component
+ */
 /* Stores the state of shim IPC Process instances */
 /* HASH_TABLE(shim_eth_instances, ipc_process_id_t, shim_eth_instance_t); */
 struct shim_eth_t {
