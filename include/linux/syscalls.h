@@ -902,4 +902,5 @@ asmlinkage long sys_ipc_process_create(struct name_t *name,
 					ipc_process_id_t ipcp_id, 
 					dif_type_t dif_type);
 
+asmlinkage long sys_kipcm_call(int param);
 #endif

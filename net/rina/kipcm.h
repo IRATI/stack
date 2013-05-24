@@ -34,7 +34,7 @@
 } dif_type_t;*/
 
 
-struct normal_ipc_process_conf_t{
+struct normal_ipc_process_conf_t {
 
 	
 	/*
@@ -55,12 +55,12 @@ struct normal_ipc_process_conf_t{
 
 };
 
-struct ipc_process_shim_ethernet_conf_t{
+struct ipc_process_shim_ethernet_conf_t {
 	
-	/*----------------------------------------------------------------------
+	/*
 	 * Configuration of the kernel component of a shim Ethernet IPC 
 	 * Process
-	 *--------------------------------------------------------------------*/
+	 */
 
 	/* The vlan id */
 	int vlan_id;
@@ -69,13 +69,13 @@ struct ipc_process_shim_ethernet_conf_t{
 	string_t *device_name;
 };
 
-struct ipc_process_shim_tcp_udp_conf_t{
+struct ipc_process_shim_tcp_udp_conf_t {
 
 	
-	/*----------------------------------------------------------------------
+	/*
 	 * Configuration of the kernel component of a shim TCP/UDP IPC 
 	 * Process
-	 *--------------------------------------------------------------------*/
+	 */
 
 	/* FIXME - lbergesio: The inet address the IPC process is bound to */
 	//in_addr_t *inet_address;
@@ -84,11 +84,11 @@ struct ipc_process_shim_tcp_udp_conf_t{
 	struct name_t *dif_name;
 };
 
-struct ipc_process_conf_t{
-	/*--........------------------------------------------------------------	
+struct ipc_process_conf_t {
+	/*	
 	 * Contains the configuration of the kernel components of an IPC
 	 * Proccess.
-	 *--------------------------------------------------------------------*/
+	 */
 
 	/* The DIF type discriminator */
 	dif_type_t type;
@@ -100,10 +100,10 @@ struct ipc_process_conf_t{
 	} ipc_process_conf;
 };
 
-struct normal_ipc_process_t{
-	/*--------------------------------------------------------------------
+struct normal_ipc_process_t {
+	/*
 	* Contains all the data structures of a normal IPC Process 
-	*---------------------------------------------------------------------*/
+	*/
 
 	/* The ID of the IPC Process */
 	ipc_process_id_t ipcp_id; 
@@ -119,7 +119,58 @@ struct normal_ipc_process_t{
 
 };
 
-struct flow_t{
+struct ipc_process_shim_ethernet_t {
+	/* 
+	 * Contains all he data structures of a shim IPC Process over Ethernet
+	 */
+
+	/* The ID of the IPC Process */
+	ipc_process_id_t ipcp_id;
+
+	/* The configuration of the module */
+	struct ipc_process_shim_ethernet_conf_t *configuration;
+
+	/* The module that performs the processing */
+	struct shim_eth_instance_t *shim_eth_ipc_process;
+
+};
+
+struct ipc_process_shim_tcp_udp_t {
+	/* 
+	 * Contains all he data structures of a shim IPC Process over TCP/IP 
+	 */
+
+	/* The ID of the IPC Process */
+	ipc_process_id_t ipcp_id;
+
+	/* The configuration of the module */
+	struct ipc_process_shim_tcp_udp_conf_t *configuration;
+
+	/* The module that performs the processing */
+	struct shim_tcp_udp_instance_t *shim_tcp_udp_ipc_process;
+};
+
+
+struct ipc_process_data_t {
+	
+	/* The DIF type descriminator */
+	dif_type_t type;
+
+	union {
+		struct normal_ipc_process_t *normal_ipcp;
+		struct ipc_process_shim_ethernet_t *shim_the_ipcp;
+		struct ipc_process_shim_tcp_udp_t *shim_tcp_udp_ipcp;
+	} ipc_process;
+
+};
+
+struct ipc_process_t {
+	dif_type_t type;
+	struct ipc_process_data_t data;
+};
+
+
+struct flow_t {
 	/* The port-id identifying the flow */
 	port_id_t port_id;
 
@@ -146,6 +197,21 @@ struct flow_t{
 	//QUEUE(segmentation_queue, pdu_t *);
 	//QUEUE(reassembly_queue,	pdu_t *);
 	//QUEUE(sdu_ready, sdu_t *);
+};
+
+
+struct kipc_t {
+	/* Maintained and used by the K-IPC Manager to return the proper flow
+	 * instance that contains the modules that provide the Data Transfer
+	 * Service in each kind of IPC Process. */
+	//FIXME Define HASH_TABLE
+	//HASH_TABLE(port_id_to_flow, port_id_t, struct flow_t *);
+	
+	/* A table with all the instances of IPC Processes, indexed by
+	 * process_id. */
+	//FIXME Define HASH_TABLE
+	//HASH_TABLE(id_to_ipcp, ipc_process_id_t, struct ipc_process_t *);
+
 };
 
 

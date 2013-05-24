@@ -22,6 +22,7 @@
 
 #include "logs.h"
 #include "kipcm.h"
+#include <linux/syscalls.h>
 
 int kipcm_init()
 {
@@ -64,3 +65,10 @@ int kipcm_post_sdu(port_id_t port_id, const struct sdu_t *sdu)
 //	return 0;
 //}
 
+
+
+SYSCALL_DEFINE1(kipcm_call, int param)
+{
+        LOG_DBG("TESTING SYSCALL: %d", param);
+	return 0;
+};
