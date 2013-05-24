@@ -34,6 +34,10 @@
 #define LOG_WARN(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_WARNING, FMT, ##ARGS)
 #define LOG_NOTE(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_NOTICE,  FMT, ##ARGS)
 #define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_INFO,    FMT, ##ARGS)
+#ifdef RINA_DEBUG
 #define LOG_DBG(FMT,  ARGS...)  __LOG(RINA_PREFIX, KERN_DEBUG,   FMT, ##ARGS)
+#else
+#define LOG_DBG(FMT,  ARGS...)
+#endif
 
 #endif
