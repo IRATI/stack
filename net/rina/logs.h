@@ -40,8 +40,14 @@
 #define LOG_DBG(FMT,  ARGS...)
 #endif
 
-#define LOG_FBEGN LOG_DBG("Entering function %s", __FUNCTION__)
-#define LOG_FEXIT LOG_DBG("Exiting function %s", __FUNCTION__)
+#ifdef RINA_DEBUG_VERBOSE
+#define LOG_FBEGN LOG_DBG("Entering function %s",    __FUNCTION__)
+#define LOG_FEXIT LOG_DBG("Exiting function %s",     __FUNCTION__)
 #define LOG_FBEAT LOG_DBG("Heartbeat: I'm in %s:%d", __FUNCTION__, __LINE__);
+#else
+#define LOG_FBEGN
+#define LOG_FEXIT
+#define LOG_FBEAT
+#endif
 
 #endif

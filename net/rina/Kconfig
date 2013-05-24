@@ -15,6 +15,13 @@ config RINA_DEBUG
 	---help---
 	  No help for the time being
 
+config RINA_DEBUG_VERBOSE
+	bool "Verbose debugging support (e.g. heartbeats, scopes)"
+        default y
+	depends on RINA_DEBUG
+	---help---
+	  No help for the time being
+
 config RINA_SHIM_ETH
 	bool "Shim IPC over Ethernet support"
         default y
