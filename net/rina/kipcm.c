@@ -22,6 +22,7 @@
 
 #include "logs.h"
 #include "kipcm.h"
+#include <linux/syscalls.h>
 
 int kipcm_init()
 {
