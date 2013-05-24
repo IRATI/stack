@@ -22,14 +22,26 @@
 #ifndef RINA_RMT_H
 #define RINA_RMT_H
 
-struct rmt_conf_t{
-	
-	/*-----------------------------------------------------------------------------
-	 * Configuration of the RMT component of a normal IPC Process
-	 *-----------------------------------------------------------------------------*/
+struct rmt_conf_t {
 
 	/* To do, only a placeholder right now */
 
+};
+
+struct rmt_instance_t {
+	/* This structure holds per-RMT instance data */
+
+	/* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
+	struct rmt_instance_config_t * configuration;
+
+	/*
+         * The PDU-FT access might change in future prototypes but
+         * changes in its underlying data-model will not be reflected
+         * into the (external) API, since the PDU-FT is accessed by
+         * RMT only.
+         */
+
+	/* LIST_HEAD(pdu_fwd_table, pdu_fwd_entry_t); */
 };
 
 int  rmt_init(void);
