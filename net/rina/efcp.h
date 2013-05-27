@@ -43,6 +43,24 @@ struct efcp_conf_t {
 	int seq_number_length;
 };
 
+struct efcp_t {
+	/* 
+	 * FIXME hash_table must be added
+	 * HASH_TABLE(efcp_components_per_ipc_process, ipc_process_id_t, 
+	 * efcp_ipc_t *);
+	 */
+	
+};
+
+struct efcp_ipc_t {
+	/* EFCP component configuration */
+	efcp_conf_t efcp_config;
+
+	/* FIXME: This hash holds the EFCP instances of a single IPC Process 
+	 * HASH_TABLE(efcp_instances, cep_id_t, efcp_instance_t *);
+	 */
+};
+
 int  efcp_init(void);
 void efcp_exit(void);
 
