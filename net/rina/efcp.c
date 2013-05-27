@@ -39,6 +39,8 @@ void efcp_exit(void)
         LOG_FEXIT;
 }
 
+/* Internal APIs */
+
 int efcp_write(port_id_t    port_id,
 		       const sdu_t *sdu)
 {
@@ -53,6 +55,9 @@ int efcp_receive_pdu(pdu_t pdu)
 
 	return 0;
 }
+
+/* Syscalls */
+
 cep_id_t efcp_create(connection_t *connection)
 {
 	LOG_DBG("EFCP instance created");
