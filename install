@@ -1,0 +1,12 @@
+#!/bin/sh
+
+me=install
+PFX=`pwd`/../build
+
+(cd librina && ./bootstrap && ./configure --prefix=$PREFIX && make install) && \
+(cd uClibc && make PREFIX=$PFX install) || {
+    echo "$me: Cannot build the whole system"
+    exit 1
+}
+
+echo "$me: System built successfully"
