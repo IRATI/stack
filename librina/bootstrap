@@ -18,8 +18,7 @@ DIRS=". `cat configure.ac|grep AC_CONFIG_SUBDIRS|sed -e 's,^.*\[,,' -e 's,\].*,,
 echo "${ME}: Bootstrapping $DIRS"
 
 for i in $DIRS ; do
-    echo "${ME}: Bootstrapping directory $PWD"
-    (cd $i && autoreconf -i -f -Wall $@) || {
+    (cd $i && echo "${ME}: Bootstrapping directory $PWD" && autoreconf -i -f -Wall $@) || {
         echo "${ME}: Cannot reconfigure $PWD"
         exit 1
     }
