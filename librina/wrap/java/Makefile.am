@@ -4,11 +4,9 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-SWIG_DEBUG      =
+SWIG_DEBUG      = -v
 SWIG_FLAGS      = $(SWIG_DEBUG) -Wall -nocpperraswarn -Werror
 SWIG_JAVA_FLAGS = -java -package eu.irati.librina
-
-SWIG_DEBUG      += -v
 
 CLEANFILES =
 
