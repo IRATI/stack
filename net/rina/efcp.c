@@ -38,3 +38,44 @@ void efcp_exit(void)
 
         LOG_FEXIT;
 }
+
+/* Internal APIs */
+
+int efcp_write(port_id_t    port_id,
+		       const struct sdu_t *sdu)
+{
+	LOG_DBG("Written SDU");
+
+	return 0;
+}
+
+int efcp_receive_pdu(struct pdu_t pdu)
+{
+	LOG_DBG("PDU received in the EFCP");
+
+	return 0;
+}
+
+/* Syscalls */
+
+cep_id_t efcp_create(struct connection_t *connection)
+{
+	LOG_DBG("EFCP instance created");
+
+	return 0;
+}
+
+int efcp_destroy(cep_id_t cep_id)
+{
+	LOG_DBG("EFCP instance destroyed");
+
+	return 0;
+}
+
+int efcp_update(cep_id_t cep_id,
+		    	cep_id_t dest_cep_id)
+{
+	LOG_DBG("EFCP instance updated");
+
+	return 0;
+}

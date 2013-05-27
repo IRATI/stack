@@ -2245,3 +2245,9 @@ int orderly_poweroff(bool force)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(orderly_poweroff);
+
+SYSCALL_DEFINE1(kipcm_call, int, param)
+{
+	        /*LOG_DBG("TESTING SYSCALL: %d", param);*/
+			return param;
+}

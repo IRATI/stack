@@ -23,15 +23,17 @@
 #ifndef RINA_COMMON_H
 #define RINA_COMMON_H
 
+
 #include <linux/types.h>
 
 typedef unsigned int	ipc_process_address_t;
 typedef uint16_t	port_id_t;
-typedef int		ipc_process_id_t;
+/*typedef int		ipc_process_id_t;*/
 typedef unsigned char	utf8_t;
 typedef unsigned char	string_t;
 typedef uint		uint_t;
 typedef uint		response_reason_t;
+typedef uint            cep_id_t;
 
 /*
  * The value should be interpreted as false if the value is 0 or true
@@ -125,12 +127,26 @@ struct flow_spec_t {
 	 * In milliseconds, indicates the maximum jitter allowed
 	 * in this flow. A value of 0 indicates 'do not care'
 	 */
-	uint_t              jitter;
+	uint_t               jitter;
 	/*
 	 * The maximum SDU size for the flow. May influence the choice
 	 * of the DIF where the flow will be created.
 	 */
 	uint_t              max_sdu_size;
+};
+
+struct pci_t {
+	address_t source;
+	address_t destination;
+	pdu_type_t type;
+	cep_id_t source_cep_id;
+	cep_id_t dest_cep_id;
+	qos_id_t qos_id;
+	seq_num_t sequence_number;
+};
+struct pdu_t {
+	struct pci_t    *pci;
+	struct buffer_t *buffer;
 };
 
 #endif

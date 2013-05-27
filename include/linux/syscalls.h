@@ -64,6 +64,7 @@ struct old_linux_dirent;
 struct perf_event_attr;
 struct file_handle;
 struct sigaltstack;
+struct name_t;
 
 #include <linux/types.h>
 #include <linux/aio_abi.h>
@@ -897,5 +898,9 @@ asmlinkage long sys_process_vm_writev(pid_t pid,
 asmlinkage long sys_kcmp(pid_t pid1, pid_t pid2, int type,
 			 unsigned long idx1, unsigned long idx2);
 asmlinkage long sys_finit_module(int fd, const char __user *uargs, int flags);
+asmlinkage long sys_ipc_process_create(struct name_t *name, 
+					ipc_process_id_t ipcp_id, 
+					dif_type_t dif_type);
+
 asmlinkage long sys_kipcm_call(int param);
 #endif
