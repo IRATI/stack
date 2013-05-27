@@ -26,33 +26,43 @@
 
 int kipcm_init()
 {
-        LOG_DBG("init");
+        LOG_FBEGN;
+
+        LOG_FEXIT;
 
         return 0;
 }
 
 void kipcm_exit()
 {
-        LOG_DBG("exit");
+        LOG_FBEGN;
+
+        LOG_FEXIT;
 }
 
-int kipcm_add_entry(port_id_t port_id, const struct flow_t *flow)
+int kipcm_add_entry(port_id_t port_id, const struct flow_t * flow)
 {
-	LOG_DBG("adding entry to the port_id_to_flow table");
+        LOG_FBEGN;
+
+        LOG_FEXIT;
 
 	return 0;
 }
 
 int kipcm_remove_entry(port_id_t port_id)
 {
-	LOG_DBG("removing entry to the port_id_to_flow table");
+        LOG_FBEGN;
+
+        LOG_FEXIT;
 
 	return 0;
 }
 
-int kipcm_post_sdu(port_id_t port_id, const struct sdu_t *sdu)
+int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
 {
-	LOG_DBG("removing entry to the port_id_to_flow table");
+        LOG_FBEGN;
+
+        LOG_FEXIT;
 
 	return 0;
 }

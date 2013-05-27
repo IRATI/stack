@@ -26,17 +26,24 @@
 
 int rmt_init(void)
 {
-        LOG_DBG("init");
+        LOG_FBEGN;
 
-        if (pdufwdt_init())
+        if (pdufwdt_init()) {
+                LOG_FEXIT;
+
                 return 1;
+        }
+
+        LOG_FEXIT;
 
         return 0;
 }
 
 void rmt_exit(void)
 {
+        LOG_FBEGN;
+
         pdufwdt_exit();
 
-        LOG_DBG("exit");
+        LOG_FEXIT;
 }

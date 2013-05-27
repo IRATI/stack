@@ -33,7 +33,6 @@ typedef unsigned char	string_t;
 typedef uint		uint_t;
 typedef uint		response_reason_t;
 
-
 /*
  * The value should be interpreted as false if the value is 0 or true
  * otherwise.
@@ -49,8 +48,9 @@ struct buffer_t {
 	size_t size;
 };
 
+/* This structure represents a SDU is */
 struct sdu_t {
-        struct buffer_t *buffer;
+        struct buffer_t * buffer;
 };
 
 struct uint_range_t {
@@ -69,34 +69,27 @@ struct name_t {
 	 * the chain of IDD databases that are linked together), and is
 	 * assigned by an authority that manages the namespace that
 	 * particular application name belongs to.
-	 *
          */
-	string_t *process_name;
-	
+	string_t * process_name;
 
 	/*
 	 * The process_instance identifies a particular instance of the
 	 * process. This value is optional, it may be NULL.
 	 *
          */
-	string_t *process_instance;
-
+	string_t * process_instance;
 	
 	/*
          * The entity_name identifies an application entity within the
 	 * application process. This value is optional, it may be NULL.
-	 *
          */
-	string_t *entity_name;
+	string_t * entity_name;
 
-	
 	/*
          * The entity_name identifies a particular instance of an entity within
 	 * the application process. This value is optional, it may be NULL.
-	 *
          */
-	string_t *entity_instance;
-
+	string_t * entity_instance;
 };
 
 struct flow_spec_t {
@@ -110,6 +103,7 @@ struct flow_spec_t {
 	struct uint_range_t *peak_bandwidth_duration;
 	/* In milliseconds */
 	struct uint_range_t *peak_sdu_bandwidth_duration;
+
 	/* A value of 0 indicates 'do not care' */
 	double               undetected_bit_error_rate;
 	/* Indicates if partial delivery of SDUs is allowed or not */

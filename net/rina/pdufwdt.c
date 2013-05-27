@@ -25,12 +25,17 @@
 
 int pdufwdt_init(void)
 {
-        LOG_DBG("init");
+        LOG_FBEGN;
+
+        LOG_FEXIT;
 
         return 0;
 }
 
 void pdufwdt_exit(void)
 {
-        LOG_DBG("exit");
+        LOG_FBEGN;
+
+        LOG_FEXIT;
+
 }
