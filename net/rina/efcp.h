@@ -217,10 +217,10 @@ struct dtcp_state_vector_t {
 
 int      efcp_init(void);
 void     efcp_exit(void);
-int      efcp_write(port_id_t    port_id,
-		    const sdu_t *sdu);
-int      efcp_receive_pdu(pdu_t pdu);
-cep_id_t efcp_create(connection_t *connection);
+int      efcp_write(port_id_t           port_id,
+		    const struct sdu_t *sdu);
+int      efcp_receive_pdu(struct pdu_t pdu);
+cep_id_t efcp_create(struct connection_t *connection);
 int      efcp_destroy(cep_id_t cep_id);
 int      efcp_update(cep_id_t cep_id,
 		     cep_id_t dest_cep_id);

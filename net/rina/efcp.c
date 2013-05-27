@@ -42,14 +42,14 @@ void efcp_exit(void)
 /* Internal APIs */
 
 int efcp_write(port_id_t    port_id,
-		       const sdu_t *sdu)
+		       const struct sdu_t *sdu)
 {
 	LOG_DBG("Written SDU");
 
 	return 0;
 }
 
-int efcp_receive_pdu(pdu_t pdu)
+int efcp_receive_pdu(struct pdu_t pdu)
 {
 	LOG_DBG("PDU received in the EFCP");
 
@@ -58,7 +58,7 @@ int efcp_receive_pdu(pdu_t pdu)
 
 /* Syscalls */
 
-cep_id_t efcp_create(connection_t *connection)
+cep_id_t efcp_create(struct connection_t *connection)
 {
 	LOG_DBG("EFCP instance created");
 
