@@ -33,6 +33,7 @@ typedef unsigned char	utf8_t;
 typedef unsigned char	string_t;
 typedef uint		uint_t;
 typedef uint		response_reason_t;
+typedef uint            cep_id_t;
 
 /*
  * The value should be interpreted as false if the value is 0 or true
@@ -126,7 +127,7 @@ struct flow_spec_t {
 	 * In milliseconds, indicates the maximum jitter allowed
 	 * in this flow. A value of 0 indicates 'do not care'
 	 */
-	uint_t              jitter;
+	uint_t               jitter;
 	/*
 	 * The maximum SDU size for the flow. May influence the choice
 	 * of the DIF where the flow will be created.
