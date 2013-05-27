@@ -79,3 +79,34 @@ SYSCALL_DEFINE1(kipcm_call, int param)
         LOG_DBG("TESTING SYSCALL: %d", param);
 	return 0;
 };*/
+
+int  read_sdu(port_id_t port_id,
+	      bool_t block,
+	      struct sdu_t * sdu)
+{
+	return 0;
+}
+
+int  write_sdu(port_id_t            port_id,
+	       const struct sdu_t * sdu)
+{
+	return 0;
+}
+
+int  ipc_process_create(const struct name_t * name,
+			ipc_process_id_t      ipcp_id,
+			enum dif_type_t       type)
+{
+	return 0;
+}
+
+int  ipc_process_configure(ipc_process_id_t ipcp_id,
+			   const struct     ipc_process_conf_t *configuration)
+{
+	return 0;
+}
+
+int  ipc_process_destroy(ipc_process_id_t ipcp_id)
+{
+	return 0;
+}

@@ -212,11 +212,11 @@ struct callback_head {
 };
 #define rcu_head callback_head
 typedef int ipc_process_id_t;
-typedef enum {
+enum dif_type_t {
 	DIF_TYPE_NORMAL,
 	DIF_TYPE_SHIM_IP,
 	DIF_TYPE_SHIM_ETH
-} dif_type_t;
+};
 
 #endif /*  __ASSEMBLY__ */
 #endif /* _LINUX_TYPES_H */
