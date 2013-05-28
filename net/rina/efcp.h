@@ -23,6 +23,7 @@
 #define RINA_EFCP_H
 
 #include "common.h"
+#include "kipcm.h"
 
 struct efcp_conf_t {
 
