@@ -13,7 +13,7 @@ AC_INIT([RINA Libraries],
 AC_PREREQ([2.68])
 
 AC_CONFIG_HEADERS([src/config.h])
-AC_CONFIG_SRCDIR([src/main.c])
+AC_CONFIG_SRCDIR([src/librina.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -55,11 +55,27 @@ AX_PKG_SWIG([2.0], [
     AC_MSG_ERROR([Your system lacks of SWIG (>2.0) support])
 ])
 
+AX_PROG_JAVAC
+AX_JNI_INCLUDE_DIR
+# XXX FIXME: Ugly as hell ...
+JNI_CPPFLAGS=""
+for JNI_INCLUDE_DIR in $JNI_INCLUDE_DIRS ;
+do
+        JNI_CPPFLAGS="$JNI_CPPFLAGS $JNI_INCLUDE_DIR"
+done
+AC_SUBST(JNI_CPPFLAGS, $JNI_CPPFLAGS)
+AX_PROG_JAR
+
 AC_CONFIG_FILES([
     Makefile
 
     include/Makefile
     src/Makefile
+
+    wrap/Makefile
+    wrap/java/Makefile
+
+    test/Makefile
 ])
 
 AC_OUTPUT
