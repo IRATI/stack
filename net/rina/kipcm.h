@@ -85,7 +85,7 @@ struct ipc_process_conf_t {
 	 */
 
 	/* The DIF type discriminator */
-	dif_type_t type;
+	enum dif_type_t type;
 
 	union{
 		struct normal_ipc_process_conf_t *normal_ipcp_conf;
