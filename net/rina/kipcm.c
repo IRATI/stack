@@ -95,7 +95,7 @@ int  write_sdu(port_id_t            port_id,
 
 int  ipc_process_create(const struct name_t * name,
 			ipc_process_id_t      ipcp_id,
-			enum dif_type_t       type)
+			dif_type_t       type)
 {
 	return 0;
 }
