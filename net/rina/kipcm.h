@@ -25,6 +25,7 @@
 #include "common.h"
 #include "efcp.h"
 #include "rmt.h"
+#include "shim-eth.h"
 
 typedef enum {
 	DIF_TYPE_NORMAL,
@@ -147,18 +148,18 @@ struct ipc_process_shim_tcp_udp_t {
 struct ipc_process_data_t {
 	
 	/* The DIF type descriminator */
-	dif_type_t type;
+	enum dif_type_t type;
 
 	union {
 		struct normal_ipc_process_t *normal_ipcp;
-		struct ipc_process_shim_ethernet_t *shim_the_ipcp;
+		struct ipc_process_shim_ethernet_t *shim_eth_ipcp;
 		struct ipc_process_shim_tcp_udp_t *shim_tcp_udp_ipcp;
 	} ipc_process;
 
 };
 
 struct ipc_process_t {
-	dif_type_t type;
+	enum dif_type_t type;
 	struct ipc_process_data_t data;
 };
 
@@ -213,5 +214,16 @@ void kipcm_exit(void);
 int  kipcm_add_entry(port_id_t port_id, const struct flow_t * flow);
 int  kipcm_remove_entry(port_id_t port_id);
 int  kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu);
+int  read_sdu(port_id_t      port_id,
+	      bool_t         block,
+	      struct sdu_t * sdu);
+int  write_sdu(port_id_t            port_id,
+	       const struct sdu_t * sdu);
+int  ipc_process_create(const struct name_t * name,
+			ipc_process_id_t      ipcp_id,
+			enum dif_type_t       type);
+int  ipc_process_configure(ipc_process_id_t ipcp_id,
+			   const struct     ipc_process_conf_t *configuration);
+int  ipc_process_destroy(ipc_process_id_t ipcp_id);
 
 #endif
