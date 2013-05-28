@@ -900,7 +900,7 @@ asmlinkage long sys_kcmp(pid_t pid1, pid_t pid2, int type,
 asmlinkage long sys_finit_module(int fd, const char __user *uargs, int flags);
 asmlinkage long sys_ipc_process_create(struct name_t *name, 
 					ipc_process_id_t ipcp_id, 
-					dif_type_t dif_type);
+					enum dif_type_t dif_type);
 
 asmlinkage long sys_kipcm_call(int param);
 #endif
