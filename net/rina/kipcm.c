@@ -73,12 +73,12 @@ int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
 //	LOG_DBG("syscall ipc_process_create");
 //	
 //	return 0;
-//}
+//}*/
 SYSCALL_DEFINE1(kipcm_call, int param)
 {
         LOG_DBG("TESTING SYSCALL: %d", param);
 	return 0;
-};*/
+};
 
 int  read_sdu(port_id_t port_id,
 	      bool_t block,

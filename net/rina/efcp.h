@@ -75,7 +75,7 @@ struct efcp_instance_t {
 	struct dtcp_instance_t *dtcp_instance;
 	
 	/* Pointer to the flow data structure of the K-IPC Manager */
-	flow_t          *flow;
+	struct flow_t          *flow;
 };
 
 struct dtp_instance_t {

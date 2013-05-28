@@ -25,14 +25,13 @@
 #include "common.h"
 #include "efcp.h"
 #include "rmt.h"
-#include "shim_eth.h"
+#include "shim-eth.h"
 
-/*typedef enum {
+typedef enum {
 	DIF_TYPE_NORMAL,
 	DIF_TYPE_SHIM_IP,
 	DIF_TYPE_SHIM_ETH
 } dif_type_t;
-*/
 
 struct normal_ipc_process_conf_t {
 	/*
@@ -87,7 +86,7 @@ struct ipc_process_conf_t {
 	 */
 
 	/* The DIF type discriminator */
-	dif_type_t type;
+	enum dif_type_t type;
 
 	union{
 		struct normal_ipc_process_conf_t *normal_ipcp_conf;
@@ -149,7 +148,7 @@ struct ipc_process_shim_tcp_udp_t {
 struct ipc_process_data_t {
 	
 	/* The DIF type descriminator */
-	dif_type_t type;
+	enum dif_type_t type;
 
 	union {
 		struct normal_ipc_process_t *normal_ipcp;
@@ -160,7 +159,7 @@ struct ipc_process_data_t {
 };
 
 struct ipc_process_t {
-	dif_type_t type;
+	enum dif_type_t type;
 	struct ipc_process_data_t data;
 };
 
