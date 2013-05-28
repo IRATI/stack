@@ -34,6 +34,12 @@ typedef unsigned char	string_t;
 typedef uint		uint_t;
 typedef uint		response_reason_t;
 typedef uint            cep_id_t;
+typedef uint16_t        address_t;
+typedef uint            seq_num_t;
+/* FIXME : The PDU type should be defined correctly in the near future */
+typedef uint            pdu_type_t;
+/* FIXME : The qos_id_t should be defined correctly in the near future */
+typedef uint            qos_id_t;
 
 /*
  * The value should be interpreted as false if the value is 0 or true
@@ -144,9 +150,42 @@ struct pci_t {
 	qos_id_t qos_id;
 	seq_num_t sequence_number;
 };
+
 struct pdu_t {
 	struct pci_t    *pci;
 	struct buffer_t *buffer;
+};
+
+struct connection_t {
+	/* This structure defines an EFCP connection */
+
+	/* The port_id this connection is bound to */
+	port_id_t port_id;
+	
+	/*
+	 * The address of the IPC Process that is the source of this
+	 * connection
+	 */
+	address_t source_address;
+	
+	/*
+	 * The address of the IPC Process that is the destination of
+	 * this connection
+	 */
+	address_t destination_address;
+	
+	/* The source connection endpoint Id */
+	cep_id_t source_cep_id;
+	
+	/* The destination connection endpoint id */
+	cep_id_t dest_cep_id;
+	
+	/* The QoS id */
+	qos_id_t qos_id;
+	
+	/* FIXME : policy type remains undefined */
+	/* The list of policies associated with this connection */
+	/* policy_t ** policies; */
 };
 
 #endif
