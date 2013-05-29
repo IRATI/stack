@@ -323,6 +323,9 @@ int write_sdu(port_id_t port_id, sdu_t * sdu);
 int get_dif_properties(const name_t * dif_name,
                        dif_properties_t * dif_properties);
 
+int get_dif_properties2(const name_t * dif_name,
+                       dif_properties_t ** dif_properties);
+
 /*
  * Description
  *

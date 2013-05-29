@@ -68,3 +68,9 @@
 %include "librina-faux-sockets.h"
 %include "librina-cdap.h"
 %include "librina-sdu-protection.h"
+
+/*
+ * make dif_properties_t * into an array
+ */
+%include <carrays.i>
+%array_functions(dif_properties_t, dif_properties_t_array);

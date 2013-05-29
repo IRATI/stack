@@ -212,13 +212,20 @@ int write_sdu(port_id_t port_id, sdu_t * sdu)
  *
  * Outputs
  *
- * dif_properties: The properties of the requested DIFs.
+ * dif_properties: A pointer to an array of properties of the requested DIFs.
+ * int: The number of elements in the array (0 or more), if the call is
+ * successful. A negative number indicating an error if the call fails.
  */
 int get_dif_properties(const name_t * dif_name,
                        dif_properties_t * dif_properties)
 {
 	LOG_DBG("Get DIF properties called");
-	return 0;
+	dif_properties[0].max_sdu_size=300;
+	dif_properties[0].dif_name.process_name = "Test.DIF";
+	dif_properties[1].max_sdu_size=400;
+	dif_properties[1].dif_name.process_name = "Test1.DIF";
+
+	return 2;
 }
 
 /*

@@ -73,5 +73,19 @@ public class SWIGTest {
 		rina.ev_poll(event);
 		System.out.println("Event poll called, got an event");
 		System.out.println("Got an event of type " +event.getType());
+		
+		dif_properties_t array = rina.new_dif_properties_t_array(10);
+		System.out.println("Calling get DIF properties");
+		int members = rina.get_dif_properties(difName, array);
+		System.out.println("Get DIF properties called, got properties of "+members+" DIFs");
+		if (members > 0){
+			dif_properties_t allDIFProperties[] = new dif_properties_t[members];
+			for(int i=0; i<members; i++){
+				allDIFProperties[i] = rina.dif_properties_t_array_getitem(array, i);
+				System.out.println("DIF name: "+allDIFProperties[i].getDif_name().getProcess_name());
+				System.out.println("   Max SDU size: "+allDIFProperties[i].getMax_sdu_size());
+			}
+		}
+		
 	}
 }
