@@ -6,6 +6,8 @@
 
 EXTRA_DIST =
 
+if BUILD_WRAPPERS_JAVA
+
 edit = $(SED)							\
         -e 's|@abs_top_builddir[@]|$(abs_top_builddir)|g'	\
         -e 's|@builddir[@]|$(builddir)|g'			\
@@ -27,6 +29,7 @@ CLEANFILES = run-java
 
 noinst_SCRIPTS = run-java
 
-EXTRA_DIST += run-java.in
+endif
 
+EXTRA_DIST += run-java.in
 EXTRA_DIST += SWIGTest.java

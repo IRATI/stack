@@ -4,4 +4,8 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-SUBDIRS = java
+SUBDIRS =
+
+if BUILD_WRAPPERS_JAVA
+SUBDIRS += java
+endif

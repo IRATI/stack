@@ -63,3 +63,6 @@
 
 /* Version number of package */
 #undef VERSION
+
+/* Define if you want java-wrappers */
+#undef WANT_JAVA_WRAPPERS

@@ -39,32 +39,50 @@ AC_PROG_CXX_C_O
 
 LT_INIT
 
-AX_PKG_SWIG([2.0], [
-    #
-    # SWIG version > 2.0.4 && < 2.0.8 have a bug that prevent correct wrappers
-    # generation
-    #
-
-    SWIG_VERSION=`$SWIG -version 2>&1 | grep 'SWIG Version' | sed 's/.*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/g'`
-    AX_COMPARE_VERSION($SWIG_VERSION, le, [2.0.4],,[
-        AX_COMPARE_VERSION($SWIG_VERSION, ge, [2.0.8],,[
-            AC_MSG_ERROR([SWIG versions in 2.0.4, ..., 2.0.8 range won't compile])
-        ])
-    ])
-], [
-    AC_MSG_ERROR([Your system lacks of SWIG (>2.0) support])
+build_wrappers=no
+build_wrappers_java=no
+AX_SELECTOR_ENABLE([java-wrappers],[
+    build_wrappers_java=yes
+],[
+    build_wrappers_java=no
+])
+AS_IF([test "$build_wrappers_java" = "yes"],[
+    build_wrappers=yes
 ])
 
-AX_PROG_JAVAC
-AX_JNI_INCLUDE_DIR
-# XXX FIXME: Ugly as hell ...
-JNI_CPPFLAGS=""
-for JNI_INCLUDE_DIR in $JNI_INCLUDE_DIRS ;
-do
-        JNI_CPPFLAGS="$JNI_CPPFLAGS $JNI_INCLUDE_DIR"
-done
-AC_SUBST(JNI_CPPFLAGS, $JNI_CPPFLAGS)
-AX_PROG_JAR
+AS_IF([test "$build_wrappers" = "yes"],[
+    AX_PKG_SWIG([2.0], [
+        #
+        # SWIG version > 2.0.4 && < 2.0.8 have a bug preventing correct
+        # wrappers generation
+        #
+    
+        SWIG_VERSION=`$SWIG -version 2>&1 | grep 'SWIG Version' | sed 's/.*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/g'`
+        AX_COMPARE_VERSION($SWIG_VERSION, le, [2.0.4],,[
+            AX_COMPARE_VERSION($SWIG_VERSION, ge, [2.0.8],,[
+                AC_MSG_ERROR([SWIG versions in 2.0.4, ..., 2.0.8 range won't compile])
+            ])
+        ])
+    ], [
+        AC_MSG_ERROR([Your system lacks of SWIG (>2.0) support, wrappers generation is not be possible])
+    ])
+])
+
+AS_IF([test "$build_wrappers_java" = "yes"],[
+    AX_PROG_JAVAC
+    AX_JNI_INCLUDE_DIR
+
+    # XXX FIXME: Ugly as hell ...
+    JNI_CPPFLAGS=""
+    for JNI_INCLUDE_DIR in $JNI_INCLUDE_DIRS ;
+    do
+            JNI_CPPFLAGS="$JNI_CPPFLAGS $JNI_INCLUDE_DIR"
+    done
+    AC_SUBST(JNI_CPPFLAGS, $JNI_CPPFLAGS)
+    AX_PROG_JAR
+])
+
+AM_CONDITIONAL(BUILD_WRAPPERS_JAVA, [test $build_wrappers_java = yes])
 
 AC_CONFIG_FILES([
     Makefile
