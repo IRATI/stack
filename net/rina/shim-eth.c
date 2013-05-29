@@ -116,7 +116,7 @@ int shim_eth_unregister_application(struct name_t * name)
 	return 0;
 }
 
-int shim_eth_write_sdu(port_id_t port_id, struct sdu_t * sdu)
+int shim_eth_write_sdu(port_id_t port_id, const struct sdu_t * sdu)
 {
 	LOG_DBG("Written SDU");
 
@@ -134,3 +134,5 @@ void shim_eth_exit(void)
 {
         LOG_DBG("exit");
 }
+
+ipc_process_id_t shim_eth_create(struct ipc_config_t * config)
