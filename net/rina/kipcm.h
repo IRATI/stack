@@ -26,6 +26,7 @@
 #include "efcp.h"
 #include "rmt.h"
 #include "shim-eth.h"
+#include <linux/hashtable.h>
 
 typedef enum {
 	DIF_TYPE_NORMAL,

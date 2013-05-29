@@ -25,9 +25,9 @@
 #include "shim-eth.h"
 
 LIST_HEAD(shim_eth);
-
+/* FIXME : This isn't needed and conceptually is wrong */
 static ipc_process_id_t count = 0;
-
+/* FIXME : This function should be removed in the near future, it's wrong */
 ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 {
         /* Unsure if I can call return count++ and count gets incremented after
@@ -135,4 +135,18 @@ void shim_eth_exit(void)
         LOG_DBG("exit");
 }
 
-ipc_process_id_t shim_eth_create(struct ipc_config_t * config)
+int shim_eth_ipc_create(const struct name_t * name,
+			ipc_process_id_t      ipcp_id)
+{
+	LOG_DBG("Created shim ETH IPC process");
+
+	return 0;
+}
+
+int shim_eth_ipc_configure(ipc_process_id_t ipcp_id,
+			   const struct ipc_process_conf_t *configuration)
+{
+	LOG_DBG("Configured shim ETH IPC Process");
+
+	return 0;
+}
