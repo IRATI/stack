@@ -4,23 +4,23 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-SWIG_DEBUG      =
-SWIG_FLAGS      = $(SWIG_DEBUG) -Wall -nocpperraswarn -Werror
+SWIG_DEBUG      = -v
+SWIG_FLAGS      = $(SWIG_DEBUG) -Werror -Wall
 SWIG_JAVA_FLAGS = -java -package eu.irati.librina
-
-SWIG_DEBUG      += -v
 
 CLEANFILES =
 
 # XXX FIXME: Prerequisites for this rule are broken ...
-wrap.stamp: $(top_srcdir)/include/librina.i $(top_srcdir)/include/librina.h
+wrap.stamp: $(top_srcdir)/include/librina.i $(top_srcdir)/include/*.h
 	rm -f wrap.tmp
 	touch wrap.tmp
+	rm -r -f eu/irati/librina   &&			\
 	$(MKDIR_P) eu/irati/librina &&			\
 	$(SWIG) $(SWIG_FLAGS) $(SWIG_JAVA_FLAGS)	\
 		-o librina_java.c			\
 		-outdir ./eu/irati/librina		\
 		$(top_srcdir)/include/librina.i || {	\
+		echo "Cannot wrap input file" ;		\
 		rm -f wrap.tmp ;			\
 		rm -r -f eu/irati/librina ;		\
 		exit 1 ;				\

@@ -15,14 +15,13 @@ rm -f    aclocal.m4
 
 DIRS=". `cat configure.ac|grep AC_CONFIG_SUBDIRS|sed -e 's,^.*\[,,' -e 's,\].*,,'`"
 
-echo "${ME}: Bootstrapping $DIRS"
+echo "${ME}: Bootstrapping autotools"
 
 for i in $DIRS ; do
-    echo "${ME}: Bootstrapping directory $PWD"
-    (cd $i && autoreconf -i -f -Wall $@) || {
-        echo "${ME}: Cannot reconfigure $PWD"
+    (cd $i && echo "${ME}: Bootstrapping autotools in $PWD" && autoreconf -i -f -Wall $@) || {
+        echo "${ME}: Cannot bootstrap autotools into $PWD"
         exit 1
     }
 done
 
-echo "${ME}: Done"
+echo "${ME}: Autotools bootstrapped successfully"
