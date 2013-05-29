@@ -45,52 +45,19 @@
  */
 
 typedef struct {
-        /* Contains an application process naming information */
-
-        /*
-         * The process_name identifies an application process within the
-         * application process namespace. This value is required, it
-         * cannot be NULL. This name has global scope (it is defined by
-         * the chain of IDD databases that are linked together), and is
-         * assigned by an authority that manages the namespace that
-         * particular application name belongs to.
-         */
-	string_t * process_name;
-
-	/*
-	 * The process_instance identifies a particular instance of the
-	 * process. This value is optional, it may be NULL.
-	 */
-	string_t * process_instance;
-
-	/*
-	 * The entity_name identifies an application entity within the
-	 * application process. This value is optional, it may be NULL.
-	 */
-        string_t * entity_name;
-
-	/*
-	 * The entity_name identifies a particular instance of an entity
-	 * within the application process. This value is optional, it
-	 * may be NULL
-	 */
-   	string_t * entity_instance;
-} name_t;
-
-typedef struct {
 	/* This structure defines the characteristics of a flow */
 
 	/* Average bandwidth in bytes/s */
-	uint_range_t * average_bandwidth;
+	uint_range_t average_bandwidth;
 
 	/* Average bandwidth in SDUs/s */
-	uint_range_t * average_sdu_bandwidth;
+	uint_range_t average_sdu_bandwidth;
 
 	/* In milliseconds */
-	uint_range_t * peak_bandwidth_duration;
+	uint_range_t peak_bandwidth_duration;
 
 	/* In milliseconds */
-	uint_range_t * peak_sdu_bandwidth_duration;
+	uint_range_t peak_sdu_bandwidth_duration;
 
 	/* A value of 0 indicates 'do not care' */
 	double undetected_bit_error_rate;
@@ -132,17 +99,17 @@ typedef struct {
 
 	/* type maps to EVENT_FLOW_[REQUEST|RESPONSE]_RECEIVED */
 	uint32_t    type;
-	name_t *  source_application;
-	name_t *  destination_application;
+	name_t  source_application;
+	name_t  destination_application;
 
 	/* The flow characteristics */
-	flow_spec_t * flow_spec;
+	flow_spec_t flow_spec;
 
 	/* The port id of the flow */
 	port_id_t  port_id;
 
 	/* Maps a response result */
-	response_reason_t * response_reason;
+	response_reason_t response_reason;
 } event_flow_t;
 
 typedef struct {
@@ -152,14 +119,14 @@ typedef struct {
 	port_id_t port_id;
 
 	/* The SDU received */
-	sdu_t *   sdu;
+	sdu_t sdu;
 } event_sdu_t;
 
 typedef struct {
 	/* Contains the information of an event related to application registration*/
 
 	/* The application affected by the event */
-	name_t *  application_name;
+	name_t  application_name;
 
 	/* DIFs affected by the event */
 	name_t ** dif_names;
@@ -169,7 +136,6 @@ typedef enum {
 	/* Defines the different events relevant to an application process*/
 
 	EVENT_ALLOCATE_FLOW_REQUEST_RECEIVED,
-	EVENT_ALLOCATE_FLOW_RESPONSE_RECEIVED,
 	EVENT_FLOW_DEALLOCATED,
 	EVENT_APPLICATION_REGISTRATION_CANCELED,
 	EVENT_SDU_RECEIVED
@@ -191,13 +157,13 @@ typedef struct {
 	/* This structure defines the properties of a QoS cube */
 
 	/* The QoS cube name */
-	string_t * name;
+	string_t name;
 
 	/* The QoS cube id */
 	int id;
 
 	/* The flow characteristics supported by this QoS cube */
-	flow_spec_t * flow_spec;
+	flow_spec_t flow_spec;
 } qos_cube_t;
 
 typedef struct {
@@ -207,10 +173,7 @@ typedef struct {
 	 */
 
 	/* The name of the DIF */
-	name_t   dif_name;
-
-	/* The QoS cubes supported by the DIF */
-	qos_cube_t ** qos_cubes;
+	name_t dif_name;
 
 	/*
 	 * The maximum SDU size this DIF can handle (writes with bigger
@@ -218,6 +181,9 @@ typedef struct {
 	 * bigger than this size
 	 */
 	int  max_sdu_size;
+
+	/* The QoS cubes supported by the DIF */
+	qos_cube_t ** qos_cubes;
 } dif_properties_t;
 
 typedef int (* event_filter_t)(const event_t * event);
@@ -310,8 +276,8 @@ port_id_t allocate_flow_request(const name_t * source,
  * optional reason explaining why and indications if a response should
  * be returned to the flow requestor.
  */
-int allocate_flow_response(const port_id_t * port_id,
-                           const response_reason_t * response);
+int allocate_flow_response(port_id_t port_id,
+                           const response_reason_t response);
 
 /*
  * Description

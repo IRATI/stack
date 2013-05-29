@@ -18,6 +18,39 @@
 
 %include "stdint.i"
 
+/* 
+ * unsigned char * typemaps. 
+ * These are input typemaps for mapping a Java byte[] array to a C char array.
+ * Note that as a Java array is used and thus passeed by reference, the C routine 
+ * can return data to Java via the parameter.
+ *
+ * Example usage wrapping:
+ *   void foo(unsigned char *array);
+ *  
+ * Java usage:
+ *   byte b[] = new byte[20];
+ *   modulename.foo(b);
+ */
+%typemap(jni) unsigned char * "jbyteArray"
+%typemap(jtype) unsigned char * "byte[]"
+%typemap(jstype) unsigned char * "byte[]"
+%typemap(in) unsigned char * {
+  $1 = (unsigned char *) JCALL2(GetByteArrayElements, jenv, $input, 0); 
+}
+
+%typemap(argout) unsigned char * {
+  JCALL3(ReleaseByteArrayElements, jenv, $input, (jbyte *) $1, 0); 
+}
+
+%typemap(javain) unsigned char * "$javainput"
+
+%typemap(javaout) unsigned char* {
+    return $jnicall;
+ }
+
+/* Prevent default freearg typemap from being used */
+%typemap(freearg) unsigned char * ""
+
 %{
 #include "librina-common.h"
 #include "librina-application.h"

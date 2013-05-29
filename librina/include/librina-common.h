@@ -28,8 +28,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
-/* A generic UTF-8 encoded string */
-typedef unsigned char string_t;
+/* A generic UTF-16 encoded string */
+typedef char * string_t;
 
 /* The local identifier of a flow, unique within a system */
 typedef uint16_t port_id_t;
@@ -43,14 +43,12 @@ typedef int bool_t;
 
 /* This structure represents raw data */
 typedef struct {
-	char * data;
+	unsigned char * data;
 	size_t size;
 } buffer_t;
 
 /* An SDU */
-typedef struct {
-	buffer_t * buffer;
-} sdu_t;
+typedef buffer_t sdu_t;
 
 /*
  * This structure represents a range of integer values
@@ -80,5 +78,38 @@ typedef int        ipc_process_id_t;
 
 /* A NULL-terminated string describing why an operation was unsuccessful */
 typedef string_t   response_reason_t;
+
+typedef struct {
+        /* Contains an application process naming information */
+
+        /*
+         * The process_name identifies an application process within the
+         * application process namespace. This value is required, it
+         * cannot be NULL. This name has global scope (it is defined by
+         * the chain of IDD databases that are linked together), and is
+         * assigned by an authority that manages the namespace that
+         * particular application name belongs to.
+         */
+	string_t process_name;
+
+	/*
+	 * The process_instance identifies a particular instance of the
+	 * process. This value is optional, it may be NULL.
+	 */
+	string_t process_instance;
+
+	/*
+	 * The entity_name identifies an application entity within the
+	 * application process. This value is optional, it may be NULL.
+	 */
+    string_t entity_name;
+
+	/*
+	 * The entity_name identifies a particular instance of an entity
+	 * within the application process. This value is optional, it
+	 * may be NULL
+	 */
+   	string_t entity_instance;
+} name_t;
 
 #endif
