@@ -4,18 +4,19 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-ACLOCAL_AMFLAGS      = -I m4
-DISTCLEANFILES       =
-MAINTAINERCLEANFILES =
-BUILT_SOURCES        =
+ACLOCAL_AMFLAGS           = -I m4
+DISTCLEANFILES            =
+MAINTAINERCLEANFILES      =
+BUILT_SOURCES             =
+DISTCHECK_CONFIGURE_FLAGS = --enable-java-wrappers
 
-SUBDIRS              =				\
+SUBDIRS =					\
 	include					\
 	src					\
 	wrap					\
 	test
 
-EXTRA_DIST     =				\
+EXTRA_DIST =					\
 	bootstrap				\
 	build-aux/git-version-gen		\
 	build-aux/gitlog-to-changelog		\
