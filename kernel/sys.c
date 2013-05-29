@@ -2244,5 +2244,4 @@ int orderly_poweroff(bool force)
 	schedule_work(&poweroff_work);
 	return 0;
 }
-
 EXPORT_SYMBOL_GPL(orderly_poweroff);
