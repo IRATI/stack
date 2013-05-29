@@ -20,9 +20,10 @@
 
 #define RINA_PREFIX "kipcm"
 
+#include <linux/linkage.h>
+
 #include "logs.h"
 #include "kipcm.h"
-#include <linux/syscalls.h>
 
 int kipcm_init()
 {
@@ -67,21 +68,8 @@ int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
 	return 0;
 }
 
-//FIXME: Define ipc_process_create
-//SYSCALL_DEFINE3(ipc_process_create, const struct name_t *name, ipc_process_id_t ipcp_id, dif_type_t type)
-//{
-//	LOG_DBG("syscall ipc_process_create");
-//	
-//	return 0;
-//}
-SYSCALL_DEFINE1(kipcm_call, int, param)
-{
-        LOG_DBG("TESTING SYSCALL: %d", param);
-	return 0;
-};
-
-int  read_sdu(port_id_t port_id,
-	      bool_t block,
+int  read_sdu(port_id_t      port_id,
+	      bool_t         block,
 	      struct sdu_t * sdu)
 {
 	return 0;
@@ -95,13 +83,13 @@ int  write_sdu(port_id_t            port_id,
 
 int  ipc_process_create(const struct name_t * name,
 			ipc_process_id_t      ipcp_id,
-			dif_type_t       type)
+			dif_type_t            type)
 {
 	return 0;
 }
 
-int  ipc_process_configure(ipc_process_id_t ipcp_id,
-			   const struct     ipc_process_conf_t *configuration)
+int  ipc_process_configure(ipc_process_id_t                  ipcp_id,
+			   const struct ipc_process_conf_t * configuration)
 {
 	return 0;
 }

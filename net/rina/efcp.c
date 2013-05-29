@@ -58,7 +58,7 @@ int efcp_receive_pdu(struct pdu_t pdu)
 
 /* Syscalls */
 
-cep_id_t efcp_create(struct connection_t *connection)
+cep_id_t efcp_create(struct connection_t * connection)
 {
 	LOG_DBG("EFCP instance created");
 
@@ -73,7 +73,7 @@ int efcp_destroy(cep_id_t cep_id)
 }
 
 int efcp_update(cep_id_t cep_id,
-		    	cep_id_t dest_cep_id)
+                cep_id_t dest_cep_id)
 {
 	LOG_DBG("EFCP instance updated");
 
