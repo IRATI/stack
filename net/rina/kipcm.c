@@ -90,18 +90,28 @@ int  read_sdu(port_id_t port_id,
 int  write_sdu(port_id_t            port_id,
 	       const struct sdu_t * sdu)
 {
+	if (shim_eth_write_sdu(port_id, sdu))
+		LOG_DBG("Error writing SDU to the SHIM ETH");
 	return 0;
 }
 
 int  ipc_process_create(const struct name_t * name,
 			ipc_process_id_t      ipcp_id,
-			dif_type_t       type)
+			dif_type_t 	      type)
 {
+	switch (type) {
+	case DIF_TYPE_SHIM_ETH:
+		break;
+	case DIF_TYPE_NORMAL:
+		break;
+	case DIF_TYPE_SHIM_IP:
+		break;
+	}
 	return 0;
 }
 
-int  ipc_process_configure(ipc_process_id_t ipcp_id,
-			   const struct     ipc_process_conf_t *configuration)
+int  ipc_process_configure(ipc_process_id_t                 ipcp_id,
+			   const struct ipc_process_conf_t *configuration)
 {
 	return 0;
 }
