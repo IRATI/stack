@@ -45,56 +45,6 @@
  */
 
 typedef struct {
-	/* This structure defines the characteristics of a flow */
-
-	/* Average bandwidth in bytes/s */
-	uint_range_t average_bandwidth;
-
-	/* Average bandwidth in SDUs/s */
-	uint_range_t average_sdu_bandwidth;
-
-	/* In milliseconds */
-	uint_range_t peak_bandwidth_duration;
-
-	/* In milliseconds */
-	uint_range_t peak_sdu_bandwidth_duration;
-
-	/* A value of 0 indicates 'do not care' */
-	double undetected_bit_error_rate;
-
-	/* Indicates if partial delivery of SDUs is allowed or not */
-	bool_t partial_delivery;
-
-	/* Indicates if SDUs have to be delivered in order */
-	bool_t ordered_delivery;
-
-	/*
-	 * Indicates the maximum gap allowed among SDUs, a gap of N SDUs
-	 * is considered the same as all SDUs delivered. A value of -1
-	 * indicates 'Any'
-	 */
-	int max_allowable_gap;
-
-	/*
-	 * In milliseconds, indicates the maximum delay allowed in this
-	 * flow. A value of 0 indicates 'do not care'
-	 */
-	uint32_t  delay;
-
-	/*
-	 * In milliseconds, indicates the maximum jitter allowed in this
-	 * flow. A value of 0 indicates 'do not care'
-	 */
-	uint32_t  jitter;
-
-	/*
-	 * The maximum SDU size for the flow. May influence the choice
-	 * of the DIF where the flow will be created.
-	 */
-	uint32_t  max_sdu_size;
-} flow_spec_t;
-
-typedef struct {
 	/* Contains the information of a single event affecting a flow*/
 
 	/* type maps to EVENT_FLOW_[REQUEST|RESPONSE]_RECEIVED */
@@ -152,29 +102,6 @@ typedef struct {
 		event_sdu_t 	   sdu;
         } data;
 } event_t;
-
-typedef struct {
-	/* This structure defines the properties of a QoS cube */
-
-	/* The QoS cube name */
-	string_t name;
-
-	/* The QoS cube id */
-	int id;
-
-	/* The flow characteristics supported by this QoS cube */
-	flow_spec_t flow_spec;
-} qos_cube_t;
-
-typedef struct {
-	/* This structure defines an array of QoS cubes */
-
-	/* Pointer to the first element of the array */
-	qos_cube_t * elements;
-
-	/* Number of elements in the array */
-	int size;
-} array_of_qos_cube_t;
 
 typedef struct {
 	/*

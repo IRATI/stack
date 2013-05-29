@@ -9,6 +9,7 @@ public class SWIGTest {
 	  }
 
 	public static void main(String[] args) {
+		System.out.println("************ TESTING LIBRINA-APPLICATION ************");
 		name_t sourceAppName = new name_t();
 		sourceAppName.setProcess_name("test/application/name/source");
 		sourceAppName.setProcess_instance("12");
@@ -100,5 +101,45 @@ public class SWIGTest {
 			}
 		}
 		rina.delete_dif_properties_t_array(array);
+		
+		System.out.println("\n************ TESTING LIBRINA-IPCMANAGER ************");
+		System.out.println("\nCALLING IPCM CREATE");
+		name_t ipcProcessName = new name_t();
+		ipcProcessName.setProcess_name("/ipcprocess/Barcelona.i2CAT");
+		ipcProcessName.setProcess_instance("1");
+		dif_type_t dif_type = dif_type_t.DIF_TYPE_SHIM_ETH;
+		rina.ipcm_create(ipcProcessName, dif_type, 25);
+		System.out.println("Created IPC Process");
+		
+		System.out.println("\nCALLING IPCM DESTROY");
+		rina.ipcm_destroy(25);
+		System.out.println("Destroyed IPC Process");
+		
+		System.out.println("\nCALLING IPCM ASSIGN");
+		dif_configuration_t difConfiguration = new dif_configuration_t();
+		difConfiguration.setDif_type(dif_type_t.DIF_TYPE_SHIM_ETH);
+		difConfiguration.setDif_name(difName);
+		difConfiguration.setMax_sdu_size(1500);
+		array_of_qos_cube_t qos_cubes = new array_of_qos_cube_t();
+		qos_cube_t array_head = rina.new_qos_cube_t_array(1);
+		qos_cube_t value = new qos_cube_t();
+		value.setId(2);
+		value.setName("Unreliable");
+		flow_spec_t flow_spec = new flow_spec_t();
+		flow_spec.setDelay(-1);
+		flow_spec.setJitter(-1);
+		value.setFlow_spec(flow_spec);
+		rina.qos_cube_t_array_setitem(array_head, 0, value);
+		qos_cubes.setElements(array_head);
+		qos_cubes.setSize(1);
+		difConfiguration.setCubes(qos_cubes);
+		specific_configuration_t specificConf = new specific_configuration_t();
+		shim_eth_dif_config_t shim_eth_config = new shim_eth_dif_config_t();
+		shim_eth_config.setDevice_name("eth0.4");
+		specificConf.setShim_eth_dif_config(shim_eth_config);
+		difConfiguration.setSpecific_conf(specificConf);
+		rina.ipcm_assign(25, difConfiguration);
+		System.out.println("Assigned IPC Process to DIF");
+		rina.delete_qos_cube_t_array(array_head);
 	}
 }
