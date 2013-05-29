@@ -33,25 +33,25 @@ public class SWIGTest {
 		flowSpec.setPartial_delivery(1);
 		flowSpec.setUndetected_bit_error_rate(0.00000000009);
 		
-		System.out.println("Calling allocate flow request");
+		System.out.println("\nCALLING ALLOCATE FLOW REQUEST");
 		int port_id = rina.allocate_flow_request(sourceAppName, destAppName, flowSpec);
 		System.out.println("Flow allocated, port id is "+port_id);
 		
-		System.out.println("Calling allocate flow response");
+		System.out.println("\nCALLING ALLOCATE FLOW RESPONSE");
 		rina.allocate_flow_response(port_id, "Flow accepted");
 		System.out.println("Accepted flow allocation");
 		
-		System.out.println("Calling deallocate flow");
+		System.out.println("\nCALLING DEALLOCATE FLOW");
 		rina.deallocate_flow(port_id);
 		System.out.println("Flow deallocated");
 		
 		name_t difName = new name_t();
 		difName.setProcess_name("rina-demo.DIF");
-		System.out.println("Calling register application");
+		System.out.println("\nCALLING REGISTER APPLICATION");
 		rina.register_application(sourceAppName, difName);
 		System.out.println("Application registered");
 		
-		System.out.println("Calling unregister application");
+		System.out.println("\nCALLING UNREGISTER APPLICATION");
 		rina.unregister_application(sourceAppName, difName);
 		System.out.println("Application unregistered");
 		
@@ -59,24 +59,26 @@ public class SWIGTest {
 		byte[] byteArray = "This is test data to be sent".getBytes();
 		sdu.setData(byteArray);
 		sdu.setSize(byteArray.length);
-		System.out.println("Calling write SDU");
+		System.out.println("\nCALLING WRITE SDU");
 		rina.write_sdu(port_id, sdu);
 		System.out.println("Wrote SDU");
 		
 		event_t event = new event_t();
-		System.out.println("Calling event wait");
+		System.out.println("\nCALLING EVENT WAIT");
 		rina.ev_wait(event);
 		System.out.println("Event wait called, got an event");
 		System.out.println("Got an event of type " +event.getType());
 		
-		System.out.println("Calling event poll");
+		System.out.println("\nCALLING EVENT POLL");
 		rina.ev_poll(event);
 		System.out.println("Event poll called, got an event");
 		System.out.println("Got an event of type " +event.getType());
 		
-		dif_properties_t array = rina.new_dif_properties_t_array(10);
-		System.out.println("Calling get DIF properties");
-		int members = rina.get_dif_properties(difName, array);
+		System.out.println("\nCALLING GET DIF PROPERTIES");
+		SWIGTYPE_p_int sizepointer = rina.new_intp();
+		dif_properties_t array = rina.get_dif_properties(difName, sizepointer);
+		int members = rina.intp_value(sizepointer);
+		rina.delete_intp(sizepointer);
 		System.out.println("Get DIF properties called, got properties of "+members+" DIFs");
 		if (members > 0){
 			dif_properties_t allDIFProperties[] = new dif_properties_t[members];
@@ -84,8 +86,19 @@ public class SWIGTest {
 				allDIFProperties[i] = rina.dif_properties_t_array_getitem(array, i);
 				System.out.println("DIF name: "+allDIFProperties[i].getDif_name().getProcess_name());
 				System.out.println("   Max SDU size: "+allDIFProperties[i].getMax_sdu_size());
+				if (allDIFProperties[i].getQos_cubes() != null){
+					qos_cube_t qos_array = allDIFProperties[i].getQos_cubes().getElements();
+					qos_cube_t qosCube = null;
+					for(int j=0; j<allDIFProperties[i].getQos_cubes().getSize(); j++){
+						qosCube = rina.qos_cube_t_array_getitem(qos_array, j);
+						System.out.println("   QoS cube name: "+qosCube.getName());
+						System.out.println("      Id: "+qosCube.getId());
+						System.out.println("      Delay: "+qosCube.getFlow_spec().getDelay());
+						System.out.println("      Jitter: "+qosCube.getFlow_spec().getJitter());
+					}
+				}
 			}
 		}
-		
+		rina.delete_dif_properties_t_array(array);
 	}
 }

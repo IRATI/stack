@@ -129,7 +129,7 @@ typedef struct {
 	name_t  application_name;
 
 	/* DIFs affected by the event */
-	name_t ** dif_names;
+	array_of_name_t  dif_names;
 } event_registration_t;
 
 typedef enum {
@@ -167,6 +167,16 @@ typedef struct {
 } qos_cube_t;
 
 typedef struct {
+	/* This structure defines an array of QoS cubes */
+
+	/* Pointer to the first element of the array */
+	qos_cube_t * elements;
+
+	/* Number of elements in the array */
+	int size;
+} array_of_qos_cube_t;
+
+typedef struct {
 	/*
 	 * This structure defines the service properties of a DIF; that
 	 * is, the properties of a DIF visible to an application
@@ -183,7 +193,7 @@ typedef struct {
 	int  max_sdu_size;
 
 	/* The QoS cubes supported by the DIF */
-	qos_cube_t ** qos_cubes;
+	array_of_qos_cube_t qos_cubes;
 } dif_properties_t;
 
 typedef int (* event_filter_t)(const event_t * event);
@@ -318,13 +328,12 @@ int write_sdu(port_id_t port_id, sdu_t * sdu);
  *
  * Outputs
  *
- * dif_properties: The properties of the requested DIFs.
+ * dif_properties_t: A pointer to an array of properties of the requested DIFs.
+ * size: The number of elements in the array (0 or more), if the call is
+ * successful. A negative number indicating an error if the call fails.
  */
-int get_dif_properties(const name_t * dif_name,
-                       dif_properties_t * dif_properties);
-
-int get_dif_properties2(const name_t * dif_name,
-                       dif_properties_t ** dif_properties);
+dif_properties_t *get_dif_properties(const name_t * dif_name,
+                       int * size);
 
 /*
  * Description

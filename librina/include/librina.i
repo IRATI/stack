@@ -73,4 +73,7 @@
  * make dif_properties_t * into an array
  */
 %include <carrays.i>
+%include "cpointer.i"
 %array_functions(dif_properties_t, dif_properties_t_array);
+%array_functions(qos_cube_t, qos_cube_t_array);
+%pointer_functions(int, intp);

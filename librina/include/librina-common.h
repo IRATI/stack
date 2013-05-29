@@ -112,4 +112,14 @@ typedef struct {
    	string_t entity_instance;
 } name_t;
 
+typedef struct {
+	/* This structure defines an array of name_t */
+
+	/* Pointer to the first element of the array */
+	name_t * elements;
+
+	/* Number of elements in the array */
+	int size;
+} array_of_name_t;
+
 #endif

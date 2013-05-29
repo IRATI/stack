@@ -212,20 +212,48 @@ int write_sdu(port_id_t port_id, sdu_t * sdu)
  *
  * Outputs
  *
- * dif_properties: A pointer to an array of properties of the requested DIFs.
- * int: The number of elements in the array (0 or more), if the call is
+ * dif_properties_t: A pointer to an array of properties of the requested DIFs.
+ * size: The number of elements in the array (0 or more), if the call is
  * successful. A negative number indicating an error if the call fails.
  */
-int get_dif_properties(const name_t * dif_name,
-                       dif_properties_t * dif_properties)
+dif_properties_t *get_dif_properties(const name_t * dif_name,
+                       int * size)
 {
 	LOG_DBG("Get DIF properties called");
+	*size = 2;
+	dif_properties_t * dif_properties;
+	dif_properties = (dif_properties_t *) malloc(2*sizeof(dif_properties_t));
+
 	dif_properties[0].max_sdu_size=300;
 	dif_properties[0].dif_name.process_name = "Test.DIF";
+	qos_cube_t * qos_cube;
+	qos_cube = (qos_cube_t *) malloc(2*sizeof(qos_cube_t));
+	qos_cube[0].name = "qos cube number 1";
+	qos_cube[0].id = 1;
+	qos_cube[0].flow_spec.jitter = 25;
+	qos_cube[0].flow_spec.delay = 300;
+	qos_cube[1].name = "qos cube number 2";
+	qos_cube[1].id = 2;
+	qos_cube[1].flow_spec.jitter = 100;
+	qos_cube[1].flow_spec.delay = 200;
+	dif_properties[0].qos_cubes.elements = qos_cube;
+	dif_properties[0].qos_cubes.size = 2;
+
 	dif_properties[1].max_sdu_size=400;
 	dif_properties[1].dif_name.process_name = "Test1.DIF";
+	qos_cube = (qos_cube_t *) malloc(2*sizeof(qos_cube_t));
+	qos_cube[0].name = "qos cube number 3";
+	qos_cube[0].id = 3;
+	qos_cube[0].flow_spec.jitter = 2;
+	qos_cube[0].flow_spec.delay = 200;
+	qos_cube[1].name = "qos cube number 4";
+	qos_cube[1].id = 4;
+	qos_cube[1].flow_spec.jitter = 80;
+	qos_cube[1].flow_spec.delay = 180;
+	dif_properties[1].qos_cubes.elements = qos_cube;
+	dif_properties[1].qos_cubes.size = 2;
 
-	return 2;
+	return dif_properties;
 }
 
 /*
