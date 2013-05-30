@@ -79,6 +79,49 @@ typedef int        ipc_process_id_t;
 /* A NULL-terminated string describing why an operation was unsuccessful */
 typedef string_t   response_reason_t;
 
+typedef enum {
+	/* Defines the type of RIB Object Value */
+
+	SHORT,
+	INT,
+	LONG,
+	FLOAT,
+	DOUBLE,
+	STRING,
+	ENCODED
+} rib_object_value_type_t;
+
+typedef union{
+	/* The value of a RIB object */
+
+	short short_value;
+	int int_value;
+	long long_value;
+	float float_value;
+	double double_value;
+	string_t string_value;
+	unsigned char * encoded_value;
+} rib_object_value_t;
+
+typedef struct{
+	/* Defines the contents of a RIB object */
+
+	/* The object class */
+	string_t object_class;
+
+	/* The object name */
+	string_t object_name;
+
+	/* The object instance */
+	long object_instance;
+
+	/* The type of value, used as the union value discriminator */
+	rib_object_value_type_t value_type;
+
+	/* The object value */
+	rib_object_value_t object_value;
+} rib_object_t;
+
 typedef struct {
         /* Contains an application process naming information */
 

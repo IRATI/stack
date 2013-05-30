@@ -141,5 +141,88 @@ public class SWIGTest {
 		rina.ipcm_assign(25, difConfiguration);
 		System.out.println("Assigned IPC Process to DIF");
 		rina.delete_qos_cube_t_array(array_head);
+		
+		System.out.println("\nCALLING IPCM NOTIFY REGISTER");
+		rina.ipcm_notify_register(25, difName);
+		System.out.println("Notified registartion to a DIF to IPC Process");
+		
+		System.out.println("\nCALLING IPCM NOTIFY UNREGISTER");
+		rina.ipcm_notify_unregister(25, difName);
+		System.out.println("Notified unregistartion from a DIF to IPC Process");
+		
+		System.out.println("\nCALLING IPCM ENROLL");
+		name_t supportingDIF = new name_t();
+		supportingDIF.setProcess_name("test.DIF");
+		rina.ipcm_enroll(25, difName, supportingDIF);
+		System.out.println("Made an IPC Process enroll to a DIF");
+		
+		System.out.println("\nCALLING IPCM DISCONNECT");
+		name_t neigbhor = new name_t();
+		neigbhor.setProcess_name("/ipcprocess/Pisa.Nextworks");
+		neigbhor.setProcess_instance("1");
+		rina.ipcm_disconnect(25, neigbhor);
+		System.out.println("Made an IPC Process disconnect from a neighbor");
+		
+		System.out.println("\nCALLING IPCM REGISTER APP");
+		rina.ipcm_register_app(sourceAppName, 25);
+		System.out.println("Requested to register an application to a DIF");
+		
+		System.out.println("\nCALLING IPCM NOTIFY APP REGISTRATION");
+		rina.ipcm_notify_app_registration(sourceAppName, "registration ok");
+		System.out.println("Notified an application about its registration request");
+		
+		System.out.println("\nCALLING IPCM UNREGISTER APP");
+		rina.ipcm_unregister_app(sourceAppName, 25);
+		System.out.println("Requested to unregister an application fro a DIF");
+		
+		System.out.println("\nCALLING IPCM NOTIFY APP UNREGISTRATION");
+		rina.ipcm_notify_app_unregistration(sourceAppName, "unregistration ok");
+		System.out.println("Notified an application about its unregistration request");
+		
+		System.out.println("\nCALLING IPCM ALLOCATE FLOW");
+		rina.ipcm_allocate_flow(sourceAppName, destAppName, flowSpec, port_id, 25);
+		System.out.println("Requested an IPC Process to allocate a flow");
+		
+		System.out.println("\nCALLING IPCM NOTIFY FLOW ALLOCATION");
+		rina.ipcm_notify_flow_allocation(sourceAppName, port_id, 25, "flow allocation ok");
+		System.out.println("Notified an application about the allocation of a flow");
+		
+		System.out.println("\nCALLING IPCM QUERY RIB");
+		sizepointer = rina.new_intp();
+		rib_object_t ribObjectsArrayHead = rina.ipcm_query_rib(25, "myClass", "/dif", 0, "test=filter", sizepointer);
+		members = rina.intp_value(sizepointer);
+		System.out.println("Queried RIB of IPC Process, got "+members+" RIB objects back");
+		rina.delete_intp(sizepointer);
+		rib_object_t currentRIBObject = null;
+		for(int i=0; i<members; i++){
+			currentRIBObject = rina.rib_object_t_array_getitem(ribObjectsArrayHead, i);
+			System.out.println("Object "+i+" class: "+currentRIBObject.getObject_class());
+			System.out.println("Object "+i+" name: "+currentRIBObject.getObject_name());
+			System.out.println("Object "+i+" instance: "+currentRIBObject.getObject_instance());
+			switch(currentRIBObject.getValue_type().swigValue()){
+			case 0:
+				System.out.println("Object "+i+" value: "+currentRIBObject.getObject_value().getShort_value());
+				break;
+			case 1:
+				System.out.println("Object "+i+" value: "+currentRIBObject.getObject_value().getInt_value());
+				break;
+			case 2:
+				System.out.println("Object "+i+" value: "+currentRIBObject.getObject_value().getLong_value());
+				break;
+			case 3:
+				System.out.println("Object "+i+" value: "+currentRIBObject.getObject_value().getFloat_value());
+				break;
+			case 4:
+				System.out.println("Object "+i+" value: "+currentRIBObject.getObject_value().getDouble_value());
+				break;
+			case 5:
+				System.out.println("Object "+i+" value: "+currentRIBObject.getObject_value().getString_value());
+				break;
+			case 6:
+				System.out.println("Object "+i+" value: "+currentRIBObject.getObject_value().getEncoded_value());
+				break;
+			}
+		}
+		rina.delete_rib_object_t_array(ribObjectsArrayHead);
 	}
 }
