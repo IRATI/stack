@@ -30,10 +30,6 @@
 #include "shim-eth.h"
 #include "shim-tcp-udp.h"
 
-MODULE_DESCRIPTION("RINA stack");
-MODULE_LICENSE("GPLv2");
-MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
-
 static __init int rina_init(void)
 {
         LOG_INFO("RINA stack v%d.%d.%d initializing",
@@ -70,3 +66,12 @@ static __exit void rina_exit(void)
 
 module_init(rina_init);
 module_exit(rina_exit);
+
+MODULE_DESCRIPTION("RINA stack");
+
+MODULE_LICENSE("GPL v2");
+
+MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+MODULE_AUTHOR("Leonardo Bergesio <leonardo.bergesio@i2cat.net>");
+MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
+MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
