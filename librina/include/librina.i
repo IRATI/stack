@@ -18,6 +18,7 @@
 
 %include <stdint.i>
 
+#ifdef SWIGJAVA
 /* 
  * unsigned char * typemaps. 
  * These are input typemaps for mapping a Java byte[] array to a C char array.
@@ -47,6 +48,7 @@
 %typemap(javaout) unsigned char* {
         return $jnicall;
  }
+#endif
 
 /* Prevent default freearg typemap from being used */
 %typemap(freearg) unsigned char * ""
