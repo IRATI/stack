@@ -16,7 +16,7 @@
 
 %module rina
 
-%include "stdint.i"
+%include <stdint.i>
 
 /* 
  * unsigned char * typemaps. 
@@ -31,21 +31,21 @@
  *   byte b[] = new byte[20];
  *   modulename.foo(b);
  */
-%typemap(jni) unsigned char * "jbyteArray"
-%typemap(jtype) unsigned char * "byte[]"
+%typemap(jni)    unsigned char * "jbyteArray"
+%typemap(jtype)  unsigned char * "byte[]"
 %typemap(jstype) unsigned char * "byte[]"
-%typemap(in) unsigned char * {
-  $1 = (unsigned char *) JCALL2(GetByteArrayElements, jenv, $input, 0); 
+%typemap(in)     unsigned char * {
+        $1 = (unsigned char *) JCALL2(GetByteArrayElements, jenv, $input, 0); 
 }
 
 %typemap(argout) unsigned char * {
-  JCALL3(ReleaseByteArrayElements, jenv, $input, (jbyte *) $1, 0); 
+        JCALL3(ReleaseByteArrayElements, jenv, $input, (jbyte *) $1, 0); 
 }
 
 %typemap(javain) unsigned char * "$javainput"
 
 %typemap(javaout) unsigned char* {
-    return $jnicall;
+        return $jnicall;
  }
 
 /* Prevent default freearg typemap from being used */
@@ -73,7 +73,8 @@
  * make dif_properties_t * into an array
  */
 %include <carrays.i>
-%include "cpointer.i"
+%include <cpointer.i>
+
 %array_functions(dif_properties_t, dif_properties_t_array);
 %array_functions(qos_cube_t, qos_cube_t_array);
 %array_functions(rib_object_t, rib_object_t_array);
