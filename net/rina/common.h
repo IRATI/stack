@@ -329,6 +329,10 @@ struct ipc_process_shim_tcp_udp_t {
 	struct shim_tcp_udp_instance_t *shim_tcp_udp_ipc_process;
 };
 
+
+/* FIXME : This structure and the following seem like having one struct for 
+ * the prize of two. Probably one should go
+ */ 
 struct ipc_process_data_t {
 	
 	/* The DIF type descriminator */

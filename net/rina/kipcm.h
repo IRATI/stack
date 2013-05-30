@@ -29,7 +29,11 @@
 #include "linux/hash.h"
 #include <linux/hashtable.h>
 
-#define ID_TO_IPCP_HASH_BITS 16
+struct id_to_ipcp_t {
+	ipc_process_id_t      id; /* key */
+	struct ipc_process_t *ipcprocess; /* Value*/
+	struct list_head      list;
+};
 
 struct kipc_t {
 	/*
@@ -45,8 +49,7 @@ struct kipc_t {
 	 * process_id. */
 	//FIXME Define HASH_TABLE
 	//HASH_TABLE(id_to_ipcp, ipc_process_id_t, struct ipc_process_t *);
-	struct hlist_head *id_to_ipcp;
-	
+	struct list_head *id_to_ipcp;
 
 };
 
