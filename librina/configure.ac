@@ -84,6 +84,18 @@ AS_IF([test "$build_wrappers_java" = "yes"],[
 
 AM_CONDITIONAL(BUILD_WRAPPERS_JAVA, [test $build_wrappers_java = yes])
 
+DX_DOXYGEN_FEATURE(ON)
+DX_DOT_FEATURE(ON)
+DX_HTML_FEATURE(ON)
+DX_CHM_FEATURE(OFF)
+DX_CHI_FEATURE(OFF)
+DX_MAN_FEATURE(ON)
+DX_RTF_FEATURE(OFF)
+DX_XML_FEATURE(OFF)
+DX_PDF_FEATURE(ON)
+DX_PS_FEATURE(OFF)
+DX_INIT_DOXYGEN($PACKAGE_NAME, [doxygen.cfg], [doc])
+
 AC_CONFIG_FILES([
     Makefile
 
@@ -94,6 +106,8 @@ AC_CONFIG_FILES([
     wrap/java/Makefile
 
     test/Makefile
+
+    doc/Makefile
 ])
 
 AC_OUTPUT

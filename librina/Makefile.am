@@ -14,7 +14,8 @@ SUBDIRS =					\
 	include					\
 	src					\
 	wrap					\
-	test
+	test					\
+	doc
 
 EXTRA_DIST =					\
 	bootstrap				\
