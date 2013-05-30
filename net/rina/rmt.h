@@ -23,9 +23,7 @@
 #define RINA_RMT_H
 
 struct rmt_conf_t {
-
 	/* To do, only a placeholder right now */
-
 };
 
 struct rmt_instance_t {

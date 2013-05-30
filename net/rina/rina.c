@@ -32,11 +32,14 @@
 
 MODULE_DESCRIPTION("RINA stack");
 MODULE_LICENSE("GPLv2");
-MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini>");
+MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
 
 static __init int rina_init(void)
 {
-        LOG_INFO("RINA stack v" RINA_VERSION_STRING " initializing");
+        LOG_INFO("RINA stack v%d.%d.%d initializing",
+                 RINA_VERSION_MAJOR(RINA_VERSION),
+                 RINA_VERSION_MINOR(RINA_VERSION),
+                 RINA_VERSION_MICRO(RINA_VERSION));
 
         kipcm_init();
         efcp_init();
