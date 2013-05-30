@@ -45,12 +45,11 @@ struct normal_ipc_process_conf_t {
 	/* The address of the IPC Process */
 	ipc_process_address_t address;
 
-	/* The configuration of the EFCP component */
-	struct efcp_conf_t *efcp_config;
+	/* EFCP component configuration */
+	struct efcp_conf_t *  efcp_config;
 
-	/* The configuration of the RMT component */
-
-	struct rmt_conf_t *rmt_config;
+	/* RMT component configuration */
+	struct rmt_conf_t *   rmt_config;
 };
 
 struct ipc_process_shim_ethernet_conf_t {
@@ -60,15 +59,13 @@ struct ipc_process_shim_ethernet_conf_t {
 	 */
 
 	/* The vlan id */
-	int vlan_id;
+	int        vlan_id;
 
 	/* The name of the device driver of the Ethernet interface */
-	string_t *device_name;
+	string_t * device_name;
 };
 
 struct ipc_process_shim_tcp_udp_conf_t {
-
-	
 	/*
 	 * Configuration of the kernel component of a shim TCP/UDP IPC 
 	 * Process
@@ -90,7 +87,7 @@ struct ipc_process_conf_t {
 	/* The DIF type discriminator */
 	dif_type_t type;
 
-	union{
+	union {
 		struct normal_ipc_process_conf_t *normal_ipcp_conf;
 		struct ipc_process_shim_ethernet_conf_t *shim_eth_ipcp_conf;
 		struct ipc_process_shim_tcp_udp_conf_t *shim_tcp_udp_ipcp_conf;
@@ -147,22 +144,14 @@ struct ipc_process_shim_tcp_udp_t {
 	struct shim_tcp_udp_instance_t *shim_tcp_udp_ipc_process;
 };
 
-struct ipc_process_data_t {
-	
-	/* The DIF type descriminator */
+struct ipc_process_t {
 	dif_type_t type;
 
 	union {
-		struct normal_ipc_process_t *normal_ipcp;
-		struct ipc_process_shim_ethernet_t *shim_eth_ipcp;
-		struct ipc_process_shim_tcp_udp_t *shim_tcp_udp_ipcp;
-	} ipc_process;
-
-};
-
-struct ipc_process_t {
-	dif_type_t type;
-	struct ipc_process_data_t data;
+		struct normal_ipc_process_t *        normal_ipcp;
+		struct ipc_process_shim_ethernet_t * shim_eth_ipcp;
+		struct ipc_process_shim_tcp_udp_t *  shim_tcp_udp_ipcp;
+	} data;
 };
 
 struct flow_t {
