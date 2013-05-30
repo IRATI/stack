@@ -19,7 +19,7 @@
 
 #include "librina-common.h"
 
-/*
+/**
  * This library provides the functionalities facilitating the IPC Manager to
  * perform the tasks related to IPC Process creation, deletion and
  * configuration; to serve requests by application processes; and to
@@ -35,38 +35,36 @@
  * coordinating with other IPC Managers to keep the IDD up to date.
  */
 
+/** Defines the different types of DIFs */
 typedef enum {
-	/* Defines the different types of DIFs */
-
 	DIF_TYPE_NORMAL,
 	DIF_TYPE_SHIM_IP,
 	DIF_TYPE_SHIM_ETH
 } dif_type_t;
 
+/**
+  * This is a generic placeholder which should be defined
+  * during the second prototype activities
+  */
 typedef struct {
-	/*
-	 * This is a generic placeholder which should be defined
-	 * during the second prototype activities
-	 */
+
 } policy_t;
 
+/** This structure defines an array of name_t */
 typedef struct {
-	/* This structure defines an array of name_t */
-
-	/* Pointer to the first element of the array */
+	/** Pointer to the first element of the array */
 	policy_t * elements;
 
-	/* Number of elements in the array */
+	/** Number of elements in the array */
 	int size;
 } array_of_policy_t;
 
+/** Encapsulates the information to configure a normal IPC Process*/
 typedef struct {
-	/* Encapsulates the information to configure a normal IPC Process*/
-
-	/* The list of policies */
+	/** The list of policies */
 	array_of_policy_t policies;
 
-	/*
+	/**
 	 * The names of the DIFs that this DIFs has to use as N-1 DIFs.
 	 * Alternatively if it’s a shim-dif they could be the ethernet
 	 * interfaces
@@ -74,34 +72,33 @@ typedef struct {
 	array_of_name_t n_minus_1_dif_names;
 } normal_dif_config_t;
 
+/** Encapsulates the information to configure a normal IPC Process*/
 typedef struct {
-	/* Encapsulates the information to configure a normal IPC Process*/
-
-	/* The device name to which the shim DIF will be bound (a VLAN) */
+	/** The device name to which the shim DIF will be bound (a VLAN) */
 	string_t device_name;
 } shim_eth_dif_config_t;
 
+/**
+ * This union contains the configuration data specific to each
+ * type of DIF
+ */
 typedef union {
-	/*
-	 * This union contains the configuration data specific to each
-	 * type of DIF
-	 */
-
-	 /* Specific configuration of a normal DIF */
+	 /** Specific configuration of a normal DIF */
 	 normal_dif_config_t    normal_dif_config;
 
-	 /* Specific configuraiton of a shim DIF over Ethernet */
+	 /** Specific configuraiton of a shim DIF over Ethernet */
 	 shim_eth_dif_config_t  shim_eth_dif_config;
 } specific_configuration_t;
 
+/** Data that holds the configuration of an IPC Process */
 typedef struct {
-	/* The DIF type, used as the union discriminator */
+	/** The DIF type, used as the union discriminator */
 	dif_type_t dif_type;
 
-	/* The DIF name */
+	/** The DIF name */
 	name_t dif_name;
 
-	/*
+	/**
 	 * The maximum SDU size this DIF can handle (writes with bigger
 	 * SDUs will return an error, and read will never return an SDU
 	 * bigger than this size
@@ -111,17 +108,17 @@ typedef struct {
 	/* The QoS cubes supported by the DIF */
 	array_of_qos_cube_t cubes;
 
-	/*
+	/**
 	 * This union contains the configuration data specific to each
 	 * type of DIF
 	 */
     specific_configuration_t specific_conf;
 } dif_configuration_t;
 
-/* A regular expression */
+/** A regular expression */
 typedef string_t regex_t;
 
-/*
+/**
  * Description
  *
  * Invoked by the IPC Manager to instantiate a new IPC Process in the system.
@@ -138,7 +135,7 @@ int ipcm_create(const name_t * name,
 				dif_type_t type,
 				ipc_process_id_t ipc_process_id);
 
-/*
+/**
  * Description
  *
  * Invoked by the IPC Manager to delete an IPC Process from the system. The
@@ -150,7 +147,7 @@ int ipcm_create(const name_t * name,
  */
 int ipcm_destroy(ipc_process_id_t ipc_process_id);
 
-/*
+/**
  * Description
  *
  * Invoked by the IPC Manager to make an IPC Process in the system member of a
@@ -174,7 +171,7 @@ int ipcm_destroy(ipc_process_id_t ipc_process_id);
 int ipcm_assign(ipc_process_id_t ipc_process_id,
 				const dif_configuration_t * dif_configuration);
 
-/*
+/**
  * Description
  *
  * Invoked by the IPC Manager to notify an IPC Process that he has been
@@ -188,7 +185,7 @@ int ipcm_assign(ipc_process_id_t ipc_process_id,
 int ipcm_notify_register(ipc_process_id_t ipc_process_id,
 						name_t * dif_name);
 
-/*
+/**
  * Description
  *
  * Invoked by the IPC Manager to notify an IPC Process that he has been
@@ -202,7 +199,7 @@ int ipcm_notify_register(ipc_process_id_t ipc_process_id,
 int ipcm_notify_unregister(ipc_process_id_t ipc_process_id,
 							name_t * dif_name);
 
-/*
+/**
  * Description
  *
  * Invoked by the IPC Manager to trigger the enrollment of an IPC Process in
@@ -221,7 +218,7 @@ int ipcm_enroll(ipc_process_id_t ipc_process_id,
 				const name_t * dif_name,
 				const name_t * nm1_dif);
 
-/*
+/**
  * Description
  *
  * Invoked by the IPC Manager to force an IPC Process to deallocate all the N-1
@@ -238,7 +235,7 @@ int ipcm_enroll(ipc_process_id_t ipc_process_id,
 int ipcm_disconnect(ipc_process_id_t ipc_process_id,
 					const name_t * neighbor);
 
-/*
+/**
  * Description
  *
  * Invoked by the IPC Manager to register an application in a DIF through an
@@ -258,7 +255,7 @@ int ipcm_disconnect(ipc_process_id_t ipc_process_id,
 int ipcm_register_app(name_t * app_name,
 					  ipc_process_id_t ipc_process_id);
 
-/*
+/**
  * Description
  *
  * Invoked by the IPC Manager to notify an application about the result of the
@@ -274,7 +271,7 @@ int ipcm_register_app(name_t * app_name,
 int ipcm_notify_app_registration(name_t * app_name,
 								response_reason_t response_reason);
 
-/*
+/**
  * Description
  *
  * Invoked by the IPC Manager to unregister an application from a DIF. An
@@ -293,7 +290,7 @@ int ipcm_notify_app_registration(name_t * app_name,
 int ipcm_unregister_app(name_t * app_name,
 						ipc_process_id_t ipc_process_id);
 
-/*
+/**
  * Description
  *
  * Invoked by the IPC Manager to notify an application about the result of
@@ -309,7 +306,7 @@ int ipcm_unregister_app(name_t * app_name,
 int ipcm_notify_app_unregistration(name_t * app_name,
 						response_reason_t response_reason);
 
-/*
+/**
  * Description
  *
  * Invoked by the IPC Manager to request an IPC Process the allocation of a
@@ -334,7 +331,7 @@ int ipcm_allocate_flow(name_t * source,
 					port_id_t port_id,
 					ipc_process_id_t ipc_process_id);
 
-/*
+/**
  * Description
  *
  * Invoked by the IPC Manager to respond to the Application Process that
@@ -355,7 +352,7 @@ int ipcm_notify_flow_allocation(name_t * app_name,
 					ipc_process_id_t ipc_process_id,
 					response_reason_t response_reason);
 
-/*
+/**
  * Description
  *
  * This API is used by the IPC Manager to retrieve information from the RIB of a

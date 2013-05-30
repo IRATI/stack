@@ -19,7 +19,7 @@
 
 #include "librina-common.h"
 
-/*
+/**
  * The librina-application library provides the native RINA API,
  * allowing applications to i) express their availability to be
  * accessed through one or more DIFS (application registration);
@@ -44,47 +44,43 @@
  * (event_wait and event_poll).
  */
 
+/** Contains the information of a single event affecting a flow*/
 typedef struct {
-	/* Contains the information of a single event affecting a flow*/
-
-	/* type maps to EVENT_FLOW_[REQUEST|RESPONSE]_RECEIVED */
+	/** type maps to EVENT_FLOW_[REQUEST|RESPONSE]_RECEIVED */
 	uint32_t    type;
 	name_t  source_application;
 	name_t  destination_application;
 
-	/* The flow characteristics */
+	/** The flow characteristics */
 	flow_spec_t flow_spec;
 
-	/* The port id of the flow */
+	/** The port id of the flow */
 	port_id_t  port_id;
 
-	/* Maps a response result */
+	/** Maps a response result */
 	response_reason_t response_reason;
 } event_flow_t;
 
+/** Contains the information of an event that reports available SDUs*/
 typedef struct {
-	/* Contains the information of an event that reports available SDUs*/
-
-	/* The port id of the flow */
+	/** The port id of the flow */
 	port_id_t port_id;
 
-	/* The SDU received */
+	/** The SDU received */
 	sdu_t sdu;
 } event_sdu_t;
 
+/** Contains the information of an event related to application registration*/
 typedef struct {
-	/* Contains the information of an event related to application registration*/
-
-	/* The application affected by the event */
+	/** The application affected by the event */
 	name_t  application_name;
 
-	/* DIFs affected by the event */
+	/** DIFs affected by the event */
 	array_of_name_t  dif_names;
 } event_registration_t;
 
+/** Defines the different events relevant to an application process*/
 typedef enum {
-	/* Defines the different events relevant to an application process*/
-
 	EVENT_ALLOCATE_FLOW_REQUEST_RECEIVED,
 	EVENT_FLOW_DEALLOCATED,
 	EVENT_APPLICATION_REGISTRATION_CANCELED,
@@ -92,10 +88,10 @@ typedef enum {
 } event_type_t;
 
 typedef struct {
-	/* The event discriminator */
+	/** The event discriminator */
 	event_type_t type;
 
-	/* This union contains the event related data */
+	/** This union contains the event related data */
         union {
 		event_flow_t         flow;
 		event_registration_t registration;
@@ -103,29 +99,28 @@ typedef struct {
         } data;
 } event_t;
 
+/**
+  * This structure defines the service properties of a DIF; that
+  * is, the properties of a DIF visible to an application
+  */
 typedef struct {
-	/*
-	 * This structure defines the service properties of a DIF; that
-	 * is, the properties of a DIF visible to an application
-	 */
-
-	/* The name of the DIF */
+	/** The name of the DIF */
 	name_t dif_name;
 
-	/*
+	/**
 	 * The maximum SDU size this DIF can handle (writes with bigger
 	 * SDUs will return an error, and read will never return an SDUs
 	 * bigger than this size
 	 */
 	int  max_sdu_size;
 
-	/* The QoS cubes supported by the DIF */
+	/** The QoS cubes supported by the DIF */
 	array_of_qos_cube_t qos_cubes;
 } dif_properties_t;
 
 typedef int (* event_filter_t)(const event_t * event);
 
-/*
+/**
  * Polls for currently pending events, and returns 1 if there are any
  * pending events, or 0 if there are none available.  If 'event' is
  * not NULL, the next event is removed from the queue and stored in
@@ -137,7 +132,7 @@ typedef int (* event_filter_t)(const event_t * event);
  */
 int ev_poll(event_t * event);
 
-/*
+/**
  * Description
  *
  * Waits indefinitely for the next available event, returning 1, or 0
@@ -151,7 +146,7 @@ int ev_poll(event_t * event);
  */
 int ev_wait(event_t * event);
 
-/*
+/**
  * Description
  *
  * The ev_set_filter() function sets up a filter to process all events
@@ -167,7 +162,7 @@ int ev_wait(event_t * event);
  */
 void ev_set_filter(event_filter_t filter);
 
-/*
+/**
  * Description
  *
  * The ev_get_filter() returns the current filter installed. If the function
@@ -179,7 +174,7 @@ void ev_set_filter(event_filter_t filter);
  */
 event_filter_t ev_get_filter(void);
 
-/*
+/**
  * Description
  *
  * Invoked by the source application, when it wants a flow to be allocated
@@ -199,7 +194,7 @@ port_id_t allocate_flow_request(const name_t * source,
                                 const name_t * destination,
                                 const flow_spec_t * flow_spec);
 
-/*
+/**
  * Description
  *
  * Invoked by the destination application, confirming or denying a flow
@@ -216,7 +211,7 @@ port_id_t allocate_flow_request(const name_t * source,
 int allocate_flow_response(port_id_t port_id,
                            const response_reason_t response);
 
-/*
+/**
  * Description
  *
  * Causes the resources allocated to a certain flow to be released,
@@ -228,7 +223,7 @@ int allocate_flow_response(port_id_t port_id,
  */
 int deallocate_flow (port_id_t port_id);
 
-/*
+/**
  * Description
  *
  * Called by an application when it wants to write an SDU to
@@ -241,7 +236,7 @@ int deallocate_flow (port_id_t port_id);
  */
 int write_sdu(port_id_t port_id, sdu_t * sdu);
 
-/*
+/**
  * Description
  *
  * Called by an application when it wants to know the DIFs in the
@@ -262,7 +257,7 @@ int write_sdu(port_id_t port_id, sdu_t * sdu);
 dif_properties_t *get_dif_properties(const name_t * dif_name,
                        int * size);
 
-/*
+/**
  * Description
  *
  * Called by an application when it wants to be advertised (and
@@ -279,7 +274,7 @@ dif_properties_t *get_dif_properties(const name_t * dif_name,
 int register_application(const name_t * name,
                          const name_t * dif);
 
-/*
+/**
  * Description
  *
  * Called by an application when it wants to stop being advertised

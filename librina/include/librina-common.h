@@ -14,7 +14,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
+/**
  * This library provides definitions common to all the other RINA
  * related libraries presented in this document. Common
  * functionalities shared among framework components (i.e. applications,
@@ -28,60 +28,59 @@
 #include <stdint.h>
 #include <stddef.h>
 
-/* A generic UTF-16 encoded string */
+/** A generic UTF-16 encoded string */
 typedef char * string_t;
 
-/* The local identifier of a flow, unique within a system */
+/** The local identifier of a flow, unique within a system */
 typedef uint16_t port_id_t;
 
-/* The value should be interpreted as false if the value is 0 or true
+/** The value should be interpreted as false if the value is 0 or true
  * otherwise. This typedef should be interpreted as ISO C99 bool/_Bool
  * and could be replaced by the inclusion of stdbool.h where/when
  * possible)
  */
 typedef int bool_t;
 
-/* This structure represents raw data */
+/** This structure represents raw data */
 typedef struct {
 	unsigned char * data;
 	size_t size;
 } buffer_t;
 
-/* An SDU */
+/** An SDU */
 typedef buffer_t sdu_t;
 
-/*
+/**
  * This structure represents a range of integer values
  */
 typedef struct {
-	/* Minimum value */
+	/** Minimum value */
 	uint32_t min_value;
 
-	/* Maximum value */
+	/** Maximum value */
 	uint32_t max_value;
 } uint_range_t;
 
-/* The address of an IPC Process */
+/** The address of an IPC Process */
 typedef uint32_t   address_t;
 
-/* The id of a QoS cube */
+/** The id of a QoS cube */
 typedef uint32_t   qos_id_t;
 
-/* A connection-endpoint id */
+/** A connection-endpoint id */
 typedef uint32_t   cep_id_t;
 
-/* A sequence number */
+/** A sequence number */
 typedef uint32_t   seq_num_t;
 
-/* A unique identifier for a local IPC Process */
+/** A unique identifier for a local IPC Process */
 typedef int        ipc_process_id_t;
 
-/* A NULL-terminated string describing why an operation was unsuccessful */
+/** A NULL-terminated string describing why an operation was unsuccessful */
 typedef string_t   response_reason_t;
 
+/** Defines the type of RIB Object Value */
 typedef enum {
-	/* Defines the type of RIB Object Value */
-
 	SHORT,
 	INT,
 	LONG,
@@ -91,9 +90,8 @@ typedef enum {
 	ENCODED
 } rib_object_value_type_t;
 
+/** The value of a RIB object */
 typedef union{
-	/* The value of a RIB object */
-
 	short short_value;
 	int int_value;
 	long long_value;
@@ -103,51 +101,49 @@ typedef union{
 	unsigned char * encoded_value;
 } rib_object_value_t;
 
+/** Defines the contents of a RIB object */
 typedef struct{
-	/* Defines the contents of a RIB object */
-
-	/* The object class */
+	/** The object class */
 	string_t object_class;
 
-	/* The object name */
+	/** The object name */
 	string_t object_name;
 
-	/* The object instance */
+	/** The object instance */
 	long object_instance;
 
-	/* The type of value, used as the union value discriminator */
+	/** The type of value, used as the union value discriminator */
 	rib_object_value_type_t value_type;
 
-	/* The object value */
+	/** The object value */
 	rib_object_value_t object_value;
 } rib_object_t;
 
+/** Contains an application process naming information */
 typedef struct {
-        /* Contains an application process naming information */
-
-        /*
-         * The process_name identifies an application process within the
-         * application process namespace. This value is required, it
-         * cannot be NULL. This name has global scope (it is defined by
-         * the chain of IDD databases that are linked together), and is
-         * assigned by an authority that manages the namespace that
-         * particular application name belongs to.
-         */
+   /**
+     * The process_name identifies an application process within the
+     * application process namespace. This value is required, it
+     * cannot be NULL. This name has global scope (it is defined by
+     * the chain of IDD databases that are linked together), and is
+     * assigned by an authority that manages the namespace that
+     * particular application name belongs to.
+     */
 	string_t process_name;
 
-	/*
+	/**
 	 * The process_instance identifies a particular instance of the
 	 * process. This value is optional, it may be NULL.
 	 */
 	string_t process_instance;
 
-	/*
+	/**
 	 * The entity_name identifies an application entity within the
 	 * application process. This value is optional, it may be NULL.
 	 */
     string_t entity_name;
 
-	/*
+	/**
 	 * The entity_name identifies a particular instance of an entity
 	 * within the application process. This value is optional, it
 	 * may be NULL
@@ -155,86 +151,82 @@ typedef struct {
    	string_t entity_instance;
 } name_t;
 
+/** This structure defines an array of name_t */
 typedef struct {
-	/* This structure defines an array of name_t */
-
-	/* Pointer to the first element of the array */
+	/** Pointer to the first element of the array */
 	name_t * elements;
 
-	/* Number of elements in the array */
+	/** Number of elements in the array */
 	int size;
 } array_of_name_t;
 
+/** This structure defines the characteristics of a flow */
 typedef struct {
-	/* This structure defines the characteristics of a flow */
-
-	/* Average bandwidth in bytes/s */
+	/** Average bandwidth in bytes/s */
 	uint_range_t average_bandwidth;
 
-	/* Average bandwidth in SDUs/s */
+	/** Average bandwidth in SDUs/s */
 	uint_range_t average_sdu_bandwidth;
 
-	/* In milliseconds */
+	/** In milliseconds */
 	uint_range_t peak_bandwidth_duration;
 
-	/* In milliseconds */
+	/** In milliseconds */
 	uint_range_t peak_sdu_bandwidth_duration;
 
-	/* A value of 0 indicates 'do not care' */
+	/** A value of 0 indicates 'do not care' */
 	double undetected_bit_error_rate;
 
-	/* Indicates if partial delivery of SDUs is allowed or not */
+	/** Indicates if partial delivery of SDUs is allowed or not */
 	bool_t partial_delivery;
 
-	/* Indicates if SDUs have to be delivered in order */
+	/** Indicates if SDUs have to be delivered in order */
 	bool_t ordered_delivery;
 
-	/*
+	/**
 	 * Indicates the maximum gap allowed among SDUs, a gap of N SDUs
 	 * is considered the same as all SDUs delivered. A value of -1
 	 * indicates 'Any'
 	 */
 	int max_allowable_gap;
 
-	/*
+	/**
 	 * In milliseconds, indicates the maximum delay allowed in this
 	 * flow. A value of 0 indicates 'do not care'
 	 */
 	uint32_t  delay;
 
-	/*
+	/**
 	 * In milliseconds, indicates the maximum jitter allowed in this
 	 * flow. A value of 0 indicates 'do not care'
 	 */
 	uint32_t  jitter;
 
-	/*
+	/**
 	 * The maximum SDU size for the flow. May influence the choice
 	 * of the DIF where the flow will be created.
 	 */
 	uint32_t  max_sdu_size;
 } flow_spec_t;
 
+/** This structure defines the properties of a QoS cube */
 typedef struct {
-	/* This structure defines the properties of a QoS cube */
-
-	/* The QoS cube name */
+	/** The QoS cube name */
 	string_t name;
 
-	/* The QoS cube id */
+	/** The QoS cube id */
 	int id;
 
-	/* The flow characteristics supported by this QoS cube */
+	/** The flow characteristics supported by this QoS cube */
 	flow_spec_t flow_spec;
 } qos_cube_t;
 
+/** This structure defines an array of QoS cubes */
 typedef struct {
-	/* This structure defines an array of QoS cubes */
-
-	/* Pointer to the first element of the array */
+	/** Pointer to the first element of the array */
 	qos_cube_t * elements;
 
-	/* Number of elements in the array */
+	/** Number of elements in the array */
 	int size;
 } array_of_qos_cube_t;
 
