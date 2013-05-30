@@ -24,9 +24,18 @@
 #include "kipcm.h"
 #include <linux/syscalls.h>
 
+static DEFINE_HASHTABLE(id_to_ipcp, ID_TO_IPCP_HASH_BITS);
+
+static struct kipc_t kipcm;
+static struct hlist_node
+
 int kipcm_init()
 {
         LOG_FBEGN;
+
+        //hash_add(id_to_ipcp,ID_TO_IPCP_HASH_BITS,);
+        kipcm.id_to_ipcp = id_to_ipcp;
+        
 
         LOG_FEXIT;
 

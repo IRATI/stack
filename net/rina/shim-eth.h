@@ -103,7 +103,7 @@ int  shim_eth_allocate_flow_response(port_id_t *         port_id,
 int  shim_eth_deallocate_flow(port_id_t port_id);
 int  shim_eth_register_application(struct name_t * name);
 int  shim_eth_unregister_application(struct name_t * name);
-int  shim_eth_write_sdu(port_id_t port_id, struct sdu_t * sdu);
+int  shim_eth_write_sdu(port_id_t port_id, const struct sdu_t * sdu);
 int  shim_eth_init(void);
 void shim_eth_exit(void);
 int  shim_eth_ipc_create(const struct name_t * name,

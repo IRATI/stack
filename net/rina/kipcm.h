@@ -26,172 +26,10 @@
 #include "efcp.h"
 #include "rmt.h"
 #include "shim-eth.h"
+#include "linux/hash.h"
 #include <linux/hashtable.h>
 
-typedef enum {
-	DIF_TYPE_NORMAL,
-	DIF_TYPE_SHIM_IP,
-	DIF_TYPE_SHIM_ETH
-} dif_type_t;
-
-struct normal_ipc_process_conf_t {
-	/*
-	 * Configuration of the kernel components of a normal IPC Process.
-	 * Defines the struct for the kernel components of a fully RINA IPC
-	 * Process.
- 	 */
-
-	/* The address of the IPC Process */
-	ipc_process_address_t address;
-
-	/* The configuration of the EFCP component */
-	struct efcp_conf_t *efcp_config;
-
-	/* The configuration of the RMT component */
-
-	struct rmt_conf_t *rmt_config;
-};
-
-struct ipc_process_shim_ethernet_conf_t {
-	/*
-	 * Configuration of the kernel component of a shim Ethernet IPC 
-	 * Process
-	 */
-
-	/* The vlan id */
-	int vlan_id;
-
-	/* The name of the device driver of the Ethernet interface */
-	string_t *device_name;
-};
-
-struct ipc_process_shim_tcp_udp_conf_t {
-
-	
-	/*
-	 * Configuration of the kernel component of a shim TCP/UDP IPC 
-	 * Process
-	 */
-
-	/* FIXME: inet address the IPC process is bound to */
-	//in_addr_t *inet_address;
-
-	/* The name of the DIF */
-	struct name_t *dif_name;
-};
-
-struct ipc_process_conf_t {
-	/*	
-	 * Contains the configuration of the kernel components of an IPC
-	 * Proccess.
-	 */
-
-	/* The DIF type discriminator */
-	dif_type_t type;
-
-	union{
-		struct normal_ipc_process_conf_t *normal_ipcp_conf;
-		struct ipc_process_shim_ethernet_conf_t *shim_eth_ipcp_conf;
-		struct ipc_process_shim_tcp_udp_conf_t *shim_tcp_udp_ipcp_conf;
-	} ipc_process_conf;
-};
-
-struct normal_ipc_process_t {
-	/*
-         * Contains all the data structures of a normal IPC Process 
-         */
-
-	/* The ID of the IPC Process */
-	ipc_process_id_t ipcp_id; 
-	
-	/* Contains the configuration of the kernel components */
-	struct normal_ipc_process_cont_t  *configuration;
-
-	/* The EFCP data structure associated to the IPC Process */
-	struct efcp_ipc_t *efcp;
-	
-	/* The RMT instance associated to the IPC Process */
-	struct rmt_instance_t *rmt;
-
-};
-
-struct ipc_process_shim_ethernet_t {
-	/* 
-	 * Contains all he data structures of a shim IPC Process over Ethernet
-	 */
-
-	/* The ID of the IPC Process */
-	ipc_process_id_t ipcp_id;
-
-	/* The configuration of the module */
-	struct ipc_process_shim_ethernet_conf_t *configuration;
-
-	/* The module that performs the processing */
-	struct shim_eth_instance_t *shim_eth_ipc_process;
-
-};
-
-struct ipc_process_shim_tcp_udp_t {
-	/* 
-	 * Contains all he data structures of a shim IPC Process over TCP/IP 
-	 */
-
-	/* The ID of the IPC Process */
-	ipc_process_id_t ipcp_id;
-
-	/* The configuration of the module */
-	struct ipc_process_shim_tcp_udp_conf_t *configuration;
-
-	/* The module that performs the processing */
-	struct shim_tcp_udp_instance_t *shim_tcp_udp_ipc_process;
-};
-
-struct ipc_process_data_t {
-	
-	/* The DIF type descriminator */
-	dif_type_t type;
-
-	union {
-		struct normal_ipc_process_t *normal_ipcp;
-		struct ipc_process_shim_ethernet_t *shim_eth_ipcp;
-		struct ipc_process_shim_tcp_udp_t *shim_tcp_udp_ipcp;
-	} ipc_process;
-
-};
-
-struct ipc_process_t {
-	dif_type_t type;
-	struct ipc_process_data_t data;
-};
-
-struct flow_t {
-	/* The port-id identifying the flow */
-	port_id_t port_id;
-
-	/*
-         * The components of the IPC Process that will handle the
-         * write calls to this flow
-         */
-	struct ipc_process_t *ipc_process;
-
-	/*
-         * True if this flow is serving a user-space application, false
-         * if it is being used by an RMT
-         */
-	bool_t application_owned;
-
-	/*
-         * In case this flow is being used by an RMT, this is a pointer
-         * to the RMT instance.
-         */
-
-	struct rmt_instance_t rmt_instance;
-
-	//FIXME: Define QUEUE
-	//QUEUE(segmentation_queue, pdu_t *);
-	//QUEUE(reassembly_queue,	pdu_t *);
-	//QUEUE(sdu_ready, sdu_t *);
-};
+#define ID_TO_IPCP_HASH_BITS 16
 
 struct kipc_t {
 	/*
@@ -207,6 +45,8 @@ struct kipc_t {
 	 * process_id. */
 	//FIXME Define HASH_TABLE
 	//HASH_TABLE(id_to_ipcp, ipc_process_id_t, struct ipc_process_t *);
+	struct hlist_head *id_to_ipcp;
+	
 
 };
 
