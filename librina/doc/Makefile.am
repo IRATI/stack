@@ -6,8 +6,29 @@
 
 include Makefile.inc
 
-$(man3_MANS): doxygen-doc
+EXTRA_DIST       = doxygen.cfg.in
+BUILT_SOURCES    =
+MOSTLYCLEANFILES =
 
-MOSTLYCLEANFILES = $(DX_CLEANFILES)
+if DX_COND_doc
 
-all: doxygen-run
+MOSTLYCLEANFILES += $(DX_CLEANFILES)
+
+edit = $(SED)							\
+        -e 's|@abs_top_srcdir[@]|$(abs_top_srcdir)|g'		\
+        -e 's|@abs_top_builddir[@]|$(abs_top_builddir)|g'
+
+BUILT_SOURCES    += doxygen.cfg
+MOSTLYCLEANFILES += doxygen.cfg
+
+doxygen.cfg: Makefile doxygen.cfg.in
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	mv $@.tmp $@
+
+all-local: doxygen.cfg doxygen-run doxygen-pdf
+
+endif
