@@ -4,6 +4,8 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
+if BUILD_WRAPPERS_JAVA
+
 SWIG_DEBUG      = -v
 SWIG_FLAGS      = $(SWIG_DEBUG) -Werror -Wall
 SWIG_JAVA_FLAGS = -java -package eu.irati.librina
@@ -54,3 +56,5 @@ librina_java_la_LIBADD   = $(top_builddir)/src/librina.la
 librina_java_la_CPPFLAGS = -I$(top_srcdir)/include -I$(JNI_CPPFLAGS)
 
 lib_LTLIBRARIES = librina_java.la
+
+endif
