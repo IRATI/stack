@@ -32,6 +32,8 @@
 
 static __init int rina_init(void)
 {
+        LOG_FBEGN;
+
         LOG_INFO("RINA stack v%d.%d.%d initializing",
                  RINA_VERSION_MAJOR(RINA_VERSION),
                  RINA_VERSION_MINOR(RINA_VERSION),
@@ -46,11 +48,16 @@ static __init int rina_init(void)
 #ifdef CONFIG_SHIM_TCP_UDP
         shim_tcp_udp_init();
 #endif
+
+        LOG_FEXIT;
+
         return 0;
 }
 
 static __exit void rina_exit(void)
 {
+        LOG_FBEGN;
+
 #ifdef CONFIG_SHIM_TCP_UDP
         shim_tcp_udp_exit();
 #endif
@@ -61,7 +68,7 @@ static __exit void rina_exit(void)
         efcp_exit();
         kipcm_exit();
 
-        LOG_INFO("exit");
+        LOG_FEXIT;
 }
 
 module_init(rina_init);
