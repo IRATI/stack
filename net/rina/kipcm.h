@@ -93,7 +93,7 @@ struct ipc_process_conf_t {
 		struct normal_ipc_process_conf_t *normal_ipcp_conf;
 		struct ipc_process_shim_ethernet_conf_t *shim_eth_ipcp_conf;
 		struct ipc_process_shim_tcp_udp_conf_t *shim_tcp_udp_ipcp_conf;
-	} data;
+	} ipc_process_conf;
 };
 
 struct normal_ipc_process_t {
@@ -186,12 +186,6 @@ struct flow_t {
 
 };
 
-struct id_to_ipcp_t {
-        ipc_process_id_t      id; /* key */
-        struct ipc_process_t *ipcprocess; /* Value*/
-        struct list_head      list;
-};
-
 struct kipc_t {
 	/*
          * Maintained and used by the K-IPC Manager to return the proper flow
@@ -208,6 +202,12 @@ struct kipc_t {
 	//HASH_TABLE(id_to_ipcp, ipc_process_id_t, struct ipc_process_t *);
 	struct list_head *id_to_ipcp;
 
+};
+
+struct id_to_ipcp_t {
+        ipc_process_id_t      id; /* key */
+        struct ipc_process_t *ipcprocess; /* Value*/
+        struct list_head      list;
 };
 
 int  kipcm_init(void);
