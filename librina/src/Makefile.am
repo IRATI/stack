@@ -6,7 +6,8 @@
 
 lib_LTLIBRARIES =
 
-librina_la_SOURCES  =				\
+librinapp_la_SOURCES  =				\
+	librina++.c++				\
 	librina.c				\
 	librina-common.c			\
 	librina-application.c			\
@@ -18,14 +19,6 @@ librina_la_SOURCES  =				\
 
 EXTRA_DIST =					\
 	logs.h
-
-librina_la_LDFLAGS  =
-librina_la_CPPFLAGS = -I$(top_srcdir)/include
-
-lib_LTLIBRARIES += librina.la
-
-librinapp_la_SOURCES  =				\
-	librina++.c++
 
 librinapp_la_LDFLAGS  =
 librinapp_la_CPPFLAGS = -I$(top_srcdir)/include
