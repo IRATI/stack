@@ -121,6 +121,8 @@ int  ipc_process_configure(ipc_process_id_t                 ipcp_id,
         const struct ipc_process_shim_ethernet_conf_t *conf;
 
         ipc_process = find_ipc_process_by_id(ipcp_id);
+        if (ipc_process == NULL)
+                return -1;
         switch (ipc_process->type) {
         case DIF_TYPE_SHIM_ETH:
                 conf = configuration->ipc_process_conf.shim_eth_ipcp_conf;
