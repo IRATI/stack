@@ -24,8 +24,8 @@
 #include "kipcm.h"
 #include <linux/syscalls.h>
 
- static LIST_HEAD(id_to_ipcp);
- static struct kipc_t *kipcm;
+static LIST_HEAD(id_to_ipcp);
+static struct kipc_t *kipcm;
 
 int kipcm_init()
 {
