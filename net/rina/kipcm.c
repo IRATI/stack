@@ -97,7 +97,7 @@ int  ipc_process_create(const struct name_t * name,
 	struct ipc_process_data_t *ipcp_data;
 	struct id_to_ipcp_t *aux_id_to_ipcp;
 	switch (type) {
-	case DIF_TYPE_SHIM_ETH:
+	case DIF_TYPE_SHIM_ETH :
 		ipc_process = kmalloc(sizeof(*ipc_process), GFP_KERNEL);
 		ipc_process->type = type;
 		ipcp_data = kmalloc(sizeof(*ipcp_data), GFP_KERNEL);
