@@ -217,6 +217,13 @@ static void SWIGUNUSED SWIG_JavaThrowException(JNIEnv *jenv, SWIG_JavaExceptionC
 #include <string>
 
 
+#include <stdexcept>
+
+
+#include <vector>
+#include <stdexcept>
+
+
 #include "librina++.h++"
 
 
@@ -795,10 +802,9 @@ SWIGEXPORT void JNICALL Java_eu_irati_librina_rinaJNI_Flow_1allocate(JNIEnv *jen
   try {
     (arg1)->allocate();
   }
-  catch(exception &_e) {
-    (void)_e;
-    SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "C++ exception exception thrown");
-    return ; 
+  catch(std::exception &_e) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, (&_e)->what());
+    return ;
   }
   
 }
@@ -814,10 +820,9 @@ SWIGEXPORT void JNICALL Java_eu_irati_librina_rinaJNI_Flow_1deallocate(JNIEnv *j
   try {
     (arg1)->deallocate();
   }
-  catch(exception &_e) {
-    (void)_e;
-    SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, "C++ exception exception thrown");
-    return ; 
+  catch(std::exception &_e) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaRuntimeException, (&_e)->what());
+    return ;
   }
   
 }
@@ -844,6 +849,118 @@ SWIGEXPORT void JNICALL Java_eu_irati_librina_rinaJNI_delete_1Flow(JNIEnv *jenv,
   (void)jenv;
   (void)jcls;
   arg1 = *(Flow **)&jarg1; 
+  delete arg1;
+}
+
+
+SWIGEXPORT jlong JNICALL Java_eu_irati_librina_rinaJNI_new_1DIFProperties(JNIEnv *jenv, jclass jcls) {
+  jlong jresult = 0 ;
+  DIFProperties *result = 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  result = (DIFProperties *)new DIFProperties();
+  *(DIFProperties **)&jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT jlong JNICALL Java_eu_irati_librina_rinaJNI_DIFProperties_1getDIFName(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  jlong jresult = 0 ;
+  DIFProperties *arg1 = (DIFProperties *) 0 ;
+  ApplicationProcessNamingInformation result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(DIFProperties **)&jarg1; 
+  result = ((DIFProperties const *)arg1)->getDIFName();
+  *(ApplicationProcessNamingInformation **)&jresult = new ApplicationProcessNamingInformation((const ApplicationProcessNamingInformation &)result); 
+  return jresult;
+}
+
+
+SWIGEXPORT void JNICALL Java_eu_irati_librina_rinaJNI_DIFProperties_1setDIFName(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2, jobject jarg2_) {
+  DIFProperties *arg1 = (DIFProperties *) 0 ;
+  ApplicationProcessNamingInformation *arg2 = 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  (void)jarg2_;
+  arg1 = *(DIFProperties **)&jarg1; 
+  arg2 = *(ApplicationProcessNamingInformation **)&jarg2;
+  if (!arg2) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "ApplicationProcessNamingInformation const & reference is null");
+    return ;
+  } 
+  (arg1)->setDIFName((ApplicationProcessNamingInformation const &)*arg2);
+}
+
+
+SWIGEXPORT jlong JNICALL Java_eu_irati_librina_rinaJNI_DIFProperties_1getMaxSduSize(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  jlong jresult = 0 ;
+  DIFProperties *arg1 = (DIFProperties *) 0 ;
+  unsigned int result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(DIFProperties **)&jarg1; 
+  result = (unsigned int)((DIFProperties const *)arg1)->getMaxSduSize();
+  jresult = (jlong)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void JNICALL Java_eu_irati_librina_rinaJNI_DIFProperties_1setMaxSduSize(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_, jlong jarg2) {
+  DIFProperties *arg1 = (DIFProperties *) 0 ;
+  unsigned int arg2 ;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(DIFProperties **)&jarg1; 
+  arg2 = (unsigned int)jarg2; 
+  (arg1)->setMaxSduSize(arg2);
+}
+
+
+SWIGEXPORT void JNICALL Java_eu_irati_librina_rinaJNI_delete_1DIFProperties(JNIEnv *jenv, jclass jcls, jlong jarg1) {
+  DIFProperties *arg1 = (DIFProperties *) 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  arg1 = *(DIFProperties **)&jarg1; 
+  delete arg1;
+}
+
+
+SWIGEXPORT jlong JNICALL Java_eu_irati_librina_rinaJNI_DIFInformation_1getDIFProperties(JNIEnv *jenv, jclass jcls, jlong jarg1, jobject jarg1_) {
+  jlong jresult = 0 ;
+  ApplicationProcessNamingInformation *arg1 = 0 ;
+  SwigValueWrapper< std::vector< DIFProperties > > result;
+  
+  (void)jenv;
+  (void)jcls;
+  (void)jarg1_;
+  arg1 = *(ApplicationProcessNamingInformation **)&jarg1;
+  if (!arg1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "ApplicationProcessNamingInformation const & reference is null");
+    return 0;
+  } 
+  result = DIFInformation::getDIFProperties((ApplicationProcessNamingInformation const &)*arg1);
+  *(std::vector< DIFProperties > **)&jresult = new std::vector< DIFProperties >((const std::vector< DIFProperties > &)result); 
+  return jresult;
+}
+
+
+SWIGEXPORT void JNICALL Java_eu_irati_librina_rinaJNI_delete_1DIFInformation(JNIEnv *jenv, jclass jcls, jlong jarg1) {
+  DIFInformation *arg1 = (DIFInformation *) 0 ;
+  
+  (void)jenv;
+  (void)jcls;
+  arg1 = *(DIFInformation **)&jarg1; 
   delete arg1;
 }
 

@@ -27,6 +27,7 @@
 
 #include <exception>
 #include <string>
+#include <vector>
 using namespace std;
 
 /**
@@ -167,6 +168,41 @@ public:
 	void allocate() throw (exception);
 	void deallocate() throw (exception);
 	int getPortId() const;
+};
+
+/**
+ * This class contains the properties of a single DIF
+ */
+class DIFProperties{
+	/** The name of the DIF */
+	ApplicationProcessNamingInformation DIFName;
+
+	/**
+	 * The maximum SDU size this DIF can handle (writes with bigger
+	 * SDUs will return an error, and read will never return an SDUs
+	 * bigger than this size
+	 */
+	unsigned int maxSDUSize;
+public:
+	DIFProperties();
+	const ApplicationProcessNamingInformation getDIFName() const;
+	void setDIFName(const ApplicationProcessNamingInformation& DIFName);
+	unsigned int getMaxSduSize() const;
+	void setMaxSduSize(unsigned int maxSduSize);
+};
+
+
+
+/**
+ * This class allows its caller to retrieve the information of
+ * the DIFs in the system
+ */
+class DIFInformation {
+private:
+	DIFInformation();
+public:
+	static vector<DIFProperties> getDIFProperties(
+			const ApplicationProcessNamingInformation& applicationName);
 };
 
 #endif

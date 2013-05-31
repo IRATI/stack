@@ -192,3 +192,47 @@ void Flow::deallocate() throw (exception){
 int Flow::getPortId() const{
 	return this->portId;
 }
+
+/* CLASS DIF PROPERTIES */
+
+DIFProperties::DIFProperties(){
+	maxSDUSize = 0;
+}
+
+const ApplicationProcessNamingInformation DIFProperties::getDIFName() const {
+	return DIFName;
+}
+
+void DIFProperties::setDIFName(const ApplicationProcessNamingInformation& difName) {
+	DIFName = difName;
+}
+
+unsigned int DIFProperties::getMaxSduSize() const {
+	return maxSDUSize;
+}
+
+void DIFProperties::setMaxSduSize(unsigned int maxSduSize) {
+	maxSDUSize = maxSduSize;
+}
+
+/* CLASS DIF INFORMATION */
+
+DIFInformation::DIFInformation(){
+}
+
+vector<DIFProperties> DIFInformation::getDIFProperties(
+			const ApplicationProcessNamingInformation& applicationName){
+	cout<<"Get flow information called!";
+	vector<DIFProperties> response;
+	ApplicationProcessNamingInformation* difName = new ApplicationProcessNamingInformation("test.DIF", "");
+	DIFProperties* difProperties = new DIFProperties();
+	difProperties->setDIFName(*difName);
+	difProperties->setMaxSduSize(5000);
+	response.push_back(*difProperties);
+	difProperties = new DIFProperties();
+	difName = new ApplicationProcessNamingInformation("test2.DIF", "");
+	difProperties->setDIFName(*difName);
+	difProperties->setMaxSduSize(2000);
+	response.push_back(*difProperties);
+	return response;
+}
