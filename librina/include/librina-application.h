@@ -63,7 +63,7 @@ typedef struct {
 } event_flow_t;
 
 typedef struct {
-	/* Contains the information of an event that reports available SDUs*/
+	/* Contains the information of an event that reports available SDUs */
 
 	/* The port id of the flow */
 	port_id_t port_id;
@@ -73,7 +73,9 @@ typedef struct {
 } event_sdu_t;
 
 typedef struct {
-	/* Contains the information of an event related to application registration*/
+	/* Contains the information of an event related to application
+         * registration
+         */
 
 	/* The application affected by the event */
 	name_t  application_name;
@@ -95,12 +97,14 @@ typedef struct {
 	/* The event discriminator */
 	event_type_t type;
 
+#if 0
 	/* This union contains the event related data */
         union {
 		event_flow_t         flow;
 		event_registration_t registration;
-		event_sdu_t 	   sdu;
+		event_sdu_t          sdu;
         } data;
+#endif
 } event_t;
 
 typedef struct {

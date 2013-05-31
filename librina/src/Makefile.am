@@ -4,6 +4,8 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
+lib_LTLIBRARIES =
+
 librina_la_SOURCES  =				\
 	librina.c				\
 	librina-common.c			\
@@ -20,4 +22,12 @@ EXTRA_DIST =					\
 librina_la_LDFLAGS  =
 librina_la_CPPFLAGS = -I$(top_srcdir)/include
 
-lib_LTLIBRARIES = librina.la
+lib_LTLIBRARIES += librina.la
+
+librinapp_la_SOURCES  =				\
+	librina++.c++
+
+librinapp_la_LDFLAGS  =
+librinapp_la_CPPFLAGS = -I$(top_srcdir)/include
+
+lib_LTLIBRARIES += librinapp.la

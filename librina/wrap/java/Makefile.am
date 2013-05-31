@@ -13,15 +13,16 @@ SWIG_JAVA_FLAGS = -java -package eu.irati.librina
 CLEANFILES =
 
 # XXX FIXME: Prerequisites for this rule are broken ...
-wrap.stamp: $(top_srcdir)/include/librina.i $(top_srcdir)/include/*.h
+wrap.stamp: $(top_srcdir)/include/librina++.i $(top_srcdir)/include/*.h $(top_srcdir)/include/*.h++
 	rm -f wrap.tmp
 	touch wrap.tmp
 	rm -r -f eu/irati/librina   &&			\
 	$(MKDIR_P) eu/irati/librina &&			\
 	$(SWIG) $(SWIG_FLAGS) $(SWIG_JAVA_FLAGS)	\
-		-o librina_java.c			\
+		-c++					\
+		-o librina_java.c++			\
 		-outdir ./eu/irati/librina		\
-		$(top_srcdir)/include/librina.i || {	\
+		$(top_srcdir)/include/librina++.i || {	\
 		echo "Cannot wrap input file" ;		\
 		rm -f wrap.tmp ;			\
 		rm -r -f eu/irati/librina ;		\
@@ -47,10 +48,10 @@ java_DATA = librina.jar
 clean-local:
 	rm -r -f eu/irati/librina
 
-librina_java.c: wrap.stamp
+librina_java.c++: wrap.stamp
 
 librina_java_la_SOURCES  =			\
-        librina_java.c
+        librina_java.c++
 librina_java_la_LDFLAGS  = -module
 librina_java_la_LIBADD   = $(top_builddir)/src/librina.la
 librina_java_la_CPPFLAGS = -I$(top_srcdir)/include -I$(JNI_CPPFLAGS)
