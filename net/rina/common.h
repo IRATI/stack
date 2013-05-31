@@ -139,7 +139,7 @@ struct flow_spec_t {
 	 * The maximum SDU size for the flow. May influence the choice
 	 * of the DIF where the flow will be created.
 	 */
-	uint_t              max_sdu_size;
+	uint_t               max_sdu_size;
 };
 
 struct pci_t {
