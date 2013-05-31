@@ -31,6 +31,11 @@
 #include "linux/hash.h"
 #include <linux/hashtable.h>
 
+typedef enum {
+        DIF_TYPE_NORMAL,
+        DIF_TYPE_SHIM_IP,
+        DIF_TYPE_SHIM_ETH
+} dif_type_t;
 
 struct id_to_ipcp_t {
 	ipc_process_id_t      id; /* key */

@@ -189,10 +189,4 @@ struct connection_t {
 	/* policy_t ** policies; */
 };
 
-typedef enum {
-	DIF_TYPE_NORMAL,
-	DIF_TYPE_SHIM_IP,
-	DIF_TYPE_SHIM_ETH
-} dif_type_t;
-
 #endif
