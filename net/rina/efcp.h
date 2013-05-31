@@ -22,6 +22,8 @@
 #ifndef RINA_EFCP_H
 #define RINA_EFCP_H
 
+#include <linux/syscalls.h>
+
 #include "common.h"
 #include "kipcm.h"
 

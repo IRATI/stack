@@ -30,13 +30,14 @@
 #include "shim-eth.h"
 #include "shim-tcp-udp.h"
 
-MODULE_DESCRIPTION("RINA stack");
-MODULE_LICENSE("GPLv2");
-MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini>");
-
 static __init int rina_init(void)
 {
-        LOG_INFO("RINA stack v" RINA_VERSION_STRING " initializing");
+        LOG_FBEGN;
+
+        LOG_INFO("RINA stack v%d.%d.%d initializing",
+                 RINA_VERSION_MAJOR(RINA_VERSION),
+                 RINA_VERSION_MINOR(RINA_VERSION),
+                 RINA_VERSION_MICRO(RINA_VERSION));
 
         kipcm_init();
         efcp_init();
@@ -47,11 +48,16 @@ static __init int rina_init(void)
 #ifdef CONFIG_SHIM_TCP_UDP
         shim_tcp_udp_init();
 #endif
+
+        LOG_FEXIT;
+
         return 0;
 }
 
 static __exit void rina_exit(void)
 {
+        LOG_FBEGN;
+
 #ifdef CONFIG_SHIM_TCP_UDP
         shim_tcp_udp_exit();
 #endif
@@ -62,8 +68,17 @@ static __exit void rina_exit(void)
         efcp_exit();
         kipcm_exit();
 
-        LOG_INFO("exit");
+        LOG_FEXIT;
 }
 
 module_init(rina_init);
 module_exit(rina_exit);
+
+MODULE_DESCRIPTION("RINA stack");
+
+MODULE_LICENSE("GPL v2");
+
+MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+MODULE_AUTHOR("Leonardo Bergesio <leonardo.bergesio@i2cat.net>");
+MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
+MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
