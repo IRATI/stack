@@ -53,7 +53,7 @@ librina_java.c++: wrap.stamp
 librina_java_la_SOURCES  =			\
         librina_java.c++
 librina_java_la_LDFLAGS  = -module
-librina_java_la_LIBADD   = $(top_builddir)/src/librina.la
+librina_java_la_LIBADD   = $(top_builddir)/src/librinapp.la
 librina_java_la_CPPFLAGS = -I$(top_srcdir)/include -I$(JNI_CPPFLAGS)
 
 lib_LTLIBRARIES = librina_java.la
