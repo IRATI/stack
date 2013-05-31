@@ -37,12 +37,6 @@ typedef enum {
         DIF_TYPE_SHIM_ETH
 } dif_type_t;
 
-struct id_to_ipcp_t {
-	ipc_process_id_t      id; /* key */
-	struct ipc_process_t *ipcprocess; /* Value*/
-	struct list_head      list;
-};
-
 struct normal_ipc_process_conf_t {
 	/*
 	 * Configuration of the kernel components of a normal IPC Process.
@@ -190,6 +184,12 @@ struct flow_t {
 	//QUEUE(reassembly_queue,	pdu_t *);
 	//QUEUE(sdu_ready, sdu_t *);
 
+};
+
+struct id_to_ipcp_t {
+        ipc_process_id_t      id; /* key */
+        struct ipc_process_t *ipcprocess; /* Value*/
+        struct list_head      list;
 };
 
 struct kipc_t {
