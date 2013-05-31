@@ -94,21 +94,17 @@ int  ipc_process_create(const struct name_t * name,
 			dif_type_t 	      type)
 {
 	struct ipc_process_t *ipc_process;
-	struct id_to_ipcp_t *aux_id_to_ipcp;
+
 	switch (type) {
 	case DIF_TYPE_SHIM_ETH :
-		ipc_process = kmalloc(sizeof(*ipc_process), GFP_KERNEL);
-		ipc_process->type = type;
-		ipc_process->data.shim_eth_ipcp = create_shim(ipcp_id);
-		aux_id_to_ipcp = kmalloc(sizeof(*aux_id_to_ipcp), GFP_KERNEL);
-		aux_id_to_ipcp->id = ipcp_id;
-		aux_id_to_ipcp->ipcprocess = ipc_process;
-		INIT_LIST_HEAD(&aux_id_to_ipcp->list);
-		list_add(&aux_id_to_ipcp->list,kipcm->id_to_ipcp);
 		if (shim_eth_ipc_create(name, ipcp_id)) {
 		        LOG_DBG("Failed shim_ipc_create in kipcm");
 		        return -1;
 		}
+		ipc_process = kmalloc(sizeof(*ipc_process), GFP_KERNEL);
+		ipc_process->type = type;
+		ipc_process->data.shim_eth_ipcp = create_shim(ipcp_id);
+		add_id_to_ipcp_node(ipcp_id, ipc_process);
 		break;
 	case DIF_TYPE_NORMAL:
 		break;
@@ -122,7 +118,7 @@ int  ipc_process_configure(ipc_process_id_t                 ipcp_id,
 			   const struct ipc_process_conf_t *configuration)
 {
         struct ipc_process_t *ipc_process;
-        struct ipc_process_shim_ethernet_conf_t *conf;
+        const struct ipc_process_shim_ethernet_conf_t *conf;
 
         ipc_process = find_ipc_process_by_id(ipcp_id);
         switch (ipc_process->type) {
@@ -153,8 +149,8 @@ struct ipc_process_t *find_ipc_process_by_id(ipc_process_id_t id)
         struct id_to_ipcp_t *cur;
 
         list_for_each_entry(cur, kipcm->id_to_ipcp, list) {
-                if (current->id == id)
-                        return current->ipcprocess;
+                if (cur->id == id)
+                        return cur->ipcprocess;
         }
 
         return NULL;
@@ -168,5 +164,17 @@ struct ipc_process_shim_ethernet_t *create_shim(ipc_process_id_t ipcp_id)
         ipcp_shim_eth->ipcp_id = ipcp_id;
 
         return ipcp_shim_eth;
+}
+
+void add_id_to_ipcp_node(ipc_process_id_t id, struct ipc_process_t *ipc_process)
+{
+        struct id_to_ipcp_t *aux_id_to_ipcp;
+
+        aux_id_to_ipcp = kmalloc(sizeof(*aux_id_to_ipcp), GFP_KERNEL);
+        aux_id_to_ipcp->id = id;
+        aux_id_to_ipcp->ipcprocess = ipc_process;
+        INIT_LIST_HEAD(&aux_id_to_ipcp->list);
+        list_add(&aux_id_to_ipcp->list,kipcm->id_to_ipcp);
+
 }
 

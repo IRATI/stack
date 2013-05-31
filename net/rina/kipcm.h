@@ -230,5 +230,6 @@ int  ipc_process_configure(ipc_process_id_t                  ipcp_id,
 int  ipc_process_destroy(ipc_process_id_t ipcp_id);
 struct ipc_process_t *find_ipc_process_by_id(ipc_process_id_t id);
 struct ipc_process_shim_ethernet_t *create_shim(ipc_process_id_t ipcp_id);
+void add_id_to_ipcp_node(ipc_process_id_t id, struct ipc_process_t *ipc_process);
 
 #endif
