@@ -93,7 +93,7 @@ struct ipc_process_conf_t {
 		struct normal_ipc_process_conf_t *normal_ipcp_conf;
 		struct ipc_process_shim_ethernet_conf_t *shim_eth_ipcp_conf;
 		struct ipc_process_shim_tcp_udp_conf_t *shim_tcp_udp_ipcp_conf;
-	} ipc_process_conf;
+	} data;
 };
 
 struct normal_ipc_process_t {
