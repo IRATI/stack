@@ -122,13 +122,13 @@ int  ipc_process_configure(ipc_process_id_t                 ipcp_id,
 			   const struct ipc_process_conf_t *configuration)
 {
         struct ipc_process_t *ipc_process;
+        struct ipc_process_shim_ethernet_conf_t *conf;
 
         ipc_process = find_ipc_process_by_id(ipcp_id);
         switch (ipc_process->type) {
         case DIF_TYPE_SHIM_ETH:
-                struct ipc_process_shim_ethernet_conf_t *conf;
                 conf = configuration->ipc_process_conf.shim_eth_ipcp_conf;
-                if (shim_eth_ipc_configure(conf)) {
+                if (shim_eth_ipc_configure(ipcp_id, conf)) {
                         LOG_DBG("Failed configuration of SHIM IPC Process");
                         return -1;
                 }
@@ -150,9 +150,9 @@ int  ipc_process_destroy(ipc_process_id_t ipcp_id)
 /* Private APIs */
 struct ipc_process_t *find_ipc_process_by_id(ipc_process_id_t id)
 {
-        struct id_to_ipcp_t *current;
+        struct id_to_ipcp_t *cur;
 
-        list_for_each_entry(current, kipcm->id_to_ipcp, list) {
+        list_for_each_entry(cur, kipcm->id_to_ipcp, list) {
                 if (current->id == id)
                         return current->ipcprocess;
         }
