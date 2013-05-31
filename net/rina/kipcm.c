@@ -94,23 +94,19 @@ int  ipc_process_create(const struct name_t * name,
 {
 	struct ipc_process_shim_ethernet_t *ipcp_shim_eth;
 	struct ipc_process_t *ipc_process;
-	struct ipc_process_data_t *ipcp_data;
 	struct id_to_ipcp_t *aux_id_to_ipcp;
 	switch (type) {
 	case DIF_TYPE_SHIM_ETH :
 		ipc_process = kmalloc(sizeof(*ipc_process), GFP_KERNEL);
 		ipc_process->type = type;
-		ipcp_data = kmalloc(sizeof(*ipcp_data), GFP_KERNEL);
-		ipcp_data->type = type;
 		ipcp_shim_eth = kmalloc(sizeof(*ipcp_shim_eth), GFP_KERNEL);
 		ipcp_shim_eth->ipcp_id = ipcp_id;
-		ipcp_data->ipc_process.shim_eth_ipcp = ipcp_shim_eth;
-		ipc_process->data = ipcp_data;
+		ipc_process->data.shim_eth_ipcp = ipcp_shim_eth;
 		aux_id_to_ipcp = kmalloc(sizeof(*aux_id_to_ipcp), GFP_KERNEL);
 		aux_id_to_ipcp->id = ipcp_id;
 		aux_id_to_ipcp->ipcprocess = ipc_process;
 		INIT_LIST_HEAD(&aux_id_to_ipcp->list);
-		list_add(aux_id_to_ipcp,&kipcm->id_to_ipcp);
+		list_add(&aux_id_to_ipcp->list,kipcm->id_to_ipcp);
 		break;
 	case DIF_TYPE_NORMAL:
 		break;

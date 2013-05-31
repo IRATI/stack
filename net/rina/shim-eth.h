@@ -24,6 +24,7 @@
 #include <linux/hashtable.h>
 
 #include "common.h"
+#include "kipcm.h"
 
 /* Holds the configuration of one shim IPC process */
 struct shim_eth_info_t {
