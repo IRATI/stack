@@ -71,7 +71,7 @@ struct shim_eth_flow_t {
  */
 struct shim_eth_instance_t {
         /* The configuration of the shim IPC Process */
-	struct shim_eth_info_t info;
+	struct shim_eth_info_t *info;
 
 	/* FIXME: Pointer to the device driver data_structure */
 	/* device_t * device_driver; */
@@ -88,7 +88,7 @@ struct shim_eth_instance_t {
 /* HASH_TABLE(shim_eth_instances, ipc_process_id_t, shim_eth_instance_t); */
 struct shim_eth_t {
 	ipc_process_id_t ipc_process_id;
-	struct shim_eth_instance_t shim_eth_instance;
+	struct shim_eth_instance_t *shim_eth_instance;
 	struct list_head list;
 };
 

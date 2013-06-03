@@ -29,6 +29,10 @@
 static LIST_HEAD(id_to_ipcp);
 static struct kipc_t *kipcm;
 
+static struct ipc_process_t *find_ipc_process_by_id(ipc_process_id_t id);
+static struct ipc_process_shim_ethernet_t *create_shim(ipc_process_id_t ipcp_id);
+static int add_id_to_ipcp_node(ipc_process_id_t id, struct ipc_process_t *ipc_process);
+
 int kipcm_init()
 {
         LOG_FBEGN;
@@ -150,7 +154,7 @@ int  ipc_process_destroy(ipc_process_id_t ipcp_id)
 }
 
 /* Private APIs */
-struct ipc_process_t *find_ipc_process_by_id(ipc_process_id_t id)
+static struct ipc_process_t *find_ipc_process_by_id(ipc_process_id_t id)
 {
         struct id_to_ipcp_t *cur;
 
@@ -162,21 +166,21 @@ struct ipc_process_t *find_ipc_process_by_id(ipc_process_id_t id)
         return NULL;
 }
 
-struct ipc_process_shim_ethernet_t *create_shim(ipc_process_id_t ipcp_id)
+static struct ipc_process_shim_ethernet_t *create_shim(ipc_process_id_t ipcp_id)
 {
         struct ipc_process_shim_ethernet_t *ipcp_shim_eth;
 
         ipcp_shim_eth = kmalloc(sizeof(*ipcp_shim_eth), GFP_KERNEL);
         if (!ipcp_shim_eth) {
                 LOG_DBG("Failed creation of the ipc process shim ethernet");
-                return -1;
+                return NULL;
         }
         ipcp_shim_eth->ipcp_id = ipcp_id;
 
         return ipcp_shim_eth;
 }
 
-int add_id_to_ipcp_node(ipc_process_id_t id, struct ipc_process_t *ipc_process)
+static int add_id_to_ipcp_node(ipc_process_id_t id, struct ipc_process_t *ipc_process)
 {
         struct id_to_ipcp_t *aux_id_to_ipcp;
 
