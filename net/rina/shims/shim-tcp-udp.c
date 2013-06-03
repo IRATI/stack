@@ -21,12 +21,14 @@
 
 int shim_tcp_udp_init(void)
 {
-        LOG_DBG("init");
+        LOG_FBEGN;
+        LOG_FEXIT;
 
         return 0;
 }
 
 void shim_tcp_udp_exit(void)
 {
-        LOG_DBG("exit");
+        LOG_FBEGN;
+        LOG_FEXIT;
 }

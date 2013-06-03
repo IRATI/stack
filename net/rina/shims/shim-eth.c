@@ -31,6 +31,8 @@ static ipc_process_id_t count = 0;
 
 ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 {
+        LOG_FBEGN;
+
         /* Unsure if I can call return count++ and count gets incremented after
 	   function call? This is a workaround, fix if possible. */ 
 	ipc_process_id_t nr = count++;
@@ -68,13 +70,14 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 	list_add(&tmp.list, &shim_eth);
 	/* FIXME: Add handler to correct interface and vlan id */
 
-	LOG_DBG("A new shim IPC process was created");
+        LOG_FEXIT;
 	return nr;
 }
 
 int shim_eth_destroy(ipc_process_id_t ipc_process_id)
 {
-	LOG_DBG("A shim IPC process was destroyed");
+        LOG_FBEGN;
+        LOG_FEXIT;
 
 	return 0;
 }
@@ -91,47 +94,54 @@ port_id_t shim_eth_allocate_flow_request(struct name_t *      source,
 int shim_eth_allocate_flow_response(port_id_t *         port_id,
                                     response_reason_t * response)
 {
-	LOG_DBG("Allocate flow response");
+        LOG_FBEGN;
+        LOG_FEXIT;
 
 	return 0;
 }
 
 int shim_eth_deallocate_flow(port_id_t port_id)
 {
-	LOG_DBG("Deallocate flow");
+        LOG_FBEGN;
+        LOG_FEXIT;
 
 	return 0;
 }
 
 int shim_eth_register_application(struct name_t * name)
 {
-	LOG_DBG("Application registered");
+        LOG_FBEGN;
+        LOG_FEXIT;
 
 	return 0;
 }
 
 int shim_eth_unregister_application(struct name_t * name)
 {
-	LOG_DBG("Application unregistered");
+        LOG_FBEGN;
+        LOG_FEXIT;
 
 	return 0;
 }
 
 int shim_eth_write_sdu(port_id_t port_id, struct sdu_t * sdu)
 {
-	LOG_DBG("Written SDU");
+        LOG_FBEGN;
+        LOG_FEXIT;
 
 	return 0;
 }
 
 int shim_eth_init(void)
 {
-        LOG_DBG("init");
+        LOG_FBEGN;
+        LOG_FEXIT;
 
         return 0;
 }
 
 void shim_eth_exit(void)
 {
-        LOG_DBG("exit");
+        LOG_FBEGN;
+        LOG_FEXIT;
 }
