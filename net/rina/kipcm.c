@@ -27,6 +27,7 @@
 #include <linux/list.h>
 
 static LIST_HEAD(id_to_ipcp);
+static LIST_HEAD(port_id_to_flow);
 static struct kipc_t *kipcm;
 
 int kipcm_init()
@@ -34,6 +35,7 @@ int kipcm_init()
         LOG_FBEGN;
 
         kipcm->id_to_ipcp = &id_to_ipcp;
+        kipcm->port_id_to_flow = &port_id_to_flow;
 
         LOG_FEXIT;
 
@@ -51,6 +53,17 @@ int kipcm_add_entry(port_id_t port_id, const struct flow_t * flow)
 {
         LOG_FBEGN;
 
+        struct port_id_to_flow_t *port_flow;
+        port_flow = kmalloc(sizeof(*port_flow), GFP_KERNEL);
+        if (!port_flow) {
+                LOG_DBG("Failed creation of port_id_to_flow structure");
+                return -1;
+        }
+        port_flow->port_id = port_id;
+        port_flow->flow = flow;
+        INIT_LIST_HEAD(&port_flow->list);
+        list_add(&port_flow->list,kipcm->port_id_to_flow);
+
         LOG_FEXIT;
 
 	return 0;
@@ -63,6 +76,18 @@ int kipcm_remove_entry(port_id_t port_id)
         LOG_FEXIT;
 
 	return 0;
+}
+
+static struct flow_t *retrieve_flow_by_port_id(port_id_t port_id)
+{
+        struct port_id_to_flow_t *cur;
+
+        list_for_each_entry(cur, kipcm->port_id_to_flow, list) {
+                if (cur->port_id == port_id)
+                        return cur->flow;
+        }
+
+        return NULL;
 }
 
 int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
@@ -84,8 +109,27 @@ int  read_sdu(port_id_t      port_id,
 int  write_sdu(port_id_t            port_id,
 	       const struct sdu_t * sdu)
 {
-	if (shim_eth_write_sdu(port_id, sdu))
-		LOG_DBG("Error writing SDU to the SHIM ETH");
+        struct flow_t *flow;
+
+        flow = retrieve_flow_by_port_id(port_id);
+        if (flow == NULL) {
+                LOG_DBG("No flow for this port_id");
+                return -1;
+        }
+        switch (flow->ipc_process->type) {
+        case DIF_TYPE_SHIM_ETH :
+                if (shim_eth_write_sdu(port_id, sdu)) {
+                        LOG_DBG("Error writing SDU to the SHIM ETH");
+                        return -1;
+                }
+                break;
+        case DIF_TYPE_NORMAL :
+                break;
+        case DIF_TYPE_SHIM_IP :
+                break;
+        default :
+                break;
+        }
 	return 0;
 }
 
@@ -107,10 +151,9 @@ create_shim(ipc_process_id_t ipcp_id)
         struct ipc_process_shim_ethernet_t *ipcp_shim_eth;
 
         ipcp_shim_eth = kmalloc(sizeof(*ipcp_shim_eth), GFP_KERNEL);
-        if (!ipcp_shim_eth) {
-                LOG_DBG("Failed creation of the ipc process shim ethernet");
+        if (!ipcp_shim_eth)
                 return NULL;
-        }
+
         ipcp_shim_eth->ipcp_id = ipcp_id;
 
         return ipcp_shim_eth;
