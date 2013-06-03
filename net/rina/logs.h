@@ -40,6 +40,11 @@
 #define LOG_DBG(FMT,  ARGS...)
 #endif
 
+/*
+ * The following macros should be used for debugging purposes only, use them
+ * for debugging BUT remove them as soon as your debugging is over (in order
+ * to avoid messing source files)
+ */
 #ifdef RINA_DEBUG_VERBOSE
 #define LOG_FBEGN LOG_DBG("Entering function %s",    __FUNCTION__)
 #define LOG_FEXIT LOG_DBG("Exiting function %s",     __FUNCTION__)

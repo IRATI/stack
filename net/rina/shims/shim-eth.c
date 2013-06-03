@@ -35,7 +35,7 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
         LOG_FBEGN;
 
         /* Unsure if I can call return count++ and count gets incremented after
-	   function call? This is a workaround, fix if possible. */ 
+	   function call? This is a workaround, fix if possible. */
 	ipc_process_id_t nr = count++;
 
 	/* Retrieve configuration of IPC process from params */
@@ -150,30 +150,6 @@ void shim_eth_exit(void)
 int shim_eth_ipc_create(const struct name_t * name,
 			ipc_process_id_t      ipcp_id)
 {
-        struct shim_eth_info_t *shim_eth_info;
-        struct shim_eth_t *tmp;
-        struct shim_eth_instance_t *instance;
-        shim_eth_info = kmalloc(sizeof(*shim_eth_info),GFP_KERNEL);
-        if (!shim_eth_info) {
-                LOG_DBG("Failed creation of the shim ethernet info structure");
-                return -1;
-        }
-        shim_eth_info->name = name;
-        instance = kmalloc(sizeof(*instance),GFP_KERNEL);
-        if (!shim_eth_info) {
-                LOG_DBG("Failed creation of the shim ethernet instance");
-                return -1;
-        }
-        instance->info = shim_eth_info;
-        tmp = kmalloc(sizeof(*tmp),GFP_KERNEL);
-        if (!tmp) {
-                LOG_DBG("Failed creation of the shim ethernet structure");
-                return -1;
-        }
-        tmp->ipc_process_id = ipcp_id;
-        tmp->shim_eth_instance = instance;
-        INIT_LIST_HEAD(&tmp->list);
-        list_add(&tmp.list, &shim_eth);
         /* FIXME: Add handler to correct interface and vlan id */
         LOG_DBG("Created shim ETH IPC process");
 
