@@ -197,6 +197,7 @@ struct kipc_t {
 
 	//FIXME Define HASH_TABLE
 	//HASH_TABLE(port_id_to_flow, port_id_t, struct flow_t *);
+        struct list_head *port_id_to_flow;
 	
 	/* A table with all the instances of IPC Processes, indexed by
 	 * process_id. */
@@ -210,6 +211,12 @@ struct id_to_ipcp_t {
         ipc_process_id_t      id; /* key */
         struct ipc_process_t *ipcprocess; /* Value*/
         struct list_head      list;
+};
+
+struct port_id_to_flow_t {
+        port_id_t        port_id; /* key */
+        struct flow_t   *flow; /* value */
+        struct list_head list;
 };
 
 int  kipcm_init(void);

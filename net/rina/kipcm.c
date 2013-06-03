@@ -2,6 +2,7 @@
  *  KIPCM (Kernel-IPC Manager)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Miquel Tarzan <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +28,7 @@
 #include <linux/list.h>
 
 static LIST_HEAD(id_to_ipcp);
+static LIST_HEAD(port_id_to_flow);
 static struct kipc_t *kipcm;
 
 int kipcm_init()
@@ -34,6 +36,7 @@ int kipcm_init()
         LOG_FBEGN;
 
         kipcm->id_to_ipcp = &id_to_ipcp;
+        kipcm->port_id_to_flow = &port_id_to_flow;
 
         LOG_FEXIT;
 
@@ -51,6 +54,17 @@ int kipcm_add_entry(port_id_t port_id, const struct flow_t * flow)
 {
         LOG_FBEGN;
 
+        struct port_id_to_flow_t *port_flow;
+        port_flow = kmalloc(sizeof(*port_flow), GFP_KERNEL);
+        if (!port_flow) {
+                LOG_ERR("Failed creation of port_id_to_flow structure");
+                return -1;
+        }
+        port_flow->port_id = port_id;
+        port_flow->flow = flow;
+        INIT_LIST_HEAD(&port_flow->list);
+        list_add(&port_flow->list,kipcm->port_id_to_flow);
+
         LOG_FEXIT;
 
 	return 0;
@@ -63,6 +77,18 @@ int kipcm_remove_entry(port_id_t port_id)
         LOG_FEXIT;
 
 	return 0;
+}
+
+static struct flow_t *retrieve_flow_by_port_id(port_id_t port_id)
+{
+        struct port_id_to_flow_t *cur;
+
+        list_for_each_entry(cur, kipcm->port_id_to_flow, list) {
+                if (cur->port_id == port_id)
+                        return cur->flow;
+        }
+
+        return NULL;
 }
 
 int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
@@ -84,11 +110,29 @@ int  read_sdu(port_id_t      port_id,
 int  write_sdu(port_id_t            port_id,
 	       const struct sdu_t * sdu)
 {
-	if (shim_eth_write_sdu(port_id, sdu))
-		LOG_DBG("Error writing SDU to the SHIM ETH");
+        struct flow_t *flow;
+
+        flow = retrieve_flow_by_port_id(port_id);
+        if (flow == NULL) {
+                LOG_ERR("There is no flow bound to port-d %d", port_id);
+                return -1;
+        }
+        switch (flow->ipc_process->type) {
+        case DIF_TYPE_SHIM_ETH :
+                if (shim_eth_write_sdu(port_id, sdu)) {
+                        LOG_ERR("Error writing SDU to the SHIM ETH");
+                        return -1;
+                }
+                break;
+        case DIF_TYPE_NORMAL :
+                break;
+        case DIF_TYPE_SHIM_IP :
+                break;
+        default :
+                break;
+        }
 	return 0;
 }
-
 
 static struct ipc_process_t * find_ipc_process_by_id(ipc_process_id_t id)
 {
@@ -116,17 +160,23 @@ create_shim(ipc_process_id_t ipcp_id)
         return ipcp_shim_eth;
 }
 
-static void add_id_to_ipcp_node(ipc_process_id_t       id,
-                                struct ipc_process_t * ipc_process)
+static int add_id_to_ipcp_node(ipc_process_id_t       id,
+                               struct ipc_process_t * ipc_process)
 {
         struct id_to_ipcp_t *aux_id_to_ipcp;
 
         aux_id_to_ipcp = kmalloc(sizeof(*aux_id_to_ipcp), GFP_KERNEL);
-        aux_id_to_ipcp->id = id;
+        if (!ipc_process) {
+                LOG_ERR("Failed creating the id_to_ipcp node");
+                return -1;
+        }
+
+        aux_id_to_ipcp->id         = id;
         aux_id_to_ipcp->ipcprocess = ipc_process;
         INIT_LIST_HEAD(&aux_id_to_ipcp->list);
         list_add(&aux_id_to_ipcp->list,kipcm->id_to_ipcp);
 
+        return 0;
 }
 
 int  ipc_process_create(const struct name_t * name,
@@ -137,11 +187,14 @@ int  ipc_process_create(const struct name_t * name,
 
 	switch (type) {
 	case DIF_TYPE_SHIM_ETH :
-		if (shim_eth_ipc_create(name, ipcp_id)) {
-		        LOG_DBG("Failed shim_ipc_create in kipcm");
+		if (shim_eth_ipc_create(name, ipcp_id))
+		        return -1;
+		ipc_process = kmalloc(sizeof(*ipc_process), GFP_KERNEL);
+		if (!ipc_process) {
+		        LOG_ERR("Cannot create the IPC Process structure");
 		        return -1;
 		}
-		ipc_process = kmalloc(sizeof(*ipc_process), GFP_KERNEL);
+
 		ipc_process->type = type;
 		ipc_process->data.shim_eth_ipcp = create_shim(ipcp_id);
 		add_id_to_ipcp_node(ipcp_id, ipc_process);
@@ -151,6 +204,7 @@ int  ipc_process_create(const struct name_t * name,
 	case DIF_TYPE_SHIM_IP:
 		break;
 	}
+
 	return 0;
 }
 
@@ -167,7 +221,7 @@ int  ipc_process_configure(ipc_process_id_t                 ipcp_id,
         case DIF_TYPE_SHIM_ETH:
                 conf = configuration->ipc_process_conf.shim_eth_ipcp_conf;
                 if (shim_eth_ipc_configure(ipcp_id, conf)) {
-                        LOG_DBG("Failed configuration of SHIM IPC Process");
+                        LOG_ERR("Failed configuring the SHIM IPC Process");
                         return -1;
                 }
                 break;
@@ -184,4 +238,3 @@ int  ipc_process_destroy(ipc_process_id_t ipcp_id)
 {
 	return 0;
 }
-

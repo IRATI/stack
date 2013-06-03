@@ -2,6 +2,7 @@
  *  Shim IPC Process for Ethernet
  *
  *    Sander Vrijders <sander.vrijders@intec.ugent.be>
+ *    Miquel Tarzan   <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,15 +27,15 @@
 #include "shim-eth.h"
 
 LIST_HEAD(shim_eth);
-/* FIXME : This isn't needed and conceptually is wrong */
+/* FIXME : This isn't needed */
 static ipc_process_id_t count = 0;
-/* FIXME : This function should be removed in the near future, it's wrong */
+
 ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 {
         LOG_FBEGN;
 
         /* Unsure if I can call return count++ and count gets incremented after
-	   function call? This is a workaround, fix if possible. */ 
+	   function call? This is a workaround, fix if possible. */
 	ipc_process_id_t nr = count++;
 
 	/* Retrieve configuration of IPC process from params */
@@ -149,7 +150,8 @@ void shim_eth_exit(void)
 int shim_eth_ipc_create(const struct name_t * name,
 			ipc_process_id_t      ipcp_id)
 {
-	LOG_DBG("Created shim ETH IPC process");
+        /* FIXME: Add handler to correct interface and vlan id */
+        LOG_DBG("Created shim ETH IPC process");
 
 	return 0;
 }
@@ -158,6 +160,7 @@ int shim_eth_ipc_configure(ipc_process_id_t ipcp_id,
                            const struct ipc_process_shim_ethernet_conf_t *configuration)
 {
 	LOG_DBG("Configured shim ETH IPC Process");
+	configuration->device_name;
 
 	return 0;
 }
