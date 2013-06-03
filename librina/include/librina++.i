@@ -26,8 +26,8 @@
 /**
  * unsigned char * typemaps. 
  * These are input typemaps for mapping a Java byte[] array to a C char array.
- * Note that as a Java array is used and thus passeed by reference, the C routine 
- * can return data to Java via the parameter.
+ * Note that as a Java array is used and thus passeed by reference, the C
+ * routine can return data to Java via the parameter.
  *
  * Example usage wrapping:
  *   void foo(unsigned char *array);

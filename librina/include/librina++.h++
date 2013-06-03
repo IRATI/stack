@@ -28,6 +28,7 @@
 #include <exception>
 #include <string>
 #include <vector>
+
 using namespace std;
 
 /**
@@ -65,16 +66,16 @@ class ApplicationProcessNamingInformation {
 
 public:
 	ApplicationProcessNamingInformation();
-	ApplicationProcessNamingInformation(const string& processName,
-				const string& processInstance);
-	const string& getEntityInstance() const;
-	void setEntityInstance(const string& entityInstance);
-	const string& getEntityName() const;
-	void setEntityName(const string& entityName);
-	const string& getProcessInstance() const;
-	void setProcessInstance(const string& processInstance);
-	const string& getProcessName() const;
-	void setProcessName(const string& processName);
+	ApplicationProcessNamingInformation(const string & processName,
+                                            const string & processInstance);
+	const string & getEntityInstance() const;
+	void           setEntityInstance(const string & entityInstance);
+	const string & getEntityName() const;
+	void           setEntityName(const string & entityName);
+	const string & getProcessInstance() const;
+	void           setProcessInstance(const string & processInstance);
+	const string & getProcessName() const;
+	void           setProcessName(const string & processName);
 };
 
 /**
@@ -159,10 +160,9 @@ public:
 class IPCException: public exception
 {
 public:
-  virtual const char* what() const throw()
-  {
-    return "IPC Exception man";
-  }
+        virtual const char* what() const throw() {
+                return "Generic IPC Exception";
+        }
 };
 
 /**
@@ -174,13 +174,13 @@ class Flow {
 	FlowSpecification flowSpecification;
 	int portId;
 public:
-	Flow(const ApplicationProcessNamingInformation& sourceApplication,
-			const ApplicationProcessNamingInformation& destinationApplication,
-			const FlowSpecification& flowSpecification);
+	Flow(const ApplicationProcessNamingInformation & sourceApp,
+             const ApplicationProcessNamingInformation & destinationApp,
+             const FlowSpecification& flowSpecification);
 	void allocate() throw (IPCException);
 	void deallocate() throw (IPCException);
 	void write(unsigned char * sdu, int sduSize) throw(IPCException);
-	int getPortId() const;
+	int  getPortId() const;
 };
 
 /**
@@ -199,9 +199,9 @@ class DIFProperties{
 public:
 	DIFProperties();
 	const ApplicationProcessNamingInformation getDIFName() const;
-	void setDIFName(const ApplicationProcessNamingInformation& DIFName);
+	void setDIFName(const ApplicationProcessNamingInformation & DIFName);
 	unsigned int getMaxSduSize() const;
-	void setMaxSduSize(unsigned int maxSduSize);
+	void         setMaxSduSize(unsigned int maxSduSize);
 };
 
 
@@ -214,8 +214,9 @@ class DIFInformation {
 private:
 	DIFInformation();
 public:
-	static vector<DIFProperties> getDIFProperties(
-			const ApplicationProcessNamingInformation& applicationName);
+	static vector<DIFProperties>
+        getDIFProperties(const ApplicationProcessNamingInformation &
+                         applicationName);
 };
 
 #endif
