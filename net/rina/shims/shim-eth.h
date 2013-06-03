@@ -18,12 +18,12 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_SHIM_ETH_H
-#define RINA_SHIM_ETH_H
+#ifndef RINA_SHIMS_SHIM_ETH_H
+#define RINA_SHIMS_SHIM_ETH_H
 
 #include <linux/hashtable.h>
 
-#include "common.h"
+#include "../common.h"
 
 /* Holds the configuration of one shim IPC process */
 struct shim_eth_info_t {

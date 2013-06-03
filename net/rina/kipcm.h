@@ -27,7 +27,7 @@
 #include "common.h"
 #include "efcp.h"
 #include "rmt.h"
-#include "shim-eth.h"
+#include "shims/shim-eth.h"
 
 typedef enum {
 	DIF_TYPE_NORMAL,

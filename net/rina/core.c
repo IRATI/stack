@@ -27,8 +27,8 @@
 #include "kipcm.h"
 #include "efcp.h"
 #include "rmt.h"
-#include "shim-eth.h"
-#include "shim-tcp-udp.h"
+#include "shims/shim-eth.h"
+#include "shims/shim-tcp-udp.h"
 
 static __init int rina_init(void)
 {
