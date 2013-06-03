@@ -30,14 +30,13 @@ LIST_HEAD(shim_eth);
 /* FIXME : This isn't needed */
 static ipc_process_id_t count = 0;
 
-/*
 ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 {
-         Unsure if I can call return count++ and count gets incremented after
-	   function call? This is a workaround, fix if possible.
+        /* Unsure if I can call return count++ and count gets incremented after
+	   function call? This is a workaround, fix if possible. */
 	ipc_process_id_t nr = count++;
 
-	 Retrieve configuration of IPC process from params
+	/* Retrieve configuration of IPC process from params */
 	struct shim_eth_info_t shim_eth_info;
 	struct ipc_config_t *ipc_config = config[0];
 	while (ipc_config != 0) {
@@ -68,12 +67,11 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 	};
        
 	list_add(&tmp.list, &shim_eth);
-	 FIXME: Add handler to correct interface and vlan id
+	/* FIXME: Add handler to correct interface and vlan id */
 
 	LOG_DBG("A new shim IPC process was created");
 	return nr;
 }
-*/
 
 int shim_eth_destroy(ipc_process_id_t ipc_process_id)
 {
@@ -142,7 +140,7 @@ void shim_eth_exit(void)
 int shim_eth_ipc_create(const struct name_t * name,
 			ipc_process_id_t      ipcp_id)
 {
-        struct shim_eth_info_t *shim_eth_info;
+        /*struct shim_eth_info_t *shim_eth_info;
         struct shim_eth_t *tmp;
         struct shim_eth_instance_t *instance;
         shim_eth_info = kmalloc(sizeof(*shim_eth_info),GFP_KERNEL);
@@ -165,7 +163,7 @@ int shim_eth_ipc_create(const struct name_t * name,
         tmp->ipc_process_id = ipcp_id;
         tmp->shim_eth_instance = instance;
         INIT_LIST_HEAD(&tmp->list);
-        list_add(&tmp->list, &shim_eth);
+        list_add(&tmp->list, &shim_eth);*/
         /* FIXME: Add handler to correct interface and vlan id */
         LOG_DBG("Created shim ETH IPC process");
 
