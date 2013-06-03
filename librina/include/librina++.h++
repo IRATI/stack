@@ -154,6 +154,18 @@ public:
 };
 
 /**
+ * An IPC exeception
+ */
+class IPCException: public exception
+{
+public:
+  virtual const char* what() const throw()
+  {
+    return "IPC Exception man";
+  }
+};
+
+/**
  * This class encapsulates the services provided by a Flow.
  */
 class Flow {
@@ -165,8 +177,9 @@ public:
 	Flow(const ApplicationProcessNamingInformation& sourceApplication,
 			const ApplicationProcessNamingInformation& destinationApplication,
 			const FlowSpecification& flowSpecification);
-	void allocate() throw (exception);
-	void deallocate() throw (exception);
+	void allocate() throw (IPCException);
+	void deallocate() throw (IPCException);
+	void write(unsigned char * sdu, int sduSize) throw(IPCException);
 	int getPortId() const;
 };
 

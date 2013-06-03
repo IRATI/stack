@@ -179,14 +179,29 @@ Flow::Flow(const ApplicationProcessNamingInformation& sourceApplication,
 	this->portId = 0;
 }
 
-void Flow::allocate() throw (exception){
-	cout<<"Allocate flow called!";
+void Flow::allocate() throw (IPCException){
+	cout<<"Allocate flow called!"<<"\n";
+
+	if(sourceApplication.getProcessName().compare("") == 0)
+	{
+		throw IPCException();
+	}
+
+
 	this->portId = 25;
 }
 
-void Flow::deallocate() throw (exception){
-	cout<<"Deallocate flow called!";
+void Flow::deallocate() throw (IPCException){
+	cout<<"Deallocate flow called!"<<"\n";
 	this->portId = 0;
+}
+
+void Flow::write(unsigned char * sdu, int sduSize) throw(IPCException){
+	cout<<"Write data to flow called!"<<"\n";
+	int i;
+	for(i=0; i<sduSize; i++){
+		cout<<"Data["<<i<<"] = "<<sdu[i]<<"\n";
+	}
 }
 
 int Flow::getPortId() const{
@@ -222,7 +237,7 @@ DIFInformation::DIFInformation(){
 
 vector<DIFProperties> DIFInformation::getDIFProperties(
 			const ApplicationProcessNamingInformation& applicationName){
-	cout<<"Get flow information called!";
+	cout<<"Get flow information called!"<<"\n";
 	vector<DIFProperties> response;
 	ApplicationProcessNamingInformation* difName = new ApplicationProcessNamingInformation("test.DIF", "");
 	DIFProperties* difProperties = new DIFProperties();

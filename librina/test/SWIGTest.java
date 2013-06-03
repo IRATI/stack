@@ -1,6 +1,10 @@
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.DIFInformation;
+import eu.irati.librina.DIFProperties;
+import eu.irati.librina.DIFPropertiesVector;
 import eu.irati.librina.Flow;
 import eu.irati.librina.FlowSpecification;
+import eu.irati.librina.IPCException;
 
 public class SWIGTest {
 
@@ -9,7 +13,7 @@ public class SWIGTest {
               System.loadLibrary("rina_java");
 	  }
 
-	public static void main(String[] args) {		
+	public static void main(String[] args) throws IPCException{		
 		System.out.println("************ TESTING LIBRINA-APPLICATION ************");
 		ApplicationProcessNamingInformation sourceNamingInfo = new ApplicationProcessNamingInformation();
 		sourceNamingInfo.setProcessName("test/application/name/source");
@@ -40,8 +44,23 @@ public class SWIGTest {
 		flow.allocate();
 		System.out.println("Flow allocated, port id is "+flow.getPortId());
 		
+		System.out.println("\n CALLING WRITE SDU");
+		byte[] sdu = "This is a test SDU".getBytes();
+		flow.write(sdu, sdu.length);
+		System.out.println("Wrote SDU");
+		
 		System.out.println("\nCALLING DEALLOCATE FLOW");
 		flow.deallocate();
 		System.out.println("Flow deallocated");
+		
+		System.out.println("\nCALLING GET DIF PROPERTIES");
+		DIFPropertiesVector difPropertiesVector = DIFInformation.getDIFProperties(sourceNamingInfo);
+		System.out.println("Got properties of "+difPropertiesVector.size()+" DIFs.");
+		DIFProperties difProperties = null;
+		for(int i=0; i<difPropertiesVector.size(); i++){
+			difProperties = difPropertiesVector.get(i);
+			System.out.println("DIF name: "+difProperties.getDIFName().getProcessName());
+			System.out.println("Max SDU size: "+difProperties.getMaxSduSize());
+		}
 	}
 }
