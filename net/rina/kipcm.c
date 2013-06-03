@@ -150,11 +150,6 @@ int  write_sdu(port_id_t            port_id,
                 break;
         }
 
-<<<<<<< HEAD
-static struct ipc_process_t * find_ipc_process_by_id(ipc_process_id_t id)
-{
-        struct id_to_ipcp_t * cur;
-=======
         if (retval) {
                 LOG_ERR("Error writing SDU to the shim");
         }
@@ -169,7 +164,6 @@ static struct ipc_process_t * find_ipc_process_by_id(ipc_process_id_t id)
         struct id_to_ipcp_t * cur;
 
         LOG_FBEGN;
->>>>>>> francesco-wip
 
         list_for_each_entry(cur, kipcm->id_to_ipcp, list) {
                 if (cur->id == id) {
@@ -187,11 +181,8 @@ static struct ipc_process_shim_ethernet_t *
 create_shim(ipc_process_id_t ipcp_id)
 {
         struct ipc_process_shim_ethernet_t * ipcp_shim_eth;
-<<<<<<< HEAD
-=======
 
         LOG_FBEGN;
->>>>>>> francesco-wip
 
         ipcp_shim_eth = kmalloc(sizeof(*ipcp_shim_eth), GFP_KERNEL);
         if (!ipcp_shim_eth) {
@@ -208,22 +199,14 @@ create_shim(ipc_process_id_t ipcp_id)
         return ipcp_shim_eth;
 }
 
-<<<<<<< HEAD
-static void add_id_to_ipcp_node(ipc_process_id_t       id,
-                                struct ipc_process_t * ipc_process)
-=======
 static int add_id_to_ipcp_node(ipc_process_id_t       id,
                                struct ipc_process_t * ipc_process)
->>>>>>> francesco-wip
 {
         struct id_to_ipcp_t *aux_id_to_ipcp;
 
         LOG_FBEGN;
 
         aux_id_to_ipcp = kmalloc(sizeof(*aux_id_to_ipcp), GFP_KERNEL);
-<<<<<<< HEAD
-        aux_id_to_ipcp->id = id;
-=======
         if (!ipc_process) {
                 LOG_CRIT("Cannot allocate %z bytes of memory",
                          sizeof(*aux_id_to_ipcp));
@@ -232,17 +215,13 @@ static int add_id_to_ipcp_node(ipc_process_id_t       id,
         }
 
         aux_id_to_ipcp->id         = id;
->>>>>>> francesco-wip
         aux_id_to_ipcp->ipcprocess = ipc_process;
         INIT_LIST_HEAD(&aux_id_to_ipcp->list);
         list_add(&aux_id_to_ipcp->list,kipcm->id_to_ipcp);
 
-<<<<<<< HEAD
-=======
         LOG_FEXIT;
 
         return 0;
->>>>>>> francesco-wip
 }
 
 int  ipc_process_create(const struct name_t * name,
