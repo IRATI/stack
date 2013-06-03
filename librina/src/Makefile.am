@@ -7,15 +7,15 @@
 lib_LTLIBRARIES =
 
 librinapp_la_SOURCES  =				\
-	librina++.c++				\
-	librina.c				\
-	librina-common.c			\
-	librina-application.c			\
-	librina-ipc-manager.c			\
-	librina-ipc-process.c			\
-	librina-faux-sockets.c			\
-	librina-cdap.c				\
-	librina-sdu-protection.c
+	librina++.cc				\
+	librina.cc				\
+	librina-common.cc			\
+	librina-application.cc			\
+	librina-ipc-manager.cc			\
+	librina-ipc-process.cc			\
+	librina-faux-sockets.cc			\
+	librina-cdap.cc				\
+	librina-sdu-protection.cc
 
 EXTRA_DIST =					\
 	logs.h
