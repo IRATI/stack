@@ -280,7 +280,48 @@ int  ipc_process_configure(ipc_process_id_t                  ipcp_id,
 	return 0;
 }
 
+static struct id_to_ipcp_t * find_id_to_ipcp_by_id(ipc_process_id_t id)
+{
+        struct id_to_ipcp_t * cur;
+
+        LOG_FBEGN;
+
+        list_for_each_entry(cur, kipcm->id_to_ipcp, list) {
+                if (cur->id == id) {
+                        LOG_FEXIT;
+                        return cur;
+                }
+        }
+
+        LOG_FEXIT;
+
+        return NULL;
+}
+
 int  ipc_process_destroy(ipc_process_id_t ipcp_id)
 {
+	struct id_to_ipcp_t * id_ipcp;
+
+	LOG_FBEGN;
+
+	id_ipcp = find_id_to_ipcp_by_id(ipcp_id);
+	if (!id_ipcp)
+		return -1;
+	list_del(id_ipcp->list);
+	switch (id_ipcp->ipcprocess->type) {
+	default :
+		break;
+	case DIF_TYPE_SHIM_ETH :
+		shim_eth_destroy(ipcp_id);
+		break;
+	case DIF_TYPE_NORMAL:
+                break;
+        case DIF_TYPE_SHIM_IP:
+                break;
+	}
+	kfree(id_ipcp);
+	id_ipcp = 0;
+
+	LOG_FEXIT;
 	return 0;
 }
