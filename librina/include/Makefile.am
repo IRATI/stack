@@ -5,7 +5,6 @@
 #
 
 nobase_include_HEADERS =			\
-	librina++.h				\
 	librina.h				\
 	librina-common.h			\
 	librina-application.h			\
@@ -16,4 +15,4 @@ nobase_include_HEADERS =			\
 	librina-sdu-protection.h
 
 EXTRA_DIST =					\
-	librina++.i
+	librina.i

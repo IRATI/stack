@@ -86,9 +86,9 @@ WRAP_THROW_EXCEPTION(write, IPCException,
 		"eu/irati/librina/IPCException");
 
 %{
-#include "librina++.h"
+#include "librina.h"
 %}
 
-%include "librina++.h"
+%include "librina.h"
 
 %template(DIFPropertiesVector) vector<DIFProperties>;

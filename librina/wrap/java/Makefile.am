@@ -13,7 +13,7 @@ SWIG_JAVA_FLAGS = -java -package eu.irati.librina
 CLEANFILES =
 
 # XXX FIXME: Prerequisites for this rule are broken ...
-wrap.stamp: $(top_srcdir)/include/librina++.i $(top_srcdir)/include/*.h
+wrap.stamp: $(top_srcdir)/include/librina.i $(top_srcdir)/include/*.h
 	rm -f wrap.tmp
 	touch wrap.tmp
 	rm -r -f eu/irati/librina   &&			\
@@ -22,7 +22,7 @@ wrap.stamp: $(top_srcdir)/include/librina++.i $(top_srcdir)/include/*.h
 		-c++					\
 		-o librina_java.cc			\
 		-outdir ./eu/irati/librina		\
-		$(top_srcdir)/include/librina++.i || {	\
+		$(top_srcdir)/include/librina.i || {	\
 		echo "Cannot wrap input file" ;		\
 		rm -f wrap.tmp ;			\
 		rm -r -f eu/irati/librina ;		\
@@ -31,7 +31,7 @@ wrap.stamp: $(top_srcdir)/include/librina++.i $(top_srcdir)/include/*.h
 	mv -f wrap.tmp $@
 
 CLEANFILES += wrap.stamp wrap.tmp
-CLEANFILES += librina_java.c
+CLEANFILES += librina_java.cc
 
 librina-java-classes: wrap.stamp
 	$(JAVAC) eu/irati/librina/*.java

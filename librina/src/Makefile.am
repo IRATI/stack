@@ -7,7 +7,6 @@
 lib_LTLIBRARIES =
 
 librinapp_la_SOURCES  =				\
-	librina++.cc				\
 	librina.cc				\
 	librina-common.cc			\
 	librina-application.cc			\
