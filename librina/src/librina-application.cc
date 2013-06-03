@@ -44,9 +44,17 @@ event_filter_t ev_get_filter(void)
 {
 	LOG_DBG("Event get filter called");
 
-	event_filter_t *installed_filter;
+        // FIXME: Compilation errors ahead
+#if 0
+	event_filter_t * installed_filter;
 	installed_filter = (event_filter_t *) malloc (sizeof (event_filter_t));
+
 	return installed_filter;
+#else
+	event_filter_t x;
+
+	return x;
+#endif
 }
 
 port_id_t allocate_flow_request(const name_t * source,
@@ -93,7 +101,8 @@ int write_sdu(port_id_t port_id, sdu_t * sdu)
 {
 	LOG_DBG("Write SDU called");
 	LOG_DBG("Port id: %d", port_id);
-	LOG_DBG("Writing %d bytes ", sdu->size);
+	LOG_DBG("Writing %ld bytes ", sdu->size);
+
 	int i;
 	for(i=0; i<sdu->size; i++){
 		LOG_DBG("Value of byte %d: %u", i, sdu->data[i]);
@@ -107,12 +116,15 @@ dif_properties_t *get_dif_properties(const name_t * dif_name,
 	LOG_DBG("Get DIF properties called");
 	*size = 2;
 	dif_properties_t * dif_properties;
-	dif_properties = (dif_properties_t *) malloc(2*sizeof(dif_properties_t));
+	dif_properties =
+                (dif_properties_t *) malloc(2*sizeof(dif_properties_t));
 
 	dif_properties[0].max_sdu_size=300;
+
+        // FIXME: Compilation errors ahead
+#if 0
 	dif_properties[0].dif_name.process_name = "Test.DIF";
-	qos_cube_t * qos_cube;
-	qos_cube = (qos_cube_t *) malloc(2*sizeof(qos_cube_t));
+	qos_cube_t * qos_cube = (qos_cube_t *) malloc(2*sizeof(qos_cube_t));
 	qos_cube[0].name = "qos cube number 1";
 	qos_cube[0].id = 1;
 	qos_cube[0].flow_spec.jitter = 25;
@@ -123,7 +135,6 @@ dif_properties_t *get_dif_properties(const name_t * dif_name,
 	qos_cube[1].flow_spec.delay = 200;
 	dif_properties[0].qos_cubes.elements = qos_cube;
 	dif_properties[0].qos_cubes.size = 2;
-
 	dif_properties[1].max_sdu_size=400;
 	dif_properties[1].dif_name.process_name = "Test1.DIF";
 	qos_cube = (qos_cube_t *) malloc(2*sizeof(qos_cube_t));
@@ -137,6 +148,7 @@ dif_properties_t *get_dif_properties(const name_t * dif_name,
 	qos_cube[1].flow_spec.delay = 180;
 	dif_properties[1].qos_cubes.elements = qos_cube;
 	dif_properties[1].qos_cubes.size = 2;
+#endif
 
 	return dif_properties;
 }
