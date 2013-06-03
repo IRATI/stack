@@ -20,6 +20,6 @@ EXTRA_DIST =					\
 	logs.h
 
 librinapp_la_LDFLAGS  =
-librinapp_la_CPPFLAGS = -I$(top_srcdir)/include
+librinapp_la_CPPFLAGS = -I$(top_srcdir)/include $(CPPFLAGS_EXTRA)
 
 lib_LTLIBRARIES += librinapp.la
