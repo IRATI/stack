@@ -307,7 +307,7 @@ int  ipc_process_destroy(ipc_process_id_t ipcp_id)
 	id_ipcp = find_id_to_ipcp_by_id(ipcp_id);
 	if (!id_ipcp)
 		return -1;
-	list_del(id_ipcp->list);
+	list_del(&id_ipcp->list);
 	switch (id_ipcp->ipcprocess->type) {
 	default :
 		break;
