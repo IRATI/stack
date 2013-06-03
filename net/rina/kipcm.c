@@ -207,7 +207,7 @@ static int add_id_to_ipcp_node(ipc_process_id_t       id,
         LOG_FBEGN;
 
         aux_id_to_ipcp = kmalloc(sizeof(*aux_id_to_ipcp), GFP_KERNEL);
-        if (!ipc_process) {
+        if (!aux_id_to_ipcp) {
                 LOG_CRIT("Cannot allocate %z bytes of memory",
                          sizeof(*aux_id_to_ipcp));
                 LOG_FEXIT;
