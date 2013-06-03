@@ -2,6 +2,7 @@
  *  Shim IPC Process for Ethernet
  *
  *    Sander Vrijders <sander.vrijders@intec.ugent.be>
+ *    Miquel Tarzan   <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,9 +26,9 @@
 #include "shim-eth.h"
 
 LIST_HEAD(shim_eth);
-/* FIXME : This isn't needed and conceptually is wrong */
+/* FIXME : This isn't needed */
 static ipc_process_id_t count = 0;
-/* FIXME : This function should be removed in the near future, it's wrong */
+
 ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 {
         /* Unsure if I can call return count++ and count gets incremented after
@@ -138,7 +139,32 @@ void shim_eth_exit(void)
 int shim_eth_ipc_create(const struct name_t * name,
 			ipc_process_id_t      ipcp_id)
 {
-	LOG_DBG("Created shim ETH IPC process");
+        struct shim_eth_info_t *shim_eth_info;
+        struct shim_eth_t *tmp;
+        struct shim_eth_instance_t *instance;
+        shim_eth_info = kmalloc(sizeof(*shim_eth_info),GFP_KERNEL);
+        if (!shim_eth_info) {
+                LOG_DBG("Failed creation of the shim ethernet info structure");
+                return -1;
+        }
+        shim_eth_info->name = name;
+        instance = kmalloc(sizeof(*instance),GFP_KERNEL);
+        if (!shim_eth_info) {
+                LOG_DBG("Failed creation of the shim ethernet instance");
+                return -1;
+        }
+        instance->info = shim_eth_info;
+        tmp = kmalloc(sizeof(*tmp),GFP_KERNEL);
+        if (!tmp) {
+                LOG_DBG("Failed creation of the shim ethernet structure");
+                return -1;
+        }
+        tmp->ipc_process_id = ipcp_id;
+        tmp->shim_eth_instance = instance;
+        INIT_LIST_HEAD(&tmp->list);
+        list_add(&tmp.list, &shim_eth);
+        /* FIXME: Add handler to correct interface and vlan id */
+        LOG_DBG("Created shim ETH IPC process");
 
 	return 0;
 }
@@ -147,6 +173,7 @@ int shim_eth_ipc_configure(ipc_process_id_t ipcp_id,
                            const struct ipc_process_shim_ethernet_conf_t *configuration)
 {
 	LOG_DBG("Configured shim ETH IPC Process");
+	configuration->device_name;
 
 	return 0;
 }
