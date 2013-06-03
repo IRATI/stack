@@ -17,6 +17,8 @@
 #ifndef RINA_SHIM_TCP_UDP_H
 #define RINA_SHIM_TCP_UDP_H
 
+#include "../common.h"
+
 int  shim_tcp_udp_init(void);
 void shim_tcp_udp_exit(void);
 

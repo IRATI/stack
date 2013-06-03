@@ -18,13 +18,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_SHIM_ETH_H
-#define RINA_SHIM_ETH_H
+#ifndef RINA_SHIMS_SHIM_ETH_H
+#define RINA_SHIMS_SHIM_ETH_H
 
 #include <linux/hashtable.h>
 
-#include "common.h"
-#include "kipcm.h"
+#include "../kipcm.h"
+#include "../common.h"
 
 /* Holds the configuration of one shim IPC process */
 struct shim_eth_info_t {
@@ -58,7 +58,7 @@ struct shim_eth_flow_t {
 	uint64_t             dst_mac;
 	port_id_t            port_id;
 	enum port_id_state_t port_id_state;
-	/* FIXME : Will probably be a sk_buff_head or a linked list 
+	/* FIXME: Will probably be a sk_buff_head or a linked list 
 	   holding only the SDUs */
 
         /* QUEUE(sdu_queue, sdu_t *); */
@@ -73,10 +73,10 @@ struct shim_eth_instance_t {
         /* The configuration of the shim IPC Process */
 	struct shim_eth_info_t info;
 
-	/* FIXME : Pointer to the device driver data_structure */
+	/* FIXME: Pointer to the device driver data_structure */
 	/* device_t * device_driver; */
 
-	/* FIXME : Stores the state of flows indexed by port_id */
+	/* FIXME: Stores the state of flows indexed by port_id */
 	/* HASH_TABLE(flow_to_port_id, port_id_t, shim_eth_flow_t); */
 };
 

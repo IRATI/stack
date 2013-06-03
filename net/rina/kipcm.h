@@ -23,13 +23,15 @@
 #define RINA_KIPCM_H
 
 #include <linux/syscalls.h>
+#if 0
+#include <linux/hash.h>
+#include <linux/hashtable.h>
+#endif
 
 #include "common.h"
 #include "efcp.h"
 #include "rmt.h"
-#include "shim-eth.h"
-#include "linux/hash.h"
-#include <linux/hashtable.h>
+#include "shims/shim-eth.h"
 
 typedef enum {
         DIF_TYPE_NORMAL,

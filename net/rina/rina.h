@@ -21,6 +21,8 @@
 #ifndef RINA_H
 #define RINA_H
 
+/* FIXME: To be moved elsewhere */
+
 #define MK_RINA_VERSION(MAJOR, MINOR, MICRO) \
         (((MAJOR & 0xFF) << 24) | ((MINOR & 0xFF) << 16) | (MICRO & 0xFFFF))
 

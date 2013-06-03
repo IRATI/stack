@@ -50,7 +50,7 @@ struct efcp_conf_t {
 
 struct efcp_t {
 	/* 
-	 * FIXME hash_table must be added
+	 * FIXME: hash_table must be added
 	 * HASH_TABLE(efcp_components_per_ipc_process, ipc_process_id_t, 
 	 * efcp_ipc_t *);
 	 */
@@ -111,7 +111,7 @@ struct dtcp_instance_t {
 	 */
 	struct dtcp_state_vector_t *dtcp_state_vector;
 
-	/* FIXME : Queues must be added
+	/* FIXME: Queues must be added
 	 * QUEUE(flow_control_queue, pdu_t);
 	 * QUEUE(closed_window_queue, pdu_t);
 	 * struct workqueue_struct * rx_control_queue;
