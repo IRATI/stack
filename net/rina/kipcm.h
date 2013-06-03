@@ -114,7 +114,6 @@ struct normal_ipc_process_t {
 	
 	/* The RMT instance associated to the IPC Process */
 	struct rmt_instance_t *rmt;
-
 };
 
 struct ipc_process_shim_ethernet_t {
@@ -130,7 +129,6 @@ struct ipc_process_shim_ethernet_t {
 
 	/* The module that performs the processing */
 	struct shim_eth_instance_t *shim_eth_ipc_process;
-
 };
 
 struct ipc_process_shim_tcp_udp_t {
@@ -185,7 +183,6 @@ struct flow_t {
 	//QUEUE(segmentation_queue, pdu_t *);
 	//QUEUE(reassembly_queue,	pdu_t *);
 	//QUEUE(sdu_ready, sdu_t *);
-
 };
 
 struct kipc_t {
@@ -197,26 +194,25 @@ struct kipc_t {
 
 	//FIXME Define HASH_TABLE
 	//HASH_TABLE(port_id_to_flow, port_id_t, struct flow_t *);
-        struct list_head *port_id_to_flow;
+        struct list_head * port_id_to_flow;
 	
 	/* A table with all the instances of IPC Processes, indexed by
 	 * process_id. */
 	//FIXME Define HASH_TABLE
 	//HASH_TABLE(id_to_ipcp, ipc_process_id_t, struct ipc_process_t *);
-	struct list_head *id_to_ipcp;
-
+	struct list_head * id_to_ipcp;
 };
 
 struct id_to_ipcp_t {
-        ipc_process_id_t      id; /* key */
-        struct ipc_process_t *ipcprocess; /* Value*/
-        struct list_head      list;
+        ipc_process_id_t       id; /* key */
+        struct ipc_process_t * ipcprocess; /* Value*/
+        struct list_head       list;
 };
 
 struct port_id_to_flow_t {
-        port_id_t        port_id; /* key */
-        struct flow_t   *flow; /* value */
-        struct list_head list;
+        port_id_t         port_id; /* key */
+        struct flow_t   * flow; /* value */
+        struct list_head  list;
 };
 
 int  kipcm_init(void);
