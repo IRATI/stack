@@ -5,7 +5,7 @@
 #
 
 nobase_include_HEADERS =			\
-	librina++.h++				\
+	librina++.h				\
 	librina.h				\
 	librina-common.h			\
 	librina-application.h			\

@@ -58,11 +58,10 @@
 %javaexception(JTYPE) MATCH {
   try {
     $action
-  }
-  catch ( CPPTYPE & e ) {
+  } catch (CPPTYPE & e) {
     jclass eclass = jenv->FindClass(JNITYPE);
-    if ( eclass ) {
-      jenv->ThrowNew( eclass, e.what() );
+    if (eclass) {
+      jenv->ThrowNew(eclass, e.what());
     }
   }
 }
@@ -87,9 +86,9 @@ WRAP_THROW_EXCEPTION(write, IPCException,
 		"eu/irati/librina/IPCException");
 
 %{
-#include "librina++.h++"
+#include "librina++.h"
 %}
 
-%include "librina++.h++"
+%include "librina++.h"
 
 %template(DIFPropertiesVector) vector<DIFProperties>;

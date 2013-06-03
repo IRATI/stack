@@ -16,7 +16,7 @@
 
 #include <iostream>
 
-#include "librina++.h++"
+#include "librina++.h"
 
 #define RINA_PREFIX "application"
 

@@ -14,8 +14,8 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#ifndef LIBRINAPP_HPP
-#define LIBRINAPP_HPP
+#ifndef LIBRINAPP_H
+#define LIBRINAPP_H
 
 //#include "librina-common.h"
 //#include "librina-application.h"
@@ -24,6 +24,8 @@
 //#include "librina-faux-sockets.h"
 //#include "librina-cdap.h"
 //#include "librina-sdu-protection.h"
+
+#ifdef __cplusplus
 
 #include <exception>
 #include <string>
@@ -218,5 +220,7 @@ public:
         getDIFProperties(const ApplicationProcessNamingInformation &
                          applicationName);
 };
+
+#endif
 
 #endif
