@@ -14,6 +14,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <cstring>
+
 #include "librina-application.h"
 
 #define RINA_PREFIX "application"
@@ -23,13 +25,16 @@
 int ev_poll(event_t * event)
 {
 	LOG_DBG("Event poll called");
+
 	event->type = EVENT_ALLOCATE_FLOW_REQUEST_RECEIVED;
+
 	return 0;
 }
 
 int ev_wait(event_t * event)
 {
 	LOG_DBG("Event wait called");
+
 	event->type = EVENT_SDU_RECEIVED;
 
 	return 0;
@@ -52,6 +57,7 @@ event_filter_t ev_get_filter(void)
 	return installed_filter;
 #else
 	event_filter_t x;
+        bzero(&x, sizeof(x));
 
 	return x;
 #endif
@@ -103,10 +109,13 @@ int write_sdu(port_id_t port_id, sdu_t * sdu)
 	LOG_DBG("Port id: %d", port_id);
 	LOG_DBG("Writing %ld bytes ", sdu->size);
 
-	int i;
-	for(i=0; i<sdu->size; i++){
-		LOG_DBG("Value of byte %d: %u", i, sdu->data[i]);
+        // FIXME: Compilation errors ahead
+#if 0
+	for (size_t i = 0; i < sdu->size; i++) {
+		LOG_DBG("Value of byte %z = %ud", i, sdu->data[i]);
 	}
+#endif
+
 	return 0;
 }
 
