@@ -19,10 +19,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/if_ether.h>
+
 #define RINA_PREFIX "shim-eth"
 
-#include <linux/if_ether.h>
-#include "logs.h"
+#include "../logs.h"
 #include "shim-eth.h"
 
 LIST_HEAD(shim_eth);
@@ -38,7 +39,7 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 	/* Retrieve configuration of IPC process from params */
 	struct shim_eth_info_t shim_eth_info;
 	struct ipc_config_t *ipc_config = config[0];
-	while(ipc_config != 0){
+	while (ipc_config != 0) {
 		switch (ipc_config->type) {
 		case IPC_CONFIG_NAME:
 			shim_eth_info.name =

@@ -36,9 +36,9 @@ typedef uint		response_reason_t;
 typedef uint            cep_id_t;
 typedef uint16_t        address_t;
 typedef uint            seq_num_t;
-/* FIXME : The PDU type should be defined correctly in the near future */
+/* FIXME: The PDU type should be defined correctly in the near future */
 typedef uint            pdu_type_t;
-/* FIXME : The qos_id_t should be defined correctly in the near future */
+/* FIXME: The qos_id_t should be defined correctly in the near future */
 typedef uint            qos_id_t;
 typedef uint            timeout_t;
 
@@ -184,7 +184,7 @@ struct connection_t {
 	/* The QoS id */
 	qos_id_t qos_id;
 	
-	/* FIXME : policy type remains undefined */
+	/* FIXME: policy type remains undefined */
 	/* The list of policies associated with this connection */
 	/* policy_t ** policies; */
 };
