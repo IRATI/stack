@@ -20,7 +20,7 @@
 
 #include <linux/module.h>
 
-#define RINA_PREFIX "rina"
+#define RINA_PREFIX "core"
 
 #include "logs.h"
 #include "rina.h"
