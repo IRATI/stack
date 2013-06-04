@@ -1,5 +1,5 @@
 /*
- * RMT (Relaying and Multiplexing Task)
+ * SysFS support
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,32 +18,5 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "rmt"
-
-#include "logs.h"
-#include "rmt.h"
-#include "pdufwdt.h"
-
-int rmt_init(void)
-{
-        LOG_FBEGN;
-
-        if (pdufwdt_init()) {
-                LOG_FEXIT;
-
-                return 1;
-        }
-
-        LOG_FEXIT;
-
-        return 0;
-}
-
-void rmt_exit(void)
-{
-        LOG_FBEGN;
-
-        pdufwdt_exit();
-
-        LOG_FEXIT;
-}
+int  sysfs_init(void);
+void sysfs_exit(void);

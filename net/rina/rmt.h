@@ -1,5 +1,5 @@
 /*
- *  RMT (Relaying and Multiplexing Task)
+ * RMT (Relaying and Multiplexing Task)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net> 
