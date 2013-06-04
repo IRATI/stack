@@ -28,6 +28,7 @@
 #include "common.h" 
 #include "kipcm.h" 
 
+#if 0
 asmlinkage long sys_ipc_process_create(const name_t __user * name,
                                        ipc_process_id_t      ipcp_id,
                                        dif_type_t            type)
@@ -98,3 +99,4 @@ asmlinkage long sys_efcp_update(cep_id_t cep_id,
 
 	return 0;
 }
+#endif
