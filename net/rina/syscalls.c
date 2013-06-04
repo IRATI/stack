@@ -1,5 +1,5 @@
 /*
- * RINA SYSTEM CALLS 
+ * System calls 
  * 
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
@@ -28,9 +28,9 @@
 #include "common.h" 
 #include "kipcm.h" 
 
-asmlinkage long sys_ipc_process_create(const name_t *   name,
-                                       ipc_process_id_t ipcp_id,
-                                       dif_type_t       type)
+asmlinkage long sys_ipc_process_create(const name_t __user * name,
+                                       ipc_process_id_t      ipcp_id,
+                                       dif_type_t            type)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -38,8 +38,8 @@ asmlinkage long sys_ipc_process_create(const name_t *   name,
 	return 0;
 }
 
-asmlinkage long sys_ipc_process_configure(ipc_process_id_t ipcp_id,
-                                          const ipc_process_conf_t configuration)
+asmlinkage long sys_ipc_process_configure(ipc_process_id_t                         ipcp_id,
+                                          const struct ipc_process_conf_t __user * configuration)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -55,9 +55,9 @@ asmlinkage long sys_ipc_process_destroy(ipc_process_id_t ipcp_id)
 	return 0;
 }
 
-asmlinkage long sys_read_sdu(port_id_t port_id,
-                             bool_t block,
-                             sdu_t *sdu)
+asmlinkage long sys_read_sdu(port_id_t      port_id,
+                             bool_t         block,
+                             sdu_t __user * sdu)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -65,8 +65,8 @@ asmlinkage long sys_read_sdu(port_id_t port_id,
 	return 0;
 }
 
-asmlinkage long sys_write_sdu(port_id_t port_id,
-                              const sdu_t *sdu)
+asmlinkage long sys_write_sdu(port_id_t            port_id,
+                              const sdu_t __user * sdu)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -74,7 +74,7 @@ asmlinkage long sys_write_sdu(port_id_t port_id,
 	return 0;
 }
 
-asmlinkage long sys_efcp_create(const connection_t *connection)
+asmlinkage long sys_efcp_create(const connection_t __user * connection)
 {
         LOG_FBEGN;
         LOG_FEXIT;
