@@ -1,5 +1,5 @@
 /*
- *  EFCP (Error and Flow Control Protocol)
+ * EFCP (Error and Flow Control Protocol)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>

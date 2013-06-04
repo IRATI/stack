@@ -1,5 +1,5 @@
 /*
- *  PDUFWDT (PDU Forwarding Table)
+ * PDU-FWD-T (PDU Forwarding Table)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *

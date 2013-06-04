@@ -1,5 +1,5 @@
 /*
- *  KIPCM (Kernel-IPC Manager)
+ * K-IPCM (Kernel-IPC Manager)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan <miquel.tarzan@i2cat.net>
@@ -228,6 +228,8 @@ int  ipc_process_create(const struct name_t * name,
 			ipc_process_id_t      ipcp_id,
 			dif_type_t 	      type)
 {
+        LOG_FBEGN;
+
 	struct ipc_process_t *ipc_process;
 
 	switch (type) {
@@ -238,6 +240,7 @@ int  ipc_process_create(const struct name_t * name,
 		if (!ipc_process) {
 		        LOG_CRIT("Cannot allocate %z bytes of memory",
                                  sizeof(*ipc_process));
+                        LOG_FEXIT;
 		        return -1;
 		}
 
@@ -251,14 +254,18 @@ int  ipc_process_create(const struct name_t * name,
 		break;
 	}
 
+        LOG_FEXIT;
+
 	return 0;
 }
 
 int  ipc_process_configure(ipc_process_id_t                  ipcp_id,
 			   const struct ipc_process_conf_t * configuration)
 {
-        struct ipc_process_t *ipc_process;
-        const struct ipc_process_shim_ethernet_conf_t *conf;
+        struct ipc_process_t *                          ipc_process;
+        const struct ipc_process_shim_ethernet_conf_t * conf;
+
+        LOG_FBEGN;
 
         ipc_process = find_ipc_process_by_id(ipcp_id);
         if (ipc_process == NULL)
@@ -268,6 +275,8 @@ int  ipc_process_configure(ipc_process_id_t                  ipcp_id,
                 conf = configuration->ipc_process_conf.shim_eth_ipcp_conf;
                 if (shim_eth_ipc_configure(ipcp_id, conf)) {
                         LOG_ERR("Failed configuring the SHIM IPC Process");
+                        LOG_FEXIT;
+
                         return -1;
                 }
                 break;
@@ -277,10 +286,15 @@ int  ipc_process_configure(ipc_process_id_t                  ipcp_id,
                 break;
         }
 
+        LOG_FEXIT;
+
 	return 0;
 }
 
 int  ipc_process_destroy(ipc_process_id_t ipcp_id)
 {
+        LOG_FBEGN;
+        LOG_FEXIT;
+
 	return 0;
 }

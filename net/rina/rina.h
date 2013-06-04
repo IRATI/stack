@@ -1,5 +1,5 @@
 /*
- *  RINA
+ * RINA
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
