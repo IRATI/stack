@@ -18,6 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#define RINA_PREFIX "sysfs"
+
 #include "logs.h"
 
 int  sysfs_init(void)
