@@ -25,209 +25,291 @@
 #ifndef LIBRINA_COMMON_H
 #define LIBRINA_COMMON_H
 
-#include <stdint.h>
-#include <stddef.h>
-
-/** A generic UTF-16 encoded string */
-typedef char * string_t;
-
-/** The local identifier of a flow, unique within a system */
-typedef uint16_t port_id_t;
-
-/** The value should be interpreted as false if the value is 0 or true
- * otherwise. This typedef should be interpreted as ISO C99 bool/_Bool
- * and could be replaced by the inclusion of stdbool.h where/when
- * possible)
- */
-typedef int bool_t;
-
-/** This structure represents raw data */
-typedef struct {
-	unsigned char * data;
-	size_t size;
-} buffer_t;
-
-/** An SDU */
-typedef buffer_t sdu_t;
+#include <exception>
+#include <string>
+#include <vector>
+#include <list>
 
 /**
- * This structure represents a range of integer values
+ * Contains an application process naming information
  */
-typedef struct {
-	/** Minimum value */
-	uint32_t min_value;
-
-	/** Maximum value */
-	uint32_t max_value;
-} uint_range_t;
-
-/** The address of an IPC Process */
-typedef uint32_t   address_t;
-
-/** The id of a QoS cube */
-typedef uint32_t   qos_id_t;
-
-/** A connection-endpoint id */
-typedef uint32_t   cep_id_t;
-
-/** A sequence number */
-typedef uint32_t   seq_num_t;
-
-/** A unique identifier for a local IPC Process */
-typedef int        ipc_process_id_t;
-
-/** A NULL-terminated string describing why an operation was unsuccessful */
-typedef string_t   response_reason_t;
-
-/** Defines the type of RIB Object Value */
-typedef enum {
-	SHORT,
-	INT,
-	LONG,
-	FLOAT,
-	DOUBLE,
-	STRING,
-	ENCODED
-} rib_object_value_type_t;
-
-/** The value of a RIB object */
-typedef union{
-	short short_value;
-	int int_value;
-	long long_value;
-	float float_value;
-	double double_value;
-	string_t string_value;
-	unsigned char * encoded_value;
-} rib_object_value_t;
-
-/** Defines the contents of a RIB object */
-typedef struct{
-	/** The object class */
-	string_t object_class;
-
-	/** The object name */
-	string_t object_name;
-
-	/** The object instance */
-	long object_instance;
-
-	/** The type of value, used as the union value discriminator */
-	rib_object_value_type_t value_type;
-
-	/** The object value */
-	rib_object_value_t object_value;
-} rib_object_t;
-
-/** Contains an application process naming information */
-typedef struct {
-   /**
-     * The process_name identifies an application process within the
-     * application process namespace. This value is required, it
-     * cannot be NULL. This name has global scope (it is defined by
-     * the chain of IDD databases that are linked together), and is
-     * assigned by an authority that manages the namespace that
-     * particular application name belongs to.
-     */
-	string_t process_name;
+class ApplicationProcessNamingInformation {
+	/**
+	 * The process_name identifies an application process within the
+	 * application process namespace. This value is required, it
+	 * cannot be NULL. This name has global scope (it is defined by
+	 * the chain of IDD databases that are linked together), and is
+	 * assigned by an authority that manages the namespace that
+	 * particular application name belongs to.
+	 */
+	std::string processName;
 
 	/**
 	 * The process_instance identifies a particular instance of the
 	 * process. This value is optional, it may be NULL.
 	 */
-	string_t process_instance;
+	std::string processInstance;
 
 	/**
 	 * The entity_name identifies an application entity within the
 	 * application process. This value is optional, it may be NULL.
 	 */
-    string_t entity_name;
+	std::string entityName;
 
 	/**
 	 * The entity_name identifies a particular instance of an entity
 	 * within the application process. This value is optional, it
 	 * may be NULL
 	 */
-   	string_t entity_instance;
-} name_t;
+	std::string entityInstance;
 
-/** This structure defines an array of name_t */
-typedef struct {
-	/** Pointer to the first element of the array */
-	name_t * elements;
+public:
+	ApplicationProcessNamingInformation();
+	ApplicationProcessNamingInformation(const std::string& processName,
+			const std::string& processInstance);
+	bool operator==(const ApplicationProcessNamingInformation &other) const;
+	bool operator!=(const ApplicationProcessNamingInformation &other) const;
+	const std::string& getEntityInstance() const;
+	void setEntityInstance(const std::string& entityInstance);
+	const std::string& getEntityName() const;
+	void setEntityName(const std::string& entityName);
+	const std::string& getProcessInstance() const;
+	void setProcessInstance(const std::string& processInstance);
+	const std::string& getProcessName() const;
+	void setProcessName(const std::string& processName);
+};
 
-	/** Number of elements in the array */
-	int size;
-} array_of_name_t;
+/**
+ * This class defines the characteristics of a flow
+ */
+class FlowSpecification {
+	/** Average bandwidth in bytes/s. A value of 0 means don't care. */
+	unsigned int averageBandwidth;
 
-/** This structure defines the characteristics of a flow */
-typedef struct {
-	/** Average bandwidth in bytes/s */
-	uint_range_t average_bandwidth;
+	/** Average bandwidth in SDUs/s. A value of 0 means don't care */
+	unsigned int averageSDUBandwidth;
 
-	/** Average bandwidth in SDUs/s */
-	uint_range_t average_sdu_bandwidth;
+	/** In milliseconds. A value of 0 means don't care*/
+	unsigned int peakBandwidthDuration;
 
-	/** In milliseconds */
-	uint_range_t peak_bandwidth_duration;
-
-	/** In milliseconds */
-	uint_range_t peak_sdu_bandwidth_duration;
+	/** In milliseconds. A value of 0 means don't care */
+	unsigned int peakSDUBandwidthDuration;
 
 	/** A value of 0 indicates 'do not care' */
-	double undetected_bit_error_rate;
+	double undetectedBitErrorRate;
 
 	/** Indicates if partial delivery of SDUs is allowed or not */
-	bool_t partial_delivery;
+	bool partialDelivery;
 
 	/** Indicates if SDUs have to be delivered in order */
-	bool_t ordered_delivery;
+	bool orderedDelivery;
 
 	/**
 	 * Indicates the maximum gap allowed among SDUs, a gap of N SDUs
 	 * is considered the same as all SDUs delivered. A value of -1
 	 * indicates 'Any'
 	 */
-	int max_allowable_gap;
+	int maxAllowableGap;
 
 	/**
 	 * In milliseconds, indicates the maximum delay allowed in this
 	 * flow. A value of 0 indicates 'do not care'
 	 */
-	uint32_t  delay;
+	unsigned int delay;
 
 	/**
 	 * In milliseconds, indicates the maximum jitter allowed in this
 	 * flow. A value of 0 indicates 'do not care'
 	 */
-	uint32_t  jitter;
+	unsigned int jitter;
 
 	/**
 	 * The maximum SDU size for the flow. May influence the choice
 	 * of the DIF where the flow will be created.
 	 */
-	uint32_t  max_sdu_size;
-} flow_spec_t;
+	unsigned int maxSDUsize;
 
-/** This structure defines the properties of a QoS cube */
-typedef struct {
-	/** The QoS cube name */
-	string_t name;
+public:
+	FlowSpecification();
+	unsigned int getAverageBandwidth() const;
+	void setAverageBandwidth(unsigned int averageBandwidth);
+	unsigned int getAverageSduBandwidth() const;
+	void setAverageSduBandwidth(unsigned int averageSduBandwidth);
+	unsigned int getDelay() const;
+	void setDelay(unsigned int delay);
+	unsigned int getJitter() const;
+	void setJitter(unsigned int jitter);
+	int getMaxAllowableGap() const;
+	void setMaxAllowableGap(int maxAllowableGap);
+	unsigned int getMaxSDUSize() const;
+	void setMaxSDUSize(unsigned int maxSduSize);
+	bool isOrderedDelivery() const;
+	void setOrderedDelivery(bool orderedDelivery);
+	bool isPartialDelivery() const;
+	void setPartialDelivery(bool partialDelivery);
+	unsigned int getPeakBandwidthDuration() const;
+	void setPeakBandwidthDuration(unsigned int peakBandwidthDuration);
+	unsigned int getPeakSduBandwidthDuration() const;
+	void setPeakSduBandwidthDuration(unsigned int peakSduBandwidthDuration);
+	double getUndetectedBitErrorRate() const;
+	void setUndetectedBitErrorRate(double undetectedBitErrorRate);
+};
 
-	/** The QoS cube id */
+/**
+ * Defines the properties that a QoSCube is able to provide
+ */
+class QoSCube {
+
+	/** The name of the QoS cube*/
+	std::string name;
+
+	/** The id of the QoS cube */
 	int id;
 
-	/** The flow characteristics supported by this QoS cube */
-	flow_spec_t flow_spec;
-} qos_cube_t;
+	/** Average bandwidth in bytes/s. A value of 0 means don't care. */
+	unsigned int averageBandwidth;
 
-/** This structure defines an array of QoS cubes */
-typedef struct {
-	/** Pointer to the first element of the array */
-	qos_cube_t * elements;
+	/** Average bandwidth in SDUs/s. A value of 0 means don't care */
+	unsigned int averageSDUBandwidth;
 
-	/** Number of elements in the array */
-	int size;
-} array_of_qos_cube_t;
+	/** In milliseconds. A value of 0 means don't care*/
+	unsigned int peakBandwidthDuration;
+
+	/** In milliseconds. A value of 0 means don't care */
+	unsigned int peakSDUBandwidthDuration;
+
+	/** A value of 0 indicates 'do not care' */
+	double undetectedBitErrorRate;
+
+	/** Indicates if partial delivery of SDUs is allowed or not */
+	bool partialDelivery;
+
+	/** Indicates if SDUs have to be delivered in order */
+	bool orderedDelivery;
+
+	/**
+	 * Indicates the maximum gap allowed among SDUs, a gap of N SDUs
+	 * is considered the same as all SDUs delivered. A value of -1
+	 * indicates 'Any'
+	 */
+	int maxAllowableGap;
+
+	/**
+	 * In milliseconds, indicates the maximum delay allowed in this
+	 * flow. A value of 0 indicates 'do not care'
+	 */
+	unsigned int delay;
+
+	/**
+	 * In milliseconds, indicates the maximum jitter allowed in this
+	 * flow. A value of 0 indicates 'do not care'
+	 */
+	unsigned int jitter;
+public:
+	QoSCube(const std::string& name, int id);
+	bool operator==(const QoSCube &other) const;
+	bool operator!=(const QoSCube &other) const;
+	int getId() const;
+	const std::string& getName() const;
+	unsigned int getAverageBandwidth() const;
+	void setAverageBandwidth(unsigned int averageBandwidth);
+	unsigned int getAverageSduBandwidth() const;
+	void setAverageSduBandwidth(unsigned int averageSduBandwidth);
+	unsigned int getDelay() const;
+	void setDelay(unsigned int delay);
+	unsigned int getJitter() const;
+	void setJitter(unsigned int jitter);
+	int getMaxAllowableGap() const;
+	void setMaxAllowableGap(int maxAllowableGap);
+	bool isOrderedDelivery() const;
+	void setOrderedDelivery(bool orderedDelivery);
+	bool isPartialDelivery() const;
+	void setPartialDelivery(bool partialDelivery);
+	unsigned int getPeakBandwidthDuration() const;
+	void setPeakBandwidthDuration(unsigned int peakBandwidthDuration);
+	unsigned int getPeakSduBandwidthDuration() const;
+	void setPeakSduBandwidthDuration(unsigned int peakSduBandwidthDuration);
+	double getUndetectedBitErrorRate() const;
+	void setUndetectedBitErrorRate(double undetectedBitErrorRate);
+};
+
+/**
+ * This class contains the properties of a single DIF
+ */
+class DIFProperties {
+	/** The name of the DIF */
+	ApplicationProcessNamingInformation DIFName;
+
+	/**
+	 * The maximum SDU size this DIF can handle (writes with bigger
+	 * SDUs will return an error, and read will never return an SDUs
+	 * bigger than this size
+	 */
+	unsigned int maxSDUSize;
+
+	/**
+	 * The different QoS cubes supported by the DIF
+	 */
+	std::list<QoSCube> qosCubes;
+public:
+	DIFProperties(const ApplicationProcessNamingInformation& DIFName,
+			int maxSDUSize);
+	const ApplicationProcessNamingInformation& getDifName() const;
+	unsigned int getMaxSduSize() const;
+	const std::list<QoSCube>& getQoSCubes() const;
+	void addQoSCube(const QoSCube& qosCube);
+	void removeQoSCube(const QoSCube& qosCube);
+};
+
+/**
+ * Enum type that identifies the different types of events
+ */
+enum IPCEventType {
+	FLOW_ALLOCATION_REQUESTED, APPLICATION_UNREGISTERED, FLOW_DEALLOCATED
+};
+
+/**
+ * Base class for IPC Events
+ */
+class IPCEvent {
+	/** The type of event */
+	IPCEventType eventType;
+public:
+	IPCEvent(IPCEventType eventType) {
+		this->eventType = eventType;
+	}
+	IPCEventType getType() const {
+		return this->eventType;
+	}
+};
+
+/**
+ * Stores IPC Events that have happened, ready to be consumed and
+ * processed by client classes.
+ */
+class IPCEventStore {
+	virtual ~IPCEventStore();
+public:
+	/** Retrieves the next available event, if any */
+	virtual IPCEvent eventPoll();
+
+	/** Blocks until there is an event available */
+	virtual IPCEvent eventWait();
+
+	/**
+	 * Blocks until there is an event available up to maxTimeInMilis
+	 * milliseconds
+	 */
+	virtual IPCEvent eventWait(long maxTimeInMilis);
+};
+
+/**
+ * Base class for all RINA exceptions
+ */
+class IPCException: public std::exception {
+	std::string whatArg;
+public:
+	explicit IPCException(const std::string& whatArg);
+};
 
 #endif

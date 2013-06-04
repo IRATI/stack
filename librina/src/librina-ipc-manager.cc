@@ -18,7 +18,7 @@
 
 #define RINA_PREFIX "ipc-manager"
 
-#include "logs.h"
+/*#include "logs.h"
 
 int ipcm_create(const name_t * name,
                 dif_type_t type,
@@ -262,7 +262,7 @@ rib_object_t *ipcm_query_rib(ipc_process_id_t ipc_process_id,
 	rib_objects[1].object_instance = 9886232;
 	rib_objects[1].value_type = INT;
 	rib_objects[1].object_value.int_value = 8432;
-#endif
 
 	return rib_objects;
-}
+}*/
+#endif
