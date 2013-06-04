@@ -16,6 +16,7 @@ if BUILD_WRAPPERS_JAVA
 edit = $(SED)							\
         -e 's|@abs_top_builddir[@]|$(abs_top_builddir)|g'	\
         -e 's|@datarootdir[@]|$(datarootdir)|g'			\
+        -e 's|@javadir[@]|$(javadir)|g'				\
         -e 's|@builddir[@]|$(builddir)|g'			\
         -e 's|@libdir[@]|$(libdir)|g'				\
         -e 's|@SHELL[@]|$(SHELL)|g'				\
