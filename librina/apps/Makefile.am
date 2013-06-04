@@ -40,7 +40,8 @@ EXTRA_DIST  += ipcpd.java
 CLEANFILES  += ipcpd
 
 ipcpd.class: ipcpd.java
-	$(JAVAC) -classpath $(top_builddir)/wrap/java ipcpd.java || {	\
+	$(JAVAC) -classpath $(builddir):$(top_builddir)/wrap/java	\
+		ipcpd.java || {						\
 		echo "Cannot compile ipcpd" ;				\
 		exit 1 ;						\
 	}
@@ -72,7 +73,8 @@ EXTRA_DIST  += ipcmd.java
 CLEANFILES  += ipcmd
 
 ipcmd.class: ipcmd.java
-	$(JAVAC) -classpath $(top_builddir)/wrap/java ipcmd.java || {	\
+	$(JAVAC) -classpath $(builddir):$(top_builddir)/wrap/java	\
+		 ipcmd.java || {					\
 		echo "Cannot compile ipcmd" ;				\
 		exit 1 ;						\
 	}
