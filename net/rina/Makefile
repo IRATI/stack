@@ -4,7 +4,7 @@
 
 obj-$(CONFIG_RINA) += rina.o
 
-rina-y := core.o
+rina-y := core.o syscalls.o
 
 rina-$(CONFIG_RINA_SYSFS) += sysfs.o
 
