@@ -10,6 +10,13 @@ menuconfig RINA
 
 if RINA
 
+config RINA_SYSFS
+	bool "SysFS support"
+        depends on SYSFS
+	default y
+	help
+	  No help for the time being
+
 config RINA_DEBUG
 	bool "Debugging support"
 	default y
