@@ -19,6 +19,7 @@
 %include <stdint.i>
 %include <stl.i>
 %include <exception.i>
+
 %include "stdlist.i"
 
 #ifdef SWIGJAVA

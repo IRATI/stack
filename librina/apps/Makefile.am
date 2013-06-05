@@ -23,6 +23,10 @@ edit = $(SED)							\
         -e 's|@JAVA[@]|$(JAVA)|g'				\
         -e 's|@JAVAC[@]|$(JAVAC)|g'
 
+#
+# Rules for ipcpd
+#
+
 ipcpd: Makefile ipcpd.in
 	rm -f $@ $@.tmp
 	srcdir=''; \
@@ -56,6 +60,10 @@ ipcpd.jar: ipcpd.class
 CLEANFILES += ipcpd.jar
 
 java_DATA += ipcpd.jar
+
+#
+# Rules for ipcmd
+#
 
 ipcmd: Makefile ipcmd.in
 	rm -f $@ $@.tmp
@@ -91,6 +99,10 @@ CLEANFILES += ipcmd.jar
 
 java_DATA += ipcmd.jar
 
+#
+# Rules for app
+#
+
 app: Makefile app.in
 	rm -f $@ $@.tmp
 	srcdir=''; \
@@ -110,14 +122,14 @@ CLEANFILES  += app
 app.class: app.java
 	$(JAVAC) -classpath $(builddir):$(top_builddir)/wrap/java	\
 		 -d $(builddir)						\
-		$(srcdir)/app.java || {				\
+		$(srcdir)/app.java || {					\
 		echo "Cannot compile app" ;				\
 		exit 1 ;						\
 	}
 CLEANFILES += app.class
 
 app.jar: app.class
-	$(JAR) -cvfe app.jar app app.class || {	\
+	$(JAR) -cvfe app.jar app app.class || {		\
 		echo "Cannot build the app jar" ;	\
 		exit 1 ;				\
 	}

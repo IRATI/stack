@@ -297,13 +297,11 @@ public:
  */
 class IPCEventProducer {
 public:
-	virtual ~IPCEventProducer();
-
 	/** Retrieves the next available event, if any */
-	virtual IPCEvent eventPoll();
+	virtual IPCEvent eventPoll() = 0;
 
 	/** Blocks until there is an event available */
-	virtual IPCEvent eventWait();
+	virtual IPCEvent eventWait() = 0;
 };
 
 /**
@@ -312,9 +310,9 @@ public:
 class IPCException: public std::exception {
 	std::string whatArg;
 public:
-	~IPCException() throw ();
+	virtual ~IPCException() throw () { };
 	explicit IPCException(const std::string& whatArg);
-	const char* what() const throw ();
+	const char * what() const throw ();
 };
 
 #endif
