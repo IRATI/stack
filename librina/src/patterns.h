@@ -31,7 +31,7 @@ private:
         const NonCopyable & operator =(const NonCopyable &);
 };
 
-template<typename TYPE> class singleton : public NonCopyable {
+template<typename TYPE> class Singleton : public NonCopyable {
 public:
         singleton()  { }
         ~singleton() { fini(); }
@@ -40,6 +40,10 @@ public:
                 init();
                 return instance_;
         }
+
+private:
+        static TYPE * instance_;
+
 
         void init() {
                 if (!instance_) {
@@ -53,34 +57,24 @@ public:
                         instance_ = 0;
                 }
         }
-
-private:
-        static TYPE * instance_;
 };
 
 template<typename TYPE> TYPE * singleton<TYPE>::instance_ = 0;
-
-class LockableException : public Exception {
-public:
-        LockableException() { }
-        LockableException(const std::string & s) : Exception(s) { }
-};
 
 class Lockable : public NonCopyable {
 public:
         Lockable();
         virtual ~Lockable() throw();
 
-        virtual void lock();
-        virtual void unlock();
-
-private:
-        // FIXME: Add proper mutexes here
-        //pthread_mutex_t     mutex_;
-        //pthread_mutexattr_t mutex_attr_;
+        virtual void lock() {
+                // FIXME: Add code here
+        }
+        virtual void unlock() {
+                // FIXME: Add code here
+        }
 };
 
-class AccessGuard {
+class AccessGuard : public NonCopyable {
 public:
         AccessGuard(Lockable & guarded) :
                 guarded_(guarded)
