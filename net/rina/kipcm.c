@@ -43,6 +43,8 @@ int kipcm_init()
         kipcm = kmalloc(sizeof(*kipcm), GFP_KERNEL);
         if (!kipcm) {
                 LOG_CRIT("Cannot allocate %d bytes of memory", sizeof(*kipcm));
+
+                LOG_FEXIT;
                 return -1;
         }
 
@@ -80,6 +82,7 @@ int kipcm_add_entry(port_id_t port_id, const struct flow_t * flow)
         if (!port_flow) {
                 LOG_ERR("Cannot allocate %d bytes of memory",
                         sizeof(*port_flow));
+                LOG_FEXIT;
                 return -1;
         }
 
@@ -150,6 +153,7 @@ int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
                              sizeof(size_t)) != sizeof(size_t)) {
                         LOG_ERR("Could not push %d bytes into the fifo",
                                 sizeof(size_t));
+                        LOG_FEXIT;
                         return -1;
                 }
                 if (kfifo_in(flow->sdu_ready,
@@ -157,6 +161,7 @@ int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
                              sdu->buffer->size) != sdu->buffer->size) {
                         LOG_ERR("Could not push %d bytes into the fifo",
                                 sdu->buffer->size);
+                        LOG_FEXIT;
                         return -1;
                 }
         } else {
@@ -334,8 +339,11 @@ int ipc_process_create(const struct name_t * name,
 
         switch (type) {
         case DIF_TYPE_SHIM_ETH :
-                if (shim_eth_ipc_create(name, ipcp_id))
+                if (shim_eth_ipc_create(name, ipcp_id)) {
+                        LOG_FEXIT;
+
                         return -1;
+                }
                 ipc_process = kmalloc(sizeof(*ipc_process), GFP_KERNEL);
                 if (!ipc_process) {
                         LOG_ERR("Cannot allocate %d bytes of memory",
@@ -372,8 +380,10 @@ int  ipc_process_configure(ipc_process_id_t                  ipcp_id,
         LOG_FBEGN;
 
         ipc_process = find_ipc_process_by_id(ipcp_id);
-        if (ipc_process == NULL)
+        if (ipc_process == NULL) {
+                LOG_FEXIT;
                 return -1;
+        }
         switch (ipc_process->type) {
         case DIF_TYPE_SHIM_ETH:
                 conf = configuration->ipc_process_conf.shim_eth_ipcp_conf;
