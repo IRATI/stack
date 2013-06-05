@@ -265,4 +265,3 @@ rib_object_t *ipcm_query_rib(ipc_process_id_t ipc_process_id,
 
 	return rib_objects;
 }*/
-#endif

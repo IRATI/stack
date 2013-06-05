@@ -45,13 +45,15 @@
  * (event_wait and event_poll).
  */
 
-enum FlowState {FLOW_ALLOCATED, FLOW_DEALLOCATED};
+enum FlowState {
+	FLOW_ALLOCATED, FLOW_DEALLOCATED
+};
 
 /**
  * Represents a flow between two application processes, and encapsulates
  * the services that the flow provides.
  */
-class Flow{
+class Flow {
 	/** The port-id that locally identifies the flow */
 	int portId;
 
@@ -71,11 +73,11 @@ class Flow{
 	FlowState flowState;
 
 	Flow(const ApplicationProcessNamingInformation& sourceApplicationName,
-             const ApplicationProcessNamingInformation& destinationApplicationName,
-             const FlowSpecification& flowSpecification, FlowState flowState,
-             const ApplicationProcessNamingInformation& DIFName, int portId);
+			const ApplicationProcessNamingInformation& destinationApplicationName,
+			const FlowSpecification& flowSpecification, FlowState flowState,
+			const ApplicationProcessNamingInformation& DIFName, int portId);
 public:
-
+	Flow();
 	static const std::string flow_not_allocated_error;
 	const FlowState& getState() const;
 	int getPortId() const;
@@ -92,7 +94,7 @@ public:
 	 * @return int The number of bytes read
 	 * @throws IPCException if the flow is not in the ALLOCATED state
 	 */
-	int readSDU(unsigned char * sdu) throw(IPCException);
+	int readSDU(unsigned char * sdu) throw (IPCException);
 
 	/**
 	 * Writes an SDU to the flow
@@ -102,7 +104,7 @@ public:
 	 * @throws IPCException if the flow is not in the ALLOCATED state or
 	 * there are problems writing to the flow
 	 */
-	void writeSDU(unsigned char * sdu, int size) throw(IPCException);
+	void writeSDU(unsigned char * sdu, int size) throw (IPCException);
 
 	friend class IPCManager;
 };
@@ -111,7 +113,7 @@ public:
  * Contains the information about a registered application: its
  * name and the DIFs where it is registered
  */
-class ApplicationRegistration{
+class ApplicationRegistration {
 	/** The registered application name */
 	ApplicationProcessNamingInformation applicationName;
 
@@ -131,7 +133,7 @@ public:
  * Point of entry to the IPC functionality available in the system. This class
  * is a singleton.
  */
-class IPCManager : public IPCEventProducer{
+class IPCManager: public IPCEventProducer {
 	static bool instanceFlag;
 	static IPCManager * instance;
 
@@ -145,7 +147,7 @@ class IPCManager : public IPCEventProducer{
 
 public:
 	static IPCManager * getInstance();
-	~IPCManager(){
+	~IPCManager() {
 		instanceFlag = false;
 	}
 
@@ -173,20 +175,23 @@ public:
 	 * @throws IPCException if the DIF doesn't exist or the application doesn't
 	 * have enough rights to use it.
 	 */
-	void registerApplication(const ApplicationProcessNamingInformation& applicationName,
-			const ApplicationProcessNamingInformation& DIFName) throw(IPCException);
+	void registerApplication(
+			const ApplicationProcessNamingInformation& applicationName,
+			const ApplicationProcessNamingInformation& DIFName)
+					throw (IPCException);
 
 	/**
 	 * Unregisters an application from a DIF.
 	 *
-     * @param applicationName The name of the application to be unregistered
+	 * @param applicationName The name of the application to be unregistered
 	 * @param DIFName Then name of the DIF where the application has to be
 	 * unregistered from
 	 * @throws IPCException if the DIF doesn't exist or the application was not
 	 * registered there
 	 */
-	void unregisterApplication(ApplicationProcessNamingInformation applicationName,
-			ApplicationProcessNamingInformation DIFName) throw(IPCException);
+	void unregisterApplication(
+			ApplicationProcessNamingInformation applicationName,
+			ApplicationProcessNamingInformation DIFName) throw (IPCException);
 
 	/**
 	 * Requests the allocation of a Flow
@@ -199,9 +204,10 @@ public:
 	 * @return A Flow object encapsulating the flow service
 	 * @throws IPCException if there are problems during the flow allocation
 	 */
-	Flow * allocateFlowRequest(const ApplicationProcessNamingInformation& sourceAppName,
+	Flow * allocateFlowRequest(
+			const ApplicationProcessNamingInformation& sourceAppName,
 			const ApplicationProcessNamingInformation& destAppName,
-			const FlowSpecification& flow) throw(IPCException);
+			const FlowSpecification& flow) throw (IPCException);
 
 	/**
 	 * Confirms or denies the request for a flow to this application.
@@ -214,7 +220,7 @@ public:
 	 * @throws IPCException If there are problems confirming/denying the flow
 	 */
 	Flow * allocateFlowResponse(int portId, bool accept,
-			const std::string& reason) throw(IPCException);
+			const std::string& reason) throw (IPCException);
 
 	/**
 	 * Causes the flow to be deallocated, and the object deleted.
@@ -222,7 +228,7 @@ public:
 	 * @throws IPCException if the flow is not in the ALLOCATED state or
 	 * there are problems deallocating the flow
 	 */
-	void deallocateFlow(const Flow& flow) throw(IPCException);
+	void deallocateFlow(const Flow& flow) throw (IPCException);
 
 	/**
 	 * Returns the flows that are currently allocated
@@ -247,7 +253,7 @@ public:
  * Event informing that a flow has been deallocated by an IPC Process, without
  * the application having requested it
  */
-class FlowDeallocatedEvent: public IPCEvent{
+class FlowDeallocatedEvent: public IPCEvent {
 	int portId;
 public:
 	FlowDeallocatedEvent(int portId);
@@ -258,7 +264,7 @@ public:
  * Event informing that an application has been unregistered from a DIF,
  * without the application having requested it
  */
-class ApplicationUnregisteredEvent: public IPCEvent{
+class ApplicationUnregisteredEvent: public IPCEvent {
 	/** The application that has been unregistered */
 	ApplicationProcessNamingInformation applicationName;
 
@@ -276,7 +282,7 @@ public:
 /**
  * Event informing about an incoming flow request from another application
  */
-class IncomingFlowRequestEvent: public IPCEvent{
+class IncomingFlowRequestEvent: public IPCEvent {
 	/** The port-id that locally identifies the flow */
 	int portId;
 
@@ -304,6 +310,5 @@ public:
 	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
 	const ApplicationProcessNamingInformation& getDestApplicationName() const;
 };
-
 
 #endif

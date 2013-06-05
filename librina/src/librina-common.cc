@@ -57,6 +57,78 @@ bool ApplicationProcessNamingInformation::operator!=(
 	return !(*this == other);
 }
 
+bool ApplicationProcessNamingInformation::operator>(
+		const ApplicationProcessNamingInformation &other) const {
+	int aux = getProcessName().compare(other.getProcessName());
+	if (aux > 0) {
+		return true;
+	} else if (aux < 0) {
+		return false;
+	}
+
+	aux = getProcessInstance().compare(other.getProcessInstance());
+	if (aux > 0) {
+		return true;
+	} else if (aux < 0) {
+		return false;
+	}
+
+	aux = getEntityName().compare(other.getEntityName());
+	if (aux > 0) {
+		return true;
+	} else if (aux < 0) {
+		return false;
+	}
+
+	aux = getEntityInstance().compare(other.getEntityInstance());
+	if (aux > 0) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+bool ApplicationProcessNamingInformation::operator<=(
+		const ApplicationProcessNamingInformation &other) const {
+	return !(*this > other);
+}
+
+bool ApplicationProcessNamingInformation::operator<(
+		const ApplicationProcessNamingInformation &other) const {
+	int aux = getProcessName().compare(other.getProcessName());
+	if (aux < 0) {
+		return true;
+	} else if (aux >0) {
+		return false;
+	}
+
+	aux = getProcessInstance().compare(other.getProcessInstance());
+	if (aux < 0) {
+		return true;
+	} else if (aux > 0) {
+		return false;
+	}
+
+	aux = getEntityName().compare(other.getEntityName());
+	if (aux < 0) {
+		return true;
+	} else if (aux > 0) {
+		return false;
+	}
+
+	aux = getEntityInstance().compare(other.getEntityInstance());
+	if (aux < 0) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+bool ApplicationProcessNamingInformation::operator>=(
+		const ApplicationProcessNamingInformation &other) const {
+	return !(*this < other);
+}
+
 const std::string & ApplicationProcessNamingInformation::getEntityInstance() const {
 	return entityInstance;
 }

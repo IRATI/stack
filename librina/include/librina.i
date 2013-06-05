@@ -76,20 +76,46 @@
   }
 %}
 
-WRAP_THROW_EXCEPTION(allocate, IPCException, 
+WRAP_THROW_EXCEPTION(Flow::readSDU, IPCException, 
 		"eu.irati.librina.IPCException",
 		"eu/irati/librina/IPCException" );
-WRAP_THROW_EXCEPTION(deallocate, IPCException, 
+WRAP_THROW_EXCEPTION(Flow::writeSDU, IPCException, 
 		"eu.irati.librina.IPCException",
 		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(write, IPCException, 
+WRAP_THROW_EXCEPTION(IPCManager::registerApplication, IPCException, 
+		"eu.irati.librina.IPCException",
+		"eu/irati/librina/IPCException");
+WRAP_THROW_EXCEPTION(IPCManager::unregisterApplication, IPCException, 
+		"eu.irati.librina.IPCException",
+		"eu/irati/librina/IPCException");
+WRAP_THROW_EXCEPTION(IPCManager::allocateFlowRequest, IPCException, 
+		"eu.irati.librina.IPCException",
+		"eu/irati/librina/IPCException");
+WRAP_THROW_EXCEPTION(IPCManager::allocateFlowResponse, IPCException, 
+		"eu.irati.librina.IPCException",
+		"eu/irati/librina/IPCException");
+WRAP_THROW_EXCEPTION(IPCManager::deallocate, IPCException, 
 		"eu.irati.librina.IPCException",
 		"eu/irati/librina/IPCException");
 
 %{
-#include "librina.h"
+#include "librina-common.h"
+#include "librina-application.h"
 %}
 
-%include "librina.h"
+%rename(equals) ApplicationProcessNamingInformation::operator==(const ApplicationProcessNamingInformation &other) const;
+%rename(differs) ApplicationProcessNamingInformation::operator!=(const ApplicationProcessNamingInformation &other) const;
+%rename(isLessThanOrEquals) ApplicationProcessNamingInformation::operator<=(const ApplicationProcessNamingInformation &other) const;   
+%rename(isLessThan) ApplicationProcessNamingInformation::operator<(const ApplicationProcessNamingInformation &other) const;
+%rename(isMoreThanOrEquals) ApplicationProcessNamingInformation::operator>=(const ApplicationProcessNamingInformation &other) const;   
+%rename(isMoreThan) ApplicationProcessNamingInformation::operator>(const ApplicationProcessNamingInformation &other) const;  
+%rename(equals) QoSCube::operator==(const QoSCube &other) const;  
+%rename(differs) QoSCube::operator!=(const QoSCube &other) const;  
 
-%template(DIFPropertiesVector) vector<DIFProperties>;
+%include "librina-common.h"
+%include "librina-application.h"
+
+%template(DIFPropertiesVector) std::vector<DIFProperties>;
+%template(FlowVector) std::vector<Flow>;
+%template(QoSCubeList) std::list<QoSCube>;
+%template(ApplicationProcessNamingInformationList) std::list<ApplicationProcessNamingInformation>;

@@ -91,4 +91,38 @@ CLEANFILES += ipcmd.jar
 
 java_DATA += ipcmd.jar
 
+app: Makefile app.in
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod +x $@.tmp
+	chmod a-w $@.tmp
+	mv $@.tmp $@
+
+bin_SCRIPTS += app
+
+EXTRA_DIST  += app.in
+EXTRA_DIST  += app.java
+
+CLEANFILES  += app
+
+app.class: app.java
+	$(JAVAC) -classpath $(builddir):$(top_builddir)/wrap/java	\
+		 -d $(builddir)						\
+		$(srcdir)/app.java || {				\
+		echo "Cannot compile app" ;				\
+		exit 1 ;						\
+	}
+CLEANFILES += app.class
+
+app.jar: app.class
+	$(JAR) -cvfe app.jar app app.class || {	\
+		echo "Cannot build the app jar" ;	\
+		exit 1 ;				\
+	}
+CLEANFILES += app.jar
+
+java_DATA += app.jar
+
 endif

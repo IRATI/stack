@@ -69,6 +69,10 @@ public:
 			const std::string& processInstance);
 	bool operator==(const ApplicationProcessNamingInformation &other) const;
 	bool operator!=(const ApplicationProcessNamingInformation &other) const;
+	bool operator>(const ApplicationProcessNamingInformation &other) const;
+	bool operator<=(const ApplicationProcessNamingInformation &other) const;
+	bool operator<(const ApplicationProcessNamingInformation &other) const;
+	bool operator>=(const ApplicationProcessNamingInformation &other) const;
 	const std::string& getEntityInstance() const;
 	void setEntityInstance(const std::string& entityInstance);
 	const std::string& getEntityName() const;
@@ -206,6 +210,7 @@ class QoSCube {
 	 */
 	unsigned int jitter;
 public:
+	QoSCube();
 	QoSCube(const std::string& name, int id);
 	bool operator==(const QoSCube &other) const;
 	bool operator!=(const QoSCube &other) const;
@@ -252,6 +257,7 @@ class DIFProperties {
 	 */
 	std::list<QoSCube> qosCubes;
 public:
+	DIFProperties();
 	DIFProperties(const ApplicationProcessNamingInformation& DIFName,
 			int maxSDUSize);
 	const ApplicationProcessNamingInformation& getDifName() const;
@@ -308,7 +314,7 @@ class IPCException: public std::exception {
 public:
 	~IPCException() throw ();
 	explicit IPCException(const std::string& whatArg);
-	const char* what() const throw();
+	const char* what() const throw ();
 };
 
 #endif

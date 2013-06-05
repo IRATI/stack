@@ -1,10 +1,8 @@
 import eu.irati.librina.ApplicationProcessNamingInformation;
-import eu.irati.librina.DIFInformation;
-import eu.irati.librina.DIFProperties;
-import eu.irati.librina.DIFPropertiesVector;
 import eu.irati.librina.Flow;
 import eu.irati.librina.FlowSpecification;
 import eu.irati.librina.IPCException;
+import eu.irati.librina.IPCManager;
 
 public class SWIGTest {
 
@@ -13,7 +11,7 @@ public class SWIGTest {
               System.loadLibrary("rina_java");
 	  }
 
-	public static void main(String[] args) throws IPCException{		
+	public static void main(String[] args) throws IPCException {		
 		System.out.println("************ TESTING LIBRINA-APPLICATION ************");
 		ApplicationProcessNamingInformation sourceNamingInfo = new ApplicationProcessNamingInformation();
 		sourceNamingInfo.setProcessName("test/application/name/source");
@@ -39,12 +37,12 @@ public class SWIGTest {
 		flowSpecification.setPeakSduBandwidthDuration(4000);
 		flowSpecification.setPeakBandwidthDuration(200);
 		
-		System.out.println("\nCALLING ALLOCATE FLOW REQUEST");
-		Flow flow = new Flow(sourceNamingInfo, destNamingInfo, flowSpecification);
-		flow.allocate();
+		System.out.println("\nALLOCATING A FLOW");
+		IPCManager ipcManager = IPCManager.getInstance();
+		Flow flow = ipcManager.allocateFlowRequest(sourceNamingInfo, destNamingInfo, flowSpecification);
 		System.out.println("Flow allocated, port id is "+flow.getPortId());
 		
-		System.out.println("\n CALLING WRITE SDU");
+		/*System.out.println("\n CALLING WRITE SDU");
 		byte[] sdu = "This is a test SDU".getBytes();
 		flow.write(sdu, sdu.length);
 		System.out.println("Wrote SDU");
@@ -61,6 +59,6 @@ public class SWIGTest {
 			difProperties = difPropertiesVector.get(i);
 			System.out.println("DIF name: "+difProperties.getDIFName().getProcessName());
 			System.out.println("Max SDU size: "+difProperties.getMaxSduSize());
-		}
+		}*/
 	}
 }
