@@ -41,7 +41,8 @@ CLEANFILES  += ipcpd
 
 ipcpd.class: ipcpd.java
 	$(JAVAC) -classpath $(builddir):$(top_builddir)/wrap/java	\
-		ipcpd.java || {						\
+		 -d $(builddir)						\
+		$(srcdir)/ipcpd.java || {				\
 		echo "Cannot compile ipcpd" ;				\
 		exit 1 ;						\
 	}
@@ -74,7 +75,8 @@ CLEANFILES  += ipcmd
 
 ipcmd.class: ipcmd.java
 	$(JAVAC) -classpath $(builddir):$(top_builddir)/wrap/java	\
-		 ipcmd.java || {					\
+		 -d $(builddir)						\
+		$(srcdir)/ipcmd.java || {				\
 		echo "Cannot compile ipcmd" ;				\
 		exit 1 ;						\
 	}
