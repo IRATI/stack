@@ -167,7 +167,7 @@ void IPCManager::registerApplication(
 
 	try {
 		ApplicationRegistration * foundRegistration =
-				this->applicationRegistrations.at(applicationName);
+                        applicationRegistrations.at(applicationName);
 		std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
 		for (iterator = foundRegistration->getDIFNames().begin();
 				iterator != foundRegistration->getDIFNames().end();
@@ -219,7 +219,7 @@ void IPCManager::unregisterApplication(
 Flow * IPCManager::allocateFlowRequest(
 		const ApplicationProcessNamingInformation& sourceAppName,
 		const ApplicationProcessNamingInformation& destAppName,
-		const FlowSpecification& flowSpec) const throw (IPCException) {
+		const FlowSpecification& flowSpec) throw (IPCException) {
 	LOG_DBG("IPCManager.allocateFlowRequest called");
 
 	int portId;
@@ -241,7 +241,7 @@ Flow * IPCManager::allocateFlowRequest(
 }
 
 Flow * IPCManager::allocateFlowResponse(int portId, bool accept,
-		const std::string& reason) const throw (IPCException) {
+		const std::string& reason) throw (IPCException) {
 	LOG_DBG("IPCManager.allocateFlowResponse called");
 
 	if (!accept) {

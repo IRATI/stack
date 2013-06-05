@@ -70,11 +70,12 @@ class Flow{
 	/** The state of the flow */
 	FlowState flowState;
 
-	Flow(const ApplicationProcessNamingInformation& sourceApplicationName,
-		 const ApplicationProcessNamingInformation& destinationApplicationName,
-		 const FlowSpecification& flowSpecification, FlowState flowState,
-		 const ApplicationProcessNamingInformation& DIFName, int portId);
 public:
+	Flow(const ApplicationProcessNamingInformation& sourceApplicationName,
+             const ApplicationProcessNamingInformation& destinationApplicationName,
+             const FlowSpecification& flowSpecification, FlowState flowState,
+             const ApplicationProcessNamingInformation& DIFName, int portId);
+
 	static const std::string flow_not_allocated_error;
 	const FlowState& getState() const;
 	int getPortId() const;
@@ -200,7 +201,7 @@ public:
 	 */
 	Flow * allocateFlowRequest(const ApplicationProcessNamingInformation& sourceAppName,
 			const ApplicationProcessNamingInformation& destAppName,
-			const FlowSpecification& flow) const throw(IPCException);
+			const FlowSpecification& flow) throw(IPCException);
 
 	/**
 	 * Confirms or denies the request for a flow to this application.
@@ -213,7 +214,7 @@ public:
 	 * @throws IPCException If there are problems confirming/denying the flow
 	 */
 	Flow * allocateFlowResponse(int portId, bool accept,
-			const std::string& reason) const throw(IPCException);
+			const std::string& reason) throw(IPCException);
 
 	/**
 	 * Causes the flow to be deallocated, and the object deleted.
