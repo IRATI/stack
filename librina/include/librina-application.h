@@ -70,11 +70,11 @@ class Flow{
 	/** The state of the flow */
 	FlowState flowState;
 
-public:
 	Flow(const ApplicationProcessNamingInformation& sourceApplicationName,
              const ApplicationProcessNamingInformation& destinationApplicationName,
              const FlowSpecification& flowSpecification, FlowState flowState,
              const ApplicationProcessNamingInformation& DIFName, int portId);
+public:
 
 	static const std::string flow_not_allocated_error;
 	const FlowState& getState() const;
