@@ -130,7 +130,7 @@ public:
  * Point of entry to the IPC functionality available in the system. This class
  * is a singleton.
  */
-class IPCManager : public IPCEventStore{
+class IPCManager : public IPCEventProducer{
 	static bool instanceFlag;
 	static IPCManager * instance;
 
@@ -148,9 +148,9 @@ public:
 		instanceFlag = false;
 	}
 
-	const std::string application_registered_error;
-	const std::string application_not_registered_error;
-	const std::string unknown_flow_error;
+	static const std::string application_registered_error;
+	static const std::string application_not_registered_error;
+	static const std::string unknown_flow_error;
 
 	/**
 	 * Retrieves the names and characteristics of a single DIF or of all the
@@ -198,7 +198,7 @@ public:
 	 * @return A Flow object encapsulating the flow service
 	 * @throws IPCException if there are problems during the flow allocation
 	 */
-	const Flow& allocateFlowRequest(const ApplicationProcessNamingInformation& sourceAppName,
+	Flow * allocateFlowRequest(const ApplicationProcessNamingInformation& sourceAppName,
 			const ApplicationProcessNamingInformation& destAppName,
 			const FlowSpecification& flow) const throw(IPCException);
 
@@ -212,7 +212,7 @@ public:
 	 * @return Flow If the flow is accepted, returns the flow object
 	 * @throws IPCException If there are problems confirming/denying the flow
 	 */
-	const Flow& allocateFlowResponse(int portId, bool accept,
+	Flow * allocateFlowResponse(int portId, bool accept,
 			const std::string& reason) const throw(IPCException);
 
 	/**
@@ -240,7 +240,6 @@ public:
 
 	IPCEvent eventPoll();
 	IPCEvent eventWait();
-	IPCEvent eventWait(long maxTimeInMilis);
 };
 
 /**
@@ -248,10 +247,10 @@ public:
  * the application having requested it
  */
 class FlowDeallocatedEvent: public IPCEvent{
-	Flow flow;
+	int portId;
 public:
-	FlowDeallocatedEvent(const Flow& flow);
-	const Flow& getFlow();
+	FlowDeallocatedEvent(int portId);
+	int getPortId() const;
 };
 
 /**

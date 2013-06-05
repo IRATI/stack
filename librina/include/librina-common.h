@@ -265,7 +265,9 @@ public:
  * Enum type that identifies the different types of events
  */
 enum IPCEventType {
-	FLOW_ALLOCATION_REQUESTED, APPLICATION_UNREGISTERED, FLOW_DEALLOCATED
+	FLOW_ALLOCATION_REQUESTED_EVENT,
+	APPLICATION_UNREGISTERED_EVENT,
+	FLOW_DEALLOCATED_EVENT
 };
 
 /**
@@ -287,20 +289,15 @@ public:
  * Stores IPC Events that have happened, ready to be consumed and
  * processed by client classes.
  */
-class IPCEventStore {
-	virtual ~IPCEventStore();
+class IPCEventProducer {
 public:
+	virtual ~IPCEventProducer();
+
 	/** Retrieves the next available event, if any */
 	virtual IPCEvent eventPoll();
 
 	/** Blocks until there is an event available */
 	virtual IPCEvent eventWait();
-
-	/**
-	 * Blocks until there is an event available up to maxTimeInMilis
-	 * milliseconds
-	 */
-	virtual IPCEvent eventWait(long maxTimeInMilis);
 };
 
 /**
@@ -309,7 +306,9 @@ public:
 class IPCException: public std::exception {
 	std::string whatArg;
 public:
+	~IPCException() throw ();
 	explicit IPCException(const std::string& whatArg);
+	const char* what() const throw();
 };
 
 #endif

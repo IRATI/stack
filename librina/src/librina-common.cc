@@ -15,9 +15,10 @@
  */
 
 #include "librina-common.h"
-#include "logs.h"
 
 #define RINA_PREFIX "common"
+
+#include "logs.h"
 
 /* CLASS APPLICATION PROCESS NAMING INFORMATION */
 
@@ -340,10 +341,10 @@ void DIFProperties::removeQoSCube(const QoSCube& qosCube) {
 
 /* CLASS IPC EXCEPTION */
 
-explicit IPCException::IPCException(const std::string& whatArg) {
+IPCException::IPCException(const std::string& whatArg) {
 	this->whatArg = whatArg;
 }
 
-virtual const char* IPCException::what() const throw () {
-	return this->whatArg;
+const char* IPCException::what() const throw () {
+	return this->whatArg.c_str();
 }

@@ -26,9 +26,9 @@
 /* CLASS FLOW */
 
 Flow::Flow(const ApplicationProcessNamingInformation& sourceApplicationName,
-		 const ApplicationProcessNamingInformation& destinationApplicationName,
-		 const FlowSpecification& flowSpecification, FlowState flowState,
-		 const ApplicationProcessNamingInformation& DIFName, int portId) {
+		const ApplicationProcessNamingInformation& destinationApplicationName,
+		const FlowSpecification& flowSpecification, FlowState flowState,
+		const ApplicationProcessNamingInformation& DIFName, int portId) {
 	this->sourceApplicationName = sourceApplicationName;
 	this->destinationApplicationName = destinationApplicationName;
 	this->flowSpecification = flowSpecification;
@@ -67,19 +67,19 @@ const FlowSpecification Flow::getFlowSpecification() const {
 int Flow::readSDU(unsigned char * sdu) throw (IPCException) {
 	LOG_DBG("Flow.readSDU called");
 
-	if (this->flowState != FlowState::FLOW_ALLOCATED) {
+	if (this->flowState != FLOW_ALLOCATED) {
 		throw IPCException(Flow::flow_not_allocated_error);
 	}
 
 	unsigned char buffer[] = { 0, 23, 43, 32, 45, 23, 78 };
-	*sdu = buffer;
+	sdu = buffer;
 	return 7;
 }
 
 void Flow::writeSDU(unsigned char * sdu, int size) throw (IPCException) {
 	LOG_DBG("Flow.writeSDU called");
 
-	if (this->flowState != FlowState::FLOW_ALLOCATED) {
+	if (this->flowState != FLOW_ALLOCATED) {
 		throw IPCException(Flow::flow_not_allocated_error);
 	}
 
@@ -132,7 +132,7 @@ IPCManager* IPCManager::getInstance() {
 
 const std::string IPCManager::application_registered_error =
 		"The application is already registered in this DIF";
-const std::string IPCManager::application_registered_error =
+const std::string IPCManager::application_not_registered_error =
 		"The application is not registered in this DIF";
 const std::string IPCManager::unknown_flow_error =
 		"There is no flow at the specified portId";
@@ -141,21 +141,21 @@ std::vector<DIFProperties> IPCManager::getDIFProperties(
 		const ApplicationProcessNamingInformation& DIFName) {
 	LOG_DBG("IPCManager.getDIFProperties called");
 	std::vector<DIFProperties> result;
-	DIFProperties DIFProperties;
-	ApplicationProcessNamingInformation name;
+	DIFProperties * properties;
+	ApplicationProcessNamingInformation * name;
 
-	if (DIFName != NULL && DIFName.getProcessName().compare("") != 0) {
-		DIFProperties = new DIFProperties(DIFName, 2000);
-		result.push_back(DIFProperties);
+	if (DIFName.getProcessName().compare("") != 0) {
+		properties = new DIFProperties(DIFName, 2000);
+		result.push_back(*properties);
 		return result;
 	}
 
 	name = new ApplicationProcessNamingInformation("test.DIF", "");
-	DIFProperties = new DIFProperties(name, 5000);
-	result.push_back(DIFProperties);
+	properties = new DIFProperties(*name, 5000);
+	result.push_back(*properties);
 	name = new ApplicationProcessNamingInformation("Public-Internet.DIF", "");
-	DIFProperties = new DIFProperties(name, 10000);
-	result.push_back(DIFProperties);
+	properties = new DIFProperties(*name, 10000);
+	result.push_back(*properties);
 	return result;
 }
 
@@ -163,34 +163,28 @@ void IPCManager::registerApplication(
 		const ApplicationProcessNamingInformation& applicationName,
 		const ApplicationProcessNamingInformation& DIFName) throw (IPCException) {
 	LOG_DBG("IPCManager.registerApplication called");
-	ApplicationRegistration applicationRegistration;
-	ApplicationProcessNamingInformation name;
-	bool wasRegistered = false;
+	ApplicationRegistration * applicationRegistration;
 
 	try {
-		applicationRegistration = this->applicationRegistrations.at(
-				applicationName);
-		wasRegistered = true;
-	} catch (std::out_of_range& oor) {
-	}
-
-	if (wasRegistered) {
+		ApplicationRegistration foundRegistration =
+				this->applicationRegistrations.at(applicationName);
 		std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
-		for (iterator = applicationRegistration.DIFNames.begin();
-				iterator != applicationRegistration.DIFNames.end();
-				++iterator) {
-			name = *iterator;
-			if (name == DIFName) {
+		for (iterator = foundRegistration.getDIFNames().begin();
+				iterator != foundRegistration.getDIFNames().end(); ++iterator) {
+			if (*iterator == DIFName) {
 				throw IPCException(IPCManager::application_registered_error);
 			}
 		}
-	} else {
-		//The application was not registered, create a new ApplicationRegistration object and add it to the map
-		applicationRegistration = new ApplicationRegistration(applicationName);
-		this->applicationRegistrations[applicationName] = applicationRegistration;
+
+		foundRegistration.addDIFName(DIFName);
+		return;
+	} catch (std::out_of_range& oor) {
 	}
 
-	applicationRegistration.addDIFName(DIFName);
+	//The application was not registered, create a new ApplicationRegistration object and add it to the map
+	applicationRegistration = new ApplicationRegistration(applicationName);
+	this->applicationRegistrations[applicationName] = *applicationRegistration;
+	applicationRegistration->addDIFName(DIFName);
 }
 
 void IPCManager::unregisterApplication(
@@ -198,85 +192,200 @@ void IPCManager::unregisterApplication(
 		ApplicationProcessNamingInformation DIFName) throw (IPCException) {
 	LOG_DBG("IPCManager.unregisterApplication called");
 
-	ApplicationRegistration applicationRegistration;
-	ApplicationProcessNamingInformation name;
-	bool wasRegistered = false;
-
 	try {
-		applicationRegistration = this->applicationRegistrations.at(
-				applicationName);
-	} catch (std::out_of_range& oor) {
+		ApplicationRegistration foundRegistration =
+				this->applicationRegistrations.at(applicationName);
+		std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
+		for (iterator = foundRegistration.getDIFNames().begin();
+				iterator != foundRegistration.getDIFNames().end(); ++iterator) {
+			if (*iterator == DIFName) {
+				foundRegistration.removeDIFName(DIFName);
+				if (foundRegistration.getDIFNames().size() == 0) {
+					this->applicationRegistrations.erase(applicationName);
+				}
+
+				return;
+			}
+		}
+
 		throw IPCException(IPCManager::application_not_registered_error);
-	}
-
-	std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
-	for (iterator = applicationRegistration.DIFNames.begin();
-			iterator != applicationRegistration.DIFNames.end();
-			++iterator) {
-		name = *iterator;
-		if (name == DIFName) {
-			wasRegistered = true;
-			break;
-		}
-	}
-
-	if (wasRegistered){
-		applicationRegistration.removeDIFName(DIFName);
-		if (applicationRegistration.getDIFNames().size() == 0){
-			this->applicationRegistrations.erase(applicationName);
-		}
-	}else{
+	} catch (std::out_of_range& oor) {
 		throw IPCException(IPCManager::application_not_registered_error);
 	}
 }
 
-const Flow& IPCManager::allocateFlowRequest(const ApplicationProcessNamingInformation& sourceAppName,
-			const ApplicationProcessNamingInformation& destAppName,
-			const FlowSpecification& flowSpec) const throw(IPCException){
+Flow * IPCManager::allocateFlowRequest(
+		const ApplicationProcessNamingInformation& sourceAppName,
+		const ApplicationProcessNamingInformation& destAppName,
+		const FlowSpecification& flowSpec) const throw (IPCException) {
 	LOG_DBG("IPCManager.allocateFlowRequest called");
 
 	int portId;
 	int i;
-	for(i=0; i<1000; i++){
-		if (this->allocatedFlows.find(i) == this->allocatedFlows.end()){
+	for (i = 0; i < 1000; i++) {
+		if (this->allocatedFlows.find(i) == this->allocatedFlows.end()) {
 			portId = i;
 			break;
 		}
 	}
 
-	ApplicationProcessNamingInformation DIFName = new ApplicationProcessNamingInformation("test.DIF", "");
-	Flow flow = new Flow(sourceAppName, destAppName, flowSpec, DIFName, FlowState::FLOW_ALLOCATED, portId);
-	this->allocatedFlows[portId] = flow;
+	ApplicationProcessNamingInformation * DIFName =
+			new ApplicationProcessNamingInformation("test.DIF", "");
+	Flow * flow = new Flow(sourceAppName, destAppName, flowSpec, FLOW_ALLOCATED,
+			*DIFName, portId);
+	this->allocatedFlows[portId] = *flow;
 
 	return flow;
 }
 
-const Flow& IPCManager::allocateFlowResponse(int portId, bool accept,
-			const std::string& reason) const throw(IPCException){
+Flow * IPCManager::allocateFlowResponse(int portId, bool accept,
+		const std::string& reason) const throw (IPCException) {
 	LOG_DBG("IPCManager.allocateFlowResponse called");
 
-	if (!accept){
+	if (!accept) {
+		LOG_DBG("Flow was not accepted because: %s", reason.c_str());
 		return NULL;
 	}
 
-	ApplicationProcessNamingInformation sourceAppName = new ApplicationProcessNamingInformation("/test/app/source", "1");
-	ApplicationProcessNamingInformation destAppName = new ApplicationProcessNamingInformation("/test/app/dest", "1");
-	ApplicationProcessNamingInformation DIFName = new ApplicationProcessNamingInformation("test.DIF", "");
-	FlowSpecification flowSpec = new FlowSpecification();
-	Flow flow = new Flow(sourceAppName, destAppName, flowSpec, DIFName, FlowState::FLOW_ALLOCATED, portId);
-	this->allocatedFlows[portId] = flow;
+	ApplicationProcessNamingInformation * sourceAppName =
+			new ApplicationProcessNamingInformation("/test/app/source", "1");
+	ApplicationProcessNamingInformation * destAppName =
+			new ApplicationProcessNamingInformation("/test/app/dest", "1");
+	ApplicationProcessNamingInformation * DIFName =
+			new ApplicationProcessNamingInformation("test.DIF", "");
+	FlowSpecification * flowSpec = new FlowSpecification();
+	Flow * flow = new Flow(*sourceAppName, *destAppName, *flowSpec,
+			FLOW_ALLOCATED, *DIFName, portId);
+	this->allocatedFlows[portId] = *flow;
 	return flow;
 }
 
-void IPCManager::deallocateFlow(const Flow& flow) throw(IPCException){
+void IPCManager::deallocateFlow(const Flow& flow) throw (IPCException) {
 	LOG_DBG("IPCManager.deallocateFlow called");
 
-	std::map<int,Flow>::iterator iterator;
+	std::map<int, Flow>::iterator iterator;
 	iterator = this->allocatedFlows.find(flow.getPortId());
-	if (iterator == this->allocatedFlows.end()){
+	if (iterator == this->allocatedFlows.end()) {
 		throw new IPCException(IPCManager::unknown_flow_error);
 	}
 
-	flow.flowState = FlowState::FLOW_DEALLOCATED;
 	this->allocatedFlows.erase(flow.getPortId());
+}
+
+std::vector<Flow> IPCManager::getAllocatedFlows() {
+	LOG_DBG("IPCManager.getAllocatedFlows called");
+	std::vector<Flow> response;
+
+	for (std::map<int, Flow>::iterator it = this->allocatedFlows.begin();
+			it != this->allocatedFlows.end(); ++it) {
+		response.push_back(it->second);
+	}
+
+	return response;
+}
+
+std::vector<ApplicationRegistration> IPCManager::getRegisteredApplications() {
+	LOG_DBG("IPCManager.getRegisteredApplications called");
+	std::vector<ApplicationRegistration> response;
+
+	for (std::map<ApplicationProcessNamingInformation, ApplicationRegistration>::iterator it =
+			this->applicationRegistrations.begin();
+			it != this->applicationRegistrations.end(); ++it) {
+		response.push_back(it->second);
+	}
+
+	return response;
+}
+
+IPCEvent IPCManager::eventPoll() {
+	LOG_DBG("IPCManager.eventPoll called");
+	ApplicationUnregisteredEvent * event;
+
+	ApplicationProcessNamingInformation * appName =
+			new ApplicationProcessNamingInformation("/test/apps/source", "1");
+	ApplicationProcessNamingInformation * difName =
+			new ApplicationProcessNamingInformation("/difs/test.DIF", "");
+	event = new ApplicationUnregisteredEvent(*appName, *difName);
+	return *event;
+}
+
+IPCEvent IPCManager::eventWait() {
+	LOG_DBG("IPCManager.eventWait called");
+	IncomingFlowRequestEvent * event;
+
+	ApplicationProcessNamingInformation * sourceAppName =
+			new ApplicationProcessNamingInformation("/test/apps/source", "1");
+	ApplicationProcessNamingInformation * destAppName =
+			new ApplicationProcessNamingInformation("/test/apps/dest", "1");
+	ApplicationProcessNamingInformation * difName =
+			new ApplicationProcessNamingInformation("/difs/test.DIF", "");
+	FlowSpecification * flowSpec = new FlowSpecification();
+	int portId = 37;
+	event = new IncomingFlowRequestEvent(portId, *flowSpec, *sourceAppName,
+			*destAppName, *difName);
+	return *event;
+}
+
+/* CLASS FLOW DEALLOCATED EVENT */
+
+FlowDeallocatedEvent::FlowDeallocatedEvent(int portId) :
+		IPCEvent(FLOW_DEALLOCATED_EVENT) {
+	this->portId = portId;
+}
+
+int FlowDeallocatedEvent::getPortId() const {
+	return this->portId;
+}
+
+/* CLASS APPLICATION UNREGISTERED EVENT */
+
+ApplicationUnregisteredEvent::ApplicationUnregisteredEvent(
+		const ApplicationProcessNamingInformation& appName,
+		const ApplicationProcessNamingInformation& DIFName) :
+		IPCEvent(APPLICATION_UNREGISTERED_EVENT) {
+	this->applicationName = appName;
+	this->DIFName = DIFName;
+}
+
+const ApplicationProcessNamingInformation& ApplicationUnregisteredEvent::getApplicationName() const {
+	return this->applicationName;
+}
+
+const ApplicationProcessNamingInformation& ApplicationUnregisteredEvent::getDIFName() const {
+	return this->DIFName;
+}
+
+/* CLASS INCOMING FLOW REQUEST EVENT */
+
+IncomingFlowRequestEvent::IncomingFlowRequestEvent(int portId,
+		const FlowSpecification& flowSpecification,
+		const ApplicationProcessNamingInformation& sourceApplicationName,
+		const ApplicationProcessNamingInformation& destApplicationName,
+		const ApplicationProcessNamingInformation& DIFName) :
+		IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT) {
+	this->flowSpecification = flowSpecification;
+	this->sourceApplicationName = sourceApplicationName;
+	this->destinationApplicationName = destApplicationName;
+	this->DIFName = DIFName;
+	this->portId = portId;
+}
+
+int IncomingFlowRequestEvent::getPortId() const {
+	return this->portId;
+}
+
+const FlowSpecification& IncomingFlowRequestEvent::getFlowSpecification() const {
+	return this->flowSpecification;
+}
+
+const ApplicationProcessNamingInformation& IncomingFlowRequestEvent::getDIFName() const {
+	return this->DIFName;
+}
+
+const ApplicationProcessNamingInformation& IncomingFlowRequestEvent::getSourceApplicationName() const {
+	return this->sourceApplicationName;
+}
+
+const ApplicationProcessNamingInformation& IncomingFlowRequestEvent::getDestApplicationName() const {
+	return this->destinationApplicationName;
 }

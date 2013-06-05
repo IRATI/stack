@@ -14,8 +14,8 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#ifndef LIBRINAPP_H
-#define LIBRINAPP_H
+#ifndef LIBRINA_H
+#define LIBRINA_H
 
 #ifdef __cplusplus
 
@@ -27,4 +27,5 @@
 //#include "librina-cdap.h"
 //#include "librina-sdu-protection.h"
 
+#endif
 #endif
