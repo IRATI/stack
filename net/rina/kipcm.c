@@ -75,6 +75,7 @@ int kipcm_add_entry(port_id_t port_id, const struct flow_t * flow)
         LOG_FBEGN;
 
         struct port_id_to_flow_t * port_flow;
+
         port_flow = kmalloc(sizeof(*port_flow), GFP_KERNEL);
         if (!port_flow) {
                 LOG_ERR("Cannot allocate %z bytes of memory",
@@ -130,20 +131,33 @@ int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
 
         /* FIXME : Change these stacked ifs with a proper switch */
         if (flow->application_owned) {
-                unsigned int avail = kfifo_avail(flow->sdu_ready);
+                unsigned int avail;
+
+                avail = kfifo_avail(flow->sdu_ready);
                 if (avail < (sdu->buffer->size + sizeof(size_t))) {
                         LOG_ERR("There is no space in the queue "
                                 "for port_id %d",
                                 port_id);
-
+                        
                         LOG_FEXIT;
                         return -1;
                 }
-                unsigned int retval = kfifo_in(flow->sdu_ready,
-                                               &sdu->buffer->size, sizeof(size_t));
-                retval = kfifo_in(flow->sdu_ready,
-                                  sdu->buffer->data,
-                                  sdu->buffer->size);
+
+                /* FIXME: Miquel, check these return values. Francesco */
+                if (kfifo_in(flow->sdu_ready,
+                             &sdu->buffer->size,
+                             sizeof(size_t)) != sizeof(size_t)) {
+                        LOG_ERR("Could not push %d bytes into the fifo",
+                                sizeof(size_t));
+                        return -1;
+                }
+                if (kfifo_in(flow->sdu_ready,
+                             sdu->buffer->data,
+                             sdu->buffer->size) != sdu->buffer->size) {
+                        LOG_ERR("Could not push %d bytes into the fifo",
+                                sdu->buffer->size);
+                        return -1;
+                }
         } else {
                 /* FIXME : RMT stuff */
         }
@@ -163,6 +177,8 @@ int read_sdu(port_id_t      port_id,
         ASSERT(sdu->buffer);
 
         struct flow_t * flow;
+        size_t          size;
+        char *          data;
 
         flow = retrieve_flow_by_port_id(port_id);
         if (flow == NULL) {
@@ -172,8 +188,6 @@ int read_sdu(port_id_t      port_id,
                 return -1;
         }
 
-        size_t size;
-        char * data;
         if (kfifo_out(flow->sdu_ready, &size, sizeof(size_t)) <
             sizeof(size_t)) {
                 LOG_DBG("There is no data for port-id %d", port_id);
@@ -190,9 +204,8 @@ int read_sdu(port_id_t      port_id,
                 return -1;
         }
 
-        int retval = kfifo_out(flow->sdu_ready, data, size);
-        if (retval < size) {
-                LOG_ERR("Corrupted data in port-id %d", port_id);
+        if (kfifo_out(flow->sdu_ready, data, size) != size) {
+                LOG_ERR("Could not push %d bytes into a fifo", size);
 
                 LOG_FEXIT;
                 return -1;
@@ -203,7 +216,7 @@ int read_sdu(port_id_t      port_id,
 
         LOG_FEXIT;
 
-        return retval;
+        return 0;
 }
 
 int  write_sdu(port_id_t            port_id,
@@ -212,6 +225,7 @@ int  write_sdu(port_id_t            port_id,
         LOG_FBEGN;
 
         struct flow_t * flow;
+        int             retval;
 
         flow = retrieve_flow_by_port_id(port_id);
         if (flow == NULL) {
@@ -221,8 +235,7 @@ int  write_sdu(port_id_t            port_id,
                 return -1;
         }
 
-        int retval = -1;
-
+        retval = -1;
         switch (flow->ipc_process->type) {
         case DIF_TYPE_SHIM_ETH:
                 retval = shim_eth_write_sdu(port_id, sdu);
@@ -273,6 +286,7 @@ create_shim(ipc_process_id_t ipcp_id)
         if (!ipcp_shim_eth) {
                 LOG_ERR("Cannot allocate %z bytes of memory",
                         sizeof(*ipcp_shim_eth));
+
                 LOG_FEXIT;
                 return NULL;
         }
