@@ -26,6 +26,7 @@
 #include "logs.h"
 #include "kipcm.h"
 #include <linux/list.h>
+#include <linux/kfifo.h>
 
 static LIST_HEAD(id_to_ipcp);
 static LIST_HEAD(port_id_to_flow);
