@@ -14,18 +14,6 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#ifndef LIBRINA_H
-#define LIBRINA_H
+#include <iostream>
 
-#ifdef __cplusplus
-
-#include "librina-common.h"
-#include "librina-application.h"
-//#include "librina-ipc-manager.h"
-//#include "librina-ipc-process.h"
-//#include "librina-faux-sockets.h"
-//#include "librina-cdap.h"
-//#include "librina-sdu-protection.h"
-
-#endif
-#endif
+#include "librina.h"

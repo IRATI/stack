@@ -18,6 +18,7 @@
 #define LIBRINA_APPLICATION_H
 
 #include "librina-common.h"
+#include <map>
 
 /**
  * The librina-application library provides the native RINA API,
@@ -44,250 +45,270 @@
  * (event_wait and event_poll).
  */
 
-/** Contains the information of a single event affecting a flow*/
-typedef struct {
-	/** type maps to EVENT_FLOW_[REQUEST|RESPONSE]_RECEIVED */
-	uint32_t    type;
-	name_t  source_application;
-	name_t  destination_application;
-
-	/** The flow characteristics */
-	flow_spec_t flow_spec;
-
-	/** The port id of the flow */
-	port_id_t  port_id;
-
-	/** Maps a response result */
-	response_reason_t response_reason;
-} event_flow_t;
-
-/** Contains the information of an event that reports available SDUs*/
-typedef struct {
-	/** The port id of the flow */
-	port_id_t port_id;
-
-	/** The SDU received */
-	sdu_t sdu;
-} event_sdu_t;
-
-/** Contains the information of an event related to application registration*/
-typedef struct {
-	/** The application affected by the event */
-	name_t  application_name;
-
-	/** DIFs affected by the event */
-	array_of_name_t  dif_names;
-} event_registration_t;
-
-/** Defines the different events relevant to an application process*/
-typedef enum {
-	EVENT_ALLOCATE_FLOW_REQUEST_RECEIVED,
-	EVENT_FLOW_DEALLOCATED,
-	EVENT_APPLICATION_REGISTRATION_CANCELED,
-	EVENT_SDU_RECEIVED
-} event_type_t;
-
-typedef struct {
-	/** The event discriminator */
-	event_type_t type;
-
-	/** This union contains the event related data */
-        union {
-		event_flow_t         flow;
-		event_registration_t registration;
-		event_sdu_t 	   sdu;
-        } data;
-} event_t;
+enum FlowState {
+	FLOW_ALLOCATED, FLOW_DEALLOCATED
+};
 
 /**
-  * This structure defines the service properties of a DIF; that
-  * is, the properties of a DIF visible to an application
-  */
-typedef struct {
-	/** The name of the DIF */
-	name_t dif_name;
+ * Represents a flow between two application processes, and encapsulates
+ * the services that the flow provides.
+ */
+class Flow {
+	/** The port-id that locally identifies the flow */
+	int portId;
+
+	/** The name of the DIF that is providing this flow */
+	ApplicationProcessNamingInformation DIFName;
+
+	/** The application that requested the flow */
+	ApplicationProcessNamingInformation sourceApplicationName;
+
+	/** The application targeted by the flow */
+	ApplicationProcessNamingInformation destinationApplicationName;
+
+	/** The characteristics of the flow */
+	FlowSpecification flowSpecification;
+
+	/** The state of the flow */
+	FlowState flowState;
+
+	Flow(const ApplicationProcessNamingInformation& sourceApplicationName,
+			const ApplicationProcessNamingInformation& destinationApplicationName,
+			const FlowSpecification& flowSpecification, FlowState flowState,
+			const ApplicationProcessNamingInformation& DIFName, int portId);
+public:
+	Flow();
+	static const std::string flow_not_allocated_error;
+	const FlowState& getState() const;
+	int getPortId() const;
+	const ApplicationProcessNamingInformation& getDIFName() const;
+	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
+	const ApplicationProcessNamingInformation& getDestinationApplcationName() const;
+	const FlowSpecification getFlowSpecification() const;
 
 	/**
-	 * The maximum SDU size this DIF can handle (writes with bigger
-	 * SDUs will return an error, and read will never return an SDUs
-	 * bigger than this size
+	 * Reads an SDU from the flow. This function will block until there is an
+	 * SDU available.
+	 *
+	 * @param sdu A buffer to store the SDU data
+	 * @return int The number of bytes read
+	 * @throws IPCException if the flow is not in the ALLOCATED state
 	 */
-	int  max_sdu_size;
+	int readSDU(unsigned char * sdu) throw (IPCException);
 
-	/** The QoS cubes supported by the DIF */
-	array_of_qos_cube_t qos_cubes;
-} dif_properties_t;
+	/**
+	 * Writes an SDU to the flow
+	 *
+	 * @param sdu A buffer that contains the SDU data
+	 * @param size The size of the SDU data, in bytes
+	 * @throws IPCException if the flow is not in the ALLOCATED state or
+	 * there are problems writing to the flow
+	 */
+	void writeSDU(unsigned char * sdu, int size) throw (IPCException);
 
-typedef int (* event_filter_t)(const event_t * event);
-
-/**
- * Polls for currently pending events, and returns 1 if there are any
- * pending events, or 0 if there are none available.  If 'event' is
- * not NULL, the next event is removed from the queue and stored in
- * that area.
- *
- * Outputs
- *
- * event: An event informing that something happened.
- */
-int ev_poll(event_t * event);
+	friend class IPCManager;
+};
 
 /**
- * Description
- *
- * Waits indefinitely for the next available event, returning 1, or 0
- * if there was an error while waiting for events.  If 'event' is not
- * NULL, the next event is removed from the queue and stored in that
- * area.
- *
- * Outputs
- *
- * event: An event informing that something happened.
+ * Contains the information about a registered application: its
+ * name and the DIFs where it is registered
  */
-int ev_wait(event_t * event);
+class ApplicationRegistration {
+	/** The registered application name */
+	ApplicationProcessNamingInformation applicationName;
+
+	/** The list of one or more DIFs in which the application is registered */
+	std::list<ApplicationProcessNamingInformation> DIFNames;
+
+public:
+	ApplicationRegistration(
+			const ApplicationProcessNamingInformation& applicationName);
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	const std::list<ApplicationProcessNamingInformation>& getDIFNames() const;
+	void addDIFName(const ApplicationProcessNamingInformation& DIFName);
+	void removeDIFName(const ApplicationProcessNamingInformation& DIFName);
+};
 
 /**
- * Description
- *
- * The ev_set_filter() function sets up a filter to process all events
- * before they change internal state and are posted to the internal
- * event queue. If the filter returns 1, then the event will be added
- * to the internal queue. If it returns 0, then the event will be dropped
- * from the queue, but the internal state will still be updated. This
- * allows selective filtering of dynamically arriving events.
- *
- * Inputs
- *
- * filter: The filter to setup.
+ * Point of entry to the IPC functionality available in the system. This class
+ * is a singleton.
  */
-void ev_set_filter(event_filter_t filter);
+class IPCManager: public IPCEventProducer {
+	static bool instanceFlag;
+	static IPCManager * instance;
+
+	/** The flows that are currently allocated */
+	std::map<int, Flow*> allocatedFlows;
+
+	/** The applications that are currently registered in one or more DIFs */
+	std::map<ApplicationProcessNamingInformation, ApplicationRegistration*> applicationRegistrations;
+
+	IPCManager();
+
+public:
+	static IPCManager * getInstance();
+	~IPCManager() {
+		instanceFlag = false;
+	}
+
+	static const std::string application_registered_error;
+	static const std::string application_not_registered_error;
+	static const std::string unknown_flow_error;
+
+	/**
+	 * Retrieves the names and characteristics of a single DIF or of all the
+	 * DIFs available to the application.
+	 *
+	 * @param DIFName If provided, the function will return the information of
+	 * the requested DIF, otherwise it will return the properties of all the
+	 * DIFs available to the application.
+	 * @return The properties of one or more DIFs
+	 */
+	std::vector<DIFProperties> getDIFProperties(
+			const ApplicationProcessNamingInformation& DIFName);
+
+	/**
+	 * Registers an application to a DIF.
+	 *
+	 * @param applicationName The name of the application to be registered
+	 * @param DIFName Then name of the DIF where the application will register
+	 * @throws IPCException if the DIF doesn't exist or the application doesn't
+	 * have enough rights to use it.
+	 */
+	void registerApplication(
+			const ApplicationProcessNamingInformation& applicationName,
+			const ApplicationProcessNamingInformation& DIFName)
+					throw (IPCException);
+
+	/**
+	 * Unregisters an application from a DIF.
+	 *
+	 * @param applicationName The name of the application to be unregistered
+	 * @param DIFName Then name of the DIF where the application has to be
+	 * unregistered from
+	 * @throws IPCException if the DIF doesn't exist or the application was not
+	 * registered there
+	 */
+	void unregisterApplication(
+			ApplicationProcessNamingInformation applicationName,
+			ApplicationProcessNamingInformation DIFName) throw (IPCException);
+
+	/**
+	 * Requests the allocation of a Flow
+	 *
+	 * @param sourceAppName The naming information of the application requesting
+	 * the flow
+	 * @param destAppName The naming information of the application that is the target
+	 * of the flow
+	 * @param flowSpecifiction The characteristics required for the flow
+	 * @return A Flow object encapsulating the flow service
+	 * @throws IPCException if there are problems during the flow allocation
+	 */
+	Flow * allocateFlowRequest(
+			const ApplicationProcessNamingInformation& sourceAppName,
+			const ApplicationProcessNamingInformation& destAppName,
+			const FlowSpecification& flow) throw (IPCException);
+
+	/**
+	 * Confirms or denies the request for a flow to this application.
+	 *
+	 * @param portId The Id of the flow to confirm/deny
+	 * @param accept true if the flow is accepted, false otherwise
+	 * @param reason IF the flow was denied, contains a short explanation
+	 * providing some motivation
+	 * @return Flow If the flow is accepted, returns the flow object
+	 * @throws IPCException If there are problems confirming/denying the flow
+	 */
+	Flow * allocateFlowResponse(int portId, bool accept,
+			const std::string& reason) throw (IPCException);
+
+	/**
+	 * Causes the flow to be deallocated, and the object deleted.
+	 *
+	 * @throws IPCException if the flow is not in the ALLOCATED state or
+	 * there are problems deallocating the flow
+	 */
+	void deallocateFlow(const Flow& flow) throw (IPCException);
+
+	/**
+	 * Returns the flows that are currently allocated
+	 *
+	 * @return the flows allocated
+	 */
+	std::vector<Flow *> getAllocatedFlows();
+
+	/**
+	 * Returns the applications that are currently registered in one or more
+	 * DIFs.
+	 *
+	 * @return the registered applications
+	 */
+	std::vector<ApplicationRegistration *> getRegisteredApplications();
+
+	IPCEvent eventPoll();
+	IPCEvent eventWait();
+};
 
 /**
- * Description
- *
- * The ev_get_filter() returns the current filter installed. If the function
- * returns NULL, then no filters are currently installed.
- *
- * Outputs
- *
- * filter: The current filter installed.
+ * Event informing that a flow has been deallocated by an IPC Process, without
+ * the application having requested it
  */
-event_filter_t ev_get_filter(void);
+class FlowDeallocatedEvent: public IPCEvent {
+	int portId;
+public:
+	FlowDeallocatedEvent(int portId);
+	int getPortId() const;
+};
 
 /**
- * Description
- *
- * Invoked by the source application, when it wants a flow to be allocated
- * to a destination application with certain characteristics.
- *
- * Inputs
- *
- * source: The source application process naming information (required)
- * destination: The destination application process naming information (required)
- * flow_spec: The QoS params requested for the flow (optional)
- *
- * Outputs
- *
- * port_id: The handle to the flow, provided by the system
+ * Event informing that an application has been unregistered from a DIF,
+ * without the application having requested it
  */
-port_id_t allocate_flow_request(const name_t * source,
-                                const name_t * destination,
-                                const flow_spec_t * flow_spec);
+class ApplicationUnregisteredEvent: public IPCEvent {
+	/** The application that has been unregistered */
+	ApplicationProcessNamingInformation applicationName;
+
+	/** The DIF from which the application has been unregistered */
+	ApplicationProcessNamingInformation DIFName;
+
+public:
+	ApplicationUnregisteredEvent(
+			const ApplicationProcessNamingInformation& appName,
+			const ApplicationProcessNamingInformation& DIFName);
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	const ApplicationProcessNamingInformation& getDIFName() const;
+};
 
 /**
- * Description
- *
- * Invoked by the destination application, confirming or denying a flow
- * allocation request.
- *
- * Inputs
- *
- * port_id: The port id of the flow, whose request is being confirmed
- * or denied
- * response: Indicates whether the flow is accepted or not, with an
- * optional reason explaining why and indications if a response should
- * be returned to the flow requestor.
+ * Event informing about an incoming flow request from another application
  */
-int allocate_flow_response(port_id_t port_id,
-                           const response_reason_t response);
+class IncomingFlowRequestEvent: public IPCEvent {
+	/** The port-id that locally identifies the flow */
+	int portId;
 
-/**
- * Description
- *
- * Causes the resources allocated to a certain flow to be released,
- * and any state associated to the flow to be removed.
- *
- * Inputs
- *
- * port_id: The port id of the flow to be deallocated.
- */
-int deallocate_flow (port_id_t port_id);
+	/** The name of the DIF that is providing this flow */
+	ApplicationProcessNamingInformation DIFName;
 
-/**
- * Description
- *
- * Called by an application when it wants to write an SDU to
- * the flow.
- *
- * Inputs
- *
- * port_id: The port id of the flow.
- * sdu: The SDU to be written to the flow.
- */
-int write_sdu(port_id_t port_id, sdu_t * sdu);
+	/** The application that requested the flow */
+	ApplicationProcessNamingInformation sourceApplicationName;
 
-/**
- * Description
- *
- * Called by an application when it wants to know the DIFs in the
- * system it can use, and what are their properties.
- *
- * Inputs
- *
- * dif_name: The name of the DIF whose properties the application
- * wants to know. If no name is provided, the call will return the
- * properties of all the DIFs available to the application.
- *
- * Outputs
- *
- * dif_properties_t: A pointer to an array of properties of the requested DIFs.
- * size: The number of elements in the array (0 or more), if the call is
- * successful. A negative number indicating an error if the call fails.
- */
-dif_properties_t *get_dif_properties(const name_t * dif_name,
-                       int * size);
+	/** The application targeted by the flow */
+	ApplicationProcessNamingInformation destinationApplicationName;
 
-/**
- * Description
- *
- * Called by an application when it wants to be advertised (and
- * reachable) through a DIF..
- *
- * Inputs
- *
- * name: The name of the application (required).
- * dif: The name of a DIF where the application wants to be registered.
- * In case none is provided, the RINA software could decide for the
- * application (e.g. register the application in all DIFs, register
- * the application in a default one, etc.)
- */
-int register_application(const name_t * name,
-                         const name_t * dif);
+	/** The characteristics of the flow */
+	FlowSpecification flowSpecification;
 
-/**
- * Description
- *
- * Called by an application when it wants to stop being advertised
- * (and reachable) through a DIF.
- *
- * Inputs
- *
- * name: the name of the application (required)
- * dif: the name of a DIF where the application is registered. In case
- * none is provided, it will be unregistered from all the DIFs the
- * application is currently registered at.
- */
-int unregister_application(const name_t * name,
-                           const name_t * dif);
+public:
+	IncomingFlowRequestEvent(int portId,
+			const FlowSpecification& flowSpecification,
+			const ApplicationProcessNamingInformation& sourceApplicationName,
+			const ApplicationProcessNamingInformation& destApplicationName,
+			const ApplicationProcessNamingInformation& DIFName);
+	int getPortId() const;
+	const FlowSpecification& getFlowSpecification() const;
+	const ApplicationProcessNamingInformation& getDIFName() const;
+	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
+	const ApplicationProcessNamingInformation& getDestApplicationName() const;
+};
 
 #endif

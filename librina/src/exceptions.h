@@ -14,18 +14,27 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#ifndef LIBRINA_H
-#define LIBRINA_H
+#ifndef LIBRINA_EXCEPTIONS_H
+#define LIBRINA_EXCEPTIONS_H
 
 #ifdef __cplusplus
 
-#include "librina-common.h"
-#include "librina-application.h"
-//#include "librina-ipc-manager.h"
-//#include "librina-ipc-process.h"
-//#include "librina-faux-sockets.h"
-//#include "librina-cdap.h"
-//#include "librina-sdu-protection.h"
+#include <stdexcept>
+
+class Exception : public std::exception {
+public:
+        Exception() { }
+        Exception(const std::string & s) : description_(s) { }
+
+        virtual ~Exception() throw() { }
+
+        virtual const char * what() const throw()
+        { return description_.c_str(); }
+
+private:
+        std::string description_;
+};
 
 #endif
+
 #endif

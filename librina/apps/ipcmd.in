@@ -1,0 +1,16 @@
+#!@SHELL@
+
+#
+# ipcmd
+#
+# Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
+#             Eduard Grasa <e DOT grasa AT i2cat DOT net>
+#
+
+me="ipcmd"
+
+CP=@javadir@
+LP=@libdir@
+
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LP java -classpath $CP -jar @javadir@/ipcmd.jar
+#LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LP java -classpath $CP ipcmd

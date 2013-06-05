@@ -14,6 +14,7 @@ SUBDIRS =					\
 	include					\
 	src					\
 	wrap					\
+	apps					\
 	test					\
 	doc
 
@@ -21,7 +22,8 @@ EXTRA_DIST =					\
 	bootstrap				\
 	build-aux/git-version-gen		\
 	build-aux/gitlog-to-changelog		\
-	LICENSE
+	LICENSE					\
+	README
 
 .PHONY: AUTHORS
 AUTHORS:

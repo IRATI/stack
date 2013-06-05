@@ -4,7 +4,7 @@ import eu.irati.librina.FlowSpecification;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.IPCManager;
 
-public class SWIGTest {
+public class app {
 
 	static {
               System.out.println("java.library.path = " + System.getProperties().getProperty("java.library.path"));
@@ -42,23 +42,17 @@ public class SWIGTest {
 		Flow flow = ipcManager.allocateFlowRequest(sourceNamingInfo, destNamingInfo, flowSpecification);
 		System.out.println("Flow allocated, port id is "+flow.getPortId());
 		
-		/*System.out.println("\n CALLING WRITE SDU");
+		System.out.println("\nWRITING A SDU TO THE FLOW");
 		byte[] sdu = "This is a test SDU".getBytes();
-		flow.write(sdu, sdu.length);
+		flow.writeSDU(sdu, sdu.length);
 		System.out.println("Wrote SDU");
 		
-		System.out.println("\nCALLING DEALLOCATE FLOW");
-		flow.deallocate();
-		System.out.println("Flow deallocated");
+		System.out.println("\nREADING AN SDU FROM THE FLOW");
+		flow.readSDU(sdu);
+		System.out.println("Read "+sdu.length+" bytes");
 		
-		System.out.println("\nCALLING GET DIF PROPERTIES");
-		DIFPropertiesVector difPropertiesVector = DIFInformation.getDIFProperties(sourceNamingInfo);
-		System.out.println("Got properties of "+difPropertiesVector.size()+" DIFs.");
-		DIFProperties difProperties = null;
-		for(int i=0; i<difPropertiesVector.size(); i++){
-			difProperties = difPropertiesVector.get(i);
-			System.out.println("DIF name: "+difProperties.getDIFName().getProcessName());
-			System.out.println("Max SDU size: "+difProperties.getMaxSduSize());
-		}*/
+		System.out.println("\nDEALLOCATING THE FLOW");
+		ipcManager.deallocateFlow(flow);
+		System.out.println("Flow deallocated");
 	}
 }

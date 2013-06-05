@@ -13,7 +13,7 @@ AC_INIT([RINA Libraries],
 AC_PREREQ([2.68])
 
 AC_CONFIG_HEADERS([src/config.h])
-AC_CONFIG_SRCDIR([src/librina.c])
+AC_CONFIG_SRCDIR([src/librina.cc])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -21,7 +21,8 @@ AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 
-AM_INIT_AUTOMAKE([1.11.1 tar-pax foreign std-options -Wall])
+AM_INIT_AUTOMAKE([1.11.1 tar-pax foreign -Wall])
+#AM_INIT_AUTOMAKE([1.11.1 tar-pax foreign std-options -Wall])
 
 AC_PROG_SED
 AC_PROG_GREP
@@ -36,6 +37,10 @@ AC_PATH_PROG([GIT],  [git],  [/bin/false])
 AC_PROG_CXXCPP
 AC_PROG_CXX
 AC_PROG_CXX_C_O
+
+CPPFLAGS_EXTRA=""
+AX_CHECK_COMPILE_FLAG([ -Wall -Werror ], [ CPPFLAGS_EXTRA="-Wall -Werror" ])
+AC_SUBST(CPPFLAGS_EXTRA, $CPPFLAGS_EXTRA)
 
 LT_INIT
 
@@ -96,6 +101,13 @@ DX_PDF_FEATURE(ON)
 DX_PS_FEATURE(OFF)
 DX_INIT_DOXYGEN($PACKAGE_NAME, [doxygen.cfg], [doxygen])
 
+PKG_CHECK_MODULES(LIBNL3, [libnl-3.0 >= 3.1],, [
+    AC_MSG_ERROR([Your system lacks of libnl-3 support])
+])
+PKG_CHECK_MODULES(LIBNLGENL3, [libnl-genl-3.0 >= 3.1],, [
+    AC_MSG_ERROR([Your system lacks of libnl-genl-3 support])
+])
+
 AC_CONFIG_FILES([
     Makefile
 
@@ -104,6 +116,8 @@ AC_CONFIG_FILES([
 
     wrap/Makefile
     wrap/java/Makefile
+
+    apps/Makefile
 
     test/Makefile
 
