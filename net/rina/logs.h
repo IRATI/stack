@@ -28,7 +28,7 @@
 #include <linux/kernel.h>
 
 #define __LOG(PREFIX, LEVEL, FMT, ARGS...)                              \
-	do { printk(LEVEL "rina-" PREFIX ": " FMT, ##ARGS); } while (0)
+        do { printk(LEVEL "rina-" PREFIX ": " FMT, ##ARGS); } while (0)
 
 /* Sorted by "urgency" (high to low) */
 #define LOG_EMERG(FMT, ARGS...) __LOG(RINA_PREFIX, KERN_EMERG,   FMT, ##ARGS)

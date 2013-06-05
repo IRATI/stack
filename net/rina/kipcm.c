@@ -22,14 +22,18 @@
 #define RINA_PREFIX "kipcm"
 
 #include <linux/linkage.h>
-
-#include "logs.h"
-#include "kipcm.h"
 #include <linux/list.h>
 #include <linux/kfifo.h>
 
+#include "logs.h"
+#include "debug.h"
+#include "kipcm.h"
+
+/* FIXME: Remove all the statics here */
 static LIST_HEAD(id_to_ipcp);
 static LIST_HEAD(port_id_to_flow);
+
+/* FIXME: This one will be "created and published" by the container */
 static struct kipc_t *kipcm;
 
 int kipcm_init()
@@ -42,6 +46,7 @@ int kipcm_init()
                 return -1;
         }
 
+        /* FIXME: Why ? */
         kipcm->id_to_ipcp      = &id_to_ipcp;
         kipcm->port_id_to_flow = &port_id_to_flow;
 
@@ -53,6 +58,11 @@ int kipcm_init()
 void kipcm_exit()
 {
         LOG_FBEGN;
+
+        /*
+         * Add code here, depending on the operations performed
+         * into kipcm_init
+         */
 
         kfree(kipcm);
         kipcm = 0; /* Useless */
@@ -67,8 +77,8 @@ int kipcm_add_entry(port_id_t port_id, const struct flow_t * flow)
         struct port_id_to_flow_t * port_flow;
         port_flow = kmalloc(sizeof(*port_flow), GFP_KERNEL);
         if (!port_flow) {
-                LOG_CRIT("Cannot allocate %z bytes of memory",
-                         sizeof(*port_flow));
+                LOG_ERR("Cannot allocate %z bytes of memory",
+                        sizeof(*port_flow));
                 return -1;
         }
 
@@ -79,7 +89,7 @@ int kipcm_add_entry(port_id_t port_id, const struct flow_t * flow)
 
         LOG_FEXIT;
 
-	return 0;
+        return 0;
 }
 
 static struct flow_t * retrieve_flow_by_port_id(port_id_t port_id)
@@ -100,7 +110,7 @@ int kipcm_remove_entry(port_id_t port_id)
 
         LOG_FEXIT;
 
-	return 0;
+        return 0;
 }
 
 int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
@@ -112,31 +122,35 @@ int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
 
         flow = retrieve_flow_by_port_id(port_id);
         if (flow == NULL) {
-		LOG_ERR("There is no flow bound to port-id %d", port_id);
+                LOG_ERR("There is no flow bound to port-id %d", port_id);
 
-		LOG_FEXIT;
-		return -1;
-	}
-        /* FIXME : This double if is ugly as hell, fix when RMT case is added */
+                LOG_FEXIT;
+                return -1;
+        }
+
+        /* FIXME : Change these stacked ifs with a proper switch */
         if (flow->application_owned) {
-        	unsigned int avail = kfifo_avail(flow->sdu_ready);
-        	if (avail < (sdu->buffer->size + sizeof(size_t))) {
-			LOG_ERR("There is no space in the queue for port_id %d",
-				port_id);
+                unsigned int avail = kfifo_avail(flow->sdu_ready);
+                if (avail < (sdu->buffer->size + sizeof(size_t))) {
+                        LOG_ERR("There is no space in the queue "
+                                "for port_id %d",
+                                port_id);
 
-			LOG_FEXIT;
-			return -1;
-		}
-        	unsigned int retval = kfifo_in(flow->sdu_ready,
-        		&sdu->buffer->size, sizeof(size_t));
-        	retval = kfifo_in(flow->sdu_ready, sdu->buffer->data, sdu->buffer->size);
+                        LOG_FEXIT;
+                        return -1;
+                }
+                unsigned int retval = kfifo_in(flow->sdu_ready,
+                                               &sdu->buffer->size, sizeof(size_t));
+                retval = kfifo_in(flow->sdu_ready,
+                                  sdu->buffer->data,
+                                  sdu->buffer->size);
         } else {
-        	/* FIXME : RMT stuff */
+                /* FIXME : RMT stuff */
         }
 
         LOG_FEXIT;
 
-	return 0;
+        return 0;
 }
 
 int read_sdu(port_id_t      port_id,
@@ -145,43 +159,55 @@ int read_sdu(port_id_t      port_id,
 {
         LOG_FBEGN;
 
+        ASSERT(sdu);
+        ASSERT(sdu->buffer);
+
         struct flow_t * flow;
 
         flow = retrieve_flow_by_port_id(port_id);
         if (flow == NULL) {
-		LOG_ERR("There is no flow bound to port-id %d", port_id);
+                LOG_ERR("There is no flow bound to port-id %d", port_id);
 
-		LOG_FEXIT;
-		return -1;
-	}
+                LOG_FEXIT;
+                return -1;
+        }
+
         size_t size;
         char * data;
-        if (kfifo_out(flow->sdu_ready, &size, sizeof(size_t)) < sizeof(size_t))
-        {
-        	LOG_DBG("There is no data for port-id %d", port_id);
+        if (kfifo_out(flow->sdu_ready, &size, sizeof(size_t)) <
+            sizeof(size_t)) {
+                LOG_DBG("There is no data for port-id %d", port_id);
 
-		LOG_FEXIT;
-		return -1;
+                LOG_FEXIT;
+                return -1;
         }
+
         data = kmalloc(size, GFP_KERNEL);
+        if (!data) {
+                LOG_ERR("Cannot allocate %d bytes of kernel memory", size);
+
+                LOG_FEXIT;
+                return -1;
+        }
+
         int retval = kfifo_out(flow->sdu_ready, data, size);
         if (retval < size) {
-        	LOG_ERR("Corrupted data in port-id %d", port_id);
+                LOG_ERR("Corrupted data in port-id %d", port_id);
 
-		LOG_FEXIT;
-		return -1;
+                LOG_FEXIT;
+                return -1;
         }
-        /* It is assumed that sdu has been initialized before calling read_sdu */
+
         sdu->buffer->data = data;
         sdu->buffer->size = size;
 
         LOG_FEXIT;
 
-	return retval;
+        return retval;
 }
 
 int  write_sdu(port_id_t            port_id,
-	       const struct sdu_t * sdu)
+               const struct sdu_t * sdu)
 {
         LOG_FBEGN;
 
@@ -196,6 +222,7 @@ int  write_sdu(port_id_t            port_id,
         }
 
         int retval = -1;
+
         switch (flow->ipc_process->type) {
         case DIF_TYPE_SHIM_ETH:
                 retval = shim_eth_write_sdu(port_id, sdu);
@@ -205,7 +232,7 @@ int  write_sdu(port_id_t            port_id,
         case DIF_TYPE_SHIM_IP :
                 break;
         default :
-                break;
+                BUG();
         }
 
         if (retval) {
@@ -214,7 +241,7 @@ int  write_sdu(port_id_t            port_id,
 
         LOG_FEXIT;
 
-	return retval;
+        return retval;
 }
 
 static struct ipc_process_t * find_ipc_process_by_id(ipc_process_id_t id)
@@ -244,8 +271,8 @@ create_shim(ipc_process_id_t ipcp_id)
 
         ipcp_shim_eth = kmalloc(sizeof(*ipcp_shim_eth), GFP_KERNEL);
         if (!ipcp_shim_eth) {
-                LOG_CRIT("Cannot allocate %z bytes of memory",
-                         sizeof(*ipcp_shim_eth));
+                LOG_ERR("Cannot allocate %z bytes of memory",
+                        sizeof(*ipcp_shim_eth));
                 LOG_FEXIT;
                 return NULL;
         }
@@ -266,8 +293,8 @@ static int add_id_to_ipcp_node(ipc_process_id_t       id,
 
         aux_id_to_ipcp = kmalloc(sizeof(*aux_id_to_ipcp), GFP_KERNEL);
         if (!aux_id_to_ipcp) {
-                LOG_CRIT("Cannot allocate %z bytes of memory",
-                         sizeof(*aux_id_to_ipcp));
+                LOG_ERR("Cannot allocate %z bytes of memory",
+                        sizeof(*aux_id_to_ipcp));
                 LOG_FEXIT;
                 return -1;
         }
@@ -282,43 +309,47 @@ static int add_id_to_ipcp_node(ipc_process_id_t       id,
         return 0;
 }
 
-int  ipc_process_create(const struct name_t * name,
-			ipc_process_id_t      ipcp_id,
-			dif_type_t 	      type)
+int ipc_process_create(const struct name_t * name,
+                       ipc_process_id_t      ipcp_id,
+                       dif_type_t             type)
 {
         LOG_FBEGN;
 
-	struct ipc_process_t *ipc_process;
+        struct ipc_process_t *ipc_process;
 
-	switch (type) {
-	case DIF_TYPE_SHIM_ETH :
-		if (shim_eth_ipc_create(name, ipcp_id))
-		        return -1;
-		ipc_process = kmalloc(sizeof(*ipc_process), GFP_KERNEL);
-		if (!ipc_process) {
-		        LOG_CRIT("Cannot allocate %z bytes of memory",
-                                 sizeof(*ipc_process));
+        switch (type) {
+        case DIF_TYPE_SHIM_ETH :
+                if (shim_eth_ipc_create(name, ipcp_id))
+                        return -1;
+                ipc_process = kmalloc(sizeof(*ipc_process), GFP_KERNEL);
+                if (!ipc_process) {
+                        LOG_ERR("Cannot allocate %z bytes of memory",
+                                sizeof(*ipc_process));
                         LOG_FEXIT;
-		        return -1;
-		}
+                        return -1;
+                }
 
-		ipc_process->type = type;
-		ipc_process->data.shim_eth_ipcp = create_shim(ipcp_id);
-		add_id_to_ipcp_node(ipcp_id, ipc_process);
-		break;
-	case DIF_TYPE_NORMAL:
-		break;
-	case DIF_TYPE_SHIM_IP:
-		break;
-	}
+                ipc_process->type = type;
+                ipc_process->data.shim_eth_ipcp = create_shim(ipcp_id);
+
+                add_id_to_ipcp_node(ipcp_id, ipc_process);
+
+                break;
+        case DIF_TYPE_NORMAL:
+                break;
+        case DIF_TYPE_SHIM_IP:
+                break;
+        default:
+                BUG();
+        }
 
         LOG_FEXIT;
 
-	return 0;
+        return 0;
 }
 
 int  ipc_process_configure(ipc_process_id_t                  ipcp_id,
-			   const struct ipc_process_conf_t * configuration)
+                           const struct ipc_process_conf_t * configuration)
 {
         struct ipc_process_t *                          ipc_process;
         const struct ipc_process_shim_ethernet_conf_t * conf;
@@ -342,11 +373,13 @@ int  ipc_process_configure(ipc_process_id_t                  ipcp_id,
                 break;
         case DIF_TYPE_SHIM_IP:
                 break;
+        default:
+                BUG();
         }
 
         LOG_FEXIT;
 
-	return 0;
+        return 0;
 }
 
 static struct id_to_ipcp_t * find_id_to_ipcp_by_id(ipc_process_id_t id)
@@ -369,29 +402,31 @@ static struct id_to_ipcp_t * find_id_to_ipcp_by_id(ipc_process_id_t id)
 
 int  ipc_process_destroy(ipc_process_id_t ipcp_id)
 {
-	struct id_to_ipcp_t * id_ipcp;
+        struct id_to_ipcp_t * id_ipcp;
 
-	LOG_FBEGN;
+        LOG_FBEGN;
 
-	id_ipcp = find_id_to_ipcp_by_id(ipcp_id);
-	if (!id_ipcp)
-		return -1;
-	list_del(&id_ipcp->list);
-	switch (id_ipcp->ipcprocess->type) {
-	default :
-		break;
-	case DIF_TYPE_SHIM_ETH :
-		shim_eth_destroy(ipcp_id);
-		break;
-	case DIF_TYPE_NORMAL:
+        id_ipcp = find_id_to_ipcp_by_id(ipcp_id);
+        if (!id_ipcp)
+                return -1;
+
+        list_del(&id_ipcp->list);
+
+        switch (id_ipcp->ipcprocess->type) {
+        case DIF_TYPE_SHIM_ETH :
+                shim_eth_destroy(ipcp_id);
+                break;
+        case DIF_TYPE_NORMAL:
                 break;
         case DIF_TYPE_SHIM_IP:
                 break;
-	}
-	kfree(id_ipcp);
-	id_ipcp = 0;
+        default :
+                BUG();
+        }
 
-	LOG_FEXIT;
+        kfree(id_ipcp);
 
-	return 0;
+        LOG_FEXIT;
+
+        return 0;
 }
