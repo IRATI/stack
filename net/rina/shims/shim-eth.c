@@ -92,7 +92,7 @@ port_id_t shim_eth_allocate_flow_request(struct name_t *      source,
 	return 0;
 }
 
-int shim_eth_allocate_flow_response(port_id_t *         port_id,
+int shim_eth_allocate_flow_response(port_id_t           port_id,
                                     response_reason_t * response)
 {
         LOG_FBEGN;

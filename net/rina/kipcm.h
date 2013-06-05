@@ -183,6 +183,7 @@ struct flow_t {
 	//QUEUE(segmentation_queue, pdu_t *);
 	//QUEUE(reassembly_queue,	pdu_t *);
 	//QUEUE(sdu_ready, sdu_t *);
+	struct kfifo *sdu_ready;
 };
 
 struct kipc_t {

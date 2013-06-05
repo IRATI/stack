@@ -81,6 +81,18 @@ int kipcm_add_entry(port_id_t port_id, const struct flow_t * flow)
 	return 0;
 }
 
+static struct flow_t * retrieve_flow_by_port_id(port_id_t port_id)
+{
+        struct port_id_to_flow_t * cur;
+
+        list_for_each_entry(cur, kipcm->port_id_to_flow, list) {
+                if (cur->port_id == port_id)
+                        return cur->flow;
+        }
+
+        return NULL;
+}
+
 int kipcm_remove_entry(port_id_t port_id)
 {
         LOG_FBEGN;
@@ -94,6 +106,33 @@ int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
 {
         LOG_FBEGN;
 
+        //sdu->buffer->size
+        struct flow_t *flow;
+
+        flow = retrieve_flow_by_port_id(port_id);
+        if (flow == NULL) {
+		LOG_ERR("There is no flow bound to port-id %d", port_id);
+
+		LOG_FEXIT;
+		return -1;
+	}
+        /* FIXME : This double if is ugly as hell, fix when RMT case is added */
+        if (flow->application_owned) {
+        	unsigned int avail = kfifo_avail(flow->sdu_ready);
+        	if (avail < (sdu->buffer->size + sizeof(size_t))) {
+			LOG_ERR("There is no space in the queue for port_id %d",
+				port_id);
+
+			LOG_FEXIT;
+			return -1;
+		}
+        	unsigned int retval = kfifo_in(flow->sdu_ready,
+        		&sdu->buffer->size, sizeof(size_t));
+        	retval = kfifo_in(flow->sdu_ready, sdu->buffer->data, sdu->buffer->size);
+        } else {
+        	/* FIXME : RMT stuff */
+        }
+
         LOG_FEXIT;
 
 	return 0;
@@ -104,22 +143,40 @@ int read_sdu(port_id_t      port_id,
              struct sdu_t * sdu)
 {
         LOG_FBEGN;
-        
-        LOG_FEXIT;
-        
-	return 0;
-}
 
-static struct flow_t * retrieve_flow_by_port_id(port_id_t port_id)
-{
-        struct port_id_to_flow_t * cur;
+        struct flow_t * flow;
 
-        list_for_each_entry(cur, kipcm->port_id_to_flow, list) {
-                if (cur->port_id == port_id)
-                        return cur->flow;
+        flow = retrieve_flow_by_port_id(port_id);
+        if (flow == NULL) {
+		LOG_ERR("There is no flow bound to port-id %d", port_id);
+
+		LOG_FEXIT;
+		return -1;
+	}
+        size_t size;
+        char * data;
+        if (kfifo_out(flow->sdu_ready, &size, sizeof(size_t)) < sizeof(size_t))
+        {
+        	LOG_DBG("There is no data for port-id %d", port_id);
+
+		LOG_FEXIT;
+		return -1;
         }
+        data = kmalloc(size, GFP_KERNEL);
+        int retval = kfifo_out(flow->sdu_ready, data, size);
+        if (retval < size) {
+        	LOG_ERR("Corrupted data in port-id %d", port_id);
 
-        return NULL;
+		LOG_FEXIT;
+		return -1;
+        }
+        /* It is assumed that sdu has been initialized before calling read_sdu */
+        sdu->buffer->data = data;
+        sdu->buffer->size = size;
+
+        LOG_FEXIT;
+
+	return retval;
 }
 
 int  write_sdu(port_id_t            port_id,
@@ -131,7 +188,7 @@ int  write_sdu(port_id_t            port_id,
 
         flow = retrieve_flow_by_port_id(port_id);
         if (flow == NULL) {
-                LOG_ERR("There is no flow bound to port-d %d", port_id);
+                LOG_ERR("There is no flow bound to port-id %d", port_id);
 
                 LOG_FEXIT;
                 return -1;
