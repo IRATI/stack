@@ -1,5 +1,5 @@
 /*
- *  CORE
+ * Core
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -20,13 +20,14 @@
 
 #include <linux/module.h>
 
-#define RINA_PREFIX "rina"
+#define RINA_PREFIX "core"
 
 #include "logs.h"
 #include "rina.h"
 #include "kipcm.h"
 #include "efcp.h"
 #include "rmt.h"
+#include "sysfs.h"
 #include "shims/shim-eth.h"
 #include "shims/shim-tcp-udp.h"
 
@@ -49,6 +50,10 @@ static __init int rina_init(void)
         shim_tcp_udp_init();
 #endif
 
+#ifdef CONFIG_RINA_SYSFS
+        sysfs_init();
+#endif
+
         LOG_FEXIT;
 
         return 0;
@@ -57,6 +62,10 @@ static __init int rina_init(void)
 static __exit void rina_exit(void)
 {
         LOG_FBEGN;
+
+#ifdef CONFIG_RINA_SYSFS
+        sysfs_exit();
+#endif
 
 #ifdef CONFIG_SHIM_TCP_UDP
         shim_tcp_udp_exit();
