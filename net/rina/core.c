@@ -28,6 +28,7 @@
 #include "efcp.h"
 #include "rmt.h"
 #include "sysfs.h"
+#include "netlink.h"
 #include "shims/shim-eth.h"
 #include "shims/shim-tcp-udp.h"
 
@@ -40,6 +41,8 @@ static __init int rina_init(void)
                  RINA_VERSION_MINOR(RINA_VERSION),
                  RINA_VERSION_MICRO(RINA_VERSION));
 
+        /* FIXME: Add proper checks over return values */
+
         kipcm_init();
         efcp_init();
         rmt_init();
@@ -49,10 +52,10 @@ static __init int rina_init(void)
 #ifdef CONFIG_SHIM_TCP_UDP
         shim_tcp_udp_init();
 #endif
-
 #ifdef CONFIG_RINA_SYSFS
         sysfs_init();
 #endif
+        netlink_init();
 
         LOG_FEXIT;
 
@@ -63,10 +66,10 @@ static __exit void rina_exit(void)
 {
         LOG_FBEGN;
 
+        netlink_exit();
 #ifdef CONFIG_RINA_SYSFS
         sysfs_exit();
 #endif
-
 #ifdef CONFIG_SHIM_TCP_UDP
         shim_tcp_udp_exit();
 #endif
