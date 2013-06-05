@@ -92,7 +92,7 @@ port_id_t shim_eth_allocate_flow_request(struct name_t *      source,
 	return 0;
 }
 
-int shim_eth_allocate_flow_response(port_id_t *         port_id,
+int shim_eth_allocate_flow_response(port_id_t           port_id,
                                     response_reason_t * response)
 {
         LOG_FBEGN;
@@ -150,7 +150,6 @@ void shim_eth_exit(void)
 int shim_eth_ipc_create(const struct name_t * name,
 			ipc_process_id_t      ipcp_id)
 {
-        /* FIXME: Add handler to correct interface and vlan id */
         LOG_DBG("Created shim ETH IPC process");
 
 	return 0;
@@ -160,7 +159,6 @@ int shim_eth_ipc_configure(ipc_process_id_t ipcp_id,
                            const struct ipc_process_shim_ethernet_conf_t *configuration)
 {
 	LOG_DBG("Configured shim ETH IPC Process");
-	configuration->device_name;
 
 	return 0;
 }

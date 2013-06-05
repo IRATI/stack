@@ -99,7 +99,7 @@ int              shim_eth_destroy(ipc_process_id_t ipc_process_id);
 port_id_t shim_eth_allocate_flow_request(struct name_t *      source,
                                          struct name_t *      dest,
                                          struct flow_spec_t * flow_spec);
-int  shim_eth_allocate_flow_response(port_id_t *         port_id,
+int  shim_eth_allocate_flow_response(port_id_t           port_id,
                                      response_reason_t * response);
 int  shim_eth_deallocate_flow(port_id_t port_id);
 int  shim_eth_register_application(struct name_t * name);
