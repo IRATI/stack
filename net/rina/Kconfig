@@ -4,6 +4,7 @@
 
 menuconfig RINA
 	tristate "RINA support"
+        depends on NET
 	default y
 	---help---
 	  No help for the time being
