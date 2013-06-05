@@ -54,9 +54,9 @@ static __init int rina_init(void)
         shim_tcp_udp_init();
 #endif
 #ifdef CONFIG_RINA_SYSFS
-        sysfs_init();
+        rina_sysfs_init();
 #endif
-        netlink_init();
+        rina_netlink_init();
 
         LOG_FEXIT;
 
@@ -67,9 +67,9 @@ static __exit void rina_exit(void)
 {
         LOG_FBEGN;
 
-        netlink_exit();
+        rina_netlink_exit();
 #ifdef CONFIG_RINA_SYSFS
-        sysfs_exit();
+        rina_sysfs_exit();
 #endif
 #ifdef CONFIG_SHIM_TCP_UDP
         shim_tcp_udp_exit();

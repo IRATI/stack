@@ -22,7 +22,7 @@
 
 #include "logs.h"
 
-int netlink_init(void)
+int rina_netlink_init(void)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -30,7 +30,7 @@ int netlink_init(void)
         return 0;
 }
 
-void netlink_exit(void)
+void rina_netlink_exit(void)
 {
         LOG_FBEGN;
         LOG_FEXIT;

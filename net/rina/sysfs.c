@@ -22,7 +22,7 @@
 
 #include "logs.h"
 
-int  sysfs_init(void)
+int  rina_sysfs_init(void)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -30,7 +30,7 @@ int  sysfs_init(void)
         return 0;
 }
 
-void sysfs_exit(void)
+void rina_sysfs_exit(void)
 {
         LOG_FBEGN;
         LOG_FEXIT;
