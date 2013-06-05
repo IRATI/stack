@@ -42,7 +42,7 @@ int kipcm_init()
 
         kipcm = kmalloc(sizeof(*kipcm), GFP_KERNEL);
         if (!kipcm) {
-                LOG_CRIT("Cannot allocate %z bytes of memory", sizeof(*kipcm));
+                LOG_CRIT("Cannot allocate %d bytes of memory", sizeof(*kipcm));
                 return -1;
         }
 
@@ -72,18 +72,20 @@ void kipcm_exit()
 
 int kipcm_add_entry(port_id_t port_id, const struct flow_t * flow)
 {
-        LOG_FBEGN;
-
         struct port_id_to_flow_t * port_flow;
+
+        LOG_FBEGN;
 
         port_flow = kmalloc(sizeof(*port_flow), GFP_KERNEL);
         if (!port_flow) {
-                LOG_ERR("Cannot allocate %z bytes of memory",
+                LOG_ERR("Cannot allocate %d bytes of memory",
                         sizeof(*port_flow));
                 return -1;
         }
 
         port_flow->port_id = port_id;
+
+        /* FIXME: input parameter is a const pointer ... */
         port_flow->flow    = flow;
         INIT_LIST_HEAD(&port_flow->list);
         list_add(&port_flow->list, kipcm->port_id_to_flow);
@@ -116,10 +118,9 @@ int kipcm_remove_entry(port_id_t port_id)
 
 int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
 {
-        LOG_FBEGN;
+        struct flow_t * flow;
 
-        //sdu->buffer->size
-        struct flow_t *flow;
+        LOG_FBEGN;
 
         flow = retrieve_flow_by_port_id(port_id);
         if (flow == NULL) {
@@ -171,14 +172,14 @@ int read_sdu(port_id_t      port_id,
              bool_t         block,
              struct sdu_t * sdu)
 {
+        struct flow_t * flow;
+        size_t          size;
+        char *          data;
+
         LOG_FBEGN;
 
         ASSERT(sdu);
         ASSERT(sdu->buffer);
-
-        struct flow_t * flow;
-        size_t          size;
-        char *          data;
 
         flow = retrieve_flow_by_port_id(port_id);
         if (flow == NULL) {
@@ -222,10 +223,10 @@ int read_sdu(port_id_t      port_id,
 int  write_sdu(port_id_t            port_id,
                const struct sdu_t * sdu)
 {
-        LOG_FBEGN;
-
         struct flow_t * flow;
         int             retval;
+
+        LOG_FBEGN;
 
         flow = retrieve_flow_by_port_id(port_id);
         if (flow == NULL) {
@@ -284,7 +285,7 @@ create_shim(ipc_process_id_t ipcp_id)
 
         ipcp_shim_eth = kmalloc(sizeof(*ipcp_shim_eth), GFP_KERNEL);
         if (!ipcp_shim_eth) {
-                LOG_ERR("Cannot allocate %z bytes of memory",
+                LOG_ERR("Cannot allocate %d bytes of memory",
                         sizeof(*ipcp_shim_eth));
 
                 LOG_FEXIT;
@@ -307,7 +308,7 @@ static int add_id_to_ipcp_node(ipc_process_id_t       id,
 
         aux_id_to_ipcp = kmalloc(sizeof(*aux_id_to_ipcp), GFP_KERNEL);
         if (!aux_id_to_ipcp) {
-                LOG_ERR("Cannot allocate %z bytes of memory",
+                LOG_ERR("Cannot allocate %d bytes of memory",
                         sizeof(*aux_id_to_ipcp));
                 LOG_FEXIT;
                 return -1;
@@ -327,9 +328,9 @@ int ipc_process_create(const struct name_t * name,
                        ipc_process_id_t      ipcp_id,
                        dif_type_t             type)
 {
-        LOG_FBEGN;
-
         struct ipc_process_t *ipc_process;
+
+        LOG_FBEGN;
 
         switch (type) {
         case DIF_TYPE_SHIM_ETH :
@@ -337,7 +338,7 @@ int ipc_process_create(const struct name_t * name,
                         return -1;
                 ipc_process = kmalloc(sizeof(*ipc_process), GFP_KERNEL);
                 if (!ipc_process) {
-                        LOG_ERR("Cannot allocate %z bytes of memory",
+                        LOG_ERR("Cannot allocate %d bytes of memory",
                                 sizeof(*ipc_process));
                         LOG_FEXIT;
                         return -1;
@@ -418,7 +419,7 @@ int  ipc_process_destroy(ipc_process_id_t ipcp_id)
 {
         struct id_to_ipcp_t * id_ipcp;
 
-        LOG_FBEGN;
+        LOG_FBEGN; 
 
         id_ipcp = find_id_to_ipcp_by_id(ipcp_id);
         if (!id_ipcp)
