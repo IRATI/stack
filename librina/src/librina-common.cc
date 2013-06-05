@@ -33,19 +33,19 @@ ApplicationProcessNamingInformation::ApplicationProcessNamingInformation(
 
 bool ApplicationProcessNamingInformation::operator==(
 		const ApplicationProcessNamingInformation &other) const {
-	if (this->processName.compare(other.processName) != 0) {
+	if (processName.compare(other.processName) != 0) {
 		return false;
 	}
 
-	if (this->processInstance.compare(other.processInstance) != 0) {
+	if (processInstance.compare(other.processInstance) != 0) {
 		return false;
 	}
 
-	if (this->entityName.compare(other.entityName) != 0) {
+	if (entityName.compare(other.entityName) != 0) {
 		return false;
 	}
 
-	if (this->entityInstance.compare(other.entityInstance) != 0) {
+	if (entityInstance.compare(other.entityInstance) != 0) {
 		return false;
 	}
 
@@ -231,7 +231,7 @@ const std::string& QoSCube::getName() const {
 }
 
 unsigned int QoSCube::getAverageBandwidth() const {
-	return this->averageBandwidth;
+	return averageBandwidth;
 }
 
 void QoSCube::setAverageBandwidth(unsigned int averageBandwidth) {
@@ -239,7 +239,7 @@ void QoSCube::setAverageBandwidth(unsigned int averageBandwidth) {
 }
 
 unsigned int QoSCube::getAverageSduBandwidth() const {
-	return this->averageSDUBandwidth;
+	return averageSDUBandwidth;
 }
 
 void QoSCube::setAverageSduBandwidth(unsigned int averageSduBandwidth) {
@@ -247,7 +247,7 @@ void QoSCube::setAverageSduBandwidth(unsigned int averageSduBandwidth) {
 }
 
 unsigned int QoSCube::getDelay() const {
-	return this->getDelay();
+	return getDelay();
 }
 
 void QoSCube::setDelay(unsigned int delay) {
@@ -255,7 +255,7 @@ void QoSCube::setDelay(unsigned int delay) {
 }
 
 unsigned int QoSCube::getJitter() const {
-	return this->jitter;
+	return jitter;
 }
 
 void QoSCube::setJitter(unsigned int jitter) {
@@ -263,7 +263,7 @@ void QoSCube::setJitter(unsigned int jitter) {
 }
 
 int QoSCube::getMaxAllowableGap() const {
-	return this->maxAllowableGap;
+	return maxAllowableGap;
 }
 
 void QoSCube::setMaxAllowableGap(int maxAllowableGap) {
@@ -271,7 +271,7 @@ void QoSCube::setMaxAllowableGap(int maxAllowableGap) {
 }
 
 bool QoSCube::isOrderedDelivery() const {
-	return this->orderedDelivery;
+	return orderedDelivery;
 }
 
 void QoSCube::setOrderedDelivery(bool orderedDelivery) {
@@ -279,7 +279,7 @@ void QoSCube::setOrderedDelivery(bool orderedDelivery) {
 }
 
 bool QoSCube::isPartialDelivery() const {
-	return this->partialDelivery;
+	return partialDelivery;
 }
 
 void QoSCube::setPartialDelivery(bool partialDelivery) {
@@ -287,7 +287,7 @@ void QoSCube::setPartialDelivery(bool partialDelivery) {
 }
 
 unsigned int QoSCube::getPeakBandwidthDuration() const {
-	return this->peakBandwidthDuration;
+	return peakBandwidthDuration;
 }
 
 void QoSCube::setPeakBandwidthDuration(unsigned int peakBandwidthDuration) {
@@ -295,7 +295,7 @@ void QoSCube::setPeakBandwidthDuration(unsigned int peakBandwidthDuration) {
 }
 
 unsigned int QoSCube::getPeakSduBandwidthDuration() const {
-	return this->peakSDUBandwidthDuration;
+	return peakSDUBandwidthDuration;
 }
 
 void QoSCube::setPeakSduBandwidthDuration(
@@ -304,7 +304,7 @@ void QoSCube::setPeakSduBandwidthDuration(
 }
 
 double QoSCube::getUndetectedBitErrorRate() const {
-	return this->getUndetectedBitErrorRate();
+	return getUndetectedBitErrorRate();
 }
 
 void QoSCube::setUndetectedBitErrorRate(double undetectedBitErrorRate) {
@@ -324,11 +324,11 @@ const ApplicationProcessNamingInformation& DIFProperties::getDifName() const {
 }
 
 unsigned int DIFProperties::getMaxSduSize() const {
-	return this->maxSDUSize;
+	return maxSDUSize;
 }
 
 const std::list<QoSCube>& DIFProperties::getQoSCubes() const {
-	return this->qosCubes;
+	return qosCubes;
 }
 
 void DIFProperties::addQoSCube(const QoSCube& qosCube) {
@@ -346,5 +346,5 @@ IPCException::IPCException(const std::string& whatArg) {
 }
 
 const char* IPCException::what() const throw () {
-	return this->whatArg.c_str();
+	return whatArg.c_str();
 }

@@ -135,10 +135,10 @@ class IPCManager : public IPCEventProducer{
 	static IPCManager * instance;
 
 	/** The flows that are currently allocated */
-	std::map<int, Flow> allocatedFlows;
+	std::map<int, Flow*> allocatedFlows;
 
 	/** The applications that are currently registered in one or more DIFs */
-	std::map<ApplicationProcessNamingInformation, ApplicationRegistration > applicationRegistrations;
+	std::map<ApplicationProcessNamingInformation, ApplicationRegistration*> applicationRegistrations;
 
 	IPCManager();
 
@@ -228,7 +228,7 @@ public:
 	 *
 	 * @return the flows allocated
 	 */
-	std::vector<Flow> getAllocatedFlows();
+	std::vector<Flow *> getAllocatedFlows();
 
 	/**
 	 * Returns the applications that are currently registered in one or more
@@ -236,7 +236,7 @@ public:
 	 *
 	 * @return the registered applications
 	 */
-	std::vector<ApplicationRegistration> getRegisteredApplications();
+	std::vector<ApplicationRegistration *> getRegisteredApplications();
 
 	IPCEvent eventPoll();
 	IPCEvent eventWait();
