@@ -135,7 +135,7 @@ public:
  * Point of entry to the IPC functionality available in the system. This class
  * is a singleton.
  */
-class IPCManager: public IPCEventProducer {
+class IPCManager {
 	/** The flows that are currently allocated */
 	std::map<int, Flow*> allocatedFlows;
 
@@ -238,9 +238,6 @@ public:
 	 * @return the registered applications
 	 */
 	std::vector<ApplicationRegistration *> getRegisteredApplications();
-
-	IPCEvent * eventPoll();
-	IPCEvent * eventWait();
 };
 
 /**

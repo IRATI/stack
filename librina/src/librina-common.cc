@@ -416,7 +416,28 @@ IPCEvent::~IPCEvent(){
 }
 
 /* CLASS IPC EVENT PRODUCER */
-IPCEventProducer::~IPCEventProducer(){
+void IPCEventProducer::enqueEvent(IPCEvent * event){
+	eventQueue.push_back(event);
+}
+
+IPCEvent * IPCEventProducer::eventPoll(){
+	if(eventQueue.size() > 0){
+		IPCEvent * result = eventQueue.front();
+		eventQueue.pop_front();
+		return result;
+	}
+
+	return NULL;
+}
+
+IPCEvent * IPCEventProducer::eventWait(){
+	if(eventQueue.size() > 0){
+		IPCEvent * result = eventQueue.front();
+		eventQueue.pop_front();
+		return result;
+	}
+
+	return NULL;
 }
 
 /* CLASS IPC EXCEPTION */

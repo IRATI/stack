@@ -294,40 +294,6 @@ std::vector<ApplicationRegistration *> IPCManager::getRegisteredApplications() {
 	return response;
 }
 
-IPCEvent * IPCManager::eventPoll() {
-	LOG_DBG("IPCManager.eventPoll called");
-	ApplicationUnregisteredEvent * event;
-
-	ApplicationProcessNamingInformation * appName =
-			new ApplicationProcessNamingInformation("/test/apps/source", "1");
-	ApplicationProcessNamingInformation * difName =
-			new ApplicationProcessNamingInformation("/difs/test.DIF", "");
-	event = new ApplicationUnregisteredEvent(*appName, *difName);
-	return event;
-}
-
-IPCEvent * IPCManager::eventWait() {
-	LOG_DBG("IPCManager.eventWait called");
-	IncomingFlowRequestEvent * event;
-
-	ApplicationProcessNamingInformation * sourceAppName =
-			new ApplicationProcessNamingInformation("/test/apps/source", "1");
-	ApplicationProcessNamingInformation * destAppName =
-			new ApplicationProcessNamingInformation("/test/apps/dest", "1");
-	ApplicationProcessNamingInformation * difName =
-			new ApplicationProcessNamingInformation("/difs/test.DIF", "");
-	FlowSpecification * flowSpec = new FlowSpecification();
-	int portId = 37;
-	event = new IncomingFlowRequestEvent(portId, *flowSpec, *sourceAppName,
-			*destAppName, *difName);
-	return event;
-}
-
-/**
- * Make IPCManager singleton
- */
-extern Singleton<IPCManager> ipcManager;
-
 /* CLASS FLOW DEALLOCATED EVENT */
 
 FlowDeallocatedEvent::FlowDeallocatedEvent(int portId) :

@@ -123,3 +123,4 @@ WRAP_THROW_EXCEPTION(rina::IPCManager::deallocate, rina::IPCException,
 %template(QoSCubeList) std::list<rina::QoSCube>;
 %template(ApplicationProcessNamingInformationList) std::list<rina::ApplicationProcessNamingInformation>;
 %template(IPCManagerSingleton) Singleton<rina::IPCManager>;
+%template(IPCEventProducerSingleton) Singleton<rina::IPCEventProducer>;

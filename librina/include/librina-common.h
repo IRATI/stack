@@ -26,6 +26,7 @@
 #define LIBRINA_COMMON_H
 
 #include <exception>
+#include "patterns.h"
 #include <string>
 #include <vector>
 #include <list>
@@ -300,15 +301,27 @@ public:
  * processed by client classes.
  */
 class IPCEventProducer {
+	/** Placeholder to store events, will be a blocking queue */
+	std::list<IPCEvent*> eventQueue;
 public:
-	virtual ~IPCEventProducer();
+	/**
+	 * Called by the library internal classes, in order to
+	 * populate the events list
+	 */
+	void enqueEvent(IPCEvent * event);
 
 	/** Retrieves the next available event, if any */
-	virtual IPCEvent * eventPoll() = 0;
+	IPCEvent * eventPoll();
 
 	/** Blocks until there is an event available */
-	virtual IPCEvent * eventWait() = 0;
+	IPCEvent * eventWait();
 };
+
+/**
+ * Make IPCManager singleton
+ */
+extern Singleton<IPCEventProducer> ipcEventProducer;
+
 
 /**
  * Base class for all RINA exceptions

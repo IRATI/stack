@@ -37,8 +37,7 @@ bool checkAllocatedFlows(unsigned int expectedFlows) {
 	return true;
 }
 
-bool checkRegisteredApplications(Singleton<IPCManager> ipcManager,
-		unsigned int expectedFlows) {
+bool checkRegisteredApplications(unsigned int expectedFlows) {
 	std::vector<ApplicationRegistration *> registeredApplications =
 			ipcManager->getRegisteredApplications();
 	if (registeredApplications.size() != expectedFlows) {
@@ -159,24 +158,29 @@ int main(int argc, char * argv[]) {
 			difProperties.getDifName());
 
 	/* TEST GET REGISTERED APPLICATIONS */
-	if (!checkRegisteredApplications(ipcManager, 2)) {
+	if (!checkRegisteredApplications(2)) {
 		return 1;
 	}
 
 	/* TEST UNREGISTER APPLICATION */
 	ipcManager->unregisterApplication(*sourceName, difProperties.getDifName());
 	ipcManager->unregisterApplication(*sourceName, *difName);
-	if (!checkRegisteredApplications(ipcManager, 1)) {
+	if (!checkRegisteredApplications(1)) {
 		return 1;
 	}
 	ipcManager->unregisterApplication(*destinationName,
 			difProperties.getDifName());
-	if (!checkRegisteredApplications(ipcManager, 0)) {
+	if (!checkRegisteredApplications(0)) {
 		return 1;
 	}
 
 	/* TEST EVENT POLL */
-	IPCEvent * event = ipcManager->eventPoll();
+	IPCEvent * event = new IncomingFlowRequestEvent(24, *flowSpecification, *sourceName, *destinationName, *difName);
+	ipcEventProducer->enqueEvent(event);
+	event = new ApplicationUnregisteredEvent(*sourceName, *difName);
+	ipcEventProducer->enqueEvent(event);
+
+	event = ipcEventProducer->eventPoll();
 	if (!checkRecognizedEvent(event)){
 		return 1;
 	}
@@ -184,7 +188,7 @@ int main(int argc, char * argv[]) {
 	delete event;
 
 	/** TEST EVENT WAIT */
-	event = ipcManager->eventWait();
+	event = ipcEventProducer->eventPoll();
 	if (!checkRecognizedEvent(event)){
 		return 1;
 	}

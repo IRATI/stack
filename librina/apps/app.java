@@ -3,6 +3,7 @@ import eu.irati.librina.Flow;
 import eu.irati.librina.FlowSpecification;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.IPCManager;
+import eu.irati.librina.IPCManagerSingleton;
 
 public class app {
 
@@ -38,7 +39,7 @@ public class app {
 		flowSpecification.setPeakBandwidthDuration(200);
 		
 		System.out.println("\nALLOCATING A FLOW");
-		IPCManager ipcManager = IPCManager.getInstance();
+		IPCManagerSingleton ipcManager = new IPCManagerSingleton();
 		Flow flow = ipcManager.allocateFlowRequest(sourceNamingInfo, destNamingInfo, flowSpecification);
 		System.out.println("Flow allocated, port id is "+flow.getPortId());
 		
