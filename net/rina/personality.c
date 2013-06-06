@@ -27,7 +27,9 @@ const struct personality_t * personality = 0;
 
 static int is_ok(const struct personality_t * pers)
 {
-        if (pers->ipc_create         &&
+        if (pers->init               &&
+            pers->exit               &&
+            pers->ipc_create         &&
             pers->ipc_configure      &&
             pers->ipc_destroy        &&
             pers->sdu_read           &&
