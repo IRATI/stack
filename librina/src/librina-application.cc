@@ -116,6 +116,10 @@ void ApplicationRegistration::removeDIFName(
 
 /* CLASS IPC MANAGER */
 
+IPCManager::IPCManager(){
+	//TODO Probably initialize Netlink machineries?
+}
+
 bool IPCManager::instanceFlag = false;
 
 IPCManager* IPCManager::instance = NULL;
@@ -224,7 +228,7 @@ Flow * IPCManager::allocateFlowRequest(
 
 	int portId;
 	int i;
-	for (i = 0; i < 1000; i++) {
+	for (i = 1; i < 1000; i++) {
 		if (allocatedFlows.find(i) == allocatedFlows.end()) {
 			portId = i;
 			break;
@@ -262,16 +266,16 @@ Flow * IPCManager::allocateFlowResponse(int portId, bool accept,
 	return flow;
 }
 
-void IPCManager::deallocateFlow(const Flow& flow) throw (IPCException) {
+void IPCManager::deallocateFlow(int portId) throw (IPCException) {
 	LOG_DBG("IPCManager.deallocateFlow called");
 
 	std::map<int, Flow*>::iterator iterator;
-	iterator = allocatedFlows.find(flow.getPortId());
+	iterator = allocatedFlows.find(portId);
 	if (iterator == allocatedFlows.end()) {
 		throw new IPCException(IPCManager::unknown_flow_error);
 	}
 
-	allocatedFlows.erase(flow.getPortId());
+	allocatedFlows.erase(portId);
 }
 
 std::vector<Flow *> IPCManager::getAllocatedFlows() {

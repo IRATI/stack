@@ -411,6 +411,10 @@ void DIFProperties::removeQoSCube(const QoSCube& qosCube) {
 	this->qosCubes.remove(qosCube);
 }
 
+/* CLASS IPC EVENT PRODUCER */
+IPCEventProducer::~IPCEventProducer(){
+}
+
 /* CLASS IPC EXCEPTION */
 
 IPCException::IPCException(const std::string& whatArg) {

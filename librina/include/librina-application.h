@@ -228,7 +228,7 @@ public:
 	 * @throws IPCException if the flow is not in the ALLOCATED state or
 	 * there are problems deallocating the flow
 	 */
-	void deallocateFlow(const Flow& flow) throw (IPCException);
+	void deallocateFlow(int portId) throw (IPCException);
 
 	/**
 	 * Returns the flows that are currently allocated
