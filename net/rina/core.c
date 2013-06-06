@@ -25,11 +25,13 @@
 
 #include "logs.h"
 #include "rina.h"
+#include "sysfs.h"
+#include "netlink.h"
+#include "personality.h"
+
 #include "kipcm.h"
 #include "efcp.h"
 #include "rmt.h"
-#include "sysfs.h"
-#include "netlink.h"
 #include "shim-eth.h"
 #include "shim-tcp-udp.h"
 
@@ -47,8 +49,25 @@ static __init int rina_init(void)
                  RINA_VERSION_MINOR(version),
                  RINA_VERSION_MICRO(version));
 
-        /* FIXME: Add proper checks over return values */
+        if (!rina_personality_init()) {
+                LOG_CRIT("Could not initialize personality");
+                return -1;
+        }
+#ifdef CONFIG_RINA_SYSFS
+        if (!rina_sysfs_init()) {
+                LOG_CRIT("Could not initialize sysfs");
+                rina_personality_exit();
+        }
+#endif
+        if (!rina_netlink_init()) {
+                LOG_CRIT("Could not initialize netlink");
+                rina_sysfs_exit();
+                rina_personality_exit();                
+        }
 
+        /* The following code has to be moved into the default personality */
+
+        /* FIXME: Add proper checks over return values */
         kipcm_init();
         efcp_init();
         rmt_init();
@@ -58,10 +77,6 @@ static __init int rina_init(void)
 #ifdef CONFIG_SHIM_TCP_UDP
         shim_tcp_udp_init();
 #endif
-#ifdef CONFIG_RINA_SYSFS
-        rina_sysfs_init();
-#endif
-        rina_netlink_init();
 
         LOG_FEXIT;
 
@@ -76,6 +91,8 @@ static __exit void rina_exit(void)
 #ifdef CONFIG_RINA_SYSFS
         rina_sysfs_exit();
 #endif
+        rina_personality_exit();
+
 #ifdef CONFIG_SHIM_TCP_UDP
         shim_tcp_udp_exit();
 #endif

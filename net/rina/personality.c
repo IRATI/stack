@@ -27,7 +27,9 @@ const struct personality_t * personality = 0;
 
 static int is_ok(const struct personality_t * pers)
 {
-        if (pers->ipc_create         &&
+        if (pers->init               &&
+            pers->exit               &&
+            pers->ipc_create         &&
             pers->ipc_configure      &&
             pers->ipc_destroy        &&
             pers->sdu_read           &&
@@ -40,6 +42,19 @@ static int is_ok(const struct personality_t * pers)
         return 0;
 }
 
+int rina_personality_init(void)
+{
+        personality = 0;
+        return 0;
+}
+
+void rina_personality_exit(void)
+{
+        if (personality)
+                personality->exit();
+        personality = 0;
+}
+
 int rina_personality_add(const struct personality_t * pers)
 {
         if (!pers)
@@ -49,8 +64,17 @@ int rina_personality_add(const struct personality_t * pers)
                 return -1;
 
         if (!personality) {
+                int retval;
+
                 personality = pers;
-                return 0;
+                retval      = personality->init();
+                if (!retval) {
+                        LOG_ERR("Could not initialize personality");
+                        personality = 0;
+                        return retval;
+                }
+
+                return retval;
         }
 
         LOG_ERR("Personality already present, remove it first");
@@ -60,6 +84,7 @@ int rina_personality_add(const struct personality_t * pers)
 int rina_personality_remove(const struct personality_t * pers)
 {
         if (personality == pers) {
+                personality->exit();
                 personality = 0;
                 return 0;
         }

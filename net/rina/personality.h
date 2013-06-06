@@ -27,6 +27,9 @@
 #include "rmt.h"
 
 struct personality_t {
+        int  (* init)(void);
+        void (* exit)(void);
+
         long (* ipc_create)(const struct name_t * name,
                             ipc_process_id_t      id,
                             dif_type_t            type);
@@ -46,7 +49,9 @@ struct personality_t {
 
 extern const struct personality_t * personality;
 
-int rina_personality_add(const struct personality_t * pers);
-int rina_personality_remove(const struct personality_t * pers);
+int  rina_personality_init(void);
+void rina_personality_exit(void);
+int  rina_personality_add(const struct personality_t * pers);
+int  rina_personality_remove(const struct personality_t * pers);
 
 #endif
