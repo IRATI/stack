@@ -15,3 +15,5 @@
  */
 
 #include "librina-ipc-process.h"
+
+using namespace rina;

@@ -70,32 +70,32 @@
 %enddef
 
 /* Define the class IPC Exception */
-%typemap(javabase) IPCException "java.lang.Exception";
-%typemap(javacode) IPCException %{
+%typemap(javabase) rina::IPCException "java.lang.Exception";
+%typemap(javacode) rina::IPCException %{
   public String getMessage() {
     return what();
   }
 %}
 
-WRAP_THROW_EXCEPTION(Flow::readSDU, IPCException, 
+WRAP_THROW_EXCEPTION(rina::Flow::readSDU, rina::IPCException, 
 		"eu.irati.librina.IPCException",
 		"eu/irati/librina/IPCException" );
-WRAP_THROW_EXCEPTION(Flow::writeSDU, IPCException, 
+WRAP_THROW_EXCEPTION(rina::Flow::writeSDU, rina::IPCException, 
 		"eu.irati.librina.IPCException",
 		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(IPCManager::registerApplication, IPCException, 
+WRAP_THROW_EXCEPTION(rina::IPCManager::registerApplication, rina::IPCException, 
 		"eu.irati.librina.IPCException",
 		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(IPCManager::unregisterApplication, IPCException, 
+WRAP_THROW_EXCEPTION(rina::IPCManager::unregisterApplication, rina::IPCException, 
 		"eu.irati.librina.IPCException",
 		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(IPCManager::allocateFlowRequest, IPCException, 
+WRAP_THROW_EXCEPTION(rina::IPCManager::allocateFlowRequest, rina::IPCException, 
 		"eu.irati.librina.IPCException",
 		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(IPCManager::allocateFlowResponse, IPCException, 
+WRAP_THROW_EXCEPTION(rina::IPCManager::allocateFlowResponse, rina::IPCException, 
 		"eu.irati.librina.IPCException",
 		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(IPCManager::deallocate, IPCException, 
+WRAP_THROW_EXCEPTION(rina::IPCManager::deallocate, rina::IPCException, 
 		"eu.irati.librina.IPCException",
 		"eu/irati/librina/IPCException");
 
@@ -104,19 +104,19 @@ WRAP_THROW_EXCEPTION(IPCManager::deallocate, IPCException,
 #include "librina-application.h"
 %}
 
-%rename(equals) ApplicationProcessNamingInformation::operator==(const ApplicationProcessNamingInformation &other) const;
-%rename(differs) ApplicationProcessNamingInformation::operator!=(const ApplicationProcessNamingInformation &other) const;
-%rename(isLessThanOrEquals) ApplicationProcessNamingInformation::operator<=(const ApplicationProcessNamingInformation &other) const;   
-%rename(isLessThan) ApplicationProcessNamingInformation::operator<(const ApplicationProcessNamingInformation &other) const;
-%rename(isMoreThanOrEquals) ApplicationProcessNamingInformation::operator>=(const ApplicationProcessNamingInformation &other) const;   
-%rename(isMoreThan) ApplicationProcessNamingInformation::operator>(const ApplicationProcessNamingInformation &other) const;  
-%rename(equals) QoSCube::operator==(const QoSCube &other) const;  
-%rename(differs) QoSCube::operator!=(const QoSCube &other) const;  
+%rename(equals) rina::ApplicationProcessNamingInformation::operator==(const ApplicationProcessNamingInformation &other) const;
+%rename(differs) rina::ApplicationProcessNamingInformation::operator!=(const ApplicationProcessNamingInformation &other) const;
+%rename(isLessThanOrEquals) rina::ApplicationProcessNamingInformation::operator<=(const ApplicationProcessNamingInformation &other) const;   
+%rename(isLessThan) rina::ApplicationProcessNamingInformation::operator<(const ApplicationProcessNamingInformation &other) const;
+%rename(isMoreThanOrEquals) rina::ApplicationProcessNamingInformation::operator>=(const ApplicationProcessNamingInformation &other) const;   
+%rename(isMoreThan) rina::ApplicationProcessNamingInformation::operator>(const ApplicationProcessNamingInformation &other) const;  
+%rename(equals) rina::QoSCube::operator==(const QoSCube &other) const;  
+%rename(differs) rina::QoSCube::operator!=(const QoSCube &other) const;  
 
 %include "librina-common.h"
 %include "librina-application.h"
 
-%template(DIFPropertiesVector) std::vector<DIFProperties>;
-%template(FlowVector) std::vector<Flow>;
-%template(QoSCubeList) std::list<QoSCube>;
-%template(ApplicationProcessNamingInformationList) std::list<ApplicationProcessNamingInformation>;
+%template(DIFPropertiesVector) std::vector<rina::DIFProperties>;
+%template(FlowVector) std::vector<rina::Flow>;
+%template(QoSCubeList) std::list<rina::QoSCube>;
+%template(ApplicationProcessNamingInformationList) std::list<rina::ApplicationProcessNamingInformation>;

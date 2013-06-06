@@ -17,6 +17,8 @@
 #include <iostream>
 #include "librina.h"
 
+using namespace rina;
+
 bool checkAllocatedFlows(IPCManager* ipcManager, unsigned int expectedFlows) {
 	std::vector<Flow *> allocatedFlows = ipcManager->getAllocatedFlows();
 	if (allocatedFlows.size() != expectedFlows) {

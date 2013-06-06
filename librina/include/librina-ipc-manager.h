@@ -19,4 +19,8 @@
 
 #include "librina-common.h"
 
+namespace rina{
+
+}
+
 #endif

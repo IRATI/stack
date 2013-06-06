@@ -17,4 +17,8 @@
 #ifndef LIBRINA_FAUX_SOCKETS_H
 #define LIBRINA_FAUX_SOCKETS_H
 
+namespace rina{
+
+}
+
 #endif

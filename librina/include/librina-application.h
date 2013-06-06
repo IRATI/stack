@@ -44,6 +44,7 @@
  * results of the operations and SDUs available to be read
  * (event_wait and event_poll).
  */
+namespace rina {
 
 enum FlowState {
 	FLOW_ALLOCATED, FLOW_DEALLOCATED
@@ -178,7 +179,7 @@ public:
 	void registerApplication(
 			const ApplicationProcessNamingInformation& applicationName,
 			const ApplicationProcessNamingInformation& DIFName)
-					throw (IPCException);
+	throw (IPCException);
 
 	/**
 	 * Unregisters an application from a DIF.
@@ -310,5 +311,6 @@ public:
 	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
 	const ApplicationProcessNamingInformation& getDestApplicationName() const;
 };
+}
 
 #endif

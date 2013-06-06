@@ -17,4 +17,8 @@
 #ifndef LIBRINA_IPC_PROCESS_H
 #define LIBRINA_IPC_PROCESS_H
 
+namespace rina{
+
+}
+
 #endif

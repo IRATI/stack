@@ -17,4 +17,8 @@
 #ifndef LIBRINA_SDU_PROTECTION_H
 #define LIBRINA_SDU_PROTECTION_H
 
+namespace rina{
+
+}
+
 #endif

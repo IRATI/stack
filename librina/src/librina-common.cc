@@ -20,6 +20,8 @@
 
 #include "logs.h"
 
+using namespace rina;
+
 /* CLASS APPLICATION PROCESS NAMING INFORMATION */
 
 ApplicationProcessNamingInformation::ApplicationProcessNamingInformation() {

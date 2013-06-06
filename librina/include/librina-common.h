@@ -30,6 +30,8 @@
 #include <vector>
 #include <list>
 
+namespace rina{
+
 /**
  * Contains an application process naming information
  */
@@ -318,5 +320,7 @@ public:
 	explicit IPCException(const std::string& whatArg);
 	const char * what() const throw ();
 };
+
+}
 
 #endif

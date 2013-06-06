@@ -23,6 +23,8 @@
 #include "logs.h"
 #include <stdexcept>
 
+using namespace rina;
+
 /* CLASS FLOW */
 
 Flow::Flow(const ApplicationProcessNamingInformation& sourceApplicationName,

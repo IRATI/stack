@@ -18,6 +18,8 @@
 
 #define RINA_PREFIX "ipc-manager"
 
+using namespace rina;
+
 /*#include "logs.h"
 
 int ipcm_create(const name_t * name,

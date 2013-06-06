@@ -17,4 +17,8 @@
 #ifndef LIBRINA_CDAP_H
 #define LIBRINA_CDAP_H
 
+namespace rina{
+
+}
+
 #endif
