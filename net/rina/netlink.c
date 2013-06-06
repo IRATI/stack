@@ -1,5 +1,5 @@
 /*
- * SysFS support
+ * NetLink support
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,11 +18,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "sysfs"
+#define RINA_PREFIX "netlink"
 
 #include "logs.h"
 
-int  rina_sysfs_init(void)
+int rina_netlink_init(void)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -30,9 +30,8 @@ int  rina_sysfs_init(void)
         return 0;
 }
 
-void rina_sysfs_exit(void)
+void rina_netlink_exit(void)
 {
         LOG_FBEGN;
         LOG_FEXIT;
 }
-

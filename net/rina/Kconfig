@@ -4,6 +4,7 @@
 
 menuconfig RINA
 	tristate "RINA support"
+        depends on NET
 	default y
 	---help---
 	  No help for the time being
@@ -29,6 +30,14 @@ config RINA_DEBUG_VERBOSE
 	depends on RINA_DEBUG
 	help
 	  No help for the time being
+
+config RINA_ASSERTIONS
+	bool "Assertions and other development facilities support"
+	default y
+	depends on RINA_DEBUG
+	help
+	  No help for the time being
+
 
 config RINA_SHIM_ETH
 	bool "Shim IPC over Ethernet support"

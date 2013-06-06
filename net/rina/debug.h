@@ -1,5 +1,5 @@
 /*
- * SysFS support
+ * Debugging facilities
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,21 +18,20 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "sysfs"
+#ifndef RINA_DEBUG_H
+#define RINA_DEBUG_H
 
-#include "logs.h"
+#ifdef CONFIG_RINA_ASSERTIONS
+#define ASSERT(X)                                       \
+do {                                                    \
+        if (unlikely(!(X))) {                           \
+                LOG_CRIT("Assertion failed (%s:%d)",    \
+			 __FILE__, __LINE__);           \
+                BUG();                                  \
+        }                                               \
+} while(0)
+#else
+#define ASSERT(X)
+#endif
 
-int  rina_sysfs_init(void)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-
-        return 0;
-}
-
-void rina_sysfs_exit(void)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-}
-
+#endif
