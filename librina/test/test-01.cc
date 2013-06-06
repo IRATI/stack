@@ -19,7 +19,7 @@
 
 using namespace rina;
 
-bool checkAllocatedFlows(IPCManager* ipcManager, unsigned int expectedFlows) {
+bool checkAllocatedFlows(unsigned int expectedFlows) {
 	std::vector<Flow *> allocatedFlows = ipcManager->getAllocatedFlows();
 	if (allocatedFlows.size() != expectedFlows) {
 		std::cout << "ERROR: Expected " << expectedFlows
@@ -37,7 +37,7 @@ bool checkAllocatedFlows(IPCManager* ipcManager, unsigned int expectedFlows) {
 	return true;
 }
 
-bool checkRegisteredApplications(IPCManager* ipcManager,
+bool checkRegisteredApplications(Singleton<IPCManager> ipcManager,
 		unsigned int expectedFlows) {
 	std::vector<ApplicationRegistration *> registeredApplications =
 			ipcManager->getRegisteredApplications();
@@ -96,7 +96,6 @@ bool checkRecognizedEvent(IPCEvent * event) {
 }
 
 int main(int argc, char * argv[]) {
-	IPCManager * ipcManager = IPCManager::getInstance();
 	ApplicationProcessNamingInformation * sourceName =
 			new ApplicationProcessNamingInformation("/apps/test/source", "1");
 	ApplicationProcessNamingInformation * destinationName =
@@ -128,7 +127,7 @@ int main(int argc, char * argv[]) {
 	}
 
 	/* TEST GET ALLOCATED FLOWS */
-	if (!checkAllocatedFlows(ipcManager, 2)) {
+	if (!checkAllocatedFlows(2)) {
 		return 1;
 	}
 
@@ -141,12 +140,12 @@ int main(int argc, char * argv[]) {
 
 	/* TEST DEALLOCATE FLOW */
 	ipcManager->deallocateFlow(flow->getPortId());
-	if (!checkAllocatedFlows(ipcManager, 1)) {
+	if (!checkAllocatedFlows(1)) {
 		return 1;
 	}
 
 	ipcManager->deallocateFlow(flow2->getPortId());
-	if (!checkAllocatedFlows(ipcManager, 0)) {
+	if (!checkAllocatedFlows(0)) {
 		return 1;
 	}
 

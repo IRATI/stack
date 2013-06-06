@@ -100,6 +100,7 @@ WRAP_THROW_EXCEPTION(rina::IPCManager::deallocate, rina::IPCException,
 		"eu/irati/librina/IPCException");
 
 %{
+#include "patterns.h"
 #include "librina-common.h"
 #include "librina-application.h"
 %}
@@ -113,6 +114,7 @@ WRAP_THROW_EXCEPTION(rina::IPCManager::deallocate, rina::IPCException,
 %rename(equals) rina::QoSCube::operator==(const QoSCube &other) const;  
 %rename(differs) rina::QoSCube::operator!=(const QoSCube &other) const;  
 
+%include "patterns.h"
 %include "librina-common.h"
 %include "librina-application.h"
 
@@ -120,3 +122,4 @@ WRAP_THROW_EXCEPTION(rina::IPCManager::deallocate, rina::IPCException,
 %template(FlowVector) std::vector<rina::Flow>;
 %template(QoSCubeList) std::list<rina::QoSCube>;
 %template(ApplicationProcessNamingInformationList) std::list<rina::ApplicationProcessNamingInformation>;
+%template(IPCManagerSingleton) Singleton<rina::IPCManager>;

@@ -33,8 +33,8 @@ private:
 
 template<typename TYPE> class Singleton : public NonCopyable {
 public:
-        singleton()  { }
-        ~singleton() { fini(); }
+        Singleton()  { }
+        ~Singleton() { fini(); }
 
         TYPE * operator->() {
                 init();
@@ -59,7 +59,7 @@ private:
         }
 };
 
-template<typename TYPE> TYPE * singleton<TYPE>::instance_ = 0;
+template<typename TYPE> TYPE * Singleton<TYPE>::instance_ = 0;
 
 class Lockable : public NonCopyable {
 public:
@@ -85,7 +85,7 @@ public:
                 try {
                         guarded_.unlock();
                 } catch (std::exception & e) {
-                        LCRT("Cannot unlock guarded access");
+                        //LCRT("Cannot unlock guarded access");
                 }
         }
 

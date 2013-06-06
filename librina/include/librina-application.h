@@ -18,6 +18,7 @@
 #define LIBRINA_APPLICATION_H
 
 #include "librina-common.h"
+#include "patterns.h"
 #include <map>
 
 /**
@@ -135,23 +136,15 @@ public:
  * is a singleton.
  */
 class IPCManager: public IPCEventProducer {
-	static bool instanceFlag;
-	static IPCManager * instance;
-
 	/** The flows that are currently allocated */
 	std::map<int, Flow*> allocatedFlows;
 
 	/** The applications that are currently registered in one or more DIFs */
 	std::map<ApplicationProcessNamingInformation, ApplicationRegistration*> applicationRegistrations;
 
-	IPCManager();
-
 public:
-	static IPCManager * getInstance();
-	~IPCManager() {
-		instanceFlag = false;
-	}
-
+	IPCManager();
+	~IPCManager();
 	static const std::string application_registered_error;
 	static const std::string application_not_registered_error;
 	static const std::string unknown_flow_error;
@@ -249,6 +242,11 @@ public:
 	IPCEvent * eventPoll();
 	IPCEvent * eventWait();
 };
+
+/**
+ * Make IPCManager singleton
+ */
+extern Singleton<IPCManager> ipcManager;
 
 /**
  * Event informing that a flow has been deallocated by an IPC Process, without

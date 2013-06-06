@@ -17,10 +17,9 @@
 #include <cstring>
 
 #include "librina-application.h"
-
 #define RINA_PREFIX "application"
-
 #include "logs.h"
+
 #include <stdexcept>
 
 using namespace rina;
@@ -122,18 +121,8 @@ IPCManager::IPCManager(){
 	//TODO Probably initialize Netlink machineries?
 }
 
-bool IPCManager::instanceFlag = false;
-
-IPCManager* IPCManager::instance = NULL;
-
-IPCManager* IPCManager::getInstance() {
-	if (!instanceFlag) {
-		instance = new IPCManager();
-		instanceFlag = true;
-		return instance;
-	} else {
-		return instance;
-	}
+IPCManager::~IPCManager(){
+	//TODO Probably clear all Netlink related machineries?
 }
 
 const std::string IPCManager::application_registered_error =
@@ -333,6 +322,11 @@ IPCEvent * IPCManager::eventWait() {
 			*destAppName, *difName);
 	return event;
 }
+
+/**
+ * Make IPCManager singleton
+ */
+extern Singleton<IPCManager> ipcManager;
 
 /* CLASS FLOW DEALLOCATED EVENT */
 

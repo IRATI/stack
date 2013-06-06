@@ -15,9 +15,7 @@
  */
 
 #include "librina-common.h"
-
 #define RINA_PREFIX "common"
-
 #include "logs.h"
 
 using namespace rina;
