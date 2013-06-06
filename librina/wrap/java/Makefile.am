@@ -7,13 +7,14 @@
 if BUILD_WRAPPERS_JAVA
 
 SWIG_DEBUG      = -v
-SWIG_FLAGS      = $(SWIG_DEBUG) -Werror -Wall
+SWIG_CPPFLAGS   = -I$(top_srcdir)/include
+SWIG_FLAGS      = $(SWIG_DEBUG) $(SWIG_CPPFLAGS) -Werror -Wall
 SWIG_JAVA_FLAGS = -java -package eu.irati.librina
 
 CLEANFILES =
 
 # XXX FIXME: Prerequisites for this rule are broken ...
-wrap.stamp: $(top_srcdir)/include/librina.i $(top_srcdir)/include/*.h
+wrap.stamp: $(top_srcdir)/wrap/*.i $(top_srcdir)/include/*.h
 	rm -f wrap.tmp
 	touch wrap.tmp
 	rm -r -f eu/irati/librina   &&			\
@@ -22,7 +23,7 @@ wrap.stamp: $(top_srcdir)/include/librina.i $(top_srcdir)/include/*.h
 		-c++					\
 		-o librina_java.cc			\
 		-outdir ./eu/irati/librina		\
-		$(top_srcdir)/include/librina.i || {	\
+		$(top_srcdir)/wrap/librina.i || {	\
 		echo "Cannot wrap input file" ;		\
 		rm -f wrap.tmp ;			\
 		rm -r -f eu/irati/librina ;		\
