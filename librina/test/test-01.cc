@@ -22,7 +22,7 @@ bool checkAllocatedFlows(IPCManager* ipcManager, unsigned int expectedFlows) {
 	if (allocatedFlows.size() != expectedFlows) {
 		std::cout << "ERROR: Expected " << expectedFlows
 				<< " allocated flows, but only found " + allocatedFlows.size()
-				<< "²n";
+				<< "\n";
 		return false;
 	}
 
