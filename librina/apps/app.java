@@ -52,7 +52,7 @@ public class app {
 		System.out.println("Read "+sdu.length+" bytes");
 		
 		System.out.println("\nDEALLOCATING THE FLOW");
-		ipcManager.deallocateFlow(flow);
+		ipcManager.deallocateFlow(flow.getPortId());
 		System.out.println("Flow deallocated");
 	}
 }

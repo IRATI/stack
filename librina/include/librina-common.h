@@ -297,6 +297,8 @@ public:
  */
 class IPCEventProducer {
 public:
+	virtual ~IPCEventProducer();
+
 	/** Retrieves the next available event, if any */
 	virtual IPCEvent eventPoll() = 0;
 
