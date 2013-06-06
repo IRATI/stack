@@ -18,5 +18,5 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-int  sysfs_init(void);
-void sysfs_exit(void);
+int  rina_sysfs_init(void);
+void rina_sysfs_exit(void);

@@ -2,13 +2,13 @@
 # Makefile for the Linux RINA layer.
 #
 
-obj-$(CONFIG_RINA) += rina.o
+# built-ins
+obj-y := core.o personality.o syscalls.o netlink.o
+obj-$(CONFIG_RINA_SYSFS) += sysfs.o
+obj-m :=
 
-rina-y := core.o syscalls.o netlink.o
+# modules
 
-rina-$(CONFIG_RINA_SYSFS) += sysfs.o
-
-rina-y += kipcm.o efcp.o rmt.o pdufwdt.o
-
-rina-$(CONFIG_RINA_SHIM_ETH)     += shims/shim-eth.o
-rina-$(CONFIG_RINA_SHIM_TCP_UDP) += shims/shim-tcp-udp.o
+rina-$(CONFIG_RINA)              += kipcm.o efcp.o rmt.o pdufwdt.o
+rina-$(CONFIG_RINA_SHIM_ETH)     += shim-eth.o
+rina-$(CONFIG_RINA_SHIM_TCP_UDP) += shim-tcp-udp.o

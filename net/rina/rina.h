@@ -21,8 +21,6 @@
 #ifndef RINA_H
 #define RINA_H
 
-/* FIXME: To be moved elsewhere */
-
 #define MK_RINA_VERSION(MAJOR, MINOR, MICRO) \
         (((MAJOR & 0xFF) << 24) | ((MINOR & 0xFF) << 16) | (MICRO & 0xFFFF))
 
@@ -30,6 +28,6 @@
 #define RINA_VERSION_MINOR(V) ((V >> 16) & 0xFF)
 #define RINA_VERSION_MICRO(V) ((V      ) & 0xFFFF)
 
-#define RINA_VERSION MK_RINA_VERSION(0, 0, 0)
+uint32_t rina_version(void);
 
 #endif

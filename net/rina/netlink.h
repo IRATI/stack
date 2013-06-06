@@ -18,5 +18,5 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-int  netlink_init(void);
-void netlink_exit(void);
+int  rina_netlink_init(void);
+void rina_netlink_exit(void);

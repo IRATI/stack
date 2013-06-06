@@ -30,17 +30,22 @@
 #include "rmt.h"
 #include "sysfs.h"
 #include "netlink.h"
-#include "shims/shim-eth.h"
-#include "shims/shim-tcp-udp.h"
+#include "shim-eth.h"
+#include "shim-tcp-udp.h"
+
+static uint32_t version = MK_RINA_VERSION(0, 0, 0);
+
+uint32_t rina_version(void)
+{ return version; }
 
 static __init int rina_init(void)
 {
         LOG_FBEGN;
 
         LOG_INFO("RINA stack v%d.%d.%d initializing",
-                 RINA_VERSION_MAJOR(RINA_VERSION),
-                 RINA_VERSION_MINOR(RINA_VERSION),
-                 RINA_VERSION_MICRO(RINA_VERSION));
+                 RINA_VERSION_MAJOR(version),
+                 RINA_VERSION_MINOR(version),
+                 RINA_VERSION_MICRO(version));
 
         /* FIXME: Add proper checks over return values */
 
@@ -54,9 +59,9 @@ static __init int rina_init(void)
         shim_tcp_udp_init();
 #endif
 #ifdef CONFIG_RINA_SYSFS
-        sysfs_init();
+        rina_sysfs_init();
 #endif
-        netlink_init();
+        rina_netlink_init();
 
         LOG_FEXIT;
 
@@ -67,9 +72,9 @@ static __exit void rina_exit(void)
 {
         LOG_FBEGN;
 
-        netlink_exit();
+        rina_netlink_exit();
 #ifdef CONFIG_RINA_SYSFS
-        sysfs_exit();
+        rina_sysfs_exit();
 #endif
 #ifdef CONFIG_SHIM_TCP_UDP
         shim_tcp_udp_exit();
