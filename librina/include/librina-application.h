@@ -245,8 +245,8 @@ public:
 	 */
 	std::vector<ApplicationRegistration *> getRegisteredApplications();
 
-	IPCEvent eventPoll();
-	IPCEvent eventWait();
+	IPCEvent * eventPoll();
+	IPCEvent * eventWait();
 };
 
 /**

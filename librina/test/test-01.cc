@@ -64,6 +64,35 @@ bool checkRegisteredApplications(IPCManager* ipcManager,
 	return true;
 }
 
+bool checkRecognizedEvent(IPCEvent * event) {
+	switch (event->getType()) {
+	case FLOW_ALLOCATION_REQUESTED_EVENT:{
+		IncomingFlowRequestEvent * incFlowEvent = dynamic_cast<IncomingFlowRequestEvent *>(event);
+		std::cout << "Got incoming flow request event with portId "
+				<< incFlowEvent->getPortId() << "\n";
+		break;
+	}
+	case FLOW_DEALLOCATED_EVENT:{
+		FlowDeallocatedEvent * flowDeallocEvent = dynamic_cast<FlowDeallocatedEvent *>(event);
+		std::cout << "Got flow deallocated event with portId "
+				<< flowDeallocEvent->getPortId() << "\n";
+		break;
+	}
+	case APPLICATION_UNREGISTERED_EVENT:{
+		ApplicationUnregisteredEvent * appUnEvent = dynamic_cast<ApplicationUnregisteredEvent *>(event);
+		std::cout << "Got application unregistered event with app name "
+				<< appUnEvent->getApplicationName().getProcessName()
+				<< "\n";
+		break;
+	}
+	default:
+		std::cout << "Unrecognized event type\n";
+		return false;
+	}
+
+	return true;
+}
+
 int main(int argc, char * argv[]) {
 	IPCManager * ipcManager = IPCManager::getInstance();
 	ApplicationProcessNamingInformation * sourceName =
@@ -122,8 +151,8 @@ int main(int argc, char * argv[]) {
 	/* TEST REGISTER APPLICATION */
 	ipcManager->registerApplication(*sourceName, difProperties.getDifName());
 	ApplicationProcessNamingInformation * difName =
-				new ApplicationProcessNamingInformation("/difs/PublicInternet.DIF",
-						"");
+			new ApplicationProcessNamingInformation("/difs/PublicInternet.DIF",
+					"");
 	ipcManager->registerApplication(*sourceName, *difName);
 	ipcManager->registerApplication(*destinationName,
 			difProperties.getDifName());
@@ -140,16 +169,31 @@ int main(int argc, char * argv[]) {
 		return 1;
 	}
 	ipcManager->unregisterApplication(*destinationName,
-				difProperties.getDifName());
+			difProperties.getDifName());
 	if (!checkRegisteredApplications(ipcManager, 0)) {
-			return 1;
-		}
+		return 1;
+	}
+
+	/* TEST EVENT POLL */
+	IPCEvent * event = ipcManager->eventPoll();
+	if (!checkRecognizedEvent(event)){
+		return 1;
+	}
+
+	delete event;
+
+	/** TEST EVENT WAIT */
+	event = ipcManager->eventWait();
+	if (!checkRecognizedEvent(event)){
+		return 1;
+	}
 
 	delete flow;
 	delete flow2;
 	delete sourceName;
 	delete destinationName;
 	delete difName;
+	delete event;
 
 	return 0;
 }

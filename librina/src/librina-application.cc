@@ -303,7 +303,7 @@ std::vector<ApplicationRegistration *> IPCManager::getRegisteredApplications() {
 	return response;
 }
 
-IPCEvent IPCManager::eventPoll() {
+IPCEvent * IPCManager::eventPoll() {
 	LOG_DBG("IPCManager.eventPoll called");
 	ApplicationUnregisteredEvent * event;
 
@@ -312,10 +312,10 @@ IPCEvent IPCManager::eventPoll() {
 	ApplicationProcessNamingInformation * difName =
 			new ApplicationProcessNamingInformation("/difs/test.DIF", "");
 	event = new ApplicationUnregisteredEvent(*appName, *difName);
-	return *event;
+	return event;
 }
 
-IPCEvent IPCManager::eventWait() {
+IPCEvent * IPCManager::eventWait() {
 	LOG_DBG("IPCManager.eventWait called");
 	IncomingFlowRequestEvent * event;
 
@@ -329,7 +329,7 @@ IPCEvent IPCManager::eventWait() {
 	int portId = 37;
 	event = new IncomingFlowRequestEvent(portId, *flowSpec, *sourceAppName,
 			*destAppName, *difName);
-	return *event;
+	return event;
 }
 
 /* CLASS FLOW DEALLOCATED EVENT */

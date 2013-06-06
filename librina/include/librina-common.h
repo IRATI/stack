@@ -283,6 +283,8 @@ class IPCEvent {
 	/** The type of event */
 	IPCEventType eventType;
 public:
+	virtual ~IPCEvent();
+
 	IPCEvent(IPCEventType eventType) {
 		this->eventType = eventType;
 	}
@@ -300,10 +302,10 @@ public:
 	virtual ~IPCEventProducer();
 
 	/** Retrieves the next available event, if any */
-	virtual IPCEvent eventPoll() = 0;
+	virtual IPCEvent * eventPoll() = 0;
 
 	/** Blocks until there is an event available */
-	virtual IPCEvent eventWait() = 0;
+	virtual IPCEvent * eventWait() = 0;
 };
 
 /**
