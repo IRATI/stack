@@ -19,7 +19,8 @@ echo "$me: Compiling Java test $TEST ..."
         exit 1
 }
 
-LP=@abs_top_builddir@/src:$@top_builddir@/wrap/java:
+#LP=@abs_top_builddir@/src:$@top_builddir@/wrap/java:@libdir@
+LP=@libdir@
 
 CLASS=`echo $TEST | sed -e 's,\.java\$,,'`
 

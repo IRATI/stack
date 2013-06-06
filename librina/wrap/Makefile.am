@@ -5,3 +5,7 @@
 #
 
 SUBDIRS = java
+
+EXTRA_DIST =					\
+	librina.i				\
+	stdlist.i
