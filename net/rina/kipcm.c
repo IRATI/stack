@@ -30,15 +30,15 @@
 #include "kipcm.h"
 
 /* FIXME: Remove all the statics here */
-static LIST_HEAD(id_to_ipcp);
-static LIST_HEAD(port_id_to_flow);
+LIST_HEAD(id_to_ipcp);
+LIST_HEAD(port_id_to_flow);
 
 /* FIXME: This one will be "created and published" by the container */
 static struct kipc_t *kipcm;
 
 int kipcm_init()
 {
-        LOG_FBEGN;
+	LOG_FBEGN;
 
         kipcm = kmalloc(sizeof(*kipcm), GFP_KERNEL);
         if (!kipcm) {
@@ -48,7 +48,6 @@ int kipcm_init()
                 return -1;
         }
 
-        /* FIXME: Why ? */
         kipcm->id_to_ipcp      = &id_to_ipcp;
         kipcm->port_id_to_flow = &port_id_to_flow;
 

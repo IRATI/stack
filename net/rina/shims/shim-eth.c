@@ -32,15 +32,16 @@ static ipc_process_id_t count = 0;
 
 ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 {
-        LOG_FBEGN;
-
-        /* Unsure if I can call return count++ and count gets incremented after
-	   function call? This is a workaround, fix if possible. */
+	/* Unsure if I can call return count++ and count gets incremented after
+	function call? This is a workaround, fix if possible. */
 	ipc_process_id_t nr = count++;
-
-	/* Retrieve configuration of IPC process from params */
 	struct shim_eth_info_t shim_eth_info;
 	struct ipc_config_t *ipc_config = config[0];
+	struct shim_eth_instance_t instance;
+
+        LOG_FBEGN;
+
+	/* Retrieve configuration of IPC process from params */
 	while (ipc_config != 0) {
 		switch (ipc_config->type) {
 		case IPC_CONFIG_NAME:
@@ -58,9 +59,7 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 		++ipc_config;
 	}
 
-	struct shim_eth_instance_t instance = {
-		.info = shim_eth_info
-	};
+	instance.info = shim_eth_info;
 	
 	struct shim_eth_t tmp = {
 		.shim_eth_instance = instance,
