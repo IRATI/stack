@@ -22,81 +22,57 @@
 #include <linux/linkage.h>
 #include <linux/kernel.h>
 
-#define RINA_PREFIX "rina_syscalls"
+#define RINA_PREFIX "syscalls"
 
-#include "logs.h" 
-#include "common.h" 
-#include "kipcm.h" 
+#include "logs.h"
+#include "utils.h"
+#include "personality.h"
 
-#if 0
-asmlinkage long sys_ipc_process_create(const name_t __user * name,
-                                       ipc_process_id_t      ipcp_id,
-                                       dif_type_t            type)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
+#define _S(X) #X
 
-	return 0;
-}
+#define RUN_PERSONALITY(X)                              \
+do {                                                    \
+        LOG_FBEGN;                                      \
+                                                        \
+        if (personality) {                              \
+                int retval;                             \
+                ASSERT(personality);                    \
+                retval = personality-> X;               \
+                LOG_FEXIT;                              \
+                return retval;                          \
+        } else {                                        \
+                LOG_ERR("No personality present");      \
+                LOG_FEXIT;                              \
+                return 0;                               \
+        }                                               \
+} while (0)
 
-asmlinkage long sys_ipc_process_configure(ipc_process_id_t                         ipcp_id,
-                                          const struct ipc_process_conf_t __user * configuration)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
+asmlinkage long sys_ipc_process_create(const struct name_t __user * name,
+                                       ipc_process_id_t             id,
+                                       dif_type_t                   type)
+{ RUN_PERSONALITY(ipc_create(name, id, type)); }
+                
+asmlinkage long sys_ipc_process_configure(ipc_process_id_t                         id,
+                                          const struct ipc_process_conf_t __user * config)
+{ RUN_PERSONALITY(ipc_configure(id, config)); }
 
-	return 0;
-}
+asmlinkage long sys_ipc_process_destroy(ipc_process_id_t id)
+{ RUN_PERSONALITY(ipc_destroy(id)); }
 
-asmlinkage long sys_ipc_process_destroy(ipc_process_id_t ipcp_id)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
+asmlinkage long sys_read_sdu(port_id_t             id,
+                             struct sdu_t __user * sdu)
+{ RUN_PERSONALITY(sdu_read(id, sdu)); }
 
-	return 0;
-}
+asmlinkage long sys_write_sdu(port_id_t                   id,
+                              const struct sdu_t __user * sdu)
+{ RUN_PERSONALITY(sdu_write(id, sdu)); }
 
-asmlinkage long sys_read_sdu(port_id_t      port_id,
-                             bool_t         block,
-                             sdu_t __user * sdu)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
+asmlinkage long sys_efcp_create(const struct connection_t __user * connection)
+{ RUN_PERSONALITY(connection_create(connection)); }
 
-	return 0;
-}
+asmlinkage long sys_efcp_destroy(cep_id_t id)
+{ RUN_PERSONALITY(connection_destroy(id)); }
 
-asmlinkage long sys_write_sdu(port_id_t            port_id,
-                              const sdu_t __user * sdu)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-
-	return 0;
-}
-
-asmlinkage long sys_efcp_create(const connection_t __user * connection)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-
-	return 0;
-}
-
-asmlinkage long sys_efcp_destroy(cep_id_t cep_id)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-
-	return 0;
-}
-
-asmlinkage long sys_efcp_update(cep_id_t cep_id,
-                                cep_id_t dest_cep_id)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-
-	return 0;
-}
-#endif
+asmlinkage long sys_efcp_update(cep_id_t from_id,
+                                cep_id_t to_id)
+{ RUN_PERSONALITY(connection_update(from_id, to_id)); }

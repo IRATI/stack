@@ -23,8 +23,8 @@
 
 #include <linux/hashtable.h>
 
-#include "../kipcm.h"
-#include "../common.h"
+#include "kipcm.h"
+#include "common.h"
 
 /* Holds the configuration of one shim IPC process */
 struct shim_eth_info_t {

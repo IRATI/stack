@@ -1,4 +1,9 @@
 /*
+ * RINA (module)
+ *
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Miquel Tarzan <miquel.tarzan@i2cat.net>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -13,13 +18,3 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-
-#ifndef RINA_SHIM_TCP_UDP_H
-#define RINA_SHIM_TCP_UDP_H
-
-#include "../common.h"
-
-int  shim_tcp_udp_init(void);
-void shim_tcp_udp_exit(void);
-
-#endif
