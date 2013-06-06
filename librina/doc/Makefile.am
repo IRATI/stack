@@ -29,6 +29,8 @@ doxygen.cfg: Makefile doxygen.cfg.in
 	chmod a-w $@.tmp
 	mv $@.tmp $@
 
-all-local: doxygen.cfg doxygen-run doxygen-pdf
+pdf-local: doxygen.cfg doxygen-run doxygen-pdf
+
+html-local: doxygen.cfg doxygen-run
 
 endif
