@@ -3,7 +3,7 @@
 #
 
 # built-ins
-obj-y := core.o syscalls.o netlink.o
+obj-y := core.o personality.o syscalls.o netlink.o
 obj-$(CONFIG_RINA_SYSFS) += sysfs.o
 obj-m :=
 
