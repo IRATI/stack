@@ -33,14 +33,19 @@
 #include "shim-eth.h"
 #include "shim-tcp-udp.h"
 
+static uint32_t version = MK_RINA_VERSION(0, 0, 0);
+
+uint32_t rina_version(void)
+{ return version; }
+
 static __init int rina_init(void)
 {
         LOG_FBEGN;
 
         LOG_INFO("RINA stack v%d.%d.%d initializing",
-                 RINA_VERSION_MAJOR(RINA_VERSION),
-                 RINA_VERSION_MINOR(RINA_VERSION),
-                 RINA_VERSION_MICRO(RINA_VERSION));
+                 RINA_VERSION_MAJOR(version),
+                 RINA_VERSION_MINOR(version),
+                 RINA_VERSION_MICRO(version));
 
         /* FIXME: Add proper checks over return values */
 
