@@ -30,8 +30,8 @@
 #include "rmt.h"
 #include "sysfs.h"
 #include "netlink.h"
-#include "shims/shim-eth.h"
-#include "shims/shim-tcp-udp.h"
+#include "shim-eth.h"
+#include "shim-tcp-udp.h"
 
 static __init int rina_init(void)
 {

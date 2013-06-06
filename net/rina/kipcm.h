@@ -31,10 +31,15 @@
 #include "common.h"
 #include "efcp.h"
 #include "rmt.h"
-#include "shims/shim-eth.h"
+
+/* FIXME: This inclusion should be avoided */
+#include "shim-eth.h"
+#include "shim-tcp-udp.h"
 
 typedef enum {
         DIF_TYPE_NORMAL,
+
+        /* FIXME: DIF_TYPE_SHIM_IP should be DIF_TYPE_SHIM_TCP_IP */
         DIF_TYPE_SHIM_IP,
         DIF_TYPE_SHIM_ETH
 } dif_type_t;
