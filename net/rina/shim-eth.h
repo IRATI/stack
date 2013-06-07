@@ -22,6 +22,7 @@
 #define RINA_SHIMS_SHIM_ETH_H
 
 #include <linux/hashtable.h>
+#include <linux/kfifo.h>
 
 #include "kipcm.h"
 #include "common.h"
@@ -99,9 +100,13 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config);
 int              shim_eth_destroy(ipc_process_id_t ipc_process_id);
 
 /* FIXME: flow_spec_t should not reach this point ..., QoS ids should suffice */
-port_id_t shim_eth_allocate_flow_request(struct name_t *      source,
-                                         struct name_t *      dest,
-                                         struct flow_spec_t * flow_spec);
+/* FIXME : Sander, I have changed this to comply with page 216 of D2.1, adding
+ *  the port_id as a parameter, please review. Miquel.
+ */
+int shim_eth_allocate_flow_request(struct name_t *      source,
+                                   struct name_t *      dest,
+                                   struct flow_spec_t * flow_spec,
+                                   port_id_t            port_id);
 int  shim_eth_allocate_flow_response(port_id_t           port_id,
                                      response_reason_t * response);
 int  shim_eth_deallocate_flow(port_id_t port_id);
@@ -111,7 +116,8 @@ int  shim_eth_write_sdu(port_id_t port_id, const struct sdu_t * sdu);
 int  shim_eth_ipc_create(const struct name_t * name,
 			 ipc_process_id_t      ipcp_id);
 int  shim_eth_ipc_configure(ipc_process_id_t      ipcp_id,
-			    const struct ipc_process_shim_ethernet_conf_t *configuration);
+			    const struct ipc_process_shim_ethernet_conf_t *
+				    configuration);
 
 #endif
 
