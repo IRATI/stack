@@ -82,11 +82,40 @@ int shim_eth_destroy(ipc_process_id_t ipc_process_id)
 	return 0;
 }
 
-port_id_t shim_eth_allocate_flow_request(struct name_t *      source,
-                                         struct name_t *      dest,
-                                         struct flow_spec_t * flow_spec)
+int shim_eth_allocate_flow_request(struct name_t *      source,
+                                   struct name_t *      dest,
+                                   struct flow_spec_t * flow_spec,
+                                   port_id_t            port_id)
 {
-	LOG_DBG("Allocate flow request");
+	struct flow_t * flow;
+	struct kfifo sdu_ready;
+	int ret;
+
+	LOG_FBEGN;
+
+	flow = kmalloc(sizeof(*flow), GFP_KERNEL);
+	if (flow == NULL) {
+		LOG_ERR("Cannot allocate %d bytes of kernel memory", sizeof(*flow));
+
+                LOG_FEXIT;
+		return -1;
+	}
+	flow->application_owned = 1;
+	flow->ipc_process = 1;
+	if (kfifo_alloc(&sdu_ready, PAGE_SIZE, GFP_KERNEL)) {
+		LOG_FEXIT;
+		kfree(flow);
+		return -1;
+	}
+	flow->sdu_ready = sdu_ready;
+	if (kipcm_add_entry(port_id, (const struct flow_t *)flow)) {
+		LOG_FEXIT;
+		kfree(flow);
+		kfree(sdu_ready);
+		return -1;
+	}
+
+	LOG_FEXIT;
 
 	return 0;
 }
