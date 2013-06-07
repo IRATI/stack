@@ -17,9 +17,7 @@ librina_la_SOURCES  =				\
 	librina-sdu-protection.cc
 
 EXTRA_DIST =					\
-	logs.h					\
-	patterns.h				\
-	exceptions.h
+	logs.h
 
 librina_la_LDFLAGS =
 

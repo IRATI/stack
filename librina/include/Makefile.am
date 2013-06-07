@@ -12,4 +12,6 @@ nobase_include_HEADERS =			\
 	librina-ipc-process.h			\
 	librina-faux-sockets.h			\
 	librina-cdap.h				\
-	librina-sdu-protection.h
+	librina-sdu-protection.h		\
+	patterns.h				\
+	exceptions.h
