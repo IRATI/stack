@@ -85,7 +85,7 @@ public:
                 try {
                         guarded_.unlock();
                 } catch (std::exception & e) {
-                        //LCRT("Cannot unlock guarded access");
+                        // FIXME: Add proper actions here
                 }
         }
 
