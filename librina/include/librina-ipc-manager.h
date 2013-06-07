@@ -53,12 +53,11 @@ public:
 	 * credentials, etc). The operation will block until the IPC Process is
 	 * assigned to the DIF or an error is returned.
 	 *
-	 * @param ipcProcessId The id of the IPC Process to be assigned to the DIF
 	 * @param difConfiguration The configuration of the DIF
 	 * @throws IPCException if an error happens during the process
 	 */
-	void assignToDIF(unsigned int ipcProcessId,
-			const DIFConfiguration& difConfiguration) throw (IPCException);
+	void assignToDIF(const DIFConfiguration& difConfiguration)
+				throw (IPCException);
 
 	/**
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been

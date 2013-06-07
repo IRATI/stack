@@ -41,8 +41,8 @@ const ApplicationProcessNamingInformation& IPCProcess::getName() const {
 	return name;
 }
 
-void IPCProcess::assignToDIF(unsigned int ipcProcessId,
-		const DIFConfiguration& difConfiguration) throw (IPCException) {
+void IPCProcess::assignToDIF(const DIFConfiguration& difConfiguration)
+					throw (IPCException) {
 	LOG_DBG("IPCProcess::assign to DIF called");
 }
 
@@ -89,7 +89,7 @@ void IPCProcess::allocateFlow(const FlowRequest& flowRequest)
 	LOG_DBG("IPCProcess::allocate flow called");
 }
 
-void IPCProcess::queryRIB(){
+void IPCProcess::queryRIB() {
 	LOG_DBG("IPCProcess::query RIB called");
 }
 
@@ -99,8 +99,8 @@ const std::string IPCProcessFactory::unknown_ipc_process_error =
 		"Could not find an IPC Process with the provided id";
 
 IPCProcess * IPCProcessFactory::create(
-			const ApplicationProcessNamingInformation& ipcProcessName,
-			DIFType difType) throw (IPCException){
+		const ApplicationProcessNamingInformation& ipcProcessName,
+		DIFType difType) throw (IPCException) {
 	LOG_DBG("IPCProcessFactory::create called");
 
 	int ipcProcessId;
@@ -111,22 +111,24 @@ IPCProcess * IPCProcessFactory::create(
 		}
 	}
 
-	IPCProcess * ipcProcess = new IPCProcess(ipcProcessId, difType, ipcProcessName);
+	IPCProcess * ipcProcess = new IPCProcess(ipcProcessId, difType,
+			ipcProcessName);
 	ipcProcesses[ipcProcessId] = ipcProcess;
 	return ipcProcess;
 }
 
-void IPCProcessFactory::destroy(unsigned int ipcProcessId) throw (IPCException){
+void IPCProcessFactory::destroy(unsigned int ipcProcessId) throw (IPCException) {
 	std::map<int, IPCProcess*>::iterator iterator;
 	iterator = ipcProcesses.find(ipcProcessId);
 	if (iterator == ipcProcesses.end()) {
 		throw new IPCException(IPCProcessFactory::unknown_ipc_process_error);
 	}
 
+	delete iterator->second;
 	ipcProcesses.erase(ipcProcessId);
 }
 
-std::vector<IPCProcess *> IPCProcessFactory::listIPCProcesses(){
+std::vector<IPCProcess *> IPCProcessFactory::listIPCProcesses() {
 	LOG_DBG("IPCProcessFactory::list IPC Processes called");
 	std::vector<IPCProcess *> response;
 

@@ -266,6 +266,7 @@ void IPCManager::deallocateFlow(int portId) throw (IPCException) {
 		throw new IPCException(IPCManager::unknown_flow_error);
 	}
 
+	delete iterator->second;
 	allocatedFlows.erase(portId);
 }
 

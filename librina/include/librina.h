@@ -21,7 +21,7 @@
 
 #include "librina-common.h"
 #include "librina-application.h"
-//#include "librina-ipc-manager.h"
+#include "librina-ipc-manager.h"
 //#include "librina-ipc-process.h"
 //#include "librina-faux-sockets.h"
 //#include "librina-cdap.h"

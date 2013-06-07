@@ -95,6 +95,7 @@ bool checkRecognizedEvent(IPCEvent * event) {
 }
 
 int main(int argc, char * argv[]) {
+	std::cout << "TESTING LIBRINA-APPLICATION\n";
 	ApplicationProcessNamingInformation * sourceName =
 			new ApplicationProcessNamingInformation("/apps/test/source", "1");
 	ApplicationProcessNamingInformation * destinationName =
@@ -193,8 +194,6 @@ int main(int argc, char * argv[]) {
 		return 1;
 	}
 
-	delete flow;
-	delete flow2;
 	delete sourceName;
 	delete destinationName;
 	delete difName;
