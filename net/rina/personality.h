@@ -22,6 +22,8 @@
 #define RINA_PERSONALITY_H
 
 #include "common.h"
+
+/* FIXME: These include should disappear from here */
 #include "kipcm.h"
 #include "efcp.h"
 #include "rmt.h"
