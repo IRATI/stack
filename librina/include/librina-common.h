@@ -31,7 +31,7 @@
 #include <vector>
 #include <list>
 
-namespace rina{
+namespace rina {
 
 /**
  * Contains an application process naming information
@@ -322,16 +322,89 @@ public:
  */
 extern Singleton<IPCEventProducer> ipcEventProducer;
 
-
 /**
  * Base class for all RINA exceptions
  */
 class IPCException: public std::exception {
 	std::string whatArg;
 public:
-	virtual ~IPCException() throw () { };
+	virtual ~IPCException() throw () {
+	};
 	explicit IPCException(const std::string& whatArg);
+	static const std::string operation_not_implemented_error;
 	const char * what() const throw ();
+};
+
+/**
+ * Represents a policy. This is a generic placeholder which should be defined
+ * during the second prototype activities
+ */
+class Policy {
+
+};
+
+/**
+ * Enum type that identifies the different types of DIFs
+ */
+enum DIFType {
+	DIF_TYPE_NORMAL, DIF_TYPE_SHIM_IP, DIF_TYPE_SHIM_ETHERNET
+};
+
+/**
+ * Contains the data about a DIF Configuration
+ */
+class DIFConfiguration {
+
+	/** The type of DIF */
+	DIFType difType;
+
+	/** The name of the DIF */
+	ApplicationProcessNamingInformation difName;
+
+	/** The QoS cubes supported by the DIF */
+	std::vector<QoSCube> qosCubes;
+
+	/** The policies of the DIF */
+	std::vector<Policy> policies;
+
+public:
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
+	DIFType getDifType() const;
+	void setDifType(DIFType difType);
+	const std::vector<Policy>& getPolicies();
+	void setPolicies(const std::vector<Policy>& policies);
+	const std::vector<QoSCube>& getQosCubes() const;
+	void setQosCubes(const std::vector<QoSCube>& qosCubes);
+};
+
+/**
+ * Encapsulates a flow request
+ */
+class FlowRequest {
+	/** The port-id that locally identifies the flow */
+	int portId;
+
+	/** The application that requested the flow */
+	ApplicationProcessNamingInformation sourceApplicationName;
+
+	/** The application targeted by the flow */
+	ApplicationProcessNamingInformation destinationApplicationName;
+
+	/** The characteristics of the flow */
+	FlowSpecification flowSpecification;
+
+public:
+	const ApplicationProcessNamingInformation& getDestinationApplicationName() const;
+	void setDestinationApplicationName(
+			const ApplicationProcessNamingInformation& destinationApplicationName);
+	const FlowSpecification& getFlowSpecification() const;
+	void setFlowSpecification(const FlowSpecification& flowSpecification);
+	int getPortId() const;
+	void setPortId(int portId);
+	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
+	void setSourceApplicationName(
+			const ApplicationProcessNamingInformation& sourceApplicationName);
 };
 
 }

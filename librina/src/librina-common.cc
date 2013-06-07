@@ -98,7 +98,7 @@ bool ApplicationProcessNamingInformation::operator<(
 	int aux = getProcessName().compare(other.getProcessName());
 	if (aux < 0) {
 		return true;
-	} else if (aux >0) {
+	} else if (aux > 0) {
 		return false;
 	}
 
@@ -412,16 +412,16 @@ void DIFProperties::removeQoSCube(const QoSCube& qosCube) {
 }
 
 /* CLASS IPC EVENT */
-IPCEvent::~IPCEvent(){
+IPCEvent::~IPCEvent() {
 }
 
 /* CLASS IPC EVENT PRODUCER */
-void IPCEventProducer::enqueEvent(IPCEvent * event){
+void IPCEventProducer::enqueEvent(IPCEvent * event) {
 	eventQueue.push_back(event);
 }
 
-IPCEvent * IPCEventProducer::eventPoll(){
-	if(eventQueue.size() > 0){
+IPCEvent * IPCEventProducer::eventPoll() {
+	if (eventQueue.size() > 0) {
 		IPCEvent * result = eventQueue.front();
 		eventQueue.pop_front();
 		return result;
@@ -430,8 +430,8 @@ IPCEvent * IPCEventProducer::eventPoll(){
 	return NULL;
 }
 
-IPCEvent * IPCEventProducer::eventWait(){
-	if(eventQueue.size() > 0){
+IPCEvent * IPCEventProducer::eventWait() {
+	if (eventQueue.size() > 0) {
 		IPCEvent * result = eventQueue.front();
 		eventQueue.pop_front();
 		return result;
@@ -446,6 +446,78 @@ IPCException::IPCException(const std::string& whatArg) {
 	this->whatArg = whatArg;
 }
 
+const std::string IPCException::operation_not_implemented_error =
+		"This operation is not yet implemented";
+
 const char* IPCException::what() const throw () {
 	return whatArg.c_str();
+}
+
+/** CLASS DIF CONFIGURATION */
+const ApplicationProcessNamingInformation& DIFConfiguration::getDifName() const {
+	return difName;
+}
+
+void DIFConfiguration::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
+DIFType DIFConfiguration::getDifType() const {
+	return difType;
+}
+
+void DIFConfiguration::setDifType(DIFType difType) {
+	this->difType = difType;
+}
+
+const std::vector<Policy>& DIFConfiguration::getPolicies() {
+	return policies;
+}
+
+void DIFConfiguration::setPolicies(const std::vector<Policy>& policies) {
+	this->policies = policies;
+}
+
+const std::vector<QoSCube>& DIFConfiguration::getQosCubes() const {
+	return qosCubes;
+}
+
+void DIFConfiguration::setQosCubes(const std::vector<QoSCube>& qosCubes) {
+	this->qosCubes = qosCubes;
+}
+
+/* CLASS FLOW REQUEST */
+const ApplicationProcessNamingInformation& FlowRequest::getDestinationApplicationName() const{
+	return destinationApplicationName;
+}
+
+void FlowRequest::setDestinationApplicationName(
+			const ApplicationProcessNamingInformation& destinationApplicationName){
+	this->destinationApplicationName = destinationApplicationName;
+}
+
+const FlowSpecification& FlowRequest::getFlowSpecification() const{
+	return flowSpecification;
+}
+
+void FlowRequest::setFlowSpecification(const FlowSpecification& flowSpecification){
+	this->flowSpecification = flowSpecification;
+}
+
+int FlowRequest::getPortId() const{
+	return portId;
+}
+
+void FlowRequest::setPortId(int portId){
+	this->portId = portId;
+}
+
+const ApplicationProcessNamingInformation& FlowRequest::getSourceApplicationName() const{
+	return sourceApplicationName;
+}
+
+void FlowRequest::setSourceApplicationName(
+			const ApplicationProcessNamingInformation& sourceApplicationName){
+	this->sourceApplicationName = sourceApplicationName;
 }
