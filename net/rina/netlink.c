@@ -39,7 +39,7 @@ int rina_netlink_init(void)
 	ret = genl_register_ops(&nl_rina_family, &nl_rina_ops_echo);
 	if (ret != 0){
 		LOG_DBG("Not able to register nl_rina_ops");
-		genl_unrigester_family(&nl_rina_family);
+		genl_unregister_family(&nl_rina_family);
 		return -2;
 	}
 	LOG_FEXIT;
@@ -53,7 +53,7 @@ void rina_netlink_exit(void)
 	int ret;
 
 	/*unregister the functions*/
-	ret = genl_unregister_ops(&nl_rina_family, nl_rina_ops_echo);
+	ret = genl_unregister_ops(&nl_rina_family, &nl_rina_ops_echo);
 
 	if(ret != 0){
 		LOG_DBG("unregister ops: %i\n",ret);

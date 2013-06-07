@@ -25,7 +25,9 @@
 #include <linux/module.h>
 #include <net/sock.h>
 #include <linux/netlink.h>
+#include <net/netlink.h>
 #include <linux/genetlink.h>
+#include <net/genetlink.h>
 #include <linux/skbuff.h>
 
 #define NETLINK_RINA 31
@@ -68,7 +70,7 @@ enum {
 static struct genl_ops nl_rina_ops_echo = {
 	.cmd = NETLINK_RINA_C_ECHO,
 	.flags = 0,
-	.policy = net_rina_policy,
+	.policy = nl_rina_policy,
 	.doit = nl_rina_echo,
 	.dumpit = NULL,
 };
