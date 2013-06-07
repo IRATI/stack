@@ -20,6 +20,7 @@
  */
 
 #include <linux/if_ether.h>
+#include <linux/kfifo.h>
 
 #define RINA_PREFIX "shim-eth"
 
@@ -90,8 +91,7 @@ int shim_eth_allocate_flow_request(struct name_t *      source,
                                    port_id_t            port_id)
 {
 	struct flow_t * flow;
-	struct kfifo sdu_ready;
-	int ret;
+	struct kfifo    sdu_ready;
 
 	LOG_FBEGN;
 
@@ -109,6 +109,7 @@ int shim_eth_allocate_flow_request(struct name_t *      source,
 		kfree(flow);
 		return -1;
 	}
+#if 0 /* FIXME: This doesn't compile */
 	flow->sdu_ready = sdu_ready;
 	if (kipcm_add_entry(port_id, (const struct flow_t *)flow)) {
 		LOG_FEXIT;
@@ -116,6 +117,7 @@ int shim_eth_allocate_flow_request(struct name_t *      source,
 		kfree(sdu_ready);
 		return -1;
 	}
+#endif
 
 	LOG_FEXIT;
 

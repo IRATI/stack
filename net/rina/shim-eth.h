@@ -22,7 +22,6 @@
 #define RINA_SHIMS_SHIM_ETH_H
 
 #include <linux/hashtable.h>
-#include <linux/kfifo.h>
 
 #include "kipcm.h"
 #include "common.h"
