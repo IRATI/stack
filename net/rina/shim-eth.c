@@ -23,7 +23,7 @@
 
 #define RINA_PREFIX "shim-eth"
 
-#include "../logs.h"
+#include "logs.h"
 #include "shim-eth.h"
 
 LIST_HEAD(shim_eth);

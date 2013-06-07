@@ -16,7 +16,7 @@
 
 #define RINA_PREFIX "shim-tcp-udp"
 
-#include "../logs.h"
+#include "logs.h"
 #include "shim-tcp-udp.h"
 
 int shim_tcp_udp_init(void)
