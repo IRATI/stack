@@ -14,11 +14,16 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include "config.h"
 #include "librina-common.h"
 #define RINA_PREFIX "common"
 #include "logs.h"
 
 using namespace rina;
+
+std::string getVersion(){
+	return VERSION;
+}
 
 /* CLASS APPLICATION PROCESS NAMING INFORMATION */
 

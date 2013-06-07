@@ -34,6 +34,11 @@
 namespace rina {
 
 /**
+ * Returns the version number of librina
+ */
+std::string getVersion();
+
+/**
  * Contains an application process naming information
  */
 class ApplicationProcessNamingInformation {
