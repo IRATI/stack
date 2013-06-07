@@ -81,7 +81,9 @@ int shim_eth_destroy(ipc_process_id_t ipc_process_id)
 
 	return 0;
 }
-
+/* FIXME : Tentative implementation to compare with the kipcm code. Please
+ * 		Sander review it. Miquel.
+ */
 int shim_eth_allocate_flow_request(struct name_t *      source,
                                    struct name_t *      dest,
                                    struct flow_spec_t * flow_spec,
