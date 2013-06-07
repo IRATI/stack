@@ -38,6 +38,37 @@ bool checkIPCProcesses(unsigned int expectedProcesses) {
 	return true;
 }
 
+bool checkRecognizedEvent(IPCEvent * event) {
+	switch (event->getType()) {
+	case APPLICATION_REGISTRATION_REQUEST_EVENT: {
+		ApplicationRegistrationRequestEvent * appREvent =
+				dynamic_cast<ApplicationRegistrationRequestEvent *>(event);
+		std::cout << "Got application registration request from application "
+				<< appREvent->getApplicationName().getProcessName() << "\n";
+		break;
+	}
+	case APPLICATION_UNREGISTRATION_REQUEST_EVENT: {
+		ApplicationUnregistrationRequestEvent * appUEvent =
+				dynamic_cast<ApplicationUnregistrationRequestEvent *>(event);
+		std::cout << "Got application unregistration request from application "
+				<< appUEvent->getApplicationName().getProcessName() << "\n";
+		break;
+	}
+	case FLOW_ALLOCATION_REQUEST_EVENT: {
+		FlowAllocationRequestEvent * flowAllocationRequest =
+				dynamic_cast<FlowAllocationRequestEvent *>(event);
+		std::cout << "Got a flow allocation request event with transaction id "
+				<< flowAllocationRequest->getTransactionId() << "\n";
+		break;
+	}
+	default:
+		std::cout << "Unrecognized event type\n";
+		return false;
+	}
+
+	return true;
+}
+
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING LIBRINA-IPCMANAGER\n";
 
@@ -53,6 +84,8 @@ int main(int argc, char * argv[]) {
 	ApplicationProcessNamingInformation * destinationName =
 			new ApplicationProcessNamingInformation("/apps/test/destination",
 					"1");
+	ApplicationProcessNamingInformation * difName =
+			new ApplicationProcessNamingInformation("/difs/Test.DIF", "");
 
 	IPCProcess * ipcProcess1 = ipcProcessFactory->create(*ipcProcessName1,
 			DIF_TYPE_NORMAL);
@@ -92,6 +125,41 @@ int main(int argc, char * argv[]) {
 	/* TEST QUERY RIB */
 	ipcProcess1->queryRIB();
 
+	/* TEST APPLICATION REGISTERED */
+	applicationManager->applicationRegistered(25, "Everything was fine");
+
+	/* TEST APPLICATION UNREGISTERED */
+	applicationManager->applicationUnregistered(25, "Everything was fine");
+
+	/* TEST FLOW ALLOCATED */
+	applicationManager->flowAllocated(25, 34, 45, "Everything was fine",
+			*difName);
+
+	/* TEST EVENT POLL */
+	IPCEvent * event = new ApplicationRegistrationRequestEvent(*sourceName, *difName,
+			45);
+	ipcEventProducer->enqueEvent(event);
+	event = new FlowAllocationRequestEvent(*sourceName, *destinationName, *flowSpec,
+			234);
+	ipcEventProducer->enqueEvent(event);
+	event = new ApplicationUnregistrationRequestEvent(*sourceName, *difName, 64);
+	ipcEventProducer->enqueEvent(event);
+
+	for (int i = 0; i < 2; i++) {
+		event = ipcEventProducer->eventPoll();
+		if (!checkRecognizedEvent(event)) {
+			return 1;
+		}
+	}
+
+	delete event;
+
+	/** TEST EVENT WAIT */
+	event = ipcEventProducer->eventPoll();
+	if (!checkRecognizedEvent(event)) {
+		return 1;
+	}
+
 	ipcProcessFactory->destroy(ipcProcess1->getId());
 	if (!checkIPCProcesses(0)) {
 		return 1;
@@ -101,6 +169,7 @@ int main(int argc, char * argv[]) {
 	delete ipcProcessName2;
 	delete sourceName;
 	delete destinationName;
+	delete difName;
 	delete difConfiguration;
 	delete flowSpec;
 	delete flowRequest;

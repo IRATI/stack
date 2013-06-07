@@ -22,7 +22,7 @@ using namespace rina;
 
 /** CLASS IPC PROCESS */
 
-IPCProcess::IPCProcess(){
+IPCProcess::IPCProcess() {
 	id = 0;
 	type = DIF_TYPE_NORMAL;
 }
@@ -47,7 +47,7 @@ const ApplicationProcessNamingInformation& IPCProcess::getName() const {
 }
 
 void IPCProcess::assignToDIF(const DIFConfiguration& difConfiguration)
-					throw (IPCException) {
+		throw (IPCException) {
 	LOG_DBG("IPCProcess::assign to DIF called");
 }
 
@@ -143,4 +143,106 @@ std::vector<IPCProcess *> IPCProcessFactory::listIPCProcesses() {
 	}
 
 	return response;
+}
+
+/** CLASS APPLICATION MANAGER */
+
+void ApplicationManager::applicationRegistered(unsigned int transactionId,
+		const std::string& response) throw (IPCException) {
+	LOG_DBG("ApplicationManager::applicationRegistered called");
+}
+
+void ApplicationManager::applicationUnregistered(unsigned int transactionId,
+		const std::string& response) throw (IPCException) {
+	LOG_DBG("ApplicationManager::applicationUnregistered called");
+}
+
+void ApplicationManager::flowAllocated(unsigned int transactionId, int portId,
+		unsigned int ipcProcessPid, std::string response,
+		const ApplicationProcessNamingInformation& difName) throw (IPCException) {
+	LOG_DBG("ApplicationManager::flowAllocated called");
+}
+
+/** CLASS APPLICATION REGISTRATION REQUEST */
+
+ApplicationRegistrationRequestEvent::ApplicationRegistrationRequestEvent(
+		const ApplicationProcessNamingInformation& appName,
+		const ApplicationProcessNamingInformation& DIFName,
+		unsigned int transactionId) :
+		IPCEvent(APPLICATION_REGISTRATION_REQUEST_EVENT) {
+	this->applicationName = appName;
+	this->DIFName = DIFName;
+	this->transactionId = transactionId;
+}
+
+const ApplicationProcessNamingInformation&
+ApplicationRegistrationRequestEvent::getApplicationName() const {
+	return applicationName;
+}
+
+const ApplicationProcessNamingInformation&
+ApplicationRegistrationRequestEvent::getDIFName() const {
+	return DIFName;
+}
+
+unsigned int ApplicationRegistrationRequestEvent::getTransactionId() const {
+	return transactionId;
+}
+
+/** CLASS APPLICATION UNREGISTRATION REQUEST */
+
+ApplicationUnregistrationRequestEvent::ApplicationUnregistrationRequestEvent(
+		const ApplicationProcessNamingInformation& appName,
+		const ApplicationProcessNamingInformation& DIFName,
+		unsigned int transactionId) :
+		IPCEvent(APPLICATION_UNREGISTRATION_REQUEST_EVENT) {
+	this->applicationName = appName;
+	this->DIFName = DIFName;
+	this->transactionId = transactionId;
+}
+
+const ApplicationProcessNamingInformation&
+ApplicationUnregistrationRequestEvent::getApplicationName() const {
+	return applicationName;
+}
+
+const ApplicationProcessNamingInformation&
+ApplicationUnregistrationRequestEvent::getDIFName() const {
+	return DIFName;
+}
+
+unsigned int ApplicationUnregistrationRequestEvent::getTransactionId() const {
+	return transactionId;
+}
+
+/** CLASS FLOW ALLOCATION REQUEST */
+
+FlowAllocationRequestEvent::FlowAllocationRequestEvent(
+		const ApplicationProcessNamingInformation& sourceName,
+		const ApplicationProcessNamingInformation& destName,
+		const FlowSpecification& flowSpec, unsigned int transactionId) :
+		IPCEvent(FLOW_ALLOCATION_REQUEST_EVENT) {
+	this->sourceApplicationName = sourceName;
+	this->destinationApplicationName = destName;
+	this->flowSpecification = flowSpec;
+	this->transactionId = transactionId;
+}
+
+const ApplicationProcessNamingInformation&
+FlowAllocationRequestEvent::getSourceApplicationName() const {
+	return sourceApplicationName;
+}
+
+const ApplicationProcessNamingInformation&
+FlowAllocationRequestEvent::getDestinationApplicationName() const {
+	return destinationApplicationName;
+}
+
+const FlowSpecification&
+FlowAllocationRequestEvent::getFlowSpecification() const {
+	return flowSpecification;
+}
+
+unsigned int FlowAllocationRequestEvent::getTransactionId() const {
+	return transactionId;
 }

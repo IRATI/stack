@@ -58,7 +58,7 @@ public:
 	 * @throws IPCException if an error happens during the process
 	 */
 	void assignToDIF(const DIFConfiguration& difConfiguration)
-				throw (IPCException);
+			throw (IPCException);
 
 	/**
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been
@@ -207,6 +207,136 @@ public:
  * Make IPC Process Factory singleton
  */
 extern Singleton<IPCProcessFactory> ipcProcessFactory;
+
+/**
+ * Class to interact with application processes
+ */
+class ApplicationManager {
+public:
+
+	/**
+	 * Invoked by the IPC Manager to notify an application about the  result of
+	 * the registration in a DIF operation.
+	 *
+	 * @param transactionId identifies the request whose reply this operation
+	 * is providing
+	 * @param response The result of the registration operation
+	 * @throws IPCException If an error occurs during the operation
+	 */
+	void applicationRegistered(unsigned int transactionId,
+			const std::string& response) throw (IPCException);
+
+	/**
+	 * Invoked by the IPC Manager to notify an application about the  result of
+	 * the unregistration in a DIF operation.
+	 *
+	 * @param transactionId identifies the request whose reply this operation
+	 * is providing
+	 * @param response The result of the unregistration operation
+	 * @throws IPCException If an error occurs during the operation
+	 */
+	void applicationUnregistered(unsigned int transactionId,
+			const std::string& response) throw (IPCException);
+
+	/**
+	 * Invoked by the IPC Manager to respond to the Application Process that
+	 * requested a flow.
+	 *
+	 * @param transactionId identifies the request whose reply this operation
+	 * is providing
+	 * @param portId The port-id assigned to the flow, in case the operation
+	 * was successful
+	 * @param ipcProcessId Required so that the application process can contact
+	 * the IPC Process to read/write the flow
+	 * @param response The result of the unregistration operation
+	 * @param difName The name of the DIF where the flow has been allocated
+	 * @throws IPCException If an error occurs during the operation
+	 */
+	void flowAllocated(unsigned int transactionId, int portId,
+			unsigned int ipcProcessPid, std::string response,
+			const ApplicationProcessNamingInformation& difName)
+					throw (IPCException);
+};
+
+/**
+ * Make Application Manager singleton
+ */
+extern Singleton<ApplicationManager> applicationManager;
+
+/**
+ * Event informing that an application has requested the
+ * registration to a DIF
+ */
+class ApplicationRegistrationRequestEvent: public IPCEvent {
+	/** The application that wants to register */
+	ApplicationProcessNamingInformation applicationName;
+
+	/** The DIF to which the application wants to register */
+	ApplicationProcessNamingInformation DIFName;
+
+	/** The event transaction id */
+	unsigned int transactionId;
+
+public:
+	ApplicationRegistrationRequestEvent(
+			const ApplicationProcessNamingInformation& appName,
+			const ApplicationProcessNamingInformation& DIFName,
+			unsigned int transactionId);
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	const ApplicationProcessNamingInformation& getDIFName() const;
+	unsigned int getTransactionId() const;
+};
+
+/**
+ * Event informing that an application has requested the
+ * unregistration from a DIF
+ */
+class ApplicationUnregistrationRequestEvent: public IPCEvent {
+	/** The application that wants to unregister */
+	ApplicationProcessNamingInformation applicationName;
+
+	/** The DIF to which the application wants to cancel the registration */
+	ApplicationProcessNamingInformation DIFName;
+
+	/** The event transaction id */
+	unsigned int transactionId;
+
+public:
+	ApplicationUnregistrationRequestEvent(
+			const ApplicationProcessNamingInformation& appName,
+			const ApplicationProcessNamingInformation& DIFName,
+			unsigned int transactionId);
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	const ApplicationProcessNamingInformation& getDIFName() const;
+	unsigned int getTransactionId() const;
+};
+
+/**
+ * Event informing that an application has requested a flow to
+ * a destination application
+ */
+class FlowAllocationRequestEvent: public IPCEvent {
+	/** The source application name */
+	ApplicationProcessNamingInformation sourceApplicationName;
+
+	/** The destination application name */
+	ApplicationProcessNamingInformation destinationApplicationName;
+
+	/** The destination application name */
+	FlowSpecification flowSpecification;
+
+	/** The event transaction id */
+	unsigned int transactionId;
+
+public:
+	FlowAllocationRequestEvent(const ApplicationProcessNamingInformation& sourceName,
+			const ApplicationProcessNamingInformation& destName,
+			const FlowSpecification& flowSpec, unsigned int transactionId);
+	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
+	const ApplicationProcessNamingInformation& getDestinationApplicationName() const;
+	const FlowSpecification& getFlowSpecification() const;
+	unsigned int getTransactionId() const;
+};
 
 }
 
