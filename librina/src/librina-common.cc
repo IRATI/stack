@@ -442,18 +442,15 @@ IPCEvent * IPCEventProducer::eventWait() {
 
 /* CLASS IPC EXCEPTION */
 
-IPCException::IPCException(const std::string& whatArg) {
-	this->whatArg = whatArg;
+IPCException::IPCException(const std::string& description) :
+		Exception(description) {
 }
 
 const std::string IPCException::operation_not_implemented_error =
 		"This operation is not yet implemented";
 
-const char* IPCException::what() const throw () {
-	return whatArg.c_str();
-}
-
 /** CLASS DIF CONFIGURATION */
+
 const ApplicationProcessNamingInformation& DIFConfiguration::getDifName() const {
 	return difName;
 }
@@ -488,36 +485,37 @@ void DIFConfiguration::setQosCubes(const std::vector<QoSCube>& qosCubes) {
 }
 
 /* CLASS FLOW REQUEST */
-const ApplicationProcessNamingInformation& FlowRequest::getDestinationApplicationName() const{
+const ApplicationProcessNamingInformation& FlowRequest::getDestinationApplicationName() const {
 	return destinationApplicationName;
 }
 
 void FlowRequest::setDestinationApplicationName(
-			const ApplicationProcessNamingInformation& destinationApplicationName){
+		const ApplicationProcessNamingInformation& destinationApplicationName) {
 	this->destinationApplicationName = destinationApplicationName;
 }
 
-const FlowSpecification& FlowRequest::getFlowSpecification() const{
+const FlowSpecification& FlowRequest::getFlowSpecification() const {
 	return flowSpecification;
 }
 
-void FlowRequest::setFlowSpecification(const FlowSpecification& flowSpecification){
+void FlowRequest::setFlowSpecification(
+		const FlowSpecification& flowSpecification) {
 	this->flowSpecification = flowSpecification;
 }
 
-int FlowRequest::getPortId() const{
+int FlowRequest::getPortId() const {
 	return portId;
 }
 
-void FlowRequest::setPortId(int portId){
+void FlowRequest::setPortId(int portId) {
 	this->portId = portId;
 }
 
-const ApplicationProcessNamingInformation& FlowRequest::getSourceApplicationName() const{
+const ApplicationProcessNamingInformation& FlowRequest::getSourceApplicationName() const {
 	return sourceApplicationName;
 }
 
 void FlowRequest::setSourceApplicationName(
-			const ApplicationProcessNamingInformation& sourceApplicationName){
+		const ApplicationProcessNamingInformation& sourceApplicationName) {
 	this->sourceApplicationName = sourceApplicationName;
 }

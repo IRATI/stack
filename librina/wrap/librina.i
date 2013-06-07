@@ -70,8 +70,8 @@
 %enddef
 
 /* Define the class IPC Exception */
-%typemap(javabase) rina::IPCException "java.lang.Exception";
-%typemap(javacode) rina::IPCException %{
+%typemap(javabase) Exception "java.lang.Exception";
+%typemap(javacode) Exception %{
   public String getMessage() {
     return what();
   }
@@ -100,9 +100,11 @@ WRAP_THROW_EXCEPTION(rina::IPCManager::deallocate, rina::IPCException,
 		"eu/irati/librina/IPCException");
 
 %{
+#include "exceptions.h"
 #include "patterns.h"
 #include "librina-common.h"
 #include "librina-application.h"
+#include "librina-ipc-manager.h"
 %}
 
 %rename(equals) rina::ApplicationProcessNamingInformation::operator==(const ApplicationProcessNamingInformation &other) const;
@@ -114,9 +116,11 @@ WRAP_THROW_EXCEPTION(rina::IPCManager::deallocate, rina::IPCException,
 %rename(equals) rina::QoSCube::operator==(const QoSCube &other) const;  
 %rename(differs) rina::QoSCube::operator!=(const QoSCube &other) const;  
 
+%include "exceptions.h"
 %include "patterns.h"
 %include "librina-common.h"
 %include "librina-application.h"
+%include "librina-ipc-manager.h"
 
 %template(DIFPropertiesVector) std::vector<rina::DIFProperties>;
 %template(FlowVector) std::vector<rina::Flow>;
@@ -124,3 +128,5 @@ WRAP_THROW_EXCEPTION(rina::IPCManager::deallocate, rina::IPCException,
 %template(ApplicationProcessNamingInformationList) std::list<rina::ApplicationProcessNamingInformation>;
 %template(IPCManagerSingleton) Singleton<rina::IPCManager>;
 %template(IPCEventProducerSingleton) Singleton<rina::IPCEventProducer>;
+%template(IPCProcessFactorySingleton) Singleton<rina::IPCProcessFactory>;
+%template(IPCProcessVector) std::vector<rina::IPCProcess>;

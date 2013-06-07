@@ -22,6 +22,11 @@ using namespace rina;
 
 /** CLASS IPC PROCESS */
 
+IPCProcess::IPCProcess(){
+	id = 0;
+	type = DIF_TYPE_NORMAL;
+}
+
 IPCProcess::IPCProcess(unsigned int id, DIFType type,
 		const ApplicationProcessNamingInformation& name) {
 	this->id = id;

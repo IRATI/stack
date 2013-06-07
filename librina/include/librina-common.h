@@ -25,7 +25,7 @@
 #ifndef LIBRINA_COMMON_H
 #define LIBRINA_COMMON_H
 
-#include <exception>
+#include "exceptions.h"
 #include "patterns.h"
 #include <string>
 #include <vector>
@@ -325,14 +325,10 @@ extern Singleton<IPCEventProducer> ipcEventProducer;
 /**
  * Base class for all RINA exceptions
  */
-class IPCException: public std::exception {
-	std::string whatArg;
+class IPCException: public Exception {
 public:
-	virtual ~IPCException() throw () {
-	};
-	explicit IPCException(const std::string& whatArg);
+	IPCException(const std::string& description);
 	static const std::string operation_not_implemented_error;
-	const char * what() const throw ();
 };
 
 /**

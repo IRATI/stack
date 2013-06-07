@@ -38,6 +38,7 @@ class IPCProcess {
 	ApplicationProcessNamingInformation name;
 
 public:
+	IPCProcess();
 	IPCProcess(unsigned int id, DIFType type,
 			const ApplicationProcessNamingInformation& name);
 	unsigned int getId() const;
