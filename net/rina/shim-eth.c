@@ -92,9 +92,18 @@ int shim_eth_allocate_flow_request(struct name_t *      source,
 {
 	struct flow_t * flow;
 	struct kfifo    sdu_ready;
+	struct ipc_process_t * ipcp;
 
 	LOG_FBEGN;
 
+	/* FIXME : This reference should be taken from the shim-eth ipc process */
+	ipcp = kmalloc(sizeof(*ipcp), GFP_KERNEL);
+	if (ipcp == NULL) {
+		LOG_ERR("Cannot allocate %d bytes of kernel memory", sizeof(*ipcp));
+
+		LOG_FEXIT;
+		return -1;
+	}
 	flow = kmalloc(sizeof(*flow), GFP_KERNEL);
 	if (flow == NULL) {
 		LOG_ERR("Cannot allocate %d bytes of kernel memory", sizeof(*flow));
@@ -103,10 +112,11 @@ int shim_eth_allocate_flow_request(struct name_t *      source,
 		return -1;
 	}
 	flow->application_owned = 1;
-	flow->ipc_process = 1;
+	flow->ipc_process = ipcp;
 	if (kfifo_alloc(&sdu_ready, PAGE_SIZE, GFP_KERNEL)) {
 		LOG_FEXIT;
 		kfree(flow);
+		kfree(ipcp);
 		return -1;
 	}
 /* FIXME: This doesn't compile */
@@ -114,6 +124,7 @@ int shim_eth_allocate_flow_request(struct name_t *      source,
 	if (kipcm_add_entry(port_id, (const struct flow_t *)flow)) {
 		LOG_FEXIT;
 		kfree(flow);
+		kfree(ipcp);
 		kfree(&sdu_ready);
 		return -1;
 	}
