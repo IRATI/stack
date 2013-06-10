@@ -9,8 +9,6 @@
 
 me="app"
 
-CP=@javadir@
 LP=@libdir@
 
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LP java -classpath $CP -jar @javadir@/app.jar
-#LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LP java -classpath $CP app
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LP java -jar @javadir@/app.jar

@@ -18,9 +18,9 @@
 #define RINA_PREFIX "ipc-manager"
 #include "logs.h"
 
-using namespace rina;
-
 /** CLASS IPC PROCESS */
+
+namespace rina{
 
 IPCProcess::IPCProcess() {
 	id = 0;
@@ -126,7 +126,7 @@ void IPCProcessFactory::destroy(unsigned int ipcProcessId) throw (IPCException) 
 	std::map<int, IPCProcess*>::iterator iterator;
 	iterator = ipcProcesses.find(ipcProcessId);
 	if (iterator == ipcProcesses.end()) {
-		throw new IPCException(IPCProcessFactory::unknown_ipc_process_error);
+		throw IPCException(IPCProcessFactory::unknown_ipc_process_error);
 	}
 
 	delete iterator->second;
@@ -145,6 +145,8 @@ std::vector<IPCProcess *> IPCProcessFactory::listIPCProcesses() {
 	return response;
 }
 
+Singleton<IPCProcessFactory> ipcProcessFactory;
+
 /** CLASS APPLICATION MANAGER */
 
 void ApplicationManager::applicationRegistered(unsigned int transactionId,
@@ -162,6 +164,8 @@ void ApplicationManager::flowAllocated(unsigned int transactionId, int portId,
 		const ApplicationProcessNamingInformation& difName) throw (IPCException) {
 	LOG_DBG("ApplicationManager::flowAllocated called");
 }
+
+Singleton<ApplicationManager> applicationManager;
 
 /** CLASS APPLICATION REGISTRATION REQUEST */
 
@@ -245,4 +249,6 @@ FlowAllocationRequestEvent::getFlowSpecification() const {
 
 unsigned int FlowAllocationRequestEvent::getTransactionId() const {
 	return transactionId;
+}
+
 }

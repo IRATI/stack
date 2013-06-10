@@ -60,7 +60,7 @@ public class app {
 		flowSpecification.setPeakBandwidthDuration(200);
 		
 		System.out.println("\nALLOCATING A FLOW");
-		IPCManagerSingleton ipcManager = new IPCManagerSingleton();
+		IPCManagerSingleton ipcManager = rina.getIpcManager();
 		Flow flow = ipcManager.allocateFlowRequest(sourceNamingInfo, destNamingInfo, flowSpecification);
 		System.out.println("Flow allocated, port id is "+flow.getPortId());
 		
@@ -76,5 +76,10 @@ public class app {
 		System.out.println("\nDEALLOCATING THE FLOW");
 		ipcManager.deallocateFlow(flow.getPortId());
 		System.out.println("Flow deallocated");
+		try{
+			ipcManager.deallocateFlow(430);
+		}catch(IPCException ex){
+			System.out.println("Caught expected exception: "+ex.getMessage());
+		}
 	}
 }

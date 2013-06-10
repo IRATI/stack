@@ -9,8 +9,6 @@
 
 me="ipcpd"
 
-CP=@javadir@
 LP=@libdir@
 
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LP java -classpath $CP -jar @javadir@/ipcpd.jar
-#LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LP java -classpath $CP ipcpd
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LP java -jar @javadir@/ipcpd.jar

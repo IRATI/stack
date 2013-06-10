@@ -95,7 +95,7 @@ WRAP_THROW_EXCEPTION(rina::IPCManager::allocateFlowRequest, rina::IPCException,
 WRAP_THROW_EXCEPTION(rina::IPCManager::allocateFlowResponse, rina::IPCException, 
 		"eu.irati.librina.IPCException",
 		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::IPCManager::deallocate, rina::IPCException, 
+WRAP_THROW_EXCEPTION(rina::IPCManager::deallocateFlow, rina::IPCException, 
 		"eu.irati.librina.IPCException",
 		"eu/irati/librina/IPCException");
 WRAP_THROW_EXCEPTION(rina::IPCProcessFactory::create, rina::IPCException, 

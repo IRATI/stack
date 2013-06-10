@@ -19,7 +19,7 @@
 #define RINA_PREFIX "common"
 #include "logs.h"
 
-using namespace rina;
+namespace rina{
 
 std::string getVersion(){
 	return VERSION;
@@ -445,6 +445,8 @@ IPCEvent * IPCEventProducer::eventWait() {
 	return NULL;
 }
 
+Singleton<IPCEventProducer> ipcEventProducer;
+
 /* CLASS IPC EXCEPTION */
 
 IPCException::IPCException(const std::string& description) :
@@ -523,4 +525,6 @@ const ApplicationProcessNamingInformation& FlowRequest::getSourceApplicationName
 void FlowRequest::setSourceApplicationName(
 		const ApplicationProcessNamingInformation& sourceApplicationName) {
 	this->sourceApplicationName = sourceApplicationName;
+}
+
 }

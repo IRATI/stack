@@ -29,3 +29,5 @@ stamp-h1
 *.[ao]
 
 /*.tar.gz
+
+wrap/java

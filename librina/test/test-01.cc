@@ -149,6 +149,12 @@ int main(int argc, char * argv[]) {
 		return 1;
 	}
 
+	try{
+		ipcManager->deallocateFlow(234);
+	}catch(IPCException &e){
+		std::cout << "Caught expected exception: "<< e.what() <<"\n";
+	}
+
 	/* TEST REGISTER APPLICATION */
 	ipcManager->registerApplication(*sourceName, difProperties.getDifName());
 	ApplicationProcessNamingInformation * difName =

@@ -4,6 +4,7 @@ public class ipcmd {
 
 	static {
               System.out.println("java.library.path = " + System.getProperties().getProperty("java.library.path"));
+              System.out.println("java.class.path = " + System.getProperties().getProperty("java.class.path"));
               System.loadLibrary("rina_java");
 	  }
 	

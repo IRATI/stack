@@ -22,7 +22,7 @@
 
 #include <stdexcept>
 
-using namespace rina;
+namespace rina{
 
 /* CLASS FLOW */
 
@@ -263,7 +263,7 @@ void IPCManager::deallocateFlow(int portId) throw (IPCException) {
 	std::map<int, Flow*>::iterator iterator;
 	iterator = allocatedFlows.find(portId);
 	if (iterator == allocatedFlows.end()) {
-		throw new IPCException(IPCManager::unknown_flow_error);
+		throw IPCException(IPCManager::unknown_flow_error);
 	}
 
 	delete iterator->second;
@@ -294,6 +294,8 @@ std::vector<ApplicationRegistration *> IPCManager::getRegisteredApplications() {
 
 	return response;
 }
+
+Singleton<IPCManager> ipcManager;
 
 /* CLASS FLOW DEALLOCATED EVENT */
 
@@ -357,4 +359,6 @@ const ApplicationProcessNamingInformation& IncomingFlowRequestEvent::getSourceAp
 
 const ApplicationProcessNamingInformation& IncomingFlowRequestEvent::getDestApplicationName() const {
 	return destinationApplicationName;
+}
+
 }
