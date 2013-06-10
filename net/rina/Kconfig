@@ -3,7 +3,7 @@
 #
 
 menuconfig RINA
-	tristate "RINA support"
+	bool "RINA support"
         depends on NET
 	default y
 	---help---
@@ -24,6 +24,13 @@ config RINA_DEBUG
 	help
 	  No help for the time being
 
+config RINA_UNFILTERED_LOGS
+	bool "Unfiltered logging"
+	default y
+	depends on RINA_DEBUG
+	help
+	  No help for the time being
+
 config RINA_DEBUG_VERBOSE
 	bool "Verbose debugging support (e.g. heartbeats, scopes)"
 	default y
@@ -38,6 +45,11 @@ config RINA_ASSERTIONS
 	help
 	  No help for the time being
 
+config RINA_PERSONALITY
+       	tristate "RINA personality support"
+	default y
+	---help---
+	  No help for the time being
 
 config RINA_SHIM_ETH
 	bool "Shim IPC over Ethernet support"

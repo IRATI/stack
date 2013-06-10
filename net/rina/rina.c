@@ -31,9 +31,11 @@
 #include "shim-eth.h"
 #include "shim-tcp-udp.h"
 
-static __init int rina_personality_init(void)
+static int __init rina_personality_init(void)
 {
         LOG_FBEGN;
+
+        LOG_DBG("Rina personality initializing");
 
         if (kipcm_init())
                 return -1;
@@ -64,13 +66,17 @@ static __init int rina_personality_init(void)
         }
 #endif
 
+        LOG_DBG("Rina personality loaded successfully");
+
         LOG_FEXIT;
         return 0;
 }
 
-static __exit void rina_personality_exit(void)
+static void __exit rina_personality_exit(void)
 {
         LOG_FBEGN;
+
+        LOG_DBG("Rina personality exiting");
 
 #ifdef CONFIG_SHIM_TCP_UDP
         shim_tcp_udp_exit();
@@ -81,6 +87,8 @@ static __exit void rina_personality_exit(void)
         rmt_exit();
         efcp_exit();
         kipcm_exit();
+
+        LOG_DBG("Rina personality unloaded successfully");
 
         LOG_FEXIT;
 }

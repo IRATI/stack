@@ -1,8 +1,9 @@
 /*
- *  Shim IPC Process for Ethernet
+ *  Shim IPC Process over Ethernet
  *
- *    Sander Vrijders <sander.vrijders@intec.ugent.be>
- *    Miquel Tarzan   <miquel.tarzan@i2cat.net>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +26,7 @@
 #define RINA_PREFIX "shim-eth"
 
 #include "logs.h"
+#include "kipcm.h" /* FIXME: should be removed */
 #include "shim-eth.h"
 
 LIST_HEAD(shim_eth);
@@ -62,6 +64,7 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 
 	instance.info = shim_eth_info;
 	
+        /* FIXME: Please stick to C90 !!! */
 	struct shim_eth_t tmp = {
 		.shim_eth_instance = instance,
 		.ipc_process_id = nr,
@@ -96,17 +99,21 @@ int shim_eth_allocate_flow_request(struct name_t *      source,
 
 	LOG_FBEGN;
 
-	/* FIXME : This reference should be taken from the shim-eth ipc process */
+	/* FIXME : This reference should be taken from the shim-eth ipc
+         * process
+         */
 	ipcp = kmalloc(sizeof(*ipcp), GFP_KERNEL);
 	if (ipcp == NULL) {
-		LOG_ERR("Cannot allocate %d bytes of kernel memory", sizeof(*ipcp));
+		LOG_ERR("Cannot allocate %zd bytes of kernel memory",
+                        sizeof(*ipcp));
 
 		LOG_FEXIT;
 		return -1;
 	}
 	flow = kmalloc(sizeof(*flow), GFP_KERNEL);
 	if (flow == NULL) {
-		LOG_ERR("Cannot allocate %d bytes of kernel memory", sizeof(*flow));
+		LOG_ERR("Cannot allocate %zd bytes of kernel memory",
+                        sizeof(*flow));
 
                 LOG_FEXIT;
 		return -1;
@@ -114,7 +121,8 @@ int shim_eth_allocate_flow_request(struct name_t *      source,
 	/* FIXME : This should be an IPC Process already existing */
 	ipcp =  kmalloc(sizeof(*ipcp), GFP_KERNEL);
 	if (ipcp == NULL) {
-		LOG_ERR("Cannot allocate %d bytes of kernel memory", sizeof(*ipcp));
+		LOG_ERR("Cannot allocate %zd bytes of kernel memory",
+                        sizeof(*ipcp));
 
 		LOG_FEXIT;
 		return -1;
@@ -127,7 +135,8 @@ int shim_eth_allocate_flow_request(struct name_t *      source,
 		kfree(ipcp);
 		return -1;
 	}
-/* FIXME: This doesn't compile */
+
+        /* FIXME: This doesn't compile */
 	flow->sdu_ready = &sdu_ready;
 	if (kipcm_add_entry(port_id, (const struct flow_t *)flow)) {
 		LOG_FEXIT;

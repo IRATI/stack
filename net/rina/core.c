@@ -34,7 +34,7 @@ static uint32_t version = MK_RINA_VERSION(0, 0, 0);
 uint32_t rina_version(void)
 { return version; }
 
-static __init int rina_core_init(void)
+static int __init rina_core_init(void)
 {
         LOG_FBEGN;
 
@@ -64,7 +64,10 @@ static __init int rina_core_init(void)
         return 0;
 }
 
-static __exit void rina_core_exit(void)
+__initcall(rina_core_init);
+
+#if 0
+static void __exit rina_core_exit(void)
 {
         LOG_FBEGN;
 
@@ -77,7 +80,6 @@ static __exit void rina_core_exit(void)
         LOG_FEXIT;
 }
 
-
 module_init(rina_core_init);
 module_exit(rina_core_exit);
 
@@ -89,3 +91,4 @@ MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
 MODULE_AUTHOR("Leonardo Bergesio <leonardo.bergesio@i2cat.net>");
 MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
 MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
+#endif
