@@ -3,7 +3,7 @@
 #
 
 menuconfig RINA
-	tristate "RINA support"
+	bool "RINA support"
         depends on NET
 	default y
 	---help---
@@ -45,6 +45,11 @@ config RINA_ASSERTIONS
 	help
 	  No help for the time being
 
+config RINA_PERSONALITY
+       	tristate "RINA personality support"
+	default y
+	---help---
+	  No help for the time being
 
 config RINA_SHIM_ETH
 	bool "Shim IPC over Ethernet support"
