@@ -103,6 +103,7 @@ int shim_eth_allocate_flow_request(struct name_t *      source,
                 LOG_FEXIT;
 		return -1;
 	}
+	/* FIXME : This should be an IPC Process already existing */
 	ipcp =  kmalloc(sizeof(*ipcp), GFP_KERNEL);
 	if (ipcp == NULL) {
 		LOG_ERR("Cannot allocate %d bytes of kernel memory", sizeof(*ipcp));
