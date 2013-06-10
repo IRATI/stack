@@ -111,9 +111,31 @@ const static struct flow_t * retrieve_flow_by_port_id(port_id_t port_id)
         return NULL;
 }
 
+static struct port_id_to_flow_t * retrieve_port_flow_node(port_id_t port_id)
+{
+	struct port_id_to_flow_t * cur;
+
+	list_for_each_entry(cur, kipcm->port_id_to_flow, list) {
+                if (cur->port_id == port_id)
+                        return cur;
+        }
+
+        return NULL;
+}
+
 int kipcm_remove_entry(port_id_t port_id)
 {
-        LOG_FBEGN;
+        struct port_id_to_flow_t * port_flow;
+
+	LOG_FBEGN;
+
+        port_flow = retrieve_port_flow_node(port_id);
+        if (!port_flow)
+        	return -1;
+
+        list_del(&port_flow->list);
+
+
 
         LOG_FEXIT;
 
