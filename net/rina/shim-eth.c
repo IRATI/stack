@@ -64,6 +64,7 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 
 	instance.info = shim_eth_info;
 	
+        /* FIXME: Please stick to C90 !!! */
 	struct shim_eth_t tmp = {
 		.shim_eth_instance = instance,
 		.ipc_process_id = nr,

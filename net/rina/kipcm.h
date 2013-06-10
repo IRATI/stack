@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,7 +33,7 @@
 #include "efcp.h"
 #include "rmt.h"
 
-/* FIXME: This inclusion should be avoided */
+/* FIXME: These inclusions should be avoided */
 #include "shim-eth.h"
 #include "shim-tcp-udp.h"
 
