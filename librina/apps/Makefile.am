@@ -51,9 +51,9 @@ ipcpd.class: ipcpd.java
 CLEANFILES += ipcpd.class
 
 ipcpd.jar: ipcpd.class
-	$(JAR) -cvfm ipcpd.jar ipcpd-manifest.txt ipcpd.class || {	\
-		echo "Cannot build the ipcpd jar" ;	\
-		exit 1 ;				\
+	$(JAR) -cvfm ipcpd.jar $(srcdir)/ipcpd-manifest.txt ipcpd.class || { \
+		echo "Cannot build the ipcpd jar" ;			     \
+		exit 1 ;						     \
 	}
 CLEANFILES += ipcpd.jar
 
@@ -87,9 +87,9 @@ ipcmd.class: ipcmd.java
 CLEANFILES += ipcmd.class
 
 ipcmd.jar: ipcmd.class
-	$(JAR) -cvfm ipcmd.jar ipcmd-manifest.txt ipcmd.class || {	\
-		echo "Cannot build the ipcmd jar" ;	\
-		exit 1 ;				\
+	$(JAR) -cvfm ipcmd.jar $(srcdir)/ipcmd-manifest.txt ipcmd.class || { \
+		echo "Cannot build the ipcmd jar" ;			     \
+		exit 1 ;						     \
 	}
 CLEANFILES += ipcmd.jar
 
@@ -123,9 +123,9 @@ app.class: app.java
 CLEANFILES += app.class
 
 app.jar: app.class
-	$(JAR) -cvfm app.jar app-manifest.txt app.class || {		\
-		echo "Cannot build the app jar" ;	\
-		exit 1 ;				\
+	$(JAR) -cvfm app.jar $(srcdir)/app-manifest.txt app.class || {	\
+		echo "Cannot build the app jar" ;			\
+		exit 1 ;						\
 	}
 CLEANFILES += app.jar
 
