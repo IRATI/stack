@@ -213,7 +213,7 @@ int shim_eth_ipc_create(const struct name_t * name,
 
 	return 0;
 }
-
+/*
 int shim_eth_ipc_configure(ipc_process_id_t ipcp_id,
                            const struct ipc_process_shim_ethernet_conf_t *
                            configuration)
@@ -222,3 +222,4 @@ int shim_eth_ipc_configure(ipc_process_id_t ipcp_id,
 
 	return 0;
 }
+*/

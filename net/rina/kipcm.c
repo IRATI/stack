@@ -401,7 +401,7 @@ int  ipc_process_configure(ipc_process_id_t                  ipcp_id,
         const struct ipc_process_shim_ethernet_conf_t * conf;
 
         LOG_FBEGN;
-
+/*
         ipc_process = find_ipc_process_by_id(ipcp_id);
         if (ipc_process == NULL) {
                 LOG_FEXIT;
@@ -424,7 +424,7 @@ int  ipc_process_configure(ipc_process_id_t                  ipcp_id,
         default:
                 BUG();
         }
-
+*/
         LOG_FEXIT;
 
         return 0;
