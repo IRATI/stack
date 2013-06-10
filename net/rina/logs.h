@@ -27,12 +27,15 @@
 
 #include <linux/kernel.h>
 
+/* The global logs prefix */
+#define __GPFX "rina-"
+
 #ifdef CONFIG_RINA_UNFILTERED_LOGS
 #define __LOG(PFX, LVL, FMT, ARGS...)                                   \
-        do { printk(KERN_NOTICE "rina-" PFX ": " FMT "\n", ##ARGS); } while (0)
+        do { printk(KERN_NOTICE __GPFX PFX ": " FMT "\n", ##ARGS); } while (0)
 #else
 #define __LOG(PFX, LVL, FMT, ARGS...)                                   \
-        do { printk(LVL "rina-" PFX ": " FMT "\n", ##ARGS); } while (0)
+        do { printk(LVL __GPFX PFX ": " FMT "\n", ##ARGS); } while (0)
 #endif
 
 /* Sorted by "urgency" (high to low) */
@@ -55,13 +58,13 @@
  * to avoid messing source files)
  */
 #ifdef RINA_DEBUG_VERBOSE
-#define LOG_FBEGN LOG_DBG("Entering function %s",    __FUNCTION__)
-#define LOG_FEXIT LOG_DBG("Exiting function %s",     __FUNCTION__)
-#define LOG_FBEAT LOG_DBG("Heartbeat: I'm in %s:%d", __FUNCTION__, __LINE__);
+#define LOG_FBEGN LOG_DBG("Entering function %s", __FUNCTION__)
+#define LOG_FEXIT LOG_DBG("Exiting function %s",  __FUNCTION__)
+#define LOG_HBEAT LOG_DBG("I'm in %s:%d",         __FUNCTION__, __LINE__);
 #else
 #define LOG_FBEGN
 #define LOG_FEXIT
-#define LOG_FBEAT
+#define LOG_HBEAT
 #endif
 
 #endif
