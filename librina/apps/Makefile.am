@@ -37,11 +37,9 @@ ipcpd: Makefile ipcpd.in
 	mv $@.tmp $@
 
 bin_SCRIPTS += ipcpd
-
-EXTRA_DIST  += ipcpd.in
-EXTRA_DIST  += ipcpd.java
-
 CLEANFILES  += ipcpd
+
+EXTRA_DIST  += ipcpd.in ipcpd.java ipcpd-manifest.txt
 
 ipcpd.class: ipcpd.java
 	$(JAVAC) -classpath $(builddir):$(top_builddir)/wrap/java	\
@@ -75,11 +73,9 @@ ipcmd: Makefile ipcmd.in
 	mv $@.tmp $@
 
 bin_SCRIPTS += ipcmd
-
-EXTRA_DIST  += ipcmd.in
-EXTRA_DIST  += ipcmd.java
-
 CLEANFILES  += ipcmd
+
+EXTRA_DIST  += ipcmd.in ipcmd.java ipcmd-manifest.txt
 
 ipcmd.class: ipcmd.java
 	$(JAVAC) -classpath $(builddir):$(top_builddir)/wrap/java	\
@@ -113,11 +109,9 @@ app: Makefile app.in
 	mv $@.tmp $@
 
 bin_SCRIPTS += app
-
-EXTRA_DIST  += app.in
-EXTRA_DIST  += app.java
-
 CLEANFILES  += app
+
+EXTRA_DIST  += app.in app.java app-manifest.txt
 
 app.class: app.java
 	$(JAVAC) -classpath $(builddir):$(top_builddir)/wrap/java	\
