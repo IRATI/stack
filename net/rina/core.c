@@ -36,7 +36,6 @@ uint32_t rina_version(void)
 
 static __init int rina_core_init(void)
 {
-#if 0
         LOG_FBEGN;
 
         LOG_INFO("RINA stack v%d.%d.%d initializing",
@@ -61,14 +60,12 @@ static __init int rina_core_init(void)
         }
 
         LOG_FEXIT;
-#endif
 
         return 0;
 }
 
 static __exit void rina_core_exit(void)
 {
-#if 0
         LOG_FBEGN;
 
         rina_netlink_exit();
@@ -76,7 +73,7 @@ static __exit void rina_core_exit(void)
         rina_sysfs_exit();
 #endif
         rina_personality_exit();
-#endif
+
         LOG_FEXIT;
 }
 
