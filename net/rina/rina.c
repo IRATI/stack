@@ -35,6 +35,8 @@ static int __init rina_personality_init(void)
 {
         LOG_FBEGN;
 
+        LOG_DBG("Rina personality initializing");
+
         if (kipcm_init())
                 return -1;
 
@@ -73,6 +75,8 @@ static int __init rina_personality_init(void)
 static void __exit rina_personality_exit(void)
 {
         LOG_FBEGN;
+
+        LOG_DBG("Rina personality exiting");
 
 #ifdef CONFIG_SHIM_TCP_UDP
         shim_tcp_udp_exit();
