@@ -24,6 +24,13 @@ config RINA_DEBUG
 	help
 	  No help for the time being
 
+config RINA_UNFILTERED_LOGS
+	bool "Unfiltered logging"
+	default y
+	depends on RINA_DEBUG
+	help
+	  No help for the time being
+
 config RINA_DEBUG_VERBOSE
 	bool "Verbose debugging support (e.g. heartbeats, scopes)"
 	default y

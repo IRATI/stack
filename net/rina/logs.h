@@ -27,8 +27,13 @@
 
 #include <linux/kernel.h>
 
+#ifdef CONFIG_RINA_UNFILTERED_LOGS
+#define __LOG(PFX, LVL, FMT, ARGS...)                                   \
+        do { printk(KERN_NOTICE "rina-" PFX ": " FMT "\n", ##ARGS); } while (0)
+#else
 #define __LOG(PFX, LVL, FMT, ARGS...)                                   \
         do { printk(LVL "rina-" PFX ": " FMT "\n", ##ARGS); } while (0)
+#endif
 
 /* Sorted by "urgency" (high to low) */
 #define LOG_EMERG(FMT, ARGS...) __LOG(RINA_PREFIX, KERN_EMERG,   FMT, ##ARGS)
