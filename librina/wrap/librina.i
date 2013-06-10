@@ -18,7 +18,6 @@
 
 %include <stdint.i>
 %include <stl.i>
-%include <exception.i>
 
 %include "stdlist.i"
 
@@ -55,21 +54,7 @@
         return $jnicall;
  }
 
-/* Macro to map C++ exceptions to Java exceptions*/
-%define WRAP_THROW_EXCEPTION( MATCH, CPPTYPE, JTYPE, JNITYPE )
-%javaexception(JTYPE) MATCH {
-  try {
-    $action
-  } catch (CPPTYPE & e) {
-    jclass eclass = jenv->FindClass(JNITYPE);
-    if (eclass) {
-      jenv->ThrowNew(eclass, e.what());
-    }
-  }
-}
-%enddef
-
-/* Define the class IPC Exception */
+/* Define the class Exception */
 %typemap(javabase) Exception "java.lang.Exception";
 %typemap(javacode) Exception %{
   public String getMessage() {
@@ -77,69 +62,12 @@
   }
 %}
 
-WRAP_THROW_EXCEPTION(rina::Flow::readSDU, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException" );
-WRAP_THROW_EXCEPTION(rina::Flow::writeSDU, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::IPCManager::registerApplication, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::IPCManager::unregisterApplication, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::IPCManager::allocateFlowRequest, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::IPCManager::allocateFlowResponse, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::IPCManager::deallocateFlow, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::IPCProcessFactory::create, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::IPCProcessFactory::destroy, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::IPCProcess::assignToDIF, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::IPCProcess::notifyRegistrationToSupportingDIF, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::IPCProcess::notifyUnregistrationFromSupportingDIF, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::IPCProcess::enroll, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::IPCProcess::disconnectFromNeighbor, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::IPCProcess::registerApplication, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::IPCProcess::unregisterApplication, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::IPCProcess::allocateFlow, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::IPCProcess::queryRIB, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::ApplicationManager::applicationRegistered, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::ApplicationManager::applicationUnregistered, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
-WRAP_THROW_EXCEPTION(rina::ApplicationManager::flowAllocated, rina::IPCException, 
-		"eu.irati.librina.IPCException",
-		"eu/irati/librina/IPCException");
+%typemap(throws, throws="eu.irati.librina.IPCException") rina::IPCException {
+  jclass excep = jenv->FindClass("eu/irati/librina/IPCException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
 
 %{
 #include "exceptions.h"
