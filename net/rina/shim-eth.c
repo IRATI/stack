@@ -111,6 +111,14 @@ int shim_eth_allocate_flow_request(struct name_t *      source,
                 LOG_FEXIT;
 		return -1;
 	}
+	/* FIXME : This should be an IPC Process already existing */
+	ipcp =  kmalloc(sizeof(*ipcp), GFP_KERNEL);
+	if (ipcp == NULL) {
+		LOG_ERR("Cannot allocate %d bytes of kernel memory", sizeof(*ipcp));
+
+		LOG_FEXIT;
+		return -1;
+	}
 	flow->application_owned = 1;
 	flow->ipc_process = ipcp;
 	if (kfifo_alloc(&sdu_ready, PAGE_SIZE, GFP_KERNEL)) {
@@ -125,7 +133,7 @@ int shim_eth_allocate_flow_request(struct name_t *      source,
 		LOG_FEXIT;
 		kfree(flow);
 		kfree(ipcp);
-		kfree(&sdu_ready);
+		kfifo_free(&sdu_ready);
 		return -1;
 	}
 

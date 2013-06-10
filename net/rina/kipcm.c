@@ -123,6 +123,7 @@ int kipcm_remove_entry(port_id_t port_id)
 int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
 {
         const struct flow_t * flow;
+        unsigned int          avail;
 
         LOG_FBEGN;
 
@@ -136,7 +137,6 @@ int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
 
         /* FIXME : Change these stacked ifs with a proper switch */
         if (flow->application_owned) {
-                unsigned int avail;
 
                 avail = kfifo_avail(flow->sdu_ready);
                 if (avail < (sdu->buffer->size + sizeof(size_t))) {
@@ -230,7 +230,7 @@ int  write_sdu(port_id_t            port_id,
                const struct sdu_t * sdu)
 {
         const struct flow_t * flow;
-        int             retval;
+        int                   retval;
 
         LOG_FBEGN;
 
