@@ -131,12 +131,18 @@ CLEANFILES += app.jar
 
 java_DATA += app.jar
 
-installcheck-local:
+installcheck-ipcpd:
 	$(bindir)/ipcpd --help    &&		\
-	$(bindir)/ipcpd --version &&		\
-	$(bindir)/ipcpd --help    &&		\
-	$(bindir)/ipcpd --version &&		\
-	$(bindir)/app   --help    &&		\
-	$(bindir)/app   --version
+	$(bindir)/ipcpd --version
+
+installcheck-ipcmd:
+	$(bindir)/ipcmd --help    &&		\
+	$(bindir)/ipcmd --version
+
+installcheck-app:
+	$(bindir)/app --help    &&		\
+	$(bindir)/app --version
+
+installcheck-local: installcheck-ipcpd installcheck-ipcmd
 
 endif
