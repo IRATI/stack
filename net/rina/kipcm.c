@@ -99,7 +99,7 @@ int kipcm_add_entry(port_id_t port_id, const struct flow_t * flow)
         return 0;
 }
 
-static struct flow_t * retrieve_flow_by_port_id(port_id_t port_id)
+const static struct flow_t * retrieve_flow_by_port_id(port_id_t port_id)
 {
         struct port_id_to_flow_t * cur;
 
@@ -122,7 +122,7 @@ int kipcm_remove_entry(port_id_t port_id)
 
 int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
 {
-        struct flow_t * flow;
+        const struct flow_t * flow;
 
         LOG_FBEGN;
 
@@ -178,9 +178,9 @@ int read_sdu(port_id_t      port_id,
              bool_t         block,
              struct sdu_t * sdu)
 {
-        struct flow_t * flow;
-        size_t          size;
-        char *          data;
+        const struct flow_t * flow;
+        size_t                size;
+        char *                data;
 
         LOG_FBEGN;
 
@@ -229,7 +229,7 @@ int read_sdu(port_id_t      port_id,
 int  write_sdu(port_id_t            port_id,
                const struct sdu_t * sdu)
 {
-        struct flow_t * flow;
+        const struct flow_t * flow;
         int             retval;
 
         LOG_FBEGN;
