@@ -48,9 +48,9 @@ int rina_netlink_init(void)
 
 void rina_netlink_exit(void)
 {
-        LOG_FBEGN;
-	
 	int ret;
+        
+	LOG_FBEGN;
 
 	/*unregister the functions*/
 	ret = genl_unregister_ops(&nl_rina_family, &nl_rina_ops_echo);
@@ -70,10 +70,65 @@ void rina_netlink_exit(void)
 }
 
 /* handler */
-static int nl_rina_echo(struct sk_buff *skb, struct genl_info *info)
+static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
 {
 	/* message handling code goes here; return 0 on success, negative
 	* values on failure */
+	int ret;
+	struct nlattr *na;
+	struct sk_buff *skb;
+	void *msg_head;
+	char * mydata;
+	skb = genlmsg_new(NLMSG_GOODSIZE, GFP_KERNEL);
+
 	LOG_DBG("ECHOING MESSAGE");
+
+	if (info == NULL){
+		LOG_DBG("info input parameter is NULL");
+		return -1;
+	}
+
+	na = info->attrs[NETLINK_RINA_A_MSG];
+	if (na){
+		mydata = (char *)nla_data(na);
+			if (mydata == NULL){
+				LOG_DBG("error while receiving data\n");
+				return -1;
+			}
+			else
+				LOG_DBG("received: %s\n", mydata);
+		}
+	else{
+		LOG_DBG("no info->attrs %i\n", NETLING_RINA_A_MSG);
+		return -1;
+	}
+
+	if (skb == NULL){
+		LOG_DBG("COULD NOT ALLOCATE sk_buff");
+		return -1;
+	}
+
+	msg_head = genlmsg_put(skb, 0, info->snd_seq+1, &nl_rina_family, 0, NETLINK_RINA_C_ECHO);
+	if (msg_head == NULL) {
+		ret = -ENOMEM;
+		return -1;
+	}
+
+	ret = nla_put_string(skb, NETLINK_RINA_A_MSG, "hello world from kernel space");
+	if (ret!= 0){
+		LOG_DBG("Could not add string message to echo");
+		return -1;
+	}
+
+	genlmsg_end(skb, msg_head);
+
+	ret = genlmsg_unicast(&init_net,skb,info->snd_portid);
+	if (ret != 0){
+		LOG_DBG("COULD NOT SEND BACK UNICAST MESSAGE");
+		return -1;
+	}
+
+	return 0;
+
 }
 
