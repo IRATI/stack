@@ -29,19 +29,14 @@
 #include "netlink.h"
 #include "personality.h"
 
-#include "kipcm.h"
-#include "efcp.h"
-#include "rmt.h"
-#include "shim-eth.h"
-#include "shim-tcp-udp.h"
-
 static uint32_t version = MK_RINA_VERSION(0, 0, 0);
 
 uint32_t rina_version(void)
 { return version; }
 
-static __init int rina_init(void)
+static __init int rina_core_init(void)
 {
+#if 0
         LOG_FBEGN;
 
         LOG_INFO("RINA stack v%d.%d.%d initializing",
@@ -65,26 +60,15 @@ static __init int rina_init(void)
                 rina_personality_exit();                
         }
 
-        /* The following code has to be moved into the default personality */
-
-        /* FIXME: Add proper checks over return values */
-        kipcm_init();
-        efcp_init();
-        rmt_init();
-#ifdef CONFIG_SHIM_ETH
-        shim_eth_init();
-#endif
-#ifdef CONFIG_SHIM_TCP_UDP
-        shim_tcp_udp_init();
-#endif
-
         LOG_FEXIT;
+#endif
 
         return 0;
 }
 
-static __exit void rina_exit(void)
+static __exit void rina_core_exit(void)
 {
+#if 0
         LOG_FBEGN;
 
         rina_netlink_exit();
@@ -92,22 +76,13 @@ static __exit void rina_exit(void)
         rina_sysfs_exit();
 #endif
         rina_personality_exit();
-
-#ifdef CONFIG_SHIM_TCP_UDP
-        shim_tcp_udp_exit();
 #endif
-#ifdef CONFIG_SHIM_ETH
-        shim_eth_exit();
-#endif
-        rmt_exit();
-        efcp_exit();
-        kipcm_exit();
-
         LOG_FEXIT;
 }
 
-module_init(rina_init);
-module_exit(rina_exit);
+
+module_init(rina_core_init);
+module_exit(rina_core_exit);
 
 MODULE_DESCRIPTION("RINA stack");
 

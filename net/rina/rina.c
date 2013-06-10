@@ -1,5 +1,5 @@
 /*
- * RINA (module)
+ * RINA personality
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan <miquel.tarzan@i2cat.net>
@@ -18,3 +18,81 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
+#include <linux/module.h>
+#include <linux/init.h>
+
+#define RINA_PREFIX "personality-default"
+
+#include "logs.h"
+#include "kipcm.h"
+#include "efcp.h"
+#include "rmt.h"
+#include "shim-eth.h"
+#include "shim-tcp-udp.h"
+
+static __init int rina_personality_init(void)
+{
+        LOG_FBEGN;
+
+        if (kipcm_init())
+                return -1;
+
+        if (efcp_init()) {
+                kipcm_exit();
+                return -1;
+        }
+
+        if (rmt_init()) {
+                efcp_exit();
+                kipcm_exit();
+        }
+
+#ifdef CONFIG_SHIM_ETH
+        if (shim_eth_init()) {
+                rmt_exit();
+                efcp_exit();
+                kipcm_exit();
+        }
+#endif
+#ifdef CONFIG_SHIM_TCP_UDP
+        if (shim_tcp_udp_init()) {
+                shim_eth_exit();
+                rmt_exit();
+                efcp_exit();
+                kipcm_exit();
+        }
+#endif
+
+        LOG_FEXIT;
+        return 0;
+}
+
+static __exit void rina_personality_exit(void)
+{
+        LOG_FBEGN;
+
+#ifdef CONFIG_SHIM_TCP_UDP
+        shim_tcp_udp_exit();
+#endif
+#ifdef CONFIG_SHIM_ETH
+        shim_eth_exit();
+#endif
+        rmt_exit();
+        efcp_exit();
+        kipcm_exit();
+
+        LOG_FEXIT;
+}
+
+module_init(rina_personality_init);
+module_exit(rina_personality_exit);
+
+MODULE_DESCRIPTION("RINA default personality");
+
+MODULE_LICENSE("GPL v2");
+
+MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+MODULE_AUTHOR("Leonardo Bergesio <leonardo.bergesio@i2cat.net>");
+MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
+MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");

@@ -29,16 +29,18 @@
 #include "debug.h"
 #include "kipcm.h"
 
-/* FIXME: Remove all the statics here */
-static LIST_HEAD(id_to_ipcp);
-static LIST_HEAD(port_id_to_flow);
+/* FIXME: Remove all the statics here
+ * FIXED: I have removed them, is it ok now?
+ */
+LIST_HEAD(id_to_ipcp);
+LIST_HEAD(port_id_to_flow);
 
 /* FIXME: This one will be "created and published" by the container */
 static struct kipc_t *kipcm;
 
 int kipcm_init()
 {
-        LOG_FBEGN;
+	LOG_FBEGN;
 
         kipcm = kmalloc(sizeof(*kipcm), GFP_KERNEL);
         if (!kipcm) {
@@ -48,7 +50,6 @@ int kipcm_init()
                 return -1;
         }
 
-        /* FIXME: Why ? */
         kipcm->id_to_ipcp      = &id_to_ipcp;
         kipcm->port_id_to_flow = &port_id_to_flow;
 
@@ -98,7 +99,7 @@ int kipcm_add_entry(port_id_t port_id, const struct flow_t * flow)
         return 0;
 }
 
-static struct flow_t * retrieve_flow_by_port_id(port_id_t port_id)
+const static struct flow_t * retrieve_flow_by_port_id(port_id_t port_id)
 {
         struct port_id_to_flow_t * cur;
 
@@ -121,7 +122,8 @@ int kipcm_remove_entry(port_id_t port_id)
 
 int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
 {
-        struct flow_t * flow;
+        const struct flow_t * flow;
+        unsigned int          avail;
 
         LOG_FBEGN;
 
@@ -135,7 +137,6 @@ int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
 
         /* FIXME : Change these stacked ifs with a proper switch */
         if (flow->application_owned) {
-                unsigned int avail;
 
                 avail = kfifo_avail(flow->sdu_ready);
                 if (avail < (sdu->buffer->size + sizeof(size_t))) {
@@ -177,9 +178,9 @@ int read_sdu(port_id_t      port_id,
              bool_t         block,
              struct sdu_t * sdu)
 {
-        struct flow_t * flow;
-        size_t          size;
-        char *          data;
+        const struct flow_t * flow;
+        size_t                size;
+        char *                data;
 
         LOG_FBEGN;
 
@@ -228,8 +229,8 @@ int read_sdu(port_id_t      port_id,
 int  write_sdu(port_id_t            port_id,
                const struct sdu_t * sdu)
 {
-        struct flow_t * flow;
-        int             retval;
+        const struct flow_t * flow;
+        int                   retval;
 
         LOG_FBEGN;
 

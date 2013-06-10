@@ -217,7 +217,7 @@ struct id_to_ipcp_t {
 
 struct port_id_to_flow_t {
         port_id_t         port_id; /* key */
-        struct flow_t   * flow; /* value */
+        const struct flow_t   * flow; /* value */
         struct list_head  list;
 };
 

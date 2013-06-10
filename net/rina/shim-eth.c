@@ -20,10 +20,11 @@
  */
 
 #include <linux/if_ether.h>
+#include <linux/kfifo.h>
 
 #define RINA_PREFIX "shim-eth"
 
-#include "../logs.h"
+#include "logs.h"
 #include "shim-eth.h"
 
 LIST_HEAD(shim_eth);
@@ -32,15 +33,16 @@ static ipc_process_id_t count = 0;
 
 ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 {
-        LOG_FBEGN;
-
-        /* Unsure if I can call return count++ and count gets incremented after
-	   function call? This is a workaround, fix if possible. */
+	/* Unsure if I can call return count++ and count gets incremented after
+	function call? This is a workaround, fix if possible. */
 	ipc_process_id_t nr = count++;
-
-	/* Retrieve configuration of IPC process from params */
 	struct shim_eth_info_t shim_eth_info;
 	struct ipc_config_t *ipc_config = config[0];
+	struct shim_eth_instance_t instance;
+
+        LOG_FBEGN;
+
+	/* Retrieve configuration of IPC process from params */
 	while (ipc_config != 0) {
 		switch (ipc_config->type) {
 		case IPC_CONFIG_NAME:
@@ -58,9 +60,7 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 		++ipc_config;
 	}
 
-	struct shim_eth_instance_t instance = {
-		.info = shim_eth_info
-	};
+	instance.info = shim_eth_info;
 	
 	struct shim_eth_t tmp = {
 		.shim_eth_instance = instance,
@@ -82,12 +82,62 @@ int shim_eth_destroy(ipc_process_id_t ipc_process_id)
 
 	return 0;
 }
-
-port_id_t shim_eth_allocate_flow_request(struct name_t *      source,
-                                         struct name_t *      dest,
-                                         struct flow_spec_t * flow_spec)
+/* FIXME : Tentative implementation to compare with the kipcm code. Please
+ * 		Sander review it. Miquel.
+ */
+int shim_eth_allocate_flow_request(struct name_t *      source,
+                                   struct name_t *      dest,
+                                   struct flow_spec_t * flow_spec,
+                                   port_id_t            port_id)
 {
-	LOG_DBG("Allocate flow request");
+	struct flow_t * flow;
+	struct kfifo    sdu_ready;
+	struct ipc_process_t * ipcp;
+
+	LOG_FBEGN;
+
+	/* FIXME : This reference should be taken from the shim-eth ipc process */
+	ipcp = kmalloc(sizeof(*ipcp), GFP_KERNEL);
+	if (ipcp == NULL) {
+		LOG_ERR("Cannot allocate %d bytes of kernel memory", sizeof(*ipcp));
+
+		LOG_FEXIT;
+		return -1;
+	}
+	flow = kmalloc(sizeof(*flow), GFP_KERNEL);
+	if (flow == NULL) {
+		LOG_ERR("Cannot allocate %d bytes of kernel memory", sizeof(*flow));
+
+                LOG_FEXIT;
+		return -1;
+	}
+	/* FIXME : This should be an IPC Process already existing */
+	ipcp =  kmalloc(sizeof(*ipcp), GFP_KERNEL);
+	if (ipcp == NULL) {
+		LOG_ERR("Cannot allocate %d bytes of kernel memory", sizeof(*ipcp));
+
+		LOG_FEXIT;
+		return -1;
+	}
+	flow->application_owned = 1;
+	flow->ipc_process = ipcp;
+	if (kfifo_alloc(&sdu_ready, PAGE_SIZE, GFP_KERNEL)) {
+		LOG_FEXIT;
+		kfree(flow);
+		kfree(ipcp);
+		return -1;
+	}
+/* FIXME: This doesn't compile */
+	flow->sdu_ready = &sdu_ready;
+	if (kipcm_add_entry(port_id, (const struct flow_t *)flow)) {
+		LOG_FEXIT;
+		kfree(flow);
+		kfree(ipcp);
+		kfifo_free(&sdu_ready);
+		return -1;
+	}
+
+	LOG_FEXIT;
 
 	return 0;
 }
