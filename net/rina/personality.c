@@ -45,6 +45,9 @@ static int is_ok(const struct personality_t * pers)
 int rina_personality_init(void)
 {
         personality = 0;
+
+        LOG_DBG("Personality initialized");
+
         return 0;
 }
 
@@ -53,6 +56,8 @@ void rina_personality_exit(void)
         if (personality)
                 personality->exit();
         personality = 0;
+
+        LOG_DBG("Personality exit successful");
 }
 
 int rina_personality_add(const struct personality_t * pers)
@@ -60,10 +65,15 @@ int rina_personality_add(const struct personality_t * pers)
         if (!pers)
                 BUG();
 
-        if (!is_ok(pers))
+        if (!is_ok(pers)) {
+                LOG_ERR("Cannot add personality, it's bogus");
                 return -1;
+        }
+
 
         if (!personality) {
+                LOG_DBG("Adding new personality");
+
                 int retval;
 
                 personality = pers;
@@ -73,6 +83,7 @@ int rina_personality_add(const struct personality_t * pers)
                         personality = 0;
                         return retval;
                 }
+                LOG_DBG("Personality init returned %d", retval);
 
                 return retval;
         }
@@ -84,6 +95,7 @@ int rina_personality_add(const struct personality_t * pers)
 int rina_personality_remove(const struct personality_t * pers)
 {
         if (personality == pers) {
+                LOG_DBG("Removing personality");
                 personality->exit();
                 personality = 0;
                 return 0;
