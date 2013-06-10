@@ -55,10 +55,15 @@ test_03_SOURCES  = test-03.cc
 test_03_CPPFLAGS = $(COMMONCPPFLAGS)
 test_03_LDFLAGS  = $(COMMONLDFLAGS)
 
+test_netlink_SOURCES  = test-netlink.cc
+test_netlink_CPPFLAGS = $(COMMONCPPFLAGS)
+test_netlink_LDFLAGS  = $(COMMONLDFLAGS)
+
 check_PROGRAMS =				\
 	test-01					\
 	test-02					\
-	test-03
+	test-03					\
+	test-netlink
 
 XFAIL_TESTS =					\
 	test-03

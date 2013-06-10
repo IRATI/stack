@@ -65,4 +65,6 @@ int main()
 	nlmsg_free(msg);
 	res = nl_recvmsgs_default(sock);
 	printf("After receive %i.\n", res);
+
+        exit(0);
 }
