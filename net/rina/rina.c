@@ -98,7 +98,7 @@ module_exit(rina_personality_exit);
 
 MODULE_DESCRIPTION("RINA default personality");
 
-MODULE_LICENSE("GPL v2");
+MODULE_LICENSE("GPL");
 
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
 MODULE_AUTHOR("Leonardo Bergesio <leonardo.bergesio@i2cat.net>");

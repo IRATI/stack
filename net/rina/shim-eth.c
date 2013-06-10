@@ -136,6 +136,7 @@ int shim_eth_allocate_flow_request(struct name_t *      source,
 		return -1;
 	}
 
+#if 0
         /* FIXME: This doesn't compile */
 	flow->sdu_ready = &sdu_ready;
 	if (kipcm_add_entry(port_id, (const struct flow_t *)flow)) {
@@ -145,6 +146,7 @@ int shim_eth_allocate_flow_request(struct name_t *      source,
 		kfifo_free(&sdu_ready);
 		return -1;
 	}
+#endif
 
 	LOG_FEXIT;
 
@@ -214,6 +216,7 @@ int shim_eth_ipc_create(const struct name_t * name,
 	return 0;
 }
 
+#if 0
 int shim_eth_ipc_configure(ipc_process_id_t ipcp_id,
                            const struct ipc_process_shim_ethernet_conf_t *configuration)
 {
@@ -221,3 +224,4 @@ int shim_eth_ipc_configure(ipc_process_id_t ipcp_id,
 
 	return 0;
 }
+#endif
