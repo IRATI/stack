@@ -114,10 +114,8 @@ int  shim_eth_unregister_application(struct name_t * name);
 int  shim_eth_write_sdu(port_id_t port_id, const struct sdu_t * sdu);
 int  shim_eth_ipc_create(const struct name_t * name,
 			 ipc_process_id_t      ipcp_id);
-#if 0
 int  shim_eth_ipc_configure(ipc_process_id_t      ipcp_id,
 			    const struct ipc_process_shim_ethernet_conf_t *
                             configuration);
-#endif
 
 #endif
