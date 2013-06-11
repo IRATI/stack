@@ -24,11 +24,11 @@ librina_la_LDFLAGS =
 librina_la_CPPFLAGS =				\
 	-I$(top_srcdir)/include			\
 	$(LIBNL3_CFLAGS)			\
-	$(LIBNLGL3_CFLAGS)			\
+	$(LIBNLGENL3_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
 
 librina_la_LIBADD =				\
 	$(LIBNL3_LIBS)				\
-	$(LIBNLGNL3_LIBS)
+	$(LIBNLGENL3_LIBS)
 
 lib_LTLIBRARIES += librina.la

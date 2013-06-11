@@ -37,10 +37,12 @@ EXTRA_DIST += SWIGTest.java
 COMMONCPPFLAGS =				\
 	-I$(top_srcdir)/include			\
 	$(LIBNL3_CFLAGS)			\
-	$(LIBNLGL3_CFLAGS)			\
+	$(LIBNLGENL3_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
 
 COMMONLDFLAGS =					\
+	$(LIBNL3_LIBS)				\
+	$(LIBNLGENL3_LIBS)			\
 	$(top_builddir)/src/librina.la
 
 test_01_SOURCES  = test-01.cc
