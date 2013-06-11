@@ -25,33 +25,71 @@
 
 #include "common.h"
 
+#if 0
+/* FIXME: Add and enhance these types, please remove them from KIPCM */
+enum shim_config_type_t {
+        SHIM_CONFIG_UINT   = 1,
+        SHIM_CONFIG_STRING,
+};
+
+struct shim_config_value_t {
+        enum shim_config_type_t type;
+        void *                  data;
+};
+
+struct shim_config_entry_t {
+        char *                       name;
+        struct shim_config_value_t * value;
+};
+#endif
+
 struct shim_t {
         /* Might be removed when deemed unnecessary */
-	int  (* init)(void);
-	void (* exit)(void);
-
         void * data;
 
+	int  (* init)(void * opaque);
+	void (* exit)(void * opaque);
+
         /* Functions exported to the shim user */
-	int  (* ipc_create)(ipc_process_id_t      ipc_process_id,
+	int  (* ipc_create)(void *                opaque,
+                            ipc_process_id_t      ipc_process_id,
                             const struct name_t * name);
-	int  (* ipc_configure)(ipc_process_id_t           ipc_process_id,
+        /* FIXME: Must take a list of entries */
+	int  (* ipc_configure)(void *                     opaque,
+                               ipc_process_id_t           ipc_process_id,
                                const struct shim_conf_t * configuration);
-	int  (* ipc_destroy)(ipc_process_id_t ipc_process_id);
+	int  (* ipc_destroy)(void *           opaque,
+                             ipc_process_id_t ipc_process_id);
 
-	int  (* flow_allocate_request)(const struct name_t      * source,
-                                       const struct name_t      * dest,
+	int  (* flow_allocate_request)(void *                     opaque,
+                                       const struct name_t *      source,
+                                       const struct name_t *      dest,
                                        const struct flow_spec_t * flow_spec,
-                                       port_id_t                * id);
-	int  (* flow_allocate_response)(port_id_t           id,
+                                       port_id_t *                id);
+	int  (* flow_allocate_response)(void *              opaque,
+                                        port_id_t           id,
                                         response_reason_t * response);
-	int  (* flow_deallocate)(port_id_t id);
+	int  (* flow_deallocate)(void *    opaque,
+                                 port_id_t id);
 
-	int  (* application_register)(const struct name_t * name);
-	int  (* application_unregister)(const struct name_t * name);
+	int  (* application_register)(void *                opaque,
+                                      const struct name_t * name);
+	int  (* application_unregister)(void *                opaque,
+                                        const struct name_t * name);
 
-	int  (* sdu_write)(port_id_t            id,
+	int  (* sdu_write)(void *               opaque,
+                           port_id_t            id,
                            const struct sdu_t * sdu);
+        /* FIXME: Should we keep the following ? */
+        int  (* sdu_read)(void *         opaque,
+                          port_id_t      id,
+                          struct sdu_t * sdu);
 };
+
+int  shim_init(void);
+void shim_exit(void);
+
+int  shim_register(struct shim_t * shim);
+int  shim_unregister(struct shim_t * shim);
 
 #endif
