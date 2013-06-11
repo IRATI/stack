@@ -21,6 +21,7 @@
 
 #include <linux/linkage.h>
 #include <linux/kernel.h>
+#include <linux/syscalls.h>
 #include <linux/stringify.h>
 
 #define RINA_PREFIX "syscalls"
@@ -29,7 +30,7 @@
 #include "utils.h"
 #include "personality.h"
 
-#define RUN_PERSONALITY(HOOK, ARGS...)                                  \
+#define CALL_PERSONALITY(HOOK, ARGS...)                                 \
 do {                                                                    \
 	if (personality == NULL) {                                      \
                 LOG_ERR("No personality registered");                   \
@@ -44,43 +45,43 @@ do {                                                                    \
         }                                                               \
                                                                         \
         ASSERT(personality -> HOOK);                                    \
-        return personality -> HOOK (personality->data, ARGS);           \
+        return personality -> HOOK (personality->data, ##ARGS);         \
 } while (0)
 
-asmlinkage long
-sys_ipc_process_create(const struct name_t __user * name,
-                       ipc_process_id_t             id,
-                       dif_type_t                   type)
-{ RUN_PERSONALITY(ipc_create, name, id, type); }
+SYSCALL_DEFINE3(ipc_create,
+                const struct name_t __user *, name,
+                ipc_process_id_t,             id,
+                dif_type_t,                   type)
+{ CALL_PERSONALITY(ipc_create, name, id, type); }
                 
-asmlinkage long
-sys_ipc_process_configure(ipc_process_id_t                         id,
-                          const struct ipc_process_conf_t __user * config)
-{ RUN_PERSONALITY(ipc_configure, id, config); }
+SYSCALL_DEFINE2(ipc_configure,
+                ipc_process_id_t,                         id,
+                const struct ipc_process_conf_t __user *, config)
+{ CALL_PERSONALITY(ipc_configure, id, config); }
 
-asmlinkage long
-sys_ipc_process_destroy(ipc_process_id_t id)
-{ RUN_PERSONALITY(ipc_destroy, id); }
+SYSCALL_DEFINE1(ipc_destroy,
+                ipc_process_id_t, id)
+{ CALL_PERSONALITY(ipc_destroy, id); }
 
-asmlinkage long
-sys_read_sdu(port_id_t             id,
-             struct sdu_t __user * sdu)
-{ RUN_PERSONALITY(sdu_read, id, sdu); }
+SYSCALL_DEFINE2(sdu_read,
+                port_id_t,             id,
+                struct sdu_t __user *, sdu)
+{ CALL_PERSONALITY(sdu_read, id, sdu); }
 
-asmlinkage long
-sys_write_sdu(port_id_t                   id,
-              const struct sdu_t __user * sdu)
-{ RUN_PERSONALITY(sdu_write, id, sdu); }
+SYSCALL_DEFINE2(sdu_write,
+                port_id_t,                   id,
+                const struct sdu_t __user *, sdu)
+{ CALL_PERSONALITY(sdu_write, id, sdu); }
 
-asmlinkage long
-sys_efcp_create(const struct connection_t __user * connection)
-{ RUN_PERSONALITY(connection_create, connection); }
+SYSCALL_DEFINE1(connection_create,
+                const struct connection_t __user *, connection)
+{ CALL_PERSONALITY(connection_create, connection); }
 
-asmlinkage long
-sys_efcp_destroy(cep_id_t id)
-{ RUN_PERSONALITY(connection_destroy, id); }
+SYSCALL_DEFINE1(connection_destroy,
+                cep_id_t, id)
+{ CALL_PERSONALITY(connection_destroy, id); }
 
-asmlinkage long
-sys_efcp_update(cep_id_t from_id,
-                cep_id_t to_id)
-{ RUN_PERSONALITY(connection_update, from_id, to_id); }
+SYSCALL_DEFINE2(connection_update,
+                cep_id_t, from_id,
+                cep_id_t, to_id)
+{ CALL_PERSONALITY(connection_update, from_id, to_id); }
