@@ -3,8 +3,8 @@
 #
 
 # built-ins
-obj-$(CONFIG_RINA)       += core.o personality.o syscalls.o netlink.o
-obj-$(CONFIG_RINA_SYSFS) += sysfs.o
+obj-$(CONFIG_RINA)             += core.o personality.o syscalls.o netlink.o
+#obj-$(CONFIG_RINA_SYSFS)       +=
 obj-$(CONFIG_RINA_PERSONALITY) += rina_personality.o
 
 # module(s)

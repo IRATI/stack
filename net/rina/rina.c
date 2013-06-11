@@ -31,7 +31,7 @@
 #include "shim-eth.h"
 #include "shim-tcp-udp.h"
 
-static int __init rina_personality_init(void)
+static int __init module_init(void)
 {
         LOG_FBEGN;
 
@@ -72,7 +72,7 @@ static int __init rina_personality_init(void)
         return 0;
 }
 
-static void __exit rina_personality_exit(void)
+static void __exit module_exit(void)
 {
         LOG_FBEGN;
 
@@ -93,8 +93,8 @@ static void __exit rina_personality_exit(void)
         LOG_FEXIT;
 }
 
-module_init(rina_personality_init);
-module_exit(rina_personality_exit);
+module_init(module_init);
+module_exit(module_exit);
 
 MODULE_DESCRIPTION("RINA default personality");
 
