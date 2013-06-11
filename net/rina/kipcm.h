@@ -228,18 +228,17 @@ int  kipcm_add_entry(port_id_t port_id, const struct flow_t * flow);
 int  kipcm_remove_entry(port_id_t port_id);
 int  kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu);
 
-/* FIXME: The following functions should be prefixed with kipcm_ */
-int  read_sdu(port_id_t      port_id,
+int  kipcm_read_sdu(port_id_t      port_id,
 	      bool_t         block,
 	      struct sdu_t * sdu);
-int  write_sdu(port_id_t            port_id,
+int  kipcm_write_sdu(port_id_t            port_id,
 	       const struct sdu_t * sdu);
 
-int  ipc_process_create(const struct name_t * name,
+int  kipcm_ipc_process_create(const struct name_t * name,
 			ipc_process_id_t      ipcp_id,
 			dif_type_t            type);
-int  ipc_process_configure(ipc_process_id_t                  ipcp_id,
+int  kipcm_ipc_process_configure(ipc_process_id_t                  ipcp_id,
 			   const struct ipc_process_conf_t * configuration);
-int  ipc_process_destroy(ipc_process_id_t ipcp_id);
+int  kipcm_ipc_process_destroy(ipc_process_id_t ipcp_id);
 
 #endif
