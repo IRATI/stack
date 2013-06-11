@@ -41,6 +41,10 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 	struct shim_eth_info_t shim_eth_info;
 	struct ipc_config_t *ipc_config = config[0];
 	struct shim_eth_instance_t instance;
+	struct shim_eth_t tmp= {
+		.ipc_process_id = nr,
+		.list = LIST_HEAD_INIT(tmp.list),
+	};
 
         LOG_FBEGN;
 
@@ -63,13 +67,7 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 	}
 
 	instance.info = shim_eth_info;
-	
-        /* FIXME: Please stick to C90 !!! */
-	struct shim_eth_t tmp = {
-		.shim_eth_instance = instance,
-		.ipc_process_id = nr,
-		.list = LIST_HEAD_INIT(tmp.list),
-	};
+	tmp.shim_eth_instance = instance;
        
 	list_add(&tmp.list, &shim_eth);
 	/* FIXME: Add handler to correct interface and vlan id */
