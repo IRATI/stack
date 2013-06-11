@@ -20,12 +20,16 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/module.h>
 #include <linux/if_ether.h>
 #include <linux/kfifo.h>
 
 #define RINA_PREFIX "shim-eth"
 
 #include "logs.h"
+
+#if 0
+
 #include "kipcm.h" /* FIXME: should be removed */
 #include "shim-eth.h"
 
@@ -225,3 +229,30 @@ int shim_eth_ipc_configure(ipc_process_id_t ipcp_id,
 	return 0;
 }
 #endif
+
+#endif
+
+static int __init mod_init(void)
+{
+        LOG_FBEGN;
+        LOG_FEXIT;
+
+        return 0;
+}
+
+static void __exit mod_exit(void)
+{
+        LOG_FBEGN;
+        LOG_FEXIT;
+}
+
+module_init(mod_init);
+module_exit(mod_exit);
+
+MODULE_DESCRIPTION("RINA Shim IPC over Ethernet");
+
+MODULE_LICENSE("GPL");
+
+MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
+MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
