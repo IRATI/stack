@@ -410,11 +410,13 @@ int  ipc_process_configure(ipc_process_id_t                  ipcp_id,
         switch (ipc_process->type) {
         case DIF_TYPE_SHIM_ETH:
                 conf = configuration->ipc_process_conf.shim_eth_ipcp_conf;
+#if 0
                 if (shim_eth_ipc_configure(ipcp_id, conf)) {
                         LOG_ERR("Failed configuring the SHIM IPC Process");
                         LOG_FEXIT;
 
                         return -1;
+#endif
                 }
                 break;
         case DIF_TYPE_NORMAL:
