@@ -23,6 +23,8 @@
 #define RINA_PREFIX "shim"
 
 #include "logs.h"
+#include "utils.h"
+#include "debug.h"
 #include "shim.h"
 
 int  shim_init(void)
@@ -42,7 +44,7 @@ static int is_ok(const struct shim_t * shim)
             shim->ipc_destroy             &&
             shim->sdu_read                &&
             shim->sdu_write               &&
-            shim->flow_allocation_request &&
+            shim->flow_allocate_request   &&
             shim->flow_allocate_response  &&
             shim->flow_deallocate         &&
             shim->application_register    &&
