@@ -21,7 +21,7 @@
 #ifndef RINA_SHIM_ETH_H
 #define RINA_SHIM_ETH_H
 
-#include <linux/hashtable.h>
+#include <linux/list.h>
 
 #include "kipcm.h"
 #include "common.h"

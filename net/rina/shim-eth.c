@@ -58,6 +58,9 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 		case IPC_CONFIG_STRING:
 			shim_eth_info.interface_name = 
 				(string_t *) ipc_config->value;
+			break;
+		default:
+			break;
 		}
 		++ipc_config;
 	}
