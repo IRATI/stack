@@ -39,9 +39,18 @@ namespace rina {
 std::string getVersion();
 
 /**
+ * A class that can be printed as a String
+ */
+class StringConvertable{
+    public:
+    virtual std::string toString () = 0;
+    virtual ~StringConvertable(){}
+};
+
+/**
  * Contains an application process naming information
  */
-class ApplicationProcessNamingInformation {
+class ApplicationProcessNamingInformation: public StringConvertable {
 	/**
 	 * The process_name identifies an application process within the
 	 * application process namespace. This value is required, it
@@ -89,6 +98,7 @@ public:
 	void setProcessInstance(const std::string& processInstance);
 	const std::string& getProcessName() const;
 	void setProcessName(const std::string& processName);
+	std::string toString ();
 };
 
 /**

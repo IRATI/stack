@@ -19,9 +19,9 @@
 #define RINA_PREFIX "common"
 #include "logs.h"
 
-namespace rina{
+namespace rina {
 
-std::string getVersion(){
+std::string getVersion() {
 	return VERSION;
 }
 
@@ -168,6 +168,12 @@ const std::string & ApplicationProcessNamingInformation::getProcessName() const 
 void ApplicationProcessNamingInformation::setProcessName(
 		const std::string & processName) {
 	this->processName = processName;
+}
+
+std::string ApplicationProcessNamingInformation::toString() {
+	return "Process name: " + processName + "; Process instance: "
+			+ processInstance + "; Entity name: " + entityName
+			+ "; Entity instance: " + entityInstance;
 }
 
 /* CLASS FLOW SPECIFICATION */

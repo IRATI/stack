@@ -1,5 +1,9 @@
+import java.util.Iterator;
+
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.ApplicationRegistrationVector;
 import eu.irati.librina.Flow;
+import eu.irati.librina.FlowPointerVector;
 import eu.irati.librina.FlowSpecification;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.IPCManager;
@@ -73,6 +77,13 @@ public class app {
 		flow.readSDU(sdu);
 		System.out.println("Read "+sdu.length+" bytes");
 		
+		System.out.println("\nLISTING ALLOCATED FLOWS");
+		FlowPointerVector allocatedFlows = ipcManager.getAllocatedFlows();
+		for(int i=0; i<allocatedFlows.size(); i++){
+			System.out.println("Got flow with portid " +allocatedFlows.get(i).getPortId()+
+					", using DIF "+allocatedFlows.get(i).getDIFName().getProcessName());
+		}
+		
 		System.out.println("\nDEALLOCATING THE FLOW");
 		ipcManager.deallocateFlow(flow.getPortId());
 		System.out.println("Flow deallocated");
@@ -81,5 +92,29 @@ public class app {
 		}catch(IPCException ex){
 			System.out.println("Caught expected exception: "+ex.getMessage());
 		}
+		
+		System.out.println("\nREGISTERING APPLICATIONS");
+		ApplicationProcessNamingInformation difName = new ApplicationProcessNamingInformation("/difs/Test.DIF", "");
+		ApplicationProcessNamingInformation difName2 = new ApplicationProcessNamingInformation("/difs/Test2.DIF", "");
+		ipcManager.registerApplication(sourceNamingInfo, difName);
+		ipcManager.registerApplication(sourceNamingInfo, difName2);
+		ipcManager.registerApplication(destNamingInfo, difName);
+		
+		System.out.println("\nLISTING REGISTERED APPLICATIONS");
+		ApplicationRegistrationVector registeredApplications = ipcManager.getRegisteredApplications();
+		Iterator<ApplicationProcessNamingInformation> iterator = null;
+		for(int i=0; i<registeredApplications.size(); i++){
+			System.out.println("Application "+registeredApplications.get(i).getApplicationName() + " registered in DIFs: ");
+			iterator = registeredApplications.get(i).getDIFNames().iterator();
+			while(iterator.hasNext()){
+				System.out.println(iterator.next());
+			}
+			
+		}
+		
+		System.out.println("\nUNREGISTERING APPLICATIONS");
+		ipcManager.unregisterApplication(sourceNamingInfo, difName);
+		ipcManager.unregisterApplication(sourceNamingInfo, difName2);
+		ipcManager.unregisterApplication(destNamingInfo, difName);
 	}
 }

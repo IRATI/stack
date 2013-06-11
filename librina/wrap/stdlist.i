@@ -31,5 +31,6 @@ namespace std {
         void pop_back();
         %rename(clearFirst) pop_front;
         void pop_front();
+        void remove(const value_type& x);
    };
 }

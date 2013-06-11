@@ -123,6 +123,8 @@ IPCProcess * IPCProcessFactory::create(
 }
 
 void IPCProcessFactory::destroy(unsigned int ipcProcessId) throw (IPCException) {
+	LOG_DBG("IPCProcessFactory::destroy called");
+
 	std::map<int, IPCProcess*>::iterator iterator;
 	iterator = ipcProcesses.find(ipcProcessId);
 	if (iterator == ipcProcesses.end()) {

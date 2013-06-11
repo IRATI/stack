@@ -92,12 +92,65 @@
 %include "librina-application.h"
 %include "librina-ipc-manager.h"
 
+/* Macro for defining collection iterators */
+%define MAKE_COLLECTION_ITERABLE( ITERATORNAME, JTYPE, CPPCOLLECTION, CPPTYPE )
+%typemap(javainterfaces) ITERATORNAME "java.util.Iterator<JTYPE>"
+%typemap(javacode) ITERATORNAME %{
+  public void remove() throws UnsupportedOperationException {
+    throw new UnsupportedOperationException();
+  }
+
+  public JTYPE next() throws java.util.NoSuchElementException {
+    if (!hasNext()) {
+      throw new java.util.NoSuchElementException();
+    }
+
+    return nextImpl();
+  }
+%}
+%javamethodmodifiers ITERATORNAME::nextImpl "private";
+%inline %{
+  struct ITERATORNAME {
+    typedef CPPCOLLECTION<CPPTYPE> collection_t;
+    ITERATORNAME(const collection_t& t) : it(t.begin()), collection(t) {}
+    bool hasNext() const {
+      return it != collection.end();
+    }
+
+    const CPPTYPE& nextImpl() {
+      const CPPTYPE& type = *it++;
+      return type;
+    }
+  private:
+    collection_t::const_iterator it;
+    const collection_t& collection;    
+  };
+%}
+%typemap(javainterfaces) CPPCOLLECTION<CPPTYPE> "Iterable<JTYPE>"
+%newobject CPPCOLLECTION<CPPTYPE>::iterator() const;
+%extend CPPCOLLECTION<CPPTYPE> {
+  ITERATORNAME *iterator() const {
+    return new ITERATORNAME(*$self);
+  }
+}
+%enddef
+
+/* Define iterator for QoSCube list */
+MAKE_COLLECTION_ITERABLE(QoSCubeListIterator, QoSCube, std::list, rina::QoSCube);
+/* Define iterator for ApplicationProcessNamingInformation list */
+MAKE_COLLECTION_ITERABLE(ApplicationProcessNamingInformationListIterator, ApplicationProcessNamingInformation, std::list, rina::ApplicationProcessNamingInformation);
+
 %template(DIFPropertiesVector) std::vector<rina::DIFProperties>;
 %template(FlowVector) std::vector<rina::Flow>;
+%template(FlowPointerVector) std::vector<rina::Flow *>;
+%template(ApplicationRegistrationVector) std::vector<rina::ApplicationRegistration *>;
 %template(QoSCubeList) std::list<rina::QoSCube>;
+%template(QoSCubeVector) std::vector<rina::QoSCube>;
+%template(PolicyVector) std::vector<rina::Policy>;
 %template(ApplicationProcessNamingInformationList) std::list<rina::ApplicationProcessNamingInformation>;
 %template(IPCManagerSingleton) Singleton<rina::IPCManager>;
 %template(IPCEventProducerSingleton) Singleton<rina::IPCEventProducer>;
 %template(IPCProcessFactorySingleton) Singleton<rina::IPCProcessFactory>;
 %template(IPCProcessVector) std::vector<rina::IPCProcess>;
+%template(IPCProcessPointerVector) std::vector<rina::IPCProcess *>;
 %template(ApplicationManagerSingleton) Singleton<rina::ApplicationManager>;
