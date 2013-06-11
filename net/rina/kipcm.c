@@ -44,7 +44,7 @@ int kipcm_init()
 	LOG_FBEGN;
 
         if (!shim_init()) {
-                LOG_FEXIT();
+                LOG_FEXIT;
                 return -1;
         }
 
@@ -402,8 +402,8 @@ int  ipc_process_configure(ipc_process_id_t                  ipcp_id,
                         LOG_FEXIT;
 
                         return -1;
-#endif
                 }
+#endif
                 break;
         case DIF_TYPE_NORMAL:
                 break;
