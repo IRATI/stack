@@ -25,6 +25,9 @@
 int rina_netlink_init(void)
 {
         LOG_FBEGN;
+
+        LOG_DBG("NetLink layer initialized");
+
         LOG_FEXIT;
 
         return 0;
@@ -33,5 +36,8 @@ int rina_netlink_init(void)
 void rina_netlink_exit(void)
 {
         LOG_FBEGN;
+
+        LOG_DBG("NetLink layer finalized");
+
         LOG_FEXIT;
 }
