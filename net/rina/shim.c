@@ -42,7 +42,7 @@ static int is_ok(const struct shim_t * shim)
             shim->ipc_destroy             &&
             shim->sdu_read                &&
             shim->sdu_write               &&
-            shim->flow_allocation_request &&
+            shim->flow_allocate_request   &&
             shim->flow_allocate_response  &&
             shim->flow_deallocate         &&
             shim->application_register    &&

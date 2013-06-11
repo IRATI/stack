@@ -34,7 +34,7 @@
 #include "rmt.h"
 
 /* FIXME: These inclusions should be avoided */
-#include "shim-eth.h"
+//#include "shim-eth.h"
 #include "shim-tcp-udp.h"
 
 typedef enum {
