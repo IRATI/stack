@@ -196,7 +196,7 @@ int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
         return 0;
 }
 
-int read_sdu(port_id_t      port_id,
+int kipcm_read_sdu(port_id_t      port_id,
              bool_t         block,
              struct sdu_t * sdu)
 {
@@ -248,7 +248,7 @@ int read_sdu(port_id_t      port_id,
         return 0;
 }
 
-int  write_sdu(port_id_t            port_id,
+int  kipcm_write_sdu(port_id_t            port_id,
                const struct sdu_t * sdu)
 {
         const struct flow_t * flow;
@@ -352,7 +352,7 @@ static int add_id_to_ipcp_node(ipc_process_id_t       id,
         return 0;
 }
 
-int ipc_process_create(const struct name_t * name,
+int kipcm_ipc_process_create(const struct name_t * name,
                        ipc_process_id_t      ipcp_id,
                        dif_type_t             type)
 {
@@ -394,7 +394,7 @@ int ipc_process_create(const struct name_t * name,
         return 0;
 }
 
-int  ipc_process_configure(ipc_process_id_t                  ipcp_id,
+int  kipcm_ipc_process_configure(ipc_process_id_t                  ipcp_id,
                            const struct ipc_process_conf_t * configuration)
 {
         struct ipc_process_t *                          ipc_process;
@@ -418,6 +418,7 @@ int  ipc_process_configure(ipc_process_id_t                  ipcp_id,
                         return -1;
 #endif
                 }
+                return 0;
                 break;
         case DIF_TYPE_NORMAL:
                 break;
@@ -450,7 +451,7 @@ static struct id_to_ipcp_t * find_id_to_ipcp_by_id(ipc_process_id_t id)
         return NULL;
 }
 
-int  ipc_process_destroy(ipc_process_id_t ipcp_id)
+int  kipcm_ipc_process_destroy(ipc_process_id_t ipcp_id)
 {
         struct id_to_ipcp_t * id_ipcp;
 
