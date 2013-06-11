@@ -42,7 +42,7 @@ ChangeLog:
 		rm -f ChangeLog ;			\
 		exit 1 ;				\
 	}
-EXTRA_DIST     += ChangeLog
+EXTRA_DIST     += ChangeLog .changelog-amend
 DISTCLEANFILES += ChangeLog
 
 .PHONY: NEWS
