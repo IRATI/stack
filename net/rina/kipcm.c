@@ -237,6 +237,7 @@ int read_sdu(port_id_t      port_id,
 int  write_sdu(port_id_t            port_id,
                const struct sdu_t * sdu)
 {
+#if 0
         const struct flow_t * flow;
         int                   retval;
 
@@ -270,6 +271,9 @@ int  write_sdu(port_id_t            port_id,
         LOG_FEXIT;
 
         return retval;
+#else
+        return 0;
+#endif
 }
 
 static struct ipc_process_t * find_ipc_process_by_id(ipc_process_id_t id)
@@ -342,6 +346,7 @@ int ipc_process_create(const struct name_t * name,
                        ipc_process_id_t      ipcp_id,
                        dif_type_t             type)
 {
+#if 0
         struct ipc_process_t *ipc_process;
 
         LOG_FBEGN;
@@ -374,6 +379,7 @@ int ipc_process_create(const struct name_t * name,
         default:
                 BUG();
         }
+#endif
 
         LOG_FEXIT;
 
@@ -438,6 +444,7 @@ static struct id_to_ipcp_t * find_id_to_ipcp_by_id(ipc_process_id_t id)
 
 int  ipc_process_destroy(ipc_process_id_t ipcp_id)
 {
+#if 0
         struct id_to_ipcp_t * id_ipcp;
 
         LOG_FBEGN; 
@@ -463,6 +470,7 @@ int  ipc_process_destroy(ipc_process_id_t ipcp_id)
         kfree(id_ipcp);
 
         LOG_FEXIT;
+#endif
 
         return 0;
 }

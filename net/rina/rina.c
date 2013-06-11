@@ -27,8 +27,12 @@
 #include "kipcm.h"
 #include "efcp.h"
 #include "rmt.h"
+
+/* FIXME: To be removed */
+#if 0
 #include "shim-eth.h"
 #include "shim-tcp-udp.h"
+#endif
 
 static int __init mod_init(void)
 {
@@ -49,6 +53,7 @@ static int __init mod_init(void)
                 kipcm_exit();
         }
 
+#if 0
 #ifdef CONFIG_SHIM_ETH
         if (shim_eth_init()) {
                 rmt_exit();
@@ -64,6 +69,7 @@ static int __init mod_init(void)
                 kipcm_exit();
         }
 #endif
+#endif
 
         LOG_DBG("Rina personality loaded successfully");
 
@@ -77,12 +83,15 @@ static void __exit mod_exit(void)
 
         LOG_DBG("Rina personality exiting");
 
+#if 0
 #ifdef CONFIG_SHIM_TCP_UDP
         shim_tcp_udp_exit();
 #endif
 #ifdef CONFIG_SHIM_ETH
         shim_eth_exit();
 #endif
+#endif
+
         rmt_exit();
         efcp_exit();
         kipcm_exit();
