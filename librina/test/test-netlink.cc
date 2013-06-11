@@ -1,5 +1,5 @@
 /*
- *  User space echo netlink application test 
+ *  User space echo netlink application test
  *
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *
@@ -32,39 +32,44 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <netlink/netlink.h>
+#include <netlink/genl/genl.h>
+#include <netlink/genl/ctrl.h>
 #include <netlink/msg.h>
 #include <netlink/socket.h>
-#include <linux/netlink.h>
-#include <linux/genetlink.h>
 
 enum {
-	NETLINL_RINA_A_UNSPEC,
-	NETLINK_RINA_A_MSG,
-	__NETLINK_RINA_A_MAX,
+        NETLINL_RINA_A_UNSPEC,
+        NETLINK_RINA_A_MSG,
+        __NETLINK_RINA_A_MAX,
 };
 
 enum {
-	NETLINK_RINA_C_UNSPEC,
-	NETLINK_RINA_C_ECHO,
-	__NETLINK_RINA_C_MAX,
+        NETLINK_RINA_C_UNSPEC,
+        NETLINK_RINA_C_ECHO,
+        __NETLINK_RINA_C_MAX,
 };
 
 int main()
 {
-	struct nl_sock *sock;
-	struct nl_msg *msg;
-	int family, res;
-	sock = nl_socket_alloc();
-	genl_connect(sock);
-	family = genl_ctrl_resolve(sock, "NETLINK_RINA");
-	msg = nlmsg_alloc();
-	genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, NLM_F_ECHO, NETLINK_RINA_C_ECHO, 1);
-	nla_put_string(msg, NETLINK_RINA_A_MSG, "Testing message");
-	/*original code was using  nl_send_auto_complete() but it is deprecated*/
-	nl_send_auto(sock, msg);
-	nlmsg_free(msg);
-	res = nl_recvmsgs_default(sock);
-	printf("After receive %i.\n", res);
+
+        struct nl_sock *sock;
+        struct nl_msg *msg;
+        int family, res;
+        sock = nl_socket_alloc();
+        genl_connect(sock);
+        family = genl_ctrl_resolve(sock, "NETLINK_RINA");
+        msg = nlmsg_alloc();
+        genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, NLM_F_ECHO,
+                    NETLINK_RINA_C_ECHO, 1);
+        nla_put_string(msg, NETLINK_RINA_A_MSG, "Testing message");
+        /*
+         * NOTE: original code was using  nl_send_auto_complete() but it is
+         * deprecated
+         */
+        nl_send_auto(sock, msg);
+        nlmsg_free(msg);
+        res = nl_recvmsgs_default(sock);
+        printf("After receive %i.\n", res);
 
         exit(0);
 }
