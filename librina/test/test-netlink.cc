@@ -32,10 +32,10 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <netlink/netlink.h>
+#include <netlink/genl/genl.h>
+#include <netlink/genl/ctrl.h>
 #include <netlink/msg.h>
 #include <netlink/socket.h>
-#include <linux/netlink.h>
-#include <linux/genetlink.h>
 
 enum {
 	NETLINL_RINA_A_UNSPEC,
@@ -51,7 +51,7 @@ enum {
 
 int main()
 {
-#if 0
+
 	struct nl_sock *sock;
 	struct nl_msg *msg;
 	int family, res;
@@ -66,7 +66,6 @@ int main()
 	nlmsg_free(msg);
 	res = nl_recvmsgs_default(sock);
 	printf("After receive %i.\n", res);
-#endif
-
-        exit(0);
+	
+	exit(0);
 }
