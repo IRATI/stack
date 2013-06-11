@@ -25,13 +25,16 @@
 
 /* FIXME: These include should disappear from here */
 #include "kipcm.h"
-#include "efcp.h"
-#include "rmt.h"
 
 struct personality_t {
+        /* Might be removed when deemed unnecessary */
         int  (* init)(void);
         void (* exit)(void);
 
+        void * data;
+
+        /* Functions exported to the personality user */
+        /* FIXME: should be int, not long */
         long (* ipc_create)(const struct name_t * name,
                             ipc_process_id_t      id,
                             dif_type_t            type);
@@ -49,11 +52,13 @@ struct personality_t {
                                    cep_id_t to_id);
 };
 
+/* FIXME: To be removed ASAP */
 extern const struct personality_t * personality;
 
 int  rina_personality_init(void);
 void rina_personality_exit(void);
-int  rina_personality_add(const struct personality_t * pers);
-int  rina_personality_remove(const struct personality_t * pers);
+
+int  rina_personality_register(const struct personality_t * pers);
+int  rina_personality_unregister(const struct personality_t * pers);
 
 #endif
