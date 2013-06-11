@@ -20,7 +20,6 @@
  */
 
 #include <linux/module.h>
-#include <linux/init.h>
 
 #define RINA_PREFIX "personality-default"
 
@@ -31,7 +30,7 @@
 #include "shim-eth.h"
 #include "shim-tcp-udp.h"
 
-static int __init module_init(void)
+static int __init mod_init(void)
 {
         LOG_FBEGN;
 
@@ -72,7 +71,7 @@ static int __init module_init(void)
         return 0;
 }
 
-static void __exit module_exit(void)
+static void __exit mod_exit(void)
 {
         LOG_FBEGN;
 
@@ -93,8 +92,8 @@ static void __exit module_exit(void)
         LOG_FEXIT;
 }
 
-module_init(module_init);
-module_exit(module_exit);
+module_init(mod_init);
+module_exit(mod_exit);
 
 MODULE_DESCRIPTION("RINA default personality");
 
