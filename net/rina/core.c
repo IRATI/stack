@@ -65,30 +65,3 @@ static int __init rina_core_init(void)
 }
 
 __initcall(rina_core_init);
-
-#if 0
-static void __exit rina_core_exit(void)
-{
-        LOG_FBEGN;
-
-        rina_netlink_exit();
-#ifdef CONFIG_RINA_SYSFS
-        rina_sysfs_exit();
-#endif
-        rina_personality_exit();
-
-        LOG_FEXIT;
-}
-
-module_init(rina_core_init);
-module_exit(rina_core_exit);
-
-MODULE_DESCRIPTION("RINA stack");
-
-MODULE_LICENSE("GPL v2");
-
-MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
-MODULE_AUTHOR("Leonardo Bergesio <leonardo.bergesio@i2cat.net>");
-MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
-MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
-#endif
