@@ -28,6 +28,7 @@
 #include "logs.h"
 #include "debug.h"
 #include "kipcm.h"
+#include "shim.h"
 
 /* FIXME: Remove all the statics here
  * FIXED: I have removed them, is it ok now?
@@ -41,6 +42,11 @@ static struct kipc_t *kipcm;
 int kipcm_init()
 {
 	LOG_FBEGN;
+
+        if (!shim_init()) {
+                LOG_FEXIT();
+                return -1;
+        }
 
         kipcm = kmalloc(sizeof(*kipcm), GFP_KERNEL);
         if (!kipcm) {
@@ -69,6 +75,8 @@ void kipcm_exit()
 
         kfree(kipcm);
         kipcm = 0; /* Useless */
+
+        shim_exit();
 
         LOG_FEXIT;
 }
