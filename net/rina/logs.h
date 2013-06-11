@@ -46,24 +46,24 @@
 #define LOG_WARN(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_WARNING, FMT, ##ARGS)
 #define LOG_NOTE(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_NOTICE,  FMT, ##ARGS)
 #define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_INFO,    FMT, ##ARGS)
-#ifdef RINA_DEBUG
 #define LOG_DBG(FMT,  ARGS...)  __LOG(RINA_PREFIX, KERN_DEBUG,   FMT, ##ARGS)
-#else
-#define LOG_DBG(FMT,  ARGS...)
-#endif
 
 /*
  * The following macros should be used for debugging purposes only, use them
  * for debugging BUT remove them as soon as your debugging is over (in order
  * to avoid messing source files)
  */
-#ifdef RINA_DEBUG_VERBOSE
+#ifdef RINA_DEBUG_SCOPES
 #define LOG_FBEGN LOG_DBG("Entering function %s", __FUNCTION__)
 #define LOG_FEXIT LOG_DBG("Exiting function %s",  __FUNCTION__)
-#define LOG_HBEAT LOG_DBG("I'm in %s:%d",         __FUNCTION__, __LINE__);
 #else
 #define LOG_FBEGN
 #define LOG_FEXIT
+#endif
+
+#ifdef RINA_DEBUG_HEARTBEATS
+#define LOG_HBEAT LOG_DBG("I'm in %s:%d", __FUNCTION__, __LINE__);
+#else
 #define LOG_HBEAT
 #endif
 
