@@ -24,12 +24,13 @@
 #include <linux/list.h>
 
 #include "common.h"
+#include "shim.h"
 
 /* Holds the configuration of one shim IPC process */
 struct shim_eth_info_t {
 	struct name_t * name;
 	uint16_t        vlan_id;
-	string_t *      interface_name;
+	char *      interface_name;
 };
 
 enum port_id_state_t {
@@ -58,7 +59,7 @@ struct shim_eth_flow_t {
  */
 struct shim_eth_instance_t {
         /* The configuration of the shim IPC Process */
-	struct shim_eth_info_t info;
+	struct shim_eth_info_t * info;
 
 	/* FIXME: Pointer to the device driver data_structure */
 	/* device_t * device_driver; */
@@ -72,10 +73,9 @@ struct shim_eth_instance_t {
  * component
  */
 /* Stores the state of shim IPC Process instances */
-/* HASH_TABLE(shim_eth_instances, ipc_process_id_t, shim_eth_instance_t); */
 struct shim_eth_t {
 	ipc_process_id_t ipc_process_id;
-	struct shim_eth_instance_t shim_eth_instance;
+	struct shim_eth_instance_t * shim_eth_instance;
 	struct list_head list;
 };
 
@@ -87,6 +87,7 @@ int shim_eth_create(ipc_process_id_t      ipc_process_id,
 int shim_eth_configure(ipc_process_id_t           ipc_process_id,
 		       const struct shim_conf_t * configuration);
 int shim_eth_destroy(ipc_process_id_t ipc_process_id);
+
 int shim_eth_flow_allocate_request(const struct name_t *      source,
                                    const struct name_t *      dest,
                                    const struct flow_spec_t * flow_spec,
@@ -98,4 +99,6 @@ int shim_eth_application_register(const struct name_t * name);
 int shim_eth_application_unregister(const struct name_t * name);
 int shim_eth_sdu_write(port_id_t            port_id, 
 		       const struct sdu_t * sdu);
+int shim_eth_sdu_read(port_id_t      id,
+		      struct sdu_t * sdu);
 #endif
