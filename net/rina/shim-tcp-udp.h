@@ -1,4 +1,8 @@
 /*
+ *  Shim Process over TCP/UDP
+ *
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -16,10 +20,5 @@
 
 #ifndef RINA_SHIM_TCP_UDP_H
 #define RINA_SHIM_TCP_UDP_H
-
-#include "common.h"
-
-int  shim_tcp_udp_init(void);
-void shim_tcp_udp_exit(void);
 
 #endif
