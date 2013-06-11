@@ -26,18 +26,14 @@
 #define RINA_PREFIX "shim-eth"
 
 #include "logs.h"
-#include "kipcm.h" /* FIXME: should be removed */
 #include "shim-eth.h"
 
 LIST_HEAD(shim_eth);
-/* FIXME : This isn't needed */
-static ipc_process_id_t count = 0;
 
-ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
+int shim_eth_create(ipc_process_id_t      ipc_process_id,
+                    const struct name_t * name)
 {
-	/* Unsure if I can call return count++ and count gets incremented after
-	function call? This is a workaround, fix if possible. */
-	ipc_process_id_t nr = count++;
+
 	struct shim_eth_info_t shim_eth_info;
 	struct ipc_config_t *ipc_config = config[0];
 	struct shim_eth_instance_t instance;
@@ -81,6 +77,14 @@ ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
 	return nr;
 }
 
+int shim_eth_configure(ipc_process_id_t          ipc_process_id,
+                      const struct shim_conf_t * configuration)
+{
+	LOG_DBG("Configured shim ETH IPC Process");
+
+	return 0;
+}
+
 int shim_eth_destroy(ipc_process_id_t ipc_process_id)
 {
         LOG_FBEGN;
@@ -91,10 +95,10 @@ int shim_eth_destroy(ipc_process_id_t ipc_process_id)
 /* FIXME : Tentative implementation to compare with the kipcm code. Please
  * 		Sander review it. Miquel.
  */
-int shim_eth_allocate_flow_request(struct name_t *      source,
-                                   struct name_t *      dest,
-                                   struct flow_spec_t * flow_spec,
-                                   port_id_t            port_id)
+int shim_eth_flow_allocate_request(const struct name_t *      source,
+                                   const struct name_t *      dest,
+                                   const struct flow_spec_t * flow_spec,
+                                   port_id_t                * port_id)
 {
 	struct flow_t * flow;
 	struct kfifo    sdu_ready;
@@ -219,12 +223,4 @@ int shim_eth_ipc_create(const struct name_t * name,
 	return 0;
 }
 
-#if 0
-int shim_eth_ipc_configure(ipc_process_id_t ipcp_id,
-                           const struct ipc_process_shim_ethernet_conf_t *configuration)
-{
-	LOG_DBG("Configured shim ETH IPC Process");
 
-	return 0;
-}
-#endif

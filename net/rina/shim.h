@@ -23,26 +23,35 @@
 #ifndef RINA_SHIM_H
 #define RINA_SHIM_H
 
+#include "common.h"
+
 struct shim_t {
         /* Might be removed when deemed unnecessary */
-	int  (* shim_init)(void);
-	void (* shim_exit)(void);
+	int  (* init)(void);
+	void (* exit)(void);
 
-	int  (* shim_ipc_create)(ipc_process_id_t      ipc_process_id,
-			   	 const struct name_t * name);
-	int  (* shim_ipc_configure)(ipc_process_id_t           ipc_process_id,
-				    const struct shim_conf_t * configuration);
-	int  (* shim_destroy)(ipc_process_id_t ipc_process_id);
-	int  (* shim_allocate_flow_request)(const struct name_t      * source,
-				  	   const struct name_t      * dest,
-					   const struct flow_spec_t * flow_spec,
-					   port_id_t                * port_id);
-	int  (* shim_allocate_flow_response)(port_id_t           port_id,
-					     response_reason_t * response);
-	int  (* shim_deallocate_flow)(port_id_t port_id);
-	int  (* shim_register_application)(const struct name_t * name);
-	int  (* shim_unregister_application)(const struct name_t * name);
-	int  (* shim_write_sdu)(port_id_t port_id, const struct sdu_t * sdu);
+        void * data;
+
+        /* Functions exported to the shim user */
+	int  (* ipc_create)(ipc_process_id_t      ipc_process_id,
+                            const struct name_t * name);
+	int  (* ipc_configure)(ipc_process_id_t           ipc_process_id,
+                               const struct shim_conf_t * configuration);
+	int  (* ipc_destroy)(ipc_process_id_t ipc_process_id);
+
+	int  (* flow_allocate_request)(const struct name_t      * source,
+                                       const struct name_t      * dest,
+                                       const struct flow_spec_t * flow_spec,
+                                       port_id_t                * id);
+	int  (* flow_allocate_response)(port_id_t           id,
+                                        response_reason_t * response);
+	int  (* flow_deallocate)(port_id_t id);
+
+	int  (* application_register)(const struct name_t * name);
+	int  (* application_unregister)(const struct name_t * name);
+
+	int  (* sdu_write)(port_id_t            id,
+                           const struct sdu_t * sdu);
 };
 
 #endif
