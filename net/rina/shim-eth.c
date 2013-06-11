@@ -134,8 +134,6 @@ int shim_eth_allocate_flow_request(struct name_t *      source,
 		return -1;
 	}
 
-#if 0
-        /* FIXME: This doesn't compile */
 	flow->sdu_ready = &sdu_ready;
 	if (kipcm_add_entry(port_id, (const struct flow_t *)flow)) {
 		LOG_FEXIT;
@@ -144,7 +142,6 @@ int shim_eth_allocate_flow_request(struct name_t *      source,
 		kfifo_free(&sdu_ready);
 		return -1;
 	}
-#endif
 
 	LOG_FEXIT;
 
