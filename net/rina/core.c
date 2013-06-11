@@ -25,7 +25,6 @@
 
 #include "logs.h"
 #include "rina.h"
-#include "sysfs.h"
 #include "netlink.h"
 #include "personality.h"
 
@@ -43,19 +42,12 @@ static int __init rina_core_init(void)
                  RINA_VERSION_MINOR(version),
                  RINA_VERSION_MICRO(version));
 
-        if (!rina_personality_init()) {
+        if (rina_personality_init()) {
                 LOG_CRIT("Could not initialize personality");
                 return -1;
         }
-#ifdef CONFIG_RINA_SYSFS
-        if (!rina_sysfs_init()) {
-                LOG_CRIT("Could not initialize sysfs");
-                rina_personality_exit();
-        }
-#endif
-        if (!rina_netlink_init()) {
+        if (rina_netlink_init()) {
                 LOG_CRIT("Could not initialize netlink");
-                rina_sysfs_exit();
                 rina_personality_exit();                
         }
 
