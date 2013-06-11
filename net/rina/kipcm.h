@@ -228,6 +228,7 @@ int  kipcm_add_entry(port_id_t port_id, const struct flow_t * flow);
 int  kipcm_remove_entry(port_id_t port_id);
 int  kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu);
 
+/* FIXME: The following functions should be prefixed with kipcm_ */
 int  read_sdu(port_id_t      port_id,
 	      bool_t         block,
 	      struct sdu_t * sdu);
