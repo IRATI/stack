@@ -51,6 +51,7 @@ enum {
 
 int main()
 {
+#if 0
 	struct nl_sock *sock;
 	struct nl_msg *msg;
 	int family, res;
@@ -65,6 +66,7 @@ int main()
 	nlmsg_free(msg);
 	res = nl_recvmsgs_default(sock);
 	printf("After receive %i.\n", res);
+#endif
 
         exit(0);
 }
