@@ -24,7 +24,6 @@
 
 #include "logs.h"
 #include "utils.h"
-#include "debug.h"
 #include "shim.h"
 
 int  shim_init(void)

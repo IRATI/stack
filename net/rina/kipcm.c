@@ -26,7 +26,7 @@
 #include <linux/kfifo.h>
 
 #include "logs.h"
-#include "debug.h"
+#include "utils.h"
 #include "kipcm.h"
 #include "shim.h"
 
