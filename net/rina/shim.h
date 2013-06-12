@@ -58,8 +58,7 @@ struct shim_t {
                             const struct name_t * name);
 	int  (* ipc_configure)(void *                     opaque,
                                ipc_process_id_t           ipc_process_id,
-                               const struct ipc_process_shim_ethernet_conf_t *
-                               configuration);
+                               const struct shim_conf_t * configuration);
 	int  (* ipc_destroy)(void *           opaque,
                              ipc_process_id_t ipc_process_id);
 

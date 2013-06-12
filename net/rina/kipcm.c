@@ -31,33 +31,42 @@
 
 void * kipcm_init()
 {
+#if 0
+	struct kipc_t * kipcm;
+	LIST_HEAD(id_to_ipcp);
+	LIST_HEAD(port_id_to_flow);
+
 	LOG_FBEGN;
 
         if (!shim_init()) {
                 LOG_FEXIT;
-                return -1;
+                return NULL;
         }
 
-        struct kipc_t *kipcm;
         kipcm = kmalloc(sizeof(*kipcm), GFP_KERNEL);
         if (!kipcm) {
                 LOG_CRIT("Cannot allocate %d bytes of memory", sizeof(*kipcm));
 
                 LOG_FEXIT;
-                return -1;
+                return NULL;
         }
-        LIST_HEAD(id_to_ipcp);
-        LIST_HEAD(port_id_to_flow);
         kipcm->id_to_ipcp      = &id_to_ipcp;
         kipcm->port_id_to_flow = &port_id_to_flow;
 
         LOG_FEXIT;
 
         return kipcm;
+#else
+        return NULL;
+#endif
 }
-
-void kipcm_exit(void * opaque)
+/*
+ * FIXME: This should be kipcm_exit(void * opaque) I guess
+ * I haven't yet put it in this form to not generate problems with rina.c
+ */
+void kipcm_exit()
 {
+#if 0
         LOG_FBEGN;
 
         /*
@@ -65,12 +74,13 @@ void kipcm_exit(void * opaque)
          * into kipcm_init
          */
 
-        kfree((struct kipc_t *) opaque);
-        (struct kipc_t *) opaque = 0; /* Useless */
+        kfree(opaque);
+        opaque = 0; /* Useless */
 
         shim_exit();
 
         LOG_FEXIT;
+#endif
 }
 
 int kipcm_add_entry(void * opaque, port_id_t port_id, const struct flow_t *
@@ -99,7 +109,7 @@ int kipcm_add_entry(void * opaque, port_id_t port_id, const struct flow_t *
 #endif
         return 0;
 }
-
+#if 0
 const static struct flow_t *
 retrieve_flow_by_port_id(void * opaque, port_id_t port_id)
 {
@@ -129,7 +139,7 @@ retrieve_port_flow_node(void * opaque, port_id_t port_id)
 #endif
         return NULL;
 }
-
+#endif
 int kipcm_remove_entry(void * opaque, port_id_t port_id)
 {
 #if 0
@@ -301,7 +311,7 @@ int  kipcm_write_sdu(void *               opaque,
         return 0;
 #endif
 }
-
+#if 0
 static struct ipc_process_t *
 find_ipc_process_by_id(void *           opaque,
 		       ipc_process_id_t id)
@@ -376,7 +386,7 @@ static int add_id_to_ipcp_node(void *                 opaque,
 #endif
         return 0;
 }
-
+#endif
 int kipcm_ipc_process_create(void *                opaque,
 			     const struct name_t * name,
 			     ipc_process_id_t      ipcp_id,
@@ -462,7 +472,7 @@ int  kipcm_ipc_process_configure(void *                            opaque,
 #endif
         return 0;
 }
-
+#if 0
 static struct id_to_ipcp_t *
 find_id_to_ipcp_by_id(void * opaque, ipc_process_id_t id)
 {
@@ -482,7 +492,7 @@ find_id_to_ipcp_by_id(void * opaque, ipc_process_id_t id)
 #endif
         return NULL;
 }
-
+#endif
 int  kipcm_ipc_process_destroy(void * opaque, ipc_process_id_t ipcp_id)
 {
 #if 0

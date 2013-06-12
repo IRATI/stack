@@ -221,7 +221,7 @@ struct port_id_to_flow_t {
 };
 
 void * kipcm_init(void);
-void   kipcm_exit(void * opaque);
+void   kipcm_exit(void);
 int    kipcm_add_entry(void *                opaque,
 		       port_id_t             port_id,
 		       const struct flow_t * flow);
