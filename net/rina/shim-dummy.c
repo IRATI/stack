@@ -1,5 +1,5 @@
 /*
- *  Shim Process over TCP/UDP
+ *  Dummy Shim IPC Process
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,7 +18,33 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_SHIM_TCP_UDP_H
-#define RINA_SHIM_TCP_UDP_H
+#include <linux/module.h>
 
-#endif
+#define RINA_PREFIX "shim-dummy"
+
+#include "logs.h"
+
+static int __init mod_init(void)
+{
+        LOG_FBEGN;
+        LOG_FEXIT;
+
+        return 0;
+}
+
+static void __exit mod_exit(void)
+{
+        LOG_FBEGN;
+        LOG_FEXIT;
+}
+
+module_init(mod_init);
+module_exit(mod_exit);
+
+MODULE_DESCRIPTION("RINA Dummy Shim IPC");
+
+MODULE_LICENSE("GPL");
+
+MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
+MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");

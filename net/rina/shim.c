@@ -38,16 +38,20 @@ static int is_ok(const struct shim_t * shim)
 
         if (shim->init                    &&
             shim->exit                    &&
+
             shim->ipc_create              &&
             shim->ipc_configure           &&
             shim->ipc_destroy             &&
-            shim->sdu_read                &&
-            shim->sdu_write               &&
+
             shim->flow_allocate_request   &&
             shim->flow_allocate_response  &&
             shim->flow_deallocate         &&
+
             shim->application_register    &&
-            shim->application_unregister)
+            shim->application_unregister  &&
+
+            shim->sdu_read                &&
+            shim->sdu_write)
                 return 1;
 
         return 0;

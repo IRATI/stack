@@ -58,6 +58,13 @@ config RINA_PERSONALITY
 	---help---
 	  No help for the time being
 
+config RINA_SHIM_DUMMY
+	tristate "Dummy Shim IPC"
+	default y
+        depends on RINA_PERSONALITY && RINA_DEBUG
+	help
+	  No help for the time being
+
 config RINA_SHIM_ETH
 	tristate "Shim IPC over Ethernet support"
 	default y

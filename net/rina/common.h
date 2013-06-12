@@ -157,9 +157,8 @@ struct pdu_t {
 	struct buffer_t *buffer;
 };
 
+/* This structure defines an EFCP connection */
 struct connection_t {
-	/* This structure defines an EFCP connection */
-
 	/* The port_id this connection is bound to */
 	port_id_t port_id;
 	

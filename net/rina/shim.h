@@ -41,7 +41,7 @@ struct shim_config_entry_t {
 };
 
 struct shim_conf_t { 
-	struct list_head list;
+	struct list_head             list;
 	struct shim_config_entry_t * entry;
 };
 
@@ -52,11 +52,10 @@ struct shim_t {
 	int  (* init)(void * opaque);
 	void (* exit)(void * opaque);
 
-        /* Functions exported to the shim user */
+        /* Functions pointer exported by the shim module */
 	int  (* ipc_create)(void *                opaque,
                             ipc_process_id_t      ipc_process_id,
                             const struct name_t * name);
-        /* FIXME: Must take a list of entries */
 	int  (* ipc_configure)(void *                     opaque,
                                ipc_process_id_t           ipc_process_id,
                                const struct ipc_process_shim_ethernet_conf_t *
@@ -83,15 +82,16 @@ struct shim_t {
 	int  (* sdu_write)(void *               opaque,
                            port_id_t            id,
                            const struct sdu_t * sdu);
-        /* FIXME: Should we keep the following ? */
         int  (* sdu_read)(void *         opaque,
                           port_id_t      id,
                           struct sdu_t * sdu);
 };
 
+/* Called by the kipcm, might disappear */
 int  shim_init(void);
 void shim_exit(void);
 
+/* Called by each shim module) */
 int  shim_register(struct shim_t * shim);
 int  shim_unregister(struct shim_t * shim);
 

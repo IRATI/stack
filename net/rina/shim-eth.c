@@ -22,11 +22,12 @@
 
 #include <linux/module.h>
 #include <linux/if_ether.h>
-#include <linux/kfifo.h>
+#include <linux/string.h>
 
 #define RINA_PREFIX "shim-eth"
 
 #include "logs.h"
+/* FIXME: To be removed */
 #include "shim-eth.h"
 
 LIST_HEAD(shim_eth);
@@ -45,11 +46,65 @@ void shim_eth_exit(void)
         LOG_FEXIT;
 }
 
+static int name_cpy(struct name_t * dst, 
+		     const struct name_t *src)
+{
+	struct name_t * temp;
+	LOG_FBEGN;
+	temp = kmalloc(sizeof(*temp), GFP_KERNEL);
+	if (!temp) {
+                LOG_ERR("Cannot allocate memory");
+                LOG_FEXIT;
+		return -1;
+        }
+
+	strcpy(temp->process_name, src->process_name);
+	strcpy(temp->process_instance, src->process_instance);
+	strcpy(temp->entity_name, src->entity_name);
+	strcpy(temp->entity_instance, src->entity_instance);
+	dst = temp;
+	return 0;
+}
 
 int shim_eth_create(ipc_process_id_t      ipc_process_id,
                     const struct name_t * name)
 {
-        LOG_FBEGN;
+	struct shim_eth_t * list_item; 
+	struct shim_eth_instance_t * shim_instance; 	
+	struct shim_eth_info_t * shim_info;
+
+	LOG_FBEGN;
+
+	list_item = kmalloc(sizeof(*list_item), GFP_KERNEL);
+	if (!list_item) {
+                LOG_ERR("Cannot allocate memory");
+                LOG_FEXIT;
+                return -1;
+        }
+
+	shim_instance = kmalloc(sizeof(*shim_instance), GFP_KERNEL);
+	if (!shim_instance) {
+                LOG_ERR("Cannot allocate memory");
+                LOG_FEXIT;
+                return -1;
+        }
+
+	shim_info = kmalloc(sizeof(*shim_info), GFP_KERNEL);
+	if (!shim_info) {
+                LOG_ERR("Cannot allocate memory");
+                LOG_FEXIT;
+                return -1;
+        }
+
+	if(!name_cpy(shim_info->name, name)){
+		LOG_FEXIT;
+		return -1;
+	}
+	shim_instance->info = shim_info;
+
+	list_item->ipc_process_id = ipc_process_id;
+	list_item->shim_eth_instance = shim_instance;
+     	list_add(&(list_item->list), &shim_eth);
         LOG_FEXIT;
 	return 0;
 }
@@ -59,17 +114,18 @@ int shim_eth_configure(ipc_process_id_t          ipc_process_id,
 {
 
 #if 0
-	struct shim_eth_info_t shim_eth_info;
-	struct ipc_config_t *ipc_config = config[0];
-	struct shim_eth_instance_t instance;
+	struct list_head *pos;
+	struct shim_config_entry_t tmp;
 
 	/* Retrieve configuration of IPC process from params */
-	while (ipc_config != 0) {
+	list_for_each(pos, configuration.list){
+
+
+		tmp = list_entry(pos, struct shim_config_entry_t, list);
+		
+
+
 		switch (ipc_config->type) {
-		case IPC_CONFIG_NAME:
-			shim_eth_info.name =
-                                (struct name_t *) ipc_config->value;
-			break;
 		case IPC_CONFIG_UINT:
 			shim_eth_info.vlan_id =
                                 * (uint16_t *) ipc_config->value;
@@ -81,20 +137,9 @@ int shim_eth_configure(ipc_process_id_t          ipc_process_id,
 		default:
 			break;
 		}
-		++ipc_config;
 	}
 
-	instance.info = shim_eth_info;
-	
-	struct shim_eth_t tmp;
-
-	tmp.shim_eth_instance = instance;
-	tmp.ipc_process_id = nr;
-	tmp.list = LIST_HEAD_INIT(tmp.list);
-       
-	list_add(&tmp.list, &shim_eth);
 	/* FIXME: Add handler to correct interface and vlan id */
-
 
 	LOG_DBG("Configured shim ETH IPC Process");
 #endif

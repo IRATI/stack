@@ -32,7 +32,9 @@
 #include "common.h"
 #include "efcp.h"
 #include "rmt.h"
-#include "shim.h"
+
+/* FIXME: This inclusions should be remove */
+#include "shim-eth.h"
 
 typedef enum {
         DIF_TYPE_NORMAL,
@@ -84,9 +86,6 @@ struct ipc_process_shim_tcp_udp_conf_t {
 	struct name_t *dif_name;
 };
 
-/* FIXME: These structures should be changed, they aren't needed in this way
- * anymore.
- */
 struct ipc_process_shim_ethernet_t {
 	/*
 	 * Contains all he data structures of a shim IPC Process over Ethernet
