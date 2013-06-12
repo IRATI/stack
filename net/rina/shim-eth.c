@@ -88,12 +88,11 @@ int shim_eth_configure(ipc_process_id_t          ipc_process_id,
 
 	instance.info = shim_eth_info;
 	
-        /* FIXME: Please stick to C90 !!! */
-	struct shim_eth_t tmp = {
-		.shim_eth_instance = instance,
-		.ipc_process_id = nr,
-		.list = LIST_HEAD_INIT(tmp.list),
-	};
+	struct shim_eth_t tmp;
+
+	tmp.shim_eth_instance = instance;
+	tmp.ipc_process_id = nr;
+	tmp.list = LIST_HEAD_INIT(tmp.list);
        
 	list_add(&tmp.list, &shim_eth);
 	/* FIXME: Add handler to correct interface and vlan id */
