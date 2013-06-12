@@ -23,6 +23,7 @@
 #define RINA_PREFIX "shim"
 
 #include "logs.h"
+#include "utils.h"
 #include "shim.h"
 
 int  shim_init(void)
