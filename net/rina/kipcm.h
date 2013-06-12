@@ -34,6 +34,13 @@
 #include "rmt.h"
 #include "shim.h"
 
+typedef enum {
+        DIF_TYPE_NORMAL,
+
+        DIF_TYPE_SHIM_IP,
+        DIF_TYPE_SHIM_ETH
+} dif_type_t;
+
 struct normal_ipc_process_conf_t {
 	/*
 	 * Configuration of the kernel components of a normal IPC Process.

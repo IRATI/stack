@@ -41,13 +41,6 @@ struct shim_config_entry_t {
         struct shim_config_value_t * value;
 };
 
-typedef enum {
-        DIF_TYPE_NORMAL,
-
-        DIF_TYPE_SHIM_IP,
-        DIF_TYPE_SHIM_ETH
-} dif_type_t;
-
 struct ipc_process_shim_ethernet_conf_t {
 	/*
 	 * Configuration of the kernel component of a shim Ethernet IPC
@@ -121,7 +114,8 @@ struct shim_t {
         /* FIXME: Must take a list of entries */
 	int  (* ipc_configure)(void *                     opaque,
                                ipc_process_id_t           ipc_process_id,
-                               const struct shim_conf_t * configuration);
+                               const struct ipc_process_shim_ethernet_conf_t *
+                               configuration);
 	int  (* ipc_destroy)(void *           opaque,
                              ipc_process_id_t ipc_process_id);
 
