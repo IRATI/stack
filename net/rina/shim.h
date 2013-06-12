@@ -25,8 +25,6 @@
 
 #include "common.h"
 
-#if 0
-/* FIXME: Add and enhance these types, please remove them from KIPCM */
 enum shim_config_type_t {
         SHIM_CONFIG_UINT   = 1,
         SHIM_CONFIG_STRING,
@@ -41,7 +39,11 @@ struct shim_config_entry_t {
         char *                       name;
         struct shim_config_value_t * value;
 };
-#endif
+
+struct shim_conf_t { 
+	struct list_head list;
+	struct shim_config_entry_t * entry;
+};
 
 struct shim_t {
         /* Might be removed when deemed unnecessary */
