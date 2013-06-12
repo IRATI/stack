@@ -29,13 +29,7 @@
 #include "utils.h"
 #include "kipcm.h"
 
-LIST_HEAD(id_to_ipcp);
-LIST_HEAD(port_id_to_flow);
-
-/* FIXME: This one will be "created and published" by the container */
-static struct kipc_t *kipcm;
-
-int kipcm_init()
+void * kipcm_init()
 {
 	LOG_FBEGN;
 
@@ -44,6 +38,7 @@ int kipcm_init()
                 return -1;
         }
 
+        struct kipc_t *kipcm;
         kipcm = kmalloc(sizeof(*kipcm), GFP_KERNEL);
         if (!kipcm) {
                 LOG_CRIT("Cannot allocate %d bytes of memory", sizeof(*kipcm));
@@ -51,16 +46,17 @@ int kipcm_init()
                 LOG_FEXIT;
                 return -1;
         }
-
+        LIST_HEAD(id_to_ipcp);
+        LIST_HEAD(port_id_to_flow);
         kipcm->id_to_ipcp      = &id_to_ipcp;
         kipcm->port_id_to_flow = &port_id_to_flow;
 
         LOG_FEXIT;
 
-        return 0;
+        return kipcm;
 }
 
-void kipcm_exit()
+void kipcm_exit(void * opaque)
 {
         LOG_FBEGN;
 
@@ -69,16 +65,18 @@ void kipcm_exit()
          * into kipcm_init
          */
 
-        kfree(kipcm);
-        kipcm = 0; /* Useless */
+        kfree((struct kipc_t *) opaque);
+        (struct kipc_t *) opaque = 0; /* Useless */
 
         shim_exit();
 
         LOG_FEXIT;
 }
 
-int kipcm_add_entry(port_id_t port_id, const struct flow_t * flow)
+int kipcm_add_entry(void * opaque, port_id_t port_id, const struct flow_t *
+		    flow)
 {
+#if 0
         struct port_id_to_flow_t * port_flow;
 
         LOG_FBEGN;
@@ -93,67 +91,74 @@ int kipcm_add_entry(port_id_t port_id, const struct flow_t * flow)
 
         port_flow->port_id = port_id;
 
-        /* FIXME: input parameter is a const pointer ... */
         port_flow->flow    = flow;
         INIT_LIST_HEAD(&port_flow->list);
-        list_add(&port_flow->list, kipcm->port_id_to_flow);
+        list_add(&port_flow->list, ((struct kipc_t *) opaque)->port_id_to_flow);
 
         LOG_FEXIT;
-
+#endif
         return 0;
 }
 
-const static struct flow_t * retrieve_flow_by_port_id(port_id_t port_id)
+const static struct flow_t *
+retrieve_flow_by_port_id(void * opaque, port_id_t port_id)
 {
+#if 0
         struct port_id_to_flow_t * cur;
 
-        list_for_each_entry(cur, kipcm->port_id_to_flow, list) {
+        list_for_each_entry(cur,
+        		((struct kipc_t *) opaque)->port_id_to_flow, list) {
                 if (cur->port_id == port_id)
                         return cur->flow;
         }
-
+#endif
         return NULL;
 }
 
-static struct port_id_to_flow_t * retrieve_port_flow_node(port_id_t port_id)
+static struct port_id_to_flow_t *
+retrieve_port_flow_node(void * opaque, port_id_t port_id)
 {
+#if 0
 	struct port_id_to_flow_t * cur;
 
-	list_for_each_entry(cur, kipcm->port_id_to_flow, list) {
+	list_for_each_entry(cur,
+			((struct kipc_t *) opaque)->port_id_to_flow, list) {
                 if (cur->port_id == port_id)
                         return cur;
         }
-
+#endif
         return NULL;
 }
 
-int kipcm_remove_entry(port_id_t port_id)
+int kipcm_remove_entry(void * opaque, port_id_t port_id)
 {
+#if 0
         struct port_id_to_flow_t * port_flow;
 
 	LOG_FBEGN;
 
-        port_flow = retrieve_port_flow_node(port_id);
+        port_flow = retrieve_port_flow_node(opaque, port_id);
         if (!port_flow)
         	return -1;
 
         list_del(&port_flow->list);
 
-
-
         LOG_FEXIT;
-
+#endif
         return 0;
 }
 
-int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
+int kipcm_post_sdu(void *               opaque,
+		   port_id_t            port_id,
+		   const struct sdu_t * sdu)
 {
+#if 0
         const struct flow_t * flow;
         unsigned int          avail;
 
         LOG_FBEGN;
 
-        flow = retrieve_flow_by_port_id(port_id);
+        flow = retrieve_flow_by_port_id(opaque, port_id);
         if (flow == NULL) {
                 LOG_ERR("There is no flow bound to port-id %d", port_id);
 
@@ -196,14 +201,16 @@ int kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu)
         }
 
         LOG_FEXIT;
-
+#endif
         return 0;
 }
 
-int kipcm_read_sdu(port_id_t      port_id,
-             bool_t         block,
-             struct sdu_t * sdu)
+int kipcm_read_sdu(void *         opaque,
+		   port_id_t      port_id,
+		   bool_t         block,
+		   struct sdu_t * sdu)
 {
+#if 0
         const struct flow_t * flow;
         size_t                size;
         char *                data;
@@ -213,7 +220,7 @@ int kipcm_read_sdu(port_id_t      port_id,
         ASSERT(sdu);
         ASSERT(sdu->buffer);
 
-        flow = retrieve_flow_by_port_id(port_id);
+        flow = retrieve_flow_by_port_id(opaque, port_id);
         if (flow == NULL) {
                 LOG_ERR("There is no flow bound to port-id %d", port_id);
 
@@ -248,12 +255,13 @@ int kipcm_read_sdu(port_id_t      port_id,
         sdu->buffer->size = size;
 
         LOG_FEXIT;
-
+#endif
         return 0;
 }
 
-int  kipcm_write_sdu(port_id_t            port_id,
-               const struct sdu_t * sdu)
+int  kipcm_write_sdu(void *               opaque,
+		     port_id_t            port_id,
+		     const struct sdu_t * sdu)
 {
 #if 0
         const struct flow_t * flow;
@@ -261,7 +269,7 @@ int  kipcm_write_sdu(port_id_t            port_id,
 
         LOG_FBEGN;
 
-        flow = retrieve_flow_by_port_id(port_id);
+        flow = retrieve_flow_by_port_id(opaque, port_id);
         if (flow == NULL) {
                 LOG_ERR("There is no flow bound to port-id %d", port_id);
 
@@ -294,8 +302,11 @@ int  kipcm_write_sdu(port_id_t            port_id,
 #endif
 }
 
-static struct ipc_process_t * find_ipc_process_by_id(ipc_process_id_t id)
+static struct ipc_process_t *
+find_ipc_process_by_id(void *           opaque,
+		       ipc_process_id_t id)
 {
+#if 0
         struct id_to_ipcp_t * cur;
 
         LOG_FBEGN;
@@ -308,13 +319,14 @@ static struct ipc_process_t * find_ipc_process_by_id(ipc_process_id_t id)
         }
 
         LOG_FEXIT;
-
+#endif
         return NULL;
 }
 
 static struct ipc_process_shim_ethernet_t *
 create_shim(ipc_process_id_t ipcp_id)
 {
+#if 0
         struct ipc_process_shim_ethernet_t * ipcp_shim_eth;
 
         LOG_FBEGN;
@@ -333,11 +345,16 @@ create_shim(ipc_process_id_t ipcp_id)
         LOG_FEXIT;
 
         return ipcp_shim_eth;
+#else
+        return NULL;
+#endif
 }
 
-static int add_id_to_ipcp_node(ipc_process_id_t       id,
+static int add_id_to_ipcp_node(void *                 opaque,
+			       ipc_process_id_t       id,
                                struct ipc_process_t * ipc_process)
 {
+#if 0
         struct id_to_ipcp_t *aux_id_to_ipcp;
 
         LOG_FBEGN;
@@ -353,16 +370,17 @@ static int add_id_to_ipcp_node(ipc_process_id_t       id,
         aux_id_to_ipcp->id         = id;
         aux_id_to_ipcp->ipcprocess = ipc_process;
         INIT_LIST_HEAD(&aux_id_to_ipcp->list);
-        list_add(&aux_id_to_ipcp->list,kipcm->id_to_ipcp);
+        list_add(&aux_id_to_ipcp->list, ((struct kipc_t *) opaque)->id_to_ipcp);
 
         LOG_FEXIT;
-
+#endif
         return 0;
 }
 
-int kipcm_ipc_process_create(const struct name_t * name,
-                       ipc_process_id_t      ipcp_id,
-                       dif_type_t             type)
+int kipcm_ipc_process_create(void *                opaque,
+			     const struct name_t * name,
+			     ipc_process_id_t      ipcp_id,
+			     dif_type_t            type)
 {
 #if 0
         struct ipc_process_t *ipc_process;
@@ -387,7 +405,7 @@ int kipcm_ipc_process_create(const struct name_t * name,
                 ipc_process->type = type;
                 ipc_process->data.shim_eth_ipcp = create_shim(ipcp_id);
 
-                add_id_to_ipcp_node(ipcp_id, ipc_process);
+                add_id_to_ipcp_node(opaque, ipcp_id, ipc_process);
 
                 break;
         case DIF_TYPE_NORMAL:
@@ -404,15 +422,18 @@ int kipcm_ipc_process_create(const struct name_t * name,
         return 0;
 }
 
-int  kipcm_ipc_process_configure(ipc_process_id_t                  ipcp_id,
-                           const struct ipc_process_conf_t * configuration)
+int  kipcm_ipc_process_configure(void *                            opaque,
+				 ipc_process_id_t                  ipcp_id,
+                                 const struct ipc_process_conf_t *
+                                 configuration)
 {
+#if 0
         struct ipc_process_t *                          ipc_process;
         const struct ipc_process_shim_ethernet_conf_t * conf;
 
         LOG_FBEGN;
 
-        ipc_process = find_ipc_process_by_id(ipcp_id);
+        ipc_process = find_ipc_process_by_id(opaque, ipcp_id);
         if (ipc_process == NULL) {
                 LOG_FEXIT;
                 return -1;
@@ -438,17 +459,19 @@ int  kipcm_ipc_process_configure(ipc_process_id_t                  ipcp_id,
         }
 
         LOG_FEXIT;
-
+#endif
         return 0;
 }
 
-static struct id_to_ipcp_t * find_id_to_ipcp_by_id(ipc_process_id_t id)
+static struct id_to_ipcp_t *
+find_id_to_ipcp_by_id(void * opaque, ipc_process_id_t id)
 {
+#if 0
         struct id_to_ipcp_t * cur;
 
         LOG_FBEGN;
 
-        list_for_each_entry(cur, kipcm->id_to_ipcp, list) {
+        list_for_each_entry(cur, ((struct kipc_t *) opaque)->id_to_ipcp, list) {
                 if (cur->id == id) {
                         LOG_FEXIT;
                         return cur;
@@ -456,18 +479,18 @@ static struct id_to_ipcp_t * find_id_to_ipcp_by_id(ipc_process_id_t id)
         }
 
         LOG_FEXIT;
-
+#endif
         return NULL;
 }
 
-int  kipcm_ipc_process_destroy(ipc_process_id_t ipcp_id)
+int  kipcm_ipc_process_destroy(void * opaque, ipc_process_id_t ipcp_id)
 {
 #if 0
         struct id_to_ipcp_t * id_ipcp;
 
         LOG_FBEGN; 
 
-        id_ipcp = find_id_to_ipcp_by_id(ipcp_id);
+        id_ipcp = find_id_to_ipcp_by_id(opaque, ipcp_id);
         if (!id_ipcp)
                 return -1;
 

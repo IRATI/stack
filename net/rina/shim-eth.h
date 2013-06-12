@@ -21,28 +21,16 @@
 #ifndef RINA_SHIM_ETH_H
 #define RINA_SHIM_ETH_H
 
-#include <linux/hashtable.h>
+#include <linux/list.h>
 
-#include "kipcm.h"
 #include "common.h"
+#include "shim.h"
 
 /* Holds the configuration of one shim IPC process */
 struct shim_eth_info_t {
 	struct name_t * name;
 	uint16_t        vlan_id;
-	string_t *      interface_name;
-};
-
-enum ipc_config_type_t {
-	IPC_CONFIG_NAME,
-	IPC_CONFIG_UINT,
-	IPC_CONFIG_STRING
-};
-
-struct ipc_config_t {
-	enum ipc_config_type_t type;
-	/* will be interpreted based on type */
-	void *value; 
+	char *      interface_name;
 };
 
 enum port_id_state_t {
@@ -71,7 +59,7 @@ struct shim_eth_flow_t {
  */
 struct shim_eth_instance_t {
         /* The configuration of the shim IPC Process */
-	struct shim_eth_info_t info;
+	struct shim_eth_info_t * info;
 
 	/* FIXME: Pointer to the device driver data_structure */
 	/* device_t * device_driver; */
@@ -85,37 +73,32 @@ struct shim_eth_instance_t {
  * component
  */
 /* Stores the state of shim IPC Process instances */
-/* HASH_TABLE(shim_eth_instances, ipc_process_id_t, shim_eth_instance_t); */
 struct shim_eth_t {
 	ipc_process_id_t ipc_process_id;
-	struct shim_eth_instance_t shim_eth_instance;
+	struct shim_eth_instance_t * shim_eth_instance;
 	struct list_head list;
 };
 
 int  shim_eth_init(void);
 void shim_eth_exit(void);
 
-ipc_process_id_t shim_eth_create(struct ipc_config_t ** config);
-int              shim_eth_destroy(ipc_process_id_t ipc_process_id);
+int shim_eth_create(ipc_process_id_t      ipc_process_id,
+                    const struct name_t * name);
+int shim_eth_configure(ipc_process_id_t           ipc_process_id,
+		       const struct shim_conf_t * configuration);
+int shim_eth_destroy(ipc_process_id_t ipc_process_id);
 
-/* FIXME: flow_spec_t should not reach this point ..., QoS ids should suffice */
-/* FIXME: Sander, I have changed this to comply with page 216 of D2.1, adding
- *  the port_id as a parameter, please review. Miquel.
- */
-int  shim_eth_allocate_flow_request(struct name_t *      source,
-                                    struct name_t *      dest,
-                                    struct flow_spec_t * flow_spec,
-                                    port_id_t            port_id);
-int  shim_eth_allocate_flow_response(port_id_t           port_id,
-                                     response_reason_t * response);
-int  shim_eth_deallocate_flow(port_id_t port_id);
-int  shim_eth_register_application(struct name_t * name);
-int  shim_eth_unregister_application(struct name_t * name);
-int  shim_eth_write_sdu(port_id_t port_id, const struct sdu_t * sdu);
-int  shim_eth_ipc_create(const struct name_t * name,
-			 ipc_process_id_t      ipcp_id);
-int  shim_eth_ipc_configure(ipc_process_id_t      ipcp_id,
-			    const struct ipc_process_shim_ethernet_conf_t *
-                            configuration);
-
+int shim_eth_flow_allocate_request(const struct name_t *      source,
+                                   const struct name_t *      dest,
+                                   const struct flow_spec_t * flow_spec,
+                                   port_id_t                * port_id);
+int shim_eth_flow_allocate_response(port_id_t           port_id,
+                                    response_reason_t * response);
+int shim_eth_flow_deallocate(port_id_t port_id);
+int shim_eth_application_register(const struct name_t * name);
+int shim_eth_application_unregister(const struct name_t * name);
+int shim_eth_sdu_write(port_id_t            port_id, 
+		       const struct sdu_t * sdu);
+int shim_eth_sdu_read(port_id_t      id,
+		      struct sdu_t * sdu);
 #endif

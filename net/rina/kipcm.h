@@ -58,6 +58,65 @@ struct normal_ipc_process_conf_t {
 	struct rmt_conf_t *   rmt_config;
 };
 
+struct ipc_process_shim_ethernet_conf_t {
+	/*
+	 * Configuration of the kernel component of a shim Ethernet IPC
+	 * Process
+	 */
+
+	/* The vlan id */
+	int        vlan_id;
+
+	/* The name of the device driver of the Ethernet interface */
+	string_t * device_name;
+};
+
+struct ipc_process_shim_tcp_udp_conf_t {
+	/*
+	 * Configuration of the kernel component of a shim TCP/UDP IPC
+	 * Process
+	 */
+
+	/* FIXME: inet address the IPC process is bound to */
+	//in_addr_t *inet_address;
+
+	/* The name of the DIF */
+	struct name_t *dif_name;
+};
+
+/* FIXME: These structures should be changed, they aren't needed in this way
+ * anymore.
+ */
+struct ipc_process_shim_ethernet_t {
+	/*
+	 * Contains all he data structures of a shim IPC Process over Ethernet
+	 */
+
+	/* The ID of the IPC Process */
+	ipc_process_id_t ipcp_id;
+
+	/* The configuration of the module */
+	struct ipc_process_shim_ethernet_conf_t *configuration;
+
+	/* The module that performs the processing */
+	struct shim_eth_instance_t *shim_eth_ipc_process;
+};
+
+struct ipc_process_shim_tcp_udp_t {
+	/*
+	 * Contains all he data structures of a shim IPC Process over TCP/IP
+	 */
+
+	/* The ID of the IPC Process */
+	ipc_process_id_t ipcp_id;
+
+	/* The configuration of the module */
+	struct ipc_process_shim_tcp_udp_conf_t *configuration;
+
+	/* The module that performs the processing */
+	struct shim_tcp_udp_instance_t *shim_tcp_udp_ipc_process;
+};
+
 struct ipc_process_conf_t {
 	/*	
 	 * Contains the configuration of the kernel components of an IPC
@@ -162,23 +221,32 @@ struct port_id_to_flow_t {
         struct list_head  list;
 };
 
-int  kipcm_init(void);
-void kipcm_exit(void);
-int  kipcm_add_entry(port_id_t port_id, const struct flow_t * flow);
-int  kipcm_remove_entry(port_id_t port_id);
-int  kipcm_post_sdu(port_id_t port_id, const struct sdu_t * sdu);
+void * kipcm_init(void);
+void   kipcm_exit(void * opaque);
+int    kipcm_add_entry(void *                opaque,
+		       port_id_t             port_id,
+		       const struct flow_t * flow);
+int    kipcm_remove_entry(void * opaque, port_id_t port_id);
+int    kipcm_post_sdu(void *               opaque,
+		      port_id_t            port_id,
+		      const struct sdu_t * sdu);
 
-int  kipcm_read_sdu(port_id_t      port_id,
-	      bool_t         block,
-	      struct sdu_t * sdu);
-int  kipcm_write_sdu(port_id_t            port_id,
-	       const struct sdu_t * sdu);
+int    kipcm_read_sdu(void *         opaque,
+		      port_id_t      port_id,
+		      bool_t         block,
+		      struct sdu_t * sdu);
+int    kipcm_write_sdu(void * opaque,
+		       port_id_t            port_id,
+		       const struct sdu_t * sdu);
 
-int  kipcm_ipc_process_create(const struct name_t * name,
-			ipc_process_id_t      ipcp_id,
-			dif_type_t            type);
-int  kipcm_ipc_process_configure(ipc_process_id_t                  ipcp_id,
+int    kipcm_ipc_process_create(void *                opaque,
+				const struct name_t * name,
+				ipc_process_id_t      ipcp_id,
+				dif_type_t            type);
+int    kipcm_ipc_process_configure(void *                    opaque,
+			   ipc_process_id_t                  ipcp_id,
 			   const struct ipc_process_conf_t * configuration);
-int  kipcm_ipc_process_destroy(ipc_process_id_t ipcp_id);
+int    kipcm_ipc_process_destroy(void *           opaque,
+				 ipc_process_id_t ipcp_id);
 
 #endif

@@ -27,171 +27,9 @@
 #define RINA_PREFIX "shim-eth"
 
 #include "logs.h"
-
-#if 0
-
-#include "kipcm.h" /* FIXME: should be removed */
 #include "shim-eth.h"
 
 LIST_HEAD(shim_eth);
-/* FIXME : This isn't needed */
-static ipc_process_id_t count = 0;
-
-ipc_process_id_t shim_eth_create(struct ipc_config_t ** config)
-{
-	/* Unsure if I can call return count++ and count gets incremented after
-	function call? This is a workaround, fix if possible. */
-	ipc_process_id_t nr = count++;
-	struct shim_eth_info_t shim_eth_info;
-	struct ipc_config_t *ipc_config = config[0];
-	struct shim_eth_instance_t instance;
-	struct shim_eth_t tmp= {
-		.ipc_process_id = nr,
-		.list = LIST_HEAD_INIT(tmp.list),
-	};
-
-        LOG_FBEGN;
-
-	/* Retrieve configuration of IPC process from params */
-	while (ipc_config != 0) {
-		switch (ipc_config->type) {
-		case IPC_CONFIG_NAME:
-			shim_eth_info.name =
-                                (struct name_t *) ipc_config->value;
-			break;
-		case IPC_CONFIG_UINT:
-			shim_eth_info.vlan_id =
-                                * (uint16_t *) ipc_config->value;
-			break;
-		case IPC_CONFIG_STRING:
-			shim_eth_info.interface_name = 
-				(string_t *) ipc_config->value;
-		}
-		++ipc_config;
-	}
-
-	instance.info = shim_eth_info;
-	tmp.shim_eth_instance = instance;
-       
-	list_add(&tmp.list, &shim_eth);
-	/* FIXME: Add handler to correct interface and vlan id */
-
-        LOG_FEXIT;
-	return nr;
-}
-
-int shim_eth_destroy(ipc_process_id_t ipc_process_id)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-
-	return 0;
-}
-/* FIXME : Tentative implementation to compare with the kipcm code. Please
- * 		Sander review it. Miquel.
- */
-int shim_eth_allocate_flow_request(struct name_t *      source,
-                                   struct name_t *      dest,
-                                   struct flow_spec_t * flow_spec,
-                                   port_id_t            port_id)
-{
-	struct flow_t * flow;
-	struct kfifo    sdu_ready;
-	struct ipc_process_t * ipcp;
-
-	LOG_FBEGN;
-
-	/* FIXME : This reference should be taken from the shim-eth ipc
-         * process
-         */
-	ipcp = kmalloc(sizeof(*ipcp), GFP_KERNEL);
-	if (ipcp == NULL) {
-		LOG_ERR("Cannot allocate %zd bytes of kernel memory",
-                        sizeof(*ipcp));
-
-		LOG_FEXIT;
-		return -1;
-	}
-	flow = kmalloc(sizeof(*flow), GFP_KERNEL);
-	if (flow == NULL) {
-		LOG_ERR("Cannot allocate %zd bytes of kernel memory",
-                        sizeof(*flow));
-
-                LOG_FEXIT;
-		return -1;
-	}
-	/* FIXME : This should be an IPC Process already existing */
-	ipcp =  kmalloc(sizeof(*ipcp), GFP_KERNEL);
-	if (ipcp == NULL) {
-		LOG_ERR("Cannot allocate %zd bytes of kernel memory",
-                        sizeof(*ipcp));
-
-		LOG_FEXIT;
-		return -1;
-	}
-	flow->application_owned = 1;
-	flow->ipc_process = ipcp;
-	if (kfifo_alloc(&sdu_ready, PAGE_SIZE, GFP_KERNEL)) {
-		LOG_FEXIT;
-		kfree(flow);
-		kfree(ipcp);
-		return -1;
-	}
-
-	flow->sdu_ready = &sdu_ready;
-	if (kipcm_add_entry(port_id, (const struct flow_t *)flow)) {
-		LOG_FEXIT;
-		kfree(flow);
-		kfree(ipcp);
-		kfifo_free(&sdu_ready);
-		return -1;
-	}
-
-	LOG_FEXIT;
-
-	return 0;
-}
-
-int shim_eth_allocate_flow_response(port_id_t           port_id,
-                                    response_reason_t * response)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-
-	return 0;
-}
-
-int shim_eth_deallocate_flow(port_id_t port_id)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-
-	return 0;
-}
-
-int shim_eth_register_application(struct name_t * name)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-
-	return 0;
-}
-
-int shim_eth_unregister_application(struct name_t * name)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-
-	return 0;
-}
-
-int shim_eth_write_sdu(port_id_t port_id, const struct sdu_t * sdu)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-
-	return 0;
-}
 
 int shim_eth_init(void)
 {
@@ -207,25 +45,131 @@ void shim_eth_exit(void)
         LOG_FEXIT;
 }
 
-int shim_eth_ipc_create(const struct name_t * name,
-			ipc_process_id_t      ipcp_id)
-{
-        LOG_DBG("Created shim ETH IPC process");
 
+int shim_eth_create(ipc_process_id_t      ipc_process_id,
+                    const struct name_t * name)
+{
+        LOG_FBEGN;
+        LOG_FEXIT;
 	return 0;
 }
 
-int shim_eth_ipc_configure(ipc_process_id_t ipcp_id,
-                           const struct ipc_process_shim_ethernet_conf_t *
-                           configuration)
+int shim_eth_configure(ipc_process_id_t          ipc_process_id,
+                      const struct shim_conf_t * configuration)
 {
+
+#if 0
+	struct shim_eth_info_t shim_eth_info;
+	struct ipc_config_t *ipc_config = config[0];
+	struct shim_eth_instance_t instance;
+
+	/* Retrieve configuration of IPC process from params */
+	while (ipc_config != 0) {
+		switch (ipc_config->type) {
+		case IPC_CONFIG_NAME:
+			shim_eth_info.name =
+                                (struct name_t *) ipc_config->value;
+			break;
+		case IPC_CONFIG_UINT:
+			shim_eth_info.vlan_id =
+                                * (uint16_t *) ipc_config->value;
+			break;
+		case IPC_CONFIG_STRING:
+			shim_eth_info.interface_name = 
+				(string_t *) ipc_config->value;
+			break;
+		default:
+			break;
+		}
+		++ipc_config;
+	}
+
+	instance.info = shim_eth_info;
+	
+	struct shim_eth_t tmp;
+
+	tmp.shim_eth_instance = instance;
+	tmp.ipc_process_id = nr;
+	tmp.list = LIST_HEAD_INIT(tmp.list);
+       
+	list_add(&tmp.list, &shim_eth);
+	/* FIXME: Add handler to correct interface and vlan id */
+
+
 	LOG_DBG("Configured shim ETH IPC Process");
+#endif
+	return 0;
+}
+
+int shim_eth_destroy(ipc_process_id_t ipc_process_id)
+{
+        LOG_FBEGN;
+        LOG_FEXIT;
 
 	return 0;
 }
-#endif
 
-#endif
+int shim_eth_flow_allocate_request(const struct name_t *      source,
+                                   const struct name_t *      dest,
+                                   const struct flow_spec_t * flow_spec,
+                                   port_id_t                * port_id)
+{
+	LOG_FBEGN;
+	LOG_FEXIT;
+
+	return 0;
+}
+
+int shim_eth_flow_allocate_response(port_id_t           port_id,
+                                    response_reason_t * response)
+{
+        LOG_FBEGN;
+        LOG_FEXIT;
+
+	return 0;
+}
+
+int shim_eth_flow_deallocate(port_id_t port_id)
+{
+        LOG_FBEGN;
+        LOG_FEXIT;
+
+	return 0;
+}
+
+int shim_eth_application_register(const struct name_t * name)
+{
+        LOG_FBEGN;
+        LOG_FEXIT;
+
+	return 0;
+}
+
+int shim_eth_application_unregister(const struct name_t * name)
+{
+        LOG_FBEGN;
+        LOG_FEXIT;
+
+	return 0;
+}
+
+int shim_eth_sdu_write(port_id_t            port_id, 
+		       const struct sdu_t * sdu)
+{
+        LOG_FBEGN;
+        LOG_FEXIT;
+
+	return 0;
+}
+
+int shim_eth_sdu_read(port_id_t      id,
+		      struct sdu_t * sdu)
+{
+	LOG_FBEGN;
+        LOG_FEXIT;
+
+	return 0;
+}
 
 static int __init mod_init(void)
 {
