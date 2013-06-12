@@ -1,5 +1,5 @@
 /*
- *  Shim Process over TCP/UDP
+ *  Shim IPC Process over TCP/UDP
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
@@ -25,7 +25,6 @@
 #define RINA_PREFIX "shim-tcp-udp"
 
 #include "logs.h"
-#include "shim-tcp-udp.h"
 
 static int __init mod_init(void)
 {

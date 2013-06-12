@@ -33,9 +33,8 @@
 #include "efcp.h"
 #include "rmt.h"
 
-/* FIXME: These inclusions should be avoided */
+/* FIXME: This inclusions should be remove */
 #include "shim-eth.h"
-#include "shim-tcp-udp.h"
 
 typedef enum {
         DIF_TYPE_NORMAL,

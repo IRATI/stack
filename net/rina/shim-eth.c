@@ -27,6 +27,8 @@
 #define RINA_PREFIX "shim-eth"
 
 #include "logs.h"
+
+/* FIXME: Should be removed !!! */
 #include "shim-eth.h"
 
 LIST_HEAD(shim_eth);
@@ -44,7 +46,6 @@ void shim_eth_exit(void)
         LOG_FBEGN;
         LOG_FEXIT;
 }
-
 
 int shim_eth_create(ipc_process_id_t      ipc_process_id,
                     const struct name_t * name)
