@@ -19,6 +19,7 @@
 #include "librina-application.h"
 #define RINA_PREFIX "application"
 #include "logs.h"
+#include "librina-netlink-manager.h"
 
 #include <stdexcept>
 
@@ -118,7 +119,6 @@ void ApplicationRegistration::removeDIFName(
 /* CLASS IPC MANAGER */
 
 IPCManager::IPCManager(){
-	//TODO Probably initialize Netlink machineries?
 }
 
 IPCManager::~IPCManager(){

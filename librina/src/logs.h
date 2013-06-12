@@ -19,24 +19,77 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 #ifndef RINA_PREFIX
 #error You must define RINA_PREFIX before including this file
 #endif
 
+/**
+ * The log levels
+ */
+enum LOG_LEVEL{
+	EMERG,
+	ALERT,
+	CRIT,
+	ERR,
+	WARN,
+	NOTE,
+	INFO,
+	DBG
+};
+
+/**
+ * Global log level, default is INFO
+ */
+extern LOG_LEVEL logLevel;
+
+/**
+ * The stream where to print the log. If none is provided,
+ * it sill be printed to stdout
+ */
+extern FILE * logOutputStream;
+
+/**
+ * Set the log level
+ *
+ * @param newLogLevel the new log level
+ */
+void setLogLevel(LOG_LEVEL newLogLevel);
+
+/**
+ * Set the output stream.
+ *
+ * @param newOutputStream The output stream where to print the log statements
+ * @returns 0 if successful, -1 if there is an error
+ */
+int setOutputStream(FILE * newOutputStream);
+
+bool shouldLog(LOG_LEVEL level);
+
+/**
+ * Prints a log statement to the output stream, in case it can be done
+ * according to the log level
+ * @param level the log level
+ * @param fmt a string with the print statement
+ * @param ... multiple arguments for the string
+ */
+void LOG(LOG_LEVEL level, const char* fmt, va_list args);
+
+void LOG_DBG(const char* fmt, ...);
+void LOG_INFO(const char* fmt, ...);
+void LOG_NOTE(const char* fmt, ...);
+void LOG_WARN(const char* fmt, ...);
+void LOG_ERR(const char* fmt, ...);
+void LOG_CRIT(const char* fmt, ...);
+void LOG_ALERT(const char* fmt, ...);
+void LOG_EMERG(const char* fmt, ...);
+
+/*
 #define __LOG(PREFIX, LEVEL, FMT, ARGS...)                              \
         do { printf("librina-" PREFIX ": " FMT "\n", ##ARGS); } while (0)
 
-#define _S(x) #x
 
-/* Sorted by "urgency" (high to low) */
-#define LOG_EMERG(FMT, ARGS...) __LOG(RINA_PREFIX, _S(EMERG  ), FMT, ##ARGS)
-#define LOG_ALERT(FMT, ARGS...) __LOG(RINA_PREFIX, _S(ALERT  ), FMT, ##ARGS)
-#define LOG_CRIT(FMT,  ARGS...) __LOG(RINA_PREFIX, _S(CRIT   ), FMT, ##ARGS)
-#define LOG_ERR(FMT,   ARGS...) __LOG(RINA_PREFIX, _S(ERR    ), FMT, ##ARGS)
-#define LOG_WARN(FMT,  ARGS...) __LOG(RINA_PREFIX, _S(WARNING), FMT, ##ARGS)
-#define LOG_NOTE(FMT,  ARGS...) __LOG(RINA_PREFIX, _S(NOTICE ), FMT, ##ARGS)
-#define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, _S(INFO   ), FMT, ##ARGS)
-#define LOG_DBG(FMT,  ARGS...)  __LOG(RINA_PREFIX, _S(DEBUG  ), FMT, ##ARGS)
+#define _S(x) #x*/
 
 #endif

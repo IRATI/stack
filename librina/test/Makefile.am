@@ -61,21 +61,27 @@ test_netlink_SOURCES  = test-netlink.cc
 test_netlink_CPPFLAGS = $(COMMONCPPFLAGS)
 test_netlink_LDFLAGS  = $(COMMONLDFLAGS)
 
+test_netlink_manager_SOURCES  = test-netlink-manager.cc
+test_netlink_manager_CPPFLAGS = $(COMMONCPPFLAGS)
+test_netlink_manager_LDFLAGS  = $(COMMONLDFLAGS)
+
 check_PROGRAMS =				\
 	test-01					\
 	test-02					\
 	test-03					\
-	test-netlink
+	test-netlink-manager
 
 XFAIL_TESTS =					\
 	test-03
 
 PASS_TESTS =					\
 	test-01					\
-	test-02
+	test-02					\
+	test-netlink-manager
 
 # Explicitly list the tests, in order to ensure ordering
 TESTS =						\
 	test-01					\
 	test-02					\
-	test-03
+	test-03					\
+	test-netlink-manager
