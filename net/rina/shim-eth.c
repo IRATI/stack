@@ -26,9 +26,9 @@
 #include <linux/string.h>
 #include <linux/list.h>
 
+#include "logs.h"
 #include "common.h"
 #include "shim.h"
-#include "logs.h"
 
 LIST_HEAD(shim_eth);
 
