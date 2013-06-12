@@ -27,9 +27,6 @@
 #define RINA_PREFIX "shim-eth"
 
 #include "logs.h"
-
-#if 0
-
 #include "shim-eth.h"
 
 LIST_HEAD(shim_eth);
@@ -61,6 +58,7 @@ int shim_eth_configure(ipc_process_id_t          ipc_process_id,
                       const struct shim_conf_t * configuration)
 {
 
+#if 0
 	struct shim_eth_info_t shim_eth_info;
 	struct ipc_config_t *ipc_config = config[0];
 	struct shim_eth_instance_t instance;
@@ -99,7 +97,7 @@ int shim_eth_configure(ipc_process_id_t          ipc_process_id,
 
 
 	LOG_DBG("Configured shim ETH IPC Process");
-
+#endif
 	return 0;
 }
 
@@ -172,11 +170,6 @@ int shim_eth_sdu_read(port_id_t      id,
 
 	return 0;
 }
-
-
-
-
-#endif
 
 static int __init mod_init(void)
 {
