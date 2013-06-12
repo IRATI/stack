@@ -21,17 +21,12 @@
 #ifndef RINA_DEBUG_H
 #define RINA_DEBUG_H
 
+#include <linux/bug.h>
+
 #ifdef CONFIG_RINA_ASSERTIONS
-#define ASSERT(X)                                       \
-do {                                                    \
-        if (unlikely(!(X))) {                           \
-                LOG_CRIT("Assertion failed (%s:%d)",    \
-			 __FILE__, __LINE__);           \
-                BUG();                                  \
-        }                                               \
-} while(0)
+#define ASSERT(COND) BUG_ON(COND)
 #else
-#define ASSERT(X)
+#define ASSERT(COND)
 #endif
 
 #endif
