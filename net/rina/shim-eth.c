@@ -27,6 +27,7 @@
 #define RINA_PREFIX "shim-eth"
 
 #include "logs.h"
+/* FIXME: To be removed */
 #include "shim-eth.h"
 
 LIST_HEAD(shim_eth);
