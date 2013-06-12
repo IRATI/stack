@@ -13,31 +13,42 @@ import eu.irati.librina.rina;
 public class app {
 
 	static {
-              System.out.println("java.library.path = " + System.getProperties().getProperty("java.library.path"));
               System.loadLibrary("rina_java");
 	  }
 	
 	public static final String HELP = "--help";
 	public static final String VERSION = "--version";
+	public static final String DEBUG = "--debug";
 	public static final String USAGE = "Usage: ipcmd [--<option1> <arg1> ...] ...";
 
-	public static void main(String[] args) throws IPCException {		
-		System.out.println("************ TESTING LIBRINA-APPLICATION ************");
-		
+	private static boolean debugEnabled = false;
+	
+	private static void printStatement(Object statement){
+		if (debugEnabled){
+			System.out.println(statement);
+		}
+	}
+	
+	public static void main(String[] args) throws IPCException {
 		for(int i=0; i<args.length; i++){
 			if(args[i].equals(HELP)){
 				System.out.println(USAGE);
 				System.out.println("Options: ");
 				System.out.println("	help: Displays the program help. ");
 				System.out.println("	version: Displays the library version number.");
+				System.out.println("	debug: Shows debug output.");
 				System.exit(0);
 			}else if (args[i].equals(VERSION)){
 				System.out.println("Librina version "+rina.getVersion());
 				System.exit(0);
+			}else if (args[i].equals(DEBUG)){
+				debugEnabled = true;
 			}else{
 				System.out.println(USAGE);
 			}
 		}
+		
+		printStatement("************ TESTING LIBRINA-APPLICATION ************");
 		
 		ApplicationProcessNamingInformation sourceNamingInfo = new ApplicationProcessNamingInformation();
 		sourceNamingInfo.setProcessName("test/application/name/source");
@@ -63,56 +74,56 @@ public class app {
 		flowSpecification.setPeakSduBandwidthDuration(4000);
 		flowSpecification.setPeakBandwidthDuration(200);
 		
-		System.out.println("\nALLOCATING A FLOW");
+		printStatement("\nALLOCATING A FLOW");
 		IPCManagerSingleton ipcManager = rina.getIpcManager();
 		Flow flow = ipcManager.allocateFlowRequest(sourceNamingInfo, destNamingInfo, flowSpecification);
-		System.out.println("Flow allocated, port id is "+flow.getPortId());
+		printStatement("Flow allocated, port id is "+flow.getPortId());
 		
-		System.out.println("\nWRITING A SDU TO THE FLOW");
+		printStatement("\nWRITING A SDU TO THE FLOW");
 		byte[] sdu = "This is a test SDU".getBytes();
 		flow.writeSDU(sdu, sdu.length);
-		System.out.println("Wrote SDU");
+		printStatement("Wrote SDU");
 		
-		System.out.println("\nREADING AN SDU FROM THE FLOW");
+		printStatement("\nREADING AN SDU FROM THE FLOW");
 		flow.readSDU(sdu);
-		System.out.println("Read "+sdu.length+" bytes");
+		printStatement("Read "+sdu.length+" bytes");
 		
-		System.out.println("\nLISTING ALLOCATED FLOWS");
+		printStatement("\nLISTING ALLOCATED FLOWS");
 		FlowPointerVector allocatedFlows = ipcManager.getAllocatedFlows();
 		for(int i=0; i<allocatedFlows.size(); i++){
-			System.out.println("Got flow with portid " +allocatedFlows.get(i).getPortId()+
+			printStatement("Got flow with portid " +allocatedFlows.get(i).getPortId()+
 					", using DIF "+allocatedFlows.get(i).getDIFName().getProcessName());
 		}
 		
-		System.out.println("\nDEALLOCATING THE FLOW");
+		printStatement("\nDEALLOCATING THE FLOW");
 		ipcManager.deallocateFlow(flow.getPortId());
-		System.out.println("Flow deallocated");
+		printStatement("Flow deallocated");
 		try{
 			ipcManager.deallocateFlow(430);
 		}catch(IPCException ex){
-			System.out.println("Caught expected exception: "+ex.getMessage());
+			printStatement("Caught expected exception: "+ex.getMessage());
 		}
 		
-		System.out.println("\nREGISTERING APPLICATIONS");
+		printStatement("\nREGISTERING APPLICATIONS");
 		ApplicationProcessNamingInformation difName = new ApplicationProcessNamingInformation("/difs/Test.DIF", "");
 		ApplicationProcessNamingInformation difName2 = new ApplicationProcessNamingInformation("/difs/Test2.DIF", "");
 		ipcManager.registerApplication(sourceNamingInfo, difName);
 		ipcManager.registerApplication(sourceNamingInfo, difName2);
 		ipcManager.registerApplication(destNamingInfo, difName);
 		
-		System.out.println("\nLISTING REGISTERED APPLICATIONS");
+		printStatement("\nLISTING REGISTERED APPLICATIONS");
 		ApplicationRegistrationVector registeredApplications = ipcManager.getRegisteredApplications();
 		Iterator<ApplicationProcessNamingInformation> iterator = null;
 		for(int i=0; i<registeredApplications.size(); i++){
-			System.out.println("Application "+registeredApplications.get(i).getApplicationName() + " registered in DIFs: ");
+			printStatement("Application "+registeredApplications.get(i).getApplicationName() + " registered in DIFs: ");
 			iterator = registeredApplications.get(i).getDIFNames().iterator();
 			while(iterator.hasNext()){
-				System.out.println(iterator.next());
+				printStatement(iterator.next());
 			}
 			
 		}
 		
-		System.out.println("\nUNREGISTERING APPLICATIONS");
+		printStatement("\nUNREGISTERING APPLICATIONS");
 		ipcManager.unregisterApplication(sourceNamingInfo, difName);
 		ipcManager.unregisterApplication(sourceNamingInfo, difName2);
 		ipcManager.unregisterApplication(destNamingInfo, difName);
