@@ -33,9 +33,6 @@
 #include "efcp.h"
 #include "rmt.h"
 
-/* FIXME: This inclusions should be remove */
-#include "shim-eth.h"
-
 typedef enum {
         DIF_TYPE_NORMAL,
 
