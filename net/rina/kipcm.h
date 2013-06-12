@@ -32,18 +32,7 @@
 #include "common.h"
 #include "efcp.h"
 #include "rmt.h"
-
-/* FIXME: These inclusions should be avoided */
-//#include "shim-eth.h"
-#include "shim-tcp-udp.h"
-
-typedef enum {
-        DIF_TYPE_NORMAL,
-
-        /* FIXME: DIF_TYPE_SHIM_IP should be DIF_TYPE_SHIM_TCP_IP */
-        DIF_TYPE_SHIM_IP,
-        DIF_TYPE_SHIM_ETH
-} dif_type_t;
+#include "shim.h"
 
 struct normal_ipc_process_conf_t {
 	/*
@@ -60,32 +49,6 @@ struct normal_ipc_process_conf_t {
 
 	/* RMT component configuration */
 	struct rmt_conf_t *   rmt_config;
-};
-
-struct ipc_process_shim_ethernet_conf_t {
-	/*
-	 * Configuration of the kernel component of a shim Ethernet IPC 
-	 * Process
-	 */
-
-	/* The vlan id */
-	int        vlan_id;
-
-	/* The name of the device driver of the Ethernet interface */
-	string_t * device_name;
-};
-
-struct ipc_process_shim_tcp_udp_conf_t {
-	/*
-	 * Configuration of the kernel component of a shim TCP/UDP IPC 
-	 * Process
-	 */
-
-	/* FIXME: inet address the IPC process is bound to */
-	//in_addr_t *inet_address;
-
-	/* The name of the DIF */
-	struct name_t *dif_name;
 };
 
 struct ipc_process_conf_t {
@@ -120,36 +83,6 @@ struct normal_ipc_process_t {
 	
 	/* The RMT instance associated to the IPC Process */
 	struct rmt_instance_t *rmt;
-};
-
-struct ipc_process_shim_ethernet_t {
-	/* 
-	 * Contains all he data structures of a shim IPC Process over Ethernet
-	 */
-
-	/* The ID of the IPC Process */
-	ipc_process_id_t ipcp_id;
-
-	/* The configuration of the module */
-	struct ipc_process_shim_ethernet_conf_t *configuration;
-
-	/* The module that performs the processing */
-	struct shim_eth_instance_t *shim_eth_ipc_process;
-};
-
-struct ipc_process_shim_tcp_udp_t {
-	/* 
-	 * Contains all he data structures of a shim IPC Process over TCP/IP 
-	 */
-
-	/* The ID of the IPC Process */
-	ipc_process_id_t ipcp_id;
-
-	/* The configuration of the module */
-	struct ipc_process_shim_tcp_udp_conf_t *configuration;
-
-	/* The module that performs the processing */
-	struct shim_tcp_udp_instance_t *shim_tcp_udp_ipc_process;
 };
 
 struct ipc_process_t {

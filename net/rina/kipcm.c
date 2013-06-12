@@ -28,11 +28,7 @@
 #include "logs.h"
 #include "debug.h"
 #include "kipcm.h"
-#include "shim.h"
 
-/* FIXME: Remove all the statics here
- * FIXED: I have removed them, is it ok now?
- */
 LIST_HEAD(id_to_ipcp);
 LIST_HEAD(port_id_to_flow);
 

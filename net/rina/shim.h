@@ -25,7 +25,6 @@
 
 #include "common.h"
 
-#if 0
 /* FIXME: Add and enhance these types, please remove them from KIPCM */
 enum shim_config_type_t {
         SHIM_CONFIG_UINT   = 1,
@@ -41,7 +40,72 @@ struct shim_config_entry_t {
         char *                       name;
         struct shim_config_value_t * value;
 };
-#endif
+
+typedef enum {
+        DIF_TYPE_NORMAL,
+
+        DIF_TYPE_SHIM_IP,
+        DIF_TYPE_SHIM_ETH
+} dif_type_t;
+
+struct ipc_process_shim_ethernet_conf_t {
+	/*
+	 * Configuration of the kernel component of a shim Ethernet IPC
+	 * Process
+	 */
+
+	/* The vlan id */
+	int        vlan_id;
+
+	/* The name of the device driver of the Ethernet interface */
+	string_t * device_name;
+};
+
+struct ipc_process_shim_tcp_udp_conf_t {
+	/*
+	 * Configuration of the kernel component of a shim TCP/UDP IPC
+	 * Process
+	 */
+
+	/* FIXME: inet address the IPC process is bound to */
+	//in_addr_t *inet_address;
+
+	/* The name of the DIF */
+	struct name_t *dif_name;
+};
+
+/* FIXME: These structures should be changed, they aren't needed in this way
+ * anymore.
+ */
+struct ipc_process_shim_ethernet_t {
+	/*
+	 * Contains all he data structures of a shim IPC Process over Ethernet
+	 */
+
+	/* The ID of the IPC Process */
+	ipc_process_id_t ipcp_id;
+
+	/* The configuration of the module */
+	struct ipc_process_shim_ethernet_conf_t *configuration;
+
+	/* The module that performs the processing */
+	struct shim_eth_instance_t *shim_eth_ipc_process;
+};
+
+struct ipc_process_shim_tcp_udp_t {
+	/*
+	 * Contains all he data structures of a shim IPC Process over TCP/IP
+	 */
+
+	/* The ID of the IPC Process */
+	ipc_process_id_t ipcp_id;
+
+	/* The configuration of the module */
+	struct ipc_process_shim_tcp_udp_conf_t *configuration;
+
+	/* The module that performs the processing */
+	struct shim_tcp_udp_instance_t *shim_tcp_udp_ipc_process;
+};
 
 struct shim_t {
         /* Might be removed when deemed unnecessary */
