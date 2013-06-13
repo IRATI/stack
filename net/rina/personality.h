@@ -60,9 +60,6 @@ struct personality_t {
                          struct sdu_t * sdu);
 };
 
-/* FIXME: To be removed ASAP */
-extern struct personality_t * personality;
-
 int  rina_personality_init(void);
 void rina_personality_exit(void);
 

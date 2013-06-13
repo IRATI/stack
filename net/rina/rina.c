@@ -29,7 +29,7 @@
 #include "kipcm.h"
 #include "efcp.h"
 
-struct personality_t * personality = NULL;
+static struct personality_t * personality = NULL;
 
 static int __init mod_init(void)
 {
@@ -69,6 +69,9 @@ static int __init mod_init(void)
                 return -1;
         }
 
+        kfree(personality);
+        personality = NULL;
+
         LOG_DBG("Rina personality loaded successfully");
 
         LOG_FEXIT;
@@ -82,6 +85,7 @@ static void __exit mod_exit(void)
         ASSERT(personality);
 
         (void) rina_personality_unregister(personality);
+
         kfree(personality);
         personality = NULL;
 
