@@ -23,27 +23,9 @@
 #include "logs.h"
 #include "utils.h"
 #include "personality.h"
+#include "shim.h"
 
 struct personality_t * personality = NULL;
-
-static int is_ok(const struct personality_t * pers)
-{
-        ASSERT(pers);
-
-        if (pers->init               &&
-            pers->exit               &&
-            pers->ipc_create         &&
-            pers->ipc_configure      &&
-            pers->ipc_destroy        &&
-            pers->sdu_read           &&
-            pers->sdu_write          &&
-            pers->connection_create  &&
-            pers->connection_destroy &&
-            pers->connection_update)
-                return 1;
-
-        return 0;
-}
 
 int rina_personality_init(void)
 {
@@ -57,12 +39,30 @@ int rina_personality_init(void)
 void rina_personality_exit(void)
 {
         if (personality) {
-                ASSERT(personality->exit);
-                personality->exit(personality->data);
+                ASSERT(personality->fini);
+                personality->fini(personality->data);
+                LOG_DBG("Personality finalized successfully");
         }
         personality = NULL;
+}
 
-        LOG_DBG("Personality finalized successfully");
+static int is_ok(const struct personality_t * pers)
+{
+        ASSERT(pers);
+
+        if (pers->init               &&
+            pers->fini               &&
+            pers->ipc_create         &&
+            pers->ipc_configure      &&
+            pers->ipc_destroy        &&
+            pers->sdu_read           &&
+            pers->sdu_write          &&
+            pers->connection_create  &&
+            pers->connection_destroy &&
+            pers->connection_update)
+                return 1;
+
+        return 0;
 }
 
 int rina_personality_register(struct personality_t * pers)
@@ -109,9 +109,9 @@ int rina_personality_unregister(struct personality_t * pers)
         }
 
         ASSERT(personality       != NULL);
-        ASSERT(personality->exit != NULL);
+        ASSERT(personality->fini != NULL);
 
-        personality->exit(pers->data);
+        personality->fini(pers->data);
         personality = 0;
 
         LOG_DBG("Personality un-registered successfully");
