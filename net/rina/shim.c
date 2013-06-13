@@ -41,9 +41,22 @@ static int is_ok(const struct shim_t * shim)
 
             shim->ipc_create              &&
             shim->ipc_configure           &&
-            shim->ipc_destroy             &&
+	    shim->ipc_reconfigure         &&
+            shim->ipc_destroy)
+                return 1;
 
-            shim->flow_allocate_request   &&
+        return 0;
+}
+
+#if 0
+
+/* FIXME: Should probably be moved to kipcm.h, to check if the shim instance can be used */
+
+static int instance_is_ok(const struct shim_instance_t * shim)
+{
+        ASSERT(shim);
+
+        if (shim->flow_allocate_request   &&
             shim->flow_allocate_response  &&
             shim->flow_deallocate         &&
 
@@ -56,6 +69,9 @@ static int is_ok(const struct shim_t * shim)
 
         return 0;
 }
+
+#endif
+
 
 int shim_register(struct shim_t * shim)
 {
