@@ -32,66 +32,60 @@ int  shim_init(void)
 void shim_exit(void)
 { }
 
-static int is_ok(const struct shim_t * shim)
+static int is_shim_ok(const struct shim_t * shim)
 {
-        ASSERT(shim);
-
-        if (shim->init                    &&
-            shim->exit                    &&
-
-            shim->ipc_create              &&
-            shim->ipc_configure           &&
-	    shim->ipc_reconfigure         &&
-            shim->ipc_destroy)
+        if (shim            &&
+            shim->create    &&
+            shim->configure &&
+	    shim->destroy)
                 return 1;
 
         return 0;
 }
 
 #if 0
-
-/* FIXME: Should probably be moved to kipcm.h, to check if the shim instance can be used */
-
-static int instance_is_ok(const struct shim_instance_t * shim)
+static int is_instance_ok(const struct shim_instance_t * inst)
 {
-        ASSERT(shim);
+        if (inst                          &&
+            inst->flow_allocate_request   &&
+            inst->flow_allocate_response  &&
+            inst->flow_deallocate         &&
 
-        if (shim->flow_allocate_request   &&
-            shim->flow_allocate_response  &&
-            shim->flow_deallocate         &&
+            inst->application_register    &&
+            inst->application_unregister  &&
 
-            shim->application_register    &&
-            shim->application_unregister  &&
-
-            shim->sdu_read                &&
-            shim->sdu_write)
+            inst->sdu_read                &&
+            inst->sdu_write)
                 return 1;
 
         return 0;
 }
-
 #endif
-
 
 int shim_register(struct shim_t * shim)
 {
-        LOG_DBG("Registering shim %pK", shim);
-
-        if (!shim || !is_ok(shim)) {
+        if (!shim || !is_shim_ok(shim)) {
                 LOG_ERR("Cannot register shim, it's bogus");
                 return -1;
         }
 
-        /* FIXME: Call the KIPCM */
+        LOG_DBG("Registering shim %pK", shim);
+
+        /* FIXME: Add code here */
 
         return 0;
 }
 
 int shim_unregister(struct shim_t * shim)
 {
+        if (!shim) {
+                LOG_ERR("Cannot unregister shim, it's bogus");
+                return -1;
+        }
+
         LOG_DBG("Un-registering shim %pK", shim);
 
-        /* FIXME: Call the KIPCM */
+        /* FIXME: Add code here */
 
         return 0;
 }

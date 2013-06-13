@@ -45,31 +45,8 @@ struct shim_conf_t {
 	struct shim_config_entry_t * entry;
 };
 
-struct shim_t {
-        /* Might be removed when deemed unnecessary */
-        void * data;
-
-	int  (* init)(void * opaque);
-	void (* exit)(void * opaque);
-
-        /* Functions pointer exported by the shim module, per shim module */
-	int  (* ipc_create)(void *                opaque,
-                            ipc_process_id_t      ipc_process_id,
-                            const struct name_t * name);
-	int  (* ipc_configure)(void *                     opaque,
-                               const struct shim_conf_t * configuration);
-	int  (* ipc_reconfigure)(void *                     opaque,
-                                 const struct shim_conf_t * configuration);
-	int  (* ipc_destroy)(void * opaque);
-
-};
-
 struct shim_instance_t {
-        /* Might be removed when deemed unnecessary */
-        void * data;
-
-	int  (* init)(void * opaque);
-	void (* exit)(void * opaque);
+        void * opaque;
 
         /* Function pointers exported by the shim module, per shim instance */
 	int  (* flow_allocate_request)(void *                     opaque,
@@ -96,11 +73,24 @@ struct shim_instance_t {
                           struct sdu_t * sdu);
 };
 
+struct shim_t {
+	struct shim_instance_t * (* create)
+                (ipc_process_id_t      id,
+                 const struct name_t * name);
+        
+	struct shim_instance_t * (* configure)
+                (struct shim_instance_t *   instance,
+                 const struct shim_conf_t * configuration);
+
+	int                      (* destroy)
+                (struct shim_instance_t * inst);
+};
+
 /* Called by the kipcm, might disappear */
 int  shim_init(void);
 void shim_exit(void);
 
-/* Called by each shim module) */
+/* Called by each shim module */
 int  shim_register(struct shim_t * shim);
 int  shim_unregister(struct shim_t * shim);
 
