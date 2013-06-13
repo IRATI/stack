@@ -16,12 +16,44 @@
 
 #include <iostream>
 #include "librina-netlink-manager.h"
+#include "librina-common.h"
 
 using namespace rina;
 
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING LIBRINA-NETLINK-MANAGER\n";
 
-	NetlinkManager * netlinkManager = new NetlinkManager();
-	delete netlinkManager;
+	NetlinkManager * source = new NetlinkManager(4);
+	NetlinkManager * destination = new NetlinkManager(5);
+	NetlinkManager * source2 = new NetlinkManager(6);
+
+	ApplicationProcessNamingInformation * sourceName = new ApplicationProcessNamingInformation();
+	sourceName->setProcessName("/apps/source");
+	sourceName->setProcessInstance("12");
+	sourceName->setEntityName("database");
+	sourceName->setEntityInstance("12");
+	source->sendMessage(*sourceName, 5);
+
+	ApplicationProcessNamingInformation * destName = new ApplicationProcessNamingInformation();
+	destName->setProcessName("/apps/dest");
+	destName->setProcessInstance("12345");
+	destName->setEntityName("printer");
+	destName->setEntityInstance("12623456");
+	source2->sendMessage(*destName, 5);
+
+	ApplicationProcessNamingInformation *  result;
+	result = destination->getMessage();
+	std::cout<<"Received message!!! \n";
+	std::cout<< result->toString() << "\n";
+	delete result;
+	result = destination->getMessage();
+	std::cout<<"Received message!!! \n";
+	std::cout<< result->toString() << "\n";
+	delete result;
+
+	delete source;
+	delete destination;
+	delete source2;
+	delete sourceName;
+	delete destName;
 }
