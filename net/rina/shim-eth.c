@@ -25,16 +25,17 @@
 #include <linux/if_ether.h>
 #include <linux/string.h>
 #include <linux/list.h>
+#include <linux/rbtree.h>
 
 #include "logs.h"
 #include "common.h"
 #include "shim.h"
 
-LIST_HEAD(shim_eth);
+/* Holds all the shim instances */
+static struct rb_root shim_eth_root;
 
 /* Holds the configuration of one shim IPC process */
 struct shim_eth_info_t {
-	struct name_t * name;
 	uint16_t        vlan_id;
 	char *      interface_name;
 };
@@ -52,18 +53,22 @@ struct shim_eth_flow_t {
 	uint64_t             dst_mac;
 	port_id_t            port_id;
 	enum port_id_state_t port_id_state;
-	/* FIXME: Will probably be a sk_buff_head or a linked list 
-	   holding only the SDUs */
 
+	/* FIXME: Will be a kfifo holding the SDUs or a sk_buff_head */
         /* QUEUE(sdu_queue, sdu_t *); */
 };
 
 /*
  * Contains all the information associated to an instance of a
- * shim Ethernet IPC Process, as well as pointers to the
- * functions to manipulate it
+ * shim Ethernet IPC Process
  */
-struct shim_eth_instance_t {
+struct shim_eth_instance_t { 
+	struct rb_node node;
+
+	/* IPC process id and DIF name */
+	ipc_process_id_t ipc_process_id;
+	struct name_t * name;
+
         /* The configuration of the shim IPC Process */
 	struct shim_eth_info_t * info;
 
@@ -72,17 +77,7 @@ struct shim_eth_instance_t {
 
 	/* FIXME: Stores the state of flows indexed by port_id */
 	/* HASH_TABLE(flow_to_port_id, port_id_t, shim_eth_flow_t); */
-};
-
-/*
- * The container for the shim IPC Process over Ethernet
- * component
- */
-/* Stores the state of shim IPC Process instances */
-struct shim_eth_t {
-	ipc_process_id_t ipc_process_id;
-	struct shim_eth_instance_t * shim_eth_instance;
-	struct list_head list;
+	/* rbtree or hash table? */
 };
 
 int shim_eth_init(void)
@@ -122,18 +117,13 @@ static int name_cpy(struct name_t * dst,
 int shim_eth_create(ipc_process_id_t      ipc_process_id,
                     const struct name_t * name)
 {
-	struct shim_eth_t * list_item; 
+
 	struct shim_eth_instance_t * shim_instance; 	
-	struct shim_eth_info_t * shim_info;
+	struct rb_node **p = &shim_eth_root.rb_node;
+	struct rb_node *parent = NULL;
+	struct shim_eth_instance_t * s;
 
 	LOG_FBEGN;
-
-	list_item = kmalloc(sizeof(*list_item), GFP_KERNEL);
-	if (!list_item) {
-                LOG_ERR("Cannot allocate memory");
-                LOG_FEXIT;
-                return -1;
-        }
 
 	shim_instance = kmalloc(sizeof(*shim_instance), GFP_KERNEL);
 	if (!shim_instance) {
@@ -142,22 +132,30 @@ int shim_eth_create(ipc_process_id_t      ipc_process_id,
                 return -1;
         }
 
-	shim_info = kmalloc(sizeof(*shim_info), GFP_KERNEL);
-	if (!shim_info) {
-                LOG_ERR("Cannot allocate memory");
-                LOG_FEXIT;
-                return -1;
-        }
-
-	if(!name_cpy(shim_info->name, name)){
+	shim_instance->ipc_process_id = ipc_process_id;
+	if(!name_cpy(shim_instance->name, name)){
 		LOG_FEXIT;
 		return -1;
 	}
-	shim_instance->info = shim_info;
 
-	list_item->ipc_process_id = ipc_process_id;
-	list_item->shim_eth_instance = shim_instance;
-     	list_add(&(list_item->list), &shim_eth);
+	while(*p){
+		parent = *p;
+		s = rb_entry(parent, struct shim_eth_instance_t, node);
+		if(unlikely(ipc_process_id == s->ipc_process_id)){
+			LOG_ERR("Shim instance with id %x already exists", 
+				ipc_process_id);
+			kfree(shim_instance);
+			return -1;
+		}
+		else if(ipc_process_id < s->ipc_process_id)
+			p = &(*p)->rb_left;
+		else
+			p = &(*p)->rb_right;
+	}
+	rb_link_node(&shim_instance->node,parent,p);
+	rb_insert_color(&shim_instance->node,&shim_eth_root);        
+
+
         LOG_FEXIT;
 	return 0;
 }
@@ -167,8 +165,19 @@ int shim_eth_configure(ipc_process_id_t          ipc_process_id,
 {
 
 #if 0
+	
+	struct shim_eth_info_t * shim_info;
+
 	struct list_head *pos;
 	struct shim_config_entry_t tmp;
+
+
+	shim_info = kmalloc(sizeof(*shim_info), GFP_KERNEL);
+	if (!shim_info) {
+                LOG_ERR("Cannot allocate memory");
+                LOG_FEXIT;
+                return -1;
+        }
 
 	/* Retrieve configuration of IPC process from params */
 	list_for_each(pos, configuration.list){
