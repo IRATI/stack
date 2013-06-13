@@ -52,16 +52,26 @@ struct shim_t {
 	int  (* init)(void * opaque);
 	void (* exit)(void * opaque);
 
-        /* Functions pointer exported by the shim module */
+        /* Functions pointer exported by the shim module, per shim module */
 	int  (* ipc_create)(void *                opaque,
                             ipc_process_id_t      ipc_process_id,
                             const struct name_t * name);
 	int  (* ipc_configure)(void *                     opaque,
-                               ipc_process_id_t           ipc_process_id,
                                const struct shim_conf_t * configuration);
-	int  (* ipc_destroy)(void *           opaque,
-                             ipc_process_id_t ipc_process_id);
+	int  (* ipc_reconfigure)(void *                     opaque,
+                                 const struct shim_conf_t * configuration);
+	int  (* ipc_destroy)(void * opaque);
 
+};
+
+struct shim_instance_t {
+        /* Might be removed when deemed unnecessary */
+        void * data;
+
+	int  (* init)(void * opaque);
+	void (* exit)(void * opaque);
+
+        /* Function pointers exported by the shim module, per shim instance */
 	int  (* flow_allocate_request)(void *                     opaque,
                                        const struct name_t *      source,
                                        const struct name_t *      dest,
