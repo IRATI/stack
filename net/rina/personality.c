@@ -18,6 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/export.h>
+
 #define RINA_PREFIX "personality"
 
 #include "logs.h"
@@ -93,6 +95,7 @@ int rina_personality_register(struct personality_t * pers)
 
         return 0;
 }
+EXPORT_SYMBOL(rina_personality_register);
 
 int rina_personality_unregister(struct personality_t * pers)
 {
@@ -118,3 +121,4 @@ int rina_personality_unregister(struct personality_t * pers)
 
         return 0;
 }
+EXPORT_SYMBOL(rina_personality_unregister);

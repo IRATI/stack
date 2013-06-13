@@ -1,5 +1,5 @@
 /*
- * RINA personality
+ * RINA default personality
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -84,7 +84,13 @@ static void __exit mod_exit(void)
 
         ASSERT(personality);
 
-        (void) rina_personality_unregister(personality);
+        if (rina_personality_unregister(personality)) {
+                LOG_CRIT("Got problems while unregistering personality, "
+                         "bailing out");
+
+                LOG_FEXIT;
+                return;
+        }
 
         kfree(personality);
         personality = NULL;
