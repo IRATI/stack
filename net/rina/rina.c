@@ -2,7 +2,6 @@
  * RINA personality
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Miquel Tarzan <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,52 +23,51 @@
 #define RINA_PREFIX "personality-default"
 
 #include "logs.h"
+#include "utils.h"
+#include "personality.h"
+#include "shim.h"
 #include "kipcm.h"
 #include "efcp.h"
-#include "rmt.h"
 
-/* FIXME: To be removed */
-#if 0
-#include "shim-eth.h"
-#include "shim-tcp-udp.h"
-#endif
+struct personality_t * personality = NULL;
 
 static int __init mod_init(void)
 {
+
         LOG_FBEGN;
 
         LOG_DBG("Rina personality initializing");
 
-        if (kipcm_init())
+        personality = kmalloc(sizeof(*personality), GFP_KERNEL);
+        if (!personality) {
+                LOG_ERR("Cannot allocate %zu bytes of memory",
+                        sizeof(*personality));
                 return -1;
+        }
+        ASSERT(personality);
+
+        if (shim_init())
+                return -1;
+
+        if (kipcm_init()) {
+                shim_exit();
+                return -1;
+        }
 
         if (efcp_init()) {
                 kipcm_exit();
+                shim_exit();
                 return -1;
         }
 
-        if (rmt_init()) {
+        if (rina_personality_register(personality)) {
                 efcp_exit();
                 kipcm_exit();
+                shim_exit();
+                kfree(personality);
+                personality = NULL;
+                return -1;
         }
-
-#if 0
-#ifdef CONFIG_SHIM_ETH
-        if (shim_eth_init()) {
-                rmt_exit();
-                efcp_exit();
-                kipcm_exit();
-        }
-#endif
-#ifdef CONFIG_SHIM_TCP_UDP
-        if (shim_tcp_udp_init()) {
-                shim_eth_exit();
-                rmt_exit();
-                efcp_exit();
-                kipcm_exit();
-        }
-#endif
-#endif
 
         LOG_DBG("Rina personality loaded successfully");
 
@@ -81,20 +79,15 @@ static void __exit mod_exit(void)
 {
         LOG_FBEGN;
 
-        LOG_DBG("Rina personality exiting");
+        ASSERT(personality);
 
-#if 0
-#ifdef CONFIG_SHIM_TCP_UDP
-        shim_tcp_udp_exit();
-#endif
-#ifdef CONFIG_SHIM_ETH
-        shim_eth_exit();
-#endif
-#endif
+        (void) rina_personality_unregister(personality);
+        kfree(personality);
+        personality = NULL;
 
-        rmt_exit();
         efcp_exit();
         kipcm_exit();
+        shim_exit();
 
         LOG_DBG("Rina personality unloaded successfully");
 
@@ -109,6 +102,3 @@ MODULE_DESCRIPTION("RINA default personality");
 MODULE_LICENSE("GPL");
 
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
-MODULE_AUTHOR("Leonardo Bergesio <leonardo.bergesio@i2cat.net>");
-MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
-MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");

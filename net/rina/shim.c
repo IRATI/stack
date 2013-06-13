@@ -79,4 +79,3 @@ int shim_unregister(struct shim_t * shim)
 
         return 0;
 }
-
