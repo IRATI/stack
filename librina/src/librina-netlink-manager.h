@@ -26,7 +26,8 @@
 
 #include "exceptions.h"
 #include "patterns.h"
-#include <netlink/socket.h>
+#include "librina-common.h"
+#include <netlink/netlink.h>
 
 namespace rina{
 
@@ -38,35 +39,35 @@ namespace rina{
 class NetlinkManager{
 
 	/** The address where the netlink socket will be bound */
-	unsigned int netlinkPid;
+	unsigned int localPort;
 
 	/** The netlink socket structure */
-	struct nl_sock *socket;
+	nl_sock *socket;
 
 	/** Creates the Netlink socket and binds it to the netlinkPid */
 	void initialize();
 public:
 	/**
-	 * Creates an instance of a Netlink socket and binds it to the specified
-	 * PID
+	 * Creates an instance of a Netlink socket and binds it to the local port
+	 * whose number is the same as the OS process PID
 	 */
 	NetlinkManager();
 
 	/**
-	 * Creates an instance of a Netlink socket and binds it to the specified s
+	 * Creates an instance of a Netlink socket and binds it to the specified
+	 * local port
 	 */
-	NetlinkManager(unsigned int netlinkPid);
+	NetlinkManager(unsigned int localPort);
 
 	/**
 	 * Closes the Netlink socket
 	 */
 	~NetlinkManager();
 
-	void sendMessage(const std::string& message, unsigned int destination);
+	void sendMessage(const ApplicationProcessNamingInformation& appName, unsigned int destination);
 
-	std::string getMessage();
+	ApplicationProcessNamingInformation *  getMessage();
 };
-
 }
 
 #endif /* LIBRINA_NETLINK_MANAGER_H_ */
