@@ -52,8 +52,8 @@ config RINA_ASSERTIONS
 	help
 	  No help for the time being
 
-config RINA_PERSONALITY
-       	tristate "Personality support"
+config RINA_PERSONALITY_DEFAULT
+       	tristate "Default Personality support"
 	default y
 	---help---
 	  No help for the time being
@@ -61,21 +61,21 @@ config RINA_PERSONALITY
 config RINA_SHIM_DUMMY
 	tristate "Dummy Shim IPC"
 	default y
-        depends on RINA_PERSONALITY && RINA_DEBUG
+        depends on RINA_PERSONALITY_DEFAULT && RINA_DEBUG
 	help
 	  No help for the time being
 
 config RINA_SHIM_ETH
 	tristate "Shim IPC over Ethernet support"
 	default y
-        depends on RINA_PERSONALITY
+        depends on RINA_PERSONALITY_DEFAULT
 	help
 	  No help for the time being
 
 config RINA_SHIM_TCP_UDP
 	tristate "Shim IPC over TCP/UDP support"
 	default y
-        depends on RINA_PERSONALITY
+        depends on RINA_PERSONALITY_DEFAULT
 	help
 	  No help for the time being
 

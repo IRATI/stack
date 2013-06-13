@@ -27,43 +27,38 @@
 #include "kipcm.h"
 
 struct personality_t {
-        /* Might be removed when deemed unnecessary */
+        /* Might be removed if deemed unnecessary */
         void * data;
 
         int  (* init)(void * opaque);
-        void (* exit)(void * opaque);
+        void (* fini)(void * opaque);
 
         /* Functions exported to the personality user */
-        /* FIXME: should be int, not long */
-        long (* ipc_create)(void *                opaque,
-                            const struct name_t * name,
-                            ipc_process_id_t      id,
-                            dif_type_t            type);
-        long (* ipc_configure)(void *                            opaque,
-                               ipc_process_id_t                  id,
-                               const struct ipc_process_conf_t * configuration);
-        long (* ipc_destroy)(void *           opaque,
-                             ipc_process_id_t ipcp_id);
+        int (* ipc_create)(void *                opaque,
+                           const struct name_t * name,
+                           ipc_process_id_t      id,
+                           dif_type_t            type);
+        int (* ipc_configure)(void *                            opaque,
+                              ipc_process_id_t                  id,
+                              const struct ipc_process_conf_t * configuration);
+        int (* ipc_destroy)(void *           opaque,
+                            ipc_process_id_t ipcp_id);
         
-        long (* connection_create)(void *                      opaque,
-                                   const struct connection_t * connection);
-        long (* connection_destroy)(void *   opaque,
-                                    cep_id_t cep_id);
-        long (* connection_update)(void *   opaque,
-                                   cep_id_t from_id,
-                                   cep_id_t to_id);
+        int (* connection_create)(void *                      opaque,
+                                  const struct connection_t * connection);
+        int (* connection_destroy)(void *   opaque,
+                                   cep_id_t cep_id);
+        int (* connection_update)(void *   opaque,
+                                  cep_id_t from_id,
+                                  cep_id_t to_id);
 
-        long (* sdu_write)(void *               opaque,
-                           port_id_t            id,
-                           const struct sdu_t * sdu);
-        /* FIXME: Should we keep the following ? */
-        long (* sdu_read)(void *         opaque,
-                          port_id_t      id,
-                          struct sdu_t * sdu);
+        int (* sdu_write)(void *               opaque,
+                          port_id_t            id,
+                          const struct sdu_t * sdu);
+        int (* sdu_read)(void *         opaque,
+                         port_id_t      id,
+                         struct sdu_t * sdu);
 };
-
-/* FIXME: To be removed ASAP */
-extern struct personality_t * personality;
 
 int  rina_personality_init(void);
 void rina_personality_exit(void);

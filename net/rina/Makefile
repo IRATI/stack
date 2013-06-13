@@ -2,12 +2,12 @@
 # Makefile for the Linux RINA layer.
 #
 
-obj-$(CONFIG_RINA)              += core.o personality.o syscalls.o netlink.o
+obj-$(CONFIG_RINA) += core.o personality.o syscalls.o netlink.o
 
-obj-$(CONFIG_RINA_PERSONALITY)  += rina_personality.o
+obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) += rina_personality_default.o
 
-rina_personality-y :=			\
-	shim.o kipcm.o efcp.o rmt.o pdufwdt.o rina.o
+rina_personality_default-y :=				\
+	shim.o kipcm.o efcp.o rmt.o pdufwdt.o default.o
 
 obj-$(CONFIG_RINA_SHIM_DUMMY)   += shim-dummy.o
 obj-$(CONFIG_RINA_SHIM_ETH)     += shim-eth.o

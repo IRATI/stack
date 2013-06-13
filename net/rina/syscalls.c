@@ -30,22 +30,25 @@
 #include "utils.h"
 #include "personality.h"
 
-#define CALL_PERSONALITY(HOOK, ARGS...)                                 \
-do {                                                                    \
-	if (personality == NULL) {                                      \
-                LOG_ERR("No personality registered");                   \
-                return -1;                                              \
-        }                                                               \
-                                                                        \
-	ASSERT(personality);                                            \
-                                                                        \
-        if (personality -> HOOK == NULL) {                              \
-                LOG_ERR("No %s hook present", __stringify(HOOK));       \
-                return -1;                                              \
-        }                                                               \
-                                                                        \
-        ASSERT(personality -> HOOK);                                    \
-        return personality -> HOOK (personality->data, ##ARGS);         \
+/* FIXME: To be removed ASAP */
+extern struct personality_t * rina_personality;
+
+#define CALL_PERSONALITY(HOOK, ARGS...)                                   \
+do {                                                                      \
+	if (rina_personality == NULL) {                                   \
+                LOG_ERR("No personality registered");                     \
+                return -1;                                                \
+        }                                                                 \
+                                                                          \
+	ASSERT(rina_personality);                                         \
+                                                                          \
+        if (rina_personality -> HOOK == NULL) {                           \
+                LOG_ERR("No %s hook present", __stringify(HOOK));         \
+                return -1;                                                \
+        }                                                                 \
+                                                                          \
+        ASSERT(rina_personality -> HOOK);                                 \
+        return rina_personality -> HOOK (rina_personality->data, ##ARGS); \
 } while (0)
 
 SYSCALL_DEFINE3(ipc_create,

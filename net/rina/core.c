@@ -47,7 +47,8 @@ static int __init rina_core_init(void)
         }
         if (rina_netlink_init()) {
                 LOG_CRIT("Could not initialize netlink");
-                rina_personality_exit();                
+                rina_personality_exit();
+                return -1;
         }
 
         LOG_FEXIT;
