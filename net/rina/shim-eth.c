@@ -80,20 +80,6 @@ struct shim_eth_instance_t {
 	/* rbtree or hash table? */
 };
 
-int shim_eth_init(void)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-
-        return 0;
-}
-
-void shim_eth_exit(void)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-}
-
 static int name_cpy(struct name_t * dst, 
 		     const struct name_t *src)
 {
