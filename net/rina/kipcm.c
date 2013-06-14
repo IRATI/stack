@@ -108,6 +108,30 @@ int kipcm_shim_unregister(struct shim_t * shim)
         return 1;
 }
 
+#if 0
+static int is_instance_ok(const struct shim_instance_t * inst)
+{
+        LDBG("Checking shim instance %pK consistence", inst);
+
+        if (inst                          &&
+            inst->flow_allocate_request   &&
+            inst->flow_allocate_response  &&
+            inst->flow_deallocate         &&
+
+            inst->application_register    &&
+            inst->application_unregister  &&
+
+            inst->sdu_read                &&
+            inst->sdu_write) {
+                LOG_DBG("Shim instance %pK is consistent", inst)
+                return 1;
+        }
+
+        LOG_ERR("Shim instance %pK is inconsistent", inst);
+        return 0;
+}
+#endif
+
 int kipcm_flow_add(void *                opaque,
                    port_id_t             id,
                    const struct flow_t * flow)

@@ -35,33 +35,19 @@ void shim_exit(void)
 
 static int is_shim_ok(const struct shim_t * shim)
 {
+        LOG_DBG("Checking shim %pK consistence", shim);
+
         if (shim            &&
             shim->create    &&
             shim->configure &&
-	    shim->destroy)
+	    shim->destroy) {
+                LOG_DBG("Shim %pK is consistent", shim);
                 return 1;
+        }
 
+        LOG_ERR("Shim %pK is inconsistent", shim);
         return 0;
 }
-
-#if 0
-static int is_instance_ok(const struct shim_instance_t * inst)
-{
-        if (inst                          &&
-            inst->flow_allocate_request   &&
-            inst->flow_allocate_response  &&
-            inst->flow_deallocate         &&
-
-            inst->application_register    &&
-            inst->application_unregister  &&
-
-            inst->sdu_read                &&
-            inst->sdu_write)
-                return 1;
-
-        return 0;
-}
-#endif
 
 int shim_register(struct shim_t * shim)
 {
