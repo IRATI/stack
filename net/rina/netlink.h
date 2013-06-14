@@ -41,22 +41,10 @@ enum {
 
 #define NETLINK_RINA_A_MAX (__NETLINK_RINA_A_MAX - 1)
 
-/* attribute policy */
-static struct nla_policy nl_rina_policy[NETLINK_RINA_A_MAX + 1] = { 
-	[NETLINK_RINA_A_MSG] = { .type = NLA_NUL_STRING },
-};
 
-/* family definition */
-static struct genl_family nl_rina_family = { 
-	.id = GENL_ID_GENERATE,
-	.hdrsize = 0,
-	.name = "NETLINK_RINA",
-	.version = 1,
-	.maxattr = NETLINK_RINA_A_MAX,
-};
 
 /* handler */
-static int nl_rina_echo(struct sk_buff *skb, struct genl_info *info);
+//static int nl_rina_echo(struct sk_buff *skb, struct genl_info *info);
 
 /* commands */
 enum {
@@ -66,14 +54,6 @@ enum {
 };
 
 #define NETLINK_RINA_C_MAX (__NETLINK_RINA_C_MAX - 1)
-/* operation definition */
-static struct genl_ops nl_rina_ops_echo = {
-	.cmd = NETLINK_RINA_C_ECHO,
-	.flags = 0,
-	.policy = nl_rina_policy,
-	.doit = nl_rina_echo,
-	.dumpit = NULL,
-};
 
 
 int  rina_netlink_init(void);

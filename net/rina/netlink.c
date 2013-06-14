@@ -24,50 +24,22 @@
 #include "logs.h"
 #include "netlink.h"
 
-int rina_netlink_init(void)
-{
-	int ret;
-	
-	LOG_FBEGN;
-	
-	ret = genl_register_family(&nl_rina_family);
-	if (ret != 0){
-		LOG_DBG("Not able to register nl_rina_family");
-		return -1;
-	}
-	
-	ret = genl_register_ops(&nl_rina_family, &nl_rina_ops_echo);
-	if (ret != 0){
-		LOG_DBG("Not able to register nl_rina_ops");
-		genl_unregister_family(&nl_rina_family);
-		return -2;
-	}
-	LOG_FEXIT;
-	return 0;
-}
+//static int nl_rina_echo(struct sk_buff *skb, struct genl_info *info);
 
-void rina_netlink_exit(void)
-{
-	int ret;
-        
-	LOG_FBEGN;
+/* attribute policy */
+static struct nla_policy nl_rina_policy[NETLINK_RINA_A_MAX + 1] = { 
+	[NETLINK_RINA_A_MSG] = { .type = NLA_NUL_STRING },
+};
 
-	/*unregister the functions*/
-	ret = genl_unregister_ops(&nl_rina_family, &nl_rina_ops_echo);
+/* family definition */
+static struct genl_family nl_rina_family = { 
+	.id = GENL_ID_GENERATE,
+	.hdrsize = 0,
+	.name = "NETLINK_RINA",
+	.version = 1,
+	.maxattr = NETLINK_RINA_A_MAX,
+};
 
-	if(ret != 0){
-		LOG_DBG("unregister ops: %i\n",ret);
-		return;
-	}
-	
-	/*unregister the family*/
-	ret = genl_unregister_family(&nl_rina_family);
-	
-	if(ret !=0){
-		LOG_DBG("unregister family %i\n",ret);
-	}
-	LOG_FEXIT;
-}
 
 /* handler */
 static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
@@ -122,7 +94,7 @@ static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
 
 	genlmsg_end(skb, msg_head);
 
-	ret = genlmsg_unicast(&init_net,skb,info->snd_portid);
+	ret = genlmsg_unicast(sock_net(skb->sk),skb,info->snd_portid);
 	if (ret != 0){
 		LOG_DBG("COULD NOT SEND BACK UNICAST MESSAGE");
 		return -1;
@@ -130,5 +102,60 @@ static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
 
 	return 0;
 
+}
+
+/* operation definition */
+static struct genl_ops nl_rina_ops_echo = {
+	.cmd = NETLINK_RINA_C_ECHO,
+	.flags = 0,
+	.policy = nl_rina_policy,
+	.doit = nl_rina_echo,
+	.dumpit = NULL,
+};
+
+
+int rina_netlink_init(void)
+{
+	int ret;
+	
+	LOG_FBEGN;
+	
+	ret = genl_register_family(&nl_rina_family);
+	if (ret != 0){
+		LOG_DBG("Not able to register nl_rina_family");
+		return -1;
+	}
+	
+	ret = genl_register_ops(&nl_rina_family, &nl_rina_ops_echo);
+	if (ret != 0){
+		LOG_DBG("Not able to register nl_rina_ops");
+		genl_unregister_family(&nl_rina_family);
+		return -2;
+	}
+	LOG_FEXIT;
+	return 0;
+}
+
+void rina_netlink_exit(void)
+{
+	int ret;
+        
+	LOG_FBEGN;
+
+	/*unregister the functions*/
+	ret = genl_unregister_ops(&nl_rina_family, &nl_rina_ops_echo);
+
+	if(ret != 0){
+		LOG_DBG("unregister ops: %i\n",ret);
+		return;
+	}
+	
+	/*unregister the family*/
+	ret = genl_unregister_family(&nl_rina_family);
+	
+	if(ret !=0){
+		LOG_DBG("unregister family %i\n",ret);
+	}
+	LOG_FEXIT;
 }
 
