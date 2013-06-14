@@ -25,6 +25,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "shim.h"
+#include "kipcm.h"
 
 int  shim_init(void)
 { return 0; }
@@ -70,10 +71,7 @@ int shim_register(struct shim_t * shim)
         }
 
         LOG_DBG("Registering shim %pK", shim);
-
-        /* FIXME: Add code here */
-
-        return 0;
+        return kipcm_shim_register(shim);
 }
 
 int shim_unregister(struct shim_t * shim)
@@ -84,8 +82,5 @@ int shim_unregister(struct shim_t * shim)
         }
 
         LOG_DBG("Un-registering shim %pK", shim);
-
-        /* FIXME: Add code here */
-
-        return 0;
+        return kipcm_shim_unregister(shim);
 }
