@@ -75,8 +75,7 @@ struct shim_instance_t {
 
 struct shim_t {
 	struct shim_instance_t * (* create)
-                (ipc_process_id_t      id,
-                 const struct name_t * name);
+                (ipc_process_id_t id);
         
 	struct shim_instance_t * (* configure)
                 (struct shim_instance_t *   instance,
