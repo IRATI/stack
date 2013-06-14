@@ -24,8 +24,6 @@
 #include "logs.h"
 #include "netlink.h"
 
-//static int nl_rina_echo(struct sk_buff *skb, struct genl_info *info);
-
 /* attribute policy */
 static struct nla_policy nl_rina_policy[NETLINK_RINA_A_MAX + 1] = { 
 	[NETLINK_RINA_A_MSG] = { .type = NLA_NUL_STRING },
@@ -39,7 +37,6 @@ static struct genl_family nl_rina_family = {
 	.version = 1,
 	.maxattr = NETLINK_RINA_A_MAX,
 };
-
 
 /* handler */
 static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
@@ -113,7 +110,6 @@ static struct genl_ops nl_rina_ops_echo = {
 	.dumpit = NULL,
 };
 
-
 int rina_netlink_init(void)
 {
 	int ret;
@@ -132,8 +128,11 @@ int rina_netlink_init(void)
 		genl_unregister_family(&nl_rina_family);
 		return -2;
 	}
-	LOG_FEXIT;
-	return 0;
+
+        LOG_DBG("NetLink layer initialized");
+        LOG_FEXIT;
+
+        return 0;
 }
 
 void rina_netlink_exit(void)
@@ -156,6 +155,8 @@ void rina_netlink_exit(void)
 	if(ret !=0){
 		LOG_DBG("unregister family %i\n",ret);
 	}
+        LOG_DBG("NetLink layer finalized");
+
 	LOG_FEXIT;
 }
 

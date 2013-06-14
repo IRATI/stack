@@ -2,7 +2,7 @@
  * K-IPCM (Kernel-IPC Manager)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Miquel Tarzan <miquel.tarzan@i2cat.net>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,8 +26,9 @@
 #include <linux/kfifo.h>
 
 #include "logs.h"
-#include "debug.h"
+#include "utils.h"
 #include "kipcm.h"
+#include "shim.h"
 
 /* FIXME: Remove all the statics here
  * FIXED: I have removed them, is it ok now?
@@ -41,6 +42,11 @@ static struct kipc_t *kipcm;
 int kipcm_init()
 {
 	LOG_FBEGN;
+
+        if (!shim_init()) {
+                LOG_FEXIT;
+                return -1;
+        }
 
         kipcm = kmalloc(sizeof(*kipcm), GFP_KERNEL);
         if (!kipcm) {
@@ -69,6 +75,8 @@ void kipcm_exit()
 
         kfree(kipcm);
         kipcm = 0; /* Useless */
+
+        shim_exit();
 
         LOG_FEXIT;
 }
@@ -229,6 +237,7 @@ int read_sdu(port_id_t      port_id,
 int  write_sdu(port_id_t            port_id,
                const struct sdu_t * sdu)
 {
+#if 0
         const struct flow_t * flow;
         int                   retval;
 
@@ -262,6 +271,9 @@ int  write_sdu(port_id_t            port_id,
         LOG_FEXIT;
 
         return retval;
+#else
+        return 0;
+#endif
 }
 
 static struct ipc_process_t * find_ipc_process_by_id(ipc_process_id_t id)
@@ -334,6 +346,7 @@ int ipc_process_create(const struct name_t * name,
                        ipc_process_id_t      ipcp_id,
                        dif_type_t             type)
 {
+#if 0
         struct ipc_process_t *ipc_process;
 
         LOG_FBEGN;
@@ -366,6 +379,7 @@ int ipc_process_create(const struct name_t * name,
         default:
                 BUG();
         }
+#endif
 
         LOG_FEXIT;
 
@@ -388,12 +402,14 @@ int  ipc_process_configure(ipc_process_id_t                  ipcp_id,
         switch (ipc_process->type) {
         case DIF_TYPE_SHIM_ETH:
                 conf = configuration->ipc_process_conf.shim_eth_ipcp_conf;
+#if 0
                 if (shim_eth_ipc_configure(ipcp_id, conf)) {
                         LOG_ERR("Failed configuring the SHIM IPC Process");
                         LOG_FEXIT;
 
                         return -1;
                 }
+#endif
                 break;
         case DIF_TYPE_NORMAL:
                 break;
@@ -428,6 +444,7 @@ static struct id_to_ipcp_t * find_id_to_ipcp_by_id(ipc_process_id_t id)
 
 int  ipc_process_destroy(ipc_process_id_t ipcp_id)
 {
+#if 0
         struct id_to_ipcp_t * id_ipcp;
 
         LOG_FBEGN; 
@@ -453,6 +470,7 @@ int  ipc_process_destroy(ipc_process_id_t ipcp_id)
         kfree(id_ipcp);
 
         LOG_FEXIT;
+#endif
 
         return 0;
 }

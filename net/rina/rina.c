@@ -20,7 +20,6 @@
  */
 
 #include <linux/module.h>
-#include <linux/init.h>
 
 #define RINA_PREFIX "personality-default"
 
@@ -28,12 +27,18 @@
 #include "kipcm.h"
 #include "efcp.h"
 #include "rmt.h"
+
+/* FIXME: To be removed */
+#if 0
 #include "shim-eth.h"
 #include "shim-tcp-udp.h"
+#endif
 
-static __init int rina_personality_init(void)
+static int __init mod_init(void)
 {
         LOG_FBEGN;
+
+        LOG_DBG("Rina personality initializing");
 
         if (kipcm_init())
                 return -1;
@@ -48,6 +53,7 @@ static __init int rina_personality_init(void)
                 kipcm_exit();
         }
 
+#if 0
 #ifdef CONFIG_SHIM_ETH
         if (shim_eth_init()) {
                 rmt_exit();
@@ -63,34 +69,44 @@ static __init int rina_personality_init(void)
                 kipcm_exit();
         }
 #endif
+#endif
+
+        LOG_DBG("Rina personality loaded successfully");
 
         LOG_FEXIT;
         return 0;
 }
 
-static __exit void rina_personality_exit(void)
+static void __exit mod_exit(void)
 {
         LOG_FBEGN;
 
+        LOG_DBG("Rina personality exiting");
+
+#if 0
 #ifdef CONFIG_SHIM_TCP_UDP
         shim_tcp_udp_exit();
 #endif
 #ifdef CONFIG_SHIM_ETH
         shim_eth_exit();
 #endif
+#endif
+
         rmt_exit();
         efcp_exit();
         kipcm_exit();
 
+        LOG_DBG("Rina personality unloaded successfully");
+
         LOG_FEXIT;
 }
 
-module_init(rina_personality_init);
-module_exit(rina_personality_exit);
+module_init(mod_init);
+module_exit(mod_exit);
 
 MODULE_DESCRIPTION("RINA default personality");
 
-MODULE_LICENSE("GPL v2");
+MODULE_LICENSE("GPL");
 
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
 MODULE_AUTHOR("Leonardo Bergesio <leonardo.bergesio@i2cat.net>");

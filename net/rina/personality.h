@@ -25,35 +25,50 @@
 
 /* FIXME: These include should disappear from here */
 #include "kipcm.h"
-#include "efcp.h"
-#include "rmt.h"
 
 struct personality_t {
-        int  (* init)(void);
-        void (* exit)(void);
+        /* Might be removed when deemed unnecessary */
+        void * data;
 
-        long (* ipc_create)(const struct name_t * name,
+        int  (* init)(void * opaque);
+        void (* exit)(void * opaque);
+
+        /* Functions exported to the personality user */
+        /* FIXME: should be int, not long */
+        long (* ipc_create)(void *                opaque,
+                            const struct name_t * name,
                             ipc_process_id_t      id,
                             dif_type_t            type);
-        long (* ipc_configure)(ipc_process_id_t                  id,
+        long (* ipc_configure)(void *                            opaque,
+                               ipc_process_id_t                  id,
                                const struct ipc_process_conf_t * configuration);
-        long (* ipc_destroy)(ipc_process_id_t ipcp_id);
+        long (* ipc_destroy)(void *           opaque,
+                             ipc_process_id_t ipcp_id);
         
-        long (* sdu_read)(port_id_t      id,
-                          struct sdu_t * sdu);
-        long (* sdu_write)(port_id_t            id,
-                           const struct sdu_t * sdu);
-        long (* connection_create)(const struct connection_t * connection);
-        long (* connection_destroy)(cep_id_t cep_id);
-        long (* connection_update)(cep_id_t from_id,
+        long (* connection_create)(void *                      opaque,
+                                   const struct connection_t * connection);
+        long (* connection_destroy)(void *   opaque,
+                                    cep_id_t cep_id);
+        long (* connection_update)(void *   opaque,
+                                   cep_id_t from_id,
                                    cep_id_t to_id);
+
+        long (* sdu_write)(void *               opaque,
+                           port_id_t            id,
+                           const struct sdu_t * sdu);
+        /* FIXME: Should we keep the following ? */
+        long (* sdu_read)(void *         opaque,
+                          port_id_t      id,
+                          struct sdu_t * sdu);
 };
 
-extern const struct personality_t * personality;
+/* FIXME: To be removed ASAP */
+extern struct personality_t * personality;
 
 int  rina_personality_init(void);
 void rina_personality_exit(void);
-int  rina_personality_add(const struct personality_t * pers);
-int  rina_personality_remove(const struct personality_t * pers);
+
+int  rina_personality_register(struct personality_t * pers);
+int  rina_personality_unregister(struct personality_t * pers);
 
 #endif
