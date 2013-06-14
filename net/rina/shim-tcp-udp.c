@@ -1,4 +1,10 @@
 /*
+ *  Shim Process over TCP/UDP
+ *
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -14,12 +20,14 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/module.h>
+
 #define RINA_PREFIX "shim-tcp-udp"
 
 #include "logs.h"
 #include "shim-tcp-udp.h"
 
-int shim_tcp_udp_init(void)
+static int __init mod_init(void)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -27,8 +35,19 @@ int shim_tcp_udp_init(void)
         return 0;
 }
 
-void shim_tcp_udp_exit(void)
+static void __exit mod_exit(void)
 {
         LOG_FBEGN;
         LOG_FEXIT;
 }
+
+module_init(mod_init);
+module_exit(mod_exit);
+
+MODULE_DESCRIPTION("RINA Shim IPC over TCP/UDP");
+
+MODULE_LICENSE("GPL");
+
+MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
+MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");

@@ -42,8 +42,11 @@ int rina_netlink_init(void)
 		genl_unregister_family(&nl_rina_family);
 		return -2;
 	}
-	LOG_FEXIT;
-	return 0;
+
+        LOG_DBG("NetLink layer initialized");
+        LOG_FEXIT;
+
+        return 0;
 }
 
 void rina_netlink_exit(void)
@@ -66,6 +69,8 @@ void rina_netlink_exit(void)
 	if(ret !=0){
 		LOG_DBG("unregister family %i\n",ret);
 	}
+        LOG_DBG("NetLink layer finalized");
+
 	LOG_FEXIT;
 }
 

@@ -21,12 +21,15 @@
 #define RINA_PREFIX "personality"
 
 #include "logs.h"
+#include "utils.h"
 #include "personality.h"
 
-const struct personality_t * personality = 0;
+struct personality_t * personality = NULL;
 
 static int is_ok(const struct personality_t * pers)
 {
+        ASSERT(pers);
+
         if (pers->init               &&
             pers->exit               &&
             pers->ipc_create         &&
@@ -44,51 +47,74 @@ static int is_ok(const struct personality_t * pers)
 
 int rina_personality_init(void)
 {
-        personality = 0;
+        personality = NULL;
+
+        LOG_DBG("Personality initialized");
+
         return 0;
 }
 
 void rina_personality_exit(void)
 {
-        if (personality)
-                personality->exit();
-        personality = 0;
+        if (personality) {
+                ASSERT(personality->exit);
+                personality->exit(personality->data);
+        }
+        personality = NULL;
+
+        LOG_DBG("Personality finalized successfully");
 }
 
-int rina_personality_add(const struct personality_t * pers)
+int rina_personality_register(struct personality_t * pers)
 {
-        if (!pers)
-                BUG();
+        LOG_DBG("Registering personality %pK", pers);
 
-        if (!is_ok(pers))
+        if (!pers || !is_ok(pers)) {
+                LOG_ERR("Cannot register personality, it's bogus");
                 return -1;
-
-        if (!personality) {
-                int retval;
-
-                personality = pers;
-                retval      = personality->init();
-                if (!retval) {
-                        LOG_ERR("Could not initialize personality");
-                        personality = 0;
-                        return retval;
-                }
-
-                return retval;
+        }
+        if (personality) {
+                LOG_ERR("Another personality is already present, "
+                        "please remove it first");
+                return -1;
         }
 
-        LOG_ERR("Personality already present, remove it first");
-        return -1;
+        ASSERT(personality       != NULL);
+        ASSERT(personality->init != NULL);
+
+        if (!pers->init(pers->data)) {
+                LOG_ERR("Could not initialize personality");
+                return -1;
+        }
+
+        personality = pers;
+
+        LOG_DBG("Personality registered successfully");
+
+        return 0;
 }
 
-int rina_personality_remove(const struct personality_t * pers)
+int rina_personality_unregister(struct personality_t * pers)
 {
-        if (personality == pers) {
-                personality->exit();
-                personality = 0;
-                return 0;
+        LOG_DBG("Un-registering personality %pK", pers);
+
+        if (!pers) {
+                LOG_ERR("Cannot unregister personality, it's bogus");
+                return -1;
         }
 
-        LOG_ERR("Cannot remove a different personality");
-        return -1;
+        if (personality != pers) {
+                LOG_ERR("Cannot remove a different personality");
+                return -1;
+        }
+
+        ASSERT(personality       != NULL);
+        ASSERT(personality->exit != NULL);
+
+        personality->exit(pers->data);
+        personality = 0;
+
+        LOG_DBG("Personality un-registered successfully");
+
+        return 0;
 }
