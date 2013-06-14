@@ -24,19 +24,14 @@
 #define RINA_KIPCM_H
 
 #include <linux/syscalls.h>
-#if 0
-#include <linux/hash.h>
-#include <linux/hashtable.h>
-#endif
 
 #include "common.h"
+#include "shim.h"
 #include "efcp.h"
 #include "rmt.h"
 
-
 typedef enum {
         DIF_TYPE_NORMAL,
-
         DIF_TYPE_SHIM
 } dif_type_t;
 
@@ -148,21 +143,25 @@ struct port_id_to_flow_t {
 
 void * kipcm_init(void);
 void   kipcm_exit(void);
-int    kipcm_add_entry(void *                opaque,
-		       port_id_t             port_id,
-		       const struct flow_t * flow);
-int    kipcm_remove_entry(void * opaque, port_id_t port_id);
-int    kipcm_post_sdu(void *               opaque,
+
+int    kipcm_shim_register(struct shim_t * shim);
+int    kipcm_shim_unregister(struct shim_t * shim);
+
+int    kipcm_flow_add(void *                opaque,
+                      port_id_t             port_id,
+                      const struct flow_t * flow);
+int    kipcm_flow_remove(void * opaque, port_id_t port_id);
+
+int    kipcm_sdu_post(void *               opaque,
 		      port_id_t            port_id,
 		      const struct sdu_t * sdu);
-
-int    kipcm_read_sdu(void *         opaque,
+int    kipcm_sud_write(void * opaque,
+		       port_id_t            port_id,
+		       const struct sdu_t * sdu);
+int    kipcm_sud_read(void *         opaque,
 		      port_id_t      port_id,
 		      bool_t         block,
 		      struct sdu_t * sdu);
-int    kipcm_write_sdu(void * opaque,
-		       port_id_t            port_id,
-		       const struct sdu_t * sdu);
 
 int    kipcm_ipc_process_create(void *                opaque,
 				const struct name_t * name,

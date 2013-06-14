@@ -60,6 +60,7 @@ void * kipcm_init()
         return NULL;
 #endif
 }
+
 /*
  * FIXME: This should be kipcm_exit(void * opaque) I guess
  * I haven't yet put it in this form to not generate problems with rina.c
@@ -83,8 +84,33 @@ void kipcm_exit()
 #endif
 }
 
-int kipcm_add_entry(void * opaque, port_id_t port_id, const struct flow_t *
-		    flow)
+int kipcm_shim_register(struct shim_t * shim)
+{
+        LOG_FBEGN;
+
+        ASSERT(shim);
+        LOG_DBG("Registering shim %pK", shim);
+
+        LOG_FEXIT;
+
+        return 1;
+}
+
+int kipcm_shim_unregister(struct shim_t * shim)
+{
+        LOG_FBEGN;
+
+        ASSERT(shim);
+        LOG_DBG("Unregistering shim %pK", shim);
+
+        LOG_FEXIT;
+
+        return 1;
+}
+
+int kipcm_flow_add(void *                opaque,
+                   port_id_t             id,
+                   const struct flow_t * flow)
 {
 #if 0
         struct port_id_to_flow_t * port_flow;
@@ -140,7 +166,9 @@ retrieve_port_flow_node(void * opaque, port_id_t port_id)
         return NULL;
 }
 #endif
-int kipcm_remove_entry(void * opaque, port_id_t port_id)
+
+int kipcm_flow_remove(void *    opaque,
+                      port_id_t id)
 {
 #if 0
         struct port_id_to_flow_t * port_flow;
@@ -158,7 +186,7 @@ int kipcm_remove_entry(void * opaque, port_id_t port_id)
         return 0;
 }
 
-int kipcm_post_sdu(void *               opaque,
+int kipcm_sdu_post(void *               opaque,
 		   port_id_t            port_id,
 		   const struct sdu_t * sdu)
 {
@@ -215,7 +243,7 @@ int kipcm_post_sdu(void *               opaque,
         return 0;
 }
 
-int kipcm_read_sdu(void *         opaque,
+int kipcm_sdu_read(void *         opaque,
 		   port_id_t      port_id,
 		   bool_t         block,
 		   struct sdu_t * sdu)
@@ -269,7 +297,7 @@ int kipcm_read_sdu(void *         opaque,
         return 0;
 }
 
-int  kipcm_write_sdu(void *               opaque,
+int  kipcm_sdu_write(void *               opaque,
 		     port_id_t            port_id,
 		     const struct sdu_t * sdu)
 {
