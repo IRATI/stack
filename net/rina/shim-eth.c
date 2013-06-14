@@ -227,11 +227,20 @@ int shim_eth_configure(struct shim_instance_t *   instance,
 	return 0;
 }
 
-int shim_eth_destroy(ipc_process_id_t ipc_process_id)
+int shim_eth_destroy(struct shim_instance_t * inst)
 {
-        LOG_FBEGN;
+	struct shim_eth_instance_t * instance;
+	LOG_FBEGN;
+	if(inst){
+                /**
+		 *  FIXME: Might need to ask instance to clean up as well
+		 * Don't know yet
+		 */
+		instance = (struct shim_eth_instance_t *) inst->opaque;
+		rb_erase(&instance->node, &shim_eth_root);
+		kfree(instance);
+	}
         LOG_FEXIT;
-
 	return 0;
 }
 
