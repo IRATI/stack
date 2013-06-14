@@ -16,7 +16,8 @@ librina_la_SOURCES  =				\
 	librina-faux-sockets.cc			\
 	librina-cdap.cc				\
 	librina-sdu-protection.cc   \
-	librina-netlink-manager.cc
+	librina-netlink-manager.cc \
+	librina-netlink-parsers.cc
 
 EXTRA_DIST =					\
 	logs.h
