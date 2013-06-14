@@ -68,7 +68,7 @@ static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
 				LOG_DBG("received: %s\n", mydata);
 		}
 	else{
-		LOG_DBG("no info->attrs %i\n", NETLING_RINA_A_MSG);
+		LOG_DBG("no info->attrs %i\n", NETLINK_RINA_A_MSG);
 		return -1;
 	}
 
