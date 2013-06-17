@@ -74,6 +74,8 @@ struct shim_instance_t {
 };
 
 struct shim_t {
+        char * label;
+
 	struct shim_instance_t * (* create)
                 (ipc_process_id_t      id,
                  const struct name_t * name);
@@ -90,7 +92,7 @@ struct shim_t {
 int  shim_init(void);
 void shim_exit(void);
 
-/* Called by each shim module upon loading/unloading */
+/* Called (once) by each shim module upon loading/unloading */
 int  shim_register(struct shim_t * shim);
 int  shim_unregister(struct shim_t * shim);
 
