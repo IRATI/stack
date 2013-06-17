@@ -48,9 +48,14 @@ static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
 	struct sk_buff *skb;
 	void *msg_head;
 	char * mydata;
-	skb = genlmsg_new(NLMSG_GOODSIZE, GFP_KERNEL);
-
 	LOG_DBG("ECHOING MESSAGE");
+	skb = genlmsg_new(NLMSG_GOODSIZE, GFP_KERNEL);
+	
+	if (skb == NULL){
+		LOG_DBG("skb buffer is NULL");
+		return -1;
+	}
+
 
 	if (info == NULL){
 		LOG_DBG("info input parameter is NULL");
@@ -76,27 +81,36 @@ static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
 		LOG_DBG("COULD NOT ALLOCATE sk_buff");
 		return -1;
 	}
-
-	msg_head = genlmsg_put(skb, 0, info->snd_seq+1, &nl_rina_family, 0, NETLINK_RINA_C_ECHO);
+	LOG_DBG("seq number received: %d\n",info->snd_seq);
+	msg_head = genlmsg_put(skb, 0, info->snd_seq, &nl_rina_family, 0, NETLINK_RINA_C_ECHO);
 	if (msg_head == NULL) {
 		ret = -ENOMEM;
 		return -1;
 	}
-
+	else {
+		LOG_DBG("msg head CREATED");
+	}
 	ret = nla_put_string(skb, NETLINK_RINA_A_MSG, "hello world from kernel space");
 	if (ret!= 0){
 		LOG_DBG("Could not add string message to echo");
 		return -1;
 	}
+	else {
+		LOG_DBG("nla_put_string OK");
+	}
 
 	genlmsg_end(skb, msg_head);
+	LOG_DBG("genlmsg_end OK");
 
-	ret = genlmsg_unicast(sock_net(skb->sk),skb,info->snd_portid);
+	//ret = genlmsg_unicast(sock_net(skb->sk),skb,info->snd_portid);
+	ret = genlmsg_unicast(&init_net,skb,info->snd_portid);
 	if (ret != 0){
 		LOG_DBG("COULD NOT SEND BACK UNICAST MESSAGE");
 		return -1;
 	}
-
+	else {
+		LOG_DBG("genkmsg_unicast OK");
+	}
 	return 0;
 
 }
