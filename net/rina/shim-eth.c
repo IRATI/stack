@@ -114,9 +114,9 @@ struct shim_instance_t * shim_eth_create(ipc_process_id_t ipc_process_id)
 			LOG_ERR("Shim instance with id %x already exists", 
 				ipc_process_id);
 			kfree(shim_instance);
+			kfree(instance);
 			LOG_FEXIT;
-                        //Return the already existing shim instance
-			return instance;
+                       	return 0;
 		}
 		else if(ipc_process_id < s->ipc_process_id)
 			p = &(*p)->rb_left;
@@ -192,7 +192,7 @@ struct shim_instance_t * shim_eth_configure
         }
 
 	/* Retrieve configuration of IPC process from params */
-	list_for_each(pos, configuration->list){
+	list_for_each(pos, &(configuration->list)){
 		c = list_entry(pos, struct shim_conf_t, list);
 		tmp = c->entry;
 		val = tmp->value;
