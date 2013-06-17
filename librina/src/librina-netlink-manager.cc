@@ -138,28 +138,40 @@ void NetlinkManager::initialize() {
 }
 
 void NetlinkManager::sendMessage(
-		const AppAllocateFlowRequestMessage& message) {
+		BaseNetlinkMessage * message) {
 	//Generate the message
 	struct nl_msg* netlinkMessage;
 
 	netlinkMessage = nlmsg_alloc_simple(MY_MESSAGE_TYPE, NLM_F_REQUEST);
-	if (putAppAllocateFlowRequestMessageObject(netlinkMessage, message) <0){
+
+	switch(message->getOperationCode()){
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST:{
+		AppAllocateFlowRequestMessage * allocateObject = dynamic_cast<AppAllocateFlowRequestMessage *>(message);
+		if (putAppAllocateFlowRequestMessageObject(netlinkMessage, allocateObject) <0){
+				LOG_WARN("Error, to do, throw Exception");
+				nlmsg_free(netlinkMessage);
+				return;
+			}
+		break;
+	}
+	default:{
 		LOG_WARN("Error, to do, throw Exception");
 		nlmsg_free(netlinkMessage);
 		return;
 	}
+	}
 
 	//Set destination and send the message
-	nl_socket_set_peer_port(socket, message.getDestPortId());
+	nl_socket_set_peer_port(socket, message->getDestPortId());
 	nl_send_auto(socket, netlinkMessage);
-	LOG_DBG("Sent message to %d", message.getDestPortId());
+	LOG_DBG("Sent message to %d", message->getDestPortId());
 
 	//Cleanup
 	nlmsg_free(netlinkMessage);
 	return;
 }
 
-AppAllocateFlowRequestMessage * NetlinkManager::getMessage() {
+BaseNetlinkMessage * NetlinkManager::getMessage() {
 	unsigned char *buf = NULL;
 	struct nlmsghdr *hdr;
 	struct sockaddr_nl nla = { 0 };

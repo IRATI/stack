@@ -41,13 +41,13 @@ int main(int argc, char * argv[]) {
 	message->setDestPortId(5);
 	message->setSourceAppName(*sourceName);
 	message->setDestAppName(*destName);
-	source->sendMessage(*message);
+	source->sendMessage(message);
 
 	AppAllocateFlowRequestMessage *  result;
-	result = destination->getMessage();
+	result = dynamic_cast<AppAllocateFlowRequestMessage *>(destination->getMessage());
 	std::cout<<"Received message from " << result->getSourcePortId() <<
 			" with sequence number "<< result->getSequenceNumber() <<"\n";
-	delete result;
+ 	delete result;
 
 	delete source;
 	delete destination;

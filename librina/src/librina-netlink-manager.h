@@ -154,9 +154,9 @@ public:
 	 */
 	~NetlinkManager();
 
-	void sendMessage(const AppAllocateFlowRequestMessage& message);
+	void sendMessage(BaseNetlinkMessage * message);
 
-	AppAllocateFlowRequestMessage *  getMessage();
+	BaseNetlinkMessage *  getMessage();
 };
 }
 

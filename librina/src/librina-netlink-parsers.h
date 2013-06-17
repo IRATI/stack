@@ -57,9 +57,33 @@ enum AppAllocateFlowRequestAttributes{
 #define AAFR_ATTR_MAX (__AAFR_ATTR_MAX -1)
 
 int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
-		const AppAllocateFlowRequestMessage& object);
+		AppAllocateFlowRequestMessage * object);
 
 AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(nlmsghdr *hdr);
+
+/* FLOW SPECIFICATION CLASS */
+enum FlowSpecificationAttributes{
+	FSPEC_ATTR_AVG_BWITH = 1,
+	FSPEC_ATTR_AVG_SDU_BWITH,
+	FSPEC_ATTR_DELAY,
+	FSPEC_ATTR_JITTER,
+	FSPEC_ATTR_MAX_GAP,
+	FSPEC_ATTR_MAX_SDU_SIZE,
+	FSPEC_ATTR_IN_ORD_DELIVERY,
+	FSPEC_ATTR_PART_DELIVERY,
+	FSPEC_ATTR_PEAK_BWITH_DURATION,
+	FSPEC_ATTR_PEAK_SDU_BWITH_DURATION,
+	FSPEC_ATTR_UNDETECTED_BER,
+	__FSPEC_ATTR_MAX,
+};
+
+#define FSPEC_ATTR_MAX (__FSPEC_ATTR_MAX -1)
+
+int putFlowSpecificationObject(nl_msg* netlinkMessage,
+		const FlowSpecification& object);
+
+FlowSpecification * parseFlowSpecificationObject(nlattr *nested);
+
 
 }
 #endif /* LIBRINA_NETLINK_PARSERS_H_ */

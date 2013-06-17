@@ -25,10 +25,10 @@
 #define RINA_PREFIX "netlink-parsers"
 #include "logs.h"
 
-namespace rina{
+namespace rina {
 
 int putApplicationProcessNamingInformationObject(nl_msg* netlinkMessage,
-		const ApplicationProcessNamingInformation& object){
+		const ApplicationProcessNamingInformation& object) {
 	NLA_PUT_STRING(netlinkMessage, APNI_ATTR_PROCESS_NAME,
 			object.getProcessName().c_str());
 	NLA_PUT_STRING(netlinkMessage, APNI_ATTR_PROCESS_INSTANCE,
@@ -40,11 +40,13 @@ int putApplicationProcessNamingInformationObject(nl_msg* netlinkMessage,
 
 	return 0;
 
-	nla_put_failure: 	LOG_WARN("Error building ApplicationProcessNamingInformation Netlink object");
-						return -1;
+	nla_put_failure: LOG_WARN(
+			"Error building ApplicationProcessNamingInformation Netlink object");
+	return -1;
 }
 
-ApplicationProcessNamingInformation * parseApplicationProcessNamingInformationObject(nlattr *nested){
+ApplicationProcessNamingInformation * parseApplicationProcessNamingInformationObject(
+		nlattr *nested) {
 	struct nla_policy attr_policy[APNI_ATTR_MAX + 1];
 	attr_policy[APNI_ATTR_PROCESS_NAME].type = NLA_STRING;
 	attr_policy[APNI_ATTR_PROCESS_NAME].minlen = 0;
@@ -61,61 +63,78 @@ ApplicationProcessNamingInformation * parseApplicationProcessNamingInformationOb
 	struct nlattr *attrs[APNI_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, APNI_ATTR_MAX, nested, attr_policy);
-	if (err < 0){
-		LOG_WARN("Error parsing ApplicationProcessNaming information from Netlink message: %d", err);
+	if (err < 0) {
+		LOG_WARN(
+				"Error parsing ApplicationProcessNaming information from Netlink message: %d",
+				err);
 		return NULL;
 	}
 
-	ApplicationProcessNamingInformation * result = new ApplicationProcessNamingInformation();
-	if(attrs[APNI_ATTR_PROCESS_NAME]){
+	ApplicationProcessNamingInformation * result =
+			new ApplicationProcessNamingInformation();
+	if (attrs[APNI_ATTR_PROCESS_NAME]) {
 		result->setProcessName(nla_get_string(attrs[APNI_ATTR_PROCESS_NAME]));
 	}
-	if(attrs[APNI_ATTR_PROCESS_INSTANCE]){
-		result->setProcessInstance(nla_get_string(attrs[APNI_ATTR_PROCESS_INSTANCE]));
+
+	if (attrs[APNI_ATTR_PROCESS_INSTANCE]) {
+		result->setProcessInstance(
+				nla_get_string(attrs[APNI_ATTR_PROCESS_INSTANCE]));
 	}
-	if(attrs[APNI_ATTR_ENTITY_NAME]){
+
+	if (attrs[APNI_ATTR_ENTITY_NAME]) {
 		result->setEntityName(nla_get_string(attrs[APNI_ATTR_ENTITY_NAME]));
 	}
-	if(attrs[APNI_ATTR_ENTITY_INSTANCE]){
-		result->setEntityInstance(nla_get_string(attrs[APNI_ATTR_ENTITY_INSTANCE]));
+
+	if (attrs[APNI_ATTR_ENTITY_INSTANCE]) {
+		result->setEntityInstance(
+				nla_get_string(attrs[APNI_ATTR_ENTITY_INSTANCE]));
 	}
 
 	return result;
 }
 
 int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
-		const AppAllocateFlowRequestMessage& object){
+		AppAllocateFlowRequestMessage * object) {
 	struct nlattr *sourceAppName, *destinationAppName;
 
-	if (!(sourceAppName = nla_nest_start(netlinkMessage, AAFR_ATTR_SOURCE_APP_NAME))){
+	if (!(sourceAppName = nla_nest_start(netlinkMessage,
+			AAFR_ATTR_SOURCE_APP_NAME))) {
 		goto nla_put_failure;
 	}
-	if (putApplicationProcessNamingInformationObject(netlinkMessage, object.getSourceAppName()) < 0){
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object->getSourceAppName()) < 0) {
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, sourceAppName);
 
-	if (!(destinationAppName = nla_nest_start(netlinkMessage, AAFR_ATTR_DEST_APP_NAME))){
+	if (!(destinationAppName = nla_nest_start(netlinkMessage,
+			AAFR_ATTR_DEST_APP_NAME))) {
 		goto nla_put_failure;
 	}
-	if (putApplicationProcessNamingInformationObject(netlinkMessage, object.getDestAppName()) <0){
+
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object->getDestAppName()) < 0) {
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, destinationAppName);
 
-	nla_put_failure: 	LOG_WARN("Error building AppAllocateFlowRequestMessage Netlink object");
-						return -1;
+	return 0;
+
+	nla_put_failure: LOG_WARN(
+			"Error building AppAllocateFlowRequestMessage Netlink object");
+	return -1;
 }
 
-AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(nlmsghdr *hdr){
-	struct nla_policy attr_policy[AAFR_ATTR_MAX+1];
+AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
+		nlmsghdr *hdr) {
+	struct nla_policy attr_policy[AAFR_ATTR_MAX + 1];
 	attr_policy[AAFR_ATTR_SOURCE_APP_NAME].type = NLA_NESTED;
 	attr_policy[AAFR_ATTR_SOURCE_APP_NAME].minlen = 0;
 	attr_policy[AAFR_ATTR_SOURCE_APP_NAME].maxlen = 65535;
 	attr_policy[AAFR_ATTR_DEST_APP_NAME].type = NLA_NESTED;
 	attr_policy[AAFR_ATTR_DEST_APP_NAME].minlen = 0;
 	attr_policy[AAFR_ATTR_DEST_APP_NAME].maxlen = 65535;
-	struct nlattr *attrs[AAFR_ATTR_MAX+1];
+	struct nlattr *attrs[AAFR_ATTR_MAX + 1];
 
 	/*
 	 * The nlmsg_parse() function will make sure that the message contains
@@ -124,33 +143,164 @@ AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(nlmsghdr *hdr
 	 * attribute in the attrs[] array accessable by attribute type.
 	 */
 	int err = nlmsg_parse(hdr, 0, attrs, AAFR_ATTR_MAX, attr_policy);
-	if (err < 0){
-		LOG_WARN("Error parsing AppAllocateFlowRequestMessage information from Netlink message: %d", err);
+	if (err < 0) {
+		LOG_WARN(
+				"Error parsing AppAllocateFlowRequestMessage information from Netlink message: %d",
+				err);
 		return NULL;
 	}
 
-	AppAllocateFlowRequestMessage * result = new AppAllocateFlowRequestMessage();
+	AppAllocateFlowRequestMessage * result =
+			new AppAllocateFlowRequestMessage();
 	ApplicationProcessNamingInformation * sourceName;
 	ApplicationProcessNamingInformation * destName;
 
 	if (attrs[AAFR_ATTR_SOURCE_APP_NAME]) {
-		sourceName = parseApplicationProcessNamingInformationObject(attrs[AAFR_ATTR_SOURCE_APP_NAME]);
-		if (sourceName == NULL){
+		sourceName = parseApplicationProcessNamingInformationObject(
+				attrs[AAFR_ATTR_SOURCE_APP_NAME]);
+		if (sourceName == NULL) {
 			delete result;
 			return NULL;
-		}else{
+		} else {
 			result->setSourceAppName(*sourceName);
 		}
 	}
 
 	if (attrs[AAFR_ATTR_DEST_APP_NAME]) {
-		destName = parseApplicationProcessNamingInformationObject(attrs[AAFR_ATTR_DEST_APP_NAME]);
-		if (destName == NULL){
+		destName = parseApplicationProcessNamingInformationObject(
+				attrs[AAFR_ATTR_DEST_APP_NAME]);
+		if (destName == NULL) {
 			delete result;
 			return NULL;
-		}else{
+		} else {
 			result->setDestAppName(*destName);
 		}
+	}
+
+	return result;
+}
+
+int putFlowSpecificationObject(nl_msg* netlinkMessage,
+		const FlowSpecification& object) {
+	if (object.getAverageBandwidth() > 0) {
+		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_AVG_BWITH,
+				object.getAverageBandwidth());
+	}
+	if (object.getAverageSduBandwidth() > 0){
+		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_AVG_SDU_BWITH,
+				object.getAverageSduBandwidth());
+	}
+	if (object.getDelay() > 0){
+		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_DELAY,
+				object.getDelay());
+	}
+	if (object.getJitter() > 0){
+		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_JITTER,
+				object.getJitter());
+	}
+	if (object.getMaxAllowableGap() >= 0){
+		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_MAX_GAP,
+				object.getMaxAllowableGap());
+	}
+	if (object.getMaxSDUSize() > 0){
+		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_MAX_SDU_SIZE,
+				object.getMaxSDUSize());
+	}
+	if (object.isOrderedDelivery()){
+		NLA_PUT_FLAG(netlinkMessage, FSPEC_ATTR_IN_ORD_DELIVERY);
+	}
+	if (object.isPartialDelivery()){
+		NLA_PUT_FLAG(netlinkMessage, FSPEC_ATTR_PART_DELIVERY);
+	}
+	if (object.getPeakBandwidthDuration() > 0){
+		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_PEAK_BWITH_DURATION,
+				object.getPeakBandwidthDuration());
+	}
+	if (object.getPeakSduBandwidthDuration() > 0){
+		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_PEAK_SDU_BWITH_DURATION,
+				object.getPeakSduBandwidthDuration());
+	}
+	if (object.getUndetectedBitErrorRate() > 0){
+		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_UNDETECTED_BER,
+				object.getUndetectedBitErrorRate());
+	}
+
+	return 0;
+
+	nla_put_failure: LOG_WARN(
+			"Error building ApplicationProcessNamingInformation Netlink object");
+	return -1;
+}
+
+FlowSpecification * parseFlowSpecificationObject(nlattr *nested) {
+	struct nla_policy attr_policy[FSPEC_ATTR_MAX + 1];
+	attr_policy[FSPEC_ATTR_AVG_BWITH].type = NLA_U32;
+	attr_policy[FSPEC_ATTR_AVG_SDU_BWITH].type = NLA_U32;
+	attr_policy[FSPEC_ATTR_DELAY].type = NLA_U32;
+	attr_policy[FSPEC_ATTR_JITTER].type = NLA_U32;
+	attr_policy[FSPEC_ATTR_MAX_GAP].type = NLA_U32;
+	attr_policy[FSPEC_ATTR_MAX_SDU_SIZE].type = NLA_U32;
+	attr_policy[FSPEC_ATTR_IN_ORD_DELIVERY].type = NLA_FLAG;
+	attr_policy[FSPEC_ATTR_PART_DELIVERY].type = NLA_FLAG;
+	attr_policy[FSPEC_ATTR_PEAK_BWITH_DURATION].type = NLA_U32;
+	attr_policy[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION].type = NLA_U32;
+	attr_policy[FSPEC_ATTR_UNDETECTED_BER].type = NLA_U32;
+	struct nlattr *attrs[FSPEC_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, FSPEC_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_WARN(
+				"Error parsing FlowSpecification object from Netlink message: %d",
+				err);
+		return NULL;
+	}
+
+	FlowSpecification * result = new FlowSpecification();
+	if (attrs[FSPEC_ATTR_AVG_BWITH]) {
+		result->setAverageBandwidth(nla_get_u32(attrs[FSPEC_ATTR_AVG_BWITH]));
+	}
+
+	if (attrs[FSPEC_ATTR_AVG_SDU_BWITH]) {
+		result->setAverageSduBandwidth(
+				nla_get_u32(attrs[FSPEC_ATTR_AVG_SDU_BWITH]));
+	}
+
+	if (attrs[FSPEC_ATTR_DELAY]) {
+		result->setDelay(nla_get_u32(attrs[FSPEC_ATTR_DELAY]));
+	}
+
+	if (attrs[FSPEC_ATTR_JITTER]) {
+		result->setJitter(nla_get_u32(attrs[FSPEC_ATTR_JITTER]));
+	}
+
+	if (attrs[FSPEC_ATTR_MAX_GAP]) {
+		result->setMaxAllowableGap(nla_get_u32(attrs[FSPEC_ATTR_MAX_GAP]));
+	}
+
+	if (attrs[FSPEC_ATTR_MAX_SDU_SIZE]) {
+		result->setMaxSDUSize(nla_get_u32(attrs[FSPEC_ATTR_MAX_SDU_SIZE]));
+	}
+
+	if (attrs[FSPEC_ATTR_IN_ORD_DELIVERY]) {
+		result->setOrderedDelivery(true);
+	} else {
+		result->setOrderedDelivery(false);
+	}
+
+	if (attrs[FSPEC_ATTR_PART_DELIVERY]) {
+		result->setPartialDelivery(true);
+	} else {
+		result->setPartialDelivery(false);
+	}
+
+	if (attrs[FSPEC_ATTR_PEAK_BWITH_DURATION]) {
+		result->setPeakBandwidthDuration(
+				nla_get_u32(attrs[FSPEC_ATTR_PEAK_BWITH_DURATION]));
+	}
+
+	if (attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION]) {
+		result->setPeakSduBandwidthDuration(
+				nla_get_u32(attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION]));
 	}
 
 	return result;
