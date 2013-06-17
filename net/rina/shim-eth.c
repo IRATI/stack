@@ -32,16 +32,17 @@
 #include "shim.h"
 
 /* Holds all the shim instances */
-static struct rb_root shim_eth_root;
+static struct rb_root shim_eth_root = RB_ROOT;
 
 /* Holds the configuration of one shim IPC process */
 struct shim_eth_info_t {
 	uint16_t        vlan_id;
 	char *      interface_name;
+	struct name_t * name;
 };
 
 enum port_id_state_t {
-	PORT_STATE_NULL,
+	PORT_STATE_NULL = 1,
 	PORT_STATE_RECIPIENT_ALLOCATE_PENDING,
 	PORT_STATE_INITIATOR_ALLOCATE_PENDING,
 	PORT_STATE_ALLOCATED
@@ -67,7 +68,6 @@ struct shim_eth_instance_t {
 
 	/* IPC process id and DIF name */
 	ipc_process_id_t ipc_process_id;
-	struct name_t * name;
 
         /* The configuration of the shim IPC Process */
 	struct shim_eth_info_t * info;
@@ -80,6 +80,56 @@ struct shim_eth_instance_t {
 	/* rbtree or hash table? */
 };
 
+struct shim_instance_t * shim_eth_create(ipc_process_id_t ipc_process_id)
+{
+	struct shim_instance_t * instance;
+	struct shim_eth_instance_t * shim_instance; 	
+	struct rb_node **p = &shim_eth_root.rb_node;
+	struct rb_node *parent = NULL;
+	struct shim_eth_instance_t * s;
+
+	LOG_FBEGN;
+
+	instance = kmalloc(sizeof(*instance), GFP_KERNEL);
+	if (!instance) {
+                LOG_ERR("Cannot allocate memory for shim_instance");
+                LOG_FEXIT;
+                return 0;
+        }
+
+	shim_instance = kmalloc(sizeof(*shim_instance), GFP_KERNEL);
+	if (!shim_instance) {
+                LOG_ERR("Cannot allocate memory for shim_eth_instance");
+                LOG_FEXIT;
+                return instance;
+        }
+	instance->opaque = shim_instance;
+
+	shim_instance->ipc_process_id = ipc_process_id;
+
+	while(*p){
+		parent = *p;
+		s = rb_entry(parent, struct shim_eth_instance_t, node);
+		if(unlikely(ipc_process_id == s->ipc_process_id)){
+			LOG_ERR("Shim instance with id %x already exists", 
+				ipc_process_id);
+			kfree(shim_instance);
+			kfree(instance);
+			LOG_FEXIT;
+                       	return 0;
+		}
+		else if(ipc_process_id < s->ipc_process_id)
+			p = &(*p)->rb_left;
+		else
+			p = &(*p)->rb_right;
+	}
+	rb_link_node(&shim_instance->node,parent,p);
+	rb_insert_color(&shim_instance->node,&shim_eth_root);        
+
+        LOG_FEXIT;
+	return instance;
+}
+
 static int name_cpy(struct name_t * dst, 
 		     const struct name_t *src)
 {
@@ -87,7 +137,7 @@ static int name_cpy(struct name_t * dst,
 	LOG_FBEGN;
 	temp = kmalloc(sizeof(*temp), GFP_KERNEL);
 	if (!temp) {
-                LOG_ERR("Cannot allocate memory");
+                LOG_ERR("Cannot allocate memory for name");
                 LOG_FEXIT;
 		return -1;
         }
@@ -100,105 +150,99 @@ static int name_cpy(struct name_t * dst,
 	return 0;
 }
 
-int shim_eth_create(ipc_process_id_t      ipc_process_id,
-                    const struct name_t * name)
+struct shim_instance_t * shim_eth_configure
+        (struct shim_instance_t *   inst,
+        const struct shim_conf_t * configuration)
 {
-
-	struct shim_eth_instance_t * shim_instance; 	
-	struct rb_node **p = &shim_eth_root.rb_node;
-	struct rb_node *parent = NULL;
-	struct shim_eth_instance_t * s;
-
-	LOG_FBEGN;
-
-	shim_instance = kmalloc(sizeof(*shim_instance), GFP_KERNEL);
-	if (!shim_instance) {
-                LOG_ERR("Cannot allocate memory");
-                LOG_FEXIT;
-                return -1;
-        }
-
-	shim_instance->ipc_process_id = ipc_process_id;
-	if(!name_cpy(shim_instance->name, name)){
-		LOG_FEXIT;
-		return -1;
-	}
-
-	while(*p){
-		parent = *p;
-		s = rb_entry(parent, struct shim_eth_instance_t, node);
-		if(unlikely(ipc_process_id == s->ipc_process_id)){
-			LOG_ERR("Shim instance with id %x already exists", 
-				ipc_process_id);
-			kfree(shim_instance);
-			return -1;
-		}
-		else if(ipc_process_id < s->ipc_process_id)
-			p = &(*p)->rb_left;
-		else
-			p = &(*p)->rb_right;
-	}
-	rb_link_node(&shim_instance->node,parent,p);
-	rb_insert_color(&shim_instance->node,&shim_eth_root);        
-
-
-        LOG_FEXIT;
-	return 0;
-}
-
-int shim_eth_configure(ipc_process_id_t          ipc_process_id,
-                      const struct shim_conf_t * configuration)
-{
-
-#if 0
-	
+	struct shim_eth_instance_t * instance;
 	struct shim_eth_info_t * shim_info;
+	struct list_head * pos;
+	struct shim_conf_t * c;
+	struct shim_config_entry_t * tmp;
+	struct shim_config_value_t * val;
+	bool_t reconfigure;
 
-	struct list_head *pos;
-	struct shim_config_entry_t tmp;
+	/* Check if instance is not null, check if opaque is not null */
+	if(!inst){
+		LOG_WARN("Configure called on empty shim instance");
+		LOG_FEXIT;
+		return inst;
+	}
 
+	instance = (struct shim_eth_instance_t *) inst->opaque;
+	if(!instance){
+		LOG_WARN("Configure called on empty eth vlan shim instance");
+		LOG_FEXIT;
+		return inst;
+	}
+	
+	/* If reconfigure = 1, break down all communication and setup again */
+	reconfigure = 0;
 
-	shim_info = kmalloc(sizeof(*shim_info), GFP_KERNEL);
+	/* Get configuration struct pertaining to this shim instance */
+	shim_info = instance->info; 
+	if(!shim_info) {
+		shim_info = kmalloc(sizeof(*shim_info), GFP_KERNEL);
+		reconfigure = 1;
+	}
 	if (!shim_info) {
-                LOG_ERR("Cannot allocate memory");
+                LOG_ERR("Cannot allocate memory for shim_info");
                 LOG_FEXIT;
-                return -1;
+                return inst;
         }
 
 	/* Retrieve configuration of IPC process from params */
-	list_for_each(pos, configuration.list){
-
-
-		tmp = list_entry(pos, struct shim_config_entry_t, list);
-		
-
-
-		switch (ipc_config->type) {
-		case IPC_CONFIG_UINT:
-			shim_eth_info.vlan_id =
-                                * (uint16_t *) ipc_config->value;
-			break;
-		case IPC_CONFIG_STRING:
-			shim_eth_info.interface_name = 
-				(string_t *) ipc_config->value;
-			break;
-		default:
-			break;
+	list_for_each(pos, &(configuration->list)){
+		c = list_entry(pos, struct shim_conf_t, list);
+		tmp = c->entry;
+		val = tmp->value;
+		if(strcmp(tmp->name, "difname") == 0 
+			&& val->type == SHIM_CONFIG_STRING) {
+			if(!name_cpy(shim_info->name, 
+					(struct name_t *)val->data)){
+				LOG_FEXIT;
+				return inst;
+			}
+		} else if (strcmp(tmp->name, "vlanid") == 0 
+			&& val->type == SHIM_CONFIG_UINT) {
+			shim_info->vlan_id = * (uint16_t *) val->data;
+			reconfigure = 1;
+		} else if(strcmp(tmp->name,"interfacename") == 0 
+			&& val->type == SHIM_CONFIG_STRING) {
+			shim_info->interface_name = (string_t *) val->data;
+			reconfigure = 1;
+		} else {
+			LOG_WARN("Unknown config param for eth shim");
 		}
 	}
-
-	/* FIXME: Add handler to correct interface and vlan id */
-
+	instance->info = shim_info;
+	
+	if(reconfigure) {
+		/* FIXME: Add handler to correct interface and vlan id */
+		/* Check if correctness VLAN id and interface name */
+	}
 	LOG_DBG("Configured shim ETH IPC Process");
-#endif
-	return 0;
+
+	return inst;
 }
 
-int shim_eth_destroy(ipc_process_id_t ipc_process_id)
+int shim_eth_destroy(struct shim_instance_t * inst)
 {
-        LOG_FBEGN;
+	struct shim_eth_instance_t * instance;
+	LOG_FBEGN;
+	if(inst){
+                /**
+		 *  FIXME: Need to ask instance to clean up as well
+		 * Don't know yet in full what to delete
+		 */
+		instance = (struct shim_eth_instance_t *) inst->opaque;
+		if(instance){
+			rb_erase(&instance->node, &shim_eth_root);
+			kfree(instance);
+		}
+		kfree(inst);
+	}
         LOG_FEXIT;
-
 	return 0;
 }
 
@@ -274,7 +318,26 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
+	struct rb_node * s;
+	struct rb_node * e;
+	struct shim_eth_instance_t * i;
         LOG_FBEGN;
+
+	/* Destroy all shim instances */
+	s = rb_first(&shim_eth_root);
+	while(s){
+                /* Get next node and keep pointer to this one */
+		e = s;
+		rb_next(s);
+		/**
+		 * Get the shim_instance 
+		 * FIXME: Need to ask it to clean up as well
+		 * Don't know yet in full what to delete
+		 */
+		i = rb_entry(e,struct shim_eth_instance_t, node);
+		rb_erase(e, &shim_eth_root);
+		kfree(i);
+	}
         LOG_FEXIT;
 }
 
