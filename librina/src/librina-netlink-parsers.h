@@ -31,6 +31,11 @@
 
 namespace rina{
 
+int putBaseNetlinkMessage(nl_msg* netlinkMessage,
+		BaseNetlinkMessage * message);
+
+BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMesasgeHeader);
+
 /* APPLICATION PROCESS NAMING INFORMATION CLASS */
 enum ApplicationProcessNamingInformationAttributes{
 	APNI_ATTR_PROCESS_NAME = 1,
@@ -51,6 +56,7 @@ ApplicationProcessNamingInformation * parseApplicationProcessNamingInformationOb
 enum AppAllocateFlowRequestAttributes{
 	AAFR_ATTR_SOURCE_APP_NAME = 1,
 	AAFR_ATTR_DEST_APP_NAME,
+	AAFR_ATTR_FLOW_SPEC,
 	__AAFR_ATTR_MAX,
 };
 

@@ -26,8 +26,9 @@
 #include "logs.h"
 #include <unistd.h>
 #include "librina-netlink-parsers.h"
+#include <netlink/genl/genl.h>
+#include <netlink/genl/ctrl.h>
 #include <netlink/socket.h>
-#define MY_MESSAGE_TYPE 17
 
 namespace rina {
 
@@ -38,6 +39,7 @@ BaseNetlinkMessage::BaseNetlinkMessage(RINANetlinkOperationCode operationCode) {
 	sourcePortId = 0;
 	destPortId = 0;
 	sequenceNumber = 0;
+	family = -1;
 }
 
 BaseNetlinkMessage::~BaseNetlinkMessage() {
@@ -71,10 +73,18 @@ RINANetlinkOperationCode BaseNetlinkMessage::getOperationCode() const {
 	return operationCode;
 }
 
+int BaseNetlinkMessage::getFamily() const {
+	return family;
+}
+
+void BaseNetlinkMessage::setFamily(int family) {
+	this->family = family;
+}
+
 /* CLASS RINA APP ALLOCATE FLOW MESSAGE */
 
 AppAllocateFlowRequestMessage::AppAllocateFlowRequestMessage() :
-		BaseNetlinkMessage(RINA_C_APP_ALLOCATE_FLOW_REQUEST){
+		BaseNetlinkMessage(RINA_C_APP_ALLOCATE_FLOW_REQUEST) {
 }
 
 const ApplicationProcessNamingInformation& AppAllocateFlowRequestMessage::getDestAppName() const {
@@ -104,16 +114,33 @@ void AppAllocateFlowRequestMessage::setSourceAppName(
 	this->sourceAppName = sourceAppName;
 }
 
+/* CLASS NETLINK EXCEPTION */
+
+NetlinkException::NetlinkException(const std::string& description) :
+		Exception(description) {
+}
+
+const std::string NetlinkException::error_connecting_netlink_socket =
+		"Error connecting Netlink socket";
+const std::string NetlinkException::error_receiving_netlink_message =
+		"Error receiving Netlink message";
+const std::string NetlinkException::error_generating_netlink_message =
+		"Error generating Netlink message";
+const std::string NetlinkException::error_sending_netlink_message =
+		"Error sending Netlink message";
+const std::string NetlinkException::error_parsing_netlink_message =
+		"Error parsing Netlink message";
+
 /* CLASS NETLINK MANAGER */
 
-NetlinkManager::NetlinkManager() {
+NetlinkManager::NetlinkManager() throw(NetlinkException){
 	this->localPort = getpid();
 	LOG_DBG("Netlink Manager constructor called, using local port = %d",
 			localPort);
 	initialize();
 }
 
-NetlinkManager::NetlinkManager(unsigned int localPort) {
+NetlinkManager::NetlinkManager(unsigned int localPort) throw(NetlinkException){
 	this->localPort = localPort;
 	LOG_DBG("Netlink Manager constructor called, with netlink pid = %d",
 			localPort);
@@ -125,72 +152,66 @@ NetlinkManager::~NetlinkManager() {
 	nl_socket_free(socket);
 }
 
-void NetlinkManager::initialize() {
+void NetlinkManager::initialize() throw(NetlinkException){
 	socket = nl_socket_alloc();
 	nl_socket_set_local_port(socket, localPort);
-	int result = nl_connect(socket, NETLINK_GENERIC);
+	int result = genl_connect(socket);
 	if (result == 0) {
-		LOG_DBG("Netlink socket connected to local port %d ",
+		LOG_INFO("Netlink socket connected to local port %d ",
 				nl_socket_get_local_port(socket));
 	} else {
-		LOG_DBG("Got error %d", result);
+		LOG_CRIT("Error creating and connecting to Netlink socket %d", result);
+		throw NetlinkException(NetlinkException::error_connecting_netlink_socket);
 	}
 }
 
-void NetlinkManager::sendMessage(
-		BaseNetlinkMessage * message) {
+void NetlinkManager::sendMessage(BaseNetlinkMessage * message) throw(NetlinkException){
 	//Generate the message
 	struct nl_msg* netlinkMessage;
 
-	netlinkMessage = nlmsg_alloc_simple(MY_MESSAGE_TYPE, NLM_F_REQUEST);
-
-	switch(message->getOperationCode()){
-	case RINA_C_APP_ALLOCATE_FLOW_REQUEST:{
-		AppAllocateFlowRequestMessage * allocateObject = dynamic_cast<AppAllocateFlowRequestMessage *>(message);
-		if (putAppAllocateFlowRequestMessageObject(netlinkMessage, allocateObject) <0){
-				LOG_WARN("Error, to do, throw Exception");
-				nlmsg_free(netlinkMessage);
-				return;
-			}
-		break;
-	}
-	default:{
-		LOG_WARN("Error, to do, throw Exception");
+	netlinkMessage = nlmsg_alloc_simple(message->getOperationCode(),
+			NLM_F_REQUEST);
+	int result = putBaseNetlinkMessage(netlinkMessage, message);
+	if (result < 0) {
+		LOG_ERR("Error generating Netlink message: %d", result);
 		nlmsg_free(netlinkMessage);
-		return;
-	}
+		throw NetlinkException(NetlinkException::error_generating_netlink_message);
 	}
 
 	//Set destination and send the message
 	nl_socket_set_peer_port(socket, message->getDestPortId());
-	nl_send_auto(socket, netlinkMessage);
-	LOG_DBG("Sent message to %d", message->getDestPortId());
+	result = nl_send_auto(socket, netlinkMessage);
+	if (result < 0){
+		LOG_ERR("Error sending Netlink mesage: %d", result);
+		nlmsg_free(netlinkMessage);
+		throw NetlinkException(NetlinkException::error_sending_netlink_message);
+	}
+	LOG_DBG("Sent message of %d bytes to %d", result, message->getDestPortId());
 
 	//Cleanup
 	nlmsg_free(netlinkMessage);
-	return;
 }
 
-BaseNetlinkMessage * NetlinkManager::getMessage() {
+BaseNetlinkMessage * NetlinkManager::getMessage() throw(NetlinkException){
 	unsigned char *buf = NULL;
 	struct nlmsghdr *hdr;
 	struct sockaddr_nl nla = { 0 };
 	struct nl_msg *msg = NULL;
 	struct ucred *creds = NULL;
 
-	int n = nl_recv(socket, &nla, &buf, &creds);
-	if (n <= 0) {
-		LOG_DBG("Error receiving Netlink message %d", n);
-		return NULL;
+	int numBytes = nl_recv(socket, &nla, &buf, &creds);
+	if (numBytes <= 0) {
+		LOG_ERR("Error receiving Netlink message %d", numBytes);
+		throw NetlinkException(NetlinkException::error_receiving_netlink_message);
 	}
 
-	LOG_DBG("Received %d bytes, parsing the message", n);
+	LOG_DBG("Received %d bytes, parsing the message", numBytes);
 
 	hdr = (struct nlmsghdr *) buf;
 	msg = nlmsg_convert(hdr);
 	if (!msg) {
-		LOG_DBG("Error");
-		return NULL;
+		LOG_ERR("Error parsing Netlink message");
+		throw NetlinkException(NetlinkException::error_parsing_netlink_message);
 	}
 
 	nlmsg_set_src(msg, &nla);
@@ -206,14 +227,13 @@ BaseNetlinkMessage * NetlinkManager::getMessage() {
 		nlmsg_set_creds(msg, creds);
 	}
 
-	AppAllocateFlowRequestMessage * result =
-					parseAppAllocateFlowRequestMessage(hdr);
+	BaseNetlinkMessage * result = parseBaseNetlinkMessage(hdr);
 
-	if (result == NULL){
+	if (result == NULL) {
 		nlmsg_free(msg);
 		free(buf);
 		free(creds);
-		return NULL;
+		throw NetlinkException(NetlinkException::error_parsing_netlink_message);
 	}
 
 	result->setDestPortId(localPort);

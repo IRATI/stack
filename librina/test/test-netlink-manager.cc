@@ -47,6 +47,8 @@ int main(int argc, char * argv[]) {
 	result = dynamic_cast<AppAllocateFlowRequestMessage *>(destination->getMessage());
 	std::cout<<"Received message from " << result->getSourcePortId() <<
 			" with sequence number "<< result->getSequenceNumber() <<"\n";
+	std::cout<<"Source application process name: " <<result->getSourceAppName().getProcessName()<<"\n";
+	std::cout<<"Destination application process name: " <<result->getDestAppName().getProcessName()<<"\n";
  	delete result;
 
 	delete source;

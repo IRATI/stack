@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string>
 
 #ifndef RINA_PREFIX
 #error You must define RINA_PREFIX before including this file
@@ -74,22 +75,20 @@ bool shouldLog(LOG_LEVEL level);
  * @param fmt a string with the print statement
  * @param ... multiple arguments for the string
  */
-void LOG(LOG_LEVEL level, const char* fmt, va_list args);
+void LOG(std::string prefix, LOG_LEVEL level, std::string logLevelString, const char* fmt, ...);
 
-void LOG_DBG(const char* fmt, ...);
-void LOG_INFO(const char* fmt, ...);
-void LOG_NOTE(const char* fmt, ...);
-void LOG_WARN(const char* fmt, ...);
-void LOG_ERR(const char* fmt, ...);
-void LOG_CRIT(const char* fmt, ...);
-void LOG_ALERT(const char* fmt, ...);
-void LOG_EMERG(const char* fmt, ...);
-
-/*
 #define __LOG(PREFIX, LEVEL, FMT, ARGS...)                              \
-        do { printf("librina-" PREFIX ": " FMT "\n", ##ARGS); } while (0)
+		do { LOG(PREFIX, LEVEL, _S(LEVEL  ), FMT, ##ARGS);} while (0)
 
+#define _S(x) #x
 
-#define _S(x) #x*/
+#define LOG_EMERG(FMT, ARGS...) __LOG(RINA_PREFIX, EMERG, FMT, ##ARGS)
+#define LOG_ALERT(FMT, ARGS...) __LOG(RINA_PREFIX, ALERT, FMT, ##ARGS)
+#define LOG_CRIT(FMT,  ARGS...) __LOG(RINA_PREFIX, CRIT, FMT, ##ARGS)
+#define LOG_ERR(FMT,   ARGS...) __LOG(RINA_PREFIX, ERR, FMT, ##ARGS)
+#define LOG_WARN(FMT,  ARGS...) __LOG(RINA_PREFIX, WARN, FMT, ##ARGS)
+#define LOG_NOTE(FMT,  ARGS...) __LOG(RINA_PREFIX, NOTE, FMT, ##ARGS)
+#define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, INFO, FMT, ##ARGS)
+#define LOG_DBG(FMT,  ARGS...)  __LOG(RINA_PREFIX, DBG, FMT, ##ARGS)
 
 #endif

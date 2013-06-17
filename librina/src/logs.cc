@@ -21,9 +21,7 @@
  *      Author: eduardgrasa
  */
 
-#ifndef RINA_PREFIX
-#define RINA_PREFIX " "
-#endif
+#define RINA_PREFIX ""
 
 #include "logs.h"
 #include <stdlib.h>
@@ -105,79 +103,23 @@ bool shouldLog(LOG_LEVEL level){
 	}
 }
 
-void LOG(LOG_LEVEL level, const char* fmt, va_list args){
+void LOG(std::string prefix, LOG_LEVEL level, std::string logLevelString, const char* fmt, ...){
 	if (!shouldLog(level)){
 		return;
 	}
 
+	std::string headerString = std::string("librina-") + prefix + "("+logLevelString +"): ";
+
+	va_list args;
+	va_start (args, fmt);
 	if (logOutputStream == NULL){
-		printf("librina-");
-		printf(RINA_PREFIX);
-		printf(": ");
+		printf(headerString.c_str());
 		vprintf(fmt, args);
 		printf("\n");
 	}else{
-		fprintf(logOutputStream, "librina-");
-		fprintf(logOutputStream, RINA_PREFIX);
-		fprintf(logOutputStream, ": ");
+		fprintf(logOutputStream, headerString.c_str());
 		vfprintf(logOutputStream, fmt, args);
 		fprintf(logOutputStream, "\n");
 	}
-}
-
-void LOG_DBG(const char* fmt, ...){
-	va_list args;
-	va_start (args, fmt);
-	LOG(DBG, fmt, args);
 	va_end(args);
 }
-
-void LOG_INFO(const char* fmt, ...){
-	va_list args;
-	va_start (args, fmt);
-	LOG(INFO, fmt, args);
-	va_end(args);
-}
-
-void LOG_NOTE(const char* fmt, ...){
-	va_list args;
-	va_start (args, fmt);
-	LOG(NOTE, fmt, args);
-	va_end(args);
-}
-
-void LOG_WARN(const char* fmt, ...){
-	va_list args;
-	va_start (args, fmt);
-	LOG(WARN, fmt, args);
-	va_end(args);
-}
-
-void LOG_ERR(const char* fmt, ...){
-	va_list args;
-	va_start (args, fmt);
-	LOG(ERR, fmt, args);
-	va_end(args);
-}
-
-void LOG_CRIT(const char* fmt, ...){
-	va_list args;
-	va_start (args, fmt);
-	LOG(CRIT, fmt, args);
-	va_end(args);
-}
-
-void LOG_ALERT(const char* fmt, ...){
-	va_list args;
-	va_start (args, fmt);
-	LOG(ALERT, fmt, args);
-	va_end(args);
-}
-
-void LOG_EMERG(const char* fmt, ...){
-	va_list args;
-	va_start (args, fmt);
-	LOG(EMERG, fmt, args);
-	va_end(args);
-}
-

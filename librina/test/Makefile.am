@@ -65,11 +65,16 @@ test_netlink_manager_SOURCES  = test-netlink-manager.cc
 test_netlink_manager_CPPFLAGS = $(COMMONCPPFLAGS)
 test_netlink_manager_LDFLAGS  = $(COMMONLDFLAGS)
 
+test_netlink_parsers_SOURCES  = test-netlink-parsers.cc
+test_netlink_parsers_CPPFLAGS = $(COMMONCPPFLAGS)
+test_netlink_parsers_LDFLAGS  = $(COMMONLDFLAGS)
+
 check_PROGRAMS =				\
 	test-01					\
 	test-02					\
 	test-03					\
-	test-netlink-manager
+	test-netlink-manager	\
+	test-netlink-parsers
 
 XFAIL_TESTS =					\
 	test-03
@@ -77,11 +82,13 @@ XFAIL_TESTS =					\
 PASS_TESTS =					\
 	test-01					\
 	test-02					\
-	test-netlink-manager
+	test-netlink-manager	\
+	test-netlink-parsers
 
 # Explicitly list the tests, in order to ensure ordering
 TESTS =						\
 	test-01					\
 	test-02					\
 	test-03					\
-	test-netlink-manager
+	test-netlink-manager	\
+	test-netlink-parsers

@@ -27,6 +27,33 @@
 
 namespace rina {
 
+int putBaseNetlinkMessage(nl_msg* netlinkMessage,
+		BaseNetlinkMessage * message){
+	switch(message->getOperationCode()){
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST:{
+		AppAllocateFlowRequestMessage * allocateObject = dynamic_cast<AppAllocateFlowRequestMessage *>(message);
+		if (putAppAllocateFlowRequestMessageObject(netlinkMessage, allocateObject) <0){
+			return -1;
+		}
+		return 0;
+	}
+	default:{
+		return -1;
+	}
+	}
+}
+
+BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader){
+	switch(netlinkMessageHeader->nlmsg_type){
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST:{
+		return parseAppAllocateFlowRequestMessage(netlinkMessageHeader);
+	}
+	default:{
+		return NULL;
+	}
+	}
+}
+
 int putApplicationProcessNamingInformationObject(nl_msg* netlinkMessage,
 		const ApplicationProcessNamingInformation& object) {
 	NLA_PUT_STRING(netlinkMessage, APNI_ATTR_PROCESS_NAME,
@@ -40,7 +67,7 @@ int putApplicationProcessNamingInformationObject(nl_msg* netlinkMessage,
 
 	return 0;
 
-	nla_put_failure: LOG_WARN(
+	nla_put_failure: LOG_ERR(
 			"Error building ApplicationProcessNamingInformation Netlink object");
 	return -1;
 }
@@ -64,7 +91,7 @@ ApplicationProcessNamingInformation * parseApplicationProcessNamingInformationOb
 
 	int err = nla_parse_nested(attrs, APNI_ATTR_MAX, nested, attr_policy);
 	if (err < 0) {
-		LOG_WARN(
+		LOG_ERR(
 				"Error parsing ApplicationProcessNaming information from Netlink message: %d",
 				err);
 		return NULL;
@@ -88,93 +115,6 @@ ApplicationProcessNamingInformation * parseApplicationProcessNamingInformationOb
 	if (attrs[APNI_ATTR_ENTITY_INSTANCE]) {
 		result->setEntityInstance(
 				nla_get_string(attrs[APNI_ATTR_ENTITY_INSTANCE]));
-	}
-
-	return result;
-}
-
-int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
-		AppAllocateFlowRequestMessage * object) {
-	struct nlattr *sourceAppName, *destinationAppName;
-
-	if (!(sourceAppName = nla_nest_start(netlinkMessage,
-			AAFR_ATTR_SOURCE_APP_NAME))) {
-		goto nla_put_failure;
-	}
-	if (putApplicationProcessNamingInformationObject(netlinkMessage,
-			object->getSourceAppName()) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, sourceAppName);
-
-	if (!(destinationAppName = nla_nest_start(netlinkMessage,
-			AAFR_ATTR_DEST_APP_NAME))) {
-		goto nla_put_failure;
-	}
-
-	if (putApplicationProcessNamingInformationObject(netlinkMessage,
-			object->getDestAppName()) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, destinationAppName);
-
-	return 0;
-
-	nla_put_failure: LOG_WARN(
-			"Error building AppAllocateFlowRequestMessage Netlink object");
-	return -1;
-}
-
-AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
-		nlmsghdr *hdr) {
-	struct nla_policy attr_policy[AAFR_ATTR_MAX + 1];
-	attr_policy[AAFR_ATTR_SOURCE_APP_NAME].type = NLA_NESTED;
-	attr_policy[AAFR_ATTR_SOURCE_APP_NAME].minlen = 0;
-	attr_policy[AAFR_ATTR_SOURCE_APP_NAME].maxlen = 65535;
-	attr_policy[AAFR_ATTR_DEST_APP_NAME].type = NLA_NESTED;
-	attr_policy[AAFR_ATTR_DEST_APP_NAME].minlen = 0;
-	attr_policy[AAFR_ATTR_DEST_APP_NAME].maxlen = 65535;
-	struct nlattr *attrs[AAFR_ATTR_MAX + 1];
-
-	/*
-	 * The nlmsg_parse() function will make sure that the message contains
-	 * enough payload to hold the header (struct my_hdr), validates any
-	 * attributes attached to the messages and stores a pointer to each
-	 * attribute in the attrs[] array accessable by attribute type.
-	 */
-	int err = nlmsg_parse(hdr, 0, attrs, AAFR_ATTR_MAX, attr_policy);
-	if (err < 0) {
-		LOG_WARN(
-				"Error parsing AppAllocateFlowRequestMessage information from Netlink message: %d",
-				err);
-		return NULL;
-	}
-
-	AppAllocateFlowRequestMessage * result =
-			new AppAllocateFlowRequestMessage();
-	ApplicationProcessNamingInformation * sourceName;
-	ApplicationProcessNamingInformation * destName;
-
-	if (attrs[AAFR_ATTR_SOURCE_APP_NAME]) {
-		sourceName = parseApplicationProcessNamingInformationObject(
-				attrs[AAFR_ATTR_SOURCE_APP_NAME]);
-		if (sourceName == NULL) {
-			delete result;
-			return NULL;
-		} else {
-			result->setSourceAppName(*sourceName);
-		}
-	}
-
-	if (attrs[AAFR_ATTR_DEST_APP_NAME]) {
-		destName = parseApplicationProcessNamingInformationObject(
-				attrs[AAFR_ATTR_DEST_APP_NAME]);
-		if (destName == NULL) {
-			delete result;
-			return NULL;
-		} else {
-			result->setDestAppName(*destName);
-		}
 	}
 
 	return result;
@@ -227,7 +167,7 @@ int putFlowSpecificationObject(nl_msg* netlinkMessage,
 
 	return 0;
 
-	nla_put_failure: LOG_WARN(
+	nla_put_failure: LOG_ERR(
 			"Error building ApplicationProcessNamingInformation Netlink object");
 	return -1;
 }
@@ -249,7 +189,7 @@ FlowSpecification * parseFlowSpecificationObject(nlattr *nested) {
 
 	int err = nla_parse_nested(attrs, FSPEC_ATTR_MAX, nested, attr_policy);
 	if (err < 0) {
-		LOG_WARN(
+		LOG_ERR(
 				"Error parsing FlowSpecification object from Netlink message: %d",
 				err);
 		return NULL;
@@ -301,6 +241,119 @@ FlowSpecification * parseFlowSpecificationObject(nlattr *nested) {
 	if (attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION]) {
 		result->setPeakSduBandwidthDuration(
 				nla_get_u32(attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION]));
+	}
+
+	return result;
+}
+
+int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
+		AppAllocateFlowRequestMessage * object) {
+	struct nlattr *sourceAppName, *destinationAppName, *flowSpec;
+
+	if (!(sourceAppName = nla_nest_start(netlinkMessage,
+			AAFR_ATTR_SOURCE_APP_NAME))) {
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object->getSourceAppName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, sourceAppName);
+
+	if (!(destinationAppName = nla_nest_start(netlinkMessage,
+			AAFR_ATTR_DEST_APP_NAME))) {
+		goto nla_put_failure;
+	}
+
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object->getDestAppName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, destinationAppName);
+
+	if (!(flowSpec = nla_nest_start(netlinkMessage,
+			AAFR_ATTR_FLOW_SPEC))) {
+		goto nla_put_failure;
+	}
+
+	if (putFlowSpecificationObject(netlinkMessage,
+			object->getFlowSpecification()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, flowSpec);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building AppAllocateFlowRequestMessage Netlink object");
+	return -1;
+}
+
+AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
+		nlmsghdr *hdr) {
+	struct nla_policy attr_policy[AAFR_ATTR_MAX + 1];
+	attr_policy[AAFR_ATTR_SOURCE_APP_NAME].type = NLA_NESTED;
+	attr_policy[AAFR_ATTR_SOURCE_APP_NAME].minlen = 0;
+	attr_policy[AAFR_ATTR_SOURCE_APP_NAME].maxlen = 65535;
+	attr_policy[AAFR_ATTR_DEST_APP_NAME].type = NLA_NESTED;
+	attr_policy[AAFR_ATTR_DEST_APP_NAME].minlen = 0;
+	attr_policy[AAFR_ATTR_DEST_APP_NAME].maxlen = 65535;
+	attr_policy[AAFR_ATTR_FLOW_SPEC].type = NLA_NESTED;
+	attr_policy[AAFR_ATTR_FLOW_SPEC].minlen = 0;
+	attr_policy[AAFR_ATTR_FLOW_SPEC].maxlen = 65535;
+	struct nlattr *attrs[AAFR_ATTR_MAX + 1];
+
+	/*
+	 * The nlmsg_parse() function will make sure that the message contains
+	 * enough payload to hold the header (struct my_hdr), validates any
+	 * attributes attached to the messages and stores a pointer to each
+	 * attribute in the attrs[] array accessable by attribute type.
+	 */
+	int err = nlmsg_parse(hdr, 0, attrs, AAFR_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing AppAllocateFlowRequestMessage information from Netlink message: %d",
+				err);
+		return NULL;
+	}
+
+	AppAllocateFlowRequestMessage * result =
+			new AppAllocateFlowRequestMessage();
+	ApplicationProcessNamingInformation * sourceName;
+	ApplicationProcessNamingInformation * destName;
+	FlowSpecification * flowSpec;
+
+	if (attrs[AAFR_ATTR_SOURCE_APP_NAME]) {
+		sourceName = parseApplicationProcessNamingInformationObject(
+				attrs[AAFR_ATTR_SOURCE_APP_NAME]);
+		if (sourceName == NULL) {
+			delete result;
+			return NULL;
+		} else {
+			result->setSourceAppName(*sourceName);
+		}
+	}
+
+	if (attrs[AAFR_ATTR_DEST_APP_NAME]) {
+		destName = parseApplicationProcessNamingInformationObject(
+				attrs[AAFR_ATTR_DEST_APP_NAME]);
+		if (destName == NULL) {
+			delete result;
+			return NULL;
+		} else {
+			result->setDestAppName(*destName);
+		}
+	}
+
+	if (attrs[AAFR_ATTR_FLOW_SPEC]) {
+		flowSpec = parseFlowSpecificationObject(
+				attrs[AAFR_ATTR_FLOW_SPEC]);
+		if (flowSpec == NULL) {
+			delete result;
+			return NULL;
+		} else {
+			result->setFlowSpecification(*flowSpec);
+		}
 	}
 
 	return result;
