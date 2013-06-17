@@ -60,12 +60,12 @@ static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
 	na = info->attrs[NETLINK_RINA_A_MSG];
 	if (na){
 		mydata = (char *)nla_data(na);
-			if (mydata == NULL){
-				LOG_DBG("error while receiving data\n");
-				return -1;
-			}
-			else
-				LOG_DBG("received: %s\n", mydata);
+		if (mydata == NULL){
+			LOG_DBG("error while receiving data\n");
+			return -1;
+		}
+		else
+			LOG_DBG("received: %s\n", mydata);
 		}
 	else{
 		LOG_DBG("no info->attrs %i\n", NETLINK_RINA_A_MSG);
