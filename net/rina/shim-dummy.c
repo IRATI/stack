@@ -22,6 +22,7 @@
 
 #define RINA_PREFIX "shim-dummy"
 
+#include <linux/slab.h>
 #include "logs.h"
 #include "common.h"
 #include "shim.h"
@@ -48,7 +49,7 @@ struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
 	if (!shim_dummy) {
 		LOG_ERR("Cannot allocate memory");
 		LOG_FEXIT;
-		return -1;
+		return NULL;
 	}
 
         LOG_FEXIT;
@@ -71,7 +72,7 @@ struct shim_instance_t * dummy_configure(struct shim_instance_t *   instance,
 	LOG_FBEGN;
 	LOG_FEXIT;
 
-	return 0;
+	return NULL;
 }
 
 static int __init mod_init(void)
