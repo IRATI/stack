@@ -23,6 +23,35 @@
 #define RINA_PREFIX "shim-dummy"
 
 #include "logs.h"
+#include "common.h"
+#include "shim.h"
+
+int dummy_create(ipc_process_id_t      ipc_process_id,
+		 const struct name_t * name)
+{
+	LOG_FBEGN;
+        LOG_FEXIT;
+
+	return 0;
+}
+
+int dummy_destroy(ipc_process_id_t      ipc_process_id,
+		 const struct name_t * name)
+{
+	LOG_FBEGN;
+        LOG_FEXIT;
+
+	return 0;
+}
+
+int dummy_configure(ipc_process_id_t          ipc_process_id,
+                      const struct shim_conf_t * configuration)
+{
+	LOG_FBEGN;
+	LOG_FEXIT;
+
+	return 0;
+}
 
 static int __init mod_init(void)
 {
