@@ -26,6 +26,7 @@
 #include "logs.h"
 #include "common.h"
 #include "shim.h"
+#include "utils.h"
 
 struct dummy_instance_t {
 	ipc_process_id_t      ipc_process_id;
@@ -151,11 +152,29 @@ struct shim_instance_t * dummy_configure(struct shim_instance_t *   instance,
 					 configuration)
 {
 	struct shim_conf_t * current_entry;
+	struct dummy_instance_t * dummy;
 
 	LOG_FBEGN;
 
+	ASSERT(instance);
+	ASSERT(configuration);
+	dummy = (struct dummy_instance_t *) instance->opaque;
+	if (!dummy) {
+		LOG_ERR("There is not a dummy instance in this shim instance");
+		LOG_FEXIT;
+
+		return instance;
+	}
 	list_for_each_entry(current_entry, &(configuration->list), list) {
-		if (strcmp(current_entry->entry->name, ))
+		if (strcmp(current_entry->entry->name, "name"))
+			dummy->name = (struct name_t *)
+				current_entry->entry->value->data;
+		else {
+			LOG_ERR("Cannot identify this parameter");
+			LOG_FEXIT;
+
+			return instance;
+		}
 	}
 
 	LOG_FEXIT;
