@@ -30,7 +30,7 @@
 
 LOG_LEVEL logLevel = DBG;
 FILE * logOutputStream = stdout;
-pthread_mutex_t outputStreamMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_rwlock_t outputStreamLock = PTHREAD_RWLOCK_INITIALIZER;
 pthread_rwlock_t logLevelLock = PTHREAD_RWLOCK_INITIALIZER;
 
 void setLogLevel(LOG_LEVEL newLogLevel){
@@ -42,13 +42,13 @@ void setLogLevel(LOG_LEVEL newLogLevel){
 int setOutputStream(FILE * newOutputStream){
 	int result = 0;
 
-	pthread_mutex_lock (&outputStreamMutex);
+	pthread_rwlock_wrlock(&outputStreamLock);
 	if (logOutputStream == stdout && newOutputStream != NULL){
 		logOutputStream = newOutputStream;
 	}else{
 		result = -1;
 	}
-	pthread_mutex_unlock (&outputStreamMutex);
+	pthread_rwlock_unlock(&outputStreamLock);
 
 	return result;
 }
@@ -124,16 +124,14 @@ void LOG(std::string prefix, LOG_LEVEL level, std::string logLevelString, const 
 		return;
 	}
 
-	std::string headerString = std::string("librina-") + prefix + "("+logLevelString +"): ";
+	std::string headerString = std::string("librina-") + prefix + "("+logLevelString +"): " + fmt + "\n";
 
 	va_list args;
 	va_start (args, fmt);
 
-	pthread_mutex_lock (&outputStreamMutex);
-	fprintf(logOutputStream, headerString.c_str());
-	vfprintf(logOutputStream, fmt, args);
-	fprintf(logOutputStream, "\n");
-	pthread_mutex_unlock (&outputStreamMutex);
+	pthread_rwlock_rdlock(&outputStreamLock);
+	fprintf(logOutputStream, headerString.c_str(), args);
+	pthread_rwlock_unlock(&outputStreamLock);
 
 	va_end(args);
 }
