@@ -26,13 +26,35 @@
 #include "common.h"
 #include "shim.h"
 
-int dummy_create(ipc_process_id_t      ipc_process_id,
-		 const struct name_t * name)
+struct dummy_info_t {
+	uint16_t        dummy_id;
+	char *      	name;
+};
+
+struct dummy_instance_t {
+	ipc_process_id_t      ipc_process_id;
+	struct name_t *       name;
+	struct dummy_info_t * info;
+	/* FIXME: Stores the state of flows indexed by port_id */
+};
+
+struct shim_instance_t * dummy_create(ipc_process_id_t      ipc_process_id,
+				      const struct name_t * name)
 {
+	struct shim_instance_t * shim_dummy;
+
 	LOG_FBEGN;
+
+	shim_dummy = kmalloc(sizeof(*shim_dummy), GFP_KERNEL);
+	if (!shim_dummy) {
+		LOG_ERR("Cannot allocate memory");
+		LOG_FEXIT;
+		return -1;
+	}
+
         LOG_FEXIT;
 
-	return 0;
+	return shim_dummy;
 }
 
 int dummy_destroy(ipc_process_id_t      ipc_process_id,
