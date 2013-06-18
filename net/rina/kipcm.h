@@ -110,38 +110,6 @@ struct flow_t {
 	struct kfifo *         sdu_ready;
 };
 
-struct kipc_t {
-	/*
-         * Maintained and used by the K-IPC Manager to return the proper flow
-	 * instance that contains the modules that provide the Data Transfer
-	 * Service in each kind of IPC Process.
-         */
-
-	//FIXME Define HASH_TABLE
-	//HASH_TABLE(port_id_to_flow, port_id_t, struct flow_t *);
-        struct list_head * port_id_to_flow;
-	
-	/*
-         * A table with all the instances of IPC Processes, indexed by
-	 * process_id.
-         */
-	//FIXME Define HASH_TABLE
-	//HASH_TABLE(id_to_ipcp, ipc_process_id_t, struct ipc_process_t *);
-	struct list_head * id_to_ipcp;
-};
-
-struct id_to_ipcp_t {
-        ipc_process_id_t       id; /* key */
-        struct ipc_process_t * ipcprocess; /* Value*/
-        struct list_head       list;
-};
-
-struct port_id_to_flow_t {
-        port_id_t             port_id; /* key */
-        const struct flow_t * flow;    /* value */
-        struct list_head      list;
-};
-
 void * kipcm_init(void);
 void   kipcm_exit(void);
 
@@ -156,10 +124,10 @@ int    kipcm_flow_remove(void * opaque, port_id_t port_id);
 int    kipcm_sdu_post(void *               opaque,
 		      port_id_t            port_id,
 		      const struct sdu_t * sdu);
-int    kipcm_sud_write(void * opaque,
+int    kipcm_sdu_write(void * opaque,
 		       port_id_t            port_id,
 		       const struct sdu_t * sdu);
-int    kipcm_sud_read(void *         opaque,
+int    kipcm_sdu_read(void *         opaque,
 		      port_id_t      port_id,
 		      bool_t         block,
 		      struct sdu_t * sdu);

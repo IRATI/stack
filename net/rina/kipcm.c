@@ -29,6 +29,38 @@
 #include "utils.h"
 #include "kipcm.h"
 
+struct id_to_ipcp_t {
+        ipc_process_id_t       id; /* key */
+        struct ipc_process_t * ipcprocess; /* Value*/
+        struct list_head       list;
+};
+
+struct port_id_to_flow_t {
+        port_id_t             port_id; /* key */
+        const struct flow_t * flow;    /* value */
+        struct list_head      list;
+};
+
+struct kipc_t {
+	/*
+         * Maintained and used by the K-IPC Manager to return the proper flow
+	 * instance that contains the modules that provide the Data Transfer
+	 * Service in each kind of IPC Process.
+         */
+
+	//FIXME Define HASH_TABLE
+	//HASH_TABLE(port_id_to_flow, port_id_t, struct flow_t *);
+        struct list_head * port_id_to_flow;
+	
+	/*
+         * A table with all the instances of IPC Processes, indexed by
+	 * process_id.
+         */
+	//FIXME Define HASH_TABLE
+	//HASH_TABLE(id_to_ipcp, ipc_process_id_t, struct ipc_process_t *);
+	struct list_head * id_to_ipcp;
+};
+
 void * kipcm_init()
 {
 #if 0
@@ -124,7 +156,7 @@ static int is_instance_ok(const struct shim_instance_t * inst)
             inst->sdu_read                &&
             inst->sdu_write) {
                 LOG_DBG("Shim instance %pK is consistent", inst)
-                return 1;
+                        return 1;
         }
 
         LOG_ERR("Shim instance %pK is inconsistent", inst);
@@ -167,7 +199,7 @@ retrieve_flow_by_port_id(void * opaque, port_id_t port_id)
         struct port_id_to_flow_t * cur;
 
         list_for_each_entry(cur,
-        		((struct kipc_t *) opaque)->port_id_to_flow, list) {
+                            ((struct kipc_t *) opaque)->port_id_to_flow, list) {
                 if (cur->port_id == port_id)
                         return cur->flow;
         }
@@ -182,7 +214,7 @@ retrieve_port_flow_node(void * opaque, port_id_t port_id)
 	struct port_id_to_flow_t * cur;
 
 	list_for_each_entry(cur,
-			((struct kipc_t *) opaque)->port_id_to_flow, list) {
+                            ((struct kipc_t *) opaque)->port_id_to_flow, list) {
                 if (cur->port_id == port_id)
                         return cur;
         }

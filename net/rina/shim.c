@@ -33,13 +33,18 @@ int  shim_init(void)
 void shim_exit(void)
 { }
 
+static int is_shim_label_ok(const struct shim_t * shim)
+{ return (shim ? strlen(shim->label) : 0); }
+
 static int is_shim_ok(const struct shim_t * shim)
 {
         LOG_DBG("Checking shim %pK consistence", shim);
 
-        if (shim            &&
-            shim->create    &&
-            shim->configure &&
+        if (shim                   &&
+            shim->label            &&
+            is_shim_label_ok(shim) &&
+            shim->create           &&
+            shim->configure        &&
 	    shim->destroy) {
                 LOG_DBG("Shim %pK is consistent", shim);
                 return 1;
@@ -52,12 +57,16 @@ static int is_shim_ok(const struct shim_t * shim)
 int shim_register(struct shim_t * shim)
 {
         if (!shim || !is_shim_ok(shim)) {
-                LOG_ERR("Cannot register shim, it's bogus");
+                LOG_ERR("Cannot register shim %pK, it's bogus", shim);
                 return -1;
         }
 
         LOG_DBG("Registering shim %pK", shim);
-        return kipcm_shim_register(shim);
+        if (!kipcm_shim_register(shim))
+                return 0;
+
+        /* FIXME: The shim label should be now published as a sysfs entry */
+        return 1;
 }
 
 int shim_unregister(struct shim_t * shim)
@@ -68,5 +77,9 @@ int shim_unregister(struct shim_t * shim)
         }
 
         LOG_DBG("Un-registering shim %pK", shim);
-        return kipcm_shim_unregister(shim);
+        if (!kipcm_shim_unregister(shim))
+                return 0;
+
+        /* FIXME: The shim label should be now published as a sysfs entry */
+        return 1;
 }

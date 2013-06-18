@@ -74,6 +74,12 @@ struct shim_instance_t {
 };
 
 struct shim_t {
+        /*
+         * The unique label this shim will be identified with, within the
+         * system. The label will be exposed to the user.
+         *
+         * It must not be NULL!
+         */
         char * label;
 
 	struct shim_instance_t * (* create)
