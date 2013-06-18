@@ -74,6 +74,14 @@ struct shim_instance_t {
 };
 
 struct shim_t {
+        /*
+         * The unique label this shim will be identified with, within the
+         * system. The label will be exposed to the user.
+         *
+         * It must not be NULL!
+         */
+        char * label;
+
 	struct shim_instance_t * (* create)
                 (ipc_process_id_t id);
         
@@ -89,7 +97,7 @@ struct shim_t {
 int  shim_init(void);
 void shim_exit(void);
 
-/* Called by each shim module */
+/* Called (once) by each shim module upon loading/unloading */
 int  shim_register(struct shim_t * shim);
 int  shim_unregister(struct shim_t * shim);
 
