@@ -26,21 +26,31 @@
 #include "logs.h"
 #include <stdlib.h>
 #include <cstdio>
+#include <pthread.h>
 
 LOG_LEVEL logLevel = DBG;
-FILE * logOutputStream;
+FILE * logOutputStream = stdout;
+pthread_mutex_t outputStreamMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_rwlock_t logLevelLock = PTHREAD_RWLOCK_INITIALIZER;
 
 void setLogLevel(LOG_LEVEL newLogLevel){
+	pthread_rwlock_wrlock(&logLevelLock);
 	logLevel = newLogLevel;
+	pthread_rwlock_unlock(&logLevelLock);
 }
 
 int setOutputStream(FILE * newOutputStream){
-	if (logOutputStream == NULL && newOutputStream != NULL){
-		logOutputStream = newOutputStream;
-		return 0;
-	}
+	int result = 0;
 
-	return -1;
+	pthread_mutex_lock (&outputStreamMutex);
+	if (logOutputStream == stdout && newOutputStream != NULL){
+		logOutputStream = newOutputStream;
+	}else{
+		result = -1;
+	}
+	pthread_mutex_unlock (&outputStreamMutex);
+
+	return result;
 }
 
 bool shouldLog(LOG_LEVEL level){
@@ -104,7 +114,13 @@ bool shouldLog(LOG_LEVEL level){
 }
 
 void LOG(std::string prefix, LOG_LEVEL level, std::string logLevelString, const char* fmt, ...){
-	if (!shouldLog(level)){
+	bool log;
+
+	pthread_rwlock_rdlock(&logLevelLock);
+	log = shouldLog(level);
+	pthread_rwlock_unlock(&logLevelLock);
+
+	if (!log){
 		return;
 	}
 
@@ -112,14 +128,12 @@ void LOG(std::string prefix, LOG_LEVEL level, std::string logLevelString, const 
 
 	va_list args;
 	va_start (args, fmt);
-	if (logOutputStream == NULL){
-		printf(headerString.c_str());
-		vprintf(fmt, args);
-		printf("\n");
-	}else{
-		fprintf(logOutputStream, headerString.c_str());
-		vfprintf(logOutputStream, fmt, args);
-		fprintf(logOutputStream, "\n");
-	}
+
+	pthread_mutex_lock (&outputStreamMutex);
+	fprintf(logOutputStream, headerString.c_str());
+	vfprintf(logOutputStream, fmt, args);
+	fprintf(logOutputStream, "\n");
+	pthread_mutex_unlock (&outputStreamMutex);
+
 	va_end(args);
 }
