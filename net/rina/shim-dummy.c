@@ -27,34 +27,115 @@
 #include "common.h"
 #include "shim.h"
 
-struct dummy_info_t {
-	uint16_t        dummy_id;
-	char *      	name;
-};
-
 struct dummy_instance_t {
 	ipc_process_id_t      ipc_process_id;
 	struct name_t *       name;
-	struct dummy_info_t * info;
 	/* FIXME: Stores the state of flows indexed by port_id */
 };
 
+int dummy_flow_allocate_request(void *                     opaque,
+				const struct name_t *      source,
+				const struct name_t *      dest,
+				const struct flow_spec_t * flow_spec,
+				port_id_t *                id)
+{
+	LOG_FBEGN;
+	LOG_FEXIT;
+
+	return 0;
+}
+
+int dummy_flow_allocate_response(void *              opaque,
+				 port_id_t           id,
+				 response_reason_t * response)
+{
+	LOG_FBEGN;
+	LOG_FEXIT;
+
+	return 0;
+}
+
+int dummy_flow_deallocate(void *    opaque,
+			  port_id_t id)
+{
+	LOG_FBEGN;
+	LOG_FEXIT;
+
+	return 0;
+}
+
+int  dummy_application_register(void *                opaque,
+			        const struct name_t * name)
+{
+	LOG_FBEGN;
+	LOG_FEXIT;
+
+	return 0;
+}
+
+int dummy_application_unregister(void *                opaque,
+				 const struct name_t * name)
+{
+	LOG_FBEGN;
+	LOG_FEXIT;
+
+	return 0;
+}
+
+int  dummy_sdu_write(void *               opaque,
+		     port_id_t            id,
+		     const struct sdu_t * sdu)
+{
+	LOG_FBEGN;
+	LOG_FEXIT;
+
+	return 0;
+}
+int  dummy_sdu_read(void *         opaque,
+		    port_id_t      id,
+		    struct sdu_t * sdu)
+{
+	LOG_FBEGN;
+	LOG_FEXIT;
+
+	return 0;
+}
+
 struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
 {
-	struct shim_instance_t * shim_dummy;
+	struct shim_instance_t * instance;
+	struct dummy_instance_t * dummy_inst;
 
 	LOG_FBEGN;
 
-	shim_dummy = kmalloc(sizeof(*shim_dummy), GFP_KERNEL);
-	if (!shim_dummy) {
-		LOG_ERR("Cannot allocate memory");
+	instance = kmalloc(sizeof(*instance), GFP_KERNEL);
+	if (!instance) {
+		LOG_ERR("Cannot allocate %zu bytes of kernel memory",
+				sizeof(*instance));
 		LOG_FEXIT;
 		return NULL;
 	}
+	dummy_inst = kmalloc(sizeof(*dummy_inst), GFP_KERNEL);
+	if (!dummy_inst) {
+		LOG_ERR("Cannot allocate %zu bytes of kernel memory",
+				sizeof(*dummy_inst));
+		kfree(instance);
+		LOG_FEXIT;
+		return NULL;
+	}
+	dummy_inst->ipc_process_id = ipc_process_id;
+	instance->opaque = dummy_inst;
+	instance->flow_allocate_request = dummy_flow_allocate_request;
+	instance->flow_allocate_response = dummy_flow_allocate_response;
+	instance->flow_deallocate = dummy_flow_deallocate;
+	instance->application_register = dummy_application_register;
+	instance->application_unregister = dummy_application_unregister;
+	instance->sdu_write = dummy_sdu_write;
+	instance->sdu_read = dummy_sdu_read;
 
         LOG_FEXIT;
 
-	return shim_dummy;
+	return instance;
 }
 
 int dummy_destroy(struct shim_instance_t * inst)
@@ -69,7 +150,14 @@ struct shim_instance_t * dummy_configure(struct shim_instance_t *   instance,
 					 const struct shim_conf_t *
 					 configuration)
 {
+	struct shim_conf_t * current_entry;
+
 	LOG_FBEGN;
+
+	list_for_each_entry(current_entry, &(configuration->list), list) {
+		if (strcmp(current_entry->entry->name, ))
+	}
+
 	LOG_FEXIT;
 
 	return NULL;
