@@ -38,8 +38,7 @@ struct dummy_instance_t {
 	/* FIXME: Stores the state of flows indexed by port_id */
 };
 
-struct shim_instance_t * dummy_create(ipc_process_id_t      ipc_process_id,
-				      const struct name_t * name)
+struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
 {
 	struct shim_instance_t * shim_dummy;
 
@@ -57,8 +56,7 @@ struct shim_instance_t * dummy_create(ipc_process_id_t      ipc_process_id,
 	return shim_dummy;
 }
 
-int dummy_destroy(ipc_process_id_t      ipc_process_id,
-		 const struct name_t * name)
+int dummy_destroy(struct shim_instance_t * inst)
 {
 	LOG_FBEGN;
         LOG_FEXIT;
@@ -66,8 +64,9 @@ int dummy_destroy(ipc_process_id_t      ipc_process_id,
 	return 0;
 }
 
-int dummy_configure(ipc_process_id_t          ipc_process_id,
-                      const struct shim_conf_t * configuration)
+struct shim_instance_t * dummy_configure(struct shim_instance_t *   instance,
+					 const struct shim_conf_t *
+					 configuration)
 {
 	LOG_FBEGN;
 	LOG_FEXIT;
@@ -77,7 +76,26 @@ int dummy_configure(ipc_process_id_t          ipc_process_id,
 
 static int __init mod_init(void)
 {
-        LOG_FBEGN;
+        struct shim_t * shim;
+
+	LOG_FBEGN;
+
+	shim = kmalloc(sizeof(*shim), GFP_KERNEL);
+	if (!shim) {
+		LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*shim));
+		LOG_FEXIT;
+		return -1;
+	}
+	shim->label = "shim-dummy";
+	shim->create = dummy_create;
+	shim->destroy = dummy_destroy;
+	shim->configure = dummy_configure;
+	if(shim_register(shim)){
+		LOG_ERR("Initialization of module shim-dummy failed");
+		LOG_FEXIT;
+		return -1;
+	}
+
         LOG_FEXIT;
 
         return 0;
