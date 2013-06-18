@@ -124,13 +124,15 @@ void LOG(std::string prefix, LOG_LEVEL level, std::string logLevelString, const 
 		return;
 	}
 
-	std::string headerString = std::string("librina-") + prefix + "("+logLevelString +"): " + fmt + "\n";
+	std::string headerString = std::string("librina-") + prefix + "("+logLevelString +"): ";
 
 	va_list args;
 	va_start (args, fmt);
 
 	pthread_rwlock_rdlock(&outputStreamLock);
-	fprintf(logOutputStream, headerString.c_str(), args);
+	fprintf(logOutputStream, headerString.c_str());
+	vfprintf(logOutputStream, fmt, args);
+	fprintf(logOutputStream, "\n");
 	pthread_rwlock_unlock(&outputStreamLock);
 
 	va_end(args);

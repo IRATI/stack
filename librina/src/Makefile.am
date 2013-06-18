@@ -8,6 +8,7 @@ lib_LTLIBRARIES =
 
 librina_la_SOURCES  =				\
 	logs.cc				\
+	concurrency.cc		\
 	librina.cc				\
 	librina-common.cc			\
 	librina-application.cc			\

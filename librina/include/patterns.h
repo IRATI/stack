@@ -61,38 +61,6 @@ private:
 
 template<typename TYPE> TYPE * Singleton<TYPE>::instance_ = 0;
 
-class Lockable : public NonCopyable {
-public:
-        Lockable();
-        virtual ~Lockable() throw();
-
-        virtual void lock() {
-                // FIXME: Add code here
-        }
-        virtual void unlock() {
-                // FIXME: Add code here
-        }
-};
-
-class AccessGuard : public NonCopyable {
-public:
-        AccessGuard(Lockable & guarded) :
-                guarded_(guarded)
-        { guarded_.lock(); }
-
-        virtual ~AccessGuard() throw()
-        {
-                try {
-                        guarded_.unlock();
-                } catch (std::exception & e) {
-                        // FIXME: Add proper actions here
-                }
-        }
-
-private:
-        Lockable & guarded_;
-};
-
 #endif
 
 #endif
