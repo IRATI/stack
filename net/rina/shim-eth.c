@@ -246,7 +246,8 @@ int shim_eth_destroy(struct shim_instance_t * inst)
 	return 0;
 }
 
-int shim_eth_flow_allocate_request(const struct name_t *      source,
+int shim_eth_flow_allocate_request(void *                     opaque, 
+				   const struct name_t *      source,
                                    const struct name_t *      dest,
                                    const struct flow_spec_t * flow_spec,
                                    port_id_t                * port_id)
@@ -257,7 +258,8 @@ int shim_eth_flow_allocate_request(const struct name_t *      source,
 	return 0;
 }
 
-int shim_eth_flow_allocate_response(port_id_t           port_id,
+int shim_eth_flow_allocate_response(void *              opaque,
+				    port_id_t           port_id,
                                     response_reason_t * response)
 {
         LOG_FBEGN;
@@ -266,7 +268,8 @@ int shim_eth_flow_allocate_response(port_id_t           port_id,
 	return 0;
 }
 
-int shim_eth_flow_deallocate(port_id_t port_id)
+int shim_eth_flow_deallocate(void *    opaque,
+			     port_id_t port_id)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -274,7 +277,8 @@ int shim_eth_flow_deallocate(port_id_t port_id)
 	return 0;
 }
 
-int shim_eth_application_register(const struct name_t * name)
+int shim_eth_application_register(void *                opaque,
+				  const struct name_t * name)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -282,7 +286,8 @@ int shim_eth_application_register(const struct name_t * name)
 	return 0;
 }
 
-int shim_eth_application_unregister(const struct name_t * name)
+int shim_eth_application_unregister(void *               opaque,
+				   const struct name_t * name)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -290,7 +295,8 @@ int shim_eth_application_unregister(const struct name_t * name)
 	return 0;
 }
 
-int shim_eth_sdu_write(port_id_t            port_id, 
+int shim_eth_sdu_write(void *               opaque,
+		       port_id_t            port_id, 
 		       const struct sdu_t * sdu)
 {
         LOG_FBEGN;
@@ -299,7 +305,8 @@ int shim_eth_sdu_write(port_id_t            port_id,
 	return 0;
 }
 
-int shim_eth_sdu_read(port_id_t      id,
+int shim_eth_sdu_read(void *         opaque,
+		      port_id_t      id,
 		      struct sdu_t * sdu)
 {
 	LOG_FBEGN;
