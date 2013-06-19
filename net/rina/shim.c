@@ -20,6 +20,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/kobject.h>
+#include <linux/string.h>
+#include <linux/sysfs.h>
+#include <linux/slab.h>
+
 #define RINA_PREFIX "shim"
 
 #include "logs.h"
@@ -27,11 +32,34 @@
 #include "shim.h"
 #include "kipcm.h"
 
-int  shim_init(void)
-{ return 0; }
+static struct kset * shims = NULL;
+
+int shim_init(void)
+{
+        if (shims) {
+                LOG_ERR("Shim layer already initialized");
+                return -1;
+        }
+
+#if CONFIG_RINA_SYSFS
+        /* FIXME: Move the set path from kernel to rina */
+        shims = kset_create_and_add("shims", NULL, kernel_kobj);
+        if (!shims)
+                return -1;
+#endif
+
+        ASSERT(shims != NULL);
+        return 0;
+}
 
 void shim_exit(void)
-{ }
+{
+        ASSERT(shims != NULL);
+#if CONFIG_RINA_SYSFS
+        kset_unregister(shims);
+#endif
+        shims = NULL;
+}
 
 static int is_shim_label_ok(const struct shim_t * shim)
 { return (shim ? strlen(shim->label) : 0); }
@@ -56,30 +84,57 @@ static int is_shim_ok(const struct shim_t * shim)
 
 int shim_register(struct shim_t * shim)
 {
+        struct shim_object * obj;
+
+        LOG_DBG("Registering shim %pK", shim);
+
         if (!shim || !is_shim_ok(shim)) {
                 LOG_ERR("Cannot register shim %pK, it's bogus", shim);
                 return -1;
         }
 
-        LOG_DBG("Registering shim %pK", shim);
-        if (!kipcm_shim_register(shim))
-                return 0;
+        ASSERT(is_shim_label_ok(shim));
 
-        /* FIXME: The shim label should be now published as a sysfs entry */
-        return 1;
+        if (kipcm_shim_register(shim))
+                return -1;
+
+#if CONFIG_RINA_SYSFS
+#if 0
+        obj = kzalloc(sizeof(*obj), GFP_KERNEL);
+        if (!obj) {
+                LOG_CRIT("Cannot allocate %d bytes of memory", sizeof(*obj));
+                return -ENOMEM;
+        }
+
+        LDBG("Setting up kobj for label '%s'", shim->label);
+        obj->kobj.kset = shims;
+        if (!kobject_init_and_add(&obj->kobj, &obj_ktype, NULL, "%s",
+                                  shim->label)) {
+                LOG_CRIT("Cannot setup sysfs for shim %pK", shim);
+                return -1;
+        }
+
+        kobject_put(&obj->kobj);
+#endif
+#endif
+
+        return 0;
 }
 
 int shim_unregister(struct shim_t * shim)
 {
+        LOG_DBG("Un-registering shim %pK", shim);
+
         if (!shim) {
                 LOG_ERR("Cannot unregister shim, it's bogus");
                 return -1;
         }
 
-        LOG_DBG("Un-registering shim %pK", shim);
-        if (!kipcm_shim_unregister(shim))
-                return 0;
+        if (kipcm_shim_unregister(shim))
+                return -1;
 
-        /* FIXME: The shim label should be now published as a sysfs entry */
-        return 1;
+#if CONFIG_RINA_SYSFS
+#endif
+
+        return 0;
 }
