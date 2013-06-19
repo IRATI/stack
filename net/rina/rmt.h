@@ -42,7 +42,7 @@ struct rmt_instance_t {
 	/* LIST_HEAD(pdu_fwd_table, pdu_fwd_entry_t); */
 };
 
-int  rmt_init(void);
-void rmt_exit(void);
+void * rmt_init(void);
+void   rmt_fini(void * opaque);
 
 #endif
