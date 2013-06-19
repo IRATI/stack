@@ -18,38 +18,65 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/slab.h>
+
 #define RINA_PREFIX "efcp"
 
 #include "logs.h"
+#include "utils.h"
 #include "efcp.h"
 
-int efcp_init(void)
+struct efcp_descriptor {
+        int this_is_dummy;
+};
+
+void * efcp_init(void)
 {
+        struct efcp_descriptor * e = NULL;
+
         LOG_FBEGN;
+
+        LOG_DBG("Finalizing instance");
+
+        e = kmalloc(sizeof(*e), GFP_KERNEL);
+        if (!e) {
+                LOG_CRIT("Cannot allocate %zu bytes of memory",
+                         sizeof(*e));
+
+                LOG_FEXIT;
+                return e;
+        }
 
         LOG_FEXIT;
 
-        return 0;
+        return e;
 }
 
-void efcp_exit(void)
+void efcp_fini(void * opaque)
 {
         LOG_FBEGN;
+
+        LOG_DBG("Finalizing instance %pK", opaque);
+
+        ASSERT(opaque);
+        kfree(opaque);
 
         LOG_FEXIT;
 }
 
 /* Internal APIs */
 
-int efcp_write(port_id_t    port_id,
-		       const struct sdu_t *sdu)
+int efcp_write(void *               opaque,
+               port_id_t            port_id,
+               const struct sdu_t * sdu)
 {
 	LOG_DBG("Written SDU");
 
 	return 0;
 }
 
-int efcp_receive_pdu(struct pdu_t pdu)
+int efcp_receive_pdu(void *       opaque,
+                     struct pdu_t pdu)
 {
 	LOG_DBG("PDU received in the EFCP");
 
@@ -58,21 +85,24 @@ int efcp_receive_pdu(struct pdu_t pdu)
 
 /* Syscalls */
 
-cep_id_t efcp_create(struct connection_t * connection)
+cep_id_t efcp_create(void *                opaque,
+                     struct connection_t * connection)
 {
 	LOG_DBG("EFCP instance created");
 
 	return 0;
 }
 
-int efcp_destroy(cep_id_t cep_id)
+int efcp_destroy(void *   opaque,
+                 cep_id_t cep_id)
 {
 	LOG_DBG("EFCP instance destroyed");
 
 	return 0;
 }
 
-int efcp_update(cep_id_t cep_id,
+int efcp_update(void *   opaque,
+                cep_id_t cep_id,
                 cep_id_t dest_cep_id)
 {
 	LOG_DBG("EFCP instance updated");
