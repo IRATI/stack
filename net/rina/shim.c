@@ -2,8 +2,6 @@
  *  Shim IPC Process
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
- *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +18,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/export.h>
 #include <linux/kobject.h>
 #include <linux/string.h>
 #include <linux/sysfs.h>
@@ -84,7 +83,9 @@ static int is_shim_ok(const struct shim_t * shim)
 
 int shim_register(struct shim_t * shim)
 {
+#if CONFIG_RINA_SYSFS
         struct shim_object * obj;
+#endif
 
         LOG_DBG("Registering shim %pK", shim);
 
@@ -120,6 +121,7 @@ int shim_register(struct shim_t * shim)
 
         return 0;
 }
+EXPORT_SYMBOL(shim_register);
 
 int shim_unregister(struct shim_t * shim)
 {
@@ -138,3 +140,4 @@ int shim_unregister(struct shim_t * shim)
 
         return 0;
 }
+EXPORT_SYMBOL(shim_unregister);
