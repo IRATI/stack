@@ -69,7 +69,7 @@ void * kipcm_init()
 
         LOG_FBEGN;
 
-        LOG_DBG("Finalizing instance");
+        LOG_DBG("Initializing instance");
 
 #if 0
 	LIST_HEAD(id_to_ipcp);

@@ -36,7 +36,7 @@ void * efcp_init(void)
 
         LOG_FBEGN;
 
-        LOG_DBG("Finalizing instance");
+        LOG_DBG("Initializing instance");
 
         e = kmalloc(sizeof(*e), GFP_KERNEL);
         if (!e) {
