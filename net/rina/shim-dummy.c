@@ -23,6 +23,8 @@
 #define RINA_PREFIX "shim-dummy"
 
 #include <linux/slab.h>
+#include <linux/list.h>
+
 #include "logs.h"
 #include "common.h"
 #include "shim.h"
@@ -32,6 +34,14 @@ struct dummy_instance_t {
 	ipc_process_id_t      ipc_process_id;
 	struct name_t *       name;
 	/* FIXME: Stores the state of flows indexed by port_id */
+	struct list_head *    dummy_flows;
+};
+
+struct dummy_flow_t {
+	port_id_t             port_id;
+	const struct name_t * source;
+	const struct name_t * dest;
+	struct list_head      list;
 };
 
 int dummy_flow_allocate_request(void *                     opaque,
@@ -40,7 +50,26 @@ int dummy_flow_allocate_request(void *                     opaque,
 				const struct flow_spec_t * flow_spec,
 				port_id_t *                id)
 {
+	struct dummy_instance_t * dummy;
+	struct dummy_flow_t *     flow;
+
 	LOG_FBEGN;
+
+	/* FIXME: We should verify that the port_id has not got a flow yet */
+
+	flow = kmalloc(sizeof(*flow), GFP_KERNEL);
+	if (!flow) {
+		LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*flow));
+		LOG_FEXIT;
+		return -1;
+	}
+	dummy = (struct dummy_instance_t *) opaque;
+	flow->dest = dest;
+	flow->source = source;
+	flow->port_id = *id;
+	INIT_LIST_HEAD(&flow->list);
+	list_add(&flow->list, dummy->dummy_flows);
+
 	LOG_FEXIT;
 
 	return 0;
@@ -106,25 +135,27 @@ struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
 {
 	struct shim_instance_t * instance;
 	struct dummy_instance_t * dummy_inst;
+	LIST_HEAD(port_flow);
 
 	LOG_FBEGN;
 
 	instance = kmalloc(sizeof(*instance), GFP_KERNEL);
 	if (!instance) {
-		LOG_ERR("Cannot allocate %zu bytes of kernel memory",
+		LOG_ERR("Cannot allocate %zu bytes of memory",
 				sizeof(*instance));
 		LOG_FEXIT;
 		return NULL;
 	}
 	dummy_inst = kmalloc(sizeof(*dummy_inst), GFP_KERNEL);
 	if (!dummy_inst) {
-		LOG_ERR("Cannot allocate %zu bytes of kernel memory",
+		LOG_ERR("Cannot allocate %zu bytes of memory",
 				sizeof(*dummy_inst));
 		kfree(instance);
 		LOG_FEXIT;
 		return NULL;
 	}
 	dummy_inst->ipc_process_id = ipc_process_id;
+	dummy_inst->dummy_flows = &port_flow;
 	instance->opaque = dummy_inst;
 	instance->flow_allocate_request = dummy_flow_allocate_request;
 	instance->flow_allocate_response = dummy_flow_allocate_response;
