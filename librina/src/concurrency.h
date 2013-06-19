@@ -31,10 +31,17 @@
 
 namespace rina{
 
-class LockableException : public Exception {
+class ConcurrentException : public Exception {
 public:
-	LockableException() { }
-	LockableException(const std::string & s) : Exception(s) { }
+	ConcurrentException() { }
+	ConcurrentException(const std::string & s) : Exception(s) { }
+	static const std::string error_initialize_thread_attributes;
+	static const std::string error_destroy_thread_attributes;
+	static const std::string error_set_thread_attributes;
+	static const std::string error_get_thread_attributes;
+	static const std::string error_create_thread;
+	static const std::string error_join_thread;
+	static const std::string error_detach_thread;
 	static const std::string error_initialize_mutex_attributes;
 	static const std::string error_set_mutex_attributes;
 	static const std::string error_initialize_mutex;
@@ -42,20 +49,116 @@ public:
 	static const std::string error_destroy_mutex;
 	static const std::string error_lock_mutex;
 	static const std::string error_unlock_mutex;
+	static const std::string error_deadlock;
+	static const std::string error_invalid_mutex;
+	static const std::string error_initialize_rw_lock_attributes;
+	static const std::string error_set_rw_lock_attributes;
+	static const std::string error_initialize_rw_lock;
+	static const std::string error_destroy_rw_lock_attributes;
+	static const std::string error_write_lock_rw_lock;
+	static const std::string error_read_lock_rw_lock;
+	static const std::string error_unlock_rw_lock;
+	static const std::string error_invalid_rw_lock;
+	static const std::string error_destroy_rw_lock;
 };
 
+/**
+ * Wraps pthread_attr_t
+ */
+class ThreadAttributes : public NonCopyable {
+public:
+	ThreadAttributes();
+	virtual ~ThreadAttributes() throw();
+
+	pthread_attr_t * getThreadAttributes();
+	bool isJoinable();
+	void setJoinable();
+	bool isDettached();
+	void setDettached();
+	bool isSystemScope();
+	void setSystemScope();
+	bool isProcessScope();
+	void setProcessScope();
+	bool isInheritedScheduling();
+	void setInheritedScheduling();
+	bool isExplicitScheduling();
+	void setExplicitScheduling();
+	bool isFifoSchedulingPolicy();
+	void setFifoSchedulingPolicy();
+	bool isRRSchedulingPolicy();
+	void setRRSchedulingPolicy();
+	bool isOtherSchedulingPolicy();
+	void setOtherSchedulingPolicy();
+private:
+	pthread_attr_t thread_attr_;
+	void setDetachState(int detachState);
+	void setScope(int scope);
+	void setInheritedScheduling(int inheritedScheduling);
+	void getSchedulingPolicy(int * schedulingPolicy);
+	void setSchedulingPolicy(int schedulingPolicy);
+};
+
+/**
+ * Wraps a Thread as provided by the pthreads library
+ */
+class Thread : public NonCopyable {
+public:
+	/** Calls pthreads.create to create a new thread */
+	Thread(ThreadAttributes * threadAttributes,
+	          void *(* startFunction)(void *), void * arg);
+	virtual ~Thread() throw();
+
+	pthread_t getThreadType() const;
+	void join(void ** status);
+	void detach();
+	static void exit(void * status);
+	static Thread * self();
+	static int getConcurrency();
+	static void setConcurrency(int concurrency);
+	bool operator==(const Thread &other) const;
+	bool operator!=(const Thread &other) const;
+
+private:
+	Thread(pthread_t thread_id_);
+	pthread_t thread_id_;
+};
+
+/**
+ * Wraps a Mutex as provided by the pthreads library
+ */
 class Lockable : public NonCopyable {
 public:
 	Lockable();
 	virtual ~Lockable() throw();
 
 	virtual void lock();
-	virtual int trylock();
+	virtual bool trylock();
 	virtual void unlock();
+	pthread_mutex_t * getMutex();
 
 private:
 	pthread_mutex_t     mutex_;
 	pthread_mutexattr_t mutex_attr_;
+};
+
+/**
+ * Wraps a Read/Write Lock as provided by the pthreads library
+ */
+class ReadWriteLockable : public NonCopyable{
+public:
+	ReadWriteLockable();
+	virtual ~ReadWriteLockable() throw();
+
+	virtual void writelock();
+	virtual bool trywritelock();
+	virtual void readlock();
+	virtual bool tryreadlock();
+	virtual void unlock();
+	pthread_rwlock_t * getReadWriteLock();
+
+private:
+	pthread_rwlock_t  rwlock_;
+	pthread_rwlockattr_t rwlock_attr_;
 };
 
 class AccessGuard {
