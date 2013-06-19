@@ -123,9 +123,11 @@ int kipcm_shim_register(struct shim_t * shim)
         ASSERT(shim);
         LOG_DBG("Registering shim %pK", shim);
 
+        LOG_DBG("Shim %pK registered successfully", shim);
+
         LOG_FEXIT;
 
-        return 1;
+        return 0;
 }
 
 int kipcm_shim_unregister(struct shim_t * shim)
@@ -135,9 +137,11 @@ int kipcm_shim_unregister(struct shim_t * shim)
         ASSERT(shim);
         LOG_DBG("Unregistering shim %pK", shim);
 
+        LOG_DBG("Shim %pK registered successfully", shim);
+
         LOG_FEXIT;
 
-        return 1;
+        return 0;
 }
 
 #if 0
