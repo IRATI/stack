@@ -74,6 +74,22 @@ const std::string ConcurrentException::error_invalid_rw_lock =
 		"Invalid read_write lock";
 const std::string ConcurrentException::error_destroy_rw_lock =
 		"Cannot destroy read_write lock";
+const std::string ConcurrentException::error_initialize_cond_attributes =
+		"Cannot initialize condition variable attribues";
+const std::string ConcurrentException::error_set_cond_attributes =
+		"Cannot set condition variable attributes";
+const std::string ConcurrentException::error_initialize_cond =
+		"Cannot initialize condition variable";
+const std::string ConcurrentException::error_destroy_cond_attributes =
+		"Cannot destroy condition variable attribues";
+const std::string ConcurrentException::error_destroy_cond =
+		"Cannot destroy condition variable";
+const std::string ConcurrentException::error_signal_cond =
+		"Cannot signal condition variable";
+const std::string ConcurrentException::error_broadcast_cond =
+		"Cannot broadcast condition variable";
+const std::string ConcurrentException::error_wait_cond =
+		"Cannot wait condition variable";
 
 /* CLASS THREAD ATTRIBUTES */
 ThreadAttributes::ThreadAttributes() {
@@ -496,6 +512,66 @@ void ReadWriteLockable::unlock() {
 
 pthread_rwlock_t * ReadWriteLockable::getReadWriteLock(){
 	return &rwlock_;
+}
+
+/* CLASS CONDITION VARIABLE */
+ConditionVariable::ConditionVariable():Lockable() {
+	if (pthread_condattr_init(&cond_attr_)) {
+		LOG_CRIT(
+				ConcurrentException::error_initialize_cond_attributes.c_str());
+		throw ConcurrentException(
+				ConcurrentException::error_initialize_cond_attributes);
+	}
+
+	if (pthread_condattr_setpshared(&cond_attr_, PTHREAD_PROCESS_PRIVATE)) {
+		LOG_CRIT(ConcurrentException::error_set_cond_attributes.c_str());
+		throw ConcurrentException(
+				ConcurrentException::error_set_cond_attributes);
+	}
+
+	if (pthread_cond_init(&cond_, &cond_attr_)) {
+		LOG_CRIT(ConcurrentException::error_initialize_cond.c_str());
+		throw ConcurrentException(
+				ConcurrentException::error_initialize_cond);
+	}
+
+	if (pthread_condattr_destroy(&cond_attr_)) {
+		LOG_CRIT(ConcurrentException::error_destroy_cond_attributes.c_str());
+		throw ConcurrentException(
+				ConcurrentException::error_destroy_cond_attributes);
+	}
+
+	LOG_DBG("Condition variable created successfully");
+}
+
+ConditionVariable::~ConditionVariable() throw () {
+	if (pthread_cond_destroy(&cond_)) {
+		LOG_CRIT(ConcurrentException::error_destroy_cond.c_str());
+	}
+}
+
+void ConditionVariable::signal(){
+	if (pthread_cond_signal(&cond_)){
+		LOG_CRIT(ConcurrentException::error_signal_cond.c_str());
+		throw ConcurrentException(
+				ConcurrentException::error_signal_cond);
+	}
+}
+
+void ConditionVariable::broadcast(){
+	if (pthread_cond_broadcast(&cond_)){
+		LOG_CRIT(ConcurrentException::error_broadcast_cond.c_str());
+		throw ConcurrentException(
+				ConcurrentException::error_broadcast_cond);
+	}
+}
+
+void ConditionVariable::wait(){
+	if (pthread_cond_wait(&cond_, getMutex())){
+		LOG_CRIT(ConcurrentException::error_wait_cond.c_str());
+		throw ConcurrentException(
+				ConcurrentException::error_wait_cond);
+	}
 }
 
 }

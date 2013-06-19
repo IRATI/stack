@@ -16,8 +16,10 @@
 
 #include <iostream>
 #include <math.h>
+#include <unistd.h>
 #include "concurrency.h"
 #define NUM_THREADS 5
+#define TRIGGER 10
 
 using namespace rina;
 
@@ -84,6 +86,59 @@ void * doWorkReadWriteLock(void * arg) {
 	ReadWriteLockableCounter * counter = (ReadWriteLockableCounter *) arg;
 	counter->count();
 	return (void *) 0;
+}
+
+class ConditionVariableCounter: public ConditionVariable{
+public:
+	ConditionVariableCounter() : ConditionVariable(){
+		counter = 0;
+	}
+
+	bool count(){
+		bool result = false;
+		lock();
+		counter ++;
+		std::cout<<"Incremented counter; current value is "<<
+						counter<<"\n";
+		if (counter >= TRIGGER){
+			std::cout<<"Counter reached threshold, signaling \n";
+			result = true;
+			signal();
+		}
+		unlock();
+		return result;
+	}
+
+	int getCounter(){
+		int result;
+		lock();
+		if (counter < TRIGGER){
+			std::cout<<"Counter below threshold, waiting \n";
+			wait();
+		}
+		std::cout<<"Counter reached threshold, value: "<<counter<<" \n";
+		result = counter;
+		unlock();
+		return result;
+	}
+
+private:
+	int counter;
+};
+
+void * doWorkConditionVariable(void * arg){
+	ConditionVariableCounter * counter = (ConditionVariableCounter *) arg;
+	while(!counter->count()){
+		usleep(1000*100);
+	}
+	return (void *) 0;
+}
+
+void * doWorkWaitForTrigger(void * arg){
+	ConditionVariableCounter * counter = (ConditionVariableCounter *) arg;
+	std::cout<<"Trying to read counter \n";
+	int result = counter->getCounter();
+	return (void *) result;
 }
 
 int main(int argc, char * argv[]) {
@@ -183,6 +238,32 @@ int main(int argc, char * argv[]) {
 		return -1;
 	}
 	delete counter2;
+
+	/* Test condition variable */
+	threadAttributes = new ThreadAttributes();
+	threadAttributes->setJoinable();
+	ConditionVariableCounter * counter3 = new ConditionVariableCounter();
+	threads[0] = new Thread(threadAttributes, &doWorkWaitForTrigger,
+			(void *) counter3);
+	std::cout << "Created thread 0 with id "
+			<< threads[0]->getThreadType() << "\n";
+	for (int i = 1; i < NUM_THREADS; i++) {
+		threads[i] = new Thread(threadAttributes, &doWorkConditionVariable,
+				(void *) counter3);
+		std::cout << "Created thread " << i << " with id "
+				<< threads[i]->getThreadType() << "\n";
+	}
+	delete threadAttributes;
+
+	for (int i = 0; i < NUM_THREADS; i++) {
+		threads[i]->join(&status);
+		std::cout << "Completed join with thread " << i
+				<< " having a status of " << status
+				<< "\n";
+		delete threads[i];
+	}
+
+	delete counter3;
 
 	/* Test exit */
 	Thread::exit(NULL);

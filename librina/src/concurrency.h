@@ -60,6 +60,14 @@ public:
 	static const std::string error_unlock_rw_lock;
 	static const std::string error_invalid_rw_lock;
 	static const std::string error_destroy_rw_lock;
+	static const std::string error_initialize_cond_attributes;
+	static const std::string error_set_cond_attributes;
+	static const std::string error_initialize_cond;
+	static const std::string error_destroy_cond_attributes;
+	static const std::string error_destroy_cond;
+	static const std::string error_signal_cond;
+	static const std::string error_broadcast_cond;
+	static const std::string error_wait_cond;
 };
 
 /**
@@ -180,6 +188,23 @@ private:
 	Lockable & guarded_;
 };
 
+/**
+ * Wraps a Condition Variable as provided by the pthreads library
+ */
+class ConditionVariable : public Lockable{
+
+public:
+	ConditionVariable();
+	virtual ~ConditionVariable() throw();
+
+	virtual void signal();
+	virtual void broadcast();
+	virtual void wait();
+
+private:
+	pthread_cond_t cond_;
+	pthread_condattr_t cond_attr_;
+};
 
 
 }
