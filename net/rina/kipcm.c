@@ -77,7 +77,7 @@ void * kipcm_init()
 
         kipcm = kmalloc(sizeof(*kipcm), GFP_KERNEL);
         if (!kipcm) {
-                LOG_CRIT("Cannot allocate %d bytes of memory", sizeof(*kipcm));
+                LOG_CRIT("Cannot allocate %zu bytes of memory", sizeof(*kipcm));
 
                 LOG_FEXIT;
                 return NULL;
@@ -123,9 +123,11 @@ int kipcm_shim_register(struct shim_t * shim)
         ASSERT(shim);
         LOG_DBG("Registering shim %pK", shim);
 
+        LOG_DBG("Shim %pK registered successfully", shim);
+
         LOG_FEXIT;
 
-        return 1;
+        return 0;
 }
 
 int kipcm_shim_unregister(struct shim_t * shim)
@@ -135,9 +137,11 @@ int kipcm_shim_unregister(struct shim_t * shim)
         ASSERT(shim);
         LOG_DBG("Unregistering shim %pK", shim);
 
+        LOG_DBG("Shim %pK registered successfully", shim);
+
         LOG_FEXIT;
 
-        return 1;
+        return 0;
 }
 
 #if 0
@@ -175,7 +179,7 @@ int kipcm_flow_add(void *                opaque,
 
         port_flow = kmalloc(sizeof(*port_flow), GFP_KERNEL);
         if (!port_flow) {
-                LOG_ERR("Cannot allocate %d bytes of memory",
+                LOG_ERR("Cannot allocate %zu bytes of memory",
                         sizeof(*port_flow));
                 LOG_FEXIT;
                 return -1;
@@ -332,7 +336,7 @@ int kipcm_sdu_read(void *         opaque,
 
         data = kmalloc(size, GFP_KERNEL);
         if (!data) {
-                LOG_ERR("Cannot allocate %d bytes of kernel memory", size);
+                LOG_ERR("Cannot allocate %zu bytes of kernel memory", size);
 
                 LOG_FEXIT;
                 return -1;
@@ -427,7 +431,7 @@ create_shim(ipc_process_id_t ipcp_id)
 
         ipcp_shim_eth = kmalloc(sizeof(*ipcp_shim_eth), GFP_KERNEL);
         if (!ipcp_shim_eth) {
-                LOG_ERR("Cannot allocate %d bytes of memory",
+                LOG_ERR("Cannot allocate %zu bytes of memory",
                         sizeof(*ipcp_shim_eth));
 
                 LOG_FEXIT;
@@ -455,7 +459,7 @@ static int add_id_to_ipcp_node(void *                 opaque,
 
         aux_id_to_ipcp = kmalloc(sizeof(*aux_id_to_ipcp), GFP_KERNEL);
         if (!aux_id_to_ipcp) {
-                LOG_ERR("Cannot allocate %d bytes of memory",
+                LOG_ERR("Cannot allocate %zu bytes of memory",
                         sizeof(*aux_id_to_ipcp));
                 LOG_FEXIT;
                 return -1;
@@ -490,7 +494,7 @@ int kipcm_ipc_process_create(void *                opaque,
                 }
                 ipc_process = kmalloc(sizeof(*ipc_process), GFP_KERNEL);
                 if (!ipc_process) {
-                        LOG_ERR("Cannot allocate %d bytes of memory",
+                        LOG_ERR("Cannot allocate %zu bytes of memory",
                                 sizeof(*ipc_process));
                         LOG_FEXIT;
                         return -1;

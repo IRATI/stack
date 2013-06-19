@@ -38,12 +38,13 @@ static int __init mod_init(void)
 
         LOG_DBG("Rina personality initializing");
 
-        personality = kmalloc(sizeof(*personality), GFP_KERNEL);
+        personality = kzalloc(sizeof(*personality), GFP_KERNEL);
         if (!personality) {
                 LOG_ERR("Cannot allocate %zu bytes of memory",
                         sizeof(*personality));
                 return -1;
         }
+
         ASSERT(personality);
 
         if (shim_init())
@@ -60,17 +61,28 @@ static int __init mod_init(void)
                 return -1;
         }
 
+        /* FIXME: To be filled properly */
+        personality->init               = 0;
+        personality->fini               = 0;
+        personality->ipc_create         = 0;
+        personality->ipc_configure      = 0;
+        personality->ipc_destroy        = 0;
+        personality->sdu_read           = 0;
+        personality->sdu_write          = 0;
+        personality->connection_create  = 0;
+        personality->connection_destroy = 0;
+        personality->connection_update  = 0;
+
         if (rina_personality_register(personality)) {
                 efcp_exit();
                 kipcm_exit();
                 shim_exit();
+
                 kfree(personality);
                 personality = NULL;
+
                 return -1;
         }
-
-        kfree(personality);
-        personality = NULL;
 
         LOG_DBG("Rina personality loaded successfully");
 

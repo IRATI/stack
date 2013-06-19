@@ -52,19 +52,26 @@ static int is_ok(const struct personality_t * pers)
 {
         ASSERT(pers);
 
-        if (pers->init               &&
-            pers->fini               &&
-            pers->ipc_create         &&
+        if ((pers->init && !pers->fini) ||
+            (!pers->init && pers->fini)) {
+                LOG_DBG("Personality %pK has bogus "
+                        "initializer/finalizer couple", pers);
+                return 0;
+        }
+
+        if (pers->ipc_create         &&
             pers->ipc_configure      &&
             pers->ipc_destroy        &&
             pers->sdu_read           &&
             pers->sdu_write          &&
             pers->connection_create  &&
             pers->connection_destroy &&
-            pers->connection_update)
-                return 1;
+            pers->connection_update) {
+                LOG_DBG("Personality %pK has bogus hooks", pers);
+                return 0;
+        }
 
-        return 0;
+        return 1;
 }
 
 int rina_personality_register(struct personality_t * pers)
@@ -81,12 +88,16 @@ int rina_personality_register(struct personality_t * pers)
                 return -1;
         }
 
-        ASSERT(pers       != NULL);
-        ASSERT(pers->init != NULL);
+        ASSERT(pers != NULL);
 
-        if (!pers->init(pers->data)) {
-                LOG_ERR("Could not initialize personality");
-                return -1;
+        if (pers->init) {
+                LOG_DBG("Calling personality %pK initialized", pers);
+                if (!pers->init(pers->data)) {
+                        LOG_ERR("Could not initialize personality");
+                        return -1;
+                }
+        } else {
+                LOG_DBG("This personality does not require initialization");
         }
 
         rina_personality = pers;
@@ -111,10 +122,16 @@ int rina_personality_unregister(struct personality_t * pers)
 
         LOG_DBG("Un-registering personality %pK", pers);
 
-        ASSERT(rina_personality       != NULL);
-        ASSERT(rina_personality->fini != NULL);
+        ASSERT(pers != NULL);
+        ASSERT(rina_personality == pers);
 
-        rina_personality->fini(rina_personality->data);
+        if (pers->fini) {
+                LOG_DBG("Calling personality %pK initialized", pers);
+                pers->fini(pers->data);
+        } else {
+                LOG_DBG("This personality does not require finalization");
+        }
+
         rina_personality = 0;
 
         LOG_DBG("Personality %pK unregistered successfully", pers);
