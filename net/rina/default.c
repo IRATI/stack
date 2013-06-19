@@ -90,15 +90,15 @@ static int __init mod_init(void)
                 return -1;
 
         pd->kipcm = kipcm_init();
-        if (!pd->kipcm)
+        if (pd->kipcm)
                 goto CLEANUP_SHIM;
 
         pd->efcp = efcp_init();
-        if (!pd->efcp)
+        if (pd->efcp)
                 goto CLEANUP_KIPCM;
 
         pd->rmt = rmt_init();
-        if (!pd->rmt)
+        if (pd->rmt)
                 goto CLEANUP_EFCP;
 
         /* FIXME: To be filled properly */
@@ -113,7 +113,7 @@ static int __init mod_init(void)
         personality->connection_destroy = 0;
         personality->connection_update  = 0;
 
-        if (!rina_personality_register(personality)) {
+        if (rina_personality_register(personality)) {
                 goto CLEANUP_RMT;
         }
 
