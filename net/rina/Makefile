@@ -9,6 +9,6 @@ obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) += rina_personality_default.o
 rina_personality_default-y :=				\
 	shim.o kipcm.o efcp.o rmt.o pdufwdt.o default.o
 
-obj-$(CONFIG_RINA_SHIM_DUMMY)   += shim-dummy.o
-obj-$(CONFIG_RINA_SHIM_ETH)     += shim-eth.o
-obj-$(CONFIG_RINA_SHIM_TCP_UDP) += shim-tcp-udp.o
+obj-$(CONFIG_RINA_SHIM_DUMMY)    += shim-dummy.o
+obj-$(CONFIG_RINA_SHIM_ETH_VLAN) += shim-eth-vlan.o
+obj-$(CONFIG_RINA_SHIM_TCP_UDP)  += shim-tcp-udp.o
