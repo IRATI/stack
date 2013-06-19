@@ -84,24 +84,31 @@ static int __init mod_init(void)
         ASSERT(personality);
         ASSERT(personality->data);
 
+        LOG_DBG("Building-up personality data");
+
         pd = personality->data;
 
+        LOG_DBG("Initializing shim layer");
         if (shim_init())
                 return -1;
 
+        LOG_DBG("Initializing kipcm component");
         pd->kipcm = kipcm_init();
-        if (pd->kipcm)
+        if (!pd->kipcm)
                 goto CLEANUP_SHIM;
 
+        LOG_DBG("Initializing efcp component");
         pd->efcp = efcp_init();
-        if (pd->efcp)
+        if (!pd->efcp)
                 goto CLEANUP_KIPCM;
 
+        LOG_DBG("Initializing rmt component");
         pd->rmt = rmt_init();
-        if (pd->rmt)
+        if (!pd->rmt)
                 goto CLEANUP_EFCP;
 
         /* FIXME: To be filled properly */
+        LOG_DBG("Filling-up personality's hooks");
         personality->init               = 0;
         personality->fini               = 0;
         personality->ipc_create         = 0;
@@ -113,9 +120,14 @@ static int __init mod_init(void)
         personality->connection_destroy = 0;
         personality->connection_update  = 0;
 
+        LOG_DBG("Finally registering personality");
         if (rina_personality_register(personality)) {
                 goto CLEANUP_RMT;
         }
+
+        ASSERT(pd->kipcm);
+        ASSERT(pd->efcp);
+        ASSERT(pd->rmt);
 
         LOG_DBG("Rina personality loaded successfully");
 
