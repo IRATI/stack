@@ -2,6 +2,7 @@
  *  Dummy Shim IPC Process
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>");
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,11 +45,11 @@ struct dummy_flow_t {
 	struct list_head      list;
 };
 
-int dummy_flow_allocate_request(void *                     opaque,
-				const struct name_t *      source,
-				const struct name_t *      dest,
-				const struct flow_spec_t * flow_spec,
-				port_id_t *                id)
+static int dummy_flow_allocate_request(void *                     opaque,
+                                       const struct name_t *      source,
+                                       const struct name_t *      dest,
+                                       const struct flow_spec_t * flow_spec,
+                                       port_id_t *                id)
 {
 	struct dummy_instance_t * dummy;
 	struct dummy_flow_t *     flow;
@@ -75,9 +76,9 @@ int dummy_flow_allocate_request(void *                     opaque,
 	return 0;
 }
 
-int dummy_flow_allocate_response(void *              opaque,
-				 port_id_t           id,
-				 response_reason_t * response)
+static int dummy_flow_allocate_response(void *              opaque,
+                                        port_id_t           id,
+                                        response_reason_t * response)
 {
 	LOG_FBEGN;
 	LOG_FEXIT;
@@ -85,8 +86,8 @@ int dummy_flow_allocate_response(void *              opaque,
 	return 0;
 }
 
-int dummy_flow_deallocate(void *    opaque,
-			  port_id_t id)
+static int dummy_flow_deallocate(void *    opaque,
+                                 port_id_t id)
 {
 	LOG_FBEGN;
 	LOG_FEXIT;
@@ -94,8 +95,8 @@ int dummy_flow_deallocate(void *    opaque,
 	return 0;
 }
 
-int  dummy_application_register(void *                opaque,
-			        const struct name_t * name)
+static int dummy_application_register(void *                opaque,
+                                      const struct name_t * name)
 {
 	LOG_FBEGN;
 	LOG_FEXIT;
@@ -103,8 +104,8 @@ int  dummy_application_register(void *                opaque,
 	return 0;
 }
 
-int dummy_application_unregister(void *                opaque,
-				 const struct name_t * name)
+static int dummy_application_unregister(void *                opaque,
+                                        const struct name_t * name)
 {
 	LOG_FBEGN;
 	LOG_FEXIT;
@@ -112,18 +113,9 @@ int dummy_application_unregister(void *                opaque,
 	return 0;
 }
 
-int  dummy_sdu_write(void *               opaque,
-		     port_id_t            id,
-		     const struct sdu_t * sdu)
-{
-	LOG_FBEGN;
-	LOG_FEXIT;
-
-	return 0;
-}
-int  dummy_sdu_read(void *         opaque,
-		    port_id_t      id,
-		    struct sdu_t * sdu)
+static int  dummy_sdu_write(void *               opaque,
+                            port_id_t            id,
+                            const struct sdu_t * sdu)
 {
 	LOG_FBEGN;
 	LOG_FEXIT;
@@ -131,7 +123,17 @@ int  dummy_sdu_read(void *         opaque,
 	return 0;
 }
 
-struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
+static int dummy_sdu_read(void *         opaque,
+                          port_id_t      id,
+                          struct sdu_t * sdu)
+{
+	LOG_FBEGN;
+	LOG_FEXIT;
+
+	return 0;
+}
+
+static struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
 {
 	struct shim_instance_t * instance;
 	struct dummy_instance_t * dummy_inst;
@@ -146,6 +148,7 @@ struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
 		LOG_FEXIT;
 		return NULL;
 	}
+
 	dummy_inst = kmalloc(sizeof(*dummy_inst), GFP_KERNEL);
 	if (!dummy_inst) {
 		LOG_ERR("Cannot allocate %zu bytes of memory",
@@ -154,23 +157,25 @@ struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
 		LOG_FEXIT;
 		return NULL;
 	}
+
 	dummy_inst->ipc_process_id = ipc_process_id;
-	dummy_inst->dummy_flows = &port_flow;
-	instance->opaque = dummy_inst;
-	instance->flow_allocate_request = dummy_flow_allocate_request;
+	dummy_inst->dummy_flows    = &port_flow;
+
+	instance->opaque                 = dummy_inst;
+	instance->flow_allocate_request  = dummy_flow_allocate_request;
 	instance->flow_allocate_response = dummy_flow_allocate_response;
-	instance->flow_deallocate = dummy_flow_deallocate;
-	instance->application_register = dummy_application_register;
+	instance->flow_deallocate        = dummy_flow_deallocate;
+	instance->application_register   = dummy_application_register;
 	instance->application_unregister = dummy_application_unregister;
-	instance->sdu_write = dummy_sdu_write;
-	instance->sdu_read = dummy_sdu_read;
+	instance->sdu_write              = dummy_sdu_write;
+	instance->sdu_read               = dummy_sdu_read;
 
         LOG_FEXIT;
 
 	return instance;
 }
 
-int dummy_destroy(struct shim_instance_t * inst)
+static int dummy_destroy(struct shim_instance_t * inst)
 {
 	LOG_FBEGN;
         LOG_FEXIT;
@@ -178,9 +183,10 @@ int dummy_destroy(struct shim_instance_t * inst)
 	return 0;
 }
 
-struct shim_instance_t * dummy_configure(struct shim_instance_t *   instance,
-					 const struct shim_conf_t *
-					 configuration)
+static struct shim_instance_t *
+dummy_configure(struct shim_instance_t *   instance,
+                const struct shim_conf_t *
+                configuration)
 {
 	struct shim_conf_t * current_entry;
 	struct dummy_instance_t * dummy;
@@ -229,6 +235,7 @@ static int __init mod_init(void)
 	shim->create = dummy_create;
 	shim->destroy = dummy_destroy;
 	shim->configure = dummy_configure;
+
 	if(shim_register(shim)){
 		LOG_ERR("Initialization of module shim-dummy failed");
 		LOG_FEXIT;
@@ -255,4 +262,3 @@ MODULE_LICENSE("GPL");
 
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
 MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
-MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
