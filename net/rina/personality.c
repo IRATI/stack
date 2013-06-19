@@ -54,7 +54,7 @@ static int is_ok(const struct personality_t * pers)
 
         if ((pers->init && !pers->fini) ||
             (!pers->init && pers->fini)) {
-                LOG_DBG("Personality %pK has a bogus "
+                LOG_DBG("Personality %pK has bogus "
                         "initializer/finalizer couple", pers);
                 return 0;
         }
