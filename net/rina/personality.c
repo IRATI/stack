@@ -56,7 +56,7 @@ static int is_ok(const struct personality_t * pers)
             (!pers->init && pers->fini)) {
                 LOG_DBG("Personality %pK has a bogus "
                         "initializer/finalizer couple", pers);
-                return 1;
+                return 0;
         }
 
         if (pers->ipc_create         &&
@@ -68,10 +68,10 @@ static int is_ok(const struct personality_t * pers)
             pers->connection_destroy &&
             pers->connection_update) {
                 LOG_DBG("Personality %pK has bogus hooks", pers);
-                return 1;
+                return 0;
         }
 
-        return 0;
+        return 1;
 }
 
 int rina_personality_register(struct personality_t * pers)
