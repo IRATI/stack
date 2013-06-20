@@ -39,8 +39,12 @@ NetlinkException::NetlinkException(const std::string& description) :
 		Exception(description) {
 }
 
+const std::string NetlinkException::error_resolving_netlink_family =
+		"Error resolving RINA Generic Netlink family";
 const std::string NetlinkException::error_connecting_netlink_socket =
 		"Error connecting Netlink socket";
+const std::string NetlinkException::error_allocating_netlink_message =
+		"Error allocating Netlink message";
 const std::string NetlinkException::error_receiving_netlink_message =
 		"Error receiving Netlink message";
 const std::string NetlinkException::error_generating_netlink_message =
@@ -74,13 +78,24 @@ NetlinkManager::~NetlinkManager() {
 
 void NetlinkManager::initialize() throw (NetlinkException) {
 	socket = nl_socket_alloc();
+	family = genl_ctrl_resolve(socket, RINA_GENERIC_NETLINK_FAMILY_NAME);
+	if (family < 0){
+		LOG_CRIT("%s %d",
+				NetlinkException::error_resolving_netlink_family.c_str(),
+				family);
+		throw NetlinkException(
+				NetlinkException::error_resolving_netlink_family);
+	}
+	LOG_DBG("Generic Netlink RINA family id: %d", family);
+
 	nl_socket_set_local_port(socket, localPort);
 	int result = genl_connect(socket);
 	if (result == 0) {
 		LOG_INFO("Netlink socket connected to local port %d ",
 				nl_socket_get_local_port(socket));
 	} else {
-		LOG_CRIT("Error creating and connecting to Netlink socket %d",
+		LOG_CRIT("%s %d",
+				NetlinkException::error_connecting_netlink_socket.c_str(),
 				result);
 		throw NetlinkException(
 				NetlinkException::error_connecting_netlink_socket);
@@ -92,12 +107,24 @@ void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
 	//Generate the message
 	struct nl_msg* netlinkMessage;
 
-	netlinkMessage = nlmsg_alloc_simple(message->getOperationCode(),
-			NLM_F_REQUEST);
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage){
+		LOG_ERR("%s",
+				NetlinkException::error_allocating_netlink_message.c_str());
+		throw NetlinkException(
+				NetlinkException::error_allocating_netlink_message);
+	}
+
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(),
+			family, 0, 0, message->getOperationCode(),
+			RINA_GENERIC_NETLINK_FAMILY_VERSION);
+
 	int result = putBaseNetlinkMessage(netlinkMessage, message);
 	if (result < 0) {
-		LOG_ERR("Error generating Netlink message: %d", result);
 		nlmsg_free(netlinkMessage);
+		LOG_ERR("%s %d",
+				NetlinkException::error_generating_netlink_message.c_str(),
+				result);
 		throw NetlinkException(
 				NetlinkException::error_generating_netlink_message);
 	}
@@ -106,8 +133,10 @@ void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
 	nl_socket_set_peer_port(socket, message->getDestPortId());
 	result = nl_send_auto(socket, netlinkMessage);
 	if (result < 0) {
-		LOG_ERR("Error sending Netlink mesage: %d", result);
 		nlmsg_free(netlinkMessage);
+		LOG_ERR("%s %d",
+				NetlinkException::error_sending_netlink_message.c_str(),
+				result);
 		throw NetlinkException(
 				NetlinkException::error_sending_netlink_message);
 	}
@@ -127,7 +156,9 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 
 	int numBytes = nl_recv(socket, &nla, &buf, &creds);
 	if (numBytes <= 0) {
-		LOG_ERR("Error receiving Netlink message %d", numBytes);
+		LOG_ERR("%s %d",
+				NetlinkException::error_receiving_netlink_message.c_str(),
+				numBytes);
 		throw NetlinkException(
 				NetlinkException::error_receiving_netlink_message);
 	}
@@ -137,7 +168,7 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 	hdr = (struct nlmsghdr *) buf;
 	msg = nlmsg_convert(hdr);
 	if (!msg) {
-		LOG_ERR("Error parsing Netlink message");
+		LOG_ERR("%s", NetlinkException::error_parsing_netlink_message.c_str());
 		throw NetlinkException(
 				NetlinkException::error_parsing_netlink_message);
 	}
@@ -161,6 +192,7 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 		nlmsg_free(msg);
 		free(buf);
 		free(creds);
+		LOG_ERR("%s", NetlinkException::error_parsing_netlink_message.c_str());
 		throw NetlinkException(
 				NetlinkException::error_parsing_netlink_message);
 	}

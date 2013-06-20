@@ -272,6 +272,95 @@ public:
 	void setResult(int result);
 };
 
+/**
+ * IPC Process -> Application, flow deallocated without the application having
+ *  requested it
+ */
+class AppFlowDeallocatedNotificationMessage: public BaseNetlinkMessage {
+
+	/** The portId of the flow that has been deallocated */
+	int portId;
+
+	/** A number identifying a reason why the flow has been deallocated */
+	int code;
+
+	/** An optional explanation of why the flow has been deallocated */
+	std::string reason;
+
+public:
+	AppFlowDeallocatedNotificationMessage();
+	int getCode() const;
+	void setCode(int code);
+	int getPortId() const;
+	void setPortId(int portId);
+	const std::string& getReason() const;
+	void setReason(const std::string& reason);
+};
+
+/**
+ * Invoked by the application when it wants to register an application
+ * to a DIF. Application -> IPC Manager
+ */
+class AppRegisterApplicationRequestMessage: public BaseNetlinkMessage {
+
+	/** The name of the application to be registered */
+	ApplicationProcessNamingInformation applicationName;
+
+	/** The DIF name where the application wants to register */
+	ApplicationProcessNamingInformation difName;
+
+public:
+	AppRegisterApplicationRequestMessage();
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	void setApplicationName(
+			const ApplicationProcessNamingInformation& applicationName);
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
+};
+
+/**
+ * Response of the IPC Manager to an application registration request.
+ * IPC Manager -> Application
+ */
+class AppRegisterApplicationResponseMessage: public BaseNetlinkMessage {
+
+	/**
+	 * Result of the operation. 0 indicates success, a negative value an
+	 * error code.
+	 */
+	int result;
+
+	/**
+	 * If the application registration didn't succeed, this field may provide
+	 * further detail
+	 */
+	std::string errorDescription;
+
+	/**
+	 * The id of the IPC Process that has registered the applicaiton
+	 */
+	unsigned int ipcProcessId;
+
+	/**
+	 * The id of the Netlink port to be used to send messages to the IPC
+	 * Process that registered the application. In the case of shim IPC
+	 * Processes (they all reside in the kernel), the value of this field will
+	 * always be 0.
+	 */
+	unsigned int ipcProcessPortId;
+
+public:
+	AppRegisterApplicationResponseMessage();
+	const std::string& getErrorDescription() const;
+	void setErrorDescription(const std::string& errorDescription);
+	unsigned int getIpcProcessId() const;
+	void setIpcProcessId(unsigned int ipcProcessId);
+	unsigned int getIpcProcessPortId() const;
+	void setIpcProcessPortId(unsigned int ipcProcessPortId);
+	int getResult() const;
+	void setResult(int result);
+};
+
 }
 
 #endif /* NETLINK_MESSAGES_H_ */
