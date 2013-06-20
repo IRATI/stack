@@ -298,7 +298,6 @@ int kipcm_sdu_post(void *               opaque,
 
 int kipcm_sdu_read(void *         opaque,
 		   port_id_t      port_id,
-		   bool_t         block,
 		   struct sdu_t * sdu)
 {
 #if 0
