@@ -1,5 +1,5 @@
 /*
- *  Shim IPC Process over Ethernet
+ *  Shim IPC Process over Ethernet (using VLANs)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>

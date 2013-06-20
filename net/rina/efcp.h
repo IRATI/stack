@@ -22,8 +22,6 @@
 #ifndef RINA_EFCP_H
 #define RINA_EFCP_H
 
-#include <linux/syscalls.h>
-
 #include "common.h"
 #include "kipcm.h"
 
@@ -218,14 +216,19 @@ struct dtcp_state_vector_t {
 	uint_t    pdus_rcvd_in_time_unit;
 };
 
-int      efcp_init(void);
-void     efcp_exit(void);
-int      efcp_write(port_id_t           port_id,
-		    const struct sdu_t *sdu);
-int      efcp_receive_pdu(struct pdu_t pdu);
-cep_id_t efcp_create(struct connection_t *connection);
-int      efcp_destroy(cep_id_t cep_id);
-int      efcp_update(cep_id_t cep_id,
+void *   efcp_init(void);
+void     efcp_fini(void * opaque);
+int      efcp_write(void *               opaque,
+                    port_id_t            port_id,
+		    const struct sdu_t * sdu);
+int      efcp_receive_pdu(void *       opaque, 
+                          struct pdu_t pdu);
+cep_id_t efcp_create(void *                opaque,
+                     struct connection_t * connection);
+int      efcp_destroy(void *   opaque,
+                      cep_id_t cep_id);
+int      efcp_update(void *  opaque,
+                     cep_id_t cep_id,
 		     cep_id_t dest_cep_id);
 
 #endif

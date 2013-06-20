@@ -18,6 +18,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/slab.h>
 #include <linux/module.h>
 
 #define RINA_PREFIX "personality-default"
@@ -28,40 +29,86 @@
 #include "shim.h"
 #include "kipcm.h"
 #include "efcp.h"
+#include "rmt.h"
 
 static struct personality_t * personality = NULL;
 
+struct personality_data {
+        void * kipcm;
+        void * efcp;
+        void * rmt;
+};
+
+static struct personality_t * personality_init(void)
+{
+        struct personality_t * p;
+        
+        p = kzalloc(sizeof(*p), GFP_KERNEL);
+        if (!p) {
+                LOG_ERR("Cannot allocate %zu bytes of memory",
+                        sizeof(*p));
+                return NULL;
+        }
+        p->data = kzalloc(sizeof(struct personality_data), GFP_KERNEL);
+        if (!p->data) {
+                LOG_ERR("Cannot allocate %zu bytes of memory",
+                        sizeof(struct personality_data));
+                kfree(personality);
+                return NULL;
+        }
+
+        return p;
+}
+
+static void personality_fini(struct personality_t * pers)
+{
+        ASSERT(pers);
+        ASSERT(pers->data);
+
+        kfree(pers->data);
+        kfree(pers);
+}
+
 static int __init mod_init(void)
 {
+        struct personality_data * pd;
 
         LOG_FBEGN;
 
         LOG_DBG("Rina personality initializing");
 
-        personality = kzalloc(sizeof(*personality), GFP_KERNEL);
-        if (!personality) {
-                LOG_ERR("Cannot allocate %zu bytes of memory",
-                        sizeof(*personality));
-                return -1;
-        }
+        personality = personality_init();
+        if (!personality)
+                return -ENOMEM;
 
         ASSERT(personality);
+        ASSERT(personality->data);
 
+        LOG_DBG("Building-up personality data");
+
+        pd = personality->data;
+
+        LOG_DBG("Initializing shim layer");
         if (shim_init())
                 return -1;
 
-        if (kipcm_init()) {
-                shim_exit();
-                return -1;
-        }
+        LOG_DBG("Initializing kipcm component");
+        pd->kipcm = kipcm_init();
+        if (!pd->kipcm)
+                goto CLEANUP_SHIM;
 
-        if (efcp_init()) {
-                kipcm_exit();
-                shim_exit();
-                return -1;
-        }
+        LOG_DBG("Initializing efcp component");
+        pd->efcp = efcp_init();
+        if (!pd->efcp)
+                goto CLEANUP_KIPCM;
+
+        LOG_DBG("Initializing rmt component");
+        pd->rmt = rmt_init();
+        if (!pd->rmt)
+                goto CLEANUP_EFCP;
 
         /* FIXME: To be filled properly */
+        LOG_DBG("Filling-up personality's hooks");
         personality->init               = 0;
         personality->fini               = 0;
         personality->ipc_create         = 0;
@@ -73,25 +120,39 @@ static int __init mod_init(void)
         personality->connection_destroy = 0;
         personality->connection_update  = 0;
 
+        LOG_DBG("Finally registering personality");
         if (rina_personality_register(personality)) {
-                efcp_exit();
-                kipcm_exit();
-                shim_exit();
-
-                kfree(personality);
-                personality = NULL;
-
-                return -1;
+                goto CLEANUP_RMT;
         }
+
+        ASSERT(pd->kipcm);
+        ASSERT(pd->efcp);
+        ASSERT(pd->rmt);
 
         LOG_DBG("Rina personality loaded successfully");
 
         LOG_FEXIT;
         return 0;
+
+ CLEANUP_RMT:
+        rmt_fini(pd->rmt);
+ CLEANUP_EFCP:
+        efcp_fini(pd->efcp);
+ CLEANUP_KIPCM:
+        kipcm_fini(pd->kipcm);
+ CLEANUP_SHIM:
+        shim_exit();
+
+        personality_fini(personality);
+        personality = NULL;
+
+        return -1;
 }
 
 static void __exit mod_exit(void)
 {
+        struct personality_data * pd;
+
         LOG_FBEGN;
 
         ASSERT(personality);
@@ -103,13 +164,16 @@ static void __exit mod_exit(void)
                 LOG_FEXIT;
                 return;
         }
+        pd = personality->data;
 
-        kfree(personality);
-        personality = NULL;
+        rmt_fini(pd->rmt);
+        efcp_fini(pd->efcp);
+        kipcm_fini(pd->kipcm);
 
-        efcp_exit();
-        kipcm_exit();
         shim_exit();
+
+        personality_fini(personality);
+        personality = NULL;
 
         LOG_DBG("Rina personality unloaded successfully");
 

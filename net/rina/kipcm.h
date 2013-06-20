@@ -23,8 +23,6 @@
 #ifndef RINA_KIPCM_H
 #define RINA_KIPCM_H
 
-#include <linux/syscalls.h>
-
 #include "common.h"
 #include "shim.h"
 #include "efcp.h"
@@ -111,7 +109,7 @@ struct flow_t {
 };
 
 void * kipcm_init(void);
-void   kipcm_exit(void);
+void   kipcm_fini(void * opaque);
 
 int    kipcm_shim_register(struct shim_t * shim);
 int    kipcm_shim_unregister(struct shim_t * shim);
