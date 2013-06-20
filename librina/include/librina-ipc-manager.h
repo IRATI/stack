@@ -17,8 +17,9 @@
 #ifndef LIBRINA_IPC_MANAGER_H
 #define LIBRINA_IPC_MANAGER_H
 
-#include "librina-common.h"
 #include <map>
+
+#include "librina-common.h"
 
 namespace rina {
 
@@ -329,11 +330,13 @@ class FlowAllocationRequestEvent: public IPCEvent {
 	unsigned int transactionId;
 
 public:
-	FlowAllocationRequestEvent(const ApplicationProcessNamingInformation& sourceName,
+	FlowAllocationRequestEvent(
+			const ApplicationProcessNamingInformation& sourceName,
 			const ApplicationProcessNamingInformation& destName,
 			const FlowSpecification& flowSpec, unsigned int transactionId);
 	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
-	const ApplicationProcessNamingInformation& getDestinationApplicationName() const;
+	const ApplicationProcessNamingInformation&
+			getDestinationApplicationName() const;
 	const FlowSpecification& getFlowSpecification() const;
 	unsigned int getTransactionId() const;
 };

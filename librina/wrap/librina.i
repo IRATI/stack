@@ -84,7 +84,9 @@
 %rename(isMoreThanOrEquals) rina::ApplicationProcessNamingInformation::operator>=(const ApplicationProcessNamingInformation &other) const;   
 %rename(isMoreThan) rina::ApplicationProcessNamingInformation::operator>(const ApplicationProcessNamingInformation &other) const;  
 %rename(equals) rina::QoSCube::operator==(const QoSCube &other) const;  
-%rename(differs) rina::QoSCube::operator!=(const QoSCube &other) const;  
+%rename(differs) rina::QoSCube::operator!=(const QoSCube &other) const; 
+%rename(equals) rina::FlowSpecification::operator==(const FlowSpecification &other) const;
+%rename(differs) rina::FlowSpecification::operator!=(const FlowSpecification &other) const;
 
 %include "exceptions.h"
 %include "patterns.h"

@@ -7,8 +7,8 @@
 lib_LTLIBRARIES =
 
 librina_la_SOURCES  =				\
-	logs.cc				\
-	concurrency.cc		\
+	logs.cc					\
+	concurrency.cc				\
 	librina.cc				\
 	librina-common.cc			\
 	librina-application.cc			\
@@ -16,10 +16,11 @@ librina_la_SOURCES  =				\
 	librina-ipc-process.cc			\
 	librina-faux-sockets.cc			\
 	librina-cdap.cc				\
-	librina-sdu-protection.cc   \
-	netlink-messages.cc \
-	librina-netlink-manager.cc \
-	librina-netlink-parsers.cc
+	librina-sdu-protection.cc		\
+	netlink-messages.cc			\
+	netlink-parsers.cc			\
+	netlink-manager.cc
+	
 
 EXTRA_DIST =					\
 	logs.h

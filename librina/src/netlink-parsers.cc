@@ -21,34 +21,38 @@
  *      Author: eduardgrasa
  */
 
-#include "librina-netlink-parsers.h"
 #define RINA_PREFIX "netlink-parsers"
+
 #include "logs.h"
+
+#include "netlink-parsers.h"
 
 namespace rina {
 
 int putBaseNetlinkMessage(nl_msg* netlinkMessage,
-		BaseNetlinkMessage * message){
-	switch(message->getOperationCode()){
-	case RINA_C_APP_ALLOCATE_FLOW_REQUEST:{
-		AppAllocateFlowRequestMessage * allocateObject = dynamic_cast<AppAllocateFlowRequestMessage *>(message);
-		if (putAppAllocateFlowRequestMessageObject(netlinkMessage, allocateObject) <0){
+		BaseNetlinkMessage * message) {
+	switch (message->getOperationCode()) {
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST: {
+		AppAllocateFlowRequestMessage * allocateObject =
+				dynamic_cast<AppAllocateFlowRequestMessage *>(message);
+		if (putAppAllocateFlowRequestMessageObject(netlinkMessage,
+				allocateObject) < 0) {
 			return -1;
 		}
 		return 0;
 	}
-	default:{
+	default: {
 		return -1;
 	}
 	}
 }
 
-BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader){
-	switch(netlinkMessageHeader->nlmsg_type){
-	case RINA_C_APP_ALLOCATE_FLOW_REQUEST:{
+BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
+	switch (netlinkMessageHeader->nlmsg_type) {
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST: {
 		return parseAppAllocateFlowRequestMessage(netlinkMessageHeader);
 	}
-	default:{
+	default: {
 		return NULL;
 	}
 	}
@@ -72,8 +76,8 @@ int putApplicationProcessNamingInformationObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
-ApplicationProcessNamingInformation * parseApplicationProcessNamingInformationObject(
-		nlattr *nested) {
+ApplicationProcessNamingInformation *
+		parseApplicationProcessNamingInformationObject(nlattr *nested) {
 	struct nla_policy attr_policy[APNI_ATTR_MAX + 1];
 	attr_policy[APNI_ATTR_PROCESS_NAME].type = NLA_STRING;
 	attr_policy[APNI_ATTR_PROCESS_NAME].minlen = 0;
@@ -126,41 +130,39 @@ int putFlowSpecificationObject(nl_msg* netlinkMessage,
 		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_AVG_BWITH,
 				object.getAverageBandwidth());
 	}
-	if (object.getAverageSduBandwidth() > 0){
+	if (object.getAverageSduBandwidth() > 0) {
 		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_AVG_SDU_BWITH,
 				object.getAverageSduBandwidth());
 	}
-	if (object.getDelay() > 0){
-		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_DELAY,
-				object.getDelay());
+	if (object.getDelay() > 0) {
+		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_DELAY, object.getDelay());
 	}
-	if (object.getJitter() > 0){
-		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_JITTER,
-				object.getJitter());
+	if (object.getJitter() > 0) {
+		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_JITTER, object.getJitter());
 	}
-	if (object.getMaxAllowableGap() >= 0){
+	if (object.getMaxAllowableGap() >= 0) {
 		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_MAX_GAP,
 				object.getMaxAllowableGap());
 	}
-	if (object.getMaxSDUSize() > 0){
+	if (object.getMaxSDUSize() > 0) {
 		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_MAX_SDU_SIZE,
 				object.getMaxSDUSize());
 	}
-	if (object.isOrderedDelivery()){
+	if (object.isOrderedDelivery()) {
 		NLA_PUT_FLAG(netlinkMessage, FSPEC_ATTR_IN_ORD_DELIVERY);
 	}
-	if (object.isPartialDelivery()){
+	if (object.isPartialDelivery()) {
 		NLA_PUT_FLAG(netlinkMessage, FSPEC_ATTR_PART_DELIVERY);
 	}
-	if (object.getPeakBandwidthDuration() > 0){
+	if (object.getPeakBandwidthDuration() > 0) {
 		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_PEAK_BWITH_DURATION,
 				object.getPeakBandwidthDuration());
 	}
-	if (object.getPeakSduBandwidthDuration() > 0){
+	if (object.getPeakSduBandwidthDuration() > 0) {
 		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_PEAK_SDU_BWITH_DURATION,
 				object.getPeakSduBandwidthDuration());
 	}
-	if (object.getUndetectedBitErrorRate() > 0){
+	if (object.getUndetectedBitErrorRate() > 0) {
 		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_UNDETECTED_BER,
 				object.getUndetectedBitErrorRate());
 	}
@@ -175,17 +177,38 @@ int putFlowSpecificationObject(nl_msg* netlinkMessage,
 FlowSpecification * parseFlowSpecificationObject(nlattr *nested) {
 	struct nla_policy attr_policy[FSPEC_ATTR_MAX + 1];
 	attr_policy[FSPEC_ATTR_AVG_BWITH].type = NLA_U32;
-	LOG_DBG("%d",attr_policy[FSPEC_ATTR_AVG_BWITH].maxlen);
+	attr_policy[FSPEC_ATTR_AVG_BWITH].minlen = 4;
+	attr_policy[FSPEC_ATTR_AVG_BWITH].maxlen = 4;
 	attr_policy[FSPEC_ATTR_AVG_SDU_BWITH].type = NLA_U32;
+	attr_policy[FSPEC_ATTR_AVG_SDU_BWITH].minlen = 4;
+	attr_policy[FSPEC_ATTR_AVG_SDU_BWITH].maxlen = 4;
 	attr_policy[FSPEC_ATTR_DELAY].type = NLA_U32;
+	attr_policy[FSPEC_ATTR_DELAY].minlen = 4;
+	attr_policy[FSPEC_ATTR_DELAY].maxlen = 4;
 	attr_policy[FSPEC_ATTR_JITTER].type = NLA_U32;
+	attr_policy[FSPEC_ATTR_JITTER].minlen = 4;
+	attr_policy[FSPEC_ATTR_JITTER].maxlen = 4;
 	attr_policy[FSPEC_ATTR_MAX_GAP].type = NLA_U32;
+	attr_policy[FSPEC_ATTR_MAX_GAP].minlen = 4;
+	attr_policy[FSPEC_ATTR_MAX_GAP].maxlen = 4;
 	attr_policy[FSPEC_ATTR_MAX_SDU_SIZE].type = NLA_U32;
+	attr_policy[FSPEC_ATTR_MAX_SDU_SIZE].minlen = 4;
+	attr_policy[FSPEC_ATTR_MAX_SDU_SIZE].maxlen = 4;
 	attr_policy[FSPEC_ATTR_IN_ORD_DELIVERY].type = NLA_FLAG;
+	attr_policy[FSPEC_ATTR_IN_ORD_DELIVERY].minlen = 0;
+	attr_policy[FSPEC_ATTR_IN_ORD_DELIVERY].maxlen = 0;
 	attr_policy[FSPEC_ATTR_PART_DELIVERY].type = NLA_FLAG;
+	attr_policy[FSPEC_ATTR_PART_DELIVERY].minlen = 0;
+	attr_policy[FSPEC_ATTR_PART_DELIVERY].maxlen = 0;
 	attr_policy[FSPEC_ATTR_PEAK_BWITH_DURATION].type = NLA_U32;
+	attr_policy[FSPEC_ATTR_PEAK_BWITH_DURATION].minlen = 4;
+	attr_policy[FSPEC_ATTR_PEAK_BWITH_DURATION].maxlen = 4;
 	attr_policy[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION].type = NLA_U32;
+	attr_policy[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION].minlen = 4;
+	attr_policy[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION].maxlen = 4;
 	attr_policy[FSPEC_ATTR_UNDETECTED_BER].type = NLA_U32;
+	attr_policy[FSPEC_ATTR_UNDETECTED_BER].minlen = 4;
+	attr_policy[FSPEC_ATTR_UNDETECTED_BER].maxlen = 4;
 	struct nlattr *attrs[FSPEC_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, FSPEC_ATTR_MAX, nested, attr_policy);
@@ -272,8 +295,7 @@ int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 	}
 	nla_nest_end(netlinkMessage, destinationAppName);
 
-	if (!(flowSpec = nla_nest_start(netlinkMessage,
-			AAFR_ATTR_FLOW_SPEC))) {
+	if (!(flowSpec = nla_nest_start(netlinkMessage, AAFR_ATTR_FLOW_SPEC))) {
 		goto nla_put_failure;
 	}
 
@@ -347,8 +369,7 @@ AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 	}
 
 	if (attrs[AAFR_ATTR_FLOW_SPEC]) {
-		flowSpec = parseFlowSpecificationObject(
-				attrs[AAFR_ATTR_FLOW_SPEC]);
+		flowSpec = parseFlowSpecificationObject(attrs[AAFR_ATTR_FLOW_SPEC]);
 		if (flowSpec == NULL) {
 			delete result;
 			return NULL;

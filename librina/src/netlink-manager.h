@@ -24,10 +24,11 @@
 #ifndef LIBRINA_NETLINK_MANAGER_H
 #define LIBRINA_NETLINK_MANAGER_H
 
+#include <netlink/netlink.h>
+
 #include "exceptions.h"
 #include "patterns.h"
 #include "netlink-messages.h"
-#include <netlink/netlink.h>
 
 #define RINA_GENERIC_NETLINK_FAMILY_NAME "RINA"
 

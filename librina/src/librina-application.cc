@@ -15,13 +15,13 @@
  */
 
 #include <cstring>
-
-#include "librina-application.h"
-#define RINA_PREFIX "application"
-#include "logs.h"
-#include "librina-netlink-manager.h"
-
 #include <stdexcept>
+
+#define RINA_PREFIX "application"
+
+#include "logs.h"
+#include "librina-application.h"
+#include "netlink-manager.h"
 
 namespace rina{
 

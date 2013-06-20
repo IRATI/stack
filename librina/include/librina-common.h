@@ -25,11 +25,12 @@
 #ifndef LIBRINA_COMMON_H
 #define LIBRINA_COMMON_H
 
-#include "exceptions.h"
-#include "patterns.h"
 #include <string>
 #include <vector>
 #include <list>
+
+#include "exceptions.h"
+#include "patterns.h"
 
 namespace rina {
 
@@ -41,10 +42,11 @@ std::string getVersion();
 /**
  * A class that can be printed as a String
  */
-class StringConvertable{
-    public:
-    virtual std::string toString () = 0;
-    virtual ~StringConvertable(){}
+class StringConvertable {
+public:
+	virtual std::string toString() = 0;
+	virtual ~StringConvertable() {
+	}
 };
 
 /**
@@ -98,7 +100,7 @@ public:
 	void setProcessInstance(const std::string& processInstance);
 	const std::string& getProcessName() const;
 	void setProcessName(const std::string& processName);
-	std::string toString ();
+	std::string toString();
 };
 
 /**
@@ -153,6 +155,8 @@ class FlowSpecification {
 
 public:
 	FlowSpecification();
+	bool operator==(const FlowSpecification &other) const;
+	bool operator!=(const FlowSpecification &other) const;
 	unsigned int getAverageBandwidth() const;
 	void setAverageBandwidth(unsigned int averageBandwidth);
 	unsigned int getAverageSduBandwidth() const;
@@ -409,9 +413,11 @@ class FlowRequest {
 	FlowSpecification flowSpecification;
 
 public:
-	const ApplicationProcessNamingInformation& getDestinationApplicationName() const;
+	const ApplicationProcessNamingInformation&
+			getDestinationApplicationName() const;
 	void setDestinationApplicationName(
-			const ApplicationProcessNamingInformation& destinationApplicationName);
+			const ApplicationProcessNamingInformation&
+				destinationApplicationName);
 	const FlowSpecification& getFlowSpecification() const;
 	void setFlowSpecification(const FlowSpecification& flowSpecification);
 	int getPortId() const;

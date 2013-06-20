@@ -17,9 +17,10 @@
 #ifndef LIBRINA_APPLICATION_H
 #define LIBRINA_APPLICATION_H
 
+#include <map>
+
 #include "librina-common.h"
 #include "patterns.h"
-#include <map>
 
 /**
  * The librina-application library provides the native RINA API,
@@ -75,7 +76,8 @@ class Flow {
 	FlowState flowState;
 
 	Flow(const ApplicationProcessNamingInformation& sourceApplicationName,
-			const ApplicationProcessNamingInformation& destinationApplicationName,
+			const ApplicationProcessNamingInformation&
+					destinationApplicationName,
 			const FlowSpecification& flowSpecification, FlowState flowState,
 			const ApplicationProcessNamingInformation& DIFName, int portId);
 public:
@@ -85,7 +87,8 @@ public:
 	int getPortId() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
 	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
-	const ApplicationProcessNamingInformation& getDestinationApplcationName() const;
+	const ApplicationProcessNamingInformation& getDestinationApplcationName()
+			const;
 	const FlowSpecification getFlowSpecification() const;
 
 	/**
@@ -140,7 +143,8 @@ class IPCManager {
 	std::map<int, Flow*> allocatedFlows;
 
 	/** The applications that are currently registered in one or more DIFs */
-	std::map<ApplicationProcessNamingInformation, ApplicationRegistration*> applicationRegistrations;
+	std::map<ApplicationProcessNamingInformation, ApplicationRegistration*>
+			applicationRegistrations;
 
 public:
 	IPCManager();

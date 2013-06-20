@@ -15,7 +15,8 @@
 //
 
 #include <iostream>
-#include "librina-netlink-manager.h"
+
+#include "netlink-manager.h"
 
 using namespace rina;
 
@@ -25,31 +26,40 @@ int main(int argc, char * argv[]) {
 	NetlinkManager * source = new NetlinkManager(4);
 	NetlinkManager * destination = new NetlinkManager(5);
 
-	ApplicationProcessNamingInformation * sourceName = new ApplicationProcessNamingInformation();
+	ApplicationProcessNamingInformation * sourceName =
+			new ApplicationProcessNamingInformation();
 	sourceName->setProcessName("/apps/source");
 	sourceName->setProcessInstance("12");
 	sourceName->setEntityName("database");
 	sourceName->setEntityInstance("12");
 
-	ApplicationProcessNamingInformation * destName = new ApplicationProcessNamingInformation();
+	ApplicationProcessNamingInformation * destName =
+			new ApplicationProcessNamingInformation();
 	destName->setProcessName("/apps/dest");
 	destName->setProcessInstance("12345");
 	destName->setEntityName("printer");
 	destName->setEntityInstance("12623456");
 
-	AppAllocateFlowRequestMessage * message = new AppAllocateFlowRequestMessage();
+	AppAllocateFlowRequestMessage * message =
+			new AppAllocateFlowRequestMessage();
 	message->setDestPortId(5);
 	message->setSourceAppName(*sourceName);
 	message->setDestAppName(*destName);
 	source->sendMessage(message);
 
-	AppAllocateFlowRequestMessage *  result;
-	result = dynamic_cast<AppAllocateFlowRequestMessage *>(destination->getMessage());
-	std::cout<<"Received message from " << result->getSourcePortId() <<
-			" with sequence number "<< result->getSequenceNumber() <<"\n";
-	std::cout<<"Source application process name: " <<result->getSourceAppName().getProcessName()<<"\n";
-	std::cout<<"Destination application process name: " <<result->getDestAppName().getProcessName()<<"\n";
- 	delete result;
+	AppAllocateFlowRequestMessage * result;
+	result = dynamic_cast<AppAllocateFlowRequestMessage *>(destination
+			->getMessage());
+	std::cout << "Received message from " << result->getSourcePortId()
+			<< " with sequence number " << result->getSequenceNumber()
+			<< "\n";
+	std::cout << "Source application process name: "
+			<< result->getSourceAppName().getProcessName() << "\n";
+	std::cout << "Destination application process name: "
+			<< result->getDestAppName().getProcessName() << "\n";
+	std::cout << "In order delivery requested: "
+			<< result->getFlowSpecification().isOrderedDelivery() << "\n";
+	delete result;
 
 	delete source;
 	delete destination;

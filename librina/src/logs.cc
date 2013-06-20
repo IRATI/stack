@@ -1,4 +1,9 @@
 /*
+ * Logging facilities
+ *
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -14,38 +19,32 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * logs.cpp
- *
- *  Created on: 12/06/2013
- *      Author: eduardgrasa
- */
-
-#define RINA_PREFIX ""
-
-#include "logs.h"
 #include <stdlib.h>
 #include <cstdio>
 #include <pthread.h>
+
+#define RINA_PREFIX "logs"
+
+#include "logs.h"
 
 LOG_LEVEL logLevel = DBG;
 FILE * logOutputStream = stdout;
 pthread_rwlock_t outputStreamLock = PTHREAD_RWLOCK_INITIALIZER;
 pthread_rwlock_t logLevelLock = PTHREAD_RWLOCK_INITIALIZER;
 
-void setLogLevel(LOG_LEVEL newLogLevel){
+void setLogLevel(LOG_LEVEL newLogLevel) {
 	pthread_rwlock_wrlock(&logLevelLock);
 	logLevel = newLogLevel;
 	pthread_rwlock_unlock(&logLevelLock);
 }
 
-int setOutputStream(FILE * newOutputStream){
+int setOutputStream(FILE * newOutputStream) {
 	int result = 0;
 
 	pthread_rwlock_wrlock(&outputStreamLock);
-	if (logOutputStream == stdout && newOutputStream != NULL){
+	if (logOutputStream == stdout && newOutputStream != NULL) {
 		logOutputStream = newOutputStream;
-	}else{
+	} else {
 		result = -1;
 	}
 	pthread_rwlock_unlock(&outputStreamLock);
@@ -53,86 +52,74 @@ int setOutputStream(FILE * newOutputStream){
 	return result;
 }
 
-bool shouldLog(LOG_LEVEL level){
-	switch(level){
-	case EMERG:{
+static bool shouldLog(LOG_LEVEL level) {
+	switch (level) {
+	case EMERG:
 		return true;
-	}
-	case ALERT:{
-		if (logLevel == EMERG){
+	case ALERT:
+		if (logLevel == EMERG) {
 			return false;
-		}else{
+		} else {
 			return true;
 		}
-	}
-	case CRIT:{
-		if(logLevel == EMERG || logLevel == ALERT){
+	case CRIT:
+		if (logLevel == EMERG || logLevel == ALERT) {
 			return false;
-		}else{
+		} else {
 			return true;
 		}
-	}
-	case ERR:{
-		if(logLevel == EMERG || logLevel == ALERT || logLevel == CRIT){
+	case ERR:
+		if (logLevel == EMERG || logLevel == ALERT || logLevel == CRIT) {
 			return false;
-		}else{
+		} else {
 			return true;
 		}
-	}
-	case WARN:{
-		if(logLevel == EMERG || logLevel == ALERT || logLevel == CRIT || logLevel == ERR){
+	case WARN:
+		if (logLevel == EMERG || logLevel == ALERT || logLevel == CRIT
+				|| logLevel == ERR) {
 			return false;
-		}else{
+		} else {
 			return true;
 		}
-	}
-	case NOTE:{
-		if (logLevel == NOTE || logLevel == INFO || logLevel == DBG){
+	case NOTE:
+		if (logLevel == NOTE || logLevel == INFO || logLevel == DBG) {
 			return true;
-		}else{
+		} else {
 			return false;
 		}
-	}
-	case INFO:{
-		if (logLevel == INFO || logLevel == DBG){
+	case INFO:
+		if (logLevel == INFO || logLevel == DBG) {
 			return true;
-		}else{
+		} else {
 			return false;
 		}
-	}
-	case DBG:{
-		if (logLevel  == DBG){
+	case DBG:
+		if (logLevel == DBG) {
 			return true;
-		}else{
+		} else {
 			return false;
 		}
-	}
-	default:{
+	default:
 		return false;
-	}
 	}
 }
 
-void LOG(std::string prefix, LOG_LEVEL level, std::string logLevelString, const char* fmt, ...){
-	bool log;
+void log(LOG_LEVEL level, const char * fmt, ...) {
+	bool goon;
 
 	pthread_rwlock_rdlock(&logLevelLock);
-	log = shouldLog(level);
+	goon = shouldLog(level);
 	pthread_rwlock_unlock(&logLevelLock);
 
-	if (!log){
+	if (!goon) {
 		return;
 	}
 
-	static std::string headerString = std::string("librina-") + prefix + "("+logLevelString +"): ";
-
 	va_list args;
-	va_start (args, fmt);
+	va_start(args, fmt);
 
 	pthread_rwlock_rdlock(&outputStreamLock);
-	fprintf(logOutputStream, headerString.c_str());
 	vfprintf(logOutputStream, fmt, args);
-	fprintf(logOutputStream, "\n");
 	pthread_rwlock_unlock(&outputStreamLock);
 
 	va_end(args);

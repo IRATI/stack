@@ -20,8 +20,8 @@
 using namespace rina;
 
 bool checkIPCProcesses(unsigned int expectedProcesses) {
-	std::vector<IPCProcess *> ipcProcesses =
-			ipcProcessFactory->listIPCProcesses();
+	std::vector<IPCProcess *> ipcProcesses = ipcProcessFactory
+			->listIPCProcesses();
 	if (ipcProcesses.size() != expectedProcesses) {
 		std::cout << "ERROR: Expected " << expectedProcesses
 				<< " IPC Processes, but only found " + ipcProcesses.size()
@@ -50,14 +50,16 @@ bool checkRecognizedEvent(IPCEvent * event) {
 	case APPLICATION_UNREGISTRATION_REQUEST_EVENT: {
 		ApplicationUnregistrationRequestEvent * appUEvent =
 				dynamic_cast<ApplicationUnregistrationRequestEvent *>(event);
-		std::cout << "Got application unregistration request from application "
+		std::cout
+				<< "Got application unregistration request from application "
 				<< appUEvent->getApplicationName().getProcessName() << "\n";
 		break;
 	}
 	case FLOW_ALLOCATION_REQUEST_EVENT: {
 		FlowAllocationRequestEvent * flowAllocationRequest =
 				dynamic_cast<FlowAllocationRequestEvent *>(event);
-		std::cout << "Got a flow allocation request event with transaction id "
+		std::cout
+				<< "Got a flow allocation request event with transaction id "
 				<< flowAllocationRequest->getTransactionId() << "\n";
 		break;
 	}
@@ -136,13 +138,14 @@ int main(int argc, char * argv[]) {
 			*difName);
 
 	/* TEST EVENT POLL */
-	IPCEvent * event = new ApplicationRegistrationRequestEvent(*sourceName, *difName,
-			45);
+	IPCEvent * event = new ApplicationRegistrationRequestEvent(*sourceName,
+			*difName, 45);
 	ipcEventProducer->enqueEvent(event);
-	event = new FlowAllocationRequestEvent(*sourceName, *destinationName, *flowSpec,
-			234);
+	event = new FlowAllocationRequestEvent(*sourceName, *destinationName,
+			*flowSpec, 234);
 	ipcEventProducer->enqueEvent(event);
-	event = new ApplicationUnregistrationRequestEvent(*sourceName, *difName, 64);
+	event = new ApplicationUnregistrationRequestEvent(*sourceName, *difName,
+			64);
 	ipcEventProducer->enqueEvent(event);
 
 	for (int i = 0; i < 2; i++) {

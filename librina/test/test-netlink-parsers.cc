@@ -15,21 +15,24 @@
 //
 
 #include <iostream>
-#include "librina-netlink-parsers.h"
+
+#include "netlink-parsers.h"
 
 using namespace rina;
 
-int testAppAllocateFlowRequestMessage(){
+int testAppAllocateFlowRequestMessage() {
 	std::cout << "TESTING APP ALLOCATE FLOW REQUEST MESSAGE\n";
 	int returnValue = 0;
 
-	ApplicationProcessNamingInformation * sourceName = new ApplicationProcessNamingInformation();
+	ApplicationProcessNamingInformation * sourceName =
+			new ApplicationProcessNamingInformation();
 	sourceName->setProcessName("/apps/source");
 	sourceName->setProcessInstance("12");
 	sourceName->setEntityName("database");
 	sourceName->setEntityInstance("12");
 
-	ApplicationProcessNamingInformation * destName = new ApplicationProcessNamingInformation();
+	ApplicationProcessNamingInformation * destName =
+			new ApplicationProcessNamingInformation();
 	destName->setProcessName("/apps/dest");
 	destName->setProcessInstance("12345");
 	destName->setEntityName("printer");
@@ -37,17 +40,20 @@ int testAppAllocateFlowRequestMessage(){
 
 	FlowSpecification * flowSpec = new FlowSpecification();
 
-	AppAllocateFlowRequestMessage * message = new AppAllocateFlowRequestMessage();
+	AppAllocateFlowRequestMessage * message =
+			new AppAllocateFlowRequestMessage();
 	message->setSourceAppName(*sourceName);
 	message->setDestAppName(*destName);
 	message->setFlowSpecification(*flowSpec);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc_simple(message->getOperationCode(),
-				NLM_F_REQUEST);
+			NLM_F_REQUEST);
 	int result = putBaseNetlinkMessage(netlinkMessage, message);
-	if (result < 0){
-		std::cout<<"Error constructing Application Allocate Flow request Message \n";
+	if (result < 0) {
+		std::cout
+				<< "Error constructing Application Allocate Flow request "
+				<< "Message \n";
 		nlmsg_free(netlinkMessage);
 		delete destName;
 		delete sourceName;
@@ -57,19 +63,34 @@ int testAppAllocateFlowRequestMessage(){
 
 	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
 	AppAllocateFlowRequestMessage * recoveredMessage =
-			dynamic_cast<AppAllocateFlowRequestMessage *>(parseBaseNetlinkMessage(netlinkMessageHeader));
-	if (message == NULL){
-		std::cout<<"Error parsing Application Allocate Flow request Message \n";
+			dynamic_cast<AppAllocateFlowRequestMessage *>(
+					parseBaseNetlinkMessage(netlinkMessageHeader));
+	if (message == NULL) {
+		std::cout
+				<< "Error parsing Application Allocate Flow request Message "
+				<<"\n";
 		returnValue = -1;
-	}else if (message->getSourceAppName() != recoveredMessage->getSourceAppName()){
-		std::cout<<"Source application name on original and recovered messages are different\n";
+	} else if (message->getSourceAppName()
+			!= recoveredMessage->getSourceAppName()) {
+		std::cout
+				<< "Source application name on original and recovered messages"
+				<< " are different\n";
 		returnValue = -1;
-	}else if (message->getDestAppName() != recoveredMessage->getDestAppName()){
-		std::cout<<"Destination application name on original and recovered messages are different\n";
+	} else if (message->getDestAppName()
+			!= recoveredMessage->getDestAppName()) {
+		std::cout
+				<< "Destination application name on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	} else if (message->getFlowSpecification()
+			!= recoveredMessage->getFlowSpecification()) {
+		std::cout
+				<< "Destination flow specification on original and recovered "
+				<< "messages are different\n";
 		returnValue = -1;
 	}
 
-	std::cout<<"AppAllocateFlowRequestMessage test ok\n";
+	std::cout << "AppAllocateFlowRequestMessage test ok\n";
 	nlmsg_free(netlinkMessage);
 	delete destName;
 	delete sourceName;
@@ -85,7 +106,7 @@ int main(int argc, char * argv[]) {
 	int result;
 
 	result = testAppAllocateFlowRequestMessage();
-	if (result < 0){
+	if (result < 0) {
 		return result;
 	}
 }

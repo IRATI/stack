@@ -21,14 +21,16 @@
  *      Author: eduardgrasa
  */
 
-#include "librina-netlink-manager.h"
-#define RINA_PREFIX "netlink-manager"
-#include "logs.h"
 #include <unistd.h>
-#include "librina-netlink-parsers.h"
 #include <netlink/genl/genl.h>
 #include <netlink/genl/ctrl.h>
 #include <netlink/socket.h>
+
+#define RINA_PREFIX "netlink-manager"
+
+#include "logs.h"
+#include "netlink-manager.h"
+#include "netlink-parsers.h"
 
 namespace rina {
 
@@ -57,7 +59,8 @@ NetlinkManager::NetlinkManager() throw (NetlinkException) {
 	initialize();
 }
 
-NetlinkManager::NetlinkManager(unsigned int localPort) throw (NetlinkException) {
+NetlinkManager::NetlinkManager(unsigned int localPort)
+		throw (NetlinkException) {
 	this->localPort = localPort;
 	LOG_DBG("Netlink Manager constructor called, with netlink pid = %d",
 			localPort);
@@ -77,7 +80,8 @@ void NetlinkManager::initialize() throw (NetlinkException) {
 		LOG_INFO("Netlink socket connected to local port %d ",
 				nl_socket_get_local_port(socket));
 	} else {
-		LOG_CRIT("Error creating and connecting to Netlink socket %d", result);
+		LOG_CRIT("Error creating and connecting to Netlink socket %d",
+				result);
 		throw NetlinkException(
 				NetlinkException::error_connecting_netlink_socket);
 	}
@@ -104,9 +108,11 @@ void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
 	if (result < 0) {
 		LOG_ERR("Error sending Netlink mesage: %d", result);
 		nlmsg_free(netlinkMessage);
-		throw NetlinkException(NetlinkException::error_sending_netlink_message);
+		throw NetlinkException(
+				NetlinkException::error_sending_netlink_message);
 	}
-	LOG_DBG("Sent message of %d bytes to %d", result, message->getDestPortId());
+	LOG_DBG("Sent message of %d bytes to %d", result,
+			message->getDestPortId());
 
 	//Cleanup
 	nlmsg_free(netlinkMessage);
@@ -132,7 +138,8 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 	msg = nlmsg_convert(hdr);
 	if (!msg) {
 		LOG_ERR("Error parsing Netlink message");
-		throw NetlinkException(NetlinkException::error_parsing_netlink_message);
+		throw NetlinkException(
+				NetlinkException::error_parsing_netlink_message);
 	}
 
 	nlmsg_set_src(msg, &nla);
@@ -154,7 +161,8 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 		nlmsg_free(msg);
 		free(buf);
 		free(creds);
-		throw NetlinkException(NetlinkException::error_parsing_netlink_message);
+		throw NetlinkException(
+				NetlinkException::error_parsing_netlink_message);
 	}
 
 	result->setDestPortId(localPort);

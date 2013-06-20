@@ -21,15 +21,15 @@
  *      Author: eduardgrasa
  */
 
-
 #ifndef LIBRINA_NETLINK_PARSERS_H_
 #define LIBRINA_NETLINK_PARSERS_H_
 
-#include <netlink-messages.h>
 #include <netlink/msg.h>
 #include <netlink/attr.h>
 
-namespace rina{
+#include <netlink-messages.h>
+
+namespace rina {
 
 int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		BaseNetlinkMessage * message);
@@ -37,7 +37,7 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMesasgeHeader);
 
 /* APPLICATION PROCESS NAMING INFORMATION CLASS */
-enum ApplicationProcessNamingInformationAttributes{
+enum ApplicationProcessNamingInformationAttributes {
 	APNI_ATTR_PROCESS_NAME = 1,
 	APNI_ATTR_PROCESS_INSTANCE,
 	APNI_ATTR_ENTITY_NAME,
@@ -50,10 +50,11 @@ enum ApplicationProcessNamingInformationAttributes{
 int putApplicationProcessNamingInformationObject(nl_msg* netlinkMessage,
 		const ApplicationProcessNamingInformation& object);
 
-ApplicationProcessNamingInformation * parseApplicationProcessNamingInformationObject(nlattr *nested);
+ApplicationProcessNamingInformation *
+		parseApplicationProcessNamingInformationObject(nlattr *nested);
 
 /* AppAllocateFlowRequestMessage CLASS*/
-enum AppAllocateFlowRequestAttributes{
+enum AppAllocateFlowRequestAttributes {
 	AAFR_ATTR_SOURCE_APP_NAME = 1,
 	AAFR_ATTR_DEST_APP_NAME,
 	AAFR_ATTR_FLOW_SPEC,
@@ -65,10 +66,11 @@ enum AppAllocateFlowRequestAttributes{
 int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 		AppAllocateFlowRequestMessage * object);
 
-AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(nlmsghdr *hdr);
+AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
+		nlmsghdr *hdr);
 
 /* FLOW SPECIFICATION CLASS */
-enum FlowSpecificationAttributes{
+enum FlowSpecificationAttributes {
 	FSPEC_ATTR_AVG_BWITH = 1,
 	FSPEC_ATTR_AVG_SDU_BWITH,
 	FSPEC_ATTR_DELAY,
@@ -89,7 +91,6 @@ int putFlowSpecificationObject(nl_msg* netlinkMessage,
 		const FlowSpecification& object);
 
 FlowSpecification * parseFlowSpecificationObject(nlattr *nested);
-
 
 }
 #endif /* LIBRINA_NETLINK_PARSERS_H_ */

@@ -14,10 +14,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#define RINA_PREFIX "common"
+
+#include "logs.h"
 #include "config.h"
 #include "librina-common.h"
-#define RINA_PREFIX "common"
-#include "logs.h"
 
 namespace rina {
 
@@ -31,7 +32,8 @@ ApplicationProcessNamingInformation::ApplicationProcessNamingInformation() {
 }
 
 ApplicationProcessNamingInformation::ApplicationProcessNamingInformation(
-		const std::string & processName, const std::string & processInstance) {
+		const std::string & processName,
+		const std::string & processInstance) {
 	this->processName = processName;
 	this->processInstance = processInstance;
 }
@@ -134,7 +136,8 @@ bool ApplicationProcessNamingInformation::operator>=(
 	return !(*this < other);
 }
 
-const std::string & ApplicationProcessNamingInformation::getEntityInstance() const {
+const std::string & ApplicationProcessNamingInformation::getEntityInstance()
+		const {
 	return entityInstance;
 }
 
@@ -143,7 +146,8 @@ void ApplicationProcessNamingInformation::setEntityInstance(
 	this->entityInstance = entityInstance;
 }
 
-const std::string & ApplicationProcessNamingInformation::getEntityName() const {
+const std::string & ApplicationProcessNamingInformation::getEntityName()
+		const {
 	return entityName;
 }
 
@@ -152,7 +156,8 @@ void ApplicationProcessNamingInformation::setEntityName(
 	this->entityName = entityName;
 }
 
-const std::string & ApplicationProcessNamingInformation::getProcessInstance() const {
+const std::string & ApplicationProcessNamingInformation::getProcessInstance()
+		const {
 	return processInstance;
 }
 
@@ -161,7 +166,8 @@ void ApplicationProcessNamingInformation::setProcessInstance(
 	this->processInstance = processInstance;
 }
 
-const std::string & ApplicationProcessNamingInformation::getProcessName() const {
+const std::string & ApplicationProcessNamingInformation::getProcessName()
+		const {
 	return processName;
 }
 
@@ -284,6 +290,58 @@ void FlowSpecification::setUndetectedBitErrorRate(
 	this->undetectedBitErrorRate = undetectedBitErrorRate;
 }
 
+bool FlowSpecification::operator==(const FlowSpecification &other) const {
+	if (averageBandwidth != other.getAverageBandwidth()) {
+		return false;
+	}
+
+	if (averageSDUBandwidth != other.getAverageSduBandwidth()) {
+		return false;
+	}
+
+	if (peakBandwidthDuration != other.getPeakBandwidthDuration()) {
+		return false;
+	}
+
+	if (peakSDUBandwidthDuration != other.getPeakSduBandwidthDuration()) {
+		return false;
+	}
+
+	if (undetectedBitErrorRate != other.getUndetectedBitErrorRate()) {
+		return false;
+	}
+
+	if (partialDelivery != other.isPartialDelivery()) {
+		return false;
+	}
+
+	if (orderedDelivery != other.isOrderedDelivery()) {
+		return false;
+	}
+
+	if (maxAllowableGap != other.getMaxAllowableGap()) {
+		return false;
+	}
+
+	if (delay != other.getDelay()) {
+		return false;
+	}
+
+	if (jitter != other.getJitter()) {
+		return false;
+	}
+
+	if (maxSDUsize != other.getMaxSDUSize()) {
+		return false;
+	}
+
+	return true;
+}
+
+bool FlowSpecification::operator!=(const FlowSpecification &other) const {
+	return !(*this == other);
+}
+
 /* CLASS QoS CUBE */
 
 QoSCube::QoSCube(const std::string& name, int id) {
@@ -396,8 +454,8 @@ void QoSCube::setUndetectedBitErrorRate(double undetectedBitErrorRate) {
 
 /* CLASS DIF PROPERTIES */
 
-DIFProperties::DIFProperties(const ApplicationProcessNamingInformation& DIFName,
-		int maxSDUSize) {
+DIFProperties::DIFProperties(
+		const ApplicationProcessNamingInformation& DIFName, int maxSDUSize) {
 	this->DIFName = DIFName;
 	this->maxSDUSize = maxSDUSize;
 }
@@ -464,7 +522,8 @@ const std::string IPCException::operation_not_implemented_error =
 
 /** CLASS DIF CONFIGURATION */
 
-const ApplicationProcessNamingInformation& DIFConfiguration::getDifName() const {
+const ApplicationProcessNamingInformation& DIFConfiguration::getDifName()
+		const {
 	return difName;
 }
 
@@ -498,12 +557,13 @@ void DIFConfiguration::setQosCubes(const std::vector<QoSCube>& qosCubes) {
 }
 
 /* CLASS FLOW REQUEST */
-const ApplicationProcessNamingInformation& FlowRequest::getDestinationApplicationName() const {
+const ApplicationProcessNamingInformation&
+		FlowRequest::getDestinationApplicationName() const {
 	return destinationApplicationName;
 }
 
 void FlowRequest::setDestinationApplicationName(
-		const ApplicationProcessNamingInformation& destinationApplicationName) {
+		const ApplicationProcessNamingInformation& destinationApplicationName){
 	this->destinationApplicationName = destinationApplicationName;
 }
 
@@ -524,7 +584,8 @@ void FlowRequest::setPortId(int portId) {
 	this->portId = portId;
 }
 
-const ApplicationProcessNamingInformation& FlowRequest::getSourceApplicationName() const {
+const ApplicationProcessNamingInformation& FlowRequest::getSourceApplicationName()
+		const {
 	return sourceApplicationName;
 }
 

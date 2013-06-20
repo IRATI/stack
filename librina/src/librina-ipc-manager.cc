@@ -14,9 +14,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "librina-ipc-manager.h"
 #define RINA_PREFIX "ipc-manager"
+
 #include "logs.h"
+#include "librina-ipc-manager.h"
 
 /** CLASS IPC PROCESS */
 
@@ -52,13 +53,15 @@ void IPCProcess::assignToDIF(const DIFConfiguration& difConfiguration)
 }
 
 void IPCProcess::notifyRegistrationToSupportingDIF(
-		const ApplicationProcessNamingInformation& difName) throw (IPCException) {
+		const ApplicationProcessNamingInformation& difName)
+		throw (IPCException) {
 	LOG_DBG("IPCProcess::notify registration to supporting DIF called");
 	throw IPCException(IPCException::operation_not_implemented_error);
 }
 
 void IPCProcess::notifyUnregistrationFromSupportingDIF(
-		const ApplicationProcessNamingInformation& difName) throw (IPCException) {
+		const ApplicationProcessNamingInformation& difName)
+		throw (IPCException) {
 	LOG_DBG("IPCProcess::notify unregistration from supporting DIF called");
 	throw IPCException(IPCException::operation_not_implemented_error);
 }
@@ -122,7 +125,8 @@ IPCProcess * IPCProcessFactory::create(
 	return ipcProcess;
 }
 
-void IPCProcessFactory::destroy(unsigned int ipcProcessId) throw (IPCException) {
+void IPCProcessFactory::destroy(unsigned int ipcProcessId)
+		throw (IPCException) {
 	LOG_DBG("IPCProcessFactory::destroy called");
 
 	std::map<int, IPCProcess*>::iterator iterator;
@@ -163,7 +167,8 @@ void ApplicationManager::applicationUnregistered(unsigned int transactionId,
 
 void ApplicationManager::flowAllocated(unsigned int transactionId, int portId,
 		unsigned int ipcProcessPid, std::string response,
-		const ApplicationProcessNamingInformation& difName) throw (IPCException) {
+		const ApplicationProcessNamingInformation& difName)
+		throw (IPCException) {
 	LOG_DBG("ApplicationManager::flowAllocated called");
 }
 
