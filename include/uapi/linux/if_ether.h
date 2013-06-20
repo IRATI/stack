@@ -92,7 +92,7 @@
 #define ETH_P_QINQ2	0x9200		/* deprecated QinQ VLAN [ NOT AN OFFICIALLY REGISTERED ID ] */
 #define ETH_P_QINQ3	0x9300		/* deprecated QinQ VLAN [ NOT AN OFFICIALLY REGISTERED ID ] */
 
-#ifdef RINA_SHIM_ETH
+#ifdef CONFIG_RINA_SHIM_ETH
 #define ETH_P_RINA      0xD1F0          /* Recursive Internet Architecture [ NOT AN OFFICIALLY REGISTERED ID ] */
 #endif
 
