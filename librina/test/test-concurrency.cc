@@ -1,4 +1,9 @@
 //
+// Concurrency test
+//
+//    Eduard Grasa          <eduard.grasa@i2cat.net>
+//    Francesco Salvestrini <f.salvestrini@nextworks.it>
+//
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation; either version 2 of the License, or
@@ -17,14 +22,16 @@
 #include <iostream>
 #include <math.h>
 #include <unistd.h>
+
 #include "concurrency.h"
+
 #define NUM_THREADS 5
 #define TRIGGER 10
 
 using namespace rina;
 
 void * doWork(void * arg) {
-	int number = (int) arg;
+	intptr_t number = (intptr_t) arg;
 	std::cout << "Thread " << number << " started work\n";
 	return (void *) number;
 }
@@ -32,7 +39,7 @@ void * doWork(void * arg) {
 class LockableCounter: public Lockable {
 public:
 	LockableCounter() :
-			Lockable() {
+                Lockable() {
 		counter = 0;
 	}
 	void count() {
@@ -58,7 +65,7 @@ void * doWorkMutex(void * arg) {
 class ReadWriteLockableCounter: public ReadWriteLockable {
 public:
 	ReadWriteLockableCounter() :
-			ReadWriteLockable() {
+                ReadWriteLockable() {
 		counter = 0;
 	}
 
@@ -66,7 +73,7 @@ public:
 		writelock();
 		counter++;
 		std::cout<<"Incremented counter; current value is "<<
-				counter<<"\n";
+                        counter<<"\n";
 		unlock();
 	}
 
@@ -99,7 +106,7 @@ public:
 		lock();
 		counter ++;
 		std::cout<<"Incremented counter; current value is "<<
-						counter<<"\n";
+                        counter<<"\n";
 		if (counter >= TRIGGER){
 			std::cout<<"Counter reached threshold, signaling \n";
 			result = true;
@@ -126,7 +133,8 @@ private:
 	int counter;
 };
 
-void * doWorkConditionVariable(void * arg){
+void * doWorkConditionVariable(void * arg)
+{
 	ConditionVariableCounter * counter = (ConditionVariableCounter *) arg;
 	while(!counter->count()){
 		usleep(1000*100);
@@ -134,14 +142,18 @@ void * doWorkConditionVariable(void * arg){
 	return (void *) 0;
 }
 
-void * doWorkWaitForTrigger(void * arg){
+void * doWorkWaitForTrigger(void * arg)
+{
 	ConditionVariableCounter * counter = (ConditionVariableCounter *) arg;
+
 	std::cout<<"Trying to read counter \n";
-	int result = counter->getCounter();
+	intptr_t result = counter->getCounter();
+
 	return (void *) result;
 }
 
-int main(int argc, char * argv[]) {
+int main(int argc, char * argv[])
+{
 	std::cout << "TESTING CONCURRENCY WRAPPER CLASSES\n";
 
 	/* Test get concurrency */
@@ -172,10 +184,10 @@ int main(int argc, char * argv[]) {
 	Thread * threads[NUM_THREADS];
 	ThreadAttributes * threadAttributes = new ThreadAttributes();
 	threadAttributes->setJoinable();
-	for (int i = 0; i < NUM_THREADS; i++) {
+	for (intptr_t i = 0; i < NUM_THREADS; i++) {
 		threads[i] = new Thread(threadAttributes, &doWork, (void *) i);
 		std::cout << "Created thread " << i << " with id "
-				<< threads[i]->getThreadType() << "\n";
+                          << threads[i]->getThreadType() << "\n";
 	}
 	delete threadAttributes;
 
@@ -183,7 +195,7 @@ int main(int argc, char * argv[]) {
 	for (int i = 0; i < NUM_THREADS; i++) {
 		threads[i]->join(&status);
 		std::cout << "Completed join with thread " << i
-				<< " having a status of " << status << "\n";
+                          << " having a status of " << status << "\n";
 		delete threads[i];
 	}
 
@@ -193,16 +205,16 @@ int main(int argc, char * argv[]) {
 	LockableCounter * counter = new LockableCounter();
 	for (int i = 0; i < NUM_THREADS; i++) {
 		threads[i] = new Thread(threadAttributes, &doWorkMutex,
-				(void *) counter);
+                                        (void *) counter);
 		std::cout << "Created thread " << i << " with id "
-				<< threads[i]->getThreadType() << "\n";
+                          << threads[i]->getThreadType() << "\n";
 	}
 	delete threadAttributes;
 
 	for (int i = 0; i < NUM_THREADS; i++) {
 		threads[i]->join(&status);
 		std::cout << "Completed join with thread " << i
-				<< " having a status of " << status << "\n";
+                          << " having a status of " << status << "\n";
 		delete threads[i];
 	}
 
@@ -218,18 +230,18 @@ int main(int argc, char * argv[]) {
 	ReadWriteLockableCounter * counter2 = new ReadWriteLockableCounter();
 	for (int i = 0; i < NUM_THREADS; i++) {
 		threads[i] = new Thread(threadAttributes, &doWorkReadWriteLock,
-				(void *) counter2);
+                                        (void *) counter2);
 		std::cout << "Created thread " << i << " with id "
-				<< threads[i]->getThreadType() << "\n";
+                          << threads[i]->getThreadType() << "\n";
 	}
 	delete threadAttributes;
 
 	for (int i = 0; i < NUM_THREADS; i++) {
 		threads[i]->join(&status);
 		std::cout << "Completed join with thread " << i
-				<< " having a status of " << status
-				<< ". Current counter value is " << counter2->getCounter()
-				<< "\n";
+                          << " having a status of " << status
+                          << ". Current counter value is " << counter2->getCounter()
+                          << "\n";
 		delete threads[i];
 	}
 
@@ -244,22 +256,22 @@ int main(int argc, char * argv[]) {
 	threadAttributes->setJoinable();
 	ConditionVariableCounter * counter3 = new ConditionVariableCounter();
 	threads[0] = new Thread(threadAttributes, &doWorkWaitForTrigger,
-			(void *) counter3);
+                                (void *) counter3);
 	std::cout << "Created thread 0 with id "
-			<< threads[0]->getThreadType() << "\n";
+                  << threads[0]->getThreadType() << "\n";
 	for (int i = 1; i < NUM_THREADS; i++) {
 		threads[i] = new Thread(threadAttributes, &doWorkConditionVariable,
-				(void *) counter3);
+                                        (void *) counter3);
 		std::cout << "Created thread " << i << " with id "
-				<< threads[i]->getThreadType() << "\n";
+                          << threads[i]->getThreadType() << "\n";
 	}
 	delete threadAttributes;
 
 	for (int i = 0; i < NUM_THREADS; i++) {
 		threads[i]->join(&status);
 		std::cout << "Completed join with thread " << i
-				<< " having a status of " << status
-				<< "\n";
+                          << " having a status of " << status
+                          << "\n";
 		delete threads[i];
 	}
 
