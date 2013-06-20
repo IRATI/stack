@@ -25,11 +25,12 @@
 #ifndef LIBRINA_NETLINK_PARSERS_H_
 #define LIBRINA_NETLINK_PARSERS_H_
 
-#include <librina-netlink-manager.h>
 #include <netlink/msg.h>
 #include <netlink/attr.h>
 
-namespace rina{
+#include <netlink-manager.h>
+
+namespace rina {
 
 int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		BaseNetlinkMessage * message);

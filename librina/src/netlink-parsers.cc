@@ -21,9 +21,11 @@
  *      Author: eduardgrasa
  */
 
-#include "librina-netlink-parsers.h"
 #define RINA_PREFIX "netlink-parsers"
+
 #include "logs.h"
+
+#include "netlink-parsers.h"
 
 namespace rina {
 

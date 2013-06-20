@@ -130,7 +130,11 @@ void LOG(std::string prefix, LOG_LEVEL level, std::string logLevelString, const 
 	va_start (args, fmt);
 
 	pthread_rwlock_rdlock(&outputStreamLock);
+#if 0
+        // FIXME: place a static string here
 	fprintf(logOutputStream, headerString.c_str());
+#endif
+
 	vfprintf(logOutputStream, fmt, args);
 	fprintf(logOutputStream, "\n");
 	pthread_rwlock_unlock(&outputStreamLock);

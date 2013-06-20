@@ -21,14 +21,17 @@
  *      Author: eduardgrasa
  */
 
-#include "librina-netlink-manager.h"
-#define RINA_PREFIX "netlink-manager"
-#include "logs.h"
 #include <unistd.h>
-#include "librina-netlink-parsers.h"
 #include <netlink/genl/genl.h>
 #include <netlink/genl/ctrl.h>
 #include <netlink/socket.h>
+
+#define RINA_PREFIX "netlink-manager"
+
+#include "logs.h"
+#include "netlink-manager.h"
+#include "netlink-parsers.h"
+
 
 namespace rina {
 

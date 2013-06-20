@@ -15,7 +15,8 @@
 //
 
 #include <iostream>
-#include "librina-netlink-parsers.h"
+
+#include "netlink-parsers.h"
 
 using namespace rina;
 

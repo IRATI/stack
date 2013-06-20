@@ -15,7 +15,8 @@
 //
 
 #include <iostream>
-#include "librina-netlink-manager.h"
+
+#include "netlink-manager.h"
 
 using namespace rina;
 
