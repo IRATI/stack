@@ -37,7 +37,7 @@ struct dummy_instance_t {
 	ipc_process_id_t      ipc_process_id;
 	struct name_t *       name;
 	/* FIXME: Stores flows indexed by port_id */
-	struct list_head *    dummy_flows;
+	struct list_head      dummy_flows;
 	/* FIXME: let's try to remove the dummy_shim_instance */
 	struct list_head      list;
 };
@@ -75,7 +75,7 @@ static int dummy_flow_allocate_request(void *                     opaque,
 	flow->source = source;
 	flow->port_id = *id;
 	INIT_LIST_HEAD(&flow->list);
-	list_add(&flow->list, dummy->dummy_flows);
+	list_add(&flow->list, &dummy->dummy_flows);
 
 	LOG_FEXIT;
 
@@ -165,7 +165,7 @@ static struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
 	}
 
 	dummy_inst->ipc_process_id = ipc_process_id;
-	dummy_inst->dummy_flows    = &port_flow;
+	dummy_inst->dummy_flows    = port_flow;
 
 	instance->opaque                 = dummy_inst;
 	instance->flow_allocate_request  = dummy_flow_allocate_request;
@@ -269,10 +269,12 @@ static void __exit mod_exit(void)
         kfree(shim);
         list_for_each_entry_safe(pos, next, &dummy_shim_list, list) {
         	list_del(&pos->list);
-
+        	list_for_each_entry_safe(pos_flow, next_flow, &pos->dummy_flows, list) {
+        		list_del(&pos_flow->list);
+        		kfree(pos_flow);
+        	}
         	kfree(pos);
         }
-
 
         LOG_FEXIT;
 }
