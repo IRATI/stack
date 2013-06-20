@@ -49,6 +49,18 @@ AC_SUBST(CPPFLAGS_EXTRA, $CPPFLAGS_EXTRA)
 
 LT_INIT
 
+PKG_CHECK_MODULES(LIBNL3, [libnl-3.0 >= 3.1],, [
+    AC_MSG_ERROR([Your system lacks of libnl-3 support])
+])
+
+PKG_CHECK_MODULES(LIBNLGENL3, [libnl-genl-3.0 >= 3.1],, [
+    AC_MSG_ERROR([Your system lacks of libnl-genl-3 support])
+])
+
+AC_CHECK_LIB([pthread], [pthread_create],,[
+    AC_MSG_ERROR([Your system lacks of libpthread support])
+])
+
 build_wrappers=no
 build_wrappers_java=no
 AX_SELECTOR_ENABLE([java-wrappers],[
@@ -105,13 +117,6 @@ DX_XML_FEATURE(OFF)
 DX_PDF_FEATURE(ON)
 DX_PS_FEATURE(OFF)
 DX_INIT_DOXYGEN($PACKAGE_NAME, [doxygen.cfg], [doxygen])
-
-PKG_CHECK_MODULES(LIBNL3, [libnl-3.0 >= 3.1],, [
-    AC_MSG_ERROR([Your system lacks of libnl-3 support])
-])
-PKG_CHECK_MODULES(LIBNLGENL3, [libnl-genl-3.0 >= 3.1],, [
-    AC_MSG_ERROR([Your system lacks of libnl-genl-3 support])
-])
 
 AC_CONFIG_FILES([
     Makefile
