@@ -104,3 +104,5 @@ FUNCTIONAL_PASS_TESTS =				\
 FUNCTIONAL_XFAIL_TESTS =
 
 check-functional: check-functional-am
+
+check-all: check check-functional

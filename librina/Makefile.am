@@ -65,3 +65,6 @@ dist-hook:
 
 check-functional:
 	cd test && $(MAKE) $(AM_MAKEFLAGS) check-functional
+
+check-all:
+	cd test && $(MAKE) $(AM_MAKEFLAGS) check-all
