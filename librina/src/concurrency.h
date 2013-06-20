@@ -1,4 +1,9 @@
 //
+// Concurrency facilities
+//
+//    Eduard Grasa          <eduard.grasa@i2cat.net>
+//    Francesco Salvestrini <f.salvestrini@nextworks.it>
+//
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation; either version 2 of the License, or
@@ -14,20 +19,15 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-/*
- * concurrency.h
- *
- *  Created on: 18/06/2013
- *      Author: francescosalvestrini, eduardgrasa
- */
-
 #ifndef CONCURRENCY_H_
 #define CONCURRENCY_H_
 
-#include "patterns.h"
-#define RINA_PREFIX "concurrency"
-#include "logs.h"
 #include <pthread.h>
+
+#define RINA_PREFIX "concurrency"
+
+#include "logs.h"
+#include "patterns.h"
 
 namespace rina{
 
