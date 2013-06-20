@@ -2,7 +2,7 @@
  * K-IPCM (Kernel-IPC Manager)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -22,8 +22,6 @@
 
 #ifndef RINA_KIPCM_H
 #define RINA_KIPCM_H
-
-#include <linux/syscalls.h>
 
 #include "common.h"
 #include "shim.h"
@@ -58,119 +56,85 @@ struct normal_ipc_process_t {
          */
 
 	/* The ID of the IPC Process */
-	ipc_process_id_t ipcp_id; 
+	ipc_process_id_t            ipcp_id; 
 	
 	/* Contains the configuration of the kernel components */
-	struct ipc_process_conf_t  *configuration;
+	struct ipc_process_conf_t * configuration;
 
 	/* The EFCP data structure associated to the IPC Process */
-	struct efcp_ipc_t *efcp;
+	struct efcp_ipc_t *         efcp;
 	
 	/* The RMT instance associated to the IPC Process */
-	struct rmt_instance_t *rmt;
+	struct rmt_instance_t *     rmt;
 };
 
 struct ipc_process_t {
 	dif_type_t type;
 
 	union {
-		struct normal_ipc_process_t *        normal_ipcp;
+		struct normal_ipc_process_t * normal_ipcp;
 #if 0
-		struct shim_instance_t *             shim_instance;
+		struct shim_instance_t *      shim_instance;
 #endif
 	} data;
 };
 
 struct flow_t {
 	/* The port-id identifying the flow */
-	port_id_t port_id;
+	port_id_t              port_id;
 
 	/*
          * The components of the IPC Process that will handle the
          * write calls to this flow
          */
-	struct ipc_process_t *ipc_process;
+	struct ipc_process_t * ipc_process;
 
 	/*
          * True if this flow is serving a user-space application, false
          * if it is being used by an RMT
          */
-	bool_t application_owned;
+	bool_t                 application_owned;
 
 	/*
          * In case this flow is being used by an RMT, this is a pointer
          * to the RMT instance.
          */
-
-	struct rmt_instance_t rmt_instance;
+	struct rmt_instance_t  rmt_instance;
 
 	//FIXME: Define QUEUE
 	//QUEUE(segmentation_queue, pdu_t *);
 	//QUEUE(reassembly_queue,	pdu_t *);
 	//QUEUE(sdu_ready, sdu_t *);
-	struct kfifo *sdu_ready;
-};
-
-struct kipc_t {
-	/*
-         * Maintained and used by the K-IPC Manager to return the proper flow
-	 * instance that contains the modules that provide the Data Transfer
-	 * Service in each kind of IPC Process.
-         */
-
-	//FIXME Define HASH_TABLE
-	//HASH_TABLE(port_id_to_flow, port_id_t, struct flow_t *);
-        struct list_head * port_id_to_flow;
-	
-	/* A table with all the instances of IPC Processes, indexed by
-	 * process_id. */
-	//FIXME Define HASH_TABLE
-	//HASH_TABLE(id_to_ipcp, ipc_process_id_t, struct ipc_process_t *);
-	struct list_head * id_to_ipcp;
-};
-
-struct id_to_ipcp_t {
-        ipc_process_id_t       id; /* key */
-        struct ipc_process_t * ipcprocess; /* Value*/
-        struct list_head       list;
-};
-
-struct port_id_to_flow_t {
-        port_id_t         port_id; /* key */
-        const struct flow_t   * flow; /* value */
-        struct list_head  list;
+	struct kfifo *         sdu_ready;
 };
 
 void * kipcm_init(void);
-void   kipcm_exit(void);
+void   kipcm_fini(void * opaque);
 
 int    kipcm_shim_register(struct shim_t * shim);
 int    kipcm_shim_unregister(struct shim_t * shim);
 
-int    kipcm_flow_add(void *                opaque,
-                      port_id_t             port_id,
-                      const struct flow_t * flow);
-int    kipcm_flow_remove(void * opaque, port_id_t port_id);
-
-int    kipcm_sdu_post(void *               opaque,
-		      port_id_t            port_id,
-		      const struct sdu_t * sdu);
-int    kipcm_sud_write(void * opaque,
-		       port_id_t            port_id,
-		       const struct sdu_t * sdu);
-int    kipcm_sud_read(void *         opaque,
-		      port_id_t      port_id,
-		      bool_t         block,
-		      struct sdu_t * sdu);
-
 int    kipcm_ipc_process_create(void *                opaque,
 				const struct name_t * name,
-				ipc_process_id_t      ipcp_id,
+				ipc_process_id_t      id,
 				dif_type_t            type);
 int    kipcm_ipc_process_configure(void *                    opaque,
-			   ipc_process_id_t                  ipcp_id,
+			   ipc_process_id_t                  id,
 			   const struct ipc_process_conf_t * configuration);
 int    kipcm_ipc_process_destroy(void *           opaque,
-				 ipc_process_id_t ipcp_id);
+				 ipc_process_id_t id);
+
+int    kipcm_flow_add(void *                opaque,
+                      port_id_t             id,
+                      const struct flow_t * flow);
+int    kipcm_flow_remove(void *    opaque,
+                         port_id_t id);
+
+int    kipcm_sdu_write(void *               opaque,
+		       port_id_t            id,
+		       const struct sdu_t * sdu);
+int    kipcm_sdu_read(void *         opaque,
+		      port_id_t      id,
+		      struct sdu_t * sdu);
 
 #endif

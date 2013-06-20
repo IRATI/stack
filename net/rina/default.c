@@ -18,6 +18,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/slab.h>
 #include <linux/module.h>
 
 #define RINA_PREFIX "personality-default"
@@ -28,58 +29,208 @@
 #include "shim.h"
 #include "kipcm.h"
 #include "efcp.h"
+#include "rmt.h"
 
 static struct personality_t * personality = NULL;
 
+struct personality_data {
+        void * kipcm;
+        void * efcp;
+        void * rmt;
+};
+
+static int default_ipc_create(struct personality_data * data,
+                              const struct name_t *     name,
+                              ipc_process_id_t          id,
+                              dif_type_t                type)
+{
+        if (!data)
+                return -1;
+
+        return kipcm_ipc_process_create(data->kipcm, name, id, type);
+}
+
+static int default_ipc_configure(struct personality_data *         data,
+                                 ipc_process_id_t                  id,
+                                 const struct ipc_process_conf_t * conf)
+{
+        if (!data)
+                return -1;
+
+        return kipcm_ipc_process_configure(data->kipcm, id, conf);
+}
+
+static int default_ipc_destroy(struct personality_data * data,
+                               ipc_process_id_t          id)
+{
+        if (!data)
+                return -1;
+
+        return kipcm_ipc_process_destroy(data->kipcm, id);
+}
+
+static int default_connection_create(struct personality_data *   data,
+                                     const struct connection_t * connection)
+{
+        if (!data)
+                return -1;
+
+        return efcp_create(data->efcp, connection);
+}
+
+static int default_connection_destroy(struct personality_data * data,
+                                      cep_id_t                  cep_id)
+{
+        if (!data)
+                return -1;
+
+        return efcp_destroy(data->efcp, cep_id);
+}
+
+static int default_connection_update(struct personality_data * data,
+                                     cep_id_t                  id_from,
+                                     cep_id_t                  id_to)
+{
+        if (!data)
+                return -1;
+
+        return efcp_update(data->efcp, id_from, id_to);
+}
+
+int default_sdu_write(struct personality_data * data,
+                      port_id_t                 id,
+                      const struct sdu_t *      sdu)
+{
+        if (!data)
+                return -1;
+
+        return kipcm_sdu_write(data->kipcm, id, sdu);
+}
+
+int default_sdu_read(struct personality_data * data,
+                     port_id_t                 id,
+                     struct sdu_t *            sdu)
+{
+        if (!data)
+                return -1;
+
+        return kipcm_sdu_read(data->kipcm, id, sdu);
+}
+
+static struct personality_t * personality_init(void)
+{
+        struct personality_t * p;
+        
+        p = kzalloc(sizeof(*p), GFP_KERNEL);
+        if (!p) {
+                LOG_ERR("Cannot allocate %zu bytes of memory",
+                        sizeof(*p));
+                return NULL;
+        }
+        p->data = kzalloc(sizeof(struct personality_data), GFP_KERNEL);
+        if (!p->data) {
+                LOG_ERR("Cannot allocate %zu bytes of memory",
+                        sizeof(struct personality_data));
+                kfree(personality);
+                return NULL;
+        }
+
+        return p;
+}
+
+static void personality_fini(struct personality_t * pers)
+{
+        ASSERT(pers);
+        ASSERT(pers->data);
+
+        kfree(pers->data);
+        kfree(pers);
+}
+
 static int __init mod_init(void)
 {
+        struct personality_data * pd;
 
         LOG_FBEGN;
 
         LOG_DBG("Rina personality initializing");
 
-        personality = kmalloc(sizeof(*personality), GFP_KERNEL);
-        if (!personality) {
-                LOG_ERR("Cannot allocate %zu bytes of memory",
-                        sizeof(*personality));
-                return -1;
-        }
-        ASSERT(personality);
+        personality = personality_init();
+        if (!personality)
+                return -ENOMEM;
 
+        ASSERT(personality);
+        ASSERT(personality->data);
+
+        LOG_DBG("Building-up personality data");
+
+        pd = personality->data;
+
+        LOG_DBG("Initializing shim layer");
         if (shim_init())
                 return -1;
 
-        if (kipcm_init()) {
-                shim_exit();
-                return -1;
-        }
+        LOG_DBG("Initializing kipcm component");
+        pd->kipcm = kipcm_init();
+        if (!pd->kipcm)
+                goto CLEANUP_SHIM;
 
-        if (efcp_init()) {
-                kipcm_exit();
-                shim_exit();
-                return -1;
-        }
+        LOG_DBG("Initializing efcp component");
+        pd->efcp = efcp_init();
+        if (!pd->efcp)
+                goto CLEANUP_KIPCM;
 
+        LOG_DBG("Initializing rmt component");
+        pd->rmt = rmt_init();
+        if (!pd->rmt)
+                goto CLEANUP_EFCP;
+
+        LOG_DBG("Filling-up personality's hooks");
+
+        personality->init               = 0;
+        personality->fini               = 0;
+        personality->ipc_create         = default_ipc_create;
+        personality->ipc_configure      = default_ipc_configure;
+        personality->ipc_destroy        = default_ipc_destroy;
+        personality->sdu_read           = default_sdu_read;
+        personality->sdu_write          = default_sdu_write;
+        personality->connection_create  = default_connection_create;
+        personality->connection_destroy = default_connection_destroy;
+        personality->connection_update  = default_connection_update;
+
+        LOG_DBG("Finally registering personality");
         if (rina_personality_register(personality)) {
-                efcp_exit();
-                kipcm_exit();
-                shim_exit();
-                kfree(personality);
-                personality = NULL;
-                return -1;
+                goto CLEANUP_RMT;
         }
 
-        kfree(personality);
-        personality = NULL;
+        ASSERT(pd->kipcm);
+        ASSERT(pd->efcp);
+        ASSERT(pd->rmt);
 
         LOG_DBG("Rina personality loaded successfully");
 
         LOG_FEXIT;
         return 0;
+
+ CLEANUP_RMT:
+        rmt_fini(pd->rmt);
+ CLEANUP_EFCP:
+        efcp_fini(pd->efcp);
+ CLEANUP_KIPCM:
+        kipcm_fini(pd->kipcm);
+ CLEANUP_SHIM:
+        shim_exit();
+
+        personality_fini(personality);
+        personality = NULL;
+
+        return -1;
 }
 
 static void __exit mod_exit(void)
 {
+        struct personality_data * pd;
+
         LOG_FBEGN;
 
         ASSERT(personality);
@@ -91,13 +242,16 @@ static void __exit mod_exit(void)
                 LOG_FEXIT;
                 return;
         }
+        pd = personality->data;
 
-        kfree(personality);
-        personality = NULL;
+        rmt_fini(pd->rmt);
+        efcp_fini(pd->efcp);
+        kipcm_fini(pd->kipcm);
 
-        efcp_exit();
-        kipcm_exit();
         shim_exit();
+
+        personality_fini(personality);
+        personality = NULL;
 
         LOG_DBG("Rina personality unloaded successfully");
 

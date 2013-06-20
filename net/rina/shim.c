@@ -2,8 +2,6 @@
  *  Shim IPC Process
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
- *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +18,12 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/export.h>
+#include <linux/kobject.h>
+#include <linux/string.h>
+#include <linux/sysfs.h>
+#include <linux/slab.h>
+
 #define RINA_PREFIX "shim"
 
 #include "logs.h"
@@ -27,60 +31,115 @@
 #include "shim.h"
 #include "kipcm.h"
 
-int  shim_init(void)
-{ return 0; }
+static struct kset * shims = NULL;
 
-void shim_exit(void)
-{ }
-
-static int is_shim_ok(const struct shim_t * shim)
+int shim_init(void)
 {
-        if (shim            &&
-            shim->create    &&
-            shim->configure &&
-	    shim->destroy)
-                return 1;
-
-        return 0;
-}
-
-#if 0
-static int is_instance_ok(const struct shim_instance_t * inst)
-{
-        if (inst                          &&
-            inst->flow_allocate_request   &&
-            inst->flow_allocate_response  &&
-            inst->flow_deallocate         &&
-
-            inst->application_register    &&
-            inst->application_unregister  &&
-
-            inst->sdu_read                &&
-            inst->sdu_write)
-                return 1;
-
-        return 0;
-}
-#endif
-
-int shim_register(struct shim_t * shim)
-{
-        if (!shim || !is_shim_ok(shim)) {
-                LOG_ERR("Cannot register shim, it's bogus");
+        if (shims) {
+                LOG_ERR("Shim layer already initialized");
                 return -1;
         }
 
-        LOG_DBG("Registering shim %pK", shim);
-        return kipcm_shim_register(shim);
+#if CONFIG_RINA_SYSFS
+        /* FIXME: Move the set path from kernel to rina */
+        shims = kset_create_and_add("shims", NULL, kernel_kobj);
+        if (!shims)
+                return -1;
+#endif
+
+        ASSERT(shims != NULL);
+        return 0;
 }
+
+void shim_exit(void)
+{
+        ASSERT(shims != NULL);
+#if CONFIG_RINA_SYSFS
+        kset_unregister(shims);
+#endif
+        shims = NULL;
+}
+
+static int is_shim_label_ok(const struct shim_t * shim)
+{ return (shim ? strlen(shim->label) : 0); }
+
+static int is_shim_ok(const struct shim_t * shim)
+{
+        LOG_DBG("Checking shim %pK consistence", shim);
+
+        if (shim                   &&
+            shim->label            &&
+            is_shim_label_ok(shim) &&
+            shim->create           &&
+            shim->configure        &&
+	    shim->destroy) {
+                LOG_DBG("Shim %pK is consistent", shim);
+                return 1;
+        }
+
+        LOG_ERR("Shim %pK is inconsistent", shim);
+        return 0;
+}
+
+int shim_register(struct shim_t * shim)
+{
+#if CONFIG_RINA_SYSFS
+#if 0
+        struct shim_object * obj;
+#endif
+#endif
+
+        LOG_DBG("Registering shim %pK", shim);
+
+        if (!shim || !is_shim_ok(shim)) {
+                LOG_ERR("Cannot register shim %pK, it's bogus", shim);
+                return -1;
+        }
+
+        ASSERT(is_shim_label_ok(shim));
+
+        if (kipcm_shim_register(shim))
+                return -1;
+
+#if CONFIG_RINA_SYSFS
+#if 0
+        obj = kzalloc(sizeof(*obj), GFP_KERNEL);
+        if (!obj) {
+                LOG_CRIT("Cannot allocate %d bytes of memory", sizeof(*obj));
+                return -ENOMEM;
+        }
+
+        LDBG("Setting up kobj for label '%s'", shim->label);
+        obj->kobj.kset = shims;
+        if (!kobject_init_and_add(&obj->kobj, &obj_ktype, NULL, "%s",
+                                  shim->label)) {
+                LOG_CRIT("Cannot setup sysfs for shim %pK", shim);
+                return -1;
+        }
+
+        kobject_put(&obj->kobj);
+#endif
+#endif
+
+        return 0;
+}
+EXPORT_SYMBOL(shim_register);
 
 int shim_unregister(struct shim_t * shim)
 {
+        LOG_DBG("Un-registering shim %pK", shim);
+
         if (!shim) {
                 LOG_ERR("Cannot unregister shim, it's bogus");
                 return -1;
         }
 
-        LOG_DBG("Un-registering shim %pK", shim);
-        return kipcm_shim_unregister(shim);
+        if (kipcm_shim_unregister(shim))
+                return -1;
+
+#if CONFIG_RINA_SYSFS
+#endif
+
+        return 0;
 }
+EXPORT_SYMBOL(shim_unregister);

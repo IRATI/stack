@@ -25,7 +25,7 @@
 
 /* Embed assertions in the code upon user-choice */
 #ifdef CONFIG_RINA_ASSERTIONS
-#define ASSERT(COND) BUG_ON(COND)
+#define ASSERT(COND) BUG_ON(!(COND))
 #else
 #define ASSERT(COND)
 #endif

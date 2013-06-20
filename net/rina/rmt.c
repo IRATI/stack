@@ -18,32 +18,49 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/slab.h>
+
 #define RINA_PREFIX "rmt"
 
 #include "logs.h"
+#include "utils.h"
 #include "rmt.h"
-#include "pdufwdt.h"
 
-int rmt_init(void)
+struct rmt_descriptor {
+        void * this_is_dummy;
+};
+
+void * rmt_init(void)
 {
+        struct rmt_descriptor * e = NULL;
+
         LOG_FBEGN;
 
-        if (pdufwdt_init()) {
-                LOG_FEXIT;
+        LOG_DBG("Initializing instance");
 
-                return 1;
+        e = kmalloc(sizeof(*e), GFP_KERNEL);
+        if (!e) {
+                LOG_CRIT("Cannot allocate %zu bytes of memory",
+                         sizeof(*e));
+
+                LOG_FEXIT;
+                return e;
         }
 
         LOG_FEXIT;
 
-        return 0;
+        return e;
 }
 
-void rmt_exit(void)
+void rmt_fini(void * opaque)
 {
         LOG_FBEGN;
 
-        pdufwdt_exit();
+        LOG_DBG("Finalizing instance %pK", opaque);
+
+        ASSERT(opaque);
+
+        kfree(opaque);
 
         LOG_FEXIT;
 }

@@ -19,6 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/slab.h>
+
 #define RINA_PREFIX "kipcm"
 
 #include <linux/linkage.h>
@@ -29,59 +31,82 @@
 #include "utils.h"
 #include "kipcm.h"
 
+struct id_to_ipcp_t {
+        ipc_process_id_t       id; /* key */
+        struct ipc_process_t * ipcprocess; /* Value*/
+        struct list_head       list;
+};
+
+struct port_id_to_flow_t {
+        port_id_t             port_id; /* key */
+        const struct flow_t * flow;    /* value */
+        struct list_head      list;
+};
+
+struct kipc_t {
+	/*
+         * Maintained and used by the K-IPC Manager to return the proper flow
+	 * instance that contains the modules that provide the Data Transfer
+	 * Service in each kind of IPC Process.
+         */
+
+	//FIXME Define HASH_TABLE
+	//HASH_TABLE(port_id_to_flow, port_id_t, struct flow_t *);
+        struct list_head * port_id_to_flow;
+	
+	/*
+         * A table with all the instances of IPC Processes, indexed by
+	 * process_id.
+         */
+	//FIXME Define HASH_TABLE
+	//HASH_TABLE(id_to_ipcp, ipc_process_id_t, struct ipc_process_t *);
+	struct list_head * id_to_ipcp;
+};
+
 void * kipcm_init()
 {
+	struct kipc_t * kipcm = NULL;
+
+        LOG_FBEGN;
+
+        LOG_DBG("Initializing instance");
+
 #if 0
-	struct kipc_t * kipcm;
 	LIST_HEAD(id_to_ipcp);
 	LIST_HEAD(port_id_to_flow);
-
-	LOG_FBEGN;
-
-        if (!shim_init()) {
-                LOG_FEXIT;
-                return NULL;
-        }
+#endif
 
         kipcm = kmalloc(sizeof(*kipcm), GFP_KERNEL);
         if (!kipcm) {
-                LOG_CRIT("Cannot allocate %d bytes of memory", sizeof(*kipcm));
+                LOG_CRIT("Cannot allocate %zu bytes of memory",
+                         sizeof(*kipcm));
 
                 LOG_FEXIT;
-                return NULL;
+                return kipcm;
         }
+#if 0
         kipcm->id_to_ipcp      = &id_to_ipcp;
         kipcm->port_id_to_flow = &port_id_to_flow;
+#endif
 
         LOG_FEXIT;
 
         return kipcm;
-#else
-        return NULL;
-#endif
 }
 
-/*
- * FIXME: This should be kipcm_exit(void * opaque) I guess
- * I haven't yet put it in this form to not generate problems with rina.c
- */
-void kipcm_exit()
+void kipcm_fini(void * opaque)
 {
-#if 0
         LOG_FBEGN;
 
-        /*
-         * Add code here, depending on the operations performed
-         * into kipcm_init
-         */
+        LOG_DBG("Finalizing instance %pK", opaque);
+
+        ASSERT(opaque);
+
+        /* FIXME: Add code here, depending on kipcm_init */
 
         kfree(opaque);
-        opaque = 0; /* Useless */
-
-        shim_exit();
 
         LOG_FEXIT;
-#endif
 }
 
 int kipcm_shim_register(struct shim_t * shim)
@@ -91,9 +116,11 @@ int kipcm_shim_register(struct shim_t * shim)
         ASSERT(shim);
         LOG_DBG("Registering shim %pK", shim);
 
+        LOG_DBG("Shim %pK registered successfully", shim);
+
         LOG_FEXIT;
 
-        return 1;
+        return 0;
 }
 
 int kipcm_shim_unregister(struct shim_t * shim)
@@ -103,10 +130,36 @@ int kipcm_shim_unregister(struct shim_t * shim)
         ASSERT(shim);
         LOG_DBG("Unregistering shim %pK", shim);
 
+        LOG_DBG("Shim %pK registered successfully", shim);
+
         LOG_FEXIT;
 
-        return 1;
+        return 0;
 }
+
+#if 0
+static int is_instance_ok(const struct shim_instance_t * inst)
+{
+        LDBG("Checking shim instance %pK consistence", inst);
+
+        if (inst                          &&
+            inst->flow_allocate_request   &&
+            inst->flow_allocate_response  &&
+            inst->flow_deallocate         &&
+
+            inst->application_register    &&
+            inst->application_unregister  &&
+
+            inst->sdu_read                &&
+            inst->sdu_write) {
+                LOG_DBG("Shim instance %pK is consistent", inst)
+                        return 1;
+        }
+
+        LOG_ERR("Shim instance %pK is inconsistent", inst);
+        return 0;
+}
+#endif
 
 int kipcm_flow_add(void *                opaque,
                    port_id_t             id,
@@ -119,7 +172,7 @@ int kipcm_flow_add(void *                opaque,
 
         port_flow = kmalloc(sizeof(*port_flow), GFP_KERNEL);
         if (!port_flow) {
-                LOG_ERR("Cannot allocate %d bytes of memory",
+                LOG_ERR("Cannot allocate %zu bytes of memory",
                         sizeof(*port_flow));
                 LOG_FEXIT;
                 return -1;
@@ -143,7 +196,7 @@ retrieve_flow_by_port_id(void * opaque, port_id_t port_id)
         struct port_id_to_flow_t * cur;
 
         list_for_each_entry(cur,
-        		((struct kipc_t *) opaque)->port_id_to_flow, list) {
+                            ((struct kipc_t *) opaque)->port_id_to_flow, list) {
                 if (cur->port_id == port_id)
                         return cur->flow;
         }
@@ -158,7 +211,7 @@ retrieve_port_flow_node(void * opaque, port_id_t port_id)
 	struct port_id_to_flow_t * cur;
 
 	list_for_each_entry(cur,
-			((struct kipc_t *) opaque)->port_id_to_flow, list) {
+                            ((struct kipc_t *) opaque)->port_id_to_flow, list) {
                 if (cur->port_id == port_id)
                         return cur;
         }
@@ -245,7 +298,6 @@ int kipcm_sdu_post(void *               opaque,
 
 int kipcm_sdu_read(void *         opaque,
 		   port_id_t      port_id,
-		   bool_t         block,
 		   struct sdu_t * sdu)
 {
 #if 0
@@ -276,7 +328,7 @@ int kipcm_sdu_read(void *         opaque,
 
         data = kmalloc(size, GFP_KERNEL);
         if (!data) {
-                LOG_ERR("Cannot allocate %d bytes of kernel memory", size);
+                LOG_ERR("Cannot allocate %zu bytes of kernel memory", size);
 
                 LOG_FEXIT;
                 return -1;
@@ -371,7 +423,7 @@ create_shim(ipc_process_id_t ipcp_id)
 
         ipcp_shim_eth = kmalloc(sizeof(*ipcp_shim_eth), GFP_KERNEL);
         if (!ipcp_shim_eth) {
-                LOG_ERR("Cannot allocate %d bytes of memory",
+                LOG_ERR("Cannot allocate %zu bytes of memory",
                         sizeof(*ipcp_shim_eth));
 
                 LOG_FEXIT;
@@ -399,7 +451,7 @@ static int add_id_to_ipcp_node(void *                 opaque,
 
         aux_id_to_ipcp = kmalloc(sizeof(*aux_id_to_ipcp), GFP_KERNEL);
         if (!aux_id_to_ipcp) {
-                LOG_ERR("Cannot allocate %d bytes of memory",
+                LOG_ERR("Cannot allocate %zu bytes of memory",
                         sizeof(*aux_id_to_ipcp));
                 LOG_FEXIT;
                 return -1;
@@ -434,7 +486,7 @@ int kipcm_ipc_process_create(void *                opaque,
                 }
                 ipc_process = kmalloc(sizeof(*ipc_process), GFP_KERNEL);
                 if (!ipc_process) {
-                        LOG_ERR("Cannot allocate %d bytes of memory",
+                        LOG_ERR("Cannot allocate %zu bytes of memory",
                                 sizeof(*ipc_process));
                         LOG_FEXIT;
                         return -1;
