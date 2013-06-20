@@ -282,5 +282,106 @@ void AppDeallocateFlowResponseMessage::setResult(int result) {
 	this->result = result;
 }
 
+/* CLASS APP FLOW DEALLOCATED NOTIFICATION MESSAGE */
+AppFlowDeallocatedNotificationMessage::AppFlowDeallocatedNotificationMessage() :
+		BaseNetlinkMessage(RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION) {
+	this->portId = 0;
+	this->code = 0;
+}
+
+int AppFlowDeallocatedNotificationMessage::getCode() const {
+	return code;
+}
+
+void AppFlowDeallocatedNotificationMessage::setCode(int code) {
+	this->code = code;
+}
+
+int AppFlowDeallocatedNotificationMessage::getPortId() const {
+	return portId;
+}
+
+void AppFlowDeallocatedNotificationMessage::setPortId(int portId) {
+	this->portId = portId;
+}
+
+const std::string& AppFlowDeallocatedNotificationMessage::getReason() const {
+	return reason;
+}
+
+void AppFlowDeallocatedNotificationMessage::setReason(
+		const std::string& reason) {
+	this->reason = reason;
+}
+
+/* CLASS APP REGISTER APPLICATION REQUEST MESSAGE */
+AppRegisterApplicationRequestMessage::AppRegisterApplicationRequestMessage() :
+		BaseNetlinkMessage(RINA_C_APP_REGISTER_APPLICATION_REQUEST) {
+}
+
+const ApplicationProcessNamingInformation&
+		AppRegisterApplicationRequestMessage::getApplicationName() const {
+		return applicationName;
+	}
+
+void AppRegisterApplicationRequestMessage::setApplicationName(
+		const ApplicationProcessNamingInformation& applicationName) {
+	this->applicationName = applicationName;
+}
+
+const ApplicationProcessNamingInformation&
+		AppRegisterApplicationRequestMessage::getDifName() const {
+	return difName;
+}
+
+void AppRegisterApplicationRequestMessage::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
+/* CLASS APP REGISTER APPLICATION RESPONSE MESSAGE */
+AppRegisterApplicationResponseMessage::AppRegisterApplicationResponseMessage() :
+		BaseNetlinkMessage(RINA_C_APP_REGISTER_APPLICATION_RESPONSE) {
+	this->ipcProcessId = 0;
+	this->ipcProcessPortId = 0;
+	this->result = 0;
+}
+
+const std::string&
+		AppRegisterApplicationResponseMessage::getErrorDescription() const {
+	return errorDescription;
+}
+
+void AppRegisterApplicationResponseMessage::setErrorDescription(
+		const std::string& errorDescription) {
+	this->errorDescription = errorDescription;
+}
+
+unsigned int AppRegisterApplicationResponseMessage::getIpcProcessId() const {
+	return ipcProcessId;
+}
+
+void AppRegisterApplicationResponseMessage::setIpcProcessId(
+		unsigned int ipcProcessId) {
+	this->ipcProcessId = ipcProcessId;
+}
+
+unsigned int AppRegisterApplicationResponseMessage::getIpcProcessPortId() const {
+	return ipcProcessPortId;
+}
+
+void AppRegisterApplicationResponseMessage::setIpcProcessPortId(
+		unsigned int ipcProcessPortId) {
+	this->ipcProcessPortId = ipcProcessPortId;
+}
+
+int AppRegisterApplicationResponseMessage::getResult() const {
+	return result;
+}
+
+void AppRegisterApplicationResponseMessage::setResult(int result) {
+	this->result = result;
+}
+
 }
 

@@ -30,7 +30,8 @@
 #include "patterns.h"
 #include "netlink-messages.h"
 
-#define RINA_GENERIC_NETLINK_FAMILY_NAME "RINA"
+#define RINA_GENERIC_NETLINK_FAMILY_NAME "nlrina"
+#define RINA_GENERIC_NETLINK_FAMILY_VERSION 0
 
 namespace rina{
 
@@ -40,7 +41,9 @@ namespace rina{
 class NetlinkException: public Exception {
 public:
 	NetlinkException(const std::string& description);
+	static const std::string error_resolving_netlink_family;
 	static const std::string error_connecting_netlink_socket;
+	static const std::string error_allocating_netlink_message;
 	static const std::string error_receiving_netlink_message;
 	static const std::string error_generating_netlink_message;
 	static const std::string error_sending_netlink_message;
@@ -59,6 +62,9 @@ class NetlinkManager{
 
 	/** The netlink socket structure */
 	nl_sock *socket;
+
+	/** The numeric value of the Generic RINA Netlink family */
+	int family;
 
 	/** Creates the Netlink socket and binds it to the netlinkPid */
 	void initialize() throw(NetlinkException);
