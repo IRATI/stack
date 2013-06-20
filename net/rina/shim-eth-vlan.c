@@ -25,6 +25,7 @@
 #include <linux/string.h>
 #include <linux/list.h>
 #include <linux/rbtree.h>
+#include <linux/slab.h>
 
 #define RINA_PREFIX "shim-eth"
 
@@ -81,7 +82,7 @@ struct shim_eth_instance_t {
 	/* rbtree or hash table? */
 };
 
-struct shim_instance_t * shim_eth_create(ipc_process_id_t ipc_process_id)
+static struct shim_instance_t * shim_create(ipc_process_id_t ipc_process_id)
 {
 	struct shim_instance_t * instance;
 	struct shim_eth_instance_t * shim_instance; 	
@@ -227,7 +228,7 @@ struct shim_instance_t * shim_eth_configure
 	return inst;
 }
 
-int shim_eth_destroy(struct shim_instance_t * inst)
+static int shim_destroy(struct shim_instance_t * inst)
 {
 	struct shim_eth_instance_t * instance;
 	LOG_FBEGN;
@@ -247,7 +248,7 @@ int shim_eth_destroy(struct shim_instance_t * inst)
 	return 0;
 }
 
-int shim_eth_flow_allocate_request(void *                     opaque, 
+static int shim_flow_allocate_request(void *                     opaque, 
 				   const struct name_t *      source,
                                    const struct name_t *      dest,
                                    const struct flow_spec_t * flow_spec,
@@ -259,7 +260,7 @@ int shim_eth_flow_allocate_request(void *                     opaque,
 	return 0;
 }
 
-int shim_eth_flow_allocate_response(void *              opaque,
+static int shim_flow_allocate_response(void *              opaque,
 				    port_id_t           port_id,
                                     response_reason_t * response)
 {
@@ -269,7 +270,7 @@ int shim_eth_flow_allocate_response(void *              opaque,
 	return 0;
 }
 
-int shim_eth_flow_deallocate(void *    opaque,
+static int shim_flow_deallocate(void *    opaque,
 			     port_id_t port_id)
 {
         LOG_FBEGN;
@@ -278,7 +279,7 @@ int shim_eth_flow_deallocate(void *    opaque,
 	return 0;
 }
 
-int shim_eth_application_register(void *                opaque,
+static int shim_application_register(void *                opaque,
 				  const struct name_t * name)
 {
         LOG_FBEGN;
@@ -287,7 +288,7 @@ int shim_eth_application_register(void *                opaque,
 	return 0;
 }
 
-int shim_eth_application_unregister(void *               opaque,
+static int shim_application_unregister(void *               opaque,
 				   const struct name_t * name)
 {
         LOG_FBEGN;
@@ -296,7 +297,7 @@ int shim_eth_application_unregister(void *               opaque,
 	return 0;
 }
 
-int shim_eth_sdu_write(void *               opaque,
+static int shim_sdu_write(void *               opaque,
 		       port_id_t            port_id, 
 		       const struct sdu_t * sdu)
 {
@@ -306,7 +307,7 @@ int shim_eth_sdu_write(void *               opaque,
 	return 0;
 }
 
-int shim_eth_sdu_read(void *         opaque,
+static int shim_sdu_read(void *         opaque,
 		      port_id_t      id,
 		      struct sdu_t * sdu)
 {
@@ -315,6 +316,32 @@ int shim_eth_sdu_read(void *         opaque,
 
 	return 0;
 }
+
+static int shim_rcv(struct sk_buff *skb, struct net_device *dev,
+			struct packet_type *pt, struct net_device *orig_dev)
+{
+	if (skb->pkt_type == PACKET_OTHERHOST ||
+		skb->pkt_type == PACKET_LOOPBACK) {
+		kfree_skb(skb);
+		return 0;
+	}
+	
+	skb = skb_share_check(skb, GFP_ATOMIC);
+	if (!skb)
+		return 0;
+	
+	/* Get the SDU out of the sk_buff */
+
+	kfree_skb(skb);
+	return 0;
+};
+
+
+/* Called on startup to receive packets from a certain dev */
+static struct packet_type shim_eth_packet_type __read_mostly = {
+	.type =	cpu_to_be16(ETH_P_RINA),
+	.func =	shim_rcv,
+};
 
 static int __init mod_init(void)
 {
