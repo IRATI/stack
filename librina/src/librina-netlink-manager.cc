@@ -32,90 +32,7 @@
 
 namespace rina {
 
-/* CLASS BASE NETLINK MESSAGE */
-
-BaseNetlinkMessage::BaseNetlinkMessage(RINANetlinkOperationCode operationCode) {
-	this->operationCode = operationCode;
-	sourcePortId = 0;
-	destPortId = 0;
-	sequenceNumber = 0;
-	family = -1;
-}
-
-BaseNetlinkMessage::~BaseNetlinkMessage() {
-}
-
-unsigned int BaseNetlinkMessage::getDestPortId() const {
-	return destPortId;
-}
-
-void BaseNetlinkMessage::setDestPortId(unsigned int destPortId) {
-	this->destPortId = destPortId;
-}
-
-unsigned int BaseNetlinkMessage::getSequenceNumber() const {
-	return sequenceNumber;
-}
-
-void BaseNetlinkMessage::setSequenceNumber(unsigned int sequenceNumber) {
-	this->sequenceNumber = sequenceNumber;
-}
-
-unsigned int BaseNetlinkMessage::getSourcePortId() const {
-	return sourcePortId;
-}
-
-void BaseNetlinkMessage::setSourcePortId(unsigned int sourcePortId) {
-	this->sourcePortId = sourcePortId;
-}
-
-RINANetlinkOperationCode BaseNetlinkMessage::getOperationCode() const {
-	return operationCode;
-}
-
-int BaseNetlinkMessage::getFamily() const {
-	return family;
-}
-
-void BaseNetlinkMessage::setFamily(int family) {
-	this->family = family;
-}
-
-/* CLASS RINA APP ALLOCATE FLOW MESSAGE */
-
-AppAllocateFlowRequestMessage::AppAllocateFlowRequestMessage() :
-		BaseNetlinkMessage(RINA_C_APP_ALLOCATE_FLOW_REQUEST) {
-}
-
-const ApplicationProcessNamingInformation& AppAllocateFlowRequestMessage::getDestAppName() const {
-	return destAppName;
-}
-
-void AppAllocateFlowRequestMessage::setDestAppName(
-		const ApplicationProcessNamingInformation& destAppName) {
-	this->destAppName = destAppName;
-}
-
-const FlowSpecification& AppAllocateFlowRequestMessage::getFlowSpecification() const {
-	return flowSpecification;
-}
-
-void AppAllocateFlowRequestMessage::setFlowSpecification(
-		const FlowSpecification& flowSpecification) {
-	this->flowSpecification = flowSpecification;
-}
-
-const ApplicationProcessNamingInformation& AppAllocateFlowRequestMessage::getSourceAppName() const {
-	return sourceAppName;
-}
-
-void AppAllocateFlowRequestMessage::setSourceAppName(
-		const ApplicationProcessNamingInformation& sourceAppName) {
-	this->sourceAppName = sourceAppName;
-}
-
 /* CLASS NETLINK EXCEPTION */
-
 NetlinkException::NetlinkException(const std::string& description) :
 		Exception(description) {
 }
@@ -133,14 +50,14 @@ const std::string NetlinkException::error_parsing_netlink_message =
 
 /* CLASS NETLINK MANAGER */
 
-NetlinkManager::NetlinkManager() throw(NetlinkException){
+NetlinkManager::NetlinkManager() throw (NetlinkException) {
 	this->localPort = getpid();
 	LOG_DBG("Netlink Manager constructor called, using local port = %d",
 			localPort);
 	initialize();
 }
 
-NetlinkManager::NetlinkManager(unsigned int localPort) throw(NetlinkException){
+NetlinkManager::NetlinkManager(unsigned int localPort) throw (NetlinkException) {
 	this->localPort = localPort;
 	LOG_DBG("Netlink Manager constructor called, with netlink pid = %d",
 			localPort);
@@ -152,7 +69,7 @@ NetlinkManager::~NetlinkManager() {
 	nl_socket_free(socket);
 }
 
-void NetlinkManager::initialize() throw(NetlinkException){
+void NetlinkManager::initialize() throw (NetlinkException) {
 	socket = nl_socket_alloc();
 	nl_socket_set_local_port(socket, localPort);
 	int result = genl_connect(socket);
@@ -161,11 +78,13 @@ void NetlinkManager::initialize() throw(NetlinkException){
 				nl_socket_get_local_port(socket));
 	} else {
 		LOG_CRIT("Error creating and connecting to Netlink socket %d", result);
-		throw NetlinkException(NetlinkException::error_connecting_netlink_socket);
+		throw NetlinkException(
+				NetlinkException::error_connecting_netlink_socket);
 	}
 }
 
-void NetlinkManager::sendMessage(BaseNetlinkMessage * message) throw(NetlinkException){
+void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
+		throw (NetlinkException) {
 	//Generate the message
 	struct nl_msg* netlinkMessage;
 
@@ -175,13 +94,14 @@ void NetlinkManager::sendMessage(BaseNetlinkMessage * message) throw(NetlinkExce
 	if (result < 0) {
 		LOG_ERR("Error generating Netlink message: %d", result);
 		nlmsg_free(netlinkMessage);
-		throw NetlinkException(NetlinkException::error_generating_netlink_message);
+		throw NetlinkException(
+				NetlinkException::error_generating_netlink_message);
 	}
 
 	//Set destination and send the message
 	nl_socket_set_peer_port(socket, message->getDestPortId());
 	result = nl_send_auto(socket, netlinkMessage);
-	if (result < 0){
+	if (result < 0) {
 		LOG_ERR("Error sending Netlink mesage: %d", result);
 		nlmsg_free(netlinkMessage);
 		throw NetlinkException(NetlinkException::error_sending_netlink_message);
@@ -192,7 +112,7 @@ void NetlinkManager::sendMessage(BaseNetlinkMessage * message) throw(NetlinkExce
 	nlmsg_free(netlinkMessage);
 }
 
-BaseNetlinkMessage * NetlinkManager::getMessage() throw(NetlinkException){
+BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 	unsigned char *buf = NULL;
 	struct nlmsghdr *hdr;
 	struct sockaddr_nl nla = { 0 };
@@ -202,7 +122,8 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw(NetlinkException){
 	int numBytes = nl_recv(socket, &nla, &buf, &creds);
 	if (numBytes <= 0) {
 		LOG_ERR("Error receiving Netlink message %d", numBytes);
-		throw NetlinkException(NetlinkException::error_receiving_netlink_message);
+		throw NetlinkException(
+				NetlinkException::error_receiving_netlink_message);
 	}
 
 	LOG_DBG("Received %d bytes, parsing the message", numBytes);

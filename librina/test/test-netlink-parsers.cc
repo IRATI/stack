@@ -35,12 +35,12 @@ int testAppAllocateFlowRequestMessage(){
 	destName->setEntityName("printer");
 	destName->setEntityInstance("12623456");
 
-	//FlowSpecification * flowSpec = new FlowSpecification();
+	FlowSpecification * flowSpec = new FlowSpecification();
 
 	AppAllocateFlowRequestMessage * message = new AppAllocateFlowRequestMessage();
 	message->setSourceAppName(*sourceName);
 	message->setDestAppName(*destName);
-	//message->setFlowSpecification(*flowSpec);
+	message->setFlowSpecification(*flowSpec);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc_simple(message->getOperationCode(),

@@ -17,6 +17,7 @@ librina_la_SOURCES  =				\
 	librina-faux-sockets.cc			\
 	librina-cdap.cc				\
 	librina-sdu-protection.cc   \
+	netlink-messages.cc \
 	librina-netlink-manager.cc \
 	librina-netlink-parsers.cc
 

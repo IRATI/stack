@@ -124,7 +124,7 @@ void LOG(std::string prefix, LOG_LEVEL level, std::string logLevelString, const 
 		return;
 	}
 
-	std::string headerString = std::string("librina-") + prefix + "("+logLevelString +"): ";
+	static std::string headerString = std::string("librina-") + prefix + "("+logLevelString +"): ";
 
 	va_list args;
 	va_start (args, fmt);

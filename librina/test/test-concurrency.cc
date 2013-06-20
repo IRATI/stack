@@ -24,7 +24,7 @@
 using namespace rina;
 
 void * doWork(void * arg) {
-	int number = (int) arg;
+	int * number = (int *) arg;
 	std::cout << "Thread " << number << " started work\n";
 	return (void *) number;
 }

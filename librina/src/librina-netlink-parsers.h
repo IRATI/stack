@@ -25,7 +25,7 @@
 #ifndef LIBRINA_NETLINK_PARSERS_H_
 #define LIBRINA_NETLINK_PARSERS_H_
 
-#include <librina-netlink-manager.h>
+#include <netlink-messages.h>
 #include <netlink/msg.h>
 #include <netlink/attr.h>
 

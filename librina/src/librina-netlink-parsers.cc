@@ -175,6 +175,7 @@ int putFlowSpecificationObject(nl_msg* netlinkMessage,
 FlowSpecification * parseFlowSpecificationObject(nlattr *nested) {
 	struct nla_policy attr_policy[FSPEC_ATTR_MAX + 1];
 	attr_policy[FSPEC_ATTR_AVG_BWITH].type = NLA_U32;
+	LOG_DBG("%d",attr_policy[FSPEC_ATTR_AVG_BWITH].maxlen);
 	attr_policy[FSPEC_ATTR_AVG_SDU_BWITH].type = NLA_U32;
 	attr_policy[FSPEC_ATTR_DELAY].type = NLA_U32;
 	attr_policy[FSPEC_ATTR_JITTER].type = NLA_U32;
