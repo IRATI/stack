@@ -62,3 +62,6 @@ BUILT_SOURCES  += $(top_srcdir)/.version
 
 dist-hook:
 	echo $(VERSION) > $(distdir)/.tarball-version
+
+check-functional:
+	cd test && $(MAKE) $(AM_MAKEFLAGS) check-functional

@@ -4,6 +4,8 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
+include Makefile.inc
+
 EXTRA_DIST =
 
 if BUILD_WRAPPERS_JAVA
@@ -82,16 +84,23 @@ XFAIL_TESTS =					\
 
 PASS_TESTS =					\
 	test-01					\
+	test-02
+
+TESTS =						\
+	test-01					\
 	test-02					\
+	test-03
+
+FUNCTIONAL_TESTS =				\
 	test-netlink-manager			\
 	test-netlink-parsers			\
 	test-concurrency
 
-# Explicitly list the tests, in order to ensure ordering
-TESTS =						\
-	test-01					\
-	test-02					\
-	test-03					\
+FUNCTIONAL_PASS_TESTS =				\
 	test-netlink-manager			\
 	test-netlink-parsers			\
 	test-concurrency
+
+FUNCTIONAL_XFAIL_TESTS =
+
+check-functional: check-functional-am
