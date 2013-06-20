@@ -39,6 +39,120 @@ struct personality_data {
         void * rmt;
 };
 
+static int default_ipc_create(struct personality_data * data,
+                              const struct name_t *     name,
+                              ipc_process_id_t          id,
+                              dif_type_t                type)
+{
+        LOG_FBEGN;
+
+        if (!data)
+                return -1;
+
+        LOG_FEXIT;
+
+        return 0;
+}
+
+static int default_ipc_configure(struct personality_data *         data,
+                                 ipc_process_id_t                  id,
+                                 const struct ipc_process_conf_t * conf)
+{
+        LOG_FBEGN;
+
+        if (!data) {
+                LOG_FEXIT;
+                return -1;
+        }
+
+        LOG_FEXIT;
+
+        return 0;
+}
+
+static int default_ipc_destroy(struct personality_data * data,
+                               ipc_process_id_t          id)
+{
+        LOG_FBEGN;
+
+        if (!data) {
+                LOG_FEXIT;
+                return -1;
+        }
+
+        LOG_FEXIT;
+
+        return 0;
+}
+
+static int default_connection_create(struct personality_data *   data,
+                                     const struct connection_t * connection)
+{
+        LOG_FBEGN;
+
+        if (!data)
+                return -1;
+
+        LOG_FEXIT;
+
+        return 0;
+}
+
+static int default_connection_destroy(struct personality_data * data,
+                                      cep_id_t                  cep_id)
+{
+        LOG_FBEGN;
+
+        if (!data)
+                return -1;
+
+        LOG_FEXIT;
+
+        return 0;
+}
+
+static int default_connection_update(struct personality_data * data,
+                                     cep_id_t                  id_from,
+                                     cep_id_t                  id_to)
+{
+        LOG_FBEGN;
+
+        if (!data)
+                return -1;
+
+        LOG_FEXIT;
+
+        return 0;
+}
+
+int default_sdu_write(struct personality_data * data,
+                      port_id_t                 id,
+                      const struct sdu_t *      sdu)
+{
+        LOG_FBEGN;
+
+        if (!data)
+                return -1;
+
+        LOG_FEXIT;
+
+        return 0;
+}
+
+int default_sdu_read(struct personality_data * data,
+                     port_id_t                 id,
+                     struct sdu_t *            sdu)
+{
+        LOG_FBEGN;
+
+        if (!data)
+                return -1;
+
+        LOG_FEXIT;
+
+        return 0;
+}
+
 static struct personality_t * personality_init(void)
 {
         struct personality_t * p;
@@ -107,18 +221,18 @@ static int __init mod_init(void)
         if (!pd->rmt)
                 goto CLEANUP_EFCP;
 
-        /* FIXME: To be filled properly */
         LOG_DBG("Filling-up personality's hooks");
+
         personality->init               = 0;
         personality->fini               = 0;
-        personality->ipc_create         = 0;
-        personality->ipc_configure      = 0;
-        personality->ipc_destroy        = 0;
-        personality->sdu_read           = 0;
-        personality->sdu_write          = 0;
-        personality->connection_create  = 0;
-        personality->connection_destroy = 0;
-        personality->connection_update  = 0;
+        personality->ipc_create         = default_ipc_create;
+        personality->ipc_configure      = default_ipc_configure;
+        personality->ipc_destroy        = default_ipc_destroy;
+        personality->sdu_read           = default_sdu_read;
+        personality->sdu_write          = default_sdu_write;
+        personality->connection_create  = default_connection_create;
+        personality->connection_destroy = default_connection_destroy;
+        personality->connection_update  = default_connection_update;
 
         LOG_DBG("Finally registering personality");
         if (rina_personality_register(personality)) {
