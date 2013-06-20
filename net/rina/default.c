@@ -44,113 +44,77 @@ static int default_ipc_create(struct personality_data * data,
                               ipc_process_id_t          id,
                               dif_type_t                type)
 {
-        LOG_FBEGN;
-
         if (!data)
                 return -1;
 
-        LOG_FEXIT;
-
-        return 0;
+        return kipcm_ipc_process_create(data->kipcm, name, id, type);
 }
 
 static int default_ipc_configure(struct personality_data *         data,
                                  ipc_process_id_t                  id,
                                  const struct ipc_process_conf_t * conf)
 {
-        LOG_FBEGN;
-
-        if (!data) {
-                LOG_FEXIT;
+        if (!data)
                 return -1;
-        }
 
-        LOG_FEXIT;
-
-        return 0;
+        return kipcm_ipc_process_configure(data->kipcm, id, conf);
 }
 
 static int default_ipc_destroy(struct personality_data * data,
                                ipc_process_id_t          id)
 {
-        LOG_FBEGN;
-
-        if (!data) {
-                LOG_FEXIT;
+        if (!data)
                 return -1;
-        }
 
-        LOG_FEXIT;
-
-        return 0;
+        return kipcm_ipc_process_destroy(data->kipcm, id);
 }
 
 static int default_connection_create(struct personality_data *   data,
                                      const struct connection_t * connection)
 {
-        LOG_FBEGN;
-
         if (!data)
                 return -1;
 
-        LOG_FEXIT;
-
-        return 0;
+        return efcp_create(data->efcp, connection);
 }
 
 static int default_connection_destroy(struct personality_data * data,
                                       cep_id_t                  cep_id)
 {
-        LOG_FBEGN;
-
         if (!data)
                 return -1;
 
-        LOG_FEXIT;
-
-        return 0;
+        return efcp_destroy(data->efcp, cep_id);
 }
 
 static int default_connection_update(struct personality_data * data,
                                      cep_id_t                  id_from,
                                      cep_id_t                  id_to)
 {
-        LOG_FBEGN;
-
         if (!data)
                 return -1;
 
-        LOG_FEXIT;
-
-        return 0;
+        return efcp_update(data->efcp, id_from, id_to);
 }
 
 int default_sdu_write(struct personality_data * data,
                       port_id_t                 id,
                       const struct sdu_t *      sdu)
 {
-        LOG_FBEGN;
-
         if (!data)
                 return -1;
 
-        LOG_FEXIT;
-
-        return 0;
+        return kipcm_sdu_write(data->kipcm, id, sdu);
 }
 
 int default_sdu_read(struct personality_data * data,
                      port_id_t                 id,
                      struct sdu_t *            sdu)
 {
-        LOG_FBEGN;
-
         if (!data)
                 return -1;
 
-        LOG_FEXIT;
-
-        return 0;
+        return kipcm_sdu_read(data->kipcm, id, sdu);
 }
 
 static struct personality_t * personality_init(void)
