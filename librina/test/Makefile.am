@@ -58,15 +58,15 @@ test_03_CPPFLAGS = $(COMMONCPPFLAGS)
 test_03_LDFLAGS  = $(COMMONLDFLAGS)
 
 test_netlink_manager_SOURCES  = test-netlink-manager.cc
-test_netlink_manager_CPPFLAGS = $(COMMONCPPFLAGS)
+test_netlink_manager_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_netlink_manager_LDFLAGS  = $(COMMONLDFLAGS)
 
 test_netlink_parsers_SOURCES  = test-netlink-parsers.cc
-test_netlink_parsers_CPPFLAGS = $(COMMONCPPFLAGS)
+test_netlink_parsers_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_netlink_parsers_LDFLAGS  = $(COMMONLDFLAGS)
 
 test_concurrency_SOURCES  = test-concurrency.cc
-test_concurrency_CPPFLAGS = $(COMMONCPPFLAGS)
+test_concurrency_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_concurrency_LDFLAGS  = $(COMMONLDFLAGS)
 
 check_PROGRAMS =				\
