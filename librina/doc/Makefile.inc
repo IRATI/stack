@@ -1,5 +1,5 @@
 #
-# Makefile.am
+# Makefile.inc
 #
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
