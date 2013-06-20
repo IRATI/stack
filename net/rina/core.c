@@ -41,13 +41,14 @@ static int __init rina_core_init(void)
                  RINA_VERSION_MINOR(version),
                  RINA_VERSION_MICRO(version));
 
-        if (rina_personality_init()) {
-                LOG_CRIT("Could not initialize personality");
-                return -1;
-        }
         if (rina_netlink_init()) {
                 LOG_CRIT("Could not initialize netlink");
                 rina_personality_exit();
+                return -1;
+        }
+
+        if (rina_personality_init()) {
+                LOG_CRIT("Could not initialize personality");
                 return -1;
         }
 

@@ -64,10 +64,8 @@ void efcp_fini(void * opaque)
         LOG_FEXIT;
 }
 
-/* Internal APIs */
-
 int efcp_write(void *               opaque,
-               port_id_t            port_id,
+               port_id_t            id,
                const struct sdu_t * sdu)
 {
 	LOG_DBG("Written SDU");
@@ -83,10 +81,8 @@ int efcp_receive_pdu(void *       opaque,
 	return 0;
 }
 
-/* Syscalls */
-
-cep_id_t efcp_create(void *                opaque,
-                     struct connection_t * connection)
+cep_id_t efcp_create(void *                      opaque,
+                     const struct connection_t * connection)
 {
 	LOG_DBG("EFCP instance created");
 
@@ -94,7 +90,7 @@ cep_id_t efcp_create(void *                opaque,
 }
 
 int efcp_destroy(void *   opaque,
-                 cep_id_t cep_id)
+                 cep_id_t id)
 {
 	LOG_DBG("EFCP instance destroyed");
 
@@ -102,8 +98,8 @@ int efcp_destroy(void *   opaque,
 }
 
 int efcp_update(void *   opaque,
-                cep_id_t cep_id,
-                cep_id_t dest_cep_id)
+                cep_id_t id_from,
+                cep_id_t id_to)
 {
 	LOG_DBG("EFCP instance updated");
 
