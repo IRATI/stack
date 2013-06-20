@@ -23,8 +23,6 @@
 #ifndef RINA_KIPCM_H
 #define RINA_KIPCM_H
 
-#include <linux/syscalls.h>
-
 #include "common.h"
 #include "shim.h"
 #include "efcp.h"
@@ -111,35 +109,32 @@ struct flow_t {
 };
 
 void * kipcm_init(void);
-void   kipcm_exit(void);
+void   kipcm_fini(void * opaque);
 
 int    kipcm_shim_register(struct shim_t * shim);
 int    kipcm_shim_unregister(struct shim_t * shim);
 
-int    kipcm_flow_add(void *                opaque,
-                      port_id_t             port_id,
-                      const struct flow_t * flow);
-int    kipcm_flow_remove(void * opaque, port_id_t port_id);
-
-int    kipcm_sdu_post(void *               opaque,
-		      port_id_t            port_id,
-		      const struct sdu_t * sdu);
-int    kipcm_sdu_write(void * opaque,
-		       port_id_t            port_id,
-		       const struct sdu_t * sdu);
-int    kipcm_sdu_read(void *         opaque,
-		      port_id_t      port_id,
-		      bool_t         block,
-		      struct sdu_t * sdu);
-
 int    kipcm_ipc_process_create(void *                opaque,
 				const struct name_t * name,
-				ipc_process_id_t      ipcp_id,
+				ipc_process_id_t      id,
 				dif_type_t            type);
 int    kipcm_ipc_process_configure(void *                    opaque,
-			   ipc_process_id_t                  ipcp_id,
+			   ipc_process_id_t                  id,
 			   const struct ipc_process_conf_t * configuration);
 int    kipcm_ipc_process_destroy(void *           opaque,
-				 ipc_process_id_t ipcp_id);
+				 ipc_process_id_t id);
+
+int    kipcm_flow_add(void *                opaque,
+                      port_id_t             id,
+                      const struct flow_t * flow);
+int    kipcm_flow_remove(void *    opaque,
+                         port_id_t id);
+
+int    kipcm_sdu_write(void *               opaque,
+		       port_id_t            id,
+		       const struct sdu_t * sdu);
+int    kipcm_sdu_read(void *         opaque,
+		      port_id_t      id,
+		      struct sdu_t * sdu);
 
 #endif

@@ -2,7 +2,8 @@
  *  Dummy Shim IPC Process
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Miquel Tarzan         <miquel.tarzan@i2cat.net>");
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,24 +22,25 @@
 
 #include <linux/module.h>
 
-#define RINA_PREFIX "shim-dummy"
-
 #include <linux/slab.h>
 #include <linux/list.h>
 
+#define RINA_PREFIX "shim-dummy"
+
 #include "logs.h"
 #include "common.h"
-#include "shim.h"
 #include "utils.h"
+#include "shim.h"
 
 struct shim_t * shim;
 
 struct dummy_instance_t {
-	ipc_process_id_t      ipc_process_id;
-	struct name_t *       name;
-	/* FIXME: Stores flows indexed by port_id */
-	struct list_head      dummy_flows;
-	/* FIXME: let's try to remove the dummy_shim_instance */
+	ipc_process_id_t ipc_process_id;
+	struct name_t *  name;
+
+	/* FIXME: Stores the state of flows indexed by port_id */
+	struct list_head * flows;
+
 	struct list_head      list;
 };
 
@@ -70,12 +72,14 @@ static int dummy_flow_allocate_request(void *                     opaque,
 		LOG_FEXIT;
 		return -1;
 	}
+
 	dummy = (struct dummy_instance_t *) opaque;
 	flow->dest = dest;
 	flow->source = source;
 	flow->port_id = *id;
+
 	INIT_LIST_HEAD(&flow->list);
-	list_add(&flow->list, &dummy->dummy_flows);
+	list_add(&flow->list, &dummy->flows);
 
 	LOG_FEXIT;
 
@@ -119,9 +123,9 @@ static int dummy_application_unregister(void *                opaque,
 	return 0;
 }
 
-static int  dummy_sdu_write(void *               opaque,
-                            port_id_t            id,
-                            const struct sdu_t * sdu)
+static int dummy_sdu_write(void *               opaque,
+                           port_id_t            id,
+                           const struct sdu_t * sdu)
 {
 	LOG_FBEGN;
 	LOG_FEXIT;
@@ -141,7 +145,7 @@ static int dummy_sdu_read(void *         opaque,
 
 static struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
 {
-	struct shim_instance_t * instance;
+	struct shim_instance_t *  instance;
 	struct dummy_instance_t * dummy_inst;
 	LIST_HEAD(port_flow);
 
@@ -165,7 +169,7 @@ static struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
 	}
 
 	dummy_inst->ipc_process_id = ipc_process_id;
-	dummy_inst->dummy_flows    = port_flow;
+	dummy_inst->flows          = port_flow;
 
 	instance->opaque                 = dummy_inst;
 	instance->flow_allocate_request  = dummy_flow_allocate_request;
@@ -238,14 +242,16 @@ static int __init mod_init(void)
 		LOG_FEXIT;
 		return -1;
 	}
-	shim->label = "shim-dummy";
-	shim->create = dummy_create;
-	shim->destroy = dummy_destroy;
+
+	shim->label     = "shim-dummy";
+	shim->create    = dummy_create;
+	shim->destroy   = dummy_destroy;
 	shim->configure = dummy_configure;
 
-	if(shim_register(shim)){
-		kfree(shim);
+	if (shim_register(shim)) {
 		LOG_ERR("Initialization of module shim-dummy failed");
+                kfree(shim);
+
 		LOG_FEXIT;
 		return -1;
 	}
@@ -276,6 +282,8 @@ static void __exit mod_exit(void)
         	kfree(pos);
         }
 
+        /* FIXME: We must unroll all the things done in mod_init */
+
         LOG_FEXIT;
 }
 
@@ -288,3 +296,4 @@ MODULE_LICENSE("GPL");
 
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
 MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
+MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");

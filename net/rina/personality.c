@@ -27,25 +27,38 @@
 #include "personality.h"
 #include "shim.h"
 
+/* FIXME: This layer allows 1 personality only, that's enough for the moment */
 struct personality_t * rina_personality = NULL;
 
 int rina_personality_init(void)
 {
+        LOG_DBG("Initializing personality");
+
+        if (rina_personality) {
+                LOG_ERR("Personality already initialized, remove it first");
+                return -1;
+        }
+
+        /* Useless */
         rina_personality = NULL;
 
-        LOG_DBG("Personality initialized");
+        LOG_DBG("Personality initialized successfully");
 
         return 0;
 }
 
 void rina_personality_exit(void)
 {
+        LOG_DBG("Finalizing personality");
+
         if (rina_personality) {
                 ASSERT(rina_personality->fini);
                 rina_personality->fini(rina_personality->data);
-                LOG_DBG("Personality finalized successfully");
         }
+
         rina_personality = NULL;
+
+        LOG_DBG("Personality finalized successfully");
 }
 
 static int is_ok(const struct personality_t * pers)

@@ -26,38 +26,40 @@
 /* FIXME: These include should disappear from here */
 #include "kipcm.h"
 
+struct personality_data;
+
 struct personality_t {
         /* Might be removed if deemed unnecessary */
-        void * data;
+        struct personality_data * data;
 
-        int  (* init)(void * opaque);
-        void (* fini)(void * opaque);
+        int  (* init)(struct personality_data * data);
+        void (* fini)(struct personality_data * data);
 
         /* Functions exported to the personality user */
-        int (* ipc_create)(void *                opaque,
-                           const struct name_t * name,
-                           ipc_process_id_t      id,
-                           dif_type_t            type);
-        int (* ipc_configure)(void *                            opaque,
+        int (* ipc_create)(struct personality_data * data,
+                           const struct name_t *     name,
+                           ipc_process_id_t          id,
+                           dif_type_t                type);
+        int (* ipc_configure)(struct personality_data *         data,
                               ipc_process_id_t                  id,
                               const struct ipc_process_conf_t * configuration);
-        int (* ipc_destroy)(void *           opaque,
-                            ipc_process_id_t ipcp_id);
+        int (* ipc_destroy)(struct personality_data * data,
+                            ipc_process_id_t          id);
         
-        int (* connection_create)(void *                      opaque,
+        int (* connection_create)(struct personality_data *   data,
                                   const struct connection_t * connection);
-        int (* connection_destroy)(void *   opaque,
-                                   cep_id_t cep_id);
-        int (* connection_update)(void *   opaque,
-                                  cep_id_t from_id,
-                                  cep_id_t to_id);
+        int (* connection_destroy)(struct personality_data * data,
+                                   cep_id_t                  id);
+        int (* connection_update)(struct personality_data * data,
+                                  cep_id_t                  id_from,
+                                  cep_id_t                  id_to);
 
-        int (* sdu_write)(void *               opaque,
-                          port_id_t            id,
-                          const struct sdu_t * sdu);
-        int (* sdu_read)(void *         opaque,
-                         port_id_t      id,
-                         struct sdu_t * sdu);
+        int (* sdu_write)(struct personality_data * data,
+                          port_id_t                 id,
+                          const struct sdu_t *      sdu);
+        int (* sdu_read)(struct personality_data * data,
+                         port_id_t                 id,
+                         struct sdu_t *            sdu);
 };
 
 int  rina_personality_init(void);

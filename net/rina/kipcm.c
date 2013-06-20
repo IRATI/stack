@@ -19,6 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/slab.h>
+
 #define RINA_PREFIX "kipcm"
 
 #include <linux/linkage.h>
@@ -63,57 +65,48 @@ struct kipc_t {
 
 void * kipcm_init()
 {
+	struct kipc_t * kipcm = NULL;
+
+        LOG_FBEGN;
+
+        LOG_DBG("Initializing instance");
+
 #if 0
-	struct kipc_t * kipcm;
 	LIST_HEAD(id_to_ipcp);
 	LIST_HEAD(port_id_to_flow);
-
-	LOG_FBEGN;
-
-        if (!shim_init()) {
-                LOG_FEXIT;
-                return NULL;
-        }
+#endif
 
         kipcm = kmalloc(sizeof(*kipcm), GFP_KERNEL);
         if (!kipcm) {
-                LOG_CRIT("Cannot allocate %zu bytes of memory", sizeof(*kipcm));
+                LOG_CRIT("Cannot allocate %zu bytes of memory",
+                         sizeof(*kipcm));
 
                 LOG_FEXIT;
-                return NULL;
+                return kipcm;
         }
+#if 0
         kipcm->id_to_ipcp      = &id_to_ipcp;
         kipcm->port_id_to_flow = &port_id_to_flow;
+#endif
 
         LOG_FEXIT;
 
         return kipcm;
-#else
-        return NULL;
-#endif
 }
 
-/*
- * FIXME: This should be kipcm_exit(void * opaque) I guess
- * I haven't yet put it in this form to not generate problems with rina.c
- */
-void kipcm_exit()
+void kipcm_fini(void * opaque)
 {
-#if 0
         LOG_FBEGN;
 
-        /*
-         * Add code here, depending on the operations performed
-         * into kipcm_init
-         */
+        LOG_DBG("Finalizing instance %pK", opaque);
+
+        ASSERT(opaque);
+
+        /* FIXME: Add code here, depending on kipcm_init */
 
         kfree(opaque);
-        opaque = 0; /* Useless */
-
-        shim_exit();
 
         LOG_FEXIT;
-#endif
 }
 
 int kipcm_shim_register(struct shim_t * shim)
@@ -305,7 +298,6 @@ int kipcm_sdu_post(void *               opaque,
 
 int kipcm_sdu_read(void *         opaque,
 		   port_id_t      port_id,
-		   bool_t         block,
 		   struct sdu_t * sdu)
 {
 #if 0

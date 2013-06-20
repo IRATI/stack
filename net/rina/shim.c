@@ -84,7 +84,9 @@ static int is_shim_ok(const struct shim_t * shim)
 int shim_register(struct shim_t * shim)
 {
 #if CONFIG_RINA_SYSFS
+#if 0
         struct shim_object * obj;
+#endif
 #endif
 
         LOG_DBG("Registering shim %pK", shim);

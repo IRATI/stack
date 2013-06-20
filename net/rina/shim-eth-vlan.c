@@ -1,5 +1,5 @@
 /*
- *  Shim IPC Process over Ethernet
+ *  Shim IPC Process over Ethernet (using VLANs)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
@@ -19,13 +19,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-#define RINA_PREFIX "shim-eth"
 
 #include <linux/module.h>
 #include <linux/if_ether.h>
 #include <linux/string.h>
 #include <linux/list.h>
 #include <linux/rbtree.h>
+
+#define RINA_PREFIX "shim-eth"
 
 #include "logs.h"
 #include "common.h"
@@ -107,10 +108,10 @@ struct shim_instance_t * shim_eth_create(ipc_process_id_t ipc_process_id)
 
 	shim_instance->ipc_process_id = ipc_process_id;
 
-	while(*p){
+	while (*p) {
 		parent = *p;
 		s = rb_entry(parent, struct shim_eth_instance_t, node);
-		if(unlikely(ipc_process_id == s->ipc_process_id)){
+		if (unlikely(ipc_process_id == s->ipc_process_id)) {
 			LOG_ERR("Shim instance with id %x already exists", 
 				ipc_process_id);
 			kfree(shim_instance);
@@ -118,7 +119,7 @@ struct shim_instance_t * shim_eth_create(ipc_process_id_t ipc_process_id)
 			LOG_FEXIT;
                        	return 0;
 		}
-		else if(ipc_process_id < s->ipc_process_id)
+		else if (ipc_process_id < s->ipc_process_id)
 			p = &(*p)->rb_left;
 		else
 			p = &(*p)->rb_right;
@@ -131,7 +132,7 @@ struct shim_instance_t * shim_eth_create(ipc_process_id_t ipc_process_id)
 }
 
 static int name_cpy(struct name_t * dst, 
-		     const struct name_t *src)
+                    const struct name_t *src)
 {
 	struct name_t * temp;
 	LOG_FBEGN;
@@ -151,8 +152,8 @@ static int name_cpy(struct name_t * dst,
 }
 
 struct shim_instance_t * shim_eth_configure
-        (struct shim_instance_t *   inst,
-        const struct shim_conf_t * configuration)
+(struct shim_instance_t *   inst,
+ const struct shim_conf_t * configuration)
 {
 	struct shim_eth_instance_t * instance;
 	struct shim_eth_info_t * shim_info;
@@ -163,14 +164,14 @@ struct shim_instance_t * shim_eth_configure
 	bool_t reconfigure;
 
 	/* Check if instance is not null, check if opaque is not null */
-	if(!inst){
+	if (!inst) {
 		LOG_WARN("Configure called on empty shim instance");
 		LOG_FEXIT;
 		return inst;
 	}
 
 	instance = (struct shim_eth_instance_t *) inst->opaque;
-	if(!instance){
+	if (!instance) {
 		LOG_WARN("Configure called on empty eth vlan shim instance");
 		LOG_FEXIT;
 		return inst;
@@ -181,7 +182,7 @@ struct shim_instance_t * shim_eth_configure
 
 	/* Get configuration struct pertaining to this shim instance */
 	shim_info = instance->info; 
-	if(!shim_info) {
+	if (!shim_info) {
 		shim_info = kmalloc(sizeof(*shim_info), GFP_KERNEL);
 		reconfigure = 1;
 	}
@@ -192,23 +193,23 @@ struct shim_instance_t * shim_eth_configure
         }
 
 	/* Retrieve configuration of IPC process from params */
-	list_for_each(pos, &(configuration->list)){
+	list_for_each(pos, &(configuration->list)) {
 		c = list_entry(pos, struct shim_conf_t, list);
 		tmp = c->entry;
 		val = tmp->value;
-		if(strcmp(tmp->name, "difname") == 0 
-			&& val->type == SHIM_CONFIG_STRING) {
-			if(!name_cpy(shim_info->name, 
-					(struct name_t *)val->data)){
+		if (strcmp(tmp->name, "difname") == 0 
+                    && val->type == SHIM_CONFIG_STRING) {
+			if (!name_cpy(shim_info->name, 
+                                      (struct name_t *)val->data)) {
 				LOG_FEXIT;
 				return inst;
 			}
 		} else if (strcmp(tmp->name, "vlanid") == 0 
-			&& val->type == SHIM_CONFIG_UINT) {
+                           && val->type == SHIM_CONFIG_UINT) {
 			shim_info->vlan_id = * (uint16_t *) val->data;
 			reconfigure = 1;
-		} else if(strcmp(tmp->name,"interfacename") == 0 
-			&& val->type == SHIM_CONFIG_STRING) {
+		} else if (strcmp(tmp->name,"interfacename") == 0 
+                           && val->type == SHIM_CONFIG_STRING) {
 			shim_info->interface_name = (string_t *) val->data;
 			reconfigure = 1;
 		} else {
@@ -217,7 +218,7 @@ struct shim_instance_t * shim_eth_configure
 	}
 	instance->info = shim_info;
 	
-	if(reconfigure) {
+	if (reconfigure) {
 		/* FIXME: Add handler to correct interface and vlan id */
 		/* Check if correctness VLAN id and interface name */
 	}
@@ -230,13 +231,13 @@ int shim_eth_destroy(struct shim_instance_t * inst)
 {
 	struct shim_eth_instance_t * instance;
 	LOG_FBEGN;
-	if(inst){
+	if (inst) {
                 /**
 		 *  FIXME: Need to ask instance to clean up as well
 		 * Don't know yet in full what to delete
 		 */
 		instance = (struct shim_eth_instance_t *) inst->opaque;
-		if(instance){
+		if (instance) {
 			rb_erase(&instance->node, &shim_eth_root);
 			kfree(instance);
 		}
@@ -325,7 +326,7 @@ static void __exit mod_exit(void)
 
 	/* Destroy all shim instances */
 	s = rb_first(&shim_eth_root);
-	while(s){
+	while(s) {
                 /* Get next node and keep pointer to this one */
 		e = s;
 		rb_next(s);
