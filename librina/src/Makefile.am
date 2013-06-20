@@ -20,10 +20,13 @@ librina_la_SOURCES  =				\
 	netlink-messages.cc			\
 	netlink-parsers.cc			\
 	netlink-manager.cc
-	
 
 EXTRA_DIST =					\
-	logs.h
+	logs.h					\
+	concurrency.h				\
+	netlink-messages.h			\
+	netlink-manager.h			\
+	netlink-parsers.h
 
 librina_la_LDFLAGS =
 
