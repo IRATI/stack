@@ -122,7 +122,7 @@ int    kipcm_flow_remove(void * opaque, port_id_t port_id);
 int    kipcm_sdu_post(void *               opaque,
 		      port_id_t            port_id,
 		      const struct sdu_t * sdu);
-int    kipcm_sdu_write(void * opaque,
+int    kipcm_sdu_write(void *               opaque,
 		       port_id_t            port_id,
 		       const struct sdu_t * sdu);
 int    kipcm_sdu_read(void *         opaque,
