@@ -25,6 +25,7 @@ Makefile.in
 /config.status
 /confdefs.h
 /conftest.c
+/conftest.err
 /libtool
 
 *.[ao]
