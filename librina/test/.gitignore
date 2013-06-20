@@ -6,4 +6,5 @@
 /test-03
 
 /test-netlink-manager
-
+/test-concurrency
+/test-netlink-parsers
