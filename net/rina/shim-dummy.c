@@ -31,11 +31,15 @@
 #include "shim.h"
 #include "utils.h"
 
+struct shim_t * shim;
+
 struct dummy_instance_t {
 	ipc_process_id_t      ipc_process_id;
 	struct name_t *       name;
-	/* FIXME: Stores the state of flows indexed by port_id */
+	/* FIXME: Stores flows indexed by port_id */
 	struct list_head *    dummy_flows;
+	/* FIXME: let's try to remove the dummy_shim_instance */
+	struct list_head      list;
 };
 
 struct dummy_flow_t {
@@ -44,6 +48,8 @@ struct dummy_flow_t {
 	const struct name_t * dest;
 	struct list_head      list;
 };
+
+static LIST_HEAD(dummy_shim_list);
 
 static int dummy_flow_allocate_request(void *                     opaque,
                                        const struct name_t *      source,
@@ -170,6 +176,9 @@ static struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
 	instance->sdu_write              = dummy_sdu_write;
 	instance->sdu_read               = dummy_sdu_read;
 
+	INIT_LIST_HEAD(&dummy_inst->list);
+	list_add(&dummy_inst->list, &dummy_shim_list);
+
         LOG_FEXIT;
 
 	return instance;
@@ -221,8 +230,6 @@ dummy_configure(struct shim_instance_t *   instance,
 
 static int __init mod_init(void)
 {
-        struct shim_t * shim;
-
 	LOG_FBEGN;
 
 	shim = kmalloc(sizeof(*shim), GFP_KERNEL);
@@ -237,6 +244,7 @@ static int __init mod_init(void)
 	shim->configure = dummy_configure;
 
 	if(shim_register(shim)){
+		kfree(shim);
 		LOG_ERR("Initialization of module shim-dummy failed");
 		LOG_FEXIT;
 		return -1;
@@ -249,7 +257,23 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
-        LOG_FBEGN;
+        struct dummy_instance_t *pos, *next;
+        struct dummy_flow_t     *pos_flow, *next_flow;
+
+	LOG_FBEGN;
+
+	ASSERT(shim);
+	if (shim_unregister(shim)) {
+        	/* FIXME: Should we do something here? */
+        }
+        kfree(shim);
+        list_for_each_entry_safe(pos, next, &dummy_shim_list, list) {
+        	list_del(&pos->list);
+
+        	kfree(pos);
+        }
+
+
         LOG_FEXIT;
 }
 
