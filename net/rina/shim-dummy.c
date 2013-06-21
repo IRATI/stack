@@ -74,6 +74,8 @@ static int dummy_flow_allocate_request(void *                     opaque,
 		return -1;
 	}
 
+	/* FIXME: Now we should ask the destination application for a flow */
+
 	dummy = (struct dummy_instance_t *) opaque;
 	flow->dest = dest;
 	flow->source = source;
@@ -124,11 +126,34 @@ static int dummy_application_unregister(void *                opaque,
 	return 0;
 }
 
+static struct dummy_flow_t * dummy_find_flow(void * opaque, port_id_t id) {
+	struct dummy_instance_t * dummy;
+	struct dummy_flow_t *     flow;
+	dummy = (struct dummy_instance_t *) opaque;
+	list_for_each_entry(flow, dummy->flows, list) {
+		if (flow->port_id == id) {
+			return flow;
+		}
+	}
+	return NULL;
+}
+
 static int dummy_sdu_write(void *               opaque,
                            port_id_t            id,
                            const struct sdu_t * sdu)
 {
+	struct dummy_instance_t * dummy;
+	struct dummy_flow_t *     flow;
 	LOG_FBEGN;
+
+	dummy = (struct dummy_instance_t *) opaque;
+	flow = dummy_find_flow(opaque, id);
+	if (!flow) {
+		LOG_ERR("There is not a flow allocated with this port-id %d", id);
+		return -1;
+	}
+
+
 	LOG_FEXIT;
 
 	return 0;
