@@ -21,6 +21,7 @@
  *      Author: eduardgrasa
  */
 
+#include <netlink/netlink.h>
 #include <netlink/genl/genl.h>
 
 #define RINA_PREFIX "netlink-parsers"
