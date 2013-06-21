@@ -67,7 +67,7 @@ int main(int argc, char * argv[]) {
 	delete result;
 
 	/* Test user-space to kernel communication */
-	AppAllocateFlowRequestMessage * message =
+	message =
 			new AppAllocateFlowRequestMessage();
 	message->setDestPortId(0);
 	message->setSourceAppName(*sourceName);
