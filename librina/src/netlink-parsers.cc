@@ -50,7 +50,7 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 }
 
 BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
-	struct genlmsghder *nlhdr;
+	struct genlmsghdr *nlhdr;
 	nlhdr = genlmsg_hdr(hdr);
 
 	switch (nlhdr->cmd) {
@@ -337,7 +337,7 @@ AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 	 * attributes attached to the messages and stores a pointer to each
 	 * attribute in the attrs[] array accessable by attribute type.
 	 */
-	int err = genlsmg_parse(hdr, 0, attrs, AAFR_ATTR_MAX, attr_policy);
+	int err = genlmsg_parse(hdr, 0, attrs, AAFR_ATTR_MAX, attr_policy);
 	if (err < 0) {
 		LOG_ERR(
 				"Error parsing AppAllocateFlowRequestMessage information from Netlink message: %d",

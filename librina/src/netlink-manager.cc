@@ -151,7 +151,7 @@ void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
 BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 	unsigned char *buf = NULL;
 	struct nlmsghdr *hdr;
-	struct genlmsghder *nlhdr;
+	struct genlmsghdr *nlhdr;
 	struct sockaddr_nl nla = { 0 };
 	struct nl_msg *msg = NULL;
 	struct ucred *creds = NULL;
