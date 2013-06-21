@@ -82,7 +82,6 @@ int main(int argc, char * argv[]) {
 
 	delete source;
 	delete destination;
-	delete message;
 	delete sourceName;
 	delete destName;
 	delete flowSpec;

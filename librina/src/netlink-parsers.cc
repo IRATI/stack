@@ -21,10 +21,11 @@
  *      Author: eduardgrasa
  */
 
+#include <netlink/genl/genl.h>
+
 #define RINA_PREFIX "netlink-parsers"
 
 #include "logs.h"
-
 #include "netlink-parsers.h"
 
 namespace rina {
@@ -48,7 +49,10 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 }
 
 BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
-	switch (netlinkMessageHeader->nlmsg_type) {
+	struct genlmsghder *nlhdr;
+	nlhdr = genlmsg_hdr(hdr);
+
+	switch (nlhdr->cmd) {
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST: {
 		return parseAppAllocateFlowRequestMessage(netlinkMessageHeader);
 	}
@@ -332,7 +336,7 @@ AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 	 * attributes attached to the messages and stores a pointer to each
 	 * attribute in the attrs[] array accessable by attribute type.
 	 */
-	int err = nlmsg_parse(hdr, 0, attrs, AAFR_ATTR_MAX, attr_policy);
+	int err = genlsmg_parse(hdr, 0, attrs, AAFR_ATTR_MAX, attr_policy);
 	if (err < 0) {
 		LOG_ERR(
 				"Error parsing AppAllocateFlowRequestMessage information from Netlink message: %d",
