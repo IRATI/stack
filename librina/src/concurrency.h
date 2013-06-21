@@ -22,6 +22,7 @@
 #ifndef CONCURRENCY_H_
 #define CONCURRENCY_H_
 
+#include <list>
 #include <pthread.h>
 
 #define RINA_PREFIX "concurrency"
@@ -204,6 +205,74 @@ public:
 private:
 	pthread_cond_t cond_;
 	pthread_condattr_t cond_attr_;
+};
+
+
+/**
+ * A queue that provides a blocking behaviour when trying to take
+ * an element when the queue is empty
+ */
+template <class T>
+class BlockingFIFOQueue: public ConditionVariable{
+
+public:
+	BlockingFIFOQueue():ConditionVariable(){};
+	~BlockingFIFOQueue() throw(){};
+
+	/** Insert an element at the end of the queue */
+	void put(T* element){
+		lock();
+		queue.push_back(element);
+		if (queue.size() == 1){
+			LOG_DBG("Queue has gone from 0 to 1 elements, broadcasting to threads that wait (if any)");
+			broadcast();
+		}
+		unlock();
+	}
+
+	/**
+	 * Get the element at the begining of the queue. If the queue is
+	 * empty, this operation will block until there is at least one
+	 * element
+	 */
+	T* take(){
+		T* result;
+
+		lock();
+		while(queue.size() == 0){
+			LOG_DBG("No elements in blocking FIFO queue, waiting");
+			wait();
+		}
+
+		LOG_DBG("At least one element in blocking FIFO queue");
+		result = queue.front();
+		queue.pop_front();
+		unlock();
+
+		return result;
+	}
+
+	/**
+	 * Get the element at the begining of the queue. If the queue is
+	 * empty it will return a NULL pointer.
+	 */
+	T* poll(){
+		T* result;
+
+		lock();
+		if (queue.size() == 0){
+			result = NULL;
+		}else{
+			result = queue.front();
+			queue.pop_front();
+		}
+		unlock();
+
+		return result;
+	}
+
+private:
+	std::list<T*> queue;
 };
 
 

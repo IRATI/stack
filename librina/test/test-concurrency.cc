@@ -152,6 +152,86 @@ void * doWorkWaitForTrigger(void * arg)
 	return (void *) result;
 }
 
+class Person {
+	std::string name;
+	std::string surname;
+
+public:
+	Person(){};
+
+	Person(std::string name, std::string surname){
+		this->name = name;
+		this->surname = surname;
+	}
+
+	const std::string& getName() const {
+		return name;
+	}
+
+	void setName(const std::string& name) {
+		this->name = name;
+	}
+
+	const std::string& getSurname() const {
+		return surname;
+	}
+
+	void setSurname(const std::string& surname) {
+		this->surname = surname;
+	}
+};
+
+class QueueWithCounter{
+	BlockingFIFOQueue<Person> * queue;
+	ReadWriteLockableCounter * counter;
+
+public:
+	QueueWithCounter(BlockingFIFOQueue<Person> * queue,
+			ReadWriteLockableCounter * counter){
+		this->queue = queue;
+		this->counter = counter;
+	}
+
+	ReadWriteLockableCounter* getCounter() {
+		return counter;
+	}
+
+	BlockingFIFOQueue<Person>* getQueue() {
+		return queue;
+	}
+};
+
+void * doWorkProduce(void * arg)
+{
+	BlockingFIFOQueue<Person> * queue = (BlockingFIFOQueue<Person> *) arg;
+	Person * person;
+	for(int i=0; i<TRIGGER; i++){
+		std::cout<<"Producer adding person "<<i<<" to queue\n";
+		person = new Person("John", "Smith");
+		queue->put(person);
+		usleep(1000*50);
+	}
+
+	return (void *) 0;
+}
+
+void * doWorkConsume(void * arg)
+{
+	QueueWithCounter * queueWithCounter = (QueueWithCounter *) arg;
+	Person * person;
+	BlockingFIFOQueue<Person> * queue = queueWithCounter->getQueue();
+	ReadWriteLockableCounter * counter = queueWithCounter->getCounter();
+	while(counter->getCounter() < TRIGGER - NUM_THREADS + 2){
+		person = queue->take();
+		std::cout<<"Consumer removing person from queue: "<<person->getName()
+				<<"\n";
+		delete person;
+		counter->count();
+	}
+
+	return (void *) 0;
+}
+
 int main(int argc, char * argv[])
 {
 	std::cout << "TESTING CONCURRENCY WRAPPER CLASSES\n";
@@ -276,6 +356,36 @@ int main(int argc, char * argv[])
 	}
 
 	delete counter3;
+
+	/* Test blocking FIFO queue */
+	BlockingFIFOQueue<Person> * personQueue = new BlockingFIFOQueue<Person>();
+	counter2 = new ReadWriteLockableCounter();
+	QueueWithCounter * queueWithCounter = new QueueWithCounter(personQueue, counter2);
+	threadAttributes = new ThreadAttributes();
+	threadAttributes->setJoinable();
+	threads[0] = new Thread(threadAttributes, &doWorkProduce,
+			(void *) personQueue);
+	std::cout << "Created producer thread with id "
+			<< threads[0]->getThreadType() << "\n";
+	for (int i = 1; i < NUM_THREADS; i++) {
+		threads[i] = new Thread(threadAttributes, &doWorkConsume,
+				(void *) queueWithCounter);
+		std::cout << "Created consumer thread " << i-1 << " with id "
+				<< threads[i]->getThreadType() << "\n";
+	}
+	delete threadAttributes;
+
+	for (int i = 0; i < NUM_THREADS; i++) {
+		threads[i]->join(&status);
+		std::cout << "Completed join with thread " << i
+				<< " having a status of " << status
+				<< "\n";
+		delete threads[i];
+	}
+
+	delete personQueue;
+	delete counter2;
+	delete queueWithCounter;
 
 	/* Test exit */
 	Thread::exit(NULL);

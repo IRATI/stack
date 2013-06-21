@@ -78,17 +78,8 @@ NetlinkManager::~NetlinkManager() {
 
 void NetlinkManager::initialize() throw (NetlinkException) {
 	socket = nl_socket_alloc();
-	family = genl_ctrl_resolve(socket, RINA_GENERIC_NETLINK_FAMILY_NAME);
-	if (family < 0){
-		LOG_CRIT("%s %d",
-				NetlinkException::error_resolving_netlink_family.c_str(),
-				family);
-		throw NetlinkException(
-				NetlinkException::error_resolving_netlink_family);
-	}
-	LOG_DBG("Generic Netlink RINA family id: %d", family);
-
 	nl_socket_set_local_port(socket, localPort);
+
 	int result = genl_connect(socket);
 	if (result == 0) {
 		LOG_INFO("Netlink socket connected to local port %d ",
@@ -100,6 +91,16 @@ void NetlinkManager::initialize() throw (NetlinkException) {
 		throw NetlinkException(
 				NetlinkException::error_connecting_netlink_socket);
 	}
+
+	family = genl_ctrl_resolve(socket, RINA_GENERIC_NETLINK_FAMILY_NAME);
+	if (family < 0){
+		LOG_CRIT("%s %d",
+				NetlinkException::error_resolving_netlink_family.c_str(),
+				family);
+		throw NetlinkException(
+				NetlinkException::error_resolving_netlink_family);
+	}
+	LOG_DBG("Generic Netlink RINA family id: %d", family);
 }
 
 void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
