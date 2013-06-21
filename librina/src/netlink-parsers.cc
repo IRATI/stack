@@ -21,6 +21,7 @@
  *      Author: eduardgrasa
  */
 
+#include <netlink/netlink.h>
 #include <netlink/genl/genl.h>
 
 #define RINA_PREFIX "netlink-parsers"
@@ -50,7 +51,7 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 
 BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	struct genlmsghdr *nlhdr;
-	nlhdr = genlmsg_hdr(netlinkMessageHeader);
+	//nlhdr = genlmsg_hdr(netlinkMessageHeader);
 
 	switch (nlhdr->cmd) {
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST: {
