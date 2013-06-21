@@ -23,6 +23,7 @@ using namespace rina;
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING LIBRINA-NETLINK-MANAGER\n";
 
+	/* Test User-space to User-space communication */
 	NetlinkManager * source = new NetlinkManager(4);
 	NetlinkManager * destination = new NetlinkManager(5);
 
@@ -40,12 +41,16 @@ int main(int argc, char * argv[]) {
 	destName->setEntityName("printer");
 	destName->setEntityInstance("12623456");
 
+	FlowSpecification * flowSpec = new FlowSpecification();
+
 	AppAllocateFlowRequestMessage * message =
 			new AppAllocateFlowRequestMessage();
 	message->setDestPortId(5);
 	message->setSourceAppName(*sourceName);
 	message->setDestAppName(*destName);
+	message->setFlowSpecification(*flowSpec);
 	source->sendMessage(message);
+	delete message;
 
 	AppAllocateFlowRequestMessage * result;
 	result = dynamic_cast<AppAllocateFlowRequestMessage *>(destination
@@ -61,9 +66,24 @@ int main(int argc, char * argv[]) {
 			<< result->getFlowSpecification().isOrderedDelivery() << "\n";
 	delete result;
 
+	/* Test user-space to kernel communication */
+	AppAllocateFlowRequestMessage * message =
+			new AppAllocateFlowRequestMessage();
+	message->setDestPortId(0);
+	message->setSourceAppName(*sourceName);
+	message->setDestAppName(*destName);
+	message->setFlowSpecification(*flowSpec);
+	source->sendMessage(message);
+	delete message;
+
+	BaseNetlinkMessage * fromKernel = source->getMessage();
+	std::cout<<"Got message from "<<fromKernel->getSourcePortId()<<"\n";
+	delete fromKernel;
+
 	delete source;
 	delete destination;
 	delete message;
 	delete sourceName;
 	delete destName;
+	delete flowSpec;
 }
