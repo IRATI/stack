@@ -26,6 +26,8 @@
 #include <linux/list.h>
 #include <linux/rbtree.h>
 #include <linux/slab.h>
+#include <linux/netdevice.h>
+#include <linux/if_packet.h>
 
 #define RINA_PREFIX "shim-eth"
 
@@ -82,6 +84,96 @@ struct shim_eth_instance_t {
 	/* rbtree or hash table? */
 };
 
+
+static int shim_flow_allocate_request(void *                     opaque, 
+				   const struct name_t *      source,
+                                   const struct name_t *      dest,
+                                   const struct flow_spec_t * flow_spec,
+                                   port_id_t                * port_id)
+{
+	LOG_FBEGN;
+	LOG_FEXIT;
+
+	return 0;
+}
+
+static int shim_flow_allocate_response(void *              opaque,
+				    port_id_t           port_id,
+                                    response_reason_t * response)
+{
+        LOG_FBEGN;
+        LOG_FEXIT;
+
+	return 0;
+}
+
+static int shim_flow_deallocate(void *    opaque,
+			     port_id_t port_id)
+{
+        LOG_FBEGN;
+        LOG_FEXIT;
+
+	return 0;
+}
+
+static int shim_application_register(void *                opaque,
+				  const struct name_t * name)
+{
+        LOG_FBEGN;
+        LOG_FEXIT;
+
+	return 0;
+}
+
+static int shim_application_unregister(void *               opaque,
+				   const struct name_t * name)
+{
+        LOG_FBEGN;
+        LOG_FEXIT;
+
+	return 0;
+}
+
+static int shim_sdu_write(void *               opaque,
+		       port_id_t            port_id, 
+		       const struct sdu_t * sdu)
+{
+        LOG_FBEGN;
+        LOG_FEXIT;
+
+	return 0;
+}
+
+static int shim_sdu_read(void *         opaque,
+		      port_id_t      id,
+		      struct sdu_t * sdu)
+{
+	LOG_FBEGN;
+        LOG_FEXIT;
+
+	return 0;
+}
+
+static int shim_rcv(struct sk_buff *skb, struct net_device *dev,
+			struct packet_type *pt, struct net_device *orig_dev)
+{
+	if (skb->pkt_type == PACKET_OTHERHOST ||
+		skb->pkt_type == PACKET_LOOPBACK) {
+		kfree_skb(skb);
+		return 0;
+	}
+	
+	skb = skb_share_check(skb, GFP_ATOMIC);
+	if (!skb)
+		return 0;
+	
+	/* Get the SDU out of the sk_buff */
+
+	kfree_skb(skb);
+	return 0;
+};
+
+
 static struct shim_instance_t * shim_create(ipc_process_id_t ipc_process_id)
 {
 	struct shim_instance_t * instance;
@@ -105,7 +197,6 @@ static struct shim_instance_t * shim_create(ipc_process_id_t ipc_process_id)
                 LOG_FEXIT;
                 return instance;
         }
-	instance->opaque = shim_instance;
 
 	shim_instance->ipc_process_id = ipc_process_id;
 
@@ -127,6 +218,15 @@ static struct shim_instance_t * shim_create(ipc_process_id_t ipc_process_id)
 	}
 	rb_link_node(&shim_instance->node,parent,p);
 	rb_insert_color(&shim_instance->node,&shim_eth_root);        
+
+        instance->opaque                 = shim_instance;
+        instance->flow_allocate_request  = shim_flow_allocate_request;
+        instance->flow_allocate_response = shim_flow_allocate_response;
+        instance->flow_deallocate        = shim_flow_deallocate;
+        instance->application_register   = shim_application_register;
+        instance->application_unregister = shim_application_unregister;
+        instance->sdu_write              = shim_sdu_write;
+        instance->sdu_read               = shim_sdu_read;
 
         LOG_FEXIT;
 	return instance;
@@ -152,7 +252,7 @@ static int name_cpy(struct name_t * dst,
 	return 0;
 }
 
-struct shim_instance_t * shim_eth_configure
+struct shim_instance_t * shim_configure
 (struct shim_instance_t *   inst,
  const struct shim_conf_t * configuration)
 {
@@ -248,104 +348,41 @@ static int shim_destroy(struct shim_instance_t * inst)
 	return 0;
 }
 
-static int shim_flow_allocate_request(void *                     opaque, 
-				   const struct name_t *      source,
-                                   const struct name_t *      dest,
-                                   const struct flow_spec_t * flow_spec,
-                                   port_id_t                * port_id)
-{
-	LOG_FBEGN;
-	LOG_FEXIT;
-
-	return 0;
-}
-
-static int shim_flow_allocate_response(void *              opaque,
-				    port_id_t           port_id,
-                                    response_reason_t * response)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-
-	return 0;
-}
-
-static int shim_flow_deallocate(void *    opaque,
-			     port_id_t port_id)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-
-	return 0;
-}
-
-static int shim_application_register(void *                opaque,
-				  const struct name_t * name)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-
-	return 0;
-}
-
-static int shim_application_unregister(void *               opaque,
-				   const struct name_t * name)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-
-	return 0;
-}
-
-static int shim_sdu_write(void *               opaque,
-		       port_id_t            port_id, 
-		       const struct sdu_t * sdu)
-{
-        LOG_FBEGN;
-        LOG_FEXIT;
-
-	return 0;
-}
-
-static int shim_sdu_read(void *         opaque,
-		      port_id_t      id,
-		      struct sdu_t * sdu)
-{
-	LOG_FBEGN;
-        LOG_FEXIT;
-
-	return 0;
-}
-
-static int shim_rcv(struct sk_buff *skb, struct net_device *dev,
-			struct packet_type *pt, struct net_device *orig_dev)
-{
-	if (skb->pkt_type == PACKET_OTHERHOST ||
-		skb->pkt_type == PACKET_LOOPBACK) {
-		kfree_skb(skb);
-		return 0;
-	}
-	
-	skb = skb_share_check(skb, GFP_ATOMIC);
-	if (!skb)
-		return 0;
-	
-	/* Get the SDU out of the sk_buff */
-
-	kfree_skb(skb);
-	return 0;
-};
-
-
 /* Called on startup to receive packets from a certain dev */
-static struct packet_type shim_eth_packet_type __read_mostly = {
+static struct packet_type shim_eth_vlan_packet_type __read_mostly = {
 	.type =	cpu_to_be16(ETH_P_RINA),
 	.func =	shim_rcv,
 };
 
+
 static int __init mod_init(void)
 {
-        LOG_FBEGN;
+        struct shim_t * shim;
+        
+	LOG_FBEGN;
+
+        shim = kmalloc(sizeof(*shim), GFP_KERNEL);
+        if (!shim) {
+                LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*shim));
+                LOG_FEXIT;
+                return -1;
+        }
+
+        shim->label     = "shim-eth-vlan";
+        shim->create    = shim_create;
+        shim->destroy   = shim_destroy;
+        shim->configure = shim_configure;
+
+        if (shim_register(shim)) {
+                LOG_ERR("Initialization of module shim-dummy failed");
+                kfree(shim);
+
+                LOG_FEXIT;
+                return -1;
+        }
+
+	dev_add_pack(&shim_eth_vlan_packet_type);
+
         LOG_FEXIT;
 
         return 0;
@@ -373,6 +410,7 @@ static void __exit mod_exit(void)
 		rb_erase(e, &shim_eth_root);
 		kfree(i);
 	}
+
         LOG_FEXIT;
 }
 
