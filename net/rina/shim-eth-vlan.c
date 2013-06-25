@@ -186,7 +186,7 @@ static struct shim_instance_t * shim_create(void *           opaque,
 	struct rb_root * shim_eth_root;
         LOG_FBEGN;
 	
-	shim_eth_root = (struct rb_root *) shim->opaque;
+	shim_eth_root = (struct rb_root *) opaque;
 	p = &shim_eth_root->rb_node;
 	parent = NULL;
 
@@ -343,7 +343,7 @@ static int shim_destroy(void *                   opaque,
 	struct rb_root * shim_eth_root;
         LOG_FBEGN;
 	
-	shim_eth_root = (struct rb_root *) shim->opaque;
+	shim_eth_root = (struct rb_root *) opaque;
 	
 	if (inst) {
                 /*
