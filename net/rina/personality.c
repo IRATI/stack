@@ -43,14 +43,14 @@ int rina_personality_init(void)
         /* Useless */
         rina_personality = NULL;
 
-        LOG_DBG("Personality initialized successfully");
+        LOG_DBG("Personality layer initialized successfully");
 
         return 0;
 }
 
 void rina_personality_exit(void)
 {
-        LOG_DBG("Finalizing personality");
+        LOG_DBG("Finalizing personality layer");
 
         if (rina_personality) {
                 ASSERT(rina_personality->fini);
@@ -59,7 +59,7 @@ void rina_personality_exit(void)
 
         rina_personality = NULL;
 
-        LOG_DBG("Personality finalized successfully");
+        LOG_DBG("Personality layer finalized successfully");
 }
 
 static int is_label_ok(const char * label)
@@ -83,16 +83,18 @@ static int is_label_ok(const char * label)
 static int is_ok(const struct personality_t * pers)
 {
         if (!pers) {
-                LOG_DBG("Personality is NULL");
+                LOG_ERR("Personality is NULL");
                 return 0;
         }
 
-        if (!is_label_ok(pers->label))
+        if (!is_label_ok(pers->label)) {
+                LOG_ERR("Personality %pK has bogus label", pers);
                 return 0;
+        }
 
         if ((pers->init && !pers->fini) ||
             (!pers->init && pers->fini)) {
-                LOG_DBG("Personality %s has bogus "
+                LOG_ERR("Personality '%s' has bogus "
                         "initializer/finalizer couple", pers->label);
                 return 0;
         }
@@ -105,49 +107,49 @@ static int is_ok(const struct personality_t * pers)
             pers->connection_create  &&
             pers->connection_destroy &&
             pers->connection_update) {
-                LOG_DBG("Personality %s has bogus hooks", pers->label);
-                return 0;
+                LOG_DBG("Personality '%s' is ok", pers->label);
+                return 1;
         }
 
-        LOG_DBG("Personality %s is ok", pers->label);
+        LOG_ERR("Personality '%s' has bogus hooks", pers->label);
 
-        return 1;
+        return 0;
 }
 
 int rina_personality_register(struct personality_t * pers)
 {
         LOG_DBG("Registering personality %pK", pers);
 
-        if (is_ok(pers)) {
-                LOG_ERR("Cannot register personality, it's bogus");
+        if (!is_ok(pers)) {
+                LOG_ERR("Cannot register personality %pK, it's bogus", pers);
                 return -1;
         }
         ASSERT(pers);
         ASSERT(pers->label != NULL);
 
         if (rina_personality) {
-                LOG_ERR("Personality %s is already present, "
+                LOG_ERR("Personality '%s' is already present, "
                         "please remove it first before loading "
-                        "personality %s",
+                        "personality '%s'",
                         rina_personality->label, pers->label);
                 return -1;
         }
 
         if (pers->init) {
-                LOG_DBG("Calling personality %s initializer", pers->label);
+                LOG_DBG("Calling personality '%s' initializer", pers->label);
                 if (!pers->init(pers->data)) {
-                        LOG_ERR("Could not initialize personality %s",
+                        LOG_ERR("Could not initialize personality '%s'",
                                 pers->label);
                         return -1;
                 }
         } else {
-                LOG_DBG("Personality %s does not require initialization",
+                LOG_DBG("Personality '%s' does not require initialization",
                         pers->label);
         }
 
         rina_personality = pers;
 
-        LOG_INFO("Personality %s registered successfully", pers->label);
+        LOG_INFO("Personality '%s' registered successfully", pers->label);
 
         return 0;
 }
@@ -155,8 +157,10 @@ EXPORT_SYMBOL(rina_personality_register);
 
 int rina_personality_unregister(struct personality_t * pers)
 {
+        LOG_DBG("Unregistering personality %pK", pers);
+
         if (!is_ok(pers)) {
-                LOG_ERR("Cannot unregister personality, it's bogus");
+                LOG_ERR("Cannot unregister personality %pK, it's bogus", pers);
                 return -1;
         }
 
@@ -164,28 +168,28 @@ int rina_personality_unregister(struct personality_t * pers)
         ASSERT(pers->label != NULL);
 
         if (rina_personality != pers) {
-                LOG_ERR("Cannot unregister personality %s, "
-                        "it's different from the currently active one (%s)",
+                LOG_ERR("Cannot unregister personality '%s', "
+                        "it's different from the currently active one ('%s')",
                         pers->label, rina_personality->label);
                 return -1;
         }
 
         ASSERT(rina_personality == pers);
 
-        LOG_DBG("Un-registering personality %s", pers->label);
+        LOG_DBG("Un-registering personality '%s'", pers->label);
 
         if (pers->fini) {
-                LOG_DBG("Calling personality %s finalizer",
+                LOG_DBG("Calling personality '%s' finalizer",
                         pers->label);
                 pers->fini(pers->data);
         } else {
-                LOG_DBG("Personality %s does not require finalization",
+                LOG_DBG("Personality '%s' does not require finalization",
                         pers->label);
         }
 
         rina_personality = 0;
 
-        LOG_INFO("Personality %s unregistered successfully", pers->label);
+        LOG_INFO("Personality '%s' unregistered successfully", pers->label);
 
         return 0;
 }
