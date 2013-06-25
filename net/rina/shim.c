@@ -19,8 +19,8 @@
  */
 
 #include <linux/export.h>
-#include <linux/kobject.h>
 #include <linux/string.h>
+#include <linux/kobject.h>
 #include <linux/sysfs.h>
 #include <linux/slab.h>
 
@@ -35,8 +35,10 @@ static struct kset * shims = NULL;
 
 int shim_init(void)
 {
+        LOG_DBG("Initializing shims layer");
+
         if (shims) {
-                LOG_ERR("Shim layer already initialized");
+                LOG_ERR("Shims layer already initialized");
                 return -1;
         }
 
@@ -48,36 +50,66 @@ int shim_init(void)
 #endif
 
         ASSERT(shims != NULL);
+
+        LOG_DBG("Shims layer initialized successfully");
+
         return 0;
 }
 
 void shim_exit(void)
 {
+        LOG_DBG("Finalizing shims layer");
+
         ASSERT(shims != NULL);
 #if CONFIG_RINA_SYSFS
         kset_unregister(shims);
 #endif
         shims = NULL;
+
+        LOG_DBG("Shims layer finalized successfully");
 }
 
-static int is_shim_label_ok(const struct shim_t * shim)
-{ return (shim ? strlen(shim->label) : 0); }
+static int is_label_ok(const char * label)
+{
+        LOG_DBG("Checking label");
 
-static int is_shim_ok(const struct shim_t * shim)
+        if (!label) {
+                LOG_DBG("Label is empty");
+                return 0;
+        }
+        if (strlen(label) == 0) {
+                LOG_DBG("Label has 0 length");
+                return 0;
+        }
+
+        LOG_DBG("Label is ok");
+
+        return 1;
+}
+
+static int is_ok(const struct shim_t * shim)
 {
         LOG_DBG("Checking shim %pK consistence", shim);
 
-        if (shim                   &&
-            shim->label            &&
-            is_shim_label_ok(shim) &&
-            shim->create           &&
-            shim->configure        &&
+        if (!shim) {
+                LOG_ERR("Shim is NULL");
+                return 0;
+        }
+
+        if (!is_label_ok(shim->label)) {
+                LOG_ERR("Shim %pK has bogus label", shim);
+                return 0;
+        }
+
+        if (shim->create             &&
+            shim->configure          &&
 	    shim->destroy) {
-                LOG_DBG("Shim %pK is consistent", shim);
+                LOG_DBG("Shim '%s' is ok", shim->label);
                 return 1;
         }
 
-        LOG_ERR("Shim %pK is inconsistent", shim);
+        LOG_ERR("Shim '%s' has bogus hooks", shim->label);
+
         return 0;
 }
 
@@ -91,12 +123,10 @@ int shim_register(struct shim_t * shim)
 
         LOG_DBG("Registering shim %pK", shim);
 
-        if (!shim || !is_shim_ok(shim)) {
+        if (!is_ok(shim)) {
                 LOG_ERR("Cannot register shim %pK, it's bogus", shim);
                 return -1;
         }
-
-        ASSERT(is_shim_label_ok(shim));
 
         if (kipcm_shim_register(shim))
                 return -1;
@@ -121,6 +151,8 @@ int shim_register(struct shim_t * shim)
 #endif
 #endif
 
+        LOG_INFO("Shim '%s' registered successfully", shim->label);
+
         return 0;
 }
 EXPORT_SYMBOL(shim_register);
@@ -130,7 +162,7 @@ int shim_unregister(struct shim_t * shim)
         LOG_DBG("Un-registering shim %pK", shim);
 
         if (!shim) {
-                LOG_ERR("Cannot unregister shim, it's bogus");
+                LOG_ERR("Cannot unregister shim %pK, it's bogus", shim);
                 return -1;
         }
 
@@ -139,6 +171,8 @@ int shim_unregister(struct shim_t * shim)
 
 #if CONFIG_RINA_SYSFS
 #endif
+
+        LOG_INFO("Shim '%s' unregistered successfully", shim->label);
 
         return 0;
 }

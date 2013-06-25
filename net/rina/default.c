@@ -31,6 +31,8 @@
 #include "efcp.h"
 #include "rmt.h"
 
+#define DEFAULT_LABEL "default"
+
 static struct personality_t * personality = NULL;
 
 struct personality_data {
@@ -127,7 +129,8 @@ static struct personality_t * personality_init(void)
                         sizeof(*p));
                 return NULL;
         }
-        p->data = kzalloc(sizeof(struct personality_data), GFP_KERNEL);
+        p->label = DEFAULT_LABEL;
+        p->data  = kzalloc(sizeof(struct personality_data), GFP_KERNEL);
         if (!p->data) {
                 LOG_ERR("Cannot allocate %zu bytes of memory",
                         sizeof(struct personality_data));
@@ -207,7 +210,7 @@ static int __init mod_init(void)
         ASSERT(pd->efcp);
         ASSERT(pd->rmt);
 
-        LOG_DBG("Rina personality loaded successfully");
+        LOG_DBG("Rina default personality loaded successfully");
 
         LOG_FEXIT;
         return 0;
@@ -253,7 +256,7 @@ static void __exit mod_exit(void)
         personality_fini(personality);
         personality = NULL;
 
-        LOG_DBG("Rina personality unloaded successfully");
+        LOG_DBG("Rina default personality unloaded successfully");
 
         LOG_FEXIT;
 }
