@@ -29,6 +29,14 @@
 struct personality_data;
 
 struct personality_t {
+        /*
+         * The unique label this personality will be identified with, within
+         * the system. The label will be exposed to the user.
+         *
+         * It must not be NULL!
+         */
+        char * label;
+
         /* Might be removed if deemed unnecessary */
         struct personality_data * data;
 

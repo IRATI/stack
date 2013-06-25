@@ -31,6 +31,8 @@
 #include "efcp.h"
 #include "rmt.h"
 
+#define DEFAULT_LABEL "default"
+
 static struct personality_t * personality = NULL;
 
 struct personality_data {
@@ -127,7 +129,8 @@ static struct personality_t * personality_init(void)
                         sizeof(*p));
                 return NULL;
         }
-        p->data = kzalloc(sizeof(struct personality_data), GFP_KERNEL);
+        p->label = DEFAULT_LABEL;
+        p->data  = kzalloc(sizeof(struct personality_data), GFP_KERNEL);
         if (!p->data) {
                 LOG_ERR("Cannot allocate %zu bytes of memory",
                         sizeof(struct personality_data));
