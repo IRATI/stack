@@ -27,6 +27,7 @@
 
 #include "logs.h"
 #include "netlink-messages.h"
+#include "librina-application.h"
 
 namespace rina {
 
@@ -38,6 +39,9 @@ BaseNetlinkMessage::BaseNetlinkMessage(
 	destPortId = 0;
 	sequenceNumber = 0;
 	family = -1;
+	responseMessage = false;
+	requestMessage = false;
+	notificationMessage = false;
 }
 
 BaseNetlinkMessage::~BaseNetlinkMessage() {
@@ -79,9 +83,40 @@ void BaseNetlinkMessage::setFamily(int family) {
 	this->family = family;
 }
 
+
+bool BaseNetlinkMessage::isNotificationMessage() const {
+	return notificationMessage;
+}
+
+void BaseNetlinkMessage::setNotificationMessage(bool notificationMessage) {
+	this->notificationMessage = notificationMessage;
+}
+
+void BaseNetlinkMessage::setOperationCode(
+		RINANetlinkOperationCode operationCode) {
+	this->operationCode = operationCode;
+}
+
+bool BaseNetlinkMessage::isRequestMessage() const {
+	return requestMessage;
+}
+
+void BaseNetlinkMessage::setRequestMessage(bool requestMessage) {
+	this->requestMessage = requestMessage;
+}
+
+bool BaseNetlinkMessage::isResponseMessage() const {
+	return responseMessage;
+}
+
+void BaseNetlinkMessage::setResponseMessage(bool responseMessage) {
+	this->responseMessage = responseMessage;
+}
+
 /* CLASS RINA APP ALLOCATE FLOW MESSAGE */
 AppAllocateFlowRequestMessage::AppAllocateFlowRequestMessage() :
-		BaseNetlinkMessage(RINA_C_APP_ALLOCATE_FLOW_REQUEST) {
+		NetlinkRequestOrNotificationMessage(
+				RINA_C_APP_ALLOCATE_FLOW_REQUEST) {
 }
 
 const ApplicationProcessNamingInformation&
@@ -112,6 +147,15 @@ const ApplicationProcessNamingInformation&
 void AppAllocateFlowRequestMessage::setSourceAppName(
 		const ApplicationProcessNamingInformation& sourceAppName) {
 	this->sourceAppName = sourceAppName;
+}
+
+IPCEvent* AppAllocateFlowRequestMessage::toIPCEvent(){
+	IncomingFlowRequestEvent * event =
+			new IncomingFlowRequestEvent(
+					this->flowSpecification,
+					this->sourceAppName,
+					this->destAppName);
+	return event;
 }
 
 /* CLASS APP ALLOCATE FLOW REQUEST RESULT MESSAGE */

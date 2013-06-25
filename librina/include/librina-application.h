@@ -76,8 +76,7 @@ class Flow {
 	FlowState flowState;
 
 	Flow(const ApplicationProcessNamingInformation& sourceApplicationName,
-			const ApplicationProcessNamingInformation&
-					destinationApplicationName,
+			const ApplicationProcessNamingInformation& destinationApplicationName,
 			const FlowSpecification& flowSpecification, FlowState flowState,
 			const ApplicationProcessNamingInformation& DIFName, int portId);
 public:
@@ -87,8 +86,7 @@ public:
 	int getPortId() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
 	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
-	const ApplicationProcessNamingInformation& getDestinationApplcationName()
-			const;
+	const ApplicationProcessNamingInformation& getDestinationApplcationName() const;
 	const FlowSpecification getFlowSpecification() const;
 
 	/**
@@ -143,8 +141,7 @@ class IPCManager {
 	std::map<int, Flow*> allocatedFlows;
 
 	/** The applications that are currently registered in one or more DIFs */
-	std::map<ApplicationProcessNamingInformation, ApplicationRegistration*>
-			applicationRegistrations;
+	std::map<ApplicationProcessNamingInformation, ApplicationRegistration*> applicationRegistrations;
 
 public:
 	IPCManager();
@@ -176,7 +173,7 @@ public:
 	void registerApplication(
 			const ApplicationProcessNamingInformation& applicationName,
 			const ApplicationProcessNamingInformation& DIFName)
-	throw (IPCException);
+					throw (IPCException);
 
 	/**
 	 * Unregisters an application from a DIF.
@@ -299,6 +296,9 @@ class IncomingFlowRequestEvent: public IPCEvent {
 	FlowSpecification flowSpecification;
 
 public:
+	IncomingFlowRequestEvent(const FlowSpecification& flowSpecification,
+			const ApplicationProcessNamingInformation& sourceApplicationName,
+			const ApplicationProcessNamingInformation& destApplicationName);
 	IncomingFlowRequestEvent(int portId,
 			const FlowSpecification& flowSpecification,
 			const ApplicationProcessNamingInformation& sourceApplicationName,

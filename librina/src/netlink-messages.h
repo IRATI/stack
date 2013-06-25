@@ -85,6 +85,15 @@ class BaseNetlinkMessage{
 	/** The operation code */
 	RINANetlinkOperationCode operationCode;
 
+	/** True if this is a request message */
+	bool requestMessage;
+
+	/** True if this is a response message */
+	bool responseMessage;
+
+	/** True if this is a notificaiton message */
+	bool notificationMessage;
+
 public:
 	BaseNetlinkMessage(RINANetlinkOperationCode operationCode);
 	virtual ~BaseNetlinkMessage();
@@ -97,13 +106,33 @@ public:
 	RINANetlinkOperationCode getOperationCode() const;
 	int getFamily() const;
 	void setFamily(int family);
+	bool isNotificationMessage() const;
+	void setNotificationMessage(bool notificationMessage);
+	void setOperationCode(RINANetlinkOperationCode operationCode);
+	bool isRequestMessage() const;
+	void setRequestMessage(bool requestMessage);
+	bool isResponseMessage() const;
+	void setResponseMessage(bool responseMessage);
+};
+
+/**
+ * Models a Netlink notification message. Transforms the
+ * Messate to an IPC Event
+ */
+class NetlinkRequestOrNotificationMessage: public BaseNetlinkMessage{
+public:
+	NetlinkRequestOrNotificationMessage(RINANetlinkOperationCode operationCode):
+		BaseNetlinkMessage(operationCode){
+	}
+	virtual ~NetlinkRequestOrNotificationMessage(){}
+	virtual IPCEvent* toIPCEvent() = 0;
 };
 
 /**
  * An allocate flow request message, exchanged between an Application Process
  * and the IPC Manager.
  */
-class AppAllocateFlowRequestMessage: public BaseNetlinkMessage{
+class AppAllocateFlowRequestMessage: public NetlinkRequestOrNotificationMessage{
 
 	/** The source application name */
 	ApplicationProcessNamingInformation sourceAppName;
@@ -124,12 +153,14 @@ public:
 	const ApplicationProcessNamingInformation& getSourceAppName() const;
 	void setSourceAppName(
 			const ApplicationProcessNamingInformation& sourceAppName);
+	IPCEvent* toIPCEvent();
 };
 
 /**
  * Response to an application allocate flow request, IPC Manager -> Application
  */
-class AppAllocateFlowRequestResultMessage: public BaseNetlinkMessage{
+class AppAllocateFlowRequestResultMessage:
+		public BaseNetlinkMessage{
 
 	/**
 	 * The port-id assigned to the flow, or error code if the value is

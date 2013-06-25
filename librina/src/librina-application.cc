@@ -23,7 +23,7 @@
 #include "librina-application.h"
 #include "netlink-manager.h"
 
-namespace rina{
+namespace rina {
 
 /* CLASS FLOW */
 
@@ -118,10 +118,10 @@ void ApplicationRegistration::removeDIFName(
 
 /* CLASS IPC MANAGER */
 
-IPCManager::IPCManager(){
+IPCManager::IPCManager() {
 }
 
-IPCManager::~IPCManager(){
+IPCManager::~IPCManager() {
 	//TODO Probably clear all Netlink related machineries?
 }
 
@@ -156,13 +156,14 @@ std::vector<DIFProperties> IPCManager::getDIFProperties(
 
 void IPCManager::registerApplication(
 		const ApplicationProcessNamingInformation& applicationName,
-		const ApplicationProcessNamingInformation& DIFName) throw (IPCException) {
+		const ApplicationProcessNamingInformation& DIFName)
+				throw (IPCException) {
 	LOG_DBG("IPCManager.registerApplication called");
 	ApplicationRegistration * applicationRegistration;
 
 	try {
-		ApplicationRegistration * foundRegistration =
-                        applicationRegistrations.at(applicationName);
+		ApplicationRegistration * foundRegistration = applicationRegistrations
+				.at(applicationName);
 		std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
 		for (iterator = foundRegistration->getDIFNames().begin();
 				iterator != foundRegistration->getDIFNames().end();
@@ -189,8 +190,8 @@ void IPCManager::unregisterApplication(
 	LOG_DBG("IPCManager.unregisterApplication called");
 
 	try {
-		ApplicationRegistration * foundRegistration =
-				applicationRegistrations.at(applicationName);
+		ApplicationRegistration * foundRegistration = applicationRegistrations
+				.at(applicationName);
 		std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
 		for (iterator = foundRegistration->getDIFNames().begin();
 				iterator != foundRegistration->getDIFNames().end();
@@ -228,8 +229,8 @@ Flow * IPCManager::allocateFlowRequest(
 
 	ApplicationProcessNamingInformation * DIFName =
 			new ApplicationProcessNamingInformation("test.DIF", "");
-	Flow * flow = new Flow(sourceAppName, destAppName, flowSpec, FLOW_ALLOCATED,
-			*DIFName, portId);
+	Flow * flow = new Flow(sourceAppName, destAppName, flowSpec,
+			FLOW_ALLOCATED, *DIFName, portId);
 	allocatedFlows[portId] = flow;
 
 	return flow;
@@ -286,9 +287,9 @@ std::vector<ApplicationRegistration *> IPCManager::getRegisteredApplications() {
 	LOG_DBG("IPCManager.getRegisteredApplications called");
 	std::vector<ApplicationRegistration *> response;
 
-	for (std::map<ApplicationProcessNamingInformation, ApplicationRegistration*>::iterator it =
-			applicationRegistrations.begin();
-			it != applicationRegistrations.end(); ++it) {
+	for (std::map<ApplicationProcessNamingInformation,
+			ApplicationRegistration*>::iterator it = applicationRegistrations
+			.begin(); it != applicationRegistrations.end(); ++it) {
 		response.push_back(it->second);
 	}
 
@@ -318,15 +319,27 @@ ApplicationUnregisteredEvent::ApplicationUnregisteredEvent(
 	this->DIFName = DIFName;
 }
 
-const ApplicationProcessNamingInformation& ApplicationUnregisteredEvent::getApplicationName() const {
+const ApplicationProcessNamingInformation&
+	ApplicationUnregisteredEvent::getApplicationName() const {
 	return applicationName;
 }
 
-const ApplicationProcessNamingInformation& ApplicationUnregisteredEvent::getDIFName() const {
+const ApplicationProcessNamingInformation&
+	ApplicationUnregisteredEvent::getDIFName() const {
 	return DIFName;
 }
 
 /* CLASS INCOMING FLOW REQUEST EVENT */
+IncomingFlowRequestEvent::IncomingFlowRequestEvent(
+		const FlowSpecification& flowSpecification,
+		const ApplicationProcessNamingInformation& sourceApplicationName,
+		const ApplicationProcessNamingInformation& destApplicationName):
+				IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT) {
+	this->flowSpecification = flowSpecification;
+	this->sourceApplicationName = sourceApplicationName;
+	this->destinationApplicationName = destApplicationName;
+	this->portId = 0;
+}
 
 IncomingFlowRequestEvent::IncomingFlowRequestEvent(int portId,
 		const FlowSpecification& flowSpecification,

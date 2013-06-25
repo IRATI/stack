@@ -24,50 +24,173 @@
 #include "logs.h"
 #include "core.h"
 
-namespace rina{
+namespace rina {
 
-//Singleton<RINAManager> rinaManager;
+/* CLASS PENDING NETLINK MESSAGE */
+PendingNetlinkMessage::PendingNetlinkMessage(unsigned int sequenceNumber) :
+		ConditionVariable() {
+	this->responseMessage = NULL;
+	this->sequenceNumber = sequenceNumber;
+}
 
+PendingNetlinkMessage::~PendingNetlinkMessage() throw(){
+}
+
+BaseNetlinkMessage * PendingNetlinkMessage::getResponseMessage() {
+	lock();
+	while (responseMessage == NULL) {
+		wait();
+	}
+	unlock();
+	LOG_DBG("Got Netlink reply to request with sequence number %d",
+			sequenceNumber);
+
+	return responseMessage;
+}
+
+void PendingNetlinkMessage::setResponseMessage(
+		BaseNetlinkMessage * responseMessage) {
+	lock();
+	this->responseMessage = responseMessage;
+	signal();
+	unlock();
+}
+
+unsigned int PendingNetlinkMessage::getSequenceNumber() const{
+	return sequenceNumber;
+}
+
+/* Class Netlink Session */
+NetlinkSession::NetlinkSession(int sessionId){
+	this->sessionId = sessionId;
+}
+
+NetlinkSession::~NetlinkSession(){
+}
+
+unsigned int NetlinkSession::getValidSequenceNumber(){
+	unsigned int sequenceNumber = 0;
+
+	for (sequenceNumber = 1; sequenceNumber < MAX_NETLINK_SEQUENCE_NUMBER;
+			sequenceNumber++) {
+		if (localPendingMessages.count(sequenceNumber) == 0 &&
+				remotePendingMessages.count(sequenceNumber) == 0) {
+			return sequenceNumber;
+		}
+	}
+
+	return MAX_NETLINK_SEQUENCE_NUMBER + 1;
+}
+
+void NetlinkSession::putLocalPendingMessage(
+		PendingNetlinkMessage* pendingMessage){
+	localPendingMessages[pendingMessage->getSequenceNumber()]
+	                     = pendingMessage;
+}
+
+PendingNetlinkMessage*
+	NetlinkSession::takeLocalPendingMessage(unsigned int sequenceNumber){
+	std::map<unsigned int, PendingNetlinkMessage>::iterator it =
+			localPendingMessages.find(sequenceNumber);
+	if(it == localPendingMessages.end()){
+		LOG_ERR("Could not find the matching request for a local response message with sequence number %d",
+				sequenceNumber);
+		return NULL;
+	}
+
+	//2 Remove pending Netlink message from table
+	localPendingMessages.erase(sequenceNumber);
+	return it->second();
+}
+
+void NetlinkSession::putRemotePendingMessage(BaseNetlinkMessage* pendingMessage){
+	remotePendingMessages[pendingMessage->getSequenceNumber()]
+		                     = pendingMessage;
+}
+
+BaseNetlinkMessage*
+	NetlinkSession::takeRemotePendingMessage(unsigned int sequenceNumber){
+	std::map<unsigned int, BaseNetlinkMessage*>::iterator it =
+			remotePendingMessages.find(sequenceNumber);
+	if(it == remotePendingMessages.end()){
+		LOG_ERR("Could not find the matching request for a remote response message with sequence number %d",
+				sequenceNumber);
+		return NULL;
+	}
+
+	//2 Remove pending Netlink message from table
+	remotePendingMessages.erase(sequenceNumber);
+	return it->second();
+}
+
+/* CLASS RINA Manager */
 /** main function of the Netlink message reader thread */
-void * doNetlinkMessageReaderWork(void * arg){
+void * doNetlinkMessageReaderWork(void * arg) {
 	RINAManager * myRINAManager = (RINAManager *) arg;
 	NetlinkManager * netlinkManager = myRINAManager->getNetlinkManager();
-	BlockingFIFOQueue<IPCEvent> * eventsQueue = myRINAManager->getEventQueue();
+	BlockingFIFOQueue<IPCEvent> * eventsQueue =
+			myRINAManager->getEventQueue();
 	BaseNetlinkMessage * incomingMessage;
 
 	//Continuously try to read incoming Netlink messages
-	while(true){
-		//1 Receive message
-		try{
+	while (true) {
+		//Receive message
+		try {
 			incomingMessage = netlinkManager->getMessage();
-		}catch(NetlinkException &e){
+		} catch (NetlinkException &e) {
 			LOG_ERR("Error receiving netlink message. %s", e.what());
+			continue;
 		}
 
-		//2 Decide if it is a response message or a notification message
+		//Process the message
+		if (incomingMessage->isResponseMessage()){
+			rinaManager->netlinkResponseMessageArrived(incomingMessage);
+		}else{
+			NetlinkRequestOrNotificationMessage * message =
+					dynamic_cast<NetlinkRequestOrNotificationMessage *>
+						(incomingMessage);
 
-		//3a if response message, get associated request and signal the
-		//thread that send the message that the response is already available
+			if (incomingMessage->isRequestMessage()){
+				rinaManager->netlinkRequestMessageArrived(incomingMessage);
+			}
 
-		//3b if notificaiton message, create associated IPCEvent and put it in the
-		//event queue
+			eventsQueue->put(message->toIPCEvent());
+			delete message;
+		}
 	}
 
 	return (void *) 0;
 }
 
-/* CLASS RINA Manager */
-RINAManager::RINAManager(){
+RINAManager::RINAManager() {
 	//1 Initialize NetlinkManager
-	try{
+	try {
 		netlinkManager = new NetlinkManager();
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 		LOG_ERR("Error initializing Netlink Manager. %s", e.what());
 		LOG_ERR("Program will exit now");
 		exit(-1); 	//FIXME Is this too drastic?
 	}
 	LOG_DBG("Initialized Netlink Manager");
 
+	initialize();
+}
+
+RINAManager::RINAManager(unsigned int netlinkPort){
+	//1 Initialize NetlinkManager
+	try {
+		netlinkManager = new NetlinkManager(netlinkPort);
+	} catch (NetlinkException &e) {
+		LOG_ERR("Error initializing Netlink Manager. %s", e.what());
+		LOG_ERR("Program will exit now");
+		exit(-1); 	//FIXME Is this too drastic?
+	}
+	LOG_DBG("Initialized Netlink Manager");
+
+	initialize();
+}
+
+void RINAManager::initialize(){
 	//2 Initialie events Queue
 	eventQueue = new BlockingFIFOQueue<IPCEvent>();
 	LOG_DBG("Initialized event queue");
@@ -80,15 +203,154 @@ RINAManager::RINAManager(){
 	LOG_DBG("Started Netlink Message reader thread");
 }
 
-RINAManager::~RINAManager(){
+RINAManager::~RINAManager() {
 	delete netlinkManager;
 	delete netlinkMessageReader;
 	delete eventQueue;
 }
 
+NetlinkSession* RINAManager::getAndCreateNetlinkSession(
+		unsigned int sessionId){
+	NetlinkSession* response = NULL;
 
+	std::map<unsigned int, NetlinkSession*>::iterator it =
+			netlinkSessions.find(sessionId);
+	if(it == netlinkSessions.end()){
+		LOG_DBG("Creating a new Netlink session with id %d",
+				sessionId);
+		response = new NetlinkSession(sessionId);
+		netlinkSessions[sessionId] = response;
+	}else{
+		response = it->second;
+	}
+
+	return response;
 }
 
+NetlinkSession* RINAManager::getNetlinkSession(unsigned int sessionId){
+	NetlinkSession* response = NULL;
 
+	std::map<unsigned int, NetlinkSession*>::iterator it =
+			netlinkSessions.find(sessionId);
+	if(it != netlinkSessions.end()){
+		response = it->second;
+	}
 
+	return response;
+}
+
+BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForReply(
+		BaseNetlinkMessage * netlinkMessage) throw (NetlinkException) {
+	PendingNetlinkMessage * pendingMessage = NULL;
+	unsigned int sequenceNumber = 0;
+
+	sendReceiveLock.lock();
+
+	NetlinkSession * netlinkSession =
+			getAndCreateNetlinkSession(netlinkMessage->getDestPortId());
+	netlinkMessage->setSequenceNumber(netlinkSession->getValidSequenceNumber());
+
+	//2 Send the message
+	try {
+		netlinkManager->sendMessage(netlinkMessage);
+	} catch (NetlinkException &e) {
+		sendReceiveLock.unlock();
+		throw e;
+	}
+
+	//3 Put message in the queue
+	pendingMessage = new PendingNetlinkMessage(sequenceNumber);
+	netlinkSession->putLocalPendingMessage(pendingMessage);
+
+	sendReceiveLock.unlock();
+
+	//4 wait for reply
+	BaseNetlinkMessage * response = pendingMessage->getResponseMessage();
+	delete pendingMessage;
+	return response;
+}
+
+void RINAManager::sendResponseOrNotficationMessage(
+		BaseNetlinkMessage * netlinkMessage) throw (NetlinkException) {
+	sendReceiveLock.lock();
+
+	if (netlinkMessage->isResponseMessage()) {
+		NetlinkSession * netlinkSession = getNetlinkSession(
+				netlinkMessage->getDestPortId());
+		if (netlinkSession == NULL) {
+			LOG_ERR("Could not find an existing Netlink session with id %d",
+					netlinkMessage->getDestPortId());
+			sendReceiveLock.unlock();
+			throw NetlinkException(
+					NetlinkException::error_fetching_netlink_session);
+		}
+
+		BaseNetlinkMessage * requestMessage = netlinkSession
+				->takeRemotePendingMessage(
+				netlinkMessage->getSequenceNumber());
+		if (requestMessage == NULL) {
+			LOG_ERR(
+					"Could not find a pending remote request message with sequence number %d",
+					netlinkMessage->getSequenceNumber());
+			sendReceiveLock.unlock();
+			throw NetlinkException(
+					NetlinkException::
+					error_fetching_pending_netlink_request_message);
+		}
+
+		delete requestMessage;
+	}
+
+	//2 Send the message
+	try {
+		netlinkManager->sendMessage(netlinkMessage);
+	} catch (NetlinkException &e) {
+		sendReceiveLock.unlock();
+		throw e;
+	}
+
+	sendReceiveLock.unlock();
+}
+
+void RINAManager::netlinkResponseMessageArrived(
+		BaseNetlinkMessage * response){
+	sendReceiveLock.lock();
+
+	NetlinkSession *netlinkSession = getNetlinkSession(
+			response->getSourcePortId());
+	if  (netlinkSession == NULL){
+		LOG_ERR("Could not find an existing Netlink session with id %d",
+				response->getSourcePortId());
+		sendReceiveLock.unlock();
+		return;
+	}
+
+	PendingNetlinkMessage* pendingMessage = netlinkSession->
+			takeLocalPendingMessage(response->getSequenceNumber());
+	sendReceiveLock.unlock();
+	if(pendingMessage == NULL){
+		LOG_ERR("Could not find the matching request for a received Netlink response message with sequence number %d",
+				response->getSequenceNumber());
+		sendReceiveLock.unlock();
+		return;
+	}
+
+	//3 Notify thread that sent the Netlink request message
+	pendingMessage->setResponseMessage(response);
+}
+
+void RINAManager::netlinkRequestMessageArrived(
+		BaseNetlinkMessage * request){
+	sendReceiveLock.lock();
+
+	NetlinkSession *netlinkSession = getAndCreateNetlinkSession(
+			request->getSourcePortId());
+
+	netlinkSession->putRemotePendingMessage(request);
+	sendReceiveLock.unlock();
+}
+
+Singleton<RINAManager> rinaManager;
+
+}
 

@@ -53,6 +53,11 @@ const std::string NetlinkException::error_sending_netlink_message =
 		"Error sending Netlink message";
 const std::string NetlinkException::error_parsing_netlink_message =
 		"Error parsing Netlink message";
+const std::string NetlinkException::error_fetching_netlink_session =
+		"Error fetching Netlink session";
+const std::string
+	NetlinkException::error_fetching_pending_netlink_request_message =
+		"Error fetching pending Netlink request message";
 
 /* CLASS NETLINK MANAGER */
 
@@ -116,8 +121,13 @@ void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
 				NetlinkException::error_allocating_netlink_message);
 	}
 
+	int flags = 0;
+	if (message->isRequestMessage()){
+		flags = NLM_F_REQUEST;
+	}
+
 	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(),
-			family, 0, 0, message->getOperationCode(),
+			family, 0, flags, message->getOperationCode(),
 			RINA_GENERIC_NETLINK_FAMILY_VERSION);
 
 	int result = putBaseNetlinkMessage(netlinkMessage, message);
@@ -181,11 +191,6 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 	LOG_DBG("Netlink family %d", hdr->nlmsg_type);
 	LOG_DBG("Version %d", nlhdr->version);
 	LOG_DBG("Operation code %d", nlhdr->cmd);
-	if (hdr->nlmsg_flags & NLM_F_REQUEST) {
-		LOG_DBG("It is a request message");
-	} else if (hdr->nlmsg_flags & NLMSG_ERROR) {
-		LOG_DBG("It is an error message");
-	}
 
 	if (creds) {
 		nlmsg_set_creds(msg, creds);
@@ -200,6 +205,17 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 		LOG_ERR("%s", NetlinkException::error_parsing_netlink_message.c_str());
 		throw NetlinkException(
 				NetlinkException::error_parsing_netlink_message);
+	}
+
+	if(hdr->nlmsg_seq == 0){
+		result->setNotificationMessage(true);
+	}else if (hdr->nlmsg_flags & NLM_F_REQUEST) {
+		result->setRequestMessage(true);
+	}else if (hdr->nlmsg_flags & NLMSG_ERROR) {
+		LOG_ERR("It is an error message");
+		//TODO, decide what to do
+	}else{
+		result->setResponseMessage(true);
 	}
 
 	result->setDestPortId(localPort);
