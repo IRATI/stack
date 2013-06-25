@@ -371,11 +371,18 @@ static struct packet_type shim_eth_vlan_packet_type __read_mostly = {
 static int __init mod_init(void)
 {
 	/* Holds all shim instances */
-	struct rb_root shim_eth_root;
+	struct rb_root * shim_eth_root;
 	LOG_FBEGN;
 	LOG_INFO("Shim-eth-vlan module v%d.%d loaded",0,1);
 
-	shim_eth_root = RB_ROOT;
+	shim_eth_root = kmalloc(sizeof(*shim_eth_root), GFP_KERNEL);
+        if (!shim_eth_root) {
+                LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*shim_eth_root));
+                LOG_FEXIT;
+                return -1;
+        }
+
+	*shim_eth_root = RB_ROOT;
 
         shim = kmalloc(sizeof(*shim), GFP_KERNEL);
         if (!shim) {
@@ -389,7 +396,7 @@ static int __init mod_init(void)
         shim->destroy   = shim_destroy;
         shim->configure = shim_configure;
 
-	shim->opaque = &shim_eth_root;
+	shim->opaque = shim_eth_root;
 
         if (shim_register(shim)) {
                 LOG_ERR("Initialization of module shim-dummy failed");
@@ -432,6 +439,7 @@ static void __exit mod_exit(void)
 		kfree(i);
 	}
 
+	kfree(shim->opaque);
 	kfree(shim);
 
         LOG_FEXIT;
