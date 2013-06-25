@@ -88,12 +88,12 @@ struct shim_t {
 		 ipc_process_id_t id);
         
 	struct shim_instance_t * (* configure)
-                (void * opaque,
+                (void *                     opaque,
 		 struct shim_instance_t *   instance,
                  const struct shim_conf_t * configuration);
 
 	int                      (* destroy)
-	        (void * opaque,
+	        (void *                  opaque,
 		struct shim_instance_t * inst);
 };
 

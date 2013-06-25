@@ -163,7 +163,7 @@ static int shim_rcv(struct sk_buff *skb,
 		    struct net_device *orig_dev)
 {
 	if (skb->pkt_type == PACKET_OTHERHOST ||
-		skb->pkt_type == PACKET_LOOPBACK) {
+            skb->pkt_type == PACKET_LOOPBACK) {
 		kfree_skb(skb);
 		return 0;
 	}
@@ -341,7 +341,7 @@ static int shim_destroy(void * opaque,
 	struct shim_eth_instance_t * instance;
 	LOG_FBEGN;
 	if (inst) {
-                /**
+                /*
 		 *  FIXME: Need to ask instance to clean up as well
 		 * Don't know yet in full what to delete
 		 */
@@ -408,7 +408,7 @@ static void __exit mod_exit(void)
                 /* Get next node and keep pointer to this one */
 		e = s;
 		rb_next(s);
-		/**
+		/*
 		 * Get the shim_instance 
 		 * FIXME: Need to ask it to clean up as well
 		 * Don't know yet in full what to delete
