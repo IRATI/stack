@@ -19,101 +19,109 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/hashtable.h>
+
 #define RINA_PREFIX "netlink"
 
 #include "logs.h"
 #include "netlink.h"
-#include <linux/hashtable.h>
 
-/* attribute policy */
+/* Attribute policy */
 //static struct nla_policy nl_rina_policy[NETLINK_RINA_A_MAX + 1] = { 
 //	[NETLINK_RINA_A_MSG] = { .type = NLA_NUL_STRING },
 //};
 
-/* family definition */
+/* Family definition */
 static struct genl_family nl_rina_family = { 
-	.id = GENL_ID_GENERATE,
+	.id      = GENL_ID_GENERATE,
 	.hdrsize = 0,
-	.name = NETLINK_RINA,
+	.name    = NETLINK_RINA,
 	.version = 1,
 	.maxattr = NETLINK_RINA_A_MAX,
 };
 
-/* handler */
+/*  Table to collect callbacks */
+typedef int (* message_handler_t)(struct sk_buff *, struct genl_info *);
+
+/* FIXME: this forward declaration should be removed */
+int  (* get_handler(int))(struct sk_buff *, struct genl_info *);
+
+/* Handler */
 static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
 {
-	/* message handling code goes here; return 0 on success, negative
-	* values on failure */
+	/*
+         * Message handling code goes here; return 0 on success, negative
+         * values on failure
+         */
+
 	int ret;
 	struct nlattr *na;
 	struct sk_buff *skb;
 	void *msg_head;
 	char * mydata;
+
 	LOG_DBG("ECHOING MESSAGE");
 	skb = genlmsg_new(NLMSG_GOODSIZE, GFP_KERNEL);
 	
-	if (skb == NULL){
+	if (skb == NULL) {
 		LOG_DBG("skb buffer is NULL");
 		return -1;
 	}
 
-
-	if (info == NULL){
+	if (info == NULL) {
 		LOG_DBG("info input parameter is NULL");
 		return -1;
 	}
 
 	na = info->attrs[NETLINK_RINA_A_MSG];
-	if (na){
+	if (na) {
 		mydata = (char *)nla_data(na);
-		if (mydata == NULL){
+		if (mydata == NULL) {
 			LOG_DBG("error while receiving data\n");
 			return -1;
-		}
-		else
+		} else
 			LOG_DBG("received: %s\n", mydata);
-		}
-	else{
+        }
+	else {
 		LOG_DBG("no info->attrs %i\n", NETLINK_RINA_A_MSG);
 		return -1;
 	}
 
-	if (skb == NULL){
+	if (skb == NULL) {
 		LOG_DBG("COULD NOT ALLOCATE sk_buff");
 		return -1;
 	}
 	LOG_DBG("seq number received: %d\n",info->snd_seq);
-	msg_head = genlmsg_put(skb, 0, info->snd_seq, &nl_rina_family, 0, RINA_C_APP_ALLOCATE_FLOW_REQUEST);
+	msg_head = genlmsg_put(skb, 0, info->snd_seq, &nl_rina_family, 0,
+                               RINA_C_APP_ALLOCATE_FLOW_REQUEST);
 	if (msg_head == NULL) {
 		ret = -ENOMEM;
 		return -1;
-	}
-	else {
+	} else {
 		LOG_DBG("msg head CREATED");
 	}
-	ret = nla_put_string(skb, NETLINK_RINA_A_MSG, "hello world from kernel space");
-	if (ret!= 0){
+	ret = nla_put_string(skb, NETLINK_RINA_A_MSG,
+                             "hello world from kernel space");
+	if (ret!= 0) {
 		LOG_DBG("Could not add string message to echo");
 		return -1;
-	}
-	else {
+	} else {
 		LOG_DBG("nla_put_string OK");
 	}
 
 	genlmsg_end(skb, msg_head);
 	LOG_DBG("genlmsg_end OK");
 
-	//ret = genlmsg_unicast(sock_net(skb->sk),skb,info->snd_portid);
+	/* ret = genlmsg_unicast(sock_net(skb->sk),skb,info->snd_portid); */
 	ret = genlmsg_unicast(&init_net,skb,info->snd_portid);
-	if (ret != 0){
+	if (ret != 0) {
 		LOG_DBG("COULD NOT SEND BACK UNICAST MESSAGE");
 		return -1;
 	}
-	else {
-		LOG_DBG("genkmsg_unicast OK");
-	}
-	return 0;
 
+        LOG_DBG("genkmsg_unicast OK");
+
+	return 0;
 }
 
 /////* operation definition */
@@ -129,24 +137,21 @@ static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
 static int nl_dispatcher(struct sk_buff *skb_in, struct genl_info *info)
 {
 	/* message handling code goes here; return 0 on success, negative
-	* values on failure */
+         * values on failure */
 	int (*cb_function)(struct sk_buff *, struct genl_info *);
 
 	LOG_DBG("Dispatching message");
 	
-	if (info == NULL){
+	if (info == NULL) {
 		LOG_DBG("info input parameter is NULL");
 		return -1;
 	}
 
 	cb_function = get_handler(info->nlhdr->nlmsg_type);
-	if (cb_function == NULL) {
+	if (cb_function == NULL)
 		return -1;
-	}
-	else {
-		return cb_function(skb_in, info);
-	}
 
+        return cb_function(skb_in, info);
 }
 
 /* operation definition */
@@ -363,44 +368,37 @@ static struct genl_ops nl_rina_ops[] = {
 	},
 };
 
-
-
-
-
-
 /* Table to collect callbacks */
 message_handler_t  message_handler_reg[NETLINK_RINA_C_MAX];
 
-int register_handler(int m_type, int (*handler)(struct sk_buff *, struct genl_info *))
+int register_handler(int m_type,
+                     int (*handler)(struct sk_buff *, struct genl_info *))
 {
 
-	if (	m_type < 0 || 
-		m_type >= NETLINK_RINA_C_MAX || 
-		message_handler_reg[m_type] != NULL)
+	if (m_type < 0 || 
+            m_type >= NETLINK_RINA_C_MAX || 
+            message_handler_reg[m_type] != NULL)
 		return -1;
-		
-	else
+        else
 		message_handler_reg[m_type] = (message_handler_t) handler;
 
 	return 0;
 }
 
-int (*get_handler(int m_type))(struct sk_buff *, struct genl_info *)
+int (* get_handler(int m_type))(struct sk_buff *, struct genl_info *)
 {
 
-	if (	m_type < 0 || 
-		m_type >= NETLINK_RINA_C_MAX ||
-		message_handler_reg[m_type] == NULL)
+	if (m_type < 0 || 
+            m_type >= NETLINK_RINA_C_MAX ||
+            message_handler_reg[m_type] == NULL)
 		return NULL;
-		
 	else
 		return message_handler_reg[m_type];
 }
 
 int unregister_handler(int m_type)
 {
-	if (	m_type < 0 || 
-		m_type >= NETLINK_RINA_C_MAX)
+	if (m_type < 0 || m_type >= NETLINK_RINA_C_MAX)
 		return -1;
 
 	message_handler_reg[m_type] = NULL;
@@ -417,14 +415,14 @@ int rina_netlink_init(void)
 	LOG_DBG("NETLINK_RINA_C_MAX = %d", NETLINK_RINA_C_MAX);
 
 	ret = genl_register_family(&nl_rina_family);
-	if (ret != 0){
+	if (ret != 0) {
 		LOG_DBG("Not able to register nl_rina_family");
 		return -1;
 	}
 
-	for(i=0; i < ARRAY_SIZE(nl_rina_ops); i++){
+	for (i=0; i < ARRAY_SIZE(nl_rina_ops); i++) {
 		ret = genl_register_ops(&nl_rina_family, &nl_rina_ops[i]);
-		if (ret < 0){
+		if (ret < 0) {
 			LOG_DBG("Not able to register nl_rina_ops %d", ret);
 			genl_unregister_family(&nl_rina_family);
 			return -2;
@@ -433,11 +431,10 @@ int rina_netlink_init(void)
 
         LOG_DBG("NetLink layer initialized");
 
-
 	/*  TODO: Testing */
 	register_handler(RINA_C_APP_ALLOCATE_FLOW_REQUEST, nl_rina_echo); 
-        LOG_DBG("nl_rina echo registered for RINA_C_APP_ALLOCATE_FLOW_REQUEST");
-
+        LOG_DBG("nl_rina echo registered for "
+                "RINA_C_APP_ALLOCATE_FLOW_REQUEST");
 
         LOG_FEXIT;
 
@@ -450,25 +447,25 @@ void rina_netlink_exit(void)
         
 	LOG_FBEGN;
 
-	/*unregister the functions*/
-	for(i=0; i < ARRAY_SIZE(nl_rina_ops); i++){
+	/* Unregister the functions*/
+	for (i=0; i < ARRAY_SIZE(nl_rina_ops); i++) {
 		ret = genl_unregister_ops(&nl_rina_family, &nl_rina_ops[i]);
-		if(ret < 0){
+		if(ret < 0) {
 			LOG_DBG("unregister ops: %i\n",ret);
 			return;
 		}
 	}
 	
-	/*unregister the family*/
+	/* Unregister the family */
 	ret = genl_unregister_family(&nl_rina_family);
-	
-	if(ret !=0){
-		LOG_DBG("unregister family %i\n",ret);
+        if(ret != 0) {
+		LOG_DBG("unregister family %i\n", ret);
 	}
-        LOG_DBG("nl_rina echo unregistered for RINA_C_APP_ALLOCATE_FLOW_REQUEST");
+
+        LOG_DBG("nl_rina echo unregistered for "
+                "RINA_C_APP_ALLOCATE_FLOW_REQUEST");
+
         LOG_DBG("NetLink layer finalized");
 
 	LOG_FEXIT;
 }
-
-

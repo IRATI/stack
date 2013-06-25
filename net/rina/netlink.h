@@ -30,11 +30,7 @@
 #include <net/genetlink.h>
 #include <linux/skbuff.h>
 
-
 #define NETLINK_RINA "nlrina"
-
-/* este es un comentario largo y a ver si em lo corta a las 80 letras porque si
- * no me vuelvo loco*/
 
 enum rina_nl_operation_code {
 	/* Unespecified operation */
@@ -61,8 +57,10 @@ enum rina_nl_operation_code {
 	/* IPC Process -> Application */
 	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, 
 	
-	/* IPC Process -> Application, flow deallocated without the application 
-	 * having requested it */
+	/*
+         * IPC Process -> Application, flow deallocated without the
+         * having requested it
+         */
 	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, 
 	
 	/* Application -> IPC Manager */
@@ -77,8 +75,9 @@ enum rina_nl_operation_code {
 	/* IPC Manager -> Application */
 	RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE, 
 	
-	/* IPC Manager -> Application, application unregistered without the application
-	 * having requested it */
+	/*
+         * IPC Manager -> Application, application unregistered without the
+         * application having requested it */
 	RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION, 
 	
 	/* Application -> IPC Manager */
@@ -148,13 +147,9 @@ enum {
 #define NETLINK_RINA_A_MAX (__NETLINK_RINA_A_MAX - 1)
 #define NETLINK_RINA_C_MAX (__NETLINK_RINA_C_MAX - 1)
 
-/*  Table to collect callbacks */
-typedef int (*message_handler_t)(struct sk_buff *, struct genl_info *);
-
-static int nl_dispatcher(struct sk_buff *, struct genl_info *);
-int register_handler(int , int (*)(struct sk_buff *, struct genl_info *));
-int (*get_handler(int))(struct sk_buff *, struct genl_info *);
-int unregister_handler(int);
+int  register_handler(int,
+                      int (*)(struct sk_buff *, struct genl_info *));
+int  unregister_handler(int);
 
 
 int  rina_netlink_init(void);
