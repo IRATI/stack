@@ -35,6 +35,9 @@
 #include "common.h"
 #include "shim.h"
 
+
+struct shim_t * shim;
+
 /* Holds all the shim instances */
 static struct rb_root shim_eth_root = RB_ROOT;
 
@@ -86,10 +89,10 @@ struct shim_eth_instance_t {
 
 
 static int shim_flow_allocate_request(void *                     opaque, 
-				   const struct name_t *      source,
-                                   const struct name_t *      dest,
-                                   const struct flow_spec_t * flow_spec,
-                                   port_id_t                * port_id)
+				      const struct name_t *      source,
+                                      const struct name_t *      dest,
+                                      const struct flow_spec_t * flow_spec,
+                                      port_id_t                * port_id)
 {
 	LOG_FBEGN;
 	LOG_FEXIT;
@@ -98,8 +101,8 @@ static int shim_flow_allocate_request(void *                     opaque,
 }
 
 static int shim_flow_allocate_response(void *              opaque,
-				    port_id_t           port_id,
-                                    response_reason_t * response)
+				       port_id_t           port_id,
+                                       response_reason_t * response)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -108,7 +111,7 @@ static int shim_flow_allocate_response(void *              opaque,
 }
 
 static int shim_flow_deallocate(void *    opaque,
-			     port_id_t port_id)
+			        port_id_t port_id)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -117,7 +120,7 @@ static int shim_flow_deallocate(void *    opaque,
 }
 
 static int shim_application_register(void *                opaque,
-				  const struct name_t * name)
+				     const struct name_t * name)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -126,7 +129,7 @@ static int shim_application_register(void *                opaque,
 }
 
 static int shim_application_unregister(void *               opaque,
-				   const struct name_t * name)
+				       const struct name_t * name)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -135,8 +138,8 @@ static int shim_application_unregister(void *               opaque,
 }
 
 static int shim_sdu_write(void *               opaque,
-		       port_id_t            port_id, 
-		       const struct sdu_t * sdu)
+		          port_id_t            port_id, 
+		          const struct sdu_t * sdu)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -145,8 +148,8 @@ static int shim_sdu_write(void *               opaque,
 }
 
 static int shim_sdu_read(void *         opaque,
-		      port_id_t      id,
-		      struct sdu_t * sdu)
+		         port_id_t      id,
+		         struct sdu_t * sdu)
 {
 	LOG_FBEGN;
         LOG_FEXIT;
@@ -154,8 +157,10 @@ static int shim_sdu_read(void *         opaque,
 	return 0;
 }
 
-static int shim_rcv(struct sk_buff *skb, struct net_device *dev,
-			struct packet_type *pt, struct net_device *orig_dev)
+static int shim_rcv(struct sk_buff *skb, 
+		    struct net_device *dev,
+		    struct packet_type *pt, 
+		    struct net_device *orig_dev)
 {
 	if (skb->pkt_type == PACKET_OTHERHOST ||
 		skb->pkt_type == PACKET_LOOPBACK) {
@@ -174,7 +179,8 @@ static int shim_rcv(struct sk_buff *skb, struct net_device *dev,
 };
 
 
-static struct shim_instance_t * shim_create(ipc_process_id_t ipc_process_id)
+static struct shim_instance_t * shim_create(void * opaque,
+	                                    ipc_process_id_t ipc_process_id)
 {
 	struct shim_instance_t * instance;
 	struct shim_eth_instance_t * shim_instance; 	
@@ -253,7 +259,8 @@ static int name_cpy(struct name_t * dst,
 }
 
 struct shim_instance_t * shim_configure
-(struct shim_instance_t *   inst,
+(void * opaque,
+ struct shim_instance_t *   inst,
  const struct shim_conf_t * configuration)
 {
 	struct shim_eth_instance_t * instance;
@@ -328,7 +335,8 @@ struct shim_instance_t * shim_configure
 	return inst;
 }
 
-static int shim_destroy(struct shim_instance_t * inst)
+static int shim_destroy(void * opaque,
+	                struct shim_instance_t * inst)
 {
 	struct shim_eth_instance_t * instance;
 	LOG_FBEGN;
@@ -357,8 +365,6 @@ static struct packet_type shim_eth_vlan_packet_type __read_mostly = {
 
 static int __init mod_init(void)
 {
-        struct shim_t * shim;
-        
 	LOG_FBEGN;
 
         shim = kmalloc(sizeof(*shim), GFP_KERNEL);
@@ -370,6 +376,7 @@ static int __init mod_init(void)
 
         shim->label     = "shim-eth-vlan";
         shim->create    = shim_create;
+
         shim->destroy   = shim_destroy;
         shim->configure = shim_configure;
 
@@ -410,6 +417,8 @@ static void __exit mod_exit(void)
 		rb_erase(e, &shim_eth_root);
 		kfree(i);
 	}
+
+	kfree(shim);
 
         LOG_FEXIT;
 }

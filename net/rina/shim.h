@@ -74,6 +74,7 @@ struct shim_instance_t {
 };
 
 struct shim_t {
+	void * opaque;
         /*
          * The unique label this shim will be identified with, within the
          * system. The label will be exposed to the user.
@@ -83,14 +84,17 @@ struct shim_t {
         char * label;
 
 	struct shim_instance_t * (* create)
-                (ipc_process_id_t id);
+                (void * opaque,
+		 ipc_process_id_t id);
         
 	struct shim_instance_t * (* configure)
-                (struct shim_instance_t *   instance,
+                (void * opaque,
+		 struct shim_instance_t *   instance,
                  const struct shim_conf_t * configuration);
 
 	int                      (* destroy)
-                (struct shim_instance_t * inst);
+	        (void * opaque,
+		struct shim_instance_t * inst);
 };
 
 /* Called by the kipcm, might disappear */
