@@ -70,7 +70,7 @@ struct personality_t {
                          struct sdu_t *            sdu);
 };
 
-int  rina_personality_init(void);
+int  rina_personality_init(struct kobject * parent);
 void rina_personality_exit(void);
 
 int  rina_personality_register(struct personality_t * pers);

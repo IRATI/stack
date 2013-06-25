@@ -19,6 +19,8 @@
  */
 
 #include <linux/init.h>
+#include <linux/kobject.h>
+#include <linux/sysfs.h>
 
 #define RINA_PREFIX "core"
 
@@ -26,6 +28,10 @@
 #include "rina.h"
 #include "netlink.h"
 #include "personality.h"
+
+#if CONFIG_RINA_SYSFS
+static struct kset * sysfs_root = NULL;
+#endif
 
 static uint32_t version = MK_RINA_VERSION(0, 0, 0);
 
@@ -41,14 +47,21 @@ static int __init rina_core_init(void)
                  RINA_VERSION_MINOR(version),
                  RINA_VERSION_MICRO(version));
 
+#if CONFIG_RINA_SYSFS
+        /* FIXME: Move the set path from kernel to rina */
+        sysfs_root = kset_create_and_add("rina", NULL, kernel_kobj);
+        if (!sysfs_root) {
+                LOG_ERR("Cannot initialize sysfs support, bailing out");
+                return -1;
+        }
+#endif
+
         if (rina_netlink_init()) {
-                LOG_CRIT("Could not initialize netlink");
-                rina_personality_exit();
                 return -1;
         }
 
-        if (rina_personality_init()) {
-                LOG_CRIT("Could not initialize personality");
+        if (rina_personality_init(&sysfs_root->kobj)) {
+                rina_netlink_exit();
                 return -1;
         }
 

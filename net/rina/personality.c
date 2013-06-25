@@ -19,6 +19,8 @@
  */
 
 #include <linux/export.h>
+#include <linux/kobject.h>
+#include <linux/sysfs.h>
 
 #define RINA_PREFIX "personality"
 
@@ -27,10 +29,21 @@
 #include "personality.h"
 #include "shim.h"
 
+#if 0
+struct personality_container {
+        kobject                data;
+        struct personality_t * personality;
+};
+#endif
+
+#if CONFIG_RINA_SYSFS
+static struct kset *   personalities    = NULL;
+#endif
+
 /* FIXME: This layer allows 1 personality only, that's enough for the moment */
 struct personality_t * rina_personality = NULL;
 
-int rina_personality_init(void)
+int rina_personality_init(struct kobject * parent)
 {
         LOG_DBG("Initializing personality layer");
 
@@ -39,6 +52,16 @@ int rina_personality_init(void)
                         "bailing out");
                 return -1;
         }
+
+#if CONFIG_RINA_SYSFS
+        ASSERT(parent);
+
+        personalities = kset_create_and_add("personalities", NULL, parent);
+        if (!personalities) {
+                LOG_ERR("Cannot initialize personality layer sysfs support");
+                return -1;
+        }
+#endif
 
         /* Useless */
         rina_personality = NULL;
@@ -56,6 +79,10 @@ void rina_personality_exit(void)
                 ASSERT(rina_personality->fini);
                 rina_personality->fini(rina_personality->data);
         }
+
+#if CONFIG_RINA_SYSFS
+        kset_unregister(personalities);
+#endif
 
         rina_personality = NULL;
 

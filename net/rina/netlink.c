@@ -416,14 +416,14 @@ int rina_netlink_init(void)
 
         ret = genl_register_family(&nl_rina_family);
         if (ret != 0) {
-                LOG_DBG("Not able to register nl_rina_family");
+                LOG_ERR("Cannot register NL family");
                 return -1;
         }
 
-        for (i=0; i < ARRAY_SIZE(nl_rina_ops); i++) {
+        for (i = 0; i < ARRAY_SIZE(nl_rina_ops); i++) {
                 ret = genl_register_ops(&nl_rina_family, &nl_rina_ops[i]);
                 if (ret < 0) {
-                        LOG_DBG("Not able to register nl_rina_ops %d", ret);
+                        LOG_ERR("Cannot register NL ops %d", ret);
                         genl_unregister_family(&nl_rina_family);
                         return -2;
                 }
@@ -431,7 +431,7 @@ int rina_netlink_init(void)
 
         LOG_DBG("NetLink layer initialized");
 
-        /*  TODO: Testing */
+        /* TODO: Testing */
         register_handler(RINA_C_APP_ALLOCATE_FLOW_REQUEST, nl_rina_echo);
         LOG_DBG("nl_rina echo registered for "
                 "RINA_C_APP_ALLOCATE_FLOW_REQUEST");
