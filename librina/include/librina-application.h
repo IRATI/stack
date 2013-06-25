@@ -253,7 +253,7 @@ extern Singleton<IPCManager> ipcManager;
 class FlowDeallocatedEvent: public IPCEvent {
 	int portId;
 public:
-	FlowDeallocatedEvent(int portId);
+	FlowDeallocatedEvent(int portId, unsigned int sequenceNumber);
 	int getPortId() const;
 };
 
@@ -271,7 +271,8 @@ class ApplicationUnregisteredEvent: public IPCEvent {
 public:
 	ApplicationUnregisteredEvent(
 			const ApplicationProcessNamingInformation& appName,
-			const ApplicationProcessNamingInformation& DIFName);
+			const ApplicationProcessNamingInformation& DIFName,
+			unsigned int sequenceNumber);
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
 };
@@ -298,12 +299,14 @@ class IncomingFlowRequestEvent: public IPCEvent {
 public:
 	IncomingFlowRequestEvent(const FlowSpecification& flowSpecification,
 			const ApplicationProcessNamingInformation& sourceApplicationName,
-			const ApplicationProcessNamingInformation& destApplicationName);
+			const ApplicationProcessNamingInformation& destApplicationName,
+			unsigned int sequenceNumber);
 	IncomingFlowRequestEvent(int portId,
 			const FlowSpecification& flowSpecification,
 			const ApplicationProcessNamingInformation& sourceApplicationName,
 			const ApplicationProcessNamingInformation& destApplicationName,
-			const ApplicationProcessNamingInformation& DIFName);
+			const ApplicationProcessNamingInformation& DIFName,
+			unsigned int sequenceNumber);
 	int getPortId() const;
 	const FlowSpecification& getFlowSpecification() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;

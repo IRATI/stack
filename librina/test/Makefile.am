@@ -71,13 +71,18 @@ test_concurrency_SOURCES  = test-concurrency.cc
 test_concurrency_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_concurrency_LDFLAGS  = $(COMMONLDFLAGS)
 
+test_core_SOURCES  = test-core.cc
+test_core_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
+test_core_LDFLAGS  = $(COMMONLDFLAGS)
+
 check_PROGRAMS =				\
 	test-01					\
 	test-02					\
 	test-03					\
 	test-netlink-manager			\
 	test-netlink-parsers			\
-	test-concurrency
+	test-concurrency		\
+	test-core
 
 XFAIL_TESTS =					\
 	test-03
@@ -94,12 +99,14 @@ TESTS =						\
 FUNCTIONAL_TESTS =				\
 	test-netlink-manager			\
 	test-netlink-parsers			\
-	test-concurrency
+	test-concurrency		\
+	test-core
 
 FUNCTIONAL_PASS_TESTS =				\
 	test-netlink-manager			\
 	test-netlink-parsers			\
-	test-concurrency
+	test-concurrency		\
+	test-core
 
 FUNCTIONAL_XFAIL_TESTS =
 

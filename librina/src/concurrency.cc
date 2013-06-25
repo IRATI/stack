@@ -21,6 +21,9 @@
 
 #include <errno.h>
 
+#define RINA_PREFIX "concurrency"
+
+#include "logs.h"
 #include "concurrency.h"
 
 namespace rina {

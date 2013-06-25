@@ -300,8 +300,9 @@ Singleton<IPCManager> ipcManager;
 
 /* CLASS FLOW DEALLOCATED EVENT */
 
-FlowDeallocatedEvent::FlowDeallocatedEvent(int portId) :
-		IPCEvent(FLOW_DEALLOCATED_EVENT) {
+FlowDeallocatedEvent::FlowDeallocatedEvent(
+		int portId, unsigned int sequenceNumber) :
+		IPCEvent(FLOW_DEALLOCATED_EVENT, sequenceNumber) {
 	this->portId = portId;
 }
 
@@ -313,8 +314,10 @@ int FlowDeallocatedEvent::getPortId() const {
 
 ApplicationUnregisteredEvent::ApplicationUnregisteredEvent(
 		const ApplicationProcessNamingInformation& appName,
-		const ApplicationProcessNamingInformation& DIFName) :
-		IPCEvent(APPLICATION_UNREGISTERED_EVENT) {
+		const ApplicationProcessNamingInformation& DIFName,
+		unsigned int sequenceNumber) :
+		IPCEvent(APPLICATION_UNREGISTERED_EVENT,
+				sequenceNumber) {
 	this->applicationName = appName;
 	this->DIFName = DIFName;
 }
@@ -333,8 +336,10 @@ const ApplicationProcessNamingInformation&
 IncomingFlowRequestEvent::IncomingFlowRequestEvent(
 		const FlowSpecification& flowSpecification,
 		const ApplicationProcessNamingInformation& sourceApplicationName,
-		const ApplicationProcessNamingInformation& destApplicationName):
-				IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT) {
+		const ApplicationProcessNamingInformation& destApplicationName,
+		unsigned int sequenceNumber):
+				IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
+						sequenceNumber) {
 	this->flowSpecification = flowSpecification;
 	this->sourceApplicationName = sourceApplicationName;
 	this->destinationApplicationName = destApplicationName;
@@ -345,8 +350,10 @@ IncomingFlowRequestEvent::IncomingFlowRequestEvent(int portId,
 		const FlowSpecification& flowSpecification,
 		const ApplicationProcessNamingInformation& sourceApplicationName,
 		const ApplicationProcessNamingInformation& destApplicationName,
-		const ApplicationProcessNamingInformation& DIFName) :
-		IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT) {
+		const ApplicationProcessNamingInformation& DIFName,
+		unsigned int sequenceNumber) :
+		IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
+				sequenceNumber) {
 	this->flowSpecification = flowSpecification;
 	this->sourceApplicationName = sourceApplicationName;
 	this->destinationApplicationName = destApplicationName;

@@ -154,7 +154,8 @@ IPCEvent* AppAllocateFlowRequestMessage::toIPCEvent(){
 			new IncomingFlowRequestEvent(
 					this->flowSpecification,
 					this->sourceAppName,
-					this->destAppName);
+					this->destAppName,
+					this->getSequenceNumber());
 	return event;
 }
 

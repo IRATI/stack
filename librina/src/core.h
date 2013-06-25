@@ -22,11 +22,10 @@
 #ifndef CORE_H_
 #define CORE_H_
 
+#include <map>
 #include "concurrency.h"
 #include "patterns.h"
 #include "netlink-manager.h"
-
-#define MAX_NETLINK_SEQUENCE_NUMBER 4294967295
 
 namespace rina {
 
@@ -58,13 +57,13 @@ class NetlinkSession {
 	/**
 	 * Stores the local Netlink request messages that are waiting for a reply
 	 */
-	std::map<unsigned int, *PendingNetlinkMessage> localPendingMessages;
+	std::map<unsigned int, PendingNetlinkMessage *> localPendingMessages;
 
 	/**
 	 * Stores the Netlink request messages from peers
 	 * that are waiting for a response
 	 */
-	std::map<unsigned int, *BaseNetlinkMessage> remotePendingMessages;
+	std::map<unsigned int, BaseNetlinkMessage *> remotePendingMessages;
 
 public:
 	NetlinkSession(int sessionId);

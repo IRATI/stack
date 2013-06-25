@@ -71,7 +71,7 @@ NetlinkSession::~NetlinkSession(){
 unsigned int NetlinkSession::getValidSequenceNumber(){
 	unsigned int sequenceNumber = 0;
 
-	for (sequenceNumber = 1; sequenceNumber < MAX_NETLINK_SEQUENCE_NUMBER;
+	for (sequenceNumber = 1; sequenceNumber< 10000;
 			sequenceNumber++) {
 		if (localPendingMessages.count(sequenceNumber) == 0 &&
 				remotePendingMessages.count(sequenceNumber) == 0) {
@@ -79,7 +79,7 @@ unsigned int NetlinkSession::getValidSequenceNumber(){
 		}
 	}
 
-	return MAX_NETLINK_SEQUENCE_NUMBER + 1;
+	return 0;
 }
 
 void NetlinkSession::putLocalPendingMessage(
@@ -89,8 +89,8 @@ void NetlinkSession::putLocalPendingMessage(
 }
 
 PendingNetlinkMessage*
-	NetlinkSession::takeLocalPendingMessage(unsigned int sequenceNumber){
-	std::map<unsigned int, PendingNetlinkMessage>::iterator it =
+NetlinkSession::takeLocalPendingMessage(unsigned int sequenceNumber){
+	std::map<unsigned int, PendingNetlinkMessage *>::iterator it =
 			localPendingMessages.find(sequenceNumber);
 	if(it == localPendingMessages.end()){
 		LOG_ERR("Could not find the matching request for a local response message with sequence number %d",
@@ -100,7 +100,7 @@ PendingNetlinkMessage*
 
 	//2 Remove pending Netlink message from table
 	localPendingMessages.erase(sequenceNumber);
-	return it->second();
+	return it->second;
 }
 
 void NetlinkSession::putRemotePendingMessage(BaseNetlinkMessage* pendingMessage){
@@ -110,7 +110,7 @@ void NetlinkSession::putRemotePendingMessage(BaseNetlinkMessage* pendingMessage)
 
 BaseNetlinkMessage*
 	NetlinkSession::takeRemotePendingMessage(unsigned int sequenceNumber){
-	std::map<unsigned int, BaseNetlinkMessage*>::iterator it =
+	std::map<unsigned int, BaseNetlinkMessage *>::iterator it =
 			remotePendingMessages.find(sequenceNumber);
 	if(it == remotePendingMessages.end()){
 		LOG_ERR("Could not find the matching request for a remote response message with sequence number %d",
@@ -120,7 +120,7 @@ BaseNetlinkMessage*
 
 	//2 Remove pending Netlink message from table
 	remotePendingMessages.erase(sequenceNumber);
-	return it->second();
+	return it->second;
 }
 
 /* CLASS RINA Manager */
@@ -348,6 +348,14 @@ void RINAManager::netlinkRequestMessageArrived(
 
 	netlinkSession->putRemotePendingMessage(request);
 	sendReceiveLock.unlock();
+}
+
+BlockingFIFOQueue<IPCEvent>* RINAManager::getEventQueue(){
+	return eventQueue;
+}
+
+NetlinkManager* RINAManager::getNetlinkManager(){
+	return netlinkManager;
 }
 
 Singleton<RINAManager> rinaManager;
