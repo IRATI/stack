@@ -36,10 +36,7 @@
 #include "shim.h"
 
 
-struct shim_t * shim;
-
-/* Holds all the shim instances */
-static struct rb_root shim_eth_root = RB_ROOT;
+static struct shim_t * shim;
 
 /* Holds the configuration of one shim IPC process */
 struct shim_eth_info_t {
@@ -184,11 +181,15 @@ static struct shim_instance_t * shim_create(void * opaque,
 {
 	struct shim_instance_t * instance;
 	struct shim_eth_instance_t * shim_instance; 	
-	struct rb_node **p = &shim_eth_root.rb_node;
-	struct rb_node *parent = NULL;
+	struct rb_node **p;
+	struct rb_node *parent;
 	struct shim_eth_instance_t * s;
-
-	LOG_FBEGN;
+	struct rb_root * shim_eth_root;
+        LOG_FBEGN;
+	
+	shim_eth_root = (struct rb_root *) shim->opaque;
+	p = &shim_eth_root->rb_node;
+	parent = NULL;
 
 	instance = kmalloc(sizeof(*instance), GFP_KERNEL);
 	if (!instance) {
@@ -223,7 +224,7 @@ static struct shim_instance_t * shim_create(void * opaque,
 			p = &(*p)->rb_right;
 	}
 	rb_link_node(&shim_instance->node,parent,p);
-	rb_insert_color(&shim_instance->node,&shim_eth_root);        
+	rb_insert_color(&shim_instance->node,shim_eth_root);        
 
         instance->opaque                 = shim_instance;
         instance->flow_allocate_request  = shim_flow_allocate_request;
@@ -339,7 +340,12 @@ static int shim_destroy(void * opaque,
 	                struct shim_instance_t * inst)
 {
 	struct shim_eth_instance_t * instance;
-	LOG_FBEGN;
+
+	struct rb_root * shim_eth_root;
+        LOG_FBEGN;
+	
+	shim_eth_root = (struct rb_root *) shim->opaque;
+	
 	if (inst) {
                 /**
 		 *  FIXME: Need to ask instance to clean up as well
@@ -347,7 +353,7 @@ static int shim_destroy(void * opaque,
 		 */
 		instance = (struct shim_eth_instance_t *) inst->opaque;
 		if (instance) {
-			rb_erase(&instance->node, &shim_eth_root);
+			rb_erase(&instance->node, shim_eth_root);
 			kfree(instance);
 		}
 		kfree(inst);
@@ -365,7 +371,12 @@ static struct packet_type shim_eth_vlan_packet_type __read_mostly = {
 
 static int __init mod_init(void)
 {
+	/* Holds all shim instances */
+	struct rb_root shim_eth_root;
 	LOG_FBEGN;
+	LOG_INFO("Shim-eth-vlan module v%d.%d loaded",0,1);
+
+	shim_eth_root = RB_ROOT;
 
         shim = kmalloc(sizeof(*shim), GFP_KERNEL);
         if (!shim) {
@@ -376,9 +387,10 @@ static int __init mod_init(void)
 
         shim->label     = "shim-eth-vlan";
         shim->create    = shim_create;
-
         shim->destroy   = shim_destroy;
         shim->configure = shim_configure;
+
+	shim->opaque = &shim_eth_root;
 
         if (shim_register(shim)) {
                 LOG_ERR("Initialization of module shim-dummy failed");
@@ -400,10 +412,13 @@ static void __exit mod_exit(void)
 	struct rb_node * s;
 	struct rb_node * e;
 	struct shim_eth_instance_t * i;
+	struct rb_root * shim_eth_root;
         LOG_FBEGN;
-
+	
+	shim_eth_root = (struct rb_root *) shim->opaque;
+	
 	/* Destroy all shim instances */
-	s = rb_first(&shim_eth_root);
+	s = rb_first(shim_eth_root);
 	while(s) {
                 /* Get next node and keep pointer to this one */
 		e = s;
@@ -414,7 +429,7 @@ static void __exit mod_exit(void)
 		 * Don't know yet in full what to delete
 		 */
 		i = rb_entry(e,struct shim_eth_instance_t, node);
-		rb_erase(e, &shim_eth_root);
+		rb_erase(e, shim_eth_root);
 		kfree(i);
 	}
 
