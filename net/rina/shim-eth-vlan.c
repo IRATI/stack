@@ -125,7 +125,7 @@ static int shim_application_register(void *                opaque,
 	return 0;
 }
 
-static int shim_application_unregister(void *               opaque,
+static int shim_application_unregister(void *                opaque,
 				       const struct name_t * name)
 {
         LOG_FBEGN;
@@ -154,13 +154,13 @@ static int shim_sdu_read(void *         opaque,
 	return 0;
 }
 
-static int shim_rcv(struct sk_buff *skb, 
-		    struct net_device *dev,
-		    struct packet_type *pt, 
-		    struct net_device *orig_dev)
+static int shim_rcv(struct sk_buff *     skb, 
+		    struct net_device *  dev,
+		    struct packet_type * pt, 
+		    struct net_device *  orig_dev)
 {
 	if (skb->pkt_type == PACKET_OTHERHOST ||
-		skb->pkt_type == PACKET_LOOPBACK) {
+            skb->pkt_type == PACKET_LOOPBACK) {
 		kfree_skb(skb);
 		return 0;
 	}
@@ -175,8 +175,7 @@ static int shim_rcv(struct sk_buff *skb,
 	return 0;
 };
 
-
-static struct shim_instance_t * shim_create(void * opaque,
+static struct shim_instance_t * shim_create(void *           opaque,
 	                                    ipc_process_id_t ipc_process_id)
 {
 	struct shim_instance_t * instance;
@@ -260,7 +259,7 @@ static int name_cpy(struct name_t * dst,
 }
 
 struct shim_instance_t * shim_configure
-(void * opaque,
+(void *                     opaque,
  struct shim_instance_t *   inst,
  const struct shim_conf_t * configuration)
 {
@@ -336,7 +335,7 @@ struct shim_instance_t * shim_configure
 	return inst;
 }
 
-static int shim_destroy(void * opaque,
+static int shim_destroy(void *                   opaque,
 	                struct shim_instance_t * inst)
 {
 	struct shim_eth_instance_t * instance;
@@ -347,7 +346,7 @@ static int shim_destroy(void * opaque,
 	shim_eth_root = (struct rb_root *) shim->opaque;
 	
 	if (inst) {
-                /**
+                /*
 		 *  FIXME: Need to ask instance to clean up as well
 		 * Don't know yet in full what to delete
 		 */
@@ -423,7 +422,7 @@ static void __exit mod_exit(void)
                 /* Get next node and keep pointer to this one */
 		e = s;
 		rb_next(s);
-		/**
+		/*
 		 * Get the shim_instance 
 		 * FIXME: Need to ask it to clean up as well
 		 * Don't know yet in full what to delete
