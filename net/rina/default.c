@@ -210,7 +210,7 @@ static int __init mod_init(void)
         ASSERT(pd->efcp);
         ASSERT(pd->rmt);
 
-        LOG_DBG("Rina personality loaded successfully");
+        LOG_DBG("Rina default personality loaded successfully");
 
         LOG_FEXIT;
         return 0;
@@ -256,7 +256,7 @@ static void __exit mod_exit(void)
         personality_fini(personality);
         personality = NULL;
 
-        LOG_DBG("Rina personality unloaded successfully");
+        LOG_DBG("Rina default personality unloaded successfully");
 
         LOG_FEXIT;
 }
