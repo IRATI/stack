@@ -185,7 +185,7 @@ static struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
 
 	LOG_FBEGN;
 
-	instance = kmalloc(sizeof(*instance), GFP_KERNEL);
+	instance = kzalloc(sizeof(*instance), GFP_KERNEL);
 	if (!instance) {
 		LOG_ERR("Cannot allocate %zu bytes of memory",
 				sizeof(*instance));
@@ -193,7 +193,7 @@ static struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
 		return NULL;
 	}
 
-	dummy_inst = kmalloc(sizeof(*dummy_inst), GFP_KERNEL);
+	dummy_inst = kzalloc(sizeof(*dummy_inst), GFP_KERNEL);
 	if (!dummy_inst) {
 		LOG_ERR("Cannot allocate %zu bytes of memory",
 				sizeof(*dummy_inst));
