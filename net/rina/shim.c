@@ -103,7 +103,7 @@ static int is_ok(const struct shim_t * shim)
 
         if (shim->create             &&
             shim->configure          &&
-	    shim->destroy) {
+            shim->destroy) {
                 LOG_DBG("Shim '%s' is ok", shim->label);
                 return 1;
         }
