@@ -26,6 +26,7 @@
 
 #include <netlink/msg.h>
 #include <netlink/attr.h>
+#include <netlink/genl/genl.h>
 
 #include <netlink-messages.h>
 

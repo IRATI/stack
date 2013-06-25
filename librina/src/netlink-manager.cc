@@ -151,6 +151,7 @@ void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
 BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 	unsigned char *buf = NULL;
 	struct nlmsghdr *hdr;
+	struct genlmsghdr *nlhdr;
 	struct sockaddr_nl nla = { 0 };
 	struct nl_msg *msg = NULL;
 	struct ucred *creds = NULL;
@@ -167,6 +168,7 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 	LOG_DBG("Received %d bytes, parsing the message", numBytes);
 
 	hdr = (struct nlmsghdr *) buf;
+	nlhdr = (genlmsghdr *) nlmsg_data(hdr);
 	msg = nlmsg_convert(hdr);
 	if (!msg) {
 		LOG_ERR("%s", NetlinkException::error_parsing_netlink_message.c_str());
@@ -176,7 +178,9 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 
 	nlmsg_set_src(msg, &nla);
 
-	LOG_DBG("Message type %d", hdr->nlmsg_type);
+	LOG_DBG("Netlink family %d", hdr->nlmsg_type);
+	LOG_DBG("Version %d", nlhdr->version);
+	LOG_DBG("Operation code %d", nlhdr->cmd);
 	if (hdr->nlmsg_flags & NLM_F_REQUEST) {
 		LOG_DBG("It is a request message");
 	} else if (hdr->nlmsg_flags & NLMSG_ERROR) {
