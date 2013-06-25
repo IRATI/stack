@@ -122,7 +122,7 @@ int default_sdu_read(struct personality_data * data,
 static struct personality_t * personality_init(void)
 {
         struct personality_t * p;
-        
+
         p = kzalloc(sizeof(*p), GFP_KERNEL);
         if (!p) {
                 LOG_ERR("Cannot allocate %zu bytes of memory",

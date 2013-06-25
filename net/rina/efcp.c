@@ -68,40 +68,40 @@ int efcp_write(void *               opaque,
                port_id_t            id,
                const struct sdu_t * sdu)
 {
-	LOG_DBG("Written SDU");
+        LOG_DBG("Written SDU");
 
-	return 0;
+        return 0;
 }
 
 int efcp_receive_pdu(void *       opaque,
                      struct pdu_t pdu)
 {
-	LOG_DBG("PDU received in the EFCP");
+        LOG_DBG("PDU received in the EFCP");
 
-	return 0;
+        return 0;
 }
 
 cep_id_t efcp_create(void *                      opaque,
                      const struct connection_t * connection)
 {
-	LOG_DBG("EFCP instance created");
+        LOG_DBG("EFCP instance created");
 
-	return 0;
+        return 0;
 }
 
 int efcp_destroy(void *   opaque,
                  cep_id_t id)
 {
-	LOG_DBG("EFCP instance destroyed");
+        LOG_DBG("EFCP instance destroyed");
 
-	return 0;
+        return 0;
 }
 
 int efcp_update(void *   opaque,
                 cep_id_t id_from,
                 cep_id_t id_to)
 {
-	LOG_DBG("EFCP instance updated");
+        LOG_DBG("EFCP instance updated");
 
-	return 0;
+        return 0;
 }

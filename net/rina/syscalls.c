@@ -1,14 +1,14 @@
 /*
- * System calls 
- * 
+ * System calls
+ *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
- *     
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -33,30 +33,32 @@
 /* FIXME: To be removed ASAP */
 extern struct personality_t * rina_personality;
 
-#define CALL_PERSONALITY(HOOK, ARGS...)                                   \
-do {                                                                      \
-	if (rina_personality == NULL) {                                   \
-                LOG_ERR("No personality registered");                     \
-                return -1;                                                \
-        }                                                                 \
-                                                                          \
-	ASSERT(rina_personality);                                         \
-                                                                          \
-        if (rina_personality -> HOOK == NULL) {                           \
-                LOG_ERR("No %s hook present", __stringify(HOOK));         \
-                return -1;                                                \
-        }                                                                 \
-                                                                          \
-        ASSERT(rina_personality -> HOOK);                                 \
-        return rina_personality -> HOOK (rina_personality->data, ##ARGS); \
-} while (0)
+#define CALL_PERSONALITY(HOOK, ARGS...)                                 \
+        do {                                                            \
+                if (rina_personality == NULL) {                         \
+                        LOG_ERR("No personality registered");           \
+                        return -1;                                      \
+                }                                                       \
+                                                                        \
+                ASSERT(rina_personality);                               \
+                                                                        \
+                if (rina_personality -> HOOK == NULL) {                 \
+                        LOG_ERR("No %s hook present",                   \
+                                __stringify(HOOK));                     \
+                        return -1;                                      \
+                }                                                       \
+                                                                        \
+                ASSERT(rina_personality -> HOOK);                       \
+                return rina_personality -> HOOK (rina_personality->data, \
+		                                 ##ARGS);               \
+        } while (0)
 
 SYSCALL_DEFINE3(ipc_create,
                 const struct name_t __user *, name,
                 ipc_process_id_t,             id,
                 dif_type_t,                   type)
 { CALL_PERSONALITY(ipc_create, name, id, type); }
-                
+
 SYSCALL_DEFINE2(ipc_configure,
                 ipc_process_id_t,                         id,
                 const struct ipc_process_conf_t __user *, config)

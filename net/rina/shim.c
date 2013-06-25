@@ -35,30 +35,32 @@ static struct kset * shims = NULL;
 
 int shim_init(void)
 {
-        LOG_DBG("Initializing shims layer");
+        LOG_DBG("Initializing shim layer");
 
         if (shims) {
-                LOG_ERR("Shims layer already initialized");
+                LOG_ERR("Shim layer already initialized");
                 return -1;
         }
 
 #if CONFIG_RINA_SYSFS
         /* FIXME: Move the set path from kernel to rina */
         shims = kset_create_and_add("shims", NULL, kernel_kobj);
-        if (!shims)
+        if (!shims) {
+                LOG_ERR("Cannot intialize shim layer sysfs support");
                 return -1;
+        }
 #endif
 
         ASSERT(shims != NULL);
 
-        LOG_DBG("Shims layer initialized successfully");
+        LOG_DBG("Shim layer initialized successfully");
 
         return 0;
 }
 
 void shim_exit(void)
 {
-        LOG_DBG("Finalizing shims layer");
+        LOG_DBG("Finalizing shim layer");
 
         ASSERT(shims != NULL);
 #if CONFIG_RINA_SYSFS
@@ -66,7 +68,7 @@ void shim_exit(void)
 #endif
         shims = NULL;
 
-        LOG_DBG("Shims layer finalized successfully");
+        LOG_DBG("Shim layer finalized successfully");
 }
 
 static int is_label_ok(const char * label)
@@ -103,7 +105,7 @@ static int is_ok(const struct shim_t * shim)
 
         if (shim->create             &&
             shim->configure          &&
-	    shim->destroy) {
+            shim->destroy) {
                 LOG_DBG("Shim '%s' is ok", shim->label);
                 return 1;
         }
