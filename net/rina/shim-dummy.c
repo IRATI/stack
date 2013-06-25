@@ -137,7 +137,8 @@ static int dummy_sdu_read(void *         opaque,
 	return 0;
 }
 
-static struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
+static struct shim_instance_t * dummy_create(void *           opaque,
+                                             ipc_process_id_t ipc_process_id)
 {
 	struct shim_instance_t *  instance;
 	struct dummy_instance_t * dummy_inst;
@@ -148,7 +149,7 @@ static struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
 	instance = kmalloc(sizeof(*instance), GFP_KERNEL);
 	if (!instance) {
 		LOG_ERR("Cannot allocate %zu bytes of memory",
-				sizeof(*instance));
+                        sizeof(*instance));
 		LOG_FEXIT;
 		return NULL;
 	}
@@ -156,7 +157,7 @@ static struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
 	dummy_inst = kmalloc(sizeof(*dummy_inst), GFP_KERNEL);
 	if (!dummy_inst) {
 		LOG_ERR("Cannot allocate %zu bytes of memory",
-				sizeof(*dummy_inst));
+                        sizeof(*dummy_inst));
 		kfree(instance);
 		LOG_FEXIT;
 		return NULL;
@@ -179,7 +180,8 @@ static struct shim_instance_t * dummy_create(ipc_process_id_t ipc_process_id)
 	return instance;
 }
 
-static int dummy_destroy(struct shim_instance_t * inst)
+static int dummy_destroy(void *                   opaque, 
+                         struct shim_instance_t * inst)
 {
 	LOG_FBEGN;
         LOG_FEXIT;
@@ -188,9 +190,9 @@ static int dummy_destroy(struct shim_instance_t * inst)
 }
 
 static struct shim_instance_t *
-dummy_configure(struct shim_instance_t *   instance,
-                const struct shim_conf_t *
-                configuration)
+dummy_configure(void *                     opaque,
+                struct shim_instance_t *   instance,
+                const struct shim_conf_t * configuration)
 {
 	struct shim_conf_t * current_entry;
 	struct dummy_instance_t * dummy;

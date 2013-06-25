@@ -84,7 +84,7 @@ struct shim_t {
         char * label;
 
 	struct shim_instance_t * (* create)
-                (void * opaque,
+                (void *           opaque,
 		 ipc_process_id_t id);
         
 	struct shim_instance_t * (* configure)
