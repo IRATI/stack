@@ -35,7 +35,7 @@ struct personality_t {
          *
          * It must not be NULL!
          */
-        char * label;
+        char *                    label;
 
         /* Might be removed if deemed unnecessary */
         struct personality_data * data;
