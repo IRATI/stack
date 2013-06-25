@@ -168,7 +168,7 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 	LOG_DBG("Received %d bytes, parsing the message", numBytes);
 
 	hdr = (struct nlmsghdr *) buf;
-	nlhdr = genlmsg_hdr(hdr);
+	nlhdr = (genlmsghdr *) nlmsg_data(hdr);
 	msg = nlmsg_convert(hdr);
 	if (!msg) {
 		LOG_ERR("%s", NetlinkException::error_parsing_netlink_message.c_str());

@@ -47,8 +47,13 @@ int testAppAllocateFlowRequestMessage() {
 	message->setFlowSpecification(*flowSpec);
 
 	struct nl_msg* netlinkMessage;
-	netlinkMessage = nlmsg_alloc_simple(message->getOperationCode(),
-			NLM_F_REQUEST);
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage){
+		std::cout<<"Error allocating Netlink message\n";
+	}
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(),
+			21, 0, 0, message->getOperationCode(), 0);
+
 	int result = putBaseNetlinkMessage(netlinkMessage, message);
 	if (result < 0) {
 		std::cout

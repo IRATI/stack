@@ -21,10 +21,6 @@
  *      Author: eduardgrasa
  */
 
-#include <netlink/netlink.h>
-#include <netlink/genl/genl.h>
-#include <netlink/genl/ctrl.h>
-
 #define RINA_PREFIX "netlink-parsers"
 
 #include "logs.h"
@@ -52,13 +48,15 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 
 BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	struct genlmsghdr *nlhdr;
-	nlhdr = genlmsg_hdr(netlinkMessageHeader);
+	nlhdr = (genlmsghdr *) nlmsg_data(netlinkMessageHeader);
 
 	switch (nlhdr->cmd) {
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST: {
 		return parseAppAllocateFlowRequestMessage(netlinkMessageHeader);
 	}
 	default: {
+		LOG_ERR("Generic Netlink message contains unrecognized command code: %d"
+				, nlhdr->cmd);
 		return NULL;
 	}
 	}
