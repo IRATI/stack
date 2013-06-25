@@ -32,7 +32,7 @@
 #include "utils.h"
 #include "shim.h"
 
-struct shim_t * shim;
+static struct shim_t * shim;
 
 struct dummy_instance_t {
 	ipc_process_id_t ipc_process_id;
@@ -142,17 +142,16 @@ static int dummy_sdu_write(void *               opaque,
                            port_id_t            id,
                            const struct sdu_t * sdu)
 {
-	struct dummy_instance_t * dummy;
-	struct dummy_flow_t *     flow;
+	struct dummy_flow_t * flow;
 	LOG_FBEGN;
 
-	dummy = (struct dummy_instance_t *) opaque;
 	flow = dummy_find_flow(opaque, id);
 	if (!flow) {
-		LOG_ERR("There is not a flow allocated with this port-id %d", id);
+		LOG_ERR("There is not a flow allocated with port-id %d", id);
 		return -1;
 	}
 
+	/* FIXME: Add code here to send the sdu */
 
 	LOG_FEXIT;
 
@@ -163,7 +162,16 @@ static int dummy_sdu_read(void *         opaque,
                           port_id_t      id,
                           struct sdu_t * sdu)
 {
+	struct dummy_flow_t * flow;
+
 	LOG_FBEGN;
+
+	flow = dummy_find_flow(opaque, id);
+	if (!flow) {
+		LOG_ERR("There is not a flow allocated with port-id %d", id);
+		return -1;
+	}
+
 	LOG_FEXIT;
 
 	return 0;
