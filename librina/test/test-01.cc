@@ -187,9 +187,9 @@ int main(int argc, char * argv[]) {
 
 	/* TEST EVENT POLL */
 	IPCEvent * event = new IncomingFlowRequestEvent(24, *flowSpecification,
-			*sourceName, *destinationName, *difName);
+			*sourceName, *destinationName, *difName, 353);
 	ipcEventProducer->enqueEvent(event);
-	event = new ApplicationUnregisteredEvent(*sourceName, *difName);
+	event = new ApplicationUnregisteredEvent(*sourceName, *difName, 25);
 	ipcEventProducer->enqueEvent(event);
 
 	event = ipcEventProducer->eventPoll();
