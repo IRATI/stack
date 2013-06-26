@@ -32,18 +32,22 @@ static struct dentry * dfs_root = NULL;
 
 int rina_debug_init()
 {
+        LOG_DBG("Debugging facilities initializing");
+
 #if CONFIG_DEBUG_FS
         if (dfs_root) {
-                LOG_ERR("Debugging facilities already initialized, "
+                LOG_ERR("Debug-fs support already initialized, "
                         "bailing out");
                 return -1;
         }
 
         dfs_root = debugfs_create_dir("rina", NULL);
         if (!dfs_root) {
-                LOG_DBG("Cannot setup debugfs facilities");
+                LOG_DBG("Cannot setup debug-fs support");
                 return -1;
         }
+        
+        LOG_DBG("Debug-fs support initialized successfully");
 #endif
 
         LOG_DBG("Debugging facilities initialized successfully");
@@ -57,12 +61,14 @@ void rina_debug_exit()
 
 #if CONFIG_DEBUG_FS
         if (!dfs_root) {
-                LOG_DBG("Debugging facilities not correctly initialized, "
+                LOG_DBG("Debug-fs support not correctly initialized, "
                         "bailing out");
                 return;
         }
 
         debugfs_remove_recursive(dfs_root);
+
+        LOG_DBG("Debug-fs support finalized successfully");
 #endif
 
         LOG_DBG("Debugging facilities finalized successfully");
@@ -71,7 +77,10 @@ void rina_debug_exit()
 #else
 
 int rina_debug_init()
-{ return 0; }
+{
+        LOG_DBG("Debugging facilities disabled");
+        return 0;
+}
 
 void rina_debug_exit()
 { }

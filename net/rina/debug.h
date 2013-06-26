@@ -21,7 +21,7 @@
 #ifndef RINA_DEBUG_H
 #define RINA_DEBUG_H
 
-int  rina_debug_init();
-void rina_debug_exit();
+int  rina_debug_init(void);
+void rina_debug_exit(void);
 
 #endif
