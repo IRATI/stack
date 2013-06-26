@@ -19,6 +19,8 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <unistd.h>
+
 #define RINA_PREFIX "core"
 
 #include "logs.h"
@@ -160,7 +162,7 @@ void * doNetlinkMessageReaderWork(void * arg) {
 RINAManager::RINAManager() {
 	//1 Initialize NetlinkManager
 	try {
-		netlinkManager = new NetlinkManager();
+		netlinkManager = new NetlinkManager(getNelinkPortId());
 	} catch (NetlinkException &e) {
 		LOG_ERR("Error initializing Netlink Manager. %s", e.what());
 		LOG_ERR("Program will exit now");
@@ -350,6 +352,23 @@ NetlinkManager* RINAManager::getNetlinkManager(){
 }
 
 Singleton<RINAManager> rinaManager;
+
+unsigned int netlinkPortId = getpid();
+Lockable * netlinkLock = new Lockable();
+
+void setNetlinkPortId(unsigned int newNetlinkPortId){
+	netlinkLock->lock();
+	netlinkPortId = newNetlinkPortId;
+	netlinkLock->unlock();
+}
+
+unsigned int getNelinkPortId(){
+	unsigned int result = 0;
+	netlinkLock->lock();
+	result = netlinkPortId;
+	netlinkLock->unlock();
+	return result;
+}
 
 }
 

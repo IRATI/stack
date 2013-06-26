@@ -140,6 +140,9 @@ public:
  */
 extern Singleton<RINAManager> rinaManager;
 
+void setNetlinkPortId(unsigned int netlinkPortId);
+unsigned int getNelinkPortId();
+
 }
 
 #endif /* CORE_H_ */
