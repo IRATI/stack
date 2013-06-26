@@ -25,45 +25,69 @@
 #define RINA_PREFIX "core"
 
 #include "logs.h"
+#include "debug.h"
 #include "rina.h"
 #include "netlink.h"
 #include "personality.h"
 
-#if CONFIG_RINA_SYSFS
-static struct kset * sysfs_root = NULL;
-#endif
-
-static uint32_t version = MK_RINA_VERSION(0, 0, 0);
+static uint32_t      version   = MK_RINA_VERSION(0, 0, 0);
+static struct kset * root_kset = NULL;
 
 uint32_t rina_version(void)
 { return version; }
+
+#if CONFIG_RINA_SYSFS
+static ssize_t version_show(struct kobject *        kobj,
+                            struct kobj_attribute * attr,
+                            char *                  buff)
+{
+        return sprintf(buff, "%d.%d.%d\n",
+                       RINA_VERSION_MAJOR(version),
+                       RINA_VERSION_MINOR(version),
+                       RINA_VERSION_MICRO(version));
+}
+
+static struct kobj_attribute version_attr = __ATTR_RO(version);
+#endif
 
 static int __init rina_core_init(void)
 {
         LOG_FBEGN;
 
-        LOG_INFO("RINA stack v%d.%d.%d initializing",
+        LOG_INFO("RINA stack initializing");
+
+        if (rina_debug_init())
+                return -1;
+
+        /* FIXME: Move the set path from kernel to rina (subsys) */
+        root_kset = kset_create_and_add("rina", NULL, kernel_kobj);
+        if (!root_kset) {
+                LOG_ERR("Cannot initialize root kset, bailing out");
+                rina_debug_exit();
+                return -1;
+        }
+
+        /*
+         * FIXME: Move to default personality OR add multiplexer based on
+         * personality identifiers ...
+         */
+        if (rina_netlink_init()) {
+                kset_unregister(root_kset);
+                rina_debug_exit();
+                return -1;
+        }
+
+        if (rina_personality_init(&root_kset->kobj)) {
+                rina_netlink_exit();
+                kset_unregister(root_kset);
+                rina_debug_exit();
+                return -1;
+        }
+
+        LOG_INFO("RINA stack v%d.%d.%d initialized",
                  RINA_VERSION_MAJOR(version),
                  RINA_VERSION_MINOR(version),
                  RINA_VERSION_MICRO(version));
-
-#if CONFIG_RINA_SYSFS
-        /* FIXME: Move the set path from kernel to rina */
-        sysfs_root = kset_create_and_add("rina", NULL, kernel_kobj);
-        if (!sysfs_root) {
-                LOG_ERR("Cannot initialize sysfs support, bailing out");
-                return -1;
-        }
-#endif
-
-        if (rina_netlink_init()) {
-                return -1;
-        }
-
-        if (rina_personality_init(&sysfs_root->kobj)) {
-                rina_netlink_exit();
-                return -1;
-        }
 
         LOG_FEXIT;
 
