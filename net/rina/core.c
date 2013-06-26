@@ -18,6 +18,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/export.h>
 #include <linux/init.h>
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
@@ -35,8 +36,10 @@ static struct kset * root_kset = NULL;
 
 uint32_t rina_version(void)
 { return version; }
+EXPORT_SYMBOL(rina_version);
 
 #if CONFIG_RINA_SYSFS
+#if 0
 static ssize_t version_show(struct kobject *        kobj,
                             struct kobj_attribute * attr,
                             char *                  buff)
@@ -48,6 +51,7 @@ static ssize_t version_show(struct kobject *        kobj,
 }
 
 static struct kobj_attribute version_attr = __ATTR_RO(version);
+#endif
 #endif
 
 static int __init rina_core_init(void)
