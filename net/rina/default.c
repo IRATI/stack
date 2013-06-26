@@ -33,182 +33,153 @@
 
 #define DEFAULT_LABEL "default"
 
-static struct personality_t * personality = NULL;
-
 struct personality_data {
         void * kipcm;
         void * efcp;
         void * rmt;
 };
 
-static int default_ipc_create(struct personality_data * data,
+#define to_pd(X) ((struct personality_data *) X)
+
+static int default_ipc_create(void *                    data,
                               const struct name_t *     name,
                               ipc_process_id_t          id,
                               dif_type_t                type)
 {
-        if (!data)
-                return -1;
+        if (!data) return -1;
 
-        return kipcm_ipc_process_create(data->kipcm, name, id, type);
+        LOG_DBG("Calling wrapped function");
+
+        return kipcm_ipc_process_create(to_pd(data)->kipcm, name, id, type);
 }
 
-static int default_ipc_configure(struct personality_data *         data,
+static int default_ipc_configure(void *                            data,
                                  ipc_process_id_t                  id,
                                  const struct ipc_process_conf_t * conf)
 {
-        if (!data)
-                return -1;
+        if (!data) return -1;
 
-        return kipcm_ipc_process_configure(data->kipcm, id, conf);
+        LOG_DBG("Calling wrapped function");
+
+        return kipcm_ipc_process_configure(to_pd(data)->kipcm, id, conf);
 }
 
-static int default_ipc_destroy(struct personality_data * data,
-                               ipc_process_id_t          id)
+static int default_ipc_destroy(void *           data,
+                               ipc_process_id_t id)
 {
-        if (!data)
-                return -1;
+        if (!data) return -1;
 
-        return kipcm_ipc_process_destroy(data->kipcm, id);
+        LOG_DBG("Calling wrapped function");
+
+        return kipcm_ipc_process_destroy(to_pd(data)->kipcm, id);
 }
 
-static int default_connection_create(struct personality_data *   data,
+static int default_connection_create(void *                      data,
                                      const struct connection_t * connection)
 {
-        if (!data)
-                return -1;
+        if (!data) return -1;
 
-        return efcp_create(data->efcp, connection);
+        LOG_DBG("Calling wrapped function");
+
+        return efcp_create(to_pd(data)->efcp, connection);
 }
 
-static int default_connection_destroy(struct personality_data * data,
-                                      cep_id_t                  cep_id)
+static int default_connection_destroy(void *   data,
+                                      cep_id_t cep_id)
 {
-        if (!data)
-                return -1;
+        if (!data) return -1;
 
-        return efcp_destroy(data->efcp, cep_id);
+        LOG_DBG("Calling wrapped function");
+
+        return efcp_destroy(to_pd(data)->efcp, cep_id);
 }
 
-static int default_connection_update(struct personality_data * data,
-                                     cep_id_t                  id_from,
-                                     cep_id_t                  id_to)
+static int default_connection_update(void *   data,
+                                     cep_id_t id_from,
+                                     cep_id_t id_to)
 {
-        if (!data)
-                return -1;
+        if (!data) return -1;
 
-        return efcp_update(data->efcp, id_from, id_to);
+        LOG_DBG("Calling wrapped function");
+
+        return efcp_update(to_pd(data)->efcp, id_from, id_to);
 }
 
-int default_sdu_write(struct personality_data * data,
-                      port_id_t                 id,
-                      const struct sdu_t *      sdu)
+int default_sdu_write(void *               data,
+                      port_id_t            id,
+                      const struct sdu_t * sdu)
 {
-        if (!data)
-                return -1;
+        if (!data) return -1;
 
-        return kipcm_sdu_write(data->kipcm, id, sdu);
+        LOG_DBG("Calling wrapped function");
+
+        return kipcm_sdu_write(to_pd(data)->kipcm, id, sdu);
 }
 
-int default_sdu_read(struct personality_data * data,
-                     port_id_t                 id,
-                     struct sdu_t *            sdu)
+int default_sdu_read(void *         data,
+                     port_id_t      id,
+                     struct sdu_t * sdu)
 {
-        if (!data)
-                return -1;
+        if (!data) return -1;
 
-        return kipcm_sdu_read(data->kipcm, id, sdu);
+        LOG_DBG("Calling wrapped function");
+
+        return kipcm_sdu_read(to_pd(data)->kipcm, id, sdu);
 }
 
-static struct personality_t * personality_init(void)
-{
-        struct personality_t * p;
+struct personality_ops ops = {
+	.init               = NULL,
+	.fini               = NULL,
+	.ipc_create         = default_ipc_create,
+	.ipc_configure      = default_ipc_configure,
+	.ipc_destroy        = default_ipc_destroy,
+	.sdu_read           = default_sdu_read,
+	.sdu_write          = default_sdu_write,
+	.connection_create  = default_connection_create,
+	.connection_destroy = default_connection_destroy,
+	.connection_update  = default_connection_update,
+};
 
-        p = kzalloc(sizeof(*p), GFP_KERNEL);
-        if (!p) {
-                LOG_ERR("Cannot allocate %zu bytes of memory",
-                        sizeof(*p));
-                return NULL;
-        }
-        p->label = DEFAULT_LABEL;
-        p->data  = kzalloc(sizeof(struct personality_data), GFP_KERNEL);
-        if (!p->data) {
-                LOG_ERR("Cannot allocate %zu bytes of memory",
-                        sizeof(struct personality_data));
-                kfree(personality);
-                return NULL;
-        }
+static struct personality_data data;
 
-        return p;
-}
-
-static void personality_fini(struct personality_t * pers)
-{
-        ASSERT(pers);
-        ASSERT(pers->data);
-
-        kfree(pers->data);
-        kfree(pers);
-}
+static struct personality *    personality = NULL;
 
 static int __init mod_init(void)
 {
-        struct personality_data * pd;
-
         LOG_FBEGN;
 
-        LOG_DBG("Rina personality initializing");
+        LOG_DBG("Rina default personality initializing");
 
-        personality = personality_init();
-        if (!personality)
-                return -ENOMEM;
-
-        ASSERT(personality);
-        ASSERT(personality->data);
-
-        LOG_DBG("Building-up personality data");
-
-        pd = personality->data;
+        if (personality) {
+                LOG_ERR("Rina default personality already initialized, "
+                        "bailing out");
+                return -1;
+        }
 
         LOG_DBG("Initializing shim layer");
         if (shim_init())
                 return -1;
 
         LOG_DBG("Initializing kipcm component");
-        pd->kipcm = kipcm_init();
-        if (!pd->kipcm)
+        data.kipcm = kipcm_init();
+        if (!data.kipcm)
                 goto CLEANUP_SHIM;
 
         LOG_DBG("Initializing efcp component");
-        pd->efcp = efcp_init();
-        if (!pd->efcp)
+        data.efcp = efcp_init();
+        if (!data.efcp)
                 goto CLEANUP_KIPCM;
 
         LOG_DBG("Initializing rmt component");
-        pd->rmt = rmt_init();
-        if (!pd->rmt)
+        data.rmt = rmt_init();
+        if (!data.rmt)
                 goto CLEANUP_EFCP;
 
-        LOG_DBG("Filling-up personality's hooks");
-
-        personality->init               = 0;
-        personality->fini               = 0;
-        personality->ipc_create         = default_ipc_create;
-        personality->ipc_configure      = default_ipc_configure;
-        personality->ipc_destroy        = default_ipc_destroy;
-        personality->sdu_read           = default_sdu_read;
-        personality->sdu_write          = default_sdu_write;
-        personality->connection_create  = default_connection_create;
-        personality->connection_destroy = default_connection_destroy;
-        personality->connection_update  = default_connection_update;
-
         LOG_DBG("Finally registering personality");
-        if (rina_personality_register(personality)) {
+        personality = rina_personality_register("default", &data, &ops);
+        if (!personality) {
                 goto CLEANUP_RMT;
         }
-
-        ASSERT(pd->kipcm);
-        ASSERT(pd->efcp);
-        ASSERT(pd->rmt);
 
         LOG_DBG("Rina default personality loaded successfully");
 
@@ -216,26 +187,19 @@ static int __init mod_init(void)
         return 0;
 
  CLEANUP_RMT:
-        rmt_fini(pd->rmt);
+        rmt_fini(data.rmt);
  CLEANUP_EFCP:
-        efcp_fini(pd->efcp);
+        efcp_fini(data.efcp);
  CLEANUP_KIPCM:
-        kipcm_fini(pd->kipcm);
+        kipcm_fini(data.kipcm);
  CLEANUP_SHIM:
         shim_exit();
-
-        personality_fini(personality);
-        personality = NULL;
 
         return -1;
 }
 
 static void __exit mod_exit(void)
 {
-        struct personality_data * pd;
-
-        LOG_FBEGN;
-
         ASSERT(personality);
 
         if (rina_personality_unregister(personality)) {
@@ -245,15 +209,13 @@ static void __exit mod_exit(void)
                 LOG_FEXIT;
                 return;
         }
-        pd = personality->data;
 
-        rmt_fini(pd->rmt);
-        efcp_fini(pd->efcp);
-        kipcm_fini(pd->kipcm);
+        rmt_fini(data.rmt);
+        efcp_fini(data.efcp);
+        kipcm_fini(data.kipcm);
 
         shim_exit();
 
-        personality_fini(personality);
         personality = NULL;
 
         LOG_DBG("Rina default personality unloaded successfully");
