@@ -59,8 +59,8 @@ bool checkRecognizedEvent(IPCEvent * event) {
 		FlowAllocationRequestEvent * flowAllocationRequest =
 				dynamic_cast<FlowAllocationRequestEvent *>(event);
 		std::cout
-				<< "Got a flow allocation request event with transaction id "
-				<< flowAllocationRequest->getTransactionId() << "\n";
+				<< "Got a flow allocation request event with sequence number "
+				<< flowAllocationRequest->getSequenceNumber() << "\n";
 		break;
 	}
 	default:

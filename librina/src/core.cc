@@ -149,7 +149,7 @@ void * doNetlinkMessageReaderWork(void * arg) {
 
 			if (incomingMessage->isNotificationMessage()){
 				delete message;
-				message = NULL;
+				message = 0;
 			}
 		}
 	}
@@ -261,7 +261,7 @@ BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForReply(
 	//4 wait for reply
 	BaseNetlinkMessage * response = pendingMessage->getResponseMessage();
 	delete pendingMessage;
-	pendingMessage = NULL;
+	pendingMessage = 0;
 	return response;
 }
 
@@ -291,7 +291,7 @@ void RINAManager::sendResponseOrNotficationMessage(
 		}
 
 		delete requestMessage;
-		requestMessage = NULL;
+		requestMessage = 0;
 	}
 
 	//2 Send the message
