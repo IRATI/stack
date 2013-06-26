@@ -17,6 +17,8 @@
 #ifndef LIBRINA_IPC_MANAGER_H
 #define LIBRINA_IPC_MANAGER_H
 
+#ifdef __cplusplus
+
 #include <map>
 
 #include "librina-common.h"
@@ -331,5 +333,7 @@ public:
 };
 
 }
+
+#endif
 
 #endif

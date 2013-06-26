@@ -17,6 +17,8 @@
 #ifndef LIBRINA_APPLICATION_H
 #define LIBRINA_APPLICATION_H
 
+#ifdef __cplusplus
+
 #include <map>
 
 #include "librina-common.h"
@@ -314,5 +316,7 @@ public:
 	const ApplicationProcessNamingInformation& getDestApplicationName() const;
 };
 }
+
+#endif
 
 #endif

@@ -25,6 +25,8 @@
 #ifndef LIBRINA_COMMON_H
 #define LIBRINA_COMMON_H
 
+#ifdef __cplusplus
+
 #include <string>
 #include <vector>
 #include <list>
@@ -441,5 +443,7 @@ public:
 };
 
 }
+
+#endif
 
 #endif
