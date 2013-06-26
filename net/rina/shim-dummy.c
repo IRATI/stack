@@ -52,8 +52,6 @@ struct dummy_flow_t {
         struct list_head      list;
 };
 
-static LIST_HEAD(dummy_shim_list);
-
 static int dummy_flow_allocate_request(void *                     opaque,
                                        const struct name_t *      source,
                                        const struct name_t *      dest,
@@ -216,7 +214,7 @@ static struct shim_instance_t * dummy_create(void *           opaque,
 	instance->sdu_read               = dummy_sdu_read;
 
 	INIT_LIST_HEAD(&dummy_inst->list);
-	list_add(&dummy_inst->list, &dummy_shim_list);
+	list_add(&dummy_inst->list, (struct list_head *) shim->opaque);
 
         LOG_FEXIT;
 
@@ -270,6 +268,7 @@ dummy_configure(void *                     opaque,
 
 static int __init mod_init(void)
 {
+	struct list_head * dummy_shim_list;
 	LOG_FBEGN;
 
         shim = kmalloc(sizeof(*shim), GFP_KERNEL);
@@ -278,11 +277,22 @@ static int __init mod_init(void)
                 LOG_FEXIT;
                 return -1;
         }
+        dummy_shim_list = kmalloc(sizeof(*dummy_shim_list), GFP_KERNEL);
+	if (!dummy_shim_list) {
+		LOG_CRIT("Cannot allocate %zu bytes of memory",
+			 sizeof(*dummy_shim_list));
 
+		kfree(shim);
+		LOG_FEXIT;
+		return -1;
+	}
+	dummy_shim_list->next = dummy_shim_list;
+	dummy_shim_list->prev = dummy_shim_list;
         shim->label     = "shim-dummy";
         shim->create    = dummy_create;
         shim->destroy   = dummy_destroy;
         shim->configure = dummy_configure;
+        shim->opaque    = dummy_shim_list;
 
         if (shim_register(shim)) {
                 LOG_ERR("Initialization of module shim-dummy failed");
@@ -305,18 +315,22 @@ static void __exit mod_exit(void)
 	LOG_FBEGN;
 
 	ASSERT(shim);
+	ASSERT(shim->opaque);
 	if (shim_unregister(shim)) {
         	/* FIXME: Should we do something here? */
         }
-        kfree(shim);
-        list_for_each_entry_safe(pos, next, &dummy_shim_list, list) {
+        list_for_each_entry_safe(pos, next, (struct list_head *) shim->opaque,
+        		list) {
         	list_del(&pos->list);
-        	list_for_each_entry_safe(pos_flow, next_flow, pos->flows, list) {
+        	list_for_each_entry_safe(pos_flow,
+        				next_flow, pos->flows, list) {
         		list_del(&pos_flow->list);
         		kfree(pos_flow);
         	}
         	kfree(pos);
         }
+        kfree(shim->opaque);
+        kfree(shim);
 
         /* FIXME: We must unroll all the things done in mod_init */
 
