@@ -81,7 +81,7 @@ check_PROGRAMS =				\
 	test-03					\
 	test-netlink-manager			\
 	test-netlink-parsers			\
-	test-concurrency		\
+	test-concurrency			\
 	test-core
 
 XFAIL_TESTS =					\
@@ -99,13 +99,13 @@ TESTS =						\
 FUNCTIONAL_TESTS =				\
 	test-netlink-manager			\
 	test-netlink-parsers			\
-	test-concurrency		\
+	test-concurrency			\
 	test-core
 
 FUNCTIONAL_PASS_TESTS =				\
 	test-netlink-manager			\
 	test-netlink-parsers			\
-	test-concurrency		\
+	test-concurrency			\
 	test-core
 
 FUNCTIONAL_XFAIL_TESTS =

@@ -9,6 +9,7 @@ lib_LTLIBRARIES =
 librina_la_SOURCES  =				\
 	logs.cc					\
 	concurrency.cc				\
+	core.cc					\
 	librina.cc				\
 	librina-common.cc			\
 	librina-application.cc			\
@@ -19,16 +20,15 @@ librina_la_SOURCES  =				\
 	librina-sdu-protection.cc		\
 	netlink-messages.cc			\
 	netlink-parsers.cc			\
-	netlink-manager.cc		\
-	core.cc
+	netlink-manager.cc
 
 EXTRA_DIST =					\
 	logs.h					\
+	core.h					\
 	concurrency.h				\
 	netlink-messages.h			\
 	netlink-manager.h			\
-	netlink-parsers.h		\
-	core.h
+	netlink-parsers.h
 
 librina_la_LDFLAGS =
 
