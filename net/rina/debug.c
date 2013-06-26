@@ -30,7 +30,7 @@
 static struct dentry * dfs_root = NULL;
 #endif
 
-int rina_debug_init()
+int rina_debug_init(void)
 {
         LOG_DBG("Debugging facilities initializing");
 
@@ -55,7 +55,7 @@ int rina_debug_init()
         return 0;
 }
 
-void rina_debug_exit()
+void rina_debug_exit(void)
 {
         LOG_DBG("Debugging facilities finalizing");
 
@@ -76,13 +76,13 @@ void rina_debug_exit()
 
 #else
 
-int rina_debug_init()
+int rina_debug_init(void)
 {
         LOG_DBG("Debugging facilities disabled");
         return 0;
 }
 
-void rina_debug_exit()
+void rina_debug_exit(void)
 { }
 
 #endif
