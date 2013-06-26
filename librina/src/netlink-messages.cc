@@ -21,6 +21,7 @@
  *      Author: eduardgrasa
  */
 
+#include <sstream>
 #include <unistd.h>
 
 #define RINA_PREFIX "netlink-messages"
@@ -111,6 +112,17 @@ bool BaseNetlinkMessage::isResponseMessage() const {
 
 void BaseNetlinkMessage::setResponseMessage(bool responseMessage) {
 	this->responseMessage = responseMessage;
+}
+
+std::string BaseNetlinkMessage::toString() {
+	std::stringstream ss;
+	ss << "Family: " << family << "; Operation code: "
+			<< operationCode << "; Source: " << sourcePortId
+			<< "; Destination: " << destPortId << "; Sequence Number: "
+			<< sequenceNumber << "\n" << "Is request message? "
+			<< requestMessage << "; Is response message? " << responseMessage
+			<< "; Is notification message? " << notificationMessage;
+	return ss.str();
 }
 
 /* CLASS RINA APP ALLOCATE FLOW MESSAGE */

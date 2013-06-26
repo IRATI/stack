@@ -66,7 +66,7 @@ enum RINANetlinkOperationCode{
 /**
  * Base class for Netlink messages to be sent or received
  */
-class BaseNetlinkMessage{
+class BaseNetlinkMessage: public StringConvertable{
 	/**
 	 * The identity of the Generic RINA Netlink family - dynamically allocated
 	 * by the Netlink controller
@@ -113,6 +113,7 @@ public:
 	void setRequestMessage(bool requestMessage);
 	bool isResponseMessage() const;
 	void setResponseMessage(bool responseMessage);
+	std::string toString();
 };
 
 /**

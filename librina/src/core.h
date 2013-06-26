@@ -68,7 +68,6 @@ class NetlinkSession {
 public:
 	NetlinkSession(int sessionId);
 	~NetlinkSession();
-	unsigned int getValidSequenceNumber();
 	void putLocalPendingMessage(PendingNetlinkMessage* pendingMessage);
 	PendingNetlinkMessage* takeLocalPendingMessage(
 			unsigned int sequenceNumber);

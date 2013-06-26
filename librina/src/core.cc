@@ -68,20 +68,6 @@ NetlinkSession::NetlinkSession(int sessionId){
 NetlinkSession::~NetlinkSession(){
 }
 
-unsigned int NetlinkSession::getValidSequenceNumber(){
-	unsigned int sequenceNumber = 0;
-
-	for (sequenceNumber = 1; sequenceNumber< 10000;
-			sequenceNumber++) {
-		if (localPendingMessages.count(sequenceNumber) == 0 &&
-				remotePendingMessages.count(sequenceNumber) == 0) {
-			return sequenceNumber;
-		}
-	}
-
-	return 0;
-}
-
 void NetlinkSession::putLocalPendingMessage(
 		PendingNetlinkMessage* pendingMessage){
 	localPendingMessages[pendingMessage->getSequenceNumber()]
@@ -92,6 +78,7 @@ PendingNetlinkMessage*
 NetlinkSession::takeLocalPendingMessage(unsigned int sequenceNumber){
 	std::map<unsigned int, PendingNetlinkMessage *>::iterator it =
 			localPendingMessages.find(sequenceNumber);
+
 	if(it == localPendingMessages.end()){
 		LOG_ERR("Could not find the matching request for a local response message with sequence number %d",
 				sequenceNumber);
@@ -120,6 +107,7 @@ BaseNetlinkMessage*
 
 	//2 Remove pending Netlink message from table
 	remotePendingMessages.erase(sequenceNumber);
+
 	return it->second;
 }
 
@@ -142,20 +130,27 @@ void * doNetlinkMessageReaderWork(void * arg) {
 			continue;
 		}
 
+		LOG_DBG("Received Netlink message. %s ",
+				incomingMessage->toString().c_str());
+
 		//Process the message
 		if (incomingMessage->isResponseMessage()){
-			rinaManager->netlinkResponseMessageArrived(incomingMessage);
+			myRINAManager->netlinkResponseMessageArrived(incomingMessage);
 		}else{
 			NetlinkRequestOrNotificationMessage * message =
 					dynamic_cast<NetlinkRequestOrNotificationMessage *>
 						(incomingMessage);
 
 			if (incomingMessage->isRequestMessage()){
-				rinaManager->netlinkRequestMessageArrived(incomingMessage);
+				myRINAManager->netlinkRequestMessageArrived(incomingMessage);
 			}
 
 			eventsQueue->put(message->toIPCEvent());
-			delete message;
+
+			if (incomingMessage->isNotificationMessage()){
+				delete message;
+				message = NULL;
+			}
 		}
 	}
 
@@ -242,13 +237,12 @@ NetlinkSession* RINAManager::getNetlinkSession(unsigned int sessionId){
 BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForReply(
 		BaseNetlinkMessage * netlinkMessage) throw (NetlinkException) {
 	PendingNetlinkMessage * pendingMessage = NULL;
-	unsigned int sequenceNumber = 0;
 
 	sendReceiveLock.lock();
 
 	NetlinkSession * netlinkSession =
 			getAndCreateNetlinkSession(netlinkMessage->getDestPortId());
-	netlinkMessage->setSequenceNumber(netlinkSession->getValidSequenceNumber());
+	netlinkMessage->setSequenceNumber(netlinkManager->getSequenceNumber());
 
 	//2 Send the message
 	try {
@@ -259,7 +253,7 @@ BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForReply(
 	}
 
 	//3 Put message in the queue
-	pendingMessage = new PendingNetlinkMessage(sequenceNumber);
+	pendingMessage = new PendingNetlinkMessage(netlinkMessage->getSequenceNumber());
 	netlinkSession->putLocalPendingMessage(pendingMessage);
 
 	sendReceiveLock.unlock();
@@ -267,6 +261,7 @@ BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForReply(
 	//4 wait for reply
 	BaseNetlinkMessage * response = pendingMessage->getResponseMessage();
 	delete pendingMessage;
+	pendingMessage = NULL;
 	return response;
 }
 
@@ -289,9 +284,6 @@ void RINAManager::sendResponseOrNotficationMessage(
 				->takeRemotePendingMessage(
 				netlinkMessage->getSequenceNumber());
 		if (requestMessage == NULL) {
-			LOG_ERR(
-					"Could not find a pending remote request message with sequence number %d",
-					netlinkMessage->getSequenceNumber());
 			sendReceiveLock.unlock();
 			throw NetlinkException(
 					NetlinkException::
@@ -299,6 +291,7 @@ void RINAManager::sendResponseOrNotficationMessage(
 		}
 
 		delete requestMessage;
+		requestMessage = NULL;
 	}
 
 	//2 Send the message
@@ -329,8 +322,6 @@ void RINAManager::netlinkResponseMessageArrived(
 			takeLocalPendingMessage(response->getSequenceNumber());
 	sendReceiveLock.unlock();
 	if(pendingMessage == NULL){
-		LOG_ERR("Could not find the matching request for a received Netlink response message with sequence number %d",
-				response->getSequenceNumber());
 		sendReceiveLock.unlock();
 		return;
 	}

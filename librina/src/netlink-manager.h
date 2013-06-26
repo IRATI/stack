@@ -88,6 +88,11 @@ public:
 	 */
 	~NetlinkManager();
 
+	/**
+	 * Get the next available sequence number
+	 */
+	unsigned int getSequenceNumber();
+
 	void sendMessage(BaseNetlinkMessage * message) throw(NetlinkException);
 
 	BaseNetlinkMessage *  getMessage() throw(NetlinkException);
