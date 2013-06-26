@@ -117,11 +117,7 @@ static int is_ok(const struct shim_t * shim)
 
 int shim_register(struct shim_t * shim)
 {
-#if CONFIG_RINA_SYSFS
-#if 0
-        struct shim_object * obj;
-#endif
-#endif
+        int err;
 
         LOG_DBG("Registering shim %pK", shim);
 
@@ -130,28 +126,9 @@ int shim_register(struct shim_t * shim)
                 return -1;
         }
 
-        if (kipcm_shim_register(shim))
-                return -1;
-
-#if CONFIG_RINA_SYSFS
-#if 0
-        obj = kzalloc(sizeof(*obj), GFP_KERNEL);
-        if (!obj) {
-                LOG_CRIT("Cannot allocate %d bytes of memory", sizeof(*obj));
-                return -ENOMEM;
-        }
-
-        LDBG("Setting up kobj for label '%s'", shim->label);
-        obj->kobj.kset = shims;
-        if (!kobject_init_and_add(&obj->kobj, &obj_ktype, NULL, "%s",
-                                  shim->label)) {
-                LOG_CRIT("Cannot setup sysfs for shim %pK", shim);
-                return -1;
-        }
-
-        kobject_put(&obj->kobj);
-#endif
-#endif
+        err = kipcm_shim_register(shim);
+        if (err)
+                return err;
 
         LOG_INFO("Shim '%s' registered successfully", shim->label);
 
@@ -161,6 +138,8 @@ EXPORT_SYMBOL(shim_register);
 
 int shim_unregister(struct shim_t * shim)
 {
+        int err;
+
         LOG_DBG("Un-registering shim %pK", shim);
 
         if (!shim) {
@@ -168,11 +147,8 @@ int shim_unregister(struct shim_t * shim)
                 return -1;
         }
 
-        if (kipcm_shim_unregister(shim))
-                return -1;
-
-#if CONFIG_RINA_SYSFS
-#endif
+        err = kipcm_shim_unregister(shim);
+                return err;
 
         LOG_INFO("Shim '%s' unregistered successfully", shim->label);
 
