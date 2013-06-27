@@ -480,10 +480,6 @@ void DIFProperties::removeQoSCube(const QoSCube& qosCube) {
 	this->qosCubes.remove(qosCube);
 }
 
-/* CLASS IPC EVENT */
-IPCEvent::~IPCEvent() {
-}
-
 /* CLASS IPC EVENT PRODUCER */
 void IPCEventProducer::enqueEvent(IPCEvent * event) {
 	eventQueue.push_back(event);

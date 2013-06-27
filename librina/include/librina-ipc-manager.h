@@ -17,6 +17,8 @@
 #ifndef LIBRINA_IPC_MANAGER_H
 #define LIBRINA_IPC_MANAGER_H
 
+#ifdef __cplusplus
+
 #include <map>
 
 #include "librina-common.h"
@@ -275,17 +277,13 @@ class ApplicationRegistrationRequestEvent: public IPCEvent {
 	/** The DIF to which the application wants to register */
 	ApplicationProcessNamingInformation DIFName;
 
-	/** The event transaction id */
-	unsigned int transactionId;
-
 public:
 	ApplicationRegistrationRequestEvent(
 			const ApplicationProcessNamingInformation& appName,
 			const ApplicationProcessNamingInformation& DIFName,
-			unsigned int transactionId);
+			unsigned int sequenceNumber);
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
-	unsigned int getTransactionId() const;
 };
 
 /**
@@ -299,17 +297,13 @@ class ApplicationUnregistrationRequestEvent: public IPCEvent {
 	/** The DIF to which the application wants to cancel the registration */
 	ApplicationProcessNamingInformation DIFName;
 
-	/** The event transaction id */
-	unsigned int transactionId;
-
 public:
 	ApplicationUnregistrationRequestEvent(
 			const ApplicationProcessNamingInformation& appName,
 			const ApplicationProcessNamingInformation& DIFName,
-			unsigned int transactionId);
+			unsigned int sequenceNumber);
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
-	unsigned int getTransactionId() const;
 };
 
 /**
@@ -326,21 +320,20 @@ class FlowAllocationRequestEvent: public IPCEvent {
 	/** The destination application name */
 	FlowSpecification flowSpecification;
 
-	/** The event transaction id */
-	unsigned int transactionId;
-
 public:
 	FlowAllocationRequestEvent(
 			const ApplicationProcessNamingInformation& sourceName,
 			const ApplicationProcessNamingInformation& destName,
-			const FlowSpecification& flowSpec, unsigned int transactionId);
+			const FlowSpecification& flowSpec,
+			unsigned int sequenceNumber);
 	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
 	const ApplicationProcessNamingInformation&
 			getDestinationApplicationName() const;
 	const FlowSpecification& getFlowSpecification() const;
-	unsigned int getTransactionId() const;
 };
 
 }
+
+#endif
 
 #endif

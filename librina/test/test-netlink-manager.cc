@@ -49,6 +49,8 @@ int main(int argc, char * argv[]) {
 	message->setSourceAppName(*sourceName);
 	message->setDestAppName(*destName);
 	message->setFlowSpecification(*flowSpec);
+	message->setRequestMessage(true);
+	message->setSequenceNumber(source->getSequenceNumber());
 	source->sendMessage(message);
 	delete message;
 
@@ -73,6 +75,8 @@ int main(int argc, char * argv[]) {
 	message->setSourceAppName(*sourceName);
 	message->setDestAppName(*destName);
 	message->setFlowSpecification(*flowSpec);
+	message->setSequenceNumber(source->getSequenceNumber());
+	message->setRequestMessage(true);
 	source->sendMessage(message);
 	delete message;
 

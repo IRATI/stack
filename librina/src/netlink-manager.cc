@@ -58,6 +58,8 @@ const std::string NetlinkException::error_fetching_netlink_session =
 const std::string
 	NetlinkException::error_fetching_pending_netlink_request_message =
 		"Error fetching pending Netlink request message";
+const std::string NetlinkException::error_fetching_netlink_port_id =
+		"Error fetching Netlink port id";
 
 /* CLASS NETLINK MANAGER */
 
@@ -84,6 +86,8 @@ NetlinkManager::~NetlinkManager() {
 void NetlinkManager::initialize() throw (NetlinkException) {
 	socket = nl_socket_alloc();
 	nl_socket_set_local_port(socket, localPort);
+	nl_socket_disable_seq_check(socket);
+	nl_socket_disable_auto_ack(socket);
 
 	int result = genl_connect(socket);
 	if (result == 0) {
@@ -108,11 +112,17 @@ void NetlinkManager::initialize() throw (NetlinkException) {
 	LOG_DBG("Generic Netlink RINA family id: %d", family);
 }
 
+unsigned int NetlinkManager::getSequenceNumber(){
+	return nl_socket_use_seq(socket);
+}
+
 void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
 		throw (NetlinkException) {
 	//Generate the message
 	struct nl_msg* netlinkMessage;
 
+	message->setSourcePortId(localPort);
+	message->setFamily(family);
 	netlinkMessage = nlmsg_alloc();
 	if (!netlinkMessage){
 		LOG_ERR("%s",
@@ -126,7 +136,7 @@ void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
 		flags = NLM_F_REQUEST;
 	}
 
-	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(),
+	genlmsg_put(netlinkMessage, localPort, message->getSequenceNumber(),
 			family, 0, flags, message->getOperationCode(),
 			RINA_GENERIC_NETLINK_FAMILY_VERSION);
 
@@ -142,7 +152,7 @@ void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
 
 	//Set destination and send the message
 	nl_socket_set_peer_port(socket, message->getDestPortId());
-	result = nl_send_auto(socket, netlinkMessage);
+	result = nl_send(socket, netlinkMessage);
 	if (result < 0) {
 		nlmsg_free(netlinkMessage);
 		LOG_ERR("%s %d",
@@ -151,9 +161,8 @@ void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
 		throw NetlinkException(
 				NetlinkException::error_sending_netlink_message);
 	}
-	LOG_DBG("Sent message of %d bytes to %d", result,
-			message->getDestPortId());
-
+	LOG_DBG("Sent message of %d bytes. %s", result,
+			message->toString().c_str());
 	//Cleanup
 	nlmsg_free(netlinkMessage);
 }
@@ -188,9 +197,9 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 
 	nlmsg_set_src(msg, &nla);
 
-	LOG_DBG("Netlink family %d", hdr->nlmsg_type);
-	LOG_DBG("Version %d", nlhdr->version);
-	LOG_DBG("Operation code %d", nlhdr->cmd);
+	LOG_DBG("Source: %d, Netlink family: %d; Version: %d; Operation code: %d; Flags: %d; Sequence number: %d",
+			nla.nl_pid, hdr->nlmsg_type, nlhdr->version, nlhdr->cmd,
+			hdr->nlmsg_flags, hdr->nlmsg_seq);
 
 	if (creds) {
 		nlmsg_set_creds(msg, creds);
@@ -218,6 +227,7 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 		result->setResponseMessage(true);
 	}
 
+	result->setFamily(family);
 	result->setDestPortId(localPort);
 	result->setSourcePortId(nla.nl_pid);
 	result->setSequenceNumber(hdr->nlmsg_seq);

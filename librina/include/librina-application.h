@@ -17,6 +17,8 @@
 #ifndef LIBRINA_APPLICATION_H
 #define LIBRINA_APPLICATION_H
 
+#ifdef __cplusplus
+
 #include <map>
 
 #include "librina-common.h"
@@ -253,7 +255,7 @@ extern Singleton<IPCManager> ipcManager;
 class FlowDeallocatedEvent: public IPCEvent {
 	int portId;
 public:
-	FlowDeallocatedEvent(int portId);
+	FlowDeallocatedEvent(int portId, unsigned int sequenceNumber);
 	int getPortId() const;
 };
 
@@ -271,7 +273,8 @@ class ApplicationUnregisteredEvent: public IPCEvent {
 public:
 	ApplicationUnregisteredEvent(
 			const ApplicationProcessNamingInformation& appName,
-			const ApplicationProcessNamingInformation& DIFName);
+			const ApplicationProcessNamingInformation& DIFName,
+			unsigned int sequenceNumber);
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
 };
@@ -279,7 +282,7 @@ public:
 /**
  * Event informing about an incoming flow request from another application
  */
-class IncomingFlowRequestEvent: public IPCEvent {
+class FlowRequestEvent: public IPCEvent {
 	/** The port-id that locally identifies the flow */
 	int portId;
 
@@ -296,14 +299,16 @@ class IncomingFlowRequestEvent: public IPCEvent {
 	FlowSpecification flowSpecification;
 
 public:
-	IncomingFlowRequestEvent(const FlowSpecification& flowSpecification,
+	FlowRequestEvent(const FlowSpecification& flowSpecification,
 			const ApplicationProcessNamingInformation& sourceApplicationName,
-			const ApplicationProcessNamingInformation& destApplicationName);
-	IncomingFlowRequestEvent(int portId,
+			const ApplicationProcessNamingInformation& destApplicationName,
+			unsigned int sequenceNumber);
+	FlowRequestEvent(int portId,
 			const FlowSpecification& flowSpecification,
 			const ApplicationProcessNamingInformation& sourceApplicationName,
 			const ApplicationProcessNamingInformation& destApplicationName,
-			const ApplicationProcessNamingInformation& DIFName);
+			const ApplicationProcessNamingInformation& DIFName,
+			unsigned int sequenceNumber);
 	int getPortId() const;
 	const FlowSpecification& getFlowSpecification() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
@@ -311,5 +316,7 @@ public:
 	const ApplicationProcessNamingInformation& getDestApplicationName() const;
 };
 }
+
+#endif
 
 #endif

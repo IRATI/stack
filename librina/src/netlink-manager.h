@@ -50,6 +50,7 @@ public:
 	static const std::string error_parsing_netlink_message;
 	static const std::string error_fetching_netlink_session;
 	static const std::string error_fetching_pending_netlink_request_message;
+	static const std::string error_fetching_netlink_port_id;
 };
 
 /**
@@ -87,6 +88,11 @@ public:
 	 * Closes the Netlink socket
 	 */
 	~NetlinkManager();
+
+	/**
+	 * Get the next available sequence number
+	 */
+	unsigned int getSequenceNumber();
 
 	void sendMessage(BaseNetlinkMessage * message) throw(NetlinkException);
 

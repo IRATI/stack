@@ -179,11 +179,11 @@ Singleton<ApplicationManager> applicationManager;
 ApplicationRegistrationRequestEvent::ApplicationRegistrationRequestEvent(
 		const ApplicationProcessNamingInformation& appName,
 		const ApplicationProcessNamingInformation& DIFName,
-		unsigned int transactionId) :
-		IPCEvent(APPLICATION_REGISTRATION_REQUEST_EVENT) {
+		unsigned int sequenceNumber) :
+		IPCEvent(APPLICATION_REGISTRATION_REQUEST_EVENT,
+				sequenceNumber) {
 	this->applicationName = appName;
 	this->DIFName = DIFName;
-	this->transactionId = transactionId;
 }
 
 const ApplicationProcessNamingInformation&
@@ -196,20 +196,16 @@ ApplicationRegistrationRequestEvent::getDIFName() const {
 	return DIFName;
 }
 
-unsigned int ApplicationRegistrationRequestEvent::getTransactionId() const {
-	return transactionId;
-}
-
 /** CLASS APPLICATION UNREGISTRATION REQUEST */
 
 ApplicationUnregistrationRequestEvent::ApplicationUnregistrationRequestEvent(
 		const ApplicationProcessNamingInformation& appName,
 		const ApplicationProcessNamingInformation& DIFName,
-		unsigned int transactionId) :
-		IPCEvent(APPLICATION_UNREGISTRATION_REQUEST_EVENT) {
+		unsigned int sequenceNumber) :
+		IPCEvent(APPLICATION_UNREGISTRATION_REQUEST_EVENT,
+				sequenceNumber) {
 	this->applicationName = appName;
 	this->DIFName = DIFName;
-	this->transactionId = transactionId;
 }
 
 const ApplicationProcessNamingInformation&
@@ -222,21 +218,18 @@ ApplicationUnregistrationRequestEvent::getDIFName() const {
 	return DIFName;
 }
 
-unsigned int ApplicationUnregistrationRequestEvent::getTransactionId() const {
-	return transactionId;
-}
-
 /** CLASS FLOW ALLOCATION REQUEST */
 
 FlowAllocationRequestEvent::FlowAllocationRequestEvent(
 		const ApplicationProcessNamingInformation& sourceName,
 		const ApplicationProcessNamingInformation& destName,
-		const FlowSpecification& flowSpec, unsigned int transactionId) :
-		IPCEvent(FLOW_ALLOCATION_REQUEST_EVENT) {
+		const FlowSpecification& flowSpec,
+		unsigned int sequenceNumber) :
+		IPCEvent(FLOW_ALLOCATION_REQUEST_EVENT,
+				sequenceNumber) {
 	this->sourceApplicationName = sourceName;
 	this->destinationApplicationName = destName;
 	this->flowSpecification = flowSpec;
-	this->transactionId = transactionId;
 }
 
 const ApplicationProcessNamingInformation&
@@ -252,10 +245,6 @@ FlowAllocationRequestEvent::getDestinationApplicationName() const {
 const FlowSpecification&
 FlowAllocationRequestEvent::getFlowSpecification() const {
 	return flowSpecification;
-}
-
-unsigned int FlowAllocationRequestEvent::getTransactionId() const {
-	return transactionId;
 }
 
 }

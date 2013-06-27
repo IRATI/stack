@@ -25,9 +25,6 @@
 #include <list>
 #include <pthread.h>
 
-#define RINA_PREFIX "concurrency"
-
-#include "logs.h"
 #include "patterns.h"
 
 namespace rina{
@@ -181,7 +178,6 @@ public:
 		try {
 			guarded_.unlock();
 		} catch (std::exception & e) {
-			LOG_CRIT("Cannot unlock guarded access");
 		}
                 		}
 
@@ -224,7 +220,6 @@ public:
 		lock();
 		queue.push_back(element);
 		if (queue.size() == 1){
-			LOG_DBG("Queue has gone from 0 to 1 elements, broadcasting to threads that wait (if any)");
 			broadcast();
 		}
 		unlock();
@@ -240,11 +235,9 @@ public:
 
 		lock();
 		while(queue.size() == 0){
-			LOG_DBG("No elements in blocking FIFO queue, waiting");
 			wait();
 		}
 
-		LOG_DBG("At least one element in blocking FIFO queue");
 		result = queue.front();
 		queue.pop_front();
 		unlock();

@@ -300,8 +300,9 @@ Singleton<IPCManager> ipcManager;
 
 /* CLASS FLOW DEALLOCATED EVENT */
 
-FlowDeallocatedEvent::FlowDeallocatedEvent(int portId) :
-		IPCEvent(FLOW_DEALLOCATED_EVENT) {
+FlowDeallocatedEvent::FlowDeallocatedEvent(
+		int portId, unsigned int sequenceNumber) :
+		IPCEvent(FLOW_DEALLOCATED_EVENT, sequenceNumber) {
 	this->portId = portId;
 }
 
@@ -313,8 +314,10 @@ int FlowDeallocatedEvent::getPortId() const {
 
 ApplicationUnregisteredEvent::ApplicationUnregisteredEvent(
 		const ApplicationProcessNamingInformation& appName,
-		const ApplicationProcessNamingInformation& DIFName) :
-		IPCEvent(APPLICATION_UNREGISTERED_EVENT) {
+		const ApplicationProcessNamingInformation& DIFName,
+		unsigned int sequenceNumber) :
+		IPCEvent(APPLICATION_UNREGISTERED_EVENT,
+				sequenceNumber) {
 	this->applicationName = appName;
 	this->DIFName = DIFName;
 }
@@ -330,23 +333,27 @@ const ApplicationProcessNamingInformation&
 }
 
 /* CLASS INCOMING FLOW REQUEST EVENT */
-IncomingFlowRequestEvent::IncomingFlowRequestEvent(
+FlowRequestEvent::FlowRequestEvent(
 		const FlowSpecification& flowSpecification,
 		const ApplicationProcessNamingInformation& sourceApplicationName,
-		const ApplicationProcessNamingInformation& destApplicationName):
-				IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT) {
+		const ApplicationProcessNamingInformation& destApplicationName,
+		unsigned int sequenceNumber):
+				IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
+						sequenceNumber) {
 	this->flowSpecification = flowSpecification;
 	this->sourceApplicationName = sourceApplicationName;
 	this->destinationApplicationName = destApplicationName;
 	this->portId = 0;
 }
 
-IncomingFlowRequestEvent::IncomingFlowRequestEvent(int portId,
+FlowRequestEvent::FlowRequestEvent(int portId,
 		const FlowSpecification& flowSpecification,
 		const ApplicationProcessNamingInformation& sourceApplicationName,
 		const ApplicationProcessNamingInformation& destApplicationName,
-		const ApplicationProcessNamingInformation& DIFName) :
-		IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT) {
+		const ApplicationProcessNamingInformation& DIFName,
+		unsigned int sequenceNumber) :
+		IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
+				sequenceNumber) {
 	this->flowSpecification = flowSpecification;
 	this->sourceApplicationName = sourceApplicationName;
 	this->destinationApplicationName = destApplicationName;
@@ -354,23 +361,26 @@ IncomingFlowRequestEvent::IncomingFlowRequestEvent(int portId,
 	this->portId = portId;
 }
 
-int IncomingFlowRequestEvent::getPortId() const {
+int FlowRequestEvent::getPortId() const {
 	return portId;
 }
 
-const FlowSpecification& IncomingFlowRequestEvent::getFlowSpecification() const {
+const FlowSpecification& FlowRequestEvent::getFlowSpecification() const {
 	return flowSpecification;
 }
 
-const ApplicationProcessNamingInformation& IncomingFlowRequestEvent::getDIFName() const {
+const ApplicationProcessNamingInformation&
+	FlowRequestEvent::getDIFName() const {
 	return DIFName;
 }
 
-const ApplicationProcessNamingInformation& IncomingFlowRequestEvent::getSourceApplicationName() const {
+const ApplicationProcessNamingInformation&
+	FlowRequestEvent::getSourceApplicationName() const {
 	return sourceApplicationName;
 }
 
-const ApplicationProcessNamingInformation& IncomingFlowRequestEvent::getDestApplicationName() const {
+const ApplicationProcessNamingInformation&
+	FlowRequestEvent::getDestApplicationName() const {
 	return destinationApplicationName;
 }
 

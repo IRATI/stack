@@ -19,12 +19,70 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <unistd.h>
+
 #define RINA_PREFIX "core"
 
 #include "logs.h"
 #include "core.h"
 
 namespace rina {
+
+/* CLASS NETLINK PORT ID MAP */
+void NetlinkPortIdMap::putIPCProcessIdToNelinkPortIdMapping(
+		unsigned int ipcProcessId, unsigned int netlinkPortId){
+	ipcProcessIdLock.writelock();
+	ipcProcessIdMappings[ipcProcessId] = netlinkPortId;
+	ipcProcessIdLock.unlock();
+}
+
+unsigned int NetlinkPortIdMap::getNetlinkPortIdFromIPCProcessId(
+		unsigned int ipcProcessId) throw(NetlinkException) {
+	ipcProcessIdLock.readlock();
+	std::map<unsigned int, unsigned int>::iterator it =
+			ipcProcessIdMappings.find(ipcProcessId);
+	if (it == ipcProcessIdMappings.end()){
+		LOG_ERR("Could not find the netlink port of IPC Process %d",
+				ipcProcessId);
+		ipcProcessIdLock.unlock();
+		throw NetlinkException(
+				NetlinkException::error_fetching_netlink_port_id);
+	}
+	ipcProcessIdLock.unlock();
+
+	return it->second;
+}
+
+void NetlinkPortIdMap::putAPNametoNetlinkPortIdMapping(
+		ApplicationProcessNamingInformation apName,
+		unsigned int netlinkPortId){
+	applicationNameLock.writelock();
+	applicationNameMappings[apName] = netlinkPortId;
+	applicationNameLock.unlock();
+}
+
+unsigned int NetlinkPortIdMap::getNetlinkPortIdFromAPName(
+		ApplicationProcessNamingInformation apName) throw(NetlinkException) {
+	applicationNameLock.readlock();
+	std::map<ApplicationProcessNamingInformation, unsigned int>::iterator it =
+			applicationNameMappings.find(apName);
+	if (it == applicationNameMappings.end()){
+		LOG_ERR("Could not find the netlink port of Application %s",
+				apName.toString().c_str());
+		applicationNameLock.unlock();
+		throw NetlinkException(
+				NetlinkException::error_fetching_netlink_port_id);
+	}
+	applicationNameLock.unlock();
+
+	return it->second;
+}
+
+unsigned int NetlinkPortIdMap::getIPCManagerPortId(){
+	return 1;
+}
+
+Singleton<NetlinkPortIdMap> netlinkPortIdMap;
 
 /* CLASS PENDING NETLINK MESSAGE */
 PendingNetlinkMessage::PendingNetlinkMessage(unsigned int sequenceNumber) :
@@ -68,20 +126,6 @@ NetlinkSession::NetlinkSession(int sessionId){
 NetlinkSession::~NetlinkSession(){
 }
 
-unsigned int NetlinkSession::getValidSequenceNumber(){
-	unsigned int sequenceNumber = 0;
-
-	for (sequenceNumber = 1; sequenceNumber < MAX_NETLINK_SEQUENCE_NUMBER;
-			sequenceNumber++) {
-		if (localPendingMessages.count(sequenceNumber) == 0 &&
-				remotePendingMessages.count(sequenceNumber) == 0) {
-			return sequenceNumber;
-		}
-	}
-
-	return MAX_NETLINK_SEQUENCE_NUMBER + 1;
-}
-
 void NetlinkSession::putLocalPendingMessage(
 		PendingNetlinkMessage* pendingMessage){
 	localPendingMessages[pendingMessage->getSequenceNumber()]
@@ -89,9 +133,10 @@ void NetlinkSession::putLocalPendingMessage(
 }
 
 PendingNetlinkMessage*
-	NetlinkSession::takeLocalPendingMessage(unsigned int sequenceNumber){
-	std::map<unsigned int, PendingNetlinkMessage>::iterator it =
+NetlinkSession::takeLocalPendingMessage(unsigned int sequenceNumber){
+	std::map<unsigned int, PendingNetlinkMessage *>::iterator it =
 			localPendingMessages.find(sequenceNumber);
+
 	if(it == localPendingMessages.end()){
 		LOG_ERR("Could not find the matching request for a local response message with sequence number %d",
 				sequenceNumber);
@@ -100,7 +145,7 @@ PendingNetlinkMessage*
 
 	//2 Remove pending Netlink message from table
 	localPendingMessages.erase(sequenceNumber);
-	return it->second();
+	return it->second;
 }
 
 void NetlinkSession::putRemotePendingMessage(BaseNetlinkMessage* pendingMessage){
@@ -110,7 +155,7 @@ void NetlinkSession::putRemotePendingMessage(BaseNetlinkMessage* pendingMessage)
 
 BaseNetlinkMessage*
 	NetlinkSession::takeRemotePendingMessage(unsigned int sequenceNumber){
-	std::map<unsigned int, BaseNetlinkMessage*>::iterator it =
+	std::map<unsigned int, BaseNetlinkMessage *>::iterator it =
 			remotePendingMessages.find(sequenceNumber);
 	if(it == remotePendingMessages.end()){
 		LOG_ERR("Could not find the matching request for a remote response message with sequence number %d",
@@ -120,7 +165,8 @@ BaseNetlinkMessage*
 
 	//2 Remove pending Netlink message from table
 	remotePendingMessages.erase(sequenceNumber);
-	return it->second();
+
+	return it->second;
 }
 
 /* CLASS RINA Manager */
@@ -142,20 +188,27 @@ void * doNetlinkMessageReaderWork(void * arg) {
 			continue;
 		}
 
+		LOG_DBG("Received Netlink message. %s ",
+				incomingMessage->toString().c_str());
+
 		//Process the message
 		if (incomingMessage->isResponseMessage()){
-			rinaManager->netlinkResponseMessageArrived(incomingMessage);
+			myRINAManager->netlinkResponseMessageArrived(incomingMessage);
 		}else{
 			NetlinkRequestOrNotificationMessage * message =
 					dynamic_cast<NetlinkRequestOrNotificationMessage *>
 						(incomingMessage);
 
 			if (incomingMessage->isRequestMessage()){
-				rinaManager->netlinkRequestMessageArrived(incomingMessage);
+				myRINAManager->netlinkRequestMessageArrived(incomingMessage);
 			}
 
 			eventsQueue->put(message->toIPCEvent());
-			delete message;
+
+			if (incomingMessage->isNotificationMessage()){
+				delete message;
+				message = 0;
+			}
 		}
 	}
 
@@ -165,7 +218,7 @@ void * doNetlinkMessageReaderWork(void * arg) {
 RINAManager::RINAManager() {
 	//1 Initialize NetlinkManager
 	try {
-		netlinkManager = new NetlinkManager();
+		netlinkManager = new NetlinkManager(getNelinkPortId());
 	} catch (NetlinkException &e) {
 		LOG_ERR("Error initializing Netlink Manager. %s", e.what());
 		LOG_ERR("Program will exit now");
@@ -242,13 +295,12 @@ NetlinkSession* RINAManager::getNetlinkSession(unsigned int sessionId){
 BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForReply(
 		BaseNetlinkMessage * netlinkMessage) throw (NetlinkException) {
 	PendingNetlinkMessage * pendingMessage = NULL;
-	unsigned int sequenceNumber = 0;
 
 	sendReceiveLock.lock();
 
 	NetlinkSession * netlinkSession =
 			getAndCreateNetlinkSession(netlinkMessage->getDestPortId());
-	netlinkMessage->setSequenceNumber(netlinkSession->getValidSequenceNumber());
+	netlinkMessage->setSequenceNumber(netlinkManager->getSequenceNumber());
 
 	//2 Send the message
 	try {
@@ -259,7 +311,7 @@ BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForReply(
 	}
 
 	//3 Put message in the queue
-	pendingMessage = new PendingNetlinkMessage(sequenceNumber);
+	pendingMessage = new PendingNetlinkMessage(netlinkMessage->getSequenceNumber());
 	netlinkSession->putLocalPendingMessage(pendingMessage);
 
 	sendReceiveLock.unlock();
@@ -267,6 +319,7 @@ BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForReply(
 	//4 wait for reply
 	BaseNetlinkMessage * response = pendingMessage->getResponseMessage();
 	delete pendingMessage;
+	pendingMessage = 0;
 	return response;
 }
 
@@ -289,9 +342,6 @@ void RINAManager::sendResponseOrNotficationMessage(
 				->takeRemotePendingMessage(
 				netlinkMessage->getSequenceNumber());
 		if (requestMessage == NULL) {
-			LOG_ERR(
-					"Could not find a pending remote request message with sequence number %d",
-					netlinkMessage->getSequenceNumber());
 			sendReceiveLock.unlock();
 			throw NetlinkException(
 					NetlinkException::
@@ -299,6 +349,7 @@ void RINAManager::sendResponseOrNotficationMessage(
 		}
 
 		delete requestMessage;
+		requestMessage = 0;
 	}
 
 	//2 Send the message
@@ -329,8 +380,6 @@ void RINAManager::netlinkResponseMessageArrived(
 			takeLocalPendingMessage(response->getSequenceNumber());
 	sendReceiveLock.unlock();
 	if(pendingMessage == NULL){
-		LOG_ERR("Could not find the matching request for a received Netlink response message with sequence number %d",
-				response->getSequenceNumber());
 		sendReceiveLock.unlock();
 		return;
 	}
@@ -350,7 +399,34 @@ void RINAManager::netlinkRequestMessageArrived(
 	sendReceiveLock.unlock();
 }
 
+BlockingFIFOQueue<IPCEvent>* RINAManager::getEventQueue(){
+	return eventQueue;
+}
+
+NetlinkManager* RINAManager::getNetlinkManager(){
+	return netlinkManager;
+}
+
 Singleton<RINAManager> rinaManager;
+
+
+/* Get and set default Netlink port id */
+unsigned int netlinkPortId = getpid();
+Lockable * netlinkLock = new Lockable();
+
+void setNetlinkPortId(unsigned int newNetlinkPortId){
+	netlinkLock->lock();
+	netlinkPortId = newNetlinkPortId;
+	netlinkLock->unlock();
+}
+
+unsigned int getNelinkPortId(){
+	unsigned int result = 0;
+	netlinkLock->lock();
+	result = netlinkPortId;
+	netlinkLock->unlock();
+	return result;
+}
 
 }
 

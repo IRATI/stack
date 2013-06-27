@@ -22,13 +22,46 @@
 #ifndef CORE_H_
 #define CORE_H_
 
+#include <map>
 #include "concurrency.h"
 #include "patterns.h"
 #include "netlink-manager.h"
 
-#define MAX_NETLINK_SEQUENCE_NUMBER 4294967295
-
 namespace rina {
+
+/**
+ * Contains mappings of application process name to netlink portId,
+ * or IPC process id to netlink portId.
+ */
+class NetlinkPortIdMap {
+
+	/** Stores the mappings of IPC Process id to nelink portId */
+	std::map<unsigned int, unsigned int> ipcProcessIdMappings;
+
+	/** Stores the mappings of application process name to netlink port id */
+	std::map<ApplicationProcessNamingInformation, unsigned int>
+		applicationNameMappings;
+
+	ReadWriteLockable ipcProcessIdLock;
+	ReadWriteLockable applicationNameLock;
+
+public:
+	void putIPCProcessIdToNelinkPortIdMapping(
+			unsigned int ipcProcessId, unsigned int netlinkPortId);
+	unsigned int getNetlinkPortIdFromIPCProcessId(
+			unsigned int ipcProcessId) throw(NetlinkException);
+	void putAPNametoNetlinkPortIdMapping(
+			ApplicationProcessNamingInformation apName,
+			unsigned int netlinkPortId);
+	unsigned int getNetlinkPortIdFromAPName(
+			ApplicationProcessNamingInformation apName) throw(NetlinkException);
+	unsigned int getIPCManagerPortId();
+};
+
+/**
+ * Make NetlinkPortIdMap singleton
+ */
+extern Singleton<NetlinkPortIdMap> netlinkPortIdMap;
 
 /**
  * Class used by the thread that sent a Netlink message
@@ -58,18 +91,17 @@ class NetlinkSession {
 	/**
 	 * Stores the local Netlink request messages that are waiting for a reply
 	 */
-	std::map<unsigned int, *PendingNetlinkMessage> localPendingMessages;
+	std::map<unsigned int, PendingNetlinkMessage *> localPendingMessages;
 
 	/**
 	 * Stores the Netlink request messages from peers
 	 * that are waiting for a response
 	 */
-	std::map<unsigned int, *BaseNetlinkMessage> remotePendingMessages;
+	std::map<unsigned int, BaseNetlinkMessage *> remotePendingMessages;
 
 public:
 	NetlinkSession(int sessionId);
 	~NetlinkSession();
-	unsigned int getValidSequenceNumber();
 	void putLocalPendingMessage(PendingNetlinkMessage* pendingMessage);
 	PendingNetlinkMessage* takeLocalPendingMessage(
 			unsigned int sequenceNumber);
@@ -141,6 +173,9 @@ public:
  * Make RINAManager singleton
  */
 extern Singleton<RINAManager> rinaManager;
+
+void setNetlinkPortId(unsigned int netlinkPortId);
+unsigned int getNelinkPortId();
 
 }
 

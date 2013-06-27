@@ -25,6 +25,8 @@
 #ifndef LIBRINA_COMMON_H
 #define LIBRINA_COMMON_H
 
+#ifdef __cplusplus
+
 #include <string>
 #include <vector>
 #include <list>
@@ -307,14 +309,27 @@ enum IPCEventType {
 class IPCEvent {
 	/** The type of event */
 	IPCEventType eventType;
-public:
-	virtual ~IPCEvent();
 
-	IPCEvent(IPCEventType eventType) {
+	/**
+	 * If the event is a request, this is the number to relate it
+	 * witht the response
+	 */
+	unsigned int sequenceNumber;
+
+public:
+	virtual ~IPCEvent(){}
+
+	IPCEvent(IPCEventType eventType, unsigned int sequenceNumber) {
 		this->eventType = eventType;
+		this->sequenceNumber = sequenceNumber;
 	}
+
 	IPCEventType getType() const {
-		return this->eventType;
+		return eventType;
+	}
+
+	unsigned int getSequenceNumber() const{
+		return sequenceNumber;
 	}
 };
 
@@ -428,5 +443,7 @@ public:
 };
 
 }
+
+#endif
 
 #endif
