@@ -153,6 +153,7 @@ static int shim_sdu_read(void *         opaque,
         return 0;
 }
 
+/* Filter the devices here. Accept packets from VLANs that are configured */
 static int shim_rcv(struct sk_buff *     skb,
                     struct net_device *  dev,
                     struct packet_type * pt,
@@ -169,6 +170,8 @@ static int shim_rcv(struct sk_buff *     skb,
                 return 0;
 
         /* Get the SDU out of the sk_buff */
+	
+
 
         kfree_skb(skb);
         return 0;
@@ -257,6 +260,14 @@ static int name_cpy(struct name_t * dst,
         return 0;
 }
 
+
+/* Called on configure to receive packets from a certain dev */
+static struct packet_type shim_eth_vlan_packet_type __read_mostly = {
+        .type =	cpu_to_be16(ETH_P_RINA),
+        .func =	shim_rcv,
+};
+
+
 struct shim_instance_t * shim_configure
 (void *                     opaque,
  struct shim_instance_t *   inst,
@@ -269,6 +280,8 @@ struct shim_instance_t * shim_configure
         struct shim_config_entry_t * tmp;
         struct shim_config_value_t * val;
         bool_t reconfigure;
+	uint16_t old_vlan_id;
+	string_t * old_interface_name;
 
         /* Check if instance is not null, check if opaque is not null */
         if (!inst) {
@@ -289,10 +302,15 @@ struct shim_instance_t * shim_configure
 
         /* Get configuration struct pertaining to this shim instance */
         shim_info = instance->info;
+	old_vlan_id = 0;
+	old_interface_name = NULL;
         if (!shim_info) {
                 shim_info = kmalloc(sizeof(*shim_info), GFP_KERNEL);
                 reconfigure = 1;
-        }
+        } else {
+		old_vlan_id = shim_info->vlan_id;
+		old_interface_name = shim_info->interface_name;
+	}
         if (!shim_info) {
                 LOG_ERR("Cannot allocate memory for shim_info");
                 LOG_FEXIT;
@@ -307,18 +325,24 @@ struct shim_instance_t * shim_configure
                 if (strcmp(tmp->name, "difname") == 0
                     && val->type == SHIM_CONFIG_STRING) {
                         if (!name_cpy(shim_info->name,
-                                      (struct name_t *)val->data)) {
+                                      (struct name_t *) val->data)) {
                                 LOG_FEXIT;
                                 return inst;
                         }
                 } else if (strcmp(tmp->name, "vlanid") == 0
                            && val->type == SHIM_CONFIG_UINT) {
                         shim_info->vlan_id = * (uint16_t *) val->data;
-                        reconfigure = 1;
+                        if (!reconfigure && 
+				shim_info->vlan_id != old_vlan_id) {
+				reconfigure = 1;
+			}
                 } else if (strcmp(tmp->name,"interfacename") == 0
                            && val->type == SHIM_CONFIG_STRING) {
                         shim_info->interface_name = (string_t *) val->data;
-                        reconfigure = 1;
+			if (!reconfigure && strcmp(shim_info->interface_name, 
+							old_interface_name)) {
+				reconfigure = 1;
+			}
                 } else {
                         LOG_WARN("Unknown config param for eth shim");
                 }
@@ -326,8 +350,15 @@ struct shim_instance_t * shim_configure
         instance->info = shim_info;
 
         if (reconfigure) {
+                /* Remove previous handler if there's one */ 
+		
+
                 /* FIXME: Add handler to correct interface and vlan id */
                 /* Check if correctness VLAN id and interface name */
+		
+
+		dev_add_pack(&shim_eth_vlan_packet_type);
+	
         }
         LOG_DBG("Configured shim ETH IPC Process");
 
@@ -359,13 +390,6 @@ static int shim_destroy(void *                   opaque,
         LOG_FEXIT;
         return 0;
 }
-
-/* Called on startup to receive packets from a certain dev */
-static struct packet_type shim_eth_vlan_packet_type __read_mostly = {
-        .type =	cpu_to_be16(ETH_P_RINA),
-        .func =	shim_rcv,
-};
-
 
 static int __init mod_init(void)
 {
@@ -405,8 +429,6 @@ static int __init mod_init(void)
                 LOG_FEXIT;
                 return -1;
         }
-
-        dev_add_pack(&shim_eth_vlan_packet_type);
 
         LOG_FEXIT;
 
