@@ -41,10 +41,10 @@ struct personality_data {
 
 #define to_pd(X) ((struct personality_data *) X)
 
-static int default_ipc_create(void *                    data,
-                              const struct name_t *     name,
-                              ipc_process_id_t          id,
-                              dif_type_t                type)
+static int default_ipc_create(void *                data,
+                              const struct name_t * name,
+                              ipc_process_id_t      id,
+                              dif_type_t            type)
 {
         if (!data) return -1;
 

@@ -180,11 +180,11 @@ struct personality * rina_personality_register(const char *             label,
                 return NULL;
         }
 
-        pers->data      = data;
-        pers->ops       = ops;
+        pers->data = data;
+        pers->ops  = ops;
         if (kobject_init_and_add(&pers->kobj,
                                  &personality_ktype,
-                                 NULL /*&personalities->kobj */,
+                                 &personalities->kobj,
                                  "%s", label)) {
                 LOG_ERR("Cannot add personality '%s' into personalities set",
                         label);
@@ -234,6 +234,7 @@ int rina_personality_unregister(struct personality * pers)
         label = pers->kobj.name;
 
         ASSERT(label);
+        ASSERT(is_label_ok(label));
 
         LOG_DBG("Unregistering personality '%s'", label);
 
