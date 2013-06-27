@@ -62,8 +62,7 @@ static int __init rina_core_init(void)
         if (rina_debug_init())
                 return -1;
 
-        /* FIXME: Move the set path from kernel to rina (subsys) */
-        root_kset = kset_create_and_add("rina", NULL, kernel_kobj);
+        root_kset = kset_create_and_add("rina", NULL, NULL /* kernel_kobj */);
         if (!root_kset) {
                 LOG_ERR("Cannot initialize root kset, bailing out");
                 rina_debug_exit();

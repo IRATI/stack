@@ -47,6 +47,7 @@ static const struct sysfs_ops personality_sysfs_ops = {
 static struct kobj_type personality_ktype = {
         .sysfs_ops     = &personality_sysfs_ops,
         .default_attrs = NULL,
+        .release       = NULL,
 };
 
 int rina_personality_init(struct kobject * parent)
@@ -180,14 +181,21 @@ struct personality * rina_personality_register(const char *             label,
                 return NULL;
         }
 
-        pers->data = data;
-        pers->ops  = ops;
+        pers->data      = data;
+        pers->ops       = ops;
+        pers->kobj.kset = personalities;
         if (kobject_init_and_add(&pers->kobj,
                                  &personality_ktype,
-                                 &personalities->kobj,
+                                 NULL,
                                  "%s", label)) {
                 LOG_ERR("Cannot add personality '%s' into personalities set",
                         label);
+                kobject_put(&pers->kobj);
+                /*
+                 * FIXME: To be removed once personality_ktype.release
+                 * gets implemented
+                 */
+                kfree(pers);
                 return NULL;
         }
 
@@ -202,7 +210,7 @@ struct personality * rina_personality_register(const char *             label,
                         LOG_ERR("Could not initialize personality '%s'",
                                 label);
                         kobject_put(&pers->kobj);
-                        kfree(pers);
+                        kfree(pers); /* FIXME: As the note before */
                         return NULL;
                 }
                 LOG_DBG("Personality '%s' initialized successfully", label);
@@ -263,7 +271,7 @@ int rina_personality_unregister(struct personality * pers)
                 default_personality = 0;
         }
 
-        kfree(pers);
+        kfree(pers); /* FIXME: To be removed */
 
         LOG_DBG("Personality unregistered successfully");
 
