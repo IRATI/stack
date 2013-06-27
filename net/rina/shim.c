@@ -21,7 +21,6 @@
 #include <linux/export.h>
 #include <linux/string.h>
 #include <linux/kobject.h>
-#include <linux/sysfs.h>
 #include <linux/slab.h>
 
 #define RINA_PREFIX "shim"
@@ -42,14 +41,12 @@ int shim_init(void)
                 return -1;
         }
 
-#if CONFIG_RINA_SYSFS
         /* FIXME: Move the set path from kernel to rina */
         shims = kset_create_and_add("shims", NULL, kernel_kobj);
         if (!shims) {
                 LOG_ERR("Cannot intialize shim layer sysfs support");
                 return -1;
         }
-#endif
 
         ASSERT(shims != NULL);
 
@@ -63,9 +60,9 @@ void shim_exit(void)
         LOG_DBG("Finalizing shim layer");
 
         ASSERT(shims != NULL);
-#if CONFIG_RINA_SYSFS
+
         kset_unregister(shims);
-#endif
+
         shims = NULL;
 
         LOG_DBG("Shim layer finalized successfully");

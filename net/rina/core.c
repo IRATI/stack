@@ -21,7 +21,6 @@
 #include <linux/export.h>
 #include <linux/init.h>
 #include <linux/kobject.h>
-#include <linux/sysfs.h>
 
 #define RINA_PREFIX "core"
 
@@ -38,7 +37,7 @@ uint32_t rina_version(void)
 { return version; }
 EXPORT_SYMBOL(rina_version);
 
-#if CONFIG_RINA_SYSFS
+#if CONFIG_SYSFS
 #if 0
 static ssize_t version_show(struct kobject *        kobj,
                             struct kobj_attribute * attr,
