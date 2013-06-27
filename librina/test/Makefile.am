@@ -44,36 +44,38 @@ COMMONCPPFLAGS =				\
 
 COMMONLDFLAGS =					\
 	$(LIBNL3_LIBS)				\
-	$(LIBNLGENL3_LIBS)			\
-	$(top_builddir)/src/librina.la
+	$(LIBNLGENL3_LIBS)
+
+REGRESSIONLDFLAGS = $(COMMONLDFLAGS) $(top_builddir)/src/librina-stubbed.la
+FUNCTIONALLDFLAGS = $(COMMONLDFLAGS) $(top_builddir)/src/librina.la
 
 test_01_SOURCES  = test-01.cc
 test_01_CPPFLAGS = $(COMMONCPPFLAGS)
-test_01_LDFLAGS  = $(COMMONLDFLAGS)
+test_01_LDFLAGS  = $(REGRESSIONLDFLAGS)
 
 test_02_SOURCES  = test-02.cc
 test_02_CPPFLAGS = $(COMMONCPPFLAGS)
-test_02_LDFLAGS  = $(COMMONLDFLAGS)
+test_02_LDFLAGS  = $(REGRESSIONLDFLAGS)
 
 test_03_SOURCES  = test-03.cc
 test_03_CPPFLAGS = $(COMMONCPPFLAGS)
-test_03_LDFLAGS  = $(COMMONLDFLAGS)
+test_03_LDFLAGS  = $(REGRESSIONLDFLAGS)
 
 test_netlink_manager_SOURCES  = test-netlink-manager.cc
 test_netlink_manager_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
-test_netlink_manager_LDFLAGS  = $(COMMONLDFLAGS)
+test_netlink_manager_LDFLAGS  = $(FUNCTIONALLDFLAGS)
 
 test_netlink_parsers_SOURCES  = test-netlink-parsers.cc
 test_netlink_parsers_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
-test_netlink_parsers_LDFLAGS  = $(COMMONLDFLAGS)
+test_netlink_parsers_LDFLAGS  = $(FUNCTIONALLDFLAGS)
 
 test_concurrency_SOURCES  = test-concurrency.cc
 test_concurrency_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
-test_concurrency_LDFLAGS  = $(COMMONLDFLAGS)
+test_concurrency_LDFLAGS  = $(FUNCTIONALLDFLAGS)
 
 test_core_SOURCES  = test-core.cc
 test_core_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
-test_core_LDFLAGS  = $(COMMONLDFLAGS)
+test_core_LDFLAGS  = $(FUNCTIONALLDFLAGS)
 
 check_PROGRAMS =				\
 	test-01					\
@@ -91,16 +93,7 @@ PASS_TESTS =					\
 	test-01					\
 	test-02
 
-TESTS =						\
-	test-01					\
-	test-02					\
-	test-03
-
-FUNCTIONAL_TESTS =				\
-	test-netlink-manager			\
-	test-netlink-parsers			\
-	test-concurrency			\
-	test-core
+TESTS = $(PASS_TESTS) $(XFAIL_TESTS)
 
 FUNCTIONAL_PASS_TESTS =				\
 	test-netlink-manager			\
@@ -109,6 +102,8 @@ FUNCTIONAL_PASS_TESTS =				\
 	test-core
 
 FUNCTIONAL_XFAIL_TESTS =
+
+FUNCTIONAL_TESTS = $(FUNCTIONAL_PASS_TESTS) $(FUNCTIONAL_XFAIL_TESTS)
 
 check-functional: check-functional-am
 
