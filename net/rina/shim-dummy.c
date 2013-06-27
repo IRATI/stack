@@ -65,7 +65,7 @@ static int dummy_flow_allocate_request(void *                     opaque,
 
         /* FIXME: We should verify that the port_id has not got a flow yet */
 
-        flow = kmalloc(sizeof(*flow), GFP_KERNEL);
+        flow = kzalloc(sizeof(*flow), GFP_KERNEL);
         if (!flow) {
                 LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*flow));
                 LOG_FEXIT;
@@ -180,7 +180,7 @@ static struct shim_instance_t * dummy_create(void *           opaque,
 {
 	struct shim_instance_t *  instance;
 	struct dummy_instance_t * dummy_inst;
-	LIST_HEAD(port_flow);
+	struct list_head *        port_flow;
 
 	LOG_FBEGN;
 
@@ -191,7 +191,6 @@ static struct shim_instance_t * dummy_create(void *           opaque,
 		LOG_FEXIT;
 		return NULL;
 	}
-
 	dummy_inst = kzalloc(sizeof(*dummy_inst), GFP_KERNEL);
 	if (!dummy_inst) {
 		LOG_ERR("Cannot allocate %zu bytes of memory",
@@ -200,9 +199,19 @@ static struct shim_instance_t * dummy_create(void *           opaque,
 		LOG_FEXIT;
 		return NULL;
 	}
-
+	port_flow = kzalloc(sizeof(*port_flow), GFP_KERNEL);
+	if (!port_flow) {
+		LOG_ERR("Cannot allocate %zu bytes of memory",
+				sizeof(*port_flow));
+		kfree(instance);
+		kfree(dummy_inst);
+		LOG_FEXIT;
+		return NULL;
+	}
+	port_flow->prev = port_flow;
+	port_flow->next = port_flow;
 	dummy_inst->ipc_process_id = ipc_process_id;
-	dummy_inst->flows          = &port_flow;
+	dummy_inst->flows          = port_flow;
 
 	instance->opaque                 = dummy_inst;
 	instance->flow_allocate_request  = dummy_flow_allocate_request;
