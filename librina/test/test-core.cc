@@ -48,17 +48,44 @@ void * doWorkApplication(void * arg) {
 	message->setSourceAppName(*sourceName);
 	message->setDestAppName(*destName);
 	message->setFlowSpecification(*flowSpec);
-
 	message->setRequestMessage(true);
 
+	/* Try successfull flow allocation */
 	std::cout << "Application: Sending netlink message and waiting for response\n";
 	BaseNetlinkMessage* response =
 			rinaManager->sendRequestMessageAndWaitForReply(message);
 	std::cout << "Application: Got response!\n";
-	delete response;
+	delete message;
+
+	AppAllocateFlowRequestResultMessage * flowResultMessage =
+				dynamic_cast<AppAllocateFlowRequestResultMessage *>(response);
+	std::cout << "Application: Flow allocated successfully. Port id: " <<
+			flowResultMessage->getPortId() << "; DIF name: " <<
+			flowResultMessage->getDifName().getProcessName() << "\n";
+	delete flowResultMessage;
+
+	message = new AppAllocateFlowRequestMessage();
+	message->setSourceAppName(*sourceName);
+	message->setDestAppName(*destName);
+	message->setFlowSpecification(*flowSpec);
+	message->setRequestMessage(true);
+
+	/* Try unsuccessfull flow allocation */
+	std::cout << "Application: Sending netlink message and waiting for response\n";
+	response =
+			rinaManager->sendRequestMessageAndWaitForReply(message);
+	std::cout << "Application: Got response!\n";
+	delete message;
+
+	flowResultMessage =
+			dynamic_cast<AppAllocateFlowRequestResultMessage *>(response);
+	std::cout << "Application: Flow allocation failed. Error code: " <<
+			flowResultMessage->getPortId() << "; Description: " <<
+			flowResultMessage->getErrorDescription() << "\n";
+
+	delete flowResultMessage;
 	delete sourceName;
 	delete destName;
-	delete message;
 
 	return (void *) 0;
 }
@@ -91,7 +118,29 @@ void * doWorkIPCManager(void * arg) {
 
 	std::cout<<"IPC Manager: Sending response!\n";
 	rinaManager->sendResponseOrNotficationMessage(message);
+
+	delete message;
+	delete flowEvent;
+
+	std::cout << "IPC Manager: Waiting for incoming request/notification\n";
+	event = eventQueue->take();
+	std::cout<<"IPC Manager: Got event! Type: "<<event->getType()
+						<<" Sequence number: "<<event->getSequenceNumber()<<"\n";
+
+	flowEvent =
+			dynamic_cast<FlowRequestEvent *>(event);
+
+	message = new AppAllocateFlowRequestResultMessage();
+	message->setSourceAppName(flowEvent->getSourceApplicationName());
+	message->setPortId(-15);
+	message->setErrorDescription("Not enough resources to accomplish the request");
+	message->setSequenceNumber(flowEvent->getSequenceNumber());
+	message->setResponseMessage(true);
+
+	std::cout<<"IPC Manager: Sending response!\n";
+	rinaManager->sendResponseOrNotficationMessage(message);
 	std::cout<<"IPC Manager: Response sent, terminating!\n";
+
 	delete flowEvent;
 	delete difName;
 	delete message;
