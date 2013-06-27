@@ -76,8 +76,8 @@ int testAppAllocateFlowRequestMessage() {
 	} else if (message->getSourceAppName()
 			!= recoveredMessage->getSourceAppName()) {
 		std::cout
-				<< "Source application name on original and recovered messages"
-				<< " are different\n";
+		<< "Source application name on original and recovered messages"
+		<< " are different\n";
 		returnValue = -1;
 	} else if (message->getDestAppName()
 			!= recoveredMessage->getDestAppName()) {
@@ -137,8 +137,8 @@ int testAppAllocateFlowRequestResultMessage() {
 	int result = putBaseNetlinkMessage(netlinkMessage, message);
 	if (result < 0) {
 		std::cout
-				<< "Error constructing Application Allocate Flow Request Result "
-				<< "Message \n";
+		<< "Error constructing Application Allocate Flow Request Result "
+		<< "Message \n";
 		nlmsg_free(netlinkMessage);
 		delete message;
 		return result;
@@ -150,8 +150,8 @@ int testAppAllocateFlowRequestResultMessage() {
 					netlinkMessageHeader));
 	if (message == NULL) {
 		std::cout
-				<< "Error parsing Application Allocate Flow Request Result Message "
-				<< "\n";
+		<< "Error parsing Application Allocate Flow Request Result Message "
+		<< "\n";
 		returnValue = -1;
 
 	} else if (message->getErrorDescription()
@@ -175,9 +175,9 @@ int testAppAllocateFlowRequestResultMessage() {
 				<< "messages are different\n";
 		returnValue = -1;
 	} else if (message->getPortId() != recoveredMessage->getPortId()) {
-			std::cout << "PortId on original and recovered messages"
-					<< " are different\n";
-			returnValue = -1;
+		std::cout << "PortId on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
 	}
 
 	if (returnValue == 0){
@@ -192,6 +192,107 @@ int testAppAllocateFlowRequestResultMessage() {
 	return returnValue;
 }
 
+
+int testAppAllocateFlowRequestArrivedMessage() {
+	std::cout << "TESTING APP ALLOCATE FLOW REQUEST ARRIVED MESSAGE\n";
+	int returnValue = 0;
+
+	ApplicationProcessNamingInformation * sourceName =
+			new ApplicationProcessNamingInformation();
+	sourceName->setProcessName("/apps/source");
+	sourceName->setProcessInstance("12");
+	sourceName->setEntityName("database");
+	sourceName->setEntityInstance("12");
+
+	ApplicationProcessNamingInformation * destName =
+			new ApplicationProcessNamingInformation();
+	destName->setProcessName("/apps/dest");
+	destName->setProcessInstance("12345");
+	destName->setEntityName("printer");
+	destName->setEntityInstance("12623456");
+
+	ApplicationProcessNamingInformation * difName =
+			new ApplicationProcessNamingInformation();
+	difName->setProcessName("/difs/Test1.DIF");
+
+
+	FlowSpecification * flowSpec = new FlowSpecification();
+
+	AppAllocateFlowRequestArrivedMessage * message =
+			new AppAllocateFlowRequestArrivedMessage();
+	message->setSourceAppName(*sourceName);
+	message->setDestAppName(*destName);
+	message->setFlowSpecification(*flowSpec);
+	message->setPortId(42);
+	message->setDifName(*difName);
+
+	struct nl_msg* netlinkMessage;
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage) {
+		std::cout << "Error allocating Netlink message\n";
+	}
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
+			0, 0, message->getOperationCode(), 0);
+
+	int result = putBaseNetlinkMessage(netlinkMessage, message);
+	if (result < 0) {
+		std::cout << "Error constructing Application Allocate Flow Request Arrived"
+				<< "Message \n";
+		nlmsg_free(netlinkMessage);
+		delete destName;
+		delete sourceName;
+		delete message;
+		return result;
+	}
+
+	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+	AppAllocateFlowRequestArrivedMessage * recoveredMessage =
+			dynamic_cast<AppAllocateFlowRequestArrivedMessage *>(parseBaseNetlinkMessage(
+					netlinkMessageHeader));
+	if (message == NULL) {
+		std::cout << "Error parsing Application Allocate Flow Request Arrived Message "
+				<< "\n";
+		returnValue = -1;
+	} else if (message->getSourceAppName()
+			!= recoveredMessage->getSourceAppName()) {
+		std::cout
+		<< "Source application name on original and recovered messages"
+		<< " are different\n";
+		returnValue = -1;
+	} else if (message->getDestAppName()
+			!= recoveredMessage->getDestAppName()) {
+		std::cout << "Destination application name on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	} else if (message->getFlowSpecification()
+			!= recoveredMessage->getFlowSpecification()) {
+		std::cout << "Destination flow specification on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	} else if (message->getPortId() != recoveredMessage->getPortId()) {
+		std::cout << "PortId on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message->getDifName() !=
+			recoveredMessage->getDifName()){
+		std::cout << "Error DIF name on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	}
+
+	if (returnValue == 0){
+		std::cout << "AppAllocateFlowRequestArrivedMessage test ok\n";
+	}
+	nlmsg_free(netlinkMessage);
+	delete destName;
+	delete sourceName;
+	delete message;
+	delete recoveredMessage;
+
+	return returnValue;
+}
+
+
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING LIBRINA-NETLINK-PARSERS\n";
 
@@ -203,6 +304,11 @@ int main(int argc, char * argv[]) {
 	}
 
 	result = testAppAllocateFlowRequestResultMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testAppAllocateFlowRequestArrivedMessage();
 	if (result < 0) {
 		return result;
 	}

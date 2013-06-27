@@ -110,5 +110,24 @@ int putAppAllocateFlowRequestResultMessageObject(nl_msg* netlinkMessage,
 AppAllocateFlowRequestResultMessage * parseAppAllocateFlowRequestResultMessage(
 		nlmsghdr *hdr);
 
+
+/* AppAllocateFlowRequestMessage CLASS*/
+enum AppAllocateFlowRequestArrivedAttributes {
+	AAFRA_ATTR_SOURCE_APP_NAME = 1,
+	AAFRA_ATTR_DEST_APP_NAME,
+	AAFRA_ATTR_FLOW_SPEC,
+	AAFRA_ATTR_PORT_ID,
+	AAFRA_ATTR_DIF_NAME,
+	__AAFRA_ATTR_MAX,
+};
+
+#define AAFRA_ATTR_MAX (__AAFRA_ATTR_MAX -1)
+
+int putAppAllocateFlowRequestArrivedMessageObject(nl_msg* netlinkMessage,
+		const AppAllocateFlowRequestArrivedMessage& object);
+
+AppAllocateFlowRequestArrivedMessage * parseAppAllocateFlowRequestArrivedMessage(
+		nlmsghdr *hdr);
+
 }
 #endif /* LIBRINA_NETLINK_PARSERS_H_ */

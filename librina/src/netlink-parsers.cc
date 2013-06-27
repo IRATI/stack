@@ -49,9 +49,19 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED: {
+		AppAllocateFlowRequestArrivedMessage * allocateFlowRequestArrivedObject =
+				dynamic_cast<AppAllocateFlowRequestArrivedMessage *>(message);
+		if (putAppAllocateFlowRequestArrivedMessageObject(netlinkMessage,
+				*allocateFlowRequestArrivedObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
 	default: {
 		return -1;
 	}
+
 	}
 }
 
@@ -65,6 +75,9 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT: {
 		return parseAppAllocateFlowRequestResultMessage(netlinkMessageHeader);
+	}
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED: {
+		return parseAppAllocateFlowRequestArrivedMessage(netlinkMessageHeader);
 	}
 	default: {
 		LOG_ERR(
@@ -349,9 +362,8 @@ int putAppAllocateFlowRequestResultMessageObject(nl_msg* netlinkMessage,
 	NLA_PUT_STRING(netlinkMessage, AAFRR_ATTR_ERROR_DESCRIPTION,
 			object.getErrorDescription().c_str());
 
-	if (object.getPortId() > 0){
-		if (!(difName = nla_nest_start(netlinkMessage,
-				AAFRR_ATTR_DIF_NAME))) {
+	if (object.getPortId() > 0) {
+		if (!(difName = nla_nest_start(netlinkMessage, AAFRR_ATTR_DIF_NAME))) {
 			goto nla_put_failure;
 		}
 		if (putApplicationProcessNamingInformationObject(netlinkMessage,
@@ -368,6 +380,59 @@ int putAppAllocateFlowRequestResultMessageObject(nl_msg* netlinkMessage,
 
 	nla_put_failure: LOG_ERR(
 			"Error building AppAllocateFlowRequestResponseMessage Netlink object");
+	return -1;
+}
+
+int putAppAllocateFlowRequestArrivedMessageObject(nl_msg* netlinkMessage,
+		const AppAllocateFlowRequestArrivedMessage& object) {
+	struct nlattr *sourceAppName, *destinationAppName, *flowSpec, *difName;
+
+	if (!(sourceAppName = nla_nest_start(netlinkMessage,
+			AAFRA_ATTR_SOURCE_APP_NAME))) {
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getSourceAppName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, sourceAppName);
+
+	if (!(destinationAppName = nla_nest_start(netlinkMessage,
+			AAFRA_ATTR_DEST_APP_NAME))) {
+		goto nla_put_failure;
+	}
+
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getDestAppName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, destinationAppName);
+
+	if (!(flowSpec = nla_nest_start(netlinkMessage, AAFRA_ATTR_FLOW_SPEC))) {
+		goto nla_put_failure;
+	}
+
+	if (putFlowSpecificationObject(netlinkMessage,
+			object.getFlowSpecification()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, flowSpec);
+
+	NLA_PUT_U32(netlinkMessage, AAFRA_ATTR_PORT_ID, object.getPortId());
+
+	if (!(difName = nla_nest_start(netlinkMessage, AAFRA_ATTR_DIF_NAME))) {
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getDifName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, difName);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building AppAllocateFlowRequestArrivedMessage Netlink object");
 	return -1;
 }
 
@@ -519,4 +584,93 @@ AppAllocateFlowRequestResultMessage * parseAppAllocateFlowRequestResultMessage(
 	return result;
 }
 
+AppAllocateFlowRequestArrivedMessage * parseAppAllocateFlowRequestArrivedMessage(
+		nlmsghdr *hdr) {
+	struct nla_policy attr_policy[AAFRA_ATTR_MAX + 1];
+	attr_policy[AAFRA_ATTR_SOURCE_APP_NAME].type = NLA_NESTED;
+	attr_policy[AAFRA_ATTR_SOURCE_APP_NAME].minlen = 0;
+	attr_policy[AAFRA_ATTR_SOURCE_APP_NAME].maxlen = 0;
+	attr_policy[AAFRA_ATTR_DEST_APP_NAME].type = NLA_NESTED;
+	attr_policy[AAFRA_ATTR_DEST_APP_NAME].minlen = 0;
+	attr_policy[AAFRA_ATTR_DEST_APP_NAME].maxlen = 0;
+	attr_policy[AAFRA_ATTR_FLOW_SPEC].type = NLA_NESTED;
+	attr_policy[AAFRA_ATTR_FLOW_SPEC].minlen = 0;
+	attr_policy[AAFRA_ATTR_FLOW_SPEC].maxlen = 0;
+	attr_policy[AAFRA_ATTR_PORT_ID].type = NLA_U32;
+	attr_policy[AAFRA_ATTR_PORT_ID].minlen = 4;
+	attr_policy[AAFRA_ATTR_PORT_ID].maxlen = 4;
+	attr_policy[AAFRA_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[AAFRA_ATTR_DIF_NAME].minlen = 0;
+	attr_policy[AAFRA_ATTR_DIF_NAME].maxlen = 0;
+	struct nlattr *attrs[AAFRA_ATTR_MAX + 1];
+
+	/*
+	 * The nlmsg_parse() function will make sure that the message contains
+	 * enough payload to hold the header (struct my_hdr), validates any
+	 * attributes attached to the messages and stores a pointer to each
+	 * attribute in the attrs[] array accessable by attribute type.
+	 */
+	int err = genlmsg_parse(hdr, 0, attrs, AAFRA_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing AppAllocateFlowRequestArrivedMessage information from Netlink message: %d",
+				err);
+		return NULL;
+	}
+
+	AppAllocateFlowRequestArrivedMessage * result =
+			new AppAllocateFlowRequestArrivedMessage();
+	ApplicationProcessNamingInformation * sourceName;
+	ApplicationProcessNamingInformation * destName;
+	FlowSpecification * flowSpec;
+	ApplicationProcessNamingInformation * difName;
+
+	if (attrs[AAFRA_ATTR_SOURCE_APP_NAME]) {
+		sourceName = parseApplicationProcessNamingInformationObject(
+				attrs[AAFRA_ATTR_SOURCE_APP_NAME]);
+		if (sourceName == NULL) {
+			delete result;
+			return NULL;
+		} else {
+			result->setSourceAppName(*sourceName);
+		}
+	}
+
+	if (attrs[AAFRA_ATTR_DEST_APP_NAME]) {
+		destName = parseApplicationProcessNamingInformationObject(
+				attrs[AAFRA_ATTR_DEST_APP_NAME]);
+		if (destName == NULL) {
+			delete result;
+			return NULL;
+		} else {
+			result->setDestAppName(*destName);
+		}
+	}
+
+	if (attrs[AAFRA_ATTR_FLOW_SPEC]) {
+		flowSpec = parseFlowSpecificationObject(attrs[AAFRA_ATTR_FLOW_SPEC]);
+		if (flowSpec == NULL) {
+			delete result;
+			return NULL;
+		} else {
+			result->setFlowSpecification(*flowSpec);
+		}
+	}
+
+	if (attrs[AAFRA_ATTR_PORT_ID]) {
+		result->setPortId(nla_get_u32(attrs[AAFRA_ATTR_PORT_ID]));
+
+		if (attrs[AAFRA_ATTR_DIF_NAME]) {
+			difName = parseApplicationProcessNamingInformationObject(
+					attrs[AAFRA_ATTR_DIF_NAME]);
+			if (difName == NULL) {
+				delete result;
+				return NULL;
+			} else {
+				result->setDifName(*difName);
+			}
+		}
+	}
+	return result;
+}
 }
