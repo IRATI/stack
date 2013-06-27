@@ -35,6 +35,20 @@ struct personality * default_personality = NULL;
 
 static struct kset * personalities       = NULL;
 
+static ssize_t personality_show(struct kobject *   kobj,
+                                struct attribute * attr,
+                                char *             buf)
+{ return sprintf(buf, "%s", kobj->name); }
+
+static const struct sysfs_ops personality_sysfs_ops = {
+        .show = personality_show
+};
+
+static struct kobj_type personality_ktype = {
+        .sysfs_ops     = &personality_sysfs_ops,
+        .default_attrs = NULL,
+};
+
 int rina_personality_init(struct kobject * parent)
 {
         LOG_DBG("Initializing personality layer");
@@ -45,15 +59,14 @@ int rina_personality_init(struct kobject * parent)
                 return -1;
         }
 
-        ASSERT(parent);
+        ASSERT(personalities       == NULL);
+        ASSERT(default_personality == NULL);
 
         personalities = kset_create_and_add("personalities", NULL, parent);
         if (!personalities) {
                 LOG_ERR("Cannot initialize personality layer");
                 return -1;
         }
-
-        default_personality = NULL;
 
         LOG_DBG("Personality layer initialized successfully");
 
@@ -64,9 +77,11 @@ void rina_personality_exit(void)
 {
         LOG_DBG("Finalizing personality layer");
 
-        kset_unregister(personalities);
-        personalities    = NULL;
+        ASSERT(personalities       != NULL);
+        ASSERT(default_personality != NULL);
 
+        kset_unregister(personalities);
+        personalities       = NULL;
         default_personality = NULL;        
 
         LOG_DBG("Personality layer finalized successfully");
@@ -77,11 +92,11 @@ static int is_label_ok(const char * label)
         LOG_DBG("Checking label");
 
         if (!label) {
-                LOG_DBG("Label is empty");
+                LOG_ERR("Label is empty");
                 return 0;
         }
         if (strlen(label) == 0) {
-                LOG_DBG("Label has 0 length");
+                LOG_ERR("Label has 0 length");
                 return 0;
         }
 
@@ -104,21 +119,29 @@ static int are_ops_ok(const struct personality_ops * ops)
                 return 0;
         }
 
-        if (ops->ipc_create         &&
-            ops->ipc_configure      &&
-            ops->ipc_destroy        &&
-            ops->sdu_read           &&
-            ops->sdu_write          &&
-            ops->connection_create  &&
-            ops->connection_destroy &&
-            ops->connection_update) {
-                LOG_DBG("Ops are ok");
-                return 1;
+        if (!(ops->ipc_create    &&
+              ops->ipc_configure &&
+              ops->ipc_destroy)) {
+                LOG_ERR("Bogus IPC related ops");
+                return 0;
         }
 
-        LOG_ERR("Bogus ops hooks");
+        if (!(ops->sdu_read  &&
+              ops->sdu_write)) {
+                LOG_ERR("Bogus SDU related ops");
+                return 0;
+        }
 
-        return 0;
+        if (!(ops->connection_create  &&
+              ops->connection_destroy &&
+              ops->connection_update)) {
+                LOG_ERR("Bogus connection related ops");
+                return 0;
+        }
+
+        LOG_DBG("Ops are ok");
+
+        return 1;
 }
 
 struct personality * rina_personality_register(const char *             label,
@@ -159,17 +182,17 @@ struct personality * rina_personality_register(const char *             label,
 
         pers->data      = data;
         pers->ops       = ops;
-        pers->hierarchy = kset_create_and_add(label,
-                                              NULL,
-                                              &personalities->kobj);
-        if (!pers->hierarchy) {
-                LOG_ERR("Cannot initialize personality '%s' hierarchy", label);
-                kfree(pers);
+        if (kobject_init_and_add(&pers->kobj,
+                                 &personality_ktype,
+                                 NULL /*&personalities->kobj */,
+                                 "%s", label)) {
+                LOG_ERR("Cannot add personality '%s' into personalities set",
+                        label);
                 return NULL;
         }
 
         /* Double checking for bugs */
-        label = pers->hierarchy->kobj.name;
+        label = pers->kobj.name;
 
         ASSERT(pers->ops);
 
@@ -178,7 +201,7 @@ struct personality * rina_personality_register(const char *             label,
                 if (!pers->ops->init(pers->data)) {
                         LOG_ERR("Could not initialize personality '%s'",
                                 label);
-                        kset_unregister(pers->hierarchy);
+                        kobject_put(&pers->kobj);
                         kfree(pers);
                         return NULL;
                 }
@@ -207,10 +230,10 @@ int rina_personality_unregister(struct personality * pers)
         }
 
         ASSERT(pers);
-        ASSERT(pers->hierarchy);
-        ASSERT(pers->hierarchy->kobj.name);
 
-        label = pers->hierarchy->kobj.name;
+        label = pers->kobj.name;
+
+        ASSERT(label);
 
         LOG_DBG("Unregistering personality '%s'", label);
 
@@ -218,6 +241,7 @@ int rina_personality_unregister(struct personality * pers)
 
         tmp = kset_find_obj(personalities, label);
         if (!tmp) {
+                kobject_put(tmp);
                 LOG_ERR("Personality '%s' not registered, bailing out",
                         label);
                 return -1;
@@ -232,8 +256,6 @@ int rina_personality_unregister(struct personality * pers)
         }
 
         kobject_put(tmp);
-
-        kset_unregister(pers->hierarchy);
 
         if (default_personality == pers) {
                 LOG_INFO("Re-setting default personality");

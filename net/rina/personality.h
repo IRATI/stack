@@ -60,7 +60,7 @@ struct personality_ops {
 };
 
 struct personality {
-        struct kset *            hierarchy;
+        struct kobject           kobj;
         void *                   data;
         struct personality_ops * ops;
 };
