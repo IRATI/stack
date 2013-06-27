@@ -277,6 +277,8 @@ int rina_personality_unregister(struct personality * pers)
                 LOG_DBG("Personality '%s' finalized successfully", name);
         }
 
+        kobject_put(&pers->kobj);
+
         if (default_personality == pers) {
                 LOG_INFO("Re-setting default personality");
                 default_personality = 0;
