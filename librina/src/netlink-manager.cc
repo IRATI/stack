@@ -60,6 +60,9 @@ const std::string
 		"Error fetching pending Netlink request message";
 const std::string NetlinkException::error_fetching_netlink_port_id =
 		"Error fetching Netlink port id";
+const std::string
+	NetlinkException::unrecognized_generic_netlink_operation_code =
+		"Unrecognized Generic Netlink operation code";
 
 /* CLASS NETLINK MANAGER */
 

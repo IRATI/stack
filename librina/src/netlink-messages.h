@@ -163,6 +163,9 @@ public:
 class AppAllocateFlowRequestResultMessage:
 		public BaseNetlinkMessage{
 
+	/** The application that requested the flow allocation */
+	ApplicationProcessNamingInformation sourceAppName;
+
 	/**
 	 * The port-id assigned to the flow, or error code if the value is
 	 * negative
@@ -176,9 +179,9 @@ class AppAllocateFlowRequestResultMessage:
 	std::string errorDescription;
 
 	/**
-	 * The id of the IPC Process that has allocated the flow
+	 * The DIF where the flow has been allocated
 	 */
-	unsigned int ipcProcessId;
+	ApplicationProcessNamingInformation difName;
 
 	/**
 	 * The id of the Netlink port to be used to send messages to the IPC Process
@@ -191,19 +194,22 @@ public:
 	AppAllocateFlowRequestResultMessage();
 	const std::string& getErrorDescription() const;
 	void setErrorDescription(const std::string& errorDescription);
-	unsigned int getIpcProcessId() const;
-	void setIpcProcessId(unsigned int ipcProcessId);
 	unsigned int getIpcProcessPortId() const;
 	void setIpcProcessPortId(unsigned int ipcProcessPortId);
 	int getPortId() const;
 	void setPortId(int portId);
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
+	const ApplicationProcessNamingInformation& getSourceAppName() const;
+	void setSourceAppName(
+			const ApplicationProcessNamingInformation& sourceAppName);
 };
 
 /**
  * Allocate flow request from a remote application, IPC Process -> Application
  */
 class AppAllocateFlowRequestArrivedMessage:
-		public BaseNetlinkMessage {
+		public NetlinkRequestOrNotificationMessage {
 
 	/** The source application name */
 	ApplicationProcessNamingInformation sourceAppName;
@@ -217,6 +223,9 @@ class AppAllocateFlowRequestArrivedMessage:
 	/** The portId reserved for the flow */
 	int portId;
 
+	/** The dif Name */
+	ApplicationProcessNamingInformation difName;
+
 public:
 	AppAllocateFlowRequestArrivedMessage();
 	const ApplicationProcessNamingInformation& getDestAppName() const;
@@ -229,6 +238,9 @@ public:
 			const ApplicationProcessNamingInformation& sourceAppName);
 	int getPortId() const;
 	void setPortId(int portId);
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
+	IPCEvent* toIPCEvent();
 };
 
 /**

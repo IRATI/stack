@@ -52,7 +52,7 @@ public:
 };
 
 /**
- * Contains an application process naming information
+ * Contains application naming information
  */
 class ApplicationProcessNamingInformation: public StringConvertable {
 	/**
@@ -338,15 +338,7 @@ public:
  * processed by client classes.
  */
 class IPCEventProducer {
-	/** Placeholder to store events, will be a blocking queue */
-	std::list<IPCEvent*> eventQueue;
 public:
-	/**
-	 * Called by the library internal classes, in order to
-	 * populate the events list
-	 */
-	void enqueEvent(IPCEvent * event);
-
 	/** Retrieves the next available event, if any */
 	IPCEvent * eventPoll();
 

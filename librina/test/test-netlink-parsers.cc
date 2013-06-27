@@ -91,7 +91,9 @@ int testAppAllocateFlowRequestMessage() {
 		returnValue = -1;
 	}
 
-	std::cout << "AppAllocateFlowRequestMessage test ok\n";
+	if (returnValue == 0){
+		std::cout << "AppAllocateFlowRequestMessage test ok\n";
+	}
 	nlmsg_free(netlinkMessage);
 	delete destName;
 	delete sourceName;
@@ -105,11 +107,23 @@ int testAppAllocateFlowRequestResultMessage() {
 	std::cout << "TESTING APP ALLOCATE FLOW REQUEST RESULT MESSAGE\n";
 	int returnValue = 0;
 
+	ApplicationProcessNamingInformation * sourceName =
+			new ApplicationProcessNamingInformation();
+	sourceName->setProcessName("/apps/source");
+	sourceName->setProcessInstance("12");
+	sourceName->setEntityName("database");
+	sourceName->setEntityInstance("12");
+
+	ApplicationProcessNamingInformation * difName =
+			new ApplicationProcessNamingInformation();
+	difName->setProcessName("/difs/Test.DIF");
+
 	AppAllocateFlowRequestResultMessage * message =
 			new AppAllocateFlowRequestResultMessage();
+	message->setSourceAppName(*sourceName);
 	message->setPortId(32);
 	message->setErrorDescription("Error description");
-	message->setIpcProcessId(15);
+	message->setDifName(*difName);
 	message->setIpcProcessPortId(42);
 
 	struct nl_msg* netlinkMessage;
@@ -145,27 +159,35 @@ int testAppAllocateFlowRequestResultMessage() {
 		std::cout << "Error description on original and recovered "
 				<< "messages are different\n";
 		returnValue = -1;
-	} else if (message->getIpcProcessId()
-			!= recoveredMessage->getIpcProcessId()) {
-		std::cout << "ipc_process_id on original and recovered "
-				<< "messages are different\n";
-		returnValue = -1;
 	} else if (message->getIpcProcessPortId()
 			!= recoveredMessage->getIpcProcessPortId()) {
 		std::cout << "ipc_process_port_id on original and recovered "
 				<< "messages are different\n";
 		returnValue = -1;
-	}
-	else if (message->getPortId() != recoveredMessage->getPortId()) {
+	} else if (message->getDifName() !=
+			recoveredMessage->getDifName()){
+		std::cout << "Error DIF name on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	} else if (message->getSourceAppName() !=
+			recoveredMessage->getSourceAppName()){
+		std::cout << "Error source app name on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	} else if (message->getPortId() != recoveredMessage->getPortId()) {
 			std::cout << "PortId on original and recovered messages"
 					<< " are different\n";
 			returnValue = -1;
 	}
 
-	std::cout << "AppAllocateFlowRequestMessage test ok\n";
+	if (returnValue == 0){
+		std::cout << "AppAllocateFlowRequestResultMessage test ok\n";
+	}
 	nlmsg_free(netlinkMessage);
 	delete message;
 	delete recoveredMessage;
+	delete sourceName;
+	delete difName;
 
 	return returnValue;
 }
@@ -176,9 +198,11 @@ int main(int argc, char * argv[]) {
 	int result;
 
 	result = testAppAllocateFlowRequestMessage();
+	if (result < 0) {
+		return result;
+	}
 
 	result = testAppAllocateFlowRequestResultMessage();
-
 	if (result < 0) {
 		return result;
 	}

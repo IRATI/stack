@@ -31,24 +31,19 @@ namespace rina {
 /* CLASS NETLINK PORT ID MAP */
 void NetlinkPortIdMap::putIPCProcessIdToNelinkPortIdMapping(
 		unsigned int ipcProcessId, unsigned int netlinkPortId){
-	ipcProcessIdLock.writelock();
 	ipcProcessIdMappings[ipcProcessId] = netlinkPortId;
-	ipcProcessIdLock.unlock();
 }
 
 unsigned int NetlinkPortIdMap::getNetlinkPortIdFromIPCProcessId(
 		unsigned int ipcProcessId) throw(NetlinkException) {
-	ipcProcessIdLock.readlock();
 	std::map<unsigned int, unsigned int>::iterator it =
 			ipcProcessIdMappings.find(ipcProcessId);
 	if (it == ipcProcessIdMappings.end()){
 		LOG_ERR("Could not find the netlink port of IPC Process %d",
 				ipcProcessId);
-		ipcProcessIdLock.unlock();
 		throw NetlinkException(
 				NetlinkException::error_fetching_netlink_port_id);
 	}
-	ipcProcessIdLock.unlock();
 
 	return it->second;
 }
@@ -56,24 +51,19 @@ unsigned int NetlinkPortIdMap::getNetlinkPortIdFromIPCProcessId(
 void NetlinkPortIdMap::putAPNametoNetlinkPortIdMapping(
 		ApplicationProcessNamingInformation apName,
 		unsigned int netlinkPortId){
-	applicationNameLock.writelock();
 	applicationNameMappings[apName] = netlinkPortId;
-	applicationNameLock.unlock();
 }
 
 unsigned int NetlinkPortIdMap::getNetlinkPortIdFromAPName(
 		ApplicationProcessNamingInformation apName) throw(NetlinkException) {
-	applicationNameLock.readlock();
 	std::map<ApplicationProcessNamingInformation, unsigned int>::iterator it =
 			applicationNameMappings.find(apName);
 	if (it == applicationNameMappings.end()){
 		LOG_ERR("Could not find the netlink port of Application %s",
 				apName.toString().c_str());
-		applicationNameLock.unlock();
 		throw NetlinkException(
 				NetlinkException::error_fetching_netlink_port_id);
-	}
-	applicationNameLock.unlock();
+	};
 
 	return it->second;
 }
@@ -82,7 +72,42 @@ unsigned int NetlinkPortIdMap::getIPCManagerPortId(){
 	return 1;
 }
 
-Singleton<NetlinkPortIdMap> netlinkPortIdMap;
+void NetlinkPortIdMap::updateMessageOrPortIdMap(
+		BaseNetlinkMessage* message, bool send) throw(NetlinkException){
+	switch (message->getOperationCode()) {
+		case RINA_C_APP_ALLOCATE_FLOW_REQUEST: {
+			if(send){
+				message->setDestPortId(getIPCManagerPortId());
+			}else{
+				AppAllocateFlowRequestMessage * specificMessage =
+					dynamic_cast<AppAllocateFlowRequestMessage *>(message);
+				putAPNametoNetlinkPortIdMapping(
+						specificMessage->getSourceAppName(),
+						specificMessage->getSourcePortId());
+			}
+			break;
+		}
+		case RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT: {
+			AppAllocateFlowRequestResultMessage * specificMessage =
+					dynamic_cast<AppAllocateFlowRequestResultMessage *>(message);
+			if(send){
+				specificMessage->setDestPortId(
+						getNetlinkPortIdFromAPName(
+								specificMessage->getSourceAppName()));
+			}else{
+				if(specificMessage->getPortId() > 0){
+					putAPNametoNetlinkPortIdMapping(
+							specificMessage->getDifName(),
+							specificMessage->getIpcProcessPortId());
+				}
+			}
+			break;
+		}
+		default:
+			throw NetlinkException(NetlinkException::
+						unrecognized_generic_netlink_operation_code);
+	}
+}
 
 /* CLASS PENDING NETLINK MESSAGE */
 PendingNetlinkMessage::PendingNetlinkMessage(unsigned int sequenceNumber) :
@@ -201,6 +226,9 @@ void * doNetlinkMessageReaderWork(void * arg) {
 
 			if (incomingMessage->isRequestMessage()){
 				myRINAManager->netlinkRequestMessageArrived(incomingMessage);
+			}else{
+				myRINAManager->netlinkNotificationMessageArrived(
+						incomingMessage);
 			}
 
 			eventsQueue->put(message->toIPCEvent());
@@ -298,6 +326,14 @@ BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForReply(
 
 	sendReceiveLock.lock();
 
+	//1 Populate destination port id
+	try {
+		netlinkPortIdMap.updateMessageOrPortIdMap(netlinkMessage, true);
+	} catch (NetlinkException &e) {
+		sendReceiveLock.unlock();
+		throw e;
+	}
+
 	NetlinkSession * netlinkSession =
 			getAndCreateNetlinkSession(netlinkMessage->getDestPortId());
 	netlinkMessage->setSequenceNumber(netlinkManager->getSequenceNumber());
@@ -326,6 +362,14 @@ BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForReply(
 void RINAManager::sendResponseOrNotficationMessage(
 		BaseNetlinkMessage * netlinkMessage) throw (NetlinkException) {
 	sendReceiveLock.lock();
+
+	//1 Populate destination port id
+	try {
+		netlinkPortIdMap.updateMessageOrPortIdMap(netlinkMessage, true);
+	} catch (NetlinkException &e) {
+		sendReceiveLock.unlock();
+		throw e;
+	}
 
 	if (netlinkMessage->isResponseMessage()) {
 		NetlinkSession * netlinkSession = getNetlinkSession(
@@ -367,6 +411,14 @@ void RINAManager::netlinkResponseMessageArrived(
 		BaseNetlinkMessage * response){
 	sendReceiveLock.lock();
 
+	//Try to update netlink port id map
+	try {
+		netlinkPortIdMap.updateMessageOrPortIdMap(response, false);
+	} catch (NetlinkException &e) {
+		LOG_WARN("Exception while trying to update netlink portId map. %s",
+				e.what());
+	}
+
 	NetlinkSession *netlinkSession = getNetlinkSession(
 			response->getSourcePortId());
 	if  (netlinkSession == NULL){
@@ -392,10 +444,33 @@ void RINAManager::netlinkRequestMessageArrived(
 		BaseNetlinkMessage * request){
 	sendReceiveLock.lock();
 
+	//Try to update netlink port id map
+	try {
+		netlinkPortIdMap.updateMessageOrPortIdMap(request, false);
+	} catch (NetlinkException &e) {
+		LOG_WARN("Exception while trying to update netlink portId map. %s",
+				e.what());
+	}
+
 	NetlinkSession *netlinkSession = getAndCreateNetlinkSession(
 			request->getSourcePortId());
 
 	netlinkSession->putRemotePendingMessage(request);
+	sendReceiveLock.unlock();
+}
+
+void RINAManager::netlinkNotificationMessageArrived(
+		BaseNetlinkMessage * notification){
+	sendReceiveLock.lock();
+
+	//Try to update netlink port id map
+	try {
+		netlinkPortIdMap.updateMessageOrPortIdMap(notification, false);
+	} catch (NetlinkException &e) {
+		LOG_WARN("Exception while trying to update netlink portId map. %s",
+				e.what());
+	}
+
 	sendReceiveLock.unlock();
 }
 

@@ -19,6 +19,7 @@
 #include "logs.h"
 #include "config.h"
 #include "librina-common.h"
+#include "core.h"
 
 namespace rina {
 
@@ -481,28 +482,12 @@ void DIFProperties::removeQoSCube(const QoSCube& qosCube) {
 }
 
 /* CLASS IPC EVENT PRODUCER */
-void IPCEventProducer::enqueEvent(IPCEvent * event) {
-	eventQueue.push_back(event);
-}
-
 IPCEvent * IPCEventProducer::eventPoll() {
-	if (eventQueue.size() > 0) {
-		IPCEvent * result = eventQueue.front();
-		eventQueue.pop_front();
-		return result;
-	}
-
-	return NULL;
+	return rinaManager->getEventQueue()->poll();
 }
 
 IPCEvent * IPCEventProducer::eventWait() {
-	if (eventQueue.size() > 0) {
-		IPCEvent * result = eventQueue.front();
-		eventQueue.pop_front();
-		return result;
-	}
-
-	return NULL;
+	return rinaManager->getEventQueue()->take();
 }
 
 Singleton<IPCEventProducer> ipcEventProducer;

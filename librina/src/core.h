@@ -42,9 +42,6 @@ class NetlinkPortIdMap {
 	std::map<ApplicationProcessNamingInformation, unsigned int>
 		applicationNameMappings;
 
-	ReadWriteLockable ipcProcessIdLock;
-	ReadWriteLockable applicationNameLock;
-
 public:
 	void putIPCProcessIdToNelinkPortIdMapping(
 			unsigned int ipcProcessId, unsigned int netlinkPortId);
@@ -56,12 +53,16 @@ public:
 	unsigned int getNetlinkPortIdFromAPName(
 			ApplicationProcessNamingInformation apName) throw(NetlinkException);
 	unsigned int getIPCManagerPortId();
-};
 
-/**
- * Make NetlinkPortIdMap singleton
- */
-extern Singleton<NetlinkPortIdMap> netlinkPortIdMap;
+	/**
+	 * Poulates the "destPortId" field for messages that have to be sent,
+	 * or updates the mappings for received messages
+	 * @param message
+	 * @param sent
+	 */
+	void updateMessageOrPortIdMap(BaseNetlinkMessage* message, bool send)
+		throw(NetlinkException);
+};
 
 /**
  * Class used by the thread that sent a Netlink message
@@ -130,6 +131,9 @@ class RINAManager {
 	/** State of the netlink sessions */
 	std::map<unsigned int, NetlinkSession*> netlinkSessions;
 
+	/** Keeps the mappings between netlink port ids and app/dif names */
+	NetlinkPortIdMap netlinkPortIdMap;
+
 	void initialize();
 
 	/**
@@ -164,6 +168,11 @@ public:
 	 * Notify about the reception of a Netlink request message.
 	 */
 	void netlinkRequestMessageArrived(BaseNetlinkMessage * request);
+
+	/**
+	 * Notify about the reception of a Netlink notificaiton message
+	 */
+	void netlinkNotificationMessageArrived(BaseNetlinkMessage * notification);
 
 	BlockingFIFOQueue<IPCEvent>* getEventQueue();
 	NetlinkManager* getNetlinkManager();

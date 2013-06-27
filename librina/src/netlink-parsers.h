@@ -94,9 +94,10 @@ FlowSpecification * parseFlowSpecificationObject(nlattr *nested);
 
 /* AppAllocateFlowRequestResultMessage CLASS*/
 enum AppAllocateFlowRequestResultAttributes {
+	AAFRR_ATTR_SOURCE_APP_NAME = 1,
 	AAFRR_ATTR_PORT_ID,
 	AAFRR_ATTR_ERROR_DESCRIPTION,
-	AAFRR_ATTR_IPC_PROCESS_ID,
+	AAFRR_ATTR_DIF_NAME,
 	AAFRR_ATTR_IPC_PROCESS_PORT_ID,
 	__AAFRR_ATTR_MAX,
 };

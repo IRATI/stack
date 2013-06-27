@@ -175,7 +175,6 @@ IPCEvent* AppAllocateFlowRequestMessage::toIPCEvent(){
 AppAllocateFlowRequestResultMessage::AppAllocateFlowRequestResultMessage() :
 		BaseNetlinkMessage(RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT) {
 	this->portId = 0;
-	this->ipcProcessId = 0;
 	this->ipcProcessPortId = 0;
 }
 
@@ -189,13 +188,24 @@ void AppAllocateFlowRequestResultMessage::setErrorDescription(
 	this->errorDescription = errorDescription;
 }
 
-unsigned int AppAllocateFlowRequestResultMessage::getIpcProcessId() const {
-	return ipcProcessId;
+const ApplicationProcessNamingInformation&
+	AppAllocateFlowRequestResultMessage::getDifName() const {
+	return difName;
 }
 
-void AppAllocateFlowRequestResultMessage::setIpcProcessId(
-		unsigned int ipcProcessId) {
-	this->ipcProcessId = ipcProcessId;
+void AppAllocateFlowRequestResultMessage::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
+const ApplicationProcessNamingInformation&
+	AppAllocateFlowRequestResultMessage::getSourceAppName() const {
+	return sourceAppName;
+}
+
+void AppAllocateFlowRequestResultMessage::setSourceAppName(
+		const ApplicationProcessNamingInformation& sourceAppName) {
+	this->sourceAppName = sourceAppName;
 }
 
 unsigned int AppAllocateFlowRequestResultMessage::getIpcProcessPortId() const {
@@ -217,7 +227,8 @@ void AppAllocateFlowRequestResultMessage::setPortId(int portId) {
 
 /* CLASS APP ALLOCATE FLOW REQUEST ARRIVED MESSAGE */
 AppAllocateFlowRequestArrivedMessage::AppAllocateFlowRequestArrivedMessage() :
-		BaseNetlinkMessage(RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED) {
+		NetlinkRequestOrNotificationMessage(
+				RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED) {
 	this->portId = 0;
 }
 
@@ -257,6 +268,28 @@ int AppAllocateFlowRequestArrivedMessage::getPortId() const {
 
 void AppAllocateFlowRequestArrivedMessage::setPortId(int portId) {
 	this->portId = portId;
+}
+
+const ApplicationProcessNamingInformation&
+	AppAllocateFlowRequestArrivedMessage::getDifName() const {
+	return difName;
+}
+
+void AppAllocateFlowRequestArrivedMessage::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
+IPCEvent* AppAllocateFlowRequestArrivedMessage::toIPCEvent(){
+	FlowRequestEvent * event =
+			new FlowRequestEvent(
+					this->portId,
+					this->flowSpecification,
+					this->sourceAppName,
+					this->destAppName,
+					this->difName,
+					this->getSequenceNumber());
+	return event;
 }
 
 /* CLASS APP ALLOCATE FLOW RESPONSE MESSAGE */

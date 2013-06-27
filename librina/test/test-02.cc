@@ -16,6 +16,7 @@
 
 #include <iostream>
 #include "librina.h"
+#include "core.h"
 
 using namespace rina;
 
@@ -138,15 +139,16 @@ int main(int argc, char * argv[]) {
 			*difName);
 
 	/* TEST EVENT POLL */
+	setNetlinkPortId(45);
 	IPCEvent * event = new ApplicationRegistrationRequestEvent(*sourceName,
 			*difName, 45);
-	ipcEventProducer->enqueEvent(event);
+	rinaManager->getEventQueue()->put(event);
 	event = new FlowAllocationRequestEvent(*sourceName, *destinationName,
 			*flowSpec, 234);
-	ipcEventProducer->enqueEvent(event);
+	rinaManager->getEventQueue()->put(event);
 	event = new ApplicationUnregistrationRequestEvent(*sourceName, *difName,
 			64);
-	ipcEventProducer->enqueEvent(event);
+	rinaManager->getEventQueue()->put(event);
 
 	for (int i = 0; i < 2; i++) {
 		event = ipcEventProducer->eventPoll();
@@ -158,7 +160,7 @@ int main(int argc, char * argv[]) {
 	delete event;
 
 	/** TEST EVENT WAIT */
-	event = ipcEventProducer->eventPoll();
+	event = ipcEventProducer->eventWait();
 	if (!checkRecognizedEvent(event)) {
 		return 1;
 	}

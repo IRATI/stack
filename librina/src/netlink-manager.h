@@ -51,6 +51,7 @@ public:
 	static const std::string error_fetching_netlink_session;
 	static const std::string error_fetching_pending_netlink_request_message;
 	static const std::string error_fetching_netlink_port_id;
+	static const std::string unrecognized_generic_netlink_operation_code;
 };
 
 /**

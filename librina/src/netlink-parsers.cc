@@ -332,19 +332,38 @@ int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 int putAppAllocateFlowRequestResultMessageObject(nl_msg* netlinkMessage,
 		const AppAllocateFlowRequestResultMessage& object) {
 
+	struct nlattr *sourceAppName, *difName;
+
+	if (!(sourceAppName = nla_nest_start(netlinkMessage,
+			AAFRR_ATTR_SOURCE_APP_NAME))) {
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getSourceAppName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, sourceAppName);
+
 	NLA_PUT_U32(netlinkMessage, AAFRR_ATTR_PORT_ID, object.getPortId());
 
 	NLA_PUT_STRING(netlinkMessage, AAFRR_ATTR_ERROR_DESCRIPTION,
 			object.getErrorDescription().c_str());
 
-	if (object.getIpcProcessId() > 0) {
-		NLA_PUT_U32(netlinkMessage, AAFRR_ATTR_IPC_PROCESS_ID,
-				object.getIpcProcessId());
-	}
-	if (object.getIpcProcessPortId() > 0) {
+	if (object.getPortId() > 0){
+		if (!(difName = nla_nest_start(netlinkMessage,
+				AAFRR_ATTR_DIF_NAME))) {
+			goto nla_put_failure;
+		}
+		if (putApplicationProcessNamingInformationObject(netlinkMessage,
+				object.getDifName()) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, difName);
+
 		NLA_PUT_U32(netlinkMessage, AAFRR_ATTR_IPC_PROCESS_PORT_ID,
 				object.getIpcProcessPortId());
 	}
+
 	return 0;
 
 	nla_put_failure: LOG_ERR(
@@ -357,13 +376,13 @@ AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 	struct nla_policy attr_policy[AAFR_ATTR_MAX + 1];
 	attr_policy[AAFR_ATTR_SOURCE_APP_NAME].type = NLA_NESTED;
 	attr_policy[AAFR_ATTR_SOURCE_APP_NAME].minlen = 0;
-	attr_policy[AAFR_ATTR_SOURCE_APP_NAME].maxlen = 65535;
+	attr_policy[AAFR_ATTR_SOURCE_APP_NAME].maxlen = 0;
 	attr_policy[AAFR_ATTR_DEST_APP_NAME].type = NLA_NESTED;
 	attr_policy[AAFR_ATTR_DEST_APP_NAME].minlen = 0;
-	attr_policy[AAFR_ATTR_DEST_APP_NAME].maxlen = 65535;
+	attr_policy[AAFR_ATTR_DEST_APP_NAME].maxlen = 0;
 	attr_policy[AAFR_ATTR_FLOW_SPEC].type = NLA_NESTED;
 	attr_policy[AAFR_ATTR_FLOW_SPEC].minlen = 0;
-	attr_policy[AAFR_ATTR_FLOW_SPEC].maxlen = 65535;
+	attr_policy[AAFR_ATTR_FLOW_SPEC].maxlen = 0;
 	struct nlattr *attrs[AAFR_ATTR_MAX + 1];
 
 	/*
@@ -424,15 +443,18 @@ AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 AppAllocateFlowRequestResultMessage * parseAppAllocateFlowRequestResultMessage(
 		nlmsghdr *hdr) {
 	struct nla_policy attr_policy[AAFRR_ATTR_MAX + 1];
+	attr_policy[AAFRR_ATTR_SOURCE_APP_NAME].type = NLA_NESTED;
+	attr_policy[AAFRR_ATTR_SOURCE_APP_NAME].minlen = 0;
+	attr_policy[AAFRR_ATTR_SOURCE_APP_NAME].maxlen = 0;
 	attr_policy[AAFRR_ATTR_PORT_ID].type = NLA_U32;
 	attr_policy[AAFRR_ATTR_PORT_ID].minlen = 4;
 	attr_policy[AAFRR_ATTR_PORT_ID].maxlen = 4;
 	attr_policy[AAFRR_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
 	attr_policy[AAFRR_ATTR_ERROR_DESCRIPTION].minlen = 0;
 	attr_policy[AAFRR_ATTR_ERROR_DESCRIPTION].maxlen = 65535;
-	attr_policy[AAFRR_ATTR_IPC_PROCESS_ID].type = NLA_U32;
-	attr_policy[AAFRR_ATTR_IPC_PROCESS_ID].minlen = 4;
-	attr_policy[AAFRR_ATTR_IPC_PROCESS_ID].maxlen = 4;
+	attr_policy[AAFRR_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[AAFRR_ATTR_DIF_NAME].minlen = 0;
+	attr_policy[AAFRR_ATTR_DIF_NAME].maxlen = 0;
 	attr_policy[AAFRR_ATTR_IPC_PROCESS_PORT_ID].type = NLA_U32;
 	attr_policy[AAFRR_ATTR_IPC_PROCESS_PORT_ID].minlen = 4;
 	attr_policy[AAFRR_ATTR_IPC_PROCESS_PORT_ID].maxlen = 4;
@@ -455,6 +477,20 @@ AppAllocateFlowRequestResultMessage * parseAppAllocateFlowRequestResultMessage(
 	AppAllocateFlowRequestResultMessage * result =
 			new AppAllocateFlowRequestResultMessage();
 
+	ApplicationProcessNamingInformation * sourceName;
+	ApplicationProcessNamingInformation * difName;
+
+	if (attrs[AAFRR_ATTR_SOURCE_APP_NAME]) {
+		sourceName = parseApplicationProcessNamingInformationObject(
+				attrs[AAFRR_ATTR_SOURCE_APP_NAME]);
+		if (sourceName == NULL) {
+			delete result;
+			return NULL;
+		} else {
+			result->setSourceAppName(*sourceName);
+		}
+	}
+
 	if (attrs[AAFRR_ATTR_PORT_ID]) {
 		result->setPortId(nla_get_u32(attrs[AAFRR_ATTR_PORT_ID]));
 	}
@@ -464,8 +500,15 @@ AppAllocateFlowRequestResultMessage * parseAppAllocateFlowRequestResultMessage(
 				nla_get_string(attrs[AAFRR_ATTR_ERROR_DESCRIPTION]));
 	}
 
-	if (attrs[AAFRR_ATTR_IPC_PROCESS_ID]) {
-		result->setIpcProcessId(nla_get_u32(attrs[AAFRR_ATTR_IPC_PROCESS_ID]));
+	if (attrs[AAFRR_ATTR_DIF_NAME]) {
+		difName = parseApplicationProcessNamingInformationObject(
+				attrs[AAFRR_ATTR_DIF_NAME]);
+		if (difName == NULL) {
+			delete result;
+			return NULL;
+		} else {
+			result->setDifName(*difName);
+		}
 	}
 
 	if (attrs[AAFRR_ATTR_IPC_PROCESS_PORT_ID]) {

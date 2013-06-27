@@ -16,6 +16,7 @@
 
 #include <iostream>
 #include "librina.h"
+#include "core.h"
 
 using namespace rina;
 
@@ -68,8 +69,8 @@ bool checkRegisteredApplications(unsigned int expectedFlows) {
 bool checkRecognizedEvent(IPCEvent * event) {
 	switch (event->getType()) {
 	case FLOW_ALLOCATION_REQUESTED_EVENT: {
-		IncomingFlowRequestEvent * incFlowEvent =
-				dynamic_cast<IncomingFlowRequestEvent *>(event);
+		FlowRequestEvent * incFlowEvent =
+				dynamic_cast<FlowRequestEvent *>(event);
 		std::cout << "Got incoming flow request event with portId "
 				<< incFlowEvent->getPortId() << "\n";
 		break;
@@ -186,11 +187,12 @@ int main(int argc, char * argv[]) {
 	}
 
 	/* TEST EVENT POLL */
-	IPCEvent * event = new IncomingFlowRequestEvent(24, *flowSpecification,
+	setNetlinkPortId(37);
+	IPCEvent * event = new FlowRequestEvent(24, *flowSpecification,
 			*sourceName, *destinationName, *difName, 353);
-	ipcEventProducer->enqueEvent(event);
+	rinaManager->getEventQueue()->put(event);
 	event = new ApplicationUnregisteredEvent(*sourceName, *difName, 25);
-	ipcEventProducer->enqueEvent(event);
+	rinaManager->getEventQueue()->put(event);
 
 	event = ipcEventProducer->eventPoll();
 	if (!checkRecognizedEvent(event)) {
@@ -200,7 +202,7 @@ int main(int argc, char * argv[]) {
 	delete event;
 
 	/** TEST EVENT WAIT */
-	event = ipcEventProducer->eventPoll();
+	event = ipcEventProducer->eventWait();
 	if (!checkRecognizedEvent(event)) {
 		return 1;
 	}
