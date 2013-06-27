@@ -52,4 +52,5 @@ librina_stubbed_la_CPPFLAGS =			\
 	$(LIBNLGENL3_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
 
-lib_LTLIBRARIES = librina.la librina-stubbed.la
+lib_LTLIBRARIES    = librina.la
+noinst_LTLIBRARIES = librina-stubbed.la
