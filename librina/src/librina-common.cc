@@ -481,13 +481,98 @@ void DIFProperties::removeQoSCube(const QoSCube& qosCube) {
 	this->qosCubes.remove(qosCube);
 }
 
+/* CLASS FLOW REQUEST EVENT */
+FlowRequestEvent::FlowRequestEvent(
+		const FlowSpecification& flowSpecification,
+		const ApplicationProcessNamingInformation& sourceApplicationName,
+		const ApplicationProcessNamingInformation& destApplicationName,
+		unsigned int sequenceNumber):
+				IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
+						sequenceNumber) {
+	this->flowSpecification = flowSpecification;
+	this->sourceApplicationName = sourceApplicationName;
+	this->destinationApplicationName = destApplicationName;
+	this->portId = 0;
+}
+
+FlowRequestEvent::FlowRequestEvent(int portId,
+		const FlowSpecification& flowSpecification,
+		const ApplicationProcessNamingInformation& sourceApplicationName,
+		const ApplicationProcessNamingInformation& destApplicationName,
+		const ApplicationProcessNamingInformation& DIFName,
+		unsigned int sequenceNumber) :
+		IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
+				sequenceNumber) {
+	this->flowSpecification = flowSpecification;
+	this->sourceApplicationName = sourceApplicationName;
+	this->destinationApplicationName = destApplicationName;
+	this->DIFName = DIFName;
+	this->portId = portId;
+}
+
+int FlowRequestEvent::getPortId() const {
+	return portId;
+}
+
+const FlowSpecification& FlowRequestEvent::getFlowSpecification() const {
+	return flowSpecification;
+}
+
+const ApplicationProcessNamingInformation&
+	FlowRequestEvent::getDIFName() const {
+	return DIFName;
+}
+
+const ApplicationProcessNamingInformation&
+	FlowRequestEvent::getSourceApplicationName() const {
+	return sourceApplicationName;
+}
+
+const ApplicationProcessNamingInformation&
+	FlowRequestEvent::getDestApplicationName() const {
+	return destinationApplicationName;
+}
+
 /* CLASS IPC EVENT PRODUCER */
+
+/* Auxiliar function called in case of using the stubbed version of the API */
+IPCEvent * getIPCEvent(){
+	ApplicationProcessNamingInformation * sourceName =
+			new ApplicationProcessNamingInformation();
+	sourceName->setProcessName("/apps/source");
+	sourceName->setProcessInstance("12");
+	sourceName->setEntityName("database");
+	sourceName->setEntityInstance("12");
+
+	ApplicationProcessNamingInformation * destName =
+			new ApplicationProcessNamingInformation();
+	destName->setProcessName("/apps/dest");
+	destName->setProcessInstance("12345");
+	destName->setEntityName("printer");
+	destName->setEntityInstance("12623456");
+
+	FlowSpecification * flowSpec = new FlowSpecification();
+
+	FlowRequestEvent * event = new
+			FlowRequestEvent(*flowSpec,*sourceName, *destName, 24);
+
+	return event;
+}
+
 IPCEvent * IPCEventProducer::eventPoll() {
+#if STUB_API
+	return getIPCEvent();
+#else
 	return rinaManager->getEventQueue()->poll();
+#endif
 }
 
 IPCEvent * IPCEventProducer::eventWait() {
+#if STUB_API
+	return getIPCEvent();
+#else
 	return rinaManager->getEventQueue()->take();
+#endif
 }
 
 Singleton<IPCEventProducer> ipcEventProducer;

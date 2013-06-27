@@ -187,14 +187,7 @@ int main(int argc, char * argv[]) {
 	}
 
 	/* TEST EVENT POLL */
-	setNetlinkPortId(37);
-	IPCEvent * event = new FlowRequestEvent(24, *flowSpecification,
-			*sourceName, *destinationName, *difName, 353);
-	rinaManager->getEventQueue()->put(event);
-	event = new ApplicationUnregisteredEvent(*sourceName, *difName, 25);
-	rinaManager->getEventQueue()->put(event);
-
-	event = ipcEventProducer->eventPoll();
+	IPCEvent * event = ipcEventProducer->eventPoll();
 	if (!checkRecognizedEvent(event)) {
 		return 1;
 	}

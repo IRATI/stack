@@ -56,7 +56,7 @@ bool checkRecognizedEvent(IPCEvent * event) {
 				<< appUEvent->getApplicationName().getProcessName() << "\n";
 		break;
 	}
-	case FLOW_ALLOCATION_REQUEST_EVENT: {
+	case FLOW_ALLOCATION_REQUESTED_EVENT: {
 		FlowAllocationRequestEvent * flowAllocationRequest =
 				dynamic_cast<FlowAllocationRequestEvent *>(event);
 		std::cout
@@ -137,33 +137,6 @@ int main(int argc, char * argv[]) {
 	/* TEST FLOW ALLOCATED */
 	applicationManager->flowAllocated(25, 34, 45, "Everything was fine",
 			*difName);
-
-	/* TEST EVENT POLL */
-	setNetlinkPortId(45);
-	IPCEvent * event = new ApplicationRegistrationRequestEvent(*sourceName,
-			*difName, 45);
-	rinaManager->getEventQueue()->put(event);
-	event = new FlowAllocationRequestEvent(*sourceName, *destinationName,
-			*flowSpec, 234);
-	rinaManager->getEventQueue()->put(event);
-	event = new ApplicationUnregistrationRequestEvent(*sourceName, *difName,
-			64);
-	rinaManager->getEventQueue()->put(event);
-
-	for (int i = 0; i < 2; i++) {
-		event = ipcEventProducer->eventPoll();
-		if (!checkRecognizedEvent(event)) {
-			return 1;
-		}
-	}
-
-	delete event;
-
-	/** TEST EVENT WAIT */
-	event = ipcEventProducer->eventWait();
-	if (!checkRecognizedEvent(event)) {
-		return 1;
-	}
 
 	ipcProcessFactory->destroy(ipcProcess1->getId());
 	if (!checkIPCProcesses(0)) {

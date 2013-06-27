@@ -334,6 +334,43 @@ public:
 };
 
 /**
+ * Event informing about an incoming flow request from another application
+ */
+class FlowRequestEvent: public IPCEvent {
+	/** The port-id that locally identifies the flow */
+	int portId;
+
+	/** The name of the DIF that is providing this flow */
+	ApplicationProcessNamingInformation DIFName;
+
+	/** The application that requested the flow */
+	ApplicationProcessNamingInformation sourceApplicationName;
+
+	/** The application targeted by the flow */
+	ApplicationProcessNamingInformation destinationApplicationName;
+
+	/** The characteristics of the flow */
+	FlowSpecification flowSpecification;
+
+public:
+	FlowRequestEvent(const FlowSpecification& flowSpecification,
+			const ApplicationProcessNamingInformation& sourceApplicationName,
+			const ApplicationProcessNamingInformation& destApplicationName,
+			unsigned int sequenceNumber);
+	FlowRequestEvent(int portId,
+			const FlowSpecification& flowSpecification,
+			const ApplicationProcessNamingInformation& sourceApplicationName,
+			const ApplicationProcessNamingInformation& destApplicationName,
+			const ApplicationProcessNamingInformation& DIFName,
+			unsigned int sequenceNumber);
+	int getPortId() const;
+	const FlowSpecification& getFlowSpecification() const;
+	const ApplicationProcessNamingInformation& getDIFName() const;
+	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
+	const ApplicationProcessNamingInformation& getDestApplicationName() const;
+};
+
+/**
  * Stores IPC Events that have happened, ready to be consumed and
  * processed by client classes.
  */
