@@ -32,8 +32,7 @@
 
 namespace rina {
 
-int putBaseNetlinkMessage(nl_msg* netlinkMessage,
-		BaseNetlinkMessage * message);
+int putBaseNetlinkMessage(nl_msg* netlinkMessage, BaseNetlinkMessage * message);
 
 BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMesasgeHeader);
 
@@ -52,7 +51,7 @@ int putApplicationProcessNamingInformationObject(nl_msg* netlinkMessage,
 		const ApplicationProcessNamingInformation& object);
 
 ApplicationProcessNamingInformation *
-		parseApplicationProcessNamingInformationObject(nlattr *nested);
+parseApplicationProcessNamingInformationObject(nlattr *nested);
 
 /* AppAllocateFlowRequestMessage CLASS*/
 enum AppAllocateFlowRequestAttributes {
@@ -65,7 +64,7 @@ enum AppAllocateFlowRequestAttributes {
 #define AAFR_ATTR_MAX (__AAFR_ATTR_MAX -1)
 
 int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
-		AppAllocateFlowRequestMessage * object);
+		const AppAllocateFlowRequestMessage& object);
 
 AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 		nlmsghdr *hdr);
@@ -92,6 +91,23 @@ int putFlowSpecificationObject(nl_msg* netlinkMessage,
 		const FlowSpecification& object);
 
 FlowSpecification * parseFlowSpecificationObject(nlattr *nested);
+
+/* AppAllocateFlowRequestResultMessage CLASS*/
+enum AppAllocateFlowRequestResultAttributes {
+	AAFRR_ATTR_PORT_ID,
+	AAFRR_ATTR_ERROR_DESCRIPTION,
+	AAFRR_ATTR_IPC_PROCESS_ID,
+	AAFRR_ATTR_IPC_PROCESS_PORT_ID,
+	__AAFRR_ATTR_MAX,
+};
+
+#define AAFRR_ATTR_MAX (__AAFRR_ATTR_MAX -1)
+
+int putAppAllocateFlowRequestResultMessageObject(nl_msg* netlinkMessage,
+		const AppAllocateFlowRequestResultMessage& object);
+
+AppAllocateFlowRequestResultMessage * parseAppAllocateFlowRequestResultMessage(
+		nlmsghdr *hdr);
 
 }
 #endif /* LIBRINA_NETLINK_PARSERS_H_ */

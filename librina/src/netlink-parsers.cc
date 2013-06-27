@@ -35,7 +35,16 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		AppAllocateFlowRequestMessage * allocateObject =
 				dynamic_cast<AppAllocateFlowRequestMessage *>(message);
 		if (putAppAllocateFlowRequestMessageObject(netlinkMessage,
-				allocateObject) < 0) {
+				*allocateObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT: {
+		AppAllocateFlowRequestResultMessage * allocateFlowRequestResultObject =
+				dynamic_cast<AppAllocateFlowRequestResultMessage *>(message);
+		if (putAppAllocateFlowRequestResultMessageObject(netlinkMessage,
+				*allocateFlowRequestResultObject) < 0) {
 			return -1;
 		}
 		return 0;
@@ -54,9 +63,13 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST: {
 		return parseAppAllocateFlowRequestMessage(netlinkMessageHeader);
 	}
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT: {
+		return parseAppAllocateFlowRequestResultMessage(netlinkMessageHeader);
+	}
 	default: {
-		LOG_ERR("Generic Netlink message contains unrecognized command code: %d"
-				, nlhdr->cmd);
+		LOG_ERR(
+				"Generic Netlink message contains unrecognized command code: %d",
+				nlhdr->cmd);
 		return NULL;
 	}
 	}
@@ -81,7 +94,7 @@ int putApplicationProcessNamingInformationObject(nl_msg* netlinkMessage,
 }
 
 ApplicationProcessNamingInformation *
-		parseApplicationProcessNamingInformationObject(nlattr *nested) {
+parseApplicationProcessNamingInformationObject(nlattr *nested) {
 	struct nla_policy attr_policy[APNI_ATTR_MAX + 1];
 	attr_policy[APNI_ATTR_PROCESS_NAME].type = NLA_STRING;
 	attr_policy[APNI_ATTR_PROCESS_NAME].minlen = 0;
@@ -275,7 +288,7 @@ FlowSpecification * parseFlowSpecificationObject(nlattr *nested) {
 }
 
 int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
-		AppAllocateFlowRequestMessage * object) {
+		const AppAllocateFlowRequestMessage& object) {
 	struct nlattr *sourceAppName, *destinationAppName, *flowSpec;
 
 	if (!(sourceAppName = nla_nest_start(netlinkMessage,
@@ -283,7 +296,7 @@ int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 		goto nla_put_failure;
 	}
 	if (putApplicationProcessNamingInformationObject(netlinkMessage,
-			object->getSourceAppName()) < 0) {
+			object.getSourceAppName()) < 0) {
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, sourceAppName);
@@ -294,7 +307,7 @@ int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 	}
 
 	if (putApplicationProcessNamingInformationObject(netlinkMessage,
-			object->getDestAppName()) < 0) {
+			object.getDestAppName()) < 0) {
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, destinationAppName);
@@ -304,7 +317,7 @@ int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 	}
 
 	if (putFlowSpecificationObject(netlinkMessage,
-			object->getFlowSpecification()) < 0) {
+			object.getFlowSpecification()) < 0) {
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, flowSpec);
@@ -313,6 +326,29 @@ int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 
 	nla_put_failure: LOG_ERR(
 			"Error building AppAllocateFlowRequestMessage Netlink object");
+	return -1;
+}
+
+int putAppAllocateFlowRequestResultMessageObject(nl_msg* netlinkMessage,
+		const AppAllocateFlowRequestResultMessage& object) {
+
+	NLA_PUT_U32(netlinkMessage, AAFRR_ATTR_PORT_ID, object.getPortId());
+
+	NLA_PUT_STRING(netlinkMessage, AAFRR_ATTR_ERROR_DESCRIPTION,
+			object.getErrorDescription().c_str());
+
+	if (object.getIpcProcessId() > 0) {
+		NLA_PUT_U32(netlinkMessage, AAFRR_ATTR_IPC_PROCESS_ID,
+				object.getIpcProcessId());
+	}
+	if (object.getIpcProcessPortId() > 0) {
+		NLA_PUT_U32(netlinkMessage, AAFRR_ATTR_IPC_PROCESS_PORT_ID,
+				object.getIpcProcessPortId());
+	}
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building AppAllocateFlowRequestResponseMessage Netlink object");
 	return -1;
 }
 
@@ -380,6 +416,61 @@ AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 		} else {
 			result->setFlowSpecification(*flowSpec);
 		}
+	}
+
+	return result;
+}
+
+AppAllocateFlowRequestResultMessage * parseAppAllocateFlowRequestResultMessage(
+		nlmsghdr *hdr) {
+	struct nla_policy attr_policy[AAFRR_ATTR_MAX + 1];
+	attr_policy[AAFRR_ATTR_PORT_ID].type = NLA_U32;
+	attr_policy[AAFRR_ATTR_PORT_ID].minlen = 4;
+	attr_policy[AAFRR_ATTR_PORT_ID].maxlen = 4;
+	attr_policy[AAFRR_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
+	attr_policy[AAFRR_ATTR_ERROR_DESCRIPTION].minlen = 0;
+	attr_policy[AAFRR_ATTR_ERROR_DESCRIPTION].maxlen = 65535;
+	attr_policy[AAFRR_ATTR_IPC_PROCESS_ID].type = NLA_U32;
+	attr_policy[AAFRR_ATTR_IPC_PROCESS_ID].minlen = 4;
+	attr_policy[AAFRR_ATTR_IPC_PROCESS_ID].maxlen = 4;
+	attr_policy[AAFRR_ATTR_IPC_PROCESS_PORT_ID].type = NLA_U32;
+	attr_policy[AAFRR_ATTR_IPC_PROCESS_PORT_ID].minlen = 4;
+	attr_policy[AAFRR_ATTR_IPC_PROCESS_PORT_ID].maxlen = 4;
+	struct nlattr *attrs[AAFRR_ATTR_MAX + 1];
+
+	/*
+	 * The nlmsg_parse() function will make sure that the message contains
+	 * enough payload to hold the header (struct my_hdr), validates any
+	 * attributes attached to the messages and stores a pointer to each
+	 * attribute in the attrs[] array accessable by attribute type.
+	 */
+	int err = genlmsg_parse(hdr, 0, attrs, AAFRR_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing AppAllocateFlowRequestResultMessage information from Netlink message: %d",
+				err);
+		return NULL;
+	}
+
+	AppAllocateFlowRequestResultMessage * result =
+			new AppAllocateFlowRequestResultMessage();
+
+	if (attrs[AAFRR_ATTR_PORT_ID]) {
+		result->setPortId(nla_get_u32(attrs[AAFRR_ATTR_PORT_ID]));
+	}
+
+	if (attrs[AAFRR_ATTR_ERROR_DESCRIPTION]) {
+		result->setErrorDescription(
+				nla_get_string(attrs[AAFRR_ATTR_ERROR_DESCRIPTION]));
+	}
+
+	if (attrs[AAFRR_ATTR_IPC_PROCESS_ID]) {
+		result->setIpcProcessId(nla_get_u32(attrs[AAFRR_ATTR_IPC_PROCESS_ID]));
+	}
+
+	if (attrs[AAFRR_ATTR_IPC_PROCESS_PORT_ID]) {
+		result->setIpcProcessPortId(
+				nla_get_u32(attrs[AAFRR_ATTR_IPC_PROCESS_PORT_ID]));
 	}
 
 	return result;
