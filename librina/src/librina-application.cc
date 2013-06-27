@@ -333,7 +333,7 @@ const ApplicationProcessNamingInformation&
 }
 
 /* CLASS INCOMING FLOW REQUEST EVENT */
-IncomingFlowRequestEvent::IncomingFlowRequestEvent(
+FlowRequestEvent::FlowRequestEvent(
 		const FlowSpecification& flowSpecification,
 		const ApplicationProcessNamingInformation& sourceApplicationName,
 		const ApplicationProcessNamingInformation& destApplicationName,
@@ -346,7 +346,7 @@ IncomingFlowRequestEvent::IncomingFlowRequestEvent(
 	this->portId = 0;
 }
 
-IncomingFlowRequestEvent::IncomingFlowRequestEvent(int portId,
+FlowRequestEvent::FlowRequestEvent(int portId,
 		const FlowSpecification& flowSpecification,
 		const ApplicationProcessNamingInformation& sourceApplicationName,
 		const ApplicationProcessNamingInformation& destApplicationName,
@@ -361,23 +361,26 @@ IncomingFlowRequestEvent::IncomingFlowRequestEvent(int portId,
 	this->portId = portId;
 }
 
-int IncomingFlowRequestEvent::getPortId() const {
+int FlowRequestEvent::getPortId() const {
 	return portId;
 }
 
-const FlowSpecification& IncomingFlowRequestEvent::getFlowSpecification() const {
+const FlowSpecification& FlowRequestEvent::getFlowSpecification() const {
 	return flowSpecification;
 }
 
-const ApplicationProcessNamingInformation& IncomingFlowRequestEvent::getDIFName() const {
+const ApplicationProcessNamingInformation&
+	FlowRequestEvent::getDIFName() const {
 	return DIFName;
 }
 
-const ApplicationProcessNamingInformation& IncomingFlowRequestEvent::getSourceApplicationName() const {
+const ApplicationProcessNamingInformation&
+	FlowRequestEvent::getSourceApplicationName() const {
 	return sourceApplicationName;
 }
 
-const ApplicationProcessNamingInformation& IncomingFlowRequestEvent::getDestApplicationName() const {
+const ApplicationProcessNamingInformation&
+	FlowRequestEvent::getDestApplicationName() const {
 	return destinationApplicationName;
 }
 

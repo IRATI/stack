@@ -58,6 +58,8 @@ const std::string NetlinkException::error_fetching_netlink_session =
 const std::string
 	NetlinkException::error_fetching_pending_netlink_request_message =
 		"Error fetching pending Netlink request message";
+const std::string NetlinkException::error_fetching_netlink_port_id =
+		"Error fetching Netlink port id";
 
 /* CLASS NETLINK MANAGER */
 
@@ -195,8 +197,9 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 
 	nlmsg_set_src(msg, &nla);
 
-	LOG_DBG("Netlink family: %d; Version: %d; Operation code: %d; Flags: %d",
-			hdr->nlmsg_type, nlhdr->version, nlhdr->cmd, hdr->nlmsg_flags);
+	LOG_DBG("Source: %d, Netlink family: %d; Version: %d; Operation code: %d; Flags: %d; Sequence number: %d",
+			nla.nl_pid, hdr->nlmsg_type, nlhdr->version, nlhdr->cmd,
+			hdr->nlmsg_flags, hdr->nlmsg_seq);
 
 	if (creds) {
 		nlmsg_set_creds(msg, creds);

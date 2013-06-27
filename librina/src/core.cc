@@ -28,6 +28,62 @@
 
 namespace rina {
 
+/* CLASS NETLINK PORT ID MAP */
+void NetlinkPortIdMap::putIPCProcessIdToNelinkPortIdMapping(
+		unsigned int ipcProcessId, unsigned int netlinkPortId){
+	ipcProcessIdLock.writelock();
+	ipcProcessIdMappings[ipcProcessId] = netlinkPortId;
+	ipcProcessIdLock.unlock();
+}
+
+unsigned int NetlinkPortIdMap::getNetlinkPortIdFromIPCProcessId(
+		unsigned int ipcProcessId) throw(NetlinkException) {
+	ipcProcessIdLock.readlock();
+	std::map<unsigned int, unsigned int>::iterator it =
+			ipcProcessIdMappings.find(ipcProcessId);
+	if (it == ipcProcessIdMappings.end()){
+		LOG_ERR("Could not find the netlink port of IPC Process %d",
+				ipcProcessId);
+		ipcProcessIdLock.unlock();
+		throw NetlinkException(
+				NetlinkException::error_fetching_netlink_port_id);
+	}
+	ipcProcessIdLock.unlock();
+
+	return it->second;
+}
+
+void NetlinkPortIdMap::putAPNametoNetlinkPortIdMapping(
+		ApplicationProcessNamingInformation apName,
+		unsigned int netlinkPortId){
+	applicationNameLock.writelock();
+	applicationNameMappings[apName] = netlinkPortId;
+	applicationNameLock.unlock();
+}
+
+unsigned int NetlinkPortIdMap::getNetlinkPortIdFromAPName(
+		ApplicationProcessNamingInformation apName) throw(NetlinkException) {
+	applicationNameLock.readlock();
+	std::map<ApplicationProcessNamingInformation, unsigned int>::iterator it =
+			applicationNameMappings.find(apName);
+	if (it == applicationNameMappings.end()){
+		LOG_ERR("Could not find the netlink port of Application %s",
+				apName.toString().c_str());
+		applicationNameLock.unlock();
+		throw NetlinkException(
+				NetlinkException::error_fetching_netlink_port_id);
+	}
+	applicationNameLock.unlock();
+
+	return it->second;
+}
+
+unsigned int NetlinkPortIdMap::getIPCManagerPortId(){
+	return 1;
+}
+
+Singleton<NetlinkPortIdMap> netlinkPortIdMap;
+
 /* CLASS PENDING NETLINK MESSAGE */
 PendingNetlinkMessage::PendingNetlinkMessage(unsigned int sequenceNumber) :
 		ConditionVariable() {
@@ -353,6 +409,8 @@ NetlinkManager* RINAManager::getNetlinkManager(){
 
 Singleton<RINAManager> rinaManager;
 
+
+/* Get and set default Netlink port id */
 unsigned int netlinkPortId = getpid();
 Lockable * netlinkLock = new Lockable();
 

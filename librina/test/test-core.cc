@@ -111,7 +111,7 @@ int main(int argc, char * argv[]) {
 	RINAManager * rinaManager1 = new RINAManager(4);
 	RINAManager * rinaManager2 = new RINAManager(5);
 
-	/* Test Thread creation and joining */
+	/* Test core RINAManager function */
 	Thread * thread1;
 	Thread * thread2;
 	ThreadAttributes * threadAttributes = new ThreadAttributes();
@@ -127,4 +127,71 @@ int main(int argc, char * argv[]) {
 	delete thread2;
 	delete rinaManager1;
 	delete rinaManager2;
+
+	/* Test NetlinkPortIdMap */
+	try{
+		netlinkPortIdMap->getNetlinkPortIdFromIPCProcessId(24);
+	}catch(NetlinkException &e){
+		std::cout<<"Caught expected exception: "<<e.what()<<"\n";
+	}
+
+	netlinkPortIdMap->putIPCProcessIdToNelinkPortIdMapping(25, 34);
+	netlinkPortIdMap->putIPCProcessIdToNelinkPortIdMapping(89, 43);
+	if (netlinkPortIdMap->getNetlinkPortIdFromIPCProcessId(25) != 34){
+		std::cout<<"Error retrieving netlink port id from map\n";
+		return -1;
+	}
+	if (netlinkPortIdMap->getNetlinkPortIdFromIPCProcessId(89) != 43){
+		std::cout<<"Error retrieving netlink port id from map\n";
+		return -1;
+	}
+	netlinkPortIdMap->putIPCProcessIdToNelinkPortIdMapping(89, 876);
+	if (netlinkPortIdMap->getNetlinkPortIdFromIPCProcessId(89) != 876){
+		std::cout<<"Error retrieving netlink port id from map\n";
+		return -1;
+	}
+
+	ApplicationProcessNamingInformation * sourceName =
+			new ApplicationProcessNamingInformation();
+	sourceName->setProcessName("/apps/source");
+	sourceName->setProcessInstance("12");
+	sourceName->setEntityName("database");
+	sourceName->setEntityInstance("12");
+
+	ApplicationProcessNamingInformation * destName =
+			new ApplicationProcessNamingInformation();
+	destName->setProcessName("/apps/dest");
+	destName->setProcessInstance("12345");
+	destName->setEntityName("printer");
+	destName->setEntityInstance("12623456");
+
+	netlinkPortIdMap->putAPNametoNetlinkPortIdMapping(*sourceName, 73);
+	netlinkPortIdMap->putAPNametoNetlinkPortIdMapping(*destName, 450);
+	if(netlinkPortIdMap->getNetlinkPortIdFromAPName(*sourceName) != 73){
+		std::cout<<"Error retrieving netlink port id from map\n";
+		return -1;
+	}
+	if(netlinkPortIdMap->getNetlinkPortIdFromAPName(*destName) != 450){
+		std::cout<<"Error retrieving netlink port id from map\n";
+		return -1;
+	}
+
+	netlinkPortIdMap->putAPNametoNetlinkPortIdMapping(*destName, 877);
+	delete destName;
+	destName = new ApplicationProcessNamingInformation();
+	destName->setProcessName("/apps/dest");
+	destName->setProcessInstance("12345");
+	destName->setEntityName("printer");
+	destName->setEntityInstance("12623456");
+	if(netlinkPortIdMap->getNetlinkPortIdFromAPName(*destName) != 877){
+		std::cout<<"Error retrieving netlink port id from map\n";
+		return -1;
+	}
+
+	if(netlinkPortIdMap->getIPCManagerPortId() != 1){
+		std::cout<<"Error retrieving netlink port id from map\n";
+		return -1;
+	}
+
+	std::cout<<"Netlink port id map tested successfully\n";
 }

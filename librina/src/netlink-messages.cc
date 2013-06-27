@@ -162,8 +162,8 @@ void AppAllocateFlowRequestMessage::setSourceAppName(
 }
 
 IPCEvent* AppAllocateFlowRequestMessage::toIPCEvent(){
-	IncomingFlowRequestEvent * event =
-			new IncomingFlowRequestEvent(
+	FlowRequestEvent * event =
+			new FlowRequestEvent(
 					this->flowSpecification,
 					this->sourceAppName,
 					this->destAppName,

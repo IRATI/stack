@@ -282,7 +282,7 @@ public:
 /**
  * Event informing about an incoming flow request from another application
  */
-class IncomingFlowRequestEvent: public IPCEvent {
+class FlowRequestEvent: public IPCEvent {
 	/** The port-id that locally identifies the flow */
 	int portId;
 
@@ -299,11 +299,11 @@ class IncomingFlowRequestEvent: public IPCEvent {
 	FlowSpecification flowSpecification;
 
 public:
-	IncomingFlowRequestEvent(const FlowSpecification& flowSpecification,
+	FlowRequestEvent(const FlowSpecification& flowSpecification,
 			const ApplicationProcessNamingInformation& sourceApplicationName,
 			const ApplicationProcessNamingInformation& destApplicationName,
 			unsigned int sequenceNumber);
-	IncomingFlowRequestEvent(int portId,
+	FlowRequestEvent(int portId,
 			const FlowSpecification& flowSpecification,
 			const ApplicationProcessNamingInformation& sourceApplicationName,
 			const ApplicationProcessNamingInformation& destApplicationName,

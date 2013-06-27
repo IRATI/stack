@@ -202,7 +202,8 @@ public:
 /**
  * Allocate flow request from a remote application, IPC Process -> Application
  */
-class AppAllocateFlowRequestArrivedMessage: public BaseNetlinkMessage{
+class AppAllocateFlowRequestArrivedMessage:
+		public BaseNetlinkMessage {
 
 	/** The source application name */
 	ApplicationProcessNamingInformation sourceAppName;

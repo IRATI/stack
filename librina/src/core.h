@@ -30,6 +30,40 @@
 namespace rina {
 
 /**
+ * Contains mappings of application process name to netlink portId,
+ * or IPC process id to netlink portId.
+ */
+class NetlinkPortIdMap {
+
+	/** Stores the mappings of IPC Process id to nelink portId */
+	std::map<unsigned int, unsigned int> ipcProcessIdMappings;
+
+	/** Stores the mappings of application process name to netlink port id */
+	std::map<ApplicationProcessNamingInformation, unsigned int>
+		applicationNameMappings;
+
+	ReadWriteLockable ipcProcessIdLock;
+	ReadWriteLockable applicationNameLock;
+
+public:
+	void putIPCProcessIdToNelinkPortIdMapping(
+			unsigned int ipcProcessId, unsigned int netlinkPortId);
+	unsigned int getNetlinkPortIdFromIPCProcessId(
+			unsigned int ipcProcessId) throw(NetlinkException);
+	void putAPNametoNetlinkPortIdMapping(
+			ApplicationProcessNamingInformation apName,
+			unsigned int netlinkPortId);
+	unsigned int getNetlinkPortIdFromAPName(
+			ApplicationProcessNamingInformation apName) throw(NetlinkException);
+	unsigned int getIPCManagerPortId();
+};
+
+/**
+ * Make NetlinkPortIdMap singleton
+ */
+extern Singleton<NetlinkPortIdMap> netlinkPortIdMap;
+
+/**
  * Class used by the thread that sent a Netlink message
  * to wait for the response
  */
