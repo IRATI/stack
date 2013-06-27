@@ -254,7 +254,7 @@ int rina_personality_unregister(struct personality * pers)
 
         ASSERT(pers);
 
-        name = pers->kobj.name;
+        name = kobject_name(&pers->kobj);
 
         ASSERT(name);
         ASSERT(is_name_ok(name));
