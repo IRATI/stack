@@ -68,7 +68,7 @@ struct personality {
 int  rina_personality_init(struct kobject * parent);
 void rina_personality_exit(void);
 
-struct personality * rina_personality_register(const char *             label,
+struct personality * rina_personality_register(const char *             name,
                                                void *                   data,
                                                struct personality_ops * ops);
 
