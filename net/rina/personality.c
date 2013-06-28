@@ -223,7 +223,7 @@ struct personality * rina_personality_register(const char *             name,
 
         if (pers->ops->init) {
                 LOG_DBG("Calling personality '%s' initializer", name);
-                if (pers->ops->init(&personalities->kobj, pers->data)) {
+                if (pers->ops->init(&pers->kobj, pers->data)) {
                         LOG_ERR("Could not initialize personality '%s'",
                                 name);
                         kobject_put(&pers->kobj);
