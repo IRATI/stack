@@ -109,7 +109,7 @@ struct flow_t {
 };
 
 void * kipcm_init(void);
-void   kipcm_fini(void * opaque);
+int    kipcm_fini(void * opaque);
 
 int    kipcm_shim_register(struct shim * shim);
 int    kipcm_shim_unregister(struct shim * shim);

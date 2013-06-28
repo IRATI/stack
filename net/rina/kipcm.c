@@ -114,7 +114,7 @@ void * kipcm_init()
         return kipcm;
 }
 
-void kipcm_fini(void * opaque)
+int kipcm_fini(void * opaque)
 {
         LOG_FBEGN;
 
@@ -128,6 +128,8 @@ void kipcm_fini(void * opaque)
         kfree(opaque);
 
         LOG_FEXIT;
+
+        return 0;
 }
 
 int kipcm_shim_register(struct shim * shim)
