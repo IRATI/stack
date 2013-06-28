@@ -167,5 +167,22 @@ AppDeallocateFlowRequestMessage * parseAppDeallocateFlowRequestMessage(
 		nlmsghdr *hdr);
 
 
+/* AppDeallocateFlowResponseMessage CLASS*/
+enum AppDeallocateFlowResponseMessageAttributes {
+	ADFRE_ATTR_RESULT = 1,
+	ADFRE_ATTR_ERROR_DESCRIPTION,
+	ADFRE_ATTR_APP_NAME,
+	__ADFRE_ATTR_MAX,
+};
+
+#define ADFRE_ATTR_MAX (__ADFRE_ATTR_MAX -1)
+
+int putAppDeallocateFlowResponseMessageObject(nl_msg* netlinkMessage,
+		const AppDeallocateFlowResponseMessage& object);
+
+AppDeallocateFlowResponseMessage * parseAppDeallocateFlowResponseMessage(
+		nlmsghdr *hdr);
+
+
 }
 #endif /* LIBRINA_NETLINK_PARSERS_H_ */

@@ -165,12 +165,12 @@ int testAppAllocateFlowRequestResultMessage() {
 				<< "messages are different\n";
 		returnValue = -1;
 	} else if (message->getDifName() != recoveredMessage->getDifName()) {
-		std::cout << "Error DIF name on original and recovered "
+		std::cout << "DIF name on original and recovered "
 				<< "messages are different\n";
 		returnValue = -1;
 	} else if (message->getSourceAppName()
 			!= recoveredMessage->getSourceAppName()) {
-		std::cout << "Error source app name on original and recovered "
+		std::cout << "Source app name on original and recovered "
 				<< "messages are different\n";
 		returnValue = -1;
 	} else if (message->getPortId() != recoveredMessage->getPortId()) {
@@ -273,7 +273,7 @@ int testAppAllocateFlowRequestArrivedMessage() {
 				<< " are different\n";
 		returnValue = -1;
 	} else if (message->getDifName() != recoveredMessage->getDifName()) {
-		std::cout << "Error DIF name on original and recovered "
+		std::cout << "DIF name on original and recovered "
 				<< "messages are different\n";
 		returnValue = -1;
 	}
@@ -332,7 +332,7 @@ int testAppAllocateFlowResponseMessage() {
 		returnValue = -1;
 
 	} else if (message->getDifName() != recoveredMessage->getDifName()) {
-		std::cout << "Error DIF name on original and recovered "
+		std::cout << "DIF name on original and recovered "
 				<< "messages are different\n";
 		returnValue = -1;
 	} else if (message->isAccept() != recoveredMessage->isAccept()) {
@@ -415,7 +415,7 @@ int testAppDeallocateFlowRequestMessage() {
 				<< " are different\n";
 		returnValue = -1;
 	} else if (message->getDifName() != recoveredMessage->getDifName()) {
-		std::cout << "Error DIF name on original and recovered "
+		std::cout << "DIF name on original and recovered "
 				<< "messages are different\n";
 		returnValue = -1;
 	} else if (message->getApplicationName()
@@ -436,6 +436,79 @@ int testAppDeallocateFlowRequestMessage() {
 
 	return returnValue;
 }
+
+
+int testAppDeallocateFlowResponseMessage() {
+	std::cout << "TESTING APP DEALLOCATE FLOW RESPONSE MESSAGE\n";
+	int returnValue = 0;
+
+	ApplicationProcessNamingInformation * applicationName =
+			new ApplicationProcessNamingInformation();
+	applicationName->setProcessName("/apps/source2");
+	applicationName->setProcessInstance("11");
+	applicationName->setEntityName("database");
+	applicationName->setEntityInstance("9");
+
+	AppDeallocateFlowResponseMessage * message =
+			new AppDeallocateFlowResponseMessage();
+	message->setResult(0);
+	message->setErrorDescription("Error description");
+	message->setApplicationName(*applicationName);
+
+	struct nl_msg* netlinkMessage;
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage) {
+		std::cout << "Error allocating Netlink message\n";
+	}
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
+			0, 0, message->getOperationCode(), 0);
+
+	int result = putBaseNetlinkMessage(netlinkMessage, message);
+	if (result < 0) {
+		std::cout << "Error constructing Application Deallocate Flow Response "
+				<< "Message \n";
+		nlmsg_free(netlinkMessage);
+		delete applicationName;
+		delete message;
+		return result;
+	}
+
+	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+	AppDeallocateFlowResponseMessage * recoveredMessage =
+			dynamic_cast<AppDeallocateFlowResponseMessage *>(parseBaseNetlinkMessage(
+					netlinkMessageHeader));
+	if (message == NULL) {
+		std::cout
+				<< "Error parsing Application Deallocate Flow Response Message "
+				<< "\n";
+		returnValue = -1;
+	} else if (message->getResult() != recoveredMessage->getResult()) {
+		std::cout << "Result on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message->getErrorDescription() != recoveredMessage->getErrorDescription()) {
+		std::cout << "Error description on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	} else if (message->getApplicationName()
+			!= recoveredMessage->getApplicationName()) {
+		std::cout << "Application name on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	}
+
+	if (returnValue == 0) {
+		std::cout << "AppDeallocateFlowResponse test ok\n";
+	}
+	nlmsg_free(netlinkMessage);
+	delete applicationName;
+	delete message;
+	delete recoveredMessage;
+
+	return returnValue;
+}
+
+
 
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING LIBRINA-NETLINK-PARSERS\n";
@@ -466,4 +539,9 @@ int main(int argc, char * argv[]) {
 	if (result < 0) {
 		return result;
 	}
+
+	result = testAppDeallocateFlowResponseMessage();
+		if (result < 0) {
+			return result;
+		}
 }
