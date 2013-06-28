@@ -66,17 +66,14 @@ struct kipc_t {
 void * kipcm_init()
 {
         struct kipc_t * kipcm = NULL;
+        struct list_head * id_to_ipcp;
+        struct list_head * port_id_to_flow;
 
         LOG_FBEGN;
 
         LOG_DBG("Initializing instance");
 
-#if 0
-        LIST_HEAD(id_to_ipcp);
-        LIST_HEAD(port_id_to_flow);
-#endif
-
-        kipcm = kmalloc(sizeof(*kipcm), GFP_KERNEL);
+        kipcm = kzalloc(sizeof(*kipcm), GFP_KERNEL);
         if (!kipcm) {
                 LOG_CRIT("Cannot allocate %zu bytes of memory",
                          sizeof(*kipcm));
@@ -84,10 +81,33 @@ void * kipcm_init()
                 LOG_FEXIT;
                 return kipcm;
         }
-#if 0
-        kipcm->id_to_ipcp      = &id_to_ipcp;
-        kipcm->port_id_to_flow = &port_id_to_flow;
-#endif
+        id_to_ipcp = kmalloc(sizeof(*id_to_ipcp), GFP_KERNEL);
+        if (!id_to_ipcp) {
+		LOG_CRIT("Cannot allocate %zu bytes of memory",
+			 sizeof(*id_to_ipcp));
+
+		kfree(kipcm);
+		LOG_FEXIT;
+		return NULL;
+	}
+        id_to_ipcp->next = id_to_ipcp;
+        id_to_ipcp->prev = id_to_ipcp;
+
+        port_id_to_flow = kmalloc(sizeof(*port_id_to_flow), GFP_KERNEL);
+	if (!port_id_to_flow) {
+		LOG_CRIT("Cannot allocate %zu bytes of memory",
+			 sizeof(*port_id_to_flow));
+
+		kfree(kipcm);
+		kfree(id_to_ipcp);
+		LOG_FEXIT;
+		return NULL;
+	}
+	port_id_to_flow->next = port_id_to_flow;
+	port_id_to_flow->prev = port_id_to_flow;
+
+        kipcm->id_to_ipcp      = id_to_ipcp;
+        kipcm->port_id_to_flow = port_id_to_flow;
 
         LOG_FEXIT;
 
@@ -103,7 +123,8 @@ void kipcm_fini(void * opaque)
         ASSERT(opaque);
 
         /* FIXME: Add code here, depending on kipcm_init */
-
+        kfree(((struct kipc_t *) opaque)->id_to_ipcp);
+        kfree(((struct kipc_t *) opaque)->port_id_to_flow);
         kfree(opaque);
 
         LOG_FEXIT;
