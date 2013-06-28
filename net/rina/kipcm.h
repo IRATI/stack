@@ -74,7 +74,7 @@ struct ipc_process_t {
 	union {
 		struct normal_ipc_process_t * normal_ipcp;
 #if 0
-		struct shim_instance_t *      shim_instance;
+		struct shim_instance *        shim_instance;
 #endif
 	} data;
 };
@@ -111,8 +111,8 @@ struct flow_t {
 void * kipcm_init(void);
 void   kipcm_fini(void * opaque);
 
-int    kipcm_shim_register(struct shim_t * shim);
-int    kipcm_shim_unregister(struct shim_t * shim);
+int    kipcm_shim_register(struct shim * shim);
+int    kipcm_shim_unregister(struct shim * shim);
 
 int    kipcm_ipc_process_create(void *                opaque,
 				const struct name_t * name,
