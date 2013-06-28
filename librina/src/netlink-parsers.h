@@ -129,5 +129,60 @@ int putAppAllocateFlowRequestArrivedMessageObject(nl_msg* netlinkMessage,
 AppAllocateFlowRequestArrivedMessage * parseAppAllocateFlowRequestArrivedMessage(
 		nlmsghdr *hdr);
 
+
+
+/* AppAllocateFlowResponseMessage CLASS*/
+enum AppAllocateFlowResponseAttributes {
+	AAFRE_ATTR_DIF_NAME = 1,
+	AAFRE_ATTR_ACCEPT,
+	AAFRE_ATTR_DENY_REASON,
+	AAFRE_ATTR_NOTIFY_SOURCE,
+	__AAFRE_ATTR_MAX,
+};
+
+#define AAFRE_ATTR_MAX (__AAFRE_ATTR_MAX -1)
+
+int putAppAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
+		const AppAllocateFlowResponseMessage& object);
+
+AppAllocateFlowResponseMessage * parseAppAllocateFlowResponseMessage(
+		nlmsghdr *hdr);
+
+
+
+/* AppDeallocateFlowRequestMessage CLASS*/
+enum AppDeallocateFlowRequestMessageAttributes {
+	ADFRT_ATTR_PORT_ID = 1,
+	ADFRT_ATTR_DIF_NAME,
+	ADFRT_ATTR_APP_NAME,
+	__ADFRT_ATTR_MAX,
+};
+
+#define ADFRT_ATTR_MAX (__ADFRT_ATTR_MAX -1)
+
+int putAppDeallocateFlowRequestMessageObject(nl_msg* netlinkMessage,
+		const AppDeallocateFlowRequestMessage& object);
+
+AppDeallocateFlowRequestMessage * parseAppDeallocateFlowRequestMessage(
+		nlmsghdr *hdr);
+
+
+/* AppDeallocateFlowResponseMessage CLASS*/
+enum AppDeallocateFlowResponseMessageAttributes {
+	ADFRE_ATTR_RESULT = 1,
+	ADFRE_ATTR_ERROR_DESCRIPTION,
+	ADFRE_ATTR_APP_NAME,
+	__ADFRE_ATTR_MAX,
+};
+
+#define ADFRE_ATTR_MAX (__ADFRE_ATTR_MAX -1)
+
+int putAppDeallocateFlowResponseMessageObject(nl_msg* netlinkMessage,
+		const AppDeallocateFlowResponseMessage& object);
+
+AppDeallocateFlowResponseMessage * parseAppDeallocateFlowResponseMessage(
+		nlmsghdr *hdr);
+
+
 }
 #endif /* LIBRINA_NETLINK_PARSERS_H_ */
