@@ -32,12 +32,17 @@
 #include "utils.h"
 #include "shim.h"
 
+static struct shim_t * shim;
+
 struct dummy_instance_t {
         ipc_process_id_t ipc_process_id;
         struct name_t *  name;
 
-        /* FIXME: Stores the state of flows indexed by port_id */
-        struct list_head * flows;
+	/* FIXME: Stores the state of flows indexed by port_id */
+	struct list_head * flows;
+
+	/* Used to keep a list of all the dummy shims */
+	struct list_head list;
 };
 
 struct dummy_flow_t {
@@ -67,10 +72,12 @@ static int dummy_flow_allocate_request(void *                     opaque,
                 return -1;
         }
 
-        dummy = (struct dummy_instance_t *) opaque;
-        flow->dest = dest;
-        flow->source = source;
-        flow->port_id = *id;
+	/* FIXME: Now we should ask the destination application for a flow */
+
+	dummy = (struct dummy_instance_t *) opaque;
+	flow->dest = dest;
+	flow->source = source;
+	flow->port_id = *id;
 
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, dummy->flows);
@@ -117,12 +124,34 @@ static int dummy_application_unregister(void *                opaque,
         return 0;
 }
 
+static struct dummy_flow_t * dummy_find_flow(void * opaque, port_id_t id) {
+	struct dummy_instance_t * dummy;
+	struct dummy_flow_t *     flow;
+	dummy = (struct dummy_instance_t *) opaque;
+	list_for_each_entry(flow, dummy->flows, list) {
+		if (flow->port_id == id) {
+			return flow;
+		}
+	}
+	return NULL;
+}
+
 static int dummy_sdu_write(void *               opaque,
                            port_id_t            id,
                            const struct sdu_t * sdu)
 {
-        LOG_FBEGN;
-        LOG_FEXIT;
+	struct dummy_flow_t * flow;
+	LOG_FBEGN;
+
+	flow = dummy_find_flow(opaque, id);
+	if (!flow) {
+		LOG_ERR("There is not a flow allocated with port-id %d", id);
+		return -1;
+	}
+
+	/* FIXME: Add code here to send the sdu */
+
+	LOG_FEXIT;
 
         return 0;
 }
@@ -131,8 +160,17 @@ static int dummy_sdu_read(void *         opaque,
                           port_id_t      id,
                           struct sdu_t * sdu)
 {
-        LOG_FBEGN;
-        LOG_FEXIT;
+	struct dummy_flow_t * flow;
+
+	LOG_FBEGN;
+
+	flow = dummy_find_flow(opaque, id);
+	if (!flow) {
+		LOG_ERR("There is not a flow allocated with port-id %d", id);
+		return -1;
+	}
+
+	LOG_FEXIT;
 
         return 0;
 }
@@ -140,40 +178,43 @@ static int dummy_sdu_read(void *         opaque,
 static struct shim_instance_t * dummy_create(void *           opaque,
                                              ipc_process_id_t ipc_process_id)
 {
-        struct shim_instance_t *  instance;
-        struct dummy_instance_t * dummy_inst;
-        LIST_HEAD(port_flow);
+	struct shim_instance_t *  instance;
+	struct dummy_instance_t * dummy_inst;
+	LIST_HEAD(port_flow);
 
-        LOG_FBEGN;
+	LOG_FBEGN;
 
-        instance = kmalloc(sizeof(*instance), GFP_KERNEL);
-        if (!instance) {
-                LOG_ERR("Cannot allocate %zu bytes of memory",
-                        sizeof(*instance));
-                LOG_FEXIT;
-                return NULL;
-        }
+	instance = kzalloc(sizeof(*instance), GFP_KERNEL);
+	if (!instance) {
+		LOG_ERR("Cannot allocate %zu bytes of memory",
+				sizeof(*instance));
+		LOG_FEXIT;
+		return NULL;
+	}
 
-        dummy_inst = kmalloc(sizeof(*dummy_inst), GFP_KERNEL);
-        if (!dummy_inst) {
-                LOG_ERR("Cannot allocate %zu bytes of memory",
-                        sizeof(*dummy_inst));
-                kfree(instance);
-                LOG_FEXIT;
-                return NULL;
-        }
+	dummy_inst = kzalloc(sizeof(*dummy_inst), GFP_KERNEL);
+	if (!dummy_inst) {
+		LOG_ERR("Cannot allocate %zu bytes of memory",
+				sizeof(*dummy_inst));
+		kfree(instance);
+		LOG_FEXIT;
+		return NULL;
+	}
 
-        dummy_inst->ipc_process_id = ipc_process_id;
-        dummy_inst->flows          = &port_flow;
+	dummy_inst->ipc_process_id = ipc_process_id;
+	dummy_inst->flows          = &port_flow;
 
-        instance->opaque                 = dummy_inst;
-        instance->flow_allocate_request  = dummy_flow_allocate_request;
-        instance->flow_allocate_response = dummy_flow_allocate_response;
-        instance->flow_deallocate        = dummy_flow_deallocate;
-        instance->application_register   = dummy_application_register;
-        instance->application_unregister = dummy_application_unregister;
-        instance->sdu_write              = dummy_sdu_write;
-        instance->sdu_read               = dummy_sdu_read;
+	instance->opaque                 = dummy_inst;
+	instance->flow_allocate_request  = dummy_flow_allocate_request;
+	instance->flow_allocate_response = dummy_flow_allocate_response;
+	instance->flow_deallocate        = dummy_flow_deallocate;
+	instance->application_register   = dummy_application_register;
+	instance->application_unregister = dummy_application_unregister;
+	instance->sdu_write              = dummy_sdu_write;
+	instance->sdu_read               = dummy_sdu_read;
+
+	INIT_LIST_HEAD(&dummy_inst->list);
+	list_add(&dummy_inst->list, (struct list_head *) shim->opaque);
 
         LOG_FEXIT;
 
@@ -227,9 +268,8 @@ dummy_configure(void *                     opaque,
 
 static int __init mod_init(void)
 {
-        struct shim_t * shim;
-
-        LOG_FBEGN;
+	struct list_head * dummy_shim_list;
+	LOG_FBEGN;
 
         shim = kmalloc(sizeof(*shim), GFP_KERNEL);
         if (!shim) {
@@ -237,11 +277,22 @@ static int __init mod_init(void)
                 LOG_FEXIT;
                 return -1;
         }
+        dummy_shim_list = kmalloc(sizeof(*dummy_shim_list), GFP_KERNEL);
+	if (!dummy_shim_list) {
+		LOG_CRIT("Cannot allocate %zu bytes of memory",
+			 sizeof(*dummy_shim_list));
 
+		kfree(shim);
+		LOG_FEXIT;
+		return -1;
+	}
+	dummy_shim_list->next = dummy_shim_list;
+	dummy_shim_list->prev = dummy_shim_list;
         shim->label     = "shim-dummy";
         shim->create    = dummy_create;
         shim->destroy   = dummy_destroy;
         shim->configure = dummy_configure;
+        shim->opaque    = dummy_shim_list;
 
         if (shim_register(shim)) {
                 LOG_ERR("Initialization of module shim-dummy failed");
@@ -258,7 +309,28 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
-        LOG_FBEGN;
+        struct dummy_instance_t *pos, *next;
+        struct dummy_flow_t     *pos_flow, *next_flow;
+
+	LOG_FBEGN;
+
+	ASSERT(shim);
+	ASSERT(shim->opaque);
+	if (shim_unregister(shim)) {
+        	/* FIXME: Should we do something here? */
+        }
+        list_for_each_entry_safe(pos, next, (struct list_head *) shim->opaque,
+        		list) {
+        	list_del(&pos->list);
+        	list_for_each_entry_safe(pos_flow,
+        				next_flow, pos->flows, list) {
+        		list_del(&pos_flow->list);
+        		kfree(pos_flow);
+        	}
+        	kfree(pos);
+        }
+        kfree(shim->opaque);
+        kfree(shim);
 
         /* FIXME: We must unroll all the things done in mod_init */
 

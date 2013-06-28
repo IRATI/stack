@@ -1,5 +1,5 @@
 /*
- *  Shim IPC Process
+ *  Shim IPC Processes layer
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -21,133 +21,264 @@
 #include <linux/export.h>
 #include <linux/string.h>
 #include <linux/kobject.h>
+#include <linux/sysfs.h>
 #include <linux/slab.h>
 
-#define RINA_PREFIX "shim"
+#define RINA_PREFIX "shims"
 
 #include "logs.h"
 #include "utils.h"
 #include "shim.h"
 #include "kipcm.h"
 
-static struct kset * shims = NULL;
+static ssize_t shim_show(struct kobject *   kobj,
+                         struct attribute * attr,
+                         char *             buf)
+{ return sprintf(buf, "%s", kobject_name(kobj)); }
 
-int shim_init(void)
+static const struct sysfs_ops shim_sysfs_ops = {
+        .show = shim_show
+};
+
+static struct kobj_type shim_ktype = {
+        .sysfs_ops     = &shim_sysfs_ops,
+        .default_attrs = NULL,
+        .release       = NULL,
+};
+
+struct shims * shims_init(struct kobject * parent)
 {
-        LOG_DBG("Initializing shim layer");
+        struct shims * temp;
 
-        if (shims) {
-                LOG_ERR("Shim layer already initialized");
-                return -1;
+        LOG_DBG("Initializing shims layer");
+
+        temp = kzalloc(sizeof(*temp), GFP_KERNEL);
+        if (!temp) {
+                LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*temp));
+                return NULL;
         }
 
-        /* FIXME: Move the set path from kernel to rina */
-        shims = kset_create_and_add("shims", NULL, kernel_kobj);
+        temp->set = kset_create_and_add("shims", NULL, parent);
+        if (!temp->set) {
+                LOG_ERR("Cannot initialize shims layer support");
+                return NULL;
+        }
+
+        ASSERT(temp->set != NULL);
+
+        LOG_DBG("Shims layer initialized successfully");
+
+        return temp;
+}
+
+int shims_fini(struct shims * shims)
+{
+        LOG_DBG("Finalizing shims layer");
+
         if (!shims) {
-                LOG_ERR("Cannot intialize shim layer sysfs support");
+                LOG_ERR("Bogus shims, cannot finalize");
                 return -1;
         }
 
-        ASSERT(shims != NULL);
+        /* FIXME: Check pending objects and flush 'em all */
 
-        LOG_DBG("Shim layer initialized successfully");
+        kset_unregister(shims->set);
+
+        LOG_DBG("Shims layer finalized successfully");
 
         return 0;
 }
 
-void shim_exit(void)
+static int is_name_ok(const char * name)
 {
-        LOG_DBG("Finalizing shim layer");
+        LOG_DBG("Checking name");
 
-        ASSERT(shims != NULL);
-
-        kset_unregister(shims);
-
-        shims = NULL;
-
-        LOG_DBG("Shim layer finalized successfully");
-}
-
-static int is_label_ok(const char * label)
-{
-        LOG_DBG("Checking label");
-
-        if (!label) {
-                LOG_DBG("Label is empty");
+        if (!name) {
+                LOG_DBG("Name is empty");
                 return 0;
         }
-        if (strlen(label) == 0) {
-                LOG_DBG("Label has 0 length");
+        if (strlen(name) == 0) {
+                LOG_DBG("Name has 0 length");
                 return 0;
         }
 
-        LOG_DBG("Label is ok");
+        LOG_DBG("Name is ok");
 
         return 1;
 }
 
-static int is_ok(const struct shim_t * shim)
+static int are_ops_ok(const struct shim_ops * ops)
 {
-        LOG_DBG("Checking shim %pK consistence", shim);
+        LOG_DBG("Checking ops %pK", ops);
 
-        if (!shim) {
-                LOG_ERR("Shim is NULL");
+        if (!ops) {
+                LOG_ERR("Ops are empty");
                 return 0;
         }
 
-        if (!is_label_ok(shim->label)) {
-                LOG_ERR("Shim %pK has bogus label", shim);
+        if (!(ops->create    &&
+              ops->configure &&
+              ops->destroy)) {
+                LOG_DBG("Ops are bogus");
                 return 0;
         }
 
-        if (shim->create             &&
-            shim->configure          &&
-            shim->destroy) {
-                LOG_DBG("Shim '%s' is ok", shim->label);
-                return 1;
-        }
+        LOG_DBG("Ops are ok");
 
-        LOG_ERR("Shim '%s' has bogus hooks", shim->label);
-
-        return 0;
+        return 1;
 }
 
-int shim_register(struct shim_t * shim)
+#define to_shim(O) container_of(O, struct shim, kobj)
+
+#define KSET_FIND_OBJECT_EXPORTED 0
+
+#if !KSET_FIND_OBJECT_EXPORTED
+/* FIXME:
+ *   In kernel 3.9.2, there's no EXPORT_SYMBOL for kset_find_object so this
+ *   is a copy and paster from lib/kobject.c. Please fix that ASAP
+ */
+static struct kobject *kobject_get_unless_zero(struct kobject *kobj)
 {
-        int err;
+	if (!kref_get_unless_zero(&kobj->kref))
+		kobj = NULL;
+	return kobj;
+}
 
-        LOG_DBG("Registering shim %pK", shim);
+struct kobject *kset_find_obj(struct kset *kset, const char *name)
+{
+	struct kobject *k;
+	struct kobject *ret = NULL;
 
-        if (!is_ok(shim)) {
-                LOG_ERR("Cannot register shim %pK, it's bogus", shim);
-                return -1;
+	spin_lock(&kset->list_lock);
+
+	list_for_each_entry(k, &kset->list, entry) {
+		if (kobject_name(k) && !strcmp(kobject_name(k), name)) {
+			ret = kobject_get_unless_zero(k);
+			break;
+		}
+	}
+
+	spin_unlock(&kset->list_lock);
+	return ret;
+}
+#endif
+
+static struct shim * shim_find(struct shims * parent,
+                               const char *   name)
+{
+        struct kobject * k;
+
+        ASSERT(parent);
+        ASSERT(parent->set);
+        ASSERT(name);
+
+        k = kset_find_obj(parent->set, name);
+        if (k) {
+                kobject_put(k);
+                return to_shim(k);
         }
 
-        err = kipcm_shim_register(shim);
-        if (err)
-                return err;
+        return NULL;
+}
 
-        LOG_INFO("Shim '%s' registered successfully", shim->label);
+struct shim * shim_register(struct shims *    parent,
+                            const char *      name,
+                            void *            data,
+                            struct shim_ops * ops)
+{
+        struct shim * tmp;
+        struct shim * shim;
 
-        return 0;
+        if (!is_name_ok(name)) {
+                LOG_ERR("Name is bogus, cannot register shim");
+                return NULL;
+        }
+
+        if (!are_ops_ok(ops)) {
+                LOG_ERR("Cannot register shim '%s', ops are bogus", name);
+                return NULL;
+        }
+
+        if (!parent) {
+                LOG_ERR("Bogus parent, cannot register shim '%s", name);
+                return NULL;
+        }
+
+        LOG_DBG("Registering shim '%s'", name);
+
+        tmp = shim_find(parent, name);
+        if (!tmp) {
+                LOG_ERR("Shim '%s' already registered", name);
+                return NULL;
+        }
+
+        shim = kzalloc(sizeof(*shim), GFP_KERNEL);
+        if (!shim) {
+                LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*shim));
+                return NULL;
+        }
+
+        shim->data = data;
+        shim->ops  = ops;
+
+        shim->kobj.kset = parent->set;
+        if (kobject_init_and_add(&shim->kobj, &shim_ktype, NULL,
+                                 "%s", name)) {
+                LOG_ERR("Cannot add shim '%s' to the set", name);
+                kobject_put(&shim->kobj);
+                /*
+                 * FIXME: To be removed once shim_ktype.release
+                 * gets implemented
+                 */
+                kfree(shim);
+                return NULL;
+        }
+
+        /* Double checking for bugs */
+        name = kobject_name(&shim->kobj);
+
+        LOG_INFO("Shim '%s' registered successfully", name);
+
+        return shim;
 }
 EXPORT_SYMBOL(shim_register);
 
-int shim_unregister(struct shim_t * shim)
+int shim_unregister(struct shims * parent,
+                    struct shim *  shim)
 {
-        int err;
+        struct shim * tmp;
+        const char *  name;
 
-        LOG_DBG("Un-registering shim %pK", shim);
-
-        if (!shim) {
-                LOG_ERR("Cannot unregister shim %pK, it's bogus", shim);
+        if (!parent) {
+                LOG_ERR("Bogus parent, cannot unregister shim %pK", shim);
                 return -1;
         }
 
-        err = kipcm_shim_unregister(shim);
-                return err;
+        if (!shim) {
+                LOG_ERR("Bogus shim, cannot unregister");
+                return -1;
+        }
 
-        LOG_INFO("Shim '%s' unregistered successfully", shim->label);
+        name = kobject_name(&shim->kobj);
+
+        ASSERT(name);
+        ASSERT(is_name_ok(name));
+
+        LOG_DBG("Unregistering shim '%s'", name);
+
+        ASSERT(parent);
+
+        tmp = shim_find(parent, name);
+        if (!tmp) {
+                LOG_ERR("Shim '%s' not registered", name);
+                return -1;
+        }
+
+        kobject_put(&shim->kobj);
+
+        kfree(shim); /* FIXME: To be removed */
+
+        LOG_DBG("Shim unregistered successfully");
 
         return 0;
 }

@@ -217,7 +217,7 @@ struct dtcp_state_vector_t {
 };
 
 void *   efcp_init(void);
-void     efcp_fini(void * opaque);
+int      efcp_fini(void * opaque);
 int      efcp_write(void *               opaque,
                     port_id_t            port_id,
                     const struct sdu_t * sdu);

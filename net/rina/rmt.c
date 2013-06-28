@@ -52,7 +52,7 @@ void * rmt_init(void)
         return e;
 }
 
-void rmt_fini(void * opaque)
+int rmt_fini(void * opaque)
 {
         LOG_FBEGN;
 
@@ -63,4 +63,6 @@ void rmt_fini(void * opaque)
         kfree(opaque);
 
         LOG_FEXIT;
+
+        return 0;
 }
