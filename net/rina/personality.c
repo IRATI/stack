@@ -18,6 +18,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/slab.h>
 #include <linux/export.h>
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
@@ -29,42 +30,44 @@
 #include "personality.h"
 #include "shim.h"
 
-#if 0
-struct personality_container {
-        kobject                data;
-        struct personality_t * personality;
+/* FIXME: Bogus, to be removed ASAP */
+struct personality * default_personality = NULL;
+
+static struct kset * personalities       = NULL;
+
+static ssize_t personality_show(struct kobject *   kobj,
+                                struct attribute * attr,
+                                char *             buf)
+{ return sprintf(buf, "%s", kobject_name(kobj)); }
+
+static const struct sysfs_ops personality_sysfs_ops = {
+        .show = personality_show
 };
-#endif
 
-#if CONFIG_RINA_SYSFS
-static struct kset *   personalities    = NULL;
-#endif
-
-/* FIXME: This layer allows 1 personality only, that's enough for the moment */
-struct personality_t * rina_personality = NULL;
+static struct kobj_type personality_ktype = {
+        .sysfs_ops     = &personality_sysfs_ops,
+        .default_attrs = NULL,
+        .release       = NULL,
+};
 
 int rina_personality_init(struct kobject * parent)
 {
         LOG_DBG("Initializing personality layer");
 
-        if (rina_personality) {
-                LOG_ERR("The personality layer already initialized, "
+        if (personalities) {
+                LOG_ERR("The personality layer is already initialized, "
                         "bailing out");
                 return -1;
         }
 
-#if CONFIG_RINA_SYSFS
-        ASSERT(parent);
+        ASSERT(personalities       == NULL);
+        ASSERT(default_personality == NULL);
 
         personalities = kset_create_and_add("personalities", NULL, parent);
         if (!personalities) {
-                LOG_ERR("Cannot initialize personality layer sysfs support");
+                LOG_ERR("Cannot initialize personality layer");
                 return -1;
         }
-#endif
-
-        /* Useless */
-        rina_personality = NULL;
 
         LOG_DBG("Personality layer initialized successfully");
 
@@ -75,148 +78,215 @@ void rina_personality_exit(void)
 {
         LOG_DBG("Finalizing personality layer");
 
-        if (rina_personality) {
-                ASSERT(rina_personality->fini);
-                rina_personality->fini(rina_personality->data);
-        }
+        ASSERT(personalities       != NULL);
+        ASSERT(default_personality != NULL);
 
-#if CONFIG_RINA_SYSFS
+        /* FIXME: Check pending objects and flush 'em all */
+
         kset_unregister(personalities);
-#endif
-
-        rina_personality = NULL;
+        personalities       = NULL;
+        default_personality = NULL;        
 
         LOG_DBG("Personality layer finalized successfully");
 }
 
-static int is_label_ok(const char * label)
+static int is_name_ok(const char * name)
 {
-        LOG_DBG("Checking label");
+        LOG_DBG("Checking name");
 
-        if (!label) {
-                LOG_DBG("Label is empty");
+        if (!name) {
+                LOG_ERR("Name is empty");
                 return 0;
         }
-        if (strlen(label) == 0) {
-                LOG_DBG("Label has 0 length");
+        if (strlen(name) == 0) {
+                LOG_ERR("Name has 0 length");
                 return 0;
         }
 
-        LOG_DBG("Label is ok");
+        LOG_DBG("Name is ok");
 
         return 1;
 }
 
-static int is_ok(const struct personality_t * pers)
+static int are_ops_ok(const struct personality_ops * ops)
 {
-        if (!pers) {
-                LOG_ERR("Personality is NULL");
+        LOG_DBG("Checking ops");
+
+        if (!ops) {
+                LOG_ERR("Ops are empty");
                 return 0;
         }
 
-        if (!is_label_ok(pers->label)) {
-                LOG_ERR("Personality %pK has bogus label", pers);
+        if ((ops->init && !ops->fini) || (!ops->init && ops->fini)) {
+                LOG_ERR("Bogus ops initializer/finalizer couple");
                 return 0;
         }
 
-        if ((pers->init && !pers->fini) ||
-            (!pers->init && pers->fini)) {
-                LOG_ERR("Personality '%s' has bogus "
-                        "initializer/finalizer couple", pers->label);
+        if (!(ops->ipc_create    &&
+              ops->ipc_configure &&
+              ops->ipc_destroy)) {
+                LOG_ERR("Bogus IPC related ops");
                 return 0;
         }
 
-        if (pers->ipc_create         &&
-            pers->ipc_configure      &&
-            pers->ipc_destroy        &&
-            pers->sdu_read           &&
-            pers->sdu_write          &&
-            pers->connection_create  &&
-            pers->connection_destroy &&
-            pers->connection_update) {
-                LOG_DBG("Personality '%s' is ok", pers->label);
-                return 1;
+        if (!(ops->sdu_read  &&
+              ops->sdu_write)) {
+                LOG_ERR("Bogus SDU related ops");
+                return 0;
         }
 
-        LOG_ERR("Personality '%s' has bogus hooks", pers->label);
+        if (!(ops->connection_create  &&
+              ops->connection_destroy &&
+              ops->connection_update)) {
+                LOG_ERR("Bogus connection related ops");
+                return 0;
+        }
 
-        return 0;
+        LOG_DBG("Ops are ok");
+
+        return 1;
 }
 
-int rina_personality_register(struct personality_t * pers)
+#define to_personality(O) container_of(O, struct personality, kobj)
+
+static struct personality * personality_find(const char * name)
 {
-        LOG_DBG("Registering personality %pK", pers);
+        struct kobject * k;
 
-        if (!is_ok(pers)) {
-                LOG_ERR("Cannot register personality %pK, it's bogus", pers);
-                return -1;
-        }
-        ASSERT(pers);
-        ASSERT(pers->label != NULL);
+        ASSERT(name);
 
-        if (rina_personality) {
-                LOG_ERR("Personality '%s' is already present, "
-                        "please remove it first before loading "
-                        "personality '%s'",
-                        rina_personality->label, pers->label);
-                return -1;
+        k = kset_find_obj(personalities, name);
+        if (k) {
+                kobject_put(k);
+                return to_personality(k);
         }
 
-        if (pers->init) {
-                LOG_DBG("Calling personality '%s' initializer", pers->label);
-                if (!pers->init(pers->data)) {
+        return NULL;
+}
+
+struct personality * rina_personality_register(const char *             name,
+                                               void *                   data,
+                                               struct personality_ops * ops)
+{
+        struct personality * tmp;
+        struct personality * pers;
+
+        if (!is_name_ok(name)) {
+                LOG_ERR("Name is bogus, cannot register personality");
+                return NULL;
+        }
+
+        if (!are_ops_ok(ops)) {
+                LOG_ERR("Cannot register personality '%s', ops are bogus",
+                        name);
+                return NULL;
+        }
+
+        LOG_DBG("Registering personality '%s'", name);
+
+        ASSERT(personalities);
+
+        tmp = personality_find(name);
+        if (tmp) {
+                LOG_ERR("Personality '%s' already registered", name);
+                return NULL;
+        }
+        
+        pers = kzalloc(sizeof(*pers), GFP_KERNEL);
+        if (!pers) {
+                LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*pers));
+                return NULL;
+        }
+
+        pers->data = data;
+        pers->ops  = ops;
+
+        pers->kobj.kset = personalities;
+        if (kobject_init_and_add(&pers->kobj, &personality_ktype, NULL,
+                                 "%s", name)) {
+                LOG_ERR("Cannot add personality '%s' to the set", name);
+                kobject_put(&pers->kobj);
+                /*
+                 * FIXME: To be removed once personality_ktype.release
+                 * gets implemented
+                 */
+                kfree(pers);
+                return NULL;
+        }
+
+        /* Double checking for bugs */
+        name = kobject_name(&pers->kobj);
+
+        ASSERT(pers->ops);
+
+        if (pers->ops->init) {
+                LOG_DBG("Calling personality '%s' initializer", name);
+                if (!pers->ops->init(pers->data)) {
                         LOG_ERR("Could not initialize personality '%s'",
-                                pers->label);
-                        return -1;
+                                name);
+                        kobject_put(&pers->kobj);
+                        kfree(pers); /* FIXME: As the note before */
+                        return NULL;
                 }
-        } else {
-                LOG_DBG("Personality '%s' does not require initialization",
-                        pers->label);
+                LOG_DBG("Personality '%s' initialized successfully", name);
         }
 
-        rina_personality = pers;
+        if (!default_personality) {
+                default_personality = pers;
+                LOG_INFO("Default personality set to '%s'", name);
+        }
 
-        LOG_INFO("Personality '%s' registered successfully", pers->label);
+        LOG_DBG("Personality '%s' registered successfully", name);
 
-        return 0;
+        return pers;
 }
 EXPORT_SYMBOL(rina_personality_register);
 
-int rina_personality_unregister(struct personality_t * pers)
+int rina_personality_unregister(struct personality * pers)
 {
-        LOG_DBG("Unregistering personality %pK", pers);
+        struct personality * tmp;
+        const char *         name;
 
-        if (!is_ok(pers)) {
-                LOG_ERR("Cannot unregister personality %pK, it's bogus", pers);
+        if (!pers) {
+                LOG_ERR("Bogus personality, cannot unregister");
                 return -1;
         }
 
         ASSERT(pers);
-        ASSERT(pers->label != NULL);
 
-        if (rina_personality != pers) {
-                LOG_ERR("Cannot unregister personality '%s', "
-                        "it's different from the currently active one ('%s')",
-                        pers->label, rina_personality->label);
+        name = kobject_name(&pers->kobj);
+
+        ASSERT(name);
+        ASSERT(is_name_ok(name));
+
+        LOG_DBG("Unregistering personality '%s'", name);
+
+        ASSERT(personalities);
+
+        tmp = personality_find(name);
+        if (!tmp) {
+                LOG_ERR("Personality '%s' not registered", name);
                 return -1;
         }
 
-        ASSERT(rina_personality == pers);
+        ASSERT(pers->ops);
 
-        LOG_DBG("Un-registering personality '%s'", pers->label);
-
-        if (pers->fini) {
-                LOG_DBG("Calling personality '%s' finalizer",
-                        pers->label);
-                pers->fini(pers->data);
-        } else {
-                LOG_DBG("Personality '%s' does not require finalization",
-                        pers->label);
+        if (pers->ops->fini) {
+                LOG_DBG("Calling personality '%s' finalizer", name);
+                pers->ops->fini(pers->data);
+                LOG_DBG("Personality '%s' finalized successfully", name);
         }
 
-        rina_personality = 0;
+        kobject_put(&pers->kobj);
 
-        LOG_INFO("Personality '%s' unregistered successfully", pers->label);
+        if (default_personality == pers) {
+                LOG_INFO("Re-setting default personality");
+                default_personality = 0;
+        }
+
+        kfree(pers); /* FIXME: To be removed */
+
+        LOG_DBG("Personality unregistered successfully");
 
         return 0;
 }
