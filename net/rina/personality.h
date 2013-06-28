@@ -29,8 +29,9 @@
 #include "kipcm.h"
 
 struct personality_ops {
-        int  (* init)(void * data);
-        void (* fini)(void * data);
+        int (* init)(struct kobject * parent,
+                     void *           data);
+        int (* fini)(void * data);
 
         /* Functions exported to the personality user */
         int (* ipc_create)(void *                    data,

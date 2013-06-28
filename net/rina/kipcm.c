@@ -114,7 +114,7 @@ void * kipcm_init()
         return kipcm;
 }
 
-void kipcm_fini(void * opaque)
+int kipcm_fini(void * opaque)
 {
         LOG_FBEGN;
 
@@ -128,9 +128,11 @@ void kipcm_fini(void * opaque)
         kfree(opaque);
 
         LOG_FEXIT;
+
+        return 0;
 }
 
-int kipcm_shim_register(struct shim_t * shim)
+int kipcm_shim_register(struct shim * shim)
 {
         LOG_FBEGN;
 
@@ -144,7 +146,7 @@ int kipcm_shim_register(struct shim_t * shim)
         return 0;
 }
 
-int kipcm_shim_unregister(struct shim_t * shim)
+int kipcm_shim_unregister(struct shim * shim)
 {
         LOG_FBEGN;
 
@@ -159,7 +161,7 @@ int kipcm_shim_unregister(struct shim_t * shim)
 }
 
 #if 0
-static int is_instance_ok(const struct shim_instance_t * inst)
+static int is_instance_ok(const struct shim_instance * inst)
 {
         LDBG("Checking shim instance %pK consistence", inst);
 

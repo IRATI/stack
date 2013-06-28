@@ -52,7 +52,7 @@ void * efcp_init(void)
         return e;
 }
 
-void efcp_fini(void * opaque)
+int efcp_fini(void * opaque)
 {
         LOG_FBEGN;
 
@@ -62,6 +62,8 @@ void efcp_fini(void * opaque)
         kfree(opaque);
 
         LOG_FEXIT;
+
+        return 0;
 }
 
 int efcp_write(void *               opaque,
