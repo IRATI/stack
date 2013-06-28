@@ -23,7 +23,11 @@
 #ifndef RINA_SHIM_H
 #define RINA_SHIM_H
 
+#include <linux/kobject.h>
+
 #include "common.h"
+
+/* FIXME: This configuration part has to be rearranged */
 
 enum shim_config_type_t {
         SHIM_CONFIG_UINT   = 1,
@@ -45,64 +49,74 @@ struct shim_conf_t {
 	struct shim_config_entry_t * entry;
 };
 
-struct shim_instance_t {
-        void * opaque;
-
-        /* Function pointers exported by the shim module, per shim instance */
-	int  (* flow_allocate_request)(void *                     opaque,
+struct shim_instance_ops {
+	int  (* flow_allocate_request)(void *                     data,
                                        const struct name_t *      source,
                                        const struct name_t *      dest,
                                        const struct flow_spec_t * flow_spec,
                                        port_id_t *                id);
-	int  (* flow_allocate_response)(void *              opaque,
+	int  (* flow_allocate_response)(void *              data,
                                         port_id_t           id,
                                         response_reason_t * response);
-	int  (* flow_deallocate)(void *    opaque,
+	int  (* flow_deallocate)(void *    data,
                                  port_id_t id);
 
-	int  (* application_register)(void *                opaque,
+	int  (* application_register)(void *                data,
                                       const struct name_t * name);
-	int  (* application_unregister)(void *                opaque,
+	int  (* application_unregister)(void *                data,
                                         const struct name_t * name);
 
-	int  (* sdu_write)(void *               opaque,
+	int  (* sdu_write)(void *               data,
                            port_id_t            id,
                            const struct sdu_t * sdu);
-        int  (* sdu_read)(void *         opaque,
+
+        /* FIXME: sdu_read will be removed */
+        int  (* sdu_read)(void *         data,
                           port_id_t      id,
                           struct sdu_t * sdu);
 };
 
-struct shim_t {
-	void * opaque;
-        /*
-         * The unique label this shim will be identified with, within the
-         * system. The label will be exposed to the user.
-         *
-         * It must not be NULL!
-         */
-        char * label;
+struct shim_instance {
+        struct kobject           kobj;
+        void *                   data;
+        struct shim_instance_ops ops;
+};
 
-	struct shim_instance_t * (* create)
-                (void *           opaque,
+struct shim_ops {
+	struct shim_instance * (* create)
+                (void *           data,
 		 ipc_process_id_t id);
         
-	struct shim_instance_t * (* configure)
-                (void *                     opaque,
-		 struct shim_instance_t *   instance,
+	struct shim_instance * (* configure)
+                (void *                     data,
+		 struct shim_instance *     instance,
                  const struct shim_conf_t * configuration);
 
 	int                      (* destroy)
-	        (void *                  opaque,
-		struct shim_instance_t * inst);
+	        (void *                 data,
+                 struct shim_instance * inst);
+};
+
+struct shim {
+        struct kobject    kobj;
+        void *            data;
+        struct shim_ops * ops; 
+};
+
+struct shims {
+        struct kset * shims;
 };
 
 /* Called by the kipcm, might disappear */
-int  shim_init(void);
-void shim_exit(void);
+struct shims * shims_init(struct kobject * parent);
+int            shims_fini(void);
 
 /* Called (once) by each shim module upon loading/unloading */
-int  shim_register(struct shim_t * shim);
-int  shim_unregister(struct shim_t * shim);
+struct shim * shim_register(struct shims *    parent,
+                            const char *      name,
+                            void *            data,
+                            struct shim_ops * ops);
+int           shim_unregister(struct shims * parent,
+                              struct shim *  shim);
 
 #endif
