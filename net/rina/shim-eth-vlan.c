@@ -21,6 +21,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/kernel.h>
 #include <linux/if_ether.h>
 #include <linux/string.h>
 #include <linux/list.h>
@@ -76,6 +77,7 @@ struct shim_eth_instance_t {
         struct shim_eth_info_t * info;
 
         /* FIXME: Pointer to the device driver data_structure */
+	/* Unsure if really needed */
         /* device_t * device_driver; */
 
         /* FIXME: Stores the state of flows indexed by port_id */
@@ -260,14 +262,6 @@ static int name_cpy(struct name_t * dst,
         return 0;
 }
 
-
-/* Called on configure to receive packets from a certain dev */
-static struct packet_type shim_eth_vlan_packet_type __read_mostly = {
-        .type =	cpu_to_be16(ETH_P_RINA),
-        .func =	shim_rcv,
-};
-
-
 struct shim_instance_t * shim_configure
 (void *                     opaque,
  struct shim_instance_t *   inst,
@@ -322,24 +316,25 @@ struct shim_instance_t * shim_configure
                 c = list_entry(pos, struct shim_conf_t, list);
                 tmp = c->entry;
                 val = tmp->value;
-                if (strcmp(tmp->name, "difname") == 0
+                if (!strcmp(tmp->name, "difname")
                     && val->type == SHIM_CONFIG_STRING) {
                         if (!name_cpy(shim_info->name,
                                       (struct name_t *) val->data)) {
                                 LOG_FEXIT;
                                 return inst;
                         }
-                } else if (strcmp(tmp->name, "vlanid") == 0
+                } else if (!strcmp(tmp->name, "vlanid")
                            && val->type == SHIM_CONFIG_UINT) {
                         shim_info->vlan_id = * (uint16_t *) val->data;
                         if (!reconfigure && 
 				shim_info->vlan_id != old_vlan_id) {
 				reconfigure = 1;
 			}
-                } else if (strcmp(tmp->name,"interfacename") == 0
+                } else if (!strcmp(tmp->name,"interfacename")
                            && val->type == SHIM_CONFIG_STRING) {
+			/* FIXME: Should probably be strcpy */
                         shim_info->interface_name = (string_t *) val->data;
-			if (!reconfigure && strcmp(shim_info->interface_name, 
+			if (!reconfigure && !strcmp(shim_info->interface_name, 
 							old_interface_name)) {
 				reconfigure = 1;
 			}
@@ -350,15 +345,56 @@ struct shim_instance_t * shim_configure
         instance->info = shim_info;
 
         if (reconfigure) {
-                /* Remove previous handler if there's one */ 
+		struct packet_type * shim_eth_vlan_packet_type;
 		
+		shim_eth_vlan_packet_type = 
+			kmalloc(sizeof(*shim_eth_vlan_packet_type), GFP_KERNEL);
+		if (!shim_eth_vlan_packet_type) {
+			LOG_ERR("Cannot allocate memory for packet_type");
+			LOG_FEXIT;
+			return inst;
+		}
+		shim_eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
+		shim_eth_vlan_packet_type->func = shim_rcv;
+		
+                /* Remove previous handler if there's one */ 
+		if (old_interface_name && old_vlan_id != 0) {
+			char string_old_vlan_id[4];
+			char * complete_interface;
+			struct net_device *dev;
+			
+			/* First construct the complete interface name */
+			complete_interface = 
+				kmalloc(sizeof(*complete_interface), GFP_KERNEL);
+			if (!complete_interface) {
+				LOG_ERR("Cannot allocate memory for string");
+				LOG_FEXIT;
+				return inst;
+			}
 
+			sprintf(string_old_vlan_id,"%d",old_vlan_id);
+			strcat(complete_interface, ".");
+			strcat(complete_interface, string_old_vlan_id);
+			
+			/* Remove the handler */
+			read_lock(&dev_base_lock);
+			dev = __dev_get_by_name(&init_net, complete_interface);
+			if (!dev) {
+				LOG_ERR("Invalid device specified to configure");
+				LOG_FEXIT;
+				return inst;	
+			}
+			shim_eth_vlan_packet_type->dev = dev;
+			dev_remove_pack(shim_eth_vlan_packet_type);
+			read_unlock(&dev_base_lock);
+			kfree(complete_interface);
+		}
                 /* FIXME: Add handler to correct interface and vlan id */
                 /* Check if correctness VLAN id and interface name */
 		
 
-		dev_add_pack(&shim_eth_vlan_packet_type);
-	
+		dev_add_pack(shim_eth_vlan_packet_type);
+		kfree(shim_eth_vlan_packet_type);
         }
         LOG_DBG("Configured shim ETH IPC Process");
 
@@ -423,7 +459,7 @@ static int __init mod_init(void)
         shim->opaque = shim_eth_root;
 
         if (shim_register(shim)) {
-                LOG_ERR("Initialization of module shim-dummy failed");
+                LOG_ERR("Initialization of module shim-eth-vlan failed");
                 kfree(shim);
 
                 LOG_FEXIT;
