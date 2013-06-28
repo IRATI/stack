@@ -14,6 +14,37 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#define RINA_PREFIX "ipc-process"
+
+#include "logs.h"
 #include "librina-ipc-process.h"
 
-using namespace rina;
+namespace rina{
+
+/* CLASS FLOW DEALLOCATE REQUEST EVENT */
+FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
+			const ApplicationProcessNamingInformation& DIFName,
+			const ApplicationProcessNamingInformation& appName,
+			unsigned int sequenceNumber):
+						IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,
+								sequenceNumber){
+	this->portId = portId;
+	this->DIFName = DIFName;
+	this->applicationName = appName;
+}
+
+int FlowDeallocateRequestEvent::getPortId() const{
+	return portId;
+}
+
+const ApplicationProcessNamingInformation&
+	FlowDeallocateRequestEvent::getDIFName() const{
+	return DIFName;
+}
+
+const ApplicationProcessNamingInformation&
+	FlowDeallocateRequestEvent::getApplicationName() const{
+	return applicationName;
+}
+
+}

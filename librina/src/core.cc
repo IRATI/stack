@@ -123,6 +123,52 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			}
 			break;
 		}
+		case RINA_C_APP_DEALLOCATE_FLOW_RESPONSE: {
+			AppDeallocateFlowResponseMessage * specificMessage =
+					dynamic_cast<AppDeallocateFlowResponseMessage *>(message);
+			if(send){
+				specificMessage->setDestPortId(
+						getNetlinkPortIdFromAPName(
+								specificMessage->getApplicationName()));
+			}
+			break;
+		}
+		case RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION: {
+			AppFlowDeallocatedNotificationMessage * specificMessage =
+					dynamic_cast<AppFlowDeallocatedNotificationMessage *>(message);
+			if(send){
+				specificMessage->setDestPortId(
+						getNetlinkPortIdFromAPName(
+								specificMessage->getApplicationName()));
+			}
+			break;
+		}
+		case RINA_C_APP_REGISTER_APPLICATION_REQUEST: {
+			AppRegisterApplicationRequestMessage * specificMessage =
+					dynamic_cast<AppRegisterApplicationRequestMessage *>(message);
+			if(send){
+				specificMessage->setDestPortId(getIPCManagerPortId());
+			}else{
+				putAPNametoNetlinkPortIdMapping(
+						specificMessage->getApplicationName(),
+						specificMessage->getSourcePortId());
+			}
+			break;
+		}
+		case RINA_C_APP_REGISTER_APPLICATION_RESPONSE:{
+			AppRegisterApplicationResponseMessage * specificMessage =
+					dynamic_cast<AppRegisterApplicationResponseMessage *>(message);
+			if(send){
+				specificMessage->setDestPortId(
+						getNetlinkPortIdFromAPName(
+								specificMessage->getApplicationName()));
+			}else{
+				putAPNametoNetlinkPortIdMapping(
+						specificMessage->getDifName(),
+						specificMessage->getIpcProcessPortId());
+			}
+			break;
+		}
 		default:
 			throw NetlinkException(NetlinkException::
 						unrecognized_generic_netlink_operation_code);

@@ -321,8 +321,16 @@ class AppDeallocateFlowResponseMessage: public BaseNetlinkMessage {
 	/** If there was an error, optional explanation providing more details */
 	std::string errorDescription;
 
+	/**
+	 * The name of the applicaiton that requested the flow deallocation
+	 */
+	ApplicationProcessNamingInformation applicationName;
+
 public:
 	AppDeallocateFlowResponseMessage();
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	void setApplicationName(
+			const ApplicationProcessNamingInformation& applicationName);
 	const std::string& getErrorDescription() const;
 	void setErrorDescription(const std::string& errorDescription);
 	int getResult() const;
@@ -333,7 +341,8 @@ public:
  * IPC Process -> Application, flow deallocated without the application having
  *  requested it
  */
-class AppFlowDeallocatedNotificationMessage: public BaseNetlinkMessage {
+class AppFlowDeallocatedNotificationMessage:
+		public NetlinkRequestOrNotificationMessage {
 
 	/** The portId of the flow that has been deallocated */
 	int portId;
@@ -344,6 +353,16 @@ class AppFlowDeallocatedNotificationMessage: public BaseNetlinkMessage {
 	/** An optional explanation of why the flow has been deallocated */
 	std::string reason;
 
+	/**
+	 * The name of the applicaiton that was using the flow
+	 */
+	ApplicationProcessNamingInformation applicationName;
+
+	/**
+	 * The name of the applicaiton that requested the flow deallocation
+	 */
+	ApplicationProcessNamingInformation difName;
+
 public:
 	AppFlowDeallocatedNotificationMessage();
 	int getCode() const;
@@ -352,13 +371,20 @@ public:
 	void setPortId(int portId);
 	const std::string& getReason() const;
 	void setReason(const std::string& reason);
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	void setApplicationName(
+			const ApplicationProcessNamingInformation& applicationName);
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
+	IPCEvent* toIPCEvent();
 };
 
 /**
  * Invoked by the application when it wants to register an application
  * to a DIF. Application -> IPC Manager
  */
-class AppRegisterApplicationRequestMessage: public BaseNetlinkMessage {
+class AppRegisterApplicationRequestMessage:
+		public NetlinkRequestOrNotificationMessage {
 
 	/** The name of the application to be registered */
 	ApplicationProcessNamingInformation applicationName;
@@ -373,6 +399,7 @@ public:
 			const ApplicationProcessNamingInformation& applicationName);
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
+	IPCEvent* toIPCEvent();
 };
 
 /**
@@ -380,6 +407,9 @@ public:
  * IPC Manager -> Application
  */
 class AppRegisterApplicationResponseMessage: public BaseNetlinkMessage {
+
+	/** The DIF name where the application wants to register */
+	ApplicationProcessNamingInformation applicationName;
 
 	/**
 	 * Result of the operation. 0 indicates success, a negative value an
@@ -393,10 +423,8 @@ class AppRegisterApplicationResponseMessage: public BaseNetlinkMessage {
 	 */
 	std::string errorDescription;
 
-	/**
-	 * The id of the IPC Process that has registered the applicaiton
-	 */
-	unsigned int ipcProcessId;
+	/** The DIF name where the application wants to register */
+	ApplicationProcessNamingInformation difName;
 
 	/**
 	 * The id of the Netlink port to be used to send messages to the IPC
@@ -408,10 +436,13 @@ class AppRegisterApplicationResponseMessage: public BaseNetlinkMessage {
 
 public:
 	AppRegisterApplicationResponseMessage();
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	void setApplicationName(
+			const ApplicationProcessNamingInformation& applicationName);
 	const std::string& getErrorDescription() const;
 	void setErrorDescription(const std::string& errorDescription);
-	unsigned int getIpcProcessId() const;
-	void setIpcProcessId(unsigned int ipcProcessId);
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
 	unsigned int getIpcProcessPortId() const;
 	void setIpcProcessPortId(unsigned int ipcProcessPortId);
 	int getResult() const;

@@ -29,6 +29,8 @@
 #include "logs.h"
 #include "netlink-messages.h"
 #include "librina-application.h"
+#include "librina-ipc-process.h"
+#include "librina-ipc-manager.h"
 
 namespace rina {
 
@@ -380,6 +382,16 @@ AppDeallocateFlowResponseMessage::AppDeallocateFlowResponseMessage() :
 	this->result = 0;
 }
 
+const ApplicationProcessNamingInformation&
+	AppDeallocateFlowResponseMessage::getApplicationName() const {
+	return applicationName;
+}
+
+void AppDeallocateFlowResponseMessage::setApplicationName(
+		const ApplicationProcessNamingInformation& applicationName) {
+	this->applicationName = applicationName;
+}
+
 const std::string&
 AppDeallocateFlowResponseMessage::getErrorDescription() const {
 	return errorDescription;
@@ -400,7 +412,8 @@ void AppDeallocateFlowResponseMessage::setResult(int result) {
 
 /* CLASS APP FLOW DEALLOCATED NOTIFICATION MESSAGE */
 AppFlowDeallocatedNotificationMessage::AppFlowDeallocatedNotificationMessage() :
-		BaseNetlinkMessage(RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION) {
+		NetlinkRequestOrNotificationMessage(
+				RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION) {
 	this->portId = 0;
 	this->code = 0;
 }
@@ -430,9 +443,36 @@ void AppFlowDeallocatedNotificationMessage::setReason(
 	this->reason = reason;
 }
 
+const ApplicationProcessNamingInformation&
+AppFlowDeallocatedNotificationMessage::getDifName() const {
+	return difName;
+}
+
+void AppFlowDeallocatedNotificationMessage::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
+const ApplicationProcessNamingInformation&
+	AppFlowDeallocatedNotificationMessage::getApplicationName() const {
+	return applicationName;
+}
+
+void AppFlowDeallocatedNotificationMessage::setApplicationName(
+		const ApplicationProcessNamingInformation& applicationName) {
+	this->applicationName = applicationName;
+}
+
+IPCEvent* AppFlowDeallocatedNotificationMessage::toIPCEvent(){
+	FlowDeallocatedEvent * event = new FlowDeallocatedEvent(
+			portId, code, reason, difName);
+	return event;
+}
+
 /* CLASS APP REGISTER APPLICATION REQUEST MESSAGE */
 AppRegisterApplicationRequestMessage::AppRegisterApplicationRequestMessage() :
-		BaseNetlinkMessage(RINA_C_APP_REGISTER_APPLICATION_REQUEST) {
+		NetlinkRequestOrNotificationMessage(
+				RINA_C_APP_REGISTER_APPLICATION_REQUEST) {
 }
 
 const ApplicationProcessNamingInformation&
@@ -455,12 +495,31 @@ void AppRegisterApplicationRequestMessage::setDifName(
 	this->difName = difName;
 }
 
+IPCEvent* AppRegisterApplicationRequestMessage::toIPCEvent(){
+	ApplicationRegistrationRequestEvent * event =
+			new ApplicationRegistrationRequestEvent(
+					applicationName,
+					difName,
+					getSequenceNumber());
+
+	return event;
+}
+
 /* CLASS APP REGISTER APPLICATION RESPONSE MESSAGE */
 AppRegisterApplicationResponseMessage::AppRegisterApplicationResponseMessage() :
 		BaseNetlinkMessage(RINA_C_APP_REGISTER_APPLICATION_RESPONSE) {
-	this->ipcProcessId = 0;
 	this->ipcProcessPortId = 0;
 	this->result = 0;
+}
+
+const ApplicationProcessNamingInformation&
+	AppRegisterApplicationResponseMessage::getApplicationName() const {
+		return applicationName;
+	}
+
+void AppRegisterApplicationResponseMessage::setApplicationName(
+		const ApplicationProcessNamingInformation& applicationName) {
+	this->applicationName = applicationName;
 }
 
 const std::string&
@@ -471,15 +530,6 @@ const std::string&
 void AppRegisterApplicationResponseMessage::setErrorDescription(
 		const std::string& errorDescription) {
 	this->errorDescription = errorDescription;
-}
-
-unsigned int AppRegisterApplicationResponseMessage::getIpcProcessId() const {
-	return ipcProcessId;
-}
-
-void AppRegisterApplicationResponseMessage::setIpcProcessId(
-		unsigned int ipcProcessId) {
-	this->ipcProcessId = ipcProcessId;
 }
 
 unsigned int AppRegisterApplicationResponseMessage::getIpcProcessPortId() const {
@@ -497,6 +547,16 @@ int AppRegisterApplicationResponseMessage::getResult() const {
 
 void AppRegisterApplicationResponseMessage::setResult(int result) {
 	this->result = result;
+}
+
+const ApplicationProcessNamingInformation&
+	AppRegisterApplicationResponseMessage::getDifName() const {
+	return difName;
+}
+
+void AppRegisterApplicationResponseMessage::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
 }
 
 }

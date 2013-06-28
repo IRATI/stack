@@ -354,13 +354,30 @@ Singleton<IPCManager> ipcManager;
 /* CLASS FLOW DEALLOCATED EVENT */
 
 FlowDeallocatedEvent::FlowDeallocatedEvent(
-		int portId, unsigned int sequenceNumber) :
-		IPCEvent(FLOW_DEALLOCATED_EVENT, sequenceNumber) {
+		int portId, int code, const std::string& reason,
+		const ApplicationProcessNamingInformation& difName) :
+		IPCEvent(FLOW_DEALLOCATED_EVENT, 0) {
 	this->portId = portId;
+	this->code = code;
+	this->reason = reason;
+	this->difName = difName;
 }
 
 int FlowDeallocatedEvent::getPortId() const {
 	return portId;
+}
+
+int FlowDeallocatedEvent::getCode() const{
+	return code;
+}
+
+const std::string FlowDeallocatedEvent::getReason() const{
+	return reason;
+}
+
+const ApplicationProcessNamingInformation
+	FlowDeallocatedEvent::getDIFName() const{
+	return difName;
 }
 
 /* CLASS APPLICATION UNREGISTERED EVENT */

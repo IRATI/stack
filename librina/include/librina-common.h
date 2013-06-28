@@ -372,30 +372,6 @@ public:
 };
 
 /**
- * Event informing the IPC Process about a flow deallocation request
- */
-class FlowDeallocateRequestEvent: public IPCEvent {
-	/** The port-id that locally identifies the flow */
-	int portId;
-
-	/** The name of the DIF that is providing this flow */
-	ApplicationProcessNamingInformation DIFName;
-
-	/** The application that requested the flow deallocation*/
-	ApplicationProcessNamingInformation applicationName;
-
-public:
-	FlowDeallocateRequestEvent(int portId,
-			const ApplicationProcessNamingInformation& DIFName,
-			const ApplicationProcessNamingInformation& appName,
-			unsigned int sequenceNumber);
-	int getPortId() const;
-	const ApplicationProcessNamingInformation& getDIFName() const;
-	const ApplicationProcessNamingInformation& getApplicationName() const;
-};
-
-
-/**
  * Stores IPC Events that have happened, ready to be consumed and
  * processed by client classes.
  */
