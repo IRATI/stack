@@ -4,19 +4,12 @@
 
 menuconfig RINA
 	bool "RINA support"
-        depends on NET
+        depends on NET && SYSFS
 	default y
 	---help---
 	  No help for the time being
 
 if RINA
-
-config RINA_SYSFS
-	bool "SysFS support"
-        depends on SYSFS
-	default y
-	help
-	  No help for the time being
 
 config RINA_DEBUG
 	bool "Debugging support"
