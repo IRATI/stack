@@ -18,17 +18,17 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/slab.h>
 #include <linux/export.h>
+#include <linux/string.h>
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
+#include <linux/slab.h>
 
 #define RINA_PREFIX "personality"
 
 #include "logs.h"
 #include "utils.h"
 #include "personality.h"
-#include "shim.h"
 
 /* FIXME: Bogus, to be removed ASAP */
 struct personality * default_personality = NULL;
@@ -60,14 +60,16 @@ int rina_personality_init(struct kobject * parent)
                 return -1;
         }
 
-        ASSERT(personalities       == NULL);
-        ASSERT(default_personality == NULL);
+        ASSERT(personalities == NULL);
 
         personalities = kset_create_and_add("personalities", NULL, parent);
         if (!personalities) {
                 LOG_ERR("Cannot initialize personality layer");
                 return -1;
         }
+
+        ASSERT(personalities       != NULL);
+        ASSERT(default_personality == NULL);
 
         LOG_DBG("Personality layer initialized successfully");
 
@@ -110,7 +112,7 @@ static int is_name_ok(const char * name)
 
 static int are_ops_ok(const struct personality_ops * ops)
 {
-        LOG_DBG("Checking ops");
+        LOG_DBG("Checking ops %pK", ops);
 
         if (!ops) {
                 LOG_ERR("Ops are empty");
