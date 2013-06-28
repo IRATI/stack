@@ -451,20 +451,11 @@ int rina_netlink_init(void)
 
 void rina_netlink_exit(void)
 {
-        int ret, i;
+        int ret;
 
         LOG_FBEGN;
 
-        /* Unregister the functions*/
-        for (i=0; i < ARRAY_SIZE(nl_rina_ops); i++) {
-                ret = genl_unregister_ops(&nl_rina_family, &nl_rina_ops[i]);
-                if(ret < 0) {
-                        LOG_DBG("unregister ops: %i\n",ret);
-                        return;
-                }
-        }
-
-        /* Unregister the family */
+        /* Unregister the family & operations*/
         ret = genl_unregister_family(&nl_rina_family);
         if(ret != 0) {
                 LOG_DBG("unregister family %i\n", ret);
