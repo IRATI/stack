@@ -104,19 +104,19 @@ struct shim {
 };
 
 struct shims {
-        struct kset * shims;
+        struct kset * set;
 };
 
 /* Called by the kipcm, might disappear */
 struct shims * shims_init(struct kobject * parent);
-int            shims_fini(void);
+int            shims_fini(struct shims * shims);
 
 /* Called (once) by each shim module upon loading/unloading */
-struct shim * shim_register(struct shims *    parent,
-                            const char *      name,
-                            void *            data,
-                            struct shim_ops * ops);
-int           shim_unregister(struct shims * parent,
-                              struct shim *  shim);
+struct shim *  shim_register(struct shims *    parent,
+                             const char *      name,
+                             void *            data,
+                             struct shim_ops * ops);
+int            shim_unregister(struct shims * parent,
+                               struct shim *  shim);
 
 #endif

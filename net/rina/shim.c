@@ -1,5 +1,5 @@
 /*
- *  Shim IPC Process
+ *  Shim IPC Processes layer
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -24,7 +24,7 @@
 #include <linux/sysfs.h>
 #include <linux/slab.h>
 
-#define RINA_PREFIX "shim"
+#define RINA_PREFIX "shims"
 
 #include "logs.h"
 #include "utils.h"
@@ -52,19 +52,19 @@ struct shims * shims_init(struct kobject * parent)
 
         LOG_DBG("Initializing shims layer");
 
-        temp = kzalloc(sizeof(*temp), GFP_KERN);
+        temp = kzalloc(sizeof(*temp), GFP_KERNEL);
         if (!temp) {
                 LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*temp));
-                retun NULL;
+                return NULL;
         }
 
-        temp->shims = kset_create_and_add("shims", NULL, parent);
-        if (!temp->shims) {
+        temp->set = kset_create_and_add("shims", NULL, parent);
+        if (!temp->set) {
                 LOG_ERR("Cannot initialize shims layer support");
                 return NULL;
         }
 
-        ASSERT(temp->shims != NULL);
+        ASSERT(temp->set != NULL);
 
         LOG_DBG("Shims layer initialized successfully");
 
@@ -77,7 +77,7 @@ int shims_fini(struct shims * shims)
 
         if (!shims) {
                 LOG_ERR("Bogus shims, cannot finalize");
-                retun -1;
+                return -1;
         }
 
         /* FIXME: Check pending objects and flush 'em all */
@@ -130,15 +130,49 @@ static int are_ops_ok(const struct shim_ops * ops)
 
 #define to_shim(O) container_of(O, struct shim, kobj)
 
+#define KSET_FIND_OBJECT_EXPORTED 0
+
+#if !KSET_FIND_OBJECT_EXPORTED
+/* FIXME:
+ *   In kernel 3.9.2, there's no EXPORT_SYMBOL for kset_find_object so this
+ *   is a copy and paster from lib/kobject.c. Please fix that ASAP
+ */
+static struct kobject *kobject_get_unless_zero(struct kobject *kobj)
+{
+	if (!kref_get_unless_zero(&kobj->kref))
+		kobj = NULL;
+	return kobj;
+}
+
+struct kobject *kset_find_obj(struct kset *kset, const char *name)
+{
+	struct kobject *k;
+	struct kobject *ret = NULL;
+
+	spin_lock(&kset->list_lock);
+
+	list_for_each_entry(k, &kset->list, entry) {
+		if (kobject_name(k) && !strcmp(kobject_name(k), name)) {
+			ret = kobject_get_unless_zero(k);
+			break;
+		}
+	}
+
+	spin_unlock(&kset->list_lock);
+	return ret;
+}
+#endif
+
 static struct shim * shim_find(struct shims * parent,
                                const char *   name)
 {
         struct kobject * k;
 
         ASSERT(parent);
+        ASSERT(parent->set);
         ASSERT(name);
 
-        k = kset_find_obj(parent->shims, name);
+        k = kset_find_obj(parent->set, name);
         if (k) {
                 kobject_put(k);
                 return to_shim(k);
@@ -172,8 +206,6 @@ struct shim * shim_register(struct shims *    parent,
 
         LOG_DBG("Registering shim '%s'", name);
 
-        ASSERT(shims);
-
         tmp = shim_find(parent, name);
         if (!tmp) {
                 LOG_ERR("Shim '%s' already registered", name);
@@ -189,7 +221,7 @@ struct shim * shim_register(struct shims *    parent,
         shim->data = data;
         shim->ops  = ops;
 
-        shim->kobj.kset = shims;
+        shim->kobj.kset = parent->set;
         if (kobject_init_and_add(&shim->kobj, &shim_ktype, NULL,
                                  "%s", name)) {
                 LOG_ERR("Cannot add shim '%s' to the set", name);
@@ -217,26 +249,24 @@ int shim_unregister(struct shims * parent,
         struct shim * tmp;
         const char *  name;
 
+        if (!parent) {
+                LOG_ERR("Bogus parent, cannot unregister shim %pK", shim);
+                return -1;
+        }
+
         if (!shim) {
                 LOG_ERR("Bogus shim, cannot unregister");
                 return -1;
         }
-
-        ASSERT(shim);
 
         name = kobject_name(&shim->kobj);
 
         ASSERT(name);
         ASSERT(is_name_ok(name));
 
-        if (!parent) {
-                LOG_ERR("Bogus parent, cannot unregister shim '%s", name);
-                return -1;
-        }
-
         LOG_DBG("Unregistering shim '%s'", name);
 
-        ASSERT(shims);
+        ASSERT(parent);
 
         tmp = shim_find(parent, name);
         if (!tmp) {
