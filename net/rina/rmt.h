@@ -43,6 +43,6 @@ struct rmt_instance_t {
 };
 
 void * rmt_init(void);
-void   rmt_fini(void * opaque);
+int    rmt_fini(void * opaque);
 
 #endif
