@@ -223,7 +223,7 @@ struct personality * rina_personality_register(const char *             name,
 
         if (pers->ops->init) {
                 LOG_DBG("Calling personality '%s' initializer", name);
-                if (!pers->ops->init(&personalities->kobj, pers->data)) {
+                if (pers->ops->init(&personalities->kobj, pers->data)) {
                         LOG_ERR("Could not initialize personality '%s'",
                                 name);
                         kobject_put(&pers->kobj);
@@ -275,8 +275,12 @@ int rina_personality_unregister(struct personality * pers)
 
         if (pers->ops->fini) {
                 LOG_DBG("Calling personality '%s' finalizer", name);
-                pers->ops->fini(pers->data);
-                LOG_DBG("Personality '%s' finalized successfully", name);
+                if (pers->ops->fini(pers->data)) {
+                        LOG_CRIT("Could not finalize personality '%s', "
+                                 "the system might become unstable", name);
+                } else
+                        LOG_DBG("Personality '%s' finalized successfully",
+                                name);
         }
 
         kobject_put(&pers->kobj);
