@@ -19,17 +19,21 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/hashtable.h>
+#include <linux/list.h>
 
 #define RINA_PREFIX "netlink"
 
 #include "logs.h"
 #include "netlink.h"
 
-/* Attribute policy */
-//static struct nla_policy nl_rina_policy[NETLINK_RINA_A_MAX + 1] = {
-//	[NETLINK_RINA_A_MSG] = { .type = NLA_NUL_STRING },
-//};
+/*  Stores the message callbacks */
+struct list_head * callback_list;
+
+struct callback_t {
+	struct list_head list;
+	message_handler_t cb;
+}
+
 
 /* Family definition */
 static struct genl_family nl_rina_family = {
@@ -39,6 +43,7 @@ static struct genl_family nl_rina_family = {
         .version = 1,
         .maxattr = NETLINK_RINA_A_MAX,
 };
+
 
 /*  Table to collect callbacks */
 typedef int (* message_handler_t)(struct sk_buff *, struct genl_info *);
