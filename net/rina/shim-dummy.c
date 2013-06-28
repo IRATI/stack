@@ -52,13 +52,17 @@ struct dummy_flow_t {
         struct list_head      list;
 };
 
-static struct {
+struct sdata {
 	/*
 	 * FIXME: Used to keep a list of all the shim dummy instances.
 	 * it's the head node that dummy_instances use to add, etc.
 	 */
 	struct list_head * shim_list;
-} shim_data;
+};
+
+static struct sdata * shim_data;
+
+static struct shim_ops * ops;
 
 static int dummy_flow_allocate_request(void *                     data,
                                        const struct name_t *      source,
@@ -229,16 +233,16 @@ static struct shim_instance * dummy_create(void *           data,
 		kfree(dummy_inst);
 		kfree(port_flow);
 		LOG_FEXIT;
-		return -1;
+		return NULL;
 	}
 	instance->data              = dummy_inst;
-	ops->flow_allocate_request  = dummy_flow_allocate_request;
-	ops->flow_allocate_response = dummy_flow_allocate_response;
-	ops->flow_deallocate        = dummy_flow_deallocate;
-	ops->application_register   = dummy_application_register;
-	ops->application_unregister = dummy_application_unregister;
-	ops->sdu_write              = dummy_sdu_write;
-	ops->sdu_read               = dummy_sdu_read;
+	ops.flow_allocate_request  = dummy_flow_allocate_request;
+	ops.flow_allocate_response = dummy_flow_allocate_response;
+	ops.flow_deallocate        = dummy_flow_deallocate;
+	ops.application_register   = dummy_application_register;
+	ops.application_unregister = dummy_application_unregister;
+	ops.sdu_write              = dummy_sdu_write;
+	ops.sdu_read               = dummy_sdu_read;
 	instance->ops               = ops;
 
 	INIT_LIST_HEAD(&dummy_inst->list);
@@ -294,13 +298,12 @@ dummy_configure(void *                     data,
         return NULL;
 }
 
-static int /*__init*/ mod_init(void)
+static int __init mod_init(void)
 {
 	struct list_head * dummy_shim_list;
 	const char *       name = "shim_dummy";
 	struct kobject *   kobj;
 	struct shims *     parent;
-	struct shim_ops *  ops;
 	LOG_FBEGN;
 
         dummy_shim_list = kmalloc(sizeof(*dummy_shim_list), GFP_KERNEL);
@@ -313,8 +316,7 @@ static int /*__init*/ mod_init(void)
 	}
 	dummy_shim_list->next = dummy_shim_list;
 	dummy_shim_list->prev = dummy_shim_list;
-	shim_data.shim_list   = dummy_shim_list;
-	shim->data            = shim_data;
+	shim_data->shim_list   = dummy_shim_list;
 	kobj = kobject_create();
 	if (!kobj) {
 		LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*kobj));
@@ -332,7 +334,7 @@ static int /*__init*/ mod_init(void)
         ops->create    = dummy_create;
         ops->destroy   = dummy_destroy;
         ops->configure = dummy_configure;
-        shim = shim_register(parent, name, data, ops);
+        shim = shim_register(parent, name, shim_data, ops);
         if (!shim) {
                 LOG_ERR("Initialization of module shim-dummy failed");
 
@@ -352,15 +354,26 @@ static void __exit mod_exit(void)
 {
         struct dummy_instance_t *pos, *next;
         struct dummy_flow_t     *pos_flow, *next_flow;
+        struct kobject *         kobj;
+        struct shims *           parent;
 
 	LOG_FBEGN;
 
 	ASSERT(shim);
-	ASSERT(shim->opaque);
-	if (shim_unregister(shim)) {
+	ASSERT(shim->data);
+	kobj = kobject_create();
+	if (!kobj) {
+		LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*kobj));
+	}
+	parent = shims_init(kobj);
+	if (!parent) {
+		kfree(kobj);
+	}
+	parent->set = shim->kobj.kset;
+	if (shim_unregister(parent, shim)) {
         	/* FIXME: Should we do something here? */
         }
-        list_for_each_entry_safe(pos, next, (struct list_head *) shim->opaque,
+        list_for_each_entry_safe(pos, next, (struct list_head *) shim->data,
         		list) {
         	list_del(&pos->list);
         	list_for_each_entry_safe(pos_flow,
@@ -370,7 +383,7 @@ static void __exit mod_exit(void)
         	}
         	kfree(pos);
         }
-        kfree(shim->opaque);
+        kfree(shim->data);
         kfree(shim);
 
         /* FIXME: We must unroll all the things done in mod_init */
