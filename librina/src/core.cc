@@ -103,6 +103,26 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			}
 			break;
 		}
+		case RINA_C_APP_ALLOCATE_FLOW_RESPONSE: {
+			AppAllocateFlowResponseMessage * specificMessage =
+					dynamic_cast<AppAllocateFlowResponseMessage *>(message);
+			if(send){
+				specificMessage->setDestPortId(
+						getNetlinkPortIdFromAPName(
+								specificMessage->getDifName()));
+			}
+			break;
+		}
+		case RINA_C_APP_DEALLOCATE_FLOW_REQUEST: {
+			AppDeallocateFlowRequestMessage * specificMessage =
+					dynamic_cast<AppDeallocateFlowRequestMessage *>(message);
+			if(send){
+				specificMessage->setDestPortId(
+						getNetlinkPortIdFromAPName(
+								specificMessage->getDifName()));
+			}
+			break;
+		}
 		default:
 			throw NetlinkException(NetlinkException::
 						unrecognized_generic_netlink_operation_code);

@@ -117,7 +117,6 @@ void log(LOG_LEVEL level, const char * fmt, ...) {
 
 	va_list args;
 	va_start(args, fmt);
-
 	pthread_rwlock_rdlock(&outputStreamLock);
 	vfprintf(logOutputStream, fmt, args);
 	pthread_rwlock_unlock(&outputStreamLock);

@@ -533,6 +533,32 @@ const ApplicationProcessNamingInformation&
 	return destinationApplicationName;
 }
 
+/* CLASS FLOW DEALLOCATE REQUEST EVENT */
+FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
+			const ApplicationProcessNamingInformation& DIFName,
+			const ApplicationProcessNamingInformation& appName,
+			unsigned int sequenceNumber):
+						IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,
+								sequenceNumber){
+	this->portId = portId;
+	this->DIFName = DIFName;
+	this->applicationName = appName;
+}
+
+int FlowDeallocateRequestEvent::getPortId() const{
+	return portId;
+}
+
+const ApplicationProcessNamingInformation&
+	FlowDeallocateRequestEvent::getDIFName() const{
+	return DIFName;
+}
+
+const ApplicationProcessNamingInformation&
+	FlowDeallocateRequestEvent::getApplicationName() const{
+	return applicationName;
+}
+
 /* CLASS IPC EVENT PRODUCER */
 
 /* Auxiliar function called in case of using the stubbed version of the API */

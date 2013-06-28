@@ -299,6 +299,16 @@ AppAllocateFlowResponseMessage::AppAllocateFlowResponseMessage() :
 	this->notifySource = false;
 }
 
+const ApplicationProcessNamingInformation&
+	AppAllocateFlowResponseMessage::getDifName() const {
+	return difName;
+}
+
+void AppAllocateFlowResponseMessage::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
 bool AppAllocateFlowResponseMessage::isAccept() const {
 	return accept;
 }
@@ -326,7 +336,7 @@ void AppAllocateFlowResponseMessage::setNotifySource(bool notifySource) {
 
 /* CLASS APP DEALLOCATE FLOW REQUEST MESSAGE */
 AppDeallocateFlowRequestMessage::AppDeallocateFlowRequestMessage() :
-		BaseNetlinkMessage(RINA_C_APP_DEALLOCATE_FLOW_REQUEST) {
+		NetlinkRequestOrNotificationMessage(RINA_C_APP_DEALLOCATE_FLOW_REQUEST) {
 	this->portId = 0;
 }
 
@@ -346,6 +356,22 @@ int AppDeallocateFlowRequestMessage::getPortId() const {
 
 void AppDeallocateFlowRequestMessage::setPortId(int portId) {
 	this->portId = portId;
+}
+
+const ApplicationProcessNamingInformation&
+	AppDeallocateFlowRequestMessage::getDifName() const {
+	return difName;
+}
+
+void AppDeallocateFlowRequestMessage::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
+IPCEvent* AppDeallocateFlowRequestMessage::toIPCEvent(){
+	FlowDeallocateRequestEvent * event = new FlowDeallocateRequestEvent(
+			portId, difName, applicationName, getSequenceNumber());
+	return event;
 }
 
 /* CLASS APP DEALLOCATE FLOW RESPONSE MESSAGE */

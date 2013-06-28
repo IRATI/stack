@@ -249,6 +249,9 @@ public:
  */
 class AppAllocateFlowResponseMessage: public BaseNetlinkMessage{
 
+	/** The name of the DIF where the flow is being allocated */
+	ApplicationProcessNamingInformation difName;
+
 	/** True if the application accepts the flow, false otherwise */
 	bool accept;
 
@@ -266,6 +269,8 @@ class AppAllocateFlowResponseMessage: public BaseNetlinkMessage{
 
 public:
 	AppAllocateFlowResponseMessage();
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
 	bool isAccept() const;
 	void setAccept(bool accept);
 	const std::string& getDenyReason() const;
@@ -278,10 +283,14 @@ public:
  * Issued by the application process when it whishes to deallocate a flow.
  * Application -> IPC Process
  */
-class AppDeallocateFlowRequestMessage: public BaseNetlinkMessage {
+class AppDeallocateFlowRequestMessage:
+		public NetlinkRequestOrNotificationMessage {
 
 	/** The id of the flow to be deallocated */
 	int portId;
+
+	/** The name of the DIF where the flow is being allocated */
+	ApplicationProcessNamingInformation difName;
 
 	/**
 	 * The name of the applicaiton requesting the flow deallocation,
@@ -296,6 +305,9 @@ public:
 			const ApplicationProcessNamingInformation& applicationName);
 	int getPortId() const;
 	void setPortId(int portId);
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
+	IPCEvent* toIPCEvent();
 };
 
 /**
