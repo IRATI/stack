@@ -437,7 +437,6 @@ int testAppDeallocateFlowRequestMessage() {
 	return returnValue;
 }
 
-
 int testAppDeallocateFlowResponseMessage() {
 	std::cout << "TESTING APP DEALLOCATE FLOW RESPONSE MESSAGE\n";
 	int returnValue = 0;
@@ -486,7 +485,8 @@ int testAppDeallocateFlowResponseMessage() {
 		std::cout << "Result on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
-	} else if (message->getErrorDescription() != recoveredMessage->getErrorDescription()) {
+	} else if (message->getErrorDescription()
+			!= recoveredMessage->getErrorDescription()) {
 		std::cout << "Error description on original and recovered "
 				<< "messages are different\n";
 		returnValue = -1;
@@ -508,7 +508,92 @@ int testAppDeallocateFlowResponseMessage() {
 	return returnValue;
 }
 
+int testAppFlowDeallocatedNotificationMessage() {
+	std::cout << "TESTING APP FLOW DEALLOCATED NOTIFICATION MESSAGE\n";
+	int returnValue = 0;
 
+	ApplicationProcessNamingInformation * applicationName =
+			new ApplicationProcessNamingInformation();
+	applicationName->setProcessName("/apps/source");
+	applicationName->setProcessInstance("35");
+	applicationName->setEntityName("database");
+	applicationName->setEntityInstance("3");
+
+	ApplicationProcessNamingInformation * difName =
+			new ApplicationProcessNamingInformation();
+	difName->setProcessName("/difs/Test5.DIF");
+
+	AppFlowDeallocatedNotificationMessage * message =
+			new AppFlowDeallocatedNotificationMessage();
+	message->setPortId(47);
+	message->setCode(7);
+	message->setReason("Reason description");
+	message->setDifName(*difName);
+	message->setApplicationName(*applicationName);
+
+	struct nl_msg* netlinkMessage;
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage) {
+		std::cout << "Error allocating Netlink message\n";
+	}
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
+			0, 0, message->getOperationCode(), 0);
+
+	int result = putBaseNetlinkMessage(netlinkMessage, message);
+	if (result < 0) {
+		std::cout
+				<< "Error constructing Application Flow Deallocated Notification "
+				<< "Message \n";
+		nlmsg_free(netlinkMessage);
+		delete difName;
+		delete applicationName;
+		delete message;
+		return result;
+	}
+
+	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+	AppFlowDeallocatedNotificationMessage * recoveredMessage =
+			dynamic_cast<AppFlowDeallocatedNotificationMessage *>(parseBaseNetlinkMessage(
+					netlinkMessageHeader));
+	if (message == NULL) {
+		std::cout
+				<< "Error parsing Application Flow Deallocated Notification Message "
+				<< "\n";
+		returnValue = -1;
+	} else if (message->getPortId() != recoveredMessage->getPortId()) {
+		std::cout << "PortId on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message->getCode() != recoveredMessage->getCode()) {
+		std::cout << "Code on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message->getReason() != recoveredMessage->getReason()) {
+		std::cout << "Reason on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message->getApplicationName()
+			!= recoveredMessage->getApplicationName()) {
+		std::cout << "Application name on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message->getDifName() != recoveredMessage->getDifName()) {
+		std::cout << "DIF name on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	}
+
+	if (returnValue == 0) {
+		std::cout << "AppDeallocateFlowRequest test ok\n";
+	}
+	nlmsg_free(netlinkMessage);
+	delete difName;
+	delete applicationName;
+	delete message;
+	delete recoveredMessage;
+
+	return returnValue;
+}
 
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING LIBRINA-NETLINK-PARSERS\n";
@@ -541,7 +626,12 @@ int main(int argc, char * argv[]) {
 	}
 
 	result = testAppDeallocateFlowResponseMessage();
-		if (result < 0) {
-			return result;
-		}
+	if (result < 0) {
+		return result;
+	}
+
+	result = testAppFlowDeallocatedNotificationMessage();
+	if (result < 0) {
+		return result;
+	}
 }
