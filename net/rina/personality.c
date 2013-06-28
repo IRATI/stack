@@ -267,7 +267,8 @@ int rina_personality_unregister(struct personality * pers)
 
         tmp = personality_find(name);
         if (!tmp) {
-                LOG_ERR("Personality '%s' not registered", name);
+                LOG_ERR("Personality '%s' is not registered, bailing out",
+                        name);
                 return -1;
         }
 

@@ -278,7 +278,7 @@ int shim_unregister(struct shims * parent,
 
         kfree(shim); /* FIXME: To be removed */
 
-        LOG_INFO("Shim '%s' unregistered successfully", name);
+        LOG_DBG("Shim unregistered successfully");
 
         return 0;
 }
