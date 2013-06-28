@@ -37,6 +37,7 @@ struct personality_data {
         void * kipcm;
         void * efcp;
         void * rmt;
+        void * shims;
 };
 
 #define to_pd(X) ((struct personality_data *) X)
@@ -156,9 +157,10 @@ static int __init mod_init(void)
                 return -1;
         }
 
-        LOG_DBG("Initializing shim layer");
-        if (shim_init())
-                return -1;
+        LOG_DBG("Initializing shims layer");
+        data.shims = shims_init(NULL); /* FIXME: Wrong root node */
+        if (!data.shims)
+                goto CLEANUP_NONE;
 
         LOG_DBG("Initializing kipcm component");
         data.kipcm = kipcm_init();
@@ -193,7 +195,8 @@ static int __init mod_init(void)
  CLEANUP_KIPCM:
         kipcm_fini(data.kipcm);
  CLEANUP_SHIM:
-        shim_exit();
+        shims_fini(data.shims);
+ CLEANUP_NONE:
 
         return -1;
 }
