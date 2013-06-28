@@ -216,8 +216,7 @@ static void __exit mod_exit(void)
         rmt_fini(data.rmt);
         efcp_fini(data.efcp);
         kipcm_fini(data.kipcm);
-
-        shim_exit();
+        shims_fini(data.shims);
 
         personality = NULL;
 
