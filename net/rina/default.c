@@ -243,7 +243,7 @@ static int __init mod_init(void)
         if (!personality)
                 return -1;
 
-        ASSERT(personality == NULL);
+        ASSERT(personality != NULL);
 
         LOG_DBG("Rina default personality loaded successfully");
 
