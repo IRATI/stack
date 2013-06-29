@@ -33,14 +33,13 @@ struct personality_ops {
                      void *           data);
         int (* fini)(void * data);
 
-        /* Functions exported to the personality user */
         int (* ipc_create)(void *                    data,
                            const struct name_t *     name,
                            ipc_process_id_t          id,
                            dif_type_t                type);
-        int (* ipc_configure)(void *                            data,
-                              ipc_process_id_t                  id,
-                              const struct ipc_process_conf_t * configuration);
+        int (* ipc_configure)(void *                          data,
+                              ipc_process_id_t                id,
+                              const struct ipc_process_conf * configuration);
         int (* ipc_destroy)(void *           data,
                             ipc_process_id_t id);
         
@@ -66,13 +65,12 @@ struct personality {
         struct personality_ops * ops;
 };
 
-int  rina_personality_init(struct kobject * parent);
-void rina_personality_exit(void);
-
+int                  rina_personality_init(struct kobject * parent);
+void                 rina_personality_exit(void);
 struct personality * rina_personality_register(const char *             name,
                                                void *                   data,
                                                struct personality_ops * ops);
 
-int rina_personality_unregister(struct personality * pers);
+int                  rina_personality_unregister(struct personality * pers);
 
 #endif
