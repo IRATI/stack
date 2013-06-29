@@ -22,6 +22,8 @@
 #ifndef RINA_RMT_H
 #define RINA_RMT_H
 
+#include <linux/kobject.h>
+
 struct rmt_conf_t {
 	/* To do, only a placeholder right now */
 };
@@ -42,7 +44,7 @@ struct rmt_instance_t {
 	/* LIST_HEAD(pdu_fwd_table, pdu_fwd_entry_t); */
 };
 
-void * rmt_init(void);
+void * rmt_init(struct kobject * parent);
 int    rmt_fini(void * opaque);
 
 #endif
