@@ -22,6 +22,8 @@
 #ifndef RINA_EFCP_H
 #define RINA_EFCP_H
 
+#include <linux/kobject.h>
+
 #include "common.h"
 #include "kipcm.h"
 
@@ -216,7 +218,7 @@ struct dtcp_state_vector_t {
         uint_t    pdus_rcvd_in_time_unit;
 };
 
-void *   efcp_init(void);
+void *   efcp_init(struct kobject * parent);
 int      efcp_fini(void * opaque);
 int      efcp_write(void *               opaque,
                     port_id_t            port_id,
