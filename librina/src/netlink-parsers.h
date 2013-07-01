@@ -211,5 +211,23 @@ int putAppRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 AppRegisterApplicationRequestMessage * parseAppRegisterApplicationRequestMessage(
 		nlmsghdr *hdr);
 
+/* AppRegisterApplicationResponseMessage CLASS*/
+enum AppRegisterApplicationResponseMessageAttributes {
+	ARARE_ATTR_APP_NAME = 1,
+	ARARE_ATTR_RESULT,
+	ARARE_ATTR_ERROR_DESCRIPTION,
+	ARARE_ATTR_DIF_NAME,
+	ARARE_ATTR_PROCESS_PORT_ID,
+	__ARARE_ATTR_MAX,
+};
+
+#define ARARE_ATTR_MAX (__ARARE_ATTR_MAX -1)
+
+int putAppRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
+		const AppRegisterApplicationResponseMessage& object);
+
+AppRegisterApplicationResponseMessage * parseAppRegisterApplicationResponseMessage(
+		nlmsghdr *hdr);
+
 }
 #endif /* LIBRINA_NETLINK_PARSERS_H_ */

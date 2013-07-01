@@ -96,13 +96,22 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 	}
 	case RINA_C_APP_REGISTER_APPLICATION_REQUEST: {
 		AppRegisterApplicationRequestMessage * registerApplicationRequestObject =
-					dynamic_cast<AppRegisterApplicationRequestMessage *>(message);
-			if (putAppRegisterApplicationRequestMessageObject(netlinkMessage,
-					*registerApplicationRequestObject) < 0) {
-				return -1;
-			}
-			return 0;
+				dynamic_cast<AppRegisterApplicationRequestMessage *>(message);
+		if (putAppRegisterApplicationRequestMessageObject(netlinkMessage,
+				*registerApplicationRequestObject) < 0) {
+			return -1;
 		}
+		return 0;
+	}
+	case RINA_C_APP_REGISTER_APPLICATION_RESPONSE: {
+		AppRegisterApplicationResponseMessage * registerApplicationResponseObject =
+				dynamic_cast<AppRegisterApplicationResponseMessage *>(message);
+		if (putAppRegisterApplicationResponseMessageObject(netlinkMessage,
+				*registerApplicationResponseObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
 
 	default: {
 		return -1;
@@ -138,8 +147,11 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 		return parseAppFlowDeallocatedNotificationMessage(netlinkMessageHeader);
 	}
 	case RINA_C_APP_REGISTER_APPLICATION_REQUEST: {
-			return parseAppRegisterApplicationRequestMessage(netlinkMessageHeader);
-		}
+		return parseAppRegisterApplicationRequestMessage(netlinkMessageHeader);
+	}
+	case RINA_C_APP_REGISTER_APPLICATION_RESPONSE: {
+		return parseAppRegisterApplicationResponseMessage(netlinkMessageHeader);
+	}
 	default: {
 		LOG_ERR(
 				"Generic Netlink message contains unrecognized command code: %d",
@@ -643,6 +655,41 @@ int putAppRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
+int putAppRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
+		const AppRegisterApplicationResponseMessage& object) {
+	struct nlattr *difName, *applicationName;
+
+	NLA_PUT_U32(netlinkMessage, ARARE_ATTR_RESULT, object.getResult());
+	NLA_PUT_STRING(netlinkMessage, ARARE_ATTR_ERROR_DESCRIPTION,
+			object.getErrorDescription().c_str());
+	NLA_PUT_U32(netlinkMessage, ARARE_ATTR_PROCESS_PORT_ID,
+			object.getIpcProcessPortId());
+
+	if (!(applicationName = nla_nest_start(netlinkMessage, ARARE_ATTR_APP_NAME))) {
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getApplicationName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, applicationName);
+
+	if (!(difName = nla_nest_start(netlinkMessage, ARARE_ATTR_DIF_NAME))) {
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getDifName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, difName);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building AppRegisterApplicationResponseMessage Netlink object");
+	return -1;
+}
+
 AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 		nlmsghdr *hdr) {
 	struct nla_policy attr_policy[AAFR_ATTR_MAX + 1];
@@ -1137,7 +1184,6 @@ AppFlowDeallocatedNotificationMessage * parseAppFlowDeallocatedNotificationMessa
 	return result;
 }
 
-
 AppRegisterApplicationRequestMessage * parseAppRegisterApplicationRequestMessage(
 		nlmsghdr *hdr) {
 	struct nla_policy attr_policy[ARAR_ATTR_MAX + 1];
@@ -1182,6 +1228,84 @@ AppRegisterApplicationRequestMessage * parseAppRegisterApplicationRequestMessage
 	if (attrs[ARAR_ATTR_DIF_NAME]) {
 		difName = parseApplicationProcessNamingInformationObject(
 				attrs[ARAR_ATTR_DIF_NAME]);
+		if (difName == NULL) {
+			delete result;
+			return NULL;
+		} else {
+			result->setDifName(*difName);
+		}
+	}
+
+	return result;
+}
+
+AppRegisterApplicationResponseMessage * parseAppRegisterApplicationResponseMessage(
+		nlmsghdr *hdr) {
+	struct nla_policy attr_policy[ARARE_ATTR_MAX + 1];
+	attr_policy[ARARE_ATTR_RESULT].type = NLA_U32;
+	attr_policy[ARARE_ATTR_RESULT].minlen = 4;
+	attr_policy[ARARE_ATTR_RESULT].maxlen = 4;
+	attr_policy[ARARE_ATTR_PROCESS_PORT_ID].type = NLA_U32;
+	attr_policy[ARARE_ATTR_PROCESS_PORT_ID].minlen = 4;
+	attr_policy[ARARE_ATTR_PROCESS_PORT_ID].maxlen = 4;
+	attr_policy[ARARE_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
+	attr_policy[ARARE_ATTR_ERROR_DESCRIPTION].minlen = 0;
+	attr_policy[ARARE_ATTR_ERROR_DESCRIPTION].maxlen = 65535;
+	attr_policy[ARARE_ATTR_APP_NAME].type = NLA_NESTED;
+	attr_policy[ARARE_ATTR_APP_NAME].minlen = 0;
+	attr_policy[ARARE_ATTR_APP_NAME].maxlen = 0;
+	attr_policy[ARARE_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[ARARE_ATTR_DIF_NAME].minlen = 0;
+	attr_policy[ARARE_ATTR_DIF_NAME].maxlen = 0;
+	struct nlattr *attrs[ARARE_ATTR_MAX + 1];
+
+	/*
+	 * The nlmsg_parse() function will make sure that the message contains
+	 * enough payload to hold the header (struct my_hdr), validates any
+	 * attributes attached to the messages and stores a pointer to each
+	 * attribute in the attrs[] array accessable by attribute type.
+	 */
+	int err = genlmsg_parse(hdr, 0, attrs, ARARE_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing AppRegisterApplicationResponseMessage information from Netlink message: %d",
+				err);
+		return NULL;
+	}
+
+	AppRegisterApplicationResponseMessage * result =
+			new AppRegisterApplicationResponseMessage();
+
+	ApplicationProcessNamingInformation * applicationName;
+	ApplicationProcessNamingInformation * difName;
+
+	if (attrs[ARARE_ATTR_RESULT]) {
+		result->setResult(nla_get_u32(attrs[ARARE_ATTR_RESULT]));
+	}
+
+	if (attrs[ARARE_ATTR_PROCESS_PORT_ID]) {
+		result->setIpcProcessPortId(
+				nla_get_u32(attrs[ARARE_ATTR_PROCESS_PORT_ID]));
+	}
+
+	if (attrs[ARARE_ATTR_ERROR_DESCRIPTION]) {
+		result->setErrorDescription(
+				nla_get_string(attrs[ARARE_ATTR_ERROR_DESCRIPTION]));
+	}
+
+	if (attrs[ARARE_ATTR_APP_NAME]) {
+		applicationName = parseApplicationProcessNamingInformationObject(
+				attrs[ARARE_ATTR_APP_NAME]);
+		if (applicationName == NULL) {
+			delete result;
+			return NULL;
+		} else {
+			result->setApplicationName(*applicationName);
+		}
+	}
+	if (attrs[ARARE_ATTR_DIF_NAME]) {
+		difName = parseApplicationProcessNamingInformationObject(
+				attrs[ARARE_ATTR_DIF_NAME]);
 		if (difName == NULL) {
 			delete result;
 			return NULL;
