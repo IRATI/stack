@@ -29,9 +29,12 @@
 static int __init mod_init(void)
 {
         LOG_FBEGN;
+
+        LOG_MISSING;
+
         LOG_FEXIT;
 
-        return 0;
+        return -1;
 }
 
 static void __exit mod_exit(void)

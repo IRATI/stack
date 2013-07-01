@@ -76,7 +76,7 @@ struct eth_vlan_instance {
         struct eth_vlan_info * info;
 
         /* FIXME: Pointer to the device driver data_structure */
-	/* Unsure if really needed */
+        /* Unsure if really needed */
         /* device_t * device_driver; */
 
         /* FIXME: Stores the state of flows indexed by port_id */
@@ -180,9 +180,9 @@ static struct shim_instance * eth_vlan_create(void *           data,
                                               ipc_process_id_t id)
 {
         struct shim_instance * instance;
-	struct shim_instance_ops ops;
+        struct shim_instance_ops ops;
         struct eth_vlan_instance * eth_instance;
-	struct rb_node **p;
+        struct rb_node **p;
         struct rb_node *parent;
         struct eth_vlan_instance * s;
         struct rb_root * eth_root;
@@ -230,16 +230,19 @@ static struct shim_instance * eth_vlan_create(void *           data,
         rb_link_node(&eth_instance->node,parent,p);
         rb_insert_color(&eth_instance->node,eth_root);
 
-	instance->data             = eth_instance;
+        instance->data             = eth_instance;
 
-	ops.flow_allocate_request  = eth_vlan_flow_allocate_request;
-	ops.flow_allocate_response = eth_vlan_flow_allocate_response;
-	ops.flow_deallocate        = eth_vlan_flow_deallocate;
-	ops.application_register   = eth_vlan_application_register;
-	ops.application_unregister = eth_vlan_application_unregister;
-	ops.sdu_write              = eth_vlan_sdu_write;
-	ops.sdu_read               = eth_vlan_sdu_read;
-	instance->ops              = ops;
+        /* ops should be bzero-ed, or statically initialized into bss or ... */
+        ops.flow_allocate_request  = eth_vlan_flow_allocate_request;
+        ops.flow_allocate_response = eth_vlan_flow_allocate_response;
+        ops.flow_deallocate        = eth_vlan_flow_deallocate;
+        ops.application_register   = eth_vlan_application_register;
+        ops.application_unregister = eth_vlan_application_unregister;
+        ops.sdu_write              = eth_vlan_sdu_write;
+        ops.sdu_read               = eth_vlan_sdu_read;
+
+        /* FIXME: ops will be destroyed at the end of this scope !!! */
+        instance->ops              = &ops;
 
         LOG_FEXIT;
         return instance;
@@ -268,17 +271,17 @@ static int name_cpy(struct name_t * dst,
 
 struct shim_instance * eth_vlan_configure (void *                     data,
                                            struct shim_instance *     inst,
-                                           const struct shim_conf_t * cfg)
+                                           const struct shim_config * cfg)
 {
         struct eth_vlan_instance * eth_instance;
-        struct eth_vlan_info * info;
-        struct list_head * pos;
-        struct shim_conf_t * c;
-        struct shim_config_entry_t * tmp;
-        struct shim_config_value_t * val;
-        bool_t reconfigure;
-	uint16_t old_vlan_id;
-	string_t * old_interface_name;
+        struct eth_vlan_info *     info;
+        struct list_head *         pos;
+        struct shim_config *       c;
+        struct shim_config_entry * tmp;
+        struct shim_config_value * val;
+        bool_t                     reconfigure;
+        uint16_t                   old_vlan_id;
+        string_t *                 old_interface_name;
 
         /* Check if instance is not null, check if opaque is not null */
         if (!inst) {
@@ -299,15 +302,15 @@ struct shim_instance * eth_vlan_configure (void *                     data,
 
         /* Get configuration struct pertaining to this shim instance */
         info = eth_instance->info;
-	old_vlan_id = 0;
-	old_interface_name = NULL;
+        old_vlan_id = 0;
+        old_interface_name = NULL;
         if (!info) {
                 info = kmalloc(sizeof(*info), GFP_KERNEL);
                 reconfigure = 1;
         } else {
-		old_vlan_id = info->vlan_id;
-		old_interface_name = info->interface_name;
-	}
+                old_vlan_id = info->vlan_id;
+                old_interface_name = info->interface_name;
+        }
         if (!info) {
                 LOG_ERR("Cannot allocate memory for shim_info");
                 LOG_FEXIT;
@@ -316,31 +319,31 @@ struct shim_instance * eth_vlan_configure (void *                     data,
 
         /* Retrieve configuration of IPC process from params */
         list_for_each(pos, &(cfg->list)) {
-                c   = list_entry(pos, struct shim_conf_t, list);
+                c   = list_entry(pos, struct shim_config, list);
                 tmp = c->entry;
                 val = tmp->value;
-                if (!strcmp(tmp->name, "difname")
+                if (!strcmp(tmp->name, "dif-name")
                     && val->type == SHIM_CONFIG_STRING) {
                         if (!name_cpy(info->name,
                                       (struct name_t *) val->data)) {
                                 LOG_FEXIT;
                                 return inst;
                         }
-                } else if (!strcmp(tmp->name, "vlanid")
+                } else if (!strcmp(tmp->name, "vlan-id")
                            && val->type == SHIM_CONFIG_UINT) {
                         info->vlan_id = * (uint16_t *) val->data;
-                        if (!reconfigure && 
-				info->vlan_id != old_vlan_id) {
-				reconfigure = 1;
-			}
-                } else if (!strcmp(tmp->name,"interfacename")
+                        if (!reconfigure &&
+                            info->vlan_id != old_vlan_id) {
+                                reconfigure = 1;
+                        }
+                } else if (!strcmp(tmp->name,"interface-name")
                            && val->type == SHIM_CONFIG_STRING) {
-			/* FIXME: Should probably be strcpy */
+                        /* FIXME: Should probably be strcpy */
                         info->interface_name = (string_t *) val->data;
-			if (!reconfigure && !strcmp(info->interface_name, 
-							old_interface_name)) {
-				reconfigure = 1;
-			}
+                        if (!reconfigure && !strcmp(info->interface_name,
+                                                    old_interface_name)) {
+                                reconfigure = 1;
+                        }
                 } else {
                         LOG_WARN("Unknown config param for eth shim");
                 }
@@ -348,49 +351,49 @@ struct shim_instance * eth_vlan_configure (void *                     data,
         eth_instance->info = info;
 
         if (reconfigure) {
-		struct packet_type eth_vlan_packet_type;
-		
-		eth_vlan_packet_type.type = cpu_to_be16(ETH_P_RINA);
-		eth_vlan_packet_type.func = eth_vlan_rcv;
-		
-                /* Remove previous handler if there's one */ 
-		if (old_interface_name && old_vlan_id != 0) {
-			char string_old_vlan_id[4];
-			char * complete_interface;
-			struct net_device *dev;
-			
-			/* First construct the complete interface name */
-			complete_interface = 
-				kmalloc(sizeof(*complete_interface), GFP_KERNEL);
-			if (!complete_interface) {
-				LOG_ERR("Cannot allocate memory for string");
-				LOG_FEXIT;
-				return inst;
-			}
+                struct packet_type eth_vlan_packet_type;
 
-			sprintf(string_old_vlan_id,"%d",old_vlan_id);
-			strcat(complete_interface, ".");
-			strcat(complete_interface, string_old_vlan_id);
-			
-			/* Remove the handler */
-			read_lock(&dev_base_lock);
-			dev = __dev_get_by_name(&init_net, complete_interface);
-			if (!dev) {
-				LOG_ERR("Invalid device specified to configure");
-				LOG_FEXIT;
-				return inst;	
-			}
-			eth_vlan_packet_type.dev = dev;
-			dev_remove_pack(&eth_vlan_packet_type);
-			read_unlock(&dev_base_lock);
-			kfree(complete_interface);
-		}
+                eth_vlan_packet_type.type = cpu_to_be16(ETH_P_RINA);
+                eth_vlan_packet_type.func = eth_vlan_rcv;
+
+                /* Remove previous handler if there's one */
+                if (old_interface_name && old_vlan_id != 0) {
+                        char string_old_vlan_id[4];
+                        char * complete_interface;
+                        struct net_device *dev;
+
+                        /* First construct the complete interface name */
+                        complete_interface =
+                                kmalloc(sizeof(*complete_interface), GFP_KERNEL);
+                        if (!complete_interface) {
+                                LOG_ERR("Cannot allocate memory for string");
+                                LOG_FEXIT;
+                                return inst;
+                        }
+
+                        sprintf(string_old_vlan_id,"%d",old_vlan_id);
+                        strcat(complete_interface, ".");
+                        strcat(complete_interface, string_old_vlan_id);
+
+                        /* Remove the handler */
+                        read_lock(&dev_base_lock);
+                        dev = __dev_get_by_name(&init_net, complete_interface);
+                        if (!dev) {
+                                LOG_ERR("Invalid device specified to configure");
+                                LOG_FEXIT;
+                                return inst;
+                        }
+                        eth_vlan_packet_type.dev = dev;
+                        dev_remove_pack(&eth_vlan_packet_type);
+                        read_unlock(&dev_base_lock);
+                        kfree(complete_interface);
+                }
                 /* FIXME: Add handler to correct interface and vlan id */
                 /* Check if correctness VLAN id and interface name */
-		
 
-		dev_add_pack(&eth_vlan_packet_type);
-	
+
+                dev_add_pack(&eth_vlan_packet_type);
+
         }
         LOG_DBG("Configured shim ETH IPC Process");
 
@@ -476,7 +479,7 @@ static int eth_vlan_fini(void * data)
 
         LOG_FEXIT;
 
-	return 0;
+        return 0;
 }
 
 static struct shim_ops eth_vlan_ops = {
@@ -495,12 +498,12 @@ extern struct kipcm * default_kipcm;
 
 static int __init mod_init(void)
 {
-	LOG_FBEGN;
+        LOG_FBEGN;
 
         eth_vlan_shim = kipcm_shim_register(default_kipcm,
-                                          "shim-eth-vlan",
-                                           &eth_vlan_data,
-                                           &eth_vlan_ops);
+                                            "shim-eth-vlan",
+                                            &eth_vlan_data,
+                                            &eth_vlan_ops);
         if (!eth_vlan_shim) {
                 LOG_CRIT("Initialization failed");
 
@@ -515,11 +518,11 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
-	LOG_FBEGN;
+        LOG_FBEGN;
 
-	if (kipcm_shim_unregister(default_kipcm,
+        if (kipcm_shim_unregister(default_kipcm,
                                   eth_vlan_shim)) {
-        	LOG_CRIT("Cannot unregister");
+                LOG_CRIT("Cannot unregister");
                 return;
         }
 

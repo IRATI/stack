@@ -1,5 +1,5 @@
 /*
- *  Empty Shim IPC Process
+ *  Empty Shim IPC Process (Shim template that should be used as a reference)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -84,8 +84,8 @@ static int empty_sdu_write(void *               data,
                            port_id_t            id,
                            const struct sdu_t * sdu)
 {
-	LOG_FBEGN;
-	LOG_FEXIT;
+        LOG_FBEGN;
+        LOG_FEXIT;
 
         return 0;
 }
@@ -94,11 +94,15 @@ static int empty_sdu_read(void *         data,
                           port_id_t      id,
                           struct sdu_t * sdu)
 {
-	LOG_FBEGN;
-	LOG_FEXIT;
+        LOG_FBEGN;
+        LOG_FEXIT;
 
         return 0;
 }
+
+struct shim_instance_data {
+        int this_is_another_fake_and_should_avoid_compiler_barfs;
+};
 
 static struct shim_instance_ops empty_instance_ops = {
         .flow_allocate_request  = empty_flow_allocate_request,
@@ -111,7 +115,7 @@ static struct shim_instance_ops empty_instance_ops = {
 };
 
 struct shim_data {
-	int this_is_fake_and_should_avoid_compiler_barfs;
+        int this_is_fake_and_should_avoid_compiler_barfs;
 };
 
 static struct shim_data empty_data;
@@ -135,17 +139,34 @@ static int empty_fini(void * data)
 }
 
 static struct shim_instance * empty_create(void *           data,
-					   ipc_process_id_t ipc_process_id)
+                                           ipc_process_id_t ipc_process_id)
 {
+        struct shim_instance * inst;
+
         LOG_FBEGN;
+
+        inst = kzalloc(sizeof(*inst), GFP_KERNEL);
+        if (!inst) {
+                LOG_ERR("Cannot allocate %zd bytes of memory", sizeof(*inst));
+                return NULL;
+        }
+
+        inst->ops  = &empty_instance_ops;
+        inst->data = kzalloc(sizeof(struct shim_instance_data), GFP_KERNEL);
+        if (!inst->data) {
+                LOG_ERR("Cannot allocate %zd bytes of memory",
+                        sizeof(*inst->data));
+                return NULL;
+        }
+
         LOG_FEXIT;
 
-        return NULL;
+        return inst;
 }
 
 static struct shim_instance * empty_configure(void *                     data,
                                               struct shim_instance *     inst,
-                                              const struct shim_conf_t * cfg)
+                                              const struct shim_config * cfg)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -175,7 +196,7 @@ extern struct kipcm * default_kipcm;
 
 static int __init mod_init(void)
 {
-	LOG_FBEGN;
+        LOG_FBEGN;
 
         bzero(&empty_data, sizeof(empty_data));
 
@@ -197,10 +218,10 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
-	LOG_FBEGN;
+        LOG_FBEGN;
 
-	if (kipcm_shim_unregister(default_kipcm, empty_shim)) {
-        	LOG_CRIT("Cannot unregister");
+        if (kipcm_shim_unregister(default_kipcm, empty_shim)) {
+                LOG_CRIT("Cannot unregister");
                 return;
         }
 
