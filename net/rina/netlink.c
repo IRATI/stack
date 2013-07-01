@@ -19,30 +19,17 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_NETLINK_H
-#define RINA_NETLINK_H
-
-#include <linux/list.h>
-
-/* FIXME: May be modified when dif_type_t is updated */
-#include <"kipcm.h">
+#include <linux/hashtable.h>
 
 #define RINA_PREFIX "netlink"
 
 #include "logs.h"
 #include "netlink.h"
 
-/* Table to collect callbacks lists by message type*/
-list_head  message_handler_registry[NETLINK_RINA_C_MAX];
-
-/*  Type to store callback funcion */
-typedef int (* message_handler_t)(struct sk_buff *, struct genl_info *);
-
-/* struct to use in list */
-struct callback_t {
-	struct list_head cb_list;
-	message_handler_t cb;
-}
+/* Attribute policy */
+//static struct nla_policy nl_rina_policy[NETLINK_RINA_A_MAX + 1] = {
+//	[NETLINK_RINA_A_MSG] = { .type = NLA_NUL_STRING },
+//};
 
 /* Family definition */
 static struct genl_family nl_rina_family = {
@@ -53,32 +40,63 @@ static struct genl_family nl_rina_family = {
         .maxattr = NETLINK_RINA_A_MAX,
 };
 
+/*  Table to collect callbacks */
+typedef int (* message_handler_t)(struct sk_buff *, struct genl_info *);
 
-
+/* Table to collect callbacks */
+message_handler_t  message_handler_reg[NETLINK_RINA_C_MAX];
 
 int register_handler(int m_type,
                      int (*handler)(struct sk_buff *, struct genl_info *))
 {
+	LOG_DBG("REGISTER - m_type: %d\n\
+		NETLINK_RINA_C_MAX: %d",
+		m_type, NETLINK_RINA_C_MAX);
+
+	/*  DEBUG IF */
+	if (message_handler_reg[m_type] == NULL )
+		LOG_DBG("message_handler_reg[%d] is NULL, OK!", m_type);
+	else 
+		LOG_DBG("message_handler_reg[%d] is NOT NULL, KO!", m_type);
+
 
         if (m_type < 0 ||
             m_type >= NETLINK_RINA_C_MAX ||
-            message_handler_reg[m_type] != NULL)
+            message_handler_reg[m_type] != NULL){
+		LOG_ERR("Message type %d unknown or handler\
+			already registered",m_type);
                 return -1;
-        else
-                message_handler_reg[m_type] = (message_handler_t) handler;
-
+	}
+        else {
+		message_handler_reg[m_type] = (message_handler_t) handler;
+		LOG_DBG("Handler for message %d registered", m_type);
+	}
         return 0;
 }
 
 int (* get_handler(int m_type))(struct sk_buff *, struct genl_info *)
 {
 
-        if (m_type < 0 ||
+	LOG_DBG("GET HANDLER - m_type: %d\n\
+		NETLINK_RINA_C_MAX: %d",
+		m_type, NETLINK_RINA_C_MAX);
+
+	/*  DEBUG IF */
+	if (message_handler_reg[m_type] == NULL )
+		LOG_DBG("message_handler_reg[%d] is NULL, KO!", m_type);
+	else 
+		LOG_DBG("message_handler_reg[%d] is NOT NULL, OK!", m_type);
+
+	if (m_type < 0 ||
             m_type >= NETLINK_RINA_C_MAX ||
-            message_handler_reg[m_type] == NULL)
+            message_handler_reg[m_type] == NULL) {
+		LOG_ERR("Message handler is NULL");
                 return NULL;
-        else
+	}
+        else {
+		LOG_DBG("Handler for message %d to be returned", m_type);
                 return message_handler_reg[m_type];
+	}
 }
 
 int unregister_handler(int m_type)
@@ -105,13 +123,23 @@ static int nl_dispatcher(struct sk_buff *skb_in, struct genl_info *info)
                 return -1;
         }
 
-        cb_function = get_handler(info->nlhdr->nlmsg_type);
+	LOG_DBG("Message type to multiplex: %d", info->genlhdr->cmd);
+        
+	cb_function = get_handler(info->genlhdr->cmd);
         if (cb_function == NULL) {
 		LOG_ERR("Could not retrieve NL Message handler");
-                return -1;
+		return -1;
 	}
 
-        return cb_function(skb_in, info);
+        if (cb_function(skb_in, info)){
+		LOG_ERR("Callback function returned error");
+		return -1;
+	}
+	else {
+		LOG_DBG("Callbck function went well");
+		return 0;
+	}
+	
 }
 
 /* Handler */
@@ -124,8 +152,14 @@ static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
 
         int ret;
         void *msg_head;
+	struct sk_buff *skb;
 
-        printk("ECHOING MESSAGE");
+	skb = skb_copy(skb_in, GFP_KERNEL);
+	if(skb == NULL){
+                LOG_ERR("netlink echo: out of memory");
+                return -ENOMEM;
+        }
+
         LOG_DBG("ECHOING MESSAGE");
 
         if (info == NULL) {
@@ -133,9 +167,9 @@ static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
                 return -1;
         }
 
-        msg_head = genlmsg_put(skb_in, 0, info->snd_seq, &nl_rina_family, 0,
+        msg_head = genlmsg_put(skb, 0, info->snd_seq, &nl_rina_family, 0,
                                RINA_C_APP_ALLOCATE_FLOW_REQUEST);
-        genlmsg_end(skb_in, msg_head);
+        genlmsg_end(skb, msg_head);
         LOG_DBG("genlmsg_end OK");
 
 	printk("Message generated:\n"
@@ -154,7 +188,7 @@ static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
 		info->genlhdr->cmd, info->nlhdr->nlmsg_flags);
 
         /* ret = genlmsg_unicast(sock_net(skb->sk),skb,info->snd_portid); */
-        ret = genlmsg_unicast(&init_net,skb_in,info->snd_portid);
+        ret = genlmsg_unicast(&init_net,skb,info->snd_portid);
         if (ret != 0) {
                 LOG_DBG("COULD NOT SEND BACK UNICAST MESSAGE");
                 return -1;
@@ -403,17 +437,7 @@ int rina_netlink_init(void)
                 }
         }
 
-        for (i = 0; i < ARRAY_SIZE(message_handler_registry); i++) {
-                INIT_LIST_HEAD(message_handler_registry[i]);
-                if (message_handler_registry[i] == NULL) {
-                        LOG_ERR("Could not initialize callback list for message %d", i);
-                        return -2;
-                }
-        }
-	LOG_DBG("Callbacks structs initialized");
-
-
-	LOG_DBG("NetLink layer initialized");
+        LOG_DBG("NetLink layer initialized");
 
         /* TODO: Testing */
         register_handler(RINA_C_APP_ALLOCATE_FLOW_REQUEST, nl_rina_echo);
@@ -427,11 +451,20 @@ int rina_netlink_init(void)
 
 void rina_netlink_exit(void)
 {
-        int ret;
+        int ret, i;
 
         LOG_FBEGN;
 
-        /* Unregister the family & operations*/
+        /* Unregister the functions*/
+        for (i=0; i < ARRAY_SIZE(nl_rina_ops); i++) {
+                ret = genl_unregister_ops(&nl_rina_family, &nl_rina_ops[i]);
+                if(ret < 0) {
+                        LOG_DBG("unregister ops: %i\n",ret);
+                        return;
+                }
+        }
+
+        /* Unregister the family */
         ret = genl_unregister_family(&nl_rina_family);
         if(ret != 0) {
                 LOG_DBG("unregister family %i\n", ret);
