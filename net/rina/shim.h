@@ -29,24 +29,24 @@
 
 /* FIXME: This configuration part has to be rearranged */
 
-enum shim_config_type_t {
+enum shim_config_type {
         SHIM_CONFIG_UINT   = 1,
         SHIM_CONFIG_STRING,
 };
 
-struct shim_config_value_t {
-        enum shim_config_type_t type;
-        void *                  data;
+struct shim_config_value {
+        enum shim_config_type type;
+        void *                data;
 };
 
-struct shim_config_entry_t {
-        char *                       name;
-        struct shim_config_value_t * value;
+struct shim_config_entry {
+        char *                     name;
+        struct shim_config_value * value;
 };
 
-struct shim_conf_t { 
-	struct list_head             list;
-	struct shim_config_entry_t * entry;
+struct shim_config { 
+	struct list_head           list;
+	struct shim_config_entry * entry;
 };
 
 struct shim_instance_ops {
@@ -77,9 +77,10 @@ struct shim_instance_ops {
 };
 
 struct shim_instance {
-        struct kobject           kobj;
-        void *                   data;
-        struct shim_instance_ops ops;
+        struct kobject             kobj;
+
+        void *                     data;
+        struct shim_instance_ops * ops;
 };
 
 struct shim_ops {
@@ -91,16 +92,16 @@ struct shim_ops {
         
 	struct shim_instance * (* configure)(void *                     data,
                                              struct shim_instance *     inst,
-                                             const struct shim_conf_t * cfg);
+                                             const struct shim_config * cfg);
 
 	int                    (* destroy)(void *                 data,
                                            struct shim_instance * inst);
 };
 
 struct shim {
-        struct kobject    kobj;
-        void *            data;
-        struct shim_ops * ops; 
+        struct kobject          kobj;
+        void *                  data;
+        const struct shim_ops * ops; 
 };
 
 struct shims {
@@ -112,10 +113,10 @@ struct shims * shims_init(struct kobject * parent);
 int            shims_fini(struct shims * shims);
 
 /* Called (once) by each shim module upon loading/unloading */
-struct shim *  shim_register(struct shims *    parent,
-                             const char *      name,
-                             void *            data,
-                             struct shim_ops * ops);
+struct shim *  shim_register(struct shims *          parent,
+                             const char *            name,
+                             void *                  data,
+                             const struct shim_ops * ops);
 int            shim_unregister(struct shims * parent,
                                struct shim *  shim);
 

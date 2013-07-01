@@ -181,10 +181,10 @@ static struct shim * shim_find(struct shims * parent,
         return NULL;
 }
 
-struct shim * shim_register(struct shims *    parent,
-                            const char *      name,
-                            void *            data,
-                            struct shim_ops * ops)
+struct shim * shim_register(struct shims *          parent,
+                            const char *            name,
+                            void *                  data,
+                            const struct shim_ops * ops)
 {
         struct shim * tmp;
         struct shim * shim;
