@@ -59,54 +59,26 @@ static struct genl_family nl_rina_family = {
 int register_handler(int m_type,
                      int (*handler)(struct sk_buff *, struct genl_info *))
 {
-	LOG_DBG("REGISTER - m_type: %d\n\
-		NETLINK_RINA_C_MAX: %d",
-		m_type, NETLINK_RINA_C_MAX);
-
-	/*  DEBUG IF */
-	if (message_handler_reg[m_type] == NULL )
-		LOG_DBG("message_handler_reg[%d] is NULL, OK!", m_type);
-	else 
-		LOG_DBG("message_handler_reg[%d] is NOT NULL, KO!", m_type);
-
 
         if (m_type < 0 ||
             m_type >= NETLINK_RINA_C_MAX ||
-            message_handler_reg[m_type] != NULL){
-		LOG_ERR("Message type %d unknown or handler\
-			already registered",m_type);
+            message_handler_reg[m_type] != NULL)
                 return -1;
-	}
-        else {
-		message_handler_reg[m_type] = (message_handler_t) handler;
-		LOG_DBG("Handler for message %d registered", m_type);
-	}
+        else
+                message_handler_reg[m_type] = (message_handler_t) handler;
+
         return 0;
 }
 
 int (* get_handler(int m_type))(struct sk_buff *, struct genl_info *)
 {
 
-	LOG_DBG("GET HANDLER - m_type: %d\n\
-		NETLINK_RINA_C_MAX: %d",
-		m_type, NETLINK_RINA_C_MAX);
-
-	/*  DEBUG IF */
-	if (message_handler_reg[m_type] == NULL )
-		LOG_DBG("message_handler_reg[%d] is NULL, KO!", m_type);
-	else 
-		LOG_DBG("message_handler_reg[%d] is NOT NULL, OK!", m_type);
-
-	if (m_type < 0 ||
+        if (m_type < 0 ||
             m_type >= NETLINK_RINA_C_MAX ||
-            message_handler_reg[m_type] == NULL) {
-		LOG_ERR("Message handler is NULL");
+            message_handler_reg[m_type] == NULL)
                 return NULL;
-	}
-        else {
-		LOG_DBG("Handler for message %d to be returned", m_type);
+        else
                 return message_handler_reg[m_type];
-	}
 }
 
 int unregister_handler(int m_type)
@@ -133,23 +105,13 @@ static int nl_dispatcher(struct sk_buff *skb_in, struct genl_info *info)
                 return -1;
         }
 
-	LOG_DBG("Message type to multiplex: %d", info->genlhdr->cmd);
-        
-	cb_function = get_handler(info->genlhdr->cmd);
+        cb_function = get_handler(info->nlhdr->nlmsg_type);
         if (cb_function == NULL) {
 		LOG_ERR("Could not retrieve NL Message handler");
-		return -1;
+                return -1;
 	}
 
-        if (cb_function(skb_in, info)){
-		LOG_ERR("Callback function returned error");
-		return -1;
-	}
-	else {
-		LOG_DBG("Callbck function went well");
-		return 0;
-	}
-	
+        return cb_function(skb_in, info);
 }
 
 /* Handler */
@@ -162,14 +124,8 @@ static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
 
         int ret;
         void *msg_head;
-	struct sk_buff *skb;
 
-	skb = skb_copy(skb_in, GFP_KERNEL);
-	if(skb == NULL){
-                LOG_ERR("netlink echo: out of memory");
-                return -ENOMEM;
-        }
-
+        printk("ECHOING MESSAGE");
         LOG_DBG("ECHOING MESSAGE");
 
         if (info == NULL) {
@@ -177,9 +133,9 @@ static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
                 return -1;
         }
 
-        msg_head = genlmsg_put(skb, 0, info->snd_seq, &nl_rina_family, 0,
+        msg_head = genlmsg_put(skb_in, 0, info->snd_seq, &nl_rina_family, 0,
                                RINA_C_APP_ALLOCATE_FLOW_REQUEST);
-        genlmsg_end(skb, msg_head);
+        genlmsg_end(skb_in, msg_head);
         LOG_DBG("genlmsg_end OK");
 
 	printk("Message generated:\n"
@@ -198,7 +154,7 @@ static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
 		info->genlhdr->cmd, info->nlhdr->nlmsg_flags);
 
         /* ret = genlmsg_unicast(sock_net(skb->sk),skb,info->snd_portid); */
-        ret = genlmsg_unicast(&init_net,skb,info->snd_portid);
+        ret = genlmsg_unicast(&init_net,skb_in,info->snd_portid);
         if (ret != 0) {
                 LOG_DBG("COULD NOT SEND BACK UNICAST MESSAGE");
                 return -1;
