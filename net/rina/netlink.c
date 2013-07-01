@@ -19,21 +19,30 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef RINA_NETLINK_H
+#define RINA_NETLINK_H
+
 #include <linux/list.h>
+
+/* FIXME: May be modified when dif_type_t is updated */
+#include <"kipcm.h">
 
 #define RINA_PREFIX "netlink"
 
 #include "logs.h"
 #include "netlink.h"
 
-/*  Stores the message callbacks */
-struct list_head * callback_list;
+/* Table to collect callbacks lists by message type*/
+list_head  message_handler_registry[NETLINK_RINA_C_MAX];
 
+/*  Type to store callback funcion */
+typedef int (* message_handler_t)(struct sk_buff *, struct genl_info *);
+
+/* struct to use in list */
 struct callback_t {
-	struct list_head list;
+	struct list_head cb_list;
 	message_handler_t cb;
 }
-
 
 /* Family definition */
 static struct genl_family nl_rina_family = {
@@ -45,11 +54,7 @@ static struct genl_family nl_rina_family = {
 };
 
 
-/*  Table to collect callbacks */
-typedef int (* message_handler_t)(struct sk_buff *, struct genl_info *);
 
-/* Table to collect callbacks */
-message_handler_t  message_handler_reg[NETLINK_RINA_C_MAX];
 
 int register_handler(int m_type,
                      int (*handler)(struct sk_buff *, struct genl_info *))
@@ -442,7 +447,17 @@ int rina_netlink_init(void)
                 }
         }
 
-        LOG_DBG("NetLink layer initialized");
+        for (i = 0; i < ARRAY_SIZE(message_handler_registry); i++) {
+                INIT_LIST_HEAD(message_handler_registry[i]);
+                if (message_handler_registry[i] == NULL) {
+                        LOG_ERR("Could not initialize callback list for message %d", i);
+                        return -2;
+                }
+        }
+	LOG_DBG("Callbacks structs initialized");
+
+
+	LOG_DBG("NetLink layer initialized");
 
         /* TODO: Testing */
         register_handler(RINA_C_APP_ALLOCATE_FLOW_REQUEST, nl_rina_echo);
