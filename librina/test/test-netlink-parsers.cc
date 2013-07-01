@@ -52,7 +52,7 @@ int testAppAllocateFlowRequestMessage() {
 		std::cout << "Error allocating Netlink message\n";
 	}
 	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
-			0, 0, message->getOperationCode(), 0);
+			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
 
 	int result = putBaseNetlinkMessage(netlinkMessage, message);
 	if (result < 0) {
@@ -132,7 +132,7 @@ int testAppAllocateFlowRequestResultMessage() {
 		std::cout << "Error allocating Netlink message\n";
 	}
 	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
-			0, 0, message->getOperationCode(), 0);
+			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
 
 	int result = putBaseNetlinkMessage(netlinkMessage, message);
 	if (result < 0) {
@@ -229,7 +229,7 @@ int testAppAllocateFlowRequestArrivedMessage() {
 		std::cout << "Error allocating Netlink message\n";
 	}
 	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
-			0, 0, message->getOperationCode(), 0);
+			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
 
 	int result = putBaseNetlinkMessage(netlinkMessage, message);
 	if (result < 0) {
@@ -311,7 +311,7 @@ int testAppAllocateFlowResponseMessage() {
 		std::cout << "Error allocating Netlink message\n";
 	}
 	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
-			0, 0, message->getOperationCode(), 0);
+			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
 
 	int result = putBaseNetlinkMessage(netlinkMessage, message);
 	if (result < 0) {
@@ -388,7 +388,7 @@ int testAppDeallocateFlowRequestMessage() {
 		std::cout << "Error allocating Netlink message\n";
 	}
 	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
-			0, 0, message->getOperationCode(), 0);
+			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
 
 	int result = putBaseNetlinkMessage(netlinkMessage, message);
 	if (result < 0) {
@@ -461,7 +461,7 @@ int testAppDeallocateFlowResponseMessage() {
 		std::cout << "Error allocating Netlink message\n";
 	}
 	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
-			0, 0, message->getOperationCode(), 0);
+			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
 
 	int result = putBaseNetlinkMessage(netlinkMessage, message);
 	if (result < 0) {

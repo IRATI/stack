@@ -40,6 +40,8 @@ BaseNetlinkMessage::BaseNetlinkMessage(
 	this->operationCode = operationCode;
 	sourcePortId = 0;
 	destPortId = 0;
+	sourceIPCProcessId = 0;
+	destIPCProcessId = 0;
 	sequenceNumber = 0;
 	family = -1;
 	responseMessage = false;
@@ -74,6 +76,23 @@ void BaseNetlinkMessage::setSourcePortId(unsigned int sourcePortId) {
 	this->sourcePortId = sourcePortId;
 }
 
+unsigned short BaseNetlinkMessage::getDestIpcProcessId() const {
+	return destIPCProcessId;
+}
+
+void BaseNetlinkMessage::setDestIpcProcessId(unsigned short destIpcProcessId) {
+	destIPCProcessId = destIpcProcessId;
+}
+
+unsigned short BaseNetlinkMessage::getSourceIpcProcessId() const {
+	return sourceIPCProcessId;
+}
+
+void BaseNetlinkMessage::setSourceIpcProcessId(
+		unsigned short sourceIpcProcessId) {
+	sourceIPCProcessId = sourceIpcProcessId;
+}
+
 RINANetlinkOperationCode BaseNetlinkMessage::getOperationCode() const {
 	return operationCode;
 }
@@ -85,7 +104,6 @@ int BaseNetlinkMessage::getFamily() const {
 void BaseNetlinkMessage::setFamily(int family) {
 	this->family = family;
 }
-
 
 bool BaseNetlinkMessage::isNotificationMessage() const {
 	return notificationMessage;
@@ -119,11 +137,14 @@ void BaseNetlinkMessage::setResponseMessage(bool responseMessage) {
 std::string BaseNetlinkMessage::toString() {
 	std::stringstream ss;
 	ss << "Family: " << family << "; Operation code: "
-			<< operationCode << "; Source: " << sourcePortId
-			<< "; Destination: " << destPortId << "; Sequence Number: "
-			<< sequenceNumber << "\n" << "Is request message? "
-			<< requestMessage << "; Is response message? " << responseMessage
-			<< "; Is notification message? " << notificationMessage;
+			<< operationCode << "; Source port: " << sourcePortId
+			<< "; Destination port: " << destPortId
+			<< "; Sequence Number: " << sequenceNumber << "\n"
+			<< "Is request message? " << requestMessage
+			<< "; Is response message? " << responseMessage
+			<< "; Is notification message? " << notificationMessage << "\n"
+			<< "Source IPC Process: " << sourceIPCProcessId
+			<< "; Destination IPC Process: " << destIPCProcessId;
 	return ss.str();
 }
 

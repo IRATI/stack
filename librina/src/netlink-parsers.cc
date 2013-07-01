@@ -576,7 +576,8 @@ AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 	 * attributes attached to the messages and stores a pointer to each
 	 * attribute in the attrs[] array accessable by attribute type.
 	 */
-	int err = genlmsg_parse(hdr, 0, attrs, AAFR_ATTR_MAX, attr_policy);
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			AAFR_ATTR_MAX, attr_policy);
 	if (err < 0) {
 		LOG_ERR(
 				"Error parsing AppAllocateFlowRequestMessage information from Netlink message: %d",
@@ -651,7 +652,8 @@ AppAllocateFlowRequestResultMessage * parseAppAllocateFlowRequestResultMessage(
 	 * attributes attached to the messages and stores a pointer to each
 	 * attribute in the attrs[] array accessable by attribute type.
 	 */
-	int err = genlmsg_parse(hdr, 0, attrs, AAFRR_ATTR_MAX, attr_policy);
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			AAFRR_ATTR_MAX, attr_policy);
 	if (err < 0) {
 		LOG_ERR(
 				"Error parsing AppAllocateFlowRequestResultMessage information from Netlink message: %d",
@@ -730,7 +732,8 @@ AppAllocateFlowRequestArrivedMessage * parseAppAllocateFlowRequestArrivedMessage
 	 * attributes attached to the messages and stores a pointer to each
 	 * attribute in the attrs[] array accessable by attribute type.
 	 */
-	int err = genlmsg_parse(hdr, 0, attrs, AAFRA_ATTR_MAX, attr_policy);
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			AAFRA_ATTR_MAX, attr_policy);
 	if (err < 0) {
 		LOG_ERR(
 				"Error parsing AppAllocateFlowRequestArrivedMessage information from Netlink message: %d",
@@ -817,7 +820,8 @@ AppAllocateFlowResponseMessage * parseAppAllocateFlowResponseMessage(
 	 * attributes attached to the messages and stores a pointer to each
 	 * attribute in the attrs[] array accessable by attribute type.
 	 */
-	int err = genlmsg_parse(hdr, 0, attrs, AAFRA_ATTR_MAX, attr_policy);
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			AAFRA_ATTR_MAX, attr_policy);
 	if (err < 0) {
 		LOG_ERR(
 				"Error parsing AppAllocateFlowResponseMessage information from Netlink message: %d",
@@ -875,7 +879,8 @@ AppDeallocateFlowRequestMessage * parseAppDeallocateFlowRequestMessage(
 	 * attributes attached to the messages and stores a pointer to each
 	 * attribute in the attrs[] array accessable by attribute type.
 	 */
-	int err = genlmsg_parse(hdr, 0, attrs, ADFRT_ATTR_MAX, attr_policy);
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs, ADFRT_ATTR_MAX,
+			attr_policy);
 	if (err < 0) {
 		LOG_ERR(
 				"Error parsing AppDeallocateFlowRequestMessage information from Netlink message: %d",
@@ -938,7 +943,8 @@ AppDeallocateFlowResponseMessage * parseAppDeallocateFlowResponseMessage(
 	 * attributes attached to the messages and stores a pointer to each
 	 * attribute in the attrs[] array accessable by attribute type.
 	 */
-	int err = genlmsg_parse(hdr, 0, attrs, ADFRE_ATTR_MAX, attr_policy);
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			ADFRE_ATTR_MAX, attr_policy);
 	if (err < 0) {
 		LOG_ERR(
 				"Error parsing AppDeallocateFlowResponseMessage information from Netlink message: %d",

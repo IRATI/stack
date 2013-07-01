@@ -123,6 +123,7 @@ void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
 		throw (NetlinkException) {
 	//Generate the message
 	struct nl_msg* netlinkMessage;
+	struct rinaHeader* myHeader;
 
 	message->setSourcePortId(localPort);
 	message->setFamily(family);
@@ -139,9 +140,19 @@ void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
 		flags = NLM_F_REQUEST;
 	}
 
-	genlmsg_put(netlinkMessage, localPort, message->getSequenceNumber(),
-			family, 0, flags, message->getOperationCode(),
+	myHeader = (rinaHeader*) genlmsg_put(netlinkMessage, localPort,
+			message->getSequenceNumber(),family, sizeof(struct rinaHeader),
+			flags, message->getOperationCode(),
 			RINA_GENERIC_NETLINK_FAMILY_VERSION);
+	if (!myHeader){
+		nlmsg_free(netlinkMessage);
+		LOG_ERR("%s",
+				NetlinkException::error_generating_netlink_message.c_str());
+		throw NetlinkException(
+				NetlinkException::error_generating_netlink_message);
+	}
+	myHeader->sourceIPCProcessId = message->getSourceIpcProcessId();
+	myHeader->destIPCProcessId = message->getDestIpcProcessId();
 
 	int result = putBaseNetlinkMessage(netlinkMessage, message);
 	if (result < 0) {
@@ -174,6 +185,7 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 	unsigned char *buf = NULL;
 	struct nlmsghdr *hdr;
 	struct genlmsghdr *nlhdr;
+	struct rinaHeader * myHeader;
 	struct sockaddr_nl nla = { 0 };
 	struct nl_msg *msg = NULL;
 	struct ucred *creds = NULL;
@@ -208,6 +220,16 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 		nlmsg_set_creds(msg, creds);
 	}
 
+	myHeader = (rinaHeader*) genlmsg_data(nlhdr);
+	if(!myHeader){
+		nlmsg_free(msg);
+		free(buf);
+		free(creds);
+		LOG_ERR("%s", NetlinkException::error_parsing_netlink_message.c_str());
+		throw NetlinkException(
+				NetlinkException::error_parsing_netlink_message);
+	}
+
 	BaseNetlinkMessage * result = parseBaseNetlinkMessage(hdr);
 
 	if (result == NULL) {
@@ -234,6 +256,8 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 	result->setDestPortId(localPort);
 	result->setSourcePortId(nla.nl_pid);
 	result->setSequenceNumber(hdr->nlmsg_seq);
+	result->setSourceIpcProcessId(myHeader->sourceIPCProcessId);
+	result->setDestIpcProcessId(myHeader->destIPCProcessId);
 
 	nlmsg_free(msg);
 	free(buf);

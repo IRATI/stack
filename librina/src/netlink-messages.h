@@ -63,6 +63,11 @@ enum RINANetlinkOperationCode{
         __RINA_C_MAX,
  };
 
+struct rinaHeader{
+	unsigned short sourceIPCProcessId;
+	unsigned short destIPCProcessId;
+};
+
 /**
  * Base class for Netlink messages to be sent or received
  */
@@ -76,8 +81,22 @@ class BaseNetlinkMessage: public StringConvertable{
 	/** The port id of the source of the Netlink message */
 	unsigned int sourcePortId;
 
+	/**
+	 * Contains the id of the IPC Process that is the source of the message. It
+	 *  is 0 if the source of the message is not an IPC Process (an application
+	 *  or the IPC Manager).
+	 */
+	unsigned short sourceIPCProcessId;
+
 	/** The port id of the destination of the Netlink message */
 	unsigned int destPortId;
+
+	/**
+	 * Contains the id of the IPC Process that is the destination of the message.
+	 * It is 0 if the destination of the message is not an IPC Process (an
+	 * application or the IPC Manager).
+	 */
+	unsigned short destIPCProcessId;
 
 	/** The message sequence number */
 	unsigned int sequenceNumber;
@@ -103,6 +122,10 @@ public:
 	void setSequenceNumber(unsigned int sequenceNumber);
 	unsigned int getSourcePortId() const;
 	void setSourcePortId(unsigned int sourcePortId);
+	unsigned short getDestIpcProcessId() const;
+	void setDestIpcProcessId(unsigned short destIpcProcessId);
+	unsigned short getSourceIpcProcessId() const;
+	void setSourceIpcProcessId(unsigned short sourceIpcProcessId);
 	RINANetlinkOperationCode getOperationCode() const;
 	int getFamily() const;
 	void setFamily(int family);

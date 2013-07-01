@@ -51,6 +51,8 @@ int main(int argc, char * argv[]) {
 	message->setFlowSpecification(*flowSpec);
 	message->setRequestMessage(true);
 	message->setSequenceNumber(source->getSequenceNumber());
+	message->setSourceIpcProcessId(25);
+	message->setDestIpcProcessId(38);
 	source->sendMessage(message);
 	delete message;
 
@@ -59,6 +61,8 @@ int main(int argc, char * argv[]) {
 			->getMessage());
 	std::cout << "Received message from " << result->getSourcePortId()
 			<< " with sequence number " << result->getSequenceNumber()
+			<< " source IPC Process id "<< result->getSourceIpcProcessId()
+			<< " destination IPC Process id "<< result->getDestIpcProcessId()
 			<< "\n";
 	std::cout << "Source application process name: "
 			<< result->getSourceAppName().getProcessName() << "\n";
@@ -77,6 +81,8 @@ int main(int argc, char * argv[]) {
 	message->setFlowSpecification(*flowSpec);
 	message->setSequenceNumber(source->getSequenceNumber());
 	message->setRequestMessage(true);
+	message->setSourceIpcProcessId(21);
+	message->setDestIpcProcessId(15);
 	source->sendMessage(message);
 	delete message;
 
