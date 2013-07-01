@@ -34,9 +34,11 @@
 #define DEFAULT_LABEL "default"
 
 struct personality_data {
-        void * kipcm;
-        void * efcp;
-        void * rmt;
+        struct kipcm * kipcm;
+
+        /* FIXME: Types to be rearranged */
+        void *         efcp;
+        void *         rmt;
 };
 
 #define to_pd(X) ((struct personality_data *) X)
@@ -50,18 +52,18 @@ static int default_ipc_create(void *                data,
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_ipc_process_create(to_pd(data)->kipcm, name, id, type);
+        return kipcm_ipc_create(to_pd(data)->kipcm, name, id, type);
 }
 
-static int default_ipc_configure(void *                            data,
-                                 ipc_process_id_t                  id,
-                                 const struct ipc_process_conf_t * conf)
+static int default_ipc_configure(void *                          data,
+                                 ipc_process_id_t                id,
+                                 const struct ipc_process_conf * conf)
 {
         if (!data) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_ipc_process_configure(to_pd(data)->kipcm, id, conf);
+        return kipcm_ipc_configure(to_pd(data)->kipcm, id, conf);
 }
 
 static int default_ipc_destroy(void *           data,
@@ -71,7 +73,7 @@ static int default_ipc_destroy(void *           data,
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_ipc_process_destroy(to_pd(data)->kipcm, id);
+        return kipcm_ipc_destroy(to_pd(data)->kipcm, id);
 }
 
 static int default_connection_create(void *                      data,
@@ -105,9 +107,9 @@ static int default_connection_update(void *   data,
         return efcp_update(to_pd(data)->efcp, id_from, id_to);
 }
 
-int default_sdu_write(void *               data,
-                      port_id_t            id,
-                      const struct sdu_t * sdu)
+static int default_sdu_write(void *               data,
+                             port_id_t            id,
+                             const struct sdu_t * sdu)
 {
         if (!data) return -1;
 
@@ -116,9 +118,9 @@ int default_sdu_write(void *               data,
         return kipcm_sdu_write(to_pd(data)->kipcm, id, sdu);
 }
 
-int default_sdu_read(void *         data,
-                     port_id_t      id,
-                     struct sdu_t * sdu)
+static int default_sdu_read(void *         data,
+                            port_id_t      id,
+                            struct sdu_t * sdu)
 {
         if (!data) return -1;
 
@@ -127,17 +129,92 @@ int default_sdu_read(void *         data,
         return kipcm_sdu_read(to_pd(data)->kipcm, id, sdu);
 }
 
+static int default_fini(void * data)
+{
+        struct personality_data * tmp = data;
+        int                       err;
+
+        if (!data) return -1;
+
+        LOG_DBG("Finalizing default personality");
+
+        if (tmp->rmt) {
+                err = rmt_fini(tmp->rmt);
+                if (err) return err;
+        }
+        if (tmp->efcp) {
+                err = efcp_fini(tmp->efcp);
+                if (err) return err;
+        }
+        if (tmp->kipcm) {
+                err = kipcm_fini(tmp->kipcm);
+                if (err) return err;
+        }
+
+        LOG_DBG("Default personality finalized successfully");
+
+        return 0;
+}
+
+/* FIXME: To be removed ABSOLUTELY */
+struct kipcm * default_kipcm;
+EXPORT_SYMBOL(default_kipcm);
+
+static int default_init(struct kobject * parent,
+                        void *           data)
+{
+        struct personality_data * tmp = data;
+
+        if (!tmp) return -1;
+
+        LOG_DBG("Initializing default personality");
+
+        LOG_DBG("Initializing kipcm component");
+        tmp->kipcm = kipcm_init(parent);
+        if (!tmp->kipcm) {
+                if (default_fini(tmp)) {
+                        LOG_CRIT("The system might become unstable ...");
+                        return -1;
+                }
+        }
+
+        /* FIXME: To be removed */
+        default_kipcm = tmp->kipcm;
+
+        LOG_DBG("Initializing efcp component");
+        tmp->efcp = efcp_init(parent);
+        if (!tmp->efcp) {
+                if (default_fini(tmp)) {
+                        LOG_CRIT("The system might become unstable ...");
+                        return -1;
+                }
+        }
+
+        LOG_DBG("Initializing rmt component");
+        tmp->rmt = rmt_init(parent);
+        if (!tmp->rmt) {
+                if (default_fini(tmp)) {
+                        LOG_CRIT("The system might become unstable ...");
+                        return -1;
+                }
+        }
+
+        LOG_DBG("Default personality initialized successfully");
+
+        return 0;
+}
+
 struct personality_ops ops = {
-	.init               = NULL,
-	.fini               = NULL,
-	.ipc_create         = default_ipc_create,
-	.ipc_configure      = default_ipc_configure,
-	.ipc_destroy        = default_ipc_destroy,
-	.sdu_read           = default_sdu_read,
-	.sdu_write          = default_sdu_write,
-	.connection_create  = default_connection_create,
-	.connection_destroy = default_connection_destroy,
-	.connection_update  = default_connection_update,
+        .init               = default_init,
+        .fini               = default_fini,
+        .ipc_create         = default_ipc_create,
+        .ipc_configure      = default_ipc_configure,
+        .ipc_destroy        = default_ipc_destroy,
+        .sdu_read           = default_sdu_read,
+        .sdu_write          = default_sdu_write,
+        .connection_create  = default_connection_create,
+        .connection_destroy = default_connection_destroy,
+        .connection_update  = default_connection_update,
 };
 
 static struct personality_data data;
@@ -148,7 +225,7 @@ static int __init mod_init(void)
 {
         LOG_FBEGN;
 
-        LOG_DBG("Rina default personality initializing");
+        LOG_DBG("Rina default personality loading");
 
         if (personality) {
                 LOG_ERR("Rina default personality already initialized, "
@@ -156,51 +233,24 @@ static int __init mod_init(void)
                 return -1;
         }
 
-        LOG_DBG("Initializing shim layer");
-        if (shim_init())
-                return -1;
-
-        LOG_DBG("Initializing kipcm component");
-        data.kipcm = kipcm_init();
-        if (!data.kipcm)
-                goto CLEANUP_SHIM;
-
-        LOG_DBG("Initializing efcp component");
-        data.efcp = efcp_init();
-        if (!data.efcp)
-                goto CLEANUP_KIPCM;
-
-        LOG_DBG("Initializing rmt component");
-        data.rmt = rmt_init();
-        if (!data.rmt)
-                goto CLEANUP_EFCP;
-
         LOG_DBG("Finally registering personality");
         personality = rina_personality_register("default", &data, &ops);
-        if (!personality) {
-                goto CLEANUP_RMT;
-        }
+        if (!personality)
+                return -1;
+
+        ASSERT(personality != NULL);
 
         LOG_DBG("Rina default personality loaded successfully");
 
         LOG_FEXIT;
         return 0;
-
- CLEANUP_RMT:
-        rmt_fini(data.rmt);
- CLEANUP_EFCP:
-        efcp_fini(data.efcp);
- CLEANUP_KIPCM:
-        kipcm_fini(data.kipcm);
- CLEANUP_SHIM:
-        shim_exit();
-
-        return -1;
 }
 
 static void __exit mod_exit(void)
 {
-        ASSERT(personality);
+        LOG_DBG("Rina default personality unloading");
+
+        ASSERT(personality != NULL);
 
         if (rina_personality_unregister(personality)) {
                 LOG_CRIT("Got problems while unregistering personality, "
@@ -209,12 +259,6 @@ static void __exit mod_exit(void)
                 LOG_FEXIT;
                 return;
         }
-
-        rmt_fini(data.rmt);
-        efcp_fini(data.efcp);
-        kipcm_fini(data.kipcm);
-
-        shim_exit();
 
         personality = NULL;
 

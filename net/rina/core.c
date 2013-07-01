@@ -21,6 +21,7 @@
 #include <linux/export.h>
 #include <linux/init.h>
 #include <linux/kobject.h>
+#include <linux/sysfs.h>
 
 #define RINA_PREFIX "core"
 
@@ -30,15 +31,21 @@
 #include "netlink.h"
 #include "personality.h"
 
-static uint32_t      version   = MK_RINA_VERSION(0, 0, 0);
+static uint32_t      version   = MK_RINA_VERSION(0, 0, 2);
 static struct kset * root_kset = NULL;
 
 uint32_t rina_version(void)
 { return version; }
 EXPORT_SYMBOL(rina_version);
 
-#if CONFIG_SYSFS
-#if 0
+#define RINA_ATTR_RO(NAME)                              \
+        static struct kobj_attribute NAME##_attr =      \
+		 __ATTR_RO(NAME)
+
+#define RINA_ATTR_RW(NAME)                                      \
+        static struct kobj_attribute NAME##_attr =              \
+		__ATTR(NAME, 0644, NAME##show, NAME##store)
+
 static ssize_t version_show(struct kobject *        kobj,
                             struct kobj_attribute * attr,
                             char *                  buff)
@@ -48,10 +55,16 @@ static ssize_t version_show(struct kobject *        kobj,
                        RINA_VERSION_MINOR(version),
                        RINA_VERSION_MICRO(version));
 }
+RINA_ATTR_RO(version);
 
-static struct kobj_attribute version_attr = __ATTR_RO(version);
-#endif
-#endif
+static struct attribute * root_attrs[] = {
+        &version_attr.attr,
+        NULL
+};
+
+static struct attribute_group root_attr_group = {
+        .attrs = root_attrs
+};
 
 static int __init rina_core_init(void)
 {
@@ -62,9 +75,17 @@ static int __init rina_core_init(void)
         if (rina_debug_init())
                 return -1;
 
+        LOG_DBG("Creating root kset");
         root_kset = kset_create_and_add("rina", NULL, NULL);
         if (!root_kset) {
                 LOG_ERR("Cannot initialize root kset, bailing out");
+                rina_debug_exit();
+                return -1;
+        }
+
+        if (sysfs_create_group(&root_kset->kobj, &root_attr_group)) {
+                LOG_ERR("Cannot create root sysfs group");
+                kset_unregister(root_kset);
                 rina_debug_exit();
                 return -1;
         }

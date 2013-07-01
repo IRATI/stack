@@ -18,17 +18,17 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/slab.h>
 #include <linux/export.h>
+#include <linux/string.h>
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
+#include <linux/slab.h>
 
 #define RINA_PREFIX "personality"
 
 #include "logs.h"
 #include "utils.h"
 #include "personality.h"
-#include "shim.h"
 
 /* FIXME: Bogus, to be removed ASAP */
 struct personality * default_personality = NULL;
@@ -60,14 +60,16 @@ int rina_personality_init(struct kobject * parent)
                 return -1;
         }
 
-        ASSERT(personalities       == NULL);
-        ASSERT(default_personality == NULL);
+        ASSERT(personalities == NULL);
 
         personalities = kset_create_and_add("personalities", NULL, parent);
         if (!personalities) {
                 LOG_ERR("Cannot initialize personality layer");
                 return -1;
         }
+
+        ASSERT(personalities       != NULL);
+        ASSERT(default_personality == NULL);
 
         LOG_DBG("Personality layer initialized successfully");
 
@@ -110,7 +112,7 @@ static int is_name_ok(const char * name)
 
 static int are_ops_ok(const struct personality_ops * ops)
 {
-        LOG_DBG("Checking ops");
+        LOG_DBG("Checking ops %pK", ops);
 
         if (!ops) {
                 LOG_ERR("Ops are empty");
@@ -221,7 +223,7 @@ struct personality * rina_personality_register(const char *             name,
 
         if (pers->ops->init) {
                 LOG_DBG("Calling personality '%s' initializer", name);
-                if (!pers->ops->init(pers->data)) {
+                if (pers->ops->init(&pers->kobj, pers->data)) {
                         LOG_ERR("Could not initialize personality '%s'",
                                 name);
                         kobject_put(&pers->kobj);
@@ -265,7 +267,8 @@ int rina_personality_unregister(struct personality * pers)
 
         tmp = personality_find(name);
         if (!tmp) {
-                LOG_ERR("Personality '%s' not registered", name);
+                LOG_ERR("Personality '%s' is not registered, bailing out",
+                        name);
                 return -1;
         }
 
@@ -273,8 +276,12 @@ int rina_personality_unregister(struct personality * pers)
 
         if (pers->ops->fini) {
                 LOG_DBG("Calling personality '%s' finalizer", name);
-                pers->ops->fini(pers->data);
-                LOG_DBG("Personality '%s' finalized successfully", name);
+                if (pers->ops->fini(pers->data)) {
+                        LOG_CRIT("Could not finalize personality '%s', "
+                                 "the system might become unstable", name);
+                } else
+                        LOG_DBG("Personality '%s' finalized successfully",
+                                name);
         }
 
         kobject_put(&pers->kobj);

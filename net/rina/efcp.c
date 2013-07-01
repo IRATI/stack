@@ -19,6 +19,7 @@
  */
 
 #include <linux/slab.h>
+#include <linux/kobject.h>
 
 #define RINA_PREFIX "efcp"
 
@@ -30,7 +31,7 @@ struct efcp_descriptor {
         int this_is_dummy;
 };
 
-void * efcp_init(void)
+void * efcp_init(struct kobject * parent)
 {
         struct efcp_descriptor * e = NULL;
 
@@ -52,7 +53,7 @@ void * efcp_init(void)
         return e;
 }
 
-void efcp_fini(void * opaque)
+int efcp_fini(void * opaque)
 {
         LOG_FBEGN;
 
@@ -62,6 +63,8 @@ void efcp_fini(void * opaque)
         kfree(opaque);
 
         LOG_FEXIT;
+
+        return 0;
 }
 
 int efcp_write(void *               opaque,
