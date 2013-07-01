@@ -58,16 +58,15 @@ void RINANetlinkEndpoint::setNetlinkPortId(unsigned int netlinkPortId) {
 
 /* CLASS NETLINK PORT ID MAP */
 void NetlinkPortIdMap::putIPCProcessIdToNelinkPortIdMapping(
-		unsigned int netlinkPortId, unsigned short ipcProcessId){
-	std::map<unsigned short, RINANetlinkEndpoint *>::iterator it =
-					ipcProcessIdMappings.find(ipcProcessId);
+		unsigned int netlinkPortId, unsigned short ipcProcessId)
+{
 	RINANetlinkEndpoint * current = ipcProcessIdMappings[ipcProcessId];
-	if(current != 0){
+	if (current != 0) {
 		current->setIpcProcessId(ipcProcessId);
 		current->setNetlinkPortId(netlinkPortId);
-	}else{
+	} else {
 		ipcProcessIdMappings[ipcProcessId] =
-				new RINANetlinkEndpoint(netlinkPortId, ipcProcessId);
+                        new RINANetlinkEndpoint(netlinkPortId, ipcProcessId);
 	}
 }
 
