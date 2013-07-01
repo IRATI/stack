@@ -83,18 +83,18 @@ struct shim_instance {
 };
 
 struct shim_ops {
-	struct shim_instance * (* create)
-                (void *           data,
-		 ipc_process_id_t id);
-        
-	struct shim_instance * (* configure)
-                (void *                     data,
-		 struct shim_instance *     instance,
-                 const struct shim_conf_t * configuration);
+        int                    (* init)(void * data);
+        int                    (* fini)(void * opaque);
 
-	int                      (* destroy)
-	        (void *                 data,
-                 struct shim_instance * inst);
+	struct shim_instance * (* create)(void *           data,
+                                          ipc_process_id_t id);
+        
+	struct shim_instance * (* configure)(void *                     data,
+                                             struct shim_instance *     inst,
+                                             const struct shim_conf_t * cfg);
+
+	int                    (* destroy)(void *                 data,
+                                           struct shim_instance * inst);
 };
 
 struct shim {

@@ -34,10 +34,11 @@
 #define DEFAULT_LABEL "default"
 
 struct personality_data {
-        void * kipcm;
-        void * efcp;
-        void * rmt;
-        void * shims;
+        struct kipcm * kipcm;
+
+        /* FIXME: Types to be rearranged */
+        void *         efcp;
+        void *         rmt;
 };
 
 #define to_pd(X) ((struct personality_data *) X)
@@ -51,18 +52,18 @@ static int default_ipc_create(void *                data,
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_ipc_process_create(to_pd(data)->kipcm, name, id, type);
+        return kipcm_ipc_create(to_pd(data)->kipcm, name, id, type);
 }
 
-static int default_ipc_configure(void *                            data,
-                                 ipc_process_id_t                  id,
-                                 const struct ipc_process_conf_t * conf)
+static int default_ipc_configure(void *                          data,
+                                 ipc_process_id_t                id,
+                                 const struct ipc_process_conf * conf)
 {
         if (!data) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_ipc_process_configure(to_pd(data)->kipcm, id, conf);
+        return kipcm_ipc_configure(to_pd(data)->kipcm, id, conf);
 }
 
 static int default_ipc_destroy(void *           data,
@@ -72,7 +73,7 @@ static int default_ipc_destroy(void *           data,
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_ipc_process_destroy(to_pd(data)->kipcm, id);
+        return kipcm_ipc_destroy(to_pd(data)->kipcm, id);
 }
 
 static int default_connection_create(void *                      data,
@@ -149,15 +150,15 @@ static int default_fini(void * data)
                 err = kipcm_fini(tmp->kipcm);
                 if (err) return err;
         }
-        if (tmp->shims) {
-                err = shims_fini(tmp->shims);
-                return err;
-        }
 
         LOG_DBG("Default personality finalized successfully");
 
         return 0;
 }
+
+/* FIXME: To be removed ABSOLUTELY */
+struct kipcm * default_kipcm;
+EXPORT_SYMBOL(default_kipcm);
 
 static int default_init(struct kobject * parent,
                         void *           data)
@@ -168,17 +169,8 @@ static int default_init(struct kobject * parent,
 
         LOG_DBG("Initializing default personality");
 
-        LOG_DBG("Initializing shims layer");
-        tmp->shims = shims_init(parent);
-        if (!tmp->shims) {
-                if (default_fini(tmp)) {
-                        LOG_CRIT("The system might become unstable ...");
-                        return -1;
-                }
-        }
-
         LOG_DBG("Initializing kipcm component");
-        tmp->kipcm = kipcm_init();
+        tmp->kipcm = kipcm_init(parent);
         if (!tmp->kipcm) {
                 if (default_fini(tmp)) {
                         LOG_CRIT("The system might become unstable ...");
@@ -186,8 +178,11 @@ static int default_init(struct kobject * parent,
                 }
         }
 
+        /* FIXME: To be removed */
+        default_kipcm = tmp->kipcm;
+
         LOG_DBG("Initializing efcp component");
-        tmp->efcp = efcp_init();
+        tmp->efcp = efcp_init(parent);
         if (!tmp->efcp) {
                 if (default_fini(tmp)) {
                         LOG_CRIT("The system might become unstable ...");
@@ -196,7 +191,7 @@ static int default_init(struct kobject * parent,
         }
 
         LOG_DBG("Initializing rmt component");
-        tmp->rmt = rmt_init();
+        tmp->rmt = rmt_init(parent);
         if (!tmp->rmt) {
                 if (default_fini(tmp)) {
                         LOG_CRIT("The system might become unstable ...");
@@ -210,16 +205,16 @@ static int default_init(struct kobject * parent,
 }
 
 struct personality_ops ops = {
-	.init               = default_init,
-	.fini               = default_fini,
-	.ipc_create         = default_ipc_create,
-	.ipc_configure      = default_ipc_configure,
-	.ipc_destroy        = default_ipc_destroy,
-	.sdu_read           = default_sdu_read,
-	.sdu_write          = default_sdu_write,
-	.connection_create  = default_connection_create,
-	.connection_destroy = default_connection_destroy,
-	.connection_update  = default_connection_update,
+        .init               = default_init,
+        .fini               = default_fini,
+        .ipc_create         = default_ipc_create,
+        .ipc_configure      = default_ipc_configure,
+        .ipc_destroy        = default_ipc_destroy,
+        .sdu_read           = default_sdu_read,
+        .sdu_write          = default_sdu_write,
+        .connection_create  = default_connection_create,
+        .connection_destroy = default_connection_destroy,
+        .connection_update  = default_connection_update,
 };
 
 static struct personality_data data;

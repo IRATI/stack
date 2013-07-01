@@ -139,27 +139,27 @@ static int are_ops_ok(const struct shim_ops * ops)
  */
 static struct kobject *kobject_get_unless_zero(struct kobject *kobj)
 {
-	if (!kref_get_unless_zero(&kobj->kref))
-		kobj = NULL;
-	return kobj;
+        if (!kref_get_unless_zero(&kobj->kref))
+                kobj = NULL;
+        return kobj;
 }
 
 struct kobject *kset_find_obj(struct kset *kset, const char *name)
 {
-	struct kobject *k;
-	struct kobject *ret = NULL;
+        struct kobject *k;
+        struct kobject *ret = NULL;
 
-	spin_lock(&kset->list_lock);
+        spin_lock(&kset->list_lock);
 
-	list_for_each_entry(k, &kset->list, entry) {
-		if (kobject_name(k) && !strcmp(kobject_name(k), name)) {
-			ret = kobject_get_unless_zero(k);
-			break;
-		}
-	}
+        list_for_each_entry(k, &kset->list, entry) {
+                if (kobject_name(k) && !strcmp(kobject_name(k), name)) {
+                        ret = kobject_get_unless_zero(k);
+                        break;
+                }
+        }
 
-	spin_unlock(&kset->list_lock);
-	return ret;
+        spin_unlock(&kset->list_lock);
+        return ret;
 }
 #endif
 
@@ -207,7 +207,7 @@ struct shim * shim_register(struct shims *    parent,
         LOG_DBG("Registering shim '%s'", name);
 
         tmp = shim_find(parent, name);
-        if (!tmp) {
+        if (tmp) {
                 LOG_ERR("Shim '%s' already registered", name);
                 return NULL;
         }
@@ -241,7 +241,6 @@ struct shim * shim_register(struct shims *    parent,
 
         return shim;
 }
-EXPORT_SYMBOL(shim_register);
 
 int shim_unregister(struct shims * parent,
                     struct shim *  shim)
@@ -282,4 +281,3 @@ int shim_unregister(struct shims * parent,
 
         return 0;
 }
-EXPORT_SYMBOL(shim_unregister);

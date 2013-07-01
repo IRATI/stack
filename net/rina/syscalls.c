@@ -45,7 +45,7 @@
                                                                         \
                 if (PERS -> ops -> HOOK == NULL) {                      \
                         LOG_ERR("Personality has no %s hook",           \
-				__stringify(HOOK));                     \
+                                __stringify(HOOK));                     \
                         return -1;                                      \
                 }                                                       \
                                                                         \
@@ -59,7 +59,7 @@
 extern struct personality * default_personality;
 
 #define CALL_DEFAULT_PERSONALITY(HOOK, ARGS...)                 \
-	CALL_PERSONALITY(default_personality, HOOK, ##ARGS)
+        CALL_PERSONALITY(default_personality, HOOK, ##ARGS)
 
 SYSCALL_DEFINE3(ipc_create,
                 const struct name_t __user *, name,
@@ -68,8 +68,8 @@ SYSCALL_DEFINE3(ipc_create,
 { CALL_DEFAULT_PERSONALITY(ipc_create, name, id, type); }
 
 SYSCALL_DEFINE2(ipc_configure,
-                ipc_process_id_t,                         id,
-                const struct ipc_process_conf_t __user *, config)
+                ipc_process_id_t,                       id,
+                const struct ipc_process_conf __user *, config)
 { CALL_DEFAULT_PERSONALITY(ipc_configure, id, config); }
 
 SYSCALL_DEFINE1(ipc_destroy,

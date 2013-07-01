@@ -30,7 +30,7 @@ struct rmt_descriptor {
         void * this_is_dummy;
 };
 
-void * rmt_init(void)
+void * rmt_init(struct kobject * parent)
 {
         struct rmt_descriptor * e = NULL;
 

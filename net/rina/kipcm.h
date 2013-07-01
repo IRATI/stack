@@ -33,7 +33,7 @@ typedef enum {
         DIF_TYPE_SHIM
 } dif_type_t;
 
-struct ipc_process_conf_t {
+struct ipc_process_conf {
 	/*
 	 * Configuration of the kernel components of a normal IPC Process.
 	 * Defines the struct for the kernel components of a fully RINA IPC
@@ -56,16 +56,16 @@ struct normal_ipc_process_t {
          */
 
 	/* The ID of the IPC Process */
-	ipc_process_id_t            ipcp_id; 
+	ipc_process_id_t          ipcp_id; 
 	
 	/* Contains the configuration of the kernel components */
-	struct ipc_process_conf_t * configuration;
+	struct ipc_process_conf * configuration;
 
 	/* The EFCP data structure associated to the IPC Process */
-	struct efcp_ipc_t *         efcp;
+	struct efcp_ipc_t *       efcp;
 	
 	/* The RMT instance associated to the IPC Process */
-	struct rmt_instance_t *     rmt;
+	struct rmt_instance_t *   rmt;
 };
 
 struct ipc_process_t {
@@ -79,7 +79,7 @@ struct ipc_process_t {
 	} data;
 };
 
-struct flow_t {
+struct flow {
 	/* The port-id identifying the flow */
 	port_id_t              port_id;
 
@@ -108,33 +108,41 @@ struct flow_t {
 	struct kfifo *         sdu_ready;
 };
 
-void * kipcm_init(void);
-int    kipcm_fini(void * opaque);
+struct kipcm {
+        struct shims * shims;
+};
 
-int    kipcm_shim_register(struct shim * shim);
-int    kipcm_shim_unregister(struct shim * shim);
+struct kipcm * kipcm_init(struct kobject * parent);
+int            kipcm_fini(struct kipcm * kipcm);
 
-int    kipcm_ipc_process_create(void *                opaque,
-				const struct name_t * name,
-				ipc_process_id_t      id,
-				dif_type_t            type);
-int    kipcm_ipc_process_configure(void *                    opaque,
-			   ipc_process_id_t                  id,
-			   const struct ipc_process_conf_t * configuration);
-int    kipcm_ipc_process_destroy(void *           opaque,
-				 ipc_process_id_t id);
+struct shim *  kipcm_shim_register(struct kipcm *    kipcm,
+                                   const char *      name,
+                                   void *            data,
+                                   struct shim_ops * ops);
+int            kipcm_shim_unregister(struct kipcm * kipcm,
+                                     struct shim *  shim);
 
-int    kipcm_flow_add(void *                opaque,
-                      port_id_t             id,
-                      const struct flow_t * flow);
-int    kipcm_flow_remove(void *    opaque,
-                         port_id_t id);
+int            kipcm_ipc_create(struct kipcm *        kipcm,
+                                const struct name_t * name,
+                                ipc_process_id_t      id,
+                                dif_type_t            type);
+int            kipcm_ipc_configure(struct kipcm *                  kipcm,
+                                   ipc_process_id_t                id,
+                                   const struct ipc_process_conf * config);
+int            kipcm_ipc_destroy(struct kipcm *   kipcm,
+                                 ipc_process_id_t id);
 
-int    kipcm_sdu_write(void *               opaque,
-		       port_id_t            id,
-		       const struct sdu_t * sdu);
-int    kipcm_sdu_read(void *         opaque,
-		      port_id_t      id,
-		      struct sdu_t * sdu);
+int            kipcm_flow_add(struct kipcm *      kipcm,
+                              port_id_t           id,
+                              const struct flow * flow);
+int            kipcm_flow_remove(struct kipcm * kipcm,
+                                 port_id_t      id);
+
+int            kipcm_sdu_write(struct kipcm *       kipcm,
+                               port_id_t            id,
+                               const struct sdu_t * sdu);
+int            kipcm_sdu_read(struct kipcm * kipcm,
+                              port_id_t      id,
+                              struct sdu_t * sdu);
 
 #endif

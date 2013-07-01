@@ -30,11 +30,12 @@
 #include "logs.h"
 #include "common.h"
 #include "utils.h"
+#include "kipcm.h"
 #include "shim.h"
 
-static struct shim_t * shim;
+static struct shim * shim;
 
-struct dummy_instance_t {
+struct dummy_instance {
         ipc_process_id_t ipc_process_id;
         struct name_t *  name;
 
@@ -45,27 +46,27 @@ struct dummy_instance_t {
 	struct list_head list;
 };
 
-struct dummy_flow_t {
+struct dummy_flow {
         port_id_t             port_id;
         const struct name_t * source;
         const struct name_t * dest;
         struct list_head      list;
 };
 
-static int dummy_flow_allocate_request(void *                     opaque,
+static int dummy_flow_allocate_request(void *                     data,
                                        const struct name_t *      source,
                                        const struct name_t *      dest,
                                        const struct flow_spec_t * flow_spec,
                                        port_id_t *                id)
 {
-        struct dummy_instance_t * dummy;
-        struct dummy_flow_t *     flow;
+        struct dummy_instance * dummy;
+        struct dummy_flow *     flow;
 
         LOG_FBEGN;
 
         /* FIXME: We should verify that the port_id has not got a flow yet */
 
-        flow = kmalloc(sizeof(*flow), GFP_KERNEL);
+        flow = kzalloc(sizeof(*flow), GFP_KERNEL);
         if (!flow) {
                 LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*flow));
                 LOG_FEXIT;
@@ -74,7 +75,7 @@ static int dummy_flow_allocate_request(void *                     opaque,
 
 	/* FIXME: Now we should ask the destination application for a flow */
 
-	dummy = (struct dummy_instance_t *) opaque;
+	dummy = (struct dummy_instance *) data;
 	flow->dest = dest;
 	flow->source = source;
 	flow->port_id = *id;
@@ -87,63 +88,67 @@ static int dummy_flow_allocate_request(void *                     opaque,
         return 0;
 }
 
-static int dummy_flow_allocate_response(void *              opaque,
+static int dummy_flow_allocate_response(void *              data,
                                         port_id_t           id,
                                         response_reason_t * response)
 {
         LOG_FBEGN;
         LOG_FEXIT;
 
-        return 0;
+        return -1;
 }
 
-static int dummy_flow_deallocate(void *    opaque,
+static int dummy_flow_deallocate(void *    data,
                                  port_id_t id)
 {
         LOG_FBEGN;
         LOG_FEXIT;
 
-        return 0;
+        return -1;
 }
 
-static int dummy_application_register(void *                opaque,
+static int dummy_application_register(void *                data,
                                       const struct name_t * name)
 {
         LOG_FBEGN;
         LOG_FEXIT;
 
-        return 0;
+        return -1;
 }
 
-static int dummy_application_unregister(void *                opaque,
+static int dummy_application_unregister(void *                data,
                                         const struct name_t * name)
 {
         LOG_FBEGN;
         LOG_FEXIT;
 
-        return 0;
+        return -1;
 }
 
-static struct dummy_flow_t * dummy_find_flow(void * opaque, port_id_t id) {
-	struct dummy_instance_t * dummy;
-	struct dummy_flow_t *     flow;
-	dummy = (struct dummy_instance_t *) opaque;
+static struct dummy_flow * find_flow(void *    opaque,
+                                     port_id_t id)
+{
+	struct dummy_instance * dummy;
+	struct dummy_flow *     flow;
+
+	dummy = (struct dummy_instance *) opaque;
 	list_for_each_entry(flow, dummy->flows, list) {
 		if (flow->port_id == id) {
 			return flow;
 		}
 	}
+
 	return NULL;
 }
 
-static int dummy_sdu_write(void *               opaque,
+static int dummy_sdu_write(void *               data,
                            port_id_t            id,
                            const struct sdu_t * sdu)
 {
-	struct dummy_flow_t * flow;
+	struct dummy_flow * flow;
 	LOG_FBEGN;
 
-	flow = dummy_find_flow(opaque, id);
+	flow = find_flow(data, id);
 	if (!flow) {
 		LOG_ERR("There is not a flow allocated with port-id %d", id);
 		return -1;
@@ -156,15 +161,15 @@ static int dummy_sdu_write(void *               opaque,
         return 0;
 }
 
-static int dummy_sdu_read(void *         opaque,
+static int dummy_sdu_read(void *         data,
                           port_id_t      id,
                           struct sdu_t * sdu)
 {
-	struct dummy_flow_t * flow;
+	struct dummy_flow * flow;
 
 	LOG_FBEGN;
 
-	flow = dummy_find_flow(opaque, id);
+	flow = find_flow(data, id);
 	if (!flow) {
 		LOG_ERR("There is not a flow allocated with port-id %d", id);
 		return -1;
@@ -175,12 +180,13 @@ static int dummy_sdu_read(void *         opaque,
         return 0;
 }
 
-static struct shim_instance_t * dummy_create(void *           opaque,
-                                             ipc_process_id_t ipc_process_id)
+static struct shim_instance * dummy_create(void *           data,
+					   ipc_process_id_t ipc_process_id)
 {
-	struct shim_instance_t *  instance;
-	struct dummy_instance_t * dummy_inst;
-	LIST_HEAD(port_flow);
+	struct shim_instance *   instance;
+	struct shim_instance_ops ops;
+	struct dummy_instance *  dummy_inst;
+	struct list_head *       port_flow;
 
 	LOG_FBEGN;
 
@@ -201,28 +207,42 @@ static struct shim_instance_t * dummy_create(void *           opaque,
 		return NULL;
 	}
 
-	dummy_inst->ipc_process_id = ipc_process_id;
-	dummy_inst->flows          = &port_flow;
+	port_flow = kzalloc(sizeof(*port_flow), GFP_KERNEL);
+	if (!port_flow) {
+		LOG_ERR("Cannot allocate %zu bytes of memory",
+				sizeof(*port_flow));
+		kfree(instance);
+		kfree(dummy_inst);
+		LOG_FEXIT;
+		return NULL;
+	}
 
-	instance->opaque                 = dummy_inst;
-	instance->flow_allocate_request  = dummy_flow_allocate_request;
-	instance->flow_allocate_response = dummy_flow_allocate_response;
-	instance->flow_deallocate        = dummy_flow_deallocate;
-	instance->application_register   = dummy_application_register;
-	instance->application_unregister = dummy_application_unregister;
-	instance->sdu_write              = dummy_sdu_write;
-	instance->sdu_read               = dummy_sdu_read;
+	port_flow->prev = port_flow;
+	port_flow->next = port_flow;
+	dummy_inst->ipc_process_id = ipc_process_id;
+	dummy_inst->flows          = port_flow;
+
+	instance->data             = dummy_inst;
+
+	ops.flow_allocate_request  = dummy_flow_allocate_request;
+	ops.flow_allocate_response = dummy_flow_allocate_response;
+	ops.flow_deallocate        = dummy_flow_deallocate;
+	ops.application_register   = dummy_application_register;
+	ops.application_unregister = dummy_application_unregister;
+	ops.sdu_write              = dummy_sdu_write;
+	ops.sdu_read               = dummy_sdu_read;
+	instance->ops              = ops;
 
 	INIT_LIST_HEAD(&dummy_inst->list);
-	list_add(&dummy_inst->list, (struct list_head *) shim->opaque);
+	list_add(&dummy_inst->list, (struct list_head *) shim->data);
 
         LOG_FEXIT;
 
         return instance;
 }
 
-static int dummy_destroy(void *                   opaque,
-                         struct shim_instance_t * inst)
+static int dummy_destroy(void *                   data,
+                         struct shim_instance *   inst)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -230,19 +250,20 @@ static int dummy_destroy(void *                   opaque,
         return 0;
 }
 
-static struct shim_instance_t *
-dummy_configure(void *                     opaque,
-                struct shim_instance_t *   instance,
+/* FIXME: It doesn't allow reconfiguration */
+static struct shim_instance *
+dummy_configure(void *                     data,
+                struct shim_instance *     instance,
                 const struct shim_conf_t * configuration)
 {
         struct shim_conf_t * current_entry;
-        struct dummy_instance_t * dummy;
+        struct dummy_instance * dummy;
 
         LOG_FBEGN;
 
         ASSERT(instance);
         ASSERT(configuration);
-        dummy = (struct dummy_instance_t *) instance->opaque;
+        dummy = (struct dummy_instance *) instance->data;
         if (!dummy) {
                 LOG_ERR("There is not a dummy instance in this shim instance");
                 LOG_FEXIT;
@@ -266,37 +287,83 @@ dummy_configure(void *                     opaque,
         return NULL;
 }
 
-static int __init mod_init(void)
+struct shim_data {
+	struct list_head * shim_list;
+};
+
+static struct shim_data dummy_data;
+
+static int dummy_init(void * data)
 {
 	struct list_head * dummy_shim_list;
-	LOG_FBEGN;
 
-        shim = kmalloc(sizeof(*shim), GFP_KERNEL);
-        if (!shim) {
-                LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*shim));
-                LOG_FEXIT;
-                return -1;
-        }
-        dummy_shim_list = kmalloc(sizeof(*dummy_shim_list), GFP_KERNEL);
-	if (!dummy_shim_list) {
-		LOG_CRIT("Cannot allocate %zu bytes of memory",
-			 sizeof(*dummy_shim_list));
+        LOG_FBEGN;
 
-		kfree(shim);
+        dummy_data.shim_list = kmalloc(sizeof(*dummy_shim_list), GFP_KERNEL);
+	if (!dummy_data.shim_list) {
+		LOG_ERR("Cannot allocate %zu bytes of memory",
+                        sizeof(*dummy_data.shim_list));
+
+                kfree(dummy_data.shim_list);
+
 		LOG_FEXIT;
 		return -1;
 	}
-	dummy_shim_list->next = dummy_shim_list;
-	dummy_shim_list->prev = dummy_shim_list;
-        shim->label     = "shim-dummy";
-        shim->create    = dummy_create;
-        shim->destroy   = dummy_destroy;
-        shim->configure = dummy_configure;
-        shim->opaque    = dummy_shim_list;
+	dummy_data.shim_list->next = dummy_data.shim_list;
+	dummy_data.shim_list->prev = dummy_data.shim_list;
 
-        if (shim_register(shim)) {
-                LOG_ERR("Initialization of module shim-dummy failed");
-                kfree(shim);
+        LOG_FEXIT;
+
+        return -1;
+}
+
+static int dummy_fini(void * data)
+{
+        struct dummy_instance * pos, * next;
+        struct dummy_flow *     pos_flow, * next_flow;
+
+        LOG_FBEGN;
+
+        list_for_each_entry_safe(pos, next,
+                                 (struct list_head *) shim->data,
+                                 list) {
+        	list_del(&pos->list);
+        	list_for_each_entry_safe(pos_flow,
+                                         next_flow, pos->flows, list) {
+        		list_del(&pos_flow->list);
+        		kfree(pos_flow);
+        	}
+        	kfree(pos);
+        }
+        
+        LOG_FEXIT;
+
+        return -1;
+}
+
+static struct shim_ops dummy_ops = {
+        .init      = dummy_init,
+        .fini      = dummy_fini,
+        .create    = dummy_create,
+        .destroy   = dummy_destroy,
+        .configure = dummy_configure,
+};
+
+static struct shim *  dummy_shim = NULL;
+
+/* FIXME: To be removed ABSOLUTELY */
+extern struct kipcm * default_kipcm;
+
+static int __init mod_init(void)
+{
+	LOG_FBEGN;
+
+        dummy_shim = kipcm_shim_register(default_kipcm,
+                                         "shim-dummy",
+                                         &dummy_data,
+                                         &dummy_ops);
+        if (!dummy_shim) {
+                LOG_CRIT("Initialization failed");
 
                 LOG_FEXIT;
                 return -1;
@@ -309,30 +376,13 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
-        struct dummy_instance_t *pos, *next;
-        struct dummy_flow_t     *pos_flow, *next_flow;
-
 	LOG_FBEGN;
 
-	ASSERT(shim);
-	ASSERT(shim->opaque);
-	if (shim_unregister(shim)) {
-        	/* FIXME: Should we do something here? */
+	if (kipcm_shim_unregister(default_kipcm,
+                                  dummy_shim)) {
+        	LOG_CRIT("Cannot unregister");
+                return;
         }
-        list_for_each_entry_safe(pos, next, (struct list_head *) shim->opaque,
-        		list) {
-        	list_del(&pos->list);
-        	list_for_each_entry_safe(pos_flow,
-        				next_flow, pos->flows, list) {
-        		list_del(&pos_flow->list);
-        		kfree(pos_flow);
-        	}
-        	kfree(pos);
-        }
-        kfree(shim->opaque);
-        kfree(shim);
-
-        /* FIXME: We must unroll all the things done in mod_init */
 
         LOG_FEXIT;
 }
