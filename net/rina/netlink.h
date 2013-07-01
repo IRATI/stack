@@ -19,8 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_NETLINK_SUPPORT
-#define RINA_NETLINK_SUPPORT
+#ifndef RINA_NETLINK_H
+#define RINA_NETLINK_H
 
 #include <linux/module.h>
 #include <net/sock.h>
@@ -147,12 +147,12 @@ enum {
 #define NETLINK_RINA_A_MAX (__NETLINK_RINA_A_MAX - 1)
 #define NETLINK_RINA_C_MAX (__NETLINK_RINA_C_MAX - 1)
 
-int  register_handler(int,
-                      int (*)(struct sk_buff *, struct genl_info *));
-int  unregister_handler(int);
-
-
 int  rina_netlink_init(void);
 void rina_netlink_exit(void);
+
+int  rina_netlink_register_handler(int,
+                                   int (*)(struct sk_buff *,
+                                           struct genl_info *));
+int  rina_netlink_unregister_handler(int);
 
 #endif
