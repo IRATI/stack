@@ -32,7 +32,7 @@
 #include "shim.h"
 
 struct shim_instance_data {
-        int this_is_another_fake_and_should_avoid_compiler_barfs;
+        ipc_process_id_t id;
 };
 
 static int empty_flow_allocate_request(struct shim_instance_data * data,
@@ -42,6 +42,9 @@ static int empty_flow_allocate_request(struct shim_instance_data * data,
                                        port_id_t *                 id)
 {
         LOG_FBEGN;
+
+        ASSERT(data);
+
         LOG_FEXIT;
 
         return 0;
@@ -52,6 +55,9 @@ static int empty_flow_allocate_response(struct shim_instance_data * data,
                                         response_reason_t *         response)
 {
         LOG_FBEGN;
+
+        ASSERT(data);
+
         LOG_FEXIT;
 
         return 0;
@@ -61,6 +67,9 @@ static int empty_flow_deallocate(struct shim_instance_data * data,
                                  port_id_t                   id)
 {
         LOG_FBEGN;
+
+        ASSERT(data);
+
         LOG_FEXIT;
 
         return 0;
@@ -70,6 +79,9 @@ static int empty_application_register(struct shim_instance_data * data,
                                       const struct name_t *       name)
 {
         LOG_FBEGN;
+
+        ASSERT(data);
+
         LOG_FEXIT;
 
         return 0;
@@ -79,6 +91,9 @@ static int empty_application_unregister(struct shim_instance_data * data,
                                         const struct name_t *       name)
 {
         LOG_FBEGN;
+
+        ASSERT(data);
+
         LOG_FEXIT;
 
         return 0;
@@ -89,6 +104,9 @@ static int empty_sdu_write(struct shim_instance_data * data,
                            const struct sdu_t *        sdu)
 {
         LOG_FBEGN;
+
+        ASSERT(data);
+
         LOG_FEXIT;
 
         return 0;
@@ -99,6 +117,9 @@ static int empty_sdu_read(struct shim_instance_data * data,
                           struct sdu_t *              sdu)
 {
         LOG_FBEGN;
+
+        ASSERT(data);
+
         LOG_FEXIT;
 
         return 0;
@@ -115,7 +136,7 @@ static struct shim_instance_ops empty_instance_ops = {
 };
 
 static struct shim_data {
-        int this_is_fake_and_should_avoid_compiler_barfs;
+        struct list_head * instances;
 } empty_data;
 
 static struct shim * empty_shim = NULL;
@@ -124,7 +145,11 @@ static int empty_init(struct shim_data * data)
 {
         LOG_FBEGN;
 
+        ASSERT(data);
+
         bzero(&empty_data, sizeof(empty_data));
+
+        INIT_LIST_HEAD(data->instances);
 
         LOG_FEXIT;
 
@@ -134,6 +159,16 @@ static int empty_init(struct shim_data * data)
 static int empty_fini(struct shim_data * data)
 {
         LOG_FBEGN;
+
+        ASSERT(data);
+
+        /*
+         * NOTE:
+         *   All the instances should be removed by the shims layer, no work is
+         *   needed here. In theory, a check for empty list should be added
+         *   here
+         */
+
         LOG_FEXIT;
 
         return 0;
@@ -146,6 +181,8 @@ static struct shim_instance * empty_create(struct shim_data * data,
 
         LOG_FBEGN;
 
+        ASSERT(data);
+
         inst = kzalloc(sizeof(*inst), GFP_KERNEL);
         if (!inst) {
                 LOG_ERR("Cannot allocate %zd bytes of memory", sizeof(*inst));
@@ -157,8 +194,11 @@ static struct shim_instance * empty_create(struct shim_data * data,
         if (!inst->data) {
                 LOG_ERR("Cannot allocate %zd bytes of memory",
                         sizeof(*inst->data));
+                kfree(inst);
                 return NULL;
         }
+
+        list_add(data->instances, inst->data);
 
         LOG_FEXIT;
 
@@ -170,6 +210,9 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
                                               const struct shim_config * cfg)
 {
         LOG_FBEGN;
+
+        ASSERT(data);
+
         LOG_FEXIT;
 
         return NULL;
@@ -179,6 +222,9 @@ static int empty_destroy(struct shim_data *       data,
                          struct shim_instance *   inst)
 {
         LOG_FBEGN;
+
+        ASSERT(data);
+
         LOG_FEXIT;
 
         return 0;
