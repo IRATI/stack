@@ -67,10 +67,10 @@ struct shim_eth_flow {
  * shim Ethernet IPC Process
  */
 struct eth_vlan_instance {
-        struct rb_node node;
+        struct rb_node         node;
 
         /* IPC process id and DIF name */
-        ipc_process_id_t id;
+        ipc_process_id_t       id;
 
         /* The configuration of the shim IPC Process */
         struct eth_vlan_info * info;
@@ -89,7 +89,7 @@ static int eth_vlan_flow_allocate_request(void *                     opaque,
                                           const struct name_t *      source,
                                           const struct name_t *      dest,
                                           const struct flow_spec_t * flow_spec,
-                                          port_id_t                * port_id)
+                                          port_id_t *                port_id)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -171,8 +171,6 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 return 0;
 
         /* Get the SDU out of the sk_buff */
-	
-
 
         kfree_skb(skb);
         return 0;
@@ -198,13 +196,18 @@ static struct shim_instance * eth_vlan_create(void *           data,
         if (!instance) {
                 LOG_ERR("Cannot allocate memory for shim_instance");
                 LOG_FEXIT;
-                return 0;
+                return NULL;
         }
 
         eth_instance = kzalloc(sizeof(*eth_instance), GFP_KERNEL);
         if (!eth_instance) {
                 LOG_ERR("Cannot allocate memory for eth_vlan_instance");
                 LOG_FEXIT;
+
+                /* FIXME:
+                 *   Are you sure ? instance might be deallocated and a
+                 *   NULL returned
+                 */
                 return instance;
         }
 
@@ -218,9 +221,8 @@ static struct shim_instance * eth_vlan_create(void *           data,
                         kfree(eth_instance);
                         kfree(instance);
                         LOG_FEXIT;
-                        return 0;
-                }
-                else if (id < s->id)
+                        return NULL;
+                } else if (id < s->id)
                         p = &(*p)->rb_left;
                 else
                         p = &(*p)->rb_right;
@@ -255,6 +257,7 @@ static int name_cpy(struct name_t * dst,
                 return -1;
         }
 
+        /* FIXME: Check strcpy return values */
         strcpy(temp->process_name, src->process_name);
         strcpy(temp->process_instance, src->process_instance);
         strcpy(temp->entity_name, src->entity_name);
@@ -263,10 +266,9 @@ static int name_cpy(struct name_t * dst,
         return 0;
 }
 
-struct shim_instance * eth_vlan_configure
-(void *                     data,
- struct shim_instance *     inst,
- const struct shim_conf_t * configuration)
+struct shim_instance * eth_vlan_configure (void *                     data,
+                                           struct shim_instance *     inst,
+                                           const struct shim_conf_t * cfg)
 {
         struct eth_vlan_instance * eth_instance;
         struct eth_vlan_info * info;
@@ -313,8 +315,8 @@ struct shim_instance * eth_vlan_configure
         }
 
         /* Retrieve configuration of IPC process from params */
-        list_for_each(pos, &(configuration->list)) {
-                c = list_entry(pos, struct shim_conf_t, list);
+        list_for_each(pos, &(cfg->list)) {
+                c   = list_entry(pos, struct shim_conf_t, list);
                 tmp = c->entry;
                 val = tmp->value;
                 if (!strcmp(tmp->name, "difname")
@@ -417,6 +419,7 @@ static int eth_vlan_destroy(void *                 data,
                 }
                 kfree(inst);
         }
+
         LOG_FEXIT;
         return 0;
 }
@@ -472,6 +475,7 @@ static int eth_vlan_fini(void * data)
         }
 
         LOG_FEXIT;
+
 	return 0;
 }
 
