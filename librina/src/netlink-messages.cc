@@ -199,6 +199,7 @@ AppAllocateFlowRequestResultMessage::AppAllocateFlowRequestResultMessage() :
 		BaseNetlinkMessage(RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT) {
 	this->portId = 0;
 	this->ipcProcessPortId = 0;
+	this->ipcProcessId = 0;
 }
 
 const std::string&
@@ -246,6 +247,15 @@ int AppAllocateFlowRequestResultMessage::getPortId() const {
 
 void AppAllocateFlowRequestResultMessage::setPortId(int portId) {
 	this->portId = portId;
+}
+
+unsigned short AppAllocateFlowRequestResultMessage::getIpcProcessId() const{
+	return ipcProcessId;
+}
+
+void AppAllocateFlowRequestResultMessage::setIpcProcessId(
+		unsigned short ipcProcessId){
+	this->ipcProcessId = ipcProcessId;
 }
 
 /* CLASS APP ALLOCATE FLOW REQUEST ARRIVED MESSAGE */
@@ -530,6 +540,7 @@ IPCEvent* AppRegisterApplicationRequestMessage::toIPCEvent(){
 AppRegisterApplicationResponseMessage::AppRegisterApplicationResponseMessage() :
 		BaseNetlinkMessage(RINA_C_APP_REGISTER_APPLICATION_RESPONSE) {
 	this->ipcProcessPortId = 0;
+	this->ipcProcessId = 0;
 	this->result = 0;
 }
 
@@ -578,6 +589,15 @@ const ApplicationProcessNamingInformation&
 void AppRegisterApplicationResponseMessage::setDifName(
 		const ApplicationProcessNamingInformation& difName) {
 	this->difName = difName;
+}
+
+unsigned short AppRegisterApplicationResponseMessage::getIpcProcessId() const{
+	return ipcProcessId;
+}
+
+void AppRegisterApplicationResponseMessage::setIpcProcessId(
+		unsigned short ipcProcessId){
+	this->ipcProcessId = ipcProcessId;
 }
 
 }

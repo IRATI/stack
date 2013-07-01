@@ -125,6 +125,7 @@ int testAppAllocateFlowRequestResultMessage() {
 	message->setErrorDescription("Error description");
 	message->setDifName(*difName);
 	message->setIpcProcessPortId(42);
+	message->setIpcProcessId(234);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -175,6 +176,11 @@ int testAppAllocateFlowRequestResultMessage() {
 		returnValue = -1;
 	} else if (message->getPortId() != recoveredMessage->getPortId()) {
 		std::cout << "PortId on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message->getIpcProcessId() !=
+			recoveredMessage->getIpcProcessId()) {
+		std::cout << "IPC Process id on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	}

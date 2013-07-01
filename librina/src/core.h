@@ -30,27 +30,45 @@
 namespace rina {
 
 /**
+ * Contains the information to identify a RINA netlink endpoing:
+ * netlink port ID and IPC Process id
+ */
+class RINANetlinkEndpoint{
+	unsigned int netlinkPortId;
+	unsigned short ipcProcessId;
+
+public:
+	RINANetlinkEndpoint();
+	RINANetlinkEndpoint(unsigned int netlinkPortId,
+			unsigned short ipcProcessId);
+	unsigned short getIpcProcessId() const;
+	void setIpcProcessId(unsigned short ipcProcessId);
+	unsigned int getNetlinkPortId() const;
+	void setNetlinkPortId(unsigned int netlinkPortId);
+};
+
+/**
  * Contains mappings of application process name to netlink portId,
  * or IPC process id to netlink portId.
  */
 class NetlinkPortIdMap {
 
 	/** Stores the mappings of IPC Process id to nelink portId */
-	std::map<unsigned int, unsigned int> ipcProcessIdMappings;
+	std::map<unsigned short, RINANetlinkEndpoint *> ipcProcessIdMappings;
 
 	/** Stores the mappings of application process name to netlink port id */
-	std::map<ApplicationProcessNamingInformation, unsigned int>
+	std::map<ApplicationProcessNamingInformation, RINANetlinkEndpoint *>
 		applicationNameMappings;
 
 public:
 	void putIPCProcessIdToNelinkPortIdMapping(
-			unsigned int ipcProcessId, unsigned int netlinkPortId);
-	unsigned int getNetlinkPortIdFromIPCProcessId(
-			unsigned int ipcProcessId) throw(NetlinkException);
+			unsigned int netlinkPortId, unsigned short ipcProcessId);
+	RINANetlinkEndpoint * getNetlinkPortIdFromIPCProcessId(
+			unsigned short ipcProcessId) throw(NetlinkException);
 	void putAPNametoNetlinkPortIdMapping(
 			ApplicationProcessNamingInformation apName,
-			unsigned int netlinkPortId);
-	unsigned int getNetlinkPortIdFromAPName(
+			unsigned int netlinkPortId, unsigned short ipcProcessId);
+	RINANetlinkEndpoint * getNetlinkPortIdFromAPName(
 			ApplicationProcessNamingInformation apName) throw(NetlinkException);
 	unsigned int getIPCManagerPortId();
 

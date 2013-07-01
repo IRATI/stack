@@ -213,6 +213,11 @@ class AppAllocateFlowRequestResultMessage:
 	 */
 	unsigned int ipcProcessPortId;
 
+	/**
+	 * The id of the IPC Process that allocated the flow.
+	 */
+	unsigned short ipcProcessId;
+
 public:
 	AppAllocateFlowRequestResultMessage();
 	const std::string& getErrorDescription() const;
@@ -226,6 +231,8 @@ public:
 	const ApplicationProcessNamingInformation& getSourceAppName() const;
 	void setSourceAppName(
 			const ApplicationProcessNamingInformation& sourceAppName);
+	unsigned short getIpcProcessId() const;
+	void setIpcProcessId(unsigned short ipcProcessId);
 };
 
 /**
@@ -457,6 +464,11 @@ class AppRegisterApplicationResponseMessage: public BaseNetlinkMessage {
 	 */
 	unsigned int ipcProcessPortId;
 
+	/**
+	 * The id of the IPC Process that allocated the flow.
+	 */
+	unsigned short ipcProcessId;
+
 public:
 	AppRegisterApplicationResponseMessage();
 	const ApplicationProcessNamingInformation& getApplicationName() const;
@@ -470,6 +482,8 @@ public:
 	void setIpcProcessPortId(unsigned int ipcProcessPortId);
 	int getResult() const;
 	void setResult(int result);
+	unsigned short getIpcProcessId() const;
+	void setIpcProcessId(unsigned short ipcProcessId);
 };
 
 }

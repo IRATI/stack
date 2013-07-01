@@ -28,18 +28,55 @@
 
 namespace rina {
 
-/* CLASS NETLINK PORT ID MAP */
-void NetlinkPortIdMap::putIPCProcessIdToNelinkPortIdMapping(
-		unsigned int ipcProcessId, unsigned int netlinkPortId){
-	ipcProcessIdMappings[ipcProcessId] = netlinkPortId;
+/* CLASS RINA NETLINK ENDPOINT */
+RINANetlinkEndpoint::RINANetlinkEndpoint(){
+	netlinkPortId = 0;
+	ipcProcessId = 0;
 }
 
-unsigned int NetlinkPortIdMap::getNetlinkPortIdFromIPCProcessId(
-		unsigned int ipcProcessId) throw(NetlinkException) {
-	std::map<unsigned int, unsigned int>::iterator it =
+RINANetlinkEndpoint::RINANetlinkEndpoint(
+		unsigned int netlinkPortId, unsigned short ipcProcessId){
+	this->netlinkPortId = netlinkPortId;
+	this->ipcProcessId = ipcProcessId;
+}
+
+unsigned short RINANetlinkEndpoint::getIpcProcessId() const {
+	return ipcProcessId;
+}
+
+void RINANetlinkEndpoint::setIpcProcessId(unsigned short ipcProcessId) {
+	this->ipcProcessId = ipcProcessId;
+}
+
+unsigned int RINANetlinkEndpoint::getNetlinkPortId() const {
+	return netlinkPortId;
+}
+
+void RINANetlinkEndpoint::setNetlinkPortId(unsigned int netlinkPortId) {
+	this->netlinkPortId = netlinkPortId;
+}
+
+/* CLASS NETLINK PORT ID MAP */
+void NetlinkPortIdMap::putIPCProcessIdToNelinkPortIdMapping(
+		unsigned int netlinkPortId, unsigned short ipcProcessId){
+	std::map<unsigned short, RINANetlinkEndpoint *>::iterator it =
+					ipcProcessIdMappings.find(ipcProcessId);
+	RINANetlinkEndpoint * current = ipcProcessIdMappings[ipcProcessId];
+	if(current != 0){
+		current->setIpcProcessId(ipcProcessId);
+		current->setNetlinkPortId(netlinkPortId);
+	}else{
+		ipcProcessIdMappings[ipcProcessId] =
+				new RINANetlinkEndpoint(netlinkPortId, ipcProcessId);
+	}
+}
+
+RINANetlinkEndpoint * NetlinkPortIdMap::getNetlinkPortIdFromIPCProcessId(
+		unsigned short ipcProcessId) throw(NetlinkException) {
+	std::map<unsigned short, RINANetlinkEndpoint *>::iterator it =
 			ipcProcessIdMappings.find(ipcProcessId);
 	if (it == ipcProcessIdMappings.end()){
-		LOG_ERR("Could not find the netlink port of IPC Process %d",
+		LOG_ERR("Could not find the netlink endpoint of IPC Process %d",
 				ipcProcessId);
 		throw NetlinkException(
 				NetlinkException::error_fetching_netlink_port_id);
@@ -50,16 +87,23 @@ unsigned int NetlinkPortIdMap::getNetlinkPortIdFromIPCProcessId(
 
 void NetlinkPortIdMap::putAPNametoNetlinkPortIdMapping(
 		ApplicationProcessNamingInformation apName,
-		unsigned int netlinkPortId){
-	applicationNameMappings[apName] = netlinkPortId;
+		unsigned int netlinkPortId, unsigned short ipcProcessId){
+	RINANetlinkEndpoint * current = applicationNameMappings[apName];
+	if(current != 0){
+		current->setIpcProcessId(ipcProcessId);
+		current->setNetlinkPortId(netlinkPortId);
+	}else{
+		applicationNameMappings[apName]  =
+				new RINANetlinkEndpoint(netlinkPortId, ipcProcessId);
+	}
 }
 
-unsigned int NetlinkPortIdMap::getNetlinkPortIdFromAPName(
+RINANetlinkEndpoint * NetlinkPortIdMap::getNetlinkPortIdFromAPName(
 		ApplicationProcessNamingInformation apName) throw(NetlinkException) {
-	std::map<ApplicationProcessNamingInformation, unsigned int>::iterator it =
-			applicationNameMappings.find(apName);
+	std::map<ApplicationProcessNamingInformation, RINANetlinkEndpoint *>
+				::iterator it = applicationNameMappings.find(apName);
 	if (it == applicationNameMappings.end()){
-		LOG_ERR("Could not find the netlink port of Application %s",
+		LOG_ERR("Could not find the netlink endpoint of Application %s",
 				apName.toString().c_str());
 		throw NetlinkException(
 				NetlinkException::error_fetching_netlink_port_id);
@@ -83,7 +127,8 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 					dynamic_cast<AppAllocateFlowRequestMessage *>(message);
 				putAPNametoNetlinkPortIdMapping(
 						specificMessage->getSourceAppName(),
-						specificMessage->getSourcePortId());
+						specificMessage->getSourcePortId(),
+						specificMessage->getSourceIpcProcessId());
 			}
 			break;
 		}
@@ -91,14 +136,16 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			AppAllocateFlowRequestResultMessage * specificMessage =
 					dynamic_cast<AppAllocateFlowRequestResultMessage *>(message);
 			if(send){
-				specificMessage->setDestPortId(
-						getNetlinkPortIdFromAPName(
-								specificMessage->getSourceAppName()));
+				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+						specificMessage->getSourceAppName());
+				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
 			}else{
 				if(specificMessage->getPortId() > 0){
 					putAPNametoNetlinkPortIdMapping(
 							specificMessage->getDifName(),
-							specificMessage->getIpcProcessPortId());
+							specificMessage->getIpcProcessPortId(),
+							specificMessage->getIpcProcessId());
 				}
 			}
 			break;
@@ -107,9 +154,10 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			AppAllocateFlowResponseMessage * specificMessage =
 					dynamic_cast<AppAllocateFlowResponseMessage *>(message);
 			if(send){
-				specificMessage->setDestPortId(
-						getNetlinkPortIdFromAPName(
-								specificMessage->getDifName()));
+				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+						specificMessage->getDifName());
+				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
 			}
 			break;
 		}
@@ -117,9 +165,10 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			AppDeallocateFlowRequestMessage * specificMessage =
 					dynamic_cast<AppDeallocateFlowRequestMessage *>(message);
 			if(send){
-				specificMessage->setDestPortId(
-						getNetlinkPortIdFromAPName(
-								specificMessage->getDifName()));
+				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+						specificMessage->getDifName());
+				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
 			}
 			break;
 		}
@@ -127,9 +176,10 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			AppDeallocateFlowResponseMessage * specificMessage =
 					dynamic_cast<AppDeallocateFlowResponseMessage *>(message);
 			if(send){
-				specificMessage->setDestPortId(
-						getNetlinkPortIdFromAPName(
-								specificMessage->getApplicationName()));
+				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+						specificMessage->getApplicationName());
+				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
 			}
 			break;
 		}
@@ -137,9 +187,10 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			AppFlowDeallocatedNotificationMessage * specificMessage =
 					dynamic_cast<AppFlowDeallocatedNotificationMessage *>(message);
 			if(send){
-				specificMessage->setDestPortId(
-						getNetlinkPortIdFromAPName(
-								specificMessage->getApplicationName()));
+				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+						specificMessage->getApplicationName());
+				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
 			}
 			break;
 		}
@@ -151,7 +202,8 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			}else{
 				putAPNametoNetlinkPortIdMapping(
 						specificMessage->getApplicationName(),
-						specificMessage->getSourcePortId());
+						specificMessage->getSourcePortId(),
+						specificMessage->getSourceIpcProcessId());
 			}
 			break;
 		}
@@ -159,13 +211,15 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			AppRegisterApplicationResponseMessage * specificMessage =
 					dynamic_cast<AppRegisterApplicationResponseMessage *>(message);
 			if(send){
-				specificMessage->setDestPortId(
-						getNetlinkPortIdFromAPName(
-								specificMessage->getApplicationName()));
+				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+						specificMessage->getApplicationName());
+				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
 			}else{
 				putAPNametoNetlinkPortIdMapping(
 						specificMessage->getDifName(),
-						specificMessage->getIpcProcessPortId());
+						specificMessage->getIpcProcessPortId(),
+						specificMessage->getIpcProcessId());
 			}
 			break;
 		}

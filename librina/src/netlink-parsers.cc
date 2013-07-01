@@ -411,6 +411,9 @@ int putAppAllocateFlowRequestResultMessageObject(nl_msg* netlinkMessage,
 
 		NLA_PUT_U32(netlinkMessage, AAFRR_ATTR_IPC_PROCESS_PORT_ID,
 				object.getIpcProcessPortId());
+
+		NLA_PUT_U16(netlinkMessage, AAFRR_ATTR_IPC_PROCESS_ID,
+						object.getIpcProcessId());
 	}
 
 	return 0;
@@ -644,6 +647,9 @@ AppAllocateFlowRequestResultMessage * parseAppAllocateFlowRequestResultMessage(
 	attr_policy[AAFRR_ATTR_IPC_PROCESS_PORT_ID].type = NLA_U32;
 	attr_policy[AAFRR_ATTR_IPC_PROCESS_PORT_ID].minlen = 4;
 	attr_policy[AAFRR_ATTR_IPC_PROCESS_PORT_ID].maxlen = 4;
+	attr_policy[AAFRR_ATTR_IPC_PROCESS_ID].type = NLA_U16;
+	attr_policy[AAFRR_ATTR_IPC_PROCESS_ID].minlen = 2;
+	attr_policy[AAFRR_ATTR_IPC_PROCESS_ID].maxlen = 2;
 	struct nlattr *attrs[AAFRR_ATTR_MAX + 1];
 
 	/*
@@ -701,6 +707,11 @@ AppAllocateFlowRequestResultMessage * parseAppAllocateFlowRequestResultMessage(
 	if (attrs[AAFRR_ATTR_IPC_PROCESS_PORT_ID]) {
 		result->setIpcProcessPortId(
 				nla_get_u32(attrs[AAFRR_ATTR_IPC_PROCESS_PORT_ID]));
+	}
+
+	if (attrs[AAFRR_ATTR_IPC_PROCESS_ID]) {
+		result->setIpcProcessId(
+				nla_get_u16(attrs[AAFRR_ATTR_IPC_PROCESS_ID]));
 	}
 
 	return result;

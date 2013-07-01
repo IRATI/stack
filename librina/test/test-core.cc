@@ -113,6 +113,7 @@ void * doWorkIPCManager(void * arg) {
 	message->setPortId(23);
 	message->setDifName(*difName);
 	message->setIpcProcessPortId(340);
+	message->setIpcProcessId(24);
 	message->setSequenceNumber(flowEvent->getSequenceNumber());
 	message->setResponseMessage(true);
 
