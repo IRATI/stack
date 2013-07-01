@@ -49,31 +49,34 @@ struct shim_config {
 	struct shim_config_entry * entry;
 };
 
+/* Pre-declared, the shim should define it properly */
+struct shim_instance_data;
+
 struct shim_instance_ops {
-	int  (* flow_allocate_request)(void *                     data,
-                                       const struct name_t *      source,
-                                       const struct name_t *      dest,
-                                       const struct flow_spec_t * flow_spec,
-                                       port_id_t *                id);
-	int  (* flow_allocate_response)(void *              data,
-                                        port_id_t           id,
-                                        response_reason_t * response);
-	int  (* flow_deallocate)(void *    data,
-                                 port_id_t id);
+	int  (* flow_allocate_request)(struct shim_instance_data * data,
+                                       const struct name_t *       source,
+                                       const struct name_t *       dest,
+                                       const struct flow_spec_t *  flow_spec,
+                                       port_id_t *                 id);
+	int  (* flow_allocate_response)(struct shim_instance_data * data,
+                                        port_id_t                   id,
+                                        response_reason_t *         response);
+	int  (* flow_deallocate)(struct shim_instance_data * data,
+                                 port_id_t                   id);
 
-	int  (* application_register)(void *                data,
-                                      const struct name_t * name);
-	int  (* application_unregister)(void *                data,
-                                        const struct name_t * name);
+	int  (* application_register)(struct shim_instance_data * data,
+                                      const struct name_t *       name);
+	int  (* application_unregister)(struct shim_instance_data * data,
+                                        const struct name_t *       name);
 
-	int  (* sdu_write)(void *               data,
-                           port_id_t            id,
-                           const struct sdu_t * sdu);
+	int  (* sdu_write)(struct shim_instance_data * data,
+                           port_id_t                   id,
+                           const struct sdu_t *        sdu);
 
         /* FIXME: sdu_read will be removed */
-        int  (* sdu_read)(void *         data,
-                          port_id_t      id,
-                          struct sdu_t * sdu);
+        int  (* sdu_read)(struct shim_instance_data * data,
+                          port_id_t                   id,
+                          struct sdu_t *              sdu);
 };
 
 struct shim_instance {
@@ -83,18 +86,23 @@ struct shim_instance {
         struct shim_instance_ops * ops;
 };
 
-struct shim_ops {
-        int                    (* init)(void * data);
-        int                    (* fini)(void * opaque);
+/* Pre-declared, the shim should define it properly */
+struct shim_data;
 
-	struct shim_instance * (* create)(void *           data,
-                                          ipc_process_id_t id);
-        
-	struct shim_instance * (* configure)(void *                     data,
+struct shim_ops {
+        int                    (* init)(struct shim_data * data);
+        int                    (* fini)(struct shim_data * data);
+
+        /* Creates a new shim instance */
+	struct shim_instance * (* create)(struct shim_data * data,
+                                          ipc_process_id_t   id);
+
+        /* It might return an updated shim instance, upon reconfiguration */
+	struct shim_instance * (* configure)(struct shim_data *         data,
                                              struct shim_instance *     inst,
                                              const struct shim_config * cfg);
 
-	int                    (* destroy)(void *                 data,
+	int                    (* destroy)(struct shim_data *     data,
                                            struct shim_instance * inst);
 };
 
@@ -115,7 +123,7 @@ int            shims_fini(struct shims * shims);
 /* Called (once) by each shim module upon loading/unloading */
 struct shim *  shim_register(struct shims *          parent,
                              const char *            name,
-                             void *                  data,
+                             struct shim_data *      data,
                              const struct shim_ops * ops);
 int            shim_unregister(struct shims * parent,
                                struct shim *  shim);
