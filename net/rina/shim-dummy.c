@@ -273,6 +273,7 @@ static struct shim_instance * dummy_create(struct shim_data * data,
 
         port_flow->prev = port_flow;
         port_flow->next = port_flow;
+
         dummy_inst->ipc_process_id = id;
         dummy_inst->flows          = port_flow;
 

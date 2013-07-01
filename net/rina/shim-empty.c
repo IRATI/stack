@@ -31,6 +31,10 @@
 #include "kipcm.h"
 #include "shim.h"
 
+struct shim_instance_data {
+        int this_is_another_fake_and_should_avoid_compiler_barfs;
+};
+
 static int empty_flow_allocate_request(struct shim_instance_data * data,
                                        const struct name_t *       source,
                                        const struct name_t *       dest,
@@ -100,10 +104,6 @@ static int empty_sdu_read(struct shim_instance_data * data,
         return 0;
 }
 
-struct shim_instance_data {
-        int this_is_another_fake_and_should_avoid_compiler_barfs;
-};
-
 static struct shim_instance_ops empty_instance_ops = {
         .flow_allocate_request  = empty_flow_allocate_request,
         .flow_allocate_response = empty_flow_allocate_response,
@@ -114,17 +114,18 @@ static struct shim_instance_ops empty_instance_ops = {
         .sdu_read               = empty_sdu_read,
 };
 
-struct shim_data {
+static struct shim_data {
         int this_is_fake_and_should_avoid_compiler_barfs;
-};
+} empty_data;
 
-static struct shim_data empty_data;
-
-static struct shim *    empty_shim = NULL;
+static struct shim * empty_shim = NULL;
 
 static int empty_init(struct shim_data * data)
 {
         LOG_FBEGN;
+
+        bzero(&empty_data, sizeof(empty_data));
+
         LOG_FEXIT;
 
         return 0;
@@ -139,7 +140,7 @@ static int empty_fini(struct shim_data * data)
 }
 
 static struct shim_instance * empty_create(struct shim_data * data,
-                                           ipc_process_id_t   ipc_process_id)
+                                           ipc_process_id_t   id)
 {
         struct shim_instance * inst;
 
