@@ -51,11 +51,11 @@ struct dummy_flow {
         struct list_head      list;
 };
 
-static int dummy_flow_allocate_request(void *                     data,
-                                       const struct name_t *      source,
-                                       const struct name_t *      dest,
-                                       const struct flow_spec_t * flow_spec,
-                                       port_id_t *                id)
+static int dummy_flow_allocate_request(struct shim_instance_data * data,
+                                       const struct name_t *       source,
+                                       const struct name_t *       dest,
+                                       const struct flow_spec_t *  flow_spec,
+                                       port_id_t *                 id)
 {
         struct dummy_instance * dummy;
         struct dummy_flow *     flow;
@@ -86,9 +86,9 @@ static int dummy_flow_allocate_request(void *                     data,
         return 0;
 }
 
-static int dummy_flow_allocate_response(void *              data,
-                                        port_id_t           id,
-                                        response_reason_t * response)
+static int dummy_flow_allocate_response(struct shim_instance_data * data,
+                                        port_id_t                   id,
+                                        response_reason_t *         response)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -96,8 +96,8 @@ static int dummy_flow_allocate_response(void *              data,
         return -1;
 }
 
-static int dummy_flow_deallocate(void *    data,
-                                 port_id_t id)
+static int dummy_flow_deallocate(struct shim_instance_data * data,
+                                 port_id_t                   id)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -105,8 +105,8 @@ static int dummy_flow_deallocate(void *    data,
         return -1;
 }
 
-static int dummy_application_register(void *                data,
-                                      const struct name_t * name)
+static int dummy_application_register(struct shim_instance_data * data,
+                                      const struct name_t *       name)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -114,8 +114,8 @@ static int dummy_application_register(void *                data,
         return -1;
 }
 
-static int dummy_application_unregister(void *                data,
-                                        const struct name_t * name)
+static int dummy_application_unregister(struct shim_instance_data * data,
+                                        const struct name_t *       name)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -123,8 +123,8 @@ static int dummy_application_unregister(void *                data,
         return -1;
 }
 
-static struct dummy_flow * find_flow(void *    opaque,
-                                     port_id_t id)
+static struct dummy_flow * find_flow(struct shim_instance_data * opaque,
+                                     port_id_t                   id)
 {
         struct dummy_instance * dummy;
         struct dummy_flow *     flow;
@@ -139,9 +139,9 @@ static struct dummy_flow * find_flow(void *    opaque,
         return NULL;
 }
 
-static int dummy_sdu_write(void *               data,
-                           port_id_t            id,
-                           const struct sdu_t * sdu)
+static int dummy_sdu_write(struct shim_instance_data * data,
+                           port_id_t                   id,
+                           const struct sdu_t *        sdu)
 {
         struct dummy_flow * flow;
         LOG_FBEGN;
@@ -159,9 +159,9 @@ static int dummy_sdu_write(void *               data,
         return 0;
 }
 
-static int dummy_sdu_read(void *         data,
-                          port_id_t      id,
-                          struct sdu_t * sdu)
+static int dummy_sdu_read(struct shim_instance_data * data,
+                          port_id_t                   id,
+                          struct sdu_t *              sdu)
 {
         struct dummy_flow * flow;
 
@@ -186,7 +186,7 @@ static struct shim_data dummy_data;
 
 static struct shim *    dummy_shim = NULL;
 
-static int dummy_init(void * data)
+static int dummy_init(struct shim_data * data)
 {
         struct list_head * dummy_shim_list;
 
@@ -210,7 +210,7 @@ static int dummy_init(void * data)
         return -1;
 }
 
-static int dummy_fini(void * data)
+static int dummy_fini(struct shim_data * data)
 {
         struct dummy_instance * pos, * next;
         struct dummy_flow *     pos_flow, * next_flow;
@@ -234,8 +234,8 @@ static int dummy_fini(void * data)
         return -1;
 }
 
-static struct shim_instance * dummy_create(void *           data,
-                                           ipc_process_id_t ipc_process_id)
+static struct shim_instance * dummy_create(struct shim_data * data,
+                                           ipc_process_id_t   id)
 {
         struct shim_instance *   instance;
         struct shim_instance_ops ops;
@@ -273,7 +273,7 @@ static struct shim_instance * dummy_create(void *           data,
 
         port_flow->prev = port_flow;
         port_flow->next = port_flow;
-        dummy_inst->ipc_process_id = ipc_process_id;
+        dummy_inst->ipc_process_id = id;
         dummy_inst->flows          = port_flow;
 
         instance->data             = dummy_inst;
@@ -296,8 +296,8 @@ static struct shim_instance * dummy_create(void *           data,
         return instance;
 }
 
-static int dummy_destroy(void *                   data,
-                         struct shim_instance *   inst)
+static int dummy_destroy(struct shim_data *     data,
+                         struct shim_instance * inst)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -306,7 +306,7 @@ static int dummy_destroy(void *                   data,
 }
 
 /* FIXME: It doesn't allow reconfiguration */
-static struct shim_instance * dummy_configure(void *                     data,
+static struct shim_instance * dummy_configure(struct shim_data *         data,
                                               struct shim_instance *     inst,
                                               const struct shim_config * conf)
 {

@@ -31,11 +31,11 @@
 #include "kipcm.h"
 #include "shim.h"
 
-static int empty_flow_allocate_request(void *                     data,
-                                       const struct name_t *      source,
-                                       const struct name_t *      dest,
-                                       const struct flow_spec_t * flow_spec,
-                                       port_id_t *                id)
+static int empty_flow_allocate_request(struct shim_instance_data * data,
+                                       const struct name_t *       source,
+                                       const struct name_t *       dest,
+                                       const struct flow_spec_t *  flow_spec,
+                                       port_id_t *                 id)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -43,9 +43,9 @@ static int empty_flow_allocate_request(void *                     data,
         return 0;
 }
 
-static int empty_flow_allocate_response(void *              data,
-                                        port_id_t           id,
-                                        response_reason_t * response)
+static int empty_flow_allocate_response(struct shim_instance_data * data,
+                                        port_id_t                   id,
+                                        response_reason_t *         response)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -53,8 +53,8 @@ static int empty_flow_allocate_response(void *              data,
         return 0;
 }
 
-static int empty_flow_deallocate(void *    data,
-                                 port_id_t id)
+static int empty_flow_deallocate(struct shim_instance_data * data,
+                                 port_id_t                   id)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -62,8 +62,8 @@ static int empty_flow_deallocate(void *    data,
         return 0;
 }
 
-static int empty_application_register(void *                data,
-                                      const struct name_t * name)
+static int empty_application_register(struct shim_instance_data * data,
+                                      const struct name_t *       name)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -71,8 +71,8 @@ static int empty_application_register(void *                data,
         return 0;
 }
 
-static int empty_application_unregister(void *                data,
-                                        const struct name_t * name)
+static int empty_application_unregister(struct shim_instance_data * data,
+                                        const struct name_t *       name)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -80,9 +80,9 @@ static int empty_application_unregister(void *                data,
         return 0;
 }
 
-static int empty_sdu_write(void *               data,
-                           port_id_t            id,
-                           const struct sdu_t * sdu)
+static int empty_sdu_write(struct shim_instance_data * data,
+                           port_id_t                   id,
+                           const struct sdu_t *        sdu)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -90,9 +90,9 @@ static int empty_sdu_write(void *               data,
         return 0;
 }
 
-static int empty_sdu_read(void *         data,
-                          port_id_t      id,
-                          struct sdu_t * sdu)
+static int empty_sdu_read(struct shim_instance_data * data,
+                          port_id_t                   id,
+                          struct sdu_t *              sdu)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -122,7 +122,7 @@ static struct shim_data empty_data;
 
 static struct shim *    empty_shim = NULL;
 
-static int empty_init(void * data)
+static int empty_init(struct shim_data * data)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -130,7 +130,7 @@ static int empty_init(void * data)
         return 0;
 }
 
-static int empty_fini(void * data)
+static int empty_fini(struct shim_data * data)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -138,8 +138,8 @@ static int empty_fini(void * data)
         return 0;
 }
 
-static struct shim_instance * empty_create(void *           data,
-                                           ipc_process_id_t ipc_process_id)
+static struct shim_instance * empty_create(struct shim_data * data,
+                                           ipc_process_id_t   ipc_process_id)
 {
         struct shim_instance * inst;
 
@@ -164,7 +164,7 @@ static struct shim_instance * empty_create(void *           data,
         return inst;
 }
 
-static struct shim_instance * empty_configure(void *                     data,
+static struct shim_instance * empty_configure(struct shim_data *         data,
                                               struct shim_instance *     inst,
                                               const struct shim_config * cfg)
 {
@@ -174,7 +174,7 @@ static struct shim_instance * empty_configure(void *                     data,
         return NULL;
 }
 
-static int empty_destroy(void *                   data,
+static int empty_destroy(struct shim_data *       data,
                          struct shim_instance *   inst)
 {
         LOG_FBEGN;

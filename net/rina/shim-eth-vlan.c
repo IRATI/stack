@@ -85,11 +85,11 @@ struct eth_vlan_instance {
 };
 
 
-static int eth_vlan_flow_allocate_request(void *                     opaque,
-                                          const struct name_t *      source,
-                                          const struct name_t *      dest,
-                                          const struct flow_spec_t * flow_spec,
-                                          port_id_t *                port_id)
+static int eth_vlan_flow_allocate_request(struct shim_instance_data * data,
+                                          const struct name_t *       source,
+                                          const struct name_t *       dest,
+                                          const struct flow_spec_t *  flowspec,
+                                          port_id_t *                 port_id)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -97,9 +97,9 @@ static int eth_vlan_flow_allocate_request(void *                     opaque,
         return 0;
 }
 
-static int eth_vlan_flow_allocate_response(void *              opaque,
-                                           port_id_t           port_id,
-                                           response_reason_t * response)
+static int eth_vlan_flow_allocate_response(struct shim_instance_data * data,
+                                           port_id_t                   port_id,
+                                           response_reason_t *         resp)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -107,8 +107,8 @@ static int eth_vlan_flow_allocate_response(void *              opaque,
         return 0;
 }
 
-static int eth_vlan_flow_deallocate(void *    opaque,
-                                    port_id_t port_id)
+static int eth_vlan_flow_deallocate(struct shim_instance_data * data,
+                                    port_id_t                   port_id)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -116,8 +116,8 @@ static int eth_vlan_flow_deallocate(void *    opaque,
         return 0;
 }
 
-static int eth_vlan_application_register(void *                opaque,
-                                         const struct name_t * name)
+static int eth_vlan_application_register(struct shim_instance_data * data,
+                                         const struct name_t *       name)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -125,8 +125,8 @@ static int eth_vlan_application_register(void *                opaque,
         return 0;
 }
 
-static int eth_vlan_application_unregister(void *                opaque,
-                                           const struct name_t * name)
+static int eth_vlan_application_unregister(struct shim_instance_data * data,
+                                           const struct name_t *       name)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -134,9 +134,9 @@ static int eth_vlan_application_unregister(void *                opaque,
         return 0;
 }
 
-static int eth_vlan_sdu_write(void *               opaque,
-                              port_id_t            port_id,
-                              const struct sdu_t * sdu)
+static int eth_vlan_sdu_write(struct shim_instance_data * data,
+                              port_id_t                   port_id,
+                              const struct sdu_t *        sdu)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -144,9 +144,9 @@ static int eth_vlan_sdu_write(void *               opaque,
         return 0;
 }
 
-static int eth_vlan_sdu_read(void *         opaque,
-                             port_id_t      id,
-                             struct sdu_t * sdu)
+static int eth_vlan_sdu_read(struct shim_instance_data * data,
+                             port_id_t                   id,
+                             struct sdu_t *              sdu)
 {
         LOG_FBEGN;
         LOG_FEXIT;
@@ -176,8 +176,8 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         return 0;
 };
 
-static struct shim_instance * eth_vlan_create(void *           data,
-                                              ipc_process_id_t id)
+static struct shim_instance * eth_vlan_create(struct shim_data * data,
+                                              ipc_process_id_t   id)
 {
         struct shim_instance * instance;
         struct shim_instance_ops ops;
@@ -269,7 +269,7 @@ static int name_cpy(struct name_t * dst,
         return 0;
 }
 
-struct shim_instance * eth_vlan_configure (void *                     data,
+struct shim_instance * eth_vlan_configure(struct shim_data *          data,
                                            struct shim_instance *     inst,
                                            const struct shim_config * cfg)
 {
@@ -283,9 +283,10 @@ struct shim_instance * eth_vlan_configure (void *                     data,
         uint16_t                   old_vlan_id;
         string_t *                 old_interface_name;
 
-        /* Check if instance is not null, check if opaque is not null */
+        /* Check if instance is not null, check if data is not null */
         if (!inst) {
                 LOG_WARN("Configure called on empty shim instance");
+
                 LOG_FEXIT;
                 return inst;
         }
@@ -400,7 +401,7 @@ struct shim_instance * eth_vlan_configure (void *                     data,
         return inst;
 }
 
-static int eth_vlan_destroy(void *                 data,
+static int eth_vlan_destroy(struct shim_data *     data,
                             struct shim_instance * inst)
 {
         struct eth_vlan_instance * instance;
@@ -427,12 +428,14 @@ static int eth_vlan_destroy(void *                 data,
         return 0;
 }
 
+/* FIXME: should have its roots into struct shim_data */
 /* Holds all shim instances */
 static struct rb_root * eth_vlan_data;
 
-static int eth_vlan_init(void * data)
+static int eth_vlan_init(struct shim_data * data)
 {
         LOG_FBEGN;
+
         LOG_INFO("Shim-eth-vlan module v%d.%d loaded",0,1);
 
         eth_vlan_data = kmalloc(sizeof(*eth_vlan_data), GFP_KERNEL);
@@ -450,7 +453,7 @@ static int eth_vlan_init(void * data)
         return 0;
 }
 
-static int eth_vlan_fini(void * data)
+static int eth_vlan_fini(struct shim_data * data)
 {
 
         struct rb_node * s;
