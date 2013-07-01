@@ -110,7 +110,6 @@ int putAppAllocateFlowRequestResultMessageObject(nl_msg* netlinkMessage,
 AppAllocateFlowRequestResultMessage * parseAppAllocateFlowRequestResultMessage(
 		nlmsghdr *hdr);
 
-
 /* AppAllocateFlowRequestMessage CLASS*/
 enum AppAllocateFlowRequestArrivedAttributes {
 	AAFRA_ATTR_SOURCE_APP_NAME = 1,
@@ -129,8 +128,6 @@ int putAppAllocateFlowRequestArrivedMessageObject(nl_msg* netlinkMessage,
 AppAllocateFlowRequestArrivedMessage * parseAppAllocateFlowRequestArrivedMessage(
 		nlmsghdr *hdr);
 
-
-
 /* AppAllocateFlowResponseMessage CLASS*/
 enum AppAllocateFlowResponseAttributes {
 	AAFRE_ATTR_DIF_NAME = 1,
@@ -148,8 +145,6 @@ int putAppAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 AppAllocateFlowResponseMessage * parseAppAllocateFlowResponseMessage(
 		nlmsghdr *hdr);
 
-
-
 /* AppDeallocateFlowRequestMessage CLASS*/
 enum AppDeallocateFlowRequestMessageAttributes {
 	ADFRT_ATTR_PORT_ID = 1,
@@ -165,7 +160,6 @@ int putAppDeallocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 
 AppDeallocateFlowRequestMessage * parseAppDeallocateFlowRequestMessage(
 		nlmsghdr *hdr);
-
 
 /* AppDeallocateFlowResponseMessage CLASS*/
 enum AppDeallocateFlowResponseMessageAttributes {
@@ -183,6 +177,57 @@ int putAppDeallocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 AppDeallocateFlowResponseMessage * parseAppDeallocateFlowResponseMessage(
 		nlmsghdr *hdr);
 
+/* AppFlowDeallocatedNotificationMessage CLASS*/
+enum AppFlowDeallocatedNotificationMessageAttributes {
+	AFDN_ATTR_PORT_ID = 1,
+	AFDN_ATTR_CODE,
+	AFDN_ATTR_REASON,
+	AFDN_ATTR_APP_NAME,
+	AFDN_ATTR_DIF_NAME,
+	__AFDN_ATTR_MAX,
+};
+
+#define AFDN_ATTR_MAX (__AFDN_ATTR_MAX -1)
+
+int putAppFlowDeallocatedNotificationMessageObject(nl_msg* netlinkMessage,
+		const AppFlowDeallocatedNotificationMessage& object);
+
+AppFlowDeallocatedNotificationMessage * parseAppFlowDeallocatedNotificationMessage(
+		nlmsghdr *hdr);
+
+
+/* AppRegisterApplicationRequestMessage CLASS*/
+enum AppRegisterApplicationRequestMessageAttributes {
+	ARAR_ATTR_APP_NAME = 1,
+	ARAR_ATTR_DIF_NAME,
+	__ARAR_ATTR_MAX,
+};
+
+#define ARAR_ATTR_MAX (__ARAR_ATTR_MAX -1)
+
+int putAppRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
+		const AppRegisterApplicationRequestMessage& object);
+
+AppRegisterApplicationRequestMessage * parseAppRegisterApplicationRequestMessage(
+		nlmsghdr *hdr);
+
+/* AppRegisterApplicationResponseMessage CLASS*/
+enum AppRegisterApplicationResponseMessageAttributes {
+	ARARE_ATTR_APP_NAME = 1,
+	ARARE_ATTR_RESULT,
+	ARARE_ATTR_ERROR_DESCRIPTION,
+	ARARE_ATTR_DIF_NAME,
+	ARARE_ATTR_PROCESS_PORT_ID,
+	__ARARE_ATTR_MAX,
+};
+
+#define ARARE_ATTR_MAX (__ARARE_ATTR_MAX -1)
+
+int putAppRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
+		const AppRegisterApplicationResponseMessage& object);
+
+AppRegisterApplicationResponseMessage * parseAppRegisterApplicationResponseMessage(
+		nlmsghdr *hdr);
 
 }
 #endif /* LIBRINA_NETLINK_PARSERS_H_ */
