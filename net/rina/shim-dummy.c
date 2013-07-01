@@ -33,8 +33,6 @@
 #include "kipcm.h"
 #include "shim.h"
 
-static struct shim * shim;
-
 struct dummy_instance {
         ipc_process_id_t ipc_process_id;
         struct name_t *  name;
@@ -180,6 +178,62 @@ static int dummy_sdu_read(void *         data,
         return 0;
 }
 
+struct shim_data {
+	struct list_head * shim_list;
+};
+
+static struct shim_data dummy_data;
+
+static struct shim *    dummy_shim = NULL;
+
+static int dummy_init(void * data)
+{
+	struct list_head * dummy_shim_list;
+
+        LOG_FBEGN;
+
+        dummy_data.shim_list = kmalloc(sizeof(*dummy_shim_list), GFP_KERNEL);
+	if (!dummy_data.shim_list) {
+		LOG_ERR("Cannot allocate %zu bytes of memory",
+                        sizeof(*dummy_data.shim_list));
+
+                kfree(dummy_data.shim_list);
+
+		LOG_FEXIT;
+		return -1;
+	}
+	dummy_data.shim_list->next = dummy_data.shim_list;
+	dummy_data.shim_list->prev = dummy_data.shim_list;
+
+        LOG_FEXIT;
+
+        return -1;
+}
+
+static int dummy_fini(void * data)
+{
+        struct dummy_instance * pos, * next;
+        struct dummy_flow *     pos_flow, * next_flow;
+
+        LOG_FBEGN;
+
+        list_for_each_entry_safe(pos, next,
+                                 (struct list_head *) dummy_shim->data,
+                                 list) {
+        	list_del(&pos->list);
+        	list_for_each_entry_safe(pos_flow,
+                                         next_flow, pos->flows, list) {
+        		list_del(&pos_flow->list);
+        		kfree(pos_flow);
+        	}
+        	kfree(pos);
+        }
+        
+        LOG_FEXIT;
+
+        return -1;
+}
+
 static struct shim_instance * dummy_create(void *           data,
 					   ipc_process_id_t ipc_process_id)
 {
@@ -234,7 +288,7 @@ static struct shim_instance * dummy_create(void *           data,
 	instance->ops              = ops;
 
 	INIT_LIST_HEAD(&dummy_inst->list);
-	list_add(&dummy_inst->list, (struct list_head *) shim->data);
+	list_add(&dummy_inst->list, (struct list_head *) dummy_shim->data);
 
         LOG_FEXIT;
 
@@ -287,60 +341,6 @@ dummy_configure(void *                     data,
         return NULL;
 }
 
-struct shim_data {
-	struct list_head * shim_list;
-};
-
-static struct shim_data dummy_data;
-
-static int dummy_init(void * data)
-{
-	struct list_head * dummy_shim_list;
-
-        LOG_FBEGN;
-
-        dummy_data.shim_list = kmalloc(sizeof(*dummy_shim_list), GFP_KERNEL);
-	if (!dummy_data.shim_list) {
-		LOG_ERR("Cannot allocate %zu bytes of memory",
-                        sizeof(*dummy_data.shim_list));
-
-                kfree(dummy_data.shim_list);
-
-		LOG_FEXIT;
-		return -1;
-	}
-	dummy_data.shim_list->next = dummy_data.shim_list;
-	dummy_data.shim_list->prev = dummy_data.shim_list;
-
-        LOG_FEXIT;
-
-        return -1;
-}
-
-static int dummy_fini(void * data)
-{
-        struct dummy_instance * pos, * next;
-        struct dummy_flow *     pos_flow, * next_flow;
-
-        LOG_FBEGN;
-
-        list_for_each_entry_safe(pos, next,
-                                 (struct list_head *) shim->data,
-                                 list) {
-        	list_del(&pos->list);
-        	list_for_each_entry_safe(pos_flow,
-                                         next_flow, pos->flows, list) {
-        		list_del(&pos_flow->list);
-        		kfree(pos_flow);
-        	}
-        	kfree(pos);
-        }
-        
-        LOG_FEXIT;
-
-        return -1;
-}
-
 static struct shim_ops dummy_ops = {
         .init      = dummy_init,
         .fini      = dummy_fini,
@@ -348,8 +348,6 @@ static struct shim_ops dummy_ops = {
         .destroy   = dummy_destroy,
         .configure = dummy_configure,
 };
-
-static struct shim *  dummy_shim = NULL;
 
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -378,8 +376,7 @@ static void __exit mod_exit(void)
 {
 	LOG_FBEGN;
 
-	if (kipcm_shim_unregister(default_kipcm,
-                                  dummy_shim)) {
+	if (kipcm_shim_unregister(default_kipcm, dummy_shim)) {
         	LOG_CRIT("Cannot unregister");
                 return;
         }
