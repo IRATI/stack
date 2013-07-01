@@ -195,5 +195,21 @@ int putAppFlowDeallocatedNotificationMessageObject(nl_msg* netlinkMessage,
 AppFlowDeallocatedNotificationMessage * parseAppFlowDeallocatedNotificationMessage(
 		nlmsghdr *hdr);
 
+
+/* AppRegisterApplicationRequestMessage CLASS*/
+enum AppRegisterApplicationRequestMessageAttributes {
+	ARAR_ATTR_APP_NAME = 1,
+	ARAR_ATTR_DIF_NAME,
+	__ARAR_ATTR_MAX,
+};
+
+#define ARAR_ATTR_MAX (__ARAR_ATTR_MAX -1)
+
+int putAppRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
+		const AppRegisterApplicationRequestMessage& object);
+
+AppRegisterApplicationRequestMessage * parseAppRegisterApplicationRequestMessage(
+		nlmsghdr *hdr);
+
 }
 #endif /* LIBRINA_NETLINK_PARSERS_H_ */
