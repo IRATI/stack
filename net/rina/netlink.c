@@ -19,7 +19,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/hashtable.h>
+#include <linux/list.h>
 
 #define RINA_PREFIX "netlink"
 
@@ -30,6 +30,24 @@
 /* FIXME: This define (and its related code) has to be removed */
 #define TESTING 1
 
+///* Table to collect callbacks lists by message type*/
+//list_head  message_handler_registry[NETLINK_RINA_C_MAX];
+//
+///*  Type to store callback funcion */
+//typedef int (* message_handler)(struct sk_buff *, struct genl_info *);
+//
+///* struct to use in list */
+//struct callback_t {
+//        struct list_head cb_list;
+//        message_handler_t cb;
+//}
+
+/*   Table to collect callbacks */
+typedef int (* message_handler)(struct sk_buff *, struct genl_info *); 
+
+/*  Table to collect callbacks */
+static message_handler messages_handlers[NETLINK_RINA_C_MAX];
+
 static struct genl_family nl_family = {
         .id      = GENL_ID_GENERATE,
         .hdrsize = 0,
@@ -37,12 +55,6 @@ static struct genl_family nl_family = {
         .version = 1,
         .maxattr = NETLINK_RINA_A_MAX,
 };
-
-/*  Table to collect callbacks */
-typedef int (* message_handler)(struct sk_buff *, struct genl_info *);
-
-/* Table to collect callbacks */
-static message_handler messages_handlers[NETLINK_RINA_C_MAX];
 
 /* FIXME: To be completely rearranged (depends on personality etc. etc.) */
 static int is_message_type_in_range(int msg_type, int min_value, int max_value)
@@ -415,12 +427,23 @@ int rina_netlink_register_handler(int    msg_type,
 
 int rina_netlink_init(void)
 {
-        int ret, i;
+        int ret;
 
         LOG_FBEGN;
 
         LOG_DBG("Initializing Netlink layer");
 
+
+        LOG_DBG("Registering family with ops");
+	ret = genl_register_family_with_ops(&nl_family, 
+					    nl_ops, 
+					    ARRAY_SIZE(nl_ops));
+        if (ret < 0) {
+        	LOG_ERR("Cannot register family and ops. Error:%d", ret);
+       		return -2;
+        }
+
+	/* Not needed if genl_register_family_with_ops works.
         LOG_DBG("Registering family");
         ret = genl_register_family(&nl_family);
         if (ret != 0) {
@@ -428,7 +451,7 @@ int rina_netlink_init(void)
                 return -1;
         }
 
-        LOG_DBG("Registering family ops");
+	LOG_DBG("Registering family ops");
         for (i = 0; i < ARRAY_SIZE(nl_ops); i++) {
                 ret = genl_register_ops(&nl_family, &nl_ops[i]);
                 if (ret < 0) {
@@ -436,7 +459,17 @@ int rina_netlink_init(void)
                         genl_unregister_family(&nl_family);
                         return -2;
                 }
+        i}*/
+
+/* 	for (i = 0; i < ARRAY_SIZE(message_handler_registry); i++) {
+                INIT_LIST_HEAD(&message_handler_registry[i]);
+                if (message_handler_registry[i] == NULL) {
+                        LOG_ERR("Could not initialize callback list "
+			"for message %d", i);
+                        return -2;
+                }
         }
+        LOG_DBG("Callbacks structs initialized");*/
 
         LOG_DBG("NetLink layer initialized");
 
@@ -453,22 +486,11 @@ int rina_netlink_init(void)
 
 void rina_netlink_exit(void)
 {
-        int i;
         int ret;
 
         LOG_FBEGN;
 
         LOG_DBG("Finalizing Netlink layer");
-
-        /* Unregister the functions */
-        for (i = 0; i < ARRAY_SIZE(nl_ops); i++) {
-                ret = genl_unregister_ops(&nl_family, &nl_ops[i]);
-                if (ret < 0) {
-                        /* FIXME: A more descriptive error would be glad */
-                        LOG_ERR("Cannot unregister ops (err=%i)\n", ret);
-                        return;
-                }
-        }
 
         /* Unregister the family */
         ret = genl_unregister_family(&nl_family); 
