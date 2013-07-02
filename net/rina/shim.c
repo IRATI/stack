@@ -130,39 +130,6 @@ static int are_ops_ok(const struct shim_ops * ops)
 
 #define to_shim(O) container_of(O, struct shim, kobj)
 
-#define KSET_FIND_OBJECT_EXPORTED 0
-
-#if !KSET_FIND_OBJECT_EXPORTED
-/* FIXME:
- *   In kernel 3.9.2, there's no EXPORT_SYMBOL for kset_find_object so this
- *   is a copy and paster from lib/kobject.c. Please fix that ASAP
- */
-static struct kobject *kobject_get_unless_zero(struct kobject *kobj)
-{
-        if (!kref_get_unless_zero(&kobj->kref))
-                kobj = NULL;
-        return kobj;
-}
-
-struct kobject *kset_find_obj(struct kset *kset, const char *name)
-{
-        struct kobject *k;
-        struct kobject *ret = NULL;
-
-        spin_lock(&kset->list_lock);
-
-        list_for_each_entry(k, &kset->list, entry) {
-                if (kobject_name(k) && !strcmp(kobject_name(k), name)) {
-                        ret = kobject_get_unless_zero(k);
-                        break;
-                }
-        }
-
-        spin_unlock(&kset->list_lock);
-        return ret;
-}
-#endif
-
 static struct shim * shim_find(struct shims * parent,
                                const char *   name)
 {

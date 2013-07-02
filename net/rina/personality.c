@@ -166,9 +166,20 @@ static struct personality * personality_find(const char * name)
         return NULL;
 }
 
-struct personality * rina_personality_register(const char *             name,
-                                               void *                   data,
-                                               struct personality_ops * ops)
+/* FIXME: Has to be rearranged properly, it's bogus at the moment */
+static personality_id id_get(void)
+{
+        static personality_id ids = 0;
+
+        return ids++;
+}
+
+static void id_put(personality_id id)
+{ }
+
+struct personality * rina_personality_register(const char *              name,
+                                               struct personality_data * data,
+                                               struct personality_ops *  ops)
 {
         struct personality * tmp;
         struct personality * pers;
@@ -200,6 +211,7 @@ struct personality * rina_personality_register(const char *             name,
                 return NULL;
         }
 
+        pers->id   = id_get();
         pers->data = data;
         pers->ops  = ops;
 
@@ -283,6 +295,9 @@ int rina_personality_unregister(struct personality * pers)
                         LOG_DBG("Personality '%s' finalized successfully",
                                 name);
         }
+        if (pers->data)
+                kfree(pers->data);
+        id_put(pers->id);
 
         kobject_put(&pers->kobj);
 

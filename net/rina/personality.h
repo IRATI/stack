@@ -28,48 +28,55 @@
 /* FIXME: This include should be removed from here */
 #include "kipcm.h"
 
-struct personality_ops {
-        int (* init)(struct kobject * parent,
-                     void *           data);
-        int (* fini)(void * data);
+/* Pre-declared, the personality should define it properly */
+struct personality_data;
 
-        int (* ipc_create)(void *                    data,
+struct personality_ops {
+        int (* init)(struct kobject *          parent,
+                     struct personality_data * data);
+        int (* fini)(struct personality_data * data);
+
+        int (* ipc_create)(struct personality_data * data,
                            const struct name_t *     name,
                            ipc_process_id_t          id,
                            dif_type_t                type);
-        int (* ipc_configure)(void *                          data,
+        int (* ipc_configure)(struct personality_data *       data,
                               ipc_process_id_t                id,
                               const struct ipc_process_conf * configuration);
-        int (* ipc_destroy)(void *           data,
-                            ipc_process_id_t id);
+        int (* ipc_destroy)(struct personality_data * data,
+                            ipc_process_id_t          id);
         
-        int (* connection_create)(void *                      data,
+        int (* connection_create)(struct personality_data *   data,
                                   const struct connection_t * connection);
-        int (* connection_destroy)(void *   data,
-                                   cep_id_t id);
-        int (* connection_update)(void *   data,
-                                  cep_id_t id_from,
-                                  cep_id_t id_to);
+        int (* connection_destroy)(struct personality_data * data,
+                                   cep_id_t                  id);
+        int (* connection_update)(struct personality_data * data,
+                                  cep_id_t                  id_from,
+                                  cep_id_t                  id_to);
 
-        int (* sdu_write)(void *               data,
-                          port_id_t            id,
-                          const struct sdu_t * sdu);
-        int (* sdu_read)(void *         data,
-                         port_id_t      id,
-                         struct sdu_t * sdu);
+        int (* sdu_write)(struct personality_data * data,
+                          port_id_t                 id,
+                          const struct sdu_t *      sdu);
+        int (* sdu_read)(struct personality_data *  data,
+                         port_id_t                  id,
+                         struct sdu_t *             sdu);
 };
 
+typedef unsigned int personality_id;
+
 struct personality {
-        struct kobject           kobj;
-        void *                   data;
-        struct personality_ops * ops;
+        struct kobject            kobj;
+        personality_id            id;
+        struct personality_data * data;
+        struct personality_ops *  ops;
 };
 
 int                  rina_personality_init(struct kobject * parent);
 void                 rina_personality_exit(void);
-struct personality * rina_personality_register(const char *             name,
-                                               void *                   data,
-                                               struct personality_ops * ops);
+
+struct personality * rina_personality_register(const char *              name,
+                                               struct personality_data * data,
+                                               struct personality_ops *  ops);
 
 int                  rina_personality_unregister(struct personality * pers);
 

@@ -331,7 +331,7 @@ static struct genl_ops nl_ops[] = {
                 .cmd    = RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE,
                 .flags  = 0,
                 //.policy = nl_rina_policy,
-                .doit = dispatcher,
+                .doit   = dispatcher,
                 .dumpit = NULL,
         },
         {
