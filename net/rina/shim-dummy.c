@@ -234,11 +234,20 @@ static int dummy_fini(struct shim_data * data)
         return -1;
 }
 
+static struct shim_instance_ops instance_ops = {
+	.flow_allocate_request  = dummy_flow_allocate_request,
+	.flow_allocate_response = dummy_flow_allocate_response,
+	.flow_deallocate        = dummy_flow_deallocate,
+	.application_register   = dummy_application_register,
+	.application_unregister = dummy_application_unregister,
+	.sdu_write              = dummy_sdu_write,
+	.sdu_read               = dummy_sdu_read,
+};
+
 static struct shim_instance * dummy_create(struct shim_data * data,
                                            ipc_process_id_t   id)
 {
         struct shim_instance *   instance;
-        struct shim_instance_ops ops;
         struct dummy_instance *  dummy_inst;
         struct list_head *       port_flow;
 
@@ -279,15 +288,7 @@ static struct shim_instance * dummy_create(struct shim_data * data,
 
         instance->data             = dummy_inst;
 
-        ops.flow_allocate_request  = dummy_flow_allocate_request;
-        ops.flow_allocate_response = dummy_flow_allocate_response;
-        ops.flow_deallocate        = dummy_flow_deallocate;
-        ops.application_register   = dummy_application_register;
-        ops.application_unregister = dummy_application_unregister;
-        ops.sdu_write              = dummy_sdu_write;
-        ops.sdu_read               = dummy_sdu_read;
-
-        instance->ops              = &ops;
+        instance->ops              = &instance_ops;
 
         INIT_LIST_HEAD(&dummy_inst->list);
         list_add(&dummy_inst->list, (struct list_head *) dummy_shim->data);
@@ -341,8 +342,7 @@ static struct shim_instance * dummy_configure(struct shim_data *         data,
 
         LOG_FEXIT;
 
-        /* FIXME: NULL ??? */
-        return NULL;
+        return inst;
 }
 
 static struct shim_ops dummy_ops = {
