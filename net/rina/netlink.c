@@ -35,11 +35,13 @@
 enum {
 	NETLINK_RINA_A_UNSPEC,
 	NETLINK_RINA_A_MSG,
-	__NETLINK_RINA_A_MAX,
+
+        /* Do not use */
+	NETLINK_RINA_A_MAX,
 };
 
-#define NETLINK_RINA_A_MAX (__NETLINK_RINA_A_MAX - 1)
-#define NETLINK_RINA_C_MAX (__NETLINK_RINA_C_MAX - 1)
+#define NETLINK_RINA_A_MAX (NETLINK_RINA_A_MAX - 1)
+#define NETLINK_RINA_C_MAX (RINA_C_MAX - 1)
 
 struct message_handler {
         void *             data;

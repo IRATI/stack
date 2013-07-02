@@ -34,6 +34,7 @@
 
 enum rina_nl_operation_code {
 	/* Unespecified operation */
+        /* FIXME: What's the meaning ??? */
 	RINA_C_UNSPEC, 
 	
 	/* Allocate flow request, Application -> IPC Manager */
@@ -134,7 +135,8 @@ enum rina_nl_operation_code {
 	/* RMT (kernel) -> IPC Process (user space) */
 	RINA_C_RMT_DUMP_FT_REPLY,
 
-	__NETLINK_RINA_C_MAX,
+        /* Do not use */
+	RINA_C_MAX,
 };
 
 int  rina_netlink_init(void);
