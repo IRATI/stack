@@ -80,10 +80,10 @@ struct shim_instance_ops {
 };
 
 struct shim_instance {
-        struct kobject             kobj;
+        struct kobject              kobj;
 
-        void *                     data;
-        struct shim_instance_ops * ops;
+        struct shim_instance_data * data;
+        struct shim_instance_ops *  ops;
 };
 
 /* Pre-declared, the shim should define it properly */
