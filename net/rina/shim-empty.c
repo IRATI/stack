@@ -296,7 +296,7 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
                                               const struct shim_config * cfg)
 {
 	struct shim_instance_data * instance, pos;
-	struct shim_config *    current_entry;
+	struct shim_config * tmp;
 	LOG_FBEGN;
 
         ASSERT(data);
@@ -321,7 +321,7 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
 	}
 
         /* Use configuration values on that instance */
-	list_for_each_entry(current_entry, &(conf->list), list) {
+	list_for_each_entry(tmp, &(conf->list), list) {
 		if (!strcmp(tmp->name, "dif-name")
 			&& val->type == SHIM_CONFIG_STRING) {
                         if (!name_cpy(instance->info->name,
