@@ -44,7 +44,7 @@ struct port_id_to_flow_t {
         struct list_head      list;
 };
 
-static struct list_head * initialize_list()
+static struct list_head * initialize_list(void)
 {
 	struct list_head * head;
 
@@ -241,6 +241,7 @@ int kipcm_ipc_configure(struct kipcm *                  kipcm,
 	struct ipc_process_t * ipc_process;
 	struct kobject *       k;
 	struct shim *          shim;
+	struct shim_config *   conf = NULL;
 
 	LOG_FBEGN;
 
@@ -253,8 +254,9 @@ int kipcm_ipc_configure(struct kipcm *                  kipcm,
 	case DIF_TYPE_SHIM :
 		k = kset_find_obj(kipcm->shims->set, "shim-dummy");
 		shim = to_shim(k);
+		/* FIXME: This won't work, conf must be created */
 		ipc_process->data.shim_instance = shim->ops->configure(
-				kipcm, ipc_process->data.shim_instance, cfg);
+			shim->data, ipc_process->data.shim_instance, conf);
 		break;
 	case DIF_TYPE_NORMAL :
 		break;
