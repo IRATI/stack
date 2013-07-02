@@ -137,22 +137,16 @@ enum rina_nl_operation_code {
 	__NETLINK_RINA_C_MAX,
 };
 
-/* attributes */
-enum {
-	NETLINK_RINA_A_UNSPEC,
-	NETLINK_RINA_A_MSG,
-	__NETLINK_RINA_A_MAX,
-};
-
-#define NETLINK_RINA_A_MAX (__NETLINK_RINA_A_MAX - 1)
-#define NETLINK_RINA_C_MAX (__NETLINK_RINA_C_MAX - 1)
-
 int  rina_netlink_init(void);
 void rina_netlink_exit(void);
 
-int  rina_netlink_register_handler(int,
-                                   int (*)(struct sk_buff *,
-                                           struct genl_info *));
+typedef int (* message_handler_cb)(void *             data,
+                                   struct sk_buff *   buff,
+                                   struct genl_info * info); 
+
+int  rina_netlink_register_handler(int                msg_type,
+				   void *             data,
+                                   message_handler_cb handler);
 int  rina_netlink_unregister_handler(int);
 
 #if 0
