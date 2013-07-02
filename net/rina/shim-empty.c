@@ -274,14 +274,13 @@ static struct shim_instance * empty_create(struct shim_data * data,
 }
 
 /* FIXME: Might need to move this to a global file for all shims */
-static int name_cpy(struct name_t *       dst,
+static name_t * name_cpy(struct name_t *       dst,
                     const struct name_t * src)
 {
-        struct name_t * temp;
-
+      
         LOG_FBEGN;
-        temp = kmalloc(sizeof(*temp), GFP_KERNEL);
-        if (!temp) {
+        dst = kmalloc(sizeof(*temp), GFP_KERNEL);
+        if (!dst) {
                 LOG_ERR("Cannot allocate %zd bytes of memory", sizeof(*temp));
 
                 LOG_FEXIT;
@@ -289,15 +288,12 @@ static int name_cpy(struct name_t *       dst,
         }
 
         /* FIXME: Check strcpy return values */
-        strcpy(temp->process_name,     src->process_name);
-        strcpy(temp->process_instance, src->process_instance);
-        strcpy(temp->entity_name,      src->entity_name);
-        strcpy(temp->entity_instance,  src->entity_instance);
-
-        /* FIXME: Utterly broken. That's a true memory leak */
-        dst = temp;
-
-        return 0;
+        strcpy(dst->process_name,     src->process_name);
+        strcpy(dst->process_instance, src->process_instance);
+        strcpy(dst->entity_name,      src->entity_name);
+        strcpy(dst->entity_instance,  src->entity_instance);
+     
+        return dst;
 }
 
 static struct shim_instance * empty_configure(struct shim_data *         data,
