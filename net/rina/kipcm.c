@@ -44,7 +44,7 @@ struct port_id_to_flow_t {
         struct list_head      list;
 };
 
-static struct list_head initialize_list()
+static struct list_head * initialize_list()
 {
 	struct list_head * head;
 
