@@ -62,14 +62,18 @@ struct personality_ops {
                          struct sdu_t *             sdu);
 };
 
+typedef unsigned int personality_id;
+
 struct personality {
         struct kobject            kobj;
+        personality_id            id;
         struct personality_data * data;
         struct personality_ops *  ops;
 };
 
 int                  rina_personality_init(struct kobject * parent);
 void                 rina_personality_exit(void);
+
 struct personality * rina_personality_register(const char *              name,
                                                struct personality_data * data,
                                                struct personality_ops *  ops);
