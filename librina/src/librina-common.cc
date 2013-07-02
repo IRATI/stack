@@ -510,6 +510,15 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 	this->portId = portId;
 }
 
+void FlowRequestEvent::setPortId(int portId){
+	this->portId = portId;
+}
+
+void FlowRequestEvent::setDIFName(
+		const ApplicationProcessNamingInformation& difName){
+	this->DIFName = difName;
+}
+
 int FlowRequestEvent::getPortId() const {
 	return portId;
 }

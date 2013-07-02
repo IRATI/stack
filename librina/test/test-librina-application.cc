@@ -98,10 +98,7 @@ int main(int argc, char * argv[]) {
 				dynamic_cast<ApplicationRegistrationRequestEvent *>(event);
 		std::cout<<"IPCManager# received an application registration request event\n";
 		applicationManager->applicationRegistered(
-				appRequestEvent->getSequenceNumber(),
-				appRequestEvent->getApplicationName(),
-				appRequestEvent->getDIFName(),
-				1, 1, 0, "ok");
+				*appRequestEvent, 1, 1, 0, "ok");
 		std::cout<<"IPCManager# Replied to application\n";
 		delete appRequestEvent;
 
@@ -112,10 +109,10 @@ int main(int argc, char * argv[]) {
 		std::cout<<"IPCManager# received a flow allocation request event\n";
 		ApplicationProcessNamingInformation * difName =
 						new ApplicationProcessNamingInformation();
-				difName->setProcessName("/difs/Test.DIF");
-		applicationManager->flowAllocated(flowRequestEvent->getSequenceNumber(),
-				23, "ok", 1, 1, flowRequestEvent->getSourceApplicationName(),
-				*difName);
+		difName->setProcessName("/difs/Test.DIF");
+		flowRequestEvent->setDIFName(*difName);
+		flowRequestEvent->setPortId(23);
+		applicationManager->flowAllocated(*flowRequestEvent, "ok", 1, 1);
 		std::cout<<"IPCManager# Replied to flow allocation\n";
 		delete flowRequestEvent;
 		delete difName;

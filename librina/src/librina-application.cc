@@ -348,8 +348,9 @@ Flow * IPCManager::allocateFlowRequest(
 	return flow;
 }
 
-Flow * IPCManager::allocateFlowResponse(int portId, bool accept,
-		const std::string& reason) throw (IPCException) {
+Flow * IPCManager::allocateFlowResponse(
+		const FlowRequestEvent& flowRequestEvent, bool accept,
+			const std::string& reason) throw (IPCException) {
 	LOG_DBG("IPCManager.allocateFlowResponse called");
 
 	if (!accept) {
@@ -360,19 +361,19 @@ Flow * IPCManager::allocateFlowResponse(int portId, bool accept,
 #if STUB_API
 	//Do nothing
 #else
-	//
+	AppAllocateFlowResponseMessage * message =
+			new AppAllocateFlowResponseMessage();
+	message->setAccept(accept);
+	message->setDenyReason(reason);
+	message->setNotifySource(true);
+	message->setSequenceNumber(flowRequestEvent.getSequenceNumber());
 #endif
 
-	ApplicationProcessNamingInformation * sourceAppName =
-			new ApplicationProcessNamingInformation("/test/app/source", "1");
-	ApplicationProcessNamingInformation * destAppName =
-			new ApplicationProcessNamingInformation("/test/app/dest", "1");
-	ApplicationProcessNamingInformation * DIFName =
-			new ApplicationProcessNamingInformation("test.DIF", "");
-	FlowSpecification * flowSpec = new FlowSpecification();
-	Flow * flow = new Flow(*sourceAppName, *destAppName, *flowSpec,
-			FLOW_ALLOCATED, *DIFName, portId);
-	allocatedFlows[portId] = flow;
+	Flow * flow = new Flow(flowRequestEvent.getSourceApplicationName(),
+			flowRequestEvent.getDestApplicationName(),
+			flowRequestEvent.getFlowSpecification(), FLOW_ALLOCATED,
+			flowRequestEvent.getDIFName(), flowRequestEvent.getPortId());
+	allocatedFlows[flowRequestEvent.getPortId()] = flow;
 	return flow;
 }
 

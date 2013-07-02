@@ -26,6 +26,72 @@
 namespace rina {
 
 /**
+ * Event informing that an application has requested the
+ * registration to a DIF
+ */
+class ApplicationRegistrationRequestEvent: public IPCEvent {
+	/** The application that wants to register */
+	ApplicationProcessNamingInformation applicationName;
+
+	/** The DIF to which the application wants to register */
+	ApplicationProcessNamingInformation DIFName;
+
+public:
+	ApplicationRegistrationRequestEvent(
+			const ApplicationProcessNamingInformation& appName,
+			const ApplicationProcessNamingInformation& DIFName,
+			unsigned int sequenceNumber);
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	const ApplicationProcessNamingInformation& getDIFName() const;
+};
+
+/**
+ * Event informing that an application has requested the
+ * unregistration from a DIF
+ */
+class ApplicationUnregistrationRequestEvent: public IPCEvent {
+	/** The application that wants to unregister */
+	ApplicationProcessNamingInformation applicationName;
+
+	/** The DIF to which the application wants to cancel the registration */
+	ApplicationProcessNamingInformation DIFName;
+
+public:
+	ApplicationUnregistrationRequestEvent(
+			const ApplicationProcessNamingInformation& appName,
+			const ApplicationProcessNamingInformation& DIFName,
+			unsigned int sequenceNumber);
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	const ApplicationProcessNamingInformation& getDIFName() const;
+};
+
+/**
+ * Event informing that an application has requested a flow to
+ * a destination application
+ */
+class FlowAllocationRequestEvent: public IPCEvent {
+	/** The source application name */
+	ApplicationProcessNamingInformation sourceApplicationName;
+
+	/** The destination application name */
+	ApplicationProcessNamingInformation destinationApplicationName;
+
+	/** The destination application name */
+	FlowSpecification flowSpecification;
+
+public:
+	FlowAllocationRequestEvent(
+			const ApplicationProcessNamingInformation& sourceName,
+			const ApplicationProcessNamingInformation& destName,
+			const FlowSpecification& flowSpec,
+			unsigned int sequenceNumber);
+	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
+	const ApplicationProcessNamingInformation&
+			getDestinationApplicationName() const;
+	const FlowSpecification& getFlowSpecification() const;
+};
+
+/**
  * Encapsulates the state and operations that can be performed over
  * a single IPC Process (besides creation/destruction)
  */
@@ -226,9 +292,7 @@ public:
 	 * @param response The result of the registration operation
 	 * @throws IPCException If an error occurs during the operation
 	 */
-	void applicationRegistered(unsigned int sequenceNumber,
-			const ApplicationProcessNamingInformation& applicationName,
-			const ApplicationProcessNamingInformation& difName,
+	void applicationRegistered(const ApplicationRegistrationRequestEvent & event,
 			unsigned short ipcProcessId, int ipcProcessPortId, int result,
 			const std::string& errorDescription) throw (IPCException);
 
@@ -261,11 +325,9 @@ public:
 	 * @param difName The name of the DIF where the flow has been allocated
 	 * @throws IPCException If an error occurs during the operation
 	 */
-	void flowAllocated(unsigned int sequenceNumber,
-			int portId, std::string errorDescription,
-			unsigned short ipcProcessId, unsigned int ipcProcessPortId,
-			const ApplicationProcessNamingInformation& appName,
-			const ApplicationProcessNamingInformation& difName)
+	void flowAllocated(const FlowRequestEvent flowRequestEvent,
+			std::string errorDescription,
+			unsigned short ipcProcessId, unsigned int ipcProcessPortId)
 			throw (IPCException);
 };
 
@@ -273,72 +335,6 @@ public:
  * Make Application Manager singleton
  */
 extern Singleton<ApplicationManager> applicationManager;
-
-/**
- * Event informing that an application has requested the
- * registration to a DIF
- */
-class ApplicationRegistrationRequestEvent: public IPCEvent {
-	/** The application that wants to register */
-	ApplicationProcessNamingInformation applicationName;
-
-	/** The DIF to which the application wants to register */
-	ApplicationProcessNamingInformation DIFName;
-
-public:
-	ApplicationRegistrationRequestEvent(
-			const ApplicationProcessNamingInformation& appName,
-			const ApplicationProcessNamingInformation& DIFName,
-			unsigned int sequenceNumber);
-	const ApplicationProcessNamingInformation& getApplicationName() const;
-	const ApplicationProcessNamingInformation& getDIFName() const;
-};
-
-/**
- * Event informing that an application has requested the
- * unregistration from a DIF
- */
-class ApplicationUnregistrationRequestEvent: public IPCEvent {
-	/** The application that wants to unregister */
-	ApplicationProcessNamingInformation applicationName;
-
-	/** The DIF to which the application wants to cancel the registration */
-	ApplicationProcessNamingInformation DIFName;
-
-public:
-	ApplicationUnregistrationRequestEvent(
-			const ApplicationProcessNamingInformation& appName,
-			const ApplicationProcessNamingInformation& DIFName,
-			unsigned int sequenceNumber);
-	const ApplicationProcessNamingInformation& getApplicationName() const;
-	const ApplicationProcessNamingInformation& getDIFName() const;
-};
-
-/**
- * Event informing that an application has requested a flow to
- * a destination application
- */
-class FlowAllocationRequestEvent: public IPCEvent {
-	/** The source application name */
-	ApplicationProcessNamingInformation sourceApplicationName;
-
-	/** The destination application name */
-	ApplicationProcessNamingInformation destinationApplicationName;
-
-	/** The destination application name */
-	FlowSpecification flowSpecification;
-
-public:
-	FlowAllocationRequestEvent(
-			const ApplicationProcessNamingInformation& sourceName,
-			const ApplicationProcessNamingInformation& destName,
-			const FlowSpecification& flowSpec,
-			unsigned int sequenceNumber);
-	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
-	const ApplicationProcessNamingInformation&
-			getDestinationApplicationName() const;
-	const FlowSpecification& getFlowSpecification() const;
-};
 
 }
 

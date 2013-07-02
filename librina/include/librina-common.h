@@ -366,6 +366,8 @@ public:
 			unsigned int sequenceNumber);
 	int getPortId() const;
 	const FlowSpecification& getFlowSpecification() const;
+	void setPortId(int portId);
+	void setDIFName(const ApplicationProcessNamingInformation& difName);
 	const ApplicationProcessNamingInformation& getDIFName() const;
 	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
 	const ApplicationProcessNamingInformation& getDestApplicationName() const;

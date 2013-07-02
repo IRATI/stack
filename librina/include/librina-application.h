@@ -211,15 +211,15 @@ public:
 	/**
 	 * Confirms or denies the request for a flow to this application.
 	 *
-	 * @param portId The Id of the flow to confirm/deny
+	 * @param flowRequestEvent information of the flow request
 	 * @param accept true if the flow is accepted, false otherwise
 	 * @param reason IF the flow was denied, contains a short explanation
 	 * providing some motivation
 	 * @return Flow If the flow is accepted, returns the flow object
 	 * @throws IPCException If there are problems confirming/denying the flow
 	 */
-	Flow * allocateFlowResponse(int portId, bool accept,
-			const std::string& reason) throw (IPCException);
+	Flow * allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
+			bool accept, const std::string& reason) throw (IPCException);
 
 	/**
 	 * Causes the flow to be deallocated, and the object deleted.

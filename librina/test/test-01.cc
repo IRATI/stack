@@ -118,7 +118,9 @@ int main(int argc, char * argv[]) {
 	flow->writeSDU(sdu, 5);
 
 	/* TEST ALLOCATE RESPONSE */
-	Flow * flow2 = ipcManager->allocateFlowResponse(25, true, "");
+	FlowRequestEvent * flowRequestEvent = new FlowRequestEvent(25, *flowSpecification,
+			*sourceName, *destinationName, *sourceName, 23);
+	Flow * flow2 = ipcManager->allocateFlowResponse(*flowRequestEvent, true, "");
 	std::cout << "Accepted flow allocation, portId is " << flow2->getPortId()
 			<< "; DIF name is: " << flow2->getDIFName().getProcessName()
 			<< "\n";

@@ -156,9 +156,8 @@ Singleton<IPCProcessFactory> ipcProcessFactory;
 
 /** CLASS APPLICATION MANAGER */
 
-void ApplicationManager::applicationRegistered(unsigned int sequenceNumber,
-		const ApplicationProcessNamingInformation& applicationName,
-		const ApplicationProcessNamingInformation& difName,
+void ApplicationManager::applicationRegistered(
+		const ApplicationRegistrationRequestEvent& event,
 		unsigned short ipcProcessId, int ipcProcessPortId, int result,
 		const std::string& errorDescription) throw (IPCException) {
 	LOG_DBG("ApplicationManager::applicationRegistered called");
@@ -168,13 +167,13 @@ void ApplicationManager::applicationRegistered(unsigned int sequenceNumber,
 #else
 	AppRegisterApplicationResponseMessage * responseMessage =
 			new AppRegisterApplicationResponseMessage();
-	responseMessage->setApplicationName(applicationName);
-	responseMessage->setDifName(difName);
+	responseMessage->setApplicationName(event.getApplicationName());
+	responseMessage->setDifName(event.getDIFName());
 	responseMessage->setIpcProcessId(ipcProcessId);
 	responseMessage->setIpcProcessPortId(ipcProcessPortId);
 	responseMessage->setResult(result);
 	responseMessage->setErrorDescription(errorDescription);
-	responseMessage->setSequenceNumber(sequenceNumber);
+	responseMessage->setSequenceNumber(event.getSequenceNumber());
 	responseMessage->setResponseMessage(true);
 	try{
 		rinaManager->sendResponseOrNotficationMessage(responseMessage);
@@ -191,12 +190,9 @@ void ApplicationManager::applicationUnregistered(unsigned int transactionId,
 	LOG_DBG("ApplicationManager::applicationUnregistered called");
 }
 
-void ApplicationManager::flowAllocated(unsigned int sequenceNumber,
-		int portId, std::string errorDescription,
-		unsigned short ipcProcessId, unsigned int ipcProcessPortId,
-		const ApplicationProcessNamingInformation& appName,
-		const ApplicationProcessNamingInformation& difName)
-		throw (IPCException) {
+void ApplicationManager::flowAllocated(const FlowRequestEvent flowRequestEvent,
+		std::string errorDescription, unsigned short ipcProcessId,
+		unsigned int ipcProcessPortId) throw (IPCException) {
 	LOG_DBG("ApplicationManager::flowAllocated called");
 
 #if STUB_API
@@ -204,13 +200,13 @@ void ApplicationManager::flowAllocated(unsigned int sequenceNumber,
 #else
 	AppAllocateFlowRequestResultMessage * responseMessage =
 				new AppAllocateFlowRequestResultMessage();
-	responseMessage->setPortId(portId);
+	responseMessage->setPortId(flowRequestEvent.getPortId());
 	responseMessage->setErrorDescription(errorDescription);
 	responseMessage->setIpcProcessId(ipcProcessId);
 	responseMessage->setIpcProcessPortId(ipcProcessPortId);
-	responseMessage->setSourceAppName(appName);
-	responseMessage->setDifName(difName);
-	responseMessage->setSequenceNumber(sequenceNumber);
+	responseMessage->setSourceAppName(flowRequestEvent.getSourceApplicationName());
+	responseMessage->setDifName(flowRequestEvent.getDIFName());
+	responseMessage->setSequenceNumber(flowRequestEvent.getSequenceNumber());
 	responseMessage->setResponseMessage(true);
 	try{
 		rinaManager->sendResponseOrNotficationMessage(responseMessage);
