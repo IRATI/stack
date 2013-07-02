@@ -30,17 +30,18 @@
 
 #define NETLINK_RINA "rina"
 
-/* FIXME: Are there really needed ? */
-
 /* attributes */
+/* FIXME: Are they really needed ??? */
 enum {
 	NETLINK_RINA_A_UNSPEC,
 	NETLINK_RINA_A_MSG,
-	__NETLINK_RINA_A_MAX,
+
+        /* Do not use */
+	NETLINK_RINA_A_MAX,
 };
 
-#define NETLINK_RINA_A_MAX (__NETLINK_RINA_A_MAX - 1)
-#define NETLINK_RINA_C_MAX (__NETLINK_RINA_C_MAX - 1)
+#define NETLINK_RINA_A_MAX (NETLINK_RINA_A_MAX - 1)
+#define NETLINK_RINA_C_MAX (RINA_C_MAX - 1)
 
 struct message_handler {
         void *             data;
@@ -54,10 +55,9 @@ static struct genl_family nl_family = {
         .hdrsize = 0,
         .name    = NETLINK_RINA,
         .version = 1,
-        .maxattr = NETLINK_RINA_A_MAX,
+        .maxattr = NETLINK_RINA_A_MAX, /* ??? */
 };
 
-/* FIXME: To be completely rearranged (depends on personality etc. etc.) */
 static int is_message_type_in_range(int msg_type, int min_value, int max_value)
 { return ((msg_type < min_value || msg_type >= max_value) ? 0 : 1); }
 
@@ -68,12 +68,12 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
          * values on failure
          */
 
-        /* FIXME: What do we do if the handler returned != 0 ??? */
+        /* FIXME: What do we do if the handler returns != 0 ??? */
 
-        int (* cb_function)(void *,struct sk_buff *, struct genl_info *);
-        void * data;
-        int msg_type;
-        int ret_val;
+        message_handler_cb cb_function;
+        void *             data;
+        int                msg_type;
+        int                ret_val;
 
         LOG_DBG("Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
 
@@ -403,9 +403,8 @@ int rina_netlink_unregister_handler(int msg_type)
         }
         ASSERT(msg_type >= 0 && msg_type < NETLINK_RINA_C_MAX);
 
-        /* FIXME: bzero the entry might avoid bugs later on. Please use that */
-        messages_handlers[msg_type].data = NULL;
-        messages_handlers[msg_type].cb   = NULL;
+        bzero(&messages_handlers[msg_type],
+              sizeof(messages_handlers[msg_type]));
 
         LOG_DBG("Handler for message type %d unregistered successfully",
                 msg_type);
