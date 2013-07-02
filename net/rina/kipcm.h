@@ -73,9 +73,7 @@ struct ipc_process_t {
 
 	union {
 		struct normal_ipc_process_t * normal_ipcp;
-#if 0
 		struct shim_instance *        shim_instance;
-#endif
 	} data;
 };
 
@@ -110,6 +108,8 @@ struct flow {
 
 struct kipcm {
         struct shims * shims;
+        struct list_head * id_to_ipcp;
+        struct list_head * port_id_to_flow;
 };
 
 struct kipcm * kipcm_init(struct kobject * parent);
