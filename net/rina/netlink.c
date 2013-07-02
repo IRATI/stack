@@ -30,18 +30,6 @@
 /* FIXME: This define (and its related code) has to be removed */
 #define TESTING 1
 
-///* Table to collect callbacks lists by message type*/
-//list_head  message_handler_registry[NETLINK_RINA_C_MAX];
-//
-///*  Type to store callback funcion */
-//typedef int (* message_handler)(struct sk_buff *, struct genl_info *);
-//
-///* struct to use in list */
-//struct callback_t {
-//        struct list_head cb_list;
-//        message_handler_t cb;
-//}
-
 /*   Table to collect callbacks */
 typedef int (* message_handler)(struct sk_buff *, struct genl_info *); 
 
@@ -442,34 +430,6 @@ int rina_netlink_init(void)
         	LOG_ERR("Cannot register family and ops. Error:%d", ret);
        		return -2;
         }
-
-	/* Not needed if genl_register_family_with_ops works.
-        LOG_DBG("Registering family");
-        ret = genl_register_family(&nl_family);
-        if (ret != 0) {
-                LOG_ERR("Cannot register NL family");
-                return -1;
-        }
-
-	LOG_DBG("Registering family ops");
-        for (i = 0; i < ARRAY_SIZE(nl_ops); i++) {
-                ret = genl_register_ops(&nl_family, &nl_ops[i]);
-                if (ret < 0) {
-                        LOG_ERR("Cannot register NL ops %d", ret);
-                        genl_unregister_family(&nl_family);
-                        return -2;
-                }
-        i}*/
-
-/* 	for (i = 0; i < ARRAY_SIZE(message_handler_registry); i++) {
-                INIT_LIST_HEAD(&message_handler_registry[i]);
-                if (message_handler_registry[i] == NULL) {
-                        LOG_ERR("Could not initialize callback list "
-			"for message %d", i);
-                        return -2;
-                }
-        }
-        LOG_DBG("Callbacks structs initialized");*/
 
         LOG_DBG("NetLink layer initialized");
 
