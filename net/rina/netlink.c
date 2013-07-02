@@ -30,6 +30,8 @@
 /* FIXME: This define (and its related code) has to be removed */
 #define TESTING 1
 
+#define NETLINK_RINA "rina"
+
 /*   Table to collect callbacks */
 typedef int (* message_handler)(struct sk_buff *, struct genl_info *); 
 
@@ -152,8 +154,7 @@ static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
 }
 #endif
 
-/* FIXME: The following ops are personality related, must be moved */
-
+/* FIXME: The following ops are personality related, must be moved elsewhere */
 static struct genl_ops nl_ops[] = {
         {
                 .cmd    = RINA_C_APP_ALLOCATE_FLOW_REQUEST,
@@ -369,7 +370,7 @@ static struct genl_ops nl_ops[] = {
 
 int rina_netlink_unregister_handler(int msg_type)
 {
-        LOG_DBG("Unregistering handler for message type %d\n", msg_type);
+        LOG_DBG("Unregistering handler for message type %d", msg_type);
 
         if (!is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX)) {
                 LOG_ERR("Message type %d is out-of-range", msg_type);
@@ -379,7 +380,7 @@ int rina_netlink_unregister_handler(int msg_type)
 
         messages_handlers[msg_type] = NULL;
 
-        LOG_DBG("Handler for message type %d unregistered successfully\n",
+        LOG_DBG("Handler for message type %d unregistered successfully",
                 msg_type);
 
         return 0;
@@ -389,8 +390,14 @@ int rina_netlink_register_handler(int    msg_type,
                                   int (* handler)(struct sk_buff *,
                                                    struct genl_info *))
 {
-        LOG_DBG("Registering handler %pK for message type %d\n",
+        LOG_DBG("Registering handler %pK for message type %d",
                 handler, msg_type);
+
+        if (!handler) {
+                LOG_ERR("Handler for message type %d is empty, "
+                        "use unregister to remove it", msg_type);
+                return -1;
+        }
 
         if (!is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX)) {
                 LOG_ERR("Message type %d is out-of-range", msg_type);
@@ -427,7 +434,7 @@ int rina_netlink_init(void)
 					    nl_ops, 
 					    ARRAY_SIZE(nl_ops));
         if (ret < 0) {
-        	LOG_ERR("Cannot register family and ops. Error:%d", ret);
+        	LOG_ERR("Cannot register family and ops (error=%i)", ret);
        		return -2;
         }
 
@@ -455,7 +462,7 @@ void rina_netlink_exit(void)
         /* Unregister the family */
         ret = genl_unregister_family(&nl_family); 
         if (ret) {
-                LOG_ERR("Could not unregister family (err=%i)\n", ret);
+                LOG_ERR("Could not unregister family (error=%i)", ret);
                 return;
         }
 

@@ -30,8 +30,6 @@
 #include <net/genetlink.h>
 #include <linux/skbuff.h>
 
-#define NETLINK_RINA "nlrina"
-
 enum rina_nl_operation_code {
 	/* Unespecified operation */
 	RINA_C_UNSPEC, 
