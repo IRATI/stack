@@ -22,6 +22,7 @@
 
 #include <linux/slab.h>
 #include <linux/list.h>
+#include <linux/string.h>
 
 #define RINA_PREFIX "shim-empty"
 
@@ -31,9 +32,16 @@
 #include "kipcm.h"
 #include "shim.h"
 
+/* Holds all configuration related to this shim */
+struct empty_info {
+	struct name_t * dif_name;
+};
+
 /* This structure will contains per-instance data */
 struct shim_instance_data {
+	struct list_head list;
         ipc_process_id_t id;
+	struct empty_info * info;
 };
 
 /*
@@ -217,12 +225,21 @@ static struct shim_instance * empty_create(struct shim_data * data,
                                            ipc_process_id_t   id)
 {
         struct shim_instance * inst;
-
+	struct shim_instance_data * pos;
         LOG_FBEGN;
 
         ASSERT(data);
+	
+	/* Check if there already is an instance with that id */
+	list_for_each_entry(pos, data->instances, instances) {
+		if(pos->id == id) {
+			LOG_ERR("Shim instance with ipcpid %d already exists", 
+				pos->id);
+			return NULL;
+		}
+	}
 
-        /* Create and instance */
+        /* Create an instance */
         inst = kzalloc(sizeof(*inst), GFP_KERNEL);
         if (!inst) {
                 LOG_ERR("Cannot allocate %zd bytes of memory", sizeof(*inst));
@@ -245,35 +262,82 @@ static struct shim_instance * empty_create(struct shim_data * data,
          * Bind the shim-instance to the shims set, to keep all our data
          * structures linked (somewhat) together
          */
-        list_add(data->instances, inst->data);
+        list_add(data->instances, &(inst->data->list));
 
         LOG_FEXIT;
 
         return inst;
 }
 
+/* FIXME: Might need to move this to a global file for all shims */
+static int name_cpy(struct name_t * dst,
+                    const struct name_t *src)
+{
+        struct name_t * temp;
+        LOG_FBEGN;
+        temp = kmalloc(sizeof(*temp), GFP_KERNEL);
+        if (!temp) {
+                LOG_ERR("Cannot allocate memory for name");
+                LOG_FEXIT;
+                return -1;
+        }
+
+        /* FIXME: Check strcpy return values */
+        strcpy(temp->process_name, src->process_name);
+        strcpy(temp->process_instance, src->process_instance);
+        strcpy(temp->entity_name, src->entity_name);
+        strcpy(temp->entity_instance, src->entity_instance);
+        dst = temp;
+        return 0;
+}
+
 static struct shim_instance * empty_configure(struct shim_data *         data,
                                               struct shim_instance *     inst,
                                               const struct shim_config * cfg)
 {
-        LOG_FBEGN;
+	struct shim_instance_data * instance, pos;
+	struct shim_config *    current_entry;
+	LOG_FBEGN;
 
         ASSERT(data);
         ASSERT(inst);
         ASSERT(cfg);
 
         /* Do we have that instance ? */
+	list_for_each_entry(pos, data->instances, instances) {
+		if(pos == inst->data) {
+			instance = pos;
+		}
+	}
+	if (!instance) {
+		LOG_ERR("No instance with that id");
+		LOG_FEXIT;
+		return inst;
+	}
 
-        /* Yes */
+	/* Get configuration struct pertaining to this shim instance */ 
+	if (!instance->info) {
+		info = kzalloc(sizeof(*info), GFP_KERNEL);
+	}
 
         /* Use configuration values on that instance */
-
+	list_for_each_entry(current_entry, &(conf->list), list) {
+		if (!strcmp(tmp->name, "dif-name")
+			&& val->type == SHIM_CONFIG_STRING) {
+                        if (!name_cpy(instance->info->name,
+					(struct name_t *) val->data)) {
+                                LOG_FEXIT;
+                                return inst;
+                        }
+		}
+	}
+	
         /*
          * Instance might change (reallocation), return the updated pointer
          * if needed. We don't re-allocate our instance so we'll be returning
          * the same pointer.
          */
-
+	
         LOG_FEXIT;
 
         return inst;
