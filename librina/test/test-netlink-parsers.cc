@@ -543,7 +543,7 @@ int testAppFlowDeallocatedNotificationMessage() {
 		std::cout << "Error allocating Netlink message\n";
 	}
 	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
-			0, 0, message->getOperationCode(), 0);
+			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
 
 	int result = putBaseNetlinkMessage(netlinkMessage, message);
 	if (result < 0) {
@@ -628,7 +628,7 @@ int testAppRegisterApplicationRequestMessage() {
 		std::cout << "Error allocating Netlink message\n";
 	}
 	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
-			0, 0, message->getOperationCode(), 0);
+			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
 
 	int result = putBaseNetlinkMessage(netlinkMessage, message);
 	if (result < 0) {
@@ -702,7 +702,7 @@ int testAppRegisterApplicationResponseMessage() {
 		std::cout << "Error allocating Netlink message\n";
 	}
 	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
-			0, 0, message->getOperationCode(), 0);
+			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
 
 	int result = putBaseNetlinkMessage(netlinkMessage, message);
 	if (result < 0) {

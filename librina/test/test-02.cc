@@ -129,14 +129,15 @@ int main(int argc, char * argv[]) {
 	ipcProcess1->queryRIB();
 
 	/* TEST APPLICATION REGISTERED */
-	applicationManager->applicationRegistered(25, "Everything was fine");
+	applicationManager->applicationRegistered(25, *ipcProcessName1,*difName,0,
+			0,0,"Everything was fine");
 
 	/* TEST APPLICATION UNREGISTERED */
 	applicationManager->applicationUnregistered(25, "Everything was fine");
 
 	/* TEST FLOW ALLOCATED */
-	applicationManager->flowAllocated(25, 34, 45, "Everything was fine",
-			*difName);
+	applicationManager->flowAllocated(25, 34, "Everything was fine", 45, 67,
+			*sourceName, *difName);
 
 	ipcProcessFactory->destroy(ipcProcess1->getId());
 	if (!checkIPCProcesses(0)) {

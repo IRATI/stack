@@ -221,13 +221,16 @@ public:
 	 * Invoked by the IPC Manager to notify an application about the  result of
 	 * the registration in a DIF operation.
 	 *
-	 * @param transactionId identifies the request whose reply this operation
+	 * @param sequenceNumber identifies the request whose reply this operation
 	 * is providing
 	 * @param response The result of the registration operation
 	 * @throws IPCException If an error occurs during the operation
 	 */
-	void applicationRegistered(unsigned int transactionId,
-			const std::string& response) throw (IPCException);
+	void applicationRegistered(unsigned int sequenceNumber,
+			const ApplicationProcessNamingInformation& applicationName,
+			const ApplicationProcessNamingInformation& difName,
+			unsigned short ipcProcessId, int ipcProcessPortId, int result,
+			const std::string& errorDescription) throw (IPCException);
 
 	/**
 	 * Invoked by the IPC Manager to notify an application about the  result of
@@ -245,20 +248,25 @@ public:
 	 * Invoked by the IPC Manager to respond to the Application Process that
 	 * requested a flow.
 	 *
-	 * @param transactionId identifies the request whose reply this operation
+	 * @param sequenceNumber identifies the request whose reply this operation
 	 * is providing
 	 * @param portId The port-id assigned to the flow, in case the operation
 	 * was successful
+	 * @param errorDescription An optional string further describing the result
 	 * @param ipcProcessId Required so that the application process can contact
 	 * the IPC Process to read/write the flow
-	 * @param response The result of the unregistration operation
+	 * @param ipcProcessPortId Required so that the application process can contact
+	 * the IPC Process to read/write the flow
+	 * @param appName The name of the application that requested the flow
 	 * @param difName The name of the DIF where the flow has been allocated
 	 * @throws IPCException If an error occurs during the operation
 	 */
-	void flowAllocated(unsigned int transactionId, int portId,
-			unsigned int ipcProcessPid, std::string response,
+	void flowAllocated(unsigned int sequenceNumber,
+			int portId, std::string errorDescription,
+			unsigned short ipcProcessId, unsigned int ipcProcessPortId,
+			const ApplicationProcessNamingInformation& appName,
 			const ApplicationProcessNamingInformation& difName)
-					throw (IPCException);
+			throw (IPCException);
 };
 
 /**

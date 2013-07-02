@@ -21,7 +21,7 @@
 
 #include "logs.h"
 #include "librina-application.h"
-#include "netlink-manager.h"
+#include "core.h"
 
 namespace rina {
 
@@ -126,6 +126,20 @@ void ApplicationRegistration::removeDIFName(
 
 /* CLASS IPC MANAGER */
 
+BaseNetlinkMessage * sendRequestAndWaitForResponse(
+		BaseNetlinkMessage * request, const std::string& errorDescription)
+			throw(IPCException){
+	BaseNetlinkMessage* response = 0;
+	try{
+		response =	rinaManager->sendRequestMessageAndWaitForReply(request);
+		delete request;
+		return response;
+	}catch(NetlinkException &e){
+		delete request;
+		throw IPCException(errorDescription + e.what());
+	}
+}
+
 IPCManager::IPCManager() {
 }
 
@@ -138,6 +152,10 @@ const std::string IPCManager::application_not_registered_error =
 		"The application is not registered in this DIF";
 const std::string IPCManager::unknown_flow_error =
 		"There is no flow at the specified portId";
+const std::string IPCManager::error_registering_application =
+		"Error registering application";
+const std::string IPCManager::error_requesting_flow_allocation =
+		"Error requesting flow allocation";
 
 /* Auxiliar function called in case of using the stubbed version of the API */
 std::vector<DIFProperties> getFakeDIFProperties(
@@ -200,7 +218,28 @@ void IPCManager::registerApplication(
 #if STUB_API
 	//Do nothing
 #else
-	//TODO real implementation
+	AppRegisterApplicationRequestMessage * message =
+			new AppRegisterApplicationRequestMessage();
+	message->setApplicationName(applicationName);
+	message->setDifName(DIFName);
+	message->setRequestMessage(true);
+
+	AppRegisterApplicationResponseMessage * registerResponseMessage =
+			dynamic_cast<AppRegisterApplicationResponseMessage *>(
+					sendRequestAndWaitForResponse(message,
+							IPCManager::error_registering_application));
+
+	if (registerResponseMessage->getResult() < 0){
+		std::string reason = IPCManager::error_registering_application +
+				registerResponseMessage->getErrorDescription();
+		delete registerResponseMessage;
+		throw IPCException(reason);
+	}
+
+	LOG_DBG("Application %s registered successfully to DIF %s",
+			applicationName.getProcessName().c_str(),
+			DIFName.getProcessName().c_str());
+	delete registerResponseMessage;
 #endif
 
 	if (!applicationRegistration){
@@ -267,19 +306,45 @@ Flow * IPCManager::allocateFlowRequest(
 	LOG_DBG("IPCManager.allocateFlowRequest called");
 
 	int portId = 0;
-	ApplicationProcessNamingInformation * DIFName = 0;
+	Flow * flow = 0;
 
 #if STUB_API
+	ApplicationProcessNamingInformation * DIFName =
+			new ApplicationProcessNamingInformation("test.DIF", "");
 	portId = getFakePortId(allocatedFlows);
-	DIFName = new ApplicationProcessNamingInformation("test.DIF", "");
+	flow = new Flow(sourceAppName, destAppName, flowSpec, FLOW_ALLOCATED,
+			*DIFName, portId);
 #else
-	//TODO real implementation
+	AppAllocateFlowRequestMessage * message =
+			new AppAllocateFlowRequestMessage();
+	message->setSourceAppName(sourceAppName);
+	message->setDestAppName(destAppName);
+	message->setFlowSpecification(flowSpec);
+	message->setRequestMessage(true);
+
+	AppAllocateFlowRequestResultMessage * flowRequestResponse =
+			dynamic_cast<AppAllocateFlowRequestResultMessage *>(
+					sendRequestAndWaitForResponse(message,
+							IPCManager::error_requesting_flow_allocation));
+
+	if (flowRequestResponse->getPortId() < 0){
+		std::string reason = IPCManager::error_requesting_flow_allocation +
+				flowRequestResponse->getErrorDescription();
+		delete flowRequestResponse;
+		throw IPCException(reason);
+	}
+
+	LOG_DBG("Flow from %s to %s allocated successfully! Port-id: %d",
+			sourceAppName.getProcessName().c_str(),
+			destAppName.getProcessName().c_str(),
+			flowRequestResponse->getPortId());
+	portId = flowRequestResponse->getPortId();
+	flow = new Flow(sourceAppName, destAppName, flowSpec, FLOW_ALLOCATED,
+			flowRequestResponse->getDifName(), portId);
+	delete flowRequestResponse;
 #endif
 
-	Flow * flow = new Flow(sourceAppName, destAppName, flowSpec,
-			FLOW_ALLOCATED, *DIFName, portId);
 	allocatedFlows[portId] = flow;
-
 	return flow;
 }
 
@@ -295,7 +360,7 @@ Flow * IPCManager::allocateFlowResponse(int portId, bool accept,
 #if STUB_API
 	//Do nothing
 #else
-	//TODO real implementation
+	//
 #endif
 
 	ApplicationProcessNamingInformation * sourceAppName =

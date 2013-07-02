@@ -77,6 +77,10 @@ test_core_SOURCES  = test-core.cc
 test_core_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_core_LDFLAGS  = $(FUNCTIONALLDFLAGS)
 
+test_librina_application_SOURCES  = test-librina-application.cc
+test_librina_application_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
+test_librina_application_LDFLAGS  = $(FUNCTIONALLDFLAGS)
+
 check_PROGRAMS =				\
 	test-01					\
 	test-02					\
@@ -84,7 +88,8 @@ check_PROGRAMS =				\
 	test-netlink-manager			\
 	test-netlink-parsers			\
 	test-concurrency			\
-	test-core
+	test-core			\
+	test-librina-application
 
 XFAIL_TESTS =					\
 	test-03
@@ -99,7 +104,8 @@ FUNCTIONAL_PASS_TESTS =				\
 	test-netlink-manager			\
 	test-netlink-parsers			\
 	test-concurrency			\
-	test-core
+	test-core					\
+	test-librina-application
 
 FUNCTIONAL_XFAIL_TESTS =
 

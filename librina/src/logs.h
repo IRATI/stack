@@ -85,7 +85,7 @@ void log(LOG_LEVEL level, const char * fmt, ...);
 #define __LOG(PREFIX, LEVEL, FMT, ARGS...)                              \
         do {      \
 		log(LEVEL,                                              \
-                    PREFIX " (" __STRINGIZE(LEVEL) "): " FMT "\n",      \
+				"#" PREFIX " (" __STRINGIZE(LEVEL) "): " FMT "\n",      \
                     ##ARGS);                                            \
 	} while (0)
 

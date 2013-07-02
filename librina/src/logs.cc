@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <cstdio>
 #include <pthread.h>
+#include <unistd.h>
+#include <time.h>
 
 #define RINA_PREFIX "logs"
 
@@ -50,6 +52,16 @@ int setOutputStream(FILE * newOutputStream) {
 	pthread_rwlock_unlock(&outputStreamLock);
 
 	return result;
+}
+
+int processId = -1;
+
+int getProcessId(){
+	if (processId == -1){
+		processId = getpid();
+	}
+
+	return processId;
 }
 
 static bool shouldLog(LOG_LEVEL level) {
@@ -118,7 +130,8 @@ void log(LOG_LEVEL level, const char * fmt, ...) {
 	va_list args;
 	va_start(args, fmt);
 	pthread_rwlock_rdlock(&outputStreamLock);
-	vfprintf(logOutputStream, fmt, args);
+	fprintf(logOutputStream, "%d(%ld)", getProcessId(), time(0));
+	vfprintf(logOutputStream,fmt, args);
 	pthread_rwlock_unlock(&outputStreamLock);
 
 	va_end(args);

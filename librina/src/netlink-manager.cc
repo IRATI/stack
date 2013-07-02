@@ -63,6 +63,8 @@ const std::string NetlinkException::error_fetching_netlink_port_id =
 const std::string
 	NetlinkException::unrecognized_generic_netlink_operation_code =
 		"Unrecognized Generic Netlink operation code";
+const std::string NetlinkException::error_waiting_for_response =
+		"Time out waiting for response message";
 
 /* CLASS NETLINK MANAGER */
 

@@ -18,6 +18,7 @@
 
 #include "logs.h"
 #include "librina-ipc-manager.h"
+#include "core.h"
 
 /** CLASS IPC PROCESS */
 
@@ -155,9 +156,34 @@ Singleton<IPCProcessFactory> ipcProcessFactory;
 
 /** CLASS APPLICATION MANAGER */
 
-void ApplicationManager::applicationRegistered(unsigned int transactionId,
-		const std::string& response) throw (IPCException) {
+void ApplicationManager::applicationRegistered(unsigned int sequenceNumber,
+		const ApplicationProcessNamingInformation& applicationName,
+		const ApplicationProcessNamingInformation& difName,
+		unsigned short ipcProcessId, int ipcProcessPortId, int result,
+		const std::string& errorDescription) throw (IPCException) {
 	LOG_DBG("ApplicationManager::applicationRegistered called");
+
+#if STUB_API
+	//Do nothing
+#else
+	AppRegisterApplicationResponseMessage * responseMessage =
+			new AppRegisterApplicationResponseMessage();
+	responseMessage->setApplicationName(applicationName);
+	responseMessage->setDifName(difName);
+	responseMessage->setIpcProcessId(ipcProcessId);
+	responseMessage->setIpcProcessPortId(ipcProcessPortId);
+	responseMessage->setResult(result);
+	responseMessage->setErrorDescription(errorDescription);
+	responseMessage->setSequenceNumber(sequenceNumber);
+	responseMessage->setResponseMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(responseMessage);
+		delete responseMessage;
+	}catch(NetlinkException &e){
+		delete responseMessage;
+		throw IPCException(e.what());
+	}
+#endif
 }
 
 void ApplicationManager::applicationUnregistered(unsigned int transactionId,
@@ -165,11 +191,35 @@ void ApplicationManager::applicationUnregistered(unsigned int transactionId,
 	LOG_DBG("ApplicationManager::applicationUnregistered called");
 }
 
-void ApplicationManager::flowAllocated(unsigned int transactionId, int portId,
-		unsigned int ipcProcessPid, std::string response,
+void ApplicationManager::flowAllocated(unsigned int sequenceNumber,
+		int portId, std::string errorDescription,
+		unsigned short ipcProcessId, unsigned int ipcProcessPortId,
+		const ApplicationProcessNamingInformation& appName,
 		const ApplicationProcessNamingInformation& difName)
 		throw (IPCException) {
 	LOG_DBG("ApplicationManager::flowAllocated called");
+
+#if STUB_API
+	//Do nothing
+#else
+	AppAllocateFlowRequestResultMessage * responseMessage =
+				new AppAllocateFlowRequestResultMessage();
+	responseMessage->setPortId(portId);
+	responseMessage->setErrorDescription(errorDescription);
+	responseMessage->setIpcProcessId(ipcProcessId);
+	responseMessage->setIpcProcessPortId(ipcProcessPortId);
+	responseMessage->setSourceAppName(appName);
+	responseMessage->setDifName(difName);
+	responseMessage->setSequenceNumber(sequenceNumber);
+	responseMessage->setResponseMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(responseMessage);
+		delete responseMessage;
+	}catch(NetlinkException &e){
+		delete responseMessage;
+		throw IPCException(e.what());
+	}
+#endif
 }
 
 Singleton<ApplicationManager> applicationManager;

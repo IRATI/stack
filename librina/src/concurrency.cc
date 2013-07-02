@@ -92,6 +92,8 @@ const std::string ConcurrentException::error_broadcast_cond =
 		"Cannot broadcast condition variable";
 const std::string ConcurrentException::error_wait_cond =
 		"Cannot wait condition variable";
+const std::string ConcurrentException::error_timeout =
+		"Timeout";
 
 /* CLASS THREAD ATTRIBUTES */
 ThreadAttributes::ThreadAttributes() {
@@ -570,6 +572,25 @@ void ConditionVariable::wait(){
 		throw ConcurrentException(
 				ConcurrentException::error_wait_cond);
 	}
+}
+
+void ConditionVariable::timedwait(long seconds, long nanoseconds){
+	timespec waitTime;
+	waitTime.tv_sec = time(0) + seconds;
+	waitTime.tv_nsec = nanoseconds;
+	int response = pthread_cond_timedwait(&cond_, getMutex(), &waitTime);
+	if (response == 0){
+		return;
+	}
+
+	if (response == ETIMEDOUT){
+		throw ConcurrentException(
+				ConcurrentException::error_timeout);
+	}
+
+	LOG_CRIT("%s", ConcurrentException::error_wait_cond.c_str());
+	throw ConcurrentException(
+			ConcurrentException::error_wait_cond);
 }
 
 }

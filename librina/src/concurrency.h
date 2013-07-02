@@ -66,6 +66,7 @@ public:
 	static const std::string error_signal_cond;
 	static const std::string error_broadcast_cond;
 	static const std::string error_wait_cond;
+	static const std::string error_timeout;
 };
 
 /**
@@ -197,6 +198,7 @@ public:
 	virtual void signal();
 	virtual void broadcast();
 	virtual void wait();
+	virtual void timedwait(long seconds, long nanoseconds);
 
 private:
 	pthread_cond_t cond_;
@@ -241,6 +243,30 @@ public:
 		result = queue.front();
 		queue.pop_front();
 		unlock();
+
+		return result;
+	}
+
+	/**
+	 * Take an element from the beginig of the queue, waiting maximum
+	 * the specified seconds and miliseconds
+	 * @param seconds
+	 * @param nanoseconds
+	 * @return
+	 */
+	T* timedtake(long seconds, long nanoseconds){
+		T* result = 0;
+
+		lock();
+		try{
+			timedwait(seconds, nanoseconds);
+		}catch(ConcurrentException &e){
+		}
+
+		if (queue.size() > 0){
+			result = queue.front();
+			queue.pop_front();
+		}
 
 		return result;
 	}

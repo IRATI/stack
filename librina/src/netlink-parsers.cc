@@ -1151,7 +1151,8 @@ AppFlowDeallocatedNotificationMessage * parseAppFlowDeallocatedNotificationMessa
 	 * attributes attached to the messages and stores a pointer to each
 	 * attribute in the attrs[] array accessable by attribute type.
 	 */
-	int err = genlmsg_parse(hdr, 0, attrs, AFDN_ATTR_MAX, attr_policy);
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			AFDN_ATTR_MAX, attr_policy);
 	if (err < 0) {
 		LOG_ERR(
 				"Error parsing AppFlowDeallocatedNotificationMessage information from Netlink message: %d",
@@ -1218,7 +1219,8 @@ AppRegisterApplicationRequestMessage * parseAppRegisterApplicationRequestMessage
 	 * attributes attached to the messages and stores a pointer to each
 	 * attribute in the attrs[] array accessable by attribute type.
 	 */
-	int err = genlmsg_parse(hdr, 0, attrs, ARAR_ATTR_MAX, attr_policy);
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			ARAR_ATTR_MAX, attr_policy);
 	if (err < 0) {
 		LOG_ERR(
 				"Error parsing AppRegisterApplicationRequestMessage information from Netlink message: %d",
@@ -1282,7 +1284,8 @@ AppRegisterApplicationResponseMessage * parseAppRegisterApplicationResponseMessa
 	 * attributes attached to the messages and stores a pointer to each
 	 * attribute in the attrs[] array accessable by attribute type.
 	 */
-	int err = genlmsg_parse(hdr, 0, attrs, ARARE_ATTR_MAX, attr_policy);
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			ARARE_ATTR_MAX, attr_policy);
 	if (err < 0) {
 		LOG_ERR(
 				"Error parsing AppRegisterApplicationResponseMessage information from Netlink message: %d",

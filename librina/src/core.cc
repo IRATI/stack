@@ -240,12 +240,19 @@ PendingNetlinkMessage::~PendingNetlinkMessage() throw(){
 
 BaseNetlinkMessage * PendingNetlinkMessage::getResponseMessage() {
 	lock();
-	while (responseMessage == NULL) {
-		wait();
+
+	try{
+		timedwait(WAIT_RESPONSE_TIMEOUT, 0);
+	}catch(ConcurrentException &e){
 	}
+
 	unlock();
-	LOG_DBG("Got Netlink reply to request with sequence number %d",
-			sequenceNumber);
+	if (responseMessage != 0){
+		LOG_DBG("Got Netlink reply to request with sequence number %d",
+					sequenceNumber);
+	}else{
+		LOG_ERR("Timed out while waiting for response message");
+	}
 
 	return responseMessage;
 }
@@ -475,6 +482,11 @@ BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForReply(
 	BaseNetlinkMessage * response = pendingMessage->getResponseMessage();
 	delete pendingMessage;
 	pendingMessage = 0;
+
+	if (response == 0){
+		throw NetlinkException(NetlinkException::error_waiting_for_response);
+	}
+
 	return response;
 }
 

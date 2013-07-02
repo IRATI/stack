@@ -151,6 +151,8 @@ public:
 	static const std::string application_registered_error;
 	static const std::string application_not_registered_error;
 	static const std::string unknown_flow_error;
+	static const std::string error_registering_application;
+	static const std::string error_requesting_flow_allocation;
 
 	/**
 	 * Retrieves the names and characteristics of a single DIF or of all the
