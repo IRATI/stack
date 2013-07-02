@@ -30,4 +30,8 @@
 #define ASSERT(COND)
 #endif
 
+#include <linux/string.h>
+
+#define bzero(DEST, LEN) do { (void) memset(DEST, 0, LEN); } while (0)
+
 #endif

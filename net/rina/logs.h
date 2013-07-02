@@ -62,9 +62,14 @@
 #endif
 
 #ifdef RINA_DEBUG_HEARTBEATS
-#define LOG_HBEAT LOG_DBG("I'm in %s:%d", __FUNCTION__, __LINE__);
+#define LOG_HBEAT LOG_DBG("I'm in %s (%s:%d)",                  \
+                          __FUNCTION__, __FILE__, __LINE__)
 #else
 #define LOG_HBEAT
 #endif
+
+#define LOG_MISSING                                     \
+        LOG_ERR("Missing implementation in %s:%d",      \
+                __FUNCTION__, __LINE__)
 
 #endif
