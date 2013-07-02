@@ -149,7 +149,9 @@ int  rina_netlink_init(void);
 void rina_netlink_exit(void);
 
 int  rina_netlink_register_handler(int,
-                                   int (*)(struct sk_buff *,
+				   void *,
+                                   int (*)(void *,
+				   	   struct sk_buff *,
                                            struct genl_info *));
 int  rina_netlink_unregister_handler(int);
 

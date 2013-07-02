@@ -19,8 +19,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/list.h>
-
 #define RINA_PREFIX "netlink"
 
 #include "logs.h"
@@ -32,11 +30,18 @@
 
 #define NETLINK_RINA "rina"
 
-/*   Table to collect callbacks */
-typedef int (* message_handler)(struct sk_buff *, struct genl_info *); 
 
-/*  Table to collect callbacks */
-static message_handler messages_handlers[NETLINK_RINA_C_MAX];
+/*   Table to collect callbacks */
+typedef int (* message_handler_cb)(void   * data,
+				   struct sk_buff *,
+				   struct genl_info *); 
+
+struct message_handler {
+	 void 		      * data;
+         message_handler_cb  cb;
+};
+
+struct  message_handler messages_handlers[NETLINK_RINA_C_MAX];
 
 static struct genl_family nl_family = {
         .id      = GENL_ID_GENERATE,
@@ -50,13 +55,24 @@ static struct genl_family nl_family = {
 static int is_message_type_in_range(int msg_type, int min_value, int max_value)
 { return ((msg_type < min_value || msg_type >= max_value) ? 0 : 1); }
 
-static int (* get_handler(int msg_type))(struct sk_buff *, struct genl_info *)
+static int (* get_handler_cb(int msg_type))(void *, 
+					    struct sk_buff *, 
+					    struct genl_info *)
 {
         ASSERT(is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX));
 
-        LOG_DBG("Fetching handler for message type %d", msg_type);
+        LOG_DBG("Fetching handler callback for message type %d", msg_type);
 
-        return messages_handlers[msg_type];
+        return messages_handlers[msg_type].cb;
+}
+
+static void * get_handler_data(int msg_type)
+{
+        ASSERT(is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX));
+
+        LOG_DBG("Fetching handler data for message type %d", msg_type);
+
+        return messages_handlers[msg_type].data;
 }
 
 static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
@@ -65,7 +81,8 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
          * Message handling code goes here; return 0 on success, negative
          * values on failure
          */
-        int (* cb_function)(struct sk_buff *, struct genl_info *);
+        int (* cb_function)(void *,struct sk_buff *, struct genl_info *);
+	void * data;
         int msg_type;
         int ret_val;
 
@@ -79,14 +96,20 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         msg_type = info->genlhdr->cmd;
         LOG_DBG("Message type to multiplex: %d", msg_type);
         
-        cb_function = get_handler(msg_type);
+        cb_function = get_handler_cb(msg_type);
         if (!cb_function) {
-                LOG_ERR("There's no handler registered from message type %d",
+                LOG_ERR("There's no handler callback registered from message type %d",
+                        msg_type);
+                return -1;
+        }
+	data = get_handler_data(msg_type);
+        if (!data) {
+                LOG_ERR("There's no handler data registered from message type %d",
                         msg_type);
                 return -1;
         }
 
-        ret_val = cb_function(skb_in, info);
+        ret_val = cb_function(data, skb_in, info);
         if (ret_val) {
                 LOG_ERR("Callback returned %i, bailing out", ret_val);
                 return -1;
@@ -97,7 +120,9 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 }
 
 #if TESTING
-static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
+static int nl_rina_echo(void * data, 
+			struct sk_buff *skb_in, 
+			struct genl_info *info)
 {
         /*
          * Message handling code goes here; return 0 on success, negative
@@ -154,7 +179,6 @@ static int nl_rina_echo(struct sk_buff *skb_in, struct genl_info *info)
 }
 #endif
 
-/* FIXME: The following ops are personality related, must be moved elsewhere */
 static struct genl_ops nl_ops[] = {
         {
                 .cmd    = RINA_C_APP_ALLOCATE_FLOW_REQUEST,
@@ -378,7 +402,8 @@ int rina_netlink_unregister_handler(int msg_type)
         }
         ASSERT(msg_type >= 0 && msg_type < NETLINK_RINA_C_MAX);
 
-        messages_handlers[msg_type] = NULL;
+        messages_handlers[msg_type].data = NULL;
+        messages_handlers[msg_type].cb = NULL;
 
         LOG_DBG("Handler for message type %d unregistered successfully",
                 msg_type);
@@ -387,15 +412,24 @@ int rina_netlink_unregister_handler(int msg_type)
 }
 
 int rina_netlink_register_handler(int    msg_type,
-                                  int (* handler)(struct sk_buff *,
-                                                   struct genl_info *))
+				  void * data,
+                                  int (* handler)(void *,
+				  		  struct sk_buff *,
+                                                  struct genl_info *))
 {
-        LOG_DBG("Registering handler %pK for message type %d",
-                handler, msg_type);
+        LOG_DBG("Registering handler callback %pK and data %pK "
+		"for message type %d",
+                handler, data, msg_type);
 
         if (!handler) {
                 LOG_ERR("Handler for message type %d is empty, "
                         "use unregister to remove it", msg_type);
+                return -1;
+        }
+
+	if (!data) {
+                LOG_ERR("Data for message type %d is empty, "
+                        "please pass a proper value", msg_type);
                 return -1;
         }
 
@@ -405,17 +439,19 @@ int rina_netlink_register_handler(int    msg_type,
         }
         ASSERT(msg_type >= 0 && msg_type < NETLINK_RINA_C_MAX);
 
-        if (messages_handlers[msg_type] != NULL) {
-                LOG_ERR("The message handler for message type %d "
+        if (messages_handlers[msg_type].data != NULL &&
+	    messages_handlers[msg_type].cb != NULL) {
+                LOG_ERR("The message handler or data for message type %d "
                         "has been registered already, "
                         "unregister it first", msg_type);
                 return -1;
         }
 
-        messages_handlers[msg_type] = (message_handler) handler;
+        messages_handlers[msg_type].cb = (message_handler_cb) handler;
+        messages_handlers[msg_type].data = data;
 
-        LOG_DBG("Handler %pK registered for  message type %d",
-                handler, msg_type);
+        LOG_DBG("Handler %pK and data %pK registered for  message type %d",
+                handler, data, msg_type);
 
         return 0;
 }
@@ -423,6 +459,11 @@ int rina_netlink_register_handler(int    msg_type,
 int rina_netlink_init(void)
 {
         int ret;
+#if TESTING
+	void * test_data;
+	int test_int = 4;
+	test_data = &test_int;
+#endif
 
         LOG_FBEGN;
 
@@ -433,7 +474,10 @@ int rina_netlink_init(void)
 	ret = genl_register_family_with_ops(&nl_family, 
 					    nl_ops, 
 					    ARRAY_SIZE(nl_ops));
-        if (ret < 0) {
+        
+	LOG_DBG("LEODEBUG: ret of register is %d",ret);
+	
+	if (ret < 0) {
         	LOG_ERR("Cannot register family and ops (error=%i)", ret);
        		return -2;
         }
@@ -443,6 +487,7 @@ int rina_netlink_init(void)
 #if TESTING
         /* FIXME: Remove this hard-wired test */
         rina_netlink_register_handler(RINA_C_APP_ALLOCATE_FLOW_REQUEST,
+				      test_data,
                                       nl_rina_echo);
 #endif
 
