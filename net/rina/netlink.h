@@ -147,7 +147,7 @@ typedef int (* message_handler_cb)(void *             data,
 int  rina_netlink_register_handler(int                msg_type,
 				   void *             data,
                                    message_handler_cb handler);
-int  rina_netlink_unregister_handler(int);
+int  rina_netlink_unregister_handler(int msg_type);
 
 #if 0
 /* New API (obsolete all the previous ones */
@@ -161,12 +161,10 @@ int  rina_netlink_set_create(personality_id id);
 int  rina_netlink_set_destroy(personality_id id);
 
 /* Per-set handlers management */
-int  rina_netlink_set_register(personality_id id,
-                               int    msg_type,
-                               void * data,
-                               int    (* handler)(void *             data,
-                                                  struct sk_buff *   buf,
-                                                  struct genl_info * inf));
+int  rina_netlink_set_register(personality_id     id,
+                               int                msg_type,
+                               void *             data,
+                               message_handler_cb handler);
 int  rina_netlink_set_unregister(set_id i, int msg_type);
 #endif
 
