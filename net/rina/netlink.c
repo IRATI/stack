@@ -30,18 +30,24 @@
 
 #define NETLINK_RINA "rina"
 
+/* FIXME: Are there really needed ? */
 
-/*   Table to collect callbacks */
-typedef int (* message_handler_cb)(void   * data,
-				   struct sk_buff *,
-				   struct genl_info *); 
-
-struct message_handler {
-	 void 		      * data;
-         message_handler_cb  cb;
+/* attributes */
+enum {
+	NETLINK_RINA_A_UNSPEC,
+	NETLINK_RINA_A_MSG,
+	__NETLINK_RINA_A_MAX,
 };
 
-struct  message_handler messages_handlers[NETLINK_RINA_C_MAX];
+#define NETLINK_RINA_A_MAX (__NETLINK_RINA_A_MAX - 1)
+#define NETLINK_RINA_C_MAX (__NETLINK_RINA_C_MAX - 1)
+
+struct message_handler {
+        void *             data;
+        message_handler_cb cb;
+};
+
+struct message_handler messages_handlers[NETLINK_RINA_C_MAX];
 
 static struct genl_family nl_family = {
         .id      = GENL_ID_GENERATE,
@@ -55,74 +61,68 @@ static struct genl_family nl_family = {
 static int is_message_type_in_range(int msg_type, int min_value, int max_value)
 { return ((msg_type < min_value || msg_type >= max_value) ? 0 : 1); }
 
-static int (* get_handler_cb(int msg_type))(void *, 
-					    struct sk_buff *, 
-					    struct genl_info *)
-{
-        ASSERT(is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX));
-
-        LOG_DBG("Fetching handler callback for message type %d", msg_type);
-
-        return messages_handlers[msg_type].cb;
-}
-
-static void * get_handler_data(int msg_type)
-{
-        ASSERT(is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX));
-
-        LOG_DBG("Fetching handler data for message type %d", msg_type);
-
-        return messages_handlers[msg_type].data;
-}
-
 static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 {
         /*
          * Message handling code goes here; return 0 on success, negative
          * values on failure
          */
+
+        /* FIXME: What do we do if the handler returned != 0 ??? */
+
         int (* cb_function)(void *,struct sk_buff *, struct genl_info *);
-	void * data;
+        void * data;
         int msg_type;
         int ret_val;
 
         LOG_DBG("Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
 
         if (!info) {
-                LOG_DBG("Can't dispatch message, info parameter is empty");
+                LOG_ERR("Can't dispatch message, info parameter is empty");
+                return -1;
+        }
+
+        if (!info->genlhdr) {
+                LOG_ERR("Received message has no genlhdr field, "
+                        "bailing out");
                 return -1;
         }
 
         msg_type = info->genlhdr->cmd;
-        LOG_DBG("Message type to multiplex: %d", msg_type);
-        
-        cb_function = get_handler_cb(msg_type);
-        if (!cb_function) {
-                LOG_ERR("There's no handler callback registered from message type %d",
-                        msg_type);
+        LOG_DBG("Multiplexing message type %d", msg_type);
+
+        if (!is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX)) {
+                LOG_ERR("Wrong message type %d received from Netlink, "
+                        "bailing out", msg_type);
                 return -1;
         }
-	data = get_handler_data(msg_type);
-        if (!data) {
-                LOG_ERR("There's no handler data registered from message type %d",
-                        msg_type);
+        ASSERT(is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX));
+
+        cb_function = messages_handlers[msg_type].cb;
+        if (!cb_function) {
+                LOG_ERR("There's no handler callback registered for "
+                        "message type %d", msg_type);
                 return -1;
         }
 
+        data = messages_handlers[msg_type].data;
+        /* Data might be empty */
+
         ret_val = cb_function(data, skb_in, info);
         if (ret_val) {
-                LOG_ERR("Callback returned %i, bailing out", ret_val);
+                LOG_ERR("Callback returned %d, bailing out", ret_val);
                 return -1;
         }
 
         LOG_DBG("Message %d handled successfully", msg_type);
+
         return 0;
 }
 
 #if TESTING
-static int nl_rina_echo(void * data, 
-			struct sk_buff *skb_in, 
-			struct genl_info *info)
+static int nl_rina_echo(void * data,
+                        struct sk_buff *skb_in,
+                        struct genl_info *info)
 {
         /*
          * Message handling code goes here; return 0 on success, negative
@@ -156,14 +156,14 @@ static int nl_rina_echo(void * data,
                "\t Version: %d; \n"
                "\t Operation code: %d; \n"
                "\t Flags: %d\n",
-               info->nlhdr->nlmsg_type, info->genlhdr->version, 
+               info->nlhdr->nlmsg_type, info->genlhdr->version,
                info->genlhdr->cmd, info->nlhdr->nlmsg_flags);
         LOG_ERR("Message generated:\n"
                 "\t Netlink family: %d;\n"
                 "\t Version: %d; \n"
                 "\t Operation code: %d; \n"
                 "\t Flags: %d\n",
-                info->nlhdr->nlmsg_type, info->genlhdr->version, 
+                info->nlhdr->nlmsg_type, info->genlhdr->version,
                 info->genlhdr->cmd, info->nlhdr->nlmsg_flags);
 
         /* ret = genlmsg_unicast(sock_net(skb->sk),skb,info->snd_portid); */
@@ -397,13 +397,15 @@ int rina_netlink_unregister_handler(int msg_type)
         LOG_DBG("Unregistering handler for message type %d", msg_type);
 
         if (!is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX)) {
-                LOG_ERR("Message type %d is out-of-range", msg_type);
+                LOG_ERR("Message type %d is out-of-range, "
+                        "cannot unregister", msg_type);
                 return -1;
         }
         ASSERT(msg_type >= 0 && msg_type < NETLINK_RINA_C_MAX);
 
+        /* FIXME: bzero the entry might avoid bugs later on. Please use that */
         messages_handlers[msg_type].data = NULL;
-        messages_handlers[msg_type].cb = NULL;
+        messages_handlers[msg_type].cb   = NULL;
 
         LOG_DBG("Handler for message type %d unregistered successfully",
                 msg_type);
@@ -411,15 +413,12 @@ int rina_netlink_unregister_handler(int msg_type)
         return 0;
 }
 
-int rina_netlink_register_handler(int    msg_type,
-				  void * data,
-                                  int (* handler)(void *,
-				  		  struct sk_buff *,
-                                                  struct genl_info *))
+int rina_netlink_register_handler(int                msg_type,
+                                  void *             data,
+                                  message_handler_cb handler)
 {
         LOG_DBG("Registering handler callback %pK and data %pK "
-		"for message type %d",
-                handler, data, msg_type);
+                "for message type %d", handler, data, msg_type);
 
         if (!handler) {
                 LOG_ERR("Handler for message type %d is empty, "
@@ -427,30 +426,26 @@ int rina_netlink_register_handler(int    msg_type,
                 return -1;
         }
 
-	if (!data) {
-                LOG_ERR("Data for message type %d is empty, "
-                        "please pass a proper value", msg_type);
+        if (!is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX)) {
+                LOG_ERR("Message type %d is out-of-range, "
+                        "cannot register", msg_type);
                 return -1;
         }
 
-        if (!is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX)) {
-                LOG_ERR("Message type %d is out-of-range", msg_type);
-                return -1;
-        }
+        ASSERT(handler != NULL);
         ASSERT(msg_type >= 0 && msg_type < NETLINK_RINA_C_MAX);
 
-        if (messages_handlers[msg_type].data != NULL &&
-	    messages_handlers[msg_type].cb != NULL) {
-                LOG_ERR("The message handler or data for message type %d "
-                        "has been registered already, "
-                        "unregister it first", msg_type);
+        if (messages_handlers[msg_type].cb) {
+                LOG_ERR("The message handler for message type %d "
+                        "has been already registered, unregister it first",
+                        msg_type);
                 return -1;
         }
 
-        messages_handlers[msg_type].cb = (message_handler_cb) handler;
+        messages_handlers[msg_type].cb   = handler;
         messages_handlers[msg_type].data = data;
 
-        LOG_DBG("Handler %pK and data %pK registered for  message type %d",
+        LOG_DBG("Handler %pK (data %pK) registered for message type %d",
                 handler, data, msg_type);
 
         return 0;
@@ -459,10 +454,11 @@ int rina_netlink_register_handler(int    msg_type,
 int rina_netlink_init(void)
 {
         int ret;
+
 #if TESTING
-	void * test_data;
-	int test_int = 4;
-	test_data = &test_int;
+        void * test_data;
+        int test_int = 4;
+        test_data = &test_int;
 #endif
 
         LOG_FBEGN;
@@ -471,27 +467,26 @@ int rina_netlink_init(void)
 
 
         LOG_DBG("Registering family with ops");
-	ret = genl_register_family_with_ops(&nl_family, 
-					    nl_ops, 
-					    ARRAY_SIZE(nl_ops));
-        
-	LOG_DBG("LEODEBUG: ret of register is %d",ret);
-	
-	if (ret < 0) {
-        	LOG_ERR("Cannot register family and ops (error=%i)", ret);
-       		return -2;
-        }
+        ret = genl_register_family_with_ops(&nl_family,
+                                            nl_ops,
+                                            ARRAY_SIZE(nl_ops));
+        LOG_DBG("genl_register_family_with_ops() returned %i", ret);
 
-        LOG_DBG("NetLink layer initialized");
+        if (ret < 0) {
+                LOG_ERR("Cannot register family and ops (error=%i)", ret);
+                return -2;
+        }
 
 #if TESTING
         /* FIXME: Remove this hard-wired test */
         rina_netlink_register_handler(RINA_C_APP_ALLOCATE_FLOW_REQUEST,
-				      test_data,
+                                      test_data,
                                       nl_rina_echo);
 #endif
 
         LOG_FEXIT;
+
+        LOG_DBG("NetLink layer initialized successfully");
 
         return 0;
 }
@@ -505,13 +500,13 @@ void rina_netlink_exit(void)
         LOG_DBG("Finalizing Netlink layer");
 
         /* Unregister the family */
-        ret = genl_unregister_family(&nl_family); 
+        ret = genl_unregister_family(&nl_family);
         if (ret) {
                 LOG_ERR("Could not unregister family (error=%i)", ret);
                 return;
         }
 
-        LOG_DBG("NetLink layer finalized");
+        LOG_DBG("NetLink layer finalized successfully");
 
         LOG_FEXIT;
 }
