@@ -2,6 +2,8 @@
  *  Empty Shim IPC Process (Shim template that should be used as a reference)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,8 +41,8 @@ struct empty_info {
 
 /* This structure will contains per-instance data */
 struct shim_instance_data {
-	struct list_head list;
-        ipc_process_id_t id;
+	struct list_head    list;
+        ipc_process_id_t    id;
 	struct empty_info * info;
 };
 
@@ -191,7 +193,6 @@ static int empty_init(struct shim_data * data)
         ASSERT(data);
 
         bzero(&empty_data, sizeof(empty_data));
-
         INIT_LIST_HEAD(data->instances);
 
         LOG_FEXIT;
@@ -224,15 +225,18 @@ static int empty_fini(struct shim_data * data)
 static struct shim_instance * empty_create(struct shim_data * data,
                                            ipc_process_id_t   id)
 {
-        struct shim_instance * inst;
+        struct shim_instance *      inst;
 	struct shim_instance_data * pos;
+
         LOG_FBEGN;
 
         ASSERT(data);
 	
 	/* Check if there already is an instance with that id */
+
+        /* FIXME: Why don't we have a find_instance() function ? */
 	list_for_each_entry(pos, data->instances, instances) {
-		if(pos->id == id) {
+		if (pos->id == id) {
 			LOG_ERR("Shim instance with ipcpid %d already exists", 
 				pos->id);
 			return NULL;
@@ -270,24 +274,29 @@ static struct shim_instance * empty_create(struct shim_data * data,
 }
 
 /* FIXME: Might need to move this to a global file for all shims */
-static int name_cpy(struct name_t * dst,
-                    const struct name_t *src)
+static int name_cpy(struct name_t *       dst,
+                    const struct name_t * src)
 {
         struct name_t * temp;
+
         LOG_FBEGN;
         temp = kmalloc(sizeof(*temp), GFP_KERNEL);
         if (!temp) {
-                LOG_ERR("Cannot allocate memory for name");
+                LOG_ERR("Cannot allocate %zd bytes of memory", sizeof(*temp));
+
                 LOG_FEXIT;
                 return -1;
         }
 
         /* FIXME: Check strcpy return values */
-        strcpy(temp->process_name, src->process_name);
+        strcpy(temp->process_name,     src->process_name);
         strcpy(temp->process_instance, src->process_instance);
-        strcpy(temp->entity_name, src->entity_name);
-        strcpy(temp->entity_instance, src->entity_instance);
+        strcpy(temp->entity_name,      src->entity_name);
+        strcpy(temp->entity_instance,  src->entity_instance);
+
+        /* FIXME: Utterly broken. That's a true memory leak */
         dst = temp;
+
         return 0;
 }
 
@@ -296,7 +305,8 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
                                               const struct shim_config * cfg)
 {
 	struct shim_instance_data * instance, pos;
-	struct shim_config *    current_entry;
+	struct shim_config *        current_entry;
+
 	LOG_FBEGN;
 
         ASSERT(data);
@@ -304,8 +314,10 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
         ASSERT(cfg);
 
         /* Do we have that instance ? */
+
+        /* FIXME: Why don't we have a find_instance() function ? */
 	list_for_each_entry(pos, data->instances, instances) {
-		if(pos == inst->data) {
+		if (pos == inst->data) {
 			instance = pos;
 		}
 	}
@@ -318,14 +330,20 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
 	/* Get configuration struct pertaining to this shim instance */ 
 	if (!instance->info) {
 		info = kzalloc(sizeof(*info), GFP_KERNEL);
+                if (!info)
+                        return NULL;
 	}
 
         /* Use configuration values on that instance */
+
+        /* FIXME: Why don't we have a find_instance() function ? */
 	list_for_each_entry(current_entry, &(conf->list), list) {
-		if (!strcmp(tmp->name, "dif-name")
-			&& val->type == SHIM_CONFIG_STRING) {
+		if (!strcmp(tmp->name, "dif-name") &&
+                    val->type == SHIM_CONFIG_STRING) {
                         if (!name_cpy(instance->info->name,
-					(struct name_t *) val->data)) {
+                                      (struct name_t *) val->data)) {
+
+                                /* FIXME: are you sure ? */
                                 LOG_FEXIT;
                                 return inst;
                         }
@@ -343,8 +361,8 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
         return inst;
 }
 
-static int empty_destroy(struct shim_data *       data,
-                         struct shim_instance *   instance)
+static int empty_destroy(struct shim_data *     data,
+                         struct shim_instance * instance)
 {
         LOG_FBEGN;
 
@@ -432,3 +450,5 @@ MODULE_DESCRIPTION("RINA Empty Shim IPC");
 MODULE_LICENSE("GPL");
 
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
+MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
