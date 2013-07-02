@@ -166,9 +166,9 @@ static struct personality * personality_find(const char * name)
         return NULL;
 }
 
-struct personality * rina_personality_register(const char *             name,
-                                               void *                   data,
-                                               struct personality_ops * ops)
+struct personality * rina_personality_register(const char *              name,
+                                               struct personality_data * data,
+                                               struct personality_ops *  ops)
 {
         struct personality * tmp;
         struct personality * pers;
