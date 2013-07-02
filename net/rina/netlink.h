@@ -150,6 +150,7 @@ enum {
 int  rina_netlink_init(void);
 void rina_netlink_exit(void);
 
+/* FIXME: Please add parameters, otherwise protos are almost useless */
 int  rina_netlink_register_handler(int,
 				   void *,
                                    int (*)(void *,
