@@ -600,5 +600,42 @@ void AppRegisterApplicationResponseMessage::setIpcProcessId(
 	this->ipcProcessId = ipcProcessId;
 }
 
+
+/* CLASS APP UNREGISTER APPLICATION REQUEST MESSAGE */
+AppUnregisterApplicationRequestMessage::AppUnregisterApplicationRequestMessage() :
+		NetlinkRequestOrNotificationMessage(
+				RINA_C_APP_UNREGISTER_APPLICATION_REQUEST) {
+}
+
+const ApplicationProcessNamingInformation&
+		AppRegisterApplicationRequestMessage::getApplicationName() const {
+		return applicationName;
+	}
+
+void AppRegisterApplicationRequestMessage::setApplicationName(
+		const ApplicationProcessNamingInformation& applicationName) {
+	this->applicationName = applicationName;
+}
+
+const ApplicationProcessNamingInformation&
+		AppRegisterApplicationRequestMessage::getDifName() const {
+	return difName;
+}
+
+void AppRegisterApplicationRequestMessage::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
+IPCEvent* AppRegisterApplicationRequestMessage::toIPCEvent(){
+	ApplicationRegistrationRequestEvent * event =
+			new ApplicationRegistrationRequestEvent(
+					applicationName,
+					difName,
+					getSequenceNumber());
+
+	return event;
+}
+
 }
 

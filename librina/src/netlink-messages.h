@@ -486,6 +486,30 @@ public:
 	void setIpcProcessId(unsigned short ipcProcessId);
 };
 
+
+/**
+ * Invoked by the application when it wants to unregister an application.
+ * Application -> IPC Manager
+ */
+class AppUnregisterApplicationRequestMessage:
+		public NetlinkRequestOrNotificationMessage {
+
+	/** The name of the application to be registered */
+	ApplicationProcessNamingInformation applicationName;
+
+	/** The DIF name where the application is registered */
+	ApplicationProcessNamingInformation difName;
+
+public:
+	AppUnregisterApplicationRequestMessage();
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	void setApplicationName(
+			const ApplicationProcessNamingInformation& applicationName);
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
+	IPCEvent* toIPCEvent();
+};
+
 }
 
 #endif /* NETLINK_MESSAGES_H_ */
