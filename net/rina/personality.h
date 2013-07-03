@@ -31,8 +31,11 @@
 /* Pre-declared, the personality should define it properly */
 struct personality_data;
 
+typedef unsigned int personality_id;
+
 struct personality_ops {
         int (* init)(struct kobject *          parent,
+                     personality_id            id,
                      struct personality_data * data);
         int (* fini)(struct personality_data * data);
 
@@ -61,8 +64,6 @@ struct personality_ops {
                          port_id_t                  id,
                          struct sdu_t *             sdu);
 };
-
-typedef unsigned int personality_id;
 
 struct personality {
         struct kobject            kobj;

@@ -66,8 +66,7 @@ struct shim_eth_flow {
  * Contains all the information associated to an instance of a
  * shim Ethernet IPC Process
  */
-struct eth_vlan_instance {
-        struct rb_node         node;
+struct shim_instance_data {
 
         /* IPC process id and DIF name */
         ipc_process_id_t       id;
@@ -92,6 +91,12 @@ static int eth_vlan_flow_allocate_request(struct shim_instance_data * data,
                                           port_id_t *                 port_id)
 {
         LOG_FBEGN;
+
+
+        ASSERT(data);
+        ASSERT(source);
+        ASSERT(dest)
+
         LOG_FEXIT;
 
         return 0;
@@ -102,6 +107,10 @@ static int eth_vlan_flow_allocate_response(struct shim_instance_data * data,
                                            response_reason_t *         resp)
 {
         LOG_FBEGN;
+
+        ASSERT(data);
+        ASSERT(response);
+
         LOG_FEXIT;
 
         return 0;
@@ -111,6 +120,9 @@ static int eth_vlan_flow_deallocate(struct shim_instance_data * data,
                                     port_id_t                   port_id)
 {
         LOG_FBEGN;
+
+        ASSERT(data);
+
         LOG_FEXIT;
 
         return 0;
@@ -120,6 +132,10 @@ static int eth_vlan_application_register(struct shim_instance_data * data,
                                          const struct name_t *       name)
 {
         LOG_FBEGN;
+
+        ASSERT(data);
+        ASSERT(name);
+
         LOG_FEXIT;
 
         return 0;
@@ -129,6 +145,10 @@ static int eth_vlan_application_unregister(struct shim_instance_data * data,
                                            const struct name_t *       name)
 {
         LOG_FBEGN;
+
+        ASSERT(data);
+        ASSERT(name);
+
         LOG_FEXIT;
 
         return 0;
@@ -139,6 +159,10 @@ static int eth_vlan_sdu_write(struct shim_instance_data * data,
                               const struct sdu_t *        sdu)
 {
         LOG_FBEGN;
+
+	ASSERT(data);
+        ASSERT(sdu);
+
         LOG_FEXIT;
 
         return 0;
@@ -149,6 +173,10 @@ static int eth_vlan_sdu_read(struct shim_instance_data * data,
                              struct sdu_t *              sdu)
 {
         LOG_FBEGN;
+
+	ASSERT(data);
+        ASSERT(sdu);
+
         LOG_FEXIT;
 
         return 0;
@@ -176,76 +204,96 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         return 0;
 };
 
+static struct shim_instance_ops eth_vlan_instance_ops = {
+        .flow_allocate_request  = eth_vlan_flow_allocate_request,
+        .flow_allocate_response = eth_vlan_flow_allocate_response,
+        .flow_deallocate        = eth_vlan_flow_deallocate,
+        .application_register   = eth_vlan_application_register,
+        .application_unregister = eth_vlan_application_unregister,
+        .sdu_write              = eth_vlan_sdu_write,
+        .sdu_read               = eth_vlan_sdu_read,
+};
+
+static struct shim_data {
+        struct list_head * instances;
+} eth_vlan_data;
+
+static struct shim *  eth_vlan_shim = NULL;
+
+static int eth_vlan_init(struct shim_data * data)
+{
+
+        LOG_FBEGN;
+	LOG_INFO("Shim-eth-vlan module v%d.%d loaded",0,1);
+        ASSERT(data);
+
+        bzero(&eth_vlan_data, sizeof(eth_vlan_data));
+
+        INIT_LIST_HEAD(data->instances);
+
+        LOG_FEXIT;
+
+        return 0;
+}
+
+static int eth_vlan_fini(struct shim_data * data)
+{
+
+	LOG_FBEGN;
+	
+        ASSERT(data);
+
+        LOG_FEXIT;
+
+        return 0;
+}
+
 static struct shim_instance * eth_vlan_create(struct shim_data * data,
                                               ipc_process_id_t   id)
 {
-        struct shim_instance * instance;
-        struct shim_instance_ops ops;
-        struct eth_vlan_instance * eth_instance;
-        struct rb_node **p;
-        struct rb_node *parent;
-        struct eth_vlan_instance * s;
-        struct rb_root * eth_root;
+
+        struct shim_instance * inst;
+	struct shim_instance_data * pos;
+
         LOG_FBEGN;
 
-        eth_root = (struct rb_root *) data;
-        p = &eth_root->rb_node;
-        parent = NULL;
+        ASSERT(data);
+	list_for_each_entry(pos, data->instances, instances) {
+		if(pos->id == id) {
+			
+			return ;
+		}
+	}
 
-        instance = kzalloc(sizeof(*instance), GFP_KERNEL);
-        if (!instance) {
-                LOG_ERR("Cannot allocate memory for shim_instance");
-                LOG_FEXIT;
+
+        /* Create an instance */
+        inst = kzalloc(sizeof(*inst), GFP_KERNEL);
+        if (!inst) {
+                LOG_ERR("Cannot allocate %zd bytes of memory", sizeof(*inst));
                 return NULL;
         }
 
-        eth_instance = kzalloc(sizeof(*eth_instance), GFP_KERNEL);
-        if (!eth_instance) {
-                LOG_ERR("Cannot allocate memory for eth_vlan_instance");
-                LOG_FEXIT;
-
-                /* FIXME:
-                 *   Are you sure ? instance might be deallocated and a
-                 *   NULL returned
-                 */
-                return instance;
+        /* fill it properly */
+        inst->ops  = &eth_vlan_instance_ops;
+        inst->data = kzalloc(sizeof(struct shim_instance_data), GFP_KERNEL);
+        if (!inst->data) {
+                LOG_ERR("Cannot allocate %zd bytes of memory",
+                        sizeof(*inst->data));
+                kfree(inst);
+                return NULL;
         }
 
-        eth_instance->id = id;
+        inst->data->id = id;
 
-        while (*p) {
-                parent = *p;
-                s = rb_entry(parent, struct eth_vlan_instance, node);
-                if (unlikely(id == s->id)) {
-                        LOG_ERR("Shim instance with id %x already exists", id);
-                        kfree(eth_instance);
-                        kfree(instance);
-                        LOG_FEXIT;
-                        return NULL;
-                } else if (id < s->id)
-                        p = &(*p)->rb_left;
-                else
-                        p = &(*p)->rb_right;
-        }
-        rb_link_node(&eth_instance->node,parent,p);
-        rb_insert_color(&eth_instance->node,eth_root);
-
-        instance->data             = eth_instance;
-
-        /* ops should be bzero-ed, or statically initialized into bss or ... */
-        ops.flow_allocate_request  = eth_vlan_flow_allocate_request;
-        ops.flow_allocate_response = eth_vlan_flow_allocate_response;
-        ops.flow_deallocate        = eth_vlan_flow_deallocate;
-        ops.application_register   = eth_vlan_application_register;
-        ops.application_unregister = eth_vlan_application_unregister;
-        ops.sdu_write              = eth_vlan_sdu_write;
-        ops.sdu_read               = eth_vlan_sdu_read;
-
-        /* FIXME: ops will be destroyed at the end of this scope !!! */
-        instance->ops              = &ops;
+        /*
+         * Bind the shim-instance to the shims set, to keep all our data
+         * structures linked (somewhat) together
+         */
+        list_add(data->instances, inst->data);
 
         LOG_FEXIT;
-        return instance;
+
+        return inst;
 }
 
 static int name_cpy(struct name_t * dst,
@@ -404,12 +452,9 @@ struct shim_instance * eth_vlan_configure(struct shim_data *          data,
 static int eth_vlan_destroy(struct shim_data *     data,
                             struct shim_instance * inst)
 {
-        struct eth_vlan_instance * instance;
+        struct shim_instance * instance;
 
-        struct rb_root * eth_root;
         LOG_FBEGN;
-
-        eth_root = (struct rb_root *) data;
 
         if (inst) {
                 /*
@@ -428,63 +473,6 @@ static int eth_vlan_destroy(struct shim_data *     data,
         return 0;
 }
 
-/* FIXME: should have its roots into struct shim_data */
-/* Holds all shim instances */
-static struct rb_root * eth_vlan_data;
-
-static int eth_vlan_init(struct shim_data * data)
-{
-        LOG_FBEGN;
-
-        LOG_INFO("Shim-eth-vlan module v%d.%d loaded",0,1);
-
-        eth_vlan_data = kmalloc(sizeof(*eth_vlan_data), GFP_KERNEL);
-        if (!eth_vlan_data) {
-                LOG_ERR("Cannot allocate %zu bytes of memory",
-                        sizeof(*eth_vlan_data));
-                LOG_FEXIT;
-                return -1;
-        }
-
-        *eth_vlan_data = RB_ROOT;
-
-        LOG_FEXIT;
-
-        return 0;
-}
-
-static int eth_vlan_fini(struct shim_data * data)
-{
-
-        struct rb_node * s;
-        struct rb_node * e;
-        struct eth_vlan_instance * i;
-        struct rb_root * eth_vlan_data;
-        LOG_FBEGN;
-
-        eth_vlan_data = (struct rb_root *) data;
-
-        /* Destroy all shim instances */
-        s = rb_first(eth_vlan_data);
-        while(s) {
-                /* Get next node and keep pointer to this one */
-                e = s;
-                rb_next(s);
-                /*
-                 * Get the shim_instance
-                 * FIXME: Need to ask it to clean up as well
-                 * Don't know yet in full what to delete
-                 */
-                i = rb_entry(e,struct eth_vlan_instance, node);
-                rb_erase(e, eth_vlan_data);
-                kfree(i);
-        }
-
-        LOG_FEXIT;
-
-        return 0;
-}
-
 static struct shim_ops eth_vlan_ops = {
         .init      = eth_vlan_init,
         .fini      = eth_vlan_fini,
@@ -494,14 +482,14 @@ static struct shim_ops eth_vlan_ops = {
 };
 
 
-static struct shim *  eth_vlan_shim = NULL;
-
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
 
 static int __init mod_init(void)
 {
         LOG_FBEGN;
+
+	bzero(&empty_data, sizeof(empty_data));
 
         eth_vlan_shim = kipcm_shim_register(default_kipcm,
                                             "shim-eth-vlan",
