@@ -290,7 +290,7 @@ static struct shim_instance * empty_create(struct shim_data * data,
 static int name_cpy(struct name_t ** dst, const struct name_t * src)
 {
 	LOG_FBEGN;
-        *dst = kmalloc(sizeof(**dst), GFP_KERNEL);
+        *dst = kzalloc(sizeof(**dst), GFP_KERNEL);
         if (!*dst) {
                 LOG_ERR("Cannot allocate %zd bytes of memory", sizeof(**dst));
                 LOG_FEXIT;
@@ -363,24 +363,25 @@ static int empty_destroy(struct shim_data *     data,
                          struct shim_instance * instance)
 {
 	struct shim_instance_data * inst;
-
+	struct list_head *pos, *q;
         LOG_FBEGN;
 
         ASSERT(data);
         ASSERT(instance);
 
         /* Retrieve the instance */
-	inst = find_instance(data, instance->data->id);
-	if (!inst) {
-		LOG_ERR("No instance with that id");
-		LOG_FEXIT;
-		return -1;
+	list_for_each_safe(pos, q, data->instances) {
+		 inst = list_entry(pos, struct shim_instance_data, list);
+
+		 if(inst->id == instance->data->id) {
+			 /* Unbind from the instances set */
+			 list_del(pos);
+			 /* Destroy it */
+			 kfree(inst->info->dif_name);
+			 kfree(inst->info);
+			 kfree(inst);
+		 }
 	}
-
-        /* Destroy it */
-
-
-        /* Unbind from the instances set */
 
         LOG_FEXIT;
 
