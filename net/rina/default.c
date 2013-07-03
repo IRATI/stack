@@ -26,6 +26,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "personality.h"
+#include "netlink.h"
 #include "shim.h"
 #include "kipcm.h"
 #include "efcp.h"
@@ -34,11 +35,12 @@
 #define DEFAULT_LABEL "default"
 
 struct personality_data {
-        struct kipcm * kipcm;
+        struct kipcm *       kipcm;
+        struct rina_nl_set * nlset;
 
         /* FIXME: Types to be rearranged */
-        void *         efcp;
-        void *         rmt;
+        void *               efcp;
+        void *               rmt;
 };
 
 static int default_ipc_create(struct personality_data * data,
@@ -148,6 +150,10 @@ static int default_fini(struct personality_data * data)
                 err = kipcm_fini(tmp->kipcm);
                 if (err) return err;
         }
+        if (tmp->nlset) {
+                err = rina_netlink_set_destroy(tmp->nlset);
+                if (err) return err;
+        }
 
         LOG_DBG("Default personality finalized successfully");
 
@@ -159,11 +165,21 @@ struct kipcm * default_kipcm;
 EXPORT_SYMBOL(default_kipcm);
 
 static int default_init(struct kobject *          parent,
+                        personality_id            id,
                         struct personality_data * data)
 {
         if (!data) return -1;
 
         LOG_DBG("Initializing default personality");
+
+        LOG_DBG("Initializing default Netlink component");
+        data->nlset = rina_netlink_set_create(id);
+        if (!data->nlset) {
+                if (default_fini(data)) {
+                        LOG_CRIT("The system might become unstable ...");
+                        return -1;
+                }
+        }
 
         LOG_DBG("Initializing kipcm component");
         data->kipcm = kipcm_init(parent);

@@ -235,9 +235,8 @@ struct personality * rina_personality_register(const char *              name,
 
         if (pers->ops->init) {
                 LOG_DBG("Calling personality '%s' initializer", name);
-                if (pers->ops->init(&pers->kobj, pers->data)) {
-                        LOG_ERR("Could not initialize personality '%s'",
-                                name);
+                if (pers->ops->init(&pers->kobj, pers->id, pers->data)) {
+                        LOG_ERR("Could not initialize personality '%s'", name);
                         kobject_put(&pers->kobj);
                         kfree(pers); /* FIXME: As the note before */
                         return NULL;
