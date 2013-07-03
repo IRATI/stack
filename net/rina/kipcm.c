@@ -38,10 +38,8 @@ struct kipcm * kipcm_init(struct kobject * parent)
 
         LOG_DBG("Initializing");
 
-        tmp = kzalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp) {
-                LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*tmp));
-
                 LOG_FEXIT;
                 return NULL;
         }
