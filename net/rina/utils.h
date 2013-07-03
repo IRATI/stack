@@ -34,4 +34,7 @@
 
 #define bzero(DEST, LEN) do { (void) memset(DEST, 0, LEN); } while (0)
 
+void * rkmalloc(size_t size, int type);
+void * rkzalloc(size_t size, int type);
+
 #endif
