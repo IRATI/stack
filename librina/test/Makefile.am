@@ -49,6 +49,10 @@ COMMONLDFLAGS =					\
 REGRESSIONLDFLAGS = $(COMMONLDFLAGS) $(top_builddir)/src/librina-stubbed.la
 FUNCTIONALLDFLAGS = $(COMMONLDFLAGS) $(top_builddir)/src/librina.la
 
+#
+# Regression tests
+#
+
 test_01_SOURCES  = test-01.cc
 test_01_CPPFLAGS = $(COMMONCPPFLAGS)
 test_01_LDFLAGS  = $(REGRESSIONLDFLAGS)
@@ -60,6 +64,10 @@ test_02_LDFLAGS  = $(REGRESSIONLDFLAGS)
 test_03_SOURCES  = test-03.cc
 test_03_CPPFLAGS = $(COMMONCPPFLAGS)
 test_03_LDFLAGS  = $(REGRESSIONLDFLAGS)
+
+#
+# Functional tests
+#
 
 test_netlink_manager_SOURCES  = test-netlink-manager.cc
 test_netlink_manager_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
@@ -88,7 +96,7 @@ check_PROGRAMS =				\
 	test-netlink-manager			\
 	test-netlink-parsers			\
 	test-concurrency			\
-	test-core			\
+	test-core				\
 	test-librina-application
 
 XFAIL_TESTS =					\
@@ -104,7 +112,7 @@ FUNCTIONAL_PASS_TESTS =				\
 	test-netlink-manager			\
 	test-netlink-parsers			\
 	test-concurrency			\
-	test-core					\
+	test-core				\
 	test-librina-application
 
 FUNCTIONAL_XFAIL_TESTS =

@@ -9,3 +9,4 @@
 /test-netlink-manager
 /test-concurrency
 /test-netlink-parsers
+/test-librina-application
