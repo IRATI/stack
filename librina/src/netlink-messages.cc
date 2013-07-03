@@ -609,28 +609,28 @@ AppUnregisterApplicationRequestMessage::AppUnregisterApplicationRequestMessage()
 }
 
 const ApplicationProcessNamingInformation&
-		AppRegisterApplicationRequestMessage::getApplicationName() const {
+		AppUnregisterApplicationRequestMessage::getApplicationName() const {
 		return applicationName;
 	}
 
-void AppRegisterApplicationRequestMessage::setApplicationName(
+void AppUnregisterApplicationRequestMessage::setApplicationName(
 		const ApplicationProcessNamingInformation& applicationName) {
 	this->applicationName = applicationName;
 }
 
 const ApplicationProcessNamingInformation&
-		AppRegisterApplicationRequestMessage::getDifName() const {
+		AppUnregisterApplicationRequestMessage::getDifName() const {
 	return difName;
 }
 
-void AppRegisterApplicationRequestMessage::setDifName(
+void AppUnregisterApplicationRequestMessage::setDifName(
 		const ApplicationProcessNamingInformation& difName) {
 	this->difName = difName;
 }
 
-IPCEvent* AppRegisterApplicationRequestMessage::toIPCEvent(){
-	ApplicationRegistrationRequestEvent * event =
-			new ApplicationRegistrationRequestEvent(
+IPCEvent* AppUnregisterApplicationRequestMessage::toIPCEvent(){
+	ApplicationUnregistrationRequestEvent * event =
+			new ApplicationUnregistrationRequestEvent(
 					applicationName,
 					difName,
 					getSequenceNumber());
