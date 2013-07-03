@@ -75,18 +75,6 @@ find_flow(struct shim_instance_data * data, port_id_t id)
 	return NULL;
 }
 
-static uint16_t list_count(struct list_head * list)
-{
-	uint16_t n_elements = 0;
-
-	struct list_head * p;
-	list_for_each(p,list) {
-		++n_elements;
-	}
-
-	return n_elements;
-}
-
 static int empty_flow_allocate_request(struct shim_instance_data * data,
                                        const struct name_t *       source,
                                        const struct name_t *       dest,
@@ -101,11 +89,11 @@ static int empty_flow_allocate_request(struct shim_instance_data * data,
         ASSERT(source);
         ASSERT(dest);
 
-        /*
-         * FIXME: It must be ensured that this request has not been awarded
-         * before.
-         */
-        *id = list_count(data->flows) + 1;
+        /* It must be ensured that this request has not been awarded before */
+        if (find_flow(data, id)) {
+        	LOG_ERR("This flow already exists");
+        	return -1;
+        }
         flow = kzalloc(sizeof(*flow), GFP_KERNEL);
 	if (!flow) {
 		LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*flow));
