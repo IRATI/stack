@@ -22,7 +22,6 @@
 #include <linux/string.h>
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
-#include <linux/slab.h>
 
 #define RINA_PREFIX "shims"
 
@@ -52,11 +51,9 @@ struct shims * shims_init(struct kobject * parent)
 
         LOG_DBG("Initializing shims layer");
 
-        temp = kzalloc(sizeof(*temp), GFP_KERNEL);
-        if (!temp) {
-                LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*temp));
+        temp = rkzalloc(sizeof(*temp), GFP_KERNEL);
+        if (!temp)
                 return NULL;
-        }
 
         temp->set = kset_create_and_add("shims", NULL, parent);
         if (!temp->set) {
@@ -179,11 +176,9 @@ struct shim * shim_register(struct shims *          parent,
                 return NULL;
         }
 
-        shim = kzalloc(sizeof(*shim), GFP_KERNEL);
-        if (!shim) {
-                LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*shim));
+        shim = rkzalloc(sizeof(*shim), GFP_KERNEL);
+        if (!shim)
                 return NULL;
-        }
 
         shim->data = data;
         shim->ops  = ops;

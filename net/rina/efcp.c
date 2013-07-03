@@ -18,7 +18,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/slab.h>
 #include <linux/kobject.h>
 
 #define RINA_PREFIX "efcp"
@@ -35,34 +34,21 @@ void * efcp_init(struct kobject * parent)
 {
         struct efcp_descriptor * e = NULL;
 
-        LOG_FBEGN;
-
         LOG_DBG("Initializing instance");
 
-        e = kmalloc(sizeof(*e), GFP_KERNEL);
-        if (!e) {
-                LOG_CRIT("Cannot allocate %zu bytes of memory",
-                         sizeof(*e));
-
-                LOG_FEXIT;
+        e = rkmalloc(sizeof(*e), GFP_KERNEL);
+        if (!e)
                 return e;
-        }
-
-        LOG_FEXIT;
 
         return e;
 }
 
 int efcp_fini(void * opaque)
 {
-        LOG_FBEGN;
-
         LOG_DBG("Finalizing instance %pK", opaque);
 
         ASSERT(opaque);
         kfree(opaque);
-
-        LOG_FEXIT;
 
         return 0;
 }

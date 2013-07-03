@@ -22,6 +22,8 @@
 #define RINA_UTILS_H
 
 #include <linux/bug.h>
+#include <linux/slab.h>
+/* #include <linux/gfp.h> */
 
 /* Embed assertions in the code upon user-choice */
 #ifdef CONFIG_RINA_ASSERTIONS
@@ -33,5 +35,8 @@
 #include <linux/string.h>
 
 #define bzero(DEST, LEN) do { (void) memset(DEST, 0, LEN); } while (0)
+
+void * rkmalloc(size_t size, gfp_t flags);
+void * rkzalloc(size_t size, gfp_t flags);
 
 #endif
