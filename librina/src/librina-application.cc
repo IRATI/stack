@@ -156,6 +156,8 @@ const std::string IPCManager::error_registering_application =
 		"Error registering application";
 const std::string IPCManager::error_requesting_flow_allocation =
 		"Error requesting flow allocation";
+const std::string IPCManager::error_requesting_flow_deallocation =
+		"Error requesting flow deallocation";
 
 /* Auxiliar function called in case of using the stubbed version of the API */
 std::vector<DIFProperties> getFakeDIFProperties(
@@ -377,17 +379,48 @@ Flow * IPCManager::allocateFlowResponse(
 	return flow;
 }
 
-void IPCManager::deallocateFlow(int portId) throw (IPCException) {
+void IPCManager::deallocateFlow(
+		int portId, const ApplicationProcessNamingInformation& applicationName)
+			throw (IPCException) {
 	LOG_DBG("IPCManager.deallocateFlow called");
 
+	Flow * flow = 0;
 	std::map<int, Flow*>::iterator iterator;
 	iterator = allocatedFlows.find(portId);
 	if (iterator == allocatedFlows.end()) {
 		throw IPCException(IPCManager::unknown_flow_error);
 	}
+	flow = iterator->second;
 
-	delete iterator->second;
+#if STUB_API
+	//Do nothing
+#else
+	AppDeallocateFlowRequestMessage * message =
+			new AppDeallocateFlowRequestMessage();
+	message->setApplicationName(applicationName);
+	message->setPortId(portId);
+	message->setDifName(flow->getDIFName());
+	message->setRequestMessage(true);
+
+	AppDeallocateFlowResponseMessage * deallocateResponse =
+			dynamic_cast<AppDeallocateFlowResponseMessage *>(
+					sendRequestAndWaitForResponse(message,
+							IPCManager::error_requesting_flow_deallocation));
+
+	if (deallocateResponse->getResult() < 0){
+		std::string reason = IPCManager::error_requesting_flow_deallocation +
+				deallocateResponse->getErrorDescription();
+		delete deallocateResponse;
+		throw IPCException(reason);
+	}
+
+	LOG_DBG("Flow deallocated successfully! Port-id: %d", portId);
+	delete deallocateResponse;
+
+#endif
+
 	allocatedFlows.erase(portId);
+	delete flow;
 }
 
 std::vector<Flow *> IPCManager::getAllocatedFlows() {

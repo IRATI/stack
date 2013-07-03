@@ -18,6 +18,7 @@
 
 #include "logs.h"
 #include "librina-ipc-process.h"
+#include "core.h"
 
 namespace rina{
 
@@ -25,11 +26,12 @@ namespace rina{
 FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
 			const ApplicationProcessNamingInformation& DIFName,
 			const ApplicationProcessNamingInformation& appName,
-			unsigned int sequenceNumber):
+			unsigned short ipcProcessId, unsigned int sequenceNumber):
 						IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,
 								sequenceNumber){
 	this->portId = portId;
 	this->DIFName = DIFName;
+	this->ipcProcessId = ipcProcessId;
 	this->applicationName = appName;
 }
 
@@ -46,5 +48,36 @@ const ApplicationProcessNamingInformation&
 	FlowDeallocateRequestEvent::getApplicationName() const{
 	return applicationName;
 }
+
+unsigned short FlowDeallocateRequestEvent::getIPCProcessId() const{
+	return ipcProcessId;
+}
+
+/* CLASS IPC PROCESS APPLICATION MANAGER */
+void IPCProcessApplicationManager::flowDeallocated(
+		const FlowDeallocateRequestEvent flowDeallocateEvent,
+			int result, std::string errorDescription) throw (IPCException){
+#if STUB_API
+	//Do nothing
+#else
+	AppDeallocateFlowResponseMessage * responseMessage =
+			new AppDeallocateFlowResponseMessage();
+	responseMessage->setApplicationName(flowDeallocateEvent.getApplicationName());
+	responseMessage->setResult(result);
+	responseMessage->setErrorDescription(errorDescription);
+	responseMessage->setSourceIpcProcessId(flowDeallocateEvent.getIPCProcessId());
+	responseMessage->setSequenceNumber(flowDeallocateEvent.getSequenceNumber());
+	responseMessage->setResponseMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(responseMessage);
+		delete responseMessage;
+	}catch(NetlinkException &e){
+		delete responseMessage;
+		throw IPCException(e.what());
+	}
+#endif
+}
+
+Singleton<IPCProcessApplicationManager> ipcProcessApplicationManager;
 
 }

@@ -145,18 +145,18 @@ int main(int argc, char * argv[]) {
 			<< "; max SDU size: " << difProperties.getMaxSduSize() << "\n";
 
 	/* TEST DEALLOCATE FLOW */
-	ipcManager->deallocateFlow(flow->getPortId());
+	ipcManager->deallocateFlow(flow->getPortId(), *sourceName);
 	if (!checkAllocatedFlows(1)) {
 		return 1;
 	}
 
-	ipcManager->deallocateFlow(flow2->getPortId());
+	ipcManager->deallocateFlow(flow2->getPortId(), *sourceName);
 	if (!checkAllocatedFlows(0)) {
 		return 1;
 	}
 
 	try {
-		ipcManager->deallocateFlow(234);
+		ipcManager->deallocateFlow(234, *sourceName);
 	} catch (IPCException &e) {
 		std::cout << "Caught expected exception: " << e.what() << "\n";
 	}

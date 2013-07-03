@@ -153,6 +153,7 @@ public:
 	static const std::string unknown_flow_error;
 	static const std::string error_registering_application;
 	static const std::string error_requesting_flow_allocation;
+	static const std::string error_requesting_flow_deallocation;
 
 	/**
 	 * Retrieves the names and characteristics of a single DIF or of all the
@@ -224,10 +225,14 @@ public:
 	/**
 	 * Causes the flow to be deallocated, and the object deleted.
 	 *
+	 * @param portId the flow to be deallocated
+	 * @param applicationName the name of the application deallocating the flow
 	 * @throws IPCException if the flow is not in the ALLOCATED state or
 	 * there are problems deallocating the flow
 	 */
-	void deallocateFlow(int portId) throw (IPCException);
+	void deallocateFlow(int portId,
+			const ApplicationProcessNamingInformation& applicationName)
+			throw (IPCException);
 
 	/**
 	 * Returns the flows that are currently allocated
