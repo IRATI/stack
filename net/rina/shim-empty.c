@@ -75,6 +75,18 @@ find_flow(struct shim_instance_data * data, port_id_t id)
 	return NULL;
 }
 
+static uint16_t list_count(struct list_head * list)
+{
+	uint16_t n_elements = 0;
+
+	struct list_head * p;
+	list_for_each(p,list) {
+		++n_elements;
+	}
+
+	return n_elements;
+}
+
 static int empty_flow_allocate_request(struct shim_instance_data * data,
                                        const struct name_t *       source,
                                        const struct name_t *       dest,
@@ -89,12 +101,11 @@ static int empty_flow_allocate_request(struct shim_instance_data * data,
         ASSERT(source);
         ASSERT(dest);
 
-        if (find_flow(data, *id)) {
-        	LOG_ERR("Flow already exists");
-        	LOG_FEXIT;
-
-        	return -1;
-        }
+        /*
+         * FIXME: It must be ensured that this request has not been awarded
+         * before.
+         */
+        *id = list_count(data->flows) + 1;
         flow = kzalloc(sizeof(*flow), GFP_KERNEL);
 	if (!flow) {
 		LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*flow));
@@ -131,9 +142,18 @@ static int empty_flow_allocate_response(struct shim_instance_data * data,
 static int empty_flow_deallocate(struct shim_instance_data * data,
                                  port_id_t                   id)
 {
+	struct empty_flow * flow;
         LOG_FBEGN;
 
         ASSERT(data);
+        flow = find_flow(data, id);
+        if (!flow) {
+		LOG_ERR("Flow does not exist, cannot remove");
+		LOG_FEXIT;
+
+		return -1;
+	}
+
 
         LOG_FEXIT;
 
@@ -282,11 +302,6 @@ static struct shim_instance_data * find_instance(struct shim_data * data,
 
 	LOG_FEXIT;
 	return NULL;
-<<<<<<< HEAD
-
-=======
-       
->>>>>>> francesco-wip
 }
 
 static struct shim_instance * empty_create(struct shim_data * data,
