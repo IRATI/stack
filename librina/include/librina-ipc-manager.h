@@ -312,17 +312,13 @@ public:
 	 * Invoked by the IPC Manager to respond to the Application Process that
 	 * requested a flow.
 	 *
-	 * @param sequenceNumber identifies the request whose reply this operation
-	 * is providing
-	 * @param portId The port-id assigned to the flow, in case the operation
-	 * was successful
+	 * @param flowRequestEvent Object containing information about the flow
+	 * request
 	 * @param errorDescription An optional string further describing the result
 	 * @param ipcProcessId Required so that the application process can contact
 	 * the IPC Process to read/write the flow
 	 * @param ipcProcessPortId Required so that the application process can contact
 	 * the IPC Process to read/write the flow
-	 * @param appName The name of the application that requested the flow
-	 * @param difName The name of the DIF where the flow has been allocated
 	 * @throws IPCException If an error occurs during the operation
 	 */
 	void flowAllocated(const FlowRequestEvent flowRequestEvent,

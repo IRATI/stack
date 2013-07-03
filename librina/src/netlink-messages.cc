@@ -403,7 +403,8 @@ void AppDeallocateFlowRequestMessage::setDifName(
 
 IPCEvent* AppDeallocateFlowRequestMessage::toIPCEvent(){
 	FlowDeallocateRequestEvent * event = new FlowDeallocateRequestEvent(
-			portId, difName, applicationName, getSequenceNumber());
+			portId, difName, applicationName, getDestIpcProcessId(),
+			getSequenceNumber());
 	return event;
 }
 

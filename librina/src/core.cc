@@ -168,6 +168,12 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 						specificMessage->getDifName());
 				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
 				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
+			}else{
+				//TODO remove this after fully implementing librina-ipcproces
+				putAPNametoNetlinkPortIdMapping(
+						specificMessage->getApplicationName(),
+						specificMessage->getSourcePortId(),
+						specificMessage->getSourceIpcProcessId());
 			}
 			break;
 		}

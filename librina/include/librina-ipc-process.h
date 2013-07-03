@@ -36,15 +36,44 @@ class FlowDeallocateRequestEvent: public IPCEvent {
 	/** The application that requested the flow deallocation*/
 	ApplicationProcessNamingInformation applicationName;
 
+	/** The id of the IPC Process that should deallocte the flow */
+	unsigned short ipcProcessId;
+
 public:
 	FlowDeallocateRequestEvent(int portId,
 			const ApplicationProcessNamingInformation& DIFName,
 			const ApplicationProcessNamingInformation& appName,
+			unsigned short ipcProcessId,
 			unsigned int sequenceNumber);
 	int getPortId() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
 	const ApplicationProcessNamingInformation& getApplicationName() const;
+	unsigned short getIPCProcessId() const;
 };
+
+/**
+ * Class used by IPC Processes to interact with application processes
+ */
+class IPCProcessApplicationManager {
+
+public:
+	/**
+	 * Invoked by the IPC Process to respond to the Application Process that
+	 * requested a flow deallocation
+	 * @param flowDeallocateEvent Object containing information about the flow
+	 * deallocate request event
+	 * @param result 0 indicates success, a negative number an error code
+	 * @param errorDescription optional explanation about the error (if any)
+	 * @throws IPCException if there are issues replying ot the application
+	 */
+	void flowDeallocated(const FlowDeallocateRequestEvent flowDeallocateEvent,
+			int result, std::string errorDescription) throw (IPCException);
+};
+
+/**
+ * Make IPC Process Application Manager singleton
+ */
+extern Singleton<IPCProcessApplicationManager> ipcProcessApplicationManager;
 
 }
 
