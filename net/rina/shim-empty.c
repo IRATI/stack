@@ -24,7 +24,9 @@
 #include <linux/list.h>
 #include <linux/string.h>
 
-#define RINA_PREFIX "shim-empty"
+#define SHIM_NAME   "shim-empty"
+
+#define RINA_PREFIX SHIM_NAME
 
 #include "logs.h"
 #include "common.h"
@@ -55,7 +57,7 @@ static int empty_flow_allocate_request(struct shim_instance_data * data,
                                        const struct name_t *       source,
                                        const struct name_t *       dest,
                                        const struct flow_spec_t *  flow_spec,
-                                       port_id_t *                 id)
+                                       port_id_t                   id)
 {
         ASSERT(data);
         ASSERT(source);
@@ -353,7 +355,7 @@ static int __init mod_init(void)
          */
 
         empty_shim = kipcm_shim_register(default_kipcm,
-                                         "shim-empty",
+                                         SHIM_NAME,
                                          &empty_data,
                                          &empty_ops);
         if (!empty_shim) {

@@ -29,7 +29,9 @@
 #include <linux/netdevice.h>
 #include <linux/if_packet.h>
 
-#define RINA_PREFIX "shim-eth"
+#define SHIM_NAME   "shim-eth-vlan"
+
+#define RINA_PREFIX SHIM_NAME
 
 #include "logs.h"
 #include "common.h"
@@ -88,7 +90,7 @@ static int eth_vlan_flow_allocate_request(struct shim_instance_data * data,
                                           const struct name_t *       source,
                                           const struct name_t *       dest,
                                           const struct flow_spec_t *  flowspec,
-                                          port_id_t *                 port_id)
+                                          port_id_t                   port_id)
 {
         ASSERT(data);
         ASSERT(source);
@@ -195,11 +197,10 @@ static int eth_vlan_init(struct shim_data * data)
 {
         ASSERT(data);
 
-        /* FIXME: Not loaded, initialized ! */
-	LOG_INFO("Shim-eth-vlan module v%d.%d loaded", 0, 1);
-
         bzero(&eth_vlan_data, sizeof(eth_vlan_data));
         INIT_LIST_HEAD(data->instances);
+
+	LOG_INFO("%s v%d.%d intialized", SHIM_NAME, 0, 1);
 
         return 0;
 }
@@ -431,7 +432,7 @@ static int __init mod_init(void)
 	bzero(&empty_data, sizeof(empty_data));
 
         eth_vlan_shim = kipcm_shim_register(default_kipcm,
-                                            "shim-eth-vlan",
+                                            SHIM_NAME,
                                             &eth_vlan_data,
                                             &eth_vlan_ops);
         if (!eth_vlan_shim) {
