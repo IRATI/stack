@@ -476,11 +476,9 @@ struct rina_nl_set * rina_netlink_set_create(personality_id id)
 {
         struct rina_nl_set * tmp;
 
-        tmp = kzalloc(sizeof(struct rina_nl_set), GFP_KERNEL);
-        if (!tmp) {
-                LOG_ERR("Cannot allocate %zd bytes of memory", sizeof(*tmp));
+        tmp = rkzalloc(sizeof(struct rina_nl_set), GFP_KERNEL);
+        if (!tmp)
                 return NULL;
-        }
 
         return tmp;
 }
