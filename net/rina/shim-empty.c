@@ -34,7 +34,7 @@
 #include "kipcm.h"
 #include "shim.h"
 
-/* Holds all configuration related to this shim */
+/* Holds all configuration related to a shim instance */
 struct empty_info {
 	struct name_t * dif_name;
 };
@@ -222,26 +222,39 @@ static int empty_fini(struct shim_data * data)
         return 0;
 }
 
+static struct shim_instance_data * find_instance(struct shim_data * data,
+						 ipc_process_id_t   id)
+{
+
+	struct shim_instance_data * pos;
+
+	LOG_FBEGN;
+
+	list_for_each_entry(pos, data->instances, list) {
+		if (pos->id == id) {
+			return pos;
+		}
+	}
+
+	LOG_FEXIT;
+	return NULL;
+       
+}
+
 static struct shim_instance * empty_create(struct shim_data * data,
                                            ipc_process_id_t   id)
 {
-        struct shim_instance *      inst;
-	struct shim_instance_data * pos;
+        struct shim_instance * inst;
 
         LOG_FBEGN;
 
         ASSERT(data);
 	
 	/* Check if there already is an instance with that id */
-        /* FIXME: Why don't we have a find_instance() function ? */
-
-	list_for_each_entry(pos, data->instances, list) {
-		if(pos->id == id) {
-			LOG_ERR("Shim instance with ipcpid %d already exists", 
-				pos->id);
-			return NULL;
-		}
-	}
+	if (find_instance(data,id)) {
+		LOG_ERR("Already a shim instance with id %d", id);
+		return NULL;
+	} 
 
         /* Create an instance */
         inst = kzalloc(sizeof(*inst), GFP_KERNEL);
@@ -274,34 +287,32 @@ static struct shim_instance * empty_create(struct shim_data * data,
 }
 
 /* FIXME: Might need to move this to a global file for all shims */
-static name_t * name_cpy(const struct name_t * src)
+static int name_cpy(struct name_t ** dst, const struct name_t * src)
 {
-	name_t * dst;
-        LOG_FBEGN;
-        dst = kmalloc(sizeof(*dst), GFP_KERNEL);
-        if (!dst) {
-                LOG_ERR("Cannot allocate %zd bytes of memory", sizeof(*dst));
+	LOG_FBEGN;
+        *dst = kmalloc(sizeof(**dst), GFP_KERNEL);
+        if (!*dst) {
+                LOG_ERR("Cannot allocate %zd bytes of memory", sizeof(**dst));
                 LOG_FEXIT;
-                return NULL;
+                return -1;
         }
 
-        if(!strcpy(dst->process_name, src->process_name)  
-		|| !strcpy(dst->process_instance, src->process_instance) 
-		|| !strcpy(dst->entity_name, src->entity_name) 
-		|| !strcpy(dst->entity_instance, src->entity_instance)) {
+        if(!strcpy((*dst)->process_name, src->process_name)  
+		|| !strcpy((*dst)->process_instance, src->process_instance) 
+		|| !strcpy((*dst)->entity_name, src->entity_name) 
+		|| !strcpy((*dst)->entity_instance, src->entity_instance)) {
 		LOG_ERR("Cannot perform strcpy");
                 LOG_FEXIT;
-                return NULL;
+                return -1;
 	}
-	return dst;
+	return 0;
 }
 
 static struct shim_instance * empty_configure(struct shim_data *         data,
                                               struct shim_instance *     inst,
                                               const struct shim_config * cfg)
 {
-	struct shim_instance_data * instance, pos;
-
+	struct shim_instance_data * instance;
 	struct shim_config * tmp;
 
 	LOG_FBEGN;
@@ -310,13 +321,7 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
         ASSERT(inst);
         ASSERT(cfg);
 
-        /* Do we have that instance ? */
-        /* FIXME: Why don't we have a find_instance() function ? */
-	list_for_each_entry(pos, data->instances, instances) {
-		if (pos == inst->data) {
-			instance = pos;
-		}
-	}
+	instance = find_instance(data,inst->data->id);
 	if (!instance) {
 		LOG_ERR("No instance with that id");
 		LOG_FEXIT;
@@ -325,20 +330,18 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
 
 	/* Get configuration struct pertaining to this shim instance */ 
 	if (!instance->info) {
-		info = kzalloc(sizeof(*info), GFP_KERNEL);
-                if (!info)
+		instance->info = kzalloc(sizeof(*instance->info), GFP_KERNEL);
+                if (!instance->info)
                         return NULL;
 	}
 
         /* Use configuration values on that instance */
-	/* FIXME: Why don't we have a find_instance() function ? */
-	list_for_each_entry(tmp, &(conf->list), list) {
-		if (!strcmp(tmp->name, "dif-name")
-			&& val->type == SHIM_CONFIG_STRING) {
-                        if (!name_cpy(instance->info->name,
-                                      (struct name_t *) val->data)) {
-
-                                /* FIXME: are you sure ? */
+	list_for_each_entry(tmp, &(cfg->list), list) {
+		if (!strcmp(tmp->entry->name, "dif-name")
+			&& tmp->entry->value->type == SHIM_CONFIG_STRING) {
+                        if (name_cpy(&(instance->info->dif_name),
+			      (struct name_t *) tmp->entry->value->data)) {
+				LOG_ERR("Failed to copy DIF name");
                                 LOG_FEXIT;
                                 return inst;
                         }
@@ -359,7 +362,7 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
 static int empty_destroy(struct shim_data *     data,
                          struct shim_instance * instance)
 {
-	struct shim_instance_data * instance, pos;
+	struct shim_instance_data * inst;
 
         LOG_FBEGN;
 
@@ -367,18 +370,15 @@ static int empty_destroy(struct shim_data *     data,
         ASSERT(instance);
 
         /* Retrieve the instance */
-	list_for_each_entry(pos, data->instances, list) {
-		if(pos == inst->data) {
-			instance = pos;
-		}
-	}
-	if (!instance) {
+	inst = find_instance(data, instance->data->id);
+	if (!inst) {
 		LOG_ERR("No instance with that id");
 		LOG_FEXIT;
-		return inst;
+		return -1;
 	}
 
         /* Destroy it */
+
 
         /* Unbind from the instances set */
 
