@@ -472,8 +472,9 @@ int rina_netlink_init(void)
         LOG_DBG("genl_register_family_with_ops() returned %i", ret);
 
         if (ret < 0) {
-                LOG_ERR("Cannot register family and ops (error=%i)", ret);
-                return -2;
+                LOG_ERR("Cannot register Netlink family and ops (error=%i), "
+                        "bailing out", ret);
+                return -1;
         }
 
 #if TESTING
@@ -498,10 +499,10 @@ void rina_netlink_exit(void)
 
         LOG_DBG("Finalizing Netlink layer");
 
-        /* Unregister the family */
         ret = genl_unregister_family(&nl_family);
         if (ret) {
-                LOG_ERR("Could not unregister family (error=%i)", ret);
+                LOG_ERR("Could not unregister Netlink family (error=%i), "
+                        "bailing out. Your system might become unstable", ret);
                 return;
         }
 
