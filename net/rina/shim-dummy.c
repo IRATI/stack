@@ -21,7 +21,6 @@
  */
 
 #include <linux/module.h>
-
 #include <linux/slab.h>
 #include <linux/list.h>
 
@@ -64,9 +63,8 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
 
         /* FIXME: We should verify that the port_id has not got a flow yet */
 
-        flow = kzalloc(sizeof(*flow), GFP_KERNEL);
+        flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
         if (!flow) {
-                LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*flow));
                 LOG_FEXIT;
                 return -1;
         }
@@ -192,13 +190,8 @@ static int dummy_init(struct shim_data * data)
 
         LOG_FBEGN;
 
-        dummy_data.shim_list = kmalloc(sizeof(*dummy_shim_list), GFP_KERNEL);
+        dummy_data.shim_list = rkmalloc(sizeof(*dummy_shim_list), GFP_KERNEL);
         if (!dummy_data.shim_list) {
-                LOG_ERR("Cannot allocate %zu bytes of memory",
-                        sizeof(*dummy_data.shim_list));
-
-                kfree(dummy_data.shim_list);
-
                 LOG_FEXIT;
                 return -1;
         }
@@ -244,27 +237,21 @@ static struct shim_instance * dummy_create(struct shim_data * data,
 
         LOG_FBEGN;
 
-        instance = kzalloc(sizeof(*instance), GFP_KERNEL);
+        instance = rkzalloc(sizeof(*instance), GFP_KERNEL);
         if (!instance) {
-                LOG_ERR("Cannot allocate %zu bytes of memory",
-                        sizeof(*instance));
                 LOG_FEXIT;
                 return NULL;
         }
 
-        dummy_inst = kzalloc(sizeof(*dummy_inst), GFP_KERNEL);
+        dummy_inst = rkzalloc(sizeof(*dummy_inst), GFP_KERNEL);
         if (!dummy_inst) {
-                LOG_ERR("Cannot allocate %zu bytes of memory",
-                        sizeof(*dummy_inst));
                 kfree(instance);
                 LOG_FEXIT;
                 return NULL;
         }
 
-        port_flow = kzalloc(sizeof(*port_flow), GFP_KERNEL);
+        port_flow = rkzalloc(sizeof(*port_flow), GFP_KERNEL);
         if (!port_flow) {
-                LOG_ERR("Cannot allocate %zu bytes of memory",
-                        sizeof(*port_flow));
                 kfree(instance);
                 kfree(dummy_inst);
                 LOG_FEXIT;

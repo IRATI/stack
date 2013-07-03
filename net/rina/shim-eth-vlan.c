@@ -36,6 +36,7 @@
 #include "common.h"
 #include "shim.h"
 #include "kipcm.h"
+#include "utils.h"
 
 /* Holds the configuration of one shim IPC process */
 struct eth_vlan_info {
@@ -252,7 +253,7 @@ static struct shim_instance * eth_vlan_create(struct shim_data * data,
                                               ipc_process_id_t   id)
 {
 
-        struct shim_instance * inst;
+        struct shim_instance *      inst;
 	struct shim_instance_data * pos;
 
         LOG_FBEGN;
@@ -265,20 +266,15 @@ static struct shim_instance * eth_vlan_create(struct shim_data * data,
 		}
 	}
 
-
         /* Create an instance */
-        inst = kzalloc(sizeof(*inst), GFP_KERNEL);
-        if (!inst) {
-                LOG_ERR("Cannot allocate %zd bytes of memory", sizeof(*inst));
+        inst = rkzalloc(sizeof(*inst), GFP_KERNEL);
+        if (!inst)
                 return NULL;
-        }
 
         /* fill it properly */
         inst->ops  = &eth_vlan_instance_ops;
-        inst->data = kzalloc(sizeof(struct shim_instance_data), GFP_KERNEL);
+        inst->data = rkzalloc(sizeof(struct shim_instance_data), GFP_KERNEL);
         if (!inst->data) {
-                LOG_ERR("Cannot allocate %zd bytes of memory",
-                        sizeof(*inst->data));
                 kfree(inst);
                 return NULL;
         }
@@ -301,9 +297,8 @@ static int name_cpy(struct name_t * dst,
 {
         struct name_t * temp;
         LOG_FBEGN;
-        temp = kmalloc(sizeof(*temp), GFP_KERNEL);
+        temp = rkmalloc(sizeof(*temp), GFP_KERNEL);
         if (!temp) {
-                LOG_ERR("Cannot allocate memory for name");
                 LOG_FEXIT;
                 return -1;
         }
@@ -354,14 +349,14 @@ struct shim_instance * eth_vlan_configure(struct shim_data *          data,
         old_vlan_id = 0;
         old_interface_name = NULL;
         if (!info) {
-                info = kmalloc(sizeof(*info), GFP_KERNEL);
+                info = rkmalloc(sizeof(*info), GFP_KERNEL);
                 reconfigure = 1;
         } else {
                 old_vlan_id = info->vlan_id;
                 old_interface_name = info->interface_name;
         }
         if (!info) {
-                LOG_ERR("Cannot allocate memory for shim_info");
+                /* FIXME: ... we haven't reconfigured it correctly anyway */
                 LOG_FEXIT;
                 return inst;
         }
@@ -413,9 +408,9 @@ struct shim_instance * eth_vlan_configure(struct shim_data *          data,
 
                         /* First construct the complete interface name */
                         complete_interface =
-                                kmalloc(sizeof(*complete_interface), GFP_KERNEL);
+                                rkmalloc(sizeof(*complete_interface),
+                                         GFP_KERNEL);
                         if (!complete_interface) {
-                                LOG_ERR("Cannot allocate memory for string");
                                 LOG_FEXIT;
                                 return inst;
                         }
@@ -428,7 +423,7 @@ struct shim_instance * eth_vlan_configure(struct shim_data *          data,
                         read_lock(&dev_base_lock);
                         dev = __dev_get_by_name(&init_net, complete_interface);
                         if (!dev) {
-                                LOG_ERR("Invalid device specified to configure");
+                                LOG_ERR("Invalid device to configure");
                                 LOG_FEXIT;
                                 return inst;
                         }

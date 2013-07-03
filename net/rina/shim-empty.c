@@ -21,8 +21,6 @@
  */
 
 #include <linux/module.h>
-
-#include <linux/slab.h>
 #include <linux/list.h>
 #include <linux/string.h>
 
@@ -257,18 +255,14 @@ static struct shim_instance * empty_create(struct shim_data * data,
 	} 
 
         /* Create an instance */
-        inst = kzalloc(sizeof(*inst), GFP_KERNEL);
-        if (!inst) {
-                LOG_ERR("Cannot allocate %zd bytes of memory", sizeof(*inst));
+        inst = rkzalloc(sizeof(*inst), GFP_KERNEL);
+        if (!inst)
                 return NULL;
-        }
 
         /* fill it properly */
         inst->ops  = &empty_instance_ops;
-        inst->data = kzalloc(sizeof(struct shim_instance_data), GFP_KERNEL);
+        inst->data = rkzalloc(sizeof(struct shim_instance_data), GFP_KERNEL);
         if (!inst->data) {
-                LOG_ERR("Cannot allocate %zd bytes of memory",
-                        sizeof(*inst->data));
                 kfree(inst);
                 return NULL;
         }
@@ -290,9 +284,9 @@ static struct shim_instance * empty_create(struct shim_data * data,
 static int name_cpy(struct name_t ** dst, const struct name_t * src)
 {
 	LOG_FBEGN;
-        *dst = kzalloc(sizeof(**dst), GFP_KERNEL);
+
+        *dst = rkzalloc(sizeof(**dst), GFP_KERNEL);
         if (!*dst) {
-                LOG_ERR("Cannot allocate %zd bytes of memory", sizeof(**dst));
                 LOG_FEXIT;
                 return -1;
         }
@@ -305,6 +299,9 @@ static int name_cpy(struct name_t ** dst, const struct name_t * src)
                 LOG_FEXIT;
                 return -1;
 	}
+
+        LOG_FEXIT;
+
 	return 0;
 }
 
@@ -330,7 +327,7 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
 
 	/* Get configuration struct pertaining to this shim instance */ 
 	if (!instance->info) {
-		instance->info = kzalloc(sizeof(*instance->info), GFP_KERNEL);
+		instance->info = rkzalloc(sizeof(*instance->info), GFP_KERNEL);
                 if (!instance->info)
                         return NULL;
 	}
