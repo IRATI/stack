@@ -22,7 +22,7 @@
 #define RINA_UTILS_H
 
 #include <linux/bug.h>
-#include <linux/slab.h>
+#include <linux/gfp.h>
 
 /* Embed assertions in the code upon user-choice */
 #ifdef CONFIG_RINA_ASSERTIONS
