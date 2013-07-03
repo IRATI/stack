@@ -28,7 +28,7 @@
 #include <netlink/attr.h>
 #include <netlink/genl/genl.h>
 
-#include <netlink-messages.h>
+#include "netlink-messages.h"
 
 namespace rina {
 
@@ -219,6 +219,7 @@ enum AppRegisterApplicationResponseMessageAttributes {
 	ARARE_ATTR_ERROR_DESCRIPTION,
 	ARARE_ATTR_DIF_NAME,
 	ARARE_ATTR_PROCESS_PORT_ID,
+	ARARE_ATTR_PROCESS_IPC_PROCESS_ID,
 	__ARARE_ATTR_MAX,
 };
 
@@ -227,8 +228,42 @@ enum AppRegisterApplicationResponseMessageAttributes {
 int putAppRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 		const AppRegisterApplicationResponseMessage& object);
 
-AppRegisterApplicationResponseMessage * parseAppRegisterApplicationResponseMessage(
-		nlmsghdr *hdr);
+AppRegisterApplicationResponseMessage *
+	parseAppRegisterApplicationResponseMessage(nlmsghdr *hdr);
+
+/* IpcmRegisterApplicationRequestMessage CLASS*/
+enum IpcmRegisterApplicationRequestMessageAttributes {
+	IRAR_ATTR_APP_NAME = 1,
+	IRAR_ATTR_DIF_NAME,
+	IRAR_ATTR_APP_PORT_ID,
+	__IRAR_ATTR_MAX,
+};
+
+#define IRAR_ATTR_MAX (__IRAR_ATTR_MAX -1)
+
+int putIpcmRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
+		const IpcmRegisterApplicationRequestMessage& object);
+
+IpcmRegisterApplicationRequestMessage *
+	parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr);
+
+/* IpcmRegisterApplicationResponseMessage CLASS*/
+enum IpcmRegisterApplicationResponseMessageAttributes {
+	IRARE_ATTR_APP_NAME = 1,
+	IRARE_ATTR_RESULT,
+	IRARE_ATTR_ERROR_DESCRIPTION,
+	IRARE_ATTR_DIF_NAME,
+	__IRARE_ATTR_MAX,
+};
+
+#define IRARE_ATTR_MAX (__IRARE_ATTR_MAX -1)
+
+int putIpcmRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
+		const IpcmRegisterApplicationResponseMessage& object);
+
+IpcmRegisterApplicationResponseMessage *
+	parseIpcmRegisterApplicationResponseMessage(nlmsghdr *hdr);
 
 }
+
 #endif /* LIBRINA_NETLINK_PARSERS_H_ */

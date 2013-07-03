@@ -54,6 +54,10 @@ enum RINANetlinkOperationCode{
         RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE, /* IPC Process -> IPC Manager */
         RINA_C_IPCM_ALLOCATE_FLOW_REQUEST, /* IPC Manager -> IPC Process */
         RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE, /* IPC Process -> IPC Manager */
+        RINA_C_IPCM_REGISTER_APPLICATION_REQUEST, /*IPC Manager -> IPC Process */
+        RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE, /*IPC Process -> IPC Manager */
+        RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST, /*IPC Manager -> IPC Process */
+        RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE, /*IPC Process -> IPC Manager */
         RINA_C_IPCM_QUERY_RIB_REQUEST, /* IPC Manager -> IPC Process */
         RINA_C_IPCM_QUERY_RIB_RESPONSE, /* IPC Process -> IPC Manager */
         RINA_C_RMT_ADD_FTE_REQUEST, /* IPC Process (user space) -> RMT (kernel) */
@@ -507,7 +511,79 @@ public:
 			const ApplicationProcessNamingInformation& applicationName);
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
+	unsigned int getApplicationPortId() const;
+	void setApplicationPortId(unsigned int applicationPortId);
 	IPCEvent* toIPCEvent();
+};
+
+
+/**
+* Invoked by the IPCManager when it wants to register an application
+* to a DIF. IPC Manager -> IPC Process
+*/
+class IpcmRegisterApplicationRequestMessage:
+public NetlinkRequestOrNotificationMessage {
+
+/** The name of the application to be registered */
+ApplicationProcessNamingInformation applicationName;
+
+/** The DIF name where the application wants to register */
+ApplicationProcessNamingInformation difName;
+
+/**
+* The netlink port Id of the application, so that the IPC Process
+* can communicate with it
+*/
+unsigned int applicationPortId;
+
+public:
+IpcmRegisterApplicationRequestMessage();
+const ApplicationProcessNamingInformation& getApplicationName() const;
+void setApplicationName(
+const ApplicationProcessNamingInformation& applicationName);
+const ApplicationProcessNamingInformation& getDifName() const;
+void setDifName(const ApplicationProcessNamingInformation& difName);
+unsigned int getApplicationPortId() const;
+void setApplicationPortId(unsigned int applicationPortId);
+IPCEvent* toIPCEvent();
+};
+
+
+/**
+ * Response of the IPC Process to an application registration request.
+ * IPC Process -> IPC Manager
+ */
+class IpcmRegisterApplicationResponseMessage: public BaseNetlinkMessage {
+
+	/** The DIF name where the application wants to register */
+	ApplicationProcessNamingInformation applicationName;
+
+	/**
+	 * Result of the operation. 0 indicates success, a negative value an
+	 * error code.
+	 */
+	int result;
+
+	/**
+	 * If the application registration didn't succeed, this field may provide
+	 * further detail
+	 */
+	std::string errorDescription;
+
+	/** The DIF name where the application wants to register */
+	ApplicationProcessNamingInformation difName;
+
+public:
+	IpcmRegisterApplicationResponseMessage();
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	void setApplicationName(
+			const ApplicationProcessNamingInformation& applicationName);
+	const std::string& getErrorDescription() const;
+	void setErrorDescription(const std::string& errorDescription);
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
+	int getResult() const;
+	void setResult(int result);
 };
 
 }

@@ -601,7 +601,6 @@ void AppRegisterApplicationResponseMessage::setIpcProcessId(
 	this->ipcProcessId = ipcProcessId;
 }
 
-
 /* CLASS APP UNREGISTER APPLICATION REQUEST MESSAGE */
 AppUnregisterApplicationRequestMessage::AppUnregisterApplicationRequestMessage() :
 		NetlinkRequestOrNotificationMessage(
@@ -636,6 +635,97 @@ IPCEvent* AppUnregisterApplicationRequestMessage::toIPCEvent(){
 					getSequenceNumber());
 
 	return event;
+}
+
+/* CLASS IPCM REGISTER APPLICATION REQUEST MESSAGE */
+IpcmRegisterApplicationRequestMessage::IpcmRegisterApplicationRequestMessage():
+		NetlinkRequestOrNotificationMessage(
+				RINA_C_IPCM_REGISTER_APPLICATION_REQUEST) {
+	applicationPortId = 0;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmRegisterApplicationRequestMessage::getApplicationName() const{
+	return applicationName;
+}
+
+void IpcmRegisterApplicationRequestMessage::setApplicationName(
+		const ApplicationProcessNamingInformation& applicationName){
+	this->applicationName = applicationName;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmRegisterApplicationRequestMessage::getDifName() const{
+	return difName;
+}
+
+void IpcmRegisterApplicationRequestMessage::setDifName(
+		const ApplicationProcessNamingInformation& difName){
+	this->difName = difName;
+}
+
+unsigned int
+IpcmRegisterApplicationRequestMessage::getApplicationPortId() const {
+	return applicationPortId;
+}
+
+void IpcmRegisterApplicationRequestMessage::setApplicationPortId(
+		unsigned int applicationPortId) {
+	this->applicationPortId = applicationPortId;
+}
+
+IPCEvent* IpcmRegisterApplicationRequestMessage::toIPCEvent(){
+	ApplicationRegistrationRequestEvent * event =
+			new ApplicationRegistrationRequestEvent(
+					applicationName,
+					difName,
+					getSequenceNumber());
+
+	return event;
+}
+
+/* CLASS IPCM REGISTER APPLICATION RESPONSE MESSAGE */
+IpcmRegisterApplicationResponseMessage::IpcmRegisterApplicationResponseMessage() :
+		BaseNetlinkMessage(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE) {
+	this->result = 0;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmRegisterApplicationResponseMessage::getApplicationName() const {
+		return applicationName;
+	}
+
+void IpcmRegisterApplicationResponseMessage::setApplicationName(
+		const ApplicationProcessNamingInformation& applicationName) {
+	this->applicationName = applicationName;
+}
+
+const std::string&
+IpcmRegisterApplicationResponseMessage::getErrorDescription() const {
+	return errorDescription;
+}
+
+void IpcmRegisterApplicationResponseMessage::setErrorDescription(
+		const std::string& errorDescription) {
+	this->errorDescription = errorDescription;
+}
+
+int IpcmRegisterApplicationResponseMessage::getResult() const {
+	return result;
+}
+
+void IpcmRegisterApplicationResponseMessage::setResult(int result) {
+	this->result = result;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmRegisterApplicationResponseMessage::getDifName() const {
+	return difName;
+}
+
+void IpcmRegisterApplicationResponseMessage::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
 }
 
 }
