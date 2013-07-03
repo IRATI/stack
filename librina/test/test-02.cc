@@ -56,14 +56,6 @@ bool checkRecognizedEvent(IPCEvent * event) {
 				<< appUEvent->getApplicationName().getProcessName() << "\n";
 		break;
 	}
-	case FLOW_ALLOCATION_REQUESTED_EVENT: {
-		FlowAllocationRequestEvent * flowAllocationRequest =
-				dynamic_cast<FlowAllocationRequestEvent *>(event);
-		std::cout
-				<< "Got a flow allocation request event with sequence number "
-				<< flowAllocationRequest->getSequenceNumber() << "\n";
-		break;
-	}
 	default:
 		std::cout << "Unrecognized event type\n";
 		return false;

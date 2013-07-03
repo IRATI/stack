@@ -374,6 +374,46 @@ public:
 };
 
 /**
+ * Event informing that an application has requested the
+ * registration to a DIF
+ */
+class ApplicationRegistrationRequestEvent: public IPCEvent {
+	/** The application that wants to register */
+	ApplicationProcessNamingInformation applicationName;
+
+	/** The DIF to which the application wants to register */
+	ApplicationProcessNamingInformation DIFName;
+
+public:
+	ApplicationRegistrationRequestEvent(
+			const ApplicationProcessNamingInformation& appName,
+			const ApplicationProcessNamingInformation& DIFName,
+			unsigned int sequenceNumber);
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	const ApplicationProcessNamingInformation& getDIFName() const;
+};
+
+/**
+ * Event informing that an application has requested the
+ * unregistration from a DIF
+ */
+class ApplicationUnregistrationRequestEvent: public IPCEvent {
+	/** The application that wants to unregister */
+	ApplicationProcessNamingInformation applicationName;
+
+	/** The DIF to which the application wants to cancel the registration */
+	ApplicationProcessNamingInformation DIFName;
+
+public:
+	ApplicationUnregistrationRequestEvent(
+			const ApplicationProcessNamingInformation& appName,
+			const ApplicationProcessNamingInformation& DIFName,
+			unsigned int sequenceNumber);
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	const ApplicationProcessNamingInformation& getDIFName() const;
+};
+
+/**
  * Stores IPC Events that have happened, ready to be consumed and
  * processed by client classes.
  */

@@ -542,6 +542,49 @@ const ApplicationProcessNamingInformation&
 	return destinationApplicationName;
 }
 
+/* CLASS APPLICATION REGISTRATION REQUEST */
+ApplicationRegistrationRequestEvent::ApplicationRegistrationRequestEvent(
+		const ApplicationProcessNamingInformation& appName,
+		const ApplicationProcessNamingInformation& DIFName,
+		unsigned int sequenceNumber) :
+		IPCEvent(APPLICATION_REGISTRATION_REQUEST_EVENT,
+				sequenceNumber) {
+	this->applicationName = appName;
+	this->DIFName = DIFName;
+}
+
+const ApplicationProcessNamingInformation&
+ApplicationRegistrationRequestEvent::getApplicationName() const {
+	return applicationName;
+}
+
+const ApplicationProcessNamingInformation&
+ApplicationRegistrationRequestEvent::getDIFName() const {
+	return DIFName;
+}
+
+/* CLASS APPLICATION UNREGISTRATION REQUEST */
+ApplicationUnregistrationRequestEvent::ApplicationUnregistrationRequestEvent(
+		const ApplicationProcessNamingInformation& appName,
+		const ApplicationProcessNamingInformation& DIFName,
+		unsigned int sequenceNumber) :
+		IPCEvent(APPLICATION_UNREGISTRATION_REQUEST_EVENT,
+				sequenceNumber) {
+	this->applicationName = appName;
+	this->DIFName = DIFName;
+}
+
+const ApplicationProcessNamingInformation&
+ApplicationUnregistrationRequestEvent::getApplicationName() const {
+	return applicationName;
+}
+
+const ApplicationProcessNamingInformation&
+ApplicationUnregistrationRequestEvent::getDIFName() const {
+	return DIFName;
+}
+
+
 /* CLASS IPC EVENT PRODUCER */
 
 /* Auxiliar function called in case of using the stubbed version of the API */

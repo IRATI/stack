@@ -692,6 +692,7 @@ int testAppRegisterApplicationResponseMessage() {
 
 	message->setResult(1);
 	message->setIpcProcessPortId(7);
+	message->setIpcProcessId(39);
 	message->setErrorDescription("Error description");
 	message->setDifName(*difName);
 	message->setApplicationName(*applicationName);
@@ -737,6 +738,11 @@ int testAppRegisterApplicationResponseMessage() {
 		std::cout << "IPC process port id on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
+	} else if (message->getIpcProcessId()
+			!= recoveredMessage->getIpcProcessId()) {
+		std::cout << "IPC process id on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
 	} else if (message->getApplicationName()
 			!= recoveredMessage->getApplicationName()) {
 		std::cout << "Application name on original and recovered messages"
@@ -750,6 +756,165 @@ int testAppRegisterApplicationResponseMessage() {
 
 	if (returnValue == 0) {
 		std::cout << "AppRegisterApplicationResponse test ok\n";
+	}
+	nlmsg_free(netlinkMessage);
+	delete difName;
+	delete applicationName;
+	delete message;
+	delete recoveredMessage;
+
+	return returnValue;
+}
+
+int testIpcmRegisterApplicationRequestMessage() {
+	std::cout << "TESTING IPCM REGISTER APPLICATION REQUEST MESSAGE\n";
+	int returnValue = 0;
+
+	ApplicationProcessNamingInformation * applicationName =
+			new ApplicationProcessNamingInformation();
+	applicationName->setProcessName("/apps/source");
+	applicationName->setProcessInstance("25");
+	applicationName->setEntityName("database");
+	applicationName->setEntityInstance("31");
+
+	ApplicationProcessNamingInformation * difName =
+			new ApplicationProcessNamingInformation();
+	difName->setProcessName("/difs/Test2.DIF");
+
+	IpcmRegisterApplicationRequestMessage * message =
+			new IpcmRegisterApplicationRequestMessage();
+
+	message->setDifName(*difName);
+	message->setApplicationName(*applicationName);
+	message->setApplicationPortId(34);
+
+	struct nl_msg* netlinkMessage;
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage) {
+		std::cout << "Error allocating Netlink message\n";
+	}
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
+			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
+
+	int result = putBaseNetlinkMessage(netlinkMessage, message);
+	if (result < 0) {
+		std::cout << "Error constructing Ipcm Register Application Request "
+				<< "Message \n";
+		nlmsg_free(netlinkMessage);
+		delete difName;
+		delete applicationName;
+		delete message;
+		return result;
+	}
+
+	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+	IpcmRegisterApplicationRequestMessage * recoveredMessage =
+			dynamic_cast<IpcmRegisterApplicationRequestMessage *>(parseBaseNetlinkMessage(
+					netlinkMessageHeader));
+	if (message == NULL) {
+		std::cout << "Error parsing Ipcm Register Application Request Message "
+				<< "\n";
+		returnValue = -1;
+	} else if (message->getApplicationName()
+			!= recoveredMessage->getApplicationName()) {
+		std::cout << "Application name on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message->getDifName() != recoveredMessage->getDifName()) {
+		std::cout << "DIF name on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	} else if (message->getApplicationPortId() !=
+			recoveredMessage->getApplicationPortId()) {
+		std::cout << "Application port id on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	}
+
+	if (returnValue == 0) {
+		std::cout << "IpcmRegisterApplicationRequest test ok\n";
+	}
+	nlmsg_free(netlinkMessage);
+	delete difName;
+	delete applicationName;
+	delete message;
+	delete recoveredMessage;
+
+	return returnValue;
+}
+
+int testIpcmRegisterApplicationResponseMessage() {
+	std::cout << "TESTING IPCM REGISTER APPLICATION RESPONSE MESSAGE\n";
+	int returnValue = 0;
+
+	ApplicationProcessNamingInformation * applicationName =
+			new ApplicationProcessNamingInformation();
+	applicationName->setProcessName("/apps/source");
+	applicationName->setProcessInstance("25");
+	applicationName->setEntityName("database");
+	applicationName->setEntityInstance("30");
+
+	ApplicationProcessNamingInformation * difName =
+			new ApplicationProcessNamingInformation();
+	difName->setProcessName("/difs/Test.DIF");
+
+	IpcmRegisterApplicationResponseMessage * message =
+			new IpcmRegisterApplicationResponseMessage();
+
+	message->setResult(1);
+	message->setErrorDescription("Error description");
+	message->setDifName(*difName);
+	message->setApplicationName(*applicationName);
+
+	struct nl_msg* netlinkMessage;
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage) {
+		std::cout << "Error allocating Netlink message\n";
+	}
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
+			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
+
+	int result = putBaseNetlinkMessage(netlinkMessage, message);
+	if (result < 0) {
+		std::cout << "Error constructing Ipcm Register Application Response "
+				<< "Message \n";
+		nlmsg_free(netlinkMessage);
+		delete difName;
+		delete applicationName;
+		delete message;
+		return result;
+	}
+
+	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+	IpcmRegisterApplicationResponseMessage * recoveredMessage =
+			dynamic_cast<IpcmRegisterApplicationResponseMessage *>(parseBaseNetlinkMessage(
+					netlinkMessageHeader));
+	if (message == NULL) {
+		std::cout << "Error parsing Ipcm Register Application Response Message "
+				<< "\n";
+		returnValue = -1;
+	} else if (message->getResult() != recoveredMessage->getResult()) {
+		std::cout << "Result on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message->getErrorDescription()
+			!= recoveredMessage->getErrorDescription()) {
+		std::cout << "Error description on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message->getApplicationName()
+			!= recoveredMessage->getApplicationName()) {
+		std::cout << "Application name on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message->getDifName() != recoveredMessage->getDifName()) {
+		std::cout << "DIF name on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	}
+
+	if (returnValue == 0) {
+		std::cout << "IpcmRegisterApplicationResponse test ok\n";
 	}
 	nlmsg_free(netlinkMessage);
 	delete difName;
@@ -806,6 +971,16 @@ int main(int argc, char * argv[]) {
 	}
 
 	result = testAppRegisterApplicationResponseMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testIpcmRegisterApplicationRequestMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testIpcmRegisterApplicationResponseMessage();
 	if (result < 0) {
 		return result;
 	}

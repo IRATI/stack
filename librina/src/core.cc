@@ -228,6 +228,28 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			}
 			break;
 		}
+		case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST:{
+			IpcmRegisterApplicationRequestMessage * specificMessage =
+					dynamic_cast<IpcmRegisterApplicationRequestMessage *>(message);
+			if(send){
+				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+					  specificMessage->getDifName());
+				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
+			}else{
+				putAPNametoNetlinkPortIdMapping(
+						specificMessage->getApplicationName(),
+						specificMessage->getApplicationPortId(),
+						specificMessage->getSourceIpcProcessId());
+			}
+			break;
+		}
+		case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:{
+			if(send){
+				message->setDestPortId(getIPCManagerPortId());
+			}
+			break;
+		}
 		default:
 			throw NetlinkException(NetlinkException::
 						unrecognized_generic_netlink_operation_code);
