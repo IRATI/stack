@@ -33,54 +33,38 @@ struct kipcm * kipcm_init(struct kobject * parent)
 {
         struct kipcm * tmp;
 
-        LOG_FBEGN;
-
         LOG_DBG("Initializing");
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp) {
-                LOG_FEXIT;
+        if (!tmp)
                 return NULL;
-        }
 
         tmp->shims = shims_init(parent);
         if (!tmp->shims) {
                 kfree(tmp);
-
-                LOG_FEXIT;
                 return NULL;
         }
 
         LOG_DBG("Initialized successfully");
-
-        LOG_FEXIT;
 
         return tmp;
 }
 
 int kipcm_fini(struct kipcm * kipcm)
 {
-        LOG_FBEGN;
-
         LOG_DBG("Finalizing");
 
         if (!kipcm) {
-                LOG_ERR("Bogus kipcm instance, cannot finalize");
-
-                LOG_FEXIT;
+                LOG_ERR("Bogus kipcm instance passed, cannot finalize");
                 return -1;
         }
 
-        if (shims_fini(kipcm->shims)) {
-                LOG_FEXIT;
+        if (shims_fini(kipcm->shims))
                 return -1;
-        } 
 
         kfree(kipcm);
 
         LOG_DBG("Finalized successfully");
-
-        LOG_FEXIT;
 
         return 0;
 }

@@ -234,8 +234,6 @@ static struct personality *    personality = NULL;
 
 static int __init mod_init(void)
 {
-        LOG_FBEGN;
-
         LOG_DBG("Rina default personality loading");
 
         if (personality) {
@@ -253,7 +251,6 @@ static int __init mod_init(void)
 
         LOG_DBG("Rina default personality loaded successfully");
 
-        LOG_FEXIT;
         return 0;
 }
 
@@ -266,16 +263,12 @@ static void __exit mod_exit(void)
         if (rina_personality_unregister(personality)) {
                 LOG_CRIT("Got problems while unregistering personality, "
                          "bailing out");
-
-                LOG_FEXIT;
                 return;
         }
 
         personality = NULL;
 
         LOG_DBG("Rina default personality unloaded successfully");
-
-        LOG_FEXIT;
 }
 
 module_init(mod_init);

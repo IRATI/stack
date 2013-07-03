@@ -34,31 +34,21 @@ void * efcp_init(struct kobject * parent)
 {
         struct efcp_descriptor * e = NULL;
 
-        LOG_FBEGN;
-
         LOG_DBG("Initializing instance");
 
         e = rkmalloc(sizeof(*e), GFP_KERNEL);
-        if (!e) {
-                LOG_FEXIT;
+        if (!e)
                 return e;
-        }
-
-        LOG_FEXIT;
 
         return e;
 }
 
 int efcp_fini(void * opaque)
 {
-        LOG_FBEGN;
-
         LOG_DBG("Finalizing instance %pK", opaque);
 
         ASSERT(opaque);
         kfree(opaque);
-
-        LOG_FEXIT;
 
         return 0;
 }

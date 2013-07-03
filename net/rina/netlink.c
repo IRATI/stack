@@ -504,8 +504,6 @@ int rina_netlink_init(void)
         test_data = &test_int;
 #endif
 
-        LOG_FBEGN;
-
         LOG_DBG("Initializing Netlink layer");
 
 
@@ -528,8 +526,6 @@ int rina_netlink_init(void)
                                       nl_rina_echo);
 #endif
 
-        LOG_FEXIT;
-
         LOG_DBG("NetLink layer initialized successfully");
 
         return 0;
@@ -538,8 +534,6 @@ int rina_netlink_init(void)
 void rina_netlink_exit(void)
 {
         int ret;
-
-        LOG_FBEGN;
 
         LOG_DBG("Finalizing Netlink layer");
 
@@ -551,6 +545,4 @@ void rina_netlink_exit(void)
         }
 
         LOG_DBG("NetLink layer finalized successfully");
-
-        LOG_FEXIT;
 }

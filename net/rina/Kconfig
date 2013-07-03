@@ -24,13 +24,6 @@ config RINA_UNFILTERED_LOGS
 	help
 	  No help for the time being
 
-config RINA_DEBUG_SCOPES
-	bool "Dump a message upon entering/exiting a scope"
-	default y
-	depends on RINA_DEBUG
-	help
-	  No help for the time being
-
 config RINA_DEBUG_HEARTBEATS
 	bool "Dump heartbeat messages"
 	default y

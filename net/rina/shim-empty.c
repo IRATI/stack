@@ -57,95 +57,67 @@ static int empty_flow_allocate_request(struct shim_instance_data * data,
                                        const struct flow_spec_t *  flow_spec,
                                        port_id_t *                 id)
 {
-        LOG_FBEGN;
-
         ASSERT(data);
         ASSERT(source);
-        ASSERT(dest)
+        ASSERT(dest);
 
-        LOG_FEXIT;
-
-        return 0;
+        return -1;
 }
 
 static int empty_flow_allocate_response(struct shim_instance_data * data,
                                         port_id_t                   id,
                                         response_reason_t *         response)
 {
-        LOG_FBEGN;
-
         ASSERT(data);
         ASSERT(response);
 
-        LOG_FEXIT;
-
-        return 0;
+        return -1;
 }
 
 static int empty_flow_deallocate(struct shim_instance_data * data,
                                  port_id_t                   id)
 {
-        LOG_FBEGN;
-
         ASSERT(data);
 
-        LOG_FEXIT;
-
-        return 0;
+        return -1;
 }
 
 static int empty_application_register(struct shim_instance_data * data,
                                       const struct name_t *       name)
 {
-        LOG_FBEGN;
-
         ASSERT(data);
         ASSERT(name);
 
-        LOG_FEXIT;
-
-        return 0;
+        return -1;
 }
 
 static int empty_application_unregister(struct shim_instance_data * data,
                                         const struct name_t *       name)
 {
-        LOG_FBEGN;
-
         ASSERT(data);
         ASSERT(name);
 
-        LOG_FEXIT;
-
-        return 0;
+        return -1;
 }
 
 static int empty_sdu_write(struct shim_instance_data * data,
                            port_id_t                   id,
                            const struct sdu_t *        sdu)
 {
-        LOG_FBEGN;
-
         ASSERT(data);
         ASSERT(sdu);
 
-        LOG_FEXIT;
-
-        return 0;
+        return -1;
 }
 
 static int empty_sdu_read(struct shim_instance_data * data,
                           port_id_t                   id,
                           struct sdu_t *              sdu)
 {
-        LOG_FBEGN;
-
         ASSERT(data);
         ASSERT(sdu);
 
-        LOG_FEXIT;
-
-        return 0;
+        return -1;
 }
 
 /*
@@ -186,14 +158,10 @@ static struct shim * empty_shim = NULL;
 /* Initializes the shim_data structure */
 static int empty_init(struct shim_data * data)
 {
-        LOG_FBEGN;
-
         ASSERT(data);
 
         bzero(&empty_data, sizeof(empty_data));
         INIT_LIST_HEAD(data->instances);
-
-        LOG_FEXIT;
 
         return 0;
 }
@@ -204,8 +172,6 @@ static int empty_init(struct shim_data * data)
  */
 static int empty_fini(struct shim_data * data)
 {
-        LOG_FBEGN;
-
         ASSERT(data);
 
         /*
@@ -215,9 +181,9 @@ static int empty_fini(struct shim_data * data)
          *   here
          */
 
-        LOG_FEXIT;
+        /* FIXME: Add code here */
 
-        return 0;
+        return -1;
 }
 
 static struct shim_instance_data * find_instance(struct shim_data * data,
@@ -226,15 +192,12 @@ static struct shim_instance_data * find_instance(struct shim_data * data,
 
 	struct shim_instance_data * pos;
 
-	LOG_FBEGN;
-
 	list_for_each_entry(pos, data->instances, list) {
 		if (pos->id == id) {
 			return pos;
 		}
 	}
 
-	LOG_FEXIT;
 	return NULL;
        
 }
@@ -244,13 +207,11 @@ static struct shim_instance * empty_create(struct shim_data * data,
 {
         struct shim_instance * inst;
 
-        LOG_FBEGN;
-
         ASSERT(data);
 	
 	/* Check if there already is an instance with that id */
 	if (find_instance(data,id)) {
-		LOG_ERR("Already a shim instance with id %d", id);
+		LOG_ERR("There's a shim instance with id %d already", id);
 		return NULL;
 	} 
 
@@ -275,32 +236,23 @@ static struct shim_instance * empty_create(struct shim_data * data,
          */
         list_add(data->instances, &(inst->data->list));
 
-        LOG_FEXIT;
-
         return inst;
 }
 
 /* FIXME: Might need to move this to a global file for all shims */
 static int name_cpy(struct name_t ** dst, const struct name_t * src)
 {
-	LOG_FBEGN;
-
         *dst = rkzalloc(sizeof(**dst), GFP_KERNEL);
-        if (!*dst) {
-                LOG_FEXIT;
+        if (!*dst)
                 return -1;
-        }
 
-        if(!strcpy((*dst)->process_name, src->process_name)  
-		|| !strcpy((*dst)->process_instance, src->process_instance) 
-		|| !strcpy((*dst)->entity_name, src->entity_name) 
-		|| !strcpy((*dst)->entity_instance, src->entity_instance)) {
+        if(!strcpy((*dst)->process_name,     src->process_name)     ||
+           !strcpy((*dst)->process_instance, src->process_instance) ||
+           !strcpy((*dst)->entity_name,      src->entity_name)      ||
+           !strcpy((*dst)->entity_instance,  src->entity_instance)) {
 		LOG_ERR("Cannot perform strcpy");
-                LOG_FEXIT;
                 return -1;
 	}
-
-        LOG_FEXIT;
 
 	return 0;
 }
@@ -310,18 +262,15 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
                                               const struct shim_config * cfg)
 {
 	struct shim_instance_data * instance;
-	struct shim_config * tmp;
-
-	LOG_FBEGN;
+	struct shim_config *        tmp;
 
         ASSERT(data);
         ASSERT(inst);
         ASSERT(cfg);
 
-	instance = find_instance(data,inst->data->id);
+	instance = find_instance(data, inst->data->id);
 	if (!instance) {
-		LOG_ERR("No instance with that id");
-		LOG_FEXIT;
+		LOG_ERR("There's no instance with id %d", inst->data->id);
 		return inst;
 	}
 
@@ -334,12 +283,12 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
 
         /* Use configuration values on that instance */
 	list_for_each_entry(tmp, &(cfg->list), list) {
-		if (!strcmp(tmp->entry->name, "dif-name")
-			&& tmp->entry->value->type == SHIM_CONFIG_STRING) {
+		if (!strcmp(tmp->entry->name, "dif-name") &&
+                    tmp->entry->value->type == SHIM_CONFIG_STRING) {
                         if (name_cpy(&(instance->info->dif_name),
-			      (struct name_t *) tmp->entry->value->data)) {
+                                     (struct name_t *)
+                                     tmp->entry->value->data)) {
 				LOG_ERR("Failed to copy DIF name");
-                                LOG_FEXIT;
                                 return inst;
                         }
 		}
@@ -351,8 +300,6 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
          * the same pointer.
          */
 	
-        LOG_FEXIT;
-
         return inst;
 }
 
@@ -360,8 +307,7 @@ static int empty_destroy(struct shim_data *     data,
                          struct shim_instance * instance)
 {
 	struct shim_instance_data * inst;
-	struct list_head *pos, *q;
-        LOG_FBEGN;
+	struct list_head          * pos, * q;
 
         ASSERT(data);
         ASSERT(instance);
@@ -380,8 +326,6 @@ static int empty_destroy(struct shim_data *     data,
 		 }
 	}
 
-        LOG_FEXIT;
-
         return 0;
 }
 
@@ -398,8 +342,6 @@ extern struct kipcm * default_kipcm;
 
 static int __init mod_init(void)
 {
-        LOG_FBEGN;
-
         /*
          * Pass data and ops to the upper layer.
          *
@@ -416,20 +358,14 @@ static int __init mod_init(void)
                                          &empty_ops);
         if (!empty_shim) {
                 LOG_CRIT("Initialization failed");
-
-                LOG_FEXIT;
                 return -1;
         }
-
-        LOG_FEXIT;
 
         return 0;
 }
 
 static void __exit mod_exit(void)
 {
-        LOG_FBEGN;
-
         /*
          * Upon unregistration empty_ops.fini will be called (if present), that
          * function will be in charge to release all the resources allocated
@@ -443,8 +379,6 @@ static void __exit mod_exit(void)
                 LOG_CRIT("Cannot unregister");
                 return;
         }
-
-        LOG_FEXIT;
 }
 
 module_init(mod_init);

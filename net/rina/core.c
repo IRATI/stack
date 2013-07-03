@@ -68,8 +68,6 @@ static struct attribute_group root_attr_group = {
 
 static int __init rina_core_init(void)
 {
-        LOG_FBEGN;
-
         LOG_INFO("RINA stack initializing");
 
         if (rina_debug_init())
@@ -107,8 +105,6 @@ static int __init rina_core_init(void)
                  RINA_VERSION_MAJOR(version),
                  RINA_VERSION_MINOR(version),
                  RINA_VERSION_MICRO(version));
-
-        LOG_FEXIT;
 
         return 0;
 }

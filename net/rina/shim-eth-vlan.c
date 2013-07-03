@@ -90,96 +90,67 @@ static int eth_vlan_flow_allocate_request(struct shim_instance_data * data,
                                           const struct flow_spec_t *  flowspec,
                                           port_id_t *                 port_id)
 {
-        LOG_FBEGN;
-
-
         ASSERT(data);
         ASSERT(source);
         ASSERT(dest)
 
-        LOG_FEXIT;
-
-        return 0;
+        return -1;
 }
 
 static int eth_vlan_flow_allocate_response(struct shim_instance_data * data,
                                            port_id_t                   port_id,
                                            response_reason_t *         resp)
 {
-        LOG_FBEGN;
-
         ASSERT(data);
         ASSERT(response);
 
-        LOG_FEXIT;
-
-        return 0;
+        return -1;
 }
 
 static int eth_vlan_flow_deallocate(struct shim_instance_data * data,
                                     port_id_t                   port_id)
 {
-        LOG_FBEGN;
-
         ASSERT(data);
 
-        LOG_FEXIT;
-
-        return 0;
+        return -1;
 }
 
 static int eth_vlan_application_register(struct shim_instance_data * data,
                                          const struct name_t *       name)
 {
-        LOG_FBEGN;
-
         ASSERT(data);
         ASSERT(name);
 
-        LOG_FEXIT;
-
-        return 0;
+        return -1;
 }
 
 static int eth_vlan_application_unregister(struct shim_instance_data * data,
                                            const struct name_t *       name)
 {
-        LOG_FBEGN;
-
         ASSERT(data);
         ASSERT(name);
 
-        LOG_FEXIT;
-
-        return 0;
+        return -1;
 }
 
 static int eth_vlan_sdu_write(struct shim_instance_data * data,
                               port_id_t                   port_id,
                               const struct sdu_t *        sdu)
 {
-        LOG_FBEGN;
-
 	ASSERT(data);
         ASSERT(sdu);
 
-        LOG_FEXIT;
-
-        return 0;
+        return -1;
 }
 
 static int eth_vlan_sdu_read(struct shim_instance_data * data,
                              port_id_t                   id,
                              struct sdu_t *              sdu)
 {
-        LOG_FBEGN;
-
 	ASSERT(data);
         ASSERT(sdu);
 
-        LOG_FEXIT;
-
-        return 0;
+        return -1;
 }
 
 /* Filter the devices here. Accept packets from VLANs that are configured */
@@ -191,12 +162,12 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         if (skb->pkt_type == PACKET_OTHERHOST ||
             skb->pkt_type == PACKET_LOOPBACK) {
                 kfree_skb(skb);
-                return 0;
+                return -1;
         }
 
         skb = skb_share_check(skb, GFP_ATOMIC);
         if (!skb)
-                return 0;
+                return -1;
 
         /* Get the SDU out of the sk_buff */
 
@@ -222,28 +193,20 @@ static struct shim *  eth_vlan_shim = NULL;
 
 static int eth_vlan_init(struct shim_data * data)
 {
-
-        LOG_FBEGN;
-	LOG_INFO("Shim-eth-vlan module v%d.%d loaded",0,1);
         ASSERT(data);
 
+        /* FIXME: Not loaded, initialized ! */
+	LOG_INFO("Shim-eth-vlan module v%d.%d loaded", 0, 1);
+
         bzero(&eth_vlan_data, sizeof(eth_vlan_data));
-
         INIT_LIST_HEAD(data->instances);
-
-        LOG_FEXIT;
 
         return 0;
 }
 
 static int eth_vlan_fini(struct shim_data * data)
 {
-
-	LOG_FBEGN;
-	
         ASSERT(data);
-
-        LOG_FEXIT;
 
         return 0;
 }
@@ -255,12 +218,9 @@ static struct shim_instance * eth_vlan_create(struct shim_data * data,
         struct shim_instance *      inst;
 	struct shim_instance_data * pos;
 
-        LOG_FBEGN;
-
         ASSERT(data);
 	list_for_each_entry(pos, data->instances, instances) {
-		if(pos->id == id) {
-			
+		if (pos->id == id) {
 			return ;
 		}
 	}
@@ -286,8 +246,6 @@ static struct shim_instance * eth_vlan_create(struct shim_data * data,
          */
         list_add(data->instances, inst->data);
 
-        LOG_FEXIT;
-
         return inst;
 }
 
@@ -295,19 +253,19 @@ static int name_cpy(struct name_t * dst,
                     const struct name_t *src)
 {
         struct name_t * temp;
-        LOG_FBEGN;
+
         temp = rkmalloc(sizeof(*temp), GFP_KERNEL);
-        if (!temp) {
-                LOG_FEXIT;
+        if (!temp)
                 return -1;
-        }
 
         /* FIXME: Check strcpy return values */
         strcpy(temp->process_name, src->process_name);
         strcpy(temp->process_instance, src->process_instance);
         strcpy(temp->entity_name, src->entity_name);
         strcpy(temp->entity_instance, src->entity_instance);
+
         dst = temp;
+
         return 0;
 }
 
@@ -327,16 +285,13 @@ struct shim_instance * eth_vlan_configure(struct shim_data *          data,
 
         /* Check if instance is not null, check if data is not null */
         if (!inst) {
-                LOG_WARN("Configure called on empty shim instance");
-
-                LOG_FEXIT;
+                LOG_ERR("Configure called with an empty shim instance");
                 return inst;
         }
 
         eth_instance = (struct eth_vlan_instance *) inst->data;
         if (!eth_instance) {
-                LOG_WARN("Configure called on empty eth vlan shim instance");
-                LOG_FEXIT;
+                LOG_ERR("Configure called on empty eth vlan shim instance");
                 return inst;
         }
 
@@ -356,7 +311,6 @@ struct shim_instance * eth_vlan_configure(struct shim_data *          data,
         }
         if (!info) {
                 /* FIXME: ... we haven't reconfigured it correctly anyway */
-                LOG_FEXIT;
                 return inst;
         }
 
@@ -365,15 +319,13 @@ struct shim_instance * eth_vlan_configure(struct shim_data *          data,
                 c   = list_entry(pos, struct shim_config, list);
                 tmp = c->entry;
                 val = tmp->value;
-                if (!strcmp(tmp->name, "dif-name")
-                    && val->type == SHIM_CONFIG_STRING) {
+                if (!strcmp(tmp->name, "dif-name") &&
+                    val->type == SHIM_CONFIG_STRING) {
                         if (!name_cpy(info->name,
-                                      (struct name_t *) val->data)) {
-                                LOG_FEXIT;
+                                      (struct name_t *) val->data))
                                 return inst;
-                        }
-                } else if (!strcmp(tmp->name, "vlan-id")
-                           && val->type == SHIM_CONFIG_UINT) {
+                } else if (!strcmp(tmp->name, "vlan-id") &&
+                           val->type == SHIM_CONFIG_UINT) {
                         info->vlan_id = * (uint16_t *) val->data;
                         if (!reconfigure &&
                             info->vlan_id != old_vlan_id) {
@@ -409,10 +361,8 @@ struct shim_instance * eth_vlan_configure(struct shim_data *          data,
                         complete_interface =
                                 rkmalloc(sizeof(*complete_interface),
                                          GFP_KERNEL);
-                        if (!complete_interface) {
-                                LOG_FEXIT;
+                        if (!complete_interface)
                                 return inst;
-                        }
 
                         sprintf(string_old_vlan_id,"%d",old_vlan_id);
                         strcat(complete_interface, ".");
@@ -422,8 +372,8 @@ struct shim_instance * eth_vlan_configure(struct shim_data *          data,
                         read_lock(&dev_base_lock);
                         dev = __dev_get_by_name(&init_net, complete_interface);
                         if (!dev) {
+                                /* FIXME: Its name might be handy*/
                                 LOG_ERR("Invalid device to configure");
-                                LOG_FEXIT;
                                 return inst;
                         }
                         eth_vlan_packet_type.dev = dev;
@@ -448,8 +398,6 @@ static int eth_vlan_destroy(struct shim_data *     data,
 {
         struct shim_instance * instance;
 
-        LOG_FBEGN;
-
         if (inst) {
                 /*
                  * FIXME: Need to ask instance to clean up as well
@@ -463,7 +411,6 @@ static int eth_vlan_destroy(struct shim_data *     data,
                 kfree(inst);
         }
 
-        LOG_FEXIT;
         return 0;
 }
 
@@ -481,8 +428,6 @@ extern struct kipcm * default_kipcm;
 
 static int __init mod_init(void)
 {
-        LOG_FBEGN;
-
 	bzero(&empty_data, sizeof(empty_data));
 
         eth_vlan_shim = kipcm_shim_register(default_kipcm,
@@ -491,27 +436,19 @@ static int __init mod_init(void)
                                             &eth_vlan_ops);
         if (!eth_vlan_shim) {
                 LOG_CRIT("Initialization failed");
-
-                LOG_FEXIT;
                 return -1;
         }
-
-        LOG_FEXIT;
 
         return 0;
 }
 
 static void __exit mod_exit(void)
 {
-        LOG_FBEGN;
-
         if (kipcm_shim_unregister(default_kipcm,
                                   eth_vlan_shim)) {
                 LOG_CRIT("Cannot unregister");
                 return;
         }
-
-        LOG_FEXIT;
 }
 
 
