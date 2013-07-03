@@ -31,7 +31,7 @@
 #include "netlink.h"
 #include "personality.h"
 
-static uint32_t      version   = MK_RINA_VERSION(0, 0, 2);
+static uint32_t      version   = MK_RINA_VERSION(0, 0, 3);
 static struct kset * root_kset = NULL;
 
 uint32_t rina_version(void)
@@ -90,10 +90,6 @@ static int __init rina_core_init(void)
                 return -1;
         }
 
-        /*
-         * FIXME: Move to default personality OR add multiplexer based on
-         * personality identifiers ...
-         */
         if (rina_netlink_init()) {
                 kset_unregister(root_kset);
                 rina_debug_exit();
