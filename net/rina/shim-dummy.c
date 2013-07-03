@@ -188,11 +188,10 @@ static struct shim *    dummy_shim = NULL;
 
 static int dummy_init(struct shim_data * data)
 {
-        struct list_head * dummy_shim_list;
 
         LOG_FBEGN;
 
-        dummy_data.shim_list = kmalloc(sizeof(*dummy_shim_list), GFP_KERNEL);
+        dummy_data.shim_list = kzalloc(sizeof(struct list_head), GFP_KERNEL);
         if (!dummy_data.shim_list) {
                 LOG_ERR("Cannot allocate %zu bytes of memory",
                         sizeof(*dummy_data.shim_list));
@@ -202,8 +201,7 @@ static int dummy_init(struct shim_data * data)
                 LOG_FEXIT;
                 return -1;
         }
-        dummy_data.shim_list->next = dummy_data.shim_list;
-        dummy_data.shim_list->prev = dummy_data.shim_list;
+        INIT_LIST_HEAD(dummy_data.shim_list);
 
         LOG_FEXIT;
 
@@ -280,8 +278,7 @@ static struct shim_instance * dummy_create(struct shim_data * data,
                 return NULL;
         }
 
-        port_flow->prev = port_flow;
-        port_flow->next = port_flow;
+        INIT_LIST_HEAD(port_flow);
 
         dummy_inst->ipc_process_id = id;
         dummy_inst->flows          = port_flow;
