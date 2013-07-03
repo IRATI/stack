@@ -19,6 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/slab.h>
+
 #define RINA_PREFIX "netlink"
 
 #include "logs.h"
@@ -26,7 +28,7 @@
 #include "netlink.h"
 
 /* FIXME: This define (and its related code) has to be removed */
-#define TESTING 1
+#define TESTING 0
 
 #define NETLINK_RINA "rina"
 
@@ -48,6 +50,11 @@ struct message_handler {
         message_handler_cb cb;
 };
 
+struct rina_nl_set {
+        /* FIXME: Must contain the callback table */
+};
+
+/* FIXME: Must be moved inside struct rina_nl_set */
 struct message_handler messages_handlers[NETLINK_RINA_C_MAX];
 
 static struct genl_family nl_family = {
@@ -61,6 +68,7 @@ static struct genl_family nl_family = {
 static int is_message_type_in_range(int msg_type, int min_value, int max_value)
 { return ((msg_type < min_value || msg_type >= max_value) ? 0 : 1); }
 
+/* FIXME: Must dispatch a message to a rina_nl_set */
 static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 {
         /*
@@ -392,30 +400,16 @@ static struct genl_ops nl_ops[] = {
         },
 };
 
-int rina_netlink_unregister_handler(int msg_type)
+int rina_netlink_register_handler(struct rina_nl_set * set,
+                                  int                  msg_type,
+                                  void *               data,
+                                  message_handler_cb   handler)
 {
-        LOG_DBG("Unregistering handler for message type %d", msg_type);
-
-        if (!is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX)) {
-                LOG_ERR("Message type %d is out-of-range, "
-                        "cannot unregister", msg_type);
+        if (!set) {
+                LOG_ERR("Bogus set passed, cannot register handler");
                 return -1;
         }
-        ASSERT(msg_type >= 0 && msg_type < NETLINK_RINA_C_MAX);
 
-        bzero(&messages_handlers[msg_type],
-              sizeof(messages_handlers[msg_type]));
-
-        LOG_DBG("Handler for message type %d unregistered successfully",
-                msg_type);
-
-        return 0;
-}
-
-int rina_netlink_register_handler(int                msg_type,
-                                  void *             data,
-                                  message_handler_cb handler)
-{
         LOG_DBG("Registering handler callback %pK and data %pK "
                 "for message type %d", handler, data, msg_type);
 
@@ -449,6 +443,60 @@ int rina_netlink_register_handler(int                msg_type,
 
         return 0;
 }
+EXPORT_SYMBOL(rina_netlink_register_handler);
+
+int rina_netlink_unregister_handler(struct rina_nl_set * set,
+                                    int                  msg_type)
+{
+        if (!set) {
+                LOG_ERR("Bogus set passed, cannot register handler");
+                return -1;
+        }
+
+        LOG_DBG("Unregistering handler for message type %d", msg_type);
+
+        if (!is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX)) {
+                LOG_ERR("Message type %d is out-of-range, "
+                        "cannot unregister", msg_type);
+                return -1;
+        }
+        ASSERT(msg_type >= 0 && msg_type < NETLINK_RINA_C_MAX);
+
+        bzero(&messages_handlers[msg_type],
+              sizeof(messages_handlers[msg_type]));
+
+        LOG_DBG("Handler for message type %d unregistered successfully",
+                msg_type);
+
+        return 0;
+}
+EXPORT_SYMBOL(rina_netlink_unregister_handler);
+
+struct rina_nl_set * rina_netlink_set_create(personality_id id)
+{
+        struct rina_nl_set * tmp;
+
+        tmp = kzalloc(sizeof(struct rina_nl_set), GFP_KERNEL);
+        if (!tmp) {
+                LOG_ERR("Cannot allocate %zd bytes of memory", sizeof(*tmp));
+                return NULL;
+        }
+
+        return tmp;
+}
+EXPORT_SYMBOL(rina_netlink_set_create);
+
+int rina_netlink_set_destroy(struct rina_nl_set * set)
+{
+        if (!set) {
+                LOG_ERR("Bogus set passed, cannot destroy");
+                return -1;
+        }
+
+        kfree(set);
+        return 0;
+}
+EXPORT_SYMBOL(rina_netlink_set_destroy);
 
 int rina_netlink_init(void)
 {
@@ -472,8 +520,9 @@ int rina_netlink_init(void)
         LOG_DBG("genl_register_family_with_ops() returned %i", ret);
 
         if (ret < 0) {
-                LOG_ERR("Cannot register family and ops (error=%i)", ret);
-                return -2;
+                LOG_ERR("Cannot register Netlink family and ops (error=%i), "
+                        "bailing out", ret);
+                return -1;
         }
 
 #if TESTING
@@ -498,10 +547,10 @@ void rina_netlink_exit(void)
 
         LOG_DBG("Finalizing Netlink layer");
 
-        /* Unregister the family */
         ret = genl_unregister_family(&nl_family);
         if (ret) {
-                LOG_ERR("Could not unregister family (error=%i)", ret);
+                LOG_ERR("Could not unregister Netlink family (error=%i), "
+                        "bailing out. Your system might become unstable", ret);
                 return;
         }
 

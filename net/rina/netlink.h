@@ -142,32 +142,20 @@ enum rina_nl_operation_code {
 int  rina_netlink_init(void);
 void rina_netlink_exit(void);
 
+struct rina_nl_set;
+
+struct rina_nl_set * rina_netlink_set_create(personality_id id);
+int                  rina_netlink_set_destroy(struct rina_nl_set * set);
+
 typedef int (* message_handler_cb)(void *             data,
                                    struct sk_buff *   buff,
                                    struct genl_info * info); 
 
-int  rina_netlink_register_handler(int                msg_type,
-				   void *             data,
-                                   message_handler_cb handler);
-int  rina_netlink_unregister_handler(int msg_type);
-
-#if 0
-/* New API (obsolete all the previous ones */
-
-/* Global initializer/finalizer */
-int  rina_netlink_init(void);
-void rina_netlink_exit(void);
-
-/* Set management */
-int  rina_netlink_set_create(personality_id id);
-int  rina_netlink_set_destroy(personality_id id);
-
-/* Per-set handlers management */
-int  rina_netlink_set_register(personality_id     id,
-                               int                msg_type,
-                               void *             data,
-                               message_handler_cb handler);
-int  rina_netlink_set_unregister(set_id i, int msg_type);
-#endif
+int  rina_netlink_register_handler(struct rina_nl_set * set,
+                                   int                  msg_type,
+                                   void *               data,
+                                   message_handler_cb   handler);
+int  rina_netlink_unregister_handler(struct rina_nl_set * set,
+                                     int                  msg_type);
 
 #endif
