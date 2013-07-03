@@ -41,21 +41,19 @@ struct personality_data {
         void *         rmt;
 };
 
-#define to_pd(X) ((struct personality_data *) X)
-
-static int default_ipc_create(void *                data,
-                              const struct name_t * name,
-                              ipc_process_id_t      id,
-                              dif_type_t            type)
+static int default_ipc_create(struct personality_data * data,
+                              const struct name_t *     name,
+                              ipc_process_id_t          id,
+                              dif_type_t                type)
 {
         if (!data) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_ipc_create(to_pd(data)->kipcm, name, id, type);
+        return kipcm_ipc_create(data->kipcm, name, id, type);
 }
 
-static int default_ipc_configure(void *                          data,
+static int default_ipc_configure(struct personality_data *       data,
                                  ipc_process_id_t                id,
                                  const struct ipc_process_conf * conf)
 {
@@ -63,73 +61,73 @@ static int default_ipc_configure(void *                          data,
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_ipc_configure(to_pd(data)->kipcm, id, conf);
+        return kipcm_ipc_configure(data->kipcm, id, conf);
 }
 
-static int default_ipc_destroy(void *           data,
-                               ipc_process_id_t id)
+static int default_ipc_destroy(struct personality_data * data,
+                               ipc_process_id_t          id)
 {
         if (!data) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_ipc_destroy(to_pd(data)->kipcm, id);
+        return kipcm_ipc_destroy(data->kipcm, id);
 }
 
-static int default_connection_create(void *                      data,
+static int default_connection_create(struct personality_data *   data,
                                      const struct connection_t * connection)
 {
         if (!data) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return efcp_create(to_pd(data)->efcp, connection);
+        return efcp_create(data->efcp, connection);
 }
 
-static int default_connection_destroy(void *   data,
-                                      cep_id_t cep_id)
+static int default_connection_destroy(struct personality_data * data,
+                                      cep_id_t                  id)
 {
         if (!data) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return efcp_destroy(to_pd(data)->efcp, cep_id);
+        return efcp_destroy(data->efcp, id);
 }
 
-static int default_connection_update(void *   data,
-                                     cep_id_t id_from,
-                                     cep_id_t id_to)
+static int default_connection_update(struct personality_data * data,
+                                     cep_id_t                  id_from,
+                                     cep_id_t                  id_to)
 {
         if (!data) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return efcp_update(to_pd(data)->efcp, id_from, id_to);
+        return efcp_update(data->efcp, id_from, id_to);
 }
 
-static int default_sdu_write(void *               data,
-                             port_id_t            id,
-                             const struct sdu_t * sdu)
+static int default_sdu_write(struct personality_data * data,
+                             port_id_t                 id,
+                             const struct sdu_t *      sdu)
 {
         if (!data) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_sdu_write(to_pd(data)->kipcm, id, sdu);
+        return kipcm_sdu_write(data->kipcm, id, sdu);
 }
 
-static int default_sdu_read(void *         data,
-                            port_id_t      id,
-                            struct sdu_t * sdu)
+static int default_sdu_read(struct personality_data * data,
+                            port_id_t                 id,
+                            struct sdu_t *            sdu)
 {
         if (!data) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_sdu_read(to_pd(data)->kipcm, id, sdu);
+        return kipcm_sdu_read(data->kipcm, id, sdu);
 }
 
-static int default_fini(void * data)
+static int default_fini(struct personality_data * data)
 {
         struct personality_data * tmp = data;
         int                       err;
@@ -160,40 +158,38 @@ static int default_fini(void * data)
 struct kipcm * default_kipcm;
 EXPORT_SYMBOL(default_kipcm);
 
-static int default_init(struct kobject * parent,
-                        void *           data)
+static int default_init(struct kobject *          parent,
+                        struct personality_data * data)
 {
-        struct personality_data * tmp = data;
-
-        if (!tmp) return -1;
+        if (!data) return -1;
 
         LOG_DBG("Initializing default personality");
 
         LOG_DBG("Initializing kipcm component");
-        tmp->kipcm = kipcm_init(parent);
-        if (!tmp->kipcm) {
-                if (default_fini(tmp)) {
+        data->kipcm = kipcm_init(parent);
+        if (!data->kipcm) {
+                if (default_fini(data)) {
                         LOG_CRIT("The system might become unstable ...");
                         return -1;
                 }
         }
 
         /* FIXME: To be removed */
-        default_kipcm = tmp->kipcm;
+        default_kipcm = data->kipcm;
 
         LOG_DBG("Initializing efcp component");
-        tmp->efcp = efcp_init(parent);
-        if (!tmp->efcp) {
-                if (default_fini(tmp)) {
+        data->efcp = efcp_init(parent);
+        if (!data->efcp) {
+                if (default_fini(data)) {
                         LOG_CRIT("The system might become unstable ...");
                         return -1;
                 }
         }
 
         LOG_DBG("Initializing rmt component");
-        tmp->rmt = rmt_init(parent);
-        if (!tmp->rmt) {
-                if (default_fini(tmp)) {
+        data->rmt = rmt_init(parent);
+        if (!data->rmt) {
+                if (default_fini(data)) {
                         LOG_CRIT("The system might become unstable ...");
                         return -1;
                 }

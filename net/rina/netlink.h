@@ -30,10 +30,11 @@
 #include <net/genetlink.h>
 #include <linux/skbuff.h>
 
-#define NETLINK_RINA "nlrina"
+#include "personality.h"
 
 enum rina_nl_operation_code {
 	/* Unespecified operation */
+        /* FIXME: What's the meaning ??? */
 	RINA_C_UNSPEC, 
 	
 	/* Allocate flow request, Application -> IPC Manager */
@@ -134,25 +135,39 @@ enum rina_nl_operation_code {
 	/* RMT (kernel) -> IPC Process (user space) */
 	RINA_C_RMT_DUMP_FT_REPLY,
 
-	__NETLINK_RINA_C_MAX,
+        /* Do not use */
+	RINA_C_MAX,
 };
-
-/* attributes */
-enum {
-	NETLINK_RINA_A_UNSPEC,
-	NETLINK_RINA_A_MSG,
-	__NETLINK_RINA_A_MAX,
-};
-
-#define NETLINK_RINA_A_MAX (__NETLINK_RINA_A_MAX - 1)
-#define NETLINK_RINA_C_MAX (__NETLINK_RINA_C_MAX - 1)
 
 int  rina_netlink_init(void);
 void rina_netlink_exit(void);
 
-int  rina_netlink_register_handler(int,
-                                   int (*)(struct sk_buff *,
-                                           struct genl_info *));
-int  rina_netlink_unregister_handler(int);
+typedef int (* message_handler_cb)(void *             data,
+                                   struct sk_buff *   buff,
+                                   struct genl_info * info); 
+
+int  rina_netlink_register_handler(int                msg_type,
+				   void *             data,
+                                   message_handler_cb handler);
+int  rina_netlink_unregister_handler(int msg_type);
+
+#if 0
+/* New API (obsolete all the previous ones */
+
+/* Global initializer/finalizer */
+int  rina_netlink_init(void);
+void rina_netlink_exit(void);
+
+/* Set management */
+int  rina_netlink_set_create(personality_id id);
+int  rina_netlink_set_destroy(personality_id id);
+
+/* Per-set handlers management */
+int  rina_netlink_set_register(personality_id     id,
+                               int                msg_type,
+                               void *             data,
+                               message_handler_cb handler);
+int  rina_netlink_set_unregister(set_id i, int msg_type);
+#endif
 
 #endif
