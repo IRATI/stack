@@ -18,6 +18,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/kobject.h>
 #include <linux/slab.h>
 
 #define RINA_PREFIX "rmt"
@@ -38,11 +39,8 @@ void * rmt_init(struct kobject * parent)
 
         LOG_DBG("Initializing instance");
 
-        e = kmalloc(sizeof(*e), GFP_KERNEL);
+        e = rkmalloc(sizeof(*e), GFP_KERNEL);
         if (!e) {
-                LOG_CRIT("Cannot allocate %zu bytes of memory",
-                         sizeof(*e));
-
                 LOG_FEXIT;
                 return e;
         }
