@@ -21,7 +21,6 @@
 #include <linux/export.h>
 #include <linux/string.h>
 #include <linux/kobject.h>
-#include <linux/slab.h>
 #include <linux/sysfs.h>
 
 #define RINA_PREFIX "personality"

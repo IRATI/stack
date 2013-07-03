@@ -21,7 +21,6 @@
  */
 
 #include <linux/module.h>
-#include <linux/slab.h>
 #include <linux/list.h>
 
 #define RINA_PREFIX "shim-dummy"

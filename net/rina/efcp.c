@@ -19,7 +19,6 @@
  */
 
 #include <linux/kobject.h>
-#include <linux/slab.h>
 
 #define RINA_PREFIX "efcp"
 

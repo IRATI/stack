@@ -26,7 +26,6 @@
 #include <linux/string.h>
 #include <linux/list.h>
 #include <linux/rbtree.h>
-#include <linux/slab.h>
 #include <linux/netdevice.h>
 #include <linux/if_packet.h>
 

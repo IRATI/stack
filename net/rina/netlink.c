@@ -19,8 +19,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/slab.h>
-
 #define RINA_PREFIX "netlink"
 
 #include "logs.h"
