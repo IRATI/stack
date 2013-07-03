@@ -30,7 +30,7 @@
 #include "patterns.h"
 #include "netlink-messages.h"
 
-#define RINA_GENERIC_NETLINK_FAMILY_NAME "nlrina"
+#define RINA_GENERIC_NETLINK_FAMILY_NAME "rina"
 #define RINA_GENERIC_NETLINK_FAMILY_VERSION 0
 
 namespace rina{
