@@ -27,7 +27,7 @@
 
 #include "logs.h"
 
-void * rkmalloc(size_t size, int type)
+void * rkmalloc(size_t size, gfp_t flags)
 {
         void * tmp = kmalloc(size, type);
         if (!tmp) {
@@ -39,7 +39,7 @@ void * rkmalloc(size_t size, int type)
 }
 EXPORT_SYMBOL(rkmalloc);
 
-void * rkzalloc(size_t size, int type)
+void * rkzalloc(size_t size, gfp_t flags)
 {
         void * tmp = kzalloc(size, type);
         if (!tmp) {
