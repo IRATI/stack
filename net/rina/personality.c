@@ -21,8 +21,8 @@
 #include <linux/export.h>
 #include <linux/string.h>
 #include <linux/kobject.h>
-#include <linux/sysfs.h>
 #include <linux/slab.h>
+#include <linux/sysfs.h>
 
 #define RINA_PREFIX "personality"
 
@@ -205,11 +205,9 @@ struct personality * rina_personality_register(const char *              name,
                 return NULL;
         }
         
-        pers = kzalloc(sizeof(*pers), GFP_KERNEL);
-        if (!pers) {
-                LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*pers));
+        pers = rkzalloc(sizeof(*pers), GFP_KERNEL);
+        if (!pers)
                 return NULL;
-        }
 
         pers->id   = id_get();
         pers->data = data;
