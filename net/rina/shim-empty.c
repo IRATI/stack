@@ -42,8 +42,16 @@ struct empty_info {
 /* This structure will contains per-instance data */
 struct shim_instance_data {
 	struct list_head    list;
+	struct list_head    flows;
         ipc_process_id_t    id;
 	struct empty_info * info;
+};
+
+struct empty_flow {
+	struct list_head      list;
+	port_id_t 	      port_id;
+	const struct name_t * source;
+	const struct name_t * dest;
 };
 
 /*
@@ -63,7 +71,7 @@ static int empty_flow_allocate_request(struct shim_instance_data * data,
 
         ASSERT(data);
         ASSERT(source);
-        ASSERT(dest)
+        ASSERT(dest);
 
         LOG_FEXIT;
 
