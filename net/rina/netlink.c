@@ -151,25 +151,18 @@ static int nl_rina_echo(void * data,
         genlmsg_end(skb, msg_head);
         LOG_DBG("genlmsg_end OK");
 
-        printk("Message generated:\n"
-               "\t Netlink family: %d;\n"
-               "\t Version: %d; \n"
-               "\t Operation code: %d; \n"
-               "\t Flags: %d\n",
-               info->nlhdr->nlmsg_type, info->genlhdr->version,
-               info->genlhdr->cmd, info->nlhdr->nlmsg_flags);
         LOG_ERR("Message generated:\n"
                 "\t Netlink family: %d;\n"
                 "\t Version: %d; \n"
                 "\t Operation code: %d; \n"
-                "\t Flags: %d\n",
+                "\t Flags: %d",
                 info->nlhdr->nlmsg_type, info->genlhdr->version,
                 info->genlhdr->cmd, info->nlhdr->nlmsg_flags);
 
         /* ret = genlmsg_unicast(sock_net(skb->sk),skb,info->snd_portid); */
         ret = genlmsg_unicast(&init_net,skb,info->snd_portid);
         if (ret != 0) {
-                LOG_DBG("COULD NOT SEND BACK UNICAST MESSAGE");
+                LOG_ERR("COULD NOT SEND BACK UNICAST MESSAGE");
                 return -1;
         }
 
