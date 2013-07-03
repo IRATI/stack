@@ -42,7 +42,7 @@ struct empty_info {
 /* This structure will contains per-instance data */
 struct shim_instance_data {
 	struct list_head    list;
-	struct list_head    flows;
+	struct list_head *  flows;
         ipc_process_id_t    id;
 	struct empty_info * info;
 };
@@ -61,17 +61,53 @@ struct empty_flow {
  *   added
  */
 
+static struct empty_flow *
+find_flow(struct shim_instance_data * data, port_id_t id)
+{
+	struct empty_flow * cur;
+
+	list_for_each_entry(cur, data->flows, list) {
+		if (cur->port_id == id) {
+			return cur;
+		}
+	}
+
+	return NULL;
+}
+
 static int empty_flow_allocate_request(struct shim_instance_data * data,
                                        const struct name_t *       source,
                                        const struct name_t *       dest,
                                        const struct flow_spec_t *  flow_spec,
                                        port_id_t *                 id)
 {
+	struct empty_flow * flow;
+
         LOG_FBEGN;
 
         ASSERT(data);
         ASSERT(source);
         ASSERT(dest);
+
+        if (find_flow(data, *id)) {
+        	LOG_ERR("Flow already exists");
+        	LOG_FEXIT;
+
+        	return -1;
+        }
+        flow = kzalloc(sizeof(*flow), GFP_KERNEL);
+	if (!flow) {
+		LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*flow));
+		LOG_FEXIT;
+		return -1;
+	}
+
+	flow->dest = dest;
+	flow->source = source;
+	flow->port_id = *id;
+
+	INIT_LIST_HEAD(&flow->list);
+	list_add(&flow->list, data->flows);
 
         LOG_FEXIT;
 
@@ -230,6 +266,25 @@ static int empty_fini(struct shim_data * data)
         return 0;
 }
 
+static struct shim_instance_data * find_instance(struct shim_data * data,
+						 ipc_process_id_t   id)
+{
+
+	struct shim_instance_data * pos;
+
+	LOG_FBEGN;
+
+	list_for_each_entry(pos, data->instances, list) {
+		if (pos->id == id) {
+			return pos;
+		}
+	}
+
+	LOG_FEXIT;
+	return NULL;
+
+}
+
 static struct shim_instance * empty_create(struct shim_data * data,
                                            ipc_process_id_t   id)
 {
@@ -242,14 +297,12 @@ static struct shim_instance * empty_create(struct shim_data * data,
 	
 	/* Check if there already is an instance with that id */
 
-        /* FIXME: Why don't we have a find_instance() function ? */
-	list_for_each_entry(pos, data->instances, instances) {
-		if (pos->id == id) {
-			LOG_ERR("Shim instance with ipcpid %d already exists", 
-				pos->id);
-			return NULL;
-		}
-	}
+        pos = find_instance(data, id);
+        if (pos) {
+        	LOG_ERR("Instance already exists");
+
+        	return NULL;
+        }
 
         /* Create an instance */
         inst = kzalloc(sizeof(*inst), GFP_KERNEL);
@@ -312,8 +365,9 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
                                               struct shim_instance *     inst,
                                               const struct shim_config * cfg)
 {
-	struct shim_instance_data * instance, pos;
+	struct shim_instance_data * instance, * pos;
 	struct shim_config *        current_entry;
+	struct shim_instance *      inst;
 
 	LOG_FBEGN;
 
@@ -324,7 +378,7 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
         /* Do we have that instance ? */
 
         /* FIXME: Why don't we have a find_instance() function ? */
-	list_for_each_entry(pos, data->instances, instances) {
+	list_for_each_entry(pos, data->instances, list) {
 		if (pos == inst->data) {
 			instance = pos;
 		}
