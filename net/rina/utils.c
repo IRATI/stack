@@ -29,7 +29,7 @@
 
 void * rkmalloc(size_t size, gfp_t flags)
 {
-        void * tmp = kmalloc(size, type);
+        void * tmp = kmalloc(size, flags);
         if (!tmp) {
                 LOG_ERR("Cannot allocate %zd bytes of memory", size);
                 return NULL;
@@ -41,7 +41,7 @@ EXPORT_SYMBOL(rkmalloc);
 
 void * rkzalloc(size_t size, gfp_t flags)
 {
-        void * tmp = kzalloc(size, type);
+        void * tmp = kzalloc(size, flags);
         if (!tmp) {
                 LOG_ERR("Cannot allocate %zd bytes of memory", size);
                 return NULL;
