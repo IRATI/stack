@@ -39,11 +39,11 @@
 #include "kipcm.h"
 #include "utils.h"
 
-/* Holds the configuration of one shim IPC process */
+/* Holds the configuration of one shim instance */
 struct eth_vlan_info {
         uint16_t        vlan_id;
         char *          interface_name;
-        struct name_t * name;
+        struct name_t * dif_name;
 };
 
 enum port_id_state {
@@ -69,6 +69,7 @@ struct shim_eth_flow {
  * shim Ethernet IPC Process
  */
 struct shim_instance_data {
+	struct list_head       list;
 
         /* IPC process id and DIF name */
         ipc_process_id_t       id;
@@ -89,19 +90,19 @@ struct shim_instance_data {
 static int eth_vlan_flow_allocate_request(struct shim_instance_data * data,
                                           const struct name_t *       source,
                                           const struct name_t *       dest,
-                                          const struct flow_spec_t *  flowspec,
-                                          port_id_t                   port_id)
+                                          const struct flow_spec_t *  flow_spec,
+                                          port_id_t                   id)
 {
         ASSERT(data);
         ASSERT(source);
-        ASSERT(dest)
+        ASSERT(dest);
 
         return -1;
 }
 
 static int eth_vlan_flow_allocate_response(struct shim_instance_data * data,
-                                           port_id_t                   port_id,
-                                           response_reason_t *         resp)
+                                           port_id_t                   id,
+                                           response_reason_t *         response)
 {
         ASSERT(data);
         ASSERT(response);
@@ -110,7 +111,7 @@ static int eth_vlan_flow_allocate_response(struct shim_instance_data * data,
 }
 
 static int eth_vlan_flow_deallocate(struct shim_instance_data * data,
-                                    port_id_t                   port_id)
+                                    port_id_t                   id)
 {
         ASSERT(data);
 
@@ -136,7 +137,7 @@ static int eth_vlan_application_unregister(struct shim_instance_data * data,
 }
 
 static int eth_vlan_sdu_write(struct shim_instance_data * data,
-                              port_id_t                   port_id,
+                              port_id_t                   id,
                               const struct sdu_t *        sdu)
 {
 	ASSERT(data);
@@ -188,7 +189,7 @@ static struct shim_instance_ops eth_vlan_instance_ops = {
 };
 
 static struct shim_data {
-        struct list_head * instances;
+        struct list_head instances;
 } eth_vlan_data;
 
 static struct shim *  eth_vlan_shim = NULL;
@@ -198,33 +199,70 @@ static int eth_vlan_init(struct shim_data * data)
         ASSERT(data);
 
         bzero(&eth_vlan_data, sizeof(eth_vlan_data));
-        INIT_LIST_HEAD(data->instances);
+        INIT_LIST_HEAD(&(data->instances));
 
-	LOG_INFO("%s v%d.%d intialized", SHIM_NAME, 0, 1);
+	LOG_INFO("%s v%d.%d intialized", SHIM_NAME, 0, 2);
 
         return 0;
 }
 
 static int eth_vlan_fini(struct shim_data * data)
 {
+ 	struct shim_instance_data * inst;
+	struct list_head          * pos, * q;
         ASSERT(data);
 
+        /*
+         * NOTE:
+         *   All the instances should be removed by the shims layer, no work is
+         *   needed here. In theory, a check for empty list should be added
+         *   here
+         */
+
+        /* Retrieve the instance */
+	list_for_each_safe(pos, q, &(data->instances)) {
+		 inst = list_entry(pos, struct shim_instance_data, list);
+		 /* Unbind from the instances set */
+		 list_del(pos);
+		 /* Destroy it */
+		 rkfree(inst->info->dif_name);
+		 rkfree(inst->info->interface_name);
+		 rkfree(inst->info);
+		 rkfree(inst);
+	}
+
         return 0;
+}
+
+
+static struct shim_instance_data * find_instance(struct shim_data * data,
+						 ipc_process_id_t   id)
+{
+
+	struct shim_instance_data * pos;
+
+	list_for_each_entry(pos, &(data->instances), list) {
+		if (pos->id == id) {
+			return pos;
+		}
+	}
+
+	return NULL;
+       
 }
 
 static struct shim_instance * eth_vlan_create(struct shim_data * data,
                                               ipc_process_id_t   id)
 {
-
-        struct shim_instance *      inst;
-	struct shim_instance_data * pos;
+        struct shim_instance * inst;
 
         ASSERT(data);
-	list_for_each_entry(pos, data->instances, instances) {
-		if (pos->id == id) {
-			return ;
-		}
-	}
+	
+	/* Check if there already is an instance with that id */
+	if (find_instance(data,id)) {
+		LOG_ERR("There's a shim instance with id %d already", id);
+		return NULL;
+	} 
 
         /* Create an instance */
         inst = rkzalloc(sizeof(*inst), GFP_KERNEL);
@@ -245,106 +283,104 @@ static struct shim_instance * eth_vlan_create(struct shim_data * data,
          * Bind the shim-instance to the shims set, to keep all our data
          * structures linked (somewhat) together
          */
-        list_add(data->instances, inst->data);
+        list_add(&(data->instances), &(inst->data->list));
 
         return inst;
 }
 
-static int name_cpy(struct name_t * dst,
-                    const struct name_t *src)
+static int name_cpy(struct name_t ** dst, const struct name_t * src)
 {
-        struct name_t * temp;
-
-        temp = rkmalloc(sizeof(*temp), GFP_KERNEL);
-        if (!temp)
+        *dst = rkzalloc(sizeof(**dst), GFP_KERNEL);
+        if (!*dst)
                 return -1;
 
-        /* FIXME: Check strcpy return values */
-        strcpy(temp->process_name, src->process_name);
-        strcpy(temp->process_instance, src->process_instance);
-        strcpy(temp->entity_name, src->entity_name);
-        strcpy(temp->entity_instance, src->entity_instance);
+        if(!strcpy((*dst)->process_name,     src->process_name)     ||
+           !strcpy((*dst)->process_instance, src->process_instance) ||
+           !strcpy((*dst)->entity_name,      src->entity_name)      ||
+           !strcpy((*dst)->entity_instance,  src->entity_instance)) {
+		LOG_ERR("Cannot perform strcpy");
+                return -1;
+	}
 
-        dst = temp;
-
-        return 0;
+	return 0;
 }
 
 struct shim_instance * eth_vlan_configure(struct shim_data *          data,
                                            struct shim_instance *     inst,
                                            const struct shim_config * cfg)
 {
-        struct eth_vlan_instance * eth_instance;
-        struct eth_vlan_info *     info;
-        struct list_head *         pos;
-        struct shim_config *       c;
-        struct shim_config_entry * tmp;
-        struct shim_config_value * val;
-        bool_t                     reconfigure;
-        uint16_t                   old_vlan_id;
-        string_t *                 old_interface_name;
+        struct shim_instance_data * instance;
+        struct eth_vlan_info *      info;
+        struct shim_config *        tmp;
+	struct shim_config_entry *  entry;
+	struct shim_config_value *  value;
+	bool_t                      reconfigure;
+        uint16_t                    old_vlan_id;
+        string_t *                  old_interface_name;
 
-        /* Check if instance is not null, check if data is not null */
-        if (!inst) {
-                LOG_ERR("Configure called with an empty shim instance");
-                return inst;
-        }
+        ASSERT(data);
+        ASSERT(inst);
+        ASSERT(cfg);
 
-        eth_instance = (struct eth_vlan_instance *) inst->data;
-        if (!eth_instance) {
+       
+        instance = find_instance(data, inst->data->id);
+        if (!instance) {
                 LOG_ERR("Configure called on empty eth vlan shim instance");
                 return inst;
         }
 
         /* If reconfigure = 1, break down all communication and setup again */
         reconfigure = 0;
-
-        /* Get configuration struct pertaining to this shim instance */
-        info = eth_instance->info;
         old_vlan_id = 0;
         old_interface_name = NULL;
-        if (!info) {
-                info = rkmalloc(sizeof(*info), GFP_KERNEL);
-                reconfigure = 1;
-        } else {
-                old_vlan_id = info->vlan_id;
+	info = instance->info;
+	
+        /* Get configuration struct pertaining to this shim instance */
+	if (!info) {
+		info = rkzalloc(sizeof(*info), GFP_KERNEL);
+		reconfigure = 1;
+                if (!info)
+                        return NULL;
+	} else {
+		old_vlan_id = info->vlan_id;
                 old_interface_name = info->interface_name;
-        }
-        if (!info) {
-                /* FIXME: ... we haven't reconfigured it correctly anyway */
-                return inst;
-        }
+	}
 
         /* Retrieve configuration of IPC process from params */
-        list_for_each(pos, &(cfg->list)) {
-                c   = list_entry(pos, struct shim_config, list);
-                tmp = c->entry;
-                val = tmp->value;
-                if (!strcmp(tmp->name, "dif-name") &&
-                    val->type == SHIM_CONFIG_STRING) {
-                        if (!name_cpy(info->name,
-                                      (struct name_t *) val->data))
+	list_for_each_entry(tmp, &(cfg->list), list) {
+		entry = tmp->entry;
+		value = entry->value;
+		if (!strcmp(entry->name, "dif-name") &&
+			value->type == SHIM_CONFIG_STRING) {
+                        if (name_cpy(&(info->dif_name),
+                                     (struct name_t *) value->data)) {
+				LOG_ERR("Failed to copy DIF name");
                                 return inst;
-                } else if (!strcmp(tmp->name, "vlan-id") &&
-                           val->type == SHIM_CONFIG_UINT) {
-                        info->vlan_id = * (uint16_t *) val->data;
-                        if (!reconfigure &&
-                            info->vlan_id != old_vlan_id) {
+                        }
+		} else if (!strcmp(entry->name, "vlan-id") &&
+			value->type == SHIM_CONFIG_UINT) {
+                        info->vlan_id = 
+				* (uint16_t *) value->data;
+                        if (!reconfigure && info->vlan_id != old_vlan_id) {
                                 reconfigure = 1;
                         }
-                } else if (!strcmp(tmp->name,"interface-name")
-                           && val->type == SHIM_CONFIG_STRING) {
-                        /* FIXME: Should probably be strcpy */
-                        info->interface_name = (string_t *) val->data;
-                        if (!reconfigure && !strcmp(info->interface_name,
-                                                    old_interface_name)) {
+                } else if (!strcmp(entry->name,"interface-name")
+			&& value->type == SHIM_CONFIG_STRING) {
+			info->interface_name =
+				rkmalloc(sizeof(*info->interface_name), 
+					GFP_KERNEL);
+			if(!strcpy(info->interface_name, 
+					(string_t *) value->data)) {
+				LOG_ERR("Failed to copy interface name");
+			}
+                        if (!reconfigure && !strcmp(info->interface_name, 
+							old_interface_name)) {
                                 reconfigure = 1;
                         }
                 } else {
                         LOG_WARN("Unknown config param for eth shim");
                 }
         }
-        eth_instance->info = info;
 
         if (reconfigure) {
                 struct packet_type eth_vlan_packet_type;
@@ -395,22 +431,28 @@ struct shim_instance * eth_vlan_configure(struct shim_data *          data,
 }
 
 static int eth_vlan_destroy(struct shim_data *     data,
-                            struct shim_instance * inst)
+                            struct shim_instance * instance)
 {
-        struct shim_instance * instance;
+      	struct shim_instance_data * inst;
+	struct list_head          * pos, * q;
 
-        if (inst) {
-                /*
-                 * FIXME: Need to ask instance to clean up as well
-                 * Don't know yet in full what to delete
-                 */
-                instance = (struct eth_vlan_instance *) inst->data;
-                if (instance) {
-                        rb_erase(&instance->node, eth_root);
-                        rkfree(instance);
-                }
-                rkfree(inst);
-        }
+        ASSERT(data);
+        ASSERT(instance);
+
+        /* Retrieve the instance */
+	list_for_each_safe(pos, q, &(data->instances)) {
+		 inst = list_entry(pos, struct shim_instance_data, list);
+
+		 if(inst->id == instance->data->id) {
+			 /* Unbind from the instances set */
+			 list_del(pos);
+			 /* Destroy it */
+			 rkfree(inst->info->dif_name);
+			 rkfree(inst->info->interface_name);
+			 rkfree(inst->info);
+			 rkfree(inst);
+		 }
+	}
 
         return 0;
 }
@@ -429,8 +471,6 @@ extern struct kipcm * default_kipcm;
 
 static int __init mod_init(void)
 {
-	bzero(&empty_data, sizeof(empty_data));
-
         eth_vlan_shim = kipcm_shim_register(default_kipcm,
                                             SHIM_NAME,
                                             &eth_vlan_data,
