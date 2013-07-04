@@ -53,7 +53,7 @@ void * doWorkApplication(void * arg) {
 	/* Try successfull flow allocation */
 	std::cout << "Application: Sending netlink message and waiting for response\n";
 	BaseNetlinkMessage* response =
-			rinaManager->sendRequestMessageAndWaitForReply(message);
+			rinaManager->sendRequestMessageAndWaitForResponse(message);
 	std::cout << "Application: Got response!\n";
 	delete message;
 
@@ -73,7 +73,7 @@ void * doWorkApplication(void * arg) {
 	/* Try unsuccessfull flow allocation */
 	std::cout << "Application: Sending netlink message and waiting for response\n";
 	response =
-			rinaManager->sendRequestMessageAndWaitForReply(message);
+			rinaManager->sendRequestMessageAndWaitForResponse(message);
 	std::cout << "Application: Got response!\n";
 	delete message;
 

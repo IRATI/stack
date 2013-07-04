@@ -100,10 +100,10 @@ int main(int argc, char * argv[]) {
 
 	/* TEST ASSIGN TO DIF */
 	DIFConfiguration * difConfiguration = new DIFConfiguration();
-	ipcProcess1->assignToDIF(*difConfiguration);
+	ipcProcess1->assignToDIF(*difConfiguration, 24);
 
 	/* TEST REGISTER APPLICATION */
-	ipcProcess1->registerApplication(*sourceName);
+	ipcProcess1->registerApplication(*sourceName, 37);
 
 	/* TEST UNREGISTER APPLICATION */
 	ipcProcess1->unregisterApplication(*sourceName);

@@ -751,5 +751,28 @@ IPCEvent* IpcmAssignToDIFRequestMessage::toIPCEvent(){
 	return event;
 }
 
+/* CLASS IPCM ASSIGN TO DIF RESPONSE MESSAGE */
+IpcmAssignToDIFResponseMessage::IpcmAssignToDIFResponseMessage():
+		BaseNetlinkMessage(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE) {
+	result = 0;
+}
+
+int IpcmAssignToDIFResponseMessage::getResult() const{
+	return result;
+}
+
+void IpcmAssignToDIFResponseMessage::setResult(int result){
+	this->result = result;
+}
+
+const std::string& IpcmAssignToDIFResponseMessage::getErrorDescription() const{
+	return errorDescription;
+}
+
+void IpcmAssignToDIFResponseMessage::setErrorDescription(
+		const std::string& errorDescription){
+	this->errorDescription = errorDescription;
+}
+
 }
 

@@ -250,6 +250,26 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			}
 			break;
 		}
+		case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST:{
+			if(send){
+				IpcmAssignToDIFRequestMessage * specificMessage =
+						dynamic_cast<IpcmAssignToDIFRequestMessage *>(message);
+				putAPNametoNetlinkPortIdMapping(
+						specificMessage->getDIFConfiguration().getDifName(),
+						specificMessage->getDestPortId(),
+						specificMessage->getDestIpcProcessId());
+				putIPCProcessIdToNelinkPortIdMapping(
+						specificMessage->getDestPortId(),
+						specificMessage->getDestIpcProcessId());
+			}
+			break;
+		}
+		case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE:{
+			if(send){
+				message->setDestPortId(getIPCManagerPortId());
+			}
+			break;
+		}
 		default:
 			throw NetlinkException(NetlinkException::
 						unrecognized_generic_netlink_operation_code);
@@ -269,15 +289,17 @@ PendingNetlinkMessage::~PendingNetlinkMessage() throw(){
 BaseNetlinkMessage * PendingNetlinkMessage::getResponseMessage() {
 	lock();
 
-	try{
-		timedwait(WAIT_RESPONSE_TIMEOUT, 0);
-	}catch(ConcurrentException &e){
+	if (responseMessage == 0){
+		try{
+			timedwait(WAIT_RESPONSE_TIMEOUT, 0);
+		}catch(ConcurrentException &e){
+		}
 	}
 
 	unlock();
 	if (responseMessage != 0){
 		LOG_DBG("Got Netlink reply to request with sequence number %d",
-					sequenceNumber);
+				sequenceNumber);
 	}else{
 		LOG_ERR("Timed out while waiting for response message");
 	}
@@ -474,7 +496,21 @@ NetlinkSession* RINAManager::getNetlinkSession(unsigned int sessionId){
 	return response;
 }
 
-BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForReply(
+BaseNetlinkMessage * RINAManager::sendRequestAndWaitForResponse(
+		BaseNetlinkMessage * request, const std::string& errorDescription)
+throw(IPCException){
+	BaseNetlinkMessage* response = 0;
+	try{
+		response = sendRequestMessageAndWaitForResponse(request);
+		delete request;
+		return response;
+	}catch(NetlinkException &e){
+		delete request;
+		throw IPCException(errorDescription + e.what());
+	}
+}
+
+BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForResponse(
 		BaseNetlinkMessage * netlinkMessage) throw (NetlinkException) {
 	PendingNetlinkMessage * pendingMessage = NULL;
 

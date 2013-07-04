@@ -603,6 +603,33 @@ public:
 	IPCEvent* toIPCEvent();
 };
 
+/**
+ * Reports the IPC MAnager about the result of an Assign to DIF request
+ * IPC Process -> IPC Manager
+ */
+class IpcmAssignToDIFResponseMessage:
+		public BaseNetlinkMessage {
+
+	/**
+	 * Result of the operation. 0 indicates success, a negative value an
+	 * error code.
+	 */
+	int result;
+
+	/**
+	 * If the application registration didn't succeed, this field may provide
+	 * further detail
+	 */
+	std::string errorDescription;
+
+public:
+	IpcmAssignToDIFResponseMessage();
+	int getResult() const;
+	void setResult(int result);
+	const std::string& getErrorDescription() const;
+	void setErrorDescription(const std::string& errorDescription);
+};
+
 }
 
 #endif /* NETLINK_MESSAGES_H_ */

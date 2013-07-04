@@ -32,7 +32,7 @@ namespace rina {
 class IPCProcess {
 
 	/** The identifier of the IPC Process, unique within the system */
-	unsigned int id;
+	unsigned short id;
 
 	/** The IPC Process type */
 	DIFType type;
@@ -40,13 +40,26 @@ class IPCProcess {
 	/** The name of the IPC Process */
 	ApplicationProcessNamingInformation name;
 
+	/** The current configuration of the IPC Process*/
+	DIFConfiguration difConfiguration;
+
+	/** True if the IPC Process is a member of the DIF, false otherwise */
+	bool difMember;
+
 public:
+	static const std::string error_assigning_to_dif;
+	static const std::string error_registering_app;
+	static const std::string error_not_a_dif_member;
 	IPCProcess();
 	IPCProcess(unsigned int id, DIFType type,
 			const ApplicationProcessNamingInformation& name);
 	unsigned int getId() const;
 	DIFType getType() const;
 	const ApplicationProcessNamingInformation& getName() const;
+	const DIFConfiguration& getConfiguration() const;
+	void setConfiguration(const DIFConfiguration& difConfiguration);
+	bool isDIFMember() const;
+	void setDIFMember(bool difMember);
 
 	/**
 	 * Invoked by the IPC Manager to make an existing IPC Process a member of a
@@ -58,10 +71,11 @@ public:
 	 * assigned to the DIF or an error is returned.
 	 *
 	 * @param difConfiguration The configuration of the DIF
+	 * @param ipcProcessPortId The port at which the IPC Process is listening
 	 * @throws IPCException if an error happens during the process
 	 */
-	void assignToDIF(const DIFConfiguration& difConfiguration)
-			throw (IPCException);
+	void assignToDIF(const DIFConfiguration& difConfiguration,
+			unsigned int ipcProcessPortId) throw (IPCException);
 
 	/**
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been
@@ -122,10 +136,12 @@ public:
 	 * successfully registered the application or an error occurs.
 	 *
 	 * @param applicationName The name of the application to be registered
+	 * @param applicationPordId The port where the application can be contacted
 	 * @throws IPCException if an error occurs
 	 */
 	void registerApplication(
-			const ApplicationProcessNamingInformation& applicationName)
+			const ApplicationProcessNamingInformation& applicationName,
+			unsigned int applicationPortId)
 					throw (IPCException);
 
 	/**

@@ -126,20 +126,6 @@ void ApplicationRegistration::removeDIFName(
 
 /* CLASS IPC MANAGER */
 
-BaseNetlinkMessage * sendRequestAndWaitForResponse(
-		BaseNetlinkMessage * request, const std::string& errorDescription)
-			throw(IPCException){
-	BaseNetlinkMessage* response = 0;
-	try{
-		response =	rinaManager->sendRequestMessageAndWaitForReply(request);
-		delete request;
-		return response;
-	}catch(NetlinkException &e){
-		delete request;
-		throw IPCException(errorDescription + e.what());
-	}
-}
-
 IPCManager::IPCManager() {
 }
 
@@ -228,7 +214,7 @@ void IPCManager::registerApplication(
 
 	AppRegisterApplicationResponseMessage * registerResponseMessage =
 			dynamic_cast<AppRegisterApplicationResponseMessage *>(
-					sendRequestAndWaitForResponse(message,
+					rinaManager->sendRequestAndWaitForResponse(message,
 							IPCManager::error_registering_application));
 
 	if (registerResponseMessage->getResult() < 0){
@@ -326,7 +312,7 @@ Flow * IPCManager::allocateFlowRequest(
 
 	AppAllocateFlowRequestResultMessage * flowRequestResponse =
 			dynamic_cast<AppAllocateFlowRequestResultMessage *>(
-					sendRequestAndWaitForResponse(message,
+					rinaManager->sendRequestAndWaitForResponse(message,
 							IPCManager::error_requesting_flow_allocation));
 
 	if (flowRequestResponse->getPortId() < 0){
@@ -404,7 +390,7 @@ void IPCManager::deallocateFlow(
 
 	AppDeallocateFlowResponseMessage * deallocateResponse =
 			dynamic_cast<AppDeallocateFlowResponseMessage *>(
-					sendRequestAndWaitForResponse(message,
+					rinaManager->sendRequestAndWaitForResponse(message,
 							IPCManager::error_requesting_flow_deallocation));
 
 	if (deallocateResponse->getResult() < 0){
