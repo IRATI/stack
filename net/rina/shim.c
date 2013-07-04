@@ -192,7 +192,7 @@ struct shim * shim_register(struct shims *          parent,
                  * FIXME: To be removed once shim_ktype.release
                  * gets implemented
                  */
-                kfree(shim);
+                rkfree(shim);
                 return NULL;
         }
 
@@ -237,7 +237,7 @@ int shim_unregister(struct shims * parent,
 
         kobject_put(&shim->kobj);
 
-        kfree(shim); /* FIXME: To be removed */
+        rkfree(shim); /* FIXME: To be removed */
 
         LOG_DBG("Shim unregistered successfully");
 

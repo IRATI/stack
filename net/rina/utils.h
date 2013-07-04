@@ -32,11 +32,21 @@
 #define ASSERT(COND)
 #endif
 
+#include <linux/kobject.h>
+#define RINA_ATTR_RO(NAME)                              \
+        static struct kobj_attribute NAME##_attr =      \
+		 __ATTR_RO(NAME)
+
+#define RINA_ATTR_RW(NAME)                                      \
+        static struct kobj_attribute NAME##_attr =              \
+		__ATTR(NAME, 0644, NAME##show, NAME##store)
+
 #include <linux/string.h>
 
 #define bzero(DEST, LEN) do { (void) memset(DEST, 0, LEN); } while (0)
 
 void * rkmalloc(size_t size, gfp_t flags);
 void * rkzalloc(size_t size, gfp_t flags);
+void   rkfree(void * ptr);
 
 #endif

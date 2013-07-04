@@ -235,7 +235,7 @@ static struct shim_instance * eth_vlan_create(struct shim_data * data,
         inst->ops  = &eth_vlan_instance_ops;
         inst->data = rkzalloc(sizeof(struct shim_instance_data), GFP_KERNEL);
         if (!inst->data) {
-                kfree(inst);
+                rkfree(inst);
                 return NULL;
         }
 
@@ -380,11 +380,11 @@ struct shim_instance * eth_vlan_configure(struct shim_data *          data,
                         eth_vlan_packet_type.dev = dev;
                         dev_remove_pack(&eth_vlan_packet_type);
                         read_unlock(&dev_base_lock);
-                        kfree(complete_interface);
+                        rkfree(complete_interface);
                 }
+
                 /* FIXME: Add handler to correct interface and vlan id */
                 /* Check if correctness VLAN id and interface name */
-
 
                 dev_add_pack(&eth_vlan_packet_type);
 
@@ -407,9 +407,9 @@ static int eth_vlan_destroy(struct shim_data *     data,
                 instance = (struct eth_vlan_instance *) inst->data;
                 if (instance) {
                         rb_erase(&instance->node, eth_root);
-                        kfree(instance);
+                        rkfree(instance);
                 }
-                kfree(inst);
+                rkfree(inst);
         }
 
         return 0;

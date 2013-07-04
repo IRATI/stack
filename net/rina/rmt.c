@@ -49,7 +49,7 @@ int rmt_fini(void * opaque)
 
         ASSERT(opaque);
 
-        kfree(opaque);
+        rkfree(opaque);
 
         return 0;
 }

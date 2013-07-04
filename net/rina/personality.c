@@ -221,7 +221,7 @@ struct personality * rina_personality_register(const char *              name,
                  * FIXME: To be removed once personality_ktype.release
                  * gets implemented
                  */
-                kfree(pers);
+                rkfree(pers);
                 return NULL;
         }
 
@@ -235,7 +235,7 @@ struct personality * rina_personality_register(const char *              name,
                 if (pers->ops->init(&pers->kobj, pers->id, pers->data)) {
                         LOG_ERR("Could not initialize personality '%s'", name);
                         kobject_put(&pers->kobj);
-                        kfree(pers); /* FIXME: As the note before */
+                        rkfree(pers); /* FIXME: As the note before */
                         return NULL;
                 }
                 LOG_DBG("Personality '%s' initialized successfully", name);
@@ -292,7 +292,7 @@ int rina_personality_unregister(struct personality * pers)
                                 name);
         }
         if (pers->data)
-                kfree(pers->data);
+                rkfree(pers->data);
         id_put(pers->id);
 
         kobject_put(&pers->kobj);
@@ -302,7 +302,7 @@ int rina_personality_unregister(struct personality * pers)
                 default_personality = 0;
         }
 
-        kfree(pers); /* FIXME: To be removed */
+        rkfree(pers); /* FIXME: To be removed */
 
         LOG_DBG("Personality unregistered successfully");
 

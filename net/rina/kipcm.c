@@ -105,7 +105,7 @@ struct kipcm * kipcm_init(struct kobject * parent)
 
         tmp->shims = shims_init(parent);
         if (!tmp->shims) {
-                kfree(tmp);
+                rkfree(tmp);
                 return NULL;
         }
 
@@ -140,9 +140,7 @@ int kipcm_fini(struct kipcm * kipcm)
         if (shims_fini(kipcm->shims))
                 return -1;
 
-        kfree(kipcm->id_to_ipcp);
-        kfree(kipcm->port_id_to_flow);
-        kfree(kipcm);
+        rkfree(kipcm);
 
         LOG_DBG("Finalized successfully");
 
