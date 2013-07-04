@@ -95,4 +95,4 @@ void rkfree(void * ptr)
 
         kfree(ptr);
 }
-EXPORT_SYMBOL(rkzalloc);
+EXPORT_SYMBOL(rkfree);
