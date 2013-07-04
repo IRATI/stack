@@ -29,6 +29,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "personality.h"
+#include "debug.h"
 
 #define CALL_PERSONALITY(PERS, HOOK, ARGS...)                           \
         do {                                                            \

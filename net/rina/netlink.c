@@ -23,6 +23,7 @@
 
 #include "logs.h"
 #include "utils.h"
+#include "debug.h"
 #include "netlink.h"
 
 /* FIXME: This define (and its related code) has to be removed */
