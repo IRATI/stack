@@ -143,7 +143,7 @@ static struct shim_instance_ops empty_instance_ops = {
  * buffer) will hold all the shim data
  */
 static struct shim_data {
-        struct list_head * instances;
+        struct list_head instances;
 } empty_data;
 
 /*
@@ -163,7 +163,7 @@ static int empty_init(struct shim_data * data)
         ASSERT(data);
 
         bzero(&empty_data, sizeof(empty_data));
-        INIT_LIST_HEAD(data->instances);
+        INIT_LIST_HEAD(&(data->instances));
 
         return 0;
 }
@@ -174,6 +174,8 @@ static int empty_init(struct shim_data * data)
  */
 static int empty_fini(struct shim_data * data)
 {
+	struct shim_instance_data * inst;
+	struct list_head          * pos, * q;
         ASSERT(data);
 
         /*
@@ -183,9 +185,20 @@ static int empty_fini(struct shim_data * data)
          *   here
          */
 
-        /* FIXME: Add code here */
+        ASSERT(data);
 
-        return -1;
+        /* Retrieve the instance */
+	list_for_each_safe(pos, q, &(data->instances)) {
+		 inst = list_entry(pos, struct shim_instance_data, list);
+		 /* Unbind from the instances set */
+		 list_del(pos);
+		 /* Destroy it */
+		 rkfree(inst->info->dif_name);
+		 rkfree(inst->info);
+		 rkfree(inst);
+	}
+
+        return 0;
 }
 
 static struct shim_instance_data * find_instance(struct shim_data * data,
@@ -194,7 +207,7 @@ static struct shim_instance_data * find_instance(struct shim_data * data,
 
 	struct shim_instance_data * pos;
 
-	list_for_each_entry(pos, data->instances, list) {
+	list_for_each_entry(pos, &(data->instances), list) {
 		if (pos->id == id) {
 			return pos;
 		}
@@ -236,7 +249,7 @@ static struct shim_instance * empty_create(struct shim_data * data,
          * Bind the shim-instance to the shims set, to keep all our data
          * structures linked (somewhat) together
          */
-        list_add(data->instances, &(inst->data->list));
+        list_add(&(data->instances), &(inst->data->list));
 
         return inst;
 }
@@ -315,7 +328,7 @@ static int empty_destroy(struct shim_data *     data,
         ASSERT(instance);
 
         /* Retrieve the instance */
-	list_for_each_safe(pos, q, data->instances) {
+	list_for_each_safe(pos, q, &(data->instances)) {
 		 inst = list_entry(pos, struct shim_instance_data, list);
 
 		 if(inst->id == instance->data->id) {
