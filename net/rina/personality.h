@@ -72,6 +72,9 @@ struct personality {
         struct personality_ops *  ops;
 };
 
+/* FIXME: To be removed ASAP */
+extern struct personality * default_personality;
+
 int                  rina_personality_init(struct kobject * parent);
 void                 rina_personality_exit(void);
 

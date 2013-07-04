@@ -119,6 +119,7 @@ struct shims {
 /* Called by the kipcm, might disappear */
 struct shims * shims_init(struct kobject * parent);
 int            shims_fini(struct shims * shims);
+uint32_t       shims_version(void);
 
 /* Called (once) by each shim module upon loading/unloading */
 struct shim *  shim_register(struct shims *          parent,
