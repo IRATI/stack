@@ -19,8 +19,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/slab.h>
-
 #define RINA_PREFIX "netlink"
 
 #include "logs.h"
@@ -476,11 +474,9 @@ struct rina_nl_set * rina_netlink_set_create(personality_id id)
 {
         struct rina_nl_set * tmp;
 
-        tmp = kzalloc(sizeof(struct rina_nl_set), GFP_KERNEL);
-        if (!tmp) {
-                LOG_ERR("Cannot allocate %zd bytes of memory", sizeof(*tmp));
+        tmp = rkzalloc(sizeof(struct rina_nl_set), GFP_KERNEL);
+        if (!tmp)
                 return NULL;
-        }
 
         return tmp;
 }
@@ -508,8 +504,6 @@ int rina_netlink_init(void)
         test_data = &test_int;
 #endif
 
-        LOG_FBEGN;
-
         LOG_DBG("Initializing Netlink layer");
 
 
@@ -532,8 +526,6 @@ int rina_netlink_init(void)
                                       nl_rina_echo);
 #endif
 
-        LOG_FEXIT;
-
         LOG_DBG("NetLink layer initialized successfully");
 
         return 0;
@@ -542,8 +534,6 @@ int rina_netlink_init(void)
 void rina_netlink_exit(void)
 {
         int ret;
-
-        LOG_FBEGN;
 
         LOG_DBG("Finalizing Netlink layer");
 
@@ -555,6 +545,4 @@ void rina_netlink_exit(void)
         }
 
         LOG_DBG("NetLink layer finalized successfully");
-
-        LOG_FEXIT;
 }

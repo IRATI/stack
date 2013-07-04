@@ -18,37 +18,35 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/slab.h>
 #include <linux/kobject.h>
 #include <linux/export.h>
 
-#if CONFIG_RINA_PERSONALITY_DEFAULT_MODULE
-/* FIXME:
- *   In kernel 3.9.2, there's no EXPORT_SYMBOL for kset_find_object so this
- *   is a copy and paste from lib/kobject.c. Please fix that ASAP
- */
-static struct kobject *kobject_get_unless_zero(struct kobject *kobj)
+/* FIXME: We should stick the caller in the prefix (rk[mz]alloc oriented) */
+#define RINA_PREFIX "utils"
+
+#include "logs.h"
+
+void * rkmalloc(size_t size, gfp_t flags)
 {
-        if (!kref_get_unless_zero(&kobj->kref))
-                kobj = NULL;
-        return kobj;
-}
-
-struct kobject *kset_find_obj(struct kset *kset, const char *name)
-{
-        struct kobject *k;
-        struct kobject *ret = NULL;
-
-        spin_lock(&kset->list_lock);
-
-        list_for_each_entry(k, &kset->list, entry) {
-                if (kobject_name(k) && !strcmp(kobject_name(k), name)) {
-                        ret = kobject_get_unless_zero(k);
-                        break;
-                }
+        void * tmp = kmalloc(size, flags);
+        if (!tmp) {
+                LOG_ERR("Cannot allocate %zd bytes of memory", size);
+                return NULL;
         }
 
-        spin_unlock(&kset->list_lock);
-        return ret;
+        return tmp;
 }
-EXPORT_SYMBOL(kset_find_obj);
-#endif
+EXPORT_SYMBOL(rkmalloc);
+
+void * rkzalloc(size_t size, gfp_t flags)
+{
+        void * tmp = kzalloc(size, flags);
+        if (!tmp) {
+                LOG_ERR("Cannot allocate %zd bytes of memory", size);
+                return NULL;
+        }
+
+        return tmp;
+}
+EXPORT_SYMBOL(rkzalloc);

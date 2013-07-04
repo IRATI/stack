@@ -28,19 +28,14 @@
 
 static int __init mod_init(void)
 {
-        LOG_FBEGN;
-
         LOG_MISSING;
-
-        LOG_FEXIT;
 
         return -1;
 }
 
 static void __exit mod_exit(void)
 {
-        LOG_FBEGN;
-        LOG_FEXIT;
+        LOG_MISSING;
 }
 
 module_init(mod_init);
