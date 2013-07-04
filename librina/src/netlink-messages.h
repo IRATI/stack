@@ -490,27 +490,22 @@ public:
 	void setIpcProcessId(unsigned short ipcProcessId);
 };
 
+
 /**
- * Invoked by the IPCManager when it wants to register an application
- * to a DIF. IPC Manager -> IPC Process
+ * Invoked by the application when it wants to unregister an application.
+ * Application -> IPC Manager
  */
-class IpcmRegisterApplicationRequestMessage:
+class AppUnregisterApplicationRequestMessage:
 		public NetlinkRequestOrNotificationMessage {
 
 	/** The name of the application to be registered */
 	ApplicationProcessNamingInformation applicationName;
 
-	/** The DIF name where the application wants to register */
+	/** The DIF name where the application is registered */
 	ApplicationProcessNamingInformation difName;
 
-	/**
-	 * The netlink port Id of the application, so that the IPC Process
-	 * can communicate with it
-	 */
-	unsigned int applicationPortId;
-
 public:
-	IpcmRegisterApplicationRequestMessage();
+	AppUnregisterApplicationRequestMessage();
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	void setApplicationName(
 			const ApplicationProcessNamingInformation& applicationName);
@@ -520,6 +515,39 @@ public:
 	void setApplicationPortId(unsigned int applicationPortId);
 	IPCEvent* toIPCEvent();
 };
+
+
+/**
+* Invoked by the IPCManager when it wants to register an application
+* to a DIF. IPC Manager -> IPC Process
+*/
+class IpcmRegisterApplicationRequestMessage:
+public NetlinkRequestOrNotificationMessage {
+
+/** The name of the application to be registered */
+ApplicationProcessNamingInformation applicationName;
+
+/** The DIF name where the application wants to register */
+ApplicationProcessNamingInformation difName;
+
+/**
+* The netlink port Id of the application, so that the IPC Process
+* can communicate with it
+*/
+unsigned int applicationPortId;
+
+public:
+IpcmRegisterApplicationRequestMessage();
+const ApplicationProcessNamingInformation& getApplicationName() const;
+void setApplicationName(
+const ApplicationProcessNamingInformation& applicationName);
+const ApplicationProcessNamingInformation& getDifName() const;
+void setDifName(const ApplicationProcessNamingInformation& difName);
+unsigned int getApplicationPortId() const;
+void setApplicationPortId(unsigned int applicationPortId);
+IPCEvent* toIPCEvent();
+};
+
 
 /**
  * Response of the IPC Process to an application registration request.
