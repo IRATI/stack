@@ -231,6 +231,23 @@ int putAppRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 AppRegisterApplicationResponseMessage *
 	parseAppRegisterApplicationResponseMessage(nlmsghdr *hdr);
 
+
+/* AppUnregisterApplicationRequestMessage CLASS*/
+enum AppUnregisterApplicationRequestMessageAttributes {
+	AUAR_ATTR_APP_NAME = 1,
+	AUAR_ATTR_DIF_NAME,
+	__AUAR_ATTR_MAX,
+};
+
+#define AUAR_ATTR_MAX (__AUAR_ATTR_MAX -1)
+
+int putAppUnregisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
+		const AppUnregisterApplicationRequestMessage& object);
+
+AppUnregisterApplicationRequestMessage * parseAppUnregisterApplicationRequestMessage(
+		nlmsghdr *hdr);
+
+
 /* IpcmRegisterApplicationRequestMessage CLASS*/
 enum IpcmRegisterApplicationRequestMessageAttributes {
 	IRAR_ATTR_APP_NAME = 1,

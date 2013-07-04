@@ -511,10 +511,42 @@ public:
 			const ApplicationProcessNamingInformation& applicationName);
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
-	unsigned int getApplicationPortId() const;
-	void setApplicationPortId(unsigned int applicationPortId);
 	IPCEvent* toIPCEvent();
 };
+
+
+/**
+ * Response of the IPC Manager to an application unregistration request.
+ * IPC Manager -> Application
+ */
+class AppUnregisterApplicationResponseMessage: public BaseNetlinkMessage {
+
+	/** The DIF name where the application wants to register */
+	ApplicationProcessNamingInformation applicationName;
+
+	/**
+	 * Result of the operation. 0 indicates success, a negative value an
+	 * error code.
+	 */
+	int result;
+
+	/**
+	 * If the application unregistration didn't succeed, this field may provide
+	 * further detail
+	 */
+	std::string errorDescription;
+
+
+public:
+	AppUnregisterApplicationResponseMessage();
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	const std::string& getErrorDescription() const;
+	void setErrorDescription(const std::string& errorDescription);
+	int getResult() const;
+	void setResult(int result);
+};
+
+
 
 
 /**

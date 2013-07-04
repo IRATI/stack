@@ -637,6 +637,32 @@ IPCEvent* AppUnregisterApplicationRequestMessage::toIPCEvent(){
 	return event;
 }
 
+
+/* CLASS APP UNREGISTER APPLICATION RESPONSE MESSAGE */
+AppUnregisterApplicationResponseMessage::AppUnregisterApplicationResponseMessage() :
+		BaseNetlinkMessage(RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE) {
+	this->result = 0;
+}
+
+const std::string&
+AppUnregisterApplicationResponseMessage::getErrorDescription() const {
+	return errorDescription;
+}
+
+void AppUnregisterApplicationResponseMessage::setErrorDescription(
+		const std::string& errorDescription) {
+	this->errorDescription = errorDescription;
+}
+
+int AppUnregisterApplicationResponseMessage::getResult() const {
+	return result;
+}
+
+void AppUnregisterApplicationResponseMessage::setResult(int result) {
+	this->result = result;
+}
+
+
 /* CLASS IPCM REGISTER APPLICATION REQUEST MESSAGE */
 IpcmRegisterApplicationRequestMessage::IpcmRegisterApplicationRequestMessage():
 		NetlinkRequestOrNotificationMessage(

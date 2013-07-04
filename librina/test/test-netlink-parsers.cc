@@ -766,6 +766,78 @@ int testAppRegisterApplicationResponseMessage() {
 	return returnValue;
 }
 
+int testAppUnregisterApplicationRequestMessage() {
+	std::cout << "TESTING APP UNREGISTER APPLICATION REQUEST MESSAGE\n";
+	int returnValue = 0;
+
+	ApplicationProcessNamingInformation * applicationName =
+			new ApplicationProcessNamingInformation();
+	applicationName->setProcessName("/apps/source");
+	applicationName->setProcessInstance("5");
+	applicationName->setEntityName("database");
+	applicationName->setEntityInstance("3");
+
+	ApplicationProcessNamingInformation * difName =
+			new ApplicationProcessNamingInformation();
+	difName->setProcessName("/difs/Test2.DIF");
+
+	AppUnregisterApplicationRequestMessage * message =
+			new AppUnregisterApplicationRequestMessage();
+
+	message->setDifName(*difName);
+	message->setApplicationName(*applicationName);
+
+	struct nl_msg* netlinkMessage;
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage) {
+		std::cout << "Error allocating Netlink message\n";
+	}
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
+			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
+
+	int result = putBaseNetlinkMessage(netlinkMessage, message);
+	if (result < 0) {
+		std::cout << "Error constructing Unregister Application Request "
+				<< "Message \n";
+		nlmsg_free(netlinkMessage);
+		delete difName;
+		delete applicationName;
+		delete message;
+		return result;
+	}
+
+	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+	AppUnregisterApplicationRequestMessage * recoveredMessage =
+			dynamic_cast<AppUnregisterApplicationRequestMessage *>(parseBaseNetlinkMessage(
+					netlinkMessageHeader));
+	if (message == NULL) {
+		std::cout << "Error parsing Unregister Application Request Message "
+				<< "\n";
+		returnValue = -1;
+	} else if (message->getApplicationName()
+			!= recoveredMessage->getApplicationName()) {
+		std::cout << "Application name on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message->getDifName() != recoveredMessage->getDifName()) {
+		std::cout << "DIF name on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	}
+
+	if (returnValue == 0) {
+		std::cout << "AppUnregisterApplicationRequest test ok\n";
+	}
+	nlmsg_free(netlinkMessage);
+	delete difName;
+	delete applicationName;
+	delete message;
+	delete recoveredMessage;
+
+	return returnValue;
+}
+
+
 int testIpcmRegisterApplicationRequestMessage() {
 	std::cout << "TESTING IPCM REGISTER APPLICATION REQUEST MESSAGE\n";
 	int returnValue = 0;
