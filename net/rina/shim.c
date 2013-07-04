@@ -77,7 +77,8 @@ int shims_fini(struct shims * shims)
                 return -1;
         }
 
-        /* FIXME: Check pending objects and flush 'em all */
+        /* All the shims have to be unregistered from now on */
+        ASSERT(list_empty(&shims->set->list));
 
         kset_unregister(shims->set);
 

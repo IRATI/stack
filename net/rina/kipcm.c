@@ -133,7 +133,10 @@ int kipcm_fini(struct kipcm * kipcm)
         }
 
         /* FIXME: Destroy elements from id_to_ipcp */
+        ASSERT(list_empty(&kipcm->id_to_ipcp));
+
         /* FIXME: Destroy elements from port_id_to_flow */
+        ASSERT(list_empty(&kipcm->port_id_to_flow));
 
         if (shims_fini(kipcm->shims))
                 return -1;
@@ -158,7 +161,16 @@ EXPORT_SYMBOL(kipcm_shim_register);
 
 int kipcm_shim_unregister(struct kipcm * kipcm,
                           struct shim *  shim)
-{ return shim_unregister(kipcm->shims, shim); }
+{
+        /* FIXME:
+         * 
+         *   We have to call _destroy on all the instances created on
+         *   this shim
+         *
+         *     Francesco
+         */
+        return shim_unregister(kipcm->shims, shim);
+}
 EXPORT_SYMBOL(kipcm_shim_unregister);
 
 int kipcm_ipc_create(struct kipcm *        kipcm,
@@ -264,12 +276,12 @@ int kipcm_flow_add(struct kipcm *      kipcm,
 int kipcm_flow_remove(struct kipcm * kipcm,
                       port_id_t      id)
 { return -1; }
-
+               
 int kipcm_sdu_write(struct kipcm *       kipcm,
                     port_id_t            id,
                     const struct sdu_t * sdu)
 { return -1; }
-
+               
 int kipcm_sdu_read(struct kipcm * kipcm,
                    port_id_t      id,
                    struct sdu_t * sdu)

@@ -61,8 +61,8 @@ struct empty_flow {
  *   added
  */
 
-static struct empty_flow *
-find_flow(struct shim_instance_data * data, port_id_t id)
+static struct empty_flow * find_flow(struct shim_instance_data * data,
+                                     port_id_t                   id)
 {
 	struct empty_flow * cur;
 
@@ -225,27 +225,23 @@ static int empty_init(struct shim_data * data)
  */
 static int empty_fini(struct shim_data * data)
 {
-	struct shim_instance_data * inst;
-	struct list_head          * pos, * q;
         ASSERT(data);
 
         /*
          * NOTE:
-         *   All the instances should be removed by the shims layer, no work is
-         *   needed here. In theory, a check for empty list should be added
-         *   here
+         *   All the instances will be removed by the shims layer, no work
+         *   should be needed here (since the caller should have destroyed all
+         *   the instances before)
+         *
+         *   This function has to unroll things created during init() or things
+         *   that cannot be unrolled by empty_destroy.
+         *
+         *   In theory, a check for an empty list should be added here
+         *
+         *     Francesco
          */
 
-        /* Retrieve the instance */
-	list_for_each_safe(pos, q, &(data->instances)) {
-		 inst = list_entry(pos, struct shim_instance_data, list);
-		 /* Unbind from the instances set */
-		 list_del(pos);
-		 /* Destroy it */
-		 rkfree(inst->info->dif_name);
-		 rkfree(inst->info);
-		 rkfree(inst);
-	}
+        ASSERT(list_empty(&(data->instances));
 
         return 0;
 }
