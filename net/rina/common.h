@@ -152,7 +152,7 @@ struct pci_t {
 	seq_num_t sequence_number;
 };
 
-struct pdu_t {
+struct pdu {
 	struct pci_t    * pci;
 	struct buffer_t * buffer;
 };
