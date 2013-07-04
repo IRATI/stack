@@ -31,6 +31,15 @@
 
 struct kipcm {
         struct shims *   shims;
+
+        /* NOTE:
+         *
+         *   This internal mapping hides the lookups for id <-> ipcp and
+         *   port-id <-> flow. They will be changed later. For the time
+         *   being these lookups will be kept simpler
+         *
+         *     Francesco
+         */
         struct list_head id_to_ipcp;
         struct list_head port_id_to_flow;
 };
@@ -39,6 +48,7 @@ struct kipcm {
 
 /*
  * NOTE:
+ *
  *   id_to_ipcp is a list at the moment, it will be changed to a map as soon
  *   as we get some free time.
  *
