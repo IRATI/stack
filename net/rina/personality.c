@@ -291,10 +291,13 @@ int rina_personality_unregister(struct personality * pers)
                         LOG_DBG("Personality '%s' finalized successfully",
                                 name);
         }
-        if (pers->data)
+        if (pers->data) {
+                LOG_DBG("Releasing personality '%s' data", name)
                 rkfree(pers->data);
+        }
         id_put(pers->id);
 
+        /* Do not use name after this point */
         kobject_put(&pers->kobj);
 
         if (default_personality == pers) {
