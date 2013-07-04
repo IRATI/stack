@@ -42,8 +42,16 @@ struct empty_info {
 /* This structure will contains per-instance data */
 struct shim_instance_data {
 	struct list_head    list;
+	struct list_head *  flows;
         ipc_process_id_t    id;
 	struct empty_info * info;
+};
+
+struct empty_flow {
+	struct list_head      list;
+	port_id_t 	      port_id;
+	const struct name_t * source;
+	const struct name_t * dest;
 };
 
 /*
@@ -53,17 +61,51 @@ struct shim_instance_data {
  *   added
  */
 
+static struct empty_flow *
+find_flow(struct shim_instance_data * data, port_id_t id)
+{
+	struct empty_flow * cur;
+
+	list_for_each_entry(cur, data->flows, list) {
+		if (cur->port_id == id) {
+			return cur;
+		}
+	}
+
+	return NULL;
+}
+
 static int empty_flow_allocate_request(struct shim_instance_data * data,
                                        const struct name_t *       source,
                                        const struct name_t *       dest,
                                        const struct flow_spec_t *  flow_spec,
                                        port_id_t                   id)
 {
+	struct empty_flow * flow;
+
         ASSERT(data);
         ASSERT(source);
         ASSERT(dest);
 
-        return -1;
+        /* It must be ensured that this request has not been awarded before */
+        if (find_flow(data, id)) {
+        	LOG_ERR("This flow already exists");
+        	return -1;
+        }
+        flow = kzalloc(sizeof(*flow), GFP_KERNEL);
+	if (!flow) {
+		LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*flow));
+		return -1;
+	}
+
+	flow->dest = dest;
+	flow->source = source;
+	flow->port_id = id;
+
+	INIT_LIST_HEAD(&flow->list);
+	list_add(&flow->list, data->flows);
+
+        return 0;
 }
 
 static int empty_flow_allocate_response(struct shim_instance_data * data,
@@ -79,9 +121,18 @@ static int empty_flow_allocate_response(struct shim_instance_data * data,
 static int empty_flow_deallocate(struct shim_instance_data * data,
                                  port_id_t                   id)
 {
-        ASSERT(data);
+	struct empty_flow * flow;
 
-        return -1;
+        ASSERT(data);
+        flow = find_flow(data, id);
+        if (!flow) {
+		LOG_ERR("Flow does not exist, cannot remove");
+
+		return -1;
+	}
+
+
+        return 0;
 }
 
 static int empty_application_register(struct shim_instance_data * data,
@@ -212,7 +263,6 @@ static struct shim_instance_data * find_instance(struct shim_data * data,
 	}
 
 	return NULL;
-       
 }
 
 static struct shim_instance * empty_create(struct shim_data * data,

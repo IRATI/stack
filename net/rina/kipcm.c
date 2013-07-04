@@ -29,6 +29,76 @@
 #include "shim.h"
 #include "kipcm.h"
 
+struct kipcm {
+        struct shims *   shims;
+
+        /* NOTE:
+         *
+         *   This internal mapping hides the lookups for id <-> ipcp and
+         *   port-id <-> flow. They will be changed later. For the time
+         *   being these lookups will be kept simpler
+         *
+         *     Francesco
+         */
+        struct list_head id_to_ipcp;
+        struct list_head port_id_to_flow;
+};
+
+#define to_shim(O) container_of(O, struct shim, kobj)
+
+/*
+ * NOTE:
+ *
+ *   id_to_ipcp is a list at the moment, it will be changed to a map as soon
+ *   as we get some free time.
+ *
+ *   Francesco
+ */
+struct id_to_ipcp {
+        ipc_process_id_t       id;   /* Key */
+        struct ipc_process_t * ipcp; /* Value*/
+        struct list_head       list;
+};
+
+struct port_id_to_flow {
+        port_id_t             port_id; /* Key */
+        const struct flow_t * flow;    /* value */
+        struct list_head      list;
+};
+
+static int add_id_to_ipcp_node(struct kipcm *         kipcm,
+                               ipc_process_id_t       id,
+                               struct ipc_process_t * ipc_process)
+{
+        struct id_to_ipcp * id_to_ipcp;
+
+        id_to_ipcp = rkzalloc(sizeof(*id_to_ipcp), GFP_KERNEL);
+        if (!id_to_ipcp)
+                return -1;
+
+        id_to_ipcp->id   = id;
+        id_to_ipcp->ipcp = ipc_process;
+
+        INIT_LIST_HEAD(&id_to_ipcp->list);
+        list_add(&id_to_ipcp->list, &kipcm->id_to_ipcp);
+
+        return 0;
+}
+
+static struct ipc_process_t * find_ipc_process_by_id(struct kipcm *   kipcm,
+                                                     ipc_process_id_t id)
+{
+        struct id_to_ipcp * cur;
+
+        list_for_each_entry(cur, &kipcm->id_to_ipcp, list) {
+                if (cur->id == id) {
+                        return cur->ipcp;
+                }
+        }
+
+        return NULL;
+}
+
 struct kipcm * kipcm_init(struct kobject * parent)
 {
         struct kipcm * tmp;
@@ -45,6 +115,9 @@ struct kipcm * kipcm_init(struct kobject * parent)
                 return NULL;
         }
 
+        INIT_LIST_HEAD(&tmp->id_to_ipcp);
+        INIT_LIST_HEAD(&tmp->port_id_to_flow);
+
         LOG_DBG("Initialized successfully");
 
         return tmp;
@@ -58,6 +131,9 @@ int kipcm_fini(struct kipcm * kipcm)
                 LOG_ERR("Bogus kipcm instance passed, cannot finalize");
                 return -1;
         }
+
+        /* FIXME: Destroy elements from id_to_ipcp */
+        /* FIXME: Destroy elements from port_id_to_flow */
 
         if (shims_fini(kipcm->shims))
                 return -1;
@@ -89,16 +165,96 @@ int kipcm_ipc_create(struct kipcm *        kipcm,
                      const struct name_t * name,
                      ipc_process_id_t      id,
                      dif_type_t            type)
+{
+        struct kobject *       k;
+        struct ipc_process_t * ipc_process;
+
+        switch (type) {
+        case DIF_TYPE_SHIM: {
+                struct shim *          shim;
+                struct shim_instance * shim_instance;
+
+                k = kset_find_obj(kipcm->shims->set, "shim-dummy");
+                if (!k) {
+                        LOG_ERR("Cannot find the requested shim");
+                        return -1;
+                }
+
+                shim        = to_shim(k);
+                ipc_process = rkzalloc(sizeof(*ipc_process), GFP_KERNEL);
+                if (!ipc_process)
+                        return -1;
+
+                shim_instance = shim->ops->create(shim->data, id);
+                if (!shim_instance) {
+                        rkfree(ipc_process);
+                        return -1;
+                }
+
+                if (!add_id_to_ipcp_node(kipcm, id, ipc_process)) {
+                        shim->ops->destroy(shim->data, shim_instance);
+                        rkfree(ipc_process);
+                        return -1;
+                }
+
+                ipc_process->data.shim_instance = shim_instance;
+        }
+                break;
+
+        case DIF_TYPE_NORMAL:
+                break;
+
+        default:
+                BUG();
+        }
+        return 0;
+}
+
+int kipcm_ipc_destroy(struct kipcm *   kipcm,
+                      ipc_process_id_t id)
 { return -1; }
 
 int kipcm_ipc_configure(struct kipcm *                  kipcm,
                         ipc_process_id_t                id,
                         const struct ipc_process_conf * cfg)
-{ return -1; }
+{
+        struct ipc_process_t * ipc_process;
 
-int kipcm_ipc_destroy(struct kipcm *   kipcm,
-                      ipc_process_id_t id)
-{ return -1; }
+        ipc_process = find_ipc_process_by_id(kipcm, id);
+        if (ipc_process == NULL)
+                return -1;
+
+        switch (ipc_process->type) {
+        case DIF_TYPE_SHIM: {
+                struct shim *        shim = NULL;
+                struct kobject *     k    = NULL;
+                struct shim_config * conf = NULL;
+
+                k = kset_find_obj(kipcm->shims->set, "shim-dummy");
+                if (!k) {
+                        LOG_ERR("Cannot find the requested shim");
+                        return -1;
+                }
+
+                shim = to_shim(k);
+
+                /* FIXME: conf must be translated */
+                LOG_MISSING;
+
+                ipc_process->data.shim_instance =
+                        shim->ops->configure(shim->data,
+                                             ipc_process->data.shim_instance,
+                                             conf);
+        }
+                break;
+        case DIF_TYPE_NORMAL:
+                break;
+        default:
+                BUG();
+        }
+
+        return 0;
+}
 
 int kipcm_flow_add(struct kipcm *      kipcm,
                    port_id_t           id,

@@ -105,7 +105,7 @@ static int eth_vlan_flow_allocate_response(struct shim_instance_data * data,
                                            response_reason_t *         response)
 {
         ASSERT(data);
-        ASSERT(response);
+        ASSERT(resp);
 
         return -1;
 }

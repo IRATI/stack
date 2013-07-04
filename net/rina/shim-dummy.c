@@ -33,7 +33,7 @@
 #include "kipcm.h"
 #include "shim.h"
 
-struct dummy_instance {
+struct shim_instance_data {
         ipc_process_id_t ipc_process_id;
         struct name_t *  name;
 
@@ -57,7 +57,7 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
                                        const struct flow_spec_t *  flow_spec,
                                        port_id_t                   id)
 {
-        struct dummy_instance * dummy;
+        struct shim_instance_data * dummy;
         struct dummy_flow *     flow;
 
         /* FIXME: We should verify that the port_id has not got a flow yet */
@@ -68,11 +68,11 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
 
         /* FIXME: Now we should ask the destination application for a flow */
 
-        dummy = (struct dummy_instance *) data;
+        dummy = (struct shim_instance_data *) data;
 
         flow->dest = dest;
         flow->source = source;
-        flow->port_id = *id;
+        flow->port_id = id;
 
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, dummy->flows);
@@ -97,14 +97,12 @@ static int dummy_application_unregister(struct shim_instance_data * data,
                                         const struct name_t *       name)
 { return -1; }
 
-static struct dummy_flow * find_flow(struct shim_instance_data * opaque,
+static struct dummy_flow * find_flow(struct shim_instance_data * data,
                                      port_id_t                   id)
 {
-        struct dummy_instance * dummy;
         struct dummy_flow *     flow;
 
-        dummy = (struct dummy_instance *) opaque;
-        list_for_each_entry(flow, dummy->flows, list) {
+        list_for_each_entry(flow, data->flows, list) {
                 if (flow->port_id == id) {
                         return flow;
                 }
@@ -155,21 +153,20 @@ static struct shim *    dummy_shim = NULL;
 
 static int dummy_init(struct shim_data * data)
 {
-        struct list_head * dummy_shim_list;
+	struct list_head * dummy_shim_list;
 
         dummy_data.shim_list = rkmalloc(sizeof(*dummy_shim_list), GFP_KERNEL);
         if (!dummy_data.shim_list)
                 return -1;
 
-        dummy_data.shim_list->next = dummy_data.shim_list;
-        dummy_data.shim_list->prev = dummy_data.shim_list;
+        INIT_LIST_HEAD(dummy_data.shim_list);
 
         return -1;
 }
 
 static int dummy_fini(struct shim_data * data)
 {
-        struct dummy_instance * pos, * next;
+        struct shim_instance_data * pos, * next;
         struct dummy_flow *     pos_flow, * next_flow;
 
         list_for_each_entry_safe(pos, next,
@@ -187,12 +184,21 @@ static int dummy_fini(struct shim_data * data)
         return -1;
 }
 
+static struct shim_instance_ops instance_ops = {
+	.flow_allocate_request  = dummy_flow_allocate_request,
+	.flow_allocate_response = dummy_flow_allocate_response,
+	.flow_deallocate        = dummy_flow_deallocate,
+	.application_register   = dummy_application_register,
+	.application_unregister = dummy_application_unregister,
+	.sdu_write              = dummy_sdu_write,
+	.sdu_read               = dummy_sdu_read,
+};
+
 static struct shim_instance * dummy_create(struct shim_data * data,
                                            ipc_process_id_t   id)
 {
         struct shim_instance *   instance;
-        struct shim_instance_ops ops;
-        struct dummy_instance *  dummy_inst;
+        struct shim_instance_data *  dummy_inst;
         struct list_head *       port_flow;
 
         instance = rkzalloc(sizeof(*instance), GFP_KERNEL);
@@ -212,23 +218,14 @@ static struct shim_instance * dummy_create(struct shim_data * data,
                 return NULL;
         }
 
-        port_flow->prev = port_flow;
-        port_flow->next = port_flow;
+        INIT_LIST_HEAD(port_flow);
 
         dummy_inst->ipc_process_id = id;
         dummy_inst->flows          = port_flow;
 
         instance->data             = dummy_inst;
 
-        ops.flow_allocate_request  = dummy_flow_allocate_request;
-        ops.flow_allocate_response = dummy_flow_allocate_response;
-        ops.flow_deallocate        = dummy_flow_deallocate;
-        ops.application_register   = dummy_application_register;
-        ops.application_unregister = dummy_application_unregister;
-        ops.sdu_write              = dummy_sdu_write;
-        ops.sdu_read               = dummy_sdu_read;
-
-        instance->ops              = &ops;
+        instance->ops              = &instance_ops;
 
         INIT_LIST_HEAD(&dummy_inst->list);
         list_add(&dummy_inst->list, (struct list_head *) dummy_shim->data);
@@ -246,12 +243,12 @@ static struct shim_instance * dummy_configure(struct shim_data *         data,
                                               const struct shim_config * conf)
 {
         struct shim_config *    current_entry;
-        struct dummy_instance * dummy;
+        struct shim_instance_data * dummy;
 
         ASSERT(inst);
         ASSERT(conf);
 
-        dummy = (struct dummy_instance *) inst->data;
+        dummy = (struct shim_instance_data *) inst->data;
         if (!dummy) {
                 LOG_ERR("There is not a dummy instance in this shim instance");
                 return NULL;
@@ -268,9 +265,7 @@ static struct shim_instance * dummy_configure(struct shim_data *         data,
                 }
         }
 
-        /* FIXME: NULL ??? */
-
-        return NULL;
+        return inst;
 }
 
 static struct shim_ops dummy_ops = {

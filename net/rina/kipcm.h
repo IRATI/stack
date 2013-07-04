@@ -73,9 +73,7 @@ struct ipc_process_t {
 
 	union {
 		struct normal_ipc_process_t * normal_ipcp;
-#if 0
 		struct shim_instance *        shim_instance;
-#endif
 	} data;
 };
 
@@ -108,9 +106,7 @@ struct flow {
 	struct kfifo *         sdu_ready;
 };
 
-struct kipcm {
-        struct shims * shims;
-};
+struct kipcm;
 
 struct kipcm * kipcm_init(struct kobject * parent);
 int            kipcm_fini(struct kipcm * kipcm);
