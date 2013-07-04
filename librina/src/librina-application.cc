@@ -479,6 +479,7 @@ const ApplicationProcessNamingInformation
 	return difName;
 }
 
+
 /* CLASS APPLICATION UNREGISTERED EVENT */
 
 ApplicationUnregisteredEvent::ApplicationUnregisteredEvent(

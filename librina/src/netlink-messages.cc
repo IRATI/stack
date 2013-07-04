@@ -601,15 +601,51 @@ void AppRegisterApplicationResponseMessage::setIpcProcessId(
 	this->ipcProcessId = ipcProcessId;
 }
 
+/* CLASS APP UNREGISTER APPLICATION REQUEST MESSAGE */
+AppUnregisterApplicationRequestMessage::AppUnregisterApplicationRequestMessage() :
+		NetlinkRequestOrNotificationMessage(
+				RINA_C_APP_UNREGISTER_APPLICATION_REQUEST) {
+}
+
+const ApplicationProcessNamingInformation&
+		AppUnregisterApplicationRequestMessage::getApplicationName() const {
+		return applicationName;
+	}
+
+void AppUnregisterApplicationRequestMessage::setApplicationName(
+		const ApplicationProcessNamingInformation& applicationName) {
+	this->applicationName = applicationName;
+}
+
+const ApplicationProcessNamingInformation&
+		AppUnregisterApplicationRequestMessage::getDifName() const {
+	return difName;
+}
+
+void AppUnregisterApplicationRequestMessage::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
+IPCEvent* AppUnregisterApplicationRequestMessage::toIPCEvent(){
+	ApplicationUnregistrationRequestEvent * event =
+			new ApplicationUnregistrationRequestEvent(
+					applicationName,
+					difName,
+					getSequenceNumber());
+
+	return event;
+}
+
 /* CLASS IPCM REGISTER APPLICATION REQUEST MESSAGE */
 IpcmRegisterApplicationRequestMessage::IpcmRegisterApplicationRequestMessage():
-				NetlinkRequestOrNotificationMessage(
-						RINA_C_IPCM_REGISTER_APPLICATION_REQUEST) {
+		NetlinkRequestOrNotificationMessage(
+				RINA_C_IPCM_REGISTER_APPLICATION_REQUEST) {
 	applicationPortId = 0;
 }
 
 const ApplicationProcessNamingInformation&
-	IpcmRegisterApplicationRequestMessage::getApplicationName() const{
+IpcmRegisterApplicationRequestMessage::getApplicationName() const{
 	return applicationName;
 }
 
@@ -619,7 +655,7 @@ void IpcmRegisterApplicationRequestMessage::setApplicationName(
 }
 
 const ApplicationProcessNamingInformation&
-	IpcmRegisterApplicationRequestMessage::getDifName() const{
+IpcmRegisterApplicationRequestMessage::getDifName() const{
 	return difName;
 }
 
@@ -629,7 +665,7 @@ void IpcmRegisterApplicationRequestMessage::setDifName(
 }
 
 unsigned int
-	IpcmRegisterApplicationRequestMessage::getApplicationPortId() const {
+IpcmRegisterApplicationRequestMessage::getApplicationPortId() const {
 	return applicationPortId;
 }
 
