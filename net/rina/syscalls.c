@@ -55,9 +55,6 @@
                 return PERS -> ops -> HOOK (PERS->data, ##ARGS);        \
         } while (0)
 
-/* FIXME: To be removed ASAP */
-extern struct personality * default_personality;
-
 #define CALL_DEFAULT_PERSONALITY(HOOK, ARGS...)                 \
         CALL_PERSONALITY(default_personality, HOOK, ##ARGS)
 

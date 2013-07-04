@@ -27,13 +27,12 @@
 
 #include "logs.h"
 #include "debug.h"
-#include "rina.h"
 #include "netlink.h"
 #include "personality.h"
 #include "utils.h"
 
-static uint32_t      version   = MK_RINA_VERSION(0, 0, 4);
 static struct kset * root_kset = NULL;
+static uint32_t      version   = MK_RINA_VERSION(0, 0, 4);
 
 uint32_t rina_version(void)
 { return version; }

@@ -160,7 +160,7 @@ static int default_fini(struct personality_data * data)
 }
 
 /* FIXME: To be removed ABSOLUTELY */
-struct kipcm * default_kipcm;
+struct kipcm * default_kipcm = NULL;
 EXPORT_SYMBOL(default_kipcm);
 
 static int default_init(struct kobject *          parent,

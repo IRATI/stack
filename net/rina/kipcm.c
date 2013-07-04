@@ -69,6 +69,10 @@ int kipcm_fini(struct kipcm * kipcm)
         return 0;
 }
 
+uint32_t kipcm_shims_version(void)
+{ return shims_version(); }
+EXPORT_SYMBOL(kipcm_shims_version);
+
 struct shim * kipcm_shim_register(struct kipcm *    kipcm,
                                   const char *      name,
                                   void *            data,

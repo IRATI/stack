@@ -21,13 +21,6 @@
 #ifndef RINA_H
 #define RINA_H
 
-#define MK_RINA_VERSION(MAJOR, MINOR, MICRO) \
-        (((MAJOR & 0xFF) << 24) | ((MINOR & 0xFF) << 16) | (MICRO & 0xFFFF))
-
-#define RINA_VERSION_MAJOR(V) ((V >> 24) & 0xFF)
-#define RINA_VERSION_MINOR(V) ((V >> 16) & 0xFF)
-#define RINA_VERSION_MICRO(V) ((V      ) & 0xFFFF)
-
 uint32_t rina_version(void);
 
 #endif

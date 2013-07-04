@@ -86,6 +86,20 @@ int shims_fini(struct shims * shims)
         return 0;
 }
 
+/*
+ * NOTE:
+ *
+ *   The shims API might change regardless the core version. The core API is
+ *   the northboud API which separates RINA from the user-space. The shim API
+ *   is the southbound one which separate the RINA stack from the shims.
+ *
+ *     Francesco
+ */
+static uint32_t version = MK_RINA_VERSION(0, 0, 4);
+
+uint32_t shims_version(void)
+{ return version; }
+
 static int is_name_ok(const char * name)
 {
         LOG_DBG("Checking name");
