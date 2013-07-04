@@ -53,6 +53,19 @@ unsigned short FlowDeallocateRequestEvent::getIPCProcessId() const{
 	return ipcProcessId;
 }
 
+/* CLASS ASSIGN TO DIF REQUEST EVENT */
+AssignToDIFRequestEvent::AssignToDIFRequestEvent(
+		const DIFConfiguration& difConfiguration,
+			unsigned int sequenceNumber):
+		IPCEvent(ASSIGN_TO_DIF_REQUEST_EVENT,
+										sequenceNumber){
+}
+
+const DIFConfiguration&
+AssignToDIFRequestEvent::getDIFConfiguration(){
+	return difConfiguration;
+}
+
 /* CLASS IPC PROCESS APPLICATION MANAGER */
 void IPCProcessApplicationManager::flowDeallocated(
 		const FlowDeallocateRequestEvent flowDeallocateEvent,

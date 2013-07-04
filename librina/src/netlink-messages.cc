@@ -692,5 +692,28 @@ void IpcmRegisterApplicationResponseMessage::setDifName(
 	this->difName = difName;
 }
 
+/* CLASS IPCM ASSIGN TO DIF REQUEST MESSAGE */
+IpcmAssignToDIFRequestMessage::IpcmAssignToDIFRequestMessage():
+		NetlinkRequestOrNotificationMessage(
+		RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST) {
+}
+
+const DIFConfiguration&
+IpcmAssignToDIFRequestMessage::getDIFConfiguration() const{
+	return difconfiguration;
+}
+
+void IpcmAssignToDIFRequestMessage::setDIFConfiguration(
+		const DIFConfiguration& difConfiguration){
+	this->difconfiguration = difConfiguration;
+}
+
+IPCEvent* IpcmAssignToDIFRequestMessage::toIPCEvent(){
+	AssignToDIFRequestEvent * event =
+			new AssignToDIFRequestEvent(getDIFConfiguration(),
+					getSequenceNumber());
+	return event;
+}
+
 }
 

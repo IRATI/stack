@@ -558,6 +558,23 @@ public:
 	void setResult(int result);
 };
 
+/**
+ * Makes an IPC Process a member of a DIF.
+ * IPC Manager -> IPC Process
+ */
+class IpcmAssignToDIFRequestMessage:
+		public NetlinkRequestOrNotificationMessage {
+
+	/** The configuration of the DIF where the IPC Process is assigned */
+	DIFConfiguration difconfiguration;
+
+public:
+	IpcmAssignToDIFRequestMessage();
+	const DIFConfiguration& getDIFConfiguration() const;
+	void setDIFConfiguration(const DIFConfiguration&);
+	IPCEvent* toIPCEvent();
+};
+
 }
 
 #endif /* NETLINK_MESSAGES_H_ */

@@ -36,7 +36,7 @@ class FlowDeallocateRequestEvent: public IPCEvent {
 	/** The application that requested the flow deallocation*/
 	ApplicationProcessNamingInformation applicationName;
 
-	/** The id of the IPC Process that should deallocte the flow */
+	/** The id of the IPC Process that should deallocate the flow */
 	unsigned short ipcProcessId;
 
 public:
@@ -49,6 +49,21 @@ public:
 	const ApplicationProcessNamingInformation& getDIFName() const;
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	unsigned short getIPCProcessId() const;
+};
+
+/**
+ * The IPC Manager requests the IPC Process to become a member of a
+ * DIF, and provides de related information
+ */
+class AssignToDIFRequestEvent: public IPCEvent {
+
+	/** The configuration of the DIF the IPC Process is being assigned to*/
+	DIFConfiguration difConfiguration;
+
+public:
+	AssignToDIFRequestEvent(const DIFConfiguration& difConfiguration,
+			unsigned int sequenceNumber);
+	const DIFConfiguration& getDIFConfiguration();
 };
 
 /**
