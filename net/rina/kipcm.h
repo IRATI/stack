@@ -106,11 +106,7 @@ struct flow {
 	struct kfifo *         sdu_ready;
 };
 
-struct kipcm {
-        struct shims * shims;
-        struct list_head * id_to_ipcp;
-        struct list_head * port_id_to_flow;
-};
+struct kipcm;
 
 struct kipcm * kipcm_init(struct kobject * parent);
 int            kipcm_fini(struct kipcm * kipcm);
