@@ -185,8 +185,6 @@ static int empty_fini(struct shim_data * data)
          *   here
          */
 
-        ASSERT(data);
-
         /* Retrieve the instance */
 	list_for_each_safe(pos, q, &(data->instances)) {
 		 inst = list_entry(pos, struct shim_instance_data, list);
