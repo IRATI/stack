@@ -27,6 +27,7 @@
 
 #include "logs.h"
 #include "utils.h"
+#include "debug.h"
 
 /*
  * NOTE:

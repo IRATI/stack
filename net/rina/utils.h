@@ -21,16 +21,8 @@
 #ifndef RINA_UTILS_H
 #define RINA_UTILS_H
 
-#include <linux/bug.h>
 #include <linux/slab.h>
 /* #include <linux/gfp.h> */
-
-/* Embed assertions in the code upon user-choice */
-#ifdef CONFIG_RINA_ASSERTIONS
-#define ASSERT(COND) BUG_ON(!(COND))
-#else
-#define ASSERT(COND)
-#endif
 
 #include <linux/kobject.h>
 #define RINA_ATTR_RO(NAME)                              \

@@ -21,6 +21,15 @@
 #ifndef RINA_DEBUG_H
 #define RINA_DEBUG_H
 
+/* Embed assertions in the code upon user-choice */
+#include <linux/bug.h>
+
+#ifdef CONFIG_RINA_ASSERTIONS
+#define ASSERT(COND) BUG_ON(!(COND))
+#else
+#define ASSERT(COND)
+#endif
+
 int  rina_debug_init(void);
 void rina_debug_exit(void);
 
