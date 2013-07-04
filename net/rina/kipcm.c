@@ -63,13 +63,10 @@ static int add_id_to_ipcp_node(struct kipcm *         kipcm,
 {
         struct id_to_ipcp_t *id_to_ipcp;
 
-        LOG_FBEGN;
-
         id_to_ipcp = kzalloc(sizeof(*id_to_ipcp), GFP_KERNEL);
         if (!id_to_ipcp) {
                 LOG_ERR("Cannot allocate %zu bytes of memory",
                         sizeof(*id_to_ipcp));
-                LOG_FEXIT;
                 return -1;
         }
 
@@ -77,8 +74,6 @@ static int add_id_to_ipcp_node(struct kipcm *         kipcm,
         id_to_ipcp->ipcprocess = ipc_process;
         INIT_LIST_HEAD(&id_to_ipcp->list);
         list_add(&id_to_ipcp->list, kipcm->id_to_ipcp);
-
-        LOG_FEXIT;
 
         return 0;
 }
@@ -89,16 +84,11 @@ find_ipc_process_by_id(struct kipcm *   kipcm,
 {
         struct id_to_ipcp_t * cur;
 
-        LOG_FBEGN;
-
         list_for_each_entry(cur, kipcm->id_to_ipcp, list) {
                 if (cur->id == id) {
-                        LOG_FEXIT;
                         return cur->ipcprocess;
                 }
         }
-
-        LOG_FEXIT;
 
         return NULL;
 }
@@ -123,7 +113,6 @@ struct kipcm * kipcm_init(struct kobject * parent)
         if (!tmp->id_to_ipcp) {
 		kfree(tmp);
 
-		LOG_FEXIT;
 		return NULL;
 	}
 
@@ -131,7 +120,6 @@ struct kipcm * kipcm_init(struct kobject * parent)
 	if (!tmp->port_id_to_flow) {
 		kfree(tmp);
 
-		LOG_FEXIT;
 		return NULL;
 	}
 
@@ -190,7 +178,6 @@ int kipcm_ipc_create(struct kipcm *        kipcm,
                 if (!ipc_process) {
                         LOG_ERR("Cannot allocate %zu bytes of memory",
                                 sizeof(*ipc_process));
-                        LOG_FEXIT;
                         return -1;
                 }
 
@@ -224,11 +211,8 @@ int kipcm_ipc_configure(struct kipcm *                  kipcm,
 	struct shim *          shim;
 	struct shim_config *   conf = NULL;
 
-	LOG_FBEGN;
-
 	ipc_process = find_ipc_process_by_id(kipcm, id);
 	if (ipc_process == NULL) {
-		LOG_FEXIT;
 		return -1;
 	}
 	switch (ipc_process->type) {

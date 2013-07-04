@@ -33,7 +33,7 @@
 #include "kipcm.h"
 #include "shim.h"
 
-struct dummy_instance {
+struct shim_instance_data {
         ipc_process_id_t ipc_process_id;
         struct name_t *  name;
 
@@ -57,7 +57,7 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
                                        const struct flow_spec_t *  flow_spec,
                                        port_id_t                   id)
 {
-        struct dummy_instance * dummy;
+        struct shim_instance_data * dummy;
         struct dummy_flow *     flow;
 
         /* FIXME: We should verify that the port_id has not got a flow yet */
@@ -68,11 +68,11 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
 
         /* FIXME: Now we should ask the destination application for a flow */
 
-        dummy = (struct dummy_instance *) data;
+        dummy = (struct shim_instance_data *) data;
 
         flow->dest = dest;
         flow->source = source;
-        flow->port_id = *id;
+        flow->port_id = id;
 
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, dummy->flows);
@@ -97,14 +97,12 @@ static int dummy_application_unregister(struct shim_instance_data * data,
                                         const struct name_t *       name)
 { return -1; }
 
-static struct dummy_flow * find_flow(struct shim_instance_data * opaque,
+static struct dummy_flow * find_flow(struct shim_instance_data * data,
                                      port_id_t                   id)
 {
-        struct dummy_instance * dummy;
         struct dummy_flow *     flow;
 
-        dummy = (struct dummy_instance *) opaque;
-        list_for_each_entry(flow, dummy->flows, list) {
+        list_for_each_entry(flow, data->flows, list) {
                 if (flow->port_id == id) {
                         return flow;
                 }
@@ -168,7 +166,7 @@ static int dummy_init(struct shim_data * data)
 
 static int dummy_fini(struct shim_data * data)
 {
-        struct dummy_instance * pos, * next;
+        struct shim_instance_data * pos, * next;
         struct dummy_flow *     pos_flow, * next_flow;
 
         list_for_each_entry_safe(pos, next,
@@ -200,7 +198,7 @@ static struct shim_instance * dummy_create(struct shim_data * data,
                                            ipc_process_id_t   id)
 {
         struct shim_instance *   instance;
-        struct dummy_instance *  dummy_inst;
+        struct shim_instance_data *  dummy_inst;
         struct list_head *       port_flow;
 
         instance = rkzalloc(sizeof(*instance), GFP_KERNEL);
@@ -245,12 +243,12 @@ static struct shim_instance * dummy_configure(struct shim_data *         data,
                                               const struct shim_config * conf)
 {
         struct shim_config *    current_entry;
-        struct dummy_instance * dummy;
+        struct shim_instance_data * dummy;
 
         ASSERT(inst);
         ASSERT(conf);
 
-        dummy = (struct dummy_instance *) inst->data;
+        dummy = (struct shim_instance_data *) inst->data;
         if (!dummy) {
                 LOG_ERR("There is not a dummy instance in this shim instance");
                 return NULL;

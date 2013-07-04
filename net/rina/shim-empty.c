@@ -100,7 +100,7 @@ static int empty_flow_allocate_request(struct shim_instance_data * data,
 
 	flow->dest = dest;
 	flow->source = source;
-	flow->port_id = *id;
+	flow->port_id = id;
 
 	INIT_LIST_HEAD(&flow->list);
 	list_add(&flow->list, data->flows);
