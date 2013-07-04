@@ -153,8 +153,8 @@ struct pci_t {
 };
 
 struct pdu_t {
-	struct pci_t    *pci;
-	struct buffer_t *buffer;
+	struct pci_t    * pci;
+	struct buffer_t * buffer;
 };
 
 /* This structure defines an EFCP connection */

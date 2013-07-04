@@ -51,7 +51,8 @@ struct kipcm {
  * NOTE:
  *
  *   id_to_ipcp is a list at the moment, it will be changed to a map as soon
- *   as we get some free time.
+ *   as we get some free time. Functionalities will be the same, a bit more
+ *   performance wise
  *
  *   Francesco
  */
