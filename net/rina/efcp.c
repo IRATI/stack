@@ -25,6 +25,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "efcp.h"
+#include "debug.h"
 
 struct efcp_descriptor {
         int this_is_dummy;

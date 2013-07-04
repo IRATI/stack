@@ -30,6 +30,7 @@
 #include "kipcm.h"
 #include "efcp.h"
 #include "rmt.h"
+#include "debug.h"
 
 #define DEFAULT_LABEL "default"
 

@@ -33,6 +33,7 @@
 #include "utils.h"
 #include "kipcm.h"
 #include "shim.h"
+#include "debug.h"
 
 /* Holds all configuration related to a shim instance */
 struct empty_info {
@@ -200,7 +201,7 @@ static struct shim_data {
 /*
  * We maintain a shim pointer since the module is loaded once (and we need it
  * during module unloading)
-*/
+ */
 static struct shim * empty_shim = NULL;
 
 /*
@@ -212,10 +213,10 @@ static struct shim * empty_shim = NULL;
 static int empty_init(struct shim_data * data)
 {
         ASSERT(data);
-
+        
         bzero(&empty_data, sizeof(empty_data));
         INIT_LIST_HEAD(&(data->instances));
-
+        
         return 0;
 }
 
@@ -226,7 +227,7 @@ static int empty_init(struct shim_data * data)
 static int empty_fini(struct shim_data * data)
 {
         ASSERT(data);
-
+        
         /*
          * NOTE:
          *   All the instances will be removed by the shims layer, no work
@@ -241,24 +242,24 @@ static int empty_fini(struct shim_data * data)
          *     Francesco
          */
 
-        ASSERT(list_empty(&(data->instances));
+        ASSERT(list_empty(&(data->instances)));
 
         return 0;
 }
 
 static struct shim_instance_data * find_instance(struct shim_data * data,
-						 ipc_process_id_t   id)
+                                                 ipc_process_id_t   id)
 {
 
-	struct shim_instance_data * pos;
+        struct shim_instance_data * pos;
 
-	list_for_each_entry(pos, &(data->instances), list) {
-		if (pos->id == id) {
-			return pos;
-		}
-	}
+        list_for_each_entry(pos, &(data->instances), list) {
+                if (pos->id == id) {
+                        return pos;
+                }
+        }
 
-	return NULL;
+        return NULL;
 }
 
 static struct shim_instance * empty_create(struct shim_data * data,
@@ -268,11 +269,11 @@ static struct shim_instance * empty_create(struct shim_data * data,
 
         ASSERT(data);
 	
-	/* Check if there already is an instance with that id */
-	if (find_instance(data,id)) {
-		LOG_ERR("There's a shim instance with id %d already", id);
-		return NULL;
-	} 
+        /* Check if there already is an instance with that id */
+        if (find_instance(data,id)) {
+                LOG_ERR("There's a shim instance with id %d already", id);
+                return NULL;
+        } 
 
         /* Create an instance */
         inst = rkzalloc(sizeof(*inst), GFP_KERNEL);
@@ -309,49 +310,49 @@ static int name_cpy(struct name_t ** dst, const struct name_t * src)
            !strcpy((*dst)->process_instance, src->process_instance) ||
            !strcpy((*dst)->entity_name,      src->entity_name)      ||
            !strcpy((*dst)->entity_instance,  src->entity_instance)) {
-		LOG_ERR("Cannot perform strcpy");
+                LOG_ERR("Cannot perform strcpy");
                 return -1;
-	}
+        }
 
-	return 0;
+        return 0;
 }
 
 static struct shim_instance * empty_configure(struct shim_data *         data,
                                               struct shim_instance *     inst,
                                               const struct shim_config * cfg)
 {
-	struct shim_instance_data * instance;
-	struct shim_config *        tmp;
+        struct shim_instance_data * instance;
+        struct shim_config *        tmp;
 
         ASSERT(data);
         ASSERT(inst);
         ASSERT(cfg);
 
-	instance = find_instance(data, inst->data->id);
-	if (!instance) {
-		LOG_ERR("There's no instance with id %d", inst->data->id);
-		return inst;
-	}
+        instance = find_instance(data, inst->data->id);
+        if (!instance) {
+                LOG_ERR("There's no instance with id %d", inst->data->id);
+                return inst;
+        }
 
-	/* Get configuration struct pertaining to this shim instance */ 
-	if (!instance->info) {
-		instance->info = rkzalloc(sizeof(*instance->info), GFP_KERNEL);
+        /* Get configuration struct pertaining to this shim instance */ 
+        if (!instance->info) {
+                instance->info = rkzalloc(sizeof(*instance->info), GFP_KERNEL);
                 if (!instance->info)
                         return NULL;
-	}
+        }
 
         /* Use configuration values on that instance */
-	list_for_each_entry(tmp, &(cfg->list), list) {
-		if (!strcmp(tmp->entry->name, "dif-name") &&
+        list_for_each_entry(tmp, &(cfg->list), list) {
+                if (!strcmp(tmp->entry->name, "dif-name") &&
                     tmp->entry->value->type == SHIM_CONFIG_STRING) {
                         if (name_cpy(&(instance->info->dif_name),
                                      (struct name_t *)
                                      tmp->entry->value->data)) {
-				LOG_ERR("Failed to copy DIF name");
+                                LOG_ERR("Failed to copy DIF name");
                                 return inst;
                         }
-		}
-	}
+                }
+        }
 	
         /*
          * Instance might change (reallocation), return the updated pointer
@@ -365,25 +366,25 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
 static int empty_destroy(struct shim_data *     data,
                          struct shim_instance * instance)
 {
-	struct shim_instance_data * inst;
-	struct list_head          * pos, * q;
+        struct shim_instance_data * inst;
+        struct list_head          * pos, * q;
 
         ASSERT(data);
         ASSERT(instance);
 
         /* Retrieve the instance */
-	list_for_each_safe(pos, q, &(data->instances)) {
-		 inst = list_entry(pos, struct shim_instance_data, list);
+        list_for_each_safe(pos, q, &(data->instances)) {
+                inst = list_entry(pos, struct shim_instance_data, list);
 
-		 if(inst->id == instance->data->id) {
-			 /* Unbind from the instances set */
-			 list_del(pos);
-			 /* Destroy it */
-			 rkfree(inst->info->dif_name);
-			 rkfree(inst->info);
-			 rkfree(inst);
-		 }
-	}
+                if(inst->id == instance->data->id) {
+                        /* Unbind from the instances set */
+                        list_del(pos);
+                        /* Destroy it */
+                        rkfree(inst->info->dif_name);
+                        rkfree(inst->info);
+                        rkfree(inst);
+                }
+        }
 
         return 0;
 }
@@ -408,7 +409,6 @@ static int __init mod_init(void)
          * it will get called and empty_data will be initialized.
          *
          * If the init function is not present (empty_ops.init == NULL)
-         *
          */
 
         empty_shim = kipcm_shim_register(default_kipcm,
@@ -426,13 +426,14 @@ static int __init mod_init(void)
 static void __exit mod_exit(void)
 {
         /*
-         * Upon unregistration empty_ops.fini will be called (if present), that
-         * function will be in charge to release all the resources allocated
-         * during the shim lifetime.
+         * Upon unregistration empty_ops.fini will be called (if present).
+         * That function will be in charge to release all the resources
+         * allocated during the shim lifetime.
          *
-         * The upper layers will call empty_ops.create and empty_ops.destroy so
-         * empty_ops.fini should release the resources allocated by
-         * empty_ops.init
+         * The upper layers will be calling .create. The .destroy must release
+         * all the resources allocated by .create. The .fini must release the
+         * resources allocated by .init and any resources that cannot be
+         * released by .destroy, if any
          */
         if (kipcm_shim_unregister(default_kipcm, empty_shim)) {
                 LOG_CRIT("Cannot unregister");
@@ -446,7 +447,7 @@ module_exit(mod_exit);
 MODULE_DESCRIPTION("RINA Empty Shim IPC");
 
 MODULE_LICENSE("GPL");
-
+ 
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
 MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
 MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");

@@ -37,6 +37,7 @@
 #include "common.h"
 #include "shim.h"
 #include "kipcm.h"
+#include "debug.h"
 #include "utils.h"
 
 /* Holds the configuration of one shim instance */
@@ -211,7 +212,7 @@ static int eth_vlan_fini(struct shim_data * data)
 {
         ASSERT(data);
 
-        ASSERT(list_empty(&(data->instances));
+        ASSERT(list_empty(&(data->instances)));
 
         return 0;
 }

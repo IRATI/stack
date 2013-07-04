@@ -28,6 +28,7 @@
 #include "utils.h"
 #include "shim.h"
 #include "kipcm.h"
+#include "debug.h"
 
 struct kipcm {
         struct shims *   shims;

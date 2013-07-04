@@ -29,6 +29,7 @@
 
 #include "logs.h"
 #include "common.h"
+#include "debug.h"
 #include "utils.h"
 #include "kipcm.h"
 #include "shim.h"
