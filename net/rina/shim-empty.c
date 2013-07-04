@@ -105,7 +105,7 @@ static int empty_flow_allocate_request(struct shim_instance_data * data,
 	INIT_LIST_HEAD(&flow->list);
 	list_add(&flow->list, data->flows);
 
-        return -1;
+        return 0;
 }
 
 static int empty_flow_allocate_response(struct shim_instance_data * data,
@@ -132,7 +132,7 @@ static int empty_flow_deallocate(struct shim_instance_data * data,
 	}
 
 
-        return -1;
+        return 0;
 }
 
 static int empty_application_register(struct shim_instance_data * data,
