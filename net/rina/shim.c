@@ -29,6 +29,7 @@
 #include "utils.h"
 #include "shim.h"
 #include "kipcm.h"
+#include "debug.h"
 
 static ssize_t shim_show(struct kobject *   kobj,
                          struct attribute * attr,
