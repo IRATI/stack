@@ -489,7 +489,7 @@ int rina_netlink_set_destroy(struct rina_nl_set * set)
                 return -1;
         }
 
-        kfree(set);
+        rkfree(set);
         return 0;
 }
 EXPORT_SYMBOL(rina_netlink_set_destroy);

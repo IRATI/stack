@@ -226,7 +226,7 @@ static struct shim_instance * empty_create(struct shim_data * data,
         inst->ops  = &empty_instance_ops;
         inst->data = rkzalloc(sizeof(struct shim_instance_data), GFP_KERNEL);
         if (!inst->data) {
-                kfree(inst);
+                rkfree(inst);
                 return NULL;
         }
 
@@ -322,9 +322,9 @@ static int empty_destroy(struct shim_data *     data,
 			 /* Unbind from the instances set */
 			 list_del(pos);
 			 /* Destroy it */
-			 kfree(inst->info->dif_name);
-			 kfree(inst->info);
-			 kfree(inst);
+			 rkfree(inst->info->dif_name);
+			 rkfree(inst->info);
+			 rkfree(inst);
 		 }
 	}
 

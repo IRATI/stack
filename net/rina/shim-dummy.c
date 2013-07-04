@@ -179,9 +179,9 @@ static int dummy_fini(struct shim_data * data)
                 list_for_each_entry_safe(pos_flow,
                                          next_flow, pos->flows, list) {
                         list_del(&pos_flow->list);
-                        kfree(pos_flow);
+                        rkfree(pos_flow);
                 }
-                kfree(pos);
+                rkfree(pos);
         }
 
         return -1;
@@ -201,14 +201,14 @@ static struct shim_instance * dummy_create(struct shim_data * data,
 
         dummy_inst = rkzalloc(sizeof(*dummy_inst), GFP_KERNEL);
         if (!dummy_inst) {
-                kfree(instance);
+                rkfree(instance);
                 return NULL;
         }
 
         port_flow = rkzalloc(sizeof(*port_flow), GFP_KERNEL);
         if (!port_flow) {
-                kfree(instance);
-                kfree(dummy_inst);
+                rkfree(instance);
+                rkfree(dummy_inst);
                 return NULL;
         }
 

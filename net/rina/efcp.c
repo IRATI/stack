@@ -48,7 +48,7 @@ int efcp_fini(void * opaque)
         LOG_DBG("Finalizing instance %pK", opaque);
 
         ASSERT(opaque);
-        kfree(opaque);
+        rkfree(opaque);
 
         return 0;
 }
