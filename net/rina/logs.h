@@ -55,8 +55,6 @@
 #define LOG_HBEAT
 #endif
 
-#define LOG_MISSING                                     \
-        LOG_ERR("Missing implementation in %s:%d",      \
-                __FUNCTION__, __LINE__)
+#define LOG_MISSING LOG_ERR("Missing code in %s:%d", __FILE__, __LINE__)
 
 #endif

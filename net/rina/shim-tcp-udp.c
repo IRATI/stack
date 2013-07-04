@@ -22,7 +22,8 @@
 
 #include <linux/module.h>
 
-#define RINA_PREFIX "shim-tcp-udp"
+#define SHIM_NAME   "shim-tcp-udp"
+#define RINA_PREFIX SHIM_NAME
 
 #include "logs.h"
 

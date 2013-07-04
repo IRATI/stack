@@ -23,7 +23,9 @@
 #include <linux/module.h>
 #include <linux/list.h>
 
-#define RINA_PREFIX "shim-dummy"
+#define SHIM_NAME   "shim-dummy"
+
+#define RINA_PREFIX SHIM_NAME
 
 #include "logs.h"
 #include "common.h"
@@ -53,7 +55,7 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
                                        const struct name_t *       source,
                                        const struct name_t *       dest,
                                        const struct flow_spec_t *  flow_spec,
-                                       port_id_t *                 id)
+                                       port_id_t                   id)
 {
         struct dummy_instance * dummy;
         struct dummy_flow *     flow;
@@ -282,7 +284,7 @@ extern struct kipcm * default_kipcm;
 static int __init mod_init(void)
 {
         dummy_shim = kipcm_shim_register(default_kipcm,
-                                         "shim-dummy",
+                                         SHIM_NAME,
                                          &dummy_data,
                                          &dummy_ops);
         if (!dummy_shim) {
