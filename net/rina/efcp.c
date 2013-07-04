@@ -63,8 +63,8 @@ int efcp_write(void *               opaque,
         return 0;
 }
 
-int efcp_receive_pdu(void *       opaque,
-                     struct pdu_t pdu)
+int efcp_receive_pdu(void *     opaque,
+                     struct pdu pdu)
 {
         LOG_DBG("PDU received in the EFCP");
 

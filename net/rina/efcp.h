@@ -112,8 +112,8 @@ struct dtcp_instance_t {
         struct dtcp_state_vector_t *dtcp_state_vector;
 
         /* FIXME: Queues must be added
-         * QUEUE(flow_control_queue, pdu_t);
-         * QUEUE(closed_window_queue, pdu_t);
+         * QUEUE(flow_control_queue, pdu);
+         * QUEUE(closed_window_queue, pdu);
          * struct workqueue_struct * rx_control_queue;
          */
 };
@@ -224,7 +224,7 @@ int      efcp_write(void *               opaque,
                     port_id_t            port_id,
                     const struct sdu_t * sdu);
 int      efcp_receive_pdu(void *       opaque,
-                          struct pdu_t pdu);
+                          struct pdu pdu);
 cep_id_t efcp_create(void *                      opaque,
                      const struct connection_t * connection);
 int      efcp_destroy(void *   opaque,

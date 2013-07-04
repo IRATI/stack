@@ -142,18 +142,18 @@ struct flow_spec_t {
 	uint_t               max_sdu_size;
 };
 
-struct pci_t {
-	address_t source;
-	address_t destination;
+struct pci {
+	address_t  source;
+	address_t  destination;
 	pdu_type_t type;
-	cep_id_t source_cep_id;
-	cep_id_t dest_cep_id;
-	qos_id_t qos_id;
-	seq_num_t sequence_number;
+	cep_id_t   source_cep_id;
+	cep_id_t   dest_cep_id;
+	qos_id_t   qos_id;
+	seq_num_t  sequence_number;
 };
 
-struct pdu_t {
-	struct pci_t    * pci;
+struct pdu {
+	struct pci *      pci;
 	struct buffer_t * buffer;
 };
 
