@@ -8,8 +8,8 @@ obj-$(CONFIG_RINA) +=							\
 obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=		\
 	utils-workarounds.o rina_personality_default.o
 
-rina_personality_default-y :=				\
-	shim.o kipcm.o efcp.o rmt.o default.o
+rina_personality_default-y :=					\
+	shim.o kipcm.o efcp.o rmt.o default.o shim-utils.o 
 
 obj-$(CONFIG_RINA_SHIM_EMPTY)    += shim-empty.o
 obj-$(CONFIG_RINA_SHIM_DUMMY)    += shim-dummy.o
