@@ -47,5 +47,6 @@
 
 void * rkmalloc(size_t size, gfp_t flags);
 void * rkzalloc(size_t size, gfp_t flags);
+void   rkfree(void * ptr);
 
 #endif
