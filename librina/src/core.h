@@ -170,8 +170,12 @@ public:
 	RINAManager(unsigned int netlinkPort);
 	~RINAManager();
 
+	BaseNetlinkMessage * sendRequestAndWaitForResponse(
+			BaseNetlinkMessage * request, const std::string& errorDescription)
+			throw(IPCException);
+
 	/** Sends a request message and waits for the reply*/
-	BaseNetlinkMessage * sendRequestMessageAndWaitForReply(
+	BaseNetlinkMessage * sendRequestMessageAndWaitForResponse(
 			BaseNetlinkMessage * netlinkMessage) throw (NetlinkException);
 
 	/** Send a response message or a notificaiton message */

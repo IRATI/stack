@@ -53,6 +53,80 @@ unsigned short FlowDeallocateRequestEvent::getIPCProcessId() const{
 	return ipcProcessId;
 }
 
+/* CLASS ASSIGN TO DIF REQUEST EVENT */
+AssignToDIFRequestEvent::AssignToDIFRequestEvent(
+		const DIFConfiguration& difConfiguration,
+			unsigned int sequenceNumber):
+		IPCEvent(ASSIGN_TO_DIF_REQUEST_EVENT,
+										sequenceNumber){
+}
+
+const DIFConfiguration&
+AssignToDIFRequestEvent::getDIFConfiguration() const{
+	return difConfiguration;
+}
+
+/* CLASS EXTENDED IPC MANAGER */
+const DIFConfiguration& ExtendedIPCManager::getCurrentConfiguration() const{
+	return currentConfiguration;
+}
+
+void ExtendedIPCManager::setCurrentConfiguration(
+		const DIFConfiguration& currentConfiguration){
+	this->currentConfiguration = currentConfiguration;
+}
+
+unsigned int ExtendedIPCManager::getIpcProcessId() const{
+	return ipcProcessId;
+}
+
+void ExtendedIPCManager::setIpcProcessId(unsigned int ipcProcessId){
+	this->ipcProcessId = ipcProcessId;
+}
+
+void ExtendedIPCManager::assignToDIFResponse(
+		const AssignToDIFRequestEvent& event, int result,
+		const std::string& errorDescription) throw(IPCException){
+	if (result == 0){
+		this->currentConfiguration = event.getDIFConfiguration();
+	}
+#if STUB_API
+	//Do nothing
+#else
+	IpcmAssignToDIFResponseMessage responseMessage;
+	responseMessage.setResult(result);
+	responseMessage.setErrorDescription(errorDescription);
+	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+	}catch(NetlinkException &e){
+		throw IPCException(e.what());
+	}
+#endif
+}
+
+void ExtendedIPCManager::registerApplicationResponse(
+		const ApplicationRegistrationRequestEvent& event, int result,
+		const std::string& errorDescription) throw(IPCException){
+#if STUB_API
+	//Do nothing
+#else
+	IpcmRegisterApplicationResponseMessage responseMessage;
+	responseMessage.setResult(result);
+	responseMessage.setErrorDescription(errorDescription);
+	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+	}catch(NetlinkException &e){
+		throw IPCException(e.what());
+	}
+#endif
+}
+
+Singleton<ExtendedIPCManager> extendedIPCManager;
+
 /* CLASS IPC PROCESS APPLICATION MANAGER */
 void IPCProcessApplicationManager::flowDeallocated(
 		const FlowDeallocateRequestEvent flowDeallocateEvent,
@@ -60,19 +134,16 @@ void IPCProcessApplicationManager::flowDeallocated(
 #if STUB_API
 	//Do nothing
 #else
-	AppDeallocateFlowResponseMessage * responseMessage =
-			new AppDeallocateFlowResponseMessage();
-	responseMessage->setApplicationName(flowDeallocateEvent.getApplicationName());
-	responseMessage->setResult(result);
-	responseMessage->setErrorDescription(errorDescription);
-	responseMessage->setSourceIpcProcessId(flowDeallocateEvent.getIPCProcessId());
-	responseMessage->setSequenceNumber(flowDeallocateEvent.getSequenceNumber());
-	responseMessage->setResponseMessage(true);
+	AppDeallocateFlowResponseMessage responseMessage;
+	responseMessage.setApplicationName(flowDeallocateEvent.getApplicationName());
+	responseMessage.setResult(result);
+	responseMessage.setErrorDescription(errorDescription);
+	responseMessage.setSourceIpcProcessId(flowDeallocateEvent.getIPCProcessId());
+	responseMessage.setSequenceNumber(flowDeallocateEvent.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(responseMessage);
-		delete responseMessage;
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
 	}catch(NetlinkException &e){
-		delete responseMessage;
 		throw IPCException(e.what());
 	}
 #endif

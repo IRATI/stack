@@ -100,22 +100,20 @@ int main(int argc, char * argv[]) {
 
 	/* TEST ASSIGN TO DIF */
 	DIFConfiguration * difConfiguration = new DIFConfiguration();
-	ipcProcess1->assignToDIF(*difConfiguration);
+	ipcProcess1->assignToDIF(*difConfiguration, 24);
 
 	/* TEST REGISTER APPLICATION */
-	ipcProcess1->registerApplication(*sourceName);
+	ipcProcess1->registerApplication(*sourceName, 37);
 
 	/* TEST UNREGISTER APPLICATION */
 	ipcProcess1->unregisterApplication(*sourceName);
 
 	/* TEST ALLOCATE FLOW */
-	FlowSpecification * flowSpec = new FlowSpecification();
-	FlowRequest * flowRequest = new FlowRequest();
-	flowRequest->setSourceApplicationName(*sourceName);
-	flowRequest->setDestinationApplicationName(*destinationName);
-	flowRequest->setFlowSpecification(*flowSpec);
+	FlowSpecification *flowSpec = new FlowSpecification();
+	FlowRequestEvent * flowRequest = new FlowRequestEvent(*flowSpec,
+			*sourceName, *difName, 1234);
 	flowRequest->setPortId(430);
-	ipcProcess1->allocateFlow(*flowRequest);
+	ipcProcess1->allocateFlow(*flowRequest, 24);
 
 	/* TEST QUERY RIB */
 	ipcProcess1->queryRIB();

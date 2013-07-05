@@ -126,20 +126,6 @@ void ApplicationRegistration::removeDIFName(
 
 /* CLASS IPC MANAGER */
 
-BaseNetlinkMessage * sendRequestAndWaitForResponse(
-		BaseNetlinkMessage * request, const std::string& errorDescription)
-			throw(IPCException){
-	BaseNetlinkMessage* response = 0;
-	try{
-		response =	rinaManager->sendRequestMessageAndWaitForReply(request);
-		delete request;
-		return response;
-	}catch(NetlinkException &e){
-		delete request;
-		throw IPCException(errorDescription + e.what());
-	}
-}
-
 IPCManager::IPCManager() {
 }
 
@@ -220,15 +206,14 @@ void IPCManager::registerApplication(
 #if STUB_API
 	//Do nothing
 #else
-	AppRegisterApplicationRequestMessage * message =
-			new AppRegisterApplicationRequestMessage();
-	message->setApplicationName(applicationName);
-	message->setDifName(DIFName);
-	message->setRequestMessage(true);
+	AppRegisterApplicationRequestMessage message;
+	message.setApplicationName(applicationName);
+	message.setDifName(DIFName);
+	message.setRequestMessage(true);
 
 	AppRegisterApplicationResponseMessage * registerResponseMessage =
 			dynamic_cast<AppRegisterApplicationResponseMessage *>(
-					sendRequestAndWaitForResponse(message,
+					rinaManager->sendRequestAndWaitForResponse(&message,
 							IPCManager::error_registering_application));
 
 	if (registerResponseMessage->getResult() < 0){
@@ -311,22 +296,21 @@ Flow * IPCManager::allocateFlowRequest(
 	Flow * flow = 0;
 
 #if STUB_API
-	ApplicationProcessNamingInformation * DIFName =
-			new ApplicationProcessNamingInformation("test.DIF", "");
+	ApplicationProcessNamingInformation DIFName =
+			ApplicationProcessNamingInformation("test.DIF", "");
 	portId = getFakePortId(allocatedFlows);
 	flow = new Flow(sourceAppName, destAppName, flowSpec, FLOW_ALLOCATED,
-			*DIFName, portId);
+			DIFName, portId);
 #else
-	AppAllocateFlowRequestMessage * message =
-			new AppAllocateFlowRequestMessage();
-	message->setSourceAppName(sourceAppName);
-	message->setDestAppName(destAppName);
-	message->setFlowSpecification(flowSpec);
-	message->setRequestMessage(true);
+	AppAllocateFlowRequestMessage message;
+	message.setSourceAppName(sourceAppName);
+	message.setDestAppName(destAppName);
+	message.setFlowSpecification(flowSpec);
+	message.setRequestMessage(true);
 
 	AppAllocateFlowRequestResultMessage * flowRequestResponse =
 			dynamic_cast<AppAllocateFlowRequestResultMessage *>(
-					sendRequestAndWaitForResponse(message,
+					rinaManager->sendRequestAndWaitForResponse(&message,
 							IPCManager::error_requesting_flow_allocation));
 
 	if (flowRequestResponse->getPortId() < 0){
@@ -363,12 +347,11 @@ Flow * IPCManager::allocateFlowResponse(
 #if STUB_API
 	//Do nothing
 #else
-	AppAllocateFlowResponseMessage * message =
-			new AppAllocateFlowResponseMessage();
-	message->setAccept(accept);
-	message->setDenyReason(reason);
-	message->setNotifySource(true);
-	message->setSequenceNumber(flowRequestEvent.getSequenceNumber());
+	AppAllocateFlowResponseMessage message;
+	message.setAccept(accept);
+	message.setDenyReason(reason);
+	message.setNotifySource(true);
+	message.setSequenceNumber(flowRequestEvent.getSequenceNumber());
 #endif
 
 	Flow * flow = new Flow(flowRequestEvent.getSourceApplicationName(),
@@ -395,16 +378,15 @@ void IPCManager::deallocateFlow(
 #if STUB_API
 	//Do nothing
 #else
-	AppDeallocateFlowRequestMessage * message =
-			new AppDeallocateFlowRequestMessage();
-	message->setApplicationName(applicationName);
-	message->setPortId(portId);
-	message->setDifName(flow->getDIFName());
-	message->setRequestMessage(true);
+	AppDeallocateFlowRequestMessage message;
+	message.setApplicationName(applicationName);
+	message.setPortId(portId);
+	message.setDifName(flow->getDIFName());
+	message.setRequestMessage(true);
 
 	AppDeallocateFlowResponseMessage * deallocateResponse =
 			dynamic_cast<AppDeallocateFlowResponseMessage *>(
-					sendRequestAndWaitForResponse(message,
+					rinaManager->sendRequestAndWaitForResponse(&message,
 							IPCManager::error_requesting_flow_deallocation));
 
 	if (deallocateResponse->getResult() < 0){
@@ -478,6 +460,7 @@ const ApplicationProcessNamingInformation
 	FlowDeallocatedEvent::getDIFName() const{
 	return difName;
 }
+
 
 /* CLASS APPLICATION UNREGISTERED EVENT */
 

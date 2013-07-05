@@ -490,27 +490,22 @@ public:
 	void setIpcProcessId(unsigned short ipcProcessId);
 };
 
+
 /**
- * Invoked by the IPCManager when it wants to register an application
- * to a DIF. IPC Manager -> IPC Process
+ * Invoked by the application when it wants to unregister an application.
+ * Application -> IPC Manager
  */
-class IpcmRegisterApplicationRequestMessage:
+class AppUnregisterApplicationRequestMessage:
 		public NetlinkRequestOrNotificationMessage {
 
 	/** The name of the application to be registered */
 	ApplicationProcessNamingInformation applicationName;
 
-	/** The DIF name where the application wants to register */
+	/** The DIF name where the application is registered */
 	ApplicationProcessNamingInformation difName;
 
-	/**
-	 * The netlink port Id of the application, so that the IPC Process
-	 * can communicate with it
-	 */
-	unsigned int applicationPortId;
-
 public:
-	IpcmRegisterApplicationRequestMessage();
+	AppUnregisterApplicationRequestMessage();
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	void setApplicationName(
 			const ApplicationProcessNamingInformation& applicationName);
@@ -520,6 +515,39 @@ public:
 	void setApplicationPortId(unsigned int applicationPortId);
 	IPCEvent* toIPCEvent();
 };
+
+
+/**
+* Invoked by the IPCManager when it wants to register an application
+* to a DIF. IPC Manager -> IPC Process
+*/
+class IpcmRegisterApplicationRequestMessage:
+public NetlinkRequestOrNotificationMessage {
+
+/** The name of the application to be registered */
+ApplicationProcessNamingInformation applicationName;
+
+/** The DIF name where the application wants to register */
+ApplicationProcessNamingInformation difName;
+
+/**
+* The netlink port Id of the application, so that the IPC Process
+* can communicate with it
+*/
+unsigned int applicationPortId;
+
+public:
+IpcmRegisterApplicationRequestMessage();
+const ApplicationProcessNamingInformation& getApplicationName() const;
+void setApplicationName(
+const ApplicationProcessNamingInformation& applicationName);
+const ApplicationProcessNamingInformation& getDifName() const;
+void setDifName(const ApplicationProcessNamingInformation& difName);
+unsigned int getApplicationPortId() const;
+void setApplicationPortId(unsigned int applicationPortId);
+IPCEvent* toIPCEvent();
+};
+
 
 /**
  * Response of the IPC Process to an application registration request.
@@ -556,6 +584,89 @@ public:
 	void setDifName(const ApplicationProcessNamingInformation& difName);
 	int getResult() const;
 	void setResult(int result);
+};
+
+/**
+ * Makes an IPC Process a member of a DIF.
+ * IPC Manager -> IPC Process
+ */
+class IpcmAssignToDIFRequestMessage:
+		public NetlinkRequestOrNotificationMessage {
+
+	/** The configuration of the DIF where the IPC Process is assigned */
+	DIFConfiguration difconfiguration;
+
+public:
+	IpcmAssignToDIFRequestMessage();
+	const DIFConfiguration& getDIFConfiguration() const;
+	void setDIFConfiguration(const DIFConfiguration&);
+	IPCEvent* toIPCEvent();
+};
+
+/**
+ * Reports the IPC MAnager about the result of an Assign to DIF request
+ * IPC Process -> IPC Manager
+ */
+class IpcmAssignToDIFResponseMessage:
+		public BaseNetlinkMessage {
+
+	/**
+	 * Result of the operation. 0 indicates success, a negative value an
+	 * error code.
+	 */
+	int result;
+
+	/**
+	 * If the application registration didn't succeed, this field may provide
+	 * further detail
+	 */
+	std::string errorDescription;
+
+public:
+	IpcmAssignToDIFResponseMessage();
+	int getResult() const;
+	void setResult(int result);
+	const std::string& getErrorDescription() const;
+	void setErrorDescription(const std::string& errorDescription);
+};
+
+class IpcmAllocateFlowRequestMessage:
+		public NetlinkRequestOrNotificationMessage {
+	/** The source application name*/
+	ApplicationProcessNamingInformation sourceAppName;
+
+	/** The destination application name*/
+	ApplicationProcessNamingInformation destAppName;
+
+	/** The characteristics requested for the flow*/
+	FlowSpecification flowSpec;
+
+	/** The DIF where the Flow is being allocated */
+	ApplicationProcessNamingInformation difName;
+
+	/** The portId assigned tot he flow */
+	int portId;
+
+	/** The Netlink portId of the application that requested the flow*/
+	unsigned int applicationPortId;
+
+public:
+	IpcmAllocateFlowRequestMessage();
+	unsigned int getApplicationPortId() const;
+	void setApplicationPortId(unsigned int applicationPortId);
+	const ApplicationProcessNamingInformation& getDestAppName() const;
+	void setDestAppName(
+			const ApplicationProcessNamingInformation& destAppName);
+	const FlowSpecification& getFlowSpec() const;
+	void setFlowSpec(const FlowSpecification& flowSpec);
+	int getPortId() const;
+	void setPortId(int portId);
+	const ApplicationProcessNamingInformation& getSourceAppName() const;
+	void setSourceAppName(
+			const ApplicationProcessNamingInformation& sourceAppName);
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
+	IPCEvent* toIPCEvent();
 };
 
 }

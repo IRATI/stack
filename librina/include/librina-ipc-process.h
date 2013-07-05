@@ -20,6 +20,7 @@
 #ifdef __cplusplus
 
 #include "librina-common.h"
+#include "librina-application.h"
 
 namespace rina {
 
@@ -36,7 +37,7 @@ class FlowDeallocateRequestEvent: public IPCEvent {
 	/** The application that requested the flow deallocation*/
 	ApplicationProcessNamingInformation applicationName;
 
-	/** The id of the IPC Process that should deallocte the flow */
+	/** The id of the IPC Process that should deallocate the flow */
 	unsigned short ipcProcessId;
 
 public:
@@ -50,6 +51,67 @@ public:
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	unsigned short getIPCProcessId() const;
 };
+
+/**
+ * The IPC Manager requests the IPC Process to become a member of a
+ * DIF, and provides de related information
+ */
+class AssignToDIFRequestEvent: public IPCEvent {
+
+	/** The configuration of the DIF the IPC Process is being assigned to*/
+	DIFConfiguration difConfiguration;
+
+public:
+	AssignToDIFRequestEvent(const DIFConfiguration& difConfiguration,
+			unsigned int sequenceNumber);
+	const DIFConfiguration& getDIFConfiguration() const;
+};
+
+/**
+ * Class used by the IPC Processes to interact with the IPC Manager. Extends
+ * the basic IPC Manager in librina-application with IPC Process specific
+ * functionality
+ */
+class ExtendedIPCManager: public IPCManager{
+	/** The ID of the IPC Process */
+	unsigned int ipcProcessId;
+
+	/** The current configuration of the IPC Process */
+	DIFConfiguration currentConfiguration;
+
+public:
+	const DIFConfiguration& getCurrentConfiguration() const;
+	void setCurrentConfiguration(
+			const DIFConfiguration& currentConfiguration);
+	unsigned int getIpcProcessId() const;
+	void setIpcProcessId(unsigned int ipcProcessId);
+
+	/**
+	 * Reply to the IPC Manager, informing it about the result of an "assign
+	 * to DIF" operation
+	 * @param event the event that trigered the operation
+	 * @param result the result of the operation (0 successful)
+	 * @param errorDescription An optional explanation of the error (if any)
+	 */
+	void assignToDIFResponse(const AssignToDIFRequestEvent& event, int result,
+			const std::string& errorDescription) throw(IPCException);
+
+	/**
+	 * Reply to the IPC Manager, informing it about the result of a "register
+	 * application request" operation
+	 * @param event
+	 * @param result
+	 * @param errorDescription
+	 */
+	void registerApplicationResponse(
+			const ApplicationRegistrationRequestEvent& event, int result,
+			const std::string& errorDescription) throw(IPCException);
+};
+
+/**
+ * Make Extended IPC Manager singleton
+ */
+extern Singleton<ExtendedIPCManager> extendedIPCManager;
 
 /**
  * Class used by IPC Processes to interact with application processes

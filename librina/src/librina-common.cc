@@ -627,6 +627,15 @@ IPCEvent * IPCEventProducer::eventWait() {
 #endif
 }
 
+IPCEvent * IPCEventProducer::eventTimedWait(
+		int seconds, int nanoseconds){
+#if STUB_API
+	return getIPCEvent();
+#else
+	return rinaManager->getEventQueue()->timedtake(seconds, nanoseconds);
+#endif
+}
+
 Singleton<IPCEventProducer> ipcEventProducer;
 
 /* CLASS IPC EXCEPTION */

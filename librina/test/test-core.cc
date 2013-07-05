@@ -27,35 +27,31 @@ void * doWorkApplication(void * arg) {
 	std::cout << "Application: started work\n";
 
 	//1 send message and wait for reply
-	ApplicationProcessNamingInformation * sourceName =
-			new ApplicationProcessNamingInformation();
-	sourceName->setProcessName("/apps/source");
-	sourceName->setProcessInstance("12");
-	sourceName->setEntityName("database");
-	sourceName->setEntityInstance("12");
+	ApplicationProcessNamingInformation sourceName;
+	sourceName.setProcessName("/apps/source");
+	sourceName.setProcessInstance("12");
+	sourceName.setEntityName("database");
+	sourceName.setEntityInstance("12");
 
-	ApplicationProcessNamingInformation * destName =
-			new ApplicationProcessNamingInformation();
-	destName->setProcessName("/apps/dest");
-	destName->setProcessInstance("12345");
-	destName->setEntityName("printer");
-	destName->setEntityInstance("12623456");
+	ApplicationProcessNamingInformation destName;
+	destName.setProcessName("/apps/dest");
+	destName.setProcessInstance("12345");
+	destName.setEntityName("printer");
+	destName.setEntityInstance("12623456");
 
-	FlowSpecification * flowSpec = new FlowSpecification();
+	FlowSpecification flowSpec;
 
-	AppAllocateFlowRequestMessage * message =
-			new AppAllocateFlowRequestMessage();
-	message->setSourceAppName(*sourceName);
-	message->setDestAppName(*destName);
-	message->setFlowSpecification(*flowSpec);
-	message->setRequestMessage(true);
+	AppAllocateFlowRequestMessage message;
+	message.setSourceAppName(sourceName);
+	message.setDestAppName(destName);
+	message.setFlowSpecification(flowSpec);
+	message.setRequestMessage(true);
 
 	/* Try successfull flow allocation */
 	std::cout << "Application: Sending netlink message and waiting for response\n";
 	BaseNetlinkMessage* response =
-			rinaManager->sendRequestMessageAndWaitForReply(message);
+			rinaManager->sendRequestMessageAndWaitForResponse(&message);
 	std::cout << "Application: Got response!\n";
-	delete message;
 
 	AppAllocateFlowRequestResultMessage * flowResultMessage =
 				dynamic_cast<AppAllocateFlowRequestResultMessage *>(response);
@@ -64,18 +60,16 @@ void * doWorkApplication(void * arg) {
 			flowResultMessage->getDifName().getProcessName() << "\n";
 	delete flowResultMessage;
 
-	message = new AppAllocateFlowRequestMessage();
-	message->setSourceAppName(*sourceName);
-	message->setDestAppName(*destName);
-	message->setFlowSpecification(*flowSpec);
-	message->setRequestMessage(true);
+	message.setSourceAppName(sourceName);
+	message.setDestAppName(destName);
+	message.setFlowSpecification(flowSpec);
+	message.setRequestMessage(true);
 
 	/* Try unsuccessfull flow allocation */
 	std::cout << "Application: Sending netlink message and waiting for response\n";
 	response =
-			rinaManager->sendRequestMessageAndWaitForReply(message);
+			rinaManager->sendRequestMessageAndWaitForResponse(&message);
 	std::cout << "Application: Got response!\n";
-	delete message;
 
 	flowResultMessage =
 			dynamic_cast<AppAllocateFlowRequestResultMessage *>(response);
@@ -84,9 +78,6 @@ void * doWorkApplication(void * arg) {
 			flowResultMessage->getErrorDescription() << "\n";
 
 	delete flowResultMessage;
-	delete sourceName;
-	delete destName;
-
 	return (void *) 0;
 }
 
@@ -103,24 +94,20 @@ void * doWorkIPCManager(void * arg) {
 	FlowRequestEvent * flowEvent =
 			dynamic_cast<FlowRequestEvent *>(event);
 
-	ApplicationProcessNamingInformation * difName =
-			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test.DIF");
+	ApplicationProcessNamingInformation difName;;
+	difName.setProcessName("/difs/Test.DIF");
 
-	AppAllocateFlowRequestResultMessage * message =
-			new AppAllocateFlowRequestResultMessage();
-	message->setSourceAppName(flowEvent->getSourceApplicationName());
-	message->setPortId(23);
-	message->setDifName(*difName);
-	message->setIpcProcessPortId(340);
-	message->setIpcProcessId(24);
-	message->setSequenceNumber(flowEvent->getSequenceNumber());
-	message->setResponseMessage(true);
+	AppAllocateFlowRequestResultMessage message;
+	message.setSourceAppName(flowEvent->getSourceApplicationName());
+	message.setPortId(23);
+	message.setDifName(difName);
+	message.setIpcProcessPortId(340);
+	message.setIpcProcessId(24);
+	message.setSequenceNumber(flowEvent->getSequenceNumber());
+	message.setResponseMessage(true);
 
 	std::cout<<"IPC Manager: Sending response!\n";
-	rinaManager->sendResponseOrNotficationMessage(message);
-
-	delete message;
+	rinaManager->sendResponseOrNotficationMessage(&message);
 	delete flowEvent;
 
 	std::cout << "IPC Manager: Waiting for incoming request/notification\n";
@@ -131,20 +118,17 @@ void * doWorkIPCManager(void * arg) {
 	flowEvent =
 			dynamic_cast<FlowRequestEvent *>(event);
 
-	message = new AppAllocateFlowRequestResultMessage();
-	message->setSourceAppName(flowEvent->getSourceApplicationName());
-	message->setPortId(-15);
-	message->setErrorDescription("Not enough resources to accomplish the request");
-	message->setSequenceNumber(flowEvent->getSequenceNumber());
-	message->setResponseMessage(true);
+	message.setSourceAppName(flowEvent->getSourceApplicationName());
+	message.setPortId(-15);
+	message.setErrorDescription("Not enough resources to accomplish the request");
+	message.setSequenceNumber(flowEvent->getSequenceNumber());
+	message.setResponseMessage(true);
 
 	std::cout<<"IPC Manager: Sending response!\n";
-	rinaManager->sendResponseOrNotficationMessage(message);
+	rinaManager->sendResponseOrNotficationMessage(&message);
 	std::cout<<"IPC Manager: Response sent, terminating!\n";
 
 	delete flowEvent;
-	delete difName;
-	delete message;
 
 	return (void *) 0;
 }

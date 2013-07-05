@@ -301,7 +301,8 @@ enum IPCEventType {
 	FLOW_DEALLOCATED_EVENT,
 	FLOW_ALLOCATION_REQUEST_EVENT,
 	APPLICATION_REGISTRATION_REQUEST_EVENT,
-	APPLICATION_UNREGISTRATION_REQUEST_EVENT
+	APPLICATION_UNREGISTRATION_REQUEST_EVENT,
+	ASSIGN_TO_DIF_REQUEST_EVENT
 };
 
 /**
@@ -424,6 +425,12 @@ public:
 
 	/** Blocks until there is an event available */
 	IPCEvent * eventWait();
+
+	/**
+	 * Blocks until there is an event available, no more than the
+	 * time specified
+	 */
+	IPCEvent * eventTimedWait(int seconds, int nanoseconds);
 };
 
 /**
