@@ -34,6 +34,7 @@
 #include "kipcm.h"
 #include "shim.h"
 #include "debug.h"
+#include "shim-utils.h"
 
 /* Holds all configuration related to a shim instance */
 struct empty_info {
@@ -43,16 +44,16 @@ struct empty_info {
 /* This structure will contains per-instance data */
 struct shim_instance_data {
 	struct list_head    list;
-	struct list_head *  flows;
+	struct list_head    flows;
         ipc_process_id_t    id;
 	struct empty_info * info;
 };
 
 struct empty_flow {
-	struct list_head    list;
-	port_id_t 	    port_id;
-	const struct name * source;
-	const struct name * dest;
+	struct list_head list;
+	port_id_t 	 port_id;
+	struct name *    source;
+	struct name *    dest;
 };
 
 /*
@@ -67,7 +68,7 @@ static struct empty_flow * find_flow(struct shim_instance_data * data,
 {
 	struct empty_flow * cur;
 
-	list_for_each_entry(cur, data->flows, list) {
+	list_for_each_entry(cur, &(data->flows), list) {
 		if (cur->port_id == id) {
 			return cur;
 		}
@@ -93,18 +94,20 @@ static int empty_flow_allocate_request(struct shim_instance_data * data,
         	LOG_ERR("This flow already exists");
         	return -1;
         }
-        flow = kzalloc(sizeof(*flow), GFP_KERNEL);
-	if (!flow) {
-		LOG_ERR("Cannot allocate %zu bytes of memory", sizeof(*flow));
+        flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+	
+	if(name_dup(&(flow->dest),dest)) {
+		LOG_ERR("Name copy failed");
 		return -1;
 	}
-
-	flow->dest = dest;
-	flow->source = source;
+	if(name_dup(&(flow->source),source)) {
+		LOG_ERR("Name copy failed");
+		return -1;
+	}
 	flow->port_id = id;
 
 	INIT_LIST_HEAD(&flow->list);
-	list_add(&flow->list, data->flows);
+	list_add(&flow->list, &data->flows);
 
         return 0;
 }
@@ -128,10 +131,12 @@ static int empty_flow_deallocate(struct shim_instance_data * data,
         flow = find_flow(data, id);
         if (!flow) {
 		LOG_ERR("Flow does not exist, cannot remove");
-
 		return -1;
 	}
-
+	
+	name_kfree(&(flow->dest));
+	name_kfree(&(flow->source));
+	rkfree(flow);
 
         return 0;
 }
@@ -290,32 +295,27 @@ static struct shim_instance * empty_create(struct shim_data * data,
         }
 
         inst->data->id = id;
+	inst->data->info = rkzalloc(sizeof(*inst->data->info), GFP_KERNEL);
+	if (!inst->data->info) {
+		rkfree(inst->data);
+		rkfree(inst);
+		return NULL;
+	}
+	if (!name_kmalloc(&(inst->data->info->dif_name))) {
+		rkfree(inst->data->info);
+		rkfree(inst->data);
+		rkfree(inst);
+		return NULL;
+	}
 
         /*
          * Bind the shim-instance to the shims set, to keep all our data
          * structures linked (somewhat) together
          */
+	INIT_LIST_HEAD(&(inst->data->list));
         list_add(&(data->instances), &(inst->data->list));
 
         return inst;
-}
-
-/* FIXME: Might need to move this to a global file for all shims */
-static int name_cpy(struct name ** dst, const struct name * src)
-{
-        *dst = rkzalloc(sizeof(**dst), GFP_KERNEL);
-        if (!*dst)
-                return -1;
-
-        if(!strcpy((*dst)->process_name,     src->process_name)     ||
-           !strcpy((*dst)->process_instance, src->process_instance) ||
-           !strcpy((*dst)->entity_name,      src->entity_name)      ||
-           !strcpy((*dst)->entity_instance,  src->entity_instance)) {
-                LOG_ERR("Cannot perform strcpy");
-                return -1;
-        }
-
-        return 0;
 }
 
 static struct shim_instance * empty_configure(struct shim_data *         data,
@@ -333,13 +333,6 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
         if (!instance) {
                 LOG_ERR("There's no instance with id %d", inst->data->id);
                 return inst;
-        }
-
-        /* Get configuration struct pertaining to this shim instance */ 
-        if (!instance->info) {
-                instance->info = rkzalloc(sizeof(*instance->info), GFP_KERNEL);
-                if (!instance->info)
-                        return NULL;
         }
 
         /* Use configuration values on that instance */
@@ -381,8 +374,8 @@ static int empty_destroy(struct shim_data *     data,
                         /* Unbind from the instances set */
                         list_del(pos);
                         /* Destroy it */
-                        rkfree(inst->info->dif_name);
-                        rkfree(inst->info);
+                        name_kfree(&(inst->info->dif_name));
+			rkfree(inst->info);
                         rkfree(inst);
                 }
         }

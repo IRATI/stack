@@ -2,6 +2,7 @@
  * Shim related utilities
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Sander Vrijders <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,5 +21,12 @@
 
 #ifndef RINA_SHIM_UTILS_H
 #define RINA_SHIM_UTILS_H
+
+#include "common.h"
+
+int name_kmalloc(struct name ** dst);
+int name_dup(struct name ** dst, const struct name * src);
+int name_cpy(struct name ** dst, const struct name * src);
+int name_kfree(struct name ** dst);
 
 #endif
