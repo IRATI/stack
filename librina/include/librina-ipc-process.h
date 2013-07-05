@@ -20,6 +20,7 @@
 #ifdef __cplusplus
 
 #include "librina-common.h"
+#include "librina-application.h"
 
 namespace rina {
 
@@ -63,8 +64,54 @@ class AssignToDIFRequestEvent: public IPCEvent {
 public:
 	AssignToDIFRequestEvent(const DIFConfiguration& difConfiguration,
 			unsigned int sequenceNumber);
-	const DIFConfiguration& getDIFConfiguration();
+	const DIFConfiguration& getDIFConfiguration() const;
 };
+
+/**
+ * Class used by the IPC Processes to interact with the IPC Manager. Extends
+ * the basic IPC Manager in librina-application with IPC Process specific
+ * functionality
+ */
+class ExtendedIPCManager: public IPCManager{
+	/** The ID of the IPC Process */
+	unsigned int ipcProcessId;
+
+	/** The current configuration of the IPC Process */
+	DIFConfiguration currentConfiguration;
+
+public:
+	const DIFConfiguration& getCurrentConfiguration() const;
+	void setCurrentConfiguration(
+			const DIFConfiguration& currentConfiguration);
+	unsigned int getIpcProcessId() const;
+	void setIpcProcessId(unsigned int ipcProcessId);
+
+	/**
+	 * Reply to the IPC Manager, informing it about the result of an "assign
+	 * to DIF" operation
+	 * @param event the event that trigered the operation
+	 * @param result the result of the operation (0 successful)
+	 * @param errorDescription An optional explanation of the error (if any)
+	 */
+	void assignToDIFResponse(const AssignToDIFRequestEvent& event, int result,
+			const std::string& errorDescription) throw(IPCException);
+
+	/**
+	 * Reply to the IPC Manager, informing it about the result of a "register
+	 * application request" operation
+	 * @param event
+	 * @param result
+	 * @param errorDescription
+	 */
+	void registerApplicationResponse(
+			const ApplicationRegistrationRequestEvent& event, int result,
+			const std::string& errorDescription) throw(IPCException);
+};
+
+/**
+ * Make Extended IPC Manager singleton
+ */
+extern Singleton<ExtendedIPCManager> extendedIPCManager;
 
 /**
  * Class used by IPC Processes to interact with application processes

@@ -281,6 +281,49 @@ int putIpcmRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 IpcmRegisterApplicationResponseMessage *
 	parseIpcmRegisterApplicationResponseMessage(nlmsghdr *hdr);
 
+/* DIF Configuration CLASS */
+enum DIFConfigurationAttributes {
+	DCONF_ATTR_DIF_TYPE = 1,
+	DCONF_ATTR_DIF_NAME,
+	__DCONF_ATTR_MAX,
+};
+
+#define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
+
+int putDIFConfigurationObject(nl_msg* netlinkMessage,
+		const DIFConfiguration& object);
+
+DIFConfiguration * parseDIFConfigurationObject(nlattr *nested);
+
+/* IpcmAssignToDIFRequestMessage CLASS*/
+enum IpcmAssignToDIFRequestMessageAttributes {
+	IATDR_ATTR_DIF_CONFIGURATION = 1,
+	__IATDR_ATTR_MAX,
+};
+
+#define IATDR_ATTR_MAX (__IATDR_ATTR_MAX -1)
+
+int putIpcmAssignToDIFRequestMessageObject(nl_msg* netlinkMessage,
+		const IpcmAssignToDIFRequestMessage& object);
+
+IpcmAssignToDIFRequestMessage *
+	parseIpcmAssignToDIFRequestMessage(nlmsghdr *hdr);
+
+/* IpcmAssignToDIFResponseMessage CLASS*/
+enum IpcmAssignToDIFResponseMessageAttributes {
+	IATDRE_ATTR_RESULT = 1,
+	IATDRE_ATTR_ERROR_DESCRIPTION = 2,
+	__IATDRE_ATTR_MAX,
+};
+
+#define IATDRE_ATTR_MAX (__IATDRE_ATTR_MAX -1)
+
+int putIpcmAssignToDIFResponseMessageObject(nl_msg* netlinkMessage,
+		const IpcmAssignToDIFResponseMessage& object);
+
+IpcmAssignToDIFResponseMessage *
+	parseIpcmAssignToDIFResponseMessage(nlmsghdr *hdr);
+
 }
 
 #endif /* LIBRINA_NETLINK_PARSERS_H_ */

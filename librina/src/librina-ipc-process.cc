@@ -62,9 +62,76 @@ AssignToDIFRequestEvent::AssignToDIFRequestEvent(
 }
 
 const DIFConfiguration&
-AssignToDIFRequestEvent::getDIFConfiguration(){
+AssignToDIFRequestEvent::getDIFConfiguration() const{
 	return difConfiguration;
 }
+
+/* CLASS EXTENDED IPC MANAGER */
+const DIFConfiguration& ExtendedIPCManager::getCurrentConfiguration() const{
+	return currentConfiguration;
+}
+
+void ExtendedIPCManager::setCurrentConfiguration(
+		const DIFConfiguration& currentConfiguration){
+	this->currentConfiguration = currentConfiguration;
+}
+
+unsigned int ExtendedIPCManager::getIpcProcessId() const{
+	return ipcProcessId;
+}
+
+void ExtendedIPCManager::setIpcProcessId(unsigned int ipcProcessId){
+	this->ipcProcessId = ipcProcessId;
+}
+
+void ExtendedIPCManager::assignToDIFResponse(
+		const AssignToDIFRequestEvent& event, int result,
+		const std::string& errorDescription) throw(IPCException){
+	if (result == 0){
+		this->currentConfiguration = event.getDIFConfiguration();
+	}
+#if STUB_API
+	//Do nothing
+#else
+	IpcmAssignToDIFResponseMessage * responseMessage =
+			new IpcmAssignToDIFResponseMessage();
+	responseMessage->setResult(result);
+	responseMessage->setErrorDescription(errorDescription);
+	responseMessage->setSequenceNumber(event.getSequenceNumber());
+	responseMessage->setResponseMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(responseMessage);
+		delete responseMessage;
+	}catch(NetlinkException &e){
+		delete responseMessage;
+		throw IPCException(e.what());
+	}
+#endif
+}
+
+void ExtendedIPCManager::registerApplicationResponse(
+		const ApplicationRegistrationRequestEvent& event, int result,
+		const std::string& errorDescription) throw(IPCException){
+#if STUB_API
+	//Do nothing
+#else
+	IpcmRegisterApplicationResponseMessage * responseMessage =
+			new IpcmRegisterApplicationResponseMessage();
+	responseMessage->setResult(result);
+	responseMessage->setErrorDescription(errorDescription);
+	responseMessage->setSequenceNumber(event.getSequenceNumber());
+	responseMessage->setResponseMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(responseMessage);
+		delete responseMessage;
+	}catch(NetlinkException &e){
+		delete responseMessage;
+		throw IPCException(e.what());
+	}
+#endif
+}
+
+Singleton<ExtendedIPCManager> extendedIPCManager;
 
 /* CLASS IPC PROCESS APPLICATION MANAGER */
 void IPCProcessApplicationManager::flowDeallocated(

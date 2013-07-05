@@ -20,13 +20,20 @@
 #include "librina-ipc-manager.h"
 #include "core.h"
 
-/** CLASS IPC PROCESS */
-
 namespace rina{
+
+/* CLASS IPC PROCESS*/
+const std::string IPCProcess::error_assigning_to_dif =
+		"Error assigning IPC Process to DIF";
+const std::string IPCProcess::error_registering_app =
+		"Error registering application";
+const std::string IPCProcess::error_not_a_dif_member =
+		"Error: the IPC Process is not member of a DIF";
 
 IPCProcess::IPCProcess() {
 	id = 0;
 	type = DIF_TYPE_NORMAL;
+	difMember = false;
 }
 
 IPCProcess::IPCProcess(unsigned int id, DIFType type,
@@ -34,6 +41,15 @@ IPCProcess::IPCProcess(unsigned int id, DIFType type,
 	this->id = id;
 	this->type = type;
 	this->name = name;
+	difMember = false;
+}
+
+bool IPCProcess::isDIFMember() const{
+	return difMember;
+}
+
+void IPCProcess::setDIFMember(bool difMember){
+	this->difMember = difMember;
 }
 
 unsigned int IPCProcess::getId() const {
@@ -48,9 +64,46 @@ const ApplicationProcessNamingInformation& IPCProcess::getName() const {
 	return name;
 }
 
-void IPCProcess::assignToDIF(const DIFConfiguration& difConfiguration)
-		throw (IPCException) {
+const DIFConfiguration& IPCProcess::getConfiguration() const{
+	return difConfiguration;
+}
+
+void IPCProcess::setConfiguration(const DIFConfiguration& difConfiguration){
+	this->difConfiguration = difConfiguration;
+}
+
+void IPCProcess::assignToDIF(const DIFConfiguration& difConfiguration,
+		unsigned int ipcProcessPortId) throw (IPCException) {
 	LOG_DBG("IPCProcess::assign to DIF called");
+#if STUB_API
+	//Do nothing
+#else
+	IpcmAssignToDIFRequestMessage * message =
+			new IpcmAssignToDIFRequestMessage();
+	message->setDIFConfiguration(difConfiguration);
+	message->setDestIpcProcessId(id);
+	message->setDestPortId(ipcProcessPortId);
+	message->setRequestMessage(true);
+
+	IpcmAssignToDIFResponseMessage * assignToDIFResponse =
+			dynamic_cast<IpcmAssignToDIFResponseMessage *>(
+					rinaManager->sendRequestAndWaitForResponse(message,
+							IPCProcess::error_assigning_to_dif));
+
+	if (assignToDIFResponse->getResult() < 0){
+		std::string reason = IPCProcess::error_assigning_to_dif + " " +
+				assignToDIFResponse->getErrorDescription();
+		delete assignToDIFResponse;
+		throw IPCException(reason);
+	}
+
+	LOG_DBG("Assigned IPC Process %d to DIF %s", id,
+			difConfiguration.getDifName().getProcessName().c_str());
+	delete assignToDIFResponse;
+#endif
+
+	this->difConfiguration = difConfiguration;
+	this->difMember = true;
 }
 
 void IPCProcess::notifyRegistrationToSupportingDIF(
@@ -82,9 +135,40 @@ void IPCProcess::disconnectFromNeighbor(
 }
 
 void IPCProcess::registerApplication(
-		const ApplicationProcessNamingInformation& applicationName)
+		const ApplicationProcessNamingInformation& applicationName,
+		unsigned int applicationPortId)
 				throw (IPCException) {
 	LOG_DBG("IPCProcess::register application called");
+	if (!difMember){
+		throw IPCException(IPCProcess::error_not_a_dif_member);
+	}
+#if STUB_API
+	//Do nothing
+#else
+	IpcmRegisterApplicationRequestMessage * message =
+			new IpcmRegisterApplicationRequestMessage();
+	message->setApplicationName(applicationName);
+	message->setDifName(difConfiguration.getDifName());
+	message->setApplicationPortId(applicationPortId);
+	message->setRequestMessage(true);
+
+	IpcmRegisterApplicationResponseMessage * registerAppResponse =
+		dynamic_cast<IpcmRegisterApplicationResponseMessage *>(
+			rinaManager->sendRequestAndWaitForResponse(message,
+				IPCProcess::error_registering_app));
+
+	if (registerAppResponse->getResult() < 0){
+		std::string reason = IPCProcess::error_registering_app + " " +
+				registerAppResponse->getErrorDescription();
+		delete registerAppResponse;
+		throw IPCException(reason);
+	}
+
+	LOG_DBG("Registered app %s to DIF %s",
+			applicationName.getProcessName().c_str(),
+			difConfiguration.getDifName().getProcessName().c_str());
+	delete registerAppResponse;
+#endif
 }
 
 void IPCProcess::unregisterApplication(

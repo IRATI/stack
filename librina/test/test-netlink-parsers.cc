@@ -997,6 +997,127 @@ int testIpcmRegisterApplicationResponseMessage() {
 	return returnValue;
 }
 
+int testIpcmAssignToDIFRequestMessage() {
+	std::cout << "TESTING IPCM ASSIGN TO DIF REQUEST MESSAGE\n";
+	int returnValue = 0;
+
+	ApplicationProcessNamingInformation * difName =
+			new ApplicationProcessNamingInformation();
+	difName->setProcessName("/difs/Test.DIF");
+
+	IpcmAssignToDIFRequestMessage * message =
+			new IpcmAssignToDIFRequestMessage();
+	DIFConfiguration * difConfiguration = new DIFConfiguration();
+	difConfiguration->setDifType(DIF_TYPE_SHIM_ETHERNET);
+	difConfiguration->setDifName(*difName);
+	message->setDIFConfiguration(*difConfiguration);
+
+	struct nl_msg* netlinkMessage;
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage) {
+		std::cout << "Error allocating Netlink message\n";
+	}
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
+			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
+
+	int result = putBaseNetlinkMessage(netlinkMessage, message);
+	if (result < 0) {
+		std::cout << "Error constructing Ipcm Assign To DIF Request "
+				<< "Message \n";
+		nlmsg_free(netlinkMessage);
+		delete difName;
+		delete difConfiguration;
+		delete message;
+		return result;
+	}
+
+	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+	IpcmAssignToDIFRequestMessage * recoveredMessage =
+			dynamic_cast<IpcmAssignToDIFRequestMessage *>(
+					parseBaseNetlinkMessage(netlinkMessageHeader));
+	if (message == 0) {
+		std::cout << "Error parsing Ipcm Assign To DIF Request Message "
+				<< "\n";
+		returnValue = -1;
+	} else if (message->getDIFConfiguration().getDifType() !=
+			recoveredMessage->getDIFConfiguration().getDifType()) {
+		std::cout << "DIFConfiguration.difType on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message->getDIFConfiguration().getDifName() !=
+			recoveredMessage->getDIFConfiguration().getDifName()) {
+		std::cout << "DIFConfiguration.difName on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	}
+
+	if (returnValue == 0) {
+		std::cout << "IpcmAssignToDIFRequest test ok\n";
+	}
+	nlmsg_free(netlinkMessage);
+	delete difName;
+	delete difConfiguration;
+	delete message;
+	delete recoveredMessage;
+
+	return returnValue;
+}
+
+int testIpcmAssignToDIFResponseMessage() {
+	std::cout << "TESTING IPCM ASSIGN TO DIF RESPONSE MESSAGE\n";
+	int returnValue = 0;
+
+	IpcmAssignToDIFResponseMessage * message =
+			new IpcmAssignToDIFResponseMessage();
+	message->setResult(-25);
+	message->setErrorDescription("Something went wrong, that's life");
+
+	struct nl_msg* netlinkMessage;
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage) {
+		std::cout << "Error allocating Netlink message\n";
+	}
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
+			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
+
+	int result = putBaseNetlinkMessage(netlinkMessage, message);
+	if (result < 0) {
+		std::cout << "Error constructing Ipcm Assign To DIF Response "
+				<< "Message \n";
+		nlmsg_free(netlinkMessage);
+		delete message;
+		return result;
+	}
+
+	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+	IpcmAssignToDIFResponseMessage * recoveredMessage =
+			dynamic_cast<IpcmAssignToDIFResponseMessage *>(
+					parseBaseNetlinkMessage(netlinkMessageHeader));
+	if (message == 0) {
+		std::cout << "Error parsing Ipcm Assign To DIF Response Message "
+				<< "\n";
+		returnValue = -1;
+	} else if (message->getResult() != recoveredMessage->getResult()) {
+		std::cout << "Result on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message->getErrorDescription().compare(
+			recoveredMessage->getErrorDescription()) != 0) {
+		std::cout << "Error description on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	}
+
+	if (returnValue == 0) {
+		std::cout << "IpcmAssignToDIFResponse test ok\n";
+	}
+	nlmsg_free(netlinkMessage);
+	delete message;
+	delete recoveredMessage;
+
+	return returnValue;
+}
+
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING LIBRINA-NETLINK-PARSERS\n";
 
@@ -1047,12 +1168,27 @@ int main(int argc, char * argv[]) {
 		return result;
 	}
 
+	result = testAppUnregisterApplicationRequestMessage();
+		if (result < 0) {
+			return result;
+		}
+
 	result = testIpcmRegisterApplicationRequestMessage();
 	if (result < 0) {
 		return result;
 	}
 
 	result = testIpcmRegisterApplicationResponseMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testIpcmAssignToDIFRequestMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testIpcmAssignToDIFResponseMessage();
 	if (result < 0) {
 		return result;
 	}
