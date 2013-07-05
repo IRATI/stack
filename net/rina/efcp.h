@@ -223,7 +223,7 @@ int      efcp_write(void *             opaque,
                     port_id_t          id,
                     const struct sdu * sdu);
 int      efcp_receive_pdu(void *       opaque,
-                          struct pdu pdu);
+                          struct pdu * pdu);
 cep_id_t efcp_create(void *                    opaque,
                      const struct connection * connection);
 int      efcp_destroy(void *   opaque,
