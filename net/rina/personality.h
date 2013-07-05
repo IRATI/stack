@@ -40,7 +40,7 @@ struct personality_ops {
         int (* fini)(struct personality_data * data);
 
         int (* ipc_create)(struct personality_data * data,
-                           const struct name_t *     name,
+                           const struct name *       name,
                            ipc_process_id_t          id,
                            dif_type_t                type);
         int (* ipc_configure)(struct personality_data *       data,

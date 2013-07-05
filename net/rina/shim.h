@@ -54,8 +54,8 @@ struct shim_instance_data;
 
 struct shim_instance_ops {
 	int  (* flow_allocate_request)(struct shim_instance_data * data,
-                                       const struct name_t *       source,
-                                       const struct name_t *       dest,
+                                       const struct name *         source,
+                                       const struct name *         dest,
                                        const struct flow_spec_t *  flow_spec,
                                        port_id_t                   id);
 	int  (* flow_allocate_response)(struct shim_instance_data * data,
@@ -64,10 +64,10 @@ struct shim_instance_ops {
 	int  (* flow_deallocate)(struct shim_instance_data * data,
                                  port_id_t                   id);
 
-	int  (* application_register)(struct shim_instance_data * data,
-                                      const struct name_t *       name);
+	int  (* application_register)(struct shim_instance_data *   data,
+                                      const struct name *           source);
 	int  (* application_unregister)(struct shim_instance_data * data,
-                                        const struct name_t *       name);
+                                        const struct name *         source);
 
 	int  (* sdu_write)(struct shim_instance_data * data,
                            port_id_t                   id,

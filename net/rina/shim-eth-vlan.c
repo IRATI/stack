@@ -42,9 +42,9 @@
 
 /* Holds the configuration of one shim instance */
 struct eth_vlan_info {
-        uint16_t        vlan_id;
-        char *          interface_name;
-        struct name_t * dif_name;
+        uint16_t      vlan_id;
+        char *        interface_name;
+        struct name * dif_name;
 };
 
 enum port_id_state {
@@ -88,8 +88,8 @@ struct shim_instance_data {
 };
 
 static int eth_vlan_flow_allocate_request(struct shim_instance_data * data,
-                                          const struct name_t *       source,
-                                          const struct name_t *       dest,
+                                          const struct name *         source,
+                                          const struct name *         dest,
                                           const struct flow_spec_t *  fspec,
                                           port_id_t                   id)
 {
@@ -119,7 +119,7 @@ static int eth_vlan_flow_deallocate(struct shim_instance_data * data,
 }
 
 static int eth_vlan_application_register(struct shim_instance_data * data,
-                                         const struct name_t *       name)
+                                         const struct name *         name)
 {
         ASSERT(data);
         ASSERT(name);
@@ -128,7 +128,7 @@ static int eth_vlan_application_register(struct shim_instance_data * data,
 }
 
 static int eth_vlan_application_unregister(struct shim_instance_data * data,
-                                           const struct name_t *       name)
+                                           const struct name *         name)
 {
         ASSERT(data);
         ASSERT(name);
@@ -270,7 +270,7 @@ static struct shim_instance * eth_vlan_create(struct shim_data * data,
         return inst;
 }
 
-static int name_cpy(struct name_t ** dst, const struct name_t * src)
+static int name_cpy(struct name ** dst, const struct name * src)
 {
         *dst = rkzalloc(sizeof(**dst), GFP_KERNEL);
         if (!*dst)
@@ -335,7 +335,7 @@ struct shim_instance * eth_vlan_configure(struct shim_data *          data,
 		if (!strcmp(entry->name, "dif-name") &&
 			value->type == SHIM_CONFIG_STRING) {
                         if (name_cpy(&(info->dif_name),
-                                     (struct name_t *) value->data)) {
+                                     (struct name *) value->data)) {
 				LOG_ERR("Failed to copy DIF name");
                                 return inst;
                         }

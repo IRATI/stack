@@ -37,7 +37,7 @@
 
 /* Holds all configuration related to a shim instance */
 struct empty_info {
-	struct name_t * dif_name;
+	struct name * dif_name;
 };
 
 /* This structure will contains per-instance data */
@@ -49,10 +49,10 @@ struct shim_instance_data {
 };
 
 struct empty_flow {
-	struct list_head      list;
-	port_id_t 	      port_id;
-	const struct name_t * source;
-	const struct name_t * dest;
+	struct list_head    list;
+	port_id_t 	    port_id;
+	const struct name * source;
+	const struct name * dest;
 };
 
 /*
@@ -77,8 +77,8 @@ static struct empty_flow * find_flow(struct shim_instance_data * data,
 }
 
 static int empty_flow_allocate_request(struct shim_instance_data * data,
-                                       const struct name_t *       source,
-                                       const struct name_t *       dest,
+                                       const struct name *         source,
+                                       const struct name *         dest,
                                        const struct flow_spec_t *  flow_spec,
                                        port_id_t                   id)
 {
@@ -137,7 +137,7 @@ static int empty_flow_deallocate(struct shim_instance_data * data,
 }
 
 static int empty_application_register(struct shim_instance_data * data,
-                                      const struct name_t *       name)
+                                      const struct name *         name)
 {
         ASSERT(data);
         ASSERT(name);
@@ -146,7 +146,7 @@ static int empty_application_register(struct shim_instance_data * data,
 }
 
 static int empty_application_unregister(struct shim_instance_data * data,
-                                        const struct name_t *       name)
+                                        const struct name *         name)
 {
         ASSERT(data);
         ASSERT(name);
@@ -300,7 +300,7 @@ static struct shim_instance * empty_create(struct shim_data * data,
 }
 
 /* FIXME: Might need to move this to a global file for all shims */
-static int name_cpy(struct name_t ** dst, const struct name_t * src)
+static int name_cpy(struct name ** dst, const struct name * src)
 {
         *dst = rkzalloc(sizeof(**dst), GFP_KERNEL);
         if (!*dst)
@@ -346,7 +346,7 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
                 if (!strcmp(tmp->entry->name, "dif-name") &&
                     tmp->entry->value->type == SHIM_CONFIG_STRING) {
                         if (name_cpy(&(instance->info->dif_name),
-                                     (struct name_t *)
+                                     (struct name *)
                                      tmp->entry->value->data)) {
                                 LOG_ERR("Failed to copy DIF name");
                                 return inst;

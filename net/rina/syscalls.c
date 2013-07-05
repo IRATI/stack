@@ -60,9 +60,9 @@
         CALL_PERSONALITY(default_personality, HOOK, ##ARGS)
 
 SYSCALL_DEFINE3(ipc_create,
-                const struct name_t __user *, name,
-                ipc_process_id_t,             id,
-                dif_type_t,                   type)
+                const struct name __user *, name,
+                ipc_process_id_t,           id,
+                dif_type_t,                 type)
 { CALL_DEFAULT_PERSONALITY(ipc_create, name, id, type); }
 
 SYSCALL_DEFINE2(ipc_configure,

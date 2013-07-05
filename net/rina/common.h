@@ -70,7 +70,7 @@ struct uint_range_t {
 	uint_t max_value;
 };
 
-struct name_t {
+struct name {
 	/*
 	 * The process_name identifies an application process within the
 	 * application process namespace. This value is required, it

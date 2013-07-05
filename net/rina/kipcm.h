@@ -118,10 +118,10 @@ struct shim *  kipcm_shim_register(struct kipcm *    kipcm,
 int            kipcm_shim_unregister(struct kipcm * kipcm,
                                      struct shim *  shim);
 
-int            kipcm_ipc_create(struct kipcm *        kipcm,
-                                const struct name_t * name,
-                                ipc_process_id_t      id,
-                                dif_type_t            type);
+int            kipcm_ipc_create(struct kipcm *      kipcm,
+                                const struct name * name,
+                                ipc_process_id_t    id,
+                                dif_type_t          type);
 int            kipcm_ipc_configure(struct kipcm *                  kipcm,
                                    ipc_process_id_t                id,
                                    const struct ipc_process_conf * config);

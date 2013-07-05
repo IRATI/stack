@@ -175,10 +175,10 @@ int kipcm_shim_unregister(struct kipcm * kipcm,
 }
 EXPORT_SYMBOL(kipcm_shim_unregister);
 
-int kipcm_ipc_create(struct kipcm *        kipcm,
-                     const struct name_t * name,
-                     ipc_process_id_t      id,
-                     dif_type_t            type)
+int kipcm_ipc_create(struct kipcm *      kipcm,
+                     const struct name * name,
+                     ipc_process_id_t    id,
+                     dif_type_t          type)
 {
         struct kobject *       k;
         struct ipc_process_t * ipc_process;

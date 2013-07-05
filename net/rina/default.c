@@ -44,7 +44,7 @@ struct personality_data {
 };
 
 static int default_ipc_create(struct personality_data * data,
-                              const struct name_t *     name,
+                              const struct name *       name,
                               ipc_process_id_t          id,
                               dif_type_t                type)
 {

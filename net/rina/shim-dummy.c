@@ -35,31 +35,31 @@
 #include "shim.h"
 
 struct shim_instance_data {
-        ipc_process_id_t ipc_process_id;
-        struct name_t *  name;
+        ipc_process_id_t   ipc_process_id;
+        struct name *      name;
 
         /* FIXME: Stores the state of flows indexed by port_id */
         struct list_head * flows;
 
         /* Used to keep a list of all the dummy shims */
-        struct list_head list;
+        struct list_head   list;
 };
 
 struct dummy_flow {
-        port_id_t             port_id;
-        const struct name_t * source;
-        const struct name_t * dest;
-        struct list_head      list;
+        port_id_t           port_id;
+        const struct name * source;
+        const struct name * dest;
+        struct list_head    list;
 };
 
 static int dummy_flow_allocate_request(struct shim_instance_data * data,
-                                       const struct name_t *       source,
-                                       const struct name_t *       dest,
+                                       const struct name *         source,
+                                       const struct name *         dest,
                                        const struct flow_spec_t *  flow_spec,
                                        port_id_t                   id)
 {
         struct shim_instance_data * dummy;
-        struct dummy_flow *     flow;
+        struct dummy_flow *         flow;
 
         /* FIXME: We should verify that the port_id has not got a flow yet */
 
@@ -91,11 +91,11 @@ static int dummy_flow_deallocate(struct shim_instance_data * data,
 { return -1; }
 
 static int dummy_application_register(struct shim_instance_data * data,
-                                      const struct name_t *       name)
+                                      const struct name *         source)
 { return -1; }
 
 static int dummy_application_unregister(struct shim_instance_data * data,
-                                        const struct name_t *       name)
+                                        const struct name *         source)
 { return -1; }
 
 static struct dummy_flow * find_flow(struct shim_instance_data * data,
@@ -257,7 +257,7 @@ static struct shim_instance * dummy_configure(struct shim_data *         data,
 
         list_for_each_entry(current_entry, &(conf->list), list) {
                 if (strcmp(current_entry->entry->name, "name"))
-                        dummy->name = (struct name_t *)
+                        dummy->name = (struct name *)
                                 current_entry->entry->value->data;
                 else {
                         LOG_ERR("Cannot identify parameter '%s'",
