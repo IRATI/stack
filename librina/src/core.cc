@@ -383,7 +383,6 @@ void * doNetlinkMessageReaderWork(void * arg) {
 	while (true) {
 		//Receive message
 		try {
-			LOG_DBG("Waiting for next message %d", netlinkManager->getLocalPort());
 			incomingMessage = netlinkManager->getMessage();
 		} catch (NetlinkException &e) {
 			LOG_ERR("Error receiving netlink message. %s", e.what());
@@ -401,16 +400,20 @@ void * doNetlinkMessageReaderWork(void * arg) {
 					dynamic_cast<NetlinkRequestOrNotificationMessage *>
 						(incomingMessage);
 
-			if (incomingMessage->isRequestMessage()){
+			bool notification = incomingMessage->isNotificationMessage();
+			bool request = incomingMessage->isRequestMessage();
+			IPCEvent * ipcEvent = message->toIPCEvent();
+
+			if (request){
 				myRINAManager->netlinkRequestMessageArrived(incomingMessage);
 			}else{
 				myRINAManager->netlinkNotificationMessageArrived(
 						incomingMessage);
 			}
 
-			eventsQueue->put(message->toIPCEvent());
+			eventsQueue->put(ipcEvent);
 
-			if (incomingMessage->isNotificationMessage()){
+			if (notification){
 				delete message;
 				message = 0;
 			}
