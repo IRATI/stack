@@ -157,6 +157,15 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
+	case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE: {
+		IpcmAllocateFlowResponseMessage * allocateFlowResponseObject =
+				dynamic_cast<IpcmAllocateFlowResponseMessage *>(message);
+		if (putIpcmAllocateFlowResponseMessageObject(netlinkMessage,
+				*allocateFlowResponseObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
 
 	default: {
 		return -1;
@@ -212,6 +221,9 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST: {
 		return parseIpcmAllocateFlowRequestMessage(netlinkMessageHeader);
 	}
+	case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE: {
+			return parseIpcmAllocateFlowResponseMessage(netlinkMessageHeader);
+		}
 	default: {
 		LOG_ERR(
 				"Generic Netlink message contains unrecognized command code: %d",
@@ -926,6 +938,20 @@ int putIpcmAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 
 	nla_put_failure: LOG_ERR(
 			"Error building IpcmAllocateFlowRequestMessage Netlink object");
+	return -1;
+}
+
+int putIpcmAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
+		const IpcmAllocateFlowResponseMessage& object){
+
+	NLA_PUT_U32(netlinkMessage, IAFREM_ATTR_RESULT, object.getResult());
+	NLA_PUT_STRING(netlinkMessage,IAFREM_ATTR_ERROR_DESCRIPTION,
+			object.getErrorDescription().c_str());
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building IpcmAllocateFlowResponseeMessage Netlink object");
 	return -1;
 }
 
@@ -1944,6 +1970,41 @@ IpcmAllocateFlowRequestMessage *
 
 	if (attrs[IAFRM_ATTR_APP_PORT]) {
 		result->setApplicationPortId(nla_get_u32(attrs[IAFRM_ATTR_APP_PORT]));
+	}
+
+	return result;
+}
+
+IpcmAllocateFlowResponseMessage *
+	parseIpcmAllocateFlowResponseMessage(nlmsghdr *hdr){
+	struct nla_policy attr_policy[IAFREM_ATTR_MAX + 1];
+	attr_policy[IAFREM_ATTR_RESULT].type = NLA_U32;
+	attr_policy[IAFREM_ATTR_RESULT].minlen = 4;
+	attr_policy[IAFREM_ATTR_RESULT].maxlen = 4;
+	attr_policy[IAFREM_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
+	attr_policy[IAFREM_ATTR_ERROR_DESCRIPTION].minlen = 0;
+	attr_policy[IAFREM_ATTR_ERROR_DESCRIPTION].maxlen = 65535;
+	struct nlattr *attrs[IAFREM_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			IAFREM_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing IpcmAllocateFlowResponseMessage information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	IpcmAllocateFlowResponseMessage * result =
+				new IpcmAllocateFlowResponseMessage();
+
+	if (attrs[IAFREM_ATTR_RESULT]) {
+		result->setResult(nla_get_u32(attrs[IAFREM_ATTR_RESULT]));
+	}
+
+	if (attrs[IAFREM_ATTR_ERROR_DESCRIPTION]) {
+			result->setErrorDescription(
+					nla_get_string(attrs[IAFREM_ATTR_ERROR_DESCRIPTION]));
 	}
 
 	return result;

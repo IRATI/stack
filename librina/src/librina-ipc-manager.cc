@@ -29,6 +29,8 @@ const std::string IPCProcess::error_registering_app =
 		"Error registering application";
 const std::string IPCProcess::error_not_a_dif_member =
 		"Error: the IPC Process is not member of a DIF";
+const std::string IPCProcess::error_allocating_flow =
+		"Error allocating flow";
 
 IPCProcess::IPCProcess() {
 	id = 0;
@@ -193,6 +195,23 @@ void IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest,
 	message.setApplicationPortId(applicationPortId);
 	message.setRequestMessage(true);
 
+	IpcmAllocateFlowResponseMessage * allocateFlowResponse =
+		dynamic_cast<IpcmAllocateFlowResponseMessage *>(
+			rinaManager->sendRequestAndWaitForResponse(&message,
+				IPCProcess::error_allocating_flow));
+
+	if (allocateFlowResponse->getResult() < 0){
+		std::string reason = IPCProcess::error_allocating_flow + " " +
+				allocateFlowResponse->getErrorDescription();
+		delete allocateFlowResponse;
+		throw IPCException(reason);
+	}
+
+	LOG_DBG("Allocated flow from %s to %s with portId %d",
+			message.getSourceAppName().getProcessName().c_str(),
+			message.getDestAppName().getProcessName().c_str(),
+			message.getPortId());
+	delete allocateFlowResponse;
 
 #endif
 }

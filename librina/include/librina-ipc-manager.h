@@ -50,6 +50,7 @@ public:
 	static const std::string error_assigning_to_dif;
 	static const std::string error_registering_app;
 	static const std::string error_not_a_dif_member;
+	static const std::string error_allocating_flow;
 	IPCProcess();
 	IPCProcess(unsigned int id, DIFType type,
 			const ApplicationProcessNamingInformation& name);

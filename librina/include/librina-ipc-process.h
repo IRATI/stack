@@ -106,6 +106,16 @@ public:
 	void registerApplicationResponse(
 			const ApplicationRegistrationRequestEvent& event, int result,
 			const std::string& errorDescription) throw(IPCException);
+
+	/**
+	 * Reply to the IPC Manager, informing it about the result of a "allocate
+	 * flow response" operation
+	 * @param event
+	 * @param result
+	 * @param errorDescription
+	 */
+	void allocateFlowResponse(const FlowRequestEvent& event, int result,
+			const std::string& errorDescription) throw(IPCException);
 };
 
 /**

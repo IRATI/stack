@@ -125,6 +125,25 @@ void ExtendedIPCManager::registerApplicationResponse(
 #endif
 }
 
+void ExtendedIPCManager::allocateFlowResponse(
+		const FlowRequestEvent& event, int result,
+		const std::string& errorDescription) throw(IPCException){
+#if STUB_API
+	//Do nothing
+#else
+	IpcmAllocateFlowResponseMessage responseMessage;
+	responseMessage.setResult(result);
+	responseMessage.setErrorDescription(errorDescription);
+	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+	}catch(NetlinkException &e){
+		throw IPCException(e.what());
+	}
+#endif
+}
+
 Singleton<ExtendedIPCManager> extendedIPCManager;
 
 /* CLASS IPC PROCESS APPLICATION MANAGER */

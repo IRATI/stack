@@ -326,6 +326,20 @@ int putIpcmAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 IpcmAllocateFlowRequestMessage *
 	parseIpcmAllocateFlowRequestMessage(nlmsghdr *hdr);
 
+/* IpcmAllocateFlowResponseMessage CLASS*/
+enum IpcmAllocateFlowResponseMessageAttributes {
+	IAFREM_ATTR_RESULT = 1,
+	IAFREM_ATTR_ERROR_DESCRIPTION,
+	__IAFREM_ATTR_MAX,
+};
+
+#define IAFREM_ATTR_MAX (__IAFREM_ATTR_MAX -1)
+
+int putIpcmAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
+		const IpcmAllocateFlowResponseMessage& object);
+
+IpcmAllocateFlowResponseMessage *
+	parseIpcmAllocateFlowResponseMessage(nlmsghdr *hdr);
 
 }
 

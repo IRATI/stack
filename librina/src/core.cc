@@ -285,6 +285,12 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			}
 			break;
 		}
+		case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE:{
+			if(send){
+				message->setDestPortId(getIPCManagerPortId());
+			}
+			break;
+		}
 		default:
 			throw NetlinkException(NetlinkException::
 						unrecognized_generic_netlink_operation_code);

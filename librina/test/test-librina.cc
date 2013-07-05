@@ -105,6 +105,17 @@ void doWorkIPCProcess(){
 	std::cout<<"IPCProcess# Replied IPC Manager"<<std::endl;
 	delete applicationRegistrationEvent;
 
+	//Wait for a flow allocation event
+	event = ipcEventProducer->eventWait();
+	FlowRequestEvent * flowRequestEvent =
+			dynamic_cast<FlowRequestEvent *>(event);
+	std::cout<<"IPCProcess# Received flow request event"
+			<<std::endl;
+	extendedIPCManager->allocateFlowResponse(
+			*flowRequestEvent, 0, "ok");
+	std::cout<<"IPCProcess# Replied IPC Manager"<<std::endl;
+	delete flowRequestEvent;
+
 	//Wait for a flow deallocation event
 	event = ipcEventProducer->eventWait();
 	FlowDeallocateRequestEvent * deallocateFlowEvent =
@@ -163,6 +174,9 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	std::cout<<"IPCManager# received a flow allocation request event\n";
 	flowRequestEvent->setDIFName(difName);
 	flowRequestEvent->setPortId(23);
+	ipcProcess->allocateFlow(*flowRequestEvent, 3);
+	std::cout<<"IPCManager# IPC Process successfully allocated flow" <<
+				"in DIF "<<difName.getProcessName()<<std::endl;
 	applicationManager->flowAllocated(*flowRequestEvent, "ok", 1, 2);
 	std::cout<<"IPCManager# Replied to flow allocation\n";
 	delete flowRequestEvent;

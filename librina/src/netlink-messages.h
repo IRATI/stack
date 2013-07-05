@@ -156,11 +156,33 @@ public:
 	virtual IPCEvent* toIPCEvent() = 0;
 };
 
+class BaseNetlinkResponseMessage: public BaseNetlinkMessage{
+	/**
+	 * Result of the operation. 0 indicates success, a negative value an
+	 * error code.
+	 */
+	int result;
+
+	/**
+	 * If the application registration didn't succeed, this field may provide
+	 * further detail
+	 */
+	std::string errorDescription;
+
+public:
+	BaseNetlinkResponseMessage(RINANetlinkOperationCode operationCode);
+	int getResult() const;
+	void setResult(int result);
+	const std::string& getErrorDescription() const;
+	void setErrorDescription(const std::string& errorDescription);
+};
+
 /**
  * An allocate flow request message, exchanged between an Application Process
  * and the IPC Manager.
  */
-class AppAllocateFlowRequestMessage: public NetlinkRequestOrNotificationMessage{
+class AppAllocateFlowRequestMessage:
+		public NetlinkRequestOrNotificationMessage{
 
 	/** The source application name */
 	ApplicationProcessNamingInformation sourceAppName;
@@ -347,13 +369,8 @@ public:
 /**
  * Response by the IPC Process to the flow deallocation request
  */
-class AppDeallocateFlowResponseMessage: public BaseNetlinkMessage {
-
-	/** 0 if the operation was successful, an error code otherwise */
-	int result;
-
-	/** If there was an error, optional explanation providing more details */
-	std::string errorDescription;
+class AppDeallocateFlowResponseMessage:
+		public BaseNetlinkResponseMessage {
 
 	/**
 	 * The name of the applicaiton that requested the flow deallocation
@@ -365,10 +382,6 @@ public:
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	void setApplicationName(
 			const ApplicationProcessNamingInformation& applicationName);
-	const std::string& getErrorDescription() const;
-	void setErrorDescription(const std::string& errorDescription);
-	int getResult() const;
-	void setResult(int result);
 };
 
 /**
@@ -440,22 +453,11 @@ public:
  * Response of the IPC Manager to an application registration request.
  * IPC Manager -> Application
  */
-class AppRegisterApplicationResponseMessage: public BaseNetlinkMessage {
+class AppRegisterApplicationResponseMessage:
+		public BaseNetlinkResponseMessage {
 
 	/** The DIF name where the application wants to register */
 	ApplicationProcessNamingInformation applicationName;
-
-	/**
-	 * Result of the operation. 0 indicates success, a negative value an
-	 * error code.
-	 */
-	int result;
-
-	/**
-	 * If the application registration didn't succeed, this field may provide
-	 * further detail
-	 */
-	std::string errorDescription;
 
 	/** The DIF name where the application wants to register */
 	ApplicationProcessNamingInformation difName;
@@ -478,14 +480,10 @@ public:
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	void setApplicationName(
 			const ApplicationProcessNamingInformation& applicationName);
-	const std::string& getErrorDescription() const;
-	void setErrorDescription(const std::string& errorDescription);
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
 	unsigned int getIpcProcessPortId() const;
 	void setIpcProcessPortId(unsigned int ipcProcessPortId);
-	int getResult() const;
-	void setResult(int result);
 	unsigned short getIpcProcessId() const;
 	void setIpcProcessId(unsigned short ipcProcessId);
 };
@@ -553,22 +551,11 @@ IPCEvent* toIPCEvent();
  * Response of the IPC Process to an application registration request.
  * IPC Process -> IPC Manager
  */
-class IpcmRegisterApplicationResponseMessage: public BaseNetlinkMessage {
+class IpcmRegisterApplicationResponseMessage:
+		public BaseNetlinkResponseMessage {
 
 	/** The DIF name where the application wants to register */
 	ApplicationProcessNamingInformation applicationName;
-
-	/**
-	 * Result of the operation. 0 indicates success, a negative value an
-	 * error code.
-	 */
-	int result;
-
-	/**
-	 * If the application registration didn't succeed, this field may provide
-	 * further detail
-	 */
-	std::string errorDescription;
 
 	/** The DIF name where the application wants to register */
 	ApplicationProcessNamingInformation difName;
@@ -578,12 +565,8 @@ public:
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	void setApplicationName(
 			const ApplicationProcessNamingInformation& applicationName);
-	const std::string& getErrorDescription() const;
-	void setErrorDescription(const std::string& errorDescription);
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
-	int getResult() const;
-	void setResult(int result);
 };
 
 /**
@@ -604,30 +587,14 @@ public:
 };
 
 /**
- * Reports the IPC MAnager about the result of an Assign to DIF request
+ * Reports the IPC Manager about the result of an Assign to DIF request
  * IPC Process -> IPC Manager
  */
 class IpcmAssignToDIFResponseMessage:
-		public BaseNetlinkMessage {
-
-	/**
-	 * Result of the operation. 0 indicates success, a negative value an
-	 * error code.
-	 */
-	int result;
-
-	/**
-	 * If the application registration didn't succeed, this field may provide
-	 * further detail
-	 */
-	std::string errorDescription;
+		public BaseNetlinkResponseMessage {
 
 public:
 	IpcmAssignToDIFResponseMessage();
-	int getResult() const;
-	void setResult(int result);
-	const std::string& getErrorDescription() const;
-	void setErrorDescription(const std::string& errorDescription);
 };
 
 class IpcmAllocateFlowRequestMessage:
@@ -667,6 +634,16 @@ public:
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
 	IPCEvent* toIPCEvent();
+};
+
+/**
+ * Sent by the IPC Process to inform about the result of the flow allocation
+ * request operation. IPC Process -> IPC Manager
+ */
+class IpcmAllocateFlowResponseMessage: public BaseNetlinkResponseMessage{
+
+public:
+	IpcmAllocateFlowResponseMessage();
 };
 
 }
