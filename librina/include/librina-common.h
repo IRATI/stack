@@ -425,6 +425,12 @@ public:
 
 	/** Blocks until there is an event available */
 	IPCEvent * eventWait();
+
+	/**
+	 * Blocks until there is an event available, no more than the
+	 * time specified
+	 */
+	IPCEvent * eventTimedWait(int seconds, int nanoseconds);
 };
 
 /**

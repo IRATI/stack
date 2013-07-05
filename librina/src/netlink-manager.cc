@@ -117,6 +117,10 @@ void NetlinkManager::initialize() throw (NetlinkException) {
 	LOG_DBG("Generic Netlink RINA family id: %d", family);
 }
 
+unsigned int NetlinkManager::getLocalPort(){
+	return localPort;
+}
+
 unsigned int NetlinkManager::getSequenceNumber(){
 	return nl_socket_use_seq(socket);
 }

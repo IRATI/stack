@@ -92,6 +92,12 @@ public:
 	~NetlinkManager();
 
 	/**
+	 * Returns the port where the Netlink Manager is listening
+	 * @return
+	 */
+	unsigned int getLocalPort();
+
+	/**
 	 * Get the next available sequence number
 	 */
 	unsigned int getSequenceNumber();

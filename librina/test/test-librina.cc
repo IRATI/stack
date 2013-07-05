@@ -34,18 +34,16 @@ void doWorkApplicationProcess(){
 
 	usleep(1000*200);
 
-	ApplicationProcessNamingInformation * appName =
-			new ApplicationProcessNamingInformation();
-	appName->setProcessName("/apps/source");
-	appName->setProcessInstance("12");
-	appName->setEntityName("database");
-	appName->setEntityInstance("12");
+	ApplicationProcessNamingInformation appName;
+	appName.setProcessName("/apps/source");
+	appName.setProcessInstance("12");
+	appName.setEntityName("database");
+	appName.setEntityInstance("12");
 
-	ApplicationProcessNamingInformation * difName =
-			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test.DIF");
+	ApplicationProcessNamingInformation difName;
+	difName.setProcessName("/difs/Test.DIF");
 	try{
-		ipcManager->registerApplication(*appName, *difName);
+		ipcManager->registerApplication(appName, difName);
 		std::cout<<"Application# Application registered!\n";
 	}catch(IPCException &e){
 		std::cout<<"Problems registering application: "<<e.what()<<"\n";
@@ -53,36 +51,29 @@ void doWorkApplicationProcess(){
 	}
 
 	if (result == -1){
-		delete appName;
-		delete difName;
 		exit(result);
 	}
 
-	ApplicationProcessNamingInformation * destName =
-			new ApplicationProcessNamingInformation();
-	destName->setProcessName("/apps/dest");
-	destName->setProcessInstance("12345");
-	destName->setEntityName("printer");
-	destName->setEntityInstance("12623456");
+	ApplicationProcessNamingInformation destName;
+	destName.setProcessName("/apps/dest");
+	destName.setProcessInstance("12345");
+	destName.setEntityName("printer");
+	destName.setEntityInstance("12623456");
 
-	FlowSpecification * flowSpec = new FlowSpecification();
+	FlowSpecification flowSpec;
 
 	Flow * flow = 0;
 	try{
-		flow = ipcManager->allocateFlowRequest(*appName, *destName, *flowSpec);
+		flow = ipcManager->allocateFlowRequest(appName, destName, flowSpec);
 		std::cout<<"Application# Flow allocated by DIF "<<
 				flow->getDIFName().getProcessName() << std::endl;
-		ipcManager->deallocateFlow(flow->getPortId(), *appName);
+		ipcManager->deallocateFlow(flow->getPortId(), appName);
 		std::cout<<"Application# Flow deallocated!"<<std::endl;
 	}catch(IPCException &e){
 		std::cout<<"Problems "<<e.what()<<"\n";
 		result = -1;
 	}
 
-	delete appName;
-	delete difName;
-	delete destName;
-	delete flowSpec;
 	std::cout<<"Application# Work done, terminating!"<<std::endl;
 	exit(result);
 }
@@ -130,29 +121,28 @@ void doWorkIPCProcess(){
 
 int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	//Parent process, this will be the IPC Manager
+	setNetlinkPortId(1);
 
 	usleep(1000*50);
 	//Create IPC Process
-	ApplicationProcessNamingInformation * processName =
-				new ApplicationProcessNamingInformation();
-	processName->setProcessName(
+	ApplicationProcessNamingInformation processName;
+	processName.setProcessName(
 			"/ipcprocesses/shimEthernet/Barcelona/i2CAT/25");
-	processName->setProcessInstance("1");
+	processName.setProcessInstance("1");
 	IPCProcess * ipcProcess = ipcProcessFactory->create(
-			*processName, DIF_TYPE_SHIM_ETHERNET);
+			processName, DIF_TYPE_SHIM_ETHERNET);
 	std::cout<<"IPCManager# Created IPC Process with id " <<
 			ipcProcess->getId()<<std::endl;
 
 	//Assign the IPC Process to a DIF
-	ApplicationProcessNamingInformation * difName =
-			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test.DIF");
-	DIFConfiguration * difConfiguration = new DIFConfiguration();
-	difConfiguration->setDifType(DIF_TYPE_SHIM_ETHERNET);
-	difConfiguration->setDifName(*difName);
-	ipcProcess->assignToDIF(*difConfiguration, 2);
+	ApplicationProcessNamingInformation difName;
+	difName.setProcessName("/difs/Test.DIF");
+	DIFConfiguration difConfiguration;
+	difConfiguration.setDifType(DIF_TYPE_SHIM_ETHERNET);
+	difConfiguration.setDifName(difName);
+	ipcProcess->assignToDIF(difConfiguration, 2);
 	std::cout<<"IPCManager# Assigned IPC Process to DIF "<<
-			difName->getProcessName()<<std::endl;
+			difName.getProcessName()<<std::endl;
 
 	//Wait for a Register application event
 	IPCEvent * event = ipcEventProducer->eventWait();
@@ -161,7 +151,7 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	std::cout<<"IPCManager# received an application registration request event\n";
 	ipcProcess->registerApplication(appRequestEvent->getApplicationName(), 3);
 	std::cout<<"IPCManager# IPC Process successfully registered application " <<
-			"to DIF "<<difName->getProcessName()<<std::endl;
+			"to DIF "<<difName.getProcessName()<<std::endl;
 	applicationManager->applicationRegistered(*appRequestEvent, 1, 2, 0, "ok");
 	std::cout<<"IPCManager# Replied to application\n";
 	delete appRequestEvent;
@@ -171,7 +161,7 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	FlowRequestEvent * flowRequestEvent =
 			dynamic_cast<FlowRequestEvent *>(event);
 	std::cout<<"IPCManager# received a flow allocation request event\n";
-	flowRequestEvent->setDIFName(*difName);
+	flowRequestEvent->setDIFName(difName);
 	flowRequestEvent->setPortId(23);
 	applicationManager->flowAllocated(*flowRequestEvent, "ok", 1, 2);
 	std::cout<<"IPCManager# Replied to flow allocation\n";
@@ -180,9 +170,6 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	//Destroy IPC Process
 	ipcProcessFactory->destroy(ipcProcess->getId());
 	std::cout<<"IPCManager# Destroyed IPC Process"<<std::endl;
-	delete processName;
-	delete difName;
-	delete difConfiguration;
 
 	//Wait for child termination
 	int childExitStatus;
@@ -202,8 +189,6 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING LIBRINA\n";
 	pid_t appPID, ipcPID;
-
-	setNetlinkPortId(1);
 
 	std::cout<<"Parent pid: "<<getpid()<<std::endl;
 

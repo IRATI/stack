@@ -78,16 +78,15 @@ void IPCProcess::assignToDIF(const DIFConfiguration& difConfiguration,
 #if STUB_API
 	//Do nothing
 #else
-	IpcmAssignToDIFRequestMessage * message =
-			new IpcmAssignToDIFRequestMessage();
-	message->setDIFConfiguration(difConfiguration);
-	message->setDestIpcProcessId(id);
-	message->setDestPortId(ipcProcessPortId);
-	message->setRequestMessage(true);
+	IpcmAssignToDIFRequestMessage message;
+	message.setDIFConfiguration(difConfiguration);
+	message.setDestIpcProcessId(id);
+	message.setDestPortId(ipcProcessPortId);
+	message.setRequestMessage(true);
 
 	IpcmAssignToDIFResponseMessage * assignToDIFResponse =
 			dynamic_cast<IpcmAssignToDIFResponseMessage *>(
-					rinaManager->sendRequestAndWaitForResponse(message,
+					rinaManager->sendRequestAndWaitForResponse(&message,
 							IPCProcess::error_assigning_to_dif));
 
 	if (assignToDIFResponse->getResult() < 0){
@@ -145,16 +144,15 @@ void IPCProcess::registerApplication(
 #if STUB_API
 	//Do nothing
 #else
-	IpcmRegisterApplicationRequestMessage * message =
-			new IpcmRegisterApplicationRequestMessage();
-	message->setApplicationName(applicationName);
-	message->setDifName(difConfiguration.getDifName());
-	message->setApplicationPortId(applicationPortId);
-	message->setRequestMessage(true);
+	IpcmRegisterApplicationRequestMessage message;
+	message.setApplicationName(applicationName);
+	message.setDifName(difConfiguration.getDifName());
+	message.setApplicationPortId(applicationPortId);
+	message.setRequestMessage(true);
 
 	IpcmRegisterApplicationResponseMessage * registerAppResponse =
 		dynamic_cast<IpcmRegisterApplicationResponseMessage *>(
-			rinaManager->sendRequestAndWaitForResponse(message,
+			rinaManager->sendRequestAndWaitForResponse(&message,
 				IPCProcess::error_registering_app));
 
 	if (registerAppResponse->getResult() < 0){
@@ -249,21 +247,18 @@ void ApplicationManager::applicationRegistered(
 #if STUB_API
 	//Do nothing
 #else
-	AppRegisterApplicationResponseMessage * responseMessage =
-			new AppRegisterApplicationResponseMessage();
-	responseMessage->setApplicationName(event.getApplicationName());
-	responseMessage->setDifName(event.getDIFName());
-	responseMessage->setIpcProcessId(ipcProcessId);
-	responseMessage->setIpcProcessPortId(ipcProcessPortId);
-	responseMessage->setResult(result);
-	responseMessage->setErrorDescription(errorDescription);
-	responseMessage->setSequenceNumber(event.getSequenceNumber());
-	responseMessage->setResponseMessage(true);
+	AppRegisterApplicationResponseMessage responseMessage;
+	responseMessage.setApplicationName(event.getApplicationName());
+	responseMessage.setDifName(event.getDIFName());
+	responseMessage.setIpcProcessId(ipcProcessId);
+	responseMessage.setIpcProcessPortId(ipcProcessPortId);
+	responseMessage.setResult(result);
+	responseMessage.setErrorDescription(errorDescription);
+	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(responseMessage);
-		delete responseMessage;
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
 	}catch(NetlinkException &e){
-		delete responseMessage;
 		throw IPCException(e.what());
 	}
 #endif
@@ -282,21 +277,18 @@ void ApplicationManager::flowAllocated(const FlowRequestEvent flowRequestEvent,
 #if STUB_API
 	//Do nothing
 #else
-	AppAllocateFlowRequestResultMessage * responseMessage =
-				new AppAllocateFlowRequestResultMessage();
-	responseMessage->setPortId(flowRequestEvent.getPortId());
-	responseMessage->setErrorDescription(errorDescription);
-	responseMessage->setIpcProcessId(ipcProcessId);
-	responseMessage->setIpcProcessPortId(ipcProcessPortId);
-	responseMessage->setSourceAppName(flowRequestEvent.getSourceApplicationName());
-	responseMessage->setDifName(flowRequestEvent.getDIFName());
-	responseMessage->setSequenceNumber(flowRequestEvent.getSequenceNumber());
-	responseMessage->setResponseMessage(true);
+	AppAllocateFlowRequestResultMessage responseMessage;
+	responseMessage.setPortId(flowRequestEvent.getPortId());
+	responseMessage.setErrorDescription(errorDescription);
+	responseMessage.setIpcProcessId(ipcProcessId);
+	responseMessage.setIpcProcessPortId(ipcProcessPortId);
+	responseMessage.setSourceAppName(flowRequestEvent.getSourceApplicationName());
+	responseMessage.setDifName(flowRequestEvent.getDIFName());
+	responseMessage.setSequenceNumber(flowRequestEvent.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(responseMessage);
-		delete responseMessage;
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
 	}catch(NetlinkException &e){
-		delete responseMessage;
 		throw IPCException(e.what());
 	}
 #endif
