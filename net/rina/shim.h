@@ -56,7 +56,7 @@ struct shim_instance_ops {
 	int  (* flow_allocate_request)(struct shim_instance_data * data,
                                        const struct name *         source,
                                        const struct name *         dest,
-                                       const struct flow_spec_t *  flow_spec,
+                                       const struct flow_spec *    flow_spec,
                                        port_id_t                   id);
 	int  (* flow_allocate_response)(struct shim_instance_data * data,
                                         port_id_t                   id,

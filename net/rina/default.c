@@ -76,8 +76,8 @@ static int default_ipc_destroy(struct personality_data * data,
         return kipcm_ipc_destroy(data->kipcm, id);
 }
 
-static int default_connection_create(struct personality_data *   data,
-                                     const struct connection_t * connection)
+static int default_connection_create(struct personality_data * data,
+                                     const struct connection * connection)
 {
         if (!data) return -1;
 

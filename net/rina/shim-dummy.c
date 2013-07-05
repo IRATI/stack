@@ -55,7 +55,7 @@ struct dummy_flow {
 static int dummy_flow_allocate_request(struct shim_instance_data * data,
                                        const struct name *         source,
                                        const struct name *         dest,
-                                       const struct flow_spec_t *  flow_spec,
+                                       const struct flow_spec *    fspec,
                                        port_id_t                   id)
 {
         struct shim_instance_data * dummy;

@@ -72,7 +72,7 @@ int efcp_receive_pdu(void *     opaque,
 }
 
 cep_id_t efcp_create(void *                      opaque,
-                     const struct connection_t * connection)
+                     const struct connection * connection)
 {
         LOG_DBG("EFCP instance created");
 

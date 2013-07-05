@@ -79,7 +79,7 @@ static struct empty_flow * find_flow(struct shim_instance_data * data,
 static int empty_flow_allocate_request(struct shim_instance_data * data,
                                        const struct name *         source,
                                        const struct name *         dest,
-                                       const struct flow_spec_t *  flow_spec,
+                                       const struct flow_spec *    fspec,
                                        port_id_t                   id)
 {
 	struct empty_flow * flow;

@@ -90,7 +90,7 @@ struct shim_instance_data {
 static int eth_vlan_flow_allocate_request(struct shim_instance_data * data,
                                           const struct name *         source,
                                           const struct name *         dest,
-                                          const struct flow_spec_t *  fspec,
+                                          const struct flow_spec *    fspec,
                                           port_id_t                   id)
 {
         ASSERT(data);

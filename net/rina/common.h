@@ -101,7 +101,7 @@ struct name {
 	string_t * entity_instance;
 };
 
-struct flow_spec_t {
+struct flow_spec {
 	/* This structure defines the characteristics of a flow */
 
 	/* Average bandwidth in bytes/s */
@@ -158,7 +158,7 @@ struct pdu {
 };
 
 /* This structure defines an EFCP connection */
-struct connection_t {
+struct connection {
 	/* The port_id this connection is bound to */
 	port_id_t port_id;
 	

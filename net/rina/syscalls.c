@@ -85,7 +85,7 @@ SYSCALL_DEFINE2(sdu_write,
 { CALL_DEFAULT_PERSONALITY(sdu_write, id, sdu); }
 
 SYSCALL_DEFINE1(connection_create,
-                const struct connection_t __user *, connection)
+                const struct connection __user *, connection)
 { CALL_DEFAULT_PERSONALITY(connection_create, connection); }
 
 SYSCALL_DEFINE1(connection_destroy,

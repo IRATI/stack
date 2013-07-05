@@ -50,7 +50,7 @@ struct personality_ops {
                             ipc_process_id_t          id);
         
         int (* connection_create)(struct personality_data *   data,
-                                  const struct connection_t * connection);
+                                  const struct connection * connection);
         int (* connection_destroy)(struct personality_data * data,
                                    cep_id_t                  id);
         int (* connection_update)(struct personality_data * data,
