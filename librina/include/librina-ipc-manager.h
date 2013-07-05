@@ -165,9 +165,12 @@ public:
 	 * @param flowRequest contains the names of source and destination
 	 * applications, the portId as well as the characteristics required for the
 	 * flow
+	 * @param applicationPortId the port where the application that requested the
+	 * flow can be contacted
 	 * @throws ICPException if an error occurs
 	 */
-	void allocateFlow(const FlowRequest& flowRequest) throw (IPCException);
+	void allocateFlow(const FlowRequestEvent& flowRequest,
+			unsigned int applicationPortId) throw (IPCException);
 
 	/**
 	 * TODO: Placeholder for the real query RIB method.

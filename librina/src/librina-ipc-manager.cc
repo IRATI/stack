@@ -175,9 +175,26 @@ void IPCProcess::unregisterApplication(
 	LOG_DBG("IPCProcess::unregister application called");
 }
 
-void IPCProcess::allocateFlow(const FlowRequest& flowRequest)
-		throw (IPCException) {
+void IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest,
+		unsigned int applicationPortId) throw (IPCException) {
 	LOG_DBG("IPCProcess::allocate flow called");
+	if (!difMember){
+		throw IPCException(IPCProcess::error_not_a_dif_member);
+	}
+#if STUB_API
+	//Do nothing
+#else
+	IpcmAllocateFlowRequestMessage message;
+	message.setSourceAppName(flowRequest.getSourceApplicationName());
+	message.setDestAppName(flowRequest.getDestApplicationName());
+	message.setFlowSpec(flowRequest.getFlowSpecification());
+	message.setDifName(flowRequest.getDIFName());
+	message.setPortId(flowRequest.getPortId());
+	message.setApplicationPortId(applicationPortId);
+	message.setRequestMessage(true);
+
+
+#endif
 }
 
 void IPCProcess::queryRIB() {

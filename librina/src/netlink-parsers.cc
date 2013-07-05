@@ -148,6 +148,15 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
+	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST: {
+		IpcmAllocateFlowRequestMessage * allocateFlowRequestObject =
+				dynamic_cast<IpcmAllocateFlowRequestMessage *>(message);
+		if (putIpcmAllocateFlowRequestMessageObject(netlinkMessage,
+				*allocateFlowRequestObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
 
 	default: {
 		return -1;
@@ -199,6 +208,9 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE: {
 		return parseIpcmAssignToDIFResponseMessage(netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST: {
+		return parseIpcmAllocateFlowRequestMessage(netlinkMessageHeader);
 	}
 	default: {
 		LOG_ERR(
@@ -864,6 +876,56 @@ int putIpcmAssignToDIFResponseMessageObject(nl_msg* netlinkMessage,
 
 	nla_put_failure: LOG_ERR(
 			"Error building IpcmAssignToDIFResponseMessage Netlink object");
+	return -1;
+}
+
+int putIpcmAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
+		const IpcmAllocateFlowRequestMessage& object){
+	struct nlattr *sourceName, *destName, *flowSpec, *difName;
+
+	if (!(sourceName = nla_nest_start(netlinkMessage, IAFRM_ATTR_SOURCE_APP))){
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getSourceAppName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, sourceName);
+
+	if (!(destName = nla_nest_start(netlinkMessage, IAFRM_ATTR_DEST_APP))){
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getDestAppName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, destName);
+
+	if (!(flowSpec = nla_nest_start(netlinkMessage, IAFRM_ATTR_FLOW_SPEC))){
+		goto nla_put_failure;
+	}
+	if (putFlowSpecificationObject(netlinkMessage, object.getFlowSpec()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, flowSpec);
+
+	if (!(difName = nla_nest_start(netlinkMessage, IAFRM_ATTR_DIF_NAME))){
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getDifName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, difName);
+
+	NLA_PUT_U32(netlinkMessage, IAFRM_ATTR_PORT_ID, object.getPortId());
+	NLA_PUT_U32(netlinkMessage,
+			IAFRM_ATTR_APP_PORT, object.getApplicationPortId());
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building IpcmAllocateFlowRequestMessage Netlink object");
 	return -1;
 }
 
@@ -1785,6 +1847,103 @@ IpcmAssignToDIFResponseMessage *
 	if (attrs[IATDRE_ATTR_ERROR_DESCRIPTION]) {
 			result->setErrorDescription(
 					nla_get_string(attrs[IATDRE_ATTR_ERROR_DESCRIPTION]));
+	}
+
+	return result;
+}
+
+IpcmAllocateFlowRequestMessage *
+	parseIpcmAllocateFlowRequestMessage(nlmsghdr *hdr){
+	struct nla_policy attr_policy[IAFRM_ATTR_MAX + 1];
+	attr_policy[IAFRM_ATTR_SOURCE_APP].type = NLA_NESTED;
+	attr_policy[IAFRM_ATTR_SOURCE_APP].minlen = 0;
+	attr_policy[IAFRM_ATTR_SOURCE_APP].maxlen = 0;
+	attr_policy[IAFRM_ATTR_DEST_APP].type = NLA_NESTED;
+	attr_policy[IAFRM_ATTR_DEST_APP].minlen = 0;
+	attr_policy[IAFRM_ATTR_DEST_APP].maxlen = 0;
+	attr_policy[IAFRM_ATTR_FLOW_SPEC].type = NLA_NESTED;
+	attr_policy[IAFRM_ATTR_FLOW_SPEC].minlen = 0;
+	attr_policy[IAFRM_ATTR_FLOW_SPEC].maxlen = 0;
+	attr_policy[IAFRM_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[IAFRM_ATTR_DIF_NAME].minlen = 0;
+	attr_policy[IAFRM_ATTR_DIF_NAME].maxlen = 0;
+	attr_policy[IAFRM_ATTR_PORT_ID].type = NLA_U32;
+	attr_policy[IAFRM_ATTR_PORT_ID].minlen = 0;
+	attr_policy[IAFRM_ATTR_PORT_ID].maxlen = 0;
+	attr_policy[IAFRM_ATTR_APP_PORT].type = NLA_U32;
+	attr_policy[IAFRM_ATTR_APP_PORT].minlen = 0;
+	attr_policy[IAFRM_ATTR_APP_PORT].maxlen = 0;
+	struct nlattr *attrs[IAFRM_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			IAFRM_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing IpcmAssignToDIFRequestMessage information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	IpcmAllocateFlowRequestMessage * result =
+			new IpcmAllocateFlowRequestMessage();
+	ApplicationProcessNamingInformation * sourceName;
+	ApplicationProcessNamingInformation * destName;
+	FlowSpecification * flowSpec;
+	ApplicationProcessNamingInformation * difName;
+
+	if (attrs[IAFRM_ATTR_SOURCE_APP]) {
+		sourceName = parseApplicationProcessNamingInformationObject(
+				attrs[IAFRM_ATTR_SOURCE_APP]);
+		if (sourceName == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->setSourceAppName(*sourceName);
+			delete sourceName;
+		}
+	}
+
+	if (attrs[IAFRM_ATTR_DEST_APP]) {
+		destName = parseApplicationProcessNamingInformationObject(
+				attrs[IAFRM_ATTR_DEST_APP]);
+		if (destName == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->setDestAppName(*destName);
+			delete destName;
+		}
+	}
+
+	if (attrs[IAFRM_ATTR_FLOW_SPEC]) {
+		flowSpec = parseFlowSpecificationObject(attrs[IAFRM_ATTR_FLOW_SPEC]);
+		if (flowSpec == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->setFlowSpec(*flowSpec);
+			delete flowSpec;
+		}
+	}
+
+	if (attrs[IAFRM_ATTR_DIF_NAME]) {
+		difName = parseApplicationProcessNamingInformationObject(
+				attrs[IAFRM_ATTR_DIF_NAME]);
+		if (difName == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->setDifName(*difName);
+			delete difName;
+		}
+	}
+
+	if (attrs[IAFRM_ATTR_PORT_ID]) {
+		result->setPortId(nla_get_u32(attrs[IAFRM_ATTR_PORT_ID]));
+	}
+
+	if (attrs[IAFRM_ATTR_APP_PORT]) {
+		result->setApplicationPortId(nla_get_u32(attrs[IAFRM_ATTR_APP_PORT]));
 	}
 
 	return result;

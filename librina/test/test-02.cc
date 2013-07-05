@@ -109,13 +109,11 @@ int main(int argc, char * argv[]) {
 	ipcProcess1->unregisterApplication(*sourceName);
 
 	/* TEST ALLOCATE FLOW */
-	FlowSpecification * flowSpec = new FlowSpecification();
-	FlowRequest * flowRequest = new FlowRequest();
-	flowRequest->setSourceApplicationName(*sourceName);
-	flowRequest->setDestinationApplicationName(*destinationName);
-	flowRequest->setFlowSpecification(*flowSpec);
+	FlowSpecification *flowSpec = new FlowSpecification();
+	FlowRequestEvent * flowRequest = new FlowRequestEvent(*flowSpec,
+			*sourceName, *difName, 1234);
 	flowRequest->setPortId(430);
-	ipcProcess1->allocateFlow(*flowRequest);
+	ipcProcess1->allocateFlow(*flowRequest, 24);
 
 	/* TEST QUERY RIB */
 	ipcProcess1->queryRIB();

@@ -630,6 +630,45 @@ public:
 	void setErrorDescription(const std::string& errorDescription);
 };
 
+class IpcmAllocateFlowRequestMessage:
+		public NetlinkRequestOrNotificationMessage {
+	/** The source application name*/
+	ApplicationProcessNamingInformation sourceAppName;
+
+	/** The destination application name*/
+	ApplicationProcessNamingInformation destAppName;
+
+	/** The characteristics requested for the flow*/
+	FlowSpecification flowSpec;
+
+	/** The DIF where the Flow is being allocated */
+	ApplicationProcessNamingInformation difName;
+
+	/** The portId assigned tot he flow */
+	int portId;
+
+	/** The Netlink portId of the application that requested the flow*/
+	unsigned int applicationPortId;
+
+public:
+	IpcmAllocateFlowRequestMessage();
+	unsigned int getApplicationPortId() const;
+	void setApplicationPortId(unsigned int applicationPortId);
+	const ApplicationProcessNamingInformation& getDestAppName() const;
+	void setDestAppName(
+			const ApplicationProcessNamingInformation& destAppName);
+	const FlowSpecification& getFlowSpec() const;
+	void setFlowSpec(const FlowSpecification& flowSpec);
+	int getPortId() const;
+	void setPortId(int portId);
+	const ApplicationProcessNamingInformation& getSourceAppName() const;
+	void setSourceAppName(
+			const ApplicationProcessNamingInformation& sourceAppName);
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
+	IPCEvent* toIPCEvent();
+};
+
 }
 
 #endif /* NETLINK_MESSAGES_H_ */

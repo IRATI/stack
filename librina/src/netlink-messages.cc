@@ -774,5 +774,77 @@ void IpcmAssignToDIFResponseMessage::setErrorDescription(
 	this->errorDescription = errorDescription;
 }
 
+/* CLASS IPCM ALLOCATE FLOW REQUEST MESSAGE */
+IpcmAllocateFlowRequestMessage::IpcmAllocateFlowRequestMessage():
+				NetlinkRequestOrNotificationMessage(
+						RINA_C_IPCM_ALLOCATE_FLOW_REQUEST) {
+	portId = 0;
+	applicationPortId = 0;
+}
+
+unsigned int IpcmAllocateFlowRequestMessage::getApplicationPortId() const {
+	return applicationPortId;
+}
+
+void IpcmAllocateFlowRequestMessage::setApplicationPortId(
+		unsigned int applicationPortId) {
+	this->applicationPortId = applicationPortId;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmAllocateFlowRequestMessage::getDestAppName() const {
+	return destAppName;
+}
+
+void IpcmAllocateFlowRequestMessage::setDestAppName(
+		const ApplicationProcessNamingInformation& destAppName) {
+	this->destAppName = destAppName;
+}
+
+const FlowSpecification&
+IpcmAllocateFlowRequestMessage::getFlowSpec() const {
+	return flowSpec;
+}
+
+void IpcmAllocateFlowRequestMessage::setFlowSpec(
+		const FlowSpecification& flowSpec) {
+	this->flowSpec = flowSpec;
+}
+
+int IpcmAllocateFlowRequestMessage::getPortId() const {
+	return portId;
+}
+
+void IpcmAllocateFlowRequestMessage::setPortId(int portId) {
+	this->portId = portId;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmAllocateFlowRequestMessage::getSourceAppName() const {
+	return sourceAppName;
+}
+
+void IpcmAllocateFlowRequestMessage::setSourceAppName(
+		const ApplicationProcessNamingInformation& sourceAppName) {
+	this->sourceAppName = sourceAppName;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmAllocateFlowRequestMessage::getDifName() const {
+	return difName;
+}
+
+void IpcmAllocateFlowRequestMessage::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
+IPCEvent* IpcmAllocateFlowRequestMessage::toIPCEvent(){
+	FlowRequestEvent * event =
+			new FlowRequestEvent(portId, flowSpec, sourceAppName, destAppName,
+					difName, getSequenceNumber());
+	return event;
+}
+
 }
 
