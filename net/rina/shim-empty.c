@@ -226,6 +226,7 @@ static int empty_init(struct shim_data * data)
  */
 static int empty_fini(struct shim_data * data)
 {
+
         ASSERT(data);
         
         /*
