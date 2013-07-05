@@ -30,6 +30,7 @@
 #include "kipcm.h"
 #include "efcp.h"
 #include "rmt.h"
+#include "debug.h"
 
 #define DEFAULT_LABEL "default"
 
@@ -43,7 +44,7 @@ struct personality_data {
 };
 
 static int default_ipc_create(struct personality_data * data,
-                              const struct name_t *     name,
+                              const struct name *       name,
                               ipc_process_id_t          id,
                               dif_type_t                type)
 {
@@ -75,8 +76,8 @@ static int default_ipc_destroy(struct personality_data * data,
         return kipcm_ipc_destroy(data->kipcm, id);
 }
 
-static int default_connection_create(struct personality_data *   data,
-                                     const struct connection_t * connection)
+static int default_connection_create(struct personality_data * data,
+                                     const struct connection * connection)
 {
         if (!data) return -1;
 
@@ -108,7 +109,7 @@ static int default_connection_update(struct personality_data * data,
 
 static int default_sdu_write(struct personality_data * data,
                              port_id_t                 id,
-                             const struct sdu_t *      sdu)
+                             const struct sdu *        sdu)
 {
         if (!data) return -1;
 
@@ -119,7 +120,7 @@ static int default_sdu_write(struct personality_data * data,
 
 static int default_sdu_read(struct personality_data * data,
                             port_id_t                 id,
-                            struct sdu_t *            sdu)
+                            struct sdu *              sdu)
 {
         if (!data) return -1;
 

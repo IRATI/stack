@@ -68,16 +68,16 @@ struct efcp_ipc_t {
 
 struct efcp_instance_t {
         /* The connection endpoint id that identifies this instance */
-        cep_id_t                cep_id;
+        cep_id_t                 id;
 
         /* The Data transfer protocol state machine instance */
-        struct dtp_instance_t  *dtp_instance;
+        struct dtp_instance_t *  dtp_instance;
 
         /* The Data transfer control protocol state machine instance */
-        struct dtcp_instance_t *dtcp_instance;
+        struct dtcp_instance_t * dtcp_instance;
 
         /* Pointer to the flow data structure of the K-IPC Manager */
-        struct flow_t          *flow;
+        struct flow_t *          flow;
 };
 
 struct dtp_instance_t {
@@ -86,9 +86,8 @@ struct dtp_instance_t {
 };
 
 struct dtp_state_vector_t {
-
         /* Configuration values */
-        struct connection_t        * connection;
+        struct connection *          connection;
         uint_t                       max_flow_sdu;
         uint_t                       max_flow_pdu_size;
         uint_t                       initial_sequence_number;
@@ -112,8 +111,8 @@ struct dtcp_instance_t {
         struct dtcp_state_vector_t *dtcp_state_vector;
 
         /* FIXME: Queues must be added
-         * QUEUE(flow_control_queue, pdu_t);
-         * QUEUE(closed_window_queue, pdu_t);
+         * QUEUE(flow_control_queue, pdu);
+         * QUEUE(closed_window_queue, pdu);
          * struct workqueue_struct * rx_control_queue;
          */
 };
@@ -220,13 +219,13 @@ struct dtcp_state_vector_t {
 
 void *   efcp_init(struct kobject * parent);
 int      efcp_fini(void * opaque);
-int      efcp_write(void *               opaque,
-                    port_id_t            port_id,
-                    const struct sdu_t * sdu);
+int      efcp_write(void *             opaque,
+                    port_id_t          id,
+                    const struct sdu * sdu);
 int      efcp_receive_pdu(void *       opaque,
-                          struct pdu_t pdu);
-cep_id_t efcp_create(void *                      opaque,
-                     const struct connection_t * connection);
+                          struct pdu * pdu);
+cep_id_t efcp_create(void *                    opaque,
+                     const struct connection * connection);
 int      efcp_destroy(void *   opaque,
                       cep_id_t id);
 int      efcp_update(void *   opaque,

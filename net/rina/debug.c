@@ -61,8 +61,8 @@ void rina_debug_exit(void)
 
 #if CONFIG_DEBUG_FS
         if (!dfs_root) {
-                LOG_DBG("Debug-fs support not correctly initialized, "
-                        "bailing out");
+                LOG_DBG("Debug-fs support not correctly initialized or "
+                        "already finalized, bailing out");
                 return;
         }
 

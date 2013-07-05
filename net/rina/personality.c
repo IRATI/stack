@@ -28,6 +28,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "personality.h"
+#include "debug.h"
 
 /* FIXME: Bogus, to be removed ASAP */
 struct personality * default_personality = NULL;

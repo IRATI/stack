@@ -97,12 +97,12 @@ struct flow {
          * In case this flow is being used by an RMT, this is a pointer
          * to the RMT instance.
          */
-	struct rmt_instance_t  rmt_instance;
+	struct rmt_instance    rmt_instance;
 
 	//FIXME: Define QUEUE
-	//QUEUE(segmentation_queue, pdu_t *);
-	//QUEUE(reassembly_queue,	pdu_t *);
-	//QUEUE(sdu_ready, sdu_t *);
+	//QUEUE(segmentation_queue, pdu *);
+	//QUEUE(reassembly_queue,	pdu *);
+	//QUEUE(sdu_ready, sdu *);
 	struct kfifo *         sdu_ready;
 };
 
@@ -118,10 +118,10 @@ struct shim *  kipcm_shim_register(struct kipcm *    kipcm,
 int            kipcm_shim_unregister(struct kipcm * kipcm,
                                      struct shim *  shim);
 
-int            kipcm_ipc_create(struct kipcm *        kipcm,
-                                const struct name_t * name,
-                                ipc_process_id_t      id,
-                                dif_type_t            type);
+int            kipcm_ipc_create(struct kipcm *      kipcm,
+                                const struct name * name,
+                                ipc_process_id_t    id,
+                                dif_type_t          type);
 int            kipcm_ipc_configure(struct kipcm *                  kipcm,
                                    ipc_process_id_t                id,
                                    const struct ipc_process_conf * config);
@@ -136,9 +136,9 @@ int            kipcm_flow_remove(struct kipcm * kipcm,
 
 int            kipcm_sdu_write(struct kipcm *       kipcm,
                                port_id_t            id,
-                               const struct sdu_t * sdu);
+                               const struct sdu * sdu);
 int            kipcm_sdu_read(struct kipcm * kipcm,
                               port_id_t      id,
-                              struct sdu_t * sdu);
+                              struct sdu * sdu);
 
 #endif
