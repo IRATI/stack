@@ -946,7 +946,7 @@ AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 		LOG_ERR(
 				"Error parsing AppAllocateFlowRequestMessage information from Netlink message: %d",
 				err);
-		return NULL;
+		return 0;
 	}
 
 	AppAllocateFlowRequestMessage * result =
@@ -958,32 +958,35 @@ AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 	if (attrs[AAFR_ATTR_SOURCE_APP_NAME]) {
 		sourceName = parseApplicationProcessNamingInformationObject(
 				attrs[AAFR_ATTR_SOURCE_APP_NAME]);
-		if (sourceName == NULL) {
+		if (sourceName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setSourceAppName(*sourceName);
+			delete sourceName;
 		}
 	}
 
 	if (attrs[AAFR_ATTR_DEST_APP_NAME]) {
 		destName = parseApplicationProcessNamingInformationObject(
 				attrs[AAFR_ATTR_DEST_APP_NAME]);
-		if (destName == NULL) {
+		if (destName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setDestAppName(*destName);
+			delete destName;
 		}
 	}
 
 	if (attrs[AAFR_ATTR_FLOW_SPEC]) {
 		flowSpec = parseFlowSpecificationObject(attrs[AAFR_ATTR_FLOW_SPEC]);
-		if (flowSpec == NULL) {
+		if (flowSpec == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setFlowSpecification(*flowSpec);
+			delete flowSpec;
 		}
 	}
 
@@ -1025,7 +1028,7 @@ AppAllocateFlowRequestResultMessage * parseAppAllocateFlowRequestResultMessage(
 		LOG_ERR(
 				"Error parsing AppAllocateFlowRequestResultMessage information from Netlink message: %d",
 				err);
-		return NULL;
+		return 0;
 	}
 
 	AppAllocateFlowRequestResultMessage * result =
@@ -1037,11 +1040,12 @@ AppAllocateFlowRequestResultMessage * parseAppAllocateFlowRequestResultMessage(
 	if (attrs[AAFRR_ATTR_SOURCE_APP_NAME]) {
 		sourceName = parseApplicationProcessNamingInformationObject(
 				attrs[AAFRR_ATTR_SOURCE_APP_NAME]);
-		if (sourceName == NULL) {
+		if (sourceName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setSourceAppName(*sourceName);
+			delete sourceName;
 		}
 	}
 
@@ -1057,11 +1061,12 @@ AppAllocateFlowRequestResultMessage * parseAppAllocateFlowRequestResultMessage(
 	if (attrs[AAFRR_ATTR_DIF_NAME]) {
 		difName = parseApplicationProcessNamingInformationObject(
 				attrs[AAFRR_ATTR_DIF_NAME]);
-		if (difName == NULL) {
+		if (difName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setDifName(*difName);
+			delete difName;
 		}
 	}
 
@@ -1109,7 +1114,7 @@ AppAllocateFlowRequestArrivedMessage * parseAppAllocateFlowRequestArrivedMessage
 		LOG_ERR(
 				"Error parsing AppAllocateFlowRequestArrivedMessage information from Netlink message: %d",
 				err);
-		return NULL;
+		return 0;
 	}
 
 	AppAllocateFlowRequestArrivedMessage * result =
@@ -1122,32 +1127,35 @@ AppAllocateFlowRequestArrivedMessage * parseAppAllocateFlowRequestArrivedMessage
 	if (attrs[AAFRA_ATTR_SOURCE_APP_NAME]) {
 		sourceName = parseApplicationProcessNamingInformationObject(
 				attrs[AAFRA_ATTR_SOURCE_APP_NAME]);
-		if (sourceName == NULL) {
+		if (sourceName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setSourceAppName(*sourceName);
+			delete sourceName;
 		}
 	}
 
 	if (attrs[AAFRA_ATTR_DEST_APP_NAME]) {
 		destName = parseApplicationProcessNamingInformationObject(
 				attrs[AAFRA_ATTR_DEST_APP_NAME]);
-		if (destName == NULL) {
+		if (destName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setDestAppName(*destName);
+			delete destName;
 		}
 	}
 
 	if (attrs[AAFRA_ATTR_FLOW_SPEC]) {
 		flowSpec = parseFlowSpecificationObject(attrs[AAFRA_ATTR_FLOW_SPEC]);
-		if (flowSpec == NULL) {
+		if (flowSpec == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setFlowSpecification(*flowSpec);
+			delete flowSpec;
 		}
 	}
 
@@ -1157,11 +1165,12 @@ AppAllocateFlowRequestArrivedMessage * parseAppAllocateFlowRequestArrivedMessage
 		if (attrs[AAFRA_ATTR_DIF_NAME]) {
 			difName = parseApplicationProcessNamingInformationObject(
 					attrs[AAFRA_ATTR_DIF_NAME]);
-			if (difName == NULL) {
+			if (difName == 0) {
 				delete result;
-				return NULL;
+				return 0;
 			} else {
 				result->setDifName(*difName);
+				delete difName;
 			}
 		}
 	}
@@ -1197,7 +1206,7 @@ AppAllocateFlowResponseMessage * parseAppAllocateFlowResponseMessage(
 		LOG_ERR(
 				"Error parsing AppAllocateFlowResponseMessage information from Netlink message: %d",
 				err);
-		return NULL;
+		return 0;
 	}
 
 	AppAllocateFlowResponseMessage * result =
@@ -1207,11 +1216,12 @@ AppAllocateFlowResponseMessage * parseAppAllocateFlowResponseMessage(
 	if (attrs[AAFRE_ATTR_DIF_NAME]) {
 		difName = parseApplicationProcessNamingInformationObject(
 				attrs[AAFRE_ATTR_DIF_NAME]);
-		if (difName == NULL) {
+		if (difName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setDifName(*difName);
+			delete difName;
 		}
 	}
 
@@ -1256,7 +1266,7 @@ AppDeallocateFlowRequestMessage * parseAppDeallocateFlowRequestMessage(
 		LOG_ERR(
 				"Error parsing AppDeallocateFlowRequestMessage information from Netlink message: %d",
 				err);
-		return NULL;
+		return 0;
 	}
 
 	AppDeallocateFlowRequestMessage * result =
@@ -1272,22 +1282,24 @@ AppDeallocateFlowRequestMessage * parseAppDeallocateFlowRequestMessage(
 	if (attrs[ADFRT_ATTR_DIF_NAME]) {
 		difName = parseApplicationProcessNamingInformationObject(
 				attrs[ADFRT_ATTR_DIF_NAME]);
-		if (difName == NULL) {
+		if (difName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setDifName(*difName);
+			delete difName;
 		}
 	}
 
 	if (attrs[ADFRT_ATTR_APP_NAME]) {
 		applicationName = parseApplicationProcessNamingInformationObject(
 				attrs[ADFRT_ATTR_APP_NAME]);
-		if (applicationName == NULL) {
+		if (applicationName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setApplicationName(*applicationName);
+			delete applicationName;
 		}
 	}
 
@@ -1320,7 +1332,7 @@ AppDeallocateFlowResponseMessage * parseAppDeallocateFlowResponseMessage(
 		LOG_ERR(
 				"Error parsing AppDeallocateFlowResponseMessage information from Netlink message: %d",
 				err);
-		return NULL;
+		return 0;
 	}
 
 	AppDeallocateFlowResponseMessage * result =
@@ -1340,11 +1352,12 @@ AppDeallocateFlowResponseMessage * parseAppDeallocateFlowResponseMessage(
 	if (attrs[ADFRE_ATTR_APP_NAME]) {
 		applicationName = parseApplicationProcessNamingInformationObject(
 				attrs[ADFRE_ATTR_APP_NAME]);
-		if (applicationName == NULL) {
+		if (applicationName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setApplicationName(*applicationName);
+			delete applicationName;
 		}
 	}
 
@@ -1383,7 +1396,7 @@ AppFlowDeallocatedNotificationMessage * parseAppFlowDeallocatedNotificationMessa
 		LOG_ERR(
 				"Error parsing AppFlowDeallocatedNotificationMessage information from Netlink message: %d",
 				err);
-		return NULL;
+		return 0;
 	}
 
 	AppFlowDeallocatedNotificationMessage * result =
@@ -1407,11 +1420,12 @@ AppFlowDeallocatedNotificationMessage * parseAppFlowDeallocatedNotificationMessa
 	if (attrs[AFDN_ATTR_APP_NAME]) {
 		applicationName = parseApplicationProcessNamingInformationObject(
 				attrs[AFDN_ATTR_APP_NAME]);
-		if (applicationName == NULL) {
+		if (applicationName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setApplicationName(*applicationName);
+			delete applicationName;
 		}
 	}
 	if (attrs[AFDN_ATTR_DIF_NAME]) {
@@ -1422,6 +1436,7 @@ AppFlowDeallocatedNotificationMessage * parseAppFlowDeallocatedNotificationMessa
 			return NULL;
 		} else {
 			result->setDifName(*difName);
+			delete difName;
 		}
 	}
 
@@ -1451,7 +1466,7 @@ AppRegisterApplicationRequestMessage * parseAppRegisterApplicationRequestMessage
 		LOG_ERR(
 				"Error parsing AppRegisterApplicationRequestMessage information from Netlink message: %d",
 				err);
-		return NULL;
+		return 0;
 	}
 
 	AppRegisterApplicationRequestMessage * result =
@@ -1463,21 +1478,23 @@ AppRegisterApplicationRequestMessage * parseAppRegisterApplicationRequestMessage
 	if (attrs[ARAR_ATTR_APP_NAME]) {
 		applicationName = parseApplicationProcessNamingInformationObject(
 				attrs[ARAR_ATTR_APP_NAME]);
-		if (applicationName == NULL) {
+		if (applicationName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setApplicationName(*applicationName);
+			delete applicationName;
 		}
 	}
 	if (attrs[ARAR_ATTR_DIF_NAME]) {
 		difName = parseApplicationProcessNamingInformationObject(
 				attrs[ARAR_ATTR_DIF_NAME]);
-		if (difName == NULL) {
+		if (difName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setDifName(*difName);
+			delete difName;
 		}
 	}
 
@@ -1519,7 +1536,7 @@ AppRegisterApplicationResponseMessage * parseAppRegisterApplicationResponseMessa
 		LOG_ERR(
 				"Error parsing AppRegisterApplicationResponseMessage information from Netlink message: %d",
 				err);
-		return NULL;
+		return 0;
 	}
 
 	AppRegisterApplicationResponseMessage * result =
@@ -1550,21 +1567,23 @@ AppRegisterApplicationResponseMessage * parseAppRegisterApplicationResponseMessa
 	if (attrs[ARARE_ATTR_APP_NAME]) {
 		applicationName = parseApplicationProcessNamingInformationObject(
 				attrs[ARARE_ATTR_APP_NAME]);
-		if (applicationName == NULL) {
+		if (applicationName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setApplicationName(*applicationName);
+			delete applicationName;
 		}
 	}
 	if (attrs[ARARE_ATTR_DIF_NAME]) {
 		difName = parseApplicationProcessNamingInformationObject(
 				attrs[ARARE_ATTR_DIF_NAME]);
-		if (difName == NULL) {
+		if (difName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setDifName(*difName);
+			delete difName;
 		}
 	}
 
@@ -1653,7 +1672,7 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 		LOG_ERR(
 				"Error parsing IpcmRegisterApplicationRequestMessage information from Netlink message: %d",
 				err);
-		return NULL;
+		return 0;
 	}
 
 	IpcmRegisterApplicationRequestMessage * result =
@@ -1665,22 +1684,24 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 	if (attrs[IRAR_ATTR_APP_NAME]) {
 		applicationName = parseApplicationProcessNamingInformationObject(
 				attrs[IRAR_ATTR_APP_NAME]);
-		if (applicationName == NULL) {
+		if (applicationName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setApplicationName(*applicationName);
+			delete applicationName;
 		}
 	}
 
 	if (attrs[IRAR_ATTR_DIF_NAME]) {
 		difName = parseApplicationProcessNamingInformationObject(
 				attrs[IRAR_ATTR_DIF_NAME]);
-		if (difName == NULL) {
+		if (difName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setDifName(*difName);
+			delete difName;
 		}
 	}
 
@@ -1720,7 +1741,7 @@ IpcmRegisterApplicationResponseMessage *
 		LOG_ERR(
 				"Error parsing IpcmRegisterApplicationResponseMessage information from Netlink message: %d",
 				err);
-		return NULL;
+		return 0;
 	}
 
 	IpcmRegisterApplicationResponseMessage * result =
@@ -1741,21 +1762,23 @@ IpcmRegisterApplicationResponseMessage *
 	if (attrs[IRARE_ATTR_APP_NAME]) {
 		applicationName = parseApplicationProcessNamingInformationObject(
 				attrs[IRARE_ATTR_APP_NAME]);
-		if (applicationName == NULL) {
+		if (applicationName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setApplicationName(*applicationName);
+			delete applicationName;
 		}
 	}
 	if (attrs[IRARE_ATTR_DIF_NAME]) {
 		difName = parseApplicationProcessNamingInformationObject(
 				attrs[IRARE_ATTR_DIF_NAME]);
-		if (difName == NULL) {
+		if (difName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setDifName(*difName);
+			delete difName;
 		}
 	}
 
@@ -1777,7 +1800,7 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 		LOG_ERR(
 				"Error parsing DIFConfiguration information from Netlink message: %d",
 				err);
-		return NULL;
+		return 0;
 	}
 
 	DIFConfiguration * result = new DIFConfiguration();
@@ -1796,6 +1819,7 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 			return 0;
 		} else {
 			result->setDifName(*difName);
+			delete difName;
 		}
 	}
 
@@ -1816,7 +1840,7 @@ IpcmAssignToDIFRequestMessage *
 		LOG_ERR(
 				"Error parsing IpcmAssignToDIFRequestMessage information from Netlink message: %d",
 				err);
-		return NULL;
+		return 0;
 	}
 
 	IpcmAssignToDIFRequestMessage * result =
@@ -1831,6 +1855,7 @@ IpcmAssignToDIFRequestMessage *
 			return 0;
 		} else {
 			result->setDIFConfiguration(*difConfiguration);
+			delete difConfiguration;
 		}
 	}
 
@@ -1854,7 +1879,7 @@ IpcmAssignToDIFResponseMessage *
 		LOG_ERR(
 				"Error parsing IpcmAssignToDIFResponseMessage information from Netlink message: %d",
 				err);
-		return NULL;
+		return 0;
 	}
 
 	IpcmAssignToDIFResponseMessage * result =

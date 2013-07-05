@@ -258,9 +258,11 @@ public:
 		T* result = 0;
 
 		lock();
-		try{
-			timedwait(seconds, nanoseconds);
-		}catch(ConcurrentException &e){
+		if (queue.size() == 0){
+			try{
+				timedwait(seconds, nanoseconds);
+			}catch(ConcurrentException &e){
+			}
 		}
 
 		if (queue.size() > 0){

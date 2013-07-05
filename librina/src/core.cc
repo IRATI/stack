@@ -383,6 +383,7 @@ void * doNetlinkMessageReaderWork(void * arg) {
 	while (true) {
 		//Receive message
 		try {
+			LOG_DBG("Waiting for next message %d", netlinkManager->getLocalPort());
 			incomingMessage = netlinkManager->getMessage();
 		} catch (NetlinkException &e) {
 			LOG_ERR("Error receiving netlink message. %s", e.what());
@@ -502,18 +503,14 @@ throw(IPCException){
 	BaseNetlinkMessage* response = 0;
 	try{
 		response = sendRequestMessageAndWaitForResponse(request);
-		delete request;
 		return response;
 	}catch(NetlinkException &e){
-		delete request;
 		throw IPCException(errorDescription + e.what());
 	}
 }
 
 BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForResponse(
 		BaseNetlinkMessage * netlinkMessage) throw (NetlinkException) {
-	PendingNetlinkMessage * pendingMessage = NULL;
-
 	sendReceiveLock.lock();
 
 	//1 Populate destination port id
@@ -537,15 +534,13 @@ BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForResponse(
 	}
 
 	//3 Put message in the queue
-	pendingMessage = new PendingNetlinkMessage(netlinkMessage->getSequenceNumber());
-	netlinkSession->putLocalPendingMessage(pendingMessage);
+	PendingNetlinkMessage pendingMessage(netlinkMessage->getSequenceNumber());
+	netlinkSession->putLocalPendingMessage(&pendingMessage);
 
 	sendReceiveLock.unlock();
 
 	//4 wait for reply
-	BaseNetlinkMessage * response = pendingMessage->getResponseMessage();
-	delete pendingMessage;
-	pendingMessage = 0;
+	BaseNetlinkMessage * response = pendingMessage.getResponseMessage();
 
 	if (response == 0){
 		throw NetlinkException(NetlinkException::error_waiting_for_response);
@@ -616,7 +611,7 @@ void RINAManager::netlinkResponseMessageArrived(
 
 	NetlinkSession *netlinkSession = getNetlinkSession(
 			response->getSourcePortId());
-	if  (netlinkSession == NULL){
+	if  (netlinkSession == 0){
 		LOG_ERR("Could not find an existing Netlink session with id %d",
 				response->getSourcePortId());
 		sendReceiveLock.unlock();
@@ -626,7 +621,7 @@ void RINAManager::netlinkResponseMessageArrived(
 	PendingNetlinkMessage* pendingMessage = netlinkSession->
 			takeLocalPendingMessage(response->getSequenceNumber());
 	sendReceiveLock.unlock();
-	if(pendingMessage == NULL){
+	if(pendingMessage == 0){
 		sendReceiveLock.unlock();
 		return;
 	}

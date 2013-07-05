@@ -93,17 +93,14 @@ void ExtendedIPCManager::assignToDIFResponse(
 #if STUB_API
 	//Do nothing
 #else
-	IpcmAssignToDIFResponseMessage * responseMessage =
-			new IpcmAssignToDIFResponseMessage();
-	responseMessage->setResult(result);
-	responseMessage->setErrorDescription(errorDescription);
-	responseMessage->setSequenceNumber(event.getSequenceNumber());
-	responseMessage->setResponseMessage(true);
+	IpcmAssignToDIFResponseMessage responseMessage;
+	responseMessage.setResult(result);
+	responseMessage.setErrorDescription(errorDescription);
+	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(responseMessage);
-		delete responseMessage;
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
 	}catch(NetlinkException &e){
-		delete responseMessage;
 		throw IPCException(e.what());
 	}
 #endif
@@ -115,17 +112,14 @@ void ExtendedIPCManager::registerApplicationResponse(
 #if STUB_API
 	//Do nothing
 #else
-	IpcmRegisterApplicationResponseMessage * responseMessage =
-			new IpcmRegisterApplicationResponseMessage();
-	responseMessage->setResult(result);
-	responseMessage->setErrorDescription(errorDescription);
-	responseMessage->setSequenceNumber(event.getSequenceNumber());
-	responseMessage->setResponseMessage(true);
+	IpcmRegisterApplicationResponseMessage responseMessage;
+	responseMessage.setResult(result);
+	responseMessage.setErrorDescription(errorDescription);
+	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(responseMessage);
-		delete responseMessage;
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
 	}catch(NetlinkException &e){
-		delete responseMessage;
 		throw IPCException(e.what());
 	}
 #endif
@@ -140,19 +134,16 @@ void IPCProcessApplicationManager::flowDeallocated(
 #if STUB_API
 	//Do nothing
 #else
-	AppDeallocateFlowResponseMessage * responseMessage =
-			new AppDeallocateFlowResponseMessage();
-	responseMessage->setApplicationName(flowDeallocateEvent.getApplicationName());
-	responseMessage->setResult(result);
-	responseMessage->setErrorDescription(errorDescription);
-	responseMessage->setSourceIpcProcessId(flowDeallocateEvent.getIPCProcessId());
-	responseMessage->setSequenceNumber(flowDeallocateEvent.getSequenceNumber());
-	responseMessage->setResponseMessage(true);
+	AppDeallocateFlowResponseMessage responseMessage;
+	responseMessage.setApplicationName(flowDeallocateEvent.getApplicationName());
+	responseMessage.setResult(result);
+	responseMessage.setErrorDescription(errorDescription);
+	responseMessage.setSourceIpcProcessId(flowDeallocateEvent.getIPCProcessId());
+	responseMessage.setSequenceNumber(flowDeallocateEvent.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(responseMessage);
-		delete responseMessage;
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
 	}catch(NetlinkException &e){
-		delete responseMessage;
 		throw IPCException(e.what());
 	}
 #endif
