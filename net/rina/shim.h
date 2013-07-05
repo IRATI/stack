@@ -71,12 +71,12 @@ struct shim_instance_ops {
 
 	int  (* sdu_write)(struct shim_instance_data * data,
                            port_id_t                   id,
-                           const struct sdu_t *        sdu);
+                           const struct sdu *          sdu);
 
         /* FIXME: sdu_read will be removed */
         int  (* sdu_read)(struct shim_instance_data * data,
                           port_id_t                   id,
-                          struct sdu_t *              sdu);
+                          struct sdu *                sdu);
 };
 
 struct shim_instance {

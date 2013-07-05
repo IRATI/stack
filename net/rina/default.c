@@ -109,7 +109,7 @@ static int default_connection_update(struct personality_data * data,
 
 static int default_sdu_write(struct personality_data * data,
                              port_id_t                 id,
-                             const struct sdu_t *      sdu)
+                             const struct sdu *        sdu)
 {
         if (!data) return -1;
 
@@ -120,7 +120,7 @@ static int default_sdu_write(struct personality_data * data,
 
 static int default_sdu_read(struct personality_data * data,
                             port_id_t                 id,
-                            struct sdu_t *            sdu)
+                            struct sdu *              sdu)
 {
         if (!data) return -1;
 

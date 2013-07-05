@@ -114,7 +114,7 @@ static struct dummy_flow * find_flow(struct shim_instance_data * data,
 
 static int dummy_sdu_write(struct shim_instance_data * data,
                            port_id_t                   id,
-                           const struct sdu_t *        sdu)
+                           const struct sdu *          sdu)
 {
         struct dummy_flow * flow;
 
@@ -131,7 +131,7 @@ static int dummy_sdu_write(struct shim_instance_data * data,
 
 static int dummy_sdu_read(struct shim_instance_data * data,
                           port_id_t                   id,
-                          struct sdu_t *              sdu)
+                          struct sdu *                sdu)
 {
         struct dummy_flow * flow;
 

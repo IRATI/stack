@@ -62,7 +62,7 @@ struct shim_eth_flow {
         enum port_id_state port_id_state;
 
         /* FIXME: Will be a kfifo holding the SDUs or a sk_buff_head */
-        /* QUEUE(sdu_queue, sdu_t *); */
+        /* QUEUE(sdu_queue, sdu *); */
 };
 
 /*
@@ -138,7 +138,7 @@ static int eth_vlan_application_unregister(struct shim_instance_data * data,
 
 static int eth_vlan_sdu_write(struct shim_instance_data * data,
                               port_id_t                   id,
-                              const struct sdu_t *        sdu)
+                              const struct sdu *          sdu)
 {
 	ASSERT(data);
         ASSERT(sdu);
@@ -148,7 +148,7 @@ static int eth_vlan_sdu_write(struct shim_instance_data * data,
 
 static int eth_vlan_sdu_read(struct shim_instance_data * data,
                              port_id_t                   id,
-                             struct sdu_t *              sdu)
+                             struct sdu *                sdu)
 {
 	ASSERT(data);
         ASSERT(sdu);

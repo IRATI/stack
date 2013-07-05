@@ -58,7 +58,7 @@ struct buffer_t {
 };
 
 /* This structure represents a SDU is */
-struct sdu_t {
+struct sdu {
         struct buffer_t * buffer;
 };
 

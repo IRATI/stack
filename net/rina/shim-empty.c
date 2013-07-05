@@ -156,7 +156,7 @@ static int empty_application_unregister(struct shim_instance_data * data,
 
 static int empty_sdu_write(struct shim_instance_data * data,
                            port_id_t                   id,
-                           const struct sdu_t *        sdu)
+                           const struct sdu *          sdu)
 {
         ASSERT(data);
         ASSERT(sdu);
@@ -166,7 +166,7 @@ static int empty_sdu_write(struct shim_instance_data * data,
 
 static int empty_sdu_read(struct shim_instance_data * data,
                           port_id_t                   id,
-                          struct sdu_t *              sdu)
+                          struct sdu *                sdu)
 {
         ASSERT(data);
         ASSERT(sdu);

@@ -219,9 +219,9 @@ struct dtcp_state_vector_t {
 
 void *   efcp_init(struct kobject * parent);
 int      efcp_fini(void * opaque);
-int      efcp_write(void *               opaque,
-                    port_id_t            id,
-                    const struct sdu_t * sdu);
+int      efcp_write(void *             opaque,
+                    port_id_t          id,
+                    const struct sdu * sdu);
 int      efcp_receive_pdu(void *       opaque,
                           struct pdu pdu);
 cep_id_t efcp_create(void *                    opaque,

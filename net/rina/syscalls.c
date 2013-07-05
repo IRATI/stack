@@ -75,13 +75,13 @@ SYSCALL_DEFINE1(ipc_destroy,
 { CALL_DEFAULT_PERSONALITY(ipc_destroy, id); }
 
 SYSCALL_DEFINE2(sdu_read,
-                port_id_t,             id,
-                struct sdu_t __user *, sdu)
+                port_id_t,           id,
+                struct sdu __user *, sdu)
 { CALL_DEFAULT_PERSONALITY(sdu_read, id, sdu); }
 
 SYSCALL_DEFINE2(sdu_write,
-                port_id_t,                   id,
-                const struct sdu_t __user *, sdu)
+                port_id_t,                 id,
+                const struct sdu __user *, sdu)
 { CALL_DEFAULT_PERSONALITY(sdu_write, id, sdu); }
 
 SYSCALL_DEFINE1(connection_create,

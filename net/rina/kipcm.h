@@ -100,9 +100,9 @@ struct flow {
 	struct rmt_instance    rmt_instance;
 
 	//FIXME: Define QUEUE
-	//QUEUE(segmentation_queue, pdu_t *);
-	//QUEUE(reassembly_queue,	pdu_t *);
-	//QUEUE(sdu_ready, sdu_t *);
+	//QUEUE(segmentation_queue, pdu *);
+	//QUEUE(reassembly_queue,	pdu *);
+	//QUEUE(sdu_ready, sdu *);
 	struct kfifo *         sdu_ready;
 };
 
@@ -136,9 +136,9 @@ int            kipcm_flow_remove(struct kipcm * kipcm,
 
 int            kipcm_sdu_write(struct kipcm *       kipcm,
                                port_id_t            id,
-                               const struct sdu_t * sdu);
+                               const struct sdu * sdu);
 int            kipcm_sdu_read(struct kipcm * kipcm,
                               port_id_t      id,
-                              struct sdu_t * sdu);
+                              struct sdu * sdu);
 
 #endif
