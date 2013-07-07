@@ -19,6 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/export.h>
+
 #define RINA_PREFIX "shim-utils"
 
 #include "logs.h"
@@ -46,10 +48,10 @@ int name_kmalloc(struct name ** dst)
 		(*dst)->entity_instance) {
 		return -1;
 	}
+
 	return 0;
 }
-
-
+EXPORT_SYMBOL(name_kmalloc);
 
 int name_dup(struct name ** dst, const struct name * src)
 {
@@ -57,10 +59,10 @@ int name_dup(struct name ** dst, const struct name * src)
                 return -1;
 	if (!name_cpy(dst,src))
 		return -1;
+
 	return 0;
 }
-
-
+EXPORT_SYMBOL(name_dup);
 
 int name_cpy(struct name ** dst, const struct name * src) 
 {
@@ -71,8 +73,10 @@ int name_cpy(struct name ** dst, const struct name * src)
                 LOG_ERR("Cannot perform strcpy");
                 return -1;
         }
+
 	return 0;
 }
+EXPORT_SYMBOL(name_cpy);
 
 int name_kfree(struct name ** dst) 
 {
@@ -81,5 +85,7 @@ int name_kfree(struct name ** dst)
 	rkfree((*dst)->entity_name); 
 	rkfree((*dst)->entity_instance);
 	rkfree(*dst);
+
 	return 0;
 }
+EXPORT_SYMBOL(name_kfree);
