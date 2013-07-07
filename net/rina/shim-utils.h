@@ -24,9 +24,49 @@
 
 #include "common.h"
 
+/* FIXME: Old API, to be removed */
 int name_kmalloc(struct name ** dst);
 int name_dup(struct name ** dst, const struct name * src);
 int name_cpy(struct name ** dst, const struct name * src);
 int name_kfree(struct name ** dst);
+
+#if 0
+/* FIXME: New API, to be added */
+
+/*
+ * Allocates a new name, returning the allocated object. In case of an error, a
+ * NULL is returned.
+ */
+struct name * name_alloc(void);
+
+/*
+ * Initializes a previously allocated name. Returns the passed object pointer
+ * in case everything is ok, a NULL otherwise. In case of error a call to
+ * name_free() is allowed in order to release the associated resources.
+ */
+struct name * name_init(struct name *    name,
+                        const string_t * process_name,
+                        const string_t * process_instance,
+                        const string_t * entity_name,
+                        const string_t * entity_instance);
+
+/* This function performs as name_alloc() and name_init() */
+struct name * name_alloc_and_init(const string_t * process_name,
+                                  const string_t * process_instance,
+                                  const string_t * entity_name,
+                                  const string_t * entity_instance);
+
+/* Releases all the associated resources bound to a name object */
+void          name_free(struct name * ptr);
+
+/* Duplicates a name object, returning the pointer to the new object */
+struct name * name_dup(const struct name * src);
+
+/*
+ * Copies the source object contents into the destination object, both must
+ * be previously allocated. Returns 
+ */
+int           name_cpy(const struct name * src, const struct name * dst);
+#endif
 
 #endif
