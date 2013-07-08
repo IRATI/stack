@@ -96,15 +96,15 @@ static int empty_flow_allocate_request(struct shim_instance_data * data,
         }
         flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
 	
-        source = name_dup(flow->source);
-        if (!source) {
+        flow->source = name_dup(flow->source);
+        if (!flow->source) {
                 rkfree(flow);
 		return -1;
 	}
 
-        dest = name_dup(flow->dest);
-	if (!dest) {
-                name_destroy(source);
+        flow->dest = name_dup(flow->dest);
+	if (!flow->dest) {
+                name_destroy(flow->source);
                 rkfree(flow);
 		return -1;
 	}
@@ -133,14 +133,15 @@ static int empty_flow_deallocate(struct shim_instance_data * data,
 	struct empty_flow * flow;
 
         ASSERT(data);
+
         flow = find_flow(data, id);
         if (!flow) {
 		LOG_ERR("Flow does not exist, cannot remove");
 		return -1;
 	}
 	
-	name_kfree(&(flow->dest));
-	name_kfree(&(flow->source));
+	name_destroy(flow->dest);
+	name_destroy(flow->source);
 	rkfree(flow);
 
         return 0;
@@ -306,7 +307,9 @@ static struct shim_instance * empty_create(struct shim_data * data,
 		rkfree(inst);
 		return NULL;
 	}
-	if (!name_kmalloc(&(inst->data->info->dif_name))) {
+
+        inst->data->info->dif_name = name_create();
+	if (!inst->data->info->dif_name) {
 		rkfree(inst->data->info);
 		rkfree(inst->data);
 		rkfree(inst);
@@ -344,7 +347,7 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
         list_for_each_entry(tmp, &(cfg->list), list) {
                 if (!strcmp(tmp->entry->name, "dif-name") &&
                     tmp->entry->value->type == SHIM_CONFIG_STRING) {
-                        if (name_cpy(&(instance->info->dif_name),
+                        if (name_cpy(instance->info->dif_name,
                                      (struct name *)
                                      tmp->entry->value->data)) {
                                 LOG_ERR("Failed to copy DIF name");
@@ -375,11 +378,12 @@ static int empty_destroy(struct shim_data *     data,
         list_for_each_safe(pos, q, &(data->instances)) {
                 inst = list_entry(pos, struct shim_instance_data, list);
 
-                if(inst->id == instance->data->id) {
+                if (inst->id == instance->data->id) {
                         /* Unbind from the instances set */
                         list_del(pos);
+
                         /* Destroy it */
-                        name_kfree(&(inst->info->dif_name));
+                        name_destroy(inst->info->dif_name);
 			rkfree(inst->info);
                         rkfree(inst);
                 }
