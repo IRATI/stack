@@ -29,6 +29,9 @@
 /* FIXME: This define (and its related code) has to be removed */
 #define TESTING 0
 
+/*  FIXME: Fake ipc process id to get default personality */
+#define RINA_FAKE_IPCP_ID 0
+
 #define NETLINK_RINA "rina"
 
 /* attributes */
@@ -50,11 +53,8 @@ struct message_handler {
 };
 
 struct rina_nl_set {
-        /* FIXME: Must contain the callback table */
+	struct message_handler messages_handlers[NETLINK_RINA_C_MAX];
 };
-
-/* FIXME: Must be moved inside struct rina_nl_set */
-struct message_handler messages_handlers[NETLINK_RINA_C_MAX];
 
 static struct genl_family nl_family = {
         .id      = GENL_ID_GENERATE,
@@ -67,7 +67,14 @@ static struct genl_family nl_family = {
 static int is_message_type_in_range(int msg_type, int min_value, int max_value)
 { return ((msg_type < min_value || msg_type >= max_value) ? 0 : 1); }
 
-/* FIXME: Must dispatch a message to a rina_nl_set */
+
+/*  FIXME: Must return default personality's set */
+static struct rina_nl_set * ipc_id_to_personality_set(int ipcp_id)
+{
+	struct rina_nl_set *pset;
+	return pset;
+}
+
 static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 {
         /*
@@ -81,6 +88,7 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         void *             data;
         int                msg_type;
         int                ret_val;
+	struct rina_nl_set *pset;
 
         LOG_DBG("Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
 
@@ -105,14 +113,18 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         }
         ASSERT(is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX));
 
-        cb_function = messages_handlers[msg_type].cb;
+	pset = ipc_id_to_personality_set(RINA_FAKE_IPCP_ID);
+	if (!pset)
+		return -1;
+
+        cb_function = pset->messages_handlers[msg_type].cb;
         if (!cb_function) {
                 LOG_ERR("There's no handler callback registered for "
                         "message type %d", msg_type);
                 return -1;
         }
 
-        data = messages_handlers[msg_type].data;
+        data = pset->messages_handlers[msg_type].data;
         /* Data might be empty */
 
         ret_val = cb_function(data, skb_in, info);
@@ -420,15 +432,15 @@ int rina_netlink_register_handler(struct rina_nl_set * set,
         ASSERT(handler != NULL);
         ASSERT(msg_type >= 0 && msg_type < NETLINK_RINA_C_MAX);
 
-        if (messages_handlers[msg_type].cb) {
+        if (set->messages_handlers[msg_type].cb) {
                 LOG_ERR("The message handler for message type %d "
                         "has been already registered, unregister it first",
                         msg_type);
                 return -1;
         }
 
-        messages_handlers[msg_type].cb   = handler;
-        messages_handlers[msg_type].data = data;
+        set->messages_handlers[msg_type].cb   = handler;
+        set->messages_handlers[msg_type].data = data;
 
         LOG_DBG("Handler %pK (data %pK) registered for message type %d",
                 handler, data, msg_type);
@@ -454,8 +466,12 @@ int rina_netlink_unregister_handler(struct rina_nl_set * set,
         }
         ASSERT(msg_type >= 0 && msg_type < NETLINK_RINA_C_MAX);
 
-        bzero(&messages_handlers[msg_type],
-              sizeof(messages_handlers[msg_type]));
+        bzero(set->messages_handlers[msg_type].cb,
+              sizeof(set->messages_handlers[msg_type].cb));
+
+	/* FIXME: Not sure if data pointer should be set to zero too */
+	bzero(set->messages_handlers[msg_type].data,
+               sizeof(set->messages_handlers[msg_type].data));
 
         LOG_DBG("Handler for message type %d unregistered successfully",
                 msg_type);
@@ -478,10 +494,20 @@ EXPORT_SYMBOL(rina_netlink_set_create);
 
 int rina_netlink_set_destroy(struct rina_nl_set * set)
 {
+	int i;
+
         if (!set) {
                 LOG_ERR("Bogus set passed, cannot destroy");
                 return -1;
         }
+
+	for (i=0; i<ARRAY_SIZE(set->messages_handlers); i++) {
+		if(set->messages_handlers[i].cb != NULL) {
+			LOG_WARN("Set on %pK had registered callbacks."
+			" They will be unregistered", set);
+			break;
+		}
+	}
 
         rkfree(set);
         return 0;
