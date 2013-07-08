@@ -89,3 +89,52 @@ int name_kfree(struct name ** dst)
 	return 0;
 }
 EXPORT_SYMBOL(name_kfree);
+
+#if 0
+struct name * name_alloc(void)
+{ return rkzalloc(sizeof(*tmp), GFP_KERNEL); }
+EXPORT_SYMBOL(name_alloc);
+
+#define INIT_RECORD(T, NAME, SRC)                               \
+	do {                                                    \
+	        if (T -> NAME) rkfree(T -> NAME);               \
+	        T ->NAME = rkmalloc(strlen(SRC), GFP_KERNEL);   \
+	} while (0);
+
+struct name * name_init(struct name *    dst,
+                        const string_t * process_name,
+                        const string_t * process_instance,
+                        const string_t * entity_name,
+                        const string_t * entity_instance)
+{
+        ASSERT(name);
+
+        INIT_RECORD(dst, process_name,     process_name);
+        INIT_RECORD(dst, process_instance, process_instance);
+        INIT_RECORD(dst, enitity_name,     enitity_name);
+        INIT_RECORD(dst, enitity_instance, enitity_instance);
+
+        return dst;
+}
+EXPORT_SYMBOL(name_init);
+
+struct name * name_alloc_and_init(const string_t * process_name,
+                                  const string_t * process_instance,
+                                  const string_t * entity_name,
+                                  const string_t * entity_instance)
+{ return NULL; }
+EXPORT_SYMBOL(name_alloc_and_init);
+
+void name_free(struct name * ptr)
+{ return NULL; }
+EXPORT_SYMBOL(name_free);
+
+struct name * name_dup(const struct name * src)
+{ return NULL; }
+EXPORT_SYMBOL(name_dup);
+
+int name_cpy(const struct name * src, const struct name * dst)
+{ return -1; }
+EXPORT_SYMBOL(name_cpy);
+
+#endif

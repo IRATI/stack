@@ -40,11 +40,14 @@ int name_kfree(struct name ** dst);
 struct name * name_alloc(void);
 
 /*
- * Initializes a previously allocated name. Returns the passed object pointer
- * in case everything is ok, a NULL otherwise. In case of error a call to
- * name_free() is allowed in order to release the associated resources.
+ * Initializes a previously dynamically allocated name (i.e. name_alloc())
+ * or a statically one (e.g. declared into a struct not as a pointer).
+ * Returns the passed object pointer  in case everything is ok, a NULL
+ * otherwise. In case of error a call to name_free() is allowed in order to
+ * release the associated resources.
+ * It is allowed to call name_init() over an already initialized object
  */
-struct name * name_init(struct name *    name,
+struct name * name_init(struct name *    dst,
                         const string_t * process_name,
                         const string_t * process_instance,
                         const string_t * entity_name,
