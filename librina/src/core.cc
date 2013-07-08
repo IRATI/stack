@@ -270,6 +270,35 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			}
 			break;
 		}
+		case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST:{
+			IpcmAllocateFlowRequestMessage * specificMessage =
+					dynamic_cast<IpcmAllocateFlowRequestMessage *>(message);
+			if(send){
+				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+						specificMessage->getDifName());
+				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
+			}else{
+				putAPNametoNetlinkPortIdMapping(
+						specificMessage->getSourceAppName(),
+						specificMessage->getApplicationPortId(), 0);
+			}
+			break;
+		}
+		case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE:{
+			if(send){
+				message->setDestPortId(getIPCManagerPortId());
+			}
+			break;
+		}
+		case RINA_C_IPCM_IPC_PROCESS_REGISTERED_TO_DIF_NOTIFICATION:{
+			if(send){
+				putIPCProcessIdToNelinkPortIdMapping(
+					message->getDestPortId(),
+					message->getDestIpcProcessId());
+			}
+			break;
+		}
 		default:
 			throw NetlinkException(NetlinkException::
 						unrecognized_generic_netlink_operation_code);
@@ -383,7 +412,6 @@ void * doNetlinkMessageReaderWork(void * arg) {
 	while (true) {
 		//Receive message
 		try {
-			LOG_DBG("Waiting for next message %d", netlinkManager->getLocalPort());
 			incomingMessage = netlinkManager->getMessage();
 		} catch (NetlinkException &e) {
 			LOG_ERR("Error receiving netlink message. %s", e.what());
@@ -401,16 +429,20 @@ void * doNetlinkMessageReaderWork(void * arg) {
 					dynamic_cast<NetlinkRequestOrNotificationMessage *>
 						(incomingMessage);
 
-			if (incomingMessage->isRequestMessage()){
+			bool notification = incomingMessage->isNotificationMessage();
+			bool request = incomingMessage->isRequestMessage();
+			IPCEvent * ipcEvent = message->toIPCEvent();
+
+			if (request){
 				myRINAManager->netlinkRequestMessageArrived(incomingMessage);
 			}else{
 				myRINAManager->netlinkNotificationMessageArrived(
 						incomingMessage);
 			}
 
-			eventsQueue->put(message->toIPCEvent());
+			eventsQueue->put(ipcEvent);
 
-			if (incomingMessage->isNotificationMessage()){
+			if (notification){
 				delete message;
 				message = 0;
 			}

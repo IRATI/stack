@@ -330,7 +330,7 @@ IpcmAssignToDIFRequestMessage *
 /* IpcmAssignToDIFResponseMessage CLASS*/
 enum IpcmAssignToDIFResponseMessageAttributes {
 	IATDRE_ATTR_RESULT = 1,
-	IATDRE_ATTR_ERROR_DESCRIPTION = 2,
+	IATDRE_ATTR_ERROR_DESCRIPTION,
 	__IATDRE_ATTR_MAX,
 };
 
@@ -341,6 +341,56 @@ int putIpcmAssignToDIFResponseMessageObject(nl_msg* netlinkMessage,
 
 IpcmAssignToDIFResponseMessage *
 	parseIpcmAssignToDIFResponseMessage(nlmsghdr *hdr);
+
+/* IpcmAllocateFlowRequestMessage CLASS*/
+enum IpcmAllocateFlowRequestMessageAttributes {
+	IAFRM_ATTR_SOURCE_APP = 1,
+	IAFRM_ATTR_DEST_APP,
+	IAFRM_ATTR_FLOW_SPEC,
+	IAFRM_ATTR_DIF_NAME,
+	IAFRM_ATTR_PORT_ID,
+	IAFRM_ATTR_APP_PORT,
+	__IAFRM_ATTR_MAX,
+};
+
+#define IAFRM_ATTR_MAX (__IAFRM_ATTR_MAX -1)
+
+int putIpcmAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
+		const IpcmAllocateFlowRequestMessage& object);
+
+IpcmAllocateFlowRequestMessage *
+	parseIpcmAllocateFlowRequestMessage(nlmsghdr *hdr);
+
+/* IpcmAllocateFlowResponseMessage CLASS*/
+enum IpcmAllocateFlowResponseMessageAttributes {
+	IAFREM_ATTR_RESULT = 1,
+	IAFREM_ATTR_ERROR_DESCRIPTION,
+	__IAFREM_ATTR_MAX,
+};
+
+#define IAFREM_ATTR_MAX (__IAFREM_ATTR_MAX -1)
+
+int putIpcmAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
+		const IpcmAllocateFlowResponseMessage& object);
+
+IpcmAllocateFlowResponseMessage *
+	parseIpcmAllocateFlowResponseMessage(nlmsghdr *hdr);
+
+
+/* IpcmIPCProcessRegisteredToDIFNotification CLASS*/
+enum IpcmIPCProcessRegisteredToDIFNotificationAttributes {
+	IIPRTDN_ATTR_IPC_PROCESS_NAME = 1,
+	IIPRTDN_ATTR_DIF_NAME,
+	__IIPRTDN_ATTR_MAX,
+};
+
+#define IIPRTDN_ATTR_MAX (__IIPRTDN_ATTR_MAX -1)
+
+int putIpcmIPCProcessRegisteredToDIFNotificationObject(nl_msg* netlinkMessage,
+		const IpcmIPCProcessRegisteredToDIFNotification& object);
+
+IpcmIPCProcessRegisteredToDIFNotification *
+	parseIpcmIPCProcessRegisteredToDIFNotification(nlmsghdr *hdr);
 
 }
 

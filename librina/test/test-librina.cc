@@ -85,8 +85,15 @@ void doWorkIPCProcess(){
 	//unsigned short ipcProcessId = 1;
 	setNetlinkPortId(2);
 
-	//Wait for an assign to DIF event
+	//Wait for Registration to DIF notification event
 	IPCEvent * event = ipcEventProducer->eventWait();
+	IPCProcessRegisteredToDIFEvent * ipcRegNotEvent =
+			dynamic_cast<IPCProcessRegisteredToDIFEvent *>(event);
+	std::cout<<"IPCProcess# Received an IPC Process registered to DIF event "
+			<<ipcRegNotEvent->getSequenceNumber()<<std::endl;
+
+	//Wait for an assign to DIF event
+	event = ipcEventProducer->eventWait();
 	AssignToDIFRequestEvent * assignToDIFEvent =
 			dynamic_cast<AssignToDIFRequestEvent *>(event);
 	std::cout<<"IPCProcess# Received an assign to DIF event"<<std::endl;
@@ -104,6 +111,17 @@ void doWorkIPCProcess(){
 			*applicationRegistrationEvent, 0, "ok");
 	std::cout<<"IPCProcess# Replied IPC Manager"<<std::endl;
 	delete applicationRegistrationEvent;
+
+	//Wait for a flow allocation event
+	event = ipcEventProducer->eventWait();
+	FlowRequestEvent * flowRequestEvent =
+			dynamic_cast<FlowRequestEvent *>(event);
+	std::cout<<"IPCProcess# Received flow request event"
+			<<std::endl;
+	extendedIPCManager->allocateFlowResponse(
+			*flowRequestEvent, 0, "ok");
+	std::cout<<"IPCProcess# Replied IPC Manager"<<std::endl;
+	delete flowRequestEvent;
 
 	//Wait for a flow deallocation event
 	event = ipcEventProducer->eventWait();
@@ -127,20 +145,31 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	//Create IPC Process
 	ApplicationProcessNamingInformation processName;
 	processName.setProcessName(
-			"/ipcprocesses/shimEthernet/Barcelona/i2CAT/25");
+			"/ipcprocesses/Barcelona/i2CAT/25");
 	processName.setProcessInstance("1");
 	IPCProcess * ipcProcess = ipcProcessFactory->create(
-			processName, DIF_TYPE_SHIM_ETHERNET);
+			processName, DIF_TYPE_NORMAL);
+	ipcProcess->setPortId(2);
 	std::cout<<"IPCManager# Created IPC Process with id " <<
 			ipcProcess->getId()<<std::endl;
+
+	//Inform IPC Process that it has been registered to underlying DIF
+	processName.setEntityName("Management");
+	processName.setEntityInstance("1234");
+	ApplicationProcessNamingInformation supportingDifName;
+	supportingDifName.setProcessName("/difs/supporting.DIF");
+	ipcProcess->notifyRegistrationToSupportingDIF(
+			processName, supportingDifName);
+	std::cout<<"IPCManager# Informed IPC Process about registration to "<<
+			"supportind DIF"<< supportingDifName.getProcessName()<<std::endl;
 
 	//Assign the IPC Process to a DIF
 	ApplicationProcessNamingInformation difName;
 	difName.setProcessName("/difs/Test.DIF");
 	DIFConfiguration difConfiguration;
-	difConfiguration.setDifType(DIF_TYPE_SHIM_ETHERNET);
+	difConfiguration.setDifType(DIF_TYPE_NORMAL);
 	difConfiguration.setDifName(difName);
-	ipcProcess->assignToDIF(difConfiguration, 2);
+	ipcProcess->assignToDIF(difConfiguration);
 	std::cout<<"IPCManager# Assigned IPC Process to DIF "<<
 			difName.getProcessName()<<std::endl;
 
@@ -163,6 +192,9 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	std::cout<<"IPCManager# received a flow allocation request event\n";
 	flowRequestEvent->setDIFName(difName);
 	flowRequestEvent->setPortId(23);
+	ipcProcess->allocateFlow(*flowRequestEvent, 3);
+	std::cout<<"IPCManager# IPC Process successfully allocated flow" <<
+				"in DIF "<<difName.getProcessName()<<std::endl;
 	applicationManager->flowAllocated(*flowRequestEvent, "ok", 1, 2);
 	std::cout<<"IPCManager# Replied to flow allocation\n";
 	delete flowRequestEvent;

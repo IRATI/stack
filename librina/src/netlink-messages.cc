@@ -148,6 +148,30 @@ std::string BaseNetlinkMessage::toString() {
 	return ss.str();
 }
 
+/* CLASS BASE NETLINK RESPONSE MESSAGE */
+BaseNetlinkResponseMessage::BaseNetlinkResponseMessage(
+		RINANetlinkOperationCode operationCode):
+	BaseNetlinkMessage(operationCode){
+	result = 0;
+}
+
+int BaseNetlinkResponseMessage::getResult() const{
+	return result;
+}
+
+void BaseNetlinkResponseMessage::setResult(int result){
+	this->result = result;
+}
+
+const std::string&
+BaseNetlinkResponseMessage::getErrorDescription() const{
+	return errorDescription;
+}
+void BaseNetlinkResponseMessage::setErrorDescription(
+		const std::string& errorDescription){
+	this->errorDescription = errorDescription;
+}
+
 /* CLASS RINA APP ALLOCATE FLOW MESSAGE */
 AppAllocateFlowRequestMessage::AppAllocateFlowRequestMessage() :
 		NetlinkRequestOrNotificationMessage(
@@ -410,8 +434,7 @@ IPCEvent* AppDeallocateFlowRequestMessage::toIPCEvent(){
 
 /* CLASS APP DEALLOCATE FLOW RESPONSE MESSAGE */
 AppDeallocateFlowResponseMessage::AppDeallocateFlowResponseMessage() :
-		BaseNetlinkMessage(RINA_C_APP_DEALLOCATE_FLOW_RESPONSE) {
-	this->result = 0;
+		BaseNetlinkResponseMessage(RINA_C_APP_DEALLOCATE_FLOW_RESPONSE) {
 }
 
 const ApplicationProcessNamingInformation&
@@ -422,24 +445,6 @@ const ApplicationProcessNamingInformation&
 void AppDeallocateFlowResponseMessage::setApplicationName(
 		const ApplicationProcessNamingInformation& applicationName) {
 	this->applicationName = applicationName;
-}
-
-const std::string&
-AppDeallocateFlowResponseMessage::getErrorDescription() const {
-	return errorDescription;
-}
-
-void AppDeallocateFlowResponseMessage::setErrorDescription(
-		const std::string& errorDescription) {
-	this->errorDescription = errorDescription;
-}
-
-int AppDeallocateFlowResponseMessage::getResult() const {
-	return result;
-}
-
-void AppDeallocateFlowResponseMessage::setResult(int result) {
-	this->result = result;
 }
 
 /* CLASS APP FLOW DEALLOCATED NOTIFICATION MESSAGE */
@@ -539,10 +544,9 @@ IPCEvent* AppRegisterApplicationRequestMessage::toIPCEvent(){
 
 /* CLASS APP REGISTER APPLICATION RESPONSE MESSAGE */
 AppRegisterApplicationResponseMessage::AppRegisterApplicationResponseMessage() :
-		BaseNetlinkMessage(RINA_C_APP_REGISTER_APPLICATION_RESPONSE) {
+		BaseNetlinkResponseMessage(RINA_C_APP_REGISTER_APPLICATION_RESPONSE) {
 	this->ipcProcessPortId = 0;
 	this->ipcProcessId = 0;
-	this->result = 0;
 }
 
 const ApplicationProcessNamingInformation&
@@ -555,16 +559,6 @@ void AppRegisterApplicationResponseMessage::setApplicationName(
 	this->applicationName = applicationName;
 }
 
-const std::string&
-		AppRegisterApplicationResponseMessage::getErrorDescription() const {
-	return errorDescription;
-}
-
-void AppRegisterApplicationResponseMessage::setErrorDescription(
-		const std::string& errorDescription) {
-	this->errorDescription = errorDescription;
-}
-
 unsigned int AppRegisterApplicationResponseMessage::getIpcProcessPortId() const {
 	return ipcProcessPortId;
 }
@@ -572,14 +566,6 @@ unsigned int AppRegisterApplicationResponseMessage::getIpcProcessPortId() const 
 void AppRegisterApplicationResponseMessage::setIpcProcessPortId(
 		unsigned int ipcProcessPortId) {
 	this->ipcProcessPortId = ipcProcessPortId;
-}
-
-int AppRegisterApplicationResponseMessage::getResult() const {
-	return result;
-}
-
-void AppRegisterApplicationResponseMessage::setResult(int result) {
-	this->result = result;
 }
 
 const ApplicationProcessNamingInformation&
@@ -712,8 +698,7 @@ IPCEvent* IpcmRegisterApplicationRequestMessage::toIPCEvent(){
 
 /* CLASS IPCM REGISTER APPLICATION RESPONSE MESSAGE */
 IpcmRegisterApplicationResponseMessage::IpcmRegisterApplicationResponseMessage() :
-		BaseNetlinkMessage(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE) {
-	this->result = 0;
+		BaseNetlinkResponseMessage(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE) {
 }
 
 const ApplicationProcessNamingInformation&
@@ -724,24 +709,6 @@ IpcmRegisterApplicationResponseMessage::getApplicationName() const {
 void IpcmRegisterApplicationResponseMessage::setApplicationName(
 		const ApplicationProcessNamingInformation& applicationName) {
 	this->applicationName = applicationName;
-}
-
-const std::string&
-IpcmRegisterApplicationResponseMessage::getErrorDescription() const {
-	return errorDescription;
-}
-
-void IpcmRegisterApplicationResponseMessage::setErrorDescription(
-		const std::string& errorDescription) {
-	this->errorDescription = errorDescription;
-}
-
-int IpcmRegisterApplicationResponseMessage::getResult() const {
-	return result;
-}
-
-void IpcmRegisterApplicationResponseMessage::setResult(int result) {
-	this->result = result;
 }
 
 const ApplicationProcessNamingInformation&
@@ -779,25 +746,119 @@ IPCEvent* IpcmAssignToDIFRequestMessage::toIPCEvent(){
 
 /* CLASS IPCM ASSIGN TO DIF RESPONSE MESSAGE */
 IpcmAssignToDIFResponseMessage::IpcmAssignToDIFResponseMessage():
-		BaseNetlinkMessage(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE) {
-	result = 0;
+		BaseNetlinkResponseMessage(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE) {
 }
 
-int IpcmAssignToDIFResponseMessage::getResult() const{
-	return result;
+/* CLASS IPCM ALLOCATE FLOW REQUEST MESSAGE */
+IpcmAllocateFlowRequestMessage::IpcmAllocateFlowRequestMessage():
+				NetlinkRequestOrNotificationMessage(
+						RINA_C_IPCM_ALLOCATE_FLOW_REQUEST) {
+	portId = 0;
+	applicationPortId = 0;
 }
 
-void IpcmAssignToDIFResponseMessage::setResult(int result){
-	this->result = result;
+unsigned int IpcmAllocateFlowRequestMessage::getApplicationPortId() const {
+	return applicationPortId;
 }
 
-const std::string& IpcmAssignToDIFResponseMessage::getErrorDescription() const{
-	return errorDescription;
+void IpcmAllocateFlowRequestMessage::setApplicationPortId(
+		unsigned int applicationPortId) {
+	this->applicationPortId = applicationPortId;
 }
 
-void IpcmAssignToDIFResponseMessage::setErrorDescription(
-		const std::string& errorDescription){
-	this->errorDescription = errorDescription;
+const ApplicationProcessNamingInformation&
+IpcmAllocateFlowRequestMessage::getDestAppName() const {
+	return destAppName;
+}
+
+void IpcmAllocateFlowRequestMessage::setDestAppName(
+		const ApplicationProcessNamingInformation& destAppName) {
+	this->destAppName = destAppName;
+}
+
+const FlowSpecification&
+IpcmAllocateFlowRequestMessage::getFlowSpec() const {
+	return flowSpec;
+}
+
+void IpcmAllocateFlowRequestMessage::setFlowSpec(
+		const FlowSpecification& flowSpec) {
+	this->flowSpec = flowSpec;
+}
+
+int IpcmAllocateFlowRequestMessage::getPortId() const {
+	return portId;
+}
+
+void IpcmAllocateFlowRequestMessage::setPortId(int portId) {
+	this->portId = portId;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmAllocateFlowRequestMessage::getSourceAppName() const {
+	return sourceAppName;
+}
+
+void IpcmAllocateFlowRequestMessage::setSourceAppName(
+		const ApplicationProcessNamingInformation& sourceAppName) {
+	this->sourceAppName = sourceAppName;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmAllocateFlowRequestMessage::getDifName() const {
+	return difName;
+}
+
+void IpcmAllocateFlowRequestMessage::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
+IPCEvent* IpcmAllocateFlowRequestMessage::toIPCEvent(){
+	FlowRequestEvent * event =
+			new FlowRequestEvent(portId, flowSpec, sourceAppName, destAppName,
+					difName, getSequenceNumber());
+	return event;
+}
+
+/* CLASS IPCM ALLOCATE FLOW RESPONSE MESSAGE */
+IpcmAllocateFlowResponseMessage::IpcmAllocateFlowResponseMessage():
+		BaseNetlinkResponseMessage(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE) {
+}
+
+/* CLASS IPCM IPC PROCESS REGISTERED TO DIF NOTIFICATION MESSAGE */
+IpcmIPCProcessRegisteredToDIFNotification::
+IpcmIPCProcessRegisteredToDIFNotification():
+NetlinkRequestOrNotificationMessage(
+		RINA_C_IPCM_IPC_PROCESS_REGISTERED_TO_DIF_NOTIFICATION){
+}
+
+const ApplicationProcessNamingInformation&
+IpcmIPCProcessRegisteredToDIFNotification::getDifName() const {
+	return difName;
+}
+
+void IpcmIPCProcessRegisteredToDIFNotification::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmIPCProcessRegisteredToDIFNotification::getIpcProcessName() const {
+	return ipcProcessName;
+}
+
+void IpcmIPCProcessRegisteredToDIFNotification::setIpcProcessName(
+		const ApplicationProcessNamingInformation& ipcProcessName) {
+	this->ipcProcessName = ipcProcessName;
+}
+
+IPCEvent* IpcmIPCProcessRegisteredToDIFNotification::toIPCEvent(){
+	IPCProcessRegisteredToDIFEvent * event =
+			new IPCProcessRegisteredToDIFEvent(ipcProcessName, difName,
+					getSequenceNumber());
+
+	return event;
 }
 
 }

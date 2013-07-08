@@ -66,6 +66,23 @@ AssignToDIFRequestEvent::getDIFConfiguration() const{
 	return difConfiguration;
 }
 
+/* CLASS IPC PROCESS REGISTERED TO DIF EVENT */
+IPCProcessRegisteredToDIFEvent::IPCProcessRegisteredToDIFEvent(
+		const ApplicationProcessNamingInformation& ipcProcessName,
+		const ApplicationProcessNamingInformation& difName,
+		unsigned int sequenceNumber): IPCEvent(IPC_PROCESS_REGISTERED_TO_DIF, sequenceNumber){
+}
+
+const ApplicationProcessNamingInformation&
+IPCProcessRegisteredToDIFEvent::getIPCProcessName() const{
+	return ipcProcessName;
+}
+
+const ApplicationProcessNamingInformation&
+IPCProcessRegisteredToDIFEvent::getDIFName() const{
+	return difName;
+}
+
 /* CLASS EXTENDED IPC MANAGER */
 const DIFConfiguration& ExtendedIPCManager::getCurrentConfiguration() const{
 	return currentConfiguration;
@@ -113,6 +130,25 @@ void ExtendedIPCManager::registerApplicationResponse(
 	//Do nothing
 #else
 	IpcmRegisterApplicationResponseMessage responseMessage;
+	responseMessage.setResult(result);
+	responseMessage.setErrorDescription(errorDescription);
+	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+	}catch(NetlinkException &e){
+		throw IPCException(e.what());
+	}
+#endif
+}
+
+void ExtendedIPCManager::allocateFlowResponse(
+		const FlowRequestEvent& event, int result,
+		const std::string& errorDescription) throw(IPCException){
+#if STUB_API
+	//Do nothing
+#else
+	IpcmAllocateFlowResponseMessage responseMessage;
 	responseMessage.setResult(result);
 	responseMessage.setErrorDescription(errorDescription);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
