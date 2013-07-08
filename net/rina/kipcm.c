@@ -63,9 +63,9 @@ struct id_to_ipcp {
 };
 
 struct port_id_to_flow {
-        port_id_t             port_id; /* Key */
-        const struct flow_t * flow;    /* value */
-        struct list_head      list;
+        port_id_t           port_id; /* Key */
+        const struct flow * flow;    /* value */
+        struct list_head    list;
 };
 
 static int add_id_to_ipcp_node(struct kipcm *         kipcm,
