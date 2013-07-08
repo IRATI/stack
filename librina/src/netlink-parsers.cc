@@ -122,14 +122,14 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		return 0;
 	}
 	case RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE: {
-			AppUnregisterApplicationResponseMessage * unregisterApplicationResponseObject =
-					dynamic_cast<AppUnregisterApplicationResponseMessage *>(message);
-			if (putAppUnregisterApplicationResponseMessageObject(netlinkMessage,
-					*unregisterApplicationResponseObject) < 0) {
-				return -1;
-			}
-			return 0;
+		AppUnregisterApplicationResponseMessage * unregisterApplicationResponseObject =
+				dynamic_cast<AppUnregisterApplicationResponseMessage *>(message);
+		if (putAppUnregisterApplicationResponseMessageObject(netlinkMessage,
+				*unregisterApplicationResponseObject) < 0) {
+			return -1;
 		}
+		return 0;
+	}
 	case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST: {
 		IpcmRegisterApplicationRequestMessage * registerApplicationRequestObject =
 				dynamic_cast<IpcmRegisterApplicationRequestMessage *>(message);
@@ -210,8 +210,8 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 		return parseAppUnregisterApplicationRequestMessage(netlinkMessageHeader);
 	}
 	case RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE: {
-			return parseAppUnregisterApplicationResponseMessage(netlinkMessageHeader);
-		}
+		return parseAppUnregisterApplicationResponseMessage(netlinkMessageHeader);
+	}
 	case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST: {
 		return parseIpcmRegisterApplicationRequestMessage(netlinkMessageHeader);
 	}
@@ -767,8 +767,8 @@ int putAppRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
-int putAppUnegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
-		const AppRegisterApplicationRequestMessage& object) {
+int putAppUnregisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
+		const AppUnregisterApplicationRequestMessage& object) {
 	struct nlattr *difName, *applicationName;
 
 	if (!(applicationName = nla_nest_start(netlinkMessage, AUAR_ATTR_APP_NAME))) {
@@ -793,6 +793,19 @@ int putAppUnegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 
 	nla_put_failure: LOG_ERR(
 			"Error building AppUnregisterApplicationRequestMessage Netlink object");
+	return -1;
+}
+
+int putAppUnregisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
+		const AppUnregisterApplicationResponseMessage& object) {
+
+	NLA_PUT_U32(netlinkMessage, AUARE_ATTR_RESULT, object.getResult());
+	NLA_PUT_STRING(netlinkMessage, AUARE_ATTR_ERROR_DESCRIPTION,
+			object.getErrorDescription().c_str());
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building AppFlowDeallocatedNotificationMessage Netlink object");
 	return -1;
 }
 
@@ -1590,7 +1603,7 @@ AppRegisterApplicationResponseMessage * parseAppRegisterApplicationResponseMessa
 	return result;
 }
 
-AppRegisterApplicationRequestMessage * parseAppUnregisterApplicationRequestMessage(
+AppUnregisterApplicationRequestMessage * parseAppUnregisterApplicationRequestMessage(
 		nlmsghdr *hdr) {
 	struct nla_policy attr_policy[AUAR_ATTR_MAX + 1];
 	attr_policy[AUAR_ATTR_APP_NAME].type = NLA_NESTED;
@@ -1645,6 +1658,50 @@ AppRegisterApplicationRequestMessage * parseAppUnregisterApplicationRequestMessa
 
 	return result;
 }
+
+
+AppUnregisterApplicationResponseMessage * parseAppUnregisterApplicationResponseMessage(
+		nlmsghdr *hdr) {
+	struct nla_policy attr_policy[AUARE_ATTR_MAX + 1];
+	attr_policy[AUARE_ATTR_RESULT].type = NLA_U32;
+	attr_policy[AUARE_ATTR_RESULT].minlen = 4;
+	attr_policy[AUARE_ATTR_RESULT].maxlen = 4;
+	attr_policy[AUARE_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
+	attr_policy[AUARE_ATTR_ERROR_DESCRIPTION].minlen = 0;
+	attr_policy[AUARE_ATTR_ERROR_DESCRIPTION].maxlen = 65535;
+	struct nlattr *attrs[AUARE_ATTR_MAX + 1];
+
+	/*
+	 * The nlmsg_parse() function will make sure that the message contains
+	 * enough payload to hold the header (struct my_hdr), validates any
+	 * attributes attached to the messages and stores a pointer to each
+	 * attribute in the attrs[] array accessable by attribute type.
+	 */
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			AUARE_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing AppUnregisterApplicationRequestMessage information from Netlink message: %d",
+				err);
+		return NULL;
+	}
+
+	AppUnregisterApplicationResponseMessage * result =
+			new AppUnregisterApplicationResponseMessage();
+
+
+	if (attrs[AUARE_ATTR_RESULT]) {
+		result->setResult(nla_get_u32(attrs[AUARE_ATTR_RESULT]));
+	}
+
+	if (attrs[AUARE_ATTR_ERROR_DESCRIPTION]) {
+		result->setErrorDescription(
+				nla_get_string(attrs[AUARE_ATTR_ERROR_DESCRIPTION]));
+	}
+
+	return result;
+}
+
 
 IpcmRegisterApplicationRequestMessage *
 parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
@@ -1713,7 +1770,7 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 }
 
 IpcmRegisterApplicationResponseMessage *
-	parseIpcmRegisterApplicationResponseMessage(nlmsghdr *hdr) {
+parseIpcmRegisterApplicationResponseMessage(nlmsghdr *hdr) {
 	struct nla_policy attr_policy[IRARE_ATTR_MAX + 1];
 	attr_policy[IRARE_ATTR_RESULT].type = NLA_U32;
 	attr_policy[IRARE_ATTR_RESULT].minlen = 4;
@@ -1827,7 +1884,7 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 }
 
 IpcmAssignToDIFRequestMessage *
-	parseIpcmAssignToDIFRequestMessage(nlmsghdr *hdr){
+parseIpcmAssignToDIFRequestMessage(nlmsghdr *hdr){
 	struct nla_policy attr_policy[IATDR_ATTR_MAX + 1];
 	attr_policy[IATDR_ATTR_DIF_CONFIGURATION].type = NLA_NESTED;
 	attr_policy[IATDR_ATTR_DIF_CONFIGURATION].minlen = 0;
@@ -1863,7 +1920,7 @@ IpcmAssignToDIFRequestMessage *
 }
 
 IpcmAssignToDIFResponseMessage *
-	parseIpcmAssignToDIFResponseMessage(nlmsghdr *hdr){
+parseIpcmAssignToDIFResponseMessage(nlmsghdr *hdr){
 	struct nla_policy attr_policy[IATDRE_ATTR_MAX + 1];
 	attr_policy[IATDRE_ATTR_RESULT].type = NLA_U32;
 	attr_policy[IATDRE_ATTR_RESULT].minlen = 4;
@@ -1883,15 +1940,15 @@ IpcmAssignToDIFResponseMessage *
 	}
 
 	IpcmAssignToDIFResponseMessage * result =
-				new IpcmAssignToDIFResponseMessage();
+			new IpcmAssignToDIFResponseMessage();
 
 	if (attrs[IATDRE_ATTR_RESULT]) {
 		result->setResult(nla_get_u32(attrs[IATDRE_ATTR_RESULT]));
 	}
 
 	if (attrs[IATDRE_ATTR_ERROR_DESCRIPTION]) {
-			result->setErrorDescription(
-					nla_get_string(attrs[IATDRE_ATTR_ERROR_DESCRIPTION]));
+		result->setErrorDescription(
+				nla_get_string(attrs[IATDRE_ATTR_ERROR_DESCRIPTION]));
 	}
 
 	return result;
