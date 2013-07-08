@@ -341,6 +341,22 @@ int putIpcmAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 IpcmAllocateFlowResponseMessage *
 	parseIpcmAllocateFlowResponseMessage(nlmsghdr *hdr);
 
+
+/* IpcmIPCProcessRegisteredToDIFNotification CLASS*/
+enum IpcmIPCProcessRegisteredToDIFNotificationAttributes {
+	IIPRTDN_ATTR_IPC_PROCESS_NAME = 1,
+	IIPRTDN_ATTR_DIF_NAME,
+	__IIPRTDN_ATTR_MAX,
+};
+
+#define IIPRTDN_ATTR_MAX (__IIPRTDN_ATTR_MAX -1)
+
+int putIpcmIPCProcessRegisteredToDIFNotificationObject(nl_msg* netlinkMessage,
+		const IpcmIPCProcessRegisteredToDIFNotification& object);
+
+IpcmIPCProcessRegisteredToDIFNotification *
+	parseIpcmIPCProcessRegisteredToDIFNotification(nlmsghdr *hdr);
+
 }
 
 #endif /* LIBRINA_NETLINK_PARSERS_H_ */

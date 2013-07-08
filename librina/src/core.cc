@@ -291,6 +291,14 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			}
 			break;
 		}
+		case RINA_C_IPCM_IPC_PROCESS_REGISTERED_TO_DIF_NOTIFICATION:{
+			if(send){
+				putIPCProcessIdToNelinkPortIdMapping(
+					message->getDestPortId(),
+					message->getDestIpcProcessId());
+			}
+			break;
+		}
 		default:
 			throw NetlinkException(NetlinkException::
 						unrecognized_generic_netlink_operation_code);

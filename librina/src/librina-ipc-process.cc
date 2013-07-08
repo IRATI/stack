@@ -66,6 +66,23 @@ AssignToDIFRequestEvent::getDIFConfiguration() const{
 	return difConfiguration;
 }
 
+/* CLASS IPC PROCESS REGISTERED TO DIF EVENT */
+IPCProcessRegisteredToDIFEvent::IPCProcessRegisteredToDIFEvent(
+		const ApplicationProcessNamingInformation& ipcProcessName,
+		const ApplicationProcessNamingInformation& difName,
+		unsigned int sequenceNumber): IPCEvent(IPC_PROCESS_REGISTERED_TO_DIF, sequenceNumber){
+}
+
+const ApplicationProcessNamingInformation&
+IPCProcessRegisteredToDIFEvent::getIPCProcessName() const{
+	return ipcProcessName;
+}
+
+const ApplicationProcessNamingInformation&
+IPCProcessRegisteredToDIFEvent::getDIFName() const{
+	return difName;
+}
+
 /* CLASS EXTENDED IPC MANAGER */
 const DIFConfiguration& ExtendedIPCManager::getCurrentConfiguration() const{
 	return currentConfiguration;

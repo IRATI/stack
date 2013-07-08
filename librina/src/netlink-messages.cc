@@ -800,5 +800,40 @@ IpcmAllocateFlowResponseMessage::IpcmAllocateFlowResponseMessage():
 		BaseNetlinkResponseMessage(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE) {
 }
 
+/* CLASS IPCM IPC PROCESS REGISTERED TO DIF NOTIFICATION MESSAGE */
+IpcmIPCProcessRegisteredToDIFNotification::
+IpcmIPCProcessRegisteredToDIFNotification():
+NetlinkRequestOrNotificationMessage(
+		RINA_C_IPCM_IPC_PROCESS_REGISTERED_TO_DIF_NOTIFICATION){
+}
+
+const ApplicationProcessNamingInformation&
+IpcmIPCProcessRegisteredToDIFNotification::getDifName() const {
+	return difName;
+}
+
+void IpcmIPCProcessRegisteredToDIFNotification::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmIPCProcessRegisteredToDIFNotification::getIpcProcessName() const {
+	return ipcProcessName;
+}
+
+void IpcmIPCProcessRegisteredToDIFNotification::setIpcProcessName(
+		const ApplicationProcessNamingInformation& ipcProcessName) {
+	this->ipcProcessName = ipcProcessName;
+}
+
+IPCEvent* IpcmIPCProcessRegisteredToDIFNotification::toIPCEvent(){
+	IPCProcessRegisteredToDIFEvent * event =
+			new IPCProcessRegisteredToDIFEvent(ipcProcessName, difName,
+					getSequenceNumber());
+
+	return event;
+}
+
 }
 

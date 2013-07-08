@@ -68,6 +68,27 @@ public:
 };
 
 /**
+ * The IPC Manager informs the IPC Process that it has been subscribed
+ * to an N-1 DIF
+ */
+class IPCProcessRegisteredToDIFEvent: public IPCEvent {
+
+	/** The name of the IPC Process registered to the N-1 DIF */
+	ApplicationProcessNamingInformation ipcProcessName;
+
+	/** The name of the N-1 DIF where the IPC Process has been registered*/
+	ApplicationProcessNamingInformation difName;
+
+public:
+	IPCProcessRegisteredToDIFEvent(
+			const ApplicationProcessNamingInformation& ipcProcessName,
+			const ApplicationProcessNamingInformation& difName,
+			unsigned int sequenceNumber);
+	const ApplicationProcessNamingInformation& getIPCProcessName() const;
+	const ApplicationProcessNamingInformation& getDIFName() const;
+};
+
+/**
  * Class used by the IPC Processes to interact with the IPC Manager. Extends
  * the basic IPC Manager in librina-application with IPC Process specific
  * functionality

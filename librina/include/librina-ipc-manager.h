@@ -34,6 +34,9 @@ class IPCProcess {
 	/** The identifier of the IPC Process, unique within the system */
 	unsigned short id;
 
+	/** The port at which the IPC Process is listening */
+	unsigned int portId;
+
 	/** The IPC Process type */
 	DIFType type;
 
@@ -52,11 +55,13 @@ public:
 	static const std::string error_not_a_dif_member;
 	static const std::string error_allocating_flow;
 	IPCProcess();
-	IPCProcess(unsigned int id, DIFType type,
+	IPCProcess(unsigned short id, unsigned int portId, DIFType type,
 			const ApplicationProcessNamingInformation& name);
 	unsigned int getId() const;
 	DIFType getType() const;
 	const ApplicationProcessNamingInformation& getName() const;
+	unsigned int getPortId() const;
+	void setPortId(unsigned int portId);
 	const DIFConfiguration& getConfiguration() const;
 	void setConfiguration(const DIFConfiguration& difConfiguration);
 	bool isDIFMember() const;
@@ -72,11 +77,10 @@ public:
 	 * assigned to the DIF or an error is returned.
 	 *
 	 * @param difConfiguration The configuration of the DIF
-	 * @param ipcProcessPortId The port at which the IPC Process is listening
 	 * @throws IPCException if an error happens during the process
 	 */
-	void assignToDIF(const DIFConfiguration& difConfiguration,
-			unsigned int ipcProcessPortId) throw (IPCException);
+	void assignToDIF(
+			const DIFConfiguration& difConfiguration) throw (IPCException);
 
 	/**
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been
@@ -88,6 +92,7 @@ public:
 	 * that DIF
 	 */
 	void notifyRegistrationToSupportingDIF(
+			const ApplicationProcessNamingInformation& ipcProcessName,
 			const ApplicationProcessNamingInformation& difName)
 					throw (IPCException);
 

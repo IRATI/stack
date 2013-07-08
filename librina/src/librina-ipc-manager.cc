@@ -34,13 +34,15 @@ const std::string IPCProcess::error_allocating_flow =
 
 IPCProcess::IPCProcess() {
 	id = 0;
+	portId = 0;
 	type = DIF_TYPE_NORMAL;
 	difMember = false;
 }
 
-IPCProcess::IPCProcess(unsigned int id, DIFType type,
+IPCProcess::IPCProcess(unsigned short id, unsigned int portId, DIFType type,
 		const ApplicationProcessNamingInformation& name) {
 	this->id = id;
+	this->portId = portId;
 	this->type = type;
 	this->name = name;
 	difMember = false;
@@ -66,6 +68,14 @@ const ApplicationProcessNamingInformation& IPCProcess::getName() const {
 	return name;
 }
 
+unsigned int IPCProcess::getPortId() const{
+	return portId;
+}
+
+void IPCProcess::setPortId(unsigned int portId){
+	this->portId = portId;
+}
+
 const DIFConfiguration& IPCProcess::getConfiguration() const{
 	return difConfiguration;
 }
@@ -74,8 +84,8 @@ void IPCProcess::setConfiguration(const DIFConfiguration& difConfiguration){
 	this->difConfiguration = difConfiguration;
 }
 
-void IPCProcess::assignToDIF(const DIFConfiguration& difConfiguration,
-		unsigned int ipcProcessPortId) throw (IPCException) {
+void IPCProcess::assignToDIF(
+		const DIFConfiguration& difConfiguration) throw (IPCException) {
 	LOG_DBG("IPCProcess::assign to DIF called");
 #if STUB_API
 	//Do nothing
@@ -83,7 +93,7 @@ void IPCProcess::assignToDIF(const DIFConfiguration& difConfiguration,
 	IpcmAssignToDIFRequestMessage message;
 	message.setDIFConfiguration(difConfiguration);
 	message.setDestIpcProcessId(id);
-	message.setDestPortId(ipcProcessPortId);
+	message.setDestPortId(portId);
 	message.setRequestMessage(true);
 
 	IpcmAssignToDIFResponseMessage * assignToDIFResponse =
@@ -108,10 +118,27 @@ void IPCProcess::assignToDIF(const DIFConfiguration& difConfiguration,
 }
 
 void IPCProcess::notifyRegistrationToSupportingDIF(
+		const ApplicationProcessNamingInformation& ipcProcessName,
 		const ApplicationProcessNamingInformation& difName)
 		throw (IPCException) {
 	LOG_DBG("IPCProcess::notify registration to supporting DIF called");
-	throw IPCException(IPCException::operation_not_implemented_error);
+#if STUB_API
+	//Do nothing
+#else
+	IpcmIPCProcessRegisteredToDIFNotification message;
+	message.setIpcProcessName(ipcProcessName);
+	message.setDestIpcProcessId(id);
+	message.setDestPortId(portId);
+	message.setDifName(difName);
+	message.setNotificationMessage(true);
+
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&message);
+	}catch(NetlinkException &e){
+		throw IPCException(e.what());
+	}
+
+#endif
 }
 
 void IPCProcess::notifyUnregistrationFromSupportingDIF(
@@ -230,7 +257,7 @@ IPCProcess * IPCProcessFactory::create(
 		DIFType difType) throw (IPCException) {
 	LOG_DBG("IPCProcessFactory::create called");
 
-	int ipcProcessId;
+	int ipcProcessId = 1;
 	for (int i = 1; i < 1000; i++) {
 		if (ipcProcesses.find(i) == ipcProcesses.end()) {
 			ipcProcessId = i;
@@ -238,7 +265,7 @@ IPCProcess * IPCProcessFactory::create(
 		}
 	}
 
-	IPCProcess * ipcProcess = new IPCProcess(ipcProcessId, difType,
+	IPCProcess * ipcProcess = new IPCProcess(ipcProcessId, 0, difType,
 			ipcProcessName);
 	ipcProcesses[ipcProcessId] = ipcProcess;
 	return ipcProcess;

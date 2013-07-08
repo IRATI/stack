@@ -646,6 +646,24 @@ public:
 	IpcmAllocateFlowResponseMessage();
 };
 
+class IpcmIPCProcessRegisteredToDIFNotification:
+		public NetlinkRequestOrNotificationMessage {
+	/** The name of the IPC Process registered to the N-1 DIF */
+	ApplicationProcessNamingInformation ipcProcessName;
+
+	/** The name of the N-1 DIF where the IPC Process has been registered*/
+	ApplicationProcessNamingInformation difName;
+
+public:
+	IpcmIPCProcessRegisteredToDIFNotification();
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
+	const ApplicationProcessNamingInformation& getIpcProcessName() const;
+	void setIpcProcessName(
+			const ApplicationProcessNamingInformation& ipcProcessName);
+	IPCEvent* toIPCEvent();
+};
+
 }
 
 #endif /* NETLINK_MESSAGES_H_ */

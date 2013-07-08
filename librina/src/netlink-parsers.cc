@@ -166,6 +166,15 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
+	case RINA_C_IPCM_IPC_PROCESS_REGISTERED_TO_DIF_NOTIFICATION: {
+		IpcmIPCProcessRegisteredToDIFNotification * notificationMessage =
+			dynamic_cast<IpcmIPCProcessRegisteredToDIFNotification *>(message);
+		if (putIpcmIPCProcessRegisteredToDIFNotificationObject(netlinkMessage,
+				*notificationMessage) < 0) {
+			return -1;
+		}
+		return 0;
+	}
 
 	default: {
 		return -1;
@@ -186,7 +195,8 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 		return parseAppAllocateFlowRequestResultMessage(netlinkMessageHeader);
 	}
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED: {
-		return parseAppAllocateFlowRequestArrivedMessage(netlinkMessageHeader);
+		return parseAppAllocateFlowRequestArrivedMessage(
+				netlinkMessageHeader);
 	}
 	case RINA_C_APP_ALLOCATE_FLOW_RESPONSE: {
 		return parseAppAllocateFlowResponseMessage(netlinkMessageHeader);
@@ -198,19 +208,24 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 		return parseAppDeallocateFlowResponseMessage(netlinkMessageHeader);
 	}
 	case RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION: {
-		return parseAppFlowDeallocatedNotificationMessage(netlinkMessageHeader);
+		return parseAppFlowDeallocatedNotificationMessage(
+				netlinkMessageHeader);
 	}
 	case RINA_C_APP_REGISTER_APPLICATION_REQUEST: {
-		return parseAppRegisterApplicationRequestMessage(netlinkMessageHeader);
+		return parseAppRegisterApplicationRequestMessage(
+				netlinkMessageHeader);
 	}
 	case RINA_C_APP_REGISTER_APPLICATION_RESPONSE: {
-		return parseAppRegisterApplicationResponseMessage(netlinkMessageHeader);
+		return parseAppRegisterApplicationResponseMessage(
+				netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST: {
-		return parseIpcmRegisterApplicationRequestMessage(netlinkMessageHeader);
+		return parseIpcmRegisterApplicationRequestMessage(
+				netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE: {
-		return parseIpcmRegisterApplicationResponseMessage(netlinkMessageHeader);
+		return parseIpcmRegisterApplicationResponseMessage(
+				netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST: {
 		return parseIpcmAssignToDIFRequestMessage(netlinkMessageHeader);
@@ -222,8 +237,12 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 		return parseIpcmAllocateFlowRequestMessage(netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE: {
-			return parseIpcmAllocateFlowResponseMessage(netlinkMessageHeader);
-		}
+		return parseIpcmAllocateFlowResponseMessage(netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_IPC_PROCESS_REGISTERED_TO_DIF_NOTIFICATION: {
+		return parseIpcmIPCProcessRegisteredToDIFNotification(
+				netlinkMessageHeader);
+	}
 	default: {
 		LOG_ERR(
 				"Generic Netlink message contains unrecognized command code: %d",
@@ -952,6 +971,37 @@ int putIpcmAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 
 	nla_put_failure: LOG_ERR(
 			"Error building IpcmAllocateFlowResponseeMessage Netlink object");
+	return -1;
+}
+
+int putIpcmIPCProcessRegisteredToDIFNotificationObject(nl_msg* netlinkMessage,
+		const IpcmIPCProcessRegisteredToDIFNotification& object){
+	struct nlattr *ipcProcessName, *difName;
+
+	if (!(ipcProcessName = nla_nest_start(
+			netlinkMessage, IIPRTDN_ATTR_IPC_PROCESS_NAME))){
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getIpcProcessName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, ipcProcessName);
+
+	if (!(difName = nla_nest_start(
+			netlinkMessage, IIPRTDN_ATTR_DIF_NAME))){
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getDifName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, difName);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building IpcmIPCProcessRegisteredToDIFNotification Netlink object");
 	return -1;
 }
 
@@ -2005,6 +2055,58 @@ IpcmAllocateFlowResponseMessage *
 	if (attrs[IAFREM_ATTR_ERROR_DESCRIPTION]) {
 			result->setErrorDescription(
 					nla_get_string(attrs[IAFREM_ATTR_ERROR_DESCRIPTION]));
+	}
+
+	return result;
+}
+
+IpcmIPCProcessRegisteredToDIFNotification *
+	parseIpcmIPCProcessRegisteredToDIFNotification(nlmsghdr *hdr){
+	struct nla_policy attr_policy[IIPRTDN_ATTR_MAX + 1];
+	attr_policy[IIPRTDN_ATTR_IPC_PROCESS_NAME].type = NLA_NESTED;
+	attr_policy[IIPRTDN_ATTR_IPC_PROCESS_NAME].minlen = 0;
+	attr_policy[IIPRTDN_ATTR_IPC_PROCESS_NAME].maxlen = 0;
+	attr_policy[IIPRTDN_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[IIPRTDN_ATTR_DIF_NAME].minlen = 0;
+	attr_policy[IIPRTDN_ATTR_DIF_NAME].maxlen = 0;
+	struct nlattr *attrs[IIPRTDN_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			IIPRTDN_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing IpcmIPCProcessRegisteredToDIFNotification information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	IpcmIPCProcessRegisteredToDIFNotification * result =
+			new IpcmIPCProcessRegisteredToDIFNotification ();
+	ApplicationProcessNamingInformation * ipcProcessName;
+	ApplicationProcessNamingInformation * difName;
+
+	if (attrs[IIPRTDN_ATTR_IPC_PROCESS_NAME]) {
+		ipcProcessName = parseApplicationProcessNamingInformationObject(
+				attrs[IIPRTDN_ATTR_IPC_PROCESS_NAME]);
+		if (ipcProcessName == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->setIpcProcessName(*ipcProcessName);
+			delete ipcProcessName;
+		}
+	}
+
+	if (attrs[IIPRTDN_ATTR_DIF_NAME]) {
+		difName = parseApplicationProcessNamingInformationObject(
+				attrs[IIPRTDN_ATTR_DIF_NAME]);
+		if (difName == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->setDifName(*difName);
+			delete difName;
+		}
 	}
 
 	return result;
