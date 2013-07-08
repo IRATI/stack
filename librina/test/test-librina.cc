@@ -133,6 +133,13 @@ void doWorkIPCProcess(){
 	std::cout<<"ICPProcess# Replied to application\n";
 	delete deallocateFlowEvent;
 
+	//Wait for Unregistration from DIF notification event
+	event = ipcEventProducer->eventWait();
+	IPCProcessUnregisteredFromDIFEvent * ipcUnregNotEvent =
+			dynamic_cast<IPCProcessUnregisteredFromDIFEvent *>(event);
+	std::cout<<"IPCProcess# Received an IPC Process unregistered from DIF event "
+			<<ipcUnregNotEvent->getSequenceNumber()<<std::endl;
+
 	std::cout<<"IPCProcess# Work done, terminating!"<<std::endl;
 	exit(result);
 }
@@ -198,6 +205,14 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	applicationManager->flowAllocated(*flowRequestEvent, "ok", 1, 2);
 	std::cout<<"IPCManager# Replied to flow allocation\n";
 	delete flowRequestEvent;
+
+	usleep(1000*50);
+
+	//Inform IPC Process that it has been unregistered from underlying DIF
+	ipcProcess->notifyUnregistrationFromSupportingDIF(
+			processName, supportingDifName);
+	std::cout<<"IPCManager# Informed IPC Process about unregistration from "<<
+			"supportind DIF"<< supportingDifName.getProcessName()<<std::endl;
 
 	//Destroy IPC Process
 	ipcProcessFactory->destroy(ipcProcess->getId());

@@ -86,6 +86,7 @@ public:
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been
 	 * registered to the N-1 DIF designed by difName
 	 *
+	 * @param ipcProcessName The name of the IPC Process being registered
 	 * @param difName The name of the N-1 DIF where the IPC Process has been
 	 * registered
 	 * @throws IPCException if the IPC Process was already registered to
@@ -100,11 +101,13 @@ public:
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been
 	 * unregistered from the N-1 DIF designed by difName
 	 *
+	 * @param ipcProcessName The name of the IPC Process being unregistered
 	 * @param difName The name of the N-1 DIF where the IPC Process has been
 	 * unregistered
 	 * @throws IPCException if the IPC Process was not registered to the DIF
 	 */
 	void notifyUnregistrationFromSupportingDIF(
+			const ApplicationProcessNamingInformation& ipcProcessName,
 			const ApplicationProcessNamingInformation& difName)
 					throw (IPCException);
 

@@ -1188,11 +1188,11 @@ int testIpcmAllocateFlowResponseMessage() {
 	return returnValue;
 }
 
-int testIpcmIPCProcessRegisteredToDIFNotification() {
-	std::cout << "TESTING IPCM IPC PROCESS REGISTERED TO DIF NOTIFICATION\n";
+int testIpcmIPCProcessDIFResgistrationNotification() {
+	std::cout << "TESTING IPCM IPC PROCESS DIF REGISTRATION NOTIFICATION\n";
 	int returnValue = 0;
 
-	IpcmIPCProcessRegisteredToDIFNotification message;
+	IpcmDIFRegistrationNotification message;
 	ApplicationProcessNamingInformation ipcProcessName;
 	ipcProcessName.setProcessName("/ipcprocesses/Barcelona/i2CAT");
 	ipcProcessName.setProcessInstance("1");
@@ -1202,6 +1202,7 @@ int testIpcmIPCProcessRegisteredToDIFNotification() {
 	ApplicationProcessNamingInformation difName;
 	difName.setProcessName("/difs/Test.DIF");
 	message.setDifName(difName);
+	message.setRegistered(true);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -1213,18 +1214,18 @@ int testIpcmIPCProcessRegisteredToDIFNotification() {
 
 	int result = putBaseNetlinkMessage(netlinkMessage, &message);
 	if (result < 0) {
-		std::cout << "Error constructing Ipcm IPC Process Registered to DIF "
+		std::cout << "Error constructing Ipcm IPC Process DIF registration"
 				<< "Notification Message \n";
 		nlmsg_free(netlinkMessage);
 		return result;
 	}
 
 	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
-	IpcmIPCProcessRegisteredToDIFNotification * recoveredMessage =
-			dynamic_cast<IpcmIPCProcessRegisteredToDIFNotification *>(
+	IpcmDIFRegistrationNotification * recoveredMessage =
+			dynamic_cast<IpcmDIFRegistrationNotification *>(
 					parseBaseNetlinkMessage(netlinkMessageHeader));
 	if (recoveredMessage == 0) {
-		std::cout << "Error parsing Ipcm IPC Process Registered to DIF Message "
+		std::cout << "Error parsing Ipcm IPC Process DIF Registration Message "
 				<< "\n";
 		returnValue = -1;
 	} else if (message.getIpcProcessName() !=
@@ -1236,10 +1237,14 @@ int testIpcmIPCProcessRegisteredToDIFNotification() {
 		std::cout << "DIF name on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
+	} else if (message.isRegistered() != recoveredMessage->isRegistered()) {
+		std::cout << "Registered on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
 	}
 
 	if (returnValue == 0) {
-		std::cout << "IpcmIPCProcessRegisteredToDIFNotification test ok\n";
+		std::cout << "IpcmDIFRegistrationNotification test ok\n";
 	}
 	nlmsg_free(netlinkMessage);
 	delete recoveredMessage;
@@ -1327,7 +1332,7 @@ int main(int argc, char * argv[]) {
 		return result;
 	}
 
-	result = testIpcmIPCProcessRegisteredToDIFNotification();
+	result = testIpcmIPCProcessDIFResgistrationNotification();
 	if (result < 0) {
 		return result;
 	}

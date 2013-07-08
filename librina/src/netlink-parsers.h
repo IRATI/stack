@@ -342,20 +342,21 @@ IpcmAllocateFlowResponseMessage *
 	parseIpcmAllocateFlowResponseMessage(nlmsghdr *hdr);
 
 
-/* IpcmIPCProcessRegisteredToDIFNotification CLASS*/
-enum IpcmIPCProcessRegisteredToDIFNotificationAttributes {
-	IIPRTDN_ATTR_IPC_PROCESS_NAME = 1,
-	IIPRTDN_ATTR_DIF_NAME,
-	__IIPRTDN_ATTR_MAX,
+/* IpcmDIFRegistrationNotification CLASS*/
+enum IpcmDIFRegistrationNotificationAttributes {
+	IDRN_ATTR_IPC_PROCESS_NAME = 1,
+	IDRN_ATTR_DIF_NAME,
+	IDRN_ATTR_REGISTRATION,
+	__IDRN_ATTR_MAX,
 };
 
-#define IIPRTDN_ATTR_MAX (__IIPRTDN_ATTR_MAX -1)
+#define IDRN_ATTR_MAX (__IDRN_ATTR_MAX -1)
 
-int putIpcmIPCProcessRegisteredToDIFNotificationObject(nl_msg* netlinkMessage,
-		const IpcmIPCProcessRegisteredToDIFNotification& object);
+int putIpcmDIFRegistrationNotificationObject(nl_msg* netlinkMessage,
+		const IpcmDIFRegistrationNotification& object);
 
-IpcmIPCProcessRegisteredToDIFNotification *
-	parseIpcmIPCProcessRegisteredToDIFNotification(nlmsghdr *hdr);
+IpcmDIFRegistrationNotification *
+	parseIpcmDIFRegistrationNotification(nlmsghdr *hdr);
 
 }
 

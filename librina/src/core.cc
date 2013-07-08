@@ -291,11 +291,11 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			}
 			break;
 		}
-		case RINA_C_IPCM_IPC_PROCESS_REGISTERED_TO_DIF_NOTIFICATION:{
+		case RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:{
 			if(send){
 				putIPCProcessIdToNelinkPortIdMapping(
-					message->getDestPortId(),
-					message->getDestIpcProcessId());
+						message->getDestPortId(),
+						message->getDestIpcProcessId());
 			}
 			break;
 		}

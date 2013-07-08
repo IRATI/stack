@@ -166,10 +166,10 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
-	case RINA_C_IPCM_IPC_PROCESS_REGISTERED_TO_DIF_NOTIFICATION: {
-		IpcmIPCProcessRegisteredToDIFNotification * notificationMessage =
-			dynamic_cast<IpcmIPCProcessRegisteredToDIFNotification *>(message);
-		if (putIpcmIPCProcessRegisteredToDIFNotificationObject(netlinkMessage,
+	case RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION: {
+		IpcmDIFRegistrationNotification * notificationMessage =
+			dynamic_cast<IpcmDIFRegistrationNotification *>(message);
+		if (putIpcmDIFRegistrationNotificationObject(netlinkMessage,
 				*notificationMessage) < 0) {
 			return -1;
 		}
@@ -239,8 +239,8 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE: {
 		return parseIpcmAllocateFlowResponseMessage(netlinkMessageHeader);
 	}
-	case RINA_C_IPCM_IPC_PROCESS_REGISTERED_TO_DIF_NOTIFICATION: {
-		return parseIpcmIPCProcessRegisteredToDIFNotification(
+	case RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION: {
+		return parseIpcmDIFRegistrationNotification(
 				netlinkMessageHeader);
 	}
 	default: {
@@ -974,12 +974,12 @@ int putIpcmAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
-int putIpcmIPCProcessRegisteredToDIFNotificationObject(nl_msg* netlinkMessage,
-		const IpcmIPCProcessRegisteredToDIFNotification& object){
+int putIpcmDIFRegistrationNotificationObject(nl_msg* netlinkMessage,
+		const IpcmDIFRegistrationNotification& object){
 	struct nlattr *ipcProcessName, *difName;
 
 	if (!(ipcProcessName = nla_nest_start(
-			netlinkMessage, IIPRTDN_ATTR_IPC_PROCESS_NAME))){
+			netlinkMessage, IDRN_ATTR_IPC_PROCESS_NAME))){
 		goto nla_put_failure;
 	}
 	if (putApplicationProcessNamingInformationObject(netlinkMessage,
@@ -989,7 +989,7 @@ int putIpcmIPCProcessRegisteredToDIFNotificationObject(nl_msg* netlinkMessage,
 	nla_nest_end(netlinkMessage, ipcProcessName);
 
 	if (!(difName = nla_nest_start(
-			netlinkMessage, IIPRTDN_ATTR_DIF_NAME))){
+			netlinkMessage, IDRN_ATTR_DIF_NAME))){
 		goto nla_put_failure;
 	}
 	if (putApplicationProcessNamingInformationObject(netlinkMessage,
@@ -997,6 +997,10 @@ int putIpcmIPCProcessRegisteredToDIFNotificationObject(nl_msg* netlinkMessage,
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, difName);
+
+	if (object.isRegistered()){
+		NLA_PUT_FLAG(netlinkMessage, IDRN_ATTR_REGISTRATION);
+	}
 
 	return 0;
 
@@ -2060,34 +2064,37 @@ IpcmAllocateFlowResponseMessage *
 	return result;
 }
 
-IpcmIPCProcessRegisteredToDIFNotification *
-	parseIpcmIPCProcessRegisteredToDIFNotification(nlmsghdr *hdr){
-	struct nla_policy attr_policy[IIPRTDN_ATTR_MAX + 1];
-	attr_policy[IIPRTDN_ATTR_IPC_PROCESS_NAME].type = NLA_NESTED;
-	attr_policy[IIPRTDN_ATTR_IPC_PROCESS_NAME].minlen = 0;
-	attr_policy[IIPRTDN_ATTR_IPC_PROCESS_NAME].maxlen = 0;
-	attr_policy[IIPRTDN_ATTR_DIF_NAME].type = NLA_NESTED;
-	attr_policy[IIPRTDN_ATTR_DIF_NAME].minlen = 0;
-	attr_policy[IIPRTDN_ATTR_DIF_NAME].maxlen = 0;
-	struct nlattr *attrs[IIPRTDN_ATTR_MAX + 1];
+IpcmDIFRegistrationNotification *
+parseIpcmDIFRegistrationNotification(nlmsghdr *hdr){
+	struct nla_policy attr_policy[IDRN_ATTR_MAX + 1];
+	attr_policy[IDRN_ATTR_IPC_PROCESS_NAME].type = NLA_NESTED;
+	attr_policy[IDRN_ATTR_IPC_PROCESS_NAME].minlen = 0;
+	attr_policy[IDRN_ATTR_IPC_PROCESS_NAME].maxlen = 0;
+	attr_policy[IDRN_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[IDRN_ATTR_DIF_NAME].minlen = 0;
+	attr_policy[IDRN_ATTR_DIF_NAME].maxlen = 0;
+	attr_policy[IDRN_ATTR_REGISTRATION].type = NLA_FLAG;
+	attr_policy[IDRN_ATTR_REGISTRATION].minlen = 0;
+	attr_policy[IDRN_ATTR_REGISTRATION].maxlen = 0;
+	struct nlattr *attrs[IDRN_ATTR_MAX + 1];
 
 	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			IIPRTDN_ATTR_MAX, attr_policy);
+			IDRN_ATTR_MAX, attr_policy);
 	if (err < 0) {
 		LOG_ERR(
-				"Error parsing IpcmIPCProcessRegisteredToDIFNotification information from Netlink message: %d",
+				"Error parsing IpcmDIFRegistrationNotification information from Netlink message: %d",
 				err);
 		return 0;
 	}
 
-	IpcmIPCProcessRegisteredToDIFNotification * result =
-			new IpcmIPCProcessRegisteredToDIFNotification ();
+	IpcmDIFRegistrationNotification * result =
+			new IpcmDIFRegistrationNotification ();
 	ApplicationProcessNamingInformation * ipcProcessName;
 	ApplicationProcessNamingInformation * difName;
 
-	if (attrs[IIPRTDN_ATTR_IPC_PROCESS_NAME]) {
+	if (attrs[IDRN_ATTR_IPC_PROCESS_NAME]) {
 		ipcProcessName = parseApplicationProcessNamingInformationObject(
-				attrs[IIPRTDN_ATTR_IPC_PROCESS_NAME]);
+				attrs[IDRN_ATTR_IPC_PROCESS_NAME]);
 		if (ipcProcessName == 0) {
 			delete result;
 			return 0;
@@ -2097,9 +2104,9 @@ IpcmIPCProcessRegisteredToDIFNotification *
 		}
 	}
 
-	if (attrs[IIPRTDN_ATTR_DIF_NAME]) {
+	if (attrs[IDRN_ATTR_DIF_NAME]) {
 		difName = parseApplicationProcessNamingInformationObject(
-				attrs[IIPRTDN_ATTR_DIF_NAME]);
+				attrs[IDRN_ATTR_DIF_NAME]);
 		if (difName == 0) {
 			delete result;
 			return 0;
@@ -2107,6 +2114,12 @@ IpcmIPCProcessRegisteredToDIFNotification *
 			result->setDifName(*difName);
 			delete difName;
 		}
+	}
+
+	if (attrs[IDRN_ATTR_REGISTRATION]){
+		result->setRegistered(true);
+	}else{
+		result->setRegistered(false);
 	}
 
 	return result;

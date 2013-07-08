@@ -46,8 +46,7 @@ enum RINANetlinkOperationCode{
         RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* TODO IPC Manager -> Application */
         RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST, /* IPC Manager -> IPC Process */
         RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE, /* IPC Process -> IPC Manager */
-        RINA_C_IPCM_IPC_PROCESS_REGISTERED_TO_DIF_NOTIFICATION, /* IPC Manager -> IPC Process */
-        RINA_C_IPCM_IPC_PROCESS_UNREGISTERED_FROM_DIF_NOTIFICATION, /* TODO IPC Manager -> IPC Process */
+        RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION, /* IPC Manager -> IPC Process */
         RINA_C_IPCM_ENROLL_TO_DIF_REQUEST, /* TODO IPC Manager -> IPC Process */
         RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE, /* TODO IPC Process -> IPC Manager */
         RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST, /* TODO IPC Manager -> IPC Process */
@@ -646,7 +645,7 @@ public:
 	IpcmAllocateFlowResponseMessage();
 };
 
-class IpcmIPCProcessRegisteredToDIFNotification:
+class IpcmDIFRegistrationNotification:
 		public NetlinkRequestOrNotificationMessage {
 	/** The name of the IPC Process registered to the N-1 DIF */
 	ApplicationProcessNamingInformation ipcProcessName;
@@ -654,16 +653,23 @@ class IpcmIPCProcessRegisteredToDIFNotification:
 	/** The name of the N-1 DIF where the IPC Process has been registered*/
 	ApplicationProcessNamingInformation difName;
 
+	/**
+	 * If true the IPC Process has been registered, if false,
+	 * it has been unregistered
+	 */
+	bool registered;
+
 public:
-	IpcmIPCProcessRegisteredToDIFNotification();
+	IpcmDIFRegistrationNotification();
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
 	const ApplicationProcessNamingInformation& getIpcProcessName() const;
 	void setIpcProcessName(
 			const ApplicationProcessNamingInformation& ipcProcessName);
+	void setRegistered(bool registered);
+	bool isRegistered() const;
 	IPCEvent* toIPCEvent();
 };
-
 }
 
 #endif /* NETLINK_MESSAGES_H_ */

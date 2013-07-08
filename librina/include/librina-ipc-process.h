@@ -68,10 +68,9 @@ public:
 };
 
 /**
- * The IPC Manager informs the IPC Process that it has been subscribed
- * to an N-1 DIF
+ * Supporting class for IPC Process DIF Registration events
  */
-class IPCProcessRegisteredToDIFEvent: public IPCEvent {
+class IPCProcessDIFRegistrationEvent: public IPCEvent {
 
 	/** The name of the IPC Process registered to the N-1 DIF */
 	ApplicationProcessNamingInformation ipcProcessName;
@@ -80,12 +79,36 @@ class IPCProcessRegisteredToDIFEvent: public IPCEvent {
 	ApplicationProcessNamingInformation difName;
 
 public:
-	IPCProcessRegisteredToDIFEvent(
+	IPCProcessDIFRegistrationEvent(IPCEventType eventType,
 			const ApplicationProcessNamingInformation& ipcProcessName,
 			const ApplicationProcessNamingInformation& difName,
 			unsigned int sequenceNumber);
 	const ApplicationProcessNamingInformation& getIPCProcessName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
+};
+
+/**
+ * The IPC Manager informs the IPC Process that it has been registered
+ * to an N-1 DIF
+ */
+class IPCProcessRegisteredToDIFEvent: public IPCProcessDIFRegistrationEvent{
+public:
+	IPCProcessRegisteredToDIFEvent(
+			const ApplicationProcessNamingInformation& ipcProcessName,
+			const ApplicationProcessNamingInformation& difName,
+			unsigned int sequenceNumber);
+};
+
+/**
+ * The IPC Manager informs the IPC Process that it has been unregistered
+ * from an N-1 DIF
+ */
+class IPCProcessUnregisteredFromDIFEvent: public IPCProcessDIFRegistrationEvent{
+public:
+	IPCProcessUnregisteredFromDIFEvent(
+			const ApplicationProcessNamingInformation& ipcProcessName,
+			const ApplicationProcessNamingInformation& difName,
+			unsigned int sequenceNumber);
 };
 
 /**

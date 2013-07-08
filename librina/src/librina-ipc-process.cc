@@ -66,21 +66,40 @@ AssignToDIFRequestEvent::getDIFConfiguration() const{
 	return difConfiguration;
 }
 
-/* CLASS IPC PROCESS REGISTERED TO DIF EVENT */
-IPCProcessRegisteredToDIFEvent::IPCProcessRegisteredToDIFEvent(
+/* CLASS IPC PROCESS DIF REGISTRATION EVENT */
+IPCProcessDIFRegistrationEvent::IPCProcessDIFRegistrationEvent(
+		IPCEventType eventType,
 		const ApplicationProcessNamingInformation& ipcProcessName,
 		const ApplicationProcessNamingInformation& difName,
-		unsigned int sequenceNumber): IPCEvent(IPC_PROCESS_REGISTERED_TO_DIF, sequenceNumber){
+		unsigned int sequenceNumber): IPCEvent(eventType, sequenceNumber){
 }
 
 const ApplicationProcessNamingInformation&
-IPCProcessRegisteredToDIFEvent::getIPCProcessName() const{
+IPCProcessDIFRegistrationEvent::getIPCProcessName() const{
 	return ipcProcessName;
 }
 
 const ApplicationProcessNamingInformation&
-IPCProcessRegisteredToDIFEvent::getDIFName() const{
+IPCProcessDIFRegistrationEvent::getDIFName() const{
 	return difName;
+}
+
+/* CLASS IPC PROCESS REGISTERED TO DIF EVENT */
+IPCProcessRegisteredToDIFEvent::IPCProcessRegisteredToDIFEvent(
+		const ApplicationProcessNamingInformation& ipcProcessName,
+		const ApplicationProcessNamingInformation& difName,
+		unsigned int sequenceNumber): IPCProcessDIFRegistrationEvent(
+				IPC_PROCESS_REGISTERED_TO_DIF, ipcProcessName,
+				difName, sequenceNumber){
+}
+
+/* CLASS IPC PROCESS UNREGISTERED FROM DIF EVENT */
+IPCProcessUnregisteredFromDIFEvent::IPCProcessUnregisteredFromDIFEvent(
+		const ApplicationProcessNamingInformation& ipcProcessName,
+		const ApplicationProcessNamingInformation& difName,
+		unsigned int sequenceNumber): IPCProcessDIFRegistrationEvent(
+				IPC_PROCESS_UNREGISTERED_FROM_DIF, ipcProcessName,
+				difName, sequenceNumber){
 }
 
 /* CLASS EXTENDED IPC MANAGER */

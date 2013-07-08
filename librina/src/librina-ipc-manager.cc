@@ -125,11 +125,12 @@ void IPCProcess::notifyRegistrationToSupportingDIF(
 #if STUB_API
 	//Do nothing
 #else
-	IpcmIPCProcessRegisteredToDIFNotification message;
+	IpcmDIFRegistrationNotification message;
 	message.setIpcProcessName(ipcProcessName);
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setDifName(difName);
+	message.setRegistered(true);
 	message.setNotificationMessage(true);
 
 	try{
@@ -137,15 +138,31 @@ void IPCProcess::notifyRegistrationToSupportingDIF(
 	}catch(NetlinkException &e){
 		throw IPCException(e.what());
 	}
-
 #endif
 }
 
 void IPCProcess::notifyUnregistrationFromSupportingDIF(
+		const ApplicationProcessNamingInformation& ipcProcessName,
 		const ApplicationProcessNamingInformation& difName)
 		throw (IPCException) {
 	LOG_DBG("IPCProcess::notify unregistration from supporting DIF called");
-	throw IPCException(IPCException::operation_not_implemented_error);
+#if STUB_API
+	//Do nothing
+#else
+	IpcmDIFRegistrationNotification message;
+	message.setIpcProcessName(ipcProcessName);
+	message.setDestIpcProcessId(id);
+	message.setDestPortId(portId);
+	message.setDifName(difName);
+	message.setRegistered(false);
+	message.setNotificationMessage(true);
+
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&message);
+	}catch(NetlinkException &e){
+		throw IPCException(e.what());
+	}
+#endif
 }
 
 void IPCProcess::enroll(const ApplicationProcessNamingInformation& difName,

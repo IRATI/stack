@@ -801,36 +801,49 @@ IpcmAllocateFlowResponseMessage::IpcmAllocateFlowResponseMessage():
 }
 
 /* CLASS IPCM IPC PROCESS REGISTERED TO DIF NOTIFICATION MESSAGE */
-IpcmIPCProcessRegisteredToDIFNotification::
-IpcmIPCProcessRegisteredToDIFNotification():
-NetlinkRequestOrNotificationMessage(
-		RINA_C_IPCM_IPC_PROCESS_REGISTERED_TO_DIF_NOTIFICATION){
+IpcmDIFRegistrationNotification::
+IpcmDIFRegistrationNotification():NetlinkRequestOrNotificationMessage(
+		RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION){
+	registered = false;
 }
 
 const ApplicationProcessNamingInformation&
-IpcmIPCProcessRegisteredToDIFNotification::getDifName() const {
+IpcmDIFRegistrationNotification::getDifName() const {
 	return difName;
 }
 
-void IpcmIPCProcessRegisteredToDIFNotification::setDifName(
+void IpcmDIFRegistrationNotification::setDifName(
 		const ApplicationProcessNamingInformation& difName) {
 	this->difName = difName;
 }
 
 const ApplicationProcessNamingInformation&
-IpcmIPCProcessRegisteredToDIFNotification::getIpcProcessName() const {
+IpcmDIFRegistrationNotification::getIpcProcessName() const {
 	return ipcProcessName;
 }
 
-void IpcmIPCProcessRegisteredToDIFNotification::setIpcProcessName(
+void IpcmDIFRegistrationNotification::setIpcProcessName(
 		const ApplicationProcessNamingInformation& ipcProcessName) {
 	this->ipcProcessName = ipcProcessName;
 }
 
-IPCEvent* IpcmIPCProcessRegisteredToDIFNotification::toIPCEvent(){
-	IPCProcessRegisteredToDIFEvent * event =
-			new IPCProcessRegisteredToDIFEvent(ipcProcessName, difName,
+void IpcmDIFRegistrationNotification::setRegistered(bool registered){
+	this->registered = registered;
+}
+
+bool IpcmDIFRegistrationNotification::isRegistered() const{
+	return registered;
+}
+
+IPCEvent* IpcmDIFRegistrationNotification::toIPCEvent(){
+	IPCEvent * event;
+	if (registered){
+		event = new IPCProcessRegisteredToDIFEvent(ipcProcessName, difName,
 					getSequenceNumber());
+	}else{
+		event = new IPCProcessUnregisteredFromDIFEvent(ipcProcessName, difName,
+							getSequenceNumber());
+	}
 
 	return event;
 }
