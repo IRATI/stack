@@ -33,6 +33,7 @@
 #include "utils.h"
 #include "kipcm.h"
 #include "shim.h"
+#include "shim-utils.h"
 
 struct shim_instance_data {
         ipc_process_id_t ipc_process_id;
@@ -238,20 +239,17 @@ static int dummy_destroy(struct shim_data *     data,
                          struct shim_instance * inst)
 {
 	struct shim_instance_data * pos, * next;
-	struct dummy_flow         * pos_flow, * next_flow;
 
 	ASSERT(data);
 	ASSERT(inst);
 
 	list_for_each_entry_safe(pos, next, &data->shim_list, list) {
-		list_del(&pos->list);
-		list_for_each_entry_safe(pos_flow,
-					 next_flow, &pos->flows, list) {
-			list_del(&pos_flow->list);
-			rkfree(pos_flow);
+		if (inst->data->ipc_process_id == pos->ipc_process_id) {
+			list_del(&pos->list);
+			rkfree(pos);
 		}
-		rkfree(pos);
 	}
+
 	return 0;
 }
 
