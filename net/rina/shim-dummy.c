@@ -89,11 +89,16 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
         if (!flow)
                 return -1;
 
-        if(name_dup(&(flow->dest),dest)) {
+        flow->dest = name_dup(dest);
+        if(!flow->dest) {
+        	rkfree(flow);
 		LOG_ERR("Name copy failed");
 		return -1;
 	}
-	if(name_dup(&(flow->source),source)) {
+        flow->source = name_dup(source);
+	if(!flow->source) {
+		rkfree(flow->dest);
+		rkfree(flow);
 		LOG_ERR("Name copy failed");
 		return -1;
 	}
@@ -124,8 +129,9 @@ static int dummy_flow_deallocate(struct shim_instance_data * data,
 		return -1;
 	}
 
-	name_kfree(&(flow->dest));
-	name_kfree(&(flow->source));
+	list_del(&flow->list);
+	name_fini(flow->dest);
+	name_fini(flow->source);
 	rkfree(flow);
 
 	return 0;
