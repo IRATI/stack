@@ -24,20 +24,11 @@
 
 #include "common.h"
 
-/* FIXME: Old API, to be removed */
-int name_kmalloc(struct name ** dst);
-int name_dup(struct name ** dst, const struct name * src);
-int name_cpy(struct name ** dst, const struct name * src);
-int name_kfree(struct name ** dst);
-
-#if 0
-/* FIXME: New API, to be added */
-
 /*
  * Allocates a new name, returning the allocated object. In case of an error, a
  * NULL is returned.
  */
-struct name * name_alloc(void);
+struct name * name_create(void);
 
 /*
  * Initializes a previously dynamically allocated name (i.e. name_alloc())
@@ -53,6 +44,12 @@ struct name * name_init(struct name *    dst,
                         const string_t * entity_name,
                         const string_t * entity_instance);
 
+/*
+ * Finalize a name object, releasing all the embedded resources (without
+ * releasing the object itself)
+ */
+void          name_fini(struct name * dst);
+
 /* This function performs as name_alloc() and name_init() */
 struct name * name_alloc_and_init(const string_t * process_name,
                                   const string_t * process_instance,
@@ -60,7 +57,7 @@ struct name * name_alloc_and_init(const string_t * process_name,
                                   const string_t * entity_instance);
 
 /* Releases all the associated resources bound to a name object */
-void          name_free(struct name * ptr);
+void          name_destroy(struct name * ptr);
 
 /* Duplicates a name object, returning the pointer to the new object */
 struct name * name_dup(const struct name * src);
@@ -69,7 +66,5 @@ struct name * name_dup(const struct name * src);
  * Copies the source object contents into the destination object, both must
  * be previously allocated. Returns 
  */
-int           name_cpy(const struct name * src, const struct name * dst);
-#endif
-
+int           name_cpy(const struct name * src, struct name * dst);
 #endif
