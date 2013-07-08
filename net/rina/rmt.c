@@ -25,6 +25,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "rmt.h"
+#include "debug.h"
 
 struct rmt_descriptor {
         void * this_is_dummy;
@@ -49,7 +50,7 @@ int rmt_fini(void * opaque)
 
         ASSERT(opaque);
 
-        kfree(opaque);
+        rkfree(opaque);
 
         return 0;
 }

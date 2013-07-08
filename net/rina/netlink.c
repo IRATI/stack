@@ -23,6 +23,7 @@
 
 #include "logs.h"
 #include "utils.h"
+#include "debug.h"
 #include "netlink.h"
 
 /* FIXME: This define (and its related code) has to be removed */
@@ -482,7 +483,7 @@ int rina_netlink_set_destroy(struct rina_nl_set * set)
                 return -1;
         }
 
-        kfree(set);
+        rkfree(set);
         return 0;
 }
 EXPORT_SYMBOL(rina_netlink_set_destroy);

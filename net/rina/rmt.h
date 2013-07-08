@@ -28,11 +28,10 @@ struct rmt_conf_t {
 	/* To do, only a placeholder right now */
 };
 
-struct rmt_instance_t {
+struct rmt_instance {
 	/* This structure holds per-RMT instance data */
 
 	/* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
-	struct rmt_instance_config_t * configuration;
 
 	/*
          * The PDU-FT access might change in future prototypes but

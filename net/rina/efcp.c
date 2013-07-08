@@ -25,6 +25,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "efcp.h"
+#include "debug.h"
 
 struct efcp_descriptor {
         int this_is_dummy;
@@ -48,14 +49,14 @@ int efcp_fini(void * opaque)
         LOG_DBG("Finalizing instance %pK", opaque);
 
         ASSERT(opaque);
-        kfree(opaque);
+        rkfree(opaque);
 
         return 0;
 }
 
-int efcp_write(void *               opaque,
-               port_id_t            id,
-               const struct sdu_t * sdu)
+int efcp_write(void *             opaque,
+               port_id_t          id,
+               const struct sdu * sdu)
 {
         LOG_DBG("Written SDU");
 
@@ -63,15 +64,15 @@ int efcp_write(void *               opaque,
 }
 
 int efcp_receive_pdu(void *       opaque,
-                     struct pdu_t pdu)
+                     struct pdu * pdu)
 {
         LOG_DBG("PDU received in the EFCP");
 
         return 0;
 }
 
-cep_id_t efcp_create(void *                      opaque,
-                     const struct connection_t * connection)
+cep_id_t efcp_create(void *                    opaque,
+                     const struct connection * connection)
 {
         LOG_DBG("EFCP instance created");
 
@@ -87,8 +88,8 @@ int efcp_destroy(void *   opaque,
 }
 
 int efcp_update(void *   opaque,
-                cep_id_t id_from,
-                cep_id_t id_to)
+                cep_id_t from,
+                cep_id_t to)
 {
         LOG_DBG("EFCP instance updated");
 

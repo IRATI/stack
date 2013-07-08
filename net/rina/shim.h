@@ -54,29 +54,29 @@ struct shim_instance_data;
 
 struct shim_instance_ops {
 	int  (* flow_allocate_request)(struct shim_instance_data * data,
-                                       const struct name_t *       source,
-                                       const struct name_t *       dest,
-                                       const struct flow_spec_t *  flow_spec,
-                                       port_id_t *                 id);
+                                       const struct name *         source,
+                                       const struct name *         dest,
+                                       const struct flow_spec *    flow_spec,
+                                       port_id_t                   id);
 	int  (* flow_allocate_response)(struct shim_instance_data * data,
                                         port_id_t                   id,
                                         response_reason_t *         response);
 	int  (* flow_deallocate)(struct shim_instance_data * data,
                                  port_id_t                   id);
 
-	int  (* application_register)(struct shim_instance_data * data,
-                                      const struct name_t *       name);
+	int  (* application_register)(struct shim_instance_data *   data,
+                                      const struct name *           source);
 	int  (* application_unregister)(struct shim_instance_data * data,
-                                        const struct name_t *       name);
+                                        const struct name *         source);
 
 	int  (* sdu_write)(struct shim_instance_data * data,
                            port_id_t                   id,
-                           const struct sdu_t *        sdu);
+                           const struct sdu *          sdu);
 
         /* FIXME: sdu_read will be removed */
         int  (* sdu_read)(struct shim_instance_data * data,
                           port_id_t                   id,
-                          struct sdu_t *              sdu);
+                          struct sdu *                sdu);
 };
 
 struct shim_instance {
@@ -119,6 +119,7 @@ struct shims {
 /* Called by the kipcm, might disappear */
 struct shims * shims_init(struct kobject * parent);
 int            shims_fini(struct shims * shims);
+uint32_t       shims_version(void);
 
 /* Called (once) by each shim module upon loading/unloading */
 struct shim *  shim_register(struct shims *          parent,

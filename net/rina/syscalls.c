@@ -29,6 +29,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "personality.h"
+#include "debug.h"
 
 #define CALL_PERSONALITY(PERS, HOOK, ARGS...)                           \
         do {                                                            \
@@ -55,16 +56,13 @@
                 return PERS -> ops -> HOOK (PERS->data, ##ARGS);        \
         } while (0)
 
-/* FIXME: To be removed ASAP */
-extern struct personality * default_personality;
-
 #define CALL_DEFAULT_PERSONALITY(HOOK, ARGS...)                 \
         CALL_PERSONALITY(default_personality, HOOK, ##ARGS)
 
 SYSCALL_DEFINE3(ipc_create,
-                const struct name_t __user *, name,
-                ipc_process_id_t,             id,
-                dif_type_t,                   type)
+                const struct name __user *, name,
+                ipc_process_id_t,           id,
+                dif_type_t,                 type)
 { CALL_DEFAULT_PERSONALITY(ipc_create, name, id, type); }
 
 SYSCALL_DEFINE2(ipc_configure,
@@ -77,17 +75,17 @@ SYSCALL_DEFINE1(ipc_destroy,
 { CALL_DEFAULT_PERSONALITY(ipc_destroy, id); }
 
 SYSCALL_DEFINE2(sdu_read,
-                port_id_t,             id,
-                struct sdu_t __user *, sdu)
+                port_id_t,           id,
+                struct sdu __user *, sdu)
 { CALL_DEFAULT_PERSONALITY(sdu_read, id, sdu); }
 
 SYSCALL_DEFINE2(sdu_write,
-                port_id_t,                   id,
-                const struct sdu_t __user *, sdu)
+                port_id_t,                 id,
+                const struct sdu __user *, sdu)
 { CALL_DEFAULT_PERSONALITY(sdu_write, id, sdu); }
 
 SYSCALL_DEFINE1(connection_create,
-                const struct connection_t __user *, connection)
+                const struct connection __user *, connection)
 { CALL_DEFAULT_PERSONALITY(connection_create, connection); }
 
 SYSCALL_DEFINE1(connection_destroy,

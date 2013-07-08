@@ -27,24 +27,16 @@
 
 #include "logs.h"
 #include "debug.h"
-#include "rina.h"
 #include "netlink.h"
 #include "personality.h"
+#include "utils.h"
 
-static uint32_t      version   = MK_RINA_VERSION(0, 0, 3);
 static struct kset * root_kset = NULL;
+static uint32_t      version   = MK_RINA_VERSION(0, 0, 4);
 
 uint32_t rina_version(void)
 { return version; }
 EXPORT_SYMBOL(rina_version);
-
-#define RINA_ATTR_RO(NAME)                              \
-        static struct kobj_attribute NAME##_attr =      \
-		 __ATTR_RO(NAME)
-
-#define RINA_ATTR_RW(NAME)                                      \
-        static struct kobj_attribute NAME##_attr =              \
-		__ATTR(NAME, 0644, NAME##show, NAME##store)
 
 static ssize_t version_show(struct kobject *        kobj,
                             struct kobj_attribute * attr,

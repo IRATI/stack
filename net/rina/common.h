@@ -58,19 +58,16 @@ struct buffer_t {
 };
 
 /* This structure represents a SDU is */
-struct sdu_t {
+struct sdu {
         struct buffer_t * buffer;
 };
 
-struct uint_range_t {
-	/* Minimum value */
-	uint_t min_value;
-
-	/* Maximum value */
-	uint_t max_value;
+struct uint_range {
+	uint_t min;
+	uint_t max;
 };
 
-struct name_t {
+struct name {
 	/*
 	 * The process_name identifies an application process within the
 	 * application process namespace. This value is required, it
@@ -101,64 +98,64 @@ struct name_t {
 	string_t * entity_instance;
 };
 
-struct flow_spec_t {
+struct flow_spec {
 	/* This structure defines the characteristics of a flow */
 
 	/* Average bandwidth in bytes/s */
-	struct uint_range_t *average_bandwidth;
+	struct uint_range * average_bandwidth;
 	/* Average bandwidth in SDUs/s */
-	struct uint_range_t *average_sdu_bandwidth;
+	struct uint_range * average_sdu_bandwidth;
 	/* In milliseconds */
-	struct uint_range_t *peak_bandwidth_duration;
+	struct uint_range * peak_bandwidth_duration;
 	/* In milliseconds */
-	struct uint_range_t *peak_sdu_bandwidth_duration;
+	struct uint_range * peak_sdu_bandwidth_duration;
 
 	/* A value of 0 indicates 'do not care' */
-	double               undetected_bit_error_rate;
+	double              undetected_bit_error_rate;
 	/* Indicates if partial delivery of SDUs is allowed or not */
-	bool_t               partial_delivery;
+	bool_t              partial_delivery;
 	/* Indicates if SDUs have to be delivered in order */
-	bool_t               ordered_delivery;
+	bool_t              ordered_delivery;
 	/*
 	 * Indicates the maximum gap allowed among SDUs, a gap of N
 	 * SDUs is considered the same as all SDUs delivered.
 	 * A value of -1 indicates 'Any'
 	 */
-	int                  max_allowable_gap;
+	int                 max_allowable_gap;
 	/*
 	 * In milliseconds, indicates the maximum delay allowed in this
 	 * flow. A value of 0 indicates 'do not care'
 	 */
-	uint_t               delay;
+	uint_t              delay;
 	/*
 	 * In milliseconds, indicates the maximum jitter allowed
 	 * in this flow. A value of 0 indicates 'do not care'
 	 */
-	uint_t               jitter;
+	uint_t              jitter;
 	/*
 	 * The maximum SDU size for the flow. May influence the choice
 	 * of the DIF where the flow will be created.
 	 */
-	uint_t               max_sdu_size;
+	uint_t              max_sdu_size;
 };
 
-struct pci_t {
-	address_t source;
-	address_t destination;
+struct pci {
+	address_t  source;
+	address_t  destination;
 	pdu_type_t type;
-	cep_id_t source_cep_id;
-	cep_id_t dest_cep_id;
-	qos_id_t qos_id;
-	seq_num_t sequence_number;
+	cep_id_t   source_cep_id;
+	cep_id_t   dest_cep_id;
+	qos_id_t   qos_id;
+	seq_num_t  sequence_number;
 };
 
-struct pdu_t {
-	struct pci_t    *pci;
-	struct buffer_t *buffer;
+struct pdu {
+	struct pci *      pci;
+	struct buffer_t * buffer;
 };
 
 /* This structure defines an EFCP connection */
-struct connection_t {
+struct connection {
 	/* The port_id this connection is bound to */
 	port_id_t port_id;
 	

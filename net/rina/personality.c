@@ -28,6 +28,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "personality.h"
+#include "debug.h"
 
 /* FIXME: Bogus, to be removed ASAP */
 struct personality * default_personality = NULL;
@@ -221,7 +222,7 @@ struct personality * rina_personality_register(const char *              name,
                  * FIXME: To be removed once personality_ktype.release
                  * gets implemented
                  */
-                kfree(pers);
+                rkfree(pers);
                 return NULL;
         }
 
@@ -235,7 +236,7 @@ struct personality * rina_personality_register(const char *              name,
                 if (pers->ops->init(&pers->kobj, pers->id, pers->data)) {
                         LOG_ERR("Could not initialize personality '%s'", name);
                         kobject_put(&pers->kobj);
-                        kfree(pers); /* FIXME: As the note before */
+                        rkfree(pers); /* FIXME: As the note before */
                         return NULL;
                 }
                 LOG_DBG("Personality '%s' initialized successfully", name);
@@ -291,10 +292,10 @@ int rina_personality_unregister(struct personality * pers)
                         LOG_DBG("Personality '%s' finalized successfully",
                                 name);
         }
-        if (pers->data)
-                kfree(pers->data);
+
         id_put(pers->id);
 
+        /* Do not use name after this point */
         kobject_put(&pers->kobj);
 
         if (default_personality == pers) {
@@ -302,7 +303,7 @@ int rina_personality_unregister(struct personality * pers)
                 default_personality = 0;
         }
 
-        kfree(pers); /* FIXME: To be removed */
+        rkfree(pers); /* FIXME: To be removed */
 
         LOG_DBG("Personality unregistered successfully");
 

@@ -29,6 +29,7 @@
 #include "utils.h"
 #include "shim.h"
 #include "kipcm.h"
+#include "debug.h"
 
 static ssize_t shim_show(struct kobject *   kobj,
                          struct attribute * attr,
@@ -77,7 +78,8 @@ int shims_fini(struct shims * shims)
                 return -1;
         }
 
-        /* FIXME: Check pending objects and flush 'em all */
+        /* All the shims have to be unregistered from now on */
+        ASSERT(list_empty(&shims->set->list));
 
         kset_unregister(shims->set);
 
@@ -85,6 +87,20 @@ int shims_fini(struct shims * shims)
 
         return 0;
 }
+
+/*
+ * NOTE:
+ *
+ *   The shims API might change regardless the core version. The core API is
+ *   the northboud API which separates RINA from the user-space. The shim API
+ *   is the southbound one which separate the RINA stack from the shims.
+ *
+ *     Francesco
+ */
+static uint32_t version = MK_RINA_VERSION(0, 0, 4);
+
+uint32_t shims_version(void)
+{ return version; }
 
 static int is_name_ok(const char * name)
 {
@@ -192,7 +208,7 @@ struct shim * shim_register(struct shims *          parent,
                  * FIXME: To be removed once shim_ktype.release
                  * gets implemented
                  */
-                kfree(shim);
+                rkfree(shim);
                 return NULL;
         }
 
@@ -237,7 +253,7 @@ int shim_unregister(struct shims * parent,
 
         kobject_put(&shim->kobj);
 
-        kfree(shim); /* FIXME: To be removed */
+        rkfree(shim); /* FIXME: To be removed */
 
         LOG_DBG("Shim unregistered successfully");
 
