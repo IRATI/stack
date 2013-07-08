@@ -22,13 +22,12 @@
 #ifndef RINA_NETLINK_H
 #define RINA_NETLINK_H
 
-#include <linux/module.h>
-#include <net/sock.h>
 #include <linux/netlink.h>
-#include <net/netlink.h>
 #include <linux/genetlink.h>
-#include <net/genetlink.h>
 #include <linux/skbuff.h>
+#include <net/genetlink.h>
+#include <net/netlink.h>
+#include <net/sock.h>
 
 #include "personality.h"
 

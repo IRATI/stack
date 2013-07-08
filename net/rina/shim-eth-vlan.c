@@ -210,6 +210,7 @@ static int eth_vlan_init(struct shim_data * data)
 
 static int eth_vlan_fini(struct shim_data * data)
 {
+
         ASSERT(data);
 
         ASSERT(list_empty(&(data->instances)));
