@@ -75,6 +75,10 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
 {
         struct dummy_flow *         flow;
 
+        ASSERT(data);
+        ASSERT(source);
+        ASSERT(dest);
+
         if (find_flow(data, id)) {
         	LOG_ERR("Flow already exists");
         	return -1;
@@ -84,6 +88,14 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
         if (!flow)
                 return -1;
 
+        if(name_dup(&(flow->dest),dest)) {
+		LOG_ERR("Name copy failed");
+		return -1;
+	}
+	if(name_dup(&(flow->source),source)) {
+		LOG_ERR("Name copy failed");
+		return -1;
+	}
         /* FIXME: Now we should ask the destination application for a flow */
 
         flow->dest = dest;
