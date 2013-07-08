@@ -96,14 +96,19 @@ static int empty_flow_allocate_request(struct shim_instance_data * data,
         }
         flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
 	
-	if(name_dup(&(flow->dest),dest)) {
-		LOG_ERR("Name copy failed");
+        source = name_dup(flow->source);
+        if (!source) {
+                rkfree(flow);
 		return -1;
 	}
-	if(name_dup(&(flow->source),source)) {
-		LOG_ERR("Name copy failed");
+
+        dest = name_dup(flow->dest);
+	if (!dest) {
+                name_destroy(source);
+                rkfree(flow);
 		return -1;
 	}
+
 	flow->port_id = id;
 
 	INIT_LIST_HEAD(&flow->list);
