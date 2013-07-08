@@ -98,8 +98,6 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
 	}
         /* FIXME: Now we should ask the destination application for a flow */
 
-        flow->dest = dest;
-        flow->source = source;
         flow->port_id = id;
 
         INIT_LIST_HEAD(&flow->list);
@@ -115,7 +113,22 @@ static int dummy_flow_allocate_response(struct shim_instance_data * data,
 
 static int dummy_flow_deallocate(struct shim_instance_data * data,
                                  port_id_t                   id)
-{ return -1; }
+{
+	struct dummy_flow * flow;
+
+	ASSERT(data);
+	flow = find_flow(data, id);
+	if (!flow) {
+		LOG_ERR("Flow does not exist, cannot remove");
+		return -1;
+	}
+
+	name_kfree(&(flow->dest));
+	name_kfree(&(flow->source));
+	rkfree(flow);
+
+	return 0;
+}
 
 static int dummy_application_register(struct shim_instance_data * data,
                                       const struct name *         source)
