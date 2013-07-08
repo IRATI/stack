@@ -47,10 +47,10 @@ struct shim_instance_data {
 };
 
 struct dummy_flow {
-        port_id_t           port_id;
-        const struct name * source;
-        const struct name * dest;
-        struct list_head    list;
+        port_id_t        port_id;
+        struct name *    source;
+        struct name *    dest;
+        struct list_head list;
 };
 
 static struct dummy_flow * find_flow(struct shim_instance_data * data,
