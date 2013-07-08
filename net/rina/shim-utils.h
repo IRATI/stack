@@ -46,7 +46,8 @@ struct name * name_init(struct name *    dst,
 
 /*
  * Finalize a name object, releasing all the embedded resources (without
- * releasing the object itself)
+ * releasing the object itself). After name_fini() execution the passed
+ * object will be in the same states as at the end of name_init().
  */
 void          name_fini(struct name * dst);
 

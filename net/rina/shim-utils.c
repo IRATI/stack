@@ -33,13 +33,24 @@ struct name * name_create(void)
 { return rkzalloc(sizeof(struct name), GFP_KERNEL); }
 EXPORT_SYMBOL(name_create);
 
-/* No needs to export this symbol for the time being */
+/*
+ * NOTE:
+ *
+ * No needs to export this symbol for the time being. string_* related
+ * utilities might be grouped here and moved into their own placeholder
+ * later on (as well as all the "common" utilities)
+ *
+ *   Francesco
+ */
 static int string_dup(const string_t * src, string_t ** dst)
 {
-        ASSERT(src);
+        /*
+         * An empty source is allowed (ref. the chain of calls), it must
+         * provoke no consequeunces
+         */
         ASSERT(dst);
 
-        if (*src) {
+        if (src) {
                 *dst = kstrdup(src, GFP_KERNEL);
                 if (!*dst) {
                         LOG_ERR("Cannot duplicate source string");
@@ -52,6 +63,18 @@ static int string_dup(const string_t * src, string_t ** dst)
         return 0;
 }
 
+static int name_is_initialized(struct name * dst)
+{
+        ASSERT(dst);
+
+        if (!dst->process_name     &&
+            !dst->process_instance &&
+            !dst->entity_name      &&
+            !dst->entity_instance)
+                return 1;
+        return 0;
+}
+
 struct name * name_init(struct name *    dst,
                         const string_t * process_name,
                         const string_t * process_instance,
@@ -60,7 +83,10 @@ struct name * name_init(struct name *    dst,
 {
         ASSERT(dst);
 
+        /* Clean up the destination, it may have leftovers */
         name_fini(dst);
+
+        ASSERT(name_is_initialized(dst));
 
         if (string_dup(process_name, &dst->process_name)) {
                 name_fini(dst);
@@ -85,6 +111,8 @@ EXPORT_SYMBOL(name_init);
 
 void name_fini(struct name * n)
 {
+        ASSERT(n);
+
         if (n->process_name) {
                 rkfree(n->process_name);
                 n->process_name = NULL;
@@ -109,6 +137,9 @@ void name_destroy(struct name * ptr)
         ASSERT(ptr);
 
         name_fini(ptr);
+
+        ASSERT(name_is_initialized(ptr));
+
         rkfree(ptr);
 }
 EXPORT_SYMBOL(name_destroy);
@@ -144,19 +175,13 @@ int name_cpy(const struct name * src, struct name * dst)
 
         name_fini(dst);
 
-        if (string_dup(src->process_name, &dst->process_name)) {
-                name_fini(dst);
-                return -1;
-        }
-        if (string_dup(src->process_instance, &dst->process_instance)) {
-                name_fini(dst);
-                return -1;
-        }
-        if (string_dup(src->entity_name, &dst->entity_name)) {
-                name_fini(dst);
-                return -1;
-        }
-        if (string_dup(src->entity_instance, &dst->entity_instance)) {
+        ASSERT(name_is_initialized(dst));
+
+        /* We rely on short-boolean evaluation ... :-) */
+        if (string_dup(src->process_name,     &dst->process_name)     ||
+            string_dup(src->process_instance, &dst->process_instance) ||
+            string_dup(src->entity_name,      &dst->entity_name)      ||
+            string_dup(src->entity_instance,  &dst->entity_instance)) {
                 name_fini(dst);
                 return -1;
         }
