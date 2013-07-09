@@ -29,9 +29,6 @@
 /* FIXME: This define (and its related code) has to be removed */
 #define TESTING 0
 
-/*  FIXME: Fake ipc process id to get default personality */
-#define RINA_FAKE_IPCP_ID 0
-
 #define NETLINK_RINA "rina"
 
 /* attributes */
@@ -45,6 +42,8 @@ enum {
 };
 
 #define NETLINK_RINA_A_MAX (NETLINK_RINA_A_MAX - 1)
+
+#define NETLINK_RINA_C_MIN (RINA_C_MIN + 1)
 #define NETLINK_RINA_C_MAX (RINA_C_MAX - 1)
 
 struct message_handler {
@@ -56,6 +55,8 @@ struct rina_nl_set {
 	struct message_handler messages_handlers[NETLINK_RINA_C_MAX];
 };
 
+static struct rina_nl_set * rina_default_nl_set;
+
 static struct genl_family nl_family = {
         .id      = GENL_ID_GENERATE,
         .hdrsize = 0,
@@ -64,16 +65,9 @@ static struct genl_family nl_family = {
         .maxattr = NETLINK_RINA_A_MAX, /* ??? */
 };
 
-static int is_message_type_in_range(int msg_type, int min_value, int max_value)
-{ return ((msg_type < min_value || msg_type >= max_value) ? 0 : 1); }
 
-
-/*  FIXME: Must return default personality's set */
-static struct rina_nl_set * ipc_id_to_personality_set(int ipcp_id)
-{
-	struct rina_nl_set *pset;
-	return pset;
-}
+static int is_message_type_in_range(msg_id msg_type)
+{ return is_value_in_range(msg_type, NETLINK_RINA_C_MIN, NETLINK_RINA_C_MAX); }
 
 static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 {
@@ -86,7 +80,7 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 
         message_handler_cb cb_function;
         void *             data;
-        int                msg_type;
+        msg_id             msg_type;
         int                ret_val;
 	struct rina_nl_set *pset;
 
@@ -103,17 +97,17 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
                 return -1;
         }
 
-        msg_type = info->genlhdr->cmd;
+        msg_type = (msg_id) info->genlhdr->cmd;
         LOG_DBG("Multiplexing message type %d", msg_type);
 
-        if (!is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX)) {
+        if (!is_message_type_in_range(msg_type)) {
                 LOG_ERR("Wrong message type %d received from Netlink, "
                         "bailing out", msg_type);
                 return -1;
         }
-        ASSERT(is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX));
+        ASSERT(is_message_type_in_range(msg_type));
 
-	pset = ipc_id_to_personality_set(RINA_FAKE_IPCP_ID);
+	pset = rina_netlink_get_set();
 	if (!pset)
 		return -1;
 
@@ -405,7 +399,7 @@ static struct genl_ops nl_ops[] = {
 };
 
 int rina_netlink_register_handler(struct rina_nl_set * set,
-                                  int                  msg_type,
+                                  msg_id               msg_type,
                                   void *               data,
                                   message_handler_cb   handler)
 {
@@ -423,14 +417,15 @@ int rina_netlink_register_handler(struct rina_nl_set * set,
                 return -1;
         }
 
-        if (!is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX)) {
+        if (!is_message_type_in_range(msg_type)) {
                 LOG_ERR("Message type %d is out-of-range, "
                         "cannot register", msg_type);
                 return -1;
         }
 
         ASSERT(handler != NULL);
-        ASSERT(msg_type >= 0 && msg_type < NETLINK_RINA_C_MAX);
+        ASSERT(msg_type >= NETLINK_RINA_C_MIN &&
+	       msg_type <= NETLINK_RINA_C_MAX);
 
         if (set->messages_handlers[msg_type].cb) {
                 LOG_ERR("The message handler for message type %d "
@@ -450,7 +445,7 @@ int rina_netlink_register_handler(struct rina_nl_set * set,
 EXPORT_SYMBOL(rina_netlink_register_handler);
 
 int rina_netlink_unregister_handler(struct rina_nl_set * set,
-                                    int                  msg_type)
+                                    msg_id               msg_type)
 {
         if (!set) {
                 LOG_ERR("Bogus set passed, cannot register handler");
@@ -459,12 +454,13 @@ int rina_netlink_unregister_handler(struct rina_nl_set * set,
 
         LOG_DBG("Unregistering handler for message type %d", msg_type);
 
-        if (!is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX)) {
+        if (!is_message_type_in_range(msg_type)) {
                 LOG_ERR("Message type %d is out-of-range, "
                         "cannot unregister", msg_type);
                 return -1;
         }
-        ASSERT(msg_type >= 0 && msg_type < NETLINK_RINA_C_MAX);
+        ASSERT(msg_type >= NETLINK_RINA_C_MIN && 
+	       msg_type < NETLINK_RINA_C_MAX);
 
         bzero(set->messages_handlers[msg_type].cb,
               sizeof(set->messages_handlers[msg_type].cb));
@@ -479,6 +475,26 @@ int rina_netlink_unregister_handler(struct rina_nl_set * set,
         return 0;
 }
 EXPORT_SYMBOL(rina_netlink_unregister_handler);
+
+int rina_netlink_set_register(struct rina_nl_set * set)
+{
+        if (!set) {
+                LOG_ERR("Bogus set passed, cannot register it");
+                return -1;
+        }
+        if (rina_default_nl_set != NULL) {
+                LOG_ERR("Default set already registered");
+                return -2;
+        }
+	rina_default_nl_set = set;
+	return 0;
+}
+EXPORT_SYMBOL(rina_netlink_set_register);
+
+struct rina_nl_set * rina_netlink_get_set(void)
+{
+	return rina_default_nl_set;
+}
 
 struct rina_nl_set * rina_netlink_set_create(personality_id id)
 {

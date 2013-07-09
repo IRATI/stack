@@ -37,6 +37,9 @@
 
 #define bzero(DEST, LEN) do { (void) memset(DEST, 0, LEN); } while (0)
 
+int    is_value_in_range(int value,
+                         int min_value,
+                         int max_value);
 void * rkmalloc(size_t size, gfp_t flags);
 void * rkzalloc(size_t size, gfp_t flags);
 void   rkfree(void * ptr);

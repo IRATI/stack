@@ -39,6 +39,11 @@
  * Francesco
  */
 
+int is_value_in_range(int value,
+                      int min_value,
+                      int max_value)
+{ return ((value >= min_value || value <= max_value) ? 1 : 0); }
+
 void * rkmalloc(size_t size, gfp_t flags)
 {
         void * tmp;
