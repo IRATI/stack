@@ -42,6 +42,8 @@ enum {
 };
 
 #define NETLINK_RINA_A_MAX (NETLINK_RINA_A_MAX - 1)
+
+#define NETLINK_RINA_C_MIN (RINA_C_MIN + 1)
 #define NETLINK_RINA_C_MAX (RINA_C_MAX - 1)
 
 struct message_handler {
@@ -50,11 +52,10 @@ struct message_handler {
 };
 
 struct rina_nl_set {
-        /* FIXME: Must contain the callback table */
+	struct message_handler messages_handlers[NETLINK_RINA_C_MAX];
 };
 
-/* FIXME: Must be moved inside struct rina_nl_set */
-struct message_handler messages_handlers[NETLINK_RINA_C_MAX];
+static struct rina_nl_set * rina_default_nl_set;
 
 static struct genl_family nl_family = {
         .id      = GENL_ID_GENERATE,
@@ -64,10 +65,10 @@ static struct genl_family nl_family = {
         .maxattr = NETLINK_RINA_A_MAX, /* ??? */
 };
 
-static int is_message_type_in_range(int msg_type, int min_value, int max_value)
-{ return ((msg_type < min_value || msg_type >= max_value) ? 0 : 1); }
 
-/* FIXME: Must dispatch a message to a rina_nl_set */
+static int is_message_type_in_range(msg_id msg_type)
+{ return is_value_in_range(msg_type, NETLINK_RINA_C_MIN, NETLINK_RINA_C_MAX); }
+
 static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 {
         /*
@@ -79,8 +80,9 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 
         message_handler_cb cb_function;
         void *             data;
-        int                msg_type;
+        msg_id             msg_type;
         int                ret_val;
+	struct rina_nl_set *pset;
 
         LOG_DBG("Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
 
@@ -95,24 +97,28 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
                 return -1;
         }
 
-        msg_type = info->genlhdr->cmd;
+        msg_type = (msg_id) info->genlhdr->cmd;
         LOG_DBG("Multiplexing message type %d", msg_type);
 
-        if (!is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX)) {
+        if (!is_message_type_in_range(msg_type)) {
                 LOG_ERR("Wrong message type %d received from Netlink, "
                         "bailing out", msg_type);
                 return -1;
         }
-        ASSERT(is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX));
+        ASSERT(is_message_type_in_range(msg_type));
 
-        cb_function = messages_handlers[msg_type].cb;
+	pset = rina_netlink_get_set();
+	if (!pset)
+		return -1;
+
+        cb_function = pset->messages_handlers[msg_type].cb;
         if (!cb_function) {
                 LOG_ERR("There's no handler callback registered for "
                         "message type %d", msg_type);
                 return -1;
         }
 
-        data = messages_handlers[msg_type].data;
+        data = pset->messages_handlers[msg_type].data;
         /* Data might be empty */
 
         ret_val = cb_function(data, skb_in, info);
@@ -158,25 +164,18 @@ static int nl_rina_echo(void * data,
         genlmsg_end(skb, msg_head);
         LOG_DBG("genlmsg_end OK");
 
-        printk("Message generated:\n"
-               "\t Netlink family: %d;\n"
-               "\t Version: %d; \n"
-               "\t Operation code: %d; \n"
-               "\t Flags: %d\n",
-               info->nlhdr->nlmsg_type, info->genlhdr->version,
-               info->genlhdr->cmd, info->nlhdr->nlmsg_flags);
         LOG_ERR("Message generated:\n"
                 "\t Netlink family: %d;\n"
                 "\t Version: %d; \n"
                 "\t Operation code: %d; \n"
-                "\t Flags: %d\n",
+                "\t Flags: %d",
                 info->nlhdr->nlmsg_type, info->genlhdr->version,
                 info->genlhdr->cmd, info->nlhdr->nlmsg_flags);
 
         /* ret = genlmsg_unicast(sock_net(skb->sk),skb,info->snd_portid); */
         ret = genlmsg_unicast(&init_net,skb,info->snd_portid);
         if (ret != 0) {
-                LOG_DBG("COULD NOT SEND BACK UNICAST MESSAGE");
+                LOG_ERR("COULD NOT SEND BACK UNICAST MESSAGE");
                 return -1;
         }
 
@@ -400,7 +399,7 @@ static struct genl_ops nl_ops[] = {
 };
 
 int rina_netlink_register_handler(struct rina_nl_set * set,
-                                  int                  msg_type,
+                                  msg_id               msg_type,
                                   void *               data,
                                   message_handler_cb   handler)
 {
@@ -418,24 +417,25 @@ int rina_netlink_register_handler(struct rina_nl_set * set,
                 return -1;
         }
 
-        if (!is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX)) {
+        if (!is_message_type_in_range(msg_type)) {
                 LOG_ERR("Message type %d is out-of-range, "
                         "cannot register", msg_type);
                 return -1;
         }
 
         ASSERT(handler != NULL);
-        ASSERT(msg_type >= 0 && msg_type < NETLINK_RINA_C_MAX);
+        ASSERT(msg_type >= NETLINK_RINA_C_MIN &&
+	       msg_type <= NETLINK_RINA_C_MAX);
 
-        if (messages_handlers[msg_type].cb) {
+        if (set->messages_handlers[msg_type].cb) {
                 LOG_ERR("The message handler for message type %d "
                         "has been already registered, unregister it first",
                         msg_type);
                 return -1;
         }
 
-        messages_handlers[msg_type].cb   = handler;
-        messages_handlers[msg_type].data = data;
+        set->messages_handlers[msg_type].cb   = handler;
+        set->messages_handlers[msg_type].data = data;
 
         LOG_DBG("Handler %pK (data %pK) registered for message type %d",
                 handler, data, msg_type);
@@ -445,7 +445,7 @@ int rina_netlink_register_handler(struct rina_nl_set * set,
 EXPORT_SYMBOL(rina_netlink_register_handler);
 
 int rina_netlink_unregister_handler(struct rina_nl_set * set,
-                                    int                  msg_type)
+                                    msg_id               msg_type)
 {
         if (!set) {
                 LOG_ERR("Bogus set passed, cannot register handler");
@@ -454,15 +454,20 @@ int rina_netlink_unregister_handler(struct rina_nl_set * set,
 
         LOG_DBG("Unregistering handler for message type %d", msg_type);
 
-        if (!is_message_type_in_range(msg_type, 0, NETLINK_RINA_C_MAX)) {
+        if (!is_message_type_in_range(msg_type)) {
                 LOG_ERR("Message type %d is out-of-range, "
                         "cannot unregister", msg_type);
                 return -1;
         }
-        ASSERT(msg_type >= 0 && msg_type < NETLINK_RINA_C_MAX);
+        ASSERT(msg_type >= NETLINK_RINA_C_MIN && 
+	       msg_type < NETLINK_RINA_C_MAX);
 
-        bzero(&messages_handlers[msg_type],
-              sizeof(messages_handlers[msg_type]));
+        bzero(set->messages_handlers[msg_type].cb,
+              sizeof(set->messages_handlers[msg_type].cb));
+
+	/* FIXME: Not sure if data pointer should be set to zero too */
+	bzero(set->messages_handlers[msg_type].data,
+               sizeof(set->messages_handlers[msg_type].data));
 
         LOG_DBG("Handler for message type %d unregistered successfully",
                 msg_type);
@@ -470,6 +475,26 @@ int rina_netlink_unregister_handler(struct rina_nl_set * set,
         return 0;
 }
 EXPORT_SYMBOL(rina_netlink_unregister_handler);
+
+int rina_netlink_set_register(struct rina_nl_set * set)
+{
+        if (!set) {
+                LOG_ERR("Bogus set passed, cannot register it");
+                return -1;
+        }
+        if (rina_default_nl_set != NULL) {
+                LOG_ERR("Default set already registered");
+                return -2;
+        }
+	rina_default_nl_set = set;
+	return 0;
+}
+EXPORT_SYMBOL(rina_netlink_set_register);
+
+struct rina_nl_set * rina_netlink_get_set(void)
+{
+	return rina_default_nl_set;
+}
 
 struct rina_nl_set * rina_netlink_set_create(personality_id id)
 {
@@ -485,10 +510,20 @@ EXPORT_SYMBOL(rina_netlink_set_create);
 
 int rina_netlink_set_destroy(struct rina_nl_set * set)
 {
+	int i;
+
         if (!set) {
                 LOG_ERR("Bogus set passed, cannot destroy");
                 return -1;
         }
+
+	for (i=0; i<ARRAY_SIZE(set->messages_handlers); i++) {
+		if(set->messages_handlers[i].cb != NULL) {
+			LOG_WARN("Set on %pK had registered callbacks."
+			" They will be unregistered", set);
+			break;
+		}
+	}
 
         rkfree(set);
         return 0;

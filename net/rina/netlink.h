@@ -31,10 +31,10 @@
 
 #include "personality.h"
 
-enum rina_nl_operation_code {
+typedef enum {
 	/* Unespecified operation */
         /* FIXME: What's the meaning ??? */
-	RINA_C_UNSPEC, 
+	RINA_C_MIN = 0, 
 	
 	/* Allocate flow request, Application -> IPC Manager */
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST, 
@@ -136,7 +136,7 @@ enum rina_nl_operation_code {
 
         /* Do not use */
 	RINA_C_MAX,
-};
+} msg_id;
 
 int  rina_netlink_init(void);
 void rina_netlink_exit(void);
@@ -151,10 +151,13 @@ typedef int (* message_handler_cb)(void *             data,
                                    struct genl_info * info); 
 
 int  rina_netlink_register_handler(struct rina_nl_set * set,
-                                   int                  msg_type,
+                                   msg_id               msg_type,
                                    void *               data,
                                    message_handler_cb   handler);
 int  rina_netlink_unregister_handler(struct rina_nl_set * set,
-                                     int                  msg_type);
+                                     msg_id               msg_type);
+
+int rina_netlink_set_register(struct rina_nl_set * set);
+struct rina_nl_set * rina_netlink_get_set(void);
 
 #endif
