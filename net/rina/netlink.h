@@ -149,15 +149,17 @@ int                  rina_netlink_set_destroy(struct rina_nl_set * set);
 typedef int (* message_handler_cb)(void *             data,
                                    struct sk_buff *   buff,
                                    struct genl_info * info); 
-
-int  rina_netlink_register_handler(struct rina_nl_set * set,
+int  rina_netlink_handler_register(struct rina_nl_set * set,
                                    msg_id               msg_type,
                                    void *               data,
                                    message_handler_cb   handler);
-int  rina_netlink_unregister_handler(struct rina_nl_set * set,
+int  rina_netlink_handler_unregister(struct rina_nl_set * set,
                                      msg_id               msg_type);
 
-int rina_netlink_set_register(struct rina_nl_set * set);
+int  rina_netlink_set_register(struct rina_nl_set * set);
+int  rina_netlink_set_unregister(struct rina_nl_set * set);
+
+/* FIXME: To be removed */
 struct rina_nl_set * rina_netlink_get_set(void);
 
 #endif
