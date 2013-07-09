@@ -32,8 +32,7 @@
 #include "personality.h"
 
 typedef enum {
-	/* Unespecified operation */
-        /* FIXME: What's the meaning ??? */
+        /* Do not use */
 	RINA_C_MIN = 0, 
 	
 	/* Allocate flow request, Application -> IPC Manager */

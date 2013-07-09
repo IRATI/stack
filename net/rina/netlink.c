@@ -52,10 +52,10 @@ struct message_handler {
 };
 
 struct rina_nl_set {
-	struct message_handler messages_handlers[NETLINK_RINA_C_MAX];
+	struct message_handler handlers[NETLINK_RINA_C_MAX];
 };
 
-static struct rina_nl_set * rina_default_nl_set;
+static struct rina_nl_set * default_set;
 
 static struct genl_family nl_family = {
         .id      = GENL_ID_GENERATE,
@@ -78,11 +78,11 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 
         /* FIXME: What do we do if the handler returns != 0 ??? */
 
-        message_handler_cb cb_function;
-        void *             data;
-        msg_id             msg_type;
-        int                ret_val;
-	struct rina_nl_set *pset;
+        message_handler_cb   cb_function;
+        void *               data;
+        msg_id               msg_type;
+        int                  ret_val;
+	struct rina_nl_set * tmp;
 
         LOG_DBG("Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
 
@@ -107,18 +107,18 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         }
         ASSERT(is_message_type_in_range(msg_type));
 
-	pset = rina_default_nl_set;
-	if (!pset)
+	tmp = default_set;
+	if (!tmp)
 		return -1;
 
-        cb_function = pset->messages_handlers[msg_type].cb;
+        cb_function = tmp->handlers[msg_type].cb;
         if (!cb_function) {
                 LOG_ERR("There's no handler callback registered for "
                         "message type %d", msg_type);
                 return -1;
         }
 
-        data = pset->messages_handlers[msg_type].data;
+        data = tmp->handlers[msg_type].data;
         /* Data might be empty */
 
         ret_val = cb_function(data, skb_in, info);
@@ -422,20 +422,19 @@ int rina_netlink_handler_register(struct rina_nl_set * set,
                         "cannot register", msg_type);
                 return -1;
         }
-
-        ASSERT(handler != NULL);
         ASSERT(msg_type >= NETLINK_RINA_C_MIN &&
 	       msg_type <= NETLINK_RINA_C_MAX);
+        ASSERT(handler != NULL);
 
-        if (set->messages_handlers[msg_type].cb) {
+        if (set->handlers[msg_type].cb) {
                 LOG_ERR("The message handler for message type %d "
                         "has been already registered, unregister it first",
                         msg_type);
                 return -1;
         }
 
-        set->messages_handlers[msg_type].cb   = handler;
-        set->messages_handlers[msg_type].data = data;
+        set->handlers[msg_type].cb   = handler;
+        set->handlers[msg_type].data = data;
 
         LOG_DBG("Handler %pK (data %pK) registered for message type %d",
                 handler, data, msg_type);
@@ -460,14 +459,9 @@ int rina_netlink_handler_unregister(struct rina_nl_set * set,
                 return -1;
         }
         ASSERT(msg_type >= NETLINK_RINA_C_MIN && 
-	       msg_type < NETLINK_RINA_C_MAX);
+	       msg_type <= NETLINK_RINA_C_MAX);
 
-        bzero(set->messages_handlers[msg_type].cb,
-              sizeof(set->messages_handlers[msg_type].cb));
-
-	/* FIXME: Not sure if data pointer should be set to zero too */
-	bzero(set->messages_handlers[msg_type].data,
-               sizeof(set->messages_handlers[msg_type].data));
+        bzero(&set->handlers[msg_type], sizeof(set->handlers[msg_type]));
 
         LOG_DBG("Handler for message type %d unregistered successfully",
                 msg_type);
@@ -482,11 +476,14 @@ int rina_netlink_set_register(struct rina_nl_set * set)
                 LOG_ERR("Bogus set passed, cannot register it");
                 return -1;
         }
-        if (rina_default_nl_set != NULL) {
+
+        if (default_set != NULL) {
                 LOG_ERR("Default set already registered");
                 return -2;
         }
-	rina_default_nl_set = set;
+
+	default_set = set;
+
 	return 0;
 }
 EXPORT_SYMBOL(rina_netlink_set_register);
@@ -497,11 +494,14 @@ int rina_netlink_set_unregister(struct rina_nl_set * set)
                 LOG_ERR("Bogus set passed, cannot unregister it");
                 return -1;
         }
-        if (rina_default_nl_set != set) {
+
+        if (default_set != set) {
                 LOG_ERR("Target set is different than the registered one");
                 return -2;
         }
-	rina_default_nl_set = NULL;
+
+	default_set = NULL;
+
 	return 0;
 }
 EXPORT_SYMBOL(rina_netlink_set_unregister);
@@ -514,28 +514,38 @@ struct rina_nl_set * rina_netlink_set_create(personality_id id)
         if (!tmp)
                 return NULL;
 
+        LOG_DBG("Set %pK created successfully", tmp);
+
         return tmp;
 }
 EXPORT_SYMBOL(rina_netlink_set_create);
 
 int rina_netlink_set_destroy(struct rina_nl_set * set)
 {
-	int i;
+	int    i;
+        size_t count;
 
         if (!set) {
                 LOG_ERR("Bogus set passed, cannot destroy");
                 return -1;
         }
 
-	for (i=0; i<ARRAY_SIZE(set->messages_handlers); i++) {
-		if(set->messages_handlers[i].cb != NULL) {
-			LOG_WARN("Set on %pK had registered callbacks."
-			" They will be unregistered", set);
+        count = 0;
+	for (i = 0; i < ARRAY_SIZE(set->handlers); i++) {
+		if (set->handlers[i].cb != NULL) {
+                        count++;
+			LOG_DBG("Set %pK has an hander yet registered, "
+                                "it will be unregistered", set);
 			break;
 		}
 	}
-
+        if (count)
+                LOG_WARN("Set %pK had %zd handler(s) that have not been "
+                        "unregistered ...", set, count);
         rkfree(set);
+
+        LOG_DBG("Set %pK destroyed %s", set, count ? "" : "successfully");
+
         return 0;
 }
 EXPORT_SYMBOL(rina_netlink_set_destroy);
@@ -589,6 +599,13 @@ void rina_netlink_exit(void)
                         "bailing out. Your system might become unstable", ret);
                 return;
         }
+
+        /* FIXME:
+         *   Add checks here to prevent misses of finalizations and or
+         *   destructions
+         */
+
+        ASSERT(!default_set);
 
         LOG_DBG("NetLink layer finalized successfully");
 }
