@@ -159,7 +159,4 @@ int  rina_netlink_handler_unregister(struct rina_nl_set * set,
 int  rina_netlink_set_register(struct rina_nl_set * set);
 int  rina_netlink_set_unregister(struct rina_nl_set * set);
 
-/* FIXME: To be removed */
-struct rina_nl_set * rina_netlink_get_set(void);
-
 #endif

@@ -107,7 +107,7 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         }
         ASSERT(is_message_type_in_range(msg_type));
 
-	pset = rina_netlink_get_set();
+	pset = rina_default_nl_set;
 	if (!pset)
 		return -1;
 
@@ -398,7 +398,7 @@ static struct genl_ops nl_ops[] = {
         },
 };
 
-int rina_netlink_register_handler(struct rina_nl_set * set,
+int rina_netlink_handler_register(struct rina_nl_set * set,
                                   msg_id               msg_type,
                                   void *               data,
                                   message_handler_cb   handler)
@@ -442,9 +442,9 @@ int rina_netlink_register_handler(struct rina_nl_set * set,
 
         return 0;
 }
-EXPORT_SYMBOL(rina_netlink_register_handler);
+EXPORT_SYMBOL(rina_netlink_handler_register);
 
-int rina_netlink_unregister_handler(struct rina_nl_set * set,
+int rina_netlink_handler_unregister(struct rina_nl_set * set,
                                     msg_id               msg_type)
 {
         if (!set) {
@@ -474,7 +474,7 @@ int rina_netlink_unregister_handler(struct rina_nl_set * set,
 
         return 0;
 }
-EXPORT_SYMBOL(rina_netlink_unregister_handler);
+EXPORT_SYMBOL(rina_netlink_handler_unregister);
 
 int rina_netlink_set_register(struct rina_nl_set * set)
 {
@@ -491,10 +491,20 @@ int rina_netlink_set_register(struct rina_nl_set * set)
 }
 EXPORT_SYMBOL(rina_netlink_set_register);
 
-struct rina_nl_set * rina_netlink_get_set(void)
+int rina_netlink_set_unregister(struct rina_nl_set * set)
 {
-	return rina_default_nl_set;
+        if (!set) {
+                LOG_ERR("Bogus set passed, cannot unregister it");
+                return -1;
+        }
+        if (rina_default_nl_set != set) {
+                LOG_ERR("Target set is different than the registered one");
+                return -2;
+        }
+	rina_default_nl_set = NULL;
+	return 0;
 }
+EXPORT_SYMBOL(rina_netlink_set_unregister);
 
 struct rina_nl_set * rina_netlink_set_create(personality_id id)
 {
@@ -557,7 +567,7 @@ int rina_netlink_init(void)
 
 #if TESTING
         /* FIXME: Remove this hard-wired test */
-        rina_netlink_register_handler(RINA_C_APP_ALLOCATE_FLOW_REQUEST,
+        rina_netlink_handler_register(RINA_C_APP_ALLOCATE_FLOW_REQUEST,
                                       test_data,
                                       nl_rina_echo);
 #endif
