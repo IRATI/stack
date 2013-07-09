@@ -1,5 +1,5 @@
 /*
- *  Shim IPC Process
+ *  Shim IPC Processes layer
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
