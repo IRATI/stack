@@ -102,6 +102,39 @@ IPCProcessUnregisteredFromDIFEvent::IPCProcessUnregisteredFromDIFEvent(
 				difName, sequenceNumber){
 }
 
+/* CLASS QUERY RIB REQUEST EVENT */
+QueryRIBRequestEvent::QueryRIBRequestEvent(const std::string& objectClass,
+		const std::string& objectName, long objectInstance,
+		int scope, const std::string& filter,
+		unsigned int sequenceNumber):
+				IPCEvent(IPC_PROCESS_QUERY_RIB, sequenceNumber){
+	this->objectClass = objectClass;
+	this->objectName = objectName;
+	this->objectInstance = objectInstance;
+	this->scope = scope;
+	this->filter = filter;
+}
+
+const std::string& QueryRIBRequestEvent::getObjectClass() const{
+	return objectClass;
+}
+
+const std::string& QueryRIBRequestEvent::getObjectName() const{
+	return objectName;
+}
+
+long QueryRIBRequestEvent::getObjectInstance() const{
+	return objectInstance;
+}
+
+int QueryRIBRequestEvent::getScope() const{
+	return scope;
+}
+
+const std::string& QueryRIBRequestEvent::getFilter() const{
+	return filter;
+}
+
 /* CLASS EXTENDED IPC MANAGER */
 const DIFConfiguration& ExtendedIPCManager::getCurrentConfiguration() const{
 	return currentConfiguration;

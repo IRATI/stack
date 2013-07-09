@@ -1252,6 +1252,133 @@ int testIpcmIPCProcessDIFResgistrationNotification() {
 	return returnValue;
 }
 
+int testIpcmQueryRIBRequestMessage() {
+	std::cout << "TESTING IPCM QUERY RIB REQUEST MESSAGE\n";
+	int returnValue = 0;
+
+	IpcmDIFQueryRIBRequestMessage message;
+	message.setObjectClass("flow");
+	message.setObjectName("/dif/management/flows/234556");
+	message.setObjectInstance(1234847);
+	message.setScope(3);
+	message.setFilter("sourcePortId=5");
+
+	struct nl_msg* netlinkMessage;
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage) {
+		std::cout << "Error allocating Netlink message\n";
+	}
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+			sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+	int result = putBaseNetlinkMessage(netlinkMessage, &message);
+	if (result < 0) {
+		std::cout << "Error constructing Ipcm Query RIB request"
+				<< "message \n";
+		nlmsg_free(netlinkMessage);
+		return result;
+	}
+
+	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+	IpcmDIFQueryRIBRequestMessage * recoveredMessage =
+			dynamic_cast<IpcmDIFQueryRIBRequestMessage *>(
+					parseBaseNetlinkMessage(netlinkMessageHeader));
+	if (recoveredMessage == 0) {
+		std::cout << "Error parsing Ipcm Query RIB request Message "
+				<< "\n";
+		returnValue = -1;
+	} else if (message.getObjectClass().compare(
+			recoveredMessage->getObjectClass()) != 0) {
+		std::cout << "Object class on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message.getObjectName().compare(
+			recoveredMessage->getObjectName())!=0) {
+		std::cout << "Object name on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message.getObjectInstance() !=
+			recoveredMessage->getObjectInstance()) {
+		std::cout << "Object instance on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message.getScope() != recoveredMessage->getScope()) {
+		std::cout << "Scope on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message.getFilter().compare(
+			recoveredMessage->getFilter())!=0) {
+		std::cout << "Filter on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	}
+
+	if (returnValue == 0) {
+		std::cout << "IpcmDIFQueryRIBRequestMessage test ok\n";
+	}
+	nlmsg_free(netlinkMessage);
+	delete recoveredMessage;
+
+	return returnValue;
+}
+
+int testIpcmQueryRIBResponseMessage() {
+	std::cout << "TESTING IPCM QUERY RIB RESPONSE MESSAGE\n";
+	int returnValue = 0;
+
+	IpcmDIFQueryRIBResponseMessage message;
+	message.setResult(0);
+	message.setErrorDescription("ok");
+	/*RIBObject * ribObject1 = new RIBObject();
+	ribObject1->setClazz("/test/clazz1");
+	ribObject1->setName("/test/name1");
+	ribObject1->setInstance(1234);
+	message.getRIBObjects().push_back(ribObject1);*/
+
+	struct nl_msg* netlinkMessage;
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage) {
+		std::cout << "Error allocating Netlink message\n";
+	}
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+			sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+	int result = putBaseNetlinkMessage(netlinkMessage, &message);
+	if (result < 0) {
+		std::cout << "Error constructing Ipcm Query RIB request"
+				<< "message \n";
+		nlmsg_free(netlinkMessage);
+		return result;
+	}
+
+	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+	IpcmDIFQueryRIBResponseMessage * recoveredMessage =
+			dynamic_cast<IpcmDIFQueryRIBResponseMessage *>(
+					parseBaseNetlinkMessage(netlinkMessageHeader));
+	if (recoveredMessage == 0) {
+		std::cout << "Error parsing Ipcm Query RIB response Message "
+				<< "\n";
+		returnValue = -1;
+	} else if (message.getResult() != recoveredMessage->getResult()) {
+		std::cout << "Result on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message.getErrorDescription().compare(
+			recoveredMessage->getErrorDescription())!=0) {
+		std::cout << "Error description on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	}
+
+	if (returnValue == 0) {
+		std::cout << "IpcmDIFQueryRIBResponseMessage test ok\n";
+	}
+	nlmsg_free(netlinkMessage);
+	delete recoveredMessage;
+
+	return returnValue;
+}
+
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING LIBRINA-NETLINK-PARSERS\n";
 
@@ -1336,4 +1463,14 @@ int main(int argc, char * argv[]) {
 	if (result < 0) {
 		return result;
 	}
+
+	result = testIpcmQueryRIBRequestMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	/*result = testIpcmQueryRIBResponseMessage();
+	if (result < 0) {
+		return result;
+	}*/
 }

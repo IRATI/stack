@@ -358,6 +358,54 @@ int putIpcmDIFRegistrationNotificationObject(nl_msg* netlinkMessage,
 IpcmDIFRegistrationNotification *
 	parseIpcmDIFRegistrationNotification(nlmsghdr *hdr);
 
+/* IpcmDIFQueryRIBRequestMessage CLASS*/
+enum IpcmDIFQueryRIBRequestMessageAttributes {
+	IDQR_ATTR_OBJECT_CLASS = 1,
+	IDQR_ATTR_OBJECT_NAME,
+	IDQR_ATTR_OBJECT_INSTANCE,
+	IDQR_ATTR_SCOPE,
+	IDQR_ATTR_FILTER,
+	__IDQR_ATTR_MAX,
+};
+
+#define IDQR_ATTR_MAX (__IDQR_ATTR_MAX -1)
+
+int putIpcmDIFQueryRIBRequestMessageObject(nl_msg* netlinkMessage,
+		const IpcmDIFQueryRIBRequestMessage& object);
+
+IpcmDIFQueryRIBRequestMessage *
+	parseIpcmDIFQueryRIBRequestMessage(nlmsghdr *hdr);
+
+/* RIBObject CLASS*/
+enum RIBObjectAttributes {
+	RIBO_ATTR_OBJECT_CLASS = 1,
+	RIBO_ATTR_OBJECT_NAME,
+	RIBO_ATTR_OBJECT_INSTANCE,
+	__RIBO_ATTR_MAX,
+};
+
+#define RIBO_ATTR_MAX (__RIBO_ATTR_MAX -1)
+
+int putRIBObject(nl_msg* netlinkMessage, RIBObject * object);
+
+RIBObject * parseRIBObject(nlattr *nested);
+
+/* IpcmDIFQueryRIBResponseMessage CLASS*/
+enum IpcmDIFQueryRIBResponseMessageAttributes {
+	IDQRE_ATTR_RESULT = 1,
+	IDQRE_ATTR_ERROR_DESCRIPTION,
+	IDQRE_ATTR_RIB_OBJECTS,
+	__IDQRE_ATTR_MAX,
+};
+
+#define IDQRE_ATTR_MAX (__IDQRE_ATTR_MAX -1)
+
+int putIpcmDIFQueryRIBResponseMessageObject(nl_msg* netlinkMessage,
+		const IpcmDIFQueryRIBResponseMessage& object);
+
+IpcmDIFQueryRIBResponseMessage *
+	parseIpcmDIFQueryRIBResponseMessage(nlmsghdr *hdr);
+
 }
 
 #endif /* LIBRINA_NETLINK_PARSERS_H_ */

@@ -721,4 +721,54 @@ void FlowRequest::setSourceApplicationName(
 	this->sourceApplicationName = sourceApplicationName;
 }
 
+/* CLAS RIBOBJECT */
+RIBObject::RIBObject(){
+	instance = generateObjectInstance();
+}
+
+RIBObject::RIBObject(
+		std::string clazz, std::string name, RIBObjectValue value){
+	this->clazz = clazz;
+	this->name = name;
+	this->value = value;
+	instance = generateObjectInstance();
+}
+
+long RIBObject::generateObjectInstance(){
+	//TODO generate instance properly
+	return 0;
+}
+
+const std::string& RIBObject::getClazz() const {
+	return clazz;
+}
+
+void RIBObject::setClazz(const std::string& clazz) {
+	this->clazz = clazz;
+}
+
+long RIBObject::getInstance() const {
+	return instance;
+}
+
+void RIBObject::setInstance(long instance) {
+	this->instance = instance;
+}
+
+const std::string& RIBObject::getName() const {
+	return name;
+}
+
+void RIBObject::setName(const std::string& name) {
+	this->name = name;
+}
+
+RIBObjectValue RIBObject::getValue() const {
+	return value;
+}
+
+void RIBObject::setValue(RIBObjectValue value) {
+	this->value = value;
+}
+
 }

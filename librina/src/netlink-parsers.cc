@@ -175,6 +175,24 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
+	case RINA_C_IPCM_QUERY_RIB_REQUEST: {
+		IpcmDIFQueryRIBRequestMessage * queryRIBMessage =
+				dynamic_cast<IpcmDIFQueryRIBRequestMessage *>(message);
+		if (putIpcmDIFQueryRIBRequestMessageObject(netlinkMessage,
+				*queryRIBMessage) < 0) {
+			return -1;
+		}
+		return 0;
+	}
+	case RINA_C_IPCM_QUERY_RIB_RESPONSE: {
+		IpcmDIFQueryRIBResponseMessage * queryRIBMessage =
+				dynamic_cast<IpcmDIFQueryRIBResponseMessage *>(message);
+		if (putIpcmDIFQueryRIBResponseMessageObject(netlinkMessage,
+				*queryRIBMessage) < 0) {
+			return -1;
+		}
+		return 0;
+	}
 
 	default: {
 		return -1;
@@ -242,6 +260,12 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	case RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION: {
 		return parseIpcmDIFRegistrationNotification(
 				netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_QUERY_RIB_REQUEST: {
+		return parseIpcmDIFQueryRIBRequestMessage(netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_QUERY_RIB_RESPONSE: {
+		return parseIpcmDIFQueryRIBResponseMessage(netlinkMessageHeader);
 	}
 	default: {
 		LOG_ERR(
@@ -1006,6 +1030,83 @@ int putIpcmDIFRegistrationNotificationObject(nl_msg* netlinkMessage,
 
 	nla_put_failure: LOG_ERR(
 			"Error building IpcmIPCProcessRegisteredToDIFNotification Netlink object");
+	return -1;
+}
+
+int putIpcmDIFQueryRIBRequestMessageObject(nl_msg* netlinkMessage,
+		const IpcmDIFQueryRIBRequestMessage& object){
+	NLA_PUT_STRING(netlinkMessage, IDQR_ATTR_OBJECT_CLASS,
+			object.getObjectClass().c_str());
+	NLA_PUT_STRING(netlinkMessage, IDQR_ATTR_OBJECT_NAME,
+			object.getObjectName().c_str());
+	NLA_PUT_U64(netlinkMessage, IDQR_ATTR_OBJECT_INSTANCE,
+			object.getObjectInstance());
+	NLA_PUT_U32(netlinkMessage, IDQR_ATTR_SCOPE, object.getScope());
+	NLA_PUT_STRING(netlinkMessage, IDQR_ATTR_FILTER,
+			object.getFilter().c_str());
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building IpcmDIFQueryRIBRequestMessage Netlink object");
+	return -1;
+}
+
+int putRIBObject(nl_msg* netlinkMessage, RIBObject * object){
+	NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_CLASS,
+				object->getClazz().c_str());
+	NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_NAME,
+					object->getName().c_str());
+	NLA_PUT_U64(netlinkMessage, RIBO_ATTR_OBJECT_INSTANCE,
+					object->getInstance());
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building RIBObject Netlink object");
+	return -1;
+}
+
+int putListOfRIBObjects(
+		nl_msg* netlinkMessage, const std::list<RIBObject*>& ribObjects){
+	std::list<RIBObject*>::const_iterator iterator;
+	int result = 0;
+
+	for (iterator = ribObjects.begin();
+			iterator != ribObjects.end();
+			++iterator) {
+		result = putRIBObject(netlinkMessage, *iterator);
+		if (result != 0){
+			break;
+		}
+	}
+
+	return result;
+}
+
+int putIpcmDIFQueryRIBResponseMessageObject(nl_msg* netlinkMessage,
+		const IpcmDIFQueryRIBResponseMessage& object){
+	struct nlattr *ribObjects;
+
+	NLA_PUT_U32(netlinkMessage, IDQRE_ATTR_RESULT, object.getResult());
+	NLA_PUT_STRING(netlinkMessage, IDQRE_ATTR_ERROR_DESCRIPTION,
+			object.getErrorDescription().c_str());
+
+	if (object.getRIBObjects().size()>0){
+		if (!(ribObjects = nla_nest_start(
+				netlinkMessage, IDRN_ATTR_IPC_PROCESS_NAME))){
+			goto nla_put_failure;
+		}
+		if (putListOfRIBObjects(netlinkMessage, object.getRIBObjects()) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, ribObjects);
+	}
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building RIBObject Netlink object");
 	return -1;
 }
 
@@ -2120,6 +2221,175 @@ parseIpcmDIFRegistrationNotification(nlmsghdr *hdr){
 		result->setRegistered(true);
 	}else{
 		result->setRegistered(false);
+	}
+
+	return result;
+}
+
+IpcmDIFQueryRIBRequestMessage *
+	parseIpcmDIFQueryRIBRequestMessage(nlmsghdr *hdr){
+	struct nla_policy attr_policy[IDQR_ATTR_MAX + 1];
+	attr_policy[IDQR_ATTR_OBJECT_CLASS].type = NLA_STRING;
+	attr_policy[IDQR_ATTR_OBJECT_CLASS].minlen = 0;
+	attr_policy[IDQR_ATTR_OBJECT_CLASS].maxlen = 65535;
+	attr_policy[IDQR_ATTR_OBJECT_NAME].type = NLA_STRING;
+	attr_policy[IDQR_ATTR_OBJECT_NAME].minlen = 0;
+	attr_policy[IDQR_ATTR_OBJECT_NAME].maxlen = 65535;
+	attr_policy[IDQR_ATTR_OBJECT_INSTANCE].type = NLA_U64;
+	attr_policy[IDQR_ATTR_OBJECT_INSTANCE].minlen = 8;
+	attr_policy[IDQR_ATTR_OBJECT_INSTANCE].maxlen = 8;
+	attr_policy[IDQR_ATTR_SCOPE].type = NLA_U32;
+	attr_policy[IDQR_ATTR_SCOPE].minlen = 4;
+	attr_policy[IDQR_ATTR_SCOPE].maxlen = 4;
+	attr_policy[IDQR_ATTR_FILTER].type = NLA_STRING;
+	attr_policy[IDQR_ATTR_FILTER].minlen = 0;
+	attr_policy[IDQR_ATTR_FILTER].maxlen = 65535;
+	struct nlattr *attrs[IDQR_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			IDQR_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing IpcmDIFQueryRIBRequestMessage information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	IpcmDIFQueryRIBRequestMessage * result =
+				new IpcmDIFQueryRIBRequestMessage ();
+
+	if (attrs[IDQR_ATTR_OBJECT_CLASS]){
+		result->setObjectClass(nla_get_string(attrs[IDQR_ATTR_OBJECT_CLASS]));
+	}
+
+	if (attrs[IDQR_ATTR_OBJECT_NAME]){
+		result->setObjectName(nla_get_string(attrs[IDQR_ATTR_OBJECT_NAME]));
+	}
+
+	if (attrs[IDQR_ATTR_OBJECT_INSTANCE]){
+		result->setObjectInstance(
+				nla_get_u64(attrs[IDQR_ATTR_OBJECT_INSTANCE]));
+	}
+
+	if (attrs[IDQR_ATTR_SCOPE]){
+		result->setScope(nla_get_u32(attrs[IDQR_ATTR_SCOPE]));
+	}
+
+	if (attrs[IDQR_ATTR_FILTER]){
+		result->setFilter(
+				nla_get_string(attrs[IDQR_ATTR_FILTER]));
+	}
+
+	return result;
+}
+
+RIBObject * parseRIBObject(nlattr *nested){
+	struct nla_policy attr_policy[RIBO_ATTR_MAX + 1];
+	attr_policy[RIBO_ATTR_OBJECT_CLASS].type = NLA_STRING;
+	attr_policy[RIBO_ATTR_OBJECT_CLASS].minlen = 0;
+	attr_policy[RIBO_ATTR_OBJECT_CLASS].maxlen = 65535;
+	attr_policy[RIBO_ATTR_OBJECT_NAME].type = NLA_STRING;
+	attr_policy[RIBO_ATTR_OBJECT_NAME].minlen = 0;
+	attr_policy[RIBO_ATTR_OBJECT_NAME].maxlen = 65535;
+	attr_policy[RIBO_ATTR_OBJECT_INSTANCE].type = NLA_U64;
+	attr_policy[RIBO_ATTR_OBJECT_INSTANCE].minlen = 8;
+	attr_policy[RIBO_ATTR_OBJECT_INSTANCE].maxlen = 8;
+	struct nlattr *attrs[RIBO_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, RIBO_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing RIBObject from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	RIBObject * result = new RIBObject();
+
+	if (attrs[RIBO_ATTR_OBJECT_CLASS]){
+		result->setClazz(
+				nla_get_string(attrs[RIBO_ATTR_OBJECT_CLASS]));
+	}
+
+	if (attrs[RIBO_ATTR_OBJECT_NAME]){
+		result->setName(
+				nla_get_string(attrs[RIBO_ATTR_OBJECT_NAME]));
+	}
+
+	if (attrs[RIBO_ATTR_OBJECT_INSTANCE]){
+		result->setInstance(
+				nla_get_u64(attrs[RIBO_ATTR_OBJECT_INSTANCE]));
+	}
+
+	return result;
+}
+
+int parseListOfRIBObjects(nlattr *nested,
+		const std::list<RIBObject*>& ribObjects){
+	struct nlattr *nla;
+	int rem;
+	RIBObject * ribObject;
+
+	nla_for_each_attr(nla, nested, nested->nla_len, rem) {
+		/* validate & parse attribute */
+		ribObject = parseRIBObject(nla);
+		if (ribObject == 0){
+			//TODO LOG ERROR
+			//ribObjects.push_back(ribObject);
+			return -1;
+		}
+	}
+
+	if (rem > 0){
+		//TODO what to do?
+	}
+
+	return 0;
+}
+
+IpcmDIFQueryRIBResponseMessage *
+	parseIpcmDIFQueryRIBResponseMessage(nlmsghdr *hdr){
+	struct nla_policy attr_policy[IDQRE_ATTR_MAX + 1];
+	attr_policy[IDQRE_ATTR_RESULT].type = NLA_U32;
+	attr_policy[IDQRE_ATTR_RESULT].minlen = 4;
+	attr_policy[IDQRE_ATTR_RESULT].maxlen = 4;
+	attr_policy[IDQRE_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
+	attr_policy[IDQRE_ATTR_ERROR_DESCRIPTION].minlen = 0;
+	attr_policy[IDQRE_ATTR_ERROR_DESCRIPTION].maxlen = 65535;
+	attr_policy[IDQRE_ATTR_RIB_OBJECTS].type = NLA_NESTED;
+	attr_policy[IDQRE_ATTR_RIB_OBJECTS].minlen = 0;
+	attr_policy[IDQRE_ATTR_RIB_OBJECTS].maxlen = 0;
+	struct nlattr *attrs[IDQRE_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			IDQRE_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing IpcmDIFQueryRIBResponseMessage information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	IpcmDIFQueryRIBResponseMessage * result =
+					new IpcmDIFQueryRIBResponseMessage ();
+
+	if (attrs[IDQRE_ATTR_RESULT]){
+		result->setResult(nla_get_u32(attrs[IDQRE_ATTR_RESULT]));
+	}
+
+	if (attrs[IDQRE_ATTR_ERROR_DESCRIPTION]){
+		result->setErrorDescription(
+				nla_get_string(attrs[IDQRE_ATTR_ERROR_DESCRIPTION]));
+	}
+
+	int status = 0;
+	if (attrs[IDQRE_ATTR_RIB_OBJECTS]) {
+		status = parseListOfRIBObjects(
+				attrs[IDQRE_ATTR_RIB_OBJECTS], result->getRIBObjects());
+		if (status != 0){
+			delete result;
+			return 0;
+		}
 	}
 
 	return result;

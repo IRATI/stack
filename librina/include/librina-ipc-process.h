@@ -112,6 +112,44 @@ public:
 };
 
 /**
+ * The IPC Manager queries the RIB of the IPC Process
+ */
+class QueryRIBRequestEvent: public IPCEvent {
+
+	/** The class of the object being queried*/
+	std::string objectClass;
+
+	/** The name of the object being queried */
+	std::string objectName;
+
+	/**
+	 * The instance of the object being queried. Either objectname +
+	 * object class or object instance have to be specified
+	 */
+	long objectInstance;
+
+	/** Number of levels below the object_name the query affects*/
+	int scope;
+
+	/**
+	 * Regular expression applied to all nodes affected by the query
+	 * in order to decide whether they have to be returned or not
+	 */
+	std::string filter;
+
+public:
+	QueryRIBRequestEvent(const std::string& objectClass,
+			const std::string& objectName, long objectInstance,
+			int scope, const std::string& filter,
+			unsigned int sequenceNumber);
+	const std::string& getObjectClass() const;
+	const std::string& getObjectName() const;
+	long getObjectInstance() const;
+	int getScope() const;
+	const std::string& getFilter() const;
+};
+
+/**
  * Class used by the IPC Processes to interact with the IPC Manager. Extends
  * the basic IPC Manager in librina-application with IPC Process specific
  * functionality

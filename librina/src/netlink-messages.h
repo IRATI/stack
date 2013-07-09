@@ -645,6 +645,10 @@ public:
 	IpcmAllocateFlowResponseMessage();
 };
 
+/**
+ * Used by the IPC Manager to notify the IPC Process about having been
+ * registered to or unregistered from a DIF. IPC Manager -> IPC Process
+ */
 class IpcmDIFRegistrationNotification:
 		public NetlinkRequestOrNotificationMessage {
 	/** The name of the IPC Process registered to the N-1 DIF */
@@ -670,6 +674,64 @@ public:
 	bool isRegistered() const;
 	IPCEvent* toIPCEvent();
 };
+
+/**
+ * Used by the IPC Manager to request information from an IPC Process RIB
+ * IPC Manager -> IPC Process
+ */
+class IpcmDIFQueryRIBRequestMessage:
+		public NetlinkRequestOrNotificationMessage {
+
+	/** The class of the object being queried*/
+	std::string objectClass;
+
+	/** The name of the object being queried */
+	std::string objectName;
+
+	/**
+	 * The instance of the object being queried. Either objectname +
+	 * object class or object instance have to be specified
+	 */
+	unsigned long objectInstance;
+
+	/** Number of levels below the object_name the query affects*/
+	unsigned int scope;
+
+	/**
+	 * Regular expression applied to all nodes affected by the query
+	 * in order to decide whether they have to be returned or not
+	 */
+	std::string filter;
+
+public:
+	IpcmDIFQueryRIBRequestMessage();
+	const std::string& getFilter() const;
+	void setFilter(const std::string& filter);
+	const std::string& getObjectClass() const;
+	void setObjectClass(const std::string& objectClass);
+	unsigned long getObjectInstance() const;
+	void setObjectInstance(unsigned long objectInstance);
+	const std::string& getObjectName() const;
+	void setObjectName(const std::string& objectName);
+	unsigned int getScope() const;
+	void setScope(unsigned int scope);
+	IPCEvent* toIPCEvent();
+};
+
+/**
+ * Replies the IPC Manager with zero or more objects in the RIB of the
+ * IPC Process. IPC Process -> IPC Manager
+ */
+class IpcmDIFQueryRIBResponseMessage:
+		public BaseNetlinkResponseMessage {
+
+	std::list<RIBObject*> ribObjects;
+
+public:
+	IpcmDIFQueryRIBResponseMessage();
+	const std::list<RIBObject*>& getRIBObjects() const;
+};
+
 }
 
 #endif /* NETLINK_MESSAGES_H_ */

@@ -134,7 +134,7 @@ void BaseNetlinkMessage::setResponseMessage(bool responseMessage) {
 	this->responseMessage = responseMessage;
 }
 
-std::string BaseNetlinkMessage::toString() {
+std::string BaseNetlinkMessage::toString(){
 	std::stringstream ss;
 	ss << "Family: " << family << "; Operation code: "
 			<< operationCode << "; Source port: " << sourcePortId
@@ -847,6 +847,74 @@ IPCEvent* IpcmDIFRegistrationNotification::toIPCEvent(){
 
 	return event;
 }
+
+/* CLASS QUERY RIB REQUEST MESSAGE */
+IpcmDIFQueryRIBRequestMessage::IpcmDIFQueryRIBRequestMessage():
+		NetlinkRequestOrNotificationMessage(RINA_C_IPCM_QUERY_RIB_REQUEST) {
+	objectInstance = -1;
+	scope = 0;
+}
+
+const std::string& IpcmDIFQueryRIBRequestMessage::getFilter() const {
+	return filter;
+}
+
+void IpcmDIFQueryRIBRequestMessage::setFilter(const std::string& filter) {
+	this->filter = filter;
+}
+
+const std::string& IpcmDIFQueryRIBRequestMessage::getObjectClass() const {
+	return objectClass;
+}
+
+void IpcmDIFQueryRIBRequestMessage::setObjectClass(
+		const std::string& objectClass) {
+	this->objectClass = objectClass;
+}
+
+unsigned long IpcmDIFQueryRIBRequestMessage::getObjectInstance() const {
+	return objectInstance;
+}
+
+void IpcmDIFQueryRIBRequestMessage::setObjectInstance(
+		unsigned long objectInstance) {
+	this->objectInstance = objectInstance;
+}
+
+const std::string&
+IpcmDIFQueryRIBRequestMessage::getObjectName() const {
+	return objectName;
+}
+
+void IpcmDIFQueryRIBRequestMessage::setObjectName(
+		const std::string& objectName) {
+	this->objectName = objectName;
+}
+
+unsigned int IpcmDIFQueryRIBRequestMessage::getScope() const {
+	return scope;
+}
+
+void IpcmDIFQueryRIBRequestMessage::setScope(unsigned int scope) {
+	this->scope = scope;
+}
+
+IPCEvent* IpcmDIFQueryRIBRequestMessage::toIPCEvent(){
+	IPCEvent * event = new QueryRIBRequestEvent(objectClass, objectName,
+			objectInstance, scope, filter, getSequenceNumber());
+	return event;
+}
+
+/* CLASS QUERY RIB RESPONSE MESSAGE */
+IpcmDIFQueryRIBResponseMessage::IpcmDIFQueryRIBResponseMessage()
+	:BaseNetlinkResponseMessage(RINA_C_IPCM_QUERY_RIB_RESPONSE){
+}
+
+const std::list<RIBObject*>&
+	IpcmDIFQueryRIBResponseMessage::getRIBObjects() const{
+	return ribObjects;
+}
+
 
 }
 

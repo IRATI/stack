@@ -102,7 +102,7 @@ public:
 	void setProcessInstance(const std::string& processInstance);
 	const std::string& getProcessName() const;
 	void setProcessName(const std::string& processName);
-	std::string toString();
+    std::string toString();
 };
 
 /**
@@ -304,7 +304,8 @@ enum IPCEventType {
 	APPLICATION_UNREGISTRATION_REQUEST_EVENT,
 	ASSIGN_TO_DIF_REQUEST_EVENT,
 	IPC_PROCESS_REGISTERED_TO_DIF,
-	IPC_PROCESS_UNREGISTERED_FROM_DIF
+	IPC_PROCESS_UNREGISTERED_FROM_DIF,
+	IPC_PROCESS_QUERY_RIB
 };
 
 /**
@@ -521,6 +522,46 @@ public:
 	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
 	void setSourceApplicationName(
 			const ApplicationProcessNamingInformation& sourceApplicationName);
+};
+
+/**
+ * Represents the value of an object stored in the RIB
+ */
+class RIBObjectValue{
+	//TODO
+};
+
+/**
+ * Represents an object in the RIB
+ */
+class RIBObject{
+
+	/** The class (type) of object */
+	std::string clazz;
+
+	/** The name of the object (unique within a class)*/
+	std::string name;
+
+	/** A synonim for clazz+name (unique within the RIB) */
+	long instance;
+
+	/** The value of the object */
+	RIBObjectValue value;
+
+	/** Geneartes a unique object instance */
+	long generateObjectInstance();
+
+public:
+	RIBObject();
+	RIBObject(std::string clazz, std::string name, RIBObjectValue value);
+	const std::string& getClazz() const;
+	void setClazz(const std::string& clazz);
+	long getInstance() const;
+	void setInstance(long instance);
+	const std::string& getName() const;
+	void setName(const std::string& name);
+	RIBObjectValue getValue() const;
+	void setValue(RIBObjectValue value);
 };
 
 }
