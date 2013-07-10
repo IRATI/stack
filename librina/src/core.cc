@@ -228,6 +228,30 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			}
 			break;
 		}
+		case RINA_C_APP_UNREGISTER_APPLICATION_REQUEST:{
+			if(send){
+				message->setDestPortId(getIPCManagerPortId());
+			}else{
+				AppUnregisterApplicationRequestMessage * specificMessage =
+					dynamic_cast<AppUnregisterApplicationRequestMessage *>(message);
+				putAPNametoNetlinkPortIdMapping(
+						specificMessage->getApplicationName(),
+						specificMessage->getSourcePortId(),
+						specificMessage->getSourceIpcProcessId());
+			}
+			break;
+		}
+		case RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE:{
+			if(send){
+				AppUnregisterApplicationResponseMessage * specificMessage =
+					 dynamic_cast<AppUnregisterApplicationResponseMessage *>(message);
+				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+						specificMessage->getApplicationName());
+				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
+			}
+			break;
+		}
 		case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST:{
 			IpcmRegisterApplicationRequestMessage * specificMessage =
 					dynamic_cast<IpcmRegisterApplicationRequestMessage *>(message);

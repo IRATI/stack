@@ -144,7 +144,7 @@ class IPCManager {
 
 	/** The applications that are currently registered in one or more DIFs */
 	std::map<ApplicationProcessNamingInformation,
-			ApplicationRegistration*> applicationRegistrations;
+	ApplicationRegistration*> applicationRegistrations;
 public:
 	IPCManager();
 	~IPCManager();
@@ -152,6 +152,7 @@ public:
 	static const std::string application_not_registered_error;
 	static const std::string unknown_flow_error;
 	static const std::string error_registering_application;
+	static const std::string error_unregistering_application;
 	static const std::string error_requesting_flow_allocation;
 	static const std::string error_requesting_flow_deallocation;
 
@@ -178,7 +179,7 @@ public:
 	void registerApplication(
 			const ApplicationProcessNamingInformation& applicationName,
 			const ApplicationProcessNamingInformation& DIFName)
-					throw (IPCException);
+	throw (IPCException);
 
 	/**
 	 * Unregisters an application from a DIF.
@@ -232,7 +233,7 @@ public:
 	 */
 	void deallocateFlow(int portId,
 			const ApplicationProcessNamingInformation& applicationName)
-			throw (IPCException);
+	throw (IPCException);
 
 	/**
 	 * Returns the flows that are currently allocated
@@ -298,6 +299,34 @@ public:
 			unsigned int sequenceNumber);
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
+};
+
+
+/**
+ * Event informing that an application registration has been canceled
+ * without the application having requested it
+ */
+class AppRegistrationCanceledEvent: public IPCEvent {
+
+	/** The application whose registration has been canceled */
+	ApplicationProcessNamingInformation applicationName;
+
+	/** The name of the DIF */
+	ApplicationProcessNamingInformation difName;
+
+	/** An error code indicating why the flow was deallocated */
+	int code;
+
+	/** Optional explanation giving more details about why the application registration has been canceled */
+	std::string reason;
+public:
+	AppRegistrationCanceledEvent(int code, const std::string& reason,
+			const ApplicationProcessNamingInformation& difName,
+			unsigned int sequenceNumber);
+	int getCode() const;
+	const std::string getReason() const;
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	const ApplicationProcessNamingInformation getDIFName() const;
 };
 
 }
