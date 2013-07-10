@@ -1,0 +1,127 @@
+#
+# configure.ac
+#
+# Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
+#
+
+AC_INIT([RINA Libraries],
+        m4_esyscmd([build-aux/git-version-gen .tarball-version]),
+        [f.salvestrini@nextworks.it],
+        [librina],
+        [http://www.irati.eu])
+
+AC_PREREQ([2.68])
+
+AC_CONFIG_HEADERS([src/config.h])
+AC_CONFIG_SRCDIR([src/librina.cc])
+AC_CONFIG_AUX_DIR([build-aux])
+AC_CONFIG_MACRO_DIR([m4])
+
+AC_CANONICAL_BUILD
+AC_CANONICAL_HOST
+AC_CANONICAL_TARGET
+
+AM_INIT_AUTOMAKE([1.11.1 tar-pax foreign -Wall])
+#AM_INIT_AUTOMAKE([1.11.1 tar-pax foreign std-options -Wall])
+
+AC_PROG_SED
+AC_PROG_GREP
+AC_PROG_MKDIR_P
+AC_PROG_LN_S
+
+AC_PATH_PROG([FMT],  [fmt],  [/bin/false])
+AC_PATH_PROG([SORT], [sort], [/bin/false])
+AC_PATH_PROG([UNIQ], [uniq], [/bin/false])
+AC_PATH_PROG([GIT],  [git],  [/bin/false])
+
+AC_PROG_CXXCPP
+AC_PROG_CXX
+AC_PROG_CXX_C_O
+
+CPPFLAGS_EXTRA=""
+AX_CHECK_COMPILE_FLAG([ -Wall -Werror ], [ CPPFLAGS_EXTRA="-Wall -Werror" ])
+AC_SUBST(CPPFLAGS_EXTRA, $CPPFLAGS_EXTRA)
+
+LT_INIT
+
+build_wrappers=no
+build_wrappers_java=no
+AX_SELECTOR_ENABLE([java-wrappers],[
+    build_wrappers_java=yes
+],[
+    build_wrappers_java=no
+])
+AS_IF([test "$build_wrappers_java" = "yes"],[
+    build_wrappers=yes
+])
+
+AS_IF([test "$build_wrappers" = "yes"],[
+    AX_PKG_SWIG([2.0], [
+        #
+        # SWIG version > 2.0.4 && < 2.0.8 have a bug preventing correct
+        # wrappers generation
+        #
+    
+        SWIG_VERSION=`$SWIG -version 2>&1 | grep 'SWIG Version' | sed 's/.*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/g'`
+        AX_COMPARE_VERSION($SWIG_VERSION, le, [2.0.4],,[
+            AX_COMPARE_VERSION($SWIG_VERSION, ge, [2.0.8],,[
+                AC_MSG_ERROR([SWIG versions in 2.0.4, ..., 2.0.8 range won't compile])
+            ])
+        ])
+    ], [
+        AC_MSG_ERROR([Your system lacks of SWIG (>2.0) support, wrappers generation is not be possible])
+    ])
+])
+
+AS_IF([test "$build_wrappers_java" = "yes"],[
+    AX_PROG_JAVAC
+    AX_JNI_INCLUDE_DIR
+
+    # XXX FIXME: Ugly as hell ...
+    JNI_CPPFLAGS=""
+    for JNI_INCLUDE_DIR in $JNI_INCLUDE_DIRS ;
+    do
+            JNI_CPPFLAGS="$JNI_CPPFLAGS $JNI_INCLUDE_DIR"
+    done
+    AC_SUBST(JNI_CPPFLAGS, $JNI_CPPFLAGS)
+    AX_PROG_JAR
+])
+
+AM_CONDITIONAL(BUILD_WRAPPERS_JAVA, [test $build_wrappers_java = yes])
+
+DX_DOXYGEN_FEATURE(ON)
+DX_DOT_FEATURE(ON)
+DX_HTML_FEATURE(ON)
+DX_CHM_FEATURE(OFF)
+DX_CHI_FEATURE(OFF)
+DX_MAN_FEATURE(ON)
+DX_RTF_FEATURE(OFF)
+DX_XML_FEATURE(OFF)
+DX_PDF_FEATURE(ON)
+DX_PS_FEATURE(OFF)
+DX_INIT_DOXYGEN($PACKAGE_NAME, [doxygen.cfg], [doxygen])
+
+PKG_CHECK_MODULES(LIBNL3, [libnl-3.0 >= 3.1],, [
+    AC_MSG_ERROR([Your system lacks of libnl-3 support])
+])
+PKG_CHECK_MODULES(LIBNLGENL3, [libnl-genl-3.0 >= 3.1],, [
+    AC_MSG_ERROR([Your system lacks of libnl-genl-3 support])
+])
+
+AC_CONFIG_FILES([
+    Makefile
+
+    include/Makefile
+    src/Makefile
+
+    wrap/Makefile
+    wrap/java/Makefile
+
+    apps/Makefile
+
+    test/Makefile
+
+    doc/Makefile
+])
+
+AC_OUTPUT

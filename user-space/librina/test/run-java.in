@@ -1,0 +1,33 @@
+#!@SHELL@
+
+#
+# run-java-test
+#
+# Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
+#             Eduard Grasa <e DOT grasa AT i2cat DOT net>
+#
+
+me="run-java"
+
+CP=@builddir@:@abs_top_builddir@/wrap/java
+
+TEST=$1
+
+echo "$me: Compiling Java test $TEST ..."
+@JAVAC@ -classpath $CP $1 || {
+        echo "$me: Cannot compile $1"
+        exit 1
+}
+
+#LP=@abs_top_builddir@/src:$@top_builddir@/wrap/java:@libdir@
+LP=@libdir@
+
+CLASS=`echo $TEST | sed -e 's,\.java\$,,'`
+
+echo "$me: Running Java class $CLASS ..."
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LP java -classpath $CP $CLASS || {
+    echo "$me: Cannot run $CLASS"
+    exit 1
+}
+
+echo "$me: Completed successfully"

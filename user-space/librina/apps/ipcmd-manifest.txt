@@ -1,0 +1,2 @@
+Class-Path: librina.jar
+Main-Class: ipcmd
