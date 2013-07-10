@@ -98,8 +98,6 @@ static struct ipc_process_t * find_ipc_process_by_id(struct kipcm *   kipcm,
                 }
         }
 
-        LOG_ERR("IPC process %d does not exist", id);
-
         return NULL;
 }
 
@@ -185,6 +183,12 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
         struct kobject *       k;
         struct ipc_process_t * ipc_process;
 
+        if (find_ipc_process_by_id(kipcm, id)) {
+        	LOG_ERR("Process id %d already exists", id);
+
+        	return -1;
+        }
+
         switch (type) {
         case DIF_TYPE_SHIM: {
                 struct shim *          shim;
@@ -233,12 +237,15 @@ int kipcm_ipc_destroy(struct kipcm *   kipcm,
 	struct kobject *       k;
 
 	ipc_process = find_ipc_process_by_id(kipcm, id);
-	if (!ipc_process)
+	if (!ipc_process) {
+		LOG_ERR("IPC process %d does not exist", id);
+
 		return -1;
+	}
 
 	switch (ipc_process->type) {
 	case DIF_TYPE_SHIM: {
-		struct shim * shim;
+		struct shim * shim = NULL;
 
 		k = kset_find_obj(kipcm->shims->set, "shim-dummy");
 		if (!k) {
@@ -247,13 +254,17 @@ int kipcm_ipc_destroy(struct kipcm *   kipcm,
 		}
 		shim        = to_shim(k);
 
-		shim->ops->destroy(shim->data,
-				ipc_process->data.shim_instance);
+		if (shim->ops->destroy(shim->data,
+				ipc_process->data.shim_instance)) {
+			LOG_ERR("Could not destroy shim instance %d", id);
+
+			return -1;
+		}
 	}
 		break;
-	case DIF_TYPE_NORMAL :
+	case DIF_TYPE_NORMAL:
 		break;
-	default :
+	default:
 		BUG();
 	}
 
