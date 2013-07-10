@@ -264,6 +264,22 @@ AppUnregisterApplicationResponseMessage * parseAppUnregisterApplicationResponseM
 		nlmsghdr *hdr);
 
 
+/* AppRegistrationCanceledNotificationMessage CLASS*/
+enum AppRegistrationCanceledNotificationMessageAttributes {
+	ARCN_ATTR_CODE = 1,
+	ARCN_ATTR_REASON,
+	ARCN_ATTR_APP_NAME,
+	ARCN_ATTR_DIF_NAME,
+	__ARCN_ATTR_MAX,
+};
+
+#define ARCN_ATTR_MAX (__ARCN_ATTR_MAX -1)
+
+int putAppRegistrationCanceledNotificationMessageObject(nl_msg* netlinkMessage,
+		const AppRegistrationCanceledNotificationMessage& object);
+
+AppRegistrationCanceledNotificationMessage * parseAppRegistrationCanceledNotificationMessage(
+		nlmsghdr *hdr);
 
 
 /* IpcmRegisterApplicationRequestMessage CLASS*/

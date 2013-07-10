@@ -26,48 +26,48 @@
 
 #include "librina-common.h"
 
-namespace rina{
+namespace rina {
 
-enum RINANetlinkOperationCode{
-        RINA_C_UNSPEC, /* Unespecified operation */
-        RINA_C_APP_ALLOCATE_FLOW_REQUEST, /* Allocate flow request, Application -> IPC Manager */
-        RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* Response to an application allocate flow request, IPC Manager -> Application */
-        RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, /* Allocate flow request from a remote application, IPC Process -> Application */
-        RINA_C_APP_ALLOCATE_FLOW_RESPONSE, /* Allocate flow response to an allocate request arrived operation, Application -> IPC Process */
-        RINA_C_APP_DEALLOCATE_FLOW_REQUEST, /* Application -> IPC Process */
-        RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, /* IPC Process -> Application */
-        RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, /* IPC Process -> Application, flow deallocated without the application having requested it */
-        RINA_C_APP_REGISTER_APPLICATION_REQUEST, /* Application -> IPC Manager */
-        RINA_C_APP_REGISTER_APPLICATION_RESPONSE, /* IPC Manager -> Application */
-        RINA_C_APP_UNREGISTER_APPLICATION_REQUEST, /* Application -> IPC Manager */
-        RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE, /* IPC Manager -> Application */
-        RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION, /* TODO IPC Manager -> Application, application unregistered without the application having requested it */
-        RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* TODO Application -> IPC Manager */
-        RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* TODO IPC Manager -> Application */
-        RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST, /* IPC Manager -> IPC Process */
-        RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE, /* IPC Process -> IPC Manager */
-        RINA_C_IPCM_IPC_PROCESS_REGISTERED_TO_DIF_NOTIFICATION, /* IPC Manager -> IPC Process */
-        RINA_C_IPCM_IPC_PROCESS_UNREGISTERED_FROM_DIF_NOTIFICATION, /* TODO IPC Manager -> IPC Process */
-        RINA_C_IPCM_ENROLL_TO_DIF_REQUEST, /* TODO IPC Manager -> IPC Process */
-        RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE, /* TODO IPC Process -> IPC Manager */
-        RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST, /* TODO IPC Manager -> IPC Process */
-        RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE, /* TODO IPC Process -> IPC Manager */
-        RINA_C_IPCM_ALLOCATE_FLOW_REQUEST, /* IPC Manager -> IPC Process */
-        RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE, /* IPC Process -> IPC Manager */
-        RINA_C_IPCM_REGISTER_APPLICATION_REQUEST, /*IPC Manager -> IPC Process */
-        RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE, /*IPC Process -> IPC Manager */
-        RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST, /* TODO IPC Manager -> IPC Process */
-        RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE, /* TODO IPC Process -> IPC Manager */
-        RINA_C_IPCM_QUERY_RIB_REQUEST, /* TODO IPC Manager -> IPC Process */
-        RINA_C_IPCM_QUERY_RIB_RESPONSE, /* TODO IPC Process -> IPC Manager */
-        RINA_C_RMT_ADD_FTE_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
-        RINA_C_RMT_DELETE_FTE_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
-        RINA_C_RMT_DUMP_FT_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
-        RINA_C_RMT_DUMP_FT_REPLY, /* TODO RMT (kernel) -> IPC Process (user space) */
-        __RINA_C_MAX,
- };
+enum RINANetlinkOperationCode {
+	RINA_C_UNSPEC, /* Unespecified operation */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST, /* Allocate flow request, Application -> IPC Manager */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* Response to an application allocate flow request, IPC Manager -> Application */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, /* Allocate flow request from a remote application, IPC Process -> Application */
+	RINA_C_APP_ALLOCATE_FLOW_RESPONSE, /* Allocate flow response to an allocate request arrived operation, Application -> IPC Process */
+	RINA_C_APP_DEALLOCATE_FLOW_REQUEST, /* Application -> IPC Process */
+	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, /* IPC Process -> Application */
+	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, /* IPC Process -> Application, flow deallocated without the application having requested it */
+	RINA_C_APP_REGISTER_APPLICATION_REQUEST, /* Application -> IPC Manager */
+	RINA_C_APP_REGISTER_APPLICATION_RESPONSE, /* IPC Manager -> Application */
+	RINA_C_APP_UNREGISTER_APPLICATION_REQUEST, /* Application -> IPC Manager */
+	RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE, /* IPC Manager -> Application */
+	RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION, /* IPC Manager -> Application, application unregistered without the application having requested it */
+	RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* TODO Application -> IPC Manager */
+	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* TODO IPC Manager -> Application */
+	RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST, /* IPC Manager -> IPC Process */
+	RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE, /* IPC Process -> IPC Manager */
+	RINA_C_IPCM_IPC_PROCESS_REGISTERED_TO_DIF_NOTIFICATION, /* IPC Manager -> IPC Process */
+	RINA_C_IPCM_IPC_PROCESS_UNREGISTERED_FROM_DIF_NOTIFICATION, /* TODO IPC Manager -> IPC Process */
+	RINA_C_IPCM_ENROLL_TO_DIF_REQUEST, /* TODO IPC Manager -> IPC Process */
+	RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE, /* TODO IPC Process -> IPC Manager */
+	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST, /* TODO IPC Manager -> IPC Process */
+	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE, /* TODO IPC Process -> IPC Manager */
+	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST, /* IPC Manager -> IPC Process */
+	RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE, /* IPC Process -> IPC Manager */
+	RINA_C_IPCM_REGISTER_APPLICATION_REQUEST, /*IPC Manager -> IPC Process */
+	RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE, /*IPC Process -> IPC Manager */
+	RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST, /* TODO IPC Manager -> IPC Process */
+	RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE, /* TODO IPC Process -> IPC Manager */
+	RINA_C_IPCM_QUERY_RIB_REQUEST, /* TODO IPC Manager -> IPC Process */
+	RINA_C_IPCM_QUERY_RIB_RESPONSE, /* TODO IPC Process -> IPC Manager */
+	RINA_C_RMT_ADD_FTE_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
+	RINA_C_RMT_DELETE_FTE_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
+	RINA_C_RMT_DUMP_FT_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
+	RINA_C_RMT_DUMP_FT_REPLY, /* TODO RMT (kernel) -> IPC Process (user space) */
+	__RINA_C_MAX,
+};
 
-struct rinaHeader{
+struct rinaHeader {
 	unsigned short sourceIPCProcessId;
 	unsigned short destIPCProcessId;
 };
@@ -157,7 +157,7 @@ public:
 	virtual IPCEvent* toIPCEvent() = 0;
 };
 
-class BaseNetlinkResponseMessage: public BaseNetlinkMessage{
+class BaseNetlinkResponseMessage: public BaseNetlinkMessage {
 	/**
 	 * Result of the operation. 0 indicates success, a negative value an
 	 * error code.
@@ -183,8 +183,7 @@ public:
  * and the IPC Manager.
  */
 
-class AppAllocateFlowRequestMessage:
-		public NetlinkRequestOrNotificationMessage{
+class AppAllocateFlowRequestMessage: public NetlinkRequestOrNotificationMessage {
 
 	/** The source application name */
 	ApplicationProcessNamingInformation sourceAppName;
@@ -366,8 +365,7 @@ public:
 /**
  * Response by the IPC Process to the flow deallocation request
  */
-class AppDeallocateFlowResponseMessage:
-		public BaseNetlinkResponseMessage {
+class AppDeallocateFlowResponseMessage: public BaseNetlinkResponseMessage {
 
 	/**
 	 * The name of the applicaiton that requested the flow deallocation
@@ -448,8 +446,7 @@ public:
  * Response of the IPC Manager to an application registration request.
  * IPC Manager -> Application
  */
-class AppRegisterApplicationResponseMessage:
-		public BaseNetlinkResponseMessage {
+class AppRegisterApplicationResponseMessage: public BaseNetlinkResponseMessage {
 
 	/** The DIF name where the application wants to register */
 	ApplicationProcessNamingInformation applicationName;
@@ -509,27 +506,52 @@ public:
  * Response of the IPC Manager to an application unregistration request.
  * IPC Manager -> Application
  */
-class AppUnregisterApplicationResponseMessage: public BaseNetlinkMessage {
+class AppUnregisterApplicationResponseMessage: public BaseNetlinkResponseMessage {
 
-	/**
-	 * Result of the operation. 0 indicates success, a negative value an
-	 * error code.
-	 */
-	int result;
-
-	/**
-	 * If the application unregistration didn't succeed, this field may provide
-	 * further detail
-	 */
-	std::string errorDescription;
+	/** The name of the application to be registered */
+	ApplicationProcessNamingInformation applicationName;
 
 public:
 	AppUnregisterApplicationResponseMessage();
 	const ApplicationProcessNamingInformation& getApplicationName() const;
-	const std::string& getErrorDescription() const;
-	void setErrorDescription(const std::string& errorDescription);
-	int getResult() const;
-	void setResult(int result);
+	void setApplicationName(
+			const ApplicationProcessNamingInformation& applicationName);
+};
+
+/**
+ * IPC Process -> Application, application unregistered without the application having
+ *  requested it
+ */
+class AppRegistrationCanceledNotificationMessage: public NetlinkRequestOrNotificationMessage {
+
+	/** A number identifying a reason why the application registration has been canceled */
+	int code;
+
+	/** An optional explanation of why the application registration has been canceled */
+	std::string reason;
+
+	/**
+	 * The name of the application whose registration was canceled
+	 */
+	ApplicationProcessNamingInformation applicationName;
+
+	/**
+	 * The name of dif the application was registered before
+	 */
+	ApplicationProcessNamingInformation difName;
+
+public:
+	AppRegistrationCanceledNotificationMessage();
+	int getCode() const;
+	void setCode(int code);
+	const std::string& getReason() const;
+	void setReason(const std::string& reason);
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	void setApplicationName(
+			const ApplicationProcessNamingInformation& applicationName);
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
+	IPCEvent* toIPCEvent();
 };
 
 /**
@@ -566,8 +588,7 @@ public:
  * Response of the IPC Process to an application registration request.
  * IPC Process -> IPC Manager
  */
-class IpcmRegisterApplicationResponseMessage:
-		public BaseNetlinkResponseMessage {
+class IpcmRegisterApplicationResponseMessage: public BaseNetlinkResponseMessage {
 
 	/** The DIF name where the application wants to register */
 	ApplicationProcessNamingInformation applicationName;
@@ -605,15 +626,13 @@ public:
  * IPC Process -> IPC Manager
  */
 
-class IpcmAssignToDIFResponseMessage:
-		public BaseNetlinkResponseMessage {
+class IpcmAssignToDIFResponseMessage: public BaseNetlinkResponseMessage {
 
 public:
 	IpcmAssignToDIFResponseMessage();
 };
 
-class IpcmAllocateFlowRequestMessage:
-		public NetlinkRequestOrNotificationMessage {
+class IpcmAllocateFlowRequestMessage: public NetlinkRequestOrNotificationMessage {
 	/** The source application name*/
 	ApplicationProcessNamingInformation sourceAppName;
 
@@ -637,8 +656,7 @@ public:
 	unsigned int getApplicationPortId() const;
 	void setApplicationPortId(unsigned int applicationPortId);
 	const ApplicationProcessNamingInformation& getDestAppName() const;
-	void setDestAppName(
-			const ApplicationProcessNamingInformation& destAppName);
+	void setDestAppName(const ApplicationProcessNamingInformation& destAppName);
 	const FlowSpecification& getFlowSpec() const;
 	void setFlowSpec(const FlowSpecification& flowSpec);
 	int getPortId() const;
@@ -655,14 +673,13 @@ public:
  * Sent by the IPC Process to inform about the result of the flow allocation
  * request operation. IPC Process -> IPC Manager
  */
-class IpcmAllocateFlowResponseMessage: public BaseNetlinkResponseMessage{
+class IpcmAllocateFlowResponseMessage: public BaseNetlinkResponseMessage {
 
 public:
 	IpcmAllocateFlowResponseMessage();
 };
 
-class IpcmIPCProcessRegisteredToDIFNotification:
-		public NetlinkRequestOrNotificationMessage {
+class IpcmIPCProcessRegisteredToDIFNotification: public NetlinkRequestOrNotificationMessage {
 	/** The name of the IPC Process registered to the N-1 DIF */
 	ApplicationProcessNamingInformation ipcProcessName;
 

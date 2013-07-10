@@ -842,11 +842,20 @@ int testAppUnregisterApplicationResponseMessage() {
 	std::cout << "TESTING APP UNREGISTER APPLICATION RESPONSE MESSAGE\n";
 	int returnValue = 0;
 
+	ApplicationProcessNamingInformation * applicationName =
+			new ApplicationProcessNamingInformation();
+	applicationName->setProcessName("/apps/source");
+	applicationName->setProcessInstance("5");
+	applicationName->setEntityName("database");
+	applicationName->setEntityInstance("3");
+
 	AppUnregisterApplicationResponseMessage * message =
 			new AppUnregisterApplicationResponseMessage();
 
 	message->setResult(1);
 	message->setErrorDescription("Error description");
+	message->setApplicationName(*applicationName);
+
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -872,6 +881,11 @@ int testAppUnregisterApplicationResponseMessage() {
 	if (message == NULL) {
 		std::cout << "Error parsing Register Application Response Message "
 				<< "\n";
+		returnValue = -1;
+	} else if (message->getApplicationName()
+			!= recoveredMessage->getApplicationName()) {
+		std::cout << "Application name on original and recovered messages"
+				<< " are different\n";
 		returnValue = -1;
 	} else if (message->getResult() != recoveredMessage->getResult()) {
 		std::cout << "Result on original and recovered messages"
@@ -1250,7 +1264,7 @@ int testIpcmAllocateFlowRequestMessage() {
 				<< " are different\n";
 		returnValue = -1;
 	} else if (message.getApplicationPortId()!=
-	 		recoveredMessage->getApplicationPortId()) {
+			recoveredMessage->getApplicationPortId()) {
 		std::cout << "Application port on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
