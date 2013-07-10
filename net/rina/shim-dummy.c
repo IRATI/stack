@@ -33,24 +33,40 @@
 #include "utils.h"
 #include "kipcm.h"
 #include "shim.h"
+#include "shim-utils.h"
 
 struct shim_instance_data {
-        ipc_process_id_t   ipc_process_id;
-        struct name *      name;
+        ipc_process_id_t ipc_process_id;
+        struct name *    name;
 
         /* FIXME: Stores the state of flows indexed by port_id */
-        struct list_head * flows;
+        struct list_head flows;
 
         /* Used to keep a list of all the dummy shims */
-        struct list_head   list;
+        struct list_head list;
 };
 
 struct dummy_flow {
-        port_id_t           port_id;
-        const struct name * source;
-        const struct name * dest;
-        struct list_head    list;
+        port_id_t        port_id;
+        struct name *    source;
+        struct name *    dest;
+        struct list_head list;
 };
+
+static struct dummy_flow * find_flow(struct shim_instance_data * data,
+                                     port_id_t                   id)
+{
+        struct dummy_flow *     flow;
+
+        list_for_each_entry(flow, &data->flows, list) {
+                if (flow->port_id == id) {
+                        return flow;
+                }
+        }
+
+        return NULL;
+}
+
 
 static int dummy_flow_allocate_request(struct shim_instance_data * data,
                                        const struct name *         source,
@@ -58,25 +74,40 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
                                        const struct flow_spec *    fspec,
                                        port_id_t                   id)
 {
-        struct shim_instance_data * dummy;
         struct dummy_flow *         flow;
 
-        /* FIXME: We should verify that the port_id has not got a flow yet */
+        ASSERT(data);
+        ASSERT(source);
+        ASSERT(dest);
+
+        if (find_flow(data, id)) {
+        	LOG_ERR("Flow already exists");
+        	return -1;
+        }
 
         flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
         if (!flow)
                 return -1;
 
+        flow->dest = name_dup(dest);
+        if(!flow->dest) {
+        	rkfree(flow);
+		LOG_ERR("Name copy failed");
+		return -1;
+	}
+        flow->source = name_dup(source);
+	if(!flow->source) {
+		rkfree(flow->dest);
+		rkfree(flow);
+		LOG_ERR("Name copy failed");
+		return -1;
+	}
         /* FIXME: Now we should ask the destination application for a flow */
 
-        dummy = (struct shim_instance_data *) data;
-
-        flow->dest = dest;
-        flow->source = source;
         flow->port_id = id;
 
         INIT_LIST_HEAD(&flow->list);
-        list_add(&flow->list, dummy->flows);
+        list_add(&flow->list, &data->flows);
 
         return 0;
 }
@@ -88,7 +119,23 @@ static int dummy_flow_allocate_response(struct shim_instance_data * data,
 
 static int dummy_flow_deallocate(struct shim_instance_data * data,
                                  port_id_t                   id)
-{ return -1; }
+{
+	struct dummy_flow * flow;
+
+	ASSERT(data);
+	flow = find_flow(data, id);
+	if (!flow) {
+		LOG_ERR("Flow does not exist, cannot remove");
+		return -1;
+	}
+
+	list_del(&flow->list);
+	name_fini(flow->dest);
+	name_fini(flow->source);
+	rkfree(flow);
+
+	return 0;
+}
 
 static int dummy_application_register(struct shim_instance_data * data,
                                       const struct name *         source)
@@ -97,20 +144,6 @@ static int dummy_application_register(struct shim_instance_data * data,
 static int dummy_application_unregister(struct shim_instance_data * data,
                                         const struct name *         source)
 { return -1; }
-
-static struct dummy_flow * find_flow(struct shim_instance_data * data,
-                                     port_id_t                   id)
-{
-        struct dummy_flow *     flow;
-
-        list_for_each_entry(flow, data->flows, list) {
-                if (flow->port_id == id) {
-                        return flow;
-                }
-        }
-
-        return NULL;
-}
 
 static int dummy_sdu_write(struct shim_instance_data * data,
                            port_id_t                   id,
@@ -145,7 +178,7 @@ static int dummy_sdu_read(struct shim_instance_data * data,
 }
 
 struct shim_data {
-        struct list_head * shim_list;
+        struct list_head shim_list;
 };
 
 static struct shim_data dummy_data;
@@ -154,35 +187,21 @@ static struct shim *    dummy_shim = NULL;
 
 static int dummy_init(struct shim_data * data)
 {
-	struct list_head * dummy_shim_list;
+	ASSERT(data);
 
-        dummy_data.shim_list = rkmalloc(sizeof(*dummy_shim_list), GFP_KERNEL);
-        if (!dummy_data.shim_list)
-                return -1;
+	bzero(&dummy_data, sizeof(dummy_data));
+	INIT_LIST_HEAD(&data->shim_list);
 
-        INIT_LIST_HEAD(dummy_data.shim_list);
-
-        return -1;
+        return 0;
 }
 
 static int dummy_fini(struct shim_data * data)
 {
-        struct shim_instance_data * pos, * next;
-        struct dummy_flow *     pos_flow, * next_flow;
+        ASSERT(data);
 
-        list_for_each_entry_safe(pos, next,
-                                 (struct list_head *) dummy_shim->data,
-                                 list) {
-                list_del(&pos->list);
-                list_for_each_entry_safe(pos_flow,
-                                         next_flow, pos->flows, list) {
-                        list_del(&pos_flow->list);
-                        rkfree(pos_flow);
-                }
-                rkfree(pos);
-        }
+        ASSERT(list_empty(&data->shim_list));
 
-        return -1;
+        return 0;
 }
 
 static struct shim_instance_ops instance_ops = {
@@ -198,58 +217,60 @@ static struct shim_instance_ops instance_ops = {
 static struct shim_instance * dummy_create(struct shim_data * data,
                                            ipc_process_id_t   id)
 {
-        struct shim_instance *   instance;
-        struct shim_instance_data *  dummy_inst;
-        struct list_head *       port_flow;
+        struct shim_instance *   inst;
 
-        instance = rkzalloc(sizeof(*instance), GFP_KERNEL);
-        if (!instance)
+        inst = rkzalloc(sizeof(*inst), GFP_KERNEL);
+        if (!inst)
                 return NULL;
 
-        dummy_inst = rkzalloc(sizeof(*dummy_inst), GFP_KERNEL);
-        if (!dummy_inst) {
-                rkfree(instance);
-                return NULL;
-        }
+        inst->data = rkzalloc(sizeof(struct shim_instance_data), GFP_KERNEL);
+        if (!inst->data) {
+		rkfree(inst);
+		return NULL;
+	}
 
-        port_flow = rkzalloc(sizeof(*port_flow), GFP_KERNEL);
-        if (!port_flow) {
-                rkfree(instance);
-                rkfree(dummy_inst);
-                return NULL;
-        }
+        INIT_LIST_HEAD(&inst->data->flows);
 
-        INIT_LIST_HEAD(port_flow);
+        inst->data->ipc_process_id = id;
 
-        dummy_inst->ipc_process_id = id;
-        dummy_inst->flows          = port_flow;
+        inst->ops = &instance_ops;
 
-        instance->data             = dummy_inst;
+        INIT_LIST_HEAD(&inst->data->list);
+        list_add(&inst->data->list, &data->shim_list);
 
-        instance->ops              = &instance_ops;
-
-        INIT_LIST_HEAD(&dummy_inst->list);
-        list_add(&dummy_inst->list, (struct list_head *) dummy_shim->data);
-
-        return instance;
+        return inst;
 }
 
 static int dummy_destroy(struct shim_data *     data,
                          struct shim_instance * inst)
-{ return -1; }
+{
+	struct shim_instance_data * pos, * next;
+
+	ASSERT(data);
+	ASSERT(inst);
+
+	list_for_each_entry_safe(pos, next, &data->shim_list, list) {
+		if (inst->data->ipc_process_id == pos->ipc_process_id) {
+			list_del(&pos->list);
+			rkfree(pos);
+		}
+	}
+
+	return 0;
+}
 
 /* FIXME: It doesn't allow reconfiguration */
 static struct shim_instance * dummy_configure(struct shim_data *         data,
                                               struct shim_instance *     inst,
                                               const struct shim_config * conf)
 {
-        struct shim_config *    current_entry;
+        struct shim_config *        current_entry;
         struct shim_instance_data * dummy;
 
         ASSERT(inst);
         ASSERT(conf);
 
-        dummy = (struct shim_instance_data *) inst->data;
+        dummy = inst->data;
         if (!dummy) {
                 LOG_ERR("There is not a dummy instance in this shim instance");
                 return NULL;
