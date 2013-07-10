@@ -125,7 +125,6 @@ void ApplicationRegistration::removeDIFName(
 }
 
 /* CLASS IPC MANAGER */
-
 IPCManager::IPCManager() {
 }
 
@@ -140,6 +139,8 @@ const std::string IPCManager::unknown_flow_error =
 		"There is no flow at the specified portId";
 const std::string IPCManager::error_registering_application =
 		"Error registering application";
+const std::string IPCManager::error_unregistering_application =
+		"Error unregistering application";
 const std::string IPCManager::error_requesting_flow_allocation =
 		"Error requesting flow allocation";
 const std::string IPCManager::error_requesting_flow_deallocation =
@@ -183,13 +184,13 @@ std::vector<DIFProperties> IPCManager::getDIFProperties(
 void IPCManager::registerApplication(
 		const ApplicationProcessNamingInformation& applicationName,
 		const ApplicationProcessNamingInformation& DIFName)
-				throw (IPCException) {
+throw (IPCException) {
 	LOG_DBG("IPCManager.registerApplication called");
 	ApplicationRegistration * applicationRegistration = 0;
 
 	std::map<ApplicationProcessNamingInformation,
-		ApplicationRegistration*>::iterator it =
-				applicationRegistrations.find(applicationName);
+	ApplicationRegistration*>::iterator it =
+			applicationRegistrations.find(applicationName);
 
 	if (it != applicationRegistrations.end()){
 		applicationRegistration = it->second;
@@ -245,7 +246,28 @@ void IPCManager::unregisterApplication(
 #if STUB_API
 	//Do nothing
 #else
-	//TODO real implementation
+	AppUnregisterApplicationRequestMessage * message =
+			new AppUnregisterApplicationRequestMessage();
+	message->setApplicationName(applicationName);
+	message->setDifName(DIFName);
+	message->setRequestMessage(true);
+
+	AppUnregisterApplicationResponseMessage * unregisterResponseMessage =
+			dynamic_cast<AppUnregisterApplicationResponseMessage *>(
+					rinaManager->sendRequestAndWaitForResponse(message,
+							IPCManager::error_unregistering_application));
+
+	if (unregisterResponseMessage->getResult() < 0){
+		std::string reason = IPCManager::error_unregistering_application +
+				unregisterResponseMessage->getErrorDescription();
+		delete unregisterResponseMessage;
+		throw IPCException(reason);
+	}
+
+	LOG_DBG("Application %s unregistered successfully to DIF %s",
+			applicationName.getProcessName().c_str(),
+			DIFName.getProcessName().c_str());
+	delete unregisterResponseMessage;
 #endif
 
 	ApplicationRegistration * applicationRegistration = 0;
@@ -336,7 +358,7 @@ Flow * IPCManager::allocateFlowRequest(
 
 Flow * IPCManager::allocateFlowResponse(
 		const FlowRequestEvent& flowRequestEvent, bool accept,
-			const std::string& reason) throw (IPCException) {
+		const std::string& reason) throw (IPCException) {
 	LOG_DBG("IPCManager.allocateFlowResponse called");
 
 	if (!accept) {
@@ -364,7 +386,7 @@ Flow * IPCManager::allocateFlowResponse(
 
 void IPCManager::deallocateFlow(
 		int portId, const ApplicationProcessNamingInformation& applicationName)
-			throw (IPCException) {
+throw (IPCException) {
 	LOG_DBG("IPCManager.deallocateFlow called");
 
 	Flow * flow = 0;
@@ -437,7 +459,7 @@ Singleton<IPCManager> ipcManager;
 FlowDeallocatedEvent::FlowDeallocatedEvent(
 		int portId, int code, const std::string& reason,
 		const ApplicationProcessNamingInformation& difName) :
-		IPCEvent(FLOW_DEALLOCATED_EVENT, 0) {
+				IPCEvent(FLOW_DEALLOCATED_EVENT, 0) {
 	this->portId = portId;
 	this->code = code;
 	this->reason = reason;
@@ -457,7 +479,7 @@ const std::string FlowDeallocatedEvent::getReason() const{
 }
 
 const ApplicationProcessNamingInformation
-	FlowDeallocatedEvent::getDIFName() const{
+FlowDeallocatedEvent::getDIFName() const{
 	return difName;
 }
 
@@ -468,19 +490,19 @@ ApplicationUnregisteredEvent::ApplicationUnregisteredEvent(
 		const ApplicationProcessNamingInformation& appName,
 		const ApplicationProcessNamingInformation& DIFName,
 		unsigned int sequenceNumber) :
-		IPCEvent(APPLICATION_UNREGISTERED_EVENT,
-				sequenceNumber) {
+				IPCEvent(APPLICATION_UNREGISTERED_EVENT,
+						sequenceNumber) {
 	this->applicationName = appName;
 	this->DIFName = DIFName;
 }
 
 const ApplicationProcessNamingInformation&
-	ApplicationUnregisteredEvent::getApplicationName() const {
+ApplicationUnregisteredEvent::getApplicationName() const {
 	return applicationName;
 }
 
 const ApplicationProcessNamingInformation&
-	ApplicationUnregisteredEvent::getDIFName() const {
+ApplicationUnregisteredEvent::getDIFName() const {
 	return DIFName;
 }
 
