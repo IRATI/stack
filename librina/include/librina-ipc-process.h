@@ -52,6 +52,29 @@ public:
 	unsigned short getIPCProcessId() const;
 };
 
+
+/**
+ * Event informing the IPC Process about an application unregistration request
+ */
+class IpcmUnregistrationRequestEvent: public IPCEvent {
+
+	/** The name of the DIF that is providing this flow */
+	ApplicationProcessNamingInformation DIFName;
+
+	/** The application that requested the flow deallocation*/
+	ApplicationProcessNamingInformation applicationName;
+
+
+public:
+	IpcmUnregistrationRequestEvent(const ApplicationProcessNamingInformation& DIFName,
+			const ApplicationProcessNamingInformation& appName,
+			unsigned int sequenceNumber);
+	const ApplicationProcessNamingInformation& getDIFName() const;
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+};
+
+
+
 /**
  * The IPC Manager requests the IPC Process to become a member of a
  * DIF, and provides de related information
@@ -188,6 +211,18 @@ public:
 	void registerApplicationResponse(
 			const ApplicationRegistrationRequestEvent& event, int result,
 			const std::string& errorDescription) throw(IPCException);
+
+	/**
+	 * Reply to the IPC Manager, informing it about the result of a "unregister
+	 * application request" operation
+	 * @param event
+	 * @param result
+	 * @param errorDescription
+	 */
+	void unregisterApplicationResponse(
+			const ApplicationUnregistrationRequestEvent& event, int result,
+			const std::string& errorDescription) throw(IPCException);
+
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of a "allocate

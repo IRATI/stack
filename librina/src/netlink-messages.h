@@ -55,8 +55,8 @@ enum RINANetlinkOperationCode{
         RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE, /* IPC Process -> IPC Manager */
         RINA_C_IPCM_REGISTER_APPLICATION_REQUEST, /*IPC Manager -> IPC Process */
         RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE, /*IPC Process -> IPC Manager */
-        RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST, /* TODO IPC Manager -> IPC Process */
-        RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE, /* TODO IPC Process -> IPC Manager */
+        RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST, /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE, /* IPC Process -> IPC Manager */
         RINA_C_IPCM_QUERY_RIB_REQUEST, /* TODO IPC Manager -> IPC Process */
         RINA_C_IPCM_QUERY_RIB_RESPONSE, /* TODO IPC Process -> IPC Manager */
         RINA_C_RMT_ADD_FTE_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
@@ -394,12 +394,12 @@ class AppFlowDeallocatedNotificationMessage: public NetlinkRequestOrNotification
 	std::string reason;
 
 	/**
-	 * The name of the applicaiton that was using the flow
+	 * The name of the application that was using the flow
 	 */
 	ApplicationProcessNamingInformation applicationName;
 
 	/**
-	 * The name of the applicaiton that requested the flow deallocation
+	 * The name of the application that requested the flow deallocation
 	 */
 	ApplicationProcessNamingInformation difName;
 
@@ -604,6 +604,42 @@ public:
 	void setDifName(const ApplicationProcessNamingInformation& difName);
 };
 
+
+/**
+ * Invoked by the IPC Manager when it wants to unregister an application.
+ * IPC Manager -> IPC Process
+ */
+class IpcmUnregisterApplicationRequestMessage: public NetlinkRequestOrNotificationMessage {
+
+	/** The name of the application to be registered */
+	ApplicationProcessNamingInformation applicationName;
+
+	/** The DIF name where the application wants to register */
+	ApplicationProcessNamingInformation difName;
+
+public:
+	IpcmUnregisterApplicationRequestMessage();
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	void setApplicationName(
+			const ApplicationProcessNamingInformation& applicationName);
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
+	IPCEvent* toIPCEvent();
+};
+
+
+/**
+ * Response of the IPC Process to an application unregistration request.
+ * IPC Process -> IPC Manager
+ */
+class IpcmUnregisterApplicationResponseMessage: public BaseNetlinkResponseMessage {
+
+public:
+	IpcmUnregisterApplicationResponseMessage();
+};
+
+
+
 /**
  * Makes an IPC Process a member of a DIF.
  * IPC Manager -> IPC Process
@@ -678,6 +714,8 @@ public:
 	IpcmAllocateFlowResponseMessage();
 };
 
+
+
 /**
  * Used by the IPC Manager to notify the IPC Process about having been
  * registered to or unregistered from a DIF. IPC Manager -> IPC Process
@@ -707,6 +745,10 @@ public:
 	bool isRegistered() const;
 	IPCEvent* toIPCEvent();
 };
+
+
+
+
 
 /**
  * Used by the IPC Manager to request information from an IPC Process RIB

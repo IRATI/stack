@@ -120,7 +120,7 @@ void IPCProcess::assignToDIF(
 void IPCProcess::notifyRegistrationToSupportingDIF(
 		const ApplicationProcessNamingInformation& ipcProcessName,
 		const ApplicationProcessNamingInformation& difName)
-		throw (IPCException) {
+throw (IPCException) {
 	LOG_DBG("IPCProcess::notify registration to supporting DIF called");
 #if STUB_API
 	//Do nothing
@@ -144,7 +144,7 @@ void IPCProcess::notifyRegistrationToSupportingDIF(
 void IPCProcess::notifyUnregistrationFromSupportingDIF(
 		const ApplicationProcessNamingInformation& ipcProcessName,
 		const ApplicationProcessNamingInformation& difName)
-		throw (IPCException) {
+throw (IPCException) {
 	LOG_DBG("IPCProcess::notify unregistration from supporting DIF called");
 #if STUB_API
 	//Do nothing
@@ -167,14 +167,14 @@ void IPCProcess::notifyUnregistrationFromSupportingDIF(
 
 void IPCProcess::enroll(const ApplicationProcessNamingInformation& difName,
 		const ApplicationProcessNamingInformation& supportinDifName)
-				throw (IPCException) {
+throw (IPCException) {
 	LOG_DBG("IPCProcess::enroll called");
 	throw IPCException(IPCException::operation_not_implemented_error);
 }
 
 void IPCProcess::disconnectFromNeighbor(
 		const ApplicationProcessNamingInformation& neighbor)
-				throw (IPCException) {
+throw (IPCException) {
 	LOG_DBG("IPCProcess::disconnect from neighbour called");
 	throw IPCException(IPCException::operation_not_implemented_error);
 }
@@ -182,7 +182,7 @@ void IPCProcess::disconnectFromNeighbor(
 void IPCProcess::registerApplication(
 		const ApplicationProcessNamingInformation& applicationName,
 		unsigned int applicationPortId)
-				throw (IPCException) {
+throw (IPCException) {
 	LOG_DBG("IPCProcess::register application called");
 	if (!difMember){
 		throw IPCException(IPCProcess::error_not_a_dif_member);
@@ -197,9 +197,9 @@ void IPCProcess::registerApplication(
 	message.setRequestMessage(true);
 
 	IpcmRegisterApplicationResponseMessage * registerAppResponse =
-		dynamic_cast<IpcmRegisterApplicationResponseMessage *>(
-			rinaManager->sendRequestAndWaitForResponse(&message,
-				IPCProcess::error_registering_app));
+			dynamic_cast<IpcmRegisterApplicationResponseMessage *>(
+					rinaManager->sendRequestAndWaitForResponse(&message,
+							IPCProcess::error_registering_app));
 
 	if (registerAppResponse->getResult() < 0){
 		std::string reason = IPCProcess::error_registering_app + " " +
@@ -217,7 +217,7 @@ void IPCProcess::registerApplication(
 
 void IPCProcess::unregisterApplication(
 		const ApplicationProcessNamingInformation& applicationName)
-				throw (IPCException) {
+throw (IPCException) {
 	LOG_DBG("IPCProcess::unregister application called");
 }
 
@@ -240,9 +240,9 @@ void IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest,
 	message.setRequestMessage(true);
 
 	IpcmAllocateFlowResponseMessage * allocateFlowResponse =
-		dynamic_cast<IpcmAllocateFlowResponseMessage *>(
-			rinaManager->sendRequestAndWaitForResponse(&message,
-				IPCProcess::error_allocating_flow));
+			dynamic_cast<IpcmAllocateFlowResponseMessage *>(
+					rinaManager->sendRequestAndWaitForResponse(&message,
+							IPCProcess::error_allocating_flow));
 
 	if (allocateFlowResponse->getResult() < 0){
 		std::string reason = IPCProcess::error_allocating_flow + " " +
@@ -289,7 +289,7 @@ IPCProcess * IPCProcessFactory::create(
 }
 
 void IPCProcessFactory::destroy(unsigned int ipcProcessId)
-		throw (IPCException) {
+throw (IPCException) {
 	LOG_DBG("IPCProcessFactory::destroy called");
 
 	std::map<int, IPCProcess*>::iterator iterator;
@@ -344,9 +344,25 @@ void ApplicationManager::applicationRegistered(
 #endif
 }
 
-void ApplicationManager::applicationUnregistered(unsigned int transactionId,
-		const std::string& response) throw (IPCException) {
+void ApplicationManager::applicationUnregistered(const ApplicationUnregistrationRequestEvent& event,
+		int result, const std::string& errorDescription) throw (IPCException) {
 	LOG_DBG("ApplicationManager::applicationUnregistered called");
+
+#if STUB_API
+	//Do nothing
+#else
+	AppUnregisterApplicationResponseMessage responseMessage;
+	responseMessage.setApplicationName(event.getApplicationName());
+	responseMessage.setResult(result);
+	responseMessage.setErrorDescription(errorDescription);
+	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+	}catch(NetlinkException &e){
+		throw IPCException(e.what());
+	}
+#endif
 }
 
 void ApplicationManager::flowAllocated(const FlowRequestEvent flowRequestEvent,

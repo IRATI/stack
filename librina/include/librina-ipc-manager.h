@@ -95,7 +95,7 @@ public:
 	void notifyRegistrationToSupportingDIF(
 			const ApplicationProcessNamingInformation& ipcProcessName,
 			const ApplicationProcessNamingInformation& difName)
-					throw (IPCException);
+	throw (IPCException);
 
 	/**
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been
@@ -109,7 +109,7 @@ public:
 	void notifyUnregistrationFromSupportingDIF(
 			const ApplicationProcessNamingInformation& ipcProcessName,
 			const ApplicationProcessNamingInformation& difName)
-					throw (IPCException);
+	throw (IPCException);
 
 	/**
 	 * Invoked by the IPC Manager to trigger the enrollment of an IPC Process
@@ -124,7 +124,7 @@ public:
 	 */
 	void enroll(const ApplicationProcessNamingInformation& difName,
 			const ApplicationProcessNamingInformation& supportinDifName)
-					throw (IPCException);
+	throw (IPCException);
 
 	/**
 	 * Invoked by the IPC Manager to force an IPC Process to deallocate all the
@@ -137,7 +137,7 @@ public:
 	 */
 	void disconnectFromNeighbor(
 			const ApplicationProcessNamingInformation& neighbor)
-					throw (IPCException);
+	throw (IPCException);
 
 	/**
 	 * Invoked by the IPC Manager to register an application in a DIF through
@@ -151,7 +151,7 @@ public:
 	void registerApplication(
 			const ApplicationProcessNamingInformation& applicationName,
 			unsigned int applicationPortId)
-					throw (IPCException);
+	throw (IPCException);
 
 	/**
 	 * Invoked by the IPC Manager to unregister an application in a DIF through
@@ -163,7 +163,7 @@ public:
 	 */
 	void unregisterApplication(
 			const ApplicationProcessNamingInformation& applicationName)
-					throw (IPCException);
+	throw (IPCException);
 
 	/**
 	 * Invoked by the IPC Manager to request an IPC Process the allocation of a
@@ -267,8 +267,8 @@ public:
 	 * @param response The result of the unregistration operation
 	 * @throws IPCException If an error occurs during the operation
 	 */
-	void applicationUnregistered(unsigned int transactionId,
-			const std::string& response) throw (IPCException);
+	void applicationUnregistered(const ApplicationUnregistrationRequestEvent & event,
+			int result, const std::string& errorDescription) throw (IPCException);
 
 	/**
 	 * Invoked by the IPC Manager to respond to the Application Process that
@@ -286,7 +286,7 @@ public:
 	void flowAllocated(const FlowRequestEvent flowRequestEvent,
 			std::string errorDescription,
 			unsigned short ipcProcessId, unsigned int ipcProcessPortId)
-			throw (IPCException);
+	throw (IPCException);
 };
 
 /**
