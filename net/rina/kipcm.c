@@ -362,6 +362,7 @@ int kipcm_flow_add(struct kipcm *      kipcm,
 
 	return 0;
 }
+EXPORT_SYMBOL(kipcm_flow_add);
 
 static struct port_id_to_flow *
 retrieve_port_flow_node(struct kipcm * kipcm, port_id_t port_id)
@@ -394,6 +395,7 @@ int kipcm_flow_remove(struct kipcm * kipcm,
 
 	return 0;
 }
+EXPORT_SYMBOL(kipcm_flow_remove);
                
 int kipcm_sdu_write(struct kipcm *     kipcm,
                     port_id_t          id,
