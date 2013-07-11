@@ -69,6 +69,9 @@ void doWorkApplicationProcess(){
 				flow->getDIFName().getProcessName() << std::endl;
 		ipcManager->deallocateFlow(flow->getPortId(), appName);
 		std::cout<<"Application# Flow deallocated!"<<std::endl;
+
+		ipcManager->unregisterApplication(appName, difName);
+		std::cout<<"Application# Application unregistered!\n";
 	}catch(IPCException &e){
 		std::cout<<"Problems "<<e.what()<<"\n";
 		result = -1;
@@ -132,6 +135,18 @@ void doWorkIPCProcess(){
 			*deallocateFlowEvent, 0, "ok");
 	std::cout<<"ICPProcess# Replied to application\n";
 	delete deallocateFlowEvent;
+
+	//Wait for an unregister application event
+	event = ipcEventProducer->eventWait();
+	ApplicationUnregistrationRequestEvent * applicationUnregistrationEvent =
+			dynamic_cast<ApplicationUnregistrationRequestEvent *>(event);
+	std::cout<<"IPCProcess# Received application unregistration event"
+			<<std::endl;
+	extendedIPCManager->unregisterApplicationResponse(
+			*applicationUnregistrationEvent, 0, "ok");
+	std::cout<<"IPCProcess# Replied IPC Manager"<<std::endl;
+	delete applicationUnregistrationEvent;
+
 
 	//Wait for Unregistration from DIF notification event
 	event = ipcEventProducer->eventWait();
@@ -201,12 +216,25 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	flowRequestEvent->setPortId(23);
 	ipcProcess->allocateFlow(*flowRequestEvent, 3);
 	std::cout<<"IPCManager# IPC Process successfully allocated flow" <<
-				"in DIF "<<difName.getProcessName()<<std::endl;
+			"in DIF "<<difName.getProcessName()<<std::endl;
 	applicationManager->flowAllocated(*flowRequestEvent, "ok", 1, 2);
 	std::cout<<"IPCManager# Replied to flow allocation\n";
 	delete flowRequestEvent;
 
 	usleep(1000*50);
+
+	//Wait for a unegister application event
+	event = ipcEventProducer->eventWait();
+	ApplicationUnregistrationRequestEvent * appUnregistrationRequestEvent =
+			dynamic_cast<ApplicationUnregistrationRequestEvent *>(event);
+	std::cout<<"IPCManager# received an application unregistration request event\n";
+	ipcProcess->unregisterApplication(appUnregistrationRequestEvent->getApplicationName());
+	std::cout<<"IPCManager# IPC Process successfully unregistered application " <<
+			"to DIF "<<difName.getProcessName()<<std::endl;
+	applicationManager->applicationUnregistered(*appUnregistrationRequestEvent, 0, "OK");
+	std::cout<<"IPCManager# Replied to application\n";
+	delete appRequestEvent;
+
 
 	//Inform IPC Process that it has been unregistered from underlying DIF
 	ipcProcess->notifyUnregistrationFromSupportingDIF(

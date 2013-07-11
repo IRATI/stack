@@ -763,6 +763,48 @@ void IpcmRegisterApplicationResponseMessage::setDifName(
 	this->difName = difName;
 }
 
+
+/* CLASS IPCM UNREGISTER APPLICATION REQUEST MESSAGE */
+IpcmUnregisterApplicationRequestMessage::IpcmUnregisterApplicationRequestMessage() :
+				NetlinkRequestOrNotificationMessage(
+						RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST) {
+}
+
+const ApplicationProcessNamingInformation&
+IpcmUnregisterApplicationRequestMessage::getApplicationName() const {
+	return applicationName;
+}
+
+void IpcmUnregisterApplicationRequestMessage::setApplicationName(
+		const ApplicationProcessNamingInformation& applicationName) {
+	this->applicationName = applicationName;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmUnregisterApplicationRequestMessage::getDifName() const {
+	return difName;
+}
+
+void IpcmUnregisterApplicationRequestMessage::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
+IPCEvent* IpcmUnregisterApplicationRequestMessage::toIPCEvent(){
+	ApplicationUnregistrationRequestEvent * event =
+			new ApplicationUnregistrationRequestEvent(
+					applicationName,
+					difName,
+					getSequenceNumber());
+	return event;
+}
+
+/* CLASS IPCM UNREGISTER APPLICATION RESPONSE MESSAGE */
+IpcmUnregisterApplicationResponseMessage::IpcmUnregisterApplicationResponseMessage() :
+				BaseNetlinkResponseMessage(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE) {
+}
+
+
 /* CLASS IPCM ASSIGN TO DIF REQUEST MESSAGE */
 IpcmAssignToDIFRequestMessage::IpcmAssignToDIFRequestMessage():
 				NetlinkRequestOrNotificationMessage(
@@ -915,6 +957,7 @@ IPCEvent* IpcmDIFRegistrationNotification::toIPCEvent(){
 
 	return event;
 }
+
 
 /* CLASS QUERY RIB REQUEST MESSAGE */
 IpcmDIFQueryRIBRequestMessage::IpcmDIFQueryRIBRequestMessage():
