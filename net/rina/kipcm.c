@@ -341,11 +341,16 @@ int kipcm_flow_add(struct kipcm *      kipcm,
 		return -1;
 	}
 
-	/* FIXME: Hardcoded values, should depend on the type of the
-	 * ipc process.
-	 */
-	flow->application_owned = 1;
-	flow->rmt_instance = NULL;
+	switch (flow->ipc_process->type) {
+	case DIF_TYPE_SHIM:
+		flow->application_owned = 1;
+		flow->rmt_instance = NULL;
+		break;
+	case DIF_TYPE_NORMAL:
+		break;
+	default:
+		BUG();
+	}
 
 	flow->sdu_ready = rkzalloc(sizeof(struct kfifo), GFP_KERNEL);
 	if (!flow->sdu_ready) {

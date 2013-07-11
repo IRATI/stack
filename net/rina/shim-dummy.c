@@ -134,6 +134,8 @@ static int dummy_flow_deallocate(struct shim_instance_data * data,
 		return -1;
 	}
 
+	/* FIXME: Notify the destination application, maybe? */
+
 	list_del(&flow->list);
 	name_destroy(flow->dest);
 	name_destroy(flow->source);
