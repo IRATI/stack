@@ -63,9 +63,9 @@ struct id_to_ipcp {
 };
 
 struct port_id_to_flow {
-        port_id_t           port_id; /* Key */
-        const struct flow * flow;    /* value */
-        struct list_head    list;
+        port_id_t        port_id; /* Key */
+        struct flow *    flow;    /* value */
+        struct list_head list;
 };
 
 static int add_id_to_ipcp_node(struct kipcm *         kipcm,
@@ -246,8 +246,6 @@ int kipcm_ipc_destroy(struct kipcm *   kipcm,
 	switch (ipc_process->type) {
 	case DIF_TYPE_SHIM: {
 		struct shim * shim = NULL;
-		struct shim_instance_data * instance_data = NULL;
-		struct list_head ls;
 
 		k = kset_find_obj(kipcm->shims->set, "shim-dummy");
 		if (!k) {
@@ -256,9 +254,6 @@ int kipcm_ipc_destroy(struct kipcm *   kipcm,
 		}
 		shim        = to_shim(k);
 
-		instance_data = ipc_process->data.shim_instance->data;
-
-		ASSERT(list_empty(&(instance_data->flows)));
 		if (shim->ops->destroy(shim->data,
 				ipc_process->data.shim_instance)) {
 			LOG_ERR("Could not destroy shim instance %d", id);
@@ -319,13 +314,86 @@ int kipcm_ipc_configure(struct kipcm *                  kipcm,
 }
 
 int kipcm_flow_add(struct kipcm *      kipcm,
-                   port_id_t           id,
-                   const struct flow * flow)
-{ return -1; }
+		   ipc_process_id_t    ipc_id,
+                   port_id_t           id)
+{
+	struct port_id_to_flow * port_flow;
+	struct flow * flow = NULL;
+
+	flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+	if (!flow) {
+		return -1;
+	}
+
+	port_flow = rkzalloc(sizeof(*port_flow), GFP_KERNEL);
+	if (!port_flow) {
+		rkfree(flow);
+		return -1;
+	}
+
+	flow->port_id = id;
+	flow->ipc_process = find_ipc_process_by_id(kipcm, ipc_id);
+	if (!flow->ipc_process) {
+		LOG_ERR("Couldn't find ipc_process %d", ipc_id);
+		rkfree(flow);
+		rkfree(port_flow);
+
+		return -1;
+	}
+
+	/* FIXME: Hardcoded values, should depend on the type of the
+	 * ipc process.
+	 */
+	flow->application_owned = 1;
+	flow->rmt_instance = NULL;
+
+	flow->sdu_ready = rkzalloc(sizeof(struct kfifo), GFP_KERNEL);
+	if (!flow->sdu_ready) {
+		rkfree(flow);
+		rkfree(port_flow);
+
+		return -1;
+	}
+
+	port_flow->port_id = id;
+	port_flow->flow = flow;
+	INIT_LIST_HEAD(&port_flow->list);
+	list_add(&port_flow->list, &kipcm->port_id_to_flow);
+
+	return 0;
+}
+
+static struct port_id_to_flow *
+retrieve_port_flow_node(struct kipcm * kipcm, port_id_t port_id)
+{
+        struct port_id_to_flow * cur;
+
+        list_for_each_entry(cur,
+                            &kipcm->port_id_to_flow, list) {
+                if (cur->port_id == port_id)
+                        return cur;
+        }
+
+        return NULL;
+}
 
 int kipcm_flow_remove(struct kipcm * kipcm,
                       port_id_t      id)
-{ return -1; }
+{
+	struct port_id_to_flow * port_flow;
+
+	port_flow = retrieve_port_flow_node(kipcm, id);
+	if (!port_flow) {
+		LOG_ERR("Couldn't retrieve the flow %d", id);
+
+		return -1;
+	}
+
+	rkfree(port_flow->flow);
+	rkfree(port_flow);
+
+	return 0;
+}
                
 int kipcm_sdu_write(struct kipcm *     kipcm,
                     port_id_t          id,

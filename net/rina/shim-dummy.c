@@ -35,6 +35,9 @@
 #include "shim.h"
 #include "shim-utils.h"
 
+/* FIXME: To be removed ABSOLUTELY */
+extern struct kipcm * default_kipcm;
+
 struct shim_instance_data {
         ipc_process_id_t ipc_process_id;
         struct name *    name;
@@ -109,6 +112,8 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, &data->flows);
 
+        kipcm_flow_add(default_kipcm, data->ipc_process_id, id);
+
         return 0;
 }
 
@@ -133,6 +138,9 @@ static int dummy_flow_deallocate(struct shim_instance_data * data,
 	name_destroy(flow->dest);
 	name_destroy(flow->source);
 	rkfree(flow);
+
+	if (kipcm_flow_remove(default_kipcm, id))
+		return -1;
 
 	return 0;
 }
@@ -313,9 +321,6 @@ static struct shim_ops dummy_ops = {
         .destroy   = dummy_destroy,
         .configure = dummy_configure,
 };
-
-/* FIXME: To be removed ABSOLUTELY */
-extern struct kipcm * default_kipcm;
 
 static int __init mod_init(void)
 {

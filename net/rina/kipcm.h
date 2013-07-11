@@ -23,6 +23,7 @@
 #ifndef RINA_KIPCM_H
 #define RINA_KIPCM_H
 
+#include <linux/kfifo.h>
 #include "common.h"
 #include "shim.h"
 #include "efcp.h"
@@ -97,7 +98,7 @@ struct flow {
          * In case this flow is being used by an RMT, this is a pointer
          * to the RMT instance.
          */
-	struct rmt_instance    rmt_instance;
+	struct rmt_instance *  rmt_instance;
 
 	//FIXME: Define QUEUE
 	//QUEUE(segmentation_queue, pdu *);
@@ -129,8 +130,8 @@ int            kipcm_ipc_destroy(struct kipcm *   kipcm,
                                  ipc_process_id_t id);
 
 int            kipcm_flow_add(struct kipcm *      kipcm,
-                              port_id_t           id,
-                              const struct flow * flow);
+			      ipc_process_id_t    ipc_id,
+                              port_id_t           id);
 int            kipcm_flow_remove(struct kipcm * kipcm,
                                  port_id_t      id);
 
