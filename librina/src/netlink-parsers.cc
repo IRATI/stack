@@ -1180,13 +1180,13 @@ int putIpcmDIFQueryRIBRequestMessageObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
-int putRIBObject(nl_msg* netlinkMessage, RIBObject * object){
+int putRIBObject(nl_msg* netlinkMessage, const RIBObject& object){
 	NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_CLASS,
-				object->getClazz().c_str());
+				object.getClazz().c_str());
 	NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_NAME,
-					object->getName().c_str());
+					object.getName().c_str());
 	NLA_PUT_U64(netlinkMessage, RIBO_ATTR_OBJECT_INSTANCE,
-					object->getInstance());
+					object.getInstance());
 
 	return 0;
 
@@ -1196,20 +1196,29 @@ int putRIBObject(nl_msg* netlinkMessage, RIBObject * object){
 }
 
 int putListOfRIBObjects(
-		nl_msg* netlinkMessage, const std::list<RIBObject*>& ribObjects){
-	std::list<RIBObject*>::const_iterator iterator;
-	int result = 0;
+		nl_msg* netlinkMessage, const std::list<RIBObject>& ribObjects){
+	std::list<RIBObject>::const_iterator iterator;
+	struct nlattr *ribObject;
+	int i = 0;
 
 	for (iterator = ribObjects.begin();
 			iterator != ribObjects.end();
 			++iterator) {
-		result = putRIBObject(netlinkMessage, *iterator);
-		if (result != 0){
-			break;
+		if (!(ribObject = nla_nest_start(netlinkMessage, i))){
+			goto nla_put_failure;
 		}
+		if (putRIBObject(netlinkMessage, *iterator) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, ribObject);
+		i++;
 	}
 
-	return result;
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building RIBObject Netlink object");
+	return -1;
 }
 
 int putIpcmDIFQueryRIBResponseMessageObject(nl_msg* netlinkMessage,
@@ -1222,7 +1231,7 @@ int putIpcmDIFQueryRIBResponseMessageObject(nl_msg* netlinkMessage,
 
 	if (object.getRIBObjects().size()>0){
 		if (!(ribObjects = nla_nest_start(
-				netlinkMessage, IDRN_ATTR_IPC_PROCESS_NAME))){
+				netlinkMessage, IDQRE_ATTR_RIB_OBJECTS))){
 			goto nla_put_failure;
 		}
 		if (putListOfRIBObjects(netlinkMessage, object.getRIBObjects()) < 0) {
@@ -2643,23 +2652,25 @@ RIBObject * parseRIBObject(nlattr *nested){
 }
 
 int parseListOfRIBObjects(nlattr *nested,
-		const std::list<RIBObject*>& ribObjects){
-	struct nlattr *nla;
+		IpcmDIFQueryRIBResponseMessage * message){
+	nlattr * nla;
 	int rem;
 	RIBObject * ribObject;
 
-	nla_for_each_attr(nla, nested, nested->nla_len, rem) {
+	for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+		     nla_ok(nla, rem);
+		     nla = nla_next(nla, &(rem))){
 		/* validate & parse attribute */
 		ribObject = parseRIBObject(nla);
 		if (ribObject == 0){
-			//TODO LOG ERROR
-			//ribObjects.push_back(ribObject);
 			return -1;
 		}
+		message->addRIBObject(*ribObject);
+		delete ribObject;
 	}
 
 	if (rem > 0){
-		//TODO what to do?
+		LOG_WARN("Missing bits to parse");
 	}
 
 	return 0;
@@ -2703,7 +2714,7 @@ IpcmDIFQueryRIBResponseMessage *
 	int status = 0;
 	if (attrs[IDQRE_ATTR_RIB_OBJECTS]) {
 		status = parseListOfRIBObjects(
-				attrs[IDQRE_ATTR_RIB_OBJECTS], result->getRIBObjects());
+				attrs[IDQRE_ATTR_RIB_OBJECTS], result);
 		if (status != 0){
 			delete result;
 			return 0;

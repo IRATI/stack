@@ -978,9 +978,13 @@ IpcmDIFQueryRIBResponseMessage::IpcmDIFQueryRIBResponseMessage()
 	:BaseNetlinkResponseMessage(RINA_C_IPCM_QUERY_RIB_RESPONSE){
 }
 
-const std::list<RIBObject*>&
+const std::list<RIBObject>&
 	IpcmDIFQueryRIBResponseMessage::getRIBObjects() const{
 	return ribObjects;
+}
+
+void IpcmDIFQueryRIBResponseMessage::addRIBObject(const RIBObject& ribObject){
+	ribObjects.push_back(ribObject);
 }
 
 

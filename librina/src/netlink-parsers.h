@@ -438,7 +438,7 @@ enum RIBObjectAttributes {
 
 #define RIBO_ATTR_MAX (__RIBO_ATTR_MAX -1)
 
-int putRIBObject(nl_msg* netlinkMessage, RIBObject * object);
+int putRIBObject(nl_msg* netlinkMessage, const RIBObject& object);
 
 RIBObject * parseRIBObject(nlattr *nested);
 

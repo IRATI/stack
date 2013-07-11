@@ -758,11 +758,12 @@ public:
 class IpcmDIFQueryRIBResponseMessage:
 		public BaseNetlinkResponseMessage {
 
-	std::list<RIBObject*> ribObjects;
+	std::list<RIBObject> ribObjects;
 
 public:
 	IpcmDIFQueryRIBResponseMessage();
-	const std::list<RIBObject*>& getRIBObjects() const;
+	const std::list<RIBObject>& getRIBObjects() const;
+	void addRIBObject(const RIBObject& ribObject);
 };
 
 }

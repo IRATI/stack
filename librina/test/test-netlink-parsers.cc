@@ -1472,11 +1472,19 @@ int testIpcmQueryRIBResponseMessage() {
 	IpcmDIFQueryRIBResponseMessage message;
 	message.setResult(0);
 	message.setErrorDescription("ok");
-	/*RIBObject * ribObject1 = new RIBObject();
-	ribObject1->setClazz("/test/clazz1");
-	ribObject1->setName("/test/name1");
-	ribObject1->setInstance(1234);
-	message.getRIBObjects().push_back(ribObject1);*/
+	RIBObject * ribObject = new RIBObject();
+	ribObject->setClazz("/test/clazz1");
+	ribObject->setName("/test/name1");
+	ribObject->setInstance(1234);
+	message.addRIBObject(*ribObject);
+	delete ribObject;
+
+	ribObject = new RIBObject();
+	ribObject->setClazz("/test/clazz2");
+	ribObject->setName("/test/name2");
+	ribObject->setInstance(343241);
+	message.addRIBObject(*ribObject);
+	delete ribObject;
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -1488,7 +1496,7 @@ int testIpcmQueryRIBResponseMessage() {
 
 	int result = putBaseNetlinkMessage(netlinkMessage, &message);
 	if (result < 0) {
-		std::cout << "Error constructing Ipcm Query RIB request"
+		std::cout << "Error constructing Ipcm Query RIB response"
 				<< "message \n";
 		nlmsg_free(netlinkMessage);
 		return result;
@@ -1511,6 +1519,57 @@ int testIpcmQueryRIBResponseMessage() {
 		std::cout << "Error description on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
+	} else if (message.getRIBObjects().size() !=
+			recoveredMessage->getRIBObjects().size()){
+		std::cout << "Number of RIB Objects on original and recovered messages"
+				<< " are different " << message.getRIBObjects().size()<<" "
+				<< recoveredMessage->getRIBObjects().size() <<std::endl;
+		returnValue = -1;
+	} else {
+		std::list<RIBObject>::const_iterator iterator;
+		int i = 0;
+		for (iterator = recoveredMessage->getRIBObjects().begin();
+				iterator != recoveredMessage->getRIBObjects().end();
+				++iterator) {
+			const RIBObject& ribObject = *iterator;
+			if (i == 0){
+				if (ribObject.getClazz().compare("/test/clazz1") != 0){
+					std::cout << "RIB Object clazz on original and recovered messages"
+							<< " are different\n";
+					returnValue = -1;
+					break;
+				}else if (ribObject.getName().compare("/test/name1") != 0){
+					std::cout << "RIB Object name on original and recovered messages"
+							<< " are different\n";
+					returnValue = -1;
+					break;
+				}else if (ribObject.getInstance() != 1234){
+					std::cout << "RIB Object instance on original and recovered messages"
+							<< " are different\n";
+					returnValue = -1;
+					break;
+				}
+
+				i++;
+			}else if (i == 1){
+				if (ribObject.getClazz().compare("/test/clazz2") != 0){
+					std::cout << "RIB Object clazz on original and recovered messages"
+							<< " are different " <<std::endl;
+					returnValue = -1;
+					break;
+				} else if (ribObject.getName().compare("/test/name2") != 0){
+					std::cout << "RIB Object name on original and recovered messages"
+							<< " are different\n";
+					returnValue = -1;
+					break;
+				} else if (ribObject.getInstance() != 343241){
+					std::cout << "RIB Object instance on original and recovered messages"
+							<< " are different\n";
+					returnValue = -1;
+					break;
+				}
+			}
+		}
 	}
 
 	if (returnValue == 0) {
@@ -1622,8 +1681,8 @@ int main(int argc, char * argv[]) {
 		return result;
 	}
 
-	/*result = testIpcmQueryRIBResponseMessage();
+	result = testIpcmQueryRIBResponseMessage();
 	if (result < 0) {
 		return result;
-	}*/
+	}
 }

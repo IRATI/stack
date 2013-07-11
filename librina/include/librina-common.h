@@ -555,6 +555,8 @@ class RIBObject{
 public:
 	RIBObject();
 	RIBObject(std::string clazz, std::string name, RIBObjectValue value);
+	bool operator==(const RIBObject &other) const;
+	bool operator!=(const RIBObject &other) const;
 	const std::string& getClazz() const;
 	void setClazz(const std::string& clazz);
 	long getInstance() const;
