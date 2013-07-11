@@ -246,6 +246,8 @@ int kipcm_ipc_destroy(struct kipcm *   kipcm,
 	switch (ipc_process->type) {
 	case DIF_TYPE_SHIM: {
 		struct shim * shim = NULL;
+		struct shim_instance_data * instance_data = NULL;
+		struct list_head ls;
 
 		k = kset_find_obj(kipcm->shims->set, "shim-dummy");
 		if (!k) {
@@ -254,6 +256,9 @@ int kipcm_ipc_destroy(struct kipcm *   kipcm,
 		}
 		shim        = to_shim(k);
 
+		instance_data = ipc_process->data.shim_instance->data;
+
+		ASSERT(list_empty(&(instance_data->flows)));
 		if (shim->ops->destroy(shim->data,
 				ipc_process->data.shim_instance)) {
 			LOG_ERR("Could not destroy shim instance %d", id);
