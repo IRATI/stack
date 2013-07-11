@@ -53,6 +53,7 @@ unsigned short FlowDeallocateRequestEvent::getIPCProcessId() const{
 	return ipcProcessId;
 }
 
+
 /* CLASS ASSIGN TO DIF REQUEST EVENT */
 AssignToDIFRequestEvent::AssignToDIFRequestEvent(
 		const DIFConfiguration& difConfiguration,

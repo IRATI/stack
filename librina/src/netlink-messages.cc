@@ -791,8 +791,8 @@ void IpcmUnregisterApplicationRequestMessage::setDifName(
 }
 
 IPCEvent* IpcmUnregisterApplicationRequestMessage::toIPCEvent(){
-	IpcmUnregistrationRequestEvent * event =
-			new IpcmUnregistrationRequestEvent(
+	ApplicationUnregistrationRequestEvent * event =
+			new ApplicationUnregistrationRequestEvent(
 					applicationName,
 					difName,
 					getSequenceNumber());
