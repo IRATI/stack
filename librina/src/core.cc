@@ -66,7 +66,7 @@ void NetlinkPortIdMap::putIPCProcessIdToNelinkPortIdMapping(
 		current->setNetlinkPortId(netlinkPortId);
 	} else {
 		ipcProcessIdMappings[ipcProcessId] =
-                        new RINANetlinkEndpoint(netlinkPortId, ipcProcessId);
+				new RINANetlinkEndpoint(netlinkPortId, ipcProcessId);
 	}
 }
 
@@ -100,7 +100,7 @@ void NetlinkPortIdMap::putAPNametoNetlinkPortIdMapping(
 RINANetlinkEndpoint * NetlinkPortIdMap::getNetlinkPortIdFromAPName(
 		ApplicationProcessNamingInformation apName) throw(NetlinkException) {
 	std::map<ApplicationProcessNamingInformation, RINANetlinkEndpoint *>
-				::iterator it = applicationNameMappings.find(apName);
+	::iterator it = applicationNameMappings.find(apName);
 	if (it == applicationNameMappings.end()){
 		LOG_ERR("Could not find the netlink endpoint of Application %s",
 				apName.toString().c_str());
@@ -118,220 +118,237 @@ unsigned int NetlinkPortIdMap::getIPCManagerPortId(){
 void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		BaseNetlinkMessage* message, bool send) throw(NetlinkException){
 	switch (message->getOperationCode()) {
-		case RINA_C_APP_ALLOCATE_FLOW_REQUEST: {
-			if(send){
-				message->setDestPortId(getIPCManagerPortId());
-			}else{
-				AppAllocateFlowRequestMessage * specificMessage =
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST: {
+		if(send){
+			message->setDestPortId(getIPCManagerPortId());
+		}else{
+			AppAllocateFlowRequestMessage * specificMessage =
 					dynamic_cast<AppAllocateFlowRequestMessage *>(message);
-				putAPNametoNetlinkPortIdMapping(
-						specificMessage->getSourceAppName(),
-						specificMessage->getSourcePortId(),
-						specificMessage->getSourceIpcProcessId());
-			}
-			break;
+			putAPNametoNetlinkPortIdMapping(
+					specificMessage->getSourceAppName(),
+					specificMessage->getSourcePortId(),
+					specificMessage->getSourceIpcProcessId());
 		}
-		case RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT: {
-			AppAllocateFlowRequestResultMessage * specificMessage =
-					dynamic_cast<AppAllocateFlowRequestResultMessage *>(message);
-			if(send){
-				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-						specificMessage->getSourceAppName());
-				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-			}else{
-				if(specificMessage->getPortId() > 0){
-					putAPNametoNetlinkPortIdMapping(
-							specificMessage->getDifName(),
-							specificMessage->getIpcProcessPortId(),
-							specificMessage->getIpcProcessId());
-				}
-			}
-			break;
-		}
-		case RINA_C_APP_ALLOCATE_FLOW_RESPONSE: {
-			AppAllocateFlowResponseMessage * specificMessage =
-					dynamic_cast<AppAllocateFlowResponseMessage *>(message);
-			if(send){
-				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-						specificMessage->getDifName());
-				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-			}
-			break;
-		}
-		case RINA_C_APP_DEALLOCATE_FLOW_REQUEST: {
-			AppDeallocateFlowRequestMessage * specificMessage =
-					dynamic_cast<AppDeallocateFlowRequestMessage *>(message);
-			if(send){
-				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-						specificMessage->getDifName());
-				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-			}else{
-				//TODO remove this after fully implementing librina-ipcproces
-				putAPNametoNetlinkPortIdMapping(
-						specificMessage->getApplicationName(),
-						specificMessage->getSourcePortId(),
-						specificMessage->getSourceIpcProcessId());
-			}
-			break;
-		}
-		case RINA_C_APP_DEALLOCATE_FLOW_RESPONSE: {
-			AppDeallocateFlowResponseMessage * specificMessage =
-					dynamic_cast<AppDeallocateFlowResponseMessage *>(message);
-			if(send){
-				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-						specificMessage->getApplicationName());
-				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-			}
-			break;
-		}
-		case RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION: {
-			AppFlowDeallocatedNotificationMessage * specificMessage =
-					dynamic_cast<AppFlowDeallocatedNotificationMessage *>(message);
-			if(send){
-				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-						specificMessage->getApplicationName());
-				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-			}
-			break;
-		}
-		case RINA_C_APP_REGISTER_APPLICATION_REQUEST: {
-			AppRegisterApplicationRequestMessage * specificMessage =
-					dynamic_cast<AppRegisterApplicationRequestMessage *>(message);
-			if(send){
-				specificMessage->setDestPortId(getIPCManagerPortId());
-			}else{
-				putAPNametoNetlinkPortIdMapping(
-						specificMessage->getApplicationName(),
-						specificMessage->getSourcePortId(),
-						specificMessage->getSourceIpcProcessId());
-			}
-			break;
-		}
-		case RINA_C_APP_REGISTER_APPLICATION_RESPONSE:{
-			AppRegisterApplicationResponseMessage * specificMessage =
-					dynamic_cast<AppRegisterApplicationResponseMessage *>(message);
-			if(send){
-				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-						specificMessage->getApplicationName());
-				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-			}else{
+		break;
+	}
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT: {
+		AppAllocateFlowRequestResultMessage * specificMessage =
+				dynamic_cast<AppAllocateFlowRequestResultMessage *>(message);
+		if(send){
+			RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+					specificMessage->getSourceAppName());
+			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
+		}else{
+			if(specificMessage->getPortId() > 0){
 				putAPNametoNetlinkPortIdMapping(
 						specificMessage->getDifName(),
 						specificMessage->getIpcProcessPortId(),
 						specificMessage->getIpcProcessId());
 			}
-			break;
 		}
-		case RINA_C_APP_UNREGISTER_APPLICATION_REQUEST:{
-			if(send){
-				message->setDestPortId(getIPCManagerPortId());
-			}else{
-				AppUnregisterApplicationRequestMessage * specificMessage =
+		break;
+	}
+	case RINA_C_APP_ALLOCATE_FLOW_RESPONSE: {
+		AppAllocateFlowResponseMessage * specificMessage =
+				dynamic_cast<AppAllocateFlowResponseMessage *>(message);
+		if(send){
+			RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+					specificMessage->getDifName());
+			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
+		}
+		break;
+	}
+	case RINA_C_APP_DEALLOCATE_FLOW_REQUEST: {
+		AppDeallocateFlowRequestMessage * specificMessage =
+				dynamic_cast<AppDeallocateFlowRequestMessage *>(message);
+		if(send){
+			RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+					specificMessage->getDifName());
+			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
+		}else{
+			//TODO remove this after fully implementing librina-ipcproces
+			putAPNametoNetlinkPortIdMapping(
+					specificMessage->getApplicationName(),
+					specificMessage->getSourcePortId(),
+					specificMessage->getSourceIpcProcessId());
+		}
+		break;
+	}
+	case RINA_C_APP_DEALLOCATE_FLOW_RESPONSE: {
+		AppDeallocateFlowResponseMessage * specificMessage =
+				dynamic_cast<AppDeallocateFlowResponseMessage *>(message);
+		if(send){
+			RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+					specificMessage->getApplicationName());
+			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
+		}
+		break;
+	}
+	case RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION: {
+		AppFlowDeallocatedNotificationMessage * specificMessage =
+				dynamic_cast<AppFlowDeallocatedNotificationMessage *>(message);
+		if(send){
+			RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+					specificMessage->getApplicationName());
+			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
+		}
+		break;
+	}
+	case RINA_C_APP_REGISTER_APPLICATION_REQUEST: {
+		AppRegisterApplicationRequestMessage * specificMessage =
+				dynamic_cast<AppRegisterApplicationRequestMessage *>(message);
+		if(send){
+			specificMessage->setDestPortId(getIPCManagerPortId());
+		}else{
+			putAPNametoNetlinkPortIdMapping(
+					specificMessage->getApplicationName(),
+					specificMessage->getSourcePortId(),
+					specificMessage->getSourceIpcProcessId());
+		}
+		break;
+	}
+	case RINA_C_APP_REGISTER_APPLICATION_RESPONSE:{
+		AppRegisterApplicationResponseMessage * specificMessage =
+				dynamic_cast<AppRegisterApplicationResponseMessage *>(message);
+		if(send){
+			RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+					specificMessage->getApplicationName());
+			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
+		}else{
+			putAPNametoNetlinkPortIdMapping(
+					specificMessage->getDifName(),
+					specificMessage->getIpcProcessPortId(),
+					specificMessage->getIpcProcessId());
+		}
+		break;
+	}
+	case RINA_C_APP_UNREGISTER_APPLICATION_REQUEST:{
+		if(send){
+			message->setDestPortId(getIPCManagerPortId());
+		}else{
+			AppUnregisterApplicationRequestMessage * specificMessage =
 					dynamic_cast<AppUnregisterApplicationRequestMessage *>(message);
-				putAPNametoNetlinkPortIdMapping(
-						specificMessage->getApplicationName(),
-						specificMessage->getSourcePortId(),
-						specificMessage->getSourceIpcProcessId());
-			}
-			break;
+			putAPNametoNetlinkPortIdMapping(
+					specificMessage->getApplicationName(),
+					specificMessage->getSourcePortId(),
+					specificMessage->getSourceIpcProcessId());
 		}
-		case RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE:{
-			if(send){
-				AppUnregisterApplicationResponseMessage * specificMessage =
-					 dynamic_cast<AppUnregisterApplicationResponseMessage *>(message);
-				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-						specificMessage->getApplicationName());
-				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-			}
-			break;
+		break;
+	}
+	case RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE:{
+		if(send){
+			AppUnregisterApplicationResponseMessage * specificMessage =
+					dynamic_cast<AppUnregisterApplicationResponseMessage *>(message);
+			RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+					specificMessage->getApplicationName());
+			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
 		}
-		case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST:{
-			IpcmRegisterApplicationRequestMessage * specificMessage =
-					dynamic_cast<IpcmRegisterApplicationRequestMessage *>(message);
-			if(send){
-				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-					  specificMessage->getDifName());
-				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-			}else{
-				putAPNametoNetlinkPortIdMapping(
-						specificMessage->getApplicationName(),
-						specificMessage->getApplicationPortId(),
-						specificMessage->getSourceIpcProcessId());
-			}
-			break;
+		break;
+	}
+	case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST:{
+		IpcmRegisterApplicationRequestMessage * specificMessage =
+				dynamic_cast<IpcmRegisterApplicationRequestMessage *>(message);
+		if(send){
+			RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+					specificMessage->getDifName());
+			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
+		}else{
+			putAPNametoNetlinkPortIdMapping(
+					specificMessage->getApplicationName(),
+					specificMessage->getApplicationPortId(),
+					specificMessage->getSourceIpcProcessId());
 		}
-		case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:{
-			if(send){
-				message->setDestPortId(getIPCManagerPortId());
-			}
-			break;
+		break;
+	}
+	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:{
+		if(send){
+			message->setDestPortId(getIPCManagerPortId());
 		}
-		case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST:{
-			if(send){
-				IpcmAssignToDIFRequestMessage * specificMessage =
-						dynamic_cast<IpcmAssignToDIFRequestMessage *>(message);
-				putAPNametoNetlinkPortIdMapping(
-						specificMessage->getDIFConfiguration().getDifName(),
-						specificMessage->getDestPortId(),
-						specificMessage->getDestIpcProcessId());
-				putIPCProcessIdToNelinkPortIdMapping(
-						specificMessage->getDestPortId(),
-						specificMessage->getDestIpcProcessId());
-			}
-			break;
+		break;
+	}
+	case RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST:{
+		if(send){
+			IpcmUnregisterApplicationRequestMessage * specificMessage =
+					dynamic_cast<IpcmUnregisterApplicationRequestMessage *>(message);
+			RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+					specificMessage->getDifName());
+			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
 		}
-		case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE:{
-			if(send){
-				message->setDestPortId(getIPCManagerPortId());
-			}
-			break;
+		break;
+	}
+	case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE:{
+		if(send){
+			message->setDestPortId(getIPCManagerPortId());
 		}
-		case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST:{
-			IpcmAllocateFlowRequestMessage * specificMessage =
-					dynamic_cast<IpcmAllocateFlowRequestMessage *>(message);
-			if(send){
-				RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-						specificMessage->getDifName());
-				specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-				specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-			}else{
-				putAPNametoNetlinkPortIdMapping(
-						specificMessage->getSourceAppName(),
-						specificMessage->getApplicationPortId(), 0);
-			}
-			break;
+		break;
+	}
+	case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST:{
+		if(send){
+			IpcmAssignToDIFRequestMessage * specificMessage =
+					dynamic_cast<IpcmAssignToDIFRequestMessage *>(message);
+			putAPNametoNetlinkPortIdMapping(
+					specificMessage->getDIFConfiguration().getDifName(),
+					specificMessage->getDestPortId(),
+					specificMessage->getDestIpcProcessId());
+			putIPCProcessIdToNelinkPortIdMapping(
+					specificMessage->getDestPortId(),
+					specificMessage->getDestIpcProcessId());
 		}
-		case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE:{
-			if(send){
-				message->setDestPortId(getIPCManagerPortId());
-			}
-			break;
+		break;
+	}
+	case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE:{
+		if(send){
+			message->setDestPortId(getIPCManagerPortId());
 		}
-		case RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:{
-			if(send){
-				putIPCProcessIdToNelinkPortIdMapping(
-						message->getDestPortId(),
-						message->getDestIpcProcessId());
-			}
-			break;
+		break;
+	}
+	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST:{
+		IpcmAllocateFlowRequestMessage * specificMessage =
+				dynamic_cast<IpcmAllocateFlowRequestMessage *>(message);
+		if(send){
+			RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+					specificMessage->getDifName());
+			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
+		}else{
+			putAPNametoNetlinkPortIdMapping(
+					specificMessage->getSourceAppName(),
+					specificMessage->getApplicationPortId(), 0);
 		}
-		default:
-			throw NetlinkException(NetlinkException::
-						unrecognized_generic_netlink_operation_code);
+		break;
+	}
+	case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE:{
+		if(send){
+			message->setDestPortId(getIPCManagerPortId());
+		}
+		break;
+	}
+	case RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:{
+		if(send){
+			putIPCProcessIdToNelinkPortIdMapping(
+					message->getDestPortId(),
+					message->getDestIpcProcessId());
+		}
+		break;
+	}
+	default:
+		throw NetlinkException(NetlinkException::
+				unrecognized_generic_netlink_operation_code);
 	}
 }
 
 /* CLASS PENDING NETLINK MESSAGE */
 PendingNetlinkMessage::PendingNetlinkMessage(unsigned int sequenceNumber) :
-		ConditionVariable() {
+				ConditionVariable() {
 	this->responseMessage = NULL;
 	this->sequenceNumber = sequenceNumber;
 }
@@ -404,11 +421,11 @@ NetlinkSession::takeLocalPendingMessage(unsigned int sequenceNumber){
 
 void NetlinkSession::putRemotePendingMessage(BaseNetlinkMessage* pendingMessage){
 	remotePendingMessages[pendingMessage->getSequenceNumber()]
-		                     = pendingMessage;
+	                      = pendingMessage;
 }
 
 BaseNetlinkMessage*
-	NetlinkSession::takeRemotePendingMessage(unsigned int sequenceNumber){
+NetlinkSession::takeRemotePendingMessage(unsigned int sequenceNumber){
 	std::map<unsigned int, BaseNetlinkMessage *>::iterator it =
 			remotePendingMessages.find(sequenceNumber);
 	if(it == remotePendingMessages.end()){
@@ -452,7 +469,7 @@ void * doNetlinkMessageReaderWork(void * arg) {
 		}else{
 			NetlinkRequestOrNotificationMessage * message =
 					dynamic_cast<NetlinkRequestOrNotificationMessage *>
-						(incomingMessage);
+			(incomingMessage);
 
 			bool notification = incomingMessage->isNotificationMessage();
 			bool request = incomingMessage->isRequestMessage();
@@ -631,7 +648,7 @@ void RINAManager::sendResponseOrNotficationMessage(
 
 		BaseNetlinkMessage * requestMessage = netlinkSession
 				->takeRemotePendingMessage(
-				netlinkMessage->getSequenceNumber());
+						netlinkMessage->getSequenceNumber());
 		if (requestMessage == NULL) {
 			sendReceiveLock.unlock();
 			throw NetlinkException(

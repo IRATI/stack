@@ -136,7 +136,6 @@ void doWorkIPCProcess(){
 	std::cout<<"ICPProcess# Replied to application\n";
 	delete deallocateFlowEvent;
 
-	//TODO unregister application event
 	//Wait for an unregister application event
 	event = ipcEventProducer->eventWait();
 	ApplicationUnregistrationRequestEvent * applicationUnregistrationEvent =
@@ -229,9 +228,9 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	ApplicationUnregistrationRequestEvent * appUnregistrationRequestEvent =
 			dynamic_cast<ApplicationUnregistrationRequestEvent *>(event);
 	std::cout<<"IPCManager# received an application unregistration request event\n";
-	/*ipcProcess->unregisterApplication(appRequestEvent2->getApplicationName());
+	ipcProcess->unregisterApplication(appUnregistrationRequestEvent->getApplicationName());
 	std::cout<<"IPCManager# IPC Process successfully unregistered application " <<
-			"to DIF "<<difName.getProcessName()<<std::endl;*/
+			"to DIF "<<difName.getProcessName()<<std::endl;
 	applicationManager->applicationUnregistered(*appUnregistrationRequestEvent, 0, "OK");
 	std::cout<<"IPCManager# Replied to application\n";
 	delete appRequestEvent;

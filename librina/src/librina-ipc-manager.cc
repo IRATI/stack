@@ -27,6 +27,8 @@ const std::string IPCProcess::error_assigning_to_dif =
 		"Error assigning IPC Process to DIF";
 const std::string IPCProcess::error_registering_app =
 		"Error registering application";
+const std::string IPCProcess::error_unregistering_app =
+		"Error unregistering application";
 const std::string IPCProcess::error_not_a_dif_member =
 		"Error: the IPC Process is not member of a DIF";
 const std::string IPCProcess::error_allocating_flow =
@@ -219,6 +221,30 @@ void IPCProcess::unregisterApplication(
 		const ApplicationProcessNamingInformation& applicationName)
 throw (IPCException) {
 	LOG_DBG("IPCProcess::unregister application called");
+#if STUB_API
+	//Do nothing
+#else
+	IpcmUnregisterApplicationRequestMessage message;
+	message.setApplicationName(applicationName);
+	message.setDifName(difConfiguration.getDifName());
+	message.setRequestMessage(true);
+
+	IpcmUnregisterApplicationResponseMessage * unregisterAppResponse =
+			dynamic_cast<IpcmUnregisterApplicationResponseMessage *>(
+					rinaManager->sendRequestAndWaitForResponse(&message,
+							IPCProcess::error_unregistering_app));
+
+	if (unregisterAppResponse->getResult() < 0){
+		std::string reason = IPCProcess::error_unregistering_app + " " +
+				unregisterAppResponse->getErrorDescription();
+		delete unregisterAppResponse;
+		throw IPCException(reason);
+	}
+	LOG_DBG("Registered app %s to DIF %s",
+			applicationName.getProcessName().c_str(),
+			difConfiguration.getDifName().getProcessName().c_str());
+	delete unregisterAppResponse;
+#endif
 }
 
 void IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest,
