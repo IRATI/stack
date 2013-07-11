@@ -6,9 +6,9 @@ obj-$(CONFIG_RINA) +=							\
 	utils.o debug.o core.o personality.o syscalls.o netlink.o
 
 obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=		\
-	utils-workarounds.o rina_personality_default.o
+	utils-workarounds.o rina.o
 
-rina_personality_default-y :=						\
+rina-y :=						\
 	dif.o shim.o ipc.o kipcm.o efcp.o rmt.o default.o shim-utils.o 
 
 obj-$(CONFIG_RINA_SHIM_EMPTY)    += shim-empty.o
