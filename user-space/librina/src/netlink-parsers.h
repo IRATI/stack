@@ -316,6 +316,36 @@ int putIpcmRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 IpcmRegisterApplicationResponseMessage *
 	parseIpcmRegisterApplicationResponseMessage(nlmsghdr *hdr);
 
+/* IpcmUnregisterApplicationRequestMessage CLASS*/
+enum IpcmUnregisterApplicationRequestMessageAttributes {
+	IUAR_ATTR_APP_NAME = 1,
+	IUAR_ATTR_DIF_NAME,
+	__IUAR_ATTR_MAX,
+};
+
+#define IUAR_ATTR_MAX (__IUAR_ATTR_MAX -1)
+
+int putIpcmUnregisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
+		const IpcmUnregisterApplicationRequestMessage& object);
+
+IpcmUnregisterApplicationRequestMessage *
+	parseIpcmUnregisterApplicationRequestMessage(nlmsghdr *hdr);
+
+/* IpcmUnregisterApplicationResponseMessage CLASS*/
+enum IpcmUnregisterApplicationResponseMessageAttributes {
+	IUARE_ATTR_RESULT = 1,
+	IUARE_ATTR_ERROR_DESCRIPTION,
+	__IUARE_ATTR_MAX,
+};
+
+#define IUARE_ATTR_MAX (__IUARE_ATTR_MAX -1)
+
+int putIpcmUnregisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
+		const IpcmUnregisterApplicationResponseMessage& object);
+
+IpcmUnregisterApplicationResponseMessage *
+	parseIpcmUnregisterApplicationResponseMessage(nlmsghdr *hdr);
+
 /* DIF Configuration CLASS */
 enum DIFConfigurationAttributes {
 	DCONF_ATTR_DIF_TYPE = 1,
@@ -438,7 +468,7 @@ enum RIBObjectAttributes {
 
 #define RIBO_ATTR_MAX (__RIBO_ATTR_MAX -1)
 
-int putRIBObject(nl_msg* netlinkMessage, RIBObject * object);
+int putRIBObject(nl_msg* netlinkMessage, const RIBObject& object);
 
 RIBObject * parseRIBObject(nlattr *nested);
 

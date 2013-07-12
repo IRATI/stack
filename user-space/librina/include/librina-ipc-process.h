@@ -44,8 +44,7 @@ public:
 	FlowDeallocateRequestEvent(int portId,
 			const ApplicationProcessNamingInformation& DIFName,
 			const ApplicationProcessNamingInformation& appName,
-			unsigned short ipcProcessId,
-			unsigned int sequenceNumber);
+			unsigned short ipcProcessId, unsigned int sequenceNumber);
 	int getPortId() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
 	const ApplicationProcessNamingInformation& getApplicationName() const;
@@ -91,7 +90,7 @@ public:
  * The IPC Manager informs the IPC Process that it has been registered
  * to an N-1 DIF
  */
-class IPCProcessRegisteredToDIFEvent: public IPCProcessDIFRegistrationEvent{
+class IPCProcessRegisteredToDIFEvent: public IPCProcessDIFRegistrationEvent {
 public:
 	IPCProcessRegisteredToDIFEvent(
 			const ApplicationProcessNamingInformation& ipcProcessName,
@@ -103,7 +102,7 @@ public:
  * The IPC Manager informs the IPC Process that it has been unregistered
  * from an N-1 DIF
  */
-class IPCProcessUnregisteredFromDIFEvent: public IPCProcessDIFRegistrationEvent{
+class IPCProcessUnregisteredFromDIFEvent: public IPCProcessDIFRegistrationEvent {
 public:
 	IPCProcessUnregisteredFromDIFEvent(
 			const ApplicationProcessNamingInformation& ipcProcessName,
@@ -139,9 +138,8 @@ class QueryRIBRequestEvent: public IPCEvent {
 
 public:
 	QueryRIBRequestEvent(const std::string& objectClass,
-			const std::string& objectName, long objectInstance,
-			int scope, const std::string& filter,
-			unsigned int sequenceNumber);
+			const std::string& objectName, long objectInstance, int scope,
+			const std::string& filter, unsigned int sequenceNumber);
 	const std::string& getObjectClass() const;
 	const std::string& getObjectName() const;
 	long getObjectInstance() const;
@@ -154,7 +152,7 @@ public:
  * the basic IPC Manager in librina-application with IPC Process specific
  * functionality
  */
-class ExtendedIPCManager: public IPCManager{
+class ExtendedIPCManager: public IPCManager {
 	/** The ID of the IPC Process */
 	unsigned int ipcProcessId;
 
@@ -163,8 +161,7 @@ class ExtendedIPCManager: public IPCManager{
 
 public:
 	const DIFConfiguration& getCurrentConfiguration() const;
-	void setCurrentConfiguration(
-			const DIFConfiguration& currentConfiguration);
+	void setCurrentConfiguration(const DIFConfiguration& currentConfiguration);
 	unsigned int getIpcProcessId() const;
 	void setIpcProcessId(unsigned int ipcProcessId);
 
@@ -176,7 +173,7 @@ public:
 	 * @param errorDescription An optional explanation of the error (if any)
 	 */
 	void assignToDIFResponse(const AssignToDIFRequestEvent& event, int result,
-			const std::string& errorDescription) throw(IPCException);
+			const std::string& errorDescription) throw (IPCException);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of a "register
@@ -187,7 +184,18 @@ public:
 	 */
 	void registerApplicationResponse(
 			const ApplicationRegistrationRequestEvent& event, int result,
-			const std::string& errorDescription) throw(IPCException);
+			const std::string& errorDescription) throw (IPCException);
+
+	/**
+	 * Reply to the IPC Manager, informing it about the result of a "unregister
+	 * application request" operation
+	 * @param event
+	 * @param result
+	 * @param errorDescription
+	 */
+	void unregisterApplicationResponse(
+			const ApplicationUnregistrationRequestEvent& event, int result,
+			const std::string& errorDescription) throw (IPCException);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of a "allocate
@@ -197,7 +205,7 @@ public:
 	 * @param errorDescription
 	 */
 	void allocateFlowResponse(const FlowRequestEvent& event, int result,
-			const std::string& errorDescription) throw(IPCException);
+			const std::string& errorDescription) throw (IPCException);
 };
 
 /**

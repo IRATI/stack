@@ -734,6 +734,22 @@ RIBObject::RIBObject(
 	instance = generateObjectInstance();
 }
 
+bool RIBObject::operator==(const RIBObject &other) const{
+	if (clazz.compare(other.getClazz()) != 0) {
+		return false;
+	}
+
+	if (name.compare(other.getName()) != 0) {
+		return false;
+	}
+
+	return instance == other.getInstance();
+}
+
+bool RIBObject::operator!=(const RIBObject &other) const{
+	return !(*this == other);
+}
+
 long RIBObject::generateObjectInstance(){
 	//TODO generate instance properly
 	return 0;

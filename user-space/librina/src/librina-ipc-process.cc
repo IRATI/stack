@@ -53,6 +53,7 @@ unsigned short FlowDeallocateRequestEvent::getIPCProcessId() const{
 	return ipcProcessId;
 }
 
+
 /* CLASS ASSIGN TO DIF REQUEST EVENT */
 AssignToDIFRequestEvent::AssignToDIFRequestEvent(
 		const DIFConfiguration& difConfiguration,
@@ -182,6 +183,25 @@ void ExtendedIPCManager::registerApplicationResponse(
 	//Do nothing
 #else
 	IpcmRegisterApplicationResponseMessage responseMessage;
+	responseMessage.setResult(result);
+	responseMessage.setErrorDescription(errorDescription);
+	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+	}catch(NetlinkException &e){
+		throw IPCException(e.what());
+	}
+#endif
+}
+
+void ExtendedIPCManager::unregisterApplicationResponse(
+		const ApplicationUnregistrationRequestEvent& event, int result,
+		const std::string& errorDescription) throw(IPCException){
+#if STUB_API
+	//Do nothing
+#else
+	IpcmUnregisterApplicationResponseMessage responseMessage;
 	responseMessage.setResult(result);
 	responseMessage.setErrorDescription(errorDescription);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
