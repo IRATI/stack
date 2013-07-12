@@ -24,16 +24,19 @@
 #define RINA_KIPCM_H
 
 #include <linux/kfifo.h>
+
 #include "common.h"
 #include "shim.h"
 #include "efcp.h"
 #include "rmt.h"
 
+/* FIXME: To be changed */
 typedef enum {
         DIF_TYPE_NORMAL,
         DIF_TYPE_SHIM
 } dif_type_t;
 
+/* Do we really need to this configuration here ? */
 struct ipc_process_conf {
 	/*
 	 * Configuration of the kernel components of a normal IPC Process.
@@ -109,6 +112,8 @@ struct flow {
 
 struct kipcm;
 
+/* FIXME: Add documentation to these API:  */
+
 struct kipcm * kipcm_init(struct kobject * parent);
 int            kipcm_fini(struct kipcm * kipcm);
 
@@ -139,6 +144,9 @@ int            kipcm_sdu_write(struct kipcm *       kipcm,
                                port_id_t            id,
                                const struct sdu * sdu);
 int            kipcm_sdu_read(struct kipcm * kipcm,
+                              port_id_t      id,
+                              struct sdu * sdu);
+int            kipcm_post_sdu(struct kipcm * kipcm,
                               port_id_t      id,
                               struct sdu * sdu);
 
