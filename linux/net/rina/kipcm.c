@@ -63,9 +63,9 @@ struct id_to_ipcp {
 };
 
 struct port_id_to_flow {
-        port_id_t           port_id; /* Key */
-        const struct flow * flow;    /* value */
-        struct list_head    list;
+        port_id_t        id;   /* Key */
+        struct flow *    flow; /* Value */
+        struct list_head list;
 };
 
 static int add_id_to_ipcp_node(struct kipcm *         kipcm,
@@ -129,10 +129,7 @@ int kipcm_fini(struct kipcm * kipcm)
 {
         LOG_DBG("Finalizing");
 
-        if (!kipcm) {
-                LOG_ERR("Bogus kipcm instance passed, cannot finalize");
-                return -1;
-        }
+        ASSERT(kipcm);
 
         /* FIXME: Destroy elements from id_to_ipcp */
         ASSERT(list_empty(&kipcm->id_to_ipcp));
@@ -164,6 +161,9 @@ EXPORT_SYMBOL(kipcm_shim_register);
 int kipcm_shim_unregister(struct kipcm * kipcm,
                           struct shim *  shim)
 {
+        ASSERT(kipcm);
+        ASSERT(shim);
+
         /* FIXME:
          * 
          *   We have to call _destroy on all the instances created on
@@ -182,6 +182,13 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
 {
         struct kobject *       k;
         struct ipc_process_t * ipc_process;
+
+        ASSERT(kipcm);
+
+        if (!name) {
+                LOG_ERR("Name is missing, cannot create ipc");
+                return -1;
+        }
 
         if (find_ipc_process_by_id(kipcm, id)) {
         	LOG_ERR("Process id %d already exists", id);
@@ -236,6 +243,8 @@ int kipcm_ipc_destroy(struct kipcm *   kipcm,
 	struct ipc_process_t * ipc_process;
 	struct kobject *       k;
 
+        ASSERT(kipcm);
+
 	ipc_process = find_ipc_process_by_id(kipcm, id);
 	if (!ipc_process) {
 		LOG_ERR("IPC process %d does not exist", id);
@@ -277,6 +286,8 @@ int kipcm_ipc_configure(struct kipcm *                  kipcm,
 {
         struct ipc_process_t * ipc_process;
 
+        ASSERT(kipcm);
+
         ipc_process = find_ipc_process_by_id(kipcm, id);
         if (ipc_process == NULL)
                 return -1;
@@ -314,20 +325,137 @@ int kipcm_ipc_configure(struct kipcm *                  kipcm,
 }
 
 int kipcm_flow_add(struct kipcm *      kipcm,
-                   port_id_t           id,
-                   const struct flow * flow)
-{ return -1; }
+		   ipc_process_id_t    ipc_id,
+                   port_id_t           id)
+{
+	struct port_id_to_flow * port_flow;
+	struct flow *            flow;
+
+        ASSERT(kipcm);
+
+	flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+	if (!flow) {
+		return -1;
+	}
+
+	port_flow = rkzalloc(sizeof(*port_flow), GFP_KERNEL);
+	if (!port_flow) {
+		rkfree(flow);
+		return -1;
+	}
+
+	flow->port_id = id;
+	flow->ipc_process = find_ipc_process_by_id(kipcm, ipc_id);
+	if (!flow->ipc_process) {
+		LOG_ERR("Couldn't find ipc_process %d", ipc_id);
+		rkfree(flow);
+		rkfree(port_flow);
+		return -1;
+	}
+
+	switch (flow->ipc_process->type) {
+	case DIF_TYPE_SHIM:
+		flow->application_owned = 1;
+		flow->rmt_instance      = NULL;
+		break;
+	case DIF_TYPE_NORMAL:
+		break;
+	default:
+		BUG();
+	}
+
+	flow->sdu_ready = rkzalloc(sizeof(struct kfifo), GFP_KERNEL);
+	if (!flow->sdu_ready) {
+		rkfree(flow);
+		rkfree(port_flow);
+
+		return -1;
+	}
+
+	port_flow->id   = id;
+	port_flow->flow = flow;
+	INIT_LIST_HEAD(&port_flow->list);
+	list_add(&port_flow->list, &kipcm->port_id_to_flow);
+
+	return 0;
+}
+EXPORT_SYMBOL(kipcm_flow_add);
+
+static struct port_id_to_flow *
+retrieve_port_flow_node(struct kipcm * kipcm, port_id_t id)
+{
+        struct port_id_to_flow * cur;
+
+        list_for_each_entry(cur, &kipcm->port_id_to_flow, list) {
+                if (cur->id == id)
+                        return cur;
+        }
+
+        return NULL;
+}
 
 int kipcm_flow_remove(struct kipcm * kipcm,
                       port_id_t      id)
-{ return -1; }
+{
+	struct port_id_to_flow * port_flow;
+
+        ASSERT(kipcm);
+
+	port_flow = retrieve_port_flow_node(kipcm, id);
+	if (!port_flow) {
+		LOG_ERR("Couldn't retrieve the flow %d", id);
+
+		return -1;
+	}
+
+	rkfree(port_flow->flow);
+	rkfree(port_flow);
+
+	return 0;
+}
+EXPORT_SYMBOL(kipcm_flow_remove);
                
 int kipcm_sdu_write(struct kipcm *     kipcm,
                     port_id_t          id,
                     const struct sdu * sdu)
-{ return -1; }
+{
+        ASSERT(kipcm);
+
+        LOG_MISSING;
+
+        return -1;
+}
                
 int kipcm_sdu_read(struct kipcm * kipcm,
                    port_id_t      id,
                    struct sdu *   sdu)
-{ return -1; }
+{
+        ASSERT(kipcm);
+
+        LOG_MISSING;
+        
+        return -1;
+}
+
+int kipcm_post_sdu(struct kipcm * kipcm,
+                   port_id_t      id,
+                   struct sdu * sdu)
+{
+        /*
+         * NOTE:
+         *
+         *   This function is the "southbound" interface (called by the shims)
+         *   so DO NOT ADD ASSERT() here! Check the parameters instead
+         *
+         *   Francesco
+         */
+
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, cannot post SDU");
+                return -1;
+        }
+
+        LOG_MISSING;
+
+        return -1;
+}

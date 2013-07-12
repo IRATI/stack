@@ -43,12 +43,24 @@ struct personality_data {
         void *               rmt;
 };
 
+static int is_personality_ok(const struct personality_data * p)
+{
+        if (!p)
+                return 0;
+        if (!p->kipcm)
+                return 0;
+        if (!p->efcp)
+                return 0;
+
+        return 1;
+} 
+
 static int default_ipc_create(struct personality_data * data,
                               const struct name *       name,
                               ipc_process_id_t          id,
                               dif_type_t                type)
 {
-        if (!data) return -1;
+        if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
@@ -59,7 +71,7 @@ static int default_ipc_configure(struct personality_data *       data,
                                  ipc_process_id_t                id,
                                  const struct ipc_process_conf * conf)
 {
-        if (!data) return -1;
+        if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
@@ -69,7 +81,7 @@ static int default_ipc_configure(struct personality_data *       data,
 static int default_ipc_destroy(struct personality_data * data,
                                ipc_process_id_t          id)
 {
-        if (!data) return -1;
+        if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
@@ -79,7 +91,7 @@ static int default_ipc_destroy(struct personality_data * data,
 static int default_connection_create(struct personality_data * data,
                                      const struct connection * connection)
 {
-        if (!data) return -1;
+        if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
@@ -89,7 +101,7 @@ static int default_connection_create(struct personality_data * data,
 static int default_connection_destroy(struct personality_data * data,
                                       cep_id_t                  id)
 {
-        if (!data) return -1;
+        if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
@@ -100,7 +112,7 @@ static int default_connection_update(struct personality_data * data,
                                      cep_id_t                  id_from,
                                      cep_id_t                  id_to)
 {
-        if (!data) return -1;
+        if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
@@ -111,7 +123,7 @@ static int default_sdu_write(struct personality_data * data,
                              port_id_t                 id,
                              const struct sdu *        sdu)
 {
-        if (!data) return -1;
+        if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
@@ -122,7 +134,7 @@ static int default_sdu_read(struct personality_data * data,
                             port_id_t                 id,
                             struct sdu *              sdu)
 {
-        if (!data) return -1;
+        if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
@@ -134,7 +146,7 @@ static int default_fini(struct personality_data * data)
         struct personality_data * tmp = data;
         int                       err;
 
-        if (!data) return -1;
+        if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Finalizing default personality");
 
@@ -168,7 +180,7 @@ static int default_init(struct kobject *          parent,
                         personality_id            id,
                         struct personality_data * data)
 {
-        if (!data) return -1;
+        if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Initializing default personality");
 

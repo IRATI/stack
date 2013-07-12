@@ -35,6 +35,9 @@
 #include "shim.h"
 #include "shim-utils.h"
 
+/* FIXME: To be removed ABSOLUTELY */
+extern struct kipcm * default_kipcm;
+
 struct shim_instance_data {
         ipc_process_id_t ipc_process_id;
         struct name *    name;
@@ -109,6 +112,8 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, &data->flows);
 
+        kipcm_flow_add(default_kipcm, data->ipc_process_id, id);
+
         return 0;
 }
 
@@ -129,10 +134,15 @@ static int dummy_flow_deallocate(struct shim_instance_data * data,
 		return -1;
 	}
 
+	/* FIXME: Notify the destination application, maybe? */
+
 	list_del(&flow->list);
-	name_fini(flow->dest);
-	name_fini(flow->source);
+	name_destroy(flow->dest);
+	name_destroy(flow->source);
 	rkfree(flow);
+
+	if (kipcm_flow_remove(default_kipcm, id))
+		return -1;
 
 	return 0;
 }
@@ -170,11 +180,26 @@ static int dummy_sdu_read(struct shim_instance_data * data,
 
         flow = find_flow(data, id);
         if (!flow) {
-                LOG_ERR("There is not flow allocated for port-id %d", id);
+                LOG_ERR("There is not a flow allocated for port-id %d", id);
                 return -1;
         }
 
         return -1;
+}
+
+static int dummy_deallocate_all(struct shim_instance_data * data)
+{
+	struct dummy_flow *pos, *next;
+
+	list_for_each_entry_safe(pos, next, &data->flows, list) {
+		if (dummy_flow_deallocate(data, pos->port_id)) {
+			/* FIXME: Maybe more should be done here in case
+			 * the flow couldn't be destroyed
+			 */
+			LOG_ERR("Flow %d could not be removed", pos->port_id);
+		}
+	}
+	return 0;
 }
 
 struct shim_data {
@@ -252,6 +277,7 @@ static int dummy_destroy(struct shim_data *     data,
 	list_for_each_entry_safe(pos, next, &data->shim_list, list) {
 		if (inst->data->ipc_process_id == pos->ipc_process_id) {
 			list_del(&pos->list);
+			dummy_deallocate_all(pos);
 			rkfree(pos);
 		}
 	}
@@ -297,9 +323,6 @@ static struct shim_ops dummy_ops = {
         .destroy   = dummy_destroy,
         .configure = dummy_configure,
 };
-
-/* FIXME: To be removed ABSOLUTELY */
-extern struct kipcm * default_kipcm;
 
 static int __init mod_init(void)
 {
