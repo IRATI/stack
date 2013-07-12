@@ -1068,6 +1068,120 @@ int testIpcmRegisterApplicationResponseMessage() {
 	return returnValue;
 }
 
+int testIpcmUnregisterApplicationRequestMessage() {
+	std::cout << "TESTING IPCM UNREGISTER APPLICATION REQUEST MESSAGE\n";
+	int returnValue = 0;
+
+	ApplicationProcessNamingInformation applicationName;
+	applicationName.setProcessName("/apps/source");
+	applicationName.setProcessInstance("25");
+	applicationName.setEntityName("database");
+	applicationName.setEntityInstance("31");
+
+	ApplicationProcessNamingInformation difName;
+	difName.setProcessName("/difs/Test2.DIF");
+
+	IpcmUnregisterApplicationRequestMessage message;
+	message.setDifName(difName);
+	message.setApplicationName(applicationName);
+
+	struct nl_msg* netlinkMessage;
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage) {
+		std::cout << "Error allocating Netlink message\n";
+	}
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+			sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+	int result = putBaseNetlinkMessage(netlinkMessage, &message);
+	if (result < 0) {
+		std::cout << "Error constructing Ipcm Unregister Application Request "
+				<< "Message \n";
+		nlmsg_free(netlinkMessage);
+		return result;
+	}
+
+	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+	IpcmUnregisterApplicationRequestMessage * recoveredMessage =
+			dynamic_cast<IpcmUnregisterApplicationRequestMessage *>(
+					parseBaseNetlinkMessage(netlinkMessageHeader));
+	if (recoveredMessage == 0) {
+		std::cout << "Error parsing Ipcm Unregister Application Request Message "
+				<< "\n";
+		returnValue = -1;
+	} else if (message.getApplicationName()
+			!= recoveredMessage->getApplicationName()) {
+		std::cout << "Application name on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message.getDifName() != recoveredMessage->getDifName()) {
+		std::cout << "DIF name on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	}
+
+	if (returnValue == 0) {
+		std::cout << "IpcmUnregisterApplicationRequest test ok\n";
+	}
+	nlmsg_free(netlinkMessage);
+	delete recoveredMessage;
+
+	return returnValue;
+}
+
+int testIpcmUnregisterApplicationResponseMessage() {
+	std::cout << "TESTING IPCM UNREGISTER APPLICATION RESPONSE MESSAGE\n";
+	int returnValue = 0;
+
+	IpcmUnregisterApplicationResponseMessage message;
+
+	message.setResult(1);
+	message.setErrorDescription("Error description");
+
+	struct nl_msg* netlinkMessage;
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage) {
+		std::cout << "Error allocating Netlink message\n";
+	}
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+			sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+	int result = putBaseNetlinkMessage(netlinkMessage, &message);
+	if (result < 0) {
+		std::cout << "Error constructing Ipcm Unregister Application Response "
+				<< "Message \n";
+		nlmsg_free(netlinkMessage);
+		return result;
+	}
+
+	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+	IpcmUnregisterApplicationResponseMessage * recoveredMessage =
+			dynamic_cast<IpcmUnregisterApplicationResponseMessage *>(parseBaseNetlinkMessage(
+					netlinkMessageHeader));
+	if (recoveredMessage == 0) {
+		std::cout << "Error parsing Ipcm Unregister Application Response Message "
+				<< "\n";
+		returnValue = -1;
+	} else if (message.getResult() != recoveredMessage->getResult()) {
+		std::cout << "Result on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message.getErrorDescription().compare(
+			recoveredMessage->getErrorDescription()) != 0) {
+		std::cout << "Error description on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	}
+
+	if (returnValue == 0) {
+		std::cout << "IpcmUnregisterApplicationResponse test ok\n";
+	}
+	nlmsg_free(netlinkMessage);
+	delete recoveredMessage;
+
+	return returnValue;
+}
+
 int testIpcmAssignToDIFRequestMessage() {
 	std::cout << "TESTING IPCM ASSIGN TO DIF REQUEST MESSAGE\n";
 	int returnValue = 0;
@@ -1647,6 +1761,16 @@ int main(int argc, char * argv[]) {
 	}
 
 	result = testIpcmRegisterApplicationResponseMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testIpcmUnregisterApplicationRequestMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testIpcmUnregisterApplicationResponseMessage();
 	if (result < 0) {
 		return result;
 	}

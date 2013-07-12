@@ -252,56 +252,15 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		}
 		break;
 	}
-	case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST:{
-		IpcmRegisterApplicationRequestMessage * specificMessage =
-				dynamic_cast<IpcmRegisterApplicationRequestMessage *>(message);
-		if(send){
-			RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-					specificMessage->getDifName());
-			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-		}else{
-			putAPNametoNetlinkPortIdMapping(
-					specificMessage->getApplicationName(),
-					specificMessage->getApplicationPortId(),
-					specificMessage->getSourceIpcProcessId());
-		}
-		break;
-	}
 	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:{
 		if(send){
 			message->setDestPortId(getIPCManagerPortId());
 		}
 		break;
 	}
-	case RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST:{
-		if(send){
-			IpcmUnregisterApplicationRequestMessage * specificMessage =
-					dynamic_cast<IpcmUnregisterApplicationRequestMessage *>(message);
-			RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-					specificMessage->getDifName());
-			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-		}
-		break;
-	}
 	case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE:{
 		if(send){
 			message->setDestPortId(getIPCManagerPortId());
-		}
-		break;
-	}
-	case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST:{
-		if(send){
-			IpcmAssignToDIFRequestMessage * specificMessage =
-					dynamic_cast<IpcmAssignToDIFRequestMessage *>(message);
-			putAPNametoNetlinkPortIdMapping(
-					specificMessage->getDIFConfiguration().getDifName(),
-					specificMessage->getDestPortId(),
-					specificMessage->getDestIpcProcessId());
-			putIPCProcessIdToNelinkPortIdMapping(
-					specificMessage->getDestPortId(),
-					specificMessage->getDestIpcProcessId());
 		}
 		break;
 	}
@@ -312,14 +271,9 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		break;
 	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST:{
-		IpcmAllocateFlowRequestMessage * specificMessage =
+		if(!send){
+			IpcmAllocateFlowRequestMessage * specificMessage =
 				dynamic_cast<IpcmAllocateFlowRequestMessage *>(message);
-		if(send){
-			RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-					specificMessage->getDifName());
-			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-		}else{
 			putAPNametoNetlinkPortIdMapping(
 					specificMessage->getSourceAppName(),
 					specificMessage->getApplicationPortId(), 0);
@@ -332,17 +286,9 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		}
 		break;
 	}
-	case RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:{
-		if(send){
-			putIPCProcessIdToNelinkPortIdMapping(
-					message->getDestPortId(),
-					message->getDestIpcProcessId());
-		}
-		break;
+	default:{
+		//Do nothing
 	}
-	default:
-		throw NetlinkException(NetlinkException::
-				unrecognized_generic_netlink_operation_code);
 	}
 }
 

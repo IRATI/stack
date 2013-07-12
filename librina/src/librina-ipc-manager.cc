@@ -196,6 +196,8 @@ throw (IPCException) {
 	message.setApplicationName(applicationName);
 	message.setDifName(difConfiguration.getDifName());
 	message.setApplicationPortId(applicationPortId);
+	message.setDestIpcProcessId(id);
+	message.setDestPortId(portId);
 	message.setRequestMessage(true);
 
 	IpcmRegisterApplicationResponseMessage * registerAppResponse =
@@ -227,6 +229,8 @@ throw (IPCException) {
 	IpcmUnregisterApplicationRequestMessage message;
 	message.setApplicationName(applicationName);
 	message.setDifName(difConfiguration.getDifName());
+	message.setDestIpcProcessId(id);
+	message.setDestPortId(portId);
 	message.setRequestMessage(true);
 
 	IpcmUnregisterApplicationResponseMessage * unregisterAppResponse =
@@ -240,7 +244,7 @@ throw (IPCException) {
 		delete unregisterAppResponse;
 		throw IPCException(reason);
 	}
-	LOG_DBG("Registered app %s to DIF %s",
+	LOG_DBG("Unregistered app %s from DIF %s",
 			applicationName.getProcessName().c_str(),
 			difConfiguration.getDifName().getProcessName().c_str());
 	delete unregisterAppResponse;
@@ -263,6 +267,8 @@ void IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest,
 	message.setDifName(flowRequest.getDIFName());
 	message.setPortId(flowRequest.getPortId());
 	message.setApplicationPortId(applicationPortId);
+	message.setDestIpcProcessId(id);
+	message.setDestPortId(portId);
 	message.setRequestMessage(true);
 
 	IpcmAllocateFlowResponseMessage * allocateFlowResponse =

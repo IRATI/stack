@@ -125,7 +125,9 @@ int main(int argc, char * argv[]) {
 			0,0,"Everything was fine");
 
 	/* TEST APPLICATION UNREGISTERED */
-	applicationManager->applicationUnregistered(25, "Everything was fine");
+	ApplicationUnregistrationRequestEvent * event2 = new
+			ApplicationUnregistrationRequestEvent(*sourceName, *difName, 34);
+	applicationManager->applicationUnregistered(*event2, 0, "ok");
 
 	/* TEST FLOW ALLOCATED */
 	FlowRequestEvent * flowEvent = new FlowRequestEvent(25, *flowSpec,

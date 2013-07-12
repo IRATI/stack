@@ -140,8 +140,9 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 			return 0;
 		}
 	case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST: {
-		IpcmRegisterApplicationRequestMessage * registerApplicationRequestObject =
-				dynamic_cast<IpcmRegisterApplicationRequestMessage *>(message);
+		IpcmRegisterApplicationRequestMessage *
+			registerApplicationRequestObject =
+			dynamic_cast<IpcmRegisterApplicationRequestMessage *>(message);
 		if (putIpcmRegisterApplicationRequestMessageObject(netlinkMessage,
 				*registerApplicationRequestObject) < 0) {
 			return -1;
@@ -149,10 +150,31 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		return 0;
 	}
 	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE: {
-		IpcmRegisterApplicationResponseMessage * registerApplicationResponseObject =
-				dynamic_cast<IpcmRegisterApplicationResponseMessage *>(message);
+		IpcmRegisterApplicationResponseMessage *
+			registerApplicationResponseObject =
+			dynamic_cast<IpcmRegisterApplicationResponseMessage *>(message);
 		if (putIpcmRegisterApplicationResponseMessageObject(netlinkMessage,
 				*registerApplicationResponseObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
+	case RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST: {
+		IpcmUnregisterApplicationRequestMessage *
+			unregisterApplicationRequestObject =
+			dynamic_cast<IpcmUnregisterApplicationRequestMessage *>(message);
+		if (putIpcmUnregisterApplicationRequestMessageObject(netlinkMessage,
+				*unregisterApplicationRequestObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
+	case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE: {
+		IpcmUnregisterApplicationResponseMessage *
+		unregisterApplicationResponseObject =
+				dynamic_cast<IpcmUnregisterApplicationResponseMessage *>(message);
+		if (putIpcmUnregisterApplicationResponseMessageObject(netlinkMessage,
+				*unregisterApplicationResponseObject) < 0) {
 			return -1;
 		}
 		return 0;
@@ -277,6 +299,14 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE: {
 		return parseIpcmRegisterApplicationResponseMessage(
 				netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST: {
+			return parseIpcmUnregisterApplicationRequestMessage(
+					netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE: {
+			return parseIpcmUnregisterApplicationResponseMessage(
+					netlinkMessageHeader);
 	}
 	case RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION: {
 		return parseAppRegistrationCanceledNotificationMessage(
@@ -935,9 +965,6 @@ int putAppRegistrationCanceledNotificationMessageObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
-
-
-
 int putIpcmRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 		const IpcmRegisterApplicationRequestMessage& object) {
 	struct nlattr *difName, *applicationName;
@@ -1000,6 +1027,48 @@ int putIpcmRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 
 	nla_put_failure: LOG_ERR(
 			"Error building IpcmRegisterApplicationResponseMessage Netlink object");
+	return -1;
+}
+
+int putIpcmUnregisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
+		const IpcmUnregisterApplicationRequestMessage& object) {
+	struct nlattr *difName, *applicationName;
+
+	if (!(applicationName = nla_nest_start(netlinkMessage, IUAR_ATTR_APP_NAME))) {
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getApplicationName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, applicationName);
+
+	if (!(difName = nla_nest_start(netlinkMessage, IUAR_ATTR_DIF_NAME))) {
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getDifName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, difName);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building IpcmUnregisterApplicationRequestMessage Netlink object");
+	return -1;
+}
+
+int putIpcmUnregisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
+		const IpcmUnregisterApplicationResponseMessage& object) {
+	NLA_PUT_U32(netlinkMessage, IUARE_ATTR_RESULT, object.getResult());
+	NLA_PUT_STRING(netlinkMessage, IUARE_ATTR_ERROR_DESCRIPTION,
+			object.getErrorDescription().c_str());
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building IpcmUnregisterApplicationResponseMessage Netlink object");
 	return -1;
 }
 
@@ -2243,6 +2312,100 @@ parseIpcmRegisterApplicationResponseMessage(nlmsghdr *hdr) {
 			result->setDifName(*difName);
 			delete difName;
 		}
+	}
+
+	return result;
+}
+
+IpcmUnregisterApplicationRequestMessage *
+parseIpcmUnregisterApplicationRequestMessage(nlmsghdr *hdr) {
+	struct nla_policy attr_policy[IUAR_ATTR_MAX + 1];
+	attr_policy[IUAR_ATTR_APP_NAME].type = NLA_NESTED;
+	attr_policy[IUAR_ATTR_APP_NAME].minlen = 0;
+	attr_policy[IUAR_ATTR_APP_NAME].maxlen = 0;
+	attr_policy[IUAR_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[IUAR_ATTR_DIF_NAME].minlen = 0;
+	attr_policy[IUAR_ATTR_DIF_NAME].maxlen = 0;
+	struct nlattr *attrs[IUAR_ATTR_MAX + 1];
+
+	/*
+	 * The nlmsg_parse() function will make sure that the message contains
+	 * enough payload to hold the header (struct my_hdr), validates any
+	 * attributes attached to the messages and stores a pointer to each
+	 * attribute in the attrs[] array accessable by attribute type.
+	 */
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			IUAR_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing IpcmRegisterApplicationRequestMessage information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	IpcmUnregisterApplicationRequestMessage * result =
+			new IpcmUnregisterApplicationRequestMessage();
+
+	ApplicationProcessNamingInformation * applicationName;
+	ApplicationProcessNamingInformation * difName;
+
+	if (attrs[IUAR_ATTR_APP_NAME]) {
+		applicationName = parseApplicationProcessNamingInformationObject(
+				attrs[IUAR_ATTR_APP_NAME]);
+		if (applicationName == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->setApplicationName(*applicationName);
+			delete applicationName;
+		}
+	}
+
+	if (attrs[IUAR_ATTR_DIF_NAME]) {
+		difName = parseApplicationProcessNamingInformationObject(
+				attrs[IUAR_ATTR_DIF_NAME]);
+		if (difName == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->setDifName(*difName);
+			delete difName;
+		}
+	}
+
+	return result;
+}
+
+IpcmUnregisterApplicationResponseMessage *
+parseIpcmUnregisterApplicationResponseMessage(nlmsghdr *hdr) {
+	struct nla_policy attr_policy[IUARE_ATTR_MAX + 1];
+	attr_policy[IUARE_ATTR_RESULT].type = NLA_U32;
+	attr_policy[IUARE_ATTR_RESULT].minlen = 4;
+	attr_policy[IUARE_ATTR_RESULT].maxlen = 4;
+	attr_policy[IUARE_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
+	attr_policy[IUARE_ATTR_ERROR_DESCRIPTION].minlen = 0;
+	attr_policy[IUARE_ATTR_ERROR_DESCRIPTION].maxlen = 65535;
+	struct nlattr *attrs[IUARE_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			IUARE_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing IpcmUnregisterApplicationResponseMessage information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	IpcmUnregisterApplicationResponseMessage * result =
+			new IpcmUnregisterApplicationResponseMessage();
+
+	if (attrs[IUARE_ATTR_RESULT]) {
+		result->setResult(nla_get_u32(attrs[IUARE_ATTR_RESULT]));
+	}
+
+	if (attrs[IUARE_ATTR_ERROR_DESCRIPTION]) {
+		result->setErrorDescription(
+				nla_get_string(attrs[IUARE_ATTR_ERROR_DESCRIPTION]));
 	}
 
 	return result;

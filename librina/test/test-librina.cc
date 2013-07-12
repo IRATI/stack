@@ -30,7 +30,7 @@ void doWorkApplicationProcess(){
 	std::cout<<"Application process pid: "<<getpid()<<std::endl;
 	//Child process, this will be the application
 	int result = 0;
-	setNetlinkPortId(3);
+	setNetlinkPortId(5);
 
 	usleep(1000*200);
 
@@ -86,7 +86,7 @@ void doWorkIPCProcess(){
 	//Child process, this will be the IPC Process
 	int result = 0;
 	//unsigned short ipcProcessId = 1;
-	setNetlinkPortId(2);
+	setNetlinkPortId(4);
 
 	//Wait for Registration to DIF notification event
 	IPCEvent * event = ipcEventProducer->eventWait();
@@ -171,7 +171,7 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	processName.setProcessInstance("1");
 	IPCProcess * ipcProcess = ipcProcessFactory->create(
 			processName, DIF_TYPE_NORMAL);
-	ipcProcess->setPortId(2);
+	ipcProcess->setPortId(4);
 	std::cout<<"IPCManager# Created IPC Process with id " <<
 			ipcProcess->getId()<<std::endl;
 
@@ -214,10 +214,10 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	std::cout<<"IPCManager# received a flow allocation request event\n";
 	flowRequestEvent->setDIFName(difName);
 	flowRequestEvent->setPortId(23);
-	ipcProcess->allocateFlow(*flowRequestEvent, 3);
+	ipcProcess->allocateFlow(*flowRequestEvent, 5);
 	std::cout<<"IPCManager# IPC Process successfully allocated flow" <<
 			"in DIF "<<difName.getProcessName()<<std::endl;
-	applicationManager->flowAllocated(*flowRequestEvent, "ok", 1, 2);
+	applicationManager->flowAllocated(*flowRequestEvent, "ok", 1, 4);
 	std::cout<<"IPCManager# Replied to flow allocation\n";
 	delete flowRequestEvent;
 
@@ -233,7 +233,7 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 			"to DIF "<<difName.getProcessName()<<std::endl;
 	applicationManager->applicationUnregistered(*appUnregistrationRequestEvent, 0, "OK");
 	std::cout<<"IPCManager# Replied to application\n";
-	delete appRequestEvent;
+	delete appUnregistrationRequestEvent;
 
 
 	//Inform IPC Process that it has been unregistered from underlying DIF

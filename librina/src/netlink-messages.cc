@@ -800,8 +800,9 @@ IPCEvent* IpcmUnregisterApplicationRequestMessage::toIPCEvent(){
 }
 
 /* CLASS IPCM UNREGISTER APPLICATION RESPONSE MESSAGE */
-IpcmUnregisterApplicationResponseMessage::IpcmUnregisterApplicationResponseMessage() :
-				BaseNetlinkResponseMessage(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE) {
+IpcmUnregisterApplicationResponseMessage::
+IpcmUnregisterApplicationResponseMessage() :
+	BaseNetlinkResponseMessage(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE) {
 }
 
 
