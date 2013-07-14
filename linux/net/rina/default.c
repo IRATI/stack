@@ -146,7 +146,11 @@ static int default_fini(struct personality_data * data)
         struct personality_data * tmp = data;
         int                       err;
 
-        if (!is_personality_ok(data)) return -1;
+        if (!data) {
+                LOG_ERR("Personality data is bogus, cannot finalize "
+                        "default personality");
+                return -1;
+        }
 
         LOG_DBG("Finalizing default personality");
 
@@ -180,7 +184,11 @@ static int default_init(struct kobject *          parent,
                         personality_id            id,
                         struct personality_data * data)
 {
-        if (!is_personality_ok(data)) return -1;
+        if (!data) {
+                LOG_ERR("Personality data is bogus, cannot initialize "
+                        "default personality");
+                return -1;
+        }
 
         LOG_DBG("Initializing default personality");
 
