@@ -57,8 +57,8 @@ enum RINANetlinkOperationCode{
         RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE, /*IPC Process -> IPC Manager */
         RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST, /* IPC Manager -> IPC Process */
         RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE, /* IPC Process -> IPC Manager */
-        RINA_C_IPCM_QUERY_RIB_REQUEST, /* TODO IPC Manager -> IPC Process */
-        RINA_C_IPCM_QUERY_RIB_RESPONSE, /* TODO IPC Process -> IPC Manager */
+        RINA_C_IPCM_QUERY_RIB_REQUEST, /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_QUERY_RIB_RESPONSE, /* IPC Process -> IPC Manager */
         RINA_C_RMT_ADD_FTE_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
         RINA_C_RMT_DELETE_FTE_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
         RINA_C_RMT_DUMP_FT_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
@@ -805,6 +805,7 @@ class IpcmDIFQueryRIBResponseMessage:
 public:
 	IpcmDIFQueryRIBResponseMessage();
 	const std::list<RIBObject>& getRIBObjects() const;
+	void setRIBObjects(const std::list<RIBObject>& ribObjects);
 	void addRIBObject(const RIBObject& ribObject);
 };
 

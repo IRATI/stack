@@ -233,6 +233,27 @@ void ExtendedIPCManager::allocateFlowResponse(
 #endif
 }
 
+void ExtendedIPCManager::queryRIBResponse(
+		const QueryRIBRequestEvent& event, int result,
+		const std::string& errorDescription,
+		const std::list<RIBObject>& ribObjects){
+#if STUB_API
+	//Do nothing
+#else
+	IpcmDIFQueryRIBResponseMessage responseMessage;
+	responseMessage.setResult(result);
+	responseMessage.setErrorDescription(errorDescription);
+	responseMessage.setRIBObjects(ribObjects);
+	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+	}catch(NetlinkException &e){
+		throw IPCException(e.what());
+	}
+#endif
+}
+
 Singleton<ExtendedIPCManager> extendedIPCManager;
 
 /* CLASS IPC PROCESS APPLICATION MANAGER */

@@ -148,6 +148,26 @@ void doWorkIPCProcess(){
 	delete applicationUnregistrationEvent;
 
 
+	//Wait for query RIB Event
+	event = ipcEventProducer->eventWait();
+	QueryRIBRequestEvent * queryRIBEvent =
+			dynamic_cast<QueryRIBRequestEvent *>(event);
+	std::cout<<"IPCProcess# Received query RIB request event"<<std::endl;
+	std::list<RIBObject> ribObjects;
+	RIBObject ribObject;
+	ribObject.setClazz("flow");
+	ribObject.setName("/dif/management/flows/23");
+	ribObject.setInstance(123456);
+	ribObjects.push_back(ribObject);
+	RIBObject ribObject2;
+	ribObject2.setClazz("flow");
+	ribObject2.setName("/dif/management/flows/24");
+	ribObject2.setInstance(12345677);
+	ribObjects.push_back(ribObject2);
+	extendedIPCManager->queryRIBResponse(*queryRIBEvent, 0, "", ribObjects);
+	std::cout<<"IPCProcess# Replied IPC Manager"<<std::endl;
+	delete queryRIBEvent;
+
 	//Wait for Unregistration from DIF notification event
 	event = ipcEventProducer->eventWait();
 	IPCProcessUnregisteredFromDIFEvent * ipcUnregNotEvent =
@@ -235,6 +255,11 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	std::cout<<"IPCManager# Replied to application\n";
 	delete appUnregistrationRequestEvent;
 
+	//Query RIB of IPC Process
+	std::list<RIBObject> ribObjects = ipcProcess->queryRIB("list of flows",
+			"/dif/management/flows/", 0, 0, "");
+	std::cout<<"IPCManager# Queried RIB of IPC Process and got "<<
+			ribObjects.size() << " objects back"<<std::endl;
 
 	//Inform IPC Process that it has been unregistered from underlying DIF
 	ipcProcess->notifyUnregistrationFromSupportingDIF(

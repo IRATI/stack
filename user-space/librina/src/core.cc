@@ -270,6 +270,12 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		}
 		break;
 	}
+	case RINA_C_IPCM_QUERY_RIB_RESPONSE:{
+		if(send){
+			message->setDestPortId(getIPCManagerPortId());
+		}
+		break;
+	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST:{
 		if(!send){
 			IpcmAllocateFlowRequestMessage * specificMessage =

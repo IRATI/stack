@@ -116,7 +116,8 @@ int main(int argc, char * argv[]) {
 	ipcProcess1->allocateFlow(*flowRequest, 24);
 
 	/* TEST QUERY RIB */
-	ipcProcess1->queryRIB();
+	ipcProcess1->queryRIB("list of flows",
+			"/dif/management/flows/", 0, 0, "");
 
 	/* TEST APPLICATION REGISTERED */
 	ApplicationRegistrationRequestEvent * event = new

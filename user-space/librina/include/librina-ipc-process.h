@@ -206,6 +206,18 @@ public:
 	 */
 	void allocateFlowResponse(const FlowRequestEvent& event, int result,
 			const std::string& errorDescription) throw (IPCException);
+
+	/**
+	 * Reply to the IPC Manager, providing 0 or more RIB Objects in response to
+	 * a "query RIB request"
+	 * @param event
+	 * @param result
+	 * @param errorDescription
+	 * @param ribObjects
+	 */
+	void queryRIBResponse(const QueryRIBRequestEvent& event, int result,
+			const std::string& errorDescription,
+			const std::list<RIBObject>& ribObjects);
 };
 
 /**

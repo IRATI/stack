@@ -1027,10 +1027,14 @@ const std::list<RIBObject>&
 	return ribObjects;
 }
 
+void IpcmDIFQueryRIBResponseMessage::setRIBObjects(
+		const std::list<RIBObject>& ribObjects){
+	this->ribObjects = ribObjects;
+}
+
 void IpcmDIFQueryRIBResponseMessage::addRIBObject(const RIBObject& ribObject){
 	ribObjects.push_back(ribObject);
 }
-
 
 }
 
