@@ -1,8 +1,11 @@
 import eu.irati.librina.ApplicationManagerSingleton;
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.ApplicationRegistrationRequestEvent;
+import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.DIFConfiguration;
 import eu.irati.librina.DIFType;
 import eu.irati.librina.FlowRequest;
+import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.FlowSpecification;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.IPCProcess;
@@ -93,20 +96,17 @@ public class ipcmd {
 		destNamingInfo.setEntityInstance("1");
 		
 		printStatement("\nREGISTERING APPLICATIONs TO IPC PROCESS");
-		ipcProcess1.registerApplication(sourceNamingInfo);
-		ipcProcess2.registerApplication(destNamingInfo);
+		ipcProcess1.registerApplication(sourceNamingInfo, 35);
+		ipcProcess2.registerApplication(destNamingInfo, 56);
 		
 		printStatement("\nUNREGISTERING APPLICATIONs FROM IPC PROCESS");
 		ipcProcess1.unregisterApplication(sourceNamingInfo);
 		ipcProcess2.unregisterApplication(destNamingInfo);
 		
 		printStatement("\nREQUESTING ALLOCATION OF FLOW TO IPC PROCESS");
-		FlowRequest flowRequest = new FlowRequest();
-		flowRequest.setSourceApplicationName(sourceNamingInfo);
-		flowRequest.setDestinationApplicationName(destNamingInfo);
-		flowRequest.setFlowSpecification(new FlowSpecification());
-		flowRequest.setPortId(230);
-		ipcProcess1.allocateFlow(flowRequest);
+		FlowRequestEvent flowRequestEvent = new FlowRequestEvent(
+				new FlowSpecification(), sourceNamingInfo, destNamingInfo, 25);
+		ipcProcess1.allocateFlow(flowRequestEvent, 15);
 		
 		printStatement("\nDESTROYING IPC PROCESSES");
 		ipcProcessFactory.destroy(ipcProcess1.getId());
@@ -115,12 +115,16 @@ public class ipcmd {
 		ApplicationManagerSingleton applicationManager = rina.getApplicationManager();
 		
 		printStatement("\nNOTIFY APPLICATION ABOUT SUCCESSFUL REGISTRATION");
-		applicationManager.applicationRegistered(23, "ok");
+		ApplicationRegistrationRequestEvent appRegRequestEvent = new 
+				ApplicationRegistrationRequestEvent(sourceNamingInfo, difName, 45);
+		applicationManager.applicationRegistered(appRegRequestEvent, 25, 15, 0, "");
 		
 		printStatement("\nNOTIFY APPLICATION ABOUT SUCCESSFUL UNREGISTRATION");
-		applicationManager.applicationUnregistered(34, "ok");
+		ApplicationUnregistrationRequestEvent appUnregRequestEvent = new 
+				ApplicationUnregistrationRequestEvent(sourceNamingInfo, difName, 37);
+		applicationManager.applicationUnregistered(appUnregRequestEvent, 0, "ok");
 		
 		printStatement("\nNOTIFY APPLICATION ABOUT SUCCESSFUL FLOW ALLOCATION");
-		applicationManager.flowAllocated(13, 434, 3, "ok", difName);
+		applicationManager.flowAllocated(flowRequestEvent, "", 3, 4);
 	}
 }

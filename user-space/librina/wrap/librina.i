@@ -75,6 +75,7 @@
 #include "librina-common.h"
 #include "librina-application.h"
 #include "librina-ipc-manager.h"
+#include "librina-ipc-process.h"
 %}
 
 %rename(equals) rina::ApplicationProcessNamingInformation::operator==(const ApplicationProcessNamingInformation &other) const;
@@ -87,12 +88,15 @@
 %rename(differs) rina::QoSCube::operator!=(const QoSCube &other) const; 
 %rename(equals) rina::FlowSpecification::operator==(const FlowSpecification &other) const;
 %rename(differs) rina::FlowSpecification::operator!=(const FlowSpecification &other) const;
+%rename(equals) rina::RIBObject::operator==(const RIBObject &other) const;
+%rename(differs) rina::RIBObject::operator!=(const RIBObject &other) const;
 
 %include "exceptions.h"
 %include "patterns.h"
 %include "librina-common.h"
 %include "librina-application.h"
 %include "librina-ipc-manager.h"
+%include "librina-ipc-process.h"
 
 /* Macro for defining collection iterators */
 %define MAKE_COLLECTION_ITERABLE( ITERATORNAME, JTYPE, CPPCOLLECTION, CPPTYPE )
@@ -156,3 +160,6 @@ MAKE_COLLECTION_ITERABLE(ApplicationProcessNamingInformationListIterator, Applic
 %template(IPCProcessVector) std::vector<rina::IPCProcess>;
 %template(IPCProcessPointerVector) std::vector<rina::IPCProcess *>;
 %template(ApplicationManagerSingleton) Singleton<rina::ApplicationManager>;
+%template(ExtendedIPCManagerSingleton) Singleton<rina::ExtendedIPCManager>;
+%template(IPCProcessApplicationManagerSingleton) Singleton<rina::IPCProcessApplicationManager>;
+%template(RIBObjectList) std::list<rina::RIBObject>;
