@@ -62,6 +62,10 @@ void * rkmalloc(size_t size, gfp_t flags)
                 return NULL;
         }
 
+#if CONFIG_RINA_MEMORY_PTRS_DUMP
+        LOG_DBG("rkmalloc(%zd) = %pK", size, tmp);
+#endif
+
         return tmp;
 }
 EXPORT_SYMBOL(rkmalloc);
@@ -84,12 +88,20 @@ void * rkzalloc(size_t size, gfp_t flags)
                 return NULL;
         }
 
+#if CONFIG_RINA_MEMORY_PTRS_DUMP
+        LOG_DBG("rkzalloc(%zd) = %pK", size, tmp);
+#endif
+
         return tmp;
 }
 EXPORT_SYMBOL(rkzalloc);
 
 void rkfree(void * ptr)
 {
+#if CONFIG_RINA_MEMORY_PTRS_DUMP
+        LOG_DBG("rkfree(%pK)", ptr);
+#endif
+
 #if CONFIG_RINA_MEMORY_CHECKS
         if (!ptr) {
                 LOG_ERR("Passed pointer is NULL, cannot free");

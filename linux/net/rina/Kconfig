@@ -24,6 +24,13 @@ config RINA_MEMORY_CHECKS
 	help
 	  No help for the time being
 
+config RINA_MEMORY_PTRS_DUMP
+	bool "Dump pointers passed to/from alloc and free routines"
+	default n
+        depends on RINA_MEMORY_CHECKS
+	help
+	  No help for the time being
+
 config RINA_UNFILTERED_LOGS
 	bool "Unfiltered logging"
 	default y
