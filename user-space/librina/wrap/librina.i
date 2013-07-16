@@ -68,6 +68,48 @@
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
+%typemap(throws, throws="eu.irati.librina.FlowNotAllocatedException") rina::FlowNotAllocatedException {
+  jclass excep = jenv->FindClass("eu/irati/librina/FlowNotAllocatedException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.ReadSDUException") rina::ReadSDUException {
+  jclass excep = jenv->FindClass("eu/irati/librina/ReadSDUException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.WriteSDUException") rina::WriteSDUException {
+  jclass excep = jenv->FindClass("eu/irati/librina/WriteSDUException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.ApplicationRegistrationException") rina::ApplicationRegistrationException {
+  jclass excep = jenv->FindClass("eu/irati/librina/ApplicationRegistrationException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.ApplicationUnregistrationException") rina::ApplicationUnregistrationException {
+  jclass excep = jenv->FindClass("eu/irati/librina/ApplicationUnregistrationException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.FlowAllocationException") rina::FlowAllocationException {
+  jclass excep = jenv->FindClass("eu/irati/librina/FlowAllocationException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.FlowDeallocationException") rina::FlowDeallocationException {
+  jclass excep = jenv->FindClass("eu/irati/librina/FlowDeallocationException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
 
 %{
 #include "exceptions.h"
