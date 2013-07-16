@@ -32,4 +32,7 @@ Makefile.in
 
 /*.tar.gz
 
-wrap/java
+/wrap/java
+
+/.project
+/.cproject
