@@ -463,7 +463,7 @@ class Policy {
  * Enum type that identifies the different types of DIFs
  */
 enum DIFType {
-	DIF_TYPE_NORMAL, DIF_TYPE_SHIM_IP, DIF_TYPE_SHIM_ETHERNET
+	DIF_TYPE_NORMAL, DIF_TYPE_SHIM_ETHERNET
 };
 
 /**

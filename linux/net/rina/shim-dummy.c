@@ -38,15 +38,32 @@
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
 
+/* Holds all configuration related to a shim instance */
+struct dummy_info {
+	/* IPC Instance name */
+	struct name * name;
+	/* DIF name */
+	struct name * dif_name;
+};
+
 struct shim_instance_data {
-        ipc_process_id_t ipc_process_id;
-        struct name *    name;
+        ipc_process_id_t    id;
 
         /* FIXME: Stores the state of flows indexed by port_id */
-        struct list_head flows;
+        struct list_head    flows;
 
         /* Used to keep a list of all the dummy shims */
-        struct list_head list;
+        struct list_head    list;
+
+	struct dummy_info * info;
+};
+
+enum dummy_flow_state {
+	NULL_STATE = 1,
+	CONNECT_PENDING,
+	AUTHENTICATED,
+	ESTABLISHED,
+	RELEASING,
 };
 
 struct dummy_flow {
@@ -59,7 +76,7 @@ struct dummy_flow {
 static struct dummy_flow * find_flow(struct shim_instance_data * data,
                                      port_id_t                   id)
 {
-        struct dummy_flow *     flow;
+        struct dummy_flow * flow;
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
@@ -77,7 +94,7 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
                                        const struct flow_spec *    fspec,
                                        port_id_t                   id)
 {
-        struct dummy_flow *         flow;
+        struct dummy_flow * flow;
 
         ASSERT(data);
         ASSERT(source);
@@ -93,13 +110,13 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
                 return -1;
 
         flow->dest = name_dup(dest);
-        if(!flow->dest) {
+        if (!flow->dest) {
         	rkfree(flow);
 		LOG_ERR("Name copy failed");
 		return -1;
 	}
         flow->source = name_dup(source);
-	if(!flow->source) {
+	if (!flow->source) {
 		rkfree(flow->dest);
 		rkfree(flow);
 		LOG_ERR("Name copy failed");
@@ -112,7 +129,8 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, &data->flows);
 
-        kipcm_flow_add(default_kipcm, data->ipc_process_id, id);
+        if (kipcm_flow_add(default_kipcm, data->id, id))
+        	return -1;
 
         return 0;
 }
@@ -120,7 +138,23 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
 static int dummy_flow_allocate_response(struct shim_instance_data * data,
                                         port_id_t                   id,
                                         response_reason_t *         response)
-{ return -1; }
+{         
+	ASSERT(data);
+        ASSERT(response);
+
+	/* On positive response, flow should transition to allocated state */
+	if (response == 0) {
+		
+	}
+
+	/* 
+	 * NOTE:
+	 *   Other shims may implement other behavior here,
+	 *   such as contacting the apposite shim IPC process 
+	 */
+
+        return 0;
+}
 
 static int dummy_flow_deallocate(struct shim_instance_data * data,
                                  port_id_t                   id)
@@ -203,11 +237,10 @@ static int dummy_deallocate_all(struct shim_instance_data * data)
 }
 
 struct shim_data {
-        struct list_head shim_list;
+        struct list_head instances;
 };
 
 static struct shim_data dummy_data;
-
 static struct shim *    dummy_shim = NULL;
 
 static int dummy_init(struct shim_data * data)
@@ -215,7 +248,7 @@ static int dummy_init(struct shim_data * data)
 	ASSERT(data);
 
 	bzero(&dummy_data, sizeof(dummy_data));
-	INIT_LIST_HEAD(&data->shim_list);
+	INIT_LIST_HEAD(&data->instances);
 
         return 0;
 }
@@ -224,12 +257,12 @@ static int dummy_fini(struct shim_data * data)
 {
         ASSERT(data);
 
-        ASSERT(list_empty(&data->shim_list));
+        ASSERT(list_empty(&data->instances));
 
         return 0;
 }
 
-static struct shim_instance_ops instance_ops = {
+static struct shim_instance_ops dummy_instance_ops = {
 	.flow_allocate_request  = dummy_flow_allocate_request,
 	.flow_allocate_response = dummy_flow_allocate_response,
 	.flow_deallocate        = dummy_flow_deallocate,
@@ -239,50 +272,93 @@ static struct shim_instance_ops instance_ops = {
 	.sdu_read               = dummy_sdu_read,
 };
 
+static struct shim_instance_data * find_instance(struct shim_data * data,
+                                                 ipc_process_id_t   id)
+{
+
+        struct shim_instance_data * pos;
+
+        list_for_each_entry(pos, &(data->instances), list) {
+                if (pos->id == id) {
+                        return pos;
+                }
+        }
+
+        return NULL;
+}
+
 static struct shim_instance * dummy_create(struct shim_data * data,
                                            ipc_process_id_t   id)
 {
-        struct shim_instance *   inst;
+	struct shim_instance * inst;
 
+        ASSERT(data);
+	
+        /* Check if there already is an instance with that id */
+        if (find_instance(data,id)) {
+                LOG_ERR("There's a shim instance with id %d already", id);
+                return NULL;
+        } 
+
+        /* Create an instance */
+	LOG_DBG("Create an instance");
         inst = rkzalloc(sizeof(*inst), GFP_KERNEL);
         if (!inst)
                 return NULL;
 
+        /* fill it properly */
+	LOG_DBG("Fill it properly");
+        inst->ops  = &dummy_instance_ops;
         inst->data = rkzalloc(sizeof(struct shim_instance_data), GFP_KERNEL);
         if (!inst->data) {
+		LOG_DBG("Fill it properly failed");
+                rkfree(inst);
+                return NULL;
+        }
+
+        inst->data->id = id;
+        INIT_LIST_HEAD(&inst->data->flows);
+	inst->data->info = rkzalloc(sizeof(*inst->data->info), GFP_KERNEL);
+	if (!inst->data->info) {
+		LOG_DBG("Failed creation of inst->data->info");
+		rkfree(inst->data);
 		rkfree(inst);
 		return NULL;
 	}
 
-        INIT_LIST_HEAD(&inst->data->flows);
-
-        inst->data->ipc_process_id = id;
-
-        inst->ops = &instance_ops;
-
-        INIT_LIST_HEAD(&inst->data->list);
-        list_add(&inst->data->list, &data->shim_list);
-
-        return inst;
-}
-
-static int dummy_destroy(struct shim_data *     data,
-                         struct shim_instance * inst)
-{
-	struct shim_instance_data * pos, * next;
-
-	ASSERT(data);
-	ASSERT(inst);
-
-	list_for_each_entry_safe(pos, next, &data->shim_list, list) {
-		if (inst->data->ipc_process_id == pos->ipc_process_id) {
-			list_del(&pos->list);
-			dummy_deallocate_all(pos);
-			rkfree(pos);
-		}
+        inst->data->info->dif_name = name_create();
+	if (!inst->data->info->dif_name) {
+		LOG_DBG("Failed creation of dif_name");
+		rkfree(inst->data->info);
+		rkfree(inst->data);
+		rkfree(inst);
+		return NULL;
 	}
 
-	return 0;
+	inst->data->info->name = name_create();
+	if (!inst->data->info->name) {
+		LOG_DBG("Failed creation of ipc name");
+		name_destroy(inst->data->info->dif_name);
+		rkfree(inst->data->info);
+		rkfree(inst->data);
+		rkfree(inst);
+		return NULL;
+	}
+
+
+        /*
+         * Bind the shim-instance to the shims set, to keep all our data
+         * structures linked (somewhat) together
+         */
+	
+	LOG_DBG("Adding dummy instance to the list of shim dummy instances");
+
+	INIT_LIST_HEAD(&(inst->data->list));
+	LOG_DBG("Initialization of instance list: %pK", &inst->data->list);
+        list_add(&(inst->data->list), &(data->instances));
+	LOG_DBG("Inst %pK added to the dummy instances", inst);
+
+        return inst;
 }
 
 /* FIXME: It doesn't allow reconfiguration */
@@ -290,30 +366,81 @@ static struct shim_instance * dummy_configure(struct shim_data *         data,
                                               struct shim_instance *     inst,
                                               const struct shim_config * conf)
 {
-        struct shim_config *        current_entry;
-        struct shim_instance_data * dummy;
+	struct shim_instance_data * instance;
+        struct shim_config *        tmp;
 
+        ASSERT(data);
         ASSERT(inst);
         ASSERT(conf);
 
-        dummy = inst->data;
-        if (!dummy) {
-                LOG_ERR("There is not a dummy instance in this shim instance");
-                return NULL;
+        instance = find_instance(data, inst->data->id);
+        if (!instance) {
+                LOG_ERR("There's no instance with id %d", inst->data->id);
+                return inst;
         }
 
-        list_for_each_entry(current_entry, &(conf->list), list) {
-                if (strcmp(current_entry->entry->name, "name"))
-                        dummy->name = (struct name *)
-                                current_entry->entry->value->data;
-                else {
+        /* Use configuration values on that instance */
+        list_for_each_entry(tmp, &(conf->list), list) {
+                if (!strcmp(tmp->entry->name, "dif-name") &&
+                    tmp->entry->value->type == SHIM_CONFIG_STRING) {
+                        if (name_cpy(instance->info->dif_name,
+                                     (struct name *)
+                                     tmp->entry->value->data)) {
+                                LOG_ERR("Failed to copy DIF name");
+                                return inst;
+                        }
+                }
+		else if (!strcmp(tmp->entry->name, "name") &&
+                         tmp->entry->value->type == SHIM_CONFIG_STRING) {
+                        if (name_cpy(instance->info->name,
+                                     (struct name *)
+                                     tmp->entry->value->data)) {
+                                LOG_ERR("Failed to copy name");
+                                return inst;
+                        }
+		}
+		else {
                         LOG_ERR("Cannot identify parameter '%s'",
-                                current_entry->entry->name);
+                                tmp->entry->name);
                         return NULL;
                 }
         }
-
+	
+        /*
+         * Instance might change (reallocation), return the updated pointer
+         * if needed. We don't re-allocate our instance so we'll be returning
+         * the same pointer.
+         */
+	
         return inst;
+}
+
+static int dummy_destroy(struct shim_data *     data,
+                         struct shim_instance * instance)
+{
+	struct shim_instance_data * pos, * next;
+
+        ASSERT(data);
+        ASSERT(instance);
+
+        /* Retrieve the instance */
+        list_for_each_entry_safe(pos, next, &data->instances, list) {
+                if (pos->id == instance->data->id) {
+                        /* Unbind from the instances set */
+                        list_del(&pos->list);
+			dummy_deallocate_all(pos);
+                        /* Destroy it */
+                        name_destroy(pos->info->dif_name);
+			name_destroy(pos->info->name);
+			rkfree(pos->info);
+                        rkfree(pos);
+                        rkfree(instance);
+
+                        return 0;
+                }
+        }
+
+        return -1;
 }
 
 static struct shim_ops dummy_ops = {
