@@ -84,6 +84,7 @@ class Flow {
 public:
 	Flow();
 	static const std::string flow_not_allocated_error;
+	static const std::string flow_write_error;
 	const FlowState& getState() const;
 	int getPortId() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
@@ -99,7 +100,7 @@ public:
 	 * @return int The number of bytes read
 	 * @throws IPCException if the flow is not in the ALLOCATED state
 	 */
-	int readSDU(unsigned char * sdu) throw (IPCException);
+	int readSDU(void * sdu) throw (IPCException);
 
 	/**
 	 * Writes an SDU to the flow
@@ -109,7 +110,7 @@ public:
 	 * @throws IPCException if the flow is not in the ALLOCATED state or
 	 * there are problems writing to the flow
 	 */
-	void writeSDU(unsigned char * sdu, int size) throw (IPCException);
+	void writeSDU(void * sdu, int size) throw (IPCException);
 
 	friend class IPCManager;
 };
