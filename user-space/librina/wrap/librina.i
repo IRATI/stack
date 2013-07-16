@@ -110,6 +110,90 @@
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
+%typemap(throws, throws="eu.irati.librina.AssignToDIFException") rina::AssignToDIFException {
+  jclass excep = jenv->FindClass("eu/irati/librina/AssignToDIFException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.NotifyRegistrationToDIFException") rina::NotifyRegistrationToDIFException {
+  jclass excep = jenv->FindClass("eu/irati/librina/NotifyRegistrationToDIFException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.NotifyUnregistrationFromDIFException") rina::NotifyUnregistrationFromDIFException {
+  jclass excep = jenv->FindClass("eu/irati/librina/NotifyUnregistrationFromDIFException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.EnrollException") rina::EnrollException {
+  jclass excep = jenv->FindClass("eu/irati/librina/EnrollException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.DisconnectFromNeighborException") rina::DisconnectFromNeighborException {
+  jclass excep = jenv->FindClass("eu/irati/librina/DisconnectFromNeighborException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.IpcmRegisterApplicationException") rina::IpcmRegisterApplicationException {
+  jclass excep = jenv->FindClass("eu/irati/librina/IpcmRegisterApplicationException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.IpcmUnregisterApplicationException") rina::IpcmUnregisterApplicationException {
+  jclass excep = jenv->FindClass("eu/irati/librina/IpcmUnregisterApplicationException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.AllocateFlowException") rina::AllocateFlowException {
+  jclass excep = jenv->FindClass("eu/irati/librina/AllocateFlowException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.QueryRIBException") rina::QueryRIBException {
+  jclass excep = jenv->FindClass("eu/irati/librina/QueryRIBException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.CreateIPCProcessException") rina::CreateIPCProcessException {
+  jclass excep = jenv->FindClass("eu/irati/librina/CreateIPCProcessException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.DestroyIPCProcessException") rina::DestroyIPCProcessException {
+  jclass excep = jenv->FindClass("eu/irati/librina/DestroyIPCProcessException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.NotifyApplicationRegisteredException") rina::NotifyApplicationRegisteredException {
+  jclass excep = jenv->FindClass("eu/irati/librina/NotifyApplicationRegisteredException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.NotifyApplicationUnregisteredException") rina::NotifyApplicationUnregisteredException {
+  jclass excep = jenv->FindClass("eu/irati/librina/NotifyApplicationUnregisteredException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.NotifyFlowAllocatedException") rina::NotifyFlowAllocatedException {
+  jclass excep = jenv->FindClass("eu/irati/librina/NotifyFlowAllocatedException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
 
 %{
 #include "exceptions.h"
