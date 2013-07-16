@@ -194,6 +194,42 @@
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
+%typemap(throws, throws="eu.irati.librina.AssignToDIFResponseException") rina::AssignToDIFResponseException {
+  jclass excep = jenv->FindClass("eu/irati/librina/AssignToDIFResponseException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.RegisterApplicationResponseException") rina::RegisterApplicationResponseException {
+  jclass excep = jenv->FindClass("eu/irati/librina/RegisterApplicationResponseException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.UnregisterApplicationResponseException") rina::UnregisterApplicationResponseException {
+  jclass excep = jenv->FindClass("eu/irati/librina/UnregisterApplicationResponseException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.AllocateFlowResponseException") rina::AllocateFlowResponseException {
+  jclass excep = jenv->FindClass("eu/irati/librina/AllocateFlowResponseException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.QueryRIBResponseException") rina::QueryRIBResponseException {
+  jclass excep = jenv->FindClass("eu/irati/librina/QueryRIBResponseException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.DeallocateFlowResponseException") rina::DeallocateFlowResponseException {
+  jclass excep = jenv->FindClass("eu/irati/librina/DeallocateFlowResponseException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
 
 %{
 #include "exceptions.h"

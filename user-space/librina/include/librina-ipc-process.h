@@ -148,6 +148,90 @@ public:
 };
 
 /**
+ * Thrown when there are problems notifying the IPC Manager about the
+ * result of an Assign to DIF operation
+ */
+class AssignToDIFResponseException: public IPCException {
+public:
+	AssignToDIFResponseException():
+		IPCException("Problems informing the IPC Manager about the result of an assign to DIF operation"){
+	}
+	AssignToDIFResponseException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems notifying the IPC Manager about the
+ * result of a register application operation
+ */
+class RegisterApplicationResponseException: public IPCException {
+public:
+	RegisterApplicationResponseException():
+		IPCException("Problems informing the IPC Manager about the result of a register application response operation"){
+	}
+	RegisterApplicationResponseException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems notifying the IPC Manager about the
+ * result of an unregister application operation
+ */
+class UnregisterApplicationResponseException: public IPCException {
+public:
+	UnregisterApplicationResponseException():
+		IPCException("Problems informing the IPC Manager about the result of an unegister application response operation"){
+	}
+	UnregisterApplicationResponseException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems notifying the IPC Manager about the
+ * result of an allocate flow operation
+ */
+class AllocateFlowResponseException: public IPCException {
+public:
+	AllocateFlowResponseException():
+		IPCException("Problems informing the IPC Manager about the result of an unegister application response operation"){
+	}
+	AllocateFlowResponseException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems notifying the IPC Manager about the
+ * result of a query RIB operation
+ */
+class QueryRIBResponseException: public IPCException {
+public:
+	QueryRIBResponseException():
+		IPCException("Problems informing the IPC Manager about the result of a query RIB response operation"){
+	}
+	QueryRIBResponseException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+
+/**
+ * Thrown when there are problems notifying the application about the
+ * result of a deallocate operation
+ */
+class DeallocateFlowResponseException: public IPCException {
+public:
+	DeallocateFlowResponseException():
+		IPCException("Problems informing the application about the result of a deallocate operation"){
+	}
+	DeallocateFlowResponseException(const std::string& description):
+		IPCException(description){
+	}
+};
+/**
  * Class used by the IPC Processes to interact with the IPC Manager. Extends
  * the basic IPC Manager in librina-application with IPC Process specific
  * functionality
@@ -171,9 +255,11 @@ public:
 	 * @param event the event that trigered the operation
 	 * @param result the result of the operation (0 successful)
 	 * @param errorDescription An optional explanation of the error (if any)
+	 * @throws AssignToDIFResponseException
 	 */
 	void assignToDIFResponse(const AssignToDIFRequestEvent& event, int result,
-			const std::string& errorDescription) throw (IPCException);
+			const std::string& errorDescription)
+		throw (AssignToDIFResponseException);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of a "register
@@ -181,10 +267,12 @@ public:
 	 * @param event
 	 * @param result
 	 * @param errorDescription
+	 * @throws RegisterApplicationResponseException
 	 */
 	void registerApplicationResponse(
 			const ApplicationRegistrationRequestEvent& event, int result,
-			const std::string& errorDescription) throw (IPCException);
+			const std::string& errorDescription)
+		throw (RegisterApplicationResponseException);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of a "unregister
@@ -192,10 +280,12 @@ public:
 	 * @param event
 	 * @param result
 	 * @param errorDescription
+	 * @throws UnregisterApplicationResponseException
 	 */
 	void unregisterApplicationResponse(
 			const ApplicationUnregistrationRequestEvent& event, int result,
-			const std::string& errorDescription) throw (IPCException);
+			const std::string& errorDescription)
+		throw (UnregisterApplicationResponseException);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of a "allocate
@@ -203,9 +293,11 @@ public:
 	 * @param event
 	 * @param result
 	 * @param errorDescription
+	 * @throws AllocateFlowResponseException
 	 */
 	void allocateFlowResponse(const FlowRequestEvent& event, int result,
-			const std::string& errorDescription) throw (IPCException);
+			const std::string& errorDescription)
+		throw (AllocateFlowResponseException);
 
 	/**
 	 * Reply to the IPC Manager, providing 0 or more RIB Objects in response to
@@ -214,10 +306,12 @@ public:
 	 * @param result
 	 * @param errorDescription
 	 * @param ribObjects
+	 * @throws QueryRIBResponseException
 	 */
 	void queryRIBResponse(const QueryRIBRequestEvent& event, int result,
 			const std::string& errorDescription,
-			const std::list<RIBObject>& ribObjects);
+			const std::list<RIBObject>& ribObjects)
+		throw (QueryRIBResponseException);
 };
 
 /**
@@ -238,10 +332,12 @@ public:
 	 * deallocate request event
 	 * @param result 0 indicates success, a negative number an error code
 	 * @param errorDescription optional explanation about the error (if any)
-	 * @throws IPCException if there are issues replying ot the application
+	 * @throws DeallocateFlowResponseException if there are issues
+	 * replying ot the application
 	 */
 	void flowDeallocated(const FlowDeallocateRequestEvent flowDeallocateEvent,
-			int result, std::string errorDescription) throw (IPCException);
+			int result, std::string errorDescription)
+		throw (DeallocateFlowResponseException);
 };
 
 /**
