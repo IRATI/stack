@@ -131,6 +131,42 @@ CLEANFILES += app.jar
 
 java_DATA += app.jar
 
+#
+# Rules for LibrinaTest
+#
+
+LibrinaTest: Makefile LibrinaTest.in
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod +x $@.tmp
+	chmod a-w $@.tmp
+	mv $@.tmp $@
+
+bin_SCRIPTS += LibrinaTest
+CLEANFILES  += LibrinaTest
+
+EXTRA_DIST  += LibrinaTest.in LibrinaTest.java LibrinaTest-manifest.txt
+
+LibrinaTest.class: LibrinaTest.java
+	$(JAVAC) -classpath $(builddir):$(top_builddir)/wrap/java	\
+		 -d $(builddir)						\
+		$(srcdir)/LibrinaTest.java || {					\
+		echo "Cannot compile LibrinaTest" ;				\
+		exit 1 ;						\
+	}
+CLEANFILES += LibrinaTest.class
+
+LibrinaTest.jar: LibrinaTest.class
+	$(JAR) -cvfm LibrinaTest.jar $(srcdir)/LibrinaTest-manifest.txt LibrinaTest.class || {	\
+		echo "Cannot build the LibrinaTest jar" ;			\
+		exit 1 ;						\
+	}
+CLEANFILES += LibrinaTest.jar
+
+java_DATA += LibrinaTest.jar
+
 installcheck-ipcpd:
 	$(bindir)/ipcpd --help    &&		\
 	$(bindir)/ipcpd --version
