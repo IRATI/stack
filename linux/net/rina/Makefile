@@ -2,16 +2,23 @@
 # Makefile for the Linux RINA layer.
 #
 
-obj-$(CONFIG_RINA) +=							\
-	utils.o debug.o core.o personality.o syscalls.o netlink.o
+obj-$(CONFIG_RINA) +=				\
+	utils.o debug.o core.o personality.o	\
+	syscalls.o				\
+	netlink.o netlink-utils.o
 
-obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=		\
-	utils-workarounds.o rina_personality_default.o
+obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
+	rina_personality_default.o
 
 rina_personality_default-y :=			\
 	dif.o shim.o ipc.o kipcm.o		\
-	du.o dtcp.o dtp.o efcp.o rmt.o		\
+	du.o sdu.o dtcp.o dtp.o efcp.o rmt.o	\
 	default.o shim-utils.o 
+
+ifeq  ($(CONFIG_RINA_PERSONALITY_DEFAULT),m)
+rina_personality_default-y +=			\
+	 utils-workarounds.o
+endif
 
 obj-$(CONFIG_RINA_SHIM_EMPTY)    += shim-empty.o
 obj-$(CONFIG_RINA_SHIM_DUMMY)    += shim-dummy.o

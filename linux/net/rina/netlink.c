@@ -34,11 +34,11 @@
 /* attributes */
 /* FIXME: Are they really needed ??? */
 enum {
-	NETLINK_RINA_A_UNSPEC,
-	NETLINK_RINA_A_MSG,
+        NETLINK_RINA_A_UNSPEC,
+        NETLINK_RINA_A_MSG,
 
         /* Do not use */
-	NETLINK_RINA_A_MAX,
+        NETLINK_RINA_A_MAX,
 };
 
 #define NETLINK_RINA_A_MAX (NETLINK_RINA_A_MAX - 1)
@@ -52,7 +52,7 @@ struct message_handler {
 };
 
 struct rina_nl_set {
-	struct message_handler handlers[NETLINK_RINA_C_MAX];
+        struct message_handler handlers[NETLINK_RINA_C_MAX];
 };
 
 static struct rina_nl_set * default_set;
@@ -82,7 +82,7 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         void *               data;
         msg_id               msg_type;
         int                  ret_val;
-	struct rina_nl_set * tmp;
+        struct rina_nl_set * tmp;
 
         LOG_DBG("Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
 
@@ -107,9 +107,12 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         }
         ASSERT(is_message_type_in_range(msg_type));
 
-	tmp = default_set;
-	if (!tmp)
-		return -1;
+        tmp = default_set;
+        if (!tmp) {
+                LOG_ERR("There is no set registered, "
+                        "first register a (default) set");
+                return -1;
+        }
 
         cb_function = tmp->handlers[msg_type].cb;
         if (!cb_function) {
@@ -187,20 +190,6 @@ static int nl_rina_echo(void * data,
 
 static struct genl_ops nl_ops[] = {
         {
-                .cmd    = RINA_C_APP_ALLOCATE_FLOW_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
                 .cmd    = RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED,
                 .flags  = 0,
                 //.policy = nl_rina_policy,
@@ -230,55 +219,6 @@ static struct genl_ops nl_ops[] = {
         },
         {
                 .cmd    = RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_REGISTER_APPLICATION_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_REGISTER_APPLICATION_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_UNREGISTER_APPLICATION_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_GET_DIF_PROPERTIES_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE,
                 .flags  = 0,
                 //.policy = nl_rina_policy,
                 .doit   = dispatcher,
@@ -423,7 +363,7 @@ int rina_netlink_handler_register(struct rina_nl_set * set,
                 return -1;
         }
         ASSERT(msg_type >= NETLINK_RINA_C_MIN &&
-	       msg_type <= NETLINK_RINA_C_MAX);
+               msg_type <= NETLINK_RINA_C_MAX);
         ASSERT(handler != NULL);
 
         if (set->handlers[msg_type].cb) {
@@ -458,8 +398,8 @@ int rina_netlink_handler_unregister(struct rina_nl_set * set,
                         "cannot unregister", msg_type);
                 return -1;
         }
-        ASSERT(msg_type >= NETLINK_RINA_C_MIN && 
-	       msg_type <= NETLINK_RINA_C_MAX);
+        ASSERT(msg_type >= NETLINK_RINA_C_MIN &&
+               msg_type <= NETLINK_RINA_C_MAX);
 
         bzero(&set->handlers[msg_type], sizeof(set->handlers[msg_type]));
 
@@ -482,9 +422,9 @@ int rina_netlink_set_register(struct rina_nl_set * set)
                 return -2;
         }
 
-	default_set = set;
+        default_set = set;
 
-	return 0;
+        return 0;
 }
 EXPORT_SYMBOL(rina_netlink_set_register);
 
@@ -500,9 +440,9 @@ int rina_netlink_set_unregister(struct rina_nl_set * set)
                 return -2;
         }
 
-	default_set = NULL;
+        default_set = NULL;
 
-	return 0;
+        return 0;
 }
 EXPORT_SYMBOL(rina_netlink_set_unregister);
 
@@ -522,7 +462,7 @@ EXPORT_SYMBOL(rina_netlink_set_create);
 
 int rina_netlink_set_destroy(struct rina_nl_set * set)
 {
-	int    i;
+        int    i;
         size_t count;
 
         if (!set) {
@@ -531,14 +471,14 @@ int rina_netlink_set_destroy(struct rina_nl_set * set)
         }
 
         count = 0;
-	for (i = 0; i < ARRAY_SIZE(set->handlers); i++) {
-		if (set->handlers[i].cb != NULL) {
+        for (i = 0; i < ARRAY_SIZE(set->handlers); i++) {
+                if (set->handlers[i].cb != NULL) {
                         count++;
-			LOG_DBG("Set %pK has an hander yet registered, "
+                        LOG_DBG("Set %pK has at least one hander still registered, "
                                 "it will be unregistered", set);
-			break;
-		}
-	}
+                        break;
+                }
+        }
         if (count)
                 LOG_WARN("Set %pK had %zd handler(s) that have not been "
                         "unregistered ...", set, count);

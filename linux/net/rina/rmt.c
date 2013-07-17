@@ -28,7 +28,7 @@
 #include "debug.h"
 
 struct rmt_conf {
-	/* To do, only a placeholder right now */
+	/* To do, only a placeholder right now to avoid sizeof = 0 */
         int placeholder;
 };
 
@@ -45,6 +45,9 @@ struct rmt {
          */
 
 	/* LIST_HEAD(pdu_fwd_table, pdu_fwd_entry_t); */
+
+	/* To do, only a placeholder right now to avoid sizeof = 0 */
+        int placeholder;
 };
 
 struct rmt * rmt_init(struct kobject * parent)
