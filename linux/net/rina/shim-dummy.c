@@ -46,7 +46,6 @@ struct dummy_info {
 	struct name * dif_name;
 };
 
-
 struct shim_instance_data {
         ipc_process_id_t id;
 
@@ -57,6 +56,14 @@ struct shim_instance_data {
         struct list_head list;
 
 	struct dummy_info * info;
+};
+
+enum dummy_flow_state {
+	NULL_STATE = 1,
+	CONNECT_PENDING,
+	AUTHENTICATED,
+	ESTABLISHED,
+	RELEASING,
 };
 
 struct dummy_flow {
