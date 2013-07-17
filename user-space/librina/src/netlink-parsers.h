@@ -282,6 +282,76 @@ int putAppRegistrationCanceledNotificationMessageObject(nl_msg* netlinkMessage,
 AppRegistrationCanceledNotificationMessage * parseAppRegistrationCanceledNotificationMessage(
 		nlmsghdr *hdr);
 
+/* AppGetDIFPropertiesRequestMessage CLASS*/
+enum AppGetDIFPropertiesRequestMessageAttributes {
+	AGDP_ATTR_APP_NAME = 1,
+	AGDP_ATTR_DIF_NAME,
+	__AGDP_ATTR_MAX,
+};
+
+#define AGDP_ATTR_MAX (__AGDP_ATTR_MAX -1)
+
+int putAppGetDIFPropertiesRequestMessageObject(nl_msg* netlinkMessage,
+		const AppGetDIFPropertiesRequestMessage& object);
+
+AppGetDIFPropertiesRequestMessage * parseAppGetDIFPropertiesRequestMessage(
+		nlmsghdr *hdr);
+
+/* QOSCUBE CLASS*/
+enum QoSCubesAttributes {
+	QOS_CUBE_ATTR_NAME = 1,
+	QOS_CUBE_ATTR_ID,
+	QOS_CUBE_ATTR_AVG_BAND,
+	QOS_CUBE_ATTR_AVG_SDU_BAND,
+	QOS_CUBE_ATTR_PEAK_BAND_DUR,
+	QOS_CUBE_ATTR_PEAK_SDU_BAND_DUR,
+	QOS_CUBE_ATTR_UND_BER,
+	QOS_CUBE_ATTR_PART_DEL,
+	QOS_CUBE_ATTR_ORD_DEL,
+	QOS_CUBE_ATTR_MAX_GAP,
+	QOS_CUBE_ATTR_DELAY,
+	QOS_CUBE_ATTR_JITTER,
+	__QOS_CUBE_ATTR_MAX,
+};
+
+#define QOS_CUBE_ATTR_MAX (__QOS_CUBE_ATTR_MAX -1)
+
+int putQoSCubeObject(nl_msg* netlinkMessage,
+		const QoSCube& object);
+
+QoSCube * parseQoSCubeObject(nlmsghdr *hdr);
+
+/* DIFPROPERTIES CLASS*/
+enum DIFPropertiesAttributes {
+	DIF_PROP_ATTR_DIF_NAME = 1,
+	DIF_PROP_ATTR_MAX_SDU_SIZE,
+	DIF_PROP_ATTR_QOS_CUBES,
+	__DIF_PROP_ATTR_MAX,
+};
+
+#define DIF_PROP_ATTR_MAX (__DIF_PROP_ATTR_MAX -1)
+
+int putDIFPropertiesObject(nl_msg* netlinkMessage,
+		const DIFProperties& object);
+
+DIFProperties * parseDIFPropertiesObject(nlmsghdr *hdr);
+
+/* AppGetDIFPropertiesResponseMessage CLASS*/
+enum AppGetDIFPropertiesResponseMessageAttributes {
+	AGDPR_ATTR_RESULT = 1,
+	AGDPR_ATTR_ERROR_DESC,
+	AGDPR_ATTR_APP_NAME,
+	AGDPR_ATTR_DIF_PROPERTIES,
+	__AGDPR_ATTR_MAX,
+};
+
+#define AGDPR_ATTR_MAX (__AGDPR_ATTR_MAX -1)
+
+int putAppGetDIFPropertiesResponseMessageObject(nl_msg* netlinkMessage,
+		const AppGetDIFPropertiesResponseMessage& object);
+
+AppGetDIFPropertiesResponseMessage * parseAppGetDIFPropertiesResponseMessage(
+		nlmsghdr *hdr);
 
 /* IpcmRegisterApplicationRequestMessage CLASS*/
 enum IpcmRegisterApplicationRequestMessageAttributes {
