@@ -138,9 +138,10 @@ int main(int argc, char * argv[]) {
 	}
 
 	/* TEST GET DIF PROPERTIES */
-	std::vector<DIFProperties> difPropertiesVector = ipcManager
-			->getDIFProperties(flow->getDIFName());
-	DIFProperties difProperties = difPropertiesVector.at(0);
+	std::list<DIFProperties> difPropertiesList = ipcManager
+			->getDIFProperties(flow->getSourceApplicationName(),
+					flow->getDIFName());
+	DIFProperties difProperties = *(difPropertiesList.begin());
 	std::cout << "DIF name: " << difProperties.getDifName().getProcessName()
 			<< "; max SDU size: " << difProperties.getMaxSduSize() << "\n";
 

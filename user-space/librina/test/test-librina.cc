@@ -42,16 +42,25 @@ void doWorkApplicationProcess(){
 
 	ApplicationProcessNamingInformation difName;
 	difName.setProcessName("/difs/Test.DIF");
+
+	std::list<DIFProperties> difProperties;
+
+	try{
+		std::list<DIFProperties> difProperties =
+				ipcManager->getDIFProperties(appName, difName);
+		std::cout<<"Got DIF Properties"<<std::endl;
+	}catch(IPCException &e){
+		std::cout<<"Problems getting DIF properties application: "
+				<<e.what()<<std::endl;
+		exit(-1);
+	}
+
 	try{
 		ipcManager->registerApplication(appName, difName);
 		std::cout<<"Application# Application registered!\n";
 	}catch(IPCException &e){
 		std::cout<<"Problems registering application: "<<e.what()<<"\n";
-		result = -1;
-	}
-
-	if (result == -1){
-		exit(result);
+		exit(-1);
 	}
 
 	ApplicationProcessNamingInformation destName;
@@ -215,8 +224,22 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	std::cout<<"IPCManager# Assigned IPC Process to DIF "<<
 			difName.getProcessName()<<std::endl;
 
-	//Wait for a Register application event
+	//Wait for Get DIF Properties Event
 	IPCEvent * event = ipcEventProducer->eventWait();
+	GetDIFPropertiesRequestEvent * getPropertiesEvent =
+			dynamic_cast<GetDIFPropertiesRequestEvent *>(event);
+	std::cout<<"IPCManager# received a get DIF properties request event\n";
+	std::list<DIFProperties> difProperties;
+	DIFProperties difProperty =
+			DIFProperties(getPropertiesEvent->getDIFName(), 9000);
+	difProperties.push_back(difProperty);
+	applicationManager->getDIFPropertiesResponse(
+			*getPropertiesEvent, 0, "", difProperties);
+	std::cout<<"IPCManager# Replied to application\n";
+	delete getPropertiesEvent;
+
+	//Wait for a Register application event
+	event = ipcEventProducer->eventWait();
 	ApplicationRegistrationRequestEvent * appRequestEvent =
 			dynamic_cast<ApplicationRegistrationRequestEvent *>(event);
 	std::cout<<"IPCManager# received an application registration request event\n";

@@ -147,6 +147,19 @@ public:
 };
 
 /**
+ * Thrown when there are problems querying DIF properties
+ */
+class GetDIFPropertiesException: public IPCException {
+public:
+	GetDIFPropertiesException():
+		IPCException("Problems getting DIF properties"){
+	}
+	GetDIFPropertiesException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
  * Represents a flow between two application processes, and encapsulates
  * the services that the flow provides.
  */
@@ -248,18 +261,24 @@ public:
 	static const std::string error_unregistering_application;
 	static const std::string error_requesting_flow_allocation;
 	static const std::string error_requesting_flow_deallocation;
+	static const std::string error_getting_dif_properties;
 
 	/**
 	 * Retrieves the names and characteristics of a single DIF or of all the
 	 * DIFs available to the application.
 	 *
+	 * @param applicationName The name of the application that wants to query
+	 * the properties of one or more DIFs
 	 * @param DIFName If provided, the function will return the information of
 	 * the requested DIF, otherwise it will return the properties of all the
 	 * DIFs available to the application.
 	 * @return The properties of one or more DIFs
+	 * @throws GetDIFPropertiesException
 	 */
-	std::vector<DIFProperties> getDIFProperties(
-			const ApplicationProcessNamingInformation& DIFName);
+	std::list<DIFProperties> getDIFProperties(
+			const ApplicationProcessNamingInformation& applicationName,
+			const ApplicationProcessNamingInformation& DIFName)
+			throw (GetDIFPropertiesException);
 
 	/**
 	 * Registers an application to a DIF.

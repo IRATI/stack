@@ -175,9 +175,9 @@ void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
 	result = nl_send(socket, netlinkMessage);
 	if (result < 0) {
 		nlmsg_free(netlinkMessage);
-		LOG_ERR("%s %d",
+		LOG_ERR("%s %d %d",
 				NetlinkException::error_sending_netlink_message.c_str(),
-				result);
+				result, message->getDestPortId());
 		throw NetlinkException(
 				NetlinkException::error_sending_netlink_message);
 	}

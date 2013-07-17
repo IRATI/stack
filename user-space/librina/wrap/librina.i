@@ -230,6 +230,18 @@
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
+%typemap(throws, throws="eu.irati.librina.GetDIFPropertiesException") rina::GetDIFPropertiesException {
+  jclass excep = jenv->FindClass("eu/irati/librina/GetDIFPropertiesException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.GetDIFPropertiesResponseException") rina::GetDIFPropertiesResponseException {
+  jclass excep = jenv->FindClass("eu/irati/librina/GetDIFPropertiesResponseException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
 
 %{
 #include "exceptions.h"

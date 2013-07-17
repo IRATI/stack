@@ -152,11 +152,13 @@ const std::string IPCManager::error_requesting_flow_allocation =
 		"Error requesting flow allocation";
 const std::string IPCManager::error_requesting_flow_deallocation =
 		"Error requesting flow deallocation";
+const std::string IPCManager::error_getting_dif_properties =
+		"Error getting DIF properties";
 
 /* Auxiliar function called in case of using the stubbed version of the API */
-std::vector<DIFProperties> getFakeDIFProperties(
+std::list<DIFProperties> getFakeDIFProperties(
 		const ApplicationProcessNamingInformation& DIFName) {
-	std::vector<DIFProperties> result;
+	std::list<DIFProperties> result;
 	DIFProperties * properties;
 	ApplicationProcessNamingInformation * name;
 
@@ -175,15 +177,43 @@ std::vector<DIFProperties> getFakeDIFProperties(
 	return result;
 }
 
-std::vector<DIFProperties> IPCManager::getDIFProperties(
-		const ApplicationProcessNamingInformation& DIFName) {
+std::list<DIFProperties> IPCManager::getDIFProperties(
+		const ApplicationProcessNamingInformation& applicationName,
+		const ApplicationProcessNamingInformation& DIFName)
+throw (GetDIFPropertiesException) {
 	LOG_DBG("IPCManager.getDIFProperties called");
 
 #if STUB_API
 	return getFakeDIFProperties(DIFName);
 #else
-	std::vector<DIFProperties> result;
-	//TODO add the real implementation
+	AppGetDIFPropertiesRequestMessage message;
+	message.setApplicationName(applicationName);
+	message.setDifName(DIFName);
+	message.setRequestMessage(true);
+
+	AppGetDIFPropertiesResponseMessage * getDIFPropertiesResponseMessage;
+	try{
+		getDIFPropertiesResponseMessage =
+				dynamic_cast<AppGetDIFPropertiesResponseMessage *>(
+						rinaManager->sendRequestAndWaitForResponse(&message,
+								IPCManager::error_getting_dif_properties));
+	}catch(NetlinkException &e){
+		throw GetDIFPropertiesException(e.what());
+	}
+
+	if (getDIFPropertiesResponseMessage->getResult() < 0){
+		std::string reason = IPCManager::error_getting_dif_properties +
+				getDIFPropertiesResponseMessage->getErrorDescription();
+		delete getDIFPropertiesResponseMessage;
+		throw GetDIFPropertiesException(reason);
+	}
+
+	LOG_DBG("Application %s queried properties of DIF %s",
+			applicationName.getProcessName().c_str(),
+			DIFName.getProcessName().c_str());
+	std::list<DIFProperties> result =
+			getDIFPropertiesResponseMessage->getDIFProperties();
+	delete getDIFPropertiesResponseMessage;
 	return result;
 #endif
 }

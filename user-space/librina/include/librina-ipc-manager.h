@@ -216,6 +216,44 @@ public:
 };
 
 /**
+ * Thrown when there are problems notifying an application about the results
+ * of a query of the properties of one ore more DIFs
+ */
+class GetDIFPropertiesResponseException: public IPCException {
+public:
+	GetDIFPropertiesResponseException():
+		IPCException("Problems notifying an application about the query of DIF properties"){
+	}
+	GetDIFPropertiesResponseException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Event informing that an application has requested the
+ * properties of one or more DIFs
+ */
+class GetDIFPropertiesRequestEvent: public IPCEvent {
+	/** The application that wants to get the DIF properties */
+	ApplicationProcessNamingInformation applicationName;
+
+	/**
+	 * The DIF whose properties are requested. If no DIF name is provided the
+	 * IPC Manager will return the properties of all the DIFs visible to the
+	 * application
+	 */
+	ApplicationProcessNamingInformation DIFName;
+
+public:
+	GetDIFPropertiesRequestEvent(
+			const ApplicationProcessNamingInformation& appName,
+			const ApplicationProcessNamingInformation& DIFName,
+			unsigned int sequenceNumber);
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	const ApplicationProcessNamingInformation& getDIFName() const;
+};
+
+/**
  * Encapsulates the state and operations that can be performed over
  * a single IPC Process (besides creation/destruction)
  */
@@ -490,40 +528,30 @@ public:
 	 * the IPC Process to read/write the flow
 	 * @throws NotifyFlowAllocatedException If an error occurs during the operation
 	 */
-	void flowAllocated(const FlowRequestEvent flowRequestEvent,
+	void flowAllocated(const FlowRequestEvent &flowRequestEvent,
 			std::string errorDescription,
 			unsigned short ipcProcessId, unsigned int ipcProcessPortId)
 				throw (NotifyFlowAllocatedException);
+
+	/**
+	 * Return the properties of zero or more DIFs to the application
+	 * @param event the event containing the query
+	 * @param result 0 if the operation was successful, a negative integer
+	 * otherwise
+	 * @param errorDescription More explanation about the errors (if any)
+	 * @param difProperties The properties of zero or more DIFs
+	 * @throws GetDIFPropertiesResponseException
+	 */
+	void getDIFPropertiesResponse(const GetDIFPropertiesRequestEvent& event,
+			int result, const std::string& errorDescription,
+			const std::list<DIFProperties>& difProperties)
+			throw (GetDIFPropertiesResponseException);
 };
 
 /**
  * Make Application Manager singleton
  */
 extern Singleton<ApplicationManager> applicationManager;
-
-/**
- * Event informing that an application has requested the
- * properties of one or more DIFs
- */
-class GetDIFPropertiesRequestEvent: public IPCEvent {
-	/** The application that wants to get the DIF properties */
-	ApplicationProcessNamingInformation applicationName;
-
-	/**
-	 * The DIF whose properties are requested. If no DIF name is provided the
-	 * IPC Manager will return the properties of all the DIFs visible to the
-	 * application
-	 */
-	ApplicationProcessNamingInformation DIFName;
-
-public:
-	GetDIFPropertiesRequestEvent(
-			const ApplicationProcessNamingInformation& appName,
-			const ApplicationProcessNamingInformation& DIFName,
-			unsigned int sequenceNumber);
-	const ApplicationProcessNamingInformation& getApplicationName() const;
-	const ApplicationProcessNamingInformation& getDIFName() const;
-};
 
 }
 

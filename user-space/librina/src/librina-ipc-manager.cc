@@ -481,7 +481,7 @@ void ApplicationManager::applicationUnregistered(
 #endif
 }
 
-void ApplicationManager::flowAllocated(const FlowRequestEvent flowRequestEvent,
+void ApplicationManager::flowAllocated(const FlowRequestEvent& flowRequestEvent,
 		std::string errorDescription, unsigned short ipcProcessId,
 		unsigned int ipcProcessPortId) throw (NotifyFlowAllocatedException) {
 	LOG_DBG("ApplicationManager::flowAllocated called");
@@ -502,6 +502,29 @@ void ApplicationManager::flowAllocated(const FlowRequestEvent flowRequestEvent,
 		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
 	}catch(NetlinkException &e){
 		throw NotifyFlowAllocatedException(e.what());
+	}
+#endif
+}
+
+void ApplicationManager::getDIFPropertiesResponse(
+		const GetDIFPropertiesRequestEvent &event,
+			int result, const std::string& errorDescription,
+			const std::list<DIFProperties>& difProperties)
+			throw (GetDIFPropertiesResponseException){
+#if STUB_API
+	//Do nothing
+#else
+	AppGetDIFPropertiesResponseMessage responseMessage;
+	responseMessage.setResult(result);
+	responseMessage.setErrorDescription(errorDescription);
+	responseMessage.setApplicationName(event.getApplicationName());
+	responseMessage.setDIFProperties(difProperties);
+	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+	}catch(NetlinkException &e){
+		throw GetDIFPropertiesResponseException(e.what());
 	}
 #endif
 }
