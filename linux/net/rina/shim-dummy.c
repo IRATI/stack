@@ -112,10 +112,8 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, &data->flows);
 
-        if (kipcm_flow_add(default_kipcm, data->ipc_process_id, id)) {
-        	LOG_ERR("Couldn't add flow to the kipcm");
+        if (kipcm_flow_add(default_kipcm, data->ipc_process_id, id))
         	return -1;
-        }
 
         return 0;
 }
@@ -144,10 +142,8 @@ static int dummy_flow_deallocate(struct shim_instance_data * data,
 	name_destroy(flow->source);
 	rkfree(flow);
 
-	if (kipcm_flow_remove(default_kipcm, id)) {
-		LOG_ERR("Couldn't remove flow %pK from kipcm", flow);
+	if (kipcm_flow_remove(default_kipcm, id))
 		return -1;
-	}
 
 	return 0;
 }
