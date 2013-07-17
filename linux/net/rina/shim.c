@@ -83,6 +83,8 @@ int shims_fini(struct shims * shims)
 
         kset_unregister(shims->set);
 
+        rkfree(shims);
+
         LOG_DBG("Shims layer finalized successfully");
 
         return 0;
