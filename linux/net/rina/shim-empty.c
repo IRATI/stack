@@ -38,6 +38,9 @@
 
 /* Holds all configuration related to a shim instance */
 struct empty_info {
+	/* IPC Instance name */
+	struct name * name;
+	/* DIF name */
 	struct name * dif_name;
 };
 
@@ -49,14 +52,6 @@ struct shim_instance_data {
 	struct empty_info * info;
 };
 
-/* FIXME: Add different states of a flow */
-struct empty_flow {
-	struct list_head list;
-	port_id_t 	 port_id;
-	struct name *    source;
-	struct name *    dest;
-};
-
 /*
  * NOTE:
  *   The functions that have to be exported for shim-instance. The caller
@@ -64,110 +59,35 @@ struct empty_flow {
  *   added
  */
 
-static struct empty_flow * find_flow(struct shim_instance_data * data,
-                                     port_id_t                   id)
-{
-	struct empty_flow * cur;
-
-	list_for_each_entry(cur, &(data->flows), list) {
-		if (cur->port_id == id) {
-			return cur;
-		}
-	}
-
-	return NULL;
-}
-
 static int empty_flow_allocate_request(struct shim_instance_data * data,
                                        const struct name *         source,
                                        const struct name *         dest,
                                        const struct flow_spec *    fspec,
                                        port_id_t                   id)
 {
-	struct empty_flow * flow;
-
-        ASSERT(data);
+	ASSERT(data);
         ASSERT(source);
         ASSERT(dest);
-
-        /* FIXME: Move creation of a flow to a separate function */
-        /* It must be ensured that this request has not been awarded before */
-        if (find_flow(data, id)) {
-        	LOG_ERR("This flow already exists");
-        	return -1;
-        }
-        flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
-	if (!flow) {
-		rkfree(flow);
-		return -1;
-	}
-	
-        flow->source = name_dup(flow->source);
-        if (!flow->source) {
-                rkfree(flow);
-		return -1;
-	}
-
-        flow->dest = name_dup(flow->dest);
-	if (!flow->dest) {
-                name_destroy(flow->source);
-                rkfree(flow);
-		return -1;
-	}
-
-	flow->port_id = id;
-
-	INIT_LIST_HEAD(&flow->list);
-	list_add(&flow->list, &data->flows);
-
-	/* 
-	 * NOTE:
-	 *   Other shims may implement other behavior here,
-	 *   such as contacting the apposite shim IPC process 
-	 */
-
-        return 0;
+	ASSERT(fspec);
+	return -1;
 }
 
 static int empty_flow_allocate_response(struct shim_instance_data * data,
                                         port_id_t                   id,
                                         response_reason_t *         response)
 {
-        ASSERT(data);
+	ASSERT(data);
         ASSERT(response);
 
-	/* If response is positive, flow should transition to allocated state */
-	if (response == 0) {
-		
-	}
-
-	/* 
-	 * NOTE:
-	 *   Other shims may implement other behavior here,
-	 *   such as contacting the apposite shim IPC process 
-	 */
-
-        return 0;
+        return -1;
 }
 
 static int empty_flow_deallocate(struct shim_instance_data * data,
                                  port_id_t                   id)
 {
-	struct empty_flow * flow;
+	ASSERT(data);
 
-        ASSERT(data);
-
-        flow = find_flow(data, id);
-        if (!flow) {
-		LOG_ERR("Flow does not exist, cannot remove");
-		return -1;
-	}
-	
-	name_destroy(flow->dest);
-	name_destroy(flow->source);
-	rkfree(flow);
-
-        return 0;
+	return -1;
 }
 
 static int empty_application_register(struct shim_instance_data * data,
@@ -339,6 +259,15 @@ static struct shim_instance * empty_create(struct shim_data * data,
 		return NULL;
 	}
 
+	inst->data->info->name = name_create();
+	if (!inst->data->info->name) {
+		rkfree(inst->data->info->dif_name);
+		rkfree(inst->data->info);
+		rkfree(inst->data);
+		rkfree(inst);
+		return NULL;
+	}
+
         /*
          * Bind the shim-instance to the shims set, to keep all our data
          * structures linked (somewhat) together
@@ -377,6 +306,20 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
                                 return inst;
                         }
                 }
+		else if (!strcmp(tmp->entry->name, "name") &&
+                    tmp->entry->value->type == SHIM_CONFIG_STRING) {
+                        if (name_cpy(instance->info->name,
+                                     (struct name *)
+                                     tmp->entry->value->data)) {
+                                LOG_ERR("Failed to copy name");
+                                return inst;
+                        }
+		}
+		else {
+                        LOG_ERR("Cannot identify parameter '%s'",
+                                tmp->entry->name);
+                        return NULL;
+                }
         }
 	
         /*
@@ -407,6 +350,7 @@ static int empty_destroy(struct shim_data *     data,
 
                         /* Destroy it */
                         name_destroy(inst->info->dif_name);
+			name_destroy(inst->info->name);
 			rkfree(inst->info);
                         rkfree(inst);
                 }
