@@ -376,7 +376,7 @@ static struct shim_instance * dummy_configure(struct shim_data *         data,
                         }
                 }
 		else if (!strcmp(tmp->entry->name, "name") &&
-                    tmp->entry->value->type == SHIM_CONFIG_STRING) {
+                         tmp->entry->value->type == SHIM_CONFIG_STRING) {
                         if (name_cpy(instance->info->name,
                                      (struct name *)
                                      tmp->entry->value->data)) {
