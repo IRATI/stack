@@ -83,6 +83,8 @@ int shims_fini(struct shims * shims)
 
         kset_unregister(shims->set);
 
+        rkfree(shims);
+
         LOG_DBG("Shims layer finalized successfully");
 
         return 0;
@@ -212,6 +214,17 @@ struct shim * shim_register(struct shims *          parent,
                 return NULL;
         }
 
+        if (shim->ops->init(shim->data)) {
+        	LOG_ERR("Cannot initialize shim '%s'", name);
+        	kobject_put(&shim->kobj);
+		/*
+		 * FIXME: To be removed once shim_ktype.release
+		 * gets implemented
+		 */
+		rkfree(shim);
+        	return NULL;
+        }
+
         /* Double checking for bugs */
         name = kobject_name(&shim->kobj);
 
@@ -252,6 +265,10 @@ int shim_unregister(struct shims * parent,
         }
 
         kobject_put(&shim->kobj);
+
+        if (shim->ops->fini(shim->data)) {
+		LOG_ERR("Cannot finalize shim '%s'", name);
+	}
 
         rkfree(shim); /* FIXME: To be removed */
 

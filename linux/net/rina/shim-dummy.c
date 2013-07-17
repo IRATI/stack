@@ -123,7 +123,9 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, &data->flows);
 
-        kipcm_flow_add(default_kipcm, data->id, id);
+
+        if (kipcm_flow_add(default_kipcm, data->id, id))
+        	return -1;
 
         return 0;
 }
@@ -341,7 +343,6 @@ static struct shim_instance * dummy_create(struct shim_data * data,
         list_add(&(data->instances), &(inst->data->list));
 
         return inst;
-
 }
 
 /* FIXME: It doesn't allow reconfiguration */
