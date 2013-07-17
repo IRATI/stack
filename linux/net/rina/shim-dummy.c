@@ -112,7 +112,10 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, &data->flows);
 
-        kipcm_flow_add(default_kipcm, data->ipc_process_id, id);
+        if (kipcm_flow_add(default_kipcm, data->ipc_process_id, id)) {
+        	LOG_ERR("Couldn't add flow to the kipcm");
+        	return -1;
+        }
 
         return 0;
 }
@@ -141,8 +144,10 @@ static int dummy_flow_deallocate(struct shim_instance_data * data,
 	name_destroy(flow->source);
 	rkfree(flow);
 
-	if (kipcm_flow_remove(default_kipcm, id))
+	if (kipcm_flow_remove(default_kipcm, id)) {
+		LOG_ERR("Couldn't remove flow %pK from kipcm", flow);
 		return -1;
+	}
 
 	return 0;
 }
@@ -279,10 +284,12 @@ static int dummy_destroy(struct shim_data *     data,
 			list_del(&pos->list);
 			dummy_deallocate_all(pos);
 			rkfree(pos);
+			rkfree(inst);
+			return 0;
 		}
 	}
 
-	return 0;
+	return -1;
 }
 
 /* FIXME: It doesn't allow reconfiguration */
