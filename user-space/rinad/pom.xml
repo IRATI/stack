@@ -84,6 +84,8 @@
 	<!-- mvn build will only recurse on pom.xml inside this folders: -->
 	<modules>
 		<module>commons</module>
+		<module>ipcmanager</module>
+		<module>applications</module>
 	</modules>
 	<!--
 		<licenses> <license> <name>GNU Lesser General Public License</name>
