@@ -96,10 +96,10 @@ public class app {
 		}
 		
 		printStatement("\nDEALLOCATING THE FLOW");
-		ipcManager.deallocateFlow(flow.getPortId());
+		ipcManager.deallocateFlow(flow.getPortId(), flow.getSourceApplicationName());
 		printStatement("Flow deallocated");
 		try{
-			ipcManager.deallocateFlow(430);
+			ipcManager.deallocateFlow(430, flow.getSourceApplicationName());
 		}catch(IPCException ex){
 			printStatement("Caught expected exception: "+ex.getMessage());
 		}

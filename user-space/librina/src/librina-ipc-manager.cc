@@ -33,6 +33,8 @@ const std::string IPCProcess::error_not_a_dif_member =
 		"Error: the IPC Process is not member of a DIF";
 const std::string IPCProcess::error_allocating_flow =
 		"Error allocating flow";
+const std::string IPCProcess::error_querying_rib =
+		"Error querying rib";
 
 IPCProcess::IPCProcess() {
 	id = 0;
@@ -292,12 +294,45 @@ void IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest,
 #endif
 }
 
-void IPCProcess::queryRIB() {
+const std::list<RIBObject> IPCProcess::queryRIB(const std::string& objectClass,
+		const std::string& objectName, unsigned long objectInstance,
+		unsigned int scope, const std::string& filter) {
 	LOG_DBG("IPCProcess::query RIB called");
+#if STUB_API
+	std::list<RIBObject> ribObjects;
+	return ribObjects;
+#else
+	IpcmDIFQueryRIBRequestMessage message;
+	message.setObjectClass(objectClass);
+	message.setObjectName(objectName);
+	message.setObjectInstance(objectInstance);
+	message.setScope(scope);
+	message.setFilter(filter);
+	message.setDestIpcProcessId(id);
+	message.setDestPortId(portId);
+	message.setRequestMessage(true);
+
+	IpcmDIFQueryRIBResponseMessage * queryRIBResponse =
+			dynamic_cast<IpcmDIFQueryRIBResponseMessage *>(
+					rinaManager->sendRequestAndWaitForResponse(&message,
+							IPCProcess::error_querying_rib));
+
+	if (queryRIBResponse->getResult() < 0){
+		std::string reason = IPCProcess::error_querying_rib + " " +
+				queryRIBResponse->getErrorDescription();
+		delete queryRIBResponse;
+		throw IPCException(reason);
+	}
+
+	LOG_DBG("Queried RIB of IPC Process %d; got %d objects",
+			id, queryRIBResponse->getRIBObjects().size());
+	std::list<RIBObject> ribObjects = queryRIBResponse->getRIBObjects();
+	delete queryRIBResponse;
+	return ribObjects;
+#endif
 }
 
 /** CLASS IPC PROCESS FACTORY */
-
 const std::string IPCProcessFactory::unknown_ipc_process_error =
 		"Could not find an IPC Process with the provided id";
 

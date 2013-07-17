@@ -55,6 +55,7 @@ public:
 	static const std::string error_unregistering_app;
 	static const std::string error_not_a_dif_member;
 	static const std::string error_allocating_flow;
+	static const std::string error_querying_rib;
 	IPCProcess();
 	IPCProcess(unsigned short id, unsigned int portId, DIFType type,
 			const ApplicationProcessNamingInformation& name);
@@ -183,9 +184,21 @@ public:
 			unsigned int applicationPortId) throw (IPCException);
 
 	/**
-	 * TODO: Placeholder for the real query RIB method.
+	 * Invoked by the IPC Manager to query a subset of the RIB of the IPC
+	 * Process.
+	 * @param objectClass the queried object class
+	 * @param objectName the queried object name
+	 * @param objectInstance the queried object instance (either objecClass +
+	 * objectName or objectInstance have to be specified)
+	 * @param scope the amount of levels in the RIB tree -starting at the
+	 * base object - that are affected by the query
+	 * @param filter An expression evaluated for each object, to determine
+	 * wether the object should be returned by the query
+	 * @return A list contaning zero or more RIB objects
 	 */
-	void queryRIB();
+	const std::list<RIBObject> queryRIB(const std::string& objectClass,
+			const std::string& objectName, unsigned long objectInstance,
+			unsigned int scope, const std::string& filter);
 };
 
 /**
