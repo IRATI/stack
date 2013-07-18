@@ -508,6 +508,7 @@ static void __exit mod_exit(void)
         }
 }
 
+module_init(mod_init);
 module_exit(mod_exit);
 
 MODULE_DESCRIPTION("RINA Dummy Shim IPC");
