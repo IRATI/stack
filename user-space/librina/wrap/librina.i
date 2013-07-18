@@ -25,32 +25,32 @@
 #endif
 
 /**
- * unsigned char * typemaps. 
- * These are input typemaps for mapping a Java byte[] array to a C char array.
+ * void * typemaps. 
+ * These are input typemaps for mapping a Java byte[] array to a C void array.
  * Note that as a Java array is used and thus passeed by reference, the C
  * routine can return data to Java via the parameter.
  *
  * Example usage wrapping:
- *   void foo(unsigned char *array);
+ *   void foo(void *array);
  *  
  * Java usage:
  *   byte b[] = new byte[20];
  *   modulename.foo(b);
  */
-%typemap(jni)    unsigned char * "jbyteArray"
-%typemap(jtype)  unsigned char * "byte[]"
-%typemap(jstype) unsigned char * "byte[]"
-%typemap(in)     unsigned char * {
-        $1 = (unsigned char *) JCALL2(GetByteArrayElements, jenv, $input, 0); 
+%typemap(jni)    void * "jbyteArray"
+%typemap(jtype)  void * "byte[]"
+%typemap(jstype) void * "byte[]"
+%typemap(in)     void * {
+        $1 = (void *) JCALL2(GetByteArrayElements, jenv, $input, 0); 
 }
 
-%typemap(argout) unsigned char * {
+%typemap(argout) void * {
         JCALL3(ReleaseByteArrayElements, jenv, $input, (jbyte *) $1, 0); 
 }
 
-%typemap(javain) unsigned char * "$javainput"
+%typemap(javain) void * "$javainput"
 
-%typemap(javaout) unsigned char* {
+%typemap(javaout) void * {
         return $jnicall;
  }
 

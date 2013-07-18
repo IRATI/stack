@@ -212,6 +212,8 @@ class IPCProcessFactory {
 
 public:
 	static const std::string unknown_ipc_process_error;
+	static const std::string create_ipc_process_error;
+	static const std::string destroy_ipc_process_error;
 
 	/**
 	 * Invoked by the IPC Manager to instantiate a new IPC Process in the

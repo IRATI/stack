@@ -19,6 +19,7 @@
 #include "logs.h"
 #include "librina-ipc-manager.h"
 #include "core.h"
+#include "rina-syscalls.h"
 
 namespace rina{
 
@@ -335,6 +336,10 @@ const std::list<RIBObject> IPCProcess::queryRIB(const std::string& objectClass,
 /** CLASS IPC PROCESS FACTORY */
 const std::string IPCProcessFactory::unknown_ipc_process_error =
 		"Could not find an IPC Process with the provided id";
+const std::string IPCProcessFactory::create_ipc_process_error =
+		"Error creating IPC Process";
+const std::string IPCProcessFactory::destroy_ipc_process_error =
+		"Error destroying IPC Process";
 
 IPCProcess * IPCProcessFactory::create(
 		const ApplicationProcessNamingInformation& ipcProcessName,
@@ -348,6 +353,16 @@ IPCProcess * IPCProcessFactory::create(
 			break;
 		}
 	}
+
+#if STUB_API
+	//Do nothing
+#else
+	int result = syscallCreateIPCProcess(
+			ipcProcessName, ipcProcessId, difType);
+	if (result != 0){
+		throw IPCException(IPCProcessFactory::create_ipc_process_error);
+	}
+#endif
 
 	IPCProcess * ipcProcess = new IPCProcess(ipcProcessId, 0, difType,
 			ipcProcessName);
@@ -364,6 +379,15 @@ throw (IPCException) {
 	if (iterator == ipcProcesses.end()) {
 		throw IPCException(IPCProcessFactory::unknown_ipc_process_error);
 	}
+
+#if STUB_API
+	//Do nothing
+#else
+	int result = syscallDestroyIPCProcess(ipcProcessId);
+	if (result != 0){
+		throw IPCException(IPCProcessFactory::destroy_ipc_process_error);
+	}
+#endif
 
 	delete iterator->second;
 	ipcProcesses.erase(ipcProcessId);
