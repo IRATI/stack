@@ -446,14 +446,11 @@ static int __init mod_init(void)
                 return -1;
         }
 
-        test_init();
-
         return 0;
 }
 
 static void __exit mod_exit(void)
 {
-	test_exit();
         if (kipcm_shim_unregister(default_kipcm, dummy_shim)) {
                 LOG_CRIT("Cannot unregister");
                 return;
