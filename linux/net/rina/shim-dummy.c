@@ -437,32 +437,7 @@ static struct shim_ops dummy_ops = {
 
 /* Test only */
 struct shim_instance * inst;
- /*******/
 
-static int __init mod_init(void)
-{
-        dummy_shim = kipcm_shim_register(default_kipcm,
-                                         SHIM_NAME,
-                                         &dummy_data,
-                                         &dummy_ops);
-        if (!dummy_shim) {
-                LOG_CRIT("Initialization failed");
-                return -1;
-        }
-
-        test_init();
-
-        return 0;
-}
-
-static void __exit mod_exit(void)
-{
-	test_exit();
-        if (kipcm_shim_unregister(default_kipcm, dummy_shim)) {
-                LOG_CRIT("Cannot unregister");
-                return;
-        }
-}
 
 static void test_init(void)
 {
@@ -507,6 +482,33 @@ static void test_exit(void)
 	LOG_DBG("Dummy data: %pK", &dummy_data);
 	res = dummy_destroy(dummy_shim->data, inst);
 	LOG_DBG("Dummy destroy : %d", res);
+}
+
+ /*******/
+
+static int __init mod_init(void)
+{
+        dummy_shim = kipcm_shim_register(default_kipcm,
+                                         SHIM_NAME,
+                                         &dummy_data,
+                                         &dummy_ops);
+        if (!dummy_shim) {
+                LOG_CRIT("Initialization failed");
+                return -1;
+        }
+
+        test_init();
+
+        return 0;
+}
+
+static void __exit mod_exit(void)
+{
+	test_exit();
+        if (kipcm_shim_unregister(default_kipcm, dummy_shim)) {
+                LOG_CRIT("Cannot unregister");
+                return;
+        }
 }
 
 module_init(mod_init);
