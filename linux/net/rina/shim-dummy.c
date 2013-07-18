@@ -92,7 +92,6 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
         ASSERT(data);
         ASSERT(source);
         ASSERT(dest);
-	ASSERT(fspec);
 
         if (find_flow(data, id)) {
         	LOG_ERR("Flow already exists");
@@ -309,6 +308,7 @@ static struct shim_instance * dummy_create(struct shim_data * data,
         }
 
         inst->data->id = id;
+	INIT_LIST_HEAD(&inst->data->flows);
 	inst->data->info = rkzalloc(sizeof(*inst->data->info), GFP_KERNEL);
 	if (!inst->data->info) {
 		rkfree(inst->data);
@@ -339,7 +339,7 @@ static struct shim_instance * dummy_create(struct shim_data * data,
          * structures linked (somewhat) together
          */
 	INIT_LIST_HEAD(&(inst->data->list));
-        list_add(&(data->instances), &(inst->data->list));
+        list_add(&(inst->data->list), &(data->instances));
 
         return inst;
 }
@@ -401,30 +401,29 @@ static struct shim_instance * dummy_configure(struct shim_data *         data,
 static int dummy_destroy(struct shim_data *     data,
                          struct shim_instance * instance)
 {
-	struct shim_instance_data * inst;
-        struct list_head          * pos, * q;
+	struct shim_instance_data * pos, * next;
 
         ASSERT(data);
         ASSERT(instance);
 
         /* Retrieve the instance */
-        list_for_each_safe(pos, q, &(data->instances)) {
-                inst = list_entry(pos, struct shim_instance_data, list);
-
-                if (inst->id == instance->data->id) {
+        list_for_each_entry_safe(pos, next, &data->instances, list) {
+                if (pos->id == instance->data->id) {
                         /* Unbind from the instances set */
-                        list_del(pos);
-			
-			dummy_deallocate_all(inst);
+                        list_del(&pos->list);
+			dummy_deallocate_all(pos);
                         /* Destroy it */
-                        name_destroy(inst->info->dif_name);
-			name_destroy(inst->info->name);
-			rkfree(inst->info);
-                        rkfree(inst);
+                        name_destroy(pos->info->dif_name);
+			name_destroy(pos->info->name);
+			rkfree(pos->info);
+			rkfree(pos);
+                        rkfree(instance);
+			
+			return 0;
                 }
         }
 
-        return 0;
+        return -1;
 }
 
 static struct shim_ops dummy_ops = {
@@ -437,32 +436,6 @@ static struct shim_ops dummy_ops = {
 
 /* Test only */
 struct shim_instance * inst;
- /*******/
-
-static int __init mod_init(void)
-{
-        dummy_shim = kipcm_shim_register(default_kipcm,
-                                         SHIM_NAME,
-                                         &dummy_data,
-                                         &dummy_ops);
-        if (!dummy_shim) {
-                LOG_CRIT("Initialization failed");
-                return -1;
-        }
-
-        test_init();
-
-        return 0;
-}
-
-static void __exit mod_exit(void)
-{
-	test_exit();
-        if (kipcm_shim_unregister(default_kipcm, dummy_shim)) {
-                LOG_CRIT("Cannot unregister");
-                return;
-        }
-}
 
 static void test_init(void)
 {
@@ -507,6 +480,32 @@ static void test_exit(void)
 	LOG_DBG("Dummy data: %pK", &dummy_data);
 	res = dummy_destroy(dummy_shim->data, inst);
 	LOG_DBG("Dummy destroy : %d", res);
+}
+ /*******/
+
+static int __init mod_init(void)
+{
+        dummy_shim = kipcm_shim_register(default_kipcm,
+                                         SHIM_NAME,
+                                         &dummy_data,
+                                         &dummy_ops);
+        if (!dummy_shim) {
+                LOG_CRIT("Initialization failed");
+                return -1;
+        }
+
+        test_init();
+
+        return 0;
+}
+
+static void __exit mod_exit(void)
+{
+	test_exit();
+        if (kipcm_shim_unregister(default_kipcm, dummy_shim)) {
+                LOG_CRIT("Cannot unregister");
+                return;
+        }
 }
 
 module_init(mod_init);
