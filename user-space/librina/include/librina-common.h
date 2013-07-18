@@ -350,24 +350,24 @@ class FlowRequestEvent: public IPCEvent {
 	/** The name of the DIF that is providing this flow */
 	ApplicationProcessNamingInformation DIFName;
 
-	/** The application that requested the flow */
-	ApplicationProcessNamingInformation sourceApplicationName;
+	/** The local application name*/
+	ApplicationProcessNamingInformation localApplicationName;
 
-	/** The application targeted by the flow */
-	ApplicationProcessNamingInformation destinationApplicationName;
+	/** The remote application name*/
+	ApplicationProcessNamingInformation remoteApplicationName;
 
 	/** The characteristics of the flow */
 	FlowSpecification flowSpecification;
 
 public:
 	FlowRequestEvent(const FlowSpecification& flowSpecification,
-			const ApplicationProcessNamingInformation& sourceApplicationName,
-			const ApplicationProcessNamingInformation& destApplicationName,
+			const ApplicationProcessNamingInformation& localApplicationName,
+			const ApplicationProcessNamingInformation& remoteApplicationName,
 			unsigned int sequenceNumber);
 	FlowRequestEvent(int portId,
 			const FlowSpecification& flowSpecification,
-			const ApplicationProcessNamingInformation& sourceApplicationName,
-			const ApplicationProcessNamingInformation& destApplicationName,
+			const ApplicationProcessNamingInformation& localApplicationName,
+			const ApplicationProcessNamingInformation& remoteApplicationName,
 			const ApplicationProcessNamingInformation& DIFName,
 			unsigned int sequenceNumber);
 	int getPortId() const;
@@ -375,8 +375,8 @@ public:
 	void setPortId(int portId);
 	void setDIFName(const ApplicationProcessNamingInformation& difName);
 	const ApplicationProcessNamingInformation& getDIFName() const;
-	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
-	const ApplicationProcessNamingInformation& getDestApplicationName() const;
+	const ApplicationProcessNamingInformation& getLocalApplicationName() const;
+	const ApplicationProcessNamingInformation& getRemoteApplicationName() const;
 };
 
 /**

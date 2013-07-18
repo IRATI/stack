@@ -76,7 +76,7 @@ void doWorkApplicationProcess(){
 		flow = ipcManager->allocateFlowRequest(appName, destName, flowSpec);
 		std::cout<<"Application# Flow allocated by DIF "<<
 				flow->getDIFName().getProcessName() << std::endl;
-		ipcManager->deallocateFlow(flow->getPortId(), appName);
+		ipcManager->deallocateFlow(flow->getPortId());
 		std::cout<<"Application# Flow deallocated!"<<std::endl;
 
 		ipcManager->unregisterApplication(appName, difName);

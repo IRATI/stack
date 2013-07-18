@@ -488,28 +488,28 @@ void DIFProperties::removeQoSCube(const QoSCube& qosCube) {
 /* CLASS FLOW REQUEST EVENT */
 FlowRequestEvent::FlowRequestEvent(
 		const FlowSpecification& flowSpecification,
-		const ApplicationProcessNamingInformation& sourceApplicationName,
-		const ApplicationProcessNamingInformation& destApplicationName,
+		const ApplicationProcessNamingInformation& localApplicationName,
+		const ApplicationProcessNamingInformation& remoteApplicationName,
 		unsigned int sequenceNumber):
 				IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
 						sequenceNumber) {
 	this->flowSpecification = flowSpecification;
-	this->sourceApplicationName = sourceApplicationName;
-	this->destinationApplicationName = destApplicationName;
+	this->localApplicationName = localApplicationName;
+	this->remoteApplicationName = remoteApplicationName;
 	this->portId = 0;
 }
 
 FlowRequestEvent::FlowRequestEvent(int portId,
 		const FlowSpecification& flowSpecification,
-		const ApplicationProcessNamingInformation& sourceApplicationName,
+		const ApplicationProcessNamingInformation& localApplicationName,
 		const ApplicationProcessNamingInformation& destApplicationName,
 		const ApplicationProcessNamingInformation& DIFName,
 		unsigned int sequenceNumber) :
 		IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
 				sequenceNumber) {
 	this->flowSpecification = flowSpecification;
-	this->sourceApplicationName = sourceApplicationName;
-	this->destinationApplicationName = destApplicationName;
+	this->localApplicationName = localApplicationName;
+	this->remoteApplicationName = remoteApplicationName;
 	this->DIFName = DIFName;
 	this->portId = portId;
 }
@@ -537,13 +537,13 @@ const ApplicationProcessNamingInformation&
 }
 
 const ApplicationProcessNamingInformation&
-	FlowRequestEvent::getSourceApplicationName() const {
-	return sourceApplicationName;
+	FlowRequestEvent::getLocalApplicationName() const {
+	return localApplicationName;
 }
 
 const ApplicationProcessNamingInformation&
-	FlowRequestEvent::getDestApplicationName() const {
-	return destinationApplicationName;
+	FlowRequestEvent::getRemoteApplicationName() const {
+	return remoteApplicationName;
 }
 
 /* CLASS APPLICATION REGISTRATION REQUEST */

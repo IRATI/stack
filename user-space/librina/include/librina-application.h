@@ -170,11 +170,11 @@ class Flow {
 	/** The name of the DIF that is providing this flow */
 	ApplicationProcessNamingInformation DIFName;
 
-	/** The application that requested the flow */
-	ApplicationProcessNamingInformation sourceApplicationName;
+	/** The local application name */
+	ApplicationProcessNamingInformation localApplicationName;
 
-	/** The application targeted by the flow */
-	ApplicationProcessNamingInformation destinationApplicationName;
+	/** The remote by the flow */
+	ApplicationProcessNamingInformation remoteApplicationName;
 
 	/** The characteristics of the flow */
 	FlowSpecification flowSpecification;
@@ -182,8 +182,8 @@ class Flow {
 	/** The state of the flow */
 	FlowState flowState;
 
-	Flow(const ApplicationProcessNamingInformation& sourceApplicationName,
-			const ApplicationProcessNamingInformation& destinationApplicationName,
+	Flow(const ApplicationProcessNamingInformation& localApplicationName,
+			const ApplicationProcessNamingInformation& remoteApplicationName,
 			const FlowSpecification& flowSpecification, FlowState flowState,
 			const ApplicationProcessNamingInformation& DIFName, int portId);
 public:
@@ -191,8 +191,8 @@ public:
 	const FlowState& getState() const;
 	int getPortId() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
-	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
-	const ApplicationProcessNamingInformation& getDestinationApplcationName() const;
+	const ApplicationProcessNamingInformation& getLocalApplicationName() const;
+	const ApplicationProcessNamingInformation& getRemoteApplcationName() const;
 	const FlowSpecification getFlowSpecification() const;
 
 	/**
@@ -310,17 +310,15 @@ public:
 	/**
 	 * Requests the allocation of a Flow
 	 *
-	 * @param sourceAppName The naming information of the application requesting
-	 * the flow
-	 * @param destAppName The naming information of the application that is the target
-	 * of the flow
+	 * @param localAppName The naming information of the local application
+	 * @param remoteAppName The naming information of the remote application
 	 * @param flowSpecifiction The characteristics required for the flow
 	 * @return A Flow object encapsulating the flow service
 	 * @throws IPCException if there are problems during the flow allocation
 	 */
 	Flow * allocateFlowRequest(
-			const ApplicationProcessNamingInformation& sourceAppName,
-			const ApplicationProcessNamingInformation& destAppName,
+			const ApplicationProcessNamingInformation& localAppName,
+			const ApplicationProcessNamingInformation& remoteAppName,
 			const FlowSpecification& flow) throw (FlowAllocationException);
 
 	/**
@@ -341,12 +339,10 @@ public:
 	 * Causes the flow to be deallocated, and the object deleted.
 	 *
 	 * @param portId the flow to be deallocated
-	 * @param applicationName the name of the application deallocating the flow
 	 * @throws IPCException if the flow is not in the ALLOCATED state or
 	 * there are problems deallocating the flow
 	 */
-	void deallocateFlow(int portId,
-			const ApplicationProcessNamingInformation& applicationName)
+	void deallocateFlow(int portId)
 			throw (FlowDeallocationException);
 
 	/**

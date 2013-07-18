@@ -279,8 +279,8 @@ void IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest,
 	//Do nothing
 #else
 	IpcmAllocateFlowRequestMessage message;
-	message.setSourceAppName(flowRequest.getSourceApplicationName());
-	message.setDestAppName(flowRequest.getDestApplicationName());
+	message.setSourceAppName(flowRequest.getLocalApplicationName());
+	message.setDestAppName(flowRequest.getRemoteApplicationName());
 	message.setFlowSpec(flowRequest.getFlowSpecification());
 	message.setDifName(flowRequest.getDIFName());
 	message.setPortId(flowRequest.getPortId());
@@ -494,7 +494,7 @@ void ApplicationManager::flowAllocated(const FlowRequestEvent& flowRequestEvent,
 	responseMessage.setErrorDescription(errorDescription);
 	responseMessage.setIpcProcessId(ipcProcessId);
 	responseMessage.setIpcProcessPortId(ipcProcessPortId);
-	responseMessage.setSourceAppName(flowRequestEvent.getSourceApplicationName());
+	responseMessage.setSourceAppName(flowRequestEvent.getLocalApplicationName());
 	responseMessage.setDifName(flowRequestEvent.getDIFName());
 	responseMessage.setSequenceNumber(flowRequestEvent.getSequenceNumber());
 	responseMessage.setResponseMessage(true);

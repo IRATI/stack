@@ -98,7 +98,7 @@ void * doWorkIPCManager(void * arg) {
 	difName.setProcessName("/difs/Test.DIF");
 
 	AppAllocateFlowRequestResultMessage message;
-	message.setSourceAppName(flowEvent->getSourceApplicationName());
+	message.setSourceAppName(flowEvent->getLocalApplicationName());
 	message.setPortId(23);
 	message.setDifName(difName);
 	message.setIpcProcessPortId(340);
@@ -118,7 +118,7 @@ void * doWorkIPCManager(void * arg) {
 	flowEvent =
 			dynamic_cast<FlowRequestEvent *>(event);
 
-	message.setSourceAppName(flowEvent->getSourceApplicationName());
+	message.setSourceAppName(flowEvent->getLocalApplicationName());
 	message.setPortId(-15);
 	message.setErrorDescription("Not enough resources to accomplish the request");
 	message.setSequenceNumber(flowEvent->getSequenceNumber());
