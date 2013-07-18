@@ -22,6 +22,7 @@
 #include "logs.h"
 #include "librina-application.h"
 #include "core.h"
+#include "rina-syscalls.h"
 
 namespace rina {
 
@@ -41,6 +42,7 @@ Flow::Flow(const ApplicationProcessNamingInformation& sourceApplicationName,
 
 const std::string Flow::flow_not_allocated_error =
 		"The flow is not in ALLOCATED state";
+const std::string Flow::flow_write_error = "Error writing SDU to the flow";
 
 const FlowState& Flow::getState() const {
 	return flowState;
@@ -66,7 +68,7 @@ const FlowSpecification Flow::getFlowSpecification() const {
 	return flowSpecification;
 }
 
-int Flow::readSDU(unsigned char * sdu) throw (IPCException) {
+int Flow::readSDU(void * sdu) throw (IPCException) {
 	LOG_DBG("Flow.readSDU called");
 
 	if (flowState != FLOW_ALLOCATED) {
@@ -78,12 +80,11 @@ int Flow::readSDU(unsigned char * sdu) throw (IPCException) {
 	sdu = buffer;
 	return 7;
 #else
-	//TODO add real implementation here
-	return 0;
+	return syscallReadSDU(portId, sdu);
 #endif
 }
 
-void Flow::writeSDU(unsigned char * sdu, int size) throw (IPCException) {
+void Flow::writeSDU(void * sdu, int size) throw (IPCException) {
 	LOG_DBG("Flow.writeSDU called");
 
 	if (flowState != FLOW_ALLOCATED) {
@@ -91,12 +92,12 @@ void Flow::writeSDU(unsigned char * sdu, int size) throw (IPCException) {
 	}
 
 #if STUB_API
-	int i;
-	for (i = 0; i < size; i++) {
-		LOG_DBG("SDU[%d] = %d", i, sdu[i]);
-	}
+	//Do nothing
 #else
-	//TODO add real implementation here
+	int result = syscallWriteSDU(portId, sdu, size);
+	if (result < 0){
+		throw IPCException(Flow::flow_write_error);
+	}
 #endif
 }
 
