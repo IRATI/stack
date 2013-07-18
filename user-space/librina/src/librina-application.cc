@@ -67,6 +67,10 @@ const FlowSpecification Flow::getFlowSpecification() const {
 	return flowSpecification;
 }
 
+bool Flow::isAllocated() const{
+	return flowState == FLOW_ALLOCATED;
+}
+
 int Flow::readSDU(void * sdu)
 		throw (FlowNotAllocatedException, ReadSDUException) {
 	LOG_DBG("Flow.readSDU called");
@@ -218,12 +222,13 @@ throw (GetDIFPropertiesException) {
 #endif
 }
 
-void IPCManager::registerApplication(
-		const ApplicationProcessNamingInformation& applicationName,
-		const ApplicationProcessNamingInformation& DIFName)
-throw (ApplicationRegistrationException) {
+ApplicationRegistration IPCManager::registerApplication(
+			const ApplicationProcessNamingInformation& applicationName,
+			const ApplicationProcessNamingInformation& DIFName)
+			throw (ApplicationRegistrationException){
 	LOG_DBG("IPCManager.registerApplication called");
 	ApplicationRegistration * applicationRegistration = 0;
+	ApplicationProcessNamingInformation registeredInDIF = DIFName;
 
 	std::map<ApplicationProcessNamingInformation,
 	ApplicationRegistration*>::iterator it =
@@ -267,9 +272,10 @@ throw (ApplicationRegistrationException) {
 		throw ApplicationRegistrationException(reason);
 	}
 
+	registeredInDIF = registerResponseMessage->getDifName();
 	LOG_DBG("Application %s registered successfully to DIF %s",
 			applicationName.getProcessName().c_str(),
-			DIFName.getProcessName().c_str());
+			registeredInDIF.getProcessName().c_str());
 	delete registerResponseMessage;
 #endif
 
@@ -278,7 +284,8 @@ throw (ApplicationRegistrationException) {
 		applicationRegistrations[applicationName] = applicationRegistration;
 	}
 
-	applicationRegistration->addDIFName(DIFName);
+	applicationRegistration->addDIFName(registeredInDIF);
+	return *applicationRegistration;
 }
 
 void IPCManager::unregisterApplication(

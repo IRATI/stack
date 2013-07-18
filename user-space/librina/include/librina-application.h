@@ -194,6 +194,7 @@ public:
 	const ApplicationProcessNamingInformation& getLocalApplicationName() const;
 	const ApplicationProcessNamingInformation& getRemoteApplcationName() const;
 	const FlowSpecification getFlowSpecification() const;
+	bool isAllocated() const;
 
 	/**
 	 * Reads an SDU from the flow. This function will block until there is an
@@ -285,10 +286,11 @@ public:
 	 *
 	 * @param applicationName The name of the application to be registered
 	 * @param DIFName Then name of the DIF where the application will register
+	 * @returns the name of the DIF where the application has registered
 	 * @throws IPCException if the DIF doesn't exist or the application doesn't
 	 * have enough rights to use it.
 	 */
-	void registerApplication(
+	ApplicationRegistration registerApplication(
 			const ApplicationProcessNamingInformation& applicationName,
 			const ApplicationProcessNamingInformation& DIFName)
 			throw (ApplicationRegistrationException);
