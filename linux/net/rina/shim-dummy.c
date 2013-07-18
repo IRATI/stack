@@ -308,7 +308,7 @@ static struct shim_instance * dummy_create(struct shim_data * data,
         }
 
         inst->data->id = id;
-	INIT_LIST_HEAD(&inst->data->flows);
+        INIT_LIST_HEAD(&inst->data->flows);
 	inst->data->info = rkzalloc(sizeof(*inst->data->info), GFP_KERNEL);
 	if (!inst->data->info) {
 		rkfree(inst->data);
@@ -416,10 +416,10 @@ static int dummy_destroy(struct shim_data *     data,
                         name_destroy(pos->info->dif_name);
 			name_destroy(pos->info->name);
 			rkfree(pos->info);
-			rkfree(pos);
+                        rkfree(pos);
                         rkfree(instance);
-			
-			return 0;
+
+                        return 0;
                 }
         }
 
@@ -508,7 +508,6 @@ static void __exit mod_exit(void)
         }
 }
 
-module_init(mod_init);
 module_exit(mod_exit);
 
 MODULE_DESCRIPTION("RINA Dummy Shim IPC");
