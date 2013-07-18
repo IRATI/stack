@@ -435,57 +435,6 @@ static struct shim_ops dummy_ops = {
         .configure = dummy_configure,
 };
 
-/* Test only */
-struct shim_instance * inst;
-
-
-static void test_init(void)
-{
-	int res;
-	const struct name *source, *dest;
-	struct name s, d;
-	string_t *app_source = "Iris";
-	string_t *app_dest = "Celia";
-	struct dummy_flow *flow;
-
-	inst = dummy_create(dummy_shim->data, 1);
-	LOG_DBG("Instance data: %pK", inst->data);
-	LOG_DBG("Instance ops : %pK", inst->ops);
-	LOG_DBG("Instance created: %pK", inst);
-	LOG_DBG("Instance id: %d", inst->data->id);
-	s.process_name = app_source;
-	d.process_name = app_dest;
-	s.process_instance = NULL;
-	s.entity_name = NULL;
-	s.entity_instance = NULL;
-	d.process_instance = NULL;
-	d.entity_name = NULL;
-	d.entity_instance = NULL;
-	source = &s;
-	dest   = &d;
-	res = dummy_flow_allocate_request(inst->data,source,dest,NULL,1);
-
-	LOG_DBG("Flow allocated %d", res);
-	flow = find_flow(inst->data, 1);
-	LOG_DBG("Flow: %pK", flow);
-	LOG_DBG("Flow id: %d", flow->port_id);
-	LOG_DBG("Source app name: %s", flow->source->process_name);
-	LOG_DBG("Destin app name: %s", flow->dest->process_name);
-}
-
-static void test_exit(void)
-{
-	int res;
-
-	LOG_DBG("Finishing shim-dummy");
-	LOG_DBG("Dummy shim: %pK", dummy_shim);
-	LOG_DBG("Dummy data: %pK", &dummy_data);
-	res = dummy_destroy(dummy_shim->data, inst);
-	LOG_DBG("Dummy destroy : %d", res);
-}
-
- /*******/
-
 static int __init mod_init(void)
 {
         dummy_shim = kipcm_shim_register(default_kipcm,
