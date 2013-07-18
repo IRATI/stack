@@ -340,7 +340,7 @@ static struct shim_instance * dummy_create(struct shim_data * data,
          * structures linked (somewhat) together
          */
 	INIT_LIST_HEAD(&(inst->data->list));
-        list_add(&(data->instances), &(inst->data->list));
+        list_add(&(inst->data->list), &(data->instances));
 
         return inst;
 }
