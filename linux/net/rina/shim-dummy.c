@@ -47,13 +47,13 @@ struct dummy_info {
 };
 
 struct shim_instance_data {
-        ipc_process_id_t id;
+        ipc_process_id_t    id;
 
         /* FIXME: Stores the state of flows indexed by port_id */
-        struct list_head flows;
+        struct list_head    flows;
 
         /* Used to keep a list of all the dummy shims */
-        struct list_head list;
+        struct list_head    list;
 
 	struct dummy_info * info;
 };
@@ -76,7 +76,7 @@ struct dummy_flow {
 static struct dummy_flow * find_flow(struct shim_instance_data * data,
                                      port_id_t                   id)
 {
-        struct dummy_flow *     flow;
+        struct dummy_flow * flow;
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
@@ -94,7 +94,7 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
                                        const struct flow_spec *    fspec,
                                        port_id_t                   id)
 {
-        struct dummy_flow *         flow;
+        struct dummy_flow * flow;
 
         ASSERT(data);
         ASSERT(source);
@@ -111,13 +111,13 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
                 return -1;
 
         flow->dest = name_dup(dest);
-        if(!flow->dest) {
+        if (!flow->dest) {
         	rkfree(flow);
 		LOG_ERR("Name copy failed");
 		return -1;
 	}
         flow->source = name_dup(source);
-	if(!flow->source) {
+	if (!flow->source) {
 		rkfree(flow->dest);
 		rkfree(flow);
 		LOG_ERR("Name copy failed");
@@ -143,7 +143,7 @@ static int dummy_flow_allocate_response(struct shim_instance_data * data,
 	ASSERT(data);
         ASSERT(response);
 
-	/* If response is positive, flow should transition to allocated state */
+	/* On positive response, flow should transition to allocated state */
 	if (response == 0) {
 		
 	}
@@ -242,7 +242,6 @@ struct shim_data {
 };
 
 static struct shim_data dummy_data;
-
 static struct shim *    dummy_shim = NULL;
 
 static int dummy_init(struct shim_data * data)
