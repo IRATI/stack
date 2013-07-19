@@ -36,7 +36,7 @@ typedef enum {
         DIF_TYPE_SHIM
 } dif_type_t;
 
-/* Do we really need to this configuration here ? */
+/* FIXME: Do we really need to this configuration here ? */
 struct ipc_process_conf {
 	/*
 	 * Configuration of the kernel components of a normal IPC Process.
@@ -48,10 +48,10 @@ struct ipc_process_conf {
 	ipc_process_address_t address;
 
 	/* EFCP component configuration */
-	struct efcp_conf_t *  efcp_config;
+	struct efcp_conf *    efcp_config;
 
 	/* RMT component configuration */
-	struct rmt_conf_t *   rmt_config;
+	struct rmt_conf *     rmt_config;
 };
 
 struct normal_ipc_process_t {
