@@ -92,7 +92,6 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
         ASSERT(data);
         ASSERT(source);
         ASSERT(dest);
-	ASSERT(fspec);
 
         if (find_flow(data, id)) {
         	LOG_ERR("Flow already exists");
@@ -296,14 +295,17 @@ static struct shim_instance * dummy_create(struct shim_data * data,
         } 
 
         /* Create an instance */
+	LOG_DBG("Create an instance");
         inst = rkzalloc(sizeof(*inst), GFP_KERNEL);
         if (!inst)
                 return NULL;
 
         /* fill it properly */
+	LOG_DBG("Fill it properly");
         inst->ops  = &dummy_instance_ops;
         inst->data = rkzalloc(sizeof(struct shim_instance_data), GFP_KERNEL);
         if (!inst->data) {
+		LOG_DBG("Fill it properly failed");
                 rkfree(inst);
                 return NULL;
         }
@@ -312,6 +314,7 @@ static struct shim_instance * dummy_create(struct shim_data * data,
         INIT_LIST_HEAD(&inst->data->flows);
 	inst->data->info = rkzalloc(sizeof(*inst->data->info), GFP_KERNEL);
 	if (!inst->data->info) {
+		LOG_DBG("Failed creation of inst->data->info");
 		rkfree(inst->data);
 		rkfree(inst);
 		return NULL;
@@ -319,6 +322,7 @@ static struct shim_instance * dummy_create(struct shim_data * data,
 
         inst->data->info->dif_name = name_create();
 	if (!inst->data->info->dif_name) {
+		LOG_DBG("Failed creation of dif_name");
 		rkfree(inst->data->info);
 		rkfree(inst->data);
 		rkfree(inst);
@@ -327,7 +331,8 @@ static struct shim_instance * dummy_create(struct shim_data * data,
 
 	inst->data->info->name = name_create();
 	if (!inst->data->info->name) {
-		rkfree(inst->data->info->dif_name);
+		LOG_DBG("Failed creation of ipc name");
+		name_destroy(inst->data->info->dif_name);
 		rkfree(inst->data->info);
 		rkfree(inst->data);
 		rkfree(inst);
@@ -339,8 +344,13 @@ static struct shim_instance * dummy_create(struct shim_data * data,
          * Bind the shim-instance to the shims set, to keep all our data
          * structures linked (somewhat) together
          */
+	
+	LOG_DBG("Adding dummy instance to the list of shim dummy instances");
+
 	INIT_LIST_HEAD(&(inst->data->list));
+	LOG_DBG("Initialization of instance list: %pK", &inst->data->list);
         list_add(&(inst->data->list), &(data->instances));
+	LOG_DBG("Inst %pK added to the dummy instances", inst);
 
         return inst;
 }
@@ -435,9 +445,8 @@ static struct shim_ops dummy_ops = {
         .configure = dummy_configure,
 };
 
-/* Test only */
+/* Test only 
 struct shim_instance * inst;
-
 
 static void test_init(void)
 {
@@ -473,6 +482,40 @@ static void test_init(void)
 	LOG_DBG("Destin app name: %s", flow->dest->process_name);
 }
 
+static void test_init_2(void)
+{
+	int res;
+	const struct name *source, *dest;
+	struct name s, d;
+	string_t *app_source = "Iris";
+	string_t *app_dest = "Celia";
+	struct dummy_flow *flow;
+	struct shim_instance_data * inst_data;
+
+	inst_data = find_instance(dummy_shim->data, 1);
+	LOG_DBG("Instance data: %pK", inst_data);
+	LOG_DBG("Instance id: %d", inst_data->id);
+	s.process_name = app_source;
+	d.process_name = app_dest;
+	s.process_instance = NULL;
+	s.entity_name = NULL;
+	s.entity_instance = NULL;
+	d.process_instance = NULL;
+	d.entity_name = NULL;
+	d.entity_instance = NULL;
+	source = &s;
+	dest   = &d;
+	res = dummy_flow_allocate_request(inst_data,source,dest,NULL,1);
+
+	LOG_DBG("Flow allocated %d", res);
+	flow = find_flow(inst_data, 1);
+	LOG_DBG("Flow: %pK", flow);
+	LOG_DBG("Flow id: %d", flow->port_id);
+	LOG_DBG("Source app name: %s", flow->source->process_name);
+	LOG_DBG("Destin app name: %s", flow->dest->process_name);
+	res = dummy_flow_deallocate(inst_data,1);
+	LOG_DBG("Flow deallocated: %d", res);
+}
 static void test_exit(void)
 {
 	int res;
@@ -484,7 +527,17 @@ static void test_exit(void)
 	LOG_DBG("Dummy destroy : %d", res);
 }
 
- /*******/
+static void test_exit_2(void)
+{
+	int res;
+
+	LOG_DBG("Finishing shim-dummy");
+	LOG_DBG("Dummy shim: %pK", dummy_shim);
+	LOG_DBG("Dummy data: %pK", &dummy_data);
+	res = dummy_destroy(dummy_shim->data, inst);
+	LOG_DBG("Dummy destroy : %d", res);
+}
+ ******/
 
 static int __init mod_init(void)
 {
@@ -497,14 +550,11 @@ static int __init mod_init(void)
                 return -1;
         }
 
-        test_init();
-
         return 0;
 }
 
 static void __exit mod_exit(void)
 {
-	test_exit();
         if (kipcm_shim_unregister(default_kipcm, dummy_shim)) {
                 LOG_CRIT("Cannot unregister");
                 return;
