@@ -111,6 +111,24 @@ static struct ipc_process_t * find_ipc_process_by_id(struct kipcm *   kipcm,
         return NULL;
 }
 
+static struct ipc_process_t * find_ipc_node_by_id(struct kipcm *   kipcm,
+                                                  ipc_process_id_t id)
+{
+        struct id_to_ipcp * cur;
+
+	LOG_DBG("Find IPC node by id");
+	LOG_DBG("IPC process id: %d", id);
+        list_for_each_entry(cur, &kipcm->id_to_ipcp, list) {
+                if (cur->id == id) {
+			LOG_DBG("IPC node found: %pk", cur);
+                        return cur;
+                }
+        }
+
+	LOG_DBG("IPC node not found");
+        return NULL;
+}
+
 struct kipcm * kipcm_init(struct kobject * parent)
 {
         struct kipcm * tmp;
@@ -261,6 +279,7 @@ int kipcm_ipc_destroy(struct kipcm *   kipcm,
                       ipc_process_id_t id)
 {
 	struct ipc_process_t * ipc_process;
+	struct id_to_ipcp *    id_ipcp;
 	struct kobject *       k;
 
         ASSERT(kipcm);
@@ -268,6 +287,13 @@ int kipcm_ipc_destroy(struct kipcm *   kipcm,
 	ipc_process = find_ipc_process_by_id(kipcm, id);
 	if (!ipc_process) {
 		LOG_ERR("IPC process %d does not exist", id);
+
+		return -1;
+	}
+
+	id_ipcp = find_ipc_node_by_id(kipcm, id);
+	if (!id_ipcp) {
+		LOG_ERR("IPC process %d node does not exist", id);
 
 		return -1;
 	}
@@ -297,6 +323,10 @@ int kipcm_ipc_destroy(struct kipcm *   kipcm,
 		BUG();
 	}
 
+	list_del(&id_ipcp->list);
+	rkfree(ipc_process);
+	rkfree(id_ipcp);
+	
 	return 0;
 }
 
