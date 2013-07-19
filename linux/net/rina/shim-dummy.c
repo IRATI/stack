@@ -46,17 +46,24 @@ struct dummy_info {
 	struct name * dif_name;
 };
 
-
 struct shim_instance_data {
-        ipc_process_id_t id;
+        ipc_process_id_t    id;
 
         /* FIXME: Stores the state of flows indexed by port_id */
-        struct list_head flows;
+        struct list_head    flows;
 
         /* Used to keep a list of all the dummy shims */
-        struct list_head list;
+        struct list_head    list;
 
 	struct dummy_info * info;
+};
+
+enum dummy_flow_state {
+	NULL_STATE = 1,
+	CONNECT_PENDING,
+	AUTHENTICATED,
+	ESTABLISHED,
+	RELEASING,
 };
 
 struct dummy_flow {
@@ -69,7 +76,7 @@ struct dummy_flow {
 static struct dummy_flow * find_flow(struct shim_instance_data * data,
                                      port_id_t                   id)
 {
-        struct dummy_flow *     flow;
+        struct dummy_flow * flow;
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
@@ -87,7 +94,7 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
                                        const struct flow_spec *    fspec,
                                        port_id_t                   id)
 {
-        struct dummy_flow *         flow;
+        struct dummy_flow * flow;
 
         ASSERT(data);
         ASSERT(source);
@@ -103,13 +110,13 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
                 return -1;
 
         flow->dest = name_dup(dest);
-        if(!flow->dest) {
+        if (!flow->dest) {
         	rkfree(flow);
 		LOG_ERR("Name copy failed");
 		return -1;
 	}
         flow->source = name_dup(source);
-	if(!flow->source) {
+	if (!flow->source) {
 		rkfree(flow->dest);
 		rkfree(flow);
 		LOG_ERR("Name copy failed");
@@ -135,7 +142,7 @@ static int dummy_flow_allocate_response(struct shim_instance_data * data,
 	ASSERT(data);
         ASSERT(response);
 
-	/* If response is positive, flow should transition to allocated state */
+	/* On positive response, flow should transition to allocated state */
 	if (response == 0) {
 		
 	}
@@ -234,7 +241,6 @@ struct shim_data {
 };
 
 static struct shim_data dummy_data;
-
 static struct shim *    dummy_shim = NULL;
 
 static int dummy_init(struct shim_data * data)
@@ -444,100 +450,6 @@ static struct shim_ops dummy_ops = {
         .destroy   = dummy_destroy,
         .configure = dummy_configure,
 };
-
-/* Test only 
-struct shim_instance * inst;
-
-static void test_init(void)
-{
-	int res;
-	const struct name *source, *dest;
-	struct name s, d;
-	string_t *app_source = "Iris";
-	string_t *app_dest = "Celia";
-	struct dummy_flow *flow;
-
-	inst = dummy_create(dummy_shim->data, 1);
-	LOG_DBG("Instance data: %pK", inst->data);
-	LOG_DBG("Instance ops : %pK", inst->ops);
-	LOG_DBG("Instance created: %pK", inst);
-	LOG_DBG("Instance id: %d", inst->data->id);
-	s.process_name = app_source;
-	d.process_name = app_dest;
-	s.process_instance = NULL;
-	s.entity_name = NULL;
-	s.entity_instance = NULL;
-	d.process_instance = NULL;
-	d.entity_name = NULL;
-	d.entity_instance = NULL;
-	source = &s;
-	dest   = &d;
-	res = dummy_flow_allocate_request(inst->data,source,dest,NULL,1);
-
-	LOG_DBG("Flow allocated %d", res);
-	flow = find_flow(inst->data, 1);
-	LOG_DBG("Flow: %pK", flow);
-	LOG_DBG("Flow id: %d", flow->port_id);
-	LOG_DBG("Source app name: %s", flow->source->process_name);
-	LOG_DBG("Destin app name: %s", flow->dest->process_name);
-}
-
-static void test_init_2(void)
-{
-	int res;
-	const struct name *source, *dest;
-	struct name s, d;
-	string_t *app_source = "Iris";
-	string_t *app_dest = "Celia";
-	struct dummy_flow *flow;
-	struct shim_instance_data * inst_data;
-
-	inst_data = find_instance(dummy_shim->data, 1);
-	LOG_DBG("Instance data: %pK", inst_data);
-	LOG_DBG("Instance id: %d", inst_data->id);
-	s.process_name = app_source;
-	d.process_name = app_dest;
-	s.process_instance = NULL;
-	s.entity_name = NULL;
-	s.entity_instance = NULL;
-	d.process_instance = NULL;
-	d.entity_name = NULL;
-	d.entity_instance = NULL;
-	source = &s;
-	dest   = &d;
-	res = dummy_flow_allocate_request(inst_data,source,dest,NULL,1);
-
-	LOG_DBG("Flow allocated %d", res);
-	flow = find_flow(inst_data, 1);
-	LOG_DBG("Flow: %pK", flow);
-	LOG_DBG("Flow id: %d", flow->port_id);
-	LOG_DBG("Source app name: %s", flow->source->process_name);
-	LOG_DBG("Destin app name: %s", flow->dest->process_name);
-	res = dummy_flow_deallocate(inst_data,1);
-	LOG_DBG("Flow deallocated: %d", res);
-}
-static void test_exit(void)
-{
-	int res;
-
-	LOG_DBG("Finishing shim-dummy");
-	LOG_DBG("Dummy shim: %pK", dummy_shim);
-	LOG_DBG("Dummy data: %pK", &dummy_data);
-	res = dummy_destroy(dummy_shim->data, inst);
-	LOG_DBG("Dummy destroy : %d", res);
-}
-
-static void test_exit_2(void)
-{
-	int res;
-
-	LOG_DBG("Finishing shim-dummy");
-	LOG_DBG("Dummy shim: %pK", dummy_shim);
-	LOG_DBG("Dummy data: %pK", &dummy_data);
-	res = dummy_destroy(dummy_shim->data, inst);
-	LOG_DBG("Dummy destroy : %d", res);
-}
- ******/
 
 static int __init mod_init(void)
 {
