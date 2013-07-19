@@ -24,11 +24,11 @@
 
 #include <linux/kobject.h>
 
-struct rmt_conf_t {
+struct rmt_conf {
 	/* To do, only a placeholder right now */
 };
 
-struct rmt_instance {
+struct rmt {
 	/* This structure holds per-RMT instance data */
 
 	/* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
@@ -43,7 +43,7 @@ struct rmt_instance {
 	/* LIST_HEAD(pdu_fwd_table, pdu_fwd_entry_t); */
 };
 
-void * rmt_init(struct kobject * parent);
-int    rmt_fini(void * opaque);
+struct rmt * rmt_init(struct kobject * parent);
+int    rmt_fini(struct rmt * instance);
 
 #endif

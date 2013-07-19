@@ -27,30 +27,26 @@
 #include "rmt.h"
 #include "debug.h"
 
-struct rmt_descriptor {
-        void * this_is_dummy;
-};
-
-void * rmt_init(struct kobject * parent)
+struct rmt * rmt_init(struct kobject * parent)
 {
-        struct rmt_descriptor * e = NULL;
+        struct rmt * e = NULL;
 
         LOG_DBG("Initializing instance");
 
-        e = rkmalloc(sizeof(*e), GFP_KERNEL);
+        e = rkzalloc(sizeof(*e), GFP_KERNEL);
         if (!e)
                 return NULL;
 
         return e;
 }
 
-int rmt_fini(void * opaque)
+int rmt_fini(struct rmt * instance)
 {
-        LOG_DBG("Finalizing instance %pK", opaque);
+        LOG_DBG("Finalizing instance %pK", instance);
 
-        ASSERT(opaque);
+        ASSERT(instance);
 
-        rkfree(opaque);
+        rkfree(instance);
 
         return 0;
 }
