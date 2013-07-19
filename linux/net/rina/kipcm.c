@@ -437,9 +437,9 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         return -1;
 }
 
-int kipcm_post_sdu(struct kipcm * kipcm,
+int kipcm_sdu_post(struct kipcm * kipcm,
                    port_id_t      id,
-                   struct sdu * sdu)
+                   struct sdu *   sdu)
 {
         /*
          * NOTE:

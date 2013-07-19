@@ -146,7 +146,7 @@ int            kipcm_sdu_write(struct kipcm *       kipcm,
 int            kipcm_sdu_read(struct kipcm * kipcm,
                               port_id_t      id,
                               struct sdu * sdu);
-int            kipcm_post_sdu(struct kipcm * kipcm,
+int            kipcm_sdu_post(struct kipcm * kipcm,
                               port_id_t      id,
                               struct sdu * sdu);
 
