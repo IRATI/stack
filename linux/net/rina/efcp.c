@@ -27,34 +27,28 @@
 #include "efcp.h"
 #include "debug.h"
 
-struct efcp_descriptor {
-        int this_is_dummy;
-};
-
-void * efcp_init(struct kobject * parent)
+struct efcp * efcp_init(struct kobject * parent)
 {
-        struct efcp_descriptor * e = NULL;
+        struct efcp * e = NULL;
 
         LOG_DBG("Initializing instance");
 
-        e = rkmalloc(sizeof(*e), GFP_KERNEL);
-        if (!e)
-                return e;
+        e = rkzalloc(sizeof(*e), GFP_KERNEL);
 
         return e;
 }
 
-int efcp_fini(void * opaque)
+int efcp_fini(struct efcp * instance)
 {
-        LOG_DBG("Finalizing instance %pK", opaque);
+        LOG_DBG("Finalizing instance %pK", instance);
 
-        ASSERT(opaque);
-        rkfree(opaque);
+        ASSERT(instance);
+        rkfree(instance);
 
         return 0;
 }
 
-int efcp_write(void *             opaque,
+int efcp_write(struct efcp *      instance,
                port_id_t          id,
                const struct sdu * sdu)
 {
@@ -63,15 +57,15 @@ int efcp_write(void *             opaque,
         return 0;
 }
 
-int efcp_receive_pdu(void *       opaque,
-                     struct pdu * pdu)
+int efcp_receive_pdu(struct efcp * instance,
+                     struct pdu *  pdu)
 {
         LOG_DBG("PDU received in the EFCP");
 
         return 0;
 }
 
-cep_id_t efcp_create(void *                    opaque,
+cep_id_t efcp_create(struct efcp *             instance,
                      const struct connection * connection)
 {
         LOG_DBG("EFCP instance created");
@@ -79,17 +73,17 @@ cep_id_t efcp_create(void *                    opaque,
         return 0;
 }
 
-int efcp_destroy(void *   opaque,
-                 cep_id_t id)
+int efcp_destroy(struct efcp * instance,
+                 cep_id_t      id)
 {
         LOG_DBG("EFCP instance destroyed");
 
         return 0;
 }
 
-int efcp_update(void *   opaque,
-                cep_id_t from,
-                cep_id_t to)
+int efcp_update(struct efcp * instance,
+                cep_id_t      from,
+                cep_id_t      to)
 {
         LOG_DBG("EFCP instance updated");
 
