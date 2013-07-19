@@ -334,7 +334,7 @@ static struct shim_instance * dummy_create(struct shim_data * data,
 
 	inst->data->info->name = name_create();
 	if (!inst->data->info->name) {
-		rkfree(inst->data->info->dif_name);
+		name_destroy(inst->data->info->dif_name);
 		rkfree(inst->data->info);
 		rkfree(inst->data);
 		rkfree(inst);
