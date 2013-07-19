@@ -323,7 +323,7 @@ int kipcm_ipc_destroy(struct kipcm *   kipcm,
 		BUG();
 	}
 
-	list_del(id_ipcp->list);
+	list_del(&id_ipcp->list);
 	rkfree(ipc_process);
 	rkfree(id_ipcp);
 
