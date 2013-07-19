@@ -74,15 +74,21 @@ static int add_id_to_ipcp_node(struct kipcm *         kipcm,
 {
         struct id_to_ipcp * id_to_ipcp;
 
+	LOG_DBG("Adding IPC process to the list of kipcm processes");
         id_to_ipcp = rkzalloc(sizeof(*id_to_ipcp), GFP_KERNEL);
-        if (!id_to_ipcp)
+        if (!id_to_ipcp){
+		LOG_DBG("Failed creation of id_to_ipcp node");
                 return -1;
+	}
 
+	LOG_DBG("Adding info to id_to_ipcp node");
         id_to_ipcp->id   = id;
         id_to_ipcp->ipcp = ipc_process;
 
+	LOG_DBG("Adding id_to_ipcp node to the kipcm->id_to_ipcp list");
         INIT_LIST_HEAD(&id_to_ipcp->list);
         list_add(&id_to_ipcp->list, &kipcm->id_to_ipcp);
+	LOG_DBG("Node added");
 
         return 0;
 }
@@ -92,12 +98,16 @@ static struct ipc_process_t * find_ipc_process_by_id(struct kipcm *   kipcm,
 {
         struct id_to_ipcp * cur;
 
+	LOG_DBG("Find IPC process by id");
+	LOG_DBG("IPC process id: %d", id);
         list_for_each_entry(cur, &kipcm->id_to_ipcp, list) {
                 if (cur->id == id) {
+			LOG_DBG("IPC process found: %pk", cur->ipcp);
                         return cur->ipcp;
                 }
         }
 
+	LOG_DBG("IPC process not found");
         return NULL;
 }
 
@@ -183,6 +193,10 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
         struct kobject *       k;
         struct ipc_process_t * ipc_process;
 
+        LOG_DBG("KIPCM: %pK", kipcm);
+        LOG_DBG("IPC process name: %s", name->process_name);
+        LOG_DBG("IPC process id: %d", id);
+        LOG_DBG("IPC process type: %d", type);
         ASSERT(kipcm);
 
         if (!name) {
@@ -213,17 +227,21 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
                         return -1;
 
                 shim_instance = shim->ops->create(shim->data, id);
+                LOG_DBG("Shim instance created: %pK", shim_instance);
                 if (!shim_instance) {
                         rkfree(ipc_process);
                         return -1;
                 }
 
-                if (!add_id_to_ipcp_node(kipcm, id, ipc_process)) {
+                LOG_DBG("Adding instance");
+                if (add_id_to_ipcp_node(kipcm, id, ipc_process)) {
+                	LOG_DBG("Add failed!!!!");
                         shim->ops->destroy(shim->data, shim_instance);
                         rkfree(ipc_process);
                         return -1;
                 }
 
+                LOG_DBG("Add succeeded!!!!");
                 ipc_process->data.shim_instance = shim_instance;
         }
                 break;
@@ -234,6 +252,8 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
         default:
                 BUG();
         }
+
+        LOG_DBG("All was ok in the kipcm_ipc_created");
         return 0;
 }
 
@@ -277,7 +297,7 @@ int kipcm_ipc_destroy(struct kipcm *   kipcm,
 		BUG();
 	}
 
-	return -1;
+	return 0;
 }
 
 int kipcm_ipc_configure(struct kipcm *                  kipcm,
