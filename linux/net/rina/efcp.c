@@ -40,9 +40,10 @@ struct efcp * efcp_init(struct kobject * parent)
 
 int efcp_fini(struct efcp * instance)
 {
+        ASSERT(instance);
+
         LOG_DBG("Finalizing instance %pK", instance);
 
-        ASSERT(instance);
         rkfree(instance);
 
         return 0;
@@ -52,6 +53,10 @@ int efcp_write(struct efcp *      instance,
                port_id_t          id,
                const struct sdu * sdu)
 {
+        ASSERT(instance);
+
+        LOG_MISSING;
+
         LOG_DBG("Written SDU");
 
         return 0;
@@ -60,6 +65,10 @@ int efcp_write(struct efcp *      instance,
 int efcp_receive_pdu(struct efcp * instance,
                      struct pdu *  pdu)
 {
+        ASSERT(instance);
+
+        LOG_MISSING;
+
         LOG_DBG("PDU received in the EFCP");
 
         return 0;
@@ -68,6 +77,10 @@ int efcp_receive_pdu(struct efcp * instance,
 cep_id_t efcp_create(struct efcp *             instance,
                      const struct connection * connection)
 {
+        ASSERT(instance);
+
+        LOG_MISSING;
+
         LOG_DBG("EFCP instance created");
 
         return 0;
@@ -76,6 +89,10 @@ cep_id_t efcp_create(struct efcp *             instance,
 int efcp_destroy(struct efcp * instance,
                  cep_id_t      id)
 {
+        ASSERT(instance);
+
+        LOG_MISSING;
+
         LOG_DBG("EFCP instance destroyed");
 
         return 0;
@@ -85,6 +102,10 @@ int efcp_update(struct efcp * instance,
                 cep_id_t      from,
                 cep_id_t      to)
 {
+        ASSERT(instance);
+
+        LOG_MISSING;
+
         LOG_DBG("EFCP instance updated");
 
         return 0;
