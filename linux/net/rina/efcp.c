@@ -69,6 +69,7 @@ int efcp_write(struct efcp *      instance,
                const struct sdu * sdu)
 {
         ASSERT(instance);
+        ASSERT(sdu);
 
         if (!instance->dtp) {
                 LOG_ERR("No DTP instance available, cannot send");
@@ -82,6 +83,7 @@ int efcp_receive_pdu(struct efcp * instance,
                      struct pdu *  pdu)
 {
         ASSERT(instance);
+        ASSERT(pdu);
 
         LOG_MISSING;
 
