@@ -27,7 +27,7 @@
 #include "common.h"
 #include "kipcm.h"
 
-struct efcp_conf_t {
+struct efcp_conf {
 
         /* Length of the address fields of the PCI */
         int address_length;
@@ -48,76 +48,29 @@ struct efcp_conf_t {
         int seq_number_length;
 };
 
-struct efcp_t {
-        /*
-         * FIXME: hash_table must be added
-         * HASH_TABLE(efcp_components_per_ipc_process, ipc_process_id_t,
-         * efcp_ipc_t *);
-         */
-
-};
-
-struct efcp_ipc_t {
-        /* EFCP component configuration */
-        struct efcp_conf_t *efcp_config;
-
-        /* FIXME: This hash holds the EFCP instances of a single IPC Process
-         * HASH_TABLE(efcp_instances, cep_id_t, efcp_instance_t *);
-         */
-};
-
-struct efcp_instance_t {
-        /* The connection endpoint id that identifies this instance */
-        cep_id_t                 id;
-
-        /* The Data transfer protocol state machine instance */
-        struct dtp_instance_t *  dtp_instance;
-
-        /* The Data transfer control protocol state machine instance */
-        struct dtcp_instance_t * dtcp_instance;
-
-        /* Pointer to the flow data structure of the K-IPC Manager */
-        struct flow_t *          flow;
-};
-
-struct dtp_instance_t {
-        port_id_t                    port_id;
-        struct dtcp_state_vector_t * dtcp_state_vector;
-};
-
-struct dtp_state_vector_t {
+struct dtp_state_vector {
         /* Configuration values */
-        struct connection *          connection;
-        uint_t                       max_flow_sdu;
-        uint_t                       max_flow_pdu_size;
-        uint_t                       initial_sequence_number;
-        uint_t                       seq_number_rollover_threshold;
-        struct dtcp_state_vector_t * dtcp_state_vector;
+        struct connection *        connection;
+        uint_t                     max_flow_sdu;
+        uint_t                     max_flow_pdu_size;
+        uint_t                     initial_sequence_number;
+        uint_t                     seq_number_rollover_threshold;
+        struct dtcp_state_vector * dtcp_state_vector;
 
         /* Variables: Inbound */
-        seq_num_t                    last_sequence_delivered;
+        seq_num_t                  last_sequence_delivered;
 
         /* Variables: Outbound */
-        seq_num_t                    next_sequence_to_send;
-        seq_num_t                    right_window_edge;
+        seq_num_t                  next_sequence_to_send;
+        seq_num_t                  right_window_edge;
 };
 
-struct dtcp_instance_t {
-        /*
-         * This instance of dtcp_state_vector should be the one
-         * contained into the dt_instance_vector of the
-         * associated dtp_instance_t
-         */
-        struct dtcp_state_vector_t *dtcp_state_vector;
-
-        /* FIXME: Queues must be added
-         * QUEUE(flow_control_queue, pdu);
-         * QUEUE(closed_window_queue, pdu);
-         * struct workqueue_struct * rx_control_queue;
-         */
+struct dtp_instance {
+        port_id_t                  id;
+        struct dtcp_state_vector * dtcp_state_vector;
 };
 
-struct dtcp_state_vector_t {
+struct dtcp_state_vector {
         /* Control state */
         uint_t max_pdu_size;
 
@@ -217,19 +170,50 @@ struct dtcp_state_vector_t {
         uint_t    pdus_rcvd_in_time_unit;
 };
 
-void *   efcp_init(struct kobject * parent);
-int      efcp_fini(void * opaque);
-int      efcp_write(void *             opaque,
-                    port_id_t          id,
-                    const struct sdu * sdu);
-int      efcp_receive_pdu(void *       opaque,
-                          struct pdu * pdu);
-cep_id_t efcp_create(void *                    opaque,
-                     const struct connection * connection);
-int      efcp_destroy(void *   opaque,
-                      cep_id_t id);
-int      efcp_update(void *   opaque,
-                     cep_id_t id_from,
-                     cep_id_t id_to);
+struct dtcp_instance {
+        /*
+         * This instance of dtcp_state_vector should be the one
+         * contained into the dt_instance_vector of the
+         * associated dtp_instance_t
+         */
+        struct dtcp_state_vector * dtcp_state_vector;
+
+        /* FIXME: Queues must be added
+         * QUEUE(flow_control_queue, pdu);
+         * QUEUE(closed_window_queue, pdu);
+         * struct workqueue_struct * rx_control_queue;
+         */
+};
+
+struct efcp {
+        /* The connection endpoint id that identifies this instance */
+        cep_id_t               id;
+
+        /* The Data transfer protocol state machine instance */
+        struct dtp_instance *  dtp_instance;
+
+        /* The Data transfer control protocol state machine instance */
+        struct dtcp_instance * dtcp_instance;
+
+        /* Pointer to the flow data structure of the K-IPC Manager */
+        struct flow *          flow;
+};
+
+struct efcp * efcp_init(struct kobject * parent);
+int           efcp_fini(struct efcp * opaque);
+
+cep_id_t      efcp_create(struct efcp *             instance,
+                          const struct connection * connection);
+int           efcp_destroy(struct efcp *   instance,
+                           cep_id_t id);
+int           efcp_update(struct efcp * instance,
+                          cep_id_t      from,
+                          cep_id_t      to);
+
+int           efcp_write(struct efcp *      instance,
+                         port_id_t          id,
+                         const struct sdu * sdu);
+int           efcp_receive_pdu(struct efcp * instance,
+                               struct pdu *  pdu);
 
 #endif

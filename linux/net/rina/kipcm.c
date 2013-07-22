@@ -112,7 +112,7 @@ static struct ipc_process_t * find_ipc_process_by_id(struct kipcm *   kipcm,
 }
 
 static struct id_to_ipcp * find_ipc_node_by_id(struct kipcm *   kipcm,
-                                                  ipc_process_id_t id)
+					       ipc_process_id_t id)
 {
         struct id_to_ipcp * cur;
 
@@ -211,11 +211,11 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
         struct kobject *       k;
         struct ipc_process_t * ipc_process;
 
-        LOG_DBG("KIPCM: %pK", kipcm);
-        LOG_DBG("IPC process name: %s", name->process_name);
-        LOG_DBG("IPC process id: %d", id);
-        LOG_DBG("IPC process type: %d", type);
         ASSERT(kipcm);
+        LOG_DBG("KIPCM: %pK", kipcm);
+	LOG_DBG("IPC process name: %s", name->process_name);
+	LOG_DBG("IPC process id: %d", id);
+	LOG_DBG("IPC process type: %d", type);
 
         if (!name) {
                 LOG_ERR("Name is missing, cannot create ipc");
@@ -245,7 +245,7 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
                         return -1;
 
                 ipc_process->type = type;
-		shim_instance = shim->ops->create(shim->data, id);
+                shim_instance = shim->ops->create(shim->data, id);
                 LOG_DBG("Shim instance created: %pK", shim_instance);
                 if (!shim_instance) {
                         rkfree(ipc_process);
@@ -272,7 +272,6 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
                 BUG();
         }
 
-        LOG_DBG("All was ok in the kipcm_ipc_created");
         return 0;
 }
 
@@ -327,7 +326,7 @@ int kipcm_ipc_destroy(struct kipcm *   kipcm,
 	list_del(&id_ipcp->list);
 	rkfree(ipc_process);
 	rkfree(id_ipcp);
-	
+
 	return 0;
 }
 
@@ -488,9 +487,9 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         return -1;
 }
 
-int kipcm_post_sdu(struct kipcm * kipcm,
+int kipcm_sdu_post(struct kipcm * kipcm,
                    port_id_t      id,
-                   struct sdu * sdu)
+                   struct sdu *   sdu)
 {
         /*
          * NOTE:
