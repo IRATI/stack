@@ -127,8 +127,27 @@ struct dtcp_state_vector {
         struct dtp_state_vector * dtp_state_vector;
 };
 
+struct dtcp_policies {
+        int (* flow_init)(struct dtcp * instance);
+        int (* sv_update)(struct dtcp * instance);
+        int (* lost_control_pdu)(struct dtcp * instance);
+        int (* rtt_estimator)(struct dtcp * instance);
+        int (* retransmission_timer_expiry)(struct dtcp * instance);
+        int (* received_retransmission_policy)(struct dtcp * instance);
+        int (* sending_ack_policy)(struct dtcp * instance);
+        int (* sending_ack_list_policy)(struct dtcp * instance);
+        int (* initial_creadit_policy)(struct dtcp * instance);
+        int (* initial_rate_policy)(struct dtcp * instance);
+        int (* receiving_flow_control)(struct dtcp * instance);
+        int (* update_credit)(struct dtcp * instance);
+        int (* flow_control_overrun)(struct dtcp * instance);
+        int (* reconcile_flow_conflict_policy)(struct dtcp * instance);
+};
+
 struct dtcp {
         struct dtcp_state_vector * state_vector;
+
+        struct dtcp_policies       policies;
 
         /* FIXME: Queues must be added
          * QUEUE(flow_control_queue, pdu);

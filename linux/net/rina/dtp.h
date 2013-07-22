@@ -43,11 +43,17 @@ struct dtp_state_vector {
         struct dtcp_state_vector * dtcp_state_vector;
 };
 
+struct dtp_policies {
+        int xxx_fixme_add_policies_here;
+};
+
 struct dtp {
         /* FIXME: Is port-id really needed here ??? */
         port_id_t                 id;
 
         struct dtp_state_vector * state_vector;
+
+        struct dtp_policies       policies;
 };
 
 struct dtp * dtp_create(port_id_t id);
