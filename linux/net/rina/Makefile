@@ -10,7 +10,7 @@ obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=		\
 
 rina_personality_default-y :=			\
 	dif.o shim.o ipc.o kipcm.o		\
-	dtcp.o dtp.o efcp.o rmt.o		\
+	du.o dtcp.o dtp.o efcp.o rmt.o		\
 	default.o shim-utils.o 
 
 obj-$(CONFIG_RINA_SHIM_EMPTY)    += shim-empty.o

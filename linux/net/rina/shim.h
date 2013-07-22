@@ -26,6 +26,7 @@
 #include <linux/kobject.h>
 
 #include "common.h"
+#include "du.h"
 
 /* FIXME: This configuration part has to be rearranged */
 

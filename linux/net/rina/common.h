@@ -23,7 +23,6 @@
 #ifndef RINA_COMMON_H
 #define RINA_COMMON_H
 
-
 #include <linux/types.h>
 
 typedef unsigned int	ipc_process_address_t;
@@ -126,31 +125,6 @@ struct flow_spec {
 	 * of the DIF where the flow will be created.
 	 */
 	uint_t              max_sdu_size;
-};
-
-/* This structure represents raw data */
-struct buffer {
-	char * data;
-	size_t size;
-};
-
-struct pci {
-	address_t  source;
-	address_t  destination;
-	pdu_type_t type;
-	cep_id_t   source_cep_id;
-	cep_id_t   dest_cep_id;
-	qos_id_t   qos_id;
-	seq_num_t  sequence_number;
-};
-
-struct pdu {
-	struct pci *    pci;
-	struct buffer * buffer;
-};
-
-struct sdu {
-        struct buffer * buffer;
 };
 
 /* This structure defines an EFCP connection */
