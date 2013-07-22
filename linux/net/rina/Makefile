@@ -9,8 +9,7 @@ obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=		\
 	utils-workarounds.o rina_personality_default.o
 
 rina_personality_default-y :=			\
-	dif.o shim.o ipc.o			\
-	kipcm.o					\
+	dif.o shim.o ipc.o kipcm.o		\
 	dtcp.o dtp.o efcp.o rmt.o		\
 	default.o shim-utils.o 
 

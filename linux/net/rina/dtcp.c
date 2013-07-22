@@ -43,6 +43,8 @@ struct dtcp * dtcp_create(void)
                 return NULL;
         }
 
+        LOG_DBG("DTCP instance created successfully");
+
         return tmp;
 }
 
@@ -57,6 +59,8 @@ int dtcp_destroy(struct dtcp * instance)
         if (instance->state_vector)
                 rkfree(instance->state_vector);
         rkfree(instance);
+
+        LOG_DBG("DTCP instance destroyed successfully");
 
         return 0;
 }

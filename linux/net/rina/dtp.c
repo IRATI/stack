@@ -44,6 +44,8 @@ struct dtp * dtp_create(port_id_t id)
                 return NULL;
         }
 
+        LOG_DBG("DTP instance created successfully");
+
         return tmp;
 }
 
@@ -58,6 +60,8 @@ int dtp_destroy(struct dtp * instance)
         if (instance->state_vector)
                 rkfree(instance->state_vector);
         rkfree(instance);
+
+        LOG_DBG("DTP instance destroyed successfully");
 
         return 0;
 }
