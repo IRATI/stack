@@ -26,6 +26,7 @@
 
 struct rmt_conf {
 	/* To do, only a placeholder right now */
+        int placeholder;
 };
 
 struct rmt {
