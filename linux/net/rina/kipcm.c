@@ -374,9 +374,9 @@ int kipcm_ipc_configure(struct kipcm *                  kipcm,
         return 0;
 }
 
-int kipcm_flow_add(struct kipcm *      kipcm,
-		   ipc_process_id_t    ipc_id,
-                   port_id_t           id)
+int kipcm_flow_add(struct kipcm *   kipcm,
+		   ipc_process_id_t ipc_id,
+                   port_id_t        id)
 {
 	struct port_id_to_flow * port_flow;
 	struct flow *            flow;

@@ -26,6 +26,7 @@
 
 struct rmt_conf {
 	/* To do, only a placeholder right now */
+        int placeholder;
 };
 
 struct rmt {
@@ -44,6 +45,6 @@ struct rmt {
 };
 
 struct rmt * rmt_init(struct kobject * parent);
-int    rmt_fini(struct rmt * instance);
+int          rmt_fini(struct rmt * instance);
 
 #endif
