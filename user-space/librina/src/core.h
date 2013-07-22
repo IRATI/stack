@@ -172,7 +172,7 @@ public:
 
 	BaseNetlinkMessage * sendRequestAndWaitForResponse(
 			BaseNetlinkMessage * request, const std::string& errorDescription)
-			throw(IPCException);
+			throw(NetlinkException);
 
 	/** Sends a request message and waits for the reply*/
 	BaseNetlinkMessage * sendRequestMessageAndWaitForResponse(

@@ -4,7 +4,6 @@ import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.DIFConfiguration;
 import eu.irati.librina.DIFType;
-import eu.irati.librina.FlowRequest;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.FlowSpecification;
 import eu.irati.librina.IPCException;

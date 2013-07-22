@@ -18,7 +18,8 @@ allsources =					\
 	librina-sdu-protection.cc		\
 	netlink-messages.cc			\
 	netlink-parsers.cc			\
-	netlink-manager.cc
+	netlink-manager.cc			\
+	rina-syscalls.cc
 
 EXTRA_DIST =					\
 	logs.h					\
@@ -26,7 +27,8 @@ EXTRA_DIST =					\
 	core.h					\
 	netlink-messages.h			\
 	netlink-manager.h			\
-	netlink-parsers.h
+	netlink-parsers.h		\
+	rina-syscalls.h
 
 librina_la_SOURCES  = $(allsources)
 librina_la_LDFLAGS  =
@@ -36,6 +38,7 @@ librina_la_LIBADD   =				\
 librina_la_CPPFLAGS =				\
 	-DSTUB_API=0				\
 	-I$(top_srcdir)/include			\
+	-I$(top_srcdir)/include-system			\
 	$(LIBNL3_CFLAGS)			\
 	$(LIBNLGENL3_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
@@ -48,6 +51,7 @@ librina_stubbed_la_LIBADD   =			\
 librina_stubbed_la_CPPFLAGS =			\
 	-DSTUB_API=1				\
 	-I$(top_srcdir)/include			\
+	-I$(top_srcdir)/include-system	\
 	$(LIBNL3_CFLAGS)			\
 	$(LIBNLGENL3_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)

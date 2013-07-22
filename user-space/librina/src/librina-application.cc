@@ -22,6 +22,7 @@
 #include "logs.h"
 #include "librina-application.h"
 #include "core.h"
+#include "rina-syscalls.h"
 
 namespace rina {
 
@@ -39,9 +40,6 @@ Flow::Flow(const ApplicationProcessNamingInformation& sourceApplicationName,
 	this->portId = portId;
 }
 
-const std::string Flow::flow_not_allocated_error =
-		"The flow is not in ALLOCATED state";
-
 const FlowState& Flow::getState() const {
 	return flowState;
 }
@@ -50,15 +48,18 @@ int Flow::getPortId() const {
 	return portId;
 }
 
-const ApplicationProcessNamingInformation& Flow::getDIFName() const {
+const ApplicationProcessNamingInformation&
+Flow::getDIFName() const {
 	return DIFName;
 }
 
-const ApplicationProcessNamingInformation& Flow::getSourceApplicationName() const {
+const ApplicationProcessNamingInformation&
+Flow::getSourceApplicationName() const {
 	return sourceApplicationName;
 }
 
-const ApplicationProcessNamingInformation& Flow::getDestinationApplcationName() const {
+const ApplicationProcessNamingInformation&
+Flow::getDestinationApplcationName() const {
 	return destinationApplicationName;
 }
 
@@ -66,11 +67,12 @@ const FlowSpecification Flow::getFlowSpecification() const {
 	return flowSpecification;
 }
 
-int Flow::readSDU(unsigned char * sdu) throw (IPCException) {
+int Flow::readSDU(void * sdu)
+		throw (FlowNotAllocatedException, ReadSDUException) {
 	LOG_DBG("Flow.readSDU called");
 
 	if (flowState != FLOW_ALLOCATED) {
-		throw IPCException(Flow::flow_not_allocated_error);
+		throw FlowNotAllocatedException();
 	}
 
 #if STUB_API
@@ -78,25 +80,30 @@ int Flow::readSDU(unsigned char * sdu) throw (IPCException) {
 	sdu = buffer;
 	return 7;
 #else
-	//TODO add real implementation here
-	return 0;
+	int result = syscallReadSDU(portId, sdu);
+	if (result < 0){
+		throw ReadSDUException();
+	}
+
+	return result;
 #endif
 }
 
-void Flow::writeSDU(unsigned char * sdu, int size) throw (IPCException) {
+void Flow::writeSDU(void * sdu, int size)
+		throw (FlowNotAllocatedException, WriteSDUException) {
 	LOG_DBG("Flow.writeSDU called");
 
 	if (flowState != FLOW_ALLOCATED) {
-		throw IPCException(Flow::flow_not_allocated_error);
+		throw FlowNotAllocatedException();
 	}
 
 #if STUB_API
-	int i;
-	for (i = 0; i < size; i++) {
-		LOG_DBG("SDU[%d] = %d", i, sdu[i]);
-	}
+	//Do nothing
 #else
-	//TODO add real implementation here
+	int result = syscallWriteSDU(portId, sdu, size);
+	if (result < 0){
+		throw WriteSDUException();
+	}
 #endif
 }
 
@@ -184,7 +191,7 @@ std::vector<DIFProperties> IPCManager::getDIFProperties(
 void IPCManager::registerApplication(
 		const ApplicationProcessNamingInformation& applicationName,
 		const ApplicationProcessNamingInformation& DIFName)
-throw (IPCException) {
+throw (ApplicationRegistrationException) {
 	LOG_DBG("IPCManager.registerApplication called");
 	ApplicationRegistration * applicationRegistration = 0;
 
@@ -199,7 +206,8 @@ throw (IPCException) {
 				iterator != applicationRegistration->getDIFNames().end();
 				++iterator) {
 			if (*iterator == DIFName) {
-				throw IPCException(IPCManager::application_registered_error);
+				throw ApplicationRegistrationException(
+						IPCManager::application_registered_error);
 			}
 		}
 	}
@@ -212,16 +220,21 @@ throw (IPCException) {
 	message.setDifName(DIFName);
 	message.setRequestMessage(true);
 
-	AppRegisterApplicationResponseMessage * registerResponseMessage =
-			dynamic_cast<AppRegisterApplicationResponseMessage *>(
-					rinaManager->sendRequestAndWaitForResponse(&message,
-							IPCManager::error_registering_application));
+	AppRegisterApplicationResponseMessage * registerResponseMessage;
+	try{
+		registerResponseMessage =
+				dynamic_cast<AppRegisterApplicationResponseMessage *>(
+						rinaManager->sendRequestAndWaitForResponse(&message,
+								IPCManager::error_registering_application));
+	}catch(NetlinkException &e){
+		throw ApplicationRegistrationException(e.what());
+	}
 
 	if (registerResponseMessage->getResult() < 0){
 		std::string reason = IPCManager::error_registering_application +
 				registerResponseMessage->getErrorDescription();
 		delete registerResponseMessage;
-		throw IPCException(reason);
+		throw ApplicationRegistrationException(reason);
 	}
 
 	LOG_DBG("Application %s registered successfully to DIF %s",
@@ -240,7 +253,8 @@ throw (IPCException) {
 
 void IPCManager::unregisterApplication(
 		ApplicationProcessNamingInformation applicationName,
-		ApplicationProcessNamingInformation DIFName) throw (IPCException) {
+		ApplicationProcessNamingInformation DIFName)
+		throw (ApplicationUnregistrationException) {
 	LOG_DBG("IPCManager.unregisterApplication called");
 
 #if STUB_API
@@ -252,16 +266,21 @@ void IPCManager::unregisterApplication(
 	message->setDifName(DIFName);
 	message->setRequestMessage(true);
 
-	AppUnregisterApplicationResponseMessage * unregisterResponseMessage =
-			dynamic_cast<AppUnregisterApplicationResponseMessage *>(
-					rinaManager->sendRequestAndWaitForResponse(message,
-							IPCManager::error_unregistering_application));
+	AppUnregisterApplicationResponseMessage * unregisterResponseMessage;
+	try{
+		unregisterResponseMessage =
+				dynamic_cast<AppUnregisterApplicationResponseMessage *>(
+						rinaManager->sendRequestAndWaitForResponse(message,
+								IPCManager::error_unregistering_application));
+	}catch(NetlinkException &e){
+		throw ApplicationUnregistrationException(e.what());
+	}
 
 	if (unregisterResponseMessage->getResult() < 0){
 		std::string reason = IPCManager::error_unregistering_application +
 				unregisterResponseMessage->getErrorDescription();
 		delete unregisterResponseMessage;
-		throw IPCException(reason);
+		throw ApplicationUnregistrationException(reason);
 	}
 
 	LOG_DBG("Application %s unregistered successfully to DIF %s",
@@ -277,7 +296,8 @@ void IPCManager::unregisterApplication(
 			applicationRegistrations.find(applicationName);
 
 	if (it == applicationRegistrations.end()){
-		throw IPCException(IPCManager::application_not_registered_error);
+		throw ApplicationUnregistrationException(
+				IPCManager::application_not_registered_error);
 	}else{
 		applicationRegistration = it->second;
 	}
@@ -296,7 +316,8 @@ void IPCManager::unregisterApplication(
 		}
 	}
 
-	throw IPCException(IPCManager::application_not_registered_error);
+	throw ApplicationUnregistrationException(
+			IPCManager::application_not_registered_error);
 }
 
 int getFakePortId(std::map<int, Flow*> allocatedFlows){
@@ -311,7 +332,7 @@ int getFakePortId(std::map<int, Flow*> allocatedFlows){
 Flow * IPCManager::allocateFlowRequest(
 		const ApplicationProcessNamingInformation& sourceAppName,
 		const ApplicationProcessNamingInformation& destAppName,
-		const FlowSpecification& flowSpec) throw (IPCException) {
+		const FlowSpecification& flowSpec) throw (FlowAllocationException) {
 	LOG_DBG("IPCManager.allocateFlowRequest called");
 
 	int portId = 0;
@@ -330,16 +351,21 @@ Flow * IPCManager::allocateFlowRequest(
 	message.setFlowSpecification(flowSpec);
 	message.setRequestMessage(true);
 
-	AppAllocateFlowRequestResultMessage * flowRequestResponse =
-			dynamic_cast<AppAllocateFlowRequestResultMessage *>(
-					rinaManager->sendRequestAndWaitForResponse(&message,
-							IPCManager::error_requesting_flow_allocation));
+	AppAllocateFlowRequestResultMessage * flowRequestResponse;
+	try{
+		flowRequestResponse =
+				dynamic_cast<AppAllocateFlowRequestResultMessage *>(
+						rinaManager->sendRequestAndWaitForResponse(&message,
+								IPCManager::error_requesting_flow_allocation));
+	}catch(NetlinkException &e){
+		throw FlowAllocationException(e.what());
+	}
 
 	if (flowRequestResponse->getPortId() < 0){
 		std::string reason = IPCManager::error_requesting_flow_allocation +
 				flowRequestResponse->getErrorDescription();
 		delete flowRequestResponse;
-		throw IPCException(reason);
+		throw FlowAllocationException(reason);
 	}
 
 	LOG_DBG("Flow from %s to %s allocated successfully! Port-id: %d",
@@ -358,7 +384,7 @@ Flow * IPCManager::allocateFlowRequest(
 
 Flow * IPCManager::allocateFlowResponse(
 		const FlowRequestEvent& flowRequestEvent, bool accept,
-		const std::string& reason) throw (IPCException) {
+		const std::string& reason) throw (FlowAllocationException) {
 	LOG_DBG("IPCManager.allocateFlowResponse called");
 
 	if (!accept) {
@@ -386,14 +412,14 @@ Flow * IPCManager::allocateFlowResponse(
 
 void IPCManager::deallocateFlow(
 		int portId, const ApplicationProcessNamingInformation& applicationName)
-throw (IPCException) {
+throw (FlowDeallocationException) {
 	LOG_DBG("IPCManager.deallocateFlow called");
 
 	Flow * flow = 0;
 	std::map<int, Flow*>::iterator iterator;
 	iterator = allocatedFlows.find(portId);
 	if (iterator == allocatedFlows.end()) {
-		throw IPCException(IPCManager::unknown_flow_error);
+		throw FlowDeallocationException(IPCManager::unknown_flow_error);
 	}
 	flow = iterator->second;
 
@@ -406,16 +432,21 @@ throw (IPCException) {
 	message.setDifName(flow->getDIFName());
 	message.setRequestMessage(true);
 
-	AppDeallocateFlowResponseMessage * deallocateResponse =
-			dynamic_cast<AppDeallocateFlowResponseMessage *>(
-					rinaManager->sendRequestAndWaitForResponse(&message,
+	AppDeallocateFlowResponseMessage * deallocateResponse;
+	try{
+		deallocateResponse =
+				dynamic_cast<AppDeallocateFlowResponseMessage *>(
+						rinaManager->sendRequestAndWaitForResponse(&message,
 							IPCManager::error_requesting_flow_deallocation));
+	}catch(NetlinkException &e){
+		throw FlowDeallocationException(e.what());
+	}
 
 	if (deallocateResponse->getResult() < 0){
 		std::string reason = IPCManager::error_requesting_flow_deallocation +
 				deallocateResponse->getErrorDescription();
 		delete deallocateResponse;
-		throw IPCException(reason);
+		throw FlowDeallocationException(reason);
 	}
 
 	LOG_DBG("Flow deallocated successfully! Port-id: %d", portId);

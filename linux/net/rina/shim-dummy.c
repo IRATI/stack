@@ -99,7 +99,6 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
         ASSERT(data);
         ASSERT(source);
         ASSERT(dest);
-	ASSERT(fspec);
 
         if (find_flow(data, id)) {
         	LOG_ERR("Flow already exists");
@@ -302,14 +301,17 @@ static struct shim_instance * dummy_create(struct shim_data * data,
         } 
 
         /* Create an instance */
+	LOG_DBG("Create an instance");
         inst = rkzalloc(sizeof(*inst), GFP_KERNEL);
         if (!inst)
                 return NULL;
 
         /* fill it properly */
+	LOG_DBG("Fill it properly");
         inst->ops  = &dummy_instance_ops;
         inst->data = rkzalloc(sizeof(struct shim_instance_data), GFP_KERNEL);
         if (!inst->data) {
+		LOG_DBG("Fill it properly failed");
                 rkfree(inst);
                 return NULL;
         }
@@ -318,6 +320,7 @@ static struct shim_instance * dummy_create(struct shim_data * data,
         INIT_LIST_HEAD(&inst->data->flows);
 	inst->data->info = rkzalloc(sizeof(*inst->data->info), GFP_KERNEL);
 	if (!inst->data->info) {
+		LOG_DBG("Failed creation of inst->data->info");
 		rkfree(inst->data);
 		rkfree(inst);
 		return NULL;
@@ -325,6 +328,7 @@ static struct shim_instance * dummy_create(struct shim_data * data,
 
         inst->data->info->dif_name = name_create();
 	if (!inst->data->info->dif_name) {
+		LOG_DBG("Failed creation of dif_name");
 		rkfree(inst->data->info);
 		rkfree(inst->data);
 		rkfree(inst);
@@ -333,6 +337,7 @@ static struct shim_instance * dummy_create(struct shim_data * data,
 
 	inst->data->info->name = name_create();
 	if (!inst->data->info->name) {
+		LOG_DBG("Failed creation of ipc name");
 		name_destroy(inst->data->info->dif_name);
 		rkfree(inst->data->info);
 		rkfree(inst->data);
@@ -345,8 +350,13 @@ static struct shim_instance * dummy_create(struct shim_data * data,
          * Bind the shim-instance to the shims set, to keep all our data
          * structures linked (somewhat) together
          */
+	
+	LOG_DBG("Adding dummy instance to the list of shim dummy instances");
+
 	INIT_LIST_HEAD(&(inst->data->list));
+	LOG_DBG("Initialization of instance list: %pK", &inst->data->list);
         list_add(&(inst->data->list), &(data->instances));
+	LOG_DBG("Inst %pK added to the dummy instances", inst);
 
         return inst;
 }
