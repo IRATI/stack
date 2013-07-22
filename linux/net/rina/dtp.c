@@ -49,6 +49,44 @@ struct dtp * dtp_create(port_id_t id)
         return tmp;
 }
 
+int dtp_state_vector_bind(struct dtp *               instance,
+                          struct dtcp_state_vector * state_vector)
+{
+        ASSERT(instance);
+        ASSERT(state_vector);
+
+        if (!instance->state_vector) {
+                LOG_ERR("DTP instance has no state vector, "
+                        "cannot bind DTCP state vector");
+                return -1;
+        }
+
+        if (instance->state_vector->dtcp_state_vector) {
+                if (instance->state_vector->dtcp_state_vector != state_vector) {
+                        LOG_ERR("DTP instance already bound to a different "
+                                "DTCP state-vector, unbind it first");
+                        return -1;
+                }
+
+                return 0;
+        }
+
+        instance->state_vector->dtcp_state_vector = state_vector;
+
+        return 0;
+}
+
+int dtp_state_vector_unbind(struct dtp * instance)
+{
+        ASSERT(instance);
+
+        if (instance->state_vector)
+                instance->state_vector->dtcp_state_vector = NULL;
+
+        return 0;
+
+}
+
 int dtp_destroy(struct dtp * instance)
 {
         ASSERT(instance);
@@ -66,8 +104,39 @@ int dtp_destroy(struct dtp * instance)
         return 0;
 }
 
-int dtp_delimit_sdu(struct dtp * dtp,
-                    struct sdu * sdu)
+int dtp_send(struct dtp *       dtp,
+             const struct sdu * sdu)
+{
+        ASSERT(dtp);
+        ASSERT(sdu);
+
+#if 0
+        if (dtp_sdu_delimit(instance->dtp, sdu))
+                return -1;
+
+        if (dtp_fragment_concatenate_sdu(instance->dtp, sdu))
+                return -1;
+
+        if (dtp_sequence_address_sdu(instance->dtp, sdu))
+                retun -1;
+
+        if (dtp_crc_sdu(instance->dtp, sdu))
+                return -1;
+
+        if (dtp_apply_policy_CsldWinQ(instance->dtp, sdu))
+                return -1;
+        
+        //return instance->dtcp->ops->write(sdu);
+#endif
+
+        LOG_MISSING;
+
+        return -1;
+}
+
+#if 0
+static int sdu_delimit(struct dtp * dtp,
+                       struct sdu * sdu)
 {
         ASSERT(dtp);
         ASSERT(sdu);
@@ -77,8 +146,8 @@ int dtp_delimit_sdu(struct dtp * dtp,
         return -1;
 }
 
-int dtp_fragment_concatenate_sdu(struct dtp * dtp,
-                                 struct sdu * sdu)
+static sdu_fragment_concatenate(struct dtp * dtp,
+                                struct sdu * sdu)
 {
         ASSERT(dtp);
         ASSERT(sdu);
@@ -88,8 +157,8 @@ int dtp_fragment_concatenate_sdu(struct dtp * dtp,
         return -1;
 }
 
-int dtp_sequence_address_sdu(struct dtp * dtp,
-                             struct sdu * sdu)
+static int sdu_sequence_address(struct dtp * dtp,
+                                struct sdu * sdu)
 {
         ASSERT(dtp);
         ASSERT(sdu);
@@ -99,8 +168,8 @@ int dtp_sequence_address_sdu(struct dtp * dtp,
         return -1;
 }
 
-int dtp_crc_sdu(struct dtp * dtp,
-                struct sdu * sdu)
+static int sdu_crc(struct dtp * dtp,
+                   struct sdu * sdu)
 {
         ASSERT(dtp);
         ASSERT(sdu);
@@ -110,7 +179,7 @@ int dtp_crc_sdu(struct dtp * dtp,
         return -1;
 }
 
-int dtp_apply_policy_CsldWinQ(struct dtp * dtp,
+int sdu_apply_policy_CsldWinQ(struct dtp * dtp,
                               struct sdu * sdu)
 {
         ASSERT(dtp);
@@ -120,3 +189,5 @@ int dtp_apply_policy_CsldWinQ(struct dtp * dtp,
 
         return -1;
 }
+
+#endif

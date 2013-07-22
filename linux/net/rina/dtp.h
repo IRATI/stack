@@ -30,7 +30,6 @@ struct dtp_state_vector {
         uint_t                     max_flow_pdu_size;
         uint_t                     initial_sequence_number;
         uint_t                     seq_number_rollover_threshold;
-        struct dtcp_state_vector * dtcp_state_vector;
 
         /* Variables: Inbound */
         seq_num_t                  last_sequence_delivered;
@@ -38,27 +37,42 @@ struct dtp_state_vector {
         /* Variables: Outbound */
         seq_num_t                  next_sequence_to_send;
         seq_num_t                  right_window_edge;
+
+        /* The companion DTCP state vector */
+        struct dtcp_state_vector * dtcp_state_vector;
 };
 
+#if 0
+struct dtp_policies {
+        int (* UnknownPortPolicy)(struct dtp * dtp);
+        int (* CsldWinQ)(struct dtp * dtp);
+};
+#endif
+
 struct dtp {
+        /* FIXME: Is port-id really needed here ??? */
         port_id_t                 id;
 
         struct dtp_state_vector * state_vector;
+#if 0
+        struct dtp_policies       policies;
+#endif
 };
 
 struct dtp * dtp_create(port_id_t id);
 int          dtp_destroy(struct dtp * instance);
 
-int          dtp_delimit_sdu(struct dtp * dtp,
-                             struct sdu * sdu);
-int          dtp_fragment_concatenate_sdu(struct dtp * dtp,
-                                          struct sdu * sdu);
-int          dtp_sequence_address_sdu(struct dtp * dtp,
-                                      struct sdu * sdu);
-int          dtp_crc_sdu(struct dtp * dtp,
-                         struct sdu * sdu);
-int          dtp_apply_policy_CsldWinQ(struct dtp * dtp,
-                                       struct sdu * sdu);
+int          dtp_state_vector_bind(struct dtp *               instance,
+                                   struct dtcp_state_vector * state_vector);
+int          dtp_state_vector_unbind(struct dtp * instance);
+
+/* Used by the higher level component to send PDUs to RMT */
+int          dtp_send(struct dtp *       dtp,
+                      const struct sdu * sdu);
+
+/* Used by the RMT to let DTP receive PDUs */
+int          dtp_receive(struct dtp * dtp,
+                         struct pdu * pdu);
 
 #endif
 
