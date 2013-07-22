@@ -134,20 +134,20 @@ int            kipcm_ipc_configure(struct kipcm *                  kipcm,
 int            kipcm_ipc_destroy(struct kipcm *   kipcm,
                                  ipc_process_id_t id);
 
-int            kipcm_flow_add(struct kipcm *      kipcm,
-			      ipc_process_id_t    ipc_id,
-                              port_id_t           id);
+int            kipcm_flow_add(struct kipcm *   kipcm,
+			      ipc_process_id_t ipc_id,
+                              port_id_t        id);
 int            kipcm_flow_remove(struct kipcm * kipcm,
                                  port_id_t      id);
 
-int            kipcm_sdu_write(struct kipcm *       kipcm,
-                               port_id_t            id,
+int            kipcm_sdu_write(struct kipcm *     kipcm,
+                               port_id_t          id,
                                const struct sdu * sdu);
 int            kipcm_sdu_read(struct kipcm * kipcm,
                               port_id_t      id,
                               struct sdu * sdu);
 int            kipcm_sdu_post(struct kipcm * kipcm,
                               port_id_t      id,
-                              struct sdu * sdu);
+                              struct sdu *   sdu);
 
 #endif
