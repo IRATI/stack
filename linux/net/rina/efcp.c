@@ -38,6 +38,7 @@ struct efcp {
         struct dtcp * dtcp;
 
         /* Pointer to the flow data structure of the K-IPC Manager */
+        /* FIXME: Do we really need this pointer ? */
         struct flow * flow;
 };
 
@@ -69,25 +70,7 @@ int efcp_write(struct efcp *      instance,
 {
         ASSERT(instance);
 
-#if 0
-        if (dtp_sdu_delimit(instance->dtp, sdu))
-                return -1;
-
-        if (dtp_fragment_concatenate_sdu(instance->dtp, sdu))
-                return -1;
-
-        if (dtp_sequence_address_sdu(instance->dtp, sdu))
-                retun -1;
-
-        if (dtp_crc_sdu(instance->dtp, sdu))
-                return -1;
-
-        if (dtp_apply_policy_CsldWinQ(instance->dtp, sdu))
-                return -1;
-        
-        //return instance->dtcp->ops->write(sdu);
-#endif
-        return 0;
+        return dtp_send(instance->dtp, sdu);
 }
 
 int efcp_receive_pdu(struct efcp * instance,
@@ -121,6 +104,10 @@ int efcp_create(struct efcp *             instance,
                 return -1;
         }
 
+        /* No needs to check here, bindings are straightforward */
+        dtp_state_vector_bind(instance->dtp,   instance->dtcp->state_vector);
+        dtcp_state_vector_bind(instance->dtcp, instance->dtp->state_vector);
+
         /* FIXME: We need to assign the id */
         LOG_MISSING;
 
@@ -133,6 +120,9 @@ int efcp_destroy(struct efcp * instance,
                  cep_id_t      id)
 {
         ASSERT(instance);
+
+        dtp_state_vector_unbind(instance->dtp);
+        dtcp_state_vector_unbind(instance->dtcp);
 
         if (dtp_destroy(instance->dtp))
                 return -1;
