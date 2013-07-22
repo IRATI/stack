@@ -100,8 +100,12 @@ int efcp_create(struct efcp *             instance,
                 return -1;
 
         instance->dtcp = dtcp_create();
-        if (!instance->dtcp)
+        if (!instance->dtcp) {
+                if (dtp_destroy(instance->dtp))
+                        return -1;
+                instance->dtp = 0;
                 return -1;
+        }
 
         /* FIXME: We need to assign the id */
         LOG_MISSING;
