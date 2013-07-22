@@ -71,6 +71,7 @@ int dtcp_state_vector_bind(struct dtcp *             instance,
         ASSERT(instance);
         ASSERT(state_vector);
 
+        /* FIXME: Should we create the missing DTCP state-vector instance ? */
         if (!instance->state_vector) {
                 LOG_ERR("DTCP instance has no state vector, "
                         "cannot bind DTP state vector");

@@ -42,21 +42,11 @@ struct dtp_state_vector {
         struct dtcp_state_vector * dtcp_state_vector;
 };
 
-#if 0
-struct dtp_policies {
-        int (* UnknownPortPolicy)(struct dtp * dtp);
-        int (* CsldWinQ)(struct dtp * dtp);
-};
-#endif
-
 struct dtp {
         /* FIXME: Is port-id really needed here ??? */
         port_id_t                 id;
 
         struct dtp_state_vector * state_vector;
-#if 0
-        struct dtp_policies       policies;
-#endif
 };
 
 struct dtp * dtp_create(port_id_t id);

@@ -55,6 +55,7 @@ int dtp_state_vector_bind(struct dtp *               instance,
         ASSERT(instance);
         ASSERT(state_vector);
 
+        /* FIXME: Should we create the missing DTP state-vector instance ? */
         if (!instance->state_vector) {
                 LOG_ERR("DTP instance has no state vector, "
                         "cannot bind DTCP state vector");
@@ -104,37 +105,6 @@ int dtp_destroy(struct dtp * instance)
         return 0;
 }
 
-int dtp_send(struct dtp *       dtp,
-             const struct sdu * sdu)
-{
-        ASSERT(dtp);
-        ASSERT(sdu);
-
-#if 0
-        if (dtp_sdu_delimit(instance->dtp, sdu))
-                return -1;
-
-        if (dtp_fragment_concatenate_sdu(instance->dtp, sdu))
-                return -1;
-
-        if (dtp_sequence_address_sdu(instance->dtp, sdu))
-                retun -1;
-
-        if (dtp_crc_sdu(instance->dtp, sdu))
-                return -1;
-
-        if (dtp_apply_policy_CsldWinQ(instance->dtp, sdu))
-                return -1;
-        
-        //return instance->dtcp->ops->write(sdu);
-#endif
-
-        LOG_MISSING;
-
-        return -1;
-}
-
-#if 0
 static int sdu_delimit(struct dtp * dtp,
                        struct sdu * sdu)
 {
@@ -190,4 +160,32 @@ int sdu_apply_policy_CsldWinQ(struct dtp * dtp,
         return -1;
 }
 
+int dtp_send(struct dtp *       dtp,
+             const struct sdu * sdu)
+{
+        ASSERT(dtp);
+        ASSERT(sdu);
+
+#if 0
+        if (sdu_delimit(dtp, sdu))
+                return -1;
+
+        if (sdu_fragment_concatenate(dtp, sdu))
+                return -1;
+
+        if (sdu_sequence_address(dtp, sdu))
+                return -1;
+
+        if (sdu_crc(dtp, sdu))
+                return -1;
+
+        if (sdu_apply_policy_CsldWinQ(dtp, sdu))
+                return -1;
+        
+        //return instance->dtcp->ops->write(sdu);
 #endif
+
+        LOG_MISSING;
+
+        return -1;
+}
