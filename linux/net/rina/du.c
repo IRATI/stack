@@ -25,3 +25,31 @@
 #include "utils.h"
 #include "debug.h"
 #include "du.h"
+
+struct pdu * pdu_create(void)
+{
+        struct pdu * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->pci    = NULL;
+        tmp->buffer = NULL;
+
+        return tmp;
+}
+
+int pdu_destroy(struct pdu * p)
+{
+        ASSERT(p);
+
+        if (p->pci)
+                rkfree(p->pci);
+        if (p->buffer)
+                rkfree(p->buffer);
+        rkfree(p);
+
+        return 0;
+}
+

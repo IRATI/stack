@@ -32,9 +32,14 @@ struct buffer {
 struct pci {
 	address_t  source;
 	address_t  destination;
+
 	pdu_type_t type;
-	cep_id_t   source_cep_id;
-	cep_id_t   dest_cep_id;
+
+        struct {
+                cep_id_t source_id;
+                cep_id_t dest_id;
+        } ceps;
+
 	qos_id_t   qos_id;
 	seq_num_t  sequence_number;
 };
@@ -47,5 +52,8 @@ struct pdu {
 struct sdu {
         struct buffer * buffer;
 };
+
+struct pdu * pdu_create(void);
+int          pdu_destroy(struct pdu * p);
 
 #endif
