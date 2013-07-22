@@ -111,7 +111,7 @@ static struct ipc_process_t * find_ipc_process_by_id(struct kipcm *   kipcm,
         return NULL;
 }
 
-static struct ipc_process_t * find_ipc_node_by_id(struct kipcm *   kipcm,
+static struct id_to_ipcp * find_ipc_node_by_id(struct kipcm *   kipcm,
                                                   ipc_process_id_t id)
 {
         struct id_to_ipcp * cur;
@@ -244,7 +244,8 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
                 if (!ipc_process)
                         return -1;
 
-                shim_instance = shim->ops->create(shim->data, id);
+                ipc_process->type = type;
+		shim_instance = shim->ops->create(shim->data, id);
                 LOG_DBG("Shim instance created: %pK", shim_instance);
                 if (!shim_instance) {
                         rkfree(ipc_process);
