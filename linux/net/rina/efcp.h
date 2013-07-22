@@ -50,19 +50,7 @@ struct efcp_conf {
         int seq_number_length;
 };
 
-struct efcp {
-        /* The connection endpoint id that identifies this instance */
-        cep_id_t      id;
-
-        /* The Data transfer protocol state machine instance */
-        struct dtp *  dtp;
-
-        /* The Data transfer control protocol state machine instance */
-        struct dtcp * dtcp;
-
-        /* Pointer to the flow data structure of the K-IPC Manager */
-        struct flow * flow;
-};
+struct efcp;
 
 struct efcp * efcp_init(struct kobject * parent);
 int           efcp_fini(struct efcp * instance);

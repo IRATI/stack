@@ -27,6 +27,20 @@
 #include "efcp.h"
 #include "debug.h"
 
+struct efcp {
+        /* The connection endpoint id that identifies this instance */
+        cep_id_t      id;
+
+        /* The Data transfer protocol state machine instance */
+        struct dtp *  dtp;
+
+        /* The Data transfer control protocol state machine instance */
+        struct dtcp * dtcp;
+
+        /* Pointer to the flow data structure of the K-IPC Manager */
+        struct flow * flow;
+};
+
 struct efcp * efcp_init(struct kobject * parent)
 {
         struct efcp * e = NULL;
@@ -139,9 +153,7 @@ int efcp_update(struct efcp * instance,
 {
         ASSERT(instance);
 
-        LOG_MISSING;
+        LOG_UNSUPPORTED;
 
-        LOG_DBG("EFCP instance updated");
-
-        return 0;
+        return -1;
 }
