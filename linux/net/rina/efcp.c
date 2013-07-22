@@ -55,10 +55,24 @@ int efcp_write(struct efcp *      instance,
 {
         ASSERT(instance);
 
-        LOG_MISSING;
+#if 0
+        if (dtp_sdu_delimit(instance->dtp, sdu))
+                return -1;
 
-        LOG_DBG("Written SDU");
+        if (dtp_fragment_concatenate_sdu(instance->dtp, sdu))
+                return -1;
 
+        if (dtp_sequence_address_sdu(instance->dtp, sdu))
+                retun -1;
+
+        if (dtp_crc_sdu(instance->dtp, sdu))
+                return -1;
+
+        if (dtp_apply_policy_CsldWinQ(instance->dtp, sdu))
+                return -1;
+        
+        //return instance->dtcp->ops->write(sdu);
+#endif
         return 0;
 }
 
@@ -78,8 +92,16 @@ cep_id_t efcp_create(struct efcp *             instance,
                      const struct connection * connection)
 {
         ASSERT(instance);
+        ASSERT(connection);
 
-        LOG_MISSING;
+        instance->dtp  = dtp_create(connection->port_id);
+        /* XXX FIXME: This is wrong */
+        if (!instance->dtp)
+                return -1;
+        instance->dtcp = dtcp_create();
+        /* XXX FIXME: This is wrong */
+        if (!instance->dtcp)
+                return -1;
 
         LOG_DBG("EFCP instance created");
 
@@ -91,7 +113,13 @@ int efcp_destroy(struct efcp * instance,
 {
         ASSERT(instance);
 
-        LOG_MISSING;
+        if (dtp_destroy(instance->dtp))
+                return -1;
+        instance->dtp = 0;
+
+        if (dtcp_destroy(instance->dtcp))
+                return -1;
+        instance->dtcp = 0;
 
         LOG_DBG("EFCP instance destroyed");
 
