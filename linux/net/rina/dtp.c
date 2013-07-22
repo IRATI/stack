@@ -105,6 +105,7 @@ int dtp_destroy(struct dtp * instance)
         return 0;
 }
 
+#if 0
 static int sdu_delimit(struct dtp * dtp,
                        struct sdu * sdu)
 {
@@ -116,8 +117,8 @@ static int sdu_delimit(struct dtp * dtp,
         return -1;
 }
 
-static sdu_fragment_concatenate(struct dtp * dtp,
-                                struct sdu * sdu)
+static int sdu_fragment_concatenate(struct dtp * dtp,
+                                    struct sdu * sdu)
 {
         ASSERT(dtp);
         ASSERT(sdu);
@@ -159,6 +160,7 @@ int sdu_apply_policy_CsldWinQ(struct dtp * dtp,
 
         return -1;
 }
+#endif
 
 int dtp_send(struct dtp *       dtp,
              const struct sdu * sdu)

@@ -127,6 +127,8 @@ struct dtcp_state_vector {
         struct dtp_state_vector * dtp_state_vector;
 };
 
+struct dtcp;
+
 struct dtcp_policies {
         int (* flow_init)(struct dtcp * instance);
         int (* sv_update)(struct dtcp * instance);

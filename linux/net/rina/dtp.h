@@ -43,8 +43,10 @@ struct dtp_state_vector {
         struct dtcp_state_vector * dtcp_state_vector;
 };
 
+struct dtp;
+
 struct dtp_policies {
-        int xxx_fixme_add_policies_here;
+        int (* xxx_fixme_add_policies_here)(struct dtp * instance);
 };
 
 struct dtp {

@@ -21,6 +21,8 @@
 #ifndef RINA_DU_H
 #define RINA_DU_H
 
+#include <linux/types.h>
+
 #include "common.h"
 
 /* This structure represents raw data */
@@ -36,6 +38,8 @@ struct buffer {
 #define PDU_FLAGS_CARRY_MULTIPLE_SDUS 0x07
 #define PDU_FLAGS_DATA_RUN            0x80
 
+typedef uint8_t pdu_flags_t;
+
 #define PDU_TYPE_EFCP       0x8000 /* EFCP PDUs */
 #define PDU_TYPE_DT         0x8001 /* Data Transfer PDU */
 #define PDU_TYPE_CC         0x8002 /* Common Control PDU */
@@ -45,6 +49,8 @@ struct buffer {
 #define PDU_TYPE_ACK        0x800C /* ACK only */
 #define PDU_TYPE_ACK_AND_FC 0x800D /* ACK and Flow Control */
 #define PDU_TYPE_MGMT       0xC000 /* Management */
+
+typedef uint16_t pdu_type_t;
 
 #define is_pdu_type_ok(X)                       \
 	((X && PDU_TYPE_EFCP)       ? 1 :       \
