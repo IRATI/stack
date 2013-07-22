@@ -51,17 +51,6 @@ typedef uint            timeout_t;
  */
 typedef int bool_t;
 
-/* This structure represents raw data */
-struct buffer_t {
-	char * data;
-	size_t size;
-};
-
-/* This structure represents a SDU is */
-struct sdu {
-        struct buffer_t * buffer;
-};
-
 struct uint_range {
 	uint_t min;
 	uint_t max;
@@ -139,6 +128,12 @@ struct flow_spec {
 	uint_t              max_sdu_size;
 };
 
+/* This structure represents raw data */
+struct buffer {
+	char * data;
+	size_t size;
+};
+
 struct pci {
 	address_t  source;
 	address_t  destination;
@@ -150,8 +145,12 @@ struct pci {
 };
 
 struct pdu {
-	struct pci *      pci;
-	struct buffer_t * buffer;
+	struct pci *    pci;
+	struct buffer * buffer;
+};
+
+struct sdu {
+        struct buffer * buffer;
 };
 
 /* This structure defines an EFCP connection */
