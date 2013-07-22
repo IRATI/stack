@@ -22,6 +22,7 @@
 #define RINA_DTP_H
 
 #include "common.h"
+#include "du.h"
 
 struct dtp_state_vector {
         /* Configuration values */

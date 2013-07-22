@@ -22,6 +22,7 @@
 #define RINA_DTCP_H
 
 #include "common.h"
+#include "du.h"
 
 struct dtcp_state_vector {
         /* Control state */
