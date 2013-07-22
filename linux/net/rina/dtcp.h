@@ -134,6 +134,6 @@ struct dtcp {
 };
 
 struct dtcp * dtcp_create(void);
-int           dtcp_destroy(struct dtp * instance);
+int           dtcp_destroy(struct dtcp * instance);
 
 #endif

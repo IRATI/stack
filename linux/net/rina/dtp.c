@@ -23,6 +23,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
+#include "dtp.h"
 
 struct dtp * dtp_create(port_id_t id)
 {

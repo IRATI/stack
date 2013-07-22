@@ -23,6 +23,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
+#include "dtcp.h"
 
 struct dtcp * dtcp_create(void)
 {
@@ -45,7 +46,7 @@ struct dtcp * dtcp_create(void)
         return tmp;
 }
 
-int dtcp_destroy(struct dtp * instance)
+int dtcp_destroy(struct dtcp * instance)
 {
         ASSERT(instance);
 
