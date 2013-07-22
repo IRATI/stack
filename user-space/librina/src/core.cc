@@ -525,14 +525,10 @@ NetlinkSession* RINAManager::getNetlinkSession(unsigned int sessionId){
 
 BaseNetlinkMessage * RINAManager::sendRequestAndWaitForResponse(
 		BaseNetlinkMessage * request, const std::string& errorDescription)
-throw(IPCException){
+throw(NetlinkException){
 	BaseNetlinkMessage* response = 0;
-	try{
-		response = sendRequestMessageAndWaitForResponse(request);
-		return response;
-	}catch(NetlinkException &e){
-		throw IPCException(errorDescription + e.what());
-	}
+	response = sendRequestMessageAndWaitForResponse(request);
+	return response;
 }
 
 BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForResponse(

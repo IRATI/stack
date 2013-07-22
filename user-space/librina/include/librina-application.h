@@ -55,6 +55,98 @@ enum FlowState {
 };
 
 /**
+ * Thrown when some operation is invoked in a flow that is not allocated
+ */
+class FlowNotAllocatedException: public IPCException {
+public:
+	FlowNotAllocatedException():
+		IPCException(
+				"Invalid operation invoked when the flow is not allocated "){
+	}
+	FlowNotAllocatedException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems reading SDUs
+ */
+class ReadSDUException: public IPCException {
+public:
+	ReadSDUException():
+		IPCException("Problems reading SDU from flow"){
+	}
+	ReadSDUException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems writing SDUs
+ */
+class WriteSDUException: public IPCException {
+public:
+	WriteSDUException():
+		IPCException("Problems writing SDU to flow"){
+	}
+	WriteSDUException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems registering an application to a DIF
+ */
+class ApplicationRegistrationException: public IPCException {
+public:
+	ApplicationRegistrationException():
+		IPCException("Problems registering application to DIF"){
+	}
+	ApplicationRegistrationException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems unregistering an application from a DIF
+ */
+class ApplicationUnregistrationException: public IPCException {
+public:
+	ApplicationUnregistrationException():
+		IPCException("Problems unregistering application from DIF"){
+	}
+	ApplicationUnregistrationException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems allocating a flow
+ */
+class FlowAllocationException: public IPCException {
+public:
+	FlowAllocationException():
+		IPCException("Problems allocating flow"){
+	}
+	FlowAllocationException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems deallocating a flow
+ */
+class FlowDeallocationException: public IPCException {
+public:
+	FlowDeallocationException():
+		IPCException("Problems deallocating flow"){
+	}
+	FlowDeallocationException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
  * Represents a flow between two application processes, and encapsulates
  * the services that the flow provides.
  */
@@ -83,8 +175,6 @@ class Flow {
 			const ApplicationProcessNamingInformation& DIFName, int portId);
 public:
 	Flow();
-	static const std::string flow_not_allocated_error;
-	static const std::string flow_write_error;
 	const FlowState& getState() const;
 	int getPortId() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
@@ -100,7 +190,8 @@ public:
 	 * @return int The number of bytes read
 	 * @throws IPCException if the flow is not in the ALLOCATED state
 	 */
-	int readSDU(void * sdu) throw (IPCException);
+	int readSDU(void * sdu)
+			throw (FlowNotAllocatedException, ReadSDUException);
 
 	/**
 	 * Writes an SDU to the flow
@@ -110,7 +201,8 @@ public:
 	 * @throws IPCException if the flow is not in the ALLOCATED state or
 	 * there are problems writing to the flow
 	 */
-	void writeSDU(void * sdu, int size) throw (IPCException);
+	void writeSDU(void * sdu, int size)
+			throw (FlowNotAllocatedException, WriteSDUException);
 
 	friend class IPCManager;
 };
@@ -180,7 +272,7 @@ public:
 	void registerApplication(
 			const ApplicationProcessNamingInformation& applicationName,
 			const ApplicationProcessNamingInformation& DIFName)
-	throw (IPCException);
+			throw (ApplicationRegistrationException);
 
 	/**
 	 * Unregisters an application from a DIF.
@@ -193,7 +285,8 @@ public:
 	 */
 	void unregisterApplication(
 			ApplicationProcessNamingInformation applicationName,
-			ApplicationProcessNamingInformation DIFName) throw (IPCException);
+			ApplicationProcessNamingInformation DIFName)
+			throw (ApplicationUnregistrationException);
 
 	/**
 	 * Requests the allocation of a Flow
@@ -209,7 +302,7 @@ public:
 	Flow * allocateFlowRequest(
 			const ApplicationProcessNamingInformation& sourceAppName,
 			const ApplicationProcessNamingInformation& destAppName,
-			const FlowSpecification& flow) throw (IPCException);
+			const FlowSpecification& flow) throw (FlowAllocationException);
 
 	/**
 	 * Confirms or denies the request for a flow to this application.
@@ -222,7 +315,8 @@ public:
 	 * @throws IPCException If there are problems confirming/denying the flow
 	 */
 	Flow * allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
-			bool accept, const std::string& reason) throw (IPCException);
+			bool accept, const std::string& reason)
+			throw (FlowAllocationException);
 
 	/**
 	 * Causes the flow to be deallocated, and the object deleted.
@@ -234,7 +328,7 @@ public:
 	 */
 	void deallocateFlow(int portId,
 			const ApplicationProcessNamingInformation& applicationName)
-	throw (IPCException);
+			throw (FlowDeallocationException);
 
 	/**
 	 * Returns the flows that are currently allocated

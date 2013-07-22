@@ -26,6 +26,196 @@
 namespace rina {
 
 /**
+ * Thrown when there are problems assigning an IPC Process to a DIF
+ */
+class AssignToDIFException: public IPCException {
+public:
+	AssignToDIFException():
+		IPCException("Problems assigning ICP Process to DIF"){
+	}
+	AssignToDIFException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems notifying an IPC Process that it has been
+ * registered to an N-1 DIF
+ */
+class NotifyRegistrationToDIFException: public IPCException {
+public:
+	NotifyRegistrationToDIFException():
+		IPCException("Problems notifying an IPC Process that it has been registered to an N-1 DIF"){
+	}
+	NotifyRegistrationToDIFException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems notifying an IPC Process that it has been
+ * unregistered from an N-1 DIF
+ */
+class NotifyUnregistrationFromDIFException: public IPCException {
+public:
+	NotifyUnregistrationFromDIFException():
+		IPCException("Problems notifying an IPC Process that it has been unregistered from an N-1 DIF"){
+	}
+	NotifyUnregistrationFromDIFException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems instructing an IPC Process to enroll to a DIF
+ */
+class EnrollException: public IPCException {
+public:
+	EnrollException():
+		IPCException("Problems causing an IPC Process to enroll to a DIF"){
+	}
+	EnrollException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems instructing an IPC Process to disconnect
+ * from a neighbour
+ */
+class DisconnectFromNeighborException: public IPCException {
+public:
+	DisconnectFromNeighborException():
+		IPCException("Problems causing an IPC Process to disconnect from a neighbour"){
+	}
+	DisconnectFromNeighborException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems instructing an IPC Process to register an
+ * application
+ */
+class IpcmRegisterApplicationException: public IPCException {
+public:
+	IpcmRegisterApplicationException():
+		IPCException("Problems while the IPC Process was trying to register an application"){
+	}
+	IpcmRegisterApplicationException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems instructing an IPC Process to unregister an
+ * application
+ */
+class IpcmUnregisterApplicationException: public IPCException {
+public:
+	IpcmUnregisterApplicationException():
+		IPCException("Problems while the IPC Process was trying to unregister an application"){
+	}
+	IpcmUnregisterApplicationException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems instructing an IPC Process to allocate a flow
+ */
+class AllocateFlowException: public IPCException {
+public:
+	AllocateFlowException():
+		IPCException("Problems while the IPC Process was trying to allocate a flow"){
+	}
+	AllocateFlowException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems while querying the RIB of an IPC Process
+ */
+class QueryRIBException: public IPCException {
+public:
+	QueryRIBException():
+		IPCException("Problems while querying the RIB of an IPC Process"){
+	}
+	QueryRIBException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems creating an IPC Process
+ */
+class CreateIPCProcessException: public IPCException {
+public:
+	CreateIPCProcessException():
+		IPCException("Problems while creating an IPC Process"){
+	}
+	CreateIPCProcessException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems destroying an IPC Process
+ */
+class DestroyIPCProcessException: public IPCException {
+public:
+	DestroyIPCProcessException():
+		IPCException("Problems while destroying an IPC Process"){
+	}
+	DestroyIPCProcessException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems notifying an application that it
+ * has been registered to a DIF
+ */
+class NotifyApplicationRegisteredException: public IPCException {
+public:
+	NotifyApplicationRegisteredException():
+		IPCException("Problems notifying an application about its registration to a DIF"){
+	}
+	NotifyApplicationRegisteredException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems notifying an application that it
+ * has been unregistered from a DIF
+ */
+class NotifyApplicationUnregisteredException: public IPCException {
+public:
+	NotifyApplicationUnregisteredException():
+		IPCException("Problems notifying an application about its unregistration from a DIF"){
+	}
+	NotifyApplicationUnregisteredException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems notifying an application that a flow
+ * has been allocated
+ */
+class NotifyFlowAllocatedException: public IPCException {
+public:
+	NotifyFlowAllocatedException():
+		IPCException("Problems notifying an application about the allocation of a flow"){
+	}
+	NotifyFlowAllocatedException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
  * Encapsulates the state and operations that can be performed over
  * a single IPC Process (besides creation/destruction)
  */
@@ -79,10 +269,10 @@ public:
 	 * assigned to the DIF or an error is returned.
 	 *
 	 * @param difConfiguration The configuration of the DIF
-	 * @throws IPCException if an error happens during the process
+	 * @throws AssignToDIFException if an error happens during the process
 	 */
 	void assignToDIF(
-			const DIFConfiguration& difConfiguration) throw (IPCException);
+			const DIFConfiguration& difConfiguration) throw (AssignToDIFException);
 
 	/**
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been
@@ -91,13 +281,13 @@ public:
 	 * @param ipcProcessName The name of the IPC Process being registered
 	 * @param difName The name of the N-1 DIF where the IPC Process has been
 	 * registered
-	 * @throws IPCException if the IPC Process was already registered to
+	 * @throws NotifyRegistrationToDIFException if the IPC Process was already registered to
 	 * that DIF
 	 */
 	void notifyRegistrationToSupportingDIF(
 			const ApplicationProcessNamingInformation& ipcProcessName,
 			const ApplicationProcessNamingInformation& difName)
-	throw (IPCException);
+	throw (NotifyRegistrationToDIFException);
 
 	/**
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been
@@ -106,12 +296,12 @@ public:
 	 * @param ipcProcessName The name of the IPC Process being unregistered
 	 * @param difName The name of the N-1 DIF where the IPC Process has been
 	 * unregistered
-	 * @throws IPCException if the IPC Process was not registered to the DIF
+	 * @throws NotifyUnregistrationFromDIFException if the IPC Process was not registered to the DIF
 	 */
 	void notifyUnregistrationFromSupportingDIF(
 			const ApplicationProcessNamingInformation& ipcProcessName,
 			const ApplicationProcessNamingInformation& difName)
-	throw (IPCException);
+	throw (NotifyUnregistrationFromDIFException);
 
 	/**
 	 * Invoked by the IPC Manager to trigger the enrollment of an IPC Process
@@ -122,11 +312,11 @@ public:
 	 * @param difName The DIF that the IPC Process will try to join
 	 * @param supportingDifName The supporting DIF used to contact the DIF to
 	 * join
-	 * @throws IPCException if the enrollment is unsuccessful
+	 * @throws EnrollException if the enrollment is unsuccessful
 	 */
 	void enroll(const ApplicationProcessNamingInformation& difName,
 			const ApplicationProcessNamingInformation& supportinDifName)
-	throw (IPCException);
+	throw (EnrollException);
 
 	/**
 	 * Invoked by the IPC Manager to force an IPC Process to deallocate all the
@@ -135,11 +325,11 @@ public:
 	 * IPC Process has successfully completed or an error is returned.
 	 *
 	 * @param neighbor The neighbor to disconnect from
-	 * @throws IPCException if an error occurs
+	 * @throws DisconnectFromNeighborException if an error occurs
 	 */
 	void disconnectFromNeighbor(
 			const ApplicationProcessNamingInformation& neighbor)
-	throw (IPCException);
+	throw (DisconnectFromNeighborException);
 
 	/**
 	 * Invoked by the IPC Manager to register an application in a DIF through
@@ -148,12 +338,12 @@ public:
 	 *
 	 * @param applicationName The name of the application to be registered
 	 * @param applicationPordId The port where the application can be contacted
-	 * @throws IPCException if an error occurs
+	 * @throws IpcmRegisterApplicationException if an error occurs
 	 */
 	void registerApplication(
 			const ApplicationProcessNamingInformation& applicationName,
 			unsigned int applicationPortId)
-	throw (IPCException);
+	throw (IpcmRegisterApplicationException);
 
 	/**
 	 * Invoked by the IPC Manager to unregister an application in a DIF through
@@ -161,11 +351,11 @@ public:
 	 * successfully unregistered the application or an error occurs.
 	 *
 	 * @param applicationName The name of the application to be unregistered
-	 * @throws IPCException if an error occurs
+	 * @throws IpcmUnregisterApplicationException if an error occurs
 	 */
 	void unregisterApplication(
 			const ApplicationProcessNamingInformation& applicationName)
-	throw (IPCException);
+	throw (IpcmUnregisterApplicationException);
 
 	/**
 	 * Invoked by the IPC Manager to request an IPC Process the allocation of a
@@ -178,10 +368,10 @@ public:
 	 * flow
 	 * @param applicationPortId the port where the application that requested the
 	 * flow can be contacted
-	 * @throws ICPException if an error occurs
+	 * @throws AllocateFlowException if an error occurs
 	 */
 	void allocateFlow(const FlowRequestEvent& flowRequest,
-			unsigned int applicationPortId) throw (IPCException);
+			unsigned int applicationPortId) throw (AllocateFlowException);
 
 	/**
 	 * Invoked by the IPC Manager to query a subset of the RIB of the IPC
@@ -198,7 +388,8 @@ public:
 	 */
 	const std::list<RIBObject> queryRIB(const std::string& objectClass,
 			const std::string& objectName, unsigned long objectInstance,
-			unsigned int scope, const std::string& filter);
+			unsigned int scope, const std::string& filter)
+					throw (QueryRIBException);
 };
 
 /**
@@ -212,8 +403,6 @@ class IPCProcessFactory {
 
 public:
 	static const std::string unknown_ipc_process_error;
-	static const std::string create_ipc_process_error;
-	static const std::string destroy_ipc_process_error;
 
 	/**
 	 * Invoked by the IPC Manager to instantiate a new IPC Process in the
@@ -225,11 +414,11 @@ public:
 	 * @param ipcProcessName The naming information of the IPC Process
 	 * @param difType The type of IPC Process (Normal or one of the shims)
 	 * @return a pointer to a data structure holding the IPC Process state
-	 * @throws IPCProcessException if an error happens during the creation
+	 * @throws CreateIPCProcessException if an error happens during the creation
 	 */
 	IPCProcess * create(
 			const ApplicationProcessNamingInformation& ipcProcessName,
-			DIFType difType) throw (IPCException);
+			DIFType difType) throw (CreateIPCProcessException);
 
 	/**
 	 * Invoked by the IPC Manager to delete an IPC Process from the system. The
@@ -237,9 +426,9 @@ public:
 	 * returned.
 	 *
 	 * @param ipcProcessId The identifier of the IPC Process to be destroyed
-	 * @throws IPCException if an error happens during the operation execution
+	 * @throws DestroyIPCProcessException if an error happens during the operation execution
 	 */
-	void destroy(unsigned int ipcProcessId) throw (IPCException);
+	void destroy(unsigned int ipcProcessId) throw (DestroyIPCProcessException);
 
 	/**
 	 * Returns a list to all the IPC Processes that are currently running in
@@ -268,11 +457,12 @@ public:
 	 * @param sequenceNumber identifies the request whose reply this operation
 	 * is providing
 	 * @param response The result of the registration operation
-	 * @throws IPCException If an error occurs during the operation
+	 * @throws NotifyApplicationRegisteredException If an error occurs during the operation
 	 */
 	void applicationRegistered(const ApplicationRegistrationRequestEvent & event,
 			unsigned short ipcProcessId, int ipcProcessPortId, int result,
-			const std::string& errorDescription) throw (IPCException);
+			const std::string& errorDescription)
+				throw (NotifyApplicationRegisteredException);
 
 	/**
 	 * Invoked by the IPC Manager to notify an application about the  result of
@@ -281,10 +471,11 @@ public:
 	 * @param transactionId identifies the request whose reply this operation
 	 * is providing
 	 * @param response The result of the unregistration operation
-	 * @throws IPCException If an error occurs during the operation
+	 * @throws NotifyApplicationUnregisteredException If an error occurs during the operation
 	 */
 	void applicationUnregistered(const ApplicationUnregistrationRequestEvent & event,
-			int result, const std::string& errorDescription) throw (IPCException);
+			int result, const std::string& errorDescription)
+				throw (NotifyApplicationUnregisteredException);
 
 	/**
 	 * Invoked by the IPC Manager to respond to the Application Process that
@@ -297,12 +488,12 @@ public:
 	 * the IPC Process to read/write the flow
 	 * @param ipcProcessPortId Required so that the application process can contact
 	 * the IPC Process to read/write the flow
-	 * @throws IPCException If an error occurs during the operation
+	 * @throws NotifyFlowAllocatedException If an error occurs during the operation
 	 */
 	void flowAllocated(const FlowRequestEvent flowRequestEvent,
 			std::string errorDescription,
 			unsigned short ipcProcessId, unsigned int ipcProcessPortId)
-	throw (IPCException);
+				throw (NotifyFlowAllocatedException);
 };
 
 /**

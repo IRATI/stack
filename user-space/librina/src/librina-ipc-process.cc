@@ -156,7 +156,8 @@ void ExtendedIPCManager::setIpcProcessId(unsigned int ipcProcessId){
 
 void ExtendedIPCManager::assignToDIFResponse(
 		const AssignToDIFRequestEvent& event, int result,
-		const std::string& errorDescription) throw(IPCException){
+		const std::string& errorDescription)
+	throw(AssignToDIFResponseException){
 	if (result == 0){
 		this->currentConfiguration = event.getDIFConfiguration();
 	}
@@ -171,14 +172,15 @@ void ExtendedIPCManager::assignToDIFResponse(
 	try{
 		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
 	}catch(NetlinkException &e){
-		throw IPCException(e.what());
+		throw AssignToDIFResponseException(e.what());
 	}
 #endif
 }
 
 void ExtendedIPCManager::registerApplicationResponse(
 		const ApplicationRegistrationRequestEvent& event, int result,
-		const std::string& errorDescription) throw(IPCException){
+		const std::string& errorDescription)
+	throw(RegisterApplicationResponseException){
 #if STUB_API
 	//Do nothing
 #else
@@ -190,14 +192,15 @@ void ExtendedIPCManager::registerApplicationResponse(
 	try{
 		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
 	}catch(NetlinkException &e){
-		throw IPCException(e.what());
+		throw RegisterApplicationResponseException(e.what());
 	}
 #endif
 }
 
 void ExtendedIPCManager::unregisterApplicationResponse(
 		const ApplicationUnregistrationRequestEvent& event, int result,
-		const std::string& errorDescription) throw(IPCException){
+		const std::string& errorDescription)
+	throw(UnregisterApplicationResponseException){
 #if STUB_API
 	//Do nothing
 #else
@@ -209,14 +212,15 @@ void ExtendedIPCManager::unregisterApplicationResponse(
 	try{
 		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
 	}catch(NetlinkException &e){
-		throw IPCException(e.what());
+		throw UnregisterApplicationResponseException(e.what());
 	}
 #endif
 }
 
 void ExtendedIPCManager::allocateFlowResponse(
 		const FlowRequestEvent& event, int result,
-		const std::string& errorDescription) throw(IPCException){
+		const std::string& errorDescription)
+	throw(AllocateFlowResponseException){
 #if STUB_API
 	//Do nothing
 #else
@@ -228,7 +232,7 @@ void ExtendedIPCManager::allocateFlowResponse(
 	try{
 		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
 	}catch(NetlinkException &e){
-		throw IPCException(e.what());
+		throw AllocateFlowResponseException(e.what());
 	}
 #endif
 }
@@ -236,7 +240,8 @@ void ExtendedIPCManager::allocateFlowResponse(
 void ExtendedIPCManager::queryRIBResponse(
 		const QueryRIBRequestEvent& event, int result,
 		const std::string& errorDescription,
-		const std::list<RIBObject>& ribObjects){
+		const std::list<RIBObject>& ribObjects)
+	throw(QueryRIBResponseException){
 #if STUB_API
 	//Do nothing
 #else
@@ -249,7 +254,7 @@ void ExtendedIPCManager::queryRIBResponse(
 	try{
 		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
 	}catch(NetlinkException &e){
-		throw IPCException(e.what());
+		throw QueryRIBResponseException(e.what());
 	}
 #endif
 }
@@ -259,7 +264,8 @@ Singleton<ExtendedIPCManager> extendedIPCManager;
 /* CLASS IPC PROCESS APPLICATION MANAGER */
 void IPCProcessApplicationManager::flowDeallocated(
 		const FlowDeallocateRequestEvent flowDeallocateEvent,
-			int result, std::string errorDescription) throw (IPCException){
+			int result, std::string errorDescription)
+	throw (DeallocateFlowResponseException){
 #if STUB_API
 	//Do nothing
 #else
@@ -273,7 +279,7 @@ void IPCProcessApplicationManager::flowDeallocated(
 	try{
 		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
 	}catch(NetlinkException &e){
-		throw IPCException(e.what());
+		throw DeallocateFlowResponseException(e.what());
 	}
 #endif
 }
