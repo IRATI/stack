@@ -25,7 +25,7 @@
 
 struct dtcp_state_vector {
         /* Control state */
-        uint_t max_pdu_size;
+        uint_t    max_pdu_size;
 
         /* TimeOuts */
 
@@ -121,6 +121,9 @@ struct dtcp_state_vector {
          * received until a new time unit begins
          */
         uint_t    pdus_rcvd_in_time_unit;
+
+        /* The companion DTP state vector */
+        struct dtp_state_vector * dtp_state_vector;
 };
 
 struct dtcp {
@@ -135,5 +138,9 @@ struct dtcp {
 
 struct dtcp * dtcp_create(void);
 int           dtcp_destroy(struct dtcp * instance);
+
+int           dtcp_state_vector_bind(struct dtcp *             instance,
+                                     struct dtp_state_vector * state_vector);
+int           dtcp_state_vector_unbind(struct dtcp * instance);
 
 #endif

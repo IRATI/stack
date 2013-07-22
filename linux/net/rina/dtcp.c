@@ -64,3 +64,40 @@ int dtcp_destroy(struct dtcp * instance)
 
         return 0;
 }
+
+int dtcp_state_vector_bind(struct dtcp *             instance,
+                           struct dtp_state_vector * state_vector)
+{
+        ASSERT(instance);
+        ASSERT(state_vector);
+
+        if (!instance->state_vector) {
+                LOG_ERR("DTCP instance has no state vector, "
+                        "cannot bind DTP state vector");
+                return -1;
+        }
+
+        if (instance->state_vector->dtp_state_vector) {
+                if (instance->state_vector->dtp_state_vector != state_vector) {
+                        LOG_ERR("DTCP instance already bound to a different "
+                                "DTP state-vector, unbind it first");
+                        return -1;
+                }
+
+                return 0;
+        }
+
+        instance->state_vector->dtp_state_vector = state_vector;
+
+        return 0;
+}
+
+int dtcp_state_vector_unbind(struct dtcp * instance)
+{
+        ASSERT(instance);
+
+        if (instance->state_vector)
+                instance->state_vector->dtp_state_vector = NULL;
+
+        return 0;
+}
