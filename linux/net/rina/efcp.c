@@ -70,6 +70,11 @@ int efcp_write(struct efcp *      instance,
 {
         ASSERT(instance);
 
+        if (!instance->dtp) {
+                LOG_ERR("No DTP instance available, cannot send");
+                return -1;
+        }
+
         return dtp_send(instance->dtp, sdu);
 }
 
