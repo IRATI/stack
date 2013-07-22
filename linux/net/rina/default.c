@@ -91,11 +91,13 @@ static int default_ipc_destroy(struct personality_data * data,
 static int default_connection_create(struct personality_data * data,
                                      const struct connection * connection)
 {
+        cep_id_t id; /* FIXME: Remains unused !!! */
+
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return efcp_create(data->efcp, connection);
+        return efcp_create(data->efcp, connection, &id);
 }
 
 static int default_connection_destroy(struct personality_data * data,

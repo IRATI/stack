@@ -88,20 +88,23 @@ int efcp_receive_pdu(struct efcp * instance,
         return 0;
 }
 
-cep_id_t efcp_create(struct efcp *             instance,
-                     const struct connection * connection)
+int efcp_create(struct efcp *             instance,
+                const struct connection * connection,
+                cep_id_t *                id)
 {
         ASSERT(instance);
         ASSERT(connection);
 
         instance->dtp  = dtp_create(connection->port_id);
-        /* XXX FIXME: This is wrong */
         if (!instance->dtp)
                 return -1;
+
         instance->dtcp = dtcp_create();
-        /* XXX FIXME: This is wrong */
         if (!instance->dtcp)
                 return -1;
+
+        /* FIXME: We need to assign the id */
+        LOG_MISSING;
 
         LOG_DBG("EFCP instance created");
 

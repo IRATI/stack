@@ -67,8 +67,9 @@ struct efcp {
 struct efcp * efcp_init(struct kobject * parent);
 int           efcp_fini(struct efcp * instance);
 
-cep_id_t      efcp_create(struct efcp *             instance,
-                          const struct connection * connection);
+int           efcp_create(struct efcp *             instance,
+                          const struct connection * connection,
+                          cep_id_t *                id);
 int           efcp_destroy(struct efcp *   instance,
                            cep_id_t id);
 int           efcp_update(struct efcp * instance,

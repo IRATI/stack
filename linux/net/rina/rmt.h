@@ -45,6 +45,6 @@ struct rmt {
 };
 
 struct rmt * rmt_init(struct kobject * parent);
-int    rmt_fini(struct rmt * instance);
+int          rmt_fini(struct rmt * instance);
 
 #endif
