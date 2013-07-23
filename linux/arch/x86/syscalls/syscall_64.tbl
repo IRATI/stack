@@ -321,6 +321,15 @@
 312	common	kcmp			sys_kcmp
 313	common	finit_module		sys_finit_module
 
+314	common	ipc_create		sys_ipc_create
+315	common	ipc_configure		sys_ipc_configure
+316	common	ipc_destroy		sys_ipc_destroy
+317	common	sdu_read		sys_sdu_read
+318	common	sdu_write		sys_sdu_write
+319	common	connection_create	sys_connection_create
+320	common	connection_destroy	sys_connection_destroy
+321	common	connection_update	sys_connection_configure
+
 #
 # x32-specific system call numbers start at 512 to avoid cache impact
 # for native 64-bit operation.
