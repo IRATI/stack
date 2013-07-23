@@ -23,11 +23,11 @@ allsources =					\
 
 EXTRA_DIST =					\
 	logs.h					\
-	concurrency.h			\
+	concurrency.h				\
 	core.h					\
 	netlink-messages.h			\
 	netlink-manager.h			\
-	netlink-parsers.h		\
+	netlink-parsers.h			\
 	rina-syscalls.h
 
 librina_la_SOURCES  = $(allsources)
@@ -38,7 +38,7 @@ librina_la_LIBADD   =				\
 librina_la_CPPFLAGS =				\
 	-DSTUB_API=0				\
 	-I$(top_srcdir)/include			\
-	-I$(top_srcdir)/include-system			\
+	-I$(top_srcdir)/include-system		\
 	$(LIBNL3_CFLAGS)			\
 	$(LIBNLGENL3_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
@@ -51,7 +51,7 @@ librina_stubbed_la_LIBADD   =			\
 librina_stubbed_la_CPPFLAGS =			\
 	-DSTUB_API=1				\
 	-I$(top_srcdir)/include			\
-	-I$(top_srcdir)/include-system	\
+	-I$(top_srcdir)/include-system		\
 	$(LIBNL3_CFLAGS)			\
 	$(LIBNLGENL3_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
