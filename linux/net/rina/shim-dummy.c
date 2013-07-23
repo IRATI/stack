@@ -80,6 +80,19 @@ struct app_register {
 	struct list_head list;
 };
 
+static int is_app_registered(struct shim_instance_data * data,
+			     struct name * name)
+{
+	struct app_register * app;
+
+	list_for_each_entry(app, &data->apps_registered, list) {
+		if (!memcmp(app->app_name, name, sizeof(struct name))) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static struct dummy_flow * find_flow(struct shim_instance_data * data,
                                      port_id_t                   id)
 {
@@ -190,7 +203,13 @@ static int dummy_flow_deallocate(struct shim_instance_data * data,
 
 static int dummy_application_register(struct shim_instance_data * data,
                                       const struct name *         source)
-{ return -1; }
+{
+	ASSERT(source);
+
+	if (is_app_registered(source))
+		return -1;
+	return -1;
+}
 
 static int dummy_application_unregister(struct shim_instance_data * data,
                                         const struct name *         source)
@@ -358,6 +377,8 @@ static struct shim_instance * dummy_create(struct shim_data * data,
          * structures linked (somewhat) together
          */
 	
+	INIT_LIST_HEAD(&inst->data->apps_registered);
+
 	LOG_DBG("Adding dummy instance to the list of shim dummy instances");
 
 	INIT_LIST_HEAD(&(inst->data->list));
