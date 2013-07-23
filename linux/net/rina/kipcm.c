@@ -120,7 +120,7 @@ static struct id_to_ipcp * find_ipc_node_by_id(struct kipcm *   kipcm,
 	LOG_DBG("IPC process id: %d", id);
         list_for_each_entry(cur, &kipcm->id_to_ipcp, list) {
                 if (cur->id == id) {
-			LOG_DBG("IPC process found: %pk", cur->ipcp);
+			LOG_DBG("IPC node found: %pk", cur);
                         return cur;
                 }
         }
