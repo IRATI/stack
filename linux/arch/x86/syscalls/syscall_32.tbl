@@ -365,4 +365,4 @@
 355	i386	sdu_write		sys_sdu_write
 356	i386	connection_create	sys_connection_create
 357	i386	connection_destroy	sys_connection_destroy
-358	i386	connection_update	sys_connection_configure
+358	i386	connection_update	sys_connection_update
