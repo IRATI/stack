@@ -108,8 +108,11 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         ASSERT(is_message_type_in_range(msg_type));
 
 	tmp = default_set;
-	if (!tmp)
+	if (!tmp) {
+		LOG_ERR("There is no set registered, "
+			"first register a (default) set");
 		return -1;
+	}
 
         cb_function = tmp->handlers[msg_type].cb;
         if (!cb_function) {
@@ -534,7 +537,7 @@ int rina_netlink_set_destroy(struct rina_nl_set * set)
 	for (i = 0; i < ARRAY_SIZE(set->handlers); i++) {
 		if (set->handlers[i].cb != NULL) {
                         count++;
-			LOG_DBG("Set %pK has an hander yet registered, "
+			LOG_DBG("Set %pK has at least one hander still registered, "
                                 "it will be unregistered", set);
 			break;
 		}
