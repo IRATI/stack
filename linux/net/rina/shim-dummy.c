@@ -56,6 +56,8 @@ struct shim_instance_data {
         struct list_head    list;
 
 	struct dummy_info * info;
+
+	struct list_head    apps_registered;
 };
 
 enum dummy_flow_state {
@@ -71,6 +73,11 @@ struct dummy_flow {
         struct name *    source;
         struct name *    dest;
         struct list_head list;
+};
+
+struct app_register {
+	struct name * 	 app_name;
+	struct list_head list;
 };
 
 static struct dummy_flow * find_flow(struct shim_instance_data * data,
