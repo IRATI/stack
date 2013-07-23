@@ -23,7 +23,32 @@ EXTRA_DIST =					\
 	build-aux/git-version-gen		\
 	build-aux/gitlog-to-changelog		\
 	LICENSE					\
-	README
+	README					\
+	librina.pc.in
+
+edit = $(SED)							\
+        -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'		\
+	-e 's|@LIBNL3_LIBS[@]|$(LIBNL3_LIBS)|g'			\
+	-e 's|@LIBNLGENL3_LIBS[@]|$(LIBNLGENL3_LIBS)|g'		\
+	-e 's|@LIBNL3_CFLAGS[@]|$(LIBNL3_CFLAGS)|g'		\
+	-e 's|@LIBNLGENL3_CFLAGS[@]|$(LIBNLGENL3_CFLAGS)|g'	\
+        -e 's|@prefix[@]|$(prefix)|g'				\
+        -e 's|@includedir[@]|$(includedir)|g'			\
+        -e 's|@libdir[@]|$(libdir)|g'
+
+librina.pc: Makefile librina.pc.in
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod +x $@.tmp
+	chmod a-w $@.tmp
+	mv $@.tmp $@
+
+CLEANFILES = librina.pc
+
+pkgconfigdir   = $(libdir)
+pkgconfig_DATA = librina.pc
 
 .PHONY: AUTHORS
 AUTHORS:

@@ -30,6 +30,8 @@ Makefile.in
 
 *.[ao]
 
+/*.pc
+
 /*.tar.gz
 
 /wrap/java
