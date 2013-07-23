@@ -10,3 +10,4 @@
 /test-concurrency
 /test-netlink-parsers
 /test-librina
+/test-syscalls

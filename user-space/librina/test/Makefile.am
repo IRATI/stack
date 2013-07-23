@@ -101,7 +101,7 @@ check_PROGRAMS =				\
 	test-netlink-parsers			\
 	test-concurrency			\
 	test-core				\
-	test-syscalls		\
+	test-syscalls				\
 	test-librina
 
 XFAIL_TESTS =					\
