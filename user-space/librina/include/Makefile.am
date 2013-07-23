@@ -4,7 +4,7 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-nobase_include_HEADERS =			\
+nobase_pkginclude_HEADERS =			\
 	librina.h				\
 	librina-common.h			\
 	librina-application.h			\
