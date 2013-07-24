@@ -145,7 +145,7 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
          * FIXME: we need to add here the sending of the message (i.e.
          * app_alloc_flow_req_arrived_msg)
          */
-        if (send_app_alloc_flow_req_arrived_msg)
+        if (send_app_alloc_flow_req_arrived_msg())
                 return -1;
 
         return 0;
