@@ -63,4 +63,6 @@ enum flow_spec_attrs {
 /* FIXME: is it really needed ? */
 #define FSPEC_ATTR_MAX (__FSPEC_ATTR_MAX - 1)
 
+/* Netlink parsers have to be provided as functionals by the components */
+
 #endif
