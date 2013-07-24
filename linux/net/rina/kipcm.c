@@ -77,10 +77,8 @@ static int add_id_to_ipcp_node(struct kipcm *         kipcm,
         LOG_DBG("Adding IPC process to the list of kipcm processes");
 
         id_to_ipcp = rkzalloc(sizeof(*id_to_ipcp), GFP_KERNEL);
-        if (!id_to_ipcp) {
-                LOG_DBG("Failed creation of id_to_ipcp node");
+        if (!id_to_ipcp)
                 return -1;
-        }
 
         LOG_DBG("Adding info to id_to_ipcp node");
         id_to_ipcp->id   = id;
@@ -100,18 +98,16 @@ static struct ipc_process_t * find_ipc_process_by_id(struct kipcm *   kipcm,
 {
         struct id_to_ipcp * cur;
 
-        LOG_DBG("Find IPC process by id");
-        LOG_DBG("IPC process id: %d", id);
+        LOG_DBG("Looking for IPC process %d", id);
 
         list_for_each_entry(cur, &kipcm->id_to_ipcp, list) {
                 if (cur->id == id) {
-                        LOG_DBG("IPC process found: %pk", cur->ipcp);
+                        LOG_DBG("Got it, it's %pk", cur->ipcp);
                         return cur->ipcp;
                 }
         }
 
         LOG_DBG("IPC process not found");
-
         return NULL;
 }
 
@@ -120,11 +116,10 @@ static struct id_to_ipcp * find_ipc_node_by_id(struct kipcm *   kipcm,
 {
         struct id_to_ipcp * cur;
 
-        LOG_DBG("Find IPC node by id");
-        LOG_DBG("IPC process id: %d", id);
+        LOG_DBG("Looking for IPC node %d", id);
         list_for_each_entry(cur, &kipcm->id_to_ipcp, list) {
                 if (cur->id == id) {
-                        LOG_DBG("IPC node found: %pk", cur);
+                        LOG_DBG("Got it, it's %pk", cur);
                         return cur;
                 }
         }
@@ -217,15 +212,15 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
 
         ASSERT(kipcm);
 
-        LOG_DBG("KIPCM: %pK", kipcm);
-        LOG_DBG("  IPC process name: %s", name->process_name);
-        LOG_DBG("  IPC process id: %d", id);
-        LOG_DBG("  IPC process type: %d", type);
-
         if (!name) {
                 LOG_ERR("Name is missing, cannot create ipc");
                 return -1;
         }
+
+        LOG_DBG("Creating IPC process:");
+        LOG_DBG("  name: %s", name->process_name);
+        LOG_DBG("  id:   %d", id);
+        LOG_DBG("  type: %d", type);
 
         if (find_ipc_process_by_id(kipcm, id)) {
                 LOG_ERR("Process id %d already exists", id);
@@ -238,34 +233,36 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
                 struct shim *          shim;
                 struct shim_instance * shim_instance;
 
+                /* FIXME: We should remove this hard-wired value */
                 k = kset_find_obj(kipcm->shims->set, "shim-dummy");
                 if (!k) {
                         LOG_ERR("Cannot find the requested shim");
                         return -1;
                 }
 
-                shim        = to_shim(k);
+                shim = to_shim(k);
+                ASSERT(shim);
+
                 ipc_process = rkzalloc(sizeof(*ipc_process), GFP_KERNEL);
                 if (!ipc_process)
                         return -1;
 
                 ipc_process->type = type;
                 shim_instance = shim->ops->create(shim->data, id);
-                LOG_DBG("Shim instance created: %pK", shim_instance);
                 if (!shim_instance) {
                         rkfree(ipc_process);
                         return -1;
                 }
 
+                LOG_DBG("Shim instance created: %pK", shim_instance);
+
                 LOG_DBG("Adding instance");
                 if (add_id_to_ipcp_node(kipcm, id, ipc_process)) {
-                        LOG_DBG("Add failed!!!!");
                         shim->ops->destroy(shim->data, shim_instance);
                         rkfree(ipc_process);
                         return -1;
                 }
 
-                LOG_DBG("Add succeeded!!!!");
                 ipc_process->data.shim_instance = shim_instance;
         }
                 break;
@@ -292,14 +289,12 @@ int kipcm_ipc_destroy(struct kipcm *   kipcm,
         ipc_process = find_ipc_process_by_id(kipcm, id);
         if (!ipc_process) {
                 LOG_ERR("IPC process %d does not exist", id);
-
                 return -1;
         }
 
         id_ipcp = find_ipc_node_by_id(kipcm, id);
         if (!id_ipcp) {
                 LOG_ERR("IPC process %d node does not exist", id);
-
                 return -1;
         }
 
@@ -312,12 +307,13 @@ int kipcm_ipc_destroy(struct kipcm *   kipcm,
                         LOG_ERR("Cannot find the requested shim");
                         return -1;
                 }
-                shim        = to_shim(k);
+
+                shim = to_shim(k);
+                ASSERT(shim);
 
                 if (shim->ops->destroy(shim->data,
-                                ipc_process->data.shim_instance)) {
+                                       ipc_process->data.shim_instance)) {
                         LOG_ERR("Could not destroy shim instance %d", id);
-
                         return -1;
                 }
         }
@@ -360,6 +356,7 @@ int kipcm_ipc_configure(struct kipcm *                  kipcm,
                 }
 
                 shim = to_shim(k);
+                ASSERT(shim);
 
                 /* FIXME: conf must be translated */
                 LOG_MISSING;
@@ -399,7 +396,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 return -1;
         }
 
-        flow->port_id = id;
+        flow->port_id     = id;
         flow->ipc_process = find_ipc_process_by_id(kipcm, ipc_id);
         if (!flow->ipc_process) {
                 LOG_ERR("Couldn't find ipc_process %d", ipc_id);

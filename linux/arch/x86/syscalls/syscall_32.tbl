@@ -357,6 +357,12 @@
 348	i386	process_vm_writev	sys_process_vm_writev		compat_sys_process_vm_writev
 349	i386	kcmp			sys_kcmp
 350	i386	finit_module		sys_finit_module
+
 351	i386	ipc_create		sys_ipc_create
 352	i386	ipc_configure		sys_ipc_configure
 353	i386	ipc_destroy		sys_ipc_destroy
+354	i386	sdu_read		sys_sdu_read
+355	i386	sdu_write		sys_sdu_write
+356	i386	connection_create	sys_connection_create
+357	i386	connection_destroy	sys_connection_destroy
+358	i386	connection_update	sys_connection_update

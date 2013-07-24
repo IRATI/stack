@@ -690,6 +690,71 @@ IPCEvent* AppRegistrationCanceledNotificationMessage::toIPCEvent(){
 	return event;
 }
 
+/*CLASS APP GET DIF PROPERTIES REQUEST MESSAGE */
+AppGetDIFPropertiesRequestMessage::AppGetDIFPropertiesRequestMessage():
+		NetlinkRequestOrNotificationMessage(
+				RINA_C_APP_GET_DIF_PROPERTIES_REQUEST){
+}
+
+const ApplicationProcessNamingInformation&
+AppGetDIFPropertiesRequestMessage::getApplicationName() const {
+	return applicationName;
+}
+
+void AppGetDIFPropertiesRequestMessage::setApplicationName(
+		const ApplicationProcessNamingInformation& applicationName) {
+	this->applicationName = applicationName;
+}
+
+const ApplicationProcessNamingInformation&
+AppGetDIFPropertiesRequestMessage::getDifName() const {
+	return difName;
+}
+
+void AppGetDIFPropertiesRequestMessage::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
+IPCEvent* AppGetDIFPropertiesRequestMessage::toIPCEvent(){
+	GetDIFPropertiesRequestEvent * event =
+			new GetDIFPropertiesRequestEvent(
+					applicationName,
+					difName,
+					getSequenceNumber());
+
+	return event;
+}
+
+/* CLASS APP GET DIF PROPERTIES RESPONSE MESSAGE */
+AppGetDIFPropertiesResponseMessage::AppGetDIFPropertiesResponseMessage()
+		:BaseNetlinkResponseMessage(RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE){
+}
+
+const ApplicationProcessNamingInformation&
+AppGetDIFPropertiesResponseMessage::getApplicationName() const {
+	return applicationName;
+}
+
+void AppGetDIFPropertiesResponseMessage::setApplicationName(
+		const ApplicationProcessNamingInformation& applicationName) {
+	this->applicationName = applicationName;
+}
+
+const std::list<DIFProperties>&
+	AppGetDIFPropertiesResponseMessage::getDIFProperties() const{
+	return difProperties;
+}
+
+void AppGetDIFPropertiesResponseMessage::setDIFProperties(
+		const std::list<DIFProperties>& difProperties){
+	this->difProperties = difProperties;
+}
+
+void AppGetDIFPropertiesResponseMessage::addDIFProperty(
+		const DIFProperties& difProperties){
+	this->difProperties.push_back(difProperties);
+}
 
 /* CLASS IPCM REGISTER APPLICATION REQUEST MESSAGE */
 IpcmRegisterApplicationRequestMessage::IpcmRegisterApplicationRequestMessage():

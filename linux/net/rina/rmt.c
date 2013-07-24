@@ -27,6 +27,26 @@
 #include "rmt.h"
 #include "debug.h"
 
+struct rmt_conf {
+	/* To do, only a placeholder right now */
+        int placeholder;
+};
+
+struct rmt {
+	/* This structure holds per-RMT instance data */
+
+	/* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
+
+	/*
+         * The PDU-FT access might change in future prototypes but
+         * changes in its underlying data-model will not be reflected
+         * into the (external) API, since the PDU-FT is accessed by
+         * RMT only.
+         */
+
+	/* LIST_HEAD(pdu_fwd_table, pdu_fwd_entry_t); */
+};
+
 struct rmt * rmt_init(struct kobject * parent)
 {
         struct rmt * e = NULL;

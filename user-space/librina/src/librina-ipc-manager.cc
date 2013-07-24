@@ -508,4 +508,23 @@ void ApplicationManager::flowAllocated(const FlowRequestEvent flowRequestEvent,
 
 Singleton<ApplicationManager> applicationManager;
 
+/* CLASS GET DIF PROPERTIES REQUEST EVENT */
+GetDIFPropertiesRequestEvent::GetDIFPropertiesRequestEvent(
+		const ApplicationProcessNamingInformation& appName,
+		const ApplicationProcessNamingInformation& DIFName,
+		unsigned int sequenceNumber):
+				IPCEvent(GET_DIF_PROPERTIES, sequenceNumber){
+	this->applicationName = appName;
+	this->DIFName = DIFName;
+}
+
+const ApplicationProcessNamingInformation&
+	GetDIFPropertiesRequestEvent::getApplicationName() const{
+	return applicationName;
+}
+const ApplicationProcessNamingInformation&
+	GetDIFPropertiesRequestEvent::getDIFName() const{
+	return DIFName;
+}
+
 }

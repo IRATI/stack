@@ -1,7 +1,12 @@
-irati-user-space
-================
+linux
+==========
 
-It will be holding all the user-space level code, apps, tools etc. No sync this time since this repository will hold IRATI only code for the moment. The master branch will hold all the work (from all-partners)
+It will be holding all the kernel-space code
+
+user-space
+==========
+
+It will be holding all the user-space code, apps, tools etc.
 
 The RINA components in user-space are mainly represented by the following elements:
 * The IPC Manager (implemented as an OS daemon): Handles the configuration, creation and deletion of an IPC Processes (in both user and kernel spaces), acts as the management agent for a remote DIF Management system and provides Inter DIF Directory functionalities (such as providing an application-name to DIF resolution service, including the capability to collaborate with other instances of the IDD running in other systems to create new DIFs).
