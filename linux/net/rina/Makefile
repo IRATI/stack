@@ -3,7 +3,7 @@
 #
 
 obj-$(CONFIG_RINA) +=							\
-	utils.o debug.o core.o personality.o syscalls.o netlink.o
+	utils.o debug.o core.o personality.o syscalls.o netlink.o netlink-parser.o
 
 obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=		\
 	utils-workarounds.o rina_personality_default.o

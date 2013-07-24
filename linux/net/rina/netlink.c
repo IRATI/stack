@@ -108,8 +108,11 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         ASSERT(is_message_type_in_range(msg_type));
 
 	tmp = default_set;
-	if (!tmp)
+	if (!tmp) {
+		LOG_ERR("There is no set registered, "
+			"first register a (default) set");
 		return -1;
+	}
 
         cb_function = tmp->handlers[msg_type].cb;
         if (!cb_function) {
@@ -187,20 +190,6 @@ static int nl_rina_echo(void * data,
 
 static struct genl_ops nl_ops[] = {
         {
-                .cmd    = RINA_C_APP_ALLOCATE_FLOW_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
                 .cmd    = RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED,
                 .flags  = 0,
                 //.policy = nl_rina_policy,
@@ -230,55 +219,6 @@ static struct genl_ops nl_ops[] = {
         },
         {
                 .cmd    = RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_REGISTER_APPLICATION_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_REGISTER_APPLICATION_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_UNREGISTER_APPLICATION_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_GET_DIF_PROPERTIES_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE,
                 .flags  = 0,
                 //.policy = nl_rina_policy,
                 .doit   = dispatcher,
@@ -534,7 +474,7 @@ int rina_netlink_set_destroy(struct rina_nl_set * set)
 	for (i = 0; i < ARRAY_SIZE(set->handlers); i++) {
 		if (set->handlers[i].cb != NULL) {
                         count++;
-			LOG_DBG("Set %pK has an hander yet registered, "
+			LOG_DBG("Set %pK has at least one hander still registered, "
                                 "it will be unregistered", set);
 			break;
 		}
