@@ -2,6 +2,7 @@
  * NetLink support
  *
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,15 +22,6 @@
 #ifndef RINA_NETLINK_PARSER_H
 #define RINA_NETLINK_PARSER_H
 
-#include <linux/netlink.h>
-#include <linux/genetlink.h>
-#include <linux/skbuff.h>
-#include <net/genetlink.h>
-#include <net/netlink.h>
-#include <net/sock.h>
-
-#include "personality.h"
-
 enum app_alloc_flow_req_arrived_attrs {
         AAFRA_ATTR_SOURCE_APP_NAME = 1,
         AAFRA_ATTR_DEST_APP_NAME,
@@ -38,7 +30,9 @@ enum app_alloc_flow_req_arrived_attrs {
         AAFRA_ATTR_DIF_NAME,
         __AAFRA_ATTR_MAX,
 };
-#define AAFRA_ATTR_MAX (__AAFRA_ATTR_MAX -1)
+
+/* FIXME: is it really needed ? */
+#define AAFRA_ATTR_MAX (__AAFRA_ATTR_MAX - 1)
 
 enum app_name_info_attrs {
         APNI_ATTR_PROCESS_NAME = 1,
@@ -47,7 +41,9 @@ enum app_name_info_attrs {
         APNI_ATTR_ENTITY_INSTANCE,
         __APNI_ATTR_MAX,
 };
-#define APNI_ATTR_MAX (__APNI_ATTR_MAX -1)
+
+/* FIXME: is it really needed ? */
+#define APNI_ATTR_MAX (__APNI_ATTR_MAX - 1)
 
 enum flow_spec_attrs {
         FSPEC_ATTR_AVG_BWITH = 1,
@@ -63,7 +59,8 @@ enum flow_spec_attrs {
         FSPEC_ATTR_UNDETECTED_BER,
         __FSPEC_ATTR_MAX,
 };
-#define FSPEC_ATTR_MAX (__FSPEC_ATTR_MAX -1)
 
+/* FIXME: is it really needed ? */
+#define FSPEC_ATTR_MAX (__FSPEC_ATTR_MAX - 1)
 
 #endif
