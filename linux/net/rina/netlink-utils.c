@@ -1,5 +1,5 @@
 /*
- * NetLink support
+ * NetLink related utilities
  *
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
@@ -20,14 +20,15 @@
  */
 
 #include <net/netlink.h>
+#include <linux/export.h>
 
-#define RINA_PREFIX "netlink-parser"
+#define RINA_PREFIX "netlink-utils"
 
 #include "logs.h"
 #include "common.h"
 #include "debug.h"
 #include "netlink.h"
-#include "netlink-parser.h"
+#include "netlink-utils.h"
 
 /*
  * FIXME: I suppose these functions are internal (at least for the time being)
@@ -41,6 +42,9 @@
 /*
  * FIXME: If some of them remain 'static', parameters checking has to be
  *        trasformed into ASSERT() calls (since msg is checked in the caller)
+ *
+ * NOTE: that functionalities exported to "shims" should prevent "evoking" 
+ *       ASSERT() here ...
  *
  * Francesco
  */
@@ -164,12 +168,12 @@ static int craft_flow_spec(struct sk_buff * msg,
 #define BUILD_ERR_STRING(X)                                     \
 	"Netlink message does not contain " X ", bailing out"
 
-static int craft_app_alloc_flow_req_arrived_msg(struct sk_buff * msg,
-                                                struct name      source,
-                                                struct name      dest,
-                                                struct flow_spec fspec,
-                                                port_id_t        id,
-                                                struct name      dif_name)
+int rnl_format_app_alloc_flow_req_arrived(struct sk_buff * msg,
+                                          struct name      source,
+                                          struct name      dest,
+                                          struct flow_spec fspec,
+                                          port_id_t        id,
+                                          struct name      dif_name)
 {
         /* FIXME: What's the use of the following variables ? */
         struct nlattr * msg_src_name, * msg_dst_name;
@@ -223,3 +227,4 @@ static int craft_app_alloc_flow_req_arrived_msg(struct sk_buff * msg,
 
         return 0;
 }
+EXPORT_SYMBOL(rnl_format_app_alloc_flow_req_arrived);

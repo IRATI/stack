@@ -5,7 +5,7 @@
 obj-$(CONFIG_RINA) +=				\
 	utils.o debug.o core.o personality.o	\
 	syscalls.o				\
-	netlink.o netlink-parser.o
+	netlink.o netlink-utils.o
 
 obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=		\
 	utils-workarounds.o rina_personality_default.o

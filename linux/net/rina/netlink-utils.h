@@ -1,5 +1,5 @@
 /*
- * NetLink support
+ * NetLink related utilities
  *
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
@@ -19,8 +19,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_NETLINK_PARSER_H
-#define RINA_NETLINK_PARSER_H
+#ifndef RINA_NETLINK_UTILS_H
+#define RINA_NETLINK_UTILS_H
+
+/* These definitions must be moved in the user-space exported headers */
 
 enum app_alloc_flow_req_arrived_attrs {
         AAFRA_ATTR_SOURCE_APP_NAME = 1,
@@ -63,6 +65,11 @@ enum flow_spec_attrs {
 /* FIXME: is it really needed ? */
 #define FSPEC_ATTR_MAX (__FSPEC_ATTR_MAX - 1)
 
-/* Netlink parsers have to be provided as functionals by the components */
+int rnl_format_app_alloc_flow_req_arrived(struct sk_buff * msg,
+                                          struct name      source,
+                                          struct name      dest,
+                                          struct flow_spec fspec,
+                                          port_id_t        id,
+                                          struct name      dif_name);
 
 #endif
