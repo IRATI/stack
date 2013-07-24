@@ -100,6 +100,10 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
         ASSERT(source);
         ASSERT(dest);
 
+	/* FIXME: we need to add here the sending of the message 
+	 * app_alloc_flow_req_arrived_msg */
+
+
         if (find_flow(data, id)) {
         	LOG_ERR("Flow already exists");
         	return -1;
