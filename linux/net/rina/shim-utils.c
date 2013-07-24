@@ -83,24 +83,16 @@ struct name * name_init(struct name *    dst,
 {
         ASSERT(dst);
 
-        /* Clean up the destination, it may have leftovers */
+        /* Clean up the destination, leftovers might be there ... */
         name_fini(dst);
 
         ASSERT(name_is_initialized(dst));
 
-        if (string_dup(process_name, &dst->process_name)) {
-                name_fini(dst);
-                return NULL;
-        }
-        if (string_dup(process_instance, &dst->process_instance)) {
-                name_fini(dst);
-                return NULL;
-        }
-        if (string_dup(entity_name, &dst->entity_name)) {
-                name_fini(dst);
-                return NULL;
-        }
-        if (string_dup(entity_instance, &dst->entity_instance)) {
+        /* Boolean shortcuits ... */
+        if (string_dup(process_name,     &dst->process_name)     ||
+            string_dup(process_instance, &dst->process_instance) ||
+            string_dup(entity_name,      &dst->entity_name)      ||
+            string_dup(entity_instance,  &dst->entity_instance)) {
                 name_fini(dst);
                 return NULL;
         }
