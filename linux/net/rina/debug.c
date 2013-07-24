@@ -24,7 +24,7 @@
 
 #include "logs.h"
 
-#if CONFIG_RINA_DEBUG
+#ifdef CONFIG_RINA_DEBUG
 
 #if CONFIG_DEBUG_FS
 static struct dentry * dfs_root = NULL;

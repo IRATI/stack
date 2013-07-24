@@ -48,7 +48,7 @@ void * rkmalloc(size_t size, gfp_t flags)
 {
         void * tmp;
 
-#if CONFIG_RINA_MEMORY_CHECKS
+#ifdef CONFIG_RINA_MEMORY_CHECKS
         if (!size) {
                 /* We wont use 0 bytes allocation */
                 LOG_ERR("Allocating 0 bytes is meaningless");
@@ -62,7 +62,7 @@ void * rkmalloc(size_t size, gfp_t flags)
                 return NULL;
         }
 
-#if CONFIG_RINA_MEMORY_PTRS_DUMP
+#ifdef CONFIG_RINA_MEMORY_PTRS_DUMP
         LOG_DBG("rkmalloc(%zd) = %pK", size, tmp);
 #endif
 
@@ -74,7 +74,7 @@ void * rkzalloc(size_t size, gfp_t flags)
 {
         void * tmp;
 
-#if CONFIG_RINA_MEMORY_CHECKS
+#ifdef CONFIG_RINA_MEMORY_CHECKS
         if (!size) {
                 /* We wont use 0 bytes allocation */
                 LOG_ERR("Allocating 0 bytes is meaningless");
@@ -88,7 +88,7 @@ void * rkzalloc(size_t size, gfp_t flags)
                 return NULL;
         }
 
-#if CONFIG_RINA_MEMORY_PTRS_DUMP
+#ifdef CONFIG_RINA_MEMORY_PTRS_DUMP
         LOG_DBG("rkzalloc(%zd) = %pK", size, tmp);
 #endif
 
@@ -98,11 +98,11 @@ EXPORT_SYMBOL(rkzalloc);
 
 void rkfree(void * ptr)
 {
-#if CONFIG_RINA_MEMORY_PTRS_DUMP
+#ifdef CONFIG_RINA_MEMORY_PTRS_DUMP
         LOG_DBG("rkfree(%pK)", ptr);
 #endif
 
-#if CONFIG_RINA_MEMORY_CHECKS
+#ifdef CONFIG_RINA_MEMORY_CHECKS
         if (!ptr) {
                 LOG_ERR("Passed pointer is NULL, cannot free");
                 return;

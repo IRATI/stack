@@ -63,6 +63,7 @@ static int string_dup(const string_t * src, string_t ** dst)
         return 0;
 }
 
+#ifdef CONFIG_RINA_DEBUG
 static int name_is_initialized(struct name * dst)
 {
         ASSERT(dst);
@@ -74,6 +75,7 @@ static int name_is_initialized(struct name * dst)
                 return 1;
         return 0;
 }
+#endif
 
 struct name * name_init(struct name *    dst,
                         const string_t * process_name,

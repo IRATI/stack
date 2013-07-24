@@ -171,6 +171,8 @@ struct shim * shim_register(struct shims *          parent,
         struct shim * tmp;
         struct shim * shim;
 
+        LOG_DBG("Registering new shim");
+
         if (!is_name_ok(name)) {
                 LOG_ERR("Name is bogus, cannot register shim");
                 return NULL;
