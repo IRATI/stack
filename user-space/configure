@@ -7,7 +7,7 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-ME=configure-user-space
+ME=configure
 
 PREFIX=$1
 
