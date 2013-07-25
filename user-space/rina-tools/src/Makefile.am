@@ -11,8 +11,6 @@ bin_PROGRAMS = rina-wrap
 rina_wrap_SOURCES  =
 	rina-wrap.c
 rina_wrap_LDFLAGS  =
-rina_wrap_LIBADD   =				\
-	$(LIBNL3_LIBS)				\
-	$(LIBNLGENL3_LIBS)
+rina_wrap_LDADD    =
 rina_wrap_CPPFLAGS =				\
 	$(CPPFLAGS_EXTRA)
