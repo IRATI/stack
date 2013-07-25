@@ -8,7 +8,7 @@ EXTRA_DIST =
 
 bin_PROGRAMS = rina-wrap
 
-rina_wrap_SOURCES  =
+rina_wrap_SOURCES  =				\
 	rina-wrap.c
 rina_wrap_LDFLAGS  =
 rina_wrap_LDADD    =
