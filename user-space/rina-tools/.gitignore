@@ -28,6 +28,4 @@ Makefile.in
 /conftest.err
 /libtool
 
-*.[ao]
-
 /*.tar.gz
