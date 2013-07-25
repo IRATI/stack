@@ -42,8 +42,8 @@ enum RINANetlinkOperationCode{
         RINA_C_APP_UNREGISTER_APPLICATION_REQUEST, /* Application -> IPC Manager */
         RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE, /* IPC Manager -> Application */
         RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION, /* IPC Manager -> Application, application unregistered without the application having requested it */
-        RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* TODO Application -> IPC Manager */
-        RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* TODO IPC Manager -> Application */
+        RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* Application -> IPC Manager */
+        RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* IPC Manager -> Application */
         RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST, /* IPC Manager -> IPC Process */
         RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE, /* IPC Process -> IPC Manager */
         RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION, /* IPC Manager -> IPC Process */
@@ -505,7 +505,8 @@ public:
  * Response of the IPC Manager to an application unregistration request.
  * IPC Manager -> Application
  */
-class AppUnregisterApplicationResponseMessage: public BaseNetlinkResponseMessage {
+class AppUnregisterApplicationResponseMessage:
+		public BaseNetlinkResponseMessage {
 
 	/** The name of the application to be registered */
 	ApplicationProcessNamingInformation applicationName;
@@ -518,15 +519,22 @@ public:
 };
 
 /**
- * IPC Process -> Application, application unregistered without the application having
- *  requested it
+ * IPC Process -> Application, application unregistered without the application
+ * having requested it
  */
-class AppRegistrationCanceledNotificationMessage: public NetlinkRequestOrNotificationMessage {
+class AppRegistrationCanceledNotificationMessage:
+		public NetlinkRequestOrNotificationMessage {
 
-	/** A number identifying a reason why the application registration has been canceled */
+	/**
+	 * A number identifying a reason why the application registration has
+	 * been canceled
+	 */
 	int code;
 
-	/** An optional explanation of why the application registration has been canceled */
+	/**
+	 * An optional explanation of why the application registration has
+	 * been canceled
+	 */
 	std::string reason;
 
 	/**
@@ -554,10 +562,61 @@ public:
 };
 
 /**
+ * Sent by the application to request the IPC Manager the properties of
+ * one or more DIFs (Application -> IPC Manager)
+ */
+class AppGetDIFPropertiesRequestMessage:
+		public NetlinkRequestOrNotificationMessage {
+	/**
+	 * The name of the application that is querying the DIF properties
+	 */
+	ApplicationProcessNamingInformation applicationName;
+
+	/**
+	 * The name of the DIF whose properties the application wants to know
+	 * If no DIF name is specified, the IPC Manager will return the
+	 * properties of all the DIFs available to the application
+	 */
+	ApplicationProcessNamingInformation difName;
+
+public:
+	AppGetDIFPropertiesRequestMessage();
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	void setApplicationName(
+			const ApplicationProcessNamingInformation& applicationName);
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
+	IPCEvent* toIPCEvent();
+};
+
+/**
+ * IPC Manager response, containing the properties of zero or more DIFs.
+ * IPC Manager -> Application
+ */
+class AppGetDIFPropertiesResponseMessage: public BaseNetlinkResponseMessage {
+	/**
+	 * The name of the application that is querying the DIF properties
+	 */
+	ApplicationProcessNamingInformation applicationName;
+
+	/** The properties of zero or more DIFs */
+	std::list<DIFProperties> difProperties;
+public:
+	AppGetDIFPropertiesResponseMessage();
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	void setApplicationName(
+				const ApplicationProcessNamingInformation& applicationName);
+	const std::list<DIFProperties>& getDIFProperties() const;
+	void setDIFProperties(const std::list<DIFProperties>& difProperties);
+	void addDIFProperty(const DIFProperties& difProperties);
+};
+
+/**
  * Invoked by the IPCManager when it wants to register an application
  * to a DIF. IPC Manager -> IPC Process
  */
-class IpcmRegisterApplicationRequestMessage: public NetlinkRequestOrNotificationMessage {
+class IpcmRegisterApplicationRequestMessage:
+		public NetlinkRequestOrNotificationMessage {
 
 	/** The name of the application to be registered */
 	ApplicationProcessNamingInformation applicationName;

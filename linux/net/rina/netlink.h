@@ -35,13 +35,6 @@ typedef enum {
         /* Do not use */
 	RINA_C_MIN = 0, 
 	
-	/* Allocate flow request, Application -> IPC Manager */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST, 
-	
-	/* Response to an application allocate flow request, 
-	 * IPC Manager -> Application */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, 
-	
 	/* Allocate flow request from a remote application, 
 	 * IPC Process -> Application */
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, 
@@ -57,33 +50,10 @@ typedef enum {
 	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, 
 	
 	/*
-         * IPC Process -> Application, flow deallocated without the
-         * having requested it
+         * IPC Process -> Application, flow deallocated without having 
+	 * requested it
          */
 	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, 
-	
-	/* Application -> IPC Manager */
-	RINA_C_APP_REGISTER_APPLICATION_REQUEST, 
-	
-	/* IPC Manager -> Application */
-	RINA_C_APP_REGISTER_APPLICATION_RESPONSE, 
-	
-	/* Application -> IPC Manager */
-	RINA_C_APP_UNREGISTER_APPLICATION_REQUEST, 
-	
-	/* IPC Manager -> Application */
-	RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE, 
-	
-	/*
-         * IPC Manager -> Application, application unregistered without the
-         * application having requested it */
-	RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION, 
-	
-	/* Application -> IPC Manager */
-	RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, 
-	
-	/* IPC Manager -> Application */
-	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, 
 	
 	/* IPC Manager -> IPC Process */
 	RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST, 
