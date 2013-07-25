@@ -222,7 +222,7 @@ static int dummy_application_register(struct shim_instance_data * data,
 {
 	ASSERT(source);
 
-	if (is_app_registered(source))
+	if (is_app_registered(data, source))
 		return -1;
 	return -1;
 }

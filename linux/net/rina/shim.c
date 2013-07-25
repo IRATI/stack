@@ -267,6 +267,7 @@ int shim_unregister(struct shims * parent,
         }
 
         kobject_put(&shim->kobj);
+        kobject_del(&shim->kobj);
 
         if (shim->ops->fini(shim->data)) {
 		LOG_ERR("Cannot finalize shim '%s'", name);
