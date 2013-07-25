@@ -20,6 +20,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/* We will do System-Calls-Interposition (SCI) here */
+
 int main(int argc, char * argv[])
 {
         printf("Hi!");
