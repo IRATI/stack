@@ -2,6 +2,7 @@
 /config.h
 /config.h.in
 
+/*.[ao]
 /*.l[ao]
 
 /librina.pc

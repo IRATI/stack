@@ -1,5 +1,6 @@
 /run-java
 /*.class
+/*.[ao]
 
 /test-01
 /test-02
