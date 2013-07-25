@@ -122,7 +122,8 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		return 0;
 	}
 	case RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE: {
-		AppUnregisterApplicationResponseMessage * unregisterApplicationResponseObject =
+		AppUnregisterApplicationResponseMessage *
+			unregisterApplicationResponseObject =
 				dynamic_cast<AppUnregisterApplicationResponseMessage *>(message);
 		if (putAppUnregisterApplicationResponseMessageObject(netlinkMessage,
 				*unregisterApplicationResponseObject) < 0) {
@@ -131,14 +132,33 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		return 0;
 	}
 	case RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION: {
-		AppRegistrationCanceledNotificationMessage * appRegistrationCanceledNotificationObject =
-					dynamic_cast<AppRegistrationCanceledNotificationMessage *>(message);
-			if (putAppRegistrationCanceledNotificationMessageObject(netlinkMessage,
-					*appRegistrationCanceledNotificationObject) < 0) {
-				return -1;
-			}
-			return 0;
+		AppRegistrationCanceledNotificationMessage *
+		appRegistrationCanceledNotificationObject =
+				dynamic_cast<AppRegistrationCanceledNotificationMessage *>(message);
+		if (putAppRegistrationCanceledNotificationMessageObject(netlinkMessage,
+				*appRegistrationCanceledNotificationObject) < 0) {
+			return -1;
 		}
+		return 0;
+	}
+	case RINA_C_APP_GET_DIF_PROPERTIES_REQUEST: {
+		AppGetDIFPropertiesRequestMessage * getDIFPropertiesRequestMessage =
+				dynamic_cast<AppGetDIFPropertiesRequestMessage *>(message);
+		if (putAppGetDIFPropertiesRequestMessageObject(netlinkMessage,
+				*getDIFPropertiesRequestMessage) < 0) {
+			return -1;
+		}
+		return 0;
+	}
+	case RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE: {
+		AppGetDIFPropertiesResponseMessage * getDIFPropertiesResonseMessage =
+				dynamic_cast<AppGetDIFPropertiesResponseMessage *>(message);
+		if (putAppGetDIFPropertiesResponseMessageObject(netlinkMessage,
+				*getDIFPropertiesResonseMessage) < 0) {
+			return -1;
+		}
+		return 0;
+	}
 	case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST: {
 		IpcmRegisterApplicationRequestMessage *
 			registerApplicationRequestObject =
@@ -287,10 +307,20 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 				netlinkMessageHeader);
 	}
 	case RINA_C_APP_UNREGISTER_APPLICATION_REQUEST: {
-		return parseAppUnregisterApplicationRequestMessage(netlinkMessageHeader);
+		return parseAppUnregisterApplicationRequestMessage(
+				netlinkMessageHeader);
 	}
 	case RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE: {
-		return parseAppUnregisterApplicationResponseMessage(netlinkMessageHeader);
+		return parseAppUnregisterApplicationResponseMessage(
+				netlinkMessageHeader);
+	}
+	case RINA_C_APP_GET_DIF_PROPERTIES_REQUEST: {
+		return parseAppGetDIFPropertiesRequestMessage(
+				netlinkMessageHeader);
+	}
+	case RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE: {
+		return parseAppGetDIFPropertiesResponseMessage(
+				netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST: {
 		return parseIpcmRegisterApplicationRequestMessage(
@@ -550,6 +580,292 @@ FlowSpecification * parseFlowSpecificationObject(nlattr *nested) {
 	if (attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION]) {
 		result->setPeakSduBandwidthDuration(
 				nla_get_u32(attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION]));
+	}
+
+	return result;
+}
+
+QoSCube * parseQoSCubeObject(nlattr *nested) {
+	struct nla_policy attr_policy[QOS_CUBE_ATTR_MAX + 1];
+	attr_policy[QOS_CUBE_ATTR_NAME].type = NLA_STRING;
+	attr_policy[QOS_CUBE_ATTR_NAME].minlen = 0;
+	attr_policy[QOS_CUBE_ATTR_NAME].maxlen = 65535;
+	attr_policy[QOS_CUBE_ATTR_ID].type = NLA_U32;
+	attr_policy[QOS_CUBE_ATTR_ID].minlen = 4;
+	attr_policy[QOS_CUBE_ATTR_ID].maxlen = 4;
+	attr_policy[QOS_CUBE_ATTR_AVG_BAND].type = NLA_U32;
+	attr_policy[QOS_CUBE_ATTR_AVG_BAND].minlen = 4;
+	attr_policy[QOS_CUBE_ATTR_AVG_BAND].maxlen = 4;
+	attr_policy[QOS_CUBE_ATTR_AVG_SDU_BAND].type = NLA_U32;
+	attr_policy[QOS_CUBE_ATTR_AVG_SDU_BAND].minlen = 4;
+	attr_policy[QOS_CUBE_ATTR_AVG_SDU_BAND].maxlen = 4;
+	attr_policy[QOS_CUBE_ATTR_DELAY].type = NLA_U32;
+	attr_policy[QOS_CUBE_ATTR_DELAY].minlen = 4;
+	attr_policy[QOS_CUBE_ATTR_DELAY].maxlen = 4;
+	attr_policy[QOS_CUBE_ATTR_JITTER].type = NLA_U32;
+	attr_policy[QOS_CUBE_ATTR_JITTER].minlen = 4;
+	attr_policy[QOS_CUBE_ATTR_JITTER].maxlen = 4;
+	attr_policy[QOS_CUBE_ATTR_MAX_GAP].type = NLA_U32;
+	attr_policy[QOS_CUBE_ATTR_MAX_GAP].minlen = 4;
+	attr_policy[QOS_CUBE_ATTR_MAX_GAP].maxlen = 4;
+	attr_policy[QOS_CUBE_ATTR_ORD_DEL].type = NLA_FLAG;
+	attr_policy[QOS_CUBE_ATTR_ORD_DEL].minlen = 0;
+	attr_policy[QOS_CUBE_ATTR_ORD_DEL].maxlen = 0;
+	attr_policy[QOS_CUBE_ATTR_PART_DEL].type = NLA_FLAG;
+	attr_policy[QOS_CUBE_ATTR_PART_DEL].minlen = 0;
+	attr_policy[QOS_CUBE_ATTR_PART_DEL].maxlen = 0;
+	attr_policy[QOS_CUBE_ATTR_PEAK_BAND_DUR].type = NLA_U32;
+	attr_policy[QOS_CUBE_ATTR_PEAK_BAND_DUR].minlen = 4;
+	attr_policy[QOS_CUBE_ATTR_PEAK_BAND_DUR].maxlen = 4;
+	attr_policy[QOS_CUBE_ATTR_PEAK_SDU_BAND_DUR].type = NLA_U32;
+	attr_policy[QOS_CUBE_ATTR_PEAK_SDU_BAND_DUR].minlen = 4;
+	attr_policy[QOS_CUBE_ATTR_PEAK_SDU_BAND_DUR].maxlen = 4;
+	attr_policy[QOS_CUBE_ATTR_UND_BER].type = NLA_U32;
+	attr_policy[QOS_CUBE_ATTR_UND_BER].minlen = 4;
+	attr_policy[QOS_CUBE_ATTR_UND_BER].maxlen = 4;
+	struct nlattr *attrs[QOS_CUBE_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, QOS_CUBE_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing QoS Cube object from Netlink message: %d",
+				err);
+		return NULL;
+	}
+
+	QoSCube * result = new QoSCube(nla_get_string(attrs[QOS_CUBE_ATTR_NAME]),
+			nla_get_u32(attrs[QOS_CUBE_ATTR_ID]));
+
+	if (attrs[QOS_CUBE_ATTR_AVG_BAND]) {
+		result->setAverageBandwidth(nla_get_u32(attrs[QOS_CUBE_ATTR_AVG_BAND]));
+	}
+
+	if (attrs[QOS_CUBE_ATTR_AVG_SDU_BAND]) {
+		result->setAverageSduBandwidth(
+				nla_get_u32(attrs[QOS_CUBE_ATTR_AVG_SDU_BAND]));
+	}
+
+	if (attrs[QOS_CUBE_ATTR_DELAY]) {
+		result->setDelay(nla_get_u32(attrs[QOS_CUBE_ATTR_DELAY]));
+	}
+
+	if (attrs[QOS_CUBE_ATTR_JITTER]) {
+		result->setJitter(nla_get_u32(attrs[QOS_CUBE_ATTR_JITTER]));
+	}
+
+	if (attrs[QOS_CUBE_ATTR_MAX_GAP]) {
+		result->setMaxAllowableGap(nla_get_u32(attrs[QOS_CUBE_ATTR_MAX_GAP]));
+	}
+
+	if (attrs[QOS_CUBE_ATTR_ORD_DEL]) {
+		result->setOrderedDelivery(true);
+	} else {
+		result->setOrderedDelivery(false);
+	}
+
+	if (attrs[QOS_CUBE_ATTR_PART_DEL]) {
+		result->setPartialDelivery(true);
+	} else {
+		result->setPartialDelivery(false);
+	}
+
+	if (attrs[QOS_CUBE_ATTR_PEAK_BAND_DUR]) {
+		result->setPeakBandwidthDuration(
+				nla_get_u32(attrs[QOS_CUBE_ATTR_PEAK_BAND_DUR]));
+	}
+
+	if (attrs[QOS_CUBE_ATTR_PEAK_SDU_BAND_DUR]) {
+		result->setPeakSduBandwidthDuration(
+				nla_get_u32(attrs[QOS_CUBE_ATTR_PEAK_SDU_BAND_DUR]));
+	}
+
+	return result;
+}
+
+int putQoSCubeObject(nl_msg* netlinkMessage,
+		const QoSCube& object){
+	NLA_PUT_STRING(netlinkMessage, QOS_CUBE_ATTR_NAME,
+			object.getName().c_str());
+
+	NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_ID, object.getId());
+
+	if (object.getAverageBandwidth() > 0) {
+		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_AVG_BAND,
+				object.getAverageBandwidth());
+	}
+	if (object.getAverageSduBandwidth() > 0) {
+		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_AVG_SDU_BAND,
+				object.getAverageSduBandwidth());
+	}
+	if (object.getDelay() > 0) {
+		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_DELAY, object.getDelay());
+	}
+	if (object.getJitter() > 0) {
+		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_JITTER, object.getJitter());
+	}
+	if (object.getMaxAllowableGap() >= 0) {
+		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_MAX_GAP,
+				object.getMaxAllowableGap());
+	}
+	if (object.isOrderedDelivery()) {
+		NLA_PUT_FLAG(netlinkMessage, QOS_CUBE_ATTR_ORD_DEL);
+	}
+	if (object.isPartialDelivery()) {
+		NLA_PUT_FLAG(netlinkMessage, QOS_CUBE_ATTR_PART_DEL);
+	}
+	if (object.getPeakBandwidthDuration() > 0) {
+		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_PEAK_BAND_DUR,
+				object.getPeakBandwidthDuration());
+	}
+	if (object.getPeakSduBandwidthDuration() > 0) {
+		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_PEAK_SDU_BAND_DUR,
+				object.getPeakSduBandwidthDuration());
+	}
+	if (object.getUndetectedBitErrorRate() > 0) {
+		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_UND_BER,
+				object.getUndetectedBitErrorRate());
+	}
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building QosCube Netlink object");
+	return -1;
+}
+
+int putListOfQoSCubeObjects(
+		nl_msg* netlinkMessage, const std::list<QoSCube>& qosCubes){
+	std::list<QoSCube>::const_iterator iterator;
+	struct nlattr *qosCube;
+	int i = 0;
+
+	for (iterator = qosCubes.begin();
+			iterator != qosCubes.end();
+			++iterator) {
+		if (!(qosCube = nla_nest_start(netlinkMessage, i))){
+			goto nla_put_failure;
+		}
+		if (putQoSCubeObject(netlinkMessage, *iterator) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, qosCube);
+		i++;
+	}
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building QosCubeObject Netlink object");
+	return -1;
+}
+
+int putDIFPropertiesObject(nl_msg* netlinkMessage,
+		const DIFProperties& object){
+	struct nlattr *difName, *qosCubes;
+
+	if (!(difName = nla_nest_start(netlinkMessage,
+			DIF_PROP_ATTR_DIF_NAME))) {
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getDifName()) < 0) {
+		goto nla_put_failure;
+	}
+
+	nla_nest_end(netlinkMessage, difName);
+
+	NLA_PUT_U32(netlinkMessage, DIF_PROP_ATTR_MAX_SDU_SIZE,
+			object.getMaxSduSize());
+
+	if (object.getQoSCubes().size() > 0){
+		if (!(qosCubes = nla_nest_start(netlinkMessage,
+				DIF_PROP_ATTR_QOS_CUBES))) {
+			goto nla_put_failure;
+		}
+
+		if (putListOfQoSCubeObjects(netlinkMessage,
+				object.getQoSCubes()) < 0) {
+			goto nla_put_failure;
+		}
+
+		nla_nest_end(netlinkMessage, qosCubes);
+	}
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building DIF Properties Netlink object");
+	return -1;
+}
+
+int parseListOfQoSCubes(nlattr *nested,
+		DIFProperties * difProperties){
+	nlattr * nla;
+	int rem;
+	QoSCube * qosCube;
+
+	for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+		     nla_ok(nla, rem);
+		     nla = nla_next(nla, &(rem))){
+		/* validate & parse attribute */
+		qosCube = parseQoSCubeObject(nla);
+		if (qosCube == 0){
+			return -1;
+		}
+		difProperties->addQoSCube(*qosCube);
+		delete qosCube;
+	}
+
+	if (rem > 0){
+		LOG_WARN("Missing bits to parse");
+	}
+
+	return 0;
+}
+
+DIFProperties * parseDIFPropertiesObject(nlattr *nested){
+	struct nla_policy attr_policy[DIF_PROP_ATTR_MAX + 1];
+	attr_policy[DIF_PROP_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[DIF_PROP_ATTR_DIF_NAME].minlen = 0;
+	attr_policy[DIF_PROP_ATTR_DIF_NAME].maxlen = 0;
+	attr_policy[DIF_PROP_ATTR_MAX_SDU_SIZE].type = NLA_U32;
+	attr_policy[DIF_PROP_ATTR_MAX_SDU_SIZE].minlen = 0;
+	attr_policy[DIF_PROP_ATTR_MAX_SDU_SIZE].maxlen = 65535;
+	attr_policy[DIF_PROP_ATTR_QOS_CUBES].type = NLA_NESTED;
+	attr_policy[DIF_PROP_ATTR_QOS_CUBES].minlen = 0;
+	attr_policy[DIF_PROP_ATTR_QOS_CUBES].maxlen = 0;
+	struct nlattr *attrs[DIF_PROP_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, DIF_PROP_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing DIF Properties object from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	ApplicationProcessNamingInformation * difName = 0;
+
+	if (attrs[IUAR_ATTR_APP_NAME]) {
+		difName = parseApplicationProcessNamingInformationObject(
+				attrs[DIF_PROP_ATTR_DIF_NAME]);
+		if (difName == 0) {
+			return 0;
+		}
+	}
+
+	DIFProperties * result = new DIFProperties(*difName,
+			nla_get_u32(attrs[DIF_PROP_ATTR_MAX_SDU_SIZE]));
+	delete difName;
+
+	int status = 0;
+	if (attrs[DIF_PROP_ATTR_QOS_CUBES]) {
+		status = parseListOfQoSCubes(
+				attrs[DIF_PROP_ATTR_QOS_CUBES], result);
+		if (status != 0){
+			delete result;
+			return 0;
+		}
 	}
 
 	return result;
@@ -962,6 +1278,99 @@ int putAppRegistrationCanceledNotificationMessageObject(nl_msg* netlinkMessage,
 
 	nla_put_failure: LOG_ERR(
 			"Error building AppRegistrationCanceledNotificationMessage Netlink object");
+	return -1;
+}
+
+int putAppGetDIFPropertiesRequestMessageObject(nl_msg* netlinkMessage,
+		const AppGetDIFPropertiesRequestMessage& object){
+	struct nlattr *difName, *applicationName;
+
+	if (!(applicationName = nla_nest_start(netlinkMessage, AGDP_ATTR_APP_NAME))) {
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getApplicationName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, applicationName);
+
+	if (!(difName = nla_nest_start(netlinkMessage, AGDP_ATTR_DIF_NAME))) {
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getDifName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, difName);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building AppGetDIFPropertiesRequestMessage Netlink object");
+	return -1;
+}
+
+int putListOfDIFProperties(
+		nl_msg* netlinkMessage, const std::list<DIFProperties>& difProperties){
+	std::list<DIFProperties>::const_iterator iterator;
+	struct nlattr *ribObject;
+	int i = 0;
+
+	for (iterator = difProperties.begin();
+			iterator != difProperties.end();
+			++iterator) {
+		if (!(ribObject = nla_nest_start(netlinkMessage, i))){
+			goto nla_put_failure;
+		}
+		if (putDIFPropertiesObject(netlinkMessage, *iterator) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, ribObject);
+		i++;
+	}
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building DIFProperties Netlink object");
+	return -1;
+}
+
+
+int putAppGetDIFPropertiesResponseMessageObject(nl_msg* netlinkMessage,
+		const AppGetDIFPropertiesResponseMessage& object){
+	struct nlattr *appName, *difProperties;
+
+	NLA_PUT_U32(netlinkMessage, AGDPR_ATTR_RESULT, object.getResult());
+	NLA_PUT_STRING(netlinkMessage, AGDPR_ATTR_ERROR_DESC,
+			object.getErrorDescription().c_str());
+
+	if (!(appName =
+			nla_nest_start(netlinkMessage, AGDPR_ATTR_APP_NAME))) {
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getApplicationName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, appName);
+
+	if (object.getDIFProperties().size() > 0){
+		if (!(difProperties =
+				nla_nest_start(netlinkMessage, AGDPR_ATTR_DIF_PROPERTIES))) {
+			goto nla_put_failure;
+		}
+		if (putListOfDIFProperties(netlinkMessage,
+				object.getDIFProperties()) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, difProperties);
+	}
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building AppGetDIFPropertiesResponseMessage Netlink object");
 	return -1;
 }
 
@@ -2021,27 +2430,28 @@ AppUnregisterApplicationRequestMessage * parseAppUnregisterApplicationRequestMes
 	if (attrs[AUAR_ATTR_APP_NAME]) {
 		applicationName = parseApplicationProcessNamingInformationObject(
 				attrs[AUAR_ATTR_APP_NAME]);
-		if (applicationName == NULL) {
+		if (applicationName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setApplicationName(*applicationName);
+			delete applicationName;
 		}
 	}
 	if (attrs[AUAR_ATTR_DIF_NAME]) {
 		difName = parseApplicationProcessNamingInformationObject(
 				attrs[AUAR_ATTR_DIF_NAME]);
-		if (difName == NULL) {
+		if (difName == 0) {
 			delete result;
-			return NULL;
+			return 0;
 		} else {
 			result->setDifName(*difName);
+			delete difName;
 		}
 	}
 
 	return result;
 }
-
 
 AppUnregisterApplicationResponseMessage * parseAppUnregisterApplicationResponseMessage(
 		nlmsghdr *hdr) {
@@ -2100,8 +2510,6 @@ AppUnregisterApplicationResponseMessage * parseAppUnregisterApplicationResponseM
 
 	return result;
 }
-
-
 
 AppRegistrationCanceledNotificationMessage * parseAppRegistrationCanceledNotificationMessage(
 		nlmsghdr *hdr) {
@@ -2176,7 +2584,153 @@ AppRegistrationCanceledNotificationMessage * parseAppRegistrationCanceledNotific
 	return result;
 }
 
+AppGetDIFPropertiesRequestMessage * parseAppGetDIFPropertiesRequestMessage(
+		nlmsghdr *hdr){
+	struct nla_policy attr_policy[AGDP_ATTR_MAX + 1];
+	attr_policy[AGDP_ATTR_APP_NAME].type = NLA_NESTED;
+	attr_policy[AGDP_ATTR_APP_NAME].minlen = 0;
+	attr_policy[AGDP_ATTR_APP_NAME].maxlen = 0;
+	attr_policy[AGDP_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[AGDP_ATTR_DIF_NAME].minlen = 0;
+	attr_policy[AGDP_ATTR_DIF_NAME].maxlen = 0;
+	struct nlattr *attrs[AGDP_ATTR_MAX + 1];
 
+	/*
+	 * The nlmsg_parse() function will make sure that the message contains
+	 * enough payload to hold the header (struct my_hdr), validates any
+	 * attributes attached to the messages and stores a pointer to each
+	 * attribute in the attrs[] array accessable by attribute type.
+	 */
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			AGDP_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing AppGetDIFPropertiesRequestMessage information from Netlink message: %d",
+				err);
+		return NULL;
+	}
+
+	AppGetDIFPropertiesRequestMessage * result =
+			new AppGetDIFPropertiesRequestMessage();
+
+	ApplicationProcessNamingInformation * applicationName;
+	ApplicationProcessNamingInformation * difName;
+
+	if (attrs[AGDP_ATTR_APP_NAME]) {
+		applicationName = parseApplicationProcessNamingInformationObject(
+				attrs[AGDP_ATTR_APP_NAME]);
+		if (applicationName == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->setApplicationName(*applicationName);
+			delete applicationName;
+		}
+	}
+	if (attrs[AGDP_ATTR_DIF_NAME]) {
+		difName = parseApplicationProcessNamingInformationObject(
+				attrs[AGDP_ATTR_DIF_NAME]);
+		if (difName == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->setDifName(*difName);
+			delete difName;
+		}
+	}
+
+	return result;
+}
+
+int parseListOfDIFProperties(nlattr *nested,
+		AppGetDIFPropertiesResponseMessage * message){
+	nlattr * nla;
+	int rem;
+	DIFProperties * difProperties;
+
+	for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+		     nla_ok(nla, rem);
+		     nla = nla_next(nla, &(rem))){
+		/* validate & parse attribute */
+		difProperties = parseDIFPropertiesObject(nla);
+		if (difProperties == 0){
+			return -1;
+		}
+		message->addDIFProperty(*difProperties);
+		delete difProperties;
+	}
+
+	if (rem > 0){
+		LOG_WARN("Missing bits to parse");
+	}
+
+	return 0;
+}
+
+AppGetDIFPropertiesResponseMessage * parseAppGetDIFPropertiesResponseMessage(
+		nlmsghdr *hdr){
+	struct nla_policy attr_policy[AGDPR_ATTR_MAX + 1];
+	attr_policy[AGDPR_ATTR_RESULT].type = NLA_U32;
+	attr_policy[AGDPR_ATTR_RESULT].minlen = 4;
+	attr_policy[AGDPR_ATTR_RESULT].maxlen = 4;
+	attr_policy[AGDPR_ATTR_ERROR_DESC].type = NLA_STRING;
+	attr_policy[AGDPR_ATTR_ERROR_DESC].minlen = 0;
+	attr_policy[AGDPR_ATTR_ERROR_DESC].maxlen = 65535;
+	attr_policy[AGDPR_ATTR_APP_NAME].type = NLA_NESTED;
+	attr_policy[AGDPR_ATTR_APP_NAME].minlen = 0;
+	attr_policy[AGDPR_ATTR_APP_NAME].maxlen = 0;
+	attr_policy[AGDPR_ATTR_DIF_PROPERTIES].type = NLA_NESTED;
+	attr_policy[AGDPR_ATTR_DIF_PROPERTIES].minlen = 0;
+	attr_policy[AGDPR_ATTR_DIF_PROPERTIES].maxlen = 0;
+	struct nlattr *attrs[AGDPR_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			AGDPR_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing AppGetDIFPropertiesResponse information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	AppGetDIFPropertiesResponseMessage * result =
+					new AppGetDIFPropertiesResponseMessage();
+
+	if (attrs[AGDPR_ATTR_RESULT]){
+		result->setResult(nla_get_u32(attrs[AGDPR_ATTR_RESULT]));
+	}
+
+	if (attrs[AGDPR_ATTR_ERROR_DESC]){
+		result->setErrorDescription(
+				nla_get_string(attrs[AGDPR_ATTR_ERROR_DESC]));
+	}
+
+	ApplicationProcessNamingInformation * applicationName;
+
+	if (attrs[AGDPR_ATTR_APP_NAME]) {
+		applicationName = parseApplicationProcessNamingInformationObject(
+				attrs[AGDPR_ATTR_APP_NAME]);
+		if (applicationName == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->setApplicationName(*applicationName);
+			delete applicationName;
+		}
+	}
+
+	int status = 0;
+	if (attrs[AGDPR_ATTR_DIF_PROPERTIES]) {
+		status = parseListOfDIFProperties(
+				attrs[AGDPR_ATTR_DIF_PROPERTIES], result);
+		if (status != 0){
+			delete result;
+			return 0;
+		}
+	}
+
+	return result;
+}
 
 IpcmRegisterApplicationRequestMessage *
 parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {

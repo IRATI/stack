@@ -372,6 +372,10 @@ const std::string& QoSCube::getName() const {
 	return this->name;
 }
 
+int QoSCube::getId() const{
+	return id;
+}
+
 unsigned int QoSCube::getAverageBandwidth() const {
 	return averageBandwidth;
 }

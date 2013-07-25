@@ -49,6 +49,8 @@ AC_SUBST(CPPFLAGS_EXTRA, $CPPFLAGS_EXTRA)
 
 LT_INIT
 
+PKG_PROG_PKG_CONFIG([0.26])
+
 PKG_CHECK_MODULES(LIBNL3, [libnl-3.0 >= 3.1],, [
     AC_MSG_ERROR([Your system lacks of libnl-3 support])
 ])

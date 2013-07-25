@@ -501,6 +501,30 @@ public:
  */
 extern Singleton<ApplicationManager> applicationManager;
 
+/**
+ * Event informing that an application has requested the
+ * properties of one or more DIFs
+ */
+class GetDIFPropertiesRequestEvent: public IPCEvent {
+	/** The application that wants to get the DIF properties */
+	ApplicationProcessNamingInformation applicationName;
+
+	/**
+	 * The DIF whose properties are requested. If no DIF name is provided the
+	 * IPC Manager will return the properties of all the DIFs visible to the
+	 * application
+	 */
+	ApplicationProcessNamingInformation DIFName;
+
+public:
+	GetDIFPropertiesRequestEvent(
+			const ApplicationProcessNamingInformation& appName,
+			const ApplicationProcessNamingInformation& DIFName,
+			unsigned int sequenceNumber);
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	const ApplicationProcessNamingInformation& getDIFName() const;
+};
+
 }
 
 #endif

@@ -837,7 +837,6 @@ int testAppUnregisterApplicationRequestMessage() {
 	return returnValue;
 }
 
-
 int testAppUnregisterApplicationResponseMessage() {
 	std::cout << "TESTING APP UNREGISTER APPLICATION RESPONSE MESSAGE\n";
 	int returnValue = 0;
@@ -908,6 +907,182 @@ int testAppUnregisterApplicationResponseMessage() {
 	return returnValue;
 }
 
+int testAppGetDIFPropertiesRequestMessage() {
+	std::cout << "TESTING APP GET DIF PROPERTIES REQUEST MESSAGE\n";
+	int returnValue = 0;
+
+	ApplicationProcessNamingInformation applicationName;
+	applicationName.setProcessName("/apps/source");
+	applicationName.setProcessInstance("5");
+	applicationName.setEntityName("database");
+	applicationName.setEntityInstance("3");
+
+	ApplicationProcessNamingInformation difName;
+	difName.setProcessName("/difs/Test2.DIF");
+
+	AppGetDIFPropertiesRequestMessage message;
+	message.setDifName(difName);
+	message.setApplicationName(applicationName);
+
+	struct nl_msg* netlinkMessage;
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage) {
+		std::cout << "Error allocating Netlink message\n";
+	}
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+			sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+	int result = putBaseNetlinkMessage(netlinkMessage, &message);
+	if (result < 0) {
+		std::cout << "Error constructing Get DIF Properties Request "
+				<< "Message \n";
+		nlmsg_free(netlinkMessage);
+		return result;
+	}
+
+	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+	AppGetDIFPropertiesRequestMessage * recoveredMessage =
+			dynamic_cast<AppGetDIFPropertiesRequestMessage *>(parseBaseNetlinkMessage(
+					netlinkMessageHeader));
+	if (recoveredMessage == 0) {
+		std::cout << "Error parsing Get DIF Properties Request Message "
+				<< "\n";
+		returnValue = -1;
+	} else if (message.getApplicationName()
+			!= recoveredMessage->getApplicationName()) {
+		std::cout << "Application name on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message.getDifName() != recoveredMessage->getDifName()) {
+		std::cout << "DIF name on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	}
+
+	if (returnValue == 0) {
+		std::cout << "AppGetDIFPropertiesRequest test ok\n";
+	}
+	nlmsg_free(netlinkMessage);
+	delete recoveredMessage;
+
+	return returnValue;
+}
+
+int testIpcmQueryRIBResponseMessage() {
+	std::cout << "TESTING IPCM QUERY RIB RESPONSE MESSAGE\n";
+	int returnValue = 0;
+
+	IpcmDIFQueryRIBResponseMessage message;
+	message.setResult(0);
+	message.setErrorDescription("ok");
+	RIBObject * ribObject = new RIBObject();
+	ribObject->setClazz("/test/clazz1");
+	ribObject->setName("/test/name1");
+	ribObject->setInstance(1234);
+	message.addRIBObject(*ribObject);
+	delete ribObject;
+
+	ribObject = new RIBObject();
+	ribObject->setClazz("/test/clazz2");
+	ribObject->setName("/test/name2");
+	ribObject->setInstance(343241);
+	message.addRIBObject(*ribObject);
+	delete ribObject;
+
+	struct nl_msg* netlinkMessage;
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage) {
+		std::cout << "Error allocating Netlink message\n";
+	}
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+			sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+	int result = putBaseNetlinkMessage(netlinkMessage, &message);
+	if (result < 0) {
+		std::cout << "Error constructing Ipcm Query RIB response"
+				<< "message \n";
+		nlmsg_free(netlinkMessage);
+		return result;
+	}
+
+	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+	IpcmDIFQueryRIBResponseMessage * recoveredMessage =
+			dynamic_cast<IpcmDIFQueryRIBResponseMessage *>(
+					parseBaseNetlinkMessage(netlinkMessageHeader));
+	if (recoveredMessage == 0) {
+		std::cout << "Error parsing Ipcm Query RIB response Message "
+				<< "\n";
+		returnValue = -1;
+	} else if (message.getResult() != recoveredMessage->getResult()) {
+		std::cout << "Result on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message.getErrorDescription().compare(
+			recoveredMessage->getErrorDescription())!=0) {
+		std::cout << "Error description on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message.getRIBObjects().size() !=
+			recoveredMessage->getRIBObjects().size()){
+		std::cout << "Number of RIB Objects on original and recovered messages"
+				<< " are different " << message.getRIBObjects().size()<<" "
+				<< recoveredMessage->getRIBObjects().size() <<std::endl;
+		returnValue = -1;
+	} else {
+		std::list<RIBObject>::const_iterator iterator;
+		int i = 0;
+		for (iterator = recoveredMessage->getRIBObjects().begin();
+				iterator != recoveredMessage->getRIBObjects().end();
+				++iterator) {
+			const RIBObject& ribObject = *iterator;
+			if (i == 0){
+				if (ribObject.getClazz().compare("/test/clazz1") != 0){
+					std::cout << "RIB Object clazz on original and recovered messages"
+							<< " are different\n";
+					returnValue = -1;
+					break;
+				}else if (ribObject.getName().compare("/test/name1") != 0){
+					std::cout << "RIB Object name on original and recovered messages"
+							<< " are different\n";
+					returnValue = -1;
+					break;
+				}else if (ribObject.getInstance() != 1234){
+					std::cout << "RIB Object instance on original and recovered messages"
+							<< " are different\n";
+					returnValue = -1;
+					break;
+				}
+
+				i++;
+			}else if (i == 1){
+				if (ribObject.getClazz().compare("/test/clazz2") != 0){
+					std::cout << "RIB Object clazz on original and recovered messages"
+							<< " are different " <<std::endl;
+					returnValue = -1;
+					break;
+				} else if (ribObject.getName().compare("/test/name2") != 0){
+					std::cout << "RIB Object name on original and recovered messages"
+							<< " are different\n";
+					returnValue = -1;
+					break;
+				} else if (ribObject.getInstance() != 343241){
+					std::cout << "RIB Object instance on original and recovered messages"
+							<< " are different\n";
+					returnValue = -1;
+					break;
+				}
+			}
+		}
+	}
+
+	if (returnValue == 0) {
+		std::cout << "IpcmDIFQueryRIBResponseMessage test ok\n";
+	}
+	nlmsg_free(netlinkMessage);
+	delete recoveredMessage;
+
+	return returnValue;
+}
 
 int testIpcmRegisterApplicationRequestMessage() {
 	std::cout << "TESTING IPCM REGISTER APPLICATION REQUEST MESSAGE\n";
@@ -1579,26 +1754,30 @@ int testIpcmQueryRIBRequestMessage() {
 	return returnValue;
 }
 
-int testIpcmQueryRIBResponseMessage() {
-	std::cout << "TESTING IPCM QUERY RIB RESPONSE MESSAGE\n";
+int testAppGetDIFPropertiesResponseMessage() {
+	std::cout << "TESTING APP QUERY DIF PROPERTIES RESPONSE MESSAGE\n";
 	int returnValue = 0;
 
-	IpcmDIFQueryRIBResponseMessage message;
+	ApplicationProcessNamingInformation appName;
+	appName.setProcessName("/test/apps/rinaband");
+	appName.setProcessInstance("1");
+	appName.setEntityName("control");
+	appName.setEntityInstance("23");
+	ApplicationProcessNamingInformation difName;
+	difName.setProcessName("/difs/Test.DIF");
+	ApplicationProcessNamingInformation difName2;
+	difName2.setProcessName("/difs/shim-dummy.DIF");
+
+	AppGetDIFPropertiesResponseMessage message;
 	message.setResult(0);
 	message.setErrorDescription("ok");
-	RIBObject * ribObject = new RIBObject();
-	ribObject->setClazz("/test/clazz1");
-	ribObject->setName("/test/name1");
-	ribObject->setInstance(1234);
-	message.addRIBObject(*ribObject);
-	delete ribObject;
-
-	ribObject = new RIBObject();
-	ribObject->setClazz("/test/clazz2");
-	ribObject->setName("/test/name2");
-	ribObject->setInstance(343241);
-	message.addRIBObject(*ribObject);
-	delete ribObject;
+	message.setApplicationName(appName);
+	DIFProperties * difProperties = new DIFProperties(difName, 9000);
+	message.addDIFProperty(*difProperties);
+	delete difProperties;
+	difProperties = new DIFProperties(difName2, 25000);
+	message.addDIFProperty(*difProperties);
+	delete difProperties;
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -1610,18 +1789,18 @@ int testIpcmQueryRIBResponseMessage() {
 
 	int result = putBaseNetlinkMessage(netlinkMessage, &message);
 	if (result < 0) {
-		std::cout << "Error constructing Ipcm Query RIB response"
+		std::cout << "Error constructing App Get DIF Properties response"
 				<< "message \n";
 		nlmsg_free(netlinkMessage);
 		return result;
 	}
 
 	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
-	IpcmDIFQueryRIBResponseMessage * recoveredMessage =
-			dynamic_cast<IpcmDIFQueryRIBResponseMessage *>(
+	AppGetDIFPropertiesResponseMessage * recoveredMessage =
+			dynamic_cast<AppGetDIFPropertiesResponseMessage *>(
 					parseBaseNetlinkMessage(netlinkMessageHeader));
 	if (recoveredMessage == 0) {
-		std::cout << "Error parsing Ipcm Query RIB response Message "
+		std::cout << "Error parsing App Get DIF Properties Response Message "
 				<< "\n";
 		returnValue = -1;
 	} else if (message.getResult() != recoveredMessage->getResult()) {
@@ -1633,52 +1812,42 @@ int testIpcmQueryRIBResponseMessage() {
 		std::cout << "Error description on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
-	} else if (message.getRIBObjects().size() !=
-			recoveredMessage->getRIBObjects().size()){
-		std::cout << "Number of RIB Objects on original and recovered messages"
-				<< " are different " << message.getRIBObjects().size()<<" "
-				<< recoveredMessage->getRIBObjects().size() <<std::endl;
+	} else if (message.getDIFProperties().size() !=
+			recoveredMessage->getDIFProperties().size()){
+		std::cout << "Number of DIF Properties on original and recovered messages"
+				<< " are different " << message.getDIFProperties().size()<<" "
+				<< recoveredMessage->getDIFProperties().size() <<std::endl;
 		returnValue = -1;
 	} else {
-		std::list<RIBObject>::const_iterator iterator;
+		std::list<DIFProperties>::const_iterator iterator;
 		int i = 0;
-		for (iterator = recoveredMessage->getRIBObjects().begin();
-				iterator != recoveredMessage->getRIBObjects().end();
+		for (iterator = recoveredMessage->getDIFProperties().begin();
+				iterator != recoveredMessage->getDIFProperties().end();
 				++iterator) {
-			const RIBObject& ribObject = *iterator;
+			const DIFProperties& difProperties = *iterator;
 			if (i == 0){
-				if (ribObject.getClazz().compare("/test/clazz1") != 0){
-					std::cout << "RIB Object clazz on original and recovered messages"
-							<< " are different\n";
+				if (difProperties.getDifName() != difName){
+					std::cout << "DIF name on original and recovered messages"
+							<< " are different 1\n";
 					returnValue = -1;
 					break;
-				}else if (ribObject.getName().compare("/test/name1") != 0){
-					std::cout << "RIB Object name on original and recovered messages"
-							<< " are different\n";
-					returnValue = -1;
-					break;
-				}else if (ribObject.getInstance() != 1234){
-					std::cout << "RIB Object instance on original and recovered messages"
-							<< " are different\n";
+				}else if (difProperties.getMaxSduSize()!= 9000){
+					std::cout << "Max SDU size on original and recovered messages"
+							<< " are different 1\n";
 					returnValue = -1;
 					break;
 				}
 
 				i++;
 			}else if (i == 1){
-				if (ribObject.getClazz().compare("/test/clazz2") != 0){
-					std::cout << "RIB Object clazz on original and recovered messages"
-							<< " are different " <<std::endl;
+				if (difProperties.getDifName() != difName2){
+					std::cout << "DIF name on original and recovered messages"
+							<< " are different 2 \n";
 					returnValue = -1;
 					break;
-				} else if (ribObject.getName().compare("/test/name2") != 0){
-					std::cout << "RIB Object name on original and recovered messages"
-							<< " are different\n";
-					returnValue = -1;
-					break;
-				} else if (ribObject.getInstance() != 343241){
-					std::cout << "RIB Object instance on original and recovered messages"
-							<< " are different\n";
+				}else if (difProperties.getMaxSduSize()!= 25000){
+					std::cout << "Max SDU size on original and recovered messages"
+							<< " are different 2 \n";
 					returnValue = -1;
 					break;
 				}
@@ -1687,7 +1856,7 @@ int testIpcmQueryRIBResponseMessage() {
 	}
 
 	if (returnValue == 0) {
-		std::cout << "IpcmDIFQueryRIBResponseMessage test ok\n";
+		std::cout << "AppGetDIFPropertiesResponse test ok\n";
 	}
 	nlmsg_free(netlinkMessage);
 	delete recoveredMessage;
@@ -1751,6 +1920,16 @@ int main(int argc, char * argv[]) {
 	}
 
 	result = testAppUnregisterApplicationResponseMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testAppGetDIFPropertiesRequestMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testAppGetDIFPropertiesResponseMessage();
 	if (result < 0) {
 		return result;
 	}

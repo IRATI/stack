@@ -252,6 +252,30 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		}
 		break;
 	}
+	case RINA_C_APP_GET_DIF_PROPERTIES_REQUEST:{
+		if(send){
+			message->setDestPortId(getIPCManagerPortId());
+		}else{
+			AppGetDIFPropertiesRequestMessage * specificMessage =
+					dynamic_cast<AppGetDIFPropertiesRequestMessage *>(message);
+			putAPNametoNetlinkPortIdMapping(
+					specificMessage->getApplicationName(),
+					specificMessage->getSourcePortId(),
+					specificMessage->getSourceIpcProcessId());
+		}
+		break;
+	}
+	case RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE:{
+		if(send){
+			AppGetDIFPropertiesResponseMessage * specificMessage =
+					dynamic_cast<AppGetDIFPropertiesResponseMessage *>(message);
+			RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+					specificMessage->getApplicationName());
+			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
+		}
+		break;
+	}
 	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:{
 		if(send){
 			message->setDestPortId(getIPCManagerPortId());
