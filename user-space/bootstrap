@@ -7,7 +7,7 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-ME=bootstrap-user-space
+ME=bootstrap
 
 DIRS="librina"
 
