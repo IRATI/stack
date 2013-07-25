@@ -7,7 +7,7 @@
 AC_INIT([RINA Tools],
         m4_esyscmd([build-aux/git-version-gen .tarball-version]),
         [f.salvestrini@nextworks.it],
-        [librina],
+        [rina-tool],
         [http://www.irati.eu])
 
 AC_PREREQ([2.68])
@@ -36,7 +36,7 @@ AC_PATH_PROG([GIT],  [git],  [/bin/false])
 
 AC_PROG_CPP
 AC_PROG_CC
-AC_PROG_CC_C_O
+AM_PROG_CC_C_O
 
 CPPFLAGS_EXTRA=""
 AX_CHECK_COMPILE_FLAG([ -Wall -Werror ], [
