@@ -1,4 +1,4 @@
-package rina.configuration;
+package rina.ipcmanager.impl.conf;
 
 /**
  * Configuration of the local RINA Software instantiation
@@ -114,5 +114,18 @@ public class LocalConfiguration {
 
 	public void setLengthOfFlowQueues(int lengthOfFlowQueues) {
 		this.lengthOfFlowQueues = lengthOfFlowQueues;
+	}
+	
+	public String toString(){
+		String result = "Local Configuration \n";
+		result = result + "Console port: " + consolePort + "\n";
+		result = result + "CDAP timeout in ms: "+ cdapTimeoutInMs + "\n";
+		result = result + "Enrollment timeout in ms: " + enrollmentTimeoutInMs + "\n";
+		result = result + "Flow allocator timeout in ms:  "+flowAllocatorTimeoutInMs + "\n";
+		result = result + "Watchdog period in ms: " + watchdogPeriodInMs + "\n";
+		result = result + "Declared dead interval in ms: " + declaredDeadIntervalInMs + "\n";
+		result = result + "Neighbors enroller period in ms: " + neighborsEnrollerPeriodInMs + "\n";
+		
+		return result;
 	}
 }

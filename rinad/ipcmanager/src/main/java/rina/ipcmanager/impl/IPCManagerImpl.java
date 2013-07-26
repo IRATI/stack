@@ -21,11 +21,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import rina.applicationprocess.api.WhatevercastName;
 import rina.cdap.api.CDAPSessionManagerFactory;
-import rina.configuration.DIFConfiguration;
-import rina.configuration.IPCProcessToCreate;
-import rina.configuration.KnownIPCProcessAddress;
-import rina.configuration.RINAConfiguration;
-import rina.configuration.SDUProtectionOption;
+import rina.ipcmanager.impl.conf.DIFConfiguration;
+import rina.ipcmanager.impl.conf.IPCProcessToCreate;
+import rina.ipcmanager.impl.conf.KnownIPCProcessAddress;
+import rina.ipcmanager.impl.conf.RINAConfiguration;
+import rina.ipcmanager.impl.conf.SDUProtectionOption;
 import rina.delimiting.api.DelimiterFactory;
 import rina.efcp.api.DataTransferConstants;
 import rina.encoding.api.EncoderFactory;

@@ -1,4 +1,4 @@
-package rina.configuration;
+package rina.ipcmanager.impl.conf;
 
 /**
  * A name/value pair

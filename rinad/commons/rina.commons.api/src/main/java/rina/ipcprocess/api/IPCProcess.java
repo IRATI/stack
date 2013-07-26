@@ -8,7 +8,6 @@ import rina.efcp.api.DataTransferConstants;
 import rina.enrollment.api.Neighbor;
 import rina.flowallocator.api.Flow;
 import rina.flowallocator.api.QoSCube;
-import rina.ipcmanager.api.IPCManager;
 import rina.applicationprocess.api.ApplicationProcessNamingInfo;
 
 /**
@@ -46,19 +45,6 @@ public interface IPCProcess{
 	public IPCProcessComponent removeIPCProcessComponent(String componentName);
 	
 	public void setIPCProcessCompnents(Map<String, IPCProcessComponent> ipcProcessComponents);
-	
-	/* IPC Manager */
-	/**
-	 * Set the IPCManager of this system
-	 * @param ipcManager
-	 */
-	public void setIPCManager(IPCManager ipcManager);
-	
-	/**
-	 * Get the IPCManager of this system
-	 * @return
-	 */
-	public IPCManager getIPCManager();
 	
 	/**
 	 * Lifecicle event, invoked to tell the IPC process it is about to be destroyed.

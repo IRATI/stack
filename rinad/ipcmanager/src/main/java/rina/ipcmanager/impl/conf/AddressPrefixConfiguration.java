@@ -1,4 +1,4 @@
-package rina.configuration;
+package rina.ipcmanager.impl.conf;
 
 /**
  * Assigns an address prefix to a certain substring (the organization)

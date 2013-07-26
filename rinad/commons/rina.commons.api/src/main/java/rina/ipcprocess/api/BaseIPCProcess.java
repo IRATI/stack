@@ -10,7 +10,6 @@ import rina.efcp.api.DataTransferConstants;
 import rina.enrollment.api.Neighbor;
 import rina.flowallocator.api.Flow;
 import rina.flowallocator.api.QoSCube;
-import rina.ipcmanager.api.IPCManager;
 import rina.ipcservice.api.IPCException;
 import rina.ipcservice.api.IPCService;
 import rina.applicationprocess.api.ApplicationProcessNamingInfo;
@@ -28,8 +27,6 @@ import rina.ribdaemon.api.RIBObjectNames;
 public abstract class BaseIPCProcess implements IPCProcess, IPCService{
 	
 	private Map<String, IPCProcessComponent> ipcProcessComponents = null;
-	
-	private IPCManager ipcManager = null;
 	
 	private IPCProcessType ipcProcessType = null;
 	
@@ -76,15 +73,6 @@ public abstract class BaseIPCProcess implements IPCProcess, IPCService{
 	 * @throws IPCException
 	 */
 	public void submitTransfer(int portId, byte[] sdu) throws IPCException{
-		this.ipcManager.getOutgoingFlowQueue(portId).writeDataToQueue(sdu);
-	}
-	
-	public void setIPCManager(IPCManager ipcManager){
-		this.ipcManager = ipcManager;
-	}
-	
-	public IPCManager getIPCManager(){
-		return this.ipcManager;
 	}
 	
 	public ApplicationProcessNamingInfo getApplicationProcessNamingInfo(){

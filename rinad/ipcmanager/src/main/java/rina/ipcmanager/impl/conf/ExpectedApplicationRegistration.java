@@ -1,11 +1,11 @@
-package rina.configuration;
+package rina.ipcmanager.impl.conf;
 
-public class DirectoryEntry {
-
+public class ExpectedApplicationRegistration {
+	
 	private String applicationProcessName = null;
 	private String applicationProcessInstance = null;
 	private String applicationEntityName = null;
-	private String hostname = null;
+	
 	private int socketPortNumber = -1;
 	
 	public String getApplicationProcessName() {
@@ -20,22 +20,16 @@ public class DirectoryEntry {
 	public void setApplicationProcessInstance(String applicationProcessInstance) {
 		this.applicationProcessInstance = applicationProcessInstance;
 	}
-	public String getApplicationEntityName() {
-		return applicationEntityName;
-	}
-	public void setApplicationEntityName(String applicationEntityName) {
-		this.applicationEntityName = applicationEntityName;
-	}
-	public String getHostname() {
-		return hostname;
-	}
-	public void setHostname(String hostname) {
-		this.hostname = hostname;
-	}
 	public int getSocketPortNumber() {
 		return socketPortNumber;
 	}
 	public void setSocketPortNumber(int socketPortNumber) {
 		this.socketPortNumber = socketPortNumber;
+	}
+	public String getApplicationEntityName() {
+		return applicationEntityName;
+	}
+	public void setApplicationEntityName(String applicationEntityName) {
+		this.applicationEntityName = applicationEntityName;
 	}
 }

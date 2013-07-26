@@ -1,4 +1,4 @@
-package rina.configuration;
+package rina.ipcmanager.impl.conf;
 
 import java.util.List;
 
@@ -182,5 +182,9 @@ public class RINAConfiguration {
 		}
 		
 		return -1;
+	}
+	
+	public String toString(){
+		return localConfiguration.toString();
 	}
 }
