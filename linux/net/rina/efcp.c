@@ -37,9 +37,11 @@ struct efcp {
         /* The Data transfer control protocol state machine instance */
         struct dtcp * dtcp;
 
+#if 0
         /* Pointer to the flow data structure of the K-IPC Manager */
         /* FIXME: Do we really need this pointer ? */
         struct flow * flow;
+#endif
 };
 
 struct efcp * efcp_init(struct kobject * parent)

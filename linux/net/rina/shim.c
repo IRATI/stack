@@ -145,8 +145,8 @@ static int are_ops_ok(const struct shim_ops * ops)
 
 #define to_shim(O) container_of(O, struct shim, kobj)
 
-static struct shim * shim_find(struct shims * parent,
-                               const char *   name)
+struct shim * shim_find(struct shims * parent,
+                        const char *   name)
 {
         struct kobject * k;
 
@@ -217,14 +217,14 @@ struct shim * shim_register(struct shims *          parent,
         }
 
         if (shim->ops->init(shim->data)) {
-        	LOG_ERR("Cannot initialize shim '%s'", name);
-        	kobject_put(&shim->kobj);
-		/*
-		 * FIXME: To be removed once shim_ktype.release
-		 * gets implemented
-		 */
-		rkfree(shim);
-        	return NULL;
+                LOG_ERR("Cannot initialize shim '%s'", name);
+                kobject_put(&shim->kobj);
+                /*
+                 * FIXME: To be removed once shim_ktype.release
+                 * gets implemented
+                 */
+                rkfree(shim);
+                return NULL;
         }
 
         /* Double checking for bugs */
@@ -266,11 +266,19 @@ int shim_unregister(struct shims * parent,
                 return -1;
         }
 
-        kobject_put(&shim->kobj);
-
         if (shim->ops->fini(shim->data)) {
-		LOG_ERR("Cannot finalize shim '%s'", name);
-	}
+                LOG_ERR("Cannot finalize shim '%s'", name);
+        }
+
+        shim->data = NULL;
+        shim->ops  = NULL;
+
+        /* FIXME: I (Miquel) added this kobject_del to allow the graceful
+         * removal of shims. Please Francesco, could you review it? Besides,
+         * this doesn't solve all the problems, a memory leak remains.
+         */
+        kobject_del(&shim->kobj);
+        kobject_put(&shim->kobj);
 
         rkfree(shim); /* FIXME: To be removed */
 
