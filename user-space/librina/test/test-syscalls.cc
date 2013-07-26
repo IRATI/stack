@@ -46,7 +46,6 @@ int main(int argc, char * argv[]) {
 				<<result<<std::endl;
 
 	//Read SDU (will fail)
-	char * sdu = new char[50];
 	result = syscallReadSDU(25, sdu);
 	std::cout<<"Called read SDU system call with result "
 			<<result<<std::endl;
