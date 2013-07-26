@@ -285,14 +285,14 @@ public:
 	 * Registers an application to a DIF.
 	 *
 	 * @param applicationName The name of the application to be registered
-	 * @param DIFName Then name of the DIF where the application will register
-	 * @returns the name of the DIF where the application has registered
+	 * @param appRegistrationInfo Information about the registration request
+	 * (hoy many DIFs, what specific DIFs)
 	 * @throws IPCException if the DIF doesn't exist or the application doesn't
 	 * have enough rights to use it.
 	 */
 	ApplicationRegistration registerApplication(
 			const ApplicationProcessNamingInformation& applicationName,
-			const ApplicationProcessNamingInformation& DIFName)
+			const ApplicationRegistrationInformation& appRegistrationInfo)
 			throw (ApplicationRegistrationException);
 
 	/**

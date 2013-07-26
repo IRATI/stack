@@ -120,9 +120,12 @@ int main(int argc, char * argv[]) {
 			"/dif/management/flows/", 0, 0, "");
 
 	/* TEST APPLICATION REGISTERED */
+	ApplicationRegistrationInformation appRegInfo =
+			ApplicationRegistrationInformation(APPLICATION_REGISTRATION_SINGLE_DIF);
+	appRegInfo.setDIFName(*difName);
 	ApplicationRegistrationRequestEvent * event = new
-			ApplicationRegistrationRequestEvent(*sourceName, *difName, 34);
-	applicationManager->applicationRegistered(*event, 0,
+			ApplicationRegistrationRequestEvent(*sourceName, appRegInfo, 34);
+	applicationManager->applicationRegistered(*event, *difName, 0,
 			0,0,"Everything was fine");
 
 	/* TEST APPLICATION UNREGISTERED */

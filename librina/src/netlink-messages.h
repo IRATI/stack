@@ -428,16 +428,18 @@ class AppRegisterApplicationRequestMessage: public NetlinkRequestOrNotificationM
 	/** The name of the application to be registered */
 	ApplicationProcessNamingInformation applicationName;
 
-	/** The DIF name where the application wants to register */
-	ApplicationProcessNamingInformation difName;
+	/** Information about the registration request */
+	ApplicationRegistrationInformation applicationRegistrationInformation;
 
 public:
 	AppRegisterApplicationRequestMessage();
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	void setApplicationName(
 			const ApplicationProcessNamingInformation& applicationName);
-	const ApplicationProcessNamingInformation& getDifName() const;
-	void setDifName(const ApplicationProcessNamingInformation& difName);
+	const ApplicationRegistrationInformation&
+		getApplicationRegistrationInformation() const;
+	void setApplicationRegistrationInformation(
+			const ApplicationRegistrationInformation& appRegistrationInfo);
 	IPCEvent* toIPCEvent();
 };
 
@@ -450,7 +452,7 @@ class AppRegisterApplicationResponseMessage: public BaseNetlinkResponseMessage {
 	/** The DIF name where the application wants to register */
 	ApplicationProcessNamingInformation applicationName;
 
-	/** The DIF name where the application wants to register */
+	/** The new DIF names where the application is now registered*/
 	ApplicationProcessNamingInformation difName;
 
 	/**

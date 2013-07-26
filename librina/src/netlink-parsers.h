@@ -196,11 +196,25 @@ int putAppFlowDeallocatedNotificationMessageObject(nl_msg* netlinkMessage,
 AppFlowDeallocatedNotificationMessage * parseAppFlowDeallocatedNotificationMessage(
 		nlmsghdr *hdr);
 
+/* ApplicationRegistrationInformation CLASS*/
+enum ApplicationRegistrationInformationAttributes {
+	ARIA_ATTR_APP_REG_TYPE = 1,
+	ARIA_ATTR_APP_DIF_NAME,
+	__ARIA_ATTR_MAX,
+};
+
+#define ARIA_ATTR_MAX (__ARIA_ATTR_MAX -1)
+
+int putApplicationRegistrationInformationObject(nl_msg* netlinkMessage,
+		const ApplicationRegistrationInformation& object);
+
+ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
+		nlattr *nested);
 
 /* AppRegisterApplicationRequestMessage CLASS*/
 enum AppRegisterApplicationRequestMessageAttributes {
 	ARAR_ATTR_APP_NAME = 1,
-	ARAR_ATTR_DIF_NAME,
+	ARAR_ATTR_APP_REG_INFO,
 	__ARAR_ATTR_MAX,
 };
 

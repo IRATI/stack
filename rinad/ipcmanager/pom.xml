@@ -59,11 +59,6 @@
 			<version>1.0.0-irati-SNAPSHOT</version>
 		</dependency>
 		<dependency>
-			<groupId>eu.irati</groupId>
-			<artifactId>eu.irati.librina</artifactId>
-			<version>1.0.0-irati-SNAPSHOT</version>
-		</dependency>
-		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<scope>test</scope>

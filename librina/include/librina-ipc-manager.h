@@ -498,6 +498,7 @@ public:
 	 * @throws NotifyApplicationRegisteredException If an error occurs during the operation
 	 */
 	void applicationRegistered(const ApplicationRegistrationRequestEvent & event,
+			const ApplicationProcessNamingInformation& difName,
 			unsigned short ipcProcessId, int ipcProcessPortId, int result,
 			const std::string& errorDescription)
 				throw (NotifyApplicationRegisteredException);

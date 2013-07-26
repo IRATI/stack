@@ -546,15 +546,41 @@ const ApplicationProcessNamingInformation&
 	return remoteApplicationName;
 }
 
+/* CLASS APPLICATION REGISTRATION INFORMATION */
+ApplicationRegistrationInformation::ApplicationRegistrationInformation(){
+	applicationRegistrationType = APPLICATION_REGISTRATION_ANY_DIF;
+}
+
+ApplicationRegistrationInformation::ApplicationRegistrationInformation(
+		ApplicationRegistrationType applicationRegistrationType){
+	this->applicationRegistrationType = applicationRegistrationType;
+}
+
+ApplicationRegistrationType
+ApplicationRegistrationInformation::getRegistrationType() const{
+	return applicationRegistrationType;
+}
+
+const ApplicationProcessNamingInformation &
+ApplicationRegistrationInformation::getDIFName() const{
+	return difName;
+}
+
+void ApplicationRegistrationInformation::setDIFName(
+		const ApplicationProcessNamingInformation& difName){
+	this->difName = difName;
+}
+
 /* CLASS APPLICATION REGISTRATION REQUEST */
 ApplicationRegistrationRequestEvent::ApplicationRegistrationRequestEvent(
-		const ApplicationProcessNamingInformation& appName,
-		const ApplicationProcessNamingInformation& DIFName,
-		unsigned int sequenceNumber) :
+	const ApplicationProcessNamingInformation& appName,
+	const ApplicationRegistrationInformation&
+	applicationRegistrationInformation, unsigned int sequenceNumber) :
 		IPCEvent(APPLICATION_REGISTRATION_REQUEST_EVENT,
 				sequenceNumber) {
 	this->applicationName = appName;
-	this->DIFName = DIFName;
+	this->applicationRegistrationInformation =
+			applicationRegistrationInformation;
 }
 
 const ApplicationProcessNamingInformation&
@@ -562,9 +588,10 @@ ApplicationRegistrationRequestEvent::getApplicationName() const {
 	return applicationName;
 }
 
-const ApplicationProcessNamingInformation&
-ApplicationRegistrationRequestEvent::getDIFName() const {
-	return DIFName;
+const ApplicationRegistrationInformation&
+ApplicationRegistrationRequestEvent::getApplicationRegistrationInformation()
+const {
+	return applicationRegistrationInformation;
 }
 
 /* CLASS APPLICATION UNREGISTRATION REQUEST */

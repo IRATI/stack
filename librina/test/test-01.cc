@@ -163,31 +163,15 @@ int main(int argc, char * argv[]) {
 	}
 
 	/* TEST REGISTER APPLICATION */
-	ipcManager->registerApplication(*sourceName, difProperties.getDifName());
-	ApplicationProcessNamingInformation * difName =
-			new ApplicationProcessNamingInformation(
-					"/difs/PublicInternet.DIF", "");
-	ipcManager->registerApplication(*sourceName, *difName);
-	ipcManager->registerApplication(*destinationName,
-			difProperties.getDifName());
-
-	/* TEST GET REGISTERED APPLICATIONS */
-	if (!checkRegisteredApplications(2)) {
-		return 1;
-	}
+	ApplicationRegistrationInformation info =
+			ApplicationRegistrationInformation(
+					APPLICATION_REGISTRATION_SINGLE_DIF);
+	info.setDIFName(difProperties.getDifName());
+	ipcManager->registerApplication(*sourceName, info);
 
 	/* TEST UNREGISTER APPLICATION */
 	ipcManager->unregisterApplication(*sourceName,
 			difProperties.getDifName());
-	ipcManager->unregisterApplication(*sourceName, *difName);
-	if (!checkRegisteredApplications(1)) {
-		return 1;
-	}
-	ipcManager->unregisterApplication(*destinationName,
-			difProperties.getDifName());
-	if (!checkRegisteredApplications(0)) {
-		return 1;
-	}
 
 	/* TEST EVENT POLL */
 	IPCEvent * event = ipcEventProducer->eventPoll();
@@ -205,7 +189,6 @@ int main(int argc, char * argv[]) {
 
 	delete sourceName;
 	delete destinationName;
-	delete difName;
 	delete event;
 
 	return 0;

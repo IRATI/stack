@@ -871,6 +871,73 @@ DIFProperties * parseDIFPropertiesObject(nlattr *nested){
 	return result;
 }
 
+int putApplicationRegistrationInformationObject(nl_msg* netlinkMessage,
+		const ApplicationRegistrationInformation& object){
+	struct nlattr *difName;
+
+	NLA_PUT_U32(netlinkMessage, ARIA_ATTR_APP_REG_TYPE,
+			object.getRegistrationType());
+
+	if (object.getRegistrationType() == APPLICATION_REGISTRATION_SINGLE_DIF){
+		if (!(difName = nla_nest_start(netlinkMessage,
+				ARIA_ATTR_APP_DIF_NAME))) {
+			goto nla_put_failure;
+		}
+
+		if (putApplicationProcessNamingInformationObject(netlinkMessage,
+				object.getDIFName()) < 0) {
+			goto nla_put_failure;
+		}
+
+		nla_nest_end(netlinkMessage, difName);
+	}
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building DIF Properties Netlink object");
+	return -1;
+}
+
+ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
+		nlattr *nested){
+	struct nla_policy attr_policy[ARIA_ATTR_MAX + 1];
+	attr_policy[ARIA_ATTR_APP_REG_TYPE].type = NLA_U32;
+	attr_policy[ARIA_ATTR_APP_REG_TYPE].minlen = 0;
+	attr_policy[ARIA_ATTR_APP_REG_TYPE].maxlen = 65535;
+	attr_policy[ARIA_ATTR_APP_DIF_NAME].type = NLA_NESTED;
+	attr_policy[ARIA_ATTR_APP_DIF_NAME].minlen = 0;
+	attr_policy[ARIA_ATTR_APP_DIF_NAME].maxlen = 0;
+	struct nlattr *attrs[ARIA_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, ARIA_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+			"Error parsing ApplicationRegistrationInformation object from Netlink message: %d",
+			err);
+		return 0;
+	}
+
+	ApplicationRegistrationInformation * result = new ApplicationRegistrationInformation(
+			static_cast<ApplicationRegistrationType>(
+					nla_get_u32(attrs[ARIA_ATTR_APP_REG_TYPE])));
+	ApplicationProcessNamingInformation * difName;
+
+	if (attrs[ARIA_ATTR_APP_DIF_NAME]) {
+		difName = parseApplicationProcessNamingInformationObject(
+				attrs[ARIA_ATTR_APP_DIF_NAME]);
+		if (difName == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->setDIFName(*difName);
+			delete difName;
+		}
+	}
+
+	return result;
+}
+
 int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 		const AppAllocateFlowRequestMessage& object) {
 	struct nlattr *sourceAppName, *destinationAppName, *flowSpec;
@@ -1140,11 +1207,11 @@ int putAppRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 	}
 	nla_nest_end(netlinkMessage, applicationName);
 
-	if (!(difName = nla_nest_start(netlinkMessage, ARAR_ATTR_DIF_NAME))) {
+	if (!(difName = nla_nest_start(netlinkMessage, ARAR_ATTR_APP_REG_INFO))) {
 		goto nla_put_failure;
 	}
-	if (putApplicationProcessNamingInformationObject(netlinkMessage,
-			object.getDifName()) < 0) {
+	if (putApplicationRegistrationInformationObject(netlinkMessage,
+			object.getApplicationRegistrationInformation()) < 0) {
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, difName);
@@ -2254,9 +2321,9 @@ AppRegisterApplicationRequestMessage * parseAppRegisterApplicationRequestMessage
 	attr_policy[ARAR_ATTR_APP_NAME].type = NLA_NESTED;
 	attr_policy[ARAR_ATTR_APP_NAME].minlen = 0;
 	attr_policy[ARAR_ATTR_APP_NAME].maxlen = 0;
-	attr_policy[ARAR_ATTR_DIF_NAME].type = NLA_NESTED;
-	attr_policy[ARAR_ATTR_DIF_NAME].minlen = 0;
-	attr_policy[ARAR_ATTR_DIF_NAME].maxlen = 0;
+	attr_policy[ARAR_ATTR_APP_REG_INFO].type = NLA_NESTED;
+	attr_policy[ARAR_ATTR_APP_REG_INFO].minlen = 0;
+	attr_policy[ARAR_ATTR_APP_REG_INFO].maxlen = 0;
 	struct nlattr *attrs[ARAR_ATTR_MAX + 1];
 
 	/*
@@ -2278,7 +2345,7 @@ AppRegisterApplicationRequestMessage * parseAppRegisterApplicationRequestMessage
 			new AppRegisterApplicationRequestMessage();
 
 	ApplicationProcessNamingInformation * applicationName;
-	ApplicationProcessNamingInformation * difName;
+	ApplicationRegistrationInformation * appRegInfo;
 
 	if (attrs[ARAR_ATTR_APP_NAME]) {
 		applicationName = parseApplicationProcessNamingInformationObject(
@@ -2291,15 +2358,15 @@ AppRegisterApplicationRequestMessage * parseAppRegisterApplicationRequestMessage
 			delete applicationName;
 		}
 	}
-	if (attrs[ARAR_ATTR_DIF_NAME]) {
-		difName = parseApplicationProcessNamingInformationObject(
-				attrs[ARAR_ATTR_DIF_NAME]);
-		if (difName == 0) {
+	if (attrs[ARAR_ATTR_APP_REG_INFO]) {
+		appRegInfo = parseApplicationRegistrationInformation(
+				attrs[ARAR_ATTR_APP_REG_INFO]);
+		if (appRegInfo == 0) {
 			delete result;
 			return 0;
 		} else {
-			result->setDifName(*difName);
-			delete difName;
+			result->setApplicationRegistrationInformation(*appRegInfo);
+			delete appRegInfo;
 		}
 	}
 
@@ -2380,6 +2447,7 @@ AppRegisterApplicationResponseMessage * parseAppRegisterApplicationResponseMessa
 			delete applicationName;
 		}
 	}
+
 	if (attrs[ARARE_ATTR_DIF_NAME]) {
 		difName = parseApplicationProcessNamingInformationObject(
 				attrs[ARARE_ATTR_DIF_NAME]);
