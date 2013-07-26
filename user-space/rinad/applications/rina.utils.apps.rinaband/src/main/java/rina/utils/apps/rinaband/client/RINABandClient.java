@@ -107,7 +107,7 @@ public class RINABandClient implements SDUListener{
 		this.testInformation = testInformation;
 		this.controlApNamingInfo = controlApNamingInfo;
 		this.dataApNamingInfo = dataApNamingInfo;
-		this.clientApNamingInfo = new ApplicationProcessNamingInformation("rina.utils.apps.rinabandclient", null);
+		this.clientApNamingInfo = new ApplicationProcessNamingInformation("rina.utils.apps.rinabandclient", "");
 		this.cdapSessionManager = new CDAPSessionManagerImpl(new GoogleProtocolBufWireMessageProviderFactory());
 		this.testWorkers = new ArrayList<TestWorker>();
 		this.executorService = Executors.newCachedThreadPool();

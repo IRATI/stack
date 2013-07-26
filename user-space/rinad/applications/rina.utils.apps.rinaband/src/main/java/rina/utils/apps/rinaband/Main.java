@@ -52,6 +52,10 @@ and the default for -instance might be the DIF address of the IPC Process.
  *
  */
 public class Main {
+
+	static {
+		System.loadLibrary("rina_java");
+	}
 	
 	public static final String ARGUMENT_SEPARATOR = "-";
 	public static final String ROLE = "role";
