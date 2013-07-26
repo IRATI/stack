@@ -39,6 +39,17 @@ int main(int argc, char * argv[]) {
 	std::cout<<"Called IPC Process destroy system call with result "
 			<<result<<std::endl;
 
+	//Write SDU (will fail)
+	char * sdu = new char[50];
+	result = syscallWriteSDU(25, sdu, 50);
+	std::cout<<"Called write SDU system call with result "
+				<<result<<std::endl;
+
+	//Read SDU (will fail)
+	result = syscallReadSDU(25, sdu);
+	std::cout<<"Called read SDU system call with result "
+			<<result<<std::endl;
+
 	delete ipcProcessName;
 
 }

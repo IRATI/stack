@@ -23,6 +23,8 @@
   <modules>
 	<module>rina.commons.api</module>
 	<module>rina.cdap.impl</module>
+	<module>rina.delimiting.impl</module>
+	<module>rina.encoding.impl</module>
   </modules>
 
   <dependencies>

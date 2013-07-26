@@ -342,8 +342,8 @@ IPCEvent* AppAllocateFlowRequestArrivedMessage::toIPCEvent(){
 			new FlowRequestEvent(
 					this->portId,
 					this->flowSpecification,
-					this->sourceAppName,
 					this->destAppName,
+					this->sourceAppName,
 					this->difName,
 					this->getSequenceNumber());
 	return event;

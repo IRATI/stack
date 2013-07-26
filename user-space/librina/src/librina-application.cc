@@ -28,12 +28,12 @@ namespace rina {
 
 /* CLASS FLOW */
 
-Flow::Flow(const ApplicationProcessNamingInformation& sourceApplicationName,
-		const ApplicationProcessNamingInformation& destinationApplicationName,
+Flow::Flow(const ApplicationProcessNamingInformation& localApplicatioName,
+		const ApplicationProcessNamingInformation& remoteApplicationName,
 		const FlowSpecification& flowSpecification, FlowState flowState,
 		const ApplicationProcessNamingInformation& DIFName, int portId) {
-	this->sourceApplicationName = sourceApplicationName;
-	this->destinationApplicationName = destinationApplicationName;
+	this->localApplicationName = localApplicationName;
+	this->remoteApplicationName = remoteApplicationName;
 	this->flowSpecification = flowSpecification;
 	this->DIFName = DIFName;
 	this->flowState = flowState;
@@ -54,17 +54,21 @@ Flow::getDIFName() const {
 }
 
 const ApplicationProcessNamingInformation&
-Flow::getSourceApplicationName() const {
-	return sourceApplicationName;
+Flow::getLocalApplicationName() const {
+	return localApplicationName;
 }
 
 const ApplicationProcessNamingInformation&
-Flow::getDestinationApplcationName() const {
-	return destinationApplicationName;
+Flow::getRemoteApplcationName() const {
+	return remoteApplicationName;
 }
 
 const FlowSpecification Flow::getFlowSpecification() const {
 	return flowSpecification;
+}
+
+bool Flow::isAllocated() const{
+	return flowState == FLOW_ALLOCATED;
 }
 
 int Flow::readSDU(void * sdu)
@@ -218,12 +222,13 @@ throw (GetDIFPropertiesException) {
 #endif
 }
 
-void IPCManager::registerApplication(
-		const ApplicationProcessNamingInformation& applicationName,
-		const ApplicationProcessNamingInformation& DIFName)
-throw (ApplicationRegistrationException) {
+ApplicationRegistration IPCManager::registerApplication(
+			const ApplicationProcessNamingInformation& applicationName,
+			const ApplicationProcessNamingInformation& DIFName)
+			throw (ApplicationRegistrationException){
 	LOG_DBG("IPCManager.registerApplication called");
 	ApplicationRegistration * applicationRegistration = 0;
+	ApplicationProcessNamingInformation registeredInDIF = DIFName;
 
 	std::map<ApplicationProcessNamingInformation,
 	ApplicationRegistration*>::iterator it =
@@ -267,9 +272,10 @@ throw (ApplicationRegistrationException) {
 		throw ApplicationRegistrationException(reason);
 	}
 
+	registeredInDIF = registerResponseMessage->getDifName();
 	LOG_DBG("Application %s registered successfully to DIF %s",
 			applicationName.getProcessName().c_str(),
-			DIFName.getProcessName().c_str());
+			registeredInDIF.getProcessName().c_str());
 	delete registerResponseMessage;
 #endif
 
@@ -278,7 +284,8 @@ throw (ApplicationRegistrationException) {
 		applicationRegistrations[applicationName] = applicationRegistration;
 	}
 
-	applicationRegistration->addDIFName(DIFName);
+	applicationRegistration->addDIFName(registeredInDIF);
+	return *applicationRegistration;
 }
 
 void IPCManager::unregisterApplication(
@@ -360,8 +367,8 @@ int getFakePortId(std::map<int, Flow*> allocatedFlows){
 }
 
 Flow * IPCManager::allocateFlowRequest(
-		const ApplicationProcessNamingInformation& sourceAppName,
-		const ApplicationProcessNamingInformation& destAppName,
+		const ApplicationProcessNamingInformation& localAppName,
+		const ApplicationProcessNamingInformation& remoteAppName,
 		const FlowSpecification& flowSpec) throw (FlowAllocationException) {
 	LOG_DBG("IPCManager.allocateFlowRequest called");
 
@@ -372,12 +379,12 @@ Flow * IPCManager::allocateFlowRequest(
 	ApplicationProcessNamingInformation DIFName =
 			ApplicationProcessNamingInformation("test.DIF", "");
 	portId = getFakePortId(allocatedFlows);
-	flow = new Flow(sourceAppName, destAppName, flowSpec, FLOW_ALLOCATED,
+	flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED,
 			DIFName, portId);
 #else
 	AppAllocateFlowRequestMessage message;
-	message.setSourceAppName(sourceAppName);
-	message.setDestAppName(destAppName);
+	message.setSourceAppName(localAppName);
+	message.setDestAppName(remoteAppName);
 	message.setFlowSpecification(flowSpec);
 	message.setRequestMessage(true);
 
@@ -399,11 +406,11 @@ Flow * IPCManager::allocateFlowRequest(
 	}
 
 	LOG_DBG("Flow from %s to %s allocated successfully! Port-id: %d",
-			sourceAppName.getProcessName().c_str(),
-			destAppName.getProcessName().c_str(),
+			localAppName.getProcessName().c_str(),
+			remoteAppName.getProcessName().c_str(),
 			flowRequestResponse->getPortId());
 	portId = flowRequestResponse->getPortId();
-	flow = new Flow(sourceAppName, destAppName, flowSpec, FLOW_ALLOCATED,
+	flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED,
 			flowRequestResponse->getDifName(), portId);
 	delete flowRequestResponse;
 #endif
@@ -432,17 +439,15 @@ Flow * IPCManager::allocateFlowResponse(
 	message.setSequenceNumber(flowRequestEvent.getSequenceNumber());
 #endif
 
-	Flow * flow = new Flow(flowRequestEvent.getSourceApplicationName(),
-			flowRequestEvent.getDestApplicationName(),
+	Flow * flow = new Flow(flowRequestEvent.getLocalApplicationName(),
+			flowRequestEvent.getRemoteApplicationName(),
 			flowRequestEvent.getFlowSpecification(), FLOW_ALLOCATED,
 			flowRequestEvent.getDIFName(), flowRequestEvent.getPortId());
 	allocatedFlows[flowRequestEvent.getPortId()] = flow;
 	return flow;
 }
 
-void IPCManager::deallocateFlow(
-		int portId, const ApplicationProcessNamingInformation& applicationName)
-throw (FlowDeallocationException) {
+void IPCManager::deallocateFlow(int portId) throw (FlowDeallocationException) {
 	LOG_DBG("IPCManager.deallocateFlow called");
 
 	Flow * flow = 0;
@@ -457,7 +462,7 @@ throw (FlowDeallocationException) {
 	//Do nothing
 #else
 	AppDeallocateFlowRequestMessage message;
-	message.setApplicationName(applicationName);
+	message.setApplicationName(flow->getLocalApplicationName());
 	message.setPortId(portId);
 	message.setDifName(flow->getDIFName());
 	message.setRequestMessage(true);

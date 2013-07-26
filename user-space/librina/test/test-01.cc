@@ -139,25 +139,25 @@ int main(int argc, char * argv[]) {
 
 	/* TEST GET DIF PROPERTIES */
 	std::list<DIFProperties> difPropertiesList = ipcManager
-			->getDIFProperties(flow->getSourceApplicationName(),
+			->getDIFProperties(flow->getLocalApplicationName(),
 					flow->getDIFName());
 	DIFProperties difProperties = *(difPropertiesList.begin());
 	std::cout << "DIF name: " << difProperties.getDifName().getProcessName()
 			<< "; max SDU size: " << difProperties.getMaxSduSize() << "\n";
 
 	/* TEST DEALLOCATE FLOW */
-	ipcManager->deallocateFlow(flow->getPortId(), *sourceName);
+	ipcManager->deallocateFlow(flow->getPortId());
 	if (!checkAllocatedFlows(1)) {
 		return 1;
 	}
 
-	ipcManager->deallocateFlow(flow2->getPortId(), *sourceName);
+	ipcManager->deallocateFlow(flow2->getPortId());
 	if (!checkAllocatedFlows(0)) {
 		return 1;
 	}
 
 	try {
-		ipcManager->deallocateFlow(234, *sourceName);
+		ipcManager->deallocateFlow(234);
 	} catch (IPCException &e) {
 		std::cout << "Caught expected exception: " << e.what() << "\n";
 	}
