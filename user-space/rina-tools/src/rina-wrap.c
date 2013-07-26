@@ -17,13 +17,36 @@
  *
  */
 
+#include <sys/ptrace.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <limits.h>
+#include <errno.h>
+#include <sys/user.h>
+#include <asm/ptrace-abi.h>
+#include <asm/unistd.h>
+
 
 /* We will do System-Calls-Interposition (SCI) here */
 
+/* http://wiki.virtualsquare.org/wiki/index.php/System_Call_Interposition:_how_to_implement_virtualization */
+
+/* strace */
+
 int main(int argc, char * argv[])
 {
-        printf("Hi!");
-        exit(0);
+        pid_t child;
+        long  orig_eax;
+        child = fork();
+        if (child == 0) {
+                ptrace(PTRACE_TRACEME, 0, NULL, NULL);
+                argv++;
+                execvp(argv[0],argv);
+        } else {
+
+        }
+
+        return 0;
 }
