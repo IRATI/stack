@@ -86,7 +86,7 @@ static int is_app_registered(struct shim_instance_data * data,
 	struct app_register * app;
 
 	list_for_each_entry(app, &data->apps_registered, list) {
-		if (!memcmp(app->app_name, name, sizeof(struct name))) {
+		if (!name_cmp(app->app_name, name)) {
 			return 1;
 		}
 	}
@@ -99,7 +99,7 @@ static struct app_register * find_app(struct shim_instance_data * data,
 	struct app_register * app;
 
 	list_for_each_entry(app, &data->apps_registered, list) {
-		if (memcmp(app->app_name, name, sizeof(struct name))) {
+		if (!name_cmp(app->app_name, name)) {
 			return app;
 		}
 	}
@@ -239,11 +239,8 @@ static int dummy_application_register(struct shim_instance_data * data,
 	ASSERT(source);
 
 	if (is_app_registered(data, source)) {
-		LOG_ERR("Application %s %s %s %s has been already registered",
-				source->process_name,
-				source->process_instance,
-				source->entity_name,
-				source->entity_instance);
+		LOG_ERR("Application %s has been already registered",
+				name_tostring(source));
 		return -1;
 	}
 
@@ -260,11 +257,8 @@ static int dummy_application_register(struct shim_instance_data * data,
 	if (name_cpy(source, app_reg->app_name)) {
 		rkfree(app_reg->app_name);
 		rkfree(app_reg);
-		LOG_ERR("Failed application %s %s %s %s registration. "
-				"Name copy failed", source->process_name,
-				source->process_instance,
-				source->entity_name,
-				source->entity_instance);
+		LOG_ERR("Failed application %s registration. "
+				"Name copy failed", name_tostring(source));
 
 		return -1;
 	}
