@@ -156,11 +156,17 @@ static int craft_flow_spec(struct sk_buff * msg,
                                 FSPEC_ATTR_PEAK_SDU_BWITH_DURATION,
                                 fspec.peak_sdu_bandwidth_duration->max))
                         return -1;
+        if (fspec.undetected_bit_error_rate > 0)
+                if (nla_put_u64(msg,
+                            FSPEC_ATTR_UNDETECTED_BER,
+                            fspec.undetected_bit_error_rate))
+                        return -1;
 #if 0
-        if (fspec.peak_sdu_bandwidth_duration->max > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_UNDETECTED_BER,
-                                fspec.undetected_bit_error_rate))
+        if (fspec.undetected_bit_error_rate > 0)
+                if (nla_put(msg,
+                            FSPEC_ATTR_UNDETECTED_BER,
+                            sizeof(fspec.undetected_bit_error_rate),
+                            &fspec.undetected_bit_error_rate))
                         return -1;
 #endif
         return 0;

@@ -98,7 +98,8 @@ struct flow_spec {
         struct uint_range * peak_sdu_bandwidth_duration;
 
         /* A value of 0 indicates 'do not care' */
-        double              undetected_bit_error_rate;
+	/* FIXME: This uint_t has to be transformed back to double */
+        uint_t              undetected_bit_error_rate;
         /* Indicates if partial delivery of SDUs is allowed or not */
         bool_t              partial_delivery;
         /* Indicates if SDUs have to be delivered in order */
