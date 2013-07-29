@@ -117,10 +117,12 @@ struct kipcm;
 struct kipcm * kipcm_init(struct kobject * parent);
 int            kipcm_fini(struct kipcm * kipcm);
 
+/* SHIM */
 struct shim *  kipcm_shim_register(struct kipcm *    kipcm,
                                    const char *      name,
                                    void *            data,
                                    struct shim_ops * ops);
+/* SHIM */
 int            kipcm_shim_unregister(struct kipcm * kipcm,
                                      struct shim *  shim);
 
@@ -133,10 +135,11 @@ int            kipcm_ipc_configure(struct kipcm *                  kipcm,
                                    const struct ipc_process_conf * config);
 int            kipcm_ipc_destroy(struct kipcm *   kipcm,
                                  ipc_process_id_t id);
-
+/* SHIM */
 int            kipcm_flow_add(struct kipcm *   kipcm,
 			      ipc_process_id_t ipc_id,
                               port_id_t        id);
+/* SHIM */
 int            kipcm_flow_remove(struct kipcm * kipcm,
                                  port_id_t      id);
 
@@ -146,6 +149,7 @@ int            kipcm_sdu_write(struct kipcm *     kipcm,
 int            kipcm_sdu_read(struct kipcm * kipcm,
                               port_id_t      id,
                               struct sdu * sdu);
+/* SHIM */
 int            kipcm_sdu_post(struct kipcm * kipcm,
                               port_id_t      id,
                               struct sdu *   sdu);
