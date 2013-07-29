@@ -55,9 +55,9 @@ struct shim_instance_data {
         /* Used to keep a list of all the dummy shims */
         struct list_head    list;
 
-	struct dummy_info * info;
+        struct dummy_info * info;
 
-	struct list_head    apps_registered;
+        struct list_head    apps_registered;
 };
 
 enum dummy_flow_state {
@@ -76,35 +76,35 @@ struct dummy_flow {
 };
 
 struct app_register {
-	struct name * 	 app_name;
-	struct list_head list;
+        struct name *    app_name;
+        struct list_head list;
 };
 
 static int is_app_registered(struct shim_instance_data * data,
-			     const struct name *         name)
+                             const struct name *         name)
 {
-	struct app_register * app;
+        struct app_register * app;
 
-	list_for_each_entry(app, &data->apps_registered, list) {
-		if (!name_cmp(app->app_name, name)) {
-			return 1;
-		}
-	}
-	return 0;
+        list_for_each_entry(app, &data->apps_registered, list) {
+                if (!name_cmp(app->app_name, name)) {
+                        return 1;
+                }
+        }
+        return 0;
 }
 
 static struct app_register * find_app(struct shim_instance_data * data,
-			     	      const struct name *         name)
+                                      const struct name *         name)
 {
-	struct app_register * app;
+        struct app_register * app;
 
-	list_for_each_entry(app, &data->apps_registered, list) {
-		if (!name_cmp(app->app_name, name)) {
-			return app;
-		}
-	}
+        list_for_each_entry(app, &data->apps_registered, list) {
+                if (!name_cmp(app->app_name, name)) {
+                        return app;
+                }
+        }
 
-	return NULL;
+        return NULL;
 }
 
 static struct dummy_flow * find_flow(struct shim_instance_data * data,
@@ -234,72 +234,72 @@ static int dummy_flow_deallocate(struct shim_instance_data * data,
 static int dummy_application_register(struct shim_instance_data * data,
                                       const struct name *         source)
 {
-	struct app_register * app_reg;
+        struct app_register * app_reg;
 
-	ASSERT(source);
+        ASSERT(source);
 
-	if (is_app_registered(data, source)) {
-		LOG_ERR("Application %s has been already registered",
-				name_tostring(source));
-		return -1;
-	}
+        if (is_app_registered(data, source)) {
+                LOG_ERR("Application %s has been already registered",
+                                name_tostring(source));
+                return -1;
+        }
 
-	app_reg = rkmalloc(sizeof(*app_reg), GFP_KERNEL);
-	if (!app_reg)
-		return -1;
+        app_reg = rkmalloc(sizeof(*app_reg), GFP_KERNEL);
+        if (!app_reg)
+                return -1;
 
-	app_reg->app_name = rkmalloc(sizeof(struct name), GFP_KERNEL);
-	if (!app_reg->app_name) {
-		rkfree(app_reg);
+        app_reg->app_name = rkmalloc(sizeof(struct name), GFP_KERNEL);
+        if (!app_reg->app_name) {
+                rkfree(app_reg);
 
-		return -1;
-	}
-	if (name_cpy(source, app_reg->app_name)) {
-		rkfree(app_reg->app_name);
-		rkfree(app_reg);
-		LOG_ERR("Failed application %s registration. "
-				"Name copy failed", name_tostring(source));
+                return -1;
+        }
+        if (name_cpy(source, app_reg->app_name)) {
+                rkfree(app_reg->app_name);
+                rkfree(app_reg);
+                LOG_ERR("Failed application %s registration. "
+                                "Name copy failed", name_tostring(source));
 
-		return -1;
-	}
-	INIT_LIST_HEAD(&app_reg->list);
-	list_add(&app_reg->list, &data->apps_registered);
+                return -1;
+        }
+        INIT_LIST_HEAD(&app_reg->list);
+        list_add(&app_reg->list, &data->apps_registered);
 
-	return 0;
+        return 0;
 }
 
 static int dummy_application_unregister(struct shim_instance_data * data,
                                         const struct name *         source)
 {
-	struct app_register * app;
+        struct app_register * app;
 
-	ASSERT(source);
+        ASSERT(source);
 
-	if (!is_app_registered(data, source)) {
-		LOG_ERR("Application %s %s %s %s is not registered",
-				source->process_name,
-				source->process_instance,
-				source->entity_name,
-				source->entity_instance);
-		return -1;
-	}
-	app = find_app(data, source);
-	list_del(&app->list);
-	rkfree(app);
+        if (!is_app_registered(data, source)) {
+                LOG_ERR("Application %s %s %s %s is not registered",
+                                source->process_name,
+                                source->process_instance,
+                                source->entity_name,
+                                source->entity_instance);
+                return -1;
+        }
+        app = find_app(data, source);
+        list_del(&app->list);
+        rkfree(app);
 
-	return 0;
+        return 0;
 }
 
 static int dummy_unregister_all(struct shim_instance_data * data)
 {
-	struct app_register * cur, *next;
+        struct app_register * cur, *next;
 
-	list_for_each_entry_safe(cur, next, &data->apps_registered, list) {
-		list_del(&cur->list);
-		rkfree(cur);
-	}
+        list_for_each_entry_safe(cur, next, &data->apps_registered, list) {
+                list_del(&cur->list);
+                rkfree(cur);
+        }
 
-	return 0;
+        return 0;
 }
 
 static int dummy_sdu_write(struct shim_instance_data * data,
@@ -462,10 +462,10 @@ static struct shim_instance * dummy_create(struct shim_data * data,
          * Bind the shim-instance to the shims set, to keep all our data
          * structures linked (somewhat) together
          */
-	
-	INIT_LIST_HEAD(&inst->data->apps_registered);
 
-	LOG_DBG("Adding dummy instance to the list of shim dummy instances");
+        INIT_LIST_HEAD(&inst->data->apps_registered);
+
+        LOG_DBG("Adding dummy instance to the list of shim dummy instances");
 
         INIT_LIST_HEAD(&(inst->data->list));
         LOG_DBG("Initialization of instance list: %pK", &inst->data->list);
