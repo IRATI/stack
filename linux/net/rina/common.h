@@ -29,7 +29,7 @@ typedef unsigned int    ipc_process_address_t;
 typedef uint16_t        port_id_t;
 typedef int             ipc_process_id_t;
 typedef unsigned char   utf8_t;
-typedef unsigned char   string_t;
+typedef char            string_t;
 typedef uint            uint_t;
 typedef uint            response_reason_t;
 typedef uint            cep_id_t;

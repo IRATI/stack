@@ -574,8 +574,14 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 
         if (kfifo_out(flow->sdu_ready, &size, sizeof(size_t)) <
             sizeof(size_t)) {
-                LOG_ERR("There is no data for port-id %d", id);
+                LOG_ERR("There is not enough data for port-id %d", id);
 
+                return -1;
+        }
+
+        /* FIXME: Is it possible to have 0 bytes sdus ??? */
+        if (size == 0) {
+                LOG_ERR("Zero-size SDU detected");
                 return -1;
         }
 
@@ -584,7 +590,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
                 return -1;
 
         if (kfifo_out(flow->sdu_ready, data, size) != size) {
-                LOG_ERR("Could not put %d bytes out of fifo", size);
+                LOG_ERR("Could not get %zd bytes from fifo", size);
 
                 return -1;
         }
