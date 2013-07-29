@@ -81,7 +81,7 @@ struct app_register {
 };
 
 static int is_app_registered(struct shim_instance_data * data,
-			     struct name * name)
+			     const struct name *         name)
 {
 	struct app_register * app;
 
@@ -94,7 +94,7 @@ static int is_app_registered(struct shim_instance_data * data,
 }
 
 static struct app_register * find_app(struct shim_instance_data * data,
-			     	      struct name * name)
+			     	      const struct name *         name)
 {
 	struct app_register * app;
 
