@@ -121,6 +121,8 @@ struct shims {
 struct shims * shims_init(struct kobject * parent);
 int            shims_fini(struct shims * shims);
 uint32_t       shims_version(void);
+struct shim *  shim_find(struct shims * parent,
+                         const char *   name);
 
 /* Called (once) by each shim module upon loading/unloading */
 struct shim *  shim_register(struct shims *          parent,

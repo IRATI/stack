@@ -145,8 +145,8 @@ static int are_ops_ok(const struct shim_ops * ops)
 
 #define to_shim(O) container_of(O, struct shim, kobj)
 
-static struct shim * shim_find(struct shims * parent,
-                               const char *   name)
+struct shim * shim_find(struct shims * parent,
+                        const char *   name)
 {
         struct kobject * k;
 
