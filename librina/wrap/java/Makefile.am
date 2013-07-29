@@ -61,7 +61,7 @@ lib_LTLIBRARIES = librina_java.la
 
 if BUILD_MAVEN_SUPPORT
 install-data-local-maven:
-	$(MVN) install:install-file						\
+	$(MVN) install:install-file					\
 		-Dfile=librina.jar					\
 		-DgroupId=eu.irati					\
 		-DartifactId=eu.irati.librina				\
