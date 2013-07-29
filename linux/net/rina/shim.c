@@ -266,8 +266,12 @@ int shim_unregister(struct shims * parent,
                 return -1;
         }
 
-        kobject_put(&shim->kobj);
+        /* FIXME: I (Miquel) added this kobject_del to allow the graceful
+         * removal of shims. Please Francesco, could you review it? Besides,
+         * this doesn't solve all the problems, a memory leak remains.
+         */
         kobject_del(&shim->kobj);
+        kobject_put(&shim->kobj);
 
         if (shim->ops->fini(shim->data)) {
 		LOG_ERR("Cannot finalize shim '%s'", name);
