@@ -161,13 +161,14 @@ static int craft_flow_spec(struct sk_buff * msg,
                             FSPEC_ATTR_UNDETECTED_BER,
                             fspec.undetected_bit_error_rate))
                         return -1;
-//        if (fspec.undetected_bit_error_rate > 0)
-//                if (nla_put(msg,
-//                            FSPEC_ATTR_UNDETECTED_BER,
-//                            sizeof(fspec.undetected_bit_error_rate),
-//                            &fspec.undetected_bit_error_rate))
-//                        return -1;
-
+#if 0
+        if (fspec.undetected_bit_error_rate > 0)
+                if (nla_put(msg,
+                            FSPEC_ATTR_UNDETECTED_BER,
+                            sizeof(fspec.undetected_bit_error_rate),
+                            &fspec.undetected_bit_error_rate))
+                        return -1;
+#endif
         return 0;
 }
 
