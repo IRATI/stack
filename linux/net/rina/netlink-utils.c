@@ -20,6 +20,7 @@
  */
 
 #include <net/netlink.h>
+#include <net/genetlink.h>
 #include <linux/export.h>
 
 #define RINA_PREFIX "netlink-utils"
@@ -53,6 +54,47 @@
  * FIXME: Destination is usually at the end of the prototype, not at the
  * beginning (e.g. msg and name)
  */
+
+struct rina_msg_hdr{
+        unsigned int src_ipc_id;
+        unsigned int dst_ipc_id;
+};
+
+#if 0
+struct rnl_msg{
+            
+        /* Generic RINA Netlink family identifier */
+        int family;
+
+        /* source nl port id */
+        unsigned int src_port;
+
+        /* destination nl port id */
+        unsigned int dst_port;
+
+        /* The message sequence number */
+        unsigned int seq_num;
+
+        /* The operation code */
+        msg_id op_code;
+
+        /* True if this is a request message */
+        bool req_msg_flag;
+
+        /* True if this is a response message */
+        bool resp_msg_flag;
+
+        /* True if this is a notification message */
+        bool notification_msg_flag;
+
+        /* RINA header containing IPC processes ids */
+        struct rina_msg_hdr * rina_hdr;
+
+        /* Specific message attributes */
+        void * attrs;
+};
+#endif
+
 static int craft_app_name_info(struct sk_buff * msg,
                                struct name      name)
 {
@@ -105,6 +147,10 @@ static int craft_flow_spec(struct sk_buff * msg,
          *  uint_range types
          */
         /* FIXME: ??? only max is accessed, what do you mean ? */
+	/* FIXME: librina does not define ranges for these attributes, just
+	 * unique values. So far I seleced only the max or min value depending
+	 * on the most restrincting (in this case all max). 
+	 * Leo */
 
         if (fspec.average_bandwidth->max > 0)
                 if (nla_put_u32(msg,
@@ -157,7 +203,7 @@ static int craft_flow_spec(struct sk_buff * msg,
                                 fspec.peak_sdu_bandwidth_duration->max))
                         return -1;
         if (fspec.undetected_bit_error_rate > 0)
-                if (nla_put_u64(msg,
+                if (nla_put_u32(msg,
                             FSPEC_ATTR_UNDETECTED_BER,
                             fspec.undetected_bit_error_rate))
                         return -1;
@@ -182,6 +228,9 @@ int rnl_format_app_alloc_flow_req_arrived(struct sk_buff * msg,
                                           struct name      dif_name)
 {
         /* FIXME: What's the use of the following variables ? */
+	/* FIXME: they are the placeholder of the nest attr returned by
+	 * nla_nest_start, if not used, then nla_nest_start should be called
+	 * twice each time */
         struct nlattr * msg_src_name, * msg_dst_name;
         struct nlattr * msg_fspec,    * msg_dif_name;
 
@@ -234,3 +283,41 @@ int rnl_format_app_alloc_flow_req_arrived(struct sk_buff * msg,
         return 0;
 }
 EXPORT_SYMBOL(rnl_format_app_alloc_flow_req_arrived);
+
+#define BUILD_ERR_STRING_BY_MSG_TYPE(X)                                     \
+         "Could not parse Netlink message of type "X
+
+int rnl_parse_msg(struct genl_info * info, int max_attr, struct nla_policy * attr_policy)
+{
+	int err;
+
+	err = nlmsg_parse(info->nlhdr, 
+	      sizeof(struct genlmsghdr) + sizeof(struct rina_msg_hdr), 
+	      info->attrs,
+              max_attr, 
+	      attr_policy);
+	if(err < 0){
+		LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_APP_ALLOCATE_FLOW_RESPONSE"));
+		return -1;
+	}
+	return 0;
+}
+
+int rnl_parse_app_alloc_flow_resp(struct sk_buff * skb_in, struct genl_info * info)
+{
+        struct nla_policy attr_policy[AAFRE_ATTR_MAX + 1];
+        
+	/* FIXME: nla_policy struct is different from user-space. No min/max
+	 * attrs. len not specified */
+	attr_policy[AAFRE_ATTR_DIF_NAME].type = NLA_NESTED;
+        attr_policy[AAFRE_ATTR_ACCEPT].type = NLA_FLAG;
+        attr_policy[AAFRE_ATTR_DENY_REASON].type = NLA_STRING;
+        attr_policy[AAFRE_ATTR_NOTIFY_SOURCE].type = NLA_FLAG;
+
+	/* Any other comprobations could be done in addition to nlmsg_parse()
+	 * done by rnl_parse_msg */
+
+	return rnl_parse_msg(info, AAFRA_ATTR_MAX, attr_policy);
+
+}
+EXPORT_SYMBOL(rnl_parse_app_alloc_flow_resp);

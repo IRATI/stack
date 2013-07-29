@@ -65,6 +65,17 @@ enum flow_spec_attrs {
 /* FIXME: is it really needed ? */
 #define FSPEC_ATTR_MAX (__FSPEC_ATTR_MAX - 1)
 
+enum app_alloc_flow_req_resp_attrs {
+        AAFRE_ATTR_DIF_NAME = 1,
+        AAFRE_ATTR_ACCEPT,
+        AAFRE_ATTR_DENY_REASON,
+        AAFRE_ATTR_NOTIFY_SOURCE,
+        __AAFRE_ATTR_MAX,
+};
+
+#define AAFRE_ATTR_MAX (__AAFRE_ATTR_MAX -1)
+
+
 int rnl_format_app_alloc_flow_req_arrived(struct sk_buff * msg,
                                           struct name      source,
                                           struct name      dest,
@@ -72,4 +83,11 @@ int rnl_format_app_alloc_flow_req_arrived(struct sk_buff * msg,
                                           port_id_t        id,
                                           struct name      dif_name);
 
+struct rina_msg_hdr;
+
+#if 0
+struct rnl_msg;
 #endif
+
+#endif
+
