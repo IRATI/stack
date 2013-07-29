@@ -1,6 +1,8 @@
 import java.util.Iterator;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.ApplicationRegistrationInformation;
+import eu.irati.librina.ApplicationRegistrationType;
 import eu.irati.librina.ApplicationRegistrationVector;
 import eu.irati.librina.Flow;
 import eu.irati.librina.FlowPointerVector;
@@ -107,21 +109,13 @@ public class app {
 		printStatement("\nREGISTERING APPLICATIONS");
 		ApplicationProcessNamingInformation difName = new ApplicationProcessNamingInformation("/difs/Test.DIF", "");
 		ApplicationProcessNamingInformation difName2 = new ApplicationProcessNamingInformation("/difs/Test2.DIF", "");
-		ipcManager.registerApplication(sourceNamingInfo, difName);
-		ipcManager.registerApplication(sourceNamingInfo, difName2);
-		ipcManager.registerApplication(destNamingInfo, difName);
-		
-		printStatement("\nLISTING REGISTERED APPLICATIONS");
-		ApplicationRegistrationVector registeredApplications = ipcManager.getRegisteredApplications();
-		Iterator<ApplicationProcessNamingInformation> iterator = null;
-		for(int i=0; i<registeredApplications.size(); i++){
-			printStatement("Application "+registeredApplications.get(i).getApplicationName() + " registered in DIFs: ");
-			iterator = registeredApplications.get(i).getDIFNames().iterator();
-			while(iterator.hasNext()){
-				printStatement(iterator.next());
-			}
-			
-		}
+		ApplicationRegistrationInformation appRegInfo = 
+				new ApplicationRegistrationInformation(ApplicationRegistrationType.APPLICATION_REGISTRATION_SINGLE_DIF);
+		appRegInfo.setDIFName(difName);
+		ipcManager.registerApplication(sourceNamingInfo, appRegInfo);
+		ipcManager.registerApplication(destNamingInfo, appRegInfo);
+		appRegInfo.setDIFName(difName2);
+		ipcManager.registerApplication(sourceNamingInfo, appRegInfo);
 		
 		printStatement("\nUNREGISTERING APPLICATIONS");
 		ipcManager.unregisterApplication(sourceNamingInfo, difName);

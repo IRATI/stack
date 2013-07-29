@@ -433,6 +433,7 @@ Singleton<IPCProcessFactory> ipcProcessFactory;
 
 void ApplicationManager::applicationRegistered(
 		const ApplicationRegistrationRequestEvent& event,
+		const ApplicationProcessNamingInformation& difName,
 		unsigned short ipcProcessId, int ipcProcessPortId, int result,
 		const std::string& errorDescription)
 			throw (NotifyApplicationRegisteredException) {
@@ -443,7 +444,7 @@ void ApplicationManager::applicationRegistered(
 #else
 	AppRegisterApplicationResponseMessage responseMessage;
 	responseMessage.setApplicationName(event.getApplicationName());
-	responseMessage.setDifName(event.getDIFName());
+	responseMessage.setDifName(difName);
 	responseMessage.setIpcProcessId(ipcProcessId);
 	responseMessage.setIpcProcessPortId(ipcProcessPortId);
 	responseMessage.setResult(result);

@@ -7,6 +7,8 @@ import java.util.Map.Entry;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistration;
+import eu.irati.librina.ApplicationRegistrationInformation;
+import eu.irati.librina.ApplicationRegistrationType;
 import eu.irati.librina.Flow;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
@@ -76,6 +78,8 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 	
 	private ApplicationRegistration dataAERegistration = null;
 	
+	private ApplicationProcessNamingInformation difName = null;
+	
 	/**
 	 * Epoch times are in miliseconds
 	 */
@@ -87,9 +91,11 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 	private long epochTimeLastSDUSent = 0;
 	private int completedSends = 0;
 	
-	public TestController(ApplicationProcessNamingInformation dataApNamingInfo, Flow flow,
+	public TestController(ApplicationProcessNamingInformation dataApNamingInfo, 
+			ApplicationProcessNamingInformation difName, Flow flow,
 			CDAPSessionManager cdapSessionManager, IPCEventConsumer ipcEventConsumer){
 		this.dataApNamingInfo = dataApNamingInfo;
+		this.difName = difName;
 		this.cdapSessionManager = cdapSessionManager;
 		this.flow = flow;
 		this.allocatedFlows = new Hashtable<Integer, TestWorker>();
@@ -154,7 +160,10 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 			
 			//2 Update the DATA AE and register it
 			this.dataApNamingInfo.setEntityInstance(this.testInformation.getAei());
-			dataAERegistration = rina.getIpcManager().registerApplication(this.dataApNamingInfo, null);
+			ApplicationRegistrationInformation appRegInfo = 
+					new ApplicationRegistrationInformation(ApplicationRegistrationType.APPLICATION_REGISTRATION_SINGLE_DIF);
+			appRegInfo.setDIFName(difName);
+			dataAERegistration = rina.getIpcManager().registerApplication(this.dataApNamingInfo, appRegInfo);
 			ipcEventConsumer.addFlowAcceptor(this, dataApNamingInfo);
 			
 			//3 Reply and update state

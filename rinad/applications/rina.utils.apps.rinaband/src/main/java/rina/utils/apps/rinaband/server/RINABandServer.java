@@ -7,6 +7,8 @@ import java.util.concurrent.Executors;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistration;
+import eu.irati.librina.ApplicationRegistrationInformation;
+import eu.irati.librina.ApplicationRegistrationType;
 import eu.irati.librina.Flow;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
@@ -43,6 +45,9 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener{
 	 */
 	private ApplicationProcessNamingInformation dataApNamingInfo = null;
 	
+	/** The name of the DIF where the RINABandServer has registered */
+	private ApplicationProcessNamingInformation difName = null;
+	
 	/**
 	 * The control flows from RINABand clients
 	 */
@@ -75,9 +80,14 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener{
 	public void execute(){
 		//Register the control AE and wait for new RINABand clients to come
 		try{
-			ApplicationRegistration appRegistration = rina.getIpcManager().registerApplication(controlApNamingInfo, null);
+			ApplicationRegistrationInformation appRegInfo = 
+					new ApplicationRegistrationInformation(
+							ApplicationRegistrationType.APPLICATION_REGISTRATION_ANY_DIF);
+			ApplicationRegistration appRegistration = 
+					rina.getIpcManager().registerApplication(controlApNamingInfo, appRegInfo);
+			difName = appRegistration.getDIFNames().getFirst();
 			System.out.println("Registered applicaiton "+controlApNamingInfo.toString() + 
-					" to DIF " + appRegistration.getDIFNames().getFirst().toString());
+					" to DIF " + difName.toString());
 		}catch(Exception ex){
 			ex.printStackTrace();
 			System.exit(-1);
@@ -89,7 +99,7 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener{
 	 * of the RINABand Server, in order to negotiate the new test parameters
 	 */
 	public synchronized void flowAllocated(Flow flow) {
-		TestController testController = new TestController(dataApNamingInfo, flow, 
+		TestController testController = new TestController(dataApNamingInfo, difName, flow, 
 				this.cdapSessionManager, ipcEventConsumer);
 		FlowReader flowReader = new FlowReader(flow, testController, 10000);
 		RINABandServer.executeRunnable(flowReader);

@@ -522,21 +522,23 @@ void AppRegisterApplicationRequestMessage::setApplicationName(
 	this->applicationName = applicationName;
 }
 
-const ApplicationProcessNamingInformation&
-AppRegisterApplicationRequestMessage::getDifName() const {
-	return difName;
+const ApplicationRegistrationInformation&
+AppRegisterApplicationRequestMessage::getApplicationRegistrationInformation()
+const {
+	return applicationRegistrationInformation;
 }
 
-void AppRegisterApplicationRequestMessage::setDifName(
-		const ApplicationProcessNamingInformation& difName) {
-	this->difName = difName;
+void
+AppRegisterApplicationRequestMessage::setApplicationRegistrationInformation(
+		const ApplicationRegistrationInformation& appRegistrationInfo) {
+	this->applicationRegistrationInformation = appRegistrationInfo;
 }
 
 IPCEvent* AppRegisterApplicationRequestMessage::toIPCEvent(){
 	ApplicationRegistrationRequestEvent * event =
 			new ApplicationRegistrationRequestEvent(
 					applicationName,
-					difName,
+					applicationRegistrationInformation,
 					getSequenceNumber());
 
 	return event;
@@ -794,10 +796,13 @@ void IpcmRegisterApplicationRequestMessage::setApplicationPortId(
 }
 
 IPCEvent* IpcmRegisterApplicationRequestMessage::toIPCEvent(){
+	ApplicationRegistrationInformation information =
+		ApplicationRegistrationInformation(APPLICATION_REGISTRATION_SINGLE_DIF);
+	information.setDIFName(difName);
 	ApplicationRegistrationRequestEvent * event =
 			new ApplicationRegistrationRequestEvent(
 					applicationName,
-					difName,
+					information,
 					getSequenceNumber());
 
 	return event;

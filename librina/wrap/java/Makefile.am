@@ -59,4 +59,21 @@ librina_java_la_CPPFLAGS = -I$(top_srcdir)/include -I$(JNI_CPPFLAGS)
 
 lib_LTLIBRARIES = librina_java.la
 
+if BUILD_MAVEN_SUPPORT
+install-data-local-maven:
+	$(MVN) install:install-file					\
+		-Dfile=librina.jar					\
+		-DgroupId=eu.irati					\
+		-DartifactId=eu.irati.librina				\
+		-Dversion=$(PACKAGE_VERSION)				\
+		-Dpackaging=jar || {					\
+		echo "Cannot install librina jar into maven ..." ;	\
+		exit 1 ;						\
+	}
+else
+install-data-local-maven:
+endif
+
+install-data-local: install-data-local-maven
+
 endif

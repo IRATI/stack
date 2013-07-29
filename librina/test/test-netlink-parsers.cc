@@ -619,7 +619,12 @@ int testAppRegisterApplicationRequestMessage() {
 	AppRegisterApplicationRequestMessage * message =
 			new AppRegisterApplicationRequestMessage();
 
-	message->setDifName(*difName);
+	ApplicationRegistrationInformation appRegInfo =
+		ApplicationRegistrationInformation(
+				APPLICATION_REGISTRATION_SINGLE_DIF);
+	appRegInfo.setDIFName(*difName);
+
+	message->setApplicationRegistrationInformation(appRegInfo);
 	message->setApplicationName(*applicationName);
 
 	struct nl_msg* netlinkMessage;
@@ -654,9 +659,18 @@ int testAppRegisterApplicationRequestMessage() {
 		std::cout << "Application name on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
-	} else if (message->getDifName() != recoveredMessage->getDifName()) {
-		std::cout << "DIF name on original and recovered "
+	} else if (message->getApplicationRegistrationInformation().
+			getRegistrationType() !=
+			recoveredMessage->getApplicationRegistrationInformation().
+			getRegistrationType()) {
+		std::cout << "Application Registration Type on original and recovered "
 				<< "messages are different\n";
+		returnValue = -1;
+	}  else if (message->getApplicationRegistrationInformation().getDIFName()
+			!= recoveredMessage->getApplicationRegistrationInformation().
+			getDIFName()) {
+		std::cout << "DIF name on original and recovered messages"
+				<< " are different\n";
 		returnValue = -1;
 	}
 
@@ -748,9 +762,10 @@ int testAppRegisterApplicationResponseMessage() {
 		std::cout << "Application name on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
-	} else if (message->getDifName() != recoveredMessage->getDifName()) {
-		std::cout << "DIF name on original and recovered "
-				<< "messages are different\n";
+	} else if (message->getDifName()
+			!= recoveredMessage->getDifName()) {
+		std::cout << "DIF name on original and recovered messages"
+				<< " are different\n";
 		returnValue = -1;
 	}
 

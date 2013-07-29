@@ -19,6 +19,7 @@
 		<guava.version>13.0.1</guava.version>
         <jackson.version>2.1.2</jackson.version>
 		<junit.version>4.5</junit.version>
+		<librina.version>0.1.0.869-3d3a-dirty</librina.version>
 		<log4j.version>1.2.16</log4j.version>
 		<protobuf.version>2.3.0</protobuf.version>
 	</properties>
@@ -29,6 +30,11 @@
 				<artifactId>guava</artifactId>
 				<version>${guava.version}</version>
             </dependency>
+		<dependency>
+		<groupId>eu.irati</groupId>
+		<artifactId>eu.irati.librina</artifactId>
+		<version>${librina.version}</version>
+	       </dependency>
             <dependency>
 				<groupId>com.google.protobuf</groupId>
 				<artifactId>protobuf-java</artifactId>
@@ -71,6 +77,10 @@
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>eu.irati</groupId>
+			<artifactId>eu.irati.librina</artifactId>
+	       	</dependency>
 		<dependency>
 			<groupId>commons-logging</groupId>
 			<artifactId>commons-logging</artifactId>

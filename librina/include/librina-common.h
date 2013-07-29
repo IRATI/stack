@@ -379,6 +379,38 @@ public:
 };
 
 /**
+ * Identifies the types of application registrations
+ * APPLICATION_REGISTRATION_SINGLE_DIF - registers the application in a single
+ * DIF, specified by the application
+ * APPLICATION_REGISTRATION_ANY_DIF - registers the application in any of the
+ * DIFs available to the application, chosen by the IPC Manager
+ */
+enum ApplicationRegistrationType {
+	APPLICATION_REGISTRATION_SINGLE_DIF,
+	APPLICATION_REGISTRATION_ANY_DIF
+};
+
+/**
+ * Contains information about the registration of an application
+ */
+class ApplicationRegistrationInformation {
+
+	/** The type of registration requested */
+	ApplicationRegistrationType applicationRegistrationType;
+
+	/** Optional DIF name where the application wants to register */
+	ApplicationProcessNamingInformation difName;
+
+public:
+	ApplicationRegistrationInformation();
+	ApplicationRegistrationInformation(
+			ApplicationRegistrationType applicationRegistrationType);
+	ApplicationRegistrationType getRegistrationType() const;
+	const ApplicationProcessNamingInformation& getDIFName() const;
+	void setDIFName(const ApplicationProcessNamingInformation& difName);
+};
+
+/**
  * Event informing that an application has requested the
  * registration to a DIF
  */
@@ -386,16 +418,17 @@ class ApplicationRegistrationRequestEvent: public IPCEvent {
 	/** The application that wants to register */
 	ApplicationProcessNamingInformation applicationName;
 
-	/** The DIF to which the application wants to register */
-	ApplicationProcessNamingInformation DIFName;
+	/** The application registration information*/
+	ApplicationRegistrationInformation applicationRegistrationInformation;
 
 public:
 	ApplicationRegistrationRequestEvent(
-			const ApplicationProcessNamingInformation& appName,
-			const ApplicationProcessNamingInformation& DIFName,
-			unsigned int sequenceNumber);
+		const ApplicationProcessNamingInformation& appName,
+		const ApplicationRegistrationInformation&
+		applicationRegistrationInformation, unsigned int sequenceNumber);
 	const ApplicationProcessNamingInformation& getApplicationName() const;
-	const ApplicationProcessNamingInformation& getDIFName() const;
+	const ApplicationRegistrationInformation&
+		getApplicationRegistrationInformation() const;
 };
 
 /**

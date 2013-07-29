@@ -36,9 +36,9 @@ EXPORT_SYMBOL(name_create);
 /*
  * NOTE:
  *
- * No needs to export this symbol for the time being. string_* related
- * utilities might be grouped here and moved into their own placeholder
- * later on (as well as all the "common" utilities)
+ * No needs to export the following string_* symbols for the time being. They
+ * will be grouped here and moved into their own placeholder later on (as well
+ * as all the "common" utilities). Lot of them should even be dropped ...
  *
  *   Francesco
  */
@@ -63,6 +63,13 @@ static int string_dup(const string_t * src, string_t ** dst)
         return 0;
 }
 
+static int string_cmp(const string_t * a, const string_t * b)
+{ return strcmp(a, b); }
+
+/* FIXME: Should we assert here ? */
+static int string_len(const string_t * s)
+{ return strlen(s); }
+
 #ifdef CONFIG_RINA_DEBUG
 static int name_is_initialized(struct name * dst)
 {
@@ -83,7 +90,8 @@ struct name * name_init(struct name *    dst,
                         const string_t * entity_name,
                         const string_t * entity_instance)
 {
-        ASSERT(dst);
+        if (!dst)
+                return NULL;
 
         /* Clean up the destination, leftovers might be there ... */
         name_fini(dst);
@@ -164,8 +172,8 @@ EXPORT_SYMBOL(name_create_and_init);
 
 int name_cpy(const struct name * src, struct name * dst)
 {
-        ASSERT(src);
-        ASSERT(dst);
+        if (!src || !dst)
+                return -1;
 
         name_fini(dst);
 
@@ -188,7 +196,8 @@ struct name * name_dup(const struct name * src)
 {
         struct name * tmp;
 
-        ASSERT(src);
+        if (!src)
+                return NULL;
 
         tmp = name_create();
         if (!tmp)
@@ -201,3 +210,63 @@ struct name * name_dup(const struct name * src)
         return tmp;
 }
 EXPORT_SYMBOL(name_dup);
+
+#define NAME_CMP_FIELD(X, Y, FIELD)                                     \
+	((X->FIELD && Y->FIELD) ? string_cmp(X->FIELD, Y->FIELD) : -1)
+
+int name_cmp(const struct name * a, const struct name * b)
+{
+        if (!a || !b)
+                return -1;
+
+        if (NAME_CMP_FIELD(a, b, process_name))
+                return -1;
+        if (NAME_CMP_FIELD(a, b, process_instance))
+                return -1;
+        if (NAME_CMP_FIELD(a, b, entity_name))
+                return -1;
+        if (NAME_CMP_FIELD(a, b, entity_instance))
+                return -1;
+
+        return 0;
+}
+EXPORT_SYMBOL(name_cmp);
+
+char * name_tostring(const struct name * n)
+{
+        char *       tmp;
+        size_t       size;
+        const char * none = "<NONE>";
+        size_t       none_len = strlen(none);
+
+        if (!n)
+                return NULL;
+        
+        size = 0;
+        size += (n->process_name                 ?
+                 string_len(n->process_name)     : none_len + 1);
+        size += (n->process_instance             ?
+                 string_len(n->process_instance) : none_len + 1);
+        size += (n->entity_name                  ?
+                 string_len(n->entity_name)      : none_len + 1);
+        size += (n->entity_instance              ?
+                 string_len(n->entity_instance)  : none_len + 1);
+        
+        tmp = rkmalloc(size, GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        if (sprintf(tmp, "%s/%s/%s/%s",
+                    (n->process_name     ? n->process_name     : none),
+                    (n->process_instance ? n->process_instance : none),
+                    (n->entity_name      ? n->entity_name      : none),
+                    (n->entity_instance  ? n->entity_instance  : none)) !=
+            size - 1) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
+EXPORT_SYMBOL(name_tostring);
+

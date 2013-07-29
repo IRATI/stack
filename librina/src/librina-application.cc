@@ -224,35 +224,17 @@ throw (GetDIFPropertiesException) {
 
 ApplicationRegistration IPCManager::registerApplication(
 			const ApplicationProcessNamingInformation& applicationName,
-			const ApplicationProcessNamingInformation& DIFName)
+			const ApplicationRegistrationInformation& appRegistrationInfo)
 			throw (ApplicationRegistrationException){
 	LOG_DBG("IPCManager.registerApplication called");
-	ApplicationRegistration * applicationRegistration = 0;
-	ApplicationProcessNamingInformation registeredInDIF = DIFName;
-
-	std::map<ApplicationProcessNamingInformation,
-	ApplicationRegistration*>::iterator it =
-			applicationRegistrations.find(applicationName);
-
-	if (it != applicationRegistrations.end()){
-		applicationRegistration = it->second;
-		std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
-		for (iterator = applicationRegistration->getDIFNames().begin();
-				iterator != applicationRegistration->getDIFNames().end();
-				++iterator) {
-			if (*iterator == DIFName) {
-				throw ApplicationRegistrationException(
-						IPCManager::application_registered_error);
-			}
-		}
-	}
-
 #if STUB_API
-	//Do nothing
+	ApplicationRegistration result =
+			ApplicationRegistration(applicationName);
+	return result;
 #else
 	AppRegisterApplicationRequestMessage message;
 	message.setApplicationName(applicationName);
-	message.setDifName(DIFName);
+	message.setApplicationRegistrationInformation(appRegistrationInfo);
 	message.setRequestMessage(true);
 
 	AppRegisterApplicationResponseMessage * registerResponseMessage;
@@ -272,20 +254,29 @@ ApplicationRegistration IPCManager::registerApplication(
 		throw ApplicationRegistrationException(reason);
 	}
 
-	registeredInDIF = registerResponseMessage->getDifName();
-	LOG_DBG("Application %s registered successfully to DIF %s",
-			applicationName.getProcessName().c_str(),
-			registeredInDIF.getProcessName().c_str());
-	delete registerResponseMessage;
-#endif
+	LOG_DBG("Application %s registered successfully to DIF %s ",
+		applicationName.getProcessName().c_str(),
+		registerResponseMessage->getDifName().getProcessName().c_str());
 
+	ApplicationRegistration * applicationRegistration = 0;
+
+	std::map<ApplicationProcessNamingInformation,
+	ApplicationRegistration*>::iterator it =
+			applicationRegistrations.find(applicationName);
+
+	if (it != applicationRegistrations.end()){
+		applicationRegistration = it->second;
+	}
 	if (!applicationRegistration){
 		applicationRegistration = new ApplicationRegistration(applicationName);
 		applicationRegistrations[applicationName] = applicationRegistration;
 	}
 
-	applicationRegistration->addDIFName(registeredInDIF);
+	applicationRegistration->addDIFName(registerResponseMessage->getDifName());
+
+	delete registerResponseMessage;
 	return *applicationRegistration;
+#endif
 }
 
 void IPCManager::unregisterApplication(
@@ -324,7 +315,6 @@ void IPCManager::unregisterApplication(
 			applicationName.getProcessName().c_str(),
 			DIFName.getProcessName().c_str());
 	delete unregisterResponseMessage;
-#endif
 
 	ApplicationRegistration * applicationRegistration = 0;
 
@@ -353,8 +343,8 @@ void IPCManager::unregisterApplication(
 		}
 	}
 
-	throw ApplicationUnregistrationException(
-			IPCManager::application_not_registered_error);
+#endif
+
 }
 
 int getFakePortId(std::map<int, Flow*> allocatedFlows){

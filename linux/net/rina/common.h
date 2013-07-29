@@ -29,7 +29,7 @@ typedef unsigned int    ipc_process_address_t;
 typedef uint16_t        port_id_t;
 typedef int             ipc_process_id_t;
 typedef unsigned char   utf8_t;
-typedef unsigned char   string_t;
+typedef char            string_t;
 typedef uint            uint_t;
 typedef uint            response_reason_t;
 typedef uint            cep_id_t;
@@ -98,7 +98,7 @@ struct flow_spec {
         struct uint_range * peak_sdu_bandwidth_duration;
 
         /* A value of 0 indicates 'do not care' */
-	/* FIXME: This u32 has to be transformed back to double */
+	/* FIXME: This uint_t has to be transformed back to double */
         uint_t              undetected_bit_error_rate;
         /* Indicates if partial delivery of SDUs is allowed or not */
         bool_t              partial_delivery;
