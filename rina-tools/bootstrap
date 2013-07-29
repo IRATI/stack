@@ -1,0 +1,27 @@
+#!/bin/sh
+# -*- sh -*-
+
+#
+# bootstrap
+#
+# Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
+#
+
+ME=bootstrap
+
+# Start from scratch
+rm -r -f autom4te.cache
+rm -f    aclocal.m4
+
+DIRS=". `cat configure.ac|grep AC_CONFIG_SUBDIRS|sed -e 's,^.*\[,,' -e 's,\].*,,'`"
+
+echo "${ME}: Bootstrapping autotools"
+
+for i in $DIRS ; do
+    (cd $i && echo "${ME}: Bootstrapping autotools in $PWD" && autoreconf -i -f -Wall $@) || {
+        echo "${ME}: Cannot bootstrap autotools into $PWD"
+        exit 1
+    }
+done
+
+echo "${ME}: Autotools bootstrapped successfully"
