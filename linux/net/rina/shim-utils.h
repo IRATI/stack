@@ -24,6 +24,8 @@
 
 #include "common.h"
 
+#define NAME2STRING(N)
+
 /*
  * Allocates a new name, returning the allocated object. In case of an error, a
  * NULL is returned.
@@ -68,4 +70,11 @@ struct name * name_dup(const struct name * src);
  * be previously allocated. Returns 
  */
 int           name_cpy(const struct name * src, struct name * dst);
+
+/* Compares two names, returns 0 if they are equal */
+int           name_cmp(const struct name * a, const struct name * b);
+
+/* Returns a name as a (newly allocated string) string */
+char *        name_tostring(const struct name * n);
+
 #endif
