@@ -104,6 +104,8 @@ AS_IF([test "$build_wrappers_java" = "yes"],[
     done
     AC_SUBST(JNI_CPPFLAGS, $JNI_CPPFLAGS)
     AX_PROG_JAR
+    AC_PATH_PROG([MVN],[mvn],[])
+    AM_CONDITIONAL(BUILD_MAVEN_SUPPORT, [test x"$MVN" != x""])
 ])
 
 AM_CONDITIONAL(BUILD_WRAPPERS_JAVA, [test $build_wrappers_java = yes])
