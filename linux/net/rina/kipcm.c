@@ -45,8 +45,6 @@ struct kipcm {
         struct list_head port_id_to_flow;
 };
 
-#define to_shim(O) container_of(O, struct shim, kobj)
-
 /*
  * NOTE:
  *
@@ -217,8 +215,14 @@ EXPORT_SYMBOL(kipcm_shim_register);
 int kipcm_shim_unregister(struct kipcm * kipcm,
                           struct shim *  shim)
 {
-        ASSERT(kipcm);
-        ASSERT(shim);
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return -1;
+        }
+        if (!shim) {
+                LOG_ERR("Bogus shim instance passed, bailing out");
+                return -1;
+        }
 
         /* FIXME:
          *
@@ -236,11 +240,12 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
                      ipc_process_id_t    id,
                      dif_type_t          type)
 {
-        struct kobject *       k;
         struct ipc_process_t * ipc_process;
 
-        ASSERT(kipcm);
-
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return -1;
+        }
         if (!name) {
                 LOG_ERR("Name is missing, cannot create ipc");
                 return -1;
@@ -263,14 +268,11 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
                 struct shim_instance * shim_instance;
 
                 /* FIXME: We should remove this hard-wired value */
-                k = kset_find_obj(kipcm->shims->set, "shim-dummy");
-                if (!k) {
+                shim = shim_find(kipcm->shims, "shim-dummy");
+                if (!shim) {
                         LOG_ERR("Cannot find the requested shim");
                         return -1;
                 }
-
-                shim = to_shim(k);
-                ASSERT(shim);
 
                 ipc_process = rkzalloc(sizeof(*ipc_process), GFP_KERNEL);
                 if (!ipc_process)
@@ -311,9 +313,11 @@ int kipcm_ipc_destroy(struct kipcm *   kipcm,
 {
         struct ipc_process_t * ipc_process;
         struct id_to_ipcp *    id_ipcp;
-        struct kobject *       k;
 
-        ASSERT(kipcm);
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return -1;
+        }
 
         ipc_process = find_ipc_process_by_id(kipcm, id);
         if (!ipc_process) {
@@ -331,14 +335,12 @@ int kipcm_ipc_destroy(struct kipcm *   kipcm,
         case DIF_TYPE_SHIM: {
                 struct shim * shim = NULL;
 
-                k = kset_find_obj(kipcm->shims->set, "shim-dummy");
-                if (!k) {
+                /* FIXME: We should remove this hard-wired value */
+                shim = shim_find(kipcm->shims, "shim-dummy");
+                if (!shim) {
                         LOG_ERR("Cannot find the requested shim");
                         return -1;
                 }
-
-                shim = to_shim(k);
-                ASSERT(shim);
 
                 if (shim->ops->destroy(shim->data,
                                        ipc_process->data.shim_instance)) {
@@ -366,7 +368,10 @@ int kipcm_ipc_configure(struct kipcm *                  kipcm,
 {
         struct ipc_process_t * ipc_process;
 
-        ASSERT(kipcm);
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return -1;
+        }
 
         ipc_process = find_ipc_process_by_id(kipcm, id);
         if (ipc_process == NULL)
@@ -375,17 +380,14 @@ int kipcm_ipc_configure(struct kipcm *                  kipcm,
         switch (ipc_process->type) {
         case DIF_TYPE_SHIM: {
                 struct shim *        shim = NULL;
-                struct kobject *     k    = NULL;
                 struct shim_config * conf = NULL;
 
-                k = kset_find_obj(kipcm->shims->set, "shim-dummy");
-                if (!k) {
+                /* FIXME: We should remove this hard-wired value */
+                shim = shim_find(kipcm->shims, "shim-dummy");
+                if (!shim) {
                         LOG_ERR("Cannot find the requested shim");
                         return -1;
                 }
-
-                shim = to_shim(k);
-                ASSERT(shim);
 
                 /* FIXME: conf must be translated */
                 LOG_MISSING;
@@ -412,7 +414,10 @@ int kipcm_flow_add(struct kipcm *   kipcm,
         struct port_id_to_flow * port_flow;
         struct flow *            flow;
 
-        ASSERT(kipcm);
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return -1;
+        }
 
         flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
         if (!flow) {
@@ -493,7 +498,10 @@ int kipcm_flow_remove(struct kipcm * kipcm,
 {
         struct port_id_to_flow * port_flow;
 
-        ASSERT(kipcm);
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return -1;
+        }
 
         port_flow = retrieve_port_flow_node(kipcm, id);
         if (!port_flow) {
@@ -517,7 +525,10 @@ int kipcm_sdu_write(struct kipcm *     kipcm,
         int           retval;
         struct ipc_process_t * ipc_process;
 
-        ASSERT(kipcm);
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return -1;
+        }
 
         flow = retrieve_flow_by_port_id(kipcm, id);
         if (!flow) {
@@ -561,9 +572,15 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         size_t        size;
         char *        data;
 
-        ASSERT(sdu);
-        ASSERT(sdu->buffer);
-        ASSERT(kipcm);
+
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return -1;
+        }
+        if (!sdu || !sdu->buffer) {
+                LOG_ERR("Bogus parameters passed, bailing out");
+                return -1;
+        }
 
         flow = retrieve_flow_by_port_id(kipcm, id);
         if (!flow) {
@@ -605,17 +622,12 @@ int kipcm_sdu_post(struct kipcm * kipcm,
                    port_id_t      id,
                    struct sdu *   sdu)
 {
-        /*
-         * NOTE:
-         *
-         *   This function is the "southbound" interface (called by the shims)
-         *   so DO NOT ADD ASSERT() here! Check the parameters instead
-         *
-         *   Francesco
-         */
-
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, cannot post SDU");
+                return -1;
+        }
+        if (!sdu) {
+                LOG_ERR("Bogus parameters passed, bailing out");
                 return -1;
         }
 
