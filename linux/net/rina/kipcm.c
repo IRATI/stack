@@ -446,6 +446,19 @@ retrieve_port_flow_node(struct kipcm * kipcm, port_id_t id)
         return NULL;
 }
 
+static struct flow *
+retrieve_flow_by_port_id(struct kipcm * kipcm, port_id_t id)
+{
+        struct port_id_to_flow * cur;
+
+        list_for_each_entry(cur, &kipcm->port_id_to_flow, list) {
+                if (cur->id == id)
+                        return cur->flow;
+        }
+
+        return NULL;
+}
+
 int kipcm_flow_remove(struct kipcm * kipcm,
                       port_id_t      id)
 {
@@ -471,22 +484,86 @@ int kipcm_sdu_write(struct kipcm *     kipcm,
                     port_id_t          id,
                     const struct sdu * sdu)
 {
-        ASSERT(kipcm);
+	struct flow * flow;
+	int           retval;
+	struct ipc_process_t * ipc_process;
 
-        LOG_MISSING;
+	ASSERT(kipcm);
 
-        return -1;
+	flow = retrieve_flow_by_port_id(kipcm, id);
+	if (!flow) {
+		LOG_ERR("There is no flow bound to port-id %d", id);
+
+		return -1;
+	}
+
+	retval = -1;
+	ipc_process = flow->ipc_process;
+
+	switch (ipc_process->type) {
+	case DIF_TYPE_SHIM: {
+		struct shim_instance * shim_instance;
+
+		shim_instance = ipc_process->data.shim_instance;
+		retval = shim_instance->ops->sdu_write(
+				shim_instance->data, id, sdu);
+	}
+		break;
+	case DIF_TYPE_NORMAL:
+		LOG_MISSING;
+
+		break;
+	default:
+		BUG();
+	}
+
+	if (retval) {
+		LOG_ERR("Couldn't write on port_id %d", id);
+	}
+
+        return retval;
 }
 
 int kipcm_sdu_read(struct kipcm * kipcm,
                    port_id_t      id,
                    struct sdu *   sdu)
 {
+        struct flow * flow;
+	size_t        size;
+	char *        data;
+
+        ASSERT(sdu);
+        ASSERT(sdu->buffer);
         ASSERT(kipcm);
 
-        LOG_MISSING;
+        flow = retrieve_flow_by_port_id(kipcm, id);
+	if (!flow) {
+		LOG_ERR("There is no flow bound to port-id %d", id);
 
-        return -1;
+		return -1;
+	}
+
+	if (kfifo_out(flow->sdu_ready, &size, sizeof(size_t)) <
+	    sizeof(size_t)) {
+		LOG_ERR("There is no data for port-id %d", id);
+
+		return -1;
+	}
+
+	data = rkmalloc(size, GFP_KERNEL);
+	if (!data)
+		return -1;
+
+	if (kfifo_out(flow->sdu_ready, data, size) != size) {
+		LOG_ERR("Could not put %d bytes out of fifo", size);
+
+		return -1;
+	}
+
+	sdu->buffer->data = data;
+	sdu->buffer->size = size;
+
+        return 0;
 }
 
 int kipcm_sdu_post(struct kipcm * kipcm,
