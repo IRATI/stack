@@ -2,6 +2,7 @@ package rina.ipcmanager.impl;
 
 import eu.irati.librina.ApplicationManagerSingleton;
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.CreateIPCProcessException;
 import eu.irati.librina.IPCEvent;
 import eu.irati.librina.IPCEventProducerSingleton;
@@ -14,6 +15,7 @@ import eu.irati.librina.rina;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -26,6 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import rina.ipcmanager.impl.conf.IPCProcessToCreate;
 import rina.ipcmanager.impl.conf.RINAConfiguration;
 import rina.ipcmanager.impl.console.IPCManagerConsole;
+import rina.ipcmanager.impl.helpers.ApplicationRegistrationManager;
 
 /**
  * The IPC Manager is the component of a DAF that manages the local IPC 
@@ -44,6 +47,10 @@ public class IPCManager {
 	public static final String CONFIG_FILE_LOCATION = "config/config.rina"; 
 	public static final long CONFIG_FILE_POLL_PERIOD_IN_MS = 5000;
 	
+	public static final String NORMAL_IPC_PROCESS_TYPE = "normal";
+	public static final String SHIM_ETHERNET_IPC_PROCESS_TYPE = "shim-ethernet";
+	public static final String SHIM_DUMMY_IPC_PROCESS_TYPE = "shim-dummy";
+	
 	private IPCManagerConsole console = null;
 	
 	/**
@@ -55,6 +62,8 @@ public class IPCManager {
 	ApplicationManagerSingleton applicationManager = null;
 	IPCEventProducerSingleton ipcEventProducer = null;
 	
+	ApplicationRegistrationManager applicationRegistrationManager = null;
+	
 	public IPCManager(){
 		log.info("Initializing IPCManager console..,");
 		executorService = Executors.newCachedThreadPool();
@@ -65,10 +74,12 @@ public class IPCManager {
 		ipcProcessFactory = rina.getIpcProcessFactory();
 		applicationManager = rina.getApplicationManager();
 		ipcEventProducer = rina.getIpcEventProducer();
+		applicationRegistrationManager = new ApplicationRegistrationManager(
+				ipcProcessFactory, applicationManager);
 		log.info("IPC Manager daemon initializing, reading RINA configuration ...");
 		initializeConfiguration();
-		log.info("Bootstrapping RINA ...");
-		bootstrap();
+		/*log.info("Bootstrapping RINA ...");
+		bootstrap();*/
 	}
 	
 	private void initializeConfiguration(){
@@ -172,7 +183,9 @@ public class IPCManager {
 	
 	private void processEvent(IPCEvent event) throws Exception{
 		if (event.getType() == IPCEventType.APPLICATION_REGISTRATION_REQUEST_EVENT){
-			
+			log.info("Got event: "+event.getClass().toString());
+			ApplicationRegistrationRequestEvent appRegReqEvent = (ApplicationRegistrationRequestEvent) event;
+			applicationRegistrationManager.registerApplication(appRegReqEvent);
 		}else if (event.getType() == IPCEventType.APPLICATION_UNREGISTRATION_REQUEST_EVENT){
 			
 		}
@@ -188,6 +201,17 @@ public class IPCManager {
 			result = "Id: "+ ipcProcess.getId() + "\n";
 			result = "    Type: " + ipcProcess.getType() + "\n";
 			result = "    Name: " + ipcProcess.getName().toString() + "\n";
+		}
+		
+		return result;
+	}
+	
+	public String getSystemCapabilitiesAsString(){
+		String result = "";
+		result = result + "Supported IPC Process types:\n";
+		Iterator<String> iterator = ipcProcessFactory.getSupportedIPCProcessTypes().iterator();
+		while(iterator.hasNext()){
+			result = result + "    " + iterator.next() + "\n";
 		}
 		
 		return result;

@@ -121,7 +121,7 @@ public:
 		lock();
 		if (counter < TRIGGER){
 			std::cout<<"Counter below threshold, waiting \n";
-			wait();
+			doWait();
 		}
 		std::cout<<"Counter reached threshold, value: "<<counter<<" \n";
 		result = counter;

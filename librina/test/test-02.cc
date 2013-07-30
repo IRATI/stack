@@ -112,7 +112,7 @@ int main(int argc, char * argv[]) {
 	ipcProcess1->assignToDIF(*difConfiguration);
 
 	/* TEST REGISTER APPLICATION */
-	ipcProcess1->registerApplication(*sourceName, 37);
+	ipcProcess1->registerApplication(*sourceName);
 
 	/* TEST UNREGISTER APPLICATION */
 	ipcProcess1->unregisterApplication(*sourceName);
@@ -135,7 +135,7 @@ int main(int argc, char * argv[]) {
 	ApplicationRegistrationRequestEvent * event = new
 			ApplicationRegistrationRequestEvent(*sourceName, appRegInfo, 34);
 	applicationManager->applicationRegistered(*event, *difName, 0,
-			0,0,"Everything was fine");
+			"Everything was fine");
 
 	/* TEST APPLICATION UNREGISTERED */
 	ApplicationUnregistrationRequestEvent * event2 = new

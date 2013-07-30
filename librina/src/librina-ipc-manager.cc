@@ -24,6 +24,7 @@
 #include "logs.h"
 #include "librina-ipc-manager.h"
 #include "core.h"
+#include "concurrency.h"
 #include "rina-syscalls.h"
 
 namespace rina{
@@ -195,8 +196,7 @@ throw (DisconnectFromNeighborException) {
 }
 
 void IPCProcess::registerApplication(
-		const ApplicationProcessNamingInformation& applicationName,
-		unsigned int applicationPortId)
+		const ApplicationProcessNamingInformation& applicationName)
 throw (IpcmRegisterApplicationException) {
 	LOG_DBG("IPCProcess::register application called");
 	if (!difMember){
@@ -208,7 +208,6 @@ throw (IpcmRegisterApplicationException) {
 	IpcmRegisterApplicationRequestMessage message;
 	message.setApplicationName(applicationName);
 	message.setDifName(difConfiguration.getDifName());
-	message.setApplicationPortId(applicationPortId);
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -372,6 +371,12 @@ const std::string IPCProcessFactory::path_to_ipc_process_types =
 const std::string IPCProcessFactory::normal_ipc_process_type =
 		"normal";
 
+IPCProcessFactory::IPCProcessFactory(): Lockable(){
+}
+
+IPCProcessFactory::~IPCProcessFactory() throw(){
+}
+
 std::list<std::string> IPCProcessFactory::getSupportedIPCProcessTypes(){
 	std::list<std::string> result;
 	result.push_back(normal_ipc_process_type);
@@ -402,6 +407,7 @@ IPCProcess * IPCProcessFactory::create(
 		const std::string& difType) throw (CreateIPCProcessException) {
 	LOG_DBG("IPCProcessFactory::create called");
 
+	lock();
 	int ipcProcessId = 1;
 	for (int i = 1; i < 1000; i++) {
 		if (ipcProcesses.find(i) == ipcProcesses.end()) {
@@ -423,12 +429,15 @@ IPCProcess * IPCProcessFactory::create(
 	IPCProcess * ipcProcess = new IPCProcess(ipcProcessId, 0, difType,
 			ipcProcessName);
 	ipcProcesses[ipcProcessId] = ipcProcess;
+	unlock();
+
 	return ipcProcess;
 }
 
 void IPCProcessFactory::destroy(unsigned int ipcProcessId)
 throw (DestroyIPCProcessException) {
 	LOG_DBG("IPCProcessFactory::destroy called");
+	lock();
 
 	std::map<int, IPCProcess*>::iterator iterator;
 	iterator = ipcProcesses.find(ipcProcessId);
@@ -447,16 +456,20 @@ throw (DestroyIPCProcessException) {
 
 	delete iterator->second;
 	ipcProcesses.erase(ipcProcessId);
+
+	unlock();
 }
 
 std::vector<IPCProcess *> IPCProcessFactory::listIPCProcesses() {
 	LOG_DBG("IPCProcessFactory::list IPC Processes called");
 	std::vector<IPCProcess *> response;
 
+	lock();
 	for (std::map<int, IPCProcess*>::iterator it = ipcProcesses.begin();
 			it != ipcProcesses.end(); ++it) {
 		response.push_back(it->second);
 	}
+	unlock();
 
 	return response;
 }
@@ -467,8 +480,7 @@ Singleton<IPCProcessFactory> ipcProcessFactory;
 
 void ApplicationManager::applicationRegistered(
 		const ApplicationRegistrationRequestEvent& event,
-		const ApplicationProcessNamingInformation& difName,
-		unsigned short ipcProcessId, int ipcProcessPortId, int result,
+		const ApplicationProcessNamingInformation& difName, int result,
 		const std::string& errorDescription)
 			throw (NotifyApplicationRegisteredException) {
 	LOG_DBG("ApplicationManager::applicationRegistered called");
@@ -479,8 +491,6 @@ void ApplicationManager::applicationRegistered(
 	AppRegisterApplicationResponseMessage responseMessage;
 	responseMessage.setApplicationName(event.getApplicationName());
 	responseMessage.setDifName(difName);
-	responseMessage.setIpcProcessId(ipcProcessId);
-	responseMessage.setIpcProcessPortId(ipcProcessPortId);
 	responseMessage.setResult(result);
 	responseMessage.setErrorDescription(errorDescription);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());

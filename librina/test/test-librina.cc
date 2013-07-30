@@ -247,11 +247,11 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	ApplicationRegistrationRequestEvent * appRequestEvent =
 			dynamic_cast<ApplicationRegistrationRequestEvent *>(event);
 	std::cout<<"IPCManager# received an application registration request event\n";
-	ipcProcess->registerApplication(appRequestEvent->getApplicationName(), 3);
+	ipcProcess->registerApplication(appRequestEvent->getApplicationName());
 	std::cout<<"IPCManager# IPC Process successfully registered application " <<
 			"to DIF "<<difName.getProcessName()<<std::endl;
 	applicationManager->applicationRegistered(
-			*appRequestEvent, difName, 1, 2, 0, "ok");
+			*appRequestEvent, difName, 0, "ok");
 	std::cout<<"IPCManager# Replied to application\n";
 	delete appRequestEvent;
 

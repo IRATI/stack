@@ -246,6 +246,7 @@
 %{
 #include "exceptions.h"
 #include "patterns.h"
+#include "concurrency.h"
 #include "librina-common.h"
 #include "librina-application.h"
 #include "librina-ipc-manager.h"
@@ -264,9 +265,12 @@
 %rename(differs) rina::FlowSpecification::operator!=(const FlowSpecification &other) const;
 %rename(equals) rina::RIBObject::operator==(const RIBObject &other) const;
 %rename(differs) rina::RIBObject::operator!=(const RIBObject &other) const;
+%rename(equals) rina::Thread::operator==(const Thread &other) const;
+%rename(differs) rina::Thread::operator!=(const Thread &other) const;
 
 %include "exceptions.h"
 %include "patterns.h"
+%include "concurrency.h"
 %include "librina-common.h"
 %include "librina-application.h"
 %include "librina-ipc-manager.h"
@@ -319,6 +323,10 @@
 MAKE_COLLECTION_ITERABLE(QoSCubeListIterator, QoSCube, std::list, rina::QoSCube);
 /* Define iterator for ApplicationProcessNamingInformation list */
 MAKE_COLLECTION_ITERABLE(ApplicationProcessNamingInformationListIterator, ApplicationProcessNamingInformation, std::list, rina::ApplicationProcessNamingInformation);
+/* Define iterator for RIBObject list */
+MAKE_COLLECTION_ITERABLE(RIBObjectListIterator, RIBObject, std::list, rina::RIBObject);
+/* Define iterator for String list */
+MAKE_COLLECTION_ITERABLE(StringListIterator, String, std::list, std::string);
 
 %template(DIFPropertiesVector) std::vector<rina::DIFProperties>;
 %template(FlowVector) std::vector<rina::Flow>;
@@ -337,3 +345,4 @@ MAKE_COLLECTION_ITERABLE(ApplicationProcessNamingInformationListIterator, Applic
 %template(ExtendedIPCManagerSingleton) Singleton<rina::ExtendedIPCManager>;
 %template(IPCProcessApplicationManagerSingleton) Singleton<rina::IPCProcessApplicationManager>;
 %template(RIBObjectList) std::list<rina::RIBObject>;
+%template(StringList) std::list<std::string>;

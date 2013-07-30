@@ -36,6 +36,7 @@ public class IPCManagerConsole implements Runnable{
 	
 	public IPCManagerConsole(IPCManager ipcManager){
 		commands = new Hashtable<String, ConsoleCommand>();
+		commands.put(GetSystemCapabilitiesCommand.ID, new GetSystemCapabilitiesCommand(ipcManager));
 		commands.put(PrintConfigurationCommand.ID, new PrintConfigurationCommand(ipcManager));
 		commands.put(ListIPCProcessesCommand.ID, new ListIPCProcessesCommand(ipcManager));
 	}

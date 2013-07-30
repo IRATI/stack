@@ -232,8 +232,6 @@ enum AppRegisterApplicationResponseMessageAttributes {
 	ARARE_ATTR_RESULT,
 	ARARE_ATTR_ERROR_DESCRIPTION,
 	ARARE_ATTR_DIF_NAME,
-	ARARE_ATTR_PROCESS_PORT_ID,
-	ARARE_ATTR_PROCESS_IPC_PROCESS_ID,
 	__ARARE_ATTR_MAX,
 };
 
@@ -371,7 +369,6 @@ AppGetDIFPropertiesResponseMessage * parseAppGetDIFPropertiesResponseMessage(
 enum IpcmRegisterApplicationRequestMessageAttributes {
 	IRAR_ATTR_APP_NAME = 1,
 	IRAR_ATTR_DIF_NAME,
-	IRAR_ATTR_APP_PORT_ID,
 	__IRAR_ATTR_MAX,
 };
 

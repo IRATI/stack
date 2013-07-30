@@ -97,8 +97,8 @@ public static void main(String[] args) throws IPCException{
 	destNamingInfo.setEntityInstance("1");
 	
 	printStatement("\nREGISTERING APPLICATIONs TO IPC PROCESS");
-	ipcProcess1.registerApplication(sourceNamingInfo, 35);
-	ipcProcess2.registerApplication(destNamingInfo, 56);
+	ipcProcess1.registerApplication(sourceNamingInfo);
+	ipcProcess2.registerApplication(destNamingInfo);
 	
 	printStatement("\nUNREGISTERING APPLICATIONs FROM IPC PROCESS");
 	ipcProcess1.unregisterApplication(sourceNamingInfo);
@@ -120,7 +120,7 @@ public static void main(String[] args) throws IPCException{
 			ApplicationRegistrationType.APPLICATION_REGISTRATION_SINGLE_DIF);
 	ApplicationRegistrationRequestEvent appRegRequestEvent = new 
 			ApplicationRegistrationRequestEvent(sourceNamingInfo, info, 45);
-	applicationManager.applicationRegistered(appRegRequestEvent, difName, 25, 15, 0, "");
+	applicationManager.applicationRegistered(appRegRequestEvent, difName, 0, "");
 	
 	printStatement("\nNOTIFY APPLICATION ABOUT SUCCESSFUL UNREGISTRATION");
 	ApplicationUnregistrationRequestEvent appUnregRequestEvent = new 

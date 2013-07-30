@@ -22,6 +22,7 @@
 #include <map>
 
 #include "librina-common.h"
+#include "concurrency.h"
 
 namespace rina {
 
@@ -375,12 +376,10 @@ public:
 	 * successfully registered the application or an error occurs.
 	 *
 	 * @param applicationName The name of the application to be registered
-	 * @param applicationPordId The port where the application can be contacted
 	 * @throws IpcmRegisterApplicationException if an error occurs
 	 */
 	void registerApplication(
-			const ApplicationProcessNamingInformation& applicationName,
-			unsigned int applicationPortId)
+			const ApplicationProcessNamingInformation& applicationName)
 	throw (IpcmRegisterApplicationException);
 
 	/**
@@ -434,7 +433,7 @@ public:
  * Provides functions to create, destroy and list IPC processes in the
  * system. This class is a singleton.
  */
-class IPCProcessFactory {
+class IPCProcessFactory: public Lockable {
 
 	/** The current IPC Processes in the system*/
 	std::map<int, IPCProcess*> ipcProcesses;
@@ -443,6 +442,9 @@ public:
 	static const std::string unknown_ipc_process_error;
 	static const std::string path_to_ipc_process_types;
 	static const std::string normal_ipc_process_type;
+
+	IPCProcessFactory();
+	~IPCProcessFactory() throw();
 
 	/**
 	 * Read the sysfs folder and get the list of IPC Process types supported
@@ -507,8 +509,7 @@ public:
 	 * @throws NotifyApplicationRegisteredException If an error occurs during the operation
 	 */
 	void applicationRegistered(const ApplicationRegistrationRequestEvent & event,
-			const ApplicationProcessNamingInformation& difName,
-			unsigned short ipcProcessId, int ipcProcessPortId, int result,
+			const ApplicationProcessNamingInformation& difName, int result,
 			const std::string& errorDescription)
 				throw (NotifyApplicationRegisteredException);
 

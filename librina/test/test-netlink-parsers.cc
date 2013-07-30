@@ -705,8 +705,6 @@ int testAppRegisterApplicationResponseMessage() {
 			new AppRegisterApplicationResponseMessage();
 
 	message->setResult(1);
-	message->setIpcProcessPortId(7);
-	message->setIpcProcessId(39);
 	message->setErrorDescription("Error description");
 	message->setDifName(*difName);
 	message->setApplicationName(*applicationName);
@@ -745,16 +743,6 @@ int testAppRegisterApplicationResponseMessage() {
 	} else if (message->getErrorDescription()
 			!= recoveredMessage->getErrorDescription()) {
 		std::cout << "Error description on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	} else if (message->getIpcProcessPortId()
-			!= recoveredMessage->getIpcProcessPortId()) {
-		std::cout << "IPC process port id on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	} else if (message->getIpcProcessId()
-			!= recoveredMessage->getIpcProcessId()) {
-		std::cout << "IPC process id on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	} else if (message->getApplicationName()
@@ -1119,7 +1107,6 @@ int testIpcmRegisterApplicationRequestMessage() {
 
 	message->setDifName(*difName);
 	message->setApplicationName(*applicationName);
-	message->setApplicationPortId(34);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -1155,11 +1142,6 @@ int testIpcmRegisterApplicationRequestMessage() {
 		returnValue = -1;
 	} else if (message->getDifName() != recoveredMessage->getDifName()) {
 		std::cout << "DIF name on original and recovered "
-				<< "messages are different\n";
-		returnValue = -1;
-	} else if (message->getApplicationPortId() !=
-			recoveredMessage->getApplicationPortId()) {
-		std::cout << "Application port id on original and recovered "
 				<< "messages are different\n";
 		returnValue = -1;
 	}

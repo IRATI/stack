@@ -19,6 +19,11 @@ public class DIFProperties {
 	private String difName = null;
 	
 	/**
+	 * The DIF Type
+	 */
+	private String difType = null;
+	
+	/**
 	 * The DIF Data Transfer constants
 	 */
 	private DataTransferConstants dataTransferConstants = null;
@@ -146,5 +151,11 @@ public class DIFProperties {
 
 	public void setDifName(String difName) {
 		this.difName = difName;
+	}
+	public String getDifType() {
+		return difType;
+	}
+	public void setDifType(String difType) {
+		this.difType = difType;
 	}
 }
