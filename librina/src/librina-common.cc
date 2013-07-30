@@ -690,11 +690,11 @@ void DIFConfiguration::setDifName(
 	this->difName = difName;
 }
 
-DIFType DIFConfiguration::getDifType() const {
+const std::string& DIFConfiguration::getDifType() const {
 	return difType;
 }
 
-void DIFConfiguration::setDifType(DIFType difType) {
+void DIFConfiguration::setDifType(const std::string& difType) {
 	this->difType = difType;
 }
 
@@ -816,6 +816,15 @@ RIBObjectValue RIBObject::getValue() const {
 
 void RIBObject::setValue(RIBObjectValue value) {
 	this->value = value;
+}
+
+void initialize(unsigned int localPort){
+	setNetlinkPortId(localPort);
+	rinaManager->getNetlinkManager();
+}
+
+void initialize(){
+	rinaManager->getNetlinkManager();
 }
 
 }

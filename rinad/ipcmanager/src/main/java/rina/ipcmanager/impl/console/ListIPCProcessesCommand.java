@@ -22,7 +22,7 @@ public class ListIPCProcessesCommand extends ConsoleCommand{
 			return "Wrong number of parameters. Usage: "+USAGE;
 		}
 
-		return this.getIPCManager().listIPCProcessesInformation();
+		return this.getIPCManager().getIPCProcessesInformationAsString();
 	}
 
 }

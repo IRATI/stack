@@ -266,7 +266,7 @@ class IPCProcess {
 	unsigned int portId;
 
 	/** The IPC Process type */
-	DIFType type;
+	std::string type;
 
 	/** The name of the IPC Process */
 	ApplicationProcessNamingInformation name;
@@ -285,10 +285,10 @@ public:
 	static const std::string error_allocating_flow;
 	static const std::string error_querying_rib;
 	IPCProcess();
-	IPCProcess(unsigned short id, unsigned int portId, DIFType type,
+	IPCProcess(unsigned short id, unsigned int portId, const std::string& type,
 			const ApplicationProcessNamingInformation& name);
 	unsigned int getId() const;
-	DIFType getType() const;
+	const std::string& getType() const;
 	const ApplicationProcessNamingInformation& getName() const;
 	unsigned int getPortId() const;
 	void setPortId(unsigned int portId);
@@ -441,6 +441,15 @@ class IPCProcessFactory {
 
 public:
 	static const std::string unknown_ipc_process_error;
+	static const std::string path_to_ipc_process_types;
+	static const std::string normal_ipc_process_type;
+
+	/**
+	 * Read the sysfs folder and get the list of IPC Process types supported
+	 * by the kernel
+	 * @return the list of supported IPC Process types
+	 */
+	std::list<std::string> getSupportedIPCProcessTypes();
 
 	/**
 	 * Invoked by the IPC Manager to instantiate a new IPC Process in the
@@ -456,7 +465,7 @@ public:
 	 */
 	IPCProcess * create(
 			const ApplicationProcessNamingInformation& ipcProcessName,
-			DIFType difType) throw (CreateIPCProcessException);
+			const std::string& difType) throw (CreateIPCProcessException);
 
 	/**
 	 * Invoked by the IPC Manager to delete an IPC Process from the system. The

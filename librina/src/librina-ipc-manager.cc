@@ -16,6 +16,11 @@
 
 #define RINA_PREFIX "ipc-manager"
 
+#include <sys/types.h>
+#include <dirent.h>
+#include <errno.h>
+#include <iostream>
+
 #include "logs.h"
 #include "librina-ipc-manager.h"
 #include "core.h"
@@ -40,11 +45,11 @@ const std::string IPCProcess::error_querying_rib =
 IPCProcess::IPCProcess() {
 	id = 0;
 	portId = 0;
-	type = DIF_TYPE_NORMAL;
 	difMember = false;
 }
 
-IPCProcess::IPCProcess(unsigned short id, unsigned int portId, DIFType type,
+IPCProcess::IPCProcess(unsigned short id,
+		unsigned int portId, const std::string& type,
 		const ApplicationProcessNamingInformation& name) {
 	this->id = id;
 	this->portId = portId;
@@ -65,7 +70,7 @@ unsigned int IPCProcess::getId() const {
 	return id;
 }
 
-DIFType IPCProcess::getType() const {
+const std::string& IPCProcess::getType() const {
 	return type;
 }
 
@@ -362,10 +367,39 @@ const std::list<RIBObject> IPCProcess::queryRIB(const std::string& objectClass,
 /** CLASS IPC PROCESS FACTORY */
 const std::string IPCProcessFactory::unknown_ipc_process_error =
 		"Could not find an IPC Process with the provided id";
+const std::string IPCProcessFactory::path_to_ipc_process_types =
+		"/sys/rina/personalities/default/shims/";
+const std::string IPCProcessFactory::normal_ipc_process_type =
+		"normal";
+
+std::list<std::string> IPCProcessFactory::getSupportedIPCProcessTypes(){
+	std::list<std::string> result;
+	result.push_back(normal_ipc_process_type);
+
+	DIR *dp;
+	struct dirent *dirp;
+	if((dp = opendir(path_to_ipc_process_types.c_str())) == 0) {
+		LOG_ERR("Error %d opening %s", errno,
+				path_to_ipc_process_types.c_str());
+		return result;
+	}
+
+	std::string name;
+	while ((dirp = readdir(dp)) != 0) {
+		name = std::string(dirp->d_name);
+		if (name.compare(".") != 0 && name.compare("..") != 0){
+			result.push_back(name);
+		}
+	}
+
+	closedir(dp);
+
+	return result;
+}
 
 IPCProcess * IPCProcessFactory::create(
 		const ApplicationProcessNamingInformation& ipcProcessName,
-		DIFType difType) throw (CreateIPCProcessException) {
+		const std::string& difType) throw (CreateIPCProcessException) {
 	LOG_DBG("IPCProcessFactory::create called");
 
 	int ipcProcessId = 1;

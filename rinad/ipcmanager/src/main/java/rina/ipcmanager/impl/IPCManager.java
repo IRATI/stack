@@ -3,7 +3,6 @@ package rina.ipcmanager.impl;
 import eu.irati.librina.ApplicationManagerSingleton;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.CreateIPCProcessException;
-import eu.irati.librina.DIFType;
 import eu.irati.librina.IPCEvent;
 import eu.irati.librina.IPCEventProducerSingleton;
 import eu.irati.librina.IPCEventType;
@@ -40,7 +39,7 @@ import rina.ipcmanager.impl.console.IPCManagerConsole;
  */
 public class IPCManager {
 	
-	private static final Log log = LogFactory.getLog(IPCManagerImpl.class);
+	private static final Log log = LogFactory.getLog(IPCManager.class);
 	
 	public static final String CONFIG_FILE_LOCATION = "config/config.rina"; 
 	public static final long CONFIG_FILE_POLL_PERIOD_IN_MS = 5000;
@@ -57,9 +56,12 @@ public class IPCManager {
 	IPCEventProducerSingleton ipcEventProducer = null;
 	
 	public IPCManager(){
+		log.info("Initializing IPCManager console..,");
 		executorService = Executors.newCachedThreadPool();
 		console = new IPCManagerConsole(this);
 		executorService.execute(console);
+		log.info("Initializing librina...");
+		rina.initialize(1);
 		ipcProcessFactory = rina.getIpcProcessFactory();
 		applicationManager = rina.getApplicationManager();
 		ipcEventProducer = rina.getIpcEventProducer();
@@ -134,7 +136,7 @@ public class IPCManager {
 			
 			try{
 				ipcProcess = ipcProcessFactory.create(processNamingInfo, 
-						getDIFType(ipcProcessToCreate.getDifName()));
+						ipcProcessToCreate.getType());
 			}catch(CreateIPCProcessException ex){
 				log.error(ex.getMessage() + ". Problems creating IPC Process " 
 						+ processNamingInfo.toString());
@@ -153,22 +155,6 @@ public class IPCManager {
 				//TODO cause enrollment to be initiated
 			}
 		}
-	}
-	
-	private DIFType getDIFType(String type) throws CreateIPCProcessException{
-		if (type.equals("normal")){
-			return DIFType.DIF_TYPE_NORMAL;
-		}else if (type.equals("shimtcpudp")){
-			return DIFType.DIF_TYPE_SHIM_TCP_UDP;
-		}else if (type.equals("shimethernet")){
-			return DIFType.DIF_TYPE_SHIM_ETHERNET;
-		}else if (type.equals("shimdummy")){
-			return DIFType.DIF_TYPE_SHIM_DUMMY;
-		}
-		
-		CreateIPCProcessException exception =
-				new CreateIPCProcessException("Unrecognized DIF type: "+type);
-		throw exception;
 	}
 	
 	public void executeEventLoop(){

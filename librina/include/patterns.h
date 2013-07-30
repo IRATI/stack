@@ -31,7 +31,8 @@ private:
         const NonCopyable & operator =(const NonCopyable &);
 };
 
-template<typename TYPE> class Singleton : public NonCopyable {
+template<typename TYPE> class Singleton : public NonCopyable{
+
 public:
         Singleton()  { }
         ~Singleton() { fini(); }
@@ -44,11 +45,10 @@ public:
 private:
         static TYPE * instance_;
 
-
         void init() {
-                if (!instance_) {
-                        instance_ = new TYPE();
-                }
+        	if (!instance_){
+        		instance_ = new TYPE();
+        	}
         }
 
         void fini() {

@@ -11,7 +11,7 @@ import rina.flowallocator.api.QoSCube;
  * @author eduardgrasa
  *
  */
-public class DIFConfiguration {
+public class DIFProperties {
 
 	/**
 	 * The DIF Name
@@ -128,8 +128,8 @@ public class DIFConfiguration {
 	public void setPolicyParameters(List<Property> policyParameters) {
 		this.policyParameters = policyParameters;
 	}
-	public static DIFConfiguration getDefaultNormalDIFConfiguration(){
-		DIFConfiguration result = new DIFConfiguration();
+	public static DIFProperties getDefaultNormalDIFConfiguration(){
+		DIFProperties result = new DIFProperties();
 		result.setDifName("RINA-Demo.DIF");
 		result.setDataTransferConstants(DataTransferConstants.getDefaultInstance());
 		List<QoSCube> qosCubes = new ArrayList<QoSCube>();

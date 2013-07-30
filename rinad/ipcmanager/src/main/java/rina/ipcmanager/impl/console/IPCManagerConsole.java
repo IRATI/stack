@@ -14,8 +14,8 @@ import java.util.Scanner;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import rina.configuration.RINAConfiguration;
 import rina.ipcmanager.impl.IPCManager;
+import rina.ipcmanager.impl.conf.RINAConfiguration;
 
 /**
  * Exports a text console to interact with the IPC Manager, reachable from port PORT. It doesn't

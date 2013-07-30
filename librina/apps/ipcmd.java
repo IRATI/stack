@@ -5,7 +5,6 @@ import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.ApplicationRegistrationType;
 import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.DIFConfiguration;
-import eu.irati.librina.DIFType;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.FlowSpecification;
 import eu.irati.librina.IPCException;
@@ -62,9 +61,9 @@ public static void main(String[] args) throws IPCException{
 	printStatement("\nCREATING IPC PROCESSES");
 	ApplicationProcessNamingInformation ipcProcessName1 = new ApplicationProcessNamingInformation("/ipcProcesses/i2CAT/Barcelona", "1");
 	ApplicationProcessNamingInformation ipcProcessName2 = new ApplicationProcessNamingInformation("/ipcProcesses/i2CAT/Castefa", "1"); 
-	IPCProcess ipcProcess1 = ipcProcessFactory.create(ipcProcessName1, DIFType.DIF_TYPE_NORMAL);
+	IPCProcess ipcProcess1 = ipcProcessFactory.create(ipcProcessName1, "normal");
 	printStatement("Created IPC Process with id " + ipcProcess1.getId());
-	IPCProcess ipcProcess2 = ipcProcessFactory.create(ipcProcessName2, DIFType.DIF_TYPE_SHIM_ETHERNET);
+	IPCProcess ipcProcess2 = ipcProcessFactory.create(ipcProcessName2, "shim-ethernet");
 	printStatement("Created IPC Process with id " + ipcProcess2.getId());
 	
 	printStatement("\nLISTING IPC PROCESSES");

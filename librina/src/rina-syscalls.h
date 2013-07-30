@@ -53,7 +53,7 @@ int syscallReadSDU(int portId, void * sdu);
  */
 int syscallCreateIPCProcess(
 		const ApplicationProcessNamingInformation& ipcProcessName,
-		unsigned int ipcProcessId, DIFType difType);
+		unsigned int ipcProcessId, const std::string& difType);
 
 /**
  * Wrapper of the ipcDestroy systen call

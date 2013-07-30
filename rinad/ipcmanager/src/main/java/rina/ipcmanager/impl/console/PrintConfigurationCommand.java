@@ -1,7 +1,7 @@
 package rina.ipcmanager.impl.console;
 
-import rina.configuration.RINAConfiguration;
 import rina.ipcmanager.impl.IPCManager;
+import rina.ipcmanager.impl.conf.RINAConfiguration;
 
 /**
  * The command to create a new IPC Process

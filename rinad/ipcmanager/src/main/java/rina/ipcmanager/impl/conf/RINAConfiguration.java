@@ -22,7 +22,7 @@ public class RINAConfiguration {
 	/**
 	 * The configurations of zero or more DIFs
 	 */
-	private List<DIFConfiguration> difConfigurations = null;
+	private List<DIFProperties> difConfigurations = null;
 
 	/**
 	 * The single instance of this class
@@ -54,11 +54,11 @@ public class RINAConfiguration {
 		this.localConfiguration = localConfiguration;
 	}
 
-	public List<DIFConfiguration> getDifConfigurations() {
+	public List<DIFProperties> getDifConfigurations() {
 		return difConfigurations;
 	}
 
-	public void setDifConfigurations(List<DIFConfiguration> difConfigurations) {
+	public void setDifConfigurations(List<DIFProperties> difConfigurations) {
 		this.difConfigurations = difConfigurations;
 	}
 	
@@ -68,7 +68,7 @@ public class RINAConfiguration {
 	 * @param difName
 	 * @return
 	 */
-	public DIFConfiguration getDIFConfiguration(String difName){
+	public DIFProperties getDIFConfiguration(String difName){
 		if (difConfigurations == null){
 			return null;
 		}
@@ -91,7 +91,7 @@ public class RINAConfiguration {
 	 * @return
 	 */
 	public KnownIPCProcessAddress getIPCProcessAddress(String difName, String apName, String apInstance){
-		DIFConfiguration difConfiguration = this.getDIFConfiguration(difName);
+		DIFProperties difConfiguration = this.getDIFConfiguration(difName);
 		if (difConfiguration == null){
 			return null;
 		}
@@ -124,7 +124,7 @@ public class RINAConfiguration {
 	 * @return
 	 */
 	public KnownIPCProcessAddress getIPCProcessAddress(String difName, long address){
-		DIFConfiguration difConfiguration = this.getDIFConfiguration(difName);
+		DIFProperties difConfiguration = this.getDIFConfiguration(difName);
 		if (difConfiguration == null){
 			return null;
 		}
@@ -165,7 +165,7 @@ public class RINAConfiguration {
 	 * @return the address prefix
 	 */
 	public long getAddressPrefixConfiguration(String difName, String apName){
-		DIFConfiguration difConfiguration = this.getDIFConfiguration(difName);
+		DIFProperties difConfiguration = this.getDIFConfiguration(difName);
 		if (difConfiguration == null){
 			return -1;
 		}

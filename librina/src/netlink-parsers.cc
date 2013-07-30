@@ -1552,7 +1552,8 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 		const DIFConfiguration& object){
 	struct nlattr *difName;
 
-	NLA_PUT_U16(netlinkMessage, DCONF_ATTR_DIF_TYPE, object.getDifType());
+	NLA_PUT_STRING(netlinkMessage, DCONF_ATTR_DIF_TYPE,
+			object.getDifType().c_str());
 
 	if (!(difName = nla_nest_start(netlinkMessage, DCONF_ATTR_DIF_NAME))) {
 		goto nla_put_failure;
@@ -3035,9 +3036,9 @@ parseIpcmUnregisterApplicationResponseMessage(nlmsghdr *hdr) {
 
 DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	struct nla_policy attr_policy[DCONF_ATTR_MAX + 1];
-	attr_policy[DCONF_ATTR_DIF_TYPE].type = NLA_U16;
-	attr_policy[DCONF_ATTR_DIF_TYPE].minlen = 2;
-	attr_policy[DCONF_ATTR_DIF_TYPE].maxlen = 2;
+	attr_policy[DCONF_ATTR_DIF_TYPE].type = NLA_STRING;
+	attr_policy[DCONF_ATTR_DIF_TYPE].minlen = 0;
+	attr_policy[DCONF_ATTR_DIF_TYPE].maxlen = 65535;
 	attr_policy[DCONF_ATTR_DIF_NAME].type = NLA_NESTED;
 	attr_policy[DCONF_ATTR_DIF_NAME].minlen = 0;
 	attr_policy[DCONF_ATTR_DIF_NAME].maxlen = 0;
@@ -3056,7 +3057,7 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 
 	if (attrs[DCONF_ATTR_DIF_TYPE]) {
 		result->setDifType(
-				static_cast<DIFType>(nla_get_u16(attrs[DCONF_ATTR_DIF_TYPE])));
+				nla_get_string(attrs[DCONF_ATTR_DIF_TYPE]));
 	}
 
 	if (attrs[DCONF_ATTR_DIF_NAME]) {

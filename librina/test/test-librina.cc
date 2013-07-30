@@ -203,7 +203,7 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 			"/ipcprocesses/Barcelona/i2CAT/25");
 	processName.setProcessInstance("1");
 	IPCProcess * ipcProcess = ipcProcessFactory->create(
-			processName, DIF_TYPE_NORMAL);
+			processName, "shim-dummy");
 	ipcProcess->setPortId(4);
 	std::cout<<"IPCManager# Created IPC Process with id " <<
 			ipcProcess->getId()<<std::endl;
@@ -216,13 +216,13 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	ipcProcess->notifyRegistrationToSupportingDIF(
 			processName, supportingDifName);
 	std::cout<<"IPCManager# Informed IPC Process about registration to "<<
-			"supportind DIF"<< supportingDifName.getProcessName()<<std::endl;
+			"supporting DIF"<< supportingDifName.getProcessName()<<std::endl;
 
 	//Assign the IPC Process to a DIF
 	ApplicationProcessNamingInformation difName;
 	difName.setProcessName("/difs/Test.DIF");
 	DIFConfiguration difConfiguration;
-	difConfiguration.setDifType(DIF_TYPE_NORMAL);
+	difConfiguration.setDifType("shim-dummy");
 	difConfiguration.setDifName(difName);
 	ipcProcess->assignToDIF(difConfiguration);
 	std::cout<<"IPCManager# Assigned IPC Process to DIF "<<

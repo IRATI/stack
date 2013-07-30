@@ -1383,7 +1383,7 @@ int testIpcmAssignToDIFRequestMessage() {
 	IpcmAssignToDIFRequestMessage * message =
 			new IpcmAssignToDIFRequestMessage();
 	DIFConfiguration * difConfiguration = new DIFConfiguration();
-	difConfiguration->setDifType(DIF_TYPE_SHIM_ETHERNET);
+	difConfiguration->setDifType("shim-ethernet");
 	difConfiguration->setDifName(*difName);
 	message->setDIFConfiguration(*difConfiguration);
 
@@ -1414,8 +1414,8 @@ int testIpcmAssignToDIFRequestMessage() {
 		std::cout << "Error parsing Ipcm Assign To DIF Request Message "
 				<< "\n";
 		returnValue = -1;
-	} else if (message->getDIFConfiguration().getDifType() !=
-			recoveredMessage->getDIFConfiguration().getDifType()) {
+	} else if (message->getDIFConfiguration().getDifType().compare(
+			recoveredMessage->getDIFConfiguration().getDifType()) != 0) {
 		std::cout << "DIFConfiguration.difType on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
