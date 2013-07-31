@@ -146,7 +146,6 @@ AppAllocateFlowResponseMessage * parseAppAllocateFlowResponseMessage(
 /* AppDeallocateFlowRequestMessage CLASS*/
 enum AppDeallocateFlowRequestMessageAttributes {
 	ADFRT_ATTR_PORT_ID = 1,
-	ADFRT_ATTR_DIF_NAME,
 	ADFRT_ATTR_APP_NAME,
 	__ADFRT_ATTR_MAX,
 };
@@ -532,6 +531,35 @@ int putIpcmAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 		const IpcmAllocateFlowResponseMessage& object);
 
 IpcmAllocateFlowResponseMessage * parseIpcmAllocateFlowResponseMessage(
+		nlmsghdr *hdr);
+
+/* IpcmDeallocateFlowRequestMessage CLASS*/
+enum IpcmDeallocateFlowRequestMessageAttributes {
+	IDFRT_ATTR_PORT_ID = 1,
+	__IDFRT_ATTR_MAX,
+};
+
+#define IDFRT_ATTR_MAX (__IDFRT_ATTR_MAX -1)
+
+int putIpcmDeallocateFlowRequestMessageObject(nl_msg* netlinkMessage,
+		const IpcmDeallocateFlowRequestMessage& object);
+
+IpcmDeallocateFlowRequestMessage * parseIpcmDeallocateFlowRequestMessage(
+		nlmsghdr *hdr);
+
+/* IpcmDeallocateFlowResponseMessage CLASS*/
+enum IpcmDeallocateFlowResponseMessageAttributes {
+	IDFRE_ATTR_RESULT = 1,
+	IDFRE_ATTR_ERROR_DESCRIPTION,
+	__IDFRE_ATTR_MAX,
+};
+
+#define IDFRE_ATTR_MAX (__IDFRE_ATTR_MAX -1)
+
+int putIpcmDeallocateFlowResponseMessageObject(nl_msg* netlinkMessage,
+		const IpcmDeallocateFlowResponseMessage& object);
+
+IpcmDeallocateFlowResponseMessage * parseIpcmDeallocateFlowResponseMessage(
 		nlmsghdr *hdr);
 
 /* IpcmDIFRegistrationNotification CLASS*/

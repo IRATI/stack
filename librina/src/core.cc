@@ -160,19 +160,8 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		break;
 	}
 	case RINA_C_APP_DEALLOCATE_FLOW_REQUEST: {
-		AppDeallocateFlowRequestMessage * specificMessage =
-				dynamic_cast<AppDeallocateFlowRequestMessage *>(message);
 		if(send){
-			RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-					specificMessage->getDifName());
-			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-		}else{
-			//TODO remove this after fully implementing librina-ipcproces
-			putAPNametoNetlinkPortIdMapping(
-					specificMessage->getApplicationName(),
-					specificMessage->getSourcePortId(),
-					specificMessage->getSourceIpcProcessId());
+			message->setDestPortId(getIPCManagerPortId());
 		}
 		break;
 	}
@@ -301,6 +290,12 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		break;
 	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED:{
+		if(send){
+			message->setDestPortId(getIPCManagerPortId());
+		}
+		break;
+	}
+	case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE:{
 		if(send){
 			message->setDestPortId(getIPCManagerPortId());
 		}

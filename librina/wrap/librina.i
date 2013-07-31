@@ -254,6 +254,18 @@
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
+%typemap(throws, throws="eu.irati.librina.IpcmDeallocateFlowException") rina::IpcmDeallocateFlowException {
+  jclass excep = jenv->FindClass("eu/irati/librina/IpcmDeallocateFlowException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+%typemap(throws, throws="eu.irati.librina.NotifyFlowDeallocatedException") rina::NotifyFlowDeallocatedException {
+  jclass excep = jenv->FindClass("eu/irati/librina/NotifyFlowDeallocatedException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
 
 /* Typemaps to allow eventWait, eventPoll and eventTimedWait to downcast IPCEvent to the correct class */
 %define DOWNCAST_IPC_EVENT_CONSUMER( OPERATION )
@@ -295,6 +307,17 @@
             if (mid) {
                 jlong cptr = 0;
                 *(rina::FlowRequestEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::FLOW_DEALLOCATION_REQUESTED_EVENT) {
+    	rina::FlowDeallocateRequestEvent *flowReqEvent = dynamic_cast<rina::FlowDeallocateRequestEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/FlowDeallocateRequestEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::FlowDeallocateRequestEvent **)&cptr = flowReqEvent; 
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
@@ -429,7 +452,6 @@ MAKE_COLLECTION_ITERABLE(StringListIterator, String, std::list, std::string);
 %template(IPCProcessPointerVector) std::vector<rina::IPCProcess *>;
 %template(ApplicationManagerSingleton) Singleton<rina::ApplicationManager>;
 %template(ExtendedIPCManagerSingleton) Singleton<rina::ExtendedIPCManager>;
-%template(IPCProcessApplicationManagerSingleton) Singleton<rina::IPCProcessApplicationManager>;
 %template(RIBObjectList) std::list<rina::RIBObject>;
 %template(StringList) std::list<std::string>;
 

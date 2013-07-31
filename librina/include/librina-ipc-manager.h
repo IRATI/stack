@@ -245,6 +245,33 @@ public:
 };
 
 /**
+ * Thrown when there are problems deallocating a flow
+ */
+class IpcmDeallocateFlowException: public IPCException {
+public:
+	IpcmDeallocateFlowException():
+		IPCException("Problems deallocating a flow. "){
+	}
+	IpcmDeallocateFlowException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Thrown when there are problems notifying about a flow
+ * deallocation event
+ */
+class NotifyFlowDeallocatedException: public IPCException {
+public:
+	NotifyFlowDeallocatedException():
+		IPCException("Problems notifying about flow deallocation. "){
+	}
+	NotifyFlowDeallocatedException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
  * Event informing that an application has requested the
  * properties of one or more DIFs
  */
@@ -298,6 +325,7 @@ public:
 	static const std::string error_unregistering_app;
 	static const std::string error_not_a_dif_member;
 	static const std::string error_allocating_flow;
+	static const std::string error_deallocating_flow;
 	static const std::string error_querying_rib;
 	IPCProcess();
 	IPCProcess(unsigned short id, unsigned int portId, const std::string& type,
@@ -433,9 +461,17 @@ public:
 	 * @param denyReason
 	 * @throws AllocateFlowException if something goes wrong
 	 */
-	void allocteFlowResponse(const FlowRequestEvent& flowRequest,
+	void allocateFlowResponse(const FlowRequestEvent& flowRequest,
 			bool accept, const std::string& denyReason)
 		throw(AllocateFlowException);
+
+	/**
+	 * Tell the IPC Process to deallocate a flow
+	 * @param portId
+	 * @throws IpcmDeallocateFlowException if there is an error during
+	 * the flow deallocation procedure
+	 */
+	void deallocateFlow(int portId) throw (IpcmDeallocateFlowException);
 
 	/**
 	 * Invoked by the IPC Manager to query a subset of the RIB of the IPC
@@ -583,6 +619,17 @@ public:
 			const FlowSpecification& flowSpec,
 			const ApplicationProcessNamingInformation& difName,
 			int portId) throw (AppFlowArrivedException);
+
+	/**
+	 * Inform the application about the result of a flow deallocation operation
+	 * @param event
+	 * @param result
+	 * @param errorDescription
+	 * @throws NotifyFlowDeallocatedException
+	 */
+	void flowDeallocated(const FlowDeallocateRequestEvent& event,
+			int result, const std::string& errorDescription)
+		throw (NotifyFlowDeallocatedException);
 
 	/**
 	 * Return the properties of zero or more DIFs to the application

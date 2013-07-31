@@ -144,7 +144,7 @@ void doWorkIPCProcess(){
 	FlowDeallocateRequestEvent * deallocateFlowEvent =
 			dynamic_cast<FlowDeallocateRequestEvent *>(event);
 	std::cout<<"IPCProcess# received a flow deallocation event\n";
-	ipcProcessApplicationManager->flowDeallocated(
+	extendedIPCManager->flowDeallocated(
 			*deallocateFlowEvent, 0, "ok");
 	std::cout<<"ICPProcess# Replied to application\n";
 	delete deallocateFlowEvent;

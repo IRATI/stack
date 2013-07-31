@@ -554,6 +554,32 @@ const ApplicationProcessNamingInformation&
 	return remoteApplicationName;
 }
 
+/* CLASS FLOW DEALLOCATE REQUEST EVENT */
+FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
+			const ApplicationProcessNamingInformation& appName,
+			unsigned int sequenceNumber):
+						IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,
+								sequenceNumber){
+	this->portId = portId;
+	this->applicationName = appName;
+}
+
+FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
+		unsigned int sequenceNumber):
+			IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,
+					sequenceNumber){
+	this->portId = portId;
+}
+
+int FlowDeallocateRequestEvent::getPortId() const{
+	return portId;
+}
+
+const ApplicationProcessNamingInformation&
+	FlowDeallocateRequestEvent::getApplicationName() const{
+	return applicationName;
+}
+
 /* CLASS APPLICATION REGISTRATION INFORMATION */
 ApplicationRegistrationInformation::ApplicationRegistrationInformation(){
 	applicationRegistrationType = APPLICATION_REGISTRATION_ANY_DIF;

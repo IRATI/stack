@@ -454,7 +454,6 @@ void IPCManager::deallocateFlow(int portId) throw (FlowDeallocationException) {
 	AppDeallocateFlowRequestMessage message;
 	message.setApplicationName(flow->getLocalApplicationName());
 	message.setPortId(portId);
-	message.setDifName(flow->getDIFName());
 	message.setRequestMessage(true);
 
 	AppDeallocateFlowResponseMessage * deallocateResponse;

@@ -387,20 +387,9 @@ void AppDeallocateFlowRequestMessage::setPortId(int portId) {
 	this->portId = portId;
 }
 
-const ApplicationProcessNamingInformation&
-AppDeallocateFlowRequestMessage::getDifName() const {
-	return difName;
-}
-
-void AppDeallocateFlowRequestMessage::setDifName(
-		const ApplicationProcessNamingInformation& difName) {
-	this->difName = difName;
-}
-
 IPCEvent* AppDeallocateFlowRequestMessage::toIPCEvent(){
 	FlowDeallocateRequestEvent * event = new FlowDeallocateRequestEvent(
-			portId, difName, applicationName, getDestIpcProcessId(),
-			getSequenceNumber());
+			portId, applicationName, getSequenceNumber());
 	return event;
 }
 
@@ -1010,6 +999,31 @@ int IpcmAllocateFlowResponseMessage::getPortId() const{
 
 void IpcmAllocateFlowResponseMessage::setPortId(int portId){
 	this->portId = portId;
+}
+
+/* CLASS IPCM DEALLOCATE FLOW REQUEST MESSAGE */
+IpcmDeallocateFlowRequestMessage::IpcmDeallocateFlowRequestMessage() :
+			NetlinkRequestOrNotificationMessage(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST) {
+	this->portId = 0;
+}
+
+int IpcmDeallocateFlowRequestMessage::getPortId() const {
+	return portId;
+}
+
+void IpcmDeallocateFlowRequestMessage::setPortId(int portId) {
+	this->portId = portId;
+}
+
+IPCEvent* IpcmDeallocateFlowRequestMessage::toIPCEvent(){
+	FlowDeallocateRequestEvent * event = new FlowDeallocateRequestEvent(
+			portId, getSequenceNumber());
+	return event;
+}
+
+/* CLASS IPCM DEALLOCATE FLOW RESPONSE MESSAGE */
+IpcmDeallocateFlowResponseMessage::IpcmDeallocateFlowResponseMessage() :
+	BaseNetlinkResponseMessage(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE) {
 }
 
 /* CLASS IPCM IPC PROCESS REGISTERED TO DIF NOTIFICATION MESSAGE */

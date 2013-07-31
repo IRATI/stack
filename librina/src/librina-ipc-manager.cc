@@ -40,6 +40,8 @@ const std::string IPCProcess::error_not_a_dif_member =
 		"Error: the IPC Process is not member of a DIF";
 const std::string IPCProcess::error_allocating_flow =
 		"Error allocating flow";
+const std::string IPCProcess::error_deallocating_flow =
+		"Error deallocating flow";
 const std::string IPCProcess::error_querying_rib =
 		"Error querying rib";
 
@@ -318,7 +320,7 @@ throw (AllocateFlowException) {
 #endif
 }
 
-void IPCProcess::allocteFlowResponse(const FlowRequestEvent& flowRequest,
+void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 		bool accept, const std::string& denyReason)
 		throw(AllocateFlowException){
 #if STUB_API
@@ -338,6 +340,42 @@ void IPCProcess::allocteFlowResponse(const FlowRequestEvent& flowRequest,
 	}catch(NetlinkException &e){
 		throw AllocateFlowException(e.what());
 	}
+#endif
+}
+
+void IPCProcess::deallocateFlow(int portId)
+	throw (IpcmDeallocateFlowException){
+	LOG_DBG("IPCProcess::deallocate flow called");
+#if STUB_API
+	//Do nothing
+#else
+	IpcmDeallocateFlowRequestMessage message;
+	message.setPortId(portId);
+	message.setDestIpcProcessId(id);
+	message.setDestPortId(portId);
+	message.setRequestMessage(true);
+
+	IpcmDeallocateFlowResponseMessage * deallocateFlowResponse;
+	try{
+		deallocateFlowResponse =
+				dynamic_cast<IpcmDeallocateFlowResponseMessage *>(
+						rinaManager->sendRequestAndWaitForResponse(&message,
+								IPCProcess::error_deallocating_flow));
+	}catch(NetlinkException &e){
+		throw IpcmDeallocateFlowException(e.what());
+	}
+
+	if (deallocateFlowResponse->getResult() < 0){
+		std::string reason = IPCProcess::error_deallocating_flow + " " +
+				deallocateFlowResponse->getErrorDescription();
+		delete deallocateFlowResponse;
+		throw IpcmDeallocateFlowException(reason);
+	}
+
+	LOG_DBG("Deallocated flow from to with portId %d",
+			message.getPortId());
+	delete deallocateFlowResponse;
+
 #endif
 }
 
@@ -609,6 +647,28 @@ void ApplicationManager::flowRequestArrived(
 	LOG_DBG("Application %s accepted flow with portId %d",
 			localAppName.getProcessName().c_str(), portId);
 	delete allocateFlowResponse;
+#endif
+}
+
+void ApplicationManager::flowDeallocated(
+		const FlowDeallocateRequestEvent& event,
+			int result, const std::string& errorDescription)
+		throw (NotifyFlowDeallocatedException){
+	LOG_DBG("ApplicationManager::flowAllocated called");
+
+#if STUB_API
+	//Do nothing
+#else
+	AppDeallocateFlowResponseMessage responseMessage;
+	responseMessage.setResult(result);
+	responseMessage.setErrorDescription(errorDescription);
+	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+	}catch(NetlinkException &e){
+		throw NotifyFlowDeallocatedException(e.what());
+	}
 #endif
 }
 

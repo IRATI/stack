@@ -42,6 +42,8 @@ enum RINANetlinkOperationCode{
 	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED, /* Allocate flow request from a remote application, IPC Process -> IPC Manager */
 	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT, /* IPC Process -> IPC Manager */
 	RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE, /* IPC Manager -> IPC Process */
+	RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST, /* IPC Manager -> IPC Process */
+	RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE, /* IPC Process -> IPC Manager */
 	RINA_C_IPCM_REGISTER_APPLICATION_REQUEST, /*IPC Manager -> IPC Process */
 	RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE, /*IPC Process -> IPC Manager */
 	RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST, /* IPC Manager -> IPC Process */
@@ -56,8 +58,8 @@ enum RINANetlinkOperationCode{
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* Response to an application allocate flow request, IPC Manager -> Application */
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, /* Allocate flow request from a remote application, IPC Manager -> Application */
 	RINA_C_APP_ALLOCATE_FLOW_RESPONSE, /* Allocate flow response to an allocate request arrived operation, Application -> IPC Manager */
-	RINA_C_APP_DEALLOCATE_FLOW_REQUEST, /* Application -> IPC Process */
-	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, /* IPC Process -> Application */
+	RINA_C_APP_DEALLOCATE_FLOW_REQUEST, /* Application -> IPC Manager */
+	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, /* IPC Manager -> Application */
 	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, /* IPC Process -> Application, flow deallocated without the application having requested it */
 	RINA_C_APP_REGISTER_APPLICATION_REQUEST, /* Application -> IPC Manager */
 	RINA_C_APP_REGISTER_APPLICATION_RESPONSE, /* IPC Manager -> Application */
@@ -322,9 +324,6 @@ class AppDeallocateFlowRequestMessage: public NetlinkRequestOrNotificationMessag
 	/** The id of the flow to be deallocated */
 	int portId;
 
-	/** The name of the DIF where the flow is being allocated */
-	ApplicationProcessNamingInformation difName;
-
 	/**
 	 * The name of the applicaiton requesting the flow deallocation,
 	 * to verify it is allowed to do so
@@ -338,8 +337,6 @@ public:
 			const ApplicationProcessNamingInformation& applicationName);
 	int getPortId() const;
 	void setPortId(int portId);
-	const ApplicationProcessNamingInformation& getDifName() const;
-	void setDifName(const ApplicationProcessNamingInformation& difName);
 	IPCEvent* toIPCEvent();
 };
 
@@ -795,6 +792,30 @@ public:
 	void setNotifySource(bool notifySource);
 	int getPortId() const;
 	void setPortId(int portId);
+};
+
+/**
+ * IPC Manager -> IPC Process
+ */
+class IpcmDeallocateFlowRequestMessage: public NetlinkRequestOrNotificationMessage {
+
+	/** The id of the flow to be deallocated */
+	int portId;
+
+public:
+	IpcmDeallocateFlowRequestMessage();
+	int getPortId() const;
+	void setPortId(int portId);
+	IPCEvent* toIPCEvent();
+};
+
+/**
+ * Response by the IPC Process to the flow deallocation request
+ */
+class IpcmDeallocateFlowResponseMessage: public BaseNetlinkResponseMessage {
+
+public:
+	IpcmDeallocateFlowResponseMessage();
 };
 
 /**

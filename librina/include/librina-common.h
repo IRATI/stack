@@ -384,6 +384,26 @@ public:
 };
 
 /**
+ * Event informing the IPC Process about a flow deallocation request
+ */
+class FlowDeallocateRequestEvent: public IPCEvent {
+	/** The port-id that locally identifies the flow */
+	int portId;
+
+	/** The application that requested the flow deallocation*/
+	ApplicationProcessNamingInformation applicationName;
+
+public:
+	FlowDeallocateRequestEvent(int portId,
+			const ApplicationProcessNamingInformation& appName,
+			unsigned int sequenceNumber);
+	FlowDeallocateRequestEvent(int portId,
+				unsigned int sequenceNumber);
+	int getPortId() const;
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+};
+
+/**
  * Identifies the types of application registrations
  * APPLICATION_REGISTRATION_SINGLE_DIF - registers the application in a single
  * DIF, specified by the application
