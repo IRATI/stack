@@ -40,8 +40,11 @@ typedef enum {
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, 
 	
 	/* Allocate flow response to an allocate request arrived operation, 
-	 * Application -> IPC Process */
-	RINA_C_APP_ALLOCATE_FLOW_RESPONSE, 
+	 * Application -> IPC Manager &
+	 * IPC Manager -> IPC Process &
+	 * IPC Process -> IPC Manager &
+	 * IPC Manager -> Application */
+	RINA_C_ALLOCATE_FLOW_RESPONSE, 
 	
 	/* Application -> IPC Process */
 	RINA_C_APP_DEALLOCATE_FLOW_REQUEST, 
@@ -81,9 +84,6 @@ typedef enum {
 	
 	/* IPC Manager -> IPC Process */
 	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST, 
-	
-	/* IPC Process -> IPC Manager */
-	RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE, 
 	
 	/* IPC Manager -> IPC Process */
 	RINA_C_IPCM_QUERY_RIB_REQUEST, 

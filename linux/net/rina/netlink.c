@@ -197,7 +197,14 @@ static struct genl_ops nl_ops[] = {
                 .dumpit = NULL,
         },
         {
-                .cmd    = RINA_C_APP_ALLOCATE_FLOW_RESPONSE,
+                .cmd    = RINA_C_ALLOCATE_FLOW_RESPONSE,
+                .flags  = 0,
+                //.policy = nl_rina_policy,
+                .doit   = dispatcher,
+                .dumpit = NULL,
+        },
+        {
+                .cmd    = RINA_C_ALLOCATE_FLOW_RESPONSE,
                 .flags  = 0,
                 //.policy = nl_rina_policy,
                 .doit   = dispatcher,
@@ -282,13 +289,6 @@ static struct genl_ops nl_ops[] = {
         },
         {
                 .cmd    = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
                 .flags  = 0,
                 //.policy = nl_rina_policy,
                 .doit   = dispatcher,

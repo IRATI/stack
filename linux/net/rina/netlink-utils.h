@@ -65,11 +65,129 @@ enum flow_spec_attrs {
 /* FIXME: is it really needed ? */
 #define FSPEC_ATTR_MAX (__FSPEC_ATTR_MAX - 1)
 
+enum app_alloc_flow_req_resp_attrs {
+        AAFRE_ATTR_DIF_NAME = 1,
+        AAFRE_ATTR_ACCEPT,
+        AAFRE_ATTR_DENY_REASON,
+        AAFRE_ATTR_NOTIFY_SOURCE,
+        __AAFRE_ATTR_MAX,
+};
+
+#define AAFRE_ATTR_MAX (__AAFRE_ATTR_MAX -1)
+
+enum ipcm_alloc_flow_req_attrs {
+        IAFRM_ATTR_SOURCE_APP = 1,
+        IAFRM_ATTR_DEST_APP,
+        IAFRM_ATTR_FLOW_SPEC,
+        IAFRM_ATTR_DIF_NAME,
+        IAFRM_ATTR_PORT_ID,
+        IAFRM_ATTR_APP_PORT,
+        __IAFRM_ATTR_MAX,
+};
+
+#define IAFRM_ATTR_MAX (__IAFRM_ATTR_MAX -1)
+
+enum app_dealloc_flow_req_msg_attrs {
+        ADFRT_ATTR_PORT_ID = 1,
+        ADFRT_ATTR_DIF_NAME,
+        ADFRT_ATTR_APP_NAME,
+        __ADFRT_ATTR_MAX,
+};
+
+#define ADFRT_ATTR_MAX (__ADFRT_ATTR_MAX -1)
+
+enum app_dealloc_flow_resp_attrs {
+        ADFRE_ATTR_RESULT = 1,
+        ADFRE_ATTR_ERROR_DESCRIPTION,
+        ADFRE_ATTR_APP_NAME,
+        __ADFRE_ATTR_MAX,
+};
+
+#define ADFRE_ATTR_MAX (__ADFRE_ATTR_MAX -1)
+
+struct rina_msg_hdr{
+	unsigned int src_ipc_id;
+	unsigned int dst_ipc_id;
+};
+
+#if 0
+struct rnl_msg{
+            
+        /* Generic RINA Netlink family identifier */
+        int family;
+
+        /* source nl port id */
+        unsigned int src_port;
+
+        /* destination nl port id */
+        unsigned int dst_port;
+
+        /* The message sequence number */
+        unsigned int seq_num;
+
+        /* The operation code */
+        msg_id op_code;
+
+        /* True if this is a request message */
+        bool req_msg_flag;
+
+        /* True if this is a response message */
+        bool resp_msg_flag;
+
+        /* True if this is a notification message */
+        bool notification_msg_flag;
+
+        /* RINA header containing IPC processes ids */
+        struct rina_msg_hdr * rina_hdr;
+
+        /* Specific message attributes */
+        void * attrs;
+};
+#endif
+
+struct rnl_ipcm_alloc_flow_req_msg{
+	struct name 		source;
+	struct name 		dest;
+	struct flow_spec	fspec;
+	port_id_t        	id;
+	struct name		dif_name;
+};
+
+struct rnl_alloc_flow_resp_msg{
+	struct name dif_name;
+	bool 	    accept;
+	string_t    * deny_reason;
+	bool	    notify_src;	
+};
+
+struct rnl_dealloc_flow_req_msg{
+	port_id_t	id;
+	struct name	dif_name;
+	struct name	app_name;
+};
+
+struct rnl_dealloc_flow_resp_msg{
+	uint_t		result;
+	string_t 	* err_desc;
+	struct name	app_name;
+}
+;
+
 int rnl_format_app_alloc_flow_req_arrived(struct sk_buff * msg,
                                           struct name      source,
                                           struct name      dest,
                                           struct flow_spec fspec,
                                           port_id_t        id,
                                           struct name      dif_name);
-
+int rnl_parse_alloc_flow_resp(struct genl_info * info,
+				  struct rnl_alloc_flow_resp_msg * msg_attrs);
+int rnl_parse_ipcm_alloc_flow_req(struct genl_info * info,
+                                  struct rnl_ipcm_alloc_flow_req_msg * msg_attrs);
+int rnl_parse_app_dealloc_flow_req(struct genl_info * info,
+	                           struct rnl_dealloc_flow_req_msg * msg_attrs);
+int rnl_parse_app_dealloc_flow_resp(struct genl_info * info,
+                                    struct rnl_dealloc_flow_resp_msg * msg_attrs);
+ipc_process_id_t rnl_src_ipcid_from_msg(struct genl_info * info);
+ipc_process_id_t rnl_dst_ipcid_from_msg(struct genl_info * info);
 #endif
+
