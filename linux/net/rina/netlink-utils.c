@@ -438,21 +438,22 @@ int rnl_parse_alloc_flow_resp(struct genl_info * info,
 
 	if(rnl_parse_msg(info, AAFRA_ATTR_MAX, attr_policy) < 0)
 		goto fail;
-	else{
-		if(parse_app_name_info(info->attrs[AAFRE_ATTR_DIF_NAME], 
-					       &msg_attrs->dif_name) < 0) 
-			goto fail;
-		if(info->attrs[AAFRE_ATTR_ACCEPT])
-			msg_attrs->accept	= \
-				nla_get_flag(info->attrs[AAFRE_ATTR_ACCEPT]);
-		if(info->attrs[AAFRE_ATTR_DENY_REASON])
-			nla_strlcpy(msg_attrs->deny_reason,
-				    info->attrs[AAFRE_ATTR_DENY_REASON],
-				    sizeof(info->attrs[AAFRE_ATTR_DENY_REASON]));
-		if(info->attrs[AAFRE_ATTR_NOTIFY_SOURCE])
-			msg_attrs->notify_src  = \
-				nla_get_flag(info->attrs[AAFRE_ATTR_NOTIFY_SOURCE]);
-	}
+
+	if(parse_app_name_info(info->attrs[AAFRE_ATTR_DIF_NAME], 
+				       &msg_attrs->dif_name) < 0) 
+		goto fail;
+	if(info->attrs[AAFRE_ATTR_ACCEPT])
+		msg_attrs->accept	= \
+			nla_get_flag(info->attrs[AAFRE_ATTR_ACCEPT]);
+	if(info->attrs[AAFRE_ATTR_DENY_REASON])
+		nla_strlcpy(msg_attrs->deny_reason,
+			    info->attrs[AAFRE_ATTR_DENY_REASON],
+			    sizeof(info->attrs[AAFRE_ATTR_DENY_REASON]));
+	if(info->attrs[AAFRE_ATTR_NOTIFY_SOURCE])
+		msg_attrs->notify_src  = \
+			nla_get_flag(info->attrs[AAFRE_ATTR_NOTIFY_SOURCE]);
+	
+	return 0;	
 
 	fail:
 		LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_APP_ALLOCATE_FLOW_RESPONSE"));
@@ -460,6 +461,74 @@ int rnl_parse_alloc_flow_resp(struct genl_info * info,
 
 }
 EXPORT_SYMBOL(rnl_parse_alloc_flow_resp);
+
+int rnl_parse_app_dealloc_flow_req(struct genl_info * info,
+                                   struct rnl_dealloc_flow_req_msg * msg_attrs)
+{
+        struct nla_policy attr_policy[ADFRT_ATTR_MAX + 1];
+
+        attr_policy[ADFRT_ATTR_PORT_ID].type = NLA_U32;
+        attr_policy[ADFRT_ATTR_DIF_NAME].type = NLA_NESTED;
+        attr_policy[ADFRT_ATTR_APP_NAME].type = NLA_NESTED;
+
+	if(rnl_parse_msg(info, ADFRT_ATTR_MAX, attr_policy) < 0)
+                 goto fail;
+
+	if(info->attrs[ADFRT_ATTR_PORT_ID])
+		msg_attrs->id       = \
+			(port_id_t) nla_get_u32(info->attrs[ADFRT_ATTR_PORT_ID]);
+
+	if(parse_app_name_info(info->attrs[ADFRT_ATTR_DIF_NAME], 
+				       &msg_attrs->dif_name) < 0) 
+		goto fail;
+
+	if(parse_app_name_info(info->attrs[ADFRT_ATTR_APP_NAME], 
+				       &msg_attrs->app_name) < 0) 
+		goto fail;
+
+	return 0;
+
+        fail:
+		LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_APP_DEALLOCATE_FLOW_REQUEST"));
+		return -1;
+
+}
+EXPORT_SYMBOL(rnl_parse_app_dealloc_flow_req);
+
+
+int rnl_parse_app_dealloc_flow_resp(struct genl_info * info,
+                                   struct rnl_dealloc_flow_resp_msg * msg_attrs)
+{
+	struct nla_policy attr_policy[ADFRE_ATTR_MAX + 1];
+
+        attr_policy[ADFRE_ATTR_RESULT].type = NLA_U32;
+        attr_policy[ADFRE_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
+        attr_policy[ADFRE_ATTR_APP_NAME].type = NLA_NESTED;
+
+	
+	if(rnl_parse_msg(info, ADFRE_ATTR_MAX, attr_policy) < 0)
+                 goto fail;
+
+	if(info->attrs[ADFRE_ATTR_RESULT])
+		msg_attrs->result       = \
+			(port_id_t) nla_get_u32(info->attrs[ADFRE_ATTR_RESULT]);
+
+	if(info->attrs[ADFRE_ATTR_ERROR_DESCRIPTION])
+		nla_strlcpy(msg_attrs->err_desc,
+			    info->attrs[ADFRE_ATTR_ERROR_DESCRIPTION],
+			    sizeof(info->attrs[ADFRE_ATTR_ERROR_DESCRIPTION]));
+
+	if(parse_app_name_info(info->attrs[ADFRE_ATTR_APP_NAME], 
+				       &msg_attrs->app_name) < 0) 
+		goto fail;
+
+	return 0;
+
+        fail:
+		LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_APP_DEALLOCATE_FLOW_RESPONSE"));
+		return -1;
+}
+EXPORT_SYMBOL(rnl_parse_app_dealloc_flow_resp);
 
 ipc_process_id_t rnl_src_ipcid_from_msg(struct genl_info * info)
 {
