@@ -7,8 +7,8 @@
 AC_INIT([RINA Tools],
         m4_esyscmd([build-aux/git-version-gen .tarball-version]),
         [f.salvestrini@nextworks.it],
-        [rina-tool],
-        [http://www.irati.eu])
+        [rina-tools],
+        [http://irati.eu])
 
 AC_PREREQ([2.68])
 
