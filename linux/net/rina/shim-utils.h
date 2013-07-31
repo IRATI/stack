@@ -67,7 +67,7 @@ struct name * name_dup(const struct name * src);
 
 /*
  * Copies the source object contents into the destination object, both must
- * be previously allocated. Returns 
+ * be previously allocated
  */
 int           name_cpy(const struct name * src, struct name * dst);
 
