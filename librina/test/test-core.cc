@@ -101,8 +101,6 @@ void * doWorkIPCManager(void * arg) {
 	message.setSourceAppName(flowEvent->getLocalApplicationName());
 	message.setPortId(23);
 	message.setDifName(difName);
-	message.setIpcProcessPortId(340);
-	message.setIpcProcessId(24);
 	message.setSequenceNumber(flowEvent->getSequenceNumber());
 	message.setResponseMessage(true);
 
