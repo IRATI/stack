@@ -26,23 +26,26 @@
 
 #include "logs.h"
 #include "utils.h"
-#include "shim.h"
 #include "kipcm.h"
 #include "debug.h"
+#include "ipcp-factories.h"
+#include "shim-utils.h"
+
+#define DEFAULT_FACTORY "normal-ipc"
 
 struct kipcm {
-        struct shims *   shims;
+        struct ipcp_factories * factories;
 
         /* NOTE:
          *
-         *   This internal mapping hides the lookups for id <-> ipcp and
-         *   port-id <-> flow. They will be changed later. For the time
-         *   being these lookups will be kept simpler
+         *   The following data structures hide the lookups for
+         *   ipcp-id <-> instance and port-id <-> flow. They will be changed
+         *   later. For the time being these lookups will be kept simpler
          *
          *     Francesco
          */
-        struct list_head id_to_ipcp;
-        struct list_head port_id_to_flow;
+        struct list_head        ipcp_id_to_instance;
+        struct list_head        port_id_to_flow;
 };
 
 /*
@@ -54,9 +57,9 @@ struct kipcm {
  *
  *   Francesco
  */
-struct id_to_ipcp {
-        ipc_process_id_t       id;   /* Key */
-        struct ipc_process_t * ipcp; /* Value*/
+struct ipcp_id_to_instance {
+        ipc_process_id_t       id;       /* Key */
+        struct ipcp_instance * instance; /* Value*/
         struct list_head       list;
 };
 
@@ -68,7 +71,7 @@ struct flow {
          * The components of the IPC Process that will handle the
          * write calls to this flow
          */
-        struct ipc_process_t * ipc_process;
+        struct ipcp_instance * ipc_process;
 
         /*
          * True if this flow is serving a user-space application, false
@@ -86,7 +89,9 @@ struct flow {
         //QUEUE(segmentation_queue, pdu *);
         //QUEUE(reassembly_queue,       pdu *);
         //QUEUE(sdu_ready, sdu *);
+#if 0
         struct kfifo *         sdu_ready;
+#endif
 };
 
 struct port_id_to_flow {
@@ -95,64 +100,94 @@ struct port_id_to_flow {
         struct list_head list;
 };
 
-static int add_id_to_ipcp_node(struct kipcm *         kipcm,
-                               ipc_process_id_t       id,
-                               struct ipc_process_t * ipc_process)
+static int instance_binding_add(struct kipcm *         kipcm,
+                                ipc_process_id_t       id,
+                                struct ipcp_instance * instance)
 {
-        struct id_to_ipcp * id_to_ipcp;
+        struct ipcp_id_to_instance * temp;
 
-        LOG_DBG("Adding IPC process to the list of kipcm processes");
+        LOG_DBG("Adding IPC process binding (%d, %pK)", id, instance);
 
-        id_to_ipcp = rkzalloc(sizeof(*id_to_ipcp), GFP_KERNEL);
-        if (!id_to_ipcp)
+        ASSERT(kipcm);
+        ASSERT(instance);
+
+        temp = rkzalloc(sizeof(*temp), GFP_KERNEL);
+        if (!temp)
                 return -1;
 
-        LOG_DBG("Adding info to id_to_ipcp node");
-        id_to_ipcp->id   = id;
-        id_to_ipcp->ipcp = ipc_process;
+        temp->id   = id;
+        temp->instance = instance;
+        INIT_LIST_HEAD(&temp->list);
 
-        LOG_DBG("Adding id_to_ipcp node to the kipcm->id_to_ipcp list");
-        INIT_LIST_HEAD(&id_to_ipcp->list);
-        list_add(&id_to_ipcp->list, &kipcm->id_to_ipcp);
-
-        LOG_DBG("Node added");
+        list_add(&temp->list, &kipcm->ipcp_id_to_instance);
 
         return 0;
 }
 
-static struct ipc_process_t * find_ipc_process_by_id(struct kipcm *   kipcm,
-                                                     ipc_process_id_t id)
+static struct ipcp_id_to_instance *
+instance_binding_find(struct kipcm *   kipcm,
+                      ipc_process_id_t id)
 {
-        struct id_to_ipcp * cur;
+        struct ipcp_id_to_instance * cur;
 
-        LOG_DBG("Looking for IPC process %d", id);
+        ASSERT(kipcm);
 
-        list_for_each_entry(cur, &kipcm->id_to_ipcp, list) {
+        list_for_each_entry(cur, &kipcm->ipcp_id_to_instance, list) {
                 if (cur->id == id) {
-                        LOG_DBG("Got it, it's %pk", cur->ipcp);
-                        return cur->ipcp;
-                }
-        }
-
-        LOG_DBG("IPC process not found");
-        return NULL;
-}
-
-static struct id_to_ipcp * find_ipc_node_by_id(struct kipcm *   kipcm,
-                                               ipc_process_id_t id)
-{
-        struct id_to_ipcp * cur;
-
-        LOG_DBG("Looking for IPC node %d", id);
-        list_for_each_entry(cur, &kipcm->id_to_ipcp, list) {
-                if (cur->id == id) {
-                        LOG_DBG("Got it, it's %pk", cur);
                         return cur;
                 }
         }
 
-        LOG_DBG("IPC node not found");
         return NULL;
+}
+
+static int instance_binding_update(struct kipcm *         kipcm,
+                                   struct ipcp_instance * old,
+                                   struct ipcp_instance * new)
+{
+        struct ipcp_id_to_instance * cur;
+
+        ASSERT(kipcm);
+        ASSERT(old);
+        ASSERT(new);
+
+        list_for_each_entry(cur, &kipcm->ipcp_id_to_instance, list) {
+                if (cur->instance == old)
+                        break;
+        }
+        if (cur)
+                return -1;
+        cur->instance = new;
+        return 0;
+}
+
+static struct ipcp_instance * instance_find(struct kipcm *   kipcm,
+                                            ipc_process_id_t id)
+{
+        struct ipcp_id_to_instance * cur;
+
+        ASSERT(kipcm);
+
+        cur = instance_binding_find(kipcm, id);
+        if (!cur)
+                return NULL;
+
+        return cur->instance;
+}
+
+static int instance_binding_remove(struct kipcm *   kipcm,
+                                   ipc_process_id_t id)
+{
+        struct ipcp_id_to_instance * cur;
+
+        ASSERT(kipcm);
+
+        cur = instance_binding_find(kipcm, id);
+        if (!cur)
+                return -1;
+
+        list_del(&cur->list);
+        return 0;
 }
 
 struct kipcm * kipcm_init(struct kobject * parent)
@@ -165,13 +200,13 @@ struct kipcm * kipcm_init(struct kobject * parent)
         if (!tmp)
                 return NULL;
 
-        tmp->shims = shims_init(parent);
-        if (!tmp->shims) {
+        tmp->factories = ipcpf_init(parent);
+        if (!tmp->factories) {
                 rkfree(tmp);
                 return NULL;
         }
 
-        INIT_LIST_HEAD(&tmp->id_to_ipcp);
+        INIT_LIST_HEAD(&tmp->ipcp_id_to_instance);
         INIT_LIST_HEAD(&tmp->port_id_to_flow);
 
         LOG_DBG("Initialized successfully");
@@ -186,12 +221,12 @@ int kipcm_fini(struct kipcm * kipcm)
         ASSERT(kipcm);
 
         /* FIXME: Destroy elements from id_to_ipcp */
-        ASSERT(list_empty(&kipcm->id_to_ipcp));
+        ASSERT(list_empty(&kipcm->ipcp_id_to_instance));
 
         /* FIXME: Destroy elements from port_id_to_flow */
         ASSERT(list_empty(&kipcm->port_id_to_flow));
 
-        if (shims_fini(kipcm->shims))
+        if (ipcpf_fini(kipcm->factories))
                 return -1;
 
         rkfree(kipcm);
@@ -201,26 +236,26 @@ int kipcm_fini(struct kipcm * kipcm)
         return 0;
 }
 
-uint32_t kipcm_shims_version(void)
-{ return shims_version(); }
-EXPORT_SYMBOL(kipcm_shims_version);
-
-struct shim * kipcm_shim_register(struct kipcm *    kipcm,
-                                  const char *      name,
-                                  void *            data,
-                                  struct shim_ops * ops)
-{ return shim_register(kipcm->shims, name, data, ops); }
-EXPORT_SYMBOL(kipcm_shim_register);
-
-int kipcm_shim_unregister(struct kipcm * kipcm,
-                          struct shim *  shim)
+struct ipcp_factory *
+kipcm_ipcp_factory_register(struct kipcm *             kipcm,
+                            const char *               name,
+                            struct ipcp_factory_data * data,
+                            struct ipcp_factory_ops *  ops)
 {
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
-                return -1;
+                return NULL;
         }
-        if (!shim) {
-                LOG_ERR("Bogus shim instance passed, bailing out");
+
+        return ipcpf_register(kipcm->factories, name, data, ops);
+}
+EXPORT_SYMBOL(kipcm_ipcp_factory_register);
+
+int kipcm_ipcp_factory_unregister(struct kipcm *        kipcm,
+                                  struct ipcp_factory * factory)
+{
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return -1;
         }
 
@@ -231,179 +266,133 @@ int kipcm_shim_unregister(struct kipcm * kipcm,
          *
          *     Francesco
          */
-        return shim_unregister(kipcm->shims, shim);
+        return ipcpf_unregister(kipcm->factories, factory);
 }
-EXPORT_SYMBOL(kipcm_shim_unregister);
+EXPORT_SYMBOL(kipcm_ipcp_factory_unregister);
 
-int kipcm_ipc_create(struct kipcm *      kipcm,
-                     const struct name * name,
-                     ipc_process_id_t    id,
-                     dif_type_t          type)
+int kipcm_ipcp_create(struct kipcm *      kipcm,
+                      const struct name * ipcp_name,
+                      ipc_process_id_t    id,
+                      const char *        factory_name)
 {
-        struct ipc_process_t * ipc_process;
+        char *                 name;
+        struct ipcp_factory *  factory;
+        struct ipcp_instance * instance;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return -1;
         }
-        if (!name) {
-                LOG_ERR("Name is missing, cannot create ipc");
-                return -1;
-        }
 
-        LOG_DBG("Creating IPC process:");
-        LOG_DBG("  name: %s", name->process_name);
-        LOG_DBG("  id:   %d", id);
-        LOG_DBG("  type: %d", type);
-
-        if (find_ipc_process_by_id(kipcm, id)) {
+        if (instance_find(kipcm, id)) {
                 LOG_ERR("Process id %d already exists", id);
 
                 return -1;
         }
 
-        switch (type) {
-        case DIF_TYPE_SHIM: {
-                struct shim *          shim;
-                struct shim_instance * shim_instance;
-
-                /* FIXME: We should remove this hard-wired value */
-                shim = shim_find(kipcm->shims, "shim-dummy");
-                if (!shim) {
-                        LOG_ERR("Cannot find the requested shim");
-                        return -1;
-                }
-
-                ipc_process = rkzalloc(sizeof(*ipc_process), GFP_KERNEL);
-                if (!ipc_process)
-                        return -1;
-
-                ipc_process->type = type;
-                shim_instance = shim->ops->create(shim->data, id);
-                if (!shim_instance) {
-                        rkfree(ipc_process);
-                        return -1;
-                }
-
-                LOG_DBG("Shim instance created: %pK", shim_instance);
-
-                LOG_DBG("Adding instance");
-                if (add_id_to_ipcp_node(kipcm, id, ipc_process)) {
-                        shim->ops->destroy(shim->data, shim_instance);
-                        rkfree(ipc_process);
-                        return -1;
-                }
-
-                ipc_process->data.shim_instance = shim_instance;
+        if (!factory_name) {
+                LOG_ERR("Name is missing, cannot create ipc");
+                return -1;
         }
-                break;
 
-        case DIF_TYPE_NORMAL:
-                break;
+        if (!factory_name)
+                factory_name = DEFAULT_FACTORY;
 
-        default:
-                BUG();
+        name = name_tostring(ipcp_name);
+        if (!name)
+                return -1;
+        LOG_DBG("Creating IPC process:");
+        LOG_DBG("  name:      %s", name);
+        LOG_DBG("  id:        %d", id);
+        LOG_DBG("  factory:   %s", factory_name);
+        rkfree(name);
+
+        if (!factory_name)
+                factory_name = DEFAULT_FACTORY;
+
+        factory = ipcpf_find(kipcm->factories, factory_name);
+        if (!factory) {
+                LOG_ERR("Cannot find the requested factory '%s'", factory_name);
+                return -1;
+        }
+
+        instance = factory->ops->create(factory->data, id);
+        if (!instance)
+                return -1;
+
+        /* FIXME: Ugly as hell */
+        instance->factory = factory;
+
+        if (instance_binding_add(kipcm, id, instance)) {
+                factory->ops->destroy(factory->data, instance);
+                return -1;
         }
 
         return 0;
 }
 
-int kipcm_ipc_destroy(struct kipcm *   kipcm,
+int kipcm_ipcp_destroy(struct kipcm *  kipcm,
                       ipc_process_id_t id)
 {
-        struct ipc_process_t * ipc_process;
-        struct id_to_ipcp *    id_ipcp;
+        struct ipcp_instance * instance;
+        struct ipcp_factory *  factory;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return -1;
         }
 
-        ipc_process = find_ipc_process_by_id(kipcm, id);
-        if (!ipc_process) {
-                LOG_ERR("IPC process %d does not exist", id);
+        instance = instance_find(kipcm, id);
+        if (!instance) {
+                LOG_ERR("IPC process %d instance does not exist", id);
                 return -1;
         }
 
-        id_ipcp = find_ipc_node_by_id(kipcm, id);
-        if (!id_ipcp) {
-                LOG_ERR("IPC process %d node does not exist", id);
+        factory = instance->factory;
+        ASSERT(factory);
+
+        if (factory->ops->destroy(factory->data, instance)) {
                 return -1;
         }
+        
+        if (instance_binding_remove(kipcm, id))
+                return -1;
 
-        switch (ipc_process->type) {
-        case DIF_TYPE_SHIM: {
-                struct shim * shim = NULL;
-
-                /* FIXME: We should remove this hard-wired value */
-                shim = shim_find(kipcm->shims, "shim-dummy");
-                if (!shim) {
-                        LOG_ERR("Cannot find the requested shim");
-                        return -1;
-                }
-
-                if (shim->ops->destroy(shim->data,
-                                       ipc_process->data.shim_instance)) {
-                        LOG_ERR("Could not destroy shim instance %d", id);
-                        return -1;
-                }
-        }
-                break;
-        case DIF_TYPE_NORMAL:
-                break;
-        default:
-                BUG();
-        }
-
-        list_del(&id_ipcp->list);
-        rkfree(ipc_process);
-        rkfree(id_ipcp);
+        rkfree(instance);
 
         return 0;
 }
 
-int kipcm_ipc_configure(struct kipcm *                  kipcm,
-                        ipc_process_id_t                id,
-                        const struct ipc_process_conf * cfg)
+int kipcm_ipcp_configure(struct kipcm *            kipcm,
+                        ipc_process_id_t           id,
+                        const struct ipcp_config * configuration)
 {
-        struct ipc_process_t * ipc_process;
+        struct ipcp_instance * instance_old;
+        struct ipcp_factory *  factory;
+        struct ipcp_instance * instance_new;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return -1;
         }
 
-        ipc_process = find_ipc_process_by_id(kipcm, id);
-        if (ipc_process == NULL)
+        instance_old = instance_find(kipcm, id);
+        if (instance_old == NULL)
                 return -1;
 
-        switch (ipc_process->type) {
-        case DIF_TYPE_SHIM: {
-                struct shim *        shim = NULL;
-                struct shim_config * conf = NULL;
+        factory = instance_old->factory;
+        ASSERT(factory);
 
-                /* FIXME: We should remove this hard-wired value */
-                shim = shim_find(kipcm->shims, "shim-dummy");
-                if (!shim) {
-                        LOG_ERR("Cannot find the requested shim");
+        instance_new = factory->ops->configure(factory->data,
+                                               instance_old,
+                                               configuration);
+        if (!instance_new)
+                return -1;
+
+        if (instance_new != instance_old)
+                if (instance_binding_update(kipcm, instance_old, instance_new))
                         return -1;
-                }
-
-                /* FIXME: conf must be translated */
-                LOG_MISSING;
-
-                ipc_process->data.shim_instance =
-                        shim->ops->configure(shim->data,
-                                             ipc_process->data.shim_instance,
-                                             conf);
-        }
-                break;
-        case DIF_TYPE_NORMAL:
-                break;
-        default:
-                BUG();
-        }
-
+   
         return 0;
 }
 
@@ -411,6 +400,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                    ipc_process_id_t ipc_id,
                    port_id_t        id)
 {
+#if 0
         struct port_id_to_flow * port_flow;
         struct flow *            flow;
 
@@ -423,7 +413,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
         if (!flow) {
                 return -1;
         }
-
+        
         port_flow = rkzalloc(sizeof(*port_flow), GFP_KERNEL);
         if (!port_flow) {
                 rkfree(flow);
@@ -450,6 +440,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 BUG();
         }
 
+        /* FIXME: Use kfifo functions! */ 
         flow->sdu_ready = rkzalloc(sizeof(struct kfifo), GFP_KERNEL);
         if (!flow->sdu_ready) {
                 rkfree(flow);
@@ -462,11 +453,13 @@ int kipcm_flow_add(struct kipcm *   kipcm,
         port_flow->flow = flow;
         INIT_LIST_HEAD(&port_flow->list);
         list_add(&port_flow->list, &kipcm->port_id_to_flow);
+#endif
 
         return 0;
 }
 EXPORT_SYMBOL(kipcm_flow_add);
 
+#if 0
 static struct port_id_to_flow *
 retrieve_port_flow_node(struct kipcm * kipcm, port_id_t id)
 {
@@ -492,10 +485,12 @@ retrieve_flow_by_port_id(struct kipcm * kipcm, port_id_t id)
 
         return NULL;
 }
+#endif
 
 int kipcm_flow_remove(struct kipcm * kipcm,
                       port_id_t      id)
 {
+#if 0
         struct port_id_to_flow * port_flow;
 
         if (!kipcm) {
@@ -512,6 +507,7 @@ int kipcm_flow_remove(struct kipcm * kipcm,
 
         rkfree(port_flow->flow);
         rkfree(port_flow);
+#endif
 
         return 0;
 }
@@ -521,8 +517,9 @@ int kipcm_sdu_write(struct kipcm *     kipcm,
                     port_id_t          id,
                     const struct sdu * sdu)
 {
-        struct flow * flow;
-        int           retval;
+        int                    retval = -1;
+#if 0
+        struct flow *          flow;
         struct ipc_process_t * ipc_process;
 
         if (!kipcm) {
@@ -537,16 +534,16 @@ int kipcm_sdu_write(struct kipcm *     kipcm,
                 return -1;
         }
 
-        retval = -1;
+        retval      = -1;
         ipc_process = flow->ipc_process;
 
         switch (ipc_process->type) {
         case DIF_TYPE_SHIM: {
-                struct shim_instance * shim_instance;
+                struct ipcp_instance * shim_instance;
 
                 shim_instance = ipc_process->data.shim_instance;
                 retval = shim_instance->ops->sdu_write(
-                                shim_instance->data, id, sdu);
+                                                       shim_instance->data, id, sdu);
         }
                 break;
         case DIF_TYPE_NORMAL:
@@ -557,9 +554,9 @@ int kipcm_sdu_write(struct kipcm *     kipcm,
                 BUG();
         }
 
-        if (retval) {
+        if (retval)
                 LOG_ERR("Couldn't write on port_id %d", id);
-        }
+#endif
 
         return retval;
 }
@@ -568,6 +565,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
                    port_id_t      id,
                    struct sdu *   sdu)
 {
+#if 0
         struct flow * flow;
         size_t        size;
         char *        data;
@@ -614,6 +612,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 
         sdu->buffer->data = data;
         sdu->buffer->size = size;
+#endif
 
         return 0;
 }
