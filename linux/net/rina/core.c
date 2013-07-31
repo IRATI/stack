@@ -60,7 +60,7 @@ static struct attribute_group root_attr_group = {
 
 static int __init rina_core_init(void)
 {
-        LOG_INFO("RINA stack initializing");
+        LOG_DBG("RINA stack initializing");
 
         if (rina_debug_init())
                 return -1;
@@ -73,6 +73,7 @@ static int __init rina_core_init(void)
                 return -1;
         }
 
+        LOG_DBG("Creating sysfs group");
         if (sysfs_create_group(&root_kset->kobj, &root_attr_group)) {
                 LOG_ERR("Cannot create root sysfs group");
                 kset_unregister(root_kset);
