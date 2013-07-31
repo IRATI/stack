@@ -32,8 +32,8 @@
 #include "debug.h"
 #include "utils.h"
 #include "kipcm.h"
-#include "shim.h"
 #include "shim-utils.h"
+#include "ipcp-factories.h"
 
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -46,7 +46,7 @@ struct dummy_info {
         struct name * dif_name;
 };
 
-struct shim_instance_data {
+struct ipcp_instance_data {
         ipc_process_id_t    id;
 
         /* FIXME: Stores the state of flows indexed by port_id */
@@ -80,7 +80,7 @@ struct app_register {
         struct list_head list;
 };
 
-static int is_app_registered(struct shim_instance_data * data,
+static int is_app_registered(struct ipcp_instance_data * data,
                              const struct name *         name)
 {
         struct app_register * app;
@@ -93,7 +93,7 @@ static int is_app_registered(struct shim_instance_data * data,
         return 0;
 }
 
-static struct app_register * find_app(struct shim_instance_data * data,
+static struct app_register * find_app(struct ipcp_instance_data * data,
                                       const struct name *         name)
 {
         struct app_register * app;
@@ -107,7 +107,7 @@ static struct app_register * find_app(struct shim_instance_data * data,
         return NULL;
 }
 
-static struct dummy_flow * find_flow(struct shim_instance_data * data,
+static struct dummy_flow * find_flow(struct ipcp_instance_data * data,
                                      port_id_t                   id)
 {
         struct dummy_flow * flow;
@@ -128,7 +128,7 @@ static int send_app_alloc_flow_req_arrived_msg(void)
         return 0;
 }
 
-static int dummy_flow_allocate_request(struct shim_instance_data * data,
+static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                                        const struct name *         source,
                                        const struct name *         dest,
                                        const struct flow_spec *    fspec,
@@ -185,7 +185,7 @@ static int dummy_flow_allocate_request(struct shim_instance_data * data,
         return 0;
 }
 
-static int dummy_flow_allocate_response(struct shim_instance_data * data,
+static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                                         port_id_t                   id,
                                         response_reason_t *         response)
 {
@@ -206,7 +206,7 @@ static int dummy_flow_allocate_response(struct shim_instance_data * data,
         return 0;
 }
 
-static int dummy_flow_deallocate(struct shim_instance_data * data,
+static int dummy_flow_deallocate(struct ipcp_instance_data * data,
                                  port_id_t                   id)
 {
         struct dummy_flow * flow;
@@ -231,7 +231,7 @@ static int dummy_flow_deallocate(struct shim_instance_data * data,
         return 0;
 }
 
-static int dummy_application_register(struct shim_instance_data * data,
+static int dummy_application_register(struct ipcp_instance_data * data,
                                       const struct name *         source)
 {
         struct app_register * app_reg;
@@ -268,7 +268,7 @@ static int dummy_application_register(struct shim_instance_data * data,
         return 0;
 }
 
-static int dummy_application_unregister(struct shim_instance_data * data,
+static int dummy_application_unregister(struct ipcp_instance_data * data,
                                         const struct name *         source)
 {
         struct app_register * app;
@@ -290,7 +290,7 @@ static int dummy_application_unregister(struct shim_instance_data * data,
         return 0;
 }
 
-static int dummy_unregister_all(struct shim_instance_data * data)
+static int dummy_unregister_all(struct ipcp_instance_data * data)
 {
         struct app_register * cur, *next;
 
@@ -302,7 +302,7 @@ static int dummy_unregister_all(struct shim_instance_data * data)
         return 0;
 }
 
-static int dummy_sdu_write(struct shim_instance_data * data,
+static int dummy_sdu_write(struct ipcp_instance_data * data,
                            port_id_t                   id,
                            const struct sdu *          sdu)
 {
@@ -319,7 +319,7 @@ static int dummy_sdu_write(struct shim_instance_data * data,
         return -1;
 }
 
-static int dummy_sdu_read(struct shim_instance_data * data,
+static int dummy_sdu_read(struct ipcp_instance_data * data,
                           port_id_t                   id,
                           struct sdu *                sdu)
 {
@@ -334,7 +334,7 @@ static int dummy_sdu_read(struct shim_instance_data * data,
         return -1;
 }
 
-static int dummy_deallocate_all(struct shim_instance_data * data)
+static int dummy_deallocate_all(struct ipcp_instance_data * data)
 {
         struct dummy_flow *pos, *next;
 
@@ -349,14 +349,13 @@ static int dummy_deallocate_all(struct shim_instance_data * data)
         return 0;
 }
 
-struct shim_data {
+struct ipcp_factory_data {
         struct list_head instances;
 };
 
-static struct shim_data dummy_data;
-static struct shim *    dummy_shim = NULL;
+static struct ipcp_factory_data dummy_data;
 
-static int dummy_init(struct shim_data * data)
+static int dummy_init(struct ipcp_factory_data * data)
 {
         ASSERT(data);
 
@@ -366,7 +365,7 @@ static int dummy_init(struct shim_data * data)
         return 0;
 }
 
-static int dummy_fini(struct shim_data * data)
+static int dummy_fini(struct ipcp_factory_data * data)
 {
         ASSERT(data);
 
@@ -375,7 +374,7 @@ static int dummy_fini(struct shim_data * data)
         return 0;
 }
 
-static struct shim_instance_ops dummy_instance_ops = {
+static struct ipcp_instance_ops dummy_instance_ops = {
         .flow_allocate_request  = dummy_flow_allocate_request,
         .flow_allocate_response = dummy_flow_allocate_response,
         .flow_deallocate        = dummy_flow_deallocate,
@@ -385,11 +384,12 @@ static struct shim_instance_ops dummy_instance_ops = {
         .sdu_read               = dummy_sdu_read,
 };
 
-static struct shim_instance_data * find_instance(struct shim_data * data,
-                                                 ipc_process_id_t   id)
+static struct ipcp_instance_data *
+find_instance(struct ipcp_factory_data * data,
+              ipc_process_id_t           id)
 {
 
-        struct shim_instance_data * pos;
+        struct ipcp_instance_data * pos;
 
         list_for_each_entry(pos, &(data->instances), list) {
                 if (pos->id == id) {
@@ -400,10 +400,10 @@ static struct shim_instance_data * find_instance(struct shim_data * data,
         return NULL;
 }
 
-static struct shim_instance * dummy_create(struct shim_data * data,
-                                           ipc_process_id_t   id)
+static struct ipcp_instance * dummy_create(struct ipcp_factory_data * data,
+                                           ipc_process_id_t           id)
 {
-        struct shim_instance * inst;
+        struct ipcp_instance * inst;
 
         ASSERT(data);
 
@@ -422,7 +422,7 @@ static struct shim_instance * dummy_create(struct shim_data * data,
         /* fill it properly */
         LOG_DBG("Fill it properly");
         inst->ops  = &dummy_instance_ops;
-        inst->data = rkzalloc(sizeof(struct shim_instance_data), GFP_KERNEL);
+        inst->data = rkzalloc(sizeof(struct ipcp_instance_data), GFP_KERNEL);
         if (!inst->data) {
                 LOG_DBG("Fill it properly failed");
                 rkfree(inst);
@@ -476,12 +476,12 @@ static struct shim_instance * dummy_create(struct shim_data * data,
 }
 
 /* FIXME: It doesn't allow reconfiguration */
-static struct shim_instance * dummy_configure(struct shim_data *         data,
-                                              struct shim_instance *     inst,
-                                              const struct shim_config * conf)
+static struct ipcp_instance * dummy_configure(struct ipcp_factory_data * data,
+                                              struct ipcp_instance *     inst,
+                                              const struct ipcp_config * conf)
 {
-        struct shim_instance_data * instance;
-        struct shim_config *        tmp;
+        struct ipcp_instance_data * instance;
+        struct ipcp_config *        tmp;
 
         ASSERT(data);
         ASSERT(inst);
@@ -496,7 +496,7 @@ static struct shim_instance * dummy_configure(struct shim_data *         data,
         /* Use configuration values on that instance */
         list_for_each_entry(tmp, &(conf->list), list) {
                 if (!strcmp(tmp->entry->name, "dif-name") &&
-                    tmp->entry->value->type == SHIM_CONFIG_STRING) {
+                    tmp->entry->value->type == IPCP_CONFIG_STRING) {
                         if (name_cpy(instance->info->dif_name,
                                      (struct name *)
                                      tmp->entry->value->data)) {
@@ -505,7 +505,7 @@ static struct shim_instance * dummy_configure(struct shim_data *         data,
                         }
                 }
                 else if (!strcmp(tmp->entry->name, "name") &&
-                         tmp->entry->value->type == SHIM_CONFIG_STRING) {
+                         tmp->entry->value->type == IPCP_CONFIG_STRING) {
                         if (name_cpy(instance->info->name,
                                      (struct name *)
                                      tmp->entry->value->data)) {
@@ -529,10 +529,10 @@ static struct shim_instance * dummy_configure(struct shim_data *         data,
         return inst;
 }
 
-static int dummy_destroy(struct shim_data *     data,
-                         struct shim_instance * instance)
+static int dummy_destroy(struct ipcp_factory_data * data,
+                         struct ipcp_instance *     instance)
 {
-        struct shim_instance_data * pos, * next;
+        struct ipcp_instance_data * pos, * next;
 
         ASSERT(data);
         ASSERT(instance);
@@ -558,7 +558,7 @@ static int dummy_destroy(struct shim_data *     data,
         return -1;
 }
 
-static struct shim_ops dummy_ops = {
+static struct ipcp_factory_ops dummy_ops = {
         .init      = dummy_init,
         .fini      = dummy_fini,
         .create    = dummy_create,
@@ -566,14 +566,16 @@ static struct shim_ops dummy_ops = {
         .configure = dummy_configure,
 };
 
+struct ipcp_factory * shim;
+
 static int __init mod_init(void)
 {
-        dummy_shim = kipcm_shim_register(default_kipcm,
-                                         SHIM_NAME,
-                                         &dummy_data,
-                                         &dummy_ops);
-        if (!dummy_shim) {
-                LOG_CRIT("Initialization failed");
+        shim = kipcm_ipcp_factory_register(default_kipcm,
+                                           SHIM_NAME,
+                                           &dummy_data,
+                                           &dummy_ops);
+        if (!shim) {
+                LOG_CRIT("Cannot register %s factory", SHIM_NAME);
                 return -1;
         }
 
@@ -582,8 +584,10 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
-        if (kipcm_shim_unregister(default_kipcm, dummy_shim)) {
-                LOG_CRIT("Cannot unregister");
+        ASSERT(shim);
+
+        if (kipcm_ipcp_factory_unregister(default_kipcm, shim)) {
+                LOG_CRIT("Cannot unregister %s factory", SHIM_NAME);
                 return;
         }
 }
