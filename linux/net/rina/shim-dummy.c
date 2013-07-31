@@ -260,7 +260,7 @@ static int dummy_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
         if (name_cpy(source, app_reg->app_name)) {
-                char * tmp = name_tostring(source);;
+                char * tmp = name_tostring(source);
 
                 name_destroy(app_reg->app_name);
                 rkfree(app_reg);
@@ -343,12 +343,10 @@ static int dummy_deallocate_all(struct ipcp_instance_data * data)
         struct dummy_flow *pos, *next;
 
         list_for_each_entry_safe(pos, next, &data->flows, list) {
-                if (dummy_flow_deallocate(data, pos->port_id)) {
-                        /* FIXME: Maybe more should be done here in case
-                         * the flow couldn't be destroyed
-                         */
-                        LOG_ERR("Flow %d could not be removed", pos->port_id);
-                }
+        	list_del(&pos->list);
+		name_destroy(pos->dest);
+		name_destroy(pos->source);
+		rkfree(pos);
         }
         return 0;
 }

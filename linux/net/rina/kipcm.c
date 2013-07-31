@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +36,8 @@
 #include "kipcm-utils.h"
 #include "common.h"
 #include "du.h"
+#include "netlink.h"
+#include "netlink-utils.h"
 
 #define DEFAULT_FACTORY "normal-ipc"
 
@@ -344,6 +347,11 @@ int kipcm_ipcp_destroy(struct kipcm *  kipcm,
         factory = instance->factory;
         ASSERT(factory);
 
+        if (ipcp_fmap_remove_all_for_id(kipcm->flows, id)) {
+		KIPCM_UNLOCK(kipcm);
+		return -1;
+	}
+
         if (factory->ops->destroy(factory->data, instance)) {
                 KIPCM_UNLOCK(kipcm);
                 return -1;
@@ -450,7 +458,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 return -1;
         }
 
-        if (ipcp_fmap_add(kipcm->flows, port_id, flow)) {
+        if (ipcp_fmap_add(kipcm->flows, port_id, flow, ipc_id)) {
                 kfifo_free(&flow->sdu_ready);
                 rkfree(flow);
                 KIPCM_UNLOCK(kipcm);
@@ -659,3 +667,128 @@ int kipcm_sdu_post(struct kipcm * kipcm,
         return 0;
 }
 EXPORT_SYMBOL(kipcm_sdu_post);
+
+static int kipcm_notify_ipcp_allocate_flow_request(void *             data,
+						   struct sk_buff *   buff,
+						   struct genl_info * info)
+{
+	struct rnl_ipcm_alloc_flow_req_msg_attrs * msg_attrs;
+	struct rnl_msg * 			   msg;
+	struct ipcp_instance * 			   ipc_process;
+	ipc_process_id_t 			   ipc_id;
+	struct rina_msg_hdr *                      hdr;
+	struct kipcm * kipcm;
+
+	if (!data) {
+		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+		return -1;
+	}
+
+	kipcm = (struct kipcm *) data;
+
+	if (!info) {
+		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+		return -1;
+	}
+
+	msg_attrs = rkzalloc(sizeof(*msg_attrs), GFP_KERNEL);
+	if (!msg_attrs)
+		return -1;
+	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+	if (!msg) {
+		rkfree(msg_attrs);
+		return -1;
+	}
+	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
+	if (!hdr) {
+		rkfree(msg_attrs);
+		rkfree(msg);
+		return -1;
+	}
+	msg->attrs = msg_attrs;
+	msg->rina_hdr = hdr;
+
+	if (rnl_parse_msg(info, msg))
+		return -1;
+	ipc_id = msg->rina_hdr->src_ipc_id;
+	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+	if (!ipc_process) {
+		LOG_ERR("IPC process %d not found", ipc_id);
+		return -1;
+	}
+	if (ipc_process->ops->flow_allocate_request(ipc_process->data,
+			msg_attrs->source,
+			msg_attrs->dest,
+			msg_attrs->fspec,
+			msg_attrs->id)) {
+		LOG_ERR("Failed allocate flow request for port id: %d",
+				msg_attrs->id);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int kipcm_notify_ipcp_allocate_flow_arrived(void *             data,
+						   struct sk_buff *   buff,
+						   struct genl_info * info)
+{
+	LOG_MISSING;
+
+	return 0;
+}
+
+static int kipcm_notify_ipcp_allocate_flow_result(void *             data,
+						  struct sk_buff *   buff,
+						  struct genl_info * info)
+{
+	LOG_MISSING;
+
+	return 0;
+}
+
+static int kipcm_notify_ipcp_allocate_flow_response(void *             data,
+						    struct sk_buff *   buff,
+						    struct genl_info * info)
+{
+	LOG_MISSING;
+
+	return 0;
+}
+
+int kipcm_netlink_handlers_register(struct kipcm * kipcm,
+				    struct rina_nl_set * set)
+{
+	message_handler_cb handler;
+
+	handler = &kipcm_notify_ipcp_allocate_flow_request;
+	if (rina_netlink_handler_register(set,
+				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
+				kipcm,
+				handler))
+		return -1;
+
+	handler = &kipcm_notify_ipcp_allocate_flow_arrived;
+	if (rina_netlink_handler_register(set,
+				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED,
+				kipcm,
+				handler))
+		return -1;
+
+	handler = &kipcm_notify_ipcp_allocate_flow_result;
+	if (rina_netlink_handler_register(set,
+				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
+				kipcm,
+				handler))
+		return -1;
+
+	handler = &kipcm_notify_ipcp_allocate_flow_response;
+	if (rina_netlink_handler_register(set,
+				RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
+				kipcm,
+				handler))
+		return -1;
+
+	return 0;
+}
+EXPORT_SYMBOL(kipcm_netlink_handlers_register);
