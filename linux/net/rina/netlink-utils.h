@@ -172,13 +172,6 @@ struct rnl_dealloc_flow_resp_msg{
 	struct name	app_name;
 }
 ;
-static int craft_app_name_info(struct sk_buff * msg,
-                               struct name      name);
-static int craft_flow_spec(struct sk_buff * msg,
-                           struct flow_spec fspec);
-static int parse_app_name_info(struct nlattr * name_attr, 
-			       struct name * name_struct);
-
 
 int rnl_format_app_alloc_flow_req_arrived(struct sk_buff * msg,
                                           struct name      source,
