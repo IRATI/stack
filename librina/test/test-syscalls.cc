@@ -30,7 +30,7 @@ int main(int argc, char * argv[]) {
 	ipcProcessName->setProcessName("/ipcprocesses/Barcelona/i2CAT");
 	ipcProcessName->setProcessInstance("1");
 	result = syscallCreateIPCProcess(
-			*ipcProcessName, 1, DIF_TYPE_SHIM_ETHERNET);
+			*ipcProcessName, 1, "shim-dummy");
 	std::cout<<"Called IPC Process create system call with result "
 			<<result<<std::endl;
 

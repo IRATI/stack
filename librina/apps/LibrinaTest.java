@@ -1,5 +1,4 @@
 import eu.irati.librina.ApplicationProcessNamingInformation;
-import eu.irati.librina.DIFType;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
@@ -26,7 +25,7 @@ public class LibrinaTest {
 		IPCProcessFactorySingleton ipcProcessFactory = rina.getIpcProcessFactory();
 		ApplicationProcessNamingInformation shimDummyName = 
 				new ApplicationProcessNamingInformation("/ipcProcesses/i2CAT/Barcelona/dummy", "1");
-		IPCProcess shimDummy = ipcProcessFactory.create(shimDummyName, DIFType.DIF_TYPE_SHIM_DUMMY);
+		IPCProcess shimDummy = ipcProcessFactory.create(shimDummyName, "shim-dummy");
 		printStatement("Created IPC Process with id " + shimDummy.getId());
 		
 		printStatement("\nDESTROYING SHIM DUMMY IPC PROCESS");

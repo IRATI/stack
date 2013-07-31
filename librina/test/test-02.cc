@@ -67,6 +67,15 @@ bool checkRecognizedEvent(IPCEvent * event) {
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING LIBRINA-IPCMANAGER\n";
 
+	/* TEST LIST IPC PROCESS TYPES */
+	std::list<std::string> ipcProcessTypes = ipcProcessFactory->getSupportedIPCProcessTypes();
+	std::list<std::string>::const_iterator iterator;
+	for (iterator = ipcProcessTypes.begin();
+			iterator != ipcProcessTypes.end();
+			++iterator) {
+		std::cout<<*iterator<<std::endl;
+	}
+
 	/* TEST CREATE IPC PROCESS */
 	ApplicationProcessNamingInformation * ipcProcessName1 =
 			new ApplicationProcessNamingInformation(
@@ -83,9 +92,9 @@ int main(int argc, char * argv[]) {
 			new ApplicationProcessNamingInformation("/difs/Test.DIF", "");
 
 	IPCProcess * ipcProcess1 = ipcProcessFactory->create(*ipcProcessName1,
-			DIF_TYPE_NORMAL);
+			"normal");
 	IPCProcess * ipcProcess2 = ipcProcessFactory->create(*ipcProcessName2,
-			DIF_TYPE_SHIM_ETHERNET);
+			"shim-ethernet");
 
 	/* TEST LIST IPC PROCESSES */
 	if (!checkIPCProcesses(2)) {
@@ -103,7 +112,7 @@ int main(int argc, char * argv[]) {
 	ipcProcess1->assignToDIF(*difConfiguration);
 
 	/* TEST REGISTER APPLICATION */
-	ipcProcess1->registerApplication(*sourceName, 37);
+	ipcProcess1->registerApplication(*sourceName);
 
 	/* TEST UNREGISTER APPLICATION */
 	ipcProcess1->unregisterApplication(*sourceName);
@@ -126,7 +135,7 @@ int main(int argc, char * argv[]) {
 	ApplicationRegistrationRequestEvent * event = new
 			ApplicationRegistrationRequestEvent(*sourceName, appRegInfo, 34);
 	applicationManager->applicationRegistered(*event, *difName, 0,
-			0,0,"Everything was fine");
+			"Everything was fine");
 
 	/* TEST APPLICATION UNREGISTERED */
 	ApplicationUnregistrationRequestEvent * event2 = new

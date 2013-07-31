@@ -455,19 +455,6 @@ class AppRegisterApplicationResponseMessage: public BaseNetlinkResponseMessage {
 	/** The new DIF names where the application is now registered*/
 	ApplicationProcessNamingInformation difName;
 
-	/**
-	 * The id of the Netlink port to be used to send messages to the IPC
-	 * Process that registered the application. In the case of shim IPC
-	 * Processes (they all reside in the kernel), the value of this field will
-	 * always be 0.
-	 */
-	unsigned int ipcProcessPortId;
-
-	/**
-	 * The id of the IPC Process that allocated the flow.
-	 */
-	unsigned short ipcProcessId;
-
 public:
 	AppRegisterApplicationResponseMessage();
 	const ApplicationProcessNamingInformation& getApplicationName() const;
@@ -475,10 +462,6 @@ public:
 			const ApplicationProcessNamingInformation& applicationName);
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
-	unsigned int getIpcProcessPortId() const;
-	void setIpcProcessPortId(unsigned int ipcProcessPortId);
-	unsigned short getIpcProcessId() const;
-	void setIpcProcessId(unsigned short ipcProcessId);
 };
 
 /**
@@ -626,12 +609,6 @@ class IpcmRegisterApplicationRequestMessage:
 	/** The DIF name where the application wants to register */
 	ApplicationProcessNamingInformation difName;
 
-	/**
-	 * The netlink port Id of the application, so that the IPC Process
-	 * can communicate with it
-	 */
-	unsigned int applicationPortId;
-
 public:
 	IpcmRegisterApplicationRequestMessage();
 	const ApplicationProcessNamingInformation& getApplicationName() const;
@@ -639,8 +616,6 @@ public:
 			const ApplicationProcessNamingInformation& applicationName);
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
-	unsigned int getApplicationPortId() const;
-	void setApplicationPortId(unsigned int applicationPortId);
 	IPCEvent* toIPCEvent();
 };
 

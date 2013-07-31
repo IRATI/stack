@@ -1,0 +1,21 @@
+{
+  "localConfiguration" : {
+    "consolePort" : 32766,
+    "cdapTimeoutInMs" : 10000,
+    "enrollmentTimeoutInMs" : 10000,
+    "flowAllocatorTimeoutInMs" : 15000,
+    "watchdogPeriodInMs" : 60000,
+    "declaredDeadIntervalInMs" : 120000,
+    "neighborsEnrollerPeriodInMs" : 10000,
+    "lengthOfFlowQueues" : 10
+  },
+  "ipcProcessesToCreate" : [ {
+    "type" : "shim-dummy",
+    "applicationProcessName" : "edu.mac.dummy.i2cat",
+    "applicationProcessInstance" : "1",
+    "difName" : "loopback.DIF"
+  }],
+  "difConfigurations" : [ {
+    "difName" : "loopback.DIF"
+  } ]
+}

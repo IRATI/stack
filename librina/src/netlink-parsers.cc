@@ -1230,10 +1230,6 @@ int putAppRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 	NLA_PUT_U32(netlinkMessage, ARARE_ATTR_RESULT, object.getResult());
 	NLA_PUT_STRING(netlinkMessage, ARARE_ATTR_ERROR_DESCRIPTION,
 			object.getErrorDescription().c_str());
-	NLA_PUT_U32(netlinkMessage, ARARE_ATTR_PROCESS_PORT_ID,
-			object.getIpcProcessPortId());
-	NLA_PUT_U16(netlinkMessage, ARARE_ATTR_PROCESS_IPC_PROCESS_ID,
-			object.getIpcProcessId());
 
 	if (!(applicationName = nla_nest_start(netlinkMessage, ARARE_ATTR_APP_NAME))) {
 		goto nla_put_failure;
@@ -1463,9 +1459,6 @@ int putIpcmRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 	}
 	nla_nest_end(netlinkMessage, difName);
 
-	NLA_PUT_U32(netlinkMessage, IRAR_ATTR_APP_PORT_ID,
-			object.getApplicationPortId());
-
 	return 0;
 
 	nla_put_failure: LOG_ERR(
@@ -1552,7 +1545,8 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 		const DIFConfiguration& object){
 	struct nlattr *difName;
 
-	NLA_PUT_U16(netlinkMessage, DCONF_ATTR_DIF_TYPE, object.getDifType());
+	NLA_PUT_STRING(netlinkMessage, DCONF_ATTR_DIF_TYPE,
+			object.getDifType().c_str());
 
 	if (!(difName = nla_nest_start(netlinkMessage, DCONF_ATTR_DIF_NAME))) {
 		goto nla_put_failure;
@@ -2379,12 +2373,6 @@ AppRegisterApplicationResponseMessage * parseAppRegisterApplicationResponseMessa
 	attr_policy[ARARE_ATTR_RESULT].type = NLA_U32;
 	attr_policy[ARARE_ATTR_RESULT].minlen = 4;
 	attr_policy[ARARE_ATTR_RESULT].maxlen = 4;
-	attr_policy[ARARE_ATTR_PROCESS_PORT_ID].type = NLA_U32;
-	attr_policy[ARARE_ATTR_PROCESS_PORT_ID].minlen = 4;
-	attr_policy[ARARE_ATTR_PROCESS_PORT_ID].maxlen = 4;
-	attr_policy[ARARE_ATTR_PROCESS_IPC_PROCESS_ID].type = NLA_U16;
-	attr_policy[ARARE_ATTR_PROCESS_IPC_PROCESS_ID].minlen = 2;
-	attr_policy[ARARE_ATTR_PROCESS_IPC_PROCESS_ID].maxlen = 2;
 	attr_policy[ARARE_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
 	attr_policy[ARARE_ATTR_ERROR_DESCRIPTION].minlen = 0;
 	attr_policy[ARARE_ATTR_ERROR_DESCRIPTION].maxlen = 65535;
@@ -2419,16 +2407,6 @@ AppRegisterApplicationResponseMessage * parseAppRegisterApplicationResponseMessa
 
 	if (attrs[ARARE_ATTR_RESULT]) {
 		result->setResult(nla_get_u32(attrs[ARARE_ATTR_RESULT]));
-	}
-
-	if (attrs[ARARE_ATTR_PROCESS_PORT_ID]) {
-		result->setIpcProcessPortId(
-				nla_get_u32(attrs[ARARE_ATTR_PROCESS_PORT_ID]));
-	}
-
-	if (attrs[ARARE_ATTR_PROCESS_IPC_PROCESS_ID]) {
-		result->setIpcProcessId(
-				nla_get_u16(attrs[ARARE_ATTR_PROCESS_IPC_PROCESS_ID]));
 	}
 
 	if (attrs[ARARE_ATTR_ERROR_DESCRIPTION]) {
@@ -2809,9 +2787,6 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 	attr_policy[IRAR_ATTR_DIF_NAME].type = NLA_NESTED;
 	attr_policy[IRAR_ATTR_DIF_NAME].minlen = 0;
 	attr_policy[IRAR_ATTR_DIF_NAME].maxlen = 0;
-	attr_policy[IRAR_ATTR_APP_PORT_ID].type = NLA_U32;
-	attr_policy[IRAR_ATTR_APP_PORT_ID].minlen = 4;
-	attr_policy[IRAR_ATTR_APP_PORT_ID].maxlen = 4;
 	struct nlattr *attrs[IRAR_ATTR_MAX + 1];
 
 	/*
@@ -2857,10 +2832,6 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 			result->setDifName(*difName);
 			delete difName;
 		}
-	}
-
-	if (attrs[IRAR_ATTR_APP_PORT_ID]) {
-		result->setApplicationPortId(nla_get_u32(attrs[IRAR_ATTR_APP_PORT_ID]));
 	}
 
 	return result;
@@ -3035,9 +3006,9 @@ parseIpcmUnregisterApplicationResponseMessage(nlmsghdr *hdr) {
 
 DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	struct nla_policy attr_policy[DCONF_ATTR_MAX + 1];
-	attr_policy[DCONF_ATTR_DIF_TYPE].type = NLA_U16;
-	attr_policy[DCONF_ATTR_DIF_TYPE].minlen = 2;
-	attr_policy[DCONF_ATTR_DIF_TYPE].maxlen = 2;
+	attr_policy[DCONF_ATTR_DIF_TYPE].type = NLA_STRING;
+	attr_policy[DCONF_ATTR_DIF_TYPE].minlen = 0;
+	attr_policy[DCONF_ATTR_DIF_TYPE].maxlen = 65535;
 	attr_policy[DCONF_ATTR_DIF_NAME].type = NLA_NESTED;
 	attr_policy[DCONF_ATTR_DIF_NAME].minlen = 0;
 	attr_policy[DCONF_ATTR_DIF_NAME].maxlen = 0;
@@ -3056,7 +3027,7 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 
 	if (attrs[DCONF_ATTR_DIF_TYPE]) {
 		result->setDifType(
-				static_cast<DIFType>(nla_get_u16(attrs[DCONF_ATTR_DIF_TYPE])));
+				nla_get_string(attrs[DCONF_ATTR_DIF_TYPE]));
 	}
 
 	if (attrs[DCONF_ATTR_DIF_NAME]) {

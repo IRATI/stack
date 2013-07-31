@@ -7,12 +7,12 @@ import rina.ipcmanager.impl.IPCManager;
  * @author eduardgrasa
  *
  */
-public class ListIPCProcessesCommand extends ConsoleCommand{
+public class GetSystemCapabilitiesCommand extends ConsoleCommand{
 
-	public static final String ID = "listipcprocesses";
-	private static final String USAGE = "listipcprocesses";
+	public static final String ID = "getsystemcapabilities";
+	private static final String USAGE = "getsystemcapabilities";
 	
-	public ListIPCProcessesCommand(IPCManager ipcManager){
+	public GetSystemCapabilitiesCommand(IPCManager ipcManager){
 		super(ID, ipcManager);
 	}
 	
@@ -22,7 +22,7 @@ public class ListIPCProcessesCommand extends ConsoleCommand{
 			return "Wrong number of parameters. Usage: "+USAGE;
 		}
 
-		return this.getIPCManager().getIPCProcessesInformationAsString();
+		return getIPCManager().getSystemCapabilitiesAsString();
 	}
 
 }

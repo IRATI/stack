@@ -1,0 +1,221 @@
+package rina.ipcmanager.impl;
+
+import eu.irati.librina.ApplicationManagerSingleton;
+import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.ApplicationRegistrationRequestEvent;
+import eu.irati.librina.ApplicationUnregistrationRequestEvent;
+import eu.irati.librina.CreateIPCProcessException;
+import eu.irati.librina.IPCEvent;
+import eu.irati.librina.IPCEventProducerSingleton;
+import eu.irati.librina.IPCEventType;
+import eu.irati.librina.IPCProcess;
+import eu.irati.librina.IPCProcessFactorySingleton;
+import eu.irati.librina.IPCProcessPointerVector;
+import eu.irati.librina.rina;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.util.Iterator;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import rina.ipcmanager.impl.conf.IPCProcessToCreate;
+import rina.ipcmanager.impl.conf.RINAConfiguration;
+import rina.ipcmanager.impl.console.IPCManagerConsole;
+import rina.ipcmanager.impl.helpers.ApplicationRegistrationManager;
+
+/**
+ * The IPC Manager is the component of a DAF that manages the local IPC 
+ * resources. In its current implementation it manages IPC Processes 
+ * (creates/configures/ destroys them), and serves as a broker between 
+ * applications and IPC Processes. Applications can use the RINA library 
+ * to establish a connection to the IPC Manager and interact with the RINA 
+ * stack.
+ * @author eduardgrasa
+ *
+ */
+public class IPCManager {
+	
+	private static final Log log = LogFactory.getLog(IPCManager.class);
+	
+	public static final String CONFIG_FILE_LOCATION = "config/config.rina"; 
+	public static final long CONFIG_FILE_POLL_PERIOD_IN_MS = 5000;
+	
+	public static final String NORMAL_IPC_PROCESS_TYPE = "normal";
+	public static final String SHIM_ETHERNET_IPC_PROCESS_TYPE = "shim-ethernet";
+	public static final String SHIM_DUMMY_IPC_PROCESS_TYPE = "shim-dummy";
+	
+	private IPCManagerConsole console = null;
+	
+	/**
+	 * The thread pool implementation
+	 */
+	private ExecutorService executorService = null;
+	
+	IPCProcessFactorySingleton ipcProcessFactory = null;
+	ApplicationManagerSingleton applicationManager = null;
+	IPCEventProducerSingleton ipcEventProducer = null;
+	
+	ApplicationRegistrationManager applicationRegistrationManager = null;
+	
+	public IPCManager(){
+		log.info("Initializing IPCManager console..,");
+		executorService = Executors.newCachedThreadPool();
+		console = new IPCManagerConsole(this);
+		executorService.execute(console);
+		log.info("Initializing librina...");
+		rina.initialize(1);
+		ipcProcessFactory = rina.getIpcProcessFactory();
+		applicationManager = rina.getApplicationManager();
+		ipcEventProducer = rina.getIpcEventProducer();
+		applicationRegistrationManager = new ApplicationRegistrationManager(
+				ipcProcessFactory, applicationManager);
+		log.info("IPC Manager daemon initializing, reading RINA configuration ...");
+		initializeConfiguration();
+		/*log.info("Bootstrapping RINA ...");
+		bootstrap();*/
+	}
+	
+	private void initializeConfiguration(){
+		//Read config file
+		RINAConfiguration rinaConfiguration = readConfigurationFile();
+		RINAConfiguration.setConfiguration(rinaConfiguration);
+		
+		//Start thread that will look for config file changes
+		Runnable configFileChangeRunnable = new Runnable(){
+			private long currentLastModified = 0;
+			private RINAConfiguration rinaConfiguration = null;
+
+			public void run(){
+				File file = new File(CONFIG_FILE_LOCATION);
+
+				while(true){
+					if (file.lastModified() > currentLastModified) {
+						log.debug("Configuration file changed, loading the new content");
+						currentLastModified = file.lastModified();
+						rinaConfiguration = readConfigurationFile();
+						RINAConfiguration.setConfiguration(rinaConfiguration);
+					}
+					try {
+						Thread.sleep(CONFIG_FILE_POLL_PERIOD_IN_MS);
+					}catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+
+		};
+
+		executorService.execute(configFileChangeRunnable);
+	}
+	
+	private RINAConfiguration readConfigurationFile(){
+		try {
+    		ObjectMapper objectMapper = new ObjectMapper();
+    		RINAConfiguration rinaConfiguration = (RINAConfiguration) 
+    			objectMapper.readValue(new FileInputStream(CONFIG_FILE_LOCATION), RINAConfiguration.class);
+    		log.info("Read configuration file");
+    		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+    		objectMapper.writer(new DefaultPrettyPrinter()).writeValue(outputStream, rinaConfiguration);
+    		log.info(outputStream.toString());
+    		return rinaConfiguration;
+    	} catch (Exception ex) {
+    		log.error(ex);
+    		ex.printStackTrace();
+    		log.debug("Could not find the main configuration file.");
+    		return null;
+        }
+	}
+	
+	private void bootstrap(){
+		RINAConfiguration configuration = RINAConfiguration.getInstance();
+		IPCProcessToCreate ipcProcessToCreate = null;
+		ApplicationProcessNamingInformation processNamingInfo = null;
+		IPCProcess ipcProcess = null;
+		
+		for(int i=0; i<configuration.getIpcProcessesToCreate().size(); i++){
+			ipcProcessToCreate = configuration.getIpcProcessesToCreate().get(i);
+			processNamingInfo = new ApplicationProcessNamingInformation();
+			processNamingInfo.setProcessName(ipcProcessToCreate.getApplicationProcessName());
+			processNamingInfo.setProcessInstance(ipcProcessToCreate.getApplicationProcessInstance());
+			
+			try{
+				ipcProcess = ipcProcessFactory.create(processNamingInfo, 
+						ipcProcessToCreate.getType());
+			}catch(CreateIPCProcessException ex){
+				log.error(ex.getMessage() + ". Problems creating IPC Process " 
+						+ processNamingInfo.toString());
+				continue;
+			}
+			
+			if (ipcProcessToCreate.getDifName() != null){
+				//TODO assign to DIF ipcProcess.assignToDIF(arg0);
+			}
+			
+			if (ipcProcessToCreate.getDifsToRegisterAt().size() > 0){
+				//TODO register in underlying DIFs
+			}
+			
+			if (ipcProcessToCreate.getNeighbors().size() > 0){
+				//TODO cause enrollment to be initiated
+			}
+		}
+	}
+	
+	public void executeEventLoop(){
+		IPCEvent event = null;
+		
+		while(true){
+			try{
+				event = ipcEventProducer.eventWait();
+				processEvent(event);
+			}catch(Exception ex){
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+	private void processEvent(IPCEvent event) throws Exception{
+		if (event.getType() == IPCEventType.APPLICATION_REGISTRATION_REQUEST_EVENT){
+			ApplicationRegistrationRequestEvent appRegReqEvent = (ApplicationRegistrationRequestEvent) event;
+			applicationRegistrationManager.registerApplication(appRegReqEvent);
+		}else if (event.getType() == IPCEventType.APPLICATION_UNREGISTRATION_REQUEST_EVENT){
+			ApplicationUnregistrationRequestEvent appUnregReqEvent = (ApplicationUnregistrationRequestEvent) event;
+			applicationRegistrationManager.unregisterApplication(appUnregReqEvent);
+		}
+	}
+	
+	public String getIPCProcessesInformationAsString(){
+		IPCProcessPointerVector ipcProcesses = ipcProcessFactory.listIPCProcesses();
+		IPCProcess ipcProcess = null;
+		String result = "";
+		
+		for(int i=0; i<ipcProcesses.size(); i++){
+			ipcProcess = ipcProcesses.get(i);
+			result = "Id: "+ ipcProcess.getId() + "\n";
+			result = "    Type: " + ipcProcess.getType() + "\n";
+			result = "    Name: " + ipcProcess.getName().toString() + "\n";
+		}
+		
+		return result;
+	}
+	
+	public String getSystemCapabilitiesAsString(){
+		String result = "";
+		result = result + "Supported IPC Process types:\n";
+		Iterator<String> iterator = ipcProcessFactory.getSupportedIPCProcessTypes().iterator();
+		while(iterator.hasNext()){
+			result = result + "    " + iterator.next() + "\n";
+		}
+		
+		return result;
+	}
+
+}

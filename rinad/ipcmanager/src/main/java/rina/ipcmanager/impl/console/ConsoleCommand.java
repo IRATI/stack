@@ -1,6 +1,6 @@
 package rina.ipcmanager.impl.console;
 
-import rina.ipcmanager.impl.IPCManagerImpl;
+import rina.ipcmanager.impl.IPCManager;
 
 /**
  * Base Console command
@@ -9,21 +9,21 @@ import rina.ipcmanager.impl.IPCManagerImpl;
  */
 public abstract class ConsoleCommand {
 	
-	private IPCManagerImpl ipcManagerImpl = null;
+	private IPCManager ipcManager = null;
 	
 	private String commandId = null;
 	
-	public ConsoleCommand(String commandId, IPCManagerImpl ipcManagerImpl){
+	public ConsoleCommand(String commandId, IPCManager ipcManager){
 		this.commandId = commandId;
-		this.ipcManagerImpl = ipcManagerImpl;
+		this.ipcManager = ipcManager;
 	}
 	
 	public String getCommandId(){
 		return this.commandId;
 	}
 	
-	public IPCManagerImpl getIPCManagerImpl(){
-		return this.ipcManagerImpl;
+	public IPCManager getIPCManager(){
+		return this.ipcManager;
 	}
 	
 	public boolean equals(Object candidate){
