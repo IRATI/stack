@@ -107,7 +107,7 @@ public static void main(String[] args) throws IPCException{
 	printStatement("\nREQUESTING ALLOCATION OF FLOW TO IPC PROCESS");
 	FlowRequestEvent flowRequestEvent = new FlowRequestEvent(
 			new FlowSpecification(), sourceNamingInfo, destNamingInfo, 25);
-	ipcProcess1.allocateFlow(flowRequestEvent, 15);
+	ipcProcess1.allocateFlow(flowRequestEvent);
 	
 	printStatement("\nDESTROYING IPC PROCESSES");
 	ipcProcessFactory.destroy(ipcProcess1.getId());
@@ -128,6 +128,6 @@ public static void main(String[] args) throws IPCException{
 	applicationManager.applicationUnregistered(appUnregRequestEvent, 0, "ok");
 	
 	printStatement("\nNOTIFY APPLICATION ABOUT SUCCESSFUL FLOW ALLOCATION");
-	applicationManager.flowAllocated(flowRequestEvent, "", 3, 4);
+	applicationManager.flowAllocated(flowRequestEvent, "");
 }
 }

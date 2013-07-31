@@ -275,6 +275,17 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
+    } else if ($1->getType() == rina::FLOW_ALLOCATION_REQUESTED_EVENT) {
+    	rina::FlowRequestEvent *flowReqEvent = dynamic_cast<rina::FlowRequestEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/FlowRequestEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::FlowRequestEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
     }
 }
 %enddef
