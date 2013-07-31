@@ -126,8 +126,7 @@ void ExtendedIPCManager::setIpcProcessId(unsigned int ipcProcessId){
 }
 
 void ExtendedIPCManager::assignToDIFResponse(
-		const AssignToDIFRequestEvent& event, int result,
-		const std::string& errorDescription)
+		const AssignToDIFRequestEvent& event, int result)
 	throw(AssignToDIFResponseException){
 	if (result == 0){
 		this->currentConfiguration = event.getDIFConfiguration();
@@ -137,7 +136,6 @@ void ExtendedIPCManager::assignToDIFResponse(
 #else
 	IpcmAssignToDIFResponseMessage responseMessage;
 	responseMessage.setResult(result);
-	responseMessage.setErrorDescription(errorDescription);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
@@ -149,15 +147,13 @@ void ExtendedIPCManager::assignToDIFResponse(
 }
 
 void ExtendedIPCManager::registerApplicationResponse(
-		const ApplicationRegistrationRequestEvent& event, int result,
-		const std::string& errorDescription)
+		const ApplicationRegistrationRequestEvent& event, int result)
 	throw(RegisterApplicationResponseException){
 #if STUB_API
 	//Do nothing
 #else
 	IpcmRegisterApplicationResponseMessage responseMessage;
 	responseMessage.setResult(result);
-	responseMessage.setErrorDescription(errorDescription);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
@@ -169,15 +165,13 @@ void ExtendedIPCManager::registerApplicationResponse(
 }
 
 void ExtendedIPCManager::unregisterApplicationResponse(
-		const ApplicationUnregistrationRequestEvent& event, int result,
-		const std::string& errorDescription)
+		const ApplicationUnregistrationRequestEvent& event, int result)
 	throw(UnregisterApplicationResponseException){
 #if STUB_API
 	//Do nothing
 #else
 	IpcmUnregisterApplicationResponseMessage responseMessage;
 	responseMessage.setResult(result);
-	responseMessage.setErrorDescription(errorDescription);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
@@ -189,15 +183,13 @@ void ExtendedIPCManager::unregisterApplicationResponse(
 }
 
 void ExtendedIPCManager::allocateFlowRequestResult(
-		const FlowRequestEvent& event, int result,
-		const std::string& errorDescription)
+		const FlowRequestEvent& event, int result)
 	throw(AllocateFlowResponseException){
 #if STUB_API
 	//Do nothing
 #else
 	IpcmAllocateFlowRequestResultMessage responseMessage;
 	responseMessage.setResult(result);
-	responseMessage.setErrorDescription(errorDescription);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
@@ -235,11 +227,10 @@ int ExtendedIPCManager::allocateFlowRequestArrived(
 		throw AllocateFlowRequestArrivedException(e.what());
 	}
 
-	if (!(allocateFlowResponse->isAccept())){
-		std::string reason = ExtendedIPCManager::error_allocate_flow + " " +
-				allocateFlowResponse->getDenyReason();
+	if (allocateFlowResponse->getResult()<0){
 		delete allocateFlowResponse;
-		throw AllocateFlowRequestArrivedException(reason);
+		throw AllocateFlowRequestArrivedException(
+				ExtendedIPCManager::error_allocate_flow );
 	}
 
 	portId = allocateFlowResponse->getPortId();
@@ -252,14 +243,13 @@ int ExtendedIPCManager::allocateFlowRequestArrived(
 
 void ExtendedIPCManager::flowDeallocated(
 		const FlowDeallocateRequestEvent flowDeallocateEvent,
-			int result, std::string errorDescription)
+		int result)
 	throw (DeallocateFlowResponseException){
 #if STUB_API
 	//Do nothing
 #else
 	IpcmDeallocateFlowResponseMessage responseMessage;
 	responseMessage.setResult(result);
-	responseMessage.setErrorDescription(errorDescription);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setSequenceNumber(flowDeallocateEvent.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
@@ -272,7 +262,7 @@ void ExtendedIPCManager::flowDeallocated(
 }
 
 void ExtendedIPCManager::flowDeallocatedRemotely(
-		int portId, int code, const std::string& reason)
+		int portId, int code)
 		throw (DeallocateFlowResponseException){
 #if STUB_API
 	//Do nothing
@@ -280,7 +270,6 @@ void ExtendedIPCManager::flowDeallocatedRemotely(
 	IpcmFlowDeallocatedNotificationMessage message;
 	message.setPortId(portId);
 	message.setCode(code);
-	message.setReason(reason);
 	message.setSourceIpcProcessId(ipcProcessId);
 	message.setNotificationMessage(true);
 	try{
@@ -293,7 +282,6 @@ void ExtendedIPCManager::flowDeallocatedRemotely(
 
 void ExtendedIPCManager::queryRIBResponse(
 		const QueryRIBRequestEvent& event, int result,
-		const std::string& errorDescription,
 		const std::list<RIBObject>& ribObjects)
 	throw(QueryRIBResponseException){
 #if STUB_API
@@ -301,7 +289,6 @@ void ExtendedIPCManager::queryRIBResponse(
 #else
 	IpcmDIFQueryRIBResponseMessage responseMessage;
 	responseMessage.setResult(result);
-	responseMessage.setErrorDescription(errorDescription);
 	responseMessage.setRIBObjects(ribObjects);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);

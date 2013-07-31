@@ -163,15 +163,6 @@ void BaseNetlinkResponseMessage::setResult(int result){
 	this->result = result;
 }
 
-const std::string&
-BaseNetlinkResponseMessage::getErrorDescription() const{
-	return errorDescription;
-}
-void BaseNetlinkResponseMessage::setErrorDescription(
-		const std::string& errorDescription){
-	this->errorDescription = errorDescription;
-}
-
 /* CLASS RINA APP ALLOCATE FLOW MESSAGE */
 AppAllocateFlowRequestMessage::AppAllocateFlowRequestMessage() :
 				NetlinkRequestOrNotificationMessage(
@@ -432,15 +423,6 @@ void AppFlowDeallocatedNotificationMessage::setPortId(int portId) {
 	this->portId = portId;
 }
 
-const std::string& AppFlowDeallocatedNotificationMessage::getReason() const {
-	return reason;
-}
-
-void AppFlowDeallocatedNotificationMessage::setReason(
-		const std::string& reason) {
-	this->reason = reason;
-}
-
 const ApplicationProcessNamingInformation&
 AppFlowDeallocatedNotificationMessage::getApplicationName() const {
 	return applicationName;
@@ -453,7 +435,7 @@ void AppFlowDeallocatedNotificationMessage::setApplicationName(
 
 IPCEvent* AppFlowDeallocatedNotificationMessage::toIPCEvent(){
 	FlowDeallocatedEvent * event = new FlowDeallocatedEvent(
-			portId, code, reason);
+			portId, code);
 	return event;
 }
 
@@ -950,29 +932,20 @@ IPCEvent* IpcmAllocateFlowRequestArrivedMessage::toIPCEvent(){
 	return event;
 }
 
-/* CLASS IPC; ALLOCATE FLOW RESPONSE MESSAGE */
+/* CLASS IPCM ALLOCATE FLOW RESPONSE MESSAGE */
 IpcmAllocateFlowResponseMessage::IpcmAllocateFlowResponseMessage() :
 				BaseNetlinkMessage(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE) {
-	this->accept = false;
+	this->result = 0;
 	this->notifySource = false;
 	this->portId = 0;
 }
 
-bool IpcmAllocateFlowResponseMessage::isAccept() const {
-	return accept;
+void IpcmAllocateFlowResponseMessage::setResult(int result) {
+	this->result = result;
 }
 
-void IpcmAllocateFlowResponseMessage::setAccept(bool accept) {
-	this->accept = accept;
-}
-
-const std::string& IpcmAllocateFlowResponseMessage::getDenyReason() const {
-	return denyReason;
-}
-
-void IpcmAllocateFlowResponseMessage::setDenyReason(
-		const std::string& denyReason) {
-	this->denyReason = denyReason;
+int IpcmAllocateFlowResponseMessage::getResult() const {
+	return result;
 }
 
 bool IpcmAllocateFlowResponseMessage::isNotifySource() const {
@@ -1040,18 +1013,9 @@ void IpcmFlowDeallocatedNotificationMessage::setPortId(int portId) {
 	this->portId = portId;
 }
 
-const std::string& IpcmFlowDeallocatedNotificationMessage::getReason() const {
-	return reason;
-}
-
-void IpcmFlowDeallocatedNotificationMessage::setReason(
-		const std::string& reason) {
-	this->reason = reason;
-}
-
 IPCEvent* IpcmFlowDeallocatedNotificationMessage::toIPCEvent(){
 	FlowDeallocatedEvent * event = new FlowDeallocatedEvent(
-			portId, code, reason);
+			portId, code);
 	return event;
 }
 

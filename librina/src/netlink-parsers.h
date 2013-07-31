@@ -161,7 +161,6 @@ AppDeallocateFlowRequestMessage * parseAppDeallocateFlowRequestMessage(
 /* AppDeallocateFlowResponseMessage CLASS*/
 enum AppDeallocateFlowResponseMessageAttributes {
 	ADFRE_ATTR_RESULT = 1,
-	ADFRE_ATTR_ERROR_DESCRIPTION,
 	ADFRE_ATTR_APP_NAME,
 	__ADFRE_ATTR_MAX,
 };
@@ -178,7 +177,6 @@ AppDeallocateFlowResponseMessage * parseAppDeallocateFlowResponseMessage(
 enum AppFlowDeallocatedNotificationMessageAttributes {
 	AFDN_ATTR_PORT_ID = 1,
 	AFDN_ATTR_CODE,
-	AFDN_ATTR_REASON,
 	AFDN_ATTR_APP_NAME,
 	__AFDN_ATTR_MAX,
 };
@@ -225,7 +223,6 @@ AppRegisterApplicationRequestMessage * parseAppRegisterApplicationRequestMessage
 enum AppRegisterApplicationResponseMessageAttributes {
 	ARARE_ATTR_APP_NAME = 1,
 	ARARE_ATTR_RESULT,
-	ARARE_ATTR_ERROR_DESCRIPTION,
 	ARARE_ATTR_DIF_NAME,
 	__ARARE_ATTR_MAX,
 };
@@ -258,7 +255,6 @@ AppUnregisterApplicationRequestMessage * parseAppUnregisterApplicationRequestMes
 /* AppUnregisterApplicationResponseMessage CLASS*/
 enum AppUnregisterApplicationResponseMessageAttributes {
 	AUARE_ATTR_RESULT = 1,
-	AUARE_ATTR_ERROR_DESCRIPTION,
 	AUARE_ATTR_APP_NAME,
 	__AUARE_ATTR_MAX,
 };
@@ -346,7 +342,6 @@ DIFProperties * parseDIFPropertiesObject(nlmsghdr *hdr);
 /* AppGetDIFPropertiesResponseMessage CLASS*/
 enum AppGetDIFPropertiesResponseMessageAttributes {
 	AGDPR_ATTR_RESULT = 1,
-	AGDPR_ATTR_ERROR_DESC,
 	AGDPR_ATTR_APP_NAME,
 	AGDPR_ATTR_DIF_PROPERTIES,
 	__AGDPR_ATTR_MAX,
@@ -379,7 +374,6 @@ IpcmRegisterApplicationRequestMessage *
 enum IpcmRegisterApplicationResponseMessageAttributes {
 	IRARE_ATTR_APP_NAME = 1,
 	IRARE_ATTR_RESULT,
-	IRARE_ATTR_ERROR_DESCRIPTION,
 	IRARE_ATTR_DIF_NAME,
 	__IRARE_ATTR_MAX,
 };
@@ -410,7 +404,6 @@ IpcmUnregisterApplicationRequestMessage *
 /* IpcmUnregisterApplicationResponseMessage CLASS*/
 enum IpcmUnregisterApplicationResponseMessageAttributes {
 	IUARE_ATTR_RESULT = 1,
-	IUARE_ATTR_ERROR_DESCRIPTION,
 	__IUARE_ATTR_MAX,
 };
 
@@ -453,7 +446,6 @@ IpcmAssignToDIFRequestMessage *
 /* IpcmAssignToDIFResponseMessage CLASS*/
 enum IpcmAssignToDIFResponseMessageAttributes {
 	IATDRE_ATTR_RESULT = 1,
-	IATDRE_ATTR_ERROR_DESCRIPTION,
 	__IATDRE_ATTR_MAX,
 };
 
@@ -467,11 +459,11 @@ IpcmAssignToDIFResponseMessage *
 
 /* IpcmAllocateFlowRequestMessage CLASS*/
 enum IpcmAllocateFlowRequestMessageAttributes {
-	IAFRM_ATTR_SOURCE_APP = 1,
-	IAFRM_ATTR_DEST_APP,
+	IAFRM_ATTR_SOURCE_APP_NAME = 1,
+	IAFRM_ATTR_DEST_APP_NAME,
 	IAFRM_ATTR_FLOW_SPEC,
-	IAFRM_ATTR_DIF_NAME,
 	IAFRM_ATTR_PORT_ID,
+	IAFRM_ATTR_DIF_NAME,
 	__IAFRM_ATTR_MAX,
 };
 
@@ -486,7 +478,6 @@ IpcmAllocateFlowRequestMessage *
 /* IpcmAllocateFlowRequestResultMessage CLASS*/
 enum IpcmAllocateFlowRequestResultMessageAttributes {
 	IAFRRM_ATTR_RESULT = 1,
-	IAFRRM_ATTR_ERROR_DESCRIPTION,
 	__IAFRRM_ATTR_MAX,
 };
 
@@ -517,8 +508,7 @@ IpcmAllocateFlowRequestArrivedMessage * parseIpcmAllocateFlowRequestArrivedMessa
 
 /* IpcmAllocateFlowResponseMessage CLASS*/
 enum IpcmAllocateFlowResponseAttributes {
-	IAFRE_ATTR_ACCEPT = 1,
-	IAFRE_ATTR_DENY_REASON,
+	IAFRE_ATTR_RESULT = 1,
 	IAFRE_ATTR_NOTIFY_SOURCE,
 	IAFRE_ATTR_PORT_ID,
 	__IAFRE_ATTR_MAX,
@@ -549,7 +539,6 @@ IpcmDeallocateFlowRequestMessage * parseIpcmDeallocateFlowRequestMessage(
 /* IpcmDeallocateFlowResponseMessage CLASS*/
 enum IpcmDeallocateFlowResponseMessageAttributes {
 	IDFRE_ATTR_RESULT = 1,
-	IDFRE_ATTR_ERROR_DESCRIPTION,
 	__IDFRE_ATTR_MAX,
 };
 
@@ -565,7 +554,6 @@ IpcmDeallocateFlowResponseMessage * parseIpcmDeallocateFlowResponseMessage(
 enum IpcmFlowDeallocatedNotificationMessageAttributes {
 	IFDN_ATTR_PORT_ID = 1,
 	IFDN_ATTR_CODE,
-	IFDN_ATTR_REASON,
 	__IFDN_ATTR_MAX,
 };
 
@@ -628,7 +616,6 @@ RIBObject * parseRIBObject(nlattr *nested);
 /* IpcmDIFQueryRIBResponseMessage CLASS*/
 enum IpcmDIFQueryRIBResponseMessageAttributes {
 	IDQRE_ATTR_RESULT = 1,
-	IDQRE_ATTR_ERROR_DESCRIPTION,
 	IDQRE_ATTR_RIB_OBJECTS,
 	__IDQRE_ATTR_MAX,
 };

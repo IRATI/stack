@@ -246,11 +246,9 @@ public:
 	 * to DIF" operation
 	 * @param event the event that trigered the operation
 	 * @param result the result of the operation (0 successful)
-	 * @param errorDescription An optional explanation of the error (if any)
 	 * @throws AssignToDIFResponseException
 	 */
-	void assignToDIFResponse(const AssignToDIFRequestEvent& event, int result,
-			const std::string& errorDescription)
+	void assignToDIFResponse(const AssignToDIFRequestEvent& event, int result)
 		throw (AssignToDIFResponseException);
 
 	/**
@@ -258,12 +256,10 @@ public:
 	 * application request" operation
 	 * @param event
 	 * @param result
-	 * @param errorDescription
 	 * @throws RegisterApplicationResponseException
 	 */
 	void registerApplicationResponse(
-			const ApplicationRegistrationRequestEvent& event, int result,
-			const std::string& errorDescription)
+			const ApplicationRegistrationRequestEvent& event, int result)
 		throw (RegisterApplicationResponseException);
 
 	/**
@@ -271,12 +267,10 @@ public:
 	 * application request" operation
 	 * @param event
 	 * @param result
-	 * @param errorDescription
 	 * @throws UnregisterApplicationResponseException
 	 */
 	void unregisterApplicationResponse(
-			const ApplicationUnregistrationRequestEvent& event, int result,
-			const std::string& errorDescription)
+			const ApplicationUnregistrationRequestEvent& event, int result)
 		throw (UnregisterApplicationResponseException);
 
 	/**
@@ -284,11 +278,9 @@ public:
 	 * flow response" operation
 	 * @param event
 	 * @param result
-	 * @param errorDescription
 	 * @throws AllocateFlowResponseException
 	 */
-	void allocateFlowRequestResult(const FlowRequestEvent& event, int result,
-			const std::string& errorDescription)
+	void allocateFlowRequestResult(const FlowRequestEvent& event, int result)
 		throw (AllocateFlowResponseException);
 
 	/**
@@ -316,12 +308,11 @@ public:
 	 * @param flowDeallocateEvent Object containing information about the flow
 	 * deallocate request event
 	 * @param result 0 indicates success, a negative number an error code
-	 * @param errorDescription optional explanation about the error (if any)
 	 * @throws DeallocateFlowResponseException if there are issues
 	 * replying ot the application
 	 */
 	void flowDeallocated(const FlowDeallocateRequestEvent flowDeallocateEvent,
-			int result, std::string errorDescription)
+			int result)
 		throw (DeallocateFlowResponseException);
 
 	/**
@@ -329,10 +320,9 @@ public:
 	 * unallocated
 	 * @param portId
 	 * @param code
-	 * @param reason
 	 * @throws DeallocateFlowResponseException
 	 */
-	void flowDeallocatedRemotely(int portId, int code, const std::string& reason)
+	void flowDeallocatedRemotely(int portId, int code)
 		throw (DeallocateFlowResponseException);
 
 	/**
@@ -340,12 +330,10 @@ public:
 	 * a "query RIB request"
 	 * @param event
 	 * @param result
-	 * @param errorDescription
 	 * @param ribObjects
 	 * @throws QueryRIBResponseException
 	 */
 	void queryRIBResponse(const QueryRIBRequestEvent& event, int result,
-			const std::string& errorDescription,
 			const std::list<RIBObject>& ribObjects)
 		throw (QueryRIBResponseException);
 };

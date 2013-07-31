@@ -582,11 +582,10 @@ const ApplicationProcessNamingInformation&
 
 /* CLASS FLOW DEALLOCATED EVENT */
 FlowDeallocatedEvent::FlowDeallocatedEvent(
-		int portId, int code, const std::string& reason) :
+		int portId, int code) :
 				IPCEvent(FLOW_DEALLOCATED_EVENT, 0) {
 	this->portId = portId;
 	this->code = code;
-	this->reason = reason;
 }
 
 int FlowDeallocatedEvent::getPortId() const {
@@ -595,10 +594,6 @@ int FlowDeallocatedEvent::getPortId() const {
 
 int FlowDeallocatedEvent::getCode() const{
 	return code;
-}
-
-const std::string FlowDeallocatedEvent::getReason() const{
-	return reason;
 }
 
 /* CLASS APPLICATION REGISTRATION INFORMATION */

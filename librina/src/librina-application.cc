@@ -206,10 +206,9 @@ throw (GetDIFPropertiesException) {
 	}
 
 	if (getDIFPropertiesResponseMessage->getResult() < 0){
-		std::string reason = IPCManager::error_getting_dif_properties +
-				getDIFPropertiesResponseMessage->getErrorDescription();
 		delete getDIFPropertiesResponseMessage;
-		throw GetDIFPropertiesException(reason);
+		throw GetDIFPropertiesException(
+				IPCManager::error_getting_dif_properties);
 	}
 
 	LOG_DBG("Application %s queried properties of DIF %s",
@@ -248,10 +247,9 @@ ApplicationRegistration IPCManager::registerApplication(
 	}
 
 	if (registerResponseMessage->getResult() < 0){
-		std::string reason = IPCManager::error_registering_application +
-				registerResponseMessage->getErrorDescription();
 		delete registerResponseMessage;
-		throw ApplicationRegistrationException(reason);
+		throw ApplicationRegistrationException(
+				IPCManager::error_registering_application);
 	}
 
 	LOG_DBG("Application %s registered successfully to DIF %s ",
@@ -305,10 +303,9 @@ void IPCManager::unregisterApplication(
 	}
 
 	if (unregisterResponseMessage->getResult() < 0){
-		std::string reason = IPCManager::error_unregistering_application +
-				unregisterResponseMessage->getErrorDescription();
 		delete unregisterResponseMessage;
-		throw ApplicationUnregistrationException(reason);
+		throw ApplicationUnregistrationException(
+				IPCManager::error_unregistering_application);
 	}
 
 	LOG_DBG("Application %s unregistered successfully to DIF %s",
@@ -467,10 +464,9 @@ void IPCManager::deallocateFlow(int portId) throw (FlowDeallocationException) {
 	}
 
 	if (deallocateResponse->getResult() < 0){
-		std::string reason = IPCManager::error_requesting_flow_deallocation +
-				deallocateResponse->getErrorDescription();
 		delete deallocateResponse;
-		throw FlowDeallocationException(reason);
+		throw FlowDeallocationException(
+				IPCManager::error_requesting_flow_deallocation);
 	}
 
 	LOG_DBG("Flow deallocated successfully! Port-id: %d", portId);
