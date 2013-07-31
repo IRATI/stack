@@ -288,9 +288,6 @@ public:
  */
 class AppAllocateFlowResponseMessage: public BaseNetlinkMessage {
 
-	/** The name of the DIF where the flow is being allocated */
-	ApplicationProcessNamingInformation difName;
-
 	/** True if the application accepts the flow, false otherwise */
 	bool accept;
 
@@ -308,8 +305,6 @@ class AppAllocateFlowResponseMessage: public BaseNetlinkMessage {
 
 public:
 	AppAllocateFlowResponseMessage();
-	const ApplicationProcessNamingInformation& getDifName() const;
-	void setDifName(const ApplicationProcessNamingInformation& difName);
 	bool isAccept() const;
 	void setAccept(bool accept);
 	const std::string& getDenyReason() const;
@@ -762,6 +757,44 @@ public:
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
 	IPCEvent* toIPCEvent();
+};
+
+/**
+ * Allocate flow response to an allocate request arrived operation,
+ * IPC Manager -> IPC Process
+ */
+class IpcmAllocateFlowResponseMessage: public BaseNetlinkMessage {
+
+	/** True if the application accepts the flow, false otherwise */
+	bool accept;
+
+	/**
+	 * If the flow was denied and the application wishes to do so, it
+	 * can provide an explanation of why this decision was taken
+	 */
+	std::string denyReason;
+
+	/**
+	 * If the flow was denied, this field controls wether the application
+	 * wants the IPC Process to reply to the source or not
+	 */
+	bool notifySource;
+
+	/**
+	 * The portId assigned to the flow by the IPC Manager
+	 */
+	int portId;
+
+public:
+	IpcmAllocateFlowResponseMessage();
+	bool isAccept() const;
+	void setAccept(bool accept);
+	const std::string& getDenyReason() const;
+	void setDenyReason(const std::string& denyReason);
+	bool isNotifySource() const;
+	void setNotifySource(bool notifySource);
+	int getPortId() const;
+	void setPortId(int portId);
 };
 
 /**

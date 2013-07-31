@@ -261,6 +261,7 @@ class ExtendedIPCManager: public IPCManager {
 	DIFConfiguration currentConfiguration;
 
 public:
+	static const std::string error_allocate_flow;
 	const DIFConfiguration& getCurrentConfiguration() const;
 	void setCurrentConfiguration(const DIFConfiguration& currentConfiguration);
 	unsigned int getIpcProcessId() const;

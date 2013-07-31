@@ -231,6 +231,20 @@ public:
 };
 
 /**
+ * Thrown when there are problems asking the application wether it accepts a new flow
+ * or if the application denies it.
+ */
+class AppFlowArrivedException: public IPCException {
+public:
+	AppFlowArrivedException():
+		IPCException("Problems notifying an application about a new flow allocation request"){
+	}
+	AppFlowArrivedException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
  * Event informing that an application has requested the
  * properties of one or more DIFs
  */
@@ -407,7 +421,21 @@ public:
 	 * flow can be contacted
 	 * @throws AllocateFlowException if an error occurs
 	 */
-	void allocateFlow(const FlowRequestEvent& flowRequest) throw (AllocateFlowException);
+	void allocateFlow(const FlowRequestEvent& flowRequest)
+		throw (AllocateFlowException);
+
+	/**
+	 * Reply an IPC Process about the fate of a flow allocation request (wether
+	 * it has been accepted or denied by the application). If it has been
+	 * accepted, communicate the portId to the IPC Process
+	 * @param flowRequest
+	 * @param accept
+	 * @param denyReason
+	 * @throws AllocateFlowException if something goes wrong
+	 */
+	void allocteFlowResponse(const FlowRequestEvent& flowRequest,
+			bool accept, const std::string& denyReason)
+		throw(AllocateFlowException);
 
 	/**
 	 * Invoked by the IPC Manager to query a subset of the RIB of the IPC
@@ -536,6 +564,25 @@ public:
 	 */
 	void flowAllocated(const FlowRequestEvent &flowRequestEvent,
 			std::string errorDescription) throw (NotifyFlowAllocatedException);
+
+	/**
+	 * Invoked by the IPC Manager to inform the Application Process that a remote
+	 * application wants to allocate a flow to it. The remote application will
+	 * decide wether it accepts or not the flow
+	 * @param localAppName
+	 * @param remoteAppName
+	 * @param flowSpec
+	 * @param difName
+	 * @param portId
+	 * @throws AppFlowArrivedException if something goes wrong or the application
+	 * doesn't accept the flow
+	 */
+	void flowRequestArrived(
+			const ApplicationProcessNamingInformation& localAppName,
+			const ApplicationProcessNamingInformation& remoteAppName,
+			const FlowSpecification& flowSpec,
+			const ApplicationProcessNamingInformation& difName,
+			int portId) throw (AppFlowArrivedException);
 
 	/**
 	 * Return the properties of zero or more DIFs to the application

@@ -143,13 +143,8 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		break;
 	}
 	case RINA_C_APP_ALLOCATE_FLOW_RESPONSE: {
-		AppAllocateFlowResponseMessage * specificMessage =
-				dynamic_cast<AppAllocateFlowResponseMessage *>(message);
 		if(send){
-			RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-					specificMessage->getDifName());
-			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
+			message->setDestPortId(getIPCManagerPortId());
 		}
 		break;
 	}

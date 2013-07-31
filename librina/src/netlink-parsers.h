@@ -129,8 +129,7 @@ AppAllocateFlowRequestArrivedMessage * parseAppAllocateFlowRequestArrivedMessage
 
 /* AppAllocateFlowResponseMessage CLASS*/
 enum AppAllocateFlowResponseAttributes {
-	AAFRE_ATTR_DIF_NAME = 1,
-	AAFRE_ATTR_ACCEPT,
+	AAFRE_ATTR_ACCEPT = 1,
 	AAFRE_ATTR_DENY_REASON,
 	AAFRE_ATTR_NOTIFY_SOURCE,
 	__AAFRE_ATTR_MAX,
@@ -518,6 +517,22 @@ int putIpcmAllocateFlowRequestArrivedMessageObject(nl_msg* netlinkMessage,
 IpcmAllocateFlowRequestArrivedMessage * parseIpcmAllocateFlowRequestArrivedMessage(
 		nlmsghdr *hdr);
 
+/* IpcmAllocateFlowResponseMessage CLASS*/
+enum IpcmAllocateFlowResponseAttributes {
+	IAFRE_ATTR_ACCEPT = 1,
+	IAFRE_ATTR_DENY_REASON,
+	IAFRE_ATTR_NOTIFY_SOURCE,
+	IAFRE_ATTR_PORT_ID,
+	__IAFRE_ATTR_MAX,
+};
+
+#define IAFRE_ATTR_MAX (__IAFRE_ATTR_MAX -1)
+
+int putIpcmAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
+		const IpcmAllocateFlowResponseMessage& object);
+
+IpcmAllocateFlowResponseMessage * parseIpcmAllocateFlowResponseMessage(
+		nlmsghdr *hdr);
 
 /* IpcmDIFRegistrationNotification CLASS*/
 enum IpcmDIFRegistrationNotificationAttributes {

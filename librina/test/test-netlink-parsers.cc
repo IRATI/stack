@@ -288,31 +288,24 @@ int testAppAllocateFlowResponseMessage() {
 	std::cout << "TESTING APP ALLOCATE FLOW RESPONSE MESSAGE\n";
 	int returnValue = 0;
 
-	ApplicationProcessNamingInformation * difName =
-			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test3.DIF");
-
-	AppAllocateFlowResponseMessage * message =
-			new AppAllocateFlowResponseMessage();
-	message->setDifName(*difName);
-	message->setAccept(true);
-	message->setDenyReason("No, we cannot!");
-	message->setNotifySource(true);
+	AppAllocateFlowResponseMessage message;
+	message.setAccept(true);
+	message.setDenyReason("No, we cannot!");
+	message.setNotifySource(true);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
 	if (!netlinkMessage) {
 		std::cout << "Error allocating Netlink message\n";
 	}
-	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
-			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+			sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
 
-	int result = putBaseNetlinkMessage(netlinkMessage, message);
+	int result = putBaseNetlinkMessage(netlinkMessage, &message);
 	if (result < 0) {
 		std::cout << "Error constructing Application Allocate Flow Response "
 				<< "Message \n";
 		nlmsg_free(netlinkMessage);
-		delete message;
 		return result;
 	}
 
@@ -320,24 +313,20 @@ int testAppAllocateFlowResponseMessage() {
 	AppAllocateFlowResponseMessage * recoveredMessage =
 			dynamic_cast<AppAllocateFlowResponseMessage *>(parseBaseNetlinkMessage(
 					netlinkMessageHeader));
-	if (message == NULL) {
+	if (recoveredMessage == 0) {
 		std::cout << "Error parsing Application Allocate Flow Response Message "
 				<< "\n";
 		returnValue = -1;
 
-	} else if (message->getDifName() != recoveredMessage->getDifName()) {
-		std::cout << "DIF name on original and recovered "
-				<< "messages are different\n";
-		returnValue = -1;
-	} else if (message->isAccept() != recoveredMessage->isAccept()) {
+	} else if (message.isAccept() != recoveredMessage->isAccept()) {
 		std::cout << "Accept flag on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
-	} else if (message->getDenyReason() != recoveredMessage->getDenyReason()) {
+	} else if (message.getDenyReason() != recoveredMessage->getDenyReason()) {
 		std::cout << "Deny reason on original and recovered "
 				<< "messages are different\n";
 		returnValue = -1;
-	} else if (message->isNotifySource()
+	} else if (message.isNotifySource()
 			!= recoveredMessage->isNotifySource()) {
 		std::cout << "Notify source flag on original and recovered messages"
 				<< " are different\n";
@@ -348,9 +337,7 @@ int testAppAllocateFlowResponseMessage() {
 		std::cout << "AppAllocateFlowResponse test ok\n";
 	}
 	nlmsg_free(netlinkMessage);
-	delete message;
 	delete recoveredMessage;
-	delete difName;
 
 	return returnValue;
 }
@@ -1683,6 +1670,69 @@ int testIpcmAllocateFlowRequestArrivedMessage() {
 	return returnValue;
 }
 
+int testIpcmAllocateFlowResponseMessage() {
+	std::cout << "TESTING IPCM ALLOCATE FLOW RESPONSE MESSAGE\n";
+	int returnValue = 0;
+
+	IpcmAllocateFlowResponseMessage message;
+	message.setAccept(true);
+	message.setDenyReason("No, we cannot!");
+	message.setNotifySource(true);
+	message.setPortId(345);
+
+	struct nl_msg* netlinkMessage;
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage) {
+		std::cout << "Error allocating Netlink message\n";
+	}
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+			sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+	int result = putBaseNetlinkMessage(netlinkMessage, &message);
+	if (result < 0) {
+		std::cout << "Error constructing IPCM Allocate Flow Response "
+				<< "Message \n";
+		nlmsg_free(netlinkMessage);
+		return result;
+	}
+
+	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+	IpcmAllocateFlowResponseMessage * recoveredMessage =
+			dynamic_cast<IpcmAllocateFlowResponseMessage *>(parseBaseNetlinkMessage(
+					netlinkMessageHeader));
+	if (recoveredMessage == 0) {
+		std::cout << "Error parsing IPCM Allocate Flow Response Message "
+				<< "\n";
+		returnValue = -1;
+
+	} else if (message.isAccept() != recoveredMessage->isAccept()) {
+		std::cout << "Accept flag on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message.getDenyReason() != recoveredMessage->getDenyReason()) {
+		std::cout << "Deny reason on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	} else if (message.isNotifySource()
+			!= recoveredMessage->isNotifySource()) {
+		std::cout << "Notify source flag on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message.getPortId() != recoveredMessage->getPortId()) {
+		std::cout << "Port id on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	}
+
+	if (returnValue == 0) {
+		std::cout << "IpcmAllocateFlowResponse test ok\n";
+	}
+	nlmsg_free(netlinkMessage);
+	delete recoveredMessage;
+
+	return returnValue;
+}
+
 int testIpcmIPCProcessDIFResgistrationNotification() {
 	std::cout << "TESTING IPCM IPC PROCESS DIF REGISTRATION NOTIFICATION\n";
 	int returnValue = 0;
@@ -2038,6 +2088,11 @@ int main(int argc, char * argv[]) {
 	}
 
 	result = testIpcmAllocateFlowRequestArrivedMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testIpcmAllocateFlowResponseMessage();
 	if (result < 0) {
 		return result;
 	}

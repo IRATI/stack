@@ -318,6 +318,29 @@ throw (AllocateFlowException) {
 #endif
 }
 
+void IPCProcess::allocteFlowResponse(const FlowRequestEvent& flowRequest,
+		bool accept, const std::string& denyReason)
+		throw(AllocateFlowException){
+#if STUB_API
+	//Do nothing
+#else
+	IpcmAllocateFlowResponseMessage responseMessage;
+	responseMessage.setAccept(accept);
+	responseMessage.setDenyReason(denyReason);
+	responseMessage.setPortId(flowRequest.getPortId());
+	responseMessage.setDestIpcProcessId(id);
+	responseMessage.setDestPortId(portId);
+	responseMessage.setSequenceNumber(flowRequest.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
+
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+	}catch(NetlinkException &e){
+		throw AllocateFlowException(e.what());
+	}
+#endif
+}
+
 const std::list<RIBObject> IPCProcess::queryRIB(const std::string& objectClass,
 		const std::string& objectName, unsigned long objectInstance,
 		unsigned int scope, const std::string& filter)
@@ -544,6 +567,48 @@ void ApplicationManager::flowAllocated(const FlowRequestEvent& flowRequestEvent,
 	}catch(NetlinkException &e){
 		throw NotifyFlowAllocatedException(e.what());
 	}
+#endif
+}
+
+void ApplicationManager::flowRequestArrived(
+			const ApplicationProcessNamingInformation& localAppName,
+			const ApplicationProcessNamingInformation& remoteAppName,
+			const FlowSpecification& flowSpec,
+			const ApplicationProcessNamingInformation& difName,
+			int portId) throw (AppFlowArrivedException){
+	LOG_DBG("ApplicationManager::flowRequestArrived called");
+
+#if STUB_API
+	//Do nothing
+#else
+	AppAllocateFlowRequestArrivedMessage message;
+	message.setSourceAppName(remoteAppName);
+	message.setDestAppName(localAppName);
+	message.setFlowSpecification(flowSpec);
+	message.setDifName(difName);
+	message.setPortId(portId);
+	message.setRequestMessage(true);
+
+	AppAllocateFlowResponseMessage * allocateFlowResponse;
+	try{
+		allocateFlowResponse =
+				dynamic_cast<AppAllocateFlowResponseMessage *>(
+						rinaManager->sendRequestAndWaitForResponse(&message,
+								IPCProcess::error_allocating_flow));
+	}catch(NetlinkException &e){
+		throw AppFlowArrivedException(e.what());
+	}
+
+	if (!(allocateFlowResponse->isAccept())){
+		std::string reason = IPCProcess::error_allocating_flow + " " +
+				allocateFlowResponse->getDenyReason();
+		delete allocateFlowResponse;
+		throw AppFlowArrivedException(reason);
+	}
+
+	LOG_DBG("Application %s accepted flow with portId %d",
+			localAppName.getProcessName().c_str(), portId);
+	delete allocateFlowResponse;
 #endif
 }
 

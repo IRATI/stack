@@ -137,6 +137,9 @@ const std::string& QueryRIBRequestEvent::getFilter() const{
 }
 
 /* CLASS EXTENDED IPC MANAGER */
+const std::string ExtendedIPCManager::error_allocate_flow =
+		"Error allocating flow";
+
 const DIFConfiguration& ExtendedIPCManager::getCurrentConfiguration() const{
 	return currentConfiguration;
 }
@@ -253,8 +256,29 @@ int ExtendedIPCManager::allocateFlowRequestArrived(
 	message.setSourceIpcProcessId(ipcProcessId);
 	message.setRequestMessage(true);
 
-	//TODO
-	return 25;
+	int portId = 0;
+	IpcmAllocateFlowResponseMessage * allocateFlowResponse;
+	try{
+		allocateFlowResponse =
+				dynamic_cast<IpcmAllocateFlowResponseMessage *>(
+						rinaManager->sendRequestAndWaitForResponse(&message,
+								ExtendedIPCManager::error_allocate_flow));
+	}catch(NetlinkException &e){
+		throw AllocateFlowRequestArrivedException(e.what());
+	}
+
+	if (!(allocateFlowResponse->isAccept())){
+		std::string reason = ExtendedIPCManager::error_allocate_flow + " " +
+				allocateFlowResponse->getDenyReason();
+		delete allocateFlowResponse;
+		throw AllocateFlowRequestArrivedException(reason);
+	}
+
+	portId = allocateFlowResponse->getPortId();
+	LOG_DBG("Allocated flow with portId %d", portId);
+	delete allocateFlowResponse;
+
+	return portId;
 #endif
 }
 

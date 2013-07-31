@@ -338,16 +338,6 @@ AppAllocateFlowResponseMessage::AppAllocateFlowResponseMessage() :
 	this->notifySource = false;
 }
 
-const ApplicationProcessNamingInformation&
-AppAllocateFlowResponseMessage::getDifName() const {
-	return difName;
-}
-
-void AppAllocateFlowResponseMessage::setDifName(
-		const ApplicationProcessNamingInformation& difName) {
-	this->difName = difName;
-}
-
 bool AppAllocateFlowResponseMessage::isAccept() const {
 	return accept;
 }
@@ -979,6 +969,47 @@ IPCEvent* IpcmAllocateFlowRequestArrivedMessage::toIPCEvent(){
 					this->difName,
 					this->getSequenceNumber());
 	return event;
+}
+
+/* CLASS IPC; ALLOCATE FLOW RESPONSE MESSAGE */
+IpcmAllocateFlowResponseMessage::IpcmAllocateFlowResponseMessage() :
+				BaseNetlinkMessage(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE) {
+	this->accept = false;
+	this->notifySource = false;
+	this->portId = 0;
+}
+
+bool IpcmAllocateFlowResponseMessage::isAccept() const {
+	return accept;
+}
+
+void IpcmAllocateFlowResponseMessage::setAccept(bool accept) {
+	this->accept = accept;
+}
+
+const std::string& IpcmAllocateFlowResponseMessage::getDenyReason() const {
+	return denyReason;
+}
+
+void IpcmAllocateFlowResponseMessage::setDenyReason(
+		const std::string& denyReason) {
+	this->denyReason = denyReason;
+}
+
+bool IpcmAllocateFlowResponseMessage::isNotifySource() const {
+	return notifySource;
+}
+
+void IpcmAllocateFlowResponseMessage::setNotifySource(bool notifySource) {
+	this->notifySource = notifySource;
+}
+
+int IpcmAllocateFlowResponseMessage::getPortId() const{
+	return portId;
+}
+
+void IpcmAllocateFlowResponseMessage::setPortId(int portId){
+	this->portId = portId;
 }
 
 /* CLASS IPCM IPC PROCESS REGISTERED TO DIF NOTIFICATION MESSAGE */
