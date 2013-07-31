@@ -26,9 +26,6 @@
 #include "debug.h"
 #include "netlink.h"
 
-/* FIXME: This define (and its related code) has to be removed */
-#define TESTING 0
-
 #define NETLINK_RINA "rina"
 
 /* attributes */
@@ -135,102 +132,7 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         return 0;
 }
 
-#if TESTING
-static int nl_rina_echo(void * data,
-                        struct sk_buff *skb_in,
-                        struct genl_info *info)
-{
-        /*
-         * Message handling code goes here; return 0 on success, negative
-         * values on failure
-         */
-
-        int ret;
-        void *msg_head;
-        struct sk_buff *skb;
-
-        skb = skb_copy(skb_in, GFP_KERNEL);
-        if (skb == NULL) {
-                LOG_ERR("netlink echo: out of memory");
-                return -ENOMEM;
-        }
-
-        LOG_DBG("ECHOING MESSAGE");
-
-        if (info == NULL) {
-                LOG_DBG("info input parameter is NULL");
-                return -1;
-        }
-
-        msg_head = genlmsg_put(skb, 0, info->snd_seq, &nl_family, 0,
-                               RINA_C_APP_ALLOCATE_FLOW_REQUEST);
-        genlmsg_end(skb, msg_head);
-        LOG_DBG("genlmsg_end OK");
-
-        LOG_ERR("Message generated:\n"
-                "\t Netlink family: %d;\n"
-                "\t Version: %d; \n"
-                "\t Operation code: %d; \n"
-                "\t Flags: %d",
-                info->nlhdr->nlmsg_type, info->genlhdr->version,
-                info->genlhdr->cmd, info->nlhdr->nlmsg_flags);
-
-        /* ret = genlmsg_unicast(sock_net(skb->sk),skb,info->snd_portid); */
-        ret = genlmsg_unicast(&init_net,skb,info->snd_portid);
-        if (ret != 0) {
-                LOG_ERR("COULD NOT SEND BACK UNICAST MESSAGE");
-                return -1;
-        }
-
-        LOG_DBG("genkmsg_unicast OK");
-
-        return 0;
-}
-#endif
-
 static struct genl_ops nl_ops[] = {
-        {
-                .cmd    = RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_ALLOCATE_FLOW_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_ALLOCATE_FLOW_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_DEALLOCATE_FLOW_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_DEALLOCATE_FLOW_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
         {
                 .cmd    = RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST,
                 .flags  = 0,
@@ -246,14 +148,14 @@ static struct genl_ops nl_ops[] = {
                 .dumpit = NULL,
         },
         {
-                .cmd    = RINA_C_IPCM_IPC_PROCESS_REGISTERED_TO_DIF_NOTIFICATION,
+                .cmd    = RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
                 .flags  = 0,
                 //.policy = nl_rina_policy,
                 .doit   = dispatcher,
                 .dumpit = NULL,
         },
         {
-                .cmd    = RINA_C_IPCM_IPC_PROCESS_UNREGISTERED_FROM_DIF_NOTIFICATION,
+                .cmd    = RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION,
                 .flags  = 0,
                 //.policy = nl_rina_policy,
                 .doit   = dispatcher,
@@ -289,6 +191,76 @@ static struct genl_ops nl_ops[] = {
         },
         {
                 .cmd    = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
+                .flags  = 0,
+                //.policy = nl_rina_policy,
+                .doit   = dispatcher,
+                .dumpit = NULL,
+        },
+        {
+                .cmd    = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED,
+                .flags  = 0,
+                //.policy = nl_rina_policy,
+                .doit   = dispatcher,
+                .dumpit = NULL,
+        },
+        {
+                .cmd    = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
+                .flags  = 0,
+                //.policy = nl_rina_policy,
+                .doit   = dispatcher,
+                .dumpit = NULL,
+        },
+        {
+                .cmd    = RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
+                .flags  = 0,
+                //.policy = nl_rina_policy,
+                .doit   = dispatcher,
+                .dumpit = NULL,
+        },
+        {
+                .cmd    = RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST,
+                .flags  = 0,
+                //.policy = nl_rina_policy,
+                .doit   = dispatcher,
+                .dumpit = NULL,
+        },
+        {
+                .cmd    = RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE,
+                .flags  = 0,
+                //.policy = nl_rina_policy,
+                .doit   = dispatcher,
+                .dumpit = NULL,
+        },
+        {
+                .cmd    = RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION,
+                .flags  = 0,
+                //.policy = nl_rina_policy,
+                .doit   = dispatcher,
+                .dumpit = NULL,
+        },
+        {
+                .cmd    = RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,
+                .flags  = 0,
+                //.policy = nl_rina_policy,
+                .doit   = dispatcher,
+                .dumpit = NULL,
+        },
+        {
+                .cmd    = RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE,
+                .flags  = 0,
+                //.policy = nl_rina_policy,
+                .doit   = dispatcher,
+                .dumpit = NULL,
+        },
+        {
+                .cmd    = RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST,
+                .flags  = 0,
+                //.policy = nl_rina_policy,
+                .doit   = dispatcher,
+                .dumpit = NULL,
+        },
+        {
+                .cmd    = RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE,
                 .flags  = 0,
                 //.policy = nl_rina_policy,
                 .doit   = dispatcher,
@@ -474,8 +446,8 @@ int rina_netlink_set_destroy(struct rina_nl_set * set)
         for (i = 0; i < ARRAY_SIZE(set->handlers); i++) {
                 if (set->handlers[i].cb != NULL) {
                         count++;
-                        LOG_DBG("Set %pK has at least one hander still registered, "
-                                "it will be unregistered", set);
+                        LOG_DBG("Set %pK has at least one hander still "
+                                "registered, it will be unregistered", set);
                         break;
                 }
         }
@@ -494,33 +466,16 @@ int rina_netlink_init(void)
 {
         int ret;
 
-#if TESTING
-        void * test_data;
-        int test_int = 4;
-        test_data = &test_int;
-#endif
-
         LOG_DBG("Initializing Netlink layer");
 
-
-        LOG_DBG("Registering family with ops");
         ret = genl_register_family_with_ops(&nl_family,
                                             nl_ops,
                                             ARRAY_SIZE(nl_ops));
-        LOG_DBG("genl_register_family_with_ops() returned %i", ret);
-
-        if (ret < 0) {
+        if (ret < 0 /* FIXME: Should be != 0 */) {
                 LOG_ERR("Cannot register Netlink family and ops (error=%i), "
                         "bailing out", ret);
                 return -1;
         }
-
-#if TESTING
-        /* FIXME: Remove this hard-wired test */
-        rina_netlink_handler_register(RINA_C_APP_ALLOCATE_FLOW_REQUEST,
-                                      test_data,
-                                      nl_rina_echo);
-#endif
 
         LOG_DBG("NetLink layer initialized successfully");
 
@@ -540,7 +495,8 @@ void rina_netlink_exit(void)
                 return;
         }
 
-        /* FIXME:
+        /*
+         * FIXME:
          *   Add checks here to prevent misses of finalizations and or
          *   destructions
          */

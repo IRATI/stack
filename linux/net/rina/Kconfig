@@ -17,6 +17,13 @@ config RINA_DEBUG
 	help
 	  No help for the time being
 
+config RINA_KIPCM_LOCKS_DEBUG
+	bool "K-IPC Manager spinlocks debugging"
+	default n
+        depends on RINA_DEBUG
+	help
+	  No help for the time being
+
 config RINA_MEMORY_CHECKS
 	bool "Memory allocation/deallocation extra checks"
 	default y

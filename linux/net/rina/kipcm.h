@@ -2,7 +2,6 @@
  * K-IPCM (Kernel-IPC Manager)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -23,99 +22,47 @@
 #ifndef RINA_KIPCM_H
 #define RINA_KIPCM_H
 
-#include <linux/kfifo.h>
-
 #include "common.h"
-#include "shim.h"
-#include "efcp.h"
-#include "rmt.h"
-
-/* FIXME: To be changed */
-typedef enum {
-        DIF_TYPE_NORMAL,
-        DIF_TYPE_SHIM
-} dif_type_t;
-
-/* FIXME: Do we really need to this configuration here ? */
-struct ipc_process_conf {
-        /*
-         * Configuration of the kernel components of a normal IPC Process.
-         * Defines the struct for the kernel components of a fully RINA IPC
-         * Process.
-         */
-
-        /* The address of the IPC Process */
-        ipc_process_address_t address;
-
-        /* EFCP component configuration */
-        struct efcp_conf *    efcp_config;
-
-        /* RMT component configuration */
-        struct rmt_conf *     rmt_config;
-};
-
-struct normal_ipc_process_t {
-        /*
-         * Contains all the data structures of a normal IPC Process
-         */
-
-        /* The ID of the IPC Process */
-        ipc_process_id_t          ipcp_id;
-
-        /* Contains the configuration of the kernel components */
-        struct ipc_process_conf * configuration;
-
-        /* The EFCP data structure associated to the IPC Process */
-        struct efcp_ipc_t *       efcp;
-
-        /* The RMT instance associated to the IPC Process */
-        struct rmt_instance_t *   rmt;
-};
-
-struct ipc_process_t {
-        dif_type_t type;
-
-        union {
-                struct normal_ipc_process_t * normal_ipcp;
-                struct shim_instance *        shim_instance;
-        } data;
-};
+#include "ipcp.h"
+#include "ipcp-factories.h"
 
 struct kipcm;
 
-/*
- * The following functions represent the KIPCM northbound interface
- */
+/* The following functions represent the KIPCM northbound interface */
 struct kipcm * kipcm_init(struct kobject * parent);
 int            kipcm_fini(struct kipcm * kipcm);
 
-int            kipcm_ipc_create(struct kipcm *      kipcm,
-                                const struct name * name,
-                                ipc_process_id_t    id,
-                                dif_type_t          type);
-int            kipcm_ipc_configure(struct kipcm *                  kipcm,
-                                   ipc_process_id_t                id,
-                                   const struct ipc_process_conf * config);
-int            kipcm_ipc_destroy(struct kipcm *   kipcm,
-                                 ipc_process_id_t id);
+/*
+ * NOTE: factory_name must be the string published by the choosen IPC
+ *       factory (module). if type is NULL a default factory will be assumed
+ */
+int            kipcm_ipcp_create(struct kipcm *      kipcm,
+                                 const struct name * name,
+                                 ipc_process_id_t    id,
+                                 const char *        factory_name);
+int            kipcm_ipcp_configure(struct kipcm *             kipcm,
+                                    ipc_process_id_t           id,
+                                    const struct ipcp_config * config);
+int            kipcm_ipcp_destroy(struct kipcm *   kipcm,
+                                  ipc_process_id_t id);
 
-int            kipcm_sdu_write(struct kipcm *     kipcm,
-                               port_id_t          id,
-                               const struct sdu * sdu);
+/* If successful: takes the ownership of the SDU */
+int            kipcm_sdu_write(struct kipcm * kipcm,
+                               port_id_t      id,
+                               struct sdu *   sdu);
+/* If successful: passes the ownership of the SDU */
 int            kipcm_sdu_read(struct kipcm * kipcm,
                               port_id_t      id,
-                              struct sdu * sdu);
+                              struct sdu **  sdu);
 
-/*
- * The following functions represent the KIPCM southbound interface (used by
- * the shims)
- */
-struct shim *  kipcm_shim_register(struct kipcm *    kipcm,
-                                   const char *      name,
-                                   void *            data,
-                                   struct shim_ops * ops);
-int            kipcm_shim_unregister(struct kipcm * kipcm,
-                                     struct shim *  shim);
+/* The following functions represent the KIPCM southbound interface */
+struct ipcp_factory *
+kipcm_ipcp_factory_register(struct kipcm *             kipcm,
+                            const char *               name,
+                            struct ipcp_factory_data * data,
+                            struct ipcp_factory_ops *  ops);
+int            kipcm_ipcp_factory_unregister(struct kipcm *        kipcm,
+                                             struct ipcp_factory * factory);
 
 int            kipcm_flow_add(struct kipcm *   kipcm,
                               ipc_process_id_t ipc_id,
@@ -123,6 +70,7 @@ int            kipcm_flow_add(struct kipcm *   kipcm,
 int            kipcm_flow_remove(struct kipcm * kipcm,
                                  port_id_t      id);
 
+/* If successul: takes the ownership of the SDU */
 int            kipcm_sdu_post(struct kipcm * kipcm,
                               port_id_t      id,
                               struct sdu *   sdu);

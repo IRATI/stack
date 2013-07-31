@@ -1,5 +1,5 @@
 /*
- * SDU Facilities
+ *  IPC Processes layer
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,12 +18,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_SDU_H
-#define RINA_SDU_H
+#define RINA_PREFIX "ipcp"
 
-#include "common.h"
-
-void sdu_protect(void);
-void sdu_unprotect(void);
-
-#endif
+#include "logs.h"

@@ -1,5 +1,5 @@
 /*
- * Shim related utilities
+ * IPC Processes related utilities
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Sander Vrijders <sander.vrijders@intec.ugent.be>
@@ -19,10 +19,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_SHIM_UTILS_H
-#define RINA_SHIM_UTILS_H
+#ifndef RINA_IPCP_UTILS_H
+#define RINA_IPCP_UTILS_H
+
+#include <linux/uaccess.h>
 
 #include "common.h"
+#include "ipcp.h"
 
 #define NAME2STRING(N)
 
@@ -65,16 +68,33 @@ void          name_destroy(struct name * ptr);
 /* Duplicates a name object, returning the pointer to the new object */
 struct name * name_dup(const struct name * src);
 
+/* Duplicates the name from user space */
+struct name * name_dup_from_user(const struct name __user * src);
+
 /*
  * Copies the source object contents into the destination object, both must
- * be previously allocated. Returns 
+ * be previously allocated
  */
 int           name_cpy(const struct name * src, struct name * dst);
+
+/* Copies the name from user space */
+int           name_cpy_from_user(const struct name __user * src,
+                                 struct name *              dst);
 
 /* Compares two names, returns 0 if they are equal */
 int           name_cmp(const struct name * a, const struct name * b);
 
 /* Returns a name as a (newly allocated string) string */
 char *        name_tostring(const struct name * n);
+
+struct ipcp_config * ipcp_config_create(void);
+int                  ipcp_config_destroy(struct ipcp_config * cfg);
+struct ipcp_config *
+ipcp_config_dup_from_user(const struct ipcp_config __user * cfg);
+
+struct connection * connection_create(void);
+struct connection *
+connection_dup_from_user(const struct connection __user * conn);
+int                 connection_destroy(struct connection * conn);
 
 #endif

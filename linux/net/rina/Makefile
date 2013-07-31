@@ -4,16 +4,17 @@
 
 obj-$(CONFIG_RINA) +=				\
 	utils.o debug.o core.o personality.o	\
-	syscalls.o				\
-	netlink.o netlink-utils.o
+	syscalls.o netlink.o netlink-utils.o	\
+        du.o ipcp-utils.o
 
 obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 	rina_personality_default.o
 
 rina_personality_default-y :=			\
-	dif.o shim.o ipc.o kipcm.o		\
-	du.o sdu.o dtcp.o dtp.o efcp.o rmt.o	\
-	default.o shim-utils.o 
+	ipcp-factories.o ipcp.o			\
+	dtcp.o dtp.o efcp.o rmt.o		\
+	kipcm-utils.o kipcm.o			\
+	default.o
 
 ifeq  ($(CONFIG_RINA_PERSONALITY_DEFAULT),m)
 rina_personality_default-y +=			\

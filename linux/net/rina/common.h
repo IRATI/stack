@@ -25,9 +25,9 @@
 
 #include <linux/types.h>
 
-typedef unsigned int    ipc_process_address_t;
 typedef uint16_t        port_id_t;
 typedef int             ipc_process_id_t;
+typedef unsigned int    ipc_process_address_t;
 typedef unsigned char   utf8_t;
 typedef char            string_t;
 typedef uint            uint_t;
@@ -35,6 +35,7 @@ typedef uint            response_reason_t;
 typedef uint            cep_id_t;
 typedef uint16_t        address_t;
 typedef uint            seq_num_t;
+typedef char		regex_t;
 
 /* FIXME: The qos_id_t should be defined correctly in the near future */
 typedef uint            qos_id_t;
@@ -156,6 +157,11 @@ struct connection {
         /* FIXME: policy type remains undefined */
         /* The list of policies associated with this connection */
         /* policy_t ** policies; */
+};
+
+/*FIXME: needed for nl api */
+enum rib_object_t {
+	EMPTY,
 };
 
 #endif

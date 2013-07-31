@@ -24,9 +24,8 @@
 #include <linux/kobject.h>
 
 #include "common.h"
-
-/* FIXME: This include should be removed from here */
-#include "kipcm.h"
+#include "ipcp.h"
+#include "du.h"
 
 /* Pre-declared, the personality should define it properly */
 struct personality_data;
@@ -39,16 +38,21 @@ struct personality_ops {
                      struct personality_data * data);
         int (* fini)(struct personality_data * data);
 
+        /*
+         * The following function pointers are hooked into the syscalls
+         */
+
         int (* ipc_create)(struct personality_data * data,
                            const struct name *       name,
                            ipc_process_id_t          id,
-                           dif_type_t                type);
-        int (* ipc_configure)(struct personality_data *       data,
-                              ipc_process_id_t                id,
-                              const struct ipc_process_conf * configuration);
+                           const char *              type);
+
+        int (* ipc_configure)(struct personality_data *  data,
+                              ipc_process_id_t           id,
+                              const struct ipcp_config * configuration);
         int (* ipc_destroy)(struct personality_data * data,
                             ipc_process_id_t          id);
-        
+
         int (* connection_create)(struct personality_data * data,
                                   const struct connection * connection);
         int (* connection_destroy)(struct personality_data * data,
@@ -57,12 +61,14 @@ struct personality_ops {
                                   cep_id_t                  from,
                                   cep_id_t                  to);
 
+        /* Takes the ownership of the sdu */
         int (* sdu_write)(struct personality_data * data,
                           port_id_t                 id,
-                          const struct sdu *        sdu);
+                          struct sdu *              sdu);
+        /* Passes the ownership of the sdu */
         int (* sdu_read)(struct personality_data *  data,
                          port_id_t                  id,
-                         struct sdu *               sdu);
+                         struct sdu **              sdu);
 };
 
 struct personality {

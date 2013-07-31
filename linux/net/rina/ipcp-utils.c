@@ -1,5 +1,5 @@
 /*
- * Utilities
+ * IPC Processes related utilities
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Sander Vrijders <sander.vrijders@intec.ugent.be>
@@ -21,11 +21,11 @@
 
 #include <linux/export.h>
 
-#define RINA_PREFIX "shim-utils"
+#define RINA_PREFIX "ipcp-utils"
 
 #include "logs.h"
 #include "common.h"
-#include "shim-utils.h"
+#include "ipcp-utils.h"
 #include "utils.h"
 #include "debug.h"
 
@@ -44,21 +44,20 @@ EXPORT_SYMBOL(name_create);
  */
 static int string_dup(const string_t * src, string_t ** dst)
 {
-        /*
-         * An empty source is allowed (ref. the chain of calls), it must
-         * provoke no consequeunces
-         */
         ASSERT(dst);
 
+        /*
+         * An empty source is allowed (ref. the chain of calls) and it must
+         * provoke no consequeunces
+         */
         if (src) {
                 *dst = kstrdup(src, GFP_KERNEL);
                 if (!*dst) {
                         LOG_ERR("Cannot duplicate source string");
                         return -1;
                 }
-        } else {
+        } else
                 *dst = NULL;
-        }
 
         return 0;
 }
@@ -242,25 +241,33 @@ char * name_tostring(const struct name * n)
         if (!n)
                 return NULL;
         
-        size = 0;
+        size  = 0;
+
         size += (n->process_name                 ?
-                 string_len(n->process_name)     : none_len + 1);
+                 string_len(n->process_name)     : none_len);
+        size += 1; /* SEPARATOR */
+
         size += (n->process_instance             ?
-                 string_len(n->process_instance) : none_len + 1);
+                 string_len(n->process_instance) : none_len);
+        size += 1;  /* SEPARATOR */
+
         size += (n->entity_name                  ?
-                 string_len(n->entity_name)      : none_len + 1);
+                 string_len(n->entity_name)      : none_len);
+        size += 1;  /* SEPARATOR */
+
         size += (n->entity_instance              ?
-                 string_len(n->entity_instance)  : none_len + 1);
+                 string_len(n->entity_instance)  : none_len);
+        size += 1;  /* TERMINATOR */
         
         tmp = rkmalloc(size, GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
-        if (sprintf(tmp, "%s/%s/%s/%s",
-                    (n->process_name     ? n->process_name     : none),
-                    (n->process_instance ? n->process_instance : none),
-                    (n->entity_name      ? n->entity_name      : none),
-                    (n->entity_instance  ? n->entity_instance  : none)) !=
+        if (snprintf(tmp, size, "%s/%s/%s/%s",
+                     (n->process_name     ? n->process_name     : none),
+                     (n->process_instance ? n->process_instance : none),
+                     (n->entity_name      ? n->entity_name      : none),
+                     (n->entity_instance  ? n->entity_instance  : none)) !=
             size - 1) {
                 rkfree(tmp);
                 return NULL;
@@ -270,3 +277,129 @@ char * name_tostring(const struct name * n)
 }
 EXPORT_SYMBOL(name_tostring);
 
+static int string_dup_from_user(const string_t __user * src, string_t ** dst)
+{
+        ASSERT(dst);
+
+        /*
+         * An empty source is allowed (ref. the chain of calls) and it must
+         * provoke no consequeunces
+         */
+        if (src) {
+                *dst = strdup_from_user(src);
+                if (!*dst) {
+                        LOG_ERR("Cannot duplicate source string");
+                        return -1;
+                }
+        } else
+                *dst = NULL;
+
+        return 0;
+}
+
+int name_cpy_from_user(const struct name __user * src,
+                       struct name *              dst)
+{
+        if (!src || !dst)
+                return -1;
+
+        name_fini(dst);
+
+        ASSERT(name_is_initialized(dst));
+
+        /* We rely on short-boolean evaluation ... :-) */
+        if (string_dup_from_user(src->process_name,
+                                 &dst->process_name)     ||
+            string_dup_from_user(src->process_instance,
+                                 &dst->process_instance) ||
+            string_dup_from_user(src->entity_name,
+                                 &dst->entity_name)      ||
+            string_dup_from_user(src->entity_instance,
+                                 &dst->entity_instance)) {
+                name_fini(dst);
+                return -1;
+        }
+
+        return 0;
+}
+
+struct name * name_dup_from_user(const struct name __user * src)
+{
+        struct name * tmp;
+
+        if (!src)
+                return NULL;
+
+        tmp = name_create();
+        if (!tmp)
+                return NULL;
+        if (name_cpy_from_user(src, tmp)) {
+                name_destroy(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
+
+struct ipcp_config * ipcp_config_create(void)
+{
+        struct ipcp_config * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->entry = NULL;
+        INIT_LIST_HEAD(&tmp->list);
+
+        return tmp;
+}
+
+int ipcp_config_destroy(struct ipcp_config * cfg)
+{
+        if (!cfg)
+                return -1;
+
+        LOG_MISSING;
+        return -1;
+}
+
+struct ipcp_config *
+ipcp_config_dup_from_user(const struct ipcp_config __user * cfg)
+{
+        LOG_MISSING;
+
+        return NULL;
+}
+
+struct connection * connection_create(void)
+{
+        struct connection * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        return tmp;
+}
+
+struct connection *
+connection_dup_from_user(const struct connection __user * conn)
+{
+        struct connection * tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        if (copy_from_user(tmp, conn, sizeof(*tmp)))
+                return NULL;
+
+        return tmp;
+}
+
+int connection_destroy(struct connection * conn)
+{
+        if (!conn)
+                return -1;
+        rkfree(conn);
+        return 0;
+}

@@ -19,7 +19,7 @@ fi
 echo "${ME}: Prefix is \`$PREFIX'"
 
 echo "${ME}: Configuring librina ..."
-(cd librina && ./configure --prefix=$PREFIX) || {
+(cd librina && ./configure --enable-java-wrappers --prefix=$PREFIX) || {
     echo "${ME}: Cannot configure librina"
     exit 1
 }

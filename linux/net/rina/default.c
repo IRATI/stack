@@ -26,7 +26,6 @@
 #include "utils.h"
 #include "personality.h"
 #include "netlink.h"
-#include "shim.h"
 #include "kipcm.h"
 #include "efcp.h"
 #include "rmt.h"
@@ -58,24 +57,24 @@ static int is_personality_ok(const struct personality_data * p)
 static int default_ipc_create(struct personality_data * data,
                               const struct name *       name,
                               ipc_process_id_t          id,
-                              dif_type_t                type)
+                              const char *              type)
 {
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_ipc_create(data->kipcm, name, id, type);
+        return kipcm_ipcp_create(data->kipcm, name, id, type);
 }
 
-static int default_ipc_configure(struct personality_data *       data,
-                                 ipc_process_id_t                id,
-                                 const struct ipc_process_conf * conf)
+static int default_ipc_configure(struct personality_data *  data,
+                                 ipc_process_id_t           id,
+                                 const struct ipcp_config * configuration)
 {
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_ipc_configure(data->kipcm, id, conf);
+        return kipcm_ipcp_configure(data->kipcm, id, configuration);
 }
 
 static int default_ipc_destroy(struct personality_data * data,
@@ -85,7 +84,7 @@ static int default_ipc_destroy(struct personality_data * data,
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_ipc_destroy(data->kipcm, id);
+        return kipcm_ipcp_destroy(data->kipcm, id);
 }
 
 static int default_connection_create(struct personality_data * data,
@@ -123,7 +122,7 @@ static int default_connection_update(struct personality_data * data,
 
 static int default_sdu_write(struct personality_data * data,
                              port_id_t                 id,
-                             const struct sdu *        sdu)
+                             struct sdu *              sdu)
 {
         if (!is_personality_ok(data)) return -1;
 
@@ -134,7 +133,7 @@ static int default_sdu_write(struct personality_data * data,
 
 static int default_sdu_read(struct personality_data * data,
                             port_id_t                 id,
-                            struct sdu *              sdu)
+                            struct sdu **             sdu)
 {
         if (!is_personality_ok(data)) return -1;
 

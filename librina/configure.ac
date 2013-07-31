@@ -8,7 +8,7 @@ AC_INIT([RINA Libraries],
         m4_esyscmd([build-aux/git-version-gen .tarball-version]),
         [f.salvestrini@nextworks.it],
         [librina],
-        [http://www.irati.eu])
+        [http://irati.eu])
 
 AC_PREREQ([2.68])
 
@@ -84,7 +84,7 @@ AS_IF([test "$build_wrappers" = "yes"],[
         SWIG_VERSION=`$SWIG -version 2>&1 | grep 'SWIG Version' | sed 's/.*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/g'`
         AX_COMPARE_VERSION($SWIG_VERSION, le, [2.0.4],,[
             AX_COMPARE_VERSION($SWIG_VERSION, ge, [2.0.8],,[
-                AC_MSG_ERROR([SWIG versions in 2.0.4, ..., 2.0.8 range won't compile])
+                AC_MSG_ERROR([SWIG versions in 2.0.4, ..., 2.0.8 range will not compile])
             ])
         ])
     ], [
@@ -96,7 +96,7 @@ AS_IF([test "$build_wrappers_java" = "yes"],[
     AX_PROG_JAVAC
     AX_JNI_INCLUDE_DIR
 
-    # XXX FIXME: Ugly as hell ...
+    # FIXME: Ugly as hell ...
     JNI_CPPFLAGS=""
     for JNI_INCLUDE_DIR in $JNI_INCLUDE_DIRS ;
     do
@@ -104,11 +104,13 @@ AS_IF([test "$build_wrappers_java" = "yes"],[
     done
     AC_SUBST(JNI_CPPFLAGS, $JNI_CPPFLAGS)
     AX_PROG_JAR
-    AC_PATH_PROG([MVN],[mvn],[])
-    AM_CONDITIONAL(BUILD_MAVEN_SUPPORT, [test x"$MVN" != x""])
 ])
-
 AM_CONDITIONAL(BUILD_WRAPPERS_JAVA, [test $build_wrappers_java = yes])
+
+# FIXME: Maven support should be enabled if Java wrappers are enabled, to avoid
+#        (unneeded) extra checks ...
+AC_PATH_PROG([MVN],[mvn],[])
+AM_CONDITIONAL(BUILD_MAVEN_SUPPORT, [test x"$MVN" != x""])
 
 DX_DOXYGEN_FEATURE(ON)
 DX_DOT_FEATURE(ON)
