@@ -5,6 +5,7 @@ import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.CreateIPCProcessException;
+import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCEvent;
 import eu.irati.librina.IPCEventProducerSingleton;
 import eu.irati.librina.IPCEventType;
@@ -30,6 +31,7 @@ import rina.ipcmanager.impl.conf.IPCProcessToCreate;
 import rina.ipcmanager.impl.conf.RINAConfiguration;
 import rina.ipcmanager.impl.console.IPCManagerConsole;
 import rina.ipcmanager.impl.helpers.ApplicationRegistrationManager;
+import rina.ipcmanager.impl.helpers.FlowManager;
 
 /**
  * The IPC Manager is the component of a DAF that manages the local IPC 
@@ -59,11 +61,12 @@ public class IPCManager {
 	 */
 	private ExecutorService executorService = null;
 	
-	IPCProcessFactorySingleton ipcProcessFactory = null;
-	ApplicationManagerSingleton applicationManager = null;
-	IPCEventProducerSingleton ipcEventProducer = null;
+	private IPCProcessFactorySingleton ipcProcessFactory = null;
+	private ApplicationManagerSingleton applicationManager = null;
+	private IPCEventProducerSingleton ipcEventProducer = null;
 	
-	ApplicationRegistrationManager applicationRegistrationManager = null;
+	private ApplicationRegistrationManager applicationRegistrationManager = null;
+	private FlowManager flowManager = null;
 	
 	public IPCManager(){
 		log.info("Initializing IPCManager console..,");
@@ -77,6 +80,7 @@ public class IPCManager {
 		ipcEventProducer = rina.getIpcEventProducer();
 		applicationRegistrationManager = new ApplicationRegistrationManager(
 				ipcProcessFactory, applicationManager);
+		flowManager = new FlowManager(ipcProcessFactory, applicationManager);
 		log.info("IPC Manager daemon initializing, reading RINA configuration ...");
 		initializeConfiguration();
 		/*log.info("Bootstrapping RINA ...");
@@ -189,6 +193,13 @@ public class IPCManager {
 		}else if (event.getType() == IPCEventType.APPLICATION_UNREGISTRATION_REQUEST_EVENT){
 			ApplicationUnregistrationRequestEvent appUnregReqEvent = (ApplicationUnregistrationRequestEvent) event;
 			applicationRegistrationManager.unregisterApplication(appUnregReqEvent);
+		}else if (event.getType() == IPCEventType.FLOW_ALLOCATION_REQUESTED_EVENT){
+			FlowRequestEvent flowReqEvent = (FlowRequestEvent) event;
+			flowManager.allocateFlow(flowReqEvent);
+		}else if (event.getType() == IPCEventType.FLOW_DEALLOCATION_REQUESTED_EVENT){
+			//TODO
+		}else if (event.getType().equals(IPCEventType.GET_DIF_PROPERTIES)){
+			//TODO
 		}
 	}
 	

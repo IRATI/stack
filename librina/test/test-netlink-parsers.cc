@@ -124,8 +124,6 @@ int testAppAllocateFlowRequestResultMessage() {
 	message->setPortId(32);
 	message->setErrorDescription("Error description");
 	message->setDifName(*difName);
-	message->setIpcProcessPortId(42);
-	message->setIpcProcessId(234);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -160,11 +158,6 @@ int testAppAllocateFlowRequestResultMessage() {
 		std::cout << "Error description on original and recovered "
 				<< "messages are different\n";
 		returnValue = -1;
-	} else if (message->getIpcProcessPortId()
-			!= recoveredMessage->getIpcProcessPortId()) {
-		std::cout << "ipc_process_port_id on original and recovered "
-				<< "messages are different\n";
-		returnValue = -1;
 	} else if (message->getDifName() != recoveredMessage->getDifName()) {
 		std::cout << "DIF name on original and recovered "
 				<< "messages are different\n";
@@ -176,11 +169,6 @@ int testAppAllocateFlowRequestResultMessage() {
 		returnValue = -1;
 	} else if (message->getPortId() != recoveredMessage->getPortId()) {
 		std::cout << "PortId on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	} else if (message->getIpcProcessId() !=
-			recoveredMessage->getIpcProcessId()) {
-		std::cout << "IPC Process id on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	}
@@ -1498,7 +1486,6 @@ int testIpcmAllocateFlowRequestMessage() {
 	difName.setProcessName("/difs/Test.DIF");
 	message.setDifName(difName);
 	message.setPortId(34);
-	message.setApplicationPortId(123);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -1547,11 +1534,6 @@ int testIpcmAllocateFlowRequestMessage() {
 	} else if (message.getPortId()!=
 			recoveredMessage->getPortId()) {
 		std::cout << "Port id on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	} else if (message.getApplicationPortId()!=
-			recoveredMessage->getApplicationPortId()) {
-		std::cout << "Application port on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	}

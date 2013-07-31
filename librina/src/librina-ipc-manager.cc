@@ -273,8 +273,8 @@ throw (IpcmUnregisterApplicationException) {
 #endif
 }
 
-void IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest,
-		unsigned int applicationPortId) throw (AllocateFlowException) {
+void IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest)
+throw (AllocateFlowException) {
 	LOG_DBG("IPCProcess::allocate flow called");
 	if (!difMember){
 		throw IPCException(IPCProcess::error_not_a_dif_member);
@@ -288,7 +288,6 @@ void IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest,
 	message.setFlowSpec(flowRequest.getFlowSpecification());
 	message.setDifName(flowRequest.getDIFName());
 	message.setPortId(flowRequest.getPortId());
-	message.setApplicationPortId(applicationPortId);
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -527,8 +526,7 @@ void ApplicationManager::applicationUnregistered(
 }
 
 void ApplicationManager::flowAllocated(const FlowRequestEvent& flowRequestEvent,
-		std::string errorDescription, unsigned short ipcProcessId,
-		unsigned int ipcProcessPortId) throw (NotifyFlowAllocatedException) {
+		std::string errorDescription) throw (NotifyFlowAllocatedException) {
 	LOG_DBG("ApplicationManager::flowAllocated called");
 
 #if STUB_API
@@ -537,8 +535,6 @@ void ApplicationManager::flowAllocated(const FlowRequestEvent& flowRequestEvent,
 	AppAllocateFlowRequestResultMessage responseMessage;
 	responseMessage.setPortId(flowRequestEvent.getPortId());
 	responseMessage.setErrorDescription(errorDescription);
-	responseMessage.setIpcProcessId(ipcProcessId);
-	responseMessage.setIpcProcessPortId(ipcProcessPortId);
 	responseMessage.setSourceAppName(flowRequestEvent.getLocalApplicationName());
 	responseMessage.setDifName(flowRequestEvent.getDIFName());
 	responseMessage.setSequenceNumber(flowRequestEvent.getSequenceNumber());

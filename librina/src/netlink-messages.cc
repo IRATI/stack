@@ -222,8 +222,6 @@ IPCEvent* AppAllocateFlowRequestMessage::toIPCEvent(){
 AppAllocateFlowRequestResultMessage::AppAllocateFlowRequestResultMessage() :
 				BaseNetlinkMessage(RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT) {
 	this->portId = 0;
-	this->ipcProcessPortId = 0;
-	this->ipcProcessId = 0;
 }
 
 const std::string&
@@ -256,30 +254,12 @@ void AppAllocateFlowRequestResultMessage::setSourceAppName(
 	this->sourceAppName = sourceAppName;
 }
 
-unsigned int AppAllocateFlowRequestResultMessage::getIpcProcessPortId() const {
-	return ipcProcessPortId;
-}
-
-void AppAllocateFlowRequestResultMessage::setIpcProcessPortId(
-		unsigned int ipcProcessPortId) {
-	this->ipcProcessPortId = ipcProcessPortId;
-}
-
 int AppAllocateFlowRequestResultMessage::getPortId() const {
 	return portId;
 }
 
 void AppAllocateFlowRequestResultMessage::setPortId(int portId) {
 	this->portId = portId;
-}
-
-unsigned short AppAllocateFlowRequestResultMessage::getIpcProcessId() const{
-	return ipcProcessId;
-}
-
-void AppAllocateFlowRequestResultMessage::setIpcProcessId(
-		unsigned short ipcProcessId){
-	this->ipcProcessId = ipcProcessId;
 }
 
 /* CLASS APP ALLOCATE FLOW REQUEST ARRIVED MESSAGE */
@@ -878,16 +858,6 @@ IpcmAllocateFlowRequestMessage::IpcmAllocateFlowRequestMessage():
 						NetlinkRequestOrNotificationMessage(
 								RINA_C_IPCM_ALLOCATE_FLOW_REQUEST) {
 	portId = 0;
-	applicationPortId = 0;
-}
-
-unsigned int IpcmAllocateFlowRequestMessage::getApplicationPortId() const {
-	return applicationPortId;
-}
-
-void IpcmAllocateFlowRequestMessage::setApplicationPortId(
-		unsigned int applicationPortId) {
-	this->applicationPortId = applicationPortId;
 }
 
 const ApplicationProcessNamingInformation&

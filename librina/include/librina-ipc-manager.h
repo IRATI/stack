@@ -407,8 +407,7 @@ public:
 	 * flow can be contacted
 	 * @throws AllocateFlowException if an error occurs
 	 */
-	void allocateFlow(const FlowRequestEvent& flowRequest,
-			unsigned int applicationPortId) throw (AllocateFlowException);
+	void allocateFlow(const FlowRequestEvent& flowRequest) throw (AllocateFlowException);
 
 	/**
 	 * Invoked by the IPC Manager to query a subset of the RIB of the IPC
@@ -533,16 +532,10 @@ public:
 	 * @param flowRequestEvent Object containing information about the flow
 	 * request
 	 * @param errorDescription An optional string further describing the result
-	 * @param ipcProcessId Required so that the application process can contact
-	 * the IPC Process to read/write the flow
-	 * @param ipcProcessPortId Required so that the application process can contact
-	 * the IPC Process to read/write the flow
 	 * @throws NotifyFlowAllocatedException If an error occurs during the operation
 	 */
 	void flowAllocated(const FlowRequestEvent &flowRequestEvent,
-			std::string errorDescription,
-			unsigned short ipcProcessId, unsigned int ipcProcessPortId)
-				throw (NotifyFlowAllocatedException);
+			std::string errorDescription) throw (NotifyFlowAllocatedException);
 
 	/**
 	 * Return the properties of zero or more DIFs to the application

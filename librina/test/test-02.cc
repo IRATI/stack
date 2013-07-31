@@ -122,7 +122,7 @@ int main(int argc, char * argv[]) {
 	FlowRequestEvent * flowRequest = new FlowRequestEvent(*flowSpec,
 			*sourceName, *difName, 1234);
 	flowRequest->setPortId(430);
-	ipcProcess1->allocateFlow(*flowRequest, 24);
+	ipcProcess1->allocateFlow(*flowRequest);
 
 	/* TEST QUERY RIB */
 	ipcProcess1->queryRIB("list of flows",
@@ -145,7 +145,7 @@ int main(int argc, char * argv[]) {
 	/* TEST FLOW ALLOCATED */
 	FlowRequestEvent * flowEvent = new FlowRequestEvent(25, *flowSpec,
 			*sourceName, *destinationName, *difName, 3);
-	applicationManager->flowAllocated(*flowEvent, "ok", 1, 1);
+	applicationManager->flowAllocated(*flowEvent, "ok");
 
 	ipcProcessFactory->destroy(ipcProcess1->getId());
 	if (!checkIPCProcesses(0)) {

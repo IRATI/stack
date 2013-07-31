@@ -139,13 +139,6 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 					specificMessage->getSourceAppName());
 			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
 			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-		}else{
-			if(specificMessage->getPortId() > 0){
-				putAPNametoNetlinkPortIdMapping(
-						specificMessage->getDifName(),
-						specificMessage->getIpcProcessPortId(),
-						specificMessage->getIpcProcessId());
-			}
 		}
 		break;
 	}
@@ -292,16 +285,6 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 	case RINA_C_IPCM_QUERY_RIB_RESPONSE:{
 		if(send){
 			message->setDestPortId(getIPCManagerPortId());
-		}
-		break;
-	}
-	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST:{
-		if(!send){
-			IpcmAllocateFlowRequestMessage * specificMessage =
-				dynamic_cast<IpcmAllocateFlowRequestMessage *>(message);
-			putAPNametoNetlinkPortIdMapping(
-					specificMessage->getSourceAppName(),
-					specificMessage->getApplicationPortId(), 0);
 		}
 		break;
 	}

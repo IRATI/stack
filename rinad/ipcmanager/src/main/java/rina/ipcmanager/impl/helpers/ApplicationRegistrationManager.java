@@ -30,11 +30,9 @@ import eu.irati.librina.IPCProcessPointerVector;
 public class ApplicationRegistrationManager {
 	
 	private static final Log log = LogFactory.getLog(ApplicationRegistrationManager.class);
-	
-	IPCProcessFactorySingleton ipcProcessFactory = null;
-	ApplicationManagerSingleton applicationManager = null;
-	
-	Map<ApplicationProcessNamingInformation, ApplicationRegistrationState> applicationRegistrations;
+	private IPCProcessFactorySingleton ipcProcessFactory = null;
+	private ApplicationManagerSingleton applicationManager = null;
+	private Map<ApplicationProcessNamingInformation, ApplicationRegistrationState> applicationRegistrations;
 
 	public ApplicationRegistrationManager(IPCProcessFactorySingleton ipcProcessFactory, 
 			ApplicationManagerSingleton applicationManager){

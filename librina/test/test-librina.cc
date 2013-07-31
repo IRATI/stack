@@ -262,10 +262,10 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	std::cout<<"IPCManager# received a flow allocation request event\n";
 	flowRequestEvent->setDIFName(difName);
 	flowRequestEvent->setPortId(23);
-	ipcProcess->allocateFlow(*flowRequestEvent, 5);
+	ipcProcess->allocateFlow(*flowRequestEvent);
 	std::cout<<"IPCManager# IPC Process successfully allocated flow" <<
 			"in DIF "<<difName.getProcessName()<<std::endl;
-	applicationManager->flowAllocated(*flowRequestEvent, "ok", 1, 4);
+	applicationManager->flowAllocated(*flowRequestEvent, "ok");
 	std::cout<<"IPCManager# Replied to flow allocation\n";
 	delete flowRequestEvent;
 

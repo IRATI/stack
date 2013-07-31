@@ -230,24 +230,10 @@ class AppAllocateFlowRequestResultMessage: public BaseNetlinkMessage {
 	 */
 	ApplicationProcessNamingInformation difName;
 
-	/**
-	 * The id of the Netlink port to be used to send messages to the IPC Process
-	 * that allocated the flow. In the case of shim IPC Processes (they all
-	 * reside in the kernel), the value of this field will always be 0.
-	 */
-	unsigned int ipcProcessPortId;
-
-	/**
-	 * The id of the IPC Process that allocated the flow.
-	 */
-	unsigned short ipcProcessId;
-
 public:
 	AppAllocateFlowRequestResultMessage();
 	const std::string& getErrorDescription() const;
 	void setErrorDescription(const std::string& errorDescription);
-	unsigned int getIpcProcessPortId() const;
-	void setIpcProcessPortId(unsigned int ipcProcessPortId);
 	int getPortId() const;
 	void setPortId(int portId);
 	const ApplicationProcessNamingInformation& getDifName() const;
@@ -255,8 +241,6 @@ public:
 	const ApplicationProcessNamingInformation& getSourceAppName() const;
 	void setSourceAppName(
 			const ApplicationProcessNamingInformation& sourceAppName);
-	unsigned short getIpcProcessId() const;
-	void setIpcProcessId(unsigned short ipcProcessId);
 };
 
 /**
@@ -719,13 +703,8 @@ class IpcmAllocateFlowRequestMessage: public NetlinkRequestOrNotificationMessage
 	/** The portId assigned tot he flow */
 	int portId;
 
-	/** The Netlink portId of the application that requested the flow*/
-	unsigned int applicationPortId;
-
 public:
 	IpcmAllocateFlowRequestMessage();
-	unsigned int getApplicationPortId() const;
-	void setApplicationPortId(unsigned int applicationPortId);
 	const ApplicationProcessNamingInformation& getDestAppName() const;
 	void setDestAppName(const ApplicationProcessNamingInformation& destAppName);
 	const FlowSpecification& getFlowSpec() const;
