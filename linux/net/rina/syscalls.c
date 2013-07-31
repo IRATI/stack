@@ -62,12 +62,12 @@
 SYSCALL_DEFINE3(ipc_create,
                 const struct name __user *, name,
                 ipc_process_id_t,           id,
-                dif_type_t,                 type)
+                const char *,               type)
 { CALL_DEFAULT_PERSONALITY(ipc_create, name, id, type); }
 
 SYSCALL_DEFINE2(ipc_configure,
-                ipc_process_id_t,                       id,
-                const struct ipc_process_conf __user *, config)
+                ipc_process_id_t,                  id,
+                const struct ipcp_config __user *, config)
 { CALL_DEFAULT_PERSONALITY(ipc_configure, id, config); }
 
 SYSCALL_DEFINE1(ipc_destroy,
