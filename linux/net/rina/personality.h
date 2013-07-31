@@ -42,13 +42,13 @@ struct personality_ops {
         int (* ipc_create)(struct personality_data * data,
                            const struct name *       name,
                            ipc_process_id_t          id,
-                           dif_type_t                type);
-        int (* ipc_configure)(struct personality_data *       data,
-                              ipc_process_id_t                id,
-                              const struct ipc_process_conf * configuration);
+                           const char *              type);
+        int (* ipc_configure)(struct personality_data *  data,
+                              ipc_process_id_t           id,
+                              const struct ipcp_config * configuration);
         int (* ipc_destroy)(struct personality_data * data,
                             ipc_process_id_t          id);
-        
+
         int (* connection_create)(struct personality_data * data,
                                   const struct connection * connection);
         int (* connection_destroy)(struct personality_data * data,
