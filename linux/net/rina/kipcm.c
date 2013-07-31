@@ -29,7 +29,7 @@
 #include "kipcm.h"
 #include "debug.h"
 #include "ipcp-factories.h"
-#include "shim-utils.h"
+#include "ipcp-utils.h"
 
 #define DEFAULT_FACTORY "normal-ipc"
 

@@ -32,7 +32,7 @@
 #include "debug.h"
 #include "utils.h"
 #include "kipcm.h"
-#include "shim-utils.h"
+#include "ipcp-utils.h"
 #include "ipcp-factories.h"
 
 /* FIXME: To be removed ABSOLUTELY */

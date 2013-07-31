@@ -1,5 +1,5 @@
 /*
- * Utilities
+ * IPC Processes related utilities
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Sander Vrijders <sander.vrijders@intec.ugent.be>
@@ -21,11 +21,11 @@
 
 #include <linux/export.h>
 
-#define RINA_PREFIX "shim-utils"
+#define RINA_PREFIX "ipcp-utils"
 
 #include "logs.h"
 #include "common.h"
-#include "shim-utils.h"
+#include "ipcp-utils.h"
 #include "utils.h"
 #include "debug.h"
 

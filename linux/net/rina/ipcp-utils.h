@@ -1,5 +1,5 @@
 /*
- * Shim related utilities
+ * IPC Processes related utilities
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Sander Vrijders <sander.vrijders@intec.ugent.be>
@@ -19,8 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_SHIM_UTILS_H
-#define RINA_SHIM_UTILS_H
+#ifndef RINA_IPCP_UTILS_H
+#define RINA_IPCP_UTILS_H
 
 #include "common.h"
 
