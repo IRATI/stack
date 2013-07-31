@@ -87,6 +87,24 @@ enum ipcm_alloc_flow_req_attrs {
 
 #define IAFRM_ATTR_MAX (__IAFRM_ATTR_MAX -1)
 
+enum app_dealloc_flow_req_msg_attrs {
+        ADFRT_ATTR_PORT_ID = 1,
+        ADFRT_ATTR_DIF_NAME,
+        ADFRT_ATTR_APP_NAME,
+        __ADFRT_ATTR_MAX,
+};
+
+#define ADFRT_ATTR_MAX (__ADFRT_ATTR_MAX -1)
+
+enum app_dealloc_flow_resp_attrs {
+        ADFRE_ATTR_RESULT = 1,
+        ADFRE_ATTR_ERROR_DESCRIPTION,
+        ADFRE_ATTR_APP_NAME,
+        __ADFRE_ATTR_MAX,
+};
+
+#define ADFRE_ATTR_MAX (__ADFRE_ATTR_MAX -1)
+
 struct rina_msg_hdr{
 	unsigned int src_ipc_id;
 	unsigned int dst_ipc_id;
@@ -142,6 +160,18 @@ struct rnl_alloc_flow_resp_msg{
 	bool	    notify_src;	
 };
 
+struct rnl_dealloc_flow_req_msg{
+	port_id_t	id;
+	struct name	dif_name;
+	struct name	app_name;
+};
+
+struct rnl_dealloc_flow_resp_msg{
+	uint_t		result;
+	string_t 	* err_desc;
+	struct name	app_name;
+}
+;
 static int craft_app_name_info(struct sk_buff * msg,
                                struct name      name);
 static int craft_flow_spec(struct sk_buff * msg,
@@ -160,6 +190,10 @@ int rnl_parse_alloc_flow_resp(struct genl_info * info,
 				  struct rnl_alloc_flow_resp_msg * msg_attrs);
 int rnl_parse_ipcm_alloc_flow_req(struct genl_info * info,
                                   struct rnl_ipcm_alloc_flow_req_msg * msg_attrs);
+int rnl_parse_app_dealloc_flow_req(struct genl_info * info,
+	                           struct rnl_dealloc_flow_req_msg * msg_attrs);
+int rnl_parse_app_dealloc_flow_resp(struct genl_info * info,
+                                    struct rnl_dealloc_flow_resp_msg * msg_attrs);
 ipc_process_id_t rnl_src_ipcid_from_msg(struct genl_info * info);
 ipc_process_id_t rnl_dst_ipcid_from_msg(struct genl_info * info);
 #endif
