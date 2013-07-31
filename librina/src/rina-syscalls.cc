@@ -75,7 +75,7 @@ int syscallDestroyIPCProcess(unsigned int ipcProcessId){
 
 int syscallCreateIPCProcess(
 		const ApplicationProcessNamingInformation& ipcProcessName,
-		unsigned int ipcProcessId, DIFType difType){
+		unsigned int ipcProcessId, const std::string& difType){
 	name_t name;
 	name.process_name = const_cast<char *>(
 			ipcProcessName.getProcessName().c_str());
@@ -87,7 +87,8 @@ int syscallCreateIPCProcess(
 			ipcProcessName.getEntityInstance().c_str());
 
 	int result;
-	result = syscall(SYS_createIPCProcess, &name, ipcProcessId, difType);
+	result = syscall(SYS_createIPCProcess, &name, ipcProcessId,
+			difType.c_str());
 	if (result == -1){
 		LOG_ERR("Create IPC Process failed, errno = %d, \n", errno);
 		return errno;

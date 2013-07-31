@@ -493,22 +493,12 @@ class Policy {
 };
 
 /**
- * Enum type that identifies the different types of DIFs
- */
-enum DIFType {
-	DIF_TYPE_NORMAL,
-	DIF_TYPE_SHIM_DUMMY,
-	DIF_TYPE_SHIM_ETHERNET,
-	DIF_TYPE_SHIM_TCP_UDP
-};
-
-/**
  * Contains the data about a DIF Configuration
  */
 class DIFConfiguration {
 
 	/** The type of DIF */
-	DIFType difType;
+	std::string difType;
 
 	/** The name of the DIF */
 	ApplicationProcessNamingInformation difName;
@@ -522,8 +512,8 @@ class DIFConfiguration {
 public:
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
-	DIFType getDifType() const;
-	void setDifType(DIFType difType);
+	const std::string& getDifType() const;
+	void setDifType(const std::string& difType);
 	const std::vector<Policy>& getPolicies();
 	void setPolicies(const std::vector<Policy>& policies);
 	const std::vector<QoSCube>& getQosCubes() const;
@@ -602,6 +592,32 @@ public:
 	RIBObjectValue getValue() const;
 	void setValue(RIBObjectValue value);
 };
+
+/**
+ * Thrown when there are problems initializing librina
+ */
+class InitializationException: public IPCException {
+public:
+	InitializationException():
+		IPCException("Problems initializing librina"){
+	}
+	InitializationException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Initialize librina providing the local Netlink port-id where this librina
+ * instantiation will be bound
+ * @param localPort
+ */
+void initialize(unsigned int localPort);
+
+/**
+ * Initialize librina letting the OS choose the Netlink port-id where this
+ * librina instantiation will be bound
+ */
+void initialize();
 
 }
 #endif

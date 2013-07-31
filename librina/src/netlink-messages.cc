@@ -547,8 +547,6 @@ IPCEvent* AppRegisterApplicationRequestMessage::toIPCEvent(){
 /* CLASS APP REGISTER APPLICATION RESPONSE MESSAGE */
 AppRegisterApplicationResponseMessage::AppRegisterApplicationResponseMessage() :
 				BaseNetlinkResponseMessage(RINA_C_APP_REGISTER_APPLICATION_RESPONSE) {
-	this->ipcProcessPortId = 0;
-	this->ipcProcessId = 0;
 }
 
 const ApplicationProcessNamingInformation&
@@ -561,15 +559,6 @@ void AppRegisterApplicationResponseMessage::setApplicationName(
 	this->applicationName = applicationName;
 }
 
-unsigned int AppRegisterApplicationResponseMessage::getIpcProcessPortId() const {
-	return ipcProcessPortId;
-}
-
-void AppRegisterApplicationResponseMessage::setIpcProcessPortId(
-		unsigned int ipcProcessPortId) {
-	this->ipcProcessPortId = ipcProcessPortId;
-}
-
 const ApplicationProcessNamingInformation&
 AppRegisterApplicationResponseMessage::getDifName() const {
 	return difName;
@@ -578,15 +567,6 @@ AppRegisterApplicationResponseMessage::getDifName() const {
 void AppRegisterApplicationResponseMessage::setDifName(
 		const ApplicationProcessNamingInformation& difName) {
 	this->difName = difName;
-}
-
-unsigned short AppRegisterApplicationResponseMessage::getIpcProcessId() const{
-	return ipcProcessId;
-}
-
-void AppRegisterApplicationResponseMessage::setIpcProcessId(
-		unsigned short ipcProcessId){
-	this->ipcProcessId = ipcProcessId;
 }
 
 /* CLASS APP UNREGISTER APPLICATION REQUEST MESSAGE */
@@ -762,7 +742,6 @@ void AppGetDIFPropertiesResponseMessage::addDIFProperty(
 IpcmRegisterApplicationRequestMessage::IpcmRegisterApplicationRequestMessage():
 				NetlinkRequestOrNotificationMessage(
 						RINA_C_IPCM_REGISTER_APPLICATION_REQUEST) {
-	applicationPortId = 0;
 }
 
 const ApplicationProcessNamingInformation&
@@ -783,16 +762,6 @@ IpcmRegisterApplicationRequestMessage::getDifName() const{
 void IpcmRegisterApplicationRequestMessage::setDifName(
 		const ApplicationProcessNamingInformation& difName){
 	this->difName = difName;
-}
-
-unsigned int
-IpcmRegisterApplicationRequestMessage::getApplicationPortId() const {
-	return applicationPortId;
-}
-
-void IpcmRegisterApplicationRequestMessage::setApplicationPortId(
-		unsigned int applicationPortId) {
-	this->applicationPortId = applicationPortId;
 }
 
 IPCEvent* IpcmRegisterApplicationRequestMessage::toIPCEvent(){

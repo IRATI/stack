@@ -1,18 +1,19 @@
 package rina.ipcmanager.impl.console;
 
 import rina.ipcmanager.impl.IPCManager;
+import rina.ipcmanager.impl.conf.RINAConfiguration;
 
 /**
  * The command to create a new IPC Process
  * @author eduardgrasa
  *
  */
-public class ListIPCProcessesCommand extends ConsoleCommand{
+public class PrintConfigurationCommand extends ConsoleCommand{
 
-	public static final String ID = "listipcprocesses";
-	private static final String USAGE = "listipcprocesses";
+	public static final String ID = "printconfig";
+	private static final String USAGE = "printconfig";
 	
-	public ListIPCProcessesCommand(IPCManager ipcManager){
+	public PrintConfigurationCommand(IPCManager ipcManager){
 		super(ID, ipcManager);
 	}
 	
@@ -22,7 +23,7 @@ public class ListIPCProcessesCommand extends ConsoleCommand{
 			return "Wrong number of parameters. Usage: "+USAGE;
 		}
 
-		return this.getIPCManager().getIPCProcessesInformationAsString();
+		return RINAConfiguration.getInstance().toString();
 	}
 
 }

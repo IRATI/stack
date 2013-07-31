@@ -68,6 +68,7 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener{
 		this.dataApNamingInfo = dataApNamingInfo;
 		ongoingTests = new Hashtable<Integer, TestController>();
 		cdapSessionManager = new CDAPSessionManagerImpl(new GoogleProtocolBufWireMessageProviderFactory());
+		rina.initialize();
 		ipcEventConsumer = new IPCEventConsumer();
 		ipcEventConsumer.addFlowAcceptor(this, controlApNamingInfo);
 		executeRunnable(ipcEventConsumer);

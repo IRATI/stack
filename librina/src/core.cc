@@ -220,11 +220,6 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 					specificMessage->getApplicationName());
 			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
 			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-		}else{
-			putAPNametoNetlinkPortIdMapping(
-					specificMessage->getDifName(),
-					specificMessage->getIpcProcessPortId(),
-					specificMessage->getIpcProcessId());
 		}
 		break;
 	}

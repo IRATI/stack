@@ -566,7 +566,7 @@ void ConditionVariable::broadcast(){
 	}
 }
 
-void ConditionVariable::wait(){
+void ConditionVariable::doWait(){
 	if (pthread_cond_wait(&cond_, getMutex())){
 		LOG_CRIT("%s", ConcurrentException::error_wait_cond.c_str());
 		throw ConcurrentException(

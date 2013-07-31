@@ -111,6 +111,7 @@ public class RINABandClient implements SDUListener{
 		this.cdapSessionManager = new CDAPSessionManagerImpl(new GoogleProtocolBufWireMessageProviderFactory());
 		this.testWorkers = new ArrayList<TestWorker>();
 		this.executorService = Executors.newCachedThreadPool();
+		rina.initialize();
 	}
 	
 	public void execute(){

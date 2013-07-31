@@ -21,7 +21,6 @@ import rina.cdap.api.message.ObjectValue;
 import rina.cdap.api.message.CDAPMessage.AuthTypes;
 import rina.cdap.api.message.CDAPMessage.Flags;
 import rina.cdap.api.message.CDAPMessage.Opcode;
-import rina.configuration.RINAConfiguration;
 
 public class CDAPSessionManagerImpl extends BaseCDAPSessionManager{
 	
@@ -46,11 +45,7 @@ public class CDAPSessionManagerImpl extends BaseCDAPSessionManager{
 	public CDAPSessionManagerImpl(WireMessageProviderFactory wireMessageProviderFactory){
 		this.cdapSessions = new ConcurrentHashMap<Integer, CDAPSession>();
 		this.wireMessageProviderFactory = wireMessageProviderFactory;
-		try{
-			timeout = RINAConfiguration.getInstance().getLocalConfiguration().getCdapTimeoutInMs();
-		}catch(Exception ex){
-			timeout = DEFAULT_TIMEOUT_IN_MS;
-		}
+		timeout = DEFAULT_TIMEOUT_IN_MS;
 	}
 
 	public CDAPSession createCDAPSession(int portId) {

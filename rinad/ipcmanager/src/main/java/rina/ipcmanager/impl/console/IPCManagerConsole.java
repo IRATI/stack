@@ -14,8 +14,8 @@ import java.util.Scanner;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import rina.configuration.RINAConfiguration;
-import rina.ipcmanager.impl.IPCManagerImpl;
+import rina.ipcmanager.impl.IPCManager;
+import rina.ipcmanager.impl.conf.RINAConfiguration;
 
 /**
  * Exports a text console to interact with the IPC Manager, reachable from port PORT. It doesn't
@@ -34,11 +34,11 @@ public class IPCManagerConsole implements Runnable{
 	
 	private Map<String, ConsoleCommand> commands = null;
 	
-	public IPCManagerConsole(IPCManagerImpl ipcManagerImpl){
+	public IPCManagerConsole(IPCManager ipcManager){
 		commands = new Hashtable<String, ConsoleCommand>();
-		commands.put(PrintRIBCommand.ID, new PrintRIBCommand(ipcManagerImpl));
-		commands.put(ListIPCProcessesCommand.ID, new ListIPCProcessesCommand(ipcManagerImpl));
-		commands.put(EnrollCommand.ID, new EnrollCommand(ipcManagerImpl));
+		commands.put(GetSystemCapabilitiesCommand.ID, new GetSystemCapabilitiesCommand(ipcManager));
+		commands.put(PrintConfigurationCommand.ID, new PrintConfigurationCommand(ipcManager));
+		commands.put(ListIPCProcessesCommand.ID, new ListIPCProcessesCommand(ipcManager));
 	}
 	
 	public void stop(){

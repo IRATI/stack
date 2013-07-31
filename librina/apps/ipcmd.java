@@ -5,7 +5,6 @@ import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.ApplicationRegistrationType;
 import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.DIFConfiguration;
-import eu.irati.librina.DIFType;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.FlowSpecification;
 import eu.irati.librina.IPCException;
@@ -62,9 +61,9 @@ public static void main(String[] args) throws IPCException{
 	printStatement("\nCREATING IPC PROCESSES");
 	ApplicationProcessNamingInformation ipcProcessName1 = new ApplicationProcessNamingInformation("/ipcProcesses/i2CAT/Barcelona", "1");
 	ApplicationProcessNamingInformation ipcProcessName2 = new ApplicationProcessNamingInformation("/ipcProcesses/i2CAT/Castefa", "1"); 
-	IPCProcess ipcProcess1 = ipcProcessFactory.create(ipcProcessName1, DIFType.DIF_TYPE_NORMAL);
+	IPCProcess ipcProcess1 = ipcProcessFactory.create(ipcProcessName1, "normal");
 	printStatement("Created IPC Process with id " + ipcProcess1.getId());
-	IPCProcess ipcProcess2 = ipcProcessFactory.create(ipcProcessName2, DIFType.DIF_TYPE_SHIM_ETHERNET);
+	IPCProcess ipcProcess2 = ipcProcessFactory.create(ipcProcessName2, "shim-ethernet");
 	printStatement("Created IPC Process with id " + ipcProcess2.getId());
 	
 	printStatement("\nLISTING IPC PROCESSES");
@@ -98,8 +97,8 @@ public static void main(String[] args) throws IPCException{
 	destNamingInfo.setEntityInstance("1");
 	
 	printStatement("\nREGISTERING APPLICATIONs TO IPC PROCESS");
-	ipcProcess1.registerApplication(sourceNamingInfo, 35);
-	ipcProcess2.registerApplication(destNamingInfo, 56);
+	ipcProcess1.registerApplication(sourceNamingInfo);
+	ipcProcess2.registerApplication(destNamingInfo);
 	
 	printStatement("\nUNREGISTERING APPLICATIONs FROM IPC PROCESS");
 	ipcProcess1.unregisterApplication(sourceNamingInfo);
@@ -121,7 +120,7 @@ public static void main(String[] args) throws IPCException{
 			ApplicationRegistrationType.APPLICATION_REGISTRATION_SINGLE_DIF);
 	ApplicationRegistrationRequestEvent appRegRequestEvent = new 
 			ApplicationRegistrationRequestEvent(sourceNamingInfo, info, 45);
-	applicationManager.applicationRegistered(appRegRequestEvent, difName, 25, 15, 0, "");
+	applicationManager.applicationRegistered(appRegRequestEvent, difName, 0, "");
 	
 	printStatement("\nNOTIFY APPLICATION ABOUT SUCCESSFUL UNREGISTRATION");
 	ApplicationUnregistrationRequestEvent appUnregRequestEvent = new 
