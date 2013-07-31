@@ -212,6 +212,7 @@ IPCEvent* AppAllocateFlowRequestMessage::toIPCEvent(){
 	FlowRequestEvent * event =
 			new FlowRequestEvent(
 					this->flowSpecification,
+					true,
 					this->sourceAppName,
 					this->destAppName,
 					this->getSequenceNumber());
@@ -322,6 +323,7 @@ IPCEvent* AppAllocateFlowRequestArrivedMessage::toIPCEvent(){
 			new FlowRequestEvent(
 					this->portId,
 					this->flowSpecification,
+					false,
 					this->destAppName,
 					this->sourceAppName,
 					this->difName,
@@ -910,14 +912,73 @@ void IpcmAllocateFlowRequestMessage::setDifName(
 
 IPCEvent* IpcmAllocateFlowRequestMessage::toIPCEvent(){
 	FlowRequestEvent * event =
-			new FlowRequestEvent(portId, flowSpec, sourceAppName, destAppName,
+			new FlowRequestEvent(portId, flowSpec, true, sourceAppName, destAppName,
 					difName, getSequenceNumber());
 	return event;
 }
 
-/* CLASS IPCM ALLOCATE FLOW RESPONSE MESSAGE */
-IpcmAllocateFlowResponseMessage::IpcmAllocateFlowResponseMessage():
-				BaseNetlinkResponseMessage(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE) {
+/* CLASS IPCM ALLOCATE FLOW REQUEST RESULT MESSAGE */
+IpcmAllocateFlowRequestResultMessage::IpcmAllocateFlowRequestResultMessage():
+	BaseNetlinkResponseMessage(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT) {
+}
+
+/* CLASS IPCM ALLOCATE FLOW REQUEST ARRIVED MESSAGE */
+IpcmAllocateFlowRequestArrivedMessage::IpcmAllocateFlowRequestArrivedMessage()
+	: NetlinkRequestOrNotificationMessage(
+			RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED) {
+}
+
+const ApplicationProcessNamingInformation&
+IpcmAllocateFlowRequestArrivedMessage::getDestAppName() const {
+	return destAppName;
+}
+
+void IpcmAllocateFlowRequestArrivedMessage::setDestAppName(
+		const ApplicationProcessNamingInformation& destAppName) {
+	this->destAppName = destAppName;
+}
+
+const FlowSpecification&
+IpcmAllocateFlowRequestArrivedMessage::getFlowSpecification() const {
+	return flowSpecification;
+}
+
+void IpcmAllocateFlowRequestArrivedMessage::setFlowSpecification(
+		const FlowSpecification& flowSpecification) {
+	this->flowSpecification = flowSpecification;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmAllocateFlowRequestArrivedMessage::getSourceAppName() const {
+	return sourceAppName;
+}
+
+void IpcmAllocateFlowRequestArrivedMessage::setSourceAppName(
+		const ApplicationProcessNamingInformation& sourceAppName) {
+	this->sourceAppName = sourceAppName;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmAllocateFlowRequestArrivedMessage::getDifName() const {
+	return difName;
+}
+
+void IpcmAllocateFlowRequestArrivedMessage::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
+IPCEvent* IpcmAllocateFlowRequestArrivedMessage::toIPCEvent(){
+	FlowRequestEvent * event =
+			new FlowRequestEvent(
+					0,
+					this->flowSpecification,
+					false,
+					this->destAppName,
+					this->sourceAppName,
+					this->difName,
+					this->getSequenceNumber());
+	return event;
 }
 
 /* CLASS IPCM IPC PROCESS REGISTERED TO DIF NOTIFICATION MESSAGE */

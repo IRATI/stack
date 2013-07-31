@@ -134,7 +134,7 @@ void doWorkIPCProcess(){
 			dynamic_cast<FlowRequestEvent *>(event);
 	std::cout<<"IPCProcess# Received flow request event"
 			<<std::endl;
-	extendedIPCManager->allocateFlowResponse(
+	extendedIPCManager->allocateFlowRequestResult(
 			*flowRequestEvent, 0, "ok");
 	std::cout<<"IPCProcess# Replied IPC Manager"<<std::endl;
 	delete flowRequestEvent;

@@ -217,6 +217,20 @@ public:
 	}
 };
 
+/**
+ * Thrown when there are problems allocating a remote flow to a
+ * local application
+ */
+class AllocateFlowRequestArrivedException: public IPCException {
+public:
+	AllocateFlowRequestArrivedException():
+		IPCException("Problems allocating a remote flow to a local application"){
+	}
+	AllocateFlowRequestArrivedException(const std::string& description):
+		IPCException(description){
+	}
+};
+
 
 /**
  * Thrown when there are problems notifying the application about the
@@ -239,6 +253,9 @@ public:
 class ExtendedIPCManager: public IPCManager {
 	/** The ID of the IPC Process */
 	unsigned int ipcProcessId;
+
+	/** The portId of the IPC Manager */
+	unsigned int ipcManagerPort;
 
 	/** The current configuration of the IPC Process */
 	DIFConfiguration currentConfiguration;
@@ -295,9 +312,28 @@ public:
 	 * @param errorDescription
 	 * @throws AllocateFlowResponseException
 	 */
-	void allocateFlowResponse(const FlowRequestEvent& event, int result,
+	void allocateFlowRequestResult(const FlowRequestEvent& event, int result,
 			const std::string& errorDescription)
 		throw (AllocateFlowResponseException);
+
+	/**
+	 * Tell the IPC Manager that an allocate flow request targeting a local
+	 * application registered in this IPC Process has arrived. The IPC manager
+	 * will contact the application and ask it if it accepts the flow. IF it
+	 * does it, it will assign a port-id to the flow. Either way it will reply
+	 * the IPC Process
+	 * @param localAppName
+	 * @param remoteAppName
+	 * @param flowSpecification
+	 * @returns the portId assigned to the flow
+	 * @throws AllocateFlowRequestArrivedException if there are issues during
+	 * the operation or the application rejects the flow
+	 */
+	int allocateFlowRequestArrived(
+			const ApplicationProcessNamingInformation& localAppName,
+			const ApplicationProcessNamingInformation& remoteAppName,
+			const FlowSpecification& flowSpecification)
+		throw (AllocateFlowRequestArrivedException);
 
 	/**
 	 * Reply to the IPC Manager, providing 0 or more RIB Objects in response to

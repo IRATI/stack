@@ -109,7 +109,7 @@ int putAppAllocateFlowRequestResultMessageObject(nl_msg* netlinkMessage,
 AppAllocateFlowRequestResultMessage * parseAppAllocateFlowRequestResultMessage(
 		nlmsghdr *hdr);
 
-/* AppAllocateFlowRequestMessage CLASS*/
+/* AppAllocateFlowRequestArrivedMessage CLASS*/
 enum AppAllocateFlowRequestArrivedAttributes {
 	AAFRA_ATTR_SOURCE_APP_NAME = 1,
 	AAFRA_ATTR_DEST_APP_NAME,
@@ -486,20 +486,37 @@ int putIpcmAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 IpcmAllocateFlowRequestMessage *
 	parseIpcmAllocateFlowRequestMessage(nlmsghdr *hdr);
 
-/* IpcmAllocateFlowResponseMessage CLASS*/
-enum IpcmAllocateFlowResponseMessageAttributes {
-	IAFREM_ATTR_RESULT = 1,
-	IAFREM_ATTR_ERROR_DESCRIPTION,
-	__IAFREM_ATTR_MAX,
+/* IpcmAllocateFlowRequestResultMessage CLASS*/
+enum IpcmAllocateFlowRequestResultMessageAttributes {
+	IAFRRM_ATTR_RESULT = 1,
+	IAFRRM_ATTR_ERROR_DESCRIPTION,
+	__IAFRRM_ATTR_MAX,
 };
 
-#define IAFREM_ATTR_MAX (__IAFREM_ATTR_MAX -1)
+#define IAFRRM_ATTR_MAX (__IAFRRM_ATTR_MAX -1)
 
-int putIpcmAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
-		const IpcmAllocateFlowResponseMessage& object);
+int putIpcmAllocateFlowRequestResultMessageObject(nl_msg* netlinkMessage,
+		const IpcmAllocateFlowRequestResultMessage& object);
 
-IpcmAllocateFlowResponseMessage *
-	parseIpcmAllocateFlowResponseMessage(nlmsghdr *hdr);
+IpcmAllocateFlowRequestResultMessage *
+	parseIpcmAllocateFlowRequestResultMessage(nlmsghdr *hdr);
+
+/* IpcmAllocateFlowRequestArrivedMessage CLASS*/
+enum IpcmAllocateFlowRequestArrivedMessageAttributes {
+	IAFRA_ATTR_SOURCE_APP_NAME = 1,
+	IAFRA_ATTR_DEST_APP_NAME,
+	IAFRA_ATTR_FLOW_SPEC,
+	IAFRA_ATTR_DIF_NAME,
+	__IAFRA_ATTR_MAX,
+};
+
+#define IAFRA_ATTR_MAX (__IAFRA_ATTR_MAX -1)
+
+int putIpcmAllocateFlowRequestArrivedMessageObject(nl_msg* netlinkMessage,
+		const IpcmAllocateFlowRequestArrivedMessage& object);
+
+IpcmAllocateFlowRequestArrivedMessage * parseIpcmAllocateFlowRequestArrivedMessage(
+		nlmsghdr *hdr);
 
 
 /* IpcmDIFRegistrationNotification CLASS*/

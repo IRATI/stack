@@ -106,7 +106,7 @@ public static void main(String[] args) throws IPCException{
 	
 	printStatement("\nREQUESTING ALLOCATION OF FLOW TO IPC PROCESS");
 	FlowRequestEvent flowRequestEvent = new FlowRequestEvent(
-			new FlowSpecification(), sourceNamingInfo, destNamingInfo, 25);
+			new FlowSpecification(), true, sourceNamingInfo, destNamingInfo, 25);
 	ipcProcess1.allocateFlow(flowRequestEvent);
 	
 	printStatement("\nDESTROYING IPC PROCESSES");

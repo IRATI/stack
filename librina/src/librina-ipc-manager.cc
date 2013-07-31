@@ -292,10 +292,10 @@ throw (AllocateFlowException) {
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
 
-	IpcmAllocateFlowResponseMessage * allocateFlowResponse;
+	IpcmAllocateFlowRequestResultMessage * allocateFlowResponse;
 	try{
 		allocateFlowResponse =
-				dynamic_cast<IpcmAllocateFlowResponseMessage *>(
+				dynamic_cast<IpcmAllocateFlowRequestResultMessage *>(
 						rinaManager->sendRequestAndWaitForResponse(&message,
 								IPCProcess::error_allocating_flow));
 	}catch(NetlinkException &e){

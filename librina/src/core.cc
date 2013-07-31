@@ -153,6 +153,17 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		}
 		break;
 	}
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED: {
+		AppAllocateFlowRequestArrivedMessage * specificMessage =
+				dynamic_cast<AppAllocateFlowRequestArrivedMessage *>(message);
+		if(send){
+			RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
+					specificMessage->getDestAppName());
+			specificMessage->setDestPortId(endpoint->getNetlinkPortId());
+			specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
+		}
+		break;
+	}
 	case RINA_C_APP_DEALLOCATE_FLOW_REQUEST: {
 		AppDeallocateFlowRequestMessage * specificMessage =
 				dynamic_cast<AppDeallocateFlowRequestMessage *>(message);
@@ -288,7 +299,13 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		}
 		break;
 	}
-	case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE:{
+	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT:{
+		if(send){
+			message->setDestPortId(getIPCManagerPortId());
+		}
+		break;
+	}
+	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED:{
 		if(send){
 			message->setDestPortId(getIPCManagerPortId());
 		}

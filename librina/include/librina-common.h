@@ -340,7 +340,7 @@ public:
 };
 
 /**
- * Event informing about an incoming flow request from another application
+ * Event informing about an incoming flow request from a local application
  */
 class FlowRequestEvent: public IPCEvent {
 	/** The port-id that locally identifies the flow */
@@ -358,18 +358,23 @@ class FlowRequestEvent: public IPCEvent {
 	/** The characteristics of the flow */
 	FlowSpecification flowSpecification;
 
+	bool localRequest;
+
 public:
 	FlowRequestEvent(const FlowSpecification& flowSpecification,
+			bool localRequest,
 			const ApplicationProcessNamingInformation& localApplicationName,
 			const ApplicationProcessNamingInformation& remoteApplicationName,
 			unsigned int sequenceNumber);
 	FlowRequestEvent(int portId,
 			const FlowSpecification& flowSpecification,
+			bool localRequest,
 			const ApplicationProcessNamingInformation& localApplicationName,
 			const ApplicationProcessNamingInformation& remoteApplicationName,
 			const ApplicationProcessNamingInformation& DIFName,
 			unsigned int sequenceNumber);
 	int getPortId() const;
+	bool isLocalRequest() const;
 	const FlowSpecification& getFlowSpecification() const;
 	void setPortId(int portId);
 	void setDIFName(const ApplicationProcessNamingInformation& difName);
@@ -518,37 +523,6 @@ public:
 	void setPolicies(const std::vector<Policy>& policies);
 	const std::vector<QoSCube>& getQosCubes() const;
 	void setQosCubes(const std::vector<QoSCube>& qosCubes);
-};
-
-/**
- * Encapsulates a flow request
- */
-class FlowRequest {
-	/** The port-id that locally identifies the flow */
-	int portId;
-
-	/** The application that requested the flow */
-	ApplicationProcessNamingInformation sourceApplicationName;
-
-	/** The application targeted by the flow */
-	ApplicationProcessNamingInformation destinationApplicationName;
-
-	/** The characteristics of the flow */
-	FlowSpecification flowSpecification;
-
-public:
-	const ApplicationProcessNamingInformation&
-			getDestinationApplicationName() const;
-	void setDestinationApplicationName(
-			const ApplicationProcessNamingInformation&
-				destinationApplicationName);
-	const FlowSpecification& getFlowSpecification() const;
-	void setFlowSpecification(const FlowSpecification& flowSpecification);
-	int getPortId() const;
-	void setPortId(int portId);
-	const ApplicationProcessNamingInformation& getSourceApplicationName() const;
-	void setSourceApplicationName(
-			const ApplicationProcessNamingInformation& sourceApplicationName);
 };
 
 /**

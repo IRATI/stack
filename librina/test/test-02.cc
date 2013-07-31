@@ -120,7 +120,7 @@ int main(int argc, char * argv[]) {
 	/* TEST ALLOCATE FLOW */
 	FlowSpecification *flowSpec = new FlowSpecification();
 	FlowRequestEvent * flowRequest = new FlowRequestEvent(*flowSpec,
-			*sourceName, *difName, 1234);
+			true, *sourceName, *difName, 1234);
 	flowRequest->setPortId(430);
 	ipcProcess1->allocateFlow(*flowRequest);
 
@@ -144,7 +144,7 @@ int main(int argc, char * argv[]) {
 
 	/* TEST FLOW ALLOCATED */
 	FlowRequestEvent * flowEvent = new FlowRequestEvent(25, *flowSpec,
-			*sourceName, *destinationName, *difName, 3);
+			true, *sourceName, *destinationName, *difName, 3);
 	applicationManager->flowAllocated(*flowEvent, "ok");
 
 	ipcProcessFactory->destroy(ipcProcess1->getId());

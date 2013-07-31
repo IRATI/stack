@@ -217,14 +217,14 @@ void ExtendedIPCManager::unregisterApplicationResponse(
 #endif
 }
 
-void ExtendedIPCManager::allocateFlowResponse(
+void ExtendedIPCManager::allocateFlowRequestResult(
 		const FlowRequestEvent& event, int result,
 		const std::string& errorDescription)
 	throw(AllocateFlowResponseException){
 #if STUB_API
 	//Do nothing
 #else
-	IpcmAllocateFlowResponseMessage responseMessage;
+	IpcmAllocateFlowRequestResultMessage responseMessage;
 	responseMessage.setResult(result);
 	responseMessage.setErrorDescription(errorDescription);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
@@ -234,6 +234,27 @@ void ExtendedIPCManager::allocateFlowResponse(
 	}catch(NetlinkException &e){
 		throw AllocateFlowResponseException(e.what());
 	}
+#endif
+}
+
+int ExtendedIPCManager::allocateFlowRequestArrived(
+			const ApplicationProcessNamingInformation& localAppName,
+			const ApplicationProcessNamingInformation& remoteAppName,
+			const FlowSpecification& flowSpecification)
+		throw (AllocateFlowRequestArrivedException){
+#if STUP_API
+	return 25;
+#else
+	IpcmAllocateFlowRequestArrivedMessage message;
+	message.setSourceAppName(remoteAppName);
+	message.setDestAppName(localAppName);
+	message.setFlowSpecification(flowSpecification);
+	message.setDifName(currentConfiguration.getDifName());
+	message.setSourceIpcProcessId(ipcProcessId);
+	message.setRequestMessage(true);
+
+	//TODO
+	return 25;
 #endif
 }
 

@@ -1547,11 +1547,11 @@ int testIpcmAllocateFlowRequestMessage() {
 	return returnValue;
 }
 
-int testIpcmAllocateFlowResponseMessage() {
-	std::cout << "TESTING IPCM ALLOCATE FLOW RESPONSE MESSAGE\n";
+int testIpcmAllocateFlowRequestResultMessage() {
+	std::cout << "TESTING IPCM ALLOCATE FLOW REQUEST RESULT MESSAGE\n";
 	int returnValue = 0;
 
-	IpcmAllocateFlowResponseMessage message;
+	IpcmAllocateFlowRequestResultMessage message;
 	message.setResult(-25);
 	message.setErrorDescription("Something went wrong, that's life");
 
@@ -1565,18 +1565,18 @@ int testIpcmAllocateFlowResponseMessage() {
 
 	int result = putBaseNetlinkMessage(netlinkMessage, &message);
 	if (result < 0) {
-		std::cout << "Error constructing Ipcm Allocate Flow Response "
+		std::cout << "Error constructing Ipcm Allocate Flow Request result "
 				<< "Message \n";
 		nlmsg_free(netlinkMessage);
 		return result;
 	}
 
 	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
-	IpcmAllocateFlowResponseMessage * recoveredMessage =
-			dynamic_cast<IpcmAllocateFlowResponseMessage *>(
+	IpcmAllocateFlowRequestResultMessage * recoveredMessage =
+			dynamic_cast<IpcmAllocateFlowRequestResultMessage *>(
 					parseBaseNetlinkMessage(netlinkMessageHeader));
 	if (recoveredMessage == 0) {
-		std::cout << "Error parsing Ipcm Allocate Flow Response Message "
+		std::cout << "Error parsing Ipcm Allocate Flow Request Result "
 				<< "\n";
 		returnValue = -1;
 	} else if (message.getResult() != recoveredMessage->getResult()) {
@@ -1591,7 +1591,91 @@ int testIpcmAllocateFlowResponseMessage() {
 	}
 
 	if (returnValue == 0) {
-		std::cout << "IpcmAssignToDIFResponse test ok\n";
+		std::cout << "IpcmAllocateFlowRequestResult test ok\n";
+	}
+	nlmsg_free(netlinkMessage);
+	delete recoveredMessage;
+
+	return returnValue;
+}
+
+int testIpcmAllocateFlowRequestArrivedMessage() {
+	std::cout << "TESTING IPCM ALLOCATE FLOW REQUEST ARRIVED MESSAGE\n";
+	int returnValue = 0;
+
+	ApplicationProcessNamingInformation sourceName;
+	sourceName.setProcessName("/apps/source");
+	sourceName.setProcessInstance("12");
+	sourceName.setEntityName("database");
+	sourceName.setEntityInstance("12");
+
+	ApplicationProcessNamingInformation destName;
+	destName.setProcessName("/apps/dest");
+	destName.setProcessInstance("12345");
+	destName.setEntityName("printer");
+	destName.setEntityInstance("12623456");
+
+	ApplicationProcessNamingInformation difName;;
+	difName.setProcessName("/difs/Test1.DIF");
+
+	FlowSpecification flowSpec;
+
+	IpcmAllocateFlowRequestArrivedMessage message;
+	message.setSourceAppName(sourceName);
+	message.setDestAppName(destName);
+	message.setFlowSpecification(flowSpec);
+	message.setDifName(difName);
+
+	struct nl_msg* netlinkMessage;
+	netlinkMessage = nlmsg_alloc();
+	if (!netlinkMessage) {
+		std::cout << "Error allocating Netlink message\n";
+	}
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+			sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+	int result = putBaseNetlinkMessage(netlinkMessage, &message);
+	if (result < 0) {
+		std::cout
+		<< "Error constructing IPCM Allocate Flow Request Arrived"
+		<< "Message \n";
+		nlmsg_free(netlinkMessage);
+		return result;
+	}
+
+	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+	IpcmAllocateFlowRequestArrivedMessage * recoveredMessage =
+			dynamic_cast<IpcmAllocateFlowRequestArrivedMessage *>(parseBaseNetlinkMessage(
+					netlinkMessageHeader));
+	if (recoveredMessage == 0) {
+		std::cout
+		<< "Error parsing IPCM Allocate Flow Request Arrived Message "
+		<< "\n";
+		returnValue = -1;
+	} else if (message.getSourceAppName()
+			!= recoveredMessage->getSourceAppName()) {
+		std::cout
+		<< "Source application name on original and recovered messages"
+		<< " are different\n";
+		returnValue = -1;
+	} else if (message.getDestAppName()
+			!= recoveredMessage->getDestAppName()) {
+		std::cout << "Destination application name on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	} else if (message.getFlowSpecification()
+			!= recoveredMessage->getFlowSpecification()) {
+		std::cout << "Destination flow specification on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	} else if (message.getDifName() != recoveredMessage->getDifName()) {
+		std::cout << "DIF name on original and recovered "
+				<< "messages are different\n";
+		returnValue = -1;
+	}
+
+	if (returnValue == 0) {
+		std::cout << "IpcmAllocateFlowRequestArrivedMessage test ok\n";
 	}
 	nlmsg_free(netlinkMessage);
 	delete recoveredMessage;
@@ -1948,7 +2032,12 @@ int main(int argc, char * argv[]) {
 		return result;
 	}
 
-	result = testIpcmAllocateFlowResponseMessage();
+	result = testIpcmAllocateFlowRequestResultMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testIpcmAllocateFlowRequestArrivedMessage();
 	if (result < 0) {
 		return result;
 	}
