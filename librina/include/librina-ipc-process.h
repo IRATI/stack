@@ -325,6 +325,17 @@ public:
 		throw (DeallocateFlowResponseException);
 
 	/**
+	 * Invoked by the ipC Process to notify that a flow has been remotely
+	 * unallocated
+	 * @param portId
+	 * @param code
+	 * @param reason
+	 * @throws DeallocateFlowResponseException
+	 */
+	void flowDeallocatedRemotely(int portId, int code, const std::string& reason)
+		throw (DeallocateFlowResponseException);
+
+	/**
 	 * Reply to the IPC Manager, providing 0 or more RIB Objects in response to
 	 * a "query RIB request"
 	 * @param event

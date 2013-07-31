@@ -580,6 +580,27 @@ const ApplicationProcessNamingInformation&
 	return applicationName;
 }
 
+/* CLASS FLOW DEALLOCATED EVENT */
+FlowDeallocatedEvent::FlowDeallocatedEvent(
+		int portId, int code, const std::string& reason) :
+				IPCEvent(FLOW_DEALLOCATED_EVENT, 0) {
+	this->portId = portId;
+	this->code = code;
+	this->reason = reason;
+}
+
+int FlowDeallocatedEvent::getPortId() const {
+	return portId;
+}
+
+int FlowDeallocatedEvent::getCode() const{
+	return code;
+}
+
+const std::string FlowDeallocatedEvent::getReason() const{
+	return reason;
+}
+
 /* CLASS APPLICATION REGISTRATION INFORMATION */
 ApplicationRegistrationInformation::ApplicationRegistrationInformation(){
 	applicationRegistrationType = APPLICATION_REGISTRATION_ANY_DIF;

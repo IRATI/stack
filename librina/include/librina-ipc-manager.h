@@ -632,6 +632,19 @@ public:
 		throw (NotifyFlowDeallocatedException);
 
 	/**
+	 * Invoked by the ipC Process to notify that a flow has been remotely
+	 * unallocated
+	 * @param portId
+	 * @param code
+	 * @param reason
+	 * @throws NotifyFlowDeallocatedException
+	 */
+	void flowDeallocatedRemotely(int portId, int code,
+			const std::string& reason,
+			const ApplicationProcessNamingInformation& appName)
+	throw (NotifyFlowDeallocatedException);
+
+	/**
 	 * Return the properties of zero or more DIFs to the application
 	 * @param event the event containing the query
 	 * @param result 0 if the operation was successful, a negative integer

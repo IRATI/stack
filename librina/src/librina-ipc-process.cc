@@ -271,6 +271,26 @@ void ExtendedIPCManager::flowDeallocated(
 #endif
 }
 
+void ExtendedIPCManager::flowDeallocatedRemotely(
+		int portId, int code, const std::string& reason)
+		throw (DeallocateFlowResponseException){
+#if STUB_API
+	//Do nothing
+#else
+	IpcmFlowDeallocatedNotificationMessage message;
+	message.setPortId(portId);
+	message.setCode(code);
+	message.setReason(reason);
+	message.setSourceIpcProcessId(ipcProcessId);
+	message.setNotificationMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&message);
+	}catch(NetlinkException &e){
+		throw DeallocateFlowResponseException(e.what());
+	}
+#endif
+}
+
 void ExtendedIPCManager::queryRIBResponse(
 		const QueryRIBRequestEvent& event, int result,
 		const std::string& errorDescription,

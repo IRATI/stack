@@ -44,6 +44,7 @@ enum RINANetlinkOperationCode{
 	RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE, /* IPC Manager -> IPC Process */
 	RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST, /* IPC Manager -> IPC Process */
 	RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE, /* IPC Process -> IPC Manager */
+	RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION, /* IPC Process -> IPC Manager, flow deallocated without the application having requested it */
 	RINA_C_IPCM_REGISTER_APPLICATION_REQUEST, /*IPC Manager -> IPC Process */
 	RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE, /*IPC Process -> IPC Manager */
 	RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST, /* IPC Manager -> IPC Process */
@@ -60,7 +61,7 @@ enum RINANetlinkOperationCode{
 	RINA_C_APP_ALLOCATE_FLOW_RESPONSE, /* Allocate flow response to an allocate request arrived operation, Application -> IPC Manager */
 	RINA_C_APP_DEALLOCATE_FLOW_REQUEST, /* Application -> IPC Manager */
 	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, /* IPC Manager -> Application */
-	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, /* IPC Process -> Application, flow deallocated without the application having requested it */
+	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, /* IPC Manager -> Application, flow deallocated without the application having requested it */
 	RINA_C_APP_REGISTER_APPLICATION_REQUEST, /* Application -> IPC Manager */
 	RINA_C_APP_REGISTER_APPLICATION_RESPONSE, /* IPC Manager -> Application */
 	RINA_C_APP_UNREGISTER_APPLICATION_REQUEST, /* Application -> IPC Manager */
@@ -358,7 +359,7 @@ public:
 };
 
 /**
- * IPC Process -> Application, flow deallocated without the application having
+ * IPC Process -> IPC Manager, flow deallocated without the application having
  *  requested it
  */
 class AppFlowDeallocatedNotificationMessage: public NetlinkRequestOrNotificationMessage {
@@ -377,10 +378,6 @@ class AppFlowDeallocatedNotificationMessage: public NetlinkRequestOrNotification
 	 */
 	ApplicationProcessNamingInformation applicationName;
 
-	/**
-	 * The name of the application that requested the flow deallocation
-	 */
-	ApplicationProcessNamingInformation difName;
 
 public:
 	AppFlowDeallocatedNotificationMessage();
@@ -393,8 +390,6 @@ public:
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	void setApplicationName(
 			const ApplicationProcessNamingInformation& applicationName);
-	const ApplicationProcessNamingInformation& getDifName() const;
-	void setDifName(const ApplicationProcessNamingInformation& difName);
 	IPCEvent* toIPCEvent();
 };
 
@@ -816,6 +811,33 @@ class IpcmDeallocateFlowResponseMessage: public BaseNetlinkResponseMessage {
 
 public:
 	IpcmDeallocateFlowResponseMessage();
+};
+
+/**
+ * IPC Manager -> Application, flow deallocated without the application having
+ *  requested it
+ */
+class IpcmFlowDeallocatedNotificationMessage: public NetlinkRequestOrNotificationMessage {
+
+	/** The portId of the flow that has been deallocated */
+	int portId;
+
+	/** A number identifying a reason why the flow has been deallocated */
+	int code;
+
+	/** An optional explanation of why the flow has been deallocated */
+	std::string reason;
+
+
+public:
+	IpcmFlowDeallocatedNotificationMessage();
+	int getCode() const;
+	void setCode(int code);
+	int getPortId() const;
+	void setPortId(int portId);
+	const std::string& getReason() const;
+	void setReason(const std::string& reason);
+	IPCEvent* toIPCEvent();
 };
 
 /**

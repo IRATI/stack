@@ -301,6 +301,12 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		}
 		break;
 	}
+	case RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION:{
+		if(send){
+			message->setDestPortId(getIPCManagerPortId());
+		}
+		break;
+	}
 	default:{
 		//Do nothing
 	}

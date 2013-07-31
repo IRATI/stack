@@ -10,6 +10,7 @@ import eu.irati.librina.AllocateFlowException;
 import eu.irati.librina.ApplicationManagerSingleton;
 import eu.irati.librina.DIFConfiguration;
 import eu.irati.librina.FlowDeallocateRequestEvent;
+import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
@@ -99,6 +100,19 @@ public class FlowManager {
 		}
 		
 		applicationManager.flowDeallocated(event, 0, "");
+	}
+	
+	public void flowDeallocated(FlowDeallocatedEvent event) throws Exception{
+		FlowState flow = null;
+		try{
+			flow = getFlow(event.getPortId());
+			flows.remove(event.getPortId());
+			applicationManager.flowDeallocatedRemotely(
+					event.getPortId(), event.getCode(), 
+					event.getReason(), flow.getLocalApplication());
+		}catch(Exception ex){
+			log.error("Error processing notification of flow deallocation. "+ex.getMessage());
+		}
 	}
 	
 	private int getAvailablePortId() throws Exception{

@@ -180,7 +180,6 @@ enum AppFlowDeallocatedNotificationMessageAttributes {
 	AFDN_ATTR_CODE,
 	AFDN_ATTR_REASON,
 	AFDN_ATTR_APP_NAME,
-	AFDN_ATTR_DIF_NAME,
 	__AFDN_ATTR_MAX,
 };
 
@@ -560,6 +559,22 @@ int putIpcmDeallocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 		const IpcmDeallocateFlowResponseMessage& object);
 
 IpcmDeallocateFlowResponseMessage * parseIpcmDeallocateFlowResponseMessage(
+		nlmsghdr *hdr);
+
+/* IpcmFlowDeallocatedNotificationMessage CLASS*/
+enum IpcmFlowDeallocatedNotificationMessageAttributes {
+	IFDN_ATTR_PORT_ID = 1,
+	IFDN_ATTR_CODE,
+	IFDN_ATTR_REASON,
+	__IFDN_ATTR_MAX,
+};
+
+#define IFDN_ATTR_MAX (__IFDN_ATTR_MAX -1)
+
+int putIpcmFlowDeallocatedNotificationMessageObject(nl_msg* netlinkMessage,
+		const IpcmFlowDeallocatedNotificationMessage& object);
+
+IpcmFlowDeallocatedNotificationMessage * parseIpcmFlowDeallocatedNotificationMessage(
 		nlmsghdr *hdr);
 
 /* IpcmDIFRegistrationNotification CLASS*/

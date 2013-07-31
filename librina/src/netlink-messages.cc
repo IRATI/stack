@@ -442,16 +442,6 @@ void AppFlowDeallocatedNotificationMessage::setReason(
 }
 
 const ApplicationProcessNamingInformation&
-AppFlowDeallocatedNotificationMessage::getDifName() const {
-	return difName;
-}
-
-void AppFlowDeallocatedNotificationMessage::setDifName(
-		const ApplicationProcessNamingInformation& difName) {
-	this->difName = difName;
-}
-
-const ApplicationProcessNamingInformation&
 AppFlowDeallocatedNotificationMessage::getApplicationName() const {
 	return applicationName;
 }
@@ -463,7 +453,7 @@ void AppFlowDeallocatedNotificationMessage::setApplicationName(
 
 IPCEvent* AppFlowDeallocatedNotificationMessage::toIPCEvent(){
 	FlowDeallocatedEvent * event = new FlowDeallocatedEvent(
-			portId, code, reason, difName);
+			portId, code, reason);
 	return event;
 }
 
@@ -1024,6 +1014,45 @@ IPCEvent* IpcmDeallocateFlowRequestMessage::toIPCEvent(){
 /* CLASS IPCM DEALLOCATE FLOW RESPONSE MESSAGE */
 IpcmDeallocateFlowResponseMessage::IpcmDeallocateFlowResponseMessage() :
 	BaseNetlinkResponseMessage(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE) {
+}
+
+/* CLASS IPCM FLOW DEALLOCATED NOTIFICATION MESSAGE */
+IpcmFlowDeallocatedNotificationMessage::IpcmFlowDeallocatedNotificationMessage() :
+		NetlinkRequestOrNotificationMessage(
+				RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION) {
+	this->portId = 0;
+	this->code = 0;
+}
+
+int IpcmFlowDeallocatedNotificationMessage::getCode() const {
+	return code;
+}
+
+void IpcmFlowDeallocatedNotificationMessage::setCode(int code) {
+	this->code = code;
+}
+
+int IpcmFlowDeallocatedNotificationMessage::getPortId() const {
+	return portId;
+}
+
+void IpcmFlowDeallocatedNotificationMessage::setPortId(int portId) {
+	this->portId = portId;
+}
+
+const std::string& IpcmFlowDeallocatedNotificationMessage::getReason() const {
+	return reason;
+}
+
+void IpcmFlowDeallocatedNotificationMessage::setReason(
+		const std::string& reason) {
+	this->reason = reason;
+}
+
+IPCEvent* IpcmFlowDeallocatedNotificationMessage::toIPCEvent(){
+	FlowDeallocatedEvent * event = new FlowDeallocatedEvent(
+			portId, code, reason);
+	return event;
 }
 
 /* CLASS IPCM IPC PROCESS REGISTERED TO DIF NOTIFICATION MESSAGE */

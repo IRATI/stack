@@ -321,6 +321,17 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
+    } else if ($1->getType() == rina::FLOW_DEALLOCATED_EVENT) {
+    	rina::FlowDeallocatedEvent *flowReqEvent = dynamic_cast<rina::FlowDeallocatedEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/FlowDeallocatedEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::FlowDeallocatedEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
     }
 }
 %enddef
@@ -328,29 +339,6 @@
 DOWNCAST_IPC_EVENT_CONSUMER(eventWait);
 DOWNCAST_IPC_EVENT_CONSUMER(eventPoll);
 DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
-
-/*%typemap(jni) rina::IPCEvent *rina::IPCEventProducer::eventWait "jobject"
-%typemap(jtype) rina::IPCEvent *rina::IPCEventProducer::eventWait "eu.irati.librina.IPCEvent"
-%typemap(jstype) rina::IPCEvent *rina::IPCEventProducer::eventWait "eu.irati.librina.IPCEvent"
-%typemap(javaout) rina::IPCEvent *rina::IPCEventProducer::eventWait {
-    return $jnicall;
-  }
-
-%typemap(out) rina::IPCEvent *rina::IPCEventProducer::eventWait {
-    rina::ApplicationRegistrationRequestEvent *appRegReqEvent = dynamic_cast<rina::ApplicationRegistrationRequestEvent *>($1);
-    if (appRegReqEvent) {
-        // call the Ambulance(long cPtr, boolean cMemoryOwn) constructor
-        jclass clazz = jenv->FindClass("eu/irati/librina/ApplicationRegistrationRequestEvent");
-        if (clazz) {
-            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
-            if (mid) {
-                jlong cptr = 0;
-                *(rina::ApplicationRegistrationRequestEvent **)&cptr = appRegReqEvent; 
-                $result = jenv->NewObject(clazz, mid, cptr, false);
-            }
-        }
-    }
-}*/
 
 %{
 #include "exceptions.h"

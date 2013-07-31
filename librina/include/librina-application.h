@@ -369,31 +369,6 @@ public:
 extern Singleton<IPCManager> ipcManager;
 
 /**
- * Event informing that a flow has been deallocated by an IPC Process, without
- * the application having requested it
- */
-class FlowDeallocatedEvent: public IPCEvent {
-	/** The port id of the deallocated flow */
-	int portId;
-
-	/** The name of the DIF */
-	ApplicationProcessNamingInformation difName;
-
-	/** An error code indicating why the flow was deallocated */
-	int code;
-
-	/** Optional explanation giving more details about the flow deallocation */
-	std::string reason;
-public:
-	FlowDeallocatedEvent(int portId, int code, const std::string& reason,
-			const ApplicationProcessNamingInformation& difName);
-	int getPortId() const;
-	int getCode() const;
-	const std::string getReason() const;
-	const ApplicationProcessNamingInformation getDIFName() const;
-};
-
-/**
  * Event informing that an application has been unregistered from a DIF,
  * without the application having requested it
  */

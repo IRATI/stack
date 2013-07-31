@@ -672,6 +672,29 @@ void ApplicationManager::flowDeallocated(
 #endif
 }
 
+void ApplicationManager::flowDeallocatedRemotely(
+		int portId, int code,
+		const std::string& reason,
+		const ApplicationProcessNamingInformation& appName)
+	throw (NotifyFlowDeallocatedException){
+	LOG_DBG("ApplicationManager::flowDeallocatedRemotely called");
+#if STUB_API
+	//Do nothing
+#else
+	AppFlowDeallocatedNotificationMessage message;
+	message.setPortId(portId);
+	message.setCode(code);
+	message.setReason(reason);
+	message.setApplicationName(appName);
+	message.setNotificationMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&message);
+	}catch(NetlinkException &e){
+		throw NotifyFlowDeallocatedException(e.what());
+	}
+#endif
+}
+
 void ApplicationManager::getDIFPropertiesResponse(
 		const GetDIFPropertiesRequestEvent &event,
 			int result, const std::string& errorDescription,

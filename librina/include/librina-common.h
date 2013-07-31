@@ -404,6 +404,27 @@ public:
 };
 
 /**
+ * Event informing that a flow has been deallocated by an IPC Process, without
+ * the application having requested it
+ */
+class FlowDeallocatedEvent: public IPCEvent {
+	/** The port id of the deallocated flow */
+	int portId;
+
+	/** An error code indicating why the flow was deallocated */
+	int code;
+
+	/** Optional explanation giving more details about the flow deallocation */
+	std::string reason;
+public:
+	FlowDeallocatedEvent(int portId, int code, const std::string& reason);
+	int getPortId() const;
+	int getCode() const;
+	const std::string getReason() const;
+	const ApplicationProcessNamingInformation getDIFName() const;
+};
+
+/**
  * Identifies the types of application registrations
  * APPLICATION_REGISTRATION_SINGLE_DIF - registers the application in a single
  * DIF, specified by the application
