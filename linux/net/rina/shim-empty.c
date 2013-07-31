@@ -32,9 +32,12 @@
 #include "common.h"
 #include "utils.h"
 #include "kipcm.h"
-#include "shim.h"
 #include "debug.h"
 #include "shim-utils.h"
+#include "ipcp-factories.h"
+
+/* FIXME: To be removed ABSOLUTELY */
+extern struct kipcm * default_kipcm;
 
 /* Holds all configuration related to a shim instance */
 struct empty_info {
@@ -45,7 +48,7 @@ struct empty_info {
 };
 
 /* This structure will contains per-instance data */
-struct shim_instance_data {
+struct ipcp_instance_data {
 	struct list_head    list;
 	struct list_head    flows;
         ipc_process_id_t    id;
@@ -59,7 +62,7 @@ struct shim_instance_data {
  *   added
  */
 
-static int empty_flow_allocate_request(struct shim_instance_data * data,
+static int empty_flow_allocate_request(struct ipcp_instance_data * data,
                                        const struct name *         source,
                                        const struct name *         dest,
                                        const struct flow_spec *    fspec,
@@ -72,7 +75,7 @@ static int empty_flow_allocate_request(struct shim_instance_data * data,
 	return -1;
 }
 
-static int empty_flow_allocate_response(struct shim_instance_data * data,
+static int empty_flow_allocate_response(struct ipcp_instance_data * data,
                                         port_id_t                   id,
                                         response_reason_t *         response)
 {
@@ -82,7 +85,7 @@ static int empty_flow_allocate_response(struct shim_instance_data * data,
         return -1;
 }
 
-static int empty_flow_deallocate(struct shim_instance_data * data,
+static int empty_flow_deallocate(struct ipcp_instance_data * data,
                                  port_id_t                   id)
 {
 	ASSERT(data);
@@ -90,7 +93,7 @@ static int empty_flow_deallocate(struct shim_instance_data * data,
 	return -1;
 }
 
-static int empty_application_register(struct shim_instance_data * data,
+static int empty_application_register(struct ipcp_instance_data * data,
                                       const struct name *         name)
 {
         ASSERT(data);
@@ -99,7 +102,7 @@ static int empty_application_register(struct shim_instance_data * data,
         return -1;
 }
 
-static int empty_application_unregister(struct shim_instance_data * data,
+static int empty_application_unregister(struct ipcp_instance_data * data,
                                         const struct name *         name)
 {
         ASSERT(data);
@@ -108,7 +111,7 @@ static int empty_application_unregister(struct shim_instance_data * data,
         return -1;
 }
 
-static int empty_sdu_write(struct shim_instance_data * data,
+static int empty_sdu_write(struct ipcp_instance_data * data,
                            port_id_t                   id,
                            const struct sdu *          sdu)
 {
@@ -118,7 +121,7 @@ static int empty_sdu_write(struct shim_instance_data * data,
         return -1;
 }
 
-static int empty_sdu_read(struct shim_instance_data * data,
+static int empty_sdu_read(struct ipcp_instance_data * data,
                           port_id_t                   id,
                           struct sdu *                sdu)
 {
@@ -134,7 +137,7 @@ static int empty_sdu_read(struct shim_instance_data * data,
  * static struct containing all the pointers and share it among all the
  * instances.
  */
-static struct shim_instance_ops empty_instance_ops = {
+static struct ipcp_instance_ops empty_instance_ops = {
         .flow_allocate_request  = empty_flow_allocate_request,
         .flow_allocate_response = empty_flow_allocate_response,
         .flow_deallocate        = empty_flow_deallocate,
@@ -148,23 +151,11 @@ static struct shim_instance_ops empty_instance_ops = {
  * This structure (static again, there's no need to dynamically allocate a
  * buffer) will hold all the shim data
  */
-static struct shim_data {
+static struct ipcp_factory_data {
         struct list_head instances;
 } empty_data;
 
-/*
- * We maintain a shim pointer since the module is loaded once (and we need it
- * during module unloading)
- */
-static struct shim * empty_shim = NULL;
-
-/*
- * NOTE:
- *   The functions that have to be exported to the shim-layer.
- */
-
-/* Initializes the shim_data structure */
-static int empty_init(struct shim_data * data)
+static int empty_init(struct ipcp_factory_data * data)
 {
         ASSERT(data);
         
@@ -174,11 +165,7 @@ static int empty_init(struct shim_data * data)
         return 0;
 }
 
-/*
- * Finalizes (destroys) the shim_data structure, releasing resources allocated
- * by empty_init
- */
-static int empty_fini(struct shim_data * data)
+static int empty_fini(struct ipcp_factory_data * data)
 {
 
         ASSERT(data);
@@ -202,11 +189,12 @@ static int empty_fini(struct shim_data * data)
         return 0;
 }
 
-static struct shim_instance_data * find_instance(struct shim_data * data,
-                                                 ipc_process_id_t   id)
+static struct ipcp_instance_data *
+find_instance(struct ipcp_factory_data * data,
+              ipc_process_id_t           id)
 {
 
-        struct shim_instance_data * pos;
+        struct ipcp_instance_data * pos;
 
         list_for_each_entry(pos, &(data->instances), list) {
                 if (pos->id == id) {
@@ -217,10 +205,10 @@ static struct shim_instance_data * find_instance(struct shim_data * data,
         return NULL;
 }
 
-static struct shim_instance * empty_create(struct shim_data * data,
-                                           ipc_process_id_t   id)
+static struct ipcp_instance * empty_create(struct ipcp_factory_data * data,
+                                           ipc_process_id_t           id)
 {
-        struct shim_instance * inst;
+        struct ipcp_instance * inst;
 
         ASSERT(data);
 	
@@ -237,7 +225,7 @@ static struct shim_instance * empty_create(struct shim_data * data,
 
         /* fill it properly */
         inst->ops  = &empty_instance_ops;
-        inst->data = rkzalloc(sizeof(struct shim_instance_data), GFP_KERNEL);
+        inst->data = rkzalloc(sizeof(struct ipcp_instance_data), GFP_KERNEL);
         if (!inst->data) {
                 rkfree(inst);
                 return NULL;
@@ -278,12 +266,13 @@ static struct shim_instance * empty_create(struct shim_data * data,
         return inst;
 }
 
-static struct shim_instance * empty_configure(struct shim_data *         data,
-                                              struct shim_instance *     inst,
-                                              const struct shim_config * cfg)
+static struct ipcp_instance *
+empty_configure(struct ipcp_factory_data * data,
+                struct ipcp_instance *     inst,
+                const struct ipcp_config * cfg)
 {
-        struct shim_instance_data * instance;
-        struct shim_config *        tmp;
+        struct ipcp_instance_data * instance;
+        struct ipcp_config *        tmp;
 
         ASSERT(data);
         ASSERT(inst);
@@ -298,7 +287,7 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
         /* Use configuration values on that instance */
         list_for_each_entry(tmp, &(cfg->list), list) {
                 if (!strcmp(tmp->entry->name, "dif-name") &&
-                    tmp->entry->value->type == SHIM_CONFIG_STRING) {
+                    tmp->entry->value->type == IPCP_CONFIG_STRING) {
                         if (name_cpy(instance->info->dif_name,
                                      (struct name *)
                                      tmp->entry->value->data)) {
@@ -307,7 +296,7 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
                         }
                 }
 		else if (!strcmp(tmp->entry->name, "name") &&
-                    tmp->entry->value->type == SHIM_CONFIG_STRING) {
+                    tmp->entry->value->type == IPCP_CONFIG_STRING) {
                         if (name_cpy(instance->info->name,
                                      (struct name *)
                                      tmp->entry->value->data)) {
@@ -331,10 +320,10 @@ static struct shim_instance * empty_configure(struct shim_data *         data,
         return inst;
 }
 
-static int empty_destroy(struct shim_data *     data,
-                         struct shim_instance * instance)
+static int empty_destroy(struct ipcp_factory_data * data,
+                         struct ipcp_instance *     instance)
 {
-        struct shim_instance_data * inst;
+        struct ipcp_instance_data * inst;
         struct list_head          * pos, * q;
 
         ASSERT(data);
@@ -342,7 +331,7 @@ static int empty_destroy(struct shim_data *     data,
 
         /* Retrieve the instance */
         list_for_each_safe(pos, q, &(data->instances)) {
-                inst = list_entry(pos, struct shim_instance_data, list);
+                inst = list_entry(pos, struct ipcp_instance_data, list);
 
                 if (inst->id == instance->data->id) {
                         /* Unbind from the instances set */
@@ -359,7 +348,7 @@ static int empty_destroy(struct shim_data *     data,
         return 0;
 }
 
-static struct shim_ops empty_ops = {
+static struct ipcp_factory_ops empty_ops = {
         .init      = empty_init,
         .fini      = empty_fini,
         .create    = empty_create,
@@ -367,34 +356,26 @@ static struct shim_ops empty_ops = {
         .configure = empty_configure,
 };
 
-/* FIXME: To be removed ABSOLUTELY */
-extern struct kipcm * default_kipcm;
+struct ipcp_factory * shim;
 
 static int __init mod_init(void)
 {
-        /*
-         * Pass data and ops to the upper layer.
-         *
-         * If the init function is not empty (our case, points to empty_fini)
-         * it will get called and empty_data will be initialized.
-         *
-         * If the init function is not present (empty_ops.init == NULL)
-         */
-
-        empty_shim = kipcm_shim_register(default_kipcm,
-                                         SHIM_NAME,
-                                         &empty_data,
-                                         &empty_ops);
-        if (!empty_shim) {
-                LOG_CRIT("Initialization failed");
+        shim = kipcm_ipcp_factory_register(default_kipcm,
+                                           SHIM_NAME,
+                                           &empty_data,
+                                           &empty_ops);
+        if (!shim) {
+                LOG_CRIT("Cannot register %s factory", SHIM_NAME);
                 return -1;
         }
-
+        
         return 0;
 }
 
 static void __exit mod_exit(void)
 {
+        ASSERT(shim);
+
         /*
          * Upon unregistration empty_ops.fini will be called (if present).
          * That function will be in charge to release all the resources
@@ -405,8 +386,8 @@ static void __exit mod_exit(void)
          * resources allocated by .init and any resources that cannot be
          * released by .destroy, if any
          */
-        if (kipcm_shim_unregister(default_kipcm, empty_shim)) {
-                LOG_CRIT("Cannot unregister");
+        if (kipcm_ipcp_factory_unregister(default_kipcm, shim)) {
+                LOG_CRIT("Cannot unregister %s factory", SHIM_NAME);
                 return;
         }
 }
