@@ -216,9 +216,12 @@ struct kipcm * kipcm_init(struct kobject * parent)
 
 int kipcm_fini(struct kipcm * kipcm)
 {
-        LOG_DBG("Finalizing");
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return -1;
+        }
 
-        ASSERT(kipcm);
+        LOG_DBG("Finalizing");
 
         /* FIXME: Destroy elements from id_to_ipcp */
         ASSERT(list_empty(&kipcm->ipcp_id_to_instance));
@@ -400,7 +403,6 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                    ipc_process_id_t ipc_id,
                    port_id_t        id)
 {
-#if 0
         struct port_id_to_flow * port_flow;
         struct flow *            flow;
 
@@ -421,7 +423,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
         }
 
         flow->port_id     = id;
-        flow->ipc_process = find_ipc_process_by_id(kipcm, ipc_id);
+        flow->ipc_process = instance_find(kipcm, ipc_id);
         if (!flow->ipc_process) {
                 LOG_ERR("Couldn't find ipc_process %d", ipc_id);
                 rkfree(flow);
@@ -429,6 +431,8 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 return -1;
         }
 
+#if 0
+        /* FIXME */
         switch (flow->ipc_process->type) {
         case DIF_TYPE_SHIM:
                 flow->application_owned = 1;
@@ -453,6 +457,8 @@ int kipcm_flow_add(struct kipcm *   kipcm,
         port_flow->flow = flow;
         INIT_LIST_HEAD(&port_flow->list);
         list_add(&port_flow->list, &kipcm->port_id_to_flow);
+#else
+        return -1;
 #endif
 
         return 0;

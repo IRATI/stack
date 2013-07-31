@@ -25,6 +25,7 @@
 
 struct ipcp_factory_data;
 
+/* FIXME: Hide this data structure */
 struct ipcp_instance {
         struct kobject              kobj;
 
@@ -50,6 +51,7 @@ struct ipcp_factory_ops {
                                            struct ipcp_instance *     inst);
 };
 
+/* FIXME: Hide this data structure */
 struct ipcp_factory {
         struct kobject                  kobj;
         struct ipcp_factory_data *      data;
