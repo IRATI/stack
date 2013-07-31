@@ -3,6 +3,7 @@ package rina.ipcmanager.impl;
 import eu.irati.librina.ApplicationManagerSingleton;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistrationRequestEvent;
+import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.CreateIPCProcessException;
 import eu.irati.librina.IPCEvent;
 import eu.irati.librina.IPCEventProducerSingleton;
@@ -183,11 +184,11 @@ public class IPCManager {
 	
 	private void processEvent(IPCEvent event) throws Exception{
 		if (event.getType() == IPCEventType.APPLICATION_REGISTRATION_REQUEST_EVENT){
-			log.info("Got event: "+event.getClass().toString());
 			ApplicationRegistrationRequestEvent appRegReqEvent = (ApplicationRegistrationRequestEvent) event;
 			applicationRegistrationManager.registerApplication(appRegReqEvent);
 		}else if (event.getType() == IPCEventType.APPLICATION_UNREGISTRATION_REQUEST_EVENT){
-			
+			ApplicationUnregistrationRequestEvent appUnregReqEvent = (ApplicationUnregistrationRequestEvent) event;
+			applicationRegistrationManager.unregisterApplication(appUnregReqEvent);
 		}
 	}
 	

@@ -243,6 +243,69 @@
   return $null;
 }
 
+/* Typemaps to allow eventWait, eventPoll and eventTimedWait to downcast IPCEvent to the correct class */
+%define DOWNCAST_IPC_EVENT_CONSUMER( OPERATION )
+%typemap(jni) rina::IPCEvent *rina::IPCEventProducer::OPERATION "jobject"
+%typemap(jtype) rina::IPCEvent *rina::IPCEventProducer::OPERATION "eu.irati.librina.IPCEvent"
+%typemap(jstype) rina::IPCEvent *rina::IPCEventProducer::OPERATION "eu.irati.librina.IPCEvent"
+%typemap(javaout) rina::IPCEvent *rina::IPCEventProducer::OPERATION {
+    return $jnicall;
+  }
+
+%typemap(out) rina::IPCEvent *rina::IPCEventProducer::OPERATION {
+    if ($1->getType() == rina::APPLICATION_REGISTRATION_REQUEST_EVENT) {
+    	rina::ApplicationRegistrationRequestEvent *appRegReqEvent = dynamic_cast<rina::ApplicationRegistrationRequestEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/ApplicationRegistrationRequestEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::ApplicationRegistrationRequestEvent **)&cptr = appRegReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::APPLICATION_UNREGISTRATION_REQUEST_EVENT) {
+    	rina::ApplicationUnregistrationRequestEvent *appUnregReqEvent = dynamic_cast<rina::ApplicationUnregistrationRequestEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/ApplicationUnregistrationRequestEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::ApplicationUnregistrationRequestEvent **)&cptr = appUnregReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    }
+}
+%enddef
+
+DOWNCAST_IPC_EVENT_CONSUMER(eventWait);
+DOWNCAST_IPC_EVENT_CONSUMER(eventPoll);
+DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
+
+/*%typemap(jni) rina::IPCEvent *rina::IPCEventProducer::eventWait "jobject"
+%typemap(jtype) rina::IPCEvent *rina::IPCEventProducer::eventWait "eu.irati.librina.IPCEvent"
+%typemap(jstype) rina::IPCEvent *rina::IPCEventProducer::eventWait "eu.irati.librina.IPCEvent"
+%typemap(javaout) rina::IPCEvent *rina::IPCEventProducer::eventWait {
+    return $jnicall;
+  }
+
+%typemap(out) rina::IPCEvent *rina::IPCEventProducer::eventWait {
+    rina::ApplicationRegistrationRequestEvent *appRegReqEvent = dynamic_cast<rina::ApplicationRegistrationRequestEvent *>($1);
+    if (appRegReqEvent) {
+        // call the Ambulance(long cPtr, boolean cMemoryOwn) constructor
+        jclass clazz = jenv->FindClass("eu/irati/librina/ApplicationRegistrationRequestEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::ApplicationRegistrationRequestEvent **)&cptr = appRegReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    }
+}*/
+
 %{
 #include "exceptions.h"
 #include "patterns.h"
@@ -346,3 +409,4 @@ MAKE_COLLECTION_ITERABLE(StringListIterator, String, std::list, std::string);
 %template(IPCProcessApplicationManagerSingleton) Singleton<rina::IPCProcessApplicationManager>;
 %template(RIBObjectList) std::list<rina::RIBObject>;
 %template(StringList) std::list<std::string>;
+
