@@ -315,7 +315,8 @@ int kipcm_ipcp_create(struct kipcm *      kipcm,
 
         factory = ipcpf_find(kipcm->factories, factory_name);
         if (!factory) {
-                LOG_ERR("Cannot find the requested factory '%s'", factory_name);
+                LOG_ERR("Cannot find the requested factory '%s'",
+                        factory_name);
                 return -1;
         }
 
@@ -354,14 +355,11 @@ int kipcm_ipcp_destroy(struct kipcm *  kipcm,
         factory = instance->factory;
         ASSERT(factory);
 
-        if (factory->ops->destroy(factory->data, instance)) {
+        if (factory->ops->destroy(factory->data, instance))
                 return -1;
-        }
         
         if (instance_binding_remove(kipcm, id))
                 return -1;
-
-        rkfree(instance);
 
         return 0;
 }
