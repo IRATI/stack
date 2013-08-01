@@ -242,25 +242,33 @@ char * name_tostring(const struct name * n)
         if (!n)
                 return NULL;
         
-        size = 0;
+        size  = 0;
+
         size += (n->process_name                 ?
-                 string_len(n->process_name)     : none_len + 1);
+                 string_len(n->process_name)     : none_len);
+        size += 1; /* SEPARATOR */
+
         size += (n->process_instance             ?
-                 string_len(n->process_instance) : none_len + 1);
+                 string_len(n->process_instance) : none_len);
+        size += 1;  /* SEPARATOR */
+
         size += (n->entity_name                  ?
-                 string_len(n->entity_name)      : none_len + 1);
+                 string_len(n->entity_name)      : none_len);
+        size += 1;  /* SEPARATOR */
+
         size += (n->entity_instance              ?
-                 string_len(n->entity_instance)  : none_len + 1);
+                 string_len(n->entity_instance)  : none_len);
+        size += 1;  /* TERMINATOR */
         
         tmp = rkmalloc(size, GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
-        if (sprintf(tmp, "%s/%s/%s/%s",
-                    (n->process_name     ? n->process_name     : none),
-                    (n->process_instance ? n->process_instance : none),
-                    (n->entity_name      ? n->entity_name      : none),
-                    (n->entity_instance  ? n->entity_instance  : none)) !=
+        if (snprintf(tmp, size, "%s/%s/%s/%s",
+                     (n->process_name     ? n->process_name     : none),
+                     (n->process_instance ? n->process_instance : none),
+                     (n->entity_name      ? n->entity_name      : none),
+                     (n->entity_instance  ? n->entity_instance  : none)) !=
             size - 1) {
                 rkfree(tmp);
                 return NULL;
