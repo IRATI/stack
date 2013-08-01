@@ -30,6 +30,7 @@
 #include <net/sock.h>
 
 #include "personality.h"
+
 typedef enum {
 
 	/* Unespecified operation */
@@ -120,6 +121,8 @@ int  rina_netlink_init(void);
 void rina_netlink_exit(void);
 
 struct rina_nl_set;
+
+struct genl_family  * get_nl_family(void);
 
 struct rina_nl_set * rina_netlink_set_create(personality_id id);
 int                  rina_netlink_set_destroy(struct rina_nl_set * set);

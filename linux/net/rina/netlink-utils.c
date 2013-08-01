@@ -1039,11 +1039,12 @@ static int rnl_format_generic_u32_param_msg(uint_t          param_var,
 					    string_t 	    * msg_name,
                                             struct sk_buff  * skb_out)
 {
+	LOG_DBG("Entring rnl_format_generic_u32_param_msg...");
         if (!skb_out) {
                 LOG_ERR("Bogus input parameter(s), bailing out");
                 return -1;
         }
-
+	
 	if (nla_put_u32(skb_out, param_name, param_var) < 0) {
                 LOG_ERR("Could not format %s message correctly", msg_name);
                 return -1;
@@ -1350,6 +1351,7 @@ EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_arrived_msg);
 int rnl_format_ipcm_alloc_flow_req_result_msg(uint_t          result,
                                               struct sk_buff  * skb_out)
 {
+	LOG_DBG("Entring rnl_format_ipcm_alloc_flow_req_result_msg");
 	return rnl_format_generic_u32_param_msg(result,
 					     IAFRRM_ATTR_RESULT, 
 					     "rnl_ipcm_alloc_flow_req_result_msg",
