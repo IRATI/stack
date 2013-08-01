@@ -33,9 +33,9 @@ struct ipcp_map {
 };
 
 struct ipcp_map_entry {
-        ipc_process_id_t id;   /* Key */
-        void *           data; /* Value */
-        struct list_head list;
+        ipc_process_id_t       key;
+        struct ipcp_instance * value;
+        struct list_head       list;
 };
 
 struct ipcp_map * ipcp_map_create(void)
@@ -67,9 +67,9 @@ int ipcp_map_destroy(struct ipcp_map * map)
         return 0;
 }
 
-int ipcp_map_add(struct ipcp_map * map,
-                 ipc_process_id_t  id,
-                 void *            data)
+int ipcp_map_add(struct ipcp_map *        map,
+                 ipc_process_id_t         key,
+                 struct ipcp_instance *   value)
 {
         struct ipcp_map_entry * tmp;
 
@@ -79,8 +79,8 @@ int ipcp_map_add(struct ipcp_map * map,
         if (!tmp)
                 return -1;
 
-        tmp->id   = id;
-        tmp->data = data;
+        tmp->key   = key;
+        tmp->value = value;
         INIT_LIST_HEAD(&tmp->list);
 
         list_add(&tmp->list, &map->root);
@@ -89,14 +89,14 @@ int ipcp_map_add(struct ipcp_map * map,
 }
 
 static struct ipcp_map_entry * map_entry_find(struct ipcp_map * map,
-                                              ipc_process_id_t  id)
+                                              ipc_process_id_t  key)
 {
         struct ipcp_map_entry * cur;
 
         ASSERT(map);
 
         list_for_each_entry(cur, &map->root, list) {
-                if (cur->id == id) {
+                if (cur->key == key) {
                         return cur;
                 }
         }
@@ -104,44 +104,44 @@ static struct ipcp_map_entry * map_entry_find(struct ipcp_map * map,
         return NULL;
 }
 
-void * ipcp_map_find(struct ipcp_map * map,
-                     ipc_process_id_t  id)
+struct ipcp_instance * ipcp_map_find(struct ipcp_map * map,
+                                     ipc_process_id_t  key)
 {
         struct ipcp_map_entry * cur;
 
         ASSERT(map);
 
-        cur = map_entry_find(map, id);
+        cur = map_entry_find(map, key);
         if (!cur)
                 return NULL;
-        return cur->data;
+        return cur->value;
 }
 
-int ipcp_map_update(struct ipcp_map * map,
-                    ipc_process_id_t  id,
-                    void *            data)
+int ipcp_map_update(struct ipcp_map *      map,
+                    ipc_process_id_t       key,
+                    struct ipcp_instance * value)
 {
         struct ipcp_map_entry * cur;
 
         ASSERT(map);
         
-        cur = map_entry_find(map, id);
+        cur = map_entry_find(map, key);
         if (!cur)
                 return -1;
 
-        cur->data = data;
+        cur->value = value;
 
         return 0;
 }
 
 int ipcp_map_remove(struct ipcp_map * map,
-                    ipc_process_id_t  id)
+                    ipc_process_id_t  key)
 {
         struct ipcp_map_entry * cur;
 
         ASSERT(map);
 
-        cur = map_entry_find(map, id);
+        cur = map_entry_find(map, key);
         if (!cur)
                 return -1;
 
