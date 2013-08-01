@@ -36,20 +36,20 @@
  */
 struct ipcp_map;
 
-struct ipcp_map * ipcp_map_create(void);
-int               ipcp_map_destroy(struct ipcp_map * map);
+struct ipcp_map *      ipcp_map_create(void);
+int                    ipcp_map_destroy(struct ipcp_map * map);
 
-int               ipcp_map_empty(struct ipcp_map * map);
+int                    ipcp_map_empty(struct ipcp_map * map);
 
-int               ipcp_map_add(struct ipcp_map * map,
-                               ipc_process_id_t  id,
-                               void *            data);
-void *            ipcp_map_find(struct ipcp_map * map,
-                                ipc_process_id_t id);
-int               ipcp_map_update(struct ipcp_map * map,
-                                  ipc_process_id_t  id,
-                                  void *            data);
-int               ipcp_map_remove(struct ipcp_map * map,
-                                  ipc_process_id_t  id);
+int                    ipcp_map_add(struct ipcp_map * map,
+				    ipc_process_id_t  id,
+                                    struct ipcp_instance * data);
+struct ipcp_instance * ipcp_map_find(struct ipcp_map * map,
+                                     ipc_process_id_t id);
+int                    ipcp_map_update(struct ipcp_map * map,
+                                       ipc_process_id_t  id,
+                                       struct ipcp_instance * data);
+int                    ipcp_map_remove(struct ipcp_map * map,
+                                       ipc_process_id_t  id);
 
 #endif

@@ -33,9 +33,9 @@ struct ipcp_map {
 };
 
 struct ipcp_map_entry {
-        ipc_process_id_t id;   /* Key */
-        void *           data; /* Value */
-        struct list_head list;
+        ipc_process_id_t       id;   /* Key */
+        struct ipcp_instance * data; /* Value */
+        struct list_head       list;
 };
 
 struct ipcp_map * ipcp_map_create(void)
@@ -67,9 +67,9 @@ int ipcp_map_destroy(struct ipcp_map * map)
         return 0;
 }
 
-int ipcp_map_add(struct ipcp_map * map,
-                 ipc_process_id_t  id,
-                 void *            data)
+int ipcp_map_add(struct ipcp_map *      map,
+                 ipc_process_id_t       id,
+                 struct ipcp_instance * data)
 {
         struct ipcp_map_entry * tmp;
 
@@ -104,8 +104,8 @@ static struct ipcp_map_entry * map_entry_find(struct ipcp_map * map,
         return NULL;
 }
 
-void * ipcp_map_find(struct ipcp_map * map,
-                     ipc_process_id_t  id)
+struct ipcp_instance * ipcp_map_find(struct ipcp_map * map,
+				     ipc_process_id_t  id)
 {
         struct ipcp_map_entry * cur;
 
@@ -117,9 +117,9 @@ void * ipcp_map_find(struct ipcp_map * map,
         return cur->data;
 }
 
-int ipcp_map_update(struct ipcp_map * map,
-                    ipc_process_id_t  id,
-                    void *            data)
+int ipcp_map_update(struct ipcp_map * 	   map,
+                    ipc_process_id_t  	   id,
+                    struct ipcp_instance * data)
 {
         struct ipcp_map_entry * cur;
 
@@ -146,5 +146,6 @@ int ipcp_map_remove(struct ipcp_map * map,
                 return -1;
 
         list_del(&cur->list);
+        rkfree(cur);
         return 0;
 }
