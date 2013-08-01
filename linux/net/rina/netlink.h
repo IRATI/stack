@@ -72,6 +72,16 @@ typedef enum {
 	/* IPC Manager -> IPC Process */
 	RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE, 
 
+	/* IPC Manager -> IPC Process */
+	RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST, 
+
+	/* IPC Process -> IPC Manager*/
+	RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE, 
+
+	/*  IPC Process -> IPC Manager, flow deallocated without the */
+	/*  application having requested it */
+	RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION, 
+
 	/*IPC Manager -> IPC Process */
 	RINA_C_IPCM_REGISTER_APPLICATION_REQUEST, 
 

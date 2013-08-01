@@ -218,6 +218,27 @@ static struct genl_ops nl_ops[] = {
                 .dumpit = NULL,
         },
         {
+                .cmd    = RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST,
+                .flags  = 0,
+                //.policy = nl_rina_policy,
+                .doit   = dispatcher,
+                .dumpit = NULL,
+        },
+        {
+                .cmd    = RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE,
+                .flags  = 0,
+                //.policy = nl_rina_policy,
+                .doit   = dispatcher,
+                .dumpit = NULL,
+        },
+        {
+                .cmd    = RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION,
+                .flags  = 0,
+                //.policy = nl_rina_policy,
+                .doit   = dispatcher,
+                .dumpit = NULL,
+        },
+        {
                 .cmd    = RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,
                 .flags  = 0,
                 //.policy = nl_rina_policy,
