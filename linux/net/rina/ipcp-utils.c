@@ -264,11 +264,11 @@ char * name_tostring(const struct name * n)
         if (!tmp)
                 return NULL;
 
-        if (snprintf(tmp, "%s/%s/%s/%s", size,
-                    (n->process_name     ? n->process_name     : none),
-                    (n->process_instance ? n->process_instance : none),
-                    (n->entity_name      ? n->entity_name      : none),
-                    (n->entity_instance  ? n->entity_instance  : none)) !=
+        if (snprintf(tmp, size, "%s/%s/%s/%s",
+                     (n->process_name     ? n->process_name     : none),
+                     (n->process_instance ? n->process_instance : none),
+                     (n->entity_name      ? n->entity_name      : none),
+                     (n->entity_instance  ? n->entity_instance  : none)) !=
             size - 1) {
                 rkfree(tmp);
                 return NULL;
