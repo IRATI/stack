@@ -246,19 +246,19 @@ char * name_tostring(const struct name * n)
 
         size += (n->process_name                 ?
                  string_len(n->process_name)     : none_len);
-        size += 1; /* / */
+        size += 1; /* SEPARATOR */
 
         size += (n->process_instance             ?
                  string_len(n->process_instance) : none_len);
-        size += 1;  /* / */
+        size += 1;  /* SEPARATOR */
 
         size += (n->entity_name                  ?
                  string_len(n->entity_name)      : none_len);
-        size += 1;  /* / */
+        size += 1;  /* SEPARATOR */
 
         size += (n->entity_instance              ?
                  string_len(n->entity_instance)  : none_len);
-        size += 1;  /* \0 */
+        size += 1;  /* TERMINATOR */
         
         tmp = rkmalloc(size, GFP_KERNEL);
         if (!tmp)
