@@ -167,26 +167,18 @@ static int craft_flow_spec(struct sk_buff * msg,
                                 FSPEC_ATTR_UNDETECTED_BER,
                                 fspec.undetected_bit_error_rate))
                         return -1;
-#if 0
-        if (fspec.undetected_bit_error_rate > 0)
-                if (nla_put(msg,
-                            FSPEC_ATTR_UNDETECTED_BER,
-                            sizeof(fspec.undetected_bit_error_rate),
-                            &fspec.undetected_bit_error_rate))
-                        return -1;
-#endif
         return 0;
 }
 
 #define BUILD_ERR_STRING(X)                                     \
 	"Netlink message does not contain " X ", bailing out"
 
-int rnl_format_app_alloc_flow_req_arrived(struct sk_buff * msg,
-                                          struct name      source,
-                                          struct name      dest,
-                                          struct flow_spec fspec,
-                                          port_id_t        id,
-                                          struct name      dif_name)
+int rnl_format_ipcm_alloc_flow_req_arrived(struct sk_buff * msg,
+                                           struct name      source,
+                                           struct name      dest,
+                                           struct flow_spec fspec,
+                                           port_id_t        id,
+                                           struct name      dif_name)
 {
         /* FIXME: What's the use of the following variables ? */
 	/* FIXME: they are the placeholder of the nest attr returned by
@@ -243,7 +235,7 @@ int rnl_format_app_alloc_flow_req_arrived(struct sk_buff * msg,
 
         return 0;
 }
-EXPORT_SYMBOL(rnl_format_app_alloc_flow_req_arrived);
+EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_arrived);
 
 #define BUILD_ERR_STRING_BY_MSG_TYPE(X)                 \
         "Could not parse Netlink message of type "X
@@ -420,7 +412,7 @@ int rnl_parse_ipcm_alloc_flow_req(struct genl_info * info,
 }
 EXPORT_SYMBOL(rnl_parse_ipcm_alloc_flow_req);
 
-int rnl_parse_alloc_flow_resp(struct genl_info * info, 
+int rnl_parse_ipcm_alloc_flow_resp(struct genl_info * info, 
                               struct rnl_alloc_flow_resp_msg * msg_attrs)
 {
         struct nla_policy attr_policy[AAFRE_ATTR_MAX + 1];
@@ -455,13 +447,13 @@ int rnl_parse_alloc_flow_resp(struct genl_info * info,
 	return 0;	
 
  fail:
-        LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_APP_ALLOCATE_FLOW_RESPONSE"));
+        LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_ALLOCATE_FLOW_RESPONSE"));
         return -1;
 
 }
-EXPORT_SYMBOL(rnl_parse_alloc_flow_resp);
+EXPORT_SYMBOL(rnl_parse_ipcm_alloc_flow_resp);
 
-int rnl_parse_app_dealloc_flow_req(struct genl_info * info,
+int rnl_parse_ipcm_dealloc_flow_req(struct genl_info * info,
                                    struct rnl_dealloc_flow_req_msg * msg_attrs)
 {
         struct nla_policy attr_policy[ADFRT_ATTR_MAX + 1];
@@ -488,14 +480,14 @@ int rnl_parse_app_dealloc_flow_req(struct genl_info * info,
 	return 0;
 
  fail:
-        LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_APP_DEALLOCATE_FLOW_REQUEST"));
+        LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST"));
         return -1;
 
 }
-EXPORT_SYMBOL(rnl_parse_app_dealloc_flow_req);
+EXPORT_SYMBOL(rnl_parse_ipcm_dealloc_flow_req);
 
 
-int rnl_parse_app_dealloc_flow_resp(struct genl_info * info,
+int rnl_parse_ipcm_dealloc_flow_resp(struct genl_info * info,
                                     struct rnl_dealloc_flow_resp_msg * msg_attrs)
 {
 	struct nla_policy attr_policy[ADFRE_ATTR_MAX + 1];
@@ -524,10 +516,10 @@ int rnl_parse_app_dealloc_flow_resp(struct genl_info * info,
 	return 0;
 
  fail:
-        LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_APP_DEALLOCATE_FLOW_RESPONSE"));
+        LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE"));
         return -1;
 }
-EXPORT_SYMBOL(rnl_parse_app_dealloc_flow_resp);
+EXPORT_SYMBOL(rnl_parse_ipcm_dealloc_flow_resp);
 
 ipc_process_id_t rnl_src_ipcid_from_msg(struct genl_info * info)
 {

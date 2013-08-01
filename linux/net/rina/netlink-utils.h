@@ -173,19 +173,19 @@ struct rnl_dealloc_flow_resp_msg{
 }
 ;
 
-int rnl_format_app_alloc_flow_req_arrived(struct sk_buff * msg,
+int rnl_format_ipcm_alloc_flow_req_arrived(struct sk_buff * msg,
                                           struct name      source,
                                           struct name      dest,
                                           struct flow_spec fspec,
                                           port_id_t        id,
                                           struct name      dif_name);
-int rnl_parse_alloc_flow_resp(struct genl_info * info,
+int rnl_parse_ipcm_alloc_flow_resp(struct genl_info * info,
 				  struct rnl_alloc_flow_resp_msg * msg_attrs);
 int rnl_parse_ipcm_alloc_flow_req(struct genl_info * info,
                                   struct rnl_ipcm_alloc_flow_req_msg * msg_attrs);
-int rnl_parse_app_dealloc_flow_req(struct genl_info * info,
+int rnl_parse_ipcm_dealloc_flow_req(struct genl_info * info,
 	                           struct rnl_dealloc_flow_req_msg * msg_attrs);
-int rnl_parse_app_dealloc_flow_resp(struct genl_info * info,
+int rnl_parse_ipcm_dealloc_flow_resp(struct genl_info * info,
                                     struct rnl_dealloc_flow_resp_msg * msg_attrs);
 ipc_process_id_t rnl_src_ipcid_from_msg(struct genl_info * info);
 ipc_process_id_t rnl_dst_ipcid_from_msg(struct genl_info * info);

@@ -30,81 +30,80 @@
 #include <net/sock.h>
 
 #include "personality.h"
-
 typedef enum {
-        /* Do not use */
+
+	/* Unespecified operation */
 	RINA_C_MIN = 0, 
-	
-	/* Allocate flow request from a remote application, 
-	 * IPC Process -> Application */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, 
-	
-	/* Allocate flow response to an allocate request arrived operation, 
-	 * Application -> IPC Manager &
-	 * IPC Manager -> IPC Process &
-	 * IPC Process -> IPC Manager &
-	 * IPC Manager -> Application */
-	RINA_C_ALLOCATE_FLOW_RESPONSE, 
-	
-	/* Application -> IPC Process */
-	RINA_C_APP_DEALLOCATE_FLOW_REQUEST, 
-	
-	/* IPC Process -> Application */
-	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, 
-	
-	/*
-         * IPC Process -> Application, flow deallocated without having 
-	 * requested it
-         */
-	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, 
-	
+
 	/* IPC Manager -> IPC Process */
 	RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST, 
-	
+
 	/* IPC Process -> IPC Manager */
 	RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE, 
-	
+
 	/* IPC Manager -> IPC Process */
-	RINA_C_IPCM_IPC_PROCESS_REGISTERED_TO_DIF_NOTIFICATION, 
-	
+	RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
+
 	/* IPC Manager -> IPC Process */
-	RINA_C_IPCM_IPC_PROCESS_UNREGISTERED_FROM_DIF_NOTIFICATION, 
-	
+	RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION, 
+
 	/* IPC Manager -> IPC Process */
 	RINA_C_IPCM_ENROLL_TO_DIF_REQUEST, 
-	
+
 	/* IPC Process -> IPC Manager */
 	RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE, 
-	
+
 	/* IPC Manager -> IPC Process */
 	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST, 
-	
+
 	/* IPC Process -> IPC Manager */
-	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE, 
-	
+	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE,
+
 	/* IPC Manager -> IPC Process */
 	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST, 
-	
+
+	/* Allocate flow request from a remote application, 
+	IPC Process -> IPC Manager */
+	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED, 
+
+	/* IPC Process -> IPC Manager */
+	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT, 
+
+	/* IPC Manager -> IPC Process */
+	RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE, 
+
+	/*IPC Manager -> IPC Process */
+	RINA_C_IPCM_REGISTER_APPLICATION_REQUEST, 
+
+	/*IPC Process -> IPC Manager */
+	RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE, 
+
+	/* IPC Manager -> IPC Process */
+	RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST, 
+
+	/* IPC Process -> IPC Manager */
+	RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE, 
+
 	/* IPC Manager -> IPC Process */
 	RINA_C_IPCM_QUERY_RIB_REQUEST, 
-	
+
 	/* IPC Process -> IPC Manager */
 	RINA_C_IPCM_QUERY_RIB_RESPONSE, 
-	
+
 	/* IPC Process (user space) -> RMT (kernel) */
 	RINA_C_RMT_ADD_FTE_REQUEST, 
-	
+
 	/* IPC Process (user space) -> RMT (kernel) */
 	RINA_C_RMT_DELETE_FTE_REQUEST, 
-	
+
 	/* IPC Process (user space) -> RMT (kernel) */
 	RINA_C_RMT_DUMP_FT_REQUEST, 
-	
+
 	/* RMT (kernel) -> IPC Process (user space) */
 	RINA_C_RMT_DUMP_FT_REPLY,
 
-        /* Do not use */
 	RINA_C_MAX,
+
 } msg_id;
 
 int  rina_netlink_init(void);
