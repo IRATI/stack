@@ -22,38 +22,6 @@
 
 namespace rina{
 
-/* CLASS FLOW DEALLOCATE REQUEST EVENT */
-FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
-			const ApplicationProcessNamingInformation& DIFName,
-			const ApplicationProcessNamingInformation& appName,
-			unsigned short ipcProcessId, unsigned int sequenceNumber):
-						IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,
-								sequenceNumber){
-	this->portId = portId;
-	this->DIFName = DIFName;
-	this->ipcProcessId = ipcProcessId;
-	this->applicationName = appName;
-}
-
-int FlowDeallocateRequestEvent::getPortId() const{
-	return portId;
-}
-
-const ApplicationProcessNamingInformation&
-	FlowDeallocateRequestEvent::getDIFName() const{
-	return DIFName;
-}
-
-const ApplicationProcessNamingInformation&
-	FlowDeallocateRequestEvent::getApplicationName() const{
-	return applicationName;
-}
-
-unsigned short FlowDeallocateRequestEvent::getIPCProcessId() const{
-	return ipcProcessId;
-}
-
-
 /* CLASS ASSIGN TO DIF REQUEST EVENT */
 AssignToDIFRequestEvent::AssignToDIFRequestEvent(
 		const DIFConfiguration& difConfiguration,
@@ -137,6 +105,9 @@ const std::string& QueryRIBRequestEvent::getFilter() const{
 }
 
 /* CLASS EXTENDED IPC MANAGER */
+const std::string ExtendedIPCManager::error_allocate_flow =
+		"Error allocating flow";
+
 const DIFConfiguration& ExtendedIPCManager::getCurrentConfiguration() const{
 	return currentConfiguration;
 }
@@ -217,14 +188,14 @@ void ExtendedIPCManager::unregisterApplicationResponse(
 #endif
 }
 
-void ExtendedIPCManager::allocateFlowResponse(
+void ExtendedIPCManager::allocateFlowRequestResult(
 		const FlowRequestEvent& event, int result,
 		const std::string& errorDescription)
 	throw(AllocateFlowResponseException){
 #if STUB_API
 	//Do nothing
 #else
-	IpcmAllocateFlowResponseMessage responseMessage;
+	IpcmAllocateFlowRequestResultMessage responseMessage;
 	responseMessage.setResult(result);
 	responseMessage.setErrorDescription(errorDescription);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
@@ -233,6 +204,89 @@ void ExtendedIPCManager::allocateFlowResponse(
 		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
 	}catch(NetlinkException &e){
 		throw AllocateFlowResponseException(e.what());
+	}
+#endif
+}
+
+int ExtendedIPCManager::allocateFlowRequestArrived(
+			const ApplicationProcessNamingInformation& localAppName,
+			const ApplicationProcessNamingInformation& remoteAppName,
+			const FlowSpecification& flowSpecification)
+		throw (AllocateFlowRequestArrivedException){
+#if STUP_API
+	return 25;
+#else
+	IpcmAllocateFlowRequestArrivedMessage message;
+	message.setSourceAppName(remoteAppName);
+	message.setDestAppName(localAppName);
+	message.setFlowSpecification(flowSpecification);
+	message.setDifName(currentConfiguration.getDifName());
+	message.setSourceIpcProcessId(ipcProcessId);
+	message.setRequestMessage(true);
+
+	int portId = 0;
+	IpcmAllocateFlowResponseMessage * allocateFlowResponse;
+	try{
+		allocateFlowResponse =
+				dynamic_cast<IpcmAllocateFlowResponseMessage *>(
+						rinaManager->sendRequestAndWaitForResponse(&message,
+								ExtendedIPCManager::error_allocate_flow));
+	}catch(NetlinkException &e){
+		throw AllocateFlowRequestArrivedException(e.what());
+	}
+
+	if (!(allocateFlowResponse->isAccept())){
+		std::string reason = ExtendedIPCManager::error_allocate_flow + " " +
+				allocateFlowResponse->getDenyReason();
+		delete allocateFlowResponse;
+		throw AllocateFlowRequestArrivedException(reason);
+	}
+
+	portId = allocateFlowResponse->getPortId();
+	LOG_DBG("Allocated flow with portId %d", portId);
+	delete allocateFlowResponse;
+
+	return portId;
+#endif
+}
+
+void ExtendedIPCManager::flowDeallocated(
+		const FlowDeallocateRequestEvent flowDeallocateEvent,
+			int result, std::string errorDescription)
+	throw (DeallocateFlowResponseException){
+#if STUB_API
+	//Do nothing
+#else
+	IpcmDeallocateFlowResponseMessage responseMessage;
+	responseMessage.setResult(result);
+	responseMessage.setErrorDescription(errorDescription);
+	responseMessage.setSourceIpcProcessId(ipcProcessId);
+	responseMessage.setSequenceNumber(flowDeallocateEvent.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+	}catch(NetlinkException &e){
+		throw DeallocateFlowResponseException(e.what());
+	}
+#endif
+}
+
+void ExtendedIPCManager::flowDeallocatedRemotely(
+		int portId, int code, const std::string& reason)
+		throw (DeallocateFlowResponseException){
+#if STUB_API
+	//Do nothing
+#else
+	IpcmFlowDeallocatedNotificationMessage message;
+	message.setPortId(portId);
+	message.setCode(code);
+	message.setReason(reason);
+	message.setSourceIpcProcessId(ipcProcessId);
+	message.setNotificationMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&message);
+	}catch(NetlinkException &e){
+		throw DeallocateFlowResponseException(e.what());
 	}
 #endif
 }
@@ -260,30 +314,5 @@ void ExtendedIPCManager::queryRIBResponse(
 }
 
 Singleton<ExtendedIPCManager> extendedIPCManager;
-
-/* CLASS IPC PROCESS APPLICATION MANAGER */
-void IPCProcessApplicationManager::flowDeallocated(
-		const FlowDeallocateRequestEvent flowDeallocateEvent,
-			int result, std::string errorDescription)
-	throw (DeallocateFlowResponseException){
-#if STUB_API
-	//Do nothing
-#else
-	AppDeallocateFlowResponseMessage responseMessage;
-	responseMessage.setApplicationName(flowDeallocateEvent.getApplicationName());
-	responseMessage.setResult(result);
-	responseMessage.setErrorDescription(errorDescription);
-	responseMessage.setSourceIpcProcessId(flowDeallocateEvent.getIPCProcessId());
-	responseMessage.setSequenceNumber(flowDeallocateEvent.getSequenceNumber());
-	responseMessage.setResponseMessage(true);
-	try{
-		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
-	}catch(NetlinkException &e){
-		throw DeallocateFlowResponseException(e.what());
-	}
-#endif
-}
-
-Singleton<IPCProcessApplicationManager> ipcProcessApplicationManager;
 
 }

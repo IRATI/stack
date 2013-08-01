@@ -25,33 +25,6 @@
 namespace rina {
 
 /**
- * Event informing the IPC Process about a flow deallocation request
- */
-class FlowDeallocateRequestEvent: public IPCEvent {
-	/** The port-id that locally identifies the flow */
-	int portId;
-
-	/** The name of the DIF that is providing this flow */
-	ApplicationProcessNamingInformation DIFName;
-
-	/** The application that requested the flow deallocation*/
-	ApplicationProcessNamingInformation applicationName;
-
-	/** The id of the IPC Process that should deallocate the flow */
-	unsigned short ipcProcessId;
-
-public:
-	FlowDeallocateRequestEvent(int portId,
-			const ApplicationProcessNamingInformation& DIFName,
-			const ApplicationProcessNamingInformation& appName,
-			unsigned short ipcProcessId, unsigned int sequenceNumber);
-	int getPortId() const;
-	const ApplicationProcessNamingInformation& getDIFName() const;
-	const ApplicationProcessNamingInformation& getApplicationName() const;
-	unsigned short getIPCProcessId() const;
-};
-
-/**
  * The IPC Manager requests the IPC Process to become a member of a
  * DIF, and provides de related information
  */
@@ -217,6 +190,20 @@ public:
 	}
 };
 
+/**
+ * Thrown when there are problems allocating a remote flow to a
+ * local application
+ */
+class AllocateFlowRequestArrivedException: public IPCException {
+public:
+	AllocateFlowRequestArrivedException():
+		IPCException("Problems allocating a remote flow to a local application"){
+	}
+	AllocateFlowRequestArrivedException(const std::string& description):
+		IPCException(description){
+	}
+};
+
 
 /**
  * Thrown when there are problems notifying the application about the
@@ -231,6 +218,7 @@ public:
 		IPCException(description){
 	}
 };
+
 /**
  * Class used by the IPC Processes to interact with the IPC Manager. Extends
  * the basic IPC Manager in librina-application with IPC Process specific
@@ -240,10 +228,14 @@ class ExtendedIPCManager: public IPCManager {
 	/** The ID of the IPC Process */
 	unsigned int ipcProcessId;
 
+	/** The portId of the IPC Manager */
+	unsigned int ipcManagerPort;
+
 	/** The current configuration of the IPC Process */
 	DIFConfiguration currentConfiguration;
 
 public:
+	static const std::string error_allocate_flow;
 	const DIFConfiguration& getCurrentConfiguration() const;
 	void setCurrentConfiguration(const DIFConfiguration& currentConfiguration);
 	unsigned int getIpcProcessId() const;
@@ -295,9 +287,53 @@ public:
 	 * @param errorDescription
 	 * @throws AllocateFlowResponseException
 	 */
-	void allocateFlowResponse(const FlowRequestEvent& event, int result,
+	void allocateFlowRequestResult(const FlowRequestEvent& event, int result,
 			const std::string& errorDescription)
 		throw (AllocateFlowResponseException);
+
+	/**
+	 * Tell the IPC Manager that an allocate flow request targeting a local
+	 * application registered in this IPC Process has arrived. The IPC manager
+	 * will contact the application and ask it if it accepts the flow. IF it
+	 * does it, it will assign a port-id to the flow. Either way it will reply
+	 * the IPC Process
+	 * @param localAppName
+	 * @param remoteAppName
+	 * @param flowSpecification
+	 * @returns the portId assigned to the flow
+	 * @throws AllocateFlowRequestArrivedException if there are issues during
+	 * the operation or the application rejects the flow
+	 */
+	int allocateFlowRequestArrived(
+			const ApplicationProcessNamingInformation& localAppName,
+			const ApplicationProcessNamingInformation& remoteAppName,
+			const FlowSpecification& flowSpecification)
+		throw (AllocateFlowRequestArrivedException);
+
+	/**
+	 * Invoked by the IPC Process to respond to the Application Process that
+	 * requested a flow deallocation
+	 * @param flowDeallocateEvent Object containing information about the flow
+	 * deallocate request event
+	 * @param result 0 indicates success, a negative number an error code
+	 * @param errorDescription optional explanation about the error (if any)
+	 * @throws DeallocateFlowResponseException if there are issues
+	 * replying ot the application
+	 */
+	void flowDeallocated(const FlowDeallocateRequestEvent flowDeallocateEvent,
+			int result, std::string errorDescription)
+		throw (DeallocateFlowResponseException);
+
+	/**
+	 * Invoked by the ipC Process to notify that a flow has been remotely
+	 * unallocated
+	 * @param portId
+	 * @param code
+	 * @param reason
+	 * @throws DeallocateFlowResponseException
+	 */
+	void flowDeallocatedRemotely(int portId, int code, const std::string& reason)
+		throw (DeallocateFlowResponseException);
 
 	/**
 	 * Reply to the IPC Manager, providing 0 or more RIB Objects in response to
@@ -315,35 +351,9 @@ public:
 };
 
 /**
- * Make Extended IPC Manager singleton
+ * Make Application Manager singleton
  */
 extern Singleton<ExtendedIPCManager> extendedIPCManager;
-
-/**
- * Class used by IPC Processes to interact with application processes
- */
-class IPCProcessApplicationManager {
-
-public:
-	/**
-	 * Invoked by the IPC Process to respond to the Application Process that
-	 * requested a flow deallocation
-	 * @param flowDeallocateEvent Object containing information about the flow
-	 * deallocate request event
-	 * @param result 0 indicates success, a negative number an error code
-	 * @param errorDescription optional explanation about the error (if any)
-	 * @throws DeallocateFlowResponseException if there are issues
-	 * replying ot the application
-	 */
-	void flowDeallocated(const FlowDeallocateRequestEvent flowDeallocateEvent,
-			int result, std::string errorDescription)
-		throw (DeallocateFlowResponseException);
-};
-
-/**
- * Make IPC Process Application Manager singleton
- */
-extern Singleton<IPCProcessApplicationManager> ipcProcessApplicationManager;
 
 }
 

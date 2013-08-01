@@ -8,6 +8,9 @@ import org.apache.commons.logging.LogFactory;
 
 import eu.irati.librina.AllocateFlowException;
 import eu.irati.librina.ApplicationManagerSingleton;
+import eu.irati.librina.DIFConfiguration;
+import eu.irati.librina.FlowDeallocateRequestEvent;
+import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
@@ -29,7 +32,7 @@ public class FlowManager {
 		this.flows = new ConcurrentHashMap<Integer, FlowState>();
 	}
 	
-	public void allocateFlow(FlowRequestEvent event) throws Exception{
+	public void allocateFlowLocal(FlowRequestEvent event) throws Exception{
 		try{
 			int portId = getAvailablePortId();
 			event.setPortId(portId);
@@ -47,6 +50,69 @@ public class FlowManager {
 		}
 		
 		applicationManager.flowAllocated(event, "");
+	}
+	
+	public void allocateFlowRemote(FlowRequestEvent event) throws Exception{
+		String difName = event.getDIFName().getProcessName();
+		IPCProcess ipcProcess = selectIPCProcessOfDIF(difName);
+		if (ipcProcess == null){
+			log.error("Received an allocate remote flow request event, but could not " 
+						+ "find a local IPC Process belonging to DIF "+difName);
+			return;
+		}
+
+		try{
+			int portId = getAvailablePortId();
+			event.setPortId(portId);
+			applicationManager.flowRequestArrived(event.getLocalApplicationName(), 
+					event.getRemoteApplicationName(), event.getFlowSpecification(), 
+					event.getDIFName(), event.getPortId());
+			FlowState flowState = new FlowState(event);
+			flowState.setIpcProcessId(ipcProcess.getId());
+			flowState.setDifName(ipcProcess.getConfiguration().getDifName().getProcessName());
+			flows.put(portId, flowState);
+		}catch(Exception ex){
+			log.error("Error allocating flow. "+ex.getMessage());
+			ipcProcess.allocateFlowResponse(event, false, ex.getMessage());
+		}
+		
+		ipcProcess.allocateFlowResponse(event, true, "");
+	}
+	
+	public void deallocateFlow(FlowDeallocateRequestEvent event) throws Exception{
+		FlowState flow = null;
+		IPCProcess ipcProcess = null;
+		String difName = null;
+		
+		try{
+			flow = getFlow(event.getPortId());
+			difName = flow.getDifName();
+			ipcProcess = selectIPCProcessOfDIF(difName);
+			if (ipcProcess == null){
+				throw new Exception("Could not find IPC process belonging to DIF "+difName);
+			}
+			
+			ipcProcess.deallocateFlow(event.getPortId());
+			flows.remove(event.getPortId());
+		}catch(Exception ex){
+			log.error("Error deallocating flow. "+ex.getMessage());
+			applicationManager.flowDeallocated(event, -1, ex.getMessage());
+		}
+		
+		applicationManager.flowDeallocated(event, 0, "");
+	}
+	
+	public void flowDeallocated(FlowDeallocatedEvent event) throws Exception{
+		FlowState flow = null;
+		try{
+			flow = getFlow(event.getPortId());
+			flows.remove(event.getPortId());
+			applicationManager.flowDeallocatedRemotely(
+					event.getPortId(), event.getCode(), 
+					event.getReason(), flow.getLocalApplication());
+		}catch(Exception ex){
+			log.error("Error processing notification of flow deallocation. "+ex.getMessage());
+		}
 	}
 	
 	private int getAvailablePortId() throws Exception{
@@ -81,5 +147,30 @@ public class FlowManager {
 		}
 		
 		throw new Exception("Flow allocation failed after trying in all the IPC Processes.");
+	}
+	
+	private IPCProcess selectIPCProcessOfDIF(String difName) {
+		IPCProcessPointerVector ipcProcesses = ipcProcessFactory.listIPCProcesses();
+		IPCProcess ipcProcess = null;
+		
+		for(int i=0; i<ipcProcesses.size(); i++){
+			ipcProcess = ipcProcesses.get(i);
+			DIFConfiguration difConfiguration = ipcProcess.getConfiguration();
+			if (difConfiguration != null && 
+					difConfiguration.getDifName().getProcessName() == difName){
+				return ipcProcess;
+			}
+		}
+		
+		return null;
+	}
+	
+	private FlowState getFlow(int portId) throws Exception{
+		FlowState result = flows.get(portId);
+		if (result == null){
+			throw new Exception("Could not find flow with portId "+portId);
+		}
+		
+		return result;
 	}
 }

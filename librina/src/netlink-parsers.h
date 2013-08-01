@@ -109,7 +109,7 @@ int putAppAllocateFlowRequestResultMessageObject(nl_msg* netlinkMessage,
 AppAllocateFlowRequestResultMessage * parseAppAllocateFlowRequestResultMessage(
 		nlmsghdr *hdr);
 
-/* AppAllocateFlowRequestMessage CLASS*/
+/* AppAllocateFlowRequestArrivedMessage CLASS*/
 enum AppAllocateFlowRequestArrivedAttributes {
 	AAFRA_ATTR_SOURCE_APP_NAME = 1,
 	AAFRA_ATTR_DEST_APP_NAME,
@@ -129,8 +129,7 @@ AppAllocateFlowRequestArrivedMessage * parseAppAllocateFlowRequestArrivedMessage
 
 /* AppAllocateFlowResponseMessage CLASS*/
 enum AppAllocateFlowResponseAttributes {
-	AAFRE_ATTR_DIF_NAME = 1,
-	AAFRE_ATTR_ACCEPT,
+	AAFRE_ATTR_ACCEPT = 1,
 	AAFRE_ATTR_DENY_REASON,
 	AAFRE_ATTR_NOTIFY_SOURCE,
 	__AAFRE_ATTR_MAX,
@@ -147,7 +146,6 @@ AppAllocateFlowResponseMessage * parseAppAllocateFlowResponseMessage(
 /* AppDeallocateFlowRequestMessage CLASS*/
 enum AppDeallocateFlowRequestMessageAttributes {
 	ADFRT_ATTR_PORT_ID = 1,
-	ADFRT_ATTR_DIF_NAME,
 	ADFRT_ATTR_APP_NAME,
 	__ADFRT_ATTR_MAX,
 };
@@ -182,7 +180,6 @@ enum AppFlowDeallocatedNotificationMessageAttributes {
 	AFDN_ATTR_CODE,
 	AFDN_ATTR_REASON,
 	AFDN_ATTR_APP_NAME,
-	AFDN_ATTR_DIF_NAME,
 	__AFDN_ATTR_MAX,
 };
 
@@ -486,21 +483,99 @@ int putIpcmAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 IpcmAllocateFlowRequestMessage *
 	parseIpcmAllocateFlowRequestMessage(nlmsghdr *hdr);
 
-/* IpcmAllocateFlowResponseMessage CLASS*/
-enum IpcmAllocateFlowResponseMessageAttributes {
-	IAFREM_ATTR_RESULT = 1,
-	IAFREM_ATTR_ERROR_DESCRIPTION,
-	__IAFREM_ATTR_MAX,
+/* IpcmAllocateFlowRequestResultMessage CLASS*/
+enum IpcmAllocateFlowRequestResultMessageAttributes {
+	IAFRRM_ATTR_RESULT = 1,
+	IAFRRM_ATTR_ERROR_DESCRIPTION,
+	__IAFRRM_ATTR_MAX,
 };
 
-#define IAFREM_ATTR_MAX (__IAFREM_ATTR_MAX -1)
+#define IAFRRM_ATTR_MAX (__IAFRRM_ATTR_MAX -1)
+
+int putIpcmAllocateFlowRequestResultMessageObject(nl_msg* netlinkMessage,
+		const IpcmAllocateFlowRequestResultMessage& object);
+
+IpcmAllocateFlowRequestResultMessage *
+	parseIpcmAllocateFlowRequestResultMessage(nlmsghdr *hdr);
+
+/* IpcmAllocateFlowRequestArrivedMessage CLASS*/
+enum IpcmAllocateFlowRequestArrivedMessageAttributes {
+	IAFRA_ATTR_SOURCE_APP_NAME = 1,
+	IAFRA_ATTR_DEST_APP_NAME,
+	IAFRA_ATTR_FLOW_SPEC,
+	IAFRA_ATTR_DIF_NAME,
+	__IAFRA_ATTR_MAX,
+};
+
+#define IAFRA_ATTR_MAX (__IAFRA_ATTR_MAX -1)
+
+int putIpcmAllocateFlowRequestArrivedMessageObject(nl_msg* netlinkMessage,
+		const IpcmAllocateFlowRequestArrivedMessage& object);
+
+IpcmAllocateFlowRequestArrivedMessage * parseIpcmAllocateFlowRequestArrivedMessage(
+		nlmsghdr *hdr);
+
+/* IpcmAllocateFlowResponseMessage CLASS*/
+enum IpcmAllocateFlowResponseAttributes {
+	IAFRE_ATTR_ACCEPT = 1,
+	IAFRE_ATTR_DENY_REASON,
+	IAFRE_ATTR_NOTIFY_SOURCE,
+	IAFRE_ATTR_PORT_ID,
+	__IAFRE_ATTR_MAX,
+};
+
+#define IAFRE_ATTR_MAX (__IAFRE_ATTR_MAX -1)
 
 int putIpcmAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 		const IpcmAllocateFlowResponseMessage& object);
 
-IpcmAllocateFlowResponseMessage *
-	parseIpcmAllocateFlowResponseMessage(nlmsghdr *hdr);
+IpcmAllocateFlowResponseMessage * parseIpcmAllocateFlowResponseMessage(
+		nlmsghdr *hdr);
 
+/* IpcmDeallocateFlowRequestMessage CLASS*/
+enum IpcmDeallocateFlowRequestMessageAttributes {
+	IDFRT_ATTR_PORT_ID = 1,
+	__IDFRT_ATTR_MAX,
+};
+
+#define IDFRT_ATTR_MAX (__IDFRT_ATTR_MAX -1)
+
+int putIpcmDeallocateFlowRequestMessageObject(nl_msg* netlinkMessage,
+		const IpcmDeallocateFlowRequestMessage& object);
+
+IpcmDeallocateFlowRequestMessage * parseIpcmDeallocateFlowRequestMessage(
+		nlmsghdr *hdr);
+
+/* IpcmDeallocateFlowResponseMessage CLASS*/
+enum IpcmDeallocateFlowResponseMessageAttributes {
+	IDFRE_ATTR_RESULT = 1,
+	IDFRE_ATTR_ERROR_DESCRIPTION,
+	__IDFRE_ATTR_MAX,
+};
+
+#define IDFRE_ATTR_MAX (__IDFRE_ATTR_MAX -1)
+
+int putIpcmDeallocateFlowResponseMessageObject(nl_msg* netlinkMessage,
+		const IpcmDeallocateFlowResponseMessage& object);
+
+IpcmDeallocateFlowResponseMessage * parseIpcmDeallocateFlowResponseMessage(
+		nlmsghdr *hdr);
+
+/* IpcmFlowDeallocatedNotificationMessage CLASS*/
+enum IpcmFlowDeallocatedNotificationMessageAttributes {
+	IFDN_ATTR_PORT_ID = 1,
+	IFDN_ATTR_CODE,
+	IFDN_ATTR_REASON,
+	__IFDN_ATTR_MAX,
+};
+
+#define IFDN_ATTR_MAX (__IFDN_ATTR_MAX -1)
+
+int putIpcmFlowDeallocatedNotificationMessageObject(nl_msg* netlinkMessage,
+		const IpcmFlowDeallocatedNotificationMessage& object);
+
+IpcmFlowDeallocatedNotificationMessage * parseIpcmFlowDeallocatedNotificationMessage(
+		nlmsghdr *hdr);
 
 /* IpcmDIFRegistrationNotification CLASS*/
 enum IpcmDIFRegistrationNotificationAttributes {
