@@ -366,6 +366,7 @@ static int parse_app_name_info(struct nlattr * name_attr,
 	return 0;
 }
 
+
 static int rnl_parse_ipcm_alloc_flow_req(struct genl_info * info, 
                                   struct rnl_ipcm_alloc_flow_req_msg_attrs * msg_attrs)
 {
@@ -563,8 +564,6 @@ int rnl_parse_msg(struct genl_info	* info,
 		case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST:
 			break;
 		case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE:
-			if (rnl_parse_ipcm_alloc_flow_resp(info, msg->attrs) < 0)
-				goto fail;
 			break;
 		case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST:
 			if (rnl_parse_ipcm_alloc_flow_req(info, msg->attrs) < 0)
@@ -575,6 +574,8 @@ int rnl_parse_msg(struct genl_info	* info,
 		case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
 			break;
 		case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE:
+			if (rnl_parse_ipcm_alloc_flow_resp(info, msg->attrs) < 0)
+				goto fail;
 			break;
 		case RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST: 
 			if (rnl_parse_ipcm_dealloc_flow_req(info, msg->attrs) < 0)
@@ -616,8 +617,67 @@ int rnl_parse_msg(struct genl_info	* info,
 }
 EXPORT_SYMBOL(rnl_parse_msg);
 
-int rnl_format_msg(struct rnl_msg  * msg,
-                   struct sk_buff  * skb_out){
-	return 0;
+int rnl_format_msg(msg_id 	   msg_type,
+		   struct rnl_msg  * msg,
+                   struct sk_buff  * skb_out)
+{
+	switch(msg_type){
+		case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST:
+			break;
+		case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE:
+			break;
+		case RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:
+			break;
+		case RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION: 
+			break;
+		case RINA_C_IPCM_ENROLL_TO_DIF_REQUEST:
+			break;
+		case RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE:
+			break;
+		case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST:
+			break;
+		case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE:
+			break;
+		case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST:
+			break;
+		case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED:
+			break;
+		case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
+			break;
+		case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE:
+			break;
+		case RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST: 
+			break;
+		case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE:
+			break;
+		case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST:
+			break;
+		case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:
+			break;
+		case RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST:
+			break;
+		case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE:
+			break;
+		case RINA_C_IPCM_QUERY_RIB_REQUEST:
+			break;
+		case RINA_C_IPCM_QUERY_RIB_RESPONSE:
+			break;
+		case RINA_C_RMT_ADD_FTE_REQUEST:
+			break;
+		case RINA_C_RMT_DELETE_FTE_REQUEST:
+			break;
+		case RINA_C_RMT_DUMP_FT_REQUEST:
+			break;
+		case RINA_C_RMT_DUMP_FT_REPLY:
+			break;
+		default:
+			goto fail;
+			break;
+	}
+	return 0;	
+
+	fail:
+		LOG_ERR("Could not format netlink message of type: %d", msg_type);
+		return -1;
 }
 EXPORT_SYMBOL(rnl_format_msg);
