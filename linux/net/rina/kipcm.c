@@ -31,6 +31,7 @@
 #include "ipcp-factories.h"
 #include "ipcp-utils.h"
 #include "kipcm-utils.h"
+#include "common.h"
 
 #define DEFAULT_FACTORY "normal-ipc"
 
@@ -45,8 +46,8 @@ struct kipcm {
          *
          *     Francesco
          */
-        struct ipcp_map *       instances;
-        struct list_head        port_id_to_flow;
+        struct ipcp_imap *       instances;
+        struct ipcp_fmap *       flows;
 };
 
 struct flow {
@@ -102,7 +103,7 @@ struct kipcm * kipcm_init(struct kobject * parent)
                 return NULL;
         }
 
-        tmp->instances = ipcp_map_create();
+        tmp->instances = ipcp_imap_create();
         if (!tmp->instances) {
                 if (ipcpf_fini(tmp->factories)) {
                         /* FIXME: What could we do here ? */
@@ -111,7 +112,17 @@ struct kipcm * kipcm_init(struct kobject * parent)
                 return NULL;
         }
 
-        INIT_LIST_HEAD(&tmp->port_id_to_flow);
+        tmp->flows = ipcp_fmap_create();
+	if (!tmp->instances) {
+		if (ipcpf_fini(tmp->factories)) {
+			/* FIXME: What could we do here ? */
+		}
+		if (ipcp_imap_destroy(tmp->instances)) {
+			/* FIXME: What could we do here ? */
+		}
+		rkfree(tmp);
+		return NULL;
+	}
 
         LOG_DBG("Initialized successfully");
 
@@ -128,12 +139,15 @@ int kipcm_fini(struct kipcm * kipcm)
         LOG_DBG("Finalizing");
 
         /* FIXME: Destroy elements from port_id_to_flow */
-        ASSERT(list_empty(&kipcm->port_id_to_flow));
+        ASSERT(ipcp_fmap_empty(kipcm->flows));
         
         /* FIXME: Destroy elements from id_to_ipcp */
-        ASSERT(ipcp_map_empty(kipcm->instances));
-        if (ipcp_map_destroy(kipcm->instances))
+        ASSERT(ipcp_imap_empty(kipcm->instances));
+        if (ipcp_imap_destroy(kipcm->instances))
                 return -1;
+
+        if (ipcp_fmap_destroy(kipcm->flows))
+		return -1;
 
         if (ipcpf_fini(kipcm->factories))
                 return -1;
@@ -193,7 +207,7 @@ int kipcm_ipcp_create(struct kipcm *      kipcm,
                 return -1;
         }
 
-        if (ipcp_map_find(kipcm->instances, id)) {
+        if (ipcp_imap_find(kipcm->instances, id)) {
                 LOG_ERR("Process id %d already exists", id);
 
                 return -1;
@@ -233,7 +247,7 @@ int kipcm_ipcp_create(struct kipcm *      kipcm,
         /* FIXME: Ugly as hell */
         instance->factory = factory;
 
-        if (ipcp_map_add(kipcm->instances, id, instance)) {
+        if (ipcp_imap_add(kipcm->instances, id, instance)) {
                 factory->ops->destroy(factory->data, instance);
                 return -1;
         }
@@ -252,7 +266,7 @@ int kipcm_ipcp_destroy(struct kipcm *  kipcm,
                 return -1;
         }
 
-        instance = ipcp_map_find(kipcm->instances, id);
+        instance = ipcp_imap_find(kipcm->instances, id);
         if (!instance) {
                 LOG_ERR("IPC process %d instance does not exist", id);
                 return -1;
@@ -264,7 +278,7 @@ int kipcm_ipcp_destroy(struct kipcm *  kipcm,
         if (factory->ops->destroy(factory->data, instance))
                 return -1;
         
-        if (ipcp_map_remove(kipcm->instances, id))
+        if (ipcp_imap_remove(kipcm->instances, id))
                 return -1;
 
         return 0;
@@ -283,7 +297,7 @@ int kipcm_ipcp_configure(struct kipcm *            kipcm,
                 return -1;
         }
 
-        instance_old = ipcp_map_find(kipcm->instances, id);
+        instance_old = ipcp_imap_find(kipcm->instances, id);
         if (instance_old == NULL)
                 return -1;
 
@@ -297,7 +311,7 @@ int kipcm_ipcp_configure(struct kipcm *            kipcm,
                 return -1;
 
         if (instance_new != instance_old)
-                if (ipcp_map_update(kipcm->instances, id, instance_new))
+                if (ipcp_imap_update(kipcm->instances, id, instance_new))
                         return -1;
    
         return 0;
@@ -307,7 +321,6 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                    ipc_process_id_t ipc_id,
                    port_id_t        id)
 {
-        struct port_id_to_flow * port_flow;
         struct flow *            flow;
 
         if (!kipcm) {
@@ -315,19 +328,23 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 return -1;
         }
 
+        if (ipcp_fmap_find(kipcm->flows, id)) {
+        	LOG_ERR("Flow %d already exists", id);
+        	return -1;
+        }
+
         flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
         if (!flow) {
                 return -1;
         }
         
-        port_flow = rkzalloc(sizeof(*port_flow), GFP_KERNEL);
-        if (!port_flow) {
+        if (ipcp_fmap_add(kipcm->flows, id, flow)) {
                 rkfree(flow);
                 return -1;
         }
 
         flow->port_id     = id;
-        flow->ipc_process = ipcp_map_find(kipcm->instances, ipc_id);
+        flow->ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!flow->ipc_process) {
                 LOG_ERR("Couldn't find ipc_process %d", ipc_id);
                 rkfree(flow);

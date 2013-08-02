@@ -25,22 +25,45 @@
 #include "logs.h"
 #include "debug.h"
 #include "utils.h"
+#include "common.h"
 #include "kipcm-utils.h"
 
 /* FIXME: Replace with a map as soon as possible */
-struct ipcp_map {
+struct ipcp_imap {
         struct list_head root;
 };
 
-struct ipcp_map_entry {
+/* FIXME: Replace with a map as soon as possible */
+struct ipcp_fmap {
+        struct list_head root;
+};
+
+struct ipcp_imap_entry {
         ipc_process_id_t       key;
         struct ipcp_instance * value;
         struct list_head       list;
 };
 
-struct ipcp_map * ipcp_map_create(void)
+struct ipcp_fmap_entry {
+	port_id_t        key;
+        struct flow *    value;
+        struct list_head list;
+};
+
+struct ipcp_imap * ipcp_imap_create(void)
 {
-        struct ipcp_map * tmp;
+        struct ipcp_imap * tmp;
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        INIT_LIST_HEAD(&tmp->root);
+        return tmp;
+}
+
+struct ipcp_fmap * ipcp_fmap_create(void)
+{
+        struct ipcp_fmap * tmp;
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
@@ -49,13 +72,19 @@ struct ipcp_map * ipcp_map_create(void)
         return tmp;
 }
 
-int ipcp_map_empty(struct ipcp_map * map)
+int ipcp_imap_empty(struct ipcp_imap * map)
 {
         ASSERT(map);
         return list_empty(&map->root);
 }
 
-int ipcp_map_destroy(struct ipcp_map * map)
+int ipcp_fmap_empty(struct ipcp_fmap * map)
+{
+        ASSERT(map);
+        return list_empty(&map->root);
+}
+
+int ipcp_imap_destroy(struct ipcp_imap * map)
 {
         ASSERT(map);
 
@@ -67,11 +96,23 @@ int ipcp_map_destroy(struct ipcp_map * map)
         return 0;
 }
 
-int ipcp_map_add(struct ipcp_map *        map,
-                 ipc_process_id_t         key,
-                 struct ipcp_instance *   value)
+int ipcp_fmap_destroy(struct ipcp_fmap * map)
 {
-        struct ipcp_map_entry * tmp;
+        ASSERT(map);
+
+        /* FIXME: Destroy all the entries */
+        LOG_MISSING;
+
+        rkfree(map);
+
+        return 0;
+}
+
+int ipcp_imap_add(struct ipcp_imap *        map,
+                  ipc_process_id_t          key,
+                  struct ipcp_instance *    value)
+{
+        struct ipcp_imap_entry * tmp;
 
         ASSERT(map);
 
@@ -88,8 +129,29 @@ int ipcp_map_add(struct ipcp_map *        map,
         return 0;
 }
 
-static struct ipcp_map_entry * map_entry_find(struct ipcp_map * map,
-                                              ipc_process_id_t  key)
+int ipcp_fmap_add(struct ipcp_fmap * map,
+                  port_id_t          key,
+                  struct flow *      value)
+{
+        struct ipcp_fmap_entry * tmp;
+
+        ASSERT(map);
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return -1;
+
+        tmp->key   = key;
+        tmp->value = value;
+        INIT_LIST_HEAD(&tmp->list);
+
+        list_add(&tmp->list, &map->root);
+
+        return 0;
+}
+
+static struct ipcp_imap_entry * imap_entry_find(struct ipcp_imap * map,
+                                                ipc_process_id_t   key)
 {
         struct ipcp_map_entry * cur;
 
@@ -104,28 +166,57 @@ static struct ipcp_map_entry * map_entry_find(struct ipcp_map * map,
         return NULL;
 }
 
-struct ipcp_instance * ipcp_map_find(struct ipcp_map * map,
-                                     ipc_process_id_t  key)
+static struct ipcp_fmap_entry * fmap_entry_find(struct ipcp_fmap * map,
+                                                ipc_process_id_t   key)
 {
         struct ipcp_map_entry * cur;
 
         ASSERT(map);
 
-        cur = map_entry_find(map, key);
+        list_for_each_entry(cur, &map->root, list) {
+                if (cur->key == key) {
+                        return cur;
+                }
+        }
+
+        return NULL;
+}
+
+struct ipcp_instance * ipcp_imap_find(struct ipcp_imap * map,
+                                      ipc_process_id_t   key)
+{
+        struct ipcp_imap_entry * cur;
+
+        ASSERT(map);
+
+        cur = imap_entry_find(map, key);
         if (!cur)
                 return NULL;
         return cur->value;
 }
 
-int ipcp_map_update(struct ipcp_map *      map,
-                    ipc_process_id_t       key,
-                    struct ipcp_instance * value)
+struct flow * ipcp_fmap_find(struct ipcp_fmap * map,
+                             port_id_t          key)
 {
-        struct ipcp_map_entry * cur;
+        struct ipcp_fmap_entry * cur;
 
         ASSERT(map);
-        
-        cur = map_entry_find(map, key);
+
+        cur = fmap_entry_find(map, key);
+        if (!cur)
+                return NULL;
+        return cur->value;
+}
+
+int ipcp_imap_update(struct ipcp_imap *     map,
+                     ipc_process_id_t       key,
+                     struct ipcp_instance * value)
+{
+        struct ipcp_imap_entry * cur;
+
+        ASSERT(map);
+
+        cur = imap_entry_find(map, key);
         if (!cur)
                 return -1;
 
@@ -134,14 +225,47 @@ int ipcp_map_update(struct ipcp_map *      map,
         return 0;
 }
 
-int ipcp_map_remove(struct ipcp_map * map,
-                    ipc_process_id_t  key)
+int ipcp_fmap_update(struct ipcp_fmap * map,
+                     port_id_t          key,
+                     struct flow *      value)
 {
-        struct ipcp_map_entry * cur;
+        struct ipcp_fmap_entry * cur;
+
+        ASSERT(map);
+        
+        cur = fmap_entry_find(map, key);
+        if (!cur)
+                return -1;
+
+        cur->value = value;
+
+        return 0;
+}
+
+int ipcp_imap_remove(struct ipcp_imap * map,
+		     ipc_process_id_t   key)
+{
+        struct ipcp_imap_entry * cur;
 
         ASSERT(map);
 
-        cur = map_entry_find(map, key);
+        cur = imap_entry_find(map, key);
+        if (!cur)
+                return -1;
+
+        list_del(&cur->list);
+        rkfree(cur);
+        return 0;
+}
+
+int ipcp_fmap_remove(struct ipcp_fmap * map,
+                     port_id_t          key)
+{
+        struct ipcp_fmap_entry * cur;
+
+        ASSERT(map);
+
+        cur = fmap_entry_find(map, key);
         if (!cur)
                 return -1;
 
