@@ -366,7 +366,6 @@ static int parse_app_name_info(struct nlattr * name_attr,
 	return 0;
 }
 
-
 static int rnl_parse_ipcm_alloc_flow_req(struct genl_info * info, 
                                   struct rnl_ipcm_alloc_flow_req_msg_attrs * msg_attrs)
 {
@@ -404,9 +403,16 @@ static int rnl_parse_ipcm_alloc_flow_req(struct genl_info * info,
 
 	return 0;
 
- fail:
-        LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_ALLOCATE_FLOW_REQUEST"));
-        return -1;
+	fail:
+        	LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_ALLOCATE_FLOW_REQUEST"));
+	        return -1;
+}
+
+
+static int rnl_parse_ipcm_alloc_flow_req_arrived(struct genl_info * info, 
+                     struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs * msg_attrs)
+{
+	return 0;
 }
 
 static int rnl_parse_ipcm_alloc_flow_resp(struct genl_info * info, 
@@ -443,14 +449,14 @@ static int rnl_parse_ipcm_alloc_flow_resp(struct genl_info * info,
 	
 	return 0;	
 
- fail:
-        LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_ALLOCATE_FLOW_RESPONSE"));
-        return -1;
+	fail:
+        	LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_ALLOCATE_FLOW_RESPONSE"));
+	        return -1;
 
 }
 
 static int rnl_parse_ipcm_dealloc_flow_req(struct genl_info * info,
-                                   struct rnl_dealloc_flow_req_msg_attrs * msg_attrs)
+                                   struct rnl_ipcm_dealloc_flow_req_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[ADFRT_ATTR_MAX + 1];
 
@@ -475,15 +481,15 @@ static int rnl_parse_ipcm_dealloc_flow_req(struct genl_info * info,
 
 	return 0;
 
- fail:
-        LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST"));
-        return -1;
+	fail:
+        	LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST"));
+        	return -1;
 
 }
 
 
 static int rnl_parse_ipcm_dealloc_flow_resp(struct genl_info * info,
-                                    struct rnl_dealloc_flow_resp_msg_attrs * msg_attrs)
+                                    struct rnl_ipcm_dealloc_flow_resp_msg_attrs * msg_attrs)
 {
 	struct nla_policy attr_policy[ADFRE_ATTR_MAX + 1];
 
@@ -510,9 +516,9 @@ static int rnl_parse_ipcm_dealloc_flow_resp(struct genl_info * info,
 
 	return 0;
 
- fail:
-        LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE"));
-        return -1;
+	fail:
+        	LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE"));
+	        return -1;
 }
 
 #if 0
