@@ -25,6 +25,7 @@
 #include <linux/kobject.h>
 
 struct rmt;
+struct pdu_ft_entry;
 
 struct rmt * rmt_init(struct kobject * parent);
 int          rmt_fini(struct rmt * instance);
