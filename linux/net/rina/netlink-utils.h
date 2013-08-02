@@ -105,12 +105,12 @@ enum ipcm_dealloc_flow_resp_attrs_list {
 #define ADFRE_ATTR_MAX (__ADFRE_ATTR_MAX -1)
 
 
-struct rina_msg_hdr{
+struct rina_msg_hdr {
 	unsigned int src_ipc_id;
 	unsigned int dst_ipc_id;
 };
 
-struct rnl_msg{
+struct rnl_msg {
             
         /* Generic RINA Netlink family identifier */
         int family;
@@ -145,48 +145,49 @@ struct rnl_msg{
 
 /* FIXME: all the alloc flow structs are the same
  * we can use only a generic one */
-struct rnl_ipcm_alloc_flow_req_msg_attrs{
-	struct name 		source;
-	struct name 		dest;
-	struct flow_spec	fspec;
-	port_id_t        	id;
-	struct name		dif_name;
+struct rnl_ipcm_alloc_flow_req_msg_attrs {
+	struct name 	 source;
+	struct name 	 dest;
+	struct flow_spec fspec;
+	port_id_t        id;
+	struct name	 dif_name;
 };
 
-struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs{
-	struct name 		source;
-	struct name 		dest;
-	struct flow_spec	fspec;
-	port_id_t        	id;
-	struct name		dif_name;
+struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs {
+	struct name 	 source;
+	struct name 	 dest;
+	struct flow_spec fspec;
+	port_id_t        id;
+	struct name	 dif_name;
 };
 
-struct rnl_alloc_flow_resp_msg_attrs{
+struct rnl_alloc_flow_resp_msg_attrs {
 	struct name dif_name;
 	bool 	    accept;
-	string_t    * deny_reason;
+	string_t *  deny_reason;
 	bool	    notify_src;	
 };
 
-struct rnl_dealloc_flow_req_msg_attrs{
-	port_id_t	id;
-	struct name	dif_name;
-	struct name	app_name;
+struct rnl_dealloc_flow_req_msg_attrs {
+	port_id_t   id;
+	struct name dif_name;
+	struct name app_name;
 };
 
-struct rnl_dealloc_flow_resp_msg_attrs{
-	uint_t		result;
-	string_t 	* err_desc;
-	struct name	app_name;
+struct rnl_dealloc_flow_resp_msg_attrs {
+	uint_t	    result;
+	string_t *  err_desc;
+	struct name app_name;
 };
 
 #if 0
 ipc_process_id_t rnl_src_ipcid_from_msg(struct genl_info * info);
 ipc_process_id_t rnl_dst_ipcid_from_msg(struct genl_info * info);
 #endif
+
 int rnl_parse_msg(struct genl_info  * info,
                   struct rnl_msg    * msg);
-int rnl_format_msg(msg_id 	   msg_type,
+int rnl_format_msg(msg_id 	     msg_type,
 		   struct rnl_msg  * msg,
 		   struct sk_buff  * skb_out);
 #endif
