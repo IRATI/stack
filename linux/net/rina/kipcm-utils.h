@@ -41,33 +41,35 @@ int                      ipcp_imap_destroy(struct ipcp_imap * map);
 
 int                      ipcp_imap_empty(struct ipcp_imap * map);
 
-int                      ipcp_imap_add(struct ipcp_imap *      map,
+int                      ipcp_imap_add(struct ipcp_imap *     map,
                                        ipc_process_id_t       key,
                                        struct ipcp_instance * value);
 struct ipcp_instance *   ipcp_imap_find(struct ipcp_imap * map,
-                                        ipc_process_id_t key);
-int                      ipcp_imap_update(struct ipcp_imap * map,
-                                          ipc_process_id_t  key,
-                                          struct ipcp_instance *   value);
+                                        ipc_process_id_t   key);
+int                      ipcp_imap_update(struct ipcp_imap *     map,
+                                          ipc_process_id_t       key,
+                                          struct ipcp_instance * value);
 int                      ipcp_imap_remove(struct ipcp_imap * map,
-                                          ipc_process_id_t  key);
+                                          ipc_process_id_t   key);
 
 struct ipcp_fmap;
+
+struct flow;
 
 struct ipcp_fmap *       ipcp_fmap_create(void);
 int                      ipcp_fmap_destroy(struct ipcp_fmap * map);
 
 int                      ipcp_fmap_empty(struct ipcp_fmap * map);
 
-int                      ipcp_fmap_add(struct ipcp_fmap *      map,
-                                       ipc_process_id_t       key,
-                                       struct ipcp_instance * value);
-struct ipcp_instance *   ipcp_fmap_find(struct ipcp_fmap * map,
-                                        ipc_process_id_t key);
+int                      ipcp_fmap_add(struct ipcp_fmap * map,
+                                       port_id_t          key,
+                                       struct flow *      value);
+struct flow *            ipcp_fmap_find(struct ipcp_fmap * map,
+                                        port_id_t          key);
 int                      ipcp_fmap_update(struct ipcp_fmap * map,
-                                          ipc_process_id_t  key,
-                                          struct ipcp_instance *   value);
+                                          port_id_t          key,
+                                          struct flow *      value);
 int                      ipcp_fmap_remove(struct ipcp_fmap * map,
-                                          ipc_process_id_t  key);
+                                          port_id_t          key);
 
 #endif
