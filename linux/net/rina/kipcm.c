@@ -46,10 +46,10 @@ struct kipcm {
          *     Francesco
          */
         struct ipcp_imap *      instances;
-        struct list_head        port_id_to_flow;
+        struct ipcp_fmap *      flows;
 };
 
-struct flow {
+struct ipcp_flow {
         /* The port-id identifying the flow */
         port_id_t              port_id;
 
@@ -80,12 +80,6 @@ struct flow {
 #endif
 };
 
-struct port_id_to_flow {
-        port_id_t        id;   /* Key */
-        struct flow *    flow; /* Value */
-        struct list_head list;
-};
-
 struct kipcm * kipcm_init(struct kobject * parent)
 {
         struct kipcm * tmp;
@@ -111,7 +105,17 @@ struct kipcm * kipcm_init(struct kobject * parent)
                 return NULL;
         }
 
-        INIT_LIST_HEAD(&tmp->port_id_to_flow);
+        tmp->flows = ipcp_fmap_create();
+        if (!tmp->flows) {
+                if (ipcp_imap_destroy(tmp->instances)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (ipcpf_fini(tmp->factories)) {
+                        /* FIXME: What could we do here ? */
+                }
+                rkfree(tmp);
+                return NULL;
+        }
 
         LOG_DBG("Initialized successfully");
 
@@ -127,10 +131,12 @@ int kipcm_fini(struct kipcm * kipcm)
 
         LOG_DBG("Finalizing");
 
-        /* FIXME: Destroy elements from port_id_to_flow */
-        ASSERT(list_empty(&kipcm->port_id_to_flow));
+        /* FIXME: Destroy all the flows */
+        ASSERT(ipcp_fmap_empty(kipcm->flows));
+        if (ipcp_fmap_destroy(kipcm->flows))
+                return -1;
         
-        /* FIXME: Destroy elements from id_to_ipcp */
+        /* FIXME: Destroy all the instances */
         ASSERT(ipcp_imap_empty(kipcm->instances));
         if (ipcp_imap_destroy(kipcm->instances))
                 return -1;
@@ -307,8 +313,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                    ipc_process_id_t ipc_id,
                    port_id_t        id)
 {
-        struct port_id_to_flow * port_flow;
-        struct flow *            flow;
+        struct ipcp_flow * flow;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
@@ -320,18 +325,11 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 return -1;
         }
         
-        port_flow = rkzalloc(sizeof(*port_flow), GFP_KERNEL);
-        if (!port_flow) {
-                rkfree(flow);
-                return -1;
-        }
-
         flow->port_id     = id;
         flow->ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!flow->ipc_process) {
                 LOG_ERR("Couldn't find ipc_process %d", ipc_id);
                 rkfree(flow);
-                rkfree(port_flow);
                 return -1;
         }
 
@@ -369,34 +367,6 @@ int kipcm_flow_add(struct kipcm *   kipcm,
 }
 EXPORT_SYMBOL(kipcm_flow_add);
 
-#if 0
-static struct port_id_to_flow *
-retrieve_port_flow_node(struct kipcm * kipcm, port_id_t id)
-{
-        struct port_id_to_flow * cur;
-
-        list_for_each_entry(cur, &kipcm->port_id_to_flow, list) {
-                if (cur->id == id)
-                        return cur;
-        }
-
-        return NULL;
-}
-
-static struct flow *
-retrieve_flow_by_port_id(struct kipcm * kipcm, port_id_t id)
-{
-        struct port_id_to_flow * cur;
-
-        list_for_each_entry(cur, &kipcm->port_id_to_flow, list) {
-                if (cur->id == id)
-                        return cur->flow;
-        }
-
-        return NULL;
-}
-#endif
-
 int kipcm_flow_remove(struct kipcm * kipcm,
                       port_id_t      id)
 {
@@ -429,7 +399,7 @@ int kipcm_sdu_write(struct kipcm *     kipcm,
 {
         int                    retval = -1;
 #if 0
-        struct flow *          flow;
+        struct ipcp_flow *     flow;
         struct ipc_process_t * ipc_process;
 
         if (!kipcm) {
@@ -476,9 +446,9 @@ int kipcm_sdu_read(struct kipcm * kipcm,
                    struct sdu *   sdu)
 {
 #if 0
-        struct flow * flow;
-        size_t        size;
-        char *        data;
+        struct ipcp_flow * flow;
+        size_t             size;
+        char *             data;
 
 
         if (!kipcm) {
