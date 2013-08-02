@@ -172,6 +172,9 @@ static int craft_flow_spec(struct sk_buff * msg,
 
 #define BUILD_ERR_STRING(X)                                     \
 	"Netlink message does not contain " X ", bailing out"
+#if 0
+/* This is an implementation of the function before redefining the API, 
+but could be useful to the the new one */
 
 static int rnl_format_ipcm_alloc_flow_req_arrived(struct sk_buff * skb_in,
 					   struct \
@@ -233,6 +236,7 @@ static int rnl_format_ipcm_alloc_flow_req_arrived(struct sk_buff * skb_in,
 
         return 0;
 }
+#endif
 
 #define BUILD_ERR_STRING_BY_MSG_TYPE(X)                 \
         "Could not parse Netlink message of type "X
@@ -803,7 +807,7 @@ EXPORT_SYMBOL(rnl_format_rmt_del_fte_req_msg);
 
 
 
-int rnl_format_msg(msg_id 	   msg_type,
+static int rnl_format_msg(msg_id   msg_type,
 		   struct rnl_msg  * msg,
                    struct sk_buff  * skb_out)
 {
