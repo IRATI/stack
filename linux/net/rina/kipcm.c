@@ -36,15 +36,6 @@
 
 struct kipcm {
         struct ipcp_factories * factories;
-
-        /* NOTE:
-         *
-         *   The following data structures hide the lookups for
-         *   ipcp-id <-> instance and port-id <-> flow. They will be changed
-         *   later. For the time being these lookups will be kept simpler
-         *
-         *     Francesco
-         */
         struct ipcp_imap *      instances;
         struct ipcp_fmap *      flows;
 };
@@ -176,8 +167,9 @@ int kipcm_ipcp_factory_unregister(struct kipcm *        kipcm,
 
         /* FIXME:
          *
-         *   We have to call _destroy on all the instances created on
-         *   this shim
+         *   We have to do the body of kipcm_ipcp_destroy() on all the
+         *   instances remaining (and not explicitly destroyed), previously
+         *   created with the factory being unregisterd ...
          *
          *     Francesco
          */
