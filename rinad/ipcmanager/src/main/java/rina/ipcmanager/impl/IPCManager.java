@@ -5,6 +5,8 @@ import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.CreateIPCProcessException;
+import eu.irati.librina.FlowDeallocateRequestEvent;
+import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCEvent;
 import eu.irati.librina.IPCEventProducerSingleton;
@@ -195,9 +197,17 @@ public class IPCManager {
 			applicationRegistrationManager.unregisterApplication(appUnregReqEvent);
 		}else if (event.getType() == IPCEventType.FLOW_ALLOCATION_REQUESTED_EVENT){
 			FlowRequestEvent flowReqEvent = (FlowRequestEvent) event;
-			flowManager.allocateFlow(flowReqEvent);
+			if (flowReqEvent.isLocalRequest()){
+				flowManager.allocateFlowLocal(flowReqEvent);
+			}else{
+				flowManager.allocateFlowRemote(flowReqEvent);
+			}
 		}else if (event.getType() == IPCEventType.FLOW_DEALLOCATION_REQUESTED_EVENT){
-			//TODO
+			FlowDeallocateRequestEvent flowDeReqEvent = (FlowDeallocateRequestEvent) event;
+			flowManager.deallocateFlow(flowDeReqEvent);
+		}else if (event.getType() == IPCEventType.FLOW_DEALLOCATED_EVENT){
+			FlowDeallocatedEvent flowDeEvent = (FlowDeallocatedEvent) event;
+			flowManager.flowDeallocated(flowDeEvent);
 		}else if (event.getType().equals(IPCEventType.GET_DIF_PROPERTIES)){
 			//TODO
 		}

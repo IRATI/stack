@@ -454,7 +454,6 @@ void IPCManager::deallocateFlow(int portId) throw (FlowDeallocationException) {
 	AppDeallocateFlowRequestMessage message;
 	message.setApplicationName(flow->getLocalApplicationName());
 	message.setPortId(portId);
-	message.setDifName(flow->getDIFName());
 	message.setRequestMessage(true);
 
 	AppDeallocateFlowResponseMessage * deallocateResponse;
@@ -509,36 +508,6 @@ std::vector<ApplicationRegistration *> IPCManager::getRegisteredApplications() {
 }
 
 Singleton<IPCManager> ipcManager;
-
-/* CLASS FLOW DEALLOCATED EVENT */
-
-FlowDeallocatedEvent::FlowDeallocatedEvent(
-		int portId, int code, const std::string& reason,
-		const ApplicationProcessNamingInformation& difName) :
-				IPCEvent(FLOW_DEALLOCATED_EVENT, 0) {
-	this->portId = portId;
-	this->code = code;
-	this->reason = reason;
-	this->difName = difName;
-}
-
-int FlowDeallocatedEvent::getPortId() const {
-	return portId;
-}
-
-int FlowDeallocatedEvent::getCode() const{
-	return code;
-}
-
-const std::string FlowDeallocatedEvent::getReason() const{
-	return reason;
-}
-
-const ApplicationProcessNamingInformation
-FlowDeallocatedEvent::getDIFName() const{
-	return difName;
-}
-
 
 /* CLASS APPLICATION UNREGISTERED EVENT */
 

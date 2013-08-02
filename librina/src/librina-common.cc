@@ -488,12 +488,14 @@ void DIFProperties::removeQoSCube(const QoSCube& qosCube) {
 /* CLASS FLOW REQUEST EVENT */
 FlowRequestEvent::FlowRequestEvent(
 		const FlowSpecification& flowSpecification,
+		bool localRequest,
 		const ApplicationProcessNamingInformation& localApplicationName,
 		const ApplicationProcessNamingInformation& remoteApplicationName,
 		unsigned int sequenceNumber):
 				IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
 						sequenceNumber) {
 	this->flowSpecification = flowSpecification;
+	this->localRequest = localRequest;
 	this->localApplicationName = localApplicationName;
 	this->remoteApplicationName = remoteApplicationName;
 	this->portId = 0;
@@ -501,6 +503,7 @@ FlowRequestEvent::FlowRequestEvent(
 
 FlowRequestEvent::FlowRequestEvent(int portId,
 		const FlowSpecification& flowSpecification,
+		bool localRequest,
 		const ApplicationProcessNamingInformation& localApplicationName,
 		const ApplicationProcessNamingInformation& destApplicationName,
 		const ApplicationProcessNamingInformation& DIFName,
@@ -508,6 +511,7 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 		IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
 				sequenceNumber) {
 	this->flowSpecification = flowSpecification;
+	this->localRequest = localRequest;
 	this->localApplicationName = localApplicationName;
 	this->remoteApplicationName = remoteApplicationName;
 	this->DIFName = DIFName;
@@ -527,6 +531,10 @@ int FlowRequestEvent::getPortId() const {
 	return portId;
 }
 
+bool FlowRequestEvent::isLocalRequest() const{
+	return localRequest;
+}
+
 const FlowSpecification& FlowRequestEvent::getFlowSpecification() const {
 	return flowSpecification;
 }
@@ -544,6 +552,53 @@ const ApplicationProcessNamingInformation&
 const ApplicationProcessNamingInformation&
 	FlowRequestEvent::getRemoteApplicationName() const {
 	return remoteApplicationName;
+}
+
+/* CLASS FLOW DEALLOCATE REQUEST EVENT */
+FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
+			const ApplicationProcessNamingInformation& appName,
+			unsigned int sequenceNumber):
+						IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,
+								sequenceNumber){
+	this->portId = portId;
+	this->applicationName = appName;
+}
+
+FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
+		unsigned int sequenceNumber):
+			IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,
+					sequenceNumber){
+	this->portId = portId;
+}
+
+int FlowDeallocateRequestEvent::getPortId() const{
+	return portId;
+}
+
+const ApplicationProcessNamingInformation&
+	FlowDeallocateRequestEvent::getApplicationName() const{
+	return applicationName;
+}
+
+/* CLASS FLOW DEALLOCATED EVENT */
+FlowDeallocatedEvent::FlowDeallocatedEvent(
+		int portId, int code, const std::string& reason) :
+				IPCEvent(FLOW_DEALLOCATED_EVENT, 0) {
+	this->portId = portId;
+	this->code = code;
+	this->reason = reason;
+}
+
+int FlowDeallocatedEvent::getPortId() const {
+	return portId;
+}
+
+int FlowDeallocatedEvent::getCode() const{
+	return code;
+}
+
+const std::string FlowDeallocatedEvent::getReason() const{
+	return reason;
 }
 
 /* CLASS APPLICATION REGISTRATION INFORMATION */
@@ -620,24 +675,22 @@ ApplicationUnregistrationRequestEvent::getDIFName() const {
 
 /* Auxiliar function called in case of using the stubbed version of the API */
 IPCEvent * getIPCEvent(){
-	ApplicationProcessNamingInformation * sourceName =
-			new ApplicationProcessNamingInformation();
-	sourceName->setProcessName("/apps/source");
-	sourceName->setProcessInstance("12");
-	sourceName->setEntityName("database");
-	sourceName->setEntityInstance("12");
+	ApplicationProcessNamingInformation sourceName;
+	sourceName.setProcessName("/apps/source");
+	sourceName.setProcessInstance("12");
+	sourceName.setEntityName("database");
+	sourceName.setEntityInstance("12");
 
-	ApplicationProcessNamingInformation * destName =
-			new ApplicationProcessNamingInformation();
-	destName->setProcessName("/apps/dest");
-	destName->setProcessInstance("12345");
-	destName->setEntityName("printer");
-	destName->setEntityInstance("12623456");
+	ApplicationProcessNamingInformation destName;
+	destName.setProcessName("/apps/dest");
+	destName.setProcessInstance("12345");
+	destName.setEntityName("printer");
+	destName.setEntityInstance("12623456");
 
-	FlowSpecification * flowSpec = new FlowSpecification();
+	FlowSpecification flowSpec;
 
 	FlowRequestEvent * event = new
-			FlowRequestEvent(*flowSpec,*sourceName, *destName, 24);
+			FlowRequestEvent(flowSpec, true, sourceName, destName, 24);
 
 	return event;
 }
@@ -712,44 +765,6 @@ const std::vector<QoSCube>& DIFConfiguration::getQosCubes() const {
 
 void DIFConfiguration::setQosCubes(const std::vector<QoSCube>& qosCubes) {
 	this->qosCubes = qosCubes;
-}
-
-/* CLASS FLOW REQUEST */
-const ApplicationProcessNamingInformation&
-		FlowRequest::getDestinationApplicationName() const {
-	return destinationApplicationName;
-}
-
-void FlowRequest::setDestinationApplicationName(
-		const ApplicationProcessNamingInformation& destinationApplicationName){
-	this->destinationApplicationName = destinationApplicationName;
-}
-
-const FlowSpecification& FlowRequest::getFlowSpecification() const {
-	return flowSpecification;
-}
-
-void FlowRequest::setFlowSpecification(
-		const FlowSpecification& flowSpecification) {
-	this->flowSpecification = flowSpecification;
-}
-
-int FlowRequest::getPortId() const {
-	return portId;
-}
-
-void FlowRequest::setPortId(int portId) {
-	this->portId = portId;
-}
-
-const ApplicationProcessNamingInformation& FlowRequest::getSourceApplicationName()
-		const {
-	return sourceApplicationName;
-}
-
-void FlowRequest::setSourceApplicationName(
-		const ApplicationProcessNamingInformation& sourceApplicationName) {
-	this->sourceApplicationName = sourceApplicationName;
 }
 
 /* CLAS RIBOBJECT */
