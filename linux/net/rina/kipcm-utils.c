@@ -26,6 +26,7 @@
 #include "logs.h"
 #include "debug.h"
 #include "utils.h"
+#include "common.h"
 #include "kipcm-utils.h"
 
 #define IMAP_HASH_BITS 7
