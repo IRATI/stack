@@ -53,3 +53,15 @@ int pdu_destroy(struct pdu * p)
         return 0;
 }
 
+int sdu_is_ok(struct sdu * sdu)
+{
+        ASSERT(sdu);
+
+        if (!sdu->buffer)
+                return 0;
+
+        /* FIXME: More checks expected here ... */
+
+        return 1;
+}
+

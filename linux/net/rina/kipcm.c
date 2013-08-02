@@ -303,7 +303,7 @@ int kipcm_ipcp_configure(struct kipcm *            kipcm,
 
 int kipcm_flow_add(struct kipcm *   kipcm,
                    ipc_process_id_t ipc_id,
-                   port_id_t        id)
+                   port_id_t        port_id)
 {
         struct ipcp_flow * flow;
 
@@ -312,8 +312,8 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 return -1;
         }
 
-        if (ipcp_fmap_find(kipcm->flows, id)) {
-                LOG_ERR("Flow %d already exists", id);
+        if (ipcp_fmap_find(kipcm->flows, port_id)) {
+                LOG_ERR("Flow on port-id %d already exists", port_id);
                 return -1;
         }
 
@@ -322,27 +322,28 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 return -1;
         }
 
-        flow->port_id     = id;
+        flow->port_id     = port_id;
         flow->ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!flow->ipc_process) {
-                LOG_ERR("Couldn't find ipc_process %d", ipc_id);
+                LOG_ERR("Couldn't find the ipc process %d", ipc_id);
                 rkfree(flow);
                 return -1;
         }
 
         /*
          * FIXME: We are allowing applications, this must be changed once
-         * once the RMT is implemented.
+         *        once the RMT is implemented.
          */
         flow->application_owned = 1;
-        flow->rmt_instance = NULL;
+        flow->rmt_instance      = NULL;
         if (kfifo_alloc(flow->sdu_ready, PAGE_SIZE, GFP_KERNEL)) {
-                LOG_ERR("Couldn't create the sdu_ready queue for flow %d", id);
+                LOG_ERR("Couldn't create the sdu-ready queue for "
+                        "flow on port-id %d", port_id);
                 rkfree(flow);
                 return -1;
         }
 
-        if (ipcp_fmap_add(kipcm->flows, id, flow)) {
+        if (ipcp_fmap_add(kipcm->flows, port_id, flow)) {
                 rkfree(flow);
                 return -1;
         }
@@ -352,7 +353,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
 EXPORT_SYMBOL(kipcm_flow_add);
 
 int kipcm_flow_remove(struct kipcm * kipcm,
-                      port_id_t      id)
+                      port_id_t      port_id)
 {
         struct ipcp_flow * flow;
 
@@ -361,18 +362,16 @@ int kipcm_flow_remove(struct kipcm * kipcm,
                 return -1;
         }
 
-        flow = ipcp_fmap_find(kipcm->flows, id);
+        flow = ipcp_fmap_find(kipcm->flows, port_id);
         if (!flow) {
-                LOG_ERR("Couldn't retrieve the flow %d", id);
-
+                LOG_ERR("Couldn't retrieve the flow for port-id %d", port_id);
                 return -1;
         }
 
         kfifo_free(flow->sdu_ready);
-
         rkfree(flow);
 
-        if (ipcp_fmap_remove(kipcm->flows, id))
+        if (ipcp_fmap_remove(kipcm->flows, port_id))
                 return -1;
 
         return 0;
@@ -380,11 +379,9 @@ int kipcm_flow_remove(struct kipcm * kipcm,
 EXPORT_SYMBOL(kipcm_flow_remove);
 
 int kipcm_sdu_write(struct kipcm *     kipcm,
-                    port_id_t          id,
+                    port_id_t          port_id,
                     const struct sdu * sdu)
 {
-        int                    retval = -1;
-
         struct ipcp_flow *     flow;
         struct ipcp_instance * instance;
 
@@ -393,51 +390,47 @@ int kipcm_sdu_write(struct kipcm *     kipcm,
                 return -1;
         }
 
-        flow = ipcp_fmap_find(kipcm->flows, id);
+        flow = ipcp_fmap_find(kipcm->flows, port_id);
         if (!flow) {
-                LOG_ERR("There is no flow bound to port-id %d", id);
+                LOG_ERR("There is no flow bound to port-id %d", port_id);
 
                 return -1;
         }
 
-        retval      = -1;
-        instance    = flow->ipc_process;
-        retval = instance->ops->sdu_write(instance->data, id, sdu);
-        if (retval)
-                LOG_ERR("Couldn't write on port-id %d", id);
+        instance = flow->ipc_process;
+        ASSERT(instance);
+        if (instance->ops->sdu_write(instance->data, port_id, sdu))
+                LOG_ERR("Couldn't write SDU on port-id %d", port_id);
 
-        return retval;
+        return 0;
 }
 
 int kipcm_sdu_read(struct kipcm * kipcm,
-                   port_id_t      id,
+                   port_id_t      port_id,
                    struct sdu *   sdu)
 {
         struct ipcp_flow * flow;
         size_t             size;
         char *             data;
 
-
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return -1;
         }
-        if (!sdu || !sdu->buffer) {
+        if (!sdu || !sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus parameters passed, bailing out");
                 return -1;
         }
 
-        flow = ipcp_fmap_find(kipcm->flows, id);
+        flow = ipcp_fmap_find(kipcm->flows, port_id);
         if (!flow) {
-                LOG_ERR("There is no flow bound to port-id %d", id);
-
+                LOG_ERR("There is no flow bound to port-id %d", port_id);
                 return -1;
         }
 
         if (kfifo_out(flow->sdu_ready, &size, sizeof(size_t)) <
             sizeof(size_t)) {
-                LOG_ERR("There is not enough data for port-id %d", id);
-
+                LOG_ERR("There is not enough data in port-id %d fifo", port_id);
                 return -1;
         }
 
@@ -465,7 +458,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 }
 
 int kipcm_sdu_post(struct kipcm * kipcm,
-                   port_id_t      id,
+                   port_id_t      port_id,
                    struct sdu *   sdu)
 {
         struct ipcp_flow * flow;
@@ -475,40 +468,35 @@ int kipcm_sdu_post(struct kipcm * kipcm,
                 LOG_ERR("Bogus kipcm instance passed, cannot post SDU");
                 return -1;
         }
-        if (!sdu) {
+        if (!sdu || !sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus parameters passed, bailing out");
                 return -1;
         }
 
-        flow = ipcp_fmap_find(kipcm->flows, id);
+        flow = ipcp_fmap_find(kipcm->flows, port_id);
         if (flow == NULL) {
-                LOG_ERR("There is no flow bound to port-id %d", id);
-
+                LOG_ERR("There is no flow bound to port-id %d", port_id);
                 return -1;
         }
 
         avail = kfifo_avail(flow->sdu_ready);
         if (avail < (sdu->buffer->size + sizeof(size_t))) {
-                LOG_ERR("There is no space in the queue "
-                        "for port_id %d", id);
-
+                LOG_ERR("There is no space in the port-id %d fifo", port_id);
                 return -1;
         }
 
         if (kfifo_in(flow->sdu_ready,
                      &sdu->buffer->size,
                      sizeof(size_t)) != sizeof(size_t)) {
-                LOG_ERR("Could not read %zd bytes into the fifo",
-                        sizeof(size_t));
-
+                LOG_ERR("Could not read %zd bytes from port-id %d fifo",
+                        sizeof(size_t), port_id);
                 return -1;
         }
         if (kfifo_in(flow->sdu_ready,
                      sdu->buffer->data,
                      sdu->buffer->size) != sdu->buffer->size) {
-                LOG_ERR("Could not read %zd bytes into the fifo",
-                        sdu->buffer->size);
-
+                LOG_ERR("Could not read %zd bytes from port-id %d fifo",
+                        sdu->buffer->size, port_id);
                 return -1;
         }
 
