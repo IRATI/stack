@@ -55,120 +55,6 @@
  * beginning (e.g. msg and name)
  */
 
-static int craft_app_name_info(struct sk_buff * msg,
-                               struct name      name)
-{
-        if (!msg) {
-                LOG_ERR("Bogus input parameter(s), bailing out");
-                return -1;
-        }
-
-        /*
-         * Components might be missing (and nla_put_string wonna have NUL
-         * terminated strings, otherwise kernel panics are on the way).
-         * Would we like to fallback here or simply return an error if (at
-         * least) one of them is missing ?
-         */
-
-        if (name.process_name)
-                if (nla_put_string(msg,
-                                   APNI_ATTR_PROCESS_NAME,
-                                   name.process_name))
-                        return -1;
-        if (name.process_instance)
-                if (nla_put_string(msg,
-                                   APNI_ATTR_PROCESS_INSTANCE,
-                                   name.process_instance))
-                        return -1;
-        if (name.entity_name)
-                if (nla_put_string(msg,
-                                   APNI_ATTR_ENTITY_NAME,
-                                   name.entity_name))
-                        return -1;
-        if (name.entity_instance)
-                if (nla_put_string(msg,
-                                   APNI_ATTR_ENTITY_INSTANCE,
-                                   name.entity_instance))
-                        return -1;
-        
-        return 0;
-}
-
-static int craft_flow_spec(struct sk_buff * msg,
-                           struct flow_spec fspec)
-{
-        if (!msg) {
-                LOG_ERR("Bogus input parameter(s), bailing out");
-                return -1;
-        }
-
-        /*
-         * FIXME: only->max or min attributes are taken from
-         *  uint_range types
-         */
-        /* FIXME: ??? only max is accessed, what do you mean ? */
-	/* FIXME: librina does not define ranges for these attributes, just
-	 * unique values. So far I seleced only the max or min value depending
-	 * on the most restrincting (in this case all max). 
-	 * Leo */
-
-        if (fspec.average_bandwidth->max > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_AVG_BWITH,
-                                fspec.average_bandwidth->max))
-                        return -1;
-        if (fspec.average_sdu_bandwidth->max > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_AVG_SDU_BWITH,
-                                fspec.average_sdu_bandwidth->max))
-                        return -1;
-        if (fspec.delay > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_DELAY,
-                                fspec.delay))
-                        return -1;
-        if (fspec.jitter > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_JITTER,
-                                fspec.jitter))
-                        return -1;
-        if (fspec.max_allowable_gap > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_MAX_GAP,
-                                fspec.max_allowable_gap))
-                        return -1;
-        if (fspec.max_sdu_size > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_MAX_SDU_SIZE,
-                                fspec.max_sdu_size))
-                        return -1;
-        if (fspec.ordered_delivery > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_IN_ORD_DELIVERY,
-                                fspec.ordered_delivery))
-                        return -1;
-        if (fspec.partial_delivery > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_PART_DELIVERY,
-                                fspec.partial_delivery))
-                        return -1;
-        if (fspec.peak_bandwidth_duration->max > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_PEAK_BWITH_DURATION,
-                                fspec.peak_bandwidth_duration->max))
-                        return -1;
-        if (fspec.peak_sdu_bandwidth_duration->max > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_PEAK_SDU_BWITH_DURATION,
-                                fspec.peak_sdu_bandwidth_duration->max))
-                        return -1;
-        if (fspec.undetected_bit_error_rate > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_UNDETECTED_BER,
-                                fspec.undetected_bit_error_rate))
-                        return -1;
-        return 0;
-}
 
 #define BUILD_ERR_STRING(X)                                     \
 	"Netlink message does not contain " X ", bailing out"
@@ -193,42 +79,42 @@ static int rnl_format_ipcm_alloc_flow_req_arrived(struct sk_buff * skb_in,
                 return -1;
         }
 
-        /* name-crafting might be moved into its own function (and reused) */
+        /* name-formating might be moved into its own function (and reused) */
         if (!(msg_src_name =
-              nla_nest_start(skb_in, AAFRA_ATTR_SOURCE_APP_NAME))) {
+              nla_nest_start(skb_in, IAFRAATTR_SOURCE_APP_NAME))) {
                 nla_nest_cancel(skb_in, msg_src_name);
                 LOG_ERR(BUILD_ERR_STRING("source application name attribute"));
                 return -1;
         }
 
         if (!(msg_dst_name =
-              nla_nest_start(skb_in, AAFRA_ATTR_DEST_APP_NAME))) {
+              nla_nest_start(skb_in, IAFRAATTR_DEST_APP_NAME))) {
                 nla_nest_cancel(skb_in, msg_dst_name);
                 LOG_ERR(BUILD_ERR_STRING("destination app name attribute"));
                 return -1;
         }
 
         if (!(msg_dif_name =
-              nla_nest_start(skb_in, AAFRA_ATTR_DIF_NAME))) {
+              nla_nest_start(skb_in, IAFRAATTR_DIF_NAME))) {
                 nla_nest_cancel(skb_in, msg_dif_name);
                 LOG_ERR(BUILD_ERR_STRING("DIF name attribute"));
                 return -1;
         }
 
         if (!(msg_fspec =
-              nla_nest_start(skb_in, AAFRA_ATTR_FLOW_SPEC))) {
+              nla_nest_start(skb_in, IAFRAATTR_FLOW_SPEC))) {
                 nla_nest_cancel(skb_in, msg_fspec);
                 LOG_ERR(BUILD_ERR_STRING("flow spec attribute"));
                 return -1;
         }
 
         /* Boolean shortcuiting here */
-        if (craft_app_name_info(skb_in, msg_attrs->source)         ||
-            craft_app_name_info(skb_in, msg_attrs->dest)           ||
-            craft_flow_spec(skb_in,     msg_attrs->fspec)          ||
-            nla_put_u32(skb_in, AAFRA_ATTR_PORT_ID, msg_attrs->id) ||
-            craft_app_name_info(skb_in, msg_attrs->dif_name)) {
-                LOG_ERR("Could not craft "
+        if (format_app_name_info(skb_in, msg_attrs->source)         ||
+            format_app_name_info(skb_in, msg_attrs->dest)           ||
+            format_flow_spec(skb_in,     msg_attrs->fspec)          ||
+            nla_put_u32(skb_in, IAFRAATTR_PORT_ID, msg_attrs->id) ||
+            format_app_name_info(skb_in, msg_attrs->dif_name)) {
+                LOG_ERR("Could not format "
                         "_ipcm_alloc_flow_req_arrived_msg "
                         "message correctly");
                 return -1;
@@ -434,7 +320,7 @@ static int rnl_parse_ipcm_alloc_flow_resp(struct genl_info * info,
 	/* Any other comprobations could be done in addition to nlmsg_parse()
 	 * done by rnl_simple_parse_msg */
 
-	if (rnl_simple_parse_msg(info, AAFRA_ATTR_MAX, attr_policy) < 0)
+	if (rnl_simple_parse_msg(info, IAFRA_ATTR_MAX, attr_policy) < 0)
 		goto fail;
 
 	if (parse_app_name_info(info->attrs[AAFRE_ATTR_DIF_NAME], 
@@ -627,6 +513,124 @@ int rnl_parse_msg(struct genl_info	* info,
 }
 EXPORT_SYMBOL(rnl_parse_msg);
 
+
+/* FORMATTING */
+
+static int format_app_name_info(const struct name * name,
+				struct sk_buff * msg)
+{
+        if (!msg) {
+                LOG_ERR("Bogus input parameter(s), bailing out");
+                return -1;
+        }
+
+        /*
+         * Components might be missing (and nla_put_string wonna have NUL
+         * terminated strings, otherwise kernel panics are on the way).
+         * Would we like to fallback here or simply return an error if (at
+         * least) one of them is missing ?
+         */
+
+        if (name->process_name)
+                if (nla_put_string(msg,
+                                   APNI_ATTR_PROCESS_NAME,
+                                   name->process_name))
+                        return -1;
+        if (name->process_instance)
+                if (nla_put_string(msg,
+                                   APNI_ATTR_PROCESS_INSTANCE,
+                                   name->process_instance))
+                        return -1;
+        if (name->entity_name)
+                if (nla_put_string(msg,
+                                   APNI_ATTR_ENTITY_NAME,
+                                   name->entity_name))
+                        return -1;
+        if (name->entity_instance)
+                if (nla_put_string(msg,
+                                   APNI_ATTR_ENTITY_INSTANCE,
+                                   name->entity_instance))
+                        return -1;
+        
+        return 0;
+}
+
+static int format_flow_spec(const struct flow_spec * fspec,
+			    struct sk_buff   * msg)
+{
+        if (!msg) {
+                LOG_ERR("Bogus input parameter(s), bailing out");
+                return -1;
+        }
+
+        /*
+         * FIXME: only->max or min attributes are taken from
+         *  uint_range types
+         */
+        /* FIXME: ??? only max is accessed, what do you mean ? */
+	/* FIXME: librina does not define ranges for these attributes, just
+	 * unique values. So far I seleced only the max or min value depending
+	 * on the most restrincting (in this case all max). 
+	 * Leo */
+
+        if (fspec->average_bandwidth->max > 0)
+                if (nla_put_u32(msg,
+                                FSPEC_ATTR_AVG_BWITH,
+                                fspec->average_bandwidth->max))
+                        return -1;
+        if (fspec->average_sdu_bandwidth->max > 0)
+                if (nla_put_u32(msg,
+                                FSPEC_ATTR_AVG_SDU_BWITH,
+                                fspec->average_sdu_bandwidth->max))
+                        return -1;
+        if (fspec->delay > 0)
+                if (nla_put_u32(msg,
+                                FSPEC_ATTR_DELAY,
+                                fspec->delay))
+                        return -1;
+        if (fspec->jitter > 0)
+                if (nla_put_u32(msg,
+                                FSPEC_ATTR_JITTER,
+                                fspec->jitter))
+                        return -1;
+        if (fspec->max_allowable_gap > 0)
+                if (nla_put_u32(msg,
+                                FSPEC_ATTR_MAX_GAP,
+                                fspec->max_allowable_gap))
+                        return -1;
+        if (fspec->max_sdu_size > 0)
+                if (nla_put_u32(msg,
+                                FSPEC_ATTR_MAX_SDU_SIZE,
+                                fspec->max_sdu_size))
+                        return -1;
+        if (fspec->ordered_delivery > 0)
+                if (nla_put_u32(msg,
+                                FSPEC_ATTR_IN_ORD_DELIVERY,
+                                fspec->ordered_delivery))
+                        return -1;
+        if (fspec->partial_delivery > 0)
+                if (nla_put_u32(msg,
+                                FSPEC_ATTR_PART_DELIVERY,
+                                fspec->partial_delivery))
+                        return -1;
+        if (fspec->peak_bandwidth_duration->max > 0)
+                if (nla_put_u32(msg,
+                                FSPEC_ATTR_PEAK_BWITH_DURATION,
+                                fspec->peak_bandwidth_duration->max))
+                        return -1;
+        if (fspec->peak_sdu_bandwidth_duration->max > 0)
+                if (nla_put_u32(msg,
+                                FSPEC_ATTR_PEAK_SDU_BWITH_DURATION,
+                                fspec->peak_sdu_bandwidth_duration->max))
+                        return -1;
+        if (fspec->undetected_bit_error_rate > 0)
+                if (nla_put_u32(msg,
+                                FSPEC_ATTR_UNDETECTED_BER,
+                                fspec->undetected_bit_error_rate))
+                        return -1;
+        return 0;
+}
+
 int rnl_format_ipcm_assign_to_dif_req_msg(const struct dif_config  * config,
                                           struct sk_buff  * skb_out)
 {
@@ -692,6 +696,55 @@ int rnl_format_ipcm_alloc_flow_req_msg(const struct name      * source,
                                        const struct name      * dif_name,
                                        struct sk_buff   * skb_out)
 {
+        struct nlattr * msg_src_name, * msg_dst_name;
+        struct nlattr * msg_fspec,    * msg_dif_name;
+
+        if (!skb_out) {
+                LOG_ERR("Bogus input parameter(s), bailing out");
+                return -1;
+        }
+
+        /* name-formating might be moved into its own function (and reused) */
+        if (!(msg_src_name =
+              nla_nest_start(skb_out, IAFRA_ATTR_SOURCE_APP_NAME))) {
+                nla_nest_cancel(skb_out, msg_src_name);
+                LOG_ERR(BUILD_ERR_STRING("source application name attribute"));
+                return -1;
+        }
+
+        if (!(msg_dst_name =
+              nla_nest_start(skb_out, IAFRA_ATTR_DEST_APP_NAME))) {
+                nla_nest_cancel(skb_out, msg_dst_name);
+                LOG_ERR(BUILD_ERR_STRING("destination app name attribute"));
+                return -1;
+        }
+
+        if (!(msg_dif_name =
+              nla_nest_start(skb_out, IAFRA_ATTR_DIF_NAME))) {
+                nla_nest_cancel(skb_out, msg_dif_name);
+                LOG_ERR(BUILD_ERR_STRING("DIF name attribute"));
+                return -1;
+        }
+
+        if (!(msg_fspec =
+              nla_nest_start(skb_out, IAFRA_ATTR_FLOW_SPEC))) {
+                nla_nest_cancel(skb_out, msg_fspec);
+                LOG_ERR(BUILD_ERR_STRING("flow spec attribute"));
+                return -1;
+        }
+
+        /* Boolean shortcuiting here */
+        if (format_app_name_info(source, skb_out)         ||
+            format_app_name_info(dest, skb_out)           ||
+            format_flow_spec(fspec, skb_out)		  ||
+            nla_put_u32(skb_out, IAFRA_ATTR_PORT_ID, id)  ||
+            format_app_name_info(dif_name, skb_out)) {
+                LOG_ERR("Could not format "
+                        "rnl_ipcm_alloc_flow_req_msg "
+                        "message correctly");
+                return -1;
+        }
+
         return 0;
 }
 EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_msg);

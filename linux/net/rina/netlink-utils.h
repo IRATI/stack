@@ -78,15 +78,15 @@ enum ipcm_alloc_flow_req_attrs_list {
 #define IAFRM_ATTR_MAX (__IAFRM_ATTR_MAX -1)
 
 enum ipcm_alloc_flow_req_arrived_attrs_list {
-	AAFRA_ATTR_SOURCE_APP_NAME = 1,
-	AAFRA_ATTR_DEST_APP_NAME,
-	AAFRA_ATTR_FLOW_SPEC,
-	AAFRA_ATTR_PORT_ID,
-	AAFRA_ATTR_DIF_NAME,
-	__AAFRA_ATTR_MAX,
+	IAFRA_ATTR_SOURCE_APP_NAME = 1,
+	IAFRA_ATTR_DEST_APP_NAME,
+	IAFRA_ATTR_FLOW_SPEC,
+	IAFRA_ATTR_PORT_ID,
+	IAFRA_ATTR_DIF_NAME,
+	__IAFRA_ATTR_MAX,
 };
 
-#define AAFRA_ATTR_MAX (__AAFRA_ATTR_MAX -1)
+#define IAFRA_ATTR_MAX (__IAFRA_ATTR_MAX -1)
 
 enum ipcm_dealloc_flow_req_msg_attrs_list {
         ADFRT_ATTR_PORT_ID = 1,
