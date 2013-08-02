@@ -468,6 +468,9 @@ int kipcm_sdu_post(struct kipcm * kipcm,
                    port_id_t      id,
                    struct sdu *   sdu)
 {
+	struct ipcp_flow * flow;
+	unsigned int          avail;
+
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, cannot post SDU");
                 return -1;
@@ -477,7 +480,39 @@ int kipcm_sdu_post(struct kipcm * kipcm,
                 return -1;
         }
 
-        LOG_MISSING;
+        flow = ipcp_fmap_find(kipcm->flows, id);
+        if (flow == NULL) {
+		LOG_ERR("There is no flow bound to port-id %d", id);
 
-        return -1;
+		return -1;
+	}
+
+        avail = kfifo_avail(flow->sdu_ready);
+	if (avail < (sdu->buffer->size + sizeof(size_t))) {
+		LOG_ERR("There is no space in the queue "
+			"for port_id %d", id);
+
+		return -1;
+	}
+
+	/* FIXME: Miquel, check these return values. Francesco */
+	if (kfifo_in(flow->sdu_ready,
+		     &sdu->buffer->size,
+		     sizeof(size_t)) != sizeof(size_t)) {
+		LOG_ERR("Could not read %d bytes into the fifo",
+			sizeof(size_t));
+
+		return -1;
+	}
+	if (kfifo_in(flow->sdu_ready,
+		     sdu->buffer->data,
+		     sdu->buffer->size) != sdu->buffer->size) {
+		LOG_ERR("Could not read %d bytes into the fifo",
+			sdu->buffer->size);
+
+		return -1;
+	}
+
+        return 0;
 }
+EXPORT_SYMBOL(kipcm_sdu_post);
