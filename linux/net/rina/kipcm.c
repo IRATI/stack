@@ -126,7 +126,7 @@ int kipcm_fini(struct kipcm * kipcm)
         ASSERT(ipcp_fmap_empty(kipcm->flows));
         if (ipcp_fmap_destroy(kipcm->flows))
                 return -1;
-        
+
         /* FIXME: Destroy all the instances */
         ASSERT(ipcp_imap_empty(kipcm->instances));
         if (ipcp_imap_destroy(kipcm->instances))
@@ -240,7 +240,7 @@ int kipcm_ipcp_create(struct kipcm *      kipcm,
 }
 
 int kipcm_ipcp_destroy(struct kipcm *  kipcm,
-                      ipc_process_id_t id)
+                       ipc_process_id_t id)
 {
         struct ipcp_instance * instance;
         struct ipcp_factory *  factory;
@@ -261,7 +261,7 @@ int kipcm_ipcp_destroy(struct kipcm *  kipcm,
 
         if (factory->ops->destroy(factory->data, instance))
                 return -1;
-        
+
         if (ipcp_imap_remove(kipcm->instances, id))
                 return -1;
 
@@ -269,8 +269,8 @@ int kipcm_ipcp_destroy(struct kipcm *  kipcm,
 }
 
 int kipcm_ipcp_configure(struct kipcm *            kipcm,
-                        ipc_process_id_t           id,
-                        const struct ipcp_config * configuration)
+                         ipc_process_id_t           id,
+                         const struct ipcp_config * configuration)
 {
         struct ipcp_instance * instance_old;
         struct ipcp_factory *  factory;
@@ -297,7 +297,7 @@ int kipcm_ipcp_configure(struct kipcm *            kipcm,
         if (instance_new != instance_old)
                 if (ipcp_imap_update(kipcm->instances, id, instance_new))
                         return -1;
-   
+
         return 0;
 }
 
@@ -313,34 +313,34 @@ int kipcm_flow_add(struct kipcm *   kipcm,
         }
 
         if (ipcp_fmap_find(kipcm->flows, id)) {
-        	LOG_ERR("Flow %d already exists", id);
-        	return -1;
+                LOG_ERR("Flow %d already exists", id);
+                return -1;
         }
 
         flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
         if (!flow) {
                 return -1;
         }
-        
-        flow->port_id     = id;
-	flow->ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
-	if (!flow->ipc_process) {
-		LOG_ERR("Couldn't find ipc_process %d", ipc_id);
-		rkfree(flow);
-		return -1;
-	}
 
-	/*
-	 * FIXME: We are allowing applications, this must be changed once
-	 * once the RMT is implemented.
-	 */
-	flow->application_owned = 1;
-	flow->rmt_instance = NULL;
-	if (kfifo_alloc(flow->sdu_ready, PAGE_SIZE, GFP_KERNEL)) {
-		LOG_ERR("Couldn't create the sdu_ready queue for flow %d", id);
-		rkfree(flow);
-		return -1;
-	}
+        flow->port_id     = id;
+        flow->ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!flow->ipc_process) {
+                LOG_ERR("Couldn't find ipc_process %d", ipc_id);
+                rkfree(flow);
+                return -1;
+        }
+
+        /*
+         * FIXME: We are allowing applications, this must be changed once
+         * once the RMT is implemented.
+         */
+        flow->application_owned = 1;
+        flow->rmt_instance = NULL;
+        if (kfifo_alloc(flow->sdu_ready, PAGE_SIZE, GFP_KERNEL)) {
+                LOG_ERR("Couldn't create the sdu_ready queue for flow %d", id);
+                rkfree(flow);
+                return -1;
+        }
 
         if (ipcp_fmap_add(kipcm->flows, id, flow)) {
                 rkfree(flow);
@@ -373,7 +373,7 @@ int kipcm_flow_remove(struct kipcm * kipcm,
         rkfree(flow);
 
         if (ipcp_fmap_remove(kipcm->flows, id))
-        	return -1;
+                return -1;
 
         return 0;
 }
@@ -404,7 +404,7 @@ int kipcm_sdu_write(struct kipcm *     kipcm,
         instance    = flow->ipc_process;
         retval = instance->ops->sdu_write(instance->data, id, sdu);
         if (retval)
-        	LOG_ERR("Couldn't write on port-id %d", id);
+                LOG_ERR("Couldn't write on port-id %d", id);
 
         return retval;
 }
@@ -468,8 +468,8 @@ int kipcm_sdu_post(struct kipcm * kipcm,
                    port_id_t      id,
                    struct sdu *   sdu)
 {
-	struct ipcp_flow * flow;
-	unsigned int          avail;
+        struct ipcp_flow * flow;
+        unsigned int       avail;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, cannot post SDU");
@@ -482,36 +482,35 @@ int kipcm_sdu_post(struct kipcm * kipcm,
 
         flow = ipcp_fmap_find(kipcm->flows, id);
         if (flow == NULL) {
-		LOG_ERR("There is no flow bound to port-id %d", id);
+                LOG_ERR("There is no flow bound to port-id %d", id);
 
-		return -1;
-	}
+                return -1;
+        }
 
         avail = kfifo_avail(flow->sdu_ready);
-	if (avail < (sdu->buffer->size + sizeof(size_t))) {
-		LOG_ERR("There is no space in the queue "
-			"for port_id %d", id);
+        if (avail < (sdu->buffer->size + sizeof(size_t))) {
+                LOG_ERR("There is no space in the queue "
+                        "for port_id %d", id);
 
-		return -1;
-	}
+                return -1;
+        }
 
-	/* FIXME: Miquel, check these return values. Francesco */
-	if (kfifo_in(flow->sdu_ready,
-		     &sdu->buffer->size,
-		     sizeof(size_t)) != sizeof(size_t)) {
-		LOG_ERR("Could not read %d bytes into the fifo",
-			sizeof(size_t));
+        if (kfifo_in(flow->sdu_ready,
+                     &sdu->buffer->size,
+                     sizeof(size_t)) != sizeof(size_t)) {
+                LOG_ERR("Could not read %zd bytes into the fifo",
+                        sizeof(size_t));
 
-		return -1;
-	}
-	if (kfifo_in(flow->sdu_ready,
-		     sdu->buffer->data,
-		     sdu->buffer->size) != sdu->buffer->size) {
-		LOG_ERR("Could not read %d bytes into the fifo",
-			sdu->buffer->size);
+                return -1;
+        }
+        if (kfifo_in(flow->sdu_ready,
+                     sdu->buffer->data,
+                     sdu->buffer->size) != sdu->buffer->size) {
+                LOG_ERR("Could not read %zd bytes into the fifo",
+                        sdu->buffer->size);
 
-		return -1;
-	}
+                return -1;
+        }
 
         return 0;
 }
