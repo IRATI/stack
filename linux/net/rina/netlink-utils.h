@@ -210,20 +210,17 @@ int rnl_format_ipcm_ipcp_dif_reg_noti_msg(struct name     * ipcp_name,
 int rnl_format_ipcm_ipcp_dif_unreg_noti_msg(uint_t	    result,
 				            struct sk_buff  * skb_out);
 
-/* TODO */
-int rnl_format_ipcm_enroll_to_dif_req_msg(struct sk_buff  * skb_out);
+int rnl_format_ipcm_enroll_to_dif_req_msg(struct name    * dif_name,
+					  struct sk_buff * skb_out);
 
-/* TODO */
-int rnl_format_ipcm_enroll_to_dif_resp_msg(struct rnl_msg  * msg,
-				           struct sk_buff  * skb_out);
+int rnl_format_ipcm_enroll_to_dif_resp_msg(uint_t         result,
+				           struct sk_buff * skb_out);
 
-/* TODO */
-int rnl_format_ipcm_disconn_neighbor_req_msg(struct rnl_msg  * msg,
-				             struct sk_buff  * skb_out);
+int rnl_format_ipcm_disconn_neighbor_req_msg(struct name    * neighbor_name,
+				             struct sk_buff * skb_out);
 
-/* TODO */
-int rnl_format_ipcm_disconn_neighbor_resp_msg(struct rnl_msg  * msg,
-				              struct sk_buff  * skb_out);
+int rnl_format_ipcm_disconn_neighbor_resp_msg(uint_t         result,
+				              struct sk_buff * skb_out);
 
 
 int rnl_format_ipcm_alloc_flow_req_msg(struct name 	* source,
