@@ -188,10 +188,6 @@ ipc_process_id_t rnl_dst_ipcid_from_msg(struct genl_info * info);
 #endif
 int rnl_parse_msg(struct genl_info  * info,
                   struct rnl_msg    * msg);
-int rnl_format_msg(msg_id 	   msg_type,
-		   struct rnl_msg  * msg,
-		   struct sk_buff  * skb_out);
-#endif
 
 /* FIXME: dif_config does not exist */
 struct dif_config;
@@ -288,3 +284,4 @@ int rnl_format_rmt_dump_ft_req_msg(struct sk_buff  * skb_out);
 int rnl_format_rmt_dump_ft_reply_msg(size_t	         count,
 				     struct pdu_ft_entry ** entries,
 			             struct sk_buff      * skb_out);
+#endif

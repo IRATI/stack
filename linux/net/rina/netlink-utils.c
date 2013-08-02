@@ -623,6 +623,186 @@ int rnl_parse_msg(struct genl_info	* info,
 }
 EXPORT_SYMBOL(rnl_parse_msg);
 
+int rnl_format_ipcm_assign_to_dif_req_msg(struct dif_config  * config,
+                                          struct sk_buff  * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_assign_to_dif_req_msg);
+
+int rnl_format_ipcm_assign_to_dif_resp_msg(uint_t          result,
+                                           struct sk_buff  * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_assign_to_dif_resp_msg);
+
+int rnl_format_ipcm_ipcp_dif_reg_noti_msg(struct name     * ipcp_name,
+                                          struct name     * dif_name,
+                                          bool            is_registered,
+                                          struct sk_buff  * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_ipcp_dif_reg_noti_msg);
+
+int rnl_format_ipcm_ipcp_dif_unreg_noti_msg(uint_t          result,
+                                            struct sk_buff  * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_ipcp_dif_unreg_noti_msg);
+
+int rnl_format_ipcm_enroll_to_dif_req_msg(struct name    * dif_name,
+                                          struct sk_buff * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_enroll_to_dif_req_msg);
+
+int rnl_format_ipcm_enroll_to_dif_resp_msg(uint_t         result,
+                                           struct sk_buff * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_enroll_to_dif_resp_msg);
+
+int rnl_format_ipcm_disconn_neighbor_req_msg(struct name    * neighbor_name,
+                                             struct sk_buff * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_disconn_neighbor_req_msg);
+
+int rnl_format_ipcm_disconn_neighbor_resp_msg(uint_t         result,
+                                              struct sk_buff * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_disconn_neighbor_resp_msg);
+
+int rnl_format_ipcm_alloc_flow_req_msg(struct name      * source,
+                                       struct name      * dest,
+                                       struct flow_spec * fspec,
+                                       port_id_t        id, 
+                                       struct name      * dif_name,
+                                       struct sk_buff   * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_msg);
+
+int rnl_format_ipcm_alloc_flow_req_arrived_msg(struct name      * source,
+                                               struct name      * dest,
+                                               struct flow_spec * fspec,
+                                               port_id_t        id,
+                                               struct name      * dif_name,
+                                               struct sk_buff   * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_arrived_msg);
+
+int rnl_format_ipcm_alloc_flow_req_result_msg(uint_t          result,
+                                              struct sk_buff  * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_result_msg);
+
+int rnl_format_ipcm_alloc_flow_resp_msg(uint_t          result,
+                                        struct sk_buff  * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_resp_msg);
+
+int rnl_format_ipcm_dealloc_flow_req_msg(port_id_t       id,
+                                         struct sk_buff  * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_dealloc_flow_req_msg);
+
+int rnl_format_ipcm_dealloc_flow_resp_msg(uint_t          result,
+                                          struct sk_buff  * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_dealloc_flow_resp_msg);
+
+int rnl_format_ipcm_flow_dealloc_noti_msg(port_id_t       id,
+                                          uint_t          code,
+                                          struct sk_buff  * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_flow_dealloc_noti_msg);
+
+int rnl_format_ipcm_reg_app_req_msg(struct name     * app_name,
+                                    struct name     * dif_name,
+                                    struct sk_buff  * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_reg_app_req_msg);
+
+int rnl_format_ipcm_reg_app_resp_msg(uint_t          result,
+                                     struct sk_buff  * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_reg_app_resp_msg);
+
+int rnl_format_ipcm_unreg_app_req_msg(struct name     * app_name,
+                                      struct name     * dif_name,
+                                      struct sk_buff  * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_unreg_app_req_msg);
+
+int rnl_format_ipcm_unreg_app_resp_msg(uint_t          result,
+                                       struct sk_buff * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_unreg_app_resp_msg);
+
+int rnl_format_ipcm_query_rib_req_msg(enum rib_object_t rib_obj_class,
+                                      string_t          * obj_name,
+                                      long unsigned int obj_instance,
+                                      uint_t            scope,
+                                      const regex_t     * filter,
+                                      struct sk_buff    * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_query_rib_req_msg);
+
+int rnl_format_ipcm_query_rib_resp_msg(uint_t          result,
+                                       struct sk_buff  * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_query_rib_resp_msg);
+
+int rnl_format_rmt_add_fte_req_msg(struct pdu_ft_entry * entry,
+                                   struct sk_buff      * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_rmt_add_fte_req_msg);
+
+int rnl_format_rmt_del_fte_req_msg(struct pdu_ft_entry *entry,
+                                   struct sk_buff      * skb_out)
+{
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_rmt_del_fte_req_msg);
+
+
+
 int rnl_format_msg(msg_id 	   msg_type,
 		   struct rnl_msg  * msg,
                    struct sk_buff  * skb_out)
@@ -686,4 +866,3 @@ int rnl_format_msg(msg_id 	   msg_type,
 		LOG_ERR("Could not format netlink message of type: %d", msg_type);
 		return -1;
 }
-EXPORT_SYMBOL(rnl_format_msg);
