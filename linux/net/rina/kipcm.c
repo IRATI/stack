@@ -21,6 +21,7 @@
 
 #include <linux/kobject.h>
 #include <linux/export.h>
+#include <linux/kfifo.h>
 
 #define RINA_PREFIX "kipcm"
 
@@ -76,9 +77,7 @@ struct ipcp_flow {
         //QUEUE(segmentation_queue, pdu *);
         //QUEUE(reassembly_queue,       pdu *);
         //QUEUE(sdu_ready, sdu *);
-#if 0
         struct kfifo *         sdu_ready;
-#endif
 };
 
 struct kipcm * kipcm_init(struct kobject * parent)
@@ -331,48 +330,30 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 return -1;
         }
         
+        flow->port_id     = id;
+	flow->ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+	if (!flow->ipc_process) {
+		LOG_ERR("Couldn't find ipc_process %d", ipc_id);
+		rkfree(flow);
+		return -1;
+	}
+
+	/*
+	 * FIXME: We are allowing applications, this must be changed once
+	 * once the RMT is implemented.
+	 */
+	flow->application_owned = 1;
+	flow->rmt_instance = NULL;
+	if (kfifo_alloc(flow->sdu_ready, PAGE_SIZE, GFP_KERNEL)) {
+		LOG_ERR("Couldn't create the sdu_ready queue for flow %d", id);
+		rkfree(flow);
+		return -1;
+	}
+
         if (ipcp_fmap_add(kipcm->flows, id, flow)) {
                 rkfree(flow);
                 return -1;
         }
-
-        flow->port_id     = id;
-        flow->ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
-        if (!flow->ipc_process) {
-                LOG_ERR("Couldn't find ipc_process %d", ipc_id);
-                rkfree(flow);
-                return -1;
-        }
-
-#if 0
-        /* FIXME */
-        switch (flow->ipc_process->type) {
-        case DIF_TYPE_SHIM:
-                flow->application_owned = 1;
-                flow->rmt_instance      = NULL;
-                break;
-        case DIF_TYPE_NORMAL:
-                break;
-        default:
-                BUG();
-        }
-
-        /* FIXME: Use kfifo functions! */ 
-        flow->sdu_ready = rkzalloc(sizeof(struct kfifo), GFP_KERNEL);
-        if (!flow->sdu_ready) {
-                rkfree(flow);
-                rkfree(port_flow);
-
-                return -1;
-        }
-
-        port_flow->id   = id;
-        port_flow->flow = flow;
-        INIT_LIST_HEAD(&port_flow->list);
-        list_add(&port_flow->list, &kipcm->port_id_to_flow);
-#else
-        return -1;
-#endif
 
         return 0;
 }
@@ -381,24 +362,26 @@ EXPORT_SYMBOL(kipcm_flow_add);
 int kipcm_flow_remove(struct kipcm * kipcm,
                       port_id_t      id)
 {
-#if 0
-        struct port_id_to_flow * port_flow;
+        struct ipcp_flow * flow;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return -1;
         }
 
-        port_flow = retrieve_port_flow_node(kipcm, id);
-        if (!port_flow) {
+        flow = ipcp_fmap_find(kipcm->flows, id);
+        if (!flow) {
                 LOG_ERR("Couldn't retrieve the flow %d", id);
 
                 return -1;
         }
 
-        rkfree(port_flow->flow);
-        rkfree(port_flow);
-#endif
+        kfifo_free(flow->sdu_ready);
+
+        rkfree(flow);
+
+        if (ipcp_fmap_remove(kipcm->flows, id))
+        	return -1;
 
         return 0;
 }
@@ -409,16 +392,16 @@ int kipcm_sdu_write(struct kipcm *     kipcm,
                     const struct sdu * sdu)
 {
         int                    retval = -1;
-#if 0
+
         struct ipcp_flow *     flow;
-        struct ipc_process_t * ipc_process;
+        struct ipcp_instance * instance;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return -1;
         }
 
-        flow = retrieve_flow_by_port_id(kipcm, id);
+        flow = ipcp_fmap_find(kipcm->flows, id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
 
@@ -426,28 +409,10 @@ int kipcm_sdu_write(struct kipcm *     kipcm,
         }
 
         retval      = -1;
-        ipc_process = flow->ipc_process;
-
-        switch (ipc_process->type) {
-        case DIF_TYPE_SHIM: {
-                struct ipcp_instance * shim_instance;
-
-                shim_instance = ipc_process->data.shim_instance;
-                retval = shim_instance->ops->sdu_write(
-                                                       shim_instance->data, id, sdu);
-        }
-                break;
-        case DIF_TYPE_NORMAL:
-                LOG_MISSING;
-
-                break;
-        default:
-                BUG();
-        }
-
+        instance    = flow->ipc_process;
+        retval = instance->ops->sdu_write(instance->data, id, sdu);
         if (retval)
-                LOG_ERR("Couldn't write on port_id %d", id);
-#endif
+        	LOG_ERR("Couldn't write on port-id %d", id);
 
         return retval;
 }
@@ -456,7 +421,6 @@ int kipcm_sdu_read(struct kipcm * kipcm,
                    port_id_t      id,
                    struct sdu *   sdu)
 {
-#if 0
         struct ipcp_flow * flow;
         size_t             size;
         char *             data;
@@ -471,7 +435,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
                 return -1;
         }
 
-        flow = retrieve_flow_by_port_id(kipcm, id);
+        flow = ipcp_fmap_find(kipcm->flows, id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
 
@@ -497,13 +461,13 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 
         if (kfifo_out(flow->sdu_ready, data, size) != size) {
                 LOG_ERR("Could not get %zd bytes from fifo", size);
+                rkfree(data);
 
                 return -1;
         }
 
         sdu->buffer->data = data;
         sdu->buffer->size = size;
-#endif
 
         return 0;
 }
