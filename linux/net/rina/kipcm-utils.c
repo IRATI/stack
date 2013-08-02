@@ -170,9 +170,9 @@ struct ipcp_fmap {
 };
 
 struct ipcp_fmap_entry {
-        port_id_t         key;
-        struct flow *     value;
-        struct hlist_node hlist;
+        port_id_t          key;
+        struct ipcp_flow * value;
+        struct hlist_node  hlist;
 };
 
 struct ipcp_fmap * ipcp_fmap_create(void)
@@ -229,8 +229,8 @@ static struct ipcp_fmap_entry * fmap_entry_find(struct ipcp_fmap * map,
         return NULL;
 }
 
-struct flow * ipcp_fmap_find(struct ipcp_fmap * map,
-                             port_id_t          key)
+struct ipcp_flow * ipcp_fmap_find(struct ipcp_fmap * map,
+                                  port_id_t          key)
 {
         struct ipcp_fmap_entry * entry;
 
@@ -245,7 +245,7 @@ struct flow * ipcp_fmap_find(struct ipcp_fmap * map,
 
 int ipcp_fmap_update(struct ipcp_fmap *    map,
                      port_id_t             key,
-                     struct flow *         value)
+                     struct ipcp_flow *    value)
 {
         struct ipcp_fmap_entry * cur;
 
@@ -262,7 +262,7 @@ int ipcp_fmap_update(struct ipcp_fmap *    map,
 
 int ipcp_fmap_add(struct ipcp_fmap * map,
                   port_id_t          key,
-                  struct flow *      value)
+                  struct ipcp_flow * value)
 {
         struct ipcp_fmap_entry * tmp;
 

@@ -54,7 +54,7 @@ int                      ipcp_imap_remove(struct ipcp_imap * map,
 
 struct ipcp_fmap;
 
-struct flow;
+struct ipcp_flow;
 
 struct ipcp_fmap *       ipcp_fmap_create(void);
 int                      ipcp_fmap_destroy(struct ipcp_fmap * map);
@@ -63,12 +63,12 @@ int                      ipcp_fmap_empty(struct ipcp_fmap * map);
 
 int                      ipcp_fmap_add(struct ipcp_fmap * map,
                                        port_id_t          key,
-                                       struct flow *      value);
-struct flow *            ipcp_fmap_find(struct ipcp_fmap * map,
+                                       struct ipcp_flow * value);
+struct ipcp_flow *       ipcp_fmap_find(struct ipcp_fmap * map,
                                         port_id_t          key);
 int                      ipcp_fmap_update(struct ipcp_fmap * map,
                                           port_id_t          key,
-                                          struct flow *      value);
+                                          struct ipcp_flow * value);
 int                      ipcp_fmap_remove(struct ipcp_fmap * map,
                                           port_id_t          key);
 
