@@ -56,6 +56,55 @@
                 return PERS -> ops -> HOOK (PERS->data, ##ARGS);        \
         } while (0)
 
+/* FIXME: To be extended later on */
+int rcopy_to_user(const char *  kernel_buffer,
+                   char __user * user_buffer,
+                   size_t        count)
+{
+        copy_to_user(user_buffer, kernel_buffer, count);
+        return 0;
+}
+
+/* FIXME: To be extended later on */
+int rcopy_from_user(const char __user * user_buffer,
+                    char *              kernel_buffer,
+                    size_t              count)
+{
+        char * tmp_page;
+        char * data;
+
+        if (count >= PAGE_SIZE) {
+                LOG_ERR("Requested buffer size is too long (%zd >= %zd)",
+                        count, PAGE_SIZE);
+                return -1;
+        }
+
+        tmp_page = (char *) __get_free_page(GFP_TEMPORARY);
+        if (!tmp_page) {
+                LOG_ERR("Cannot get a free page");
+                return -1;
+        }
+
+        data = rkzalloc(count, GFP_KERNEL);
+        if (!data) {
+                free_page((unsigned long) tmp_page);
+                return -1;
+        }
+
+        if (copy_from_user(tmp_page, user_buffer, count)) {
+                LOG_ERR("Cannot copy from user");
+                free_page((unsigned long) tmp_page);
+                rkfree(data);
+                return -1;
+                
+        }
+
+        memcpy(data, tmp_page, count);
+        
+        free_page((unsigned long) tmp_page);
+        return 0;
+}
+
 #define CALL_DEFAULT_PERSONALITY(HOOK, ARGS...)                 \
         CALL_PERSONALITY(default_personality, HOOK, ##ARGS)
 
