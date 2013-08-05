@@ -262,8 +262,8 @@ static int rnl_parse_ipcm_alloc_flow_req(struct genl_info * info,
 {
         struct nla_policy attr_policy[IAFRM_ATTR_MAX + 1];
 
-        attr_policy[IAFRM_ATTR_SOURCE_APP].type = NLA_NESTED;
-        attr_policy[IAFRM_ATTR_DEST_APP].type = NLA_NESTED;
+        attr_policy[IAFRM_ATTR_SOURCE_APP_NAME].type = NLA_NESTED;
+        attr_policy[IAFRM_ATTR_DEST_APP_NAME].type = NLA_NESTED;
         attr_policy[IAFRM_ATTR_FLOW_SPEC].type = NLA_NESTED;
         attr_policy[IAFRM_ATTR_DIF_NAME].type = NLA_NESTED;
         attr_policy[IAFRM_ATTR_PORT_ID].type = NLA_U32;
@@ -272,11 +272,11 @@ static int rnl_parse_ipcm_alloc_flow_req(struct genl_info * info,
         if (rnl_simple_parse_msg(info, IAFRM_ATTR_MAX, attr_policy) < 0)
                 goto fail;
 
-        if (parse_app_name_info(info->attrs[IAFRM_ATTR_SOURCE_APP],
+        if (parse_app_name_info(info->attrs[IAFRM_ATTR_SOURCE_APP_NAME],
                                 &msg_attrs->source) < 0)
                 goto fail;
 
-        if (parse_app_name_info(info->attrs[IAFRM_ATTR_DEST_APP],
+        if (parse_app_name_info(info->attrs[IAFRM_ATTR_DEST_APP_NAME],
                                 &msg_attrs->dest) < 0)
                 goto fail;
 
@@ -672,9 +672,68 @@ EXPORT_SYMBOL(rnl_format_ipcm_disconn_neighbor_resp_msg);
 int rnl_format_ipcm_alloc_flow_req_msg(const struct name      * source,
                                        const struct name      * dest,
                                        const struct flow_spec * fspec,
-                                       port_id_t        id,
+                                       port_id_t	      id,
                                        const struct name      * dif_name,
                                        struct sk_buff   * skb_out)
+{
+        struct nlattr * msg_src_name, * msg_dst_name;
+        struct nlattr * msg_fspec,    * msg_dif_name;
+
+        if (!skb_out) {
+                LOG_ERR("Bogus input parameter(s), bailing out");
+                return -1;
+        }
+
+        /* name-formating might be moved into its own function (and reused) */
+        if (!(msg_src_name =
+              nla_nest_start(skb_out, IAFRM_ATTR_SOURCE_APP_NAME))) {
+                nla_nest_cancel(skb_out, msg_src_name);
+                LOG_ERR(BUILD_ERR_STRING("source application name attribute"));
+                return -1;
+        }
+
+        if (!(msg_dst_name =
+              nla_nest_start(skb_out, IAFRM_ATTR_DEST_APP_NAME))) {
+                nla_nest_cancel(skb_out, msg_dst_name);
+                LOG_ERR(BUILD_ERR_STRING("destination app name attribute"));
+                return -1;
+        }
+
+        if (!(msg_dif_name =
+              nla_nest_start(skb_out, IAFRM_ATTR_DIF_NAME))) {
+                nla_nest_cancel(skb_out, msg_dif_name);
+                LOG_ERR(BUILD_ERR_STRING("DIF name attribute"));
+                return -1;
+        }
+
+        if (!(msg_fspec =
+              nla_nest_start(skb_out, IAFRM_ATTR_FLOW_SPEC))) {
+                nla_nest_cancel(skb_out, msg_fspec);
+                LOG_ERR(BUILD_ERR_STRING("flow spec attribute"));
+                return -1;
+        }
+
+        /* Boolean shortcuiting here */
+        if (format_app_name_info(source, skb_out)         ||
+            format_app_name_info(dest, skb_out)           ||
+            format_flow_spec(fspec, skb_out)              ||
+            nla_put_u32(skb_out, IAFRM_ATTR_PORT_ID, id)  ||
+            format_app_name_info(dif_name, skb_out)) {
+                LOG_ERR("Could not format "
+                        "rnl_ipcm_alloc_flow_req_msg "
+                        "message correctly");
+                return -1;
+        }
+
+        return 0;
+}
+EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_msg);
+
+int rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name      * source,
+                                               const struct name      * dest,
+                                               const struct flow_spec * fspec,
+                                               const struct name      * dif_name,
+                                               struct sk_buff   * skb_out)
 {
         struct nlattr * msg_src_name, * msg_dst_name;
         struct nlattr * msg_fspec,    * msg_dif_name;
@@ -717,25 +776,13 @@ int rnl_format_ipcm_alloc_flow_req_msg(const struct name      * source,
         if (format_app_name_info(source, skb_out)         ||
             format_app_name_info(dest, skb_out)           ||
             format_flow_spec(fspec, skb_out)              ||
-            nla_put_u32(skb_out, IAFRA_ATTR_PORT_ID, id)  ||
             format_app_name_info(dif_name, skb_out)) {
                 LOG_ERR("Could not format "
-                        "rnl_ipcm_alloc_flow_req_msg "
+                        "rnl_ipcm_alloc_flow_req_arrived_msg "
                         "message correctly");
                 return -1;
         }
 
-        return 0;
-}
-EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_msg);
-
-int rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name      * source,
-                                               const struct name      * dest,
-                                               const struct flow_spec * fspec,
-                                               port_id_t        id,
-                                               const struct name      * dif_name,
-                                               struct sk_buff   * skb_out)
-{
         return 0;
 }
 EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_arrived_msg);
@@ -743,6 +790,10 @@ EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_arrived_msg);
 int rnl_format_ipcm_alloc_flow_req_result_msg(uint_t          result,
                                               struct sk_buff  * skb_out)
 {
+	if (nla_put_u32(skb_out, IAFRRM_ATTR_RESULT, result) < 0){
+		LOG_ERR(BUILD_ERR_STRING("result attribute"));
+		return -1;
+	}
         return 0;
 }
 EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_result_msg);

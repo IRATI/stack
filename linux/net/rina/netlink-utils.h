@@ -68,8 +68,8 @@ enum ipcm_alloc_flow_resp_attrs_list {
 #define IAFRE_ATTR_MAX (__IAFRE_ATTR_MAX -1)
 
 enum ipcm_alloc_flow_req_attrs_list {
-        IAFRM_ATTR_SOURCE_APP = 1,
-        IAFRM_ATTR_DEST_APP,
+        IAFRM_ATTR_SOURCE_APP_NAME = 1,
+        IAFRM_ATTR_DEST_APP_NAME,
         IAFRM_ATTR_FLOW_SPEC,
         IAFRM_ATTR_DIF_NAME,
         IAFRM_ATTR_PORT_ID,
@@ -83,12 +83,18 @@ enum ipcm_alloc_flow_req_arrived_attrs_list {
         IAFRA_ATTR_SOURCE_APP_NAME = 1,
         IAFRA_ATTR_DEST_APP_NAME,
         IAFRA_ATTR_FLOW_SPEC,
-        IAFRA_ATTR_PORT_ID,
         IAFRA_ATTR_DIF_NAME,
         __IAFRA_ATTR_MAX,
 };
 
 #define IAFRA_ATTR_MAX (__IAFRA_ATTR_MAX -1)
+
+enum ipcm_alloc_flow_req_result_attrs_list {
+        IAFRRM_ATTR_RESULT = 1,
+       __IAFRRM_ATTR_MAX,
+};
+
+#define IAFRRM_ATTR_MAX (__IAFRRM_ATTR_MAX -1)
 
 enum ipcm_dealloc_flow_req_msg_attrs_list {
         IDFRT_ATTR_PORT_ID = 1,
@@ -220,7 +226,6 @@ int rnl_format_ipcm_alloc_flow_req_msg(const struct name *      source,
 int rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name *      source,
                                                const struct name *      dest,
                                                const struct flow_spec * fspec,
-                                               port_id_t                id,
                                                const struct name *     dif_name,
                                                struct sk_buff *        skb_out);
 
