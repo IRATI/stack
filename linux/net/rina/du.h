@@ -88,7 +88,7 @@ struct sdu {
         struct buffer * buffer;
 };
 
-int          sdu_is_ok(struct sdu * sdu);
+int          sdu_is_ok(const struct sdu * sdu);
 
 struct pdu * pdu_create(void);
 int          pdu_destroy(struct pdu * p);

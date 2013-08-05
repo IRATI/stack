@@ -53,7 +53,7 @@ int pdu_destroy(struct pdu * p)
         return 0;
 }
 
-int sdu_is_ok(struct sdu * sdu)
+int sdu_is_ok(const struct sdu * sdu)
 {
         ASSERT(sdu);
 
