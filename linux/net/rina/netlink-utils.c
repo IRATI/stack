@@ -44,7 +44,7 @@
  * FIXME: If some of them remain 'static', parameters checking has to be
  *        trasformed into ASSERT() calls (since msg is checked in the caller)
  *
- * NOTE: that functionalities exported to "shims" should prevent "evoking" 
+ * NOTE: that functionalities exported to "shims" should prevent "evoking"
  *       ASSERT() here ...
  *
  * Francesco
@@ -57,20 +57,20 @@
 
 
 #define BUILD_ERR_STRING(X)                                     \
-	"Netlink message does not contain " X ", bailing out"
+        "Netlink message does not contain " X ", bailing out"
 #if 0
-/* This is an implementation of the function before redefining the API, 
-but could be useful to the the new one */
+/* This is an implementation of the function before redefining the API,
+   but could be useful to the the new one */
 
 static int rnl_format_ipcm_alloc_flow_req_arrived(struct sk_buff * skb_in,
-					   struct \
-					   rnl_ipcm_alloc_flow_req_arrived_msg_attrs\
-					   * msg_attrs)
+                                                  struct \
+                                                  rnl_ipcm_alloc_flow_req_arrived_msg_attrs\
+                                                  * msg_attrs)
 {
         /* FIXME: What's the use of the following variables ? */
-	/* FIXME: they are the placeholder of the nest attr returned by
-	 * nla_nest_start, if not used, then nla_nest_start should be called
-	 * twice each time */
+        /* FIXME: they are the placeholder of the nest attr returned by
+         * nla_nest_start, if not used, then nla_nest_start should be called
+         * twice each time */
         struct nlattr * msg_src_name, * msg_dst_name;
         struct nlattr * msg_fspec,    * msg_dif_name;
 
@@ -127,28 +127,29 @@ static int rnl_format_ipcm_alloc_flow_req_arrived(struct sk_buff * skb_in,
 #define BUILD_ERR_STRING_BY_MSG_TYPE(X)                 \
         "Could not parse Netlink message of type "X
 
-static int rnl_simple_parse_msg(struct genl_info * info, int max_attr, 
-		  struct nla_policy * attr_policy)
+static int rnl_simple_parse_msg(struct genl_info * info, int max_attr,
+                                struct nla_policy * attr_policy)
 {
-	int err;
+        int err;
 
-	err = nlmsg_parse(info->nlhdr, 
+        err = nlmsg_parse(info->nlhdr,
                           /* FIXME: Check if this is correct */
-                          sizeof(struct genlmsghdr) + sizeof(struct rina_msg_hdr), 
+                          sizeof(struct genlmsghdr) +
+                          sizeof(struct rina_msg_hdr),
                           info->attrs,
-                          max_attr, 
+                          max_attr,
                           attr_policy);
-	if (err < 0)
-		return -1;
-	return 0;
+        if (err < 0)
+                return -1;
+        return 0;
 }
 
-static int parse_flow_spec(struct nlattr * fspec_attr, 
+static int parse_flow_spec(struct nlattr * fspec_attr,
                            struct flow_spec * fspec_struct)
 {
         struct nla_policy attr_policy[FSPEC_ATTR_MAX + 1];
         struct nlattr *attrs[FSPEC_ATTR_MAX + 1];
-	int err;
+        int err;
 
         attr_policy[FSPEC_ATTR_AVG_BWITH].type = NLA_U32;
         attr_policy[FSPEC_ATTR_AVG_SDU_BWITH].type = NLA_U32;
@@ -162,104 +163,104 @@ static int parse_flow_spec(struct nlattr * fspec_attr,
         attr_policy[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION].type = NLA_U32;
         attr_policy[FSPEC_ATTR_UNDETECTED_BER].type = NLA_U32;
 
-	err = nla_parse_nested(attrs, FSPEC_ATTR_MAX, fspec_attr, attr_policy);
+        err = nla_parse_nested(attrs, FSPEC_ATTR_MAX, fspec_attr, attr_policy);
         goto fail;
 
-	if (attrs[FSPEC_ATTR_AVG_BWITH])
+        if (attrs[FSPEC_ATTR_AVG_BWITH])
                 /* FIXME: min = max in uint_range */
-		fspec_struct->average_bandwidth->min = \
-			fspec_struct->average_bandwidth->max = \
-                        nla_get_u32(attrs[FSPEC_ATTR_AVG_BWITH]);	
+                fspec_struct->average_bandwidth->min = \
+                        fspec_struct->average_bandwidth->max = \
+                        nla_get_u32(attrs[FSPEC_ATTR_AVG_BWITH]);
 
-	if (attrs[FSPEC_ATTR_AVG_SDU_BWITH])
-		fspec_struct->average_sdu_bandwidth->min = \
-			fspec_struct->average_sdu_bandwidth->max = \
-                        nla_get_u32(attrs[FSPEC_ATTR_AVG_SDU_BWITH]);	
-	
-	if (attrs[FSPEC_ATTR_PEAK_BWITH_DURATION])
-		fspec_struct->peak_bandwidth_duration->min = \
-			fspec_struct->peak_bandwidth_duration->max = \
-                        nla_get_u32(attrs[FSPEC_ATTR_PEAK_BWITH_DURATION]);	
-	
-	if (attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION])
-		fspec_struct->peak_sdu_bandwidth_duration->min = \
-			fspec_struct->peak_sdu_bandwidth_duration->max = \
-                        nla_get_u32(attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION]);	
+        if (attrs[FSPEC_ATTR_AVG_SDU_BWITH])
+                fspec_struct->average_sdu_bandwidth->min = \
+                        fspec_struct->average_sdu_bandwidth->max = \
+                        nla_get_u32(attrs[FSPEC_ATTR_AVG_SDU_BWITH]);
 
-	if (attrs[FSPEC_ATTR_UNDETECTED_BER])
-		fspec_struct->undetected_bit_error_rate = \
-			nla_get_u32(attrs[FSPEC_ATTR_UNDETECTED_BER]);	
+        if (attrs[FSPEC_ATTR_PEAK_BWITH_DURATION])
+                fspec_struct->peak_bandwidth_duration->min = \
+                        fspec_struct->peak_bandwidth_duration->max = \
+                        nla_get_u32(attrs[FSPEC_ATTR_PEAK_BWITH_DURATION]);
 
-	if (attrs[FSPEC_ATTR_UNDETECTED_BER])
-		fspec_struct->undetected_bit_error_rate = \
-			nla_get_u32(attrs[FSPEC_ATTR_UNDETECTED_BER]);	
-	
-	if (attrs[FSPEC_ATTR_PART_DELIVERY])
-		fspec_struct->partial_delivery = \
-			nla_get_flag(attrs[FSPEC_ATTR_PART_DELIVERY]);	
+        if (attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION])
+                fspec_struct->peak_sdu_bandwidth_duration->min = \
+                        fspec_struct->peak_sdu_bandwidth_duration->max = \
+                        nla_get_u32(attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION]);
 
-	if (attrs[FSPEC_ATTR_IN_ORD_DELIVERY])
-		fspec_struct->ordered_delivery = \
-			nla_get_flag(attrs[FSPEC_ATTR_IN_ORD_DELIVERY]);	
+        if (attrs[FSPEC_ATTR_UNDETECTED_BER])
+                fspec_struct->undetected_bit_error_rate = \
+                        nla_get_u32(attrs[FSPEC_ATTR_UNDETECTED_BER]);
 
-	if (attrs[FSPEC_ATTR_MAX_GAP])
-		fspec_struct->max_allowable_gap = \
-			(int) nla_get_u32(attrs[FSPEC_ATTR_MAX_GAP]);	
+        if (attrs[FSPEC_ATTR_UNDETECTED_BER])
+                fspec_struct->undetected_bit_error_rate = \
+                        nla_get_u32(attrs[FSPEC_ATTR_UNDETECTED_BER]);
 
-	if (attrs[FSPEC_ATTR_DELAY])
-		fspec_struct->delay = \
-			nla_get_u32(attrs[FSPEC_ATTR_DELAY]);	
+        if (attrs[FSPEC_ATTR_PART_DELIVERY])
+                fspec_struct->partial_delivery = \
+                        nla_get_flag(attrs[FSPEC_ATTR_PART_DELIVERY]);
 
-	if (attrs[FSPEC_ATTR_MAX_SDU_SIZE])
-		fspec_struct->max_sdu_size = \
-			nla_get_u32(attrs[FSPEC_ATTR_MAX_SDU_SIZE]);	
+        if (attrs[FSPEC_ATTR_IN_ORD_DELIVERY])
+                fspec_struct->ordered_delivery = \
+                        nla_get_flag(attrs[FSPEC_ATTR_IN_ORD_DELIVERY]);
 
-	return 0;
+        if (attrs[FSPEC_ATTR_MAX_GAP])
+                fspec_struct->max_allowable_gap = \
+                        (int) nla_get_u32(attrs[FSPEC_ATTR_MAX_GAP]);
+
+        if (attrs[FSPEC_ATTR_DELAY])
+                fspec_struct->delay = \
+                        nla_get_u32(attrs[FSPEC_ATTR_DELAY]);
+
+        if (attrs[FSPEC_ATTR_MAX_SDU_SIZE])
+                fspec_struct->max_sdu_size = \
+                        nla_get_u32(attrs[FSPEC_ATTR_MAX_SDU_SIZE]);
+
+        return 0;
 
  fail:
-        return -1;	
+        return -1;
 }
 
-static int parse_app_name_info(struct nlattr * name_attr, 
-			       struct name * name_struct)
+static int parse_app_name_info(struct nlattr * name_attr,
+                               struct name * name_struct)
 {
-	struct nla_policy attr_policy[APNI_ATTR_MAX + 1];
+        struct nla_policy attr_policy[APNI_ATTR_MAX + 1];
         struct nlattr *attrs[APNI_ATTR_MAX + 1];
-	int err;
+        int err;
 
-	attr_policy[APNI_ATTR_PROCESS_NAME].type = NLA_STRING;
+        attr_policy[APNI_ATTR_PROCESS_NAME].type = NLA_STRING;
         attr_policy[APNI_ATTR_PROCESS_INSTANCE].type = NLA_STRING;
-        attr_policy[APNI_ATTR_ENTITY_NAME].type = NLA_STRING; 
+        attr_policy[APNI_ATTR_ENTITY_NAME].type = NLA_STRING;
         attr_policy[APNI_ATTR_ENTITY_INSTANCE].type = NLA_STRING;
 
-	err = nla_parse_nested(attrs, APNI_ATTR_MAX, name_attr, attr_policy);
-        if (err < 0) { 
-                return -1;         
-        } 
-	if (attrs[APNI_ATTR_PROCESS_NAME])
-		nla_strlcpy(name_struct->process_name, 
-			    attrs[APNI_ATTR_PROCESS_NAME],
-			    sizeof(attrs[APNI_ATTR_PROCESS_NAME]));
-			    
-	if (attrs[APNI_ATTR_PROCESS_INSTANCE])
-		nla_strlcpy(name_struct->process_instance,
-			    attrs[APNI_ATTR_PROCESS_INSTANCE],
-			    sizeof(attrs[APNI_ATTR_PROCESS_INSTANCE]));
-	if (attrs[APNI_ATTR_ENTITY_NAME])
-		nla_strlcpy(name_struct->entity_name,
-			    attrs[APNI_ATTR_ENTITY_NAME],
-			    sizeof(attrs[APNI_ATTR_ENTITY_NAME]));
-	if (attrs[APNI_ATTR_ENTITY_INSTANCE])
-		nla_strlcpy(name_struct->entity_instance,
-			    attrs[APNI_ATTR_ENTITY_INSTANCE],
-			    sizeof(attrs[APNI_ATTR_ENTITY_INSTANCE]));
-	return 0;
+        err = nla_parse_nested(attrs, APNI_ATTR_MAX, name_attr, attr_policy);
+        if (err < 0)
+                return -1;
+
+        if (attrs[APNI_ATTR_PROCESS_NAME])
+                nla_strlcpy(name_struct->process_name,
+                            attrs[APNI_ATTR_PROCESS_NAME],
+                            sizeof(attrs[APNI_ATTR_PROCESS_NAME]));
+
+        if (attrs[APNI_ATTR_PROCESS_INSTANCE])
+                nla_strlcpy(name_struct->process_instance,
+                            attrs[APNI_ATTR_PROCESS_INSTANCE],
+                            sizeof(attrs[APNI_ATTR_PROCESS_INSTANCE]));
+        if (attrs[APNI_ATTR_ENTITY_NAME])
+                nla_strlcpy(name_struct->entity_name,
+                            attrs[APNI_ATTR_ENTITY_NAME],
+                            sizeof(attrs[APNI_ATTR_ENTITY_NAME]));
+        if (attrs[APNI_ATTR_ENTITY_INSTANCE])
+                nla_strlcpy(name_struct->entity_instance,
+                            attrs[APNI_ATTR_ENTITY_INSTANCE],
+                            sizeof(attrs[APNI_ATTR_ENTITY_INSTANCE]));
+        return 0;
 }
 
-static int rnl_parse_ipcm_alloc_flow_req(struct genl_info * info, 
-                                  struct rnl_ipcm_alloc_flow_req_msg_attrs * msg_attrs)
+static int rnl_parse_ipcm_alloc_flow_req(struct genl_info * info,
+                                         struct rnl_ipcm_alloc_flow_req_msg_attrs * msg_attrs)
 {
-	struct nla_policy attr_policy[IAFRM_ATTR_MAX + 1];
+        struct nla_policy attr_policy[IAFRM_ATTR_MAX + 1];
 
         attr_policy[IAFRM_ATTR_SOURCE_APP].type = NLA_NESTED;
         attr_policy[IAFRM_ATTR_DEST_APP].type = NLA_NESTED;
@@ -267,86 +268,86 @@ static int rnl_parse_ipcm_alloc_flow_req(struct genl_info * info,
         attr_policy[IAFRM_ATTR_DIF_NAME].type = NLA_NESTED;
         attr_policy[IAFRM_ATTR_PORT_ID].type = NLA_U32;
         attr_policy[IAFRM_ATTR_APP_PORT].type = NLA_U32;
-	
-	if (rnl_simple_parse_msg(info, IAFRM_ATTR_MAX, attr_policy) < 0)
+
+        if (rnl_simple_parse_msg(info, IAFRM_ATTR_MAX, attr_policy) < 0)
                 goto fail;
 
-	if (parse_app_name_info(info->attrs[IAFRM_ATTR_SOURCE_APP],
+        if (parse_app_name_info(info->attrs[IAFRM_ATTR_SOURCE_APP],
                                 &msg_attrs->source) < 0)
                 goto fail;
 
-	if (parse_app_name_info(info->attrs[IAFRM_ATTR_DEST_APP],
+        if (parse_app_name_info(info->attrs[IAFRM_ATTR_DEST_APP],
                                 &msg_attrs->dest) < 0)
                 goto fail;
 
-	if (parse_flow_spec(info->attrs[IAFRM_ATTR_FLOW_SPEC],
+        if (parse_flow_spec(info->attrs[IAFRM_ATTR_FLOW_SPEC],
                             &msg_attrs->fspec) < 0);
         goto fail;
 
-	if (info->attrs[IAFRM_ATTR_PORT_ID])
-		msg_attrs->id = \
+        if (info->attrs[IAFRM_ATTR_PORT_ID])
+                msg_attrs->id = \
                         (port_id_t) nla_get_u32(info->attrs[IAFRM_ATTR_PORT_ID]);
 
-	if (parse_app_name_info(info->attrs[IAFRM_ATTR_DIF_NAME],
+        if (parse_app_name_info(info->attrs[IAFRM_ATTR_DIF_NAME],
                                 &msg_attrs->dif_name) < 0)
                 goto fail;
 
-	return 0;
+        return 0;
 
-	fail:
-        	LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_ALLOCATE_FLOW_REQUEST"));
-	        return -1;
+ fail:
+        LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_ALLOCATE_FLOW_REQUEST"));
+        return -1;
 }
 
 
-static int rnl_parse_ipcm_alloc_flow_req_arrived(struct genl_info * info, 
-                     struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs * msg_attrs)
+static int rnl_parse_ipcm_alloc_flow_req_arrived(struct genl_info * info,
+                                                 struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs * msg_attrs)
 {
-	return 0;
+        return 0;
 }
 
-static int rnl_parse_ipcm_alloc_flow_resp(struct genl_info * info, 
-                              struct rnl_alloc_flow_resp_msg_attrs * msg_attrs)
+static int rnl_parse_ipcm_alloc_flow_resp(struct genl_info * info,
+                                          struct rnl_alloc_flow_resp_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[AAFRE_ATTR_MAX + 1];
-        
-	/* FIXME: nla_policy struct is different from user-space. No min/max
-	 * attrs. len not specified */
-	attr_policy[AAFRE_ATTR_DIF_NAME].type = NLA_NESTED;
+
+        /* FIXME: nla_policy struct is different from user-space. No min/max
+         * attrs. len not specified */
+        attr_policy[AAFRE_ATTR_DIF_NAME].type = NLA_NESTED;
         attr_policy[AAFRE_ATTR_ACCEPT].type = NLA_FLAG;
         attr_policy[AAFRE_ATTR_DENY_REASON].type = NLA_STRING;
         attr_policy[AAFRE_ATTR_NOTIFY_SOURCE].type = NLA_FLAG;
 
-	/* Any other comprobations could be done in addition to nlmsg_parse()
-	 * done by rnl_simple_parse_msg */
+        /* Any other comprobations could be done in addition to nlmsg_parse()
+         * done by rnl_simple_parse_msg */
 
-	if (rnl_simple_parse_msg(info, IAFRA_ATTR_MAX, attr_policy) < 0)
-		goto fail;
+        if (rnl_simple_parse_msg(info, IAFRA_ATTR_MAX, attr_policy) < 0)
+                goto fail;
 
-	if (parse_app_name_info(info->attrs[AAFRE_ATTR_DIF_NAME], 
-                                &msg_attrs->dif_name) < 0) 
-		goto fail;
-	if (info->attrs[AAFRE_ATTR_ACCEPT])
-		msg_attrs->accept	= \
-			nla_get_flag(info->attrs[AAFRE_ATTR_ACCEPT]);
-	if (info->attrs[AAFRE_ATTR_DENY_REASON])
-		nla_strlcpy(msg_attrs->deny_reason,
-			    info->attrs[AAFRE_ATTR_DENY_REASON],
-			    sizeof(info->attrs[AAFRE_ATTR_DENY_REASON]));
-	if (info->attrs[AAFRE_ATTR_NOTIFY_SOURCE])
-		msg_attrs->notify_src  = \
-			nla_get_flag(info->attrs[AAFRE_ATTR_NOTIFY_SOURCE]);
-	
-	return 0;	
+        if (parse_app_name_info(info->attrs[AAFRE_ATTR_DIF_NAME],
+                                &msg_attrs->dif_name) < 0)
+                goto fail;
+        if (info->attrs[AAFRE_ATTR_ACCEPT])
+                msg_attrs->accept       = \
+                        nla_get_flag(info->attrs[AAFRE_ATTR_ACCEPT]);
+        if (info->attrs[AAFRE_ATTR_DENY_REASON])
+                nla_strlcpy(msg_attrs->deny_reason,
+                            info->attrs[AAFRE_ATTR_DENY_REASON],
+                            sizeof(info->attrs[AAFRE_ATTR_DENY_REASON]));
+        if (info->attrs[AAFRE_ATTR_NOTIFY_SOURCE])
+                msg_attrs->notify_src  = \
+                        nla_get_flag(info->attrs[AAFRE_ATTR_NOTIFY_SOURCE]);
 
-	fail:
-        	LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_ALLOCATE_FLOW_RESPONSE"));
-	        return -1;
+        return 0;
+
+ fail:
+        LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_ALLOCATE_FLOW_RESPONSE"));
+        return -1;
 
 }
 
 static int rnl_parse_ipcm_dealloc_flow_req(struct genl_info * info,
-                                   struct rnl_ipcm_dealloc_flow_req_msg_attrs * msg_attrs)
+                                           struct rnl_ipcm_dealloc_flow_req_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[ADFRT_ATTR_MAX + 1];
 
@@ -354,162 +355,162 @@ static int rnl_parse_ipcm_dealloc_flow_req(struct genl_info * info,
         attr_policy[ADFRT_ATTR_DIF_NAME].type = NLA_NESTED;
         attr_policy[ADFRT_ATTR_APP_NAME].type = NLA_NESTED;
 
-	if (rnl_simple_parse_msg(info, ADFRT_ATTR_MAX, attr_policy) < 0)
+        if (rnl_simple_parse_msg(info, ADFRT_ATTR_MAX, attr_policy) < 0)
                 goto fail;
 
-	if (info->attrs[ADFRT_ATTR_PORT_ID])
-		msg_attrs->id       = \
-			(port_id_t) nla_get_u32(info->attrs[ADFRT_ATTR_PORT_ID]);
+        if (info->attrs[ADFRT_ATTR_PORT_ID])
+                msg_attrs->id       = \
+                        (port_id_t) nla_get_u32(info->attrs[ADFRT_ATTR_PORT_ID]);
 
-	if (parse_app_name_info(info->attrs[ADFRT_ATTR_DIF_NAME], 
-                                &msg_attrs->dif_name) < 0) 
-		goto fail;
+        if (parse_app_name_info(info->attrs[ADFRT_ATTR_DIF_NAME],
+                                &msg_attrs->dif_name) < 0)
+                goto fail;
 
-	if (parse_app_name_info(info->attrs[ADFRT_ATTR_APP_NAME], 
-                                &msg_attrs->app_name) < 0) 
-		goto fail;
+        if (parse_app_name_info(info->attrs[ADFRT_ATTR_APP_NAME],
+                                &msg_attrs->app_name) < 0)
+                goto fail;
 
-	return 0;
+        return 0;
 
-	fail:
-        	LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST"));
-        	return -1;
+ fail:
+        LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST"));
+        return -1;
 
 }
 
 
 static int rnl_parse_ipcm_dealloc_flow_resp(struct genl_info * info,
-                                    struct rnl_ipcm_dealloc_flow_resp_msg_attrs * msg_attrs)
+                                            struct rnl_ipcm_dealloc_flow_resp_msg_attrs * msg_attrs)
 {
-	struct nla_policy attr_policy[ADFRE_ATTR_MAX + 1];
+        struct nla_policy attr_policy[ADFRE_ATTR_MAX + 1];
 
         attr_policy[ADFRE_ATTR_RESULT].type = NLA_U32;
         attr_policy[ADFRE_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
         attr_policy[ADFRE_ATTR_APP_NAME].type = NLA_NESTED;
 
-	
-	if (rnl_simple_parse_msg(info, ADFRE_ATTR_MAX, attr_policy) < 0)
+
+        if (rnl_simple_parse_msg(info, ADFRE_ATTR_MAX, attr_policy) < 0)
                 goto fail;
 
-	if (info->attrs[ADFRE_ATTR_RESULT])
-		msg_attrs->result       = \
-			(port_id_t) nla_get_u32(info->attrs[ADFRE_ATTR_RESULT]);
+        if (info->attrs[ADFRE_ATTR_RESULT])
+                msg_attrs->result       = \
+                        (port_id_t) nla_get_u32(info->attrs[ADFRE_ATTR_RESULT]);
 
-	if (info->attrs[ADFRE_ATTR_ERROR_DESCRIPTION])
-		nla_strlcpy(msg_attrs->err_desc,
-			    info->attrs[ADFRE_ATTR_ERROR_DESCRIPTION],
-			    sizeof(info->attrs[ADFRE_ATTR_ERROR_DESCRIPTION]));
+        if (info->attrs[ADFRE_ATTR_ERROR_DESCRIPTION])
+                nla_strlcpy(msg_attrs->err_desc,
+                            info->attrs[ADFRE_ATTR_ERROR_DESCRIPTION],
+                            sizeof(info->attrs[ADFRE_ATTR_ERROR_DESCRIPTION]));
 
-	if (parse_app_name_info(info->attrs[ADFRE_ATTR_APP_NAME], 
-                                &msg_attrs->app_name) < 0) 
-		goto fail;
+        if (parse_app_name_info(info->attrs[ADFRE_ATTR_APP_NAME],
+                                &msg_attrs->app_name) < 0)
+                goto fail;
 
-	return 0;
+        return 0;
 
-	fail:
-        	LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE"));
-	        return -1;
+ fail:
+        LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE"));
+        return -1;
 }
 
 #if 0
 ipc_process_id_t rnl_src_ipcid_from_msg(struct genl_info * info)
 {
-	struct rina_msg_hdr * usr_hdr = info->userhdr;
-	return usr_hdr->src_ipc_id;
+        struct rina_msg_hdr * usr_hdr = info->userhdr;
+        return usr_hdr->src_ipc_id;
 }
 EXPORT_SYMBOL(rnl_src_ipcid_from_msg);
 
 ipc_process_id_t rnl_dst_ipcid_from_msg(struct genl_info * info)
 {
-	struct rina_msg_hdr * usr_hdr = info->userhdr;
-	return usr_hdr->src_ipc_id;
+        struct rina_msg_hdr * usr_hdr = info->userhdr;
+        return usr_hdr->src_ipc_id;
 }
 EXPORT_SYMBOL(rnl_dst_ipcid_from_msg);
 #endif
 
-int rnl_parse_msg(struct genl_info	* info,
-		  struct rnl_msg	* msg)
+int rnl_parse_msg(struct genl_info      * info,
+                  struct rnl_msg        * msg)
 {
-	/* harcoded  */
-	/* msg->family			= "rina";*/
-	msg->src_port			= info->snd_portid;
-	/* dst_port can not be parsed */
-	msg->dst_port			= 0;
-	msg->seq_num			= info->snd_seq;
-	msg->op_code			= (msg_id) info->genlhdr->cmd;
+        /* harcoded  */
+        /* msg->family                  = "rina";*/
+        msg->src_port                   = info->snd_portid;
+        /* dst_port can not be parsed */
+        msg->dst_port                   = 0;
+        msg->seq_num                    = info->snd_seq;
+        msg->op_code                    = (msg_id) info->genlhdr->cmd;
 #if 0
-	msg->req_msg_flag		= 
-	msg->resp_msg_flag		=
-	msg->notification_msg_flag	=
+        msg->req_msg_flag               =
+                msg->resp_msg_flag              =
+                msg->notification_msg_flag      =
 #endif
-	msg->rina_hdr		= info->userhdr;
-	switch(info->genlhdr->cmd){
-		case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST:
-			msg->attrs = 0; 
-			break;
-		case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE:
-			break;
-		case RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:
-			break;
-		case RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION: 
-			break;
-		case RINA_C_IPCM_ENROLL_TO_DIF_REQUEST:
-			break;
-		case RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE:
-			break;
-		case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST:
-			break;
-		case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE:
-			break;
-		case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST:
-			if (rnl_parse_ipcm_alloc_flow_req(info, msg->attrs) < 0)
-				goto fail;
-			break;
-		case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED:
-			break;
-		case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
-			break;
-		case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE:
-			if (rnl_parse_ipcm_alloc_flow_resp(info, msg->attrs) < 0)
-				goto fail;
-			break;
-		case RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST: 
-			if (rnl_parse_ipcm_dealloc_flow_req(info, msg->attrs) < 0)
-				goto fail;
-			break;
-		case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE:
-			if (rnl_parse_ipcm_dealloc_flow_resp(info, msg->attrs) < 0)
-				goto fail;
-			break;
-		case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST:
-			break;
-		case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:
-			break;
-		case RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST:
-			break;
-		case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE:
-			break;
-		case RINA_C_IPCM_QUERY_RIB_REQUEST:
-			break;
-		case RINA_C_IPCM_QUERY_RIB_RESPONSE:
-			break;
-		case RINA_C_RMT_ADD_FTE_REQUEST:
-			break;
-		case RINA_C_RMT_DELETE_FTE_REQUEST:
-			break;
-		case RINA_C_RMT_DUMP_FT_REQUEST:
-			break;
-		case RINA_C_RMT_DUMP_FT_REPLY:
-			break;
-		default:
-			goto fail;
-			break;
-	}
-	return 0;	
+                msg->rina_hdr           = info->userhdr;
+        switch(info->genlhdr->cmd){
+        case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST:
+                msg->attrs = 0;
+                break;
+        case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE:
+                break;
+        case RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:
+                break;
+        case RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION:
+                break;
+        case RINA_C_IPCM_ENROLL_TO_DIF_REQUEST:
+                break;
+        case RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE:
+                break;
+        case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST:
+                break;
+        case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE:
+                break;
+        case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST:
+                if (rnl_parse_ipcm_alloc_flow_req(info, msg->attrs) < 0)
+                        goto fail;
+                break;
+        case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED:
+                break;
+        case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
+                break;
+        case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE:
+                if (rnl_parse_ipcm_alloc_flow_resp(info, msg->attrs) < 0)
+                        goto fail;
+                break;
+        case RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST:
+                if (rnl_parse_ipcm_dealloc_flow_req(info, msg->attrs) < 0)
+                        goto fail;
+                break;
+        case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE:
+                if (rnl_parse_ipcm_dealloc_flow_resp(info, msg->attrs) < 0)
+                        goto fail;
+                break;
+        case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST:
+                break;
+        case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:
+                break;
+        case RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST:
+                break;
+        case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE:
+                break;
+        case RINA_C_IPCM_QUERY_RIB_REQUEST:
+                break;
+        case RINA_C_IPCM_QUERY_RIB_RESPONSE:
+                break;
+        case RINA_C_RMT_ADD_FTE_REQUEST:
+                break;
+        case RINA_C_RMT_DELETE_FTE_REQUEST:
+                break;
+        case RINA_C_RMT_DUMP_FT_REQUEST:
+                break;
+        case RINA_C_RMT_DUMP_FT_REPLY:
+                break;
+        default:
+                goto fail;
+                break;
+        }
+        return 0;
 
-	fail:
-		LOG_ERR("Could not parse netlink message of type: %d", info->genlhdr->cmd);
-		return -1;
+ fail:
+        LOG_ERR("Could not parse netlink message of type: %d", info->genlhdr->cmd);
+        return -1;
 }
 EXPORT_SYMBOL(rnl_parse_msg);
 
@@ -517,7 +518,7 @@ EXPORT_SYMBOL(rnl_parse_msg);
 /* FORMATTING */
 
 static int format_app_name_info(const struct name * name,
-				struct sk_buff * msg)
+                                struct sk_buff * msg)
 {
         if (!msg) {
                 LOG_ERR("Bogus input parameter(s), bailing out");
@@ -551,12 +552,12 @@ static int format_app_name_info(const struct name * name,
                                    APNI_ATTR_ENTITY_INSTANCE,
                                    name->entity_instance))
                         return -1;
-        
+
         return 0;
 }
 
 static int format_flow_spec(const struct flow_spec * fspec,
-			    struct sk_buff   * msg)
+                            struct sk_buff   * msg)
 {
         if (!msg) {
                 LOG_ERR("Bogus input parameter(s), bailing out");
@@ -568,10 +569,10 @@ static int format_flow_spec(const struct flow_spec * fspec,
          *  uint_range types
          */
         /* FIXME: ??? only max is accessed, what do you mean ? */
-	/* FIXME: librina does not define ranges for these attributes, just
-	 * unique values. So far I seleced only the max or min value depending
-	 * on the most restrincting (in this case all max). 
-	 * Leo */
+        /* FIXME: librina does not define ranges for these attributes, just
+         * unique values. So far I seleced only the max or min value depending
+         * on the most restrincting (in this case all max).
+         * Leo */
 
         if (fspec->average_bandwidth->max > 0)
                 if (nla_put_u32(msg,
@@ -692,7 +693,7 @@ EXPORT_SYMBOL(rnl_format_ipcm_disconn_neighbor_resp_msg);
 int rnl_format_ipcm_alloc_flow_req_msg(const struct name      * source,
                                        const struct name      * dest,
                                        const struct flow_spec * fspec,
-                                       port_id_t        id, 
+                                       port_id_t        id,
                                        const struct name      * dif_name,
                                        struct sk_buff   * skb_out)
 {
@@ -736,7 +737,7 @@ int rnl_format_ipcm_alloc_flow_req_msg(const struct name      * source,
         /* Boolean shortcuiting here */
         if (format_app_name_info(source, skb_out)         ||
             format_app_name_info(dest, skb_out)           ||
-            format_flow_spec(fspec, skb_out)		  ||
+            format_flow_spec(fspec, skb_out)              ||
             nla_put_u32(skb_out, IAFRA_ATTR_PORT_ID, id)  ||
             format_app_name_info(dif_name, skb_out)) {
                 LOG_ERR("Could not format "
@@ -860,66 +861,66 @@ EXPORT_SYMBOL(rnl_format_rmt_del_fte_req_msg);
 
 
 
-static int rnl_format_msg(msg_id   msg_type,
-		   struct rnl_msg  * msg,
-                   struct sk_buff  * skb_out)
+static int rnl_format_msg(msg_id           msg_type,
+                          struct rnl_msg * msg,
+                          struct sk_buff * skb_out)
 {
-	switch(msg_type){
-		case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST:
-			break;
-		case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE:
-			break;
-		case RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:
-			break;
-		case RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION: 
-			break;
-		case RINA_C_IPCM_ENROLL_TO_DIF_REQUEST:
-			break;
-		case RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE:
-			break;
-		case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST:
-			break;
-		case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE:
-			break;
-		case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST:
-			break;
-		case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED:
-			break;
-		case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
-			break;
-		case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE:
-			break;
-		case RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST: 
-			break;
-		case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE:
-			break;
-		case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST:
-			break;
-		case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:
-			break;
-		case RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST:
-			break;
-		case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE:
-			break;
-		case RINA_C_IPCM_QUERY_RIB_REQUEST:
-			break;
-		case RINA_C_IPCM_QUERY_RIB_RESPONSE:
-			break;
-		case RINA_C_RMT_ADD_FTE_REQUEST:
-			break;
-		case RINA_C_RMT_DELETE_FTE_REQUEST:
-			break;
-		case RINA_C_RMT_DUMP_FT_REQUEST:
-			break;
-		case RINA_C_RMT_DUMP_FT_REPLY:
-			break;
-		default:
-			goto fail;
-			break;
-	}
-	return 0;	
+        switch(msg_type) {
+        case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST:
+                break;
+        case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE:
+                break;
+        case RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:
+                break;
+        case RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION:
+                break;
+        case RINA_C_IPCM_ENROLL_TO_DIF_REQUEST:
+                break;
+        case RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE:
+                break;
+        case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST:
+                break;
+        case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE:
+                break;
+        case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST:
+                break;
+        case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED:
+                break;
+        case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
+                break;
+        case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE:
+                break;
+        case RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST:
+                break;
+        case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE:
+                break;
+        case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST:
+                break;
+        case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:
+                break;
+        case RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST:
+                break;
+        case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE:
+                break;
+        case RINA_C_IPCM_QUERY_RIB_REQUEST:
+                break;
+        case RINA_C_IPCM_QUERY_RIB_RESPONSE:
+                break;
+        case RINA_C_RMT_ADD_FTE_REQUEST:
+                break;
+        case RINA_C_RMT_DELETE_FTE_REQUEST:
+                break;
+        case RINA_C_RMT_DUMP_FT_REQUEST:
+                break;
+        case RINA_C_RMT_DUMP_FT_REPLY:
+                break;
+        default:
+                goto fail;
+                break;
+        }
+        return 0;
 
-	fail:
-		LOG_ERR("Could not format netlink message of type: %d", msg_type);
-		return -1;
+ fail:
+        LOG_ERR("Could not format netlink message of type: %d", msg_type);
+        return -1;
 }
