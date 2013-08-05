@@ -58,15 +58,14 @@ enum flow_spec_attrs_list {
 
 #define FSPEC_ATTR_MAX (__FSPEC_ATTR_MAX - 1)
 
-enum ipcm_alloc_flow_req_resp_attrs_list {
-        AAFRE_ATTR_DIF_NAME = 1,
-        AAFRE_ATTR_ACCEPT,
-        AAFRE_ATTR_DENY_REASON,
-        AAFRE_ATTR_NOTIFY_SOURCE,
-        __AAFRE_ATTR_MAX,
+enum ipcm_alloc_flow_resp_attrs_list {
+        IAFRE_ATTR_ACCEPT = 1,
+        IAFRE_ATTR_DENY_REASON,
+        IAFRE_ATTR_NOTIFY_SOURCE,
+        __IAFRE_ATTR_MAX,
 };
 
-#define AAFRE_ATTR_MAX (__AAFRE_ATTR_MAX -1)
+#define IAFRE_ATTR_MAX (__IAFRE_ATTR_MAX -1)
 
 enum ipcm_alloc_flow_req_attrs_list {
         IAFRM_ATTR_SOURCE_APP = 1,
@@ -92,22 +91,19 @@ enum ipcm_alloc_flow_req_arrived_attrs_list {
 #define IAFRA_ATTR_MAX (__IAFRA_ATTR_MAX -1)
 
 enum ipcm_dealloc_flow_req_msg_attrs_list {
-        ADFRT_ATTR_PORT_ID = 1,
-        ADFRT_ATTR_DIF_NAME,
-        ADFRT_ATTR_APP_NAME,
-        __ADFRT_ATTR_MAX,
+        IDFRT_ATTR_PORT_ID = 1,
+        __IDFRT_ATTR_MAX,
 };
 
-#define ADFRT_ATTR_MAX (__ADFRT_ATTR_MAX -1)
+#define IDFRT_ATTR_MAX (__IDFRT_ATTR_MAX -1)
 
 enum ipcm_dealloc_flow_resp_attrs_list {
-        ADFRE_ATTR_RESULT = 1,
-        ADFRE_ATTR_ERROR_DESCRIPTION,
-        ADFRE_ATTR_APP_NAME,
-        __ADFRE_ATTR_MAX,
+        IDFRE_ATTR_RESULT = 1,
+        IDFRE_ATTR_APP_NAME,
+        __IDFRE_ATTR_MAX,
 };
 
-#define ADFRE_ATTR_MAX (__ADFRE_ATTR_MAX -1)
+#define IDFRE_ATTR_MAX (__IDFRE_ATTR_MAX -1)
 
 struct rina_msg_hdr {
         unsigned int src_ipc_id;
@@ -165,9 +161,8 @@ struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs {
 };
 
 struct rnl_alloc_flow_resp_msg_attrs {
-        struct name dif_name;
         bool        accept;
-        string_t *  deny_reason;
+        uint_t	    deny_reason;
         bool        notify_src;
 };
 
@@ -179,7 +174,7 @@ struct rnl_ipcm_dealloc_flow_req_msg_attrs {
 
 struct rnl_ipcm_dealloc_flow_resp_msg_attrs {
         uint_t      result;
-        string_t *  err_desc;
+        uint_t	    err_desc;
         struct name app_name;
 };
 

@@ -309,34 +309,29 @@ static int rnl_parse_ipcm_alloc_flow_req_arrived(struct genl_info * info,
 static int rnl_parse_ipcm_alloc_flow_resp(struct genl_info * info,
                                           struct rnl_alloc_flow_resp_msg_attrs * msg_attrs)
 {
-        struct nla_policy attr_policy[AAFRE_ATTR_MAX + 1];
+        struct nla_policy attr_policy[IAFRE_ATTR_MAX + 1];
 
         /* FIXME: nla_policy struct is different from user-space. No min/max
          * attrs. len not specified */
-        attr_policy[AAFRE_ATTR_DIF_NAME].type = NLA_NESTED;
-        attr_policy[AAFRE_ATTR_ACCEPT].type = NLA_FLAG;
-        attr_policy[AAFRE_ATTR_DENY_REASON].type = NLA_STRING;
-        attr_policy[AAFRE_ATTR_NOTIFY_SOURCE].type = NLA_FLAG;
+        attr_policy[IAFRE_ATTR_ACCEPT].type = NLA_FLAG;
+        attr_policy[IAFRE_ATTR_DENY_REASON].type = NLA_U32;
+        attr_policy[IAFRE_ATTR_NOTIFY_SOURCE].type = NLA_FLAG;
 
         /* Any other comprobations could be done in addition to nlmsg_parse()
          * done by rnl_simple_parse_msg */
 
-        if (rnl_simple_parse_msg(info, IAFRA_ATTR_MAX, attr_policy) < 0)
+        if (rnl_simple_parse_msg(info, IAFRE_ATTR_MAX, attr_policy) < 0)
                 goto fail;
 
-        if (parse_app_name_info(info->attrs[AAFRE_ATTR_DIF_NAME],
-                                &msg_attrs->dif_name) < 0)
-                goto fail;
-        if (info->attrs[AAFRE_ATTR_ACCEPT])
-                msg_attrs->accept       = \
-                        nla_get_flag(info->attrs[AAFRE_ATTR_ACCEPT]);
-        if (info->attrs[AAFRE_ATTR_DENY_REASON])
-                nla_strlcpy(msg_attrs->deny_reason,
-                            info->attrs[AAFRE_ATTR_DENY_REASON],
-                            sizeof(info->attrs[AAFRE_ATTR_DENY_REASON]));
-        if (info->attrs[AAFRE_ATTR_NOTIFY_SOURCE])
+        if (info->attrs[IAFRE_ATTR_ACCEPT])
+                msg_attrs->accept = \
+                        nla_get_flag(info->attrs[IAFRE_ATTR_ACCEPT]);
+        if (info->attrs[IAFRE_ATTR_DENY_REASON])
+                msg_attrs->deny_reason = \
+                        nla_get_u32(info->attrs[IAFRE_ATTR_DENY_REASON]);
+        if (info->attrs[IAFRE_ATTR_NOTIFY_SOURCE])
                 msg_attrs->notify_src  = \
-                        nla_get_flag(info->attrs[AAFRE_ATTR_NOTIFY_SOURCE]);
+                        nla_get_flag(info->attrs[IAFRE_ATTR_NOTIFY_SOURCE]);
 
         return 0;
 
@@ -349,26 +344,16 @@ static int rnl_parse_ipcm_alloc_flow_resp(struct genl_info * info,
 static int rnl_parse_ipcm_dealloc_flow_req(struct genl_info * info,
                                            struct rnl_ipcm_dealloc_flow_req_msg_attrs * msg_attrs)
 {
-        struct nla_policy attr_policy[ADFRT_ATTR_MAX + 1];
+        struct nla_policy attr_policy[IDFRT_ATTR_MAX + 1];
 
-        attr_policy[ADFRT_ATTR_PORT_ID].type = NLA_U32;
-        attr_policy[ADFRT_ATTR_DIF_NAME].type = NLA_NESTED;
-        attr_policy[ADFRT_ATTR_APP_NAME].type = NLA_NESTED;
+        attr_policy[IDFRT_ATTR_PORT_ID].type = NLA_U32;
 
-        if (rnl_simple_parse_msg(info, ADFRT_ATTR_MAX, attr_policy) < 0)
+        if (rnl_simple_parse_msg(info, IDFRT_ATTR_MAX, attr_policy) < 0)
                 goto fail;
 
-        if (info->attrs[ADFRT_ATTR_PORT_ID])
+        if (info->attrs[IDFRT_ATTR_PORT_ID])
                 msg_attrs->id       = \
-                        (port_id_t) nla_get_u32(info->attrs[ADFRT_ATTR_PORT_ID]);
-
-        if (parse_app_name_info(info->attrs[ADFRT_ATTR_DIF_NAME],
-                                &msg_attrs->dif_name) < 0)
-                goto fail;
-
-        if (parse_app_name_info(info->attrs[ADFRT_ATTR_APP_NAME],
-                                &msg_attrs->app_name) < 0)
-                goto fail;
+                        (port_id_t) nla_get_u32(info->attrs[IDFRT_ATTR_PORT_ID]);
 
         return 0;
 
@@ -382,26 +367,20 @@ static int rnl_parse_ipcm_dealloc_flow_req(struct genl_info * info,
 static int rnl_parse_ipcm_dealloc_flow_resp(struct genl_info * info,
                                             struct rnl_ipcm_dealloc_flow_resp_msg_attrs * msg_attrs)
 {
-        struct nla_policy attr_policy[ADFRE_ATTR_MAX + 1];
+        struct nla_policy attr_policy[IDFRE_ATTR_MAX + 1];
 
-        attr_policy[ADFRE_ATTR_RESULT].type = NLA_U32;
-        attr_policy[ADFRE_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
-        attr_policy[ADFRE_ATTR_APP_NAME].type = NLA_NESTED;
+        attr_policy[IDFRE_ATTR_RESULT].type = NLA_U32;
+        attr_policy[IDFRE_ATTR_APP_NAME].type = NLA_NESTED;
 
 
-        if (rnl_simple_parse_msg(info, ADFRE_ATTR_MAX, attr_policy) < 0)
+        if (rnl_simple_parse_msg(info, IDFRE_ATTR_MAX, attr_policy) < 0)
                 goto fail;
 
-        if (info->attrs[ADFRE_ATTR_RESULT])
+        if (info->attrs[IDFRE_ATTR_RESULT])
                 msg_attrs->result       = \
-                        (port_id_t) nla_get_u32(info->attrs[ADFRE_ATTR_RESULT]);
+                        (port_id_t) nla_get_u32(info->attrs[IDFRE_ATTR_RESULT]);
 
-        if (info->attrs[ADFRE_ATTR_ERROR_DESCRIPTION])
-                nla_strlcpy(msg_attrs->err_desc,
-                            info->attrs[ADFRE_ATTR_ERROR_DESCRIPTION],
-                            sizeof(info->attrs[ADFRE_ATTR_ERROR_DESCRIPTION]));
-
-        if (parse_app_name_info(info->attrs[ADFRE_ATTR_APP_NAME],
+        if (parse_app_name_info(info->attrs[IDFRE_ATTR_APP_NAME],
                                 &msg_attrs->app_name) < 0)
                 goto fail;
 
