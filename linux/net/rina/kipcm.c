@@ -390,6 +390,11 @@ int kipcm_sdu_write(struct kipcm *     kipcm,
                 return -1;
         }
 
+        if (!sdu_is_ok(sdu)) {
+                LOG_ERR("Bogus SDU received, bailing out");
+                return -1;
+        }
+
         flow = ipcp_fmap_find(kipcm->flows, port_id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", port_id);
