@@ -345,7 +345,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
         }
 
         if (ipcp_fmap_add(kipcm->flows, port_id, flow)) {
-        	kfifo_free(&flow->sdu_ready);
+                kfifo_free(&flow->sdu_ready);
                 rkfree(flow);
                 return -1;
         }
@@ -396,7 +396,7 @@ int kipcm_sdu_write(struct kipcm * kipcm,
                 return -1;
         }
         LOG_DBG("SDU received with size: %zd and data: %s",
-			sdu->buffer->size, sdu->buffer->data);
+                sdu->buffer->size, sdu->buffer->data);
 
         flow = ipcp_fmap_find(kipcm->flows, port_id);
         if (!flow) {
