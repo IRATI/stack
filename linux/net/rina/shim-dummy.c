@@ -240,8 +240,12 @@ static int dummy_application_register(struct ipcp_instance_data * data,
         ASSERT(source);
 
         if (is_app_registered(data, source)) {
-                LOG_ERR("Application %s has been already registered",
-                                name_tostring(source));
+                char * tmp = name_tostring(source);
+
+                LOG_ERR("Application %s has been already registered", tmp);
+
+                rkfree(tmp);
+
                 return -1;
         }
 
@@ -256,10 +260,14 @@ static int dummy_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
         if (name_cpy(source, app_reg->app_name)) {
+                char * tmp = name_tostring(source);;
+
                 name_destroy(app_reg->app_name);
                 rkfree(app_reg);
-                LOG_ERR("Failed application %s registration. "
-                                "Name copy failed", name_tostring(source));
+
+                LOG_ERR("Application %s registration has failed", tmp);
+
+                rkfree(tmp);
 
                 return -1;
         }
@@ -277,8 +285,12 @@ static int dummy_application_unregister(struct ipcp_instance_data * data,
         ASSERT(source);
 
         if (!is_app_registered(data, source)) {
-                LOG_ERR("Application %s is not registered",
-                		name_tostring(source));
+                char * tmp = name_tostring(source);
+
+                LOG_ERR("Application %s is not registered", tmp);
+
+                rkfree(tmp);
+
                 return -1;
         }
         app = find_app(data, source);
@@ -316,8 +328,12 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
 
         /* FIXME: Add code here to send the sdu */
         LOG_MISSING;
-	LOG_DBG("Port id %d. Written %zd size of data, data: %s",
-			id, sdu->buffer->size, sdu->buffer->data);
+
+#if 0
+        /* FIXME: An SDU is a buffer, do not presume it's a string */
+        LOG_DBG("Port id %d. Written %zd size of data, data: %s",
+                id, sdu->buffer->size, sdu->buffer->data);
+#endif
 
         return 0;
 }
