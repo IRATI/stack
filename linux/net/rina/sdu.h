@@ -23,7 +23,7 @@
 
 #include "common.h"
 
-void sdu_protect(void);
-void sdu_unprotect(void);
+struct sdu * sdu_protect(struct sdu * s);
+struct sdu * sdu_unprotect(struct sdu * s);
 
 #endif

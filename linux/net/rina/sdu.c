@@ -25,8 +25,8 @@
 #include "debug.h"
 #include "sdu.h"
 
-void sdu_protect(void)
-{ }
+struct sdu * sdu_protect(struct sdu * s)
+{ return NULL; }
 
-void sdu_unprotect(void)
-{ }
+struct sdu * sdu_unprotect(struct sdu * s)
+{ return NULL; }
