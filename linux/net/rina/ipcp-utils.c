@@ -277,3 +277,66 @@ char * name_tostring(const struct name * n)
 }
 EXPORT_SYMBOL(name_tostring);
 
+static int string_dup_from_user(const string_t __user * src, string_t ** dst)
+{
+        ASSERT(dst);
+
+        /*
+         * An empty source is allowed (ref. the chain of calls) and it must
+         * provoke no consequeunces
+         */
+        if (src) {
+                *dst = strdup_from_user(src);
+                if (!*dst) {
+                        LOG_ERR("Cannot duplicate source string");
+                        return -1;
+                }
+        } else
+                *dst = NULL;
+
+        return 0;
+}
+
+int name_cpy_from_user(const struct name __user * src,
+                       struct name *              dst)
+{
+        if (!src || !dst)
+                return -1;
+
+        name_fini(dst);
+
+        ASSERT(name_is_initialized(dst));
+
+        /* We rely on short-boolean evaluation ... :-) */
+        if (string_dup_from_user(src->process_name,
+                                 &dst->process_name)     ||
+            string_dup_from_user(src->process_instance,
+                                 &dst->process_instance) ||
+            string_dup_from_user(src->entity_name,
+                                 &dst->entity_name)      ||
+            string_dup_from_user(src->entity_instance,
+                                 &dst->entity_instance)) {
+                name_fini(dst);
+                return -1;
+        }
+
+        return 0;
+}
+
+struct name * name_dup_from_user(const struct name __user * src)
+{
+        struct name * tmp;
+
+        if (!src)
+                return NULL;
+
+        tmp = name_create();
+        if (!tmp)
+                return NULL;
+        if (name_cpy_from_user(src, tmp)) {
+                name_destroy(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}

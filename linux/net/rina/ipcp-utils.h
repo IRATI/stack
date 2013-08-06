@@ -65,11 +65,18 @@ void          name_destroy(struct name * ptr);
 /* Duplicates a name object, returning the pointer to the new object */
 struct name * name_dup(const struct name * src);
 
+/* Duplicates the name from user space */
+struct name * name_dup_from_user(const struct name __user * src);
+
 /*
  * Copies the source object contents into the destination object, both must
  * be previously allocated
  */
 int           name_cpy(const struct name * src, struct name * dst);
+
+/* Copies the name from user space */
+int           name_cpy_from_user(const struct name __user * src,
+                                 struct name *              dst);
 
 /* Compares two names, returns 0 if they are equal */
 int           name_cmp(const struct name * a, const struct name * b);

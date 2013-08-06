@@ -21,6 +21,7 @@
 #include <linux/slab.h>
 #include <linux/kobject.h>
 #include <linux/export.h>
+#include <linux/uaccess.h>
 
 /* FIXME: We should stick the caller in the prefix (rk[mz]alloc oriented) */
 #define RINA_PREFIX "utils"
@@ -114,3 +115,28 @@ void rkfree(void * ptr)
         kfree(ptr);
 }
 EXPORT_SYMBOL(rkfree);
+
+char * strdup_from_user(const char __user * src)
+{
+        size_t size;
+        char * tmp;
+
+        if (!src)
+                return NULL;
+
+        size = strlen_user(src); /* Includes the terminating NUL */
+        if (!size)
+                return NULL;
+
+        tmp = rkmalloc(size, GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        /* strncpy_from_user() copies the terminating NUL */
+        if (strncpy_from_user(tmp, src, size)) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
