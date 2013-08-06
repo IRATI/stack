@@ -78,8 +78,10 @@ struct sdu * sdu_create_from(void * data, size_t size)
 
 int sdu_destroy(struct sdu * s)
 {
+        /* FIXME: Should we assert here ? */
         if (!s)
-                return 0;
+                return -1;
+
         if (s->buffer) {
                 if (s->buffer->data)
                         rkfree(s->buffer->data);
@@ -90,15 +92,23 @@ int sdu_destroy(struct sdu * s)
         return 0;
 }
 
-int sdu_is_ok(const struct sdu * sdu)
+int sdu_is_ok(const struct sdu * s)
 {
-        ASSERT(sdu);
+        /* FIXME: Should we assert here ? */
+        if (!s)
+                return 0;
 
-        if (!sdu->buffer)
+        if (!s->buffer)
+                return 0;
+
+        /* Should we accept an empty sdu ? */
+        if (!s->buffer->data)
+                return 0;
+        if (!s->buffer->size)
                 return 0;
 
         /* FIXME: More checks expected here ... */
 
         return 1;
 }
-
+EXPORT_SYMBOL(sdu_is_ok);
