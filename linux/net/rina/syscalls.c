@@ -31,7 +31,7 @@
 #include "personality.h"
 #include "debug.h"
 
-#define CALL_PERSONALITY(PERS, HOOK, ARGS...)                           \
+#define CALL_PERSONALITY(RETVAL, PERS, HOOK, ARGS...)                   \
         do {                                                            \
                 LOG_DBG("Handling personality hook %s",                 \
                         __stringify(HOOK));                             \
@@ -53,13 +53,13 @@
                 LOG_DBG("Calling personality hook %s",                  \
                         __stringify(HOOK));                             \
                                                                         \
-                return PERS -> ops -> HOOK (PERS->data, ##ARGS);        \
+                RETVAL = PERS -> ops -> HOOK (PERS->data, ##ARGS);      \
         } while (0)
 
 /* FIXME: To be extended later on */
 int rcopy_to_user(const char *  kernel_buffer,
-                   char __user * user_buffer,
-                   size_t        count)
+                  char __user * user_buffer,
+                  size_t        count)
 {
         copy_to_user(user_buffer, kernel_buffer, count);
         return 0;
@@ -71,7 +71,6 @@ int rcopy_from_user(const char __user * user_buffer,
                     size_t              count)
 {
         char * tmp_page;
-        char * data;
 
         if (count >= PAGE_SIZE) {
                 LOG_ERR("Requested buffer size is too long (%zd >= %zd)",
@@ -85,63 +84,104 @@ int rcopy_from_user(const char __user * user_buffer,
                 return -1;
         }
 
-        data = rkzalloc(count, GFP_KERNEL);
-        if (!data) {
-                free_page((unsigned long) tmp_page);
-                return -1;
-        }
-
         if (copy_from_user(tmp_page, user_buffer, count)) {
                 LOG_ERR("Cannot copy from user");
                 free_page((unsigned long) tmp_page);
-                rkfree(data);
                 return -1;
                 
         }
 
-        memcpy(data, tmp_page, count);
+        memcpy(kernel_buffer, tmp_page, count);
         
         free_page((unsigned long) tmp_page);
         return 0;
 }
 
-#define CALL_DEFAULT_PERSONALITY(HOOK, ARGS...)                 \
-        CALL_PERSONALITY(default_personality, HOOK, ##ARGS)
+#define CALL_DEFAULT_PERSONALITY(RETVAL, HOOK, ARGS...)                 \
+        CALL_PERSONALITY(RETVAL, default_personality, HOOK, ##ARGS)
 
 SYSCALL_DEFINE3(ipc_create,
                 const struct name __user *, name,
                 ipc_process_id_t,           id,
-                const char *,               type)
-{ CALL_DEFAULT_PERSONALITY(ipc_create, name, id, type); }
+                const char __user *,        type)
+{
+        long retval;
+
+        CALL_DEFAULT_PERSONALITY(retval, ipc_create, name, id, type);
+
+        return retval;
+}
 
 SYSCALL_DEFINE2(ipc_configure,
                 ipc_process_id_t,                  id,
                 const struct ipcp_config __user *, config)
-{ CALL_DEFAULT_PERSONALITY(ipc_configure, id, config); }
+{
+        long retval;
+
+        CALL_DEFAULT_PERSONALITY(retval, ipc_configure, id, config);
+
+        return retval;
+}
 
 SYSCALL_DEFINE1(ipc_destroy,
                 ipc_process_id_t, id)
-{ CALL_DEFAULT_PERSONALITY(ipc_destroy, id); }
+{
+        long retval;
+
+        CALL_DEFAULT_PERSONALITY(retval, ipc_destroy, id);
+
+        return retval;
+}
 
 SYSCALL_DEFINE2(sdu_read,
                 port_id_t,           id,
                 struct sdu __user *, sdu)
-{ CALL_DEFAULT_PERSONALITY(sdu_read, id, sdu); }
+{
+        long retval;
+        
+        CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, sdu);
+
+        return retval;
+}
 
 SYSCALL_DEFINE2(sdu_write,
                 port_id_t,                 id,
                 const struct sdu __user *, sdu)
-{ CALL_DEFAULT_PERSONALITY(sdu_write, id, sdu); }
+{
+        long retval;
+
+        CALL_DEFAULT_PERSONALITY(retval, sdu_write, id, sdu);
+
+        return retval;
+}
 
 SYSCALL_DEFINE1(connection_create,
                 const struct connection __user *, connection)
-{ CALL_DEFAULT_PERSONALITY(connection_create, connection); }
+{
+        long retval;
+
+        CALL_DEFAULT_PERSONALITY(retval, connection_create, connection);
+
+        return retval;
+}
 
 SYSCALL_DEFINE1(connection_destroy,
                 cep_id_t, id)
-{ CALL_DEFAULT_PERSONALITY(connection_destroy, id); }
+{
+        long retval;
+        
+        CALL_DEFAULT_PERSONALITY(retval, connection_destroy, id);
+        
+        return retval;
+}
 
 SYSCALL_DEFINE2(connection_update,
                 cep_id_t, from_id,
                 cep_id_t, to_id)
-{ CALL_DEFAULT_PERSONALITY(connection_update, from_id, to_id); }
+{
+        long retval;
+
+        CALL_DEFAULT_PERSONALITY(retval, connection_update, from_id, to_id);
+
+        return retval;
+}
