@@ -44,21 +44,20 @@ EXPORT_SYMBOL(name_create);
  */
 static int string_dup(const string_t * src, string_t ** dst)
 {
-        /*
-         * An empty source is allowed (ref. the chain of calls), it must
-         * provoke no consequeunces
-         */
         ASSERT(dst);
 
+        /*
+         * An empty source is allowed (ref. the chain of calls) and it must
+         * provoke no consequeunces
+         */
         if (src) {
                 *dst = kstrdup(src, GFP_KERNEL);
                 if (!*dst) {
                         LOG_ERR("Cannot duplicate source string");
                         return -1;
                 }
-        } else {
+        } else
                 *dst = NULL;
-        }
 
         return 0;
 }
