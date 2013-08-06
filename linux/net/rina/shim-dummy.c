@@ -34,6 +34,7 @@
 #include "kipcm.h"
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
+#include "du.h"
 
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -244,18 +245,18 @@ static int dummy_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        app_reg = rkmalloc(sizeof(*app_reg), GFP_KERNEL);
+        app_reg = rkzalloc(sizeof(*app_reg), GFP_KERNEL);
         if (!app_reg)
                 return -1;
 
-        app_reg->app_name = rkmalloc(sizeof(struct name), GFP_KERNEL);
+        app_reg->app_name = rkzalloc(sizeof(struct name), GFP_KERNEL);
         if (!app_reg->app_name) {
                 rkfree(app_reg);
 
                 return -1;
         }
         if (name_cpy(source, app_reg->app_name)) {
-                rkfree(app_reg->app_name);
+                name_destroy(app_reg->app_name);
                 rkfree(app_reg);
                 LOG_ERR("Failed application %s registration. "
                                 "Name copy failed", name_tostring(source));
@@ -276,15 +277,13 @@ static int dummy_application_unregister(struct ipcp_instance_data * data,
         ASSERT(source);
 
         if (!is_app_registered(data, source)) {
-                LOG_ERR("Application %s %s %s %s is not registered",
-                                source->process_name,
-                                source->process_instance,
-                                source->entity_name,
-                                source->entity_instance);
+                LOG_ERR("Application %s is not registered",
+                		name_tostring(source));
                 return -1;
         }
         app = find_app(data, source);
         list_del(&app->list);
+        name_destroy(app->app_name);
         rkfree(app);
 
         return 0;
@@ -296,6 +295,7 @@ static int dummy_unregister_all(struct ipcp_instance_data * data)
 
         list_for_each_entry_safe(cur, next, &data->apps_registered, list) {
                 list_del(&cur->list);
+                name_destroy(cur->app_name);
                 rkfree(cur);
         }
 
@@ -315,8 +315,11 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
         }
 
         /* FIXME: Add code here to send the sdu */
+        LOG_MISSING;
+	LOG_DBG("Port id %d. Written %zd size of data, data: %s",
+			id, sdu->buffer->size, sdu->buffer->data);
 
-        return -1;
+        return 0;
 }
 
 static int dummy_sdu_read(struct ipcp_instance_data * data,
