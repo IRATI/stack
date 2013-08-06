@@ -31,6 +31,7 @@
 #include "personality.h"
 #include "debug.h"
 #include "ipcp-utils.h"
+#include "du.h"
 
 #define CALL_PERSONALITY(RETVAL, PERS, HOOK, ARGS...)                   \
         do {                                                            \
@@ -108,30 +109,74 @@ SYSCALL_DEFINE1(ipc_destroy,
         return retval;
 }
 
-SYSCALL_DEFINE2(sdu_read,
-                port_id_t,           id,
-                struct sdu __user *, sdu)
+SYSCALL_DEFINE3(sdu_read,
+                port_id_t,     id,
+                void __user *, buffer,
+                size_t,        size)
 {
-        long retval;
+        ssize_t      retval;
+        struct sdu * tmp;
 
-        LOG_MISSING; /* FIXME: Rearrange for copy_from_user() */
+        tmp = NULL;
 
-        CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, sdu);
+        CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, tmp);
+        /* NOTE: We must receive SDU ownership ... */
 
-        return retval;
+        if (!retval) {
+                if (!sdu_is_ok(tmp))
+                        return -EFAULT;
+
+                /* NOTE: We don't handle partial copies now ... */
+                if (tmp->buffer->size > size) {
+                        sdu_destroy(tmp);
+                        return -EFAULT;
+                }
+                if (copy_to_user(buffer,
+                                 tmp->buffer->data,
+                                 tmp->buffer->size)) {
+                        sdu_destroy(tmp);
+                        return -EFAULT;
+                }
+
+                sdu_destroy(tmp);
+
+                return tmp->buffer->size;
+        }
+
+        return -EFAULT;
 }
 
-SYSCALL_DEFINE2(sdu_write,
-                port_id_t,                 id,
-                const struct sdu __user *, sdu)
+SYSCALL_DEFINE3(sdu_write,
+                port_id_t,           id,
+                const void __user *, buffer,
+                size_t,              size)
 {
-        long retval;
+        ssize_t      retval;
+        struct sdu * sdu;
+        void *       tmp_buffer;
 
-        LOG_MISSING; /* FIXME: Rearrange for copy_to_user() */
+        if (!buffer || !size)
+                return -EFAULT;
 
+        tmp_buffer = rkmalloc(size, GFP_KERNEL);
+        if (!tmp_buffer)
+                return -EFAULT;
+        if (copy_from_user(tmp_buffer, buffer, size)) {
+                rkfree(tmp_buffer);
+                return -EFAULT;
+        }
+
+        sdu = sdu_create_from(tmp_buffer, size);
+        if (!sdu) {
+                rkfree(tmp_buffer);
+                return -EFAULT;
+        }
+        ASSERT(sdu_is_ok(sdu));
+
+        /* NOTE: SDU ownership will be passed to the internal layers ... */
         CALL_DEFAULT_PERSONALITY(retval, sdu_write, id, sdu);
 
-        return retval;
+        return sdu->buffer->size;
 }
 
 SYSCALL_DEFINE1(connection_create,
