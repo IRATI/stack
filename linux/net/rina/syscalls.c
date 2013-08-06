@@ -2,7 +2,6 @@
  * System calls
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +22,7 @@
 #include <linux/kernel.h>
 #include <linux/syscalls.h>
 #include <linux/stringify.h>
+#include <linux/uaccess.h>
 
 #define RINA_PREFIX "syscalls"
 
@@ -30,6 +30,7 @@
 #include "utils.h"
 #include "personality.h"
 #include "debug.h"
+#include "ipcp-utils.h"
 
 #define CALL_PERSONALITY(RETVAL, PERS, HOOK, ARGS...)                   \
         do {                                                            \
@@ -56,58 +57,118 @@
                 RETVAL = PERS -> ops -> HOOK (PERS->data, ##ARGS);      \
         } while (0)
 
-/* FIXME: To be extended later on */
-int rcopy_to_user(const char *  kernel_buffer,
-                  char __user * user_buffer,
-                  size_t        count)
-{
-        copy_to_user(user_buffer, kernel_buffer, count);
-        return 0;
-}
-
-/* FIXME: To be extended later on */
-int rcopy_from_user(const char __user * user_buffer,
-                    char *              kernel_buffer,
-                    size_t              count)
-{
-        char * tmp_page;
-
-        if (count >= PAGE_SIZE) {
-                LOG_ERR("Requested buffer size is too long (%zd >= %zd)",
-                        count, PAGE_SIZE);
-                return -1;
-        }
-
-        tmp_page = (char *) __get_free_page(GFP_TEMPORARY);
-        if (!tmp_page) {
-                LOG_ERR("Cannot get a free page");
-                return -1;
-        }
-
-        if (copy_from_user(tmp_page, user_buffer, count)) {
-                LOG_ERR("Cannot copy from user");
-                free_page((unsigned long) tmp_page);
-                return -1;
-                
-        }
-
-        memcpy(kernel_buffer, tmp_page, count);
-        
-        free_page((unsigned long) tmp_page);
-        return 0;
-}
-
 #define CALL_DEFAULT_PERSONALITY(RETVAL, HOOK, ARGS...)                 \
         CALL_PERSONALITY(RETVAL, default_personality, HOOK, ##ARGS)
+
+static char * strdup_from_user(const char __user * src)
+{
+        size_t size;
+        char * tmp;
+
+        if (!src)
+                return NULL;
+
+        size = strlen_user(src); /* Includes the terminating NUL */
+        if (!size)
+                return NULL;
+
+        tmp = rkmalloc(size, GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        /* strncpy_from_user() copies the terminating NUL */
+        if (strncpy_from_user(tmp, src, size)) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
+
+static int string_dup_from_user(const string_t __user * src, string_t ** dst)
+{
+        ASSERT(dst);
+
+        /*
+         * An empty source is allowed (ref. the chain of calls) and it must
+         * provoke no consequeunces
+         */
+        if (src) {
+                *dst = strdup_from_user(src);
+                if (!*dst) {
+                        LOG_ERR("Cannot duplicate source string");
+                        return -1;
+                }
+        } else
+                *dst = NULL;
+
+        return 0;
+}
+
+static int name_cpy_from_user(const struct name __user * src,
+                              struct name *              dst)
+{
+        if (!src || !dst)
+                return -1;
+
+        name_fini(dst);
+
+        /* We rely on short-boolean evaluation ... :-) */
+        if (string_dup_from_user(src->process_name,
+                                 &dst->process_name)     ||
+            string_dup_from_user(src->process_instance,
+                                 &dst->process_instance) ||
+            string_dup_from_user(src->entity_name,
+                                 &dst->entity_name)      ||
+            string_dup_from_user(src->entity_instance,
+                                 &dst->entity_instance)) {
+                name_fini(dst);
+                return -1;
+        }
+
+        return 0;
+}
+
+static struct name * name_dup_from_user(const struct name __user * src)
+{
+        struct name * tmp;
+
+        if (!src)
+                return NULL;
+
+        tmp = name_create();
+        if (!tmp)
+                return NULL;
+        if (name_cpy_from_user(src, tmp)) {
+                name_destroy(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
+EXPORT_SYMBOL(name_dup_from_user);
 
 SYSCALL_DEFINE3(ipc_create,
                 const struct name __user *, name,
                 ipc_process_id_t,           id,
                 const char __user *,        type)
 {
-        long retval;
+        long          retval;
+        struct name * tn;
+        char *        tt;
 
-        CALL_DEFAULT_PERSONALITY(retval, ipc_create, name, id, type);
+        tn = name_dup_from_user(name);
+        if (!tn)
+                return -EFAULT;
+        tt = strdup_from_user(type);
+        if (!tt) {
+                name_destroy(tn);
+                return -EFAULT;
+        }
+        CALL_DEFAULT_PERSONALITY(retval, ipc_create, tn, id, tt);
+
+        name_destroy(tn);
+        rkfree(tt);
 
         return retval;
 }
@@ -117,6 +178,8 @@ SYSCALL_DEFINE2(ipc_configure,
                 const struct ipcp_config __user *, config)
 {
         long retval;
+
+        LOG_MISSING; /* FIXME: Rearrange for copy_from_user() */
 
         CALL_DEFAULT_PERSONALITY(retval, ipc_configure, id, config);
 
@@ -138,7 +201,9 @@ SYSCALL_DEFINE2(sdu_read,
                 struct sdu __user *, sdu)
 {
         long retval;
-        
+
+        LOG_MISSING; /* FIXME: Rearrange for copy_from_user() */
+
         CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, sdu);
 
         return retval;
@@ -150,6 +215,8 @@ SYSCALL_DEFINE2(sdu_write,
 {
         long retval;
 
+        LOG_MISSING; /* FIXME: Rearrange for copy_to_user() */
+
         CALL_DEFAULT_PERSONALITY(retval, sdu_write, id, sdu);
 
         return retval;
@@ -158,9 +225,13 @@ SYSCALL_DEFINE2(sdu_write,
 SYSCALL_DEFINE1(connection_create,
                 const struct connection __user *, connection)
 {
-        long retval;
+        long              retval;
+        struct connection tmp;
 
-        CALL_DEFAULT_PERSONALITY(retval, connection_create, connection);
+        if (copy_from_user(&tmp, connection, sizeof(*connection)))
+                return -EFAULT;
+
+        CALL_DEFAULT_PERSONALITY(retval, connection_create, &tmp);
 
         return retval;
 }
