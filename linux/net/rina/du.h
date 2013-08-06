@@ -88,6 +88,9 @@ struct sdu {
         struct buffer * buffer;
 };
 
+/* NOTE: Takes the ownership of the buffer passed */
+struct sdu * sdu_create_from(void * data, size_t size);
+int          sdu_destroy(struct sdu * s);
 int          sdu_is_ok(const struct sdu * sdu);
 
 struct pdu * pdu_create(void);

@@ -53,6 +53,43 @@ int pdu_destroy(struct pdu * p)
         return 0;
 }
 
+struct sdu * sdu_create_from(void * data, size_t size)
+{
+        struct sdu * tmp;
+
+        if (!data)
+                return NULL;
+
+        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->buffer = rkmalloc(sizeof(struct buffer), GFP_KERNEL);
+        if (!tmp->buffer) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->buffer->data = data;
+        tmp->buffer->size = size;
+
+        return tmp;
+}
+
+int sdu_destroy(struct sdu * s)
+{
+        if (!s)
+                return 0;
+        if (s->buffer) {
+                if (s->buffer->data)
+                        rkfree(s->buffer->data);
+                rkfree(s->buffer);
+        }
+
+        rkfree(s);
+        return 0;
+}
+
 int sdu_is_ok(const struct sdu * sdu)
 {
         ASSERT(sdu);
