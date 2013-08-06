@@ -69,7 +69,7 @@ struct ipcp_flow {
         //QUEUE(segmentation_queue, pdu *);
         //QUEUE(reassembly_queue,       pdu *);
         //QUEUE(sdu_ready, sdu *);
-        struct kfifo *         sdu_ready;
+        struct kfifo           sdu_ready;
 };
 
 struct kipcm * kipcm_init(struct kobject * parent)
@@ -333,11 +333,11 @@ int kipcm_flow_add(struct kipcm *   kipcm,
 
         /*
          * FIXME: We are allowing applications, this must be changed once
-         *        once the RMT is implemented.
+         *        the RMT is implemented.
          */
         flow->application_owned = 1;
         flow->rmt_instance      = NULL;
-        if (kfifo_alloc(flow->sdu_ready, PAGE_SIZE, GFP_KERNEL)) {
+        if (kfifo_alloc(&flow->sdu_ready, PAGE_SIZE, GFP_KERNEL)) {
                 LOG_ERR("Couldn't create the sdu-ready queue for "
                         "flow on port-id %d", port_id);
                 rkfree(flow);
@@ -345,6 +345,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
         }
 
         if (ipcp_fmap_add(kipcm->flows, port_id, flow)) {
+        	kfifo_free(&flow->sdu_ready);
                 rkfree(flow);
                 return -1;
         }
@@ -369,7 +370,7 @@ int kipcm_flow_remove(struct kipcm * kipcm,
                 return -1;
         }
 
-        kfifo_free(flow->sdu_ready);
+        kfifo_free(&flow->sdu_ready);
         rkfree(flow);
 
         if (ipcp_fmap_remove(kipcm->flows, port_id))
@@ -394,6 +395,8 @@ int kipcm_sdu_write(struct kipcm * kipcm,
                 LOG_ERR("Bogus SDU received, bailing out");
                 return -1;
         }
+        LOG_DBG("SDU received with size: %zd and data: %s",
+			sdu->buffer->size, sdu->buffer->data);
 
         flow = ipcp_fmap_find(kipcm->flows, port_id);
         if (!flow) {
@@ -433,7 +436,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
                 return -1;
         }
 
-        if (kfifo_out(flow->sdu_ready, &size, sizeof(size_t)) <
+        if (kfifo_out(&flow->sdu_ready, &size, sizeof(size_t)) <
             sizeof(size_t)) {
                 LOG_ERR("There is not enough data in port-id %d fifo", port_id);
                 return -1;
@@ -445,11 +448,11 @@ int kipcm_sdu_read(struct kipcm * kipcm,
                 return -1;
         }
 
-        data = rkmalloc(size, GFP_KERNEL);
+        data = rkzalloc(size, GFP_KERNEL);
         if (!data)
                 return -1;
 
-        if (kfifo_out(flow->sdu_ready, data, size) != size) {
+        if (kfifo_out(&flow->sdu_ready, data, size) != size) {
                 LOG_ERR("Could not get %zd bytes from fifo", size);
                 rkfree(data);
 
@@ -458,6 +461,8 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 
         sdu->buffer->data = data;
         sdu->buffer->size = size;
+
+        LOG_DBG("Read %zd size of data, data: %s", size, data);
 
         return 0;
 }
@@ -484,20 +489,20 @@ int kipcm_sdu_post(struct kipcm * kipcm,
                 return -1;
         }
 
-        avail = kfifo_avail(flow->sdu_ready);
+        avail = kfifo_avail(&flow->sdu_ready);
         if (avail < (sdu->buffer->size + sizeof(size_t))) {
                 LOG_ERR("There is no space in the port-id %d fifo", port_id);
                 return -1;
         }
 
-        if (kfifo_in(flow->sdu_ready,
+        if (kfifo_in(&flow->sdu_ready,
                      &sdu->buffer->size,
                      sizeof(size_t)) != sizeof(size_t)) {
                 LOG_ERR("Could not read %zd bytes from port-id %d fifo",
                         sizeof(size_t), port_id);
                 return -1;
         }
-        if (kfifo_in(flow->sdu_ready,
+        if (kfifo_in(&flow->sdu_ready,
                      sdu->buffer->data,
                      sdu->buffer->size) != sdu->buffer->size) {
                 LOG_ERR("Could not read %zd bytes from port-id %d fifo",
