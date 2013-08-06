@@ -56,10 +56,11 @@ struct personality_ops {
         int (* connection_update)(struct personality_data * data,
                                   cep_id_t                  from,
                                   cep_id_t                  to);
-
+        /* Takes the ownership of the buffer (and the duties of freeing) */
         int (* sdu_write)(struct personality_data * data,
                           port_id_t                 id,
-                          const struct sdu *        sdu);
+                          struct sdu *              sdu);
+        /* Passes the ownership of the buffer (and the duties of freeing) */
         int (* sdu_read)(struct personality_data *  data,
                          port_id_t                  id,
                          struct sdu *               sdu);

@@ -33,6 +33,7 @@
 #include "ipcp-utils.h"
 #include "kipcm-utils.h"
 #include "common.h"
+#include "du.h"
 
 #define DEFAULT_FACTORY "normal-ipc"
 
@@ -378,9 +379,9 @@ int kipcm_flow_remove(struct kipcm * kipcm,
 }
 EXPORT_SYMBOL(kipcm_flow_remove);
 
-int kipcm_sdu_write(struct kipcm *     kipcm,
-                    port_id_t          port_id,
-                    const struct sdu * sdu)
+int kipcm_sdu_write(struct kipcm * kipcm,
+                    port_id_t      port_id,
+                    struct sdu *   sdu)
 {
         struct ipcp_flow *     flow;
         struct ipcp_instance * instance;
@@ -389,8 +390,7 @@ int kipcm_sdu_write(struct kipcm *     kipcm,
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return -1;
         }
-
-        if (!sdu_is_ok(sdu)) {
+        if (!sdu || !sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus SDU received, bailing out");
                 return -1;
         }

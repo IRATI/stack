@@ -46,9 +46,9 @@ int            kipcm_ipcp_configure(struct kipcm *             kipcm,
 int            kipcm_ipcp_destroy(struct kipcm *   kipcm,
                                   ipc_process_id_t id);
 
-int            kipcm_sdu_write(struct kipcm *     kipcm,
-                               port_id_t          id,
-                               const struct sdu * sdu);
+int            kipcm_sdu_write(struct kipcm * kipcm,
+                               port_id_t      id,
+                               struct sdu *   sdu);
 int            kipcm_sdu_read(struct kipcm * kipcm,
                               port_id_t      id,
                               struct sdu * sdu);
