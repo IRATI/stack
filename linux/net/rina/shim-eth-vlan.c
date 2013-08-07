@@ -101,6 +101,8 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
         ASSERT(source);
         ASSERT(dest);
 
+        LOG_MISSING;
+
         return -1;
 }
 
@@ -111,6 +113,8 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(resp);
 
+        LOG_MISSING;
+
         return -1;
 }
 
@@ -118,6 +122,8 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
                                     port_id_t                   id)
 {
         ASSERT(data);
+
+        LOG_MISSING;
 
         return -1;
 }
@@ -128,6 +134,8 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(name);
 
+        LOG_MISSING;
+
         return -1;
 }
 
@@ -137,15 +145,19 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(name);
 
+        LOG_MISSING;
+
         return -1;
 }
 
 static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                               port_id_t                   id,
-                              const struct sdu *          sdu)
+                              struct sdu *                sdu)
 {
 	ASSERT(data);
         ASSERT(sdu);
+
+        LOG_MISSING;
 
         return -1;
 }

@@ -316,7 +316,7 @@ static int dummy_unregister_all(struct ipcp_instance_data * data)
 
 static int dummy_sdu_write(struct ipcp_instance_data * data,
                            port_id_t                   id,
-                           const struct sdu *          sdu)
+                           struct sdu *                sdu)
 {
         struct dummy_flow * flow;
 

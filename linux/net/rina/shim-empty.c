@@ -113,7 +113,7 @@ static int empty_application_unregister(struct ipcp_instance_data * data,
 
 static int empty_sdu_write(struct ipcp_instance_data * data,
                            port_id_t                   id,
-                           const struct sdu *          sdu)
+                           struct sdu *                sdu)
 {
         ASSERT(data);
         ASSERT(sdu);
