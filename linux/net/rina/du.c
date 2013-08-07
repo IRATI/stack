@@ -114,3 +114,19 @@ int sdu_is_ok(const struct sdu * s)
         return 1;
 }
 EXPORT_SYMBOL(sdu_is_ok);
+
+struct sdu * sdu_protect(struct sdu * s)
+{
+        LOG_MISSING;
+
+        return NULL;
+}
+EXPORT_SYMBOL(sdu_protect);
+
+struct sdu * sdu_unprotect(struct sdu * s)
+{
+        LOG_MISSING;
+
+        return NULL;
+}
+EXPORT_SYMBOL(sdu_unprotect);

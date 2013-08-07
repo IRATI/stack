@@ -92,6 +92,8 @@ struct sdu {
 struct sdu * sdu_create_from(void * data, size_t size);
 int          sdu_destroy(struct sdu * s);
 int          sdu_is_ok(const struct sdu * sdu);
+struct sdu * sdu_protect(struct sdu * s);
+struct sdu * sdu_unprotect(struct sdu * s);
 
 struct pdu * pdu_create(void);
 int          pdu_destroy(struct pdu * p);
