@@ -156,7 +156,6 @@ SYSCALL_DEFINE2(connection_update,
         return retval;
 }
 
-
 SYSCALL_DEFINE3(sdu_read,
                 port_id_t,     id,
                 void __user *, buffer,
@@ -165,35 +164,35 @@ SYSCALL_DEFINE3(sdu_read,
         ssize_t      retval;
 
         struct sdu * tmp;
+        size_t       retsize;
 
         tmp = NULL;
 
         CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, &tmp);
         /* Taking ownership from the internal layers */
 
-        if (!retval) {
-                if (!sdu_is_ok(tmp))
-                        return -EFAULT;
+        if (retval)
+                return -EFAULT;
 
-                /* NOTE: We don't handle partial copies now ... */
-                if (tmp->buffer->size > size) {
-                        sdu_destroy(tmp);
-                        return -EFAULT;
-                }
-                if (copy_to_user(buffer,
-                                 tmp->buffer->data,
-                                 tmp->buffer->size)) {
-                        sdu_destroy(tmp);
-                        return -EFAULT;
-                }
-
+        if (!sdu_is_ok(tmp))
+                return -EFAULT;
+        
+        /* NOTE: We don't handle partial copies */
+        if (tmp->buffer->size > size) {
                 sdu_destroy(tmp);
-
-                /* NOTE */
-                return tmp->buffer->size;
+                return -EFAULT;
         }
-
-        return -EFAULT;
+        if (copy_to_user(buffer,
+                         tmp->buffer->data,
+                         tmp->buffer->size)) {
+                sdu_destroy(tmp);
+                return -EFAULT;
+        }
+        
+        retsize = tmp->buffer->size;
+        sdu_destroy(tmp);
+        
+        return retsize;
 }
 
 SYSCALL_DEFINE3(sdu_write,
@@ -202,6 +201,7 @@ SYSCALL_DEFINE3(sdu_write,
                 size_t,              size)
 {
         ssize_t      retval;
+
         struct sdu * sdu;
         void *       tmp_buffer;
 
@@ -211,6 +211,8 @@ SYSCALL_DEFINE3(sdu_write,
         tmp_buffer = rkmalloc(size, GFP_KERNEL);
         if (!tmp_buffer)
                 return -EFAULT;
+
+        /* NOTE: We don't handle partial copies */
         if (copy_from_user(tmp_buffer, buffer, size)) {
                 rkfree(tmp_buffer);
                 return -EFAULT;
@@ -225,7 +227,10 @@ SYSCALL_DEFINE3(sdu_write,
 
         /* Passing ownership to the internal layers */
         CALL_DEFAULT_PERSONALITY(retval, sdu_write, id, sdu);
+        if (retval) {
+                sdu_destroy(sdu);
+                return -EFAULT;
+        }
 
-        /* NOTE */
-        return sdu->buffer->size;
+        return size;
 }
