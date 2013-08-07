@@ -75,6 +75,7 @@ struct sdu * sdu_create_from(void * data, size_t size)
 
         return tmp;
 }
+EXPORT_SYMBOL(sdu_create_from);
 
 int sdu_destroy(struct sdu * s)
 {
