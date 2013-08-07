@@ -22,6 +22,8 @@
 #ifndef RINA_IPCP_UTILS_H
 #define RINA_IPCP_UTILS_H
 
+#include <linux/uaccess.h>
+
 #include "common.h"
 #include "ipcp.h"
 
@@ -87,5 +89,12 @@ char *        name_tostring(const struct name * n);
 
 struct ipcp_config * ipcp_config_create(void);
 int                  ipcp_config_destroy(struct ipcp_config * cfg);
+struct ipcp_config *
+ipcp_config_dup_from_user(const struct ipcp_config __user * cfg);
+
+struct connection * connection_create(void);
+struct connection *
+connection_dup_from_user(const struct connection __user * conn);
+int                 connection_destroy(struct connection * conn);
 
 #endif

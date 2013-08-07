@@ -363,4 +363,43 @@ int ipcp_config_destroy(struct ipcp_config * cfg)
         LOG_MISSING;
         return -1;
 }
-EXPORT_SYMBOL(ipcp_config_destroy);
+
+struct ipcp_config *
+ipcp_config_dup_from_user(const struct ipcp_config __user * cfg)
+{
+        LOG_MISSING;
+
+        return NULL;
+}
+
+struct connection * connection_create(void)
+{
+        struct connection * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        return tmp;
+}
+
+struct connection *
+connection_dup_from_user(const struct connection __user * conn)
+{
+        struct connection * tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        if (copy_from_user(tmp, conn, sizeof(*tmp)))
+                return NULL;
+
+        return tmp;
+}
+
+int connection_destroy(struct connection * conn)
+{
+        if (!conn)
+                return -1;
+        rkfree(conn);
+        return 0;
+}
