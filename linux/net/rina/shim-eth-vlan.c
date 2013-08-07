@@ -150,16 +150,6 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         return -1;
 }
 
-static int eth_vlan_sdu_read(struct ipcp_instance_data * data,
-                             port_id_t                   id,
-                             struct sdu *                sdu)
-{
-	ASSERT(data);
-        ASSERT(sdu);
-
-        return -1;
-}
-
 /* Filter the devices here. Accept packets from VLANs that are configured */
 static int eth_vlan_rcv(struct sk_buff *     skb,
                         struct net_device *  dev,
@@ -191,7 +181,6 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .application_register   = eth_vlan_application_register,
         .application_unregister = eth_vlan_application_unregister,
         .sdu_write              = eth_vlan_sdu_write,
-        .sdu_read               = eth_vlan_sdu_read,
 };
 
 static struct ipcp_factory_data {

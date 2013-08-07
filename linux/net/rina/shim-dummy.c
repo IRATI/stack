@@ -338,21 +338,6 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int dummy_sdu_read(struct ipcp_instance_data * data,
-                          port_id_t                   id,
-                          struct sdu *                sdu)
-{
-        struct dummy_flow * flow;
-
-        flow = find_flow(data, id);
-        if (!flow) {
-                LOG_ERR("There is not a flow allocated for port-id %d", id);
-                return -1;
-        }
-
-        return -1;
-}
-
 static int dummy_deallocate_all(struct ipcp_instance_data * data)
 {
         struct dummy_flow *pos, *next;
@@ -400,7 +385,6 @@ static struct ipcp_instance_ops dummy_instance_ops = {
         .application_register   = dummy_application_register,
         .application_unregister = dummy_application_unregister,
         .sdu_write              = dummy_sdu_write,
-        .sdu_read               = dummy_sdu_read,
 };
 
 static struct ipcp_instance_data *

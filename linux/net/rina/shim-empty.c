@@ -121,16 +121,6 @@ static int empty_sdu_write(struct ipcp_instance_data * data,
         return -1;
 }
 
-static int empty_sdu_read(struct ipcp_instance_data * data,
-                          port_id_t                   id,
-                          struct sdu *                sdu)
-{
-        ASSERT(data);
-        ASSERT(sdu);
-
-        return -1;
-}
-
 /*
  * The shim_instance ops are common to all the shim instances therefore
  * there's no real need to take a dynamically allocated buffer. Let's use a
@@ -144,7 +134,6 @@ static struct ipcp_instance_ops empty_instance_ops = {
         .application_register   = empty_application_register,
         .application_unregister = empty_application_unregister,
         .sdu_write              = empty_sdu_write,
-        .sdu_read               = empty_sdu_read,
 };
 
 /*
