@@ -23,6 +23,7 @@
 #define RINA_IPCP_UTILS_H
 
 #include "common.h"
+#include "ipcp.h"
 
 #define NAME2STRING(N)
 
@@ -83,5 +84,8 @@ int           name_cmp(const struct name * a, const struct name * b);
 
 /* Returns a name as a (newly allocated string) string */
 char *        name_tostring(const struct name * n);
+
+struct ipcp_config * ipcp_config_create(void);
+int                  ipcp_config_destroy(struct ipcp_config * cfg);
 
 #endif

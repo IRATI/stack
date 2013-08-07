@@ -340,3 +340,27 @@ struct name * name_dup_from_user(const struct name __user * src)
 
         return tmp;
 }
+
+struct ipcp_config * ipcp_config_create(void)
+{
+        struct ipcp_config * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->entry = NULL;
+        INIT_LIST_HEAD(&tmp->list);
+
+        return tmp;
+}
+
+int ipcp_config_destroy(struct ipcp_config * cfg)
+{
+        if (!cfg)
+                return -1;
+
+        LOG_MISSING;
+        return -1;
+}
+EXPORT_SYMBOL(ipcp_config_destroy);
