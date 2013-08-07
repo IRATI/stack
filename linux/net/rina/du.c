@@ -91,6 +91,7 @@ int sdu_destroy(struct sdu * s)
         rkfree(s);
         return 0;
 }
+EXPORT_SYMBOL(sdu_destroy);
 
 int sdu_is_ok(const struct sdu * s)
 {
