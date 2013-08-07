@@ -67,6 +67,7 @@ SYSCALL_DEFINE3(ipc_create,
                 const char __user *,        type)
 {
         long          retval;
+
         struct name * tn;
         char *        tt;
 
@@ -78,6 +79,7 @@ SYSCALL_DEFINE3(ipc_create,
                 name_destroy(tn);
                 return -EFAULT;
         }
+
         CALL_DEFAULT_PERSONALITY(retval, ipc_create, tn, id, tt);
 
         name_destroy(tn);
@@ -90,11 +92,17 @@ SYSCALL_DEFINE2(ipc_configure,
                 ipc_process_id_t,                  id,
                 const struct ipcp_config __user *, config)
 {
-        long retval;
+        long                 retval;
 
-        LOG_MISSING; /* FIXME: Rearrange for copy_from_user() */
+        struct ipcp_config * tmp;
 
-        CALL_DEFAULT_PERSONALITY(retval, ipc_configure, id, config);
+        tmp = ipcp_config_dup_from_user(config);
+        if (!tmp)
+                return -EFAULT;
+
+        CALL_DEFAULT_PERSONALITY(retval, ipc_configure, id, tmp);
+
+        ipcp_config_destroy(tmp);
 
         return retval;
 }
@@ -109,18 +117,59 @@ SYSCALL_DEFINE1(ipc_destroy,
         return retval;
 }
 
+SYSCALL_DEFINE1(connection_create,
+                const struct connection __user *, conn)
+{
+        long                retval;
+
+        struct connection * tmp;
+
+        tmp = connection_dup_from_user(conn);
+        if (!tmp)
+                return -EFAULT;
+
+        CALL_DEFAULT_PERSONALITY(retval, connection_create, tmp);
+
+        connection_destroy(tmp);
+
+        return retval;
+}
+
+SYSCALL_DEFINE1(connection_destroy,
+                cep_id_t, id)
+{
+        long retval;
+        
+        CALL_DEFAULT_PERSONALITY(retval, connection_destroy, id);
+        
+        return retval;
+}
+
+SYSCALL_DEFINE2(connection_update,
+                cep_id_t, from_id,
+                cep_id_t, to_id)
+{
+        long retval;
+
+        CALL_DEFAULT_PERSONALITY(retval, connection_update, from_id, to_id);
+
+        return retval;
+}
+
+
 SYSCALL_DEFINE3(sdu_read,
                 port_id_t,     id,
                 void __user *, buffer,
                 size_t,        size)
 {
         ssize_t      retval;
+
         struct sdu * tmp;
 
         tmp = NULL;
 
-        CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, tmp);
-        /* NOTE: We must receive SDU ownership ... */
+        CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, &tmp);
+        /* Taking ownership from the internal layers */
 
         if (!retval) {
                 if (!sdu_is_ok(tmp))
@@ -140,6 +189,7 @@ SYSCALL_DEFINE3(sdu_read,
 
                 sdu_destroy(tmp);
 
+                /* NOTE */
                 return tmp->buffer->size;
         }
 
@@ -173,43 +223,9 @@ SYSCALL_DEFINE3(sdu_write,
         }
         ASSERT(sdu_is_ok(sdu));
 
-        /* NOTE: SDU ownership will be passed to the internal layers ... */
+        /* Passing ownership to the internal layers */
         CALL_DEFAULT_PERSONALITY(retval, sdu_write, id, sdu);
 
+        /* NOTE */
         return sdu->buffer->size;
-}
-
-SYSCALL_DEFINE1(connection_create,
-                const struct connection __user *, connection)
-{
-        long              retval;
-        struct connection tmp;
-
-        if (copy_from_user(&tmp, connection, sizeof(*connection)))
-                return -EFAULT;
-
-        CALL_DEFAULT_PERSONALITY(retval, connection_create, &tmp);
-
-        return retval;
-}
-
-SYSCALL_DEFINE1(connection_destroy,
-                cep_id_t, id)
-{
-        long retval;
-        
-        CALL_DEFAULT_PERSONALITY(retval, connection_destroy, id);
-        
-        return retval;
-}
-
-SYSCALL_DEFINE2(connection_update,
-                cep_id_t, from_id,
-                cep_id_t, to_id)
-{
-        long retval;
-
-        CALL_DEFAULT_PERSONALITY(retval, connection_update, from_id, to_id);
-
-        return retval;
 }
