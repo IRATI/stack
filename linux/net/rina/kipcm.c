@@ -455,8 +455,11 @@ int kipcm_sdu_read(struct kipcm * kipcm,
                 return -1;
         }
 
-        (*sdu)->buffer->data = data;
-        (*sdu)->buffer->size = size;
+        *sdu = sdu_create_from(data, size);
+        if (!*sdu) {
+                rkfree(data);
+                return -1;
+        }
 
         /* The SDU is theirs now */
         return 0;
@@ -479,7 +482,7 @@ int kipcm_sdu_post(struct kipcm * kipcm,
         }
 
         flow = ipcp_fmap_find(kipcm->flows, port_id);
-        if (flow == NULL) {
+        if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", port_id);
                 return -1;
         }
