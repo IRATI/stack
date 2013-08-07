@@ -66,14 +66,10 @@ struct ipcp_instance_ops {
 	int  (* application_unregister)(struct ipcp_instance_data * data,
                                         const struct name *         source);
 
+        /* Takes the ownership of the passed SDU */
 	int  (* sdu_write)(struct ipcp_instance_data * data,
                            port_id_t                   id,
-                           const struct sdu *          sdu);
-
-        /* FIXME: sdu_read will be removed */
-        int  (* sdu_read)(struct ipcp_instance_data * data,
-                          port_id_t                   id,
-                          struct sdu *                sdu);
+                           struct sdu *                sdu);
 };
 
 #endif
