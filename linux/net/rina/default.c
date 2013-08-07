@@ -133,7 +133,7 @@ static int default_sdu_write(struct personality_data * data,
 
 static int default_sdu_read(struct personality_data * data,
                             port_id_t                 id,
-                            struct sdu *              sdu)
+                            struct sdu **             sdu)
 {
         if (!is_personality_ok(data)) return -1;
 
