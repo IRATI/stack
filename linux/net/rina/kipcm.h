@@ -46,12 +46,14 @@ int            kipcm_ipcp_configure(struct kipcm *             kipcm,
 int            kipcm_ipcp_destroy(struct kipcm *   kipcm,
                                   ipc_process_id_t id);
 
+/* If successful: takes the ownership of the SDU */
 int            kipcm_sdu_write(struct kipcm * kipcm,
                                port_id_t      id,
                                struct sdu *   sdu);
+/* If successful: passes the ownership of the SDU */
 int            kipcm_sdu_read(struct kipcm * kipcm,
                               port_id_t      id,
-                              struct sdu * sdu);
+                              struct sdu **  sdu);
 
 /* The following functions represent the KIPCM southbound interface */
 struct ipcp_factory *
@@ -68,6 +70,7 @@ int            kipcm_flow_add(struct kipcm *   kipcm,
 int            kipcm_flow_remove(struct kipcm * kipcm,
                                  port_id_t      id);
 
+/* If successul: takes the ownership of the SDU */
 int            kipcm_sdu_post(struct kipcm * kipcm,
                               port_id_t      id,
                               struct sdu *   sdu);

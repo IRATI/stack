@@ -145,7 +145,7 @@ int kipcm_fini(struct kipcm * kipcm)
 
 struct ipcp_factory *
 kipcm_ipcp_factory_register(struct kipcm *             kipcm,
-                            const char *               name,
+                            const  char *              name,
                             struct ipcp_factory_data * data,
                             struct ipcp_factory_ops *  ops)
 {
@@ -192,36 +192,30 @@ int kipcm_ipcp_create(struct kipcm *      kipcm,
                 return -1;
         }
 
-        if (ipcp_imap_find(kipcm->instances, id)) {
-                LOG_ERR("Process id %d already exists", id);
-
-                return -1;
-        }
-
-        if (!factory_name) {
-                LOG_ERR("Name is missing, cannot create ipc");
-                return -1;
-        }
-
         if (!factory_name)
                 factory_name = DEFAULT_FACTORY;
 
         name = name_tostring(ipcp_name);
         if (!name)
                 return -1;
+
+        ASSERT(ipcp_name);
+        ASSERT(factory_name);
+
         LOG_DBG("Creating IPC process:");
         LOG_DBG("  name:      %s", name);
         LOG_DBG("  id:        %d", id);
         LOG_DBG("  factory:   %s", factory_name);
         rkfree(name);
 
-        if (!factory_name)
-                factory_name = DEFAULT_FACTORY;
+        if (ipcp_imap_find(kipcm->instances, id)) {
+                LOG_ERR("Process id %d already exists", id);
+                return -1;
+        }
 
         factory = ipcpf_find(kipcm->factories, factory_name);
         if (!factory) {
-                LOG_ERR("Cannot find the requested factory '%s'",
-                        factory_name);
+                LOG_ERR("Cannot find factory '%s'", factory_name);
                 return -1;
         }
 
@@ -269,7 +263,7 @@ int kipcm_ipcp_destroy(struct kipcm *  kipcm,
         return 0;
 }
 
-int kipcm_ipcp_configure(struct kipcm *            kipcm,
+int kipcm_ipcp_configure(struct kipcm *             kipcm,
                          ipc_process_id_t           id,
                          const struct ipcp_config * configuration)
 {
@@ -391,31 +385,34 @@ int kipcm_sdu_write(struct kipcm * kipcm,
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return -1;
         }
+
         if (!sdu || !sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus SDU received, bailing out");
                 return -1;
         }
-        LOG_DBG("SDU received with size: %zd and data: %s",
-                sdu->buffer->size, sdu->buffer->data);
+
+        LOG_DBG("SDU received (size %zd)", sdu->buffer->size);
 
         flow = ipcp_fmap_find(kipcm->flows, port_id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", port_id);
-
                 return -1;
         }
 
         instance = flow->ipc_process;
         ASSERT(instance);
-        if (instance->ops->sdu_write(instance->data, port_id, sdu))
+        if (instance->ops->sdu_write(instance->data, port_id, sdu)) {
                 LOG_ERR("Couldn't write SDU on port-id %d", port_id);
+                return -1;
+        }
 
+        /* The SDU is ours */
         return 0;
 }
 
 int kipcm_sdu_read(struct kipcm * kipcm,
                    port_id_t      port_id,
-                   struct sdu *   sdu)
+                   struct sdu **  sdu)
 {
         struct ipcp_flow * flow;
         size_t             size;
@@ -425,7 +422,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return -1;
         }
-        if (!sdu || !sdu_is_ok(sdu)) {
+        if (!sdu) {
                 LOG_ERR("Bogus parameters passed, bailing out");
                 return -1;
         }
@@ -455,15 +452,13 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         if (kfifo_out(&flow->sdu_ready, data, size) != size) {
                 LOG_ERR("Could not get %zd bytes from fifo", size);
                 rkfree(data);
-
                 return -1;
         }
 
-        sdu->buffer->data = data;
-        sdu->buffer->size = size;
+        (*sdu)->buffer->data = data;
+        (*sdu)->buffer->size = size;
 
-        LOG_DBG("Read %zd size of data, data: %s", size, data);
-
+        /* The SDU is theirs now */
         return 0;
 }
 
@@ -498,18 +493,19 @@ int kipcm_sdu_post(struct kipcm * kipcm,
         if (kfifo_in(&flow->sdu_ready,
                      &sdu->buffer->size,
                      sizeof(size_t)) != sizeof(size_t)) {
-                LOG_ERR("Could not read %zd bytes from port-id %d fifo",
+                LOG_ERR("Could not write %zd bytes from port-id %d fifo",
                         sizeof(size_t), port_id);
                 return -1;
         }
         if (kfifo_in(&flow->sdu_ready,
                      sdu->buffer->data,
                      sdu->buffer->size) != sdu->buffer->size) {
-                LOG_ERR("Could not read %zd bytes from port-id %d fifo",
+                LOG_ERR("Could not write %zd bytes from port-id %d fifo",
                         sdu->buffer->size, port_id);
                 return -1;
         }
 
+        /* The SDU is ours now */
         return 0;
 }
 EXPORT_SYMBOL(kipcm_sdu_post);
