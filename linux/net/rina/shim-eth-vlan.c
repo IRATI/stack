@@ -48,6 +48,7 @@ extern struct kipcm * default_kipcm;
 struct eth_vlan_info {
         uint16_t      vlan_id;
         char *        interface_name;
+	struct name * name;
         struct name * dif_name;
 };
 
@@ -82,13 +83,16 @@ struct ipcp_instance_data {
         /* The configuration of the shim IPC Process */
         struct eth_vlan_info * info;
 
+	/* The IPC Process using the shim-eth-vlan */
+	struct name * app_name;
+
         /* FIXME: Pointer to the device driver data_structure */
         /* Unsure if really needed */
         /* device_t * device_driver; */
 
         /* FIXME: Stores the state of flows indexed by port_id */
         /* HASH_TABLE(flow_to_port_id, port_id_t, shim_eth_flow_t); */
-        /* rbtree or hash table? */
+        /* rbtree or hash table? Or simply a list? */
 };
 
 static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
@@ -131,12 +135,33 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
 static int eth_vlan_application_register(struct ipcp_instance_data * data,
                                          const struct name *         name)
 {
+	struct name * app_name;
         ASSERT(data);
         ASSERT(name);
 
-        LOG_MISSING;
+	if (data->app_name) {
+		char * tmp = name_tostring(name);
+		LOG_ERR("Application %s is already registered", tmp);
+		rkfree(tmp);
+		return -1;
+	}
 
-        return -1;
+	app_name = rkzalloc(sizeof(struct name), GFP_KERNEL);
+        if (!app_name) {
+                return -1;
+        }
+
+	if (name_cpy(name, app_name)) {
+                char * tmp = name_tostring(name);
+                name_destroy(app_name);
+                LOG_ERR("Application %s registration has failed", tmp);
+                rkfree(tmp);
+                return -1;
+        }
+
+	data->app_name = app_name;
+
+        return 0;
 }
 
 static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
@@ -144,10 +169,13 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
 {
         ASSERT(data);
         ASSERT(name);
-
-        LOG_MISSING;
-
-        return -1;
+	if (!data->app_name) {
+		LOG_ERR("Shim-eth-vlan has no application registered");
+		return -1;
+	}
+	name_destroy(data->app_name);
+	data->app_name = NULL;
+	return 0;
 }
 
 static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
@@ -206,7 +234,7 @@ static int eth_vlan_init(struct ipcp_factory_data * data)
         bzero(&eth_vlan_data, sizeof(eth_vlan_data));
         INIT_LIST_HEAD(&(data->instances));
 
-	LOG_INFO("%s v%d.%d intialized", SHIM_NAME, 0, 2);
+	LOG_INFO("%s v%d.%d intialized", SHIM_NAME, 0, 3);
 
         return 0;
 }

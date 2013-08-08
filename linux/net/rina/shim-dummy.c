@@ -260,7 +260,7 @@ static int dummy_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
         if (name_cpy(source, app_reg->app_name)) {
-                char * tmp = name_tostring(source);;
+                char * tmp = name_tostring(source);
 
                 name_destroy(app_reg->app_name);
                 rkfree(app_reg);
