@@ -35,6 +35,8 @@
 #include "kipcm-utils.h"
 #include "common.h"
 #include "du.h"
+#include "netlink.h"
+#include "netlink-utils.h"
 
 #define DEFAULT_FACTORY "normal-ipc"
 
@@ -659,3 +661,37 @@ int kipcm_sdu_post(struct kipcm * kipcm,
         return 0;
 }
 EXPORT_SYMBOL(kipcm_sdu_post);
+
+int kipcm_notify_ipcp_allocate_flow_request(struct kipcm * kipcm,
+					    struct genl_info * info)
+{
+	struct rnl_ipcm_alloc_flow_req_msg_attrs * msg_attrs;
+	struct rnl_msg        * msg;
+	struct ipcp_instance * ipc_process;
+	ipc_process_id_t ipc_id;
+
+	if (rnl_parse_msg(info, msg))
+		return -1;
+	ipc_id = msg->rina_hdr->src_ipc_id;
+	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+	if (!ipc_process) {
+		LOG_ERR("IPC process %d not found", ipc_id);
+		return -1;
+	}
+	msg_attrs = (struct rnl_ipcm_alloc_flow_req_msg_attrs *) msg->attrs;
+	if (!msg_attrs) {
+		LOG_ERR("No message attributes, cannot fulfill the flow req");
+		return -1;
+	}
+	if (ipc_process->ops->flow_allocate_request(ipc_process->data,
+			msg_attrs->source,
+			msg_attrs->dest,
+			msg_attrs->fspec,
+			msg_attrs->id)) {
+		LOG_ERR("Failed allocate flow request for port id: %d",
+				msg_attrs->id);
+		return -1;
+	}
+
+	return 0;
+}
