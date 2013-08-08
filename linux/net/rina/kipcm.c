@@ -695,3 +695,4 @@ int kipcm_notify_ipcp_allocate_flow_request(struct kipcm * kipcm,
 
 	return 0;
 }
+EXPORT_SYMBOL(kipcm_notify_ipcp_allocate_flow_req);
