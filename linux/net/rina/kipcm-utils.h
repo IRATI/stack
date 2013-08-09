@@ -63,7 +63,8 @@ int                      ipcp_fmap_empty(struct ipcp_fmap * map);
 
 int                      ipcp_fmap_add(struct ipcp_fmap * map,
                                        port_id_t          key,
-                                       struct ipcp_flow * value);
+                                       struct ipcp_flow * value,
+                                       ipc_process_id_t   id);
 struct ipcp_flow *       ipcp_fmap_find(struct ipcp_fmap * map,
                                         port_id_t          key);
 int                      ipcp_fmap_update(struct ipcp_fmap * map,
@@ -71,5 +72,7 @@ int                      ipcp_fmap_update(struct ipcp_fmap * map,
                                           struct ipcp_flow * value);
 int                      ipcp_fmap_remove(struct ipcp_fmap * map,
                                           port_id_t          key);
+int 			 ipcp_fmap_remove_all_for_id(struct ipcp_fmap * map,
+						     ipc_process_id_t   id);
 
 #endif

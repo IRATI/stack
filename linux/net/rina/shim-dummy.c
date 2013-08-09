@@ -343,7 +343,7 @@ static int dummy_deallocate_all(struct ipcp_instance_data * data)
         struct dummy_flow *pos, *next;
 
         list_for_each_entry_safe(pos, next, &data->flows, list) {
-        	list_del(&pos>list);
+        	list_del(&pos->list);
 		name_destroy(pos->dest);
 		name_destroy(pos->source);
 		rkfree(pos);

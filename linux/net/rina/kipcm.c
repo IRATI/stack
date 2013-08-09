@@ -346,7 +346,7 @@ int kipcm_ipcp_destroy(struct kipcm *  kipcm,
         factory = instance->factory;
         ASSERT(factory);
 
-        if (ipcp_fmap_remove_all_for_ipcp_id(kipcm->flows, id)) {
+        if (ipcp_fmap_remove_all_for_id(kipcm->flows, id)) {
 		KIPCM_UNLOCK(kipcm);
 		return -1;
 	}
@@ -457,7 +457,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 return -1;
         }
 
-        if (ipcp_fmap_add(kipcm->flows, port_id, flow)) {
+        if (ipcp_fmap_add(kipcm->flows, port_id, flow, ipc_id)) {
                 kfifo_free(&flow->sdu_ready);
                 rkfree(flow);
                 KIPCM_UNLOCK(kipcm);
@@ -667,7 +667,7 @@ int kipcm_sdu_post(struct kipcm * kipcm,
 }
 EXPORT_SYMBOL(kipcm_sdu_post);
 
-static int kipcm_notify_ipcp_allocate_flow_request(struct kipcm * kipcm,
+static int kipcm_notify_ipcp_allocate_flow_request(void *             data,
 						   struct sk_buff *   buff,
 						   struct genl_info * info)
 {
@@ -675,11 +675,15 @@ static int kipcm_notify_ipcp_allocate_flow_request(struct kipcm * kipcm,
 	struct rnl_msg * 			   msg;
 	struct ipcp_instance * 			   ipc_process;
 	ipc_process_id_t 			   ipc_id;
+	struct rina_msg_hdr *                      hdr;
+	struct kipcm * kipcm;
 
-	if (!kipcm) {
+	if (!data) {
 		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
 		return -1;
 	}
+
+	kipcm = (struct kipcm *) data;
 
 	if (!info) {
 		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
@@ -724,7 +728,7 @@ static int kipcm_notify_ipcp_allocate_flow_request(struct kipcm * kipcm,
 	return 0;
 }
 
-static int kipcm_notify_ipcp_allocate_flow_arrived(struct kipcm * kipcm,
+static int kipcm_notify_ipcp_allocate_flow_arrived(void *             data,
 						   struct sk_buff *   buff,
 						   struct genl_info * info)
 {
@@ -733,7 +737,7 @@ static int kipcm_notify_ipcp_allocate_flow_arrived(struct kipcm * kipcm,
 	return 0;
 }
 
-static int kipcm_notify_ipcp_allocate_flow_result(struct kipcm * kipcm,
+static int kipcm_notify_ipcp_allocate_flow_result(void *             data,
 						  struct sk_buff *   buff,
 						  struct genl_info * info)
 {
@@ -742,7 +746,7 @@ static int kipcm_notify_ipcp_allocate_flow_result(struct kipcm * kipcm,
 	return 0;
 }
 
-static int kipcm_notify_ipcp_allocate_flow_response(struct kipcm * kipcm,
+static int kipcm_notify_ipcp_allocate_flow_response(void *             data,
 						    struct sk_buff *   buff,
 						    struct genl_info * info)
 {
@@ -754,28 +758,34 @@ static int kipcm_notify_ipcp_allocate_flow_response(struct kipcm * kipcm,
 int kipcm_netlink_handlers_register(struct kipcm * kipcm,
 				    struct rina_nl_set * set)
 {
+	message_handler_cb handler;
+
+	handler = &kipcm_notify_ipcp_allocate_flow_request;
 	if (rina_netlink_handler_register(set,
 				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
 				kipcm,
-				kipcm_notify_ipcp_allocate_flow_request))
+				handler))
 		return -1;
 
+	handler = &kipcm_notify_ipcp_allocate_flow_arrived;
 	if (rina_netlink_handler_register(set,
 				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED,
 				kipcm,
-				kipcm_notify_ipcp_allocate_flow_arrived))
+				handler))
 		return -1;
 
+	handler = &kipcm_notify_ipcp_allocate_flow_result;
 	if (rina_netlink_handler_register(set,
 				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
 				kipcm,
-				kipcm_notify_ipcp_allocate_flow_result))
+				handler))
 		return -1;
 
+	handler = &kipcm_notify_ipcp_allocate_flow_response;
 	if (rina_netlink_handler_register(set,
 				RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
 				kipcm,
-				kipcm_notify_ipcp_allocate_flow_response))
+				handler))
 		return -1;
 
 	return 0;
