@@ -135,7 +135,6 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
 static int eth_vlan_application_register(struct ipcp_instance_data * data,
                                          const struct name *         name)
 {
-	struct name * app_name;
         ASSERT(data);
         ASSERT(name);
 
@@ -145,21 +144,14 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
 		rkfree(tmp);
 		return -1;
 	}
-
-	app_name = rkzalloc(sizeof(struct name), GFP_KERNEL);
-        if (!app_name) {
-                return -1;
-        }
-
-	if (name_cpy(name, app_name)) {
+	
+	data->app_name = name_dup(name);
+       	if (!data->app_name) {
                 char * tmp = name_tostring(name);
-                name_destroy(app_name);
                 LOG_ERR("Application %s registration has failed", tmp);
                 rkfree(tmp);
                 return -1;
         }
-
-	data->app_name = app_name;
 
         return 0;
 }
