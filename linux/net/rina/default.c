@@ -211,6 +211,13 @@ static int default_init(struct kobject *          parent,
                 }
         }
 
+        if (kipcm_netlink_handlers_register(data->kipcm, data->nlset)) {
+        	if (default_fini(data)) {
+        		LOG_CRIT("The system might become unstable ...");
+        		return -1;
+        	}
+        }
+
         /* FIXME: To be removed */
         default_kipcm = data->kipcm;
 

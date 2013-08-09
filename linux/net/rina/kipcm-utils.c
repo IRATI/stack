@@ -298,3 +298,22 @@ int ipcp_fmap_remove(struct ipcp_fmap * map,
 
         return 0;
 }
+
+int ipcp_fmap_remove_all_for_ipcp_id(struct ipcp_fmap * map,
+				     ipc_process_id_t   id)
+{
+	struct ipcp_fmap_entry * entry;
+	struct hlist_node *      tmp;
+	int                      bucket;
+
+	ASSERT(map);
+
+	hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
+		if (entry->value->ipc_process->data->id == id) {
+			hash_del(&entry->hlist);
+			rkfree(entry);
+		}
+	}
+
+	return 0;
+}

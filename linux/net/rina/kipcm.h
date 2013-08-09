@@ -74,5 +74,7 @@ int            kipcm_flow_remove(struct kipcm * kipcm,
 int            kipcm_sdu_post(struct kipcm * kipcm,
                               port_id_t      id,
                               struct sdu *   sdu);
+int 	       kipcm_netlink_handlers_register(struct kipcm *       kipcm,
+					       struct rina_nl_set * set);
 
 #endif
