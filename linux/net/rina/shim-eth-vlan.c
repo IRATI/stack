@@ -29,9 +29,10 @@
 #include <linux/netdevice.h>
 #include <linux/if_packet.h>
 
-#define SHIM_NAME   "shim-eth-vlan"
-
-#define RINA_PREFIX SHIM_NAME
+#define SHIM_NAME     "shim-eth-vlan"
+#define MAJOR_VERSION 0
+#define MINOR_VERSION 3
+#define RINA_PREFIX   SHIM_NAME
 
 #include "logs.h"
 #include "common.h"
@@ -85,10 +86,6 @@ struct ipcp_instance_data {
 
 	/* The IPC Process using the shim-eth-vlan */
 	struct name * app_name;
-
-        /* FIXME: Pointer to the device driver data_structure */
-        /* Unsure if really needed */
-        /* device_t * device_driver; */
 
         /* FIXME: Stores the state of flows indexed by port_id */
         /* HASH_TABLE(flow_to_port_id, port_id_t, shim_eth_flow_t); */
@@ -152,6 +149,8 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
                 rkfree(tmp);
                 return -1;
         }
+
+        /* FIXME: Add in ARP cache */
 
         return 0;
 }
@@ -226,7 +225,8 @@ static int eth_vlan_init(struct ipcp_factory_data * data)
         bzero(&eth_vlan_data, sizeof(eth_vlan_data));
         INIT_LIST_HEAD(&(data->instances));
 
-	LOG_INFO("%s v%d.%d intialized", SHIM_NAME, 0, 3);
+	LOG_INFO("%s v%d.%d intialized", 
+		 SHIM_NAME, MAJOR_VERSION, MINOR_VERSION);
 
         return 0;
 }
@@ -334,6 +334,27 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
         return inst;
 }
 
+static string_t * create_vlan_interface_name(string_t * interface_name, 
+					     uint16_t vlan_id)
+{
+	char string_vlan_id[4];
+	string_t * complete_interface;
+	
+	complete_interface =
+		rkmalloc(sizeof(*complete_interface),
+			 GFP_KERNEL);
+	if (!complete_interface)
+		return NULL;
+
+	strcpy(complete_interface, interface_name);
+	sprintf(string_vlan_id,"%d",vlan_id);
+	strcat(complete_interface, ".");
+	strcat(complete_interface, string_vlan_id);
+
+	return complete_interface;
+}
+
+
 struct ipcp_instance * eth_vlan_configure(struct ipcp_factory_data *  data,
                                            struct ipcp_instance *     inst,
                                            const struct ipcp_config * cfg)
@@ -346,6 +367,9 @@ struct ipcp_instance * eth_vlan_configure(struct ipcp_factory_data *  data,
 	bool_t                      reconfigure;
         uint16_t                    old_vlan_id;
         string_t *                  old_interface_name;
+	struct packet_type          eth_vlan_packet_type;
+	string_t *                  complete_interface;
+	struct net_device *dev;
 
         ASSERT(data);
         ASSERT(inst);
@@ -412,35 +436,27 @@ struct ipcp_instance * eth_vlan_configure(struct ipcp_factory_data *  data,
                 }
         }
 
+	eth_vlan_packet_type.type = cpu_to_be16(ETH_P_RINA);
+	eth_vlan_packet_type.func = eth_vlan_rcv;
+
         if (reconfigure) {
-                struct packet_type eth_vlan_packet_type;
-
-                eth_vlan_packet_type.type = cpu_to_be16(ETH_P_RINA);
-                eth_vlan_packet_type.func = eth_vlan_rcv;
-
+            
                 /* Remove previous handler if there's one */
                 if (old_interface_name && old_vlan_id != 0) {
-                        char string_old_vlan_id[4];
-                        char * complete_interface;
-                        struct net_device *dev;
-
+                      
                         /* First construct the complete interface name */
-                        complete_interface =
-                                rkmalloc(sizeof(*complete_interface),
-                                         GFP_KERNEL);
-                        if (!complete_interface)
-                                return inst;
-
-                        sprintf(string_old_vlan_id,"%d",old_vlan_id);
-                        strcat(complete_interface, ".");
-                        strcat(complete_interface, string_old_vlan_id);
-
+			complete_interface= 
+				create_vlan_interface_name(old_interface_name, 
+							   old_vlan_id);
+			if (!complete_interface) {
+				return inst;
+			}
                         /* Remove the handler */
                         read_lock(&dev_base_lock);
                         dev = __dev_get_by_name(&init_net, complete_interface);
                         if (!dev) {
-                                /* FIXME: Its name might be handy*/
-                                LOG_ERR("Invalid device to configure");
+				LOG_ERR("Invalid device to configure: %s",
+					complete_interface);
                                 return inst;
                         }
                         eth_vlan_packet_type.dev = dev;
@@ -448,14 +464,28 @@ struct ipcp_instance * eth_vlan_configure(struct ipcp_factory_data *  data,
                         read_unlock(&dev_base_lock);
                         rkfree(complete_interface);
                 }
-
-                /* FIXME: Add handler to correct interface and vlan id */
-                /* Check if correctness VLAN id and interface name */
-
-                dev_add_pack(&eth_vlan_packet_type);
-
         }
-        LOG_DBG("Configured shim ETH IPC Process");
+
+	complete_interface= 
+		create_vlan_interface_name(info->interface_name, 
+					   info->vlan_id);
+	if (!complete_interface) {
+		return inst;
+	}
+        /* Add the handler */
+	read_lock(&dev_base_lock);
+	dev = __dev_get_by_name(&init_net, complete_interface);
+	if (!dev) {
+		LOG_ERR("Invalid device to configure: %s",
+			complete_interface);
+		return inst;
+	}
+	eth_vlan_packet_type.dev = dev;
+	dev_add_pack(&eth_vlan_packet_type);
+	read_unlock(&dev_base_lock);
+	rkfree(complete_interface);
+
+	LOG_DBG("Configured shim eth vlan IPC Process");
 
         return inst;
 }
