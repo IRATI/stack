@@ -40,8 +40,6 @@
 
 #define DEFAULT_FACTORY "normal-ipc"
 
-#define TESTS_ENABLED 1
-
 struct kipcm {
         spinlock_t              lock;
         struct ipcp_factories * factories;
@@ -324,9 +322,7 @@ int kipcm_ipcp_create(struct kipcm *      kipcm,
 
         return 0;
 }
-#if TESTS_ENABLED
-EXPORT_SYMBOL(kipcm_ipcp_create);
-#endif
+
 int kipcm_ipcp_destroy(struct kipcm *  kipcm,
                        ipc_process_id_t id)
 {

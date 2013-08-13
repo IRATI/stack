@@ -36,8 +36,6 @@
 #include "ipcp-factories.h"
 #include "du.h"
 
-#define TESTS_ENABLED 1
-
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
 
@@ -573,18 +571,6 @@ struct ipcp_factory * shim;
 
 static int __init mod_init(void)
 {
-#if TESTS_ENABLED
-	int res;
-	const struct name *shim_name, *source, *dest;
-	struct name s, d, shn;
-	string_t *app_source = "Francesco";
-	string_t *app_dest = "Sander";
-	string_t *ipcp_str = "Leo";
-	struct ipcp_instance_data * inst_data;
-	struct sdu sdu;
-	struct buffer buff;
-
-#endif
         shim = kipcm_ipcp_factory_register(default_kipcm,
                                            SHIM_NAME,
                                            &dummy_data,
@@ -593,37 +579,6 @@ static int __init mod_init(void)
                 LOG_CRIT("Cannot register %s factory", SHIM_NAME);
                 return -1;
         }
-#if TESTS_ENABLED
-        shn.process_name = ipcp_str;
-        shn.process_instance = NULL;
-        shn.entity_name = NULL;
-        shn.entity_instance = NULL;
-        shim_name = &shn;
-        res = kipcm_ipcp_create(default_kipcm, shim_name, 1, SHIM_NAME);
-        LOG_DBG("Dummy instance created: %d", res);
-
-        s.process_name = app_source;
-	d.process_name = app_dest;
-	s.process_instance = NULL;
-	s.entity_name = NULL;
-	s.entity_instance = NULL;
-	d.process_instance = NULL;
-	d.entity_name = NULL;
-	d.entity_instance = NULL;
-	source = &s;
-	dest   = &d;
-	LOG_DBG("Find instance");
-	inst_data = find_instance(&dummy_data, 1);
-	LOG_DBG("Found instance: %pK", inst_data);
-	res = dummy_application_register(inst_data, dest);
-	LOG_DBG("Application registered: %d", res);
-	res = dummy_flow_allocate_request(inst_data,source,dest,NULL,1);
-	LOG_DBG("Flow allocated %d", res);
-	buff.data = "Hola";
-	buff.size = 4;
-	sdu.buffer = &buff;
-	kipcm_sdu_post(default_kipcm, 1, &sdu);
-#endif
 
         return 0;
 }
