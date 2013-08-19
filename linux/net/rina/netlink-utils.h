@@ -38,7 +38,6 @@ enum app_name_info_attrs_list {
         APNI_ATTR_ENTITY_INSTANCE,
         __APNI_ATTR_MAX,
 };
-
 #define APNI_ATTR_MAX (__APNI_ATTR_MAX - 1)
 
 enum flow_spec_attrs_list {
@@ -55,7 +54,6 @@ enum flow_spec_attrs_list {
         FSPEC_ATTR_UNDETECTED_BER,
         __FSPEC_ATTR_MAX,
 };
-
 #define FSPEC_ATTR_MAX (__FSPEC_ATTR_MAX - 1)
 
 enum ipcm_alloc_flow_req_resp_attrs_list {
@@ -65,19 +63,17 @@ enum ipcm_alloc_flow_req_resp_attrs_list {
         AAFRE_ATTR_NOTIFY_SOURCE,
         __AAFRE_ATTR_MAX,
 };
-
 #define AAFRE_ATTR_MAX (__AAFRE_ATTR_MAX -1)
 
+/* FIXME: in user space these are called without _NAME */
 enum ipcm_alloc_flow_req_attrs_list {
-        IAFRM_ATTR_SOURCE_APP = 1,
-        IAFRM_ATTR_DEST_APP,
+        IAFRM_ATTR_SOURCE_APP_NAME = 1,
+        IAFRM_ATTR_DEST_APP_NAME,
         IAFRM_ATTR_FLOW_SPEC,
-        IAFRM_ATTR_DIF_NAME,
         IAFRM_ATTR_PORT_ID,
-        IAFRM_ATTR_APP_PORT,
+        IAFRM_ATTR_DIF_NAME,
         __IAFRM_ATTR_MAX,
 };
-
 #define IAFRM_ATTR_MAX (__IAFRM_ATTR_MAX -1)
 
 enum ipcm_alloc_flow_req_arrived_attrs_list {
@@ -88,8 +84,29 @@ enum ipcm_alloc_flow_req_arrived_attrs_list {
         IAFRA_ATTR_DIF_NAME,
         __IAFRA_ATTR_MAX,
 };
-
 #define IAFRA_ATTR_MAX (__IAFRA_ATTR_MAX -1)
+
+enum ipcm_alloc_flow_resp_attrs_list {
+        IAFRE_ATTR_RESULT,
+        IAFRE_ATTR_NOTIFY_SOURCE,
+        IAFRE_ATTR_PORT_ID,
+        __IAFRE_ATTR_MAX,
+};
+#define IAFRE_ATTR_MAX (__IAFRE_ATTR_MAX -1)
+
+/* FIXME: Need to specify the possible values of result to map with deny 
+ * reasons strings in US */
+#define DENY_REASON_1 "FAILED"
+
+enum ipcm_alloc_flow_req_result_attrs_list {
+        IAFRRM_ATTR_RESULT = 1,
+        __IAFRRM_ATTR_MAX,
+};
+#define IAFRRM_ATTR_MAX (__IAFRRM_ATTR_MAX -1)
+
+/* FIXME: Need to specify the possible values of result to map with error 
+ * descriptions strings in US */
+#define ERR_DESC_1 "FAILED"
 
 enum ipcm_dealloc_flow_req_msg_attrs_list {
         ADFRT_ATTR_PORT_ID = 1,
@@ -97,7 +114,6 @@ enum ipcm_dealloc_flow_req_msg_attrs_list {
         ADFRT_ATTR_APP_NAME,
         __ADFRT_ATTR_MAX,
 };
-
 #define ADFRT_ATTR_MAX (__ADFRT_ATTR_MAX -1)
 
 enum ipcm_dealloc_flow_resp_attrs_list {
@@ -106,7 +122,6 @@ enum ipcm_dealloc_flow_resp_attrs_list {
         ADFRE_ATTR_APP_NAME,
         __ADFRE_ATTR_MAX,
 };
-
 #define ADFRE_ATTR_MAX (__ADFRE_ATTR_MAX -1)
 
 struct rina_msg_hdr {
@@ -165,10 +180,9 @@ struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs {
 };
 
 struct rnl_alloc_flow_resp_msg_attrs {
-        struct name dif_name;
-        bool        accept;
-        string_t *  deny_reason;
-        bool        notify_src;
+        uint_t    result;
+        bool      notify_src;
+	port_id_t id;
 };
 
 struct rnl_ipcm_dealloc_flow_req_msg_attrs {
@@ -233,6 +247,8 @@ int rnl_format_ipcm_alloc_flow_req_result_msg(uint_t           result,
                                               struct sk_buff * skb_out);
 
 int rnl_format_ipcm_alloc_flow_resp_msg(uint_t           result,
+					bool 		 notify_src,
+					port_id_t	 id,
                                         struct sk_buff * skb_out);
 
 int rnl_format_ipcm_dealloc_flow_req_msg(port_id_t        id,
