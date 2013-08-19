@@ -56,15 +56,6 @@ enum flow_spec_attrs_list {
 };
 #define FSPEC_ATTR_MAX (__FSPEC_ATTR_MAX - 1)
 
-enum ipcm_alloc_flow_req_resp_attrs_list {
-        AAFRE_ATTR_DIF_NAME = 1,
-        AAFRE_ATTR_ACCEPT,
-        AAFRE_ATTR_DENY_REASON,
-        AAFRE_ATTR_NOTIFY_SOURCE,
-        __AAFRE_ATTR_MAX,
-};
-#define AAFRE_ATTR_MAX (__AAFRE_ATTR_MAX -1)
-
 /* FIXME: in user space these are called without _NAME */
 enum ipcm_alloc_flow_req_attrs_list {
         IAFRM_ATTR_SOURCE_APP_NAME = 1,
@@ -80,7 +71,6 @@ enum ipcm_alloc_flow_req_arrived_attrs_list {
         IAFRA_ATTR_SOURCE_APP_NAME = 1,
         IAFRA_ATTR_DEST_APP_NAME,
         IAFRA_ATTR_FLOW_SPEC,
-        IAFRA_ATTR_PORT_ID,
         IAFRA_ATTR_DIF_NAME,
         __IAFRA_ATTR_MAX,
 };
@@ -109,20 +99,17 @@ enum ipcm_alloc_flow_req_result_attrs_list {
 #define ERR_DESC_1 "FAILED"
 
 enum ipcm_dealloc_flow_req_msg_attrs_list {
-        ADFRT_ATTR_PORT_ID = 1,
-        ADFRT_ATTR_DIF_NAME,
-        ADFRT_ATTR_APP_NAME,
-        __ADFRT_ATTR_MAX,
+        IDFRT_ATTR_PORT_ID = 1,
+        __IDFRT_ATTR_MAX,
 };
-#define ADFRT_ATTR_MAX (__ADFRT_ATTR_MAX -1)
+#define IDFRT_ATTR_MAX (__IDFRT_ATTR_MAX -1)
 
 enum ipcm_dealloc_flow_resp_attrs_list {
-        ADFRE_ATTR_RESULT = 1,
-        ADFRE_ATTR_ERROR_DESCRIPTION,
-        ADFRE_ATTR_APP_NAME,
-        __ADFRE_ATTR_MAX,
+        IDFRE_ATTR_RESULT = 1,
+        IDFRE_ATTR_APP_NAME,
+        __IDFRE_ATTR_MAX,
 };
-#define ADFRE_ATTR_MAX (__ADFRE_ATTR_MAX -1)
+#define IDFRE_ATTR_MAX (__IDFRE_ATTR_MAX -1)
 
 struct rina_msg_hdr {
         unsigned int src_ipc_id;
@@ -193,7 +180,7 @@ struct rnl_ipcm_dealloc_flow_req_msg_attrs {
 
 struct rnl_ipcm_dealloc_flow_resp_msg_attrs {
         uint_t      result;
-        string_t *  err_desc;
+        uint_t	    err_desc;
         struct name app_name;
 };
 
@@ -239,7 +226,6 @@ int rnl_format_ipcm_alloc_flow_req_msg(const struct name *      source,
 int rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name *      source,
                                                const struct name *      dest,
                                                const struct flow_spec * fspec,
-                                               port_id_t                id,
                                                const struct name *     dif_name,
                                                struct sk_buff *        skb_out);
 
