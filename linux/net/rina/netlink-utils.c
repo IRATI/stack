@@ -680,46 +680,56 @@ int rnl_format_ipcm_alloc_flow_req_msg(const struct name      * source,
 
         /* name-formating might be moved into its own function (and reused) */
         if (!(msg_src_name =
-              nla_nest_start(skb_out, IAFRM_ATTR_SOURCE_APP_NAME))) {
+                nla_nest_start(skb_out, IAFRM_ATTR_SOURCE_APP_NAME))) {
                 nla_nest_cancel(skb_out, msg_src_name);
                 LOG_ERR(BUILD_ERR_STRING("source application name attribute"));
-                return -1;
+                goto format_fail;
         }
+	if (format_app_name_info(source, skb_out) < 0)
+		goto format_fail;
+	nla_nest_end(skb_out, msg_src_name);
 
         if (!(msg_dst_name =
               nla_nest_start(skb_out, IAFRM_ATTR_DEST_APP_NAME))) {
                 nla_nest_cancel(skb_out, msg_dst_name);
                 LOG_ERR(BUILD_ERR_STRING("destination app name attribute"));
-                return -1;
+                goto format_fail;
         }
+	if (format_app_name_info(dest, skb_out) < 0)
+		goto format_fail;
+	nla_nest_end(skb_out, msg_dst_name);
 
         if (!(msg_dif_name =
               nla_nest_start(skb_out, IAFRM_ATTR_DIF_NAME))) {
                 nla_nest_cancel(skb_out, msg_dif_name);
                 LOG_ERR(BUILD_ERR_STRING("DIF name attribute"));
-                return -1;
+                goto format_fail;
         }
+	if (format_app_name_info(dif_name, skb_out) < 0)
+		goto format_fail;
+	nla_nest_end(skb_out, msg_dif_name);
 
         if (!(msg_fspec =
               nla_nest_start(skb_out, IAFRM_ATTR_FLOW_SPEC))) {
                 nla_nest_cancel(skb_out, msg_fspec);
                 LOG_ERR(BUILD_ERR_STRING("flow spec attribute"));
-                return -1;
+                goto format_fail;
         }
+	if (format_flow_spec(fspec, skb_out) < 0)
+		goto format_fail;
+	nla_nest_end(skb_out, msg_fspec);
 
-        /* Boolean shortcuiting here */
-        if (format_app_name_info(source, skb_out)         ||
-            format_app_name_info(dest, skb_out)           ||
-            format_flow_spec(fspec, skb_out)              ||
-            nla_put_u32(skb_out, IAFRM_ATTR_PORT_ID, id)  ||
-            format_app_name_info(dif_name, skb_out)) {
+        if (nla_put_u32(skb_out, IAFRM_ATTR_PORT_ID, id)) 
+		goto format_fail;
+
+        return 0;
+
+	format_fail:
                 LOG_ERR("Could not format "
                         "rnl_ipcm_alloc_flow_req_msg "
                         "message correctly");
                 return -1;
-        }
 
-        return 0;
 }
 EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_msg);
 
