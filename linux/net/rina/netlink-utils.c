@@ -744,7 +744,7 @@ int rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name      * source,
 
         if (!skb_out) {
                 LOG_ERR("Bogus input parameter(s), bailing out");
-                return -1;
+                goto format_fail;
         }
 
         /* name-formating might be moved into its own function (and reused) */
@@ -752,42 +752,50 @@ int rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name      * source,
               nla_nest_start(skb_out, IAFRA_ATTR_SOURCE_APP_NAME))) {
                 nla_nest_cancel(skb_out, msg_src_name);
                 LOG_ERR(BUILD_ERR_STRING("source application name attribute"));
-                return -1;
+                goto format_fail;
         }
+        if (format_app_name_info(source, skb_out) < 0)        
+		goto format_fail;
+	nla_nest_end(skb_out, msg_src_name);
 
         if (!(msg_dst_name =
               nla_nest_start(skb_out, IAFRA_ATTR_DEST_APP_NAME))) {
                 nla_nest_cancel(skb_out, msg_dst_name);
                 LOG_ERR(BUILD_ERR_STRING("destination app name attribute"));
-                return -1;
+                goto format_fail;
         }
+        if (format_app_name_info(dest, skb_out) < 0)        
+		goto format_fail;
+	nla_nest_end(skb_out, msg_dst_name);
 
         if (!(msg_dif_name =
               nla_nest_start(skb_out, IAFRA_ATTR_DIF_NAME))) {
                 nla_nest_cancel(skb_out, msg_dif_name);
                 LOG_ERR(BUILD_ERR_STRING("DIF name attribute"));
-                return -1;
+                goto format_fail;
         }
+        if (format_app_name_info(dif_name, skb_out) < 0)        
+		goto format_fail;
+	nla_nest_end(skb_out, msg_dif_name);
 
         if (!(msg_fspec =
               nla_nest_start(skb_out, IAFRA_ATTR_FLOW_SPEC))) {
                 nla_nest_cancel(skb_out, msg_fspec);
                 LOG_ERR(BUILD_ERR_STRING("flow spec attribute"));
-                return -1;
+                goto format_fail;
         }
+        if (format_flow_spec(fspec, skb_out) < 0)
+		goto format_fail;
+	nla_nest_end(skb_out, msg_fspec);
 
-        /* Boolean shortcuiting here */
-        if (format_app_name_info(source, skb_out)         ||
-            format_app_name_info(dest, skb_out)           ||
-            format_flow_spec(fspec, skb_out)              ||
-            format_app_name_info(dif_name, skb_out)) {
+	return 0;
+
+	format_fail:
                 LOG_ERR("Could not format "
                         "rnl_ipcm_alloc_flow_req_arrived_msg "
                         "message correctly");
                 return -1;
-        }
-
-        return 0;
+        
 }
 EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_arrived_msg);
 
@@ -904,25 +912,30 @@ int rnl_format_ipcm_reg_app_req_msg(const struct name     * app_name,
               nla_nest_start(skb_out, IRAR_ATTR_APP_NAME))) {
                 nla_nest_cancel(skb_out, msg_src_name);
                 LOG_ERR(BUILD_ERR_STRING("source application name attribute"));
-                return -1;
+                goto format_fail;
         }
+        if (format_app_name_info(app_name, skb_out) < 0)
+		goto format_fail;
+	nla_nest_end(skb_out, msg_src_name);
 
         if (!(msg_dif_name =
               nla_nest_start(skb_out, IRAR_ATTR_DIF_NAME))) {
                 nla_nest_cancel(skb_out, msg_dif_name);
                 LOG_ERR(BUILD_ERR_STRING("DIF name attribute"));
-                return -1;
+                goto format_fail;
         }
+        if (format_app_name_info(dif_name, skb_out) < 0)
+		goto format_fail;
+	nla_nest_end(skb_out, msg_dif_name);
 
-        if (format_app_name_info(app_name, skb_out) ||
-            format_app_name_info(dif_name, skb_out)) {
+        return 0;
+
+	format_fail:
                 LOG_ERR("Could not format "
                         "rnl_ipcm_reg_app_req_msg "
                         "message correctly");
                 return -1;
-        }
 
-        return 0;
 }
 EXPORT_SYMBOL(rnl_format_ipcm_reg_app_req_msg);
 
@@ -942,18 +955,19 @@ int rnl_format_ipcm_reg_app_resp_msg(const struct name * app_name,
               nla_nest_start(skb_out, IRARE_ATTR_APP_NAME))) {
                 nla_nest_cancel(skb_out, msg_src_name);
                 LOG_ERR(BUILD_ERR_STRING("source application name attribute"));
-                return -1;
+                goto format_fail;
         }
+        if (format_app_name_info(app_name, skb_out) < 0)
+		goto format_fail;
+	nla_nest_end(skb_out, msg_src_name);
 
-        if (format_app_name_info(app_name, skb_out) ||
-            nla_put_u32(skb_out, IRARE_ATTR_RESULT, result )) {
+	return 0;
+	
+	format_fail:
                 LOG_ERR("Could not format "
                         "rnl_ipcm_reg_app_resp_msg "
                         "message correctly");
                 return -1;
-        }
-
-        return 0;
 }
 EXPORT_SYMBOL(rnl_format_ipcm_reg_app_resp_msg);
 
@@ -972,25 +986,30 @@ int rnl_format_ipcm_unreg_app_req_msg(const struct name     * app_name,
               nla_nest_start(skb_out, IUAR_ATTR_APP_NAME))) {
                 nla_nest_cancel(skb_out, msg_src_name);
                 LOG_ERR(BUILD_ERR_STRING("source application name attribute"));
-                return -1;
+                goto format_fail;
         }
+        if (format_app_name_info(app_name, skb_out) < 0)
+		goto format_fail;
+	nla_nest_end(skb_out, msg_src_name);
 
         if (!(msg_dif_name =
               nla_nest_start(skb_out, IUAR_ATTR_DIF_NAME))) {
                 nla_nest_cancel(skb_out, msg_dif_name);
                 LOG_ERR(BUILD_ERR_STRING("DIF name attribute"));
-                return -1;
+                goto format_fail;
         }
+        if (format_app_name_info(dif_name, skb_out) < 0)
+		goto format_fail;
+	nla_nest_end(skb_out, msg_dif_name);
 
-        if (format_app_name_info(app_name, skb_out) ||
-            format_app_name_info(dif_name, skb_out)) {
+        return 0;
+
+	format_fail:
                 LOG_ERR("Could not format "
                         "rnl_ipcm_unreg_app_req_msg "
                         "message correctly");
                 return -1;
-        }
 
-        return 0;
 }
 EXPORT_SYMBOL(rnl_format_ipcm_unreg_app_req_msg);
 
@@ -1083,19 +1102,23 @@ int rnl_format_ipcm_query_rib_req_msg(const struct rib_object * obj,
         	nla_nest_start(skb_out, IDQR_ATTR_OBJECT))) {
                 nla_nest_cancel(skb_out, msg_obj);
                 LOG_ERR(BUILD_ERR_STRING("rib object attribute"));
-                return -1;
+                goto format_fail;
         }
+        if (format_rib_object(obj, skb_out) < 0)
+		goto format_fail;
+	nla_nest_end(skb_out, msg_obj);
 
-        if (format_rib_object(obj, skb_out)		      ||
-	    nla_put_u32(skb_out, IDQR_ATTR_SCOPE, scope)      ||
-	    nla_put_string(skb_out, IDQR_ATTR_FILTER, filter)) {
+        if (nla_put_u32(skb_out, IDQR_ATTR_SCOPE, scope)      ||
+	    nla_put_string(skb_out, IDQR_ATTR_FILTER, filter)) 
+	    	goto format_fail;
+
+	return 0;
+
+	format_fail:
                 LOG_ERR("Could not format "
                         "rnl_ipcm_query_rib_req_msg "
                         "message correctly");
                 return -1;
-        }
-
-        return 0;
 }
 EXPORT_SYMBOL(rnl_format_ipcm_query_rib_req_msg);
 
