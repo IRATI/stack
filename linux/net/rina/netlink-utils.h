@@ -38,7 +38,6 @@ enum app_name_info_attrs_list {
         APNI_ATTR_ENTITY_INSTANCE,
         __APNI_ATTR_MAX,
 };
-
 #define APNI_ATTR_MAX (__APNI_ATTR_MAX - 1)
 
 enum flow_spec_attrs_list {
@@ -55,59 +54,169 @@ enum flow_spec_attrs_list {
         FSPEC_ATTR_UNDETECTED_BER,
         __FSPEC_ATTR_MAX,
 };
-
 #define FSPEC_ATTR_MAX (__FSPEC_ATTR_MAX - 1)
 
-enum ipcm_alloc_flow_req_resp_attrs_list {
-        AAFRE_ATTR_DIF_NAME = 1,
-        AAFRE_ATTR_ACCEPT,
-        AAFRE_ATTR_DENY_REASON,
-        AAFRE_ATTR_NOTIFY_SOURCE,
-        __AAFRE_ATTR_MAX,
-};
-
-#define AAFRE_ATTR_MAX (__AAFRE_ATTR_MAX -1)
-
+/* FIXME: in user space these are called without _NAME */
 enum ipcm_alloc_flow_req_attrs_list {
-        IAFRM_ATTR_SOURCE_APP = 1,
-        IAFRM_ATTR_DEST_APP,
+        IAFRM_ATTR_SOURCE_APP_NAME = 1,
+        IAFRM_ATTR_DEST_APP_NAME,
         IAFRM_ATTR_FLOW_SPEC,
-        IAFRM_ATTR_DIF_NAME,
         IAFRM_ATTR_PORT_ID,
-        IAFRM_ATTR_APP_PORT,
+        IAFRM_ATTR_DIF_NAME,
         __IAFRM_ATTR_MAX,
 };
-
 #define IAFRM_ATTR_MAX (__IAFRM_ATTR_MAX -1)
 
 enum ipcm_alloc_flow_req_arrived_attrs_list {
         IAFRA_ATTR_SOURCE_APP_NAME = 1,
         IAFRA_ATTR_DEST_APP_NAME,
         IAFRA_ATTR_FLOW_SPEC,
-        IAFRA_ATTR_PORT_ID,
         IAFRA_ATTR_DIF_NAME,
         __IAFRA_ATTR_MAX,
 };
-
 #define IAFRA_ATTR_MAX (__IAFRA_ATTR_MAX -1)
 
-enum ipcm_dealloc_flow_req_msg_attrs_list {
-        ADFRT_ATTR_PORT_ID = 1,
-        ADFRT_ATTR_DIF_NAME,
-        ADFRT_ATTR_APP_NAME,
-        __ADFRT_ATTR_MAX,
+enum ipcm_alloc_flow_resp_attrs_list {
+        IAFRE_ATTR_RESULT,
+        IAFRE_ATTR_NOTIFY_SOURCE,
+        IAFRE_ATTR_PORT_ID,
+        __IAFRE_ATTR_MAX,
 };
+#define IAFRE_ATTR_MAX (__IAFRE_ATTR_MAX -1)
 
-#define ADFRT_ATTR_MAX (__ADFRT_ATTR_MAX -1)
+/* FIXME: Need to specify the possible values of result to map with deny 
+ * reasons strings in US */
+#define ALLOC_RESP_DENY_REASON_1 "FAILED"
+
+enum ipcm_alloc_flow_req_result_attrs_list {
+        IAFRRM_ATTR_RESULT = 1,
+        __IAFRRM_ATTR_MAX,
+};
+#define IAFRRM_ATTR_MAX (__IAFRRM_ATTR_MAX -1)
+
+/* FIXME: Need to specify the possible values of result to map with error 
+ * descriptions strings in US */
+#define ALLOC_RESP_ERR_DESC_1 "FAILED"
+
+enum ipcm_dealloc_flow_req_msg_attrs_list {
+        IDFRT_ATTR_PORT_ID = 1,
+        __IDFRT_ATTR_MAX,
+};
+#define IDFRT_ATTR_MAX (__IDFRT_ATTR_MAX -1)
 
 enum ipcm_dealloc_flow_resp_attrs_list {
-        ADFRE_ATTR_RESULT = 1,
-        ADFRE_ATTR_ERROR_DESCRIPTION,
-        ADFRE_ATTR_APP_NAME,
-        __ADFRE_ATTR_MAX,
+        IDFRE_ATTR_RESULT = 1,
+        __IDFRE_ATTR_MAX,
 };
+#define IDFRE_ATTR_MAX (__IDFRE_ATTR_MAX -1)
 
-#define ADFRE_ATTR_MAX (__ADFRE_ATTR_MAX -1)
+/* FIXME: Need to specify the possible values of result to map with error 
+ * descriptions strings in US */
+#define DEALLOC_RESP_ERR_DESC_1 "FAILED"
+
+enum ipcm_flow_dealloc_noti_attrs_list {
+        IFDN_ATTR_PORT_ID = 1,
+        IFDN_ATTR_CODE,
+        __IFDN_ATTR_MAX,
+};
+#define IFDN_ATTR_MAX (__IFDN_ATTR_MAX -1)
+
+enum ipcm_reg_app_req_attrs_list {
+        IRAR_ATTR_APP_NAME = 1,
+        IRAR_ATTR_DIF_NAME,
+        __IRAR_ATTR_MAX,
+};
+#define IRAR_ATTR_MAX (__IRAR_ATTR_MAX -1)
+
+enum ipcm_reg_app_resp_attrs_list {
+        IRARE_ATTR_APP_NAME = 1,
+        IRARE_ATTR_RESULT,
+        __IRARE_ATTR_MAX,
+};
+#define IRARE_ATTR_MAX (__IRARE_ATTR_MAX -1)
+
+/* FIXME: Need to specify the possible values of result to map with error 
+ * descriptions strings in US */
+#define REG_APP_RESP_ERR_DESC_1 "FAILED"
+
+enum ipcm_unreg_app_req_attrs_list {
+        IUAR_ATTR_APP_NAME = 1,
+        IUAR_ATTR_DIF_NAME,
+        __IUAR_ATTR_MAX,
+};
+#define IUAR_ATTR_MAX (__IUAR_ATTR_MAX -1)
+
+enum ipcm_unreg_app_resp_attrs_list {
+        IUARE_ATTR_RESULT = 1,
+        __IUARE_ATTR_MAX,
+};
+#define IUARE_ATTR_MAX (__IUARE_ATTR_MAX -1)
+
+/* FIXME: Need to specify the possible values of result to map with error 
+ * descriptions strings in US */
+#define UNREG_APP_RESP_ERR_DESC_1 "FAILED"
+
+enum ipcm_query_rib_req_attrs_list {
+        IDQR_ATTR_OBJECT = 1,
+        IDQR_ATTR_SCOPE,
+        IDQR_ATTR_FILTER,
+        __IDQR_ATTR_MAX,
+};
+#define IDQR_ATTR_MAX (__IDQR_ATTR_MAX -1)
+
+enum rib_object_attrs_list {
+        RIBO_ATTR_OBJECT_CLASS = 1,
+        RIBO_ATTR_OBJECT_NAME,
+        RIBO_ATTR_OBJECT_INSTANCE,
+        __RIBO_ATTR_MAX,
+};
+#define RIBO_ATTR_MAX (__RIBO_ATTR_MAX -1)
+
+enum ipcm_query_rib_resp_attrs_list {
+        IDQRE_ATTR_RESULT = 1,
+        IDQRE_ATTR_COUNT,
+        IDQRE_ATTR_RIB_OBJECTS,
+        __IDQRE_ATTR_MAX,
+};
+#define IDQRE_ATTR_MAX (__IDQRE_ATTR_MAX -1)
+
+enum ipcm_assign_to_dif_req_attrs_list {
+        IATDR_ATTR_DIF_CONFIGURATION = 1,
+        __IATDR_ATTR_MAX,
+};
+#define IATDR_ATTR_MAX (__IATDR_ATTR_MAX -1)
+
+enum dif_conf_attrs_list {
+        DCONF_ATTR_DIF_TYPE = 1,
+        DCONF_ATTR_DIF_NAME,
+        __DCONF_ATTR_MAX,
+};
+#define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
+
+enum ipcm_assign_to_dif_resp_attrs_list {
+	IATDRE_ATTR_RESULT = 1,
+	__IATDRE_ATTR_MAX,
+};
+#define IATDRE_ATTR_MAX (__IATDRE_ATTR_MAX -1)
+
+/* FIXME: Need to specify the possible values of result to map with error 
+ * descriptions strings in US */
+#define ASSIGN_TO_DIF_RESP_ERR_DESC_1 "FAILED"
+
+enum ipcm_ipcp_dif_reg_noti_attrs_list {
+	IDRN_ATTR_IPC_PROCESS_NAME = 1,
+	IDRN_ATTR_DIF_NAME,
+	IDRN_ATTR_REGISTRATION,
+	__IDRN_ATTR_MAX,
+};
+#define IDRN_ATTR_MAX (__IDRN_ATTR_MAX -1)
+
+/* FIXME: It does not exist in user space */
+enum ipcm_ipcp_dif_unreg_noti_attrs_list {
+	IDUN_ATTR_RESULT = 1,
+	__IDUN_ATTR_MAX,
+};
+#define IDUN_ATTR_MAX (__IDUN_ATTR_MAX -1)
 
 struct rina_msg_hdr {
         unsigned int src_ipc_id;
@@ -160,34 +269,31 @@ struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs {
         struct name      source;
         struct name      dest;
         struct flow_spec fspec;
-        port_id_t        id;
         struct name      dif_name;
 };
 
 struct rnl_alloc_flow_resp_msg_attrs {
-        struct name dif_name;
-        bool        accept;
-        string_t *  deny_reason;
-        bool        notify_src;
+        uint_t    result;
+        bool      notify_src;
+	port_id_t id;
 };
 
 struct rnl_ipcm_dealloc_flow_req_msg_attrs {
         port_id_t   id;
-        struct name dif_name;
-        struct name app_name;
 };
 
 struct rnl_ipcm_dealloc_flow_resp_msg_attrs {
         uint_t      result;
-        string_t *  err_desc;
-        struct name app_name;
 };
 
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg *   msg);
 
-/* FIXME: dif_config does not exist */
-struct dif_config;
+/* FIXME: dif_config does not exist. Coded based on user space */
+struct dif_config{
+	string_t    * type;
+	struct name * dif_name;
+};
 
 int rnl_format_ipcm_assign_to_dif_req_msg(const struct dif_config * config,
                                           struct sk_buff  *         skb_out);
@@ -225,7 +331,6 @@ int rnl_format_ipcm_alloc_flow_req_msg(const struct name *      source,
 int rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name *      source,
                                                const struct name *      dest,
                                                const struct flow_spec * fspec,
-                                               port_id_t                id,
                                                const struct name *     dif_name,
                                                struct sk_buff *        skb_out);
 
@@ -233,6 +338,8 @@ int rnl_format_ipcm_alloc_flow_req_result_msg(uint_t           result,
                                               struct sk_buff * skb_out);
 
 int rnl_format_ipcm_alloc_flow_resp_msg(uint_t           result,
+					bool 		 notify_src,
+					port_id_t	 id,
                                         struct sk_buff * skb_out);
 
 int rnl_format_ipcm_dealloc_flow_req_msg(port_id_t        id,
@@ -249,25 +356,26 @@ int rnl_format_ipcm_reg_app_req_msg(const struct name * app_name,
                                     const struct name * dif_name,
                                     struct sk_buff *    skb_out);
 
-int rnl_format_ipcm_reg_app_resp_msg(uint_t           result,
-                                     struct sk_buff * skb_out);
+int rnl_format_ipcm_reg_app_resp_msg(const struct name * app_name,
+				     uint_t            result,
+                                     struct sk_buff    * skb_out);
 
 int rnl_format_ipcm_unreg_app_req_msg(const struct name * app_name,
                                       const struct name * dif_name,
                                       struct sk_buff  *   skb_out);
 
-int rnl_format_ipcm_unreg_app_resp_msg(uint_t           result,
-                                       struct sk_buff * skb_out);
+int rnl_format_ipcm_unreg_app_resp_msg(uint_t       result,
+                                     struct sk_buff * skb_out);
 
-int rnl_format_ipcm_query_rib_req_msg(enum rib_object_t rib_obj_class,
-                                      string_t *        obj_name,
-                                      long unsigned int obj_instance,
-                                      uint_t            scope,
-                                      const regex_t *   filter,
-                                      struct sk_buff *  skb_out);
+int rnl_format_ipcm_query_rib_req_msg(const struct rib_object * obj,
+                                      uint_t         	      scope,
+                                      const regex_t  	      * filter,
+                                      struct sk_buff 	      * skb_out);
 
-int rnl_format_ipcm_query_rib_resp_msg(uint_t           result,
-                                       struct sk_buff * skb_out);
+int rnl_format_ipcm_query_rib_resp_msg(uint_t                  result,
+				       uint_t	               count,
+				       const struct rib_object **objs,
+                                       struct sk_buff          * skb_out);
 
 int rnl_format_rmt_add_fte_req_msg(const struct pdu_ft_entry * entry,
                                    struct sk_buff *            skb_out);
