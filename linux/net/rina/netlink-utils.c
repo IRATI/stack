@@ -604,33 +604,146 @@ static int format_flow_spec(const struct flow_spec * fspec,
         return 0;
 }
 
+static int format_dif_config(const struct dif_config * config,
+			     struct sk_buff          * msg)
+{
+	struct nlattr * msg_dif_name;
+
+        if (!(msg_dif_name =
+                nla_nest_start(msg, DCONF_ATTR_DIF_NAME))) {
+                nla_nest_cancel(msg, msg_dif_name);
+                LOG_ERR(BUILD_ERR_STRING("dif name attribute"));
+                return -1;
+        }
+        if (format_app_name_info(config->dif_name, msg) < 0)
+		return -1;
+	nla_nest_end(msg, msg_dif_name);
+
+	if (nla_put_string(msg, 
+			  DCONF_ATTR_DIF_TYPE,
+			  config->type) < 0)
+                LOG_ERR(BUILD_ERR_STRING("dif type attribute"));
+ 		return -1;
+
+	return 0;
+
+}
 
 int rnl_format_ipcm_assign_to_dif_req_msg(const struct dif_config  * config,
-                                          struct sk_buff  * skb_out)
+                                          struct sk_buff           * skb_out)
 {
+        struct nlattr * msg_config;
+
+        if (!skb_out) {
+                LOG_ERR("Bogus input parameter(s), bailing out");
+                return -1;
+        }
+
+        if (!(msg_config =
+                nla_nest_start(skb_out, IATDR_ATTR_DIF_CONFIGURATION))) {
+                nla_nest_cancel(skb_out, msg_config);
+                LOG_ERR(BUILD_ERR_STRING("dif configuration attribute"));
+                goto format_fail;
+        }
+        if (format_dif_config(config, skb_out) < 0)
+		goto format_fail;
+	nla_nest_end(skb_out, msg_config);
+
         return 0;
+
+	format_fail:
+                LOG_ERR("Could not format "
+                        "rnl_ipcm_assign_to_dif_req_msg "
+                        "message correctly");
+                return -1;
+
 }
 EXPORT_SYMBOL(rnl_format_ipcm_assign_to_dif_req_msg);
 
 int rnl_format_ipcm_assign_to_dif_resp_msg(uint_t          result,
                                            struct sk_buff  * skb_out)
 {
+        if (!skb_out) {
+                LOG_ERR("Bogus input parameter(s), bailing out");
+                return -1;
+        }
+
+	if (nla_put_u32(skb_out, IAFRRM_ATTR_RESULT, result) < 0) {
+                LOG_ERR("Could not format "
+                        "rnl_ipcm_assign_to_dif_resp_msg "
+                        "message correctly");
+                return -1;
+	}
         return 0;
 }
 EXPORT_SYMBOL(rnl_format_ipcm_assign_to_dif_resp_msg);
 
-int rnl_format_ipcm_ipcp_dif_reg_noti_msg(const struct name     * ipcp_name,
-                                          const struct name     * dif_name,
-                                          bool            is_registered,
-                                          struct sk_buff  * skb_out)
+int rnl_format_ipcm_ipcp_dif_reg_noti_msg(const struct name * ipcp_name,
+                                          const struct name * dif_name,
+                                          bool		    is_registered,
+                                          struct sk_buff    * skb_out)
 {
-        return 0;
+        struct nlattr * msg_ipcp_name, * msg_dif_name;
+
+        if (!skb_out) {
+                LOG_ERR("Bogus input parameter(s), bailing out");
+                return -1;
+        }
+
+        /* name-formating might be moved into its own function (and reused) */
+        if (!(msg_ipcp_name =
+                nla_nest_start(skb_out, IDRN_ATTR_IPC_PROCESS_NAME))) {
+                nla_nest_cancel(skb_out, msg_ipcp_name);
+                LOG_ERR(BUILD_ERR_STRING("ipcp name attribute"));
+                goto format_fail;
+        }
+	if (format_app_name_info(ipcp_name, skb_out) < 0)
+		goto format_fail;
+	nla_nest_end(skb_out, msg_ipcp_name);
+
+        if (!(msg_dif_name =
+              nla_nest_start(skb_out, IDRN_ATTR_DIF_NAME))) {
+                nla_nest_cancel(skb_out, msg_dif_name);
+                LOG_ERR(BUILD_ERR_STRING("dif name attribute"));
+                goto format_fail;
+        }
+	if (format_app_name_info(dif_name, skb_out) < 0)
+		goto format_fail;
+	nla_nest_end(skb_out, msg_dif_name);
+
+	/* FIXME: I think the flag value must be specified so nla_put_flag
+	* can not be used. Check in US cause it is using it */
+        if (nla_put(skb_out, IDRN_ATTR_REGISTRATION, is_registered, NULL) < 0) {
+                LOG_ERR(BUILD_ERR_STRING("is_registered attribute"));
+		goto format_fail;
+	}
+
+	return 0;
+
+	format_fail:
+                LOG_ERR("Could not format "
+                        "rnl_ipcm_ipcp_dif_reg_noti_msg "
+                        "message correctly");
+                return -1;
+
 }
 EXPORT_SYMBOL(rnl_format_ipcm_ipcp_dif_reg_noti_msg);
 
+/*  FIXME: It does not exist in user space */
 int rnl_format_ipcm_ipcp_dif_unreg_noti_msg(uint_t          result,
                                             struct sk_buff  * skb_out)
 {
+        if (!skb_out) {
+                LOG_ERR("Bogus input parameter(s), bailing out");
+                return -1;
+        }
+
+	if (nla_put_u32(skb_out, IDUN_ATTR_RESULT, result) < 0) {
+                LOG_ERR("Could not format "
+                        "rnl_ipcm_ipcp_to_dif_unreg_noti_msg "
+                        "message correctly");
+                return -1;
+	}
         return 0;
 }
 EXPORT_SYMBOL(rnl_format_ipcm_ipcp_dif_unreg_noti_msg);
@@ -1058,33 +1171,28 @@ static int format_rib_object(const struct rib_object * obj,
         return 0;
 }
 
-#if 0
-static int format_rib_object_list(const struct rib_object ** objs,
+static int format_rib_objects_list(const struct rib_object ** objs,
 				  uint_t                  count,
 				  struct sk_buff	  * msg)
 {
 	int i;
-	struct nlattr ** msg_objs;
-	
-	msg_objs = rkmalloc(count * sizeof(struct nlattr *), GFP_KERNEL);
+	struct nlattr * msg_obj;
 	
 	for (i=0; i< count; i++){
-        	if (!(msg_objs[i] =
+        	if (!(msg_obj =
         		nla_nest_start(msg, i))) {
-        	        nla_nest_cancel(msg, msg_objs[i]);
+        	        nla_nest_cancel(msg, msg_obj);
         	        LOG_ERR(BUILD_ERR_STRING("rib object attribute"));
         	        return -1;
         	}
+		if(format_rib_object(objs[i], msg) < 0)
+			return -1;
+		nla_nest_end(msg, msg_obj);
 	}
-	for (i; i< count; i++){
-		if (format_rib_object(objs[i], msg) < 0)
-			return -1
-	}
-
+	
 	return 0;
 
 }
-#endif 
 
 int rnl_format_ipcm_query_rib_req_msg(const struct rib_object * obj,
                                       uint_t                  scope,
@@ -1127,26 +1235,35 @@ int rnl_format_ipcm_query_rib_resp_msg(uint_t                  result,
 				       const struct rib_object ** objs,
                                        struct sk_buff          * skb_out)
 {
-#if 0
-	int i;
+	struct nlattr * msg_objs;
 
         if (!skb_out) {
                 LOG_ERR("Bogus input parameter(s), bailing out");
                 return -1;
         }
 
+        if (!(msg_objs =
+        	nla_nest_start(skb_out, IDQRE_ATTR_RIB_OBJECTS))) {
+                nla_nest_cancel(skb_out, msg_objs);
+                LOG_ERR(BUILD_ERR_STRING("rib object list attribute"));
+                goto format_fail;
+        }
+        if (format_rib_objects_list(objs, count, skb_out) < 0)
+		goto format_fail;
+	nla_nest_end(skb_out, msg_objs);
+	
 
         if (nla_put_u32(skb_out, IDQRE_ATTR_RESULT, result) ||
-	    nla_put_u32(skb_out, IDQRE_ATTR_COUNT, count)   ||
-	    format_rib_objects_list(objs, skb_out)) {
+	    nla_put_u32(skb_out, IDQRE_ATTR_COUNT, count))
+		goto format_fail;
+
+	return 0;
+
+	format_fail:
                 LOG_ERR("Could not format "
                         "rnl_ipcm_query_rib_resp_msg "
                         "message correctly");
                 return -1;
-        }
-#endif
-
-        return 0;
 }
 EXPORT_SYMBOL(rnl_format_ipcm_query_rib_resp_msg);
 

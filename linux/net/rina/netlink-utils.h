@@ -178,6 +178,45 @@ enum ipcm_query_rib_resp_attrs_list {
         IDQRE_ATTR_RIB_OBJECTS,
         __IDQRE_ATTR_MAX,
 };
+#define IDQRE_ATTR_MAX (__IDQRE_ATTR_MAX -1)
+
+enum ipcm_assign_to_dif_req_attrs_list {
+        IATDR_ATTR_DIF_CONFIGURATION = 1,
+        __IATDR_ATTR_MAX,
+};
+#define IATDR_ATTR_MAX (__IATDR_ATTR_MAX -1)
+
+enum dif_conf_attrs_list {
+        DCONF_ATTR_DIF_TYPE = 1,
+        DCONF_ATTR_DIF_NAME,
+        __DCONF_ATTR_MAX,
+};
+#define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
+
+enum ipcm_assign_to_dif_resp_attrs_list {
+	IATDRE_ATTR_RESULT = 1,
+	__IATDRE_ATTR_MAX,
+};
+#define IATDRE_ATTR_MAX (__IATDRE_ATTR_MAX -1)
+
+/* FIXME: Need to specify the possible values of result to map with error 
+ * descriptions strings in US */
+#define ASSIGN_TO_DIF_RESP_ERR_DESC_1 "FAILED"
+
+enum ipcm_ipcp_dif_reg_noti_attrs_list {
+	IDRN_ATTR_IPC_PROCESS_NAME = 1,
+	IDRN_ATTR_DIF_NAME,
+	IDRN_ATTR_REGISTRATION,
+	__IDRN_ATTR_MAX,
+};
+#define IDRN_ATTR_MAX (__IDRN_ATTR_MAX -1)
+
+/* FIXME: It does not exist in user space */
+enum ipcm_ipcp_dif_unreg_noti_attrs_list {
+	IDUN_ATTR_RESULT = 1,
+	__IDUN_ATTR_MAX,
+};
+#define IDUN_ATTR_MAX (__IDUN_ATTR_MAX -1)
 
 struct rina_msg_hdr {
         unsigned int src_ipc_id;
@@ -250,8 +289,11 @@ struct rnl_ipcm_dealloc_flow_resp_msg_attrs {
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg *   msg);
 
-/* FIXME: dif_config does not exist */
-struct dif_config;
+/* FIXME: dif_config does not exist. Coded based on user space */
+struct dif_config{
+	string_t    * type;
+	struct name * dif_name;
+};
 
 int rnl_format_ipcm_assign_to_dif_req_msg(const struct dif_config * config,
                                           struct sk_buff  *         skb_out);
