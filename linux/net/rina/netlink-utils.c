@@ -188,9 +188,53 @@ static int parse_app_name_info(struct nlattr * name_attr,
         return 0;
 }
 
-static int rnl_parse_ipcm_assign_to_dif_req_msg(struct genl_info * info,
-		 struct rnl_ipcm_asign_to_dif_req_msg_attrs * msg_attrs)
+static int parse_dif_config(struct nlattr      * dif_config_attr,
+                            struct dif_config  * dif_config_struct)
 {
+        struct nla_policy attr_policy[DCONF_ATTR_MAX + 1];
+        struct nlattr *attrs[DCONF_ATTR_MAX + 1];
+
+        attr_policy[DCONF_ATTR_DIF_TYPE].type = NLA_STRING;
+        attr_policy[DCONF_ATTR_DIF_NAME].type = NLA_NESTED;
+
+        if (nla_parse_nested(attrs, 
+			     DCONF_ATTR_MAX, 
+			     dif_config_attr, 
+			     attr_policy) < 0)
+                goto parse_fail;
+
+        if (attrs[DCONF_ATTR_DIF_TYPE])
+                nla_strlcpy(dif_config_struct->type,
+                            attrs[DCONF_ATTR_DIF_TYPE],
+                            sizeof(attrs[DCONF_ATTR_DIF_TYPE]));
+
+	if (parse_app_name_info(attrs[DCONF_ATTR_DIF_NAME], 
+				dif_config_struct->dif_name) <0)
+		goto parse_fail;
+
+	return 0;
+
+	parse_fail:
+        	LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("dif config attribute"));
+        	return -1;
+
+		
+}
+
+static int rnl_parse_ipcm_assign_to_dif_req_msg(struct genl_info * info,
+		struct rnl_ipcm_assign_to_dif_req_msg_attrs * msg_attrs)
+{
+        struct nla_policy attr_policy[IATDR_ATTR_MAX + 1];
+
+        attr_policy[IATDR_ATTR_DIF_CONFIGURATION].type = NLA_NESTED;
+	
+        if (rnl_check_attr_policy(info, IATDR_ATTR_MAX, attr_policy) < 0 || 
+	    parse_dif_config(info->attrs[IATDR_ATTR_DIF_CONFIGURATION],
+                             msg_attrs->dif_config) < 0) {
+        	LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST"));
+        	return -1;
+	}
+
 	return 0;
 }
 
@@ -482,7 +526,8 @@ int rnl_parse_msg(struct genl_info      * info,
 
 	switch(info->genlhdr->cmd){
         case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST:
-                msg->attrs = 0;
+		if (rnl_parse_ipcm_assign_to_dif_req_msg(info, msg->attrs) < 0)
+                	goto fail;
                 break;
         case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE:
                 break;

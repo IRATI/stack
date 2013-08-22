@@ -255,8 +255,8 @@ struct rnl_msg {
         void *                attrs;
 };
 
-struct rnl_ipcm_asign_to_dif_req_msg_attrs {
-	int a;
+struct rnl_ipcm_assign_to_dif_req_msg_attrs {
+	struct dif_config * dif_config;
 };
 
 struct rnl_ipcm_assign_to_dif_resp_msg_attrs {
