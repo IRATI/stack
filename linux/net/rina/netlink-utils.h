@@ -255,6 +255,38 @@ struct rnl_msg {
         void *                attrs;
 };
 
+struct rnl_ipcm_asign_to_dif_req_msg_attrs {
+	int a;
+};
+
+struct rnl_ipcm_assign_to_dif_resp_msg_attrs {
+	int a;
+};
+
+struct rnl_ipcm_ipcp_dif_reg_noti_msg_attrs {
+	int a;
+};
+
+struct rnl_ipcm_ipcp_dif_unreg_noti_msg_attrs {
+	int a;
+};
+
+struct rnl_ipcm_enroll_to_dif_req_msg_attrs {
+	int a;
+};
+
+struct rnl_ipcm_enroll_to_dif_resp_msg_attrs {
+	int a;
+};
+
+struct rnl_ipcm_disconn_neighbor_req_msg_attrs {
+	int a;
+};
+
+struct rnl_ipcm_disconn_neighbor_resp_msg_attrs {
+	int a;
+};
+
 /* FIXME: all the alloc flow structs are the same
  * we can use only a generic one */
 struct rnl_ipcm_alloc_flow_req_msg_attrs {
@@ -272,6 +304,10 @@ struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs {
         struct name      dif_name;
 };
 
+struct rnl_ipcm_alloc_flow_req_result_msg_attrs {
+	int a;
+};
+
 struct rnl_alloc_flow_resp_msg_attrs {
         uint_t    result;
         bool      notify_src;
@@ -285,6 +321,51 @@ struct rnl_ipcm_dealloc_flow_req_msg_attrs {
 struct rnl_ipcm_dealloc_flow_resp_msg_attrs {
         uint_t      result;
 };
+
+struct rnl_ipcm_flow_dealloc_noti_msg_attrs {
+	int temp;
+};
+
+struct rnl_ipcm_reg_app_req_msg_attrs {
+	int temp;
+};
+
+struct rnl_ipcm_reg_app_resp_msg_attrs {
+	int temp;
+};
+
+struct rnl_ipcm_unreg_app_req_msg_attrs {
+	int temp;
+};
+
+struct rnl_ipcm_unreg_app_resp_msg_attrs {
+	int temp;
+};
+
+struct rnl_ipcm_query_rib_req_msg_attrs {
+	int temp;
+};
+
+struct rnl_ipcm_query_rib_resp_msg_attrs {
+	int temp;
+};
+
+struct rnl_rmt_add_fte_req_msg_attrs {
+	int temp;
+};
+
+struct rnl_rmt_del_fte_req_msg_attrs {
+	int temp;
+};
+
+struct rnl_rmt_dump_ft_req_msg_attrs {
+	int temp;
+};
+
+struct rnl_rmt_dump_ft_reply_msg_attrs {
+	int temp;
+};
+
 
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg *   msg);
