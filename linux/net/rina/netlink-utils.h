@@ -218,6 +218,18 @@ enum ipcm_ipcp_dif_unreg_noti_attrs_list {
 };
 #define IDUN_ATTR_MAX (__IDUN_ATTR_MAX -1)
 
+enum ipcm_ipcp_enroll_to_dif_req_msg_attr_list {
+	IEDR_ATTR_DIF_NAME = 1,
+	__IEDR_ATTR_MAX,
+};
+#define IEDR_ATTR_MAX (__IEDR_ATTR_MAX -1)
+
+enum ipcm_ipcp_enroll_to_dif_resp_msg_attr_list {
+	IEDRE_ATTR_RESULT = 1,
+	__IEDRE_ATTR_MAX,
+};
+#define IEDRE_ATTR_MAX (__IEDRE_ATTR_MAX -1)
+
 struct rina_msg_hdr {
         unsigned int src_ipc_id;
         unsigned int dst_ipc_id;
@@ -260,23 +272,25 @@ struct rnl_ipcm_assign_to_dif_req_msg_attrs {
 };
 
 struct rnl_ipcm_assign_to_dif_resp_msg_attrs {
-	int a;
+	uint_t result;
 };
 
 struct rnl_ipcm_ipcp_dif_reg_noti_msg_attrs {
-	int a;
+	struct name * ipcp_name;
+	struct name * dif_name;
+	bool	      is_registered;
 };
 
 struct rnl_ipcm_ipcp_dif_unreg_noti_msg_attrs {
-	int a;
+	uint_t result;
 };
 
 struct rnl_ipcm_enroll_to_dif_req_msg_attrs {
-	int a;
+	struct name * dif_name;
 };
 
 struct rnl_ipcm_enroll_to_dif_resp_msg_attrs {
-	int a;
+	uint_t result;
 };
 
 struct rnl_ipcm_disconn_neighbor_req_msg_attrs {
