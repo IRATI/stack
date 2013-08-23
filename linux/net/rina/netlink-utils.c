@@ -347,17 +347,43 @@ static int rnl_parse_ipcm_enroll_to_dif_resp_msg(struct genl_info * info,
 static int rnl_parse_ipcm_disconn_neighbor_req_msg(struct genl_info * info,
           struct rnl_ipcm_disconn_neighbor_req_msg_attrs * msg_attrs)
 {
+        struct nla_policy attr_policy[IDNR_ATTR_MAX + 1];
+
+        attr_policy[IDNR_ATTR_NEIGHBOR_NAME].type = NLA_NESTED;
+
+        if (rnl_check_attr_policy(info, IDNR_ATTR_MAX, attr_policy) < 0 ||
+            parse_app_name_info(info->attrs[IDNR_ATTR_NEIGHBOR_NAME], 
+	    			msg_attrs->neighbor_name) < 0) {
+        	LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE(\
+		"RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST:"));
+	        return -1;
+
+ 	}
 	return 0;
 }
 
 static int rnl_parse_ipcm_disconn_neighbor_resp_msg(struct genl_info * info,
 	  struct rnl_ipcm_disconn_neighbor_resp_msg_attrs * msg_attrs)
 {
+	struct nla_policy attr_policy[IDNRE_ATTR_MAX + 1];
+
+	attr_policy[IDNRE_ATTR_RESULT].type = NLA_U32;
+
+	if(rnl_check_attr_policy(info, IDNRE_ATTR_MAX, attr_policy) < 0){
+		LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE(\
+			"RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE"));
+		return -1;
+	}
+
+        if (info->attrs[IATDRE_ATTR_RESULT])
+                msg_attrs->result = \
+                        nla_get_u32(info->attrs[IEDRE_ATTR_RESULT]);
+
 	return 0;
 }
 
-static int rnl_parse_ipcm_alloc_flow_req(struct genl_info * info,
-                                         struct rnl_ipcm_alloc_flow_req_msg_attrs * msg_attrs)
+static int rnl_parse_ipcm_alloc_flow_req_msg(struct genl_info * info,
+                                             struct rnl_ipcm_alloc_flow_req_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[IAFRM_ATTR_MAX + 1];
 
@@ -398,8 +424,8 @@ static int rnl_parse_ipcm_alloc_flow_req(struct genl_info * info,
 }
 
 
-static int rnl_parse_ipcm_alloc_flow_req_arrived(struct genl_info * info,
-                                                 struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs * msg_attrs)
+static int rnl_parse_ipcm_alloc_flow_req_arrived_msg(struct genl_info * info,
+                struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[IAFRA_ATTR_MAX + 1];
 
@@ -430,8 +456,8 @@ static int rnl_parse_ipcm_alloc_flow_req_result_msg(struct genl_info * info,
 	return 0;
 }
 
-static int rnl_parse_ipcm_alloc_flow_resp(struct genl_info * info,
-                                          struct rnl_alloc_flow_resp_msg_attrs * msg_attrs)
+static int rnl_parse_ipcm_alloc_flow_resp_msg(struct genl_info * info,
+                     struct rnl_alloc_flow_resp_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[IAFRE_ATTR_MAX + 1];
 
@@ -462,8 +488,8 @@ static int rnl_parse_ipcm_alloc_flow_resp(struct genl_info * info,
 
 }
 
-static int rnl_parse_ipcm_dealloc_flow_req(struct genl_info * info,
-                                           struct rnl_ipcm_dealloc_flow_req_msg_attrs * msg_attrs)
+static int rnl_parse_ipcm_dealloc_flow_req_msg(struct genl_info * info,
+                struct rnl_ipcm_dealloc_flow_req_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[IDFRT_ATTR_MAX + 1];
 
@@ -485,8 +511,8 @@ static int rnl_parse_ipcm_dealloc_flow_req(struct genl_info * info,
 }
 
 
-static int rnl_parse_ipcm_dealloc_flow_resp(struct genl_info * info,
-                                            struct rnl_ipcm_dealloc_flow_resp_msg_attrs * msg_attrs)
+static int rnl_parse_ipcm_dealloc_flow_resp_msg(struct genl_info * info,
+                struct rnl_ipcm_dealloc_flow_resp_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[IDFRE_ATTR_MAX + 1];
 
@@ -621,48 +647,99 @@ int rnl_parse_msg(struct genl_info      * info,
 			goto fail;
                 break;
         case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST:
+		if (rnl_parse_ipcm_disconn_neighbor_req_msg(info,
+							    msg->attrs) < 0)
+			goto fail;
                 break;
         case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE:
+		if (rnl_parse_ipcm_disconn_neighbor_resp_msg(info,
+							     msg->attrs) < 0)
+			goto fail;
                 break;
         case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST:
-                if (rnl_parse_ipcm_alloc_flow_req(info, msg->attrs) < 0)
+                if (rnl_parse_ipcm_alloc_flow_req_msg(info, 
+						      msg->attrs) < 0)
                         goto fail;
                 break;
         case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED:
+                if (rnl_parse_ipcm_alloc_flow_req_arrived_msg(info, 
+							      msg->attrs) < 0)
+                        goto fail;
                 break;
         case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
+                if (rnl_parse_ipcm_alloc_flow_req_result_msg(info, 
+							     msg->attrs) < 0)
+                        goto fail;
                 break;
         case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE:
-                if (rnl_parse_ipcm_alloc_flow_resp(info, msg->attrs) < 0)
+                if (rnl_parse_ipcm_alloc_flow_resp_msg(info, 
+						       msg->attrs) < 0)
                         goto fail;
                 break;
         case RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST:
-                if (rnl_parse_ipcm_dealloc_flow_req(info, msg->attrs) < 0)
+                if (rnl_parse_ipcm_dealloc_flow_req_msg(info, 
+							msg->attrs) < 0)
+                        goto fail;
+                break;
+        case RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION:
+                if (rnl_parse_ipcm_flow_dealloc_noti_msg(info, 
+							 msg->attrs) < 0)
                         goto fail;
                 break;
         case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE:
-                if (rnl_parse_ipcm_dealloc_flow_resp(info, msg->attrs) < 0)
+                if (rnl_parse_ipcm_dealloc_flow_resp_msg(info, 
+							 msg->attrs) < 0)
                         goto fail;
                 break;
         case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST:
+                if (rnl_parse_ipcm_reg_app_req_msg(info, 
+						   msg->attrs) < 0)
+                        goto fail;
                 break;
         case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:
+                if (rnl_parse_ipcm_reg_app_resp_msg(info, 
+					 	    msg->attrs) < 0)
+                        goto fail;
                 break;
         case RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST:
+                if (rnl_parse_ipcm_unreg_app_req_msg(info, 
+					 	     msg->attrs) < 0)
+                        goto fail;
                 break;
         case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE:
+                if (rnl_parse_ipcm_unreg_app_resp_msg(info, 
+				 	 	      msg->attrs) < 0)
+                        goto fail;
                 break;
         case RINA_C_IPCM_QUERY_RIB_REQUEST:
+                if (rnl_parse_ipcm_query_rib_req_msg(info, 
+				 	 	     msg->attrs) < 0)
+                        goto fail;
                 break;
         case RINA_C_IPCM_QUERY_RIB_RESPONSE:
+                if (rnl_parse_ipcm_query_rib_resp_msg(info, 
+				 	 	      msg->attrs) < 0)
+                        goto fail;
                 break;
         case RINA_C_RMT_ADD_FTE_REQUEST:
+                if (rnl_parse_rmt_add_fte_req_msg(info, 
+				 	 	  msg->attrs) < 0)
+                        goto fail;
                 break;
         case RINA_C_RMT_DELETE_FTE_REQUEST:
+                if (rnl_parse_rmt_del_fte_req_msg(info, 
+				 	 	  msg->attrs) < 0)
+                        goto fail;
                 break;
         case RINA_C_RMT_DUMP_FT_REQUEST:
+                if (rnl_parse_rmt_dump_ft_req_msg(info, 
+				 	 	  msg->attrs) < 0)
+                        goto fail;
                 break;
         case RINA_C_RMT_DUMP_FT_REPLY:
+                if (rnl_parse_rmt_dump_ft_reply_msg(info, 
+				 	 	    msg->attrs) < 0)
+                        goto fail;
                 break;
         default:
                 goto fail;
