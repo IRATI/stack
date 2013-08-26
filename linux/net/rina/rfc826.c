@@ -24,11 +24,26 @@
 #define ARPOP_REQUEST   1               /* ARP request                  */
 #define ARPOP_REPLY     2               /* ARP reply                    */
 
-static inline struct arphdr *arp_hdr(const struct sk_buff *skb)
-{
-	return (struct arphdr *)skb_network_header(skb);
-}
- 
+struct rina_mapping {
+        struct list_head list;
+
+        /* The application advertised */
+        unsigned char *app_name;
+	
+	/* Hardware address */
+	unsigned char hw_addr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
+};
+
+struct rina_list {
+	struct list_head entries;
+	struct list_head perm_entries;
+};
+
+static struct arp_entries {
+	struct list_head mapping;
+	__be16 ar_pro;
+};
+
 struct arphdr {
 	__be16          ar_hrd;         /* format of hardware address   */
 	__be16          ar_pro;         /* format of protocol address   */
@@ -38,7 +53,8 @@ struct arphdr {
  
 #if 0
 	/*
-	 *      Ethernet looks like this : This bit is variable sized however...
+	 *      This bit is variable sized however...
+	 *      This is an example
 	 */
 	unsigned char           ar_sha[ETH_ALEN];       /* sender hardware address      */
 	unsigned char           ar_sip[4];              /* sender IP address            */
@@ -48,6 +64,33 @@ struct arphdr {
  
 };
 
+
+/* FIXME: Insert top part of ARP PM here */
+/* Register handler for ARP response? */
+
+int register_network_address(__be16 ar_pro, unsigned char *netw_addr) {
+
+
+
+}
+
+int unregister_network_address(__be16 ar_pro, unsigned char *netw_addr) {
+
+
+
+}
+
+
+int add_arp_resp_handler();
+
+int remove_arp_resp_handler();
+
+
+static inline struct arphdr *arp_hdr(const struct sk_buff *skb)
+{
+	return (struct arphdr *)skb_network_header(skb);
+}
+ 
 /*
  *	Create an arp packet. If (dest_hw == NULL), we create a broadcast
  *	message.
