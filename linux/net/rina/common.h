@@ -169,4 +169,10 @@ struct rib_object{
 	string_t		 * rib_obj_name;
 	long unsigned int	 rib_obj_instance;
 };
+
+/*  FIXME: dif_config does not exist. Coded based on user space */
+struct dif_config{
+        string_t    * type;
+        struct name * dif_name;
+};
 #endif

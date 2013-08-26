@@ -114,7 +114,7 @@ enum ipcm_dealloc_flow_resp_attrs_list {
  * descriptions strings in US */
 #define DEALLOC_RESP_ERR_DESC_1 "FAILED"
 
-enum ipcm_flow_dealloc_noti_attrs_list {
+enum ipcm_resultlow_dealloc_noti_attrs_list {
         IFDN_ATTR_PORT_ID = 1,
         IFDN_ATTR_CODE,
         __IFDN_ATTR_MAX,
@@ -316,22 +316,22 @@ struct rnl_ipcm_disconn_neighbor_resp_msg_attrs {
 /* FIXME: all the alloc flow structs are the same
  * we can use only a generic one */
 struct rnl_ipcm_alloc_flow_req_msg_attrs {
-        struct name      source;
-        struct name      dest;
-        struct flow_spec fspec;
+        struct name      * source;
+        struct name      * dest;
+        struct flow_spec * fspec;
         port_id_t        id;
-        struct name      dif_name;
+        struct name      * dif_name;
 };
 
 struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs {
-        struct name      source;
-        struct name      dest;
-        struct flow_spec fspec;
-        struct name      dif_name;
+        struct name      * source;
+        struct name      * dest;
+        struct flow_spec * fspec;
+        struct name      * dif_name;
 };
 
 struct rnl_ipcm_alloc_flow_req_result_msg_attrs {
-	int a;
+	int result;
 };
 
 struct rnl_alloc_flow_resp_msg_attrs {
@@ -349,31 +349,39 @@ struct rnl_ipcm_dealloc_flow_resp_msg_attrs {
 };
 
 struct rnl_ipcm_flow_dealloc_noti_msg_attrs {
-	int temp;
+	port_id_t id;
+	uint_t    code;
 };
 
 struct rnl_ipcm_reg_app_req_msg_attrs {
-	int temp;
+	struct name * app_name;
+	struct name * dif_name;
 };
 
 struct rnl_ipcm_reg_app_resp_msg_attrs {
-	int temp;
+	struct name * app_name;
+	uint_t      result;
 };
 
 struct rnl_ipcm_unreg_app_req_msg_attrs {
-	int temp;
+	struct name * app_name;
+	struct name * dif_name;
 };
 
 struct rnl_ipcm_unreg_app_resp_msg_attrs {
-	int temp;
+	uint_t result;
 };
 
 struct rnl_ipcm_query_rib_req_msg_attrs {
-	int temp;
+	struct rib_object * rib_obj;
+	uint_t            scope;
+	string_t          * filter;
 };
 
 struct rnl_ipcm_query_rib_resp_msg_attrs {
-	int temp;
+	uint_t            result;
+	uint_t            count;
+	struct rib_object * rib_objs;
 };
 
 struct rnl_rmt_add_fte_req_msg_attrs {
@@ -395,12 +403,6 @@ struct rnl_rmt_dump_ft_reply_msg_attrs {
 
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg *   msg);
-
-/* FIXME: dif_config does not exist. Coded based on user space */
-struct dif_config{
-	string_t    * type;
-	struct name * dif_name;
-};
 
 int rnl_format_ipcm_assign_to_dif_req_msg(const struct dif_config * config,
                                           struct sk_buff  *         skb_out);
