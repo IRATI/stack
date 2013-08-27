@@ -21,25 +21,54 @@
 
 #include "rina-arp.h"
 
-int register_network_address(__be16 ar_pro, unsigned char *netw_addr) {
+
+
+int add_arp_reply_handler(struct arp_reply_ops *ops)
+{
 
 
 
 }
+EXPORT_SYMBOL(add_arp_reply_handler);
 
-int unregister_network_address(__be16 ar_pro, unsigned char *netw_addr) {
+int remove_arp_reply_handler(struct arp_reply_ops *ops)
+{
 
 
 
 }
+EXPORT_SYMBOL(remove_arp_reply_handler);
+
+int register_network_address(__be16 ar_pro, 
+			     struct net_device *dev, 
+			     unsigned char *netw_addr)
+{
 
 
-int add_arp_resp_handler();
 
-int remove_arp_resp_handler();
+}
+EXPORT_SYMBOL(register_network_address);
+
+int unregister_network_address(__be16 ar_pro, 
+			       struct net_device *dev, 
+			       unsigned char *netw_addr)
+{
 
 
- 
+
+}
+EXPORT_SYMBOL(unregister_network_address);
+
+unsigned char * lookup_network_address(__be16 ar_pro, 
+				       struct net_device *dev, 
+				       unsigned char *netw_addr)
+{
+
+
+
+}
+EXPORT_SYMBOL(lookup_network_address);
+
 /*
  *	Create an arp packet. If (dest_hw == NULL), we create a broadcast
  *	message.
@@ -125,23 +154,14 @@ out:
 	return NULL;
 }
 
-/*
- *	Send an arp packet.
- */
-static void arp_xmit(struct sk_buff *skb)
-{
-	/* Send it off, maybe filter it using firewalling first.  */
-	NF_HOOK(NFPROTO_ARP, NF_ARP_OUT, skb, NULL, skb->dev, dev_queue_xmit);
-}
-
 
 /*
  *	Create and send an arp packet.
  */
-void arp_send(int type, int ptype, __be32 dest_ip,
-	      struct net_device *dev, __be32 src_ip,
-	      const unsigned char *dest_hw, const unsigned char *src_hw,
-	      const unsigned char *target_hw)
+void arp_send_request(__be16 ar_pro, 
+		      struct net_device *dev, 
+		      unsigned char *src_netw_addr,
+		      unsigned char *dest_netw_addr)
 {
 	struct sk_buff *skb;
 
@@ -157,9 +177,9 @@ void arp_send(int type, int ptype, __be32 dest_ip,
 	if (skb == NULL)
 		return;
 
-	arp_xmit(skb);
+	NF_HOOK(NFPROTO_ARP, NF_ARP_OUT, skb, NULL, skb->dev, dev_queue_xmit);
 }
-EXPORT_SYMBOL(arp_send);
+EXPORT_SYMBOL(arp_send_request);
 
 /*
  *	Process an arp request.

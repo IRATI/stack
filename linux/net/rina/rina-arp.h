@@ -27,25 +27,29 @@
 #define ARPOP_REQUEST   1               /* ARP request                  */
 #define ARPOP_REPLY     2               /* ARP reply                    */
 
-struct rina_mapping {
+struct network_mapping {
         struct list_head list;
 
-        /* The application advertised */
-        unsigned char *app_name;
+        /* The network address advertised */
+        unsigned char *network_address;
 	
 	/* Hardware address */
 	unsigned char hw_addr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
 };
 
-struct rina_list {
-	struct list_head entries;
+struct arp_entries {
+	struct list_head list;
+	struct list_head temp_entries;
 	struct list_head perm_entries;
 };
 
-static struct arp_entries {
-	struct list_head mapping;
+static struct arp_data {
+	struct list_head list;
+	struct list_head arp_entries;
 	__be16 ar_pro;
+	struct net_device *dev;
 };
+
 
 struct arphdr {
 	__be16          ar_hrd;         /* format of hardware address   */
@@ -59,10 +63,10 @@ struct arphdr {
 	 *      This bit is variable sized however...
 	 *      This is an example
 	 */
-	unsigned char           ar_sha[ETH_ALEN];       /* sender hardware address      */
-	unsigned char           ar_sip[4];              /* sender IP address            */
-	unsigned char           ar_tha[ETH_ALEN];       /* target hardware address      */
-	unsigned char           ar_tip[4];              /* target IP address            */
+	unsigned char    ar_sha[ETH_ALEN];     /* sender hardware address   */
+	unsigned char    ar_sip[4];            /* sender IP address         */
+	unsigned char    ar_tha[ETH_ALEN];     /* target hardware address   */
+	unsigned char    ar_tip[4];            /* target IP address         */
 #endif
  
 };
@@ -72,14 +76,26 @@ static inline struct arphdr *arp_hdr(const struct sk_buff *skb)
 	return (struct arphdr *)skb_network_header(skb);
 }
 
-int register_network_address(__be16 ar_pro, unsigned char *netw_addr);
+struct arp_reply_ops {
+	struct list_head list;
+	__be16 ar_pro;
+	struct net_device *dev;
+	void (*handle)(struct sk_buff *skb);
+};
 
-int unregister_network_address(__be16 ar_pro, unsigned char *netw_addr);
-
-int add_arp_resp_handler();
-
-int remove_arp_resp_handler();
-
-void arp_send();
-
+int             add_arp_reply_handler(struct arp_reply_ops *ops);
+int             remove_arp_reply_handler(struct arp_reply_ops *ops);
+int             register_network_address(__be16 ar_pro, 
+					 struct net_device *dev, 
+					 unsigned char *netw_addr);
+int             unregister_network_address(__be16 ar_pro, 
+					   struct net_device *dev, 
+					   unsigned char *netw_addr);
+unsigned char * lookup_network_address(__be16 ar_pro, 
+				       struct net_device *dev, 
+				       unsigned char *netw_addr);
+int              arp_send_request(__be16 ar_pro, 
+				  struct net_device *dev, 
+				  unsigned char *src_netw_addr,
+				  unsigned char *dest_netw_addr);
 #endif
