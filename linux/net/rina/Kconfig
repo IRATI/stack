@@ -65,6 +65,12 @@ config RINA_PERSONALITY_DEFAULT
 	---help---
 	  No help for the time being
 
+config RINA_ARP
+	bool "RINA ARP implementation support"
+	default y
+	help
+	  No help for the time being
+
 config RINA_SHIM_EMPTY
 	tristate "Empty Shim IPC"
 	default y
@@ -82,7 +88,7 @@ config RINA_SHIM_DUMMY
 config RINA_SHIM_ETH_VLAN
 	tristate "Shim IPC over Ethernet (using VLANs) support"
 	default y
-        depends on RINA_PERSONALITY_DEFAULT
+        depends on RINA_PERSONALITY_DEFAULT && RINA_ARP
 	help
 	  No help for the time being
 
