@@ -19,6 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifdef RINA_ARP
+
 #include "rina-arp.h"
 
 
@@ -393,3 +395,5 @@ MODULE_DESCRIPTION("Basic implementation of RFC 826");
 MODULE_LICENSE("GPL");
 
 MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
+
+#endif
