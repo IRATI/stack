@@ -24,8 +24,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifdef RINA_ARP
-
 #include <linux/module.h>
 #include <linux/types.h>
 #include <linux/kernel.h>
@@ -34,6 +32,7 @@
 #include <linux/slab.h>
 #include <linux/list.h>
 #include <linux/if_ether.h>
+
 #include "rina-arp.h"
 
 #define RINA_TEST 0
@@ -60,11 +59,11 @@ struct arp_entries {
 	struct list_head perm_entries;
 };
 
-static struct arp_data {
-	struct list_head list;
-	struct list_head arp_entries;
-	__be16 ar_pro;
-	struct net_device *dev;
+struct arp_data {
+	struct list_head    list;
+	struct list_head    arp_entries;
+	__be16              ar_pro;
+	struct net_device * dev;
 };
 
 /* 
@@ -91,65 +90,49 @@ struct arp_hdr {
  
 };
 
-
-int rinarp_register_netaddr(__be16 ar_pro, 
-			    struct net_device *dev, 
-			    unsigned char *netw_addr)
-{
-
-
-}
+int rinarp_register_netaddr(__be16              ar_pro, 
+			    struct net_device * dev, 
+			    unsigned char *     netw_addr)
+{ return -1; }
 EXPORT_SYMBOL(rinarp_register_netaddr);
 
-int rinarp_unregister_netaddr(__be16 ar_pro, 
-			      struct net_device *dev, 
-			      unsigned char *netw_addr)
-{
-
-
-}
+int rinarp_unregister_netaddr(__be16              ar_pro, 
+			      struct net_device * dev, 
+			      unsigned char *     netw_addr)
+{ return -1; }
 EXPORT_SYMBOL(rinarp_unregister_netaddr);
 
-unsigned char * rinarp_lookup_netaddr(__be16 ar_pro, 
-				      struct net_device *dev, 
-				      unsigned char *netw_addr)
-{
-
-
-}
+unsigned char * rinarp_lookup_netaddr(__be16              ar_pro, 
+				      struct net_device * dev, 
+				      unsigned char *     netw_addr)
+{ return NULL; }
 EXPORT_SYMBOL(rinarp_lookup_netaddr);
 
-int rinarp_remove_reply_handler(struct arp_reply_ops *ops)
-{
-
-
-}
+int rinarp_remove_reply_handler(struct arp_reply_ops * ops)
+{ return -1; }
 EXPORT_SYMBOL(rinarp_remove_reply_handler);
 
+#if RINA_TEST
 /* Taken from include/linux/if_arp.h */
-static struct arp_hdr *arphdr(const struct sk_buff *skb)
-{
-        return (struct arp_hdr *)skb_network_header(skb);
-}
-
+static struct arp_hdr * arphdr(const struct sk_buff * skb)
+{ return (struct arp_hdr *)skb_network_header(skb); }
 
 /*
  *	Create an arp packet. If (dest_hw == NULL), we create a broadcast
  *	message.
  *      Taken from net/ipv4/arp.c
  */
-#ifdef RINA_TEST
 static struct sk_buff *arp_create(int type, int ptype, __be32 dest_ip,
-			   struct net_device *dev, __be32 src_ip,
-			   const unsigned char *dest_hw,
-			   const unsigned char *src_hw,
-			   const unsigned char *target_hw)
+                                  struct net_device *dev, __be32 src_ip,
+                                  const unsigned char *dest_hw,
+                                  const unsigned char *src_hw,
+                                  const unsigned char *target_hw)
 {
-	struct sk_buff *skb;
-	struct arphdr *arp;
-	unsigned char *arp_ptr;
-	int hlen = LL_RESERVED_SPACE(dev);
-	int tlen = dev->needed_tailroom;
+	struct sk_buff * skb;
+	struct arphdr *  arp;
+	unsigned char *  arp_ptr;
+	int              hlen = LL_RESERVED_SPACE(dev);
+	int              tlen = dev->needed_tailroom;
 
 	/*
 	 *	Allocate a buffer
@@ -194,7 +177,7 @@ static struct sk_buff *arp_create(int type, int ptype, __be32 dest_ip,
 
 	arp->ar_hln = dev->addr_len;
 	arp->ar_pln = 4;
-	arp->ar_op = htons(type);
+	arp->ar_op  = htons(type);
 
 	arp_ptr = (unsigned char *)(arp + 1);
 
@@ -221,13 +204,12 @@ out:
 }
 #endif
 
-
 /*
  *	Create and send an arp packet.
  *      Taken from net/ipv4/arp.c
  *      Original name arp_send
  */
-#ifdef RINA_TEST
+#if RINA_TEST
 int rinarp_send_request(struct arp_reply_ops *ops)
 {
 	struct sk_buff *skb;
@@ -254,7 +236,7 @@ EXPORT_SYMBOL(rinarp_send_request);
  *	Process an arp request.
  *      Taken from net/ipv4/arp.c
  */
-#ifdef RINA_TEST
+#if RINA_TEST
 static int arp_process(struct sk_buff *skb)
 {
 	struct net_device *dev = skb->dev;
@@ -287,7 +269,6 @@ static int arp_process(struct sk_buff *skb)
 	if (arp->ar_pro != htons(ETH_P_RINA) ||
 	    htons(dev_type) != arp->ar_hrd)
 		goto out;
-
 
 	switch (dev_type) {
 	/* 
@@ -402,8 +383,9 @@ out:
 static int arp_rcv(struct sk_buff *skb, struct net_device *dev,
 		   struct packet_type *pt, struct net_device *orig_dev)
 {
-	const struct arphdr *arp;
-	int total_length;
+#if RINA_TEST
+	const struct arphdr * arp;
+	int                   total_length;
 
 	if (dev->flags & IFF_NOARP ||
 	    skb->pkt_type == PACKET_OTHERHOST ||
@@ -437,6 +419,9 @@ freeskb:
 	kfree_skb(skb);
 out_of_mem:
 	return 0;
+#else
+        return -1;
+#endif
 }
 
 /* Taken from net/ipv4/arp.c */
@@ -444,7 +429,6 @@ static struct packet_type arp_packet_type __read_mostly = {
 	.type =	cpu_to_be16(ETH_P_ARP),
 	.func =	arp_rcv,
 };
-
 
 static int __init mod_init(void)
 {
@@ -454,9 +438,7 @@ static int __init mod_init(void)
 }
 
 static void __exit mod_exit(void)
-{
-	
-}
+{ }
 
 module_init(mod_init);
 module_exit(mod_exit);
@@ -466,5 +448,3 @@ MODULE_DESCRIPTION("Basic implementation of RFC 826");
 MODULE_LICENSE("GPL");
 
 MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
-
-#endif
