@@ -6,6 +6,8 @@
  *
  *    Code reused from:
  *      net/ipv4/arp.c
+ *      include/linux/if_arp.h
+ *      include/uapi/linux/if_arp.h
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,60 +26,119 @@
 
 #ifdef RINA_ARP
 
+#include <linux/module.h>
+#include <linux/types.h>
+#include <linux/kernel.h>
+#include <linux/skbuff.h>
+#include <linux/netdevice.h>
+#include <linux/slab.h>
+#include <linux/list.h>
+#include <linux/if_ether.h>
 #include "rina-arp.h"
 
+#define RINA_TEST 0
+
+/* Taken from include/uapi/linux/if_arp.h */
+#define RINARP_ETHER     1              /* Ethernet    */
+
+#define RINARP_REQUEST   1              /* ARP request */
+#define RINARP_REPLY     2              /* ARP reply   */
+
+struct network_mapping {
+        struct list_head list;
+
+        /* The network address advertised */
+        unsigned char netaddr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
+	
+	/* Hardware address */
+	unsigned char hw_addr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
+};
+
+struct arp_entries {
+	struct list_head list;
+	struct list_head temp_entries;
+	struct list_head perm_entries;
+};
+
+static struct arp_data {
+	struct list_head list;
+	struct list_head arp_entries;
+	__be16 ar_pro;
+	struct net_device *dev;
+};
+
+/* 
+ *  Taken from include/uapi/linux/if_arp.h 
+ *  Original name: struct arphdr
+ */
+struct arp_hdr {
+	__be16          ar_hrd;         /* format of hardware address   */
+	__be16          ar_pro;         /* format of protocol address   */
+	unsigned char   ar_hln;         /* length of hardware address   */
+	unsigned char   ar_pln;         /* length of protocol address   */
+	__be16          ar_op;          /* ARP opcode (command)         */
+ 
+#if 0
+	/*
+	 *      This bit is variable sized however...
+	 *      This is an example
+	 */
+	unsigned char    ar_sha[ETH_ALEN];     /* sender hardware address   */
+	unsigned char    ar_sip[4];            /* sender IP address         */
+	unsigned char    ar_tha[ETH_ALEN];     /* target hardware address   */
+	unsigned char    ar_tip[4];            /* target IP address         */
+#endif
+ 
+};
 
 
-int add_arp_reply_handler(struct arp_reply_ops *ops)
+int rinarp_register_netaddr(__be16 ar_pro, 
+			    struct net_device *dev, 
+			    unsigned char *netw_addr)
 {
 
 
-
 }
-EXPORT_SYMBOL(add_arp_reply_handler);
+EXPORT_SYMBOL(rinarp_register_netaddr);
 
-int remove_arp_reply_handler(struct arp_reply_ops *ops)
+int rinarp_unregister_netaddr(__be16 ar_pro, 
+			      struct net_device *dev, 
+			      unsigned char *netw_addr)
 {
 
 
-
 }
-EXPORT_SYMBOL(remove_arp_reply_handler);
+EXPORT_SYMBOL(rinarp_unregister_netaddr);
 
-int register_network_address(__be16 ar_pro, 
-			     struct net_device *dev, 
-			     unsigned char *netw_addr)
+unsigned char * rinarp_lookup_netaddr(__be16 ar_pro, 
+				      struct net_device *dev, 
+				      unsigned char *netw_addr)
 {
 
 
-
 }
-EXPORT_SYMBOL(register_network_address);
+EXPORT_SYMBOL(rinarp_lookup_netaddr);
 
-int unregister_network_address(__be16 ar_pro, 
-			       struct net_device *dev, 
-			       unsigned char *netw_addr)
+int rinarp_remove_reply_handler(struct arp_reply_ops *ops)
 {
 
 
-
 }
-EXPORT_SYMBOL(unregister_network_address);
+EXPORT_SYMBOL(rinarp_remove_reply_handler);
 
-unsigned char * lookup_network_address(__be16 ar_pro, 
-				       struct net_device *dev, 
-				       unsigned char *netw_addr)
+/* Taken from include/linux/if_arp.h */
+static struct arp_hdr *arphdr(const struct sk_buff *skb)
 {
-
-
-
+        return (struct arp_hdr *)skb_network_header(skb);
 }
-EXPORT_SYMBOL(lookup_network_address);
+
 
 /*
  *	Create an arp packet. If (dest_hw == NULL), we create a broadcast
  *	message.
+ *      Taken from net/ipv4/arp.c
  */
+#ifdef RINA_TEST
 static struct sk_buff *arp_create(int type, int ptype, __be32 dest_ip,
 			   struct net_device *dev, __be32 src_ip,
 			   const unsigned char *dest_hw,
@@ -158,15 +219,16 @@ out:
 	kfree_skb(skb);
 	return NULL;
 }
+#endif
 
 
 /*
  *	Create and send an arp packet.
+ *      Taken from net/ipv4/arp.c
+ *      Original name arp_send
  */
-void arp_send_request(__be16 ar_pro, 
-		      struct net_device *dev, 
-		      unsigned char *src_netw_addr,
-		      unsigned char *dest_netw_addr)
+#ifdef RINA_TEST
+int rinarp_send_request(struct arp_reply_ops *ops)
 {
 	struct sk_buff *skb;
 
@@ -183,13 +245,16 @@ void arp_send_request(__be16 ar_pro,
 		return;
 
 	NF_HOOK(NFPROTO_ARP, NF_ARP_OUT, skb, NULL, skb->dev, dev_queue_xmit);
+
 }
-EXPORT_SYMBOL(arp_send_request);
+EXPORT_SYMBOL(rinarp_send_request);
+#endif
 
 /*
  *	Process an arp request.
+ *      Taken from net/ipv4/arp.c
  */
-
+#ifdef RINA_TEST
 static int arp_process(struct sk_buff *skb)
 {
 	struct net_device *dev = skb->dev;
@@ -230,7 +295,7 @@ static int arp_process(struct sk_buff *skb)
 	 * Other could be added
 	 */
 	case ARPHRD_ETHER:
-		if ((arp->ar_hrd != htons(ARPHRD_ETHER)
+		if ((arp->ar_hrd != htons(ARPHRD_ETHER))
 			goto out;
 		break;
 	}
@@ -331,7 +396,9 @@ out:
 	consume_skb(skb);
 	return 0;
 }
+#endif 
 
+/* Function taken from net/ipv4/arp.c */
 static int arp_rcv(struct sk_buff *skb, struct net_device *dev,
 		   struct packet_type *pt, struct net_device *orig_dev)
 {
@@ -372,6 +439,7 @@ out_of_mem:
 	return 0;
 }
 
+/* Taken from net/ipv4/arp.c */
 static struct packet_type arp_packet_type __read_mostly = {
 	.type =	cpu_to_be16(ETH_P_ARP),
 	.func =	arp_rcv,
