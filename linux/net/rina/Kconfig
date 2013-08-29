@@ -66,8 +66,8 @@ config RINA_PERSONALITY_DEFAULT
 	  No help for the time being
 
 config RINA_ARP
-	bool "RINA ARP implementation support"
-	default y
+	tristate "RINA ARP implementation support"
+	default n
 	help
 	  No help for the time being
 
