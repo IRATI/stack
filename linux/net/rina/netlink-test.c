@@ -412,7 +412,7 @@ void test_formatters(void){
 	LOG_DBG("Netlink formatting tests started...");
 
 	//for (i=RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST; i< RINA_C_MAX; i++) {
-	for (i=RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST; i< RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST; i++) {
+	for (i=RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST; i< RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE; i++) {
 
 		switch(i){
         	case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST:
