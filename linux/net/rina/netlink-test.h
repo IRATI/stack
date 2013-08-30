@@ -23,6 +23,7 @@
 
 #include <net/netlink.h>
 
+int test_register_echo_handler(void);
 int test_register_handler(void);
 int test_rnl_format_ipcm_alloc_flow_req_result_msg(uint_t result);
 void test_formatters(void);

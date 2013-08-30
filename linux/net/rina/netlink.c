@@ -471,6 +471,8 @@ int rina_netlink_init(void)
         }
 
 	LOG_DBG("Executing Testing functions...");
+	test_register_echo_handler();
+#if 0
 	if (test_register_handler()) {
 		return -1;
 	}
@@ -478,7 +480,7 @@ int rina_netlink_init(void)
 		return -1;
 	}
 	test_formatters();
-
+#endif
         LOG_DBG("NetLink layer initialized successfully");
 
         return 0;
