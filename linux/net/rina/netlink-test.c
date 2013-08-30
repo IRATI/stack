@@ -151,6 +151,7 @@ int test_register_echo_handler(void)
 		LOG_ERR("Could not register handler");
 		return -1;
 	}
+	LOG_DBG("test_register_echo_handler: registered handler at %p:", test_echo_dispatcher);
 	return 0;
 }
 EXPORT_SYMBOL(test_register_echo_handler);

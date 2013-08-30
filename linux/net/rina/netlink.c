@@ -46,7 +46,8 @@ static struct rina_nl_set * default_set;
 
 static struct genl_family nl_family = {
         .id      = GENL_ID_GENERATE,
-        .hdrsize = sizeof(struct rina_msg_hdr),
+        .hdrsize = 0,
+        //.hdrsize = sizeof(struct rina_msg_hdr),
         .name    = NETLINK_RINA,
         .version = 1,
         /* .maxattr = NETLINK_RINA_A_MAX, */
@@ -464,11 +465,15 @@ int rina_netlink_init(void)
         ret = genl_register_family_with_ops(&nl_family,
                                             nl_ops,
                                             ARRAY_SIZE(nl_ops));
-        if (ret < 0 /* FIXME: Should be != 0 */) {
+
+        if (ret != 0) {
                 LOG_ERR("Cannot register Netlink family and ops (error=%i), "
                         "bailing out", ret);
                 return -1;
         }
+
+	LOG_DBG("Family registered with id: %d",nl_family.id);
+	LOG_DBG("Dispatcher registed for message type 2 is at: %p",nl_ops[2].doit);
 
 	LOG_DBG("Executing Testing functions...");
 	test_register_echo_handler();
