@@ -112,11 +112,11 @@ int rinarp_remove_reply_handler(struct arp_reply_ops * ops)
 { return -1; }
 EXPORT_SYMBOL(rinarp_remove_reply_handler);
 
-#if RINA_TEST
 /* Taken from include/linux/if_arp.h */
 static struct arp_hdr * arphdr(const struct sk_buff * skb)
 { return (struct arp_hdr *)skb_network_header(skb); }
 
+#if RINA_TEST
 /*
  *	Create an arp packet. If (dest_hw == NULL), we create a broadcast
  *	message.
@@ -129,7 +129,7 @@ static struct sk_buff *arp_create(int type, int ptype, __be32 dest_ip,
                                   const unsigned char *target_hw)
 {
 	struct sk_buff * skb;
-	struct arphdr *  arp;
+	struct arp_hdr * arp;
 	unsigned char *  arp_ptr;
 	int              hlen = LL_RESERVED_SPACE(dev);
 	int              tlen = dev->needed_tailroom;
@@ -241,14 +241,13 @@ static int arp_process(struct sk_buff *skb)
 {
 	struct net_device *dev = skb->dev;
 	struct in_device *in_dev = __in_dev_get_rcu(dev);
-	struct arphdr *arp;
-	unsigned char *arp_ptr;
+	struct arp_hdr *arp;
+	unsigned char  *arp_ptr;
 
 	unsigned char *sha;
-	__be32 sip, tip;
+	unsigned char s_netaddr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
+	unsigned char d_netaddr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
 	u16 dev_type = dev->type;
-	int addr_type;
-	struct neighbour *n;
 	struct net *net = dev_net(dev);
 
 	/* arp_rcv below verifies the ARP header and verifies the device
@@ -258,7 +257,7 @@ static int arp_process(struct sk_buff *skb)
 	if (in_dev == NULL)
 		goto out;
 
-	arp = arp_hdr(skb);
+	arp = arphdr(skb);
 
 	/* 
 	 * Check if we know the protocol specified
@@ -276,29 +275,29 @@ static int arp_process(struct sk_buff *skb)
 	 * Other could be added
 	 */
 	case ARPHRD_ETHER:
-		if ((arp->ar_hrd != htons(ARPHRD_ETHER))
+		if ((arp->ar_hrd != htons(RINARP_ETHER))
 			goto out;
 		break;
 	}
 
 	/* Understand only these message types */
-	if (arp->ar_op != htons(ARPOP_REPLY) &&
-	    arp->ar_op != htons(ARPOP_REQUEST))
+	if (arp->ar_op != htons(RINARP_REPLY) &&
+	    arp->ar_op != htons(RINARP_REQUEST))
 		goto out;
 
 /*
- *	Extract protocol addresses
+ *	Extract network addresses
  */
 	arp_ptr = (unsigned char *)(arp + 1);
 	sha	= arp_ptr;
 	arp_ptr += dev->addr_len;
-	memcpy(&sip, arp_ptr, arp->ar_pln);
+	memcpy(&s_netaddr, arp_ptr, arp->ar_pln);
 	arp_ptr += arp->ar_pln;
 	switch (dev_type) {
 	default:
 		arp_ptr += dev->addr_len;
 	}
-	memcpy(&tip, arp_ptr, arp->ar_pln);
+	memcpy(&d_netaddr, arp_ptr, arp->ar_pln);
 
 /*
  *  Process entry. The idea here is we want to send a reply if it is a
@@ -310,8 +309,7 @@ static int arp_process(struct sk_buff *skb)
  *  about those for us. We add the requester to the arp cache.
  */
 
-	if (arp->ar_op == htons(ARPOP_REQUEST) &&
-	    ip_route_input_noref(skb, tip, sip, 0, dev) == 0) {
+	if (arp->ar_op == htons(ARPOP_REQUEST)) {
 
 		rt = skb_rtable(skb);
 		addr_type = rt->rt_type;
@@ -339,39 +337,7 @@ static int arp_process(struct sk_buff *skb)
 
 	n = __neigh_lookup(&arp_tbl, &sip, dev, 0);
 
-	if (IN_DEV_ARP_ACCEPT(in_dev)) {
-		/* Unsolicited ARP is not accepted by default.
-		   It is possible, that this option should be enabled for some
-		   devices (strip is candidate)
-		 */
-		if (n == NULL &&
-		    (arp->ar_op == htons(ARPOP_REPLY) ||
-		     (arp->ar_op == htons(ARPOP_REQUEST) && tip == sip)) &&
-		    inet_addr_type(net, sip) == RTN_UNICAST)
-			n = __neigh_lookup(&arp_tbl, &sip, dev, 1);
-	}
 
-	if (n) {
-		int state = NUD_REACHABLE;
-		int override;
-
-		/* If several different ARP replies follows back-to-back,
-		   use the FIRST one. It is possible, if several proxy
-		   agents are active. Taking the first reply prevents
-		   arp trashing and chooses the fastest router.
-		 */
-		override = time_after(jiffies, n->updated + n->parms->locktime);
-
-		/* Broadcast replies and request packets
-		   do not assert neighbour reachability.
-		 */
-		if (arp->ar_op != htons(ARPOP_REPLY) ||
-		    skb->pkt_type != PACKET_HOST)
-			state = NUD_STALE;
-		neigh_update(n, sha, state,
-			     override ? NEIGH_UPDATE_F_OVERRIDE : 0);
-		neigh_release(n);
-	}
 
 out:
 	consume_skb(skb);
@@ -383,9 +349,9 @@ out:
 static int arp_rcv(struct sk_buff *skb, struct net_device *dev,
 		   struct packet_type *pt, struct net_device *orig_dev)
 {
-#if RINA_TEST
-	const struct arphdr * arp;
-	int                   total_length;
+
+	const struct arp_hdr * arp;
+	int                    total_length;
 
 	if (dev->flags & IFF_NOARP ||
 	    skb->pkt_type == PACKET_OTHERHOST ||
@@ -397,31 +363,33 @@ static int arp_rcv(struct sk_buff *skb, struct net_device *dev,
 		goto out_of_mem;
 
 	/* ARP header, without 2 device and 2 network addresses.  */
-	if (!pskb_may_pull(skb, sizeof(struct arphdr)))
+	if (!pskb_may_pull(skb, sizeof(struct arp_hdr)))
 		goto freeskb;
 
-	arp = arp_hdr(skb);
+	arp = arphdr(skb);
 	if (arp->ar_hln != dev->addr_len)
 		goto freeskb;
 
-	total_length = sizeof(struct arphdr) 
+	total_length = sizeof(struct arp_hdr) 
 		+ (dev->addr_len + arp->ar_pln) * 2;
 
         /* ARP header, with 2 device and 2 network addresses.  */
 	if (!pskb_may_pull(skb, total_length))
 		goto freeskb;
-	
+#if RINA_TEST	
 	arp_process(skb);
 
 	return 0;
+#else
+
+	return -1;
+#endif
 
 freeskb:
 	kfree_skb(skb);
 out_of_mem:
 	return 0;
-#else
-        return -1;
-#endif
+
 }
 
 /* Taken from net/ipv4/arp.c */
