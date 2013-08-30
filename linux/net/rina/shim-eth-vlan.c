@@ -63,8 +63,8 @@ enum port_id_state {
 /* Hold the information related to one flow*/
 struct shim_eth_flow {
 	struct list_head   list;
-        struct name *             source;
-        struct name *             dest;
+        struct name *      source;
+        struct name *      dest;
         port_id_t          port_id;
         enum port_id_state port_id_state;
 
