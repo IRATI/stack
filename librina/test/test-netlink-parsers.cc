@@ -413,7 +413,6 @@ int testAppDeallocateFlowResponseMessage() {
 
 	AppDeallocateFlowResponseMessage message;
 	message.setResult(0);
-	message.setErrorDescription("Error description");
 	message.setApplicationName(applicationName);
 
 	struct nl_msg* netlinkMessage;
@@ -445,11 +444,6 @@ int testAppDeallocateFlowResponseMessage() {
 		std::cout << "Result on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
-	} else if (message.getErrorDescription().compare(
-			recoveredMessage->getErrorDescription()) != 0) {
-		std::cout << "Error description on original and recovered "
-				<< "messages are different\n";
-		returnValue = -1;
 	} else if (message.getApplicationName()
 			!= recoveredMessage->getApplicationName()) {
 		std::cout << "Application name on original and recovered messages"
@@ -479,7 +473,6 @@ int testAppFlowDeallocatedNotificationMessage() {
 	AppFlowDeallocatedNotificationMessage message;;
 	message.setPortId(47);
 	message.setCode(7);
-	message.setReason("Reason description");
 	message.setApplicationName(applicationName);
 
 	struct nl_msg* netlinkMessage;
@@ -514,10 +507,6 @@ int testAppFlowDeallocatedNotificationMessage() {
 		returnValue = -1;
 	} else if (message.getCode() != recoveredMessage->getCode()) {
 		std::cout << "Code on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	} else if (message.getReason() != recoveredMessage->getReason()) {
-		std::cout << "Reason on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	} else if (message.getApplicationName()
@@ -640,7 +629,6 @@ int testAppRegisterApplicationResponseMessage() {
 			new AppRegisterApplicationResponseMessage();
 
 	message->setResult(1);
-	message->setErrorDescription("Error description");
 	message->setDifName(*difName);
 	message->setApplicationName(*applicationName);
 
@@ -673,11 +661,6 @@ int testAppRegisterApplicationResponseMessage() {
 		returnValue = -1;
 	} else if (message->getResult() != recoveredMessage->getResult()) {
 		std::cout << "Result on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	} else if (message->getErrorDescription()
-			!= recoveredMessage->getErrorDescription()) {
-		std::cout << "Error description on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	} else if (message->getApplicationName()
@@ -790,7 +773,6 @@ int testAppUnregisterApplicationResponseMessage() {
 			new AppUnregisterApplicationResponseMessage();
 
 	message->setResult(1);
-	message->setErrorDescription("Error description");
 	message->setApplicationName(*applicationName);
 
 
@@ -826,11 +808,6 @@ int testAppUnregisterApplicationResponseMessage() {
 		returnValue = -1;
 	} else if (message->getResult() != recoveredMessage->getResult()) {
 		std::cout << "Result on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	} else if (message->getErrorDescription()
-			!= recoveredMessage->getErrorDescription()) {
-		std::cout << "Error description on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	}
@@ -912,7 +889,6 @@ int testIpcmQueryRIBResponseMessage() {
 
 	IpcmDIFQueryRIBResponseMessage message;
 	message.setResult(0);
-	message.setErrorDescription("ok");
 	RIBObject * ribObject = new RIBObject();
 	ribObject->setClazz("/test/clazz1");
 	ribObject->setName("/test/name1");
@@ -953,11 +929,6 @@ int testIpcmQueryRIBResponseMessage() {
 		returnValue = -1;
 	} else if (message.getResult() != recoveredMessage->getResult()) {
 		std::cout << "Result on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	} else if (message.getErrorDescription().compare(
-			recoveredMessage->getErrorDescription())!=0) {
-		std::cout << "Error description on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	} else if (message.getRIBObjects().size() !=
@@ -1112,7 +1083,6 @@ int testIpcmRegisterApplicationResponseMessage() {
 			new IpcmRegisterApplicationResponseMessage();
 
 	message->setResult(1);
-	message->setErrorDescription("Error description");
 	message->setDifName(*difName);
 	message->setApplicationName(*applicationName);
 
@@ -1145,11 +1115,6 @@ int testIpcmRegisterApplicationResponseMessage() {
 		returnValue = -1;
 	} else if (message->getResult() != recoveredMessage->getResult()) {
 		std::cout << "Result on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	} else if (message->getErrorDescription()
-			!= recoveredMessage->getErrorDescription()) {
-		std::cout << "Error description on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	} else if (message->getApplicationName()
@@ -1243,7 +1208,6 @@ int testIpcmUnregisterApplicationResponseMessage() {
 	IpcmUnregisterApplicationResponseMessage message;
 
 	message.setResult(1);
-	message.setErrorDescription("Error description");
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -1271,11 +1235,6 @@ int testIpcmUnregisterApplicationResponseMessage() {
 		returnValue = -1;
 	} else if (message.getResult() != recoveredMessage->getResult()) {
 		std::cout << "Result on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	} else if (message.getErrorDescription().compare(
-			recoveredMessage->getErrorDescription()) != 0) {
-		std::cout << "Error description on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	}
@@ -1362,7 +1321,6 @@ int testIpcmAssignToDIFResponseMessage() {
 	IpcmAssignToDIFResponseMessage * message =
 			new IpcmAssignToDIFResponseMessage();
 	message->setResult(-25);
-	message->setErrorDescription("Something went wrong, that's life");
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -1391,11 +1349,6 @@ int testIpcmAssignToDIFResponseMessage() {
 		returnValue = -1;
 	} else if (message->getResult() != recoveredMessage->getResult()) {
 		std::cout << "Result on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	} else if (message->getErrorDescription().compare(
-			recoveredMessage->getErrorDescription()) != 0) {
-		std::cout << "Error description on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	}
@@ -1500,7 +1453,6 @@ int testIpcmAllocateFlowRequestResultMessage() {
 
 	IpcmAllocateFlowRequestResultMessage message;
 	message.setResult(-25);
-	message.setErrorDescription("Something went wrong, that's life");
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -1528,11 +1480,6 @@ int testIpcmAllocateFlowRequestResultMessage() {
 		returnValue = -1;
 	} else if (message.getResult() != recoveredMessage->getResult()) {
 		std::cout << "Result on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	} else if (message.getErrorDescription().compare(
-			recoveredMessage->getErrorDescription()) != 0) {
-		std::cout << "Error description on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	}
@@ -1635,8 +1582,7 @@ int testIpcmAllocateFlowResponseMessage() {
 	int returnValue = 0;
 
 	IpcmAllocateFlowResponseMessage message;
-	message.setAccept(true);
-	message.setDenyReason("No, we cannot!");
+	message.setResult(0);
 	message.setNotifySource(true);
 	message.setPortId(345);
 
@@ -1665,13 +1611,9 @@ int testIpcmAllocateFlowResponseMessage() {
 				<< "\n";
 		returnValue = -1;
 
-	} else if (message.isAccept() != recoveredMessage->isAccept()) {
-		std::cout << "Accept flag on original and recovered messages"
+	} else if (message.getResult() != recoveredMessage->getResult()) {
+		std::cout << "Result on original and recovered messages"
 				<< " are different\n";
-		returnValue = -1;
-	} else if (message.getDenyReason() != recoveredMessage->getDenyReason()) {
-		std::cout << "Deny reason on original and recovered "
-				<< "messages are different\n";
 		returnValue = -1;
 	} else if (message.isNotifySource()
 			!= recoveredMessage->isNotifySource()) {
@@ -1746,7 +1688,6 @@ int testIpcmDeallocateFlowResponseMessage() {
 
 	IpcmDeallocateFlowResponseMessage message;
 	message.setResult(0);
-	message.setErrorDescription("Error description");
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -1777,11 +1718,6 @@ int testIpcmDeallocateFlowResponseMessage() {
 		std::cout << "Result on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
-	} else if (message.getErrorDescription().compare(
-			recoveredMessage->getErrorDescription()) != 0) {
-		std::cout << "Error description on original and recovered "
-				<< "messages are different\n";
-		returnValue = -1;
 	}
 
 	if (returnValue == 0) {
@@ -1800,7 +1736,6 @@ int testIpcmFlowDeallocatedNotificationMessage() {
 	IpcmFlowDeallocatedNotificationMessage message;;
 	message.setPortId(47);
 	message.setCode(7);
-	message.setReason("Reason description");
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -1834,10 +1769,6 @@ int testIpcmFlowDeallocatedNotificationMessage() {
 		returnValue = -1;
 	} else if (message.getCode() != recoveredMessage->getCode()) {
 		std::cout << "Code on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	} else if (message.getReason() != recoveredMessage->getReason()) {
-		std::cout << "Reason on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	}
@@ -2001,7 +1932,6 @@ int testAppGetDIFPropertiesResponseMessage() {
 
 	AppGetDIFPropertiesResponseMessage message;
 	message.setResult(0);
-	message.setErrorDescription("ok");
 	message.setApplicationName(appName);
 	DIFProperties * difProperties = new DIFProperties(difName, 9000);
 	message.addDIFProperty(*difProperties);
@@ -2036,11 +1966,6 @@ int testAppGetDIFPropertiesResponseMessage() {
 		returnValue = -1;
 	} else if (message.getResult() != recoveredMessage->getResult()) {
 		std::cout << "Result on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	} else if (message.getErrorDescription().compare(
-			recoveredMessage->getErrorDescription())!=0) {
-		std::cout << "Error description on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	} else if (message.getDIFProperties().size() !=

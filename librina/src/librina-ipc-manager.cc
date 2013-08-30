@@ -120,10 +120,9 @@ void IPCProcess::assignToDIF(
 	}
 
 	if (assignToDIFResponse->getResult() < 0){
-		std::string reason = IPCProcess::error_assigning_to_dif + " " +
-				assignToDIFResponse->getErrorDescription();
 		delete assignToDIFResponse;
-		throw AssignToDIFException(reason);
+		throw AssignToDIFException(
+				IPCProcess::error_assigning_to_dif);
 	}
 
 	LOG_DBG("Assigned IPC Process %d to DIF %s", id,
@@ -225,10 +224,9 @@ throw (IpcmRegisterApplicationException) {
 	}
 
 	if (registerAppResponse->getResult() < 0){
-		std::string reason = IPCProcess::error_registering_app + " " +
-				registerAppResponse->getErrorDescription();
 		delete registerAppResponse;
-		throw IpcmRegisterApplicationException(reason);
+		throw IpcmRegisterApplicationException(
+				IPCProcess::error_registering_app);
 	}
 
 	LOG_DBG("Registered app %s to DIF %s",
@@ -263,10 +261,9 @@ throw (IpcmUnregisterApplicationException) {
 	}
 
 	if (unregisterAppResponse->getResult() < 0){
-		std::string reason = IPCProcess::error_unregistering_app + " " +
-				unregisterAppResponse->getErrorDescription();
 		delete unregisterAppResponse;
-		throw IpcmUnregisterApplicationException(reason);
+		throw IpcmUnregisterApplicationException(
+				IPCProcess::error_unregistering_app);
 	}
 	LOG_DBG("Unregistered app %s from DIF %s",
 			applicationName.getProcessName().c_str(),
@@ -305,10 +302,9 @@ throw (AllocateFlowException) {
 	}
 
 	if (allocateFlowResponse->getResult() < 0){
-		std::string reason = IPCProcess::error_allocating_flow + " " +
-				allocateFlowResponse->getErrorDescription();
 		delete allocateFlowResponse;
-		throw AllocateFlowException(reason);
+		throw AllocateFlowException(
+				IPCProcess::error_allocating_flow);
 	}
 
 	LOG_DBG("Allocated flow from %s to %s with portId %d",
@@ -321,14 +317,13 @@ throw (AllocateFlowException) {
 }
 
 void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
-		bool accept, const std::string& denyReason)
+		int result)
 		throw(AllocateFlowException){
 #if STUB_API
 	//Do nothing
 #else
 	IpcmAllocateFlowResponseMessage responseMessage;
-	responseMessage.setAccept(accept);
-	responseMessage.setDenyReason(denyReason);
+	responseMessage.setResult(result);
 	responseMessage.setPortId(flowRequest.getPortId());
 	responseMessage.setDestIpcProcessId(id);
 	responseMessage.setDestPortId(portId);
@@ -366,10 +361,9 @@ void IPCProcess::deallocateFlow(int portId)
 	}
 
 	if (deallocateFlowResponse->getResult() < 0){
-		std::string reason = IPCProcess::error_deallocating_flow + " " +
-				deallocateFlowResponse->getErrorDescription();
 		delete deallocateFlowResponse;
-		throw IpcmDeallocateFlowException(reason);
+		throw IpcmDeallocateFlowException(
+				IPCProcess::error_deallocating_flow);
 	}
 
 	LOG_DBG("Deallocated flow from to with portId %d",
@@ -409,10 +403,9 @@ const std::list<RIBObject> IPCProcess::queryRIB(const std::string& objectClass,
 	}
 
 	if (queryRIBResponse->getResult() < 0){
-		std::string reason = IPCProcess::error_querying_rib + " " +
-				queryRIBResponse->getErrorDescription();
 		delete queryRIBResponse;
-		throw QueryRIBException(reason);
+		throw QueryRIBException(
+				IPCProcess::error_querying_rib);
 	}
 
 	LOG_DBG("Queried RIB of IPC Process %d; got %d objects",
@@ -540,8 +533,7 @@ Singleton<IPCProcessFactory> ipcProcessFactory;
 
 void ApplicationManager::applicationRegistered(
 		const ApplicationRegistrationRequestEvent& event,
-		const ApplicationProcessNamingInformation& difName, int result,
-		const std::string& errorDescription)
+		const ApplicationProcessNamingInformation& difName, int result)
 			throw (NotifyApplicationRegisteredException) {
 	LOG_DBG("ApplicationManager::applicationRegistered called");
 
@@ -552,7 +544,6 @@ void ApplicationManager::applicationRegistered(
 	responseMessage.setApplicationName(event.getApplicationName());
 	responseMessage.setDifName(difName);
 	responseMessage.setResult(result);
-	responseMessage.setErrorDescription(errorDescription);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
@@ -565,7 +556,7 @@ void ApplicationManager::applicationRegistered(
 
 void ApplicationManager::applicationUnregistered(
 		const ApplicationUnregistrationRequestEvent& event,
-		int result, const std::string& errorDescription)
+		int result)
 			throw (NotifyApplicationUnregisteredException) {
 	LOG_DBG("ApplicationManager::applicationUnregistered called");
 
@@ -575,7 +566,6 @@ void ApplicationManager::applicationUnregistered(
 	AppUnregisterApplicationResponseMessage responseMessage;
 	responseMessage.setApplicationName(event.getApplicationName());
 	responseMessage.setResult(result);
-	responseMessage.setErrorDescription(errorDescription);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
@@ -586,8 +576,8 @@ void ApplicationManager::applicationUnregistered(
 #endif
 }
 
-void ApplicationManager::flowAllocated(const FlowRequestEvent& flowRequestEvent,
-		std::string errorDescription) throw (NotifyFlowAllocatedException) {
+void ApplicationManager::flowAllocated(const FlowRequestEvent& flowRequestEvent)
+throw (NotifyFlowAllocatedException) {
 	LOG_DBG("ApplicationManager::flowAllocated called");
 
 #if STUB_API
@@ -595,7 +585,6 @@ void ApplicationManager::flowAllocated(const FlowRequestEvent& flowRequestEvent,
 #else
 	AppAllocateFlowRequestResultMessage responseMessage;
 	responseMessage.setPortId(flowRequestEvent.getPortId());
-	responseMessage.setErrorDescription(errorDescription);
 	responseMessage.setSourceAppName(flowRequestEvent.getLocalApplicationName());
 	responseMessage.setDifName(flowRequestEvent.getDIFName());
 	responseMessage.setSequenceNumber(flowRequestEvent.getSequenceNumber());
@@ -651,8 +640,7 @@ void ApplicationManager::flowRequestArrived(
 }
 
 void ApplicationManager::flowDeallocated(
-		const FlowDeallocateRequestEvent& event,
-			int result, const std::string& errorDescription)
+		const FlowDeallocateRequestEvent& event, int result)
 		throw (NotifyFlowDeallocatedException){
 	LOG_DBG("ApplicationManager::flowAllocated called");
 
@@ -661,7 +649,6 @@ void ApplicationManager::flowDeallocated(
 #else
 	AppDeallocateFlowResponseMessage responseMessage;
 	responseMessage.setResult(result);
-	responseMessage.setErrorDescription(errorDescription);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
@@ -674,7 +661,6 @@ void ApplicationManager::flowDeallocated(
 
 void ApplicationManager::flowDeallocatedRemotely(
 		int portId, int code,
-		const std::string& reason,
 		const ApplicationProcessNamingInformation& appName)
 	throw (NotifyFlowDeallocatedException){
 	LOG_DBG("ApplicationManager::flowDeallocatedRemotely called");
@@ -684,7 +670,6 @@ void ApplicationManager::flowDeallocatedRemotely(
 	AppFlowDeallocatedNotificationMessage message;
 	message.setPortId(portId);
 	message.setCode(code);
-	message.setReason(reason);
 	message.setApplicationName(appName);
 	message.setNotificationMessage(true);
 	try{
@@ -697,15 +682,13 @@ void ApplicationManager::flowDeallocatedRemotely(
 
 void ApplicationManager::getDIFPropertiesResponse(
 		const GetDIFPropertiesRequestEvent &event,
-			int result, const std::string& errorDescription,
-			const std::list<DIFProperties>& difProperties)
+			int result, const std::list<DIFProperties>& difProperties)
 			throw (GetDIFPropertiesResponseException){
 #if STUB_API
 	//Do nothing
 #else
 	AppGetDIFPropertiesResponseMessage responseMessage;
 	responseMessage.setResult(result);
-	responseMessage.setErrorDescription(errorDescription);
 	responseMessage.setApplicationName(event.getApplicationName());
 	responseMessage.setDIFProperties(difProperties);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());

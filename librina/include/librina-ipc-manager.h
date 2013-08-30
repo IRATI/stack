@@ -457,12 +457,12 @@ public:
 	 * it has been accepted or denied by the application). If it has been
 	 * accepted, communicate the portId to the IPC Process
 	 * @param flowRequest
-	 * @param accept
-	 * @param denyReason
+	 * @param result 0 if the request is accepted, negative number indicating error
+	 * otherwise
 	 * @throws AllocateFlowException if something goes wrong
 	 */
 	void allocateFlowResponse(const FlowRequestEvent& flowRequest,
-			bool accept, const std::string& denyReason)
+			int result)
 		throw(AllocateFlowException);
 
 	/**
@@ -566,27 +566,22 @@ public:
 	 * Invoked by the IPC Manager to notify an application about the  result of
 	 * the registration in a DIF operation.
 	 *
-	 * @param sequenceNumber identifies the request whose reply this operation
-	 * is providing
 	 * @param response The result of the registration operation
 	 * @throws NotifyApplicationRegisteredException If an error occurs during the operation
 	 */
 	void applicationRegistered(const ApplicationRegistrationRequestEvent & event,
-			const ApplicationProcessNamingInformation& difName, int result,
-			const std::string& errorDescription)
+			const ApplicationProcessNamingInformation& difName, int result)
 				throw (NotifyApplicationRegisteredException);
 
 	/**
 	 * Invoked by the IPC Manager to notify an application about the  result of
 	 * the unregistration in a DIF operation.
 	 *
-	 * @param transactionId identifies the request whose reply this operation
-	 * is providing
 	 * @param response The result of the unregistration operation
 	 * @throws NotifyApplicationUnregisteredException If an error occurs during the operation
 	 */
 	void applicationUnregistered(const ApplicationUnregistrationRequestEvent & event,
-			int result, const std::string& errorDescription)
+			int result)
 				throw (NotifyApplicationUnregisteredException);
 
 	/**
@@ -595,11 +590,10 @@ public:
 	 *
 	 * @param flowRequestEvent Object containing information about the flow
 	 * request
-	 * @param errorDescription An optional string further describing the result
 	 * @throws NotifyFlowAllocatedException If an error occurs during the operation
 	 */
-	void flowAllocated(const FlowRequestEvent &flowRequestEvent,
-			std::string errorDescription) throw (NotifyFlowAllocatedException);
+	void flowAllocated(const FlowRequestEvent &flowRequestEvent)
+		throw (NotifyFlowAllocatedException);
 
 	/**
 	 * Invoked by the IPC Manager to inform the Application Process that a remote
@@ -624,11 +618,9 @@ public:
 	 * Inform the application about the result of a flow deallocation operation
 	 * @param event
 	 * @param result
-	 * @param errorDescription
 	 * @throws NotifyFlowDeallocatedException
 	 */
-	void flowDeallocated(const FlowDeallocateRequestEvent& event,
-			int result, const std::string& errorDescription)
+	void flowDeallocated(const FlowDeallocateRequestEvent& event, int result)
 		throw (NotifyFlowDeallocatedException);
 
 	/**
@@ -636,11 +628,9 @@ public:
 	 * unallocated
 	 * @param portId
 	 * @param code
-	 * @param reason
 	 * @throws NotifyFlowDeallocatedException
 	 */
 	void flowDeallocatedRemotely(int portId, int code,
-			const std::string& reason,
 			const ApplicationProcessNamingInformation& appName)
 	throw (NotifyFlowDeallocatedException);
 
@@ -649,13 +639,11 @@ public:
 	 * @param event the event containing the query
 	 * @param result 0 if the operation was successful, a negative integer
 	 * otherwise
-	 * @param errorDescription More explanation about the errors (if any)
 	 * @param difProperties The properties of zero or more DIFs
 	 * @throws GetDIFPropertiesResponseException
 	 */
 	void getDIFPropertiesResponse(const GetDIFPropertiesRequestEvent& event,
-			int result, const std::string& errorDescription,
-			const std::list<DIFProperties>& difProperties)
+			int result, const std::list<DIFProperties>& difProperties)
 			throw (GetDIFPropertiesResponseException);
 };
 

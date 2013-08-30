@@ -120,14 +120,14 @@ public static void main(String[] args) throws IPCException{
 			ApplicationRegistrationType.APPLICATION_REGISTRATION_SINGLE_DIF);
 	ApplicationRegistrationRequestEvent appRegRequestEvent = new 
 			ApplicationRegistrationRequestEvent(sourceNamingInfo, info, 45);
-	applicationManager.applicationRegistered(appRegRequestEvent, difName, 0, "");
+	applicationManager.applicationRegistered(appRegRequestEvent, difName, 0);
 	
 	printStatement("\nNOTIFY APPLICATION ABOUT SUCCESSFUL UNREGISTRATION");
 	ApplicationUnregistrationRequestEvent appUnregRequestEvent = new 
 			ApplicationUnregistrationRequestEvent(sourceNamingInfo, difName, 37);
-	applicationManager.applicationUnregistered(appUnregRequestEvent, 0, "ok");
+	applicationManager.applicationUnregistered(appUnregRequestEvent, 0);
 	
 	printStatement("\nNOTIFY APPLICATION ABOUT SUCCESSFUL FLOW ALLOCATION");
-	applicationManager.flowAllocated(flowRequestEvent, "");
+	applicationManager.flowAllocated(flowRequestEvent);
 }
 }

@@ -169,18 +169,10 @@ class BaseNetlinkResponseMessage: public BaseNetlinkMessage {
 	 */
 	int result;
 
-	/**
-	 * If the application registration didn't succeed, this field may provide
-	 * further detail
-	 */
-	std::string errorDescription;
-
 public:
 	BaseNetlinkResponseMessage(RINANetlinkOperationCode operationCode);
 	int getResult() const;
 	void setResult(int result);
-	const std::string& getErrorDescription() const;
-	void setErrorDescription(const std::string& errorDescription);
 };
 
 /**
@@ -370,9 +362,6 @@ class AppFlowDeallocatedNotificationMessage: public NetlinkRequestOrNotification
 	/** A number identifying a reason why the flow has been deallocated */
 	int code;
 
-	/** An optional explanation of why the flow has been deallocated */
-	std::string reason;
-
 	/**
 	 * The name of the application that was using the flow
 	 */
@@ -385,8 +374,6 @@ public:
 	void setCode(int code);
 	int getPortId() const;
 	void setPortId(int portId);
-	const std::string& getReason() const;
-	void setReason(const std::string& reason);
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	void setApplicationName(
 			const ApplicationProcessNamingInformation& applicationName);
@@ -757,14 +744,8 @@ public:
  */
 class IpcmAllocateFlowResponseMessage: public BaseNetlinkMessage {
 
-	/** True if the application accepts the flow, false otherwise */
-	bool accept;
-
-	/**
-	 * If the flow was denied and the application wishes to do so, it
-	 * can provide an explanation of why this decision was taken
-	 */
-	std::string denyReason;
+	/** Result of the flow allocation operation */
+	int result;
 
 	/**
 	 * If the flow was denied, this field controls wether the application
@@ -779,10 +760,8 @@ class IpcmAllocateFlowResponseMessage: public BaseNetlinkMessage {
 
 public:
 	IpcmAllocateFlowResponseMessage();
-	bool isAccept() const;
-	void setAccept(bool accept);
-	const std::string& getDenyReason() const;
-	void setDenyReason(const std::string& denyReason);
+	int getResult() const;
+	void setResult(int result);
 	bool isNotifySource() const;
 	void setNotifySource(bool notifySource);
 	int getPortId() const;
@@ -825,18 +804,12 @@ class IpcmFlowDeallocatedNotificationMessage: public NetlinkRequestOrNotificatio
 	/** A number identifying a reason why the flow has been deallocated */
 	int code;
 
-	/** An optional explanation of why the flow has been deallocated */
-	std::string reason;
-
-
 public:
 	IpcmFlowDeallocatedNotificationMessage();
 	int getCode() const;
 	void setCode(int code);
 	int getPortId() const;
 	void setPortId(int portId);
-	const std::string& getReason() const;
-	void setReason(const std::string& reason);
 	IPCEvent* toIPCEvent();
 };
 

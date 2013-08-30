@@ -1175,8 +1175,6 @@ int putAppDeallocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 	struct nlattr *applicationName;
 
 	NLA_PUT_U32(netlinkMessage, ADFRE_ATTR_RESULT, object.getResult());
-	NLA_PUT_STRING(netlinkMessage, ADFRE_ATTR_ERROR_DESCRIPTION,
-			object.getErrorDescription().c_str());
 
 	if (!(applicationName = nla_nest_start(netlinkMessage, ADFRT_ATTR_APP_NAME))) {
 		goto nla_put_failure;
@@ -1200,8 +1198,6 @@ int putAppFlowDeallocatedNotificationMessageObject(nl_msg* netlinkMessage,
 
 	NLA_PUT_U32(netlinkMessage, AFDN_ATTR_PORT_ID, object.getPortId());
 	NLA_PUT_U32(netlinkMessage, AFDN_ATTR_CODE, object.getCode());
-	NLA_PUT_STRING(netlinkMessage, AFDN_ATTR_REASON,
-			object.getReason().c_str());
 
 	if (!(applicationName = nla_nest_start(netlinkMessage, AFDN_ATTR_APP_NAME))) {
 		goto nla_put_failure;
@@ -1253,8 +1249,6 @@ int putAppRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 	struct nlattr *difName, *applicationName;
 
 	NLA_PUT_U32(netlinkMessage, ARARE_ATTR_RESULT, object.getResult());
-	NLA_PUT_STRING(netlinkMessage, ARARE_ATTR_ERROR_DESCRIPTION,
-			object.getErrorDescription().c_str());
 
 	if (!(applicationName = nla_nest_start(netlinkMessage, ARARE_ATTR_APP_NAME))) {
 		goto nla_put_failure;
@@ -1316,8 +1310,6 @@ int putAppUnregisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 	struct nlattr *applicationName;
 
 	NLA_PUT_U32(netlinkMessage, AUARE_ATTR_RESULT, object.getResult());
-	NLA_PUT_STRING(netlinkMessage, AUARE_ATTR_ERROR_DESCRIPTION,
-			object.getErrorDescription().c_str());
 
 	if (!(applicationName = nla_nest_start(netlinkMessage, AUARE_ATTR_APP_NAME))) {
 		goto nla_put_failure;
@@ -1430,8 +1422,6 @@ int putAppGetDIFPropertiesResponseMessageObject(nl_msg* netlinkMessage,
 	struct nlattr *appName, *difProperties;
 
 	NLA_PUT_U32(netlinkMessage, AGDPR_ATTR_RESULT, object.getResult());
-	NLA_PUT_STRING(netlinkMessage, AGDPR_ATTR_ERROR_DESC,
-			object.getErrorDescription().c_str());
 
 	if (!(appName =
 			nla_nest_start(netlinkMessage, AGDPR_ATTR_APP_NAME))) {
@@ -1496,8 +1486,6 @@ int putIpcmRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 	struct nlattr *difName, *applicationName;
 
 	NLA_PUT_U32(netlinkMessage, IRARE_ATTR_RESULT, object.getResult());
-	NLA_PUT_STRING(netlinkMessage, IRARE_ATTR_ERROR_DESCRIPTION,
-			object.getErrorDescription().c_str());
 
 	if (!(applicationName = nla_nest_start(netlinkMessage, IRARE_ATTR_APP_NAME))) {
 		goto nla_put_failure;
@@ -1556,8 +1544,6 @@ int putIpcmUnregisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 int putIpcmUnregisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 		const IpcmUnregisterApplicationResponseMessage& object) {
 	NLA_PUT_U32(netlinkMessage, IUARE_ATTR_RESULT, object.getResult());
-	NLA_PUT_STRING(netlinkMessage, IUARE_ATTR_ERROR_DESCRIPTION,
-			object.getErrorDescription().c_str());
 
 	return 0;
 
@@ -1616,8 +1602,6 @@ int putIpcmAssignToDIFResponseMessageObject(nl_msg* netlinkMessage,
 		const IpcmAssignToDIFResponseMessage& object){
 
 	NLA_PUT_U32(netlinkMessage, IATDRE_ATTR_RESULT, object.getResult());
-	NLA_PUT_STRING(netlinkMessage,IATDRE_ATTR_ERROR_DESCRIPTION,
-			object.getErrorDescription().c_str());
 
 	return 0;
 
@@ -1630,7 +1614,7 @@ int putIpcmAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 		const IpcmAllocateFlowRequestMessage& object){
 	struct nlattr *sourceName, *destName, *flowSpec, *difName;
 
-	if (!(sourceName = nla_nest_start(netlinkMessage, IAFRM_ATTR_SOURCE_APP))){
+	if (!(sourceName = nla_nest_start(netlinkMessage, IAFRM_ATTR_SOURCE_APP_NAME))){
 		goto nla_put_failure;
 	}
 	if (putApplicationProcessNamingInformationObject(netlinkMessage,
@@ -1639,7 +1623,7 @@ int putIpcmAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 	}
 	nla_nest_end(netlinkMessage, sourceName);
 
-	if (!(destName = nla_nest_start(netlinkMessage, IAFRM_ATTR_DEST_APP))){
+	if (!(destName = nla_nest_start(netlinkMessage, IAFRM_ATTR_DEST_APP_NAME))){
 		goto nla_put_failure;
 	}
 	if (putApplicationProcessNamingInformationObject(netlinkMessage,
@@ -1678,8 +1662,6 @@ int putIpcmAllocateFlowRequestResultMessageObject(nl_msg* netlinkMessage,
 		const IpcmAllocateFlowRequestResultMessage& object){
 
 	NLA_PUT_U32(netlinkMessage, IAFRRM_ATTR_RESULT, object.getResult());
-	NLA_PUT_STRING(netlinkMessage,IAFRRM_ATTR_ERROR_DESCRIPTION,
-			object.getErrorDescription().c_str());
 
 	return 0;
 
@@ -1741,9 +1723,8 @@ int putIpcmAllocateFlowRequestArrivedMessageObject(nl_msg* netlinkMessage,
 
 int putIpcmAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 		const IpcmAllocateFlowResponseMessage& object) {
-	NLA_PUT_FLAG(netlinkMessage, IAFRE_ATTR_ACCEPT);
-	NLA_PUT_STRING(netlinkMessage, IAFRE_ATTR_DENY_REASON,
-			object.getDenyReason().c_str());
+	NLA_PUT_U32(netlinkMessage, IAFRE_ATTR_RESULT,
+			object.getResult());
 	NLA_PUT_FLAG(netlinkMessage, IAFRE_ATTR_NOTIFY_SOURCE);
 	NLA_PUT_U32(netlinkMessage, IAFRE_ATTR_PORT_ID, object.getPortId());
 
@@ -1770,8 +1751,6 @@ int putIpcmDeallocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 		const IpcmDeallocateFlowResponseMessage& object) {
 
 	NLA_PUT_U32(netlinkMessage, IDFRE_ATTR_RESULT, object.getResult());
-	NLA_PUT_STRING(netlinkMessage, IDFRE_ATTR_ERROR_DESCRIPTION,
-			object.getErrorDescription().c_str());
 
 	return 0;
 
@@ -1785,8 +1764,6 @@ int putIpcmFlowDeallocatedNotificationMessageObject(nl_msg* netlinkMessage,
 
 	NLA_PUT_U32(netlinkMessage, IFDN_ATTR_PORT_ID, object.getPortId());
 	NLA_PUT_U32(netlinkMessage, IFDN_ATTR_CODE, object.getCode());
-	NLA_PUT_STRING(netlinkMessage, IFDN_ATTR_REASON,
-			object.getReason().c_str());
 
 	return 0;
 
@@ -1895,8 +1872,6 @@ int putIpcmDIFQueryRIBResponseMessageObject(nl_msg* netlinkMessage,
 	struct nlattr *ribObjects;
 
 	NLA_PUT_U32(netlinkMessage, IDQRE_ATTR_RESULT, object.getResult());
-	NLA_PUT_STRING(netlinkMessage, IDQRE_ATTR_ERROR_DESCRIPTION,
-			object.getErrorDescription().c_str());
 
 	if (object.getRIBObjects().size()>0){
 		if (!(ribObjects = nla_nest_start(
@@ -2262,9 +2237,6 @@ AppDeallocateFlowResponseMessage * parseAppDeallocateFlowResponseMessage(
 	attr_policy[ADFRE_ATTR_RESULT].type = NLA_U32;
 	attr_policy[ADFRE_ATTR_RESULT].minlen = 4;
 	attr_policy[ADFRE_ATTR_RESULT].maxlen = 4;
-	attr_policy[ADFRE_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
-	attr_policy[ADFRE_ATTR_ERROR_DESCRIPTION].minlen = 0;
-	attr_policy[ADFRE_ATTR_ERROR_DESCRIPTION].maxlen = 65535;
 	attr_policy[ADFRE_ATTR_APP_NAME].type = NLA_NESTED;
 	attr_policy[ADFRE_ATTR_APP_NAME].minlen = 0;
 	attr_policy[ADFRE_ATTR_APP_NAME].maxlen = 0;
@@ -2294,11 +2266,6 @@ AppDeallocateFlowResponseMessage * parseAppDeallocateFlowResponseMessage(
 		result->setResult(nla_get_u32(attrs[ADFRE_ATTR_RESULT]));
 	}
 
-	if (attrs[ADFRE_ATTR_ERROR_DESCRIPTION]) {
-		result->setErrorDescription(
-				nla_get_string(attrs[ADFRE_ATTR_ERROR_DESCRIPTION]));
-	}
-
 	if (attrs[ADFRE_ATTR_APP_NAME]) {
 		applicationName = parseApplicationProcessNamingInformationObject(
 				attrs[ADFRE_ATTR_APP_NAME]);
@@ -2323,9 +2290,6 @@ AppFlowDeallocatedNotificationMessage * parseAppFlowDeallocatedNotificationMessa
 	attr_policy[AFDN_ATTR_CODE].type = NLA_U32;
 	attr_policy[AFDN_ATTR_CODE].minlen = 4;
 	attr_policy[AFDN_ATTR_CODE].maxlen = 4;
-	attr_policy[AFDN_ATTR_REASON].type = NLA_STRING;
-	attr_policy[AFDN_ATTR_REASON].minlen = 0;
-	attr_policy[AFDN_ATTR_REASON].maxlen = 65535;
 	attr_policy[AFDN_ATTR_APP_NAME].type = NLA_NESTED;
 	attr_policy[AFDN_ATTR_APP_NAME].minlen = 0;
 	attr_policy[AFDN_ATTR_APP_NAME].maxlen = 0;
@@ -2357,10 +2321,6 @@ AppFlowDeallocatedNotificationMessage * parseAppFlowDeallocatedNotificationMessa
 
 	if (attrs[AFDN_ATTR_CODE]) {
 		result->setCode(nla_get_u32(attrs[AFDN_ATTR_CODE]));
-	}
-
-	if (attrs[AFDN_ATTR_REASON]) {
-		result->setReason(nla_get_string(attrs[AFDN_ATTR_REASON]));
 	}
 
 	if (attrs[AFDN_ATTR_APP_NAME]) {
@@ -2442,9 +2402,6 @@ AppRegisterApplicationResponseMessage * parseAppRegisterApplicationResponseMessa
 	attr_policy[ARARE_ATTR_RESULT].type = NLA_U32;
 	attr_policy[ARARE_ATTR_RESULT].minlen = 4;
 	attr_policy[ARARE_ATTR_RESULT].maxlen = 4;
-	attr_policy[ARARE_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
-	attr_policy[ARARE_ATTR_ERROR_DESCRIPTION].minlen = 0;
-	attr_policy[ARARE_ATTR_ERROR_DESCRIPTION].maxlen = 65535;
 	attr_policy[ARARE_ATTR_APP_NAME].type = NLA_NESTED;
 	attr_policy[ARARE_ATTR_APP_NAME].minlen = 0;
 	attr_policy[ARARE_ATTR_APP_NAME].maxlen = 0;
@@ -2476,11 +2433,6 @@ AppRegisterApplicationResponseMessage * parseAppRegisterApplicationResponseMessa
 
 	if (attrs[ARARE_ATTR_RESULT]) {
 		result->setResult(nla_get_u32(attrs[ARARE_ATTR_RESULT]));
-	}
-
-	if (attrs[ARARE_ATTR_ERROR_DESCRIPTION]) {
-		result->setErrorDescription(
-				nla_get_string(attrs[ARARE_ATTR_ERROR_DESCRIPTION]));
 	}
 
 	if (attrs[ARARE_ATTR_APP_NAME]) {
@@ -2574,9 +2526,6 @@ AppUnregisterApplicationResponseMessage * parseAppUnregisterApplicationResponseM
 	attr_policy[AUARE_ATTR_RESULT].type = NLA_U32;
 	attr_policy[AUARE_ATTR_RESULT].minlen = 4;
 	attr_policy[AUARE_ATTR_RESULT].maxlen = 4;
-	attr_policy[AUARE_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
-	attr_policy[AUARE_ATTR_ERROR_DESCRIPTION].minlen = 0;
-	attr_policy[AUARE_ATTR_ERROR_DESCRIPTION].maxlen = 65535;
 	attr_policy[AUARE_ATTR_APP_NAME].type = NLA_NESTED;
 	attr_policy[AUARE_ATTR_APP_NAME].minlen = 0;
 	attr_policy[AUARE_ATTR_APP_NAME].maxlen = 0;
@@ -2604,11 +2553,6 @@ AppUnregisterApplicationResponseMessage * parseAppUnregisterApplicationResponseM
 
 	if (attrs[AUARE_ATTR_RESULT]) {
 		result->setResult(nla_get_u32(attrs[AUARE_ATTR_RESULT]));
-	}
-
-	if (attrs[AUARE_ATTR_ERROR_DESCRIPTION]) {
-		result->setErrorDescription(
-				nla_get_string(attrs[AUARE_ATTR_ERROR_DESCRIPTION]));
 	}
 
 	if (attrs[AUARE_ATTR_APP_NAME]) {
@@ -2788,9 +2732,6 @@ AppGetDIFPropertiesResponseMessage * parseAppGetDIFPropertiesResponseMessage(
 	attr_policy[AGDPR_ATTR_RESULT].type = NLA_U32;
 	attr_policy[AGDPR_ATTR_RESULT].minlen = 4;
 	attr_policy[AGDPR_ATTR_RESULT].maxlen = 4;
-	attr_policy[AGDPR_ATTR_ERROR_DESC].type = NLA_STRING;
-	attr_policy[AGDPR_ATTR_ERROR_DESC].minlen = 0;
-	attr_policy[AGDPR_ATTR_ERROR_DESC].maxlen = 65535;
 	attr_policy[AGDPR_ATTR_APP_NAME].type = NLA_NESTED;
 	attr_policy[AGDPR_ATTR_APP_NAME].minlen = 0;
 	attr_policy[AGDPR_ATTR_APP_NAME].maxlen = 0;
@@ -2813,11 +2754,6 @@ AppGetDIFPropertiesResponseMessage * parseAppGetDIFPropertiesResponseMessage(
 
 	if (attrs[AGDPR_ATTR_RESULT]){
 		result->setResult(nla_get_u32(attrs[AGDPR_ATTR_RESULT]));
-	}
-
-	if (attrs[AGDPR_ATTR_ERROR_DESC]){
-		result->setErrorDescription(
-				nla_get_string(attrs[AGDPR_ATTR_ERROR_DESC]));
 	}
 
 	ApplicationProcessNamingInformation * applicationName;
@@ -2912,9 +2848,6 @@ parseIpcmRegisterApplicationResponseMessage(nlmsghdr *hdr) {
 	attr_policy[IRARE_ATTR_RESULT].type = NLA_U32;
 	attr_policy[IRARE_ATTR_RESULT].minlen = 4;
 	attr_policy[IRARE_ATTR_RESULT].maxlen = 4;
-	attr_policy[IRARE_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
-	attr_policy[IRARE_ATTR_ERROR_DESCRIPTION].minlen = 0;
-	attr_policy[IRARE_ATTR_ERROR_DESCRIPTION].maxlen = 65535;
 	attr_policy[IRARE_ATTR_APP_NAME].type = NLA_NESTED;
 	attr_policy[IRARE_ATTR_APP_NAME].minlen = 0;
 	attr_policy[IRARE_ATTR_APP_NAME].maxlen = 0;
@@ -2946,11 +2879,6 @@ parseIpcmRegisterApplicationResponseMessage(nlmsghdr *hdr) {
 
 	if (attrs[IRARE_ATTR_RESULT]) {
 		result->setResult(nla_get_u32(attrs[IRARE_ATTR_RESULT]));
-	}
-
-	if (attrs[IRARE_ATTR_ERROR_DESCRIPTION]) {
-		result->setErrorDescription(
-				nla_get_string(attrs[IRARE_ATTR_ERROR_DESCRIPTION]));
 	}
 
 	if (attrs[IRARE_ATTR_APP_NAME]) {
@@ -3044,9 +2972,6 @@ parseIpcmUnregisterApplicationResponseMessage(nlmsghdr *hdr) {
 	attr_policy[IUARE_ATTR_RESULT].type = NLA_U32;
 	attr_policy[IUARE_ATTR_RESULT].minlen = 4;
 	attr_policy[IUARE_ATTR_RESULT].maxlen = 4;
-	attr_policy[IUARE_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
-	attr_policy[IUARE_ATTR_ERROR_DESCRIPTION].minlen = 0;
-	attr_policy[IUARE_ATTR_ERROR_DESCRIPTION].maxlen = 65535;
 	struct nlattr *attrs[IUARE_ATTR_MAX + 1];
 
 	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -3063,11 +2988,6 @@ parseIpcmUnregisterApplicationResponseMessage(nlmsghdr *hdr) {
 
 	if (attrs[IUARE_ATTR_RESULT]) {
 		result->setResult(nla_get_u32(attrs[IUARE_ATTR_RESULT]));
-	}
-
-	if (attrs[IUARE_ATTR_ERROR_DESCRIPTION]) {
-		result->setErrorDescription(
-				nla_get_string(attrs[IUARE_ATTR_ERROR_DESCRIPTION]));
 	}
 
 	return result;
@@ -3156,9 +3076,6 @@ parseIpcmAssignToDIFResponseMessage(nlmsghdr *hdr){
 	attr_policy[IATDRE_ATTR_RESULT].type = NLA_U32;
 	attr_policy[IATDRE_ATTR_RESULT].minlen = 4;
 	attr_policy[IATDRE_ATTR_RESULT].maxlen = 4;
-	attr_policy[IATDRE_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
-	attr_policy[IATDRE_ATTR_ERROR_DESCRIPTION].minlen = 0;
-	attr_policy[IATDRE_ATTR_ERROR_DESCRIPTION].maxlen = 65535;
 	struct nlattr *attrs[IATDRE_ATTR_MAX + 1];
 
 	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -3177,23 +3094,18 @@ parseIpcmAssignToDIFResponseMessage(nlmsghdr *hdr){
 		result->setResult(nla_get_u32(attrs[IATDRE_ATTR_RESULT]));
 	}
 
-	if (attrs[IATDRE_ATTR_ERROR_DESCRIPTION]) {
-		result->setErrorDescription(
-				nla_get_string(attrs[IATDRE_ATTR_ERROR_DESCRIPTION]));
-	}
-
 	return result;
 }
 
 IpcmAllocateFlowRequestMessage *
 	parseIpcmAllocateFlowRequestMessage(nlmsghdr *hdr){
 	struct nla_policy attr_policy[IAFRM_ATTR_MAX + 1];
-	attr_policy[IAFRM_ATTR_SOURCE_APP].type = NLA_NESTED;
-	attr_policy[IAFRM_ATTR_SOURCE_APP].minlen = 0;
-	attr_policy[IAFRM_ATTR_SOURCE_APP].maxlen = 0;
-	attr_policy[IAFRM_ATTR_DEST_APP].type = NLA_NESTED;
-	attr_policy[IAFRM_ATTR_DEST_APP].minlen = 0;
-	attr_policy[IAFRM_ATTR_DEST_APP].maxlen = 0;
+	attr_policy[IAFRM_ATTR_SOURCE_APP_NAME].type = NLA_NESTED;
+	attr_policy[IAFRM_ATTR_SOURCE_APP_NAME].minlen = 0;
+	attr_policy[IAFRM_ATTR_SOURCE_APP_NAME].maxlen = 0;
+	attr_policy[IAFRM_ATTR_DEST_APP_NAME].type = NLA_NESTED;
+	attr_policy[IAFRM_ATTR_DEST_APP_NAME].minlen = 0;
+	attr_policy[IAFRM_ATTR_DEST_APP_NAME].maxlen = 0;
 	attr_policy[IAFRM_ATTR_FLOW_SPEC].type = NLA_NESTED;
 	attr_policy[IAFRM_ATTR_FLOW_SPEC].minlen = 0;
 	attr_policy[IAFRM_ATTR_FLOW_SPEC].maxlen = 0;
@@ -3221,9 +3133,9 @@ IpcmAllocateFlowRequestMessage *
 	FlowSpecification * flowSpec;
 	ApplicationProcessNamingInformation * difName;
 
-	if (attrs[IAFRM_ATTR_SOURCE_APP]) {
+	if (attrs[IAFRM_ATTR_SOURCE_APP_NAME]) {
 		sourceName = parseApplicationProcessNamingInformationObject(
-				attrs[IAFRM_ATTR_SOURCE_APP]);
+				attrs[IAFRM_ATTR_SOURCE_APP_NAME]);
 		if (sourceName == 0) {
 			delete result;
 			return 0;
@@ -3233,9 +3145,9 @@ IpcmAllocateFlowRequestMessage *
 		}
 	}
 
-	if (attrs[IAFRM_ATTR_DEST_APP]) {
+	if (attrs[IAFRM_ATTR_DEST_APP_NAME]) {
 		destName = parseApplicationProcessNamingInformationObject(
-				attrs[IAFRM_ATTR_DEST_APP]);
+				attrs[IAFRM_ATTR_DEST_APP_NAME]);
 		if (destName == 0) {
 			delete result;
 			return 0;
@@ -3281,9 +3193,6 @@ IpcmAllocateFlowRequestResultMessage *
 	attr_policy[IAFRRM_ATTR_RESULT].type = NLA_U32;
 	attr_policy[IAFRRM_ATTR_RESULT].minlen = 4;
 	attr_policy[IAFRRM_ATTR_RESULT].maxlen = 4;
-	attr_policy[IAFRRM_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
-	attr_policy[IAFRRM_ATTR_ERROR_DESCRIPTION].minlen = 0;
-	attr_policy[IAFRRM_ATTR_ERROR_DESCRIPTION].maxlen = 65535;
 	struct nlattr *attrs[IAFRRM_ATTR_MAX + 1];
 
 	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -3300,11 +3209,6 @@ IpcmAllocateFlowRequestResultMessage *
 
 	if (attrs[IAFRRM_ATTR_RESULT]) {
 		result->setResult(nla_get_u32(attrs[IAFRRM_ATTR_RESULT]));
-	}
-
-	if (attrs[IAFRRM_ATTR_ERROR_DESCRIPTION]) {
-			result->setErrorDescription(
-					nla_get_string(attrs[IAFRRM_ATTR_ERROR_DESCRIPTION]));
 	}
 
 	return result;
@@ -3402,12 +3306,9 @@ IpcmAllocateFlowRequestArrivedMessage * parseIpcmAllocateFlowRequestArrivedMessa
 IpcmAllocateFlowResponseMessage * parseIpcmAllocateFlowResponseMessage(
 		nlmsghdr *hdr) {
 	struct nla_policy attr_policy[IAFRE_ATTR_MAX + 1];
-	attr_policy[IAFRE_ATTR_ACCEPT].type = NLA_FLAG;
-	attr_policy[IAFRE_ATTR_ACCEPT].minlen = 0;
-	attr_policy[IAFRE_ATTR_ACCEPT].maxlen = 0;
-	attr_policy[IAFRE_ATTR_DENY_REASON].type = NLA_STRING;
-	attr_policy[IAFRE_ATTR_DENY_REASON].minlen = 0;
-	attr_policy[IAFRE_ATTR_DENY_REASON].maxlen = 65535;
+	attr_policy[IAFRE_ATTR_RESULT].type = NLA_U32;
+	attr_policy[IAFRE_ATTR_RESULT].minlen = 4;
+	attr_policy[IAFRE_ATTR_RESULT].maxlen = 4;
 	attr_policy[IAFRE_ATTR_NOTIFY_SOURCE].type = NLA_FLAG;
 	attr_policy[IAFRE_ATTR_NOTIFY_SOURCE].minlen = 0;
 	attr_policy[IAFRE_ATTR_NOTIFY_SOURCE].maxlen = 0;
@@ -3434,12 +3335,8 @@ IpcmAllocateFlowResponseMessage * parseIpcmAllocateFlowResponseMessage(
 	IpcmAllocateFlowResponseMessage * result =
 			new IpcmAllocateFlowResponseMessage();
 
-	if (attrs[IAFRE_ATTR_ACCEPT]) {
-		result->setAccept((nla_get_flag(attrs[IAFRE_ATTR_ACCEPT])));
-	}
-
-	if (attrs[IAFRE_ATTR_DENY_REASON]) {
-		result->setDenyReason(nla_get_string(attrs[IAFRE_ATTR_DENY_REASON]));
+	if (attrs[IAFRE_ATTR_RESULT]) {
+		result->setResult((nla_get_u32(attrs[IAFRE_ATTR_RESULT])));
 	}
 
 	if (attrs[IAFRE_ATTR_NOTIFY_SOURCE]) {
@@ -3493,9 +3390,6 @@ IpcmDeallocateFlowResponseMessage * parseIpcmDeallocateFlowResponseMessage(
 	attr_policy[IDFRE_ATTR_RESULT].type = NLA_U32;
 	attr_policy[IDFRE_ATTR_RESULT].minlen = 4;
 	attr_policy[IDFRE_ATTR_RESULT].maxlen = 4;
-	attr_policy[IDFRE_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
-	attr_policy[IDFRE_ATTR_ERROR_DESCRIPTION].minlen = 0;
-	attr_policy[IDFRE_ATTR_ERROR_DESCRIPTION].maxlen = 65535;
 	struct nlattr *attrs[IDFRE_ATTR_MAX + 1];
 
 	/*
@@ -3520,11 +3414,6 @@ IpcmDeallocateFlowResponseMessage * parseIpcmDeallocateFlowResponseMessage(
 		result->setResult(nla_get_u32(attrs[IDFRE_ATTR_RESULT]));
 	}
 
-	if (attrs[IDFRE_ATTR_ERROR_DESCRIPTION]) {
-		result->setErrorDescription(
-				nla_get_string(attrs[IDFRE_ATTR_ERROR_DESCRIPTION]));
-	}
-
 	return result;
 }
 
@@ -3537,9 +3426,6 @@ IpcmFlowDeallocatedNotificationMessage * parseIpcmFlowDeallocatedNotificationMes
 	attr_policy[IFDN_ATTR_CODE].type = NLA_U32;
 	attr_policy[IFDN_ATTR_CODE].minlen = 4;
 	attr_policy[IFDN_ATTR_CODE].maxlen = 4;
-	attr_policy[IFDN_ATTR_REASON].type = NLA_STRING;
-	attr_policy[IFDN_ATTR_REASON].minlen = 0;
-	attr_policy[IFDN_ATTR_REASON].maxlen = 65535;
 	struct nlattr *attrs[IFDN_ATTR_MAX + 1];
 
 	/*
@@ -3566,10 +3452,6 @@ IpcmFlowDeallocatedNotificationMessage * parseIpcmFlowDeallocatedNotificationMes
 
 	if (attrs[IFDN_ATTR_CODE]) {
 		result->setCode(nla_get_u32(attrs[IFDN_ATTR_CODE]));
-	}
-
-	if (attrs[IFDN_ATTR_REASON]) {
-		result->setReason(nla_get_string(attrs[IFDN_ATTR_REASON]));
 	}
 
 	return result;
@@ -3765,9 +3647,6 @@ IpcmDIFQueryRIBResponseMessage *
 	attr_policy[IDQRE_ATTR_RESULT].type = NLA_U32;
 	attr_policy[IDQRE_ATTR_RESULT].minlen = 4;
 	attr_policy[IDQRE_ATTR_RESULT].maxlen = 4;
-	attr_policy[IDQRE_ATTR_ERROR_DESCRIPTION].type = NLA_STRING;
-	attr_policy[IDQRE_ATTR_ERROR_DESCRIPTION].minlen = 0;
-	attr_policy[IDQRE_ATTR_ERROR_DESCRIPTION].maxlen = 65535;
 	attr_policy[IDQRE_ATTR_RIB_OBJECTS].type = NLA_NESTED;
 	attr_policy[IDQRE_ATTR_RIB_OBJECTS].minlen = 0;
 	attr_policy[IDQRE_ATTR_RIB_OBJECTS].maxlen = 0;
@@ -3787,11 +3666,6 @@ IpcmDIFQueryRIBResponseMessage *
 
 	if (attrs[IDQRE_ATTR_RESULT]){
 		result->setResult(nla_get_u32(attrs[IDQRE_ATTR_RESULT]));
-	}
-
-	if (attrs[IDQRE_ATTR_ERROR_DESCRIPTION]){
-		result->setErrorDescription(
-				nla_get_string(attrs[IDQRE_ATTR_ERROR_DESCRIPTION]));
 	}
 
 	int status = 0;

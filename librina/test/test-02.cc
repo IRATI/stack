@@ -134,18 +134,17 @@ int main(int argc, char * argv[]) {
 	appRegInfo.setDIFName(*difName);
 	ApplicationRegistrationRequestEvent * event = new
 			ApplicationRegistrationRequestEvent(*sourceName, appRegInfo, 34);
-	applicationManager->applicationRegistered(*event, *difName, 0,
-			"Everything was fine");
+	applicationManager->applicationRegistered(*event, *difName, 0);
 
 	/* TEST APPLICATION UNREGISTERED */
 	ApplicationUnregistrationRequestEvent * event2 = new
 			ApplicationUnregistrationRequestEvent(*sourceName, *difName, 34);
-	applicationManager->applicationUnregistered(*event2, 0, "ok");
+	applicationManager->applicationUnregistered(*event2, 0);
 
 	/* TEST FLOW ALLOCATED */
 	FlowRequestEvent * flowEvent = new FlowRequestEvent(25, *flowSpec,
 			true, *sourceName, *destinationName, *difName, 3);
-	applicationManager->flowAllocated(*flowEvent, "ok");
+	applicationManager->flowAllocated(*flowEvent);
 
 	ipcProcessFactory->destroy(ipcProcess1->getId());
 	if (!checkIPCProcesses(0)) {

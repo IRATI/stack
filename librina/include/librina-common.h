@@ -414,13 +414,10 @@ class FlowDeallocatedEvent: public IPCEvent {
 	/** An error code indicating why the flow was deallocated */
 	int code;
 
-	/** Optional explanation giving more details about the flow deallocation */
-	std::string reason;
 public:
-	FlowDeallocatedEvent(int portId, int code, const std::string& reason);
+	FlowDeallocatedEvent(int portId, int code);
 	int getPortId() const;
 	int getCode() const;
-	const std::string getReason() const;
 	const ApplicationProcessNamingInformation getDIFName() const;
 };
 
