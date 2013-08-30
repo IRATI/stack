@@ -477,6 +477,7 @@ int rina_netlink_init(void)
 	if (test_rnl_format_ipcm_alloc_flow_req_result_msg(5)){
 		return -1;
 	}
+	test_formatters();
 
         LOG_DBG("NetLink layer initialized successfully");
 

@@ -207,20 +207,37 @@ static void test_end_generic(struct sk_buff * msg,
 
 }
 
+void populate_generic_name(string_t    * prefix,
+		           struct name * name)
+{
+	name->process_name = strcat(prefix,"my_process_name");
+	name->process_instance = strcat(prefix,"my_process_instance");
+	name->entity_name = strcat(prefix,"my_entity_name");
+	name->entity_instance = strcat(prefix,"my_entity_instance");
+}
+
 int test_rnl_format_ipcm_assign_to_dif_req_msg(void)
 {
 
 	struct sk_buff * msg;
 	struct rina_msg_hdr * hdr;
 	struct dif_config * config;
+	struct name * name;
 
 	config = rkzalloc(sizeof(*config), GFP_KERNEL);
+	name = rkzalloc(sizeof(*name), GFP_KERNEL);
 	if(!config){
-		LOG_ERR("Could not allocate config para");
+		LOG_ERR("Could not allocate config param");
 		return -1;
 	}
-
+	if(!name){
+		LOG_ERR("Could not allocate name param");
+		return -1;
+	}
+	
+	populate_generic_name("dif_",name);
 	config->type = "Test";
+	config->dif_name = name;
 
 	if (test_begin_generic(msg,
 	  		       hdr,
@@ -236,6 +253,154 @@ int test_rnl_format_ipcm_assign_to_dif_req_msg(void)
 
 	test_end_generic(msg, hdr, "RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST");
 	rkfree(config);
+	rkfree(name);
+	return 0;
+
+}
+
+int test_rnl_format_ipcm_assign_to_dif_resp_msg(void)
+{
+	struct sk_buff * msg;
+	struct rina_msg_hdr * hdr;
+
+	if (test_begin_generic(msg,
+	  		       hdr,
+			       "RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE",
+			       RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE) < 0)
+		return -1;
+
+	if (rnl_format_ipcm_assign_to_dif_resp_msg(10, msg)){
+		LOG_ERR("Could not format message RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE...");
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	test_end_generic(msg, hdr, "RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE");
+	return 0;
+}
+
+int test_rnl_format_ipcm_ipcp_dif_reg_noti_msg(void)
+{
+	struct sk_buff * msg;
+	struct rina_msg_hdr * hdr;
+	struct name * ipc_name;
+	struct name * dif_name;
+
+	ipc_name = rkzalloc(sizeof(*ipc_name), GFP_KERNEL);
+	dif_name = rkzalloc(sizeof(*dif_name), GFP_KERNEL);
+	if(!ipc_name){
+		LOG_ERR("Could not allocate ipc_name param");
+		return -1;
+	}
+	if(!dif_name){
+		LOG_ERR("Could not allocate dif_name param");
+		return -1;
+	}
+	
+	populate_generic_name("ipc_",ipc_name);
+	populate_generic_name("dif_",dif_name);
+
+	if (test_begin_generic(msg,
+	  	hdr,
+		"RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION",
+		RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION) < 0)
+		return -1;
+
+	if (rnl_format_ipcm_ipcp_dif_reg_noti_msg(ipc_name,
+						       dif_name,
+						       false, 
+						       msg)){
+		LOG_ERR("Could not format message"
+		"RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION...");
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	test_end_generic(msg, hdr, "RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION");
+	rkfree(ipc_name);
+	rkfree(dif_name);
+	return 0;
+
+}
+
+int test_rnl_format_ipcm_ipcp_dif_unreg_noti_msg(void)
+{
+	struct sk_buff * msg;
+	struct rina_msg_hdr * hdr;
+
+	if (test_begin_generic(msg,
+	  	hdr,
+		"RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION",
+		RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION) < 0)
+		return -1;
+
+	if (rnl_format_ipcm_ipcp_dif_unreg_noti_msg(10,
+						    msg)){
+		LOG_ERR("Could not format message"
+		"RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION...");
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	test_end_generic(msg, hdr, "RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION");
+	return 0;
+
+}
+
+int test_rnl_format_ipcm_enroll_to_dif_req_msg(void)
+{
+	struct sk_buff * msg;
+	struct rina_msg_hdr * hdr;
+	struct name * dif_name;
+
+	dif_name = rkzalloc(sizeof(*dif_name), GFP_KERNEL);
+	if(!dif_name){
+		LOG_ERR("Could not allocate dif_name param");
+		return -1;
+	}
+	
+	populate_generic_name("dif_",dif_name);
+
+	if (test_begin_generic(msg,
+	  	hdr,
+		"RINA_C_IPCM_ENROLL_TO_DIF_REQUEST",
+		RINA_C_IPCM_ENROLL_TO_DIF_REQUEST) < 0)
+		return -1;
+
+	if (rnl_format_ipcm_enroll_to_dif_req_msg(dif_name,
+						   msg)){
+		LOG_ERR("Could not format message"
+		"RINA_C_IPCM_ENROLL_TO_DIF_REQUEST...");
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	test_end_generic(msg, hdr, "RINA_C_IPCM_ENROLL_TO_DIF_REQUEST");
+	rkfree(dif_name);
+	return 0;
+
+}
+
+int test_rnl_format_ipcm_enroll_to_dif_resp_msg(void)
+{
+	struct sk_buff * msg;
+	struct rina_msg_hdr * hdr;
+
+	if (test_begin_generic(msg,
+	  	hdr,
+		"RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE",
+		RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE) < 0)
+		return -1;
+
+	if (rnl_format_ipcm_ipcp_dif_unreg_noti_msg(10,
+						    msg)){
+		LOG_ERR("Could not format message"
+		"RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE...");
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	test_end_generic(msg, hdr, "RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE");
 	return 0;
 
 }
@@ -246,13 +411,13 @@ void test_formatters(void){
 
 	LOG_DBG("Netlink formatting tests started...");
 
-	for (i=RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST; i< RINA_C_MAX; i++) {
+	//for (i=RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST; i< RINA_C_MAX; i++) {
+	for (i=RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST; i< RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST; i++) {
 
 		switch(i){
         	case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST:
 			test_rnl_format_ipcm_assign_to_dif_req_msg();
         	        break;
-#if 0
         	case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE:
 			test_rnl_format_ipcm_assign_to_dif_resp_msg();
         	        break;
@@ -268,6 +433,7 @@ void test_formatters(void){
         	case RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE:
 			test_rnl_format_ipcm_enroll_to_dif_resp_msg();
         	        break;
+#if 0
         	case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST:
 			test_rnl_format_ipcm_disconn_neighbor_req_msg();
         	        break;
@@ -334,3 +500,4 @@ void test_formatters(void){
 
 	LOG_DBG("Netlink formatters testing ended");
 }
+EXPORT_SYMBOL(test_formatters);
