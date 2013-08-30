@@ -25,20 +25,10 @@
 #include "utils.h"
 #include "debug.h"
 #include "netlink.h"
+#include "netlink-utils.h"
+#include "netlink-test.h"
 
 #define NETLINK_RINA "rina"
-
-/* attributes */
-/* FIXME: Are they really needed ??? */
-enum {
-        NETLINK_RINA_A_UNSPEC,
-        NETLINK_RINA_A_MSG,
-
-        /* Do not use */
-        NETLINK_RINA_A_MAX,
-};
-
-#define NETLINK_RINA_A_MAX (NETLINK_RINA_A_MAX - 1)
 
 #define NETLINK_RINA_C_MIN (RINA_C_MIN + 1)
 #define NETLINK_RINA_C_MAX (RINA_C_MAX - 1)
@@ -56,12 +46,15 @@ static struct rina_nl_set * default_set;
 
 static struct genl_family nl_family = {
         .id      = GENL_ID_GENERATE,
-        .hdrsize = 0,
+        .hdrsize = sizeof(struct rina_msg_hdr),
         .name    = NETLINK_RINA,
         .version = 1,
-        .maxattr = NETLINK_RINA_A_MAX, /* ??? */
+        /* .maxattr = NETLINK_RINA_A_MAX, */
 };
 
+struct genl_family  * get_nl_family()
+{ return &nl_family; }
+EXPORT_SYMBOL(get_nl_family);
 
 static int is_message_type_in_range(msg_id msg_type)
 { return is_value_in_range(msg_type, NETLINK_RINA_C_MIN, NETLINK_RINA_C_MAX); }
@@ -476,6 +469,14 @@ int rina_netlink_init(void)
                         "bailing out", ret);
                 return -1;
         }
+
+	LOG_DBG("Executing Testing functions...");
+	if (test_register_handler()) {
+		return -1;
+	}
+	if (test_rnl_format_ipcm_alloc_flow_req_result_msg(5)){
+		return -1;
+	}
 
         LOG_DBG("NetLink layer initialized successfully");
 
