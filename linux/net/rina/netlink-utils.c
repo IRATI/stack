@@ -71,7 +71,8 @@ static int rnl_check_attr_policy(struct nlmsghdr   * nlh,
 	LOG_DBG("Entering rnl_check_attr_policy...");
         if (nlmsg_parse(nlh,
                         /* FIXME: Check if this is correct */
-                        sizeof(struct genlmsghdr),
+                        sizeof(struct genlmsghdr) +
+                        sizeof(struct rina_msg_hdr),
                         attrs,
                         max_attr,
                         attr_policy) < 0){
@@ -735,6 +736,20 @@ int rnl_parse_msg(struct genl_info      * info,
                 msg->notification_msg_flag      =
 #endif
         msg->rina_hdr           = info->userhdr;
+
+	LOG_DBG("Parsed Netlink message header:\n"
+		"msg->src_port: %d "
+		"msg->dst_port: %d "
+		"msg->seq_num:  %d "
+		"msg->op_code:  %d "
+		"msg->rina_hdr->src_ipc_id: %d "
+		"msg->rina_hdr->dst_ipc_id: %d",msg->src_port,msg->dst_port,
+				   		msg->seq_num,msg->op_code,
+						msg->rina_hdr->src_ipc_id,
+						msg->rina_hdr->dst_ipc_id);
+	LOG_DBG("[LDBG] msg is at %pK", msg);
+	LOG_DBG("[LDBG] msg->rina_hdr is at %pK and size is: %d", msg->rina_hdr, sizeof(msg->rina_hdr));
+	LOG_DBG("[LDBG] msg->attrs is at %pK", msg->attrs);
 
 	switch(info->genlhdr->cmd){
         case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST:

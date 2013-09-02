@@ -75,6 +75,10 @@ static int test_echo_dispatcher(void * data,
         my_msg->rina_hdr = my_hdr;
 	
 	LOG_DBG("[LDBG] test-dispatcher before parsing OK");
+	LOG_DBG("[LDBG] Size of rina_msg_header: %d", sizeof(struct rina_msg_hdr));
+	LOG_DBG("[LDBG] my_msg is at %pK", my_msg);
+	LOG_DBG("[LDBG] my_msg->rina_hdr is at %pK and size is %d", my_msg->rina_hdr, sizeof(my_msg->rina_hdr));
+	LOG_DBG("[LDBG] my_msg->attrs is at %pK", my_msg->attrs);
 
 	if (rnl_parse_msg(info, my_msg)){
 		LOG_ERR("Could not parse message");
@@ -85,7 +89,12 @@ static int test_echo_dispatcher(void * data,
 	}
 
 	LOG_DBG("Returned value\n"
-		"RESULT: %d\n",attrs->result);
+		"RESULT: %d\n"
+		"my_hdr->src_ipc_id: %d\n"
+		"my_hdr->dst_ipc_id %d",
+		attrs->result,
+		my_hdr->src_ipc_id,
+		my_hdr->dst_ipc_id);
 
 	
 	
