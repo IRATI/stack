@@ -93,6 +93,8 @@ int main(int argc, char * argv[]) {
 	std::cout<<"Got message from "<<fromKernel->getSourcePortId()<<"\n";
 	IpcmAssignToDIFResponseMessage * result2 =
 			dynamic_cast<IpcmAssignToDIFResponseMessage *>(fromKernel);
+	std::cout<<"Source IPC Process id "<<result2->getSourceIpcProcessId();
+	std::cout<<"Destination IPC Process id "<<result2->getDestIpcProcessId();
 	std::cout<<"Result is "<<result2->getResult()<<std::endl;
 	delete fromKernel;
 }

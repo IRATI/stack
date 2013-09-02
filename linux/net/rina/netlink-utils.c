@@ -266,24 +266,35 @@ static int parse_rib_objects_list(struct nlattr     * rib_objs_attr,
 }
 
 static int rnl_parse_generic_u32_param_msg (struct genl_info * info,
-					    uint_t           param_var,
-					    uint_t	     param_name,
-					    uint_t	     max_params,
-					    string_t         * msg_name)
+		uint_t          * param_var,
+		uint_t	     param_name,
+		uint_t	     max_params,
+		string_t         * msg_name)
 {
 	struct nla_policy attr_policy[max_params + 1];
 
 	LOG_DBG("rnl_parse_generic_u32_param_msg started...");
-	
-	attr_policy[param_name].type = NLA_U32;
 
-	if(rnl_check_attr_policy(info->nlhdr, max_params, attr_policy) < 0){
+	attr_policy[param_name].type = NLA_U32;
+	attr_policy[param_name].len = 4;
+
+	struct nlattr *attrs[max_params + 1];
+
+	if (nlmsg_parse(info->nlhdr,
+			/* FIXME: Check if this is correct */
+			sizeof(struct genlmsghdr) +
+			sizeof(struct rina_msg_hdr),
+			attrs,
+			max_params,
+			attr_policy) < 0){
 		LOG_ERR("Could not parse Netlink message of type %s", msg_name);
 		return -1;
 	}
 
-        if (info->attrs[param_name])
-                param_var = nla_get_u32(info->attrs[param_name]);
+	if (attrs[param_name]){
+		*param_var = nla_get_u32(attrs[param_name]);
+		LOG_DBG("Parsed result: %d", param_var);
+	}
 
 	return 0;
 
@@ -312,7 +323,7 @@ static int rnl_parse_ipcm_assign_to_dif_resp_msg(struct genl_info * info,
 {
 	LOG_DBG("rnl_parse_ipcm_assign_to_dif_resp_msg started...");
 	return rnl_parse_generic_u32_param_msg(info,
-					msg_attrs->result,
+					&(msg_attrs->result),
 					IATDRE_ATTR_RESULT,
 					IATDRE_ATTR_MAX,
 					"RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE");
@@ -350,7 +361,7 @@ static int rnl_parse_ipcm_ipcp_dif_unreg_noti_msg(struct genl_info * info,
 	  struct rnl_ipcm_ipcp_dif_unreg_noti_msg_attrs * msg_attrs)
 {
 	return rnl_parse_generic_u32_param_msg(info,
-					msg_attrs->result,
+					&(msg_attrs->result),
 					IDUN_ATTR_RESULT,
 					IDUN_ATTR_MAX,
 					"RINA_C_IPCM_IPC_PROCESS_UNREGISTRATION_NOTIFICATION");
@@ -378,7 +389,7 @@ static int rnl_parse_ipcm_enroll_to_dif_resp_msg(struct genl_info * info,
 	  struct rnl_ipcm_enroll_to_dif_resp_msg_attrs * msg_attrs)
 {
 	return rnl_parse_generic_u32_param_msg(info,
-					msg_attrs->result,
+					&(msg_attrs->result),
 					IEDRE_ATTR_RESULT,
 					IEDRE_ATTR_MAX,
 					"RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE");
@@ -406,7 +417,7 @@ static int rnl_parse_ipcm_disconn_neighbor_resp_msg(struct genl_info * info,
 	  struct rnl_ipcm_disconn_neighbor_resp_msg_attrs * msg_attrs)
 {
 	return rnl_parse_generic_u32_param_msg(info,
-					msg_attrs->result,
+					&(msg_attrs->result),
 					IATDRE_ATTR_RESULT,
 					IATDRE_ATTR_MAX,
 					"RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE");
@@ -484,7 +495,7 @@ static int rnl_parse_ipcm_alloc_flow_req_result_msg(struct genl_info * info,
 	struct rnl_ipcm_alloc_flow_req_result_msg_attrs * msg_attrs)
 {
 	return rnl_parse_generic_u32_param_msg(info,
-					msg_attrs->result,
+					&(msg_attrs->result),
 					IAFRRM_ATTR_RESULT,
 					IAFRRM_ATTR_MAX,
 					"RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT");
@@ -526,7 +537,7 @@ static int rnl_parse_ipcm_dealloc_flow_req_msg(struct genl_info * info,
                 struct rnl_ipcm_dealloc_flow_req_msg_attrs * msg_attrs)
 {
 	return rnl_parse_generic_u32_param_msg(info,
-					msg_attrs->id,
+					&(msg_attrs->id),
 					IDFRT_ATTR_PORT_ID,
 					IDFRT_ATTR_MAX,
 					"RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST");
@@ -538,7 +549,7 @@ static int rnl_parse_ipcm_dealloc_flow_resp_msg(struct genl_info * info,
                 struct rnl_ipcm_dealloc_flow_resp_msg_attrs * msg_attrs)
 {
 	return rnl_parse_generic_u32_param_msg(info,
-					msg_attrs->result,
+					&(msg_attrs->result),
 					IDFRE_ATTR_RESULT,
 					IDFRE_ATTR_MAX,
 					"RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE");
@@ -628,7 +639,7 @@ static int rnl_parse_ipcm_unreg_app_resp_msg(struct genl_info * info,
 	  struct rnl_ipcm_unreg_app_resp_msg_attrs * msg_attrs)
 {
 	return rnl_parse_generic_u32_param_msg(info,
-					msg_attrs->result,
+					&(msg_attrs->result),
 					IUARE_ATTR_RESULT,
 					IUARE_ATTR_MAX,
 					"RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE");
