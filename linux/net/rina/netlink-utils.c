@@ -293,7 +293,7 @@ static int rnl_parse_generic_u32_param_msg (struct genl_info * info,
 
 	if (attrs[param_name]){
 		*param_var = nla_get_u32(attrs[param_name]);
-		LOG_DBG("Parsed result: %d", param_var);
+		LOG_DBG("Parsed result: %d", *param_var);
 	}
 
 	return 0;
