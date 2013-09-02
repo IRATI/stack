@@ -75,7 +75,9 @@ int main(int argc, char * argv[]) {
 
 	/* Test user-space to kernel communication */
 	IpcmAssignToDIFResponseMessage message2;
-	message.setDestPortId(0);
+	message2.setDestPortId(0);
+	message2.setRequestMessage(true);
+	message2.setSequenceNumber(source.getSequenceNumber());
 	try{
 		source.sendMessage(&message2);
 	}catch(NetlinkException &e){

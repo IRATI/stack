@@ -122,23 +122,25 @@ static struct arp_hdr * arphdr(const struct sk_buff * skb)
  *	message.
  *      Taken from net/ipv4/arp.c
  */
-static struct sk_buff *arp_create(int type, int ptype, __be32 dest_ip,
-                                  struct net_device *dev, __be32 src_ip,
-                                  const unsigned char *dest_hw,
-                                  const unsigned char *src_hw,
-                                  const unsigned char *target_hw)
+static struct sk_buff *arp_create(int op, int ptype, int plen,
+                                  struct net_device *dev, 
+				  const unsigned char *src_nwaddr,
+				  const unsigned char *dest_nwaddr,
+                                  const unsigned char *dest_hw)
 {
 	struct sk_buff * skb;
 	struct arp_hdr * arp;
 	unsigned char *  arp_ptr;
 	int              hlen = LL_RESERVED_SPACE(dev);
 	int              tlen = dev->needed_tailroom;
+	const unsigned char *src_hw;
 
 	/*
 	 *	Allocate a buffer
 	 */
+	int length = sizeof(struct arp_hdr) + (dev->addr_len + plen)) * 2;
 
-	skb = alloc_skb(arp_hdr_len(dev) + hlen + tlen, GFP_ATOMIC);
+	skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
 	if (skb == NULL)
 		return NULL;
 
@@ -147,8 +149,7 @@ static struct sk_buff *arp_create(int type, int ptype, __be32 dest_ip,
 	arp = (struct arphdr *) skb_put(skb, arp_hdr_len(dev));
 	skb->dev = dev;
 	skb->protocol = htons(ETH_P_ARP);
-	if (src_hw == NULL)
-		src_hw = dev->dev_addr;
+	src_hw = dev->dev_addr;
 	if (dest_hw == NULL)
 		dest_hw = dev->broadcast;
 
@@ -160,31 +161,25 @@ static struct sk_buff *arp_create(int type, int ptype, __be32 dest_ip,
 
 	/*
 	 * Fill out the arp protocol part.
-	 *
-	 * The arp hardware type should match the device type, except for FDDI,
-	 * which (according to RFC 1390) should always equal 1 (Ethernet).
 	 */
-	/*
-	 *	Exceptions everywhere. AX.25 uses the AX.25 PID value not the
-	 *	DIX code for the protocol. Make these device structure fields.
-	 */
+
 	switch (dev->type) {
 	default:
 		arp->ar_hrd = htons(dev->type);
-		arp->ar_pro = htons(ETH_P_IP);
+		arp->ar_pro = htons(ptype);
 		break;
 	}
 
 	arp->ar_hln = dev->addr_len;
-	arp->ar_pln = 4;
-	arp->ar_op  = htons(type);
+	arp->ar_pln = plen;
+	arp->ar_op  = htons(op);
 
 	arp_ptr = (unsigned char *)(arp + 1);
 
 	memcpy(arp_ptr, src_hw, dev->addr_len);
 	arp_ptr += dev->addr_len;
-	memcpy(arp_ptr, &src_ip, 4);
-	arp_ptr += 4;
+	memcpy(arp_ptr, &src_nwaddr, plen);
+	arp_ptr += plen;
 
 	switch (dev->type) {
 	default:
@@ -194,7 +189,7 @@ static struct sk_buff *arp_create(int type, int ptype, __be32 dest_ip,
 			memset(arp_ptr, 0, dev->addr_len);
 		arp_ptr += dev->addr_len;
 	}
-	memcpy(arp_ptr, &dest_ip, 4);
+	memcpy(arp_ptr, &dest_nwaddr, plen);
 
 	return skb;
 
@@ -220,12 +215,16 @@ int rinarp_send_request(struct arp_reply_ops *ops)
 
 	if (dev->flags&IFF_NOARP)
 		return;
+	
+	/* Store into list of ARP response handlers */
 
+	/* FIXME: Call arp_create with correct params */
 	skb = arp_create(type, ptype, dest_ip, dev, src_ip,
 			 dest_hw, src_hw, target_hw);
 	if (skb == NULL)
 		return;
-
+	
+        /* FIXME: Actually send it */
 	NF_HOOK(NFPROTO_ARP, NF_ARP_OUT, skb, NULL, skb->dev, dev_queue_xmit);
 
 }
@@ -247,6 +246,8 @@ static int arp_process(struct sk_buff *skb)
 	unsigned char *sha;
 	unsigned char s_netaddr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
 	unsigned char d_netaddr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
+	unsigned char s_hwaddr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
+	unsigned char d_hwaddr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
 	u16 dev_type = dev->type;
 	struct net *net = dev_net(dev);
 
@@ -285,52 +286,49 @@ static int arp_process(struct sk_buff *skb)
 	    arp->ar_op != htons(RINARP_REQUEST))
 		goto out;
 
-/*
- *	Extract network addresses
- */
+        /*
+	 *	Extract addresses
+	 */
 	arp_ptr = (unsigned char *)(arp + 1);
 	sha	= arp_ptr;
 	arp_ptr += dev->addr_len;
 	memcpy(&s_netaddr, arp_ptr, arp->ar_pln);
 	arp_ptr += arp->ar_pln;
-	switch (dev_type) {
-	default:
-		arp_ptr += dev->addr_len;
-	}
+	memcpy(&s_hwaddr, arp_ptr, arp->ar_hln);
+	arp_ptr += dev->addr_len;
 	memcpy(&d_netaddr, arp_ptr, arp->ar_pln);
+	arp_ptr += arp->ar_pln;
+	memcpy(&d_hwaddr, arp_ptr, arp->ar_hln);
 
 /*
  *  Process entry. The idea here is we want to send a reply if it is a
  *  request for us. We want to add an entry to our cache if it is a reply
- *  to us or if it is a request for our address.
+ *  to us or if it is a request for one of our addresses.
  *
  *  Putting this another way, we only care about replies if they are to
  *  us, in which case we add them to the cache.  For requests, we care
  *  about those for us. We add the requester to the arp cache.
+ *
  */
 
+/* FIXME: The following part, first complete top part ARP PM */
 	if (arp->ar_op == htons(ARPOP_REQUEST)) {
+	
+		int dont_send;
 
-		rt = skb_rtable(skb);
-		addr_type = rt->rt_type;
-
-		if (addr_type == RTN_LOCAL) {
-			int dont_send;
-
-			dont_send = arp_ignore(in_dev, sip, tip);
-			if (!dont_send && IN_DEV_ARPFILTER(in_dev))
-				dont_send = arp_filter(sip, tip, dev);
-			if (!dont_send) {
-				n = neigh_event_ns(&arp_tbl, sha, &sip, dev);
-				if (n) {
-					arp_send(ARPOP_REPLY, ETH_P_ARP, sip,
-						 dev, tip, sha, dev->dev_addr,
-						 sha);
-					neigh_release(n);
-				}
+		dont_send = arp_ignore(in_dev, sip, tip);
+		if (!dont_send && IN_DEV_ARPFILTER(in_dev))
+			dont_send = arp_filter(sip, tip, dev);
+		if (!dont_send) {
+			n = neigh_event_ns(&arp_tbl, sha, &sip, dev);
+			if (n) {
+				arp_send(ARPOP_REPLY, ETH_P_ARP, sip,
+					 dev, tip, sha, dev->dev_addr,
+					 sha);
+				neigh_release(n);
 			}
-			goto out;
-		}
+		}	
+		goto out;
 	}
 
 	/* Update our ARP tables */
