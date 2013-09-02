@@ -55,7 +55,6 @@ static int test_echo_dispatcher(void * data,
 		LOG_ERR("Wrong info struct in dispatcher");
 		return -1;
 	}
-
 	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
         if (!attrs)
                 return -1;
@@ -79,6 +78,9 @@ static int test_echo_dispatcher(void * data,
 
 	if (rnl_parse_msg(info, my_msg)){
 		LOG_ERR("Could not parse message");
+		rkfree(attrs);
+		rkfree(my_msg);
+		rkfree(my_hdr);
 		return -1;
 	}
 
@@ -92,6 +94,9 @@ static int test_echo_dispatcher(void * data,
 	out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
 	if(!out_msg) {
 		LOG_ERR("Could not allocate memory for message");
+		rkfree(attrs);
+		rkfree(my_msg);
+		rkfree(my_hdr);
 		return -1;
 	}
 
@@ -105,6 +110,9 @@ static int test_echo_dispatcher(void * data,
 	if(!out_hdr) {
 		LOG_ERR("Could not use genlmsg_put");
 		nlmsg_free(out_msg);
+		rkfree(attrs);
+		rkfree(my_msg);
+		rkfree(my_hdr);
 		return -1;
 	}
 
@@ -114,6 +122,9 @@ static int test_echo_dispatcher(void * data,
 	if (rnl_format_ipcm_assign_to_dif_resp_msg(attrs->result, out_msg)){
 		LOG_ERR("Could not format message...");
 		nlmsg_free(out_msg);
+		rkfree(attrs);
+		rkfree(my_msg);
+		rkfree(my_hdr);
 		return -1;
 	}
 	result = genlmsg_end(out_msg, out_hdr);
@@ -124,9 +135,15 @@ static int test_echo_dispatcher(void * data,
 	result = genlmsg_unicast(&init_net, out_msg, info->snd_portid);
 	if(result) {
 		LOG_ERR("Could not send unicast msg: %d", result);
+		rkfree(attrs);
+		rkfree(my_msg);
+		rkfree(my_hdr);
 		return -1;
 	}
 
+	rkfree(attrs);
+	rkfree(my_msg);
+	rkfree(my_hdr);
 	return 0;
 }
 
