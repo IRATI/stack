@@ -37,7 +37,7 @@ struct rina_nl_set * set;
 
 
 static int test_echo_dispatcher(void * data, 
-			   	struct sk_buff skb_in, 
+			   	struct sk_buff * skb_in, 
 			   	struct genl_info * info)
 {
 	
@@ -48,7 +48,8 @@ static int test_echo_dispatcher(void * data,
 	struct rina_msg_hdr * out_hdr;
 	int result;
 
-	LOG_DBG("ENTER TEST DISPATCHER");
+	LOG_DBG("Entering the test dispatcher....");
+	LOG_DBG("[LDBG] Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
 
 	if (!info) {
 		LOG_ERR("Wrong info struct in dispatcher");
@@ -73,6 +74,9 @@ static int test_echo_dispatcher(void * data,
         }
         my_msg->attrs = attrs;
         my_msg->rina_hdr = my_hdr;
+	
+	LOG_DBG("[LDBG] test-dispatcher before parsing OK");
+
 	if (rnl_parse_msg(info, my_msg)){
 		LOG_ERR("Could not parse message");
 		return -1;
@@ -122,10 +126,8 @@ static int test_echo_dispatcher(void * data,
 		LOG_ERR("Could not send unicast msg: %d", result);
 		return -1;
 	}
+
 	return 0;
-
-
-	return 0;	
 }
 
 

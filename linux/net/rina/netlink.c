@@ -46,8 +46,8 @@ static struct rina_nl_set * default_set;
 
 static struct genl_family nl_family = {
         .id      = GENL_ID_GENERATE,
-        .hdrsize = 0,
-        //.hdrsize = sizeof(struct rina_msg_hdr),
+        //.hdrsize = 0,
+        .hdrsize = sizeof(struct rina_msg_hdr),
         .name    = NETLINK_RINA,
         .version = 1,
         /* .maxattr = NETLINK_RINA_A_MAX, */
@@ -76,7 +76,6 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         struct rina_nl_set * tmp;
 
         LOG_DBG("Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
-
         if (!info) {
                 LOG_ERR("Can't dispatch message, info parameter is empty");
                 return -1;
@@ -106,6 +105,7 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         }
 
         cb_function = tmp->handlers[msg_type].cb;
+	LOG_DBG("[LDBG] Catching callback cb_function =%pK)", cb_function);
         if (!cb_function) {
                 LOG_ERR("There's no handler callback registered for "
                         "message type %d", msg_type);
@@ -472,8 +472,10 @@ int rina_netlink_init(void)
                 return -1;
         }
 
+	LOG_DBG("Registering Family returned: %d",ret);
 	LOG_DBG("Family registered with id: %d",nl_family.id);
-	LOG_DBG("Dispatcher registed for message type 2 is at: %p",nl_ops[2].doit);
+	LOG_DBG("Dispatcher registed for message type 2 is at: %p",nl_ops[1].doit);
+	LOG_DBG("Dispatcher cmd for message type 2 is: %d",nl_ops[1].cmd);
 
 	LOG_DBG("Executing Testing functions...");
 	test_register_echo_handler();
