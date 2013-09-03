@@ -47,10 +47,10 @@ struct network_mapping {
         struct list_head list;
 
         /* The network address advertised */
-        unsigned char netaddr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
+        unsigned char * netaddr;
 	
 	/* Hardware address */
-	unsigned char hw_addr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
+	unsigned char * hw_addr;
 };
 
 struct arp_data {
@@ -112,13 +112,13 @@ static struct arp_data * find_arp_data(__be16              ar_pro,
 	return arp_d;
 }
 
-static struct network_mapping find_netw_map(struct arp_data *arp_d,
-					    unsigned char   *netw_addr)
+static struct network_mapping * find_netw_map(struct arp_data * arp_d,
+					      unsigned char   * netw_addr)
 {
 	struct network_mapping * netw_map;
 
 	list_for_each_entry(netw_map, &arp_d->entries, list) {
-		if (netw_map->netaddr == netw_addr) {
+		if (!strcmp(netw_map->netaddr, netw_addr)) {
 			return netw_map;
 		}
         }
@@ -126,15 +126,15 @@ static struct network_mapping find_netw_map(struct arp_data *arp_d,
 	return NULL;
 }
 
-static struct arp_reply_ops find_reply_ops(struct arp_data arp_d,
-					   unsigned char * src_netw_addr,
-					   unsigned char * dest_netw_addr)
+static struct arp_reply_ops * find_reply_ops(struct arp_data * arp_d,
+			  		     unsigned char *   src_netw_addr,
+					     unsigned char *   dest_netw_addr)
 {
 	struct arp_reply_ops * ops;
 
 	list_for_each_entry(ops, &arp_d->arp_handlers, list) {
-		if (ops->src_netw_addr == src_netw_addr 
-		    && ops->dest_netw_addr == dest_netw_addr) {
+		if (!strcmp(ops->src_netw_addr, src_netw_addr) 
+		    && !strcmp(ops->dest_netw_addr, dest_netw_addr)) {
 			return ops;
 		}
         }
@@ -168,8 +168,8 @@ int rinarp_register_netaddr(__be16              ar_pro,
 	}
 
         INIT_LIST_HEAD(&net_map->list);
-	net_map->netaddr = netw_addr;
-	net_map->hw_addr = dev->dev_addr;
+	strcpy(net_map->netaddr, netw_addr);
+	strcpy(net_map->hw_addr, dev->dev_addr);
         list_add(&net_map->list, &arp_d->entries);
 
 	return 0;
@@ -196,7 +196,7 @@ int rinarp_unregister_netaddr(__be16              ar_pro,
                 return -1;
         }
 
-	list_del(net_map->list);
+	list_del(&net_map->list);
 	kfree(net_map);
 	
 	return 0;
@@ -239,7 +239,7 @@ int rinarp_remove_reply_handler(struct arp_reply_ops * ops)
                 return -1;
         }
 
-	list_del(reply_ops->list);
+	list_del(&reply_ops->list);
 	kfree(reply_ops);
 	
 	return 0;
