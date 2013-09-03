@@ -723,8 +723,15 @@ static int kipcm_notify_ipcp_allocate_flow_request(void *             data,
 			msg_attrs->id)) {
 		LOG_ERR("Failed allocate flow request for port id: %d",
 				msg_attrs->id);
+		rkfree(hdr);
+		rkfree(msg_attrs);
+		rkfree(msg);
 		return -1;
 	}
+
+	rkfree(hdr);
+	rkfree(msg_attrs);
+	rkfree(msg);
 
 	return 0;
 }
@@ -733,6 +740,29 @@ static int kipcm_notify_ipcp_allocate_flow_arrived(void *             data,
 						   struct sk_buff *   buff,
 						   struct genl_info * info)
 {
+	struct kipcm * kipcm;
+	struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs * msg_attrs;
+	struct rnl_msg * 			   msg;
+
+	if (!data) {
+		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+		return -1;
+	}
+
+	kipcm = (struct kipcm *) data;
+
+	if (!info) {
+		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+		return -1;
+	}
+	msg_attrs = rkzalloc(sizeof(*msg_attrs), GFP_KERNEL);
+	if (!msg_attrs)
+		return -1;
+	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+	if (!msg) {
+		rkfree(msg_attrs);
+		return -1;
+	}
 	LOG_MISSING;
 
 	return 0;
