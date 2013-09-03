@@ -23,6 +23,7 @@
 #define RINA_ARP_H
 
 struct arp_reply_ops {
+	struct list_head    list;
 	__be16              ar_pro; 
 	struct net_device * dev; 
 	unsigned char *     src_netw_addr;
