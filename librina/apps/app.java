@@ -87,8 +87,8 @@ public class app {
 		printStatement("Wrote SDU");
 		
 		printStatement("\nREADING AN SDU FROM THE FLOW");
-		flow.readSDU(sdu);
-		printStatement("Read "+sdu.length+" bytes");
+		int bytesRead = flow.readSDU(sdu, sdu.length);
+		printStatement("Read "+bytesRead+" bytes");
 		
 		printStatement("\nLISTING ALLOCATED FLOWS");
 		FlowPointerVector allocatedFlows = ipcManager.getAllocatedFlows();

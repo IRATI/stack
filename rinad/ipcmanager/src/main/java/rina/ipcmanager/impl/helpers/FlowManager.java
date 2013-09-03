@@ -45,11 +45,11 @@ public class FlowManager {
 		}catch(Exception ex){
 			log.error("Error allocating flow. "+ex.getMessage());
 			event.setPortId(-1);
-			applicationManager.flowAllocated(event, ex.getMessage());
+			applicationManager.flowAllocated(event);
 			return;
 		}
 		
-		applicationManager.flowAllocated(event, "");
+		applicationManager.flowAllocated(event);
 	}
 	
 	public void allocateFlowRemote(FlowRequestEvent event) throws Exception{
@@ -73,10 +73,10 @@ public class FlowManager {
 			flows.put(portId, flowState);
 		}catch(Exception ex){
 			log.error("Error allocating flow. "+ex.getMessage());
-			ipcProcess.allocateFlowResponse(event, false, ex.getMessage());
+			ipcProcess.allocateFlowResponse(event, -1);
 		}
 		
-		ipcProcess.allocateFlowResponse(event, true, "");
+		ipcProcess.allocateFlowResponse(event, 0);
 	}
 	
 	public void deallocateFlow(FlowDeallocateRequestEvent event) throws Exception{
@@ -96,10 +96,10 @@ public class FlowManager {
 			flows.remove(event.getPortId());
 		}catch(Exception ex){
 			log.error("Error deallocating flow. "+ex.getMessage());
-			applicationManager.flowDeallocated(event, -1, ex.getMessage());
+			applicationManager.flowDeallocated(event, -1);
 		}
 		
-		applicationManager.flowDeallocated(event, 0, "");
+		applicationManager.flowDeallocated(event, 0);
 	}
 	
 	public void flowDeallocated(FlowDeallocatedEvent event) throws Exception{
@@ -109,7 +109,7 @@ public class FlowManager {
 			flows.remove(event.getPortId());
 			applicationManager.flowDeallocatedRemotely(
 					event.getPortId(), event.getCode(), 
-					event.getReason(), flow.getLocalApplication());
+					flow.getLocalApplication());
 		}catch(Exception ex){
 			log.error("Error processing notification of flow deallocation. "+ex.getMessage());
 		}
