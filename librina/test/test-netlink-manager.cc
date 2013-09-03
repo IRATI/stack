@@ -77,7 +77,10 @@ int main(int argc, char * argv[]) {
 	IpcmAssignToDIFResponseMessage message2;
 	message2.setDestPortId(0);
 	message2.setRequestMessage(true);
+	message2.setSourceIpcProcessId(1);
+	message2.setDestIpcProcessId(2);
 	message2.setSequenceNumber(source.getSequenceNumber());
+	message2.setResult(32);
 	try{
 		source.sendMessage(&message2);
 	}catch(NetlinkException &e){
@@ -88,5 +91,8 @@ int main(int argc, char * argv[]) {
 
 	BaseNetlinkMessage * fromKernel = source.getMessage();
 	std::cout<<"Got message from "<<fromKernel->getSourcePortId()<<"\n";
+	IpcmAssignToDIFResponseMessage * result2 =
+			dynamic_cast<IpcmAssignToDIFResponseMessage *>(fromKernel);
+	std::cout<<"Result is "<<result2->getResult()<<std::endl;
 	delete fromKernel;
 }
