@@ -85,8 +85,8 @@ public class IPCManager {
 		flowManager = new FlowManager(ipcProcessFactory, applicationManager);
 		log.info("IPC Manager daemon initializing, reading RINA configuration ...");
 		initializeConfiguration();
-		/*log.info("Bootstrapping RINA ...");
-		bootstrap();*/
+		log.info("Bootstrapping RINA ...");
+		bootstrap();
 	}
 	
 	private void initializeConfiguration(){

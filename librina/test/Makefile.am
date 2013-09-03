@@ -125,6 +125,15 @@ FUNCTIONAL_XFAIL_TESTS =
 
 FUNCTIONAL_TESTS = $(FUNCTIONAL_PASS_TESTS) $(FUNCTIONAL_XFAIL_TESTS)
 
+KERNEL_DEBUG_PASS_TESTS =				\
+	test-netlink-manager
+
+KERNEL_DEBUG_XFAIL_TESTS =
+
+KERNEL_DEBUG_TESTS = $(KERNEL_DEBUG_PASS_TESTS) $(KERNEL_DEBUG_XFAIL_TESTS)
+
+check-kernel-debug: check-kernel-debug-am
+
 check-functional: check-functional-am
 
 check-all: check check-functional

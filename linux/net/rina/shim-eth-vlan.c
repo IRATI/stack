@@ -62,8 +62,9 @@ enum port_id_state {
 
 /* Hold the information related to one flow*/
 struct shim_eth_flow {
-        uint64_t           src_mac;
-        uint64_t           dst_mac;
+	struct list_head   list;
+        struct name *      source;
+        struct name *      dest;
         port_id_t          port_id;
         enum port_id_state port_id_state;
 
@@ -87,10 +88,23 @@ struct ipcp_instance_data {
 	/* The IPC Process using the shim-eth-vlan */
 	struct name * app_name;
 
-        /* FIXME: Stores the state of flows indexed by port_id */
-        /* HASH_TABLE(flow_to_port_id, port_id_t, shim_eth_flow_t); */
-        /* rbtree or hash table? Or simply a list? */
+        /* Stores the state of flows indexed by port_id */
+	struct list_head flows;
 };
+
+static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
+                                        port_id_t                   id)
+{
+        struct shim_eth_flow * flow;
+
+        list_for_each_entry(flow, &data->flows, list) {
+                if (flow->port_id == id) {
+                        return flow;
+                }
+        }
+
+        return NULL;
+}
 
 static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                                           const struct name *         source,
@@ -98,35 +112,118 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                                           const struct flow_spec *    fspec,
                                           port_id_t                   id)
 {
+	struct shim_eth_flow * flow;
+
         ASSERT(data);
         ASSERT(source);
         ASSERT(dest);
 
-        LOG_MISSING;
+        if (find_flow(data, id)) {
+                LOG_ERR("A flow already exists on port %d", id);
+                return -1;
+        }
 
-        return -1;
+        flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+        if (!flow)
+                return -1;
+
+	flow->port_id = id;
+	flow->port_id_state = PORT_STATE_NULL;
+	
+	/* Keep them as name * ? Or as MAC or 'IP'? */
+        flow->dest = name_dup(dest);
+        if (!flow->dest) {
+                rkfree(flow);
+                return -1;
+        }
+        flow->source = name_dup(source);
+        if (!flow->source) {
+                name_destroy(flow->dest);
+                rkfree(flow);
+                return -1;
+        }
+
+	/* FIXME: Convert the names to IP addresses */
+
+        /* 
+	 * FIXME: If the destination is in the ARP cache,
+	 * transition to ALLOCATED
+	 */
+	flow->port_id_state = PORT_STATE_ALLOCATED;
+
+	/* FIXME: If it is not, send an ARP request */
+	flow->port_id_state = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
+
+        INIT_LIST_HEAD(&flow->list);
+        list_add(&flow->list, &data->flows);
+
+        if (kipcm_flow_add(default_kipcm, data->id, id)) {
+                list_del(&flow->list);
+		name_destroy(flow->source);
+                name_destroy(flow->dest);
+                rkfree(flow);
+                return -1;
+        }
+
+        return 0;
 }
 
 static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                            port_id_t                   id,
                                            response_reason_t *         resp)
 {
+	struct shim_eth_flow * flow;
+
         ASSERT(data);
         ASSERT(resp);
 
-        LOG_MISSING;
+	flow = find_flow(data, id);
+        if (!flow) {
+                LOG_ERR("Flow does not exist, cannot remove");
+                return -1;
+        }
 
-        return -1;
+	if (flow->port_id_state != PORT_STATE_RECIPIENT_ALLOCATE_PENDING) {
+		LOG_ERR("Flow is not in the right state to call this");
+                return -1;	
+	}
+
+        /* 
+	 * On positive response, flow should transition to allocated state 
+	 */
+        if (resp == 0) {
+		/* FIXME: Deliver frames to application */
+		flow->port_id_state = PORT_STATE_ALLOCATED;
+        } else {
+		/* FIXME: Drop all frames in queue */
+		flow->port_id_state = PORT_STATE_NULL;
+	}
+
+
+        return 0;
 }
 
 static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
                                     port_id_t                   id)
 {
+        struct shim_eth_flow * flow;
+
         ASSERT(data);
+        flow = find_flow(data, id);
+        if (!flow) {
+                LOG_ERR("Flow does not exist, cannot remove");
+                return -1;
+        }
 
-        LOG_MISSING;
+        list_del(&flow->list);
+        name_destroy(flow->dest);
+        name_destroy(flow->source);
+        rkfree(flow);
 
-        return -1;
+        if (kipcm_flow_remove(default_kipcm, id))
+                return -1;
+
+        return 0;
 }
 
 static int eth_vlan_application_register(struct ipcp_instance_data * data,
@@ -164,6 +261,9 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
 		LOG_ERR("Shim-eth-vlan has no application registered");
 		return -1;
 	}
+
+	/* FIXME: Remove from ARP cache */
+
 	name_destroy(data->app_name);
 	data->app_name = NULL;
 	return 0;

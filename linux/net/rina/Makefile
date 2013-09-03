@@ -5,7 +5,7 @@
 obj-$(CONFIG_RINA) +=				\
 	utils.o debug.o core.o personality.o	\
 	syscalls.o netlink.o netlink-utils.o	\
-        du.o ipcp-utils.o
+        du.o ipcp-utils.o netlink-test.o
 
 obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 	rina_personality_default.o
@@ -20,6 +20,8 @@ ifeq  ($(CONFIG_RINA_PERSONALITY_DEFAULT),m)
 rina_personality_default-y +=			\
 	 utils-workarounds.o
 endif
+
+obj-$(CONFIG_RINA_ARP)           += rina-arp.o
 
 obj-$(CONFIG_RINA_SHIM_EMPTY)    += shim-empty.o
 obj-$(CONFIG_RINA_SHIM_DUMMY)    += shim-dummy.o

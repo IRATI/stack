@@ -160,8 +160,19 @@ struct connection {
 };
 
 /*FIXME: needed for nl api */
-enum rib_object_t {
+enum rib_object_class_t {
 	EMPTY,
 };
 
+struct rib_object{
+	enum rib_object_class_t  rib_obj_class;
+	string_t		 * rib_obj_name;
+	long unsigned int	 rib_obj_instance;
+};
+
+/*  FIXME: dif_config does not exist. Coded based on user space */
+struct dif_config{
+        string_t    * type;
+        struct name * dif_name;
+};
 #endif

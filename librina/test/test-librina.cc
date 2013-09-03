@@ -113,7 +113,7 @@ void doWorkIPCProcess(){
 	AssignToDIFRequestEvent * assignToDIFEvent =
 			dynamic_cast<AssignToDIFRequestEvent *>(event);
 	std::cout<<"IPCProcess# Received an assign to DIF event"<<std::endl;
-	extendedIPCManager->assignToDIFResponse(*assignToDIFEvent, 0, "ok");
+	extendedIPCManager->assignToDIFResponse(*assignToDIFEvent, 0);
 	std::cout<<"IPCProcess# Replied IPC Manager"<<std::endl;
 	delete assignToDIFEvent;
 
@@ -124,7 +124,7 @@ void doWorkIPCProcess(){
 	std::cout<<"IPCProcess# Received application registration event"
 			<<std::endl;
 	extendedIPCManager->registerApplicationResponse(
-			*applicationRegistrationEvent, 0, "ok");
+			*applicationRegistrationEvent, 0);
 	std::cout<<"IPCProcess# Replied IPC Manager"<<std::endl;
 	delete applicationRegistrationEvent;
 
@@ -135,7 +135,7 @@ void doWorkIPCProcess(){
 	std::cout<<"IPCProcess# Received flow request event"
 			<<std::endl;
 	extendedIPCManager->allocateFlowRequestResult(
-			*flowRequestEvent, 0, "ok");
+			*flowRequestEvent, 0);
 	std::cout<<"IPCProcess# Replied IPC Manager"<<std::endl;
 	delete flowRequestEvent;
 
@@ -145,7 +145,7 @@ void doWorkIPCProcess(){
 			dynamic_cast<FlowDeallocateRequestEvent *>(event);
 	std::cout<<"IPCProcess# received a flow deallocation event\n";
 	extendedIPCManager->flowDeallocated(
-			*deallocateFlowEvent, 0, "ok");
+			*deallocateFlowEvent, 0);
 	std::cout<<"ICPProcess# Replied to application\n";
 	delete deallocateFlowEvent;
 
@@ -156,7 +156,7 @@ void doWorkIPCProcess(){
 	std::cout<<"IPCProcess# Received application unregistration event"
 			<<std::endl;
 	extendedIPCManager->unregisterApplicationResponse(
-			*applicationUnregistrationEvent, 0, "ok");
+			*applicationUnregistrationEvent, 0);
 	std::cout<<"IPCProcess# Replied IPC Manager"<<std::endl;
 	delete applicationUnregistrationEvent;
 
@@ -177,7 +177,7 @@ void doWorkIPCProcess(){
 	ribObject2.setName("/dif/management/flows/24");
 	ribObject2.setInstance(12345677);
 	ribObjects.push_back(ribObject2);
-	extendedIPCManager->queryRIBResponse(*queryRIBEvent, 0, "", ribObjects);
+	extendedIPCManager->queryRIBResponse(*queryRIBEvent, 0, ribObjects);
 	std::cout<<"IPCProcess# Replied IPC Manager"<<std::endl;
 	delete queryRIBEvent;
 
@@ -238,7 +238,7 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 			DIFProperties(getPropertiesEvent->getDIFName(), 9000);
 	difProperties.push_back(difProperty);
 	applicationManager->getDIFPropertiesResponse(
-			*getPropertiesEvent, 0, "", difProperties);
+			*getPropertiesEvent, 0, difProperties);
 	std::cout<<"IPCManager# Replied to application\n";
 	delete getPropertiesEvent;
 
@@ -251,7 +251,7 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	std::cout<<"IPCManager# IPC Process successfully registered application " <<
 			"to DIF "<<difName.getProcessName()<<std::endl;
 	applicationManager->applicationRegistered(
-			*appRequestEvent, difName, 0, "ok");
+			*appRequestEvent, difName, 0);
 	std::cout<<"IPCManager# Replied to application\n";
 	delete appRequestEvent;
 
@@ -265,7 +265,7 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	ipcProcess->allocateFlow(*flowRequestEvent);
 	std::cout<<"IPCManager# IPC Process successfully allocated flow" <<
 			"in DIF "<<difName.getProcessName()<<std::endl;
-	applicationManager->flowAllocated(*flowRequestEvent, "ok");
+	applicationManager->flowAllocated(*flowRequestEvent);
 	std::cout<<"IPCManager# Replied to flow allocation\n";
 	delete flowRequestEvent;
 
@@ -279,7 +279,7 @@ int doWorkIPCManager(pid_t appPID, pid_t ipcPID){
 	ipcProcess->unregisterApplication(appUnregistrationRequestEvent->getApplicationName());
 	std::cout<<"IPCManager# IPC Process successfully unregistered application " <<
 			"to DIF "<<difName.getProcessName()<<std::endl;
-	applicationManager->applicationUnregistered(*appUnregistrationRequestEvent, 0, "OK");
+	applicationManager->applicationUnregistered(*appUnregistrationRequestEvent, 0);
 	std::cout<<"IPCManager# Replied to application\n";
 	delete appUnregistrationRequestEvent;
 

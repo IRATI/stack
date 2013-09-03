@@ -24,41 +24,42 @@ int main(int argc, char * argv[]) {
 	std::cout << "TESTING LIBRINA-NETLINK-MANAGER\n";
 
 	/* Test User-space to User-space communication */
-	NetlinkManager * source = new NetlinkManager(4);
-	NetlinkManager * destination = new NetlinkManager(5);
+	NetlinkManager source = NetlinkManager(30);
+	NetlinkManager destination = NetlinkManager(31);
 
-	ApplicationProcessNamingInformation * sourceName =
-			new ApplicationProcessNamingInformation();
-	sourceName->setProcessName("/apps/source");
-	sourceName->setProcessInstance("12");
-	sourceName->setEntityName("database");
-	sourceName->setEntityInstance("12");
+	ApplicationProcessNamingInformation sourceName;
+	sourceName.setProcessName("/apps/source");
+	sourceName.setProcessInstance("12");
+	sourceName.setEntityName("database");
+	sourceName.setEntityInstance("12");
 
-	ApplicationProcessNamingInformation * destName =
-			new ApplicationProcessNamingInformation();
-	destName->setProcessName("/apps/dest");
-	destName->setProcessInstance("12345");
-	destName->setEntityName("printer");
-	destName->setEntityInstance("12623456");
+	ApplicationProcessNamingInformation destName;
+	destName.setProcessName("/apps/dest");
+	destName.setProcessInstance("12345");
+	destName.setEntityName("printer");
+	destName.setEntityInstance("12623456");
 
-	FlowSpecification * flowSpec = new FlowSpecification();
+	FlowSpecification flowSpec;
 
-	AppAllocateFlowRequestMessage * message =
-			new AppAllocateFlowRequestMessage();
-	message->setDestPortId(5);
-	message->setSourceAppName(*sourceName);
-	message->setDestAppName(*destName);
-	message->setFlowSpecification(*flowSpec);
-	message->setRequestMessage(true);
-	message->setSequenceNumber(source->getSequenceNumber());
-	message->setSourceIpcProcessId(25);
-	message->setDestIpcProcessId(38);
-	source->sendMessage(message);
-	delete message;
+	AppAllocateFlowRequestMessage message;
+	message.setDestPortId(31);
+	message.setSourceAppName(sourceName);
+	message.setDestAppName(destName);
+	message.setFlowSpecification(flowSpec);
+	message.setRequestMessage(true);
+	message.setSequenceNumber(source.getSequenceNumber());
+	message.setSourceIpcProcessId(25);
+	message.setDestIpcProcessId(38);
+	try{
+		source.sendMessage(&message);
+	}catch(NetlinkException &e){
+		std::cout<<"Exception: "<<e.what()<<std::endl;
+		return -1;
+	}
 
 	AppAllocateFlowRequestMessage * result;
 	result = dynamic_cast<AppAllocateFlowRequestMessage *>(destination
-			->getMessage());
+			.getMessage());
 	std::cout << "Received message from " << result->getSourcePortId()
 			<< " with sequence number " << result->getSequenceNumber()
 			<< " source IPC Process id "<< result->getSourceIpcProcessId()
@@ -73,26 +74,25 @@ int main(int argc, char * argv[]) {
 	delete result;
 
 	/* Test user-space to kernel communication */
-	message =
-			new AppAllocateFlowRequestMessage();
-	message->setDestPortId(0);
-	message->setSourceAppName(*sourceName);
-	message->setDestAppName(*destName);
-	message->setFlowSpecification(*flowSpec);
-	message->setSequenceNumber(source->getSequenceNumber());
-	message->setRequestMessage(true);
-	message->setSourceIpcProcessId(21);
-	message->setDestIpcProcessId(15);
-	source->sendMessage(message);
-	delete message;
+	IpcmAssignToDIFResponseMessage message2;
+	message2.setDestPortId(0);
+	message2.setRequestMessage(true);
+	message2.setSourceIpcProcessId(1);
+	message2.setDestIpcProcessId(2);
+	message2.setSequenceNumber(source.getSequenceNumber());
+	message2.setResult(32);
+	try{
+		source.sendMessage(&message2);
+	}catch(NetlinkException &e){
+		std::cout<<"Exception: "<<e.what()<<std::endl;
+		return -1;
+	}
+	std::cout<<"Sent message to Kernel"<<std::endl;
 
-	BaseNetlinkMessage * fromKernel = source->getMessage();
+	BaseNetlinkMessage * fromKernel = source.getMessage();
 	std::cout<<"Got message from "<<fromKernel->getSourcePortId()<<"\n";
+	IpcmAssignToDIFResponseMessage * result2 =
+			dynamic_cast<IpcmAssignToDIFResponseMessage *>(fromKernel);
+	std::cout<<"Result is "<<result2->getResult()<<std::endl;
 	delete fromKernel;
-
-	delete source;
-	delete destination;
-	delete sourceName;
-	delete destName;
-	delete flowSpec;
 }

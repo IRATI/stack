@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -716,9 +717,9 @@ static int kipcm_notify_ipcp_allocate_flow_request(void *             data,
 		return -1;
 	}
 	if (ipc_process->ops->flow_allocate_request(ipc_process->data,
-			&msg_attrs->source,
-			&msg_attrs->dest,
-			&msg_attrs->fspec,
+			msg_attrs->source,
+			msg_attrs->dest,
+			msg_attrs->fspec,
 			msg_attrs->id)) {
 		LOG_ERR("Failed allocate flow request for port id: %d",
 				msg_attrs->id);

@@ -25,20 +25,10 @@
 #include "utils.h"
 #include "debug.h"
 #include "netlink.h"
+#include "netlink-utils.h"
+#include "netlink-test.h"
 
 #define NETLINK_RINA "rina"
-
-/* attributes */
-/* FIXME: Are they really needed ??? */
-enum {
-        NETLINK_RINA_A_UNSPEC,
-        NETLINK_RINA_A_MSG,
-
-        /* Do not use */
-        NETLINK_RINA_A_MAX,
-};
-
-#define NETLINK_RINA_A_MAX (NETLINK_RINA_A_MAX - 1)
 
 #define NETLINK_RINA_C_MIN (RINA_C_MIN + 1)
 #define NETLINK_RINA_C_MAX (RINA_C_MAX - 1)
@@ -56,12 +46,16 @@ static struct rina_nl_set * default_set;
 
 static struct genl_family nl_family = {
         .id      = GENL_ID_GENERATE,
-        .hdrsize = 0,
+        //.hdrsize = 0,
+        .hdrsize = sizeof(struct rina_msg_hdr),
         .name    = NETLINK_RINA,
         .version = 1,
-        .maxattr = NETLINK_RINA_A_MAX, /* ??? */
+        /* .maxattr = NETLINK_RINA_A_MAX, */
 };
 
+struct genl_family  * get_nl_family()
+{ return &nl_family; }
+EXPORT_SYMBOL(get_nl_family);
 
 static int is_message_type_in_range(msg_id msg_type)
 { return is_value_in_range(msg_type, NETLINK_RINA_C_MIN, NETLINK_RINA_C_MAX); }
@@ -82,7 +76,6 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         struct rina_nl_set * tmp;
 
         LOG_DBG("Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
-
         if (!info) {
                 LOG_ERR("Can't dispatch message, info parameter is empty");
                 return -1;
@@ -112,6 +105,7 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         }
 
         cb_function = tmp->handlers[msg_type].cb;
+	LOG_DBG("[LDBG] Catching callback cb_function =%pK)", cb_function);
         if (!cb_function) {
                 LOG_ERR("There's no handler callback registered for "
                         "message type %d", msg_type);
@@ -471,12 +465,29 @@ int rina_netlink_init(void)
         ret = genl_register_family_with_ops(&nl_family,
                                             nl_ops,
                                             ARRAY_SIZE(nl_ops));
-        if (ret < 0 /* FIXME: Should be != 0 */) {
+
+        if (ret != 0) {
                 LOG_ERR("Cannot register Netlink family and ops (error=%i), "
                         "bailing out", ret);
                 return -1;
         }
 
+	LOG_DBG("Registering Family returned: %d",ret);
+	LOG_DBG("Family registered with id: %d",nl_family.id);
+	LOG_DBG("Dispatcher registed for message type 2 is at: %p",nl_ops[1].doit);
+	LOG_DBG("Dispatcher cmd for message type 2 is: %d",nl_ops[1].cmd);
+
+	LOG_DBG("Executing Testing functions...");
+	test_register_echo_handler();
+#if 0
+	if (test_register_handler()) {
+		return -1;
+	}
+	if (test_rnl_format_ipcm_alloc_flow_req_result_msg(5)){
+		return -1;
+	}
+	test_formatters();
+#endif
         LOG_DBG("NetLink layer initialized successfully");
 
         return 0;
