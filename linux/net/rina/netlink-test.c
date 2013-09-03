@@ -43,7 +43,6 @@ static int test_echo_dispatcher(void * data,
 	
 	struct rnl_msg * my_msg;
 	struct rnl_ipcm_assign_to_dif_resp_msg_attrs * attrs;
-	struct rina_msg_hdr * my_hdr;
 	struct sk_buff * out_msg;
 	struct rina_msg_hdr * out_hdr;
 	int result;
@@ -64,15 +63,7 @@ static int test_echo_dispatcher(void * data,
                 rkfree(attrs);
                 return -1;
         }
-        my_hdr = rkzalloc(sizeof(*my_hdr), GFP_KERNEL);
-        if (!my_hdr) {
-		LOG_ERR("Could not allocate space for header");
-                rkfree(attrs);
-                rkfree(my_msg);
-                return -1;
-        }
         my_msg->attrs = attrs;
-        my_msg->rina_hdr = my_hdr;
 	
 	LOG_DBG("[LDBG] test-dispatcher before parsing OK");
 	LOG_DBG("[LDBG] Size of rina_msg_header: %d", sizeof(struct rina_msg_hdr));
@@ -84,17 +75,16 @@ static int test_echo_dispatcher(void * data,
 		LOG_ERR("Could not parse message");
 		rkfree(attrs);
 		rkfree(my_msg);
-		rkfree(my_hdr);
 		return -1;
 	}
 
 	LOG_DBG("Returned value\n"
 		"RESULT: %d\n"
-		"my_hdr->src_ipc_id: %d\n"
-		"my_hdr->dst_ipc_id %d",
+		"(my_msg->rina_hdr)->src_ipc_id: %d\n"
+		"(my_msg->rina_hdr)->src_ipc_id: %d",
 		attrs->result,
-		my_hdr->src_ipc_id,
-		my_hdr->dst_ipc_id);
+		(my_msg->rina_hdr)->src_ipc_id,
+		(my_msg->rina_hdr)->dst_ipc_id);
 
 	
 	
@@ -105,7 +95,6 @@ static int test_echo_dispatcher(void * data,
 		LOG_ERR("Could not allocate memory for message");
 		rkfree(attrs);
 		rkfree(my_msg);
-		rkfree(my_hdr);
 		return -1;
 	}
 
@@ -121,19 +110,17 @@ static int test_echo_dispatcher(void * data,
 		nlmsg_free(out_msg);
 		rkfree(attrs);
 		rkfree(my_msg);
-		rkfree(my_hdr);
 		return -1;
 	}
 
-	out_hdr->src_ipc_id = my_hdr->dst_ipc_id;
-	out_hdr->dst_ipc_id = my_hdr->src_ipc_id;
+	out_hdr->src_ipc_id = (my_msg->rina_hdr)->dst_ipc_id;
+	out_hdr->dst_ipc_id = (my_msg->rina_hdr)->src_ipc_id;
 
 	if (rnl_format_ipcm_assign_to_dif_resp_msg(attrs->result, out_msg)){
 		LOG_ERR("Could not format message...");
 		nlmsg_free(out_msg);
 		rkfree(attrs);
 		rkfree(my_msg);
-		rkfree(my_hdr);
 		return -1;
 	}
 	result = genlmsg_end(out_msg, out_hdr);
@@ -146,13 +133,11 @@ static int test_echo_dispatcher(void * data,
 		LOG_ERR("Could not send unicast msg: %d", result);
 		rkfree(attrs);
 		rkfree(my_msg);
-		rkfree(my_hdr);
 		return -1;
 	}
 
 	rkfree(attrs);
 	rkfree(my_msg);
-	rkfree(my_hdr);
 	return 0;
 }
 
