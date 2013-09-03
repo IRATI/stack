@@ -58,9 +58,10 @@ struct arp_data {
 	struct list_head    entries;
 	__be16              ar_pro;
 	struct net_device * dev;
+	struct list_head    arp_handlers;
 };
 
-static struct arp_data data;
+static struct list_head data;
 
 /* 
  *  Taken from include/uapi/linux/if_arp.h 
@@ -87,11 +88,11 @@ struct arp_hdr {
 };
 
 /* Searches for an arp_data or creates one if not found */
-static struct arp_data find_arp_data(__be16              ar_pro, 
-				     struct net_device * dev)
+static struct arp_data * find_arp_data(__be16              ar_pro, 
+				       struct net_device * dev)
 {
 	struct arp_data * arp_d;
-	list_for_each_entry(arp_d, &data->list, list) {
+	list_for_each_entry(arp_d, &data, list) {
 		if(arp_d->ar_pro == ar_pro && arp_d->dev == dev) {
 			return arp_d;
 		}
@@ -106,19 +107,35 @@ static struct arp_data find_arp_data(__be16              ar_pro,
 	arp_d->ar_pro = ar_pro;
 	INIT_LIST_HEAD(&arp_d->list);
 	INIT_LIST_HEAD(&arp_d->entries);
-	list_add(&arp_d->list, &data->list);
+	list_add(&arp_d->list, &data);
 	
 	return arp_d;
 }
 
-static struct network_mapping find_netw_map(struct arp_data arp_d,
-					    struct network_mapping netw_addr)
+static struct network_mapping find_netw_map(struct arp_data *arp_d,
+					    unsigned char   *netw_addr)
 {
 	struct network_mapping * netw_map;
 
 	list_for_each_entry(netw_map, &arp_d->entries, list) {
 		if (netw_map->netaddr == netw_addr) {
 			return netw_map;
+		}
+        }
+
+	return NULL;
+}
+
+static struct arp_reply_ops find_reply_ops(struct arp_data arp_d,
+					   unsigned char * src_netw_addr,
+					   unsigned char * dest_netw_addr)
+{
+	struct arp_reply_ops * ops;
+
+	list_for_each_entry(ops, &arp_d->arp_handlers, list) {
+		if (ops->src_netw_addr == src_netw_addr 
+		    && ops->dest_netw_addr == dest_netw_addr) {
+			return ops;
 		}
         }
 
@@ -138,7 +155,7 @@ int rinarp_register_netaddr(__be16              ar_pro,
 		return -1;
 	}
 
-        if (find_netw_nap(arp_d, netw_addr)) {
+        if (find_netw_map(arp_d, netw_addr)) {
                 printk("Network address %s has been already registered", 
 		       netw_addr);
                 return -1;
@@ -172,7 +189,7 @@ int rinarp_unregister_netaddr(__be16              ar_pro,
 		return -1;
 	}
 
-	net_map = find_netw_nap(arp_d, netw_addr);
+	net_map = find_netw_map(arp_d, netw_addr);
         if (!net_map) {
                 printk("No such network address: %s", 
 		       netw_addr);
@@ -206,7 +223,27 @@ unsigned char * rinarp_lookup_netaddr(__be16              ar_pro,
 EXPORT_SYMBOL(rinarp_lookup_netaddr);
 
 int rinarp_remove_reply_handler(struct arp_reply_ops * ops)
-{ return -1; }
+{ 
+	struct arp_reply_ops * reply_ops;
+	struct arp_data * arp_d;
+
+	/* First get the right arp_data */
+	arp_d = find_arp_data(ops->ar_pro, ops->dev);
+	if (!arp_d) {
+		return -1;
+	}
+
+	reply_ops = find_reply_ops(arp_d, ops->src_netw_addr, ops->dest_netw_addr);
+        if (!reply_ops) {
+                printk("No such reply ops");
+                return -1;
+        }
+
+	list_del(reply_ops->list);
+	kfree(reply_ops);
+	
+	return 0;
+}
 EXPORT_SYMBOL(rinarp_remove_reply_handler);
 
 /* Taken from include/linux/if_arp.h */
@@ -225,11 +262,11 @@ static struct sk_buff *arp_create(int op, int ptype, int plen,
 				  const unsigned char *dest_nwaddr,
                                   const unsigned char *dest_hw)
 {
-	struct sk_buff * skb;
-	struct arp_hdr * arp;
-	unsigned char *  arp_ptr;
-	int              hlen = LL_RESERVED_SPACE(dev);
-	int              tlen = dev->needed_tailroom;
+	struct sk_buff *     skb;
+	struct arp_hdr *     arp;
+	unsigned char *      arp_ptr;
+	int                  hlen = LL_RESERVED_SPACE(dev);
+	int                  tlen = dev->needed_tailroom;
 	const unsigned char *src_hw;
 
 	/*
@@ -495,7 +532,7 @@ static struct packet_type arp_packet_type __read_mostly = {
 
 static int __init mod_init(void)
 {
-	INIT_LIST_HEAD(&data.list);
+	INIT_LIST_HEAD(&data);
 	dev_add_pack(&arp_packet_type);
 
         return 0;
