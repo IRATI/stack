@@ -241,8 +241,8 @@ EXPORT_SYMBOL(test_register_handler);
 
 int test_rnl_format_ipcm_alloc_flow_req_result_msg(uint_t result)
 {
-	struct sk_buff * msg;
-	struct rina_msg_hdr * hdr;
+	struct sk_buff * msg = NULL;
+	struct rina_msg_hdr * hdr = NULL;
 	
 	LOG_DBG("FORMATTING TEST MESSAGE...");
 
@@ -353,10 +353,10 @@ void populate_generic_name(string_t    * prefix,
 int test_rnl_format_ipcm_assign_to_dif_req_msg(void)
 {
 
-	struct sk_buff * msg;
-	struct rina_msg_hdr * hdr;
-	struct dif_config * config;
-	struct name * name;
+	struct sk_buff * msg = NULL;
+	struct rina_msg_hdr * hdr = NULL;
+	struct dif_config * config = NULL;
+	struct name * name = NULL;
 
 	config = rkzalloc(sizeof(*config), GFP_KERNEL);
 	name = rkzalloc(sizeof(*name), GFP_KERNEL);
@@ -394,8 +394,8 @@ int test_rnl_format_ipcm_assign_to_dif_req_msg(void)
 
 int test_rnl_format_ipcm_assign_to_dif_resp_msg(void)
 {
-	struct sk_buff * msg;
-	struct rina_msg_hdr * hdr;
+	struct sk_buff * msg = NULL;
+	struct rina_msg_hdr * hdr = NULL;
 
 	if (test_begin_generic(msg,
 	  		       hdr,
@@ -415,10 +415,10 @@ int test_rnl_format_ipcm_assign_to_dif_resp_msg(void)
 
 int test_rnl_format_ipcm_ipcp_dif_reg_noti_msg(void)
 {
-	struct sk_buff * msg;
-	struct rina_msg_hdr * hdr;
-	struct name * ipc_name;
-	struct name * dif_name;
+	struct sk_buff * msg = NULL;
+	struct rina_msg_hdr * hdr = NULL;
+	struct name * ipc_name = NULL;
+	struct name * dif_name = NULL;
 
 	ipc_name = rkzalloc(sizeof(*ipc_name), GFP_KERNEL);
 	dif_name = rkzalloc(sizeof(*dif_name), GFP_KERNEL);
@@ -459,8 +459,8 @@ int test_rnl_format_ipcm_ipcp_dif_reg_noti_msg(void)
 
 int test_rnl_format_ipcm_ipcp_dif_unreg_noti_msg(void)
 {
-	struct sk_buff * msg;
-	struct rina_msg_hdr * hdr;
+	struct sk_buff * msg = NULL;
+	struct rina_msg_hdr * hdr = NULL;
 
 	if (test_begin_generic(msg,
 	  	hdr,
@@ -483,9 +483,9 @@ int test_rnl_format_ipcm_ipcp_dif_unreg_noti_msg(void)
 
 int test_rnl_format_ipcm_enroll_to_dif_req_msg(void)
 {
-	struct sk_buff * msg;
-	struct rina_msg_hdr * hdr;
-	struct name * dif_name;
+	struct sk_buff * msg = NULL;
+	struct rina_msg_hdr * hdr = NULL;
+	struct name * dif_name = NULL;
 
 	dif_name = rkzalloc(sizeof(*dif_name), GFP_KERNEL);
 	if(!dif_name){
@@ -517,8 +517,8 @@ int test_rnl_format_ipcm_enroll_to_dif_req_msg(void)
 
 int test_rnl_format_ipcm_enroll_to_dif_resp_msg(void)
 {
-	struct sk_buff * msg;
-	struct rina_msg_hdr * hdr;
+	struct sk_buff * msg = NULL;
+	struct rina_msg_hdr * hdr = NULL;
 
 	if (test_begin_generic(msg,
 	  	hdr,
