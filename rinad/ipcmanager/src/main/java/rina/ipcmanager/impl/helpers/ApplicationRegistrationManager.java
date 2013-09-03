@@ -64,12 +64,12 @@ public class ApplicationRegistrationManager {
 		}catch(Exception ex){
 			log.error("Error registering application. "+ex.getMessage());
 			applicationManager.applicationRegistered(event, new ApplicationProcessNamingInformation(), 
-					-1, ex.getMessage());
+					-1);
 			return;
 		}
 		
 		applicationManager.applicationRegistered(event, ipcProcess.getConfiguration().getDifName(), 
-				0, "");
+				0);
 	}
 	
 	/**
@@ -101,11 +101,11 @@ public class ApplicationRegistrationManager {
 			}
 		}catch(Exception ex){
 			log.error("Error unregistering application. "+ex.getMessage());
-			applicationManager.applicationUnregistered(event, -1, ex.getMessage());
+			applicationManager.applicationUnregistered(event, -1);
 			return;
 		}
 		
-		applicationManager.applicationUnregistered(event, 0, "");
+		applicationManager.applicationUnregistered(event, 0);
 	}
 	
 	private IPCProcess getIPCProcessToRegisterAt(ApplicationRegistrationRequestEvent event, 

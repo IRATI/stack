@@ -201,10 +201,11 @@ public:
 	 * SDU available.
 	 *
 	 * @param sdu A buffer to store the SDU data
+	 * @param maxBytes The maximum number of bytes to read
 	 * @return int The number of bytes read
 	 * @throws IPCException if the flow is not in the ALLOCATED state
 	 */
-	int readSDU(void * sdu)
+	int readSDU(void * sdu, int maxBytes)
 			throw (FlowNotAllocatedException, ReadSDUException);
 
 	/**

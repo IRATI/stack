@@ -71,7 +71,7 @@ bool Flow::isAllocated() const{
 	return flowState == FLOW_ALLOCATED;
 }
 
-int Flow::readSDU(void * sdu)
+int Flow::readSDU(void * sdu, int maxBytes)
 		throw (FlowNotAllocatedException, ReadSDUException) {
 	LOG_DBG("Flow.readSDU called");
 
@@ -84,7 +84,7 @@ int Flow::readSDU(void * sdu)
 	sdu = buffer;
 	return 7;
 #else
-	int result = syscallReadSDU(portId, sdu);
+	int result = syscallReadSDU(portId, sdu, maxBytes);
 	if (result < 0){
 		throw ReadSDUException();
 	}

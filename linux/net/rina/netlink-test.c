@@ -47,7 +47,7 @@ static int test_echo_dispatcher_2(void * data,
 	struct rina_msg_hdr * out_hdr;
 	int result;
 
-	LOG_DBG("Entering the test dispatcher....");
+	LOG_DBG("\nEntering the test dispatcher RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE...");
 	LOG_DBG("[LDBG] Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
 
 	if (!info) {
@@ -141,18 +141,18 @@ static int test_echo_dispatcher_2(void * data,
 	return 0;
 }
 
-static int test_echo_dispatcher_9(void * data, 
+static int test_echo_dispatcher_10(void * data, 
 			   	  struct sk_buff * skb_in, 
 			   	  struct genl_info * info)
 {
 	
 	struct rnl_msg * my_msg;
-	struct rnl_ipcm_assign_to_dif_resp_msg_attrs * attrs;
+	struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs;
 	struct sk_buff * out_msg;
 	struct rina_msg_hdr * out_hdr;
 	int result;
 
-	LOG_DBG("Entering the test dispatcher....");
+	LOG_DBG("\nEntering the test dispatcher RINA_C_IPCM_ALLOCATE_FLOW_REQUEST....");
 	LOG_DBG("[LDBG] Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
 
 	if (!info) {
@@ -170,10 +170,7 @@ static int test_echo_dispatcher_9(void * data,
         }
         my_msg->attrs = attrs;
 	
-	LOG_DBG("[LDBG] test-dispatcher before parsing OK");
-	LOG_DBG("[LDBG] Size of rina_msg_header: %d", sizeof(struct rina_msg_hdr));
 	LOG_DBG("[LDBG] my_msg is at %pK", my_msg);
-	LOG_DBG("[LDBG] my_msg->rina_hdr is at %pK and size is %d", my_msg->rina_hdr, sizeof(my_msg->rina_hdr));
 	LOG_DBG("[LDBG] my_msg->attrs is at %pK", my_msg->attrs);
 
 	if (rnl_parse_msg(info, my_msg)){
@@ -183,13 +180,13 @@ static int test_echo_dispatcher_9(void * data,
 		return -1;
 	}
 
-	LOG_DBG("Returned value\n"
-		"RESULT: %d\n"
+	LOG_DBG("Returned parsed msg\n"
 		"(my_msg->rina_hdr)->src_ipc_id: %d\n"
-		"(my_msg->rina_hdr)->src_ipc_id: %d",
-		attrs->result,
+		"(my_msg->rina_hdr)->src_ipc_id: %d\n"
+		"((my_msg->attrs)->source)->process_name: %s",
 		(my_msg->rina_hdr)->src_ipc_id,
-		(my_msg->rina_hdr)->dst_ipc_id);
+		(my_msg->rina_hdr)->dst_ipc_id,
+		(attrs->source)->process_name);
 
 	
 	
@@ -209,7 +206,7 @@ static int test_echo_dispatcher_9(void * data,
 				0, 
 				get_nl_family(), 
 				0, 
-				RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE);
+				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST);
 	if(!out_hdr) {
 		LOG_ERR("Could not use genlmsg_put");
 		nlmsg_free(out_msg);
@@ -221,7 +218,12 @@ static int test_echo_dispatcher_9(void * data,
 	out_hdr->src_ipc_id = (my_msg->rina_hdr)->dst_ipc_id;
 	out_hdr->dst_ipc_id = (my_msg->rina_hdr)->src_ipc_id;
 
-	if (rnl_format_ipcm_assign_to_dif_resp_msg(attrs->result, out_msg)){
+	if (rnl_format_ipcm_alloc_flow_req_msg(attrs->source, 
+					       attrs->dest,
+					       attrs->fspec,
+					       attrs->id,
+					       attrs->dif_name,
+					       out_msg)){
 		LOG_ERR("Could not format message...");
 		nlmsg_free(out_msg);
 		rkfree(attrs);
@@ -266,9 +268,9 @@ int test_register_echo_handler(void)
 				&data,
 				(message_handler_cb) test_echo_dispatcher_2) ||
 	    rina_netlink_handler_register(set,
-				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED,
+				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
 				&data,
-				(message_handler_cb) test_echo_dispatcher_9) 
+				(message_handler_cb) test_echo_dispatcher_10) 
 									  ) {
 		LOG_ERR("Could not register handler");
 		return -1;

@@ -39,10 +39,11 @@ int syscallWriteSDU(int portId, void * sdu, int size);
  * Wrapper of the readSDU system call
  * @param portId the portId where the data has to be written
  * @param sdu pointer to the memory address of the first byte of the SDU
+ * @param maxBytes Maximum amount of bytes to read
  * @return number of bytes read if successful, a negative number indicating
  * an error otherwise
  */
-int syscallReadSDU(int portId, void * sdu);
+int syscallReadSDU(int portId, void * sdu, int maxBytes);
 
 /**
  * Wrapper of ipcCreate system call

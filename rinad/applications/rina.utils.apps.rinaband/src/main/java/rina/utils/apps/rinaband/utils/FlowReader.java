@@ -24,7 +24,7 @@ public class FlowReader implements Runnable{
 		
 		while(flow.isAllocated()){
 			try{
-				bytesRead = flow.readSDU(sdu);
+				bytesRead = flow.readSDU(sdu, maxSDUSize);
 				sduListener.sduDelivered(sdu, bytesRead);
 			}catch(Exception ex){
 				System.out.println("Problems reading SDU from flow "+flow.getPortId());

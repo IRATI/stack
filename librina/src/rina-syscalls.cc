@@ -30,14 +30,8 @@
 namespace rina {
 
 int syscallWriteSDU(int portId, void * sdu, int size){
-	buffer_t buffer;
-	buffer.data = sdu;
-	buffer.size = size;
-	sdu_t sduToDeliver;
-	sduToDeliver.buffer = &buffer;
-
 	int result;
-	result = syscall(SYS_writeSDU, portId, sduToDeliver);
+	result = syscall(SYS_writeSDU, portId, sdu, size);
 	if (result == -1){
 		LOG_ERR("Write SDU failed, errno = %d \n", errno);
 		return errno;
@@ -46,20 +40,15 @@ int syscallWriteSDU(int portId, void * sdu, int size){
 	return 0;
 }
 
-int syscallReadSDU(int portId, void * sdu){
-	buffer_t buffer;
-	buffer.data = sdu;
-	sdu_t consumedSDU;
-	consumedSDU.buffer = &buffer;
-
+int syscallReadSDU(int portId, void * sdu, int maxBytes){
 	int result;
-	result = syscall(SYS_readSDU, portId, consumedSDU);
+	result = syscall(SYS_readSDU, portId, sdu, maxBytes);
 	if (result == -1){
 		LOG_ERR("Read SDU failed, errno = %d, \n", errno);
 		return errno;
 	}
 
-	return consumedSDU.buffer->size;
+	return result;
 }
 
 int syscallDestroyIPCProcess(unsigned int ipcProcessId){
