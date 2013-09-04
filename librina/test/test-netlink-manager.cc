@@ -105,12 +105,12 @@ int main(int argc, char * argv[]) {
 	delete fromKernel;
 
 	/* Test sending IpcmAllocateFlowRequestMessage */
-	IpcmAllocateFlowRequestMessage message3;
+	/*IpcmAllocateFlowRequestMessage message3;
 	message3.setDestPortId(0);
 	message3.setSourceAppName(sourceName);
 	message3.setDestAppName(destName);
 	message3.setFlowSpec(flowSpec);
-	message3.setPortId(982);
+	message3.setPortId(1);
 	message3.setDifName(difName);
 	message3.setRequestMessage(true);
 	message3.setSequenceNumber(source.getSequenceNumber());
@@ -139,7 +139,7 @@ int main(int argc, char * argv[]) {
 			result3->getDestAppName().getProcessName()<<std::endl;
 	std::cout<<"Port id: "<<result3->getPortId()<<std::endl;
 	std::cout<<"DIF Name: "<<result3->getDifName().getProcessName()<<std::endl;
-	delete fromKernel;
+	delete fromKernel;*/
 
 	/* Test sending IpcmAllocateFlowRequestResultMessage */
 	IpcmAllocateFlowRequestResultMessage message4;
