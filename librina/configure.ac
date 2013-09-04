@@ -49,6 +49,23 @@ AC_SUBST(CPPFLAGS_EXTRA, $CPPFLAGS_EXTRA)
 
 LT_INIT
 
+#AX_HAVE_SYSCALL([ipc_create],,[
+#    AC_MSG_ERROR([Your system lacks of ipc_create syscall])])
+#AX_HAVE_SYSCALL([ipc_configure],,[
+#    AC_MSG_ERROR([Your system lacks of ipc_configure syscall])])
+#AX_HAVE_SYSCALL([ipc_destroy],,[
+#    AC_MSG_ERROR([Your system lacks of ipc_destroy syscall])])
+#AX_HAVE_SYSCALL([connection_create],,[
+#    AC_MSG_ERROR([Your system lacks of connection_create syscall])])
+#AX_HAVE_SYSCALL([connection_destroy],,[
+#    AC_MSG_ERROR([Your system lacks of connection_destroy syscall])])
+#AX_HAVE_SYSCALL([connection_update],,[
+#    AC_MSG_ERROR([Your system lacks of connection_update syscall])])
+#AX_HAVE_SYSCALL([sdu_read],,[
+#    AC_MSG_ERROR([Your system lacks of sdu_read syscall])])
+#AX_HAVE_SYSCALL([sdu_write],,[
+#    AC_MSG_ERROR([Your system lacks of sdu_write syscall])])
+
 PKG_PROG_PKG_CONFIG([0.26])
 
 PKG_CHECK_MODULES(LIBNL3, [libnl-3.0 >= 3.1],, [
