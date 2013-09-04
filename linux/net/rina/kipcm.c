@@ -870,6 +870,8 @@ EXPORT_SYMBOL(kipcm_sdu_post);
 
 int kipcm_send_nl_msg(struct sk_buff * out_msg)
 {
+	int result;
+
 	result = genlmsg_unicast(&init_net, out_msg, 1);
 	if (result) {
 		LOG_ERR("Could not send unicast msg: %d", result);
