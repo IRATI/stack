@@ -165,11 +165,13 @@ public class IPCManager {
 				//TODO assign to DIF ipcProcess.assignToDIF(arg0);
 			}
 			
-			if (ipcProcessToCreate.getDifsToRegisterAt().size() > 0){
+			if (ipcProcessToCreate.getDifsToRegisterAt() != null && 
+					ipcProcessToCreate.getDifsToRegisterAt().size() > 0){
 				//TODO register in underlying DIFs
 			}
 			
-			if (ipcProcessToCreate.getNeighbors().size() > 0){
+			if (ipcProcessToCreate.getNeighbors() != null && 
+					ipcProcessToCreate.getNeighbors().size() > 0){
 				//TODO cause enrollment to be initiated
 			}
 		}
