@@ -341,7 +341,8 @@ out:
 #if RINA_TEST
 int rinarp_send_request(struct arp_reply_ops *ops)
 {
-	struct sk_buff *skb;
+	struct sk_buff * skb;
+	struct arp_data * arp_d;
 
 	/*
 	 *	No arp on this interface.
@@ -350,17 +351,23 @@ int rinarp_send_request(struct arp_reply_ops *ops)
 	if (dev->flags&IFF_NOARP)
 		return;
 	
-	/* FIXME: Store into list of ARP response handlers */
+	/* Store into list of ARP response handlers */
+	arp_d = find_arp_data(ops->ar_pro, ops->dev);
+	if (!arp_d) {
+		return -1;
+	}
+	list_add(&ops->list, &arp_d->arp_handlers);
+	
 
-	/* FIXME: Call arp_create with correct params */
-	skb = arp_create(type, ptype, dest_ip, dev, src_ip,
-			 dest_hw, src_hw, target_hw);
+	/* FIXME: Call arp_create with correct length params */
+	skb = arp_create(RINARP_REQUEST, ops->ar_pro, INSERT PROTOCOL LENGTH, ops->dev,
+			 ops->src_nwaddr, ops->dest_nwaddr, NULL);
+
 	if (skb == NULL)
 		return;
 	
-        /* FIXME: Actually send it */
-	NF_HOOK(NFPROTO_ARP, NF_ARP_OUT, skb, NULL, skb->dev, dev_queue_xmit);
-
+        /* Actually send it */
+	dev_queue_xmit(skb);
 }
 EXPORT_SYMBOL(rinarp_send_request);
 #endif

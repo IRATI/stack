@@ -121,22 +121,23 @@ char * strdup_from_user(const char __user * src)
         size_t size;
         char * tmp;
 
-        if (!src){
+        if (!src)
         	return NULL;
-        }
 
         size = strlen_user(src); /* Includes the terminating NUL */
-        if (!size){
+        if (!size)
             return NULL;
-        }
 
         tmp = rkmalloc(size, GFP_KERNEL);
-        if (!tmp){
+        if (!tmp)
                 return NULL;
-        }
 
-        /* strncpy_from_user() copies the terminating NUL */
-        if (strncpy_from_user(tmp, src, size) < 0) {
+        /*
+         * strncpy_from_user() copies the terminating NUL. On success, returns
+         * the length of the string (not including the trailing NUL). We care
+         * on having the complete-copy, parts of it are a no-go
+         */
+        if (strncpy_from_user(tmp, src, size) != (size - 1)) {
                 rkfree(tmp);
                 return NULL;
         }
