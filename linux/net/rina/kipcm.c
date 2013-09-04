@@ -130,7 +130,7 @@ struct ipcp_flow {
         struct kfifo           sdu_ready;
 };
 
-struct kipcm * kipcm_init(struct kobject * parent)
+struct kipcm * kipcm_init(struct kobject * parent, struct rina_nl_set * set)
 {
         struct kipcm * tmp;
 
@@ -165,6 +165,20 @@ struct kipcm * kipcm_init(struct kobject * parent)
                 }
                 rkfree(tmp);
                 return NULL;
+        }
+
+        if (kipcm_netlink_handlers_register(tmp, set)) {
+        	if (ipcp_imap_destroy(tmp->instances)) {
+			/* FIXME: What could we do here ? */
+		}
+        	if (ipcp_fmap_destroy(tmp->flows)) {
+			/* FIXME: What could we do here ? */
+		}
+		if (ipcpf_fini(tmp->factories)) {
+			/* FIXME: What could we do here ? */
+		}
+		rkfree(tmp);
+		return NULL;
         }
 
         KIPCM_LOCK_INIT(tmp);
@@ -668,7 +682,7 @@ int kipcm_sdu_post(struct kipcm * kipcm,
 }
 EXPORT_SYMBOL(kipcm_sdu_post);
 
-static int kipcm_notify_ipcp_allocate_flow_request(void *             data,
+static int notify_ipcp_allocate_flow_request(void *             data,
 						   struct sk_buff *   buff,
 						   struct genl_info * info)
 {
@@ -678,6 +692,7 @@ static int kipcm_notify_ipcp_allocate_flow_request(void *             data,
 	ipc_process_id_t 			   ipc_id;
 	struct rina_msg_hdr *                      hdr;
 	struct kipcm * kipcm;
+	int retval = 0;
 
 	if (!data) {
 		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -723,26 +738,28 @@ static int kipcm_notify_ipcp_allocate_flow_request(void *             data,
 			msg_attrs->id)) {
 		LOG_ERR("Failed allocate flow request for port id: %d",
 				msg_attrs->id);
-		rkfree(hdr);
-		rkfree(msg_attrs);
-		rkfree(msg);
-		return -1;
+		retval = -1;
 	}
 
 	rkfree(hdr);
 	rkfree(msg_attrs);
 	rkfree(msg);
 
-	return 0;
+	return retval;
 }
 
-static int kipcm_notify_ipcp_allocate_flow_arrived(void *             data,
-						   struct sk_buff *   buff,
-						   struct genl_info * info)
+static int notify_ipcp_allocate_flow_response(void *             data,
+						    struct sk_buff *   buff,
+						    struct genl_info * info)
 {
 	struct kipcm * kipcm;
-	struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs * msg_attrs;
-	struct rnl_msg * 			   msg;
+	struct rnl_alloc_flow_resp_msg_attrs * msg_attrs;
+	struct rnl_msg * 		       msg;
+	struct rina_msg_hdr * 		       hdr;
+	struct ipcp_instance * 		       ipc_process;
+	ipc_process_id_t 		       ipc_id;
+	int 				       retval = 0;
+	response_reason_t  		       reason;
 
 	if (!data) {
 		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -763,56 +780,51 @@ static int kipcm_notify_ipcp_allocate_flow_arrived(void *             data,
 		rkfree(msg_attrs);
 		return -1;
 	}
-	LOG_MISSING;
+	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
+	if (!hdr) {
+		rkfree(msg_attrs);
+		rkfree(msg);
+		return -1;
+	}
+	msg->attrs = msg_attrs;
+	msg->rina_hdr = hdr;
 
-	return 0;
+	if (rnl_parse_msg(info, msg))
+		return -1;
+	ipc_id = msg->rina_hdr->src_ipc_id;
+	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+	if (!ipc_process) {
+		LOG_ERR("IPC process %d not found", ipc_id);
+		return -1;
+	}
+	reason = (response_reason_t) msg_attrs->result;
+	if (ipc_process->ops->flow_allocate_response(ipc_process->data,
+			msg_attrs->id, &reason)) {
+		LOG_ERR("Failed allocate flow request for port id: %d",
+				msg_attrs->id);
+		retval = -1;
+	}
+
+	rkfree(hdr);
+	rkfree(msg_attrs);
+	rkfree(msg);
+
+	return retval;
 }
 
-static int kipcm_notify_ipcp_allocate_flow_result(void *             data,
-						  struct sk_buff *   buff,
-						  struct genl_info * info)
-{
-	LOG_MISSING;
-
-	return 0;
-}
-
-static int kipcm_notify_ipcp_allocate_flow_response(void *             data,
-						    struct sk_buff *   buff,
-						    struct genl_info * info)
-{
-	LOG_MISSING;
-
-	return 0;
-}
-
-int kipcm_netlink_handlers_register(struct kipcm * kipcm,
-				    struct rina_nl_set * set)
+static int kipcm_netlink_handlers_register(struct kipcm * kipcm,
+					   struct rina_nl_set * set)
 {
 	message_handler_cb handler;
 
-	handler = &kipcm_notify_ipcp_allocate_flow_request;
+	handler = &notify_ipcp_allocate_flow_request;
 	if (rina_netlink_handler_register(set,
 				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
 				kipcm,
 				handler))
 		return -1;
 
-	handler = &kipcm_notify_ipcp_allocate_flow_arrived;
-	if (rina_netlink_handler_register(set,
-				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED,
-				kipcm,
-				handler))
-		return -1;
-
-	handler = &kipcm_notify_ipcp_allocate_flow_result;
-	if (rina_netlink_handler_register(set,
-				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
-				kipcm,
-				handler))
-		return -1;
-
-	handler = &kipcm_notify_ipcp_allocate_flow_response;
+	handler = &notify_ipcp_allocate_flow_response;
 	if (rina_netlink_handler_register(set,
 				RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
 				kipcm,
@@ -821,4 +833,3 @@ int kipcm_netlink_handlers_register(struct kipcm * kipcm,
 
 	return 0;
 }
-EXPORT_SYMBOL(kipcm_netlink_handlers_register);
