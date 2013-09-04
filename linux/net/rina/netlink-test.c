@@ -141,7 +141,7 @@ static int test_echo_dispatcher_2(void * data,
 	return 0;
 }
 
-static int test_echo_dispatcher_10(void * data, 
+static int test_echo_dispatcher_9(void * data,
 			   	  struct sk_buff * skb_in, 
 			   	  struct genl_info * info)
 {
@@ -248,7 +248,7 @@ static int test_echo_dispatcher_10(void * data,
 	return 0;
 }
 
-static int test_echo_dispatcher_11(void * data, 
+static int test_echo_dispatcher_10(void * data,
 			   	  struct sk_buff * skb_in, 
 			   	  struct genl_info * info)
 {
@@ -354,7 +354,7 @@ static int test_echo_dispatcher_11(void * data,
 	return 0;
 }
 
-static int test_echo_dispatcher_12(void * data,
+static int test_echo_dispatcher_11(void * data,
 			   	  struct sk_buff * skb_in,
 			   	  struct genl_info * info)
 {
@@ -439,21 +439,30 @@ static int test_echo_dispatcher_12(void * data,
 		rkfree(my_msg);
 		return -1;
 	}
+
+	result = terminate_and_send_message(out_msg, out_hdr, info);
+	rkfree(attrs);
+	rkfree(my_msg);
+	return result;
+}
+
+int terminate_and_send_message(struct sk_buff * out_msg,
+		struct rina_msg_hdr * out_hdr,
+		struct genl_info * info){
+	int result;
+
 	result = genlmsg_end(out_msg, out_hdr);
 
 	if (result){
 		LOG_DBG("Result of genlmesg_end: %d", result);
 	}
+
 	result = genlmsg_unicast(&init_net, out_msg, info->snd_portid);
 	if(result) {
 		LOG_ERR("Could not send unicast msg: %d", result);
-		rkfree(attrs);
-		rkfree(my_msg);
 		return -1;
 	}
 
-	rkfree(attrs);
-	rkfree(my_msg);
 	return 0;
 }
 
@@ -479,15 +488,15 @@ int test_register_echo_handler(void)
 	    rina_netlink_handler_register(set,
 				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
 				&data,
-				(message_handler_cb) test_echo_dispatcher_10) || 
+				(message_handler_cb) test_echo_dispatcher_9) ||
 	    rina_netlink_handler_register(set,
 				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED,
 				&data,
-				(message_handler_cb) test_echo_dispatcher_11) ||
+				(message_handler_cb) test_echo_dispatcher_10) ||
 		rina_netlink_handler_register(set,
 				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
 				&data,
-				(message_handler_cb) test_echo_dispatcher_12)
+				(message_handler_cb) test_echo_dispatcher_11)
 		) {
 		LOG_ERR("Could not register handler");
 		return -1;

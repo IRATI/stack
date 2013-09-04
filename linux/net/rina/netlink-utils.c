@@ -93,16 +93,27 @@ static int parse_flow_spec(struct nlattr * fspec_attr,
         struct nlattr *attrs[FSPEC_ATTR_MAX + 1];
 
         attr_policy[FSPEC_ATTR_AVG_BWITH].type = NLA_U32;
+        attr_policy[FSPEC_ATTR_AVG_BWITH].len = 4;
         attr_policy[FSPEC_ATTR_AVG_SDU_BWITH].type = NLA_U32;
+        attr_policy[FSPEC_ATTR_AVG_SDU_BWITH].len = 4;
         attr_policy[FSPEC_ATTR_DELAY].type = NLA_U32;
+        attr_policy[FSPEC_ATTR_DELAY].len = 4;
         attr_policy[FSPEC_ATTR_JITTER].type = NLA_U32;
+        attr_policy[FSPEC_ATTR_JITTER].len = 4;
         attr_policy[FSPEC_ATTR_MAX_GAP].type = NLA_U32;
+        attr_policy[FSPEC_ATTR_MAX_GAP].len = 4;
         attr_policy[FSPEC_ATTR_MAX_SDU_SIZE].type = NLA_U32;
+        attr_policy[FSPEC_ATTR_MAX_SDU_SIZE].len = 4;
         attr_policy[FSPEC_ATTR_IN_ORD_DELIVERY].type = NLA_FLAG;
+        attr_policy[FSPEC_ATTR_IN_ORD_DELIVERY].len = 0;
         attr_policy[FSPEC_ATTR_PART_DELIVERY].type = NLA_FLAG;
+        attr_policy[FSPEC_ATTR_PART_DELIVERY].len = 0;
         attr_policy[FSPEC_ATTR_PEAK_BWITH_DURATION].type = NLA_U32;
+        attr_policy[FSPEC_ATTR_PEAK_BWITH_DURATION].len = 4;
         attr_policy[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION].type = NLA_U32;
+        attr_policy[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION].len = 4;
         attr_policy[FSPEC_ATTR_UNDETECTED_BER].type = NLA_U32;
+        attr_policy[FSPEC_ATTR_UNDETECTED_BER].len = 4;
 
         if (nla_parse_nested(attrs, FSPEC_ATTR_MAX, fspec_attr, attr_policy) < 0)
         	return -1;
@@ -165,6 +176,9 @@ static int parse_app_name_info(struct nlattr * name_attr,
 {
         struct nla_policy attr_policy[APNI_ATTR_MAX + 1];
         struct nlattr *attrs[APNI_ATTR_MAX + 1];
+	
+	LOG_DBG("[LDBG] Entering parse_app_name_info with nlattr "
+		"at %p and name_struct at %p", name_attr, name_struct);
 
         attr_policy[APNI_ATTR_PROCESS_NAME].type = NLA_STRING;
         attr_policy[APNI_ATTR_PROCESS_INSTANCE].type = NLA_STRING;
@@ -475,11 +489,12 @@ static int rnl_parse_ipcm_alloc_flow_req_msg(struct genl_info * info,
 			msg_attrs->dest) < 0)
 		goto format_fail;
 
+
 	if (parse_flow_spec(attrs[IAFRM_ATTR_FLOW_SPEC],
 			msg_attrs->fspec) < 0)
 		goto format_fail;
 
-	if (info->attrs[IAFRM_ATTR_PORT_ID])
+	if (attrs[IAFRM_ATTR_PORT_ID])
 		msg_attrs->id = \
 		(port_id_t) nla_get_u32(attrs[IAFRM_ATTR_PORT_ID]);
 
