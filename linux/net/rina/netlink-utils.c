@@ -965,6 +965,9 @@ static int format_app_name_info(const struct name * name,
                 return -1;
         }
 
+        LOG_DBG("Entering format_app_name_info with name "
+        		"at %p and sk_buff at %p", name, msg);
+
         /*
          * Components might be missing (and nla_put_string wonna have NUL
          * terminated strings, otherwise kernel panics are on the way).

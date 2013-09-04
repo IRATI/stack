@@ -92,7 +92,7 @@ static int test_echo_dispatcher_1(void * data,
 	}
 
 	LOG_DBG("Returned value\n"
-		"RESULT: %d\n"
+		"RESULT: %s\n"
 		"(my_msg->rina_hdr)->src_ipc_id: %d\n"
 		"(my_msg->rina_hdr)->src_ipc_id: %d",
 		attrs->dif_config->type,
