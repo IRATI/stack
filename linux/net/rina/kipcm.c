@@ -201,8 +201,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 }
 
 static int notify_ipcp_allocate_flow_response(void *             data,
-						    struct sk_buff *   buff,
-						    struct genl_info * info)
+					      struct sk_buff *   buff,
+					      struct genl_info * info)
 {
 	struct kipcm * kipcm;
 	struct rnl_alloc_flow_resp_msg_attrs * msg_attrs;
@@ -271,6 +271,21 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 	return retval;
 }
 
+static int netlink_handlers_unregister(struct rina_nl_set * set)
+{
+	int retval = 0;
+
+	if (rina_netlink_handler_unregister(set,
+				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST))
+		retval = -1;
+
+	if (rina_netlink_handler_unregister(set,
+				RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE))
+		retval = -1;
+
+	return retval;
+}
+
 static int netlink_handlers_register(struct kipcm * kipcm)
 {
 	message_handler_cb handler;
@@ -286,25 +301,13 @@ static int netlink_handlers_register(struct kipcm * kipcm)
 	if (rina_netlink_handler_register(kipcm->set,
 				RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
 				kipcm,
-				handler))
+				handler)) {
+		rina_netlink_handler_unregister(kipcm->set,
+				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST);
 		return -1;
+	}
 
 	return 0;
-}
-
-static int netlink_handlers_unregister(struct rina_nl_set * set)
-{
-	int retval = 0;
-
-	if (rina_netlink_handler_unregister(set,
-				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST))
-		retval = -1;
-
-	if (rina_netlink_handler_unregister(set,
-				RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE))
-		retval = -1;
-
-	return retval;
 }
 
 struct kipcm * kipcm_init(struct kobject * parent, struct rina_nl_set * set)
