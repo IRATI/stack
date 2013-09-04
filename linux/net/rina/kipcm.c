@@ -130,6 +130,173 @@ struct ipcp_flow {
         struct kfifo           sdu_ready;
 };
 
+static int notify_ipcp_allocate_flow_request(void *             data,
+						   struct sk_buff *   buff,
+						   struct genl_info * info)
+{
+	struct rnl_ipcm_alloc_flow_req_msg_attrs * msg_attrs;
+	struct rnl_msg * 			   msg;
+	struct ipcp_instance * 			   ipc_process;
+	ipc_process_id_t 			   ipc_id;
+	struct rina_msg_hdr *                      hdr;
+	struct kipcm * kipcm;
+	int retval = 0;
+
+	if (!data) {
+		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+		return -1;
+	}
+
+	kipcm = (struct kipcm *) data;
+
+	if (!info) {
+		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+		return -1;
+	}
+
+	msg_attrs = rkzalloc(sizeof(*msg_attrs), GFP_KERNEL);
+	if (!msg_attrs)
+		return -1;
+	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+	if (!msg) {
+		rkfree(msg_attrs);
+		return -1;
+	}
+	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
+	if (!hdr) {
+		rkfree(msg_attrs);
+		rkfree(msg);
+		return -1;
+	}
+	msg->attrs = msg_attrs;
+	msg->rina_hdr = hdr;
+
+	if (rnl_parse_msg(info, msg))
+		return -1;
+	ipc_id = msg->rina_hdr->src_ipc_id;
+	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+	if (!ipc_process) {
+		LOG_ERR("IPC process %d not found", ipc_id);
+		return -1;
+	}
+	if (ipc_process->ops->flow_allocate_request(ipc_process->data,
+			msg_attrs->source,
+			msg_attrs->dest,
+			msg_attrs->fspec,
+			msg_attrs->id)) {
+		LOG_ERR("Failed allocate flow request for port id: %d",
+				msg_attrs->id);
+		retval = -1;
+	}
+
+	rkfree(hdr);
+	rkfree(msg_attrs);
+	rkfree(msg);
+
+	return retval;
+}
+
+static int notify_ipcp_allocate_flow_response(void *             data,
+						    struct sk_buff *   buff,
+						    struct genl_info * info)
+{
+	struct kipcm * kipcm;
+	struct rnl_alloc_flow_resp_msg_attrs * msg_attrs;
+	struct rnl_msg * 		       msg;
+	struct rina_msg_hdr * 		       hdr;
+	struct ipcp_instance * 		       ipc_process;
+	ipc_process_id_t 		       ipc_id;
+	int 				       retval = 0;
+	response_reason_t  		       reason;
+
+	if (!data) {
+		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+		return -1;
+	}
+
+	kipcm = (struct kipcm *) data;
+
+	if (!info) {
+		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+		return -1;
+	}
+	msg_attrs = rkzalloc(sizeof(*msg_attrs), GFP_KERNEL);
+	if (!msg_attrs)
+		return -1;
+	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+	if (!msg) {
+		rkfree(msg_attrs);
+		return -1;
+	}
+	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
+	if (!hdr) {
+		rkfree(msg_attrs);
+		rkfree(msg);
+		return -1;
+	}
+	msg->attrs = msg_attrs;
+	msg->rina_hdr = hdr;
+
+	if (rnl_parse_msg(info, msg))
+		return -1;
+	ipc_id = msg->rina_hdr->src_ipc_id;
+	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+	if (!ipc_process) {
+		LOG_ERR("IPC process %d not found", ipc_id);
+		return -1;
+	}
+	reason = (response_reason_t) msg_attrs->result;
+	if (ipc_process->ops->flow_allocate_response(ipc_process->data,
+			msg_attrs->id, &reason)) {
+		LOG_ERR("Failed allocate flow request for port id: %d",
+				msg_attrs->id);
+		retval = -1;
+	}
+
+	rkfree(hdr);
+	rkfree(msg_attrs);
+	rkfree(msg);
+
+	return retval;
+}
+
+static int netlink_handlers_register(struct kipcm * kipcm,
+				     struct rina_nl_set * set)
+{
+	message_handler_cb handler;
+
+	handler = &notify_ipcp_allocate_flow_request;
+	if (rina_netlink_handler_register(set,
+				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
+				kipcm,
+				handler))
+		return -1;
+
+	handler = &notify_ipcp_allocate_flow_response;
+	if (rina_netlink_handler_register(set,
+				RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
+				kipcm,
+				handler))
+		return -1;
+
+	return 0;
+}
+
+static int netlink_handlers_unregister(struct rina_nl_set * set)
+{
+	int retval = 0;
+
+	if (rina_netlink_handler_unregister(set,
+				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST))
+		retval = -1;
+
+	if (rina_netlink_handler_unregister(set,
+				RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE))
+		retval = -1;
+
+	return retval;
+}
+
 struct kipcm * kipcm_init(struct kobject * parent, struct rina_nl_set * set)
 {
         struct kipcm * tmp;
@@ -686,170 +853,3 @@ int kipcm_sdu_post(struct kipcm * kipcm,
         return 0;
 }
 EXPORT_SYMBOL(kipcm_sdu_post);
-
-static int notify_ipcp_allocate_flow_request(void *             data,
-						   struct sk_buff *   buff,
-						   struct genl_info * info)
-{
-	struct rnl_ipcm_alloc_flow_req_msg_attrs * msg_attrs;
-	struct rnl_msg * 			   msg;
-	struct ipcp_instance * 			   ipc_process;
-	ipc_process_id_t 			   ipc_id;
-	struct rina_msg_hdr *                      hdr;
-	struct kipcm * kipcm;
-	int retval = 0;
-
-	if (!data) {
-		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
-		return -1;
-	}
-
-	kipcm = (struct kipcm *) data;
-
-	if (!info) {
-		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
-		return -1;
-	}
-
-	msg_attrs = rkzalloc(sizeof(*msg_attrs), GFP_KERNEL);
-	if (!msg_attrs)
-		return -1;
-	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
-	if (!msg) {
-		rkfree(msg_attrs);
-		return -1;
-	}
-	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
-	if (!hdr) {
-		rkfree(msg_attrs);
-		rkfree(msg);
-		return -1;
-	}
-	msg->attrs = msg_attrs;
-	msg->rina_hdr = hdr;
-
-	if (rnl_parse_msg(info, msg))
-		return -1;
-	ipc_id = msg->rina_hdr->src_ipc_id;
-	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
-	if (!ipc_process) {
-		LOG_ERR("IPC process %d not found", ipc_id);
-		return -1;
-	}
-	if (ipc_process->ops->flow_allocate_request(ipc_process->data,
-			msg_attrs->source,
-			msg_attrs->dest,
-			msg_attrs->fspec,
-			msg_attrs->id)) {
-		LOG_ERR("Failed allocate flow request for port id: %d",
-				msg_attrs->id);
-		retval = -1;
-	}
-
-	rkfree(hdr);
-	rkfree(msg_attrs);
-	rkfree(msg);
-
-	return retval;
-}
-
-static int notify_ipcp_allocate_flow_response(void *             data,
-						    struct sk_buff *   buff,
-						    struct genl_info * info)
-{
-	struct kipcm * kipcm;
-	struct rnl_alloc_flow_resp_msg_attrs * msg_attrs;
-	struct rnl_msg * 		       msg;
-	struct rina_msg_hdr * 		       hdr;
-	struct ipcp_instance * 		       ipc_process;
-	ipc_process_id_t 		       ipc_id;
-	int 				       retval = 0;
-	response_reason_t  		       reason;
-
-	if (!data) {
-		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
-		return -1;
-	}
-
-	kipcm = (struct kipcm *) data;
-
-	if (!info) {
-		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
-		return -1;
-	}
-	msg_attrs = rkzalloc(sizeof(*msg_attrs), GFP_KERNEL);
-	if (!msg_attrs)
-		return -1;
-	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
-	if (!msg) {
-		rkfree(msg_attrs);
-		return -1;
-	}
-	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
-	if (!hdr) {
-		rkfree(msg_attrs);
-		rkfree(msg);
-		return -1;
-	}
-	msg->attrs = msg_attrs;
-	msg->rina_hdr = hdr;
-
-	if (rnl_parse_msg(info, msg))
-		return -1;
-	ipc_id = msg->rina_hdr->src_ipc_id;
-	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
-	if (!ipc_process) {
-		LOG_ERR("IPC process %d not found", ipc_id);
-		return -1;
-	}
-	reason = (response_reason_t) msg_attrs->result;
-	if (ipc_process->ops->flow_allocate_response(ipc_process->data,
-			msg_attrs->id, &reason)) {
-		LOG_ERR("Failed allocate flow request for port id: %d",
-				msg_attrs->id);
-		retval = -1;
-	}
-
-	rkfree(hdr);
-	rkfree(msg_attrs);
-	rkfree(msg);
-
-	return retval;
-}
-
-static int netlink_handlers_register(struct kipcm * kipcm,
-				     struct rina_nl_set * set)
-{
-	message_handler_cb handler;
-
-	handler = &notify_ipcp_allocate_flow_request;
-	if (rina_netlink_handler_register(set,
-				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
-				kipcm,
-				handler))
-		return -1;
-
-	handler = &notify_ipcp_allocate_flow_response;
-	if (rina_netlink_handler_register(set,
-				RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
-				kipcm,
-				handler))
-		return -1;
-
-	return 0;
-}
-
-static int netlink_handlers_unregister(struct rina_nl_set * set)
-{
-	int retval = 0;
-
-	if (rina_netlink_handler_unregister(set,
-				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST))
-		retval = -1;
-
-	if (rina_netlink_handler_register(set,
-				RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE))
-		retval = -1;
-
-	return retval;
-}

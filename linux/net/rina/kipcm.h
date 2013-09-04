@@ -30,8 +30,8 @@
 struct kipcm;
 
 /* The following functions represent the KIPCM northbound interface */
-struct kipcm * kipcm_init(struct kobject * parent);
-int            kipcm_fini(struct kipcm * kipcm);
+struct kipcm * kipcm_init(struct kobject * parent, struct rina_nl_set * set);
+int            kipcm_fini(struct kipcm * kipcm, struct rina_nl_set * set);
 
 /*
  * NOTE: factory_name must be the string published by the choosen IPC
