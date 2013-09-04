@@ -431,8 +431,19 @@ static int rnl_parse_ipcm_alloc_flow_req_msg(struct genl_info * info,
         attr_policy[IAFRM_ATTR_SOURCE_APP_NAME].type = NLA_NESTED;
         attr_policy[IAFRM_ATTR_DEST_APP_NAME].type = NLA_NESTED;
         attr_policy[IAFRM_ATTR_FLOW_SPEC].type = NLA_NESTED;
-        attr_policy[IAFRM_ATTR_DIF_NAME].type = NLA_NESTED;
         attr_policy[IAFRM_ATTR_PORT_ID].type = NLA_U32;
+        attr_policy[IAFRM_ATTR_DIF_NAME].type = NLA_NESTED;
+
+	LOG_DBG("IAFRM_ATTR_SOURCE_APP_NAME: %d\n"
+		"IAFRM_ATTR_DEST_APP_NAME: %d\n"
+		"IAFRM_ATTR_FLOW_SPEC: %d\n"
+		"IAFRM_ATTR_PORT_ID: %d\n"
+		"IAFRM_ATTR_DIF_NAME: %d\n",
+		IAFRM_ATTR_SOURCE_APP_NAME,
+		IAFRM_ATTR_DEST_APP_NAME,
+		IAFRM_ATTR_FLOW_SPEC,
+		IAFRM_ATTR_PORT_ID,
+		IAFRM_ATTR_DIF_NAME);
 
         if (rnl_check_attr_policy(info->nlhdr, IAFRM_ATTR_MAX, attr_policy) < 0)
                 goto format_fail;
