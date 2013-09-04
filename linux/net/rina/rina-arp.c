@@ -253,10 +253,10 @@ static struct arp_hdr * arphdr(const struct sk_buff * skb)
  *      Taken from net/ipv4/arp.c
  */
 static struct sk_buff *arp_create(int op, int ptype, int plen,
-                                  struct net_device *dev, 
-				  const unsigned char *src_nwaddr,
-				  const unsigned char *dest_nwaddr,
-                                  const unsigned char *dest_hw)
+                                  struct net_device *   dev, 
+				  const unsigned char * src_nwaddr,
+				  const unsigned char * dest_nwaddr,
+                                  const unsigned char * dest_hw)
 {
 	struct sk_buff *     skb;
 	struct arp_hdr *     arp;
@@ -335,9 +335,9 @@ out:
  *      Original name arp_send
  */
 #if RINA_TEST
-int rinarp_send_request(struct arp_reply_ops *ops)
+int rinarp_send_request(struct arp_reply_ops * ops)
 {
-	struct sk_buff * skb;
+	struct sk_buff *  skb;
 	struct arp_data * arp_d;
 
 	/*
