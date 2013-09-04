@@ -167,7 +167,7 @@ struct kipcm * kipcm_init(struct kobject * parent, struct rina_nl_set * set)
                 return NULL;
         }
 
-        if (kipcm_netlink_handlers_register(tmp, set)) {
+        if (netlink_handlers_register(tmp, set)) {
         	if (ipcp_imap_destroy(tmp->instances)) {
 			/* FIXME: What could we do here ? */
 		}
@@ -188,7 +188,7 @@ struct kipcm * kipcm_init(struct kobject * parent, struct rina_nl_set * set)
         return tmp;
 }
 
-int kipcm_fini(struct kipcm * kipcm)
+int kipcm_fini(struct kipcm * kipcm, struct rina_nl_set * set)
 {
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
@@ -216,6 +216,11 @@ int kipcm_fini(struct kipcm * kipcm)
         if (ipcpf_fini(kipcm->factories)) {
                 KIPCM_UNLOCK(kipcm);
                 return -1;
+        }
+
+        if (netlink_handlers_unregister(set)) {
+        	KIPCM_UNLOCK(kipcm);
+		return -1;
         }
 
         KIPCM_UNLOCK(kipcm);
@@ -812,8 +817,8 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 	return retval;
 }
 
-static int kipcm_netlink_handlers_register(struct kipcm * kipcm,
-					   struct rina_nl_set * set)
+static int netlink_handlers_register(struct kipcm * kipcm,
+				     struct rina_nl_set * set)
 {
 	message_handler_cb handler;
 
@@ -832,4 +837,19 @@ static int kipcm_netlink_handlers_register(struct kipcm * kipcm,
 		return -1;
 
 	return 0;
+}
+
+static int netlink_handlers_unregister(struct rina_nl_set * set)
+{
+	int retval = 0;
+
+	if (rina_netlink_handler_unregister(set,
+				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST))
+		retval = -1;
+
+	if (rina_netlink_handler_register(set,
+				RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE))
+		retval = -1;
+
+	return retval;
 }
