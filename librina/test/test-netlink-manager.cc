@@ -104,43 +104,6 @@ int main(int argc, char * argv[]) {
 	std::cout<<"Result is "<<result2->getResult()<<std::endl;
 	delete fromKernel;
 
-	/* Test sending IpcmAllocateFlowRequestMessage */
-	/*IpcmAllocateFlowRequestMessage message3;
-	message3.setDestPortId(0);
-	message3.setSourceAppName(sourceName);
-	message3.setDestAppName(destName);
-	message3.setFlowSpec(flowSpec);
-	message3.setPortId(1);
-	message3.setDifName(difName);
-	message3.setRequestMessage(true);
-	message3.setSequenceNumber(source.getSequenceNumber());
-	message3.setSourceIpcProcessId(8);
-	message3.setDestIpcProcessId(9);
-	try{
-		source.sendMessage(&message3);
-	}catch(NetlinkException &e){
-		std::cout<<"Exception: "<<e.what()<<std::endl;
-		return -1;
-	}
-	std::cout<<"Sent IpcmAllocateFlowRequestMessage message to Kernel"
-			<<std::endl;
-
-	fromKernel = source.getMessage();
-	std::cout<<"Got message from "<<fromKernel->getSourcePortId()<<"\n";
-	IpcmAllocateFlowRequestMessage * result3 =
-			dynamic_cast<IpcmAllocateFlowRequestMessage *>(fromKernel);
-	std::cout<<"Source IPC Process id "<<result3->getSourceIpcProcessId()
-			<<std::endl;
-	std::cout<<"Destination IPC Process id "<<result3->getDestIpcProcessId()
-			<<std::endl;
-	std::cout<<"Source application AP name "<<
-			result3->getSourceAppName().getProcessName()<<std::endl;
-	std::cout<<"Destination application AP name "<<
-			result3->getDestAppName().getProcessName()<<std::endl;
-	std::cout<<"Port id: "<<result3->getPortId()<<std::endl;
-	std::cout<<"DIF Name: "<<result3->getDifName().getProcessName()<<std::endl;
-	delete fromKernel;*/
-
 	/* Test sending IpcmAllocateFlowRequestResultMessage */
 	IpcmAllocateFlowRequestResultMessage message4;
 	message4.setDestPortId(0);
@@ -167,5 +130,42 @@ int main(int argc, char * argv[]) {
 	std::cout<<"Destination IPC Process id "<<result4->getDestIpcProcessId()
 						<<std::endl;
 	std::cout<<"Result is "<<result4->getResult()<<std::endl;
+	delete fromKernel;
+
+	/*Test sending IpcmAllocateFlowRequestMessage */
+	IpcmAllocateFlowRequestMessage message3;
+	message3.setDestPortId(0);
+	message3.setSourceAppName(sourceName);
+	message3.setDestAppName(destName);
+	message3.setFlowSpec(flowSpec);
+	message3.setPortId(1);
+	message3.setDifName(difName);
+	message3.setRequestMessage(true);
+	message3.setSequenceNumber(source.getSequenceNumber());
+	message3.setSourceIpcProcessId(8);
+	message3.setDestIpcProcessId(9);
+	try{
+		source.sendMessage(&message3);
+	}catch(NetlinkException &e){
+		std::cout<<"Exception: "<<e.what()<<std::endl;
+		return -1;
+	}
+	std::cout<<"Sent IpcmAllocateFlowRequestMessage message to Kernel"
+			<<std::endl;
+
+	fromKernel = source.getMessage();
+	std::cout<<"Got message from "<<fromKernel->getSourcePortId()<<"\n";
+	IpcmAllocateFlowRequestMessage * result3 =
+			dynamic_cast<IpcmAllocateFlowRequestMessage *>(fromKernel);
+	std::cout<<"Source IPC Process id "<<result3->getSourceIpcProcessId()
+						<<std::endl;
+	std::cout<<"Destination IPC Process id "<<result3->getDestIpcProcessId()
+						<<std::endl;
+	std::cout<<"Source application AP name "<<
+			result3->getSourceAppName().getProcessName()<<std::endl;
+	std::cout<<"Destination application AP name "<<
+			result3->getDestAppName().getProcessName()<<std::endl;
+	std::cout<<"Port id: "<<result3->getPortId()<<std::endl;
+	std::cout<<"DIF Name: "<<result3->getDifName().getProcessName()<<std::endl;
 	delete fromKernel;
 }

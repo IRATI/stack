@@ -497,4 +497,7 @@ int rnl_format_rmt_dump_ft_req_msg(struct sk_buff * skb_out);
 int rnl_format_rmt_dump_ft_reply_msg(size_t                       count,
                                      const struct pdu_ft_entry ** entries,
                                      struct sk_buff *             skb_out);
+
+char *nla_get_string(struct nlattr *nla);
+
 #endif

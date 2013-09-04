@@ -63,6 +63,11 @@
 #define BUILD_ERR_STRING_BY_MSG_TYPE(X)                 \
         "Could not parse Netlink message of type "X
 
+char *nla_get_string(struct nlattr *nla)
+{
+	return (char *) nla_data(nla);
+}
+
 static int rnl_check_attr_policy(struct nlmsghdr   * nlh, 
 				 int 		   max_attr,
                                  struct nla_policy * attr_policy)
@@ -181,30 +186,32 @@ static int parse_app_name_info(struct nlattr * name_attr,
 		"at %p and name_struct at %p", name_attr, name_struct);
 
         attr_policy[APNI_ATTR_PROCESS_NAME].type = NLA_STRING;
+        attr_policy[APNI_ATTR_PROCESS_NAME].len = 0;
         attr_policy[APNI_ATTR_PROCESS_INSTANCE].type = NLA_STRING;
+        attr_policy[APNI_ATTR_PROCESS_INSTANCE].len = 0;
         attr_policy[APNI_ATTR_ENTITY_NAME].type = NLA_STRING;
+        attr_policy[APNI_ATTR_ENTITY_NAME].len = 0;
         attr_policy[APNI_ATTR_ENTITY_INSTANCE].type = NLA_STRING;
+        attr_policy[APNI_ATTR_ENTITY_INSTANCE].len = 0;
 
         if (nla_parse_nested(attrs, APNI_ATTR_MAX, name_attr, attr_policy) < 0)
                 return -1;
 
         if (attrs[APNI_ATTR_PROCESS_NAME])
-                nla_strlcpy(name_struct->process_name,
-                            attrs[APNI_ATTR_PROCESS_NAME],
-                            sizeof(attrs[APNI_ATTR_PROCESS_NAME]));
+        	name_struct->process_name =
+        			nla_get_string(attrs[APNI_ATTR_PROCESS_NAME]);
 
         if (attrs[APNI_ATTR_PROCESS_INSTANCE])
-                nla_strlcpy(name_struct->process_instance,
-                            attrs[APNI_ATTR_PROCESS_INSTANCE],
-                            sizeof(attrs[APNI_ATTR_PROCESS_INSTANCE]));
+        	name_struct->process_instance =
+        			nla_get_string(attrs[APNI_ATTR_PROCESS_INSTANCE]);
+
         if (attrs[APNI_ATTR_ENTITY_NAME])
-                nla_strlcpy(name_struct->entity_name,
-                            attrs[APNI_ATTR_ENTITY_NAME],
-                            sizeof(attrs[APNI_ATTR_ENTITY_NAME]));
+        	name_struct->entity_name =
+        	        nla_get_string(attrs[APNI_ATTR_ENTITY_NAME]);
+
         if (attrs[APNI_ATTR_ENTITY_INSTANCE])
-                nla_strlcpy(name_struct->entity_instance,
-                            attrs[APNI_ATTR_ENTITY_INSTANCE],
-                            sizeof(attrs[APNI_ATTR_ENTITY_INSTANCE]));
+        	name_struct->entity_instance =
+        	        nla_get_string(attrs[APNI_ATTR_ENTITY_INSTANCE]);
         return 0;
 }
 
@@ -469,7 +476,6 @@ static int rnl_parse_ipcm_alloc_flow_req_msg(struct genl_info * info,
 			IAFRM_ATTR_DIF_NAME);
 
 	result = nlmsg_parse(info->nlhdr,
-			/* FIXME: Check if this is correct */
 			sizeof(struct genlmsghdr) +
 			sizeof(struct rina_msg_hdr),
 			attrs,
