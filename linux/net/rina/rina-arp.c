@@ -45,12 +45,8 @@
 
 struct network_mapping {
         struct list_head list;
-
-        /* The network address advertised */
-        unsigned char * netaddr;
-	
-	/* Hardware address */
-	unsigned char * hw_addr;
+        unsigned char *  netaddr; /* The network address advertised */
+	unsigned char *  hw_addr; /* The Hardware address */
 };
 
 struct arp_data {
@@ -92,10 +88,10 @@ static struct arp_data * find_arp_data(__be16              ar_pro,
 				       struct net_device * dev)
 {
 	struct arp_data * arp_d;
+
 	list_for_each_entry(arp_d, &data, list) {
-		if(arp_d->ar_pro == ar_pro && arp_d->dev == dev) {
+		if (arp_d->ar_pro == ar_pro && arp_d->dev == dev)
 			return arp_d;
-		}
         }
 
 	arp_d = kzalloc(sizeof(*arp_d), GFP_KERNEL);
@@ -103,10 +99,13 @@ static struct arp_data * find_arp_data(__be16              ar_pro,
 		printk("Out of memory");
                 return NULL;
 	}
-	arp_d->dev = dev;
+
+	arp_d->dev    = dev;
 	arp_d->ar_pro = ar_pro;
+
 	INIT_LIST_HEAD(&arp_d->list);
 	INIT_LIST_HEAD(&arp_d->entries);
+
 	list_add(&arp_d->list, &data);
 	
 	return arp_d;
@@ -118,9 +117,8 @@ static struct network_mapping * find_netw_map(struct arp_data * arp_d,
 	struct network_mapping * netw_map;
 
 	list_for_each_entry(netw_map, &arp_d->entries, list) {
-		if (!strcmp(netw_map->netaddr, netw_addr)) {
+		if (!strcmp(netw_map->netaddr, netw_addr))
 			return netw_map;
-		}
         }
 
 	return NULL;
@@ -133,8 +131,8 @@ static struct arp_reply_ops * find_reply_ops(struct arp_data * arp_d,
 	struct arp_reply_ops * ops;
 
 	list_for_each_entry(ops, &arp_d->arp_handlers, list) {
-		if (!strcmp(ops->src_netw_addr, src_netw_addr) 
-		    && !strcmp(ops->dest_netw_addr, dest_netw_addr)) {
+		if (!strcmp(ops->src_netw_addr,  src_netw_addr) &&
+                    !strcmp(ops->dest_netw_addr, dest_netw_addr)) {
 			return ops;
 		}
         }
@@ -151,9 +149,8 @@ int rinarp_register_netaddr(__be16              ar_pro,
 
 	/* First get the right arp_data */
 	arp_d = find_arp_data(ar_pro, dev);
-	if (!arp_d) {
+	if (!arp_d)
 		return -1;
-	}
 
         if (find_netw_map(arp_d, netw_addr)) {
                 printk("Network address %s has been already registered", 
@@ -168,6 +165,7 @@ int rinarp_register_netaddr(__be16              ar_pro,
 	}
 
         INIT_LIST_HEAD(&net_map->list);
+
 	strcpy(net_map->netaddr, netw_addr);
 	strcpy(net_map->hw_addr, dev->dev_addr);
         list_add(&net_map->list, &arp_d->entries);
@@ -181,18 +179,16 @@ int rinarp_unregister_netaddr(__be16              ar_pro,
 			      unsigned char *     netw_addr)
 { 
 	struct network_mapping * net_map;
-	struct arp_data * arp_d;
+	struct arp_data *        arp_d;
 
 	/* First get the right arp_data */
 	arp_d = find_arp_data(ar_pro, dev);
-	if (!arp_d) {
+	if (!arp_d)
 		return -1;
-	}
 
 	net_map = find_netw_map(arp_d, netw_addr);
         if (!net_map) {
-                printk("No such network address: %s", 
-		       netw_addr);
+                printk("No such network address: %s", netw_addr);
                 return -1;
         }
 
@@ -212,9 +208,8 @@ unsigned char * rinarp_lookup_netaddr(__be16              ar_pro,
 
 	/* First get the right arp_data */
 	arp_d = find_arp_data(ar_pro, dev);
-	if (!arp_d) {
+	if (!arp_d)
 		return NULL;
-	}
 	
 	net_map = find_netw_map(arp_d, netw_addr);
 
@@ -229,11 +224,12 @@ int rinarp_remove_reply_handler(struct arp_reply_ops * ops)
 
 	/* First get the right arp_data */
 	arp_d = find_arp_data(ops->ar_pro, ops->dev);
-	if (!arp_d) {
+	if (!arp_d)
 		return -1;
-	}
 
-	reply_ops = find_reply_ops(arp_d, ops->src_netw_addr, ops->dest_netw_addr);
+	reply_ops = find_reply_ops(arp_d,
+                                   ops->src_netw_addr,
+                                   ops->dest_netw_addr);
         if (!reply_ops) {
                 printk("No such reply ops");
                 return -1;
@@ -353,14 +349,14 @@ int rinarp_send_request(struct arp_reply_ops *ops)
 	
 	/* Store into list of ARP response handlers */
 	arp_d = find_arp_data(ops->ar_pro, ops->dev);
-	if (!arp_d) {
+	if (!arp_d)
 		return -1;
-	}
 	list_add(&ops->list, &arp_d->arp_handlers);
 	
 
 	/* FIXME: Call arp_create with correct length params */
-	skb = arp_create(RINARP_REQUEST, ops->ar_pro, INSERT PROTOCOL LENGTH, ops->dev,
+	skb = arp_create(RINARP_REQUEST,
+                         ops->ar_pro, INSERT PROTOCOL LENGTH, ops->dev,
 			 ops->src_nwaddr, ops->dest_nwaddr, NULL);
 
 	if (skb == NULL)
@@ -520,7 +516,6 @@ static int arp_rcv(struct sk_buff *skb, struct net_device *dev,
 
 	return 0;
 #else
-
 	return -1;
 #endif
 
@@ -540,13 +535,14 @@ static struct packet_type arp_packet_type __read_mostly = {
 static int __init mod_init(void)
 {
 	INIT_LIST_HEAD(&data);
+
 	dev_add_pack(&arp_packet_type);
 
         return 0;
 }
 
 static void __exit mod_exit(void)
-{ }
+{ /* FIXME: Destroy everything (e.g. the contents of 'data' */ }
 
 module_init(mod_init);
 module_exit(mod_exit);
