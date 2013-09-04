@@ -243,8 +243,8 @@ enum ipcm_disconn_neighbor_resp_msg_attr_list {
 #define IDNRE_ATTR_MAX (__IDNRE_ATTR_MAX -1)
 
 struct rina_msg_hdr {
-        unsigned int src_ipc_id;
-        unsigned int dst_ipc_id;
+        unsigned short src_ipc_id;
+        unsigned short dst_ipc_id;
 };
 
 struct rnl_msg {

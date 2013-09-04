@@ -36,25 +36,24 @@ int data;
 struct rina_nl_set * set;
 
 
-static int test_echo_dispatcher(void * data, 
-			   	struct sk_buff skb_in, 
-			   	struct genl_info * info)
+static int test_echo_dispatcher_2(void * data, 
+			   	  struct sk_buff * skb_in, 
+			   	  struct genl_info * info)
 {
 	
 	struct rnl_msg * my_msg;
 	struct rnl_ipcm_assign_to_dif_resp_msg_attrs * attrs;
-	struct rina_msg_hdr * my_hdr;
 	struct sk_buff * out_msg;
 	struct rina_msg_hdr * out_hdr;
 	int result;
 
-	LOG_DBG("ENTER TEST DISPATCHER");
+	LOG_DBG("\nEntering the test dispatcher RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE...");
+	LOG_DBG("[LDBG] Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
 
 	if (!info) {
 		LOG_ERR("Wrong info struct in dispatcher");
 		return -1;
 	}
-
 	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
         if (!attrs)
                 return -1;
@@ -64,22 +63,28 @@ static int test_echo_dispatcher(void * data,
                 rkfree(attrs);
                 return -1;
         }
-        my_hdr = rkzalloc(sizeof(*my_hdr), GFP_KERNEL);
-        if (!my_hdr) {
-		LOG_ERR("Could not allocate space for header");
-                rkfree(attrs);
-                rkfree(my_msg);
-                return -1;
-        }
         my_msg->attrs = attrs;
-        my_msg->rina_hdr = my_hdr;
+	
+	LOG_DBG("[LDBG] test-dispatcher before parsing OK");
+	LOG_DBG("[LDBG] Size of rina_msg_header: %d", sizeof(struct rina_msg_hdr));
+	LOG_DBG("[LDBG] my_msg is at %pK", my_msg);
+	LOG_DBG("[LDBG] my_msg->rina_hdr is at %pK and size is %d", my_msg->rina_hdr, sizeof(my_msg->rina_hdr));
+	LOG_DBG("[LDBG] my_msg->attrs is at %pK", my_msg->attrs);
+
 	if (rnl_parse_msg(info, my_msg)){
 		LOG_ERR("Could not parse message");
+		rkfree(attrs);
+		rkfree(my_msg);
 		return -1;
 	}
 
 	LOG_DBG("Returned value\n"
-		"RESULT: %d\n",attrs->result);
+		"RESULT: %d\n"
+		"(my_msg->rina_hdr)->src_ipc_id: %d\n"
+		"(my_msg->rina_hdr)->src_ipc_id: %d",
+		attrs->result,
+		(my_msg->rina_hdr)->src_ipc_id,
+		(my_msg->rina_hdr)->dst_ipc_id);
 
 	
 	
@@ -88,6 +93,8 @@ static int test_echo_dispatcher(void * data,
 	out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
 	if(!out_msg) {
 		LOG_ERR("Could not allocate memory for message");
+		rkfree(attrs);
+		rkfree(my_msg);
 		return -1;
 	}
 
@@ -101,15 +108,19 @@ static int test_echo_dispatcher(void * data,
 	if(!out_hdr) {
 		LOG_ERR("Could not use genlmsg_put");
 		nlmsg_free(out_msg);
+		rkfree(attrs);
+		rkfree(my_msg);
 		return -1;
 	}
 
-	out_hdr->src_ipc_id = my_hdr->dst_ipc_id;
-	out_hdr->dst_ipc_id = my_hdr->src_ipc_id;
+	out_hdr->src_ipc_id = (my_msg->rina_hdr)->dst_ipc_id;
+	out_hdr->dst_ipc_id = (my_msg->rina_hdr)->src_ipc_id;
 
 	if (rnl_format_ipcm_assign_to_dif_resp_msg(attrs->result, out_msg)){
 		LOG_ERR("Could not format message...");
 		nlmsg_free(out_msg);
+		rkfree(attrs);
+		rkfree(my_msg);
 		return -1;
 	}
 	result = genlmsg_end(out_msg, out_hdr);
@@ -120,14 +131,228 @@ static int test_echo_dispatcher(void * data,
 	result = genlmsg_unicast(&init_net, out_msg, info->snd_portid);
 	if(result) {
 		LOG_ERR("Could not send unicast msg: %d", result);
+		rkfree(attrs);
+		rkfree(my_msg);
 		return -1;
 	}
+
+	rkfree(attrs);
+	rkfree(my_msg);
 	return 0;
-
-
-	return 0;	
 }
 
+static int test_echo_dispatcher_10(void * data, 
+			   	  struct sk_buff * skb_in, 
+			   	  struct genl_info * info)
+{
+	
+	struct rnl_msg * my_msg;
+	struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs;
+	struct sk_buff * out_msg;
+	struct rina_msg_hdr * out_hdr;
+	int result;
+
+	LOG_DBG("\nEntering the test dispatcher RINA_C_IPCM_ALLOCATE_FLOW_REQUEST....");
+	LOG_DBG("[LDBG] Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
+
+	if (!info) {
+		LOG_ERR("Wrong info struct in dispatcher");
+		return -1;
+	}
+	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+        if (!attrs)
+                return -1;
+        my_msg = rkzalloc(sizeof(*my_msg), GFP_KERNEL);
+        if (!my_msg) {
+		LOG_ERR("Could not allocate space for my_msg struct");
+                rkfree(attrs);
+                return -1;
+        }
+        my_msg->attrs = attrs;
+	
+	LOG_DBG("[LDBG] my_msg is at %pK", my_msg);
+	LOG_DBG("[LDBG] my_msg->attrs is at %pK", my_msg->attrs);
+
+	if (rnl_parse_msg(info, my_msg)){
+		LOG_ERR("Could not parse message");
+		rkfree(attrs);
+		rkfree(my_msg);
+		return -1;
+	}
+
+	LOG_DBG("Returned parsed msg\n"
+		"(my_msg->rina_hdr)->src_ipc_id: %d\n"
+		"(my_msg->rina_hdr)->src_ipc_id: %d\n"
+		"((my_msg->attrs)->source)->process_name: %s",
+		(my_msg->rina_hdr)->src_ipc_id,
+		(my_msg->rina_hdr)->dst_ipc_id,
+		(attrs->source)->process_name);
+
+	
+	
+	LOG_DBG("Formatting out message...");
+
+	out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
+	if(!out_msg) {
+		LOG_ERR("Could not allocate memory for message");
+		rkfree(attrs);
+		rkfree(my_msg);
+		return -1;
+	}
+
+	out_hdr = (struct rina_msg_hdr *) genlmsg_put(
+				out_msg, 
+				0, 
+				0, 
+				get_nl_family(), 
+				0, 
+				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST);
+	if(!out_hdr) {
+		LOG_ERR("Could not use genlmsg_put");
+		nlmsg_free(out_msg);
+		rkfree(attrs);
+		rkfree(my_msg);
+		return -1;
+	}
+
+	out_hdr->src_ipc_id = (my_msg->rina_hdr)->dst_ipc_id;
+	out_hdr->dst_ipc_id = (my_msg->rina_hdr)->src_ipc_id;
+
+	if (rnl_format_ipcm_alloc_flow_req_msg(attrs->source, 
+					       attrs->dest,
+					       attrs->fspec,
+					       attrs->id,
+					       attrs->dif_name,
+					       out_msg)){
+		LOG_ERR("Could not format message...");
+		nlmsg_free(out_msg);
+		rkfree(attrs);
+		rkfree(my_msg);
+		return -1;
+	}
+	result = genlmsg_end(out_msg, out_hdr);
+
+	if (result){
+		LOG_DBG("Result of genlmesg_end: %d", result);
+	}
+	result = genlmsg_unicast(&init_net, out_msg, info->snd_portid);
+	if(result) {
+		LOG_ERR("Could not send unicast msg: %d", result);
+		rkfree(attrs);
+		rkfree(my_msg);
+		return -1;
+	}
+
+	rkfree(attrs);
+	rkfree(my_msg);
+	return 0;
+}
+
+static int test_echo_dispatcher_11(void * data, 
+			   	  struct sk_buff * skb_in, 
+			   	  struct genl_info * info)
+{
+	
+	struct rnl_msg * my_msg;
+	struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs * attrs;
+	struct sk_buff * out_msg;
+	struct rina_msg_hdr * out_hdr;
+	int result;
+
+	LOG_DBG("\nEntering the test dispatcher RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED....");
+	LOG_DBG("[LDBG] Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
+
+	if (!info) {
+		LOG_ERR("Wrong info struct in dispatcher");
+		return -1;
+	}
+	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+        if (!attrs)
+                return -1;
+        my_msg = rkzalloc(sizeof(*my_msg), GFP_KERNEL);
+        if (!my_msg) {
+		LOG_ERR("Could not allocate space for my_msg struct");
+                rkfree(attrs);
+                return -1;
+        }
+        my_msg->attrs = attrs;
+	
+	LOG_DBG("[LDBG] my_msg is at %pK", my_msg);
+	LOG_DBG("[LDBG] my_msg->attrs is at %pK", my_msg->attrs);
+
+	if (rnl_parse_msg(info, my_msg)){
+		LOG_ERR("Could not parse message");
+		rkfree(attrs);
+		rkfree(my_msg);
+		return -1;
+	}
+
+	LOG_DBG("Returned parsed msg\n"
+		"(my_msg->rina_hdr)->src_ipc_id: %d\n"
+		"(my_msg->rina_hdr)->src_ipc_id: %d\n"
+		"((my_msg->attrs)->source)->process_name: %s",
+		(my_msg->rina_hdr)->src_ipc_id,
+		(my_msg->rina_hdr)->dst_ipc_id,
+		(attrs->source)->process_name);
+
+	
+	
+	LOG_DBG("Formatting out message...");
+
+	out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
+	if(!out_msg) {
+		LOG_ERR("Could not allocate memory for message");
+		rkfree(attrs);
+		rkfree(my_msg);
+		return -1;
+	}
+
+	out_hdr = (struct rina_msg_hdr *) genlmsg_put(
+				out_msg, 
+				0, 
+				0, 
+				get_nl_family(), 
+				0, 
+				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED);
+	if(!out_hdr) {
+		LOG_ERR("Could not use genlmsg_put");
+		nlmsg_free(out_msg);
+		rkfree(attrs);
+		rkfree(my_msg);
+		return -1;
+	}
+
+	out_hdr->src_ipc_id = (my_msg->rina_hdr)->dst_ipc_id;
+	out_hdr->dst_ipc_id = (my_msg->rina_hdr)->src_ipc_id;
+
+	if (rnl_format_ipcm_alloc_flow_req_arrived_msg(attrs->source, 
+					       attrs->dest,
+					       attrs->fspec,
+					       attrs->dif_name,
+					       out_msg)){
+		LOG_ERR("Could not format message...");
+		nlmsg_free(out_msg);
+		rkfree(attrs);
+		rkfree(my_msg);
+		return -1;
+	}
+	result = genlmsg_end(out_msg, out_hdr);
+
+	if (result){
+		LOG_DBG("Result of genlmesg_end: %d", result);
+	}
+	result = genlmsg_unicast(&init_net, out_msg, info->snd_portid);
+	if(result) {
+		LOG_ERR("Could not send unicast msg: %d", result);
+		rkfree(attrs);
+		rkfree(my_msg);
+		return -1;
+	}
+
+	rkfree(attrs);
+	rkfree(my_msg);
+	return 0;
+}
 
 int test_register_echo_handler(void)
 {
@@ -147,11 +372,19 @@ int test_register_echo_handler(void)
 	if (rina_netlink_handler_register(set,
 				RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE,
 				&data,
-				(message_handler_cb) test_echo_dispatcher)) {
+				(message_handler_cb) test_echo_dispatcher_2)  ||
+	    rina_netlink_handler_register(set,
+				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
+				&data,
+				(message_handler_cb) test_echo_dispatcher_10) || 
+	    rina_netlink_handler_register(set,
+				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED,
+				&data,
+				(message_handler_cb) test_echo_dispatcher_11) 
+									  ) {
 		LOG_ERR("Could not register handler");
 		return -1;
 	}
-	LOG_DBG("test_register_echo_handler: registered handler at %p:", test_echo_dispatcher);
 	return 0;
 }
 EXPORT_SYMBOL(test_register_echo_handler);
@@ -228,8 +461,8 @@ EXPORT_SYMBOL(test_register_handler);
 
 int test_rnl_format_ipcm_alloc_flow_req_result_msg(uint_t result)
 {
-	struct sk_buff * msg;
-	struct rina_msg_hdr * hdr;
+	struct sk_buff * msg = NULL;
+	struct rina_msg_hdr * hdr = NULL;
 	
 	LOG_DBG("FORMATTING TEST MESSAGE...");
 
@@ -340,10 +573,10 @@ void populate_generic_name(string_t    * prefix,
 int test_rnl_format_ipcm_assign_to_dif_req_msg(void)
 {
 
-	struct sk_buff * msg;
-	struct rina_msg_hdr * hdr;
-	struct dif_config * config;
-	struct name * name;
+	struct sk_buff * msg = NULL;
+	struct rina_msg_hdr * hdr = NULL;
+	struct dif_config * config = NULL;
+	struct name * name = NULL;
 
 	config = rkzalloc(sizeof(*config), GFP_KERNEL);
 	name = rkzalloc(sizeof(*name), GFP_KERNEL);
@@ -381,8 +614,8 @@ int test_rnl_format_ipcm_assign_to_dif_req_msg(void)
 
 int test_rnl_format_ipcm_assign_to_dif_resp_msg(void)
 {
-	struct sk_buff * msg;
-	struct rina_msg_hdr * hdr;
+	struct sk_buff * msg = NULL;
+	struct rina_msg_hdr * hdr = NULL;
 
 	if (test_begin_generic(msg,
 	  		       hdr,
@@ -402,10 +635,10 @@ int test_rnl_format_ipcm_assign_to_dif_resp_msg(void)
 
 int test_rnl_format_ipcm_ipcp_dif_reg_noti_msg(void)
 {
-	struct sk_buff * msg;
-	struct rina_msg_hdr * hdr;
-	struct name * ipc_name;
-	struct name * dif_name;
+	struct sk_buff * msg = NULL;
+	struct rina_msg_hdr * hdr = NULL;
+	struct name * ipc_name = NULL;
+	struct name * dif_name = NULL;
 
 	ipc_name = rkzalloc(sizeof(*ipc_name), GFP_KERNEL);
 	dif_name = rkzalloc(sizeof(*dif_name), GFP_KERNEL);
@@ -446,8 +679,8 @@ int test_rnl_format_ipcm_ipcp_dif_reg_noti_msg(void)
 
 int test_rnl_format_ipcm_ipcp_dif_unreg_noti_msg(void)
 {
-	struct sk_buff * msg;
-	struct rina_msg_hdr * hdr;
+	struct sk_buff * msg = NULL;
+	struct rina_msg_hdr * hdr = NULL;
 
 	if (test_begin_generic(msg,
 	  	hdr,
@@ -470,9 +703,9 @@ int test_rnl_format_ipcm_ipcp_dif_unreg_noti_msg(void)
 
 int test_rnl_format_ipcm_enroll_to_dif_req_msg(void)
 {
-	struct sk_buff * msg;
-	struct rina_msg_hdr * hdr;
-	struct name * dif_name;
+	struct sk_buff * msg = NULL;
+	struct rina_msg_hdr * hdr = NULL;
+	struct name * dif_name = NULL;
 
 	dif_name = rkzalloc(sizeof(*dif_name), GFP_KERNEL);
 	if(!dif_name){
@@ -504,8 +737,8 @@ int test_rnl_format_ipcm_enroll_to_dif_req_msg(void)
 
 int test_rnl_format_ipcm_enroll_to_dif_resp_msg(void)
 {
-	struct sk_buff * msg;
-	struct rina_msg_hdr * hdr;
+	struct sk_buff * msg = NULL;
+	struct rina_msg_hdr * hdr = NULL;
 
 	if (test_begin_generic(msg,
 	  	hdr,
