@@ -164,7 +164,7 @@ static int default_fini(struct personality_data * data)
                 if (err) return err;
         }
         if (tmp->kipcm) {
-                err = kipcm_fini(tmp->kipcm, tmp->nlset);
+                err = kipcm_fini(tmp->kipcm);
                 if (err) return err;
         }
         if (tmp->nlset) {
