@@ -121,19 +121,22 @@ char * strdup_from_user(const char __user * src)
         size_t size;
         char * tmp;
 
-        if (!src)
-                return NULL;
+        if (!src){
+        	return NULL;
+        }
 
         size = strlen_user(src); /* Includes the terminating NUL */
-        if (!size)
-                return NULL;
+        if (!size){
+            return NULL;
+        }
 
         tmp = rkmalloc(size, GFP_KERNEL);
-        if (!tmp)
+        if (!tmp){
                 return NULL;
+        }
 
         /* strncpy_from_user() copies the terminating NUL */
-        if (strncpy_from_user(tmp, src, size)) {
+        if (strncpy_from_user(tmp, src, size) < 0) {
                 rkfree(tmp);
                 return NULL;
         }

@@ -266,10 +266,10 @@ static int parse_rib_objects_list(struct nlattr     * rib_objs_attr,
 }
 
 static int rnl_parse_generic_u32_param_msg (struct genl_info * info,
-		uint_t          * param_var,
-		uint_t	     param_name,
-		uint_t	     max_params,
-		string_t         * msg_name)
+					    uint_t           * param_var,
+					    uint_t	     param_name,
+					    uint_t	     max_params,
+					    string_t         * msg_name)
 {
 	struct nla_policy attr_policy[max_params + 1];
 
@@ -292,8 +292,8 @@ static int rnl_parse_generic_u32_param_msg (struct genl_info * info,
 	}
 
 	if (attrs[param_name]){
-		*param_var = nla_get_u32(attrs[param_name]);
-		LOG_DBG("Parsed result: %d", *param_var);
+		* param_var = nla_get_u32(attrs[param_name]);
+		LOG_DBG("Parsed result: %d", * param_var);
 	}
 
 	return 0;
@@ -431,8 +431,19 @@ static int rnl_parse_ipcm_alloc_flow_req_msg(struct genl_info * info,
         attr_policy[IAFRM_ATTR_SOURCE_APP_NAME].type = NLA_NESTED;
         attr_policy[IAFRM_ATTR_DEST_APP_NAME].type = NLA_NESTED;
         attr_policy[IAFRM_ATTR_FLOW_SPEC].type = NLA_NESTED;
-        attr_policy[IAFRM_ATTR_DIF_NAME].type = NLA_NESTED;
         attr_policy[IAFRM_ATTR_PORT_ID].type = NLA_U32;
+        attr_policy[IAFRM_ATTR_DIF_NAME].type = NLA_NESTED;
+
+	LOG_DBG("IAFRM_ATTR_SOURCE_APP_NAME: %d\n"
+		"IAFRM_ATTR_DEST_APP_NAME: %d\n"
+		"IAFRM_ATTR_FLOW_SPEC: %d\n"
+		"IAFRM_ATTR_PORT_ID: %d\n"
+		"IAFRM_ATTR_DIF_NAME: %d\n",
+		IAFRM_ATTR_SOURCE_APP_NAME,
+		IAFRM_ATTR_DEST_APP_NAME,
+		IAFRM_ATTR_FLOW_SPEC,
+		IAFRM_ATTR_PORT_ID,
+		IAFRM_ATTR_DIF_NAME);
 
         if (rnl_check_attr_policy(info->nlhdr, IAFRM_ATTR_MAX, attr_policy) < 0)
                 goto format_fail;
@@ -537,7 +548,7 @@ static int rnl_parse_ipcm_dealloc_flow_req_msg(struct genl_info * info,
                 struct rnl_ipcm_dealloc_flow_req_msg_attrs * msg_attrs)
 {
 	return rnl_parse_generic_u32_param_msg(info,
-					&(msg_attrs->id),
+					(uint_t *) &(msg_attrs->id),
 					IDFRT_ATTR_PORT_ID,
 					IDFRT_ATTR_MAX,
 					"RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST");
