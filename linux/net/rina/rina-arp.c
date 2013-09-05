@@ -66,8 +66,8 @@ static struct list_head data;
 struct arp_hdr {
 	__be16          ar_hrd;         /* format of hardware address   */
 	__be16          ar_pro;         /* format of protocol address   */
-	unsigned char   ar_hln;         /* length of hardware address   */
-	unsigned char   ar_pln;         /* length of protocol address   */
+	__u8           ar_hln;         /* length of hardware address   */
+        __u8           ar_pln;         /* length of protocol address   */
 	__be16          ar_op;          /* ARP opcode (command)         */
  
 #if 0
@@ -246,7 +246,6 @@ EXPORT_SYMBOL(rinarp_remove_reply_handler);
 static struct arp_hdr * arphdr(const struct sk_buff * skb)
 { return (struct arp_hdr *)skb_network_header(skb); }
 
-#if RINA_TEST
 /*
  *	Create an arp packet. If (dest_hw == NULL), we create a broadcast
  *	message.
@@ -268,7 +267,7 @@ static struct sk_buff *arp_create(int op, int ptype, int plen,
 	/*
 	 *	Allocate a buffer
 	 */
-	int length = sizeof(struct arp_hdr) + (dev->addr_len + plen)) * 2;
+	int length = sizeof(struct arp_hdr) + (dev->addr_len + plen) * 2;
 
 	skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
 	if (skb == NULL)
@@ -276,7 +275,7 @@ static struct sk_buff *arp_create(int op, int ptype, int plen,
 
 	skb_reserve(skb, hlen);
 	skb_reset_network_header(skb);
-	arp = (struct arphdr *) skb_put(skb, arp_hdr_len(dev));
+	arp = (struct arp_hdr *) skb_put(skb, length);
 	skb->dev = dev;
 	skb->protocol = htons(ETH_P_ARP);
 	src_hw = dev->dev_addr;
@@ -313,8 +312,8 @@ static struct sk_buff *arp_create(int op, int ptype, int plen,
 
 	switch (dev->type) {
 	default:
-		if (target_hw != NULL)
-			memcpy(arp_ptr, target_hw, dev->addr_len);
+		if (dest_hw != NULL)
+			memcpy(arp_ptr, dest_hw, dev->addr_len);
 		else
 			memset(arp_ptr, 0, dev->addr_len);
 		arp_ptr += dev->addr_len;
@@ -327,14 +326,13 @@ out:
 	kfree_skb(skb);
 	return NULL;
 }
-#endif
 
 /*
  *	Create and send an arp packet.
  *      Taken from net/ipv4/arp.c
  *      Original name arp_send
  */
-#if RINA_TEST
+
 int rinarp_send_request(struct arp_reply_ops * ops)
 {
 	struct sk_buff *  skb;
@@ -344,8 +342,8 @@ int rinarp_send_request(struct arp_reply_ops * ops)
 	 *	No arp on this interface.
 	 */
 
-	if (dev->flags&IFF_NOARP)
-		return;
+	if (ops->dev->flags&IFF_NOARP)
+		return -1;
 	
 	/* Store into list of ARP response handlers */
 	arp_d = find_arp_data(ops->ar_pro, ops->dev);
@@ -356,17 +354,17 @@ int rinarp_send_request(struct arp_reply_ops * ops)
 
 	/* FIXME: Call arp_create with correct length params */
 	skb = arp_create(RINARP_REQUEST,
-                         ops->ar_pro, INSERT PROTOCOL LENGTH, ops->dev,
-			 ops->src_nwaddr, ops->dest_nwaddr, NULL);
+                         ops->ar_pro, 32, ops->dev,
+			 ops->src_netw_addr, ops->dest_netw_addr, NULL);
 
 	if (skb == NULL)
-		return;
+		return -1;
 	
         /* Actually send it */
 	dev_queue_xmit(skb);
+	return 0;
 }
 EXPORT_SYMBOL(rinarp_send_request);
-#endif
 
 /*
  *	Process an arp request.
