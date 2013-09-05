@@ -135,6 +135,8 @@ void name_fini(struct name * n)
                 rkfree(n->entity_instance);
                 n->entity_instance = NULL;
         }
+
+        LOG_DBG("Name at %pK finalized successfully", n);
 }
 EXPORT_SYMBOL(name_fini);
 
@@ -147,6 +149,8 @@ void name_destroy(struct name * ptr)
         ASSERT(name_is_initialized(ptr));
 
         rkfree(ptr);
+
+        LOG_DBG("Name at %pK destroyed successfully", ptr);
 }
 EXPORT_SYMBOL(name_destroy);
 
