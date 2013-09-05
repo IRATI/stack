@@ -35,6 +35,7 @@
  */
 struct name * name_create(void);
 
+
 /*
  * Initializes a previously dynamically allocated name (i.e. name_alloc())
  * or a statically one (e.g. declared into a struct not as a pointer).

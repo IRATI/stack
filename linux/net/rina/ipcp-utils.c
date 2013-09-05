@@ -114,6 +114,11 @@ void name_fini(struct name * n)
 {
         ASSERT(n);
 
+        LOG_DBG("Process name at %pK", n->process_name);
+        LOG_DBG("Process instance at %pK", n->process_instance);
+        LOG_DBG("Entity name at %pK", n->entity_name);
+        LOG_DBG("Entity instance at %pK", n->entity_instance);
+
         if (n->process_name) {
                 rkfree(n->process_name);
                 n->process_name = NULL;
@@ -130,6 +135,8 @@ void name_fini(struct name * n)
                 rkfree(n->entity_instance);
                 n->entity_instance = NULL;
         }
+
+        LOG_DBG("Name at %pK finalized successfully", n);
 }
 EXPORT_SYMBOL(name_fini);
 
@@ -142,6 +149,8 @@ void name_destroy(struct name * ptr)
         ASSERT(name_is_initialized(ptr));
 
         rkfree(ptr);
+
+        LOG_DBG("Name at %pK destroyed successfully", ptr);
 }
 EXPORT_SYMBOL(name_destroy);
 

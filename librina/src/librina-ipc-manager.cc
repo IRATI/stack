@@ -325,6 +325,8 @@ void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 	IpcmAllocateFlowResponseMessage responseMessage;
 	responseMessage.setResult(result);
 	responseMessage.setPortId(flowRequest.getPortId());
+	//FIXME add parameter to API
+	responseMessage.setNotifySource(true);
 	responseMessage.setDestIpcProcessId(id);
 	responseMessage.setDestPortId(portId);
 	responseMessage.setSequenceNumber(flowRequest.getSequenceNumber());

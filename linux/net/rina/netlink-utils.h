@@ -77,7 +77,7 @@ enum ipcm_alloc_flow_req_arrived_attrs_list {
 #define IAFRA_ATTR_MAX (__IAFRA_ATTR_MAX -1)
 
 enum ipcm_alloc_flow_resp_attrs_list {
-        IAFRE_ATTR_RESULT,
+        IAFRE_ATTR_RESULT = 1,
         IAFRE_ATTR_NOTIFY_SOURCE,
         IAFRE_ATTR_PORT_ID,
         __IAFRE_ATTR_MAX,
@@ -129,8 +129,7 @@ enum ipcm_reg_app_req_attrs_list {
 #define IRAR_ATTR_MAX (__IRAR_ATTR_MAX -1)
 
 enum ipcm_reg_app_resp_attrs_list {
-        IRARE_ATTR_APP_NAME = 1,
-        IRARE_ATTR_RESULT,
+        IRARE_ATTR_RESULT=1,
         __IRARE_ATTR_MAX,
 };
 #define IRARE_ATTR_MAX (__IRARE_ATTR_MAX -1)
@@ -359,7 +358,6 @@ struct rnl_ipcm_reg_app_req_msg_attrs {
 };
 
 struct rnl_ipcm_reg_app_resp_msg_attrs {
-	struct name * app_name;
 	uint_t      result;
 };
 
@@ -465,8 +463,7 @@ int rnl_format_ipcm_reg_app_req_msg(const struct name * app_name,
                                     const struct name * dif_name,
                                     struct sk_buff *    skb_out);
 
-int rnl_format_ipcm_reg_app_resp_msg(const struct name * app_name,
-				     uint_t            result,
+int rnl_format_ipcm_reg_app_resp_msg(uint_t            result,
                                      struct sk_buff    * skb_out);
 
 int rnl_format_ipcm_unreg_app_req_msg(const struct name * app_name,
@@ -497,4 +494,7 @@ int rnl_format_rmt_dump_ft_req_msg(struct sk_buff * skb_out);
 int rnl_format_rmt_dump_ft_reply_msg(size_t                       count,
                                      const struct pdu_ft_entry ** entries,
                                      struct sk_buff *             skb_out);
+
+char *nla_get_string(struct nlattr *nla);
+
 #endif

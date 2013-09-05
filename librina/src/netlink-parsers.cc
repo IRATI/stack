@@ -1483,27 +1483,7 @@ int putIpcmRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 
 int putIpcmRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 		const IpcmRegisterApplicationResponseMessage& object) {
-	struct nlattr *difName, *applicationName;
-
 	NLA_PUT_U32(netlinkMessage, IRARE_ATTR_RESULT, object.getResult());
-
-	if (!(applicationName = nla_nest_start(netlinkMessage, IRARE_ATTR_APP_NAME))) {
-		goto nla_put_failure;
-	}
-	if (putApplicationProcessNamingInformationObject(netlinkMessage,
-			object.getApplicationName()) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, applicationName);
-
-	if (!(difName = nla_nest_start(netlinkMessage, IRARE_ATTR_DIF_NAME))) {
-		goto nla_put_failure;
-	}
-	if (putApplicationProcessNamingInformationObject(netlinkMessage,
-			object.getDifName()) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, difName);
 
 	return 0;
 
@@ -2848,12 +2828,6 @@ parseIpcmRegisterApplicationResponseMessage(nlmsghdr *hdr) {
 	attr_policy[IRARE_ATTR_RESULT].type = NLA_U32;
 	attr_policy[IRARE_ATTR_RESULT].minlen = 4;
 	attr_policy[IRARE_ATTR_RESULT].maxlen = 4;
-	attr_policy[IRARE_ATTR_APP_NAME].type = NLA_NESTED;
-	attr_policy[IRARE_ATTR_APP_NAME].minlen = 0;
-	attr_policy[IRARE_ATTR_APP_NAME].maxlen = 0;
-	attr_policy[IRARE_ATTR_DIF_NAME].type = NLA_NESTED;
-	attr_policy[IRARE_ATTR_DIF_NAME].minlen = 0;
-	attr_policy[IRARE_ATTR_DIF_NAME].maxlen = 0;
 	struct nlattr *attrs[IRARE_ATTR_MAX + 1];
 
 	/*
@@ -2874,34 +2848,8 @@ parseIpcmRegisterApplicationResponseMessage(nlmsghdr *hdr) {
 	IpcmRegisterApplicationResponseMessage * result =
 			new IpcmRegisterApplicationResponseMessage();
 
-	ApplicationProcessNamingInformation * applicationName;
-	ApplicationProcessNamingInformation * difName;
-
 	if (attrs[IRARE_ATTR_RESULT]) {
 		result->setResult(nla_get_u32(attrs[IRARE_ATTR_RESULT]));
-	}
-
-	if (attrs[IRARE_ATTR_APP_NAME]) {
-		applicationName = parseApplicationProcessNamingInformationObject(
-				attrs[IRARE_ATTR_APP_NAME]);
-		if (applicationName == 0) {
-			delete result;
-			return 0;
-		} else {
-			result->setApplicationName(*applicationName);
-			delete applicationName;
-		}
-	}
-	if (attrs[IRARE_ATTR_DIF_NAME]) {
-		difName = parseApplicationProcessNamingInformationObject(
-				attrs[IRARE_ATTR_DIF_NAME]);
-		if (difName == 0) {
-			delete result;
-			return 0;
-		} else {
-			result->setDifName(*difName);
-			delete difName;
-		}
 	}
 
 	return result;

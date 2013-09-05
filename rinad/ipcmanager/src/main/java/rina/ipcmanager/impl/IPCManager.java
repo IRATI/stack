@@ -4,7 +4,9 @@ import eu.irati.librina.ApplicationManagerSingleton;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.ApplicationUnregistrationRequestEvent;
+import eu.irati.librina.AssignToDIFException;
 import eu.irati.librina.CreateIPCProcessException;
+import eu.irati.librina.DIFConfiguration;
 import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
@@ -162,7 +164,19 @@ public class IPCManager {
 			}
 			
 			if (ipcProcessToCreate.getDifName() != null){
-				//TODO assign to DIF ipcProcess.assignToDIF(arg0);
+				DIFConfiguration difConfiguration = new DIFConfiguration();
+				ApplicationProcessNamingInformation difName = 
+						new ApplicationProcessNamingInformation();
+				difName.setProcessName(ipcProcessToCreate.getDifName());
+				difConfiguration.setDifName(difName);
+				difConfiguration.setDifType(ipcProcess.getType());
+				try{
+					ipcProcess.assignToDIF(difConfiguration);
+				}catch(AssignToDIFException ex){
+					log.error(ex.getMessage() + ". Problems assigning IPC Process to DIF " 
+							+ ipcProcessToCreate.getDifName());
+					continue;
+				}
 			}
 			
 			if (ipcProcessToCreate.getDifsToRegisterAt() != null && 

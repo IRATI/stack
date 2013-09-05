@@ -586,19 +586,8 @@ public:
  */
 class IpcmRegisterApplicationResponseMessage: public BaseNetlinkResponseMessage {
 
-	/** The DIF name where the application wants to register */
-	ApplicationProcessNamingInformation applicationName;
-
-	/** The DIF name where the application wants to register */
-	ApplicationProcessNamingInformation difName;
-
 public:
 	IpcmRegisterApplicationResponseMessage();
-	const ApplicationProcessNamingInformation& getApplicationName() const;
-	void setApplicationName(
-			const ApplicationProcessNamingInformation& applicationName);
-	const ApplicationProcessNamingInformation& getDifName() const;
-	void setDifName(const ApplicationProcessNamingInformation& difName);
 };
 
 

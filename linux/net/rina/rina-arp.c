@@ -66,8 +66,8 @@ static struct list_head data;
 struct arp_hdr {
 	__be16          ar_hrd;         /* format of hardware address   */
 	__be16          ar_pro;         /* format of protocol address   */
-	unsigned char   ar_hln;         /* length of hardware address   */
-	unsigned char   ar_pln;         /* length of protocol address   */
+	__u8            ar_hln;         /* length of hardware address   */
+        __u8            ar_pln;         /* length of protocol address   */
 	__be16          ar_op;          /* ARP opcode (command)         */
  
 #if 0
@@ -246,7 +246,6 @@ EXPORT_SYMBOL(rinarp_remove_reply_handler);
 static struct arp_hdr * arphdr(const struct sk_buff * skb)
 { return (struct arp_hdr *)skb_network_header(skb); }
 
-#if RINA_TEST
 /*
  *	Create an arp packet. If (dest_hw == NULL), we create a broadcast
  *	message.
@@ -268,7 +267,7 @@ static struct sk_buff *arp_create(int op, int ptype, int plen,
 	/*
 	 *	Allocate a buffer
 	 */
-	int length = sizeof(struct arp_hdr) + (dev->addr_len + plen)) * 2;
+	int length = sizeof(struct arp_hdr) + (dev->addr_len + plen) * 2;
 
 	skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
 	if (skb == NULL)
@@ -276,7 +275,7 @@ static struct sk_buff *arp_create(int op, int ptype, int plen,
 
 	skb_reserve(skb, hlen);
 	skb_reset_network_header(skb);
-	arp = (struct arphdr *) skb_put(skb, arp_hdr_len(dev));
+	arp = (struct arp_hdr *) skb_put(skb, length);
 	skb->dev = dev;
 	skb->protocol = htons(ETH_P_ARP);
 	src_hw = dev->dev_addr;
@@ -308,18 +307,18 @@ static struct sk_buff *arp_create(int op, int ptype, int plen,
 
 	memcpy(arp_ptr, src_hw, dev->addr_len);
 	arp_ptr += dev->addr_len;
-	memcpy(arp_ptr, &src_nwaddr, plen);
+	memcpy(arp_ptr, src_nwaddr, plen);
 	arp_ptr += plen;
 
 	switch (dev->type) {
 	default:
-		if (target_hw != NULL)
-			memcpy(arp_ptr, target_hw, dev->addr_len);
+		if (dest_hw != NULL)
+			memcpy(arp_ptr, dest_hw, dev->addr_len);
 		else
 			memset(arp_ptr, 0, dev->addr_len);
 		arp_ptr += dev->addr_len;
 	}
-	memcpy(arp_ptr, &dest_nwaddr, plen);
+	memcpy(arp_ptr, dest_nwaddr, plen);
 
 	return skb;
 
@@ -327,14 +326,13 @@ out:
 	kfree_skb(skb);
 	return NULL;
 }
-#endif
 
 /*
  *	Create and send an arp packet.
  *      Taken from net/ipv4/arp.c
  *      Original name arp_send
  */
-#if RINA_TEST
+
 int rinarp_send_request(struct arp_reply_ops * ops)
 {
 	struct sk_buff *  skb;
@@ -344,8 +342,8 @@ int rinarp_send_request(struct arp_reply_ops * ops)
 	 *	No arp on this interface.
 	 */
 
-	if (dev->flags&IFF_NOARP)
-		return;
+	if (ops->dev->flags&IFF_NOARP)
+		return -1;
 	
 	/* Store into list of ARP response handlers */
 	arp_d = find_arp_data(ops->ar_pro, ops->dev);
@@ -356,17 +354,17 @@ int rinarp_send_request(struct arp_reply_ops * ops)
 
 	/* FIXME: Call arp_create with correct length params */
 	skb = arp_create(RINARP_REQUEST,
-                         ops->ar_pro, INSERT PROTOCOL LENGTH, ops->dev,
-			 ops->src_nwaddr, ops->dest_nwaddr, NULL);
+                         ops->ar_pro, 32, ops->dev,
+			 ops->src_netw_addr, ops->dest_netw_addr, NULL);
 
 	if (skb == NULL)
-		return;
+		return -1;
 	
         /* Actually send it */
 	dev_queue_xmit(skb);
+	return 0;
 }
 EXPORT_SYMBOL(rinarp_send_request);
-#endif
 
 /*
  *	Process an arp request.
@@ -381,10 +379,10 @@ static int arp_process(struct sk_buff *skb)
 	unsigned char  *arp_ptr;
 
 	unsigned char *sha;
-	unsigned char s_netaddr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
-	unsigned char d_netaddr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
-	unsigned char s_hwaddr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
-	unsigned char d_hwaddr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
+	unsigned char *s_netaddr;
+	unsigned char *d_netaddr;
+	unsigned char *s_hwaddr;
+	unsigned char *d_hwaddr;
 	u16 dev_type = dev->type;
 	struct net *net = dev_net(dev);
 
@@ -429,13 +427,13 @@ static int arp_process(struct sk_buff *skb)
 	arp_ptr = (unsigned char *)(arp + 1);
 	sha	= arp_ptr;
 	arp_ptr += dev->addr_len;
-	memcpy(&s_netaddr, arp_ptr, arp->ar_pln);
+	memcpy(s_netaddr, arp_ptr, arp->ar_pln);
 	arp_ptr += arp->ar_pln;
-	memcpy(&s_hwaddr, arp_ptr, arp->ar_hln);
+	memcpy(s_hwaddr, arp_ptr, arp->ar_hln);
 	arp_ptr += dev->addr_len;
-	memcpy(&d_netaddr, arp_ptr, arp->ar_pln);
+	memcpy(d_netaddr, arp_ptr, arp->ar_pln);
 	arp_ptr += arp->ar_pln;
-	memcpy(&d_hwaddr, arp_ptr, arp->ar_hln);
+	memcpy(d_hwaddr, arp_ptr, arp->ar_hln);
 
 /*
  *  Process entry. The idea here is we want to send a reply if it is a
@@ -449,28 +447,21 @@ static int arp_process(struct sk_buff *skb)
  */
 
 /* FIXME: The following part, first complete top part ARP PM */
-	if (arp->ar_op == htons(ARPOP_REQUEST)) {
+	if (arp->ar_op == htons(RINARP_REQUEST)) {
+		/* Are we advertising this network address? */
 	
-		int dont_send;
+	
+	} else if (arp->arp_op == htons(RINARP_REPLY)) {
+		/* Is the reply for one of our network addresses? */
 
-		dont_send = arp_ignore(in_dev, sip, tip);
-		if (!dont_send && IN_DEV_ARPFILTER(in_dev))
-			dont_send = arp_filter(sip, tip, dev);
-		if (!dont_send) {
-			n = neigh_event_ns(&arp_tbl, sha, &sip, dev);
-			if (n) {
-				arp_send(ARPOP_REPLY, ETH_P_ARP, sip,
-					 dev, tip, sha, dev->dev_addr,
-					 sha);
-				neigh_release(n);
-			}
-		}	
+		
+	} else {
+		printk("Unknown operation code");
 		goto out;
 	}
 
 	/* Update our ARP tables */
-
-	n = __neigh_lookup(&arp_tbl, &sip, dev, 0);
+	
 
 
 

@@ -1083,8 +1083,6 @@ int testIpcmRegisterApplicationResponseMessage() {
 			new IpcmRegisterApplicationResponseMessage();
 
 	message->setResult(1);
-	message->setDifName(*difName);
-	message->setApplicationName(*applicationName);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -1116,15 +1114,6 @@ int testIpcmRegisterApplicationResponseMessage() {
 	} else if (message->getResult() != recoveredMessage->getResult()) {
 		std::cout << "Result on original and recovered messages"
 				<< " are different\n";
-		returnValue = -1;
-	} else if (message->getApplicationName()
-			!= recoveredMessage->getApplicationName()) {
-		std::cout << "Application name on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	} else if (message->getDifName() != recoveredMessage->getDifName()) {
-		std::cout << "DIF name on original and recovered "
-				<< "messages are different\n";
 		returnValue = -1;
 	}
 
