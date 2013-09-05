@@ -297,27 +297,27 @@ static int test_echo_dispatcher_9(void * data,
 
 	dest_name = name_create();
 	if (!dest_name){
-		rkfree(attrs);
 		name_destroy(source_name);
+		rkfree(attrs);
 		return -1;
 	}
 	attrs->dest = dest_name;
 
 	dif_name = name_create();
 	if (!dif_name){
-		rkfree(attrs);
 		name_destroy(source_name);
 		name_destroy(dest_name);
+		rkfree(attrs);
 		return -1;
 	}
 	attrs->dif_name = dif_name;
 
 	fspec = rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
 	if (!fspec){
-		rkfree(attrs);
 		name_destroy(source_name);
 		name_destroy(dest_name);
 		name_destroy(dif_name);
+		rkfree(attrs);
 		return -1;
 	}
 	attrs->fspec = fspec;
@@ -325,11 +325,11 @@ static int test_echo_dispatcher_9(void * data,
 	my_msg = rkzalloc(sizeof(*my_msg), GFP_KERNEL);
 	if (!my_msg) {
 		LOG_ERR("Could not allocate space for my_msg struct");
-		rkfree(attrs);
 		name_destroy(source_name);
 		name_destroy(dest_name);
 		name_destroy(dif_name);
 		rkfree(fspec);
+		rkfree(attrs);
 		return -1;
 	}
 	my_msg->attrs = attrs;
@@ -339,11 +339,11 @@ static int test_echo_dispatcher_9(void * data,
 
 	if (rnl_parse_msg(info, my_msg)){
 		LOG_ERR("Could not parse message");
-		rkfree(attrs);
 		name_destroy(source_name);
 		name_destroy(dest_name);
 		name_destroy(dif_name);
 		rkfree(fspec);
+		rkfree(attrs);
 		rkfree(my_msg);
 		return -1;
 	}
@@ -361,11 +361,11 @@ static int test_echo_dispatcher_9(void * data,
 	out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
 	if(!out_msg) {
 		LOG_ERR("Could not allocate memory for message");
-		rkfree(attrs);
 		name_destroy(source_name);
 		name_destroy(dest_name);
 		name_destroy(dif_name);
 		rkfree(fspec);
+		rkfree(attrs);
 		rkfree(my_msg);
 		return -1;
 	}
@@ -380,11 +380,11 @@ static int test_echo_dispatcher_9(void * data,
 	if(!out_hdr) {
 		LOG_ERR("Could not use genlmsg_put");
 		nlmsg_free(out_msg);
-		rkfree(attrs);
 		name_destroy(source_name);
 		name_destroy(dest_name);
 		name_destroy(dif_name);
 		rkfree(fspec);
+		rkfree(attrs);
 		rkfree(my_msg);
 		return -1;
 	}
@@ -400,11 +400,11 @@ static int test_echo_dispatcher_9(void * data,
 					       out_msg)){
 		LOG_ERR("Could not format message...");
 		nlmsg_free(out_msg);
-		rkfree(attrs);
 		name_destroy(source_name);
 		name_destroy(dest_name);
 		name_destroy(dif_name);
 		rkfree(fspec);
+		rkfree(attrs);
 		rkfree(my_msg);
 		return -1;
 	}
@@ -416,20 +416,23 @@ static int test_echo_dispatcher_9(void * data,
 	result = genlmsg_unicast(&init_net, out_msg, info->snd_portid);
 	if(result) {
 		LOG_ERR("Could not send unicast msg: %d", result);
-		rkfree(attrs);
 		name_destroy(source_name);
 		name_destroy(dest_name);
 		name_destroy(dif_name);
 		rkfree(fspec);
+		rkfree(attrs);
 		rkfree(my_msg);
 		return -1;
 	}
 
-	rkfree(attrs);
+	LOG_DBG("Destroying source_name %pK", source_name);
 	name_destroy(source_name);
+	LOG_DBG("Destroying dest %pK", dest_name);
 	name_destroy(dest_name);
+	LOG_DBG("Destroying dif_name %pK", dif_name);
 	name_destroy(dif_name);
 	rkfree(fspec);
+	rkfree(attrs);
 	rkfree(my_msg);
 	return 0;
 }
@@ -461,36 +464,36 @@ static int test_echo_dispatcher_10(void * data,
 	if (!attrs)
 		return -1;
 
-	source_name = rkzalloc(sizeof(struct name), GFP_KERNEL);
+	source_name =  name_create();
 	if (!source_name){
 		rkfree(attrs);
 		return -1;
 	}
 	attrs->source = source_name;
 
-	dest_name = rkzalloc(sizeof(struct name), GFP_KERNEL);
+	dest_name =  name_create();
 	if (!dest_name){
+		name_destroy(source_name);
 		rkfree(attrs);
-		rkfree(source_name);
 		return -1;
 	}
 	attrs->dest = dest_name;
 
-	dif_name = rkzalloc(sizeof(struct name), GFP_KERNEL);
+	dif_name =  name_create();
 	if (!dif_name){
+		name_destroy(source_name);
+		name_destroy(dest_name);
 		rkfree(attrs);
-		rkfree(source_name);
-		rkfree(dest_name);
 		return -1;
 	}
 	attrs->dif_name = dif_name;
 
 	fspec = rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
 	if (!fspec){
+		name_destroy(source_name);
+		name_destroy(dest_name);
+		name_destroy(dif_name);
 		rkfree(attrs);
-		rkfree(source_name);
-		rkfree(dest_name);
-		rkfree(dif_name);
 		return -1;
 	}
 	attrs->fspec = fspec;
@@ -498,11 +501,11 @@ static int test_echo_dispatcher_10(void * data,
 	my_msg = rkzalloc(sizeof(*my_msg), GFP_KERNEL);
 	if (!my_msg) {
 		LOG_ERR("Could not allocate space for my_msg struct");
-		rkfree(attrs);
-		rkfree(source_name);
-		rkfree(dest_name);
-		rkfree(dif_name);
+		name_destroy(source_name);
+		name_destroy(dest_name);
+		name_destroy(dif_name);
 		rkfree(fspec);
+		rkfree(attrs);
 		return -1;
 	}
 	my_msg->attrs = attrs;
@@ -512,11 +515,11 @@ static int test_echo_dispatcher_10(void * data,
 
 	if (rnl_parse_msg(info, my_msg)){
 		LOG_ERR("Could not parse message");
-		rkfree(attrs);
-		rkfree(source_name);
-		rkfree(dest_name);
-		rkfree(dif_name);
+		name_destroy(source_name);
+		name_destroy(dest_name);
+		name_destroy(dif_name);
 		rkfree(fspec);
+		rkfree(attrs);
 		rkfree(my_msg);
 		return -1;
 	}
@@ -534,11 +537,11 @@ static int test_echo_dispatcher_10(void * data,
 	out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
 	if(!out_msg) {
 		LOG_ERR("Could not allocate memory for message");
-		rkfree(attrs);
-		rkfree(source_name);
-		rkfree(dest_name);
-		rkfree(dif_name);
+		name_destroy(source_name);
+		name_destroy(dest_name);
+		name_destroy(dif_name);
 		rkfree(fspec);
+		rkfree(attrs);
 		rkfree(my_msg);
 		return -1;
 	}
@@ -553,11 +556,11 @@ static int test_echo_dispatcher_10(void * data,
 	if(!out_hdr) {
 		LOG_ERR("Could not use genlmsg_put");
 		nlmsg_free(out_msg);
-		rkfree(attrs);
-		rkfree(source_name);
-		rkfree(dest_name);
-		rkfree(dif_name);
+		name_destroy(source_name);
+		name_destroy(dest_name);
+		name_destroy(dif_name);
 		rkfree(fspec);
+		rkfree(attrs);
 		rkfree(my_msg);
 		return -1;
 	}
@@ -572,11 +575,11 @@ static int test_echo_dispatcher_10(void * data,
 					       out_msg)){
 		LOG_ERR("Could not format message...");
 		nlmsg_free(out_msg);
-		rkfree(attrs);
-		rkfree(source_name);
-		rkfree(dest_name);
-		rkfree(dif_name);
+		name_destroy(source_name);
+		name_destroy(dest_name);
+		name_destroy(dif_name);
 		rkfree(fspec);
+		rkfree(attrs);
 		rkfree(my_msg);
 		return -1;
 	}
@@ -588,20 +591,20 @@ static int test_echo_dispatcher_10(void * data,
 	result = genlmsg_unicast(&init_net, out_msg, info->snd_portid);
 	if(result) {
 		LOG_ERR("Could not send unicast msg: %d", result);
-		rkfree(attrs);
-		rkfree(source_name);
-		rkfree(dest_name);
-		rkfree(dif_name);
+		name_destroy(source_name);
+		name_destroy(dest_name);
+		name_destroy(dif_name);
 		rkfree(fspec);
+		rkfree(attrs);
 		rkfree(my_msg);
 		return -1;
 	}
 
-	rkfree(attrs);
-	rkfree(source_name);
-	rkfree(dest_name);
-	rkfree(dif_name);
+	name_destroy(source_name);
+	name_destroy(dest_name);
+	name_destroy(dif_name);
 	rkfree(fspec);
+	rkfree(attrs);
 	rkfree(my_msg);
 	return 0;
 }

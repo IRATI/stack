@@ -90,13 +90,13 @@ struct flow_spec {
         /* This structure defines the characteristics of a flow */
 
         /* Average bandwidth in bytes/s */
-        struct uint_range * average_bandwidth;
+        uint_t average_bandwidth;
         /* Average bandwidth in SDUs/s */
-        struct uint_range * average_sdu_bandwidth;
+        uint_t average_sdu_bandwidth;
         /* In milliseconds */
-        struct uint_range * peak_bandwidth_duration;
+        uint_t peak_bandwidth_duration;
         /* In milliseconds */
-        struct uint_range * peak_sdu_bandwidth_duration;
+        uint_t peak_sdu_bandwidth_duration;
 
         /* A value of 0 indicates 'do not care' */
 	/* FIXME: This uint_t has to be transformed back to double */

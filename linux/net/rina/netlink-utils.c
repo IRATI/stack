@@ -28,6 +28,7 @@
 #include "logs.h"
 #include "common.h"
 #include "debug.h"
+#include "ipcp-utils.h"
 #include "utils.h"
 #include "netlink.h"
 #include "netlink-utils.h"
@@ -125,23 +126,19 @@ static int parse_flow_spec(struct nlattr * fspec_attr,
 
         if (attrs[FSPEC_ATTR_AVG_BWITH])
                 /* FIXME: min = max in uint_range */
-                fspec_struct->average_bandwidth->min = \
-                        fspec_struct->average_bandwidth->max = \
+                fspec_struct->average_bandwidth =
                         nla_get_u32(attrs[FSPEC_ATTR_AVG_BWITH]);
 
         if (attrs[FSPEC_ATTR_AVG_SDU_BWITH])
-                fspec_struct->average_sdu_bandwidth->min = \
-                        fspec_struct->average_sdu_bandwidth->max = \
+                fspec_struct->average_sdu_bandwidth =
                         nla_get_u32(attrs[FSPEC_ATTR_AVG_SDU_BWITH]);
 
         if (attrs[FSPEC_ATTR_PEAK_BWITH_DURATION])
-                fspec_struct->peak_bandwidth_duration->min = \
-                        fspec_struct->peak_bandwidth_duration->max = \
+                fspec_struct->peak_bandwidth_duration =
                         nla_get_u32(attrs[FSPEC_ATTR_PEAK_BWITH_DURATION]);
 
         if (attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION])
-                fspec_struct->peak_sdu_bandwidth_duration->min = \
-                        fspec_struct->peak_sdu_bandwidth_duration->max = \
+                fspec_struct->peak_sdu_bandwidth_duration =
                         nla_get_u32(attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION]);
 
         if (attrs[FSPEC_ATTR_UNDETECTED_BER])
@@ -464,17 +461,6 @@ static int rnl_parse_ipcm_alloc_flow_req_msg(struct genl_info * info,
 	attr_policy[IAFRM_ATTR_DIF_NAME].type = NLA_NESTED;
 	attr_policy[IAFRM_ATTR_DIF_NAME].len = 0;
 
-	LOG_DBG("IAFRM_ATTR_SOURCE_APP_NAME: %d\n"
-			"IAFRM_ATTR_DEST_APP_NAME: %d\n"
-			"IAFRM_ATTR_FLOW_SPEC: %d\n"
-			"IAFRM_ATTR_PORT_ID: %d\n"
-			"IAFRM_ATTR_DIF_NAME: %d\n",
-			IAFRM_ATTR_SOURCE_APP_NAME,
-			IAFRM_ATTR_DEST_APP_NAME,
-			IAFRM_ATTR_FLOW_SPEC,
-			IAFRM_ATTR_PORT_ID,
-			IAFRM_ATTR_DIF_NAME);
-
 	result = nlmsg_parse(info->nlhdr,
 			sizeof(struct genlmsghdr) +
 			sizeof(struct rina_msg_hdr),
@@ -495,7 +481,6 @@ static int rnl_parse_ipcm_alloc_flow_req_msg(struct genl_info * info,
 			msg_attrs->dest) < 0)
 		goto format_fail;
 
-
 	if (parse_flow_spec(attrs[IAFRM_ATTR_FLOW_SPEC],
 			msg_attrs->fspec) < 0)
 		goto format_fail;
@@ -511,35 +496,63 @@ static int rnl_parse_ipcm_alloc_flow_req_msg(struct genl_info * info,
 	return 0;
 
 	format_fail:
-	LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_ALLOCATE_FLOW_REQUEST"));
+	LOG_ERR(
+			BUILD_ERR_STRING_BY_MSG_TYPE(
+					"RINA_C_IPCM_ALLOCATE_FLOW_REQUEST"));
 	return -1;
 }
 
-
 static int rnl_parse_ipcm_alloc_flow_req_arrived_msg(struct genl_info * info,
-                struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs * msg_attrs)
+		struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs * msg_attrs)
 {
-        struct nla_policy attr_policy[IAFRA_ATTR_MAX + 1];
+	struct nla_policy attr_policy[IAFRA_ATTR_MAX + 1];
+	struct nlattr *attrs[IAFRA_ATTR_MAX + 1];
+	int result;
 
-        attr_policy[IAFRA_ATTR_SOURCE_APP_NAME].type = NLA_NESTED;
-        attr_policy[IAFRA_ATTR_DEST_APP_NAME].type = NLA_NESTED;
-        attr_policy[IAFRA_ATTR_FLOW_SPEC].type = NLA_NESTED;
-        attr_policy[IAFRA_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[IAFRA_ATTR_SOURCE_APP_NAME].type = NLA_NESTED;
+	attr_policy[IAFRA_ATTR_SOURCE_APP_NAME].len = 0;
+	attr_policy[IAFRA_ATTR_DEST_APP_NAME].type = NLA_NESTED;
+	attr_policy[IAFRA_ATTR_DEST_APP_NAME].len = 0;
+	attr_policy[IAFRA_ATTR_FLOW_SPEC].type = NLA_NESTED;
+	attr_policy[IAFRA_ATTR_FLOW_SPEC].len = 0;
+	attr_policy[IAFRA_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[IAFRA_ATTR_DIF_NAME].len = 0;
 
-        if (rnl_check_attr_policy(info->nlhdr, IAFRA_ATTR_MAX, attr_policy) < 0 ||
-            parse_app_name_info(info->attrs[IAFRA_ATTR_SOURCE_APP_NAME],
-                                 msg_attrs->source) < 0		 ||
-            parse_app_name_info(info->attrs[IAFRA_ATTR_DEST_APP_NAME],
-                                msg_attrs->dest) < 0			 ||
-            parse_flow_spec(info->attrs[IAFRA_ATTR_FLOW_SPEC],
-                            msg_attrs->fspec) < 0			 ||
-            parse_app_name_info(info->attrs[IAFRA_ATTR_DIF_NAME],
-                                msg_attrs->dif_name) < 0){
-        	LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED"));
-	        return -1;
+	result = nlmsg_parse(info->nlhdr,
+			sizeof(struct genlmsghdr) +
+			sizeof(struct rina_msg_hdr),
+			attrs,
+			IAFRA_ATTR_MAX,
+			attr_policy);
+
+	if (result < 0){
+		LOG_ERR("Error %d; could not validate nl message policy", result);
+		goto format_fail;
 	}
 
+	if (parse_app_name_info(attrs[IAFRA_ATTR_SOURCE_APP_NAME],
+			msg_attrs->source) < 0)
+		goto format_fail;
+
+	if (parse_app_name_info(attrs[IAFRA_ATTR_DEST_APP_NAME],
+			msg_attrs->dest) < 0)
+		goto format_fail;
+
+	if (parse_app_name_info(attrs[IAFRA_ATTR_DIF_NAME],
+			msg_attrs->dif_name) < 0)
+		goto format_fail;
+
+	if (parse_flow_spec(attrs[IAFRA_ATTR_FLOW_SPEC],
+			msg_attrs->fspec) < 0)
+		goto format_fail;
+
 	return 0;
+
+	format_fail:
+	LOG_ERR(
+			BUILD_ERR_STRING_BY_MSG_TYPE(
+					"RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED"));
+	return -1;
 }
 
 static int rnl_parse_ipcm_alloc_flow_req_result_msg(struct genl_info * info,
@@ -996,6 +1009,7 @@ static int format_app_name_info(const struct name * name,
                                    name->entity_instance))
                         return -1;
 
+        LOG_DBG("Format app name successs");
         return 0;
 }
 
@@ -1007,6 +1021,9 @@ static int format_flow_spec(const struct flow_spec * fspec,
                 return -1;
         }
 
+        LOG_DBG("Entering format_flow_spec with fspec "
+               "at %p and sk_buff at %p", fspec, msg);
+
         /*
          * FIXME: only->max or min attributes are taken from
          *  uint_range types
@@ -1017,61 +1034,61 @@ static int format_flow_spec(const struct flow_spec * fspec,
          * on the most restrincting (in this case all max).
          * Leo */
 
-        if (fspec->average_bandwidth->max > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_AVG_BWITH,
-                                fspec->average_bandwidth->max))
-                        return -1;
-        if (fspec->average_sdu_bandwidth->max > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_AVG_SDU_BWITH,
-                                fspec->average_sdu_bandwidth->max))
+        if (fspec->average_bandwidth > 0)
+        	if (nla_put_u32(msg,
+                            FSPEC_ATTR_AVG_BWITH,
+                            fspec->average_bandwidth))
+        				return -1;
+        if (fspec->average_sdu_bandwidth > 0)
+        	if (nla_put_u32(msg,
+                            FSPEC_ATTR_AVG_SDU_BWITH,
+                            fspec->average_sdu_bandwidth))
                         return -1;
         if (fspec->delay > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_DELAY,
-                                fspec->delay))
+        	if (nla_put_u32(msg,
+                            FSPEC_ATTR_DELAY,
+                            fspec->delay))
                         return -1;
         if (fspec->jitter > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_JITTER,
-                                fspec->jitter))
+        	if (nla_put_u32(msg,
+                            FSPEC_ATTR_JITTER,
+                            fspec->jitter))
                         return -1;
-        if (fspec->max_allowable_gap > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_MAX_GAP,
-                                fspec->max_allowable_gap))
+        if (fspec->max_allowable_gap >=0)
+        	if (nla_put_u32(msg,
+                            FSPEC_ATTR_MAX_GAP,
+                            fspec->max_allowable_gap))
                         return -1;
         if (fspec->max_sdu_size > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_MAX_SDU_SIZE,
-                                fspec->max_sdu_size))
+        	if (nla_put_u32(msg,
+                            FSPEC_ATTR_MAX_SDU_SIZE,
+                            fspec->max_sdu_size))
                         return -1;
-        if (fspec->ordered_delivery > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_IN_ORD_DELIVERY,
-                                fspec->ordered_delivery))
+        if (fspec->ordered_delivery)
+            if (nla_put_flag(msg,
+                            FSPEC_ATTR_IN_ORD_DELIVERY))
                         return -1;
-        if (fspec->partial_delivery > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_PART_DELIVERY,
-                                fspec->partial_delivery))
+        if (fspec->partial_delivery)
+            if (nla_put_flag(msg,
+                            FSPEC_ATTR_PART_DELIVERY))
                         return -1;
-        if (fspec->peak_bandwidth_duration->max > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_PEAK_BWITH_DURATION,
-                                fspec->peak_bandwidth_duration->max))
+        if (fspec->peak_bandwidth_duration > 0)
+        	if (nla_put_u32(msg,
+                            FSPEC_ATTR_PEAK_BWITH_DURATION,
+                            fspec->peak_bandwidth_duration))
                         return -1;
-        if (fspec->peak_sdu_bandwidth_duration->max > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_PEAK_SDU_BWITH_DURATION,
-                                fspec->peak_sdu_bandwidth_duration->max))
+        if (fspec->peak_sdu_bandwidth_duration > 0)
+        	if (nla_put_u32(msg,
+                        	FSPEC_ATTR_PEAK_SDU_BWITH_DURATION,
+                        	fspec->peak_sdu_bandwidth_duration))
                         return -1;
         if (fspec->undetected_bit_error_rate > 0)
-                if (nla_put_u32(msg,
-                                FSPEC_ATTR_UNDETECTED_BER,
-                                fspec->undetected_bit_error_rate))
+        	if (nla_put_u32(msg,
+                        	FSPEC_ATTR_UNDETECTED_BER,
+                        	fspec->undetected_bit_error_rate))
                         return -1;
+
+        LOG_DBG("Format flow spec success");
         return 0;
 }
 
@@ -1372,68 +1389,75 @@ int rnl_format_ipcm_alloc_flow_req_msg(const struct name      * source,
 EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_msg);
 
 int rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name      * source,
-                                               const struct name      * dest,
-                                               const struct flow_spec * fspec,
-                                               const struct name      * dif_name,
-                                               struct sk_buff   * skb_out)
+		const struct name      * dest,
+		const struct flow_spec * fspec,
+		const struct name      * dif_name,
+		struct sk_buff   * skb_out)
 {
-        struct nlattr * msg_src_name, * msg_dst_name;
-        struct nlattr * msg_fspec,    * msg_dif_name;
+	struct nlattr * msg_src_name, * msg_dst_name;
+	struct nlattr * msg_fspec,    * msg_dif_name;
 
-        if (!skb_out) {
-                LOG_ERR("Bogus input parameter(s), bailing out");
-                goto format_fail;
-        }
-
-        /* name-formating might be moved into its own function (and reused) */
-        if (!(msg_src_name =
-              nla_nest_start(skb_out, IAFRA_ATTR_SOURCE_APP_NAME))) {
-                nla_nest_cancel(skb_out, msg_src_name);
-                LOG_ERR(BUILD_ERR_STRING("source application name attribute"));
-                goto format_fail;
-        }
-        if (format_app_name_info(source, skb_out) < 0)        
+	if (!skb_out) {
+		LOG_ERR("Bogus input parameter(s), bailing out");
 		goto format_fail;
+	}
+
+	/* name-formating might be moved into its own function (and reused) */
+	if (!(msg_src_name =
+		nla_nest_start(skb_out, IAFRA_ATTR_SOURCE_APP_NAME))) {
+		nla_nest_cancel(skb_out, msg_src_name);
+		LOG_ERR(BUILD_ERR_STRING("source application name attribute"));
+		goto format_fail;
+	}
+
+	if (format_app_name_info(source, skb_out) < 0)
+		goto format_fail;
+
 	nla_nest_end(skb_out, msg_src_name);
 
-        if (!(msg_dst_name =
-              nla_nest_start(skb_out, IAFRA_ATTR_DEST_APP_NAME))) {
-                nla_nest_cancel(skb_out, msg_dst_name);
-                LOG_ERR(BUILD_ERR_STRING("destination app name attribute"));
-                goto format_fail;
-        }
-        if (format_app_name_info(dest, skb_out) < 0)        
+	if (!(msg_dst_name =
+		nla_nest_start(skb_out, IAFRA_ATTR_DEST_APP_NAME))) {
+		nla_nest_cancel(skb_out, msg_dst_name);
+		LOG_ERR(BUILD_ERR_STRING("destination app name attribute"));
 		goto format_fail;
+	}
+
+	if (format_app_name_info(dest, skb_out) < 0)
+		goto format_fail;
+
 	nla_nest_end(skb_out, msg_dst_name);
 
-        if (!(msg_dif_name =
-              nla_nest_start(skb_out, IAFRA_ATTR_DIF_NAME))) {
-                nla_nest_cancel(skb_out, msg_dif_name);
-                LOG_ERR(BUILD_ERR_STRING("DIF name attribute"));
-                goto format_fail;
-        }
-        if (format_app_name_info(dif_name, skb_out) < 0)        
+	if (!(msg_dif_name =
+		nla_nest_start(skb_out, IAFRA_ATTR_DIF_NAME))) {
+		nla_nest_cancel(skb_out, msg_dif_name);
+		LOG_ERR(BUILD_ERR_STRING("DIF name attribute"));
 		goto format_fail;
+	}
+
+	if (format_app_name_info(dif_name, skb_out) < 0)
+		goto format_fail;
+
 	nla_nest_end(skb_out, msg_dif_name);
 
-        if (!(msg_fspec =
-              nla_nest_start(skb_out, IAFRA_ATTR_FLOW_SPEC))) {
-                nla_nest_cancel(skb_out, msg_fspec);
-                LOG_ERR(BUILD_ERR_STRING("flow spec attribute"));
-                goto format_fail;
-        }
-        if (format_flow_spec(fspec, skb_out) < 0)
+	if (!(msg_fspec =
+		nla_nest_start(skb_out, IAFRA_ATTR_FLOW_SPEC))) {
+		nla_nest_cancel(skb_out, msg_fspec);
+		LOG_ERR(BUILD_ERR_STRING("flow spec attribute"));
 		goto format_fail;
+	}
+
+	if (format_flow_spec(fspec, skb_out) < 0)
+		goto format_fail;
+
 	nla_nest_end(skb_out, msg_fspec);
 
 	return 0;
 
-	format_fail:
-                LOG_ERR("Could not format "
-                        "rnl_ipcm_alloc_flow_req_arrived_msg "
-                        "message correctly");
-                return -1;
-        
+format_fail:
+	LOG_ERR("Could not format "
+		"rnl_ipcm_alloc_flow_req_arrived_msg "
+		"message correctly");
+	return -1;
 }
 EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_arrived_msg);
 
