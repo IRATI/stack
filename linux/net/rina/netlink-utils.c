@@ -212,37 +212,36 @@ static int parse_app_name_info(struct nlattr * name_attr,
         return 0;
 }
 
-static int parse_dif_config(struct nlattr      * dif_config_attr,
-                            struct dif_config  * dif_config_struct)
+static int parse_dif_config(struct nlattr * dif_config_attr,
+		struct dif_config  * dif_config_struct)
 {
-        struct nla_policy attr_policy[DCONF_ATTR_MAX + 1];
-        struct nlattr *attrs[DCONF_ATTR_MAX + 1];
+	struct nla_policy attr_policy[DCONF_ATTR_MAX + 1];
+	struct nlattr *attrs[DCONF_ATTR_MAX + 1];
 
-        attr_policy[DCONF_ATTR_DIF_TYPE].type = NLA_STRING;
-        attr_policy[DCONF_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_DIF_TYPE].type = NLA_STRING;
+	attr_policy[DCONF_ATTR_DIF_TYPE].len = 0;
+	attr_policy[DCONF_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_DIF_NAME].len = 0;
 
-        if (nla_parse_nested(attrs, 
-			     DCONF_ATTR_MAX, 
-			     dif_config_attr, 
-			     attr_policy) < 0)
-                goto parse_fail;
+	if (nla_parse_nested(attrs,
+			DCONF_ATTR_MAX,
+			dif_config_attr,
+			attr_policy) < 0)
+		goto parse_fail;
 
-        if (attrs[DCONF_ATTR_DIF_TYPE])
-                nla_strlcpy(dif_config_struct->type,
-                            attrs[DCONF_ATTR_DIF_TYPE],
-                            sizeof(attrs[DCONF_ATTR_DIF_TYPE]));
+	if (attrs[DCONF_ATTR_DIF_TYPE])
+		dif_config_struct->type =
+				nla_get_string(attrs[DCONF_ATTR_DIF_TYPE]);
 
 	if (parse_app_name_info(attrs[DCONF_ATTR_DIF_NAME], 
-				dif_config_struct->dif_name) <0)
+			dif_config_struct->dif_name) <0)
 		goto parse_fail;
 
 	return 0;
 
-	parse_fail:
-        	LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("dif config attribute"));
-        	return -1;
-
-		
+parse_fail:
+	LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("dif config attribute"));
+	return -1;
 }
 
 static int parse_rib_object(struct nlattr     * rib_obj_attr,
@@ -322,20 +321,37 @@ static int rnl_parse_generic_u32_param_msg (struct genl_info * info,
 static int rnl_parse_ipcm_assign_to_dif_req_msg(struct genl_info * info,
 		struct rnl_ipcm_assign_to_dif_req_msg_attrs * msg_attrs)
 {
-        struct nla_policy attr_policy[IATDR_ATTR_MAX + 1];
+	struct nla_policy attr_policy[IATDR_ATTR_MAX + 1];
+	struct nlattr *attrs[IATDR_ATTR_MAX + 1];
+	int result;
 
-        attr_policy[IATDR_ATTR_DIF_CONFIGURATION].type = NLA_NESTED;
-	
-        if (rnl_check_attr_policy(info->nlhdr, IATDR_ATTR_MAX, attr_policy) < 0 || 
-	    parse_dif_config(info->attrs[IATDR_ATTR_DIF_CONFIGURATION],
-                             msg_attrs->dif_config) < 0) {
-        	LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST"));
-        	return -1;
+	attr_policy[IATDR_ATTR_DIF_CONFIGURATION].type = NLA_NESTED;
+	attr_policy[IATDR_ATTR_DIF_CONFIGURATION].len = 0;
+
+	result = nlmsg_parse(info->nlhdr,
+				sizeof(struct genlmsghdr) +
+				sizeof(struct rina_msg_hdr),
+				attrs,
+				IATDR_ATTR_MAX,
+				attr_policy);
+
+	if (result < 0){
+		LOG_ERR("Error %d; could not validate nl message policy", result);
+		goto format_fail;
 	}
 
-	return 0;
-}
+	if (parse_dif_config(attrs[IATDR_ATTR_DIF_CONFIGURATION],
+			msg_attrs->dif_config) < 0)
+		goto format_fail;
 
+	return 0;
+
+format_fail:
+	LOG_ERR(
+			BUILD_ERR_STRING_BY_MSG_TYPE(
+					"RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST"));
+	return -1;
+}
 
 static int rnl_parse_ipcm_assign_to_dif_resp_msg(struct genl_info * info,
 	  struct rnl_ipcm_assign_to_dif_resp_msg_attrs * msg_attrs)
@@ -1198,34 +1214,28 @@ static int format_nested_app_name_info_attr(struct nlattr     * msg_attr,
 }
 
 static int format_dif_config(const struct dif_config * config,
-			     struct sk_buff          * msg)
+		struct sk_buff          * msg)
 {
 	struct nlattr * msg_dif_name = NULL;
 
-	format_nested_app_name_info_attr(msg_dif_name,
-			                 DCONF_ATTR_DIF_NAME,
-			                 config->dif_name,
-			                 msg);
-
-
-        if (!(msg_dif_name =
-                nla_nest_start(msg, DCONF_ATTR_DIF_NAME))) {
-                nla_nest_cancel(msg, msg_dif_name);
-                LOG_ERR(BUILD_ERR_STRING("dif name attribute"));
-                return -1;
-        }
-        if (format_app_name_info(config->dif_name, msg) < 0)
+	if (!(msg_dif_name =
+			nla_nest_start(msg, DCONF_ATTR_DIF_NAME))) {
+		nla_nest_cancel(msg, msg_dif_name);
+		LOG_ERR(BUILD_ERR_STRING("dif name attribute"));
+		return -1;
+	}
+	if (format_app_name_info(config->dif_name, msg) < 0)
 		return -1;
 	nla_nest_end(msg, msg_dif_name);
 
 	if (nla_put_string(msg, 
-			  DCONF_ATTR_DIF_TYPE,
-			  config->type) < 0)
-                LOG_ERR(BUILD_ERR_STRING("dif type attribute"));
- 		return -1;
+			DCONF_ATTR_DIF_TYPE,
+			config->type) < 0){
+		LOG_ERR(BUILD_ERR_STRING("dif type attribute"));
+		return -1;
+	}
 
 	return 0;
-
 }
 
 static int rnl_format_generic_u32_param_msg(uint_t          param_var,
@@ -1247,32 +1257,32 @@ static int rnl_format_generic_u32_param_msg(uint_t          param_var,
 }
 
 int rnl_format_ipcm_assign_to_dif_req_msg(const struct dif_config  * config,
-                                          struct sk_buff           * skb_out)
+		struct sk_buff           * skb_out)
 {
-        struct nlattr * msg_config;
+	struct nlattr * msg_config;
 
-        if (!skb_out) {
-                LOG_ERR("Bogus input parameter(s), bailing out");
-                return -1;
-        }
+	if (!skb_out) {
+		LOG_ERR("Bogus input parameter(s), bailing out");
+		return -1;
+	}
 
-        if (!(msg_config =
-                nla_nest_start(skb_out, IATDR_ATTR_DIF_CONFIGURATION))) {
-                nla_nest_cancel(skb_out, msg_config);
-                LOG_ERR(BUILD_ERR_STRING("dif configuration attribute"));
-                goto format_fail;
-        }
-        if (format_dif_config(config, skb_out) < 0)
+	if (!(msg_config =
+			nla_nest_start(skb_out, IATDR_ATTR_DIF_CONFIGURATION))) {
+		nla_nest_cancel(skb_out, msg_config);
+		LOG_ERR(BUILD_ERR_STRING("dif configuration attribute"));
+		goto format_fail;
+	}
+	if (format_dif_config(config, skb_out) < 0)
 		goto format_fail;
 	nla_nest_end(skb_out, msg_config);
 
-        return 0;
+	return 0;
 
 	format_fail:
-                LOG_ERR("Could not format "
-                        "rnl_ipcm_assign_to_dif_req_msg "
-                        "message correctly");
-                return -1;
+	LOG_ERR("Could not format "
+			"rnl_ipcm_assign_to_dif_req_msg "
+			"message correctly");
+	return -1;
 
 }
 EXPORT_SYMBOL(rnl_format_ipcm_assign_to_dif_req_msg);

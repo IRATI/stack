@@ -44,6 +44,10 @@ int main(int argc, char * argv[]) {
 	ApplicationProcessNamingInformation difName;
 	difName.setProcessName("/difs/test.DIF");
 
+	DIFConfiguration difConfiguration;
+	difConfiguration.setDifType("shim-dummy");
+	difConfiguration.setDifName(difName);
+
 	AppAllocateFlowRequestMessage message;
 	message.setDestPortId(31);
 	message.setSourceAppName(sourceName);
@@ -452,5 +456,37 @@ int main(int argc, char * argv[]) {
 									<<std::endl;;
 	std::cout<<"Result: "<<
 			result13->getResult()<<std::endl;
+	delete fromKernel;
+
+	/*Test sending IpcmAssignToDIFRequestMessage */
+	IpcmAssignToDIFRequestMessage message14;
+	message14.setDestPortId(0);
+	message14.setDIFConfiguration(difConfiguration);
+	message14.setRequestMessage(true);
+	message14.setSequenceNumber(source.getSequenceNumber());
+	message14.setSourceIpcProcessId(21);
+	message14.setDestIpcProcessId(34);
+	try{
+		source.sendMessage(&message14);
+	}catch(NetlinkException &e){
+		std::cout<<"Exception: "<<e.what()<<std::endl;
+		return -1;
+	}
+	std::cout<<"Sent IpcmAssignToDIFRequestMessage message to Kernel"
+			<<std::endl;
+
+	fromKernel = source.getMessage();
+	std::cout<<"Got message from "<<fromKernel->getSourcePortId()<<"\n";
+	IpcmAssignToDIFRequestMessage * result14 =
+			dynamic_cast<IpcmAssignToDIFRequestMessage *>(fromKernel);
+	std::cout<<"Source IPC Process id "<<result14->getSourceIpcProcessId()
+												<<std::endl;
+	std::cout<<"Destination IPC Process id "<<result14->getDestIpcProcessId()
+												<<std::endl;;
+	std::cout<<"DIF name: "<<
+			result14->getDIFConfiguration().getDifName().getProcessName()
+			<<std::endl;
+	std::cout<<"DIF type: "<<
+			result14->getDIFConfiguration().getDifType()<<std::endl;
 	delete fromKernel;
 }

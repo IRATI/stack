@@ -45,6 +45,7 @@ static int test_echo_dispatcher_1(void * data,
 	struct rnl_msg * my_msg;
 	struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs;
 	struct dif_config * dif_config;
+	struct name * dif_name;
 	struct sk_buff * out_msg;
 	struct rina_msg_hdr * out_hdr;
 	int result;
@@ -68,11 +69,20 @@ static int test_echo_dispatcher_1(void * data,
 	}
 	attrs->dif_config = dif_config;
 
+	dif_name = name_create();
+	if (!dif_name){
+		rkfree(dif_config);
+		rkfree(attrs);
+		return -1;
+	}
+	dif_config->dif_name = dif_name;
+
 	my_msg = rkzalloc(sizeof(*my_msg), GFP_KERNEL);
 	if (!my_msg) {
 		LOG_ERR("Could not allocate space for my_msg struct");
-		rkfree(attrs);
+		name_destroy(dif_name);
 		rkfree(dif_config);
+		rkfree(attrs);
 		return -1;
 	}
 	my_msg->attrs = attrs;
@@ -85,8 +95,9 @@ static int test_echo_dispatcher_1(void * data,
 
 	if (rnl_parse_msg(info, my_msg)){
 		LOG_ERR("Could not parse message");
-		rkfree(attrs);
+		name_destroy(dif_name);
 		rkfree(dif_config);
+		rkfree(attrs);
 		rkfree(my_msg);
 		return -1;
 	}
@@ -104,8 +115,9 @@ static int test_echo_dispatcher_1(void * data,
 	out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
 	if(!out_msg) {
 		LOG_ERR("Could not allocate memory for message");
-		rkfree(attrs);
+		name_destroy(dif_name);
 		rkfree(dif_config);
+		rkfree(attrs);
 		rkfree(my_msg);
 		return -1;
 	}
@@ -116,12 +128,13 @@ static int test_echo_dispatcher_1(void * data,
 				my_msg->seq_num,
 				get_nl_family(),
 				0,
-				RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE);
+				RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST);
 	if(!out_hdr) {
 		LOG_ERR("Could not use genlmsg_put");
 		nlmsg_free(out_msg);
-		rkfree(attrs);
+		name_destroy(dif_name);
 		rkfree(dif_config);
+		rkfree(attrs);
 		rkfree(my_msg);
 		return -1;
 	}
@@ -132,8 +145,9 @@ static int test_echo_dispatcher_1(void * data,
 	if (rnl_format_ipcm_assign_to_dif_req_msg(attrs->dif_config, out_msg)){
 		LOG_ERR("Could not format message...");
 		nlmsg_free(out_msg);
-		rkfree(attrs);
+		name_destroy(dif_name);
 		rkfree(dif_config);
+		rkfree(attrs);
 		rkfree(my_msg);
 		return -1;
 	}
@@ -145,14 +159,16 @@ static int test_echo_dispatcher_1(void * data,
 	result = genlmsg_unicast(&init_net, out_msg, info->snd_portid);
 	if(result) {
 		LOG_ERR("Could not send unicast msg: %d", result);
-		rkfree(attrs);
+		name_destroy(dif_name);
 		rkfree(dif_config);
+		rkfree(attrs);
 		rkfree(my_msg);
 		return -1;
 	}
 
-	rkfree(attrs);
+	name_destroy(dif_name);
 	rkfree(dif_config);
+	rkfree(attrs);
 	rkfree(my_msg);
 	return 0;
 }
