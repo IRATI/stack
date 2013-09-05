@@ -207,4 +207,128 @@ int main(int argc, char * argv[]) {
 				result5->getFlowSpecification().isOrderedDelivery()<<std::endl;
 	std::cout<<"DIF Name: "<<result5->getDifName().getProcessName()<<std::endl;
 	delete fromKernel;
+
+	/*Test sending IpcmAllocateFlowResponseMessage */
+	IpcmAllocateFlowResponseMessage message6;
+	message6.setDestPortId(0);
+	message6.setResult(38);
+	message6.setNotifySource(true);
+	message6.setPortId(234);
+	message6.setRequestMessage(true);
+	message6.setSequenceNumber(source.getSequenceNumber());
+	message6.setSourceIpcProcessId(11);
+	message6.setDestIpcProcessId(90);
+	try{
+		source.sendMessage(&message6);
+	}catch(NetlinkException &e){
+		std::cout<<"Exception: "<<e.what()<<std::endl;
+		return -1;
+	}
+	std::cout<<"Sent IpcmAllocateFlowResponseMessage message to Kernel"
+			<<std::endl;
+
+	fromKernel = source.getMessage();
+	std::cout<<"Got message from "<<fromKernel->getSourcePortId()<<"\n";
+	IpcmAllocateFlowResponseMessage * result6 =
+			dynamic_cast<IpcmAllocateFlowResponseMessage *>(fromKernel);
+	std::cout<<"Source IPC Process id "<<result6->getSourceIpcProcessId()
+												<<std::endl;
+	std::cout<<"Destination IPC Process id "<<result6->getDestIpcProcessId()
+												<<std::endl;
+	std::cout<<"Result "<<
+			result6->getResult()<<std::endl;
+	std::cout<<"Notify source? "<<
+			result6->isNotifySource()<<std::endl;
+	std::cout<<"Port id: "<<
+			result6->getPortId()<<std::endl;
+	delete fromKernel;
+
+	/*Test sending IpcmDeallocateFlowRequestMessage */
+	IpcmDeallocateFlowRequestMessage message7;
+	message7.setDestPortId(0);
+	message7.setPortId(234);
+	message7.setRequestMessage(true);
+	message7.setSequenceNumber(source.getSequenceNumber());
+	message7.setSourceIpcProcessId(21);
+	message7.setDestIpcProcessId(54);
+	try{
+		source.sendMessage(&message7);
+	}catch(NetlinkException &e){
+		std::cout<<"Exception: "<<e.what()<<std::endl;
+		return -1;
+	}
+	std::cout<<"Sent IpcmDeallocateFlowRequestMessage message to Kernel"
+			<<std::endl;
+
+	fromKernel = source.getMessage();
+	std::cout<<"Got message from "<<fromKernel->getSourcePortId()<<"\n";
+	IpcmDeallocateFlowRequestMessage * result7 =
+			dynamic_cast<IpcmDeallocateFlowRequestMessage *>(fromKernel);
+	std::cout<<"Source IPC Process id "<<result7->getSourceIpcProcessId()
+															<<std::endl;
+	std::cout<<"Destination IPC Process id "<<result7->getDestIpcProcessId()
+															<<std::endl;;
+	std::cout<<"Port id: "<<
+			result7->getPortId()<<std::endl;
+	delete fromKernel;
+
+	/*Test sending IpcmDeallocateFlowResponseMessage */
+	IpcmDeallocateFlowResponseMessage message8;
+	message8.setDestPortId(0);
+	message8.setResult(33);
+	message8.setRequestMessage(true);
+	message8.setSequenceNumber(source.getSequenceNumber());
+	message8.setSourceIpcProcessId(13);
+	message8.setDestIpcProcessId(98);
+	try{
+		source.sendMessage(&message8);
+	}catch(NetlinkException &e){
+		std::cout<<"Exception: "<<e.what()<<std::endl;
+		return -1;
+	}
+	std::cout<<"Sent IpcmDeallocateFlowResponseMessage message to Kernel"
+			<<std::endl;
+
+	fromKernel = source.getMessage();
+	std::cout<<"Got message from "<<fromKernel->getSourcePortId()<<"\n";
+	IpcmDeallocateFlowResponseMessage * result8 =
+			dynamic_cast<IpcmDeallocateFlowResponseMessage *>(fromKernel);
+	std::cout<<"Source IPC Process id "<<result8->getSourceIpcProcessId()
+			<<std::endl;
+	std::cout<<"Destination IPC Process id "<<result8->getDestIpcProcessId()
+			<<std::endl;;
+	std::cout<<"Result: "<<
+			result8->getResult()<<std::endl;
+
+	/*Test sending IpcmFlowDeallocatedNotificationMessage */
+	IpcmFlowDeallocatedNotificationMessage message9;
+	message9.setDestPortId(0);
+	message9.setCode(32);
+	message9.setPortId(543);
+	message9.setRequestMessage(true);
+	message9.setSequenceNumber(source.getSequenceNumber());
+	message9.setSourceIpcProcessId(21);
+	message9.setDestIpcProcessId(34);
+	try{
+		source.sendMessage(&message9);
+	}catch(NetlinkException &e){
+		std::cout<<"Exception: "<<e.what()<<std::endl;
+		return -1;
+	}
+	std::cout<<"Sent IpcmFlowDeallocatedNotificationMessage message to Kernel"
+			<<std::endl;
+
+	fromKernel = source.getMessage();
+	std::cout<<"Got message from "<<fromKernel->getSourcePortId()<<"\n";
+	IpcmFlowDeallocatedNotificationMessage * result9 =
+			dynamic_cast<IpcmFlowDeallocatedNotificationMessage *>(fromKernel);
+	std::cout<<"Source IPC Process id "<<result9->getSourceIpcProcessId()
+			<<std::endl;
+	std::cout<<"Destination IPC Process id "<<result9->getDestIpcProcessId()
+			<<std::endl;;
+	std::cout<<"Code: "<<
+			result9->getCode()<<std::endl;
+	std::cout<<"Port id: "<<
+			result9->getPortId()<<std::endl;
+	delete fromKernel;
 }
