@@ -372,9 +372,7 @@ IpcmRegisterApplicationRequestMessage *
 
 /* IpcmRegisterApplicationResponseMessage CLASS*/
 enum IpcmRegisterApplicationResponseMessageAttributes {
-	IRARE_ATTR_APP_NAME = 1,
-	IRARE_ATTR_RESULT,
-	IRARE_ATTR_DIF_NAME,
+	IRARE_ATTR_RESULT = 1,
 	__IRARE_ATTR_MAX,
 };
 

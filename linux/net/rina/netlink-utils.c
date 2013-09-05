@@ -747,23 +747,44 @@ format_fail:
 }
 
 static int rnl_parse_ipcm_unreg_app_req_msg(struct genl_info * info,
-	  struct rnl_ipcm_unreg_app_req_msg_attrs * msg_attrs)
+		struct rnl_ipcm_unreg_app_req_msg_attrs * msg_attrs)
 {
-        struct nla_policy attr_policy[IUAR_ATTR_MAX + 1];
+	struct nla_policy attr_policy[IUAR_ATTR_MAX + 1];
+	struct nlattr *attrs[IUAR_ATTR_MAX + 1];
+	int result;
 
-        attr_policy[IUAR_ATTR_APP_NAME].type = NLA_NESTED;
-        attr_policy[IUAR_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[IUAR_ATTR_APP_NAME].type = NLA_NESTED;
+	attr_policy[IUAR_ATTR_APP_NAME].len = 0;
+	attr_policy[IUAR_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[IUAR_ATTR_DIF_NAME].len = 0;
 
-        if (rnl_check_attr_policy(info->nlhdr, IUAR_ATTR_MAX, attr_policy) < 0 ||
-            parse_app_name_info(info->attrs[IUAR_ATTR_APP_NAME],
-                                 msg_attrs->app_name) < 0		         ||
-            parse_app_name_info(info->attrs[IUAR_ATTR_DIF_NAME],
-                                msg_attrs->dif_name) < 0){
-        	LOG_ERR(BUILD_ERR_STRING_BY_MSG_TYPE("RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST"));
-	        return -1;
+	result = nlmsg_parse(info->nlhdr,
+			sizeof(struct genlmsghdr) +
+			sizeof(struct rina_msg_hdr),
+			attrs,
+			IUAR_ATTR_MAX,
+			attr_policy);
+
+	if (result < 0){
+		LOG_ERR("Error %d; could not validate nl message policy", result);
+		goto format_fail;
 	}
 
+	if (parse_app_name_info(attrs[IUAR_ATTR_APP_NAME],
+			msg_attrs->app_name) < 0)
+		goto format_fail;
+
+	if (parse_app_name_info(attrs[IUAR_ATTR_DIF_NAME],
+			msg_attrs->dif_name) < 0)
+		goto format_fail;
+
 	return 0;
+
+	format_fail:
+	LOG_ERR(
+			BUILD_ERR_STRING_BY_MSG_TYPE(
+					"RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST"));
+	return -1;
 }
 
 static int rnl_parse_ipcm_unreg_app_resp_msg(struct genl_info * info,
@@ -1683,62 +1704,64 @@ int rnl_format_ipcm_reg_app_resp_msg(uint_t            result,
 EXPORT_SYMBOL(rnl_format_ipcm_reg_app_resp_msg);
 
 int rnl_format_ipcm_unreg_app_req_msg(const struct name     * app_name,
-                                      const struct name     * dif_name,
-                                      struct sk_buff  * skb_out)
+		const struct name     * dif_name,
+		struct sk_buff  * skb_out)
 {
-        struct nlattr * msg_src_name, * msg_dif_name;
+	struct nlattr * msg_src_name, * msg_dif_name;
 
-        if (!skb_out) {
-                LOG_ERR("Bogus input parameter(s), bailing out");
-                return -1;
-        }
+	if (!skb_out) {
+		LOG_ERR("Bogus input parameter(s), bailing out");
+		return -1;
+	}
 
-        if (!(msg_src_name =
-              nla_nest_start(skb_out, IUAR_ATTR_APP_NAME))) {
-                nla_nest_cancel(skb_out, msg_src_name);
-                LOG_ERR(BUILD_ERR_STRING("source application name attribute"));
-                goto format_fail;
-        }
-        if (format_app_name_info(app_name, skb_out) < 0)
+	if (!(msg_src_name =
+			nla_nest_start(skb_out, IUAR_ATTR_APP_NAME))) {
+		nla_nest_cancel(skb_out, msg_src_name);
+		LOG_ERR(BUILD_ERR_STRING("source application name attribute"));
+		goto format_fail;
+	}
+
+	if (format_app_name_info(app_name, skb_out) < 0)
 		goto format_fail;
 	nla_nest_end(skb_out, msg_src_name);
 
-        if (!(msg_dif_name =
-              nla_nest_start(skb_out, IUAR_ATTR_DIF_NAME))) {
-                nla_nest_cancel(skb_out, msg_dif_name);
-                LOG_ERR(BUILD_ERR_STRING("DIF name attribute"));
-                goto format_fail;
-        }
-        if (format_app_name_info(dif_name, skb_out) < 0)
+	if (!(msg_dif_name =
+			nla_nest_start(skb_out, IUAR_ATTR_DIF_NAME))) {
+		nla_nest_cancel(skb_out, msg_dif_name);
+		LOG_ERR(BUILD_ERR_STRING("DIF name attribute"));
+		goto format_fail;
+	}
+
+	if (format_app_name_info(dif_name, skb_out) < 0)
 		goto format_fail;
 	nla_nest_end(skb_out, msg_dif_name);
 
-        return 0;
+	return 0;
 
-	format_fail:
-                LOG_ERR("Could not format "
-                        "rnl_ipcm_unreg_app_req_msg "
-                        "message correctly");
-                return -1;
+format_fail:
+	LOG_ERR("Could not format "
+			"rnl_ipcm_unreg_app_req_msg "
+			"message correctly");
+	return -1;
 
 }
 EXPORT_SYMBOL(rnl_format_ipcm_unreg_app_req_msg);
 
 int rnl_format_ipcm_unreg_app_resp_msg(uint_t          result,
-                                       struct sk_buff * skb_out)
+		struct sk_buff * skb_out)
 {
-        if (!skb_out) {
-                LOG_ERR("Bogus input parameter(s), bailing out");
-                return -1;
-        }
+	if (!skb_out) {
+		LOG_ERR("Bogus input parameter(s), bailing out");
+		return -1;
+	}
 
-        if (nla_put_u32(skb_out, IUARE_ATTR_RESULT, result) < 0){
-                LOG_ERR("Could not format "
-                        "rnl_ipcm_unreg_app_resp_msg "
-                        "message correctly");
-                return -1;
-        }
-        return 0;
+	if (nla_put_u32(skb_out, IUARE_ATTR_RESULT, result) < 0){
+		LOG_ERR("Could not format "
+				"rnl_ipcm_unreg_app_resp_msg "
+				"message correctly");
+		return -1;
+	}
+	return 0;
 }
 EXPORT_SYMBOL(rnl_format_ipcm_unreg_app_resp_msg);
 

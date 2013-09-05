@@ -331,4 +331,126 @@ int main(int argc, char * argv[]) {
 	std::cout<<"Port id: "<<
 			result9->getPortId()<<std::endl;
 	delete fromKernel;
+
+	/*Test sending IpcmRegisterApplicationRequestMessage */
+	IpcmRegisterApplicationRequestMessage message10;
+	message10.setDestPortId(0);
+	message10.setApplicationName(sourceName);
+	message10.setDifName(difName);
+	message10.setRequestMessage(true);
+	message10.setSequenceNumber(source.getSequenceNumber());
+	message10.setSourceIpcProcessId(21);
+	message10.setDestIpcProcessId(34);
+	try{
+		source.sendMessage(&message10);
+	}catch(NetlinkException &e){
+		std::cout<<"Exception: "<<e.what()<<std::endl;
+		return -1;
+	}
+	std::cout<<"Sent IpcmRegisterApplicationRequestMessage message to Kernel"
+			<<std::endl;
+
+	fromKernel = source.getMessage();
+	std::cout<<"Got message from "<<fromKernel->getSourcePortId()<<"\n";
+	IpcmRegisterApplicationRequestMessage * result10 =
+			dynamic_cast<IpcmRegisterApplicationRequestMessage *>(fromKernel);
+	std::cout<<"Source IPC Process id "<<result10->getSourceIpcProcessId()
+			<<std::endl;
+	std::cout<<"Destination IPC Process id "<<result10->getDestIpcProcessId()
+			<<std::endl;;
+	std::cout<<"Application process name: "<<
+			result10->getApplicationName().getProcessName()<<std::endl;
+	std::cout<<"DIF name: "<<
+			result10->getDifName().getProcessName()<<std::endl;
+	delete fromKernel;
+
+	/*Test sending IpcmRegisterApplicationResponseMessage */
+	IpcmRegisterApplicationResponseMessage message11;
+	message11.setDestPortId(0);
+	message11.setResult(231);
+	message11.setRequestMessage(true);
+	message11.setSequenceNumber(source.getSequenceNumber());
+	message11.setSourceIpcProcessId(21);
+	message11.setDestIpcProcessId(34);
+	try{
+		source.sendMessage(&message11);
+	}catch(NetlinkException &e){
+		std::cout<<"Exception: "<<e.what()<<std::endl;
+		return -1;
+	}
+	std::cout<<"Sent IpcmRegisterApplicationResponseMessage message to Kernel"
+			<<std::endl;
+
+	fromKernel = source.getMessage();
+	std::cout<<"Got message from "<<fromKernel->getSourcePortId()<<"\n";
+	IpcmRegisterApplicationResponseMessage * result11 =
+			dynamic_cast<IpcmRegisterApplicationResponseMessage *>(fromKernel);
+	std::cout<<"Source IPC Process id "<<result11->getSourceIpcProcessId()
+						<<std::endl;
+	std::cout<<"Destination IPC Process id "<<result11->getDestIpcProcessId()
+						<<std::endl;;
+	std::cout<<"Result: "<<
+			result11->getResult()<<std::endl;
+	delete fromKernel;
+
+	/*Test sending IpcmRegisterApplicationRequestMessage */
+	IpcmUnregisterApplicationRequestMessage message12;
+	message12.setDestPortId(0);
+	message12.setApplicationName(sourceName);
+	message12.setDifName(difName);
+	message12.setRequestMessage(true);
+	message12.setSequenceNumber(source.getSequenceNumber());
+	message12.setSourceIpcProcessId(21);
+	message12.setDestIpcProcessId(34);
+	try{
+		source.sendMessage(&message12);
+	}catch(NetlinkException &e){
+		std::cout<<"Exception: "<<e.what()<<std::endl;
+		return -1;
+	}
+	std::cout<<"Sent IpcmUnregisterApplicationRequestMessage message to Kernel"
+			<<std::endl;
+
+	fromKernel = source.getMessage();
+	std::cout<<"Got message from "<<fromKernel->getSourcePortId()<<"\n";
+	IpcmUnregisterApplicationRequestMessage * result12 =
+			dynamic_cast<IpcmUnregisterApplicationRequestMessage *>(fromKernel);
+	std::cout<<"Source IPC Process id "<<result12->getSourceIpcProcessId()
+						<<std::endl;
+	std::cout<<"Destination IPC Process id "<<result12->getDestIpcProcessId()
+						<<std::endl;;
+	std::cout<<"Application process name: "<<
+			result12->getApplicationName().getProcessName()<<std::endl;
+	std::cout<<"DIF name: "<<
+			result12->getDifName().getProcessName()<<std::endl;
+	delete fromKernel;
+
+	/*Test sending IpcmUnregisterApplicationResponseMessage */
+	IpcmUnregisterApplicationResponseMessage message13;
+	message13.setDestPortId(0);
+	message13.setResult(431);
+	message13.setRequestMessage(true);
+	message13.setSequenceNumber(source.getSequenceNumber());
+	message13.setSourceIpcProcessId(21);
+	message13.setDestIpcProcessId(34);
+	try{
+		source.sendMessage(&message13);
+	}catch(NetlinkException &e){
+		std::cout<<"Exception: "<<e.what()<<std::endl;
+		return -1;
+	}
+	std::cout<<"Sent IpcmUnregisterApplicationResponseMessage message to Kernel"
+			<<std::endl;
+
+	fromKernel = source.getMessage();
+	std::cout<<"Got message from "<<fromKernel->getSourcePortId()<<"\n";
+	IpcmUnregisterApplicationResponseMessage * result13 =
+			dynamic_cast<IpcmUnregisterApplicationResponseMessage *>(fromKernel);
+	std::cout<<"Source IPC Process id "<<result13->getSourceIpcProcessId()
+									<<std::endl;
+	std::cout<<"Destination IPC Process id "<<result13->getDestIpcProcessId()
+									<<std::endl;;
+	std::cout<<"Result: "<<
+			result13->getResult()<<std::endl;
+	delete fromKernel;
 }
