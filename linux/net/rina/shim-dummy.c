@@ -64,10 +64,10 @@ struct ipcp_instance_data {
 };
 
 enum dummy_flow_state {
-	PORT_STATE_NULL = 1,
-	PORT_STATE_RECIPIENT_ALLOCATE_PENDING,
-	PORT_STATE_INITIATOR_ALLOCATE_PENDING,
-	PORT_STATE_ALLOCATED
+        PORT_STATE_NULL = 1,
+        PORT_STATE_RECIPIENT_ALLOCATE_PENDING,
+        PORT_STATE_INITIATOR_ALLOCATE_PENDING,
+        PORT_STATE_ALLOCATED
 };
 
 struct dummy_flow {
@@ -156,10 +156,9 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                 rkfree(flow);
                 return -1;
         }
+
         flow->state = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
-
         flow->port_id = id;
-
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, &data->flows);
 
@@ -170,26 +169,26 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                                         port_id_t                   id,
                                         response_reason_t *         response)
 {
-	static struct dummy_flow * flow;
+        static struct dummy_flow * flow;
 
         ASSERT(data);
         ASSERT(response);
 
         /* On positive response, flow should transition to allocated state */
         if (*response == 0) {
-        	flow = find_flow(data, id);
-        	if (!flow) {
-			LOG_ERR("Flow does not exist, cannot go to allocated");
-			return -1;
-		}
-        	if (kipcm_flow_add(default_kipcm, data->id, id)) {
-			list_del(&flow->list);
-			name_destroy(flow->source);
-			name_destroy(flow->dest);
-			rkfree(flow);
-			return -1;
-		}
-        	flow->state = PORT_STATE_ALLOCATED;
+                flow = find_flow(data, id);
+                if (!flow) {
+                        LOG_ERR("Flow does not exist, cannot go to allocated");
+                        return -1;
+                }
+                if (kipcm_flow_add(default_kipcm, data->id, id)) {
+                        list_del(&flow->list);
+                        name_destroy(flow->source);
+                        name_destroy(flow->dest);
+                        rkfree(flow);
+                        return -1;
+                }
+                flow->state = PORT_STATE_ALLOCATED;
         }
 
         /*
@@ -234,12 +233,12 @@ static int dummy_application_register(struct ipcp_instance_data * data,
         ASSERT(source);
 
         if (!data->info) {
-        	LOG_ERR("IPC Process doesn't belong to any DIF");
-        	return -1;
+                LOG_ERR("IPC Process doesn't belong to any DIF");
+                return -1;
         }
         if (!data->info->dif_name) {
-        	LOG_ERR("IPC Process doesn't belong to any DIF");
-        	return -1;
+                LOG_ERR("IPC Process doesn't belong to any DIF");
+                return -1;
         }
 
         if (is_app_registered(data, source)) {
@@ -346,10 +345,10 @@ static int dummy_deallocate_all(struct ipcp_instance_data * data)
         struct dummy_flow *pos, *next;
 
         list_for_each_entry_safe(pos, next, &data->flows, list) {
-        	list_del(&pos->list);
-		name_destroy(pos->dest);
-		name_destroy(pos->source);
-		rkfree(pos);
+                list_del(&pos->list);
+                name_destroy(pos->dest);
+                name_destroy(pos->source);
+                rkfree(pos);
         }
         return 0;
 }
@@ -379,36 +378,37 @@ static int dummy_fini(struct ipcp_factory_data * data)
         return 0;
 }
 
-static int dummy_assign_dif_request(struct ipcp_instance_data * data,
-		    	    	    const struct name * 	dif_name)
+static int dummy_assign_to_dif(struct ipcp_instance_data * data,
+                               const struct name *         dif_name)
 {
-	ASSERT(data);
+        ASSERT(data);
 
-	data->info = rkzalloc(sizeof(struct dummy_info), GFP_KERNEL);
-	if (!data->info)
-		return -1;
+        data->info = rkzalloc(sizeof(struct dummy_info), GFP_KERNEL);
+        if (!data->info)
+                return -1;
 
-	data->info->dif_name = rkzalloc(sizeof(struct name), GFP_KERNEL);
-	if (!data->info->dif_name) {
-		rkfree(data->info);
+        /* FIXME: name_dup() should do all this code */
+        data->info->dif_name = rkzalloc(sizeof(struct name), GFP_KERNEL);
+        if (!data->info->dif_name) {
+                rkfree(data->info);
 
-		return -1;
-	}
+                return -1;
+        }
 
-	if (name_cpy(dif_name, data->info->dif_name)) {
-		char * tmp = name_tostring(dif_name);
+        if (name_cpy(dif_name, data->info->dif_name)) {
+                char * tmp = name_tostring(dif_name);
 
-		rkfree(data->info->dif_name);
-		rkfree(data->info);
+                rkfree(data->info->dif_name);
+                rkfree(data->info);
 
-		LOG_ERR("Application %s registration has failed", tmp);
+                LOG_ERR("Application %s registration has failed", tmp);
 
-		rkfree(tmp);
+                rkfree(tmp);
 
-		return -1;
-	}
+                return -1;
+        }
 
-	return 0;
+        return 0;
 }
 
 static struct ipcp_instance_ops dummy_instance_ops = {
@@ -418,7 +418,7 @@ static struct ipcp_instance_ops dummy_instance_ops = {
         .application_register   = dummy_application_register,
         .application_unregister = dummy_application_unregister,
         .sdu_write              = dummy_sdu_write,
-        .assign_dif_request	= dummy_assign_dif_request,
+        .assign_to_dif          = dummy_assign_to_dif,
 };
 
 static struct ipcp_instance_data *

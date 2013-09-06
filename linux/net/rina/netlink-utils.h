@@ -471,7 +471,7 @@ int rnl_format_ipcm_unreg_app_req_msg(const struct name * app_name,
                                       struct sk_buff  *   skb_out);
 
 int rnl_format_ipcm_unreg_app_resp_msg(uint_t       result,
-                                     struct sk_buff * skb_out);
+                                       struct sk_buff * skb_out);
 
 int rnl_format_ipcm_query_rib_req_msg(const struct rib_object * obj,
                                       uint_t         	      scope,
@@ -503,6 +503,14 @@ int rnl_app_alloc_flow_req_arrived_msg(struct ipcp_instance_data * data,
 				       const struct flow_spec *    fspec,
 				       port_id_t                   id);
 
-char *nla_get_string(struct nlattr *nla);
+int rnl_app_alloc_flow_result_msg(ipc_process_id_t src_ipc_id,
+		  	  	  ipc_process_id_t dst_ipc_id,
+		  	  	  uint_t           res);
+
+int rnl_app_register_response_msg(ipc_process_id_t ipc_id,
+				  ipc_process_id_t dst_id,
+				  uint_t           res);
+
+char * nla_get_string(struct nlattr *nla);
 
 #endif

@@ -41,18 +41,18 @@ extern struct kipcm * default_kipcm;
 
 /* Holds all configuration related to a shim instance */
 struct empty_info {
-	/* IPC Instance name */
-	struct name * name;
-	/* DIF name */
-	struct name * dif_name;
+        /* IPC Instance name */
+        struct name * name;
+        /* DIF name */
+        struct name * dif_name;
 };
 
 /* This structure will contains per-instance data */
 struct ipcp_instance_data {
-	struct list_head    list;
-	struct list_head    flows;
+        struct list_head    list;
+        struct list_head    flows;
         ipc_process_id_t    id;
-	struct empty_info * info;
+        struct empty_info * info;
 };
 
 /*
@@ -68,18 +68,18 @@ static int empty_flow_allocate_request(struct ipcp_instance_data * data,
                                        const struct flow_spec *    fspec,
                                        port_id_t                   id)
 {
-	ASSERT(data);
+        ASSERT(data);
         ASSERT(source);
         ASSERT(dest);
-	ASSERT(fspec);
-	return -1;
+        ASSERT(fspec);
+        return -1;
 }
 
 static int empty_flow_allocate_response(struct ipcp_instance_data * data,
                                         port_id_t                   id,
                                         response_reason_t *         response)
 {
-	ASSERT(data);
+        ASSERT(data);
         ASSERT(response);
 
         return -1;
@@ -88,9 +88,9 @@ static int empty_flow_allocate_response(struct ipcp_instance_data * data,
 static int empty_flow_deallocate(struct ipcp_instance_data * data,
                                  port_id_t                   id)
 {
-	ASSERT(data);
+        ASSERT(data);
 
-	return -1;
+        return -1;
 }
 
 static int empty_application_register(struct ipcp_instance_data * data,
@@ -121,6 +121,15 @@ static int empty_sdu_write(struct ipcp_instance_data * data,
         return -1;
 }
 
+static int empty_assign_to_dif(struct ipcp_instance_data * data,
+                               const struct name *         dif_name)
+{
+        ASSERT(data);
+        ASSERT(dif_name);
+
+        return -1;
+}
+
 /*
  * The shim_instance ops are common to all the shim instances therefore
  * there's no real need to take a dynamically allocated buffer. Let's use a
@@ -134,6 +143,7 @@ static struct ipcp_instance_ops empty_instance_ops = {
         .application_register   = empty_application_register,
         .application_unregister = empty_application_unregister,
         .sdu_write              = empty_sdu_write,
+        .assign_to_dif          = empty_assign_to_dif,
 };
 
 /*
@@ -147,10 +157,10 @@ static struct ipcp_factory_data {
 static int empty_init(struct ipcp_factory_data * data)
 {
         ASSERT(data);
-        
+
         bzero(&empty_data, sizeof(empty_data));
         INIT_LIST_HEAD(&(data->instances));
-        
+
         return 0;
 }
 
@@ -158,7 +168,7 @@ static int empty_fini(struct ipcp_factory_data * data)
 {
 
         ASSERT(data);
-        
+
         /*
          * NOTE:
          *   All the instances will be removed by the shims layer, no work
@@ -200,12 +210,12 @@ static struct ipcp_instance * empty_create(struct ipcp_factory_data * data,
         struct ipcp_instance * inst;
 
         ASSERT(data);
-	
+
         /* Check if there already is an instance with that id */
         if (find_instance(data,id)) {
                 LOG_ERR("There's a shim instance with id %d already", id);
                 return NULL;
-        } 
+        }
 
         /* Create an instance */
         inst = rkzalloc(sizeof(*inst), GFP_KERNEL);
@@ -221,35 +231,35 @@ static struct ipcp_instance * empty_create(struct ipcp_factory_data * data,
         }
 
         inst->data->id = id;
-	inst->data->info = rkzalloc(sizeof(*inst->data->info), GFP_KERNEL);
-	if (!inst->data->info) {
-		rkfree(inst->data);
-		rkfree(inst);
-		return NULL;
-	}
+        inst->data->info = rkzalloc(sizeof(*inst->data->info), GFP_KERNEL);
+        if (!inst->data->info) {
+                rkfree(inst->data);
+                rkfree(inst);
+                return NULL;
+        }
 
         inst->data->info->dif_name = name_create();
-	if (!inst->data->info->dif_name) {
-		rkfree(inst->data->info);
-		rkfree(inst->data);
-		rkfree(inst);
-		return NULL;
-	}
+        if (!inst->data->info->dif_name) {
+                rkfree(inst->data->info);
+                rkfree(inst->data);
+                rkfree(inst);
+                return NULL;
+        }
 
-	inst->data->info->name = name_create();
-	if (!inst->data->info->name) {
-		rkfree(inst->data->info->dif_name);
-		rkfree(inst->data->info);
-		rkfree(inst->data);
-		rkfree(inst);
-		return NULL;
-	}
+        inst->data->info->name = name_create();
+        if (!inst->data->info->name) {
+                rkfree(inst->data->info->dif_name);
+                rkfree(inst->data->info);
+                rkfree(inst->data);
+                rkfree(inst);
+                return NULL;
+        }
 
         /*
          * Bind the shim-instance to the shims set, to keep all our data
          * structures linked (somewhat) together
          */
-	INIT_LIST_HEAD(&(inst->data->list));
+        INIT_LIST_HEAD(&(inst->data->list));
         list_add(&(data->instances), &(inst->data->list));
 
         return inst;
@@ -284,28 +294,28 @@ empty_configure(struct ipcp_factory_data * data,
                                 return inst;
                         }
                 }
-		else if (!strcmp(tmp->entry->name, "name") &&
-                    tmp->entry->value->type == IPCP_CONFIG_STRING) {
+                else if (!strcmp(tmp->entry->name, "name") &&
+                         tmp->entry->value->type == IPCP_CONFIG_STRING) {
                         if (name_cpy(instance->info->name,
                                      (struct name *)
                                      tmp->entry->value->data)) {
                                 LOG_ERR("Failed to copy name");
                                 return inst;
                         }
-		}
-		else {
+                }
+                else {
                         LOG_ERR("Cannot identify parameter '%s'",
                                 tmp->entry->name);
                         return NULL;
                 }
         }
-	
+
         /*
          * Instance might change (reallocation), return the updated pointer
          * if needed. We don't re-allocate our instance so we'll be returning
          * the same pointer.
          */
-	
+
         return inst;
 }
 
@@ -328,8 +338,8 @@ static int empty_destroy(struct ipcp_factory_data * data,
 
                         /* Destroy it */
                         name_destroy(inst->info->dif_name);
-			name_destroy(inst->info->name);
-			rkfree(inst->info);
+                        name_destroy(inst->info->name);
+                        rkfree(inst->info);
                         rkfree(inst);
                 }
         }
@@ -357,7 +367,7 @@ static int __init mod_init(void)
                 LOG_CRIT("Cannot register %s factory", SHIM_NAME);
                 return -1;
         }
-        
+
         return 0;
 }
 
@@ -387,7 +397,7 @@ module_exit(mod_exit);
 MODULE_DESCRIPTION("RINA Empty Shim IPC");
 
 MODULE_LICENSE("GPL");
- 
+
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
 MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
 MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
