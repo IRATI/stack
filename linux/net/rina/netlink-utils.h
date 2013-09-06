@@ -513,7 +513,6 @@ int rnl_app_alloc_flow_result_msg(ipc_process_id_t src_ipc_id,
 		  	  	  uint_t	   seq_num);
 
 int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
-				  ipc_process_id_t dst_id,
 				  uint_t           res,
 				  uint_t           seq_num,
 				  uint_t 		   port_id,

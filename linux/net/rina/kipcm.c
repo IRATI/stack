@@ -314,129 +314,142 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         return retval;
 }
 
-static int notify_ipcp_assign_dif_request(void *             data,
-                                          struct sk_buff *   buff,
-                                          struct genl_info * info)
+int assign_to_dif_free_memory_and_reply(struct name * dif_name,
+		struct dif_config * dif_config,
+		struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs,
+		struct rnl_msg * msg,
+		ipc_process_id_t id,
+		uint_t res,
+		uint_t seq_num,
+		uint_t port_id)
 {
-        struct kipcm *                                kipcm;
-        struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs;
-        struct rnl_msg *                              msg;
-        struct dif_config *                           dif_config;
-        struct name *                                 dif_name;
-        struct ipcp_instance *                        ipc_process;
-        ipc_process_id_t                              ipc_id;
+	if (attrs){
+		rkfree(attrs);
+		attrs = NULL;
+	}
 
-        if (!data) {
-                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
-                return -1;
-        }
+	if (dif_name){
+		rkfree(dif_name);
+		dif_name = NULL;
+	}
 
-        kipcm = (struct kipcm *) data;
+	if (dif_config){
+		rkfree(dif_config);
+		dif_config = NULL;
+	}
 
-        if (!info) {
-                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
-                return -1;
-        }
+	if (msg){
+		rkfree(msg);
+		msg = NULL;
+	}
 
-        attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
-        if (!attrs) {
-                rnl_assign_dif_response(0, -1, info->snd_seq,
-                		info->snd_portid);
-                return 0;
-        }
-
-        dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
-        if (!dif_config){
-                rkfree(attrs);
-                rnl_assign_dif_response(0, -1, info->snd_seq,
-                		info->snd_portid);
-                return 0;
-        }
-        attrs->dif_config = dif_config;
-
-        dif_name = name_create();
-        if (!dif_name){
-                rkfree(dif_config);
-                rkfree(attrs);
-                rnl_assign_dif_response(0, -1, info->snd_seq,
-                		info->snd_portid);
-                return 0;
-        }
-        dif_config->dif_name = dif_name;
-
-        msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
-        if (!msg) {
-                //name_destroy(dif_name);
-                rkfree(dif_config);
-                rkfree(attrs);
-                rnl_assign_dif_response(0, -1, info->snd_seq,
-                		info->snd_portid);
-                return 0;
-        }
-        msg->attrs = attrs;
-
-        if (rnl_parse_msg(info, msg)) {
-                //name_destroy(dif_name);
-                rkfree(dif_config);
-                rkfree(attrs);
-                rkfree(msg);
-                rnl_assign_dif_response(0, -1, info->snd_seq,
-                		info->snd_portid);
-                return 0;
-        }
-        ipc_id = msg->rina_hdr->dst_ipc_id;
-
-        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
-        if (!ipc_process) {
-                LOG_ERR("IPC process %d not found", ipc_id);
-                //name_destroy(dif_name);
-                rkfree(dif_config);
-                rkfree(attrs);
-                rkfree(msg);
-                rnl_assign_dif_response(0, -1, info->snd_seq,
-                		info->snd_portid);
-                return 0;
-        }
-        LOG_DBG("Found IPC Process with id %d", ipc_id);
-
-        if (ipc_process->ops->assign_to_dif(ipc_process->data,
-                                            attrs->dif_config->dif_name)) {
-                char * tmp = name_tostring(attrs->dif_config->dif_name);
-                LOG_ERR("Failed assign to dif %s for IPC process: %d",
-                        tmp, ipc_id);
-                rkfree(tmp);
-                //name_destroy(dif_name);
-                rkfree(dif_config);
-                rkfree(attrs);
-                rkfree(msg);
-                rnl_assign_dif_response(0, -1, info->snd_seq,
-                		info->snd_portid);
-                return 0;
-        }
-        LOG_DBG("Assign to DIF operation successful, freeing memory");
-
-        LOG_DBG("Calling assign to DIF response");
-        if (rnl_assign_dif_response(ipc_id, 0, info->snd_seq,
-        		info->snd_portid)){
-                name_destroy(dif_name);
-                rkfree(dif_config);
-                rkfree(attrs);
-                rkfree(msg);
-                return -1;
-        }
-
-        //name_destroy(dif_name);
-        rkfree(dif_config);
-        rkfree(attrs);
-        rkfree(msg);
-        LOG_DBG("Finishing successfully");
-        return 0;
+	if (rnl_assign_dif_response(id, res, seq_num, port_id))
+		return -1;
+	else
+		return 0;
 }
 
-void reg_unreg_resp_free_memory(struct name * app_name,
+static int notify_ipcp_assign_dif_request(void *             data,
+		struct sk_buff *   buff,
+		struct genl_info * info)
+{
+	struct kipcm *                                kipcm;
+	struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs;
+	struct rnl_msg *                              msg;
+	struct dif_config *                           dif_config;
+	struct name *                                 dif_name;
+	struct ipcp_instance *                        ipc_process;
+	ipc_process_id_t                              ipc_id;
+
+	attrs = NULL;
+	msg = NULL;
+	dif_name = NULL;
+	dif_config = NULL;
+
+	if (!data) {
+		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+		return -1;
+	}
+
+	kipcm = (struct kipcm *) data;
+
+	if (!info) {
+		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+		return -1;
+	}
+
+	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+	if (!attrs) {
+		return assign_to_dif_free_memory_and_reply(dif_name,
+				dif_config, attrs, msg, 0, -1,
+				info->snd_seq, info->snd_portid);
+	}
+
+	dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
+	if (!dif_config){
+		return assign_to_dif_free_memory_and_reply(dif_name,
+				dif_config, attrs, msg, 0, -1,
+				info->snd_seq, info->snd_portid);
+	}
+	attrs->dif_config = dif_config;
+
+	dif_name = name_create();
+	if (!dif_name){
+		return assign_to_dif_free_memory_and_reply(dif_name,
+				dif_config, attrs, msg, 0, -1,
+				info->snd_seq, info->snd_portid);
+	}
+	dif_config->dif_name = dif_name;
+
+	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+	if (!msg) {
+		return assign_to_dif_free_memory_and_reply(dif_name,
+				dif_config, attrs, msg, 0, -1,
+				info->snd_seq, info->snd_portid);
+	}
+	msg->attrs = attrs;
+
+	if (rnl_parse_msg(info, msg)) {
+		return assign_to_dif_free_memory_and_reply(dif_name,
+				dif_config, attrs, msg, 0, -1,
+				info->snd_seq, info->snd_portid);
+	}
+	ipc_id = msg->rina_hdr->dst_ipc_id;
+
+	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+	if (!ipc_process) {
+		LOG_ERR("IPC process %d not found", ipc_id);
+		return assign_to_dif_free_memory_and_reply(dif_name,
+				dif_config, attrs, msg, 0, -1,
+				info->snd_seq, info->snd_portid);
+	}
+	LOG_DBG("Found IPC Process with id %d", ipc_id);
+
+	if (ipc_process->ops->assign_to_dif(ipc_process->data,
+			attrs->dif_config->dif_name)) {
+		char * tmp = name_tostring(attrs->dif_config->dif_name);
+		LOG_ERR("Failed assign to dif %s for IPC process: %d",
+				tmp, ipc_id);
+		rkfree(tmp);
+		return assign_to_dif_free_memory_and_reply(dif_name,
+				dif_config, attrs, msg, ipc_id, -1,
+				info->snd_seq, info->snd_portid);
+	}
+
+	return assign_to_dif_free_memory_and_reply(dif_name,
+			dif_config, attrs, msg, ipc_id, 0,
+			info->snd_seq, info->snd_portid);
+}
+
+int reg_unreg_resp_free_memory_and_reply(struct name * app_name,
 		struct name * dif_name,
 		struct rnl_ipcm_reg_app_req_msg_attrs * attrs,
-		struct rnl_msg *                        msg)
+		struct rnl_msg *  msg,
+		ipc_process_id_t id,
+		uint_t res,
+		uint_t seq_num,
+		uint_t port_id,
+		bool isRegister)
 {
 	if (app_name){
 		rkfree(app_name);
@@ -457,9 +470,15 @@ void reg_unreg_resp_free_memory(struct name * app_name,
 		rkfree(msg);
 		msg = NULL;
 	}
+
+	if (rnl_app_register_unregister_response_msg(
+			id, res, seq_num, port_id, isRegister))
+		return -1;
+	else
+		return 0;
 }
 
-static int notify_ipcp_register_app_request(void *             data,
+static int notify_ipcp_register_app_request(void * data,
 		struct sk_buff *   buff,
 		struct genl_info * info)
 {
@@ -470,7 +489,6 @@ static int notify_ipcp_register_app_request(void *             data,
 	struct name *                           dif_name;
 	struct ipcp_instance *                  ipc_process;
 	ipc_process_id_t                        ipc_id;
-	int result;
 
 	attrs = NULL;
 	msg = NULL;
@@ -491,94 +509,54 @@ static int notify_ipcp_register_app_request(void *             data,
 
 	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
 	if (!attrs) {
-		if (rnl_app_register_unregister_response_msg(0, 0, -1, info->snd_seq,
-				info->snd_portid, true))
-			return -1;
-
-		return 0;
+		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+				msg, 0, -1, info->snd_seq, info->snd_portid, true);
 	}
 
 	app_name = name_create();
 	if (!app_name) {
-		reg_unreg_resp_free_memory(app_name, dif_name, attrs, msg);
-		if (rnl_app_register_unregister_response_msg(0, 0, -1, info->snd_seq,
-				info->snd_portid, true))
-			return -1;
-
-		return 0;
+		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+				msg, 0, -1, info->snd_seq, info->snd_portid, true);
 	}
 	attrs->app_name= app_name;
 
 	dif_name = name_create();
 	if (!dif_name) {
-		reg_unreg_resp_free_memory(app_name, dif_name, attrs, msg);
-		if (rnl_app_register_unregister_response_msg(0, 0, -1, info->snd_seq,
-				info->snd_portid, true))
-			return -1;
-
-		return 0;
+		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+				msg, 0, -1, info->snd_seq, info->snd_portid, true);
 	}
 	attrs->dif_name= dif_name;
 
 	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
 	if (!msg) {
 		LOG_ERR("Could not allocate space for my_msg struct");
-		reg_unreg_resp_free_memory(app_name, dif_name, attrs, msg);
-		if (rnl_app_register_unregister_response_msg(0, 0, -1, info->snd_seq,
-				info->snd_portid, true))
-			return -1;
-
-		return 0;
+		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+				msg, 0, -1, info->snd_seq, info->snd_portid, true);
 	}
 	msg->attrs = attrs;
 
 	if (rnl_parse_msg(info, msg)) {
 		LOG_ERR("Could not parse message");
-		reg_unreg_resp_free_memory(app_name, dif_name, attrs, msg);
-		if (rnl_app_register_unregister_response_msg(0, 0, -1, info->snd_seq,
-				info->snd_portid, true))
-			return -1;
-		return 0;
+		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+				msg, 0, -1, info->snd_seq, info->snd_portid, true);
 	}
 
 	ipc_id = msg->rina_hdr->dst_ipc_id;
 	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
 	if (!ipc_process) {
 		LOG_ERR("IPC process %d not found", ipc_id);
-
-		if (rnl_app_register_unregister_response_msg(ipc_id,
-				msg->rina_hdr->src_ipc_id, -1, info->snd_seq,
-				info->snd_portid, true))
-			result = -1;
-		else
-			result = 0;
-
-		reg_unreg_resp_free_memory(app_name, dif_name, attrs, msg);
-		return result;
+		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+				msg, 0, -1, info->snd_seq, info->snd_portid, true);
 	}
 
 	if (ipc_process->ops->application_register(ipc_process->data,
 			attrs->app_name)) {
-		if (rnl_app_register_unregister_response_msg(ipc_id,
-				msg->rina_hdr->src_ipc_id, -1, info->snd_seq,
-				info->snd_portid, true))
-			result = -1;
-		else
-			result = 0;
-
-		reg_unreg_resp_free_memory(app_name, dif_name, attrs, msg);
-		return result;
+		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+				msg, ipc_id, -1, info->snd_seq, info->snd_portid, true);
 	}
 
-	if (rnl_app_register_unregister_response_msg(ipc_id,
-			msg->rina_hdr->src_ipc_id, 0, info->snd_seq,
-			info->snd_portid, true))
-		result = -1;
-	else
-		result = 0;
-
-	reg_unreg_resp_free_memory(app_name, dif_name, attrs, msg);
-	return result;
+	return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+			msg, ipc_id, 0, info->snd_seq, info->snd_portid, true);
 }
 
 static int notify_ipcp_unregister_app_request(void *             data,

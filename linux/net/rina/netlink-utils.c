@@ -1966,7 +1966,6 @@ int rnl_assign_dif_response(ipc_process_id_t id,
 EXPORT_SYMBOL(rnl_assign_dif_response);
 
 int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
-				  ipc_process_id_t dst_id,
 				  uint_t           res,
 				  uint_t 	   seq_num,
 				  uint_t	   port_id,
@@ -2002,7 +2001,7 @@ int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
 	}
 
 	out_hdr->src_ipc_id = ipc_id;
-	out_hdr->dst_ipc_id = dst_id;
+	out_hdr->dst_ipc_id = 0;
 
 	if (rnl_format_ipcm_reg_app_resp_msg(res, out_msg)){
 		LOG_ERR("Could not format message...");
