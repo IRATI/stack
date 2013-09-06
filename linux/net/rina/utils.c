@@ -33,82 +33,167 @@
 int is_value_in_range(int value, int min_value, int max_value)
 { return ((value >= min_value || value <= max_value) ? 1 : 0); }
 
-/*
- * NOTE:
- *
- * These functions will contain wrappers to check for memory corruptions etc.
- * These wrappers/checks will be enabled/disabled at compilation time (via a
- * Kconfig rule)
- *
- * Francesco
- */
+#ifdef CONFIG_RINA_MEMORY_TAMPERING
+struct memblock_header {
+        uint8_t filler[BITS_PER_LONG / 8];
+        size_t  inner_length;
+};
 
-void * rkmalloc(size_t size, gfp_t flags)
+struct memblock_footer {
+        uint8_t filler[BITS_PER_LONG / 8];
+};
+
+static void filler_init(uint8_t * f, size_t length)
 {
-        void * tmp;
+        size_t i;
+
+        LOG_DBG("Applying filler at %pK, size %zd", f, length);
+
+        for (i = 0; i != length; i++) {
+                *f = i;
+                f++;
+        }
+}
+
+static int is_filler_ok(const uint8_t * f, size_t length)
+{
+        size_t i;
+
+        LOG_DBG("Checking filler at %pK, size %zd", f, length);
+
+        for (i = 0; i != length; i++) {
+                if (*f != i)
+                        return 0;
+                f++;
+        }
+
+        return 1;
+}
+
+static void header_filler_init(struct memblock_header * m)
+{ filler_init(m->filler, ARRAY_SIZE(m->filler)); }
+
+static int is_header_filler_ok(const struct memblock_header * m)
+{ return is_filler_ok(m->filler, ARRAY_SIZE(m->filler)); }
+
+static void footer_filler_init(struct memblock_footer * m)
+{ filler_init(m->filler, ARRAY_SIZE(m->filler)); }
+
+static int is_footer_filler_ok(const struct memblock_footer * m)
+{ return is_filler_ok(m->filler, ARRAY_SIZE(m->filler)); }
+#endif
+
+static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
+                            size_t size,
+                            gfp_t flags)
+{
+        size_t                   real_size;
+        void *                   ptr;
+#ifdef CONFIG_RINA_MEMORY_TAMPERING
+        struct memblock_header * header;
+        struct memblock_footer * footer;
+#endif
+
+        ASSERT(alloc_func);
 
 #ifdef CONFIG_RINA_MEMORY_CHECKS
+        /* Should this be transformed into an assertion ? */
         if (!size) {
-                /* We wont use 0 bytes allocation */
+                /* We will consider 0 bytes allocations as meaningless */
                 LOG_ERR("Allocating 0 bytes is meaningless");
                 return NULL;
         }
 #endif
 
-        tmp = kmalloc(size, flags);
-        if (!tmp) {
-                LOG_ERR("Cannot allocate %zd bytes of memory", size);
+        real_size = size;
+#ifdef CONFIG_RINA_MEMORY_TAMPERING
+        real_size += sizeof(*header) + sizeof(*footer);
+#endif
+        
+        ptr = alloc_func(real_size, flags);
+        if (!ptr) {
+                LOG_ERR("Cannot allocate %zd bytes", size);
                 return NULL;
         }
+        LOG_DBG("The requested block has been allocated at %pK, size %zd",
+                ptr, real_size);
 
-#ifdef CONFIG_RINA_MEMORY_PTRS_DUMP
-        LOG_DBG("rkmalloc(%zd) = %pK", size, tmp);
+#ifdef CONFIG_RINA_MEMORY_TAMPERING
+        if (!ptr) {
+                LOG_ERR("Cannot tamper block, it's NULL");
+                return ptr;
+        }
+
+        header               = ptr;
+        header_filler_init(header);
+        header->inner_length = size;
+        ptr                  = header + sizeof(*header) / sizeof(void *);
+        footer               = ptr    + sizeof(*footer) / sizeof(void *);
+        footer_filler_init(footer);
+
+        LOG_DBG("Returning tampered memory block %pK/%zd", ptr, real_size);
 #endif
 
-        return tmp;
+#ifdef CONFIG_RINA_MEMORY_PTRS_DUMP
+        LOG_DBG("rkmalloc(%zd) = %pK %s", size, ptr);
+#endif
+
+        return ptr;
 }
+
+void * rkmalloc(size_t size, gfp_t flags)
+{ return generic_alloc(kmalloc, size, flags); }
 EXPORT_SYMBOL(rkmalloc);
 
 void * rkzalloc(size_t size, gfp_t flags)
-{
-        void * tmp;
-
-#ifdef CONFIG_RINA_MEMORY_CHECKS
-        if (!size) {
-                /* We wont use 0 bytes allocation */
-                LOG_ERR("Allocating 0 bytes is meaningless");
-                return NULL;
-        }
-#endif
-
-        tmp = kzalloc(size, flags);
-        if (!tmp) {
-                LOG_ERR("Cannot allocate %zd bytes of memory", size);
-                return NULL;
-        }
-
-#ifdef CONFIG_RINA_MEMORY_PTRS_DUMP
-        LOG_DBG("rkzalloc(%zd) = %pK", size, tmp);
-#endif
-
-        return tmp;
-}
+{ return generic_alloc(kzalloc, size, flags); }
 EXPORT_SYMBOL(rkzalloc);
 
 void rkfree(void * ptr)
 {
+#ifdef CONFIG_RINA_MEMORY_TAMPERING
+        struct memblock_header * header;
+        struct memblock_footer * footer;
+#ifdef CONFIG_RINA_MEMORY_POISONING
+        uint8_t *                p;
+        size_t                   i;
+        size_t                   size;
+#endif
+#endif
+
 #ifdef CONFIG_RINA_MEMORY_PTRS_DUMP
         LOG_DBG("rkfree(%pK)", ptr);
 #endif
 
-#ifdef CONFIG_RINA_MEMORY_CHECKS
-        if (!ptr) {
-                LOG_ERR("Passed pointer is NULL, cannot free");
-                return;
+        ASSERT(ptr);
+
+#ifdef CONFIG_RINA_MEMORY_TAMPERING
+        header = ptr - sizeof(*header) / sizeof(void *);
+        footer = ptr + sizeof(*header) + header->inner_length / sizeof(void *);
+
+        if (is_header_filler_ok(header)) {
+                LOG_CRIT("Memory block %pK has been corrupted (header)", ptr);
+                BUG();
+        }
+        if (is_footer_filler_ok(footer)) {
+                LOG_CRIT("Memory block %pK has been corrupted (footer)", ptr);
+                BUG();
+        }
+
+#ifdef CONFIG_RINA_MEMORY_POISONING
+        p    = ptr + sizeof(*header);
+        size = header->inner_length;
+
+        LOG_DBG("Poisoning memory block at %pK, length %zd", p, size);
+
+        for (i = 0; i < size; i++) {
+                *p = (uint8_t) i;
+                p++;
         }
 #endif
 
-        ASSERT(ptr);
+        ptr = header;
+#endif
 
         kfree(ptr);
 }
@@ -124,7 +209,7 @@ char * strdup_from_user(const char __user * src)
 
         size = strlen_user(src); /* Includes the terminating NUL */
         if (!size)
-            return NULL;
+                return NULL;
 
         tmp = rkmalloc(size, GFP_KERNEL);
         if (!tmp)

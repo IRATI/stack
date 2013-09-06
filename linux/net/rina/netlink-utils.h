@@ -495,6 +495,14 @@ int rnl_format_rmt_dump_ft_reply_msg(size_t                       count,
                                      const struct pdu_ft_entry ** entries,
                                      struct sk_buff *             skb_out);
 
+int rnl_assign_dif_response(ipc_process_id_t id, uint_t res);
+
+int rnl_app_alloc_flow_req_arrived_msg(struct ipcp_instance_data * data,
+				       const struct name *         source,
+				       const struct name *         dest,
+				       const struct flow_spec *    fspec,
+				       port_id_t                   id);
+
 char *nla_get_string(struct nlattr *nla);
 
 #endif

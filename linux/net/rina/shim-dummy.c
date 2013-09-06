@@ -124,60 +124,6 @@ static struct dummy_flow * find_flow(struct ipcp_instance_data * data,
         return NULL;
 }
 
-static int send_app_alloc_flow_req_arrived_msg(struct ipcp_instance_data * data,
-					       const struct name *         source,
-					       const struct name *         dest,
-					       const struct flow_spec *    fspec,
-					       port_id_t                   id)
-{
-        /* FIXME: Add code here */
-	struct sk_buff * msg;
-	struct rina_msg_hdr * hdr;
-	int result;
-
-	msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
-	if(!msg) {
-		LOG_ERR("Could not allocate memory for message");
-		return -1;
-	}
-	hdr = (struct rina_msg_hdr *) genlmsg_put(
-				msg,
-				0,
-				0,
-				get_nl_family(),
-				0,
-				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED);
-	if(!hdr) {
-		LOG_ERR("Could not use genlmsg_put");
-		nlmsg_free(msg);
-		return -1;
-	}
-	/* FIXME: In the shim dummy there's only one ipc process as source and
-	 * destination, in the general case there will be different.
-	 */
-	hdr->dst_ipc_id = data->id;
-	hdr->src_ipc_id = data->id;
-	if (rnl_format_ipcm_alloc_flow_req_arrived_msg(source,
-					       dest,
-					       fspec,
-					       data->info->dif_name,
-					       msg)){
-		LOG_ERR("Could not format message...");
-		nlmsg_free(msg);
-		return -1;
-	}
-	result = genlmsg_end(msg, hdr);
-	if (result){
-		LOG_DBG("Result of genlmesg_end: %d", result);
-	}
-
-	result = kipcm_send_nl_msg(msg);
-	if (result)
-		return -1;
-
-        return 0;
-}
-
 static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                                        const struct name *         source,
                                        const struct name *         dest,
@@ -210,27 +156,8 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                 rkfree(flow);
                 return -1;
         }
-        /* FIXME: Now we should ask the destination application for a flow */
-        /*
-	* FIXME: we need to add here the sending of the message (i.e.
-	* app_alloc_flow_req_arrived_msg)
-	*/
-       if (send_app_alloc_flow_req_arrived_msg(data,
-		       	       	       	       source,
-		       	       	       	       dest,
-		       	       	       	       fspec,
-		       	       	       	       id)) {
-	       name_destroy(flow->source);
-	       name_destroy(flow->dest);
-	       rkfree(flow);
-	       return -1;
-       }
+        flow->state = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
 
-       flow->state = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
-
-       /* FIXME: The following lines should also be in
-        * dummy_flow_allocate_response
-        */
         flow->port_id = id;
 
         INIT_LIST_HEAD(&flow->list);
@@ -305,6 +232,15 @@ static int dummy_application_register(struct ipcp_instance_data * data,
         struct app_register * app_reg;
 
         ASSERT(source);
+
+        if (!data->info) {
+        	LOG_ERR("IPC Process doesn't belong to any DIF");
+        	return -1;
+        }
+        if (!data->info->dif_name) {
+        	LOG_ERR("IPC Process doesn't belong to any DIF");
+        	return -1;
+        }
 
         if (is_app_registered(data, source)) {
                 char * tmp = name_tostring(source);
@@ -443,52 +379,6 @@ static int dummy_fini(struct ipcp_factory_data * data)
         return 0;
 }
 
-static int dummy_assign_dif_response(struct ipcp_instance_data * data, uint_t res)
-{
-	struct sk_buff * out_msg;
-	struct rina_msg_hdr * out_hdr;
-	int result;
-
-	out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
-	if(!out_msg) {
-		LOG_ERR("Could not allocate memory for message");
-		return -1;
-	}
-
-	out_hdr = (struct rina_msg_hdr *) genlmsg_put(
-				out_msg,
-				0,
-				0,
-				get_nl_family(),
-				0,
-				RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE);
-	if(!out_hdr) {
-		LOG_ERR("Could not use genlmsg_put");
-		nlmsg_free(out_msg);
-		return -1;
-	}
-
-	out_hdr->src_ipc_id = data->id;
-	out_hdr->dst_ipc_id = 0;
-
-	if (rnl_format_ipcm_assign_to_dif_resp_msg(res, out_msg)){
-		LOG_ERR("Could not format message...");
-		nlmsg_free(out_msg);
-		return -1;
-	}
-	result = genlmsg_end(out_msg, out_hdr);
-
-	if (result){
-		LOG_DBG("Result of genlmesg_end: %d", result);
-	}
-
-	result = kipcm_send_nl_msg(out_msg);
-	if (result)
-		return -1;
-
-	return 0;
-}
-
 static int dummy_assign_dif_request(struct ipcp_instance_data * data,
 		    	    	    const struct name * 	dif_name)
 {
@@ -515,12 +405,8 @@ static int dummy_assign_dif_request(struct ipcp_instance_data * data,
 
 		rkfree(tmp);
 
-		dummy_assign_dif_response(data, -1);
-
 		return -1;
 	}
-
-	dummy_assign_dif_response(data, 0);
 
 	return 0;
 }
