@@ -87,7 +87,7 @@ public class IPCManager {
 		flowManager = new FlowManager(ipcProcessFactory, applicationManager);
 		log.info("IPC Manager daemon initializing, reading RINA configuration ...");
 		initializeConfiguration();
-		log.info("Bootstrapping RINA ...");
+		log.info("Bootstrapping IPC Manager ...");
 		bootstrap();
 	}
 	
@@ -199,7 +199,7 @@ public class IPCManager {
 	public void startEventLoopWorkers(){
 		int eventLoopWorkers = 
 				RINAConfiguration.getInstance().getLocalConfiguration().getEventLoopWorkers();
-		log.debug("Starting " + eventLoopWorkers + " event loop workers");
+		log.info("Starting " + eventLoopWorkers + " event loop workers");
 		
 		Runnable worker = null;
 		for(int i=0; i<eventLoopWorkers; i++){
