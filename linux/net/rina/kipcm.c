@@ -131,15 +131,73 @@ struct ipcp_flow {
         struct kfifo           sdu_ready;
 };
 
+void alloc_flow_req_free_memory(struct name * source_name,
+		struct name * dest_name,
+		struct flow_spec * fspec,
+		struct name * dif_name,
+		struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
+		struct rnl_msg * msg)
+{
+	if (attrs){
+		rkfree(attrs);
+		attrs = NULL;
+	}
+
+	if (source_name){
+		rkfree(source_name);
+		source_name = NULL;
+	}
+
+	if (dest_name){
+		rkfree(dest_name);
+		dest_name = NULL;
+	}
+
+	if (fspec){
+		rkfree(fspec);
+		fspec = NULL;
+	}
+
+	if (dif_name){
+		rkfree(dif_name);
+		dif_name = NULL;
+	}
+
+	if (msg){
+		rkfree(msg);
+		msg = NULL;
+	}
+}
+
+int alloc_flow_req_free_memory_and_reply(struct name * source_name,
+		struct name * dest_name,
+		struct flow_spec * fspec,
+		struct name * dif_name,
+		struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
+		struct rnl_msg * msg,
+		ipc_process_id_t id,
+		uint_t res,
+		uint_t seq_num,
+		uint_t port_id)
+{
+	alloc_flow_req_free_memory(source_name, dest_name, fspec, dif_name,
+			attrs, msg);
+
+	if (rnl_app_alloc_flow_result_msg(id, res, seq_num, port_id))
+		return -1;
+	else
+		return 0;
+}
+
 /*
  * It is the responsibility of the shims to send the alloc_req_arrived
  * and the alloc_req_result.
  */
 static int notify_ipcp_allocate_flow_request(void *             data,
-                                             struct sk_buff *   buff,
-                                             struct genl_info * info)
+		struct sk_buff *   buff,
+		struct genl_info * info)
 {
-	struct rnl_ipcm_alloc_flow_req_msg_attrs * msg_attrs;
+	struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs;
 	struct rnl_msg * 			   msg;
 	struct ipcp_instance * 			   ipc_process;
 	ipc_process_id_t 			   ipc_id;
@@ -149,6 +207,13 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 	struct name * dest;
 	struct name * dif_name;
 	struct flow_spec * fspec;
+
+	source = NULL;
+	dest = NULL;
+	dif_name = NULL;
+	fspec = NULL;
+	attrs = NULL;
+	msg = NULL;
 
 	if (!data) {
 		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -161,120 +226,78 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 	}
 
 	kipcm = (struct kipcm *) data;
-	msg_attrs = rkzalloc(sizeof(*msg_attrs), GFP_KERNEL);
-	if (!msg_attrs) {
-		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq))
-			return -1;
-
-		return 0;
+	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+	if (!attrs) {
+		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
 	}
+
 	source = name_create();
 	if (!source) {
-		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq)) {
-			rkfree(msg_attrs);
-			return -1;
-		}
-
-		return 0;
+		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
 	}
+	attrs->source = source;
+
 	dest = name_create();
 	if (!dest) {
-		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq)) {
-			rkfree(msg_attrs);
-			name_destroy(source);
-			return -1;
-		}
-
-		return 0;
+		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
 	}
+	attrs->dest = dest;
+
 	dif_name = name_create();
 	if (!dif_name) {
-		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq)) {
-			rkfree(msg_attrs);
-			name_destroy(source);
-			name_destroy(dest);
-			return -1;
-		}
-
-		return 0;
+		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
 	}
+	attrs->dif_name = dif_name;
+
 	fspec = rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
 	if (!fspec) {
-		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq)) {
-			rkfree(msg_attrs);
-			name_destroy(source);
-			name_destroy(dest);
-			name_destroy(dif_name);
-			return -1;
-		}
-
-		return 0;
+		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
 	}
+	attrs->fspec = fspec;
 
 	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
 	if (!msg) {
-		rkfree(msg_attrs);
-		name_destroy(source);
-		name_destroy(dest);
-		name_destroy(dif_name);
-		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq))
-			return -1;
-
-		return 0;
+		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
 	}
+	msg->attrs = attrs;
+
 	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
 	if (!hdr) {
-		rkfree(msg_attrs);
-		name_destroy(source);
-		name_destroy(dest);
-		name_destroy(dif_name);
-		rkfree(fspec);
-		rkfree(msg);
-		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq))
-			return -1;
-
-		return 0;
+		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
 	}
-	msg->attrs = msg_attrs;
 	msg->rina_hdr = hdr;
 
 	if (rnl_parse_msg(info, msg)) {
-		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq))
-			return -1;
-
-		return 0;
+		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
 	}
+
 	ipc_id = msg->rina_hdr->dst_ipc_id;
 	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
 	if (!ipc_process) {
 		LOG_ERR("IPC process %d not found", ipc_id);
-		if (rnl_app_alloc_flow_result_msg(ipc_id,
-                                              msg->rina_hdr->src_ipc_id, -1,
-                                              info->snd_seq))
-			return -1;
-
-		return 0;
+		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
 	}
+
 	if (ipc_process->ops->flow_allocate_request(ipc_process->data,
-                                                    msg_attrs->source,
-                                                    msg_attrs->dest,
-                                                    msg_attrs->fspec,
-                                                    msg_attrs->id,
-                                                    msg->seq_num,
-                                                    msg->rina_hdr->src_ipc_id))
+			attrs->source, attrs->dest, attrs->fspec, attrs->id,
+			msg->seq_num, msg->rina_hdr->src_ipc_id))
 	{
-		LOG_ERR("Failed allocate flow request for port id: %d",
-                        msg_attrs->id);
-		if (rnl_app_alloc_flow_result_msg(ipc_id,
-                                              msg->rina_hdr->src_ipc_id, -1,
-                                              info->snd_seq))
-			return -1;
+		LOG_ERR("Failed allocate flow request for port id: %d", attrs->id);
+		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+				dif_name, attrs, msg, ipc_id, -1, info->snd_seq,
+				info->snd_portid);
 	}
 
-	rkfree(hdr);
-	rkfree(msg_attrs);
-	rkfree(msg);
-        
+	alloc_flow_req_free_memory(source, dest, fspec, dif_name, attrs, msg);
 	return 0;
 }
 

@@ -507,10 +507,10 @@ int rnl_app_alloc_flow_req_arrived_msg(struct ipcp_instance_data * data,
 				       port_id_t                   id,
 				       uint_t	   		   seq_num);
 
-int rnl_app_alloc_flow_result_msg(ipc_process_id_t src_ipc_id,
-		  	  	  ipc_process_id_t dst_ipc_id,
+int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
 		  	  	  uint_t           res,
-		  	  	  uint_t	   seq_num);
+		  	  	  uint_t	   seq_num,
+		  	  	  uint_t port_id);
 
 int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
 				  uint_t           res,

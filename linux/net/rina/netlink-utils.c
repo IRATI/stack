@@ -2087,10 +2087,10 @@ int rnl_app_alloc_flow_req_arrived_msg(struct ipcp_instance_data * data,
 }
 EXPORT_SYMBOL(rnl_app_alloc_flow_req_arrived_msg);
 
-int rnl_app_alloc_flow_result_msg(ipc_process_id_t src_ipc_id,
-				  ipc_process_id_t dst_ipc_id,
-				  uint_t           res,
-				  uint_t	   seq_num)
+int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
+		  	  	  uint_t           res,
+		  	  	  uint_t	   seq_num,
+		  	  	  uint_t port_id)
 {
 	struct sk_buff * out_msg;
 	struct rina_msg_hdr * out_hdr;
@@ -2115,9 +2115,8 @@ int rnl_app_alloc_flow_result_msg(ipc_process_id_t src_ipc_id,
 		return -1;
 	}
 
-	out_hdr->src_ipc_id = src_ipc_id; /* This IPC process */
-	out_hdr->dst_ipc_id = dst_ipc_id; /* The IPC process that originated
-					 the request*/
+	out_hdr->src_ipc_id = ipc_id; /* This IPC process */
+	out_hdr->dst_ipc_id = 0;
 
 	if (rnl_format_ipcm_alloc_flow_req_result_msg(res, out_msg)){
 		LOG_ERR("Could not format message...");
@@ -2130,7 +2129,7 @@ int rnl_app_alloc_flow_result_msg(ipc_process_id_t src_ipc_id,
 	if (result){
 		LOG_DBG("Result of genlmesg_end: %d", result);
 	}
-	result = genlmsg_unicast(&init_net, out_msg, 1);
+	result = genlmsg_unicast(&init_net, out_msg, port_id);
 	if(result) {
 		LOG_ERR("Could not send unicast msg: %d", result);
 		return -1;
