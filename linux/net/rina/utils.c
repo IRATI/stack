@@ -115,21 +115,29 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
                 LOG_ERR("Cannot allocate %zd bytes", size);
                 return NULL;
         }
-        LOG_DBG("The requested block has been allocated at %pK, size %zd",
-                ptr, real_size);
+        LOG_DBG("The requested block is at %pK, size %zd", ptr, real_size);
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
         if (!ptr) {
-                LOG_ERR("Cannot tamper block, it's NULL");
+                LOG_ERR("Cannot tamper a NULL memory block");
                 return ptr;
         }
 
-        header               = ptr;
+        header               =
+                (struct memblock_header *) ptr;
         header_filler_init(header);
         header->inner_length = size;
-        ptr                  = header + sizeof(*header) / sizeof(void *);
-        footer               = ptr    + sizeof(*footer) / sizeof(void *);
+        ptr                  =
+                (void *)((uint8_t *) header + sizeof(*header));
+        footer               =
+                (struct memblock_footer *)((uint8_t *) ptr + size);
         footer_filler_init(footer);
+
+        ASSERT((uint8_t *) header <= (uint8_t *) ptr);
+        ASSERT((uint8_t *) ptr    <= (uint8_t *) footer);
+
+        LOG_DBG("Memblock header at %pK/%zd", header, sizeof(*header));
+        LOG_DBG("Memblock footer at %pK/%zd", footer, sizeof(*footer));
 
         LOG_DBG("Returning tampered memory block %pK/%zd", ptr, real_size);
 #endif
