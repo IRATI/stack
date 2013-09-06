@@ -35,8 +35,8 @@ int is_value_in_range(int value, int min_value, int max_value)
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
 struct memblock_header {
-        uint8_t filler[BITS_PER_LONG / 8];
         size_t  inner_length;
+        uint8_t filler[BITS_PER_LONG / 8];
 };
 
 struct memblock_footer {
@@ -49,8 +49,8 @@ static void filler_init(uint8_t * f, size_t length)
 
         LOG_DBG("Applying filler at %pK, size %zd", f, length);
 
-        for (i = 0; i != length; i++) {
-                *f = i;
+        for (i = 0; i < length; i++) {
+                *f = i % 0xff;
                 f++;
         }
 }
@@ -61,9 +61,11 @@ static int is_filler_ok(const uint8_t * f, size_t length)
 
         LOG_DBG("Checking filler at %pK, size %zd", f, length);
 
-        for (i = 0; i != length; i++) {
-                if (*f != i)
+        for (i = 0; i < length; i++) {
+                if (*f != i % 0xff) {
+                        LOG_ERR("Filler corrupted at %pK", f);
                         return 0;
+                }
                 f++;
         }
 
@@ -115,21 +117,29 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
                 LOG_ERR("Cannot allocate %zd bytes", size);
                 return NULL;
         }
-        LOG_DBG("The requested block has been allocated at %pK, size %zd",
-                ptr, real_size);
+        LOG_DBG("The requested block is at %pK, size %zd", ptr, real_size);
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
         if (!ptr) {
-                LOG_ERR("Cannot tamper block, it's NULL");
+                LOG_ERR("Cannot tamper a NULL memory block");
                 return ptr;
         }
 
-        header               = ptr;
+        header               =
+                (struct memblock_header *) ptr;
         header_filler_init(header);
         header->inner_length = size;
-        ptr                  = header + sizeof(*header) / sizeof(void *);
-        footer               = ptr    + sizeof(*footer) / sizeof(void *);
+        ptr                  =
+                (void *)((uint8_t *) header + sizeof(*header));
+        footer               =
+                (struct memblock_footer *)((uint8_t *) ptr + size);
         footer_filler_init(footer);
+
+        ASSERT((uint8_t *) header <= (uint8_t *) ptr);
+        ASSERT((uint8_t *) ptr    <= (uint8_t *) footer);
+
+        LOG_DBG("Memblock header at %pK/%zd", header, sizeof(*header));
+        LOG_DBG("Memblock footer at %pK/%zd", footer, sizeof(*footer));
 
         LOG_DBG("Returning tampered memory block %pK/%zd", ptr, real_size);
 #endif
@@ -168,21 +178,25 @@ void rkfree(void * ptr)
         ASSERT(ptr);
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
-        header = ptr - sizeof(*header) / sizeof(void *);
-        footer = ptr + sizeof(*header) + header->inner_length / sizeof(void *);
+        header = (struct memblock_header *)
+                ((uint8_t *) ptr - sizeof(*header));
+        footer = (struct memblock_footer *)
+                ((uint8_t *) ptr + header->inner_length);
 
-        if (is_header_filler_ok(header)) {
+        if (!is_header_filler_ok(header)) {
                 LOG_CRIT("Memory block %pK has been corrupted (header)", ptr);
                 BUG();
         }
-        if (is_footer_filler_ok(footer)) {
+        if (!is_footer_filler_ok(footer)) {
                 LOG_CRIT("Memory block %pK has been corrupted (footer)", ptr);
                 BUG();
         }
 
 #ifdef CONFIG_RINA_MEMORY_POISONING
-        p    = ptr + sizeof(*header);
+        p    = (uint8_t *) ptr;
         size = header->inner_length;
+
+        LOG_DBG("Now poisoning the memory block (%pK-%pK)", p, p + size - 1);
 
         LOG_DBG("Poisoning memory block at %pK, length %zd", p, size);
 
