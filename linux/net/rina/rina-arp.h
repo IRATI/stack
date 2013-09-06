@@ -47,12 +47,12 @@ int             rinarp_remove_reply_handler(struct arp_reply_ops *ops);
 struct naddr_handle;
 struct naddr_filter;
 
-typedef char * naddr_t;
+typedef unsigned char * naddr_t;
 
 struct naddr_handle * rinarp_naddr_register(__be16              proto, 
                                             __be16              proto_length,
                                             struct net_device * device,
-                                            naddr_t *           address);
+                                            naddr_t             address);
 int                   rinarp_naddr_unregister(struct naddr_handle * h);
 
 typedef void (* arp_handler_t)(struct sk_buff * skb);
@@ -69,11 +69,11 @@ arp_handler_t         naddr_filter_rep_handler_get(struct naddr_handle * h);
  * Checks for a network address in the ARP cache. Returns the network address
  * if present NULL if not present
  */
-unsigned char *         rinarp_get_naddr(struct naddr_filter * filter, 
-                                           unsigned char *     address);
+naddr_t               rinarp_naddr_get(struct naddr_filter * filter, 
+                                       naddr_t               address);
 
-int                     rinarp_send_request(struct naddr_filter * filter, 
-                                            unsigned char * address);
+int                   rinarp_send_request(struct naddr_filter * filter, 
+                                          naddr_t               address);
 #endif
 
 #endif
