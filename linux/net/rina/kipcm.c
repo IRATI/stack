@@ -518,7 +518,8 @@ static int notify_ipcp_register_app_request(void *             data,
 		return 0;
 	}
 
-	if (ipc_process->ops->application_register(data, attrs->app_name)) {
+	if (ipc_process->ops->application_register(
+			ipc_process->data, attrs->app_name)) {
 		if (rnl_app_register_response_msg(ipc_id,
                                               msg->rina_hdr->src_ipc_id, -1,
                                               info->snd_seq)) {
