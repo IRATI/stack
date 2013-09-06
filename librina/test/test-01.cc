@@ -126,7 +126,7 @@ int main(int argc, char * argv[]) {
 			<< "\n";
 
 	/* TEST READ SDU */
-	int bytesRead = flow2->readSDU(sdu);
+	int bytesRead = flow2->readSDU((void*)sdu, 5);
 	std::cout << "Read an SDU of " << bytesRead << " bytes. Contents: \n";
 	for (int i = 0; i < bytesRead; i++) {
 		std::cout << "SDU[" << i << "]: " << sdu[i] << "\n";

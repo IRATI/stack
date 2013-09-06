@@ -715,27 +715,6 @@ IpcmRegisterApplicationResponseMessage::IpcmRegisterApplicationResponseMessage()
 				BaseNetlinkResponseMessage(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE) {
 }
 
-const ApplicationProcessNamingInformation&
-IpcmRegisterApplicationResponseMessage::getApplicationName() const {
-	return applicationName;
-}
-
-void IpcmRegisterApplicationResponseMessage::setApplicationName(
-		const ApplicationProcessNamingInformation& applicationName) {
-	this->applicationName = applicationName;
-}
-
-const ApplicationProcessNamingInformation&
-IpcmRegisterApplicationResponseMessage::getDifName() const {
-	return difName;
-}
-
-void IpcmRegisterApplicationResponseMessage::setDifName(
-		const ApplicationProcessNamingInformation& difName) {
-	this->difName = difName;
-}
-
-
 /* CLASS IPCM UNREGISTER APPLICATION REQUEST MESSAGE */
 IpcmUnregisterApplicationRequestMessage::IpcmUnregisterApplicationRequestMessage() :
 				NetlinkRequestOrNotificationMessage(

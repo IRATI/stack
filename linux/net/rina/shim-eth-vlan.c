@@ -31,7 +31,7 @@
 
 #define SHIM_NAME     "shim-eth-vlan"
 #define MAJOR_VERSION 0
-#define MINOR_VERSION 3
+#define MINOR_VERSION 4
 #define RINA_PREFIX   SHIM_NAME
 
 #include "logs.h"
@@ -60,7 +60,7 @@ enum port_id_state {
         PORT_STATE_ALLOCATED
 };
 
-/* Hold the information related to one flow*/
+/* Holds the information related to one flow */
 struct shim_eth_flow {
 	struct list_head   list;
         struct name *      source;
@@ -77,16 +77,25 @@ struct shim_eth_flow {
  * shim Ethernet IPC Process
  */
 struct ipcp_instance_data {
-	struct list_head       list;
+	struct list_head list;
 
         /* IPC process id and DIF name */
-        ipc_process_id_t       id;
+        ipc_process_id_t id;
 
         /* The configuration of the shim IPC Process */
         struct eth_vlan_info * info;
 
+	/* The packet_type struct */
+	struct packet_type * eth_vlan_packet_type;
+
+	/* The device structure */
+	struct net_device * dev;
+
 	/* The IPC Process using the shim-eth-vlan */
 	struct name * app_name;
+
+	/* The registered application */
+	struct name * reg_app;
 
         /* Stores the state of flows indexed by port_id */
 	struct list_head flows;
@@ -130,7 +139,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 	flow->port_id = id;
 	flow->port_id_state = PORT_STATE_NULL;
 	
-	/* Keep them as name * ? Or as MAC or 'IP'? */
+        /* Keep them as name */
         flow->dest = name_dup(dest);
         if (!flow->dest) {
                 rkfree(flow);
@@ -143,7 +152,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 return -1;
         }
 
-	/* FIXME: Convert the names to IP addresses */
+	/* FIXME: Convert the names to network addresses */
 
         /* 
 	 * FIXME: If the destination is in the ARP cache,
@@ -191,7 +200,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
         /* 
 	 * On positive response, flow should transition to allocated state 
 	 */
-        if (resp == 0) {
+        if (!resp) {
 		/* FIXME: Deliver frames to application */
 		flow->port_id_state = PORT_STATE_ALLOCATED;
         } else {
@@ -232,15 +241,24 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(name);
 
-	if (data->app_name) {
-		char * tmp = name_tostring(name);
+	if (data->reg_app) {
+		char * tmp = name_tostring(data->reg_app);
 		LOG_ERR("Application %s is already registered", tmp);
 		rkfree(tmp);
 		return -1;
 	}
+
+	/* Who's the user of the shim DIF? */
+	if (data->app_name) {
+		if (!name_cmp(name, data->app_name)) {
+			LOG_ERR("Shim already has a different user");
+			return -1;
+		}
+	}
+
 	
-	data->app_name = name_dup(name);
-       	if (!data->app_name) {
+	data->reg_app = name_dup(name);
+       	if (!data->reg_app) {
                 char * tmp = name_tostring(name);
                 LOG_ERR("Application %s registration has failed", tmp);
                 rkfree(tmp);
@@ -257,15 +275,20 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
 {
         ASSERT(data);
         ASSERT(name);
-	if (!data->app_name) {
+	if (!data->reg_app) {
 		LOG_ERR("Shim-eth-vlan has no application registered");
+		return -1;
+	}
+	
+	if (!name_cmp(data->reg_app,name)) {
+		LOG_ERR("Application registered != application specified");
 		return -1;
 	}
 
 	/* FIXME: Remove from ARP cache */
 
-	name_destroy(data->app_name);
-	data->app_name = NULL;
+	name_destroy(data->reg_app);
+	data->reg_app = NULL;
 	return 0;
 }
 
@@ -295,7 +318,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 
         skb = skb_share_check(skb, GFP_ATOMIC);
         if (!skb) {
-                /* FIXME: A message here might be helpful ... */
+                LOG_ERR("Couldn't obtain ownership of the skb");
                 return -1;
         }
 
@@ -384,11 +407,21 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
+	inst->data->eth_vlan_packet_type = 
+		rkzalloc(sizeof(struct packet_type), GFP_KERNEL);
+	if (!inst->data->eth_vlan_packet_type) {
+                LOG_DBG("Failed creation of inst->data->eth_vlan_packet_type");
+		rkfree(inst->data);
+                rkfree(inst);
+                return NULL;
+        }
+
 	inst->data->id = id;
         
         inst->data->info = rkzalloc(sizeof(*inst->data->info), GFP_KERNEL);
         if (!inst->data->info) {
                 LOG_DBG("Failed creation of inst->data->info");
+		rkfree(inst->data->eth_vlan_packet_type);
                 rkfree(inst->data);
                 rkfree(inst);
                 return NULL;
@@ -399,6 +432,7 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
 	if (!inst->data->info->interface_name) {
                 LOG_DBG("Failed creation of interface_name");
                 rkfree(inst->data->info);
+		rkfree(inst->data->eth_vlan_packet_type);
 		rkfree(inst->data);
                 rkfree(inst);
                 return NULL;
@@ -409,6 +443,7 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
                 LOG_DBG("Failed creation of dif_name");
 		rkfree(inst->data->info->interface_name);
                 rkfree(inst->data->info);
+		rkfree(inst->data->eth_vlan_packet_type);
                 rkfree(inst->data);
                 rkfree(inst);
                 return NULL;
@@ -420,6 +455,7 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
                 name_destroy(inst->data->info->dif_name);
 		rkfree(inst->data->info->interface_name);
                 rkfree(inst->data->info);
+		rkfree(inst->data->eth_vlan_packet_type);
                 rkfree(inst->data);
                 rkfree(inst);
                 return NULL;
@@ -467,9 +503,8 @@ struct ipcp_instance * eth_vlan_configure(struct ipcp_factory_data *  data,
 	bool_t                      reconfigure;
         uint16_t                    old_vlan_id;
         string_t *                  old_interface_name;
-	struct packet_type          eth_vlan_packet_type;
 	string_t *                  complete_interface;
-	struct net_device *dev;
+
 
         ASSERT(data);
         ASSERT(inst);
@@ -494,7 +529,7 @@ struct ipcp_instance * eth_vlan_configure(struct ipcp_factory_data *  data,
 
 
         /* Retrieve configuration of IPC process from params */
-	list_for_each_entry(tmp, &(cfg->list), list) {
+	list_for_each_entry (tmp, &(cfg->list), list) {
 		entry = tmp->entry;
 		value = entry->value;
 		if (!strcmp(entry->name, "dif-name") &&
@@ -536,37 +571,16 @@ struct ipcp_instance * eth_vlan_configure(struct ipcp_factory_data *  data,
                 }
         }
 
-	eth_vlan_packet_type.type = cpu_to_be16(ETH_P_RINA);
-	eth_vlan_packet_type.func = eth_vlan_rcv;
 
         if (reconfigure) {
-            
-                /* Remove previous handler if there's one */
-                if (old_interface_name && old_vlan_id != 0) {
-                      
-                        /* First construct the complete interface name */
-			complete_interface= 
-				create_vlan_interface_name(old_interface_name, 
-							   old_vlan_id);
-			if (!complete_interface) {
-				return inst;
-			}
-                        /* Remove the handler */
-                        read_lock(&dev_base_lock);
-                        dev = __dev_get_by_name(&init_net, complete_interface);
-                        if (!dev) {
-				LOG_ERR("Invalid device to configure: %s",
-					complete_interface);
-                                return inst;
-                        }
-                        eth_vlan_packet_type.dev = dev;
-                        dev_remove_pack(&eth_vlan_packet_type);
-                        read_unlock(&dev_base_lock);
-                        rkfree(complete_interface);
-                }
-        }
+		dev_remove_pack(instance->eth_vlan_packet_type);
+	}
 
-	complete_interface= 
+
+	instance->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
+	instance->eth_vlan_packet_type->func = eth_vlan_rcv;
+
+	complete_interface = 
 		create_vlan_interface_name(info->interface_name, 
 					   info->vlan_id);
 	if (!complete_interface) {
@@ -574,14 +588,14 @@ struct ipcp_instance * eth_vlan_configure(struct ipcp_factory_data *  data,
 	}
         /* Add the handler */
 	read_lock(&dev_base_lock);
-	dev = __dev_get_by_name(&init_net, complete_interface);
-	if (!dev) {
+	instance->dev = __dev_get_by_name(&init_net, complete_interface);
+	if (!instance->dev) {
 		LOG_ERR("Invalid device to configure: %s",
 			complete_interface);
 		return inst;
 	}
-	eth_vlan_packet_type.dev = dev;
-	dev_add_pack(&eth_vlan_packet_type);
+	instance->eth_vlan_packet_type->dev = instance->dev;
+	dev_add_pack(instance->eth_vlan_packet_type);
 	read_unlock(&dev_base_lock);
 	rkfree(complete_interface);
 
@@ -605,6 +619,10 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
 		 inst = list_entry(pos, struct ipcp_instance_data, list);
 
 		 if (inst->id == instance->data->id) {
+			 /* Remove packet handler if there is one */
+			 if (inst->eth_vlan_packet_type->dev)
+				 __dev_remove_pack(inst->eth_vlan_packet_type);
+
 			 /* Unbind from the instances set */
 			 list_del(pos);
 
@@ -613,6 +631,13 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
 			 name_destroy(inst->info->name);
 			 rkfree(inst->info->interface_name);
 			 rkfree(inst->info);
+			 /* 
+			  * Might cause problems: 
+			  * The packet type might still be in use by receivers
+			  * and must not be freed until after all 
+			  * the CPU's have gone through a quiescent state.
+			  */
+			 rkfree(inst->eth_vlan_packet_type);
 			 rkfree(inst);
 		 }
 	}

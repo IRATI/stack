@@ -66,8 +66,8 @@ static struct list_head data;
 struct arp_hdr {
 	__be16          ar_hrd;         /* format of hardware address   */
 	__be16          ar_pro;         /* format of protocol address   */
-	__u8           ar_hln;         /* length of hardware address   */
-        __u8           ar_pln;         /* length of protocol address   */
+	__u8            ar_hln;         /* length of hardware address   */
+        __u8            ar_pln;         /* length of protocol address   */
 	__be16          ar_op;          /* ARP opcode (command)         */
  
 #if 0
@@ -307,7 +307,7 @@ static struct sk_buff *arp_create(int op, int ptype, int plen,
 
 	memcpy(arp_ptr, src_hw, dev->addr_len);
 	arp_ptr += dev->addr_len;
-	memcpy(arp_ptr, &src_nwaddr, plen);
+	memcpy(arp_ptr, src_nwaddr, plen);
 	arp_ptr += plen;
 
 	switch (dev->type) {
@@ -318,7 +318,7 @@ static struct sk_buff *arp_create(int op, int ptype, int plen,
 			memset(arp_ptr, 0, dev->addr_len);
 		arp_ptr += dev->addr_len;
 	}
-	memcpy(arp_ptr, &dest_nwaddr, plen);
+	memcpy(arp_ptr, dest_nwaddr, plen);
 
 	return skb;
 
@@ -379,10 +379,10 @@ static int arp_process(struct sk_buff *skb)
 	unsigned char  *arp_ptr;
 
 	unsigned char *sha;
-	unsigned char s_netaddr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
-	unsigned char d_netaddr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
-	unsigned char s_hwaddr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
-	unsigned char d_hwaddr[ALIGN(MAX_ADDR_LEN, sizeof(unsigned long))];
+	unsigned char *s_netaddr;
+	unsigned char *d_netaddr;
+	unsigned char *s_hwaddr;
+	unsigned char *d_hwaddr;
 	u16 dev_type = dev->type;
 	struct net *net = dev_net(dev);
 
@@ -427,13 +427,13 @@ static int arp_process(struct sk_buff *skb)
 	arp_ptr = (unsigned char *)(arp + 1);
 	sha	= arp_ptr;
 	arp_ptr += dev->addr_len;
-	memcpy(&s_netaddr, arp_ptr, arp->ar_pln);
+	memcpy(s_netaddr, arp_ptr, arp->ar_pln);
 	arp_ptr += arp->ar_pln;
-	memcpy(&s_hwaddr, arp_ptr, arp->ar_hln);
+	memcpy(s_hwaddr, arp_ptr, arp->ar_hln);
 	arp_ptr += dev->addr_len;
-	memcpy(&d_netaddr, arp_ptr, arp->ar_pln);
+	memcpy(d_netaddr, arp_ptr, arp->ar_pln);
 	arp_ptr += arp->ar_pln;
-	memcpy(&d_hwaddr, arp_ptr, arp->ar_hln);
+	memcpy(d_hwaddr, arp_ptr, arp->ar_hln);
 
 /*
  *  Process entry. The idea here is we want to send a reply if it is a
@@ -447,28 +447,21 @@ static int arp_process(struct sk_buff *skb)
  */
 
 /* FIXME: The following part, first complete top part ARP PM */
-	if (arp->ar_op == htons(ARPOP_REQUEST)) {
+	if (arp->ar_op == htons(RINARP_REQUEST)) {
+		/* Are we advertising this network address? */
 	
-		int dont_send;
+	
+	} else if (arp->arp_op == htons(RINARP_REPLY)) {
+		/* Is the reply for one of our network addresses? */
 
-		dont_send = arp_ignore(in_dev, sip, tip);
-		if (!dont_send && IN_DEV_ARPFILTER(in_dev))
-			dont_send = arp_filter(sip, tip, dev);
-		if (!dont_send) {
-			n = neigh_event_ns(&arp_tbl, sha, &sip, dev);
-			if (n) {
-				arp_send(ARPOP_REPLY, ETH_P_ARP, sip,
-					 dev, tip, sha, dev->dev_addr,
-					 sha);
-				neigh_release(n);
-			}
-		}	
+		
+	} else {
+		printk("Unknown operation code");
 		goto out;
 	}
 
 	/* Update our ARP tables */
-
-	n = __neigh_lookup(&arp_tbl, &sip, dev, 0);
+	
 
 
 
