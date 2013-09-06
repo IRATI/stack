@@ -196,16 +196,16 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
 }
 
 static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
-                                        port_id_t                   id,
-                                        response_reason_t *         response)
+		port_id_t                   id,
+		response_reason_t *         response)
 {
-        struct dummy_flow * flow;
-        int retval = 0;
+	struct dummy_flow * flow;
+	int retval = 0;
 
-        ASSERT(data);
-        ASSERT(response);
+	ASSERT(data);
+	ASSERT(response);
 
-        if (!data->info) {
+	if (!data->info) {
 		LOG_ERR("There is not info in this IPC Process");
 		return -1;
 	}
@@ -215,81 +215,81 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
 		return -1;
 	}
 
-        flow = find_flow(data, id);
+	flow = find_flow(data, id);
 	if (!flow) {
 		LOG_ERR("Flow does not exist, cannot allocate");
 		return -1;
 	}
 
 	if (flow->state != PORT_STATE_INITIATOR_ALLOCATE_PENDING)
-	        		return -1;
+		return -1;
 
-        /* On positive response, flow should transition to allocated state */
-        if (*response == 0) {
-                if (rnl_app_alloc_flow_result_msg(data->id,
-						  flow->dst_id,
-						  0,
-						  flow->seq_num)) {
-                	list_del(&flow->list);
+	/* On positive response, flow should transition to allocated state */
+	if (*response == 0) {
+		if (rnl_app_alloc_flow_result_msg(data->id,
+				flow->dst_id,
+				0,
+				flow->seq_num)) {
+			list_del(&flow->list);
 			name_destroy(flow->source);
 			name_destroy(flow->dest);
 			rkfree(flow);
 			return -1;
 		}
-                if (kipcm_flow_add(default_kipcm, data->id, id)) {
-                        list_del(&flow->list);
-                        name_destroy(flow->source);
-                        name_destroy(flow->dest);
-                        rkfree(flow);
-                        return -1;
-                }
-                flow->state = PORT_STATE_ALLOCATED;
-        } else {
-        	if (rnl_app_alloc_flow_result_msg(data->id,
-						  flow->dst_id,
-						  -1,
-						  flow->seq_num))
-        		retval = -1;
+		if (kipcm_flow_add(default_kipcm, data->id, id)) {
+			list_del(&flow->list);
+			name_destroy(flow->source);
+			name_destroy(flow->dest);
+			rkfree(flow);
+			return -1;
+		}
+		flow->state = PORT_STATE_ALLOCATED;
+	} else {
+		if (rnl_app_alloc_flow_result_msg(data->id,
+				flow->dst_id,
+				-1,
+				flow->seq_num))
+			retval = -1;
 
-        	list_del(&flow->list);
+		list_del(&flow->list);
 		name_destroy(flow->source);
 		name_destroy(flow->dest);
 		rkfree(flow);
 		return retval;
-        }
+	}
 
-        /*
-         * NOTE:
-         *   Other shims may implement other behavior here,
-         *   such as contacting the apposite shim IPC process
-         */
+	/*
+	 * NOTE:
+	 *   Other shims may implement other behavior here,
+	 *   such as contacting the apposite shim IPC process
+	 */
 
-        return 0;
+	return 0;
 }
 
 static int dummy_flow_deallocate(struct ipcp_instance_data * data,
-                                 port_id_t                   id)
+		port_id_t                   id)
 {
-        struct dummy_flow * flow;
+	struct dummy_flow * flow;
 
-        ASSERT(data);
-        flow = find_flow(data, id);
-        if (!flow) {
-                LOG_ERR("Flow does not exist, cannot remove");
-                return -1;
-        }
+	ASSERT(data);
+	flow = find_flow(data, id);
+	if (!flow) {
+		LOG_ERR("Flow does not exist, cannot remove");
+		return -1;
+	}
 
-        /* FIXME: Notify the destination application, maybe? */
+	/* FIXME: Notify the destination application, maybe? */
 
-        list_del(&flow->list);
-        name_destroy(flow->dest);
-        name_destroy(flow->source);
-        rkfree(flow);
+	list_del(&flow->list);
+	name_destroy(flow->dest);
+	name_destroy(flow->source);
+	rkfree(flow);
 
-        if (kipcm_flow_remove(default_kipcm, id))
-                return -1;
+	if (kipcm_flow_remove(default_kipcm, id))
+		return -1;
 
-        return 0;
+	return 0;
 }
 
 static int dummy_application_register(struct ipcp_instance_data * data,
