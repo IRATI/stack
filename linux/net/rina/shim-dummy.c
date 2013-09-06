@@ -441,6 +441,37 @@ static int dummy_fini(struct ipcp_factory_data * data)
         return 0;
 }
 
+static int dummy_assign_dif_request(struct ipcp_instance_data * data,
+		    	    	    const struct name * 	dif_name)
+{
+	ASSERT(data);
+
+	data->info = rkzalloc(sizeof(struct dummy_info), GFP_KERNEL);
+	if (!data->info)
+		return -1;
+
+	data->info->dif_name = rkzalloc(sizeof(struct name), GFP_KERNEL);
+	if (!data->info->dif_name) {
+		rkfree(data->info);
+
+		return -1;
+	}
+
+	if (name_cpy(dif_name, data->info->dif_name)) {
+		char * tmp = name_tostring(dif_name);
+
+		rkfree(data->info->dif_name);
+		rkfree(data->info);
+
+		LOG_ERR("Application %s registration has failed", tmp);
+
+		rkfree(tmp);
+
+		return -1;
+	}
+	return 0;
+}
+
 static struct ipcp_instance_ops dummy_instance_ops = {
         .flow_allocate_request  = dummy_flow_allocate_request,
         .flow_allocate_response = dummy_flow_allocate_response,
@@ -448,6 +479,7 @@ static struct ipcp_instance_ops dummy_instance_ops = {
         .application_register   = dummy_application_register,
         .application_unregister = dummy_application_unregister,
         .sdu_write              = dummy_sdu_write,
+        .assign_dif_request	= dummy_assign_dif_request,
 };
 
 static struct ipcp_instance_data *
