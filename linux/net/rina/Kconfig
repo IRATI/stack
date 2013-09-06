@@ -14,6 +14,7 @@ if RINA
 config RINA_DEBUG
 	bool "Debugging support"
 	default y
+        depends on RINA_ASSERTIONS
 	help
 	  No help for the time being
 
@@ -31,8 +32,22 @@ config RINA_MEMORY_CHECKS
 	help
 	  No help for the time being
 
+config RINA_MEMORY_TAMPERING
+	bool "Memory blocks tampering"
+	default n
+        depends on RINA_MEMORY_CHECKS
+	help
+	  No help for the time being
+
+config RINA_MEMORY_POISONING
+	bool "Memory blocks poisoning"
+	default n
+        depends on RINA_MEMORY_TAMPERING
+	help
+	  No help for the time being
+
 config RINA_MEMORY_PTRS_DUMP
-	bool "Dump pointers passed to/from alloc and free routines"
+	bool "Dump pointers passed to alloc()/returned by free()"
 	default n
         depends on RINA_MEMORY_CHECKS
 	help
@@ -53,9 +68,8 @@ config RINA_DEBUG_HEARTBEATS
 	  No help for the time being
 
 config RINA_ASSERTIONS
-	bool "Embedded assertions"
+	bool "Embed assertions (slowing down everything)"
 	default y
-	depends on RINA_DEBUG
 	help
 	  No help for the time being
 
