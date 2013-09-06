@@ -443,7 +443,7 @@ static int dummy_fini(struct ipcp_factory_data * data)
         return 0;
 }
 
-static int dummy_assign_dif_response(struct ipcp_instance_data * data)
+static int dummy_assign_dif_response(struct ipcp_instance_data * data, uint_t res)
 {
 	struct sk_buff * out_msg;
 	struct rina_msg_hdr * out_hdr;
@@ -471,7 +471,7 @@ static int dummy_assign_dif_response(struct ipcp_instance_data * data)
 	out_hdr->src_ipc_id = data->id;
 	out_hdr->dst_ipc_id = 0;
 
-	if (rnl_format_ipcm_assign_to_dif_resp_msg(0, out_msg)){
+	if (rnl_format_ipcm_assign_to_dif_resp_msg(res, out_msg)){
 		LOG_ERR("Could not format message...");
 		nlmsg_free(out_msg);
 		return -1;
@@ -515,8 +515,13 @@ static int dummy_assign_dif_request(struct ipcp_instance_data * data,
 
 		rkfree(tmp);
 
+		dummy_assign_dif_response(data, -1);
+
 		return -1;
 	}
+
+	dummy_assign_dif_response(data, 0);
+
 	return 0;
 }
 
