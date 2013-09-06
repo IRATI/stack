@@ -287,6 +287,115 @@ static int notify_ipcp_assign_dif_request(void *             data,
 
 	if (!data) {
 		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+		rnl_assign_dif_response(0, -1);
+		return -1;
+	}
+
+	kipcm = (struct kipcm *) data;
+
+	if (!info) {
+		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+		rnl_assign_dif_response(0, -1);
+		return -1;
+	}
+	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+	if (!attrs) {
+		rnl_assign_dif_response(0, -1);
+		return -1;
+	}
+
+	dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
+	if (!dif_config){
+		rkfree(attrs);
+		rnl_assign_dif_response(0, -1);
+		return -1;
+	}
+	attrs->dif_config = dif_config;
+
+	dif_name = name_create();
+	if (!dif_name){
+		rkfree(dif_config);
+		rkfree(attrs);
+		rnl_assign_dif_response(0, -1);
+		return -1;
+	}
+	dif_config->dif_name = dif_name;
+	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+	if (!msg) {
+		name_destroy(dif_name);
+		rkfree(dif_config);
+		rkfree(attrs);
+		rnl_assign_dif_response(0, -1);
+		return -1;
+	}
+	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
+	if (!hdr) {
+		name_destroy(dif_name);
+		rkfree(dif_config);
+		rkfree(attrs);
+		rkfree(msg);
+		rnl_assign_dif_response(0, -1);
+		return -1;
+	}
+	msg->attrs = attrs;
+	msg->rina_hdr = hdr;
+
+	if (rnl_parse_msg(info, msg)) {
+		name_destroy(dif_name);
+		rkfree(dif_config);
+		rkfree(hdr);
+		rkfree(attrs);
+		rkfree(msg);
+		rnl_assign_dif_response(0, -1);
+		return -1;
+	}
+	ipc_id = msg->rina_hdr->dst_ipc_id;
+	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+	if (!ipc_process) {
+		LOG_ERR("IPC process %d not found", ipc_id);
+		name_destroy(dif_name);
+		rkfree(dif_config);
+		rkfree(hdr);
+		rkfree(attrs);
+		rkfree(msg);
+		rnl_assign_dif_response(0, -1);
+		return -1;
+	}
+	if (ipc_process->ops->assign_dif_request(ipc_process->data,
+			attrs->dif_config->dif_name)) {
+		char * tmp = name_tostring(attrs->dif_config->dif_name);
+		LOG_ERR("Failed assign to dif %s for IPC process: %d",
+				tmp, ipc_id);
+		rkfree(tmp);
+		rnl_assign_dif_response(0, -1);
+		retval = -1;
+	}
+	rnl_assign_dif_response(ipc_id, 0);
+
+	name_destroy(dif_name);
+	rkfree(dif_config);
+	rkfree(hdr);
+	rkfree(attrs);
+	rkfree(msg);
+
+	return retval;
+}
+
+static int notify_ipcp_register_app_request(void *             data,
+					    struct sk_buff *   buff,
+					    struct genl_info * info)
+{
+	struct kipcm * 				kipcm;
+	struct rnl_ipcm_reg_app_req_msg_attrs * attrs;
+	struct rnl_msg * 			msg;
+	struct name * 				app_name;
+	struct name * 				dif_name;
+	int 					retval = 0;
+	struct ipcp_instance * 			ipc_process;
+	ipc_process_id_t 			ipc_id;
+
+	if (!data) {
+		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
 		return -1;
 	}
 
@@ -300,42 +409,34 @@ static int notify_ipcp_assign_dif_request(void *             data,
 	if (!attrs)
 		return -1;
 
-	dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
-	if (!dif_config){
+	app_name = name_create();
+	if (!app_name){
 		rkfree(attrs);
 		return -1;
 	}
-	attrs->dif_config = dif_config;
+	attrs->app_name= app_name;
 
 	dif_name = name_create();
 	if (!dif_name){
-		rkfree(dif_config);
+		name_destroy(app_name);
 		rkfree(attrs);
 		return -1;
 	}
-	dif_config->dif_name = dif_name;
+	attrs->dif_name= dif_name;
+
 	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
 	if (!msg) {
+		LOG_ERR("Could not allocate space for my_msg struct");
+		name_destroy(app_name);
 		name_destroy(dif_name);
-		rkfree(dif_config);
 		rkfree(attrs);
-		return -1;
-	}
-	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
-	if (!hdr) {
-		name_destroy(dif_name);
-		rkfree(dif_config);
-		rkfree(attrs);
-		rkfree(msg);
 		return -1;
 	}
 	msg->attrs = attrs;
-	msg->rina_hdr = hdr;
-
-	if (rnl_parse_msg(info, msg)) {
+	if (rnl_parse_msg(info, msg)){
+		LOG_ERR("Could not parse message");
+		name_destroy(app_name);
 		name_destroy(dif_name);
-		rkfree(dif_config);
-		rkfree(hdr);
 		rkfree(attrs);
 		rkfree(msg);
 		return -1;
@@ -344,29 +445,23 @@ static int notify_ipcp_assign_dif_request(void *             data,
 	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
 	if (!ipc_process) {
 		LOG_ERR("IPC process %d not found", ipc_id);
+		name_destroy(app_name);
 		name_destroy(dif_name);
-		rkfree(dif_config);
-		rkfree(hdr);
 		rkfree(attrs);
 		rkfree(msg);
 		return -1;
 	}
-	if (ipc_process->ops->assign_dif_request(ipc_process->data,
-			attrs->dif_config->dif_name)) {
-		char * tmp = name_tostring(attrs->dif_config->dif_name);
-		LOG_ERR("Failed assign to dif %s for IPC process: %d",
-				tmp, ipc_id);
-		rkfree(tmp);
+
+	if (ipc_process->ops->application_register(data, attrs->app_name)) {
 		retval = -1;
 	}
 
+	name_destroy(app_name);
 	name_destroy(dif_name);
-	rkfree(dif_config);
-	rkfree(hdr);
 	rkfree(attrs);
 	rkfree(msg);
 
-	return retval;
+	return 0;
 }
 
 static int netlink_handlers_unregister(struct rina_nl_set * set)
@@ -429,6 +524,29 @@ static int netlink_handlers_register(struct kipcm * kipcm)
 		}
 		return -1;
 	}
+	handler = notify_ipcp_register_app_request;
+	if (rina_netlink_handler_register(kipcm->set,
+				RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,
+				kipcm,
+				handler)) {
+		if (rina_netlink_handler_unregister(kipcm->set,
+				RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
+			LOG_ERR("Failed handler unregister while bailing out");
+			/* FIXME: What else could be done here?" */
+		}
+		if (rina_netlink_handler_unregister(kipcm->set,
+				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
+			LOG_ERR("Failed handler unregister while bailing out");
+			/* FIXME: What else could be done here?" */
+		}
+		if (rina_netlink_handler_unregister(kipcm->set,
+				RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
+			LOG_ERR("Failed handler unregister while bailing out");
+			/* FIXME: What else could be done here?" */
+		}
+		return -1;
+	}
+
 
 	return 0;
 }
@@ -1005,22 +1123,3 @@ int kipcm_sdu_post(struct kipcm * kipcm,
         return 0;
 }
 EXPORT_SYMBOL(kipcm_sdu_post);
-
-int kipcm_send_nl_msg(struct sk_buff * out_msg)
-{
-	int result;
-
-	/*
-	 * FIXME: Destination port-id set to 1, it must be changed in the
-	 * future, probably obtained from a config file
-	 */
-	result = genlmsg_unicast(&init_net, out_msg, 1);
-	if (result) {
-		LOG_ERR("Could not send unicast msg: %d", result);
-		nlmsg_free(out_msg);
-		return -1;
-	}
-	nlmsg_free(out_msg);
-	return 0;
-}
-EXPORT_SYMBOL(kipcm_send_nl_msg);
