@@ -48,6 +48,7 @@ struct naddr_handle;
 struct naddr_filter;
 
 typedef unsigned char * naddr_t;
+typedef u8[6]           mac_addr_t;
 
 struct naddr_handle * rinarp_naddr_register(__be16              proto, 
                                             __be16              proto_length,
@@ -55,7 +56,8 @@ struct naddr_handle * rinarp_naddr_register(__be16              proto,
                                             naddr_t             address);
 int                   rinarp_naddr_unregister(struct naddr_handle * h);
 
-typedef void (* arp_handler_t)(struct sk_buff * skb);
+typedef void (* arp_handler_t)(naddr_t *  dest_net_addr,
+                               mac_addr_t dest_hw_addr);
 
 struct naddr_filter * naddr_filter_create(struct naddr_handle * handle);
 int                   naddr_filter_set(struct naddr_filter * filter,
