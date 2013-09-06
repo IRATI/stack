@@ -1961,7 +1961,6 @@ int rnl_assign_dif_response(ipc_process_id_t id, uint_t res, uint_t seq_num)
 		nlmsg_free(out_msg);
 		return -1;
 	}
-	nlmsg_free(out_msg);
 
 	return 0;
 }
