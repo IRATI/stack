@@ -44,25 +44,44 @@ int             rinarp_send_request(struct arp_reply_ops *ops);
 int             rinarp_remove_reply_handler(struct arp_reply_ops *ops);
 
 #if 0
-struct arp_reply_ops {
-	__be16              ar_pro; 
-	unsigned char *     src_netw_addr;
-	unsigned char *     dest_netw_addr;
-	void                (*handle)(struct sk_buff *skb);
-};
+
+
+/*
+ * Generic use:
+ *   Create a netaddr_handle by registering a network address
+ *   Get a filter by calling netaddr_filter_set
+ *   This filter can be used to lookup ARP entries and send ARP requests
+ */
 
 struct netaddr_handle;
+struct netaddr_filter;
 
 struct netaddr_handle * rinarp_netaddr_register(__be16              ar_pro, 
+						__be16              ar_pro_len,
                                                 struct net_device * dev, 
                                                 unsigned char *     netw_addr);
 int                     rinarp_netaddr_unregister(struct netaddr_handle * h);
 
-unsigned char *         rinarp_lookup_netaddr(__be16 ar_pro, 
-                                              struct net_device *dev, 
-                                              unsigned char *netw_addr);
-int             rinarp_send_request(struct arp_reply_ops *ops);
-int             rinarp_remove_reply_handler(struct arp_reply_ops *ops);
+struct netaddr_filter * netaddr_filter_set(
+	struct netaddr_handle * net_handle,
+	void (*arp_req_handle)(struct sk_buff *skb),
+	void (*arp_rep_handle)(struct sk_buff *skb));
+
+void (*netaddr_filter_get_req(struct netaddr_handle * net_handle))
+(struct sk_buff *skb);
+void (*netaddr_filter_get_rep(struct netaddr_handle * net_handle))
+(struct sk_buff *skb);
+
+/* 
+ *  Checks for a network address in the ARP cache 
+ *  Returns the network address if present
+ *  NULL if not present
+ */
+unsigned char * rinarp_get_netaddr(struct netaddr_filter * filter, 
+				   unsigned char         * netw_addr);
+
+int rinarp_send_request(struct netaddr_filter * filter, 
+			unsigned char         * netw_addr);
 #endif
 
 #endif
