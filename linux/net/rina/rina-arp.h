@@ -43,4 +43,26 @@ unsigned char * rinarp_lookup_netaddr(__be16 ar_pro,
 int             rinarp_send_request(struct arp_reply_ops *ops);
 int             rinarp_remove_reply_handler(struct arp_reply_ops *ops);
 
+#if 0
+struct arp_reply_ops {
+	__be16              ar_pro; 
+	unsigned char *     src_netw_addr;
+	unsigned char *     dest_netw_addr;
+	void                (*handle)(struct sk_buff *skb);
+};
+
+struct netaddr_handle;
+
+struct netaddr_handle * rinarp_netaddr_register(__be16              ar_pro, 
+                                                struct net_device * dev, 
+                                                unsigned char *     netw_addr);
+int                     rinarp_netaddr_unregister(struct netaddr_handle * h);
+
+unsigned char *         rinarp_lookup_netaddr(__be16 ar_pro, 
+                                              struct net_device *dev, 
+                                              unsigned char *netw_addr);
+int             rinarp_send_request(struct arp_reply_ops *ops);
+int             rinarp_remove_reply_handler(struct arp_reply_ops *ops);
+#endif
+
 #endif
