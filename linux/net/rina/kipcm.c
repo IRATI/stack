@@ -283,7 +283,6 @@ static int notify_ipcp_assign_dif_request(void *             data,
 	struct name * 				      dif_name;
 	struct ipcp_instance * 		       	      ipc_process;
 	ipc_process_id_t 		      	      ipc_id;
-	int 					      retval = 0;
 
 	if (!data) {
 		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -367,10 +366,14 @@ static int notify_ipcp_assign_dif_request(void *             data,
 		LOG_ERR("Failed assign to dif %s for IPC process: %d",
 				tmp, ipc_id);
 		rkfree(tmp);
+		name_destroy(dif_name);
+		rkfree(dif_config);
+		rkfree(hdr);
+		rkfree(attrs);
+		rkfree(msg);
 		rnl_assign_dif_response(0, -1);
-		retval = -1;
+		return -1;
 	}
-	rnl_assign_dif_response(ipc_id, 0);
 
 	name_destroy(dif_name);
 	rkfree(dif_config);
@@ -378,7 +381,10 @@ static int notify_ipcp_assign_dif_request(void *             data,
 	rkfree(attrs);
 	rkfree(msg);
 
-	return retval;
+	if (rnl_assign_dif_response(ipc_id, 0))
+		return -1;
+
+	return 0;
 }
 
 static int notify_ipcp_register_app_request(void *             data,
