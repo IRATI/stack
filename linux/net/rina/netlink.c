@@ -478,8 +478,8 @@ int rina_netlink_init(void)
 	LOG_DBG("Dispatcher cmd for message type 2 is: %d",nl_ops[1].cmd);
 
 	LOG_DBG("Executing Testing functions...");
-	test_register_echo_handler();
 #if 0
+	test_register_echo_handler();
 	if (test_register_handler()) {
 		return -1;
 	}
