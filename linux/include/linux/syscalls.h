@@ -841,4 +841,24 @@ asmlinkage long sys_process_vm_writev(pid_t pid,
 asmlinkage long sys_kcmp(pid_t pid1, pid_t pid2, int type,
 			 unsigned long idx1, unsigned long idx2);
 asmlinkage long sys_finit_module(int fd, const char __user *uargs, int flags);
+
+#if 0
+asmlinkage long sys_ipc_create(const struct name __user * name,
+                               ipc_process_id_t           id,
+                               const char __user *        type);
+asmlinkage long sys_ipc_configure(ipc_process_id_t                  id,
+                                  const struct ipcp_config __user * config);
+asmlinkage long sys_ipc_destroy(ipc_process_id_t id);
+asmlinkage long sys_connection_create(constr struct connection __user * conn);
+asmlinkage long sys_connection_destroy(cep_id_t id);
+asmlinkage long sys_connection_update(cep_id_t from_id,
+                                      cep_id_t to_id);
+asmlinkage long sys_sdu_read(port_id_t     id,
+                             void __user * buffer,
+                             size_t        size);
+asmlinkage long sys_sdu_write(port_id_t           id,
+                              const void __user * buffer,
+                              size_t              size);
+#endif
+
 #endif
