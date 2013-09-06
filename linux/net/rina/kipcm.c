@@ -271,6 +271,104 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 	return retval;
 }
 
+static int notify_ipcp_assign_dif_request(void *             data,
+				  	  struct sk_buff *   buff,
+				  	  struct genl_info * info)
+{
+	struct kipcm * kipcm;
+	struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs;
+	struct rnl_msg * 			      msg;
+	struct rina_msg_hdr * 			      hdr;
+	struct dif_config *			      dif_config;
+	struct name * 				      dif_name;
+	struct ipcp_instance * 		       	      ipc_process;
+	ipc_process_id_t 		      	      ipc_id;
+	int 					      retval = 0;
+
+	if (!data) {
+		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+		return -1;
+	}
+
+	kipcm = (struct kipcm *) data;
+
+	if (!info) {
+		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+		return -1;
+	}
+	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+	if (!attrs)
+		return -1;
+
+	dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
+	if (!dif_config){
+		rkfree(attrs);
+		return -1;
+	}
+	attrs->dif_config = dif_config;
+
+	dif_name = name_create();
+	if (!dif_name){
+		rkfree(dif_config);
+		rkfree(attrs);
+		return -1;
+	}
+	dif_config->dif_name = dif_name;
+	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+	if (!msg) {
+		name_destroy(dif_name);
+		rkfree(dif_config);
+		rkfree(attrs);
+		return -1;
+	}
+	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
+	if (!hdr) {
+		name_destroy(dif_name);
+		rkfree(dif_config);
+		rkfree(attrs);
+		rkfree(msg);
+		return -1;
+	}
+	msg->attrs = attrs;
+	msg->rina_hdr = hdr;
+
+	if (rnl_parse_msg(info, msg)) {
+		name_destroy(dif_name);
+		rkfree(dif_config);
+		rkfree(hdr);
+		rkfree(attrs);
+		rkfree(msg);
+		return -1;
+	}
+	ipc_id = msg->rina_hdr->src_ipc_id;
+	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+	if (!ipc_process) {
+		LOG_ERR("IPC process %d not found", ipc_id);
+		name_destroy(dif_name);
+		rkfree(dif_config);
+		rkfree(hdr);
+		rkfree(attrs);
+		rkfree(msg);
+		return -1;
+	}
+	if (ipc_process->ops->assign_dif_request(ipc_process->data,
+			attrs->dif_config->dif_name)) {
+		char * tmp = name_tostring(attrs->dif_config->dif_name);
+		LOG_ERR("Failed assign to dif %s for IPC process: %d",
+				tmp, ipc_id);
+		rkfree(tmp);
+		retval = -1;
+	}
+
+	name_destroy(dif_name);
+	rkfree(dif_config);
+	rkfree(hdr);
+	rkfree(attrs);
+	rkfree(msg);
+
+	return retval;
+}
+
 static int netlink_handlers_unregister(struct rina_nl_set * set)
 {
 	int retval = 0;
@@ -283,6 +381,10 @@ static int netlink_handlers_unregister(struct rina_nl_set * set)
 				RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE))
 		retval = -1;
 
+	if (rina_netlink_handler_unregister(set,
+				RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST))
+		retval = -1;
+
 	return retval;
 }
 
@@ -290,20 +392,41 @@ static int netlink_handlers_register(struct kipcm * kipcm)
 {
 	message_handler_cb handler;
 
+	handler = notify_ipcp_assign_dif_request;
+	if (rina_netlink_handler_register(kipcm->set,
+				RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST,
+				kipcm,
+				handler))
+		return -1;
+
 	handler = notify_ipcp_allocate_flow_request;
 	if (rina_netlink_handler_register(kipcm->set,
 				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
 				kipcm,
-				handler))
+				handler)) {
+		if (rina_netlink_handler_unregister(kipcm->set,
+				RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
+			LOG_ERR("Failed handler unregister while bailing out");
+			/* FIXME: What else could be done here?" */
+		}
 		return -1;
+	}
 
 	handler = notify_ipcp_allocate_flow_response;
 	if (rina_netlink_handler_register(kipcm->set,
 				RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
 				kipcm,
 				handler)) {
-		rina_netlink_handler_unregister(kipcm->set,
-				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST);
+		if (rina_netlink_handler_unregister(kipcm->set,
+				RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
+			LOG_ERR("Failed handler unregister while bailing out");
+			/* FIXME: What else could be done here?" */
+		}
+		if (rina_netlink_handler_unregister(kipcm->set,
+				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
+			LOG_ERR("Failed handler unregister while bailing out");
+			/* FIXME: What else could be done here?" */
+		}
 		return -1;
 	}
 
