@@ -1967,3 +1967,62 @@ int rnl_assign_dif_response(ipc_process_id_t id, uint_t res)
 }
 EXPORT_SYMBOL(rnl_assign_dif_response);
 
+int rnl_app_alloc_flow_req_arrived_msg(struct ipcp_instance_data * data,
+				       const struct name *         source,
+				       const struct name *         dest,
+				       const struct flow_spec *    fspec,
+				       port_id_t                   id)
+{
+        /* FIXME: Add code here */
+	struct sk_buff * msg;
+	struct rina_msg_hdr * hdr;
+	int result;
+
+	msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
+	if(!msg) {
+		LOG_ERR("Could not allocate memory for message");
+		return -1;
+	}
+	hdr = (struct rina_msg_hdr *) genlmsg_put(
+				msg,
+				0,
+				0,
+				get_nl_family(),
+				0,
+				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED);
+	if(!hdr) {
+		LOG_ERR("Could not use genlmsg_put");
+		nlmsg_free(msg);
+		return -1;
+	}
+	/* FIXME: In the shim dummy there's only one ipc process as source and
+	 * destination, in the general case they will be different.
+	 */
+	hdr->dst_ipc_id = 1;
+	hdr->src_ipc_id = 1;
+	if (rnl_format_ipcm_alloc_flow_req_arrived_msg(source,
+					       dest,
+					       fspec,
+					       NULL,
+					       msg)){
+		LOG_ERR("Could not format message...");
+		nlmsg_free(msg);
+		return -1;
+	}
+	result = genlmsg_end(msg, hdr);
+	if (result){
+		LOG_DBG("Result of genlmesg_end: %d", result);
+	}
+
+	result = genlmsg_unicast(&init_net, msg, 1);
+	if (result) {
+		LOG_ERR("Could not send unicast msg: %d", result);
+		nlmsg_free(msg);
+		return -1;
+	}
+	nlmsg_free(msg);
+
+        return 0;
+}
+EXPORT_SYMBOL(rnl_app_alloc_flow_req_arrived_msg);
+
