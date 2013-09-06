@@ -343,7 +343,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
 
 	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
 	if (!msg) {
-		name_destroy(dif_name);
+		//name_destroy(dif_name);
 		rkfree(dif_config);
 		rkfree(attrs);
 		rnl_assign_dif_response(0, -1, info->snd_seq);
@@ -352,7 +352,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
 	msg->attrs = attrs;
 
 	if (rnl_parse_msg(info, msg)) {
-		name_destroy(dif_name);
+		//name_destroy(dif_name);
 		rkfree(dif_config);
 		rkfree(attrs);
 		rkfree(msg);
@@ -364,7 +364,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
 	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
 	if (!ipc_process) {
 		LOG_ERR("IPC process %d not found", ipc_id);
-		name_destroy(dif_name);
+		//name_destroy(dif_name);
 		rkfree(dif_config);
 		rkfree(attrs);
 		rkfree(msg);
@@ -379,7 +379,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
 		LOG_ERR("Failed assign to dif %s for IPC process: %d",
                         tmp, ipc_id);
 		rkfree(tmp);
-		name_destroy(dif_name);
+		//name_destroy(dif_name);
 		rkfree(dif_config);
 		rkfree(attrs);
 		rkfree(msg);
@@ -397,7 +397,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
 		return -1;
 	}
 
-	name_destroy(dif_name);
+	//name_destroy(dif_name);
 	rkfree(dif_config);
 	rkfree(attrs);
 	rkfree(msg);
@@ -445,7 +445,7 @@ static int notify_ipcp_register_app_request(void *             data,
 
 	dif_name = name_create();
 	if (!dif_name) {
-		name_destroy(app_name);
+		//name_destroy(app_name);
 		rkfree(attrs);
 		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
 		return -1;
@@ -456,8 +456,8 @@ static int notify_ipcp_register_app_request(void *             data,
 	if (!msg) {
 		LOG_ERR("Could not allocate space for my_msg struct");
 		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
-		name_destroy(app_name);
-		name_destroy(dif_name);
+		//name_destroy(app_name);
+		//name_destroy(dif_name);
 		rkfree(attrs);
 		return -1;
 	}
@@ -465,8 +465,8 @@ static int notify_ipcp_register_app_request(void *             data,
 	if (rnl_parse_msg(info, msg)) {
 		LOG_ERR("Could not parse message");
 		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
-		name_destroy(app_name);
-		name_destroy(dif_name);
+		//name_destroy(app_name);
+		//name_destroy(dif_name);
 		rkfree(attrs);
 		rkfree(msg);
 		return -1;
@@ -478,19 +478,20 @@ static int notify_ipcp_register_app_request(void *             data,
 		rnl_app_register_response_msg(ipc_id,
                                               msg->rina_hdr->src_ipc_id, -1,
                                               info->snd_seq);
-		name_destroy(app_name);
-		name_destroy(dif_name);
+		//name_destroy(app_name);
+		//name_destroy(dif_name);
 		rkfree(attrs);
 		rkfree(msg);
 		return -1;
 	}
 
-	if (ipc_process->ops->application_register(data, attrs->app_name)) {
+	if (ipc_process->ops->application_register(
+			ipc_process->data, attrs->app_name)) {
 		rnl_app_register_response_msg(ipc_id,
                                               msg->rina_hdr->src_ipc_id, -1,
                                               info->snd_seq);
-		name_destroy(app_name);
-		name_destroy(dif_name);
+		//name_destroy(app_name);
+		//name_destroy(dif_name);
 		rkfree(attrs);
 		rkfree(msg);
 		return -1;
@@ -499,8 +500,8 @@ static int notify_ipcp_register_app_request(void *             data,
 	rnl_app_register_response_msg(ipc_id, msg->rina_hdr->src_ipc_id, 0,
                         info->snd_seq);
 
-	name_destroy(app_name);
-	name_destroy(dif_name);
+	//name_destroy(app_name);
+	//name_destroy(dif_name);
 	rkfree(attrs);
 	rkfree(msg);
 

@@ -379,25 +379,28 @@ static int dummy_fini(struct ipcp_factory_data * data)
 }
 
 static int dummy_assign_to_dif(struct ipcp_instance_data * data,
-                               const struct name *         dif_name)
+		const struct name *         dif_name)
 {
-        ASSERT(data);
+	ASSERT(data);
 
-        data->info = rkzalloc(sizeof(struct dummy_info), GFP_KERNEL);
-        if (!data->info)
-                return -1;
+	data->info = rkzalloc(sizeof(struct dummy_info), GFP_KERNEL);
+	if (!data->info)
+		return -1;
 
-        data->info->dif_name = name_dup(dif_name);
-        if (!data->info->dif_name) {
-        	char * tmp = name_tostring(dif_name);
-        	LOG_ERR("Application %s registration has failed", tmp);
+	data->info->dif_name = name_dup(dif_name);
+	if (!data->info->dif_name) {
+		char * tmp = name_tostring(dif_name);
+		LOG_ERR("Assingment of IPC Process to DIF %s failed", tmp);
 		rkfree(tmp);
-                rkfree(data->info);
+		rkfree(data->info);
 
-                return -1;
-        }
+		return -1;
+	}
 
-        return 0;
+	LOG_DBG("Assigned IPC Process to DIF %s",
+			data->info->dif_name->process_name);
+
+	return 0;
 }
 
 static struct ipcp_instance_ops dummy_instance_ops = {
