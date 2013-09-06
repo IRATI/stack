@@ -44,25 +44,36 @@ int             rinarp_send_request(struct arp_reply_ops *ops);
 int             rinarp_remove_reply_handler(struct arp_reply_ops *ops);
 
 #if 0
-struct arp_reply_ops {
-	__be16              ar_pro; 
-	unsigned char *     src_netw_addr;
-	unsigned char *     dest_netw_addr;
-	void                (*handle)(struct sk_buff *skb);
-};
+struct naddr_handle;
+struct naddr_filter;
 
-struct netaddr_handle;
+typedef char * naddr_t;
 
-struct netaddr_handle * rinarp_netaddr_register(__be16              ar_pro, 
-                                                struct net_device * dev, 
-                                                unsigned char *     netw_addr);
-int                     rinarp_netaddr_unregister(struct netaddr_handle * h);
+struct naddr_handle * rinarp_naddr_register(__be16              proto, 
+                                            __be16              proto_length,
+                                            struct net_device * device,
+                                            naddr_t *           address);
+int                   rinarp_naddr_unregister(struct naddr_handle * h);
 
-unsigned char *         rinarp_lookup_netaddr(__be16 ar_pro, 
-                                              struct net_device *dev, 
-                                              unsigned char *netw_addr);
-int             rinarp_send_request(struct arp_reply_ops *ops);
-int             rinarp_remove_reply_handler(struct arp_reply_ops *ops);
+typedef void (* arp_handler_t)(struct sk_buff * skb);
+
+struct naddr_filter * naddr_filter_create(struct naddr_handle * handle);
+int                   naddr_filter_set(struct naddr_filter * filter,
+                                       arp_handler_t         request,
+                                       arp_handler_t         reply);
+int                   naddr_filter_destroy(struct naddr_filter * filter);
+arp_handler_t         naddr_filter_req_handler_get(struct naddr_handle * h);
+arp_handler_t         naddr_filter_rep_handler_get(struct naddr_handle * h);
+           
+/* 
+ * Checks for a network address in the ARP cache. Returns the network address
+ * if present NULL if not present
+ */
+unsigned char *         rinarp_get_naddr(struct naddr_filter * filter, 
+                                           unsigned char *     address);
+
+int                     rinarp_send_request(struct naddr_filter * filter, 
+                                            unsigned char * address);
 #endif
 
 #endif
