@@ -54,7 +54,9 @@ struct ipcp_instance_ops {
                                        const struct name *         source,
                                        const struct name *         dest,
                                        const struct flow_spec *    flow_spec,
-                                       port_id_t                   id);
+                                       port_id_t                   id,
+                                       uint_t			   seq_num,
+                                       ipc_process_id_t		   dst_id);
 	int  (* flow_allocate_response)(struct ipcp_instance_data * data,
                                         port_id_t                   id,
                                         response_reason_t *         response);
