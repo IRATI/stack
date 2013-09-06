@@ -132,8 +132,8 @@ struct ipcp_flow {
 };
 
 static int notify_ipcp_allocate_flow_request(void *             data,
-						   struct sk_buff *   buff,
-						   struct genl_info * info)
+					     struct sk_buff *   buff,
+					     struct genl_info * info)
 {
 	struct rnl_ipcm_alloc_flow_req_msg_attrs * msg_attrs;
 	struct rnl_msg * 			   msg;
@@ -347,7 +347,22 @@ struct kipcm * kipcm_init(struct kobject * parent, struct rina_nl_set * set)
                 return NULL;
         }
 
+        LOG_DBG("Registering set");
+        if (rina_netlink_set_register(set)){
+        	if (ipcp_imap_destroy(tmp->instances)) {
+			/* FIXME: What could we do here ? */
+		}
+		if (ipcp_fmap_destroy(tmp->flows)) {
+			/* FIXME: What could we do here ? */
+		}
+		if (ipcpf_fini(tmp->factories)) {
+			/* FIXME: What could we do here ? */
+		}
+		rkfree(tmp);
+		return NULL;
+	}
         tmp->set = set;
+        LOG_DBG("Registering handlers");
         if (netlink_handlers_register(tmp)) {
         	if (ipcp_imap_destroy(tmp->instances)) {
 			/* FIXME: What could we do here ? */
@@ -867,3 +882,22 @@ int kipcm_sdu_post(struct kipcm * kipcm,
         return 0;
 }
 EXPORT_SYMBOL(kipcm_sdu_post);
+
+int kipcm_send_nl_msg(struct sk_buff * out_msg)
+{
+	int result;
+
+	/*
+	 * FIXME: Destination port-id set to 1, it must be changed in the
+	 * future, probably obtained from a config file
+	 */
+	result = genlmsg_unicast(&init_net, out_msg, 1);
+	if (result) {
+		LOG_ERR("Could not send unicast msg: %d", result);
+		nlmsg_free(out_msg);
+		return -1;
+	}
+	nlmsg_free(out_msg);
+	return 0;
+}
+EXPORT_SYMBOL(kipcm_send_nl_msg);

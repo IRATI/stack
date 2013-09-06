@@ -76,4 +76,7 @@ int            kipcm_sdu_post(struct kipcm * kipcm,
                               port_id_t      id,
                               struct sdu *   sdu);
 
+/* Takes the ownership of the message */
+int 	       kipcm_send_nl_msg(struct sk_buff * out_msg);
+
 #endif
