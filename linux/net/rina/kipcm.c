@@ -143,8 +143,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 	struct kipcm * kipcm;
 	int retval = 0;
 
-	/* FIXME: Responses needed! */
-
 	if (!data) {
 		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
 		return -1;
@@ -176,7 +174,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
 	if (rnl_parse_msg(info, msg))
 		return -1;
-	ipc_id = msg->rina_hdr->dst_ipc_id;
+	ipc_id = msg->rina_hdr->src_ipc_id;
 	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
 	if (!ipc_process) {
 		LOG_ERR("IPC process %d not found", ipc_id);
@@ -194,13 +192,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 				msg_attrs->id);
 		retval = -1;
 	}
-
-	if (rnl_app_alloc_flow_req_arrived_msg(ipc_process->data,
-			msg_attrs->source,
-			msg_attrs->dest,
-			msg_attrs->fspec,
-			msg_attrs->id))
-		retval = -1;
 
 	rkfree(hdr);
 	rkfree(msg_attrs);
