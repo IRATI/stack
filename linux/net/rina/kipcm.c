@@ -295,7 +295,8 @@ static int notify_ipcp_assign_dif_request(void *             data,
 
 	if (!data) {
 		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
-		rnl_assign_dif_response(0, -1);
+		nlmsg_free(buff);
+		rnl_assign_dif_response(0, -1, info->snd_seq);
 		return -1;
 	}
 
@@ -303,96 +304,83 @@ static int notify_ipcp_assign_dif_request(void *             data,
 
 	if (!info) {
 		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
-		rnl_assign_dif_response(0, -1);
+		nlmsg_free(buff);
+		rnl_assign_dif_response(0, -1, info->snd_seq);
 		return -1;
 	}
 	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
 	if (!attrs) {
-		rnl_assign_dif_response(0, -1);
+		nlmsg_free(buff);
+		rnl_assign_dif_response(0, -1, info->snd_seq);
 		return -1;
 	}
 
 	dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
 	if (!dif_config){
-		rkfree(attrs);
-		rnl_assign_dif_response(0, -1);
+		nlmsg_free(buff);
+		rnl_assign_dif_response(0, -1, info->snd_seq);
 		return -1;
 	}
 	attrs->dif_config = dif_config;
 
 	dif_name = name_create();
 	if (!dif_name){
-		rkfree(dif_config);
-		rkfree(attrs);
-		rnl_assign_dif_response(0, -1);
+		nlmsg_free(buff);
+		rnl_assign_dif_response(0, -1, info->snd_seq);
 		return -1;
 	}
 	dif_config->dif_name = dif_name;
 	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
 	if (!msg) {
-		name_destroy(dif_name);
-		rkfree(dif_config);
-		rkfree(attrs);
-		rnl_assign_dif_response(0, -1);
+		nlmsg_free(buff);
+		rnl_assign_dif_response(0, -1, info->snd_seq);
 		return -1;
 	}
 	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
 	if (!hdr) {
-		name_destroy(dif_name);
-		rkfree(dif_config);
-		rkfree(attrs);
-		rkfree(msg);
-		rnl_assign_dif_response(0, -1);
+		nlmsg_free(buff);
+		rnl_assign_dif_response(0, -1, info->snd_seq);
 		return -1;
 	}
 	msg->attrs = attrs;
 	msg->rina_hdr = hdr;
 
 	if (rnl_parse_msg(info, msg)) {
-		name_destroy(dif_name);
-		rkfree(dif_config);
-		rkfree(hdr);
-		rkfree(attrs);
-		rkfree(msg);
-		rnl_assign_dif_response(0, -1);
+		nlmsg_free(buff);
+		rnl_assign_dif_response(0, -1, info->snd_seq);
 		return -1;
 	}
 	ipc_id = msg->rina_hdr->dst_ipc_id;
+
 	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
 	if (!ipc_process) {
 		LOG_ERR("IPC process %d not found", ipc_id);
-		name_destroy(dif_name);
-		rkfree(dif_config);
-		rkfree(hdr);
-		rkfree(attrs);
-		rkfree(msg);
-		rnl_assign_dif_response(0, -1);
+		nlmsg_free(buff);
+		rnl_assign_dif_response(0, -1, info->snd_seq);
 		return -1;
 	}
+	LOG_DBG("Found IPC Process with id %d", ipc_id);
+
 	if (ipc_process->ops->assign_dif_request(ipc_process->data,
 			attrs->dif_config->dif_name)) {
 		char * tmp = name_tostring(attrs->dif_config->dif_name);
 		LOG_ERR("Failed assign to dif %s for IPC process: %d",
 				tmp, ipc_id);
 		rkfree(tmp);
-		name_destroy(dif_name);
-		rkfree(dif_config);
-		rkfree(hdr);
-		rkfree(attrs);
-		rkfree(msg);
-		rnl_assign_dif_response(0, -1);
+		nlmsg_free(buff);
+		rnl_assign_dif_response(0, -1, info->snd_seq);
+		return -1;
+	}
+	LOG_DBG("Assign to DIF operation successful, freeing memory");
+
+	LOG_DBG("Calling assign to DIF response");
+	if (rnl_assign_dif_response(ipc_id, 0, info->snd_seq)){
+		nlmsg_free(buff);
 		return -1;
 	}
 
-	name_destroy(dif_name);
-	rkfree(dif_config);
-	rkfree(hdr);
-	rkfree(attrs);
-	rkfree(msg);
-
-	if (rnl_assign_dif_response(ipc_id, 0))
-		return -1;
-
+	nlmsg_free(buff);
+	LOG_DBG("Finishing successfully");
 	return 0;
 }
 
