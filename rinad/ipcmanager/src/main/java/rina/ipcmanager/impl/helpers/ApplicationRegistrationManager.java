@@ -48,7 +48,8 @@ public class ApplicationRegistrationManager {
 	 * @param event
 	 * @throws Exception
 	 */
-	public void registerApplication(ApplicationRegistrationRequestEvent event) throws Exception{
+	public synchronized void registerApplication(
+			ApplicationRegistrationRequestEvent event) throws Exception{
 		IPCProcess ipcProcess = null;
 		try{
 			ApplicationRegistrationState applicationRegistration = 
@@ -77,7 +78,8 @@ public class ApplicationRegistrationManager {
 	 * @param event
 	 * @throws Exception
 	 */
-	public void unregisterApplication(ApplicationUnregistrationRequestEvent event) throws Exception{
+	public synchronized void unregisterApplication(
+			ApplicationUnregistrationRequestEvent event) throws Exception{
 		IPCProcess ipcProcess = null;
 		try{
 			ApplicationRegistrationState applicationRegistration = 

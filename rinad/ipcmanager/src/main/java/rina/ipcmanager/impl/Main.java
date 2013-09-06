@@ -10,8 +10,12 @@ public class Main {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		IPCManager ipcManager = new IPCManager();
-		ipcManager.executeEventLoop();
+		try{
+			IPCManager ipcManager = new IPCManager();
+			ipcManager.startEventLoopWorkers();
+		}catch(Exception ex){
+			ex.printStackTrace();
+		}
 	}
 
 }

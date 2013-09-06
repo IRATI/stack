@@ -97,7 +97,7 @@ public class IPCManager {
 		RINAConfiguration.setConfiguration(rinaConfiguration);
 		
 		//Start thread that will look for config file changes
-		Runnable configFileChangeRunnable = new Runnable(){
+		/*Runnable configFileChangeRunnable = new Runnable(){
 			private long currentLastModified = 0;
 			private RINAConfiguration rinaConfiguration = null;
 
@@ -121,7 +121,7 @@ public class IPCManager {
 
 		};
 
-		executorService.execute(configFileChangeRunnable);
+		executorService.execute(configFileChangeRunnable);*/
 	}
 	
 	private RINAConfiguration readConfigurationFile(){
@@ -142,6 +142,11 @@ public class IPCManager {
         }
 	}
 	
+	/**
+	 * Read the configuration file and create IPC processes, assign them 
+	 * to DIFs, cause them to enroll to other IPC processes etc, as 
+	 * specified in the config file.
+	 */
 	private void bootstrap(){
 		RINAConfiguration configuration = RINAConfiguration.getInstance();
 		IPCProcessToCreate ipcProcessToCreate = null;
@@ -188,6 +193,18 @@ public class IPCManager {
 					ipcProcessToCreate.getNeighbors().size() > 0){
 				//TODO cause enrollment to be initiated
 			}
+		}
+	}
+	
+	public void startEventLoopWorkers(){
+		int eventLoopWorkers = 
+				RINAConfiguration.getInstance().getLocalConfiguration().getEventLoopWorkers();
+		log.debug("Starting " + eventLoopWorkers + " event loop workers");
+		
+		Runnable worker = null;
+		for(int i=0; i<eventLoopWorkers; i++){
+			worker = new IPCManagerEventLoopWorker(this);
+			executorService.execute(worker);
 		}
 	}
 	
