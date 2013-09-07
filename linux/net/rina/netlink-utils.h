@@ -500,12 +500,13 @@ int rnl_assign_dif_response(ipc_process_id_t id,
 		uint_t seq_num,
 		uint_t port_id);
 
-int rnl_app_alloc_flow_req_arrived_msg(struct ipcp_instance_data * data,
-				       const struct name *         source,
-				       const struct name *         dest,
-				       const struct flow_spec *    fspec,
-				       port_id_t                   id,
-				       uint_t	   		   seq_num);
+int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t            ipc_id,
+		const struct name *         dif_name,
+		const struct name *         source,
+		const struct name *         dest,
+		const struct flow_spec *    fspec,
+		uint_t 			   seq_num,
+		uint_t                      nl_port_id);
 
 int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
 		  	  	  uint_t           res,

@@ -67,8 +67,7 @@ static int empty_flow_allocate_request(struct ipcp_instance_data * data,
                                        const struct name *         dest,
                                        const struct flow_spec *    fspec,
                                        port_id_t                   id,
-                                       uint_t 			   seq_num,
-                                       ipc_process_id_t		   dst_id)
+                                       uint_t 			   seq_num)
 {
         ASSERT(data);
         ASSERT(source);
@@ -79,6 +78,7 @@ static int empty_flow_allocate_request(struct ipcp_instance_data * data,
 
 static int empty_flow_allocate_response(struct ipcp_instance_data * data,
                                         port_id_t                   id,
+                                        uint_t			    seq_num,
                                         response_reason_t *         response)
 {
         ASSERT(data);

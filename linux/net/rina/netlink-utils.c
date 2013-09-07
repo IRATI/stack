@@ -2024,14 +2024,14 @@ int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
 }
 EXPORT_SYMBOL(rnl_app_register_unregister_response_msg);
 
-int rnl_app_alloc_flow_req_arrived_msg(struct ipcp_instance_data * data,
-				       const struct name *         source,
-				       const struct name *         dest,
-				       const struct flow_spec *    fspec,
-				       port_id_t                   id,
-				       uint_t 			   seq_num)
+int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t            ipc_id,
+		const struct name *         dif_name,
+		const struct name *         source,
+		const struct name *         dest,
+		const struct flow_spec *    fspec,
+		uint_t 			   seq_num,
+		uint_t                      nl_port_id)
 {
-        /* FIXME: Add code here */
 	struct sk_buff * msg;
 	struct rina_msg_hdr * hdr;
 	int result;
@@ -2041,28 +2041,27 @@ int rnl_app_alloc_flow_req_arrived_msg(struct ipcp_instance_data * data,
 		LOG_ERR("Could not allocate memory for message");
 		return -1;
 	}
+
 	hdr = (struct rina_msg_hdr *) genlmsg_put(
-				msg,
-				0,
-				seq_num,
-				get_nl_family(),
-				0,
-				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED);
+			msg,
+			0,
+			seq_num,
+			get_nl_family(),
+			NLM_F_REQUEST,
+			RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED);
 	if(!hdr) {
 		LOG_ERR("Could not use genlmsg_put");
 		nlmsg_free(msg);
 		return -1;
 	}
-	/* FIXME: In the shim dummy there's only one ipc process as source and
-	 * destination, in the general case they will be different.
-	 */
-	hdr->dst_ipc_id = 1;
-	hdr->src_ipc_id = 1;
+
+	hdr->dst_ipc_id = 0;
+	hdr->src_ipc_id = ipc_id;
 	if (rnl_format_ipcm_alloc_flow_req_arrived_msg(source,
-					       dest,
-					       fspec,
-					       NULL,
-					       msg)){
+			dest,
+			fspec,
+			dif_name,
+			msg)){
 		LOG_ERR("Could not format message...");
 		nlmsg_free(msg);
 		return -1;
@@ -2072,18 +2071,14 @@ int rnl_app_alloc_flow_req_arrived_msg(struct ipcp_instance_data * data,
 		LOG_DBG("Result of genlmesg_end: %d", result);
 	}
 
-	/*
-	 * FIXME: Destination port-id set to 1, it must be changed in the
-	 * future, probably obtained from a config file
-	 */
-	result = genlmsg_unicast(&init_net, msg, 1);
+	result = genlmsg_unicast(&init_net, msg, nl_port_id);
 	if (result) {
 		LOG_ERR("Could not send unicast msg: %d", result);
 		nlmsg_free(msg);
 		return -1;
 	}
 
-        return 0;
+	return 0;
 }
 EXPORT_SYMBOL(rnl_app_alloc_flow_req_arrived_msg);
 

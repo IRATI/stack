@@ -119,8 +119,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                                           const struct name *         dest,
                                           const struct flow_spec *    fspec,
                                           port_id_t                   id,
-                                          uint_t		      seq_num,
-                                          ipc_process_id_t 	      dst_id)
+                                          uint_t		      seq_num)
 {
 	struct shim_eth_flow * flow;
 	unsigned char * d_netaddr;
@@ -181,6 +180,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 
 static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                            port_id_t                   id,
+                                           uint_t		       seq_num,
                                            response_reason_t *         resp)
 {
         struct shim_eth_flow * flow;
