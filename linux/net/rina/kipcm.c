@@ -1247,7 +1247,8 @@ int kipcm_sdu_write(struct kipcm * kipcm,
                 return -1;
         }
 
-        LOG_DBG("SDU received (size %zd)", sdu->buffer->size);
+        LOG_DBG("Tring to write SDU of size %d to port_id %d",
+        		sdu->buffer->size, port_id);
 
         KIPCM_LOCK(kipcm);
 
@@ -1288,6 +1289,8 @@ int kipcm_sdu_read(struct kipcm * kipcm,
                 LOG_ERR("Bogus parameters passed, bailing out");
                 return -1;
         }
+
+        LOG_DBG("Trying to read SDU from port-id %d", port_id);
 
         KIPCM_LOCK(kipcm);
 
@@ -1345,6 +1348,9 @@ int kipcm_sdu_post(struct kipcm * kipcm,
 {
         struct ipcp_flow * flow;
         unsigned int       avail;
+
+        LOG_DBG("Post SDU called. Trying to post SDU of size %d to port-id %d "
+        		, sdu->buffer->size, port_id);
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, cannot post SDU");

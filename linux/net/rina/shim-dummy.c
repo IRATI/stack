@@ -222,7 +222,6 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                                         response_reason_t *         response)
 {
         struct dummy_flow * flow;
-        int retval = 0;
 
         ASSERT(data);
         ASSERT(response);
@@ -419,6 +418,8 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                            struct sdu *                sdu)
 {
         struct dummy_flow * flow;
+
+        LOG_DBG("Dummy SDU write invoked.");
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {

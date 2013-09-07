@@ -1,4 +1,6 @@
 import eu.irati.librina.rina;
+import eu.irati.librina.IPCException;
+import eu.irati.librina.IPCProcessFactorySingleton;
 
 public class ipcpd {
 
@@ -19,7 +21,7 @@ public class ipcpd {
 		}
 	}
 	
-	public static void main(String[] args){		
+	public static void main(String[] args) throws IPCException{		
 		for(int i=0; i<args.length; i++){
 			if(args[i].equals(HELP)){
 				System.out.println(USAGE);
@@ -37,6 +39,8 @@ public class ipcpd {
 			}
 		}
 		
-		printStatement("************ TESTING LIBRINA-IPCMANAGER ************");
+		printStatement("************ CLEANING UP IPC PROCESSES IN KERNEL ************");
+		IPCProcessFactorySingleton ipcProcessFactory = rina.getIpcProcessFactory();
+		ipcProcessFactory.destroy(1);
 	}
 }

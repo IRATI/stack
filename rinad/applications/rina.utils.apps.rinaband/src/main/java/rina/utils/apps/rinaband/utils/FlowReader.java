@@ -15,6 +15,7 @@ public class FlowReader implements Runnable{
 	public FlowReader(Flow flow, SDUListener sduListener, int maxSDUSize){
 		this.flow = flow;
 		this.sduListener = sduListener;
+		this.maxSDUSize = maxSDUSize;
 	}
 
 	@Override

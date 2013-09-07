@@ -157,42 +157,48 @@ SYSCALL_DEFINE2(connection_update,
 }
 
 SYSCALL_DEFINE3(sdu_read,
-                port_id_t,     id,
-                void __user *, buffer,
-                size_t,        size)
+		port_id_t,     id,
+		void __user *, buffer,
+		size_t,        size)
 {
-        ssize_t      retval;
+	ssize_t      retval;
 
-        struct sdu * tmp;
-        size_t       retsize;
+	struct sdu * tmp;
+	size_t       retsize;
 
-        tmp = NULL;
+	tmp = NULL;
 
-        CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, &tmp);
-        /* Taking ownership from the internal layers */
+	CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, &tmp);
+	/* Taking ownership from the internal layers */
 
-        if (retval)
-                return -EFAULT;
+	LOG_DBG("Personality returned value %d", retval);
 
-        if (!sdu_is_ok(tmp))
-                return -EFAULT;
-        
-        /* NOTE: We don't handle partial copies */
-        if (tmp->buffer->size > size) {
-                sdu_destroy(tmp);
-                return -EFAULT;
-        }
-        if (copy_to_user(buffer,
-                         tmp->buffer->data,
-                         tmp->buffer->size)) {
-                sdu_destroy(tmp);
-                return -EFAULT;
-        }
-        
-        retsize = tmp->buffer->size;
-        sdu_destroy(tmp);
-        
-        return retsize;
+	if (retval)
+		return -EFAULT;
+
+	if (!sdu_is_ok(tmp))
+		return -EFAULT;
+
+	/* NOTE: We don't handle partial copies */
+	if (tmp->buffer->size > size) {
+		LOG_ERR("Partial copies not handled. SDU size: %d, User space buffer size: %d",
+				tmp->buffer->size, size);
+		sdu_destroy(tmp);
+		return -EFAULT;
+	}
+
+	if (copy_to_user(buffer,
+			tmp->buffer->data,
+			tmp->buffer->size)) {
+		LOG_ERR("Error copying data to user-space");
+		sdu_destroy(tmp);
+		return -EFAULT;
+	}
+
+	retsize = tmp->buffer->size;
+	sdu_destroy(tmp);
+
+	return retsize;
 }
 
 SYSCALL_DEFINE3(sdu_write,
@@ -207,6 +213,9 @@ SYSCALL_DEFINE3(sdu_write,
 
         if (!buffer || !size)
                 return -EFAULT;
+
+        LOG_DBG("Syscall write SDU of size %d called with port-id %d",
+        		size, id);
 
         tmp_buffer = rkmalloc(size, GFP_KERNEL);
         if (!tmp_buffer)

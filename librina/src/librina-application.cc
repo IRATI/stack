@@ -85,9 +85,11 @@ int Flow::readSDU(void * sdu, int maxBytes)
 	return 7;
 #else
 	int result = syscallReadSDU(portId, sdu, maxBytes);
-	if (result != 0){
+	if (result < 0){
 		throw ReadSDUException();
 	}
+
+	LOG_DBG("Read an SDU of %d bytes", result);
 
 	return result;
 #endif
@@ -95,7 +97,7 @@ int Flow::readSDU(void * sdu, int maxBytes)
 
 void Flow::writeSDU(void * sdu, int size)
 		throw (FlowNotAllocatedException, WriteSDUException) {
-	LOG_DBG("Flow.writeSDU called");
+	LOG_DBG("Flow.writeSDU called, size is %d", size);
 
 	if (flowState != FLOW_ALLOCATED) {
 		throw FlowNotAllocatedException();
@@ -105,9 +107,11 @@ void Flow::writeSDU(void * sdu, int size)
 	//Do nothing
 #else
 	int result = syscallWriteSDU(portId, sdu, size);
-	if (result != 0){
+	if (result < 0){
 		throw WriteSDUException();
 	}
+
+	LOG_DBG("Written an SDU of %d bytes", result);
 #endif
 }
 
