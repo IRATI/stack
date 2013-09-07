@@ -87,16 +87,16 @@ struct app_register {
 };
 
 static int is_app_registered(struct ipcp_instance_data * data,
-                             const struct name *         name)
+		const struct name *         name)
 {
-        struct app_register * app;
+	struct app_register * app;
 
-        list_for_each_entry(app, &data->apps_registered, list) {
-                if (!name_cmp(app->app_name, name)) {
-                        return 1;
-                }
-        }
-        return 0;
+	list_for_each_entry(app, &data->apps_registered, list) {
+		if (!name_cmp(app->app_name, name)) {
+			return 1;
+		}
+	}
+	return 0;
 }
 
 static struct app_register * find_app(struct ipcp_instance_data * data,
@@ -128,71 +128,71 @@ static struct dummy_flow * find_flow(struct ipcp_instance_data * data,
 }
 
 static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
-                                       const struct name *         source,
-                                       const struct name *         dest,
-                                       const struct flow_spec *    fspec,
-                                       port_id_t                   id,
-                                       uint_t			   seq_num,
-                                       ipc_process_id_t		   dst_id)
+		const struct name *         source,
+		const struct name *         dest,
+		const struct flow_spec *    fspec,
+		port_id_t                   id,
+		uint_t			   seq_num,
+		ipc_process_id_t		   dst_id)
 {
-        struct dummy_flow * flow;
+	struct dummy_flow * flow;
 
-        ASSERT(data);
-        ASSERT(source);
-        ASSERT(dest);
+	ASSERT(data);
+	ASSERT(source);
+	ASSERT(dest);
 
-        if (!data->info) {
-        	LOG_ERR("There is not info in this IPC Process");
-        	return -1;
-        }
+	if (!data->info) {
+		LOG_ERR("There is not info in this IPC Process");
+		return -1;
+	}
 
-        if (!data->info->dif_name) {
-        	LOG_ERR("This IPC Process doesn't belong to a DIF");
-        	return -1;
-        }
+	if (!data->info->dif_name) {
+		LOG_ERR("This IPC Process doesn't belong to a DIF");
+		return -1;
+	}
 
-        if (!is_app_registered(data, source)) {
-        	LOG_ERR("Application is not registered in this IPC Process");
-        	return -1;
-        }
+	if (!is_app_registered(data, dest)) {
+		LOG_ERR("Application is not registered in this IPC Process");
+		return -1;
+	}
 
-        if (find_flow(data, id)) {
-                LOG_ERR("A flow already exists on port %d", id);
-                return -1;
-        }
+	if (find_flow(data, id)) {
+		LOG_ERR("A flow already exists on port %d", id);
+		return -1;
+	}
 
-        if (rnl_app_alloc_flow_req_arrived_msg(data,
-					       source,
-					       dest,
-					       fspec,
-					       id,
-					       seq_num))
-        	return -1;
+	if (rnl_app_alloc_flow_req_arrived_msg(data,
+			source,
+			dest,
+			fspec,
+			id,
+			seq_num))
+		return -1;
 
-        flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
-        if (!flow)
-                return -1;
+	flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+	if (!flow)
+		return -1;
 
-        flow->dst_id  = dst_id;
-        flow->seq_num = seq_num;
-        flow->dest    = name_dup(dest);
-        if (!flow->dest) {
-                rkfree(flow);
-                return -1;
-        }
-        flow->source = name_dup(source);
-        if (!flow->source) {
-                name_destroy(flow->dest);
-                rkfree(flow);
-                return -1;
-        }
+	flow->dst_id  = dst_id;
+	flow->seq_num = seq_num;
+	flow->dest    = name_dup(dest);
+	if (!flow->dest) {
+		rkfree(flow);
+		return -1;
+	}
+	flow->source = name_dup(source);
+	if (!flow->source) {
+		name_destroy(flow->dest);
+		rkfree(flow);
+		return -1;
+	}
 
-        flow->state = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
+	flow->state = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
 	flow->port_id = id;
 	INIT_LIST_HEAD(&flow->list);
 	list_add(&flow->list, &data->flows);
 
-        return 0;
+	return 0;
 }
 
 static int dummy_flow_allocate_response(struct ipcp_instance_data * data,

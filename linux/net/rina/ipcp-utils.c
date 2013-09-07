@@ -224,19 +224,19 @@ EXPORT_SYMBOL(name_dup);
 
 int name_cmp(const struct name * a, const struct name * b)
 {
-        if (!a || !b)
-                return -1;
+	if (!a || !b)
+		return -1;
 
-        if (NAME_CMP_FIELD(a, b, process_name))
-                return -1;
-        if (NAME_CMP_FIELD(a, b, process_instance))
-                return -1;
-        if (NAME_CMP_FIELD(a, b, entity_name))
-                return -1;
-        if (NAME_CMP_FIELD(a, b, entity_instance))
-                return -1;
+	if (NAME_CMP_FIELD(a, b, process_name))
+		return -1;
+	if (NAME_CMP_FIELD(a, b, process_instance))
+		return -1;
+	if (NAME_CMP_FIELD(a, b, entity_name))
+		return -1;
+	if (NAME_CMP_FIELD(a, b, entity_instance))
+		return -1;
 
-        return 0;
+	return 0;
 }
 EXPORT_SYMBOL(name_cmp);
 
