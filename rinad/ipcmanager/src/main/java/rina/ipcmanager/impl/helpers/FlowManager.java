@@ -155,9 +155,10 @@ public class FlowManager {
 		
 		for(int i=0; i<ipcProcesses.size(); i++){
 			ipcProcess = ipcProcesses.get(i);
+			log.info("Trying IPC Process "+ipcProcess.getId());
 			DIFConfiguration difConfiguration = ipcProcess.getConfiguration();
 			if (difConfiguration != null && 
-					difConfiguration.getDifName().getProcessName() == difName){
+					difConfiguration.getDifName().getProcessName().equals(difName)){
 				return ipcProcess;
 			}
 		}

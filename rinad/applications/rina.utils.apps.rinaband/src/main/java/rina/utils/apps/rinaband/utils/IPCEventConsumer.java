@@ -3,6 +3,9 @@ package rina.utils.apps.rinaband.utils;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
@@ -13,17 +16,22 @@ import eu.irati.librina.rina;
 
 public class IPCEventConsumer implements Runnable{
 	
-	private Map<ApplicationProcessNamingInformation, FlowAcceptor> flowAcceptors;
+	private static final Log log = LogFactory.getLog(IPCEventConsumer.class);
+	private Map<String, FlowAcceptor> flowAcceptors;
 	private Map<Integer, FlowDeallocationListener> flowDeallocationListeners;
 	
 	public IPCEventConsumer(){
-		flowAcceptors = new ConcurrentHashMap<ApplicationProcessNamingInformation, FlowAcceptor>();
+		flowAcceptors = new ConcurrentHashMap<String, FlowAcceptor>();
 		flowDeallocationListeners = new ConcurrentHashMap<Integer, FlowDeallocationListener>();
 	}
 	
 	public void addFlowAcceptor(FlowAcceptor flowAcceptor, 
 			ApplicationProcessNamingInformation localAppName){
-		flowAcceptors.put(localAppName, flowAcceptor);
+		flowAcceptors.put(
+				Utils.geApplicationNamingInformationCode(localAppName), 
+				flowAcceptor);
+		log.info("Added flow acceptor for application: " + 
+				Utils.geApplicationNamingInformationCode(localAppName));
 	}
 	
 	public void removeFlowAcceptor(ApplicationProcessNamingInformation localAppName){
@@ -49,7 +57,12 @@ public class IPCEventConsumer implements Runnable{
 			
 			if (event.getType() == IPCEventType.FLOW_ALLOCATION_REQUESTED_EVENT){
 				FlowRequestEvent flowRequestEvent = (FlowRequestEvent) event;
-				FlowAcceptor flowAcceptor = flowAcceptors.get(flowRequestEvent.getLocalApplicationName());
+				log.info("Looking for flow acceptors for application: "
+						+ Utils.geApplicationNamingInformationCode(
+								flowRequestEvent.getLocalApplicationName()));
+				FlowAcceptor flowAcceptor = flowAcceptors.get(
+						Utils.geApplicationNamingInformationCode(
+						flowRequestEvent.getLocalApplicationName()));
 				if (flowAcceptor != null){
 					flowAcceptor.dispatchFlowRequestEvent(flowRequestEvent);
 				}else{

@@ -419,11 +419,17 @@ Flow * IPCManager::allocateFlowResponse(
 #if STUB_API
 	//Do nothing
 #else
-	AppAllocateFlowResponseMessage message;
-	message.setAccept(accept);
-	message.setDenyReason(reason);
-	message.setNotifySource(true);
-	message.setSequenceNumber(flowRequestEvent.getSequenceNumber());
+	AppAllocateFlowResponseMessage responseMessage;
+	responseMessage.setAccept(accept);
+	responseMessage.setDenyReason(reason);
+	responseMessage.setNotifySource(true);
+	responseMessage.setSequenceNumber(flowRequestEvent.getSequenceNumber());
+	responseMessage.setResponseMessage(true);
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+	}catch(NetlinkException &e){
+		throw FlowAllocationException(e.what());
+	}
 #endif
 
 	Flow * flow = new Flow(flowRequestEvent.getLocalApplicationName(),
