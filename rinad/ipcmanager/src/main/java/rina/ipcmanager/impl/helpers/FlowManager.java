@@ -33,17 +33,20 @@ public class FlowManager {
 	}
 	
 	public void allocateFlowLocal(FlowRequestEvent event) throws Exception{
+		int portId = 0;
+		
 		try{
-			int portId = getAvailablePortId();
+			portId = getAvailablePortId();
 			event.setPortId(portId);
+			FlowState flowState = new FlowState(event);
+			flows.put(portId, flowState);
 			IPCProcess ipcProcess = tryFlowAllocation(event);
 			event.setDIFName(ipcProcess.getConfiguration().getDifName());
-			FlowState flowState = new FlowState(event);
 			flowState.setIpcProcessId(ipcProcess.getId());
 			flowState.setDifName(ipcProcess.getConfiguration().getDifName().getProcessName());
-			flows.put(portId, flowState);
 		}catch(Exception ex){
 			log.error("Error allocating flow. "+ex.getMessage());
+			flows.remove(portId);
 			event.setPortId(-1);
 			applicationManager.flowAllocated(event);
 			return;
@@ -61,18 +64,20 @@ public class FlowManager {
 			return;
 		}
 
+		int portId = 0;
 		try{
-			int portId = getAvailablePortId();
+			portId = getAvailablePortId();
 			event.setPortId(portId);
-			applicationManager.flowRequestArrived(event.getLocalApplicationName(), 
-					event.getRemoteApplicationName(), event.getFlowSpecification(), 
-					event.getDIFName(), event.getPortId());
 			FlowState flowState = new FlowState(event);
 			flowState.setIpcProcessId(ipcProcess.getId());
 			flowState.setDifName(ipcProcess.getConfiguration().getDifName().getProcessName());
 			flows.put(portId, flowState);
+			applicationManager.flowRequestArrived(event.getLocalApplicationName(), 
+					event.getRemoteApplicationName(), event.getFlowSpecification(), 
+					event.getDIFName(), event.getPortId());
 		}catch(Exception ex){
 			log.error("Error allocating flow. "+ex.getMessage());
+			flows.remove(portId);
 			ipcProcess.allocateFlowResponse(event, -1);
 		}
 		

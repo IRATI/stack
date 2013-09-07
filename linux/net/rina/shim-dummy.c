@@ -266,9 +266,9 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         return -1;
                 }
                 if (rnl_app_alloc_flow_result_msg(data->id,
-                                flow->dst_id,
                                 0,
-                                flow->seq_num)) {
+                                flow->seq_num,
+                                1)) {
                         kipcm_flow_remove(default_kipcm, flow->port_id);
                         kipcm_flow_remove(default_kipcm, flow->dst_port_id);
                         list_del(&flow->list);
@@ -279,16 +279,14 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 }
         } else {
                 if (rnl_app_alloc_flow_result_msg(data->id,
-                                flow->dst_id,
                                 -1,
-                                flow->seq_num))
-                        retval = -1;
-
+                                flow->seq_num,
+                                1))
                 list_del(&flow->list);
                 name_destroy(flow->source);
                 name_destroy(flow->dest);
                 rkfree(flow);
-                return retval;
+                return -1;
         }
 
         /*
