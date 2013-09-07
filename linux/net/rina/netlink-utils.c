@@ -1967,6 +1967,61 @@ int rnl_assign_dif_response(ipc_process_id_t id, uint_t res)
 }
 EXPORT_SYMBOL(rnl_assign_dif_response);
 
+int rnl_app_register_response_msg(ipc_process_id_t ipc_id,
+				  unsigned short   dst_id,
+				  uint_t           res)
+{
+	struct sk_buff * out_msg;
+	struct rina_msg_hdr * out_hdr;
+	int result;
+
+	out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
+	if(!out_msg) {
+		LOG_ERR("Could not allocate memory for message");
+		return -1;
+	}
+
+	out_hdr = (struct rina_msg_hdr *) genlmsg_put(
+				out_msg,
+				0,
+				0,
+				get_nl_family(),
+				0,
+				RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE);
+	if(!out_hdr) {
+		LOG_ERR("Could not use genlmsg_put");
+		nlmsg_free(out_msg);
+		return -1;
+	}
+
+	out_hdr->src_ipc_id = ipc_id;
+	out_hdr->dst_ipc_id = dst_id;
+
+	if (rnl_format_ipcm_reg_app_resp_msg(res, out_msg)){
+		LOG_ERR("Could not format message...");
+		nlmsg_free(out_msg);
+		return -1;
+	}
+	result = genlmsg_end(out_msg, out_hdr);
+
+	if (result){
+		LOG_DBG("Result of genlmesg_end: %d", result);
+	}
+
+	/*
+	 * FIXME: Destination port-id set to 1, it must be changed in the
+	 * future, probably obtained from a config file
+	 */
+	result = genlmsg_unicast(&init_net, out_msg, 1);
+	if(result) {
+		LOG_ERR("Could not send unicast msg: %d", result);
+		return -1;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(rnl_app_register_response_msg);
+
 int rnl_app_alloc_flow_req_arrived_msg(struct ipcp_instance_data * data,
 				       const struct name *         source,
 				       const struct name *         dest,

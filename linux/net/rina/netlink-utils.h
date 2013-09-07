@@ -503,6 +503,10 @@ int rnl_app_alloc_flow_req_arrived_msg(struct ipcp_instance_data * data,
 				       const struct flow_spec *    fspec,
 				       port_id_t                   id);
 
+int rnl_app_register_response_msg(ipc_process_id_t ipc_id,
+			  	  unsigned short   dst_id,
+				  uint_t           res);
+
 char *nla_get_string(struct nlattr *nla);
 
 #endif

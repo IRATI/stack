@@ -405,12 +405,12 @@ static int notify_ipcp_register_app_request(void *             data,
 	struct rnl_msg * 			msg;
 	struct name * 				app_name;
 	struct name * 				dif_name;
-	int 					retval = 0;
 	struct ipcp_instance * 			ipc_process;
 	ipc_process_id_t 			ipc_id;
 
 	if (!data) {
 		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+		rnl_app_register_response_msg(0, 0, -1);
 		return -1;
 	}
 
@@ -418,15 +418,19 @@ static int notify_ipcp_register_app_request(void *             data,
 
 	if (!info) {
 		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+		rnl_app_register_response_msg(0, 0, -1);
 		return -1;
 	}
 	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
-	if (!attrs)
+	if (!attrs) {
+		rnl_app_register_response_msg(0, 0, -1);
 		return -1;
+	}
 
 	app_name = name_create();
 	if (!app_name){
 		rkfree(attrs);
+		rnl_app_register_response_msg(0, 0, -1);
 		return -1;
 	}
 	attrs->app_name= app_name;
@@ -435,6 +439,7 @@ static int notify_ipcp_register_app_request(void *             data,
 	if (!dif_name){
 		name_destroy(app_name);
 		rkfree(attrs);
+		rnl_app_register_response_msg(0, 0, -1);
 		return -1;
 	}
 	attrs->dif_name= dif_name;
@@ -442,6 +447,7 @@ static int notify_ipcp_register_app_request(void *             data,
 	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
 	if (!msg) {
 		LOG_ERR("Could not allocate space for my_msg struct");
+		rnl_app_register_response_msg(0, 0, -1);
 		name_destroy(app_name);
 		name_destroy(dif_name);
 		rkfree(attrs);
@@ -450,16 +456,19 @@ static int notify_ipcp_register_app_request(void *             data,
 	msg->attrs = attrs;
 	if (rnl_parse_msg(info, msg)){
 		LOG_ERR("Could not parse message");
+		rnl_app_register_response_msg(0, 0, -1);
 		name_destroy(app_name);
 		name_destroy(dif_name);
 		rkfree(attrs);
 		rkfree(msg);
 		return -1;
 	}
-	ipc_id = msg->rina_hdr->src_ipc_id;
+	ipc_id = msg->rina_hdr->dst_ipc_id;
 	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
 	if (!ipc_process) {
 		LOG_ERR("IPC process %d not found", ipc_id);
+		rnl_app_register_response_msg(ipc_id,
+				msg->rina_hdr->src_ipc_id, -1);
 		name_destroy(app_name);
 		name_destroy(dif_name);
 		rkfree(attrs);
@@ -468,8 +477,16 @@ static int notify_ipcp_register_app_request(void *             data,
 	}
 
 	if (ipc_process->ops->application_register(data, attrs->app_name)) {
-		retval = -1;
+		rnl_app_register_response_msg(ipc_id,
+				msg->rina_hdr->src_ipc_id, -1);
+		name_destroy(app_name);
+		name_destroy(dif_name);
+		rkfree(attrs);
+		rkfree(msg);
+		return -1;
 	}
+
+	rnl_app_register_response_msg(ipc_id, msg->rina_hdr->src_ipc_id, 0);
 
 	name_destroy(app_name);
 	name_destroy(dif_name);
