@@ -330,7 +330,7 @@ void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 	responseMessage.setDestIpcProcessId(id);
 	responseMessage.setDestPortId(portId);
 	responseMessage.setSequenceNumber(flowRequest.getSequenceNumber());
-	responseMessage.setResponseMessage(true);
+	responseMessage.setRequestMessage(true);
 
 	try{
 		rinaManager->sendResponseOrNotficationMessage(&responseMessage);

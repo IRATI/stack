@@ -85,7 +85,7 @@ int Flow::readSDU(void * sdu, int maxBytes)
 	return 7;
 #else
 	int result = syscallReadSDU(portId, sdu, maxBytes);
-	if (result < 0){
+	if (result != 0){
 		throw ReadSDUException();
 	}
 
@@ -105,7 +105,7 @@ void Flow::writeSDU(void * sdu, int size)
 	//Do nothing
 #else
 	int result = syscallWriteSDU(portId, sdu, size);
-	if (result < 0){
+	if (result != 0){
 		throw WriteSDUException();
 	}
 #endif

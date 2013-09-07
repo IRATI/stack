@@ -24,6 +24,8 @@ public class FlowReader implements Runnable{
 		
 		while(flow.isAllocated()){
 			try{
+				//TODO Remove
+				Thread.sleep(60000);
 				bytesRead = flow.readSDU(sdu, maxSDUSize);
 				sduListener.sduDelivered(sdu, bytesRead);
 			}catch(Exception ex){

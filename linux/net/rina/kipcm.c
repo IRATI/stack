@@ -350,7 +350,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 		rkfree(msg);
 		return -1;
 	}
-	ipc_id = msg->rina_hdr->src_ipc_id;
+	ipc_id = msg->rina_hdr->dst_ipc_id;
 	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
 	if (!ipc_process) {
 		LOG_ERR("IPC process %d not found", ipc_id);
