@@ -63,8 +63,7 @@ static int is_filler_ok(const uint8_t * f, size_t length)
 
         for (i = 0; i < length; i++) {
                 if (*f != i % 0xff) {
-                        LOG_ERR("Filler corrupted at %pK (%zd != %zd), "
-                                "index %zd", f, *f, i % 0xff, i);
+                        LOG_ERR("Filler corrupted at %pK", f);
                         return 0;
                 }
                 f++;
@@ -182,7 +181,7 @@ void rkfree(void * ptr)
         header = (struct memblock_header *)
                 ((uint8_t *) ptr - sizeof(*header));
         footer = (struct memblock_footer *)
-                ((uint8_t *) ptr + sizeof(*header) + header->inner_length);
+                ((uint8_t *) ptr + header->inner_length);
 
         if (!is_header_filler_ok(header)) {
                 LOG_CRIT("Memory block %pK has been corrupted (header)", ptr);
@@ -194,7 +193,7 @@ void rkfree(void * ptr)
         }
 
 #ifdef CONFIG_RINA_MEMORY_POISONING
-        p    = (uint8_t *) ptr + sizeof(*header);
+        p    = (uint8_t *) ptr;
         size = header->inner_length;
 
         LOG_DBG("Now poisoning the memory block (%pK-%pK)", p, p + size - 1);
