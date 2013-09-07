@@ -49,7 +49,7 @@ static void filler_init(uint8_t * f, size_t length)
 
         LOG_DBG("Applying filler at %pK, size %zd", f, length);
 
-        for (i = 0; i != length; i++) {
+        for (i = 0; i < length; i++) {
                 *f = i;
                 f++;
         }
@@ -61,7 +61,7 @@ static int is_filler_ok(const uint8_t * f, size_t length)
 
         LOG_DBG("Checking filler at %pK, size %zd", f, length);
 
-        for (i = 0; i != length; i++) {
+        for (i = 0; i < length; i++) {
                 if (*f != i)
                         return 0;
                 f++;
@@ -176,8 +176,10 @@ void rkfree(void * ptr)
         ASSERT(ptr);
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
-        header = ptr - sizeof(*header) / sizeof(void *);
-        footer = ptr + sizeof(*header) + header->inner_length / sizeof(void *);
+        header = (struct memblock_header *)
+                ((uint8_t *) ptr - sizeof(*header));
+        footer = (struct memblock_footer *)
+                ((uint8_t *) ptr + sizeof(*header) + header->inner_length);
 
         if (is_header_filler_ok(header)) {
                 LOG_CRIT("Memory block %pK has been corrupted (header)", ptr);
@@ -189,12 +191,16 @@ void rkfree(void * ptr)
         }
 
 #ifdef CONFIG_RINA_MEMORY_POISONING
-        p    = ptr + sizeof(*header);
+        LOG_DBG("Now poisoning the memory block");
+
+        p    = (uint8_t *) ptr + sizeof(*header);
         size = header->inner_length;
 
         LOG_DBG("Poisoning memory block at %pK, length %zd", p, size);
 
         for (i = 0; i < size; i++) {
+                LOG_DBG("Poisoning cell %zd", i);
+
                 *p = (uint8_t) i;
                 p++;
         }
