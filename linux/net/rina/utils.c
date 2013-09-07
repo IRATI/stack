@@ -35,8 +35,8 @@ int is_value_in_range(int value, int min_value, int max_value)
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
 struct memblock_header {
-        uint8_t filler[BITS_PER_LONG / 8];
         size_t  inner_length;
+        uint8_t filler[BITS_PER_LONG / 8];
 };
 
 struct memblock_footer {
@@ -50,7 +50,7 @@ static void filler_init(uint8_t * f, size_t length)
         LOG_DBG("Applying filler at %pK, size %zd", f, length);
 
         for (i = 0; i < length; i++) {
-                *f = i;
+                *f = i % 0xff;
                 f++;
         }
 }
@@ -62,8 +62,11 @@ static int is_filler_ok(const uint8_t * f, size_t length)
         LOG_DBG("Checking filler at %pK, size %zd", f, length);
 
         for (i = 0; i < length; i++) {
-                if (*f != i)
+                if (*f != i % 0xff) {
+                        LOG_ERR("Filler corrupted at %pK (%zd != %zd), "
+                                "index %zd", f, *f, i % 0xff, i);
                         return 0;
+                }
                 f++;
         }
 
@@ -181,26 +184,24 @@ void rkfree(void * ptr)
         footer = (struct memblock_footer *)
                 ((uint8_t *) ptr + sizeof(*header) + header->inner_length);
 
-        if (is_header_filler_ok(header)) {
+        if (!is_header_filler_ok(header)) {
                 LOG_CRIT("Memory block %pK has been corrupted (header)", ptr);
                 BUG();
         }
-        if (is_footer_filler_ok(footer)) {
+        if (!is_footer_filler_ok(footer)) {
                 LOG_CRIT("Memory block %pK has been corrupted (footer)", ptr);
                 BUG();
         }
 
 #ifdef CONFIG_RINA_MEMORY_POISONING
-        LOG_DBG("Now poisoning the memory block");
-
         p    = (uint8_t *) ptr + sizeof(*header);
         size = header->inner_length;
+
+        LOG_DBG("Now poisoning the memory block (%pK-%pK)", p, p + size - 1);
 
         LOG_DBG("Poisoning memory block at %pK, length %zd", p, size);
 
         for (i = 0; i < size; i++) {
-                LOG_DBG("Poisoning cell %zd", i);
-
                 *p = (uint8_t) i;
                 p++;
         }
