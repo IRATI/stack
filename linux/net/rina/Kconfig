@@ -42,7 +42,7 @@ config RINA_MEMORY_TAMPERING
 config RINA_MEMORY_POISONING
 	bool "Memory blocks poisoning"
 	default n
-        depends on RINA_MEMORY_TAMPERING
+        depends on RINA_MEMORY_CHECKS
 	help
 	  No help for the time being
 
