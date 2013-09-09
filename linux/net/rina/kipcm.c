@@ -143,45 +143,49 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 	struct kipcm * kipcm;
 	int retval = 0;
 
-	/* FIXME: Responses needed! */
-
-	if (!info) {
-		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
-		rnl_app_alloc_flow_result_msg(0, 0, -1, 0);
+	if (!data) {
+		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
 		return -1;
 	}
 
-	if (!data) {
-		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
-		rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq);
+	if (!info) {
+		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
 		return -1;
 	}
 
 	kipcm = (struct kipcm *) data;
 	msg_attrs = rkzalloc(sizeof(*msg_attrs), GFP_KERNEL);
 	if (!msg_attrs) {
-		rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq);
-		return -1;
+		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq))
+			return -1;
+
+		return 0;
 	}
 	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
 	if (!msg) {
 		rkfree(msg_attrs);
-		rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq);
-		return -1;
+		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq))
+			return -1;
+
+		return 0;
 	}
 	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
 	if (!hdr) {
 		rkfree(msg_attrs);
 		rkfree(msg);
-		rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq);
-		return -1;
+		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq))
+			return -1;
+
+		return 0;
 	}
 	msg->attrs = msg_attrs;
 	msg->rina_hdr = hdr;
 
 	if (rnl_parse_msg(info, msg)) {
-		rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq);
-		return -1;
+		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq))
+			return -1;
+
+		return 0;
 	}
 	ipc_id = msg->rina_hdr->dst_ipc_id;
 	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
@@ -190,10 +194,12 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 		rkfree(hdr);
 		rkfree(msg_attrs);
 		rkfree(msg);
-		rnl_app_alloc_flow_result_msg(ipc_id,
+		if (rnl_app_alloc_flow_result_msg(ipc_id,
                                               msg->rina_hdr->src_ipc_id, -1,
-                                              info->snd_seq);
-		return -1;
+                                              info->snd_seq))
+			return -1;
+
+		return 0;
 	}
 	if (ipc_process->ops->flow_allocate_request(ipc_process->data,
                                                     msg_attrs->source,
@@ -202,10 +208,19 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                     msg_attrs->id)) {
 		LOG_ERR("Failed allocate flow request for port id: %d",
                         msg_attrs->id);
-		rnl_app_alloc_flow_result_msg(ipc_id,
+		if (rnl_app_alloc_flow_result_msg(ipc_id,
                                               msg->rina_hdr->src_ipc_id, -1,
-                                              info->snd_seq);
-		retval = -1;
+                                              info->snd_seq)) {
+			rkfree(hdr);
+			rkfree(msg_attrs);
+			rkfree(msg);
+			return -1;
+		}
+
+		rkfree(hdr);
+		rkfree(msg_attrs);
+		rkfree(msg);
+		return 0;
 	}
 
 	if (rnl_app_alloc_flow_req_arrived_msg(ipc_process->data,
@@ -213,14 +228,17 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                msg_attrs->dest,
                                                msg_attrs->fspec,
                                                msg_attrs->id,
-                                               info->snd_seq))
-                retval = -1;
-        
+                                               info->snd_seq)) {
+		rkfree(hdr);
+		rkfree(msg_attrs);
+		rkfree(msg);
+		return -1;
+	}
 	rkfree(hdr);
 	rkfree(msg_attrs);
 	rkfree(msg);
         
-	return retval;
+	return 0;
 }
 
 static int notify_ipcp_allocate_flow_response(void *             data,
@@ -431,15 +449,19 @@ static int notify_ipcp_register_app_request(void *             data,
 
 	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
 	if (!attrs) {
-		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
-		return -1;
+		if (rnl_app_register_response_msg(0, 0, -1, info->snd_seq))
+			return -1;
+
+		return 0;
 	}
 
 	app_name = name_create();
 	if (!app_name) {
 		rkfree(attrs);
-		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
-		return -1;
+		if (rnl_app_register_response_msg(0, 0, -1, info->snd_seq))
+			return -1;
+
+		return 0;
 	}
 	attrs->app_name= app_name;
 
@@ -447,57 +469,80 @@ static int notify_ipcp_register_app_request(void *             data,
 	if (!dif_name) {
 		name_destroy(app_name);
 		rkfree(attrs);
-		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
-		return -1;
+		if (rnl_app_register_response_msg(0, 0, -1, info->snd_seq))
+			return -1;
+
+		return 0;
 	}
 	attrs->dif_name= dif_name;
 
 	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
 	if (!msg) {
 		LOG_ERR("Could not allocate space for my_msg struct");
-		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
 		name_destroy(app_name);
 		name_destroy(dif_name);
 		rkfree(attrs);
-		return -1;
+		if (rnl_app_register_response_msg(0, 0, -1, info->snd_seq))
+			return -1;
+
+		return 0;
 	}
 	msg->attrs = attrs;
 	if (rnl_parse_msg(info, msg)) {
 		LOG_ERR("Could not parse message");
-		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
 		name_destroy(app_name);
 		name_destroy(dif_name);
 		rkfree(attrs);
 		rkfree(msg);
-		return -1;
+		if (rnl_app_register_response_msg(0, 0, -1, info->snd_seq))
+			return -1;
+		return 0;
 	}
 	ipc_id = msg->rina_hdr->dst_ipc_id;
 	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
 	if (!ipc_process) {
 		LOG_ERR("IPC process %d not found", ipc_id);
-		rnl_app_register_response_msg(ipc_id,
+		if (rnl_app_register_response_msg(ipc_id,
                                               msg->rina_hdr->src_ipc_id, -1,
-                                              info->snd_seq);
+                                              info->snd_seq)) {
+			name_destroy(app_name);
+			name_destroy(dif_name);
+			rkfree(attrs);
+			rkfree(msg);
+			return -1;
+		}
 		name_destroy(app_name);
 		name_destroy(dif_name);
 		rkfree(attrs);
 		rkfree(msg);
-		return -1;
+		return 0;
 	}
 
 	if (ipc_process->ops->application_register(data, attrs->app_name)) {
-		rnl_app_register_response_msg(ipc_id,
+		if (rnl_app_register_response_msg(ipc_id,
                                               msg->rina_hdr->src_ipc_id, -1,
-                                              info->snd_seq);
+                                              info->snd_seq)) {
+			name_destroy(app_name);
+			name_destroy(dif_name);
+			rkfree(attrs);
+			rkfree(msg);
+			return -1;
+		}
+		name_destroy(app_name);
+		name_destroy(dif_name);
+		rkfree(attrs);
+		rkfree(msg);
+		return 0;
+	}
+
+	if (rnl_app_register_response_msg(ipc_id, msg->rina_hdr->src_ipc_id, 0,
+                        info->snd_seq)) {
 		name_destroy(app_name);
 		name_destroy(dif_name);
 		rkfree(attrs);
 		rkfree(msg);
 		return -1;
 	}
-
-	rnl_app_register_response_msg(ipc_id, msg->rina_hdr->src_ipc_id, 0,
-                        info->snd_seq);
 
 	name_destroy(app_name);
 	name_destroy(dif_name);

@@ -233,7 +233,7 @@ static int dummy_application_register(struct ipcp_instance_data * data,
         ASSERT(source);
 
         if (!data->info) {
-                LOG_ERR("IPC Process doesn't belong to any DIF");
+                LOG_ERR("There is not info in this IPC Process");
                 return -1;
         }
         if (!data->info->dif_name) {
@@ -383,9 +383,10 @@ static int dummy_assign_to_dif(struct ipcp_instance_data * data,
 {
         ASSERT(data);
 
-        data->info = rkzalloc(sizeof(struct dummy_info), GFP_KERNEL);
-        if (!data->info)
+        if (!data->info) {
+        	LOG_ERR("There is no info for this IPC process");
                 return -1;
+        }
 
         data->info->dif_name = name_dup(dif_name);
         if (!data->info->dif_name) {
@@ -460,15 +461,6 @@ static struct ipcp_instance * dummy_create(struct ipcp_factory_data * data,
         inst->data->info = rkzalloc(sizeof(*inst->data->info), GFP_KERNEL);
         if (!inst->data->info) {
                 LOG_DBG("Failed creation of inst->data->info");
-                rkfree(inst->data);
-                rkfree(inst);
-                return NULL;
-        }
-
-        inst->data->info->dif_name = name_create();
-        if (!inst->data->info->dif_name) {
-                LOG_DBG("Failed creation of dif_name");
-                rkfree(inst->data->info);
                 rkfree(inst->data);
                 rkfree(inst);
                 return NULL;

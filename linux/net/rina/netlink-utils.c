@@ -2080,7 +2080,6 @@ int rnl_app_alloc_flow_req_arrived_msg(struct ipcp_instance_data * data,
 		nlmsg_free(msg);
 		return -1;
 	}
-	nlmsg_free(msg);
 
         return 0;
 }
