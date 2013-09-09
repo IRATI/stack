@@ -157,10 +157,10 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                 return -1;
         }
 
-       flow->state = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
-       flow->port_id = id;
-       INIT_LIST_HEAD(&flow->list);
-       list_add(&flow->list, &data->flows);
+        flow->state = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
+        flow->port_id = id;
+        INIT_LIST_HEAD(&flow->list);
+        list_add(&flow->list, &data->flows);
 
 	return 0;
 }
@@ -387,6 +387,7 @@ static int dummy_assign_dif_request(struct ipcp_instance_data * data,
 	if (!data->info)
 		return -1;
 
+        /* FIXME: name_dup() should do all this code */
 	data->info->dif_name = rkzalloc(sizeof(struct name), GFP_KERNEL);
 	if (!data->info->dif_name) {
 		rkfree(data->info);
