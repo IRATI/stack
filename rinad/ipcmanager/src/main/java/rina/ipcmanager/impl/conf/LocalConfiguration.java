@@ -6,6 +6,12 @@ package rina.ipcmanager.impl.conf;
  *
  */
 public class LocalConfiguration {
+	
+	/**
+	 * The number of threads that will be executing the 
+	 * IPC Manager event loop
+	 */
+	private int eventLoopWorkers = 2;
 
 	/**
 	 * The port where the IPC Manager is listening for incoming local TCP connections from administrators
@@ -51,6 +57,14 @@ public class LocalConfiguration {
 	 * The length of Flow queues
 	 */
 	private int lengthOfFlowQueues = 10;
+
+	public int getEventLoopWorkers() {
+		return eventLoopWorkers;
+	}
+
+	public void setEventLoopWorkers(int eventLoopWorkers) {
+		this.eventLoopWorkers = eventLoopWorkers;
+	}
 
 	public int getConsolePort() {
 		return consolePort;
@@ -118,13 +132,14 @@ public class LocalConfiguration {
 	
 	public String toString(){
 		String result = "Local Configuration \n";
-		result = result + "Console port: " + consolePort + "\n";
-		result = result + "CDAP timeout in ms: "+ cdapTimeoutInMs + "\n";
-		result = result + "Enrollment timeout in ms: " + enrollmentTimeoutInMs + "\n";
-		result = result + "Flow allocator timeout in ms:  "+flowAllocatorTimeoutInMs + "\n";
-		result = result + "Watchdog period in ms: " + watchdogPeriodInMs + "\n";
-		result = result + "Declared dead interval in ms: " + declaredDeadIntervalInMs + "\n";
-		result = result + "Neighbors enroller period in ms: " + neighborsEnrollerPeriodInMs + "\n";
+		result = result + "   Number of event loop workers: " + eventLoopWorkers + "\n";
+		result = result + "   Console port: " + consolePort + "\n";
+		result = result + "   CDAP timeout in ms: "+ cdapTimeoutInMs + "\n";
+		result = result + "   Enrollment timeout in ms: " + enrollmentTimeoutInMs + "\n";
+		result = result + "   Flow allocator timeout in ms:  "+flowAllocatorTimeoutInMs + "\n";
+		result = result + "   Watchdog period in ms: " + watchdogPeriodInMs + "\n";
+		result = result + "   Declared dead interval in ms: " + declaredDeadIntervalInMs + "\n";
+		result = result + "   Neighbors enroller period in ms: " + neighborsEnrollerPeriodInMs + "\n";
 		
 		return result;
 	}

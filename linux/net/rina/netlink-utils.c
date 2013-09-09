@@ -1912,7 +1912,7 @@ int rnl_format_rmt_del_fte_req_msg(const struct pdu_ft_entry *entry,
 }
 EXPORT_SYMBOL(rnl_format_rmt_del_fte_req_msg);
 
-int rnl_assign_dif_response(ipc_process_id_t id, uint_t res)
+int rnl_assign_dif_response(ipc_process_id_t id, uint_t res, uint_t seq_num)
 {
 	struct sk_buff * out_msg;
 	struct rina_msg_hdr * out_hdr;
@@ -1927,7 +1927,7 @@ int rnl_assign_dif_response(ipc_process_id_t id, uint_t res)
 	out_hdr = (struct rina_msg_hdr *) genlmsg_put(
 				out_msg,
 				0,
-				0,
+				seq_num,
 				get_nl_family(),
 				0,
 				RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE);
@@ -1961,7 +1961,6 @@ int rnl_assign_dif_response(ipc_process_id_t id, uint_t res)
 		nlmsg_free(out_msg);
 		return -1;
 	}
-	nlmsg_free(out_msg);
 
 	return 0;
 }

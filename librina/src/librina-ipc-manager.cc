@@ -422,7 +422,7 @@ const std::list<RIBObject> IPCProcess::queryRIB(const std::string& objectClass,
 const std::string IPCProcessFactory::unknown_ipc_process_error =
 		"Could not find an IPC Process with the provided id";
 const std::string IPCProcessFactory::path_to_ipc_process_types =
-		"/sys/rina/personalities/default/shims/";
+		"/sys/rina/personalities/default/ipcp-factories/";
 const std::string IPCProcessFactory::normal_ipc_process_type =
 		"normal";
 
@@ -477,6 +477,7 @@ IPCProcess * IPCProcessFactory::create(
 	int result = syscallCreateIPCProcess(
 			ipcProcessName, ipcProcessId, difType);
 	if (result != 0){
+		unlock();
 		throw CreateIPCProcessException();
 	}
 #endif
@@ -505,6 +506,7 @@ throw (DestroyIPCProcessException) {
 #else
 	int result = syscallDestroyIPCProcess(ipcProcessId);
 	if (result != 0){
+		unlock();
 		throw DestroyIPCProcessException();
 	}
 #endif
