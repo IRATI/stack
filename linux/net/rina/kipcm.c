@@ -141,7 +141,9 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 	ipc_process_id_t 			   ipc_id;
 	struct rina_msg_hdr *                      hdr;
 	struct kipcm * kipcm;
-	int retval = 0;
+	struct name * source;
+	struct name * dest;
+	struct name * dif_name;
 
 	if (!data) {
 		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -161,9 +163,42 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
 		return 0;
 	}
+	source = name_create();
+	if (!source) {
+		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq)) {
+			rkfree(msg_attrs);
+			return -1;
+		}
+
+		return 0;
+	}
+	dest = name_create();
+	if (!dest) {
+		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq)) {
+			rkfree(msg_attrs);
+			name_destroy(source);
+			return -1;
+		}
+
+		return 0;
+	}
+	dif_name = name_create();
+	if (!dif_name) {
+		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq)) {
+			rkfree(msg_attrs);
+			name_destroy(source);
+			name_destroy(dest);
+			return -1;
+		}
+
+		return 0;
+	}
+
 	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
 	if (!msg) {
 		rkfree(msg_attrs);
+		name_destroy(source);
+		name_destroy(dest);
 		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq))
 			return -1;
 
@@ -172,6 +207,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
 	if (!hdr) {
 		rkfree(msg_attrs);
+		name_destroy(source);
+		name_destroy(dest);
 		rkfree(msg);
 		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq))
 			return -1;
