@@ -299,7 +299,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
 				  	  struct sk_buff *   buff,
 				  	  struct genl_info * info)
 {
-	struct kipcm * kipcm;
+	struct kipcm *                                kipcm;
 	struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs;
 	struct rnl_msg * 			      msg;
 	struct rina_msg_hdr * 			      hdr;
@@ -384,8 +384,8 @@ static int notify_ipcp_assign_dif_request(void *             data,
 		rnl_assign_dif_response(0, -1);
 		return -1;
 	}
-	if (ipc_process->ops->assign_dif_request(ipc_process->data,
-                                                 attrs->dif_config->dif_name)) {
+	if (ipc_process->ops->assign_to_dif(ipc_process->data,
+                                            attrs->dif_config->dif_name)) {
 		char * tmp = name_tostring(attrs->dif_config->dif_name);
 		LOG_ERR("Failed assign to dif %s for IPC process: %d",
                         tmp, ipc_id);

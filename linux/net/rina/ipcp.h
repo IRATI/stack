@@ -66,12 +66,13 @@ struct ipcp_instance_ops {
 	int  (* application_unregister)(struct ipcp_instance_data * data,
                                         const struct name *         source);
 
+	int  (* assign_to_dif)(struct ipcp_instance_data * data,
+                               const struct name * 	   dif_name);
+
         /* Takes the ownership of the passed SDU */
 	int  (* sdu_write)(struct ipcp_instance_data * data,
                            port_id_t                   id,
                            struct sdu *                sdu);
-	int  (* assign_dif_request)(struct ipcp_instance_data * data,
-			    	    const struct name * 	dif_name);
 };
 
 #endif
