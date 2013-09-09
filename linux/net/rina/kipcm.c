@@ -158,8 +158,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         if (!msg_attrs) {
                 if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq))
                         return -1;
-
-                /* FIXME: should not be -1 even here ? */
                 return 0;
         }
 
@@ -168,8 +166,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 rkfree(msg_attrs);
                 if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq))
                         return -1;
-
-                /* FIXME: should not be -1 even here ? */
                 return 0;
         }
 
@@ -179,8 +175,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 rkfree(msg);
                 if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq))
                         return -1;
-
-                /* FIXME: should not be -1 even here ? */
                 return 0;
         }
         msg->attrs = msg_attrs;
@@ -189,8 +183,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         if (rnl_parse_msg(info, msg)) {
                 if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq))
                         return -1;
-
-                /* FIXME: should not be -1 even here ? */
                 return 0;
         }
 
@@ -202,11 +194,10 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 rkfree(msg_attrs);
                 rkfree(msg);
                 if (rnl_app_alloc_flow_result_msg(ipc_id,
-                                                  msg->rina_hdr->src_ipc_id, -1,
+                                                  msg->rina_hdr->src_ipc_id,
+                                                  -1,
                                                   info->snd_seq))
                         return -1;
-
-                /* FIXME: should not be -1 even here ? */
                 return 0;
         }
 
@@ -218,7 +209,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 LOG_ERR("Failed allocate flow request for port id: %d",
                         msg_attrs->id);
                 if (rnl_app_alloc_flow_result_msg(ipc_id,
-                                                  msg->rina_hdr->src_ipc_id, -1,
+                                                  msg->rina_hdr->src_ipc_id,
+                                                  -1,
                                                   info->snd_seq)) {
                         rkfree(hdr);
                         rkfree(msg_attrs);
@@ -230,7 +222,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 rkfree(msg_attrs);
                 rkfree(msg);
 
-                /* FIXME: should not be -1 even here ? */
                 return 0;
         }
 
@@ -514,7 +505,8 @@ static int notify_ipcp_register_app_request(void *             data,
         if (!ipc_process) {
                 LOG_ERR("IPC process %d not found", ipc_id);
                 if (rnl_app_register_response_msg(ipc_id,
-                                                  msg->rina_hdr->src_ipc_id, -1,
+                                                  msg->rina_hdr->src_ipc_id,
+                                                  -1,
                                                   info->snd_seq)) {
                         name_destroy(app_name);
                         name_destroy(dif_name);
@@ -532,7 +524,8 @@ static int notify_ipcp_register_app_request(void *             data,
         if (ipc_process->ops->application_register(ipc_process->data,
                                                    attrs->app_name)) {
                 if (rnl_app_register_response_msg(ipc_id,
-                                                  msg->rina_hdr->src_ipc_id, -1,
+                                                  msg->rina_hdr->src_ipc_id,
+                                                  -1,
                                                   info->snd_seq)) {
                         name_destroy(app_name);
                         name_destroy(dif_name);
@@ -1134,7 +1127,8 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 
         if (kfifo_out(&flow->sdu_ready, &size, sizeof(size_t)) <
             sizeof(size_t)) {
-                LOG_ERR("There is not enough data in port-id %d fifo", port_id);
+                LOG_ERR("There is not enough data in port-id %d fifo",
+                        port_id);
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
