@@ -328,6 +328,14 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         return 0;
 };
 
+static int eth_vlan_dif_request(struct ipcp_instance_data * data,
+                                const struct name * 	    dif_name)
+{
+        LOG_MISSING;
+
+        return 0;
+}
+
 static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_allocate_request  = eth_vlan_flow_allocate_request,
         .flow_allocate_response = eth_vlan_flow_allocate_response,
@@ -335,6 +343,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .application_register   = eth_vlan_application_register,
         .application_unregister = eth_vlan_application_unregister,
         .sdu_write              = eth_vlan_sdu_write,
+        .assign_dif_request	= eth_vlan_dif_request,
 };
 
 static struct ipcp_factory_data {
