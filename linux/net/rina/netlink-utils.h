@@ -501,15 +501,18 @@ int rnl_app_alloc_flow_req_arrived_msg(struct ipcp_instance_data * data,
 				       const struct name *         source,
 				       const struct name *         dest,
 				       const struct flow_spec *    fspec,
-				       port_id_t                   id);
+				       port_id_t                   id,
+				       uint_t	   		   seq_num);
 
 int rnl_app_alloc_flow_result_msg(ipc_process_id_t src_ipc_id,
 		  	  	  ipc_process_id_t dst_ipc_id,
-		  	  	  uint_t           res);
+		  	  	  uint_t           res,
+		  	  	  uint_t	   seq_num);
 
 int rnl_app_register_response_msg(ipc_process_id_t ipc_id,
 				  ipc_process_id_t dst_id,
-				  uint_t           res);
+				  uint_t           res,
+				  uint_t           seq_num);
 
 char * nla_get_string(struct nlattr *nla);
 

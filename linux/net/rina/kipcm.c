@@ -147,7 +147,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
 	if (!data) {
 		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
-		rnl_app_alloc_flow_result_msg(0, 0, -1);
+		rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq);
 		return -1;
 	}
 
@@ -155,33 +155,33 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
 	if (!info) {
 		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
-		rnl_app_alloc_flow_result_msg(0, 0, -1);
+		rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq);
 		return -1;
 	}
 
 	msg_attrs = rkzalloc(sizeof(*msg_attrs), GFP_KERNEL);
 	if (!msg_attrs) {
-		rnl_app_alloc_flow_result_msg(0, 0, -1);
+		rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq);
 		return -1;
 	}
 	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
 	if (!msg) {
 		rkfree(msg_attrs);
-		rnl_app_alloc_flow_result_msg(0, 0, -1);
+		rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq);
 		return -1;
 	}
 	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
 	if (!hdr) {
 		rkfree(msg_attrs);
 		rkfree(msg);
-		rnl_app_alloc_flow_result_msg(0, 0, -1);
+		rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq);
 		return -1;
 	}
 	msg->attrs = msg_attrs;
 	msg->rina_hdr = hdr;
 
 	if (rnl_parse_msg(info, msg)) {
-		rnl_app_alloc_flow_result_msg(0, 0, -1);
+		rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq);
 		return -1;
 	}
 	ipc_id = msg->rina_hdr->dst_ipc_id;
@@ -192,7 +192,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 		rkfree(msg_attrs);
 		rkfree(msg);
 		rnl_app_alloc_flow_result_msg(ipc_id,
-                                              msg->rina_hdr->src_ipc_id, -1);
+                                              msg->rina_hdr->src_ipc_id, -1,
+                                              info->snd_seq);
 		return -1;
 	}
 	if (ipc_process->ops->flow_allocate_request(ipc_process->data,
@@ -203,7 +204,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 		LOG_ERR("Failed allocate flow request for port id: %d",
                         msg_attrs->id);
 		rnl_app_alloc_flow_result_msg(ipc_id,
-                                              msg->rina_hdr->src_ipc_id, -1);
+                                              msg->rina_hdr->src_ipc_id, -1,
+                                              info->snd_seq);
 		retval = -1;
 	}
 
@@ -211,7 +213,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                msg_attrs->source,
                                                msg_attrs->dest,
                                                msg_attrs->fspec,
-                                               msg_attrs->id))
+                                               msg_attrs->id,
+                                               info->snd_seq))
                 retval = -1;
         
 	rkfree(hdr);
@@ -422,7 +425,7 @@ static int notify_ipcp_register_app_request(void *             data,
 
 	if (!data) {
 		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
-		rnl_app_register_response_msg(0, 0, -1);
+		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
 		return -1;
 	}
 
@@ -430,19 +433,19 @@ static int notify_ipcp_register_app_request(void *             data,
 
 	if (!info) {
 		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
-		rnl_app_register_response_msg(0, 0, -1);
+		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
 		return -1;
 	}
 	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
 	if (!attrs) {
-		rnl_app_register_response_msg(0, 0, -1);
+		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
 		return -1;
 	}
 
 	app_name = name_create();
 	if (!app_name) {
 		rkfree(attrs);
-		rnl_app_register_response_msg(0, 0, -1);
+		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
 		return -1;
 	}
 	attrs->app_name= app_name;
@@ -451,7 +454,7 @@ static int notify_ipcp_register_app_request(void *             data,
 	if (!dif_name) {
 		name_destroy(app_name);
 		rkfree(attrs);
-		rnl_app_register_response_msg(0, 0, -1);
+		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
 		return -1;
 	}
 	attrs->dif_name= dif_name;
@@ -459,7 +462,7 @@ static int notify_ipcp_register_app_request(void *             data,
 	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
 	if (!msg) {
 		LOG_ERR("Could not allocate space for my_msg struct");
-		rnl_app_register_response_msg(0, 0, -1);
+		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
 		name_destroy(app_name);
 		name_destroy(dif_name);
 		rkfree(attrs);
@@ -468,7 +471,7 @@ static int notify_ipcp_register_app_request(void *             data,
 	msg->attrs = attrs;
 	if (rnl_parse_msg(info, msg)) {
 		LOG_ERR("Could not parse message");
-		rnl_app_register_response_msg(0, 0, -1);
+		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
 		name_destroy(app_name);
 		name_destroy(dif_name);
 		rkfree(attrs);
@@ -480,7 +483,8 @@ static int notify_ipcp_register_app_request(void *             data,
 	if (!ipc_process) {
 		LOG_ERR("IPC process %d not found", ipc_id);
 		rnl_app_register_response_msg(ipc_id,
-                                              msg->rina_hdr->src_ipc_id, -1);
+                                              msg->rina_hdr->src_ipc_id, -1,
+                                              info->snd_seq);
 		name_destroy(app_name);
 		name_destroy(dif_name);
 		rkfree(attrs);
@@ -490,7 +494,8 @@ static int notify_ipcp_register_app_request(void *             data,
 
 	if (ipc_process->ops->application_register(data, attrs->app_name)) {
 		rnl_app_register_response_msg(ipc_id,
-                                              msg->rina_hdr->src_ipc_id, -1);
+                                              msg->rina_hdr->src_ipc_id, -1,
+                                              info->snd_seq);
 		name_destroy(app_name);
 		name_destroy(dif_name);
 		rkfree(attrs);
@@ -498,7 +503,8 @@ static int notify_ipcp_register_app_request(void *             data,
 		return -1;
 	}
 
-	rnl_app_register_response_msg(ipc_id, msg->rina_hdr->src_ipc_id, 0);
+	rnl_app_register_response_msg(ipc_id, msg->rina_hdr->src_ipc_id, 0,
+                        info->snd_seq);
 
 	name_destroy(app_name);
 	name_destroy(dif_name);
