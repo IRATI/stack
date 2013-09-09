@@ -147,6 +147,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
 	if (!data) {
 		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+		rnl_app_alloc_flow_result_msg(0, 0, -1);
 		return -1;
 	}
 
@@ -154,35 +155,44 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
 	if (!info) {
 		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+		rnl_app_alloc_flow_result_msg(0, 0, -1);
 		return -1;
 	}
 
 	msg_attrs = rkzalloc(sizeof(*msg_attrs), GFP_KERNEL);
-	if (!msg_attrs)
+	if (!msg_attrs) {
+		rnl_app_alloc_flow_result_msg(0, 0, -1);
 		return -1;
+	}
 	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
 	if (!msg) {
 		rkfree(msg_attrs);
+		rnl_app_alloc_flow_result_msg(0, 0, -1);
 		return -1;
 	}
 	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
 	if (!hdr) {
 		rkfree(msg_attrs);
 		rkfree(msg);
+		rnl_app_alloc_flow_result_msg(0, 0, -1);
 		return -1;
 	}
 	msg->attrs = msg_attrs;
 	msg->rina_hdr = hdr;
 
-	if (rnl_parse_msg(info, msg))
+	if (rnl_parse_msg(info, msg)) {
+		rnl_app_alloc_flow_result_msg(0, 0, -1);
 		return -1;
-	ipc_id = msg->rina_hdr->src_ipc_id;
+	}
+	ipc_id = msg->rina_hdr->dst_ipc_id;
 	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
 	if (!ipc_process) {
 		LOG_ERR("IPC process %d not found", ipc_id);
 		rkfree(hdr);
 		rkfree(msg_attrs);
 		rkfree(msg);
+		rnl_app_alloc_flow_result_msg(ipc_id,
+				msg->rina_hdr->src_ipc_id, -1);
 		return -1;
 	}
 	if (ipc_process->ops->flow_allocate_request(ipc_process->data,
@@ -192,6 +202,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 			msg_attrs->id)) {
 		LOG_ERR("Failed allocate flow request for port id: %d",
 				msg_attrs->id);
+		rnl_app_alloc_flow_result_msg(ipc_id,
+				msg->rina_hdr->src_ipc_id, -1);
 		retval = -1;
 	}
 
