@@ -145,6 +145,12 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
 	/* FIXME: Responses needed! */
 
+	if (!info) {
+		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+		rnl_app_alloc_flow_result_msg(0, 0, -1, 0);
+		return -1;
+	}
+
 	if (!data) {
 		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
 		rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq);
@@ -152,13 +158,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 	}
 
 	kipcm = (struct kipcm *) data;
-
-	if (!info) {
-		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
-		rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq);
-		return -1;
-	}
-
 	msg_attrs = rkzalloc(sizeof(*msg_attrs), GFP_KERNEL);
 	if (!msg_attrs) {
 		rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq);
@@ -423,6 +422,12 @@ static int notify_ipcp_register_app_request(void *             data,
 	struct ipcp_instance * 			ipc_process;
 	ipc_process_id_t 			ipc_id;
 
+	if (!info) {
+		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+		rnl_app_register_response_msg(0, 0, -1, 0);
+		return -1;
+	}
+
 	if (!data) {
 		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
 		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
@@ -431,11 +436,6 @@ static int notify_ipcp_register_app_request(void *             data,
 
 	kipcm = (struct kipcm *) data;
 
-	if (!info) {
-		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
-		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
-		return -1;
-	}
 	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
 	if (!attrs) {
 		rnl_app_register_response_msg(0, 0, -1, info->snd_seq);
@@ -519,19 +519,19 @@ static int netlink_handlers_unregister(struct rina_nl_set * set)
 	int retval = 0;
 
 	if (rina_netlink_handler_unregister(set,
-                                            RINA_C_IPCM_ALLOCATE_FLOW_REQUEST))
+				    RINA_C_IPCM_ALLOCATE_FLOW_REQUEST))
 		retval = -1;
 
 	if (rina_netlink_handler_unregister(set,
-                                            RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE))
+				    RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE))
 		retval = -1;
 
 	if (rina_netlink_handler_unregister(set,
-                                            RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST))
+				    RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST))
 		retval = -1;
 
 	if (rina_netlink_handler_unregister(set,
-				RINA_C_IPCM_REGISTER_APPLICATION_REQUEST))
+				    RINA_C_IPCM_REGISTER_APPLICATION_REQUEST))
 		retval = -1;
 
 	return retval;
