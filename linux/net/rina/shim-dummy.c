@@ -387,23 +387,12 @@ static int dummy_assign_to_dif(struct ipcp_instance_data * data,
         if (!data->info)
                 return -1;
 
-        /* FIXME: name_dup() should do all this code */
-        data->info->dif_name = rkzalloc(sizeof(struct name), GFP_KERNEL);
+        data->info->dif_name = name_dup(dif_name);
         if (!data->info->dif_name) {
+        	char * tmp = name_tostring(dif_name);
+        	LOG_ERR("Application %s registration has failed", tmp);
+		rkfree(tmp);
                 rkfree(data->info);
-
-                return -1;
-        }
-
-        if (name_cpy(dif_name, data->info->dif_name)) {
-                char * tmp = name_tostring(dif_name);
-
-                rkfree(data->info->dif_name);
-                rkfree(data->info);
-
-                LOG_ERR("Application %s registration has failed", tmp);
-
-                rkfree(tmp);
 
                 return -1;
         }
