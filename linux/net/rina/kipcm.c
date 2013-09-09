@@ -530,6 +530,10 @@ static int netlink_handlers_unregister(struct rina_nl_set * set)
                                             RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST))
 		retval = -1;
 
+	if (rina_netlink_handler_unregister(set,
+				RINA_C_IPCM_REGISTER_APPLICATION_REQUEST))
+		retval = -1;
+
 	return retval;
 }
 
