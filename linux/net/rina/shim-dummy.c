@@ -252,7 +252,15 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
 	if (*response == 0) {
 		flow->dst_port_id = id;
 		flow->state = PORT_STATE_ALLOCATED;
+		if (kipcm_flow_add(default_kipcm, data->id, flow->port_id)) {
+			list_del(&flow->list);
+			name_destroy(flow->source);
+			name_destroy(flow->dest);
+			rkfree(flow);
+			return -1;
+		}
 		if (kipcm_flow_add(default_kipcm, data->id, id)) {
+			kipcm_flow_remove(default_kipcm, id);
 			list_del(&flow->list);
 			name_destroy(flow->source);
 			name_destroy(flow->dest);
@@ -264,6 +272,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
 				0,
 				flow->seq_num)) {
 			kipcm_flow_remove(default_kipcm, flow->port_id);
+			kipcm_flow_remove(default_kipcm, flow->dst_port_id);
 			list_del(&flow->list);
 			name_destroy(flow->source);
 			name_destroy(flow->dest);
@@ -415,22 +424,19 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
 {
         struct dummy_flow * flow;
 
-        flow = find_flow(data, id);
-        if (!flow) {
-                LOG_ERR("There is no flow allocated for port-id %d", id);
-                return -1;
+        list_for_each_entry(flow, &data->flows, list) {
+        	if (flow->port_id == id) {
+        		kipcm_sdu_post(default_kipcm, flow->dst_port_id, sdu);
+        		return 0;
+        	}
+        	if (flow->dst_port_id == id) {
+			kipcm_sdu_post(default_kipcm, flow->port_id, sdu);
+			return 0;
+		}
         }
+	LOG_ERR("There is no flow allocated for port-id %d", id);
 
-        /* FIXME: Add code here to send the sdu */
-        LOG_MISSING;
-
-#if 0
-        /* FIXME: An SDU is a buffer, do not presume it's a string */
-        LOG_DBG("Port id %d. Written %zd size of data, data: %s",
-                id, sdu->buffer->size, sdu->buffer->data);
-#endif
-
-        return 0;
+	return -1;
 }
 
 static int dummy_deallocate_all(struct ipcp_instance_data * data)
