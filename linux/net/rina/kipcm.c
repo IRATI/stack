@@ -136,8 +136,8 @@ struct ipcp_flow {
  * and the alloc_req_result.
  */
 static int notify_ipcp_allocate_flow_request(void *             data,
-					     struct sk_buff *   buff,
-					     struct genl_info * info)
+                                             struct sk_buff *   buff,
+                                             struct genl_info * info)
 {
 	struct rnl_ipcm_alloc_flow_req_msg_attrs * msg_attrs;
 	struct rnl_msg * 			   msg;
@@ -268,19 +268,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                               info->snd_seq))
 			return -1;
 	}
-/*
-	if (rnl_app_alloc_flow_req_arrived_msg(ipc_process->data,
-                                               msg_attrs->source,
-                                               msg_attrs->dest,
-                                               msg_attrs->fspec,
-                                               msg_attrs->id,
-                                               info->snd_seq)) {
-		rkfree(hdr);
-		rkfree(msg_attrs);
-		rkfree(msg);
-		return -1;
-	}
-*/
+
 	rkfree(hdr);
 	rkfree(msg_attrs);
 	rkfree(msg);
@@ -289,190 +277,190 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 }
 
 static int notify_ipcp_allocate_flow_response(void *             data,
-					      struct sk_buff *   buff,
-					      struct genl_info * info)
+                                              struct sk_buff *   buff,
+                                              struct genl_info * info)
 {
-	struct kipcm *                         kipcm;
-	struct rnl_alloc_flow_resp_msg_attrs * msg_attrs;
-	struct rnl_msg * 		       msg;
-	struct rina_msg_hdr * 		       hdr;
-	struct ipcp_instance * 		       ipc_process;
-	ipc_process_id_t 		       ipc_id;
-	int 				       retval = 0;
-	response_reason_t  		       reason;
+        struct kipcm *                         kipcm;
+        struct rnl_alloc_flow_resp_msg_attrs * msg_attrs;
+        struct rnl_msg *                       msg;
+        struct rina_msg_hdr *                  hdr;
+        struct ipcp_instance *                 ipc_process;
+        ipc_process_id_t                       ipc_id;
+        int                                    retval = 0;
+        response_reason_t                      reason;
 
-	if (!data) {
-		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
-		return -1;
-	}
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
 
-	kipcm = (struct kipcm *) data;
+        kipcm = (struct kipcm *) data;
 
-	if (!info) {
-		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
-		return -1;
-	}
-	msg_attrs = rkzalloc(sizeof(*msg_attrs), GFP_KERNEL);
-	if (!msg_attrs)
-		return -1;
-	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
-	if (!msg) {
-		rkfree(msg_attrs);
-		return -1;
-	}
-	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
-	if (!hdr) {
-		rkfree(msg_attrs);
-		rkfree(msg);
-		return -1;
-	}
-	msg->attrs = msg_attrs;
-	msg->rina_hdr = hdr;
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+        msg_attrs = rkzalloc(sizeof(*msg_attrs), GFP_KERNEL);
+        if (!msg_attrs)
+                return -1;
+        msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+        if (!msg) {
+                rkfree(msg_attrs);
+                return -1;
+        }
+        hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
+        if (!hdr) {
+                rkfree(msg_attrs);
+                rkfree(msg);
+                return -1;
+        }
+        msg->attrs = msg_attrs;
+        msg->rina_hdr = hdr;
 
-	if (rnl_parse_msg(info, msg)) {
-		rkfree(hdr);
-		rkfree(msg_attrs);
-		rkfree(msg);
-		return -1;
-	}
-	ipc_id = msg->rina_hdr->src_ipc_id;
-	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
-	if (!ipc_process) {
-		LOG_ERR("IPC process %d not found", ipc_id);
-		rkfree(hdr);
-		rkfree(msg_attrs);
-		rkfree(msg);
-		return -1;
-	}
-	reason = (response_reason_t) msg_attrs->result;
-	if (ipc_process->ops->flow_allocate_response(ipc_process->data,
+        if (rnl_parse_msg(info, msg)) {
+                rkfree(hdr);
+                rkfree(msg_attrs);
+                rkfree(msg);
+                return -1;
+        }
+        ipc_id = msg->rina_hdr->src_ipc_id;
+        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipc_process) {
+                LOG_ERR("IPC process %d not found", ipc_id);
+                rkfree(hdr);
+                rkfree(msg_attrs);
+                rkfree(msg);
+                return -1;
+        }
+        reason = (response_reason_t) msg_attrs->result;
+        if (ipc_process->ops->flow_allocate_response(ipc_process->data,
                                                      msg_attrs->id, &reason)) {
-		LOG_ERR("Failed allocate flow request for port id: %d",
+                LOG_ERR("Failed allocate flow request for port id: %d",
                         msg_attrs->id);
-		retval = -1;
-	}
+                retval = -1;
+        }
 
-	rkfree(hdr);
-	rkfree(msg_attrs);
-	rkfree(msg);
+        rkfree(hdr);
+        rkfree(msg_attrs);
+        rkfree(msg);
 
-	return retval;
+        return retval;
 }
 
 static int notify_ipcp_assign_dif_request(void *             data,
-				  	  struct sk_buff *   buff,
-				  	  struct genl_info * info)
+                                          struct sk_buff *   buff,
+                                          struct genl_info * info)
 {
-	struct kipcm *                                kipcm;
-	struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs;
-	struct rnl_msg * 			      msg;
-	struct dif_config *			      dif_config;
-	struct name * 				      dif_name;
-	struct ipcp_instance * 		       	      ipc_process;
-	ipc_process_id_t 		      	      ipc_id;
+        struct kipcm *                                kipcm;
+        struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs;
+        struct rnl_msg *                              msg;
+        struct dif_config *                           dif_config;
+        struct name *                                 dif_name;
+        struct ipcp_instance *                        ipc_process;
+        ipc_process_id_t                              ipc_id;
 
-	if (!data) {
-		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
-		return -1;
-	}
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
 
-	kipcm = (struct kipcm *) data;
+        kipcm = (struct kipcm *) data;
 
-	if (!info) {
-		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
-		return -1;
-	}
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
 
-	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
-	if (!attrs) {
-		rnl_assign_dif_response(0, -1, info->snd_seq);
-		return 0;
-	}
+        attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+        if (!attrs) {
+                rnl_assign_dif_response(0, -1, info->snd_seq);
+                return 0;
+        }
 
-	dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
-	if (!dif_config){
-		rkfree(attrs);
-		rnl_assign_dif_response(0, -1, info->snd_seq);
-		return 0;
-	}
-	attrs->dif_config = dif_config;
+        dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
+        if (!dif_config){
+                rkfree(attrs);
+                rnl_assign_dif_response(0, -1, info->snd_seq);
+                return 0;
+        }
+        attrs->dif_config = dif_config;
 
-	dif_name = name_create();
-	if (!dif_name){
-		rkfree(dif_config);
-		rkfree(attrs);
-		rnl_assign_dif_response(0, -1, info->snd_seq);
-		return 0;
-	}
-	dif_config->dif_name = dif_name;
+        dif_name = name_create();
+        if (!dif_name){
+                rkfree(dif_config);
+                rkfree(attrs);
+                rnl_assign_dif_response(0, -1, info->snd_seq);
+                return 0;
+        }
+        dif_config->dif_name = dif_name;
 
-	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
-	if (!msg) {
-		//name_destroy(dif_name);
-		rkfree(dif_config);
-		rkfree(attrs);
-		rnl_assign_dif_response(0, -1, info->snd_seq);
-		return 0;
-	}
-	msg->attrs = attrs;
+        msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+        if (!msg) {
+                //name_destroy(dif_name);
+                rkfree(dif_config);
+                rkfree(attrs);
+                rnl_assign_dif_response(0, -1, info->snd_seq);
+                return 0;
+        }
+        msg->attrs = attrs;
 
-	if (rnl_parse_msg(info, msg)) {
-		//name_destroy(dif_name);
-		rkfree(dif_config);
-		rkfree(attrs);
-		rkfree(msg);
-		rnl_assign_dif_response(0, -1, info->snd_seq);
-		return 0;
-	}
-	ipc_id = msg->rina_hdr->dst_ipc_id;
+        if (rnl_parse_msg(info, msg)) {
+                //name_destroy(dif_name);
+                rkfree(dif_config);
+                rkfree(attrs);
+                rkfree(msg);
+                rnl_assign_dif_response(0, -1, info->snd_seq);
+                return 0;
+        }
+        ipc_id = msg->rina_hdr->dst_ipc_id;
 
-	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
-	if (!ipc_process) {
-		LOG_ERR("IPC process %d not found", ipc_id);
-		//name_destroy(dif_name);
-		rkfree(dif_config);
-		rkfree(attrs);
-		rkfree(msg);
-		rnl_assign_dif_response(0, -1, info->snd_seq);
-		return 0;
-	}
-	LOG_DBG("Found IPC Process with id %d", ipc_id);
+        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipc_process) {
+                LOG_ERR("IPC process %d not found", ipc_id);
+                //name_destroy(dif_name);
+                rkfree(dif_config);
+                rkfree(attrs);
+                rkfree(msg);
+                rnl_assign_dif_response(0, -1, info->snd_seq);
+                return 0;
+        }
+        LOG_DBG("Found IPC Process with id %d", ipc_id);
 
-	if (ipc_process->ops->assign_to_dif(ipc_process->data,
-			attrs->dif_config->dif_name)) {
-		char * tmp = name_tostring(attrs->dif_config->dif_name);
-		LOG_ERR("Failed assign to dif %s for IPC process: %d",
+        if (ipc_process->ops->assign_to_dif(ipc_process->data,
+                                            attrs->dif_config->dif_name)) {
+                char * tmp = name_tostring(attrs->dif_config->dif_name);
+                LOG_ERR("Failed assign to dif %s for IPC process: %d",
                         tmp, ipc_id);
-		rkfree(tmp);
-		//name_destroy(dif_name);
-		rkfree(dif_config);
-		rkfree(attrs);
-		rkfree(msg);
-		rnl_assign_dif_response(0, -1, info->snd_seq);
-		return 0;
-	}
-	LOG_DBG("Assign to DIF operation successful, freeing memory");
+                rkfree(tmp);
+                //name_destroy(dif_name);
+                rkfree(dif_config);
+                rkfree(attrs);
+                rkfree(msg);
+                rnl_assign_dif_response(0, -1, info->snd_seq);
+                return 0;
+        }
+        LOG_DBG("Assign to DIF operation successful, freeing memory");
 
-	LOG_DBG("Calling assign to DIF response");
-	if (rnl_assign_dif_response(ipc_id, 0, info->snd_seq)){
-		name_destroy(dif_name);
-		rkfree(dif_config);
-		rkfree(attrs);
-		rkfree(msg);
-		return -1;
-	}
+        LOG_DBG("Calling assign to DIF response");
+        if (rnl_assign_dif_response(ipc_id, 0, info->snd_seq)){
+                name_destroy(dif_name);
+                rkfree(dif_config);
+                rkfree(attrs);
+                rkfree(msg);
+                return -1;
+        }
 
-	//name_destroy(dif_name);
-	rkfree(dif_config);
-	rkfree(attrs);
-	rkfree(msg);
-	LOG_DBG("Finishing successfully");
-	return 0;
+        //name_destroy(dif_name);
+        rkfree(dif_config);
+        rkfree(attrs);
+        rkfree(msg);
+        LOG_DBG("Finishing successfully");
+        return 0;
 }
 
 static int notify_ipcp_register_app_request(void *             data,
-					    struct sk_buff *   buff,
-					    struct genl_info * info)
+                                            struct sk_buff *   buff,
+                                            struct genl_info * info)
 {
 	struct kipcm * 				kipcm;
 	struct rnl_ipcm_reg_app_req_msg_attrs * attrs;
@@ -550,7 +538,8 @@ static int notify_ipcp_register_app_request(void *             data,
 	if (!ipc_process) {
 		LOG_ERR("IPC process %d not found", ipc_id);
 		if (rnl_app_register_response_msg(ipc_id,
-                                              msg->rina_hdr->src_ipc_id, -1,
+                                              msg->rina_hdr->src_ipc_id,
+                                              -1,
                                               info->snd_seq)) {
 			name_destroy(app_name);
 			name_destroy(dif_name);
@@ -568,7 +557,8 @@ static int notify_ipcp_register_app_request(void *             data,
 	if (ipc_process->ops->application_register(
 			ipc_process->data, attrs->app_name)) {
 		if (rnl_app_register_response_msg(ipc_id,
-                                              msg->rina_hdr->src_ipc_id, -1,
+                                              msg->rina_hdr->src_ipc_id,
+                                              -1,
                                               info->snd_seq)) {
 			name_destroy(app_name);
 			name_destroy(dif_name);
@@ -584,7 +574,7 @@ static int notify_ipcp_register_app_request(void *             data,
 	}
 
 	if (rnl_app_register_response_msg(ipc_id, msg->rina_hdr->src_ipc_id, 0,
-                        info->snd_seq)) {
+                        	info->snd_seq)) {
 		name_destroy(app_name);
 		name_destroy(dif_name);
 		rkfree(attrs);
@@ -602,93 +592,93 @@ static int notify_ipcp_register_app_request(void *             data,
 
 static int netlink_handlers_unregister(struct rina_nl_set * set)
 {
-	int retval = 0;
+        int retval = 0;
 
-	if (rina_netlink_handler_unregister(set,
-				    RINA_C_IPCM_ALLOCATE_FLOW_REQUEST))
-		retval = -1;
+        if (rina_netlink_handler_unregister(set,
+                                            RINA_C_IPCM_ALLOCATE_FLOW_REQUEST))
+                retval = -1;
 
-	if (rina_netlink_handler_unregister(set,
-				    RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE))
-		retval = -1;
+        if (rina_netlink_handler_unregister(set,
+                                            RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE))
+                retval = -1;
 
-	if (rina_netlink_handler_unregister(set,
-				    RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST))
-		retval = -1;
+        if (rina_netlink_handler_unregister(set,
+                                            RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST))
+                retval = -1;
 
-	if (rina_netlink_handler_unregister(set,
-				    RINA_C_IPCM_REGISTER_APPLICATION_REQUEST))
-		retval = -1;
+        if (rina_netlink_handler_unregister(set,
+                                            RINA_C_IPCM_REGISTER_APPLICATION_REQUEST))
+                retval = -1;
 
-	return retval;
+        return retval;
 }
 
 static int netlink_handlers_register(struct kipcm * kipcm)
 {
-	message_handler_cb handler;
+        message_handler_cb handler;
 
-	handler = notify_ipcp_assign_dif_request;
-	if (rina_netlink_handler_register(kipcm->set,
+        handler = notify_ipcp_assign_dif_request;
+        if (rina_netlink_handler_register(kipcm->set,
                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST,
                                           kipcm,
                                           handler))
-		return -1;
+                return -1;
 
-	handler = notify_ipcp_allocate_flow_request;
-	if (rina_netlink_handler_register(kipcm->set,
+        handler = notify_ipcp_allocate_flow_request;
+        if (rina_netlink_handler_register(kipcm->set,
                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
                                           kipcm,
                                           handler)) {
-		if (rina_netlink_handler_unregister(kipcm->set,
+                if (rina_netlink_handler_unregister(kipcm->set,
                                                     RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-			LOG_ERR("Failed handler unregister while bailing out");
-			/* FIXME: What else could be done here?" */
-		}
-		return -1;
-	}
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                return -1;
+        }
 
-	handler = notify_ipcp_allocate_flow_response;
-	if (rina_netlink_handler_register(kipcm->set,
+        handler = notify_ipcp_allocate_flow_response;
+        if (rina_netlink_handler_register(kipcm->set,
                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
                                           kipcm,
                                           handler)) {
-		if (rina_netlink_handler_unregister(kipcm->set,
+                if (rina_netlink_handler_unregister(kipcm->set,
                                                     RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-			LOG_ERR("Failed handler unregister while bailing out");
-			/* FIXME: What else could be done here?" */
-		}
-		if (rina_netlink_handler_unregister(kipcm->set,
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                if (rina_netlink_handler_unregister(kipcm->set,
                                                     RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-			LOG_ERR("Failed handler unregister while bailing out");
-			/* FIXME: What else could be done here?" */
-		}
-		return -1;
-	}
-	handler = notify_ipcp_register_app_request;
-	if (rina_netlink_handler_register(kipcm->set,
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                return -1;
+        }
+        handler = notify_ipcp_register_app_request;
+        if (rina_netlink_handler_register(kipcm->set,
                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,
                                           kipcm,
                                           handler)) {
-		if (rina_netlink_handler_unregister(kipcm->set,
+                if (rina_netlink_handler_unregister(kipcm->set,
                                                     RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-			LOG_ERR("Failed handler unregister while bailing out");
-			/* FIXME: What else could be done here?" */
-		}
-		if (rina_netlink_handler_unregister(kipcm->set,
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                if (rina_netlink_handler_unregister(kipcm->set,
                                                     RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-			LOG_ERR("Failed handler unregister while bailing out");
-			/* FIXME: What else could be done here?" */
-		}
-		if (rina_netlink_handler_unregister(kipcm->set,
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                if (rina_netlink_handler_unregister(kipcm->set,
                                                     RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-			LOG_ERR("Failed handler unregister while bailing out");
-			/* FIXME: What else could be done here?" */
-		}
-		return -1;
-	}
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                return -1;
+        }
 
 
-	return 0;
+        return 0;
 }
 
 struct kipcm * kipcm_init(struct kobject * parent, struct rina_nl_set * set)
@@ -730,32 +720,32 @@ struct kipcm * kipcm_init(struct kobject * parent, struct rina_nl_set * set)
 
         LOG_DBG("Registering set");
         if (rina_netlink_set_register(set)) {
-        	if (ipcp_imap_destroy(tmp->instances)) {
-			/* FIXME: What could we do here ? */
-		}
-		if (ipcp_fmap_destroy(tmp->flows)) {
-			/* FIXME: What could we do here ? */
-		}
-		if (ipcpf_fini(tmp->factories)) {
-			/* FIXME: What could we do here ? */
-		}
-		rkfree(tmp);
-		return NULL;
-	}
+                if (ipcp_imap_destroy(tmp->instances)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (ipcp_fmap_destroy(tmp->flows)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (ipcpf_fini(tmp->factories)) {
+                        /* FIXME: What could we do here ? */
+                }
+                rkfree(tmp);
+                return NULL;
+        }
         tmp->set = set;
         LOG_DBG("Registering handlers");
         if (netlink_handlers_register(tmp)) {
-        	if (ipcp_imap_destroy(tmp->instances)) {
-			/* FIXME: What could we do here ? */
-		}
-        	if (ipcp_fmap_destroy(tmp->flows)) {
-			/* FIXME: What could we do here ? */
-		}
-		if (ipcpf_fini(tmp->factories)) {
-			/* FIXME: What could we do here ? */
-		}
-		rkfree(tmp);
-		return NULL;
+                if (ipcp_imap_destroy(tmp->instances)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (ipcp_fmap_destroy(tmp->flows)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (ipcpf_fini(tmp->factories)) {
+                        /* FIXME: What could we do here ? */
+                }
+                rkfree(tmp);
+                return NULL;
         }
 
         KIPCM_LOCK_INIT(tmp);
@@ -796,8 +786,8 @@ int kipcm_fini(struct kipcm * kipcm)
         }
 
         if (netlink_handlers_unregister(kipcm->set)) {
-        	KIPCM_UNLOCK(kipcm);
-		return -1;
+                KIPCM_UNLOCK(kipcm);
+                return -1;
         }
 
         KIPCM_UNLOCK(kipcm);
@@ -944,9 +934,9 @@ int kipcm_ipcp_destroy(struct kipcm *  kipcm,
         ASSERT(factory);
 
         if (ipcp_fmap_remove_all_for_id(kipcm->flows, id)) {
-		KIPCM_UNLOCK(kipcm);
-		return -1;
-	}
+                KIPCM_UNLOCK(kipcm);
+                return -1;
+        }
 
         if (factory->ops->destroy(factory->data, instance)) {
                 KIPCM_UNLOCK(kipcm);
@@ -959,7 +949,7 @@ int kipcm_ipcp_destroy(struct kipcm *  kipcm,
         }
 
         KIPCM_UNLOCK(kipcm);
-        
+
         return 0;
 }
 
@@ -1170,7 +1160,8 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 
         if (kfifo_out(&flow->sdu_ready, &size, sizeof(size_t)) <
             sizeof(size_t)) {
-                LOG_ERR("There is not enough data in port-id %d fifo", port_id);
+                LOG_ERR("There is not enough data in port-id %d fifo",
+                        port_id);
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
