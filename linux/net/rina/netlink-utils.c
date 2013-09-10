@@ -1912,7 +1912,10 @@ int rnl_format_rmt_del_fte_req_msg(const struct pdu_ft_entry *entry,
 }
 EXPORT_SYMBOL(rnl_format_rmt_del_fte_req_msg);
 
-int rnl_assign_dif_response(ipc_process_id_t id, uint_t res, uint_t seq_num)
+int rnl_assign_dif_response(ipc_process_id_t id,
+		uint_t res,
+		uint_t seq_num,
+		uint_t port_id)
 {
 	struct sk_buff * out_msg;
 	struct rina_msg_hdr * out_hdr;
@@ -1951,11 +1954,7 @@ int rnl_assign_dif_response(ipc_process_id_t id, uint_t res, uint_t seq_num)
 		LOG_DBG("Result of genlmesg_end: %d", result);
 	}
 
-	/*
-	 * FIXME: Destination port-id set to 1, it must be changed in the
-	 * future, probably obtained from a config file
-	 */
-	result = genlmsg_unicast(&init_net, out_msg, 1);
+	result = genlmsg_unicast(&init_net, out_msg, port_id);
 	if (result) {
 		LOG_ERR("Could not send unicast msg: %d", result);
 		nlmsg_free(out_msg);
@@ -1966,13 +1965,16 @@ int rnl_assign_dif_response(ipc_process_id_t id, uint_t res, uint_t seq_num)
 }
 EXPORT_SYMBOL(rnl_assign_dif_response);
 
-int rnl_app_register_response_msg(ipc_process_id_t ipc_id,
+int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
 				  ipc_process_id_t dst_id,
 				  uint_t           res,
-				  uint_t 	   seq_num)
+				  uint_t 	   seq_num,
+				  uint_t	   port_id,
+				  bool isRegister)
 {
 	struct sk_buff * out_msg;
 	struct rina_msg_hdr * out_hdr;
+	uint_t command;
 	int result;
 
 	out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
@@ -1981,13 +1983,18 @@ int rnl_app_register_response_msg(ipc_process_id_t ipc_id,
 		return -1;
 	}
 
+	if (isRegister)
+		command = RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE;
+	else
+		command = RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE;
+
 	out_hdr = (struct rina_msg_hdr *) genlmsg_put(
 				out_msg,
 				0,
 				seq_num,
 				get_nl_family(),
 				0,
-				RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE);
+				command);
 	if(!out_hdr) {
 		LOG_ERR("Could not use genlmsg_put");
 		nlmsg_free(out_msg);
@@ -2008,11 +2015,7 @@ int rnl_app_register_response_msg(ipc_process_id_t ipc_id,
 		LOG_DBG("Result of genlmesg_end: %d", result);
 	}
 
-	/*
-	 * FIXME: Destination port-id set to 1, it must be changed in the
-	 * future, probably obtained from a config file
-	 */
-	result = genlmsg_unicast(&init_net, out_msg, 1);
+	result = genlmsg_unicast(&init_net, out_msg, port_id);
 	if(result) {
 		LOG_ERR("Could not send unicast msg: %d", result);
 		return -1;
@@ -2020,7 +2023,7 @@ int rnl_app_register_response_msg(ipc_process_id_t ipc_id,
 
 	return 0;
 }
-EXPORT_SYMBOL(rnl_app_register_response_msg);
+EXPORT_SYMBOL(rnl_app_register_unregister_response_msg);
 
 int rnl_app_alloc_flow_req_arrived_msg(struct ipcp_instance_data * data,
 				       const struct name *         source,

@@ -55,15 +55,14 @@ struct eth_vlan_info {
 
 enum port_id_state {
         PORT_STATE_NULL = 1,
-        PORT_STATE_RECIPIENT_ALLOCATE_PENDING,
-        PORT_STATE_INITIATOR_ALLOCATE_PENDING,
+        PORT_STATE_RECIPIENT_PENDING,
+        PORT_STATE_INITIATOR_PENDING,
         PORT_STATE_ALLOCATED
 };
 
 /* Holds the information related to one flow */
 struct shim_eth_flow {
-        struct list_head   list;
-        struct name *      source;
+	struct list_head   list;
         struct name *      dest;
         port_id_t          port_id;
         enum port_id_state port_id_state;
@@ -123,59 +122,60 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                                           uint_t		      seq_num,
                                           ipc_process_id_t 	      dst_id)
 {
-        struct shim_eth_flow * flow;
+	struct shim_eth_flow * flow;
+	unsigned char * d_netaddr;
 
         ASSERT(data);
         ASSERT(source);
         ASSERT(dest);
 
-        if (find_flow(data, id)) {
-                LOG_ERR("A flow already exists on port %d", id);
-                return -1;
-        }
+	if (!name_cmp(source, data->app_name)) {
+		LOG_ERR("Shim IPC process can have only one user");
+		return -1;
+	}
 
-        flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
-        if (!flow)
-                return -1;
+	flow = find_flow(data, id);
+	
+	if (!flow) {
+		flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+		if (!flow)
+			return -1;
 
-        flow->port_id = id;
-        flow->port_id_state = PORT_STATE_NULL;
+		flow->port_id = id;
+		flow->port_id_state = PORT_STATE_NULL;
 
-        /* Keep them as name */
-        flow->dest = name_dup(dest);
-        if (!flow->dest) {
-                rkfree(flow);
-                return -1;
-        }
-        flow->source = name_dup(source);
-        if (!flow->source) {
-                name_destroy(flow->dest);
-                rkfree(flow);
-                return -1;
-        }
+		flow->dest = name_dup(dest);
+		if (!flow->dest) {
+			rkfree(flow);
+			return -1;
+		}
 
-        /* FIXME: Convert the names to network addresses */
+		/* Convert the name to a network address */
+		d_netaddr = name_tostring(dest);
 
-        /*
-         * FIXME: If the destination is in the ARP cache,
-         * transition to ALLOCATED
-         */
-        flow->port_id_state = PORT_STATE_ALLOCATED;
+		/* FIXME: Hash them to 32 bit */
 
-        /* FIXME: If it is not, send an ARP request */
-        flow->port_id_state = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
+		/* FIXME: Send an ARP request and transition the state */
+		flow->port_id_state = PORT_STATE_INITIATOR_PENDING;
 
-        INIT_LIST_HEAD(&flow->list);
-        list_add(&flow->list, &data->flows);
+		INIT_LIST_HEAD(&flow->list);
+		list_add(&flow->list, &data->flows);
 
-        if (kipcm_flow_add(default_kipcm, data->id, id)) {
-                list_del(&flow->list);
-                name_destroy(flow->source);
-                name_destroy(flow->dest);
-                rkfree(flow);
-                return -1;
-        }
-
+		if (kipcm_flow_add(default_kipcm, data->id, id)) {
+			list_del(&flow->list);
+			name_destroy(flow->dest);
+			rkfree(flow);
+			return -1;
+		}
+	}
+        else if (flow->port_id_state == PORT_STATE_RECIPIENT_PENDING) {
+		flow->port_id_state = PORT_STATE_ALLOCATED;
+        } 
+	else {
+		LOG_ERR("Allocate called in a wrong state. How dare you!");
+		return -1;
+	}
+        
         return 0;
 }
 
@@ -190,14 +190,18 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
 
         flow = find_flow(data, id);
         if (!flow) {
-                LOG_ERR("Flow does not exist, cannot remove");
+                LOG_ERR("Flow does not exist, you shouldn't call this");
                 return -1;
         }
 
-        if (flow->port_id_state != PORT_STATE_RECIPIENT_ALLOCATE_PENDING) {
-                LOG_ERR("Flow is not in the right state to call this");
-                return -1;
-        }
+	if (flow->port_id_state == PORT_STATE_ALLOCATED) {
+		LOG_ERR("Flow has already been allocated");
+                return 0;	
+	}
+	else if (flow->port_id_state != PORT_STATE_RECIPIENT_PENDING) {
+		LOG_ERR("Flow is not in the right state to call this");
+                return -1;	
+	}
 
         /*
          * On positive response, flow should transition to allocated state
@@ -228,7 +232,6 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
 
         list_del(&flow->list);
         name_destroy(flow->dest);
-        name_destroy(flow->source);
         rkfree(flow);
 
         if (kipcm_flow_remove(default_kipcm, id))
