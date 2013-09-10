@@ -72,10 +72,12 @@ enum dummy_flow_state {
 
 struct dummy_flow {
         port_id_t             port_id;
+        port_id_t	      dst_port_id;
         struct name *         source;
         struct name *         dest;
         struct list_head      list;
         enum dummy_flow_state state;
+        uint_t		      dst_seq_num;
         uint_t		      seq_num; /* Required to notify back to the */
         ipc_process_id_t      dst_id;  /* IPC Manager the result of the
         				* allocation */
@@ -151,7 +153,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         	return -1;
         }
 
-        if (!is_app_registered(data, source)) {
+        if (!is_app_registered(data, dest)) {
         	LOG_ERR("Application is not registered in this IPC Process");
         	return -1;
         }
@@ -160,14 +162,6 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                 LOG_ERR("A flow already exists on port %d", id);
                 return -1;
         }
-
-        if (rnl_app_alloc_flow_req_arrived_msg(data,
-					       source,
-					       dest,
-					       fspec,
-					       id,
-					       seq_num))
-        	return -1;
 
         flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
         if (!flow)
@@ -191,13 +185,43 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
 	flow->port_id = id;
 	INIT_LIST_HEAD(&flow->list);
 	list_add(&flow->list, &data->flows);
+	flow->dst_seq_num = 666; /*FIXME!!!*/
+
+	if (rnl_app_alloc_flow_req_arrived_msg(data->id,
+					       data->info->dif_name,
+					       source,
+					       dest,
+					       fspec,
+					       flow->dst_seq_num,
+					       1)) {
+		list_del(&flow->list);
+		name_destroy(flow->source);
+		name_destroy(flow->dest);
+		rkfree(flow);
+		return -1;
+	}
 
         return 0;
 }
 
+static struct dummy_flow * find_flow_by_seq_num(struct ipcp_instance_data * data,
+					 	uint_t			    seq_num)
+{
+	struct dummy_flow * flow;
+
+	list_for_each_entry(flow, &data->flows, list) {
+		if (flow->dst_seq_num == seq_num) {
+			return flow;
+		}
+	}
+
+	return NULL;
+}
+
 static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
-		port_id_t                   id,
-		response_reason_t *         response)
+					port_id_t                   id,
+					uint_t			    seq_num,
+					response_reason_t *         response)
 {
 	struct dummy_flow * flow;
 	int retval = 0;
@@ -215,7 +239,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
 		return -1;
 	}
 
-	flow = find_flow(data, id);
+	flow = find_flow_by_seq_num(data, seq_num);
 	if (!flow) {
 		LOG_ERR("Flow does not exist, cannot allocate");
 		return -1;
@@ -226,16 +250,8 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
 
 	/* On positive response, flow should transition to allocated state */
 	if (*response == 0) {
-		if (rnl_app_alloc_flow_result_msg(data->id,
-				flow->dst_id,
-				0,
-				flow->seq_num)) {
-			list_del(&flow->list);
-			name_destroy(flow->source);
-			name_destroy(flow->dest);
-			rkfree(flow);
-			return -1;
-		}
+		flow->dst_port_id = id;
+		flow->state = PORT_STATE_ALLOCATED;
 		if (kipcm_flow_add(default_kipcm, data->id, id)) {
 			list_del(&flow->list);
 			name_destroy(flow->source);
@@ -243,7 +259,17 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
 			rkfree(flow);
 			return -1;
 		}
-		flow->state = PORT_STATE_ALLOCATED;
+		if (rnl_app_alloc_flow_result_msg(data->id,
+				flow->dst_id,
+				0,
+				flow->seq_num)) {
+			kipcm_flow_remove(default_kipcm, flow->port_id);
+			list_del(&flow->list);
+			name_destroy(flow->source);
+			name_destroy(flow->dest);
+			rkfree(flow);
+			return -1;
+		}
 	} else {
 		if (rnl_app_alloc_flow_result_msg(data->id,
 				flow->dst_id,

@@ -359,7 +359,9 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         }
         reason = (response_reason_t) msg_attrs->result;
         if (ipc_process->ops->flow_allocate_response(ipc_process->data,
-                                                     msg_attrs->id, &reason)) {
+                                                     msg_attrs->id,
+                                                     info->snd_seq,
+                                                     &reason)) {
                 LOG_ERR("Failed allocate flow request for port id: %d",
                         msg_attrs->id);
                 retval = -1;

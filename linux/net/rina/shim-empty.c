@@ -79,6 +79,7 @@ static int empty_flow_allocate_request(struct ipcp_instance_data * data,
 
 static int empty_flow_allocate_response(struct ipcp_instance_data * data,
                                         port_id_t                   id,
+                                        uint_t			    seq_num,
                                         response_reason_t *         response)
 {
         ASSERT(data);
