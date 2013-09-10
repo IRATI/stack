@@ -76,6 +76,9 @@ struct dummy_flow {
         struct name *         dest;
         struct list_head      list;
         enum dummy_flow_state state;
+        uint_t		      seq_num; /* Required to notify back to the
+        				  IPC Manager the result of the
+        				  allocation */
 };
 
 struct app_register {
@@ -128,7 +131,8 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                                        const struct name *         source,
                                        const struct name *         dest,
                                        const struct flow_spec *    fspec,
-                                       port_id_t                   id)
+                                       port_id_t                   id,
+                                       uint_t			   seq_num)
 {
         struct dummy_flow * flow;
 
@@ -157,10 +161,22 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        if (rnl_app_alloc_flow_req_arrived_msg(data,
+					       source,
+					       dest,
+					       fspec,
+					       id,
+					       seq_num)) {
+        	name_destroy(flow->dest);
+        	name_destroy(flow->source);
+        	rkfree(flow);
+        	return -1;
+        }
+
         flow->state = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
-        flow->port_id = id;
-        INIT_LIST_HEAD(&flow->list);
-        list_add(&flow->list, &data->flows);
+	flow->port_id = id;
+	INIT_LIST_HEAD(&flow->list);
+	list_add(&flow->list, &data->flows);
 
         return 0;
 }
