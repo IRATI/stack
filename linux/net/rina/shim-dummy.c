@@ -72,15 +72,15 @@ enum dummy_flow_state {
 
 struct dummy_flow {
         port_id_t             port_id;
-        port_id_t	      dst_port_id;
+        port_id_t             dst_port_id;
         struct name *         source;
         struct name *         dest;
         struct list_head      list;
         enum dummy_flow_state state;
-        uint_t		      dst_seq_num;
-        uint_t		      seq_num; /* Required to notify back to the */
+        uint_t                dst_seq_num;
+        uint_t                seq_num; /* Required to notify back to the */
         ipc_process_id_t      dst_id;  /* IPC Manager the result of the
-        				* allocation */
+                                        * allocation */
 };
 
 struct app_register {
@@ -89,16 +89,16 @@ struct app_register {
 };
 
 static int is_app_registered(struct ipcp_instance_data * data,
-		const struct name *         name)
+                const struct name *         name)
 {
-	struct app_register * app;
+        struct app_register * app;
 
-	list_for_each_entry(app, &data->apps_registered, list) {
-		if (!name_cmp(app->app_name, name)) {
-			return 1;
-		}
-	}
-	return 0;
+        list_for_each_entry(app, &data->apps_registered, list) {
+                if (!name_cmp(app->app_name, name)) {
+                        return 1;
+                }
+        }
+        return 0;
 }
 
 static struct app_register * find_app(struct ipcp_instance_data * data,
@@ -130,199 +130,199 @@ static struct dummy_flow * find_flow(struct ipcp_instance_data * data,
 }
 
 static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
-		const struct name *         source,
-		const struct name *         dest,
-		const struct flow_spec *    fspec,
-		port_id_t                   id,
-		uint_t			   seq_num)
+                const struct name *         source,
+                const struct name *         dest,
+                const struct flow_spec *    fspec,
+                port_id_t                   id,
+                uint_t                     seq_num)
 {
-	struct dummy_flow * flow;
+        struct dummy_flow * flow;
 
-	ASSERT(data);
-	ASSERT(source);
-	ASSERT(dest);
+        ASSERT(data);
+        ASSERT(source);
+        ASSERT(dest);
 
-	if (!data->info) {
-		LOG_ERR("There is not info in this IPC Process");
-		return -1;
-	}
+        if (!data->info) {
+                LOG_ERR("There is not info in this IPC Process");
+                return -1;
+        }
 
-	if (!data->info->dif_name) {
-		LOG_ERR("This IPC Process doesn't belong to a DIF");
-		return -1;
-	}
+        if (!data->info->dif_name) {
+                LOG_ERR("This IPC Process doesn't belong to a DIF");
+                return -1;
+        }
 
-	if (!is_app_registered(data, dest)) {
-		LOG_ERR("Application is not registered in this IPC Process");
-		return -1;
-	}
+        if (!is_app_registered(data, dest)) {
+                LOG_ERR("Application is not registered in this IPC Process");
+                return -1;
+        }
 
-	if (find_flow(data, id)) {
-		LOG_ERR("A flow already exists on port %d", id);
-		return -1;
-	}
+        if (find_flow(data, id)) {
+                LOG_ERR("A flow already exists on port %d", id);
+                return -1;
+        }
 
-	flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
-	if (!flow)
-		return -1;
+        flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+        if (!flow)
+                return -1;
 
-	flow->seq_num = seq_num;
-	flow->dest    = name_dup(dest);
-	if (!flow->dest) {
-		rkfree(flow);
-		return -1;
-	}
-	flow->source = name_dup(source);
-	if (!flow->source) {
-		name_destroy(flow->dest);
-		rkfree(flow);
-		return -1;
-	}
+        flow->seq_num = seq_num;
+        flow->dest    = name_dup(dest);
+        if (!flow->dest) {
+                rkfree(flow);
+                return -1;
+        }
+        flow->source = name_dup(source);
+        if (!flow->source) {
+                name_destroy(flow->dest);
+                rkfree(flow);
+                return -1;
+        }
 
-	flow->state = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
-	flow->port_id = id;
-	flow->dst_seq_num = 666; /*FIXME!!!*/
-	INIT_LIST_HEAD(&flow->list);
-	list_add(&flow->list, &data->flows);
+        flow->state = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
+        flow->port_id = id;
+        flow->dst_seq_num = 666; /*FIXME!!!*/
+        INIT_LIST_HEAD(&flow->list);
+        list_add(&flow->list, &data->flows);
 
-	if (rnl_app_alloc_flow_req_arrived_msg(data->id,
-					       data->info->dif_name,
-					       source,
-					       dest,
-					       fspec,
-					       flow->dst_seq_num,
-					       1)) {
-		list_del(&flow->list);
-		name_destroy(flow->source);
-		name_destroy(flow->dest);
-		rkfree(flow);
-		return -1;
-	}
+        if (rnl_app_alloc_flow_req_arrived_msg(data->id,
+                                               data->info->dif_name,
+                                               source,
+                                               dest,
+                                               fspec,
+                                               flow->dst_seq_num,
+                                               1)) {
+                list_del(&flow->list);
+                name_destroy(flow->source);
+                name_destroy(flow->dest);
+                rkfree(flow);
+                return -1;
+        }
 
-	return 0;
+        return 0;
 }
 
 static struct dummy_flow * find_flow_by_seq_num(struct ipcp_instance_data * data,
-					 	uint_t			    seq_num)
+                                                uint_t                      seq_num)
 {
-	struct dummy_flow * flow;
+        struct dummy_flow * flow;
 
-	list_for_each_entry(flow, &data->flows, list) {
-		if (flow->dst_seq_num == seq_num) {
-			return flow;
-		}
-	}
+        list_for_each_entry(flow, &data->flows, list) {
+                if (flow->dst_seq_num == seq_num) {
+                        return flow;
+                }
+        }
 
-	return NULL;
+        return NULL;
 }
 
 static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
-					port_id_t                   id,
-					uint_t			    seq_num,
-					response_reason_t *         response)
+                                        port_id_t                   id,
+                                        uint_t                      seq_num,
+                                        response_reason_t *         response)
 {
-	struct dummy_flow * flow;
-	int retval = 0;
+        struct dummy_flow * flow;
+        int retval = 0;
 
-	ASSERT(data);
-	ASSERT(response);
+        ASSERT(data);
+        ASSERT(response);
 
-	if (!data->info) {
-		LOG_ERR("There is not info in this IPC Process");
-		return -1;
-	}
+        if (!data->info) {
+                LOG_ERR("There is not info in this IPC Process");
+                return -1;
+        }
 
-	if (!data->info->dif_name) {
-		LOG_ERR("This IPC Process doesn't belong to a DIF");
-		return -1;
-	}
+        if (!data->info->dif_name) {
+                LOG_ERR("This IPC Process doesn't belong to a DIF");
+                return -1;
+        }
 
-	flow = find_flow_by_seq_num(data, seq_num);
-	if (!flow) {
-		LOG_ERR("Flow does not exist, cannot allocate");
-		return -1;
-	}
+        flow = find_flow_by_seq_num(data, seq_num);
+        if (!flow) {
+                LOG_ERR("Flow does not exist, cannot allocate");
+                return -1;
+        }
 
-	if (flow->state != PORT_STATE_INITIATOR_ALLOCATE_PENDING)
-		return -1;
+        if (flow->state != PORT_STATE_INITIATOR_ALLOCATE_PENDING)
+                return -1;
 
-	/* On positive response, flow should transition to allocated state */
-	if (*response == 0) {
-		flow->dst_port_id = id;
-		flow->state = PORT_STATE_ALLOCATED;
-		if (kipcm_flow_add(default_kipcm, data->id, flow->port_id)) {
-			list_del(&flow->list);
-			name_destroy(flow->source);
-			name_destroy(flow->dest);
-			rkfree(flow);
-			return -1;
-		}
-		if (kipcm_flow_add(default_kipcm, data->id, id)) {
-			kipcm_flow_remove(default_kipcm, id);
-			list_del(&flow->list);
-			name_destroy(flow->source);
-			name_destroy(flow->dest);
-			rkfree(flow);
-			return -1;
-		}
-		if (rnl_app_alloc_flow_result_msg(data->id,
-				flow->dst_id,
-				0,
-				flow->seq_num)) {
-			kipcm_flow_remove(default_kipcm, flow->port_id);
-			kipcm_flow_remove(default_kipcm, flow->dst_port_id);
-			list_del(&flow->list);
-			name_destroy(flow->source);
-			name_destroy(flow->dest);
-			rkfree(flow);
-			return -1;
-		}
-	} else {
-		if (rnl_app_alloc_flow_result_msg(data->id,
-				flow->dst_id,
-				-1,
-				flow->seq_num))
-			retval = -1;
+        /* On positive response, flow should transition to allocated state */
+        if (*response == 0) {
+                flow->dst_port_id = id;
+                flow->state = PORT_STATE_ALLOCATED;
+                if (kipcm_flow_add(default_kipcm, data->id, flow->port_id)) {
+                        list_del(&flow->list);
+                        name_destroy(flow->source);
+                        name_destroy(flow->dest);
+                        rkfree(flow);
+                        return -1;
+                }
+                if (kipcm_flow_add(default_kipcm, data->id, id)) {
+                        kipcm_flow_remove(default_kipcm, id);
+                        list_del(&flow->list);
+                        name_destroy(flow->source);
+                        name_destroy(flow->dest);
+                        rkfree(flow);
+                        return -1;
+                }
+                if (rnl_app_alloc_flow_result_msg(data->id,
+                                flow->dst_id,
+                                0,
+                                flow->seq_num)) {
+                        kipcm_flow_remove(default_kipcm, flow->port_id);
+                        kipcm_flow_remove(default_kipcm, flow->dst_port_id);
+                        list_del(&flow->list);
+                        name_destroy(flow->source);
+                        name_destroy(flow->dest);
+                        rkfree(flow);
+                        return -1;
+                }
+        } else {
+                if (rnl_app_alloc_flow_result_msg(data->id,
+                                flow->dst_id,
+                                -1,
+                                flow->seq_num))
+                        retval = -1;
 
-		list_del(&flow->list);
-		name_destroy(flow->source);
-		name_destroy(flow->dest);
-		rkfree(flow);
-		return retval;
-	}
+                list_del(&flow->list);
+                name_destroy(flow->source);
+                name_destroy(flow->dest);
+                rkfree(flow);
+                return retval;
+        }
 
-	/*
-	 * NOTE:
-	 *   Other shims may implement other behavior here,
-	 *   such as contacting the apposite shim IPC process
-	 */
+        /*
+         * NOTE:
+         *   Other shims may implement other behavior here,
+         *   such as contacting the apposite shim IPC process
+         */
 
-	return 0;
+        return 0;
 }
 
 static int dummy_flow_deallocate(struct ipcp_instance_data * data,
-		port_id_t                   id)
+                port_id_t                   id)
 {
-	struct dummy_flow * flow;
+        struct dummy_flow * flow;
 
-	ASSERT(data);
-	flow = find_flow(data, id);
-	if (!flow) {
-		LOG_ERR("Flow does not exist, cannot remove");
-		return -1;
-	}
+        ASSERT(data);
+        flow = find_flow(data, id);
+        if (!flow) {
+                LOG_ERR("Flow does not exist, cannot remove");
+                return -1;
+        }
 
-	/* FIXME: Notify the destination application, maybe? */
+        /* FIXME: Notify the destination application, maybe? */
 
-	list_del(&flow->list);
-	name_destroy(flow->dest);
-	name_destroy(flow->source);
-	rkfree(flow);
+        list_del(&flow->list);
+        name_destroy(flow->dest);
+        name_destroy(flow->source);
+        rkfree(flow);
 
-	if (kipcm_flow_remove(default_kipcm, id))
-		return -1;
+        if (kipcm_flow_remove(default_kipcm, id))
+                return -1;
 
-	return 0;
+        return 0;
 }
 
 static int dummy_application_register(struct ipcp_instance_data * data,
@@ -423,18 +423,18 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
         struct dummy_flow * flow;
 
         list_for_each_entry(flow, &data->flows, list) {
-        	if (flow->port_id == id) {
-        		kipcm_sdu_post(default_kipcm, flow->dst_port_id, sdu);
-        		return 0;
-        	}
-        	if (flow->dst_port_id == id) {
-			kipcm_sdu_post(default_kipcm, flow->port_id, sdu);
-			return 0;
-		}
+                if (flow->port_id == id) {
+                        kipcm_sdu_post(default_kipcm, flow->dst_port_id, sdu);
+                        return 0;
+                }
+                if (flow->dst_port_id == id) {
+                        kipcm_sdu_post(default_kipcm, flow->port_id, sdu);
+                        return 0;
+                }
         }
-	LOG_ERR("There is no flow allocated for port-id %d", id);
+        LOG_ERR("There is no flow allocated for port-id %d", id);
 
-	return -1;
+        return -1;
 }
 
 static int dummy_deallocate_all(struct ipcp_instance_data * data)
@@ -476,29 +476,29 @@ static int dummy_fini(struct ipcp_factory_data * data)
 }
 
 static int dummy_assign_to_dif(struct ipcp_instance_data * data,
-		const struct name *         dif_name)
+                const struct name *         dif_name)
 {
-	ASSERT(data);
+        ASSERT(data);
 
         if (!data->info) {
-        	LOG_ERR("There is no info for this IPC process");
+                LOG_ERR("There is no info for this IPC process");
                 return -1;
         }
 
-	data->info->dif_name = name_dup(dif_name);
-	if (!data->info->dif_name) {
-		char * tmp = name_tostring(dif_name);
-		LOG_ERR("Assingment of IPC Process to DIF %s failed", tmp);
-		rkfree(tmp);
-		rkfree(data->info);
+        data->info->dif_name = name_dup(dif_name);
+        if (!data->info->dif_name) {
+                char * tmp = name_tostring(dif_name);
+                LOG_ERR("Assingment of IPC Process to DIF %s failed", tmp);
+                rkfree(tmp);
+                rkfree(data->info);
 
-		return -1;
-	}
+                return -1;
+        }
 
-	LOG_DBG("Assigned IPC Process to DIF %s",
-			data->info->dif_name->process_name);
+        LOG_DBG("Assigned IPC Process to DIF %s",
+                        data->info->dif_name->process_name);
 
-	return 0;
+        return 0;
 }
 
 static struct ipcp_instance_ops dummy_instance_ops = {

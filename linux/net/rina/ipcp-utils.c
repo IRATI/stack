@@ -105,7 +105,7 @@ struct name * name_init(struct name *    dst,
                 name_fini(dst);
                 return NULL;
         }
-        
+
         return dst;
 }
 EXPORT_SYMBOL(name_init);
@@ -220,23 +220,23 @@ struct name * name_dup(const struct name * src)
 EXPORT_SYMBOL(name_dup);
 
 #define NAME_CMP_FIELD(X, Y, FIELD)                                     \
-	((X->FIELD && Y->FIELD) ? string_cmp(X->FIELD, Y->FIELD) : -1)
+        ((X->FIELD && Y->FIELD) ? string_cmp(X->FIELD, Y->FIELD) : -1)
 
 int name_cmp(const struct name * a, const struct name * b)
 {
-	if (!a || !b)
-		return -1;
+        if (!a || !b)
+                return -1;
 
-	if (NAME_CMP_FIELD(a, b, process_name))
-		return -1;
-	if (NAME_CMP_FIELD(a, b, process_instance))
-		return -1;
-	if (NAME_CMP_FIELD(a, b, entity_name))
-		return -1;
-	if (NAME_CMP_FIELD(a, b, entity_instance))
-		return -1;
+        if (NAME_CMP_FIELD(a, b, process_name))
+                return -1;
+        if (NAME_CMP_FIELD(a, b, process_instance))
+                return -1;
+        if (NAME_CMP_FIELD(a, b, entity_name))
+                return -1;
+        if (NAME_CMP_FIELD(a, b, entity_instance))
+                return -1;
 
-	return 0;
+        return 0;
 }
 EXPORT_SYMBOL(name_cmp);
 
@@ -249,7 +249,7 @@ char * name_tostring(const struct name * n)
 
         if (!n)
                 return NULL;
-        
+
         size  = 0;
 
         size += (n->process_name                 ?
@@ -267,7 +267,7 @@ char * name_tostring(const struct name * n)
         size += (n->entity_instance              ?
                  string_len(n->entity_instance)  : none_len);
         size += 1;  /* TERMINATOR */
-        
+
         tmp = rkmalloc(size, GFP_KERNEL);
         if (!tmp)
                 return NULL;

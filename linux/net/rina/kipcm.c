@@ -132,61 +132,61 @@ struct ipcp_flow {
 };
 
 void alloc_flow_req_free_memory(struct name * source_name,
-		struct name * dest_name,
-		struct flow_spec * fspec,
-		struct name * dif_name,
-		struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
-		struct rnl_msg * msg)
+                struct name * dest_name,
+                struct flow_spec * fspec,
+                struct name * dif_name,
+                struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
+                struct rnl_msg * msg)
 {
-	if (attrs){
-		rkfree(attrs);
-		attrs = NULL;
-	}
+        if (attrs){
+                rkfree(attrs);
+                attrs = NULL;
+        }
 
-	if (source_name){
-		rkfree(source_name);
-		source_name = NULL;
-	}
+        if (source_name){
+                rkfree(source_name);
+                source_name = NULL;
+        }
 
-	if (dest_name){
-		rkfree(dest_name);
-		dest_name = NULL;
-	}
+        if (dest_name){
+                rkfree(dest_name);
+                dest_name = NULL;
+        }
 
-	if (fspec){
-		rkfree(fspec);
-		fspec = NULL;
-	}
+        if (fspec){
+                rkfree(fspec);
+                fspec = NULL;
+        }
 
-	if (dif_name){
-		rkfree(dif_name);
-		dif_name = NULL;
-	}
+        if (dif_name){
+                rkfree(dif_name);
+                dif_name = NULL;
+        }
 
-	if (msg){
-		rkfree(msg);
-		msg = NULL;
-	}
+        if (msg){
+                rkfree(msg);
+                msg = NULL;
+        }
 }
 
 int alloc_flow_req_free_memory_and_reply(struct name * source_name,
-		struct name * dest_name,
-		struct flow_spec * fspec,
-		struct name * dif_name,
-		struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
-		struct rnl_msg * msg,
-		ipc_process_id_t id,
-		uint_t res,
-		uint_t seq_num,
-		uint_t port_id)
+                struct name * dest_name,
+                struct flow_spec * fspec,
+                struct name * dif_name,
+                struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
+                struct rnl_msg * msg,
+                ipc_process_id_t id,
+                uint_t res,
+                uint_t seq_num,
+                uint_t port_id)
 {
-	alloc_flow_req_free_memory(source_name, dest_name, fspec, dif_name,
-			attrs, msg);
+        alloc_flow_req_free_memory(source_name, dest_name, fspec, dif_name,
+                        attrs, msg);
 
-	if (rnl_app_alloc_flow_result_msg(id, res, seq_num, port_id))
-		return -1;
-	else
-		return 0;
+        if (rnl_app_alloc_flow_result_msg(id, res, seq_num, port_id))
+                return -1;
+        else
+                return 0;
 }
 
 /*
@@ -194,511 +194,511 @@ int alloc_flow_req_free_memory_and_reply(struct name * source_name,
  * and the alloc_req_result.
  */
 static int notify_ipcp_allocate_flow_request(void *             data,
-		struct sk_buff *   buff,
-		struct genl_info * info)
+                struct sk_buff *   buff,
+                struct genl_info * info)
 {
-	struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs;
-	struct rnl_msg * 			   msg;
-	struct ipcp_instance * 			   ipc_process;
-	ipc_process_id_t 			   ipc_id;
-	struct rina_msg_hdr *                      hdr;
-	struct kipcm * kipcm;
-	struct name * source;
-	struct name * dest;
-	struct name * dif_name;
-	struct flow_spec * fspec;
+        struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs;
+        struct rnl_msg *                           msg;
+        struct ipcp_instance *                     ipc_process;
+        ipc_process_id_t                           ipc_id;
+        struct rina_msg_hdr *                      hdr;
+        struct kipcm * kipcm;
+        struct name * source;
+        struct name * dest;
+        struct name * dif_name;
+        struct flow_spec * fspec;
 
-	source = NULL;
-	dest = NULL;
-	dif_name = NULL;
-	fspec = NULL;
-	attrs = NULL;
-	msg = NULL;
+        source = NULL;
+        dest = NULL;
+        dif_name = NULL;
+        fspec = NULL;
+        attrs = NULL;
+        msg = NULL;
 
-	if (!data) {
-		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
-		return -1;
-	}
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
 
-	if (!info) {
-		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
-		return -1;
-	}
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
 
-	kipcm = (struct kipcm *) data;
-	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
-	if (!attrs) {
-		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
-				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
-	}
+        kipcm = (struct kipcm *) data;
+        attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+        if (!attrs) {
+                return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+                                dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
+        }
 
-	source = name_create();
-	if (!source) {
-		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
-				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
-	}
-	attrs->source = source;
+        source = name_create();
+        if (!source) {
+                return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+                                dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
+        }
+        attrs->source = source;
 
-	dest = name_create();
-	if (!dest) {
-		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
-				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
-	}
-	attrs->dest = dest;
+        dest = name_create();
+        if (!dest) {
+                return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+                                dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
+        }
+        attrs->dest = dest;
 
-	dif_name = name_create();
-	if (!dif_name) {
-		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
-				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
-	}
-	attrs->dif_name = dif_name;
+        dif_name = name_create();
+        if (!dif_name) {
+                return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+                                dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
+        }
+        attrs->dif_name = dif_name;
 
-	fspec = rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
-	if (!fspec) {
-		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
-				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
-	}
-	attrs->fspec = fspec;
+        fspec = rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
+        if (!fspec) {
+                return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+                                dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
+        }
+        attrs->fspec = fspec;
 
-	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
-	if (!msg) {
-		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
-				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
-	}
-	msg->attrs = attrs;
+        msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+        if (!msg) {
+                return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+                                dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
+        }
+        msg->attrs = attrs;
 
-	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
-	if (!hdr) {
-		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
-				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
-	}
-	msg->rina_hdr = hdr;
+        hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
+        if (!hdr) {
+                return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+                                dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
+        }
+        msg->rina_hdr = hdr;
 
-	if (rnl_parse_msg(info, msg)) {
-		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
-				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
-	}
+        if (rnl_parse_msg(info, msg)) {
+                return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+                                dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
+        }
 
-	ipc_id = msg->rina_hdr->dst_ipc_id;
-	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
-	if (!ipc_process) {
-		LOG_ERR("IPC process %d not found", ipc_id);
-		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
-				dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
-	}
+        ipc_id = msg->rina_hdr->dst_ipc_id;
+        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipc_process) {
+                LOG_ERR("IPC process %d not found", ipc_id);
+                return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+                                dif_name, attrs, msg, 0, -1, info->snd_seq, info->snd_portid);
+        }
 
-	if (ipc_process->ops->flow_allocate_request(ipc_process->data,
-			attrs->source, attrs->dest, attrs->fspec, attrs->id,
-			msg->seq_num))
-	{
-		LOG_ERR("Failed allocate flow request for port id: %d", attrs->id);
-		return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
-				dif_name, attrs, msg, ipc_id, -1, info->snd_seq,
-				info->snd_portid);
-	}
+        if (ipc_process->ops->flow_allocate_request(ipc_process->data,
+                        attrs->source, attrs->dest, attrs->fspec, attrs->id,
+                        msg->seq_num))
+        {
+                LOG_ERR("Failed allocate flow request for port id: %d", attrs->id);
+                return alloc_flow_req_free_memory_and_reply(source, dest, fspec,
+                                dif_name, attrs, msg, ipc_id, -1, info->snd_seq,
+                                info->snd_portid);
+        }
 
-	alloc_flow_req_free_memory(source, dest, fspec, dif_name, attrs, msg);
-	return 0;
+        alloc_flow_req_free_memory(source, dest, fspec, dif_name, attrs, msg);
+        return 0;
 }
 
 static int notify_ipcp_allocate_flow_response(void *             data,
-		struct sk_buff *   buff,
-		struct genl_info * info)
+                struct sk_buff *   buff,
+                struct genl_info * info)
 {
-	struct kipcm *                         kipcm;
-	struct rnl_alloc_flow_resp_msg_attrs * attrs;
-	struct rnl_msg *                       msg;
-	struct rina_msg_hdr *                  hdr;
-	struct ipcp_instance *                 ipc_process;
-	ipc_process_id_t                       ipc_id;
-	int                                    retval = 0;
-	response_reason_t                      reason;
+        struct kipcm *                         kipcm;
+        struct rnl_alloc_flow_resp_msg_attrs * attrs;
+        struct rnl_msg *                       msg;
+        struct rina_msg_hdr *                  hdr;
+        struct ipcp_instance *                 ipc_process;
+        ipc_process_id_t                       ipc_id;
+        int                                    retval = 0;
+        response_reason_t                      reason;
 
-	if (!data) {
-		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
-		return -1;
-	}
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
 
-	kipcm = (struct kipcm *) data;
+        kipcm = (struct kipcm *) data;
 
-	if (!info) {
-		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
-		return -1;
-	}
-	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
-	if (!attrs)
-		return -1;
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+        attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+        if (!attrs)
+                return -1;
 
-	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
-	if (!msg) {
-		rkfree(attrs);
-		return -1;
-	}
+        msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+        if (!msg) {
+                rkfree(attrs);
+                return -1;
+        }
 
-	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
-	if (!hdr) {
-		rkfree(attrs);
-		rkfree(msg);
-		return -1;
-	}
-	msg->attrs = attrs;
-	msg->rina_hdr = hdr;
+        hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
+        if (!hdr) {
+                rkfree(attrs);
+                rkfree(msg);
+                return -1;
+        }
+        msg->attrs = attrs;
+        msg->rina_hdr = hdr;
 
-	if (rnl_parse_msg(info, msg)) {
-		rkfree(hdr);
-		rkfree(attrs);
-		rkfree(msg);
-		return -1;
-	}
-	ipc_id = msg->rina_hdr->src_ipc_id;
-	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
-	if (!ipc_process) {
-		LOG_ERR("IPC process %d not found", ipc_id);
-		rkfree(hdr);
-		rkfree(attrs);
-		rkfree(msg);
-		return -1;
-	}
-	reason = (response_reason_t) attrs->result;
-	if (ipc_process->ops->flow_allocate_response(ipc_process->data,
-			attrs->id,
-			info->snd_seq,
-			&reason)) {
-		LOG_ERR("Failed allocate flow response for port id: %d",
-				attrs->id);
-		retval = -1;
-	}
+        if (rnl_parse_msg(info, msg)) {
+                rkfree(hdr);
+                rkfree(attrs);
+                rkfree(msg);
+                return -1;
+        }
+        ipc_id = msg->rina_hdr->src_ipc_id;
+        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipc_process) {
+                LOG_ERR("IPC process %d not found", ipc_id);
+                rkfree(hdr);
+                rkfree(attrs);
+                rkfree(msg);
+                return -1;
+        }
+        reason = (response_reason_t) attrs->result;
+        if (ipc_process->ops->flow_allocate_response(ipc_process->data,
+                        attrs->id,
+                        info->snd_seq,
+                        &reason)) {
+                LOG_ERR("Failed allocate flow response for port id: %d",
+                                attrs->id);
+                retval = -1;
+        }
 
-	rkfree(hdr);
-	rkfree(attrs);
-	rkfree(msg);
-	return retval;
+        rkfree(hdr);
+        rkfree(attrs);
+        rkfree(msg);
+        return retval;
 }
 
 int assign_to_dif_free_memory_and_reply(struct name * dif_name,
-		struct dif_config * dif_config,
-		struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs,
-		struct rnl_msg * msg,
-		ipc_process_id_t id,
-		uint_t res,
-		uint_t seq_num,
-		uint_t port_id)
+                struct dif_config * dif_config,
+                struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs,
+                struct rnl_msg * msg,
+                ipc_process_id_t id,
+                uint_t res,
+                uint_t seq_num,
+                uint_t port_id)
 {
-	if (attrs){
-		rkfree(attrs);
-		attrs = NULL;
-	}
+        if (attrs){
+                rkfree(attrs);
+                attrs = NULL;
+        }
 
-	if (dif_name){
-		rkfree(dif_name);
-		dif_name = NULL;
-	}
+        if (dif_name){
+                rkfree(dif_name);
+                dif_name = NULL;
+        }
 
-	if (dif_config){
-		rkfree(dif_config);
-		dif_config = NULL;
-	}
+        if (dif_config){
+                rkfree(dif_config);
+                dif_config = NULL;
+        }
 
-	if (msg){
-		rkfree(msg);
-		msg = NULL;
-	}
+        if (msg){
+                rkfree(msg);
+                msg = NULL;
+        }
 
-	if (rnl_assign_dif_response(id, res, seq_num, port_id))
-		return -1;
-	else
-		return 0;
+        if (rnl_assign_dif_response(id, res, seq_num, port_id))
+                return -1;
+        else
+                return 0;
 }
 
 static int notify_ipcp_assign_dif_request(void *             data,
-		struct sk_buff *   buff,
-		struct genl_info * info)
+                struct sk_buff *   buff,
+                struct genl_info * info)
 {
-	struct kipcm *                                kipcm;
-	struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs;
-	struct rnl_msg *                              msg;
-	struct dif_config *                           dif_config;
-	struct name *                                 dif_name;
-	struct ipcp_instance *                        ipc_process;
-	ipc_process_id_t                              ipc_id;
+        struct kipcm *                                kipcm;
+        struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs;
+        struct rnl_msg *                              msg;
+        struct dif_config *                           dif_config;
+        struct name *                                 dif_name;
+        struct ipcp_instance *                        ipc_process;
+        ipc_process_id_t                              ipc_id;
 
-	attrs = NULL;
-	msg = NULL;
-	dif_name = NULL;
-	dif_config = NULL;
+        attrs = NULL;
+        msg = NULL;
+        dif_name = NULL;
+        dif_config = NULL;
 
-	if (!data) {
-		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
-		return -1;
-	}
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
 
-	kipcm = (struct kipcm *) data;
+        kipcm = (struct kipcm *) data;
 
-	if (!info) {
-		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
-		return -1;
-	}
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
 
-	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
-	if (!attrs) {
-		return assign_to_dif_free_memory_and_reply(dif_name,
-				dif_config, attrs, msg, 0, -1,
-				info->snd_seq, info->snd_portid);
-	}
+        attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+        if (!attrs) {
+                return assign_to_dif_free_memory_and_reply(dif_name,
+                                dif_config, attrs, msg, 0, -1,
+                                info->snd_seq, info->snd_portid);
+        }
 
-	dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
-	if (!dif_config){
-		return assign_to_dif_free_memory_and_reply(dif_name,
-				dif_config, attrs, msg, 0, -1,
-				info->snd_seq, info->snd_portid);
-	}
-	attrs->dif_config = dif_config;
+        dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
+        if (!dif_config){
+                return assign_to_dif_free_memory_and_reply(dif_name,
+                                dif_config, attrs, msg, 0, -1,
+                                info->snd_seq, info->snd_portid);
+        }
+        attrs->dif_config = dif_config;
 
-	dif_name = name_create();
-	if (!dif_name){
-		return assign_to_dif_free_memory_and_reply(dif_name,
-				dif_config, attrs, msg, 0, -1,
-				info->snd_seq, info->snd_portid);
-	}
-	dif_config->dif_name = dif_name;
+        dif_name = name_create();
+        if (!dif_name){
+                return assign_to_dif_free_memory_and_reply(dif_name,
+                                dif_config, attrs, msg, 0, -1,
+                                info->snd_seq, info->snd_portid);
+        }
+        dif_config->dif_name = dif_name;
 
-	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
-	if (!msg) {
-		return assign_to_dif_free_memory_and_reply(dif_name,
-				dif_config, attrs, msg, 0, -1,
-				info->snd_seq, info->snd_portid);
-	}
-	msg->attrs = attrs;
+        msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+        if (!msg) {
+                return assign_to_dif_free_memory_and_reply(dif_name,
+                                dif_config, attrs, msg, 0, -1,
+                                info->snd_seq, info->snd_portid);
+        }
+        msg->attrs = attrs;
 
-	if (rnl_parse_msg(info, msg)) {
-		return assign_to_dif_free_memory_and_reply(dif_name,
-				dif_config, attrs, msg, 0, -1,
-				info->snd_seq, info->snd_portid);
-	}
-	ipc_id = msg->rina_hdr->dst_ipc_id;
+        if (rnl_parse_msg(info, msg)) {
+                return assign_to_dif_free_memory_and_reply(dif_name,
+                                dif_config, attrs, msg, 0, -1,
+                                info->snd_seq, info->snd_portid);
+        }
+        ipc_id = msg->rina_hdr->dst_ipc_id;
 
-	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
-	if (!ipc_process) {
-		LOG_ERR("IPC process %d not found", ipc_id);
-		return assign_to_dif_free_memory_and_reply(dif_name,
-				dif_config, attrs, msg, 0, -1,
-				info->snd_seq, info->snd_portid);
-	}
-	LOG_DBG("Found IPC Process with id %d", ipc_id);
+        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipc_process) {
+                LOG_ERR("IPC process %d not found", ipc_id);
+                return assign_to_dif_free_memory_and_reply(dif_name,
+                                dif_config, attrs, msg, 0, -1,
+                                info->snd_seq, info->snd_portid);
+        }
+        LOG_DBG("Found IPC Process with id %d", ipc_id);
 
-	if (ipc_process->ops->assign_to_dif(ipc_process->data,
-			attrs->dif_config->dif_name)) {
-		char * tmp = name_tostring(attrs->dif_config->dif_name);
-		LOG_ERR("Failed assign to dif %s for IPC process: %d",
-				tmp, ipc_id);
-		rkfree(tmp);
-		return assign_to_dif_free_memory_and_reply(dif_name,
-				dif_config, attrs, msg, ipc_id, -1,
-				info->snd_seq, info->snd_portid);
-	}
+        if (ipc_process->ops->assign_to_dif(ipc_process->data,
+                        attrs->dif_config->dif_name)) {
+                char * tmp = name_tostring(attrs->dif_config->dif_name);
+                LOG_ERR("Failed assign to dif %s for IPC process: %d",
+                                tmp, ipc_id);
+                rkfree(tmp);
+                return assign_to_dif_free_memory_and_reply(dif_name,
+                                dif_config, attrs, msg, ipc_id, -1,
+                                info->snd_seq, info->snd_portid);
+        }
 
-	return assign_to_dif_free_memory_and_reply(dif_name,
-			dif_config, attrs, msg, ipc_id, 0,
-			info->snd_seq, info->snd_portid);
+        return assign_to_dif_free_memory_and_reply(dif_name,
+                        dif_config, attrs, msg, ipc_id, 0,
+                        info->snd_seq, info->snd_portid);
 }
 
 int reg_unreg_resp_free_memory_and_reply(struct name * app_name,
-		struct name * dif_name,
-		struct rnl_ipcm_reg_app_req_msg_attrs * attrs,
-		struct rnl_msg *  msg,
-		ipc_process_id_t id,
-		uint_t res,
-		uint_t seq_num,
-		uint_t port_id,
-		bool isRegister)
+                struct name * dif_name,
+                struct rnl_ipcm_reg_app_req_msg_attrs * attrs,
+                struct rnl_msg *  msg,
+                ipc_process_id_t id,
+                uint_t res,
+                uint_t seq_num,
+                uint_t port_id,
+                bool isRegister)
 {
-	if (app_name) {
-		rkfree(app_name);
-		app_name = NULL;
-	}
+        if (app_name) {
+                rkfree(app_name);
+                app_name = NULL;
+        }
 
-	if (dif_name) {
-		rkfree(dif_name);
-		dif_name = NULL;
-	}
+        if (dif_name) {
+                rkfree(dif_name);
+                dif_name = NULL;
+        }
 
-	if (attrs) {
-		rkfree(attrs);
-		attrs = NULL;
-	}
+        if (attrs) {
+                rkfree(attrs);
+                attrs = NULL;
+        }
 
-	if (msg){
-		rkfree(msg);
-		msg = NULL;
-	}
+        if (msg){
+                rkfree(msg);
+                msg = NULL;
+        }
 
-	if (rnl_app_register_unregister_response_msg(
-			id, res, seq_num, port_id, isRegister))
-		return -1;
-	else
-		return 0;
+        if (rnl_app_register_unregister_response_msg(
+                        id, res, seq_num, port_id, isRegister))
+                return -1;
+        else
+                return 0;
 }
 
 static int notify_ipcp_register_app_request(void * data,
-		struct sk_buff *   buff,
-		struct genl_info * info)
+                struct sk_buff *   buff,
+                struct genl_info * info)
 {
-	struct kipcm *                          kipcm;
-	struct rnl_ipcm_reg_app_req_msg_attrs * attrs;
-	struct rnl_msg *                        msg;
-	struct name *                           app_name;
-	struct name *                           dif_name;
-	struct ipcp_instance *                  ipc_process;
-	ipc_process_id_t                        ipc_id;
+        struct kipcm *                          kipcm;
+        struct rnl_ipcm_reg_app_req_msg_attrs * attrs;
+        struct rnl_msg *                        msg;
+        struct name *                           app_name;
+        struct name *                           dif_name;
+        struct ipcp_instance *                  ipc_process;
+        ipc_process_id_t                        ipc_id;
 
-	attrs = NULL;
-	msg = NULL;
-	app_name = NULL;
-	dif_name = NULL;
+        attrs = NULL;
+        msg = NULL;
+        app_name = NULL;
+        dif_name = NULL;
 
-	if (!data) {
-		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
-		return -1;
-	}
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
 
-	kipcm = (struct kipcm *) data;
+        kipcm = (struct kipcm *) data;
 
-	if (!info) {
-		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
-		return -1;
-	}
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
 
-	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
-	if (!attrs) {
-		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
-				msg, 0, -1, info->snd_seq, info->snd_portid, true);
-	}
+        attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+        if (!attrs) {
+                return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+                                msg, 0, -1, info->snd_seq, info->snd_portid, true);
+        }
 
-	app_name = name_create();
-	if (!app_name) {
-		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
-				msg, 0, -1, info->snd_seq, info->snd_portid, true);
-	}
-	attrs->app_name= app_name;
+        app_name = name_create();
+        if (!app_name) {
+                return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+                                msg, 0, -1, info->snd_seq, info->snd_portid, true);
+        }
+        attrs->app_name= app_name;
 
-	dif_name = name_create();
-	if (!dif_name) {
-		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
-				msg, 0, -1, info->snd_seq, info->snd_portid, true);
-	}
-	attrs->dif_name= dif_name;
+        dif_name = name_create();
+        if (!dif_name) {
+                return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+                                msg, 0, -1, info->snd_seq, info->snd_portid, true);
+        }
+        attrs->dif_name= dif_name;
 
-	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
-	if (!msg) {
-		LOG_ERR("Could not allocate space for my_msg struct");
-		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
-				msg, 0, -1, info->snd_seq, info->snd_portid, true);
-	}
-	msg->attrs = attrs;
+        msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+        if (!msg) {
+                LOG_ERR("Could not allocate space for my_msg struct");
+                return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+                                msg, 0, -1, info->snd_seq, info->snd_portid, true);
+        }
+        msg->attrs = attrs;
 
-	if (rnl_parse_msg(info, msg)) {
-		LOG_ERR("Could not parse message");
-		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
-				msg, 0, -1, info->snd_seq, info->snd_portid, true);
-	}
+        if (rnl_parse_msg(info, msg)) {
+                LOG_ERR("Could not parse message");
+                return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+                                msg, 0, -1, info->snd_seq, info->snd_portid, true);
+        }
 
-	ipc_id = msg->rina_hdr->dst_ipc_id;
-	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
-	if (!ipc_process) {
-		LOG_ERR("IPC process %d not found", ipc_id);
-		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
-				msg, 0, -1, info->snd_seq, info->snd_portid, true);
-	}
+        ipc_id = msg->rina_hdr->dst_ipc_id;
+        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipc_process) {
+                LOG_ERR("IPC process %d not found", ipc_id);
+                return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+                                msg, 0, -1, info->snd_seq, info->snd_portid, true);
+        }
 
-	if (ipc_process->ops->application_register(ipc_process->data,
-			attrs->app_name)) {
-		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
-				msg, ipc_id, -1, info->snd_seq, info->snd_portid, true);
-	}
+        if (ipc_process->ops->application_register(ipc_process->data,
+                        attrs->app_name)) {
+                return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+                                msg, ipc_id, -1, info->snd_seq, info->snd_portid, true);
+        }
 
-	return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
-			msg, ipc_id, 0, info->snd_seq, info->snd_portid, true);
+        return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+                        msg, ipc_id, 0, info->snd_seq, info->snd_portid, true);
 }
 
 static int notify_ipcp_unregister_app_request(void *             data,
-		struct sk_buff *   buff,
-		struct genl_info * info)
+                struct sk_buff *   buff,
+                struct genl_info * info)
 {
-	struct kipcm *                          kipcm;
-	struct rnl_ipcm_reg_app_req_msg_attrs * attrs;
-	struct rnl_msg *                        msg;
-	struct name *                           app_name;
-	struct name *                           dif_name;
-	struct ipcp_instance *                  ipc_process;
-	ipc_process_id_t                        ipc_id;
+        struct kipcm *                          kipcm;
+        struct rnl_ipcm_reg_app_req_msg_attrs * attrs;
+        struct rnl_msg *                        msg;
+        struct name *                           app_name;
+        struct name *                           dif_name;
+        struct ipcp_instance *                  ipc_process;
+        ipc_process_id_t                        ipc_id;
 
-	attrs = NULL;
-	msg = NULL;
-	app_name = NULL;
-	dif_name = NULL;
+        attrs = NULL;
+        msg = NULL;
+        app_name = NULL;
+        dif_name = NULL;
 
-	if (!data) {
-		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
-		return -1;
-	}
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
 
-	kipcm = (struct kipcm *) data;
+        kipcm = (struct kipcm *) data;
 
-	if (!info) {
-		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
-		return -1;
-	}
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
 
-	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
-	if (!attrs) {
-		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
-				msg, 0, -1, info->snd_seq, info->snd_portid, false);
-	}
+        attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+        if (!attrs) {
+                return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+                                msg, 0, -1, info->snd_seq, info->snd_portid, false);
+        }
 
-	app_name = name_create();
-	if (!app_name) {
-		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
-				msg, 0, -1, info->snd_seq, info->snd_portid, false);
-	}
-	attrs->app_name= app_name;
+        app_name = name_create();
+        if (!app_name) {
+                return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+                                msg, 0, -1, info->snd_seq, info->snd_portid, false);
+        }
+        attrs->app_name= app_name;
 
-	dif_name = name_create();
-	if (!dif_name) {
-		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
-				msg, 0, -1, info->snd_seq, info->snd_portid, false);
-	}
-	attrs->dif_name= dif_name;
+        dif_name = name_create();
+        if (!dif_name) {
+                return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+                                msg, 0, -1, info->snd_seq, info->snd_portid, false);
+        }
+        attrs->dif_name= dif_name;
 
-	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
-	if (!msg) {
-		LOG_ERR("Could not allocate space for my_msg struct");
-		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
-				msg, 0, -1, info->snd_seq, info->snd_portid, false);
-	}
-	msg->attrs = attrs;
+        msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+        if (!msg) {
+                LOG_ERR("Could not allocate space for my_msg struct");
+                return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+                                msg, 0, -1, info->snd_seq, info->snd_portid, false);
+        }
+        msg->attrs = attrs;
 
-	if (rnl_parse_msg(info, msg)) {
-		LOG_ERR("Could not parse message");
-		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
-				msg, 0, -1, info->snd_seq, info->snd_portid, false);
-	}
+        if (rnl_parse_msg(info, msg)) {
+                LOG_ERR("Could not parse message");
+                return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+                                msg, 0, -1, info->snd_seq, info->snd_portid, false);
+        }
 
-	ipc_id = msg->rina_hdr->dst_ipc_id;
-	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
-	if (!ipc_process) {
-		LOG_ERR("IPC process %d not found", ipc_id);
-		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
-				msg, 0, -1, info->snd_seq, info->snd_portid, false);
-	}
+        ipc_id = msg->rina_hdr->dst_ipc_id;
+        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipc_process) {
+                LOG_ERR("IPC process %d not found", ipc_id);
+                return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+                                msg, 0, -1, info->snd_seq, info->snd_portid, false);
+        }
 
-	if (ipc_process->ops->application_unregister(ipc_process->data,
-			attrs->app_name)) {
-		return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
-				msg, ipc_id, -1, info->snd_seq, info->snd_portid, false);
-	}
+        if (ipc_process->ops->application_unregister(ipc_process->data,
+                        attrs->app_name)) {
+                return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+                                msg, ipc_id, -1, info->snd_seq, info->snd_portid, false);
+        }
 
-	return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
-			msg, ipc_id, 0, info->snd_seq, info->snd_portid, false);
+        return reg_unreg_resp_free_memory_and_reply(app_name, dif_name, attrs,
+                        msg, ipc_id, 0, info->snd_seq, info->snd_portid, false);
 }
 
 static int netlink_handlers_unregister(struct rina_nl_set * set)
@@ -726,99 +726,99 @@ static int netlink_handlers_unregister(struct rina_nl_set * set)
 
 static int netlink_handlers_register(struct kipcm * kipcm)
 {
-	message_handler_cb handler;
+        message_handler_cb handler;
 
-	handler = notify_ipcp_assign_dif_request;
-	if (rina_netlink_handler_register(kipcm->set,
-			RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST,
-			kipcm,
-			handler))
-		return -1;
+        handler = notify_ipcp_assign_dif_request;
+        if (rina_netlink_handler_register(kipcm->set,
+                        RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST,
+                        kipcm,
+                        handler))
+                return -1;
 
-	handler = notify_ipcp_allocate_flow_request;
-	if (rina_netlink_handler_register(kipcm->set,
-			RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
-			kipcm,
-			handler)) {
-		if (rina_netlink_handler_unregister(kipcm->set,
-				RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-			LOG_ERR("Failed handler unregister while bailing out");
-			/* FIXME: What else could be done here?" */
-		}
-		return -1;
-	}
+        handler = notify_ipcp_allocate_flow_request;
+        if (rina_netlink_handler_register(kipcm->set,
+                        RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
+                        kipcm,
+                        handler)) {
+                if (rina_netlink_handler_unregister(kipcm->set,
+                                RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                return -1;
+        }
 
-	handler = notify_ipcp_allocate_flow_response;
-	if (rina_netlink_handler_register(kipcm->set,
-			RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
-			kipcm,
-			handler)) {
-		if (rina_netlink_handler_unregister(kipcm->set,
-				RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-			LOG_ERR("Failed handler unregister while bailing out");
-			/* FIXME: What else could be done here?" */
-		}
-		if (rina_netlink_handler_unregister(kipcm->set,
-				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-			LOG_ERR("Failed handler unregister while bailing out");
-			/* FIXME: What else could be done here?" */
-		}
-		return -1;
-	}
+        handler = notify_ipcp_allocate_flow_response;
+        if (rina_netlink_handler_register(kipcm->set,
+                        RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
+                        kipcm,
+                        handler)) {
+                if (rina_netlink_handler_unregister(kipcm->set,
+                                RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                if (rina_netlink_handler_unregister(kipcm->set,
+                                RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                return -1;
+        }
 
-	handler = notify_ipcp_register_app_request;
-	if (rina_netlink_handler_register(kipcm->set,
-			RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,
-			kipcm,
-			handler)) {
-		if (rina_netlink_handler_unregister(kipcm->set,
-				RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-			LOG_ERR("Failed handler unregister while bailing out");
-			/* FIXME: What else could be done here?" */
-		}
-		if (rina_netlink_handler_unregister(kipcm->set,
-				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-			LOG_ERR("Failed handler unregister while bailing out");
-			/* FIXME: What else could be done here?" */
-		}
-		if (rina_netlink_handler_unregister(kipcm->set,
-				RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-			LOG_ERR("Failed handler unregister while bailing out");
-			/* FIXME: What else could be done here?" */
-		}
-		return -1;
-	}
+        handler = notify_ipcp_register_app_request;
+        if (rina_netlink_handler_register(kipcm->set,
+                        RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,
+                        kipcm,
+                        handler)) {
+                if (rina_netlink_handler_unregister(kipcm->set,
+                                RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                if (rina_netlink_handler_unregister(kipcm->set,
+                                RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                if (rina_netlink_handler_unregister(kipcm->set,
+                                RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                return -1;
+        }
 
-	handler = notify_ipcp_unregister_app_request;
-	if (rina_netlink_handler_register(kipcm->set,
-			RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST,
-			kipcm,
-			handler)) {
-		if (rina_netlink_handler_unregister(kipcm->set,
-				RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-			LOG_ERR("Failed handler unregister while bailing out");
-			/* FIXME: What else could be done here?" */
-		}
-		if (rina_netlink_handler_unregister(kipcm->set,
-				RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-			LOG_ERR("Failed handler unregister while bailing out");
-			/* FIXME: What else could be done here?" */
-		}
-		if (rina_netlink_handler_unregister(kipcm->set,
-				RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-			LOG_ERR("Failed handler unregister while bailing out");
-			/* FIXME: What else could be done here?" */
-		}
-		return -1;
-		if (rina_netlink_handler_unregister(kipcm->set,
-				RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
-			LOG_ERR("Failed handler unregister while bailing out");
-			/* FIXME: What else could be done here?" */
-		}
-		return -1;
-	}
+        handler = notify_ipcp_unregister_app_request;
+        if (rina_netlink_handler_register(kipcm->set,
+                        RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST,
+                        kipcm,
+                        handler)) {
+                if (rina_netlink_handler_unregister(kipcm->set,
+                                RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                if (rina_netlink_handler_unregister(kipcm->set,
+                                RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                if (rina_netlink_handler_unregister(kipcm->set,
+                                RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                return -1;
+                if (rina_netlink_handler_unregister(kipcm->set,
+                                RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                return -1;
+        }
 
-	return 0;
+        return 0;
 }
 
 struct kipcm * kipcm_init(struct kobject * parent, struct rina_nl_set * set)
@@ -1376,9 +1376,9 @@ int kipcm_sdu_post(struct kipcm * kipcm,
         if (avail < (sdu->buffer->size + sizeof(size_t))) {
                 LOG_ERR("There is no space in the port-id %d fifo", port_id);
                 /*
-		 * FIXME: This lock has been removed only for the shim-dummy demo. Please
-		 * reinstate it as soon as possible.
-		 *
+                 * FIXME: This lock has been removed only for the shim-dummy demo. Please
+                 * reinstate it as soon as possible.
+                 *
                 KIPCM_UNLOCK(kipcm);
                 */
                 return -1;
@@ -1390,11 +1390,11 @@ int kipcm_sdu_post(struct kipcm * kipcm,
                 LOG_ERR("Could not write %zd bytes from port-id %d fifo",
                         sizeof(size_t), port_id);
                 /*
-		 * FIXME: This lock has been removed only for the shim-dummy demo. Please
-		 * reinstate it as soon as possible.
-		 *
-		KIPCM_UNLOCK(kipcm);
-		*/
+                 * FIXME: This lock has been removed only for the shim-dummy demo. Please
+                 * reinstate it as soon as possible.
+                 *
+                KIPCM_UNLOCK(kipcm);
+                */
                 return -1;
         }
         if (kfifo_in(&flow->sdu_ready,
@@ -1403,20 +1403,20 @@ int kipcm_sdu_post(struct kipcm * kipcm,
                 LOG_ERR("Could not write %zd bytes from port-id %d fifo",
                         sdu->buffer->size, port_id);
                 /*
-		 * FIXME: This lock has been removed only for the shim-dummy demo. Please
-		 * reinstate it as soon as possible.
-		 *
-		KIPCM_UNLOCK(kipcm);
-		*/
+                 * FIXME: This lock has been removed only for the shim-dummy demo. Please
+                 * reinstate it as soon as possible.
+                 *
+                KIPCM_UNLOCK(kipcm);
+                */
                 return -1;
         }
 
         /*
-	 * FIXME: This lock has been removed only for the shim-dummy demo. Please
-	 * reinstate it as soon as possible.
-	 *
-	KIPCM_UNLOCK(kipcm);
-	*/
+         * FIXME: This lock has been removed only for the shim-dummy demo. Please
+         * reinstate it as soon as possible.
+         *
+        KIPCM_UNLOCK(kipcm);
+        */
 
         /* The SDU is ours now */
         return 0;
