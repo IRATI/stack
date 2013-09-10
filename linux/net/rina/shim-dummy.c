@@ -151,7 +151,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         	return -1;
         }
 
-        if (!is_app_registered(source)) {
+        if (!is_app_registered(data, source)) {
         	LOG_ERR("Application is not registered in this IPC Process");
         	return -1;
         }
