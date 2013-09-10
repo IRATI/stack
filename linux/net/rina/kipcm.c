@@ -131,6 +131,10 @@ struct ipcp_flow {
         struct kfifo           sdu_ready;
 };
 
+/*
+ * It is the responsibility of the shims to send the alloc_req_arrived
+ * and the alloc_req_result.
+ */
 static int notify_ipcp_allocate_flow_request(void *             data,
 					     struct sk_buff *   buff,
 					     struct genl_info * info)
@@ -144,6 +148,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 	struct name * source;
 	struct name * dest;
 	struct name * dif_name;
+	struct flow_spec * fspec;
 
 	if (!data) {
 		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -193,12 +198,25 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
 		return 0;
 	}
+	fspec = rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
+	if (!fspec) {
+		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq)) {
+			rkfree(msg_attrs);
+			name_destroy(source);
+			name_destroy(dest);
+			name_destroy(dif_name);
+			return -1;
+		}
+
+		return 0;
+	}
 
 	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
 	if (!msg) {
 		rkfree(msg_attrs);
 		name_destroy(source);
 		name_destroy(dest);
+		name_destroy(dif_name);
 		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq))
 			return -1;
 
@@ -209,6 +227,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 		rkfree(msg_attrs);
 		name_destroy(source);
 		name_destroy(dest);
+		name_destroy(dif_name);
+		rkfree(fspec);
 		rkfree(msg);
 		if (rnl_app_alloc_flow_result_msg(0, 0, -1, info->snd_seq))
 			return -1;
@@ -228,9 +248,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
 	if (!ipc_process) {
 		LOG_ERR("IPC process %d not found", ipc_id);
-		rkfree(hdr);
-		rkfree(msg_attrs);
-		rkfree(msg);
 		if (rnl_app_alloc_flow_result_msg(ipc_id,
                                               msg->rina_hdr->src_ipc_id, -1,
                                               info->snd_seq))
@@ -247,19 +264,10 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                         msg_attrs->id);
 		if (rnl_app_alloc_flow_result_msg(ipc_id,
                                               msg->rina_hdr->src_ipc_id, -1,
-                                              info->snd_seq)) {
-			rkfree(hdr);
-			rkfree(msg_attrs);
-			rkfree(msg);
+                                              info->snd_seq))
 			return -1;
-		}
-
-		rkfree(hdr);
-		rkfree(msg_attrs);
-		rkfree(msg);
-		return 0;
 	}
-
+/*
 	if (rnl_app_alloc_flow_req_arrived_msg(ipc_process->data,
                                                msg_attrs->source,
                                                msg_attrs->dest,
@@ -271,6 +279,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 		rkfree(msg);
 		return -1;
 	}
+*/
 	rkfree(hdr);
 	rkfree(msg_attrs);
 	rkfree(msg);
@@ -555,7 +564,8 @@ static int notify_ipcp_register_app_request(void *             data,
 		return 0;
 	}
 
-	if (ipc_process->ops->application_register(data, attrs->app_name)) {
+	if (ipc_process->ops->application_register(ipc_process->data,
+			attrs->app_name)) {
 		if (rnl_app_register_response_msg(ipc_id,
                                               msg->rina_hdr->src_ipc_id, -1,
                                               info->snd_seq)) {
