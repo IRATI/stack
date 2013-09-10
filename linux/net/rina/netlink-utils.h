@@ -495,7 +495,10 @@ int rnl_format_rmt_dump_ft_reply_msg(size_t                       count,
                                      const struct pdu_ft_entry ** entries,
                                      struct sk_buff *             skb_out);
 
-int rnl_assign_dif_response(ipc_process_id_t id, uint_t res, uint_t seq_num);
+int rnl_assign_dif_response(ipc_process_id_t id,
+		uint_t res,
+		uint_t seq_num,
+		uint_t port_id);
 
 int rnl_app_alloc_flow_req_arrived_msg(struct ipcp_instance_data * data,
 				       const struct name *         source,
@@ -509,10 +512,12 @@ int rnl_app_alloc_flow_result_msg(ipc_process_id_t src_ipc_id,
 		  	  	  uint_t           res,
 		  	  	  uint_t	   seq_num);
 
-int rnl_app_register_response_msg(ipc_process_id_t ipc_id,
+int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
 				  ipc_process_id_t dst_id,
 				  uint_t           res,
-				  uint_t           seq_num);
+				  uint_t           seq_num,
+				  uint_t 		   port_id,
+				  bool isRegister);
 
 char * nla_get_string(struct nlattr *nla);
 
