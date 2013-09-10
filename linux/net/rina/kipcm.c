@@ -260,7 +260,9 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                     msg_attrs->dest,
                                                     msg_attrs->fspec,
                                                     msg_attrs->id,
-                                                    msg->seq_num)) {
+                                                    msg->seq_num,
+                                                    msg->rina_hdr->src_ipc_id))
+	{
 		LOG_ERR("Failed allocate flow request for port id: %d",
                         msg_attrs->id);
 		if (rnl_app_alloc_flow_result_msg(ipc_id,
@@ -538,9 +540,9 @@ static int notify_ipcp_register_app_request(void *             data,
 	if (!ipc_process) {
 		LOG_ERR("IPC process %d not found", ipc_id);
 		if (rnl_app_register_response_msg(ipc_id,
-                                              msg->rina_hdr->src_ipc_id,
-                                              -1,
-                                              info->snd_seq)) {
+						  msg->rina_hdr->src_ipc_id,
+						  -1,
+						  info->snd_seq)) {
 			name_destroy(app_name);
 			name_destroy(dif_name);
 			rkfree(attrs);
@@ -554,12 +556,12 @@ static int notify_ipcp_register_app_request(void *             data,
 		return 0;
 	}
 
-	if (ipc_process->ops->application_register(
-			ipc_process->data, attrs->app_name)) {
+	if (ipc_process->ops->application_register(ipc_process->data,
+						   attrs->app_name)) {
 		if (rnl_app_register_response_msg(ipc_id,
-                                              msg->rina_hdr->src_ipc_id,
-                                              -1,
-                                              info->snd_seq)) {
+					          msg->rina_hdr->src_ipc_id,
+					          -1,
+					          info->snd_seq)) {
 			name_destroy(app_name);
 			name_destroy(dif_name);
 			rkfree(attrs);
@@ -574,7 +576,7 @@ static int notify_ipcp_register_app_request(void *             data,
 	}
 
 	if (rnl_app_register_response_msg(ipc_id, msg->rina_hdr->src_ipc_id, 0,
-                        	info->snd_seq)) {
+                        		  info->snd_seq)) {
 		name_destroy(app_name);
 		name_destroy(dif_name);
 		rkfree(attrs);
