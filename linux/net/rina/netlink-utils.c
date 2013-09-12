@@ -2134,3 +2134,106 @@ int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
 }
 EXPORT_SYMBOL(rnl_app_alloc_flow_result_msg);
 
+int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
+		  	  	  uint_t           res,
+		  	  	  uint_t	   seq_num,
+		  	  	  uint_t port_id)
+{
+	struct sk_buff * out_msg;
+	struct rina_msg_hdr * out_hdr;
+	int result;
+
+	out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
+	if(!out_msg) {
+		LOG_ERR("Could not allocate memory for message");
+		return -1;
+	}
+
+	out_hdr = (struct rina_msg_hdr *) genlmsg_put(
+				out_msg,
+				0,
+				seq_num,
+				get_nl_family(),
+				0,
+				RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE);
+	if(!out_hdr) {
+		LOG_ERR("Could not use genlmsg_put");
+		nlmsg_free(out_msg);
+		return -1;
+	}
+
+	out_hdr->src_ipc_id = ipc_id; /* This IPC process */
+	out_hdr->dst_ipc_id = 0;
+
+	if (rnl_format_ipcm_dealloc_flow_resp_msg(res, out_msg)){
+		LOG_ERR("Could not format message...");
+		nlmsg_free(out_msg);
+		return -1;
+	}
+
+	result = genlmsg_end(out_msg, out_hdr);
+
+	if (result){
+		LOG_DBG("Result of genlmesg_end: %d", result);
+	}
+	result = genlmsg_unicast(&init_net, out_msg, port_id);
+	if(result) {
+		LOG_ERR("Could not send unicast msg: %d", result);
+		return -1;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(rnl_app_dealloc_flow_resp_msg);
+
+int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
+		  	  	  uint_t	   code,
+		  	  	  uint_t	port_id,
+		  	  	  uint_t nl_port_id)
+{
+	struct sk_buff * out_msg;
+	struct rina_msg_hdr * out_hdr;
+	int result;
+
+	out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
+	if(!out_msg) {
+		LOG_ERR("Could not allocate memory for message");
+		return -1;
+	}
+
+	out_hdr = (struct rina_msg_hdr *) genlmsg_put(
+				out_msg,
+				0,
+				0,
+				get_nl_family(),
+				0,
+				RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION);
+	if(!out_hdr) {
+		LOG_ERR("Could not use genlmsg_put");
+		nlmsg_free(out_msg);
+		return -1;
+	}
+
+	out_hdr->src_ipc_id = ipc_id; /* This IPC process */
+	out_hdr->dst_ipc_id = 0;
+
+	if (rnl_format_ipcm_flow_dealloc_noti_msg(port_id, code, out_msg)){
+		LOG_ERR("Could not format message...");
+		nlmsg_free(out_msg);
+		return -1;
+	}
+
+	result = genlmsg_end(out_msg, out_hdr);
+
+	if (result){
+		LOG_DBG("Result of genlmesg_end: %d", result);
+	}
+	result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
+	if(result) {
+		LOG_ERR("Could not send unicast msg: %d", result);
+		return -1;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(rnl_flow_dealloc_not_msg);

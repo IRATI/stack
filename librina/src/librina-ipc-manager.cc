@@ -340,14 +340,14 @@ void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 #endif
 }
 
-void IPCProcess::deallocateFlow(int portId)
+void IPCProcess::deallocateFlow(int flowPortId)
 	throw (IpcmDeallocateFlowException){
 	LOG_DBG("IPCProcess::deallocate flow called");
 #if STUB_API
 	//Do nothing
 #else
 	IpcmDeallocateFlowRequestMessage message;
-	message.setPortId(portId);
+	message.setPortId(flowPortId);
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);

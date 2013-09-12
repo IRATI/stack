@@ -79,6 +79,7 @@ public class FlowManager {
 			log.error("Error allocating flow. "+ex.getMessage());
 			flows.remove(portId);
 			ipcProcess.allocateFlowResponse(event, -1);
+			return;
 		}
 		
 		ipcProcess.allocateFlowResponse(event, 0);
@@ -102,6 +103,7 @@ public class FlowManager {
 		}catch(Exception ex){
 			log.error("Error deallocating flow. "+ex.getMessage());
 			applicationManager.flowDeallocated(event, -1);
+			return;
 		}
 		
 		applicationManager.flowDeallocated(event, 0);
