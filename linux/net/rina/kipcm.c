@@ -152,7 +152,7 @@ struct ipcp_flow {
         //QUEUE(sdu_ready, sdu *);
         struct kfifo           sdu_ready;
 
-        struct semaphore sema;
+        wait_queue_head_t wait_queue;
 };
 
 void alloc_flow_req_free_memory(struct name * source_name,
@@ -1328,7 +1328,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 return -1;
         }
 
-        sema_init(&flow->sema, 0);
+        init_waitqueue_head(&flow->wait_queue);
 
         flow->port_id     = port_id;
         flow->ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
@@ -1472,14 +1472,16 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 	}
 
 	if (kfifo_is_empty(&flow->sdu_ready)) {
-		KIPCM_UNLOCK(kipcm);
-		down_interruptible(&flow->sema);
 		checkval = 1;
+		LOG_DBG("Going to sleep: %d", checkval);
+		KIPCM_UNLOCK(kipcm);
+		interruptible_sleep_on(&flow->wait_queue);
 	}
 
 	if (checkval) {
 		KIPCM_LOCK(kipcm);
 
+		LOG_DBG("Woken up");
 		flow = ipcp_fmap_find(kipcm->flows, port_id);
 		if (!flow) {
 			LOG_ERR("There is no flow bound to port-id %d", port_id);
@@ -1604,8 +1606,11 @@ int kipcm_sdu_post(struct kipcm * kipcm,
                 return -1;
         }
 
-        if (flow->sema.count < 0)
-        	up(&flow->sema);
+        LOG_DBG("SDU posted");
+
+        wake_up_interruptible(&flow->wait_queue);
+
+        LOG_DBG("Sleeping read syscall should be working now");
 
         /*
          * FIXME: This lock has been removed only for the shim-dummy demo. Please
