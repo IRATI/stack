@@ -1385,15 +1385,18 @@ int kipcm_flow_remove(struct kipcm * kipcm,
                 return -1;
         }
 
+        if (ipcp_fmap_remove(kipcm->flows, port_id)) {
+		KIPCM_UNLOCK(kipcm);
+		return -1;
+	}
+
+	KIPCM_UNLOCK(kipcm);
+
+	LOG_DBG("Awake flow");
+	wake_up_interruptible(&flow->wait_queue);
+
         kfifo_free(&flow->sdu_ready);
         rkfree(flow);
-
-        if (ipcp_fmap_remove(kipcm->flows, port_id)) {
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-
-        KIPCM_UNLOCK(kipcm);
 
         return 0;
 }
