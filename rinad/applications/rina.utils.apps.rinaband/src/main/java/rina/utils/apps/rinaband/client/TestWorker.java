@@ -181,7 +181,7 @@ public class TestWorker implements Runnable, SDUListener{
 	/**
 	 * Called when an sdu is received through the flow
 	 */
-	public void sduDelivered(byte[] sdu, int numBytes) {
+	public void sduDelivered(byte[] sdu) {
 		testDeadTimerTask.cancel();
 		
 		if (this.receivedSDUs == 0){

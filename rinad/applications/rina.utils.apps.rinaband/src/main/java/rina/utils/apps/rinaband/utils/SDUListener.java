@@ -6,5 +6,5 @@ package rina.utils.apps.rinaband.utils;
  *
  */
 public interface SDUListener {
-	public void sduDelivered(byte[] sdu, int numBytes);
+	public void sduDelivered(byte[] sdu);
 }

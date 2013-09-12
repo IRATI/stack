@@ -21,6 +21,7 @@ import rina.utils.apps.rinaband.StatisticsInformation;
 import rina.utils.apps.rinaband.TestInformation;
 import rina.utils.apps.rinaband.protobuf.RINABandStatisticsMessageEncoder;
 import rina.utils.apps.rinaband.protobuf.RINABandTestMessageEncoder;
+import rina.utils.apps.rinaband.server.RINABandServer;
 import rina.utils.apps.rinaband.utils.FlowReader;
 import rina.utils.apps.rinaband.utils.SDUListener;
 
@@ -120,10 +121,14 @@ public class RINABandClient implements SDUListener{
 			FlowSpecification qosSpec = new FlowSpecification();
 			this.controlFlow = rina.getIpcManager().allocateFlowRequest(this.clientApNamingInfo, this.controlApNamingInfo, qosSpec);
 			
-			//2 Update the state
+			//2 Start flowReader
+			FlowReader flowReader = new FlowReader(this.controlFlow, this, 10000);
+			this.executorService.execute(flowReader);
+			
+			//3 Update the state
 			this.state = State.WAIT_CREATE_R;
 			
-			//3 Send the create test message
+			//4 Send the create test message
 			ObjectValue objectValue = new ObjectValue();
 			objectValue.setByteval(RINABandTestMessageEncoder.encode(this.testInformation));
 			CDAPMessage cdapMessage = CDAPMessage.getCreateObjectRequestMessage(
@@ -142,7 +147,7 @@ public class RINABandClient implements SDUListener{
 	/**
 	 * Called when an SDU is available on the control flow
 	 */
-	public void sduDelivered(byte[] sdu, int numBytes){
+	public void sduDelivered(byte[] sdu){
 		try{
 			CDAPMessage cdapMessage = this.cdapSessionManager.decodeCDAPMessage(sdu);
 			System.out.println("Received a CDAP Message! "+cdapMessage.toString());

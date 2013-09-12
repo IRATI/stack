@@ -95,6 +95,7 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 			ApplicationProcessNamingInformation difName, Flow flow,
 			CDAPSessionManager cdapSessionManager, IPCEventConsumer ipcEventConsumer){
 		this.dataApNamingInfo = dataApNamingInfo;
+		System.out.println("DIF name is "+difName);
 		this.difName = difName;
 		this.cdapSessionManager = cdapSessionManager;
 		this.flow = flow;
@@ -102,7 +103,7 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 		this.ipcEventConsumer = ipcEventConsumer;
 	}
 
-	public void sduDelivered(byte[] sdu, int numBytes) {
+	public void sduDelivered(byte[] sdu) {
 		try{
 			CDAPMessage cdapMessage = this.cdapSessionManager.decodeCDAPMessage(sdu);
 			System.out.println("Received CDAP Message: "+cdapMessage.toString());
@@ -160,9 +161,10 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 			
 			//2 Update the DATA AE and register it
 			this.dataApNamingInfo.setEntityInstance(this.testInformation.getAei());
-			ApplicationRegistrationInformation appRegInfo = 
-					new ApplicationRegistrationInformation(ApplicationRegistrationType.APPLICATION_REGISTRATION_SINGLE_DIF);
-			appRegInfo.setDIFName(difName);
+			ApplicationRegistrationInformation appRegInfo = new ApplicationRegistrationInformation();
+			//TODO fix this and replace it for the = new ApplicationRegistrationInformation();
+					/*new ApplicationRegistrationInformation(ApplicationRegistrationType.APPLICATION_REGISTRATION_SINGLE_DIF);
+			appRegInfo.setDIFName(difName);*/
 			dataAERegistration = rina.getIpcManager().registerApplication(this.dataApNamingInfo, appRegInfo);
 			ipcEventConsumer.addFlowAcceptor(this, dataApNamingInfo);
 			

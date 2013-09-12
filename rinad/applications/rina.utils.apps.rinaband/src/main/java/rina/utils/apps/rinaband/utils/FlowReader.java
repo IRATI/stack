@@ -20,18 +20,22 @@ public class FlowReader implements Runnable{
 
 	@Override
 	public void run() {
-		byte[] sdu = new byte[maxSDUSize];
+		byte[] buffer = new byte[maxSDUSize];
+		byte[] sdu = null;
 		int bytesRead = 0;
 		
 		while(flow.isAllocated()){
 			try{
 				//TODO Remove
-				Thread.sleep(60000);
-				bytesRead = flow.readSDU(sdu, maxSDUSize);
-				sduListener.sduDelivered(sdu, bytesRead);
+				//Thread.sleep(1000);
+				bytesRead = flow.readSDU(buffer, maxSDUSize);
+				sdu = new byte[bytesRead];
+				for(int i=0; i<sdu.length; i++){
+					sdu[i] = buffer[i];
+				}
+				sduListener.sduDelivered(sdu);
 			}catch(Exception ex){
 				System.out.println("Problems reading SDU from flow "+flow.getPortId());
-				ex.printStackTrace();
 				if (!flow.isAllocated()){
 					break;
 				}

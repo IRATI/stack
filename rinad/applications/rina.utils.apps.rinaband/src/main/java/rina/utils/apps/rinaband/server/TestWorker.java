@@ -79,7 +79,7 @@ public class TestWorker implements SDUListener{
 		this.started = false;
 	}
 
-	public void sduDelivered(byte[] sdu, int numBytes) {
+	public void sduDelivered(byte[] sdu) {
 		deliveredSDUs ++;
 		if (timeOfFirstSDUReceived == 0){
 			timeOfFirstSDUReceived = System.nanoTime();
