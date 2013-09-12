@@ -129,6 +129,8 @@ struct ipcp_flow {
         //QUEUE(reassembly_queue,       pdu *);
         //QUEUE(sdu_ready, sdu *);
         struct kfifo           sdu_ready;
+
+        struct semaphore sema;
 };
 
 void alloc_flow_req_free_memory(struct name * source_name,
@@ -1160,6 +1162,8 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
+
+        sema_init(&flow->sema, 1);
 
         flow->port_id     = port_id;
         flow->ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
