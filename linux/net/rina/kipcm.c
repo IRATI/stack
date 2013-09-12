@@ -24,6 +24,10 @@
 #include <linux/kobject.h>
 #include <linux/export.h>
 #include <linux/kfifo.h>
+#define USE_MUTEXES 0
+#if USE_MUTEXES
+#include <linux/mutex.h>
+#endif
 
 #define RINA_PREFIX "kipcm"
 
@@ -42,7 +46,11 @@
 #define DEFAULT_FACTORY "normal-ipc"
 
 struct kipcm {
+#if USE_MUTEXES
+        struct mutex            lock;
+#else
         spinlock_t              lock;
+#endif
         struct ipcp_factories * factories;
         struct ipcp_imap *      instances;
         struct ipcp_fmap *      flows;
@@ -87,16 +95,30 @@ struct kipcm {
 
 #else
 
+#if USE_MUTEXES
+#define KIPCM_LOCK_INIT(X) mutex_init(&(X -> lock));
+#define KIPCM_LOCK_FINI(X) mutex_destroy(&(X -> lock));
+#else
 #define KIPCM_LOCK_INIT(X) spin_lock_init(&(X -> lock));
+#define KIPCM_LOCK_FINI(X) do { } while (0);
+#endif
+
+#if USE_MUTEXES
+#define __KIPCM_LOCK(X)   mutex_lock(&(X -> lock))
+#define __KIPCM_UNLOCK(X) mutex_unlock(&(X -> lock))
+#else
+#define __KIPCM_LOCK(X)   spin_lock(&(X -> lock))
+#define __KIPCM_UNLOCK(X) spin_unlock(&(X -> lock))
+#endif
 
 #define KIPCM_LOCK(X)   do {                    \
                 KIPCM_LOCK_HEADER(X);           \
-                spin_lock(&(X -> lock));        \
+                __KIPCM_LOCK(X);                \
                 KIPCM_LOCK_FOOTER(X);           \
         } while (0)
 #define KIPCM_UNLOCK(X) do {                    \
                 KIPCM_UNLOCK_HEADER(X);         \
-                spin_unlock(&(X -> lock));      \
+                __KIPCM_UNLOCK(X);              \
                 KIPCM_UNLOCK_FOOTER(X);         \
         } while (0)
 
@@ -933,6 +955,8 @@ int kipcm_fini(struct kipcm * kipcm)
         }
 
         KIPCM_UNLOCK(kipcm);
+
+        KIPCM_LOCK_FINI(kipcm);
 
         rkfree(kipcm);
 
