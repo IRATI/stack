@@ -24,6 +24,10 @@
 #include <linux/kobject.h>
 #include <linux/export.h>
 #include <linux/kfifo.h>
+#define USE_MUTEXES 0
+#if USE_MUTEXES
+#include <linux/mutex.h>
+#endif
 
 #define RINA_PREFIX "kipcm"
 
@@ -42,7 +46,11 @@
 #define DEFAULT_FACTORY "normal-ipc"
 
 struct kipcm {
+#if USE_MUTEXES
+        struct mutex            lock;
+#else
         spinlock_t              lock;
+#endif
         struct ipcp_factories * factories;
         struct ipcp_imap *      instances;
         struct ipcp_fmap *      flows;
@@ -87,16 +95,30 @@ struct kipcm {
 
 #else
 
+#if USE_MUTEXES
+#define KIPCM_LOCK_INIT(X) mutex_init(&(X -> lock));
+#define KIPCM_LOCK_FINI(X) mutex_destroy(&(X -> lock));
+#else
 #define KIPCM_LOCK_INIT(X) spin_lock_init(&(X -> lock));
+#define KIPCM_LOCK_FINI(X) do { } while (0);
+#endif
+
+#if USE_MUTEXES
+#define __KIPCM_LOCK(X)   mutex_lock(&(X -> lock))
+#define __KIPCM_UNLOCK(X) mutex_unlock(&(X -> lock))
+#else
+#define __KIPCM_LOCK(X)   spin_lock(&(X -> lock))
+#define __KIPCM_UNLOCK(X) spin_unlock(&(X -> lock))
+#endif
 
 #define KIPCM_LOCK(X)   do {                    \
                 KIPCM_LOCK_HEADER(X);           \
-                spin_lock(&(X -> lock));        \
+                __KIPCM_LOCK(X);                \
                 KIPCM_LOCK_FOOTER(X);           \
         } while (0)
 #define KIPCM_UNLOCK(X) do {                    \
                 KIPCM_UNLOCK_HEADER(X);         \
-                spin_unlock(&(X -> lock));      \
+                __KIPCM_UNLOCK(X);              \
                 KIPCM_UNLOCK_FOOTER(X);         \
         } while (0)
 
@@ -129,6 +151,8 @@ struct ipcp_flow {
         //QUEUE(reassembly_queue,       pdu *);
         //QUEUE(sdu_ready, sdu *);
         struct kfifo           sdu_ready;
+
+        struct semaphore sema;
 };
 
 void alloc_flow_req_free_memory(struct name * source_name,
@@ -932,6 +956,8 @@ int kipcm_fini(struct kipcm * kipcm)
 
         KIPCM_UNLOCK(kipcm);
 
+        KIPCM_LOCK_FINI(kipcm);
+
         rkfree(kipcm);
 
         LOG_DBG("Finalized successfully");
@@ -1161,6 +1187,8 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 return -1;
         }
 
+        sema_init(&flow->sema, 0);
+
         flow->port_id     = port_id;
         flow->ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!flow->ipc_process) {
@@ -1280,6 +1308,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         struct ipcp_flow * flow;
         size_t             size;
         char *             data;
+        int 		   checkval = 0;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
@@ -1292,51 +1321,68 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 
         LOG_DBG("Trying to read SDU from port-id %d", port_id);
 
-        KIPCM_LOCK(kipcm);
+	KIPCM_LOCK(kipcm);
 
-        flow = ipcp_fmap_find(kipcm->flows, port_id);
-        if (!flow) {
-                LOG_ERR("There is no flow bound to port-id %d", port_id);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
+	flow = ipcp_fmap_find(kipcm->flows, port_id);
+	if (!flow) {
+		LOG_ERR("There is no flow bound to port-id %d", port_id);
+		KIPCM_UNLOCK(kipcm);
+		return -1;
+	}
 
-        if (kfifo_out(&flow->sdu_ready, &size, sizeof(size_t)) <
-            sizeof(size_t)) {
-                LOG_ERR("There is not enough data in port-id %d fifo",
-                        port_id);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
+	if (kfifo_is_empty(&flow->sdu_ready)) {
+		KIPCM_UNLOCK(kipcm);
+		down_interruptible(&flow->sema);
+		checkval = 1;
+	}
 
-        /* FIXME: Is it possible to have 0 bytes sdus ??? */
-        if (size == 0) {
-                LOG_ERR("Zero-size SDU detected");
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
+	if (checkval) {
+		KIPCM_LOCK(kipcm);
 
-        data = rkzalloc(size, GFP_KERNEL);
-        if (!data) {
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
+		flow = ipcp_fmap_find(kipcm->flows, port_id);
+		if (!flow) {
+			LOG_ERR("There is no flow bound to port-id %d", port_id);
+			KIPCM_UNLOCK(kipcm);
+			return -1;
+		}
+	}
 
-        if (kfifo_out(&flow->sdu_ready, data, size) != size) {
-                LOG_ERR("Could not get %zd bytes from fifo", size);
-                rkfree(data);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
+	if (kfifo_out(&flow->sdu_ready, &size, sizeof(size_t)) <
+	    sizeof(size_t)) {
+		LOG_ERR("There is not enough data in port-id %d fifo",
+			port_id);
+		KIPCM_UNLOCK(kipcm);
+		return -1;
+	}
 
-        *sdu = sdu_create_from(data, size);
-        if (!*sdu) {
-                rkfree(data);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
+	/* FIXME: Is it possible to have 0 bytes sdus ??? */
+	if (size == 0) {
+		LOG_ERR("Zero-size SDU detected");
+		KIPCM_UNLOCK(kipcm);
+		return -1;
+	}
 
-        KIPCM_UNLOCK(kipcm);
+	data = rkzalloc(size, GFP_KERNEL);
+	if (!data) {
+		KIPCM_UNLOCK(kipcm);
+		return -1;
+	}
+
+	if (kfifo_out(&flow->sdu_ready, data, size) != size) {
+		LOG_ERR("Could not get %zd bytes from fifo", size);
+		rkfree(data);
+		KIPCM_UNLOCK(kipcm);
+		return -1;
+	}
+
+	*sdu = sdu_create_from(data, size);
+	if (!*sdu) {
+		rkfree(data);
+		KIPCM_UNLOCK(kipcm);
+		return -1;
+	}
+
+	KIPCM_UNLOCK(kipcm);
 
         /* The SDU is theirs now */
         return 0;
@@ -1416,6 +1462,9 @@ int kipcm_sdu_post(struct kipcm * kipcm,
                 */
                 return -1;
         }
+
+        if (flow->sema.count < 0)
+        	up(&flow->sema);
 
         /*
          * FIXME: This lock has been removed only for the shim-dummy demo. Please
