@@ -22,6 +22,7 @@
 #include <linux/kobject.h>
 #include <linux/export.h>
 #include <linux/uaccess.h>
+#include <linux/workqueue.h>
 
 /* FIXME: We should stick the caller in the prefix (rk[mz]alloc oriented) */
 #define RINA_PREFIX "utils"
@@ -259,4 +260,97 @@ char * strdup_from_user(const char __user * src)
         }
 
         return tmp;
+}
+
+struct rwq_work_item {
+        struct work_struct work; /* Keep at top ! */
+        int                (* worker)(void * data);
+        void *             data;
+};
+
+static void rwq_worker(struct work_struct * work)
+{
+        struct rwq_work_item * item = (struct rwq_work_item *) work;
+
+        if (!item) {
+                LOG_ERR("No item to work on ?");
+        }
+        ASSERT(item->worker); /* Ensured by post */
+
+        /* We're the owner of the data, let's free it */
+        if (!item->worker(item->data)) {
+                LOG_ERR("The worker could not process its data!");
+                /* FIXME: We should do something here ... */
+        }
+
+        return;
+}
+
+struct workqueue_struct * rwq_create(const char * name)
+{
+        struct workqueue_struct * wq;
+
+        if (!name) {
+                LOG_ERR("No workqueue name passed, cannot create a workqueue");
+                return NULL;
+        }
+
+        wq = create_workqueue(name);
+
+        LOG_DBG("Workqueue '%s' (%pK) created successfully", name, wq);
+
+        return wq;
+}
+
+int rwq_post(struct workqueue_struct * wq,
+             int                       (* worker)(void * data),
+             void *                    data)
+{
+        struct rwq_work_item * tmp;
+
+        if (!wq) {
+                LOG_ERR("No workqueue passed, cannot post work");
+                return -1;
+        }
+        if (!worker) {
+                LOG_ERR("No worker passed, cannot post work");
+                return -1;
+        }
+
+        tmp = rkzalloc(sizeof(struct rwq_work_item), GFP_KERNEL);
+        if (!tmp) {
+                LOG_ERR("Cannot post work");
+                return -1;
+        }
+
+        /* Filling the workqueue item */
+        INIT_WORK((struct work_struct *) tmp, rwq_worker);
+        tmp->worker = worker;
+        tmp->data   = data;
+
+        /* Finally posting the work to do */
+        if (queue_work(wq, (struct work_struct *) tmp)) {
+                /* FIXME: Add workqueue name in the log */
+                LOG_ERR("Cannot post work on workqueue %pK", wq);
+                return -1;
+        }
+
+        LOG_DBG("Work posted on workqueue %pK, please wait ...", wq);
+
+        return 0;
+}
+
+int rwq_destroy(struct workqueue_struct * wq)
+{
+        if (!wq) {
+                LOG_ERR("The workqueue is NULL, cannot destroy");
+                return -1;
+        }
+
+        flush_workqueue(wq);
+        destroy_workqueue(wq);
+
+        LOG_DBG("Workqueue %pK destroyed successfully", wq);
+
+        return 0;
 }

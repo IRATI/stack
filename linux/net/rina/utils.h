@@ -21,9 +21,6 @@
 #ifndef RINA_UTILS_H
 #define RINA_UTILS_H
 
-#include <linux/slab.h>
-/* #include <linux/gfp.h> */
-
 #include <linux/kobject.h>
 #define RINA_ATTR_RO(NAME)                              \
         static struct kobj_attribute NAME##_attr =      \
@@ -39,12 +36,31 @@
 
 int    is_value_in_range(int value, int min_value, int max_value);
 
+/* Memory */
+#include <linux/slab.h>
+
 void * rkmalloc(size_t size, gfp_t flags);
 void * rkzalloc(size_t size, gfp_t flags);
 void   rkfree(void * ptr);
 
+/* Syscalls */
 char * strdup_from_user(const char __user * src);
 
+/* Workqueues */
+#include <linux/workqueue.h>
+
+struct workqueue_struct * rwq_create(const char * name);
+int                       rwq_destroy(struct workqueue_struct * rwq);
+
+/*
+ * NOTE: The worker is the owner of the data passed. It must return 0 if its
+ *       work completed successfully.
+ */
+int                 rwq_post(struct workqueue_struct * rwq,
+                             int                       (* worker)(void * data),
+                             void *                    data);
+
+/* Miscellaneous */
 #define MK_RINA_VERSION(MAJOR, MINOR, MICRO) \
         (((MAJOR & 0xFF) << 24) | ((MINOR & 0xFF) << 16) | (MICRO & 0xFFFF))
 
