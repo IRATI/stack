@@ -28,7 +28,7 @@ namespace rina {
 
 /* CLASS FLOW */
 
-Flow::Flow(const ApplicationProcessNamingInformation& localApplicatioName,
+Flow::Flow(const ApplicationProcessNamingInformation& localApplicationName,
 		const ApplicationProcessNamingInformation& remoteApplicationName,
 		const FlowSpecification& flowSpecification, FlowState flowState,
 		const ApplicationProcessNamingInformation& DIFName, int portId) {
@@ -396,13 +396,13 @@ Flow * IPCManager::allocateFlowRequest(
 		throw FlowAllocationException(reason);
 	}
 
-	LOG_DBG("Flow from %s to %s allocated successfully! Port-id: %d",
-			localAppName.getProcessName().c_str(),
-			remoteAppName.getProcessName().c_str(),
-			flowRequestResponse->getPortId());
 	portId = flowRequestResponse->getPortId();
 	flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED,
 			flowRequestResponse->getDifName(), portId);
+	LOG_DBG("Flow from %s to %s allocated successfully! Port-id: %d",
+				flow->getLocalApplicationName().getProcessName().c_str(),
+				flow->getRemoteApplcationName().getProcessName().c_str(),
+				flowRequestResponse->getPortId());
 	delete flowRequestResponse;
 #endif
 
