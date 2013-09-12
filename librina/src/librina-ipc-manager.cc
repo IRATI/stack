@@ -646,12 +646,13 @@ void ApplicationManager::flowRequestArrived(
 void ApplicationManager::flowDeallocated(
 		const FlowDeallocateRequestEvent& event, int result)
 		throw (NotifyFlowDeallocatedException){
-	LOG_DBG("ApplicationManager::flowAllocated called");
+	LOG_DBG("ApplicationManager::flowdeallocated called");
 
 #if STUB_API
 	//Do nothing
 #else
 	AppDeallocateFlowResponseMessage responseMessage;
+	responseMessage.setApplicationName(event.getApplicationName());
 	responseMessage.setResult(result);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);

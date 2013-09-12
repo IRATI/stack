@@ -103,6 +103,7 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener{
 		TestController testController = new TestController(dataApNamingInfo, difName, flow, 
 				this.cdapSessionManager, ipcEventConsumer);
 		FlowReader flowReader = new FlowReader(flow, testController, 10000);
+		testController.setFlowReader(flowReader);
 		RINABandServer.executeRunnable(flowReader);
 		ongoingTests.put(new Integer(flow.getPortId()), testController);
 		ipcEventConsumer.addFlowDeallocationListener(this, flow.getPortId());
@@ -113,7 +114,8 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener{
 	 * Called when the control flow with the RINABand client is deallocated
 	 */
 	public synchronized void flowDeallocated(int portId) {
-		ongoingTests.remove(new Integer(portId));
+		TestController testController = ongoingTests.remove(new Integer(portId));
+		testController.getFlowReader().stop();
 		ipcEventConsumer.removeFlowDeallocationListener(portId);
 		System.out.println("Control flow with port id "+portId+" deallocated");
 	}

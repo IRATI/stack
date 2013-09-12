@@ -219,6 +219,7 @@ public class RINABandClient implements SDUListener{
 							testWorker.setFlow(flow, System.currentTimeMillis() - before);
 							testWorkers.add(testWorker);
 							FlowReader flowReader = new FlowReader(flow, testWorker, testInformation.getSduSize());
+							testWorker.setFlowReader(flowReader);
 							executorService.execute(flowReader);
 							break;
 						}catch(Exception ex){

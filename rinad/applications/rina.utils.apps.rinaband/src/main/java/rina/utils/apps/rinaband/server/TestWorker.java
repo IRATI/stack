@@ -4,6 +4,7 @@ import eu.irati.librina.Flow;
 import eu.irati.librina.FlowState;
 import eu.irati.librina.rina;
 import rina.utils.apps.rinaband.TestInformation;
+import rina.utils.apps.rinaband.utils.FlowReader;
 import rina.utils.apps.rinaband.utils.SDUListener;
 
 /**
@@ -44,11 +45,21 @@ public class TestWorker implements SDUListener{
 	 */
 	private TestController testController = null;
 	
+	private FlowReader flowReader = null;
+	
 	
 	public TestWorker(TestInformation testInformation, Flow flow, TestController testController){
 		this.testInformation = testInformation;
 		this.flow = flow;
 		this.testController = testController;
+	}
+	
+	public void setFlowReader(FlowReader flowReader){
+		this.flowReader = flowReader;
+	}
+	
+	public FlowReader getFlowReader(){
+		return this.flowReader;
 	}
 	
 	/**
@@ -69,6 +80,8 @@ public class TestWorker implements SDUListener{
 	public void abort(){
 		if (this.started){
 			try{
+				this.flowReader.stop();
+				
 				if (this.flow.getState() == FlowState.FLOW_ALLOCATED){
 					rina.getIpcManager().deallocateFlow(this.flow.getPortId());
 				}

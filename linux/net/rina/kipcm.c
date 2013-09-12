@@ -417,7 +417,7 @@ int dealloc_flow_req_free_memory_and_reply(
 		msg = NULL;
 	}
 
-	if (rnl_app_alloc_flow_result_msg(id, res, seq_num, port_id))
+	if (rnl_app_dealloc_flow_resp_msg(id, res, seq_num, port_id))
 		return -1;
 	else
 		return 0;

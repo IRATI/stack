@@ -90,6 +90,9 @@ public class FlowManager {
 		IPCProcess ipcProcess = null;
 		String difName = null;
 		
+		log.info("Got flow deallocate request event, for local application: "+ 
+				event.getApplicationName().getProcessName());
+		
 		try{
 			flow = getFlow(event.getPortId());
 			difName = flow.getDifName();

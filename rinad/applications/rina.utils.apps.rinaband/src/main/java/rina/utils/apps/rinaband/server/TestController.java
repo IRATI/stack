@@ -80,6 +80,8 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 	
 	private ApplicationProcessNamingInformation difName = null;
 	
+	private FlowReader flowReader = null;
+	
 	/**
 	 * Epoch times are in miliseconds
 	 */
@@ -101,6 +103,14 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 		this.flow = flow;
 		this.allocatedFlows = new Hashtable<Integer, TestWorker>();
 		this.ipcEventConsumer = ipcEventConsumer;
+	}
+	
+	public void setFlowReader(FlowReader flowReader){
+		this.flowReader = flowReader;
+	}
+	
+	public FlowReader getFlowReader(){
+		return this.flowReader;
 	}
 
 	public void sduDelivered(byte[] sdu) {
@@ -343,6 +353,7 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 		
 		TestWorker testWorker = new TestWorker(this.testInformation, flow, this);
 		FlowReader flowReader = new FlowReader(flow, testWorker, this.testInformation.getSduSize());
+		testWorker.setFlowReader(flowReader);
 		RINABandServer.executeRunnable(flowReader);
 		this.allocatedFlows.put(new Integer(flow.getPortId()), testWorker);
 		ipcEventConsumer.addFlowDeallocationListener(this, flow.getPortId());
@@ -354,7 +365,8 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 	 */
 	public synchronized void flowDeallocated(int portId) {
 		if (this.state == State.COMPLETED){
-			this.allocatedFlows.remove(new Integer(portId));
+			TestWorker testWorker = this.allocatedFlows.remove(new Integer(portId));
+			testWorker.getFlowReader().stop();
 			printMessage("Data flow with portId "+portId+ " deallocated");
 		}
 		

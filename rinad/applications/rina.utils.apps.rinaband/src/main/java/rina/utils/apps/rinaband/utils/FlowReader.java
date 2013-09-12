@@ -11,11 +11,13 @@ public class FlowReader implements Runnable{
 	private Flow flow;
 	private SDUListener sduListener;
 	private int maxSDUSize;
+	private boolean stop;
 	
 	public FlowReader(Flow flow, SDUListener sduListener, int maxSDUSize){
 		this.flow = flow;
 		this.sduListener = sduListener;
 		this.maxSDUSize = maxSDUSize;
+		this.stop = false;
 	}
 
 	@Override
@@ -24,10 +26,8 @@ public class FlowReader implements Runnable{
 		byte[] sdu = null;
 		int bytesRead = 0;
 		
-		while(flow.isAllocated()){
+		while(!isStopped()){
 			try{
-				//TODO Remove
-				Thread.sleep(1000);
 				bytesRead = flow.readSDU(buffer, maxSDUSize);
 				sdu = new byte[bytesRead];
 				for(int i=0; i<sdu.length; i++){
@@ -36,11 +36,20 @@ public class FlowReader implements Runnable{
 				sduListener.sduDelivered(sdu);
 			}catch(Exception ex){
 				System.out.println("Problems reading SDU from flow "+flow.getPortId());
-				if (!flow.isAllocated()){
-					break;
+				if (isStopped()){
+					return;
 				}
 			}
 		}
+	}
+	
+	public synchronized void stop(){
+		System.out.println("Requesting reader of flow "+flow.getPortId()+ " to stop");
+		stop = true;
+	}
+	
+	public synchronized boolean isStopped(){
+		return stop;
 	}
 	
 }

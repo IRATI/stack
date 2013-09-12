@@ -458,6 +458,9 @@ void IPCManager::deallocateFlow(int portId) throw (FlowDeallocationException) {
 #if STUB_API
 	//Do nothing
 #else
+
+	LOG_DBG("Application %s requested to deallocate flow with port-id %d",
+		flow->getLocalApplicationName().getProcessName().c_str(), portId);
 	AppDeallocateFlowRequestMessage message;
 	message.setApplicationName(flow->getLocalApplicationName());
 	message.setPortId(portId);

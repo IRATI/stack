@@ -10,6 +10,7 @@ import rina.utils.apps.rinaband.TestInformation;
 import rina.utils.apps.rinaband.generator.BoringSDUGenerator;
 import rina.utils.apps.rinaband.generator.IncrementSDUGenerator;
 import rina.utils.apps.rinaband.generator.SDUGenerator;
+import rina.utils.apps.rinaband.utils.FlowReader;
 import rina.utils.apps.rinaband.utils.SDUListener;
 
 public class TestWorker implements Runnable, SDUListener{
@@ -81,6 +82,8 @@ public class TestWorker implements Runnable, SDUListener{
 	
 	private Timer timer = null;
 	
+	private FlowReader flowReader = null;
+	
 	public TestWorker(TestInformation testInformation, RINABandClient rinaBandClient, Timer timer){
 		this.testInformation = testInformation;
 		this.rinaBandClient = rinaBandClient;
@@ -105,6 +108,14 @@ public class TestWorker implements Runnable, SDUListener{
 		}
 	}
 	
+	public void setFlowReader(FlowReader flowReader){
+		this.flowReader = flowReader;
+	}
+	
+	public FlowReader getFlowReader(){
+		return this.flowReader;
+	}
+	
 	private void scheduleTestDeadTimerTask(){
 		testDeadTimerTask = new TestDeclaredDeadTimerTask(this);
 		timer.schedule(testDeadTimerTask, TestDeclaredDeadTimerTask.DEFAULT_DELAY_IN_MS);
@@ -124,6 +135,8 @@ public class TestWorker implements Runnable, SDUListener{
 	}
 	
 	public void abortTest(){
+		flowReader.stop();
+		
 		if (this.flow.getState() == FlowState.FLOW_ALLOCATED){
 			try{
 				rina.getIpcManager().deallocateFlow(this.flow.getPortId());
