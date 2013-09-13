@@ -1,5 +1,8 @@
 package rina.utils.apps.rinaband.server;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import eu.irati.librina.Flow;
 import eu.irati.librina.FlowState;
 import eu.irati.librina.rina;
@@ -40,6 +43,8 @@ public class SDUSender implements Runnable {
 	 */
 	private TestController testController = null;
 	
+	private static final Log log = LogFactory.getLog(SDUSender.class);
+	
 	public SDUSender(TestInformation testInformation, Flow flow, TestController testController){
 		this.testInformation = testInformation;
 		this.flow = flow;
@@ -79,8 +84,8 @@ public class SDUSender implements Runnable {
 		long time = System.nanoTime() - before;
 		this.testController.setLastSDUSent(System.currentTimeMillis());
 		long sentSDUsperSecond = 1000L*1000L*1000L*numberOfSdus/time;
-		System.out.println("Flow at portId "+flow.getPortId()+": Sent SDUs per second: "+sentSDUsperSecond);
-		System.out.println("Flow at portId "+flow.getPortId()+": Sent KiloBytes per second (KBps): "
+		log.info("Flow at portId "+flow.getPortId()+": Sent SDUs per second: "+sentSDUsperSecond);
+		log.info("Flow at portId "+flow.getPortId()+": Sent KiloBytes per second (KBps): "
 				+sentSDUsperSecond*this.testInformation.getSduSize()/1024);
 	}
 }

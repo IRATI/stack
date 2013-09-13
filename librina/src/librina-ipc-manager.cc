@@ -340,14 +340,14 @@ void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 #endif
 }
 
-void IPCProcess::deallocateFlow(int portId)
+void IPCProcess::deallocateFlow(int flowPortId)
 	throw (IpcmDeallocateFlowException){
 	LOG_DBG("IPCProcess::deallocate flow called");
 #if STUB_API
 	//Do nothing
 #else
 	IpcmDeallocateFlowRequestMessage message;
-	message.setPortId(portId);
+	message.setPortId(flowPortId);
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -646,12 +646,13 @@ void ApplicationManager::flowRequestArrived(
 void ApplicationManager::flowDeallocated(
 		const FlowDeallocateRequestEvent& event, int result)
 		throw (NotifyFlowDeallocatedException){
-	LOG_DBG("ApplicationManager::flowAllocated called");
+	LOG_DBG("ApplicationManager::flowdeallocated called");
 
 #if STUB_API
 	//Do nothing
 #else
 	AppDeallocateFlowResponseMessage responseMessage;
+	responseMessage.setApplicationName(event.getApplicationName());
 	responseMessage.setResult(result);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);

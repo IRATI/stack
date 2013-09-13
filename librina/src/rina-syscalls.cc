@@ -34,7 +34,7 @@ int syscallWriteSDU(int portId, void * sdu, int size){
 	result = syscall(SYS_writeSDU, portId, sdu, size);
 	if (result == -1){
 		LOG_ERR("Write SDU failed, errno = %d \n", errno);
-		return errno;
+		return -errno;
 	}
 
 	return 0;
@@ -45,7 +45,7 @@ int syscallReadSDU(int portId, void * sdu, int maxBytes){
 	result = syscall(SYS_readSDU, portId, sdu, maxBytes);
 	if (result == -1){
 		LOG_ERR("Read SDU failed, errno = %d, \n", errno);
-		return errno;
+		return -errno;
 	}
 
 	return result;
@@ -56,7 +56,7 @@ int syscallDestroyIPCProcess(unsigned int ipcProcessId){
 	result = syscall(SYS_destroyIPCProcess, ipcProcessId);
 	if (result == -1){
 		LOG_ERR("Destroy IPC Process failed, errno = %d, \n", errno);
-		return errno;
+		return -errno;
 	}
 
 	return 0;
@@ -80,7 +80,7 @@ int syscallCreateIPCProcess(
 			difType.c_str());
 	if (result == -1){
 		LOG_ERR("Create IPC Process failed, errno = %d, \n", errno);
-		return errno;
+		return -errno;
 	}
 
 	return 0;

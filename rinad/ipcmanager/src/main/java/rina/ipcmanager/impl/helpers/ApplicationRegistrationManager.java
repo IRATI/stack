@@ -32,14 +32,14 @@ public class ApplicationRegistrationManager {
 	private static final Log log = LogFactory.getLog(ApplicationRegistrationManager.class);
 	private IPCProcessFactorySingleton ipcProcessFactory = null;
 	private ApplicationManagerSingleton applicationManager = null;
-	private Map<ApplicationProcessNamingInformation, ApplicationRegistrationState> applicationRegistrations;
+	private Map<String, ApplicationRegistrationState> applicationRegistrations;
 
 	public ApplicationRegistrationManager(IPCProcessFactorySingleton ipcProcessFactory, 
 			ApplicationManagerSingleton applicationManager){
 		this.ipcProcessFactory = ipcProcessFactory;
 		this.applicationManager = applicationManager;
 		applicationRegistrations = 
-				new ConcurrentHashMap<ApplicationProcessNamingInformation, ApplicationRegistrationState>();
+				new ConcurrentHashMap<String, ApplicationRegistrationState>();
 	}
 	
 	/**
@@ -58,7 +58,10 @@ public class ApplicationRegistrationManager {
 			ipcProcess.registerApplication(event.getApplicationName());
 			if (applicationRegistration == null){
 				applicationRegistration = new ApplicationRegistrationState(event.getApplicationName());
-				applicationRegistrations.put(event.getApplicationName(), applicationRegistration);
+				applicationRegistrations.put(
+						Utils.geApplicationNamingInformationCode(
+								event.getApplicationName()), 
+								applicationRegistration);
 			}
 
 			applicationRegistration.getDIFNames().add(ipcProcess.getConfiguration().getDifName().getProcessName());
@@ -83,7 +86,9 @@ public class ApplicationRegistrationManager {
 		IPCProcess ipcProcess = null;
 		try{
 			ApplicationRegistrationState applicationRegistration = 
-					applicationRegistrations.get(event.getApplicationName());
+					applicationRegistrations.get(
+							Utils.geApplicationNamingInformationCode(
+									event.getApplicationName()));
 			if (applicationRegistration == null){
 				throw new Exception("Application "+event.getApplicationName().toString() 
 						+ " was not registered to any DIF");
@@ -180,7 +185,7 @@ public class ApplicationRegistrationManager {
 			ipcProcess = ipcProcesses.get(i);
 			DIFConfiguration difConfiguration = ipcProcess.getConfiguration();
 			if (difConfiguration != null && 
-					difConfiguration.getDifName().getProcessName() == difName){
+					difConfiguration.getDifName().getProcessName().equals(difName)){
 				return ipcProcess;
 			}
 		}

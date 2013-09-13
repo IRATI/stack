@@ -151,6 +151,8 @@ struct ipcp_flow {
         //QUEUE(reassembly_queue,       pdu *);
         //QUEUE(sdu_ready, sdu *);
         struct kfifo           sdu_ready;
+
+        wait_queue_head_t wait_queue;
 };
 
 void alloc_flow_req_free_memory(struct name * source_name,
@@ -395,6 +397,104 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 	rkfree(attrs);
 	rkfree(msg);
 	return retval;
+}
+
+int dealloc_flow_req_free_memory_and_reply(
+		struct rnl_ipcm_dealloc_flow_req_msg_attrs * attrs,
+		struct rnl_msg * msg,
+		ipc_process_id_t id,
+		uint_t res,
+		uint_t seq_num,
+		uint_t port_id)
+{
+	if (attrs){
+		rkfree(attrs);
+		attrs = NULL;
+	}
+
+	if (msg){
+		rkfree(msg);
+		msg = NULL;
+	}
+
+	if (rnl_app_dealloc_flow_resp_msg(id, res, seq_num, port_id))
+		return -1;
+	else
+		return 0;
+}
+
+/*
+ * It is the responsibility of the shims to send the alloc_req_arrived
+ * and the alloc_req_result.
+ */
+static int notify_ipcp_deallocate_flow_request(void *             data,
+		struct sk_buff *   buff,
+		struct genl_info * info)
+{
+	struct rnl_ipcm_dealloc_flow_req_msg_attrs * attrs;
+	struct rnl_msg *                           msg;
+	struct ipcp_instance *                     ipc_process;
+	ipc_process_id_t                           ipc_id;
+	struct rina_msg_hdr *                      hdr;
+	struct kipcm * kipcm;
+
+	attrs = NULL;
+	msg = NULL;
+
+	if (!data) {
+		LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+		return -1;
+	}
+
+	if (!info) {
+		LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+		return -1;
+	}
+
+	kipcm = (struct kipcm *) data;
+	attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+	if (!attrs) {
+		return dealloc_flow_req_free_memory_and_reply(attrs, msg, 0, -1,
+				info->snd_seq, info->snd_portid);
+	}
+
+	msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+	if (!msg) {
+		return dealloc_flow_req_free_memory_and_reply(attrs, msg, 0, -1,
+				info->snd_seq, info->snd_portid);
+	}
+	msg->attrs = attrs;
+
+	hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
+	if (!hdr) {
+		return dealloc_flow_req_free_memory_and_reply(attrs, msg, 0, -1,
+				info->snd_seq, info->snd_portid);
+	}
+	msg->rina_hdr = hdr;
+
+	if (rnl_parse_msg(info, msg)) {
+		return dealloc_flow_req_free_memory_and_reply(attrs, msg, 0, -1,
+				info->snd_seq, info->snd_portid);
+	}
+
+	ipc_id = msg->rina_hdr->dst_ipc_id;
+	ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+	if (!ipc_process) {
+		LOG_ERR("IPC process %d not found", ipc_id);
+		return dealloc_flow_req_free_memory_and_reply(attrs, msg, 0, -1,
+				info->snd_seq, info->snd_portid);
+	}
+
+	if (ipc_process->ops->flow_deallocate(ipc_process->data, attrs->id))
+	{
+		LOG_ERR("Failed deallocate flow request for port id: %d", attrs->id);
+		return dealloc_flow_req_free_memory_and_reply(attrs, msg, ipc_id, -1,
+				info->snd_seq, info->snd_portid);
+	}
+
+	return dealloc_flow_req_free_memory_and_reply(attrs, msg, ipc_id, 0,
+					info->snd_seq, info->snd_portid);
+	return 0;
 }
 
 int assign_to_dif_free_memory_and_reply(struct name * dif_name,
@@ -725,25 +825,33 @@ static int notify_ipcp_unregister_app_request(void *             data,
 
 static int netlink_handlers_unregister(struct rina_nl_set * set)
 {
-        int retval = 0;
+	int retval = 0;
 
-        if (rina_netlink_handler_unregister(set,
-                                            RINA_C_IPCM_ALLOCATE_FLOW_REQUEST))
-                retval = -1;
+	if (rina_netlink_handler_unregister(set,
+			RINA_C_IPCM_ALLOCATE_FLOW_REQUEST))
+		retval = -1;
 
-        if (rina_netlink_handler_unregister(set,
-                                            RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE))
-                retval = -1;
+	if (rina_netlink_handler_unregister(set,
+			RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE))
+		retval = -1;
 
-        if (rina_netlink_handler_unregister(set,
-                                            RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST))
-                retval = -1;
+	if (rina_netlink_handler_unregister(set,
+			RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST))
+		retval = -1;
 
-        if (rina_netlink_handler_unregister(set,
-                                            RINA_C_IPCM_REGISTER_APPLICATION_REQUEST))
-                retval = -1;
+	if (rina_netlink_handler_unregister(set,
+			RINA_C_IPCM_REGISTER_APPLICATION_REQUEST))
+		retval = -1;
 
-        return retval;
+	if (rina_netlink_handler_unregister(set,
+			RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST))
+		retval = -1;
+
+	if (rina_netlink_handler_unregister(set,
+			RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST))
+		retval = -1;
+
+	return retval;
 }
 
 static int netlink_handlers_register(struct kipcm * kipcm)
@@ -838,6 +946,41 @@ static int netlink_handlers_register(struct kipcm * kipcm)
                         /* FIXME: What else could be done here?" */
                 }
                 return -1;
+        }
+
+        handler = notify_ipcp_deallocate_flow_request;
+        if (rina_netlink_handler_register(kipcm->set,
+        		RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST,
+        		kipcm,
+        		handler)) {
+        	if (rina_netlink_handler_unregister(kipcm->set,
+        			RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
+        		LOG_ERR("Failed handler unregister while bailing out");
+        		/* FIXME: What else could be done here?" */
+        	}
+        	if (rina_netlink_handler_unregister(kipcm->set,
+        			RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
+        		LOG_ERR("Failed handler unregister while bailing out");
+        		/* FIXME: What else could be done here?" */
+        	}
+        	if (rina_netlink_handler_unregister(kipcm->set,
+        			RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
+        		LOG_ERR("Failed handler unregister while bailing out");
+        		/* FIXME: What else could be done here?" */
+        	}
+        	return -1;
+        	if (rina_netlink_handler_unregister(kipcm->set,
+        			RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
+        		LOG_ERR("Failed handler unregister while bailing out");
+        		/* FIXME: What else could be done here?" */
+        	}
+        	return -1;
+        	if (rina_netlink_handler_unregister(kipcm->set,
+        			RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
+        		LOG_ERR("Failed handler unregister while bailing out");
+        		/* FIXME: What else could be done here?" */
+        	}
+        	return -1;
         }
 
         return 0;
@@ -1185,6 +1328,8 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 return -1;
         }
 
+        init_waitqueue_head(&flow->wait_queue);
+
         flow->port_id     = port_id;
         flow->ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!flow->ipc_process) {
@@ -1240,15 +1385,18 @@ int kipcm_flow_remove(struct kipcm * kipcm,
                 return -1;
         }
 
+        if (ipcp_fmap_remove(kipcm->flows, port_id)) {
+		KIPCM_UNLOCK(kipcm);
+		return -1;
+	}
+
+	KIPCM_UNLOCK(kipcm);
+
+	LOG_DBG("Awake flow");
+	wake_up_interruptible(&flow->wait_queue);
+
         kfifo_free(&flow->sdu_ready);
         rkfree(flow);
-
-        if (ipcp_fmap_remove(kipcm->flows, port_id)) {
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-
-        KIPCM_UNLOCK(kipcm);
 
         return 0;
 }
@@ -1271,7 +1419,8 @@ int kipcm_sdu_write(struct kipcm * kipcm,
                 return -1;
         }
 
-        LOG_DBG("SDU received (size %zd)", sdu->buffer->size);
+        LOG_DBG("Tring to write SDU of size %d to port_id %d",
+        		sdu->buffer->size, port_id);
 
         KIPCM_LOCK(kipcm);
 
@@ -1303,6 +1452,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         struct ipcp_flow * flow;
         size_t             size;
         char *             data;
+        int 		   checkval = 0;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
@@ -1313,51 +1463,72 @@ int kipcm_sdu_read(struct kipcm * kipcm,
                 return -1;
         }
 
-        KIPCM_LOCK(kipcm);
+        LOG_DBG("Trying to read SDU from port-id %d", port_id);
 
-        flow = ipcp_fmap_find(kipcm->flows, port_id);
-        if (!flow) {
-                LOG_ERR("There is no flow bound to port-id %d", port_id);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
+	KIPCM_LOCK(kipcm);
 
-        if (kfifo_out(&flow->sdu_ready, &size, sizeof(size_t)) <
-            sizeof(size_t)) {
-                LOG_ERR("There is not enough data in port-id %d fifo",
-                        port_id);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
+	flow = ipcp_fmap_find(kipcm->flows, port_id);
+	if (!flow) {
+		LOG_ERR("There is no flow bound to port-id %d", port_id);
+		KIPCM_UNLOCK(kipcm);
+		return -1;
+	}
 
-        /* FIXME: Is it possible to have 0 bytes sdus ??? */
-        if (size == 0) {
-                LOG_ERR("Zero-size SDU detected");
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
+	if (kfifo_is_empty(&flow->sdu_ready)) {
+		checkval = 1;
+		LOG_DBG("Going to sleep: %d", checkval);
+		KIPCM_UNLOCK(kipcm);
+		interruptible_sleep_on(&flow->wait_queue);
+	}
 
-        data = rkzalloc(size, GFP_KERNEL);
-        if (!data) {
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
+	if (checkval) {
+		KIPCM_LOCK(kipcm);
 
-        if (kfifo_out(&flow->sdu_ready, data, size) != size) {
-                LOG_ERR("Could not get %zd bytes from fifo", size);
-                rkfree(data);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
+		LOG_DBG("Woken up");
+		flow = ipcp_fmap_find(kipcm->flows, port_id);
+		if (!flow) {
+			LOG_ERR("There is no flow bound to port-id %d", port_id);
+			KIPCM_UNLOCK(kipcm);
+			return -1;
+		}
+	}
 
-        *sdu = sdu_create_from(data, size);
-        if (!*sdu) {
-                rkfree(data);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
+	if (kfifo_out(&flow->sdu_ready, &size, sizeof(size_t)) <
+	    sizeof(size_t)) {
+		LOG_ERR("There is not enough data in port-id %d fifo",
+			port_id);
+		KIPCM_UNLOCK(kipcm);
+		return -1;
+	}
 
-        KIPCM_UNLOCK(kipcm);
+	/* FIXME: Is it possible to have 0 bytes sdus ??? */
+	if (size == 0) {
+		LOG_ERR("Zero-size SDU detected");
+		KIPCM_UNLOCK(kipcm);
+		return -1;
+	}
+
+	data = rkzalloc(size, GFP_KERNEL);
+	if (!data) {
+		KIPCM_UNLOCK(kipcm);
+		return -1;
+	}
+
+	if (kfifo_out(&flow->sdu_ready, data, size) != size) {
+		LOG_ERR("Could not get %zd bytes from fifo", size);
+		rkfree(data);
+		KIPCM_UNLOCK(kipcm);
+		return -1;
+	}
+
+	*sdu = sdu_create_from(data, size);
+	if (!*sdu) {
+		rkfree(data);
+		KIPCM_UNLOCK(kipcm);
+		return -1;
+	}
+
+	KIPCM_UNLOCK(kipcm);
 
         /* The SDU is theirs now */
         return 0;
@@ -1369,6 +1540,9 @@ int kipcm_sdu_post(struct kipcm * kipcm,
 {
         struct ipcp_flow * flow;
         unsigned int       avail;
+
+        LOG_DBG("Post SDU called. Trying to post SDU of size %d to port-id %d "
+        		, sdu->buffer->size, port_id);
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, cannot post SDU");
@@ -1434,6 +1608,12 @@ int kipcm_sdu_post(struct kipcm * kipcm,
                 */
                 return -1;
         }
+
+        LOG_DBG("SDU posted");
+
+        wake_up_interruptible(&flow->wait_queue);
+
+        LOG_DBG("Sleeping read syscall should be working now");
 
         /*
          * FIXME: This lock has been removed only for the shim-dummy demo. Please

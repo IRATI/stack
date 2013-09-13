@@ -28,7 +28,7 @@ namespace rina {
 
 /* CLASS FLOW */
 
-Flow::Flow(const ApplicationProcessNamingInformation& localApplicatioName,
+Flow::Flow(const ApplicationProcessNamingInformation& localApplicationName,
 		const ApplicationProcessNamingInformation& remoteApplicationName,
 		const FlowSpecification& flowSpecification, FlowState flowState,
 		const ApplicationProcessNamingInformation& DIFName, int portId) {
@@ -85,9 +85,11 @@ int Flow::readSDU(void * sdu, int maxBytes)
 	return 7;
 #else
 	int result = syscallReadSDU(portId, sdu, maxBytes);
-	if (result != 0){
+	if (result < 0){
 		throw ReadSDUException();
 	}
+
+	LOG_DBG("Read an SDU of %d bytes", result);
 
 	return result;
 #endif
@@ -95,7 +97,7 @@ int Flow::readSDU(void * sdu, int maxBytes)
 
 void Flow::writeSDU(void * sdu, int size)
 		throw (FlowNotAllocatedException, WriteSDUException) {
-	LOG_DBG("Flow.writeSDU called");
+	LOG_DBG("Flow.writeSDU called, size is %d", size);
 
 	if (flowState != FLOW_ALLOCATED) {
 		throw FlowNotAllocatedException();
@@ -105,9 +107,11 @@ void Flow::writeSDU(void * sdu, int size)
 	//Do nothing
 #else
 	int result = syscallWriteSDU(portId, sdu, size);
-	if (result != 0){
+	if (result < 0){
 		throw WriteSDUException();
 	}
+
+	LOG_DBG("Written an SDU of %d bytes", result);
 #endif
 }
 
@@ -392,13 +396,13 @@ Flow * IPCManager::allocateFlowRequest(
 		throw FlowAllocationException(reason);
 	}
 
-	LOG_DBG("Flow from %s to %s allocated successfully! Port-id: %d",
-			localAppName.getProcessName().c_str(),
-			remoteAppName.getProcessName().c_str(),
-			flowRequestResponse->getPortId());
 	portId = flowRequestResponse->getPortId();
 	flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED,
 			flowRequestResponse->getDifName(), portId);
+	LOG_DBG("Flow from %s to %s allocated successfully! Port-id: %d",
+				flow->getLocalApplicationName().getProcessName().c_str(),
+				flow->getRemoteApplcationName().getProcessName().c_str(),
+				flowRequestResponse->getPortId());
 	delete flowRequestResponse;
 #endif
 
@@ -454,6 +458,9 @@ void IPCManager::deallocateFlow(int portId) throw (FlowDeallocationException) {
 #if STUB_API
 	//Do nothing
 #else
+
+	LOG_DBG("Application %s requested to deallocate flow with port-id %d",
+		flow->getLocalApplicationName().getProcessName().c_str(), portId);
 	AppDeallocateFlowRequestMessage message;
 	message.setApplicationName(flow->getLocalApplicationName());
 	message.setPortId(portId);

@@ -375,28 +375,38 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
 }
 
 static int dummy_flow_deallocate(struct ipcp_instance_data * data,
-                port_id_t                   id)
+		port_id_t                   id)
 {
-        struct dummy_flow * flow;
+	struct dummy_flow * flow;
+	port_id_t dest_port_id;
 
-        ASSERT(data);
-        flow = find_flow(data, id);
-        if (!flow) {
-                LOG_ERR("Flow does not exist, cannot remove");
-                return -1;
-        }
+	ASSERT(data);
+	flow = find_flow(data, id);
+	if (!flow) {
+		LOG_ERR("Flow does not exist, cannot remove");
+		return -1;
+	}
 
-        /* FIXME: Notify the destination application, maybe? */
+	if (id == flow->port_id)
+		dest_port_id = flow->dst_port_id;
+	else
+		dest_port_id = flow->port_id;
 
-        list_del(&flow->list);
-        name_destroy(flow->dest);
-        name_destroy(flow->source);
-        rkfree(flow);
+	if (kipcm_flow_remove(default_kipcm, id))
+		return -1;
 
-        if (kipcm_flow_remove(default_kipcm, id))
-                return -1;
+	if (kipcm_flow_remove(default_kipcm, dest_port_id))
+		return -1;
 
-        return 0;
+	/* Notify the destination application */
+	rnl_flow_dealloc_not_msg(data->id, 0, dest_port_id, 1);
+
+	list_del(&flow->list);
+	name_destroy(flow->dest);
+	name_destroy(flow->source);
+	rkfree(flow);
+
+	return 0;
 }
 
 static int dummy_application_register(struct ipcp_instance_data * data,
@@ -495,6 +505,8 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                            struct sdu *                sdu)
 {
         struct dummy_flow * flow;
+
+        LOG_DBG("Dummy SDU write invoked.");
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {

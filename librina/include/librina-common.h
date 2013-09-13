@@ -88,6 +88,8 @@ public:
 	ApplicationProcessNamingInformation();
 	ApplicationProcessNamingInformation(const std::string& processName,
 			const std::string& processInstance);
+	ApplicationProcessNamingInformation & operator=(
+			const ApplicationProcessNamingInformation & other);
 	bool operator==(const ApplicationProcessNamingInformation &other) const;
 	bool operator!=(const ApplicationProcessNamingInformation &other) const;
 	bool operator>(const ApplicationProcessNamingInformation &other) const;

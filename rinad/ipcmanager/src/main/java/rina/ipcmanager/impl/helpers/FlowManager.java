@@ -79,6 +79,7 @@ public class FlowManager {
 			log.error("Error allocating flow. "+ex.getMessage());
 			flows.remove(portId);
 			ipcProcess.allocateFlowResponse(event, -1);
+			return;
 		}
 		
 		ipcProcess.allocateFlowResponse(event, 0);
@@ -88,6 +89,9 @@ public class FlowManager {
 		FlowState flow = null;
 		IPCProcess ipcProcess = null;
 		String difName = null;
+		
+		log.info("Got flow deallocate request event, for local application: "+ 
+				event.getApplicationName().getProcessName());
 		
 		try{
 			flow = getFlow(event.getPortId());
@@ -102,6 +106,7 @@ public class FlowManager {
 		}catch(Exception ex){
 			log.error("Error deallocating flow. "+ex.getMessage());
 			applicationManager.flowDeallocated(event, -1);
+			return;
 		}
 		
 		applicationManager.flowDeallocated(event, 0);

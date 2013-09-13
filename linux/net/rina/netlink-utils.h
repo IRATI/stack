@@ -492,8 +492,8 @@ int rnl_format_rmt_del_fte_req_msg(const struct pdu_ft_entry * entry,
 int rnl_format_rmt_dump_ft_req_msg(struct sk_buff * skb_out);
 
 int rnl_format_rmt_dump_ft_reply_msg(size_t                       count,
-                                     const struct pdu_ft_entry ** entries,
-                                     struct sk_buff *             skb_out);
+		const struct pdu_ft_entry ** entries,
+		struct sk_buff *             skb_out);
 
 int rnl_assign_dif_response(ipc_process_id_t id,
 		uint_t res,
@@ -509,15 +509,25 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t            ipc_id,
 		uint_t                      nl_port_id);
 
 int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
-		  	  	  uint_t           res,
-		  	  	  uint_t	   seq_num,
-		  	  	  uint_t port_id);
+		uint_t           res,
+		uint_t	   seq_num,
+		uint_t port_id);
 
 int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
-				  uint_t           res,
-				  uint_t           seq_num,
-				  uint_t 		   port_id,
-				  bool isRegister);
+		uint_t           res,
+		uint_t           seq_num,
+		uint_t 		   port_id,
+		bool isRegister);
+
+int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
+		uint_t           res,
+		uint_t	   seq_num,
+		uint_t port_id);
+
+int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
+		uint_t           res,
+		uint_t	   code,
+		uint_t port_id);
 
 char * nla_get_string(struct nlattr *nla);
 

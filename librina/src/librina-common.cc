@@ -65,6 +65,19 @@ bool ApplicationProcessNamingInformation::operator!=(
 	return !(*this == other);
 }
 
+ApplicationProcessNamingInformation &
+ApplicationProcessNamingInformation::operator=(
+		const ApplicationProcessNamingInformation & other){
+	if (this != &other){
+		processName = other.getProcessName();
+		processInstance = other.getProcessInstance();
+		entityName = other.getEntityName();
+		entityInstance = other.getEntityInstance();
+	}
+
+	return *this;
+}
+
 bool ApplicationProcessNamingInformation::operator>(
 		const ApplicationProcessNamingInformation &other) const {
 	int aux = getProcessName().compare(other.getProcessName());
