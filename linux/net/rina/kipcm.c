@@ -24,7 +24,7 @@
 #include <linux/kobject.h>
 #include <linux/export.h>
 #include <linux/kfifo.h>
-#define USE_MUTEXES 0
+#define USE_MUTEXES 1
 #if USE_MUTEXES
 #include <linux/mutex.h>
 #endif
@@ -1446,24 +1446,23 @@ int kipcm_sdu_write(struct kipcm * kipcm,
 }
 
 int kipcm_sdu_read(struct kipcm * kipcm,
-                   port_id_t      port_id,
-                   struct sdu **  sdu)
+		port_id_t      port_id,
+		struct sdu **  sdu)
 {
-        struct ipcp_flow * flow;
-        size_t             size;
-        char *             data;
-        int 		   checkval = 0;
+	struct ipcp_flow * flow;
+	size_t             size;
+	char *             data;
 
-        if (!kipcm) {
-                LOG_ERR("Bogus kipcm instance passed, bailing out");
-                return -1;
-        }
-        if (!sdu) {
-                LOG_ERR("Bogus parameters passed, bailing out");
-                return -1;
-        }
+	if (!kipcm) {
+		LOG_ERR("Bogus kipcm instance passed, bailing out");
+		return -1;
+	}
+	if (!sdu) {
+		LOG_ERR("Bogus parameters passed, bailing out");
+		return -1;
+	}
 
-        LOG_DBG("Trying to read SDU from port-id %d", port_id);
+	LOG_DBG("Trying to read SDU from port-id %d", port_id);
 
 	KIPCM_LOCK(kipcm);
 
@@ -1474,16 +1473,11 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 		return -1;
 	}
 
-	if (kfifo_is_empty(&flow->sdu_ready)) {
-		checkval = 1;
-		LOG_DBG("Going to sleep: %d", checkval);
+	while(kfifo_is_empty(&flow->sdu_ready)){
+		LOG_DBG("Going to sleep");
 		KIPCM_UNLOCK(kipcm);
 		interruptible_sleep_on(&flow->wait_queue);
-	}
-
-	if (checkval) {
 		KIPCM_LOCK(kipcm);
-
 		LOG_DBG("Woken up");
 		flow = ipcp_fmap_find(kipcm->flows, port_id);
 		if (!flow) {
@@ -1494,9 +1488,9 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 	}
 
 	if (kfifo_out(&flow->sdu_ready, &size, sizeof(size_t)) <
-	    sizeof(size_t)) {
+			sizeof(size_t)) {
 		LOG_ERR("There is not enough data in port-id %d fifo",
-			port_id);
+				port_id);
 		KIPCM_UNLOCK(kipcm);
 		return -1;
 	}
@@ -1530,8 +1524,8 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 
 	KIPCM_UNLOCK(kipcm);
 
-        /* The SDU is theirs now */
-        return 0;
+	/* The SDU is theirs now */
+	return 0;
 }
 
 int kipcm_sdu_post(struct kipcm * kipcm,

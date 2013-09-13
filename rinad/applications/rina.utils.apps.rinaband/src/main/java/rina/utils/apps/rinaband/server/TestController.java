@@ -4,6 +4,7 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Timer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -97,6 +98,8 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 	
 	private static final Log log = LogFactory.getLog(TestController.class);
 	
+	private Timer timer = null;
+	
 	public TestController(ApplicationProcessNamingInformation dataApNamingInfo, 
 			ApplicationProcessNamingInformation difName, Flow flow,
 			CDAPSessionManager cdapSessionManager, IPCEventConsumer ipcEventConsumer){
@@ -106,6 +109,7 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 		this.flow = flow;
 		this.allocatedFlows = new Hashtable<Integer, TestWorker>();
 		this.ipcEventConsumer = ipcEventConsumer;
+		this.timer = new Timer();
 	}
 	
 	public void setFlowReader(FlowReader flowReader){
@@ -214,6 +218,7 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 		}
 		
 		this.state = State.EXECUTING;
+		timer.schedule(new CancelTestTimerTask(this), 20*1000);
 		log.info("Started test execution");
 	}
 	
@@ -265,6 +270,21 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 	}
 	
 	private void changeToWaitStopState(){
+		this.state = State.WAIT_STOP;
+		if (this.stopTestMessage != null){
+			printStatsAndFinishTest();
+		}
+	}
+	
+	/**
+	 * The test maximum duration has expired, but the 
+	 * test may have not finished yet
+	 */
+	public synchronized void timerExpired(){
+		if (this.state == State.COMPLETED){
+			return;
+		}
+		
 		this.state = State.WAIT_STOP;
 		if (this.stopTestMessage != null){
 			printStatsAndFinishTest();
@@ -329,8 +349,9 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 			ex.printStackTrace();
 		}
 		
-		//2 Cancel the registration of the data AE
+		//2 Cancel the timer and update the state
 		this.state = State.COMPLETED;
+		this.timer.cancel();
 	}
 
 	/**

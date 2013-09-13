@@ -9,4 +9,4 @@
 
 LP=/media/sf_irati/dist/librina/lib
 
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LP java -jar rina.utils.apps.rinaband-1.0.0-irati-SNAPSHOT.jar -role client -sender client -flows 1 -sdusize 100 -count 100
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LP java -jar rina.utils.apps.rinaband-1.0.0-irati-SNAPSHOT.jar -role client -sender client -flows 1 -sdusize 30 -count 100
