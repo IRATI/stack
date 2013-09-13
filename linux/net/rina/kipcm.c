@@ -89,7 +89,7 @@ struct kipcm {
 
 #define KIPCM_LOCK_INIT(X) do {                                 \
                 LOG_DBG("KIPCM instance locking disabled");     \
-        } while(0);
+        } while (0);
 #define KIPCM_LOCK(X)      do { } while (0);
 #define KIPCM_UNLOCK(X)    do { } while (0);
 
@@ -162,32 +162,32 @@ void alloc_flow_req_free_memory(struct name * source_name,
                 struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
                 struct rnl_msg * msg)
 {
-        if (attrs){
+        if (attrs) {
                 rkfree(attrs);
                 attrs = NULL;
         }
 
-        if (source_name){
+        if (source_name) {
                 rkfree(source_name);
                 source_name = NULL;
         }
 
-        if (dest_name){
+        if (dest_name) {
                 rkfree(dest_name);
                 dest_name = NULL;
         }
 
-        if (fspec){
+        if (fspec) {
                 rkfree(fspec);
                 fspec = NULL;
         }
 
-        if (dif_name){
+        if (dif_name) {
                 rkfree(dif_name);
                 dif_name = NULL;
         }
 
-        if (msg){
+        if (msg) {
                 rkfree(msg);
                 msg = NULL;
         }
@@ -407,12 +407,12 @@ int dealloc_flow_req_free_memory_and_reply(
 		uint_t seq_num,
 		uint_t port_id)
 {
-	if (attrs){
+	if (attrs) {
 		rkfree(attrs);
 		attrs = NULL;
 	}
 
-	if (msg){
+	if (msg) {
 		rkfree(msg);
 		msg = NULL;
 	}
@@ -506,22 +506,22 @@ int assign_to_dif_free_memory_and_reply(struct name * dif_name,
                 uint_t seq_num,
                 uint_t port_id)
 {
-        if (attrs){
+        if (attrs) {
                 rkfree(attrs);
                 attrs = NULL;
         }
 
-        if (dif_name){
+        if (dif_name) {
                 rkfree(dif_name);
                 dif_name = NULL;
         }
 
-        if (dif_config){
+        if (dif_config) {
                 rkfree(dif_config);
                 dif_config = NULL;
         }
 
-        if (msg){
+        if (msg) {
                 rkfree(msg);
                 msg = NULL;
         }
@@ -569,7 +569,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
         }
 
         dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
-        if (!dif_config){
+        if (!dif_config) {
                 return assign_to_dif_free_memory_and_reply(dif_name,
                                 dif_config, attrs, msg, 0, -1,
                                 info->snd_seq, info->snd_portid);
@@ -577,7 +577,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
         attrs->dif_config = dif_config;
 
         dif_name = name_create();
-        if (!dif_name){
+        if (!dif_name) {
                 return assign_to_dif_free_memory_and_reply(dif_name,
                                 dif_config, attrs, msg, 0, -1,
                                 info->snd_seq, info->snd_portid);
@@ -649,7 +649,7 @@ int reg_unreg_resp_free_memory_and_reply(struct name * app_name,
                 attrs = NULL;
         }
 
-        if (msg){
+        if (msg) {
                 rkfree(msg);
                 msg = NULL;
         }
@@ -1419,8 +1419,8 @@ int kipcm_sdu_write(struct kipcm * kipcm,
                 return -1;
         }
 
-        LOG_DBG("Tring to write SDU of size %d to port_id %d",
-        		sdu->buffer->size, port_id);
+        LOG_DBG("Tring to write SDU of size %zd to port_id %d",
+                sdu->buffer->size, port_id);
 
         KIPCM_LOCK(kipcm);
 
@@ -1473,7 +1473,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 		return -1;
 	}
 
-	while(kfifo_is_empty(&flow->sdu_ready)){
+	while (kfifo_is_empty(&flow->sdu_ready)) {
 		LOG_DBG("Going to sleep");
 		KIPCM_UNLOCK(kipcm);
 		interruptible_sleep_on(&flow->wait_queue);
@@ -1481,14 +1481,15 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 		LOG_DBG("Woken up");
 		flow = ipcp_fmap_find(kipcm->flows, port_id);
 		if (!flow) {
-			LOG_ERR("There is no flow bound to port-id %d", port_id);
+			LOG_ERR("There is no flow bound to port-id %d",
+                                port_id);
 			KIPCM_UNLOCK(kipcm);
 			return -1;
 		}
 	}
 
 	if (kfifo_out(&flow->sdu_ready, &size, sizeof(size_t)) <
-			sizeof(size_t)) {
+            sizeof(size_t)) {
 		LOG_ERR("There is not enough data in port-id %d fifo",
 				port_id);
 		KIPCM_UNLOCK(kipcm);
@@ -1535,8 +1536,8 @@ int kipcm_sdu_post(struct kipcm * kipcm,
         struct ipcp_flow * flow;
         unsigned int       avail;
 
-        LOG_DBG("Post SDU called. Trying to post SDU of size %d to port-id %d "
-        		, sdu->buffer->size, port_id);
+        LOG_DBG("Posting SDU of size %zd to port-id %d ",
+                sdu->buffer->size, port_id);
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, cannot post SDU");
