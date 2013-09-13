@@ -6,6 +6,9 @@ import java.util.Timer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.Flow;
 import eu.irati.librina.FlowSpecification;
@@ -103,6 +106,8 @@ public class RINABandClient implements SDUListener{
 	private int completedReceives = 0;
 	private Timer timer = null;
 	
+	private static final Log log = LogFactory.getLog(RINABandClient.class);
+	
 	public RINABandClient(TestInformation testInformation, ApplicationProcessNamingInformation controlApNamingInfo, 
 			ApplicationProcessNamingInformation dataApNamingInfo){
 		this.testInformation = testInformation;
@@ -136,8 +141,8 @@ public class RINABandClient implements SDUListener{
 			cdapMessage.setInvokeID(1);
 			byte[] sdu = this.cdapSessionManager.encodeCDAPMessage(cdapMessage);
 			this.controlFlow.writeSDU(sdu, sdu.length);
-			System.out.println("Requested a new test with the following parameters:");
-			System.out.println(this.testInformation.toString());
+			log.info("Requested a new test with the following parameters:");
+			log.info(this.testInformation.toString());
 		}catch(Exception ex){
 			ex.printStackTrace();
 			abortTest("Problems requesting test");
@@ -190,8 +195,8 @@ public class RINABandClient implements SDUListener{
 			testInformation = RINABandTestMessageEncoder.decode(objectValue.getByteval());
 			dataApNamingInfo.setEntityInstance(testInformation.getAei());
 			
-			System.out.println("Starting a new test with the following parameters:");
-			System.out.println(testInformation.toString());
+			log.info("Starting a new test with the following parameters:");
+			log.info(testInformation.toString());
 			
 			//Setup all the flows
 			Flow flow = null;
@@ -238,7 +243,7 @@ public class RINABandClient implements SDUListener{
 			}
 			state = State.EXECUTING;
 			
-			System.out.println("Allocated "+testWorkers.size()+" flows. Executing the test ...");
+			log.info("Allocated "+testWorkers.size()+" flows. Executing the test ...");
 			
 			//2 Tell the server to start the test
 			CDAPMessage startTestMessage = CDAPMessage.getStartObjectRequestMessage(
@@ -296,17 +301,7 @@ public class RINABandClient implements SDUListener{
 		
 		//All the tests have completed
 		try{
-			//1 Unallocate the data flows
-			TestWorker currentWorker = null;
-			long before = 0;
-			for(int i=0; i<this.testWorkers.size(); i++){
-				currentWorker = this.testWorkers.get(i);
-				before = System.currentTimeMillis();
-				currentWorker.abortTest();
-				currentWorker.getStatistics().setFlowTearDownTimeInMillis(System.currentTimeMillis()-before);
-			}
-			
-			//2 Tell the server to STOP the test
+			//1 Tell the server to STOP the test
 			StatisticsInformation statisticsInformation = new StatisticsInformation();
 			if (this.testInformation.isServerSendsSDUs()){
 				statisticsInformation.setClientTimeLastSDUSent(this.epochTimeLastSDUSent*1000L);
@@ -323,7 +318,7 @@ public class RINABandClient implements SDUListener{
 			stopTestMessage.setInvokeID(1);
 			byte[] sdu = this.cdapSessionManager.encodeCDAPMessage(stopTestMessage);
 			this.controlFlow.writeSDU(sdu, sdu.length);
-			System.out.println("Requested the RINABand server to stop the test and to get statistics back");
+			log.info("Requested the RINABand server to stop the test and to get statistics back");
 			this.state = State.STOP_REQUESTED;
 		}catch(Exception ex){
 			ex.printStackTrace();
@@ -333,64 +328,74 @@ public class RINABandClient implements SDUListener{
 		
 	private void handleStopResponseReceived(CDAPMessage stopResponse){
 		try{
-			System.out.println("Test successfully completed!");
+			log.info("Received test stop confirmation from server, deallocating the flows...");
+			//1 Unallocate the data flows
+			TestWorker currentWorker = null;
+			long before = 0;
+			for(int i=0; i<this.testWorkers.size(); i++){
+				currentWorker = this.testWorkers.get(i);
+				before = System.currentTimeMillis();
+				currentWorker.abortTest();
+				currentWorker.getStatistics().setFlowTearDownTimeInMillis(System.currentTimeMillis()-before);
+			}
+			
+			log.info("Test successfully completed!");
 			StatisticsInformation statsInformation = RINABandStatisticsMessageEncoder.decode(stopResponse.getObjValue().getByteval());
 			System.out.println(statsInformation.toString());
 			
-			//1 Print the individual statistics
-			TestWorker currentWorker = null;
+			//2 Print the individual statistics
 			for(int i=0; i<this.testWorkers.size(); i++){
 				currentWorker = this.testWorkers.get(i);
-				System.out.println("Statistics of flow "+currentWorker.getFlow().getPortId());
-				System.out.println("Flow allocation time (ms): "+currentWorker.getStatistics().getFlowSetupTimeInMillis());
-				System.out.println("Flow deallocation time (ms): "+currentWorker.getStatistics().getFlowTearDownTimeInMillis());
-				System.out.println("Sent SDUs: "+currentWorker.getStatistics().getSentSDUS());
-				System.out.println("Sent SDUs per second: "+currentWorker.getStatistics().getSentSDUsPerSecond());
-				System.out.println("Sent KiloBytes per second (KBps): "+
+				log.info("Statistics of flow "+currentWorker.getFlow().getPortId());
+				log.info("Flow allocation time (ms): "+currentWorker.getStatistics().getFlowSetupTimeInMillis());
+				log.info("Flow deallocation time (ms): "+currentWorker.getStatistics().getFlowTearDownTimeInMillis());
+				log.info("Sent SDUs: "+currentWorker.getStatistics().getSentSDUS());
+				log.info("Sent SDUs per second: "+currentWorker.getStatistics().getSentSDUsPerSecond());
+				log.info("Sent KiloBytes per second (KBps): "+
 						currentWorker.getStatistics().getSentSDUsPerSecond()*this.testInformation.getSduSize()/1024);
-				System.out.println("Recveived SDUs: "+currentWorker.getStatistics().getReceivedSDUs());
-				System.out.println("Received SDUs per second: "+currentWorker.getStatistics().getReceivedSDUsPerSecond());
-				System.out.println("Received KiloBytes per second (KBps): "+
+				log.info("Recveived SDUs: "+currentWorker.getStatistics().getReceivedSDUs());
+				log.info("Received SDUs per second: "+currentWorker.getStatistics().getReceivedSDUsPerSecond());
+				log.info("Received KiloBytes per second (KBps): "+
 						currentWorker.getStatistics().getReceivedSDUsPerSecond()*this.testInformation.getSduSize()/1024);
-				System.out.println("% of received SDUs lost: "+100*currentWorker.getStatistics().getReceivedSDUsLost()/this.testInformation.getNumberOfSDUs());
-				System.out.println();
+				log.info("% of received SDUs lost: "+100*currentWorker.getStatistics().getReceivedSDUsLost()/this.testInformation.getNumberOfSDUs());
+				log.info("");
 			}
 			
-			//2 Print the aggregated statistics
-			System.out.println("Mean statistics");
-			System.out.println("Mean flow allocation time (ms): "+ this.getMean(Type.FLOW_ALLOCATION));
-			System.out.println("Mean flow deallocation time (ms): "+ this.getMean(Type.FLOW_DEALLOCATION));
+			//3 Print the aggregated statistics
+			log.info("Mean statistics");
+			log.info("Mean flow allocation time (ms): "+ this.getMean(Type.FLOW_ALLOCATION));
+			log.info("Mean flow deallocation time (ms): "+ this.getMean(Type.FLOW_DEALLOCATION));
 			long averageClientServerDelay = 0L;
 			long averageServerClientDelay = 0L;
 			if (this.testInformation.isClientSendsSDUs()){
 				long meanSentSdus = this.getMean(Type.SENT_SDUS);
-				System.out.println("Mean sent SDUs per second: "+ meanSentSdus);
-				System.out.println("Mean sent KiloBytes per second (KBps): "+ meanSentSdus*this.testInformation.getSduSize()/1024);
+				log.info("Mean sent SDUs per second: "+ meanSentSdus);
+				log.info("Mean sent KiloBytes per second (KBps): "+ meanSentSdus*this.testInformation.getSduSize()/1024);
 				averageClientServerDelay = ((statsInformation.getServerTimeFirstSDUReceived()/1000L - this.epochTimeFirstSDUSent) + 
 						(statsInformation.getServerTimeLastSDUReceived()/1000L - this.epochTimeLastSDUSent))/2;
 			}
 			if (this.testInformation.isServerSendsSDUs()){
 				long meanReceivedSdus = this.getMean(Type.RECEIVED_SDUS);
-				System.out.println("Mean received SDUs per second: "+ meanReceivedSdus);
-				System.out.println("Mean received KiloBytes per second (KBps): "+ meanReceivedSdus*this.testInformation.getSduSize()/1024);
+				log.info("Mean received SDUs per second: "+ meanReceivedSdus);
+				log.info("Mean received KiloBytes per second (KBps): "+ meanReceivedSdus*this.testInformation.getSduSize()/1024);
 				averageServerClientDelay = ((this.epochTimeFirstSDUReceived - statsInformation.getServerTimeFirstSDUSent()/1000L) + 
 						(this.epochTimeLastSDUReceived - statsInformation.getServerTimeLastSDUSent()/1000L))/2;
 			}
-			System.out.println();
-			System.out.println("Aggregate bandwidth:");
+			log.info("");
+			log.info("Aggregate bandwidth:");
 			if (this.testInformation.isClientSendsSDUs()){
 				long aggregateSentSDUsPerSecond = 1000L*1000L*this.testInformation.getNumberOfFlows()*
 					this.testInformation.getNumberOfSDUs()/(statsInformation.getServerTimeLastSDUReceived()-statsInformation.getServerTimeFirstSDUReceived());
-				System.out.println("Aggregate sent SDUs per second: "+aggregateSentSDUsPerSecond);
-				System.out.println("Aggregate sent KiloBytes per second (KBps): "+ aggregateSentSDUsPerSecond*this.testInformation.getSduSize()/1024);
-				System.out.println("Aggregate sent Megabits per second (Mbps): "+ aggregateSentSDUsPerSecond*this.testInformation.getSduSize()*8/(1024*1024));
+				log.info("Aggregate sent SDUs per second: "+aggregateSentSDUsPerSecond);
+				log.info("Aggregate sent KiloBytes per second (KBps): "+ aggregateSentSDUsPerSecond*this.testInformation.getSduSize()/1024);
+				log.info("Aggregate sent Megabits per second (Mbps): "+ aggregateSentSDUsPerSecond*this.testInformation.getSduSize()*8/(1024*1024));
 			}
 			if (this.testInformation.isServerSendsSDUs()){
 				long aggregateReceivedSDUsPerSecond = 1000L*this.testInformation.getNumberOfFlows()*
 					this.testInformation.getNumberOfSDUs()/(this.epochTimeLastSDUReceived-this.epochTimeFirstSDUReceived);
-				System.out.println("Aggregate received SDUs per second: "+aggregateReceivedSDUsPerSecond);
-				System.out.println("Aggregate received KiloBytes per second (KBps): "+ aggregateReceivedSDUsPerSecond*this.testInformation.getSduSize()/1024);
-				System.out.println("Aggregate received Megabits per second (Mbps): "+ aggregateReceivedSDUsPerSecond*this.testInformation.getSduSize()*8/(1024*1024));
+				log.info("Aggregate received SDUs per second: "+aggregateReceivedSDUsPerSecond);
+				log.info("Aggregate received KiloBytes per second (KBps): "+ aggregateReceivedSDUsPerSecond*this.testInformation.getSduSize()/1024);
+				log.info("Aggregate received Megabits per second (Mbps): "+ aggregateReceivedSDUsPerSecond*this.testInformation.getSduSize()*8/(1024*1024));
 			}
 			
 			long rttInMs = 0L;
@@ -401,13 +406,13 @@ public class RINABandClient implements SDUListener{
 			}else{
 				rttInMs = averageServerClientDelay*2;
 			}
-			System.out.println("Estimated round-trip time (RTT) in ms: "+rttInMs);
+			log.info("Estimated round-trip time (RTT) in ms: "+rttInMs);
 			
-			//3 Deallocate the control flow
+			//4 Deallocate the control flow
 			rina.getIpcManager().deallocateFlow(this.controlFlow.getPortId());
 			this.state = State.COMPLETED;
 			
-			//4 Exit
+			//5 Exit
 			System.exit(0);
 		}catch(Exception ex){
 			ex.printStackTrace();
@@ -450,7 +455,7 @@ public class RINABandClient implements SDUListener{
 			}
 		}
 		
-		System.out.println(message + ". Aborting the test.");
+		log.info(message + ". Aborting the test.");
 		System.exit(-1);
 	}
 	

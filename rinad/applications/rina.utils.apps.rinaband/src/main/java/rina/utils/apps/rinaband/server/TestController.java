@@ -5,10 +5,12 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistration;
 import eu.irati.librina.ApplicationRegistrationInformation;
-import eu.irati.librina.ApplicationRegistrationType;
 import eu.irati.librina.Flow;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
@@ -93,11 +95,12 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 	private long epochTimeLastSDUSent = 0;
 	private int completedSends = 0;
 	
+	private static final Log log = LogFactory.getLog(TestController.class);
+	
 	public TestController(ApplicationProcessNamingInformation dataApNamingInfo, 
 			ApplicationProcessNamingInformation difName, Flow flow,
 			CDAPSessionManager cdapSessionManager, IPCEventConsumer ipcEventConsumer){
 		this.dataApNamingInfo = dataApNamingInfo;
-		System.out.println("DIF name is "+difName);
 		this.difName = difName;
 		this.cdapSessionManager = cdapSessionManager;
 		this.flow = flow;
@@ -113,7 +116,7 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 		return this.flowReader;
 	}
 
-	public void sduDelivered(byte[] sdu) {
+	public synchronized void sduDelivered(byte[] sdu) {
 		try{
 			CDAPMessage cdapMessage = this.cdapSessionManager.decodeCDAPMessage(sdu);
 			System.out.println("Received CDAP Message: "+cdapMessage.toString());
@@ -128,10 +131,10 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 				handleStopMessageReceived(cdapMessage);
 				break;
 			default:
-				printMessage("Received CDAP Message with wrong opcode, ignoring it.");
+				log.info("Received CDAP Message with wrong opcode, ignoring it.");
 			}
 		}catch(Exception ex){
-			printMessage("Error decoding CDAP Message.");
+			log.info("Error decoding CDAP Message.");
 			ex.printStackTrace();
 		}
 	}
@@ -144,14 +147,14 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 	 */
 	private void handleCreateMessageReceived(CDAPMessage cdapMessage){
 		if (this.state != State.WAIT_CREATE){
-			printMessage("Received CREATE Test message while not in WAIT_CREATE state." + 
+			log.info("Received CREATE Test message while not in WAIT_CREATE state." + 
 			" Ignoring it.");
 			return;
 		}
 		
 		ObjectValue objectValue = cdapMessage.getObjValue();
 		if (objectValue == null || objectValue.getByteval() == null){
-			printMessage("The create message did not contain an object value. Ignoring the message");
+			log.info("The create message did not contain an object value. Ignoring the message");
 			return;
 		}
 		
@@ -184,10 +187,10 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 			replyMessage.setObjValue(objectValue);
 			sendCDAPMessage(replyMessage);
 			this.state = State.WAIT_START;
-			printMessage("Waiting to START a new test with the following parameters.");
-			printMessage(this.testInformation.toString());
+			log.info("Waiting to START a new test with the following parameters.");
+			log.info(this.testInformation.toString());
 		}catch(Exception ex){
-			printMessage("Error handling CREATE Test message.");
+			log.info("Error handling CREATE Test message.");
 			ex.printStackTrace();
 		}
 		
@@ -200,7 +203,7 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 	 */
 	private void handleStartMessageReceived(CDAPMessage cdapMessage){
 		if (this.state != State.WAIT_START){
-			printMessage("Received START Test message while not in WAIT_START state." + 
+			log.info("Received START Test message while not in WAIT_START state." + 
 			" Ignoring it.");
 			return;
 		}
@@ -211,17 +214,17 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 		}
 		
 		this.state = State.EXECUTING;
-		printMessage("Started test execution");
+		log.info("Started test execution");
 	}
 	
-	private synchronized void handleStopMessageReceived(CDAPMessage cdapMessage){
+	private void handleStopMessageReceived(CDAPMessage cdapMessage){
 		if (this.state == State.EXECUTING){
 			this.stopTestMessage = cdapMessage;
-			printMessage("Received STOP Test message while still in EXECUTING state." + 
+			log.info("Received STOP Test message while still in EXECUTING state." + 
 			" Storing it and waiting to send/receive all test data.");
 			return;
 		}else if (this.state != State.WAIT_STOP){
-			printMessage("Received STOP Test message while not in EXECUTING or WAIT_STOP state, ignoring it");
+			log.info("Received STOP Test message while not in EXECUTING or WAIT_STOP state, ignoring it");
 			return;
 		}
 		
@@ -281,7 +284,7 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 				statsInformation.setServerTimeFirstSDUSent(this.epochTimeFirstSDUSent*1000L);
 				statsInformation.setServerTimeLastSDUSent(this.epochTimeLastSDUSent*1000L);
 			}
-			printMessage(statsInformation.toString());
+			log.info(statsInformation.toString());
 			ObjectValue objectValue = new ObjectValue();
 			objectValue.setByteval(RINABandStatisticsMessageEncoder.encode(statsInformation));
 			CDAPMessage responseMessage = CDAPMessage.getStopObjectResponseMessage(null, 0, null, this.stopTestMessage.getInvokeID());
@@ -293,24 +296,24 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 			//Print aggregate statistics
 			long averageClientServerDelay = 0L;
 			long averageServerClientDelay = 0L;
-			printMessage("Aggregate bandwidth:");
+			log.info("Aggregate bandwidth:");
 			if (this.testInformation.isClientSendsSDUs()){
 				long aggregateReceivedSDUsPerSecond = 1000L*this.testInformation.getNumberOfFlows()*
 					this.testInformation.getNumberOfSDUs()/(this.epochTimeLastSDUReceived-this.epochTimeFirstSDUReceived);
-				printMessage("Aggregate received SDUs per second: "+aggregateReceivedSDUsPerSecond);
+				log.info("Aggregate received SDUs per second: "+aggregateReceivedSDUsPerSecond);
 				averageClientServerDelay = ((this.epochTimeFirstSDUReceived - statsInformation.getClientTimeFirstSDUSent()/1000L) + 
 						(this.epochTimeLastSDUReceived - statsInformation.getClientTimeLastSDUSent()/1000L))/2;
-				printMessage("Aggregate received KiloBytes per second (KBps): "+ aggregateReceivedSDUsPerSecond*this.testInformation.getSduSize()/1024);
-				printMessage("Aggregate received Megabits per second (Mbps): "+ aggregateReceivedSDUsPerSecond*this.testInformation.getSduSize()*8/(1024*1024));
+				log.info("Aggregate received KiloBytes per second (KBps): "+ aggregateReceivedSDUsPerSecond*this.testInformation.getSduSize()/1024);
+				log.info("Aggregate received Megabits per second (Mbps): "+ aggregateReceivedSDUsPerSecond*this.testInformation.getSduSize()*8/(1024*1024));
 			}
 			if (this.testInformation.isServerSendsSDUs()){
 				long aggregateSentSDUsPerSecond = 1000L*1000L*this.testInformation.getNumberOfFlows()*
 					this.testInformation.getNumberOfSDUs()/(statsInformation.getClientTimeLastSDUReceived()-statsInformation.getClientTimeFirstSDUReceived());
 				averageServerClientDelay = ((statsInformation.getClientTimeFirstSDUReceived()/1000L - this.epochTimeFirstSDUSent) + 
 						(statsInformation.getClientTimeLastSDUReceived()/1000L - this.epochTimeLastSDUSent))/2;
-				printMessage("Aggregate sent SDUs per second: "+aggregateSentSDUsPerSecond);
-				printMessage("Aggregate sent KiloBytes per second (KBps): "+ aggregateSentSDUsPerSecond*this.testInformation.getSduSize()/1024);
-				printMessage("Aggregate sent Megabits per second (Mbps): "+ aggregateSentSDUsPerSecond*this.testInformation.getSduSize()*8/(1024*1024));
+				log.info("Aggregate sent SDUs per second: "+aggregateSentSDUsPerSecond);
+				log.info("Aggregate sent KiloBytes per second (KBps): "+ aggregateSentSDUsPerSecond*this.testInformation.getSduSize()/1024);
+				log.info("Aggregate sent Megabits per second (Mbps): "+ aggregateSentSDUsPerSecond*this.testInformation.getSduSize()*8/(1024*1024));
 			}
 			long rttInMs = 0L;
 			if (this.testInformation.isClientSendsSDUs() && this.testInformation.isServerSendsSDUs()){
@@ -320,21 +323,14 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 			}else{
 				rttInMs = averageServerClientDelay*2;
 			}
-			printMessage("Estimated round-trip time (RTT) in ms: "+rttInMs);
+			log.info("Estimated round-trip time (RTT) in ms: "+rttInMs);
 		}catch(Exception ex){
-			printMessage("Problems returning STOP RESPONSE message");
+			log.info("Problems returning STOP RESPONSE message");
 			ex.printStackTrace();
 		}
 		
 		//2 Cancel the registration of the data AE
 		this.state = State.COMPLETED;
-		try{
-			rina.getIpcManager().unregisterApplication(dataApNamingInfo, dataAERegistration.getDIFNames().getFirst());
-			ipcEventConsumer.removeFlowAcceptor(dataApNamingInfo);
-		}catch(Exception ex){
-			printMessage("Problems unregistering data AE");
-			ex.printStackTrace();
-		}
 	}
 
 	/**
@@ -342,7 +338,7 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 	 */
 	public synchronized void flowAllocated(Flow flow) {
 		if (this.state != State.WAIT_START){
-			printMessage("New flow allocated, but we're not in the WAIT_START state. Requesting deallocation.");
+			log.info("New flow allocated, but we're not in the WAIT_START state. Requesting deallocation.");
 			try{
 				rina.getIpcManager().deallocateFlow(flow.getPortId());
 			}catch(Exception ex){
@@ -357,26 +353,33 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 		RINABandServer.executeRunnable(flowReader);
 		this.allocatedFlows.put(new Integer(flow.getPortId()), testWorker);
 		ipcEventConsumer.addFlowDeallocationListener(this, flow.getPortId());
-		printMessage("Data flow with portId "+flow.getPortId()+ " allocated");
+		log.info("Data flow with portId "+flow.getPortId()+ " allocated");
 	}
 
 	/**
 	 * Called when an existing data flow has been deallocated
 	 */
 	public synchronized void flowDeallocated(int portId) {
-		if (this.state == State.COMPLETED){
-			TestWorker testWorker = this.allocatedFlows.remove(new Integer(portId));
-			testWorker.getFlowReader().stop();
-			printMessage("Data flow with portId "+portId+ " deallocated");
-		}
-		
+		TestWorker testWorker = this.allocatedFlows.remove(new Integer(portId));
+		testWorker.getFlowReader().stop();
+		log.info("Data flow with portId "+portId+ " deallocated");
 		ipcEventConsumer.removeFlowDeallocationListener(portId);
+		if (this.allocatedFlows.size() == 0){
+			//Cancel the registration of the data AE
+			try{
+				rina.getIpcManager().unregisterApplication(dataApNamingInfo, dataAERegistration.getDIFNames().getFirst());
+				ipcEventConsumer.removeFlowAcceptor(dataApNamingInfo);
+			}catch(Exception ex){
+				log.info("Problems unregistering data AE");
+				ex.printStackTrace();
+			}
+		}
 	}
 	
 	/**
 	 * Decide when a flow can be accepted
 	 */
-	public void dispatchFlowRequestEvent(FlowRequestEvent event){
+	public synchronized void dispatchFlowRequestEvent(FlowRequestEvent event){
 		IPCManagerSingleton ipcManager = rina.getIpcManager();
 		
 		try{
@@ -387,14 +390,10 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 		}
 	}
 	
-	public void dispatchFlowDeallocatedEvent(FlowDeallocatedEvent event){
+	public synchronized void dispatchFlowDeallocatedEvent(FlowDeallocatedEvent event){
 		flowDeallocated(event.getPortId());
 	}
-	
-	private void printMessage(String message){
-		System.out.println("Test controller "+flow.getPortId()+": " + message);
-	}
-	
+
 	private void sendCDAPMessage(CDAPMessage cdapMessage) throws Exception{
 		byte[] sdu = cdapSessionManager.encodeCDAPMessage(cdapMessage);
 		flow.writeSDU(sdu, sdu.length);

@@ -5,6 +5,9 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistration;
 import eu.irati.librina.ApplicationRegistrationInformation;
@@ -62,6 +65,8 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener{
 	
 	private static ExecutorService executorService = Executors.newCachedThreadPool();
 	
+	private static final Log log = LogFactory.getLog(RINABandServer.class);
+	
 	public RINABandServer(ApplicationProcessNamingInformation controlApNamingInfo, 
 			ApplicationProcessNamingInformation dataApNamingInfo){
 		this.controlApNamingInfo = controlApNamingInfo;
@@ -87,7 +92,7 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener{
 			ApplicationRegistration appRegistration = 
 					rina.getIpcManager().registerApplication(controlApNamingInfo, appRegInfo);
 			difName = appRegistration.getDIFNames().getFirst();
-			System.out.println("Registered applicaiton "+controlApNamingInfo.toString() + 
+			log.info("Registered application "+controlApNamingInfo.toString() + 
 					" to DIF " + difName.toString());
 		}catch(Exception ex){
 			ex.printStackTrace();
@@ -107,7 +112,7 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener{
 		RINABandServer.executeRunnable(flowReader);
 		ongoingTests.put(new Integer(flow.getPortId()), testController);
 		ipcEventConsumer.addFlowDeallocationListener(this, flow.getPortId());
-		System.out.println("New flow to the control AE allocated, with port id "+flow.getPortId());
+		log.info("New flow to the control AE allocated, with port id "+flow.getPortId());
 	}
 
 	/**
@@ -117,7 +122,7 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener{
 		TestController testController = ongoingTests.remove(new Integer(portId));
 		testController.getFlowReader().stop();
 		ipcEventConsumer.removeFlowDeallocationListener(portId);
-		System.out.println("Control flow with port id "+portId+" deallocated");
+		log.info("Control flow with port id "+portId+" deallocated");
 	}
 
 	/**

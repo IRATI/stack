@@ -1,5 +1,8 @@
 package rina.utils.apps.rinaband.server;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import eu.irati.librina.Flow;
 import eu.irati.librina.FlowState;
 import eu.irati.librina.rina;
@@ -47,6 +50,7 @@ public class TestWorker implements SDUListener{
 	
 	private FlowReader flowReader = null;
 	
+	private static final Log log = LogFactory.getLog(TestWorker.class);
 	
 	public TestWorker(TestInformation testInformation, Flow flow, TestController testController){
 		this.testInformation = testInformation;
@@ -102,8 +106,8 @@ public class TestWorker implements SDUListener{
 			long time = System.nanoTime() - timeOfFirstSDUReceived;
 			testController.setLastSDUReceived(System.currentTimeMillis());
 			long sentSDUsperSecond = 1000L*1000L*1000L*this.testInformation.getNumberOfSDUs()/time;
-			System.out.println("Flow at portId "+flow.getPortId()+": Received SDUs per second: "+sentSDUsperSecond);
-			System.out.println("Flow at portId "+flow.getPortId()+": Received KiloBytes per second (KBps): "
+			log.info("Flow at portId "+flow.getPortId()+": Received SDUs per second: "+sentSDUsperSecond);
+			log.info("Flow at portId "+flow.getPortId()+": Received KiloBytes per second (KBps): "
 					+sentSDUsperSecond*this.testInformation.getSduSize()/1024);
 		}
 	}
