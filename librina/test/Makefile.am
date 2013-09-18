@@ -8,7 +8,7 @@ include Makefile.inc
 
 EXTRA_DIST =
 
-if BUILD_WRAPPERS_JAVA
+if BUILD_BINDINGS_JAVA
 
 edit = $(SED)							\
         -e 's|@abs_top_builddir[@]|$(abs_top_builddir)|g'	\

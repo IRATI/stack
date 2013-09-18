@@ -80,22 +80,22 @@ AC_CHECK_LIB([pthread], [pthread_create],,[
     AC_MSG_ERROR([Your system lacks of libpthread support])
 ])
 
-build_wrappers=no
-build_wrappers_java=no
-AX_SELECTOR_ENABLE([java-wrappers],[
-    build_wrappers_java=yes
+build_bindings=no
+build_bindings_java=no
+AX_SELECTOR_ENABLE([java-bindings],[
+    build_bindings_java=yes
 ],[
-    build_wrappers_java=no
+    build_bindings_java=no
 ])
-AS_IF([test "$build_wrappers_java" = "yes"],[
-    build_wrappers=yes
+AS_IF([test "$build_bindings_java" = "yes"],[
+    build_bindings=yes
 ])
 
-AS_IF([test "$build_wrappers" = "yes"],[
+AS_IF([test "$build_bindings" = "yes"],[
     AX_PKG_SWIG([2.0], [
         #
         # SWIG version > 2.0.4 && < 2.0.8 have a bug preventing correct
-        # wrappers generation
+        # bindings generation
         #
     
         SWIG_VERSION=`$SWIG -version 2>&1 | grep 'SWIG Version' | sed 's/.*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/g'`
@@ -105,11 +105,11 @@ AS_IF([test "$build_wrappers" = "yes"],[
             ])
         ])
     ], [
-        AC_MSG_ERROR([Your system lacks of SWIG (>2.0) support, wrappers generation is not be possible])
+        AC_MSG_ERROR([Your system lacks of SWIG (>2.0) support, bindings generation is not possible])
     ])
 ])
 
-AS_IF([test "$build_wrappers_java" = "yes"],[
+AS_IF([test "$build_bindings_java" = "yes"],[
     AX_PROG_JAVAC
     AX_JNI_INCLUDE_DIR
 
@@ -122,9 +122,9 @@ AS_IF([test "$build_wrappers_java" = "yes"],[
     AC_SUBST(JNI_CPPFLAGS, $JNI_CPPFLAGS)
     AX_PROG_JAR
 ])
-AM_CONDITIONAL(BUILD_WRAPPERS_JAVA, [test $build_wrappers_java = yes])
+AM_CONDITIONAL(BUILD_BINDINGS_JAVA, [test $build_bindings_java = yes])
 
-# FIXME: Maven support should be enabled if Java wrappers are enabled, to avoid
+# FIXME: Maven support should be enabled if Java bindings are enabled, to avoid
 #        (unneeded) extra checks ...
 AC_PATH_PROG([MVN],[mvn],[])
 AM_CONDITIONAL(BUILD_MAVEN_SUPPORT, [test x"$MVN" != x""])

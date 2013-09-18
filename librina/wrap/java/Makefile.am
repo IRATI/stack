@@ -4,7 +4,7 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-if BUILD_WRAPPERS_JAVA
+if BUILD_BINDINGS_JAVA
 
 SWIG_DEBUG      = -v
 SWIG_CPPFLAGS   = -I$(top_srcdir)/include

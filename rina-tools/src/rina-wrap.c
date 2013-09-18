@@ -28,7 +28,6 @@
 #include <asm/ptrace-abi.h>
 #include <asm/unistd.h>
 
-
 /* We will do System-Calls-Interposition (SCI) here */
 
 /* http://wiki.virtualsquare.org/wiki/index.php/System_Call_Interposition:_how_to_implement_virtualization */
@@ -38,14 +37,40 @@
 int main(int argc, char * argv[])
 {
         pid_t child;
-        long  orig_eax;
+
         child = fork();
+        if (child == -1) {
+                printf("Error forking\n");
+                return -1;
+        }
+
         if (child == 0) {
-                ptrace(PTRACE_TRACEME, 0, NULL, NULL);
+                /* Child */
+
+                if (ptrace(PTRACE_TRACEME, 0, NULL, NULL)) {
+                        printf("Couldn't ptrace(TRACEME)\n");
+                        return -1;
+                }
+                if (ptrace(PTRACE_SYSCALL, 0)) {
+                        printf("Couldn't ptrace(SETOPTIONS)\n");
+                        return -1;
+                }
                 argv++;
                 execvp(argv[0],argv);
         } else {
+                /* Parent */
 
+                pid_t w;
+                int   status;
+                
+                do {
+                        printf("Ciclo");
+                        w = waitpid(child, &status, WSTOPPED|WCONTINUED);
+                        if (w == -1) {
+                                printf("Error waitpid");
+                                return -1;                        }
+                        printf("Sbloccato\n");
+                } while (!WIFEXITED(status) && !WIFSIGNALED(status));
         }
 
         return 0;
