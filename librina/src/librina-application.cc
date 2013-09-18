@@ -487,6 +487,7 @@ void IPCManager::deallocateFlow(int portId) throw (FlowDeallocationException) {
 
 #endif
 
+	flow->flowState = FLOW_DEALLOCATED;
 	allocatedFlows.erase(portId);
 	delete flow;
 }

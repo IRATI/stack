@@ -19,7 +19,7 @@
 		<guava.version>13.0.1</guava.version>
         <jackson.version>2.1.2</jackson.version>
 		<junit.version>4.5</junit.version>
-		<librina.version>0.1.0.1046-aa90-dirty</librina.version>
+		<librina.version>0.2.0.2-a8532</librina.version>
 		<log4j.version>1.2.16</log4j.version>
 		<protobuf.version>2.3.0</protobuf.version>
 	</properties>
