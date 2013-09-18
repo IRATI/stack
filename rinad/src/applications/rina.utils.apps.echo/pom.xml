@@ -18,8 +18,8 @@
 	<!--  Maven configuration -->
 	<modelVersion>4.0.0</modelVersion>
 	<packaging>jar</packaging>
-	<name>RINABand test application</name>
-	<description>Implementation of the RINAband test application</description>
+	<name>Echo test application</name>
+	<description>Implementation of the Echo test application</description>
 
 	<dependencies>
 		<dependency>
