@@ -11,7 +11,7 @@ bin_SCRIPTS =
 javadir     = $(datarootdir)/java
 java_DATA   =
 
-if BUILD_WRAPPERS_JAVA
+if BUILD_BINDINGS_JAVA
 
 edit = $(SED)							\
         -e 's|@abs_top_builddir[@]|$(abs_top_builddir)|g'	\
