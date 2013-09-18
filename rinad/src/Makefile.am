@@ -22,3 +22,6 @@ pom.xml: Makefile pom.xml.in
 CLEANFILES = pom.xml
 
 BUILT_SOURCES = pom.xml
+
+all-local: pom.xml Makefile.am
+	$(MVN) package
