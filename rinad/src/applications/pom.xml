@@ -21,6 +21,7 @@
   <!-- include your project here -->
 
   <modules>
+	<module>rina.utils.apps.echo</module>
 	<module>rina.utils.apps.rinaband</module>
   </modules>
 

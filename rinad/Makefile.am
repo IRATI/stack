@@ -8,15 +8,9 @@ ACLOCAL_AMFLAGS           = -I m4
 DISTCLEANFILES            =
 MAINTAINERCLEANFILES      =
 BUILT_SOURCES             =
-DISTCHECK_CONFIGURE_FLAGS = --enable-java-wrappers
+DISTCHECK_CONFIGURE_FLAGS =
 
-SUBDIRS =					\
-	include					\
-	src					\
-	wrap					\
-	apps					\
-	test					\
-	doc
+SUBDIRS = src
 
 EXTRA_DIST =					\
 	bootstrap				\
