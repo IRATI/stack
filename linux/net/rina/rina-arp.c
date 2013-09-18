@@ -75,10 +75,10 @@ struct arp_hdr {
 	 *      This bit is variable sized however...
 	 *      This is an example
 	 */
-	unsigned char    ar_sha[ETH_ALEN];     /* sender hardware address   */
-	unsigned char    ar_sip[4];            /* sender IP address         */
-	unsigned char    ar_tha[ETH_ALEN];     /* target hardware address   */
-	unsigned char    ar_tip[4];            /* target IP address         */
+	unsigned char    ar_sha;     /* sender hardware address   */
+	unsigned char    ar_spa;     /* sender protocol address   */
+	unsigned char    ar_tha;     /* target hardware address   */
+	unsigned char    ar_tpa;     /* target protocol address   */
 #endif
  
 };
