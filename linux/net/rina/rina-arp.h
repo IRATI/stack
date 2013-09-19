@@ -82,7 +82,7 @@ int                   naddr_filter_destroy(struct naddr_filter * filter);
  * Checks for a network address in the ARP cache. Returns the network address
  * if present NULL if not present
  */
-hwaddr_t               rinarp_hwaddr_get(struct naddr_filter * filter, 
+rinarp_mac_addr       rinarp_hwaddr_get(struct naddr_filter * filter, 
 					 struct paddr          address);
 
 int                   rinarp_send_request(struct naddr_filter * filter, 
