@@ -46,6 +46,12 @@ struct ipcp_config {
 	struct ipcp_config_entry * entry;
 };
 
+struct dif_config {
+        string_t    *        type; /* FIXME: Should not be passed, remove it */
+        struct name *        dif_name;
+        struct ipcp_config * configuration;
+};
+
 /* Pre-declared, the shim should define it properly */
 struct ipcp_instance_data;
 
@@ -69,7 +75,8 @@ struct ipcp_instance_ops {
                                         const struct name *         source);
 
 	int  (* assign_to_dif)(struct ipcp_instance_data * data,
-                               const struct name * 	   dif_name);
+                               const struct name * 	   dif_name,
+                               const struct dif_config *   configuration);
 
         /* Takes the ownership of the passed SDU */
 	int  (* sdu_write)(struct ipcp_instance_data * data,
