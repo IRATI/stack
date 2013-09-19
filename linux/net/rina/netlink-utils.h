@@ -278,6 +278,11 @@ struct rnl_msg {
         void *                attrs;
 };
 
+struct dif_config {
+        string_t    * type;
+        struct name * dif_name;
+};
+
 struct rnl_ipcm_assign_to_dif_req_msg_attrs {
 	struct dif_config * dif_config;
 };
