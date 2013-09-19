@@ -44,7 +44,6 @@ static int are_ops_ok(const struct ipcp_factory_ops * ops)
         }
 
         if (!(ops->create    &&
-              ops->configure &&
               ops->destroy)) {
                 LOG_DBG("Ops are bogus");
                 return 0;
@@ -149,10 +148,10 @@ struct ipcp_factory * ipcpf_find(struct ipcp_factories * factories,
         return NULL;
 }
 
-struct ipcp_factory * ipcpf_register(struct ipcp_factories *          factories,
-                                     const char *                     name,
-                                     struct ipcp_factory_data *       data,
-                                     const struct ipcp_factory_ops *  ops)
+struct ipcp_factory * ipcpf_register(struct ipcp_factories *         factories,
+                                     const char *                    name,
+                                     struct ipcp_factory_data *      data,
+                                     const struct ipcp_factory_ops * ops)
 {
         struct ipcp_factory * factory;
 
