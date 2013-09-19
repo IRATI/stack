@@ -55,6 +55,7 @@ enum RINANetlinkOperationCode{
 	RINA_C_RMT_DELETE_FTE_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
 	RINA_C_RMT_DUMP_FT_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
 	RINA_C_RMT_DUMP_FT_REPLY, /* TODO RMT (kernel) -> IPC Process (user space) */
+	RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION, /* NL layer (kernel) -> IPC Manager */
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST, /* Allocate flow request, Application -> IPC Manager */
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* Response to an application allocate flow request, IPC Manager -> Application */
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, /* Allocate flow request from a remote application, IPC Manager -> Application */
@@ -893,6 +894,24 @@ public:
 	const std::list<RIBObject>& getRIBObjects() const;
 	void setRIBObjects(const std::list<RIBObject>& ribObjects);
 	void addRIBObject(const RIBObject& ribObject);
+};
+
+/**
+ * NL layer (kernel) -> IPC Manager. Received when a user-space NL socket has been
+ * closed, which means the user process associated to that socket will be no longer
+ * reachable.
+ */
+class IpcmNLSocketClosedNotificationMessage:
+		public NetlinkRequestOrNotificationMessage {
+
+	/** The portId of the NL socket that has been closed*/
+	int portId;
+
+public:
+	IpcmNLSocketClosedNotificationMessage();
+	int getPortId() const;
+	void setPortId(int portId);
+	IPCEvent* toIPCEvent();
 };
 
 }

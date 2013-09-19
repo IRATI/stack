@@ -113,6 +113,9 @@ typedef enum {
 	/* RMT (kernel) -> IPC Process (user space) */
 	RINA_C_RMT_DUMP_FT_REPLY,
 
+	/* NL layer -> IPC Manager */
+	RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION,
+
 	RINA_C_MAX,
 
 } msg_id;

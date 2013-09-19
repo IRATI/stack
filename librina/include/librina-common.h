@@ -308,7 +308,8 @@ enum IPCEventType {
 	IPC_PROCESS_REGISTERED_TO_DIF,
 	IPC_PROCESS_UNREGISTERED_FROM_DIF,
 	IPC_PROCESS_QUERY_RIB,
-	GET_DIF_PROPERTIES
+	GET_DIF_PROPERTIES,
+	OS_PROCESS_FINALIZED
 };
 
 /**
@@ -494,6 +495,31 @@ public:
 			unsigned int sequenceNumber);
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
+};
+
+/**
+ * Event informing that an OS process (an application or an
+ * IPC Process daemon) has finalized
+ */
+class OSProcessFinalizedEvent: public IPCEvent {
+	/**
+	 * The naming information of the application that has
+	 * finalized
+	 */
+	ApplicationProcessNamingInformation applicationName;
+
+	/**
+	 * If this id is greater than 0, it means that the process
+	 * that finalized was an IPC Process Daemon. Otherwise it is an
+	 * application process.
+	 */
+	unsigned int ipcProcessId;
+
+public:
+	OSProcessFinalizedEvent(const ApplicationProcessNamingInformation& appName,
+			unsigned int ipcProcessId, unsigned int sequenceNumber);
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	unsigned int getIPCProcessId() const;
 };
 
 /**

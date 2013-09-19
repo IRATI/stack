@@ -82,6 +82,15 @@ public:
 	 */
 	void updateMessageOrPortIdMap(BaseNetlinkMessage* message, bool send)
 		throw(NetlinkException);
+
+	/**
+	 * An OS Process has finalized. Retrieve the information associated to
+	 * the NL port-id (application name, IPC Process id if it is IPC process),
+	 * and return it in the form of an OSProcessFinalized event
+	 * @param nl_portid
+	 * @return
+	 */
+	IPCEvent * osProcessFinalized(int nl_portid);
 };
 
 /**
@@ -197,6 +206,15 @@ public:
 	 * Notify about the reception of a Netlink notificaiton message
 	 */
 	void netlinkNotificationMessageArrived(BaseNetlinkMessage * notification);
+
+	/**
+	 * An OS Process has finalized. Retrieve the information associated to
+	 * the NL port-id (application name, IPC Process id if it is IPC process),
+	 * and return it in the form of an OSProcessFinalized event
+	 * @param nl_portid
+	 * @return
+	 */
+	IPCEvent * osProcessFinalized(int nl_portid);
 
 	BlockingFIFOQueue<IPCEvent>* getEventQueue();
 	NetlinkManager* getNetlinkManager();

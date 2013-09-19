@@ -463,12 +463,20 @@ static int kipcm_netlink_notify(struct notifier_block *nb,
 		unsigned long state,
 		void *_notify)
 {
+	int result;
 	struct netlink_notify *notify = _notify;
 
 	if (state != NETLINK_URELEASE)
 		return NOTIFY_DONE;
 
-	LOG_DBG("Netlink socket at port-id %d closed", notify->portid);
+	LOG_INFO("Netlink socket at port-id %d closed", notify->portid);
+	result = rnl_ipcm_sock_closed_notif_msg(notify->portid, 1);
+	if (result)
+		LOG_ERR("Error notifying IPC Manager in user space, %d",
+				result);
+
+	LOG_INFO("Sent NL message informing IPC Manager at user space");
+
 	return NOTIFY_DONE;
 }
 

@@ -678,6 +678,26 @@ ApplicationUnregistrationRequestEvent::getDIFName() const {
 	return DIFName;
 }
 
+/* CLASS OS PROCESS FINALIZED EVENT */
+OSProcessFinalizedEvent::OSProcessFinalizedEvent(
+		const ApplicationProcessNamingInformation& appName,
+		unsigned int ipcProcessId,
+		unsigned int sequenceNumber) :
+		IPCEvent(OS_PROCESS_FINALIZED,
+				sequenceNumber) {
+	this->applicationName = appName;
+	this->ipcProcessId = ipcProcessId;
+}
+
+const ApplicationProcessNamingInformation&
+OSProcessFinalizedEvent::getApplicationName() const {
+	return applicationName;
+}
+
+unsigned int OSProcessFinalizedEvent::getIPCProcessId() const {
+	return ipcProcessId;
+}
+
 
 /* CLASS IPC EVENT PRODUCER */
 
