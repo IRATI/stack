@@ -166,7 +166,7 @@ struct app_register {
 };
 
 static int is_app_registered(struct ipcp_instance_data * data,
-                const struct name *         name)
+                             const struct name *         name)
 {
         struct app_register * app;
 
@@ -207,11 +207,11 @@ static struct dummy_flow * find_flow(struct ipcp_instance_data * data,
 }
 
 static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
-                const struct name *         source,
-                const struct name *         dest,
-                const struct flow_spec *    fspec,
-                port_id_t                   id,
-                uint_t                     seq_num)
+                                       const struct name *         source,
+                                       const struct name *         dest,
+                                       const struct flow_spec *    fspec,
+                                       port_id_t                   id,
+                                       uint_t                     seq_num)
 {
         struct dummy_flow * flow;
 
@@ -256,8 +256,12 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        flow->state = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
-        flow->port_id = id;
+        /* Only for readability reasons */
+        ASSERT(flow->dest);
+        ASSERT(flow->source);
+
+        flow->state       = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
+        flow->port_id     = id;
         flow->dst_seq_num = 666; /*FIXME!!!*/
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, &data->flows);
@@ -279,8 +283,9 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         return 0;
 }
 
-static struct dummy_flow * find_flow_by_seq_num(struct ipcp_instance_data * data,
-                                                uint_t                      seq_num)
+static struct dummy_flow *
+find_flow_by_seq_num(struct ipcp_instance_data * data,
+                     uint_t                      seq_num)
 {
         struct dummy_flow * flow;
 
@@ -342,9 +347,9 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         return -1;
                 }
                 if (rnl_app_alloc_flow_result_msg(data->id,
-                                0,
-                                flow->seq_num,
-                                1)) {
+                                                  0,
+                                                  flow->seq_num,
+                                                  1)) {
                         kipcm_flow_remove(default_kipcm, flow->port_id);
                         kipcm_flow_remove(default_kipcm, flow->dst_port_id);
                         list_del(&flow->list);
@@ -355,10 +360,10 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 }
         } else {
                 if (rnl_app_alloc_flow_result_msg(data->id,
-                                -1,
-                                flow->seq_num,
-                                1))
-                list_del(&flow->list);
+                                                  -1,
+                                                  flow->seq_num,
+                                                  1))
+                        list_del(&flow->list);
                 name_destroy(flow->source);
                 name_destroy(flow->dest);
                 rkfree(flow);
@@ -375,7 +380,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
 }
 
 static int dummy_flow_deallocate(struct ipcp_instance_data * data,
-		port_id_t                   id)
+                                 port_id_t                   id)
 {
 	struct dummy_flow * flow;
 	port_id_t dest_port_id;
@@ -562,7 +567,8 @@ static int dummy_fini(struct ipcp_factory_data * data)
 }
 
 static int dummy_assign_to_dif(struct ipcp_instance_data * data,
-                const struct name *         dif_name)
+                               const struct name *         dif_name,
+                               const struct dif_config *   dif_config)
 {
         ASSERT(data);
 
@@ -582,7 +588,7 @@ static int dummy_assign_to_dif(struct ipcp_instance_data * data,
         }
 
         LOG_DBG("Assigned IPC Process to DIF %s",
-                        data->info->dif_name->process_name);
+                data->info->dif_name->process_name);
 
         return 0;
 }
@@ -614,6 +620,7 @@ find_instance(struct ipcp_factory_data * data,
 }
 
 static struct ipcp_instance * dummy_create(struct ipcp_factory_data * data,
+                                           const struct name *        name,
                                            ipc_process_id_t           id)
 {
         struct ipcp_instance * inst;
@@ -652,10 +659,9 @@ static struct ipcp_instance * dummy_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-        inst->data->info->name = name_create();
+        inst->data->info->name = name_dup(name);
         if (!inst->data->info->name) {
                 LOG_DBG("Failed creation of ipc name");
-                name_destroy(inst->data->info->dif_name);
                 rkfree(inst->data->info);
                 rkfree(inst->data);
                 rkfree(inst);
@@ -679,6 +685,7 @@ static struct ipcp_instance * dummy_create(struct ipcp_factory_data * data,
         return inst;
 }
 
+#if 0
 /* FIXME: It doesn't allow reconfiguration */
 static struct ipcp_instance * dummy_configure(struct ipcp_factory_data * data,
                                               struct ipcp_instance *     inst,
@@ -732,6 +739,7 @@ static struct ipcp_instance * dummy_configure(struct ipcp_factory_data * data,
 
         return inst;
 }
+#endif
 
 static int dummy_destroy(struct ipcp_factory_data * data,
                          struct ipcp_instance *     instance)
@@ -748,6 +756,7 @@ static int dummy_destroy(struct ipcp_factory_data * data,
                         list_del(&pos->list);
                         dummy_deallocate_all(pos);
                         dummy_unregister_all(pos);
+
                         /* Destroy it */
                         name_destroy(pos->info->dif_name);
                         name_destroy(pos->info->name);
@@ -767,7 +776,6 @@ static struct ipcp_factory_ops dummy_ops = {
         .fini      = dummy_fini,
         .create    = dummy_create,
         .destroy   = dummy_destroy,
-        .configure = dummy_configure,
 };
 
 struct ipcp_factory * shim;
