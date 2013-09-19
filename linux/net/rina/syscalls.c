@@ -88,25 +88,6 @@ SYSCALL_DEFINE3(ipc_create,
         return retval;
 }
 
-SYSCALL_DEFINE2(ipc_configure,
-                ipc_process_id_t,                  id,
-                const struct ipcp_config __user *, config)
-{
-        long                 retval;
-
-        struct ipcp_config * tmp;
-
-        tmp = ipcp_config_dup_from_user(config);
-        if (!tmp)
-                return -EFAULT;
-
-        CALL_DEFAULT_PERSONALITY(retval, ipc_configure, id, tmp);
-
-        ipcp_config_destroy(tmp);
-
-        return retval;
-}
-
 SYSCALL_DEFINE1(ipc_destroy,
                 ipc_process_id_t, id)
 {
@@ -171,7 +152,7 @@ SYSCALL_DEFINE3(sdu_read,
 	CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, &tmp);
 	/* Taking ownership from the internal layers */
 
-	LOG_DBG("Personality returned value %d", retval);
+	LOG_DBG("Personality returned value %zd", retval);
 
 	if (retval)
 		return -EFAULT;
@@ -181,8 +162,9 @@ SYSCALL_DEFINE3(sdu_read,
 
 	/* NOTE: We don't handle partial copies */
 	if (tmp->buffer->size > size) {
-		LOG_ERR("Partial copies not handled. SDU size: %d, User space buffer size: %d",
-				tmp->buffer->size, size);
+		LOG_ERR("Partial copies not handled. SDU size: %zd, "
+                        "User space buffer size: %zd",
+                        tmp->buffer->size, size);
 		sdu_destroy(tmp);
 		return -EFAULT;
 	}
@@ -213,9 +195,9 @@ SYSCALL_DEFINE3(sdu_write,
 
         if (!buffer || !size)
                 return -EFAULT;
-
-        LOG_DBG("Syscall write SDU of size %d called with port-id %d",
-        		size, id);
+        
+        LOG_DBG("Syscall write SDU of size %zd called with port-id %d",
+                size, id);
 
         tmp_buffer = rkmalloc(size, GFP_KERNEL);
         if (!tmp_buffer)

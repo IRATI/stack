@@ -21,10 +21,10 @@
 
 namespace rina{
 
-#define SYS_writeSDU 355
-#define SYS_readSDU 354
-#define SYS_destroyIPCProcess 353
-#define SYS_createIPCProcess 351 
+#define SYS_createIPCProcess  351
+#define SYS_destroyIPCProcess 352
+#define SYS_readSDU           353
+#define SYS_writeSDU          354
 
 /**
  * Wrapper of the writeSDU system call
