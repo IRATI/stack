@@ -26,7 +26,6 @@
 #include "debug.h"
 #include "netlink.h"
 #include "netlink-utils.h"
-#include "netlink-test.h"
 
 #define NETLINK_RINA "rina"
 
@@ -471,23 +470,9 @@ int rina_netlink_init(void)
                         "bailing out", ret);
                 return -1;
         }
+	LOG_DBG("Registering Family returned: %d", ret);
+	LOG_DBG("Family registered with id: %d",   nl_family.id);
 
-	LOG_DBG("Registering Family returned: %d",ret);
-	LOG_DBG("Family registered with id: %d",nl_family.id);
-	LOG_DBG("Dispatcher registed for message type 2 is at: %p",nl_ops[1].doit);
-	LOG_DBG("Dispatcher cmd for message type 2 is: %d",nl_ops[1].cmd);
-
-	LOG_DBG("Executing Testing functions...");
-#if 0
-	test_register_echo_handler();
-	if (test_register_handler()) {
-		return -1;
-	}
-	if (test_rnl_format_ipcm_alloc_flow_req_result_msg(5)){
-		return -1;
-	}
-	test_formatters();
-#endif
         LOG_DBG("NetLink layer initialized successfully");
 
         return 0;
