@@ -26,3 +26,5 @@ Makefile.in
 /confdefs.h
 /conftest.c
 /conftest.err
+
+._*
