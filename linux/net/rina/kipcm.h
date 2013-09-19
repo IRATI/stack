@@ -41,9 +41,6 @@ int            kipcm_ipcp_create(struct kipcm *      kipcm,
                                  const struct name * name,
                                  ipc_process_id_t    id,
                                  const char *        factory_name);
-int            kipcm_ipcp_configure(struct kipcm *             kipcm,
-                                    ipc_process_id_t           id,
-                                    const struct ipcp_config * config);
 int            kipcm_ipcp_destroy(struct kipcm *   kipcm,
                                   ipc_process_id_t id);
 
