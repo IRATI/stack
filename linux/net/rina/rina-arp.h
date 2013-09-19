@@ -47,7 +47,10 @@ int             rinarp_remove_reply_handler(struct arp_reply_ops *ops);
 struct naddr_handle;
 struct naddr_filter;
 
-typedef unsigned char * naddr_t;
+struct paddr {
+	void * buf;
+	size_t length;
+};
 
 enum rinarp_mac_addr_type_t {
         MAC_ADDR_802_3
@@ -58,15 +61,15 @@ struct rinarp_mac_addr {
         union {
                 u8[6] mac_8023;
         } data;
-}
+};
 
-struct naddr_handle * rinarp_naddr_register(__be16              proto, 
-                                            __be16              proto_length,
+struct naddr_handle * rinarp_paddr_register(__be16              proto_name,
+					    __be16              proto_len,
                                             struct net_device * device,
-                                            naddr_t             address);
-int                   rinarp_naddr_unregister(struct naddr_handle * h);
+                                            struct paddr        address);
+int                   rinarp_paddr_unregister(struct naddr_handle * h);
 
-typedef void (* arp_handler_t)(const naddr_t *                dest_net_addr,
+typedef void (* arp_handler_t)(const struct paddr *           dest_net_addr,
                                const struct rinarp_mac_addr * dest_hw_addr);
 
 struct naddr_filter * naddr_filter_create(struct naddr_handle * handle);
@@ -74,18 +77,16 @@ int                   naddr_filter_set(struct naddr_filter * filter,
                                        arp_handler_t         request,
                                        arp_handler_t         reply);
 int                   naddr_filter_destroy(struct naddr_filter * filter);
-arp_handler_t         naddr_filter_req_handler_get(struct naddr_handle * h);
-arp_handler_t         naddr_filter_rep_handler_get(struct naddr_handle * h);
            
 /* 
  * Checks for a network address in the ARP cache. Returns the network address
  * if present NULL if not present
  */
-naddr_t               rinarp_naddr_get(struct naddr_filter * filter, 
-                                       naddr_t               address);
+hwaddr_t               rinarp_hwaddr_get(struct naddr_filter * filter, 
+					 struct paddr          address);
 
 int                   rinarp_send_request(struct naddr_filter * filter, 
-                                          naddr_t               address);
+                                          struct paddr          address);
 #endif
 
 #endif
