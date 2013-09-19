@@ -85,13 +85,6 @@ config RINA_ARP
 	help
 	  No help for the time being
 
-config RINA_SHIM_EMPTY
-	tristate "Empty Shim IPC"
-	default y
-        depends on RINA_PERSONALITY_DEFAULT && RINA_DEBUG
-	help
-	  No help for the time being
-
 config RINA_SHIM_DUMMY
 	tristate "Dummy Shim IPC"
 	default y
