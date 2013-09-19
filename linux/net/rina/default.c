@@ -66,17 +66,6 @@ static int default_ipc_create(struct personality_data * data,
         return kipcm_ipcp_create(data->kipcm, name, id, type);
 }
 
-static int default_ipc_configure(struct personality_data *  data,
-                                 ipc_process_id_t           id,
-                                 const struct ipcp_config * configuration)
-{
-        if (!is_personality_ok(data)) return -1;
-
-        LOG_DBG("Calling wrapped function");
-
-        return kipcm_ipcp_configure(data->kipcm, id, configuration);
-}
-
 static int default_ipc_destroy(struct personality_data * data,
                                ipc_process_id_t          id)
 {
@@ -241,7 +230,6 @@ struct personality_ops ops = {
         .init               = default_init,
         .fini               = default_fini,
         .ipc_create         = default_ipc_create,
-        .ipc_configure      = default_ipc_configure,
         .ipc_destroy        = default_ipc_destroy,
         .sdu_read           = default_sdu_read,
         .sdu_write          = default_sdu_write,
