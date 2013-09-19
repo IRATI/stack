@@ -7,11 +7,11 @@
 	<!-- Maven configuration -->
 	<packaging>pom</packaging>
 	<!-- Administrative information -->
-	<name>Alba (IRATI version)</name>
+	<name>@PACKAGE_NAME@</name>
 	<url>https://github.com/dana-i2cat/irati</url>
 	<organization>
 		<name>FP7 IRATI project</name>
-		<url>http://www.irati.eu</url>
+		<url>@PACKAGE_URL@</url>
 	</organization>
 	<!-- Custom Properties -->
 	<properties>
