@@ -23,13 +23,12 @@
 
 typedef int16_t flow_id_t;
 
+/* ALWAYS use this function to check if the id looks good */
+int        is_flow_id_ok(flow_id_t id);
+
 /* FIXME: Move to _create and _destroy */
 int        fidm_init(void);
 int        fidm_fini(void);
-
-/* ALWAYS use this function to check if the id looks good */
-static inline int is_flow_id_ok(flow_id_t id)
-{ return id >= 0 ? 1 : 0; }
 
 flow_id_t  fidm_allocate(void);
 int        fidm_release(flow_id_t id);
