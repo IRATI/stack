@@ -1251,7 +1251,7 @@ static int netlink_handlers_register(struct kipcm * kipcm)
         return 0;
 }
 
-struct kipcm * kipcm_init(struct kobject * parent, struct rina_nl_set * set)
+struct kipcm * kipcm_create(struct kobject * parent, struct rina_nl_set * set)
 {
         struct kipcm * tmp;
 
@@ -1325,7 +1325,7 @@ struct kipcm * kipcm_init(struct kobject * parent, struct rina_nl_set * set)
         return tmp;
 }
 
-int kipcm_fini(struct kipcm * kipcm)
+int kipcm_destroy(struct kipcm * kipcm)
 {
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");

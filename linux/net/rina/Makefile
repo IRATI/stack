@@ -11,6 +11,7 @@ obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 	rina_personality_default.o
 
 rina_personality_default-y :=			\
+	flow-manager.o				\
 	ipcp-factories.o ipcp.o			\
 	dtcp.o dtp.o efcp.o rmt.o		\
 	kipcm-utils.o kipcm.o			\

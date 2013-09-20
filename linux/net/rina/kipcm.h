@@ -25,13 +25,17 @@
 #include "common.h"
 #include "ipcp.h"
 #include "ipcp-factories.h"
+#include "flow-manager.h"
 #include "netlink.h"
 
 struct kipcm;
 
-/* The following functions represent the KIPCM northbound interface */
-struct kipcm * kipcm_init(struct kobject * parent, struct rina_nl_set * set);
-int            kipcm_fini(struct kipcm * kipcm);
+/*
+ * The following functions represent the KIPCM northbound interface
+ */
+
+struct kipcm * kipcm_create(struct kobject * parent, struct rina_nl_set * set);
+int            kipcm_destroy(struct kipcm * kipcm);
 
 /*
  * NOTE: factory_name must be the string published by the choosen IPC
@@ -53,7 +57,9 @@ int            kipcm_sdu_read(struct kipcm * kipcm,
                               port_id_t      id,
                               struct sdu **  sdu);
 
-/* The following functions represent the KIPCM southbound interface */
+/*
+ * The following functions represent the KIPCM southbound interface
+ */
 struct ipcp_factory *
 kipcm_ipcp_factory_register(struct kipcm *             kipcm,
                             const char *               name,
@@ -61,10 +67,16 @@ kipcm_ipcp_factory_register(struct kipcm *             kipcm,
                             struct ipcp_factory_ops *  ops);
 int            kipcm_ipcp_factory_unregister(struct kipcm *        kipcm,
                                              struct ipcp_factory * factory);
+/* On the destination */
+int            kipcm_flow_arrived(ipc_process_id_t ipc_id,
+                                  flow_id_t        id);
 
+/* On both source and destination */
 int            kipcm_flow_add(struct kipcm *   kipcm,
                               ipc_process_id_t ipc_id,
                               port_id_t        id);
+
+/* On both source and destination */
 int            kipcm_flow_remove(struct kipcm * kipcm,
                                  port_id_t      id);
 
