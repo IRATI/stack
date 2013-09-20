@@ -75,33 +75,39 @@ config RINA_ASSERTIONS
 
 config RINA_PERSONALITY_DEFAULT
        	tristate "Default Personality support"
-	default y
+	default m
 	---help---
 	  No help for the time being
 
-config RINA_ARP
-	tristate "RINA ARP implementation support"
-	default n
+config RINA_ARP_OLD
+	tristate "RINA ARP implementation support (old)"
+	default m
+	help
+	  No help for the time being
+
+config RINA_ARP_NEW
+	tristate "RINA ARP implementation support (new)"
+	default m
 	help
 	  No help for the time being
 
 config RINA_SHIM_DUMMY
 	tristate "Dummy Shim IPC"
-	default y
+	default m
         depends on RINA_PERSONALITY_DEFAULT && RINA_DEBUG
 	help
 	  No help for the time being
 
 config RINA_SHIM_ETH_VLAN
 	tristate "Shim IPC over Ethernet (using VLANs) support"
-	default y
+	default m
         depends on RINA_PERSONALITY_DEFAULT && RINA_ARP
 	help
 	  No help for the time being
 
 config RINA_SHIM_TCP_UDP
 	tristate "Shim IPC over TCP/UDP support"
-	default y
+	default m
         depends on RINA_PERSONALITY_DEFAULT
 	help
 	  No help for the time being

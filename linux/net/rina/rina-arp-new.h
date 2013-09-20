@@ -3,6 +3,7 @@
  * intertwined with IP version 4.
  *
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,28 +23,11 @@
 #ifndef RINA_ARP_H
 #define RINA_ARP_H
 
-struct arp_reply_ops {
-	struct list_head    list;
-	__be16              ar_pro; 
-	struct net_device * dev; 
-	unsigned char *     src_netw_addr;
-	unsigned char *     dest_netw_addr;
-	void                (*handle)(struct sk_buff *skb);
-};
+#include <linux/types.h>
+#include <linux/kernel.h>
+#include <linux/netdevice.h>
+#include <linux/if_ether.h>
 
-int             rinarp_register_netaddr(__be16 ar_pro, 
-					struct net_device *dev, 
-					unsigned char *netw_addr);
-int             rinarp_unregister_netaddr(__be16 ar_pro, 
-					  struct net_device *dev, 
-					  unsigned char *netw_addr);
-unsigned char * rinarp_lookup_netaddr(__be16 ar_pro, 
-				      struct net_device *dev, 
-				      unsigned char *netw_addr);
-int             rinarp_send_request(struct arp_reply_ops *ops);
-int             rinarp_remove_reply_handler(struct arp_reply_ops *ops);
-
-#if 0
 struct naddr_handle;
 struct naddr_filter;
 
@@ -52,14 +36,14 @@ struct paddr {
 	size_t length;
 };
 
-enum rinarp_mac_addr_type_t {
+enum rinarp_mac_addr_type {
         MAC_ADDR_802_3
-}
+};
 
 struct rinarp_mac_addr {
-        rinarp_mac_addr_type_t type;
+        enum rinarp_mac_addr_type type;
         union {
-                u8[6] mac_8023;
+                uint8_t mac_802_3[6];
         } data;
 };
 
@@ -77,16 +61,12 @@ int                   naddr_filter_set(struct naddr_filter * filter,
                                        arp_handler_t         request,
                                        arp_handler_t         reply);
 int                   naddr_filter_destroy(struct naddr_filter * filter);
-           
-/* 
- * Checks for a network address in the ARP cache. Returns the network address
- * if present NULL if not present
- */
-rinarp_mac_addr       rinarp_hwaddr_get(struct naddr_filter * filter, 
-					 struct paddr          address);
+
+int                   rinarp_hwaddr_get(struct naddr_filter * filter, 
+                                        struct paddr          in_address,
+                                        rinarp_mac_addr     * out_addr);
 
 int                   rinarp_send_request(struct naddr_filter * filter, 
                                           struct paddr          address);
-#endif
 
 #endif

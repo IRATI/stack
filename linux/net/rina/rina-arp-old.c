@@ -33,7 +33,7 @@
 #include <linux/list.h>
 #include <linux/if_ether.h>
 
-#include "rina-arp.h"
+#include "rina-arp-old.h"
 
 #define RINA_TEST 0
 
@@ -140,9 +140,9 @@ static struct arp_reply_ops * find_reply_ops(struct arp_data * arp_d,
 	return NULL;
 }
 
-int rinarp_register_netaddr(__be16              ar_pro, 
-			    struct net_device * dev, 
-			    unsigned char *     netw_addr)
+int rinarp_old_register_netaddr(__be16              ar_pro, 
+                                struct net_device * dev, 
+                                unsigned char *     netw_addr)
 { 
 	struct network_mapping * net_map;
 	struct arp_data * arp_d;
@@ -172,11 +172,11 @@ int rinarp_register_netaddr(__be16              ar_pro,
 
 	return 0;
 }
-EXPORT_SYMBOL(rinarp_register_netaddr);
+EXPORT_SYMBOL(rinarp_old_register_netaddr);
 
-int rinarp_unregister_netaddr(__be16              ar_pro, 
-			      struct net_device * dev, 
-			      unsigned char *     netw_addr)
+int rinarp_old_unregister_netaddr(__be16              ar_pro, 
+                                  struct net_device * dev, 
+                                  unsigned char *     netw_addr)
 { 
 	struct network_mapping * net_map;
 	struct arp_data *        arp_d;
@@ -197,11 +197,11 @@ int rinarp_unregister_netaddr(__be16              ar_pro,
 	
 	return 0;
 }
-EXPORT_SYMBOL(rinarp_unregister_netaddr);
+EXPORT_SYMBOL(rinarp_old_unregister_netaddr);
 
-unsigned char * rinarp_lookup_netaddr(__be16              ar_pro, 
-				      struct net_device * dev, 
-				      unsigned char *     netw_addr)
+unsigned char * rinarp_old_lookup_netaddr(__be16              ar_pro, 
+                                          struct net_device * dev, 
+                                          unsigned char *     netw_addr)
 {
 	struct network_mapping * net_map;
 	struct arp_data * arp_d;
@@ -215,9 +215,9 @@ unsigned char * rinarp_lookup_netaddr(__be16              ar_pro,
 
 	return net_map->hw_addr;
 }
-EXPORT_SYMBOL(rinarp_lookup_netaddr);
+EXPORT_SYMBOL(rinarp_old_lookup_netaddr);
 
-int rinarp_remove_reply_handler(struct arp_reply_ops * ops)
+int rinarp_old_remove_reply_handler(struct arp_reply_ops * ops)
 { 
 	struct arp_reply_ops * reply_ops;
 	struct arp_data * arp_d;
@@ -240,7 +240,7 @@ int rinarp_remove_reply_handler(struct arp_reply_ops * ops)
 	
 	return 0;
 }
-EXPORT_SYMBOL(rinarp_remove_reply_handler);
+EXPORT_SYMBOL(rinarp_old_remove_reply_handler);
 
 /* Taken from include/linux/if_arp.h */
 static struct arp_hdr * arphdr(const struct sk_buff * skb)
@@ -322,7 +322,7 @@ static struct sk_buff *arp_create(int op, int ptype, int plen,
 
 	return skb;
 
-out:
+ out:
 	kfree_skb(skb);
 	return NULL;
 }
@@ -333,7 +333,7 @@ out:
  *      Original name arp_send
  */
 
-int rinarp_send_request(struct arp_reply_ops * ops)
+int rinarp_old_send_request(struct arp_reply_ops * ops)
 {
 	struct sk_buff *  skb;
 	struct arp_data * arp_d;
@@ -364,7 +364,7 @@ int rinarp_send_request(struct arp_reply_ops * ops)
 	dev_queue_xmit(skb);
 	return 0;
 }
-EXPORT_SYMBOL(rinarp_send_request);
+EXPORT_SYMBOL(rinarp_old_send_request);
 
 /*
  *	Process an arp request.
@@ -406,128 +406,126 @@ static int arp_process(struct sk_buff *skb)
 		goto out;
 
 	switch (dev_type) {
-	/* 
-	 * Only accept Ethernet packets in this implementation
-	 * Other could be added
-	 */
+                /* 
+                 * Only accept Ethernet packets in this implementation
+                 * Other could be added
+                 */
 	case ARPHRD_ETHER:
 		if ((arp->ar_hrd != htons(RINARP_ETHER))
-			goto out;
-		break;
-	}
+                    goto out;
+                    break;
+                    }
 
-	/* Understand only these message types */
-	if (arp->ar_op != htons(RINARP_REPLY) &&
-	    arp->ar_op != htons(RINARP_REQUEST))
-		goto out;
+                /* Understand only these message types */
+                if (arp->ar_op != htons(RINARP_REPLY) &&
+                    arp->ar_op != htons(RINARP_REQUEST))
+                        goto out;
 
-        /*
-	 *	Extract addresses
-	 */
-	arp_ptr = (unsigned char *)(arp + 1);
-	sha	= arp_ptr;
-	arp_ptr += dev->addr_len;
-	memcpy(s_netaddr, arp_ptr, arp->ar_pln);
-	arp_ptr += arp->ar_pln;
-	memcpy(s_hwaddr, arp_ptr, arp->ar_hln);
-	arp_ptr += dev->addr_len;
-	memcpy(d_netaddr, arp_ptr, arp->ar_pln);
-	arp_ptr += arp->ar_pln;
-	memcpy(d_hwaddr, arp_ptr, arp->ar_hln);
+                /*
+                 *	Extract addresses
+                 */
+                arp_ptr = (unsigned char *)(arp + 1);
+                sha	= arp_ptr;
+                arp_ptr += dev->addr_len;
+                memcpy(s_netaddr, arp_ptr, arp->ar_pln);
+                arp_ptr += arp->ar_pln;
+                memcpy(s_hwaddr, arp_ptr, arp->ar_hln);
+                arp_ptr += dev->addr_len;
+                memcpy(d_netaddr, arp_ptr, arp->ar_pln);
+                arp_ptr += arp->ar_pln;
+                memcpy(d_hwaddr, arp_ptr, arp->ar_hln);
 
-/*
- *  Process entry. The idea here is we want to send a reply if it is a
- *  request for us. We want to add an entry to our cache if it is a reply
- *  to us or if it is a request for one of our addresses.
- *
- *  Putting this another way, we only care about replies if they are to
- *  us, in which case we add them to the cache.  For requests, we care
- *  about those for us. We add the requester to the arp cache.
- *
- */
+                /*
+                 *  Process entry. The idea here is we want to send a reply if it is a
+                 *  request for us. We want to add an entry to our cache if it is a reply
+                 *  to us or if it is a request for one of our addresses.
+                 *
+                 *  Putting this another way, we only care about replies if they are to
+                 *  us, in which case we add them to the cache.  For requests, we care
+                 *  about those for us. We add the requester to the arp cache.
+                 *
+                 */
 
-/* FIXME: The following part, first complete top part ARP PM */
-	if (arp->ar_op == htons(RINARP_REQUEST)) {
-		/* Are we advertising this network address? */
+                /* FIXME: The following part, first complete top part ARP PM */
+                if (arp->ar_op == htons(RINARP_REQUEST)) {
+                        /* Are we advertising this network address? */
 	
 	
-	} else if (arp->arp_op == htons(RINARP_REPLY)) {
-		/* Is the reply for one of our network addresses? */
+                } else if (arp->arp_op == htons(RINARP_REPLY)) {
+                        /* Is the reply for one of our network addresses? */
 
 		
-	} else {
-		printk("Unknown operation code");
-		goto out;
-	}
+                } else {
+                        printk("Unknown operation code");
+                        goto out;
+                }
 
-	/* Update our ARP tables */
-	
-
-
-
-out:
-	consume_skb(skb);
-	return 0;
+                /* Update our ARP tables */
+                
+        out:
+                consume_skb(skb);
+                return 0;
+        }
 }
 #endif 
 
 /* Function taken from net/ipv4/arp.c */
 static int arp_rcv(struct sk_buff *skb, struct net_device *dev,
-		   struct packet_type *pt, struct net_device *orig_dev)
+                   struct packet_type *pt, struct net_device *orig_dev)
 {
 
-	const struct arp_hdr * arp;
-	int                    total_length;
+        const struct arp_hdr * arp;
+        int                    total_length;
 
-	if (dev->flags & IFF_NOARP ||
-	    skb->pkt_type == PACKET_OTHERHOST ||
-	    skb->pkt_type == PACKET_LOOPBACK)
-		goto freeskb;
+        if (dev->flags & IFF_NOARP ||
+            skb->pkt_type == PACKET_OTHERHOST ||
+            skb->pkt_type == PACKET_LOOPBACK)
+                goto freeskb;
 
-	skb = skb_share_check(skb, GFP_ATOMIC);
-	if (!skb)
-		goto out_of_mem;
+        skb = skb_share_check(skb, GFP_ATOMIC);
+        if (!skb)
+                goto out_of_mem;
 
-	/* ARP header, without 2 device and 2 network addresses.  */
-	if (!pskb_may_pull(skb, sizeof(struct arp_hdr)))
-		goto freeskb;
+        /* ARP header, without 2 device and 2 network addresses.  */
+        if (!pskb_may_pull(skb, sizeof(struct arp_hdr)))
+                goto freeskb;
 
-	arp = arphdr(skb);
-	if (arp->ar_hln != dev->addr_len)
-		goto freeskb;
+        arp = arphdr(skb);
+        if (arp->ar_hln != dev->addr_len)
+                goto freeskb;
 
-	total_length = sizeof(struct arp_hdr) 
-		+ (dev->addr_len + arp->ar_pln) * 2;
+        total_length = sizeof(struct arp_hdr) 
+                + (dev->addr_len + arp->ar_pln) * 2;
 
         /* ARP header, with 2 device and 2 network addresses.  */
-	if (!pskb_may_pull(skb, total_length))
-		goto freeskb;
+        if (!pskb_may_pull(skb, total_length))
+                goto freeskb;
 #if RINA_TEST	
-	arp_process(skb);
+        arp_process(skb);
 
-	return 0;
+        return 0;
 #else
-	return -1;
+        return -1;
 #endif
 
-freeskb:
-	kfree_skb(skb);
-out_of_mem:
-	return 0;
+ freeskb:
+        kfree_skb(skb);
+ out_of_mem:
+        return 0;
 
 }
 
 /* Taken from net/ipv4/arp.c */
 static struct packet_type arp_packet_type __read_mostly = {
-	.type =	cpu_to_be16(ETH_P_ARP),
-	.func =	arp_rcv,
+        .type =	cpu_to_be16(ETH_P_ARP),
+        .func =	arp_rcv,
 };
 
 static int __init mod_init(void)
 {
-	INIT_LIST_HEAD(&data);
+        INIT_LIST_HEAD(&data);
 
-	dev_add_pack(&arp_packet_type);
+        dev_add_pack(&arp_packet_type);
 
         return 0;
 }
