@@ -20,6 +20,9 @@
 
 #include <linux/module.h>
 
+#define RINA_PREFIX "fidm"
+
+#include "logs.h"
 #include "fidm.h"
 
 int fidm_init(void)
