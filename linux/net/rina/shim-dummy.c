@@ -40,6 +40,7 @@
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 #include "du.h"
+#include "fidm.h"
 #include "netlink.h"
 #include "netlink-utils.h"
 
@@ -210,8 +211,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                                        const struct name *         source,
                                        const struct name *         dest,
                                        const struct flow_spec *    fspec,
-                                       port_id_t                   id,
-                                       uint_t                     seq_num)
+                                       port_id_t                   id)
 {
         struct dummy_flow * flow;
 
@@ -243,7 +243,9 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         if (!flow)
                 return -1;
 
+#if 0 /* The KIPCM should manage this seq-number, please remove */
         flow->seq_num = seq_num;
+#endif
         flow->dest    = name_dup(dest);
         if (!flow->dest) {
                 rkfree(flow);
@@ -300,9 +302,10 @@ find_flow_by_seq_num(struct ipcp_instance_data * data,
 
 static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                                         port_id_t                   id,
-                                        uint_t                      seq_num,
-                                        response_reason_t *         response)
+                                        flow_id_t                   flow_id,
+                                        port_id_t                   port_id)
 {
+#if 0 /* FIXME: sequence-number must be managed by the kipcm */
         struct dummy_flow * flow;
 
         ASSERT(data);
@@ -324,8 +327,10 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if (flow->state != PORT_STATE_INITIATOR_ALLOCATE_PENDING)
+        if (flow->state != PORT_STATE_INITIATOR_ALLOCATE_PENDING) {
+                LOG_ERR("Wrong flow state");
                 return -1;
+        }
 
         /* On positive response, flow should transition to allocated state */
         if (*response == 0) {
@@ -375,6 +380,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
          *   Other shims may implement other behavior here,
          *   such as contacting the apposite shim IPC process
          */
+#endif
 
         return 0;
 }
