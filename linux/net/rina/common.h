@@ -25,7 +25,12 @@
 
 #include <linux/types.h>
 
-typedef uint16_t        port_id_t;
+typedef int             port_id_t;
+
+/* ALWAYS use this function to check if the id looks good */
+static inline int is_port_id_ok(port_id_t id)
+{ return id >= 0 ? 1 : 0; }
+
 typedef int             ipc_process_id_t;
 typedef unsigned int    ipc_process_address_t;
 typedef unsigned char   utf8_t;
