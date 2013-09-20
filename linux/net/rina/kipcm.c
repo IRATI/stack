@@ -386,6 +386,9 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         }
 
 #if 0 /* FIXME: Please re-enable */
+        /* The flow id MUST be ok upon calling the IPC Process ... */
+        ASSERT(is_flow_id_ok(fid);
+
         if (ipc_process->ops->flow_allocate_request(ipc_process->data,
                                                     attrs->source,
                                                     attrs->dest,
