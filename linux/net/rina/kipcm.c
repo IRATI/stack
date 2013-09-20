@@ -40,6 +40,7 @@
 #include "kipcm-utils.h"
 #include "common.h"
 #include "du.h"
+#include "fidm.h"
 #include "netlink.h"
 #include "netlink-utils.h"
 
@@ -384,6 +385,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      info->snd_portid);
         }
 
+#if 0 /* FIXME: Please re-enable */
         if (ipc_process->ops->flow_allocate_request(ipc_process->data,
                                                     attrs->source,
                                                     attrs->dest,
@@ -403,6 +405,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      info->snd_seq,
                                                      info->snd_portid);
         }
+#endif
 
         alloc_flow_req_free(source, dest, fspec, dif_name, attrs, msg);
 
@@ -470,6 +473,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         }
 
         reason = (response_reason_t) attrs->result;
+#if 0 /* FIXME: Please re-enable */
         if (ipc_process->ops->flow_allocate_response(ipc_process->data,
                                                      attrs->id,
                                                      info->snd_seq,
@@ -478,7 +482,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                         attrs->id);
                 retval = -1;
         }
-
+#endif
         rkfree(hdr);
         rkfree(attrs);
         rkfree(msg);
@@ -1524,6 +1528,16 @@ int kipcm_ipcp_destroy(struct kipcm *   kipcm,
 
         return 0;
 }
+
+int kipcm_flow_arrived(struct kipcm *   kipcm,
+                       ipc_process_id_t ipc_id,
+                       flow_id_t        id)
+{
+        LOG_MISSING;
+
+        return -1;
+}
+EXPORT_SYMBOL(kipcm_flow_arrived);
 
 int kipcm_flow_add(struct kipcm *   kipcm,
                    ipc_process_id_t ipc_id,

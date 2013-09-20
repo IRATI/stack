@@ -25,7 +25,7 @@
 #include "common.h"
 #include "ipcp.h"
 #include "ipcp-factories.h"
-#include "flow-manager.h"
+#include "fidm.h"
 #include "netlink.h"
 
 struct kipcm;
@@ -68,7 +68,8 @@ kipcm_ipcp_factory_register(struct kipcm *             kipcm,
 int            kipcm_ipcp_factory_unregister(struct kipcm *        kipcm,
                                              struct ipcp_factory * factory);
 /* On the destination */
-int            kipcm_flow_arrived(ipc_process_id_t ipc_id,
+int            kipcm_flow_arrived(struct kipcm *   kipcm,
+                                  ipc_process_id_t ipc_id,
                                   flow_id_t        id);
 
 /* On both source and destination */
