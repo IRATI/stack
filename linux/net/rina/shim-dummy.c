@@ -20,13 +20,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define USE_WQ 1
-
 #include <linux/module.h>
 #include <linux/list.h>
-#if USE_WQ
-#include <linux/workqueue.h>
-#endif
 
 #define SHIM_NAME   "shim-dummy"
 
@@ -43,78 +38,6 @@
 #include "fidm.h"
 #include "netlink.h"
 #include "netlink-utils.h"
-
-#if USE_WQ
-/* DO NOT REMOVE THIS CODE, IT WILL BE MOVED TO utils.[ch] */
-/* DO NOT REMOVE THIS CODE, IT WILL BE MOVED TO utils.[ch] */
-/* DO NOT REMOVE THIS CODE, IT WILL BE MOVED TO utils.[ch] */
-
-/* It's global BUT should be placed into a shim-dummy handle */
-static struct workqueue_struct * wq;
-
-struct work_item {
-        struct work_struct work; /* Must be at the beginning */
-
-        struct sdu *       sdu;
-};
-
-/* FIXME: Statics commented out to prevent compiler from barfing */
-
-/* static */ void wq_worker(struct work_struct * work)
-{
-        struct work_item * data = (struct work_item *) work;
-
-        LOG_DBG("Working on a new SDU (%pK)", data->sdu);
-
-        /* We're the owner of the data, let's free it */
-        rkfree(data->sdu);
-        rkfree(data);
-
-        return;
-}
-
-/* static */ int wq_init(void)
-{
-        ASSERT(!wq); /* Already initialized */
-
-        wq = create_workqueue("shim-dummy-workqueue");
-
-        return 0;
-}
-
-/* static */ int wq_post(struct sdu * sdu)
-{
-        struct work_item * work;
-
-        if (!sdu)
-                return -1;
-
-        work = (struct work_item *) rkzalloc(sizeof(struct work_item),
-                                             GFP_KERNEL);
-        if (!work)
-                return -1;
-
-        /* Filling workqueue item */
-        INIT_WORK((struct work_struct *) work, wq_worker);
-        work->sdu = sdu;
-
-        /* Finally posting the work to do */
-        if (queue_work(wq, (struct work_struct *) work)) {
-                LOG_ERR("Cannot post work on workqueue");
-                return -1;
-        }
-
-        LOG_DBG("Work posted on the workqueue, please wait ...");
-
-        return 0;
-}
-
-/* static */ void wq_fini(void)
-{
-        flush_workqueue(wq);
-        destroy_workqueue(wq);
-}
-#endif
 
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -285,6 +208,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         return 0;
 }
 
+#if 0
 static struct dummy_flow *
 find_flow_by_seq_num(struct ipcp_instance_data * data,
                      uint_t                      seq_num)
@@ -299,9 +223,9 @@ find_flow_by_seq_num(struct ipcp_instance_data * data,
 
         return NULL;
 }
+#endif
 
 static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
-                                        port_id_t                   id,
                                         flow_id_t                   flow_id,
                                         port_id_t                   port_id)
 {

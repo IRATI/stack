@@ -29,9 +29,10 @@
 #include <linux/netdevice.h>
 #include <linux/if_packet.h>
 
-#define SHIM_NAME     "shim-eth-vlan"
-#define RINA_PREFIX   SHIM_NAME
-#define PROTO_LEN     32
+#define SHIM_NAME    "shim-eth-vlan"
+#define PROTO_LEN    32
+
+#define RINA_PREFIX  SHIM_NAME
 
 #include "logs.h"
 #include "common.h"
@@ -40,6 +41,7 @@
 #include "utils.h"
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
+#include "fidm.h"
 #include "rina-arp-new.h"
 
 /* FIXME: To be removed ABSOLUTELY */
@@ -112,9 +114,10 @@ static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
         return NULL;
 }
 
-static struct shim_eth_flow * find_flow_by_flow_id
-(struct ipcp_instance_data * data,
- port_id_t                   id)
+/* FIXME: Flows should be by flow-id (and once "confirmed") by port-id */
+static struct shim_eth_flow *
+find_flow_by_flow_id(struct ipcp_instance_data * data,
+                     port_id_t                   id)
 {
         struct shim_eth_flow * flow;
 
@@ -235,8 +238,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                                           const struct name *         source,
                                           const struct name *         dest,
                                           const struct flow_spec *    fspec,
-                                          port_id_t                   id,
-                                          uint_t		      seq_num)
+                                          port_id_t                   id)
 {
 	struct shim_eth_flow * flow;
 
@@ -253,8 +255,10 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 
 	/* If it is the first flow and no app is registered, add to ARP cache */
 	if (list_empty(&data->flows) && !data->reg_app) {
-		data->handle = rinarp_paddr_register(ETH_P_RINA, PROTO_LEN, 
-						     data->dev, name_to_paddr(source));
+		data->handle = rinarp_paddr_register(ETH_P_RINA,
+                                                     PROTO_LEN, 
+						     data->dev,
+                                                     name_to_paddr(source));
 		data->filter = naddr_filter_create(data->handle);
 		naddr_filter_set(data->filter, 
 				 data,
@@ -289,11 +293,9 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 			rkfree(flow);
 			return -1;
 		}
-	}
-        else if (flow->port_id_state == PORT_STATE_RECIPIENT_PENDING) {
+	} else if (flow->port_id_state == PORT_STATE_RECIPIENT_PENDING) {
 		flow->port_id_state = PORT_STATE_ALLOCATED;
-        } 
-	else {
+        } else {
 		LOG_ERR("Allocate called in a wrong state. How dare you!");
 		return -1;
 	}
@@ -302,37 +304,35 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 }
 
 static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
-					   port_id_t                   id,
-					   uint_t                      seq_num,
-					   response_reason_t *         resp)
+                                           flow_id_t                   flow_id,
+					   port_id_t                   port_id)
 {
         struct shim_eth_flow * flow;
 
         ASSERT(data);
-        ASSERT(resp);
+        ASSERT(is_flow_id_ok(flow_id));
 
-        flow = find_flow_by_flow_id(data, id);
+        flow = find_flow_by_flow_id(data, flow_id);
         if (!flow) {
                 LOG_ERR("Flow does not exist, you shouldn't call this");
                 return -1;
         }
-
+        
 	if (flow->port_id_state != PORT_STATE_RECIPIENT_PENDING) {
 		LOG_ERR("Flow is not in the right state to call this");
                 return -1;	
 	}
-
+        
         /*
          * On positive response, flow should transition to allocated state
          */
-        if (!*resp) {
+        if (is_port_id_ok(port_id)) {
                 /* FIXME: Deliver frames to application */
                 flow->port_id_state = PORT_STATE_ALLOCATED;
         } else {
                 /* FIXME: Drop all frames in queue */
                 flow->port_id_state = PORT_STATE_NULL;
         }
-
 
         return 0;
 }
@@ -404,7 +404,7 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
         /* Add in ARP cache if no AP was using the shim */
 	if(!data->app_name) {
 		data->handle = rinarp_paddr_register(ETH_P_RINA, PROTO_LEN, 
-					       data->dev, name_to_paddr(name));
+                                                     data->dev, name_to_paddr(name));
 		data->filter = naddr_filter_create(data->handle);
 		naddr_filter_set(data->filter, 
 				 data,
@@ -568,8 +568,8 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 };
 
 static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
-                               const struct name *         dif_name,
-                               const struct ipcp_config *  dif_config)
+                                  const struct name *         dif_name,
+                                  const struct ipcp_config *  dif_config)
 {
         struct eth_vlan_info *      info;
         struct ipcp_config *        tmp;
@@ -604,7 +604,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 entry = tmp->entry;
                 value = entry->value;
                 if (!strcmp(entry->name,"interface-name") &&
-                           value->type == IPCP_CONFIG_STRING) {
+                    value->type == IPCP_CONFIG_STRING) {
                         if (!strcpy(info->interface_name,
                                     (string_t *) value->data)) {
                                 LOG_ERR("Failed to copy interface name");
