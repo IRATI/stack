@@ -21,12 +21,13 @@
 #ifndef RINA_FLOW_MANAGER_H
 #define RINA_FLOW_MANAGER_H
 
-typedef int flow_id_t;
+typedef int16_t flow_id_t;
 
 /* FIXME: Move to _create and _destroy */
 int       fmgr_init(void);
 int       fmgr_fini(void);
 
+/* A negative flow-id means that an error happend during allocation */
 flow_id_t fmgr_allocate(void);
 int       fmgr_release(flow_id_t id);
 
