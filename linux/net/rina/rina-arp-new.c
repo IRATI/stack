@@ -52,8 +52,9 @@ struct naddr_filter * naddr_filter_create(struct naddr_handle * handle)
 EXPORT_SYMBOL(naddr_filter_create);
 
 int naddr_filter_set(struct naddr_filter * filter,
-                                       arp_handler_t         request,
-                                       arp_handler_t         reply)
+		     void *                opaque,
+		     arp_handler_t         request,
+		     arp_handler_t         reply)
 { return -1; }
 EXPORT_SYMBOL(naddr_filter_set);
 
@@ -61,9 +62,9 @@ int naddr_filter_destroy(struct naddr_filter * filter)
 { return -1; }
 EXPORT_SYMBOL(naddr_filter_destroy);
 
-int rinarp_hwaddr_get(struct naddr_filter * filter, 
-                      struct paddr          in_address,
-                      hwaddr_t *            out_addr)
+int rinarp_hwaddr_get(struct naddr_filter *    filter, 
+		      struct paddr             in_address,
+		      struct rinarp_mac_addr * out_addr)
 { return -1; }
 EXPORT_SYMBOL(rinarp_hwaddr_get);
 
