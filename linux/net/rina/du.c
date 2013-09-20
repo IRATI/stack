@@ -57,8 +57,8 @@ struct sdu * sdu_create_from(void * data, size_t size)
 {
         struct sdu * tmp;
 
-        LOG_DBG("Trying to create an SDU of size %d from data in the buffer",
-        		size);
+        LOG_DBG("Trying to create an SDU of size %zd from data in the buffer",
+                size);
 
         if (!data)
                 return NULL;
