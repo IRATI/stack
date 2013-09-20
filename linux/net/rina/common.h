@@ -31,7 +31,7 @@ typedef int             port_id_t;
 static inline int is_port_id_ok(port_id_t id)
 { return id >= 0 ? 1 : 0; }
 
-typedef int             ipc_process_id_t;
+typedef int32_t         ipc_process_id_t;
 typedef unsigned int    ipc_process_address_t;
 typedef unsigned char   utf8_t;
 typedef char            string_t;
