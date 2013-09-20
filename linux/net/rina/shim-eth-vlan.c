@@ -140,17 +140,41 @@ static struct paddr name_to_paddr(const struct name * name)
 	return addr;
 }
 
+
+static string_t * create_vlan_interface_name(string_t * interface_name,
+                                             uint16_t vlan_id)
+{
+        char string_vlan_id[4];
+        string_t * complete_interface;
+
+        complete_interface =
+                rkmalloc(sizeof(*complete_interface),
+                         GFP_KERNEL);
+        if (!complete_interface)
+                return NULL;
+
+        strcpy(complete_interface, interface_name);
+        sprintf(string_vlan_id,"%d",vlan_id);
+        strcat(complete_interface, ".");
+        strcat(complete_interface, string_vlan_id);
+
+        return complete_interface;
+}
+
 static struct shim_eth_flow * find_flow_by_addr
-(struct ipcp_instance_data * data,
- struct paddr *              addr)
+(struct ipcp_instance_data *       data,
+ const struct paddr *              addr)
 {
         struct shim_eth_flow * flow;
 
         list_for_each_entry(flow, &data->flows, list) {
+		/* FIXME: Should be compared properly */
+#if 0
                 if (name_to_paddr(flow->dest) == addr) {
                         return flow;
                 }
-        }
+#endif
+	}
 
         return NULL;
 }
@@ -166,23 +190,26 @@ static void arp_req_handler(void *                         opaque,
 	struct shim_eth_flow * flow;
 
 	data = (struct ipcp_instance_data *) opaque;
-	flow = find_flow_by_addr(data, dest_net_addr);
+	flow = find_flow_by_addr(data, dest_paddr);
 
 	if (flow && flow->port_id_state == PORT_STATE_INITIATOR_PENDING) {
-		flow->port_id_state == PORT_STATE_ALLOCATED;
+		flow->port_id_state = PORT_STATE_ALLOCATED;
 	} else if (!flow && data->reg_app) {
       
 		flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
 		if (!flow)
-			return -1;
+			return;
 
 		flow->port_id_state = PORT_STATE_RECIPIENT_PENDING;
+		
+		/* FIXME: */
+		/* Need to convert paddr to name here */
 
-		/* FIXME: Call KIPCM to send allocate_req message here */
-		/* Probably need to convert paddr to name here */
-
-		/* Assign flow-id for later retrieval */
+		/* Get flow-id for later retrieval from FIDM */
+		/* Store in flow struct */
 		/* flow->flow_id = id; */
+
+		/*  Call KIPCM to send allocate_req message here */
 	}
 
 }
@@ -195,11 +222,11 @@ static void arp_rep_handler(void *                         opaque,
 	struct shim_eth_flow * flow;
 
 	data = (struct ipcp_instance_data *) opaque;
-	flow = find_flow_by_addr(data, dest_net_addr);
+	flow = find_flow_by_addr(data, dest_paddr);
 
-	if (flow && flow->port_id_state == INITIATOR_PENDING) {
-		flow->port_id_state = ALLOCATED;
-	} else if (flow && flow->port_id_state != ALLOCATED) {
+	if (flow && flow->port_id_state == PORT_STATE_INITIATOR_PENDING) {
+		flow->port_id_state = PORT_STATE_ALLOCATED;
+	} else if (flow && flow->port_id_state != PORT_STATE_ALLOCATED) {
 		LOG_ERR("ARP response received when we shouldn't");
 	}
 }
@@ -225,9 +252,9 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 	flow = find_flow(data, id);
 
 	/* If it is the first flow and no app is registered, add to ARP cache */
-	if (list_empty(flows) && !data->reg_app) {
+	if (list_empty(&data->flows) && !data->reg_app) {
 		data->handle = rinarp_paddr_register(ETH_P_RINA, PROTO_LEN, 
-						     data->dev, name_to_paddr(name));
+						     data->dev, name_to_paddr(source));
 		data->filter = naddr_filter_create(data->handle);
 		naddr_filter_set(data->filter, 
 				 data,
@@ -275,7 +302,8 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 }
 
 static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
-                                           port_id_t                   id,
+					   port_id_t                   id,
+					   uint_t                      seq_num,
 					   response_reason_t *         resp)
 {
         struct shim_eth_flow * flow;
@@ -330,7 +358,7 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
 	 *  the last flow and no app registered 
 	 */
 	
-	if (list_empty(data->flows) && !data->reg_app) {
+	if (list_empty(&data->flows) && !data->reg_app) {
 		naddr_filter_destroy(data->filter);
 		rinarp_paddr_unregister(data->handle);
 	}
@@ -411,7 +439,7 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
         }
 
         /* Remove from ARP cache if no flows left */
-	if (list_empty(data->flows)) {
+	if (list_empty(&data->flows)) {
 		naddr_filter_destroy(data->filter);
 		rinarp_paddr_unregister(data->handle);
 	}
@@ -425,6 +453,9 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                               port_id_t                   id,
                               struct sdu *                sdu)
 {
+#if 0
+	/* FIXME: Fix the errors here */
+	/* Too many to handle before EOB */
 	struct shim_eth_flow * flow;
 	struct sk_buff *     skb;
 	const unsigned char *src_hw;
@@ -487,6 +518,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 	dev_queue_xmit(skb);
 
 	rkfree(sdu);
+#endif
         return 0;
 }
 
@@ -496,6 +528,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                         struct packet_type * pt,
                         struct net_device *  orig_dev)
 {
+#if 0
 
 	struct ethhdr *mh; 
 	unsigned char * saddr;
@@ -511,15 +544,24 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 LOG_ERR("Couldn't obtain ownership of the skb");
                 return -1;
         }
-
+	
 	mh = eth_hdr(skb);
 	saddr = mh->h_source;
 	/* FIXME: Get flow that corresponds to this */
 
 	/* We need the ARP filter... and ipcp_instance_data */
+	/* Retrieve data by packet_type (interface name and vlan id) */
+	/* Retrieve flow by paddr; get it from ARP by the hwaddr of source */
+	/* hwaddr source found in packet */
+
+	/* If the port id state is ALLOCATED deliver to application */
+
+	/* If the port id state is RECIPIENT_PENDING, the SDU is queued */
 
         /* FIXME: Get the SDU out of the sk_buff */
 	skb->nh.raw;
+
+#endif
 
         kfree_skb(skb);
         return 0;
@@ -540,8 +582,8 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
 
 
         ASSERT(data);
-        ASSERT(inst);
-        ASSERT(cfg);
+	ASSERT(dif_name);
+	ASSERT(dif_config);
 
         /* If reconfigure = 1, break down all communication and setup again */
         reconfigure = 0;
@@ -590,7 +632,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 create_vlan_interface_name(info->interface_name,
                                            info->vlan_id);
         if (!complete_interface) {
-                return inst;
+                return -1;
         }
         /* Add the handler */
         read_lock(&dev_base_lock);
@@ -598,7 +640,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         if (!data->dev) {
                 LOG_ERR("Invalid device to configure: %s",
                         complete_interface);
-                return inst;
+                return -1;
         }
         data->eth_vlan_packet_type->dev = data->dev;
         dev_add_pack(data->eth_vlan_packet_type);
@@ -738,26 +780,6 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
         return inst;
 }
 
-static string_t * create_vlan_interface_name(string_t * interface_name,
-                                             uint16_t vlan_id)
-{
-        char string_vlan_id[4];
-        string_t * complete_interface;
-
-        complete_interface =
-                rkmalloc(sizeof(*complete_interface),
-                         GFP_KERNEL);
-        if (!complete_interface)
-                return NULL;
-
-        strcpy(complete_interface, interface_name);
-        sprintf(string_vlan_id,"%d",vlan_id);
-        strcat(complete_interface, ".");
-        strcat(complete_interface, string_vlan_id);
-
-        return complete_interface;
-}
-
 static int eth_vlan_destroy(struct ipcp_factory_data * data,
                             struct ipcp_instance *     instance)
 {
@@ -781,8 +803,9 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         list_del(pos);
 
                         /* Destroy it */
-                        name_destroy(inst->info->dif_name);
-                        name_destroy(inst->info->name);
+                        name_destroy(inst->name);
+			name_destroy(inst->reg_app);
+			name_destroy(inst->app_name);
                         rkfree(inst->info->interface_name);
                         rkfree(inst->info);
                         /*
