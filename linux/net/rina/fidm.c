@@ -51,9 +51,11 @@ int fidm_init(void)
         bitmap_zero(instance->bitmap, BITS_IN_BITMAP);
         spin_lock_init(&instance->lock);
 
+        LOG_DBG("Instance initialized successfully (%zd bits)",
+                BITS_IN_BITMAP);
+
         return 0;
- }
-EXPORT_SYMBOL(fidm_init);
+}
 
 int fidm_fini(void)
 {
@@ -67,7 +69,6 @@ int fidm_fini(void)
 
         return 0;
 }
-EXPORT_SYMBOL(fidm_fini);
 
 int is_flow_id_ok(flow_id_t id)
 { return (id >= 0 && id < BITS_IN_BITMAP) ? 1 : 0; }
