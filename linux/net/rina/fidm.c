@@ -58,7 +58,7 @@ EXPORT_SYMBOL(fidm_init);
 int fidm_fini(void)
 {
         if (!instance) {
-                LOG_WRN("Instance already finalized");
+                LOG_WARN("Instance already finalized");
                 return 0;
         }
 
