@@ -157,12 +157,13 @@ struct ipcp_flow {
         wait_queue_head_t wait_queue;
 };
 
-void alloc_flow_req_free(struct name *      source_name,
-                         struct name *      dest_name,
-                         struct flow_spec * fspec,
-                         struct name *      dif_name,
-                         struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
-                         struct rnl_msg *   msg)
+static void
+alloc_flow_req_free(struct name *      source_name,
+                    struct name *      dest_name,
+                    struct flow_spec * fspec,
+                    struct name *      dif_name,
+                    struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
+                    struct rnl_msg *   msg)
 {
         if (attrs)       rkfree(attrs);
         if (source_name) rkfree(source_name);
@@ -172,23 +173,24 @@ void alloc_flow_req_free(struct name *      source_name,
         if (msg)         rkfree(msg);
 }
 
-int alloc_flow_req_free_and_reply(struct name *      source_name,
-                                  struct name *      dest_name,
-                                  struct flow_spec * fspec,
-                                  struct name *      dif_name,
-                                  struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
-                                  struct rnl_msg *   msg,
-                                  ipc_process_id_t   id,
-                                  uint_t             res,
-                                  uint_t             seq_num,
-                                  uint_t             port_id)
+static int
+alloc_flow_req_free_and_reply(struct name *      source_name,
+                              struct name *      dest_name,
+                              struct flow_spec * fspec,
+                              struct name *      dif_name,
+                              struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
+                              struct rnl_msg *   msg,
+                              ipc_process_id_t   id,
+                              uint_t             res,
+                              uint_t             seq_num,
+                              uint_t             port_id)
 {
         alloc_flow_req_free(source_name, dest_name, fspec, dif_name,
                             attrs, msg);
-
+        
         if (rnl_app_alloc_flow_result_msg(id, res, seq_num, port_id))
                 return -1;
-
+        
         return 0;
 }
 
@@ -453,6 +455,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         }
 
         reason = (response_reason_t) attrs->result;
+
 #if 0 /* FIXME: Please re-enable */
         if (ipc_process->ops->flow_allocate_response(ipc_process->data,
                                                      attrs->id,
@@ -470,12 +473,13 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         return retval;
 }
 
-int dealloc_flow_req_free_and_reply(struct rnl_ipcm_dealloc_flow_req_msg_attrs * attrs,
-                                    struct rnl_msg * msg,
-                                    ipc_process_id_t id,
-                                    uint_t           res,
-                                    uint_t           seq_num,
-                                    uint_t           port_id)
+static int
+dealloc_flow_req_free_and_reply(struct rnl_ipcm_dealloc_flow_req_msg_attrs * attrs,
+                                struct rnl_msg * msg,
+                                ipc_process_id_t id,
+                                uint_t           res,
+                                uint_t           seq_num,
+                                uint_t           port_id)
 {
         if (attrs) rkfree(attrs);
         if (msg)   rkfree(msg);
@@ -584,14 +588,15 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
                                                info->snd_portid);
 }
 
-int assign_to_dif_free_and_reply(struct name *       dif_name,
-                                 struct dif_config * dif_config,
-                                 struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs,
-                                 struct rnl_msg *    msg,
-                                 ipc_process_id_t    id,
-                                 uint_t              res,
-                                 uint_t              seq_num,
-                                 uint_t              port_id)
+static int
+assign_to_dif_free_and_reply(struct name *       dif_name,
+                             struct dif_config * dif_config,
+                             struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs,
+                             struct rnl_msg *    msg,
+                             ipc_process_id_t    id,
+                             uint_t              res,
+                             uint_t              seq_num,
+                             uint_t              port_id)
 {
         if (attrs)      rkfree(attrs);
         if (dif_name)   rkfree(dif_name);
@@ -738,15 +743,16 @@ static int notify_ipcp_assign_dif_request(void *             data,
                                             info->snd_portid);
 }
 
-int reg_unreg_resp_free_and_reply(struct name *     app_name,
-                                  struct name *     dif_name,
-                                  struct rnl_ipcm_reg_app_req_msg_attrs * attrs,
-                                  struct rnl_msg *  msg,
-                                  ipc_process_id_t  id,
-                                  uint_t            res,
-                                  uint_t            seq_num,
-                                  uint_t            port_id,
-                                  bool              is_register)
+static int
+reg_unreg_resp_free_and_reply(struct name *     app_name,
+                              struct name *     dif_name,
+                              struct rnl_ipcm_reg_app_req_msg_attrs * attrs,
+                              struct rnl_msg *  msg,
+                              ipc_process_id_t  id,
+                              uint_t            res,
+                              uint_t            seq_num,
+                              uint_t            port_id,
+                              bool              is_register)
 {
         if (app_name) rkfree(app_name);
         if (dif_name) rkfree(dif_name);
@@ -1197,7 +1203,8 @@ static int netlink_handlers_register(struct kipcm * kipcm)
         return 0;
 }
 
-struct kipcm * kipcm_create(struct kobject * parent, struct rnl_set * set)
+struct kipcm * kipcm_create(struct kobject * parent,
+                            struct rnl_set * set)
 {
         struct kipcm * tmp;
 
@@ -1474,7 +1481,7 @@ int kipcm_ipcp_destroy(struct kipcm *   kipcm,
 
 int kipcm_flow_arrived(struct kipcm *   kipcm,
                        ipc_process_id_t ipc_id,
-                       flow_id_t        id)
+                       flow_id_t        flow_id)
 {
         LOG_MISSING;
 
