@@ -107,8 +107,6 @@ struct ipcp_flow {
          */
         bool_t                 application_owned;
 
-        struct rmt_instance *  rmt_instance;
-
         struct kfifo           sdu_ready;
 
         wait_queue_head_t      wait_queue;
@@ -1487,7 +1485,6 @@ int kipcm_flow_add(struct kipcm *   kipcm,
          *        the RMT is implemented.
          */
         flow->application_owned = 1;
-        flow->rmt_instance      = NULL;
         if (kfifo_alloc(&flow->sdu_ready, PAGE_SIZE, GFP_KERNEL)) {
                 LOG_ERR("Couldn't create the sdu-ready queue for "
                         "flow on port-id %d", port_id);
