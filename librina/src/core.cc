@@ -320,9 +320,45 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
  * @param nl_portid
  * @return
  */
-IPCEvent * NetlinkPortIdMap::osProcessFinalized(int nl_portid){
-	//FIXME implement this
-	return 0;
+IPCEvent * NetlinkPortIdMap::osProcessFinalized(unsigned int nl_portid){
+	//1 Try to get application process name, if not there return 0
+	ApplicationProcessNamingInformation apNamingInfo;
+	std::map<ApplicationProcessNamingInformation,
+		RINANetlinkEndpoint*>::iterator iterator;
+	std::map<unsigned short,
+		RINANetlinkEndpoint*>::iterator iterator2;
+	bool foundAppName = false;
+	unsigned short ipcProcessId = 0;
+
+	for(iterator = applicationNameMappings.begin();
+			iterator != applicationNameMappings.end();
+			++iterator){
+		if(iterator->second->getNetlinkPortId() == nl_portid){
+			apNamingInfo = iterator->first;
+			foundAppName = true;
+			applicationNameMappings.erase(iterator);
+			break;
+		}
+	}
+
+	if (!foundAppName){
+		return 0;
+	}
+
+	//2 Try to get IPC Process id
+	for(iterator2 = ipcProcessIdMappings.begin();
+			iterator2 != ipcProcessIdMappings.end();
+			++iterator2){
+		if (iterator2->second->getNetlinkPortId() == nl_portid){
+			ipcProcessId = iterator2->first;
+			ipcProcessIdMappings.erase(iterator2);
+			break;
+		}
+	}
+
+	OSProcessFinalizedEvent * event = new OSProcessFinalizedEvent(
+			apNamingInfo, ipcProcessId, 0);
+	return event;
 }
 
 /* CLASS PENDING NETLINK MESSAGE */
@@ -451,9 +487,8 @@ void * doNetlinkMessageReaderWork(void * arg) {
 			LOG_DBG("NL socket at port %d is closed", message->getPortId());
 
 			IPCEvent * event = myRINAManager->osProcessFinalized(message->getPortId());
-			if (event){
+			if (event)
 				eventsQueue->put(event);
-			}
 
 			delete message;
 		}else if (incomingMessage->isResponseMessage()){
@@ -726,8 +761,12 @@ void RINAManager::netlinkNotificationMessageArrived(
 	sendReceiveLock.unlock();
 }
 
-IPCEvent * RINAManager::osProcessFinalized(int nl_portid){
-	return netlinkPortIdMap.osProcessFinalized(nl_portid);
+IPCEvent * RINAManager::osProcessFinalized(unsigned int nl_portid){
+	IPCEvent * event;
+	sendReceiveLock.lock();
+	event = netlinkPortIdMap.osProcessFinalized(nl_portid);
+	sendReceiveLock.unlock();
+	return event;
 }
 
 BlockingFIFOQueue<IPCEvent>* RINAManager::getEventQueue(){

@@ -90,7 +90,7 @@ public:
 	 * @param nl_portid
 	 * @return
 	 */
-	IPCEvent * osProcessFinalized(int nl_portid);
+	IPCEvent * osProcessFinalized(unsigned int nl_portid);
 };
 
 /**
@@ -214,7 +214,7 @@ public:
 	 * @param nl_portid
 	 * @return
 	 */
-	IPCEvent * osProcessFinalized(int nl_portid);
+	IPCEvent * osProcessFinalized(unsigned int nl_portid);
 
 	BlockingFIFOQueue<IPCEvent>* getEventQueue();
 	NetlinkManager* getNetlinkManager();
