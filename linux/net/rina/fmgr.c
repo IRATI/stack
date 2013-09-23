@@ -24,6 +24,7 @@
 #include "debug.h"
 #include "utils.h"
 #include "fidm.h"
+#include "fmgr.h"
 
 struct fmgr {
         struct fidm * fidm;
@@ -59,4 +60,45 @@ int fmgr_destroy(struct fmgr * instance)
         return 0;
 }
 
+struct ipcp_flow {
+        /* FIXME: Move KIPCM struct ipcp_flow here */
+        int keep_me;
+};
 
+struct ipcp_flow * fmgr_flow_create(struct fmgr * mgr)
+{ return NULL; }
+
+int fmgr_flow_destroy(struct fmgr *      mgr,
+                      struct ipcp_flow * flow)
+{ return -1; }
+
+int fmgr_flow_bind(struct fmgr *      mgr,
+                   struct ipcp_flow * flow,
+                   port_id_t          pid)
+{ return -1; }
+
+int fmgr_flow_unbind(struct fmgr *      mgr,
+                     struct ipcp_flow * flow)
+{ return -1; }
+
+/* FIXME: Move away from here !!! */
+#define PORT_ID_WRONG -1
+
+port_id_t fmgr_flow2port(struct fmgr *      mgr,
+                         struct ipcp_flow * flow)
+{ return PORT_ID_WRONG; }
+
+/* Returns the flow bound to the port 'pid' */
+struct ipcp_flow * fmgr_port2flow(struct fmgr * mgr,
+                                  port_id_t     pid)
+{ return NULL; }
+
+int fmgr_flow_sdu_post(struct fmgr *      mgr,
+                       struct ipcp_flow * flow,
+                       struct sdu *       sdu)
+{ return -1; }
+
+int fmgr_flow_sdu_post_by_port(struct fmgr * mgr,
+                               port_id_t     pid,
+                               struct sdu *  sdu)
+{ return -1; }

@@ -21,9 +21,57 @@
 #ifndef RINA_FMGR_H
 #define RINA_FMGR_H
 
+#include "common.h"
+#include "du.h"
+
 struct fmgr;
 
 struct fmgr * fmgr_create(void);
 int           fmgr_destroy(struct fmgr * instance);
+
+/*
+ * NOTE: is_port_id_ok() and is_flow_id_ok() must be used to detect error
+ *       conditions. DO NOT ASSUME port-id or flow-id < 0 as an error condition
+ *       AND ALWAYS use is_port_id_ok() and is_flow_id_ok() functions
+ */
+
+struct ipcp_flow;
+
+/* Creates a flow (the flow is initially unbound from a port) */
+struct ipcp_flow * fmgr_flow_create(struct fmgr * mgr);
+
+/* Destroys a flow (either already bound to a port or not) */
+int                fmgr_flow_destroy(struct fmgr *      mgr,
+                                     struct ipcp_flow * flow);
+
+/* (Re-)Binds the pointed flow to the port 'pid' */
+int                fmgr_flow_bind(struct fmgr *      mgr,
+                                  struct ipcp_flow * flow,
+                                  port_id_t          pid);
+/* Unbinds a flow from a port (if any) */
+int                fmgr_flow_unbind(struct fmgr *      mgr,
+                                    struct ipcp_flow * flow);
+
+/* Returns the port the flow is bound to (if any) */
+port_id_t          fmgr_flow2port(struct fmgr *      mgr,
+                                  struct ipcp_flow * flow);
+
+/* Returns the flow bound to the port 'pid' */
+struct ipcp_flow * fmgr_port2flow(struct fmgr * mgr,
+                                  port_id_t     pid);
+
+/*
+ * Once the flow is bound to a port, we can post SDUs ...
+ */
+
+/* ... directly, if we "know" the flow */
+int                fmgr_flow_sdu_post(struct fmgr *      mgr,
+                                      struct ipcp_flow * flow,
+                                      struct sdu *       sdu);
+
+/* ... indirectly if we don't know the flow (hence using its port-id) */
+int                fmgr_flow_sdu_post_by_port(struct fmgr * mgr,
+                                              port_id_t     pid,
+                                              struct sdu *  sdu);
 
 #endif
