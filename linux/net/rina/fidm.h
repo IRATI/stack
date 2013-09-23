@@ -23,14 +23,14 @@
 
 typedef int16_t flow_id_t;
 
-/* ALWAYS use this function to check if the id looks good */
-int        is_flow_id_ok(flow_id_t id);
+int           is_flow_id_ok(flow_id_t id);
 
-/* FIXME: Move to _create and _destroy */
-int        fidm_init(void);
-int        fidm_fini(void);
+struct fidm;
 
-flow_id_t  fidm_allocate(void);
-int        fidm_release(flow_id_t id);
+struct fidm * fidm_create(void);
+int           fidm_destroy(struct fidm * instance);
+flow_id_t     fidm_allocate(struct fidm * instance);
+int           fidm_release(struct fidm * instance,
+                           flow_id_t     id);
 
 #endif

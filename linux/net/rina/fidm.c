@@ -35,14 +35,9 @@ struct fidm {
         DECLARE_BITMAP(bitmap, BITS_IN_BITMAP);
 };
 
-static struct fidm * instance;
-
 int fidm_init(void)
 {
-        if (instance) {
-                LOG_ERR("Instance already initialized");
-                return -1;
-        }
+        struct fidm * instance;
 
         instance = rkmalloc(sizeof(*instance), GFP_KERNEL);
         if (!instance)
@@ -54,33 +49,34 @@ int fidm_init(void)
         LOG_DBG("Instance initialized successfully (%zd bits)",
                 BITS_IN_BITMAP);
 
-        return 0;
+        return instance;
 }
 
-int fidm_fini(void)
+int fidm_fini(struct fidm * instance)
 {
         if (!instance) {
-                LOG_WARN("Instance already finalized");
-                return 0;
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
         }
 
         rkfree(instance);
-        instance = NULL;
 
         return 0;
 }
+
+#define FLOW_ID_WRONG -1
 
 int is_flow_id_ok(flow_id_t id)
 { return (id >= 0 && id < BITS_IN_BITMAP) ? 1 : 0; }
 EXPORT_SYMBOL(is_flow_id_ok);
 
-flow_id_t fidm_allocate(void)
+flow_id_t fidm_allocate(struct fidm * instance)
 {
         flow_id_t id;
 
         if (!instance) {
-                LOG_ERR("Instance not yet initialized");
-                return -1;
+                LOG_ERR("Bogus instance passed, bailing out");
+                return FLOW_ID_WRONG;
         }
         
         spin_lock(&instance->lock);
@@ -97,13 +93,18 @@ flow_id_t fidm_allocate(void)
 }
 EXPORT_SYMBOL(fidm_allocate);
 
-int fidm_release(flow_id_t id)
+int fidm_release(struct fidm * instance,
+                 flow_id_t     id)
 {
         if (!is_flow_id_ok(id)) {
                 LOG_ERR("Bad flow-id passed, bailing out");
                 return -1;
         }
-        
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+
         spin_lock(&instance->lock);
 
         bitmap_set(instance->bitmap, id, 1);

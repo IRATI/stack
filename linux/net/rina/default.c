@@ -27,8 +27,7 @@
 #include "personality.h"
 #include "netlink.h"
 #include "kipcm.h"
-#include "efcp.h"
-#include "rmt.h"
+#include "fmgr.h"
 #include "debug.h"
 
 #define DEFAULT_LABEL "default"
@@ -36,10 +35,7 @@
 struct personality_data {
         struct kipcm *   kipcm;
         struct rnl_set * nlset;
-
-        /* FIXME: Types to be rearranged */
-        void *           efcp;
-        void *           rmt;
+        struct fmgr *    fmgr;
 };
 
 static int is_personality_ok(const struct personality_data * p)
@@ -48,7 +44,9 @@ static int is_personality_ok(const struct personality_data * p)
                 return 0;
         if (!p->kipcm)
                 return 0;
-        if (!p->efcp)
+        if (!p->nlset)
+                return 0;
+        if (!p->fmgr)
                 return 0;
 
         return 1;
@@ -79,34 +77,40 @@ static int default_ipc_destroy(struct personality_data * data,
 static int default_connection_create(struct personality_data * data,
                                      const struct connection * connection)
 {
-        cep_id_t id; /* FIXME: Remains unused !!! */
+#if 0
+        cep_id_t id;
 
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
+#endif
 
-        return efcp_create(data->efcp, connection, &id);
+        return -1; /* efcp_create(data->efcp, connection, &id); */
 }
 
 static int default_connection_destroy(struct personality_data * data,
                                       cep_id_t                  id)
 {
+#if 0
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
+#endif
 
-        return efcp_destroy(data->efcp, id);
+        return -1; /* efcp_destroy(data->efcp, id); */
 }
 
 static int default_connection_update(struct personality_data * data,
                                      cep_id_t                  id_from,
                                      cep_id_t                  id_to)
 {
+#if 0
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
+#endif
 
-        return efcp_update(data->efcp, id_from, id_to);
+        return -1; /* efcp_update(data->efcp, id_from, id_to); */
 }
 
 static int default_sdu_write(struct personality_data * data,
@@ -144,14 +148,6 @@ static int default_fini(struct personality_data * data)
 
         LOG_DBG("Finalizing default personality");
 
-        if (tmp->rmt) {
-                err = rmt_fini(tmp->rmt);
-                if (err) return err;
-        }
-        if (tmp->efcp) {
-                err = efcp_fini(tmp->efcp);
-                if (err) return err;
-        }
         if (tmp->kipcm) {
                 err = kipcm_destroy(tmp->kipcm);
                 if (err) return err;
@@ -160,10 +156,12 @@ static int default_fini(struct personality_data * data)
                 err = rnl_set_destroy(tmp->nlset);
                 if (err) return err;
         }
+        if (tmp->fmgr) {
+                err = fmgr_destroy(tmp->fmgr);
+                if (err) return err;
+        }
 
         LOG_DBG("Default personality finalized successfully");
-
-        fidm_fini();
 
         return 0;
 }
@@ -184,14 +182,27 @@ static int default_init(struct kobject *          parent,
 
         LOG_DBG("Initializing default personality");
 
-        if (!fidm_init()) {
-                fidm_fini();
-                return -1;
+        LOG_DBG("Initializing fmgr component");
+        data->fmgr = fmgr_create();
+        if (!data->fmgr) {
+                if (default_fini(data)) {
+                        LOG_CRIT("The system might become unstable ...");
+                        return -1;
+                }
         }
 
         LOG_DBG("Initializing default Netlink component");
         data->nlset = rnl_set_create(id);
         if (!data->nlset) {
+                if (default_fini(data)) {
+                        LOG_CRIT("The system might become unstable ...");
+                        return -1;
+                }
+        }
+
+        LOG_DBG("Initializing default fmgr component");
+        data->fmgr = fmgr_create();
+        if (!data->fmgr) {
                 if (default_fini(data)) {
                         LOG_CRIT("The system might become unstable ...");
                         return -1;
@@ -209,24 +220,6 @@ static int default_init(struct kobject *          parent,
 
         /* FIXME: To be removed */
         default_kipcm = data->kipcm;
-
-        LOG_DBG("Initializing efcp component");
-        data->efcp = efcp_init(parent);
-        if (!data->efcp) {
-                if (default_fini(data)) {
-                        LOG_CRIT("The system might become unstable ...");
-                        return -1;
-                }
-        }
-
-        LOG_DBG("Initializing rmt component");
-        data->rmt = rmt_init(parent);
-        if (!data->rmt) {
-                if (default_fini(data)) {
-                        LOG_CRIT("The system might become unstable ...");
-                        return -1;
-                }
-        }
 
         LOG_DBG("Default personality initialized successfully");
 
