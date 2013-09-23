@@ -19,7 +19,7 @@ config RINA_DEBUG
 	  No help for the time being
 
 config RINA_KIPCM_LOCKS_DEBUG
-	bool "K-IPC Manager spinlocks debugging"
+	bool "K-IPC Manager locks debugging"
 	default n
         depends on RINA_DEBUG
 	help
@@ -101,7 +101,7 @@ config RINA_SHIM_DUMMY
 config RINA_SHIM_ETH_VLAN
 	tristate "Shim IPC over Ethernet (using VLANs) support"
 	default m
-        depends on RINA_PERSONALITY_DEFAULT && RINA_ARP
+        depends on RINA_PERSONALITY_DEFAULT && RINA_ARP_NEW
 	help
 	  No help for the time being
 

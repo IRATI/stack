@@ -56,9 +56,9 @@ int                       rwq_destroy(struct workqueue_struct * rwq);
  * NOTE: The worker is the owner of the data passed. It must return 0 if its
  *       work completed successfully.
  */
-int                 rwq_post(struct workqueue_struct * rwq,
-                             int                       (* worker)(void * data),
-                             void *                    data);
+int                       rwq_post(struct workqueue_struct * rwq,
+                                   int                       (* job)(void * o),
+                                   void *                    data);
 
 /* Miscellaneous */
 #define MK_RINA_VERSION(MAJOR, MINOR, MICRO) \

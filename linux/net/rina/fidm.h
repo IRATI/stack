@@ -1,5 +1,5 @@
 /*
- * DTCP (Data Transfer Control Protocol)
+ * FIDM (Flows-IDs Manager)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,24 +18,24 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_DTCP_H
-#define RINA_DTCP_H
+#ifndef RINA_FIDM_H
+#define RINA_FIDM_H
 
-#include "common.h"
-#include "du.h"
+typedef int16_t flow_id_t;
 
-struct dtp;
-struct dtcp;
+/* ALWAYS use this function to check if the id looks good */
+int           is_flow_id_ok(flow_id_t id);
 
-struct dtcp * dtcp_create(void);
-int           dtcp_destroy(struct dtcp * instance);
+/* ALWAYS use this function to get a bad port-id */
+flow_id_t     flow_id_bad(void);
 
-int           dtcp_bind(struct dtcp * instance,
-                        struct dtp *  peer);
-int           dtcp_unbind(struct dtcp * instance);
+struct fidm;
 
-/* NOTE: Takes the ownership of the passed PDU */
-int           dtcp_send(struct dtcp * instance,
-                        struct sdu *  sdu);
+struct fidm * fidm_create(void);
+int           fidm_destroy(struct fidm * instance);
+
+flow_id_t     fidm_allocate(struct fidm * instance);
+int           fidm_release(struct fidm * instance,
+                           flow_id_t     id);
 
 #endif

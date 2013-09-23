@@ -24,10 +24,10 @@
 #define RINA_PREFIX "ipcp-utils"
 
 #include "logs.h"
-#include "common.h"
-#include "ipcp-utils.h"
 #include "utils.h"
 #include "debug.h"
+#include "common.h"
+#include "ipcp-utils.h"
 
 struct name * name_create(void)
 { return rkzalloc(sizeof(struct name), GFP_KERNEL); }

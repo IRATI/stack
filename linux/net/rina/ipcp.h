@@ -25,6 +25,7 @@
 #include <linux/kobject.h>
 
 #include "du.h"
+#include "fidm.h"
 
 enum ipcp_config_type {
         IPCP_CONFIG_UINT   = 1,
@@ -54,12 +55,10 @@ struct ipcp_instance_ops {
                                        const struct name *         source,
                                        const struct name *         dest,
                                        const struct flow_spec *    flow_spec,
-                                       port_id_t                   id,
-                                       uint_t			   seq_num);
+                                       port_id_t                   id);
 	int  (* flow_allocate_response)(struct ipcp_instance_data * data,
-                                        port_id_t                   id,
-                                        uint_t			    seq_num,
-                                        response_reason_t *         response);
+                                        flow_id_t                   flow_id,
+                                        port_id_t                   port_id);
 	int  (* flow_deallocate)(struct ipcp_instance_data * data,
                                  port_id_t                   id);
 

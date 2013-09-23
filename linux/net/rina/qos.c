@@ -1,5 +1,5 @@
 /*
- * DTCP (Data Transfer Control Protocol)
+ * QoS
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,24 +18,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_DTCP_H
-#define RINA_DTCP_H
+#define RINA_PREFIX "qos"
 
-#include "common.h"
-#include "du.h"
-
-struct dtp;
-struct dtcp;
-
-struct dtcp * dtcp_create(void);
-int           dtcp_destroy(struct dtcp * instance);
-
-int           dtcp_bind(struct dtcp * instance,
-                        struct dtp *  peer);
-int           dtcp_unbind(struct dtcp * instance);
-
-/* NOTE: Takes the ownership of the passed PDU */
-int           dtcp_send(struct dtcp * instance,
-                        struct sdu *  sdu);
-
-#endif
+#include "logs.h"
+#include "utils.h"
+#include "debug.h"
+#include "qos.h"

@@ -1,5 +1,5 @@
 /*
- * DTCP (Data Transfer Control Protocol)
+ * Common utilities
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,24 +18,19 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_DTCP_H
-#define RINA_DTCP_H
+#include <linux/module.h>
 
+#define RINA_PREFIX "common"
+
+#include "logs.h"
 #include "common.h"
-#include "du.h"
 
-struct dtp;
-struct dtcp;
+#define PORT_ID_WRONG -1
 
-struct dtcp * dtcp_create(void);
-int           dtcp_destroy(struct dtcp * instance);
+port_id_t port_id_bad(void)
+{ return PORT_ID_WRONG; }
+EXPORT_SYMBOL(port_id_bad);
 
-int           dtcp_bind(struct dtcp * instance,
-                        struct dtp *  peer);
-int           dtcp_unbind(struct dtcp * instance);
-
-/* NOTE: Takes the ownership of the passed PDU */
-int           dtcp_send(struct dtcp * instance,
-                        struct sdu *  sdu);
-
-#endif
+int is_port_id_ok(port_id_t id)
+{ return id >= 0 ? 1 : 0; }
+EXPORT_SYMBOL(is_port_id_ok);

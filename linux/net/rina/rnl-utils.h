@@ -1,5 +1,5 @@
 /*
- * NetLink related utilities
+ * RNL utilities
  *
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
@@ -19,10 +19,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_NETLINK_UTILS_H
-#define RINA_NETLINK_UTILS_H
+#ifndef RINA_RNL_UTILS_H
+#define RINA_RNL_UTILS_H
 
-#include "rmt.h"
+#include "pft.h"
 
 /*
  * FIXME:
@@ -329,7 +329,7 @@ struct rnl_ipcm_alloc_flow_req_msg_attrs {
         struct name      * source;
         struct name      * dest;
         struct flow_spec * fspec;
-        port_id_t        id;
+        port_id_t          id;
         struct name      * dif_name;
 };
 
@@ -351,11 +351,11 @@ struct rnl_alloc_flow_resp_msg_attrs {
 };
 
 struct rnl_ipcm_dealloc_flow_req_msg_attrs {
-        port_id_t   id;
+        port_id_t id;
 };
 
 struct rnl_ipcm_dealloc_flow_resp_msg_attrs {
-        uint_t      result;
+        uint_t result;
 };
 
 struct rnl_ipcm_flow_dealloc_noti_msg_attrs {
@@ -474,14 +474,14 @@ int rnl_format_ipcm_reg_app_req_msg(const struct name * app_name,
                                     const struct name * dif_name,
                                     struct sk_buff *    skb_out);
 
-int rnl_format_ipcm_reg_app_resp_msg(uint_t            result,
+int rnl_format_ipcm_reg_app_resp_msg(uint_t              result,
                                      struct sk_buff    * skb_out);
 
 int rnl_format_ipcm_unreg_app_req_msg(const struct name * app_name,
                                       const struct name * dif_name,
                                       struct sk_buff  *   skb_out);
 
-int rnl_format_ipcm_unreg_app_resp_msg(uint_t       result,
+int rnl_format_ipcm_unreg_app_resp_msg(uint_t           result,
                                        struct sk_buff * skb_out);
 
 int rnl_format_ipcm_query_rib_req_msg(const struct rib_object * obj,
@@ -503,45 +503,50 @@ int rnl_format_rmt_del_fte_req_msg(const struct pdu_ft_entry * entry,
 int rnl_format_rmt_dump_ft_req_msg(struct sk_buff * skb_out);
 
 int rnl_format_rmt_dump_ft_reply_msg(size_t                       count,
-		const struct pdu_ft_entry ** entries,
-		struct sk_buff *             skb_out);
+                                     const struct pdu_ft_entry ** entries,
+                                     struct sk_buff *             skb_out);
 
+/* FIXME: Use port_id_t */
 int rnl_assign_dif_response(ipc_process_id_t id,
-		uint_t res,
-		uint_t seq_num,
-		uint_t port_id);
+                            uint_t           res,
+                            uint_t           seq_num,
+                            uint_t           port_id);
 
 int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t            ipc_id,
-		const struct name *         dif_name,
-		const struct name *         source,
-		const struct name *         dest,
-		const struct flow_spec *    fspec,
-		uint_t 			   seq_num,
-		uint_t                      nl_port_id);
+                                       const struct name *         dif_name,
+                                       const struct name *         source,
+                                       const struct name *         dest,
+                                       const struct flow_spec *    fspec,
+                                       uint_t 			   seq_num,
+                                       uint_t                      nl_port_id);
 
-int rnl_format_socket_closed_notification_msg(int           nl_port,
-		struct sk_buff * skb_out);
+int rnl_format_socket_closed_notification_msg(int              nl_port,
+                                              struct sk_buff * skb_out);
 
+/* FIXME: Use port_id_t */
 int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
-		uint_t           res,
-		uint_t	   seq_num,
-		uint_t port_id);
+                                  uint_t           res,
+                                  uint_t	   seq_num,
+                                  uint_t           port_id);
 
+/* FIXME: Use port_id_t */
 int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
-		uint_t           res,
-		uint_t           seq_num,
-		uint_t 		   port_id,
-		bool isRegister);
+                                             uint_t           res,
+                                             uint_t           seq_num,
+                                             uint_t 	      port_id,
+                                             bool             isRegister);
 
+/* FIXME: Use port_id_t */
 int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
-		uint_t           res,
-		uint_t	   seq_num,
-		uint_t port_id);
+                                  uint_t           res,
+                                  uint_t	   seq_num,
+                                  uint_t           port_id);
 
+/* FIXME: Use port_id_t */
 int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
-		uint_t           res,
-		uint_t	   code,
-		uint_t port_id);
+                             uint_t           res,
+                             uint_t	      code,
+                             uint_t           port_id);
 
 int rnl_ipcm_sock_closed_notif_msg(int closed_port, int dest_port);
 

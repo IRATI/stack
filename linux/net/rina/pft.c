@@ -1,5 +1,5 @@
 /*
- * DTCP (Data Transfer Control Protocol)
+ * PDU-FWD-T (PDU Forwarding Table)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,24 +18,36 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_DTCP_H
-#define RINA_DTCP_H
+#define RINA_PREFIX "pft"
 
-#include "common.h"
-#include "du.h"
+#include "logs.h"
+#include "utils.h"
+#include "debug.h"
+#include "pft.h"
 
-struct dtp;
-struct dtcp;
+struct pft {
+        int x;
+};
 
-struct dtcp * dtcp_create(void);
-int           dtcp_destroy(struct dtcp * instance);
+struct pft * pft_create(void)
+{
+        struct pft * tmp;
 
-int           dtcp_bind(struct dtcp * instance,
-                        struct dtp *  peer);
-int           dtcp_unbind(struct dtcp * instance);
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
 
-/* NOTE: Takes the ownership of the passed PDU */
-int           dtcp_send(struct dtcp * instance,
-                        struct sdu *  sdu);
+        return tmp;
+}
 
-#endif
+int pft_destroy(struct pft * instance)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+
+        rkfree(instance);
+
+        return 0;
+}

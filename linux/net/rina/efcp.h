@@ -2,7 +2,6 @@
  * EFCP (Error and Flow Control Protocol)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,52 +21,69 @@
 #ifndef RINA_EFCP_H
 #define RINA_EFCP_H
 
-#include <linux/kobject.h>
-
 #include "common.h"
-//#include "kipcm.h"
-#include "dtp.h"
-#include "dtcp.h"
+#include "du.h"
+#include "qos.h"
 
-struct efcp_conf {
+typedef uint cep_id_t;
 
-        /* Length of the address fields of the PCI */
-        int address_length;
+/* This structure defines an EFCP connection */
+struct connection {
+        /* The port_id this connection is bound to */
+        port_id_t port_id;
 
-        /* Length of the port_id fields of the PCI */
-        int port_id_length;
+        /*
+         * The address of the IPC Process that is the source of this
+         * connection
+         */
+        address_t source_address;
 
-        /* Length of the cep_id fields of the PCI */
-        int cep_id_length;
+        /*
+         * The address of the IPC Process that is the destination of
+         * this connection
+         */
+        address_t destination_address;
 
-        /* Length of the qos_id field of the PCI */
-        int qos_id_length;
+        /* The source connection endpoint id */
+        cep_id_t  source_cep_id;
 
-        /* Length of the length field of the PCI */
-        int length_length;
+        /* The destination connection endpoint id */
+        cep_id_t  dest_cep_id;
 
-        /* Length of the sequence number fields of the PCI */
-        int seq_number_length;
+        /* The QoS id */
+        qos_id_t  qos_id;
+
+        /* FIXME: policy type remains undefined */
+        /* The list of policies associated with this connection */
+        /* policy_t ** policies; */
 };
 
 struct efcp;
 
-struct efcp * efcp_init(struct kobject * parent);
-int           efcp_fini(struct efcp * instance);
+/* NOTE: There's one EFCP for each flow */
 
-int           efcp_create(struct efcp *             instance,
-                          const struct connection * connection,
-                          cep_id_t *                id);
-int           efcp_destroy(struct efcp *   instance,
-                           cep_id_t id);
-int           efcp_update(struct efcp * instance,
-                          cep_id_t      from,
-                          cep_id_t      to);
+/* FIXME: efcp_create() creates an EFCP-PM ... */
+struct efcp * efcp_create(void);
+int           efcp_destroy(struct efcp * instance);
 
-int           efcp_write(struct efcp *      instance,
-                         port_id_t          id,
-                         const struct sdu * sdu);
-int           efcp_receive_pdu(struct efcp * instance,
-                               struct pdu *  pdu);
+/* FIXME: Should a cep_id_t be returned instead ? */
+int           efcp_connection_create(struct efcp *             instance,
+                                     const struct connection * connection,
+                                     cep_id_t *                id);
+int           efcp_connection_destroy(struct efcp *   instance,
+                                      cep_id_t id);
+int           efcp_connection_update(struct efcp * instance,
+                                     cep_id_t      from,
+                                     cep_id_t      to);
+
+/* FIXME: Should these functions work over a struct connection * instead ? */
+
+/* NOTE: efcp_send() takes the ownership of the passed SDU */
+int           efcp_send(struct efcp * instance,
+                        port_id_t     id,
+                        struct sdu *  sdu);
+
+/* NOTE: efcp_receive() gives the ownership of the returned PDU */
+struct pdu *  efcp_receive(struct efcp * instance);
 
 #endif

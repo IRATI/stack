@@ -1,5 +1,5 @@
 /*
- * NetLink support
+ * RNL (RINA NetLink support)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
@@ -19,13 +19,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "netlink"
+#define RINA_PREFIX "rnl"
 
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
-#include "netlink.h"
-#include "netlink-utils.h"
+#include "rnl.h"
+#include "rnl-utils.h"
 
 #define NETLINK_RINA "rina"
 
@@ -37,11 +37,11 @@ struct message_handler {
         message_handler_cb cb;
 };
 
-struct rina_nl_set {
+struct rnl_set {
         struct message_handler handlers[NETLINK_RINA_C_MAX];
 };
 
-static struct rina_nl_set * default_set;
+static struct rnl_set * default_set;
 
 static struct genl_family nl_family = {
         .id      = GENL_ID_GENERATE,
@@ -68,11 +68,11 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 
         /* FIXME: What do we do if the handler returns != 0 ??? */
 
-        message_handler_cb   cb_function;
-        void *               data;
-        msg_id               msg_type;
-        int                  ret_val;
-        struct rina_nl_set * tmp;
+        message_handler_cb cb_function;
+        void *             data;
+        msg_id             msg_type;
+        int                ret_val;
+        struct rnl_set *   tmp;
 
         LOG_DBG("Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
         if (!info) {
@@ -104,7 +104,7 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         }
 
         cb_function = tmp->handlers[msg_type].cb;
-	LOG_DBG("[LDBG] Catching callback cb_function =%pK)", cb_function);
+        LOG_DBG("[LDBG] Catching callback cb_function =%pK)", cb_function);
         if (!cb_function) {
                 LOG_ERR("There's no handler callback registered for "
                         "message type %d", msg_type);
@@ -303,10 +303,10 @@ static struct genl_ops nl_ops[] = {
         },
 };
 
-int rina_netlink_handler_register(struct rina_nl_set * set,
-                                  msg_id               msg_type,
-                                  void *               data,
-                                  message_handler_cb   handler)
+int rnl_handler_register(struct rnl_set *   set,
+                         msg_id             msg_type,
+                         void *             data,
+                         message_handler_cb handler)
 {
         if (!set) {
                 LOG_ERR("Bogus set passed, cannot register handler");
@@ -346,10 +346,10 @@ int rina_netlink_handler_register(struct rina_nl_set * set,
 
         return 0;
 }
-EXPORT_SYMBOL(rina_netlink_handler_register);
+EXPORT_SYMBOL(rnl_handler_register);
 
-int rina_netlink_handler_unregister(struct rina_nl_set * set,
-                                    msg_id               msg_type)
+int rnl_handler_unregister(struct rnl_set * set,
+                           msg_id           msg_type)
 {
         if (!set) {
                 LOG_ERR("Bogus set passed, cannot register handler");
@@ -373,9 +373,9 @@ int rina_netlink_handler_unregister(struct rina_nl_set * set,
 
         return 0;
 }
-EXPORT_SYMBOL(rina_netlink_handler_unregister);
+EXPORT_SYMBOL(rnl_handler_unregister);
 
-int rina_netlink_set_register(struct rina_nl_set * set)
+int rnl_set_register(struct rnl_set * set)
 {
         if (!set) {
                 LOG_ERR("Bogus set passed, cannot register it");
@@ -389,11 +389,13 @@ int rina_netlink_set_register(struct rina_nl_set * set)
 
         default_set = set;
 
+        LOG_DBG("Set %pK registered", set);
+
         return 0;
 }
-EXPORT_SYMBOL(rina_netlink_set_register);
+EXPORT_SYMBOL(rnl_set_register);
 
-int rina_netlink_set_unregister(struct rina_nl_set * set)
+int rnl_set_unregister(struct rnl_set * set)
 {
         if (!set) {
                 LOG_ERR("Bogus set passed, cannot unregister it");
@@ -407,15 +409,17 @@ int rina_netlink_set_unregister(struct rina_nl_set * set)
 
         default_set = NULL;
 
+        LOG_DBG("Set %pK unregistered", set);
+
         return 0;
 }
-EXPORT_SYMBOL(rina_netlink_set_unregister);
+EXPORT_SYMBOL(rnl_set_unregister);
 
-struct rina_nl_set * rina_netlink_set_create(personality_id id)
+struct rnl_set * rnl_set_create(personality_id id)
 {
-        struct rina_nl_set * tmp;
+        struct rnl_set * tmp;
 
-        tmp = rkzalloc(sizeof(struct rina_nl_set), GFP_KERNEL);
+        tmp = rkzalloc(sizeof(struct rnl_set), GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
@@ -423,9 +427,9 @@ struct rina_nl_set * rina_netlink_set_create(personality_id id)
 
         return tmp;
 }
-EXPORT_SYMBOL(rina_netlink_set_create);
+EXPORT_SYMBOL(rnl_set_create);
 
-int rina_netlink_set_destroy(struct rina_nl_set * set)
+int rnl_set_destroy(struct rnl_set * set)
 {
         int    i;
         size_t count;
@@ -446,29 +450,37 @@ int rina_netlink_set_destroy(struct rina_nl_set * set)
         }
         if (count)
                 LOG_WARN("Set %pK had %zd handler(s) that have not been "
-                        "unregistered ...", set, count);
+                         "unregistered ...", set, count);
         rkfree(set);
 
         LOG_DBG("Set %pK destroyed %s", set, count ? "" : "successfully");
 
         return 0;
 }
-EXPORT_SYMBOL(rina_netlink_set_destroy);
+EXPORT_SYMBOL(rnl_set_destroy);
 
 /*
- * Invoked when an event related to a NL socket occurs. We're only
- * interested in socket closed events.
+ * Invoked when an event related to a NL socket occurs. We're only interested
+ * in socket closed events.
  */
-static int kipcm_netlink_notify(struct notifier_block *nb,
-		unsigned long state,
-		void *_notify)
+static int kipcm_netlink_notify(struct notifier_block * nb,
+                                unsigned long           state,
+                                void *                  notification)
 {
-	int result;
-	struct netlink_notify *notify = _notify;
+        int                     result;
+        struct netlink_notify * notify = notification;
 
-	if (state != NETLINK_URELEASE)
-		return NOTIFY_DONE;
+        if (state != NETLINK_URELEASE)
+                return NOTIFY_DONE;
 
+        if (!notify) {
+                LOG_ERR("Wrong data obtained in netlink notifier callback");
+                return NOTIFY_BAD;
+        }
+
+        LOG_INFO("Netlink socket at port-id %d closed", notify->portid);
+
+<<<<<<< HEAD:linux/net/rina/netlink.c
 	LOG_INFO("Netlink socket at port-id %d closed", notify->portid);
 	result = rnl_ipcm_sock_closed_notif_msg(notify->portid, 1);
 	if (result)
@@ -476,70 +488,84 @@ static int kipcm_netlink_notify(struct notifier_block *nb,
 				result);
 	else
 		LOG_INFO("Sent NL message informing IPC Manager at user space");
+=======
+        /* FIXME: Is the IPCM available ??? */
+        result = rnl_ipcm_sock_closed_notif_msg(notify->portid, 1);
+        if (result) {
+                LOG_ERR("Error notifying IPC Manager in user space, %d",
+                        result);
+                return NOTIFY_BAD;
+        }
 
-	return NOTIFY_DONE;
+        LOG_INFO("Sent NL message informing IPC Manager at user space");
+>>>>>>> e5f3690d13570e73324c6ed761c612e10bb97385:linux/net/rina/rnl.c
+
+        /* FIXME: NOTIFY_DONE or NOTIFY_OK ??? */
+        return NOTIFY_DONE;
 }
 
 static struct notifier_block kipcm_netlink_notifier = {
-		.notifier_call = kipcm_netlink_notify,
+        .notifier_call = kipcm_netlink_notify,
 };
 
-int rina_netlink_init(void)
+int rnl_init(void)
 {
-	int ret;
+        int ret;
 
-	LOG_DBG("Initializing Netlink layer");
+        LOG_DBG("Initializing Netlink layer");
 
-	ret = genl_register_family_with_ops(&nl_family,
-			nl_ops,
-			ARRAY_SIZE(nl_ops));
+        ret = genl_register_family_with_ops(&nl_family,
+                                            nl_ops,
+                                            ARRAY_SIZE(nl_ops));
+        if (ret != 0) {
+                LOG_ERR("Cannot register Netlink family and ops (error=%i), "
+                        "bailing out", ret);
+                return -1;
+        }
 
-	if (ret != 0) {
-		LOG_ERR("Cannot register Netlink family and ops (error=%i), "
-				"bailing out", ret);
-		return -1;
-	}
-	LOG_DBG("Registering Family returned: %d", ret);
-	LOG_DBG("Family registered with id: %d",   nl_family.id);
+        LOG_DBG("Registering Family returned: %d", ret);
+        LOG_DBG("Family registered with id:   %d", nl_family.id);
 
-	//Register a NETLINK notifier so that the kernel is
-	//informed when a Netlink socket in user-space is closed
-	ret = netlink_register_notifier(&kipcm_netlink_notifier);
-	if (ret){
-		LOG_ERR("Cannot register Netlink notifier (error=%i), "
-				"bailing out", ret);
-		genl_unregister_family(&nl_family);
-		return -1;
-	}
+        /*
+         * Register a NETLINK notifier so that the kernel is
+         * informed when a Netlink socket in user-space is closed
+         */
+        ret = netlink_register_notifier(&kipcm_netlink_notifier);
+        if (ret) {
+                LOG_ERR("Cannot register Netlink notifier (error=%i), "
+                        "bailing out", ret);
+                genl_unregister_family(&nl_family);
+                return -1;
+        }
 
-	LOG_DBG("NetLink layer initialized successfully");
+        LOG_DBG("NetLink layer initialized successfully");
 
-	return 0;
+        return 0;
 }
 
-void rina_netlink_exit(void)
+void rnl_exit(void)
 {
-	int ret;
+        int ret;
 
-	LOG_DBG("Finalizing Netlink layer");
+        LOG_DBG("Finalizing Netlink layer");
 
-	/* unregister the notifier */
-	netlink_unregister_notifier(&kipcm_netlink_notifier);
+        /* unregister the notifier */
+        netlink_unregister_notifier(&kipcm_netlink_notifier);
 
-	ret = genl_unregister_family(&nl_family);
-	if (ret) {
-		LOG_ERR("Could not unregister Netlink family (error=%i), "
-				"bailing out. Your system might become unstable", ret);
-		return;
-	}
+        ret = genl_unregister_family(&nl_family);
+        if (ret) {
+                LOG_ERR("Could not unregister Netlink family (error=%i), "
+                        "bailing out. Your system might become unstable", ret);
+                return;
+        }
 
-	/*
-	 * FIXME:
-	 *   Add checks here to prevent misses of finalizations and or
-	 *   destructions
-	 */
+        /*
+         * FIXME:
+         *   Add checks here to prevent misses of finalizations and or
+         *   destructions
+         */
 
-	ASSERT(!default_set);
+        ASSERT(!default_set);
 
-	LOG_DBG("NetLink layer finalized successfully");
+        LOG_DBG("NetLink layer finalized successfully");
 }

@@ -25,30 +25,26 @@
 
 #include <linux/types.h>
 
-typedef uint16_t        port_id_t;
-typedef int             ipc_process_id_t;
-typedef unsigned int    ipc_process_address_t;
-typedef unsigned char   utf8_t;
-typedef char            string_t;
-typedef uint            uint_t;
-typedef uint            response_reason_t;
-typedef uint            cep_id_t;
-typedef uint16_t        address_t;
-typedef uint            seq_num_t;
-typedef char		regex_t;
+/* FIXME: Shouldn't we keep contrained to int32 ids ? */
+typedef int           port_id_t;
 
-/* FIXME: The qos_id_t should be defined correctly in the near future */
-typedef uint            qos_id_t;
-typedef uint            timeout_t;
+/* ALWAYS use this function to check if the id looks good */
+int       is_port_id_ok(port_id_t id);
 
-/*
- * The value should be interpreted as false if the value is 0 or true
- * otherwise.
- * This typedef should be interpreted as ISO C99 bool/_Bool and could be
- * replaced by the inclusion of stdbool.h where/when possible.
- *
- */
-typedef int bool_t;
+/* ALWAYS use this function to get a bad port-id */
+port_id_t port_id_bad(void);
+
+typedef int32_t       ipc_process_id_t;
+typedef unsigned int  ipc_process_address_t;
+
+/* We should get rid of the following definitions */
+typedef char          string_t;
+typedef uint          uint_t;
+
+/* FIXME: Is this address_t definition correct ??? */
+typedef uint16_t      address_t;
+
+typedef uint          timeout_t;
 
 struct uint_range {
         uint_t min;
@@ -100,70 +96,44 @@ struct flow_spec {
 
         /* A value of 0 indicates 'do not care' */
 	/* FIXME: This uint_t has to be transformed back to double */
-        uint_t              undetected_bit_error_rate;
+        uint_t undetected_bit_error_rate;
         /* Indicates if partial delivery of SDUs is allowed or not */
-        bool_t              partial_delivery;
+        bool   partial_delivery;
         /* Indicates if SDUs have to be delivered in order */
-        bool_t              ordered_delivery;
+        bool   ordered_delivery;
         /*
          * Indicates the maximum gap allowed among SDUs, a gap of N
          * SDUs is considered the same as all SDUs delivered.
          * A value of -1 indicates 'Any'
          */
-        int                 max_allowable_gap;
+        int    max_allowable_gap;
         /*
          * In milliseconds, indicates the maximum delay allowed in this
          * flow. A value of 0 indicates 'do not care'
          */
-        uint_t              delay;
+        uint_t delay;
         /*
          * In milliseconds, indicates the maximum jitter allowed
          * in this flow. A value of 0 indicates 'do not care'
          */
-        uint_t              jitter;
+        uint_t jitter;
         /*
          * The maximum SDU size for the flow. May influence the choice
          * of the DIF where the flow will be created.
          */
-        uint_t              max_sdu_size;
+        uint_t max_sdu_size;
 };
 
-/* This structure defines an EFCP connection */
-struct connection {
-        /* The port_id this connection is bound to */
-        port_id_t port_id;
+/* FIXME: Move RNL related types to RNL header(s) */
 
-        /*
-         * The address of the IPC Process that is the source of this
-         * connection
-         */
-        address_t source_address;
+typedef char	      regex_t; /* FIXME: must be a string */
 
-        /*
-         * The address of the IPC Process that is the destination of
-         * this connection
-         */
-        address_t destination_address;
-
-        /* The source connection endpoint Id */
-        cep_id_t source_cep_id;
-
-        /* The destination connection endpoint id */
-        cep_id_t dest_cep_id;
-
-        /* The QoS id */
-        qos_id_t qos_id;
-
-        /* FIXME: policy type remains undefined */
-        /* The list of policies associated with this connection */
-        /* policy_t ** policies; */
-};
-
-/*FIXME: needed for nl api */
+/* FIXME: needed for nl api */
 enum rib_object_class_t {
 	EMPTY,
 };
 
+/* FIXME: Remove rib_obj_ prefix, it's unneeded */
 struct rib_object {
 	enum rib_object_class_t rib_obj_class;
 	string_t *              rib_obj_name;
