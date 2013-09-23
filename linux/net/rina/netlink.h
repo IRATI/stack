@@ -63,8 +63,8 @@ typedef enum {
 	/* IPC Manager -> IPC Process */
 	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST, 
 
-	/* Allocate flow request from a remote application, 
-	IPC Process -> IPC Manager */
+	/* Allocate flow request from a remote application */
+        /* IPC Process -> IPC Manager */
 	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED, 
 
 	/* IPC Process -> IPC Manager */
@@ -117,27 +117,27 @@ typedef enum {
 
 } msg_id;
 
-int  rina_netlink_init(void);
-void rina_netlink_exit(void);
+int  rnl_init(void);
+void rnl_exit(void);
 
 struct rina_nl_set;
 
 struct genl_family  * get_nl_family(void);
 
-struct rina_nl_set * rina_netlink_set_create(personality_id id);
-int                  rina_netlink_set_destroy(struct rina_nl_set * set);
+struct rina_nl_set * rnl_set_create(personality_id id);
+int                  rnl_set_destroy(struct rina_nl_set * set);
 
 typedef int (* message_handler_cb)(void *             data,
                                    struct sk_buff *   buff,
                                    struct genl_info * info); 
-int  rina_netlink_handler_register(struct rina_nl_set * set,
+int  rnl_handler_register(struct rina_nl_set * set,
                                    msg_id               msg_type,
                                    void *               data,
                                    message_handler_cb   handler);
-int  rina_netlink_handler_unregister(struct rina_nl_set * set,
+int  rnl_handler_unregister(struct rina_nl_set * set,
                                      msg_id               msg_type);
 
-int  rina_netlink_set_register(struct rina_nl_set * set);
-int  rina_netlink_set_unregister(struct rina_nl_set * set);
+int  rnl_set_register(struct rina_nl_set * set);
+int  rnl_set_unregister(struct rina_nl_set * set);
 
 #endif

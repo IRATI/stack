@@ -303,7 +303,7 @@ static struct genl_ops nl_ops[] = {
         },
 };
 
-int rina_netlink_handler_register(struct rina_nl_set * set,
+int rnl_handler_register(struct rina_nl_set * set,
                                   msg_id               msg_type,
                                   void *               data,
                                   message_handler_cb   handler)
@@ -346,9 +346,9 @@ int rina_netlink_handler_register(struct rina_nl_set * set,
 
         return 0;
 }
-EXPORT_SYMBOL(rina_netlink_handler_register);
+EXPORT_SYMBOL(rnl_handler_register);
 
-int rina_netlink_handler_unregister(struct rina_nl_set * set,
+int rnl_handler_unregister(struct rina_nl_set * set,
                                     msg_id               msg_type)
 {
         if (!set) {
@@ -373,9 +373,9 @@ int rina_netlink_handler_unregister(struct rina_nl_set * set,
 
         return 0;
 }
-EXPORT_SYMBOL(rina_netlink_handler_unregister);
+EXPORT_SYMBOL(rnl_handler_unregister);
 
-int rina_netlink_set_register(struct rina_nl_set * set)
+int rnl_set_register(struct rina_nl_set * set)
 {
         if (!set) {
                 LOG_ERR("Bogus set passed, cannot register it");
@@ -391,9 +391,9 @@ int rina_netlink_set_register(struct rina_nl_set * set)
 
         return 0;
 }
-EXPORT_SYMBOL(rina_netlink_set_register);
+EXPORT_SYMBOL(rnl_set_register);
 
-int rina_netlink_set_unregister(struct rina_nl_set * set)
+int rnl_set_unregister(struct rina_nl_set * set)
 {
         if (!set) {
                 LOG_ERR("Bogus set passed, cannot unregister it");
@@ -409,9 +409,9 @@ int rina_netlink_set_unregister(struct rina_nl_set * set)
 
         return 0;
 }
-EXPORT_SYMBOL(rina_netlink_set_unregister);
+EXPORT_SYMBOL(rnl_set_unregister);
 
-struct rina_nl_set * rina_netlink_set_create(personality_id id)
+struct rina_nl_set * rnl_set_create(personality_id id)
 {
         struct rina_nl_set * tmp;
 
@@ -423,9 +423,9 @@ struct rina_nl_set * rina_netlink_set_create(personality_id id)
 
         return tmp;
 }
-EXPORT_SYMBOL(rina_netlink_set_create);
+EXPORT_SYMBOL(rnl_set_create);
 
-int rina_netlink_set_destroy(struct rina_nl_set * set)
+int rnl_set_destroy(struct rina_nl_set * set)
 {
         int    i;
         size_t count;
@@ -453,9 +453,9 @@ int rina_netlink_set_destroy(struct rina_nl_set * set)
 
         return 0;
 }
-EXPORT_SYMBOL(rina_netlink_set_destroy);
+EXPORT_SYMBOL(rnl_set_destroy);
 
-int rina_netlink_init(void)
+int rnl_init(void)
 {
         int ret;
 
@@ -478,7 +478,7 @@ int rina_netlink_init(void)
         return 0;
 }
 
-void rina_netlink_exit(void)
+void rnl_exit(void)
 {
         int ret;
 

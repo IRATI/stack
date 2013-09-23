@@ -387,7 +387,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
 #if 0 /* FIXME: Please re-enable */
         /* The flow id MUST be ok upon calling the IPC Process ... */
-        ASSERT(is_flow_id_ok(fid);
+        ASSERT(is_flow_id_ok(fid));
 
         if (ipc_process->ops->flow_allocate_request(ipc_process->data,
                                                     attrs->source,
@@ -855,41 +855,41 @@ static int notify_ipcp_register_app_request(void *             data,
 
         attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
         if (!attrs) {
-                return reg_unreg_resp_free_and_reply(app_name, 
-                                                     dif_name, 
+                return reg_unreg_resp_free_and_reply(app_name,
+                                                     dif_name,
                                                      attrs,
-                                                     msg, 
-                                                     0, 
-                                                     -1, 
-                                                     info->snd_seq, 
-                                                     info->snd_portid, 
+                                                     msg,
+                                                     0,
+                                                     -1,
+                                                     info->snd_seq,
+                                                     info->snd_portid,
                                                      true);
         }
 
         app_name = name_create();
         if (!app_name) {
-                return reg_unreg_resp_free_and_reply(app_name, 
-                                                     dif_name, 
+                return reg_unreg_resp_free_and_reply(app_name,
+                                                     dif_name,
                                                      attrs,
-                                                     msg, 
-                                                     0, 
-                                                     -1, 
-                                                     info->snd_seq, 
-                                                     info->snd_portid, 
+                                                     msg,
+                                                     0,
+                                                     -1,
+                                                     info->snd_seq,
+                                                     info->snd_portid,
                                                      true);
         }
         attrs->app_name= app_name;
 
         dif_name = name_create();
         if (!dif_name) {
-                return reg_unreg_resp_free_and_reply(app_name, 
-                                                     dif_name, 
+                return reg_unreg_resp_free_and_reply(app_name,
+                                                     dif_name,
                                                      attrs,
-                                                     msg, 
-                                                     0, 
-                                                     -1, 
-                                                     info->snd_seq, 
-                                                     info->snd_portid, 
+                                                     msg,
+                                                     0,
+                                                     -1,
+                                                     info->snd_seq,
+                                                     info->snd_portid,
                                                      true);
         }
         attrs->dif_name= dif_name;
@@ -897,28 +897,28 @@ static int notify_ipcp_register_app_request(void *             data,
         msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
         if (!msg) {
                 LOG_ERR("Could not allocate space for my_msg struct");
-                return reg_unreg_resp_free_and_reply(app_name, 
-                                                     dif_name, 
+                return reg_unreg_resp_free_and_reply(app_name,
+                                                     dif_name,
                                                      attrs,
-                                                     msg, 
-                                                     0, 
-                                                     -1, 
-                                                     info->snd_seq, 
-                                                     info->snd_portid, 
+                                                     msg,
+                                                     0,
+                                                     -1,
+                                                     info->snd_seq,
+                                                     info->snd_portid,
                                                      true);
         }
         msg->attrs = attrs;
 
         if (rnl_parse_msg(info, msg)) {
                 LOG_ERR("Could not parse message");
-                return reg_unreg_resp_free_and_reply(app_name, 
-                                                     dif_name, 
+                return reg_unreg_resp_free_and_reply(app_name,
+                                                     dif_name,
                                                      attrs,
-                                                     msg, 
-                                                     0, 
-                                                     -1, 
-                                                     info->snd_seq, 
-                                                     info->snd_portid, 
+                                                     msg,
+                                                     0,
+                                                     -1,
+                                                     info->snd_seq,
+                                                     info->snd_portid,
                                                      true);
         }
 
@@ -926,38 +926,38 @@ static int notify_ipcp_register_app_request(void *             data,
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
                 LOG_ERR("IPC process %d not found", ipc_id);
-                return reg_unreg_resp_free_and_reply(app_name, 
-                                                     dif_name, 
+                return reg_unreg_resp_free_and_reply(app_name,
+                                                     dif_name,
                                                      attrs,
-                                                     msg, 
-                                                     0, 
-                                                     -1, 
-                                                     info->snd_seq, 
-                                                     info->snd_portid, 
+                                                     msg,
+                                                     0,
+                                                     -1,
+                                                     info->snd_seq,
+                                                     info->snd_portid,
                                                      true);
         }
 
         if (ipc_process->ops->application_register(ipc_process->data,
                                                    attrs->app_name)) {
-                return reg_unreg_resp_free_and_reply(app_name, 
-                                                     dif_name, 
+                return reg_unreg_resp_free_and_reply(app_name,
+                                                     dif_name,
                                                      attrs,
-                                                     msg, 
-                                                     ipc_id, 
-                                                     -1, 
-                                                     info->snd_seq, 
-                                                     info->snd_portid, 
+                                                     msg,
+                                                     ipc_id,
+                                                     -1,
+                                                     info->snd_seq,
+                                                     info->snd_portid,
                                                      true);
         }
 
-        return reg_unreg_resp_free_and_reply(app_name, 
-                                             dif_name, 
+        return reg_unreg_resp_free_and_reply(app_name,
+                                             dif_name,
                                              attrs,
-                                             msg, 
-                                             ipc_id, 
-                                             0, 
-                                             info->snd_seq, 
-                                             info->snd_portid, 
+                                             msg,
+                                             ipc_id,
+                                             0,
+                                             info->snd_seq,
+                                             info->snd_portid,
                                              true);
 }
 
@@ -1099,28 +1099,28 @@ static int netlink_handlers_unregister(struct rina_nl_set * set)
 {
         int retval = 0;
 
-        if (rina_netlink_handler_unregister(set,
-                                            RINA_C_IPCM_ALLOCATE_FLOW_REQUEST))
+        if (rnl_handler_unregister(set,
+                                   RINA_C_IPCM_ALLOCATE_FLOW_REQUEST))
                 retval = -1;
 
-        if (rina_netlink_handler_unregister(set,
-                                            RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE))
+        if (rnl_handler_unregister(set,
+                                   RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE))
                 retval = -1;
 
-        if (rina_netlink_handler_unregister(set,
-                                            RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST))
+        if (rnl_handler_unregister(set,
+                                   RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST))
                 retval = -1;
 
-        if (rina_netlink_handler_unregister(set,
-                                            RINA_C_IPCM_REGISTER_APPLICATION_REQUEST))
+        if (rnl_handler_unregister(set,
+                                   RINA_C_IPCM_REGISTER_APPLICATION_REQUEST))
                 retval = -1;
 
-        if (rina_netlink_handler_unregister(set,
-                                            RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST))
+        if (rnl_handler_unregister(set,
+                                   RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST))
                 retval = -1;
 
-        if (rina_netlink_handler_unregister(set,
-                                            RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST))
+        if (rnl_handler_unregister(set,
+                                   RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST))
                 retval = -1;
 
         return retval;
@@ -1131,19 +1131,19 @@ static int netlink_handlers_register(struct kipcm * kipcm)
         message_handler_cb handler;
 
         handler = notify_ipcp_assign_dif_request;
-        if (rina_netlink_handler_register(kipcm->set,
-                                          RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST,
-                                          kipcm,
-                                          handler))
+        if (rnl_handler_register(kipcm->set,
+                                 RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST,
+                                 kipcm,
+                                 handler))
                 return -1;
 
         handler = notify_ipcp_allocate_flow_request;
-        if (rina_netlink_handler_register(kipcm->set,
-                                          RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
-                                          kipcm,
-                                          handler)) {
-                if (rina_netlink_handler_unregister(kipcm->set,
-                                                    RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
+        if (rnl_handler_register(kipcm->set,
+                                 RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
+                                 kipcm,
+                                 handler)) {
+                if (rnl_handler_unregister(kipcm->set,
+                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
                         LOG_ERR("Failed handler unregister while bailing out");
                         /* FIXME: What else could be done here?" */
                 }
@@ -1151,17 +1151,17 @@ static int netlink_handlers_register(struct kipcm * kipcm)
         }
 
         handler = notify_ipcp_allocate_flow_response;
-        if (rina_netlink_handler_register(kipcm->set,
-                                          RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
-                                          kipcm,
-                                          handler)) {
-                if (rina_netlink_handler_unregister(kipcm->set,
-                                                    RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
+        if (rnl_handler_register(kipcm->set,
+                                 RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
+                                 kipcm,
+                                 handler)) {
+                if (rnl_handler_unregister(kipcm->set,
+                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
                         LOG_ERR("Failed handler unregister while bailing out");
                         /* FIXME: What else could be done here?" */
                 }
-                if (rina_netlink_handler_unregister(kipcm->set,
-                                                    RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
+                if (rnl_handler_unregister(kipcm->set,
+                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
                         LOG_ERR("Failed handler unregister while bailing out");
                         /* FIXME: What else could be done here?" */
                 }
@@ -1169,22 +1169,22 @@ static int netlink_handlers_register(struct kipcm * kipcm)
         }
 
         handler = notify_ipcp_register_app_request;
-        if (rina_netlink_handler_register(kipcm->set,
-                                          RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,
-                                          kipcm,
-                                          handler)) {
-                if (rina_netlink_handler_unregister(kipcm->set,
-                                                    RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
+        if (rnl_handler_register(kipcm->set,
+                                 RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,
+                                 kipcm,
+                                 handler)) {
+                if (rnl_handler_unregister(kipcm->set,
+                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
                         LOG_ERR("Failed handler unregister while bailing out");
                         /* FIXME: What else could be done here?" */
                 }
-                if (rina_netlink_handler_unregister(kipcm->set,
-                                                    RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
+                if (rnl_handler_unregister(kipcm->set,
+                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
                         LOG_ERR("Failed handler unregister while bailing out");
                         /* FIXME: What else could be done here?" */
                 }
-                if (rina_netlink_handler_unregister(kipcm->set,
-                                                    RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
+                if (rnl_handler_unregister(kipcm->set,
+                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
                         LOG_ERR("Failed handler unregister while bailing out");
                         /* FIXME: What else could be done here?" */
                 }
@@ -1192,28 +1192,28 @@ static int netlink_handlers_register(struct kipcm * kipcm)
         }
 
         handler = notify_ipcp_unregister_app_request;
-        if (rina_netlink_handler_register(kipcm->set,
-                                          RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST,
-                                          kipcm,
-                                          handler)) {
-                if (rina_netlink_handler_unregister(kipcm->set,
-                                                    RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
+        if (rnl_handler_register(kipcm->set,
+                                 RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST,
+                                 kipcm,
+                                 handler)) {
+                if (rnl_handler_unregister(kipcm->set,
+                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
                         LOG_ERR("Failed handler unregister while bailing out");
                         /* FIXME: What else could be done here?" */
                 }
-                if (rina_netlink_handler_unregister(kipcm->set,
-                                                    RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
+                if (rnl_handler_unregister(kipcm->set,
+                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
                         LOG_ERR("Failed handler unregister while bailing out");
                         /* FIXME: What else could be done here?" */
                 }
-                if (rina_netlink_handler_unregister(kipcm->set,
-                                                    RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
+                if (rnl_handler_unregister(kipcm->set,
+                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
                         LOG_ERR("Failed handler unregister while bailing out");
                         /* FIXME: What else could be done here?" */
                 }
                 return -1;
-                if (rina_netlink_handler_unregister(kipcm->set,
-                                                    RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
+                if (rnl_handler_unregister(kipcm->set,
+                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
                         LOG_ERR("Failed handler unregister while bailing out");
                         /* FIXME: What else could be done here?" */
                 }
@@ -1221,34 +1221,34 @@ static int netlink_handlers_register(struct kipcm * kipcm)
         }
 
         handler = notify_ipcp_deallocate_flow_request;
-        if (rina_netlink_handler_register(kipcm->set,
-                                          RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST,
-                                          kipcm,
-                                          handler)) {
-                if (rina_netlink_handler_unregister(kipcm->set,
-                                                    RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
+        if (rnl_handler_register(kipcm->set,
+                                 RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST,
+                                 kipcm,
+                                 handler)) {
+                if (rnl_handler_unregister(kipcm->set,
+                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
                         LOG_ERR("Failed handler unregister while bailing out");
                         /* FIXME: What else could be done here?" */
                 }
-                if (rina_netlink_handler_unregister(kipcm->set,
-                                                    RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
+                if (rnl_handler_unregister(kipcm->set,
+                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
                         LOG_ERR("Failed handler unregister while bailing out");
                         /* FIXME: What else could be done here?" */
                 }
-                if (rina_netlink_handler_unregister(kipcm->set,
-                                                    RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-                if (rina_netlink_handler_unregister(kipcm->set,
-                                                    RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
+                if (rnl_handler_unregister(kipcm->set,
+                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
                         LOG_ERR("Failed handler unregister while bailing out");
                         /* FIXME: What else could be done here?" */
                 }
                 return -1;
-                if (rina_netlink_handler_unregister(kipcm->set,
-                                                    RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
+                if (rnl_handler_unregister(kipcm->set,
+                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                return -1;
+                if (rnl_handler_unregister(kipcm->set,
+                                           RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
                         LOG_ERR("Failed handler unregister while bailing out");
                         /* FIXME: What else could be done here?" */
                 }
@@ -1296,7 +1296,7 @@ struct kipcm * kipcm_create(struct kobject * parent, struct rina_nl_set * set)
         }
 
         LOG_DBG("Registering set");
-        if (rina_netlink_set_register(set)) {
+        if (rnl_set_register(set)) {
                 if (ipcp_imap_destroy(tmp->instances)) {
                         /* FIXME: What could we do here ? */
                 }

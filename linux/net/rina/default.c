@@ -52,7 +52,7 @@ static int is_personality_ok(const struct personality_data * p)
                 return 0;
 
         return 1;
-} 
+}
 
 static int default_ipc_create(struct personality_data * data,
                               const struct name *       name,
@@ -157,7 +157,7 @@ static int default_fini(struct personality_data * data)
                 if (err) return err;
         }
         if (tmp->nlset) {
-                err = rina_netlink_set_destroy(tmp->nlset);
+                err = rnl_set_destroy(tmp->nlset);
                 if (err) return err;
         }
 
@@ -190,7 +190,7 @@ static int default_init(struct kobject *          parent,
         }
 
         LOG_DBG("Initializing default Netlink component");
-        data->nlset = rina_netlink_set_create(id);
+        data->nlset = rnl_set_create(id);
         if (!data->nlset) {
                 if (default_fini(data)) {
                         LOG_CRIT("The system might become unstable ...");

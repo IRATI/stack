@@ -81,14 +81,14 @@ static int __init rina_core_init(void)
                 return -1;
         }
 
-        if (rina_netlink_init()) {
+        if (rnl_init()) {
                 kset_unregister(root_kset);
                 rina_debug_exit();
                 return -1;
         }
 
         if (rina_personality_init(&root_kset->kobj)) {
-                rina_netlink_exit();
+                rnl_exit();
                 kset_unregister(root_kset);
                 rina_debug_exit();
                 return -1;
