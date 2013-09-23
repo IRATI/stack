@@ -35,7 +35,7 @@ struct fidm {
         DECLARE_BITMAP(bitmap, BITS_IN_BITMAP);
 };
 
-int fidm_init(void)
+struct fidm * fidm_create(void)
 {
         struct fidm * instance;
 
@@ -52,7 +52,7 @@ int fidm_init(void)
         return instance;
 }
 
-int fidm_fini(struct fidm * instance)
+int fidm_destroy(struct fidm * instance)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
@@ -91,7 +91,7 @@ flow_id_t fidm_allocate(struct fidm * instance)
         
         return id;
 }
-EXPORT_SYMBOL(fidm_allocate);
+/* EXPORT_SYMBOL(fidm_allocate); */
 
 int fidm_release(struct fidm * instance,
                  flow_id_t     id)
@@ -113,4 +113,4 @@ int fidm_release(struct fidm * instance,
 
         return 0;
 }
-EXPORT_SYMBOL(fidm_release);
+/* EXPORT_SYMBOL(fidm_release); */

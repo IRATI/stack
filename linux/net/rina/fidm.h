@@ -29,6 +29,7 @@ struct fidm;
 
 struct fidm * fidm_create(void);
 int           fidm_destroy(struct fidm * instance);
+
 flow_id_t     fidm_allocate(struct fidm * instance);
 int           fidm_release(struct fidm * instance,
                            flow_id_t     id);
