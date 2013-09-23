@@ -241,6 +241,12 @@ enum ipcm_disconn_neighbor_resp_msg_attr_list {
 };
 #define IDNRE_ATTR_MAX (__IDNRE_ATTR_MAX -1)
 
+enum socket_closed_notification_msg_attr_list {
+	ISCN_ATTR_PORT = 1,
+	__ISCN_ATTR_MAX,
+};
+#define ISCN_ATTR_MAX (__ISCN_ATTR_MAX -1)
+
 struct rina_msg_hdr {
         unsigned short src_ipc_id;
         unsigned short dst_ipc_id;
@@ -513,6 +519,9 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t            ipc_id,
 		uint_t 			   seq_num,
 		uint_t                      nl_port_id);
 
+int rnl_format_socket_closed_notification_msg(int           nl_port,
+		struct sk_buff * skb_out);
+
 int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
 		uint_t           res,
 		uint_t	   seq_num,
@@ -533,6 +542,8 @@ int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
 		uint_t           res,
 		uint_t	   code,
 		uint_t port_id);
+
+int rnl_ipcm_sock_closed_notif_msg(int closed_port, int dest_port);
 
 char * nla_get_string(struct nlattr *nla);
 

@@ -313,6 +313,18 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 	}
 }
 
+/**
+ * An OS Process has finalized. Retrieve the information associated to
+ * the NL port-id (application name, IPC Process id if it is IPC process),
+ * and return it in the form of an OSProcessFinalized event
+ * @param nl_portid
+ * @return
+ */
+IPCEvent * NetlinkPortIdMap::osProcessFinalized(int nl_portid){
+	//FIXME implement this
+	return 0;
+}
+
 /* CLASS PENDING NETLINK MESSAGE */
 PendingNetlinkMessage::PendingNetlinkMessage(unsigned int sequenceNumber) :
 				ConditionVariable() {
@@ -431,7 +443,20 @@ void * doNetlinkMessageReaderWork(void * arg) {
 				incomingMessage->toString().c_str());
 
 		//Process the message
-		if (incomingMessage->isResponseMessage()){
+		if (incomingMessage->getOperationCode() ==
+				RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION){
+			IpcmNLSocketClosedNotificationMessage * message =
+					dynamic_cast<IpcmNLSocketClosedNotificationMessage *>
+			(incomingMessage);
+			LOG_DBG("NL socket at port %d is closed", message->getPortId());
+
+			IPCEvent * event = myRINAManager->osProcessFinalized(message->getPortId());
+			if (event){
+				eventsQueue->put(event);
+			}
+
+			delete message;
+		}else if (incomingMessage->isResponseMessage()){
 			myRINAManager->netlinkResponseMessageArrived(incomingMessage);
 		}else{
 			NetlinkRequestOrNotificationMessage * message =
@@ -699,6 +724,10 @@ void RINAManager::netlinkNotificationMessageArrived(
 	}
 
 	sendReceiveLock.unlock();
+}
+
+IPCEvent * RINAManager::osProcessFinalized(int nl_portid){
+	return netlinkPortIdMap.osProcessFinalized(nl_portid);
 }
 
 BlockingFIFOQueue<IPCEvent>* RINAManager::getEventQueue(){

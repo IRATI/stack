@@ -426,6 +426,10 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	case RINA_C_IPCM_QUERY_RIB_RESPONSE: {
 		return parseIpcmDIFQueryRIBResponseMessage(netlinkMessageHeader);
 	}
+	case RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION: {
+		return parseIpcmNLSocketClosedNotificationMessage(
+				netlinkMessageHeader);
+	}
 	default: {
 		LOG_ERR(
 				"Generic Netlink message contains unrecognized command code: %d",
@@ -3624,6 +3628,34 @@ IpcmDIFQueryRIBResponseMessage *
 			delete result;
 			return 0;
 		}
+	}
+
+	return result;
+}
+
+IpcmNLSocketClosedNotificationMessage *
+	parseIpcmNLSocketClosedNotificationMessage(nlmsghdr *hdr)
+{
+	struct nla_policy attr_policy[INSCN_ATTR_MAX + 1];
+	attr_policy[INSCN_ATTR_PORT].type = NLA_U32;
+	attr_policy[INSCN_ATTR_PORT].minlen = 4;
+	attr_policy[INSCN_ATTR_PORT].maxlen = 4;
+	struct nlattr *attrs[INSCN_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			INSCN_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing IpcmNLSocketClosedNotificationMessage information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	IpcmNLSocketClosedNotificationMessage * result =
+					new IpcmNLSocketClosedNotificationMessage ();
+
+	if (attrs[INSCN_ATTR_PORT]){
+		result->setPortId(nla_get_u32(attrs[INSCN_ATTR_PORT]));
 	}
 
 	return result;

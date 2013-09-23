@@ -46,10 +46,6 @@ struct personality_ops {
                            const struct name *       name,
                            ipc_process_id_t          id,
                            const char *              type);
-
-        int (* ipc_configure)(struct personality_data *  data,
-                              ipc_process_id_t           id,
-                              const struct ipcp_config * configuration);
         int (* ipc_destroy)(struct personality_data * data,
                             ipc_process_id_t          id);
 

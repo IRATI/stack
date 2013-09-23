@@ -626,6 +626,18 @@ int putIpcmDIFQueryRIBResponseMessageObject(nl_msg* netlinkMessage,
 IpcmDIFQueryRIBResponseMessage *
 	parseIpcmDIFQueryRIBResponseMessage(nlmsghdr *hdr);
 
+/* IpcmDIFQueryRIBResponseMessage CLASS*/
+enum IpcmNLSocketClosedNotificationMessageAttributes {
+	INSCN_ATTR_PORT = 1,
+	__INSCN_ATTR_MAX,
+};
+
+#define INSCN_ATTR_MAX (__INSCN_ATTR_MAX -1)
+
+IpcmNLSocketClosedNotificationMessage *
+	parseIpcmNLSocketClosedNotificationMessage(nlmsghdr *hdr);
+
 }
+
 
 #endif /* LIBRINA_NETLINK_PARSERS_H_ */

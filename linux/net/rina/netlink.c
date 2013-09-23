@@ -455,49 +455,93 @@ int rnl_set_destroy(struct rnl_set * set)
 }
 EXPORT_SYMBOL(rnl_set_destroy);
 
+/*
+ * Invoked when an event related to a NL socket occurs. We're only
+ * interested in socket closed events.
+ */
+static int kipcm_netlink_notify(struct notifier_block *nb,
+		unsigned long state,
+		void *_notify)
+{
+	int result;
+	struct netlink_notify *notify = _notify;
+
+	if (state != NETLINK_URELEASE)
+		return NOTIFY_DONE;
+
+	LOG_INFO("Netlink socket at port-id %d closed", notify->portid);
+	result = rnl_ipcm_sock_closed_notif_msg(notify->portid, 1);
+	if (result)
+		LOG_ERR("Error notifying IPC Manager in user space, %d",
+				result);
+
+	LOG_INFO("Sent NL message informing IPC Manager at user space");
+
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block kipcm_netlink_notifier = {
+		.notifier_call = kipcm_netlink_notify,
+};
+
 int rnl_init(void)
 {
-        int ret;
+	int ret;
 
-        LOG_DBG("Initializing Netlink layer");
+	LOG_DBG("Initializing Netlink layer");
 
-        ret = genl_register_family_with_ops(&nl_family,
+	ret = genl_register_family_with_ops(&nl_family,
                                             nl_ops,
                                             ARRAY_SIZE(nl_ops));
-
-        if (ret != 0) {
-                LOG_ERR("Cannot register Netlink family and ops (error=%i), "
+	if (ret != 0) {
+		LOG_ERR("Cannot register Netlink family and ops (error=%i), "
                         "bailing out", ret);
-                return -1;
-        }
-        LOG_DBG("Registering Family returned: %d", ret);
-        LOG_DBG("Family registered with id: %d",   nl_family.id);
+		return -1;
+	}
 
-        LOG_DBG("NetLink layer initialized successfully");
+	LOG_DBG("Registering Family returned: %d", ret);
+	LOG_DBG("Family registered with id:   %d", nl_family.id);
 
-        return 0;
+	/*
+         * Register a NETLINK notifier so that the kernel is
+         * informed when a Netlink socket in user-space is closed
+         */
+	ret = netlink_register_notifier(&kipcm_netlink_notifier);
+	if (ret){
+		LOG_ERR("Cannot register Netlink notifier (error=%i), "
+				"bailing out", ret);
+		genl_unregister_family(&nl_family);
+		return -1;
+	}
+
+	LOG_DBG("NetLink layer initialized successfully");
+
+	return 0;
 }
 
 void rnl_exit(void)
 {
-        int ret;
+	int ret;
 
-        LOG_DBG("Finalizing Netlink layer");
+	LOG_DBG("Finalizing Netlink layer");
 
-        ret = genl_unregister_family(&nl_family);
-        if (ret) {
-                LOG_ERR("Could not unregister Netlink family (error=%i), "
+	/* unregister the notifier */
+	netlink_unregister_notifier(&kipcm_netlink_notifier);
+
+	ret = genl_unregister_family(&nl_family);
+	if (ret) {
+		LOG_ERR("Could not unregister Netlink family (error=%i), "
                         "bailing out. Your system might become unstable", ret);
-                return;
-        }
+		return;
+	}
 
-        /*
-         * FIXME:
-         *   Add checks here to prevent misses of finalizations and or
-         *   destructions
-         */
+	/*
+	 * FIXME:
+	 *   Add checks here to prevent misses of finalizations and or
+	 *   destructions
+	 */
 
-        ASSERT(!default_set);
+	ASSERT(!default_set);
 
-        LOG_DBG("NetLink layer finalized successfully");
+	LOG_DBG("NetLink layer finalized successfully");
 }
