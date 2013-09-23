@@ -389,6 +389,8 @@ int rnl_set_register(struct rnl_set * set)
 
         default_set = set;
 
+        LOG_DBG("Set %pK registered", set);
+
         return 0;
 }
 EXPORT_SYMBOL(rnl_set_register);
@@ -406,6 +408,8 @@ int rnl_set_unregister(struct rnl_set * set)
         }
 
         default_set = NULL;
+
+        LOG_DBG("Set %pK unregistered", set);
 
         return 0;
 }
