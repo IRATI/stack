@@ -58,8 +58,8 @@ EXPORT_SYMBOL(fidm_init);
 int fidm_fini(void)
 {
         if (!instance) {
-                LOG_ERR("Instance already finalized");
-                return -1;
+                LOG_WRN("Instance already finalized");
+                return 0;
         }
 
         rkfree(instance);
@@ -78,7 +78,7 @@ flow_id_t fidm_allocate(void)
         flow_id_t id;
 
         if (!instance) {
-                LOG_ERR("Instance not initialized");
+                LOG_ERR("Instance not yet initialized");
                 return -1;
         }
         
@@ -91,8 +91,6 @@ flow_id_t fidm_allocate(void)
                 id = -1;
 
         spin_unlock(&instance->lock);
-        
-        ASSERT(is_flow_id_ok(id));
         
         return id;
 }
@@ -111,6 +109,6 @@ int fidm_release(flow_id_t id)
 
         spin_unlock(&instance->lock);
 
-        return -1;
+        return 0;
 }
 EXPORT_SYMBOL(fidm_release);
