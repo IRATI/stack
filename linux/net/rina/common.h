@@ -25,26 +25,25 @@
 
 #include <linux/types.h>
 
-typedef int             port_id_t;
+typedef int           port_id_t;
 
 /* ALWAYS use this function to check if the id looks good */
-static inline int is_port_id_ok(port_id_t id)
-{ return id >= 0 ? 1 : 0; }
+int is_port_id_ok(port_id_t id);
 
-typedef int32_t         ipc_process_id_t;
-typedef unsigned int    ipc_process_address_t;
-typedef unsigned char   utf8_t;
-typedef char            string_t;
-typedef uint            uint_t;
-typedef uint            response_reason_t;
-typedef uint            cep_id_t;
-typedef uint16_t        address_t;
-typedef uint            seq_num_t;
-typedef char		regex_t;
+typedef int32_t       ipc_process_id_t;
+typedef unsigned int  ipc_process_address_t;
+typedef unsigned char utf8_t;
+typedef char          string_t;
+typedef uint          uint_t;
+typedef uint          response_reason_t;
+typedef uint          cep_id_t;
+typedef uint16_t      address_t;
+typedef uint          seq_num_t;
+typedef char	      regex_t;
 
 /* FIXME: The qos_id_t should be defined correctly in the near future */
-typedef uint            qos_id_t;
-typedef uint            timeout_t;
+typedef uint          qos_id_t;
+typedef uint          timeout_t;
 
 /*
  * The value should be interpreted as false if the value is 0 or true
