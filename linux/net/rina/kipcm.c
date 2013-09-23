@@ -47,7 +47,7 @@ struct kipcm {
         struct mutex            lock;
         struct ipcp_factories * factories;
         struct ipcp_imap *      instances;
-        struct ipcp_fmap *      flows;
+        struct ipcp_pmap *      flows;
         struct rnl_set *        set;
 };
 
@@ -107,28 +107,20 @@ struct ipcp_flow {
          */
         bool_t                 application_owned;
 
-        /*
-         * In case this flow is being used by an RMT, this is a pointer
-         * to the RMT instance.
-         */
         struct rmt_instance *  rmt_instance;
 
-        //FIXME: Define QUEUE
-        //QUEUE(segmentation_queue, pdu *);
-        //QUEUE(reassembly_queue,       pdu *);
-        //QUEUE(sdu_ready, sdu *);
         struct kfifo           sdu_ready;
 
-        wait_queue_head_t wait_queue;
+        wait_queue_head_t      wait_queue;
 };
 
 static void
-alloc_flow_req_free(struct name *      source_name,
-                    struct name *      dest_name,
-                    struct flow_spec * fspec,
-                    struct name *      dif_name,
+alloc_flow_req_free(struct name *                              source_name,
+                    struct name *                              dest_name,
+                    struct flow_spec *                         fspec,
+                    struct name *                              dif_name,
                     struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
-                    struct rnl_msg *   msg)
+                    struct rnl_msg *                           msg)
 {
         if (attrs)       rkfree(attrs);
         if (source_name) rkfree(source_name);
@@ -409,7 +401,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 rkfree(msg);
                 return -1;
         }
-        ipc_id = msg->rina_hdr->dst_ipc_id;
+        ipc_id      = msg->rina_hdr->dst_ipc_id;
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
                 LOG_ERR("IPC process %d not found", ipc_id);
@@ -1194,7 +1186,7 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 return NULL;
         }
 
-        tmp->flows = ipcp_fmap_create();
+        tmp->flows = ipcp_pmap_create();
         if (!tmp->flows) {
                 if (ipcp_imap_destroy(tmp->instances)) {
                         /* FIXME: What could we do here ? */
@@ -1211,7 +1203,7 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 if (ipcp_imap_destroy(tmp->instances)) {
                         /* FIXME: What could we do here ? */
                 }
-                if (ipcp_fmap_destroy(tmp->flows)) {
+                if (ipcp_pmap_destroy(tmp->flows)) {
                         /* FIXME: What could we do here ? */
                 }
                 if (ipcpf_fini(tmp->factories)) {
@@ -1227,7 +1219,7 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 if (ipcp_imap_destroy(tmp->instances)) {
                         /* FIXME: What could we do here ? */
                 }
-                if (ipcp_fmap_destroy(tmp->flows)) {
+                if (ipcp_pmap_destroy(tmp->flows)) {
                         /* FIXME: What could we do here ? */
                 }
                 if (ipcpf_fini(tmp->factories)) {
@@ -1256,8 +1248,8 @@ int kipcm_destroy(struct kipcm * kipcm)
         KIPCM_LOCK(kipcm);
 
         /* FIXME: Destroy all the flows */
-        ASSERT(ipcp_fmap_empty(kipcm->flows));
-        if (ipcp_fmap_destroy(kipcm->flows)) {
+        ASSERT(ipcp_pmap_empty(kipcm->flows));
+        if (ipcp_pmap_destroy(kipcm->flows)) {
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
@@ -1424,7 +1416,7 @@ int kipcm_ipcp_destroy(struct kipcm *   kipcm,
         factory = instance->factory;
         ASSERT(factory);
 
-        if (ipcp_fmap_remove_all_for_id(kipcm->flows, id)) {
+        if (ipcp_pmap_remove_all_for_id(kipcm->flows, id)) {
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
@@ -1467,7 +1459,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
 
         KIPCM_LOCK(kipcm);
 
-        if (ipcp_fmap_find(kipcm->flows, port_id)) {
+        if (ipcp_pmap_find(kipcm->flows, port_id)) {
                 LOG_ERR("Flow on port-id %d already exists", port_id);
                 KIPCM_UNLOCK(kipcm);
                 return -1;
@@ -1504,7 +1496,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 return -1;
         }
 
-        if (ipcp_fmap_add(kipcm->flows, port_id, flow, ipc_id)) {
+        if (ipcp_pmap_add(kipcm->flows, port_id, flow, ipc_id)) {
                 kfifo_free(&flow->sdu_ready);
                 rkfree(flow);
                 KIPCM_UNLOCK(kipcm);
@@ -1529,14 +1521,14 @@ int kipcm_flow_remove(struct kipcm * kipcm,
 
         KIPCM_LOCK(kipcm);
 
-        flow = ipcp_fmap_find(kipcm->flows, port_id);
+        flow = ipcp_pmap_find(kipcm->flows, port_id);
         if (!flow) {
                 LOG_ERR("Couldn't retrieve the flow for port-id %d", port_id);
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
 
-        if (ipcp_fmap_remove(kipcm->flows, port_id)) {
+        if (ipcp_pmap_remove(kipcm->flows, port_id)) {
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
@@ -1575,7 +1567,7 @@ int kipcm_sdu_write(struct kipcm * kipcm,
 
         KIPCM_LOCK(kipcm);
 
-        flow = ipcp_fmap_find(kipcm->flows, port_id);
+        flow = ipcp_pmap_find(kipcm->flows, port_id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", port_id);
                 KIPCM_UNLOCK(kipcm);
@@ -1617,7 +1609,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 
         KIPCM_LOCK(kipcm);
 
-        flow = ipcp_fmap_find(kipcm->flows, port_id);
+        flow = ipcp_pmap_find(kipcm->flows, port_id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", port_id);
                 KIPCM_UNLOCK(kipcm);
@@ -1632,7 +1624,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 
                 KIPCM_LOCK(kipcm);
                 LOG_DBG("Woken up");
-                flow = ipcp_fmap_find(kipcm->flows, port_id);
+                flow = ipcp_pmap_find(kipcm->flows, port_id);
                 if (!flow) {
                         LOG_ERR("There is no flow bound to port-id %d",
                                 port_id);
@@ -1706,7 +1698,7 @@ int kipcm_sdu_post(struct kipcm * kipcm,
          *
          *      KIPCM_LOCK(kipcm);
          */
-        flow = ipcp_fmap_find(kipcm->flows, port_id);
+        flow = ipcp_pmap_find(kipcm->flows, port_id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", port_id);
                 /*

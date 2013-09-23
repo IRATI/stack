@@ -164,22 +164,22 @@ int ipcp_imap_remove(struct ipcp_imap * map,
         return 0;
 }
 
-#define FMAP_HASH_BITS 7
+#define PMAP_HASH_BITS 7
 
-struct ipcp_fmap {
-        DECLARE_HASHTABLE(table, FMAP_HASH_BITS);
+struct ipcp_pmap {
+        DECLARE_HASHTABLE(table, PMAP_HASH_BITS);
 };
 
-struct ipcp_fmap_entry {
+struct ipcp_pmap_entry {
         port_id_t          key;
         struct ipcp_flow * value;
         struct hlist_node  hlist;
         ipc_process_id_t   id;
 };
 
-struct ipcp_fmap * ipcp_fmap_create(void)
+struct ipcp_pmap * ipcp_pmap_create(void)
 {
-        struct ipcp_fmap * tmp;
+        struct ipcp_pmap * tmp;
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
@@ -188,9 +188,9 @@ struct ipcp_fmap * ipcp_fmap_create(void)
         return tmp;
 }
 
-int ipcp_fmap_destroy(struct ipcp_fmap * map)
+int ipcp_pmap_destroy(struct ipcp_pmap * map)
 {
-        struct ipcp_fmap_entry * entry;
+        struct ipcp_pmap_entry * entry;
         struct hlist_node *      tmp;
         int                      bucket;
 
@@ -206,23 +206,23 @@ int ipcp_fmap_destroy(struct ipcp_fmap * map)
         return 0;
 }
 
-int ipcp_fmap_empty(struct ipcp_fmap * map)
+int ipcp_pmap_empty(struct ipcp_pmap * map)
 {
         ASSERT(map);
         return hash_empty(map->table);
 }
 
-#define fmap_hash(T, K) hash_min(K, HASH_BITS(T))
+#define pmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
-static struct ipcp_fmap_entry * fmap_entry_find(struct ipcp_fmap * map,
+static struct ipcp_pmap_entry * pmap_entry_find(struct ipcp_pmap * map,
                                                 port_id_t          key)
 {
-        struct ipcp_fmap_entry * entry;
+        struct ipcp_pmap_entry * entry;
         struct hlist_head *      head;
 
         ASSERT(map);
 
-        head = &map->table[fmap_hash(map->table, key)];
+        head = &map->table[pmap_hash(map->table, key)];
         hlist_for_each_entry(entry, head, hlist) {
                 if (entry->key == key)
                         return entry;
@@ -231,29 +231,29 @@ static struct ipcp_fmap_entry * fmap_entry_find(struct ipcp_fmap * map,
         return NULL;
 }
 
-struct ipcp_flow * ipcp_fmap_find(struct ipcp_fmap * map,
+struct ipcp_flow * ipcp_pmap_find(struct ipcp_pmap * map,
                                   port_id_t          key)
 {
-        struct ipcp_fmap_entry * entry;
+        struct ipcp_pmap_entry * entry;
 
         ASSERT(map);
 
-        entry = fmap_entry_find(map, key);
+        entry = pmap_entry_find(map, key);
         if (!entry)
                 return NULL;
 
         return entry->value;
 }
 
-int ipcp_fmap_update(struct ipcp_fmap *    map,
+int ipcp_pmap_update(struct ipcp_pmap *    map,
                      port_id_t             key,
                      struct ipcp_flow *    value)
 {
-        struct ipcp_fmap_entry * cur;
+        struct ipcp_pmap_entry * cur;
 
         ASSERT(map);
         
-        cur = fmap_entry_find(map, key);
+        cur = pmap_entry_find(map, key);
         if (!cur)
                 return -1;
 
@@ -262,12 +262,12 @@ int ipcp_fmap_update(struct ipcp_fmap *    map,
         return 0;
 }
 
-int ipcp_fmap_add(struct ipcp_fmap * map,
+int ipcp_pmap_add(struct ipcp_pmap * map,
                   port_id_t          key,
                   struct ipcp_flow * value,
                   ipc_process_id_t   id)
 {
-        struct ipcp_fmap_entry * tmp;
+        struct ipcp_pmap_entry * tmp;
 
         ASSERT(map);
 
@@ -285,14 +285,14 @@ int ipcp_fmap_add(struct ipcp_fmap * map,
         return 0;
 }
 
-int ipcp_fmap_remove(struct ipcp_fmap * map,
+int ipcp_pmap_remove(struct ipcp_pmap * map,
                      port_id_t          key)
 {
-        struct ipcp_fmap_entry * cur;
+        struct ipcp_pmap_entry * cur;
 
         ASSERT(map);
 
-        cur = fmap_entry_find(map, key);
+        cur = pmap_entry_find(map, key);
         if (!cur)
                 return -1;
 
@@ -302,10 +302,10 @@ int ipcp_fmap_remove(struct ipcp_fmap * map,
         return 0;
 }
 
-int ipcp_fmap_remove_all_for_id(struct ipcp_fmap * map,
+int ipcp_pmap_remove_all_for_id(struct ipcp_pmap * map,
 				ipc_process_id_t   id)
 {
-	struct ipcp_fmap_entry * entry;
+	struct ipcp_pmap_entry * entry;
 	struct hlist_node *      tmp;
 	int                      bucket;
 
