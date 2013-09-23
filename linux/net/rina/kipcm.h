@@ -34,7 +34,7 @@ struct kipcm;
  * The following functions represent the KIPCM northbound interface
  */
 
-struct kipcm * kipcm_create(struct kobject * parent, struct rina_nl_set * set);
+struct kipcm * kipcm_create(struct kobject * parent, struct rnl_set * set);
 int            kipcm_destroy(struct kipcm * kipcm);
 
 /*

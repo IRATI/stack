@@ -33,111 +33,111 @@
 
 typedef enum {
 
-	/* Unespecified operation */
-	RINA_C_MIN = 0, 
+        /* Unespecified operation */
+        RINA_C_MIN = 0,
 
-	/* IPC Manager -> IPC Process */
-	RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST, 
+        /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST,
 
-	/* IPC Process -> IPC Manager */
-	RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE, 
-
-	/* IPC Manager -> IPC Process */
-	RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
-
-	/* IPC Manager -> IPC Process */
-	RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION, 
-
-	/* IPC Manager -> IPC Process */
-	RINA_C_IPCM_ENROLL_TO_DIF_REQUEST, 
-
-	/* IPC Process -> IPC Manager */
-	RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE, 
-
-	/* IPC Manager -> IPC Process */
-	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST, 
-
-	/* IPC Process -> IPC Manager */
-	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE,
-
-	/* IPC Manager -> IPC Process */
-	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST, 
-
-	/* Allocate flow request from a remote application */
         /* IPC Process -> IPC Manager */
-	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED, 
+        RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE,
 
-	/* IPC Process -> IPC Manager */
-	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT, 
+        /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
 
-	/* IPC Manager -> IPC Process */
-	RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE, 
+        /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION,
 
-	/* IPC Manager -> IPC Process */
-	RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST, 
+        /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_ENROLL_TO_DIF_REQUEST,
 
-	/* IPC Process -> IPC Manager*/
-	RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE, 
+        /* IPC Process -> IPC Manager */
+        RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE,
 
-	/*  IPC Process -> IPC Manager, flow deallocated without the */
-	/*  application having requested it */
-	RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION, 
+        /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST,
 
-	/*IPC Manager -> IPC Process */
-	RINA_C_IPCM_REGISTER_APPLICATION_REQUEST, 
+        /* IPC Process -> IPC Manager */
+        RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE,
 
-	/*IPC Process -> IPC Manager */
-	RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE, 
+        /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
 
-	/* IPC Manager -> IPC Process */
-	RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST, 
+        /* Allocate flow request from a remote application */
+        /* IPC Process -> IPC Manager */
+        RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED,
 
-	/* IPC Process -> IPC Manager */
-	RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE, 
+        /* IPC Process -> IPC Manager */
+        RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
 
-	/* IPC Manager -> IPC Process */
-	RINA_C_IPCM_QUERY_RIB_REQUEST, 
+        /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
 
-	/* IPC Process -> IPC Manager */
-	RINA_C_IPCM_QUERY_RIB_RESPONSE, 
+        /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST,
 
-	/* IPC Process (user space) -> RMT (kernel) */
-	RINA_C_RMT_ADD_FTE_REQUEST, 
+        /* IPC Process -> IPC Manager*/
+        RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE,
 
-	/* IPC Process (user space) -> RMT (kernel) */
-	RINA_C_RMT_DELETE_FTE_REQUEST, 
+        /*  IPC Process -> IPC Manager, flow deallocated without the */
+        /*  application having requested it */
+        RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION,
 
-	/* IPC Process (user space) -> RMT (kernel) */
-	RINA_C_RMT_DUMP_FT_REQUEST, 
+        /*IPC Manager -> IPC Process */
+        RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,
 
-	/* RMT (kernel) -> IPC Process (user space) */
-	RINA_C_RMT_DUMP_FT_REPLY,
+        /*IPC Process -> IPC Manager */
+        RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE,
 
-	RINA_C_MAX,
+        /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST,
+
+        /* IPC Process -> IPC Manager */
+        RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE,
+
+        /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_QUERY_RIB_REQUEST,
+
+        /* IPC Process -> IPC Manager */
+        RINA_C_IPCM_QUERY_RIB_RESPONSE,
+
+        /* IPC Process (user space) -> RMT (kernel) */
+        RINA_C_RMT_ADD_FTE_REQUEST,
+
+        /* IPC Process (user space) -> RMT (kernel) */
+        RINA_C_RMT_DELETE_FTE_REQUEST,
+
+        /* IPC Process (user space) -> RMT (kernel) */
+        RINA_C_RMT_DUMP_FT_REQUEST,
+
+        /* RMT (kernel) -> IPC Process (user space) */
+        RINA_C_RMT_DUMP_FT_REPLY,
+
+        RINA_C_MAX,
 
 } msg_id;
 
 int  rnl_init(void);
 void rnl_exit(void);
 
-struct rina_nl_set;
+struct rnl_set;
 
 struct genl_family  * get_nl_family(void);
 
-struct rina_nl_set * rnl_set_create(personality_id id);
-int                  rnl_set_destroy(struct rina_nl_set * set);
+struct rnl_set * rnl_set_create(personality_id id);
+int              rnl_set_destroy(struct rnl_set * set);
 
 typedef int (* message_handler_cb)(void *             data,
                                    struct sk_buff *   buff,
-                                   struct genl_info * info); 
-int  rnl_handler_register(struct rina_nl_set * set,
-                                   msg_id               msg_type,
-                                   void *               data,
-                                   message_handler_cb   handler);
-int  rnl_handler_unregister(struct rina_nl_set * set,
-                                     msg_id               msg_type);
+                                   struct genl_info * info);
+int  rnl_handler_register(struct rnl_set *   set,
+                          msg_id             msg_type,
+                          void *             data,
+                          message_handler_cb handler);
+int  rnl_handler_unregister(struct rnl_set * set,
+                            msg_id           msg_type);
 
-int  rnl_set_register(struct rina_nl_set * set);
-int  rnl_set_unregister(struct rina_nl_set * set);
+int  rnl_set_register(struct rnl_set * set);
+int  rnl_set_unregister(struct rnl_set * set);
 
 #endif

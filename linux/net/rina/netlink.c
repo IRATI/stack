@@ -37,11 +37,11 @@ struct message_handler {
         message_handler_cb cb;
 };
 
-struct rina_nl_set {
+struct rnl_set {
         struct message_handler handlers[NETLINK_RINA_C_MAX];
 };
 
-static struct rina_nl_set * default_set;
+static struct rnl_set * default_set;
 
 static struct genl_family nl_family = {
         .id      = GENL_ID_GENERATE,
@@ -68,11 +68,11 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 
         /* FIXME: What do we do if the handler returns != 0 ??? */
 
-        message_handler_cb   cb_function;
-        void *               data;
-        msg_id               msg_type;
-        int                  ret_val;
-        struct rina_nl_set * tmp;
+        message_handler_cb cb_function;
+        void *             data;
+        msg_id             msg_type;
+        int                ret_val;
+        struct rnl_set *   tmp;
 
         LOG_DBG("Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
         if (!info) {
@@ -104,7 +104,7 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         }
 
         cb_function = tmp->handlers[msg_type].cb;
-	LOG_DBG("[LDBG] Catching callback cb_function =%pK)", cb_function);
+        LOG_DBG("[LDBG] Catching callback cb_function =%pK)", cb_function);
         if (!cb_function) {
                 LOG_ERR("There's no handler callback registered for "
                         "message type %d", msg_type);
@@ -303,10 +303,10 @@ static struct genl_ops nl_ops[] = {
         },
 };
 
-int rnl_handler_register(struct rina_nl_set * set,
-                                  msg_id               msg_type,
-                                  void *               data,
-                                  message_handler_cb   handler)
+int rnl_handler_register(struct rnl_set *   set,
+                         msg_id             msg_type,
+                         void *             data,
+                         message_handler_cb handler)
 {
         if (!set) {
                 LOG_ERR("Bogus set passed, cannot register handler");
@@ -348,8 +348,8 @@ int rnl_handler_register(struct rina_nl_set * set,
 }
 EXPORT_SYMBOL(rnl_handler_register);
 
-int rnl_handler_unregister(struct rina_nl_set * set,
-                                    msg_id               msg_type)
+int rnl_handler_unregister(struct rnl_set * set,
+                           msg_id           msg_type)
 {
         if (!set) {
                 LOG_ERR("Bogus set passed, cannot register handler");
@@ -375,7 +375,7 @@ int rnl_handler_unregister(struct rina_nl_set * set,
 }
 EXPORT_SYMBOL(rnl_handler_unregister);
 
-int rnl_set_register(struct rina_nl_set * set)
+int rnl_set_register(struct rnl_set * set)
 {
         if (!set) {
                 LOG_ERR("Bogus set passed, cannot register it");
@@ -393,7 +393,7 @@ int rnl_set_register(struct rina_nl_set * set)
 }
 EXPORT_SYMBOL(rnl_set_register);
 
-int rnl_set_unregister(struct rina_nl_set * set)
+int rnl_set_unregister(struct rnl_set * set)
 {
         if (!set) {
                 LOG_ERR("Bogus set passed, cannot unregister it");
@@ -411,11 +411,11 @@ int rnl_set_unregister(struct rina_nl_set * set)
 }
 EXPORT_SYMBOL(rnl_set_unregister);
 
-struct rina_nl_set * rnl_set_create(personality_id id)
+struct rnl_set * rnl_set_create(personality_id id)
 {
-        struct rina_nl_set * tmp;
+        struct rnl_set * tmp;
 
-        tmp = rkzalloc(sizeof(struct rina_nl_set), GFP_KERNEL);
+        tmp = rkzalloc(sizeof(struct rnl_set), GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
@@ -425,7 +425,7 @@ struct rina_nl_set * rnl_set_create(personality_id id)
 }
 EXPORT_SYMBOL(rnl_set_create);
 
-int rnl_set_destroy(struct rina_nl_set * set)
+int rnl_set_destroy(struct rnl_set * set)
 {
         int    i;
         size_t count;
@@ -470,8 +470,8 @@ int rnl_init(void)
                         "bailing out", ret);
                 return -1;
         }
-	LOG_DBG("Registering Family returned: %d", ret);
-	LOG_DBG("Family registered with id: %d",   nl_family.id);
+        LOG_DBG("Registering Family returned: %d", ret);
+        LOG_DBG("Family registered with id: %d",   nl_family.id);
 
         LOG_DBG("NetLink layer initialized successfully");
 

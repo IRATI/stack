@@ -55,7 +55,7 @@ struct kipcm {
         struct ipcp_factories * factories;
         struct ipcp_imap *      instances;
         struct ipcp_fmap *      flows;
-        struct rina_nl_set *    set;
+        struct rnl_set *        set;
 };
 
 #ifdef RINA_KIPCM_LOCKS_DEBUG
@@ -1095,7 +1095,7 @@ static int notify_ipcp_unregister_app_request(void *             data,
                                              false);
 }
 
-static int netlink_handlers_unregister(struct rina_nl_set * set)
+static int netlink_handlers_unregister(struct rnl_set * set)
 {
         int retval = 0;
 
@@ -1258,7 +1258,7 @@ static int netlink_handlers_register(struct kipcm * kipcm)
         return 0;
 }
 
-struct kipcm * kipcm_create(struct kobject * parent, struct rina_nl_set * set)
+struct kipcm * kipcm_create(struct kobject * parent, struct rnl_set * set)
 {
         struct kipcm * tmp;
 
@@ -1310,6 +1310,7 @@ struct kipcm * kipcm_create(struct kobject * parent, struct rina_nl_set * set)
                 return NULL;
         }
         tmp->set = set;
+
         LOG_DBG("Registering handlers");
         if (netlink_handlers_register(tmp)) {
                 if (ipcp_imap_destroy(tmp->instances)) {

@@ -34,12 +34,12 @@
 #define DEFAULT_LABEL "default"
 
 struct personality_data {
-        struct kipcm *       kipcm;
-        struct rina_nl_set * nlset;
+        struct kipcm *   kipcm;
+        struct rnl_set * nlset;
 
         /* FIXME: Types to be rearranged */
-        void *               efcp;
-        void *               rmt;
+        void *           efcp;
+        void *           rmt;
 };
 
 static int is_personality_ok(const struct personality_data * p)
