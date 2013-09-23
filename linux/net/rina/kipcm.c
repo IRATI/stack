@@ -1716,33 +1716,19 @@ int kipcm_sdu_post(struct kipcm * kipcm,
                 LOG_ERR("Bogus parameters passed, bailing out");
                 return -1;
         }
-        /*
-         * FIXME: This lock has been removed only for the shim-dummy demo. Please
-         * reinstate it as soon as possible.
-         *
-         *      KIPCM_LOCK(kipcm);
-         */
+
+        /* FIXME: re-add KIPCM_LOCK(kipcm); */
         flow = ipcp_pmap_find(kipcm->flows.committed, port_id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", port_id);
-                /*
-                 * FIXME: This lock has been removed only for the shim-dummy demo. Please
-                 * reinstate it as soon as possible.
-                 *
-                 KIPCM_UNLOCK(kipcm);
-                */
+                /* FIXME: re-add KIPCM_UNLOCK(kipcm); */
                 return -1;
         }
 
         avail = kfifo_avail(&flow->sdu_ready);
         if (avail < (sdu->buffer->size + sizeof(size_t))) {
                 LOG_ERR("There is no space in the port-id %d fifo", port_id);
-                /*
-                 * FIXME: This lock has been removed only for the shim-dummy demo. Please
-                 * reinstate it as soon as possible.
-                 *
-                 KIPCM_UNLOCK(kipcm);
-                */
+                /* FIXME: re-add KIPCM_UNLOCK(kipcm); */
                 return -1;
         }
 
@@ -1751,12 +1737,7 @@ int kipcm_sdu_post(struct kipcm * kipcm,
                      sizeof(size_t)) != sizeof(size_t)) {
                 LOG_ERR("Could not write %zd bytes from port-id %d fifo",
                         sizeof(size_t), port_id);
-                /*
-                 * FIXME: This lock has been removed only for the shim-dummy demo. Please
-                 * reinstate it as soon as possible.
-                 *
-                 KIPCM_UNLOCK(kipcm);
-                */
+                /* FIXME: re-add KIPCM_UNLOCK(kipcm); */
                 return -1;
         }
         if (kfifo_in(&flow->sdu_ready,
@@ -1764,12 +1745,7 @@ int kipcm_sdu_post(struct kipcm * kipcm,
                      sdu->buffer->size) != sdu->buffer->size) {
                 LOG_ERR("Could not write %zd bytes from port-id %d fifo",
                         sdu->buffer->size, port_id);
-                /*
-                 * FIXME: This lock has been removed only for the shim-dummy demo. Please
-                 * reinstate it as soon as possible.
-                 *
-                 KIPCM_UNLOCK(kipcm);
-                */
+                /* FIXME: re-add KIPCM_UNLOCK(kipcm); */
                 return -1;
         }
 
@@ -1779,12 +1755,7 @@ int kipcm_sdu_post(struct kipcm * kipcm,
 
         LOG_DBG("Sleeping read syscall should be working now");
 
-        /*
-         * FIXME: This lock has been removed only for the shim-dummy demo.
-         *        Please reinstate it as soon as possible.
-         *
-         * KIPCM_UNLOCK(kipcm);
-         */
+        /* FIXME: re-add KIPCM_UNLOCK(kipcm); */
 
         /* The SDU is ours now */
         return 0;
