@@ -2254,7 +2254,7 @@ int rnl_ipcm_sock_closed_notif_msg(int closed_port, int dest_port)
 	struct rina_msg_hdr * out_hdr;
 	int result;
 
-	out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
+	out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
 	if(!out_msg) {
 		LOG_ERR("Could not allocate memory for message");
 		return -1;

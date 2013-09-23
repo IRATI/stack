@@ -474,8 +474,8 @@ static int kipcm_netlink_notify(struct notifier_block *nb,
 	if (result)
 		LOG_ERR("Error notifying IPC Manager in user space, %d",
 				result);
-
-	LOG_INFO("Sent NL message informing IPC Manager at user space");
+	else
+		LOG_INFO("Sent NL message informing IPC Manager at user space");
 
 	return NOTIFY_DONE;
 }
