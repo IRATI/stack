@@ -26,7 +26,7 @@
 #include "fidm.h"
 
 struct fmgr {
-        int keep_me;
+        struct fidm * fidm;
 };
 
 struct fmgr * fmgr_create(void)
@@ -36,6 +36,12 @@ struct fmgr * fmgr_create(void)
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
+
+        tmp->fidm = fidm_create();
+        if (!tmp->fidm) {
+                rkfree(tmp);
+                return NULL;
+        }
 
         return tmp;
 }
@@ -47,7 +53,9 @@ int fmgr_destroy(struct fmgr * instance)
                 return -1;
         }
 
+        fidm_destroy(instance->fidm);
         rkfree(instance);
+
         return 0;
 }
 
