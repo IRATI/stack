@@ -163,6 +163,8 @@ static int default_fini(struct personality_data * data)
 
         LOG_DBG("Default personality finalized successfully");
 
+        fidm_fini();
+
         return 0;
 }
 
@@ -181,6 +183,11 @@ static int default_init(struct kobject *          parent,
         }
 
         LOG_DBG("Initializing default personality");
+
+        if (!fidm_init()) {
+                fidm_fini();
+                return -1;
+        }
 
         LOG_DBG("Initializing default Netlink component");
         data->nlset = rina_netlink_set_create(id);
