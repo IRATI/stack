@@ -1194,9 +1194,24 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 return NULL;
         }
 
+        tmp->flows.pending = ipcp_fmap_create();
+        if (!tmp->flows.pending) {
+                if (ipcp_imap_destroy(tmp->instances)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (ipcpf_fini(tmp->factories)) {
+                        /* FIXME: What could we do here ? */
+                }
+                rkfree(tmp);
+                return NULL;
+        }
+
         tmp->flows.committed = ipcp_pmap_create();
         if (!tmp->flows.committed) {
                 if (ipcp_imap_destroy(tmp->instances)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (ipcp_fmap_destroy(tmp->flows.pending)) {
                         /* FIXME: What could we do here ? */
                 }
                 if (ipcpf_fini(tmp->factories)) {
@@ -1208,6 +1223,9 @@ struct kipcm * kipcm_create(struct kobject * parent,
 
         if (rnl_set_register(set)) {
                 if (ipcp_imap_destroy(tmp->instances)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (ipcp_fmap_destroy(tmp->flows.pending)) {
                         /* FIXME: What could we do here ? */
                 }
                 if (ipcp_pmap_destroy(tmp->flows.committed)) {
@@ -1223,6 +1241,9 @@ struct kipcm * kipcm_create(struct kobject * parent,
 
         if (netlink_handlers_register(tmp)) {
                 if (ipcp_imap_destroy(tmp->instances)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (ipcp_fmap_destroy(tmp->flows.pending)) {
                         /* FIXME: What could we do here ? */
                 }
                 if (ipcp_pmap_destroy(tmp->flows.committed)) {
@@ -1253,28 +1274,30 @@ int kipcm_destroy(struct kipcm * kipcm)
 
         KIPCM_LOCK(kipcm);
 
+        /* FIXME: Destroy all the pending flows */
+        ASSERT(ipcp_fmap_empty(kipcm->flows.pending));
+        if (ipcp_fmap_destroy(kipcm->flows.pending)) {
+                /* FIXME: What should we do here ? */
+        }
+
         /* FIXME: Destroy all the committed flows */
         ASSERT(ipcp_pmap_empty(kipcm->flows.committed));
         if (ipcp_pmap_destroy(kipcm->flows.committed)) {
-                KIPCM_UNLOCK(kipcm);
-                return -1;
+                /* FIXME: What should we do here ? */
         }
 
         /* FIXME: Destroy all the instances */
         ASSERT(ipcp_imap_empty(kipcm->instances));
         if (ipcp_imap_destroy(kipcm->instances)) {
-                KIPCM_UNLOCK(kipcm);
-                return -1;
+                /* FIXME: What should we do here ? */
         }
 
         if (ipcpf_fini(kipcm->factories)) {
-                KIPCM_UNLOCK(kipcm);
-                return -1;
+                /* FIXME: What should we do here ? */
         }
 
         if (netlink_handlers_unregister(kipcm->set)) {
-                KIPCM_UNLOCK(kipcm);
-                return -1;
+                /* FIXME: What should we do here ? */
         }
 
         KIPCM_UNLOCK(kipcm);
@@ -1422,6 +1445,8 @@ int kipcm_ipcp_destroy(struct kipcm *   kipcm,
         factory = instance->factory;
         ASSERT(factory);
 
+        /* FIXME: Should we look for pending flows from this IPC Process ? */
+
         if (ipcp_pmap_remove_all_for_id(kipcm->flows.committed, id)) {
                 KIPCM_UNLOCK(kipcm);
                 return -1;
@@ -1465,6 +1490,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
 
         KIPCM_LOCK(kipcm);
 
+        /* FIXME: What about pending flows ? */
         if (ipcp_pmap_find(kipcm->flows.committed, port_id)) {
                 LOG_ERR("Flow on port-id %d already exists", port_id);
                 KIPCM_UNLOCK(kipcm);
@@ -1501,6 +1527,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 return -1;
         }
 
+        /* FIXME: What about pending flows ? */
         if (ipcp_pmap_add(kipcm->flows.committed, port_id, flow, ipc_id)) {
                 kfifo_free(&flow->sdu_ready);
                 rkfree(flow);
@@ -1525,6 +1552,8 @@ int kipcm_flow_remove(struct kipcm * kipcm,
         }
 
         KIPCM_LOCK(kipcm);
+
+        /* FIXME: What about pending flows ? */
 
         flow = ipcp_pmap_find(kipcm->flows.committed, port_id);
         if (!flow) {
@@ -1629,9 +1658,10 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 
                 KIPCM_LOCK(kipcm);
                 LOG_DBG("Woken up");
+
                 flow = ipcp_pmap_find(kipcm->flows.committed, port_id);
                 if (!flow) {
-                        LOG_ERR("There is no flow bound to port-id %d",
+                        LOG_ERR("There is no flow bound to port-id %d anymore",
                                 port_id);
                         KIPCM_UNLOCK(kipcm);
                         return -1;
