@@ -24,10 +24,7 @@
 #include <linux/kobject.h>
 #include <linux/export.h>
 #include <linux/kfifo.h>
-#define USE_MUTEXES 1
-#if USE_MUTEXES
 #include <linux/mutex.h>
-#endif
 
 #define RINA_PREFIX "kipcm"
 
@@ -47,18 +44,14 @@
 #define DEFAULT_FACTORY "normal-ipc"
 
 struct kipcm {
-#if USE_MUTEXES
         struct mutex            lock;
-#else
-        spinlock_t              lock;
-#endif
         struct ipcp_factories * factories;
         struct ipcp_imap *      instances;
         struct ipcp_fmap *      flows;
         struct rnl_set *        set;
 };
 
-#ifdef RINA_KIPCM_LOCKS_DEBUG
+#ifdef CONFIG_RINA_KIPCM_LOCKS_DEBUG
 
 #define KIPCM_LOCK_HEADER(X)   do {                             \
                 LOG_DBG("KIPCM instance %pK locking ...", X);   \
@@ -83,36 +76,10 @@ struct kipcm {
 
 #endif
 
-/* Disable locking only in case of REAL necessity */
-#define DISABLE_LOCKING 0
-
-#if DISABLE_LOCKING
-
-#define KIPCM_LOCK_INIT(X) do {                                 \
-                LOG_DBG("KIPCM instance locking disabled");     \
-        } while (0);
-#define KIPCM_LOCK_FINI(X) do { } while (0);
-#define KIPCM_LOCK(X)      do { } while (0);
-#define KIPCM_UNLOCK(X)    do { } while (0);
-
-#else
-
-#if USE_MUTEXES
 #define KIPCM_LOCK_INIT(X) mutex_init(&(X -> lock));
 #define KIPCM_LOCK_FINI(X) mutex_destroy(&(X -> lock));
-#else
-#define KIPCM_LOCK_INIT(X) spin_lock_init(&(X -> lock));
-#define KIPCM_LOCK_FINI(X) do { } while (0);
-#endif
-
-#if USE_MUTEXES
-#define __KIPCM_LOCK(X)   mutex_lock(&(X -> lock))
-#define __KIPCM_UNLOCK(X) mutex_unlock(&(X -> lock))
-#else
-#define __KIPCM_LOCK(X)   spin_lock(&(X -> lock))
-#define __KIPCM_UNLOCK(X) spin_unlock(&(X -> lock))
-#endif
-
+#define __KIPCM_LOCK(X)    mutex_lock(&(X -> lock))
+#define __KIPCM_UNLOCK(X)  mutex_unlock(&(X -> lock))
 #define KIPCM_LOCK(X)   do {                    \
                 KIPCM_LOCK_HEADER(X);           \
                 __KIPCM_LOCK(X);                \
@@ -123,8 +90,6 @@ struct kipcm {
                 __KIPCM_UNLOCK(X);              \
                 KIPCM_UNLOCK_FOOTER(X);         \
         } while (0)
-
-#endif
 
 struct ipcp_flow {
         /* The port-id identifying the flow */
@@ -1662,7 +1627,9 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         while (kfifo_is_empty(&flow->sdu_ready)) {
                 LOG_DBG("Going to sleep");
                 KIPCM_UNLOCK(kipcm);
+
                 interruptible_sleep_on(&flow->wait_queue);
+
                 KIPCM_LOCK(kipcm);
                 LOG_DBG("Woken up");
                 flow = ipcp_fmap_find(kipcm->flows, port_id);

@@ -19,7 +19,7 @@ config RINA_DEBUG
 	  No help for the time being
 
 config RINA_KIPCM_LOCKS_DEBUG
-	bool "K-IPC Manager spinlocks debugging"
+	bool "K-IPC Manager locks debugging"
 	default n
         depends on RINA_DEBUG
 	help
