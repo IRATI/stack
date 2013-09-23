@@ -51,8 +51,8 @@ struct kipcm {
 
         /* Should these flows management moved to a KFM ? */
         struct {
-                struct ipcp_pmap * committed;
                 struct ipcp_fmap * pending;
+                struct ipcp_pmap * committed;
         } flows;
 };
 
@@ -1028,6 +1028,9 @@ static int netlink_handlers_unregister(struct rnl_set * set)
                                    RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST))
                 retval = -1;
 
+        LOG_DBG("NL handlers unregistered %s",
+                (retval == 0) ? "successfully" : "unsuccessfully");
+
         return retval;
 }
 
@@ -1160,6 +1163,8 @@ static int netlink_handlers_register(struct kipcm * kipcm)
                 return -1;
         }
 
+        LOG_DBG("NL handlers registered successfully");
+
         return 0;
 }
 
@@ -1201,7 +1206,6 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 return NULL;
         }
 
-        LOG_DBG("Registering set");
         if (rnl_set_register(set)) {
                 if (ipcp_imap_destroy(tmp->instances)) {
                         /* FIXME: What could we do here ? */
@@ -1217,7 +1221,6 @@ struct kipcm * kipcm_create(struct kobject * parent,
         }
         tmp->set = set;
 
-        LOG_DBG("Registering handlers");
         if (netlink_handlers_register(tmp)) {
                 if (ipcp_imap_destroy(tmp->instances)) {
                         /* FIXME: What could we do here ? */
