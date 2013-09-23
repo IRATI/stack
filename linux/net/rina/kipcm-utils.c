@@ -29,6 +29,10 @@
 #include "common.h"
 #include "kipcm-utils.h"
 
+/*
+ * IMAPs
+ */
+
 #define IMAP_HASH_BITS 7
 
 struct ipcp_imap {
@@ -163,6 +167,10 @@ int ipcp_imap_remove(struct ipcp_imap * map,
 
         return 0;
 }
+
+/*
+ * PMAPs
+ */
 
 #define PMAP_HASH_BITS 7
 
