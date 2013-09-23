@@ -5,7 +5,7 @@
 obj-$(CONFIG_RINA) +=				\
 	utils.o debug.o core.o personality.o	\
 	syscalls.o netlink.o netlink-utils.o	\
-        du.o ipcp-utils.o
+        du.o ipcp-utils.o common.o
 
 obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 	rina_personality_default.o
@@ -13,7 +13,7 @@ obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 rina_personality_default-y :=			\
 	ipcp-factories.o ipcp.o			\
 	dtcp.o dtp.o efcp.o rmt.o		\
-	fidm.o					\
+	fidm.o fmgr.o				\
 	kipcm-utils.o kipcm.o			\
 	default.o
 
