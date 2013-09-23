@@ -41,7 +41,7 @@ struct fidm * fidm_create(void)
 
         instance = rkmalloc(sizeof(*instance), GFP_KERNEL);
         if (!instance)
-                return -1;
+                return NULL;
 
         bitmap_zero(instance->bitmap, BITS_IN_BITMAP);
         spin_lock_init(&instance->lock);
@@ -85,7 +85,7 @@ flow_id_t fidm_allocate(struct fidm * instance)
                                                     BITS_IN_BITMAP,
                                                     0, 1, 0);
         if (id >= BITS_IN_BITMAP)
-                id = -1;
+                id = FLOW_ID_WRONG;
 
         spin_unlock(&instance->lock);
         
