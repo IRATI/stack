@@ -67,7 +67,6 @@ struct ipcp_instance_ops {
 	int  (* application_unregister)(struct ipcp_instance_data * data,
                                         const struct name *         source);
 
-        /* */
 	int  (* assign_to_dif)(struct ipcp_instance_data * data,
                                const struct name * 	   dif_name,
                                const struct ipcp_config *  configuration);

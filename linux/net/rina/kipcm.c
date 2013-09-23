@@ -164,35 +164,12 @@ void alloc_flow_req_free(struct name *      source_name,
                          struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
                          struct rnl_msg *   msg)
 {
-        if (attrs) {
-                rkfree(attrs);
-                attrs = NULL;
-        }
-
-        if (source_name) {
-                rkfree(source_name);
-                source_name = NULL;
-        }
-
-        if (dest_name) {
-                rkfree(dest_name);
-                dest_name = NULL;
-        }
-
-        if (fspec) {
-                rkfree(fspec);
-                fspec = NULL;
-        }
-
-        if (dif_name) {
-                rkfree(dif_name);
-                dif_name = NULL;
-        }
-
-        if (msg) {
-                rkfree(msg);
-                msg = NULL;
-        }
+        if (attrs)       rkfree(attrs);
+        if (source_name) rkfree(source_name);
+        if (dest_name)   rkfree(dest_name);
+        if (fspec)       rkfree(fspec);
+        if (dif_name)    rkfree(dif_name);
+        if (msg)         rkfree(msg);
 }
 
 int alloc_flow_req_free_and_reply(struct name *      source_name,
@@ -234,12 +211,12 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         struct name *                              dif_name;
         struct flow_spec *                         fspec;
 
-        source = NULL;
-        dest = NULL;
+        source   = NULL;
+        dest     = NULL;
         dif_name = NULL;
-        fspec = NULL;
-        attrs = NULL;
-        msg = NULL;
+        fspec    = NULL;
+        attrs    = NULL;
+        msg      = NULL;
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -500,15 +477,8 @@ int dealloc_flow_req_free_and_reply(struct rnl_ipcm_dealloc_flow_req_msg_attrs *
                                     uint_t           seq_num,
                                     uint_t           port_id)
 {
-        if (attrs) {
-                rkfree(attrs);
-                attrs = NULL;
-        }
-
-        if (msg) {
-                rkfree(msg);
-                msg = NULL;
-        }
+        if (attrs) rkfree(attrs);
+        if (msg)   rkfree(msg);
 
         if (rnl_app_dealloc_flow_resp_msg(id, res, seq_num, port_id))
                 return -1;
@@ -614,34 +584,19 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
                                                info->snd_portid);
 }
 
-int assign_to_dif_free_and_reply(struct name * dif_name,
+int assign_to_dif_free_and_reply(struct name *       dif_name,
                                  struct dif_config * dif_config,
                                  struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs,
-                                 struct rnl_msg * msg,
-                                 ipc_process_id_t id,
-                                 uint_t res,
-                                 uint_t seq_num,
-                                 uint_t port_id)
+                                 struct rnl_msg *    msg,
+                                 ipc_process_id_t    id,
+                                 uint_t              res,
+                                 uint_t              seq_num,
+                                 uint_t              port_id)
 {
-        if (attrs) {
-                rkfree(attrs);
-                attrs = NULL;
-        }
-
-        if (dif_name) {
-                rkfree(dif_name);
-                dif_name = NULL;
-        }
-
-        if (dif_config) {
-                rkfree(dif_config);
-                dif_config = NULL;
-        }
-
-        if (msg) {
-                rkfree(msg);
-                msg = NULL;
-        }
+        if (attrs)      rkfree(attrs);
+        if (dif_name)   rkfree(dif_name);
+        if (dif_config) rkfree(dif_config);
+        if (msg)        rkfree(msg);
 
         if (rnl_assign_dif_response(id, res, seq_num, port_id))
                 return -1;
@@ -759,8 +714,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
                                             attrs->dif_config->dif_name,
                                             NULL)) {
                 char * tmp = name_tostring(attrs->dif_config->dif_name);
-                LOG_ERR("Assign to dif %s operation failed "
-                        "for IPC process: %d",
+                LOG_ERR("Assign to dif %s operation failed for IPC process %d",
                         tmp, ipc_id);
                 rkfree(tmp);
 
@@ -794,25 +748,10 @@ int reg_unreg_resp_free_and_reply(struct name *     app_name,
                                   uint_t            port_id,
                                   bool              is_register)
 {
-        if (app_name) {
-                rkfree(app_name);
-                app_name = NULL;
-        }
-
-        if (dif_name) {
-                rkfree(dif_name);
-                dif_name = NULL;
-        }
-
-        if (attrs) {
-                rkfree(attrs);
-                attrs = NULL;
-        }
-
-        if (msg) {
-                rkfree(msg);
-                msg = NULL;
-        }
+        if (app_name) rkfree(app_name);
+        if (dif_name) rkfree(dif_name);
+        if (attrs)    rkfree(attrs);
+        if (msg)      rkfree(msg);
 
         if (rnl_app_register_unregister_response_msg(id,
                                                      res,
@@ -836,8 +775,8 @@ static int notify_ipcp_register_app_request(void *             data,
         struct ipcp_instance *                  ipc_process;
         ipc_process_id_t                        ipc_id;
 
-        attrs = NULL;
-        msg = NULL;
+        attrs    = NULL;
+        msg      = NULL;
         app_name = NULL;
         dif_name = NULL;
 
@@ -973,8 +912,8 @@ static int notify_ipcp_unregister_app_request(void *             data,
         struct ipcp_instance *                  ipc_process;
         ipc_process_id_t                        ipc_id;
 
-        attrs = NULL;
-        msg = NULL;
+        attrs    = NULL;
+        msg      = NULL;
         app_name = NULL;
         dif_name = NULL;
 
