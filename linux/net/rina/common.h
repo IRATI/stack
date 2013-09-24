@@ -35,7 +35,7 @@ typedef unsigned int  ipc_process_address_t;
 typedef unsigned char utf8_t;
 typedef char          string_t;
 typedef uint          uint_t;
-typedef uint          response_reason_t;
+/* typedef uint          response_reason_t; FIXME: Shouldn't be here !!! */
 typedef uint          cep_id_t;
 typedef uint16_t      address_t;
 typedef uint          seq_num_t;

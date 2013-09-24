@@ -359,7 +359,9 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         struct ipcp_instance *                 ipc_process;
         ipc_process_id_t                       ipc_id;
         int                                    retval = 0;
+#if 0
         response_reason_t                      reason;
+#endif
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -408,9 +410,9 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 return -1;
         }
 
+#if 0 /* FIXME: Please re-enable */
         reason = (response_reason_t) attrs->result;
 
-#if 0 /* FIXME: Please re-enable */
         if (ipc_process->ops->flow_allocate_response(ipc_process->data,
                                                      attrs->id,
                                                      info->snd_seq,
