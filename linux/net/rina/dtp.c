@@ -25,7 +25,48 @@
 #include "debug.h"
 #include "dtp.h"
 
-struct dtp * dtp_create(port_id_t id)
+struct dtp_sv {
+        /* Configuration values */
+        struct connection * connection; /* FIXME: Are we really sure ??? */
+        uint_t              max_flow_sdu;
+        uint_t              max_flow_pdu_size;
+        uint_t              initial_sequence_number;
+        uint_t              seq_number_rollover_threshold;
+
+        /* Variables: Inbound */
+        seq_num_t           last_sequence_delivered;
+
+        /* Variables: Outbound */
+        seq_num_t           next_sequence_to_send;
+        seq_num_t           right_window_edge;
+};
+
+struct dtp_policies {
+        int (* xxx_fixme_add_policies_here)(struct dtp * instance);
+};
+
+struct dtp {
+        struct dtp_sv *       state_vector;
+        struct dtp_policies * policies;
+        struct dtcp *         peer;
+};
+
+static struct dtp_sv default_sv = {
+        .connection                    = NULL,
+        .max_flow_sdu                  = 0,
+        .max_flow_pdu_size             = 0,
+        .initial_sequence_number       = 0,
+        .seq_number_rollover_threshold = 0,
+        .last_sequence_delivered       = 0,
+        .next_sequence_to_send         = 0,
+        .right_window_edge             = 0
+};
+
+static struct dtp_policies default_policies = {
+        .xxx_fixme_add_policies_here = NULL
+};
+
+struct dtp * dtp_create(void)
 {
         struct dtp * tmp;
 
@@ -35,74 +76,77 @@ struct dtp * dtp_create(port_id_t id)
                 return NULL;
         }
 
-        tmp->id = id;
-        tmp->state_vector = rkzalloc(sizeof(*tmp->state_vector), GFP_KERNEL);
+        tmp->state_vector = rkmalloc(sizeof(*tmp->state_vector), GFP_KERNEL);
         if (!tmp->state_vector) {
                 LOG_ERR("Cannot create DTP state-vector");
 
                 rkfree(tmp);
                 return NULL;
         }
+        *tmp->state_vector = default_sv;
+        tmp->policies      = &default_policies;
+        tmp->peer          = NULL;
 
-        LOG_DBG("DTP instance created successfully");
+        LOG_DBG("Instance %pK created successfully", tmp);
 
         return tmp;
 }
 
-int dtp_state_vector_bind(struct dtp *               instance,
-                          struct dtcp_state_vector * state_vector)
+int dtp_destroy(struct dtp * instance)
 {
-        ASSERT(instance);
-        ASSERT(state_vector);
-
-        /* FIXME: Should we create the missing DTP state-vector instance ? */
-        if (!instance->state_vector) {
-                LOG_ERR("DTP instance has no state vector, "
-                        "cannot bind DTCP state vector");
+        if (!instance) {
+                LOG_ERR("Bad instance passed, bailing out");
                 return -1;
         }
 
-        if (instance->state_vector->dtcp_state_vector) {
-                if (instance->state_vector->dtcp_state_vector != state_vector) {
-                        LOG_ERR("DTP instance already bound to a different "
-                                "DTCP state-vector, unbind it first");
-                        return -1;
-                }
-
-                return 0;
-        }
-
-        instance->state_vector->dtcp_state_vector = state_vector;
-
-        return 0;
-}
-
-int dtp_state_vector_unbind(struct dtp * instance)
-{
-        ASSERT(instance);
-
-        if (instance->state_vector)
-                instance->state_vector->dtcp_state_vector = NULL;
-
-        return 0;
-
-}
-
-int dtp_destroy(struct dtp * instance)
-{
-        ASSERT(instance);
-
-        /*
-         * NOTE: The state vector can be discarded during long periods of
-         *       no traffic
-         */
         if (instance->state_vector)
                 rkfree(instance->state_vector);
         rkfree(instance);
 
-        LOG_DBG("DTP instance destroyed successfully");
+        LOG_DBG("Instance %pK destroyed successfully", instance);
 
         return 0;
+}
+
+int dtp_bind(struct dtp *  instance,
+             struct dtcp * peer)
+{
+        if (!instance) {
+                LOG_ERR("Bad instance passed, bailing out");
+                return -1;
+        }
+        if (!peer) {
+                LOG_ERR("Bad peer passed, bailing out");
+                return -1;
+        }
+
+        if (instance->peer) {
+                if (instance->peer != peer) {
+                        LOG_ERR("This instance is already bound to "
+                                "a different peer, unbind it first");
+                        return -1;
+                }
+
+                LOG_DBG("This instance is already bound to the same peer ...");
+                return 0;
+        }
+
+        instance->peer = peer;
+
+        return 0;
+}
+
+int dtp_unbind(struct dtp * instance)
+{
+        if (!instance) {
+                LOG_ERR("Bad instance passed, bailing out");
+                return -1;
+        }
+
+        instance->peer = NULL;
+
+        return 0;
+
 }
 
 #if 0
@@ -184,10 +228,17 @@ int dtp_send(struct dtp *       dtp,
         if (sdu_apply_policy_CsldWinQ(dtp, sdu))
                 return -1;
         
-        //return instance->dtcp->ops->write(sdu);
+        return dtcp_instance->peer->ops->write(sdu);
 #endif
 
         LOG_MISSING;
 
         return -1;
+}
+
+struct pdu * dtp_receive(struct dtp * dtp)
+{
+        LOG_MISSING;
+
+        return NULL;
 }

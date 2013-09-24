@@ -24,54 +24,22 @@
 #include "common.h"
 #include "du.h"
 
-struct dtp_state_vector {
-        /* Configuration values */
-        struct connection *        connection;
-        uint_t                     max_flow_sdu;
-        uint_t                     max_flow_pdu_size;
-        uint_t                     initial_sequence_number;
-        uint_t                     seq_number_rollover_threshold;
-
-        /* Variables: Inbound */
-        seq_num_t                  last_sequence_delivered;
-
-        /* Variables: Outbound */
-        seq_num_t                  next_sequence_to_send;
-        seq_num_t                  right_window_edge;
-
-        /* The companion DTCP state vector */
-        struct dtcp_state_vector * dtcp_state_vector;
-};
-
+struct dtcp;
 struct dtp;
 
-struct dtp_policies {
-        int (* xxx_fixme_add_policies_here)(struct dtp * instance);
-};
-
-struct dtp {
-        /* FIXME: Is port-id really needed here ??? */
-        port_id_t                 id;
-
-        struct dtp_state_vector * state_vector;
-
-        struct dtp_policies       policies;
-};
-
-struct dtp * dtp_create(port_id_t id);
+struct dtp * dtp_create(void);
 int          dtp_destroy(struct dtp * instance);
 
-int          dtp_state_vector_bind(struct dtp *               instance,
-                                   struct dtcp_state_vector * state_vector);
-int          dtp_state_vector_unbind(struct dtp * instance);
+int          dtp_bind(struct dtp *  instance,
+                      struct dtcp * peer);
+int          dtp_unbind(struct dtp * instance);
 
 /* Used by the higher level component to send PDUs to RMT */
 int          dtp_send(struct dtp *       dtp,
                       const struct sdu * sdu);
 
 /* Used by the RMT to let DTP receive PDUs */
-int          dtp_receive(struct dtp * dtp,
-                         struct pdu * pdu);
+struct pdu * dtp_receive(struct dtp * dtp);
 
 #endif
 
