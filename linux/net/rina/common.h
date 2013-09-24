@@ -37,6 +37,8 @@ typedef char          string_t;
 typedef uint          uint_t;
 /* typedef uint          response_reason_t; FIXME: Shouldn't be here !!! */
 typedef uint          cep_id_t;
+
+/* FIXME: Is this address_t definition correct ??? */
 typedef uint16_t      address_t;
 typedef uint          seq_num_t;
 typedef char	      regex_t;
@@ -149,7 +151,7 @@ struct connection {
          */
         address_t destination_address;
 
-        /* The source connection endpoint Id */
+        /* The source connection endpoint id */
         cep_id_t source_cep_id;
 
         /* The destination connection endpoint id */
