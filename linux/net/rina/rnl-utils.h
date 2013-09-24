@@ -22,7 +22,7 @@
 #ifndef RINA_RNL_UTILS_H
 #define RINA_RNL_UTILS_H
 
-#include "rmt.h"
+#include "pdufwdt.h"
 
 /*
  * FIXME:
