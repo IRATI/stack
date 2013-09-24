@@ -39,10 +39,27 @@ struct rmt;
  * (N-1)-DIFs available to the RMT.
  */
 
-struct rmt * rmt_init(void);
-int          rmt_fini(struct rmt * instance);
+#include "common.h"
 
-int          rmt_post(struct rmt * instance,
-                      struct pdu * pdu);
+struct rmt * rmt_create(void);
+int          rmt_destroy(struct rmt * instance);
+
+/* FIXME: Please check the following APIs */
+
+/*
+ * NOTES: Used by EFCP. Sends SDU to DIF-(N).
+ *        Takes ownership of the passed SDU
+ */
+int          rmt_send_sdu(struct rmt * instance,
+                          address_t    address,
+                          cep_id_t     connection_id,
+                          struct sdu * sdu);
+
+/*
+ * NOTES: Used by the SDU Protection module, sends PDU to DIF-(N-1).
+ *        Takes the ownership of the passed PDU
+ */
+int          rmt_send_pdu(struct rmt * instance,
+                          struct pdu * pdu);
 
 #endif

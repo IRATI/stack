@@ -24,53 +24,65 @@
 #include "utils.h"
 #include "debug.h"
 #include "rmt.h"
+#include "pft.h"
 
 struct rmt {
-	/* This structure holds per-RMT instance data */
+        struct pft * pft; /* The PDU Forwarding Table */
 
 	/* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
-
-	/*
-         * The PDU-FT access might change in future prototypes but
-         * changes in its underlying data-model will not be reflected
-         * into the (external) API, since the PDU-FT is accessed by
-         * RMT only.
-         */
-
-	/* LIST_HEAD(pdu_fwd_table, pdu_fwd_entry_t); */
-
-	/* To do, only a placeholder right now to avoid sizeof = 0 */
-        int placeholder;
 };
 
-struct rmt * rmt_init(void)
+struct rmt * rmt_create(void)
 {
-        struct rmt * e = NULL;
+        struct rmt * tmp = NULL;
 
-        LOG_DBG("Initializing instance");
-
-        e = rkzalloc(sizeof(*e), GFP_KERNEL);
-        if (!e)
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
                 return NULL;
 
-        return e;
+        tmp->pft = pft_create();
+        if (!tmp->pft) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        LOG_DBG("Instance %pK initialized successfully", tmp);
+
+        return tmp;
 }
 
-int rmt_fini(struct rmt * instance)
+int rmt_destroy(struct rmt * instance)
 {
-        LOG_DBG("Finalizing instance %pK", instance);
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
 
-        ASSERT(instance);
-
+        ASSERT(instance->pft);
+        pft_destroy(instance->pft);
         rkfree(instance);
+
+        LOG_DBG("Instance %pK finalized successfully", instance);
+
 
         return 0;
 }
 
-int rmt_post(struct rmt * instance,
-             struct pdu * pdu)
+int rmt_send_sdu(struct rmt * instance,
+                 address_t    address,
+                 cep_id_t     connection_id,
+                 struct sdu * sdu)
 {
         LOG_MISSING;
 
         return -1;
 }
+
+int rmt_send_pdu(struct rmt * instance,
+                 struct pdu * pdu)
+{
+        LOG_MISSING;
+
+        return -1;
+}
+
