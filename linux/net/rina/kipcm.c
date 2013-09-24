@@ -38,8 +38,8 @@
 #include "common.h"
 #include "du.h"
 #include "fidm.h"
-#include "netlink.h"
-#include "netlink-utils.h"
+#include "rnl.h"
+#include "rnl-utils.h"
 
 #define DEFAULT_FACTORY "normal-ipc"
 
@@ -49,7 +49,7 @@ struct kipcm {
         struct ipcp_imap *      instances;
         struct rnl_set *        set;
 
-        /* Should these flows management moved to a KFM ? */
+        /* Should these flows management moved to FMGR ? */
         struct {
                 struct ipcp_fmap * pending;
                 struct ipcp_pmap * committed;

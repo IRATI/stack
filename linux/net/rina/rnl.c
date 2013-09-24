@@ -1,5 +1,5 @@
 /*
- * NetLink support
+ * RNL (RINA NetLink support)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
@@ -19,13 +19,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "netlink"
+#define RINA_PREFIX "rnl"
 
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
-#include "netlink.h"
-#include "netlink-utils.h"
+#include "rnl.h"
+#include "rnl-utils.h"
 
 #define NETLINK_RINA "rina"
 

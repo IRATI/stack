@@ -1,5 +1,5 @@
 /*
- * NetLink support
+ * RNL (RINA NetLink support)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
@@ -19,8 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_NETLINK_H
-#define RINA_NETLINK_H
+#ifndef RINA_RNL_H
+#define RINA_RNL_H
 
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
@@ -124,6 +124,7 @@ void rnl_exit(void);
 
 struct rnl_set;
 
+/* FIXME: Remove this symbol */
 struct genl_family  * get_nl_family(void);
 
 struct rnl_set * rnl_set_create(personality_id id);

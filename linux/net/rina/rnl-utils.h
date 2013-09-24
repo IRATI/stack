@@ -1,5 +1,5 @@
 /*
- * NetLink related utilities
+ * RNL utilities
  *
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
@@ -19,8 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_NETLINK_UTILS_H
-#define RINA_NETLINK_UTILS_H
+#ifndef RINA_RNL_UTILS_H
+#define RINA_RNL_UTILS_H
 
 #include "rmt.h"
 

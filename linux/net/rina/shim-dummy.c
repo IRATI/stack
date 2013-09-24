@@ -36,8 +36,8 @@
 #include "ipcp-factories.h"
 #include "du.h"
 #include "fidm.h"
-#include "netlink.h"
-#include "netlink-utils.h"
+#include "rnl.h"
+#include "rnl-utils.h"
 
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;

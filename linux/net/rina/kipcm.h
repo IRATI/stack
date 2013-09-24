@@ -25,8 +25,8 @@
 #include "common.h"
 #include "ipcp.h"
 #include "ipcp-factories.h"
-#include "fidm.h"
-#include "netlink.h"
+#include "du.h"
+#include "rnl.h"
 
 struct kipcm;
 

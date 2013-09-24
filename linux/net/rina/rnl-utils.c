@@ -1,5 +1,5 @@
 /*
- * NetLink related utilities
+ * RNL utilities
  *
  *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
@@ -23,15 +23,15 @@
 #include <net/genetlink.h>
 #include <linux/export.h>
 
-#define RINA_PREFIX "netlink-utils"
+#define RINA_PREFIX "rnl-utils"
 
 #include "logs.h"
 #include "common.h"
 #include "debug.h"
 #include "ipcp-utils.h"
 #include "utils.h"
-#include "netlink.h"
-#include "netlink-utils.h"
+#include "rnl.h"
+#include "rnl-utils.h"
 
 /*
  * FIXME: I suppose these functions are internal (at least for the time being)

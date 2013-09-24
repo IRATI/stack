@@ -163,6 +163,7 @@ struct connection {
         /* policy_t ** policies; */
 };
 
+/* FIXME: Move Netlink types into rnl */
 /* FIXME: needed for nl api */
 enum rib_object_class_t {
 	EMPTY,
