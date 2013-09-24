@@ -2,7 +2,6 @@
  * EFCP (Error and Flow Control Protocol)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,52 +21,28 @@
 #ifndef RINA_EFCP_H
 #define RINA_EFCP_H
 
-#include <linux/kobject.h>
-
 #include "common.h"
-//#include "kipcm.h"
-#include "dtp.h"
-#include "dtcp.h"
-
-struct efcp_conf {
-
-        /* Length of the address fields of the PCI */
-        int address_length;
-
-        /* Length of the port_id fields of the PCI */
-        int port_id_length;
-
-        /* Length of the cep_id fields of the PCI */
-        int cep_id_length;
-
-        /* Length of the qos_id field of the PCI */
-        int qos_id_length;
-
-        /* Length of the length field of the PCI */
-        int length_length;
-
-        /* Length of the sequence number fields of the PCI */
-        int seq_number_length;
-};
+#include "du.h"
 
 struct efcp;
 
-struct efcp * efcp_init(struct kobject * parent);
-int           efcp_fini(struct efcp * instance);
+struct efcp * efcp_create(void);
+int           efcp_destroy(struct efcp * instance);
 
-int           efcp_create(struct efcp *             instance,
-                          const struct connection * connection,
-                          cep_id_t *                id);
-int           efcp_destroy(struct efcp *   instance,
-                           cep_id_t id);
-int           efcp_update(struct efcp * instance,
-                          cep_id_t      from,
-                          cep_id_t      to);
+/* FIXME: Should a struct connection * be returned instead ? */
+int           efcp_connection_create(struct efcp *             instance,
+                                     const struct connection * connection,
+                                     cep_id_t *                id);
+int           efcp_connection_destroy(struct efcp *   instance,
+                                      cep_id_t id);
+int           efcp_connection_update(struct efcp * instance,
+                                     cep_id_t      from,
+                                     cep_id_t      to);
 
+/* FIXME: Should these functions work over a struct connection * instead ? */
 int           efcp_write(struct efcp *      instance,
                          port_id_t          id,
                          const struct sdu * sdu);
-int           efcp_receive_pdu(struct efcp * instance,
-                               struct pdu *  pdu);
+struct pdu *  efcp_receive(struct efcp * instance);
 
 #endif

@@ -24,8 +24,33 @@
 
 #include "logs.h"
 #include "utils.h"
-#include "efcp.h"
 #include "debug.h"
+#include "efcp.h"
+#include "dtp.h"
+#include "dtcp.h"
+
+#if 0
+struct efcp_conf {
+
+        /* Length of the address fields of the PCI */
+        int address_length;
+
+        /* Length of the port_id fields of the PCI */
+        int port_id_length;
+
+        /* Length of the cep_id fields of the PCI */
+        int cep_id_length;
+
+        /* Length of the qos_id field of the PCI */
+        int qos_id_length;
+
+        /* Length of the length field of the PCI */
+        int length_length;
+
+        /* Length of the sequence number fields of the PCI */
+        int seq_number_length;
+};
+#endif
 
 struct efcp {
         /* The connection endpoint id that identifies this instance */
@@ -44,7 +69,7 @@ struct efcp {
 #endif
 };
 
-struct efcp * efcp_init(struct kobject * parent)
+struct efcp * efcp_create(void)
 {
         struct efcp * e = NULL;
 
@@ -55,7 +80,7 @@ struct efcp * efcp_init(struct kobject * parent)
         return e;
 }
 
-int efcp_fini(struct efcp * instance)
+int efcp_destroy(struct efcp * instance)
 {
         ASSERT(instance);
 
@@ -66,42 +91,14 @@ int efcp_fini(struct efcp * instance)
         return 0;
 }
 
-int efcp_write(struct efcp *      instance,
-               port_id_t          id,
-               const struct sdu * sdu)
-{
-        ASSERT(instance);
-        ASSERT(sdu);
-
-        if (!instance->dtp) {
-                LOG_ERR("No DTP instance available, cannot send");
-                return -1;
-        }
-
-        return dtp_send(instance->dtp, sdu);
-}
-
-int efcp_receive_pdu(struct efcp * instance,
-                     struct pdu *  pdu)
-{
-        ASSERT(instance);
-        ASSERT(pdu);
-
-        LOG_MISSING;
-
-        LOG_DBG("PDU received in the EFCP");
-
-        return 0;
-}
-
-int efcp_create(struct efcp *             instance,
-                const struct connection * connection,
-                cep_id_t *                id)
+int efcp_connection_create(struct efcp *             instance,
+                           const struct connection * connection,
+                           cep_id_t *                id)
 {
         ASSERT(instance);
         ASSERT(connection);
 
-        instance->dtp  = dtp_create(connection->port_id);
+        instance->dtp  = dtp_create(/* connection->port_id */);
         if (!instance->dtp)
                 return -1;
 
@@ -114,8 +111,8 @@ int efcp_create(struct efcp *             instance,
         }
 
         /* No needs to check here, bindings are straightforward */
-        dtp_state_vector_bind(instance->dtp,   instance->dtcp->state_vector);
-        dtcp_state_vector_bind(instance->dtcp, instance->dtp->state_vector);
+        dtp_bind(instance->dtp,   instance->dtcp);
+        dtcp_bind(instance->dtcp, instance->dtp);
 
         /* FIXME: We need to assign the id */
         LOG_MISSING;
@@ -125,13 +122,13 @@ int efcp_create(struct efcp *             instance,
         return 0;
 }
 
-int efcp_destroy(struct efcp * instance,
-                 cep_id_t      id)
+int efcp_connection_destroy(struct efcp * instance,
+                            cep_id_t      id)
 {
         ASSERT(instance);
 
-        dtp_state_vector_unbind(instance->dtp);
-        dtcp_state_vector_unbind(instance->dtcp);
+        dtp_unbind(instance->dtp);
+        dtcp_unbind(instance->dtcp);
 
         if (dtp_destroy(instance->dtp))
                 return -1;
@@ -146,13 +143,38 @@ int efcp_destroy(struct efcp * instance,
         return 0;
 }
 
-int efcp_update(struct efcp * instance,
-                cep_id_t      from,
-                cep_id_t      to)
+int efcp_connection_update(struct efcp * instance,
+                           cep_id_t      from,
+                           cep_id_t      to)
 {
         ASSERT(instance);
 
-        LOG_UNSUPPORTED;
+        LOG_MISSING;
 
         return -1;
+}
+
+int efcp_write(struct efcp *      instance,
+               port_id_t          id,
+               const struct sdu * sdu)
+{
+        ASSERT(instance);
+        ASSERT(is_port_id_ok(id));
+        ASSERT(sdu);
+
+        if (!instance->dtp) {
+                LOG_ERR("No DTP instance available, cannot send");
+                return -1;
+        }
+
+        return dtp_send(instance->dtp, sdu);
+}
+
+struct pdu * efcp_receive_pdu(struct efcp * instance)
+{
+        ASSERT(instance);
+
+        LOG_MISSING;
+
+        return NULL;
 }
