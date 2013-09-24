@@ -163,11 +163,12 @@ struct connection {
         /* policy_t ** policies; */
 };
 
-/*FIXME: needed for nl api */
+/* FIXME: needed for nl api */
 enum rib_object_class_t {
 	EMPTY,
 };
 
+/* FIXME: Remove rib_obj_ prefix, it's unneeded */
 struct rib_object {
 	enum rib_object_class_t rib_obj_class;
 	string_t *              rib_obj_name;
