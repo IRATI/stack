@@ -18,9 +18,36 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_PDUFWDT_H
-#define RINA_PDUFWDT_H
+#define RINA_PREFIX "pft"
 
-struct pdu_ft_entry; /* FIXME: To be defined properly */
+#include "logs.h"
+#include "utils.h"
+#include "debug.h"
+#include "pft.h"
 
-#endif
+struct pft {
+        int x;
+};
+
+struct pft * pft_create(void)
+{
+        struct pft * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        return tmp;
+}
+
+int pft_destroy(struct pft * instance)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+
+        rkfree(instance);
+
+        return 0;
+}
