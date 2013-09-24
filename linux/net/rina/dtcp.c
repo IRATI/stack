@@ -279,3 +279,23 @@ int dtcp_unbind(struct dtcp * instance)
         return 0;
 
 }
+
+#if 0
+static void dtcp_task(void)
+{
+        /* TODO: Perform transmission control */
+        /* TODO: Perform re-transmission control */
+        /* TODO: Perform flow control */
+}
+#endif
+
+int dtcp_send(struct dtcp * instance,
+              struct sdu *  sdu)
+{
+        LOG_MISSING;
+
+        /* Takes the pdu and enqueue in its internal queues */
+
+        return -1;
+}
+
