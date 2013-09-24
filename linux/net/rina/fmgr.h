@@ -26,8 +26,23 @@
 
 struct fmgr;
 
+/*
+ * Instance management related functions
+ */
 struct fmgr * fmgr_create(void);
 int           fmgr_destroy(struct fmgr * instance);
+
+/*
+ * Each flow will have its own EFCP and RMT instance.
+ *
+ * EFCP will have its DTP and DTCP parts, loosely coupled by the DTSV:
+ *
+ *   The DTP part will perform fragmentation, reassembly, sequencing,
+ *   concatenation and separation of SDUs.
+ *
+ *   The DTCP part will perform transmission, retransmission and flow control
+ *
+ */
 
 /*
  * NOTE: is_port_id_ok() and is_flow_id_ok() must be used to detect error
