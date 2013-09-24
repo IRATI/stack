@@ -21,10 +21,9 @@
 #ifndef RINA_RMT_H
 #define RINA_RMT_H
 
-#include <linux/kobject.h>
+#include "du.h"
 
 struct rmt;
-struct pdu_ft_entry;
 
 /*
  * NOTEs:
@@ -40,7 +39,10 @@ struct pdu_ft_entry;
  * (N-1)-DIFs available to the RMT.
  */
 
-struct rmt * rmt_init(struct kobject * parent);
+struct rmt * rmt_init(void);
 int          rmt_fini(struct rmt * instance);
+
+int          rmt_post(struct rmt * instance,
+                      struct pdu * pdu);
 
 #endif

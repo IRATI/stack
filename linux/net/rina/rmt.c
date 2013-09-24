@@ -18,14 +18,12 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/kobject.h>
-
 #define RINA_PREFIX "rmt"
 
 #include "logs.h"
 #include "utils.h"
-#include "rmt.h"
 #include "debug.h"
+#include "rmt.h"
 
 struct rmt {
 	/* This structure holds per-RMT instance data */
@@ -45,7 +43,7 @@ struct rmt {
         int placeholder;
 };
 
-struct rmt * rmt_init(struct kobject * parent)
+struct rmt * rmt_init(void)
 {
         struct rmt * e = NULL;
 
@@ -67,4 +65,12 @@ int rmt_fini(struct rmt * instance)
         rkfree(instance);
 
         return 0;
+}
+
+int rmt_post(struct rmt * instance,
+             struct pdu * pdu)
+{
+        LOG_MISSING;
+
+        return -1;
 }
