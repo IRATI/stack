@@ -46,6 +46,7 @@ struct dtp_policies {
 };
 
 struct dtp {
+        /* NOTE: The DTP State Vector cannot be discarded */
         struct dtp_sv *       state_vector;
         struct dtp_policies * policies;
         struct dtcp *         peer;
@@ -99,8 +100,10 @@ int dtp_destroy(struct dtp * instance)
                 return -1;
         }
 
-        if (instance->state_vector)
-                rkfree(instance->state_vector);
+        /* NOTE: The DTP State Vector cannot be discarded */
+        ASSERT(instance->state_vector);
+        
+        rkfree(instance->state_vector);
         rkfree(instance);
 
         LOG_DBG("Instance %pK destroyed successfully", instance);
@@ -149,7 +152,6 @@ int dtp_unbind(struct dtp * instance)
 
 }
 
-#if 0
 static int sdu_delimit(struct dtp * dtp,
                        struct sdu * sdu)
 {
@@ -194,6 +196,7 @@ static int sdu_crc(struct dtp * dtp,
         return -1;
 }
 
+/* Closed Window Queue policy */
 int sdu_apply_policy_CsldWinQ(struct dtp * dtp,
                               struct sdu * sdu)
 {
@@ -204,15 +207,24 @@ int sdu_apply_policy_CsldWinQ(struct dtp * dtp,
 
         return -1;
 }
-#endif
 
-int dtp_send(struct dtp *       dtp,
-             const struct sdu * sdu)
+int sdu_apply_policy_RexmsnQ(struct dtp * dtp,
+                             struct sdu * sdu)
 {
         ASSERT(dtp);
         ASSERT(sdu);
 
-#if 0
+        LOG_MISSING;
+
+        return -1;
+}
+
+int dtp_send(struct dtp * dtp,
+             struct sdu * sdu)
+{
+        ASSERT(dtp);
+        ASSERT(sdu);
+
         if (sdu_delimit(dtp, sdu))
                 return -1;
 
@@ -227,7 +239,11 @@ int dtp_send(struct dtp *       dtp,
 
         if (sdu_apply_policy_CsldWinQ(dtp, sdu))
                 return -1;
+
+        if (sdu_apply_policy_RexmsnQ(dtp, sdu))
+                return -1;
         
+#if 0
         return dtcp_instance->peer->ops->write(sdu);
 #endif
 

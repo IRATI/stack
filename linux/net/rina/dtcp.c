@@ -143,6 +143,10 @@ struct dtcp_policies {
 };
 
 struct dtcp {
+        /*
+         * NOTE: The DTCP State Vector can be discarded during long periods of
+         *       no traffic
+         */
         struct dtcp_sv *       state_vector;
         struct dtcp_policies * policies;
 

@@ -209,6 +209,7 @@ SYSCALL_DEFINE3(sdu_write,
                 return -EFAULT;
         }
 
+        /* NOTE: sdu_create takes the ownership of the buffer */
         sdu = sdu_create_from(tmp_buffer, size);
         if (!sdu) {
                 rkfree(tmp_buffer);

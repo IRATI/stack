@@ -61,12 +61,6 @@ struct efcp {
 
         /* The Data transfer control protocol state machine instance */
         struct dtcp * dtcp;
-
-#if 0
-        /* Pointer to the flow data structure of the K-IPC Manager */
-        /* FIXME: Do we really need this pointer ? */
-        struct flow * flow;
-#endif
 };
 
 struct efcp * efcp_create(void)
@@ -97,6 +91,9 @@ int efcp_connection_create(struct efcp *             instance,
 {
         ASSERT(instance);
         ASSERT(connection);
+
+        /* FIXME: We should ensure that only the DTP is instantiated ... */
+        /* FIXME: How could we know if DTCP is needed ??? */
 
         instance->dtp  = dtp_create(/* connection->port_id */);
         if (!instance->dtp)
@@ -154,9 +151,9 @@ int efcp_connection_update(struct efcp * instance,
         return -1;
 }
 
-int efcp_write(struct efcp *      instance,
-               port_id_t          id,
-               const struct sdu * sdu)
+int efcp_send(struct efcp *      instance,
+              port_id_t          id,
+              const struct sdu * sdu)
 {
         ASSERT(instance);
         ASSERT(is_port_id_ok(id));

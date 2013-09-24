@@ -40,9 +40,9 @@ int           efcp_connection_update(struct efcp * instance,
                                      cep_id_t      to);
 
 /* FIXME: Should these functions work over a struct connection * instead ? */
-int           efcp_write(struct efcp *      instance,
-                         port_id_t          id,
-                         const struct sdu * sdu);
+int           efcp_send(struct efcp *      instance,
+                        port_id_t          id,
+                        const struct sdu * sdu);
 struct pdu *  efcp_receive(struct efcp * instance);
 
 #endif

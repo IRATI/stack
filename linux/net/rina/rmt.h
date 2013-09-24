@@ -2,7 +2,6 @@
  * RMT (Relaying and Multiplexing Task)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net> 
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +25,20 @@
 
 struct rmt;
 struct pdu_ft_entry;
+
+/*
+ * NOTEs:
+ *
+ * QoS-id - An identifier unambiguous within this DIF that identifies a
+ * QoS-hypercube. As QoS-cubes are created they are sequentially enumerated.
+ * QoS-id is an element of Data Transfer PCI that may be used by the RMT to
+ * classify PDUs.
+ *
+ * RMT - This task is an element of the data transfer function of a DIF.
+ * Logically, it sits between the EFCP and SDU Protection.  RMT performs the
+ * real time scheduling of sending PDUs on the appropriate (N-1)-ports of the
+ * (N-1)-DIFs available to the RMT.
+ */
 
 struct rmt * rmt_init(struct kobject * parent);
 int          rmt_fini(struct rmt * instance);

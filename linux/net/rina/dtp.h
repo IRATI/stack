@@ -34,11 +34,11 @@ int          dtp_bind(struct dtp *  instance,
                       struct dtcp * peer);
 int          dtp_unbind(struct dtp * instance);
 
-/* Used by the higher level component to send PDUs to RMT */
-int          dtp_send(struct dtp *       dtp,
-                      const struct sdu * sdu);
+/* Sends a SDU to the DTP (DTP takes the ownership of the passed SDU) */
+int          dtp_send(struct dtp * dtp,
+                      struct sdu * sdu);
 
-/* Used by the RMT to let DTP receive PDUs */
+/* Receives a PDU from DTP (DTP gives the ownership of the returned PDU) */
 struct pdu * dtp_receive(struct dtp * dtp);
 
 #endif

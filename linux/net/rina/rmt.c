@@ -27,11 +27,6 @@
 #include "rmt.h"
 #include "debug.h"
 
-struct rmt_conf {
-	/* To do, only a placeholder right now to avoid sizeof = 0 */
-        int placeholder;
-};
-
 struct rmt {
 	/* This structure holds per-RMT instance data */
 
