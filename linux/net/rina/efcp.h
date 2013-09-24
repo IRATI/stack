@@ -40,9 +40,13 @@ int           efcp_connection_update(struct efcp * instance,
                                      cep_id_t      to);
 
 /* FIXME: Should these functions work over a struct connection * instead ? */
-int           efcp_send(struct efcp *      instance,
-                        port_id_t          id,
-                        const struct sdu * sdu);
+
+/* NOTE: efcp_send() takes the ownership of the passed SDU */
+int           efcp_send(struct efcp * instance,
+                        port_id_t     id,
+                        struct sdu *  sdu);
+
+/* NOTE: efcp_receive() gives the ownership of the returned PDU */
 struct pdu *  efcp_receive(struct efcp * instance);
 
 #endif

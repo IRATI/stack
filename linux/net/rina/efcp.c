@@ -151,9 +151,9 @@ int efcp_connection_update(struct efcp * instance,
         return -1;
 }
 
-int efcp_send(struct efcp *      instance,
-              port_id_t          id,
-              const struct sdu * sdu)
+int efcp_send(struct efcp * instance,
+              port_id_t     id,
+              struct sdu *  sdu)
 {
         ASSERT(instance);
         ASSERT(is_port_id_ok(id));
