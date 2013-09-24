@@ -35,11 +35,11 @@ int          dtp_bind(struct dtp *  instance,
 int          dtp_unbind(struct dtp * instance);
 
 /* Sends a SDU to the DTP (DTP takes the ownership of the passed SDU) */
-int          dtp_send(struct dtp * dtp,
+int          dtp_send(struct dtp * instance,
                       struct sdu * sdu);
 
 /* Receives a PDU from DTP (DTP gives the ownership of the returned PDU) */
-struct pdu * dtp_receive(struct dtp * dtp);
+struct pdu * dtp_receive(struct dtp * instance);
 
 #endif
 

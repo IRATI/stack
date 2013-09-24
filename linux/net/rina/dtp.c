@@ -152,8 +152,8 @@ int dtp_unbind(struct dtp * instance)
 
 }
 
-static int sdu_delimit(struct dtp * dtp,
-                       struct sdu * sdu)
+static int delimit_fragment_concatenate(struct dtp * dtp,
+                                        struct sdu * sdu)
 {
         ASSERT(dtp);
         ASSERT(sdu);
@@ -163,8 +163,8 @@ static int sdu_delimit(struct dtp * dtp,
         return -1;
 }
 
-static int sdu_fragment_concatenate(struct dtp * dtp,
-                                    struct sdu * sdu)
+static int sequence_address(struct dtp * dtp,
+                            struct sdu * sdu)
 {
         ASSERT(dtp);
         ASSERT(sdu);
@@ -174,19 +174,8 @@ static int sdu_fragment_concatenate(struct dtp * dtp,
         return -1;
 }
 
-static int sdu_sequence_address(struct dtp * dtp,
-                                struct sdu * sdu)
-{
-        ASSERT(dtp);
-        ASSERT(sdu);
-
-        LOG_MISSING;
-
-        return -1;
-}
-
-static int sdu_crc(struct dtp * dtp,
-                   struct sdu * sdu)
+static int crc_apply(struct dtp * dtp,
+                     struct sdu * sdu)
 {
         ASSERT(dtp);
         ASSERT(sdu);
@@ -197,8 +186,8 @@ static int sdu_crc(struct dtp * dtp,
 }
 
 /* Closed Window Queue policy */
-int sdu_apply_policy_CsldWinQ(struct dtp * dtp,
-                              struct sdu * sdu)
+int apply_policy_CsldWinQ(struct dtp * dtp,
+                          struct sdu * sdu)
 {
         ASSERT(dtp);
         ASSERT(sdu);
@@ -208,8 +197,8 @@ int sdu_apply_policy_CsldWinQ(struct dtp * dtp,
         return -1;
 }
 
-int sdu_apply_policy_RexmsnQ(struct dtp * dtp,
-                             struct sdu * sdu)
+int apply_policy_RexmsnQ(struct dtp * dtp,
+                         struct sdu * sdu)
 {
         ASSERT(dtp);
         ASSERT(sdu);
@@ -219,42 +208,83 @@ int sdu_apply_policy_RexmsnQ(struct dtp * dtp,
         return -1;
 }
 
-int dtp_send(struct dtp * dtp,
+int dtp_send(struct dtp * instance,
              struct sdu * sdu)
 {
-        ASSERT(dtp);
-        ASSERT(sdu);
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+        if (!sdu) {
+                LOG_ERR("No data passed, bailing out");
+                return -1;
+        }
 
-        if (sdu_delimit(dtp, sdu))
+        if (delimit_fragment_concatenate(instance, sdu))
                 return -1;
 
-        if (sdu_fragment_concatenate(dtp, sdu))
+        if (sequence_address(instance, sdu))
                 return -1;
 
-        if (sdu_sequence_address(dtp, sdu))
+        if (crc_apply(instance, sdu))
                 return -1;
 
-        if (sdu_crc(dtp, sdu))
+        if (apply_policy_CsldWinQ(instance, sdu))
                 return -1;
 
-        if (sdu_apply_policy_CsldWinQ(dtp, sdu))
-                return -1;
-
-        if (sdu_apply_policy_RexmsnQ(dtp, sdu))
+        if (apply_policy_RexmsnQ(instance, sdu))
                 return -1;
         
-#if 0
-        return dtcp_instance->peer->ops->write(sdu);
-#endif
+        /* Give the data to RMT now ! */
 
         LOG_MISSING;
 
         return -1;
 }
 
-struct pdu * dtp_receive(struct dtp * dtp)
+static int crc_check(struct dtp * instance,
+                     struct pdu * pdu)
 {
         LOG_MISSING;
 
-        return NULL;
+        return -1;
+}
+
+static int sequencing(struct dtp * instance,
+                      struct pdu * pdu)
+{
+        LOG_MISSING;
+
+        return -1;
+}
+
+static int delimiting_reassembly_separation(struct dtp * instance,
+                                            struct pdu * pdu)
+{
+        LOG_MISSING;
+        
+        return -1;
+}
+
+struct pdu * dtp_receive(struct dtp * instance)
+{
+        struct pdu * tmp;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return NULL;
+        }
+
+        tmp = NULL;
+
+        if (crc_check(instance, tmp))
+                return NULL;
+
+        if (sequencing(instance, tmp))
+                return NULL;
+
+        if (delimiting_reassembly_separation(instance, tmp))
+                return NULL;
+
+        return tmp;
 }
