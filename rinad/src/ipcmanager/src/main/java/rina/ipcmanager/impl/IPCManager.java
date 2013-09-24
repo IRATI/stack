@@ -252,7 +252,16 @@ public class IPCManager {
 			log.info("OS process finalized. Naming info: " 
 					+ osProcessFinalizedEvent.getApplicationName().toString());
 			
-			//TODO clean up all stuff related to the finalized process (registrations, flows, ...)
+			//Clean up all stuff related to the finalized process (registrations, flows)
+			applicationRegistrationManager.cleanApplicationRegistrations(
+					osProcessFinalizedEvent.getApplicationName());
+			flowManager.cleanFlows(osProcessFinalizedEvent.getApplicationName());
+			
+			if (osProcessFinalizedEvent.getIPCProcessId() != 0){
+				//TODO The process that crashed was an IPC Process in user space
+				//Should we destroy the state in the kernel? Or try to create another
+				//IPC Process in user space to bring it back?
+			}
 		}
 	}
 	

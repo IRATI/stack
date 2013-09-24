@@ -104,6 +104,7 @@ public:
 	void setProcessInstance(const std::string& processInstance);
 	const std::string& getProcessName() const;
 	void setProcessName(const std::string& processName);
+	std::string getProcessNamePlusInstance();
     std::string toString();
 };
 

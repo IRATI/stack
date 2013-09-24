@@ -1,6 +1,10 @@
 package rina.ipcmanager.impl.helpers;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
@@ -74,6 +78,50 @@ public class ApplicationRegistrationManager {
 		
 		applicationManager.applicationRegistered(event, ipcProcess.getConfiguration().getDifName(), 
 				0);
+	}
+	
+	/**
+	 * Called when the IPC Manager is informed that the application identified by apName (process + instance) 
+	 * has terminated. We have to look for potential registrations of the application and cancel them
+	 * @param apName
+	 */
+	public synchronized void cleanApplicationRegistrations(ApplicationProcessNamingInformation apName){
+		Iterator<Entry<String, ApplicationRegistrationState>> iterator = 
+				applicationRegistrations.entrySet().iterator();
+		Entry<String, ApplicationRegistrationState> currentEntry = null;
+		ApplicationRegistrationState state = null;
+		List<Entry<String, ApplicationRegistrationState>> entriesToRemove = 
+				new ArrayList<Entry<String, ApplicationRegistrationState>>();
+		
+		while(iterator.hasNext()){
+			currentEntry = iterator.next();
+			if (currentEntry.getValue().getApplicationName().getProcessNamePlusInstance().equals(
+					apName.getProcessNamePlusInstance())){
+				entriesToRemove.add(currentEntry);
+			}
+		}
+		
+		log.info(entriesToRemove.size() + " application registrations are going to be canceled");
+		String difName = null;
+		IPCProcess ipcProcess = null;
+		for(int i=0; i<entriesToRemove.size(); i++){
+			currentEntry = entriesToRemove.get(i);
+			state = currentEntry.getValue();
+			applicationRegistrations.remove(currentEntry.getKey());
+			
+			for(int j=0; j<state.getDIFNames().size(); j++){
+				difName = state.getDIFNames().get(j);
+				try{
+					ipcProcess = selectIPCProcessOfDIF(difName);
+					ipcProcess.unregisterApplication(state.getApplicationName());
+				}catch(Exception ex){
+					log.error("Error unregistering application " + 
+							state.getApplicationName().toString() + " from DIF "+difName);
+				}
+				
+			}
+			
+		}
 	}
 	
 	/**

@@ -1,6 +1,10 @@
 package rina.ipcmanager.impl.helpers;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
@@ -8,6 +12,7 @@ import org.apache.commons.logging.LogFactory;
 
 import eu.irati.librina.AllocateFlowException;
 import eu.irati.librina.ApplicationManagerSingleton;
+import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.DIFConfiguration;
 import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowDeallocatedEvent;
@@ -83,6 +88,47 @@ public class FlowManager {
 		}
 		
 		ipcProcess.allocateFlowResponse(event, 0);
+	}
+	
+	/**
+	 * Called when the IPC Manager is informed that the application identified by apName (process + instance) 
+	 * has terminated. We have to look for potential flows of the application and deallocate them
+	 * @param apName
+	 */
+	public synchronized void cleanFlows(ApplicationProcessNamingInformation apName){
+		Iterator<Entry<Integer, FlowState>> iterator = flows.entrySet().iterator();
+		Entry<Integer, FlowState> currentEntry = null;
+		FlowState state = null;
+		List<Entry<Integer, FlowState>> entriesToRemove = 
+				new ArrayList<Entry<Integer, FlowState>>();
+		
+		while(iterator.hasNext()){
+			currentEntry = iterator.next();
+			state = currentEntry.getValue();
+			if (state.getLocalApplication().getProcessNamePlusInstance().equals(
+					apName.getProcessNamePlusInstance())){
+				entriesToRemove.add(currentEntry);
+			}
+		}
+		
+		log.info(entriesToRemove.size() + " flows are going to be deallocated");
+		IPCProcess ipcProcess = null;
+		for(int i=0; i<entriesToRemove.size(); i++){
+			currentEntry = entriesToRemove.get(i);
+			state = currentEntry.getValue();
+			flows.remove(currentEntry.getKey());
+			try{
+				ipcProcess = selectIPCProcessOfDIF(state.getDifName());
+				if (ipcProcess == null){
+					log.error("Could not find IPC Process of DIF "+state.getDifName());
+					continue;
+				}
+
+				ipcProcess.deallocateFlow(state.getPortId());
+			}catch(Exception ex){
+				log.error("Error deallocating flow with port id " + state.getPortId());
+			}
+		}
 	}
 	
 	public void deallocateFlow(FlowDeallocateRequestEvent event) throws Exception{

@@ -190,6 +190,11 @@ void ApplicationProcessNamingInformation::setProcessName(
 	this->processName = processName;
 }
 
+std::string ApplicationProcessNamingInformation::
+getProcessNamePlusInstance(){
+	return processName + "-" + processInstance;
+}
+
 std::string ApplicationProcessNamingInformation::toString() {
 	return "Process name: " + processName + "; Process instance: "
 			+ processInstance + "; Entity name: " + entityName

@@ -40,6 +40,15 @@ RINANetlinkEndpoint::RINANetlinkEndpoint(
 	this->ipcProcessId = ipcProcessId;
 }
 
+RINANetlinkEndpoint::RINANetlinkEndpoint(
+		unsigned int netlinkPortId,
+				unsigned short ipcProcessId,
+				const ApplicationProcessNamingInformation& appNamingInfo){
+	this->netlinkPortId = netlinkPortId;
+	this->ipcProcessId = ipcProcessId;
+	this->applicationProcessName = appNamingInfo;
+}
+
 unsigned short RINANetlinkEndpoint::getIpcProcessId() const {
 	return ipcProcessId;
 }
@@ -54,6 +63,16 @@ unsigned int RINANetlinkEndpoint::getNetlinkPortId() const {
 
 void RINANetlinkEndpoint::setNetlinkPortId(unsigned int netlinkPortId) {
 	this->netlinkPortId = netlinkPortId;
+}
+
+const ApplicationProcessNamingInformation&
+RINANetlinkEndpoint::getApplicationProcessName() const {
+	return applicationProcessName;
+}
+
+void RINANetlinkEndpoint::setApplicationProcessName(
+		const ApplicationProcessNamingInformation& applicationProcessName) {
+	this->applicationProcessName = applicationProcessName;
 }
 
 /* CLASS NETLINK PORT ID MAP */
@@ -87,20 +106,21 @@ RINANetlinkEndpoint * NetlinkPortIdMap::getNetlinkPortIdFromIPCProcessId(
 void NetlinkPortIdMap::putAPNametoNetlinkPortIdMapping(
 		ApplicationProcessNamingInformation apName,
 		unsigned int netlinkPortId, unsigned short ipcProcessId){
-	RINANetlinkEndpoint * current = applicationNameMappings[apName];
+	RINANetlinkEndpoint * current =
+			applicationNameMappings[apName.getProcessNamePlusInstance()];
 	if(current != 0){
 		current->setIpcProcessId(ipcProcessId);
 		current->setNetlinkPortId(netlinkPortId);
 	}else{
-		applicationNameMappings[apName]  =
-				new RINANetlinkEndpoint(netlinkPortId, ipcProcessId);
+		applicationNameMappings[apName.getProcessNamePlusInstance()]  =
+			new RINANetlinkEndpoint(netlinkPortId, ipcProcessId, apName);
 	}
 }
 
 RINANetlinkEndpoint * NetlinkPortIdMap::getNetlinkPortIdFromAPName(
 		ApplicationProcessNamingInformation apName) throw(NetlinkException) {
-	std::map<ApplicationProcessNamingInformation, RINANetlinkEndpoint *>
-	::iterator it = applicationNameMappings.find(apName);
+	std::map<std::string, RINANetlinkEndpoint *>::iterator it =
+			applicationNameMappings.find(apName.getProcessNamePlusInstance());
 	if (it == applicationNameMappings.end()){
 		LOG_ERR("Could not find the netlink endpoint of Application %s",
 				apName.toString().c_str());
@@ -323,10 +343,8 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 IPCEvent * NetlinkPortIdMap::osProcessFinalized(unsigned int nl_portid){
 	//1 Try to get application process name, if not there return 0
 	ApplicationProcessNamingInformation apNamingInfo;
-	std::map<ApplicationProcessNamingInformation,
-		RINANetlinkEndpoint*>::iterator iterator;
-	std::map<unsigned short,
-		RINANetlinkEndpoint*>::iterator iterator2;
+	std::map<std::string, RINANetlinkEndpoint*>::iterator iterator;
+	std::map<unsigned short, RINANetlinkEndpoint*>::iterator iterator2;
 	bool foundAppName = false;
 	unsigned short ipcProcessId = 0;
 
@@ -334,7 +352,7 @@ IPCEvent * NetlinkPortIdMap::osProcessFinalized(unsigned int nl_portid){
 			iterator != applicationNameMappings.end();
 			++iterator){
 		if(iterator->second->getNetlinkPortId() == nl_portid){
-			apNamingInfo = iterator->first;
+			apNamingInfo = iterator->second->getApplicationProcessName();
 			foundAppName = true;
 			applicationNameMappings.erase(iterator);
 			break;
