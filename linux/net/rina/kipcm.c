@@ -49,7 +49,7 @@ struct kipcm {
         struct ipcp_imap *      instances;
         struct rnl_set *        set;
 
-        /* Should these flows management moved to FMGR ? */
+        /* FIXME: The flows management has to be moved to KFA / removed here */
         struct {
                 struct ipcp_fmap * pending;
                 struct ipcp_pmap * committed;
@@ -1404,8 +1404,10 @@ int kipcm_ipcp_create(struct kipcm *      kipcm,
                 return -1;
         }
 
-        /* FIXME: Ugly as hell */
+        /* FIXME: The following fixups are "ugly as hell" (TM) */
         instance->factory = factory;
+        instance->efcpc   = NULL;
+        instance->rmt     = NULL;
 
         if (ipcp_imap_add(kipcm->instances, id, instance)) {
                 factory->ops->destroy(factory->data, instance);

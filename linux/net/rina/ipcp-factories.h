@@ -22,6 +22,8 @@
 #define RINA_IPCP_FACTORIES_H
 
 #include "ipcp.h"
+#include "efcp.h"
+#include "rmt.h"
 
 struct ipcp_factory_data;
 
@@ -29,7 +31,11 @@ struct ipcp_factory_data;
 struct ipcp_instance {
         struct kobject              kobj;
 
+        /* The parent factory */
         struct ipcp_factory *       factory;
+
+        struct efcp_container *     efcpc;
+        struct rmt *                rmt;
 
         struct ipcp_instance_data * data;
         struct ipcp_instance_ops *  ops;
@@ -42,7 +48,6 @@ struct ipcp_factory_ops {
 	struct ipcp_instance * (* create)(struct ipcp_factory_data * data,
                                           const struct name *        name,
                                           ipc_process_id_t           id);
-
 	int                    (* destroy)(struct ipcp_factory_data * data,
                                            struct ipcp_instance *     inst);
 };

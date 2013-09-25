@@ -174,7 +174,6 @@ int kfa_flow_sdu_write(struct kfa *  instance,
 
         return -1;
 }
-EXPORT_SYMBOL(kfa_flow_sdu_write);
 
 struct sdu * kfa_flow_sdu_read(struct kfa *  instance,
                                port_id_t     id)
@@ -194,4 +193,3 @@ struct sdu * kfa_flow_sdu_read(struct kfa *  instance,
 
         return NULL;
 }
-EXPORT_SYMBOL(kfa_flow_sdu_read);

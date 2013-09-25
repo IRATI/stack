@@ -58,6 +58,9 @@ struct connection {
         /* policy_t ** policies; */
 };
 
+/* The container holding all the EFCP instances for an IPC Process */
+struct efcp_container;
+
 struct efcp;
 
 /* NOTE: There's one EFCP for each flow */
