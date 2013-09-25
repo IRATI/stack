@@ -1398,12 +1398,10 @@ int kipcm_ipcp_destroy(struct kipcm *   kipcm,
         ASSERT(factory);
 
         /* FIXME: Should we look for pending flows from this IPC Process ? */
-#if 0
-        if (ipcp_pmap_remove_all_for_id(kipcm->kfa->flows.committed, id)) {
+        if (kfa_remove_all_for_id(kipcm->kfa, id)) {
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
-#endif
         if (factory->ops->destroy(factory->data, instance)) {
                 KIPCM_UNLOCK(kipcm);
                 return -1;

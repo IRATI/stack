@@ -241,6 +241,20 @@ int kfa_flow_destroy(struct kfa * instance,
 }
 EXPORT_SYMBOL(kfa_flow_destroy);
 
+int kfa_remove_all_for_id(struct kfa * instance, ipc_process_id_t id)
+{
+	if (!instance) {
+		LOG_ERR("Bogus instance passed, bailing out");
+		return -1;
+	}
+
+	if (ipcp_pmap_remove_all_for_id(instance->flows.committed, id)) {
+		return -1;
+	}
+	return 0;
+}
+EXPORT_SYMBOL(kfa_remove_all_for_id);
+
 int kfa_flow_sdu_write(struct kfa *  instance,
                        port_id_t     id,
                        struct sdu *  sdu)

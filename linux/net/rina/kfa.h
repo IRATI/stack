@@ -51,6 +51,9 @@ flow_id_t    kfa_flow_unbind(struct kfa * instance,
 int          kfa_flow_destroy(struct kfa * instance,
                               flow_id_t    id);
 
+int 	     kfa_remove_all_for_id(struct kfa *     instance,
+				   ipc_process_id_t id);
+
 /* Once the flow is bound to a port, we can write/read SDUs */
 int          kfa_flow_sdu_write(struct kfa *  instance,
                                 port_id_t     id,
