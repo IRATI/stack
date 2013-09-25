@@ -23,6 +23,7 @@
 
 #include "common.h"
 #include "du.h"
+#include "ipcp-factories.h"
 
 struct kfa;
 
@@ -33,9 +34,11 @@ int          kfa_destroy(struct kfa * instance);
 flow_id_t    kfa_flow_create(struct kfa * instance);
 
 /* Commits the flow, binds the flow to a port-id, frees the flow-id */
-int          kfa_flow_bind(struct kfa * instance,
-                           flow_id_t    fid,
-                           port_id_t    pid);
+int          kfa_flow_bind(struct kfa * 	  instance,
+                           flow_id_t    	  fid,
+                           port_id_t    	  pid,
+                           struct ipcp_instance * ipc_process,
+                           ipc_process_id_t       ipc_id);
 
 /*
  * Un-commits the flow, binds the flow to a flow-id (different from the one
