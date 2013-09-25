@@ -40,7 +40,6 @@ typedef uint          cep_id_t;
 
 /* FIXME: Is this address_t definition correct ??? */
 typedef uint16_t      address_t;
-typedef uint          seq_num_t;
 typedef char	      regex_t;
 
 /* FIXME: The qos_id_t should be defined correctly in the near future */
@@ -165,7 +164,10 @@ struct connection {
         /* policy_t ** policies; */
 };
 
-/* FIXME: Move Netlink types into rnl */
+/* FIXME: Move all the Netlink types below to rnl */
+
+typedef uint seq_num_t;
+
 /* FIXME: needed for nl api */
 enum rib_object_class_t {
 	EMPTY,

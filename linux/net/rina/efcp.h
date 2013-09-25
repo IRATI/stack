@@ -26,10 +26,13 @@
 
 struct efcp;
 
+/* NOTE: There's one EFCP for each flow */
+
+/* FIXME: efcp_create() creates an EFCP-PM ... */
 struct efcp * efcp_create(void);
 int           efcp_destroy(struct efcp * instance);
 
-/* FIXME: Should a struct connection * be returned instead ? */
+/* FIXME: Should a cep_id_t be returned instead ? */
 int           efcp_connection_create(struct efcp *             instance,
                                      const struct connection * connection,
                                      cep_id_t *                id);

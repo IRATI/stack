@@ -34,7 +34,7 @@ struct rmt {
 
 struct rmt * rmt_create(void)
 {
-        struct rmt * tmp = NULL;
+        struct rmt * tmp;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)

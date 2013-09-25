@@ -21,6 +21,7 @@
 #ifndef RINA_RMT_H
 #define RINA_RMT_H
 
+#include "common.h"
 #include "du.h"
 
 struct rmt;
@@ -39,7 +40,7 @@ struct rmt;
  * (N-1)-DIFs available to the RMT.
  */
 
-#include "common.h"
+/* NOTE: There's one RMT for each IPC Process */
 
 struct rmt * rmt_create(void);
 int          rmt_destroy(struct rmt * instance);

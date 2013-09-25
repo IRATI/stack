@@ -65,13 +65,15 @@ struct efcp {
 
 struct efcp * efcp_create(void)
 {
-        struct efcp * e = NULL;
+        struct efcp * tmp;
 
-        LOG_DBG("Initializing instance");
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
 
-        e = rkzalloc(sizeof(*e), GFP_KERNEL);
+        LOG_DBG("Instance %pK initialized successfully", tmp);
 
-        return e;
+        return tmp;
 }
 
 int efcp_destroy(struct efcp * instance)
