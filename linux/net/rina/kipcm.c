@@ -50,6 +50,7 @@ struct kipcm {
         struct ipcp_imap *      instances;
         struct rnl_set *        set;
         struct kfa *            kfa;
+
 };
 
 #ifdef CONFIG_RINA_KIPCM_LOCKS_DEBUG
@@ -1357,8 +1358,10 @@ int kipcm_ipcp_create(struct kipcm *      kipcm,
                 return -1;
         }
 
-        /* FIXME: Ugly as hell */
+        /* FIXME: The following fixups are "ugly as hell" (TM) */
         instance->factory = factory;
+        instance->efcpc   = NULL;
+        instance->rmt     = NULL;
 
         if (ipcp_imap_add(kipcm->instances, id, instance)) {
                 factory->ops->destroy(factory->data, instance);

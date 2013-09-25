@@ -164,9 +164,9 @@ static string_t * create_vlan_interface_name(string_t * interface_name,
         return complete_interface;
 }
 
-static struct shim_eth_flow * find_flow_by_addr
-(struct ipcp_instance_data *       data,
- const struct paddr *              addr)
+static struct shim_eth_flow *
+find_flow_by_addr(struct ipcp_instance_data *       data,
+                  const struct paddr *              addr)
 {
         struct shim_eth_flow * flow;
 
@@ -705,7 +705,7 @@ find_instance(struct ipcp_factory_data * data,
 }
 
 static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
-					      const struct name * name,
+					      const struct name *        name,
                                               ipc_process_id_t           id)
 {
         struct ipcp_instance * inst;

@@ -47,7 +47,7 @@ struct ipcp_config {
 	struct ipcp_config_entry * entry;
 };
 
-/* Pre-declared, the shim should define it properly */
+/* Pre-declared, the implementation should define it properly */
 struct ipcp_instance_data;
 
 struct ipcp_instance_ops {
