@@ -84,6 +84,7 @@ flow_id_t kfa_flow_create(struct kfa * instance)
 
         return flow_id_bad();
 }
+EXPORT_SYMBOL(kfa_flow_create);
 
 int kfa_flow_bind(struct kfa * instance,
                   flow_id_t    fid,
@@ -108,6 +109,7 @@ int kfa_flow_bind(struct kfa * instance,
 
         return -1;
 }
+EXPORT_SYMBOL(kfa_flow_bind);
 
 flow_id_t kfa_flow_unbind(struct kfa * instance,
                           port_id_t    id)
@@ -127,6 +129,7 @@ flow_id_t kfa_flow_unbind(struct kfa * instance,
 
         return flow_id_bad();
 }
+EXPORT_SYMBOL(kfa_flow_unbind);
 
 int kfa_flow_destroy(struct kfa * instance,
                      flow_id_t    id)
@@ -146,6 +149,7 @@ int kfa_flow_destroy(struct kfa * instance,
 
         return -1;
 }
+EXPORT_SYMBOL(kfa_flow_destroy);
 
 int kfa_flow_sdu_write(struct kfa *  instance,
                        port_id_t     id,
@@ -159,7 +163,7 @@ int kfa_flow_sdu_write(struct kfa *  instance,
                 LOG_ERR("Bogus port-id, bailing out");
                 return -1;
         }
-        if (!sdu_is_ok(sdu)) {
+        if (!is_sdu_ok(sdu)) {
                 LOG_ERR("Bogus port-id, bailing out");
                 return -1;
         }
@@ -170,6 +174,7 @@ int kfa_flow_sdu_write(struct kfa *  instance,
 
         return -1;
 }
+EXPORT_SYMBOL(kfa_flow_sdu_write);
 
 struct sdu * kfa_flow_sdu_read(struct kfa *  instance,
                                port_id_t     id)
@@ -189,3 +194,4 @@ struct sdu * kfa_flow_sdu_read(struct kfa *  instance,
 
         return NULL;
 }
+EXPORT_SYMBOL(kfa_flow_sdu_read);
