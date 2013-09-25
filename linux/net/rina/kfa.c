@@ -1,5 +1,5 @@
 /*
- * FMGR (Flows Manager)
+ * KFA (Kernel Flow Allocator)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,6 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/module.h>
+
 #define RINA_PREFIX "kfa"
 
 #include "logs.h"
@@ -27,24 +29,27 @@
 #include "kfa.h"
 
 struct kfa {
+        spinlock_t    lock;
         struct fidm * fidm;
 };
 
 struct kfa * kfa_create(void)
 {
-        struct kfa * tmp;
+        struct kfa * instance;
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
+        instance = rkzalloc(sizeof(*instance), GFP_KERNEL);
+        if (!instance)
                 return NULL;
-
-        tmp->fidm = fidm_create();
-        if (!tmp->fidm) {
-                rkfree(tmp);
+        
+        instance->fidm = fidm_create();
+        if (!instance->fidm) {
+                rkfree(instance);
                 return NULL;
         }
 
-        return tmp;
+        spin_lock_init(&instance->lock);
+
+        return instance;
 }
 
 int kfa_destroy(struct kfa * instance)
@@ -67,8 +72,19 @@ struct ipcp_flow {
 };
 
 flow_id_t kfa_flow_create(struct kfa * instance)
-{ return flow_id_bad();
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+
+        spin_lock(&instance->lock);
+        LOG_MISSING;
+        spin_unlock(&instance->lock);
+
+        return flow_id_bad();
 }
+EXPORT_SYMBOL(kfa_flow_create);
 
 int kfa_flow_bind(struct kfa * instance,
                   flow_id_t    fid,
@@ -87,10 +103,13 @@ int kfa_flow_bind(struct kfa * instance,
                 return -1;
         }
 
+        spin_lock(&instance->lock);
         LOG_MISSING;
+        spin_unlock(&instance->lock);
 
         return -1;
 }
+EXPORT_SYMBOL(kfa_flow_bind);
 
 flow_id_t kfa_flow_unbind(struct kfa * instance,
                           port_id_t    id)
@@ -104,8 +123,13 @@ flow_id_t kfa_flow_unbind(struct kfa * instance,
                 return -1;
         }
 
+        spin_lock(&instance->lock);
+        LOG_MISSING;
+        spin_unlock(&instance->lock);
+
         return flow_id_bad();
 }
+EXPORT_SYMBOL(kfa_flow_unbind);
 
 int kfa_flow_destroy(struct kfa * instance,
                      flow_id_t    id)
@@ -119,16 +143,19 @@ int kfa_flow_destroy(struct kfa * instance,
                 return -1;
         }
 
+        spin_lock(&instance->lock);
         LOG_MISSING;
+        spin_unlock(&instance->lock);
 
         return -1;
 }
+EXPORT_SYMBOL(kfa_flow_destroy);
 
-int kfa_flow_sdu_post_by_port(struct kfa *  instance,
-                              port_id_t     id,
-                              struct sdu *  sdu)
+int kfa_flow_sdu_write(struct kfa *  instance,
+                       port_id_t     id,
+                       struct sdu *  sdu)
 {
-       if (!instance) {
+        if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
         }
@@ -136,21 +163,23 @@ int kfa_flow_sdu_post_by_port(struct kfa *  instance,
                 LOG_ERR("Bogus port-id, bailing out");
                 return -1;
         }
-        if (!sdu_is_ok(sdu)) {
+        if (!is_sdu_ok(sdu)) {
                 LOG_ERR("Bogus port-id, bailing out");
                 return -1;
         }
 
+        spin_lock(&instance->lock);
         LOG_MISSING;
+        spin_unlock(&instance->lock);
 
         return -1;
 }
-
+EXPORT_SYMBOL(kfa_flow_sdu_write);
 
 struct sdu * kfa_flow_sdu_read(struct kfa *  instance,
                                port_id_t     id)
 {
-       if (!instance) {
+        if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return NULL;
         }
@@ -159,7 +188,10 @@ struct sdu * kfa_flow_sdu_read(struct kfa *  instance,
                 return NULL;
         }
 
+        spin_lock(&instance->lock);
         LOG_MISSING;
+        spin_unlock(&instance->lock);
 
         return NULL;
 }
+EXPORT_SYMBOL(kfa_flow_sdu_read);

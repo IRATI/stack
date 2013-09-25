@@ -157,7 +157,7 @@ SYSCALL_DEFINE3(sdu_read,
 	if (retval)
 		return -EFAULT;
 
-	if (!sdu_is_ok(tmp))
+	if (!is_sdu_ok(tmp))
 		return -EFAULT;
 
 	/* NOTE: We don't handle partial copies */
@@ -215,7 +215,7 @@ SYSCALL_DEFINE3(sdu_write,
                 rkfree(tmp_buffer);
                 return -EFAULT;
         }
-        ASSERT(sdu_is_ok(sdu));
+        ASSERT(is_sdu_ok(sdu));
 
         /* Passing ownership to the internal layers */
         CALL_DEFAULT_PERSONALITY(retval, sdu_write, id, sdu);

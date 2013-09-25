@@ -1581,7 +1581,7 @@ int kipcm_sdu_write(struct kipcm * kipcm,
                 return -1;
         }
 
-        if (!sdu || !sdu_is_ok(sdu)) {
+        if (!sdu || !is_sdu_ok(sdu)) {
                 LOG_ERR("Bogus SDU received, bailing out");
                 return -1;
         }
@@ -1713,7 +1713,7 @@ int kipcm_sdu_post(struct kipcm * kipcm,
                 LOG_ERR("Bogus kipcm instance passed, cannot post SDU");
                 return -1;
         }
-        if (!sdu || !sdu_is_ok(sdu)) {
+        if (!sdu || !is_sdu_ok(sdu)) {
                 LOG_ERR("Bogus parameters passed, bailing out");
                 return -1;
         }

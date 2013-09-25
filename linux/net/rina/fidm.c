@@ -18,7 +18,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/module.h>
 #include <linux/bitmap.h>
 
 #define RINA_PREFIX "fidm"
@@ -95,7 +94,6 @@ flow_id_t fidm_allocate(struct fidm * instance)
         
         return id;
 }
-/* EXPORT_SYMBOL(fidm_allocate); */
 
 int fidm_release(struct fidm * instance,
                  flow_id_t     id)
@@ -117,4 +115,3 @@ int fidm_release(struct fidm * instance,
 
         return 0;
 }
-/* EXPORT_SYMBOL(fidm_release); */
