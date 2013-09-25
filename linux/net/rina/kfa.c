@@ -18,13 +18,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "fmgr"
+#define RINA_PREFIX "kfa"
 
 #include "logs.h"
 #include "debug.h"
 #include "utils.h"
 #include "fidm.h"
-#include "fmgr.h"
+#include "kfa.h"
 
 struct fmgr {
         struct fidm * fidm;

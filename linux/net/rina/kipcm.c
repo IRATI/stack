@@ -1,5 +1,5 @@
 /*
- * KIPCM (Kernel-IPC Manager)
+ * KIPCM (Kernel IPC Manager)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>

@@ -1,5 +1,5 @@
 /*
- * FMGR (Flows Manager)
+ * KFA (Kernel Flow Allocator)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,8 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_FMGR_H
-#define RINA_FMGR_H
+#ifndef RINA_KFA_H
+#define RINA_KFA_H
 
 #include "common.h"
 #include "du.h"
