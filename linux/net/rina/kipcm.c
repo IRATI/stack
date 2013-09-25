@@ -318,7 +318,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      info->snd_portid);
         }
 
-#if 0 /* FIXME: Please re-enable */
+#if 1 /* FIXME: Please re-enable */
         /* The flow id MUST be ok upon calling the IPC Process ... */
         ASSERT(is_flow_id_ok(fid));
 
@@ -326,8 +326,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                     attrs->source,
                                                     attrs->dest,
                                                     attrs->fspec,
-                                                    attrs->id,
-                                                    msg->seq_num)) {
+                                                    attrs->id)) {
                 LOG_ERR("Failed allocating flow request "
                         "for port id: %d", attrs->id);
                 return alloc_flow_req_free_and_reply(source,

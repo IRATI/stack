@@ -78,8 +78,8 @@ struct dummy_flow {
         struct name *         dest;
         struct list_head      list;
         enum dummy_flow_state state;
-        uint_t                dst_seq_num;
-        uint_t                seq_num; /* Required to notify back to the */
+        flow_id_t             dst_fid;
+        flow_id_t             src_fid; /* Required to notify back to the */
         ipc_process_id_t      dst_id;  /* IPC Manager the result of the
                                         * allocation */
 };
