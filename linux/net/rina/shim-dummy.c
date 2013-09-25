@@ -187,7 +187,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
 
         flow->state       = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
         flow->port_id     = id;
-        flow->dst_seq_num = 666; /*FIXME!!!*/
+        flow->dst_fid = 666; /*FIXME!!!*/
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, &data->flows);
 
@@ -196,7 +196,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                                                source,
                                                dest,
                                                fspec,
-                                               flow->dst_seq_num,
+                                               flow->dst_fid,
                                                1)) {
                 list_del(&flow->list);
                 name_destroy(flow->source);
