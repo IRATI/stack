@@ -24,79 +24,36 @@
 #include "common.h"
 #include "du.h"
 
-#if 0
-int   kfa_init(void);
-int   kfa_fini(void);
+struct kfa;
 
-fid_t kfa_create(void);
-int   kfa_bind(fid_t, pid_t);
-fid_t kfa_undind(pid_t);
-int   kfa_destroy(fid_t);
-#endif
+struct kfa * kfa_create(void);
+int          kfa_destroy(struct kfa * instance);
 
-struct fmgr;
+/* Returns a flow-id, the flow is uncommitted yet */
+flow_id_t    kfa_flow_create(struct kfa * instance);
 
-/*
- * Instance management related functions
- */
-struct fmgr * fmgr_create(void);
-int           fmgr_destroy(struct fmgr * instance);
+/* Commits the flow, binds the flow to a port-id, frees the flow-id */
+int          kfa_flow_bind(struct kfa * instance,
+                           flow_id_t    fid,
+                           port_id_t    pid);
 
 /*
- * Each flow will have its own EFCP and RMT instance.
- *
- * EFCP will have its DTP and DTCP parts, loosely coupled by the DTSV:
- *
- *   The DTP part will perform fragmentation, reassembly, sequencing,
- *   concatenation and separation of SDUs.
- *
- *   The DTCP part will perform transmission, retransmission and flow control
- *
+ * Un-commits the flow, binds the flow to a flow-id (different from the one
+ * obtained during creation
  */
+flow_id_t    kfa_flow_unbind(struct kfa * instance,
+                             port_id_t    id);
 
-/*
- * NOTE: is_port_id_ok() and is_flow_id_ok() must be used to detect error
- *       conditions. DO NOT ASSUME port-id or flow-id < 0 as an error condition
- *       AND ALWAYS use is_port_id_ok() and is_flow_id_ok() functions
- */
+/* Finally destroys the flow */
+int          kfa_flow_destroy(struct kfa * instance,
+                              flow_id_t    id);
 
-struct ipcp_flow;
+/* Once the flow is bound to a port, we can write/read SDUs */
+int          kfa_flow_sdu_write(struct kfa *  instance,
+                                port_id_t     id,
+                                struct sdu *  sdu);
 
-/* Creates a flow (the flow is initially unbound from a port) */
-struct ipcp_flow * fmgr_flow_create(struct fmgr * mgr);
-
-/* Destroys a flow (either already bound to a port or not) */
-int                fmgr_flow_destroy(struct fmgr *      mgr,
-                                     struct ipcp_flow * flow);
-
-/* (Re-)Binds the pointed flow to the port 'pid' */
-int                fmgr_flow_bind(struct fmgr *      mgr,
-                                  struct ipcp_flow * flow,
-                                  port_id_t          pid);
-/* Unbinds a flow from a port (if any) */
-int                fmgr_flow_unbind(struct fmgr *      mgr,
-                                    struct ipcp_flow * flow);
-
-/* Returns the port the flow is bound to (if any) */
-port_id_t          fmgr_flow2port(struct fmgr *      mgr,
-                                  struct ipcp_flow * flow);
-
-/* Returns the flow bound to the port 'pid' */
-struct ipcp_flow * fmgr_port2flow(struct fmgr * mgr,
-                                  port_id_t     pid);
-
-/*
- * Once the flow is bound to a port, we can post SDUs ...
- */
-
-/* ... directly, if we "know" the flow */
-int                fmgr_flow_sdu_post(struct fmgr *      mgr,
-                                      struct ipcp_flow * flow,
-                                      struct sdu *       sdu);
-
-/* ... indirectly if we don't know the flow (hence using its port-id) */
-int                fmgr_flow_sdu_post_by_port(struct fmgr * mgr,
-                                              port_id_t     pid,
-                                              struct sdu *  sdu);
+struct sdu * kfa_flow_sdu_read(struct kfa *  instance,
+                               port_id_t     id);
 
 #endif
