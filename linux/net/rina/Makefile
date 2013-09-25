@@ -10,10 +10,10 @@ obj-$(CONFIG_RINA) +=				\
 obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 	rina_personality_default.o
 
-rina_personality_default-y :=				\
-	ipcp-factories.o ipcp.o				\
-	dtcp.o dtp.o efcp.o pft.o rmt.o fidm.o fmgr.o	\
-	kipcm-utils.o kipcm.o				\
+rina_personality_default-y :=					\
+	ipcp-factories.o ipcp.o					\
+	qos.o dtcp.o dtp.o efcp.o pft.o rmt.o fidm.o fmgr.o	\
+	kipcm-utils.o kipcm.o					\
 	default.o
 
 ifeq  ($(CONFIG_RINA_PERSONALITY_DEFAULT),m)
