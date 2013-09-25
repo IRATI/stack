@@ -27,7 +27,7 @@
 #include "personality.h"
 #include "rnl.h"
 #include "kipcm.h"
-#include "fmgr.h"
+#include "kfa.h"
 #include "debug.h"
 
 #define DEFAULT_LABEL "default"
