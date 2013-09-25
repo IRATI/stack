@@ -26,6 +26,7 @@
 
 #include "common.h"
 #include "ipcp.h"
+#include "efcp.h"
 
 #define NAME2STRING(N)
 

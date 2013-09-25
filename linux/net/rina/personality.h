@@ -26,6 +26,7 @@
 #include "common.h"
 #include "ipcp.h"
 #include "du.h"
+#include "efcp.h"
 
 /* Pre-declared, the personality should define it properly */
 struct personality_data;

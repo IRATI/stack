@@ -24,12 +24,7 @@
 #include <linux/types.h>
 
 #include "common.h"
-
-/* This structure represents raw data */
-struct buffer {
-	char * data;
-	size_t size;
-};
+#include "qos.h"
 
 #define PDU_FLAGS_FRAG_MIDDLE         0x00
 #define PDU_FLAGS_FRAG_FIRST          0x01
@@ -64,19 +59,29 @@ typedef uint16_t pdu_type_t;
 	((X && PDU_TYPE_MGMT)       ? 1 :       \
 	 0)))))
 
+typedef uint seq_num_t;
+
 struct pci {
 	address_t  source;
 	address_t  destination;
 
 	pdu_type_t type;
 
+        /* FIXME: Do we really need CEP-IDs ? */
+#if 0
         struct {
                 cep_id_t source_id;
                 cep_id_t dest_id;
         } ceps;
-
+#endif
 	qos_id_t   qos_id;
 	seq_num_t  sequence_number;
+};
+
+/* This structure represents raw data */
+struct buffer {
+	char * data;
+	size_t size;
 };
 
 struct pdu {
@@ -92,10 +97,10 @@ struct sdu {
 struct sdu * sdu_create_from(void * data, size_t size);
 int          sdu_destroy(struct sdu * s);
 int          sdu_is_ok(const struct sdu * sdu);
-struct sdu * sdu_protect(struct sdu * s);
-struct sdu * sdu_unprotect(struct sdu * s);
+struct sdu * sdu_protect(struct sdu * sdu);
+struct sdu * sdu_unprotect(struct sdu * sdu);
 
 struct pdu * pdu_create(void);
-int          pdu_destroy(struct pdu * p);
+int          pdu_destroy(struct pdu * pdu);
 
 #endif

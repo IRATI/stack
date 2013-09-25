@@ -22,6 +22,7 @@
 #define RINA_PFT_H
 
 #include "common.h"
+#include "qos.h"
 
 /* FIXME: This definition is bounded to RNL and must be removed from here */ 
 struct pdu_ft_entry {

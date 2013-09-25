@@ -23,6 +23,40 @@
 
 #include "common.h"
 #include "du.h"
+#include "qos.h"
+
+typedef uint cep_id_t;
+
+/* This structure defines an EFCP connection */
+struct connection {
+        /* The port_id this connection is bound to */
+        port_id_t port_id;
+
+        /*
+         * The address of the IPC Process that is the source of this
+         * connection
+         */
+        address_t source_address;
+
+        /*
+         * The address of the IPC Process that is the destination of
+         * this connection
+         */
+        address_t destination_address;
+
+        /* The source connection endpoint id */
+        cep_id_t  source_cep_id;
+
+        /* The destination connection endpoint id */
+        cep_id_t  dest_cep_id;
+
+        /* The QoS id */
+        qos_id_t  qos_id;
+
+        /* FIXME: policy type remains undefined */
+        /* The list of policies associated with this connection */
+        /* policy_t ** policies; */
+};
 
 struct efcp;
 

@@ -24,6 +24,16 @@
 #include "common.h"
 #include "du.h"
 
+#if 0
+int   kfa_init(void);
+int   kfa_fini(void);
+
+fid_t kfa_create(void);
+int   kfa_bind(fid_t, pid_t);
+fid_t kfa_undind(pid_t);
+int   kfa_destroy(fid_t);
+#endif
+
 struct fmgr;
 
 /*

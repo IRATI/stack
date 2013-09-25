@@ -42,4 +42,3 @@ int          dtp_send(struct dtp * instance,
 struct pdu * dtp_receive(struct dtp * instance);
 
 #endif
-
