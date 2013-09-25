@@ -16,6 +16,7 @@ import eu.irati.librina.IPCEventType;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IPCProcessPointerVector;
+import eu.irati.librina.OSProcessFinalizedEvent;
 import eu.irati.librina.rina;
 
 import java.io.ByteArrayOutputStream;
@@ -222,6 +223,9 @@ public class IPCManager {
 	}
 	
 	private void processEvent(IPCEvent event) throws Exception{
+		log.info("Got event of type: "+event.getType() 
+				+ " and sequence number: "+event.getSequenceNumber());
+		
 		if (event.getType() == IPCEventType.APPLICATION_REGISTRATION_REQUEST_EVENT){
 			ApplicationRegistrationRequestEvent appRegReqEvent = (ApplicationRegistrationRequestEvent) event;
 			applicationRegistrationManager.registerApplication(appRegReqEvent);
@@ -243,6 +247,12 @@ public class IPCManager {
 			flowManager.flowDeallocated(flowDeEvent);
 		}else if (event.getType().equals(IPCEventType.GET_DIF_PROPERTIES)){
 			//TODO
+		}else if (event.getType().equals(IPCEventType.OS_PROCESS_FINALIZED)){
+			OSProcessFinalizedEvent osProcessFinalizedEvent = (OSProcessFinalizedEvent) event;
+			log.info("OS process finalized. Naming info: " 
+					+ osProcessFinalizedEvent.getApplicationName().toString());
+			
+			//TODO clean up all stuff related to the finalized process (registrations, flows, ...)
 		}
 	}
 	

@@ -332,6 +332,17 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
+    } else if ($1->getType() == rina::OS_PROCESS_FINALIZED) {
+    	rina::OSProcessFinalizedEvent *flowReqEvent = dynamic_cast<rina::OSProcessFinalizedEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/OSProcessFinalizedEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::OSProcessFinalizedEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
     }
 }
 %enddef

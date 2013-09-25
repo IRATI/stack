@@ -464,34 +464,29 @@ EXPORT_SYMBOL(rnl_set_destroy);
  * in socket closed events.
  */
 static int kipcm_netlink_notify(struct notifier_block * nb,
-                                unsigned long           state,
-                                void *                  notification)
+		unsigned long           state,
+		void *                  notification)
 {
-        int                     result;
-        struct netlink_notify * notify = notification;
+	int                     result;
+	struct netlink_notify * notify = notification;
 
-        if (state != NETLINK_URELEASE)
-                return NOTIFY_DONE;
+	if (state != NETLINK_URELEASE)
+		return NOTIFY_DONE;
 
-        if (!notify) {
-                LOG_ERR("Wrong data obtained in netlink notifier callback");
-                return NOTIFY_BAD;
-        }
+	if (!notify) {
+		LOG_ERR("Wrong data obtained in netlink notifier callback");
+		return NOTIFY_BAD;
+	}
 
-        LOG_INFO("Netlink socket at port-id %d closed", notify->portid);
+	/* FIXME: Is the IPCM available ??? */
+	result = rnl_ipcm_sock_closed_notif_msg(notify->portid, 1);
+	if (result)
+		LOG_ERR("Error notifying IPC Manager in user space, %d",
+				result);
+	else
+		LOG_INFO("Sent NL message informing IPC Manager at user space");
 
-        /* FIXME: Is the IPCM available ??? */
-        result = rnl_ipcm_sock_closed_notif_msg(notify->portid, 1);
-        if (result) {
-                LOG_ERR("Error notifying IPC Manager in user space, %d",
-                        result);
-                return NOTIFY_BAD;
-        }
-
-        LOG_INFO("Sent NL message informing IPC Manager at user space");
-
-        /* FIXME: NOTIFY_DONE or NOTIFY_OK ??? */
-        return NOTIFY_DONE;
+	return NOTIFY_DONE;
 }
 
 static struct notifier_block kipcm_netlink_notifier = {
