@@ -23,7 +23,11 @@
 
 typedef int16_t flow_id_t;
 
+/* ALWAYS use this function to check if the id looks good */
 int           is_flow_id_ok(flow_id_t id);
+
+/* ALWAYS use this function to get a bad port-id */
+flow_id_t     flow_id_bad(void);
 
 struct fidm;
 

@@ -66,6 +66,10 @@ int fidm_destroy(struct fidm * instance)
 
 #define FLOW_ID_WRONG -1
 
+flow_id_t flow_id_bad(void)
+{ return FLOW_ID_WRONG; }
+EXPORT_SYMBOL(flow_id_bad);
+
 int is_flow_id_ok(flow_id_t id)
 { return (id >= 0 && id < BITS_IN_BITMAP) ? 1 : 0; }
 EXPORT_SYMBOL(is_flow_id_ok);
@@ -85,7 +89,7 @@ flow_id_t fidm_allocate(struct fidm * instance)
                                                     BITS_IN_BITMAP,
                                                     0, 1, 0);
         if (id >= BITS_IN_BITMAP)
-                id = FLOW_ID_WRONG;
+                id = flow_id_bad();
 
         spin_unlock(&instance->lock);
         
