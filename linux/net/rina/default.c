@@ -35,7 +35,7 @@
 struct personality_data {
         struct kipcm *   kipcm;
         struct rnl_set * nlset;
-        struct fmgr *    fmgr;
+        struct kfa *     kfa;
 };
 
 static int is_personality_ok(const struct personality_data * p)
@@ -46,7 +46,7 @@ static int is_personality_ok(const struct personality_data * p)
                 return 0;
         if (!p->nlset)
                 return 0;
-        if (!p->fmgr)
+        if (!p->kfa)
                 return 0;
 
         return 1;
@@ -156,8 +156,8 @@ static int default_fini(struct personality_data * data)
                 err = rnl_set_destroy(tmp->nlset);
                 if (err) return err;
         }
-        if (tmp->fmgr) {
-                err = fmgr_destroy(tmp->fmgr);
+        if (tmp->kfa) {
+                err = kfa_destroy(tmp->kfa);
                 if (err) return err;
         }
 
@@ -182,9 +182,9 @@ static int default_init(struct kobject *          parent,
 
         LOG_DBG("Initializing default personality");
 
-        LOG_DBG("Initializing fmgr component");
-        data->fmgr = fmgr_create();
-        if (!data->fmgr) {
+        LOG_DBG("Initializing kfa component");
+        data->kfa = kfa_create();
+        if (!data->kfa) {
                 if (default_fini(data)) {
                         LOG_CRIT("The system might become unstable ...");
                         return -1;
@@ -200,9 +200,9 @@ static int default_init(struct kobject *          parent,
                 }
         }
 
-        LOG_DBG("Initializing default fmgr component");
-        data->fmgr = fmgr_create();
-        if (!data->fmgr) {
+        LOG_DBG("Initializing default kfa component");
+        data->kfa = kfa_create();
+        if (!data->kfa) {
                 if (default_fini(data)) {
                         LOG_CRIT("The system might become unstable ...");
                         return -1;
