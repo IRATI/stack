@@ -30,7 +30,6 @@
 #define BITS_IN_BITMAP (2 ^ BITS_PER_BYTE * sizeof(flow_id_t))
 
 struct fidm {
-        spinlock_t     lock;
         DECLARE_BITMAP(bitmap, BITS_IN_BITMAP);
 };
 
@@ -43,7 +42,6 @@ struct fidm * fidm_create(void)
                 return NULL;
 
         bitmap_zero(instance->bitmap, BITS_IN_BITMAP);
-        spin_lock_init(&instance->lock);
 
         LOG_DBG("Instance initialized successfully (%zd bits)",
                 BITS_IN_BITMAP);
@@ -82,16 +80,12 @@ flow_id_t fidm_allocate(struct fidm * instance)
                 return FLOW_ID_WRONG;
         }
         
-        spin_lock(&instance->lock);
-
         id = (flow_id_t) bitmap_find_next_zero_area(instance->bitmap,
                                                     BITS_IN_BITMAP,
                                                     0, 1, 0);
         if (id >= BITS_IN_BITMAP)
                 id = flow_id_bad();
 
-        spin_unlock(&instance->lock);
-        
         return id;
 }
 
@@ -107,11 +101,7 @@ int fidm_release(struct fidm * instance,
                 return -1;
         }
 
-        spin_lock(&instance->lock);
-
         bitmap_set(instance->bitmap, id, 1);
-
-        spin_unlock(&instance->lock);
 
         return 0;
 }
