@@ -31,9 +31,8 @@ struct ipcp_factory_data;
 struct ipcp_instance {
         struct kobject              kobj;
 
-        /* The parent factory */
-        struct ipcp_factory *       factory;
-
+        /* FIXME: Should be hidden and not fixed up in KIPCM ... */
+        struct ipcp_factory *       factory; /* The parent factory */
         struct efcp_container *     efcpc;
         struct rmt *                rmt;
 
