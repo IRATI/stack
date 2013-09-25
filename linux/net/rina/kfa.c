@@ -1,5 +1,5 @@
 /*
- * FMGR (Flows Manager)
+ * KFA (Kernel Flow Allocator)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
