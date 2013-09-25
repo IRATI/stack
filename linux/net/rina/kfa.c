@@ -26,13 +26,13 @@
 #include "fidm.h"
 #include "kfa.h"
 
-struct fmgr {
+struct kfa {
         struct fidm * fidm;
 };
 
-struct fmgr * fmgr_create(void)
+struct kfa * kfa_create(void)
 {
-        struct fmgr * tmp;
+        struct kfa * tmp;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
@@ -47,7 +47,7 @@ struct fmgr * fmgr_create(void)
         return tmp;
 }
 
-int fmgr_destroy(struct fmgr * instance)
+int kfa_destroy(struct kfa * instance)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
@@ -61,44 +61,105 @@ int fmgr_destroy(struct fmgr * instance)
 }
 
 struct ipcp_flow {
+        struct efcp * efcp;
+
         /* FIXME: Move KIPCM struct ipcp_flow here */
-        int keep_me;
 };
 
-struct ipcp_flow * fmgr_flow_create(struct fmgr * mgr)
-{ return NULL; }
+flow_id_t kfa_flow_create(struct kfa * instance)
+{ return flow_id_bad();
+}
 
-int fmgr_flow_destroy(struct fmgr *      mgr,
-                      struct ipcp_flow * flow)
-{ return -1; }
+int kfa_flow_bind(struct kfa * instance,
+                  flow_id_t    fid,
+                  port_id_t    pid)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+        if (!is_flow_id_ok(fid)) {
+                LOG_ERR("Bogus flow-id, bailing out");
+                return -1;
+        }
+        if (!is_port_id_ok(fid)) {
+                LOG_ERR("Bogus port-id, bailing out");
+                return -1;
+        }
 
-int fmgr_flow_bind(struct fmgr *      mgr,
-                   struct ipcp_flow * flow,
-                   port_id_t          pid)
-{ return -1; }
+        LOG_MISSING;
 
-int fmgr_flow_unbind(struct fmgr *      mgr,
-                     struct ipcp_flow * flow)
-{ return -1; }
+        return -1;
+}
 
-/* FIXME: Move away from here !!! */
-#define PORT_ID_WRONG -1
+flow_id_t kfa_flow_unbind(struct kfa * instance,
+                          port_id_t    id)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Bogus port-id, bailing out");
+                return -1;
+        }
 
-port_id_t fmgr_flow2port(struct fmgr *      mgr,
-                         struct ipcp_flow * flow)
-{ return PORT_ID_WRONG; }
+        return flow_id_bad();
+}
 
-/* Returns the flow bound to the port 'pid' */
-struct ipcp_flow * fmgr_port2flow(struct fmgr * mgr,
-                                  port_id_t     pid)
-{ return NULL; }
+int kfa_flow_destroy(struct kfa * instance,
+                     flow_id_t    id)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+        if (!is_flow_id_ok(id)) {
+                LOG_ERR("Bogus flow-id, bailing out");
+                return -1;
+        }
 
-int fmgr_flow_sdu_post(struct fmgr *      mgr,
-                       struct ipcp_flow * flow,
-                       struct sdu *       sdu)
-{ return -1; }
+        LOG_MISSING;
 
-int fmgr_flow_sdu_post_by_port(struct fmgr * mgr,
-                               port_id_t     pid,
-                               struct sdu *  sdu)
-{ return -1; }
+        return -1;
+}
+
+int kfa_flow_sdu_post_by_port(struct kfa *  instance,
+                              port_id_t     id,
+                              struct sdu *  sdu)
+{
+       if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Bogus port-id, bailing out");
+                return -1;
+        }
+        if (!sdu_is_ok(sdu)) {
+                LOG_ERR("Bogus port-id, bailing out");
+                return -1;
+        }
+
+        LOG_MISSING;
+
+        return -1;
+}
+
+
+struct sdu * kfa_flow_sdu_read(struct kfa *  instance,
+                               port_id_t     id)
+{
+       if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return NULL;
+        }
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Bogus port-id, bailing out");
+                return NULL;
+        }
+
+        LOG_MISSING;
+
+        return NULL;
+}
