@@ -571,14 +571,14 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                                   const struct name *         dif_name,
                                   const struct ipcp_config *  dif_config)
 {
-        struct eth_vlan_info *      info;
-        struct ipcp_config *        tmp;
-        struct ipcp_config_entry *  entry;
-        struct ipcp_config_value *  value;
-        bool_t                      reconfigure;
-        uint16_t                    old_vlan_id;
-        string_t *                  old_interface_name;
-        string_t *                  complete_interface;
+        struct eth_vlan_info *     info;
+        struct ipcp_config *       tmp;
+        struct ipcp_config_entry * entry;
+        struct ipcp_config_value * value;
+        bool                       reconfigure;
+        uint16_t                   old_vlan_id;
+        string_t *                 old_interface_name;
+        string_t *                 complete_interface;
 
 
         ASSERT(data);
@@ -587,17 +587,16 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
 
         /* If reconfigure = 1, break down all communication and setup again */
         reconfigure = 0;
-        info = data->info;
+        info        = data->info;
 
         /* Get configuration struct pertaining to this shim instance */
-        old_vlan_id = info->vlan_id;
+        old_vlan_id        = info->vlan_id;
         old_interface_name = info->interface_name;
 
 	/* Get vlan id */
 	info->vlan_id = simple_strtol(dif_name->process_name,0,10);
-	if (old_vlan_id && old_vlan_id != info->vlan_id) {
+	if (old_vlan_id && old_vlan_id != info->vlan_id)
 		reconfigure = 1;
-	}
 		
         /* Retrieve configuration of IPC process from params */
         list_for_each_entry (tmp, &(dif_config->list), list) {
