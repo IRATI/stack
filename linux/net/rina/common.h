@@ -25,10 +25,14 @@
 
 #include <linux/types.h>
 
+/* FIXME: Shouldn't we keep contrained to int32 ids ? */
 typedef int           port_id_t;
 
 /* ALWAYS use this function to check if the id looks good */
-int is_port_id_ok(port_id_t id);
+int       is_port_id_ok(port_id_t id);
+
+/* ALWAYS use this function to get a bad port-id */
+port_id_t port_id_bad(void);
 
 typedef int32_t       ipc_process_id_t;
 typedef unsigned int  ipc_process_address_t;

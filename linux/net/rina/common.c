@@ -25,6 +25,12 @@
 #include "logs.h"
 #include "common.h"
 
+#define PORT_ID_WRONG -1
+
+port_id_t port_id_bad(void)
+{ return PORT_ID_WRONG; }
+EXPORT_SYMBOL(port_id_bad);
+
 int is_port_id_ok(port_id_t id)
 { return id >= 0 ? 1 : 0; }
 EXPORT_SYMBOL(is_port_id_ok);
