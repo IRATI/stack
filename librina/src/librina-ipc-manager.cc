@@ -498,7 +498,8 @@ throw (DestroyIPCProcessException) {
 	std::map<int, IPCProcess*>::iterator iterator;
 	iterator = ipcProcesses.find(ipcProcessId);
 	if (iterator == ipcProcesses.end()) {
-		throw IPCException(IPCProcessFactory::unknown_ipc_process_error);
+		unlock();
+		throw DestroyIPCProcessException(IPCProcessFactory::unknown_ipc_process_error);
 	}
 
 #if STUB_API
