@@ -27,7 +27,8 @@
 struct efcp_imap;
 
 struct efcp_imap * efcp_imap_create(void);
-int                efcp_imap_destroy(struct efcp_imap * map);
+int                efcp_imap_destroy(struct efcp_imap * map,
+                                     int (* destructor)(struct efcp * i));
 
 int                efcp_imap_empty(struct efcp_imap * map);
 int                efcp_imap_add(struct efcp_imap * map,

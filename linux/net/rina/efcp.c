@@ -30,42 +30,6 @@
 #include "dtp.h"
 #include "dtcp.h"
 
-struct efcp_container {
-        struct efcp_imap * instances;
-};
-
-// efcp_imap maps cep_id_t to efcp_instances
-
-struct efcp_container * efcp_container_create(void)
-{
-        struct efcp_container * container;
-
-        container = rkzalloc(sizeof(*container), GFP_KERNEL);
-        if (!container)
-                return NULL;
-
-        container->instances = efcp_imap_create();
-
-        return container;
-}
-
-int efcp_container_destroy(struct efcp_container * container)
-{
-        if (!container) {
-                LOG_ERR("Bogus container passed, bailing out");
-                return -1;
-        }
-
-        /* FIXME: We should destroy all the instances there */
-        LOG_MISSING;
-
-        efcp_imap_destroy(container->instances);
-
-        rkfree(container);
-
-        return 0;
-}
-
 struct efcp {
         struct dtp *  dtp;
         struct dtcp * dtcp;
@@ -102,6 +66,38 @@ static int efcp_destroy(struct efcp * instance)
         rkfree(instance);
 
         LOG_DBG("Instance %pK finalized successfully", instance);
+
+        return 0;
+}
+
+struct efcp_container {
+        struct efcp_imap * instances;
+};
+
+// efcp_imap maps cep_id_t to efcp_instances
+
+struct efcp_container * efcp_container_create(void)
+{
+        struct efcp_container * container;
+
+        container = rkzalloc(sizeof(*container), GFP_KERNEL);
+        if (!container)
+                return NULL;
+
+        container->instances = efcp_imap_create();
+
+        return container;
+}
+
+int efcp_container_destroy(struct efcp_container * container)
+{
+        if (!container) {
+                LOG_ERR("Bogus container passed, bailing out");
+                return -1;
+        }
+
+        efcp_imap_destroy(container->instances, efcp_destroy);
+        rkfree(container);
 
         return 0;
 }
@@ -294,10 +290,8 @@ struct pdu * efcp_receive_pdu(struct efcp * instance)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
+                return NULL;
         }
 
-        LOG_MISSING;
-
-        return NULL;
+        return dtp_receive(instance->dtp);
 }

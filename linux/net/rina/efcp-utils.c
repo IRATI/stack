@@ -48,15 +48,18 @@ struct efcp_imap_entry {
 struct efcp_imap * efcp_imap_create(void)
 {
         struct efcp_imap * tmp;
+
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
         hash_init(tmp->table);
+
         return tmp;
 }
 
-int efcp_imap_destroy(struct efcp_imap * map)
+int efcp_imap_destroy(struct efcp_imap * map,
+                      int (* destructor)(struct efcp * instance))
 {
         struct efcp_imap_entry * entry;
         struct hlist_node *      tmp;
@@ -66,6 +69,8 @@ int efcp_imap_destroy(struct efcp_imap * map)
 
         hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
                 hash_del(&entry->hlist);
+                if (destructor)
+                        destructor(entry->value);
                 rkfree(entry);
         }
 
