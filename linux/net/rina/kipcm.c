@@ -302,7 +302,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      info->snd_portid);
         }
 
-#if 1 /* FIXME: Please re-enable */
+#if 0 /* FIXME: Please re-enable */
         /* The flow id MUST be ok upon calling the IPC Process ... */
         //ASSERT(is_flow_id_ok(fid));
 
@@ -323,6 +323,15 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      -1,
                                                      info->snd_seq,
                                                      info->snd_portid);
+        }
+        if (rnl_app_alloc_flow_req_arrived_msg(data->id,
+					       data->info->dif_name,
+					       source,
+					       dest,
+					       fspec,
+					       flow->dst_fid,
+					       1)) {
+
         }
 #endif
 

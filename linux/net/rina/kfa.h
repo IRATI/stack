@@ -64,4 +64,8 @@ int          kfa_flow_sdu_write(struct kfa *  instance,
 struct sdu * kfa_flow_sdu_read(struct kfa *  instance,
                                port_id_t     id);
 
+int 	     kfa_sdu_post(struct kfa * instance,
+			  port_id_t    id,
+			  struct sdu * sdu);
+
 #endif

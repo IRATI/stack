@@ -35,7 +35,7 @@
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 #include "du.h"
-#include "fidm.h"
+#include "kfa.h"
 #include "rnl.h"
 #include "rnl-utils.h"
 

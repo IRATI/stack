@@ -126,6 +126,7 @@ flow_id_t kfa_flow_create(struct kfa * instance)
 {
 
 	struct ipcp_flow * flow;
+	flow_id_t          fid;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
