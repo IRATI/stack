@@ -240,7 +240,7 @@ struct personality_ops ops = {
 
 static struct personality_data data;
 
-static struct personality *    personality = NULL;
+static struct personality * personality = NULL;
 
 static int __init mod_init(void)
 {
