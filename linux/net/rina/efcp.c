@@ -251,7 +251,7 @@ struct efcp * efcp_find(struct efcp_container * container,
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
-                return -1;
+                return NULL;
         }
 
         tmp = efcp_imap_find(container->instances, id);
