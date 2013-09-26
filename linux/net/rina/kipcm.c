@@ -1510,9 +1510,6 @@ int kipcm_sdu_write(struct kipcm * kipcm,
                     port_id_t      port_id,
                     struct sdu *   sdu)
 {
-        struct ipcp_flow *     flow;
-        struct ipcp_instance * instance;
-
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return -1;
