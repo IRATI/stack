@@ -27,59 +27,40 @@
 
 typedef uint cep_id_t;
 
-/* This structure defines an EFCP connection */
 struct connection {
-        /* The port_id this connection is bound to */
         port_id_t port_id;
 
-        /*
-         * The address of the IPC Process that is the source of this
-         * connection
-         */
         address_t source_address;
-
-        /*
-         * The address of the IPC Process that is the destination of
-         * this connection
-         */
         address_t destination_address;
 
-        /* The source connection endpoint id */
         cep_id_t  source_cep_id;
+        cep_id_t  destination_cep_id;
 
-        /* The destination connection endpoint id */
-        cep_id_t  dest_cep_id;
-
-        /* The QoS id */
         qos_id_t  qos_id;
 
-        /* FIXME: policy type remains undefined */
-        /* The list of policies associated with this connection */
-        /* policy_t ** policies; */
+        /* FIXME: Add the list of policies associated with this connection */
 };
 
 /* The container holding all the EFCP instances for an IPC Process */
 struct efcp_container;
 
-struct efcp;
-
-/* NOTE: There's one EFCP for each flow */
-
-/* FIXME: efcp_create() creates an EFCP-PM ... */
-struct efcp * efcp_create(void);
-int           efcp_destroy(struct efcp * instance);
+struct efcp_container * efcp_container_create(void);
+int                     efcp_container_destroy(struct efcp_container * c);
 
 /* FIXME: Should a cep_id_t be returned instead ? */
-int           efcp_connection_create(struct efcp *             instance,
-                                     const struct connection * connection,
-                                     cep_id_t *                id);
-int           efcp_connection_destroy(struct efcp *   instance,
-                                      cep_id_t id);
-int           efcp_connection_update(struct efcp * instance,
-                                     cep_id_t      from,
-                                     cep_id_t      to);
+int           efcp_connection_create(struct efcp_container *   container,
+                                     const struct connection * connection);
 
-/* FIXME: Should these functions work over a struct connection * instead ? */
+int           efcp_connection_destroy(struct efcp_container * container,
+                                      cep_id_t                id);
+int           efcp_connection_update(struct efcp_container * container,
+                                     cep_id_t                from,
+                                     cep_id_t                to);
+
+struct efcp;
+
+struct efcp * efcp_find(struct efcp_container * container,
+                        cep_id_t                id);
 
 /* NOTE: efcp_send() takes the ownership of the passed SDU */
 int           efcp_send(struct efcp * instance,
