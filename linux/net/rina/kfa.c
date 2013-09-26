@@ -2,6 +2,9 @@
  * KFA (Kernel Flow Allocator)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+ *        
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -121,16 +124,47 @@ int kfa_destroy(struct kfa * instance)
 
 flow_id_t kfa_flow_create(struct kfa * instance)
 {
+
+	struct ipcp_flow * flow;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
+                return flow_id_bad();
+        }
+
+        if (!instance->fidm) {
+                LOG_ERR("Bogus Flow ID Manager in instance passed, bailing out");
+                return flow_id_bad();
         }
 
         spin_lock(&instance->lock);
-        LOG_MISSING;
+	
+	flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+	if (!flow) {
+		spin_unlock(&instance->lock);
+		return flow_id_bad();
+	}
+
+	fid = fidm_allocate(instance->fidm);
+
+	if (!is_flow_id_ok(fid)){
+                LOG_ERR("Generated Flow ID is no OK, bailing out");
+		rkfree(flow);
+		spin_unlock(&instance->lock);
+		return flow_id_bad();
+	}
+	
+	if(!ipcp_fmap_add(&instance->flows.pending, fid, flow)) {
+                LOG_ERR("Could not map Flow and Flow ID");
+		rkfree(flow);
+		spin_unlock(&instance->lock);
+		return flow_id_bad();
+	}
+
         spin_unlock(&instance->lock);
 
-        return flow_id_bad();
+	return fid;
+
 }
 EXPORT_SYMBOL(kfa_flow_create);
 
