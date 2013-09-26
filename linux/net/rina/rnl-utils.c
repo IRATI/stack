@@ -1921,7 +1921,7 @@ int rnl_assign_dif_response(ipc_process_id_t id,
         struct rina_msg_hdr * out_hdr;
         int result;
 
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
                 LOG_ERR("Could not allocate memory for message");
                 return -1;
@@ -1975,7 +1975,7 @@ int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
         uint_t command;
         int result;
 
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
                 LOG_ERR("Could not allocate memory for message");
                 return -1;
@@ -2034,7 +2034,7 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t            ipc_id,
         struct rina_msg_hdr * hdr;
         int result;
 
-        msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
+        msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!msg) {
                 LOG_ERR("Could not allocate memory for message");
                 return -1;
@@ -2088,7 +2088,7 @@ int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
         struct rina_msg_hdr * out_hdr;
         int result;
 
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
                 LOG_ERR("Could not allocate memory for message");
                 return -1;
@@ -2139,7 +2139,7 @@ int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
         struct rina_msg_hdr * out_hdr;
         int result;
 
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
                 LOG_ERR("Could not allocate memory for message");
                 return -1;
@@ -2190,7 +2190,7 @@ int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
         struct rina_msg_hdr * out_hdr;
         int result;
 
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_KERNEL);
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
                 LOG_ERR("Could not allocate memory for message");
                 return -1;

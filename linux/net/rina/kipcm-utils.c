@@ -48,11 +48,13 @@ struct ipcp_imap_entry {
 struct ipcp_imap * ipcp_imap_create(void)
 {
         struct ipcp_imap * tmp;
+
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
         hash_init(tmp->table);
+
         return tmp;
 }
 
@@ -187,11 +189,13 @@ struct ipcp_fmap_entry {
 struct ipcp_fmap * ipcp_fmap_create(void)
 {
         struct ipcp_fmap * tmp;
+
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
         hash_init(tmp->table);
+
         return tmp;
 }
 
@@ -327,11 +331,13 @@ struct ipcp_pmap_entry {
 struct ipcp_pmap * ipcp_pmap_create(void)
 {
         struct ipcp_pmap * tmp;
+
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
         hash_init(tmp->table);
+
         return tmp;
 }
 

@@ -38,15 +38,23 @@ namespace rina {
 class RINANetlinkEndpoint{
 	unsigned int netlinkPortId;
 	unsigned short ipcProcessId;
+	ApplicationProcessNamingInformation applicationProcessName;
 
 public:
 	RINANetlinkEndpoint();
 	RINANetlinkEndpoint(unsigned int netlinkPortId,
 			unsigned short ipcProcessId);
+	RINANetlinkEndpoint(unsigned int netlinkPortId,
+				unsigned short ipcProcessId,
+				const ApplicationProcessNamingInformation& appNamingInfo);
 	unsigned short getIpcProcessId() const;
 	void setIpcProcessId(unsigned short ipcProcessId);
 	unsigned int getNetlinkPortId() const;
 	void setNetlinkPortId(unsigned int netlinkPortId);
+	const ApplicationProcessNamingInformation&
+		getApplicationProcessName() const;
+	void setApplicationProcessName(
+		const ApplicationProcessNamingInformation& applicationProcessName);
 };
 
 /**
@@ -59,7 +67,7 @@ class NetlinkPortIdMap {
 	std::map<unsigned short, RINANetlinkEndpoint *> ipcProcessIdMappings;
 
 	/** Stores the mappings of application process name to netlink port id */
-	std::map<ApplicationProcessNamingInformation, RINANetlinkEndpoint *>
+	std::map<std::string, RINANetlinkEndpoint *>
 		applicationNameMappings;
 
 public:
