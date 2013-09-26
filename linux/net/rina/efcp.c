@@ -273,7 +273,7 @@ int efcp_send(struct efcp * instance,
                 return -1;
         }
 
-        if (!is_sdu_ok) {
+        if (!is_sdu_ok(sdu)) {
                 LOG_ERR("Bogus SDU passed");
                 return -1;
         }
