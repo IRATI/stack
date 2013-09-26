@@ -259,6 +259,9 @@ int kfa_flow_sdu_write(struct kfa *  instance,
                        port_id_t     id,
                        struct sdu *  sdu)
 {
+	struct ipcp_flow *     flow;
+	struct ipcp_instance * ipcp;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
@@ -272,11 +275,24 @@ int kfa_flow_sdu_write(struct kfa *  instance,
                 return -1;
         }
 
-        spin_lock(&instance->lock);
-        LOG_MISSING;
-        spin_unlock(&instance->lock);
+        //spin_lock(&instance->lock);
+        flow = ipcp_pmap_find(instance->flows.committed, id);
+	if (!flow) {
+		LOG_ERR("There is no flow bound to port-id %d", id);
+		//spin_unlock(&instance->lock);
+		return -1;
+	}
 
-        return -1;
+	ipcp = flow->ipc_process;
+	ASSERT(instance);
+	if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
+		LOG_ERR("Couldn't write SDU on port-id %d", id);
+		//spin_unlock(&instance->lock);
+		return -1;
+	}
+        //spin_unlock(&instance->lock);
+
+        return 0;
 }
 
 struct sdu * kfa_flow_sdu_read(struct kfa *  instance,
@@ -297,3 +313,68 @@ struct sdu * kfa_flow_sdu_read(struct kfa *  instance,
 
         return NULL;
 }
+int kfa_sdu_post(struct kfa * instance,
+                 port_id_t    id,
+                 struct sdu * sdu)
+{
+	struct ipcp_flow * flow;
+	unsigned int       avail;
+
+	if (!instance) {
+		LOG_ERR("Bogus kfa instance passed, cannot post SDU");
+		return -1;
+	}
+	if (!is_port_id_ok(id)) {
+		LOG_ERR("Bogus port-id, bailing out");
+		return -1;
+	}
+	if (!sdu || !is_sdu_ok(sdu)) {
+		LOG_ERR("Bogus parameters passed, bailing out");
+		return -1;
+	}
+
+	LOG_DBG("Posting SDU of size %zd to port-id %d ",
+		sdu->buffer->size, id);
+
+
+	spin_lock(&instance->lock);
+	flow = ipcp_pmap_find(instance->flows.committed, id);
+	if (!flow) {
+		LOG_ERR("There is no flow bound to port-id %d", id);
+		spin_unlock(&instance->lock);
+		return -1;
+	}
+
+	avail = kfifo_avail(&flow->sdu_ready);
+	if (avail < (sdu->buffer->size + sizeof(size_t))) {
+		LOG_ERR("There is no space in the port-id %d fifo", id);
+		spin_unlock(&instance->lock);
+		return -1;
+	}
+
+	if (kfifo_in(&flow->sdu_ready,
+		     &sdu->buffer->size,
+		     sizeof(size_t)) != sizeof(size_t)) {
+		LOG_ERR("Could not write %zd bytes into port-id %d fifo",
+			sizeof(size_t), id);
+		spin_unlock(&instance->lock);
+		return -1;
+	}
+	if (kfifo_in(&flow->sdu_ready,
+		     sdu->buffer->data,
+		     sdu->buffer->size) != sdu->buffer->size) {
+		LOG_ERR("Could not write %zd bytes into port-id %d fifo",
+			sdu->buffer->size, id);
+		spin_unlock(&instance->lock);
+		return -1;
+	}
+
+	LOG_DBG("SDU posted");
+
+	wake_up_interruptible(&flow->wait_queue);
+
+	LOG_DBG("Sleeping read syscall should be working now");
+
+	return 0;
+}
+EXPORT_SYMBOL(kfa_sdu_post);

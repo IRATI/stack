@@ -1510,7 +1510,6 @@ int kipcm_sdu_write(struct kipcm * kipcm,
                     port_id_t      port_id,
                     struct sdu *   sdu)
 {
-#if 0
         struct ipcp_flow *     flow;
         struct ipcp_instance * instance;
 
@@ -1529,25 +1528,14 @@ int kipcm_sdu_write(struct kipcm * kipcm,
 
         KIPCM_LOCK(kipcm);
 
-        flow = ipcp_pmap_find(kipcm->flows.committed, port_id);
-        if (!flow) {
-                LOG_ERR("There is no flow bound to port-id %d", port_id);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
+        kfa_flow_sdu_write(kipcm->kfa, port_id, sdu);
 
-        instance = flow->ipc_process;
-        ASSERT(instance);
-        if (instance->ops->sdu_write(instance->data, port_id, sdu)) {
-                LOG_ERR("Couldn't write SDU on port-id %d", port_id);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
+        sdu_destroy(sdu);
 
         KIPCM_UNLOCK(kipcm);
-#endif
 
         /* The SDU is ours */
+
         return 0;
 }
 
