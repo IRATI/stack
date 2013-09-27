@@ -36,7 +36,6 @@
  *   Francesco
  */
 
-/* IMAPs */
 struct ipcp_imap;
 
 struct ipcp_imap *     ipcp_imap_create(void);
@@ -55,6 +54,10 @@ int                    ipcp_imap_remove(struct ipcp_imap * map,
                                         ipc_process_id_t   key);
 
 struct ipcp_flow;
+
+/*
+ * FIXME: FMAPs and PMAPs must be moved into KFA
+ */
 
 /* FMAPs */
 struct ipcp_fmap *     ipcp_fmap_create(void);

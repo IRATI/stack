@@ -37,6 +37,7 @@
 struct kfa {
         spinlock_t    lock;
         struct fidm * fidm;
+
         struct {
 		struct ipcp_fmap * pending;
 		struct ipcp_pmap * committed;
@@ -44,20 +45,11 @@ struct kfa {
 };
 
 struct ipcp_flow {
-        /* The port-id identifying the flow */
         port_id_t              port_id;
-
-        /*
-         * The components of the IPC Process that will handle the
-         * write calls to this flow
-         */
         struct ipcp_instance * ipc_process;
-
         struct kfifo           sdu_ready;
-
         wait_queue_head_t      wait_queue;
-
-        struct efcp * efcp;
+        struct efcp *          efcp;
 };
 
 struct kfa * kfa_create(void)
@@ -94,7 +86,6 @@ struct kfa * kfa_create(void)
 		rkfree(instance);
 		return NULL;
 	}
-
 
         spin_lock_init(&instance->lock);
 
@@ -133,12 +124,16 @@ flow_id_t kfa_flow_create(struct kfa * instance)
                 return flow_id_bad();
         }
 
-        if (!instance->fidm) {
-                LOG_ERR("Bogus Flow ID Manager in instance passed, bailing out");
-                return flow_id_bad();
-        }
+        ASSERT(instance->fidm);
 
         spin_lock(&instance->lock);
+	
+	fid = fidm_allocate(instance->fidm);
+	if (!is_flow_id_ok(fid)){
+                LOG_ERR("Cannot get a flow-id");
+		spin_unlock(&instance->lock);
+		return flow_id_bad();
+	}
 	
 	flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
 	if (!flow) {
@@ -146,16 +141,7 @@ flow_id_t kfa_flow_create(struct kfa * instance)
 		return flow_id_bad();
 	}
 
-	fid = fidm_allocate(instance->fidm);
-
-	if (!is_flow_id_ok(fid)){
-                LOG_ERR("Generated Flow ID is no OK, bailing out");
-		rkfree(flow);
-		spin_unlock(&instance->lock);
-		return flow_id_bad();
-	}
-	
-	if(!ipcp_fmap_add(&instance->flows.pending, fid, flow)) {
+	if (!ipcp_fmap_add(instance->flows.pending, fid, flow)) {
                 LOG_ERR("Could not map Flow and Flow ID");
 		rkfree(flow);
 		spin_unlock(&instance->lock);
@@ -211,7 +197,7 @@ int kfa_flow_bind(struct kfa * 		 instance,
 
 	init_waitqueue_head(&flow->wait_queue);
 
-	flow->port_id    = pid;
+	flow->port_id     = pid;
 	flow->ipc_process = ipc_process;
 
 	if (kfifo_alloc(&flow->sdu_ready, PAGE_SIZE, GFP_KERNEL)) {

@@ -25,6 +25,7 @@
 
 #include "common.h"
 #include "du.h"
+#include "fidm.h"
 #include "ipcp-factories.h"
 
 struct kfa;
