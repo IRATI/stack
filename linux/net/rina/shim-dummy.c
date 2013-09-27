@@ -35,7 +35,7 @@
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 #include "du.h"
-#include "fidm.h"
+#include "kfa.h"
 #include "rnl.h"
 #include "rnl-utils.h"
 
@@ -78,8 +78,8 @@ struct dummy_flow {
         struct name *         dest;
         struct list_head      list;
         enum dummy_flow_state state;
-        uint_t                dst_seq_num;
-        uint_t                seq_num; /* Required to notify back to the */
+        flow_id_t             dst_fid;
+        flow_id_t             src_fid; /* Required to notify back to the */
         ipc_process_id_t      dst_id;  /* IPC Manager the result of the
                                         * allocation */
 };
@@ -187,7 +187,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
 
         flow->state       = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
         flow->port_id     = id;
-        flow->dst_seq_num = 666; /*FIXME!!!*/
+        flow->dst_fid = 666; /*FIXME!!!*/
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, &data->flows);
 
@@ -196,7 +196,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                                                source,
                                                dest,
                                                fspec,
-                                               flow->dst_seq_num,
+                                               flow->dst_fid,
                                                1)) {
                 list_del(&flow->list);
                 name_destroy(flow->source);

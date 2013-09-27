@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,7 +76,8 @@ int            kipcm_flow_arrived(struct kipcm *   kipcm,
 /* On both source and destination */
 int            kipcm_flow_add(struct kipcm *   kipcm,
                               ipc_process_id_t ipc_id,
-                              port_id_t        id);
+                              port_id_t        id,
+                              flow_id_t	    fid);
 
 /* On both source and destination */
 int            kipcm_flow_remove(struct kipcm * kipcm,

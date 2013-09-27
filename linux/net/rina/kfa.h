@@ -2,6 +2,8 @@
  * KFA (Kernel Flow Allocator)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>    
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +26,7 @@
 #include "common.h"
 #include "du.h"
 #include "fidm.h"
+#include "ipcp-factories.h"
 
 struct kfa;
 
@@ -34,9 +37,11 @@ int          kfa_destroy(struct kfa * instance);
 flow_id_t    kfa_flow_create(struct kfa * instance);
 
 /* Commits the flow, binds the flow to a port-id, frees the flow-id */
-int          kfa_flow_bind(struct kfa * instance,
-                           flow_id_t    fid,
-                           port_id_t    pid);
+int          kfa_flow_bind(struct kfa * 	  instance,
+                           flow_id_t    	  fid,
+                           port_id_t    	  pid,
+                           struct ipcp_instance * ipc_process,
+                           ipc_process_id_t       ipc_id);
 
 /*
  * Un-commits the flow, binds the flow to a flow-id (different from the one
@@ -49,6 +54,9 @@ flow_id_t    kfa_flow_unbind(struct kfa * instance,
 int          kfa_flow_destroy(struct kfa * instance,
                               flow_id_t    id);
 
+int 	     kfa_remove_all_for_id(struct kfa *     instance,
+				   ipc_process_id_t id);
+
 /* Once the flow is bound to a port, we can write/read SDUs */
 int          kfa_flow_sdu_write(struct kfa *  instance,
                                 port_id_t     id,
@@ -56,5 +64,9 @@ int          kfa_flow_sdu_write(struct kfa *  instance,
 
 struct sdu * kfa_flow_sdu_read(struct kfa *  instance,
                                port_id_t     id);
+
+int 	     kfa_sdu_post(struct kfa * instance,
+			  port_id_t    id,
+			  struct sdu * sdu);
 
 #endif
