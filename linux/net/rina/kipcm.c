@@ -93,8 +93,6 @@ struct kipcm {
                 KIPCM_UNLOCK_FOOTER(X);         \
         } while (0)
 
-
-
 static void
 alloc_flow_req_free(struct name *                              source_name,
                     struct name *                              dest_name,
