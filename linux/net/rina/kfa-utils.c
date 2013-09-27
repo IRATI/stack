@@ -1,5 +1,5 @@
 /*
- * K-IPCM related utilities
+ * KFA related utilities
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
