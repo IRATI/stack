@@ -150,6 +150,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         struct name *                              dest;
         struct name *                              dif_name;
         struct flow_spec *                         fspec;
+        flow_id_t				   fid;
 
         source   = NULL;
         dest     = NULL;
@@ -302,10 +303,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      info->snd_portid);
         }
 
-#if 0 /* FIXME: Please re-enable */
-        /* The flow id MUST be ok upon calling the IPC Process ... */
-        //ASSERT(is_flow_id_ok(fid));
-
         if (ipc_process->ops->flow_allocate_request(ipc_process->data,
                                                     attrs->source,
                                                     attrs->dest,
@@ -324,16 +321,23 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      info->snd_seq,
                                                      info->snd_portid);
         }
-        if (rnl_app_alloc_flow_req_arrived_msg(data->id,
-					       data->info->dif_name,
-					       source,
-					       dest,
-					       fspec,
-					       flow->dst_fid,
+
+        fid = fidm_allocate(kipcm->kfa->fidm);
+        ASSERT(is_flow_id_ok(fid));
+
+        /*
+         * FIXME: We need seq numbers instead of fid in the message
+         */
+
+        if (rnl_app_alloc_flow_req_arrived_msg(ipc_id,
+					       attrs->dif_name,
+					       attrs->source,
+					       attrs->dest,
+					       attrs->fspec,
+					       fid,
 					       1)) {
 
         }
-#endif
 
         alloc_flow_req_free(source, dest, fspec, dif_name, attrs, msg);
 
@@ -402,13 +406,11 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 return -1;
         }
 
-#if 0 /* FIXME: Please re-enable */
-        reason = (response_reason_t) attrs->result;
+#if 1 /* FIXME: Please re-enable */
 
         if (ipc_process->ops->flow_allocate_response(ipc_process->data,
-                                                     attrs->id,
-                                                     info->snd_seq,
-                                                     &reason)) {
+        					     info->snd_seq,
+        					     attrs->id)) {
                 LOG_ERR("Failed allocate flow response for port id: %d",
                         attrs->id);
                 retval = -1;
