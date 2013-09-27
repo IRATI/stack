@@ -23,6 +23,7 @@
 
 #include "common.h"
 #include "du.h"
+#include "fidm.h"
 
 struct kfa;
 
