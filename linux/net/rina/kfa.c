@@ -141,7 +141,7 @@ flow_id_t kfa_flow_create(struct kfa * instance)
 		return flow_id_bad();
 	}
 
-	if (!ipcp_fmap_add(&instance->flows.pending, fid, flow)) {
+	if (!ipcp_fmap_add(instance->flows.pending, fid, flow)) {
                 LOG_ERR("Could not map Flow and Flow ID");
 		rkfree(flow);
 		spin_unlock(&instance->lock);
@@ -197,7 +197,7 @@ int kfa_flow_bind(struct kfa * 		 instance,
 
 	init_waitqueue_head(&flow->wait_queue);
 
-	flow->port_id    = pid;
+	flow->port_id     = pid;
 	flow->ipc_process = ipc_process;
 
 	if (kfifo_alloc(&flow->sdu_ready, PAGE_SIZE, GFP_KERNEL)) {
