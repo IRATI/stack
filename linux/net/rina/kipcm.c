@@ -412,6 +412,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 retval = -1;
         }
 #endif
+
         rkfree(hdr);
         rkfree(attrs);
         rkfree(msg);
