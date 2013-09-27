@@ -115,7 +115,7 @@ struct ipcp_instance * ipcp_imap_find(struct ipcp_imap * map,
         return entry->value;
 }
 
-int ipcp_imap_update(struct ipcp_imap *    map,
+int ipcp_imap_update(struct ipcp_imap *     map,
                      ipc_process_id_t       key,
                      struct ipcp_instance * value)
 {
@@ -132,7 +132,7 @@ int ipcp_imap_update(struct ipcp_imap *    map,
         return 0;
 }
 
-int ipcp_imap_add(struct ipcp_imap *    map,
+int ipcp_imap_add(struct ipcp_imap *     map,
                   ipc_process_id_t       key,
                   struct ipcp_instance * value)
 {
@@ -154,7 +154,7 @@ int ipcp_imap_add(struct ipcp_imap *    map,
 }
 
 int ipcp_imap_remove(struct ipcp_imap * map,
-                     ipc_process_id_t    key)
+                     ipc_process_id_t   key)
 {
         struct ipcp_imap_entry * cur;
 

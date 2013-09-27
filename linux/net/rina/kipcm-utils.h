@@ -25,17 +25,6 @@
 #include "kipcm.h"
 #include "fidm.h"
 
-/*
- * NOTE:
- *
- *   This is an opaque data structure mapping an IPC Process id to something.
- *   We will replace it to a proper data structure (a hash, at least) as soon
- *   as we get some apre time to do that. Functionalities will be the same, a
- *   bit more performance wise though ...
- *
- *   Francesco
- */
-
 struct ipcp_imap;
 
 struct ipcp_imap *     ipcp_imap_create(void);
@@ -52,7 +41,5 @@ int                    ipcp_imap_update(struct ipcp_imap *     map,
                                         struct ipcp_instance * value);
 int                    ipcp_imap_remove(struct ipcp_imap * map,
                                         ipc_process_id_t   key);
-
-struct ipcp_flow;
 
 #endif
