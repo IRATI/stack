@@ -212,7 +212,12 @@ int kfa_flow_bind(struct kfa * 		 instance,
 		return -1;
 	}
 
-	/* FIXME: What about pending flows ? */
+	if (ipcp_fmap_remove(instance->flows.pending, fid)) {
+		kfifo_free(&flow->sdu_ready);
+		rkfree(flow);
+		spin_unlock(&instance->lock);
+		return -1;
+	}
 	if (ipcp_pmap_add(instance->flows.committed, pid, flow, ipc_id)) {
 		kfifo_free(&flow->sdu_ready);
 		rkfree(flow);
@@ -226,9 +231,14 @@ int kfa_flow_bind(struct kfa * 		 instance,
 }
 EXPORT_SYMBOL(kfa_flow_bind);
 
+/*  kfa_flow_unbind removes port_id-flow binding and moves the flow to pending
+ *  map to be destroyed */
 flow_id_t kfa_flow_unbind(struct kfa * instance,
                           port_id_t    id)
 {
+	struct ipcp_flow * flow;
+	flow_id_t          fid;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
@@ -239,10 +249,40 @@ flow_id_t kfa_flow_unbind(struct kfa * instance,
         }
 
         spin_lock(&instance->lock);
-        LOG_MISSING;
+	
+	
+	flow = ipcp_pmap_find(instance->flows.committed, id);
+	if (!flow){
+		LOG_ERR("There is no flow binded on port-id %d", id);
+		spin_unlock(&instance->lock);
+		return -1;
+	}
+
+	if(ipcp_pmap_remove(instance->flows.committed, id)) {
+		LOG_ERR("Could not remove commited flow at port %d", id);
+		spin_unlock(&instance->lock);
+		return -1;
+	}
+
+	fid = fidm_allocate(instance->fidm);
+
+	if (!is_flow_id_ok(fid)){
+                LOG_ERR("Flow ID could not be generated (bitmap is full)");
+		rkfree(flow);
+		spin_unlock(&instance->lock);
+		return flow_id_bad();
+	}
+	
+	if(!ipcp_fmap_add(instance->flows.pending, fid, flow)) {
+                LOG_ERR("Could not map Flow and Flow ID");
+		rkfree(flow);
+		spin_unlock(&instance->lock);
+		return flow_id_bad();
+	}
+
         spin_unlock(&instance->lock);
 
-        return flow_id_bad();
+        return fid;
 }
 EXPORT_SYMBOL(kfa_flow_unbind);
 
