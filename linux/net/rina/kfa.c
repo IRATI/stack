@@ -31,8 +31,8 @@
 #include "utils.h"
 #include "fidm.h"
 #include "kfa.h"
-#include "kipcm-utils.h"
-
+#include "kfa-utils.h"
+#include "kipcm-utils.h" /* FIXME: Wipe this out */
 
 struct kfa {
         spinlock_t    lock;
@@ -45,11 +45,13 @@ struct kfa {
 };
 
 struct ipcp_flow {
-        port_id_t              port_id;
-        struct ipcp_instance * ipc_process;
-        struct kfifo           sdu_ready;
-        wait_queue_head_t      wait_queue;
-        struct efcp *          efcp;
+        port_id_t               port_id;
+
+        struct ipcp_instance *  ipc_process;
+
+        /* FIXME: To be wiped out */
+        struct kfifo            sdu_ready;
+        wait_queue_head_t       wait_queue;
 };
 
 struct kfa * kfa_create(void)
@@ -66,23 +68,25 @@ struct kfa * kfa_create(void)
                 return NULL;
         }
 
-        instance->flows.pending = ipcp_fmap_create();
-        if (!instance->flows.pending) {
-		if (fidm_destroy(instance->fidm)) {
-			/* FIXME: What could we do here ? */
-		}
-		rkfree(instance);
-		return NULL;
-	}
-
+        instance->flows.pending   = ipcp_fmap_create();
         instance->flows.committed = ipcp_pmap_create();
-	if (!instance->flows.committed) {
+
+        if (!instance->flows.pending    ||
+            !instance->flows.committed) {
+                if (instance->flows.pending)
+                        if (ipcp_fmap_destroy(instance->flows.pending)) {
+                                /* FIXME: What could we do here ? */
+                        }
+
+                if (instance->flows.committed)
+                        if (ipcp_pmap_destroy(instance->flows.committed)) {
+                                /* FIXME: What could we do here ? */
+                        }
+
 		if (fidm_destroy(instance->fidm)) {
 			/* FIXME: What could we do here ? */
 		}
-		if (ipcp_fmap_destroy(instance->flows.pending)) {
-			/* FIXME> What could we do here? */
-		}
+
 		rkfree(instance);
 		return NULL;
 	}
