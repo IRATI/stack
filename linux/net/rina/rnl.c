@@ -41,11 +41,11 @@ struct rnl_set {
         struct message_handler handlers[NETLINK_RINA_C_MAX];
 };
 
-static struct rnl_set * default_set;
+static struct rnl_set * default_set = NULL;
 
 static struct genl_family nl_family = {
         .id      = GENL_ID_GENERATE,
-        //.hdrsize = 0,
+        /* .hdrsize = 0, */
         .hdrsize = sizeof(struct rina_msg_hdr),
         .name    = NETLINK_RINA,
         .version = 1,
@@ -464,8 +464,8 @@ EXPORT_SYMBOL(rnl_set_destroy);
  * in socket closed events.
  */
 static int kipcm_netlink_notify(struct notifier_block * nb,
-		unsigned long           state,
-		void *                  notification)
+                                unsigned long           state,
+                                void *                  notification)
 {
 	int                     result;
 	struct netlink_notify * notify = notification;
@@ -482,9 +482,9 @@ static int kipcm_netlink_notify(struct notifier_block * nb,
 	result = rnl_ipcm_sock_closed_notif_msg(notify->portid, 1);
 	if (result)
 		LOG_ERR("Error notifying IPC Manager in user space, %d",
-				result);
+                        result);
 	else
-		LOG_INFO("Sent NL message informing IPC Manager at user space");
+		LOG_DBG("IPC Manager notification sent");
 
 	return NOTIFY_DONE;
 }
@@ -507,9 +507,7 @@ int rnl_init(void)
                         "bailing out", ret);
                 return -1;
         }
-
-        LOG_DBG("Registering Family returned: %d", ret);
-        LOG_DBG("Family registered with id:   %d", nl_family.id);
+        LOG_DBG("NL family registered (id = %d)", nl_family.id);
 
         /*
          * Register a NETLINK notifier so that the kernel is
@@ -534,7 +532,7 @@ void rnl_exit(void)
 
         LOG_DBG("Finalizing Netlink layer");
 
-        /* unregister the notifier */
+        /* Unregister the notifier */
         netlink_unregister_notifier(&kipcm_netlink_notifier);
 
         ret = genl_unregister_family(&nl_family);
@@ -546,7 +544,7 @@ void rnl_exit(void)
 
         /*
          * FIXME:
-         *   Add checks here to prevent misses of finalizations and or
+         *   Add checks here to prevent misses of finalizations and/or
          *   destructions
          */
 

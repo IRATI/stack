@@ -708,7 +708,7 @@ static struct ipcp_factory_ops dummy_ops = {
         .destroy   = dummy_destroy,
 };
 
-struct ipcp_factory * shim;
+struct ipcp_factory * shim = NULL;
 
 static int __init mod_init(void)
 {
