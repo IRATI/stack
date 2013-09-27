@@ -22,7 +22,13 @@
  */
 
 #include <linux/module.h>
+
+/* For sdu_ready */
 #include <linux/kfifo.h>
+
+/* For wait_queue */
+#include <linux/sched.h>
+#include <linux/wait.h>
 
 #define RINA_PREFIX "kfa"
 
@@ -32,15 +38,14 @@
 #include "fidm.h"
 #include "kfa.h"
 #include "kfa-utils.h"
-#include "kipcm-utils.h" /* FIXME: Wipe this out */
 
 struct kfa {
         spinlock_t    lock;
         struct fidm * fidm;
 
         struct {
-		struct ipcp_fmap * pending;
-		struct ipcp_pmap * committed;
+		struct kfa_fmap * pending;
+		struct kfa_pmap * committed;
 	} flows;
 };
 
@@ -68,18 +73,17 @@ struct kfa * kfa_create(void)
                 return NULL;
         }
 
-        instance->flows.pending   = ipcp_fmap_create();
-        instance->flows.committed = ipcp_pmap_create();
+        instance->flows.pending   = kfa_fmap_create();
+        instance->flows.committed = kfa_pmap_create();
 
-        if (!instance->flows.pending    ||
-            !instance->flows.committed) {
+        if (!instance->flows.pending || !instance->flows.committed) {
                 if (instance->flows.pending)
-                        if (ipcp_fmap_destroy(instance->flows.pending)) {
+                        if (kfa_fmap_destroy(instance->flows.pending)) {
                                 /* FIXME: What could we do here ? */
                         }
 
                 if (instance->flows.committed)
-                        if (ipcp_pmap_destroy(instance->flows.committed)) {
+                        if (kfa_pmap_destroy(instance->flows.committed)) {
                                 /* FIXME: What could we do here ? */
                         }
 
@@ -106,12 +110,12 @@ int kfa_destroy(struct kfa * instance)
         fidm_destroy(instance->fidm);
 
         /* FIXME: Destroy all the pending flows */
-	ASSERT(ipcp_fmap_empty(instance->flows.pending));
-        ipcp_fmap_destroy(instance->flows.pending);
+	ASSERT(kfa_fmap_empty(instance->flows.pending));
+        kfa_fmap_destroy(instance->flows.pending);
 
         /* FIXME: Destroy all the committed flows */
-	ASSERT(ipcp_pmap_empty(instance->flows.committed));
-        ipcp_pmap_destroy(instance->flows.committed);
+	ASSERT(kfa_pmap_empty(instance->flows.committed));
+        kfa_pmap_destroy(instance->flows.committed);
         rkfree(instance);
 
         return 0;
@@ -145,7 +149,7 @@ flow_id_t kfa_flow_create(struct kfa * instance)
 		return flow_id_bad();
 	}
 
-	if (!ipcp_fmap_add(instance->flows.pending, fid, flow)) {
+	if (!kfa_fmap_add(instance->flows.pending, fid, flow)) {
                 LOG_ERR("Could not map Flow and Flow ID");
 		rkfree(flow);
 		spin_unlock(&instance->lock);
@@ -187,7 +191,7 @@ int kfa_flow_bind(struct kfa * 		 instance,
         spin_lock(&instance->lock);
 
 	/* FIXME: What about pending flows ? */
-	if (ipcp_pmap_find(instance->flows.committed, pid)) {
+	if (kfa_pmap_find(instance->flows.committed, pid)) {
 		LOG_ERR("Flow on port-id %d already exists", pid);
 		spin_unlock(&instance->lock);
 		return -1;
@@ -212,13 +216,13 @@ int kfa_flow_bind(struct kfa * 		 instance,
 		return -1;
 	}
 
-	if (ipcp_fmap_remove(instance->flows.pending, fid)) {
+	if (kfa_fmap_remove(instance->flows.pending, fid)) {
 		kfifo_free(&flow->sdu_ready);
 		rkfree(flow);
 		spin_unlock(&instance->lock);
 		return -1;
 	}
-	if (ipcp_pmap_add(instance->flows.committed, pid, flow, ipc_id)) {
+	if (kfa_pmap_add(instance->flows.committed, pid, flow, ipc_id)) {
 		kfifo_free(&flow->sdu_ready);
 		rkfree(flow);
 		spin_unlock(&instance->lock);
@@ -251,14 +255,14 @@ flow_id_t kfa_flow_unbind(struct kfa * instance,
         spin_lock(&instance->lock);
 	
 	
-	flow = ipcp_pmap_find(instance->flows.committed, id);
+	flow = kfa_pmap_find(instance->flows.committed, id);
 	if (!flow){
 		LOG_ERR("There is no flow binded on port-id %d", id);
 		spin_unlock(&instance->lock);
 		return -1;
 	}
 
-	if(ipcp_pmap_remove(instance->flows.committed, id)) {
+	if (kfa_pmap_remove(instance->flows.committed, id)) {
 		LOG_ERR("Could not remove commited flow at port %d", id);
 		spin_unlock(&instance->lock);
 		return -1;
@@ -273,7 +277,7 @@ flow_id_t kfa_flow_unbind(struct kfa * instance,
 		return flow_id_bad();
 	}
 	
-	if(!ipcp_fmap_add(instance->flows.pending, fid, flow)) {
+	if (!kfa_fmap_add(instance->flows.pending, fid, flow)) {
                 LOG_ERR("Could not map Flow and Flow ID");
 		rkfree(flow);
 		spin_unlock(&instance->lock);
@@ -313,7 +317,7 @@ int kfa_remove_all_for_id(struct kfa * instance, ipc_process_id_t id)
 		return -1;
 	}
 
-	if (ipcp_pmap_remove_all_for_id(instance->flows.committed, id)) {
+	if (kfa_pmap_remove_all_for_id(instance->flows.committed, id)) {
 		return -1;
 	}
 	return 0;
@@ -341,7 +345,7 @@ int kfa_flow_sdu_write(struct kfa *  instance,
         }
 
         //spin_lock(&instance->lock);
-        flow = ipcp_pmap_find(instance->flows.committed, id);
+        flow = kfa_pmap_find(instance->flows.committed, id);
 	if (!flow) {
 		LOG_ERR("There is no flow bound to port-id %d", id);
 		//spin_unlock(&instance->lock);
@@ -403,7 +407,7 @@ int kfa_sdu_post(struct kfa * instance,
 
 
 	spin_lock(&instance->lock);
-	flow = ipcp_pmap_find(instance->flows.committed, id);
+	flow = kfa_pmap_find(instance->flows.committed, id);
 	if (!flow) {
 		LOG_ERR("There is no flow bound to port-id %d", id);
 		spin_unlock(&instance->lock);
