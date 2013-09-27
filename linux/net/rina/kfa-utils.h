@@ -27,40 +27,40 @@
 struct ipcp_flow;
 
 /* FMAPs */
-struct kfa_fmap *      kfa_fmap_create(void);
-int                    kfa_fmap_destroy(struct kfa_fmap * map);
+struct kfa_fmap *  kfa_fmap_create(void);
+int                kfa_fmap_destroy(struct kfa_fmap * map);
 
-int                    kfa_fmap_empty(struct kfa_fmap * map);
-int                    kfa_fmap_add(struct kfa_fmap *  map,
-                                    flow_id_t          key,
-                                    struct ipcp_flow * value);
-struct ipcp_flow *     kfa_fmap_find(struct kfa_fmap * map,
-                                     flow_id_t         key);
-int                    kfa_fmap_update(struct kfa_fmap *  map,
-                                       flow_id_t          key,
-                                       struct ipcp_flow * value);
-int                    kfa_fmap_remove(struct kfa_fmap * map,
-                                       flow_id_t         key);
+int                kfa_fmap_empty(struct kfa_fmap * map);
+int                kfa_fmap_add(struct kfa_fmap *  map,
+                                flow_id_t          key,
+                                struct ipcp_flow * value);
+struct ipcp_flow * kfa_fmap_find(struct kfa_fmap * map,
+                                 flow_id_t         key);
+int                kfa_fmap_update(struct kfa_fmap *  map,
+                                   flow_id_t          key,
+                                   struct ipcp_flow * value);
+int                kfa_fmap_remove(struct kfa_fmap * map,
+                                   flow_id_t         key);
 
 /* PMAPs */
 struct kfa_pmap;
 
-struct kfa_pmap *      kfa_pmap_create(void);
-int                    kfa_pmap_destroy(struct kfa_pmap * map);
+struct kfa_pmap *  kfa_pmap_create(void);
+int                kfa_pmap_destroy(struct kfa_pmap * map);
 
-int                    kfa_pmap_empty(struct kfa_pmap * map);
-int                    kfa_pmap_add(struct kfa_pmap *  map,
-                                    port_id_t          key,
-                                    struct ipcp_flow * value,
-                                    ipc_process_id_t   id);
-struct ipcp_flow *     kfa_pmap_find(struct kfa_pmap * map,
-                                     port_id_t          key);
-int                    kfa_pmap_update(struct kfa_pmap *  map,
-                                       port_id_t          key,
-                                       struct ipcp_flow * value);
-int                    kfa_pmap_remove(struct kfa_pmap * map,
-                                       port_id_t          key);
-int                    kfa_pmap_remove_all_for_id(struct kfa_pmap * map,
-                                                  ipc_process_id_t   id);
+int                kfa_pmap_empty(struct kfa_pmap * map);
+int                kfa_pmap_add(struct kfa_pmap *  map,
+                                port_id_t          key,
+                                struct ipcp_flow * value,
+                                ipc_process_id_t   id);
+struct ipcp_flow * kfa_pmap_find(struct kfa_pmap * map,
+                                 port_id_t          key);
+int                kfa_pmap_update(struct kfa_pmap *  map,
+                                   port_id_t          key,
+                                   struct ipcp_flow * value);
+int                kfa_pmap_remove(struct kfa_pmap * map,
+                                   port_id_t          key);
+int                kfa_pmap_remove_all_for_id(struct kfa_pmap * map,
+                                              ipc_process_id_t   id);
 
 #endif
