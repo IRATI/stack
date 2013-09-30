@@ -83,8 +83,18 @@ flow_id_t fidm_allocate(struct fidm * instance)
         id = (flow_id_t) bitmap_find_next_zero_area(instance->bitmap,
                                                     BITS_IN_BITMAP,
                                                     0, 1, 0);
-        if (id >= BITS_IN_BITMAP)
-                id = flow_id_bad();
+        LOG_DBG("The fidm bitmap find returned id %d (bad = %d)",
+                id, FLOW_ID_WRONG);
+
+        if (!is_flow_id_ok(id)) {
+                LOG_WARN("Got an out-of-range flow-id (%d) from "
+                         "the bitmap allocator, the bitmap is full ...", id);
+                return FLOW_ID_WRONG;
+        }
+
+        bitmap_set(instance->bitmap, id, 1);
+
+        LOG_DBG("Bitmap allocation completed successfully (id = %d)", id);
 
         return id;
 }
@@ -101,7 +111,9 @@ int fidm_release(struct fidm * instance,
                 return -1;
         }
 
-        bitmap_set(instance->bitmap, id, 1);
+        bitmap_clear(instance->bitmap, id, 1);
+
+        LOG_DBG("Bitmap release completed successfully");
 
         return 0;
 }
