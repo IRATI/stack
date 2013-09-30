@@ -124,8 +124,10 @@ void                 rnl_exit(void);
 
 struct rnl_set;
 
+#if 0
 /* FIXME: Remove this symbol from the API */
 struct genl_family * rnl_family(void);
+#endif
 
 struct rnl_set *     rnl_set_create(personality_id id);
 int                  rnl_set_destroy(struct rnl_set * set);

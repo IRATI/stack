@@ -247,6 +247,7 @@ enum socket_closed_notification_msg_attr_list {
 };
 #define ISCN_ATTR_MAX (__ISCN_ATTR_MAX -1)
 
+/* FIXME: Should be hidden by the API !!! */
 struct rina_msg_hdr {
         unsigned short src_ipc_id;
         unsigned short dst_ipc_id;
