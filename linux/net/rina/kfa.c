@@ -187,10 +187,16 @@ int kfa_flow_bind(struct kfa *           instance,
                 LOG_ERR("Bogus ipc process instance passed, bailing out");
                 return -1;
         }
+        /* FIXME: Check the ipc-id */
 
         spin_lock(&instance->lock);
 
-        /* FIXME: What about pending flows ? */
+        if (!kfa_fmap_find(instance->flows.pending, pid)) {
+                LOG_ERR("The flow with flow-id %d is not pending, "
+                        "cannot bind it to port %d", fid, pid);
+                spin_unlock(&instance->lock);
+                return -1;
+        }
         if (kfa_pmap_find(instance->flows.committed, pid)) {
                 LOG_ERR("Flow on port-id %d already exists", pid);
                 spin_unlock(&instance->lock);
@@ -204,7 +210,6 @@ int kfa_flow_bind(struct kfa *           instance,
         }
 
         init_waitqueue_head(&flow->wait_queue);
-
         flow->port_id     = pid;
         flow->ipc_process = ipc_process;
 
@@ -217,12 +222,18 @@ int kfa_flow_bind(struct kfa *           instance,
         }
 
         if (kfa_fmap_remove(instance->flows.pending, fid)) {
+                LOG_ERR("Cannot bind flow %d to port %d (#1)", fid, pid);
                 kfifo_free(&flow->sdu_ready);
                 rkfree(flow);
                 spin_unlock(&instance->lock);
                 return -1;
         }
         if (kfa_pmap_add(instance->flows.committed, pid, flow, ipc_id)) {
+                LOG_ERR("Cannot bind flow %d to port %d (#1)", fid, pid);
+                if (kfa_fmap_add(instance->flows.pending, fid, flow)) {
+                        LOG_ERR("Cannot roll-back changes for flow %d", fid);
+                }
+
                 kfifo_free(&flow->sdu_ready);
                 rkfree(flow);
                 spin_unlock(&instance->lock);
@@ -235,8 +246,6 @@ int kfa_flow_bind(struct kfa *           instance,
 }
 EXPORT_SYMBOL(kfa_flow_bind);
 
-/*  kfa_flow_unbind removes port_id-flow binding and moves the flow to pending
- *  map to be destroyed */
 flow_id_t kfa_flow_unbind(struct kfa * instance,
                           port_id_t    id)
 {
@@ -253,7 +262,6 @@ flow_id_t kfa_flow_unbind(struct kfa * instance,
         }
 
         spin_lock(&instance->lock);
-
 
         flow = kfa_pmap_find(instance->flows.committed, id);
         if (!flow){
@@ -310,23 +318,25 @@ int kfa_flow_destroy(struct kfa * instance,
 }
 EXPORT_SYMBOL(kfa_flow_destroy);
 
-int kfa_remove_all_for_id(struct kfa * instance, ipc_process_id_t id)
+/* FIXME: To be removed ASAP */
+int kfa_remove_all_for_id(struct kfa *     instance,
+                          ipc_process_id_t id)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
         }
 
-        if (kfa_pmap_remove_all_for_id(instance->flows.committed, id)) {
+        if (kfa_pmap_remove_all_for_id(instance->flows.committed, id))
                 return -1;
-        }
+
         return 0;
 }
 EXPORT_SYMBOL(kfa_remove_all_for_id);
 
-int kfa_flow_sdu_write(struct kfa *  instance,
-                       port_id_t     id,
-                       struct sdu *  sdu)
+int kfa_flow_sdu_write(struct kfa * instance,
+                       port_id_t    id,
+                       struct sdu * sdu)
 {
         struct ipcp_flow *     flow;
         struct ipcp_instance * ipcp;
@@ -364,8 +374,8 @@ int kfa_flow_sdu_write(struct kfa *  instance,
         return 0;
 }
 
-struct sdu * kfa_flow_sdu_read(struct kfa *  instance,
-                               port_id_t     id)
+struct sdu * kfa_flow_sdu_read(struct kfa * instance,
+                               port_id_t    id)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
