@@ -43,7 +43,7 @@ struct rnl_set {
 
 static struct rnl_set * default_set = NULL;
 
-static struct genl_family nl_family = {
+struct genl_family rnl_nl_family = {
         .id      = GENL_ID_GENERATE,
         /* .hdrsize = 0, */
         .hdrsize = sizeof(struct rina_msg_hdr),
@@ -52,9 +52,11 @@ static struct genl_family nl_family = {
         /* .maxattr = NETLINK_RINA_A_MAX, */
 };
 
-struct genl_family  * get_nl_family()
+#if 0
+/* FIXME: Why an external method to access our "private" data structures ??? */
+struct genl_family * rnl_family(void)
 { return &nl_family; }
-EXPORT_SYMBOL(get_nl_family);
+#endif
 
 static int is_message_type_in_range(msg_id msg_type)
 { return is_value_in_range(msg_type, NETLINK_RINA_C_MIN, NETLINK_RINA_C_MAX); }
@@ -499,7 +501,7 @@ int rnl_init(void)
 
         LOG_DBG("Initializing Netlink layer");
 
-        ret = genl_register_family_with_ops(&nl_family,
+        ret = genl_register_family_with_ops(&rnl_nl_family,
                                             nl_ops,
                                             ARRAY_SIZE(nl_ops));
         if (ret != 0) {
@@ -507,7 +509,7 @@ int rnl_init(void)
                         "bailing out", ret);
                 return -1;
         }
-        LOG_DBG("NL family registered (id = %d)", nl_family.id);
+        LOG_DBG("NL family registered (id = %d)", rnl_nl_family.id);
 
         /*
          * Register a NETLINK notifier so that the kernel is
@@ -517,7 +519,7 @@ int rnl_init(void)
         if (ret) {
                 LOG_ERR("Cannot register Netlink notifier (error=%i), "
                         "bailing out", ret);
-                genl_unregister_family(&nl_family);
+                genl_unregister_family(&rnl_nl_family);
                 return -1;
         }
 
@@ -535,7 +537,7 @@ void rnl_exit(void)
         /* Unregister the notifier */
         netlink_unregister_notifier(&kipcm_netlink_notifier);
 
-        ret = genl_unregister_family(&nl_family);
+        ret = genl_unregister_family(&rnl_nl_family);
         if (ret) {
                 LOG_ERR("Could not unregister Netlink family (error=%i), "
                         "bailing out. Your system might become unstable", ret);
