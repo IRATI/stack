@@ -119,25 +119,25 @@ typedef enum {
         RINA_C_MAX,
 } msg_type_t;
 
-int                  rnl_init(void);
-void                 rnl_exit(void);
+int              rnl_init(void);
+void             rnl_exit(void);
 
 struct rnl_set;
 
-struct rnl_set *     rnl_set_create(personality_id id);
-int                  rnl_set_destroy(struct rnl_set * set);
+struct rnl_set * rnl_set_create(personality_id id);
+int              rnl_set_destroy(struct rnl_set * set);
 
 typedef int (* message_handler_cb)(void *             data,
                                    struct sk_buff *   buff,
                                    struct genl_info * info);
-int                  rnl_handler_register(struct rnl_set *   set,
-                                          msg_type_t         msg_type,
-                                          void *             data,
-                                          message_handler_cb handler);
-int                  rnl_handler_unregister(struct rnl_set * set,
-                                            msg_type_t       msg_type);
+int              rnl_handler_register(struct rnl_set *   set,
+                                      msg_type_t         msg_type,
+                                      void *             data,
+                                      message_handler_cb handler);
+int              rnl_handler_unregister(struct rnl_set * set,
+                                        msg_type_t       msg_type);
 
-int                  rnl_set_register(struct rnl_set * set);
-int                  rnl_set_unregister(struct rnl_set * set);
+int              rnl_set_register(struct rnl_set * set);
+int              rnl_set_unregister(struct rnl_set * set);
 
 #endif

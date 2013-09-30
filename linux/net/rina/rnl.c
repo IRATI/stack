@@ -52,12 +52,6 @@ struct genl_family rnl_nl_family = {
         /* .maxattr = NETLINK_RINA_A_MAX, */
 };
 
-#if 0
-/* FIXME: Why an external method to access our "private" data structures ??? */
-struct genl_family * rnl_family(void)
-{ return &nl_family; }
-#endif
-
 static int is_message_type_in_range(msg_type_t msg_type)
 { return is_value_in_range(msg_type, NETLINK_RINA_C_MIN, NETLINK_RINA_C_MAX); }
 

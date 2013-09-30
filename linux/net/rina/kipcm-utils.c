@@ -182,8 +182,8 @@ struct seqn_fmap {
 };
 
 struct seqn_fmap_entry {
-        flow_id_t 	  key;
-        int		  value;
+        flow_id_t         key;
+        int               value;
         struct hlist_node hlist;
 };
 
@@ -227,7 +227,7 @@ int seqn_fmap_empty(struct seqn_fmap * map)
 #define snmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 static struct seqn_fmap_entry * snmap_entry_find(struct seqn_fmap * map,
-                                                 flow_id_t   	    key)
+                                                 flow_id_t          key)
 {
         struct seqn_fmap_entry * entry;
         struct hlist_head *      head;
@@ -245,7 +245,7 @@ static struct seqn_fmap_entry * snmap_entry_find(struct seqn_fmap * map,
 
 /* FIXME: This is broken !!! */
 int seqn_fmap_find(struct seqn_fmap * map,
-                   flow_id_t	      key)
+                   flow_id_t          key)
 {
         struct seqn_fmap_entry * entry;
 
@@ -259,8 +259,8 @@ int seqn_fmap_find(struct seqn_fmap * map,
 }
 
 int seqn_fmap_update(struct seqn_fmap * map,
-                     flow_id_t	        key,
-                     int		value)
+                     flow_id_t          key,
+                     int                value)
 {
         struct seqn_fmap_entry * cur;
 
@@ -276,8 +276,8 @@ int seqn_fmap_update(struct seqn_fmap * map,
 }
 
 int seqn_fmap_add(struct seqn_fmap * map,
-                  flow_id_t	     key,
-                  int 		     value)
+                  flow_id_t          key,
+                  int                value)
 {
         struct seqn_fmap_entry * tmp;
 
@@ -312,4 +312,3 @@ int seqn_fmap_remove(struct seqn_fmap * map,
 
         return 0;
 }
-
