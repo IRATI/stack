@@ -58,7 +58,7 @@ struct genl_family * rnl_family(void)
 { return &nl_family; }
 #endif
 
-static int is_message_type_in_range(msg_id msg_type)
+static int is_message_type_in_range(msg_type_t msg_type)
 { return is_value_in_range(msg_type, NETLINK_RINA_C_MIN, NETLINK_RINA_C_MAX); }
 
 static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
@@ -72,7 +72,7 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 
         message_handler_cb cb_function;
         void *             data;
-        msg_id             msg_type;
+        msg_type_t         msg_type;
         int                ret_val;
         struct rnl_set *   tmp;
 
@@ -88,7 +88,7 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
                 return -1;
         }
 
-        msg_type = (msg_id) info->genlhdr->cmd;
+        msg_type = (msg_type_t) info->genlhdr->cmd;
         LOG_DBG("Multiplexing message type %d", msg_type);
 
         if (!is_message_type_in_range(msg_type)) {
@@ -306,7 +306,7 @@ static struct genl_ops nl_ops[] = {
 };
 
 int rnl_handler_register(struct rnl_set *   set,
-                         msg_id             msg_type,
+                         msg_type_t         msg_type,
                          void *             data,
                          message_handler_cb handler)
 {
@@ -351,7 +351,7 @@ int rnl_handler_register(struct rnl_set *   set,
 EXPORT_SYMBOL(rnl_handler_register);
 
 int rnl_handler_unregister(struct rnl_set * set,
-                           msg_id           msg_type)
+                           msg_type_t       msg_type)
 {
         if (!set) {
                 LOG_ERR("Bogus set passed, cannot register handler");

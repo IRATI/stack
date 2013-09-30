@@ -892,7 +892,7 @@ int rnl_parse_msg(struct genl_info * info,
         /* dst_port can not be parsed */
         msg->dst_port              = 0;
         msg->seq_num               = info->snd_seq;
-        msg->op_code               = (msg_id) info->genlhdr->cmd;
+        msg->op_code               = (msg_type_t) info->genlhdr->cmd;
 #if 0
         msg->req_msg_flag          = 0;
         msg->resp_msg_flag         = 0;
