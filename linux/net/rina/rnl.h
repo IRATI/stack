@@ -113,34 +113,34 @@ typedef enum {
         /* RMT (kernel) -> IPC Process (user space) */
         RINA_C_RMT_DUMP_FT_REPLY,
 
-	/* NL layer -> IPC Manager */
-	RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION,
+        /* NL layer -> IPC Manager */
+        RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION,
 
-	RINA_C_MAX,
+        RINA_C_MAX,
 } msg_id;
 
-int  rnl_init(void);
-void rnl_exit(void);
+int                  rnl_init(void);
+void                 rnl_exit(void);
 
 struct rnl_set;
 
-/* FIXME: Remove this symbol */
-struct genl_family  * get_nl_family(void);
+/* FIXME: Remove this symbol from the API */
+struct genl_family * rnl_family(void);
 
-struct rnl_set * rnl_set_create(personality_id id);
-int              rnl_set_destroy(struct rnl_set * set);
+struct rnl_set *     rnl_set_create(personality_id id);
+int                  rnl_set_destroy(struct rnl_set * set);
 
 typedef int (* message_handler_cb)(void *             data,
                                    struct sk_buff *   buff,
                                    struct genl_info * info);
-int  rnl_handler_register(struct rnl_set *   set,
-                          msg_id             msg_type,
-                          void *             data,
-                          message_handler_cb handler);
-int  rnl_handler_unregister(struct rnl_set * set,
-                            msg_id           msg_type);
+int                  rnl_handler_register(struct rnl_set *   set,
+                                          msg_id             msg_type,
+                                          void *             data,
+                                          message_handler_cb handler);
+int                  rnl_handler_unregister(struct rnl_set * set,
+                                            msg_id           msg_type);
 
-int  rnl_set_register(struct rnl_set * set);
-int  rnl_set_unregister(struct rnl_set * set);
+int                  rnl_set_register(struct rnl_set * set);
+int                  rnl_set_unregister(struct rnl_set * set);
 
 #endif

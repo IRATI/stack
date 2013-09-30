@@ -52,9 +52,9 @@ static struct genl_family nl_family = {
         /* .maxattr = NETLINK_RINA_A_MAX, */
 };
 
-struct genl_family  * get_nl_family()
+/* FIXME: Why an external method to access our "private" data structures ??? */
+struct genl_family * rnl_family(void)
 { return &nl_family; }
-EXPORT_SYMBOL(get_nl_family);
 
 static int is_message_type_in_range(msg_id msg_type)
 { return is_value_in_range(msg_type, NETLINK_RINA_C_MIN, NETLINK_RINA_C_MAX); }
