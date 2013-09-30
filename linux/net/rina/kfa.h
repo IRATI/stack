@@ -69,4 +69,7 @@ int 	     kfa_sdu_post(struct kfa * instance,
 			  port_id_t    id,
 			  struct sdu * sdu);
 
+struct ipcp_flow * kfa_find_flow_by_fid(struct kfa * instance,
+                       	       	       	flow_id_t    fid);
+
 #endif

@@ -32,6 +32,7 @@
 #include "fidm.h"
 #include "kfa.h"
 #include "kipcm-utils.h"
+#include "kfa-utils.h"
 
 
 struct kfa {
@@ -141,7 +142,7 @@ flow_id_t kfa_flow_create(struct kfa * instance)
 		return flow_id_bad();
 	}
 
-	if (!ipcp_fmap_add(&instance->flows.pending, fid, flow)) {
+	if (!ipcp_fmap_add(instance->flows.pending, fid, flow)) {
                 LOG_ERR("Could not map Flow and Flow ID");
 		rkfree(flow);
 		spin_unlock(&instance->lock);
@@ -399,3 +400,10 @@ int kfa_sdu_post(struct kfa * instance,
 	return 0;
 }
 EXPORT_SYMBOL(kfa_sdu_post);
+
+struct ipcp_flow * kfa_find_flow_by_fid(struct kfa * instance,
+			 	 	flow_id_t    fid)
+{
+	return kfa_fmap_find(instance->flows.pending, fid);
+}
+EXPORT_SYMBOL(kfa_find_flow_by_fid);

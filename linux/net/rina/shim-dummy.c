@@ -215,7 +215,6 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
         struct dummy_flow * flow;
 
         ASSERT(data);
-        ASSERT(response);
 
         if (!data->info) {
                 LOG_ERR("There is not info in this IPC Process");
@@ -242,15 +241,15 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
         if (result == 0) {
                 flow->dst_port_id = port_id;
                 flow->state = PORT_STATE_ALLOCATED;
-                if (kipcm_flow_add(default_kipcm, data->id, flow->port_id)) {
+                if (kipcm_flow_add(default_kipcm, data->id, flow->port_id, flow_id)) {
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
                         rkfree(flow);
                         return -1;
                 }
-                if (kipcm_flow_add(default_kipcm, data->id, id)) {
-                        kipcm_flow_remove(default_kipcm, id);
+                if (kipcm_flow_add(default_kipcm, data->id, port_id, flow_id)) {
+                        kipcm_flow_remove(default_kipcm, port_id);
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
@@ -270,6 +269,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         return -1;
                 }
         } else {
+#if 0
                 if (rnl_app_alloc_flow_result_msg(data->id,
                                                   -1,
                                                   flow->seq_num,
@@ -279,6 +279,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 name_destroy(flow->dest);
                 rkfree(flow);
                 return -1;
+#endif
         }
 
         /*

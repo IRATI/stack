@@ -59,7 +59,8 @@ struct ipcp_instance_ops {
                                        flow_id_t		   fid);
 	int  (* flow_allocate_response)(struct ipcp_instance_data * data,
                                         flow_id_t                   flow_id,
-                                        port_id_t                   port_id);
+                                        port_id_t                   port_id,
+                                        int			    result);
 	int  (* flow_deallocate)(struct ipcp_instance_data * data,
                                  port_id_t                   id);
 

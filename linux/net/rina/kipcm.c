@@ -41,6 +41,7 @@
 #include "rnl.h"
 #include "rnl-utils.h"
 #include "kfa.h"
+#include "kfa-utils.h"
 
 #define DEFAULT_FACTORY "normal-ipc"
 
@@ -301,11 +302,15 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      info->snd_portid);
         }
 
+        fid = kfa_flow_create(kipcm->kfa);
+	ASSERT(is_flow_id_ok(fid));
+
         if (ipc_process->ops->flow_allocate_request(ipc_process->data,
                                                     attrs->source,
                                                     attrs->dest,
                                                     attrs->fspec,
-                                                    attrs->id)) {
+                                                    attrs->id,
+                                                    fid)) {
                 LOG_ERR("Failed allocating flow request "
                         "for port id: %d", attrs->id);
                 return alloc_flow_req_free_and_reply(source,
@@ -319,10 +324,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      info->snd_seq,
                                                      info->snd_portid);
         }
-
-        fid = fidm_allocate(kipcm->kfa->fidm);
-        ASSERT(is_flow_id_ok(fid));
-
+#if 0
         /*
          * FIXME: We need seq numbers instead of fid in the message
          */
@@ -336,6 +338,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 					       1)) {
 
         }
+#endif
 
         alloc_flow_req_free(source, dest, fspec, dif_name, attrs, msg);
 
@@ -404,14 +407,21 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 return -1;
         }
 
-#if 1 /* FIXME: Please re-enable */
+#if 0 /* FIXME: Please re-enable */
 
         if (ipc_process->ops->flow_allocate_response(ipc_process->data,
         					     info->snd_seq,
-        					     attrs->id)) {
+        					     attrs->id,
+        					     0)) {
                 LOG_ERR("Failed allocate flow response for port id: %d",
                         attrs->id);
                 retval = -1;
+        }
+
+                if (rnl_app_alloc_flow_result_msg(id, res, seq_num, port_id))
+                        return -1;
+
+                return 0;
         }
 #endif
         rkfree(hdr);
@@ -1426,13 +1436,34 @@ int kipcm_ipcp_destroy(struct kipcm *   kipcm,
         return 0;
 }
 
-int kipcm_flow_arrived(struct kipcm *   kipcm,
-                       ipc_process_id_t ipc_id,
-                       flow_id_t        flow_id)
+int kipcm_flow_arrived(struct kipcm *     kipcm,
+                       ipc_process_id_t   ipc_id,
+                       flow_id_t          flow_id,
+                       struct name *      dif_name,
+                       struct name *      source,
+                       struct name *      dest,
+                       struct flow_spec * fspec)
 {
-        LOG_MISSING;
+	uint_t nl_port_id = 1;
+	uint_t seq_num = 666;
+	struct ipcp_flow * flow;
 
-        return -1;
+	flow = kfa_find_flow_by_fid(kipcm->kfa->flows.pending, flow_id);
+	if (!flow) {
+		LOG_DBG("There's no flow pending for flow_id: %d", flow_id);
+		return -1;
+	}
+	if (rnl_app_alloc_flow_req_arrived_msg(ipc_id,
+					       dif_name,
+					       source,
+					       dest,
+					       fspec,
+					       seq_num,
+					       nl_port_id)) {
+		return -1;
+	}
+
+	return 0;
 }
 EXPORT_SYMBOL(kipcm_flow_arrived);
 
