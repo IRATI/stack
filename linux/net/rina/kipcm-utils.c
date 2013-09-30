@@ -257,9 +257,9 @@ int seqn_fmap_find(struct seqn_fmap * map,
         return entry->value;
 }
 
-int seqn_fmap_update(struct seqn_fmap     * map,
-                     flow_id_t				key,
-                     int					value)
+int seqn_fmap_update(struct seqn_fmap * map,
+                     flow_id_t	        key,
+                     int		value)
 {
         struct seqn_fmap_entry * cur;
 
@@ -274,9 +274,9 @@ int seqn_fmap_update(struct seqn_fmap     * map,
         return 0;
 }
 
-int seqn_fmap_add(struct seqn_fmap     * map,
-                  flow_id_t		         key,
-                  int					 value)
+int seqn_fmap_add(struct seqn_fmap * map,
+                  flow_id_t	     key,
+                  int 		     value)
 {
         struct seqn_fmap_entry * tmp;
 
