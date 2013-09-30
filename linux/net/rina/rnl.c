@@ -43,7 +43,7 @@ struct rnl_set {
 
 static struct rnl_set * default_set = NULL;
 
-static struct genl_family nl_family = {
+struct genl_family rnl_nl_family = {
         .id      = GENL_ID_GENERATE,
         /* .hdrsize = 0, */
         .hdrsize = sizeof(struct rina_msg_hdr),
@@ -52,11 +52,7 @@ static struct genl_family nl_family = {
         /* .maxattr = NETLINK_RINA_A_MAX, */
 };
 
-struct genl_family  * get_nl_family()
-{ return &nl_family; }
-EXPORT_SYMBOL(get_nl_family);
-
-static int is_message_type_in_range(msg_id msg_type)
+static int is_message_type_in_range(msg_type_t msg_type)
 { return is_value_in_range(msg_type, NETLINK_RINA_C_MIN, NETLINK_RINA_C_MAX); }
 
 static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
@@ -70,7 +66,7 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 
         message_handler_cb cb_function;
         void *             data;
-        msg_id             msg_type;
+        msg_type_t         msg_type;
         int                ret_val;
         struct rnl_set *   tmp;
 
@@ -86,7 +82,7 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
                 return -1;
         }
 
-        msg_type = (msg_id) info->genlhdr->cmd;
+        msg_type = (msg_type_t) info->genlhdr->cmd;
         LOG_DBG("Multiplexing message type %d", msg_type);
 
         if (!is_message_type_in_range(msg_type)) {
@@ -111,8 +107,8 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
                 return -1;
         }
 
+        /* Data might be empty, no check strictly necessary */
         data = tmp->handlers[msg_type].data;
-        /* Data might be empty */
 
         ret_val = cb_function(data, skb_in, info);
         if (ret_val) {
@@ -125,186 +121,44 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         return 0;
 }
 
+/* NOTE: Let's avoid silly (and dangerous) copy&paste-like initializations */
+#define DECL_NL_OP(X) {                         \
+        	.cmd    = X,                    \
+        	.flags  = 0,                    \
+        	.doit   = dispatcher,           \
+        	.dumpit = NULL,                 \
+        }
+
 static struct genl_ops nl_ops[] = {
-        {
-                .cmd    = RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_ENROLL_TO_DIF_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_QUERY_RIB_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_QUERY_RIB_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_RMT_ADD_FTE_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_RMT_DELETE_FTE_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_RMT_DUMP_FT_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_RMT_DUMP_FT_REPLY,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
+        DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION),
+        DECL_NL_OP(RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION),
+        DECL_NL_OP(RINA_C_IPCM_ENROLL_TO_DIF_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED),
+        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT),
+        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION),
+        DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_RESPONSE),
+        DECL_NL_OP(RINA_C_RMT_ADD_FTE_REQUEST),
+        DECL_NL_OP(RINA_C_RMT_DELETE_FTE_REQUEST),
+        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REQUEST),
+        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REPLY)
 };
 
 int rnl_handler_register(struct rnl_set *   set,
-                         msg_id             msg_type,
+                         msg_type_t         msg_type,
                          void *             data,
                          message_handler_cb handler)
 {
@@ -349,7 +203,7 @@ int rnl_handler_register(struct rnl_set *   set,
 EXPORT_SYMBOL(rnl_handler_register);
 
 int rnl_handler_unregister(struct rnl_set * set,
-                           msg_id           msg_type)
+                           msg_type_t       msg_type)
 {
         if (!set) {
                 LOG_ERR("Bogus set passed, cannot register handler");
@@ -499,7 +353,7 @@ int rnl_init(void)
 
         LOG_DBG("Initializing Netlink layer");
 
-        ret = genl_register_family_with_ops(&nl_family,
+        ret = genl_register_family_with_ops(&rnl_nl_family,
                                             nl_ops,
                                             ARRAY_SIZE(nl_ops));
         if (ret != 0) {
@@ -507,7 +361,7 @@ int rnl_init(void)
                         "bailing out", ret);
                 return -1;
         }
-        LOG_DBG("NL family registered (id = %d)", nl_family.id);
+        LOG_DBG("NL family registered (id = %d)", rnl_nl_family.id);
 
         /*
          * Register a NETLINK notifier so that the kernel is
@@ -517,7 +371,7 @@ int rnl_init(void)
         if (ret) {
                 LOG_ERR("Cannot register Netlink notifier (error=%i), "
                         "bailing out", ret);
-                genl_unregister_family(&nl_family);
+                genl_unregister_family(&rnl_nl_family);
                 return -1;
         }
 
@@ -535,7 +389,7 @@ void rnl_exit(void)
         /* Unregister the notifier */
         netlink_unregister_notifier(&kipcm_netlink_notifier);
 
-        ret = genl_unregister_family(&nl_family);
+        ret = genl_unregister_family(&rnl_nl_family);
         if (ret) {
                 LOG_ERR("Could not unregister Netlink family (error=%i), "
                         "bailing out. Your system might become unstable", ret);
