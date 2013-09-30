@@ -303,6 +303,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         }
 
         fid = kfa_flow_create(kipcm->kfa);
+        LOG_DBG("The very best of debugging: %d", fid);
 	ASSERT(is_flow_id_ok(fid));
 
         if (ipc_process->ops->flow_allocate_request(ipc_process->data,
@@ -1674,6 +1675,11 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         KIPCM_UNLOCK(kipcm);
 #endif
         /* The SDU is theirs now */
+        *sdu = kfa_flow_sdu_read(kipcm->kfa, port_id);
+        if (!sdu){
+        	LOG_DBG("Failed to read sdu");
+        	return -1;
+        }
         return 0;
 }
 

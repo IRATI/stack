@@ -288,12 +288,12 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                                                   -1,
                                                   flow->seq_num,
                                                   1))
-                        list_del(&flow->list);
+#endif
+		list_del(&flow->list);
                 name_destroy(flow->source);
                 name_destroy(flow->dest);
                 rkfree(flow);
                 return -1;
-#endif
         }
 
         /*
