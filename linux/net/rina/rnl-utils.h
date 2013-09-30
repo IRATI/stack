@@ -252,6 +252,8 @@ struct rina_msg_hdr {
         unsigned short dst_ipc_id;
 };
 
+typedef u32 rnl_sn_t;
+
 struct rnl_msg {
         /* Generic RINA Netlink family identifier */
         int                   family;
@@ -263,7 +265,7 @@ struct rnl_msg {
         unsigned int          dst_port;
 
         /* The message sequence number */
-        unsigned int          seq_num;
+        rnl_sn_t              seq_num;
 
         /* The operation code */
         msg_id                op_code;
@@ -509,7 +511,7 @@ int rnl_format_rmt_dump_ft_reply_msg(size_t                       count,
 /* FIXME: Use port_id_t */
 int rnl_assign_dif_response(ipc_process_id_t id,
                             uint_t           res,
-                            uint_t           seq_num,
+                            rnl_sn_t         seq_num,
                             uint_t           port_id);
 
 int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t            ipc_id,
@@ -517,7 +519,7 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t            ipc_id,
                                        const struct name *         source,
                                        const struct name *         dest,
                                        const struct flow_spec *    fspec,
-                                       uint_t 			   seq_num,
+                                       rnl_sn_t 		   seq_num,
                                        uint_t                      nl_port_id);
 
 int rnl_format_socket_closed_notification_msg(int              nl_port,
@@ -526,20 +528,20 @@ int rnl_format_socket_closed_notification_msg(int              nl_port,
 /* FIXME: Use port_id_t */
 int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
-                                  uint_t	   seq_num,
+                                  rnl_sn_t	   seq_num,
                                   uint_t           port_id);
 
 /* FIXME: Use port_id_t */
 int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
                                              uint_t           res,
-                                             uint_t           seq_num,
+                                             rnl_sn_t         seq_num,
                                              uint_t 	      port_id,
                                              bool             isRegister);
 
 /* FIXME: Use port_id_t */
 int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
-                                  uint_t	   seq_num,
+                                  rnl_sn_t	   seq_num,
                                   uint_t           port_id);
 
 /* FIXME: Use port_id_t */
