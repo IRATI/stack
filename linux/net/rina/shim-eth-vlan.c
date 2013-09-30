@@ -182,8 +182,6 @@ find_flow_by_addr(struct ipcp_instance_data *       data,
         return NULL;
 }
 
-
-
 static void arp_req_handler(void *                         opaque,
 			    const struct paddr *           dest_paddr,
 			    const struct rinarp_mac_addr * dest_hw_addr)
@@ -828,7 +826,7 @@ static struct ipcp_factory_ops eth_vlan_ops = {
         .destroy   = eth_vlan_destroy,
 };
 
-struct ipcp_factory * shim;
+struct ipcp_factory * shim = NULL;
 
 static int __init mod_init(void)
 {

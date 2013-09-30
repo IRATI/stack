@@ -2196,12 +2196,13 @@ int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        out_hdr = (struct rina_msg_hdr *) genlmsg_put(out_msg,
-                                                      0,
-                                                      0,
-                                                      get_nl_family(),
-                                                      0,
-                                                      RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION);
+        out_hdr = (struct rina_msg_hdr *)
+                genlmsg_put(out_msg,
+                            0,
+                            0,
+                            get_nl_family(),
+                            0,
+                            RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION);
         if (!out_hdr) {
                 LOG_ERR("Could not use genlmsg_put");
                 nlmsg_free(out_msg);
@@ -2244,12 +2245,13 @@ int rnl_ipcm_sock_closed_notif_msg(int closed_port, int dest_port)
                 return -1;
         }
 
-        out_hdr = (struct rina_msg_hdr *) genlmsg_put(out_msg,
-                                                      0,
-                                                      0,
-                                                      get_nl_family(),
-                                                      0,
-                                                      RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION);
+        out_hdr = (struct rina_msg_hdr *)
+                genlmsg_put(out_msg,
+                            0,
+                            0,
+                            get_nl_family(),
+                            0,
+                            RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION);
         if (!out_hdr) {
                 LOG_ERR("Could not use genlmsg_put");
                 nlmsg_free(out_msg);
