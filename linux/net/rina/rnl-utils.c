@@ -63,7 +63,9 @@
 #define BUILD_STRERROR_BY_MTYPE(X)                      \
         "Could not parse Netlink message of type " X
 
-char *nla_get_string(struct nlattr * nla)
+extern struct genl_family rnl_nl_family;
+
+char * nla_get_string(struct nlattr * nla)
 { return (char *) nla_data(nla); }
 
 static int rnl_check_attr_policy(struct nlmsghdr *   nlh,
@@ -1913,13 +1915,13 @@ int rnl_format_socket_closed_notification_msg(int           nl_port,
 EXPORT_SYMBOL(rnl_format_socket_closed_notification_msg);
 
 int rnl_assign_dif_response(ipc_process_id_t id,
-                            uint_t res,
-                            uint_t seq_num,
-                            uint_t port_id)
+                            uint_t           res,
+                            rnl_sn_t         seq_num,
+                            uint_t           port_id)
 {
-        struct sk_buff * out_msg;
+        struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int result;
+        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -1927,12 +1929,13 @@ int rnl_assign_dif_response(ipc_process_id_t id,
                 return -1;
         }
 
-        out_hdr = (struct rina_msg_hdr *) genlmsg_put(out_msg,
-                                                      0,
-                                                      seq_num,
-                                                      get_nl_family(),
-                                                      0,
-                                                      RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE);
+        out_hdr = (struct rina_msg_hdr *)
+                genlmsg_put(out_msg,
+                            0,
+                            seq_num,
+                            &rnl_nl_family,
+                            0,
+                            RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE);
         if (!out_hdr) {
                 LOG_ERR("Could not use genlmsg_put");
                 nlmsg_free(out_msg);
@@ -1966,14 +1969,14 @@ EXPORT_SYMBOL(rnl_assign_dif_response);
 
 int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
                                              uint_t           res,
-                                             uint_t        seq_num,
-                                             uint_t        port_id,
-                                             bool isRegister)
+                                             rnl_sn_t         seq_num,
+                                             uint_t           port_id,
+                                             bool             isRegister)
 {
-        struct sk_buff * out_msg;
+        struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        uint_t command;
-        int result;
+        uint_t                command;
+        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -1981,15 +1984,14 @@ int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        if (isRegister)
-                command = RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE;
-        else
-                command = RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE;
+        command = isRegister                               ?
+                RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE  :
+                RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE;
 
         out_hdr = (struct rina_msg_hdr *) genlmsg_put(out_msg,
                                                       0,
                                                       seq_num,
-                                                      get_nl_family(),
+                                                      &rnl_nl_family,
                                                       0,
                                                       command);
         if (!out_hdr) {
@@ -2027,7 +2029,7 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t            ipc_id,
                                        const struct name *         source,
                                        const struct name *         dest,
                                        const struct flow_spec *    fspec,
-                                       uint_t                      seq_num,
+                                       rnl_sn_t                    seq_num,
                                        uint_t                      nl_port_id)
 {
         struct sk_buff * msg;
@@ -2040,12 +2042,13 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t            ipc_id,
                 return -1;
         }
 
-        hdr = (struct rina_msg_hdr *) genlmsg_put(msg,
-                                                  0,
-                                                  seq_num,
-                                                  get_nl_family(),
-                                                  NLM_F_REQUEST,
-                                                  RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED);
+        hdr = (struct rina_msg_hdr *)
+                genlmsg_put(msg,
+                            0,
+                            seq_num,
+                            &rnl_nl_family,
+                            NLM_F_REQUEST,
+                            RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED);
         if (!hdr) {
                 LOG_ERR("Could not use genlmsg_put");
                 nlmsg_free(msg);
@@ -2081,8 +2084,8 @@ EXPORT_SYMBOL(rnl_app_alloc_flow_req_arrived_msg);
 
 int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
-                                  uint_t           seq_num,
-                                  uint_t port_id)
+                                  rnl_sn_t         seq_num,
+                                  uint_t           port_id)
 {
         struct sk_buff * out_msg;
         struct rina_msg_hdr * out_hdr;
@@ -2094,12 +2097,13 @@ int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        out_hdr = (struct rina_msg_hdr *) genlmsg_put(out_msg,
-                                                      0,
-                                                      seq_num,
-                                                      get_nl_family(),
-                                                      0,
-                                                      RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT);
+        out_hdr = (struct rina_msg_hdr *)
+                genlmsg_put(out_msg,
+                            0,
+                            seq_num,
+                            &rnl_nl_family,
+                            0,
+                            RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT);
         if (!out_hdr) {
                 LOG_ERR("Could not use genlmsg_put");
                 nlmsg_free(out_msg);
@@ -2132,7 +2136,7 @@ EXPORT_SYMBOL(rnl_app_alloc_flow_result_msg);
 
 int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
-                                  uint_t           seq_num,
+                                  rnl_sn_t         seq_num,
                                   uint_t           port_id)
 {
         struct sk_buff * out_msg;
@@ -2145,12 +2149,13 @@ int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
                 return -1;
         }
 
-        out_hdr = (struct rina_msg_hdr *) genlmsg_put(out_msg,
-                                                      0,
-                                                      seq_num,
-                                                      get_nl_family(),
-                                                      0,
-                                                      RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE);
+        out_hdr = (struct rina_msg_hdr *)
+                genlmsg_put(out_msg,
+                            0,
+                            seq_num,
+                            &rnl_nl_family,
+                            0,
+                            RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE);
         if (!out_hdr) {
                 LOG_ERR("Could not use genlmsg_put");
                 nlmsg_free(out_msg);
@@ -2200,7 +2205,7 @@ int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
                 genlmsg_put(out_msg,
                             0,
                             0,
-                            get_nl_family(),
+                            &rnl_nl_family,
                             0,
                             RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION);
         if (!out_hdr) {
@@ -2249,7 +2254,7 @@ int rnl_ipcm_sock_closed_notif_msg(int closed_port, int dest_port)
                 genlmsg_put(out_msg,
                             0,
                             0,
-                            get_nl_family(),
+                            &rnl_nl_family,
                             0,
                             RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION);
         if (!out_hdr) {
