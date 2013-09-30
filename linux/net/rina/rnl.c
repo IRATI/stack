@@ -107,8 +107,8 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
                 return -1;
         }
 
+        /* Data might be empty, no check strictly necessary */
         data = tmp->handlers[msg_type].data;
-        /* Data might be empty */
 
         ret_val = cb_function(data, skb_in, info);
         if (ret_val) {
@@ -121,182 +121,40 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         return 0;
 }
 
+/* NOTE: Let's avoid silly (and dangerous) copy&paste-like initializations */
+#define DECL_NL_OP(X) {                         \
+        	.cmd    = X,                    \
+        	.flags  = 0,                    \
+        	.doit   = dispatcher,           \
+        	.dumpit = NULL,                 \
+        }
+
 static struct genl_ops nl_ops[] = {
-        {
-                .cmd    = RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_ENROLL_TO_DIF_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_QUERY_RIB_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_IPCM_QUERY_RIB_RESPONSE,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_RMT_ADD_FTE_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_RMT_DELETE_FTE_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_RMT_DUMP_FT_REQUEST,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-        {
-                .cmd    = RINA_C_RMT_DUMP_FT_REPLY,
-                .flags  = 0,
-                //.policy = nl_rina_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
+        DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION),
+        DECL_NL_OP(RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION),
+        DECL_NL_OP(RINA_C_IPCM_ENROLL_TO_DIF_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED),
+        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT),
+        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION),
+        DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_RESPONSE),
+        DECL_NL_OP(RINA_C_RMT_ADD_FTE_REQUEST),
+        DECL_NL_OP(RINA_C_RMT_DELETE_FTE_REQUEST),
+        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REQUEST),
+        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REPLY)
 };
 
 int rnl_handler_register(struct rnl_set *   set,
