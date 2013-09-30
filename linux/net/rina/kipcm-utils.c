@@ -2,6 +2,7 @@
  * K-IPCM related utilities
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -161,6 +162,148 @@ int ipcp_imap_remove(struct ipcp_imap * map,
         ASSERT(map);
 
         cur = imap_entry_find(map, key);
+        if (!cur)
+                return -1;
+
+        hash_del(&cur->hlist);
+        rkfree(cur);
+
+        return 0;
+}
+
+/*
+ * SEQNMAPs
+ */
+
+#define SEQNMAP_HASH_BITS 7
+
+struct seqn_fmap {
+        DECLARE_HASHTABLE(table, SEQNMAP_HASH_BITS);
+};
+
+struct seqn_fmap_entry {
+        flow_id_t         key;
+        int               value;
+        struct hlist_node hlist;
+};
+
+struct seqn_fmap * seqn_fmap_create(void)
+{
+        struct seqn_fmap * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        hash_init(tmp->table);
+
+        return tmp;
+}
+
+int seqn_fmap_destroy(struct seqn_fmap * map)
+{
+        struct seqn_fmap_entry * entry;
+        struct hlist_node *      tmp;
+        int                      bucket;
+
+        ASSERT(map);
+
+        hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
+                hash_del(&entry->hlist);
+                rkfree(entry);
+        }
+
+        rkfree(map);
+
+        return 0;
+}
+
+int seqn_fmap_empty(struct seqn_fmap * map)
+{
+        ASSERT(map);
+        return hash_empty(map->table);
+}
+
+#define snmap_hash(T, K) hash_min(K, HASH_BITS(T))
+
+static struct seqn_fmap_entry * snmap_entry_find(struct seqn_fmap * map,
+                                                 flow_id_t          key)
+{
+        struct seqn_fmap_entry * entry;
+        struct hlist_head *      head;
+
+        ASSERT(map);
+
+        head = &map->table[snmap_hash(map->table, key)];
+        hlist_for_each_entry(entry, head, hlist) {
+                if (entry->key == key)
+                        return entry;
+        }
+
+        return NULL;
+}
+
+/* FIXME: This is broken !!! */
+int seqn_fmap_find(struct seqn_fmap * map,
+                   flow_id_t          key)
+{
+        struct seqn_fmap_entry * entry;
+
+        ASSERT(map);
+
+        entry = snmap_entry_find(map, key);
+        if (!entry)
+                return -1;
+
+        return entry->value;
+}
+
+int seqn_fmap_update(struct seqn_fmap * map,
+                     flow_id_t          key,
+                     int                value)
+{
+        struct seqn_fmap_entry * cur;
+
+        ASSERT(map);
+
+        cur = snmap_entry_find(map, key);
+        if (!cur)
+                return -1;
+
+        cur->value = value;
+
+        return 0;
+}
+
+int seqn_fmap_add(struct seqn_fmap * map,
+                  flow_id_t          key,
+                  int                value)
+{
+        struct seqn_fmap_entry * tmp;
+
+        ASSERT(map);
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return -1;
+
+        tmp->key   = key;
+        tmp->value = value;
+        INIT_HLIST_NODE(&tmp->hlist);
+
+        hash_add(map->table, &tmp->hlist, key);
+
+        return 0;
+}
+
+int seqn_fmap_remove(struct seqn_fmap * map,
+                     flow_id_t          key)
+{
+        struct seqn_fmap_entry * cur;
+
+        ASSERT(map);
+
+        cur = snmap_entry_find(map, key);
         if (!cur)
                 return -1;
 

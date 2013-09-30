@@ -269,7 +269,7 @@ struct rnl_msg {
         rnl_sn_t              seq_num;
 
         /* The operation code */
-        msg_id                op_code;
+        msg_type_t            op_code;
 
         /* True if this is a request message */
         bool                  req_msg_flag;
