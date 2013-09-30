@@ -185,9 +185,21 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
 
         flow->state       = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
         flow->port_id     = id;
-        flow->dst_fid     = fid;
+        flow->src_fid     = fid;
+
+        flow->dst_fid     = kipcm_flow_new(default_kipcm, data->id);
+        ASSERT(is_flow_id_ok(flow->dst_fid));
+
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, &data->flows);
+
+        kipcm_flow_arrived(default_kipcm,
+                           data->id,
+                           flow->dst_fid,
+                           data->info->dif_name,
+                           flow->source,
+                           flow->dest,
+                           fspec);
 
         return 0;
 }
@@ -241,7 +253,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
         if (result == 0) {
                 flow->dst_port_id = port_id;
                 flow->state = PORT_STATE_ALLOCATED;
-                if (kipcm_flow_add(default_kipcm, data->id, flow->port_id, flow_id)) {
+                if (kipcm_flow_add(default_kipcm, data->id, flow->port_id, flow->src_fid)) {
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
@@ -256,6 +268,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         rkfree(flow);
                         return -1;
                 }
+#if 0
                 if (rnl_app_alloc_flow_result_msg(data->id,
                                                   0,
                                                   flow->src_fid,
@@ -268,6 +281,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         rkfree(flow);
                         return -1;
                 }
+#endif
         } else {
 #if 0
                 if (rnl_app_alloc_flow_result_msg(data->id,
@@ -690,7 +704,7 @@ static struct ipcp_factory_ops dummy_ops = {
         .destroy   = dummy_destroy,
 };
 
-struct ipcp_factory * shim;
+struct ipcp_factory * shim = NULL;
 
 static int __init mod_init(void)
 {
