@@ -116,7 +116,7 @@ struct ipcp_instance * ipcp_imap_find(struct ipcp_imap * map,
         return entry->value;
 }
 
-int ipcp_imap_update(struct ipcp_imap 	  * map,
+int ipcp_imap_update(struct ipcp_imap *     map,
                      ipc_process_id_t       key,
                      struct ipcp_instance * value)
 {
@@ -133,7 +133,7 @@ int ipcp_imap_update(struct ipcp_imap 	  * map,
         return 0;
 }
 
-int ipcp_imap_add(struct ipcp_imap     * map,
+int ipcp_imap_add(struct ipcp_imap *     map,
                   ipc_process_id_t       key,
                   struct ipcp_instance * value)
 {
@@ -182,9 +182,9 @@ struct seqn_fmap {
 };
 
 struct seqn_fmap_entry {
-        flow_id_t 			key;
-        int					value;
-        struct hlist_node	hlist;
+        flow_id_t 	  key;
+        int		  value;
+        struct hlist_node hlist;
 };
 
 struct seqn_fmap * seqn_fmap_create(void)
@@ -227,7 +227,7 @@ int seqn_fmap_empty(struct seqn_fmap * map)
 #define snmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 static struct seqn_fmap_entry * snmap_entry_find(struct seqn_fmap * map,
-                                                 flow_id_t   		key)
+                                                 flow_id_t   	    key)
 {
         struct seqn_fmap_entry * entry;
         struct hlist_head *      head;
@@ -243,8 +243,9 @@ static struct seqn_fmap_entry * snmap_entry_find(struct seqn_fmap * map,
         return NULL;
 }
 
+/* FIXME: This is broken !!! */
 int seqn_fmap_find(struct seqn_fmap * map,
-                   flow_id_t		  key)
+                   flow_id_t	      key)
 {
         struct seqn_fmap_entry * entry;
 
