@@ -83,6 +83,9 @@ flow_id_t fidm_allocate(struct fidm * instance)
         id = (flow_id_t) bitmap_find_next_zero_area(instance->bitmap,
                                                     BITS_IN_BITMAP,
                                                     0, 1, 0);
+        LOG_DBG("The fidm bitmap find returned id %d (bad = %d)",
+                id, FLOW_ID_WRONG);
+
         if (id >= BITS_IN_BITMAP)
                 id = flow_id_bad();
 
