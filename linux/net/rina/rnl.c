@@ -32,6 +32,9 @@
 #define NETLINK_RINA_C_MIN (RINA_C_MIN + 1)
 #define NETLINK_RINA_C_MAX (RINA_C_MAX - 1)
 
+
+rnl_sn_t rnl_sn_counter;
+
 struct message_handler {
         void *             data;
         message_handler_cb cb;
@@ -347,11 +350,15 @@ static struct notifier_block kipcm_netlink_notifier = {
         .notifier_call = kipcm_netlink_notify,
 };
 
+
+
 int rnl_init(void)
 {
         int ret;
 
         LOG_DBG("Initializing Netlink layer");
+
+        rnl_sn_counter = 0;
 
         ret = genl_register_family_with_ops(&rnl_nl_family,
                                             nl_ops,
