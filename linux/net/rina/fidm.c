@@ -86,10 +86,9 @@ flow_id_t fidm_allocate(struct fidm * instance)
         LOG_DBG("The fidm bitmap find returned id %d (bad = %d)",
                 id, FLOW_ID_WRONG);
 
-        if (id >= BITS_IN_BITMAP)
-                id = flow_id_bad();
+        if (!is_flow_id_ok(id))
+                return FLOW_ID_WRONG;
 
-        ASSERT(is_flow_id_ok(id));
         bitmap_set(instance->bitmap, id, 1);
 
         return id;
