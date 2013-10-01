@@ -70,7 +70,7 @@ extern rnl_sn_t rnl_sn_counter;
 
 rnl_sn_t rnl_get_next_seqn(void)
 {
-        rnl_sn_counter = (rnl_sn_counter + 1) % 0xFF;
+        rnl_sn_counter = (rnl_sn_counter + 1) % 0xFFFFFF;
 
         return rnl_sn_counter;
 }
@@ -347,16 +347,16 @@ static int rnl_parse_ipcm_assign_to_dif_req_msg(struct genl_info * info,
 
         if (result < 0) {
                 LOG_ERR("Error %d; could not validate nl message policy", result);
-                goto format_fail;
+                goto parse_fail;
         }
 
         if (parse_dif_config(attrs[IATDR_ATTR_DIF_CONFIGURATION],
                              msg_attrs->dif_config) < 0)
-                goto format_fail;
+                goto parse_fail;
 
         return 0;
 
- format_fail:
+ parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST"));
         return -1;
 }
@@ -492,20 +492,20 @@ static int rnl_parse_ipcm_alloc_flow_req_msg(struct genl_info * info,
 
         if (result < 0) {
                 LOG_ERR("Error %d; could not validate nl message policy", result);
-                goto format_fail;
+                goto parse_fail;
         }
 
         if (parse_app_name_info(attrs[IAFRM_ATTR_SOURCE_APP_NAME],
                                 msg_attrs->source) < 0)
-                goto format_fail;
+                goto parse_fail;
 
         if (parse_app_name_info(attrs[IAFRM_ATTR_DEST_APP_NAME],
                                 msg_attrs->dest) < 0)
-                goto format_fail;
+                goto parse_fail;
 
         if (parse_flow_spec(attrs[IAFRM_ATTR_FLOW_SPEC],
                             msg_attrs->fspec) < 0)
-                goto format_fail;
+                goto parse_fail;
 
         if (attrs[IAFRM_ATTR_PORT_ID])
                 msg_attrs->id = \
@@ -513,11 +513,11 @@ static int rnl_parse_ipcm_alloc_flow_req_msg(struct genl_info * info,
 
         if (parse_app_name_info(attrs[IAFRM_ATTR_DIF_NAME],
                                 msg_attrs->dif_name) < 0)
-                goto format_fail;
+                goto parse_fail;
 
         return 0;
 
- format_fail:
+ parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_ALLOCATE_FLOW_REQUEST"));
         return -1;
 }
@@ -547,28 +547,28 @@ static int rnl_parse_ipcm_alloc_flow_req_arrived_msg(struct genl_info * info,
 
         if (result < 0) {
                 LOG_ERR("Error %d; could not validate nl message policy", result);
-                goto format_fail;
+                goto parse_fail;
         }
 
         if (parse_app_name_info(attrs[IAFRA_ATTR_SOURCE_APP_NAME],
                                 msg_attrs->source) < 0)
-                goto format_fail;
+                goto parse_fail;
 
         if (parse_app_name_info(attrs[IAFRA_ATTR_DEST_APP_NAME],
                                 msg_attrs->dest) < 0)
-                goto format_fail;
+                goto parse_fail;
 
         if (parse_app_name_info(attrs[IAFRA_ATTR_DIF_NAME],
                                 msg_attrs->dif_name) < 0)
-                goto format_fail;
+                goto parse_fail;
 
         if (parse_flow_spec(attrs[IAFRA_ATTR_FLOW_SPEC],
                             msg_attrs->fspec) < 0)
-                goto format_fail;
+                goto parse_fail;
 
         return 0;
 
- format_fail:
+ parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED"));
         return -1;
 }
@@ -606,7 +606,7 @@ static int rnl_parse_ipcm_alloc_flow_resp_msg(struct genl_info * info,
 
         if (result < 0) {
                 LOG_ERR("Error %d; could not validate nl message policy", result);
-                goto format_fail;
+                goto parse_fail;
         }
 
         if (attrs[IAFRE_ATTR_RESULT])
@@ -623,7 +623,7 @@ static int rnl_parse_ipcm_alloc_flow_resp_msg(struct genl_info * info,
 
         return 0;
 
- format_fail:
+ parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE"));
         return -1;
 }
@@ -670,7 +670,7 @@ static int rnl_parse_ipcm_flow_dealloc_noti_msg(struct genl_info * info,
 
         if (result < 0) {
                 LOG_ERR("Error %d; could not validate nl message policy", result);
-                goto format_fail;
+                goto parse_fail;
         }
 
         if (attrs[IFDN_ATTR_PORT_ID])
@@ -681,7 +681,7 @@ static int rnl_parse_ipcm_flow_dealloc_noti_msg(struct genl_info * info,
 
         return 0;
 
- format_fail:
+ parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION"));
         return -1;
 }
@@ -707,20 +707,20 @@ static int rnl_parse_ipcm_reg_app_req_msg(struct genl_info * info,
 
         if (result < 0) {
                 LOG_ERR("Error %d; could not validate nl message policy", result);
-                goto format_fail;
+                goto parse_fail;
         }
 
         if (parse_app_name_info(attrs[IRAR_ATTR_APP_NAME],
                                 msg_attrs->app_name) < 0)
-                goto format_fail;
+                goto parse_fail;
 
         if (parse_app_name_info(attrs[IRAR_ATTR_DIF_NAME],
                                 msg_attrs->dif_name) < 0)
-                goto format_fail;
+                goto parse_fail;
 
         return 0;
 
- format_fail:
+ parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_REGISTER_APPLICATION_REQUEST"));
         return -1;
 }
@@ -744,7 +744,7 @@ static int rnl_parse_ipcm_reg_app_resp_msg(struct genl_info * info,
 
         if (result < 0) {
                 LOG_ERR("Error %d; could not validate nl message policy", result);
-                goto format_fail;
+                goto parse_fail;
         }
 
         if (attrs[IRARE_ATTR_RESULT])
@@ -752,7 +752,7 @@ static int rnl_parse_ipcm_reg_app_resp_msg(struct genl_info * info,
 
         return 0;
 
- format_fail:
+ parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_REGISTER_APPLICATION_REPONSE"));
         return -1;
 }
@@ -778,20 +778,20 @@ static int rnl_parse_ipcm_unreg_app_req_msg(struct genl_info * info,
 
         if (result < 0) {
                 LOG_ERR("Error %d; could not validate nl message policy", result);
-                goto format_fail;
+                goto parse_fail;
         }
 
         if (parse_app_name_info(attrs[IUAR_ATTR_APP_NAME],
                                 msg_attrs->app_name) < 0)
-                goto format_fail;
+                goto parse_fail;
 
         if (parse_app_name_info(attrs[IUAR_ATTR_DIF_NAME],
                                 msg_attrs->dif_name) < 0)
-                goto format_fail;
+                goto parse_fail;
 
         return 0;
 
- format_fail:
+ parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST"));
         return -1;
 }
@@ -1928,7 +1928,7 @@ EXPORT_SYMBOL(rnl_format_socket_closed_notification_msg);
 int rnl_assign_dif_response(ipc_process_id_t id,
                             uint_t           res,
                             rnl_sn_t         seq_num,
-                            uint_t           port_id)
+                            port_id_t        port_id)
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
@@ -1981,7 +1981,7 @@ EXPORT_SYMBOL(rnl_assign_dif_response);
 int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
                                              uint_t           res,
                                              rnl_sn_t         seq_num,
-                                             uint_t           port_id,
+                                             port_id_t        port_id,
                                              bool             isRegister)
 {
         struct sk_buff *      out_msg;
@@ -2035,13 +2035,13 @@ int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
 }
 EXPORT_SYMBOL(rnl_app_register_unregister_response_msg);
 
-int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t            ipc_id,
-                                       const struct name *         dif_name,
-                                       const struct name *         source,
-                                       const struct name *         dest,
-                                       const struct flow_spec *    fspec,
-                                       rnl_sn_t                    seq_num,
-                                       uint_t                      nl_port_id)
+int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
+                                       const struct name      * dif_name,
+                                       const struct name      * source,
+                                       const struct name      * dest,
+                                       const struct flow_spec * fspec,
+                                       rnl_sn_t                 seq_num,
+                                       port_id_t                nl_port_id)
 {
         struct sk_buff * msg;
         struct rina_msg_hdr * hdr;
@@ -2096,7 +2096,7 @@ EXPORT_SYMBOL(rnl_app_alloc_flow_req_arrived_msg);
 int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
                                   rnl_sn_t         seq_num,
-                                  uint_t           port_id)
+                                  port_id_t        port_id)
 {
         struct sk_buff * out_msg;
         struct rina_msg_hdr * out_hdr;
@@ -2148,7 +2148,7 @@ EXPORT_SYMBOL(rnl_app_alloc_flow_result_msg);
 int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
                                   rnl_sn_t         seq_num,
-                                  uint_t           port_id)
+                                  port_id_t        port_id)
 {
         struct sk_buff * out_msg;
         struct rina_msg_hdr * out_hdr;
@@ -2198,9 +2198,9 @@ int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
 EXPORT_SYMBOL(rnl_app_dealloc_flow_resp_msg);
 
 int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
-                             uint_t        code,
-                             uint_t     port_id,
-                             uint_t nl_port_id)
+                             uint_t           code,
+                             uint_t           port_id,
+                             port_id_t        nl_port_id)
 {
         struct sk_buff * out_msg;
         struct rina_msg_hdr * out_hdr;
@@ -2249,7 +2249,7 @@ int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
 }
 EXPORT_SYMBOL(rnl_flow_dealloc_not_msg);
 
-int rnl_ipcm_sock_closed_notif_msg(int closed_port, int dest_port)
+int rnl_ipcm_sock_closed_notif_msg(port_id_t closed_port, port_id_t dest_port)
 {
         struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;

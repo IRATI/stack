@@ -177,7 +177,7 @@ int ipcp_imap_remove(struct ipcp_imap * map,
  */
 
 #define SEQNMAP_HASH_BITS 7
-#define SEQNMAP_WRONG 0xFF
+#define SEQNMAP_WRONG 0xFFFFFF
 
 rnl_sn_t seq_num_bad(void)
 { return SEQNMAP_WRONG; }

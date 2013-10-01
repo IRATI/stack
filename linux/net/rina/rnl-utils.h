@@ -509,50 +509,52 @@ int rnl_format_rmt_dump_ft_reply_msg(size_t                       count,
                                      const struct pdu_ft_entry ** entries,
                                      struct sk_buff *             skb_out);
 
-/* FIXME: Use port_id_t */
+
 int rnl_assign_dif_response(ipc_process_id_t id,
                             uint_t           res,
                             rnl_sn_t         seq_num,
-                            uint_t           port_id);
+                            port_id_t        port_id);
 
-int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t            ipc_id,
-                                       const struct name *         dif_name,
-                                       const struct name *         source,
-                                       const struct name *         dest,
-                                       const struct flow_spec *    fspec,
-                                       rnl_sn_t 		   seq_num,
-                                       uint_t                      nl_port_id);
+int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
+                                       const struct name      * dif_name,
+                                       const struct name      * source,
+                                       const struct name      * dest,
+                                       const struct flow_spec * fspec,
+                                       rnl_sn_t 		        seq_num,
+                                       port_id_t                nl_port_id);
 
 int rnl_format_socket_closed_notification_msg(int              nl_port,
                                               struct sk_buff * skb_out);
 
-/* FIXME: Use port_id_t */
+
 int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
-                                  rnl_sn_t	   seq_num,
-                                  uint_t           port_id);
+                                  rnl_sn_t	       seq_num,
+                                  port_id_t        port_id);
 
-/* FIXME: Use port_id_t */
+
 int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
                                              uint_t           res,
                                              rnl_sn_t         seq_num,
-                                             uint_t 	      port_id,
+                                             port_id_t 	      port_id,
                                              bool             isRegister);
 
-/* FIXME: Use port_id_t */
+
 int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
-                                  rnl_sn_t	   seq_num,
-                                  uint_t           port_id);
+                                  rnl_sn_t	       seq_num,
+                                  port_id_t        port_id);
 
-/* FIXME: Use port_id_t */
+
 int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
                              uint_t           res,
-                             uint_t	      code,
-                             uint_t           port_id);
+                             uint_t	          code,
+                             port_id_t        port_id);
 
-int rnl_ipcm_sock_closed_notif_msg(int closed_port, int dest_port);
+int rnl_ipcm_sock_closed_notif_msg(port_id_t closed_port, port_id_t dest_port);
 
 char * nla_get_string(struct nlattr *nla);
+
+rnl_sn_t rnl_get_next_seqn(void);
 
 #endif
