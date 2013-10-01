@@ -1718,3 +1718,15 @@ int kipcm_sdu_post(struct kipcm * kipcm,
         return 0;
 }
 EXPORT_SYMBOL(kipcm_sdu_post);
+
+/* FIXME: This "method" is only temporary, do not rely on its presence */
+struct kfa * kipcm_kfa(struct kipcm * kipcm)
+{
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return NULL;
+        }
+
+        return kipcm->kfa;
+}
+EXPORT_SYMBOL(kipcm_kfa);
