@@ -45,12 +45,12 @@
 
 #define DEFAULT_FACTORY "normal-ipc"
 
+extern struct kfa * default_kfa;
 struct kipcm {
         struct mutex            lock;
         struct ipcp_factories * factories;
         struct ipcp_imap *      instances;
         struct rnl_set *        rnls;
-        struct kfa *            kfa;
 
 };
 
@@ -302,7 +302,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      info->snd_portid);
         }
 
-        fid = kfa_flow_create(kipcm->kfa);
+        fid = kfa_flow_create(default_kfa);
         LOG_DBG("The very best of debugging: %d", fid);
 	ASSERT(is_flow_id_ok(fid));
 
@@ -1194,23 +1194,8 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 return NULL;
         }
 
-        tmp->kfa = kfa_create();
-        if (!tmp->kfa) {
-                if (ipcp_imap_destroy(tmp->instances)) {
-                        /* FIXME: What could we do here ? */
-                }
-                if (ipcpf_fini(tmp->factories)) {
-                        /* FIXME: What could we do here ? */
-                }
-                rkfree(tmp);
-                return NULL;
-        }
-
         if (rnl_set_register(rnls)) {
                 if (ipcp_imap_destroy(tmp->instances)) {
-                        /* FIXME: What could we do here ? */
-                }
-                if (kfa_destroy(tmp->kfa)) {
                         /* FIXME: What could we do here ? */
                 }
                 if (ipcpf_fini(tmp->factories)) {
@@ -1225,9 +1210,6 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 if (ipcp_imap_destroy(tmp->instances)) {
                         /* FIXME: What could we do here ? */
                 }
-                if (kfa_destroy(tmp->kfa)) {
-			/* FIXME: What could we do here ? */
-		}
                 if (ipcpf_fini(tmp->factories)) {
                         /* FIXME: What could we do here ? */
                 }
@@ -1252,10 +1234,6 @@ int kipcm_destroy(struct kipcm * kipcm)
         LOG_DBG("Finalizing");
 
         KIPCM_LOCK(kipcm);
-
-        if (kfa_destroy(kipcm->kfa)) {
-		/* FIXME: What could we do here ? */
-	}
 
         /* FIXME: Destroy all the instances */
         ASSERT(ipcp_imap_empty(kipcm->instances));
@@ -1419,7 +1397,7 @@ int kipcm_ipcp_destroy(struct kipcm *   kipcm,
         ASSERT(factory);
 
         /* FIXME: Should we look for pending flows from this IPC Process ? */
-        if (kfa_remove_all_for_id(kipcm->kfa, id)) {
+        if (kfa_remove_all_for_id(default_kfa, id)) {
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
@@ -1455,7 +1433,7 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
 	 * the arrived flow request has been properly processed by the
 	 * IPC process calling this API.
 	 */
-	flow = kfa_find_flow_by_fid(kipcm->kfa, flow_id);
+	flow = kfa_find_flow_by_fid(default_kfa, flow_id);
 	if (!flow) {
 		LOG_DBG("There's no flow pending for flow_id: %d", flow_id);
 		return -1;
@@ -1473,13 +1451,6 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
 	return 0;
 }
 EXPORT_SYMBOL(kipcm_flow_arrived);
-
-flow_id_t kipcm_flow_new(struct kipcm * kipcm,
-			 ipc_process_id_t ipc_id)
-{
-	return kfa_flow_create(kipcm->kfa);
-}
-EXPORT_SYMBOL(kipcm_flow_new);
 
 int kipcm_flow_add(struct kipcm *   kipcm,
                    ipc_process_id_t ipc_id,
@@ -1504,7 +1475,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 return -1;
         }
 
-        if(kfa_flow_bind(kipcm->kfa,
+        if(kfa_flow_bind(default_kfa,
                          fid,
                          port_id,
                          ipc_process,
@@ -1579,7 +1550,7 @@ int kipcm_sdu_write(struct kipcm * kipcm,
 
         KIPCM_LOCK(kipcm);
 
-        kfa_flow_sdu_write(kipcm->kfa, port_id, sdu);
+        kfa_flow_sdu_write(default_kfa, port_id, sdu);
 
         sdu_destroy(sdu);
 
@@ -1675,7 +1646,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         KIPCM_UNLOCK(kipcm);
 #endif
         /* The SDU is theirs now */
-        *sdu = kfa_flow_sdu_read(kipcm->kfa, port_id);
+        *sdu = kfa_flow_sdu_read(default_kfa, port_id);
         if (!sdu){
         	LOG_DBG("Failed to read sdu");
         	return -1;

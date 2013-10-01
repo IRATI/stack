@@ -41,6 +41,7 @@
 
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
+extern struct kfa * default_kfa;
 
 /* Holds all configuration related to a shim instance */
 struct dummy_info {
@@ -187,7 +188,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         flow->port_id     = id;
         flow->src_fid     = fid;
 
-        flow->dst_fid     = kipcm_flow_new(default_kipcm, data->id);
+        flow->dst_fid     = kfa_flow_create(default_kfa);
         ASSERT(is_flow_id_ok(flow->dst_fid));
 
         INIT_LIST_HEAD(&flow->list);
@@ -441,11 +442,11 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
-                        kipcm_sdu_post(default_kipcm, flow->dst_port_id, sdu);
+                        kfa_sdu_post(default_kfa, flow->dst_port_id, sdu);
                         return 0;
                 }
                 if (flow->dst_port_id == id) {
-                        kipcm_sdu_post(default_kipcm, flow->port_id, sdu);
+                        kfa_sdu_post(default_kfa, flow->port_id, sdu);
                         return 0;
                 }
         }
