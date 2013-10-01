@@ -64,9 +64,16 @@ int            kipcm_sdu_read(struct kipcm * kipcm,
  */
 
 /* 
- * NOTE: This is a core "accessor", to be removed ASAP. It's currently here
- *       in the meanwhile we find the best way to settle the component in its
- *       final position
+ * FIXME: This is a core "accessor", to be removed ASAP. It's currently here
+ *        in the meanwhile we find the best way to settle the component in its
+ *        final position.
+ *
+ * NOTE: The KFA lifetime is "contained" into the KIPCM one; if the KIPCM is
+ *       alive and running, its KFA will also be. For the time being, IPCPs
+ *       (shims as well the normal-ipc) are allowed to store the kfa instance
+ *       returned by the KIPCM (through kipcm_kfa()). DO NOT TRUST THIS
+ *       BEHAVIOR BURYING IT INTO THE CODE, WE WILL TRY TO GET RID OF IT
+ *       ASAP
  */
 struct kfa *   kipcm_kfa(struct kipcm * kipcm);
 
