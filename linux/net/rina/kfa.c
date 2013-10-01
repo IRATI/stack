@@ -149,7 +149,7 @@ flow_id_t kfa_flow_create(struct kfa * instance)
                 return flow_id_bad();
         }
 
-        if (!kfa_fmap_add(instance->flows.pending, fid, flow)) {
+        if (kfa_fmap_add(instance->flows.pending, fid, flow)) {
                 LOG_ERR("Could not map Flow and Flow ID");
                 rkfree(flow);
                 spin_unlock(&instance->lock);
@@ -285,7 +285,7 @@ flow_id_t kfa_flow_unbind(struct kfa * instance,
                 return flow_id_bad();
         }
 
-        if (!kfa_fmap_add(instance->flows.pending, fid, flow)) {
+        if (kfa_fmap_add(instance->flows.pending, fid, flow)) {
                 LOG_ERR("Could not map Flow and Flow ID");
                 rkfree(flow);
                 spin_unlock(&instance->lock);
