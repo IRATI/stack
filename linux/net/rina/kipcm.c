@@ -50,7 +50,6 @@ struct kipcm {
         struct ipcp_imap *      instances;
         struct rnl_set *        rnls;
         struct kfa *            kfa;
-
 };
 
 #ifdef CONFIG_RINA_KIPCM_LOCKS_DEBUG
@@ -123,10 +122,10 @@ alloc_flow_req_free_and_reply(struct name *      source_name,
 {
         alloc_flow_req_free(source_name, dest_name, fspec, dif_name,
                             attrs, msg);
-        
+
         if (rnl_app_alloc_flow_result_msg(id, res, seq_num, port_id))
                 return -1;
-        
+
         return 0;
 }
 
@@ -323,12 +322,12 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      info->snd_portid);
         }
         if (rnl_app_alloc_flow_req_arrived_msg(data->id,
-					       data->info->dif_name,
-					       source,
-					       dest,
-					       fspec,
-					       flow->dst_fid,
-					       1)) {
+                                               data->info->dif_name,
+                                               source,
+                                               dest,
+                                               fspec,
+                                               flow->dst_fid,
+                                               1)) {
 
         }
 #endif
@@ -1213,8 +1212,8 @@ struct kipcm * kipcm_create(struct kobject * parent,
                         /* FIXME: What could we do here ? */
                 }
                 if (kfa_destroy(tmp->kfa)) {
-			/* FIXME: What could we do here ? */
-		}
+                        /* FIXME: What could we do here ? */
+                }
                 if (ipcpf_fini(tmp->factories)) {
                         /* FIXME: What could we do here ? */
                 }
@@ -1241,8 +1240,8 @@ int kipcm_destroy(struct kipcm * kipcm)
         KIPCM_LOCK(kipcm);
 
         if (kfa_destroy(kipcm->kfa)) {
-		/* FIXME: What could we do here ? */
-	}
+                /* FIXME: What could we do here ? */
+        }
 
         /* FIXME: Destroy all the instances */
         ASSERT(ipcp_imap_empty(kipcm->instances));
@@ -1438,9 +1437,9 @@ EXPORT_SYMBOL(kipcm_flow_arrived);
 int kipcm_flow_add(struct kipcm *   kipcm,
                    ipc_process_id_t ipc_id,
                    port_id_t        port_id,
-                   flow_id_t	    fid)
+                   flow_id_t        fid)
 {
-	struct ipcp_instance * ipc_process;
+        struct ipcp_instance * ipc_process;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
@@ -1463,9 +1462,9 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                          port_id,
                          ipc_process,
                          ipc_id)) {
-        	LOG_ERR("Couldn't commit flow");
-        	KIPCM_UNLOCK(kipcm);
-		return -1;
+                LOG_ERR("Couldn't commit flow");
+                KIPCM_UNLOCK(kipcm);
+                return -1;
         }
 
         KIPCM_UNLOCK(kipcm);
