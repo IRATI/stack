@@ -169,8 +169,6 @@ static int default_fini(struct personality_data * data)
 /* FIXME: To be removed ABSOLUTELY */
 struct kipcm * default_kipcm = NULL;
 EXPORT_SYMBOL(default_kipcm);
-struct kfa * default_kfa = NULL;
-EXPORT_SYMBOL(default_kfa);
 
 static int default_init(struct kobject *          parent,
                         personality_id            id,
@@ -222,7 +220,6 @@ static int default_init(struct kobject *          parent,
 
         /* FIXME: To be removed */
         default_kipcm = data->kipcm;
-        default_kfa = data->kfa;
 
         LOG_DBG("Default personality initialized successfully");
 

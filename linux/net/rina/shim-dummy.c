@@ -41,7 +41,6 @@
 
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
-extern struct kfa * default_kfa;
 
 /* Holds all configuration related to a shim instance */
 struct dummy_info {
@@ -188,7 +187,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         flow->port_id     = id;
         flow->src_fid     = fid;
 
-        flow->dst_fid     = kfa_flow_create(default_kfa);
+        flow->dst_fid     = kfa_flow_create(kipcm_kfa(default_kipcm));
         ASSERT(is_flow_id_ok(flow->dst_fid));
 
         INIT_LIST_HEAD(&flow->list);
@@ -269,27 +268,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         rkfree(flow);
                         return -1;
                 }
-#if 0
-                if (rnl_app_alloc_flow_result_msg(data->id,
-                                                  0,
-                                                  flow->src_fid,
-                                                  1)) {
-                        kipcm_flow_remove(default_kipcm, flow->port_id);
-                        kipcm_flow_remove(default_kipcm, flow->dst_port_id);
-                        list_del(&flow->list);
-                        name_destroy(flow->source);
-                        name_destroy(flow->dest);
-                        rkfree(flow);
-                        return -1;
-                }
-#endif
         } else {
-#if 0
-                if (rnl_app_alloc_flow_result_msg(data->id,
-                                                  -1,
-                                                  flow->seq_num,
-                                                  1))
-#endif
 		list_del(&flow->list);
                 name_destroy(flow->source);
                 name_destroy(flow->dest);
@@ -345,6 +324,7 @@ static int dummy_application_register(struct ipcp_instance_data * data,
                                       const struct name *         source)
 {
         struct app_register * app_reg;
+        char * tmp;
 
         ASSERT(source);
 
@@ -389,8 +369,12 @@ static int dummy_application_register(struct ipcp_instance_data * data,
 
                 return -1;
         }
+
         INIT_LIST_HEAD(&app_reg->list);
         list_add(&app_reg->list, &data->apps_registered);
+        tmp = name_tostring(source);
+        LOG_DBG("Application %s registered successfully", tmp);
+        rkfree(tmp);
 
         return 0;
 }
@@ -442,11 +426,13 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
-                        kfa_sdu_post(default_kfa, flow->dst_port_id, sdu);
+                        kfa_sdu_post(kipcm_kfa(default_kipcm),
+                        		flow->dst_port_id, sdu);
                         return 0;
                 }
                 if (flow->dst_port_id == id) {
-                        kfa_sdu_post(default_kfa, flow->port_id, sdu);
+                        kfa_sdu_post(kipcm_kfa(default_kipcm),
+                        		flow->port_id, sdu);
                         return 0;
                 }
         }
