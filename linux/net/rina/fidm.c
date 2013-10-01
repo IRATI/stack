@@ -94,6 +94,8 @@ flow_id_t fidm_allocate(struct fidm * instance)
 
         bitmap_set(instance->bitmap, id, 1);
 
+        LOG_DBG("Bitmap allocation completed successfully (id = %d)", id);
+
         return id;
 }
 
@@ -110,6 +112,8 @@ int fidm_release(struct fidm * instance,
         }
 
         bitmap_clear(instance->bitmap, id, 1);
+
+        LOG_DBG("Bitmap release completed successfully");
 
         return 0;
 }
