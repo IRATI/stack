@@ -89,6 +89,9 @@ flow_id_t fidm_allocate(struct fidm * instance)
         if (id >= BITS_IN_BITMAP)
                 id = flow_id_bad();
 
+        ASSERT(is_flow_id_ok(id));
+        bitmap_set(instance->bitmap, id, 1);
+
         return id;
 }
 
@@ -104,7 +107,7 @@ int fidm_release(struct fidm * instance,
                 return -1;
         }
 
-        bitmap_set(instance->bitmap, id, 1);
+        bitmap_clear(instance->bitmap, id, 1);
 
         return 0;
 }
