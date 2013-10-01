@@ -28,6 +28,7 @@
 #include "ipcp-factories.h"
 #include "du.h"
 #include "rnl.h"
+#include "kfa.h"
 
 struct kipcm;
 
@@ -61,6 +62,14 @@ int            kipcm_sdu_read(struct kipcm * kipcm,
 /*
  * The following functions represent the KIPCM southbound interface
  */
+
+/* 
+ * NOTE: This is a core "accessor", to be removed ASAP. It's currently here
+ *       in the meanwhile we find the best way to settle the component in its
+ *       final position
+ */
+struct kfa *   kipcm_kfa(struct kipcm * kipcm);
+
 struct ipcp_factory *
 kipcm_ipcp_factory_register(struct kipcm *             kipcm,
                             const char *               name,
