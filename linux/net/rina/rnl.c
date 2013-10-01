@@ -42,6 +42,7 @@ struct message_handler {
 
 struct rnl_set {
         struct message_handler handlers[NETLINK_RINA_C_MAX];
+        rnl_sn_t sn_counter;
 };
 
 static struct rnl_set * default_set = NULL;
@@ -280,6 +281,8 @@ struct rnl_set * rnl_set_create(personality_id id)
         if (!tmp)
                 return NULL;
 
+        tmp->sn_counter = 0;
+
         LOG_DBG("Set %pK created successfully", tmp);
 
         return tmp;
@@ -315,6 +318,18 @@ int rnl_set_destroy(struct rnl_set * set)
         return 0;
 }
 EXPORT_SYMBOL(rnl_set_destroy);
+
+rnl_sn_t rnl_get_next_seqn(struct rnl_set * set)
+{
+        /* FIXME: What to do about roll-over? */
+        set->sn_counter++;
+
+        if (set->sn_counter == 0){
+                LOG_DBG("RN Layer Sequence number roll-overed!");
+        }
+        return set->sn_counter;
+}
+EXPORT_SYMBOL(rnl_get_next_seqn);
 
 /*
  * Invoked when an event related to a NL socket occurs. We're only interested
@@ -357,8 +372,6 @@ int rnl_init(void)
         int ret;
 
         LOG_DBG("Initializing Netlink layer");
-
-        rnl_sn_counter = 0;
 
         ret = genl_register_family_with_ops(&rnl_nl_family,
                                             nl_ops,

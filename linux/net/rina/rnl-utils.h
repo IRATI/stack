@@ -253,7 +253,7 @@ struct rina_msg_hdr {
         unsigned short dst_ipc_id;
 };
 
-typedef u32 rnl_sn_t;
+
 
 struct rnl_msg {
         /* Generic RINA Netlink family identifier */
@@ -555,6 +555,5 @@ int rnl_ipcm_sock_closed_notif_msg(port_id_t closed_port, port_id_t dest_port);
 
 char * nla_get_string(struct nlattr *nla);
 
-rnl_sn_t rnl_get_next_seqn(void);
 
 #endif

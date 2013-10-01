@@ -65,16 +65,6 @@
 
 
 extern struct genl_family rnl_nl_family;
-extern rnl_sn_t rnl_sn_counter;
-
-
-rnl_sn_t rnl_get_next_seqn(void)
-{
-        rnl_sn_counter = (rnl_sn_counter + 1) % 0xFFFFFF;
-
-        return rnl_sn_counter;
-}
-EXPORT_SYMBOL(rnl_get_next_seqn);
 
 char * nla_get_string(struct nlattr * nla)
 { return (char *) nla_data(nla); }
