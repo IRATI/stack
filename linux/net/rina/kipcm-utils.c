@@ -235,6 +235,7 @@ int kipcm_fmap_empty(struct kipcm_fmap * map)
         return hash_empty(map->table);
 }
 
+
 #define fmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 static struct kipcm_fmap_entry * fmap_entry_find(struct kipcm_fmap * map,
@@ -325,10 +326,12 @@ int kipcm_fmap_remove(struct kipcm_fmap * map,
 }
 
 /*
- * SMAP by SEQN
+ * SMAP returning seq nums
  */
+
 #define SMAP_SEQN_HASH_BITS 7
 #define FIDVALUE_WRONG -1
+
 
 struct kipcm_smap {
         DECLARE_HASHTABLE(table, SMAP_SEQN_HASH_BITS);
@@ -383,7 +386,7 @@ static struct kipcm_smap_entry * smap_entry_find(struct kipcm_smap * map,
                                                  rnl_sn_t            key)
 {
         struct kipcm_smap_entry * entry;
-        struct hlist_head *     head;
+        struct hlist_head *       head;
 
         ASSERT(map);
 

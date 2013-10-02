@@ -1187,7 +1187,7 @@ struct kipcm * kipcm_create(struct kobject * parent,
         }
 
         tmp->fid_messages->ingress = kipcm_fmap_create();
-        tmp->fid_messages->egress = kipcm_smap_create();
+        tmp->fid_messages->egress  = kipcm_smap_create();
         if (!tmp->fid_messages->ingress || !tmp->fid_messages->egress) {
                 if (!tmp->fid_messages->ingress)
                         if (kipcm_fmap_destroy(tmp->fid_messages->ingress)) {
