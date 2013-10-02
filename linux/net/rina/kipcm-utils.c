@@ -322,3 +322,143 @@ int seqn_fmap_remove(struct seqn_fmap * map,
 
         return 0;
 }
+
+/*
+ * FMAP by SEQN
+ */
+#define FMAP_SEQN_HASH_BITS 7
+
+struct fid_snmap {
+        DECLARE_HASHTABLE(table, FMAP_SEQN_HASH_BITS);
+};
+
+struct fid_snmap_entry {
+        rnl_sn_t          key;
+        flow_id_t *       value;
+        struct hlist_node hlist;
+};
+
+struct fid_snmap * fid_snmap_create(void)
+{
+        struct fid_snmap * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        hash_init(tmp->table);
+
+        return tmp;
+}
+
+int fid_snmap_destroy(struct fid_snmap * map)
+{
+        struct fid_snmap_entry * entry;
+        struct hlist_node *      tmp;
+        int                      bucket;
+
+        ASSERT(map);
+
+        hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
+                hash_del(&entry->hlist);
+                rkfree(entry);
+        }
+
+        rkfree(map);
+
+        return 0;
+}
+
+int fid_snmap_empty(struct fid_snmap * map)
+{
+        ASSERT(map);
+        return hash_empty(map->table);
+}
+
+#define fmap_hash(T, K) hash_min(K, HASH_BITS(T))
+
+static struct fid_snmap_entry * fmap_entry_find(struct fid_snmap * map,
+                                                rnl_sn_t           key)
+{
+        struct fid_snmap_entry * entry;
+        struct hlist_head *     head;
+
+        ASSERT(map);
+
+        head = &map->table[fmap_hash(map->table, key)];
+        hlist_for_each_entry(entry, head, hlist) {
+                if (entry->key == key)
+                        return entry;
+        }
+
+        return NULL;
+}
+
+struct flow_id_t * fid_snmap_find(struct fid_snmap * map,
+                                  rnl_sn_t           key)
+{
+        struct fid_snmap_entry * entry;
+
+        ASSERT(map);
+
+        entry = fmap_entry_find(map, key);
+        if (!entry)
+                return NULL;
+
+        return entry->value;
+}
+
+int fid_snmap_update(struct fid_snmap *  map,
+                     rnl_sn_t            key,
+                     flow_id_t *         value)
+{
+        struct fid_snmap_entry * cur;
+
+        ASSERT(map);
+
+        cur = fmap_entry_find(map, key);
+        if (!cur)
+                return -1;
+
+        cur->value = value;
+
+        return 0;
+}
+
+int fid_snmap_add(struct fid_snmap *  map,
+                  rnl_sn_t            key,
+                  flow_id_t *         value)
+{
+        struct fid_snmap_entry * tmp;
+
+        ASSERT(map);
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return -1;
+
+        tmp->key   = key;
+        tmp->value = value;
+        INIT_HLIST_NODE(&tmp->hlist);
+
+        hash_add(map->table, &tmp->hlist, key);
+
+        return 0;
+}
+
+int fid_snmap_remove(struct fid_snmap * map,
+                     rnl_sn_t           key)
+{
+        struct fid_snmap_entry * cur;
+
+        ASSERT(map);
+
+        cur = fmap_entry_find(map, key);
+        if (!cur)
+                return -1;
+
+        hash_del(&cur->hlist);
+        rkfree(cur);
+
+        return 0;
+}
