@@ -33,6 +33,8 @@
 #include "rnl.h"
 #include "rnl-utils.h"
 
+
+
 /*
  * FIXME: I suppose these functions are internal (at least for the time being)
  *        therefore have been "statified" to avoid polluting the common name

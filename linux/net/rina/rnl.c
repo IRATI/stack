@@ -33,8 +33,6 @@
 #define NETLINK_RINA_C_MAX (RINA_C_MAX - 1)
 
 
-rnl_sn_t rnl_sn_counter;
-
 struct message_handler {
         void *             data;
         message_handler_cb cb;

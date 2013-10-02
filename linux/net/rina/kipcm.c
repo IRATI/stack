@@ -45,8 +45,8 @@
 #define DEFAULT_FACTORY "normal-ipc"
 
 struct flow_messages {
-        struct seqn_fmap * ingressing;
-        struct seqn_fmap * egressing;
+        struct seqn_fmap * ingress;
+        struct seqn_fmap * egress;
 };
 
 struct kipcm {
@@ -1186,16 +1186,16 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 return NULL;
         }
 
-        tmp->fid_messages->ingressing = seqn_fmap_create();
-        tmp->fid_messages->egressing = seqn_fmap_create();
-        if (!tmp->fid_messages->ingressing || !tmp->fid_messages->egressing) {
-                if (!tmp->fid_messages->ingressing)
-                        if (seqn_fmap_destroy(tmp->fid_messages->ingressing)) {
+        tmp->fid_messages->ingress = seqn_fmap_create();
+        tmp->fid_messages->egress = seqn_fmap_create();
+        if (!tmp->fid_messages->ingress || !tmp->fid_messages->egress) {
+                if (!tmp->fid_messages->ingress)
+                        if (seqn_fmap_destroy(tmp->fid_messages->ingress)) {
                                 /* FIXME: What could we do here ? */
                         }
 
-                if (!tmp->fid_messages->egressing)
-                        if (seqn_fmap_destroy(tmp->fid_messages->egressing)) {
+                if (!tmp->fid_messages->egress)
+                        if (seqn_fmap_destroy(tmp->fid_messages->egress)) {
                                 /* FIXME: What could we do here ? */
                         }
 
@@ -1277,11 +1277,11 @@ int kipcm_destroy(struct kipcm * kipcm)
                 /* FIXME: What should we do here ? */
         }
 
-        ASSERT(seqn_fmap_empty(kipcm->fid_messages->ingressing));
-        seqn_fmap_destroy(kipcm->fid_messages->ingressing);
+        ASSERT(seqn_fmap_empty(kipcm->fid_messages->ingress));
+        seqn_fmap_destroy(kipcm->fid_messages->ingress);
 
-        ASSERT(seqn_fmap_empty(kipcm->fid_messages->egressing));
-        seqn_fmap_destroy(kipcm->fid_messages->egressing);
+        ASSERT(seqn_fmap_empty(kipcm->fid_messages->egress));
+        seqn_fmap_destroy(kipcm->fid_messages->egress);
 
         if (netlink_handlers_unregister(kipcm->rnls)) {
                 /* FIXME: What should we do here ? */

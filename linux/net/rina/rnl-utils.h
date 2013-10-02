@@ -24,6 +24,7 @@
 
 #include "pft.h"
 
+
 /*
  * FIXME:
  *   These definitions must be moved in the user-space exported headers or
@@ -254,7 +255,6 @@ struct rina_msg_hdr {
 };
 
 
-
 struct rnl_msg {
         /* Generic RINA Netlink family identifier */
         int                   family;
@@ -452,15 +452,15 @@ int rnl_format_ipcm_alloc_flow_req_msg(const struct name *      source,
 int rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name *      source,
                                                const struct name *      dest,
                                                const struct flow_spec * fspec,
-                                               const struct name *     dif_name,
-                                               struct sk_buff *        skb_out);
+                                               const struct name *      dif_name,
+                                               struct sk_buff *         skb_out);
 
 int rnl_format_ipcm_alloc_flow_req_result_msg(uint_t           result,
                                               struct sk_buff * skb_out);
 
 int rnl_format_ipcm_alloc_flow_resp_msg(uint_t           result,
-					bool 		 notify_src,
-					port_id_t	 id,
+					                    bool 		     notify_src,
+					                    port_id_t	     id,
                                         struct sk_buff * skb_out);
 
 int rnl_format_ipcm_dealloc_flow_req_msg(port_id_t        id,
@@ -477,25 +477,25 @@ int rnl_format_ipcm_reg_app_req_msg(const struct name * app_name,
                                     const struct name * dif_name,
                                     struct sk_buff *    skb_out);
 
-int rnl_format_ipcm_reg_app_resp_msg(uint_t              result,
-                                     struct sk_buff    * skb_out);
+int rnl_format_ipcm_reg_app_resp_msg(uint_t           result,
+                                     struct sk_buff * skb_out);
 
 int rnl_format_ipcm_unreg_app_req_msg(const struct name * app_name,
                                       const struct name * dif_name,
-                                      struct sk_buff  *   skb_out);
+                                      struct sk_buff *    skb_out);
 
 int rnl_format_ipcm_unreg_app_resp_msg(uint_t           result,
                                        struct sk_buff * skb_out);
 
 int rnl_format_ipcm_query_rib_req_msg(const struct rib_object * obj,
-                                      uint_t         	      scope,
-                                      const regex_t  	      * filter,
-                                      struct sk_buff 	      * skb_out);
+                                      uint_t         	        scope,
+                                      const regex_t *           filter,
+                                      struct sk_buff *          skb_out);
 
-int rnl_format_ipcm_query_rib_resp_msg(uint_t                  result,
-				       uint_t	               count,
-				       const struct rib_object **objs,
-                                       struct sk_buff          * skb_out);
+int rnl_format_ipcm_query_rib_resp_msg(uint_t                     result,
+				                       uint_t	                  count,
+				                       const struct rib_object ** objs,
+                                       struct sk_buff *           skb_out);
 
 int rnl_format_rmt_add_fte_req_msg(const struct pdu_ft_entry * entry,
                                    struct sk_buff *            skb_out);
@@ -516,9 +516,9 @@ int rnl_assign_dif_response(ipc_process_id_t id,
                             port_id_t        port_id);
 
 int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
-                                       const struct name      * dif_name,
-                                       const struct name      * source,
-                                       const struct name      * dest,
+                                       const struct name *      dif_name,
+                                       const struct name *      source,
+                                       const struct name *      dest,
                                        const struct flow_spec * fspec,
                                        rnl_sn_t 		        seq_num,
                                        port_id_t                nl_port_id);
