@@ -60,15 +60,17 @@ int                    kipcm_fmap_remove(struct kipcm_fmap * map,
 struct kipcm_smap *    kipcm_smap_create(void);
 int                    kipcm_smap_destroy(struct kipcm_smap * map);
 int                    kipcm_smap_empty(struct kipcm_smap * map);
-flow_id_t *            kipcm_smap_find(struct kipcm_smap * map,
+flow_id_t              kipcm_smap_find(struct kipcm_smap * map,
                                        rnl_sn_t            key);
 int                    kipcm_smap_update(struct kipcm_smap * map,
                                          rnl_sn_t            key,
-                                         flow_id_t *         value);
+                                         flow_id_t           value);
 int                    kipcm_smap_add(struct kipcm_smap * map,
                                       rnl_sn_t            key,
-                                      flow_id_t *         value);
+                                      flow_id_t           value);
 int                    kipcm_smap_remove(struct kipcm_smap * map,
                                          rnl_sn_t            key);
+int                    is_seq_num_ok(rnl_sn_t sn);
+
 
 #endif
