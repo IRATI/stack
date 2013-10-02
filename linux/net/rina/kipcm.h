@@ -108,4 +108,9 @@ int            kipcm_sdu_post(struct kipcm * kipcm,
                               port_id_t      id,
                               struct sdu *   sdu);
 
+int            kipcm_flow_res(struct kipcm *   kipcm,
+                              ipc_process_id_t ipc_id,
+                              flow_id_t        fid,
+                              uint_t	       res);
+
 #endif

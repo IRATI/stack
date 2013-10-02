@@ -278,6 +278,10 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        if (kipcm_flow_res(default_kipcm, data->id, flow->src_fid, 0)) {
+        	return -1;
+        }
+
         /*
          * NOTE:
          *   Other shims may implement other behavior here,

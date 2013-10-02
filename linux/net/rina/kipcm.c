@@ -309,6 +309,9 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
         fid = kfa_flow_create(kipcm->kfa);
 	ASSERT(is_flow_id_ok(fid));
+	if (seqn_fmap_add(kipcm->fid_messages->ingress, fid, info->snd_seq)) {
+		return -1;
+	}
 
         if (ipc_process->ops->flow_allocate_request(ipc_process->data,
                                                     attrs->source,
@@ -397,8 +400,6 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 return -1;
         }
 
-#if 0 /* FIXME: Please re-enable */
-
         if (ipc_process->ops->flow_allocate_response(ipc_process->data,
         					     info->snd_seq,
         					     attrs->id,
@@ -407,13 +408,6 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                         attrs->id);
                 retval = -1;
         }
-
-                if (rnl_app_alloc_flow_result_msg(id, res, seq_num, port_id))
-                        return -1;
-
-                return 0;
-        }
-#endif
 
         rkfree(hdr);
         rkfree(attrs);
@@ -1459,7 +1453,7 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
                        struct flow_spec * fspec)
 {
 	uint_t nl_port_id = 1;
-	uint_t seq_num = 666;
+	rnl_sn_t seq_num;
 	struct ipcp_flow * flow;
 
 	/*
@@ -1470,6 +1464,10 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
 	flow = kfa_find_flow_by_fid(kipcm->kfa, flow_id);
 	if (!flow) {
 		LOG_DBG("There's no flow pending for flow_id: %d", flow_id);
+		return -1;
+	}
+	seq_num = rnl_get_next_seqn(kipcm->rnls);
+	if (seqn_fmap_add(kipcm->fid_messages->egress, flow_id, seq_num)) {
 		return -1;
 	}
 	if (rnl_app_alloc_flow_req_arrived_msg(ipc_id,
@@ -1671,6 +1669,20 @@ int kipcm_sdu_post(struct kipcm * kipcm,
         return 0;
 }
 EXPORT_SYMBOL(kipcm_sdu_post);
+
+int kipcm_flow_res(struct kipcm *   kipcm,
+		   ipc_process_id_t ipc_id,
+		   flow_id_t        fid,
+		   uint_t     	    res)
+{
+	rnl_sn_t seq_num;
+
+	if (rnl_app_alloc_flow_result_msg(ipc_id, res, seq_num, 1))
+		return -1;
+
+	return 0;
+}
+EXPORT_SYMBOL(kipcm_flow_res);
 
 /* FIXME: This "method" is only temporary, do not rely on its presence */
 struct kfa * kipcm_kfa(struct kipcm * kipcm)
