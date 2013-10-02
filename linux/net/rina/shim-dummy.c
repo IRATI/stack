@@ -154,7 +154,9 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         }
 
         if (!is_app_registered(data, dest)) {
-                LOG_ERR("Application is not registered in this IPC Process");
+        	char * tmp = name_tostring(dest);
+                LOG_ERR("Application %s is not registered in IPC process %d",
+                		tmp, data->id);
                 return -1;
         }
 
