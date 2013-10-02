@@ -44,10 +44,16 @@
 
 #define DEFAULT_FACTORY "normal-ipc"
 
+struct flow_messages {
+        struct seqn_fmap * ingressing;
+        struct seqn_fmap * egressing;
+};
+
 struct kipcm {
         struct mutex            lock;
         struct ipcp_factories * factories;
         struct ipcp_imap *      instances;
+        struct flow_messages *  fid_messages;
         struct rnl_set *        rnls;
         struct kfa *            kfa;
 };
@@ -1180,6 +1186,24 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 return NULL;
         }
 
+        tmp->fid_messages->ingressing = seqn_fmap_create();
+        tmp->fid_messages->egressing = seqn_fmap_create();
+        if (!tmp->fid_messages->ingressing || !tmp->fid_messages->egressing) {
+                if (!tmp->fid_messages->ingressing)
+                        if (seqn_fmap_destroy(tmp->fid_messages->ingressing)) {
+                                /* FIXME: What could we do here ? */
+                        }
+
+                if (!tmp->fid_messages->egressing)
+                        if (seqn_fmap_destroy(tmp->fid_messages->egressing)) {
+                                /* FIXME: What could we do here ? */
+                        }
+
+                rkfree(tmp);
+                return NULL;
+        }
+
+
         tmp->kfa = kfa_create();
         if (!tmp->kfa) {
                 if (ipcp_imap_destroy(tmp->instances)) {
@@ -1252,6 +1276,12 @@ int kipcm_destroy(struct kipcm * kipcm)
         if (ipcpf_fini(kipcm->factories)) {
                 /* FIXME: What should we do here ? */
         }
+
+        ASSERT(seqn_fmap_empty(kipcm->fid_messages->ingressing));
+        seqn_fmap_destroy(kipcm->fid_messages->ingressing);
+
+        ASSERT(seqn_fmap_empty(kipcm->fid_messages->egressing));
+        seqn_fmap_destroy(kipcm->fid_messages->egressing);
 
         if (netlink_handlers_unregister(kipcm->rnls)) {
                 /* FIXME: What should we do here ? */

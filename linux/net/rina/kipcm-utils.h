@@ -26,8 +26,9 @@
 #include "fidm.h"
 
 struct ipcp_imap;
+struct seqn_fmap;
 
-struct ipcp_imap *     ipcp_imap_create(void);
+struct ipcp_imap     * ipcp_imap_create(void);
 int                    ipcp_imap_destroy(struct ipcp_imap * map);
 
 int                    ipcp_imap_empty(struct ipcp_imap * map);
@@ -41,5 +42,20 @@ int                    ipcp_imap_update(struct ipcp_imap *     map,
                                         struct ipcp_instance * value);
 int                    ipcp_imap_remove(struct ipcp_imap * map,
                                         ipc_process_id_t   key);
+
+struct seqn_fmap     * seqn_fmap_create(void);
+int                    seqn_fmap_destroy(struct seqn_fmap * map);
+int                    seqn_fmap_empty(struct seqn_fmap * map);
+rnl_sn_t               seqn_fmap_find(struct seqn_fmap * map,
+                                      flow_id_t          key);
+int                    seqn_fmap_update(struct seqn_fmap * map,
+                                        flow_id_t          key,
+                                        rnl_sn_t           value);
+int                    seqn_fmap_add(struct seqn_fmap * map,
+                                     flow_id_t          key,
+                                     rnl_sn_t           value);
+int                    seqn_fmap_remove(struct seqn_fmap * map,
+                                        flow_id_t          key);
+
 
 #endif

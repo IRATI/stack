@@ -41,8 +41,9 @@ struct message_handler {
 };
 
 struct rnl_set {
+        spinlock_t             lock;
         struct message_handler handlers[NETLINK_RINA_C_MAX];
-        rnl_sn_t sn_counter;
+        rnl_sn_t               sn_counter;
 };
 
 static struct rnl_set * default_set = NULL;
@@ -283,6 +284,7 @@ struct rnl_set * rnl_set_create(personality_id id)
 
         tmp->sn_counter = 0;
 
+        spin_lock_init(&tmp->lock);
         LOG_DBG("Set %pK created successfully", tmp);
 
         return tmp;
@@ -322,11 +324,18 @@ EXPORT_SYMBOL(rnl_set_destroy);
 rnl_sn_t rnl_get_next_seqn(struct rnl_set * set)
 {
         /* FIXME: What to do about roll-over? */
-        set->sn_counter++;
+        rnl_sn_t tmp;
+
+        spin_lock(&set->lock);
+
+        tmp = set->sn_counter++;
 
         if (set->sn_counter == 0){
                 LOG_DBG("RN Layer Sequence number roll-overed!");
         }
+
+        spin_unlock(&set->lock);
+
         return set->sn_counter;
 }
 EXPORT_SYMBOL(rnl_get_next_seqn);
