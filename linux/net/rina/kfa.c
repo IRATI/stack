@@ -385,16 +385,16 @@ int kfa_flow_sdu_read(struct kfa *  instance,
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return NULL;
+                return -1;
         }
         if (!is_port_id_ok(id)) {
                 LOG_ERR("Bogus port-id, bailing out");
-                return NULL;
+                return -1;
         }
 
         LOG_DBG("Trying to read SDU from port-id %d", id);
         spin_lock(&instance->lock);
-        flow = ipcp_pmap_find(instance->flows.committed, id);
+        flow = kfa_pmap_find(instance->flows.committed, id);
         if (!flow) {
 		LOG_ERR("There is no flow bound to port-id %d", id);
 		spin_unlock(&instance->lock);
@@ -409,10 +409,10 @@ int kfa_flow_sdu_read(struct kfa *  instance,
 		spin_lock(&instance->lock);
 		LOG_DBG("Woken up");
 
-		flow = ipcp_pmap_find(instance->flows.committed, id);
+		flow = kfa_pmap_find(instance->flows.committed, id);
 		if (!flow) {
 			LOG_ERR("There is no flow bound to port-id %d anymore",
-				port_id);
+				id);
 			spin_unlock(&instance->lock);
 			return -1;
 		}
@@ -421,7 +421,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
 	if (kfifo_out(&flow->sdu_ready, &size, sizeof(size_t)) <
 	    sizeof(size_t)) {
 		LOG_ERR("There is not enough data in port-id %d fifo",
-			port_id);
+			id);
 		spin_unlock(&instance->lock);
 		return -1;
 	}

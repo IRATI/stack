@@ -1570,7 +1570,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
                    struct sdu **  sdu)
 {
         /* The SDU is theirs now */
-        if(kfa_flow_sdu_read(kipcm->kfa, port_id, *sdu)) {
+        if(kfa_flow_sdu_read(kipcm->kfa, port_id, sdu)) {
         	LOG_DBG("Failed to read sdu");
         	return -1;
         }
