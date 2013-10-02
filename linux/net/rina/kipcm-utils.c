@@ -173,7 +173,7 @@ int ipcp_imap_remove(struct ipcp_imap * map,
 }
 
 /*
- * SEQNMAPs
+ * FMAPs
  */
 
 #define SEQNMAP_HASH_BITS 7
@@ -234,6 +234,7 @@ int kipcm_fmap_empty(struct kipcm_fmap * map)
         return hash_empty(map->table);
 }
 
+/* FIXME: Confusing, shouldn't be fmap_hash ? */
 #define snmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 static struct kipcm_fmap_entry * snmap_entry_find(struct kipcm_fmap * map,
@@ -324,8 +325,9 @@ int kipcm_fmap_remove(struct kipcm_fmap * map,
 }
 
 /*
- * FMAP by SEQN
+ * SMAPs
  */
+
 #define FMAP_SEQN_HASH_BITS 7
 
 struct kipcm_smap {
@@ -375,13 +377,14 @@ int kipcm_smap_empty(struct kipcm_smap * map)
         return hash_empty(map->table);
 }
 
+/* FIXME: Confusing, shouldn't be smap_hash ? */
 #define fmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 static struct kipcm_smap_entry * fmap_entry_find(struct kipcm_smap * map,
                                                  rnl_sn_t            key)
 {
         struct kipcm_smap_entry * entry;
-        struct hlist_head *     head;
+        struct hlist_head *       head;
 
         ASSERT(map);
 
