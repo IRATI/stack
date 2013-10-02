@@ -160,7 +160,7 @@ public class IPCManager {
 			processNamingInfo.setProcessInstance(ipcProcessToCreate.getApplicationProcessInstance());
 			
 			try{
-				ipcProcess = ipcProcessFactory.create(processNamingInfo, 
+				ipcProcess = createIPCProcess(processNamingInfo, 
 						ipcProcessToCreate.getType());
 			}catch(CreateIPCProcessException ex){
 				log.error(ex.getMessage() + ". Problems creating IPC Process " 
@@ -294,6 +294,17 @@ public class IPCManager {
 		}
 		
 		return result;
+	}
+	
+	/**
+	 * Requests the creation of an IPC Process
+	 * @param name
+	 * @param type
+	 * @throws CreateIPCProcessException
+	 */
+	public IPCProcess createIPCProcess(ApplicationProcessNamingInformation name, 
+			String type) throws CreateIPCProcessException {
+		return ipcProcessFactory.create(name, type);
 	}
 	
 	/**

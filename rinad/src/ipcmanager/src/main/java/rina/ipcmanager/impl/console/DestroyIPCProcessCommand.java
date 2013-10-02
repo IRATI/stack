@@ -3,14 +3,14 @@ package rina.ipcmanager.impl.console;
 import rina.ipcmanager.impl.IPCManager;
 
 /**
- * The command to create a new IPC Process
+ * The command to destroy an existing IPC Process
  * @author eduardgrasa
  *
  */
 public class DestroyIPCProcessCommand extends ConsoleCommand{
 
-	public static final String ID = "destroyipcprocess";
-	private static final String USAGE = "destroyipcprocess <ipcprocessid>";
+	public static final String ID = "destroyipcp";
+	private static final String USAGE = "destroyipcp <ipcprocessid>";
 	
 	private long ipcProcessId = 0;
 	
