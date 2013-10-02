@@ -309,7 +309,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
         fid = kfa_flow_create(kipcm->kfa);
 	ASSERT(is_flow_id_ok(fid));
-	if (seqn_fmap_add(kipcm->fid_messages->ingress, fid, info->snd_seq)) {
+	if (kipcm_fmap_add(kipcm->fid_messages->ingress, fid, info->snd_seq)) {
 		return -1;
 	}
 
@@ -349,6 +349,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         struct ipcp_instance *                 ipc_process;
         ipc_process_id_t                       ipc_id;
         int                                    retval = 0;
+        flow_id_t                              fid;
 #if 0
         response_reason_t                      reason;
 #endif
@@ -400,8 +401,13 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 return -1;
         }
 
+        fid = kipcm_smap_find(kipcm->fid_messages->egress, info->snd_seq);
+        if (!is_flow_id_ok(fid)) {
+        	return -1;
+        }
+
         if (ipc_process->ops->flow_allocate_response(ipc_process->data,
-        					     info->snd_seq,
+        					     fid,
         					     attrs->id,
         					     0)) {
                 LOG_ERR("Failed allocate flow response for port id: %d",
@@ -1676,6 +1682,11 @@ int kipcm_flow_res(struct kipcm *   kipcm,
 		   uint_t     	    res)
 {
 	rnl_sn_t seq_num;
+
+	seq_num = kipcm_fmap_find(kipcm->fid_messages->ingress, fid);
+	if (!is_seq_num_ok(seq_num)) {
+		return -1;
+	}
 
 	if (rnl_app_alloc_flow_result_msg(ipc_id, res, seq_num, 1))
 		return -1;
