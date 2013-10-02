@@ -32,13 +32,16 @@
 #define NETLINK_RINA_C_MIN (RINA_C_MIN + 1)
 #define NETLINK_RINA_C_MAX (RINA_C_MAX - 1)
 
+
 struct message_handler {
         void *             data;
         message_handler_cb cb;
 };
 
 struct rnl_set {
+        spinlock_t             lock;
         struct message_handler handlers[NETLINK_RINA_C_MAX];
+        rnl_sn_t               sn_counter;
 };
 
 static struct rnl_set * default_set = NULL;
@@ -277,6 +280,9 @@ struct rnl_set * rnl_set_create(personality_id id)
         if (!tmp)
                 return NULL;
 
+        tmp->sn_counter = 0;
+
+        spin_lock_init(&tmp->lock);
         LOG_DBG("Set %pK created successfully", tmp);
 
         return tmp;
@@ -313,6 +319,25 @@ int rnl_set_destroy(struct rnl_set * set)
 }
 EXPORT_SYMBOL(rnl_set_destroy);
 
+rnl_sn_t rnl_get_next_seqn(struct rnl_set * set)
+{
+        /* FIXME: What to do about roll-over? */
+        rnl_sn_t tmp;
+
+        spin_lock(&set->lock);
+
+        tmp = set->sn_counter++;
+
+        if (set->sn_counter == 0){
+                LOG_DBG("RN Layer Sequence number roll-overed!");
+        }
+
+        spin_unlock(&set->lock);
+
+        return set->sn_counter;
+}
+EXPORT_SYMBOL(rnl_get_next_seqn);
+
 /*
  * Invoked when an event related to a NL socket occurs. We're only interested
  * in socket closed events.
@@ -346,6 +371,8 @@ static int kipcm_netlink_notify(struct notifier_block * nb,
 static struct notifier_block kipcm_netlink_notifier = {
         .notifier_call = kipcm_netlink_notify,
 };
+
+
 
 int rnl_init(void)
 {

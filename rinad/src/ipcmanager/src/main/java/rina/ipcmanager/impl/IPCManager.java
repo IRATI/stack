@@ -20,7 +20,6 @@ import eu.irati.librina.OSProcessFinalizedEvent;
 import eu.irati.librina.rina;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
@@ -268,13 +267,19 @@ public class IPCManager {
 	public String getIPCProcessesInformationAsString(){
 		IPCProcessPointerVector ipcProcesses = ipcProcessFactory.listIPCProcesses();
 		IPCProcess ipcProcess = null;
+		DIFConfiguration difConfiguration = null;
 		String result = "";
 		
 		for(int i=0; i<ipcProcesses.size(); i++){
 			ipcProcess = ipcProcesses.get(i);
-			result = "Id: "+ ipcProcess.getId() + "\n";
-			result = "    Type: " + ipcProcess.getType() + "\n";
-			result = "    Name: " + ipcProcess.getName().toString() + "\n";
+			result = result + "Id: "+ ipcProcess.getId() + "\n";
+			result = result + "    Type: " + ipcProcess.getType() + "\n";
+			result = result + "    Name: " + ipcProcess.getName().toString() + "\n";
+			difConfiguration = ipcProcess.getConfiguration();
+			if (difConfiguration != null){
+				result = result + "    Member of DIF: " + 
+						difConfiguration.getDifName().getProcessName() + "\n"; 
+			}
 		}
 		
 		return result;
@@ -289,6 +294,18 @@ public class IPCManager {
 		}
 		
 		return result;
+	}
+	
+	/**
+	 * Destroys an IPC Process
+	 * @param ipcProcessId
+	 */
+	public void destroyIPCProcess(long ipcProcessId) throws Exception{
+		//TODO if the IPC Process exists, delete all flows that go through the IPC Process,
+		//and terminate all application registrations.
+		
+		//Destroy the IPC Process
+		this.ipcProcessFactory.destroy(ipcProcessId);
 	}
 
 }

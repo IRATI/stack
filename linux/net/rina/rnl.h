@@ -31,6 +31,7 @@
 
 #include "personality.h"
 
+
 typedef enum {
 
         /* Unespecified operation */
@@ -119,6 +120,8 @@ typedef enum {
         RINA_C_MAX,
 } msg_type_t;
 
+typedef u32 rnl_sn_t;
+
 int              rnl_init(void);
 void             rnl_exit(void);
 
@@ -139,5 +142,6 @@ int              rnl_handler_unregister(struct rnl_set * set,
 
 int              rnl_set_register(struct rnl_set * set);
 int              rnl_set_unregister(struct rnl_set * set);
+rnl_sn_t         rnl_get_next_seqn(struct rnl_set * set);
 
 #endif
