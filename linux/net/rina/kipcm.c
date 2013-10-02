@@ -45,8 +45,8 @@
 #define DEFAULT_FACTORY "normal-ipc"
 
 struct flow_messages {
-        struct seqn_fmap * ingress;
-        struct fid_snmap * egress;
+        struct kipcm_fmap * ingress;
+        struct kipcm_smap * egress;
 };
 
 struct kipcm {
@@ -1186,16 +1186,16 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 return NULL;
         }
 
-        tmp->fid_messages->ingress = seqn_fmap_create();
-        tmp->fid_messages->egress = fid_snmap_create();
+        tmp->fid_messages->ingress = kipcm_fmap_create();
+        tmp->fid_messages->egress = kipcm_smap_create();
         if (!tmp->fid_messages->ingress || !tmp->fid_messages->egress) {
                 if (!tmp->fid_messages->ingress)
-                        if (seqn_fmap_destroy(tmp->fid_messages->ingress)) {
+                        if (kipcm_fmap_destroy(tmp->fid_messages->ingress)) {
                                 /* FIXME: What could we do here ? */
                         }
 
                 if (!tmp->fid_messages->egress)
-                        if (fid_snmap_destroy(tmp->fid_messages->egress)) {
+                        if (kipcm_smap_destroy(tmp->fid_messages->egress)) {
                                 /* FIXME: What could we do here ? */
                         }
 
@@ -1277,11 +1277,11 @@ int kipcm_destroy(struct kipcm * kipcm)
                 /* FIXME: What should we do here ? */
         }
 
-        ASSERT(seqn_fmap_empty(kipcm->fid_messages->ingress));
-        seqn_fmap_destroy(kipcm->fid_messages->ingress);
+        ASSERT(kipcm_fmap_empty(kipcm->fid_messages->ingress));
+        kipcm_fmap_destroy(kipcm->fid_messages->ingress);
 
-        ASSERT(fid_snmap_empty(kipcm->fid_messages->egress));
-        fid_snmap_destroy(kipcm->fid_messages->egress);
+        ASSERT(kipcm_smap_empty(kipcm->fid_messages->egress));
+        kipcm_smap_destroy(kipcm->fid_messages->egress);
 
         if (netlink_handlers_unregister(kipcm->rnls)) {
                 /* FIXME: What should we do here ? */
