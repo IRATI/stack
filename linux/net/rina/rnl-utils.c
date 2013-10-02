@@ -33,8 +33,6 @@
 #include "rnl.h"
 #include "rnl-utils.h"
 
-
-
 /*
  * FIXME: I suppose these functions are internal (at least for the time being)
  *        therefore have been "statified" to avoid polluting the common name
@@ -64,7 +62,6 @@
 
 #define BUILD_STRERROR_BY_MTYPE(X)                      \
         "Could not parse Netlink message of type " X
-
 
 extern struct genl_family rnl_nl_family;
 
@@ -1063,9 +1060,7 @@ int rnl_parse_msg(struct genl_info * info,
 }
 EXPORT_SYMBOL(rnl_parse_msg);
 
-
 /* FORMATTING */
-
 
 static int format_app_name_info(const struct name * name,
                                 struct sk_buff * msg)
@@ -1282,8 +1277,6 @@ int rnl_format_ipcm_assign_to_dif_req_msg(const struct dif_config  * config,
 }
 EXPORT_SYMBOL(rnl_format_ipcm_assign_to_dif_req_msg);
 
-
-
 int rnl_format_ipcm_assign_to_dif_resp_msg(uint_t          result,
                                            struct sk_buff  * skb_out)
 {
@@ -1329,7 +1322,10 @@ int rnl_format_ipcm_ipcp_dif_reg_noti_msg(const struct name * ipcp_name,
 
         /* FIXME: I think the flag value must be specified so nla_put_flag
          * can not be used. Check in US cause it is using it */
-        if (nla_put(skb_out, IDRN_ATTR_REGISTRATION, is_registered, NULL) < 0) {
+        if (nla_put(skb_out,
+                    IDRN_ATTR_REGISTRATION,
+                    is_registered,
+                    NULL) < 0) {
                 LOG_ERR(BUILD_STRERROR("is_registered attribute"));
                 goto format_fail;
         }
@@ -1346,8 +1342,8 @@ int rnl_format_ipcm_ipcp_dif_reg_noti_msg(const struct name * ipcp_name,
 EXPORT_SYMBOL(rnl_format_ipcm_ipcp_dif_reg_noti_msg);
 
 /*  FIXME: It does not exist in user space */
-int rnl_format_ipcm_ipcp_dif_unreg_noti_msg(uint_t          result,
-                                            struct sk_buff  * skb_out)
+int rnl_format_ipcm_ipcp_dif_unreg_noti_msg(uint_t           result,
+                                            struct sk_buff * skb_out)
 {
         return rnl_format_generic_u32_param_msg(result,
                                                 IDUN_ATTR_RESULT,
@@ -1356,8 +1352,8 @@ int rnl_format_ipcm_ipcp_dif_unreg_noti_msg(uint_t          result,
 }
 EXPORT_SYMBOL(rnl_format_ipcm_ipcp_dif_unreg_noti_msg);
 
-int rnl_format_ipcm_enroll_to_dif_req_msg(const struct name    * dif_name,
-                                          struct sk_buff       *  skb_out)
+int rnl_format_ipcm_enroll_to_dif_req_msg(const struct name * dif_name,
+                                          struct sk_buff *    skb_out)
 {
         struct nlattr * msg_dif_name;
 
@@ -1557,8 +1553,8 @@ int rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name      * source,
 }
 EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_arrived_msg);
 
-int rnl_format_ipcm_alloc_flow_req_result_msg(uint_t          result,
-                                              struct sk_buff  * skb_out)
+int rnl_format_ipcm_alloc_flow_req_result_msg(uint_t           result,
+                                              struct sk_buff * skb_out)
 {
         LOG_DBG("Entring rnl_format_ipcm_alloc_flow_req_result_msg");
         return rnl_format_generic_u32_param_msg(result,
@@ -1568,10 +1564,10 @@ int rnl_format_ipcm_alloc_flow_req_result_msg(uint_t          result,
 }
 EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_result_msg);
 
-int rnl_format_ipcm_alloc_flow_resp_msg(uint_t          result,
-                                        bool            notify_src,
-                                        port_id_t       id,
-                                        struct sk_buff  * skb_out)
+int rnl_format_ipcm_alloc_flow_resp_msg(uint_t           result,
+                                        bool             notify_src,
+                                        port_id_t        id,
+                                        struct sk_buff * skb_out)
 {
         if (!skb_out) {
                 LOG_ERR("Bogus input parameter(s), bailing out");
@@ -1598,8 +1594,8 @@ int rnl_format_ipcm_alloc_flow_resp_msg(uint_t          result,
 }
 EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_resp_msg);
 
-int rnl_format_ipcm_dealloc_flow_req_msg(port_id_t       id,
-                                         struct sk_buff  * skb_out)
+int rnl_format_ipcm_dealloc_flow_req_msg(port_id_t        id,
+                                         struct sk_buff * skb_out)
 {
         return rnl_format_generic_u32_param_msg(id,
                                                 IDFRT_ATTR_PORT_ID,
@@ -1608,8 +1604,8 @@ int rnl_format_ipcm_dealloc_flow_req_msg(port_id_t       id,
 }
 EXPORT_SYMBOL(rnl_format_ipcm_dealloc_flow_req_msg);
 
-int rnl_format_ipcm_dealloc_flow_resp_msg(uint_t          result,
-                                          struct sk_buff  * skb_out)
+int rnl_format_ipcm_dealloc_flow_resp_msg(uint_t           result,
+                                          struct sk_buff * skb_out)
 {
         return rnl_format_generic_u32_param_msg(result,
                                                 IDFRE_ATTR_RESULT,
@@ -1618,9 +1614,9 @@ int rnl_format_ipcm_dealloc_flow_resp_msg(uint_t          result,
 }
 EXPORT_SYMBOL(rnl_format_ipcm_dealloc_flow_resp_msg);
 
-int rnl_format_ipcm_flow_dealloc_noti_msg(port_id_t       id,
-                                          uint_t          code,
-                                          struct sk_buff  * skb_out)
+int rnl_format_ipcm_flow_dealloc_noti_msg(port_id_t        id,
+                                          uint_t           code,
+                                          struct sk_buff * skb_out)
 {
         if (!skb_out) {
                 LOG_ERR("Bogus input parameter(s), bailing out");
@@ -1643,9 +1639,9 @@ int rnl_format_ipcm_flow_dealloc_noti_msg(port_id_t       id,
 }
 EXPORT_SYMBOL(rnl_format_ipcm_flow_dealloc_noti_msg);
 
-int rnl_format_ipcm_reg_app_req_msg(const struct name     * app_name,
-                                    const struct name     * dif_name,
-                                    struct sk_buff  * skb_out)
+int rnl_format_ipcm_reg_app_req_msg(const struct name * app_name,
+                                    const struct name * dif_name,
+                                    struct sk_buff *    skb_out)
 {
         struct nlattr * msg_src_name, * msg_dif_name;
 
@@ -1687,8 +1683,8 @@ int rnl_format_ipcm_reg_app_req_msg(const struct name     * app_name,
 }
 EXPORT_SYMBOL(rnl_format_ipcm_reg_app_req_msg);
 
-int rnl_format_ipcm_reg_app_resp_msg(uint_t            result,
-                                     struct sk_buff    * skb_out)
+int rnl_format_ipcm_reg_app_resp_msg(uint_t           result,
+                                     struct sk_buff * skb_out)
 {
         if (!skb_out) {
                 LOG_ERR("Bogus input parameter(s), bailing out");
@@ -1877,7 +1873,6 @@ int rnl_format_ipcm_query_rib_resp_msg(uint_t                  result,
         if (format_rib_objects_list(objs, count, skb_out) < 0)
                 goto format_fail;
         nla_nest_end(skb_out, msg_objs);
-
 
         if (nla_put_u32(skb_out, IDQRE_ATTR_RESULT, result) ||
             nla_put_u32(skb_out, IDQRE_ATTR_COUNT, count))

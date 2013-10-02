@@ -177,7 +177,7 @@ int ipcp_imap_remove(struct ipcp_imap * map,
  */
 
 #define SEQNMAP_HASH_BITS 7
-#define SEQNMAP_WRONG 0xFFFFFF
+#define SEQNMAP_WRONG     0xFFFFFF
 
 rnl_sn_t seq_num_bad(void)
 { return SEQNMAP_WRONG; }
@@ -263,7 +263,7 @@ rnl_sn_t seqn_fmap_find(struct seqn_fmap * map,
 
         entry = snmap_entry_find(map, key);
         if (!entry)
-                return seq_num_bad();
+                return SEQNMAP_WRONG;
 
         return entry->value;
 }
