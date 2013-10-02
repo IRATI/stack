@@ -173,22 +173,23 @@ int ipcp_imap_remove(struct ipcp_imap * map,
 }
 
 /*
- * SEQNMAPs
+ * FMAPs
  */
 
-#define SEQNMAP_HASH_BITS 7
-#define SEQNMAP_WRONG     0xFFFFFF
+#define FMAP_HASH_BITS 7
+#define SNVALUE_WRONG     0xFFFFFF
 
 rnl_sn_t seq_num_bad(void)
-{ return SEQNMAP_WRONG; }
+{ return SNVALUE_WRONG; }
 EXPORT_SYMBOL(seq_num_bad);
 
+/* FIXME: We need to change this */
 int is_seq_num_ok(rnl_sn_t sn)
-{ return (sn >= 0 && sn < SEQNMAP_WRONG) ? 1 : 0; }
+{ return (sn >= 0 && sn < SNVALUE_WRONG) ? 1 : 0; }
 EXPORT_SYMBOL(is_seq_num_ok);
 
 struct kipcm_fmap {
-        DECLARE_HASHTABLE(table, SEQNMAP_HASH_BITS);
+        DECLARE_HASHTABLE(table, FMAP_HASH_BITS);
 };
 
 struct kipcm_fmap_entry {
@@ -234,9 +235,9 @@ int kipcm_fmap_empty(struct kipcm_fmap * map)
         return hash_empty(map->table);
 }
 
-#define snmap_hash(T, K) hash_min(K, HASH_BITS(T))
+#define fmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
-static struct kipcm_fmap_entry * snmap_entry_find(struct kipcm_fmap * map,
+static struct kipcm_fmap_entry * fmap_entry_find(struct kipcm_fmap * map,
                                                   flow_id_t           key)
 {
         struct kipcm_fmap_entry * entry;
@@ -244,7 +245,7 @@ static struct kipcm_fmap_entry * snmap_entry_find(struct kipcm_fmap * map,
 
         ASSERT(map);
 
-        head = &map->table[snmap_hash(map->table, key)];
+        head = &map->table[fmap_hash(map->table, key)];
         hlist_for_each_entry(entry, head, hlist) {
                 if (entry->key == key)
                         return entry;
@@ -261,9 +262,9 @@ rnl_sn_t kipcm_fmap_find(struct kipcm_fmap * map,
 
         ASSERT(map);
 
-        entry = snmap_entry_find(map, key);
+        entry = fmap_entry_find(map, key);
         if (!entry)
-                return SEQNMAP_WRONG;
+                return SNVALUE_WRONG;
 
         return entry->value;
 }
@@ -276,7 +277,7 @@ int kipcm_fmap_update(struct kipcm_fmap * map,
 
         ASSERT(map);
 
-        cur = snmap_entry_find(map, key);
+        cur = fmap_entry_find(map, key);
         if (!cur)
                 return -1;
 
@@ -313,7 +314,7 @@ int kipcm_fmap_remove(struct kipcm_fmap * map,
 
         ASSERT(map);
 
-        cur = snmap_entry_find(map, key);
+        cur = fmap_entry_find(map, key);
         if (!cur)
                 return -1;
 
@@ -324,17 +325,18 @@ int kipcm_fmap_remove(struct kipcm_fmap * map,
 }
 
 /*
- * FMAP by SEQN
+ * SMAP by SEQN
  */
-#define FMAP_SEQN_HASH_BITS 7
+#define SMAP_SEQN_HASH_BITS 7
+#define FIDVALUE_WRONG -1
 
 struct kipcm_smap {
-        DECLARE_HASHTABLE(table, FMAP_SEQN_HASH_BITS);
+        DECLARE_HASHTABLE(table, SMAP_SEQN_HASH_BITS);
 };
 
 struct kipcm_smap_entry {
         rnl_sn_t          key;
-        flow_id_t *       value;
+        flow_id_t         value;
         struct hlist_node hlist;
 };
 
@@ -375,9 +377,9 @@ int kipcm_smap_empty(struct kipcm_smap * map)
         return hash_empty(map->table);
 }
 
-#define fmap_hash(T, K) hash_min(K, HASH_BITS(T))
+#define smap_hash(T, K) hash_min(K, HASH_BITS(T))
 
-static struct kipcm_smap_entry * fmap_entry_find(struct kipcm_smap * map,
+static struct kipcm_smap_entry * smap_entry_find(struct kipcm_smap * map,
                                                  rnl_sn_t            key)
 {
         struct kipcm_smap_entry * entry;
@@ -385,7 +387,7 @@ static struct kipcm_smap_entry * fmap_entry_find(struct kipcm_smap * map,
 
         ASSERT(map);
 
-        head = &map->table[fmap_hash(map->table, key)];
+        head = &map->table[smap_hash(map->table, key)];
         hlist_for_each_entry(entry, head, hlist) {
                 if (entry->key == key)
                         return entry;
@@ -394,29 +396,29 @@ static struct kipcm_smap_entry * fmap_entry_find(struct kipcm_smap * map,
         return NULL;
 }
 
-flow_id_t * kipcm_smap_find(struct kipcm_smap * map,
+flow_id_t kipcm_smap_find(struct kipcm_smap * map,
                             rnl_sn_t            key)
 {
         struct kipcm_smap_entry * entry;
 
         ASSERT(map);
 
-        entry = fmap_entry_find(map, key);
+        entry = smap_entry_find(map, key);
         if (!entry)
-                return NULL;
+                return FIDVALUE_WRONG;
 
         return entry->value;
 }
 
 int kipcm_smap_update(struct kipcm_smap * map,
                       rnl_sn_t            key,
-                      flow_id_t *         value)
+                      flow_id_t           value)
 {
         struct kipcm_smap_entry * cur;
 
         ASSERT(map);
 
-        cur = fmap_entry_find(map, key);
+        cur = smap_entry_find(map, key);
         if (!cur)
                 return -1;
 
@@ -427,7 +429,7 @@ int kipcm_smap_update(struct kipcm_smap * map,
 
 int kipcm_smap_add(struct kipcm_smap * map,
                   rnl_sn_t             key,
-                  flow_id_t *          value)
+                  flow_id_t            value)
 {
         struct kipcm_smap_entry * tmp;
 
@@ -453,7 +455,7 @@ int kipcm_smap_remove(struct kipcm_smap * map,
 
         ASSERT(map);
 
-        cur = fmap_entry_find(map, key);
+        cur = smap_entry_find(map, key);
         if (!cur)
                 return -1;
 
