@@ -123,10 +123,10 @@ alloc_flow_req_free_and_reply(struct name *      source_name,
 {
         alloc_flow_req_free(source_name, dest_name, fspec, dif_name,
                             attrs, msg);
-        
+
         if (rnl_app_alloc_flow_result_msg(id, res, seq_num, port_id))
                 return -1;
-        
+
         return 0;
 }
 
@@ -1207,6 +1207,9 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 if (ipcp_imap_destroy(tmp->instances)) {
                         /* FIXME: What could we do here ? */
                 }
+                if (kfa_destroy(tmp->kfa)) {
+                        /* FIXME: What could we do here ? */
+                }
                 if (ipcpf_fini(tmp->factories)) {
                         /* FIXME: What could we do here ? */
                 }
@@ -1231,6 +1234,10 @@ int kipcm_destroy(struct kipcm * kipcm)
         LOG_DBG("Finalizing");
 
         KIPCM_LOCK(kipcm);
+
+        if (kfa_destroy(kipcm->kfa)) {
+                /* FIXME: What could we do here ? */
+        }
 
         /* FIXME: Destroy all the instances */
         ASSERT(ipcp_imap_empty(kipcm->instances));
@@ -1452,9 +1459,9 @@ EXPORT_SYMBOL(kipcm_flow_arrived);
 int kipcm_flow_add(struct kipcm *   kipcm,
                    ipc_process_id_t ipc_id,
                    port_id_t        port_id,
-                   flow_id_t	    fid)
+                   flow_id_t        fid)
 {
-	struct ipcp_instance * ipc_process;
+        struct ipcp_instance * ipc_process;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
@@ -1477,9 +1484,9 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                          port_id,
                          ipc_process,
                          ipc_id)) {
-        	LOG_ERR("Couldn't commit flow");
-        	KIPCM_UNLOCK(kipcm);
-		return -1;
+                LOG_ERR("Couldn't commit flow");
+                KIPCM_UNLOCK(kipcm);
+                return -1;
         }
 
         KIPCM_UNLOCK(kipcm);
@@ -1562,89 +1569,8 @@ int kipcm_sdu_read(struct kipcm * kipcm,
                    port_id_t      port_id,
                    struct sdu **  sdu)
 {
-#if 0
-        struct ipcp_flow * flow;
-        size_t             size;
-        char *             data;
-
-        if (!kipcm) {
-                LOG_ERR("Bogus kipcm instance passed, bailing out");
-                return -1;
-        }
-        if (!sdu) {
-                LOG_ERR("Bogus parameters passed, bailing out");
-                return -1;
-        }
-
-        LOG_DBG("Trying to read SDU from port-id %d", port_id);
-
-        KIPCM_LOCK(kipcm);
-
-        flow = ipcp_pmap_find(kipcm->flows.committed, port_id);
-        if (!flow) {
-                LOG_ERR("There is no flow bound to port-id %d", port_id);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-
-        while (kfifo_is_empty(&flow->sdu_ready)) {
-                LOG_DBG("Going to sleep");
-                KIPCM_UNLOCK(kipcm);
-
-                interruptible_sleep_on(&flow->wait_queue);
-
-                KIPCM_LOCK(kipcm);
-                LOG_DBG("Woken up");
-
-                flow = ipcp_pmap_find(kipcm->flows.committed, port_id);
-                if (!flow) {
-                        LOG_ERR("There is no flow bound to port-id %d anymore",
-                                port_id);
-                        KIPCM_UNLOCK(kipcm);
-                        return -1;
-                }
-        }
-
-        if (kfifo_out(&flow->sdu_ready, &size, sizeof(size_t)) <
-            sizeof(size_t)) {
-                LOG_ERR("There is not enough data in port-id %d fifo",
-                        port_id);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-
-        /* FIXME: Is it possible to have 0 bytes sdus ??? */
-        if (size == 0) {
-                LOG_ERR("Zero-size SDU detected");
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-
-        data = rkzalloc(size, GFP_KERNEL);
-        if (!data) {
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-
-        if (kfifo_out(&flow->sdu_ready, data, size) != size) {
-                LOG_ERR("Could not get %zd bytes from fifo", size);
-                rkfree(data);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-
-        *sdu = sdu_create_from(data, size);
-        if (!*sdu) {
-                rkfree(data);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-
-        KIPCM_UNLOCK(kipcm);
-#endif
         /* The SDU is theirs now */
-        *sdu = kfa_flow_sdu_read(kipcm->kfa, port_id);
-        if (!sdu){
+        if(kfa_flow_sdu_read(kipcm->kfa, port_id, *sdu)) {
         	LOG_DBG("Failed to read sdu");
         	return -1;
         }
