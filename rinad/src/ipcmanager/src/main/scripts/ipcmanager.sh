@@ -7,6 +7,6 @@
 #             Eduard Grasa <e DOT grasa AT i2cat DOT net>
 #
 
-LP=/media/sf_irati/dist/librina/lib
+LP=/media/sf_irati/dist/lib
 
 LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LP java -jar rina.ipcmanager.impl-1.0.0-irati-SNAPSHOT.jar

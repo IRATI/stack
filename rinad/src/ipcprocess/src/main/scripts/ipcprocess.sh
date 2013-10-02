@@ -9,4 +9,4 @@
 
 LP=/media/sf_irati/dist/lib
 
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LP java -jar rina.utils.apps.rinaband-1.0.0-irati-SNAPSHOT.jar -role server
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LP java -jar rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar

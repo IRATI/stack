@@ -95,6 +95,7 @@
 	<modules>
 		<module>commons</module>
 		<module>ipcmanager</module>
+		<module>ipcprocess</module>
 		<module>applications</module>
 	</modules>
 	<!--
