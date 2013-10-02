@@ -29,6 +29,7 @@
 #include "utils.h"
 #include "common.h"
 #include "kipcm-utils.h"
+#include "rnl-utils.h"
 
 /*
  * IMAPs
@@ -176,6 +177,15 @@ int ipcp_imap_remove(struct ipcp_imap * map,
  */
 
 #define SEQNMAP_HASH_BITS 7
+#define SEQNMAP_WRONG 0xFFFFFF
+
+rnl_sn_t seq_num_bad(void)
+{ return SEQNMAP_WRONG; }
+EXPORT_SYMBOL(seq_num_bad);
+
+int is_seq_num_ok(rnl_sn_t sn)
+{ return (sn >= 0 && sn < SEQNMAP_WRONG) ? 1 : 0; }
+EXPORT_SYMBOL(is_seq_num_ok);
 
 struct seqn_fmap {
         DECLARE_HASHTABLE(table, SEQNMAP_HASH_BITS);
@@ -183,7 +193,7 @@ struct seqn_fmap {
 
 struct seqn_fmap_entry {
         flow_id_t         key;
-        int               value;
+        rnl_sn_t          value;
         struct hlist_node hlist;
 };
 
@@ -243,9 +253,9 @@ static struct seqn_fmap_entry * snmap_entry_find(struct seqn_fmap * map,
         return NULL;
 }
 
-/* FIXME: This is broken !!! */
-int seqn_fmap_find(struct seqn_fmap * map,
-                   flow_id_t          key)
+
+rnl_sn_t seqn_fmap_find(struct seqn_fmap * map,
+                        flow_id_t          key)
 {
         struct seqn_fmap_entry * entry;
 
@@ -253,14 +263,14 @@ int seqn_fmap_find(struct seqn_fmap * map,
 
         entry = snmap_entry_find(map, key);
         if (!entry)
-                return -1;
+                return seq_num_bad();
 
         return entry->value;
 }
 
 int seqn_fmap_update(struct seqn_fmap * map,
                      flow_id_t          key,
-                     int                value)
+                     rnl_sn_t           value)
 {
         struct seqn_fmap_entry * cur;
 
@@ -277,7 +287,7 @@ int seqn_fmap_update(struct seqn_fmap * map,
 
 int seqn_fmap_add(struct seqn_fmap * map,
                   flow_id_t          key,
-                  int                value)
+                  rnl_sn_t           value)
 {
         struct seqn_fmap_entry * tmp;
 
