@@ -412,3 +412,31 @@ int connection_destroy(struct connection * conn)
         rkfree(conn);
         return 0;
 }
+
+struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
+{
+        struct flow_spec * tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+
+        if (!tmp) {
+                return NULL;
+        }
+        if (!fspec) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->average_bandwidth = fspec->average_bandwidth;
+        tmp->average_sdu_bandwidth = fspec->average_sdu_bandwidth;
+        tmp->delay = fspec->delay;
+        tmp->jitter = fspec->jitter;
+        tmp->max_allowable_gap = fspec->max_allowable_gap;
+        tmp->max_sdu_size = fspec->max_sdu_size;
+        tmp->ordered_delivery = fspec->ordered_delivery;
+        tmp->partial_delivery = fspec->partial_delivery;
+        tmp->peak_bandwidth_duration = fspec->peak_bandwidth_duration;
+        tmp->peak_sdu_bandwidth_duration = fspec->peak_sdu_bandwidth_duration;
+        tmp->undetected_bit_error_rate = fspec->undetected_bit_error_rate;
+
+        return tmp;
+}
+EXPORT_SYMBOL(flow_spec_dup);

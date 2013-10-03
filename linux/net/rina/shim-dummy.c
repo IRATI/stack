@@ -83,8 +83,8 @@ struct dummy_flow {
         enum dummy_flow_state state;
         flow_id_t             dst_fid;
         flow_id_t             src_fid; /* Required to notify back to the */
-        ipc_process_id_t      dst_id;  /* IPC Manager the result of the
-                                        * allocation */
+        ipc_process_id_t      dst_id;  /* IPC Manager the result of the */
+        struct flow_spec *    fspec;   /* allocation */
 };
 
 struct app_register {
@@ -191,6 +191,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         flow->state   = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
         flow->port_id = id;
         flow->src_fid = fid;
+        flow->fspec = flow_spec_dup(fspec);
 
         flow->dst_fid = kfa_flow_create(data->kfa);
         ASSERT(is_flow_id_ok(flow->dst_fid));
@@ -204,7 +205,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                            data->info->dif_name,
                            flow->source,
                            flow->dest,
-                           fspec)) {
+                           flow->fspec)) {
         	return -1;
         }
 
