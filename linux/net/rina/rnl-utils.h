@@ -85,7 +85,7 @@ enum ipcm_alloc_flow_resp_attrs_list {
 };
 #define IAFRE_ATTR_MAX (__IAFRE_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with deny 
+/* FIXME: Need to specify the possible values of result to map with deny
  * reasons strings in US */
 #define ALLOC_RESP_DENY_REASON_1 "FAILED"
 
@@ -95,7 +95,7 @@ enum ipcm_alloc_flow_req_result_attrs_list {
 };
 #define IAFRRM_ATTR_MAX (__IAFRRM_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with error 
+/* FIXME: Need to specify the possible values of result to map with error
  * descriptions strings in US */
 #define ALLOC_RESP_ERR_DESC_1 "FAILED"
 
@@ -111,7 +111,7 @@ enum ipcm_dealloc_flow_resp_attrs_list {
 };
 #define IDFRE_ATTR_MAX (__IDFRE_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with error 
+/* FIXME: Need to specify the possible values of result to map with error
  * descriptions strings in US */
 #define DEALLOC_RESP_ERR_DESC_1 "FAILED"
 
@@ -135,7 +135,7 @@ enum ipcm_reg_app_resp_attrs_list {
 };
 #define IRARE_ATTR_MAX (__IRARE_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with error 
+/* FIXME: Need to specify the possible values of result to map with error
  * descriptions strings in US */
 #define REG_APP_RESP_ERR_DESC_1 "FAILED"
 
@@ -152,7 +152,7 @@ enum ipcm_unreg_app_resp_attrs_list {
 };
 #define IUARE_ATTR_MAX (__IUARE_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with error 
+/* FIXME: Need to specify the possible values of result to map with error
  * descriptions strings in US */
 #define UNREG_APP_RESP_ERR_DESC_1 "FAILED"
 
@@ -194,57 +194,57 @@ enum dif_conf_attrs_list {
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
 
 enum ipcm_assign_to_dif_resp_attrs_list {
-	IATDRE_ATTR_RESULT = 1,
-	__IATDRE_ATTR_MAX,
+        IATDRE_ATTR_RESULT = 1,
+        __IATDRE_ATTR_MAX,
 };
 #define IATDRE_ATTR_MAX (__IATDRE_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with error 
+/* FIXME: Need to specify the possible values of result to map with error
  * descriptions strings in US */
 #define ASSIGN_TO_DIF_RESP_ERR_DESC_1 "FAILED"
 
 enum ipcm_ipcp_dif_reg_noti_attrs_list {
-	IDRN_ATTR_IPC_PROCESS_NAME = 1,
-	IDRN_ATTR_DIF_NAME,
-	IDRN_ATTR_REGISTRATION,
-	__IDRN_ATTR_MAX,
+        IDRN_ATTR_IPC_PROCESS_NAME = 1,
+        IDRN_ATTR_DIF_NAME,
+        IDRN_ATTR_REGISTRATION,
+        __IDRN_ATTR_MAX,
 };
 #define IDRN_ATTR_MAX (__IDRN_ATTR_MAX -1)
 
 /* FIXME: It does not exist in user space */
 enum ipcm_ipcp_dif_unreg_noti_attrs_list {
-	IDUN_ATTR_RESULT = 1,
-	__IDUN_ATTR_MAX,
+        IDUN_ATTR_RESULT = 1,
+        __IDUN_ATTR_MAX,
 };
 #define IDUN_ATTR_MAX (__IDUN_ATTR_MAX -1)
 
 enum ipcm_ipcp_enroll_to_dif_req_msg_attr_list {
-	IEDR_ATTR_DIF_NAME = 1,
-	__IEDR_ATTR_MAX,
+        IEDR_ATTR_DIF_NAME = 1,
+        __IEDR_ATTR_MAX,
 };
 #define IEDR_ATTR_MAX (__IEDR_ATTR_MAX -1)
 
 enum ipcm_ipcp_enroll_to_dif_resp_msg_attr_list {
-	IEDRE_ATTR_RESULT = 1,
-	__IEDRE_ATTR_MAX,
+        IEDRE_ATTR_RESULT = 1,
+        __IEDRE_ATTR_MAX,
 };
 #define IEDRE_ATTR_MAX (__IEDRE_ATTR_MAX -1)
 
 enum ipcm_disconn_neighbor_req_msg_attr_list {
-	IDNR_ATTR_NEIGHBOR_NAME = 1,
-	__IDNR_ATTR_MAX,
+        IDNR_ATTR_NEIGHBOR_NAME = 1,
+        __IDNR_ATTR_MAX,
 };
 #define IDNR_ATTR_MAX (__IDNR_ATTR_MAX -1)
 
 enum ipcm_disconn_neighbor_resp_msg_attr_list {
-	IDNRE_ATTR_RESULT = 1,
-	__IDNRE_ATTR_MAX,
+        IDNRE_ATTR_RESULT = 1,
+        __IDNRE_ATTR_MAX,
 };
 #define IDNRE_ATTR_MAX (__IDNRE_ATTR_MAX -1)
 
 enum socket_closed_notification_msg_attr_list {
-	ISCN_ATTR_PORT = 1,
-	__ISCN_ATTR_MAX,
+        ISCN_ATTR_PORT = 1,
+        __ISCN_ATTR_MAX,
 };
 #define ISCN_ATTR_MAX (__ISCN_ATTR_MAX -1)
 
@@ -293,37 +293,37 @@ struct dif_config {
 };
 
 struct rnl_ipcm_assign_to_dif_req_msg_attrs {
-	struct dif_config * dif_config;
+        struct dif_config * dif_config;
 };
 
 struct rnl_ipcm_assign_to_dif_resp_msg_attrs {
-	uint_t result;
+        uint_t result;
 };
 
 struct rnl_ipcm_ipcp_dif_reg_noti_msg_attrs {
-	struct name * ipcp_name;
-	struct name * dif_name;
-	bool	      is_registered;
+        struct name * ipcp_name;
+        struct name * dif_name;
+        bool          is_registered;
 };
 
 struct rnl_ipcm_ipcp_dif_unreg_noti_msg_attrs {
-	uint_t result;
+        uint_t result;
 };
 
 struct rnl_ipcm_enroll_to_dif_req_msg_attrs {
-	struct name * dif_name;
+        struct name * dif_name;
 };
 
 struct rnl_ipcm_enroll_to_dif_resp_msg_attrs {
-	uint_t result;
+        uint_t result;
 };
 
 struct rnl_ipcm_disconn_neighbor_req_msg_attrs {
-	struct name * neighbor_name;
+        struct name * neighbor_name;
 };
 
 struct rnl_ipcm_disconn_neighbor_resp_msg_attrs {
-	uint_t result;
+        uint_t result;
 };
 
 /* FIXME: all the alloc flow structs are the same
@@ -344,13 +344,13 @@ struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs {
 };
 
 struct rnl_ipcm_alloc_flow_req_result_msg_attrs {
-	int result;
+        int result;
 };
 
 struct rnl_alloc_flow_resp_msg_attrs {
         uint_t    result;
         bool      notify_src;
-	port_id_t id;
+        port_id_t id;
 };
 
 struct rnl_ipcm_dealloc_flow_req_msg_attrs {
@@ -362,54 +362,54 @@ struct rnl_ipcm_dealloc_flow_resp_msg_attrs {
 };
 
 struct rnl_ipcm_flow_dealloc_noti_msg_attrs {
-	port_id_t id;
-	uint_t    code;
+        port_id_t id;
+        uint_t    code;
 };
 
 struct rnl_ipcm_reg_app_req_msg_attrs {
-	struct name * app_name;
-	struct name * dif_name;
+        struct name * app_name;
+        struct name * dif_name;
 };
 
 struct rnl_ipcm_reg_app_resp_msg_attrs {
-	uint_t      result;
+        uint_t      result;
 };
 
 struct rnl_ipcm_unreg_app_req_msg_attrs {
-	struct name * app_name;
-	struct name * dif_name;
+        struct name * app_name;
+        struct name * dif_name;
 };
 
 struct rnl_ipcm_unreg_app_resp_msg_attrs {
-	uint_t result;
+        uint_t result;
 };
 
 struct rnl_ipcm_query_rib_req_msg_attrs {
-	struct rib_object * rib_obj;
-	uint_t            scope;
-	string_t          * filter;
+        struct rib_object * rib_obj;
+        uint_t            scope;
+        string_t          * filter;
 };
 
 struct rnl_ipcm_query_rib_resp_msg_attrs {
-	uint_t            result;
-	uint_t            count;
-	struct rib_object * rib_objs;
+        uint_t            result;
+        uint_t            count;
+        struct rib_object * rib_objs;
 };
 
 struct rnl_rmt_add_fte_req_msg_attrs {
-	int temp;
+        int temp;
 };
 
 struct rnl_rmt_del_fte_req_msg_attrs {
-	int temp;
+        int temp;
 };
 
 struct rnl_rmt_dump_ft_req_msg_attrs {
-	int temp;
+        int temp;
 };
 
 struct rnl_rmt_dump_ft_reply_msg_attrs {
-	int temp;
+        int temp;
 };
 
 
@@ -459,8 +459,8 @@ int rnl_format_ipcm_alloc_flow_req_result_msg(uint_t           result,
                                               struct sk_buff * skb_out);
 
 int rnl_format_ipcm_alloc_flow_resp_msg(uint_t           result,
-					                    bool 		     notify_src,
-					                    port_id_t	     id,
+                                        bool                     notify_src,
+                                        port_id_t        id,
                                         struct sk_buff * skb_out);
 
 int rnl_format_ipcm_dealloc_flow_req_msg(port_id_t        id,
@@ -488,13 +488,13 @@ int rnl_format_ipcm_unreg_app_resp_msg(uint_t           result,
                                        struct sk_buff * skb_out);
 
 int rnl_format_ipcm_query_rib_req_msg(const struct rib_object * obj,
-                                      uint_t         	        scope,
+                                      uint_t                    scope,
                                       const regex_t *           filter,
                                       struct sk_buff *          skb_out);
 
 int rnl_format_ipcm_query_rib_resp_msg(uint_t                     result,
-				                       uint_t	                  count,
-				                       const struct rib_object ** objs,
+                                       uint_t                     count,
+                                       const struct rib_object ** objs,
                                        struct sk_buff *           skb_out);
 
 int rnl_format_rmt_add_fte_req_msg(const struct pdu_ft_entry * entry,
@@ -513,45 +513,45 @@ int rnl_format_rmt_dump_ft_reply_msg(size_t                       count,
 int rnl_assign_dif_response(ipc_process_id_t id,
                             uint_t           res,
                             rnl_sn_t         seq_num,
-                            port_id_t        port_id);
+                            u32              nl_port_id);
 
 int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
                                        const struct name *      dif_name,
                                        const struct name *      source,
                                        const struct name *      dest,
                                        const struct flow_spec * fspec,
-                                       rnl_sn_t 		        seq_num,
-                                       port_id_t                nl_port_id);
+                                       rnl_sn_t                 seq_num,
+                                       u32                      nl_port_id);
 
-int rnl_format_socket_closed_notification_msg(int              nl_port,
+int rnl_format_socket_closed_notification_msg(u32              nl_port,
                                               struct sk_buff * skb_out);
 
 
 int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
-                                  rnl_sn_t	       seq_num,
-                                  port_id_t        port_id);
+                                  rnl_sn_t         seq_num,
+                                  u32              nl_port_id);
 
 
 int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
                                              uint_t           res,
                                              rnl_sn_t         seq_num,
-                                             port_id_t 	      port_id,
+                                             u32              nl_port_id,
                                              bool             isRegister);
 
 
 int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
-                                  rnl_sn_t	       seq_num,
-                                  port_id_t        port_id);
+                                  rnl_sn_t         seq_num,
+                                  u32              nl_port_id);
 
 
 int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
-                             uint_t           res,
-                             uint_t	          code,
-                             port_id_t        port_id);
+                             uint_t           code,
+                             port_id_t        port_id,
+                             u32              nl_port_id);
 
-int rnl_ipcm_sock_closed_notif_msg(port_id_t closed_port, port_id_t dest_port);
+int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port);
 
 char * nla_get_string(struct nlattr *nla);
 

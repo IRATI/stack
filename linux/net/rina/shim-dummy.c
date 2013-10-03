@@ -62,6 +62,9 @@ struct ipcp_instance_data {
         struct dummy_info * info;
 
         struct list_head    apps_registered;
+
+        /* FIXME: Remove it as soon as the kipcm_kfa gets removed*/
+        struct kfa *        kfa;
 };
 
 enum dummy_flow_state {
@@ -80,8 +83,8 @@ struct dummy_flow {
         enum dummy_flow_state state;
         flow_id_t             dst_fid;
         flow_id_t             src_fid; /* Required to notify back to the */
-        ipc_process_id_t      dst_id;  /* IPC Manager the result of the
-                                        * allocation */
+        ipc_process_id_t      dst_id;  /* IPC Manager the result of the */
+        struct flow_spec *    fspec;   /* allocation */
 };
 
 struct app_register {
@@ -135,7 +138,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                                        const struct name *         dest,
                                        const struct flow_spec *    fspec,
                                        port_id_t                   id,
-                                       flow_id_t		   fid)
+                                       flow_id_t                   fid)
 {
         struct dummy_flow * flow;
 
@@ -154,9 +157,9 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         }
 
         if (!is_app_registered(data, dest)) {
-        	char * tmp = name_tostring(dest);
+                char * tmp = name_tostring(dest);
                 LOG_ERR("Application %s is not registered in IPC process %d",
-                		tmp, data->id);
+                        tmp, data->id);
                 return -1;
         }
 
@@ -188,20 +191,22 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         flow->state   = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
         flow->port_id = id;
         flow->src_fid = fid;
-
-        flow->dst_fid = kfa_flow_create(kipcm_kfa(default_kipcm));
+        flow->fspec   = flow_spec_dup(fspec);
+        flow->dst_fid = kfa_flow_create(data->kfa);
         ASSERT(is_flow_id_ok(flow->dst_fid));
 
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, &data->flows);
 
-        kipcm_flow_arrived(default_kipcm,
-                           data->id,
-                           flow->dst_fid,
-                           data->info->dif_name,
-                           flow->source,
-                           flow->dest,
-                           fspec);
+        if (kipcm_flow_arrived(default_kipcm,
+                               data->id,
+                               flow->dst_fid,
+                               data->info->dif_name,
+                               flow->source,
+                               flow->dest,
+                               flow->fspec)) {
+                return -1;
+        }
 
         return 0;
 }
@@ -224,7 +229,7 @@ find_flow_by_fid(struct ipcp_instance_data * data,
 static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                                         flow_id_t                   flow_id,
                                         port_id_t                   port_id,
-                                        int			    result)
+                                        int                         result)
 {
         struct dummy_flow * flow;
 
@@ -272,17 +277,24 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         rkfree(flow);
                         return -1;
                 }
+                if (kipcm_flow_res(default_kipcm, data->id, flow->src_fid, 0)) {
+                        kipcm_flow_remove(default_kipcm, flow->port_id);
+                        kipcm_flow_remove(default_kipcm, port_id);
+                        list_del(&flow->list);
+                        name_destroy(flow->source);
+                        name_destroy(flow->dest);
+                        rkfree(flow);
+                        return -1;
+                }
         } else {
-		list_del(&flow->list);
+                list_del(&flow->list);
                 name_destroy(flow->source);
                 name_destroy(flow->dest);
                 rkfree(flow);
                 return -1;
         }
 
-        if (kipcm_flow_res(default_kipcm, data->id, flow->src_fid, 0)) {
-        	return -1;
-        }
+
 
         /*
          * NOTE:
@@ -296,36 +308,36 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
 static int dummy_flow_deallocate(struct ipcp_instance_data * data,
                                  port_id_t                   id)
 {
-	struct dummy_flow * flow;
-	port_id_t dest_port_id;
+        struct dummy_flow * flow;
+        port_id_t dest_port_id;
 
-	ASSERT(data);
-	flow = find_flow(data, id);
-	if (!flow) {
-		LOG_ERR("Flow does not exist, cannot remove");
-		return -1;
-	}
+        ASSERT(data);
+        flow = find_flow(data, id);
+        if (!flow) {
+                LOG_ERR("Flow does not exist, cannot remove");
+                return -1;
+        }
 
-	if (id == flow->port_id)
-		dest_port_id = flow->dst_port_id;
-	else
-		dest_port_id = flow->port_id;
+        if (id == flow->port_id)
+                dest_port_id = flow->dst_port_id;
+        else
+                dest_port_id = flow->port_id;
 
-	if (kipcm_flow_remove(default_kipcm, id))
-		return -1;
+        if (kipcm_flow_remove(default_kipcm, id))
+                return -1;
 
-	if (kipcm_flow_remove(default_kipcm, dest_port_id))
-		return -1;
+        if (kipcm_flow_remove(default_kipcm, dest_port_id))
+                return -1;
 
-	/* Notify the destination application */
-	rnl_flow_dealloc_not_msg(data->id, 0, dest_port_id, 1);
+        /* Notify the destination application */
+        rnl_flow_dealloc_not_msg(data->id, 0, dest_port_id, 1);
 
-	list_del(&flow->list);
-	name_destroy(flow->dest);
-	name_destroy(flow->source);
-	rkfree(flow);
+        list_del(&flow->list);
+        name_destroy(flow->dest);
+        name_destroy(flow->source);
+        rkfree(flow);
 
-	return 0;
+        return 0;
 }
 
 static int dummy_application_register(struct ipcp_instance_data * data,
@@ -434,13 +446,13 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
-                        kfa_sdu_post(kipcm_kfa(default_kipcm),
-                        		flow->dst_port_id, sdu);
+                        kfa_sdu_post(data->kfa,
+                                     flow->dst_port_id, sdu);
                         return 0;
                 }
                 if (flow->dst_port_id == id) {
-                        kfa_sdu_post(kipcm_kfa(default_kipcm),
-                        		flow->port_id, sdu);
+                        kfa_sdu_post(data->kfa,
+                                     flow->port_id, sdu);
                         return 0;
                 }
         }
@@ -588,6 +600,9 @@ static struct ipcp_instance * dummy_create(struct ipcp_factory_data * data,
                 rkfree(inst);
                 return NULL;
         }
+
+        /* FIXME: Remove as soon as the kipcm_kfa gets removed*/
+        inst->data->kfa = kipcm_kfa(default_kipcm);
 
         /*
          * Bind the shim-instance to the shims set, to keep all our data

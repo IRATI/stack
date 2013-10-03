@@ -99,4 +99,6 @@ struct connection *
 connection_dup_from_user(const struct connection __user * conn);
 int                 connection_destroy(struct connection * conn);
 
+struct flow_spec * flow_spec_dup(const struct flow_spec * fspec);
+
 #endif
