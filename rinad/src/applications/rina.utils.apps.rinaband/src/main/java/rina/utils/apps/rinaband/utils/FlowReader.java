@@ -26,6 +26,12 @@ public class FlowReader implements Runnable{
 		byte[] sdu = null;
 		int bytesRead = 0;
 		
+		try{
+			Thread.sleep(1000);
+		}catch(Exception ex){
+			ex.printStackTrace();
+		}
+		
 		while(!isStopped()){
 			try{
 				bytesRead = flow.readSDU(buffer, maxSDUSize);
@@ -36,9 +42,10 @@ public class FlowReader implements Runnable{
 				sduListener.sduDelivered(sdu);
 			}catch(Exception ex){
 				System.out.println("Problems reading SDU from flow "+flow.getPortId());
-				if (isStopped()){
+				return;
+				/*if (isStopped()){
 					return;
-				}
+				}*/
 			}
 		}
 	}
