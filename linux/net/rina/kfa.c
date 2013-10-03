@@ -139,6 +139,7 @@ flow_id_t kfa_flow_create(struct kfa * instance)
         fid = fidm_allocate(instance->fidm);
         if (!is_flow_id_ok(fid)){
                 LOG_ERR("Cannot get a flow-id");
+
                 spin_unlock(&instance->lock);
                 return flow_id_bad();
         }
@@ -374,23 +375,87 @@ int kfa_flow_sdu_write(struct kfa * instance,
         return 0;
 }
 
-struct sdu * kfa_flow_sdu_read(struct kfa * instance,
-                               port_id_t    id)
+int kfa_flow_sdu_read(struct kfa *  instance,
+                      port_id_t     id,
+                      struct sdu ** sdu)
 {
+	struct ipcp_flow * flow;
+	size_t             size;
+	char *             data;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return NULL;
+                return -1;
         }
         if (!is_port_id_ok(id)) {
                 LOG_ERR("Bogus port-id, bailing out");
-                return NULL;
+                return -1;
         }
 
+        LOG_DBG("Trying to read SDU from port-id %d", id);
         spin_lock(&instance->lock);
-        LOG_MISSING;
+        flow = kfa_pmap_find(instance->flows.committed, id);
+        if (!flow) {
+		LOG_ERR("There is no flow bound to port-id %d", id);
+		spin_unlock(&instance->lock);
+		return -1;
+	}
+        while (kfifo_is_empty(&flow->sdu_ready)) {
+		LOG_DBG("Going to sleep");
+		spin_unlock(&instance->lock);
+
+		interruptible_sleep_on(&flow->wait_queue);
+
+		spin_lock(&instance->lock);
+		LOG_DBG("Woken up");
+
+		flow = kfa_pmap_find(instance->flows.committed, id);
+		if (!flow) {
+			LOG_ERR("There is no flow bound to port-id %d anymore",
+				id);
+			spin_unlock(&instance->lock);
+			return -1;
+		}
+	}
+
+	if (kfifo_out(&flow->sdu_ready, &size, sizeof(size_t)) <
+	    sizeof(size_t)) {
+		LOG_ERR("There is not enough data in port-id %d fifo",
+			id);
+		spin_unlock(&instance->lock);
+		return -1;
+	}
+
+	/* FIXME: Is it possible to have 0 bytes sdus ??? */
+	if (size == 0) {
+		LOG_ERR("Zero-size SDU detected");
+		spin_unlock(&instance->lock);
+		return -1;
+	}
+
+	data = rkzalloc(size, GFP_KERNEL);
+	if (!data) {
+		spin_unlock(&instance->lock);
+		return -1;
+	}
+
+	if (kfifo_out(&flow->sdu_ready, data, size) != size) {
+		LOG_ERR("Could not get %zd bytes from fifo", size);
+		rkfree(data);
+		spin_unlock(&instance->lock);
+		return -1;
+	}
+
+	*sdu = sdu_create_from(data, size);
+	if (!*sdu) {
+		rkfree(data);
+		spin_unlock(&instance->lock);
+		return -1;
+	}
+
         spin_unlock(&instance->lock);
 
-        return NULL;
+        return 0;
 }
 int kfa_sdu_post(struct kfa * instance,
                  port_id_t    id,
@@ -458,3 +523,9 @@ int kfa_sdu_post(struct kfa * instance,
 }
 EXPORT_SYMBOL(kfa_sdu_post);
 
+struct ipcp_flow * kfa_find_flow_by_fid(struct kfa * instance,
+			 	 	flow_id_t    fid)
+{
+	return kfa_fmap_find(instance->flows.pending, fid);
+}
+EXPORT_SYMBOL(kfa_find_flow_by_fid);

@@ -41,6 +41,7 @@
 #include "rnl.h"
 #include "rnl-utils.h"
 #include "kfa.h"
+#include "kfa-utils.h"
 
 #define DEFAULT_FACTORY "normal-ipc"
 
@@ -153,6 +154,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         struct name *                              dest;
         struct name *                              dif_name;
         struct flow_spec *                         fspec;
+        flow_id_t				   fid;
 
         source   = NULL;
         dest     = NULL;
@@ -305,15 +307,18 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      info->snd_portid);
         }
 
-#if 0 /* FIXME: Please re-enable */
-        /* The flow id MUST be ok upon calling the IPC Process ... */
-        //ASSERT(is_flow_id_ok(fid));
+        fid = kfa_flow_create(kipcm->kfa);
+	ASSERT(is_flow_id_ok(fid));
+	if (kipcm_fmap_add(kipcm->fid_messages->ingress, fid, info->snd_seq)) {
+		return -1;
+	}
 
         if (ipc_process->ops->flow_allocate_request(ipc_process->data,
                                                     attrs->source,
                                                     attrs->dest,
                                                     attrs->fspec,
-                                                    attrs->id)) {
+                                                    attrs->id,
+                                                    fid)) {
                 LOG_ERR("Failed allocating flow request "
                         "for port id: %d", attrs->id);
                 return alloc_flow_req_free_and_reply(source,
@@ -327,16 +332,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      info->snd_seq,
                                                      info->snd_portid);
         }
-        if (rnl_app_alloc_flow_req_arrived_msg(data->id,
-                                               data->info->dif_name,
-                                               source,
-                                               dest,
-                                               fspec,
-                                               flow->dst_fid,
-                                               1)) {
-
-        }
-#endif
 
         alloc_flow_req_free(source, dest, fspec, dif_name, attrs, msg);
 
@@ -354,6 +349,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         struct ipcp_instance *                 ipc_process;
         ipc_process_id_t                       ipc_id;
         int                                    retval = 0;
+        flow_id_t                              fid;
 #if 0
         response_reason_t                      reason;
 #endif
@@ -405,18 +401,19 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 return -1;
         }
 
-#if 0 /* FIXME: Please re-enable */
-        reason = (response_reason_t) attrs->result;
+        fid = kipcm_smap_find(kipcm->fid_messages->egress, info->snd_seq);
+        if (!is_flow_id_ok(fid)) {
+        	return -1;
+        }
 
         if (ipc_process->ops->flow_allocate_response(ipc_process->data,
-                                                     attrs->id,
-                                                     info->snd_seq,
-                                                     &reason)) {
+        					     fid,
+        					     attrs->id,
+        					     0)) {
                 LOG_ERR("Failed allocate flow response for port id: %d",
                         attrs->id);
                 retval = -1;
         }
-#endif
 
         rkfree(hdr);
         rkfree(attrs);
@@ -847,6 +844,8 @@ static int notify_ipcp_register_app_request(void *             data,
                                                      true);
         }
 
+        LOG_DBG("Application registered");
+
         return reg_unreg_resp_free_and_reply(app_name,
                                              dif_name,
                                              attrs,
@@ -1205,22 +1204,19 @@ struct kipcm * kipcm_create(struct kobject * parent,
 
 
         tmp->kfa = kfa_create();
-        if (!tmp->kfa) {
-                if (ipcp_imap_destroy(tmp->instances)) {
-                        /* FIXME: What could we do here ? */
-                }
-                if (ipcpf_fini(tmp->factories)) {
-                        /* FIXME: What could we do here ? */
-                }
-                rkfree(tmp);
-                return NULL;
-        }
+	if (!tmp->kfa) {
+		if (ipcp_imap_destroy(tmp->instances)) {
+			/* FIXME: What could we do here ? */
+		}
+		if (ipcpf_fini(tmp->factories)) {
+			/* FIXME: What could we do here ? */
+		}
+		rkfree(tmp);
+		return NULL;
+	}
 
         if (rnl_set_register(rnls)) {
                 if (ipcp_imap_destroy(tmp->instances)) {
-                        /* FIXME: What could we do here ? */
-                }
-                if (kfa_destroy(tmp->kfa)) {
                         /* FIXME: What could we do here ? */
                 }
                 if (ipcpf_fini(tmp->factories)) {
@@ -1454,13 +1450,43 @@ int kipcm_ipcp_destroy(struct kipcm *   kipcm,
         return 0;
 }
 
-int kipcm_flow_arrived(struct kipcm *   kipcm,
-                       ipc_process_id_t ipc_id,
-                       flow_id_t        flow_id)
+int kipcm_flow_arrived(struct kipcm *     kipcm,
+                       ipc_process_id_t   ipc_id,
+                       flow_id_t          flow_id,
+                       struct name *      dif_name,
+                       struct name *      source,
+                       struct name *      dest,
+                       struct flow_spec * fspec)
 {
-        LOG_MISSING;
+	uint_t nl_port_id = 1;
+	rnl_sn_t seq_num;
+	struct ipcp_flow * flow;
 
-        return -1;
+	/*
+	 * NB: This flow find is just a check, I think it's useful to be sure
+	 * the arrived flow request has been properly processed by the
+	 * IPC process calling this API.
+	 */
+	flow = kfa_find_flow_by_fid(kipcm->kfa, flow_id);
+	if (!flow) {
+		LOG_DBG("There's no flow pending for flow_id: %d", flow_id);
+		return -1;
+	}
+	seq_num = rnl_get_next_seqn(kipcm->rnls);
+	if (seqn_fmap_add(kipcm->fid_messages->egress, flow_id, seq_num)) {
+		return -1;
+	}
+	if (rnl_app_alloc_flow_req_arrived_msg(ipc_id,
+					       dif_name,
+					       source,
+					       dest,
+					       fspec,
+					       seq_num,
+					       nl_port_id)) {
+		return -1;
+	}
+
+	return 0;
 }
 EXPORT_SYMBOL(kipcm_flow_arrived);
 
@@ -1577,87 +1603,11 @@ int kipcm_sdu_read(struct kipcm * kipcm,
                    port_id_t      port_id,
                    struct sdu **  sdu)
 {
-#if 0
-        struct ipcp_flow * flow;
-        size_t             size;
-        char *             data;
-
-        if (!kipcm) {
-                LOG_ERR("Bogus kipcm instance passed, bailing out");
-                return -1;
-        }
-        if (!sdu) {
-                LOG_ERR("Bogus parameters passed, bailing out");
-                return -1;
-        }
-
-        LOG_DBG("Trying to read SDU from port-id %d", port_id);
-
-        KIPCM_LOCK(kipcm);
-
-        flow = ipcp_pmap_find(kipcm->flows.committed, port_id);
-        if (!flow) {
-                LOG_ERR("There is no flow bound to port-id %d", port_id);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-
-        while (kfifo_is_empty(&flow->sdu_ready)) {
-                LOG_DBG("Going to sleep");
-                KIPCM_UNLOCK(kipcm);
-
-                interruptible_sleep_on(&flow->wait_queue);
-
-                KIPCM_LOCK(kipcm);
-                LOG_DBG("Woken up");
-
-                flow = ipcp_pmap_find(kipcm->flows.committed, port_id);
-                if (!flow) {
-                        LOG_ERR("There is no flow bound to port-id %d anymore",
-                                port_id);
-                        KIPCM_UNLOCK(kipcm);
-                        return -1;
-                }
-        }
-
-        if (kfifo_out(&flow->sdu_ready, &size, sizeof(size_t)) <
-            sizeof(size_t)) {
-                LOG_ERR("There is not enough data in port-id %d fifo",
-                        port_id);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-
-        /* FIXME: Is it possible to have 0 bytes sdus ??? */
-        if (size == 0) {
-                LOG_ERR("Zero-size SDU detected");
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-
-        data = rkzalloc(size, GFP_KERNEL);
-        if (!data) {
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-
-        if (kfifo_out(&flow->sdu_ready, data, size) != size) {
-                LOG_ERR("Could not get %zd bytes from fifo", size);
-                rkfree(data);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-
-        *sdu = sdu_create_from(data, size);
-        if (!*sdu) {
-                rkfree(data);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-
-        KIPCM_UNLOCK(kipcm);
-#endif
         /* The SDU is theirs now */
+        if(kfa_flow_sdu_read(kipcm->kfa, port_id, sdu)) {
+        	LOG_DBG("Failed to read sdu");
+        	return -1;
+        }
         return 0;
 }
 
@@ -1725,6 +1675,25 @@ int kipcm_sdu_post(struct kipcm * kipcm,
         return 0;
 }
 EXPORT_SYMBOL(kipcm_sdu_post);
+
+int kipcm_flow_res(struct kipcm *   kipcm,
+		   ipc_process_id_t ipc_id,
+		   flow_id_t        fid,
+		   uint_t     	    res)
+{
+	rnl_sn_t seq_num;
+
+	seq_num = kipcm_fmap_find(kipcm->fid_messages->ingress, fid);
+	if (!is_seq_num_ok(seq_num)) {
+		return -1;
+	}
+
+	if (rnl_app_alloc_flow_result_msg(ipc_id, res, seq_num, 1))
+		return -1;
+
+	return 0;
+}
+EXPORT_SYMBOL(kipcm_flow_res);
 
 /* FIXME: This "method" is only temporary, do not rely on its presence */
 struct kfa * kipcm_kfa(struct kipcm * kipcm)
