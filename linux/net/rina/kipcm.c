@@ -1473,7 +1473,7 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
 		return -1;
 	}
 	seq_num = rnl_get_next_seqn(kipcm->rnls);
-	if (seqn_fmap_add(kipcm->fid_messages->egress, flow_id, seq_num)) {
+	if (kipcm_smap_add(kipcm->fid_messages->egress, seq_num, flow_id)) {
 		return -1;
 	}
 	if (rnl_app_alloc_flow_req_arrived_msg(ipc_id,

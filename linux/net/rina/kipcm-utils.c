@@ -30,6 +30,7 @@
 #include "common.h"
 #include "kipcm-utils.h"
 #include "rnl-utils.h"
+#include "fidm.h"
 
 /*
  * IMAPs
@@ -326,11 +327,10 @@ int kipcm_fmap_remove(struct kipcm_fmap * map,
 }
 
 /*
- * SMAP returning seq nums
+ * SMAP returning fids
  */
 
 #define SMAP_SEQN_HASH_BITS 7
-#define FIDVALUE_WRONG -1
 
 
 struct kipcm_smap {
@@ -408,7 +408,7 @@ flow_id_t kipcm_smap_find(struct kipcm_smap * map,
 
         entry = smap_entry_find(map, key);
         if (!entry)
-                return FIDVALUE_WRONG;
+                return flow_id_bad();
 
         return entry->value;
 }

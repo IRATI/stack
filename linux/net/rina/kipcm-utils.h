@@ -70,5 +70,7 @@ int                    kipcm_smap_add(struct kipcm_smap * map,
                                       flow_id_t           value);
 int                    kipcm_smap_remove(struct kipcm_smap * map,
                                          rnl_sn_t            key);
+int                    is_seq_num_ok(rnl_sn_t sn);
+
 
 #endif
