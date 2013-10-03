@@ -62,6 +62,9 @@ struct ipcp_instance_data {
         struct dummy_info * info;
 
         struct list_head    apps_registered;
+
+        /* FIXME: Remove it as soon as the kipcm_kfa gets removed*/
+        struct kfa *        kfa;
 };
 
 enum dummy_flow_state {
@@ -189,19 +192,21 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         flow->port_id = id;
         flow->src_fid = fid;
 
-        flow->dst_fid = kfa_flow_create(kipcm_kfa(default_kipcm));
+        flow->dst_fid = kfa_flow_create(data->kfa);
         ASSERT(is_flow_id_ok(flow->dst_fid));
 
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, &data->flows);
 
-        kipcm_flow_arrived(default_kipcm,
+        if (kipcm_flow_arrived(default_kipcm,
                            data->id,
                            flow->dst_fid,
                            data->info->dif_name,
                            flow->source,
                            flow->dest,
-                           fspec);
+                           fspec)) {
+        	return -1;
+        }
 
         return 0;
 }
@@ -272,6 +277,15 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         rkfree(flow);
                         return -1;
                 }
+                if (kipcm_flow_res(default_kipcm, data->id, flow->src_fid, 0)) {
+                	kipcm_flow_remove(default_kipcm, flow->port_id);
+                	kipcm_flow_remove(default_kipcm, port_id);
+			list_del(&flow->list);
+			name_destroy(flow->source);
+			name_destroy(flow->dest);
+			rkfree(flow);
+			return -1;
+		}
         } else {
 		list_del(&flow->list);
                 name_destroy(flow->source);
@@ -280,9 +294,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if (kipcm_flow_res(default_kipcm, data->id, flow->src_fid, 0)) {
-        	return -1;
-        }
+
 
         /*
          * NOTE:
@@ -434,12 +446,12 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
-                        kfa_sdu_post(kipcm_kfa(default_kipcm),
+                        kfa_sdu_post(data->kfa,
                         		flow->dst_port_id, sdu);
                         return 0;
                 }
                 if (flow->dst_port_id == id) {
-                        kfa_sdu_post(kipcm_kfa(default_kipcm),
+                        kfa_sdu_post(data->kfa,
                         		flow->port_id, sdu);
                         return 0;
                 }
@@ -588,6 +600,9 @@ static struct ipcp_instance * dummy_create(struct ipcp_factory_data * data,
                 rkfree(inst);
                 return NULL;
         }
+
+        /* FIXME: Remove as soon as the kipcm_kfa gets removed*/
+        inst->data->kfa = kipcm_kfa(default_kipcm);
 
         /*
          * Bind the shim-instance to the shims set, to keep all our data

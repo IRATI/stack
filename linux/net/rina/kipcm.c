@@ -310,6 +310,17 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         fid = kfa_flow_create(kipcm->kfa);
 	ASSERT(is_flow_id_ok(fid));
 	if (kipcm_fmap_add(kipcm->fid_messages->ingress, fid, info->snd_seq)) {
+		LOG_ERR("IPC process %d not found", ipc_id);
+		alloc_flow_req_free_and_reply(source,
+					      dest,
+					      fspec,
+					      dif_name,
+					      attrs,
+					      msg,
+					      0,
+					      -1,
+					      info->snd_seq,
+					      info->snd_portid);
 		return -1;
 	}
 
@@ -1473,18 +1484,17 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
 		return -1;
 	}
 	seq_num = rnl_get_next_seqn(kipcm->rnls);
-	if (kipcm_smap_add(kipcm->fid_messages->egress, seq_num, flow_id)) {
+	if (kipcm_smap_add(kipcm->fid_messages->egress, seq_num, flow_id))
 		return -1;
-	}
+
 	if (rnl_app_alloc_flow_req_arrived_msg(ipc_id,
 					       dif_name,
 					       source,
 					       dest,
 					       fspec,
 					       seq_num,
-					       nl_port_id)) {
+					       nl_port_id))
 		return -1;
-	}
 
 	return 0;
 }
@@ -1688,6 +1698,9 @@ int kipcm_flow_res(struct kipcm *   kipcm,
 		return -1;
 	}
 
+	/*
+	 * FIXME: The rnl_port_id shouldn't be hardcoded as 1.
+	 */
 	if (rnl_app_alloc_flow_result_msg(ipc_id, res, seq_num, 1))
 		return -1;
 

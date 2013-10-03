@@ -513,45 +513,45 @@ int rnl_format_rmt_dump_ft_reply_msg(size_t                       count,
 int rnl_assign_dif_response(ipc_process_id_t id,
                             uint_t           res,
                             rnl_sn_t         seq_num,
-                            port_id_t        port_id);
+                            u32              nl_port_id);
 
 int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
                                        const struct name *      dif_name,
                                        const struct name *      source,
                                        const struct name *      dest,
                                        const struct flow_spec * fspec,
-                                       rnl_sn_t 		        seq_num,
-                                       port_id_t                nl_port_id);
+                                       rnl_sn_t 		seq_num,
+                                       u32                      nl_port_id);
 
-int rnl_format_socket_closed_notification_msg(int              nl_port,
+int rnl_format_socket_closed_notification_msg(u32              nl_port,
                                               struct sk_buff * skb_out);
 
 
 int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
-                                  rnl_sn_t	       seq_num,
-                                  port_id_t        port_id);
+                                  rnl_sn_t	   seq_num,
+                                  u32        	   nl_port_id);
 
 
 int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
                                              uint_t           res,
                                              rnl_sn_t         seq_num,
-                                             port_id_t 	      port_id,
+                                             u32 	      nl_port_id,
                                              bool             isRegister);
 
 
 int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
-                                  rnl_sn_t	       seq_num,
-                                  port_id_t        port_id);
+                                  rnl_sn_t	   seq_num,
+                                  u32              nl_port_id);
 
 
 int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
-                             uint_t           res,
-                             uint_t	          code,
-                             port_id_t        port_id);
+                             uint_t           code,
+                             port_id_t        port_id,
+                             u32              nl_port_id);
 
-int rnl_ipcm_sock_closed_notif_msg(port_id_t closed_port, port_id_t dest_port);
+int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port);
 
 char * nla_get_string(struct nlattr *nla);
 
