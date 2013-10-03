@@ -16,10 +16,13 @@
 
 #define RINA_PREFIX "ipc-manager"
 
-#include <sys/types.h>
 #include <dirent.h>
 #include <errno.h>
 #include <iostream>
+#include <signal.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "logs.h"
 #include "librina-ipc-manager.h"
@@ -48,14 +51,16 @@ const std::string IPCProcess::error_querying_rib =
 IPCProcess::IPCProcess() {
 	id = 0;
 	portId = 0;
+	pid = 0;
 	difMember = false;
 }
 
-IPCProcess::IPCProcess(unsigned short id,
-		unsigned int portId, const std::string& type,
+IPCProcess::IPCProcess(unsigned short id, unsigned int portId,
+		pid_t pid, const std::string& type,
 		const ApplicationProcessNamingInformation& name) {
 	this->id = id;
 	this->portId = portId;
+	this->pid = pid;
 	this->type = type;
 	this->name = name;
 	difMember = false;
@@ -87,6 +92,14 @@ unsigned int IPCProcess::getPortId() const{
 
 void IPCProcess::setPortId(unsigned int portId){
 	this->portId = portId;
+}
+
+pid_t IPCProcess::getPid() const{
+	return pid;
+}
+
+void IPCProcess::setPid(pid_t pid){
+	this->pid = pid;
 }
 
 const DIFConfiguration& IPCProcess::getConfiguration() const{
@@ -464,6 +477,7 @@ IPCProcess * IPCProcessFactory::create(
 
 	lock();
 	int ipcProcessId = 1;
+	pid_t pid=0;
 	for (int i = 1; i < 1000; i++) {
 		if (ipcProcesses.find(i) == ipcProcesses.end()) {
 			ipcProcessId = i;
@@ -474,15 +488,52 @@ IPCProcess * IPCProcessFactory::create(
 #if STUB_API
 	//Do nothing
 #else
-	int result = syscallCreateIPCProcess(
-			ipcProcessName, ipcProcessId, difType);
-	if (result != 0){
-		unlock();
-		throw CreateIPCProcessException();
+	//FIXME when the kernel supports normal IPC Process creation, first
+	//perform the syscall for normal IPC Processes and later
+	//create a new user-space process
+	if (difType.compare(NORMAL_IPC_PROCESS) == 0){
+		pid = fork();
+		if (pid == 0){
+			//This is the OS process that has to execute the IPC Process
+			//program and then exit
+			LOG_DBG("New OS Process created, executing IPC Process ...");
+
+			char * argv[] =
+			{
+				stringToCharArray("/usr/local/rina/rinad/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT/ipcprocess.sh"),
+				//stringToCharArray("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/rina/lib java"),
+				//stringToCharArray("-jar"),
+				//stringToCharArray("/usr/local/rina/rinad/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar"),
+				stringToCharArray(ipcProcessName.getProcessName()),
+				stringToCharArray(ipcProcessName.getProcessInstance()),
+				intToCharArray(ipcProcessId),
+				0
+			};
+
+			execve(argv[0], &argv[0], 0);
+
+			LOG_ERR("Problems loading IPC Process program, finalizing OS Process");
+
+			exit(-1);
+		}else if (pid < 0){
+			//This is the IPC Manager, and fork failed
+			unlock();
+			throw CreateIPCProcessException();
+		}else{
+			//This is the IPC Manager, and fork was successful
+			LOG_DBG("Craeted a new IPC Process with pid = %d", pid);
+		}
+	}else{
+		int result = syscallCreateIPCProcess(
+				ipcProcessName, ipcProcessId, difType);
+		if (result != 0){
+			unlock();
+			throw CreateIPCProcessException();
+		}
 	}
 #endif
 
-	IPCProcess * ipcProcess = new IPCProcess(ipcProcessId, 0, difType,
+	IPCProcess * ipcProcess = new IPCProcess(ipcProcessId, 0, pid, difType,
 			ipcProcessName);
 	ipcProcesses[ipcProcessId] = ipcProcess;
 	unlock();
@@ -505,10 +556,23 @@ throw (DestroyIPCProcessException) {
 #if STUB_API
 	//Do nothing
 #else
-	int result = syscallDestroyIPCProcess(ipcProcessId);
-	if (result != 0){
-		unlock();
-		throw DestroyIPCProcessException();
+	//FIXME: Have to call the syscall for normal IPC Processes as well
+	//Will do when the kernel supports creation/destruction of normal
+	//IPC Processes
+	IPCProcess * ipcProcess = iterator->second;
+	if (ipcProcess->getType().compare(NORMAL_IPC_PROCESS) == 0){
+		pid_t toKill = ipcProcess->getPid() + 1;
+		int result = kill(toKill, SIGKILL);
+		if (result)
+			LOG_ERR("Error killing OS process with PID %d: %d",
+					ipcProcess->getPid(), result);
+		LOG_DBG("OS process with PID %d destroyed", ipcProcess->getPid());
+	}else{
+		int result = syscallDestroyIPCProcess(ipcProcessId);
+		if (result != 0){
+			unlock();
+			throw DestroyIPCProcessException();
+		}
 	}
 #endif
 

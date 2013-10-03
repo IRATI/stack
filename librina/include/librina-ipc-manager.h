@@ -26,6 +26,8 @@
 
 namespace rina {
 
+static std::string NORMAL_IPC_PROCESS= "normal";
+
 /**
  * Thrown when there are problems assigning an IPC Process to a DIF
  */
@@ -307,6 +309,9 @@ class IPCProcess {
 	/** The port at which the IPC Process is listening */
 	unsigned int portId;
 
+	/** The OS process identifier */
+	pid_t pid;
+
 	/** The IPC Process type */
 	std::string type;
 
@@ -328,13 +333,15 @@ public:
 	static const std::string error_deallocating_flow;
 	static const std::string error_querying_rib;
 	IPCProcess();
-	IPCProcess(unsigned short id, unsigned int portId, const std::string& type,
+	IPCProcess(unsigned short id, unsigned int portId, pid_t pid, const std::string& type,
 			const ApplicationProcessNamingInformation& name);
 	unsigned int getId() const;
 	const std::string& getType() const;
 	const ApplicationProcessNamingInformation& getName() const;
 	unsigned int getPortId() const;
 	void setPortId(unsigned int portId);
+	pid_t getPid() const;
+	void setPid(pid_t pid);
 	const DIFConfiguration& getConfiguration() const;
 	void setConfiguration(const DIFConfiguration& difConfiguration);
 	bool isDIFMember() const;

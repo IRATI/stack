@@ -31,6 +31,9 @@
 
 namespace rina {
 
+char * stringToCharArray(std::string s);
+char * intToCharArray(int i);
+
 /**
  * Contains the information to identify a RINA netlink endpoing:
  * netlink port ID and IPC Process id

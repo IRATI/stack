@@ -19,6 +19,7 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <sstream>
 #include <unistd.h>
 
 #define RINA_PREFIX "core"
@@ -27,6 +28,19 @@
 #include "core.h"
 
 namespace rina {
+
+char * stringToCharArray(std::string s){
+	char * result = new char[s.size()+1];
+	result[s.size()]=0;
+	memcpy(result, s.c_str(), s.size());
+	return result;
+}
+
+char * intToCharArray(int i){
+	std::stringstream strs;
+	strs << i;
+	return stringToCharArray(strs.str());
+}
 
 /* CLASS RINA NETLINK ENDPOINT */
 RINANetlinkEndpoint::RINANetlinkEndpoint(){
