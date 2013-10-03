@@ -97,7 +97,7 @@ int            kipcm_flow_arrived(struct kipcm *     kipcm,
 int            kipcm_flow_add(struct kipcm *   kipcm,
                               ipc_process_id_t ipc_id,
                               port_id_t        id,
-                              flow_id_t	    fid);
+                              flow_id_t	       fid);
 
 /* On both source and destination */
 int            kipcm_flow_remove(struct kipcm * kipcm,

@@ -185,11 +185,11 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         ASSERT(flow->dest);
         ASSERT(flow->source);
 
-        flow->state       = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
-        flow->port_id     = id;
-        flow->src_fid     = fid;
+        flow->state   = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
+        flow->port_id = id;
+        flow->src_fid = fid;
 
-        flow->dst_fid     = kfa_flow_create(kipcm_kfa(default_kipcm));
+        flow->dst_fid = kfa_flow_create(kipcm_kfa(default_kipcm));
         ASSERT(is_flow_id_ok(flow->dst_fid));
 
         INIT_LIST_HEAD(&flow->list);
@@ -255,14 +255,16 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
         if (result == 0) {
                 flow->dst_port_id = port_id;
                 flow->state = PORT_STATE_ALLOCATED;
-                if (kipcm_flow_add(default_kipcm, data->id, flow->port_id, flow->src_fid)) {
+                if (kipcm_flow_add(default_kipcm,
+                                   data->id, flow->port_id, flow->src_fid)) {
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
                         rkfree(flow);
                         return -1;
                 }
-                if (kipcm_flow_add(default_kipcm, data->id, port_id, flow_id)) {
+                if (kipcm_flow_add(default_kipcm,
+                                   data->id, port_id, flow_id)) {
                         kipcm_flow_remove(default_kipcm, port_id);
                         list_del(&flow->list);
                         name_destroy(flow->source);

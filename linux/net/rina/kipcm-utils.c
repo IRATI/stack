@@ -178,7 +178,7 @@ int ipcp_imap_remove(struct ipcp_imap * map,
  */
 
 #define FMAP_HASH_BITS 7
-#define SNVALUE_WRONG     0xFFFFFF
+#define SNVALUE_WRONG  0xFFFFFF
 
 rnl_sn_t seq_num_bad(void)
 { return SNVALUE_WRONG; }
@@ -236,11 +236,10 @@ int kipcm_fmap_empty(struct kipcm_fmap * map)
         return hash_empty(map->table);
 }
 
-
 #define fmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 static struct kipcm_fmap_entry * fmap_entry_find(struct kipcm_fmap * map,
-                                                  flow_id_t           key)
+                                                 flow_id_t           key)
 {
         struct kipcm_fmap_entry * entry;
         struct hlist_head *      head;
@@ -255,7 +254,6 @@ static struct kipcm_fmap_entry * fmap_entry_find(struct kipcm_fmap * map,
 
         return NULL;
 }
-
 
 rnl_sn_t kipcm_fmap_find(struct kipcm_fmap * map,
                          flow_id_t           key)
@@ -332,7 +330,6 @@ int kipcm_fmap_remove(struct kipcm_fmap * map,
 
 #define SMAP_SEQN_HASH_BITS 7
 
-
 struct kipcm_smap {
         DECLARE_HASHTABLE(table, SMAP_SEQN_HASH_BITS);
 };
@@ -400,7 +397,7 @@ static struct kipcm_smap_entry * smap_entry_find(struct kipcm_smap * map,
 }
 
 flow_id_t kipcm_smap_find(struct kipcm_smap * map,
-                            rnl_sn_t            key)
+                          rnl_sn_t            key)
 {
         struct kipcm_smap_entry * entry;
 
@@ -431,8 +428,8 @@ int kipcm_smap_update(struct kipcm_smap * map,
 }
 
 int kipcm_smap_add(struct kipcm_smap * map,
-                  rnl_sn_t             key,
-                  flow_id_t            value)
+                   rnl_sn_t             key,
+                   flow_id_t            value)
 {
         struct kipcm_smap_entry * tmp;
 
