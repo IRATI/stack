@@ -1183,12 +1183,14 @@ struct kipcm * kipcm_create(struct kobject * parent,
 
         tmp->factories = ipcpf_init(parent);
         if (!tmp->factories) {
+                LOG_ERR("Failed to build factories");
                 rkfree(tmp);
                 return NULL;
         }
 
         tmp->instances = ipcp_imap_create();
         if (!tmp->instances) {
+                LOG_ERR("Failed to build imap");
                 if (ipcpf_fini(tmp->factories)) {
                         /* FIXME: What could we do here ? */
                 }
@@ -1197,18 +1199,29 @@ struct kipcm * kipcm_create(struct kobject * parent,
         }
 
         tmp->fid_messages->ingress = kipcm_fmap_create();
+        if (!tmp->fid_messages->ingress) {
+                LOG_ERR("Failed to build fmap");
+                if (ipcpf_fini(tmp->factories)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (ipcp_imap_destroy(tmp->instances)) {
+                        /* FIXME: What could we do here ? */
+                }
+                rkfree(tmp);
+                return NULL;
+        }
         tmp->fid_messages->egress  = kipcm_smap_create();
-        if (!tmp->fid_messages->ingress || !tmp->fid_messages->egress) {
-                if (!tmp->fid_messages->ingress)
-                        if (kipcm_fmap_destroy(tmp->fid_messages->ingress)) {
-                                /* FIXME: What could we do here ? */
-                        }
-
-                if (!tmp->fid_messages->egress)
-                        if (kipcm_smap_destroy(tmp->fid_messages->egress)) {
-                                /* FIXME: What could we do here ? */
-                        }
-
+        if (!tmp->fid_messages->egress) {
+                LOG_ERR("Failed to build smap");
+                if (kipcm_fmap_destroy(tmp->fid_messages->ingress)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (ipcpf_fini(tmp->factories)) {
+                       /* FIXME: What could we do here ? */
+                }
+                if (ipcp_imap_destroy(tmp->instances)) {
+                       /* FIXME: What could we do here ? */
+                }
                 rkfree(tmp);
                 return NULL;
         }
@@ -1216,6 +1229,12 @@ struct kipcm * kipcm_create(struct kobject * parent,
 
         tmp->kfa = kfa_create();
         if (!tmp->kfa) {
+                if (kipcm_fmap_destroy(tmp->fid_messages->ingress)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (kipcm_smap_destroy(tmp->fid_messages->egress)) {
+                        /* FIXME: What could we do here ? */
+                }
                 if (ipcp_imap_destroy(tmp->instances)) {
                         /* FIXME: What could we do here ? */
                 }
@@ -1227,6 +1246,15 @@ struct kipcm * kipcm_create(struct kobject * parent,
         }
 
         if (rnl_set_register(rnls)) {
+                if (kipcm_fmap_destroy(tmp->fid_messages->ingress)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (kipcm_smap_destroy(tmp->fid_messages->egress)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (kfa_destroy(tmp->kfa)) {
+                        /* FIXME: What could we do here ? */
+                }
                 if (ipcp_imap_destroy(tmp->instances)) {
                         /* FIXME: What could we do here ? */
                 }
@@ -1239,6 +1267,12 @@ struct kipcm * kipcm_create(struct kobject * parent,
         tmp->rnls = rnls;
 
         if (netlink_handlers_register(tmp)) {
+                if (kipcm_fmap_destroy(tmp->fid_messages->ingress)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (kipcm_smap_destroy(tmp->fid_messages->egress)) {
+                        /* FIXME: What could we do here ? */
+                }
                 if (ipcp_imap_destroy(tmp->instances)) {
                         /* FIXME: What could we do here ? */
                 }
