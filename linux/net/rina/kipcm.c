@@ -312,8 +312,9 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         fid = kfa_flow_create(kipcm->kfa);
         ASSERT(is_flow_id_ok(fid));
         if (kipcm_fmap_add(kipcm->fid_messages->ingress, fid, info->snd_seq)) {
-                LOG_ERR("IPC process %d not found", ipc_id);
-                alloc_flow_req_free_and_reply(source,
+                LOG_ERR("Could not add map [fid, seq_num]: [%d, %d]",
+                                                           fid, info->snd_seq);
+                return alloc_flow_req_free_and_reply(source,
                                               dest,
                                               fspec,
                                               dif_name,
@@ -323,7 +324,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                               -1,
                                               info->snd_seq,
                                               info->snd_portid);
-                return -1;
         }
 
         if (ipc_process->ops->flow_allocate_request(ipc_process->data,
@@ -361,7 +361,6 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         struct rina_msg_hdr *                  hdr;
         struct ipcp_instance *                 ipc_process;
         ipc_process_id_t                       ipc_id;
-        int                                    retval = 0;
         flow_id_t                              fid;
 #if 0
         response_reason_t                      reason;
@@ -416,6 +415,11 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 
         fid = kipcm_smap_find(kipcm->fid_messages->egress, info->snd_seq);
         if (!is_flow_id_ok(fid)) {
+                LOG_ERR("Could not find flow id %d for response %d",
+                                                           fid, info->snd_seq);
+                rkfree(hdr);
+                rkfree(attrs);
+                rkfree(msg);
                 return -1;
         }
 
@@ -425,14 +429,13 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                                                      0)) {
                 LOG_ERR("Failed allocate flow response for port id: %d",
                         attrs->id);
-                retval = -1;
+                rkfree(hdr);
+                rkfree(attrs);
+                rkfree(msg);
+                return -1;
         }
 
-        rkfree(hdr);
-        rkfree(attrs);
-        rkfree(msg);
-
-        return retval;
+        return 0;
 }
 
 static int
@@ -1201,12 +1204,12 @@ struct kipcm * kipcm_create(struct kobject * parent,
         tmp->fid_messages->ingress = kipcm_fmap_create();
         tmp->fid_messages->egress  = kipcm_smap_create();
         if (!tmp->fid_messages->ingress || !tmp->fid_messages->egress) {
-                if (!tmp->fid_messages->ingress)
+                if (tmp->fid_messages->ingress)
                         if (kipcm_fmap_destroy(tmp->fid_messages->ingress)) {
                                 /* FIXME: What could we do here ? */
                         }
 
-                if (!tmp->fid_messages->egress)
+                if (tmp->fid_messages->egress)
                         if (kipcm_smap_destroy(tmp->fid_messages->egress)) {
                                 /* FIXME: What could we do here ? */
                         }
@@ -1486,8 +1489,10 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
                 return -1;
         }
         seq_num = rnl_get_next_seqn(kipcm->rnls);
-        if (kipcm_smap_add(kipcm->fid_messages->egress, seq_num, flow_id))
+        if (kipcm_smap_add(kipcm->fid_messages->egress, seq_num, flow_id)) {
+                LOG_DBG("Could not get next sequence number");
                 return -1;
+        }
 
         if (rnl_app_alloc_flow_req_arrived_msg(ipc_id,
                                                dif_name,
@@ -1697,6 +1702,7 @@ int kipcm_flow_res(struct kipcm *   kipcm,
 
         seq_num = kipcm_fmap_find(kipcm->fid_messages->ingress, fid);
         if (!is_seq_num_ok(seq_num)) {
+                LOG_DBG("Could not find request message id (seq num)");
                 return -1;
         }
 
