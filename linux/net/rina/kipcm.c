@@ -133,7 +133,7 @@ alloc_flow_req_free_and_reply(struct name *      source_name,
         if (rnl_app_alloc_flow_result_msg(id, res, seq_num, port_id)) {
                 LOG_ERR("Could not send flow_result_msg");
                 return -1;
-	}
+        }
 
         return 0;
 }
