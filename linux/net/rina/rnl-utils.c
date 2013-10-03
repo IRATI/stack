@@ -2083,7 +2083,7 @@ EXPORT_SYMBOL(rnl_app_alloc_flow_req_arrived_msg);
 int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
                                   rnl_sn_t         seq_num,
-                                  u32	           nl_port_id)
+                                  u32              nl_port_id)
 {
         struct sk_buff * out_msg;
         struct rina_msg_hdr * out_hdr;

@@ -138,7 +138,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                                        const struct name *         dest,
                                        const struct flow_spec *    fspec,
                                        port_id_t                   id,
-                                       flow_id_t		   fid)
+                                       flow_id_t                   fid)
 {
         struct dummy_flow * flow;
 
@@ -157,9 +157,9 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         }
 
         if (!is_app_registered(data, dest)) {
-        	char * tmp = name_tostring(dest);
+                char * tmp = name_tostring(dest);
                 LOG_ERR("Application %s is not registered in IPC process %d",
-                		tmp, data->id);
+                        tmp, data->id);
                 return -1;
         }
 
@@ -191,8 +191,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         flow->state   = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
         flow->port_id = id;
         flow->src_fid = fid;
-        flow->fspec = flow_spec_dup(fspec);
-
+        flow->fspec   = flow_spec_dup(fspec);
         flow->dst_fid = kfa_flow_create(data->kfa);
         ASSERT(is_flow_id_ok(flow->dst_fid));
 
@@ -200,13 +199,13 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         list_add(&flow->list, &data->flows);
 
         if (kipcm_flow_arrived(default_kipcm,
-                           data->id,
-                           flow->dst_fid,
-                           data->info->dif_name,
-                           flow->source,
-                           flow->dest,
-                           flow->fspec)) {
-        	return -1;
+                               data->id,
+                               flow->dst_fid,
+                               data->info->dif_name,
+                               flow->source,
+                               flow->dest,
+                               flow->fspec)) {
+                return -1;
         }
 
         return 0;
@@ -230,7 +229,7 @@ find_flow_by_fid(struct ipcp_instance_data * data,
 static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                                         flow_id_t                   flow_id,
                                         port_id_t                   port_id,
-                                        int			    result)
+                                        int                         result)
 {
         struct dummy_flow * flow;
 
@@ -279,16 +278,16 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         return -1;
                 }
                 if (kipcm_flow_res(default_kipcm, data->id, flow->src_fid, 0)) {
-                	kipcm_flow_remove(default_kipcm, flow->port_id);
-                	kipcm_flow_remove(default_kipcm, port_id);
-			list_del(&flow->list);
-			name_destroy(flow->source);
-			name_destroy(flow->dest);
-			rkfree(flow);
-			return -1;
-		}
+                        kipcm_flow_remove(default_kipcm, flow->port_id);
+                        kipcm_flow_remove(default_kipcm, port_id);
+                        list_del(&flow->list);
+                        name_destroy(flow->source);
+                        name_destroy(flow->dest);
+                        rkfree(flow);
+                        return -1;
+                }
         } else {
-		list_del(&flow->list);
+                list_del(&flow->list);
                 name_destroy(flow->source);
                 name_destroy(flow->dest);
                 rkfree(flow);
@@ -309,36 +308,36 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
 static int dummy_flow_deallocate(struct ipcp_instance_data * data,
                                  port_id_t                   id)
 {
-	struct dummy_flow * flow;
-	port_id_t dest_port_id;
+        struct dummy_flow * flow;
+        port_id_t dest_port_id;
 
-	ASSERT(data);
-	flow = find_flow(data, id);
-	if (!flow) {
-		LOG_ERR("Flow does not exist, cannot remove");
-		return -1;
-	}
+        ASSERT(data);
+        flow = find_flow(data, id);
+        if (!flow) {
+                LOG_ERR("Flow does not exist, cannot remove");
+                return -1;
+        }
 
-	if (id == flow->port_id)
-		dest_port_id = flow->dst_port_id;
-	else
-		dest_port_id = flow->port_id;
+        if (id == flow->port_id)
+                dest_port_id = flow->dst_port_id;
+        else
+                dest_port_id = flow->port_id;
 
-	if (kipcm_flow_remove(default_kipcm, id))
-		return -1;
+        if (kipcm_flow_remove(default_kipcm, id))
+                return -1;
 
-	if (kipcm_flow_remove(default_kipcm, dest_port_id))
-		return -1;
+        if (kipcm_flow_remove(default_kipcm, dest_port_id))
+                return -1;
 
-	/* Notify the destination application */
-	rnl_flow_dealloc_not_msg(data->id, 0, dest_port_id, 1);
+        /* Notify the destination application */
+        rnl_flow_dealloc_not_msg(data->id, 0, dest_port_id, 1);
 
-	list_del(&flow->list);
-	name_destroy(flow->dest);
-	name_destroy(flow->source);
-	rkfree(flow);
+        list_del(&flow->list);
+        name_destroy(flow->dest);
+        name_destroy(flow->source);
+        rkfree(flow);
 
-	return 0;
+        return 0;
 }
 
 static int dummy_application_register(struct ipcp_instance_data * data,
@@ -448,12 +447,12 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
                         kfa_sdu_post(data->kfa,
-                        		flow->dst_port_id, sdu);
+                                     flow->dst_port_id, sdu);
                         return 0;
                 }
                 if (flow->dst_port_id == id) {
                         kfa_sdu_post(data->kfa,
-                        		flow->port_id, sdu);
+                                     flow->port_id, sdu);
                         return 0;
                 }
         }

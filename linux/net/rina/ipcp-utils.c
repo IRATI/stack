@@ -415,16 +415,18 @@ int connection_destroy(struct connection * conn)
 
 struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
 {
-        struct flow_spec * tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        struct flow_spec * tmp;
 
+        if (!fspec)
+                return NULL;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp) {
                 return NULL;
         }
-        if (!fspec) {
-                rkfree(tmp);
-                return NULL;
-        }
 
+        /* FIXME: Are these field by field copy really needed ? */
+        /* FIXME: Please use proper indentation */
         tmp->average_bandwidth = fspec->average_bandwidth;
         tmp->average_sdu_bandwidth = fspec->average_sdu_bandwidth;
         tmp->delay = fspec->delay;

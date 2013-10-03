@@ -154,7 +154,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         struct name *                              dest;
         struct name *                              dif_name;
         struct flow_spec *                         fspec;
-        flow_id_t				   fid;
+        flow_id_t                                  fid;
 
         source   = NULL;
         dest     = NULL;
@@ -308,21 +308,21 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         }
 
         fid = kfa_flow_create(kipcm->kfa);
-	ASSERT(is_flow_id_ok(fid));
-	if (kipcm_fmap_add(kipcm->fid_messages->ingress, fid, info->snd_seq)) {
-		LOG_ERR("IPC process %d not found", ipc_id);
-		alloc_flow_req_free_and_reply(source,
-					      dest,
-					      fspec,
-					      dif_name,
-					      attrs,
-					      msg,
-					      0,
-					      -1,
-					      info->snd_seq,
-					      info->snd_portid);
-		return -1;
-	}
+        ASSERT(is_flow_id_ok(fid));
+        if (kipcm_fmap_add(kipcm->fid_messages->ingress, fid, info->snd_seq)) {
+                LOG_ERR("IPC process %d not found", ipc_id);
+                alloc_flow_req_free_and_reply(source,
+                                              dest,
+                                              fspec,
+                                              dif_name,
+                                              attrs,
+                                              msg,
+                                              0,
+                                              -1,
+                                              info->snd_seq,
+                                              info->snd_portid);
+                return -1;
+        }
 
         if (ipc_process->ops->flow_allocate_request(ipc_process->data,
                                                     attrs->source,
@@ -414,13 +414,13 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 
         fid = kipcm_smap_find(kipcm->fid_messages->egress, info->snd_seq);
         if (!is_flow_id_ok(fid)) {
-        	return -1;
+                return -1;
         }
 
         if (ipc_process->ops->flow_allocate_response(ipc_process->data,
-        					     fid,
-        					     attrs->id,
-        					     0)) {
+                                                     fid,
+                                                     attrs->id,
+                                                     0)) {
                 LOG_ERR("Failed allocate flow response for port id: %d",
                         attrs->id);
                 retval = -1;
@@ -1215,16 +1215,16 @@ struct kipcm * kipcm_create(struct kobject * parent,
 
 
         tmp->kfa = kfa_create();
-	if (!tmp->kfa) {
-		if (ipcp_imap_destroy(tmp->instances)) {
-			/* FIXME: What could we do here ? */
-		}
-		if (ipcpf_fini(tmp->factories)) {
-			/* FIXME: What could we do here ? */
-		}
-		rkfree(tmp);
-		return NULL;
-	}
+        if (!tmp->kfa) {
+                if (ipcp_imap_destroy(tmp->instances)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (ipcpf_fini(tmp->factories)) {
+                        /* FIXME: What could we do here ? */
+                }
+                rkfree(tmp);
+                return NULL;
+        }
 
         if (rnl_set_register(rnls)) {
                 if (ipcp_imap_destroy(tmp->instances)) {
@@ -1469,34 +1469,34 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
                        struct name *      dest,
                        struct flow_spec * fspec)
 {
-	uint_t nl_port_id = 1;
-	rnl_sn_t seq_num;
-	struct ipcp_flow * flow;
+        uint_t nl_port_id = 1;
+        rnl_sn_t seq_num;
+        struct ipcp_flow * flow;
 
-	/*
-	 * NB: This flow find is just a check, I think it's useful to be sure
-	 * the arrived flow request has been properly processed by the
-	 * IPC process calling this API.
-	 */
-	flow = kfa_find_flow_by_fid(kipcm->kfa, flow_id);
-	if (!flow) {
-		LOG_DBG("There's no flow pending for flow_id: %d", flow_id);
-		return -1;
-	}
-	seq_num = rnl_get_next_seqn(kipcm->rnls);
-	if (kipcm_smap_add(kipcm->fid_messages->egress, seq_num, flow_id))
-		return -1;
+        /*
+         * NB: This flow find is just a check, I think it's useful to be sure
+         * the arrived flow request has been properly processed by the
+         * IPC process calling this API.
+         */
+        flow = kfa_find_flow_by_fid(kipcm->kfa, flow_id);
+        if (!flow) {
+                LOG_DBG("There's no flow pending for flow_id: %d", flow_id);
+                return -1;
+        }
+        seq_num = rnl_get_next_seqn(kipcm->rnls);
+        if (kipcm_smap_add(kipcm->fid_messages->egress, seq_num, flow_id))
+                return -1;
 
-	if (rnl_app_alloc_flow_req_arrived_msg(ipc_id,
-					       dif_name,
-					       source,
-					       dest,
-					       fspec,
-					       seq_num,
-					       nl_port_id))
-		return -1;
+        if (rnl_app_alloc_flow_req_arrived_msg(ipc_id,
+                                               dif_name,
+                                               source,
+                                               dest,
+                                               fspec,
+                                               seq_num,
+                                               nl_port_id))
+                return -1;
 
-	return 0;
+        return 0;
 }
 EXPORT_SYMBOL(kipcm_flow_arrived);
 
@@ -1615,8 +1615,8 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 {
         /* The SDU is theirs now */
         if(kfa_flow_sdu_read(kipcm->kfa, port_id, sdu)) {
-        	LOG_DBG("Failed to read sdu");
-        	return -1;
+                LOG_DBG("Failed to read sdu");
+                return -1;
         }
         return 0;
 }
@@ -1687,24 +1687,24 @@ int kipcm_sdu_post(struct kipcm * kipcm,
 EXPORT_SYMBOL(kipcm_sdu_post);
 
 int kipcm_flow_res(struct kipcm *   kipcm,
-		   ipc_process_id_t ipc_id,
-		   flow_id_t        fid,
-		   uint_t     	    res)
+                   ipc_process_id_t ipc_id,
+                   flow_id_t        fid,
+                   uint_t           res)
 {
-	rnl_sn_t seq_num;
+        rnl_sn_t seq_num;
 
-	seq_num = kipcm_fmap_find(kipcm->fid_messages->ingress, fid);
-	if (!is_seq_num_ok(seq_num)) {
-		return -1;
-	}
+        seq_num = kipcm_fmap_find(kipcm->fid_messages->ingress, fid);
+        if (!is_seq_num_ok(seq_num)) {
+                return -1;
+        }
 
-	/*
-	 * FIXME: The rnl_port_id shouldn't be hardcoded as 1.
-	 */
-	if (rnl_app_alloc_flow_result_msg(ipc_id, res, seq_num, 1))
-		return -1;
+        /*
+         * FIXME: The rnl_port_id shouldn't be hardcoded as 1.
+         */
+        if (rnl_app_alloc_flow_result_msg(ipc_id, res, seq_num, 1))
+                return -1;
 
-	return 0;
+        return 0;
 }
 EXPORT_SYMBOL(kipcm_flow_res);
 
