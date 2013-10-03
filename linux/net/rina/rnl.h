@@ -117,10 +117,14 @@ typedef enum {
         /* NL layer -> IPC Manager */
         RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION,
 
+        /* IPC Manager -> Kernel (NL Layer) */
+        RINA_C_IPCM_IPC_MANAGER_PRESENT,
+
         RINA_C_MAX,
 } msg_type_t;
 
 typedef u32 rnl_sn_t;
+typedef u32 rnl_port_t;
 
 int              rnl_init(void);
 void             rnl_exit(void);
@@ -143,5 +147,7 @@ int              rnl_handler_unregister(struct rnl_set * set,
 int              rnl_set_register(struct rnl_set * set);
 int              rnl_set_unregister(struct rnl_set * set);
 rnl_sn_t         rnl_get_next_seqn(struct rnl_set * set);
+rnl_port_t       rnl_get_ipc_manager_port(void);
+void             rnl_set_ipc_manager_port(rnl_port_t port);
 
 #endif

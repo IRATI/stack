@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <sstream>
 #include <cstring>
+#include <stdio.h>
 
 #include "rina-syscalls.h"
 
@@ -78,20 +79,24 @@ int main(int argc, char * argv[]) {
 
 	char * args[] =
 	{
-			//stringToCharArray("/usr/local/rina/rinad/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT/ipcprocess.sh"),
-			stringToCharArray("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/rina/lib java"),
-			//stringToCharArray("java"),
+			stringToCharArray("/usr/bin/java"),
 			stringToCharArray("-jar"),
 			stringToCharArray("/usr/local/rina/rinad/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar"),
-			//stringToCharArray("tupadre.jar"),
-			//stringToCharArray("test"),
-			//stringToCharArray("1"),
-			//intToCharArray(2),
-			0
+			stringToCharArray("test"),
+			stringToCharArray("1"),
+			intToCharArray(2),
+			(char*) 0
 	};
 
+	char * envp[] =
+	{
+			stringToCharArray("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"),
+			stringToCharArray("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/rina/lib"),
+			(char*) 0
+	};
 
-	execve(args[0], &args[0], 0);
+	execve(args[0], &args[0], envp);
+	perror ("execve");
 
 	std::cout<<"I shouldn't be here";
 

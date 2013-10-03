@@ -274,6 +274,28 @@ public:
 };
 
 /**
+ * Thrown when there are problems initializing the IPC Manager
+ */
+class IPCManagerInitializationException: public IPCException {
+public:
+	IPCManagerInitializationException():
+		IPCException("Problems initializing librina-ipcmanager. "){
+	}
+	IPCManagerInitializationException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Initializes the IPC Manager, opening a NL socket
+ * to the specified local port, and sending an IPC
+ * Manager present message to the kernel
+ * @param localPort
+ */
+void initializeIPCManager(unsigned int localPort)
+	throw (IPCManagerInitializationException);
+
+/**
  * Event informing that an application has requested the
  * properties of one or more DIFs
  */

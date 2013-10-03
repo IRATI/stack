@@ -32,6 +32,21 @@
 
 namespace rina{
 
+void initializeIPCManager(unsigned int localPort)
+	throw (IPCManagerInitializationException){
+	initialize(localPort);
+
+	IpcmIPCManagerPresentMessage message;
+	message.setDestPortId(0);
+	message.setNotificationMessage(true);
+
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&message);
+	}catch(NetlinkException &e){
+		throw IPCManagerInitializationException(e.what());
+	}
+}
+
 /* CLASS IPC PROCESS*/
 const std::string IPCProcess::error_assigning_to_dif =
 		"Error assigning IPC Process to DIF";
@@ -500,17 +515,23 @@ IPCProcess * IPCProcessFactory::create(
 
 			char * argv[] =
 			{
-				stringToCharArray("/usr/local/rina/rinad/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT/ipcprocess.sh"),
-				//stringToCharArray("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/rina/lib java"),
-				//stringToCharArray("-jar"),
-				//stringToCharArray("/usr/local/rina/rinad/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar"),
-				stringToCharArray(ipcProcessName.getProcessName()),
-				stringToCharArray(ipcProcessName.getProcessInstance()),
-				intToCharArray(ipcProcessId),
-				0
+					stringToCharArray("/usr/bin/java"),
+					stringToCharArray("-jar"),
+					stringToCharArray("/usr/local/rina/rinad/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar"),
+					stringToCharArray(ipcProcessName.getProcessName()),
+					stringToCharArray(ipcProcessName.getProcessInstance()),
+					intToCharArray(ipcProcessId),
+					0
 			};
 
-			execve(argv[0], &argv[0], 0);
+			char * envp[] =
+			{
+					stringToCharArray("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"),
+					stringToCharArray("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/rina/lib"),
+					(char*) 0
+			};
+
+			execve(argv[0], &argv[0], envp);
 
 			LOG_ERR("Problems loading IPC Process program, finalizing OS Process");
 
@@ -561,8 +582,7 @@ throw (DestroyIPCProcessException) {
 	//IPC Processes
 	IPCProcess * ipcProcess = iterator->second;
 	if (ipcProcess->getType().compare(NORMAL_IPC_PROCESS) == 0){
-		pid_t toKill = ipcProcess->getPid() + 1;
-		int result = kill(toKill, SIGKILL);
+		int result = kill(ipcProcess->getPid(), SIGKILL);
 		if (result)
 			LOG_ERR("Error killing OS process with PID %d: %d",
 					ipcProcess->getPid(), result);

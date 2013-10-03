@@ -55,7 +55,8 @@ enum RINANetlinkOperationCode{
 	RINA_C_RMT_DELETE_FTE_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
 	RINA_C_RMT_DUMP_FT_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
 	RINA_C_RMT_DUMP_FT_REPLY, /* TODO RMT (kernel) -> IPC Process (user space) */
-	RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION, /* NL layer (kernel) -> IPC Manager */
+	RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION, /* Kernel (NL layer) -> IPC Manager */
+	RINA_C_IPCM_IPC_MANAGER_PRESENT, /* IPC Manager -> Kernel (NL layer) */
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST, /* Allocate flow request, Application -> IPC Manager */
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* Response to an application allocate flow request, IPC Manager -> Application */
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, /* Allocate flow request from a remote application, IPC Manager -> Application */
@@ -912,6 +913,15 @@ public:
 	int getPortId() const;
 	void setPortId(int portId);
 	IPCEvent* toIPCEvent();
+};
+
+/**
+ * IPC Manager -> Kernel (NL layer). Sent when the IPC Manager starts up, to
+ * signal the kernel that the IPC Manager is ready and make its NL port-id known.
+ */
+class IpcmIPCManagerPresentMessage: public BaseNetlinkMessage {
+public:
+	IpcmIPCManagerPresentMessage();
 };
 
 }

@@ -1233,7 +1233,6 @@ static int rnl_format_generic_u32_param_msg(u32             param_var,
                                             string_t        * msg_name,
                                             struct sk_buff  * skb_out)
 {
-        LOG_DBG("Entring rnl_format_generic_u32_param_msg...");
         if (!skb_out) {
                 LOG_ERR("Bogus input parameter(s), bailing out");
                 return -1;

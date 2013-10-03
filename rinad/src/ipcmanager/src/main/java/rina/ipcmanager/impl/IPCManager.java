@@ -13,6 +13,7 @@ import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCEvent;
 import eu.irati.librina.IPCEventProducerSingleton;
 import eu.irati.librina.IPCEventType;
+import eu.irati.librina.IPCManagerInitializationException;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IPCProcessPointerVector;
@@ -77,8 +78,13 @@ public class IPCManager {
 		executorService = Executors.newCachedThreadPool();
 		console = new IPCManagerConsole(this);
 		executorService.execute(console);
-		log.info("Initializing librina...");
-		rina.initialize(1);
+		log.info("Initializing librina-ipcmanager...");
+		try{
+			rina.initializeIPCManager(1);
+		}catch(IPCManagerInitializationException ex){
+			log.fatal("Error initializing IPC Manager: "+ex.getMessage() 
+					+ ". Exiting.");
+		}
 		ipcProcessFactory = rina.getIpcProcessFactory();
 		applicationManager = rina.getApplicationManager();
 		ipcEventProducer = rina.getIpcEventProducer();

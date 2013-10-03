@@ -308,6 +308,9 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
+	case RINA_C_IPCM_IPC_MANAGER_PRESENT: {
+		return 0;
+	}
 
 	default: {
 		return -1;

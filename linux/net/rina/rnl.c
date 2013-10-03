@@ -157,7 +157,9 @@ static struct genl_ops nl_ops[] = {
         DECL_NL_OP(RINA_C_RMT_ADD_FTE_REQUEST),
         DECL_NL_OP(RINA_C_RMT_DELETE_FTE_REQUEST),
         DECL_NL_OP(RINA_C_RMT_DUMP_FT_REQUEST),
-        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REPLY)
+        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REPLY),
+        DECL_NL_OP(RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION),
+        DECL_NL_OP(RINA_C_IPCM_IPC_MANAGER_PRESENT)
 };
 
 int rnl_handler_register(struct rnl_set *   set,
@@ -346,8 +348,8 @@ static int kipcm_netlink_notify(struct notifier_block * nb,
                                 unsigned long           state,
                                 void *                  notification)
 {
-	int                     result;
 	struct netlink_notify * notify = notification;
+	rnl_port_t ipc_manager_port;
 
 	if (state != NETLINK_URELEASE)
 		return NOTIFY_DONE;
@@ -357,13 +359,18 @@ static int kipcm_netlink_notify(struct notifier_block * nb,
 		return NOTIFY_BAD;
 	}
 
-	/* FIXME: Is the IPCM available ??? */
-	result = rnl_ipcm_sock_closed_notif_msg(notify->portid, 1);
-	if (result)
-		LOG_ERR("Error notifying IPC Manager in user space, %d",
-                        result);
-	else
-		LOG_DBG("IPC Manager notification sent");
+	ipc_manager_port = rnl_get_ipc_manager_port();
+
+	if (ipc_manager_port){
+		//Check if the IPC Manager is the process that died
+		if (ipc_manager_port == notify->portid){
+			rnl_set_ipc_manager_port(0);
+
+			LOG_WARN("IPC Manager process has been destroyed");
+		}else{
+			rnl_ipcm_sock_closed_notif_msg(notify->portid, ipc_manager_port);
+		}
+	}
 
 	return NOTIFY_DONE;
 }
@@ -433,3 +440,15 @@ void rnl_exit(void)
 
         LOG_DBG("NetLink layer finalized successfully");
 }
+
+rnl_port_t ipc_manager_port = 0;
+
+rnl_port_t rnl_get_ipc_manager_port(void){
+	return ipc_manager_port;
+}
+EXPORT_SYMBOL(rnl_get_ipc_manager_port);
+
+void rnl_set_ipc_manager_port(rnl_port_t port){
+	ipc_manager_port = port;
+}
+EXPORT_SYMBOL(rnl_set_ipc_manager_port);

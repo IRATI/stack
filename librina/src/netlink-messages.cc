@@ -1123,7 +1123,7 @@ void IpcmDIFQueryRIBResponseMessage::addRIBObject(const RIBObject& ribObject){
 	ribObjects.push_back(ribObject);
 }
 
-/* CLASS APP FLOW DEALLOCATED NOTIFICATION MESSAGE */
+/* CLASS IPCM SOCKET CLOSED NOTIFICATION MESSAGE */
 IpcmNLSocketClosedNotificationMessage::IpcmNLSocketClosedNotificationMessage() :
 						NetlinkRequestOrNotificationMessage(
 								RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION) {
@@ -1140,6 +1140,11 @@ void IpcmNLSocketClosedNotificationMessage::setPortId(int portId) {
 
 IPCEvent* IpcmNLSocketClosedNotificationMessage::toIPCEvent(){
 	return 0;
+}
+
+/* CLAS IPCM IPC MANAGER PRESENT MESSAGE */
+IpcmIPCManagerPresentMessage::IpcmIPCManagerPresentMessage() :
+BaseNetlinkMessage(RINA_C_IPCM_IPC_MANAGER_PRESENT){
 }
 
 }
