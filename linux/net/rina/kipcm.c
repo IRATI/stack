@@ -1198,6 +1198,19 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 return NULL;
         }
 
+        tmp->fid_messages = rkzalloc(sizeof(struct flow_messages), GFP_KERNEL);
+        if(!tmp->fid_messages) {
+                LOG_ERR("Failed to build imap");
+                if (ipcpf_fini(tmp->factories)) {
+                        /* FIXME: What could we do here ? */
+                }
+                if (ipcp_imap_destroy(tmp->instances)) {
+                        /* FIXME: What could we do here ? */
+                }
+                rkfree(tmp);
+                return NULL;
+        }
+
         tmp->fid_messages->ingress = kipcm_fmap_create();
         if (!tmp->fid_messages->ingress) {
                 LOG_ERR("Failed to build fmap");
