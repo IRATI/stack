@@ -178,7 +178,7 @@ int ipcp_imap_remove(struct ipcp_imap * map,
  */
 
 #define FMAP_HASH_BITS 7
-#define SNVALUE_WRONG  0xFFFFFF
+#define SNVALUE_WRONG  0xFFFFFFFF
 
 rnl_sn_t seq_num_bad(void)
 { return SNVALUE_WRONG; }
