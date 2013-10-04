@@ -212,7 +212,6 @@ int kfa_flow_bind(struct kfa *           instance,
                 return -1;
         }
 
-        init_waitqueue_head(&flow->wait_queue);
         flow->port_id     = pid;
         flow->ipc_process = ipc_process;
 
