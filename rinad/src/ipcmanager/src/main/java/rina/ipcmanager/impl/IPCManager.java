@@ -18,6 +18,7 @@ import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IPCProcessPointerVector;
 import eu.irati.librina.OSProcessFinalizedEvent;
+import eu.irati.librina.Parameter;
 import eu.irati.librina.rina;
 
 import java.io.ByteArrayOutputStream;
@@ -181,6 +182,8 @@ public class IPCManager {
 				difName.setProcessName(ipcProcessToCreate.getDifName());
 				difConfiguration.setDifName(difName);
 				difConfiguration.setDifType(ipcProcess.getType());
+				difConfiguration.addParameter(new Parameter("interface", "eth0"));
+				difConfiguration.addParameter(new Parameter("vlanid", "987"));
 				try{
 					ipcProcess.assignToDIF(difConfiguration);
 				}catch(AssignToDIFException ex){

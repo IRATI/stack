@@ -211,8 +211,117 @@ static int parse_app_name_info(struct nlattr * name_attr,
         return 0;
 }
 
+static int parse_ipcp_config_entry_value(struct nlattr * name_attr,
+                           	   	   	     struct ipcp_config_entry * entry)
+{
+        struct nla_policy attr_policy[IPCP_CONFIG_ENTRY_ATTR_MAX + 1];
+        struct nlattr *attrs[IPCP_CONFIG_ENTRY_ATTR_MAX + 1];
+
+        LOG_DBG("[LDBG] Entering parse_parameter with nlattr "
+                "at %p and entry at %p",
+                name_attr, entry);
+
+        if (!name_attr){
+        	LOG_ERR("Bogus attribute passed, bailing out");
+        	return -1;
+        }
+
+        if (!entry){
+        	LOG_ERR("Bogus entry passed, bailing out");
+        	return -1;
+        }
+
+        attr_policy[IPCP_CONFIG_ENTRY_ATTR_NAME].type = NLA_STRING;
+        attr_policy[IPCP_CONFIG_ENTRY_ATTR_NAME].len = 0;
+        attr_policy[IPCP_CONFIG_ENTRY_ATTR_VALUE].type = NLA_STRING;
+        attr_policy[IPCP_CONFIG_ENTRY_ATTR_VALUE].len = 0;
+
+        if (nla_parse_nested(attrs, IPCP_CONFIG_ENTRY_ATTR_MAX,
+        					 name_attr, attr_policy) < 0)
+                return -1;
+
+        if (attrs[IPCP_CONFIG_ENTRY_ATTR_NAME])
+        		entry->name =
+                        nla_get_string(attrs[IPCP_CONFIG_ENTRY_ATTR_NAME]);
+
+        if (attrs[IPCP_CONFIG_ENTRY_ATTR_VALUE])
+        		entry->value =
+                        nla_get_string(attrs[IPCP_CONFIG_ENTRY_ATTR_VALUE]);
+
+        LOG_DBG("Entry name is %s, and value is %s",
+        		entry->name,
+        		entry->value);
+
+        return 0;
+}
+
+static int parse_list_of_ipcp_config_entries(struct nlattr *nested_attr,
+									         struct dif_config * dif_config)
+{
+		struct nlattr * nla;
+		struct ipcp_config_entry * entry;
+		struct ipcp_config * config;
+		int rem = 0;
+		int entries_with_problems = 0;
+		int total_entries = 0;
+
+		if (!nested_attr){
+			LOG_ERR("Bogus attribute passed, bailing out");
+			return -1;
+		}
+
+		if (!dif_config){
+			LOG_ERR("Bogus dif_config passed, bailing out");
+			return -1;
+		}
+
+		for (nla = (struct nlattr*) nla_data(nested_attr),
+				rem = nla_len(nested_attr);
+				nla_ok(nla, rem);
+				nla = nla_next(nla, &(rem))){
+			total_entries++;
+
+			LOG_DBG("Trying to parse entry %d", total_entries);
+
+			entry = rkzalloc(sizeof(*entry), GFP_KERNEL);
+			if (!entry){
+				entries_with_problems++;
+				continue;
+			}
+
+			if (parse_ipcp_config_entry_value(nla, entry) < 0){
+				rkfree(entry);
+				entries_with_problems++;
+				continue;
+			}
+
+			config = ipcp_config_create();
+			if (!config){
+				rkfree(entry);
+				entries_with_problems++;
+				continue;
+			}
+			config->entry = entry;
+			if (!dif_config->config_entries)
+				dif_config->config_entries = config;
+			else
+				list_add(&config->next, &dif_config->config_entries->next);
+		}
+
+		if (rem > 0){
+				LOG_WARN("Missing bits to parse");
+		}
+
+		if (entries_with_problems > 0)
+				LOG_WARN("Problems parsing %d out of %d parameters",
+						entries_with_problems,
+						total_entries);
+
+		return 0;
+}
+
 static int parse_dif_config(struct nlattr * dif_config_attr,
-                            struct dif_config  * dif_config_struct)
+                            struct dif_config  * dif_configuration)
 {
         struct nla_policy attr_policy[DCONF_ATTR_MAX + 1];
         struct nlattr *attrs[DCONF_ATTR_MAX + 1];
@@ -221,8 +330,8 @@ static int parse_dif_config(struct nlattr * dif_config_attr,
         attr_policy[DCONF_ATTR_DIF_TYPE].len = 0;
         attr_policy[DCONF_ATTR_DIF_NAME].type = NLA_NESTED;
         attr_policy[DCONF_ATTR_DIF_NAME].len = 0;
-        attr_policy[DCONF_ATTR_PARAMETERS].type = NLA_NESTED;
-        attr_policy[DCONF_ATTR_PARAMETERS].len = 0;
+        attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].type = NLA_NESTED;
+        attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].len = 0;
 
         if (nla_parse_nested(attrs,
                              DCONF_ATTR_MAX,
@@ -231,15 +340,18 @@ static int parse_dif_config(struct nlattr * dif_config_attr,
                 goto parse_fail;
 
         if (attrs[DCONF_ATTR_DIF_TYPE])
-                dif_config_struct->type =
-                        nla_get_string(attrs[DCONF_ATTR_DIF_TYPE]);
+        	dif_configuration->type =
+                        	   nla_get_string(attrs[DCONF_ATTR_DIF_TYPE]);
 
         if (parse_app_name_info(attrs[DCONF_ATTR_DIF_NAME],
-                                dif_config_struct->dif_name) < 0)
+        						dif_configuration->dif_name) < 0)
                 goto parse_fail;
 
-        if(attrs[DCONF_ATTR_PARAMETERS]){
-
+        if(attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES]){
+        	if (parse_list_of_ipcp_config_entries(
+        			attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES],
+        			dif_configuration) < 0)
+        		goto parse_fail;
         }
 
         return 0;

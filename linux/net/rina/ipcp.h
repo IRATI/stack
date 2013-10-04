@@ -38,13 +38,25 @@ struct ipcp_config_value {
 };
 
 struct ipcp_config_entry {
-        char *                     name;
-        struct ipcp_config_value * value;
+        string_t *  name;
+        string_t * 	value;
 };
 
 struct ipcp_config {
-        struct list_head           list;
+        struct list_head           next;
         struct ipcp_config_entry * entry;
+};
+
+/* Represents a DIF configuration */
+struct dif_config {
+	/* The DIF type. Can be 'NORMAL' or one of the shims */
+	string_t    * 		type;
+
+	/* The DIF Distributed Application Name (DAN) */
+	struct name * 		dif_name;
+
+	/* Pointer to the first configuration entry */
+	struct ipcp_config * 	config_entries;
 };
 
 /* Pre-declared, the implementation should define it properly */

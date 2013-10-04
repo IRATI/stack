@@ -57,6 +57,13 @@ enum flow_spec_attrs_list {
 };
 #define FSPEC_ATTR_MAX (__FSPEC_ATTR_MAX - 1)
 
+enum ipcp_config_entry_attrs_list {
+        IPCP_CONFIG_ENTRY_ATTR_NAME = 1,
+        IPCP_CONFIG_ENTRY_ATTR_VALUE,
+        __IPCP_CONFIG_ENTRY_ATTR_MAX,
+};
+#define IPCP_CONFIG_ENTRY_ATTR_MAX (__IPCP_CONFIG_ENTRY_ATTR_MAX - 1)
+
 /* FIXME: in user space these are called without _NAME */
 enum ipcm_alloc_flow_req_attrs_list {
         IAFRM_ATTR_SOURCE_APP_NAME = 1,
@@ -189,7 +196,7 @@ enum ipcm_assign_to_dif_req_attrs_list {
 enum dif_conf_attrs_list {
         DCONF_ATTR_DIF_TYPE = 1,
         DCONF_ATTR_DIF_NAME,
-        DCONF_ATTR_PARAMETERS,
+        DCONF_ATTR_IPCP_CONFIG_ENTRIES,
         __DCONF_ATTR_MAX,
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)

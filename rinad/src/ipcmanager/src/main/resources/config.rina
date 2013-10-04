@@ -17,6 +17,13 @@
     "difName" : "loopback.DIF"
   }],
   "difConfigurations" : [ {
-    "difName" : "loopback.DIF"
+    "difName" : "loopback.DIF", 
+    "configParameters" : [ {
+    	"name" : "interface", 
+    	"value" : "eth0"
+    	}, {
+    	"name" : "vlanid", 
+    	"value" : "987"
+    } ]
   } ]
 }

@@ -359,7 +359,7 @@ struct ipcp_config * ipcp_config_create(void)
                 return NULL;
 
         tmp->entry = NULL;
-        INIT_LIST_HEAD(&tmp->list);
+        INIT_LIST_HEAD(&tmp->next);
 
         return tmp;
 }
@@ -369,8 +369,12 @@ int ipcp_config_destroy(struct ipcp_config * cfg)
         if (!cfg)
                 return -1;
 
-        LOG_MISSING;
-        return -1;
+        if (cfg->entry)
+        		rkfree(cfg->entry);
+
+        rkfree(cfg);
+
+        return 0;
 }
 
 struct ipcp_config *

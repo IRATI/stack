@@ -501,9 +501,9 @@ static int dummy_fini(struct ipcp_factory_data * data)
 
 static int dummy_assign_to_dif(struct ipcp_instance_data * data,
                                const struct name *         dif_name,
-                               const struct ipcp_config *  dif_config)
+                               const struct ipcp_config *  ipcp_config)
 {
-        ASSERT(data);
+		ASSERT(data);
 
         if (!data->info) {
                 LOG_ERR("There is no info for this IPC process");
@@ -519,6 +519,11 @@ static int dummy_assign_to_dif(struct ipcp_instance_data * data,
 
                 return -1;
         }
+
+        if (ipcp_config)
+        	LOG_DBG("Current configuration entry name: %s; value: %s",
+        				ipcp_config->entry->name,
+        				ipcp_config->entry->value);
 
         LOG_DBG("Assigned IPC Process to DIF %s",
                 data->info->dif_name->process_name);
