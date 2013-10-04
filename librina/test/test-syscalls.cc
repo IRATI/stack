@@ -46,7 +46,7 @@ char * intToCharArray(int i){
 
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING RINA SYSCALLS\n";
-	/*int result = 0;
+	int result = 0;
 
 	//Create an IPC Process
 	ApplicationProcessNamingInformation * ipcProcessName =
@@ -74,8 +74,8 @@ int main(int argc, char * argv[]) {
 	std::cout<<"Called read SDU system call with result "
 			<<result<<std::endl;
 
-	delete ipcProcessName;*/
-
+	delete ipcProcessName;
+/*
 	char * args[] =
 	{
 			//stringToCharArray("/usr/local/rina/rinad/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT/ipcprocess.sh"),
@@ -94,5 +94,5 @@ int main(int argc, char * argv[]) {
 	execve(args[0], &args[0], 0);
 
 	std::cout<<"I shouldn't be here";
-
+	*/
 }

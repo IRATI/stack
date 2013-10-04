@@ -603,6 +603,7 @@ static struct ipcp_instance * dummy_create(struct ipcp_factory_data * data,
 
         /* FIXME: Remove as soon as the kipcm_kfa gets removed*/
         inst->data->kfa = kipcm_kfa(default_kipcm);
+        LOG_DBG("KFA instance %pK bound to the shim dummy", inst->data->kfa);
 
         /*
          * Bind the shim-instance to the shims set, to keep all our data

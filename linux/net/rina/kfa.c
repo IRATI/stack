@@ -192,7 +192,7 @@ int kfa_flow_bind(struct kfa *           instance,
 
         spin_lock(&instance->lock);
 
-        if (!kfa_fmap_find(instance->flows.pending, pid)) {
+        if (!kfa_fmap_find(instance->flows.pending, fid)) {
                 LOG_ERR("The flow with flow-id %d is not pending, "
                         "cannot bind it to port %d", fid, pid);
                 spin_unlock(&instance->lock);
