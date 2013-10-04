@@ -92,6 +92,25 @@ int putFlowSpecificationObject(nl_msg* netlinkMessage,
 
 FlowSpecification * parseFlowSpecificationObject(nlattr *nested);
 
+/* PARAMETER CLASS */
+enum ParameterAttributes {
+	PARAM_ATTR_NAME = 1,
+	PARAM_ATTR_VALUE,
+	__PARAM_ATTR_MAX,
+};
+
+#define PARAM_ATTR_MAX (__PARAM_ATTR_MAX -1)
+
+int putListOfParameters(
+		nl_msg* netlinkMessage, const std::list<Parameter>& parameters);
+
+int putParameterObject(nl_msg* netlinkMessage, const Parameter& object);
+
+int parseListOfDIFConfigurationParameters(nlattr *nested,
+		DIFConfiguration * difConfiguration);
+
+Parameter * parseParameter(nlattr *nested);
+
 /* AppAllocateFlowRequestResultMessage CLASS*/
 enum AppAllocateFlowRequestResultAttributes {
 	AAFRR_ATTR_SOURCE_APP_NAME = 1,
@@ -417,6 +436,7 @@ IpcmUnregisterApplicationResponseMessage *
 enum DIFConfigurationAttributes {
 	DCONF_ATTR_DIF_TYPE = 1,
 	DCONF_ATTR_DIF_NAME,
+	DCONF_ATTR_PARAMETERS,
 	__DCONF_ATTR_MAX,
 };
 

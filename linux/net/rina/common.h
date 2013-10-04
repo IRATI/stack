@@ -124,6 +124,24 @@ struct flow_spec {
         uint_t max_sdu_size;
 };
 
+/* Represents a name/value pair */
+struct parameter {
+	string_t * name;
+	string_t * value;
+};
+
+/* Represents a DIF configuration */
+struct dif_config {
+	/* The DIF type. Can be 'NORMAL' or one of the shims */
+	string_t    * 		type;
+
+	/* The DIF Distributed Application Name (DAN) */
+	struct name * 		dif_name;
+
+	/* List of configuration parameters (name/value pairs) */
+	struct list_head 	parameters;
+};
+
 /* FIXME: Move RNL related types to RNL header(s) */
 
 typedef char	      regex_t; /* FIXME: must be a string */

@@ -189,6 +189,7 @@ enum ipcm_assign_to_dif_req_attrs_list {
 enum dif_conf_attrs_list {
         DCONF_ATTR_DIF_TYPE = 1,
         DCONF_ATTR_DIF_NAME,
+        DCONF_ATTR_PARAMETERS,
         __DCONF_ATTR_MAX,
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
@@ -285,11 +286,6 @@ struct rnl_msg {
 
         /* Specific message attributes */
         void *                attrs;
-};
-
-struct dif_config {
-        string_t    * type;
-        struct name * dif_name;
 };
 
 struct rnl_ipcm_assign_to_dif_req_msg_attrs {

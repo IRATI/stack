@@ -12,7 +12,7 @@ import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IPCProcessPointerVector;
 import eu.irati.librina.QoSCube;
-import eu.irati.librina.QoSCubeVector;
+import eu.irati.librina.QoSCubeList;
 import eu.irati.librina.rina;
 
 public class ipcmd {
@@ -78,9 +78,9 @@ public static void main(String[] args) throws IPCException{
 	printStatement("\nASSIGNING IPC PROCESS TO DIF");
 	DIFConfiguration difConfiguration = new DIFConfiguration();
 	difConfiguration.setDifName(difName);
-	QoSCubeVector qosCubes = new QoSCubeVector();
-	qosCubes.add(new QoSCube("reliable", 1));
-	qosCubes.add(new QoSCube("unreliable", 2));
+	QoSCubeList qosCubes = new QoSCubeList();
+	qosCubes.addFirst(new QoSCube("reliable", 1));
+	qosCubes.addFirst(new QoSCube("unreliable", 2));
 	difConfiguration.setQosCubes(qosCubes);
 	ipcProcess1.assignToDIF(difConfiguration);
 	

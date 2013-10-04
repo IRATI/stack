@@ -940,6 +940,104 @@ DIFProperties * parseDIFPropertiesObject(nlattr *nested){
 	return result;
 }
 
+int putParameterObject(nl_msg* netlinkMessage, const Parameter& object){
+	NLA_PUT_STRING(netlinkMessage, PARAM_ATTR_NAME,
+			object.getName().c_str());
+
+	NLA_PUT_STRING(netlinkMessage, PARAM_ATTR_VALUE,
+				object.getValue().c_str());
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building Parameter Netlink object");
+	return -1;
+}
+
+int putListOfParameters(
+		nl_msg* netlinkMessage, const std::list<Parameter>& parameters){
+	std::list<Parameter>::const_iterator iterator;
+	struct nlattr *parameter;
+	int i = 0;
+
+	for (iterator = parameters.begin();
+			iterator != parameters.end();
+			++iterator) {
+		if (!(parameter = nla_nest_start(netlinkMessage, i))){
+			goto nla_put_failure;
+		}
+		if (putParameterObject(netlinkMessage, *iterator) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, parameter);
+		i++;
+	}
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building List of Parameters Netlink object");
+	return -1;
+}
+
+Parameter * parseParameter(nlattr *nested){
+	struct nla_policy attr_policy[PARAM_ATTR_MAX + 1];
+	attr_policy[PARAM_ATTR_NAME].type = NLA_STRING;
+	attr_policy[PARAM_ATTR_NAME].minlen = 0;
+	attr_policy[PARAM_ATTR_NAME].maxlen = 65535;
+	attr_policy[PARAM_ATTR_VALUE].type = NLA_STRING;
+	attr_policy[PARAM_ATTR_VALUE].minlen = 0;
+	attr_policy[PARAM_ATTR_VALUE].maxlen = 65535;
+	struct nlattr *attrs[PARAM_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, PARAM_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing Parameter from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	Parameter * result = new Parameter();
+
+	if (attrs[PARAM_ATTR_NAME]){
+		result->setName(
+				nla_get_string(attrs[PARAM_ATTR_NAME]));
+	}
+
+	if (attrs[PARAM_ATTR_VALUE]){
+		result->setValue(
+				nla_get_string(attrs[PARAM_ATTR_VALUE]));
+	}
+
+	return result;
+}
+
+int parseListOfDIFConfigurationParameters(nlattr *nested,
+		DIFConfiguration * difConfiguration){
+	nlattr * nla;
+	int rem;
+	Parameter * parameter;
+
+	for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+		     nla_ok(nla, rem);
+		     nla = nla_next(nla, &(rem))){
+		/* validate & parse attribute */
+		parameter = parseParameter(nla);
+		if (parameter == 0){
+			return -1;
+		}
+		difConfiguration->addParameter(*parameter);
+		delete parameter;
+	}
+
+	if (rem > 0){
+		LOG_WARN("Missing bits to parse");
+	}
+
+	return 0;
+}
+
 int putApplicationRegistrationInformationObject(nl_msg* netlinkMessage,
 		const ApplicationRegistrationInformation& object){
 	struct nlattr *difName;
@@ -1541,7 +1639,7 @@ int putIpcmUnregisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 
 int putDIFConfigurationObject(nl_msg* netlinkMessage,
 		const DIFConfiguration& object){
-	struct nlattr *difName;
+	struct nlattr *difName, *parameters;
 
 	NLA_PUT_STRING(netlinkMessage, DCONF_ATTR_DIF_TYPE,
 			object.getDifType().c_str());
@@ -1554,6 +1652,15 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, difName);
+
+	if (!(parameters = nla_nest_start(netlinkMessage, DCONF_ATTR_PARAMETERS))) {
+		goto nla_put_failure;
+	}
+	if (putListOfParameters(netlinkMessage,
+			object.getParameters()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, parameters);
 
 	return 0;
 
@@ -2956,6 +3063,9 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	attr_policy[DCONF_ATTR_DIF_NAME].type = NLA_NESTED;
 	attr_policy[DCONF_ATTR_DIF_NAME].minlen = 0;
 	attr_policy[DCONF_ATTR_DIF_NAME].maxlen = 0;
+	attr_policy[DCONF_ATTR_PARAMETERS].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_PARAMETERS].minlen = 0;
+	attr_policy[DCONF_ATTR_PARAMETERS].maxlen = 0;
 	struct nlattr *attrs[DCONF_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, DCONF_ATTR_MAX, nested, attr_policy);
@@ -2983,6 +3093,16 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 		} else {
 			result->setDifName(*difName);
 			delete difName;
+		}
+	}
+
+	int status = 0;
+	if (attrs[DCONF_ATTR_PARAMETERS]) {
+		status = parseListOfDIFConfigurationParameters(
+				attrs[DCONF_ATTR_PARAMETERS], result);
+		if (status != 0){
+			delete result;
+			return 0;
 		}
 	}
 

@@ -624,7 +624,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
                                                     -1,
                                                     info->snd_seq,
                                                     info->snd_portid);
-
+        INIT_LIST_HEAD(&dif_config->parameters);
         attrs->dif_config = dif_config;
 
         dif_name = name_create();

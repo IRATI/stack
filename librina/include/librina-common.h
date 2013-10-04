@@ -562,6 +562,27 @@ public:
  */
 class Policy {
 
+public:
+	bool operator==(const Policy &other) const;
+	bool operator!=(const Policy &other) const;
+};
+
+/**
+ * Represents a parameter that has a name and value
+ */
+class Parameter {
+	std::string name;
+	std::string value;
+
+public:
+	Parameter();
+	Parameter(const std::string & name, const std::string & value);
+	bool operator==(const Parameter &other) const;
+	bool operator!=(const Parameter &other) const;
+	const std::string& getName() const;
+	void setName(const std::string& name);
+	const std::string& getValue() const;
+	void setValue(const std::string& value);
 };
 
 /**
@@ -576,20 +597,26 @@ class DIFConfiguration {
 	ApplicationProcessNamingInformation difName;
 
 	/** The QoS cubes supported by the DIF */
-	std::vector<QoSCube> qosCubes;
+	std::list<QoSCube> qosCubes;
 
 	/** The policies of the DIF */
-	std::vector<Policy> policies;
+	std::list<Policy> policies;
+
+	/** Configuration parameters */
+	std::list<Parameter> parameters;
 
 public:
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
 	const std::string& getDifType() const;
 	void setDifType(const std::string& difType);
-	const std::vector<Policy>& getPolicies();
-	void setPolicies(const std::vector<Policy>& policies);
-	const std::vector<QoSCube>& getQosCubes() const;
-	void setQosCubes(const std::vector<QoSCube>& qosCubes);
+	const std::list<Policy>& getPolicies();
+	void setPolicies(const std::list<Policy>& policies);
+	const std::list<QoSCube>& getQosCubes() const;
+	void setQosCubes(const std::list<QoSCube>& qosCubes);
+	const std::list<Parameter>& getParameters() const;
+	void setParameters(const std::list<Parameter>& parameters);
+	void addParameter(const Parameter& parameter);
 };
 
 /**
