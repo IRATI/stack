@@ -150,6 +150,8 @@ flow_id_t kfa_flow_create(struct kfa * instance)
                 return flow_id_bad();
         }
 
+        init_waitqueue_head(&flow->wait_queue);
+
         if (kfa_fmap_add(instance->flows.pending, fid, flow)) {
                 LOG_ERR("Could not map Flow and Flow ID");
                 rkfree(flow);
