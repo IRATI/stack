@@ -36,8 +36,6 @@
 #include "ipcp-factories.h"
 #include "du.h"
 #include "kfa.h"
-#include "rnl.h"
-#include "rnl-utils.h"
 
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -628,62 +626,6 @@ static struct ipcp_instance * dummy_create(struct ipcp_factory_data * data,
 
         return inst;
 }
-
-#if 0
-/* FIXME: It doesn't allow reconfiguration */
-static struct ipcp_instance * dummy_configure(struct ipcp_factory_data * data,
-                                              struct ipcp_instance *     inst,
-                                              const struct ipcp_config * conf)
-{
-        struct ipcp_instance_data * instance;
-        struct ipcp_config *        tmp;
-
-        ASSERT(data);
-        ASSERT(inst);
-        ASSERT(conf);
-
-        instance = find_instance(data, inst->data->id);
-        if (!instance) {
-                LOG_ERR("There's no instance with id %d", inst->data->id);
-                return inst;
-        }
-
-        /* Use configuration values on that instance */
-        list_for_each_entry(tmp, &(conf->list), list) {
-                if (!strcmp(tmp->entry->name, "dif-name") &&
-                    tmp->entry->value->type == IPCP_CONFIG_STRING) {
-                        if (name_cpy(instance->info->dif_name,
-                                     (struct name *)
-                                     tmp->entry->value->data)) {
-                                LOG_ERR("Failed to copy DIF name");
-                                return inst;
-                        }
-                }
-                else if (!strcmp(tmp->entry->name, "name") &&
-                         tmp->entry->value->type == IPCP_CONFIG_STRING) {
-                        if (name_cpy(instance->info->name,
-                                     (struct name *)
-                                     tmp->entry->value->data)) {
-                                LOG_ERR("Failed to copy name");
-                                return inst;
-                        }
-                }
-                else {
-                        LOG_ERR("Cannot identify parameter '%s'",
-                                tmp->entry->name);
-                        return NULL;
-                }
-        }
-
-        /*
-         * Instance might change (reallocation), return the updated pointer
-         * if needed. We don't re-allocate our instance so we'll be returning
-         * the same pointer.
-         */
-
-        return inst;
-}
-#endif
 
 static int dummy_destroy(struct ipcp_factory_data * data,
                          struct ipcp_instance *     instance)

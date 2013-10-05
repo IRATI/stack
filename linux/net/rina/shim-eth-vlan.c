@@ -577,7 +577,6 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         struct eth_vlan_info *     info;
         struct ipcp_config *       tmp;
         struct ipcp_config_entry * entry;
-        struct ipcp_config_value * value;
         bool                       reconfigure;
         uint16_t                   old_vlan_id;
         string_t *                 old_interface_name;
@@ -603,11 +602,9 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         /* Retrieve configuration of IPC process from params */
         list_for_each_entry (tmp, &(configuration->ipcp_config_entries), next) {
                 entry = tmp->entry;
-                value = entry->value;
-                if (!strcmp(entry->name,"interface-name") &&
-                    value->type == IPCP_CONFIG_STRING) {
+                if (!strcmp(entry->name,"interface-name")){
                         if (!strcpy(info->interface_name,
-                                    (string_t *) value->data)) {
+                                    entry->value)) {
                                 LOG_ERR("Failed to copy interface name");
                         }
                         if (!reconfigure && old_interface_name &&
