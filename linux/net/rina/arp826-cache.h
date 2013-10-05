@@ -31,17 +31,35 @@ bool         gpa_is_equal(const struct gpa * a,
                           const struct gpa * b);
 bool         gpa_is_ok(const struct gpa * gpa);
 
+struct cache_entry;
+
+struct cache_entry *       ce_create(struct gpa *    gpa,
+                                     const uint8_t * hardware_address,
+                                     size_t          hardware_address_length);
+void                       ce_destroy(struct cache_entry * entry);
+const struct gpa *         ce_pa(struct cache_entry * entry);
+const struct uint8_t *     ce_ha(struct cache_entry * entry);
+
 struct cache_line;
 
-struct cache_line * cl_create(void);
-void                cl_destroy(struct cache_line * instance);
+struct cache_line *        cl_create(size_t hw_address_length);
+void                       cl_destroy(struct cache_line * instance);
 
-int                 cl_add(struct cache_line *   instance,
-                           size_t                protocol_address_length,
-                           const unsigned char * source_protocol_address,
-                           const unsigned char * target_protocol_address,
-                           size_t                hardware_address_length,
-                           const unsigned char * source_hardware_address,
-                           const unsigned char * target_hardware_address);
+/*
+ * NOTE:
+ *   Takes the ownership of the passed gpa. Hardware address length is
+ *   implicitly obtained from the cache-line (cl_create) so there are no
+ *   needs to pass the length here
+ */
+int                        cl_add(struct cache_line * instance,
+                                  struct gpa *        protocol_address,
+                                  const uint8_t *     hardware_address);
+void                       cl_remove(struct cache_line *        instance,
+                                     const struct cache_entry * entry);
+
+const struct cache_entry * cl_find_by_ha(struct cache_line * instance,
+                                         struct uint8_t *    hardware_address);
+const struct cache_entry * cl_find_by_pa(struct cache_line * instance,
+                                         struct gpa *        protocol_address);
 
 #endif

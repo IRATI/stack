@@ -49,8 +49,8 @@ struct gpa * gpa_create(const uint8_t * address,
 {
         struct gpa * tmp;
 
-        ASSERT(address);
-        ASSERT(length);
+        if (!address || length == 0)
+                return NULL;
 
         tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
@@ -69,89 +69,79 @@ struct gpa * gpa_create(const uint8_t * address,
 
 void gpa_destroy(struct gpa * gpa)
 {
-        ASSERT(gpa);
-        ASSERT(gpa->address);
+        ASSERT(gpa); /* Merciless, we don't want to leak here  */
 
-        rkfree(gpa->address);
+        if (gpa->address) rkfree(gpa->address); /* Merciful, it may be bogus */
         rkfree(gpa);
 }
 
 struct gpa * gpa_dup(const struct gpa * gpa)
 {
-        struct gpa * tmp;
+        if (!gpa)
+                return NULL;
 
-        ASSERT(gpa);
-
-        tmp = gpa_create(gpa->address, gpa->length);
-
-        return tmp;
+        return gpa_create(gpa->address, gpa->length);
 }
 
 bool gpa_is_ok(const struct gpa * gpa)
-{
-        ASSERT(gpa);
-
-        if (gpa->length == 0 || gpa->address == NULL)
-                return 0;
-        return 1;
-}
+{ return (!gpa || gpa->length == 0 || gpa->address == NULL) ? 0 : 1; }
 
 bool gpa_is_equal(const struct gpa * a, const struct gpa * b)
 {
-        ASSERT(a);
-        ASSERT(b);
-        ASSERT(a->length);
-        ASSERT(b->length);
-        ASSERT(a->address);
-        ASSERT(b->address);
+        if (a != b) {
+                if (!a || !b)
+                        return 0;
 
-        if (a->length != b->length)
-                return 0;
-        ASSERT(a->length == b->length);
-        if (memcmp(a->address, b->address, a->length))
-                return 0;
+                ASSERT(a);
+                ASSERT(b);
+
+                if (a->length != b->length)
+                        return 0;
+                ASSERT(a->length == b->length);
+
+                if (!a->address || !b->address)
+                        return 0;
+
+                ASSERT(a->address);
+                ASSERT(b->address);
+
+                if (memcmp(a->address, b->address, a->length))
+                        return 0;
+        }
+
         return 1;
 }
 
 struct cache_entry {
-        size_t           pal; /* FIXME: To be removed */
+        struct gpa *     pa;  /* Protocol address */
 
-        unsigned char *  spa;
-        unsigned char *  tpa;
-
-        size_t           hal; /* FIXME: To be removed */
-
-        unsigned char *  sha;
-        unsigned char *  tha;
+        unsigned char *  ha;  /* Hardware address */
+        size_t           hal; /* Hardware address length (FIXME: REMOVE!) */
 
         struct list_head next;
 };
 
+#if 0
 static int ce_is_ok(struct cache_entry * entry)
 {
-        if (entry      == NULL ||
-            entry->pal == 0    ||
-            entry->hal == 0    ||
-            entry->spa == NULL ||
-            entry->tpa == NULL ||
-            entry->sha == NULL ||
-            entry->tha == NULL)
+        if (entry == NULL                           ||
+            !gpa_is_ok(entry->pa)                   ||
+            (entry->hal == 0 || entry->ha  == NULL))
                 return 0;
         return 1;
 }
+#endif
 
 static void ce_fini(struct cache_entry * entry)
 {
         ASSERT(entry);
 
-        entry->pal = entry->hal = 0;
-        if (entry->spa) rkfree(entry->spa);
-        if (entry->tpa) rkfree(entry->tpa);
-        if (entry->sha) rkfree(entry->sha);
-        if (entry->tha) rkfree(entry->tha);
+        /* Let's be merciful from now on */
+        if (entry->pa) gpa_destroy(entry->pa);
+        if (entry->ha) rkfree(entry->ha);
 }
 
-static void ce_destroy(struct cache_entry * entry)
+void ce_destroy(struct cache_entry * entry)
 {
         ASSERT(entry);
 
@@ -159,70 +149,44 @@ static void ce_destroy(struct cache_entry * entry)
         rkfree(entry);
 }
 
-int ce_init(struct cache_entry *  entry,
-            size_t                protocol_address_length,
-            const unsigned char * protocol_address_source,
-            const unsigned char * protocol_address_target,
-            size_t                hardware_address_length,
-            const unsigned char * hardware_address_source,
-            const unsigned char * hardware_address_target)
+/* Takes the ownership og the protocol address */
+int ce_init(struct cache_entry * entry,
+            struct gpa *         protocol_address,
+            const uint8_t *      hardware_address,
+            size_t               hardware_address_length)
 {
         ASSERT(entry);
-        ASSERT(protocol_address_length > 0);
+        ASSERT(gpa_is_ok(protocol_address));
+        ASSERT(hardware_address);
         ASSERT(hardware_address_length > 0);
-        ASSERT(protocol_address_source);
-        ASSERT(protocol_address_target);
-        ASSERT(hardware_address_source);
-        ASSERT(hardware_address_target);
 
-        entry->pal = protocol_address_length;
-        entry->spa = rkmalloc(protocol_address_length, GFP_KERNEL);
-        entry->tpa = rkmalloc(protocol_address_length, GFP_KERNEL);
+        entry->pa  = protocol_address;
         entry->hal = hardware_address_length;
-        entry->sha = rkmalloc(hardware_address_length, GFP_KERNEL);
-        entry->tha = rkmalloc(hardware_address_length, GFP_KERNEL);
-        if (!ce_is_ok(entry)) {
-                ce_fini(entry);
+        entry->ha  = rkmalloc(entry->hal, GFP_KERNEL);
+        if (!entry->ha) {
+                gpa_destroy(entry->pa);
+                entry->pa  = NULL;
+                entry->hal = 0; /* Useless but merciful */
                 return -1;
         }
-
-        memcpy(entry->spa, protocol_address_source, protocol_address_length);
-        memcpy(entry->tpa, protocol_address_target, protocol_address_length);
-        memcpy(entry->sha, hardware_address_source, hardware_address_length);
-        memcpy(entry->tha, hardware_address_target, hardware_address_length);
-
+        memcpy(entry->ha, hardware_address, entry->hal);
+        
         INIT_LIST_HEAD(&entry->next);
 
         return 0;
 }
 
-static struct cache_entry *
-ce_create(size_t                protocol_address_length,
-          const unsigned char * protocol_address_source,
-          const unsigned char * protocol_address_target,
-          size_t                hardware_address_length,
-          const unsigned char * hardware_address_source,
-          const unsigned char * hardware_address_target)
+/* Takes the ownership of the passed gpa */
+struct cache_entry * ce_create(struct gpa *    gpa,
+                                      const uint8_t * hardware_address,
+                                      size_t          hardware_address_length)
 {
         struct cache_entry * entry;
-
-        ASSERT(protocol_address_length > 0);
-        ASSERT(protocol_address_source);
-        ASSERT(protocol_address_target);
-        ASSERT(hardware_address_length > 0);
-        ASSERT(hardware_address_source);
-        ASSERT(hardware_address_target);
 
         entry = rkmalloc(sizeof(*entry), GFP_KERNEL);
         if (!entry)
                 return NULL;
-        if (ce_init(entry,
-                    protocol_address_length,
-                    protocol_address_source,
-                    protocol_address_target,
-                    hardware_address_length,
-                    hardware_address_source,
-                    hardware_address_target)) {
+        if (ce_init(entry, gpa, hardware_address, hardware_address_length)) {
                 rkfree(entry);
                 return NULL;
         }
@@ -239,33 +203,34 @@ static bool ce_is_equal(struct cache_entry * entry1,
         if (!ce_is_ok(entry2))
                 return 0;
 
-        if (entry1->pal != entry2->pal)
+        if (!gpa_is_equal(entry1->pa, entry2->pa))
                 return 0;
         if (entry1->hal != entry2->hal)
                 return 0;
-
-        if (memcmp(entry1->spa, entry2->spa, entry1->pal)) return 0;
-        if (memcmp(entry1->tpa, entry2->tpa, entry1->pal)) return 0;
-        if (memcmp(entry1->sha, entry2->sha, entry1->hal)) return 0;
-        if (memcmp(entry1->tha, entry2->tha, entry1->hal)) return 0;
+        if (memcmp(entry1->ha, entry2->ha, entry1->pal)) return 0;
 
         return 1;
 }
 #endif
 
 struct cache_line {
+        size_t           hal;     /* Hardware address length */
         spinlock_t       lock;
         struct list_head entries;
 };
 
-struct cache_line * cl_create(void)
+struct cache_line * cl_create(size_t hw_address_length)
 {
         struct cache_line * instance;
+
+        if (hw_address_length == 0)
+                return NULL;
 
         instance = rkmalloc(sizeof(*instance), GFP_KERNEL);
         if (!instance)
                 return NULL;
 
+        instance->hal = hw_address_length;
         INIT_LIST_HEAD(&instance->entries);
         spin_lock_init(&instance->lock);
 
@@ -289,25 +254,16 @@ void cl_destroy(struct cache_line * instance)
         rkfree(instance);
 }
 
-int cl_add(struct cache_line *   instance,
-           size_t                protocol_address_length,
-           const unsigned char * protocol_address_source,
-           const unsigned char * protocol_address_target,
-           size_t                hardware_address_length,
-           const unsigned char * hardware_address_source,
-           const unsigned char * hardware_address_target)
+int cl_add(struct cache_line * instance,
+           struct gpa *        protocol_address,
+           const uint8_t *     hardware_address)
 {
         struct cache_entry * entry;
 
         if (!instance)
                 return -1;
 
-        entry = ce_create(protocol_address_length,
-                          protocol_address_source,
-                          protocol_address_target,
-                          hardware_address_length,
-                          hardware_address_source,
-                          hardware_address_target);
+        entry = ce_create(protocol_address, hardware_address, instance->hal);
         if (!entry)
                 return -1;
 

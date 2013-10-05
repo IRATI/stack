@@ -100,6 +100,12 @@ int rinarp_hwaddr_get(struct naddr_filter *    filter,
 { return -1; }
 EXPORT_SYMBOL(rinarp_hwaddr_get);
 
+int rinarp_paddr_get(struct naddr_filter *  filter, 
+                     struct rinarp_mac_addr in_address,
+                     struct paddr         * out_addr)
+{ return -1; }
+EXPORT_SYMBOL(rinarp_paddr_get);
+
 int rinarp_send_request(struct naddr_filter * filter,
                         struct paddr          address)
 { return -1; }
@@ -154,15 +160,20 @@ static int arp826_process(struct sk_buff * skb)
 
         ptr = (unsigned char *) header + 8;
 
-        sha = ptr; ptr += 6;
-        spa = ptr; ptr += 4;
-        tha = ptr; ptr += 6;
-        tpa = ptr; ptr += 4;
+        sha = ptr; ptr += header->hlen;
+        spa = ptr; ptr += header->plen;
+        tha = ptr; ptr += header->hlen;
+        tpa = ptr; ptr += header->plen;
 
-        if (cl_add(NULL, header->plen, spa, tpa, header->hlen, sha, tha)) {
+#if 0
+        /* FIXME: To be rearranged */
+        ASSERT(sha == 6);
+        ASSERT(tha == 6);
+        if (cl_add(NULL, gpa_create(spa, header->plen), sha, header->hlen)) {
                 LOG_ERR("Could not add this entry to its cache-line");
                 return -1;
         }
+#endif
 
         /*
          *  And finally process the entry ...
@@ -193,7 +204,7 @@ static int arp826_process(struct sk_buff * skb)
         }
 
         /* Finally, update the ARP cache */
-
+                
         return 0;
 }
 
@@ -275,7 +286,7 @@ struct cache_line * cache_lines[7] = { NULL };
 
 static int __init mod_init(void)
 {
-        cache_lines[6] = cl_create();
+        cache_lines[6] = cl_create(6);
         if (!cache_lines[6])
                 return -1;
 
@@ -289,6 +300,8 @@ static int __init mod_init(void)
 static void __exit mod_exit(void)
 {
         dev_remove_pack(&arp_packet_type);
+
+        ASSERT(cache_lines[6]);
 
         cl_destroy(cache_lines[6]);
 
@@ -551,12 +564,12 @@ static struct sk_buff *arp_create(int op, int ptype, int plen,
                                   const unsigned char * dest_nwaddr,
                                   const unsigned char * dest_hw)
 {
-        struct sk_buff *     skb;
-        struct arp_header *     arp;
-        unsigned char *      arp_ptr;
-        int                  hlen = LL_RESERVED_SPACE(dev);
-        int                  tlen = dev->needed_tailroom;
-        const unsigned char *src_hw;
+        struct sk_buff *      skb;
+        struct arp_header *   arp;
+        unsigned char *       arp_ptr;
+        int                   hlen = LL_RESERVED_SPACE(dev);
+        int                   tlen = dev->needed_tailroom;
+        const unsigned char * src_hw;
 
         /*
          *      Allocate a buffer
