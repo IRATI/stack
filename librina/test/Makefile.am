@@ -89,10 +89,6 @@ test_syscalls_SOURCES  = test-syscalls.cc
 test_syscalls_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_syscalls_LDFLAGS  = $(FUNCTIONALLDFLAGS)
 
-test_librina_SOURCES  = test-librina.cc
-test_librina_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
-test_librina_LDFLAGS  = $(FUNCTIONALLDFLAGS)
-
 check_PROGRAMS =				\
 	test-01					\
 	test-02					\
@@ -101,8 +97,7 @@ check_PROGRAMS =				\
 	test-netlink-parsers			\
 	test-concurrency			\
 	test-core				\
-	test-syscalls				\
-	test-librina
+	test-syscalls				
 
 XFAIL_TESTS =					\
 	test-03
@@ -118,8 +113,7 @@ FUNCTIONAL_PASS_TESTS =				\
 	test-netlink-parsers			\
 	test-concurrency			\
 	test-core				\
-	test-syscalls				\
-	test-librina
+	test-syscalls			
 
 FUNCTIONAL_XFAIL_TESTS =
 

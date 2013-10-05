@@ -810,25 +810,36 @@ void Parameter::setValue(const std::string& value) {
 	this->value = value;
 }
 
-/* CLASS DIF CONFIGURATION */
-const ApplicationProcessNamingInformation& DIFConfiguration::getDifName()
+/* CLASS DIF INFORMATION */
+const ApplicationProcessNamingInformation& DIFInformation::getDifName()
 		const {
 	return difName;
 }
 
-void DIFConfiguration::setDifName(
+void DIFInformation::setDifName(
 		const ApplicationProcessNamingInformation& difName) {
 	this->difName = difName;
 }
 
-const std::string& DIFConfiguration::getDifType() const {
+const std::string& DIFInformation::getDifType() const {
 	return difType;
 }
 
-void DIFConfiguration::setDifType(const std::string& difType) {
+void DIFInformation::setDifType(const std::string& difType) {
 	this->difType = difType;
 }
 
+const DIFConfiguration& DIFInformation::getDifConfiguration()
+		const {
+	return difConfiguration;
+}
+
+void DIFInformation::setDifConfiguration(
+		const DIFConfiguration& difConfiguration) {
+	this->difConfiguration = difConfiguration;
+}
+
+/* CLASS DIF CONFIGURATION */
 const std::list<Policy>& DIFConfiguration::getPolicies() {
 	return policies;
 }

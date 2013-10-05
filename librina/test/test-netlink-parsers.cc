@@ -1245,16 +1245,18 @@ int testIpcmAssignToDIFRequestMessage() {
 	difName.setProcessName("/difs/Test.DIF");
 
 	IpcmAssignToDIFRequestMessage message;
+	DIFInformation difInformation;
 	DIFConfiguration difConfiguration;
-	difConfiguration.setDifType("shim-ethernet");
-	difConfiguration.setDifName(difName);
+	difInformation.setDifType("shim-ethernet");
+	difInformation.setDifName(difName);
 	Parameter * parameter = new Parameter("interface", "eth0");
 	difConfiguration.addParameter(*parameter);
 	delete parameter;
 	parameter = new Parameter("vlanid", "430");
 	difConfiguration.addParameter(*parameter);
 	delete parameter;
-	message.setDIFConfiguration(difConfiguration);
+	difInformation.setDifConfiguration(difConfiguration);
+	message.setDIFInformation(difInformation);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -1280,19 +1282,19 @@ int testIpcmAssignToDIFRequestMessage() {
 		std::cout << "Error parsing Ipcm Assign To DIF Request Message "
 				<< "\n";
 		returnValue = -1;
-	} else if (message.getDIFConfiguration().getDifType().compare(
-			recoveredMessage->getDIFConfiguration().getDifType()) != 0) {
-		std::cout << "DIFConfiguration.difType on original and recovered messages"
+	} else if (message.getDIFInformation().getDifType().compare(
+			recoveredMessage->getDIFInformation().getDifType()) != 0) {
+		std::cout << "DIFInformation.difType on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
-	} else if (message.getDIFConfiguration().getDifName() !=
-			recoveredMessage->getDIFConfiguration().getDifName()) {
-		std::cout << "DIFConfiguration.difName on original and recovered messages"
+	} else if (message.getDIFInformation().getDifName() !=
+			recoveredMessage->getDIFInformation().getDifName()) {
+		std::cout << "DIFInformation.difName on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
-	} else if (message.getDIFConfiguration().getParameters().size() !=
-			recoveredMessage->getDIFConfiguration().getParameters().size()){
-		std::cout << "DIFConfiguration.parameters.size on original and recovered messages"
+	} else if (message.getDIFInformation().getDifConfiguration().getParameters().size() !=
+			recoveredMessage->getDIFInformation().getDifConfiguration().getParameters().size()){
+		std::cout << "DIFInformation.DIFConfiguration.parameters.size on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	}

@@ -7,6 +7,7 @@ import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.AssignToDIFException;
 import eu.irati.librina.CreateIPCProcessException;
 import eu.irati.librina.DIFConfiguration;
+import eu.irati.librina.DIFInformation;
 import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
@@ -18,7 +19,6 @@ import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IPCProcessPointerVector;
 import eu.irati.librina.OSProcessFinalizedEvent;
-import eu.irati.librina.Parameter;
 import eu.irati.librina.rina;
 
 import java.io.ByteArrayOutputStream;
@@ -177,22 +177,23 @@ public class IPCManager {
 			}
 			
 			if (ipcProcessToCreate.getDifName() != null){
-				DIFConfiguration difConfiguration = new DIFConfiguration();
+				DIFInformation difInformation = new DIFInformation();
 				ApplicationProcessNamingInformation difName = 
 						new ApplicationProcessNamingInformation();
 				difName.setProcessName(ipcProcessToCreate.getDifName());
-				difConfiguration.setDifName(difName);
-				difConfiguration.setDifType(ipcProcess.getType());
+				difInformation.setDifName(difName);
+				difInformation.setDifType(ipcProcess.getType());
 				
 				DIFProperties difProperties = configuration.getDIFConfiguration(ipcProcessToCreate.getDifName());
 				if (difProperties != null && difProperties.getConfigParameters() != null){
 					for(int j=0; j<difProperties.getConfigParameters().size(); j++){
-						difConfiguration.addParameter(difProperties.getConfigParameters().get(j));
+						difInformation.getDifConfiguration().addParameter(
+								difProperties.getConfigParameters().get(j));
 					}
 				}
 				
 				try{
-					ipcProcess.assignToDIF(difConfiguration);
+					ipcProcess.assignToDIF(difInformation);
 				}catch(AssignToDIFException ex){
 					log.error(ex.getMessage() + ". Problems assigning IPC Process to DIF " 
 							+ ipcProcessToCreate.getDifName());
@@ -283,7 +284,7 @@ public class IPCManager {
 	public String getIPCProcessesInformationAsString(){
 		IPCProcessPointerVector ipcProcesses = ipcProcessFactory.listIPCProcesses();
 		IPCProcess ipcProcess = null;
-		DIFConfiguration difConfiguration = null;
+		DIFInformation difInformation = null;
 		String result = "";
 		
 		for(int i=0; i<ipcProcesses.size(); i++){
@@ -291,10 +292,10 @@ public class IPCManager {
 			result = result + "Id: "+ ipcProcess.getId() + "\n";
 			result = result + "    Type: " + ipcProcess.getType() + "\n";
 			result = result + "    Name: " + ipcProcess.getName().toString() + "\n";
-			difConfiguration = ipcProcess.getConfiguration();
-			if (difConfiguration != null){
+			difInformation = ipcProcess.getDIFInformation();
+			if (difInformation != null){
 				result = result + "    Member of DIF: " + 
-						difConfiguration.getDifName().getProcessName() + "\n"; 
+						difInformation.getDifName().getProcessName() + "\n"; 
 			}
 		}
 		

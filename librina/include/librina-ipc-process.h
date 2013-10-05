@@ -30,13 +30,13 @@ namespace rina {
  */
 class AssignToDIFRequestEvent: public IPCEvent {
 
-	/** The configuration of the DIF the IPC Process is being assigned to*/
-	DIFConfiguration difConfiguration;
+	/** The information of the DIF the IPC Process is being assigned to*/
+	DIFInformation difInformation;
 
 public:
-	AssignToDIFRequestEvent(const DIFConfiguration& difConfiguration,
+	AssignToDIFRequestEvent(const DIFInformation& difInformation,
 			unsigned int sequenceNumber);
-	const DIFConfiguration& getDIFConfiguration() const;
+	const DIFInformation& getDIFInformation() const;
 };
 
 /**
@@ -232,12 +232,12 @@ class ExtendedIPCManager: public IPCManager {
 	unsigned int ipcManagerPort;
 
 	/** The current configuration of the IPC Process */
-	DIFConfiguration currentConfiguration;
+	DIFInformation currentDIFInformation;
 
 public:
 	static const std::string error_allocate_flow;
-	const DIFConfiguration& getCurrentConfiguration() const;
-	void setCurrentConfiguration(const DIFConfiguration& currentConfiguration);
+	const DIFInformation& getCurrentDIFInformation() const;
+	void setCurrentDIFInformation(const DIFInformation& currentDIFInformation);
 	unsigned int getIpcProcessId() const;
 	void setIpcProcessId(unsigned int ipcProcessId);
 

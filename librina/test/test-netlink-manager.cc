@@ -44,9 +44,9 @@ int main(int argc, char * argv[]) {
 	ApplicationProcessNamingInformation difName;
 	difName.setProcessName("/difs/test.DIF");
 
-	DIFConfiguration difConfiguration;
-	difConfiguration.setDifType("shim-dummy");
-	difConfiguration.setDifName(difName);
+	DIFInformation difInformation;
+	difInformation.setDifType("shim-dummy");
+	difInformation.setDifName(difName);
 
 	AppAllocateFlowRequestMessage message;
 	message.setDestPortId(31);
@@ -461,7 +461,7 @@ int main(int argc, char * argv[]) {
 	/*Test sending IpcmAssignToDIFRequestMessage */
 	IpcmAssignToDIFRequestMessage message14;
 	message14.setDestPortId(0);
-	message14.setDIFConfiguration(difConfiguration);
+	message14.setDIFInformation(difInformation);
 	message14.setRequestMessage(true);
 	message14.setSequenceNumber(source.getSequenceNumber());
 	message14.setSourceIpcProcessId(21);
@@ -484,9 +484,9 @@ int main(int argc, char * argv[]) {
 	std::cout<<"Destination IPC Process id "<<result14->getDestIpcProcessId()
 												<<std::endl;;
 	std::cout<<"DIF name: "<<
-			result14->getDIFConfiguration().getDifName().getProcessName()
+			result14->getDIFInformation().getDifName().getProcessName()
 			<<std::endl;
 	std::cout<<"DIF type: "<<
-			result14->getDIFConfiguration().getDifType()<<std::endl;
+			result14->getDIFInformation().getDifType()<<std::endl;
 	delete fromKernel;
 }

@@ -46,25 +46,24 @@
 /* FIXME: End of dependencies ... */
 
 #include "arp826.h"
-
-static struct list_head arp_cache;
+#include "arp826-cache.h"
 
 struct arp_hdr {
-	__be16        ar_hrd;         /* Hardware address   */
-	__be16        ar_pro;         /* Protocol address   */
-	__u8          ar_hln;         /* Length of hardware address   */
-        __u8          ar_pln;         /* Length of protocol address   */
-	__be16        ar_op;          /* ARP opcode (command)         */
+	__be16        ar_hrd; /* Hardware address   */
+	__be16        ar_pro; /* Protocol address   */
+	__u8          ar_hln; /* Length of hardware address   */
+        __u8          ar_pln; /* Length of protocol address   */
+	__be16        ar_op;  /* ARP opcode (command)         */
  
 #if 0
 	/*
 	 *      This bit is variable sized however...
 	 *      This is an example
 	 */
-	unsigned char ar_sha;     /* sender hardware address   */
-	unsigned char ar_spa;     /* sender protocol address   */
-	unsigned char ar_tha;     /* target hardware address   */
-	unsigned char ar_tpa;     /* target protocol address   */
+	unsigned char ar_sha; /* sender hardware address   */
+	unsigned char ar_spa; /* sender protocol address   */
+	unsigned char ar_tha; /* target hardware address   */
+	unsigned char ar_tpa; /* target protocol address   */
 #endif
 };
 
@@ -106,7 +105,7 @@ int rinarp_send_request(struct naddr_filter * filter,
 EXPORT_SYMBOL(rinarp_send_request);
 
 static struct arp_hdr * arp826_header(const struct sk_buff * skb)
-{ return (struct arp_hdr *)skb_network_header(skb); }
+{ return (struct arp_hdr *) skb_network_header(skb); }
 
 static int arp826_process(struct sk_buff * skb)
 {
@@ -224,8 +223,9 @@ static int arp826_receive(struct sk_buff *     skb,
                 goto freeskb;
 
         skb = skb_share_check(skb, GFP_ATOMIC);
-        if (!skb)
+        if (!skb) {
                 goto out_of_mem;
+        }
 
         /* ARP header, without 2 device and 2 network addresses */
         if (!pskb_may_pull(skb, sizeof(struct arp_hdr)))
@@ -260,7 +260,8 @@ static struct packet_type arp_packet_type __read_mostly = {
 
 static int __init mod_init(void)
 {
-        INIT_LIST_HEAD(&arp_cache);
+        if (arp826_cache_init())
+                return -1;
 
         dev_add_pack(&arp_packet_type);
 
@@ -268,7 +269,11 @@ static int __init mod_init(void)
 }
 
 static void __exit mod_exit(void)
-{ /* FIXME: Destroy the contents of the cache (if any) */ }
+{
+        dev_remove_pack(&arp_packet_type);
+
+        arp826_cache_fini();
+}
 
 module_init(mod_init);
 module_exit(mod_exit);

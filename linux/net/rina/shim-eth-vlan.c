@@ -29,10 +29,10 @@
 #include <linux/netdevice.h>
 #include <linux/if_packet.h>
 
-#define SHIM_NAME    "shim-eth-vlan"
-#define PROTO_LEN    32
+#define PROTO_LEN   32
+#define SHIM_NAME   "shim-eth-vlan"
 
-#define RINA_PREFIX  SHIM_NAME
+#define RINA_PREFIX SHIM_NAME
 
 #include "logs.h"
 #include "common.h"
@@ -49,8 +49,8 @@ extern struct kipcm * default_kipcm;
 
 /* Holds the configuration of one shim instance */
 struct eth_vlan_info {
-        uint16_t      vlan_id;
-        char *        interface_name;
+        uint16_t vlan_id;
+        char *   interface_name;
 };
 
 enum port_id_state {
@@ -78,26 +78,26 @@ struct shim_eth_flow {
  * shim Ethernet IPC Process
  */
 struct ipcp_instance_data {
-        struct list_head list;
-        ipc_process_id_t id;
+        struct list_head       list;
+        ipc_process_id_t       id;
 
         /* IPC Process name */
-        struct name * name;
+        struct name *          name;
         struct eth_vlan_info * info;
-        struct packet_type * eth_vlan_packet_type;
-        struct net_device * dev;
+        struct packet_type *   eth_vlan_packet_type;
+        struct net_device *    dev;
 
         /* The IPC Process using the shim-eth-vlan */
-        struct name * app_name;
+        struct name *          app_name;
         /* The registered application */
-        struct name * reg_app;
+        struct name *          reg_app;
 
         /* Stores the state of flows indexed by port_id */
-        struct list_head flows;
+        struct list_head       flows;
 
         /* RINA-ARP related */
-        struct naddr_handle * handle;
-        struct naddr_filter * filter;
+        struct naddr_handle *  handle;
+        struct naddr_filter *  filter;
 };
 
 static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
@@ -144,9 +144,9 @@ static struct paddr name_to_paddr(const struct name * name)
 
 
 static string_t * create_vlan_interface_name(string_t * interface_name,
-                                             uint16_t vlan_id)
+                                             uint16_t   vlan_id)
 {
-        char string_vlan_id[4];
+        char       string_vlan_id[4];
         string_t * complete_interface;
 
         complete_interface =
@@ -164,8 +164,8 @@ static string_t * create_vlan_interface_name(string_t * interface_name,
 }
 
 static struct shim_eth_flow *
-find_flow_by_addr(struct ipcp_instance_data *       data,
-                  const struct paddr *              addr)
+find_flow_by_addr(struct ipcp_instance_data * data,
+                  const struct paddr *        addr)
 {
         struct shim_eth_flow * flow;
 
@@ -184,7 +184,7 @@ static void arp_req_handler(void *                         opaque,
 {
 
         struct ipcp_instance_data * data;
-        struct shim_eth_flow * flow;
+        struct shim_eth_flow *      flow;
 
         data = (struct ipcp_instance_data *) opaque;
         flow = find_flow_by_addr(data, dest_paddr);
@@ -304,7 +304,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                            flow_id_t                   flow_id,
                                            port_id_t                   port_id,
-                                           int result)
+                                           int                         result)
 {
         struct shim_eth_flow * flow;
 
@@ -571,16 +571,20 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         return 0;
 };
 
+//FIXME reconfiguration is not allowed through this operation
+//If the IPC Process is already assigned to a shim DIF, this
+//method must return an error. Reconfiguration must be achieved
+//through update-dif-configuration (which doesn't allow changing
+//the DIF to which this IPC Process is assigned)
 static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
-                                  const struct dif_config *  configuration)
+		                          const struct dif_info *  dif_information)
 {
-        struct eth_vlan_info *     info;
-        struct ipcp_config *       tmp;
-        struct ipcp_config_entry * entry;
-        bool                       reconfigure;
-        uint16_t                   old_vlan_id;
-        string_t *                 old_interface_name;
-        string_t *                 complete_interface;
+        struct eth_vlan_info * info;
+        struct ipcp_config *   tmp;
+        bool                   reconfigure;
+        uint16_t               old_vlan_id;
+        string_t *             old_interface_name;
+        string_t *             complete_interface;
 
 
         ASSERT(data);
@@ -595,12 +599,20 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         old_interface_name = info->interface_name;
 
         /* Get vlan id */
-        info->vlan_id = simple_strtol(configuration->dif_name->process_name,0,10);
+        info->vlan_id = simple_strtol(dif_information->dif_name->process_name,
+                                      0,
+                                      10);
         if (old_vlan_id && old_vlan_id != info->vlan_id)
                 reconfigure = 1;
 
         /* Retrieve configuration of IPC process from params */
-        list_for_each_entry (tmp, &(configuration->ipcp_config_entries), next) {
+        list_for_each_entry(tmp,
+        		&(dif_information->configuration->ipcp_config_entries),
+        		next)
+        {
+                const struct ipcp_config_entry * entry;
+                const struct ipcp_config_value * value;
+
                 entry = tmp->entry;
                 if (!strcmp(entry->name,"interface-name")){
                         if (!strcpy(info->interface_name,
@@ -650,6 +662,12 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         return 0;
 }
 
+static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
+                                   const struct dif_config *  new_config){
+	    //FIXME Implement if required
+	    return -1;
+}
+
 static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_allocate_request  = eth_vlan_flow_allocate_request,
         .flow_allocate_response = eth_vlan_flow_allocate_response,
@@ -658,6 +676,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .application_unregister = eth_vlan_application_unregister,
         .sdu_write              = eth_vlan_sdu_write,
         .assign_to_dif          = eth_vlan_assign_to_dif,
+        .update_dif_config      = eth_vlan_update_dif_config,
 };
 
 static struct ipcp_factory_data {
@@ -759,7 +778,8 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
         }
 
         inst->data->info->interface_name =
-                rkzalloc(sizeof(*inst->data->info->interface_name), GFP_KERNEL);
+                rkzalloc(sizeof(*inst->data->info->interface_name),
+                         GFP_KERNEL);
         if (!inst->data->info->interface_name) {
                 LOG_DBG("Failed creation of interface_name");
                 rkfree(inst->data->info);

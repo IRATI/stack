@@ -36,6 +36,7 @@
 #include "ipcp-factories.h"
 #include "du.h"
 #include "kfa.h"
+#include "rnl-utils.h"
 
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -498,21 +499,21 @@ static int dummy_fini(struct ipcp_factory_data * data)
 }
 
 static int dummy_assign_to_dif(struct ipcp_instance_data * data,
-                               const struct dif_config *  configuration)
+		                       const struct dif_info *  dif_information)
 {
-		struct ipcp_config * pos;
+        struct ipcp_config * pos;
 
-		ASSERT(data);
-		ASSERT(configuration);
+        ASSERT(data);
+        ASSERT(dif_information);
 
         if (!data->info) {
                 LOG_ERR("There is no info for this IPC process");
                 return -1;
         }
 
-        data->info->dif_name = name_dup(configuration->dif_name);
+        data->info->dif_name = name_dup(dif_information->dif_name);
         if (!data->info->dif_name) {
-                char * tmp = name_tostring(configuration->dif_name);
+                char * tmp = name_tostring(dif_information->dif_name);
                 LOG_ERR("Assingment of IPC Process to DIF %s failed", tmp);
                 rkfree(tmp);
                 rkfree(data->info);
@@ -520,15 +521,25 @@ static int dummy_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        list_for_each_entry(pos, &(configuration->ipcp_config_entries), next)
-        		LOG_DBG("Configuration entry name: %s; value: %s",
-        				pos->entry->name,
-        				pos->entry->value);
+        if (dif_information->configuration)
+                list_for_each_entry(
+        		        pos,
+        	 	        &(dif_information->configuration->ipcp_config_entries),
+        		        next)
+                        LOG_DBG("Configuration entry name: %s; value: %s",
+                                pos->entry->name,
+                                pos->entry->value);
 
         LOG_DBG("Assigned IPC Process to DIF %s",
                 data->info->dif_name->process_name);
 
         return 0;
+}
+
+static int dummy_update_dif_config(struct ipcp_instance_data * data,
+                                   const struct dif_config *  new_config){
+	    //Nothing to be reconfigured
+	    return -1;
 }
 
 static struct ipcp_instance_ops dummy_instance_ops = {
@@ -539,6 +550,7 @@ static struct ipcp_instance_ops dummy_instance_ops = {
         .application_unregister = dummy_application_unregister,
         .sdu_write              = dummy_sdu_write,
         .assign_to_dif          = dummy_assign_to_dif,
+        .update_dif_config      = dummy_update_dif_config,
 };
 
 static struct ipcp_instance_data *
@@ -645,10 +657,10 @@ static int dummy_destroy(struct ipcp_factory_data * data,
 
                         /* Destroy it */
                         if (pos->info->dif_name)
-                        	name_destroy(pos->info->dif_name);
+                                name_destroy(pos->info->dif_name);
 
                         if (pos->info->name)
-                        	name_destroy(pos->info->name);
+                                name_destroy(pos->info->name);
 
                         rkfree(pos->info);
                         rkfree(pos);

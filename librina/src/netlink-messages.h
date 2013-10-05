@@ -634,13 +634,13 @@ public:
  */
 class IpcmAssignToDIFRequestMessage: public NetlinkRequestOrNotificationMessage {
 
-	/** The configuration of the DIF where the IPC Process is assigned */
-	DIFConfiguration difconfiguration;
+	/** The information of the DIF where the IPC Process is assigned */
+	DIFInformation difInformation;
 
 public:
 	IpcmAssignToDIFRequestMessage();
-	const DIFConfiguration& getDIFConfiguration() const;
-	void setDIFConfiguration(const DIFConfiguration&);
+	const DIFInformation& getDIFInformation() const;
+	void setDIFInformation(const DIFInformation&);
 	IPCEvent* toIPCEvent();
 };
 

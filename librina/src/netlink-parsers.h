@@ -434,9 +434,7 @@ IpcmUnregisterApplicationResponseMessage *
 
 /* DIF Configuration CLASS */
 enum DIFConfigurationAttributes {
-	DCONF_ATTR_DIF_TYPE = 1,
-	DCONF_ATTR_DIF_NAME,
-	DCONF_ATTR_PARAMETERS,
+	DCONF_ATTR_PARAMETERS = 1,
 	__DCONF_ATTR_MAX,
 };
 
@@ -447,9 +445,24 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 
 DIFConfiguration * parseDIFConfigurationObject(nlattr *nested);
 
+/* DIF INFORMATION CLASS */
+enum DIFInformationAttributes {
+	DINFO_ATTR_DIF_TYPE = 1,
+	DINFO_ATTR_DIF_NAME,
+	DINFO_ATTR_DIF_CONFIG,
+	__DINFO_ATTR_MAX,
+};
+
+#define DINFO_ATTR_MAX (__DINFO_ATTR_MAX -1)
+
+int putDIFInformationObject(nl_msg* netlinkMessage,
+		const DIFInformation& object);
+
+DIFInformation * parseDIFInformationObject(nlattr *nested);
+
 /* IpcmAssignToDIFRequestMessage CLASS*/
 enum IpcmAssignToDIFRequestMessageAttributes {
-	IATDR_ATTR_DIF_CONFIGURATION = 1,
+	IATDR_ATTR_DIF_INFORMATION = 1,
 	__IATDR_ATTR_MAX,
 };
 

@@ -587,14 +587,9 @@ public:
 
 /**
  * Contains the data about a DIF Configuration
+ * (QoS cubes, policies, parameters, etc)
  */
 class DIFConfiguration {
-
-	/** The type of DIF */
-	std::string difType;
-
-	/** The name of the DIF */
-	ApplicationProcessNamingInformation difName;
 
 	/** The QoS cubes supported by the DIF */
 	std::list<QoSCube> qosCubes;
@@ -606,10 +601,6 @@ class DIFConfiguration {
 	std::list<Parameter> parameters;
 
 public:
-	const ApplicationProcessNamingInformation& getDifName() const;
-	void setDifName(const ApplicationProcessNamingInformation& difName);
-	const std::string& getDifType() const;
-	void setDifType(const std::string& difType);
 	const std::list<Policy>& getPolicies();
 	void setPolicies(const std::list<Policy>& policies);
 	const std::list<QoSCube>& getQosCubes() const;
@@ -617,6 +608,28 @@ public:
 	const std::list<Parameter>& getParameters() const;
 	void setParameters(const std::list<Parameter>& parameters);
 	void addParameter(const Parameter& parameter);
+};
+
+/**
+ * Contains the information about a DIF (name, type, configuration)
+ */
+class DIFInformation{
+	/** The type of DIF */
+	std::string difType;
+
+	/** The name of the DIF */
+	ApplicationProcessNamingInformation difName;
+
+	/** The DIF Configuration (qoscubes, policies, parameters, etc) */
+	DIFConfiguration difConfiguration;
+
+public:
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
+	const std::string& getDifType() const;
+	void setDifType(const std::string& difType);
+	const DIFConfiguration& getDifConfiguration() const;
+	void setDifConfiguration(const DIFConfiguration& difConfiguration);
 };
 
 /**
