@@ -79,14 +79,8 @@ config RINA_PERSONALITY_DEFAULT
 	---help---
 	  No help for the time being
 
-config RINA_ARP_OLD
-	tristate "RINA ARP implementation support (old)"
-	default m
-	help
-	  No help for the time being
-
-config RINA_ARP_NEW
-	tristate "RINA ARP implementation support (new)"
+config ARP826
+	tristate "RFC-826 ARP compliant implementation"
 	default m
 	help
 	  No help for the time being
@@ -101,7 +95,7 @@ config RINA_SHIM_DUMMY
 config RINA_SHIM_ETH_VLAN
 	tristate "Shim IPC over Ethernet (using VLANs) support"
 	default m
-        depends on RINA_PERSONALITY_DEFAULT && RINA_ARP_NEW
+        depends on RINA_PERSONALITY_DEFAULT && ARP826
 	help
 	  No help for the time being
 

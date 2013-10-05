@@ -1,8 +1,8 @@
 /*
- * Implementation of RFC 826 because current implementation is too
- * intertwined with IP version 4.
+ * An RFC 826 ARP implementation
  *
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  *    Code reused from:
  *      net/ipv4/arp.c
@@ -23,6 +23,275 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
+#include <linux/module.h>
+#include <linux/types.h>
+#include <linux/kernel.h>
+#include <linux/skbuff.h>
+#include <linux/netdevice.h>
+#include <linux/slab.h>
+#include <linux/list.h>
+#include <linux/if_ether.h>
+
+/*
+ * FIXME: The following lines provide basic framework and utilities. These
+ *        dependencies will be removed ASAP to let this module live its own
+ *        life
+ */
+#define RINA_PREFIX "arp826"
+
+#include "logs.h"
+#include "debug.h"
+#include "utils.h"
+/* FIXME: End of dependencies ... */
+
+#include "arp826.h"
+
+static struct list_head arp_cache;
+
+struct arp_hdr {
+	__be16        ar_hrd;         /* Hardware address   */
+	__be16        ar_pro;         /* Protocol address   */
+	__u8          ar_hln;         /* Length of hardware address   */
+        __u8          ar_pln;         /* Length of protocol address   */
+	__be16        ar_op;          /* ARP opcode (command)         */
+ 
+#if 0
+	/*
+	 *      This bit is variable sized however...
+	 *      This is an example
+	 */
+	unsigned char ar_sha;     /* sender hardware address   */
+	unsigned char ar_spa;     /* sender protocol address   */
+	unsigned char ar_tha;     /* target hardware address   */
+	unsigned char ar_tpa;     /* target protocol address   */
+#endif
+};
+
+struct naddr_handle * rinarp_paddr_register(__be16              proto_name,
+					    __be16              proto_len,
+                                            struct net_device * device,
+                                            struct paddr        address)
+{ return NULL; }
+EXPORT_SYMBOL(rinarp_paddr_register);
+
+int rinarp_paddr_unregister(struct naddr_handle * h)
+{ return -1; }
+EXPORT_SYMBOL(rinarp_paddr_unregister);
+
+struct naddr_filter * naddr_filter_create(struct naddr_handle * handle)
+{ return NULL; }
+EXPORT_SYMBOL(naddr_filter_create);
+
+int naddr_filter_set(struct naddr_filter * filter,
+		     void *                opaque,
+		     arp_handler_t         request,
+		     arp_handler_t         reply)
+{ return -1; }
+EXPORT_SYMBOL(naddr_filter_set);
+
+int naddr_filter_destroy(struct naddr_filter * filter)
+{ return -1; }
+EXPORT_SYMBOL(naddr_filter_destroy);
+
+int rinarp_hwaddr_get(struct naddr_filter *    filter, 
+		      struct paddr             in_address,
+		      struct rinarp_mac_addr * out_addr)
+{ return -1; }
+EXPORT_SYMBOL(rinarp_hwaddr_get);
+
+int rinarp_send_request(struct naddr_filter * filter, 
+                        struct paddr          address)
+{ return -1; }
+EXPORT_SYMBOL(rinarp_send_request);
+
+static struct arp_hdr * arp826_header(const struct sk_buff * skb)
+{ return (struct arp_hdr *)skb_network_header(skb); }
+
+static int arp826_process(struct sk_buff * skb)
+{
+#if 0
+	struct net_device * dev;
+	struct in_device *  in_dev;
+	struct arp_hdr *    arp;
+	unsigned char  *    arp_ptr;
+
+	unsigned char *     sha;
+	unsigned char *     s_netaddr;
+	unsigned char *     d_netaddr;
+	unsigned char *     s_hwaddr;
+	unsigned char *     d_hwaddr;
+	u16                 dev_type;
+
+	struct net *        net;
+
+        dev      = skb->dev;
+        in_dev   = = __in_dev_get_rcu(dev);
+        dev_type = dev->type;
+        net      = dev_net(dev);
+
+	/* Verify the ARP header and verifies the device is ARP'able */
+
+	if (in_dev == NULL)
+		goto out;
+
+	arp = arp826_header(skb);
+
+	/* 
+	 * Check if we know the protocol specified
+	 * Only accept RINA packets in this implementation 
+	 * Others could be added 
+	 */
+
+	if (arp->ar_pro != htons(ETH_P_RINA) ||
+	    htons(dev_type) != arp->ar_hrd)
+		goto out;
+
+	switch (dev_type) {
+	case ARPHRD_ETHER:
+		if ((arp->ar_hrd != htons(RINARP_ETHER))
+                    goto out;
+                    break;
+                    }
+
+                /* Understand only these message types */
+                if (arp->ar_op != htons(RINARP_REPLY) &&
+                    arp->ar_op != htons(RINARP_REQUEST))
+                        goto out;
+                
+                /* Extract addresses */
+                arp_ptr = (unsigned char *)(arp + 1);
+                sha	= arp_ptr;
+                arp_ptr += dev->addr_len;
+                memcpy(s_netaddr, arp_ptr, arp->ar_pln);
+                arp_ptr += arp->ar_pln;
+                memcpy(s_hwaddr, arp_ptr, arp->ar_hln);
+                arp_ptr += dev->addr_len;
+                memcpy(d_netaddr, arp_ptr, arp->ar_pln);
+                arp_ptr += arp->ar_pln;
+                memcpy(d_hwaddr, arp_ptr, arp->ar_hln);
+
+                /*
+                 *  Process entry. The idea here is we want to send a reply
+                 *  if it is a request for us. We want to add an entry to our
+                 *  cache if it is a reply to us or if it is a request for one
+                 *  of our addresses.
+                 *
+                 *  Putting this another way, we only care about replies if
+                 *  they are to us, in which case we add them to the cache.
+                 *  For requests, we care about those for us. We add the
+                 *  requester to the arp cache.
+                 */
+
+                /* FIXME: The following part, first complete top part ARP PM */
+                if (arp->ar_op == htons(RINARP_REQUEST)) {
+                        /* Are we advertising this network address? */
+
+                } else if (arp->arp_op == htons(RINARP_REPLY)) {
+                        /* Is the reply for one of our network addresses? */
+		
+                } else {
+                        printk("Unknown operation code");
+                        goto out;
+                }
+
+                /* Update our ARP tables */
+                
+        out:
+                consume_skb(skb);
+                return 0;
+        }
+#else
+        consume_skb(skb);
+        return 0;
+#endif
+}
+
+static int arp826_receive(struct sk_buff *     skb,
+                          struct net_device *  dev,
+                          struct packet_type * pkt,
+                          struct net_device *  orig_dev)
+{
+        const struct arp_hdr * arp;
+        int                    total_length;
+
+        if (!dev || !skb)
+                return -1;
+
+        if (dev->flags & IFF_NOARP            ||
+            skb->pkt_type == PACKET_OTHERHOST ||
+            skb->pkt_type == PACKET_LOOPBACK)
+                goto freeskb;
+
+        skb = skb_share_check(skb, GFP_ATOMIC);
+        if (!skb)
+                goto out_of_mem;
+
+        /* ARP header, without 2 device and 2 network addresses */
+        if (!pskb_may_pull(skb, sizeof(struct arp_hdr)))
+                goto freeskb;
+
+        arp = arp826_header(skb);
+        if (arp->ar_hln != dev->addr_len)
+                goto freeskb;
+
+        total_length = sizeof(struct arp_hdr) +
+                (dev->addr_len + arp->ar_pln) * 2;
+
+        /* ARP header, with 2 device and 2 network addresses */
+        if (!pskb_may_pull(skb, total_length))
+                goto freeskb;
+
+        arp826_process(skb);
+        return 0;
+
+ freeskb:
+        kfree_skb(skb);
+
+ out_of_mem:
+        /* FIXME: Shouldn't we prompt for something here ? */
+        return 0;
+}
+
+static struct packet_type arp_packet_type __read_mostly = {
+        .type =	cpu_to_be16(ETH_P_ARP),
+        .func =	arp826_receive,
+};
+
+static int __init mod_init(void)
+{
+        INIT_LIST_HEAD(&arp_cache);
+
+        dev_add_pack(&arp_packet_type);
+
+        return 0;
+}
+
+static void __exit mod_exit(void)
+{ /* FIXME: Destroy the contents of the cache (if any) */ }
+
+module_init(mod_init);
+module_exit(mod_exit);
+
+MODULE_DESCRIPTION("Basic RFC 826 compliant ARP implementation");
+
+MODULE_LICENSE("GPL");
+
+MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
+MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+
+
+
+
+
+
+
+
+
+
+#if 0
+
+/* RINA ARP OLD */
 
 #include <linux/module.h>
 #include <linux/types.h>
@@ -367,8 +636,7 @@ int rinarp_old_send_request(struct arp_reply_ops * ops)
 EXPORT_SYMBOL(rinarp_old_send_request);
 
 /*
- *	Process an arp request.
- *      Taken from net/ipv4/arp.c
+ * Process an arp request (code stolen from net/ipv4/arp.c)
  */
 #if RINA_TEST
 static int arp_process(struct sk_buff *skb)
@@ -541,3 +809,5 @@ MODULE_DESCRIPTION("Basic implementation of RFC 826");
 MODULE_LICENSE("GPL");
 
 MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
+MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+#endif
