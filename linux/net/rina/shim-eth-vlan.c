@@ -588,7 +588,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
 
 
         ASSERT(data);
-        ASSERT(configuration);
+        ASSERT(dif_information);
 
         /* If reconfigure = 1, break down all communication and setup again */
         reconfigure = 0;
@@ -611,7 +611,6 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         		next)
         {
                 const struct ipcp_config_entry * entry;
-                const struct ipcp_config_value * value;
 
                 entry = tmp->entry;
                 if (!strcmp(entry->name,"interface-name")){
