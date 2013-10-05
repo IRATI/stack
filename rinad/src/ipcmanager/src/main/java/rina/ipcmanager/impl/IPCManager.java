@@ -321,7 +321,8 @@ public class IPCManager {
 	 */
 	public IPCProcess createIPCProcess(ApplicationProcessNamingInformation name, 
 			String type) throws CreateIPCProcessException {
-		return ipcProcessFactory.create(name, type);
+		return ipcProcessFactory.create(name, type, 
+				RINAConfiguration.getInstance().getLocalConfiguration().getInstallationPath());
 	}
 	
 	/**

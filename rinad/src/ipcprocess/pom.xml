@@ -62,46 +62,60 @@
 				<directory>src/test/resources</directory>
 			</resource>
 		</resources>	
-    <plugins>
-            <!-- The configuration of maven-assembly-plugin -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.2.2</version>
-                <!-- The configuration of the plugin -->
-                <configuration>
-                    <!-- Specifies the configuration file of the assembly plugin -->
-                    <descriptors>
-                        <descriptor>src/main/assembly/assembly.xml</descriptor>
-                    </descriptors>
-                </configuration>
-            </plugin>
-            <!-- The configuration of maven-jar-plugin -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>2.3.1</version>
-                <!-- The configuration of the plugin -->
-                <configuration>
-                    <!-- Configuration of the archiver -->
-                    <archive>
-                        <!-- Manifest specific configuration -->
-                        <manifest>
-                            <!-- Classpath is added to the manifest of the created jar file. -->
-                            <addClasspath>true</addClasspath>
-                            <!--
-                               Configures the classpath prefix. This configuration option is
-                               used to specify that all needed libraries are found under lib/
-                               directory.
-                           -->
-                            <classpathPrefix>lib/</classpathPrefix>
-                            <!-- Specifies the main class of the application -->
-                            <mainClass>rina.ipcprocess.impl.Main</mainClass>
-                        </manifest>
-                    </archive>
-                </configuration>
-            </plugin>
-        </plugins>
+    	<plugins>
+        	<plugin>
+            	<groupId>org.apache.maven.plugins</groupId>
+            	<artifactId>maven-jar-plugin</artifactId>
+            	<version>2.3.1</version>
+            	<configuration>
+                	<archive>
+                    	<manifest>
+                        	<addClasspath>true</addClasspath>
+                        	<classpathPrefix>lib/</classpathPrefix>
+                        	<mainClass>rina.ipcprocess.impl.Main</mainClass>
+                    	</manifest>
+                	</archive>
+            	</configuration>
+        	</plugin>
+        	<plugin>
+        		<groupId>org.apache.maven.plugins</groupId>
+        		<artifactId>maven-dependency-plugin</artifactId>
+        		<version>2.8</version>
+        		<executions>
+         			<execution>
+            			<id>copy-installed</id>
+            			<phase>install</phase>
+            			<goals>
+              				<goal>copy</goal>
+            			</goals>
+            			<configuration>
+              				<artifactItems>
+                				<artifactItem>
+                  					<groupId>${project.groupId}</groupId>
+                  					<artifactId>${project.artifactId}</artifactId>
+                  					<version>${project.version}</version>
+                  					<type>${project.packaging}</type>
+                				</artifactItem>
+             				 </artifactItems>
+              				<outputDirectory>${installation.path}/ipcprocess</outputDirectory>
+            			</configuration>
+          			</execution>
+          			<execution>
+            			<id>copy-dependencies</id>
+            			<phase>install</phase>
+            			<goals>
+              				<goal>copy-dependencies</goal>
+            			</goals>
+            			<configuration>
+              				<outputDirectory>${installation.path}/ipcprocess/lib</outputDirectory>
+              				<overWriteReleases>false</overWriteReleases>
+              				<overWriteSnapshots>false</overWriteSnapshots>
+              				<overWriteIfNewer>true</overWriteIfNewer>
+           			 	</configuration>
+         			</execution>
+        		</executions>
+      		</plugin>
+    	</plugins>
 	</build>
 
 </project>

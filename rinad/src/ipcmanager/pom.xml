@@ -75,19 +75,6 @@
 			</resource>
 		</resources>	
     <plugins>
-            <!-- The configuration of maven-assembly-plugin -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.2.2</version>
-                <!-- The configuration of the plugin -->
-                <configuration>
-                    <!-- Specifies the configuration file of the assembly plugin -->
-                    <descriptors>
-                        <descriptor>src/main/assembly/assembly.xml</descriptor>
-                    </descriptors>
-                </configuration>
-            </plugin>
             <!-- The configuration of maven-jar-plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -156,7 +143,7 @@
         		<version>2.6</version>
         		<executions>
           			<execution>
-            			<id>copy-resources</id>
+            			<id>copy-configuration</id>
             			<phase>install</phase>
             			<goals>
               				<goal>copy-resources</goal>
@@ -165,7 +152,7 @@
               				<outputDirectory>${installation.path}/../../conf</outputDirectory>
               				<resources>          
                 				<resource>
-                  					<directory>src/main/resources/</directory>
+                  					<directory>src/main/conf</directory>
                   					<filtering>true</filtering>
                 				</resource>
               				</resources>              
