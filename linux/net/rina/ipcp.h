@@ -49,14 +49,14 @@ struct ipcp_config {
 
 /* Represents the information about a DIF (name, type, configuration) */
 struct dif_info {
-	    /* The DIF type. Can be 'NORMAL' or one of the shims */
-        string_t *       type;
+        /* The DIF type. Can be 'NORMAL' or one of the shims */
+        string_t *          type;
 
-	    /* The DIF Distributed Application Name (DAN) */
-	    struct name *    dif_name;
+        /* The DIF Distributed Application Name (DAN) */
+        struct name *       dif_name;
 
-	    /* The DIF configuration (policies, parameters, etc) */
-	    struct dif_config * configuration;
+        /* The DIF configuration (policies, parameters, etc) */
+        struct dif_config * configuration;
 };
 
 /* Represents a DIF configuration (policies, parameters, etc) */
@@ -89,10 +89,10 @@ struct ipcp_instance_ops {
                                         const struct name *         source);
 
         int  (* assign_to_dif)(struct ipcp_instance_data * data,
-                               const struct dif_info *  dif_information);
+                               const struct dif_info *     information);
 
         int  (* update_dif_config)(struct ipcp_instance_data * data,
-                                   const struct dif_config *  new_config);
+                                   const struct dif_config *   configuration);
 
         /* Takes the ownership of the passed SDU */
         int  (* sdu_write)(struct ipcp_instance_data * data,

@@ -537,8 +537,10 @@ static int dummy_assign_to_dif(struct ipcp_instance_data * data,
 }
 
 static int dummy_update_dif_config(struct ipcp_instance_data * data,
-                                   const struct dif_config *  new_config){
-        //Nothing to be reconfigured
+                                   const struct dif_config *   new_config)
+{
+        /* Nothing to be reconfigured */
+
         return -1;
 }
 
