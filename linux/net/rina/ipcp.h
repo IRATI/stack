@@ -55,8 +55,8 @@ struct dif_config {
 	/* The DIF Distributed Application Name (DAN) */
 	struct name * 		dif_name;
 
-	/* Pointer to the first configuration entry */
-	struct ipcp_config * 	config_entries;
+	/* List of configuration entries */
+	struct list_head    ipcp_config_entries;
 };
 
 /* Pre-declared, the implementation should define it properly */
@@ -82,8 +82,7 @@ struct ipcp_instance_ops {
                                         const struct name *         source);
 
         int  (* assign_to_dif)(struct ipcp_instance_data * data,
-                               const struct name *         dif_name,
-                               const struct ipcp_config *  configuration);
+                               const struct dif_config *  configuration);
 
         /* Takes the ownership of the passed SDU */
         int  (* sdu_write)(struct ipcp_instance_data * data,

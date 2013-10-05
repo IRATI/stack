@@ -217,10 +217,6 @@ static int parse_ipcp_config_entry_value(struct nlattr * name_attr,
         struct nla_policy attr_policy[IPCP_CONFIG_ENTRY_ATTR_MAX + 1];
         struct nlattr *attrs[IPCP_CONFIG_ENTRY_ATTR_MAX + 1];
 
-        LOG_DBG("[LDBG] Entering parse_parameter with nlattr "
-                "at %p and entry at %p",
-                name_attr, entry);
-
         if (!name_attr){
         	LOG_ERR("Bogus attribute passed, bailing out");
         	return -1;
@@ -247,10 +243,6 @@ static int parse_ipcp_config_entry_value(struct nlattr * name_attr,
         if (attrs[IPCP_CONFIG_ENTRY_ATTR_VALUE])
         		entry->value =
                         nla_get_string(attrs[IPCP_CONFIG_ENTRY_ATTR_VALUE]);
-
-        LOG_DBG("Entry name is %s, and value is %s",
-        		entry->name,
-        		entry->value);
 
         return 0;
 }
@@ -281,8 +273,6 @@ static int parse_list_of_ipcp_config_entries(struct nlattr *nested_attr,
 				nla = nla_next(nla, &(rem))){
 			total_entries++;
 
-			LOG_DBG("Trying to parse entry %d", total_entries);
-
 			entry = rkzalloc(sizeof(*entry), GFP_KERNEL);
 			if (!entry){
 				entries_with_problems++;
@@ -302,10 +292,7 @@ static int parse_list_of_ipcp_config_entries(struct nlattr *nested_attr,
 				continue;
 			}
 			config->entry = entry;
-			if (!dif_config->config_entries)
-				dif_config->config_entries = config;
-			else
-				list_add(&config->next, &dif_config->config_entries->next);
+			list_add(&config->next, &dif_config->ipcp_config_entries);
 		}
 
 		if (rem > 0){

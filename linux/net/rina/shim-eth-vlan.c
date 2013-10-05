@@ -571,8 +571,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 };
 
 static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
-                                  const struct name *         dif_name,
-                                  const struct ipcp_config *  dif_config)
+                                  const struct dif_config *  configuration)
 {
         struct eth_vlan_info *     info;
         struct ipcp_config *       tmp;
@@ -585,8 +584,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
 
 
         ASSERT(data);
-        ASSERT(dif_name);
-        ASSERT(dif_config);
+        ASSERT(configuration);
 
         /* If reconfigure = 1, break down all communication and setup again */
         reconfigure = 0;
@@ -597,12 +595,12 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         old_interface_name = info->interface_name;
 
         /* Get vlan id */
-        info->vlan_id = simple_strtol(dif_name->process_name,0,10);
+        info->vlan_id = simple_strtol(configuration->dif_name->process_name,0,10);
         if (old_vlan_id && old_vlan_id != info->vlan_id)
                 reconfigure = 1;
 
         /* Retrieve configuration of IPC process from params */
-        list_for_each_entry (tmp, &(dif_config->list), list) {
+        list_for_each_entry (tmp, &(configuration->ipcp_config_entries), next) {
                 entry = tmp->entry;
                 value = entry->value;
                 if (!strcmp(entry->name,"interface-name") &&

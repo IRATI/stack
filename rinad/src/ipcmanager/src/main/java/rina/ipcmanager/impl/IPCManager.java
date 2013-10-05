@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import rina.ipcmanager.impl.conf.DIFProperties;
 import rina.ipcmanager.impl.conf.IPCProcessToCreate;
 import rina.ipcmanager.impl.conf.RINAConfiguration;
 import rina.ipcmanager.impl.console.IPCManagerConsole;
@@ -182,8 +183,14 @@ public class IPCManager {
 				difName.setProcessName(ipcProcessToCreate.getDifName());
 				difConfiguration.setDifName(difName);
 				difConfiguration.setDifType(ipcProcess.getType());
-				difConfiguration.addParameter(new Parameter("interface", "eth0"));
-				difConfiguration.addParameter(new Parameter("vlanid", "987"));
+				
+				DIFProperties difProperties = configuration.getDIFConfiguration(ipcProcessToCreate.getDifName());
+				if (difProperties != null && difProperties.getConfigParameters() != null){
+					for(int j=0; j<difProperties.getConfigParameters().size(); j++){
+						difConfiguration.addParameter(difProperties.getConfigParameters().get(j));
+					}
+				}
+				
 				try{
 					ipcProcess.assignToDIF(difConfiguration);
 				}catch(AssignToDIFException ex){

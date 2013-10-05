@@ -624,6 +624,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
                                                     -1,
                                                     info->snd_seq,
                                                     info->snd_portid);
+        INIT_LIST_HEAD(&(dif_config->ipcp_config_entries));
         attrs->dif_config = dif_config;
 
         dif_name = name_create();
@@ -680,8 +681,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
         LOG_MISSING;
 
         if (ipc_process->ops->assign_to_dif(ipc_process->data,
-                                            attrs->dif_config->dif_name,
-                                            attrs->dif_config->config_entries)) {
+                                            attrs->dif_config)) {
                 char * tmp = name_tostring(attrs->dif_config->dif_name);
                 LOG_ERR("Assign to dif %s operation failed for IPC process %d",
                         tmp, ipc_id);

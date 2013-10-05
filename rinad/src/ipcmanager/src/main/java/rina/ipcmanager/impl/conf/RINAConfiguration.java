@@ -2,6 +2,8 @@ package rina.ipcmanager.impl.conf;
 
 import java.util.List;
 
+import eu.irati.librina.DIFConfiguration;
+
 /**
  * The global configuration of the RINA software
  * @author eduardgrasa
@@ -82,67 +84,6 @@ public class RINAConfiguration {
 		return null;
 	}
 	
-	/**
-	 * Return the address of the IPC process named "apName" if it is known, 
-	 * null otherwise
-	 * @param difName
-	 * @param apName
-	 * @param instance
-	 * @return
-	 */
-	public KnownIPCProcessAddress getIPCProcessAddress(String difName, String apName, String apInstance){
-		DIFProperties difConfiguration = this.getDIFConfiguration(difName);
-		if (difConfiguration == null){
-			return null;
-		}
-		
-		List<KnownIPCProcessAddress> knownIPCProcessAddresses = difConfiguration.getKnownIPCProcessAddresses();
-		if (knownIPCProcessAddresses == null){
-			return null;
-		}
-		
-		KnownIPCProcessAddress currentAddress = null;
-		for(int i=0; i<knownIPCProcessAddresses.size(); i++){
-			currentAddress = knownIPCProcessAddresses.get(i);
-			if (currentAddress.getApName().equals(apName)){
-				if (apInstance == null && currentAddress.getApInstance() == null){	
-					return currentAddress;
-				}else if (apInstance != null && currentAddress.getApInstance() != null && apInstance.equals(currentAddress.getApInstance())){
-					return currentAddress;
-				}
-			}
-		}
-		
-		return null;
-	}
-	
-	/**
-	 * Return the configuration of the IPC process whose address is "address" if it is known, 
-	 * null otherwise
-	 * @param difName
-	 * @param address
-	 * @return
-	 */
-	public KnownIPCProcessAddress getIPCProcessAddress(String difName, long address){
-		DIFProperties difConfiguration = this.getDIFConfiguration(difName);
-		if (difConfiguration == null){
-			return null;
-		}
-		
-		List<KnownIPCProcessAddress> knownIPCProcessAddresses = difConfiguration.getKnownIPCProcessAddresses();
-		if (knownIPCProcessAddresses == null){
-			return null;
-		}
-		
-		for(int i=0; i<knownIPCProcessAddresses.size(); i++){
-			if (knownIPCProcessAddresses.get(i).getAddress() == address){
-				return knownIPCProcessAddresses.get(i);
-			}
-		}
-		
-		return null;
-	}
-	
 	public IPCProcessToCreate getIPCProcessToCreate(String apName, String apInstance){
 		IPCProcessToCreate result = null;
 		
@@ -155,33 +96,6 @@ public class RINAConfiguration {
 		}
 		
 		return null;
-	}
-	
-	/**
-	 * Get the address prefix that corresponds to the application process name of the 
-	 * IPC Process. Return -1 if there is no matching.
-	 * @param difName
-	 * @param ipcProcessName
-	 * @return the address prefix
-	 */
-	public long getAddressPrefixConfiguration(String difName, String apName){
-		DIFProperties difConfiguration = this.getDIFConfiguration(difName);
-		if (difConfiguration == null){
-			return -1;
-		}
-		
-		List<AddressPrefixConfiguration> addressPrefixes = difConfiguration.getAddressPrefixes();
-		if (addressPrefixes == null){
-			return -1;
-		}
-		
-		for(int i=0; i<addressPrefixes.size(); i++){
-			if (apName.indexOf(addressPrefixes.get(i).getOrganization()) != -1){
-				return addressPrefixes.get(i).getAddressPrefix();
-			}
-		}
-		
-		return -1;
 	}
 	
 	public String toString(){
