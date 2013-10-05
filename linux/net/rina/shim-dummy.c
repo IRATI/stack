@@ -499,7 +499,7 @@ static int dummy_fini(struct ipcp_factory_data * data)
 }
 
 static int dummy_assign_to_dif(struct ipcp_instance_data * data,
-		                       const struct dif_info *  dif_information)
+                               const struct dif_info *  dif_information)
 {
         struct ipcp_config * pos;
 
@@ -523,9 +523,9 @@ static int dummy_assign_to_dif(struct ipcp_instance_data * data,
 
         if (dif_information->configuration)
                 list_for_each_entry(
-        		        pos,
-        	 	        &(dif_information->configuration->ipcp_config_entries),
-        		        next)
+                                    pos,
+                                    &(dif_information->configuration->ipcp_config_entries),
+                                    next)
                         LOG_DBG("Configuration entry name: %s; value: %s",
                                 pos->entry->name,
                                 pos->entry->value);
@@ -538,8 +538,8 @@ static int dummy_assign_to_dif(struct ipcp_instance_data * data,
 
 static int dummy_update_dif_config(struct ipcp_instance_data * data,
                                    const struct dif_config *  new_config){
-	    //Nothing to be reconfigured
-	    return -1;
+        //Nothing to be reconfigured
+        return -1;
 }
 
 static struct ipcp_instance_ops dummy_instance_ops = {

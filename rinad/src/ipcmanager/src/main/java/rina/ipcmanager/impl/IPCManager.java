@@ -54,7 +54,7 @@ public class IPCManager {
 	
 	private static final Log log = LogFactory.getLog(IPCManager.class);
 	
-	public static final String CONFIG_FILE_LOCATION = "config/config.rina"; 
+	public static final String CONFIG_FILE_LOCATION = "../conf/ipcmanager.conf"; 
 	public static final long CONFIG_FILE_POLL_PERIOD_IN_MS = 5000;
 	
 	public static final String NORMAL_IPC_PROCESS_TYPE = "normal";
