@@ -524,6 +524,8 @@ int kfa_sdu_post(struct kfa * instance,
 
         LOG_DBG("SDU posted");
 
+        spin_unlock(&instance->lock);
+
         wake_up_interruptible(&flow->wait_queue);
 
         LOG_DBG("Sleeping read syscall should be working now");
