@@ -150,6 +150,8 @@ flow_id_t kfa_flow_create(struct kfa * instance)
                 return flow_id_bad();
         }
 
+        init_waitqueue_head(&flow->wait_queue);
+
         if (kfa_fmap_add(instance->flows.pending, fid, flow)) {
                 LOG_ERR("Could not map Flow and Flow ID");
                 rkfree(flow);
@@ -210,7 +212,6 @@ int kfa_flow_bind(struct kfa *           instance,
                 return -1;
         }
 
-        init_waitqueue_head(&flow->wait_queue);
         flow->port_id     = pid;
         flow->ipc_process = ipc_process;
 
@@ -240,6 +241,9 @@ int kfa_flow_bind(struct kfa *           instance,
                 spin_unlock(&instance->lock);
                 return -1;
         }
+
+        LOG_DBG("Flow bound to port id %d with waitqueue %pK",
+                pid, &flow->wait_queue);
 
         spin_unlock(&instance->lock);
 
@@ -375,6 +379,11 @@ int kfa_flow_sdu_write(struct kfa * instance,
         return 0;
 }
 
+static int ready_queue_not_empty(struct kfifo * sdu_ready)
+{
+        return (!kfifo_is_empty(sdu_ready));
+}
+
 int kfa_flow_sdu_read(struct kfa *  instance,
                       port_id_t     id,
                       struct sdu ** sdu)
@@ -404,7 +413,8 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 LOG_DBG("Going to sleep");
                 spin_unlock(&instance->lock);
 
-                interruptible_sleep_on(&flow->wait_queue);
+                wait_event_interruptible(flow->wait_queue,
+                                         ready_queue_not_empty(&flow->sdu_ready));
 
                 spin_lock(&instance->lock);
                 LOG_DBG("Woken up");
@@ -513,6 +523,8 @@ int kfa_sdu_post(struct kfa * instance,
         }
 
         LOG_DBG("SDU posted");
+
+        spin_unlock(&instance->lock);
 
         wake_up_interruptible(&flow->wait_queue);
 

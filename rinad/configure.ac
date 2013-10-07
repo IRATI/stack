@@ -29,6 +29,8 @@ AC_PATH_PROG([SORT], [sort], [/bin/false])
 AC_PATH_PROG([UNIQ], [uniq], [/bin/false])
 AC_PATH_PROG([GIT],  [git],  [/bin/false])
 
+AX_PROG_JAVA
+
 PKG_PROG_PKG_CONFIG([0.26])
 
 PKG_CHECK_MODULES([LIBRINA], [librina >= 0.2.0],, [

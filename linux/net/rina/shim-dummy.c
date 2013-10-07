@@ -695,8 +695,12 @@ static int dummy_destroy(struct ipcp_factory_data * data,
                         dummy_unregister_all(pos);
 
                         /* Destroy it */
-                        name_destroy(pos->info->dif_name);
-                        name_destroy(pos->info->name);
+                        if (pos->info->dif_name)
+                        	name_destroy(pos->info->dif_name);
+
+                        if (pos->info->name)
+                        	name_destroy(pos->info->name);
+
                         rkfree(pos->info);
                         rkfree(pos);
                         rkfree(instance);

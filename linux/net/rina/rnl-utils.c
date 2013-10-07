@@ -903,7 +903,7 @@ int rnl_parse_msg(struct genl_info * info,
         LOG_DBG("Parsed Netlink message header:\n"
                 "msg->src_port: %d "
                 "msg->dst_port: %d "
-                "msg->seq_num:  %d "
+                "msg->seq_num:  %u "
                 "msg->op_code:  %d "
                 "msg->rina_hdr->src_ipc_id: %d "
                 "msg->rina_hdr->dst_ipc_id: %d",
