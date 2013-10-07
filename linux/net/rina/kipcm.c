@@ -1690,13 +1690,9 @@ int kipcm_sdu_write(struct kipcm * kipcm,
         LOG_DBG("Tring to write SDU of size %zd to port_id %d",
                 sdu->buffer->size, port_id);
 
-        KIPCM_LOCK(kipcm);
-
         kfa_flow_sdu_write(kipcm->kfa, port_id, sdu);
 
         sdu_destroy(sdu);
-
-        KIPCM_UNLOCK(kipcm);
 
         /* The SDU is ours */
 
@@ -1710,8 +1706,10 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         /* The SDU is theirs now */
         if(kfa_flow_sdu_read(kipcm->kfa, port_id, sdu)) {
                 LOG_DBG("Failed to read sdu");
+                KIPCM_UNLOCK(kipcm);
                 return -1;
         }
+
         return 0;
 }
 
