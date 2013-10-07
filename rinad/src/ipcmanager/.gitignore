@@ -1,7 +1,8 @@
-# vi temporary files
 *~
-# target directory
+
 target/
 .settings/
 .classpath
 .project
+
+ipcmanager

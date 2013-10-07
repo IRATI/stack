@@ -1,5 +1,8 @@
 package rina.utils.apps.rinaband.utils;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import eu.irati.librina.Flow;
 
 /**
@@ -12,6 +15,7 @@ public class FlowReader implements Runnable{
 	private SDUListener sduListener;
 	private int maxSDUSize;
 	private boolean stop;
+	private static final Log log = LogFactory.getLog(FlowReader.class);
 	
 	public FlowReader(Flow flow, SDUListener sduListener, int maxSDUSize){
 		this.flow = flow;
@@ -26,11 +30,13 @@ public class FlowReader implements Runnable{
 		byte[] sdu = null;
 		int bytesRead = 0;
 		
+		log.info("Starting reader of flow "+flow.getPortId()+", sleeping for 1 second");
 		try{
 			Thread.sleep(1000);
 		}catch(Exception ex){
 			ex.printStackTrace();
 		}
+		log.info("Flow reader waking up, let's go!");
 		
 		while(!isStopped()){
 			try{

@@ -1,2 +1,0 @@
-Class-Path: librina.jar
-Main-Class: LibrinaTest
