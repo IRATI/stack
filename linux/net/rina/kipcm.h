@@ -103,11 +103,6 @@ int            kipcm_flow_add(struct kipcm *   kipcm,
 int            kipcm_flow_remove(struct kipcm * kipcm,
                                  port_id_t      id);
 
-/* If successul: takes the ownership of the SDU */
-int            kipcm_sdu_post(struct kipcm * kipcm,
-                              port_id_t      id,
-                              struct sdu *   sdu);
-
 int            kipcm_flow_res(struct kipcm *   kipcm,
                               ipc_process_id_t ipc_id,
                               flow_id_t        fid,
