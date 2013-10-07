@@ -22,9 +22,14 @@
 #include <linux/kobject.h>
 #include <linux/export.h>
 #include <linux/uaccess.h>
+
+/* For RWQ */
 #include <linux/workqueue.h>
 
-/* FIXME: We should stick the caller in the prefix (rk[mz]alloc oriented) */
+/* For RMAP */
+#include <linux/hashtable.h>
+#include <linux/list.h>
+
 #define RINA_PREFIX "utils"
 
 #include "logs.h"
@@ -263,7 +268,7 @@ char * strdup_from_user(const char __user * src)
 }
 
 struct rwq_work_item {
-        struct work_struct work; /* Keep at top ! */
+        struct work_struct work; /* KEEP AT TOP AND DO NOT MOVE ! */
         int                (* worker)(void * data);
         void *             data;
 };
@@ -343,7 +348,7 @@ int rwq_post(struct workqueue_struct * wq,
 int rwq_destroy(struct workqueue_struct * wq)
 {
         if (!wq) {
-                LOG_ERR("The workqueue is NULL, cannot destroy");
+                LOG_ERR("The passed workqueue is NULL, cannot destroy");
                 return -1;
         }
 

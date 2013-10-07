@@ -313,17 +313,17 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         ASSERT(is_flow_id_ok(fid));
         if (kipcm_fmap_add(kipcm->fid_messages->ingress, fid, info->snd_seq)) {
                 LOG_ERR("Could not add map [fid, seq_num]: [%d, %d]",
-                                                           fid, info->snd_seq);
+                        fid, info->snd_seq);
                 return alloc_flow_req_free_and_reply(source,
-                                              dest,
-                                              fspec,
-                                              dif_name,
-                                              attrs,
-                                              msg,
-                                              0,
-                                              -1,
-                                              info->snd_seq,
-                                              info->snd_portid);
+                                                     dest,
+                                                     fspec,
+                                                     dif_name,
+                                                     attrs,
+                                                     msg,
+                                                     0,
+                                                     -1,
+                                                     info->snd_seq,
+                                                     info->snd_portid);
         }
 
         if (ipc_process->ops->flow_allocate_request(ipc_process->data,
@@ -416,7 +416,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         fid = kipcm_smap_find(kipcm->fid_messages->egress, info->snd_seq);
         if (!is_flow_id_ok(fid)) {
                 LOG_ERR("Could not find flow id %d for response %d",
-                                                           fid, info->snd_seq);
+                        fid, info->snd_seq);
                 rkfree(hdr);
                 rkfree(attrs);
                 rkfree(msg);
@@ -1011,12 +1011,12 @@ static int notify_ipc_manager_present(void *             data,
                                       struct sk_buff *   buff,
                                       struct genl_info * info)
 {
-	LOG_INFO("IPC Manager started. It is listening at NL port-id %d",
-			info->snd_portid);
+        LOG_INFO("IPC Manager started. It is listening at NL port-id %d",
+                 info->snd_portid);
 
-	rnl_set_ipc_manager_port(info->snd_portid);
+        rnl_set_ipc_manager_port(info->snd_portid);
 
-	return 0;
+        return 0;
 }
 
 static int netlink_handlers_unregister(struct rnl_set * rnls)
@@ -1048,8 +1048,8 @@ static int netlink_handlers_unregister(struct rnl_set * rnls)
                 retval = -1;
 
         if (rnl_handler_unregister(rnls,
-        						   RINA_C_IPCM_IPC_MANAGER_PRESENT))
-        		retval = -1;
+                                   RINA_C_IPCM_IPC_MANAGER_PRESENT))
+                retval = -1;
 
         LOG_DBG("NL handlers unregistered %s",
                 (retval == 0) ? "successfully" : "unsuccessfully");
@@ -1215,8 +1215,8 @@ static int netlink_handlers_register(struct kipcm * kipcm)
                 }
                 if (rnl_handler_unregister(kipcm->rnls,
                                            RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST)) {
-                         LOG_ERR("Failed handler unregister while bailing out");
-                         /* FIXME: What else could be done here?" */
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
                 }
                 return -1;
         }
