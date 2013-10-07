@@ -236,7 +236,8 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                                           const struct name *         source,
                                           const struct name *         dest,
                                           const struct flow_spec *    fspec,
-                                          port_id_t                   id)
+                                          port_id_t                   id,
+					  flow_id_t                   fid)
 {
 	struct shim_eth_flow * flow;
 
@@ -285,7 +286,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 		INIT_LIST_HEAD(&flow->list);
 		list_add(&flow->list, &data->flows);
 
-		if (kipcm_flow_add(default_kipcm, data->id, id)) {
+		if (kipcm_flow_add(default_kipcm, data->id, id, fid)) {
 			list_del(&flow->list);
 			name_destroy(flow->dest);
 			rkfree(flow);
@@ -303,7 +304,8 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 
 static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                            flow_id_t                   flow_id,
-					   port_id_t                   port_id)
+					   port_id_t                   port_id,
+					   int result)
 {
         struct shim_eth_flow * flow;
 
