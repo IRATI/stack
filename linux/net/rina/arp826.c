@@ -34,9 +34,9 @@
 #include <linux/if_ether.h>
 
 /*
- * FIXME: The following lines provide basic framework and utilities
- *        These dependencies will be removed ASAP and the arp826 to let this
- *        module live its own life
+ * FIXME: The following lines provide basic framework and utilities. These
+ *        dependencies will be removed ASAP to let this module live its own
+ *        life
  */
 #define RINA_PREFIX "arp826"
 
@@ -50,23 +50,22 @@
 static struct list_head arp_cache;
 
 struct arp_hdr {
-	__be16          ar_hrd;         /* Hardware address   */
-	__be16          ar_pro;         /* Protocol address   */
-	__u8            ar_hln;         /* Length of hardware address   */
-        __u8            ar_pln;         /* Length of protocol address   */
-	__be16          ar_op;          /* ARP opcode (command)         */
+	__be16        ar_hrd;         /* Hardware address   */
+	__be16        ar_pro;         /* Protocol address   */
+	__u8          ar_hln;         /* Length of hardware address   */
+        __u8          ar_pln;         /* Length of protocol address   */
+	__be16        ar_op;          /* ARP opcode (command)         */
  
 #if 0
 	/*
 	 *      This bit is variable sized however...
 	 *      This is an example
 	 */
-	unsigned char    ar_sha;     /* sender hardware address   */
-	unsigned char    ar_spa;     /* sender protocol address   */
-	unsigned char    ar_tha;     /* target hardware address   */
-	unsigned char    ar_tpa;     /* target protocol address   */
+	unsigned char ar_sha;     /* sender hardware address   */
+	unsigned char ar_spa;     /* sender protocol address   */
+	unsigned char ar_tha;     /* target hardware address   */
+	unsigned char ar_tpa;     /* target protocol address   */
 #endif
- 
 };
 
 struct naddr_handle * rinarp_paddr_register(__be16              proto_name,
@@ -173,24 +172,23 @@ static int arp826_process(struct sk_buff * skb)
                 memcpy(d_hwaddr, arp_ptr, arp->ar_hln);
 
                 /*
-                 *  Process entry. The idea here is we want to send a reply if it is a
-                 *  request for us. We want to add an entry to our cache if it is a reply
-                 *  to us or if it is a request for one of our addresses.
+                 *  Process entry. The idea here is we want to send a reply
+                 *  if it is a request for us. We want to add an entry to our
+                 *  cache if it is a reply to us or if it is a request for one
+                 *  of our addresses.
                  *
-                 *  Putting this another way, we only care about replies if they are to
-                 *  us, in which case we add them to the cache.  For requests, we care
-                 *  about those for us. We add the requester to the arp cache.
-                 *
+                 *  Putting this another way, we only care about replies if
+                 *  they are to us, in which case we add them to the cache.
+                 *  For requests, we care about those for us. We add the
+                 *  requester to the arp cache.
                  */
 
                 /* FIXME: The following part, first complete top part ARP PM */
                 if (arp->ar_op == htons(RINARP_REQUEST)) {
                         /* Are we advertising this network address? */
-	
-	
+
                 } else if (arp->arp_op == htons(RINARP_REPLY)) {
                         /* Is the reply for one of our network addresses? */
-
 		
                 } else {
                         printk("Unknown operation code");
@@ -209,14 +207,16 @@ static int arp826_process(struct sk_buff * skb)
 #endif
 }
 
-static int arp826_rcv(struct sk_buff *     skb,
-                      struct net_device *  dev,
-                      struct packet_type * pkt,
-                      struct net_device *  orig_dev)
+static int arp826_receive(struct sk_buff *     skb,
+                          struct net_device *  dev,
+                          struct packet_type * pkt,
+                          struct net_device *  orig_dev)
 {
-
         const struct arp_hdr * arp;
         int                    total_length;
+
+        if (!dev || !skb)
+                return -1;
 
         if (dev->flags & IFF_NOARP            ||
             skb->pkt_type == PACKET_OTHERHOST ||
@@ -251,12 +251,11 @@ static int arp826_rcv(struct sk_buff *     skb,
  out_of_mem:
         /* FIXME: Shouldn't we prompt for something here ? */
         return 0;
-
 }
 
 static struct packet_type arp_packet_type __read_mostly = {
         .type =	cpu_to_be16(ETH_P_ARP),
-        .func =	arp826_rcv,
+        .func =	arp826_receive,
 };
 
 static int __init mod_init(void)
@@ -278,8 +277,17 @@ MODULE_DESCRIPTION("Basic RFC 826 compliant ARP implementation");
 
 MODULE_LICENSE("GPL");
 
-MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
 MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
+MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+
+
+
+
+
+
+
+
+
 
 #if 0
 
