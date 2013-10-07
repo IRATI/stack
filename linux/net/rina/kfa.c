@@ -57,6 +57,7 @@ struct ipcp_flow {
         /* FIXME: To be wiped out */
         struct kfifo            sdu_ready;
         wait_queue_head_t       wait_queue;
+        atomic_t                flag;
 };
 
 struct kfa * kfa_create(void)
@@ -149,6 +150,8 @@ flow_id_t kfa_flow_create(struct kfa * instance)
                 spin_unlock(&instance->lock);
                 return flow_id_bad();
         }
+
+        atomic_set(&flow->flag, 0);
 
         init_waitqueue_head(&flow->wait_queue);
 
@@ -379,11 +382,6 @@ int kfa_flow_sdu_write(struct kfa * instance,
         return 0;
 }
 
-static int ready_queue_not_empty(struct kfifo * sdu_ready)
-{
-        return (!kfifo_is_empty(sdu_ready));
-}
-
 int kfa_flow_sdu_read(struct kfa *  instance,
                       port_id_t     id,
                       struct sdu ** sdu)
@@ -411,10 +409,9 @@ int kfa_flow_sdu_read(struct kfa *  instance,
         }
         while (kfifo_is_empty(&flow->sdu_ready)) {
                 LOG_DBG("Going to sleep");
+                atomic_set(&flow->flag, 0);
                 spin_unlock(&instance->lock);
-
-                wait_event_interruptible(flow->wait_queue,
-                                         ready_queue_not_empty(&flow->sdu_ready));
+                wait_event_interruptible(flow->wait_queue, (flow->flag == 1));
 
                 spin_lock(&instance->lock);
                 LOG_DBG("Woken up");
@@ -521,6 +518,8 @@ int kfa_sdu_post(struct kfa * instance,
                 spin_unlock(&instance->lock);
                 return -1;
         }
+
+        atomic_set(&flow->flag, 1);
 
         LOG_DBG("SDU posted");
 
