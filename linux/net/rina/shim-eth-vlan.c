@@ -114,10 +114,9 @@ static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
         return NULL;
 }
 
-/* FIXME: Flows should be by flow-id (and once "confirmed") by port-id */
 static struct shim_eth_flow *
 find_flow_by_flow_id(struct ipcp_instance_data * data,
-                     port_id_t                   id)
+                     flow_id_t                   id)
 {
         struct shim_eth_flow * flow;
 
@@ -453,7 +452,6 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                               port_id_t                   id,
                               struct sdu *                sdu)
 {
-#if 0
 	/* FIXME: Fix the errors here */
 	/* Too many to handle before EOB */
 	struct shim_eth_flow * flow;
@@ -462,12 +460,14 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 	struct rinarp_mac_addr *desthw;
 	const unsigned char *dest_hw;
 	unsigned char * sdu_ptr;
+	int hlen, tlen, length;
 	ASSERT(data);
         ASSERT(sdu);
-	int hlen = LL_RESERVED_SPACE(dev);
-	int tlen = dev->needed_tailroom;
-	int length = sdu->buffer->size;
 
+	hlen = LL_RESERVED_SPACE(data->dev);
+	tlen = data->dev->needed_tailroom;
+	length = sdu->buffer->size;
+	desthw = 0;
 	
         flow = find_flow(data, id);
         if (!flow) {
@@ -502,7 +502,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
 	skb_reserve(skb, hlen);
 	skb_reset_network_header(skb);
-	sdu_ptr = skb_put(sdu->buffer->size) + 1;
+	sdu_ptr = (unsigned char *) skb_put(skb, sdu->buffer->size) + 1;
 	memcpy(sdu_ptr, sdu->buffer->data, sdu->buffer->size);
 
 	skb->dev = data->dev;
@@ -518,7 +518,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 	dev_queue_xmit(skb);
 
 	rkfree(sdu);
-#endif
+
         return 0;
 }
 
