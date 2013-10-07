@@ -9,6 +9,7 @@ edit = $(SED)						\
         -e 's|@PACKAGE_NAME[@]|$(PACKAGE_NAME)|g'	\
         -e 's|@PACKAGE_URL[@]|$(PACKAGE_URL)|g'		\
         -e 's|@JAVA[@]|$(JAVA)|g'			\
+        -e 's|@pkgdatadir[@]|$(pkgdatadir)|g'		\
         -e 's|@LIBRINA_VERSION[@]|$(LIBRINA_VERSION)|g'
 
 CLEANFILES    =
