@@ -14,7 +14,6 @@ SUBDIRS =					\
 	include					\
 	src					\
 	wrap					\
-	apps					\
 	test					\
 	doc
 
