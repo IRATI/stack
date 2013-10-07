@@ -1,8 +1,8 @@
 /*
- * Implementation of RFC 826 because current implementation is too
- * intertwined with IP version 4.
+ * An RFC 826 ARP implementation
  *
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  *    Code reused from:
  *      net/ipv4/arp.c
@@ -23,6 +23,74 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
+#include <linux/module.h>
+#include <linux/types.h>
+#include <linux/kernel.h>
+#include <linux/skbuff.h>
+#include <linux/netdevice.h>
+#include <linux/slab.h>
+#include <linux/list.h>
+#include <linux/if_ether.h>
+
+#include "arp826.h"
+
+struct naddr_handle * rinarp_paddr_register(__be16              proto_name,
+					    __be16              proto_len,
+                                            struct net_device * device,
+                                            struct paddr        address)
+{ return NULL; }
+EXPORT_SYMBOL(rinarp_paddr_register);
+
+int rinarp_paddr_unregister(struct naddr_handle * h)
+{ return -1; }
+EXPORT_SYMBOL(rinarp_paddr_unregister);
+
+struct naddr_filter * naddr_filter_create(struct naddr_handle * handle)
+{ return NULL; }
+EXPORT_SYMBOL(naddr_filter_create);
+
+int naddr_filter_set(struct naddr_filter * filter,
+		     void *                opaque,
+		     arp_handler_t         request,
+		     arp_handler_t         reply)
+{ return -1; }
+EXPORT_SYMBOL(naddr_filter_set);
+
+int naddr_filter_destroy(struct naddr_filter * filter)
+{ return -1; }
+EXPORT_SYMBOL(naddr_filter_destroy);
+
+int rinarp_hwaddr_get(struct naddr_filter *    filter, 
+		      struct paddr             in_address,
+		      struct rinarp_mac_addr * out_addr)
+{ return -1; }
+EXPORT_SYMBOL(rinarp_hwaddr_get);
+
+int rinarp_send_request(struct naddr_filter * filter, 
+                        struct paddr          address)
+{ return -1; }
+EXPORT_SYMBOL(rinarp_send_request);
+
+static int __init mod_init(void)
+{ return 0; }
+
+static void __exit mod_exit(void)
+{ /* FIXME: Destroy everything (e.g. the contents of 'data' */ }
+
+module_init(mod_init);
+module_exit(mod_exit);
+
+MODULE_DESCRIPTION("Basic RFC 826 compliant ARP implementation");
+
+MODULE_LICENSE("GPL");
+
+MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
+MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+
+#if 0
+
+/* RINA ARP OLD */
 
 #include <linux/module.h>
 #include <linux/types.h>
@@ -367,8 +435,7 @@ int rinarp_old_send_request(struct arp_reply_ops * ops)
 EXPORT_SYMBOL(rinarp_old_send_request);
 
 /*
- *	Process an arp request.
- *      Taken from net/ipv4/arp.c
+ * Process an arp request (code stolen from net/ipv4/arp.c)
  */
 #if RINA_TEST
 static int arp_process(struct sk_buff *skb)
@@ -541,3 +608,74 @@ MODULE_DESCRIPTION("Basic implementation of RFC 826");
 MODULE_LICENSE("GPL");
 
 MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
+MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+#endif
+
+#if 0
+
+/* RINA ARP NEW */
+
+#include <linux/module.h>
+#include <linux/types.h>
+#include <linux/kernel.h>
+#include <linux/skbuff.h>
+#include <linux/netdevice.h>
+#include <linux/slab.h>
+#include <linux/list.h>
+#include <linux/if_ether.h>
+
+#include "rina-arp-new.h"
+
+struct naddr_handle * rinarp_paddr_register(__be16              proto_name,
+					    __be16              proto_len,
+                                            struct net_device * device,
+                                            struct paddr        address)
+{ return NULL; }
+EXPORT_SYMBOL(rinarp_paddr_register);
+
+int rinarp_paddr_unregister(struct naddr_handle * h)
+{ return -1; }
+EXPORT_SYMBOL(rinarp_paddr_unregister);
+
+struct naddr_filter * naddr_filter_create(struct naddr_handle * handle)
+{ return NULL; }
+EXPORT_SYMBOL(naddr_filter_create);
+
+int naddr_filter_set(struct naddr_filter * filter,
+		     void *                opaque,
+		     arp_handler_t         request,
+		     arp_handler_t         reply)
+{ return -1; }
+EXPORT_SYMBOL(naddr_filter_set);
+
+int naddr_filter_destroy(struct naddr_filter * filter)
+{ return -1; }
+EXPORT_SYMBOL(naddr_filter_destroy);
+
+int rinarp_hwaddr_get(struct naddr_filter *    filter, 
+		      struct paddr             in_address,
+		      struct rinarp_mac_addr * out_addr)
+{ return -1; }
+EXPORT_SYMBOL(rinarp_hwaddr_get);
+
+int rinarp_send_request(struct naddr_filter * filter, 
+                        struct paddr          address)
+{ return -1; }
+EXPORT_SYMBOL(rinarp_send_request);
+
+static int __init mod_init(void)
+{ return 0; }
+
+static void __exit mod_exit(void)
+{ /* FIXME: Destroy everything (e.g. the contents of 'data' */ }
+
+module_init(mod_init);
+module_exit(mod_exit);
+
+MODULE_DESCRIPTION("Basic RFC 826 compliant ARP implementation");
+
+MODULE_LICENSE("GPL");
+
+MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
+MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+#endif

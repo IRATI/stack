@@ -42,7 +42,7 @@
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 #include "fidm.h"
-#include "rina-arp-new.h"
+#include "arp826.h"
 
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -489,6 +489,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                           desthw);
         if (!desthw) {
                 rinarp_send_request(data->filter, name_to_paddr(flow->dest));
+
                 /* Dropping SDU in this case */
                 rkfree(sdu);
                 return -1;
