@@ -170,12 +170,9 @@ find_flow_by_addr(struct ipcp_instance_data *       data,
         struct shim_eth_flow * flow;
 
         list_for_each_entry(flow, &data->flows, list) {
-		/* FIXME: Should be compared properly */
-#if 0
-                if (name_to_paddr(flow->dest) == addr) {
+                if (strcmp(name_tostring(flow->dest), (char *) addr->buf)) {
                         return flow;
                 }
-#endif
 	}
 
         return NULL;
