@@ -411,7 +411,8 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 LOG_DBG("Going to sleep");
                 atomic_set(&flow->flag, 0);
                 spin_unlock(&instance->lock);
-                wait_event_interruptible(flow->wait_queue, (flow->flag == 1));
+                wait_event_interruptible(flow->wait_queue,
+                                ((atomic_read(&flow->flag)) == 1));
 
                 spin_lock(&instance->lock);
                 LOG_DBG("Woken up");
