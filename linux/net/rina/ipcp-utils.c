@@ -243,6 +243,8 @@ int name_cmp(const struct name * a, const struct name * b)
 }
 EXPORT_SYMBOL(name_cmp);
 
+#define DELIMITER "/"
+
 char * name_tostring(const struct name * n)
 {
         char *       tmp;
@@ -275,7 +277,8 @@ char * name_tostring(const struct name * n)
         if (!tmp)
                 return NULL;
 
-        if (snprintf(tmp, size, "%s/%s/%s/%s",
+        if (snprintf(tmp, size,
+                     "%s" DELIMITER "%s" DELIMITER "%s" DELIMITER "%s",
                      (n->process_name     ? n->process_name     : none),
                      (n->process_instance ? n->process_instance : none),
                      (n->entity_name      ? n->entity_name      : none),
