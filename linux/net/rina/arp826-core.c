@@ -48,6 +48,11 @@
 #include "arp826.h"
 #include "arp826-cache.h"
 
+#define HW_TYPE_ETHER    1              /* Ethernet    */
+
+#define RINARP_REQUEST   1              /* ARP request */
+#define RINARP_REPLY     2              /* ARP reply   */
+
 struct arp_hdr {
 	__be16        ar_hrd; /* Hardware address   */
 	__be16        ar_pro; /* Protocol address   */
@@ -109,101 +114,129 @@ static struct arp_hdr * arp826_header(const struct sk_buff * skb)
 
 static int arp826_process(struct sk_buff * skb)
 {
-#if 0
 	struct net_device * dev;
+#if 0
 	struct in_device *  in_dev;
+#endif
 	struct arp_hdr *    arp;
 	unsigned char  *    arp_ptr;
 
+	u16                 dev_type;
+
+#if 0
 	unsigned char *     sha;
 	unsigned char *     s_netaddr;
 	unsigned char *     d_netaddr;
 	unsigned char *     s_hwaddr;
 	unsigned char *     d_hwaddr;
-	u16                 dev_type;
+#endif
 
-	struct net *        net;
+	/* struct net *        net; */
 
-        dev      = skb->dev;
-        in_dev   = = __in_dev_get_rcu(dev);
+        LOG_DBG("Processing ARP skb %pK", skb);
+
+        dev = skb->dev;
+        if (!dev) {
+                LOG_WARN("Got a corrupted skb, bailing out");
+                return 0;
+        }
+
+#if 0
+        in_dev = (struct in_device *) in_dev_get(dev);
+	if (!in_dev) {
+                LOG_WARN("No in-device for this ARP");
+
+		consume_skb(skb);
+                return 0;
+        }
+#endif
+
         dev_type = dev->type;
-        net      = dev_net(dev);
+        /* We only handle type-1 headers */
+	if (dev_type != HW_TYPE_ETHER) {
+                LOG_WARN("Unknown ARP header");
 
-	/* Verify the ARP header and verifies the device is ARP'able */
+                consume_skb(skb);
+                return 0;
+        }
 
-	if (in_dev == NULL)
-		goto out;
+        /* FIXME: We should switch on the dev-type here */
+
+        /* net = dev_net(dev); */
 
 	arp = arp826_header(skb);
 
 	/* 
-	 * Check if we know the protocol specified
-	 * Only accept RINA packets in this implementation 
-	 * Others could be added 
+         * FIXME: Check if we know the protocol specified. Only accept RINA
+         *        packets for the time being. Others will be added later ...
 	 */
 
 	if (arp->ar_pro != htons(ETH_P_RINA) ||
-	    htons(dev_type) != arp->ar_hrd)
-		goto out;
+            htons(dev_type) != arp->ar_hrd) {
+                LOG_WARN("Unknown proto");
 
-	switch (dev_type) {
-	case ARPHRD_ETHER:
-		if ((arp->ar_hrd != htons(RINARP_ETHER))
-                    goto out;
-                    break;
-                    }
-
-                /* Understand only these message types */
-                if (arp->ar_op != htons(RINARP_REPLY) &&
-                    arp->ar_op != htons(RINARP_REQUEST))
-                        goto out;
-                
-                /* Extract addresses */
-                arp_ptr = (unsigned char *)(arp + 1);
-                sha	= arp_ptr;
-                arp_ptr += dev->addr_len;
-                memcpy(s_netaddr, arp_ptr, arp->ar_pln);
-                arp_ptr += arp->ar_pln;
-                memcpy(s_hwaddr, arp_ptr, arp->ar_hln);
-                arp_ptr += dev->addr_len;
-                memcpy(d_netaddr, arp_ptr, arp->ar_pln);
-                arp_ptr += arp->ar_pln;
-                memcpy(d_hwaddr, arp_ptr, arp->ar_hln);
-
-                /*
-                 *  Process entry. The idea here is we want to send a reply
-                 *  if it is a request for us. We want to add an entry to our
-                 *  cache if it is a reply to us or if it is a request for one
-                 *  of our addresses.
-                 *
-                 *  Putting this another way, we only care about replies if
-                 *  they are to us, in which case we add them to the cache.
-                 *  For requests, we care about those for us. We add the
-                 *  requester to the arp cache.
-                 */
-
-                /* FIXME: The following part, first complete top part ARP PM */
-                if (arp->ar_op == htons(RINARP_REQUEST)) {
-                        /* Are we advertising this network address? */
-
-                } else if (arp->arp_op == htons(RINARP_REPLY)) {
-                        /* Is the reply for one of our network addresses? */
-		
-                } else {
-                        printk("Unknown operation code");
-                        goto out;
-                }
-
-                /* Update our ARP tables */
-                
-        out:
+		consume_skb(skb);
+                return 0;
+        }
+        if (arp->ar_hrd != htons(HW_TYPE_ETHER)) {
+                LOG_WARN("Wrong ARP header");
+                        
                 consume_skb(skb);
                 return 0;
         }
-#else
-        consume_skb(skb);
-        return 0;
+        if (arp->ar_op != htons(RINARP_REPLY) &&
+            arp->ar_op != htons(RINARP_REQUEST)) {
+                LOG_WARN("Unhandled ARP operation");
+                
+                consume_skb(skb);
+                return 0;
+        }
+
+        /* Hooray, we can handle this ARP (probably ...) */
+        
+#if 0
+        /* Extract the addresses */
+        arp_ptr = (unsigned char *)(arp + 1);
+        sha	= arp_ptr;
+        arp_ptr += dev->addr_len;
+        memcpy(s_netaddr, arp_ptr, arp->ar_pln);
+        arp_ptr += arp->ar_pln;
+        memcpy(s_hwaddr, arp_ptr,  arp->ar_hln);
+        arp_ptr += dev->addr_len;
+        memcpy(d_netaddr, arp_ptr, arp->ar_pln);
+        arp_ptr += arp->ar_pln;
+        memcpy(d_hwaddr, arp_ptr,  arp->ar_hln);
 #endif
+        
+        /*
+         *  And finally process the entry ...
+         *
+         *  The idea is that we want to send a reply if the request is for us.
+         *  We want to add an entry to our cache if it is a reply to us or if
+         *  it is a request for one of our addresses.
+         *
+         *  Putting this another way, we only care about replies if
+         *  they are to us, in which case we add them to the cache.
+         *  For requests, we care about those for us. We add the
+         *  requester to the arp cache.
+         */
+        
+        /* FIXME: The following part, first complete top part ARP PM */
+        if (arp->ar_op == htons(RINARP_REQUEST)) {
+                /* Are we advertising this network address? */
+                
+        } else if (arp->ar_op == htons(RINARP_REPLY)) {
+                /* Is the reply for one of our network addresses? */
+		
+        } else {
+                BUG();
+        }
+        
+        /* Update our ARP tables */
+                
+        consume_skb(skb);
+
+        return 0;
 }
 
 static int arp826_receive(struct sk_buff *     skb,
@@ -219,37 +252,49 @@ static int arp826_receive(struct sk_buff *     skb,
 
         if (dev->flags & IFF_NOARP            ||
             skb->pkt_type == PACKET_OTHERHOST ||
-            skb->pkt_type == PACKET_LOOPBACK)
-                goto freeskb;
+            skb->pkt_type == PACKET_LOOPBACK) {
+                kfree_skb(skb);
+                LOG_DBG("This ARP is not for us");
+                return 0;
+        }
 
         skb = skb_share_check(skb, GFP_ATOMIC);
         if (!skb) {
-                goto out_of_mem;
+                LOG_WARN("This ARP cannot be shared!");
+                return 0;
         }
 
         /* ARP header, without 2 device and 2 network addresses */
-        if (!pskb_may_pull(skb, sizeof(struct arp_hdr)))
-                goto freeskb;
+        if (!pskb_may_pull(skb, sizeof(struct arp_hdr))) {
+                LOG_WARN("Got an ARP header "
+                        "without 2 devices and 2 network addresses "
+                        "(step #1)");
+                kfree_skb(skb);
+                return 0;
+        }
 
         arp = arp826_header(skb);
-        if (arp->ar_hln != dev->addr_len)
-                goto freeskb;
+        if (arp->ar_hln != dev->addr_len) {
+                LOG_WARN("Cannot process this ARP");
+                kfree_skb(skb);
+                return 0;
+        }
 
         total_length = sizeof(struct arp_hdr) +
                 (dev->addr_len + arp->ar_pln) * 2;
 
         /* ARP header, with 2 device and 2 network addresses */
-        if (!pskb_may_pull(skb, total_length))
-                goto freeskb;
+        if (!pskb_may_pull(skb, total_length)) {
+                LOG_WARN("Got an ARP header "
+                        "without 2 devices and 2 network addresses "
+                        "(step #2)");
+                kfree_skb(skb);
+                return 0;
+        }
 
         arp826_process(skb);
-        return 0;
-
- freeskb:
         kfree_skb(skb);
 
- out_of_mem:
-        /* FIXME: Shouldn't we prompt for something here ? */
         return 0;
 }
 
@@ -265,6 +310,8 @@ static int __init mod_init(void)
 
         dev_add_pack(&arp_packet_type);
 
+        LOG_DBG("Initialized successfully");
+
         return 0;
 }
 
@@ -273,6 +320,8 @@ static void __exit mod_exit(void)
         dev_remove_pack(&arp_packet_type);
 
         arp826_cache_fini();
+
+        LOG_DBG("Destroyed successfully");
 }
 
 module_init(mod_init);
@@ -651,13 +700,13 @@ static int arp_process(struct sk_buff *skb)
 	struct arp_hdr *arp;
 	unsigned char  *arp_ptr;
 
-	unsigned char *sha;
-	unsigned char *s_netaddr;
-	unsigned char *d_netaddr;
-	unsigned char *s_hwaddr;
-	unsigned char *d_hwaddr;
-	u16 dev_type = dev->type;
-	struct net *net = dev_net(dev);
+	unsigned char * sha;
+	unsigned char * s_netaddr;
+	unsigned char * d_netaddr;
+	unsigned char * s_hwaddr;
+	unsigned char * d_hwaddr;
+	u16             dev_type = dev->type;
+	struct net *    net = dev_net(dev);
 
 	/* arp_rcv below verifies the ARP header and verifies the device
 	 * is ARP'able.
