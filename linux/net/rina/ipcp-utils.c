@@ -296,54 +296,39 @@ char * name_tostring(const struct name * n)
 EXPORT_SYMBOL(name_tostring);
 
 
-struct name * string_toname(const char * input) 
+struct name * string_toname(const string_t * input) 
 {
 	struct name * n;
-	char *        tmp;
-	char *        tmp1;
-	char *        tmp2;
+
+        string_t *    tmp1;
+        string_t *    tmp2;
+
+	string_t *    tmp_pn;
+	string_t *    tmp_pi;
+	string_t *    tmp_en;
+	string_t *    tmp_ei;
 
         if (!input)
                 return NULL;
 	
-	n = name_create();
-        if (!n)
-                return NULL;
-
-	string_dup(input, &tmp);
-	if (!tmp) {
-		name_fini(n);
+	string_dup(input, &tmp1);
+	if (!tmp1) {
 		return NULL;
 	} 
-	tmp1 = tmp;
-			
-	tmp2 = strsep(&tmp1, DELIMITER);
-	if (string_dup(tmp2, &n->process_name)) {
-		rkfree(tmp);
-		name_fini(n);
-		return NULL;
-	}
-	tmp2 = strsep(&tmp1, DELIMITER);
-	if (string_dup(tmp2, &n->process_instance)) {
-		rkfree(tmp);
-		name_fini(n);
-		return NULL;
-	}
-	tmp2 = strsep(&tmp1, DELIMITER);
-	if (string_dup(tmp2, &n->entity_name)) {
-		rkfree(tmp);
-		name_fini(n);
-		return NULL;
-	}
-	tmp2 = strsep(&tmp1, DELIMITER);
-	if (string_dup(tmp2, &n->entity_instance)) {
-		rkfree(tmp);
-		name_fini(n);
-		return NULL;
-	}
+        tmp2 = tmp1;
 
-	rkfree(tmp);
-	return n;
+	tmp_pn = strsep(&tmp2, DELIMITER);
+	tmp_pi = strsep(&tmp2, DELIMITER);
+	tmp_en = strsep(&tmp2, DELIMITER);
+	tmp_ei = strsep(&tmp2, DELIMITER);
+        
+        n = name_create_and_init(tmp_pn, tmp_pi, tmp_en, tmp_ei);
+        if (!n) {
+                rkfree(tmp1);
+                return NULL;
+        }
+
+        return n;
 }
 EXPORT_SYMBOL(string_toname); 
 

@@ -90,7 +90,7 @@ int           name_cmp(const struct name * a, const struct name * b);
 char *        name_tostring(const struct name * n);
 
 /* Inverse of name_tostring() */
-struct name * string_toname(const char * s);
+struct name * string_toname(const string_t * s);
 
 struct ipcp_config * ipcp_config_create(void);
 int                  ipcp_config_destroy(struct ipcp_config * cfg);
