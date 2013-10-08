@@ -115,7 +115,6 @@ static struct arp_header * arp826_header(const struct sk_buff * skb)
 
 static int arp826_process(struct sk_buff * skb)
 {
-        struct net_device * dev;
         struct arp_header * header;
         uint16_t            operation;
 
