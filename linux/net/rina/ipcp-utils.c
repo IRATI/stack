@@ -243,7 +243,7 @@ int name_cmp(const struct name * a, const struct name * b)
 }
 EXPORT_SYMBOL(name_cmp);
 
-#define DELIMITER "/"
+#define DELIMITER '/'
 
 char * name_tostring(const struct name * n)
 {
@@ -259,15 +259,15 @@ char * name_tostring(const struct name * n)
 
         size += (n->process_name                 ?
                  string_len(n->process_name)     : none_len);
-        size += 1; /* SEPARATOR */
+        size += 1; /* DELIMITER */
 
         size += (n->process_instance             ?
                  string_len(n->process_instance) : none_len);
-        size += 1;  /* SEPARATOR */
+        size += 1;  /* DELIMITER */
 
         size += (n->entity_name                  ?
                  string_len(n->entity_name)      : none_len);
-        size += 1;  /* SEPARATOR */
+        size += 1;  /* DELIMITER */
 
         size += (n->entity_instance              ?
                  string_len(n->entity_instance)  : none_len);
@@ -278,10 +278,13 @@ char * name_tostring(const struct name * n)
                 return NULL;
 
         if (snprintf(tmp, size,
-                     "%s" DELIMITER "%s" DELIMITER "%s" DELIMITER "%s",
+                     "%s%c%s%c%s%c%s",
                      (n->process_name     ? n->process_name     : none),
+                     DELIMITER,
                      (n->process_instance ? n->process_instance : none),
+                     DELIMITER,
                      (n->entity_name      ? n->entity_name      : none),
+                     DELIMITER,
                      (n->entity_instance  ? n->entity_instance  : none)) !=
             size - 1) {
                 rkfree(tmp);
