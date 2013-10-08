@@ -513,7 +513,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         skb->protocol = htons(ETH_P_RINA);
 
         if (dev_hard_header(skb, data->dev, ETH_P_RINA,
-                            dest_hw, src_hw, skb->len) < 0){
+                            dest_hw, src_hw, skb->len) < 0) {
                 kfree_skb(skb);
                 rkfree(sdu);
                 return -1;
@@ -571,13 +571,15 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         return 0;
 };
 
-//FIXME reconfiguration is not allowed through this operation
-//If the IPC Process is already assigned to a shim DIF, this
-//method must return an error. Reconfiguration must be achieved
-//through update-dif-configuration (which doesn't allow changing
-//the DIF to which this IPC Process is assigned)
+/*
+ * FIXME: Reconfiguration is not allowed through this operation
+ *        If the IPC Process is already assigned to a shim DIF, this
+ *        method must return an error. Reconfiguration must be achieved
+ *        through update-dif-configuration (which doesn't allow changing
+ *        the DIF to which this IPC Process is assigned)
+ */
 static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
-		                          const struct dif_info *  dif_information)
+                                  const struct dif_info *     dif_information)
 {
         struct eth_vlan_info * info;
         struct ipcp_config *   tmp;
@@ -586,9 +588,8 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         string_t *             old_interface_name;
         string_t *             complete_interface;
 
-
         ASSERT(data);
-        ASSERT(configuration);
+        ASSERT(dif_information);
 
         /* If reconfigure = 1, break down all communication and setup again */
         reconfigure = 0;
@@ -606,34 +607,30 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 reconfigure = 1;
 
         /* Retrieve configuration of IPC process from params */
-        list_for_each_entry(tmp,
-        		&(dif_information->configuration->ipcp_config_entries),
-        		next)
-        {
-                const struct ipcp_config_entry * entry;
-                const struct ipcp_config_value * value;
+        list_for_each_entry(tmp, &(dif_information->
+                                   configuration->
+                                   ipcp_config_entries), next) {
+                        const struct ipcp_config_entry * entry;
 
-                entry = tmp->entry;
-                if (!strcmp(entry->name,"interface-name")){
-                        if (!strcpy(info->interface_name,
-                                    entry->value)) {
-                                LOG_ERR("Failed to copy interface name");
+                        entry = tmp->entry;
+                        if (!strcmp(entry->name,"interface-name")) {
+                                if (!strcpy(info->interface_name,
+                                            entry->value)) {
+                                        LOG_ERR("Cannot copy interface name");
+                                }
+                                if (!reconfigure && old_interface_name &&
+                                    !strcmp(info->interface_name,
+                                            old_interface_name)) {
+                                        reconfigure = 1;
+                                }
+                        } else {
+                                LOG_WARN("Unknown config param for eth shim");
                         }
-                        if (!reconfigure && old_interface_name &&
-                            !strcmp(info->interface_name,
-                                    old_interface_name)) {
-                                reconfigure = 1;
-                        }
-                } else {
-                        LOG_WARN("Unknown config param for eth shim");
                 }
-        }
 
 
-        if (reconfigure) {
+        if (reconfigure)
                 dev_remove_pack(data->eth_vlan_packet_type);
-        }
-
 
         data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
         data->eth_vlan_packet_type->func = eth_vlan_rcv;
@@ -641,9 +638,9 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         complete_interface =
                 create_vlan_interface_name(info->interface_name,
                                            info->vlan_id);
-        if (!complete_interface) {
+        if (!complete_interface)
                 return -1;
-        }
+
         /* Add the handler */
         read_lock(&dev_base_lock);
         data->dev = __dev_get_by_name(&init_net, complete_interface);
@@ -663,9 +660,10 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
 }
 
 static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
-                                   const struct dif_config *  new_config){
-	    //FIXME Implement if required
-	    return -1;
+                                      const struct dif_config *   new_config) 
+{
+        /* FIXME: Implement if required */
+        return -1;
 }
 
 static struct ipcp_instance_ops eth_vlan_instance_ops = {

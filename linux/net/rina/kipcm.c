@@ -555,7 +555,7 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
 
 static int
 assign_to_dif_free_and_reply(struct name *       dif_name,
-		                     struct dif_config * dif_config,
+                             struct dif_config * dif_config,
                              struct dif_info *   dif_info,
                              struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs,
                              struct rnl_msg *    msg,
@@ -585,7 +585,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
         struct rnl_msg *                              msg;
         struct dif_info *                             dif_info;
         struct name *                                 dif_name;
-        struct dif_config * 						  dif_config;
+        struct dif_config *                                               dif_config;
         struct ipcp_instance *                        ipc_process;
         ipc_process_id_t                              ipc_id;
 
@@ -610,7 +610,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
         attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
         if (!attrs)
                 return assign_to_dif_free_and_reply(dif_name,
-                		                            dif_config,
+                                                    dif_config,
                                                     dif_info,
                                                     attrs,
                                                     msg,
@@ -622,8 +622,8 @@ static int notify_ipcp_assign_dif_request(void *             data,
         dif_info = rkzalloc(sizeof(struct dif_info), GFP_KERNEL);
         if (!dif_info)
                 return assign_to_dif_free_and_reply(dif_name,
-                		                            dif_config,
-                		                            dif_info,
+                                                    dif_config,
+                                                    dif_info,
                                                     attrs,
                                                     msg,
                                                     0,
@@ -648,12 +648,12 @@ static int notify_ipcp_assign_dif_request(void *             data,
         dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
         if (!dif_config)
                 return assign_to_dif_free_and_reply(dif_name,
-                        		                    dif_config,
-                        		                    dif_info,
+                                                    dif_config,
+                                                    dif_info,
                                                     attrs,
                                                     msg,
                                                     0,
-                                                   -1,
+                                                    -1,
                                                     info->snd_seq,
                                                     info->snd_portid);
         INIT_LIST_HEAD(&(dif_config->ipcp_config_entries));

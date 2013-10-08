@@ -324,8 +324,8 @@ static int parse_dif_config(struct nlattr * dif_config_attr,
 
         if(attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES]){
                 if (parse_list_of_ipcp_config_entries(
-                                         attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES],
-                                         dif_config) < 0)
+                                                      attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES],
+                                                      dif_config) < 0)
                         goto parse_fail;
         }
 
@@ -337,7 +337,7 @@ static int parse_dif_config(struct nlattr * dif_config_attr,
 }
 
 static int parse_dif_info(struct nlattr * dif_config_attr,
-                            struct dif_info  * dif_info)
+                          struct dif_info  * dif_info)
 {
         struct nla_policy attr_policy[DINFO_ATTR_MAX + 1];
         struct nlattr *attrs[DINFO_ATTR_MAX + 1];
@@ -350,7 +350,7 @@ static int parse_dif_info(struct nlattr * dif_config_attr,
         attr_policy[DINFO_ATTR_CONFIG].len = 0;
 
         if (nla_parse_nested(attrs,
-        		             DINFO_ATTR_MAX,
+                             DINFO_ATTR_MAX,
                              dif_config_attr,
                              attr_policy) < 0)
                 goto parse_fail;
@@ -366,7 +366,7 @@ static int parse_dif_info(struct nlattr * dif_config_attr,
         if (attrs[DINFO_ATTR_CONFIG])
                 if (parse_dif_config(attrs[DINFO_ATTR_CONFIG],
                                      dif_info->configuration) < 0)
-                       goto parse_fail;
+                        goto parse_fail;
 
         return 0;
 
@@ -472,7 +472,7 @@ static int rnl_parse_ipcm_assign_to_dif_req_msg(struct genl_info * info,
         }
 
         if (parse_dif_info(attrs[IATDR_ATTR_DIF_INFORMATION],
-                             msg_attrs->dif_info) < 0)
+                           msg_attrs->dif_info) < 0)
                 goto parse_fail;
 
         return 0;
