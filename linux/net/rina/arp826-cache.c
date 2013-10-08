@@ -40,4 +40,16 @@ int arp826_cache_init(void)
 }
 
 void arp826_cache_fini(void)
-{ }
+{
+        LOG_MISSING;
+}
+
+int arp826_cache_add(const unsigned char * spa, uint8_t spa_length,
+                     const unsigned char * tpa, uint8_t tpa_length,
+                     const unsigned char * sha, uint8_t sha_length,
+                     const unsigned char * tha, uint8_t tha_length)
+{
+        LOG_MISSING;
+
+        return -1;
+}

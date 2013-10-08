@@ -53,22 +53,21 @@
 #define RINARP_REQUEST   1              /* ARP request */
 #define RINARP_REPLY     2              /* ARP reply   */
 
-struct arp_hdr {
-        __be16        ar_hrd; /* Hardware address   */
-        __be16        ar_pro; /* Protocol address   */
-        __u8          ar_hln; /* Length of hardware address   */
-        __u8          ar_pln; /* Length of protocol address   */
-        __be16        ar_op;  /* ARP opcode (command)         */
+struct arp_header {
+        __be16        ar_hrd; /* Hardware type */
+        __be16        ar_pro; /* Protocol type */
+        __u8          ar_hln; /* Hardware address length */
+        __u8          ar_pln; /* Protocol address length */
+        __be16        ar_op;  /* Operation */
 
 #if 0
         /*
-         *      This bit is variable sized however...
-         *      This is an example
+         *  This part is variable sized, names here are only representative
          */
-        unsigned char ar_sha; /* sender hardware address   */
-        unsigned char ar_spa; /* sender protocol address   */
-        unsigned char ar_tha; /* target hardware address   */
-        unsigned char ar_tpa; /* target protocol address   */
+        unsigned char ar_sha; /* Sender hardware address */
+        unsigned char ar_spa; /* Sender protocol address */
+        unsigned char ar_tha; /* Target hardware address */
+        unsigned char ar_tpa; /* Target protocol address */
 #endif
 };
 
@@ -109,76 +108,75 @@ int rinarp_send_request(struct naddr_filter * filter,
 { return -1; }
 EXPORT_SYMBOL(rinarp_send_request);
 
-static struct arp_hdr * arp826_header(const struct sk_buff * skb)
-{ return (struct arp_hdr *) skb_network_header(skb); }
+static struct arp_header * arp826_header(const struct sk_buff * skb)
+{ return (struct arp_header *) skb_network_header(skb); }
 
 static int arp826_process(struct sk_buff * skb)
 {
         struct net_device * dev;
-        struct arp_hdr *    arp;
-#if 0
-        unsigned char  *    arp_ptr;
-        unsigned char *     sha;
-        unsigned char *     s_netaddr;
-        unsigned char *     d_netaddr;
-        unsigned char *     s_hwaddr;
-        unsigned char *     d_hwaddr;
-#endif
+        struct arp_header * header;
+        uint16_t            operation;
 
+        unsigned char *     ptr;
+
+        unsigned char *     spa; /* Source protocol address pointer */
+        unsigned char *     tpa; /* Target protocol address pointer */
+        unsigned char *     sha; /* Source protocol address pointer */
+        unsigned char *     tha; /* Target protocol address pointer */
+        
         LOG_DBG("Processing ARP skb %pK", skb);
-
+        
         dev = skb->dev;
         if (!dev) {
-                LOG_WARN("Got a corrupted skb, bailing out");
+                LOG_ERR("Got a corrupted skb, bailing out");
                 return 0;
         }
-
+        
         /* We only handle type-1 headers */
         if (dev->type != HW_TYPE_ETHER) {
-                LOG_WARN("Unknown ARP header");
+                LOG_ERR("Unknown ARP header");
                 return 0;
         }
-
-        /* FIXME: We should switch on the dev-type here */
-
-        /* net = dev_net(dev); */
-
-        arp = arp826_header(skb);
+        
+        header = arp826_header(skb);
+        if (!header) {
+                LOG_ERR("Cannot get the header");
+                return 0;
+        }
 
         /*
          * FIXME: Check if we know the protocol specified. Only accept RINA
          *        packets for the time being. Others will be added later ...
          */
+        
+        if (header->ar_pro != htons(ETH_P_RINA)) {
+                LOG_ERR("Unknown protocol address %d", header->ar_pro);
+                return 0;
+        }
+        if (header->ar_hrd != htons(HW_TYPE_ETHER)) {
+                LOG_ERR("Wrong ARP hardware address %d", header->ar_hrd);
+                return 0;
+        }
 
-        if (arp->ar_pro != htons(ETH_P_RINA)) {
-                LOG_WARN("Unknown protocol address %d", arp->ar_pro);
-                return 0;
-        }
-        if (arp->ar_hrd != htons(HW_TYPE_ETHER)) {
-                LOG_WARN("Wrong ARP hardware address %d", arp->ar_hrd));
-                return 0;
-        }
-        if (arp->ar_op != htons(RINARP_REPLY) &&
-            arp->ar_op != htons(RINARP_REQUEST)) {
-                LOG_WARN("Unhandled ARP operation %d", arp->ar_op);
+        operation = ntohs(header->ar_op);
+        if (operation != RINARP_REPLY && operation != RINARP_REQUEST) {
+                LOG_ERR("Unhandled ARP operation %d", operation);
                 return 0;
         }
 
         /* Hooray, we can handle this ARP (probably ...) */
 
-#if 0
-        /* Extract the addresses */
-        arp_ptr = (unsigned char *)(arp + 1);
-        sha     = arp_ptr;
-        arp_ptr += dev->addr_len;
-        memcpy(s_netaddr, arp_ptr, arp->ar_pln);
-        arp_ptr += arp->ar_pln;
-        memcpy(s_hwaddr, arp_ptr,  arp->ar_hln);
-        arp_ptr += dev->addr_len;
-        memcpy(d_netaddr, arp_ptr, arp->ar_pln);
-        arp_ptr += arp->ar_pln;
-        memcpy(d_hwaddr, arp_ptr,  arp->ar_hln);
-#endif
+        LOG_DBG("Extracting information");
+
+        ptr = (unsigned char *) header + 8;
+
+        sha = ptr; ptr += 6;
+        spa = ptr; ptr += 4;
+        tha = ptr; ptr += 6;
+        tpa = ptr; ptr += 4;
+
+        arp826_cache_add(spa, header->ar_pln, tpa, header->ar_pln,
+                         sha, header->ar_hln, tha, header->ar_hln);
 
         /*
          *  And finally process the entry ...
@@ -193,7 +191,7 @@ static int arp826_process(struct sk_buff * skb)
          *  requester to the arp cache.
          */
 
-        switch (ntohs(arp->ar_op)) {
+        switch (operation) {
         case RINARP_REQUEST:
                 /* Are we advertising this network address? */
 
@@ -208,7 +206,7 @@ static int arp826_process(struct sk_buff * skb)
                 BUG();
         }
 
-        /* Update our ARP tables */
+        /* Finally, update the ARP cache */
 
         return 0;
 }
@@ -218,8 +216,8 @@ static int arp826_receive(struct sk_buff *     skb,
                           struct packet_type * pkt,
                           struct net_device *  orig_dev)
 {
-        const struct arp_hdr * arp;
-        int                    total_length;
+        const struct arp_header * header;
+        int                       total_length;
 
         if (!dev || !skb)
                 return -1;
@@ -236,12 +234,12 @@ static int arp826_receive(struct sk_buff *     skb,
 
         skb = skb_share_check(skb, GFP_ATOMIC);
         if (!skb) {
-                LOG_WARN("This ARP cannot be shared!");
+                LOG_ERR("This ARP cannot be shared!");
                 return 0;
         }
 
         /* ARP header, without 2 device and 2 network addresses */
-        if (!pskb_may_pull(skb, sizeof(struct arp_hdr))) {
+        if (!pskb_may_pull(skb, sizeof(struct arp_header))) {
                 LOG_WARN("Got an ARP header "
                          "without 2 devices and 2 network addresses "
                          "(step #1)");
@@ -249,15 +247,15 @@ static int arp826_receive(struct sk_buff *     skb,
                 return 0;
         }
 
-        arp = arp826_header(skb);
-        if (arp->ar_hln != dev->addr_len) {
+        header = arp826_header(skb);
+        if (header->ar_hln != dev->addr_len) {
                 LOG_WARN("Cannot process this ARP");
                 kfree_skb(skb);
                 return 0;
         }
 
-        total_length = sizeof(struct arp_hdr) +
-                (dev->addr_len + arp->ar_pln) * 2;
+        total_length = sizeof(struct arp_header) +
+                (dev->addr_len + header->ar_pln) * 2;
 
         /* ARP header, with 2 device and 2 network addresses */
         if (!pskb_may_pull(skb, total_length)) {
@@ -362,7 +360,7 @@ static struct list_head data;
  *  Taken from include/uapi/linux/if_arp.h
  *  Original name: struct arphdr
  */
-struct arp_hdr {
+struct arp_header {
         __be16          ar_hrd;         /* format of hardware address   */
         __be16          ar_pro;         /* format of protocol address   */
         __u8            ar_hln;         /* length of hardware address   */
@@ -542,8 +540,8 @@ int rinarp_old_remove_reply_handler(struct arp_reply_ops * ops)
 EXPORT_SYMBOL(rinarp_old_remove_reply_handler);
 
 /* Taken from include/linux/if_arp.h */
-static struct arp_hdr * arphdr(const struct sk_buff * skb)
-{ return (struct arp_hdr *)skb_network_header(skb); }
+static struct arp_header * arphdr(const struct sk_buff * skb)
+{ return (struct arp_header *)skb_network_header(skb); }
 
 /*
  *      Create an arp packet. If (dest_hw == NULL), we create a broadcast
@@ -557,7 +555,7 @@ static struct sk_buff *arp_create(int op, int ptype, int plen,
                                   const unsigned char * dest_hw)
 {
         struct sk_buff *     skb;
-        struct arp_hdr *     arp;
+        struct arp_header *     arp;
         unsigned char *      arp_ptr;
         int                  hlen = LL_RESERVED_SPACE(dev);
         int                  tlen = dev->needed_tailroom;
@@ -566,7 +564,7 @@ static struct sk_buff *arp_create(int op, int ptype, int plen,
         /*
          *      Allocate a buffer
          */
-        int length = sizeof(struct arp_hdr) + (dev->addr_len + plen) * 2;
+        int length = sizeof(struct arp_header) + (dev->addr_len + plen) * 2;
 
         skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
         if (skb == NULL)
@@ -574,7 +572,7 @@ static struct sk_buff *arp_create(int op, int ptype, int plen,
 
         skb_reserve(skb, hlen);
         skb_reset_network_header(skb);
-        arp = (struct arp_hdr *) skb_put(skb, length);
+        arp = (struct arp_header *) skb_put(skb, length);
         skb->dev = dev;
         skb->protocol = htons(ETH_P_ARP);
         src_hw = dev->dev_addr;
@@ -673,7 +671,7 @@ static int arp_process(struct sk_buff *skb)
 {
         struct net_device *dev = skb->dev;
         struct in_device *in_dev = __in_dev_get_rcu(dev);
-        struct arp_hdr *arp;
+        struct arp_header *arp;
         unsigned char  *arp_ptr;
 
         unsigned char * sha;
@@ -772,7 +770,7 @@ static int arp_rcv(struct sk_buff *skb, struct net_device *dev,
                    struct packet_type *pt, struct net_device *orig_dev)
 {
 
-        const struct arp_hdr * arp;
+        const struct arp_header * arp;
         int                    total_length;
 
         if (dev->flags & IFF_NOARP ||
@@ -785,14 +783,14 @@ static int arp_rcv(struct sk_buff *skb, struct net_device *dev,
                 goto out_of_mem;
 
         /* ARP header, without 2 device and 2 network addresses.  */
-        if (!pskb_may_pull(skb, sizeof(struct arp_hdr)))
+        if (!pskb_may_pull(skb, sizeof(struct arp_header)))
                 goto freeskb;
 
         arp = arphdr(skb);
         if (arp->ar_hln != dev->addr_len)
                 goto freeskb;
 
-        total_length = sizeof(struct arp_hdr)
+        total_length = sizeof(struct arp_header)
                 + (dev->addr_len + arp->ar_pln) * 2;
 
         /* ARP header, with 2 device and 2 network addresses.  */
