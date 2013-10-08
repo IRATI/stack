@@ -613,7 +613,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         info->vlan_id = simple_strtol(dif_information->dif_name->process_name,
                                       0,
                                       10);
-        data->dif_name = name_dup(configuration->dif_name);
+        data->dif_name = name_dup(dif_information->dif_name);
 
         if (old_vlan_id && old_vlan_id != info->vlan_id)
                 reconfigure = 1;
