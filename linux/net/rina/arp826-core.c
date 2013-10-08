@@ -151,16 +151,16 @@ static int arp826_process(struct sk_buff * skb)
          */
 
         if (arp->ar_pro != htons(ETH_P_RINA)) {
-                LOG_WARN("Unknown protocol address %d", ntohs(arp->ar_pro));
+                LOG_WARN("Unknown protocol address %d", arp->ar_pro);
                 return 0;
         }
         if (arp->ar_hrd != htons(HW_TYPE_ETHER)) {
-                LOG_WARN("Wrong ARP hardware address %d", ntohs(arp->ar_hrd));
+                LOG_WARN("Wrong ARP hardware address %d", arp->ar_hrd));
                 return 0;
         }
         if (arp->ar_op != htons(RINARP_REPLY) &&
             arp->ar_op != htons(RINARP_REQUEST)) {
-                LOG_WARN("Unhandled ARP operation %d", ntohs(arp->ar_op));
+                LOG_WARN("Unhandled ARP operation %d", arp->ar_op);
                 return 0;
         }
 
@@ -232,6 +232,8 @@ static int arp826_receive(struct sk_buff *     skb,
                 return 0;
         }
 
+        /* FIXME: We should move pre-checks from arp826_process() here ... */
+
         skb = skb_share_check(skb, GFP_ATOMIC);
         if (!skb) {
                 LOG_WARN("This ARP cannot be shared!");
@@ -268,7 +270,6 @@ static int arp826_receive(struct sk_buff *     skb,
 
         arp826_process(skb);
         consume_skb(skb);
-        kfree_skb(skb);
 
         return 0;
 }
