@@ -298,37 +298,36 @@ EXPORT_SYMBOL(name_tostring);
 
 struct name * string_toname(const string_t * input) 
 {
-	struct name * n;
+	struct name * name;
 
-        string_t *    tmp1;
-        string_t *    tmp2;
+        string_t *    tmp1   = NULL;
+	string_t *    tmp_pn = NULL;
+	string_t *    tmp_pi = NULL;
+	string_t *    tmp_en = NULL;
+	string_t *    tmp_ei = NULL;
 
-	string_t *    tmp_pn;
-	string_t *    tmp_pi;
-	string_t *    tmp_en;
-	string_t *    tmp_ei;
+        if (input) {
+                string_t * tmp2;
 
-        if (!input)
-                return NULL;
-	
-	string_dup(input, &tmp1);
-	if (!tmp1) {
-		return NULL;
-	} 
-        tmp2 = tmp1;
-
-	tmp_pn = strsep(&tmp2, DELIMITER);
-	tmp_pi = strsep(&tmp2, DELIMITER);
-	tmp_en = strsep(&tmp2, DELIMITER);
-	tmp_ei = strsep(&tmp2, DELIMITER);
+                string_dup(input, &tmp1);
+                if (!tmp1) {
+                        return NULL;
+                } 
+                tmp2 = tmp1;
+                
+                tmp_pn = strsep(&tmp2, DELIMITER);
+                tmp_pi = strsep(&tmp2, DELIMITER);
+                tmp_en = strsep(&tmp2, DELIMITER);
+                tmp_ei = strsep(&tmp2, DELIMITER);
+        }
         
-        n = name_create_and_init(tmp_pn, tmp_pi, tmp_en, tmp_ei);
-        if (!n) {
-                rkfree(tmp1);
+        name = name_create_and_init(tmp_pn, tmp_pi, tmp_en, tmp_ei);
+        if (!name) {
+                if (tmp1) rkfree(tmp1);
                 return NULL;
         }
 
-        return n;
+        return name;
 }
 EXPORT_SYMBOL(string_toname); 
 
