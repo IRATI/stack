@@ -45,19 +45,24 @@ void arp826_cache_fini(void)
 }
 
 struct cache_entry {
+        size_t          pal; /* FIXME: To be removed */
+
         unsigned char * spa;
         unsigned char * tpa;
+
+        size_t          hal; /* FIXME: To be removed */
 
         unsigned char * sha;
         unsigned char * tha;
 };
 
-struct cache_entry * ce_create(size_t                protocol_address_length,
-                               const unsigned char * source_protocol_address,
-                               const unsigned char * target_protocol_address,
-                               size_t                hardware_address_length,
-                               const unsigned char * source_hardware_address,
-                               const unsigned char * target_hardware_address)
+static struct cache_entry *
+ce_create(size_t                protocol_address_length,
+          const unsigned char * source_protocol_address,
+          const unsigned char * target_protocol_address,
+          size_t                hardware_address_length,
+          const unsigned char * source_hardware_address,
+          const unsigned char * target_hardware_address)
 {
         struct cache_entry * entry;
 
@@ -93,7 +98,7 @@ struct cache_entry * ce_create(size_t                protocol_address_length,
         return entry;
 }
 
-void ce_destroy(struct cache_entry * entry)
+static void ce_destroy(struct cache_entry * entry)
 {
         ASSERT(entry);
         ASSERT(entry->spa);
@@ -106,7 +111,37 @@ void ce_destroy(struct cache_entry * entry)
         rkfree(entry->sha);
         rkfree(entry->tha);
         rkfree(entry);
- }
+}
+
+static int ce_is_ok(struct cache_entry * entry)
+{
+        if (!entry || !entry->spa || !entry->tpa || !entry->sha || !entry->tha)
+                return 0;
+        return 1;
+}
+
+#if 0
+static bool ce_is_equal(struct cache_entry * entry1,
+                        struct cache_entry * entry2)
+{
+        if (!ce_is_ok(entry1))
+                return 0;
+        if (!ce_is_ok(entry2))
+                return 0;
+
+        if (entry1->pal != entry2->pal)
+                return 0;
+        if (entry1->hal != entry2->hal)
+                return 0;
+
+        if (memcmp(entry1->spa, entry2->spa, entry1->pal)) return 0;
+        if (memcmp(entry1->tpa, entry2->tpa, entry1->pal)) return 0;
+        if (memcmp(entry1->sha, entry2->sha, entry1->hal)) return 0;
+        if (memcmp(entry1->tha, entry2->tha, entry1->hal)) return 0;
+
+        return 1;
+}
+#endif
 
 int arp826_cache_add(size_t                protocol_address_length,
                      const unsigned char * source_protocol_address,
