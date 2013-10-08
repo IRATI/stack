@@ -114,10 +114,12 @@ void name_fini(struct name * n)
 {
         ASSERT(n);
 
-        LOG_DBG("Process name at %pK", n->process_name);
+#if 0
+        LOG_DBG("Process name at %pK",     n->process_name);
         LOG_DBG("Process instance at %pK", n->process_instance);
-        LOG_DBG("Entity name at %pK", n->entity_name);
-        LOG_DBG("Entity instance at %pK", n->entity_instance);
+        LOG_DBG("Entity name at %pK",      n->entity_name);
+        LOG_DBG("Entity instance at %pK",  n->entity_instance);
+#endif
 
         if (n->process_name) {
                 rkfree(n->process_name);
@@ -159,9 +161,10 @@ struct name * name_create_and_init(const string_t * process_name,
                                    const string_t * entity_name,
                                    const string_t * entity_instance)
 {
-        struct name * tmp1 = name_create();
+        struct name * tmp1;
         struct name * tmp2;
 
+        tmp1 = name_create();
         if (!tmp1)
                 return NULL;
         tmp2 = name_init(tmp1,
@@ -244,7 +247,7 @@ char * name_tostring(const struct name * n)
 {
         char *       tmp;
         size_t       size;
-        const char * none = "<NONE>";
+        const char * none     = "<NONE>";
         size_t       none_len = strlen(none);
 
         if (!n)
@@ -370,7 +373,7 @@ int ipcp_config_destroy(struct ipcp_config * cfg)
                 return -1;
 
         if (cfg->entry)
-        		rkfree(cfg->entry);
+                rkfree(cfg->entry);
 
         rkfree(cfg);
 
@@ -431,17 +434,17 @@ struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
 
         /* FIXME: Are these field by field copy really needed ? */
         /* FIXME: Please use proper indentation */
-        tmp->average_bandwidth = fspec->average_bandwidth;
-        tmp->average_sdu_bandwidth = fspec->average_sdu_bandwidth;
-        tmp->delay = fspec->delay;
-        tmp->jitter = fspec->jitter;
-        tmp->max_allowable_gap = fspec->max_allowable_gap;
-        tmp->max_sdu_size = fspec->max_sdu_size;
-        tmp->ordered_delivery = fspec->ordered_delivery;
-        tmp->partial_delivery = fspec->partial_delivery;
-        tmp->peak_bandwidth_duration = fspec->peak_bandwidth_duration;
+        tmp->average_bandwidth           = fspec->average_bandwidth;
+        tmp->average_sdu_bandwidth       = fspec->average_sdu_bandwidth;
+        tmp->delay                       = fspec->delay;
+        tmp->jitter                      = fspec->jitter;
+        tmp->max_allowable_gap           = fspec->max_allowable_gap;
+        tmp->max_sdu_size                = fspec->max_sdu_size;
+        tmp->ordered_delivery            = fspec->ordered_delivery;
+        tmp->partial_delivery            = fspec->partial_delivery;
+        tmp->peak_bandwidth_duration     = fspec->peak_bandwidth_duration;
         tmp->peak_sdu_bandwidth_duration = fspec->peak_sdu_bandwidth_duration;
-        tmp->undetected_bit_error_rate = fspec->undetected_bit_error_rate;
+        tmp->undetected_bit_error_rate   = fspec->undetected_bit_error_rate;
 
         return tmp;
 }
