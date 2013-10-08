@@ -236,8 +236,13 @@ static void arp_rep_handler(void *                         opaque,
 
         if (flow && flow->port_id_state == PORT_STATE_INITIATOR_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
-                kipcm_flow_add(default_kipcm, data->id,
-                               flow->port_id, flow->flow_id);
+                if (kipcm_flow_res(default_kipcm, data->id, flow->flow_id, 0)) {
+                        kipcm_flow_remove(default_kipcm, flow->port_id);
+                        list_del(&flow->list);
+                        name_destroy(flow->dest);
+                        rkfree(flow);
+                        LOG_ERR("Couldn't tell KIPCM flow is allocated");
+                }
         } else if (flow && flow->port_id_state != PORT_STATE_ALLOCATED) {
                 LOG_ERR("ARP response received when we shouldn't");
         }
@@ -338,9 +343,18 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
         /*
          * On positive response, flow should transition to allocated state
          */
-        if (is_port_id_ok(port_id)) {
+        if (!result) {
                 /* FIXME: Deliver frames to application */
                 flow->port_id_state = PORT_STATE_ALLOCATED;
+		kipcm_flow_add(default_kipcm, data->id,
+                               flow->port_id, flow->flow_id);
+		if (kipcm_flow_res(default_kipcm, data->id, flow->flow_id, 0)) {
+                        kipcm_flow_remove(default_kipcm, flow->port_id);
+                        list_del(&flow->list);
+                        name_destroy(flow->dest);
+                        rkfree(flow);
+                        return -1;
+                }
         } else {
                 /* FIXME: Drop all frames in queue */
                 flow->port_id_state = PORT_STATE_NULL;
