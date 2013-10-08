@@ -295,6 +295,53 @@ char * name_tostring(const struct name * n)
 }
 EXPORT_SYMBOL(name_tostring);
 
+
+struct name * string_toname(const char * input) 
+{
+	struct name * n;
+	char * tmp, tmp1, tmp2;
+	
+	n = name_create();
+        if (!n)
+                return NULL;
+
+	tmp = string_dup(input);
+	if (!tmp) {
+		name_fini(n);
+		return NULL;
+	} 
+	tmp1 = tmp;
+			
+	tmp2 = strsep(&tmp1, DELIMITER);
+	if (string_dup(tmp2, n->process_name)) {
+		rkfree(tmp);
+		name_fini(n);
+		return NULL;
+	}
+	tmp2 = strsep(&tmp1, DELIMITER);
+	if (string_dup(tmp2, n->process_instance)) {
+		rkfree(tmp);
+		name_fini(n);
+		return NULL;
+	}
+	tmp2 = strsep(&tmp1, DELIMITER);
+	if (string_dup(tmp2, n->entity_name)) {
+		rkfree(tmp);
+		name_fini(n);
+		return NULL;
+	}
+	tmp2 = strsep(&tmp1, DELIMITER);
+	if (string_dup(tmp2, n->entity_name_instance)) {
+		rkfree(tmp);
+		name_fini(n);
+		return NULL;
+	}
+
+	rkfree(tmp);
+	return n;
+}
+EXPORT_SYMBOL(string_toname); 
+
 static int string_dup_from_user(const string_t __user * src, string_t ** dst)
 {
         ASSERT(dst);
