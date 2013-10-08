@@ -1,5 +1,5 @@
 /*
- * An RFC 826 ARP implementation
+ * An ARP RFC-826 (wonnabe) complaiant implementation
  *
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>

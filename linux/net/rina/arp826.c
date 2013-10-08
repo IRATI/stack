@@ -46,6 +46,7 @@
 /* FIXME: End of dependencies ... */
 
 #include "arp826.h"
+#include "arp826-cache.h"
 
 struct arp_hdr {
 	__be16        ar_hrd; /* Hardware address   */
@@ -271,7 +272,7 @@ static void __exit mod_exit(void)
 {
         dev_remove_pack(&arp_packet_type);
 
-        arp_cache_fini();
+        arp826_cache_fini();
 }
 
 module_init(mod_init);

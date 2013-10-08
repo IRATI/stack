@@ -38,6 +38,8 @@ int arp826_cache_init(void)
 
         return 0;
 }
+EXPORT_SYMBOL(arp826_cache_init);
 
 void arp826_cache_fini(void)
 { }
+EXPORT_SYMBOL(arp826_cache_fini);
