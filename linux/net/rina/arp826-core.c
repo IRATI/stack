@@ -54,22 +54,17 @@
 #define RINARP_REPLY     2              /* ARP reply   */
 
 struct arp_header {
-        __be16        ar_hrd; /* Hardware type */
-        __be16        ar_pro; /* Protocol type */
+        __be16        htype; /* Hardware type */
+        __be16        ptype; /* Protocol type */
+        __u8          hlen; /* Hardware address length */
+        __u8          plen; /* Protocol address length */
+        __be16        oper;  /* Operation */
 
-        __u8          ar_hln; /* Hardware address length */
-        __u8          ar_pln; /* Protocol address length */
-
-        __be16        ar_op;  /* Operation */
-
-#if 0
-        /*
-         *  This part is variable sized, names here are only representative
-         */
-        unsigned char ar_sha; /* Sender hardware address */
-        unsigned char ar_spa; /* Sender protocol address */
-        unsigned char ar_tha; /* Target hardware address */
-        unsigned char ar_tpa; /* Target protocol address */
+#if 0 /* IPv4 over Ethernet */
+        __u8[6]       sha; /* Sender hardware address */
+        __u8[4]       spa; /* Sender protocol address */
+        __u8[6]       tha; /* Target hardware address */
+        __u8[4]       tpa; /* Target protocol address */
 #endif
 };
 
@@ -138,16 +133,16 @@ static int arp826_process(struct sk_buff * skb)
          *        packets for the time being. Others will be added later ...
          */
         
-        if (header->ar_pro != htons(ETH_P_RINA)) {
-                LOG_ERR("Unknown protocol address %d", header->ar_pro);
+        if (header->ptype != htons(ETH_P_RINA)) {
+                LOG_ERR("Unknown protocol address %d", header->ptype);
                 return 0;
         }
-        if (header->ar_hrd != htons(HW_TYPE_ETHER)) {
-                LOG_ERR("Wrong ARP hardware address %d", header->ar_hrd);
+        if (header->htype != htons(HW_TYPE_ETHER)) {
+                LOG_ERR("Wrong ARP hardware address %d", header->htype);
                 return 0;
         }
 
-        operation = ntohs(header->ar_op);
+        operation = ntohs(header->oper);
         if (operation != RINARP_REPLY && operation != RINARP_REQUEST) {
                 LOG_ERR("Unhandled ARP operation %d", operation);
                 return 0;
@@ -164,8 +159,8 @@ static int arp826_process(struct sk_buff * skb)
         tha = ptr; ptr += 6;
         tpa = ptr; ptr += 4;
 
-        arp826_cache_add(header->ar_pln, spa, tpa,
-                         header->ar_hln, sha, tha);
+        arp826_cache_add(header->plen, spa, tpa,
+                         header->hlen, sha, tha);
 
         /*
          *  And finally process the entry ...
@@ -243,14 +238,14 @@ static int arp826_receive(struct sk_buff *     skb,
         }
 
         header = arp826_header(skb);
-        if (header->ar_hln != dev->addr_len) {
+        if (header->hlen != dev->addr_len) {
                 LOG_WARN("Cannot process this ARP");
                 kfree_skb(skb);
                 return 0;
         }
 
         total_length = sizeof(struct arp_header) +
-                (dev->addr_len + header->ar_pln) * 2;
+                (dev->addr_len + header->plen) * 2;
 
         /* ARP header, with 2 device and 2 network addresses */
         if (!pskb_may_pull(skb, total_length)) {
