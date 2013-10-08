@@ -45,19 +45,55 @@ void arp826_cache_fini(void)
 }
 
 struct cache_entry {
+        size_t          pal; /* FIXME: To be removed */
+
         unsigned char * spa;
         unsigned char * tpa;
+
+        size_t          hal; /* FIXME: To be removed */
 
         unsigned char * sha;
         unsigned char * tha;
 };
 
-struct cache_entry * ce_create(size_t                protocol_address_length,
-                               const unsigned char * source_protocol_address,
-                               const unsigned char * target_protocol_address,
-                               size_t                hardware_address_length,
-                               const unsigned char * source_hardware_address,
-                               const unsigned char * target_hardware_address)
+static int ce_is_ok(struct cache_entry * entry)
+{
+        if (entry      == NULL ||
+            entry->pal == 0    ||
+            entry->hal == 0    ||
+            entry->spa == NULL ||
+            entry->tpa == NULL ||
+            entry->sha == NULL ||
+            entry->tha == NULL)
+                return 0;
+        return 1;
+}
+
+static void ce_fini(struct cache_entry * entry)
+{
+        ASSERT(entry);
+
+        if (entry->spa) rkfree(entry->spa);
+        if (entry->tpa) rkfree(entry->tpa);
+        if (entry->sha) rkfree(entry->sha);
+        if (entry->tha) rkfree(entry->tha);
+}
+
+static void ce_destroy(struct cache_entry * entry)
+{
+        ASSERT(entry);
+
+        ce_fini(entry);
+        rkfree(entry);
+}
+
+static struct cache_entry *
+ce_create(size_t                protocol_address_length,
+          const unsigned char * source_protocol_address,
+          const unsigned char * target_protocol_address,
+          size_t                hardware_address_length,
+          const unsigned char * source_hardware_address,
+          const unsigned char * target_hardware_address)
 {
         struct cache_entry * entry;
 
@@ -72,16 +108,14 @@ struct cache_entry * ce_create(size_t                protocol_address_length,
         if (!entry)
                 return NULL;
 
+        entry->pal = protocol_address_length;
         entry->spa = rkmalloc(protocol_address_length, GFP_KERNEL);
         entry->tpa = rkmalloc(protocol_address_length, GFP_KERNEL);
+        entry->hal = hardware_address_length;
         entry->sha = rkmalloc(hardware_address_length, GFP_KERNEL);
         entry->tha = rkmalloc(hardware_address_length, GFP_KERNEL);
-        if (!entry->spa || !entry->tpa || !entry->sha || !entry->tha) {
-                if (entry->spa) rkfree(entry->spa);
-                if (entry->tpa) rkfree(entry->tpa);
-                if (entry->sha) rkfree(entry->sha);
-                if (entry->tha) rkfree(entry->tha);
-                rkfree(entry);
+        if (!ce_is_ok(entry)) {
+                ce_destroy(entry);
                 return NULL;
         }
 
@@ -93,20 +127,28 @@ struct cache_entry * ce_create(size_t                protocol_address_length,
         return entry;
 }
 
-void ce_destroy(struct cache_entry * entry)
+#if 0
+static bool ce_is_equal(struct cache_entry * entry1,
+                        struct cache_entry * entry2)
 {
-        ASSERT(entry);
-        ASSERT(entry->spa);
-        ASSERT(entry->tpa);
-        ASSERT(entry->sha);
-        ASSERT(entry->tha);
+        if (!ce_is_ok(entry1))
+                return 0;
+        if (!ce_is_ok(entry2))
+                return 0;
 
-        rkfree(entry->spa);
-        rkfree(entry->tpa);
-        rkfree(entry->sha);
-        rkfree(entry->tha);
-        rkfree(entry);
- }
+        if (entry1->pal != entry2->pal)
+                return 0;
+        if (entry1->hal != entry2->hal)
+                return 0;
+
+        if (memcmp(entry1->spa, entry2->spa, entry1->pal)) return 0;
+        if (memcmp(entry1->tpa, entry2->tpa, entry1->pal)) return 0;
+        if (memcmp(entry1->sha, entry2->sha, entry1->hal)) return 0;
+        if (memcmp(entry1->tha, entry2->tha, entry1->hal)) return 0;
+
+        return 1;
+}
+#endif
 
 int arp826_cache_add(size_t                protocol_address_length,
                      const unsigned char * source_protocol_address,
