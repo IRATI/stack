@@ -534,7 +534,6 @@ int kfa_sdu_post(struct kfa * instance,
 }
 EXPORT_SYMBOL(kfa_sdu_post);
 
-struct ipcp_flow * kfa_find_flow_by_fid(struct kfa * instance,
-                                        flow_id_t    fid)
+struct ipcp_flow * kfa_find_flow_by_fid(struct kfa * instance, flow_id_t fid)
 { return kfa_fmap_find(instance->flows.pending, fid); }
 EXPORT_SYMBOL(kfa_find_flow_by_fid);
