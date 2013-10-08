@@ -25,7 +25,6 @@
 #include <linux/if_ether.h>
 #include <linux/string.h>
 #include <linux/list.h>
-#include <linux/rbtree.h>
 #include <linux/netdevice.h>
 #include <linux/if_packet.h>
 
@@ -205,8 +204,9 @@ static void arp_req_handler(void *                         opaque,
 
                 flow->port_id_state = PORT_STATE_RECIPIENT_PENDING;
 
-                /* FIXME: */
-                /* Need to convert paddr to name here */
+		flow->dest = string_toname((char *) dest_paddr->buf);
+		if (!flow->dest) 
+			LOG_ERR("Destination name is NULL");
 
                 flow->flow_id =  kfa_flow_create(data->kfa);
 		INIT_LIST_HEAD(&flow->list);
@@ -613,7 +613,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         info->vlan_id = simple_strtol(dif_information->dif_name->process_name,
                                       0,
                                       10);
-	data->dif_name = name_dup(configuration->dif_name);
+	data->dif_name = name_dup(dif_information->dif_name);
 
         if (old_vlan_id && old_vlan_id != info->vlan_id)
                 reconfigure = 1;

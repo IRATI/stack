@@ -89,6 +89,9 @@ int           name_cmp(const struct name * a, const struct name * b);
 /* Returns a name as a (newly allocated string) string */
 char *        name_tostring(const struct name * n);
 
+/* Inverse of the above */
+struct name * string_toname(const char * s);
+
 struct ipcp_config * ipcp_config_create(void);
 int                  ipcp_config_destroy(struct ipcp_config * cfg);
 struct ipcp_config *
