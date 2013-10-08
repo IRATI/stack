@@ -243,7 +243,7 @@ int name_cmp(const struct name * a, const struct name * b)
 }
 EXPORT_SYMBOL(name_cmp);
 
-#define DELIMITER '/'
+#define DELIMITER "/"
 
 char * name_tostring(const struct name * n)
 {
@@ -259,26 +259,26 @@ char * name_tostring(const struct name * n)
 
         size += (n->process_name                 ?
                  string_len(n->process_name)     : none_len);
-        size += 1; /* DELIMITER */
+        size += strlen(DELIMITER);
 
         size += (n->process_instance             ?
                  string_len(n->process_instance) : none_len);
-        size += 1;  /* DELIMITER */
+        size += strlen(DELIMITER);
 
         size += (n->entity_name                  ?
                  string_len(n->entity_name)      : none_len);
-        size += 1;  /* DELIMITER */
+        size += strlen(DELIMITER);
 
         size += (n->entity_instance              ?
                  string_len(n->entity_instance)  : none_len);
-        size += 1;  /* TERMINATOR */
+        size += strlen(DELIMITER);
 
         tmp = rkmalloc(size, GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
         if (snprintf(tmp, size,
-                     "%s%c%s%c%s%c%s",
+                     "%s%s%s%s%s%s%s",
                      (n->process_name     ? n->process_name     : none),
                      DELIMITER,
                      (n->process_instance ? n->process_instance : none),
@@ -299,9 +299,12 @@ EXPORT_SYMBOL(name_tostring);
 struct name * string_toname(const char * input) 
 {
 	struct name * n;
-	char * tmp;
-	char * tmp1;
-	char * tmp2;
+	char *        tmp;
+	char *        tmp1;
+	char *        tmp2;
+
+        if (!input)
+                return NULL;
 	
 	n = name_create();
         if (!n)
@@ -314,25 +317,25 @@ struct name * string_toname(const char * input)
 	} 
 	tmp1 = tmp;
 			
-	tmp2 = strsep(&tmp1, (char *) DELIMITER);
+	tmp2 = strsep(&tmp1, DELIMITER);
 	if (string_dup(tmp2, &n->process_name)) {
 		rkfree(tmp);
 		name_fini(n);
 		return NULL;
 	}
-	tmp2 = strsep(&tmp1, (char *) DELIMITER);
+	tmp2 = strsep(&tmp1, DELIMITER);
 	if (string_dup(tmp2, &n->process_instance)) {
 		rkfree(tmp);
 		name_fini(n);
 		return NULL;
 	}
-	tmp2 = strsep(&tmp1, (char *) DELIMITER);
+	tmp2 = strsep(&tmp1, DELIMITER);
 	if (string_dup(tmp2, &n->entity_name)) {
 		rkfree(tmp);
 		name_fini(n);
 		return NULL;
 	}
-	tmp2 = strsep(&tmp1, (char *) DELIMITER);
+	tmp2 = strsep(&tmp1, DELIMITER);
 	if (string_dup(tmp2, &n->entity_instance)) {
 		rkfree(tmp);
 		name_fini(n);

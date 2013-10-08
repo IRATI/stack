@@ -82,7 +82,7 @@ struct ipcp_instance_data {
 
         /* IPC Process name */
         struct name *          name;
-	struct name *          dif_name;
+        struct name *          dif_name;
         struct eth_vlan_info * info;
         struct packet_type *   eth_vlan_packet_type;
         struct net_device *    dev;
@@ -95,8 +95,8 @@ struct ipcp_instance_data {
         /* Stores the state of flows indexed by port_id */
         struct list_head       flows;
 
-	/* FIXME: Remove it as soon as the kipcm_kfa gets removed */
-	struct kfa * kfa;
+        /* FIXME: Remove it as soon as the kipcm_kfa gets removed */
+        struct kfa * kfa;
 
         /* RINA-ARP related */
         struct naddr_handle *  handle;
@@ -194,8 +194,8 @@ static void arp_req_handler(void *                         opaque,
 
         if (flow && flow->port_id_state == PORT_STATE_INITIATOR_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
-		kipcm_flow_add(default_kipcm, data->id, 
-			       flow->port_id, flow->flow_id);
+                kipcm_flow_add(default_kipcm, data->id,
+                               flow->port_id, flow->flow_id);
         } else if (!flow && data->reg_app) {
 
                 flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
@@ -209,17 +209,17 @@ static void arp_req_handler(void *                         opaque,
 			LOG_ERR("Destination name is NULL");
 
                 flow->flow_id =  kfa_flow_create(data->kfa);
-		INIT_LIST_HEAD(&flow->list);
-		list_add(&flow->list, &data->flows);
+                INIT_LIST_HEAD(&flow->list);
+                list_add(&flow->list, &data->flows);
 
-		if (kipcm_flow_arrived(default_kipcm,
-				       data->id,
-				       flow->flow_id,
-				       data->dif_name,
-				       data->app_name,
-				       flow->dest, 0)) {
-			LOG_ERR("Flow was not reported to KIPCM");
-		}
+                if (kipcm_flow_arrived(default_kipcm,
+                                       data->id,
+                                       flow->flow_id,
+                                       data->dif_name,
+                                       data->app_name,
+                                       flow->dest, 0)) {
+                        LOG_ERR("Flow was not reported to KIPCM");
+                }
         }
 
 }
@@ -236,8 +236,8 @@ static void arp_rep_handler(void *                         opaque,
 
         if (flow && flow->port_id_state == PORT_STATE_INITIATOR_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
-		kipcm_flow_add(default_kipcm, data->id, 
-		       flow->port_id, flow->flow_id);
+                kipcm_flow_add(default_kipcm, data->id,
+                               flow->port_id, flow->flow_id);
         } else if (flow && flow->port_id_state != PORT_STATE_ALLOCATED) {
                 LOG_ERR("ARP response received when we shouldn't");
         }
@@ -296,16 +296,16 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 /* Send an ARP request and transition the state */
                 rinarp_send_request(data->filter, name_to_paddr(dest));
                 flow->port_id_state = PORT_STATE_INITIATOR_PENDING;
-		
-		flow->flow_id = fid;
+
+                flow->flow_id = fid;
 
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
 
         } else if (flow->port_id_state == PORT_STATE_RECIPIENT_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
-		kipcm_flow_add(default_kipcm, data->id, 
-			       flow->port_id, flow->flow_id);
+                kipcm_flow_add(default_kipcm, data->id,
+                               flow->port_id, flow->flow_id);
         } else {
                 LOG_ERR("Allocate called in a wrong state. How dare you!");
                 return -1;
@@ -613,7 +613,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         info->vlan_id = simple_strtol(dif_information->dif_name->process_name,
                                       0,
                                       10);
-	data->dif_name = name_dup(dif_information->dif_name);
+        data->dif_name = name_dup(dif_information->dif_name);
 
         if (old_vlan_id && old_vlan_id != info->vlan_id)
                 reconfigure = 1;
@@ -622,23 +622,23 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         list_for_each_entry(tmp, &(dif_information->
                                    configuration->
                                    ipcp_config_entries), next) {
-                        const struct ipcp_config_entry * entry;
+                const struct ipcp_config_entry * entry;
 
-                        entry = tmp->entry;
-                        if (!strcmp(entry->name,"interface-name")) {
-                                if (!strcpy(info->interface_name,
-                                            entry->value)) {
-                                        LOG_ERR("Cannot copy interface name");
-                                }
-                                if (!reconfigure && old_interface_name &&
-                                    !strcmp(info->interface_name,
-                                            old_interface_name)) {
-                                        reconfigure = 1;
-                                }
-                        } else {
-                                LOG_WARN("Unknown config param for eth shim");
+                entry = tmp->entry;
+                if (!strcmp(entry->name,"interface-name")) {
+                        if (!strcpy(info->interface_name,
+                                    entry->value)) {
+                                LOG_ERR("Cannot copy interface name");
                         }
+                        if (!reconfigure && old_interface_name &&
+                            !strcmp(info->interface_name,
+                                    old_interface_name)) {
+                                reconfigure = 1;
+                        }
+                } else {
+                        LOG_WARN("Unknown config param for eth shim");
                 }
+        }
 
 
         if (reconfigure)
@@ -672,7 +672,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
 }
 
 static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
-                                      const struct dif_config *   new_config) 
+                                      const struct dif_config *   new_config)
 {
         /* FIXME: Implement if required */
         return -1;
@@ -799,7 +799,7 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-	/* FIXME: Remove as soon as the kipcm_kfa gets removed*/
+        /* FIXME: Remove as soon as the kipcm_kfa gets removed*/
         inst->data->kfa = kipcm_kfa(default_kipcm);
         LOG_DBG("KFA instance %pK bound to the shim eth", inst->data->kfa);
 
