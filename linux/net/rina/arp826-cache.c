@@ -44,11 +44,37 @@ void arp826_cache_fini(void)
         LOG_MISSING;
 }
 
-int arp826_cache_add(const unsigned char * spa, uint8_t spa_length,
-                     const unsigned char * tpa, uint8_t tpa_length,
-                     const unsigned char * sha, uint8_t sha_length,
-                     const unsigned char * tha, uint8_t tha_length)
+int arp826_cache_add(size_t                protocol_address_length,
+                     const unsigned char * source_protocol_address,
+                     const unsigned char * target_protocol_address,
+                     size_t                hardware_address_length,
+                     const unsigned char * source_hardware_address,
+                     const unsigned char * target_hardware_address)
 {
+        unsigned char * spa;
+        unsigned char * tpa;
+        unsigned char * sha;
+        unsigned char * tha;
+
+        LOG_MISSING;
+
+        spa = rkmalloc(protocol_address_length, GFP_KERNEL);
+        tpa = rkmalloc(protocol_address_length, GFP_KERNEL);
+        sha = rkmalloc(hardware_address_length, GFP_KERNEL);
+        tha = rkmalloc(hardware_address_length, GFP_KERNEL);
+
+        if (!spa || !tpa || !sha || !tha) {
+                if (spa) rkfree(spa);
+                if (tpa) rkfree(tpa);
+                if (sha) rkfree(sha);
+                if (tha) rkfree(tha);
+        }
+
+        memcpy(spa, source_protocol_address, protocol_address_length);
+        memcpy(tpa, target_protocol_address, protocol_address_length);
+        memcpy(sha, source_hardware_address, hardware_address_length);
+        memcpy(tha, target_hardware_address, hardware_address_length);
+
         LOG_MISSING;
 
         return -1;

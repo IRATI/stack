@@ -24,9 +24,11 @@
 int arp826_cache_init(void);
 int arp826_cache_fini(void);
 
-int arp826_cache_add(const unsigned char * s_netaddr, uint8_t sna_length,
-                     const unsigned char * t_netaddr, uint8_t dna_length,
-                     const unsigned char * s_hwaddr,  uint8_t sha_length,
-                     const unsigned char * t_hwaddr,  uint8_t dha_length);
+int arp826_cache_add(size_t                protocol_address_length,
+                     const unsigned char * source_protocol_address,
+                     const unsigned char * target_protocol_address,
+                     size_t                hardware_address_length,
+                     const unsigned char * source_hardware_address,
+                     const unsigned char * target_hardware_address);
 
 #endif

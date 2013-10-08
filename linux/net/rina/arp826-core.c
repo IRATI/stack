@@ -56,8 +56,10 @@
 struct arp_header {
         __be16        ar_hrd; /* Hardware type */
         __be16        ar_pro; /* Protocol type */
+
         __u8          ar_hln; /* Hardware address length */
         __u8          ar_pln; /* Protocol address length */
+
         __be16        ar_op;  /* Operation */
 
 #if 0
@@ -126,18 +128,6 @@ static int arp826_process(struct sk_buff * skb)
         
         LOG_DBG("Processing ARP skb %pK", skb);
         
-        dev = skb->dev;
-        if (!dev) {
-                LOG_ERR("Got a corrupted skb, bailing out");
-                return 0;
-        }
-        
-        /* We only handle type-1 headers */
-        if (dev->type != HW_TYPE_ETHER) {
-                LOG_ERR("Unknown ARP header");
-                return 0;
-        }
-        
         header = arp826_header(skb);
         if (!header) {
                 LOG_ERR("Cannot get the header");
@@ -175,8 +165,8 @@ static int arp826_process(struct sk_buff * skb)
         tha = ptr; ptr += 6;
         tpa = ptr; ptr += 4;
 
-        arp826_cache_add(spa, header->ar_pln, tpa, header->ar_pln,
-                         sha, header->ar_hln, tha, header->ar_hln);
+        arp826_cache_add(header->ar_pln, spa, tpa,
+                         header->ar_hln, sha, tha);
 
         /*
          *  And finally process the entry ...
@@ -227,6 +217,12 @@ static int arp826_receive(struct sk_buff *     skb,
             skb->pkt_type == PACKET_LOOPBACK) {
                 kfree_skb(skb);
                 LOG_DBG("This ARP is not for us");
+                return 0;
+        }
+
+        /* We only handle type-1 headers */
+        if (skb->dev->type != HW_TYPE_ETHER) {
+                LOG_DBG("Unknown device type (%d)", skb->dev->type);
                 return 0;
         }
 
