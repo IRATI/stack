@@ -137,7 +137,7 @@ flow_id_t kfa_flow_create(struct kfa * instance)
         spin_lock(&instance->lock);
 
         fid = fidm_allocate(instance->fidm);
-        if (!is_flow_id_ok(fid)){
+        if (!is_flow_id_ok(fid)) {
                 LOG_ERR("Cannot get a flow-id");
 
                 spin_unlock(&instance->lock);
@@ -269,7 +269,7 @@ flow_id_t kfa_flow_unbind(struct kfa * instance,
         spin_lock(&instance->lock);
 
         flow = kfa_pmap_find(instance->flows.committed, id);
-        if (!flow){
+        if (!flow) {
                 LOG_ERR("There is no flow binded on port-id %d", id);
                 spin_unlock(&instance->lock);
                 return -1;
@@ -283,7 +283,7 @@ flow_id_t kfa_flow_unbind(struct kfa * instance,
 
         fid = fidm_allocate(instance->fidm);
 
-        if (!is_flow_id_ok(fid)){
+        if (!is_flow_id_ok(fid)) {
                 LOG_ERR("Flow ID could not be generated (bitmap is full)");
                 rkfree(flow);
                 spin_unlock(&instance->lock);
