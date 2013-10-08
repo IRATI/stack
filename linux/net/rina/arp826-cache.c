@@ -56,6 +56,37 @@ struct cache_entry {
         unsigned char * tha;
 };
 
+static int ce_is_ok(struct cache_entry * entry)
+{
+        if (entry      == NULL ||
+            entry->pal == 0    ||
+            entry->hal == 0    ||
+            entry->spa == NULL ||
+            entry->tpa == NULL ||
+            entry->sha == NULL ||
+            entry->tha == NULL)
+                return 0;
+        return 1;
+}
+
+static void ce_fini(struct cache_entry * entry)
+{
+        ASSERT(entry);
+
+        if (entry->spa) rkfree(entry->spa);
+        if (entry->tpa) rkfree(entry->tpa);
+        if (entry->sha) rkfree(entry->sha);
+        if (entry->tha) rkfree(entry->tha);
+}
+
+static void ce_destroy(struct cache_entry * entry)
+{
+        ASSERT(entry);
+
+        ce_fini(entry);
+        rkfree(entry);
+}
+
 static struct cache_entry *
 ce_create(size_t                protocol_address_length,
           const unsigned char * source_protocol_address,
@@ -77,16 +108,14 @@ ce_create(size_t                protocol_address_length,
         if (!entry)
                 return NULL;
 
+        entry->pal = protocol_address_length;
         entry->spa = rkmalloc(protocol_address_length, GFP_KERNEL);
         entry->tpa = rkmalloc(protocol_address_length, GFP_KERNEL);
+        entry->hal = hardware_address_length;
         entry->sha = rkmalloc(hardware_address_length, GFP_KERNEL);
         entry->tha = rkmalloc(hardware_address_length, GFP_KERNEL);
-        if (!entry->spa || !entry->tpa || !entry->sha || !entry->tha) {
-                if (entry->spa) rkfree(entry->spa);
-                if (entry->tpa) rkfree(entry->tpa);
-                if (entry->sha) rkfree(entry->sha);
-                if (entry->tha) rkfree(entry->tha);
-                rkfree(entry);
+        if (!ce_is_ok(entry)) {
+                ce_destroy(entry);
                 return NULL;
         }
 
@@ -96,28 +125,6 @@ ce_create(size_t                protocol_address_length,
         memcpy(entry->tha, target_hardware_address, hardware_address_length);
 
         return entry;
-}
-
-static void ce_destroy(struct cache_entry * entry)
-{
-        ASSERT(entry);
-        ASSERT(entry->spa);
-        ASSERT(entry->tpa);
-        ASSERT(entry->sha);
-        ASSERT(entry->tha);
-
-        rkfree(entry->spa);
-        rkfree(entry->tpa);
-        rkfree(entry->sha);
-        rkfree(entry->tha);
-        rkfree(entry);
-}
-
-static int ce_is_ok(struct cache_entry * entry)
-{
-        if (!entry || !entry->spa || !entry->tpa || !entry->sha || !entry->tha)
-                return 0;
-        return 1;
 }
 
 #if 0
