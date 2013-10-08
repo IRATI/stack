@@ -471,6 +471,7 @@ int kfa_sdu_post(struct kfa * instance,
 {
         struct ipcp_flow * flow;
         unsigned int       avail;
+        wait_queue_head_t *wq;
 
         if (!instance) {
                 LOG_ERR("Bogus kfa instance passed, cannot post SDU");
@@ -520,13 +521,15 @@ int kfa_sdu_post(struct kfa * instance,
                 return -1;
         }
 
-        atomic_set(&flow->flag, 1);
+        wq = &flow->wait_queue;
 
-        LOG_DBG("SDU posted");
+        atomic_set(&flow->flag, 1);
 
         spin_unlock(&instance->lock);
 
-        wake_up_interruptible(&flow->wait_queue);
+        LOG_DBG("SDU posted");
+
+        wake_up_interruptible(wq);
 
         LOG_DBG("Sleeping read syscall should be working now");
 
