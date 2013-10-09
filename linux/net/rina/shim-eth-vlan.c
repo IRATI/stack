@@ -103,6 +103,16 @@ struct ipcp_instance_data {
         struct naddr_filter *  filter;
 };
 
+/* Needed for eth_vlan_rcv function */
+struct interface_data_mapping {
+	struct list_head list;
+	
+	struct net_device * dev;
+	struct ipcp_instance_data * data;
+};
+
+static struct list_head data_instances_list;
+
 static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
                                         port_id_t                   id)
 {
@@ -166,6 +176,21 @@ static string_t * create_vlan_interface_name(string_t * interface_name,
         return complete_interface;
 }
 
+
+static struct ipcp_instance_data * inst_data_get(struct net_device * dev)
+{
+	struct interface_data_mapping * mapping;
+
+	list_for_each_entry(mapping, &data_instances_list, list) {
+                if (mapping->dev == dev) {
+                        return mapping->data;
+                }
+        }
+
+        return NULL;
+}
+
+
 static struct shim_eth_flow *
 find_flow_by_addr(struct ipcp_instance_data * data,
                   const struct paddr *        addr)
@@ -173,7 +198,7 @@ find_flow_by_addr(struct ipcp_instance_data * data,
         struct shim_eth_flow * flow;
 
         list_for_each_entry(flow, &data->flows, list) {
-                if (strcmp(name_tostring(flow->dest), (char *) addr->buf)) {
+                if (!strcmp(name_tostring(flow->dest), (char *) addr->buf)) {
                         return flow;
                 }
         }
@@ -556,10 +581,19 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                         struct packet_type * pt,
                         struct net_device *  orig_dev)
 {
-#if 0
-
         struct ethhdr *mh;
         unsigned char * saddr;
+	struct ipcp_instance_data * data;
+	struct rinarp_mac_addr shwaddr;
+	struct paddr * paddr;
+	struct shim_eth_flow * flow;
+
+	/* C-c-c-checks */
+	data = inst_data_get(dev);
+	if (!data) {
+		kfree_skb(skb);
+		return -1;
+	}
 
         if (skb->pkt_type == PACKET_OTHERHOST ||
             skb->pkt_type == PACKET_LOOPBACK) {
@@ -572,21 +606,35 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 LOG_ERR("Couldn't obtain ownership of the skb");
                 return -1;
         }
-
+	
         mh = eth_hdr(skb);
         saddr = mh->h_source;
-        /* FIXME: Get flow that corresponds to this */
+	shwaddr.type = MAC_ADDR_802_3;
+	/* shwaddr.data.mac_802_3 = simple_strtol(saddr,0,10); */
 
-        /* We need the ARP filter... and ipcp_instance_data */
-        /* Retrieve data by packet_type (interface name and vlan id) */
-        /* Retrieve flow by paddr; get it from ARP by the hwaddr of source */
-        /* hwaddr source found in packet */
+	sprintf(shwaddr.data.mac_802_3, "%d", (int) simple_strtol(saddr,0,10));
 
+	paddr = 0;
+	if (rinarp_paddr_get(data->filter, shwaddr, paddr)) {
+		LOG_DBG("Don't know the application that send this :(");
+		kfree(skb);
+		return -1;
+	}
+	
+	flow = find_flow_by_addr(data,paddr);
+	if (!flow) {
+		LOG_DBG("Don't know the application that send this :(");
+		kfree(skb);
+		return -1;
+	}
+
+#if 0
+        /* FIXME: */
         /* If the port id state is ALLOCATED deliver to application */
 
         /* If the port id state is RECIPIENT_PENDING, the SDU is queued */
 
-        /* FIXME: Get the SDU out of the sk_buff */
+        /* Get the SDU out of the sk_buff */
         skb->nh.raw;
 
 #endif
@@ -605,12 +653,14 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                                   const struct dif_info *     dif_information)
 {
-        struct eth_vlan_info * info;
-        struct ipcp_config *   tmp;
-        bool                   reconfigure;
-        uint16_t               old_vlan_id;
-        string_t *             old_interface_name;
-        string_t *             complete_interface;
+        struct eth_vlan_info *          info;
+        struct ipcp_config *            tmp;
+        bool                            reconfigure;
+        uint16_t                        old_vlan_id;
+        string_t *                      old_interface_name;
+        string_t *                      complete_interface;
+	struct net_device *             dev;
+	struct interface_data_mapping * mapping;
 
         ASSERT(data);
         ASSERT(dif_information);
@@ -655,8 +705,16 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         }
 
 
-        if (reconfigure)
+        if (reconfigure) {
                 dev_remove_pack(data->eth_vlan_packet_type);
+		/* Remove from list */
+		dev = data->dev;
+		mapping = inst_data_get(dev);
+		if (mapping) {
+			list_del(&mapping->list);
+			rkfree(&mapping);
+		}
+	}
 
         data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
         data->eth_vlan_packet_type->func = eth_vlan_rcv;
@@ -667,6 +725,8 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         if (!complete_interface)
                 return -1;
 
+
+
         /* Add the handler */
         read_lock(&dev_base_lock);
         data->dev = __dev_get_by_name(&init_net, complete_interface);
@@ -675,6 +735,17 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                         complete_interface);
                 return -1;
         }
+
+	/* Store in list for retrieval later on */
+	mapping = rkmalloc(sizeof(*mapping), GFP_KERNEL);
+	if (!mapping)
+		return -1;
+	mapping->dev = data->dev;
+	mapping->data = data;
+	INIT_LIST_HEAD(&mapping->list);
+	list_add(&mapping->list, &data_instances_list);
+
+
         data->eth_vlan_packet_type->dev = data->dev;
         dev_add_pack(data->eth_vlan_packet_type);
         read_unlock(&dev_base_lock);
