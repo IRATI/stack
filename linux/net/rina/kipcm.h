@@ -99,13 +99,13 @@ int            kipcm_flow_add(struct kipcm *   kipcm,
                               port_id_t        id,
                               flow_id_t        fid);
 
-/* On both source and destination */
-int            kipcm_flow_remove(struct kipcm * kipcm,
-                                 port_id_t      id);
-
 int            kipcm_flow_res(struct kipcm *   kipcm,
                               ipc_process_id_t id,
                               flow_id_t        fid,
                               uint_t           res);
 
+int            kipcm_notify_flow_dealloc(ipc_process_id_t ipc_id,
+                                         uint_t           code,
+                                         port_id_t        port_id,
+                                         u32              nl_port_id);
 #endif
