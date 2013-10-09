@@ -339,7 +339,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 		if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
 			LOG_ERR("Couldn't create the sdu queue");
 			rkfree(flow);
-			return;
+			return -1;
 		}
 		
 
@@ -413,7 +413,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                 }
         } else {
                 flow->port_id_state = PORT_STATE_NULL;
-		kfifo_free(flow->sdu_queue);
+		kfifo_free(&flow->sdu_queue);
         }
 
         return 0;
