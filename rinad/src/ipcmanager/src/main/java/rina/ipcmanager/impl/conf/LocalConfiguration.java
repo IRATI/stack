@@ -57,6 +57,19 @@ public class LocalConfiguration {
 	 * The length of Flow queues
 	 */
 	private int lengthOfFlowQueues = 10;
+	
+	/**
+	 * The path to the RINA software installation in the system
+	 */
+	private String installationPath = null;
+	
+	public String getInstallationPath() {
+		return installationPath;
+	}
+
+	public void setInstallationPath(String installationPath) {
+		this.installationPath = installationPath;
+	}
 
 	public int getEventLoopWorkers() {
 		return eventLoopWorkers;
@@ -132,6 +145,7 @@ public class LocalConfiguration {
 	
 	public String toString(){
 		String result = "Local Configuration \n";
+		result = result + "   Installation path: " + installationPath + "\n";
 		result = result + "   Number of event loop workers: " + eventLoopWorkers + "\n";
 		result = result + "   Console port: " + consolePort + "\n";
 		result = result + "   CDAP timeout in ms: "+ cdapTimeoutInMs + "\n";

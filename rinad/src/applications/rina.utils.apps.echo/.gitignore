@@ -5,3 +5,5 @@ target/
 .settings/
 .classpath
 .project
+echo-client
+echo-server

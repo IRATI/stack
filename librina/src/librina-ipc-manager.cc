@@ -487,7 +487,8 @@ std::list<std::string> IPCProcessFactory::getSupportedIPCProcessTypes(){
 
 IPCProcess * IPCProcessFactory::create(
 		const ApplicationProcessNamingInformation& ipcProcessName,
-		const std::string& difType) throw (CreateIPCProcessException) {
+		const std::string& difType,
+		const std::string& installationPath) throw (CreateIPCProcessException) {
 	LOG_DBG("IPCProcessFactory::create called");
 
 	lock();
@@ -517,7 +518,7 @@ IPCProcess * IPCProcessFactory::create(
 			{
 					stringToCharArray("/usr/bin/java"),
 					stringToCharArray("-jar"),
-					stringToCharArray("/usr/local/rina/rinad/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar"),
+					stringToCharArray(installationPath + "/share/rinad/ipcprocess/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar"),
 					stringToCharArray(ipcProcessName.getProcessName()),
 					stringToCharArray(ipcProcessName.getProcessInstance()),
 					intToCharArray(ipcProcessId),
@@ -527,7 +528,7 @@ IPCProcess * IPCProcessFactory::create(
 			char * envp[] =
 			{
 					stringToCharArray("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"),
-					stringToCharArray("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/rina/lib"),
+					stringToCharArray("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:"+installationPath+"/lib"),
 					(char*) 0
 			};
 

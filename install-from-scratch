@@ -22,7 +22,3 @@ echo "$ME: Starting phase rinad"
 }
 
 echo "$ME: Starting phase rina-tools"
-(cd rinad && ./bootstrap && PKG_CONFIG_PATH=$1/lib/pkgconfig ./configure --prefix=$1 && make install) || {
-    echo "$ME: Cannot install rina-tools phase"
-    exit 1
-}

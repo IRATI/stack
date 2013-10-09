@@ -92,9 +92,9 @@ int main(int argc, char * argv[]) {
 			new ApplicationProcessNamingInformation("/difs/Test.DIF", "");
 
 	IPCProcess * ipcProcess1 = ipcProcessFactory->create(*ipcProcessName1,
-			"normal");
+			"normal", "");
 	IPCProcess * ipcProcess2 = ipcProcessFactory->create(*ipcProcessName2,
-			"shim-ethernet");
+			"shim-ethernet", "");
 
 	/* TEST LIST IPC PROCESSES */
 	if (!checkIPCProcesses(2)) {
@@ -108,8 +108,8 @@ int main(int argc, char * argv[]) {
 	}
 
 	/* TEST ASSIGN TO DIF */
-	DIFConfiguration * difConfiguration = new DIFConfiguration();
-	ipcProcess1->assignToDIF(*difConfiguration);
+	DIFInformation * difInformation = new DIFInformation();
+	ipcProcess1->assignToDIF(*difInformation);
 
 	/* TEST REGISTER APPLICATION */
 	ipcProcess1->registerApplication(*sourceName);
@@ -156,7 +156,7 @@ int main(int argc, char * argv[]) {
 	delete sourceName;
 	delete destinationName;
 	delete difName;
-	delete difConfiguration;
+	delete difInformation;
 	delete flowSpec;
 	delete flowRequest;
 	return 0;
