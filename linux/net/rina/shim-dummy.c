@@ -269,7 +269,8 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 }
                 if (kipcm_flow_add(default_kipcm,
                                    data->id, port_id, flow_id)) {
-                        kipcm_flow_remove(default_kipcm, port_id);
+                        /* FIXME: change this with kfa_flow_destroy
+                           kipcm_flow_remove(default_kipcm, port_id); */
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
@@ -277,8 +278,9 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         return -1;
                 }
                 if (kipcm_flow_res(default_kipcm, data->id, flow->src_fid, 0)) {
-                        kipcm_flow_remove(default_kipcm, flow->port_id);
-                        kipcm_flow_remove(default_kipcm, port_id);
+                        /* FIXME: change this with kfa_flow_destroy
+                           kipcm_flow_remove(default_kipcm, flow->port_id);
+                           kipcm_flow_remove(default_kipcm, port_id); */
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
@@ -349,7 +351,7 @@ static int dummy_flow_deallocate(struct ipcp_instance_data * data,
         }
 
         /* Notify the destination application */
-        rnl_flow_dealloc_not_msg(data->id, 0, dest_port_id, 1);
+        kipcm_notify_flow_dealloc(data->id, 0, dest_port_id, 1);
 
         list_del(&flow->list);
         name_destroy(flow->dest);
