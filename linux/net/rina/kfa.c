@@ -298,6 +298,8 @@ EXPORT_SYMBOL(kfa_flow_unbind);
 int kfa_flow_destroy(struct kfa * instance,
                      flow_id_t    id)
 {
+        struct ipcp_flow * flow;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
@@ -308,10 +310,22 @@ int kfa_flow_destroy(struct kfa * instance,
         }
 
         spin_lock(&instance->lock);
-        LOG_MISSING;
+
+        flow = kfa_fmap_find(instance->flows.pending, id);
+        if (!flow) {
+                LOG_ERR("There is no flow created with fid %d", id);
+                spin_unlock(&instance->lock);
+                return -1;
+        }
+
+        if (kfa_fmap_remove(instance->flows.pending, id)) {
+                LOG_ERR("Could not remove pending flow with fid %d", id);
+                spin_unlock(&instance->lock);
+                return -1;        }
+
         spin_unlock(&instance->lock);
 
-        return -1;
+        return 0;
 }
 EXPORT_SYMBOL(kfa_flow_destroy);
 
@@ -396,7 +410,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 LOG_DBG("Going to sleep on wait queue %pK", &flow->wait_queue);
                 spin_unlock(&instance->lock);
                 wait_event_interruptible(flow->wait_queue,
-                                       ready_queue_not_empty(&flow->sdu_ready));
+                                         ready_queue_not_empty(&flow->sdu_ready));
 
                 spin_lock(&instance->lock);
                 LOG_DBG("Woken up");
