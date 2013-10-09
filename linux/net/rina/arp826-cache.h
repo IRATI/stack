@@ -21,14 +21,26 @@
 #ifndef ARP_826_CACHE_H
 #define ARP_826_CACHE_H
 
-int arp826_cache_init(void);
-int arp826_cache_fini(void);
+struct gpa;
 
-int arp826_cache_add(size_t                protocol_address_length,
-                     const unsigned char * source_protocol_address,
-                     const unsigned char * target_protocol_address,
-                     size_t                hardware_address_length,
-                     const unsigned char * source_hardware_address,
-                     const unsigned char * target_hardware_address);
+struct gpa * gpa_create(const uint8_t * address,
+                        size_t          length);
+void         gpa_destroy(struct gpa * gpa);
+struct gpa * gpa_dup(const struct gpa * gpa);
+bool         gpa_is_equal(const struct gpa * a,
+                          const struct gpa * b);
+
+struct cache_line;
+
+struct cache_line * cl_create(void);
+void                cl_destroy(struct cache_line * instance);
+
+int                 cl_add(struct cache_line *   instance,
+                           size_t                protocol_address_length,
+                           const unsigned char * source_protocol_address,
+                           const unsigned char * target_protocol_address,
+                           size_t                hardware_address_length,
+                           const unsigned char * source_hardware_address,
+                           const unsigned char * target_hardware_address);
 
 #endif

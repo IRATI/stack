@@ -159,8 +159,10 @@ static int arp826_process(struct sk_buff * skb)
         tha = ptr; ptr += 6;
         tpa = ptr; ptr += 4;
 
-        arp826_cache_add(header->plen, spa, tpa,
-                         header->hlen, sha, tha);
+        if (cl_add(NULL, header->plen, spa, tpa, header->hlen, sha, tha)) {
+                LOG_ERR("Could not add this entry to its cache-line");
+                return -1;
+        }
 
         /*
          *  And finally process the entry ...
@@ -256,7 +258,9 @@ static int arp826_receive(struct sk_buff *     skb,
                 return 0;
         }
 
-        arp826_process(skb);
+        if (arp826_process(skb)) {
+                /* FIXME: What should we do here? */
+        }
         consume_skb(skb);
 
         return 0;
@@ -267,9 +271,12 @@ static struct packet_type arp_packet_type __read_mostly = {
         .func = arp826_receive,
 };
 
+struct cache_line * cache_lines[7] = { NULL };
+
 static int __init mod_init(void)
 {
-        if (arp826_cache_init())
+        cache_lines[6] = cl_create();
+        if (!cache_lines[6])
                 return -1;
 
         dev_add_pack(&arp_packet_type);
@@ -283,7 +290,7 @@ static void __exit mod_exit(void)
 {
         dev_remove_pack(&arp_packet_type);
 
-        arp826_cache_fini();
+        cl_destroy(cache_lines[6]);
 
         LOG_DBG("Destroyed successfully");
 }
