@@ -554,12 +554,14 @@ public:
 	 * within a aystem.
 	 * @param ipcProcessName The naming information of the IPC Process
 	 * @param difType The type of IPC Process (Normal or one of the shims)
+	 * @param installationPath The installation path of the IRATI software
 	 * @return a pointer to a data structure holding the IPC Process state
 	 * @throws CreateIPCProcessException if an error happens during the creation
 	 */
 	IPCProcess * create(
 			const ApplicationProcessNamingInformation& ipcProcessName,
-			const std::string& difType) throw (CreateIPCProcessException);
+			const std::string& difType,
+			const std::string& installationPath) throw (CreateIPCProcessException);
 
 	/**
 	 * Invoked by the IPC Manager to delete an IPC Process from the system. The

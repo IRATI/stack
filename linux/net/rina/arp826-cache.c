@@ -21,8 +21,8 @@
 /*
  * NOTE: This cache implementation is far far far away to be a performance-wise
  *       one. Its scope is to server the upper-layers, nothing else. If we will
- *       have the time, a performance-wise implementation will obsolete this one
- *       completely.
+ *       have the time, a performance-wise implementation will obsolete this
+ *       one completely.
  */
 
 #include <linux/kernel.h>
