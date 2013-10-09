@@ -270,7 +270,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 if (kipcm_flow_add(default_kipcm,
                                    data->id, port_id, flow_id)) {
                         /* FIXME: change this with kfa_flow_destroy
-                        kipcm_flow_remove(default_kipcm, port_id); */
+                           kipcm_flow_remove(default_kipcm, port_id); */
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
@@ -279,8 +279,8 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 }
                 if (kipcm_flow_res(default_kipcm, data->id, flow->src_fid, 0)) {
                         /* FIXME: change this with kfa_flow_destroy
-                        kipcm_flow_remove(default_kipcm, flow->port_id);
-                        kipcm_flow_remove(default_kipcm, port_id); */
+                           kipcm_flow_remove(default_kipcm, flow->port_id);
+                           kipcm_flow_remove(default_kipcm, port_id); */
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
