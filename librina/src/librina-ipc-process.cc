@@ -24,15 +24,16 @@ namespace rina{
 
 /* CLASS ASSIGN TO DIF REQUEST EVENT */
 AssignToDIFRequestEvent::AssignToDIFRequestEvent(
-		const DIFConfiguration& difConfiguration,
+		const DIFInformation& difInformation,
 			unsigned int sequenceNumber):
 		IPCEvent(ASSIGN_TO_DIF_REQUEST_EVENT,
 										sequenceNumber){
+	this->difInformation = difInformation;
 }
 
-const DIFConfiguration&
-AssignToDIFRequestEvent::getDIFConfiguration() const{
-	return difConfiguration;
+const DIFInformation&
+AssignToDIFRequestEvent::getDIFInformation() const{
+	return difInformation;
 }
 
 /* CLASS IPC PROCESS DIF REGISTRATION EVENT */
@@ -108,13 +109,13 @@ const std::string& QueryRIBRequestEvent::getFilter() const{
 const std::string ExtendedIPCManager::error_allocate_flow =
 		"Error allocating flow";
 
-const DIFConfiguration& ExtendedIPCManager::getCurrentConfiguration() const{
-	return currentConfiguration;
+const DIFInformation& ExtendedIPCManager::getCurrentDIFInformation() const{
+	return currentDIFInformation;
 }
 
-void ExtendedIPCManager::setCurrentConfiguration(
-		const DIFConfiguration& currentConfiguration){
-	this->currentConfiguration = currentConfiguration;
+void ExtendedIPCManager::setCurrentDIFInformation(
+		const DIFInformation& currentDIFInformation){
+	this->currentDIFInformation = currentDIFInformation;
 }
 
 unsigned int ExtendedIPCManager::getIpcProcessId() const{
@@ -129,7 +130,7 @@ void ExtendedIPCManager::assignToDIFResponse(
 		const AssignToDIFRequestEvent& event, int result)
 	throw(AssignToDIFResponseException){
 	if (result == 0){
-		this->currentConfiguration = event.getDIFConfiguration();
+		this->currentDIFInformation = event.getDIFInformation();
 	}
 #if STUB_API
 	//Do nothing
@@ -212,7 +213,7 @@ int ExtendedIPCManager::allocateFlowRequestArrived(
 	message.setSourceAppName(remoteAppName);
 	message.setDestAppName(localAppName);
 	message.setFlowSpecification(flowSpecification);
-	message.setDifName(currentConfiguration.getDifName());
+	message.setDifName(currentDIFInformation.getDifName());
 	message.setSourceIpcProcessId(ipcProcessId);
 	message.setRequestMessage(true);
 

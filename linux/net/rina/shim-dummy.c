@@ -36,7 +36,6 @@
 #include "ipcp-factories.h"
 #include "du.h"
 #include "kfa.h"
-#include "rnl.h"
 #include "rnl-utils.h"
 
 /* FIXME: To be removed ABSOLUTELY */
@@ -500,19 +499,21 @@ static int dummy_fini(struct ipcp_factory_data * data)
 }
 
 static int dummy_assign_to_dif(struct ipcp_instance_data * data,
-                               const struct name *         dif_name,
-                               const struct ipcp_config *  dif_config)
+                               const struct dif_info *  dif_information)
 {
+        struct ipcp_config * pos;
+
         ASSERT(data);
+        ASSERT(dif_information);
 
         if (!data->info) {
                 LOG_ERR("There is no info for this IPC process");
                 return -1;
         }
 
-        data->info->dif_name = name_dup(dif_name);
+        data->info->dif_name = name_dup(dif_information->dif_name);
         if (!data->info->dif_name) {
-                char * tmp = name_tostring(dif_name);
+                char * tmp = name_tostring(dif_information->dif_name);
                 LOG_ERR("Assingment of IPC Process to DIF %s failed", tmp);
                 rkfree(tmp);
                 rkfree(data->info);
@@ -520,10 +521,27 @@ static int dummy_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        if (dif_information->configuration)
+                list_for_each_entry(
+                                    pos,
+                                    &(dif_information->configuration->ipcp_config_entries),
+                                    next)
+                        LOG_DBG("Configuration entry name: %s; value: %s",
+                                pos->entry->name,
+                                pos->entry->value);
+
         LOG_DBG("Assigned IPC Process to DIF %s",
                 data->info->dif_name->process_name);
 
         return 0;
+}
+
+static int dummy_update_dif_config(struct ipcp_instance_data * data,
+                                   const struct dif_config *   new_config)
+{
+        /* Nothing to be reconfigured */
+
+        return -1;
 }
 
 static struct ipcp_instance_ops dummy_instance_ops = {
@@ -534,6 +552,7 @@ static struct ipcp_instance_ops dummy_instance_ops = {
         .application_unregister = dummy_application_unregister,
         .sdu_write              = dummy_sdu_write,
         .assign_to_dif          = dummy_assign_to_dif,
+        .update_dif_config      = dummy_update_dif_config,
 };
 
 static struct ipcp_instance_data *
@@ -622,62 +641,6 @@ static struct ipcp_instance * dummy_create(struct ipcp_factory_data * data,
         return inst;
 }
 
-#if 0
-/* FIXME: It doesn't allow reconfiguration */
-static struct ipcp_instance * dummy_configure(struct ipcp_factory_data * data,
-                                              struct ipcp_instance *     inst,
-                                              const struct ipcp_config * conf)
-{
-        struct ipcp_instance_data * instance;
-        struct ipcp_config *        tmp;
-
-        ASSERT(data);
-        ASSERT(inst);
-        ASSERT(conf);
-
-        instance = find_instance(data, inst->data->id);
-        if (!instance) {
-                LOG_ERR("There's no instance with id %d", inst->data->id);
-                return inst;
-        }
-
-        /* Use configuration values on that instance */
-        list_for_each_entry(tmp, &(conf->list), list) {
-                if (!strcmp(tmp->entry->name, "dif-name") &&
-                    tmp->entry->value->type == IPCP_CONFIG_STRING) {
-                        if (name_cpy(instance->info->dif_name,
-                                     (struct name *)
-                                     tmp->entry->value->data)) {
-                                LOG_ERR("Failed to copy DIF name");
-                                return inst;
-                        }
-                }
-                else if (!strcmp(tmp->entry->name, "name") &&
-                         tmp->entry->value->type == IPCP_CONFIG_STRING) {
-                        if (name_cpy(instance->info->name,
-                                     (struct name *)
-                                     tmp->entry->value->data)) {
-                                LOG_ERR("Failed to copy name");
-                                return inst;
-                        }
-                }
-                else {
-                        LOG_ERR("Cannot identify parameter '%s'",
-                                tmp->entry->name);
-                        return NULL;
-                }
-        }
-
-        /*
-         * Instance might change (reallocation), return the updated pointer
-         * if needed. We don't re-allocate our instance so we'll be returning
-         * the same pointer.
-         */
-
-        return inst;
-}
-#endif
-
 static int dummy_destroy(struct ipcp_factory_data * data,
                          struct ipcp_instance *     instance)
 {
@@ -696,10 +659,10 @@ static int dummy_destroy(struct ipcp_factory_data * data,
 
                         /* Destroy it */
                         if (pos->info->dif_name)
-                        	name_destroy(pos->info->dif_name);
+                                name_destroy(pos->info->dif_name);
 
                         if (pos->info->name)
-                        	name_destroy(pos->info->name);
+                                name_destroy(pos->info->name);
 
                         rkfree(pos->info);
                         rkfree(pos);

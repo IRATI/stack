@@ -382,6 +382,10 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(differs) rina::RIBObject::operator!=(const RIBObject &other) const;
 %rename(equals) rina::Thread::operator==(const Thread &other) const;
 %rename(differs) rina::Thread::operator!=(const Thread &other) const;
+%rename(equals) rina::Parameter::operator==(const Parameter &other) const;
+%rename(differs) rina::Parameter::operator!=(const Parameter &other) const;
+%rename(equals) rina::Policy::operator==(const Policy &other) const;
+%rename(differs) rina::Policy::operator!=(const Policy &other) const;
 
 %include "exceptions.h"
 %include "patterns.h"
@@ -449,7 +453,8 @@ MAKE_COLLECTION_ITERABLE(StringListIterator, String, std::list, std::string);
 %template(ApplicationRegistrationVector) std::vector<rina::ApplicationRegistration *>;
 %template(QoSCubeList) std::list<rina::QoSCube>;
 %template(QoSCubeVector) std::vector<rina::QoSCube>;
-%template(PolicyVector) std::vector<rina::Policy>;
+%template(PolicyList) std::list<rina::Policy>;
+%template(ParameterList) std::list<rina::Parameter>;
 %template(ApplicationProcessNamingInformationList) std::list<rina::ApplicationProcessNamingInformation>;
 %template(IPCManagerSingleton) Singleton<rina::IPCManager>;
 %template(IPCEventProducerSingleton) Singleton<rina::IPCEventProducer>;

@@ -13,7 +13,7 @@ import org.apache.commons.logging.LogFactory;
 import eu.irati.librina.AllocateFlowException;
 import eu.irati.librina.ApplicationManagerSingleton;
 import eu.irati.librina.ApplicationProcessNamingInformation;
-import eu.irati.librina.DIFConfiguration;
+import eu.irati.librina.DIFInformation;
 import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
@@ -46,9 +46,9 @@ public class FlowManager {
 			FlowState flowState = new FlowState(event);
 			flows.put(portId, flowState);
 			IPCProcess ipcProcess = tryFlowAllocation(event);
-			event.setDIFName(ipcProcess.getConfiguration().getDifName());
+			event.setDIFName(ipcProcess.getDIFInformation().getDifName());
 			flowState.setIpcProcessId(ipcProcess.getId());
-			flowState.setDifName(ipcProcess.getConfiguration().getDifName().getProcessName());
+			flowState.setDifName(ipcProcess.getDIFInformation().getDifName().getProcessName());
 		}catch(Exception ex){
 			log.error("Error allocating flow. "+ex.getMessage());
 			flows.remove(portId);
@@ -75,7 +75,7 @@ public class FlowManager {
 			event.setPortId(portId);
 			FlowState flowState = new FlowState(event);
 			flowState.setIpcProcessId(ipcProcess.getId());
-			flowState.setDifName(ipcProcess.getConfiguration().getDifName().getProcessName());
+			flowState.setDifName(ipcProcess.getDIFInformation().getDifName().getProcessName());
 			flows.put(portId, flowState);
 			applicationManager.flowRequestArrived(event.getLocalApplicationName(), 
 					event.getRemoteApplicationName(), event.getFlowSpecification(), 
@@ -212,9 +212,9 @@ public class FlowManager {
 		for(int i=0; i<ipcProcesses.size(); i++){
 			ipcProcess = ipcProcesses.get(i);
 			log.info("Trying IPC Process "+ipcProcess.getId());
-			DIFConfiguration difConfiguration = ipcProcess.getConfiguration();
-			if (difConfiguration != null && 
-					difConfiguration.getDifName().getProcessName().equals(difName)){
+			DIFInformation difInformation = ipcProcess.getDIFInformation();
+			if (difInformation != null && 
+					difInformation.getDifName().getProcessName().equals(difName)){
 				return ipcProcess;
 			}
 		}

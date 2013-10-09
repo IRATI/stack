@@ -340,8 +340,8 @@ class IPCProcess {
 	/** The name of the IPC Process */
 	ApplicationProcessNamingInformation name;
 
-	/** The current configuration of the IPC Process*/
-	DIFConfiguration difConfiguration;
+	/** The current information of the DIF where the IPC Process is assigned*/
+	DIFInformation difInformation;
 
 	/** True if the IPC Process is a member of the DIF, false otherwise */
 	bool difMember;
@@ -364,8 +364,8 @@ public:
 	void setPortId(unsigned int portId);
 	pid_t getPid() const;
 	void setPid(pid_t pid);
-	const DIFConfiguration& getConfiguration() const;
-	void setConfiguration(const DIFConfiguration& difConfiguration);
+	const DIFInformation& getDIFInformation() const;
+	void setDIFInformation(const DIFInformation& difInformation);
 	bool isDIFMember() const;
 	void setDIFMember(bool difMember);
 
@@ -378,11 +378,11 @@ public:
 	 * credentials, etc). The operation will block until the IPC Process is
 	 * assigned to the DIF or an error is returned.
 	 *
-	 * @param difConfiguration The configuration of the DIF
+	 * @param difInformation The information of the DIF (name, type configuration)
 	 * @throws AssignToDIFException if an error happens during the process
 	 */
 	void assignToDIF(
-			const DIFConfiguration& difConfiguration) throw (AssignToDIFException);
+			const DIFInformation& difInformation) throw (AssignToDIFException);
 
 	/**
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been

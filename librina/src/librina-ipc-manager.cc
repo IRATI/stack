@@ -117,22 +117,22 @@ void IPCProcess::setPid(pid_t pid){
 	this->pid = pid;
 }
 
-const DIFConfiguration& IPCProcess::getConfiguration() const{
-	return difConfiguration;
+const DIFInformation& IPCProcess::getDIFInformation() const{
+	return difInformation;
 }
 
-void IPCProcess::setConfiguration(const DIFConfiguration& difConfiguration){
-	this->difConfiguration = difConfiguration;
+void IPCProcess::setDIFInformation(const DIFInformation& difInformation){
+	this->difInformation = difInformation;
 }
 
 void IPCProcess::assignToDIF(
-		const DIFConfiguration& difConfiguration) throw (AssignToDIFException) {
+		const DIFInformation& difInformation) throw (AssignToDIFException) {
 	LOG_DBG("IPCProcess::assign to DIF called");
 #if STUB_API
 	//Do nothing
 #else
 	IpcmAssignToDIFRequestMessage message;
-	message.setDIFConfiguration(difConfiguration);
+	message.setDIFInformation(difInformation);
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -154,11 +154,11 @@ void IPCProcess::assignToDIF(
 	}
 
 	LOG_DBG("Assigned IPC Process %d to DIF %s", id,
-			difConfiguration.getDifName().getProcessName().c_str());
+			difInformation.getDifName().getProcessName().c_str());
 	delete assignToDIFResponse;
 #endif
 
-	this->difConfiguration = difConfiguration;
+	this->difInformation = difInformation;
 	this->difMember = true;
 }
 
@@ -236,7 +236,7 @@ throw (IpcmRegisterApplicationException) {
 #else
 	IpcmRegisterApplicationRequestMessage message;
 	message.setApplicationName(applicationName);
-	message.setDifName(difConfiguration.getDifName());
+	message.setDifName(difInformation.getDifName());
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -259,7 +259,7 @@ throw (IpcmRegisterApplicationException) {
 
 	LOG_DBG("Registered app %s to DIF %s",
 			applicationName.getProcessName().c_str(),
-			difConfiguration.getDifName().getProcessName().c_str());
+			difInformation.getDifName().getProcessName().c_str());
 	delete registerAppResponse;
 #endif
 }
@@ -273,7 +273,7 @@ throw (IpcmUnregisterApplicationException) {
 #else
 	IpcmUnregisterApplicationRequestMessage message;
 	message.setApplicationName(applicationName);
-	message.setDifName(difConfiguration.getDifName());
+	message.setDifName(difInformation.getDifName());
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -295,7 +295,7 @@ throw (IpcmUnregisterApplicationException) {
 	}
 	LOG_DBG("Unregistered app %s from DIF %s",
 			applicationName.getProcessName().c_str(),
-			difConfiguration.getDifName().getProcessName().c_str());
+			difInformation.getDifName().getProcessName().c_str());
 	delete unregisterAppResponse;
 #endif
 }

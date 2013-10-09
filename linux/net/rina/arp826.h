@@ -1,6 +1,5 @@
 /*
- * Implementation of RFC 826 because current implementation is too
- * intertwined with IP version 4.
+ * An ARP RFC-826 (wonnabe) compliant implementation
  *
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
@@ -20,8 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_ARP_H
-#define RINA_ARP_H
+#ifndef ARP_826_H
+#define ARP_826_H
 
 #include <linux/types.h>
 #include <linux/kernel.h>
@@ -46,6 +45,8 @@ struct rinarp_mac_addr {
                 uint8_t mac_802_3[6];
         } data;
 };
+
+/* FIXME: All these rinarp_* thingies have to be removed */
 
 struct naddr_handle * rinarp_paddr_register(__be16              proto_name,
 					    __be16              proto_len,

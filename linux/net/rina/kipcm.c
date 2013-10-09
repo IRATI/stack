@@ -556,6 +556,7 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
 static int
 assign_to_dif_free_and_reply(struct name *       dif_name,
                              struct dif_config * dif_config,
+                             struct dif_info *   dif_info,
                              struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs,
                              struct rnl_msg *    msg,
                              ipc_process_id_t    id,
@@ -565,7 +566,8 @@ assign_to_dif_free_and_reply(struct name *       dif_name,
 {
         if (attrs)      rkfree(attrs);
         if (dif_name)   rkfree(dif_name);
-        if (dif_config) rkfree(dif_config);
+        if (dif_config)   rkfree(dif_config);
+        if (dif_info)   rkfree(dif_info);
         if (msg)        rkfree(msg);
 
         if (rnl_assign_dif_response(id, res, seq_num, port_id))
@@ -581,14 +583,16 @@ static int notify_ipcp_assign_dif_request(void *             data,
         struct kipcm *                                kipcm;
         struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs;
         struct rnl_msg *                              msg;
-        struct dif_config *                           dif_config;
+        struct dif_info *                             dif_info;
         struct name *                                 dif_name;
+        struct dif_config *                                               dif_config;
         struct ipcp_instance *                        ipc_process;
         ipc_process_id_t                              ipc_id;
 
         attrs      = NULL;
         msg        = NULL;
         dif_name   = NULL;
+        dif_info   = NULL;
         dif_config = NULL;
 
         if (!data) {
@@ -607,6 +611,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
         if (!attrs)
                 return assign_to_dif_free_and_reply(dif_name,
                                                     dif_config,
+                                                    dif_info,
                                                     attrs,
                                                     msg,
                                                     0,
@@ -614,35 +619,51 @@ static int notify_ipcp_assign_dif_request(void *             data,
                                                     info->snd_seq,
                                                     info->snd_portid);
 
-        dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
-        if (!dif_config)
+        dif_info = rkzalloc(sizeof(struct dif_info), GFP_KERNEL);
+        if (!dif_info)
                 return assign_to_dif_free_and_reply(dif_name,
                                                     dif_config,
+                                                    dif_info,
                                                     attrs,
                                                     msg,
                                                     0,
                                                     -1,
                                                     info->snd_seq,
                                                     info->snd_portid);
-
-        attrs->dif_config = dif_config;
+        attrs->dif_info = dif_info;
 
         dif_name = name_create();
         if (!dif_name)
                 return assign_to_dif_free_and_reply(dif_name,
                                                     dif_config,
+                                                    dif_info,
                                                     attrs,
                                                     msg,
                                                     0,
                                                     -1,
                                                     info->snd_seq,
                                                     info->snd_portid);
-        dif_config->dif_name = dif_name;
+        dif_info->dif_name = dif_name;
+
+        dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
+        if (!dif_config)
+                return assign_to_dif_free_and_reply(dif_name,
+                                                    dif_config,
+                                                    dif_info,
+                                                    attrs,
+                                                    msg,
+                                                    0,
+                                                    -1,
+                                                    info->snd_seq,
+                                                    info->snd_portid);
+        INIT_LIST_HEAD(&(dif_config->ipcp_config_entries));
+        dif_info->configuration = dif_config;
 
         msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
         if (!msg)
                 return assign_to_dif_free_and_reply(dif_name,
                                                     dif_config,
+                                                    dif_info,
                                                     attrs,
                                                     msg,
                                                     0,
@@ -655,6 +676,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
         if (rnl_parse_msg(info, msg))
                 return assign_to_dif_free_and_reply(dif_name,
                                                     dif_config,
+                                                    dif_info,
                                                     attrs,
                                                     msg,
                                                     0,
@@ -668,6 +690,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
                 LOG_ERR("IPC process %d not found", ipc_id);
                 return assign_to_dif_free_and_reply(dif_name,
                                                     dif_config,
+                                                    dif_info,
                                                     attrs,
                                                     msg,
                                                     0,
@@ -681,15 +704,15 @@ static int notify_ipcp_assign_dif_request(void *             data,
         LOG_MISSING;
 
         if (ipc_process->ops->assign_to_dif(ipc_process->data,
-                                            attrs->dif_config->dif_name,
-                                            NULL)) {
-                char * tmp = name_tostring(attrs->dif_config->dif_name);
+                                            attrs->dif_info)) {
+                char * tmp = name_tostring(attrs->dif_info->dif_name);
                 LOG_ERR("Assign to dif %s operation failed for IPC process %d",
                         tmp, ipc_id);
                 rkfree(tmp);
 
                 return assign_to_dif_free_and_reply(dif_name,
                                                     dif_config,
+                                                    dif_info,
                                                     attrs,
                                                     msg,
                                                     ipc_id,
@@ -700,6 +723,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
 
         return assign_to_dif_free_and_reply(dif_name,
                                             dif_config,
+                                            dif_info,
                                             attrs,
                                             msg,
                                             ipc_id,
