@@ -154,7 +154,6 @@ flow_id_t kfa_flow_create(struct kfa * instance)
         atomic_set(&flow->flag, 0);
 
         init_waitqueue_head(&flow->wait_queue);
-        INIT_LIST_HEAD(&flow->wait_queue.task_list);
 
         if (kfa_fmap_add(instance->flows.pending, fid, flow)) {
                 LOG_ERR("Could not map Flow and Flow ID");
@@ -198,7 +197,8 @@ int kfa_flow_bind(struct kfa *           instance,
 
         spin_lock(&instance->lock);
 
-        if (!kfa_fmap_find(instance->flows.pending, fid)) {
+        flow = kfa_fmap_find(instance->flows.pending, fid);
+        if (!flow) {
                 LOG_ERR("The flow with flow-id %d is not pending, "
                         "cannot bind it to port %d", fid, pid);
                 spin_unlock(&instance->lock);
@@ -206,12 +206,6 @@ int kfa_flow_bind(struct kfa *           instance,
         }
         if (kfa_pmap_find(instance->flows.committed, pid)) {
                 LOG_ERR("Flow on port-id %d already exists", pid);
-                spin_unlock(&instance->lock);
-                return -1;
-        }
-
-        flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
-        if (!flow) {
                 spin_unlock(&instance->lock);
                 return -1;
         }
@@ -246,8 +240,9 @@ int kfa_flow_bind(struct kfa *           instance,
                 return -1;
         }
 
-        LOG_DBG("Flow bound to port id %d with waitqueue %pK",
-                pid, &flow->wait_queue);
+        LOG_DBG("Flow bound to port id %d with waitqueue %pK, task_list %pK",
+                pid, &flow->wait_queue, &flow->wait_queue.task_list);
+        LOG_DBG("Next: %pK", flow->wait_queue.task_list.next);
 
         spin_unlock(&instance->lock);
 
@@ -370,7 +365,7 @@ int kfa_flow_sdu_write(struct kfa * instance,
         }
 
         ipcp = flow->ipc_process;
-        ASSERT(instance);
+        ASSERT(ipcp);
         if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
                 LOG_ERR("Couldn't write SDU on port-id %d", id);
                 return -1;
