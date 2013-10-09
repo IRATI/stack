@@ -309,6 +309,8 @@ static int dummy_flow_deallocate(struct ipcp_instance_data * data,
 {
         struct dummy_flow * flow;
         port_id_t dest_port_id;
+        flow_id_t rm_fid;
+        flow_id_t rm_dst_fid;
 
         ASSERT(data);
         flow = find_flow(data, id);
@@ -322,11 +324,29 @@ static int dummy_flow_deallocate(struct ipcp_instance_data * data,
         else
                 dest_port_id = flow->port_id;
 
-        if (kipcm_flow_remove(default_kipcm, id))
+        /* FIXME: dummy_flow is not updated after unbinding cause it is going
+         * to be deleted. Is it really needed to unbind+destroy?
+         */
+        rm_fid = kfa_flow_unbind(data->kfa, id);
+        if (!is_flow_id_ok(rm_fid)){
+                LOG_ERR("Could not unbind flow at port %d", id);
                 return -1;
+        }
+        rm_dst_fid = kfa_flow_unbind(data->kfa, dest_port_id);
+        if (!is_flow_id_ok(rm_dst_fid)){
+                LOG_ERR("Could not unbind flow at port %d", dest_port_id);
+                return -1;
+        }
 
-        if (kipcm_flow_remove(default_kipcm, dest_port_id))
+        if (kfa_flow_destroy(data->kfa, rm_fid)) {
+                LOG_ERR("Could not destroy flow with fid: %d", rm_fid);
                 return -1;
+        }
+
+        if (kfa_flow_destroy(data->kfa, rm_dst_fid)) {
+                LOG_ERR("Could not destroy flow with fid: %d", rm_dst_fid);
+                return -1;
+        }
 
         /* Notify the destination application */
         rnl_flow_dealloc_not_msg(data->id, 0, dest_port_id, 1);

@@ -63,7 +63,7 @@ int            kipcm_sdu_read(struct kipcm * kipcm,
  * The following functions represent the KIPCM southbound interface
  */
 
-/* 
+/*
  * FIXME: This is a core "accessor", to be removed ASAP. It's currently here
  *        in the meanwhile we find the best way to settle the component in its
  *        final position.
@@ -97,24 +97,15 @@ int            kipcm_flow_arrived(struct kipcm *     kipcm,
 int            kipcm_flow_add(struct kipcm *   kipcm,
                               ipc_process_id_t ipc_id,
                               port_id_t        id,
-                              flow_id_t	       fid);
+                              flow_id_t        fid);
 
 /* On both source and destination */
 int            kipcm_flow_remove(struct kipcm * kipcm,
                                  port_id_t      id);
 
-/* If successul: takes the ownership of the SDU */
-int            kipcm_sdu_post(struct kipcm * kipcm,
-                              port_id_t      id,
-                              struct sdu *   sdu);
-
-/*
- * FIXME: This function-name is not-so-descriptive ... may you find a better
- *        name ?
- */
 int            kipcm_flow_res(struct kipcm *   kipcm,
                               ipc_process_id_t id,
                               flow_id_t        fid,
-                              uint_t	       res);
+                              uint_t           res);
 
 #endif
