@@ -1697,16 +1697,20 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         return 0;
 }
 
-int kipcm_flow_res(struct kipcm *   kipcm,
-                   ipc_process_id_t ipc_id,
-                   flow_id_t        fid,
-                   uint_t           res)
+int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
+                                       ipc_process_id_t ipc_id,
+                                       flow_id_t        fid,
+                                       uint_t           res)
 {
         rnl_sn_t seq_num;
 
+        if(!is_flow_id_ok(fid)) {
+                LOG_ERR("Flow id is not ok");
+        }
+
         seq_num = kipcm_fmap_find(kipcm->fid_messages->ingress, fid);
         if (!is_seq_num_ok(seq_num)) {
-                LOG_DBG("Could not find request message id (seq num)");
+                LOG_ERR("Could not find request message id (seq num)");
                 return -1;
         }
 
@@ -1718,7 +1722,7 @@ int kipcm_flow_res(struct kipcm *   kipcm,
 
         return 0;
 }
-EXPORT_SYMBOL(kipcm_flow_res);
+EXPORT_SYMBOL(kipcm_notify_flow_alloc_req_result);
 
 int kipcm_notify_flow_dealloc(ipc_process_id_t ipc_id,
                               uint_t           code,
