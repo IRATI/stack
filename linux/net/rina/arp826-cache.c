@@ -62,7 +62,7 @@ struct gpa * gpa_create(const uint8_t * address,
                 rkfree(tmp);
                 return NULL;
         }
-        memcpy(tmp->address, address, length);
+        memcpy(tmp->address, address, tmp->length);
 
         return tmp;
 }
@@ -86,6 +86,7 @@ struct gpa * gpa_dup(const struct gpa * gpa)
 bool gpa_is_ok(const struct gpa * gpa)
 { return (!gpa || gpa->length == 0 || gpa->address == NULL) ? 0 : 1; }
 
+/* FIXME: Please fix this, it's broken */
 bool gpa_is_equal(const struct gpa * a, const struct gpa * b)
 {
         if (a != b) {
@@ -213,6 +214,18 @@ static bool ce_is_equal(struct cache_entry * entry1,
 }
 #endif
 
+const struct gpa * ce_pa(struct cache_entry * entry)
+{
+        ASSERT(entry);
+        return entry->pa;
+}
+
+const struct uint8_t * ce_ha(struct cache_entry * entry)
+{
+        ASSERT(entry);
+        return entry->ha;
+}
+
 struct cache_line {
         size_t           hal;     /* Hardware address length */
         spinlock_t       lock;
@@ -273,3 +286,52 @@ int cl_add(struct cache_line * instance,
 
         return -1;
 }
+
+void cl_remove(struct cache_line *        instance,
+               const struct cache_entry * entry)
+{
+        ASSERT(instance);
+}
+
+const struct cache_entry * cl_find_by_ha(struct cache_line * instance,
+                                         struct uint8_t *    hardware_address)
+{
+        struct cache_entry * pos;
+
+        ASSERT(instance);
+
+        spin_lock(&instance->lock);
+
+        list_for_each_entry(pos, &instance->entries, next) {
+                if (!memcmp(pos->ha, hardware_address, instance->hal)) {
+                        spin_unlock(&instance->lock);
+                        return pos;
+                }
+        }
+
+        spin_unlock(&instance->lock);
+
+        return NULL;
+}
+
+const struct cache_entry * cl_find_by_pa(struct cache_line * instance,
+                                         struct gpa *        protocol_address)
+{
+        struct cache_entry * pos;
+
+        ASSERT(instance);
+
+        spin_lock(&instance->lock);
+
+        list_for_each_entry(pos, &instance->entries, next) {
+                if (gpa_is_equal(pos->pa, protocol_address)) {
+                        spin_unlock(&instance->lock);
+                        return pos;
+                }
+        }
+
+        spin_unlock(&instance->lock);
+
+        return NULL;
+}
+
