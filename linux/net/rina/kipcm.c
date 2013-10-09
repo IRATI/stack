@@ -1657,46 +1657,6 @@ int kipcm_flow_add(struct kipcm *   kipcm,
 }
 EXPORT_SYMBOL(kipcm_flow_add);
 
-int kipcm_flow_remove(struct kipcm * kipcm,
-                      port_id_t      port_id)
-{
-#if 0
-        struct ipcp_flow * flow;
-
-        if (!kipcm) {
-                LOG_ERR("Bogus kipcm instance passed, bailing out");
-                return -1;
-        }
-
-        KIPCM_LOCK(kipcm);
-
-        /* FIXME: What about pending flows ? */
-
-        flow = ipcp_pmap_find(kipcm->flows.committed, port_id);
-        if (!flow) {
-                LOG_ERR("Couldn't retrieve the flow for port-id %d", port_id);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-
-        if (ipcp_pmap_remove(kipcm->flows.committed, port_id)) {
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-
-        KIPCM_UNLOCK(kipcm);
-
-        LOG_DBG("Awake flow");
-        wake_up_interruptible(&flow->wait_queue);
-
-        kfifo_free(&flow->sdu_ready);
-        rkfree(flow);
-#endif
-
-        return 0;
-}
-EXPORT_SYMBOL(kipcm_flow_remove);
-
 int kipcm_sdu_write(struct kipcm * kipcm,
                     port_id_t      port_id,
                     struct sdu *   sdu)
@@ -1759,6 +1719,20 @@ int kipcm_flow_res(struct kipcm *   kipcm,
         return 0;
 }
 EXPORT_SYMBOL(kipcm_flow_res);
+
+int kipcm_notify_flow_dealloc(ipc_process_id_t ipc_id,
+                              uint_t           code,
+                              port_id_t        port_id,
+                              u32              nl_port_id)
+{
+        if (rnl_flow_dealloc_not_msg(ipc_id, code, port_id, nl_port_id)) {
+                LOG_ERR("Could not notificate application about "
+                        "flow deallocation");
+                return -1;
+        }
+        return 0;
+}
+EXPORT_SYMBOL(kipcm_notify_flow_dealloc);
 
 /* FIXME: This "method" is only temporary, do not rely on its presence */
 struct kfa * kipcm_kfa(struct kipcm * kipcm)

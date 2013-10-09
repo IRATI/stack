@@ -262,7 +262,9 @@ static void arp_rep_handler(void *                         opaque,
         if (flow && flow->port_id_state == PORT_STATE_INITIATOR_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 if (kipcm_flow_res(default_kipcm, data->id, flow->flow_id, 0)) {
-                        kipcm_flow_remove(default_kipcm, flow->port_id);
+                        /* FIXME: change this with kfa_flow_destroy
+                        * kipcm_flow_remove(default_kipcm, flow->port_id);
+                        */
                         list_del(&flow->list);
                         name_destroy(flow->dest);
                         rkfree(flow);
@@ -374,7 +376,9 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
 		kipcm_flow_add(default_kipcm, data->id,
                                flow->port_id, flow->flow_id);
 		if (kipcm_flow_res(default_kipcm, data->id, flow->flow_id, 0)) {
-                        kipcm_flow_remove(default_kipcm, flow->port_id);
+		                /* FIXME: change this with kfa_flow_destroy
+                        * kipcm_flow_remove(default_kipcm, flow->port_id);
+                        */
                         list_del(&flow->list);
                         name_destroy(flow->dest);
                         rkfree(flow);
@@ -414,8 +418,10 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
                 rinarp_paddr_unregister(data->handle);
         }
 
-        if (kipcm_flow_remove(default_kipcm, id))
-                return -1;
+        /* FIXME: change this with kfa_flow_destroy
+        * if (kipcm_flow_remove(default_kipcm, id))
+        *         return -1;
+        */
 
         return 0;
 }
