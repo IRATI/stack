@@ -57,7 +57,6 @@ struct ipcp_flow {
         /* FIXME: To be wiped out */
         struct kfifo            sdu_ready;
         wait_queue_head_t       wait_queue;
-        atomic_t                flag;
 };
 
 struct kfa * kfa_create(void)
@@ -151,8 +150,6 @@ flow_id_t kfa_flow_create(struct kfa * instance)
                 return flow_id_bad();
         }
 
-        atomic_set(&flow->flag, 0);
-
         init_waitqueue_head(&flow->wait_queue);
 
         if (kfa_fmap_add(instance->flows.pending, fid, flow)) {
@@ -239,10 +236,6 @@ int kfa_flow_bind(struct kfa *           instance,
                 spin_unlock(&instance->lock);
                 return -1;
         }
-
-        LOG_DBG("Flow bound to port id %d with waitqueue %pK, task_list %pK",
-                pid, &flow->wait_queue, &flow->wait_queue.task_list);
-        LOG_DBG("Next: %pK", flow->wait_queue.task_list.next);
 
         spin_unlock(&instance->lock);
 
@@ -401,11 +394,9 @@ int kfa_flow_sdu_read(struct kfa *  instance,
         }
         while (kfifo_is_empty(&flow->sdu_ready)) {
                 LOG_DBG("Going to sleep on wait queue %pK", &flow->wait_queue);
-                atomic_set(&flow->flag, 0);
                 spin_unlock(&instance->lock);
-                wait_event_interruptible((flow->wait_queue),
-                                ((atomic_read(&flow->flag)) == 1));
-                //interruptible_sleep_on(&flow->wait_queue);
+                wait_event_interruptible(flow->wait_queue,
+                                       ready_queue_not_empty(&flow->sdu_ready));
 
                 spin_lock(&instance->lock);
                 LOG_DBG("Woken up");
@@ -518,8 +509,6 @@ int kfa_sdu_post(struct kfa * instance,
 
         LOG_DBG("Wait queue %pK, next: %pK, prev: %pK",
                         wq, wq->task_list.next, wq->task_list.prev);
-
-        atomic_set(&flow->flag, 1);
 
         spin_unlock(&instance->lock);
 
