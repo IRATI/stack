@@ -24,8 +24,8 @@ rina_personality_default-y +=			\
 	 utils-workarounds.o
 endif
 
-obj-$(CONFIG_RINA_ARP_OLD)       += rina-arp-old.o
-obj-$(CONFIG_RINA_ARP_NEW)       += rina-arp-new.o
+obj-$(CONFIG_ARP826) += arp826.o
+arp826-y             := arp826-core.o arp826-cache.o
 
 obj-$(CONFIG_RINA_SHIM_DUMMY)    += shim-dummy.o
 obj-$(CONFIG_RINA_SHIM_ETH_VLAN) += shim-eth-vlan.o

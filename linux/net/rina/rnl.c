@@ -330,7 +330,7 @@ rnl_sn_t rnl_get_next_seqn(struct rnl_set * set)
 
         tmp = set->sn_counter++;
 
-        if (set->sn_counter == 0){
+        if (set->sn_counter == 0) {
                 LOG_DBG("RN Layer Sequence number roll-overed!");
         }
 
@@ -349,6 +349,8 @@ static int kipcm_netlink_notify(struct notifier_block * nb,
                                 void *                  notification)
 {
 	struct netlink_notify * notify = notification;
+
+        /* FIXME: Why? why have another static with the same name ! */
 	rnl_port_t ipc_manager_port;
 
 	if (state != NETLINK_URELEASE)
@@ -361,15 +363,15 @@ static int kipcm_netlink_notify(struct notifier_block * nb,
 
 	ipc_manager_port = rnl_get_ipc_manager_port();
 
-	if (ipc_manager_port){
-		//Check if the IPC Manager is the process that died
-		if (ipc_manager_port == notify->portid){
+	if (ipc_manager_port) {
+		/* Check if the IPC Manager is the process that died */
+		if (ipc_manager_port == notify->portid) {
 			rnl_set_ipc_manager_port(0);
 
 			LOG_WARN("IPC Manager process has been destroyed");
-		}else{
-			rnl_ipcm_sock_closed_notif_msg(notify->portid, ipc_manager_port);
-		}
+		} else
+			rnl_ipcm_sock_closed_notif_msg(notify->portid,
+                                                       ipc_manager_port);
 	}
 
 	return NOTIFY_DONE;
@@ -441,14 +443,13 @@ void rnl_exit(void)
         LOG_DBG("NetLink layer finalized successfully");
 }
 
+/* FIXME: Noooo */
 rnl_port_t ipc_manager_port = 0;
 
-rnl_port_t rnl_get_ipc_manager_port(void){
-	return ipc_manager_port;
-}
+rnl_port_t rnl_get_ipc_manager_port(void)
+{ return ipc_manager_port; }
 EXPORT_SYMBOL(rnl_get_ipc_manager_port);
 
-void rnl_set_ipc_manager_port(rnl_port_t port){
-	ipc_manager_port = port;
-}
+void rnl_set_ipc_manager_port(rnl_port_t port)
+{ ipc_manager_port = port; }
 EXPORT_SYMBOL(rnl_set_ipc_manager_port);

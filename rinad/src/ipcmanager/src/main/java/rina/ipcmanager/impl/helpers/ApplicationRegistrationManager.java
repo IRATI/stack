@@ -18,7 +18,7 @@ import eu.irati.librina.ApplicationRegistrationInformation;
 import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.ApplicationRegistrationType;
 import eu.irati.librina.ApplicationUnregistrationRequestEvent;
-import eu.irati.librina.DIFConfiguration;
+import eu.irati.librina.DIFInformation;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IPCProcessPointerVector;
@@ -68,7 +68,7 @@ public class ApplicationRegistrationManager {
 								applicationRegistration);
 			}
 
-			applicationRegistration.getDIFNames().add(ipcProcess.getConfiguration().getDifName().getProcessName());
+			applicationRegistration.getDIFNames().add(ipcProcess.getDIFInformation().getDifName().getProcessName());
 		}catch(Exception ex){
 			log.error("Error registering application. "+ex.getMessage());
 			applicationManager.applicationRegistered(event, new ApplicationProcessNamingInformation(), 
@@ -76,7 +76,7 @@ public class ApplicationRegistrationManager {
 			return;
 		}
 		
-		applicationManager.applicationRegistered(event, ipcProcess.getConfiguration().getDifName(), 
+		applicationManager.applicationRegistered(event, ipcProcess.getDIFInformation().getDifName(), 
 				0);
 	}
 	
@@ -231,9 +231,9 @@ public class ApplicationRegistrationManager {
 		
 		for(int i=0; i<ipcProcesses.size(); i++){
 			ipcProcess = ipcProcesses.get(i);
-			DIFConfiguration difConfiguration = ipcProcess.getConfiguration();
-			if (difConfiguration != null && 
-					difConfiguration.getDifName().getProcessName().equals(difName)){
+			DIFInformation difInformation = ipcProcess.getDIFInformation();
+			if (difInformation != null && 
+					difInformation.getDifName().getProcessName().equals(difName)){
 				return ipcProcess;
 			}
 		}

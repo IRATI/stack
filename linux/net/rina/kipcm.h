@@ -87,7 +87,7 @@ int            kipcm_ipcp_factory_unregister(struct kipcm *        kipcm,
 /* On the destination */
 int            kipcm_flow_arrived(struct kipcm *     kipcm,
                                   ipc_process_id_t   ipc_id,
-                                  flow_id_t          id,
+                                  flow_id_t          flow_id,
                                   struct name *      dif_name,
                                   struct name *      source,
                                   struct name *      dest,
@@ -104,7 +104,7 @@ int            kipcm_flow_remove(struct kipcm * kipcm,
                                  port_id_t      id);
 
 int            kipcm_flow_res(struct kipcm *   kipcm,
-                              ipc_process_id_t ipc_id,
+                              ipc_process_id_t id,
                               flow_id_t        fid,
                               uint_t	       res);
 

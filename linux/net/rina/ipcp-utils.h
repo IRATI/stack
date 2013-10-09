@@ -86,8 +86,11 @@ int           name_cpy_from_user(const struct name __user * src,
 /* Compares two names, returns 0 if they are equal */
 int           name_cmp(const struct name * a, const struct name * b);
 
-/* Returns a name as a (newly allocated string) string */
+/* Returns a name as a (newly allocated) string */
 char *        name_tostring(const struct name * n);
+
+/* Inverse of name_tostring() */
+struct name * string_toname(const string_t * s);
 
 struct ipcp_config * ipcp_config_create(void);
 int                  ipcp_config_destroy(struct ipcp_config * cfg);

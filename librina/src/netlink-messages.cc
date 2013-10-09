@@ -763,19 +763,19 @@ IpcmAssignToDIFRequestMessage::IpcmAssignToDIFRequestMessage():
 						RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST) {
 }
 
-const DIFConfiguration&
-IpcmAssignToDIFRequestMessage::getDIFConfiguration() const{
-	return difconfiguration;
+const DIFInformation&
+IpcmAssignToDIFRequestMessage::getDIFInformation() const{
+	return difInformation;
 }
 
-void IpcmAssignToDIFRequestMessage::setDIFConfiguration(
-		const DIFConfiguration& difConfiguration){
-	this->difconfiguration = difConfiguration;
+void IpcmAssignToDIFRequestMessage::setDIFInformation(
+		const DIFInformation& difInformation){
+	this->difInformation = difInformation;
 }
 
 IPCEvent* IpcmAssignToDIFRequestMessage::toIPCEvent(){
 	AssignToDIFRequestEvent * event =
-			new AssignToDIFRequestEvent(getDIFConfiguration(),
+			new AssignToDIFRequestEvent(getDIFInformation(),
 					getSequenceNumber());
 	return event;
 }

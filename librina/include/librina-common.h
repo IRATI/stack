@@ -562,34 +562,74 @@ public:
  */
 class Policy {
 
+public:
+	bool operator==(const Policy &other) const;
+	bool operator!=(const Policy &other) const;
+};
+
+/**
+ * Represents a parameter that has a name and value
+ */
+class Parameter {
+	std::string name;
+	std::string value;
+
+public:
+	Parameter();
+	Parameter(const std::string & name, const std::string & value);
+	bool operator==(const Parameter &other) const;
+	bool operator!=(const Parameter &other) const;
+	const std::string& getName() const;
+	void setName(const std::string& name);
+	const std::string& getValue() const;
+	void setValue(const std::string& value);
 };
 
 /**
  * Contains the data about a DIF Configuration
+ * (QoS cubes, policies, parameters, etc)
  */
 class DIFConfiguration {
 
+	/** The QoS cubes supported by the DIF */
+	std::list<QoSCube> qosCubes;
+
+	/** The policies of the DIF */
+	std::list<Policy> policies;
+
+	/** Configuration parameters */
+	std::list<Parameter> parameters;
+
+public:
+	const std::list<Policy>& getPolicies();
+	void setPolicies(const std::list<Policy>& policies);
+	const std::list<QoSCube>& getQosCubes() const;
+	void setQosCubes(const std::list<QoSCube>& qosCubes);
+	const std::list<Parameter>& getParameters() const;
+	void setParameters(const std::list<Parameter>& parameters);
+	void addParameter(const Parameter& parameter);
+};
+
+/**
+ * Contains the information about a DIF (name, type, configuration)
+ */
+class DIFInformation{
 	/** The type of DIF */
 	std::string difType;
 
 	/** The name of the DIF */
 	ApplicationProcessNamingInformation difName;
 
-	/** The QoS cubes supported by the DIF */
-	std::vector<QoSCube> qosCubes;
-
-	/** The policies of the DIF */
-	std::vector<Policy> policies;
+	/** The DIF Configuration (qoscubes, policies, parameters, etc) */
+	DIFConfiguration difConfiguration;
 
 public:
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
 	const std::string& getDifType() const;
 	void setDifType(const std::string& difType);
-	const std::vector<Policy>& getPolicies();
-	void setPolicies(const std::vector<Policy>& policies);
-	const std::vector<QoSCube>& getQosCubes() const;
-	void setQosCubes(const std::vector<QoSCube>& qosCubes);
+	const DIFConfiguration& getDifConfiguration() const;
+	void setDifConfiguration(const DIFConfiguration& difConfiguration);
 };
 
 /**

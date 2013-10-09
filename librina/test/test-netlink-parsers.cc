@@ -1241,33 +1241,36 @@ int testIpcmAssignToDIFRequestMessage() {
 	std::cout << "TESTING IPCM ASSIGN TO DIF REQUEST MESSAGE\n";
 	int returnValue = 0;
 
-	ApplicationProcessNamingInformation * difName =
-			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test.DIF");
+	ApplicationProcessNamingInformation  difName;
+	difName.setProcessName("/difs/Test.DIF");
 
-	IpcmAssignToDIFRequestMessage * message =
-			new IpcmAssignToDIFRequestMessage();
-	DIFConfiguration * difConfiguration = new DIFConfiguration();
-	difConfiguration->setDifType("shim-ethernet");
-	difConfiguration->setDifName(*difName);
-	message->setDIFConfiguration(*difConfiguration);
+	IpcmAssignToDIFRequestMessage message;
+	DIFInformation difInformation;
+	DIFConfiguration difConfiguration;
+	difInformation.setDifType("shim-ethernet");
+	difInformation.setDifName(difName);
+	Parameter * parameter = new Parameter("interface", "eth0");
+	difConfiguration.addParameter(*parameter);
+	delete parameter;
+	parameter = new Parameter("vlanid", "430");
+	difConfiguration.addParameter(*parameter);
+	delete parameter;
+	difInformation.setDifConfiguration(difConfiguration);
+	message.setDIFInformation(difInformation);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
 	if (!netlinkMessage) {
 		std::cout << "Error allocating Netlink message\n";
 	}
-	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
-			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+			sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
 
-	int result = putBaseNetlinkMessage(netlinkMessage, message);
+	int result = putBaseNetlinkMessage(netlinkMessage, &message);
 	if (result < 0) {
 		std::cout << "Error constructing Ipcm Assign To DIF Request "
 				<< "Message \n";
 		nlmsg_free(netlinkMessage);
-		delete difName;
-		delete difConfiguration;
-		delete message;
 		return result;
 	}
 
@@ -1275,18 +1278,23 @@ int testIpcmAssignToDIFRequestMessage() {
 	IpcmAssignToDIFRequestMessage * recoveredMessage =
 			dynamic_cast<IpcmAssignToDIFRequestMessage *>(
 					parseBaseNetlinkMessage(netlinkMessageHeader));
-	if (message == 0) {
+	if (recoveredMessage == 0) {
 		std::cout << "Error parsing Ipcm Assign To DIF Request Message "
 				<< "\n";
 		returnValue = -1;
-	} else if (message->getDIFConfiguration().getDifType().compare(
-			recoveredMessage->getDIFConfiguration().getDifType()) != 0) {
-		std::cout << "DIFConfiguration.difType on original and recovered messages"
+	} else if (message.getDIFInformation().getDifType().compare(
+			recoveredMessage->getDIFInformation().getDifType()) != 0) {
+		std::cout << "DIFInformation.difType on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
-	} else if (message->getDIFConfiguration().getDifName() !=
-			recoveredMessage->getDIFConfiguration().getDifName()) {
-		std::cout << "DIFConfiguration.difName on original and recovered messages"
+	} else if (message.getDIFInformation().getDifName() !=
+			recoveredMessage->getDIFInformation().getDifName()) {
+		std::cout << "DIFInformation.difName on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
+	} else if (message.getDIFInformation().getDifConfiguration().getParameters().size() !=
+			recoveredMessage->getDIFInformation().getDifConfiguration().getParameters().size()){
+		std::cout << "DIFInformation.DIFConfiguration.parameters.size on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	}
@@ -1295,9 +1303,6 @@ int testIpcmAssignToDIFRequestMessage() {
 		std::cout << "IpcmAssignToDIFRequest test ok\n";
 	}
 	nlmsg_free(netlinkMessage);
-	delete difName;
-	delete difConfiguration;
-	delete message;
 	delete recoveredMessage;
 
 	return returnValue;

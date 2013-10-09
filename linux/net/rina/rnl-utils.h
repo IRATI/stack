@@ -57,6 +57,13 @@ enum flow_spec_attrs_list {
 };
 #define FSPEC_ATTR_MAX (__FSPEC_ATTR_MAX - 1)
 
+enum ipcp_config_entry_attrs_list {
+        IPCP_CONFIG_ENTRY_ATTR_NAME = 1,
+        IPCP_CONFIG_ENTRY_ATTR_VALUE,
+        __IPCP_CONFIG_ENTRY_ATTR_MAX,
+};
+#define IPCP_CONFIG_ENTRY_ATTR_MAX (__IPCP_CONFIG_ENTRY_ATTR_MAX - 1)
+
 /* FIXME: in user space these are called without _NAME */
 enum ipcm_alloc_flow_req_attrs_list {
         IAFRM_ATTR_SOURCE_APP_NAME = 1,
@@ -181,14 +188,21 @@ enum ipcm_query_rib_resp_attrs_list {
 #define IDQRE_ATTR_MAX (__IDQRE_ATTR_MAX -1)
 
 enum ipcm_assign_to_dif_req_attrs_list {
-        IATDR_ATTR_DIF_CONFIGURATION = 1,
+        IATDR_ATTR_DIF_INFORMATION = 1,
         __IATDR_ATTR_MAX,
 };
 #define IATDR_ATTR_MAX (__IATDR_ATTR_MAX -1)
 
-enum dif_conf_attrs_list {
-        DCONF_ATTR_DIF_TYPE = 1,
-        DCONF_ATTR_DIF_NAME,
+enum dif_info_attrs_list {
+        DINFO_ATTR_DIF_TYPE = 1,
+        DINFO_ATTR_DIF_NAME,
+        DINFO_ATTR_CONFIG,
+        __DINFO_ATTR_MAX,
+};
+#define DINFO_ATTR_MAX (__DINFO_ATTR_MAX -1)
+
+enum dif_config_attrs_list {
+        DCONF_ATTR_IPCP_CONFIG_ENTRIES = 1,
         __DCONF_ATTR_MAX,
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
@@ -287,13 +301,8 @@ struct rnl_msg {
         void *                attrs;
 };
 
-struct dif_config {
-        string_t    * type;
-        struct name * dif_name;
-};
-
 struct rnl_ipcm_assign_to_dif_req_msg_attrs {
-        struct dif_config * dif_config;
+        struct dif_info * dif_info;
 };
 
 struct rnl_ipcm_assign_to_dif_resp_msg_attrs {
