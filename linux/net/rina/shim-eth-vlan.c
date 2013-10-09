@@ -103,6 +103,16 @@ struct ipcp_instance_data {
         struct naddr_filter *  filter;
 };
 
+/* Needed for eth_vlan_rcv function */
+struct interface_data_mapping {
+	struct list_head list;
+	
+	string_t * complete_interface;
+	struct ipcp_instance_data * data;
+};
+
+static struct list_head data_instances_list;
+
 static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
                                         port_id_t                   id)
 {
@@ -166,6 +176,21 @@ static string_t * create_vlan_interface_name(string_t * interface_name,
         return complete_interface;
 }
 
+
+static struct ipcp_instance_data * inst_data_get(string_t * interface_name)
+{
+	struct interface_data_mapping * mapping;
+
+	list_for_each_entry(mapping, &data_instances_list, list) {
+                if (!strcmp(mapping->complete_interface,interface_name)) {
+                        return mapping->data;
+                }
+        }
+
+        return NULL;
+}
+
+
 static struct shim_eth_flow *
 find_flow_by_addr(struct ipcp_instance_data * data,
                   const struct paddr *        addr)
@@ -173,7 +198,7 @@ find_flow_by_addr(struct ipcp_instance_data * data,
         struct shim_eth_flow * flow;
 
         list_for_each_entry(flow, &data->flows, list) {
-                if (strcmp(name_tostring(flow->dest), (char *) addr->buf)) {
+                if (!strcmp(name_tostring(flow->dest), (char *) addr->buf)) {
                         return flow;
                 }
         }
@@ -605,12 +630,14 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                                   const struct dif_info *     dif_information)
 {
-        struct eth_vlan_info * info;
-        struct ipcp_config *   tmp;
-        bool                   reconfigure;
-        uint16_t               old_vlan_id;
-        string_t *             old_interface_name;
-        string_t *             complete_interface;
+        struct eth_vlan_info *          info;
+        struct ipcp_config *            tmp;
+        bool                            reconfigure;
+        uint16_t                        old_vlan_id;
+        string_t *                      old_interface_name;
+        string_t *                      complete_interface;
+	string_t *                      tmp_interface;
+	struct interface_data_mapping * mapping;
 
         ASSERT(data);
         ASSERT(dif_information);
@@ -655,8 +682,19 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         }
 
 
-        if (reconfigure)
+        if (reconfigure) {
                 dev_remove_pack(data->eth_vlan_packet_type);
+		/* Remove from list */
+		tmp_interface = 
+			create_vlan_interface_name(old_interface_name, 
+						   old_vlan_id);
+		mapping = inst_data_get(tmp_interface);
+		if (mapping) {
+			list_del(&mapping->list);
+			rkfree(&mapping);
+		}
+		rkfree(tmp_interface);
+	}
 
         data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
         data->eth_vlan_packet_type->func = eth_vlan_rcv;
@@ -666,6 +704,15 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                                            info->vlan_id);
         if (!complete_interface)
                 return -1;
+
+	/* Store in list for retrieval later on */
+	mapping = rkmalloc(sizeof(*mapping), GFP_KERNEL);
+	if (!mapping)
+		return -1;
+	mapping->complete_interface = complete_interface;
+	mapping->data = data;
+	INIT_LIST_HEAD(&mapping->list);
+	list_add(&mapping->list, &data_instances_list);
 
         /* Add the handler */
         read_lock(&dev_base_lock);
