@@ -460,8 +460,6 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
 static int eth_vlan_application_register(struct ipcp_instance_data * data,
                                          const struct name *         name)
 {
-
-
         ASSERT(data);
         ASSERT(name);
 

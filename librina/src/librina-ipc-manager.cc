@@ -489,8 +489,6 @@ IPCProcess * IPCProcessFactory::create(
 		const ApplicationProcessNamingInformation& ipcProcessName,
 		const std::string& difType,
 		const std::string& installationPath) throw (CreateIPCProcessException) {
-	LOG_DBG("IPCProcessFactory::create called");
-
 	lock();
 	int ipcProcessId = 1;
 	pid_t pid=0;
@@ -565,7 +563,6 @@ IPCProcess * IPCProcessFactory::create(
 
 void IPCProcessFactory::destroy(unsigned int ipcProcessId)
 throw (DestroyIPCProcessException) {
-	LOG_DBG("IPCProcessFactory::destroy called");
 	lock();
 
 	std::map<int, IPCProcess*>::iterator iterator;
@@ -604,7 +601,6 @@ throw (DestroyIPCProcessException) {
 }
 
 std::vector<IPCProcess *> IPCProcessFactory::listIPCProcesses() {
-	LOG_DBG("IPCProcessFactory::list IPC Processes called");
 	std::vector<IPCProcess *> response;
 
 	lock();
@@ -615,6 +611,21 @@ std::vector<IPCProcess *> IPCProcessFactory::listIPCProcesses() {
 	unlock();
 
 	return response;
+}
+
+IPCProcess * IPCProcessFactory::getIPCProcess(unsigned int ipcProcessId)
+        throw (GetIPCProcessException)
+{
+        std::map<int, IPCProcess*>::iterator iterator;
+
+        lock();
+        iterator = ipcProcesses.find(ipcProcessId);
+        unlock();
+
+        if (iterator == ipcProcesses.end())
+                throw GetIPCProcessException();
+
+        return iterator->second;
 }
 
 Singleton<IPCProcessFactory> ipcProcessFactory;

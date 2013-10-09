@@ -22,6 +22,7 @@ import eu.irati.librina.OSProcessFinalizedEvent;
 import eu.irati.librina.rina;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
@@ -105,8 +106,8 @@ public class IPCManager {
 		RINAConfiguration.setConfiguration(rinaConfiguration);
 		
 		//Start thread that will look for config file changes
-		/*Runnable configFileChangeRunnable = new Runnable(){
-			private long currentLastModified = 0;
+		Runnable configFileChangeRunnable = new Runnable(){
+			private long currentLastModified = System.currentTimeMillis();
 			private RINAConfiguration rinaConfiguration = null;
 
 			public void run(){
@@ -129,7 +130,7 @@ public class IPCManager {
 
 		};
 
-		executorService.execute(configFileChangeRunnable);*/
+		executorService.execute(configFileChangeRunnable);
 	}
 	
 	private RINAConfiguration readConfigurationFile(){
@@ -177,23 +178,8 @@ public class IPCManager {
 			}
 			
 			if (ipcProcessToCreate.getDifName() != null){
-				DIFInformation difInformation = new DIFInformation();
-				ApplicationProcessNamingInformation difName = 
-						new ApplicationProcessNamingInformation();
-				difName.setProcessName(ipcProcessToCreate.getDifName());
-				difInformation.setDifName(difName);
-				difInformation.setDifType(ipcProcess.getType());
-				
-				DIFProperties difProperties = configuration.getDIFConfiguration(ipcProcessToCreate.getDifName());
-				if (difProperties != null && difProperties.getConfigParameters() != null){
-					for(int j=0; j<difProperties.getConfigParameters().size(); j++){
-						difInformation.getDifConfiguration().addParameter(
-								difProperties.getConfigParameters().get(j));
-					}
-				}
-				
 				try{
-					ipcProcess.assignToDIF(difInformation);
+					assignToDIF(ipcProcess, ipcProcessToCreate.getDifName());
 				}catch(AssignToDIFException ex){
 					log.error(ex.getMessage() + ". Problems assigning IPC Process to DIF " 
 							+ ipcProcessToCreate.getDifName());
@@ -335,6 +321,39 @@ public class IPCManager {
 		
 		//Destroy the IPC Process
 		this.ipcProcessFactory.destroy(ipcProcessId);
+	}
+	
+	/**
+	 * Assigns the IPC Process identified by ipcProcessID to the DIF called 'difName'
+	 * The DIF configuration must be available in the IPC Manager configuration file, 
+	 * otherwise this operation will return an error
+	 * @param ipcProcessID
+	 * @param difName
+	 * @throws Exception
+	 */
+	public void assignToDIF(long ipcProcessID, String difName) throws Exception{
+		IPCProcess ipcProcess = this.ipcProcessFactory.getIPCProcess(ipcProcessID);
+		assignToDIF(ipcProcess, difName);
+	}
+	
+	private void assignToDIF(IPCProcess ipcProcess, String difName) throws AssignToDIFException{
+		DIFInformation difInformation = new DIFInformation();
+		ApplicationProcessNamingInformation difNamingInfo = 
+				new ApplicationProcessNamingInformation();
+		difNamingInfo.setProcessName(difName);
+		difInformation.setDifName(difNamingInfo);
+		difInformation.setDifType(ipcProcess.getType());
+		
+		DIFProperties difProperties = 
+				RINAConfiguration.getInstance().getDIFConfiguration(difName);
+		if (difProperties != null && difProperties.getConfigParameters() != null){
+			for(int j=0; j<difProperties.getConfigParameters().size(); j++){
+				difInformation.getDifConfiguration().addParameter(
+						difProperties.getConfigParameters().get(j));
+			}
+		}
+		
+		ipcProcess.assignToDIF(difInformation);
 	}
 
 }
