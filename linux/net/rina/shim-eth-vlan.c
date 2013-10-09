@@ -659,13 +659,6 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         return 0;
 };
 
-/*
- * FIXME: Reconfiguration is not allowed through this operation
- *        If the IPC Process is already assigned to a shim DIF, this
- *        method must return an error. Reconfiguration must be achieved
- *        through update-dif-configuration (which doesn't allow changing
- *        the DIF to which this IPC Process is assigned)
- */
 static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                                   const struct dif_info *     dif_information)
 {
