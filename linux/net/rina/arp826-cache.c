@@ -39,6 +39,42 @@
 #include "utils.h"
 /* FIXME: End of dependencies ... */
 
+struct gpa {
+        uint8_t * address;
+        size_t    length;
+};
+
+struct gpa * gpa_create(const uint8_t * address, size_t length)
+{
+        struct gpa * tmp;
+
+        if (!address || !length)
+                return NULL;
+
+        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->length  = length;
+        tmp->address = rkmalloc(tmp->length, GFP_KERNEL);
+        if (!tmp->address) {
+                rkfree(tmp);
+                return NULL;
+        }
+        memcpy(tmp->address, address, length);
+
+        return tmp;
+}
+
+void gpa_destroy(struct gpa * gpa)
+{
+        ASSERT(gpa);
+        ASSERT(gpa->address);
+
+        rkfree(gpa->address);
+        rkfree(gpa);
+}
+
 struct cache_entry {
         size_t           pal; /* FIXME: To be removed */
 
