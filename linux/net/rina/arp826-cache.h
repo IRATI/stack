@@ -21,6 +21,15 @@
 #ifndef ARP_826_CACHE_H
 #define ARP_826_CACHE_H
 
+struct gpa;
+
+struct gpa * gpa_create(const uint8_t * address,
+                        size_t          length);
+void         gpa_destroy(struct gpa * gpa);
+struct gpa * gpa_dup(const struct gpa * gpa);
+bool         gpa_is_equal(const struct gpa * a,
+                          const struct gpa * b);
+
 struct cache_line;
 
 struct cache_line * cl_create(void);

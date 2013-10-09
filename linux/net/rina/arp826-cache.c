@@ -44,12 +44,13 @@ struct gpa {
         size_t    length;
 };
 
-struct gpa * gpa_create(const uint8_t * address, size_t length)
+struct gpa * gpa_create(const uint8_t * address,
+                        size_t          length)
 {
         struct gpa * tmp;
 
-        if (!address || !length)
-                return NULL;
+        ASSERT(address);
+        ASSERT(length);
 
         tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
@@ -73,6 +74,34 @@ void gpa_destroy(struct gpa * gpa)
 
         rkfree(gpa->address);
         rkfree(gpa);
+}
+
+struct gpa * gpa_dup(const struct gpa * gpa)
+{
+        struct gpa * tmp;
+
+        ASSERT(gpa);
+
+        tmp = gpa_create(gpa->address, gpa->length);
+
+        return tmp;
+}
+
+bool gpa_is_equal(const struct gpa * a, const struct gpa * b)
+{
+        ASSERT(a);
+        ASSERT(b);
+        ASSERT(a->length);
+        ASSERT(b->length);
+        ASSERT(a->address);
+        ASSERT(b->address);
+
+        if (a->length != b->length)
+                return 0;
+        ASSERT(a->length == b->length);
+        if (memcmp(a->address, b->address, a->length))
+                return 0;
+        return 1;
 }
 
 struct cache_entry {
@@ -247,7 +276,7 @@ void cl_destroy(struct cache_line * instance)
         }
 
         spin_unlock(&instance->lock);
-        
+
         rkfree(instance);
 }
 
