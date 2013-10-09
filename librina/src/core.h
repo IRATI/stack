@@ -31,6 +31,9 @@
 
 namespace rina {
 
+char * stringToCharArray(std::string s);
+char * intToCharArray(int i);
+
 /**
  * Contains the information to identify a RINA netlink endpoing:
  * netlink port ID and IPC Process id
@@ -38,15 +41,23 @@ namespace rina {
 class RINANetlinkEndpoint{
 	unsigned int netlinkPortId;
 	unsigned short ipcProcessId;
+	ApplicationProcessNamingInformation applicationProcessName;
 
 public:
 	RINANetlinkEndpoint();
 	RINANetlinkEndpoint(unsigned int netlinkPortId,
 			unsigned short ipcProcessId);
+	RINANetlinkEndpoint(unsigned int netlinkPortId,
+				unsigned short ipcProcessId,
+				const ApplicationProcessNamingInformation& appNamingInfo);
 	unsigned short getIpcProcessId() const;
 	void setIpcProcessId(unsigned short ipcProcessId);
 	unsigned int getNetlinkPortId() const;
 	void setNetlinkPortId(unsigned int netlinkPortId);
+	const ApplicationProcessNamingInformation&
+		getApplicationProcessName() const;
+	void setApplicationProcessName(
+		const ApplicationProcessNamingInformation& applicationProcessName);
 };
 
 /**
@@ -59,7 +70,7 @@ class NetlinkPortIdMap {
 	std::map<unsigned short, RINANetlinkEndpoint *> ipcProcessIdMappings;
 
 	/** Stores the mappings of application process name to netlink port id */
-	std::map<ApplicationProcessNamingInformation, RINANetlinkEndpoint *>
+	std::map<std::string, RINANetlinkEndpoint *>
 		applicationNameMappings;
 
 public:
@@ -82,6 +93,15 @@ public:
 	 */
 	void updateMessageOrPortIdMap(BaseNetlinkMessage* message, bool send)
 		throw(NetlinkException);
+
+	/**
+	 * An OS Process has finalized. Retrieve the information associated to
+	 * the NL port-id (application name, IPC Process id if it is IPC process),
+	 * and return it in the form of an OSProcessFinalized event
+	 * @param nl_portid
+	 * @return
+	 */
+	IPCEvent * osProcessFinalized(unsigned int nl_portid);
 };
 
 /**
@@ -197,6 +217,15 @@ public:
 	 * Notify about the reception of a Netlink notificaiton message
 	 */
 	void netlinkNotificationMessageArrived(BaseNetlinkMessage * notification);
+
+	/**
+	 * An OS Process has finalized. Retrieve the information associated to
+	 * the NL port-id (application name, IPC Process id if it is IPC process),
+	 * and return it in the form of an OSProcessFinalized event
+	 * @param nl_portid
+	 * @return
+	 */
+	IPCEvent * osProcessFinalized(unsigned int nl_portid);
 
 	BlockingFIFOQueue<IPCEvent>* getEventQueue();
 	NetlinkManager* getNetlinkManager();

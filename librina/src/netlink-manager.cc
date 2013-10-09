@@ -142,7 +142,9 @@ void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
 	}
 
 	int flags = 0;
-	if (message->isRequestMessage()){
+	//FIXME, apparently messages directed to the kernel without the
+	//NLM_F_REQUEST flag set don't reach its destination
+	if (message->isRequestMessage() || message->getDestPortId() == 0){
 		flags = NLM_F_REQUEST;
 	}
 

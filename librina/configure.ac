@@ -150,8 +150,6 @@ AC_CONFIG_FILES([
     wrap/Makefile
     wrap/java/Makefile
 
-    apps/Makefile
-
     test/Makefile
 
     doc/Makefile

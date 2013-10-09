@@ -19,6 +19,7 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <sstream>
 #include <unistd.h>
 
 #define RINA_PREFIX "core"
@@ -27,6 +28,19 @@
 #include "core.h"
 
 namespace rina {
+
+char * stringToCharArray(std::string s){
+	char * result = new char[s.size()+1];
+	result[s.size()]=0;
+	memcpy(result, s.c_str(), s.size());
+	return result;
+}
+
+char * intToCharArray(int i){
+	std::stringstream strs;
+	strs << i;
+	return stringToCharArray(strs.str());
+}
 
 /* CLASS RINA NETLINK ENDPOINT */
 RINANetlinkEndpoint::RINANetlinkEndpoint(){
@@ -38,6 +52,15 @@ RINANetlinkEndpoint::RINANetlinkEndpoint(
 		unsigned int netlinkPortId, unsigned short ipcProcessId){
 	this->netlinkPortId = netlinkPortId;
 	this->ipcProcessId = ipcProcessId;
+}
+
+RINANetlinkEndpoint::RINANetlinkEndpoint(
+		unsigned int netlinkPortId,
+				unsigned short ipcProcessId,
+				const ApplicationProcessNamingInformation& appNamingInfo){
+	this->netlinkPortId = netlinkPortId;
+	this->ipcProcessId = ipcProcessId;
+	this->applicationProcessName = appNamingInfo;
 }
 
 unsigned short RINANetlinkEndpoint::getIpcProcessId() const {
@@ -54,6 +77,16 @@ unsigned int RINANetlinkEndpoint::getNetlinkPortId() const {
 
 void RINANetlinkEndpoint::setNetlinkPortId(unsigned int netlinkPortId) {
 	this->netlinkPortId = netlinkPortId;
+}
+
+const ApplicationProcessNamingInformation&
+RINANetlinkEndpoint::getApplicationProcessName() const {
+	return applicationProcessName;
+}
+
+void RINANetlinkEndpoint::setApplicationProcessName(
+		const ApplicationProcessNamingInformation& applicationProcessName) {
+	this->applicationProcessName = applicationProcessName;
 }
 
 /* CLASS NETLINK PORT ID MAP */
@@ -87,20 +120,21 @@ RINANetlinkEndpoint * NetlinkPortIdMap::getNetlinkPortIdFromIPCProcessId(
 void NetlinkPortIdMap::putAPNametoNetlinkPortIdMapping(
 		ApplicationProcessNamingInformation apName,
 		unsigned int netlinkPortId, unsigned short ipcProcessId){
-	RINANetlinkEndpoint * current = applicationNameMappings[apName];
+	RINANetlinkEndpoint * current =
+			applicationNameMappings[apName.getProcessNamePlusInstance()];
 	if(current != 0){
 		current->setIpcProcessId(ipcProcessId);
 		current->setNetlinkPortId(netlinkPortId);
 	}else{
-		applicationNameMappings[apName]  =
-				new RINANetlinkEndpoint(netlinkPortId, ipcProcessId);
+		applicationNameMappings[apName.getProcessNamePlusInstance()]  =
+			new RINANetlinkEndpoint(netlinkPortId, ipcProcessId, apName);
 	}
 }
 
 RINANetlinkEndpoint * NetlinkPortIdMap::getNetlinkPortIdFromAPName(
 		ApplicationProcessNamingInformation apName) throw(NetlinkException) {
-	std::map<ApplicationProcessNamingInformation, RINANetlinkEndpoint *>
-	::iterator it = applicationNameMappings.find(apName);
+	std::map<std::string, RINANetlinkEndpoint *>::iterator it =
+			applicationNameMappings.find(apName.getProcessNamePlusInstance());
 	if (it == applicationNameMappings.end()){
 		LOG_ERR("Could not find the netlink endpoint of Application %s",
 				apName.toString().c_str());
@@ -313,6 +347,52 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 	}
 }
 
+/**
+ * An OS Process has finalized. Retrieve the information associated to
+ * the NL port-id (application name, IPC Process id if it is IPC process),
+ * and return it in the form of an OSProcessFinalized event
+ * @param nl_portid
+ * @return
+ */
+IPCEvent * NetlinkPortIdMap::osProcessFinalized(unsigned int nl_portid){
+	//1 Try to get application process name, if not there return 0
+	ApplicationProcessNamingInformation apNamingInfo;
+	std::map<std::string, RINANetlinkEndpoint*>::iterator iterator;
+	std::map<unsigned short, RINANetlinkEndpoint*>::iterator iterator2;
+	bool foundAppName = false;
+	unsigned short ipcProcessId = 0;
+
+	for(iterator = applicationNameMappings.begin();
+			iterator != applicationNameMappings.end();
+			++iterator){
+		if(iterator->second->getNetlinkPortId() == nl_portid){
+			apNamingInfo = iterator->second->getApplicationProcessName();
+			foundAppName = true;
+			applicationNameMappings.erase(iterator);
+			break;
+		}
+	}
+
+	if (!foundAppName){
+		return 0;
+	}
+
+	//2 Try to get IPC Process id
+	for(iterator2 = ipcProcessIdMappings.begin();
+			iterator2 != ipcProcessIdMappings.end();
+			++iterator2){
+		if (iterator2->second->getNetlinkPortId() == nl_portid){
+			ipcProcessId = iterator2->first;
+			ipcProcessIdMappings.erase(iterator2);
+			break;
+		}
+	}
+
+	OSProcessFinalizedEvent * event = new OSProcessFinalizedEvent(
+			apNamingInfo, ipcProcessId, 0);
+	return event;
+}
+
 /* CLASS PENDING NETLINK MESSAGE */
 PendingNetlinkMessage::PendingNetlinkMessage(unsigned int sequenceNumber) :
 				ConditionVariable() {
@@ -431,7 +511,19 @@ void * doNetlinkMessageReaderWork(void * arg) {
 				incomingMessage->toString().c_str());
 
 		//Process the message
-		if (incomingMessage->isResponseMessage()){
+		if (incomingMessage->getOperationCode() ==
+				RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION){
+			IpcmNLSocketClosedNotificationMessage * message =
+					dynamic_cast<IpcmNLSocketClosedNotificationMessage *>
+			(incomingMessage);
+			LOG_DBG("NL socket at port %d is closed", message->getPortId());
+
+			IPCEvent * event = myRINAManager->osProcessFinalized(message->getPortId());
+			if (event)
+				eventsQueue->put(event);
+
+			delete message;
+		}else if (incomingMessage->isResponseMessage()){
 			myRINAManager->netlinkResponseMessageArrived(incomingMessage);
 		}else{
 			NetlinkRequestOrNotificationMessage * message =
@@ -699,6 +791,14 @@ void RINAManager::netlinkNotificationMessageArrived(
 	}
 
 	sendReceiveLock.unlock();
+}
+
+IPCEvent * RINAManager::osProcessFinalized(unsigned int nl_portid){
+	IPCEvent * event;
+	sendReceiveLock.lock();
+	event = netlinkPortIdMap.osProcessFinalized(nl_portid);
+	sendReceiveLock.unlock();
+	return event;
 }
 
 BlockingFIFOQueue<IPCEvent>* RINAManager::getEventQueue(){

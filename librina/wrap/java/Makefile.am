@@ -42,17 +42,14 @@ librina.jar: librina-java-classes
 
 CLEANFILES += librina.jar
 
-javadir = $(datarootdir)/java
-
-java_DATA = librina.jar
+pkgdata_DATA = librina.jar
 
 clean-local:
 	rm -r -f eu/irati/librina
 
 librina_java.cc: wrap.stamp
 
-librina_java_la_SOURCES  =			\
-        librina_java.cc
+librina_java_la_SOURCES  = librina_java.cc
 librina_java_la_LDFLAGS  = -module
 librina_java_la_LIBADD   = $(top_builddir)/src/librina.la
 librina_java_la_CPPFLAGS = -I$(top_srcdir)/include -I$(JNI_CPPFLAGS)
@@ -60,7 +57,7 @@ librina_java_la_CPPFLAGS = -I$(top_srcdir)/include -I$(JNI_CPPFLAGS)
 lib_LTLIBRARIES = librina_java.la
 
 if BUILD_MAVEN_SUPPORT
-install-data-local-maven:
+install-data-local-maven: librina.jar
 	$(MVN) install:install-file					\
 		-Dfile=librina.jar					\
 		-DgroupId=eu.irati					\

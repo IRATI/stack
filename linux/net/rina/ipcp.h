@@ -25,6 +25,7 @@
 #include <linux/kobject.h>
 
 #include "du.h"
+#include "fidm.h"
 
 enum ipcp_config_type {
         IPCP_CONFIG_UINT   = 1,
@@ -37,42 +38,64 @@ struct ipcp_config_value {
 };
 
 struct ipcp_config_entry {
-        char *                     name;
-        struct ipcp_config_value * value;
+        string_t * name;
+        string_t * value;
 };
 
-struct ipcp_config { 
-	struct list_head           list;
-	struct ipcp_config_entry * entry;
+struct ipcp_config {
+        struct list_head           next;
+        struct ipcp_config_entry * entry;
 };
 
-/* Pre-declared, the shim should define it properly */
+/* Represents the information about a DIF (name, type, configuration) */
+struct dif_info {
+        /* The DIF type. Can be 'NORMAL' or one of the shims */
+        string_t *          type;
+
+        /* The DIF Distributed Application Name (DAN) */
+        struct name *       dif_name;
+
+        /* The DIF configuration (policies, parameters, etc) */
+        struct dif_config * configuration;
+};
+
+/* Represents a DIF configuration (policies, parameters, etc) */
+struct dif_config {
+
+        /* List of configuration entries */
+        struct list_head ipcp_config_entries;
+};
+
+/* Pre-declared, the implementation should define it properly */
 struct ipcp_instance_data;
 
 struct ipcp_instance_ops {
-	int  (* flow_allocate_request)(struct ipcp_instance_data * data,
+        int  (* flow_allocate_request)(struct ipcp_instance_data * data,
                                        const struct name *         source,
                                        const struct name *         dest,
                                        const struct flow_spec *    flow_spec,
                                        port_id_t                   id,
-                                       uint_t			   seq_num);
-	int  (* flow_allocate_response)(struct ipcp_instance_data * data,
-                                        port_id_t                   id,
-                                        uint_t			    seq_num,
-                                        response_reason_t *         response);
-	int  (* flow_deallocate)(struct ipcp_instance_data * data,
+                                       flow_id_t                   fid);
+        int  (* flow_allocate_response)(struct ipcp_instance_data * data,
+                                        flow_id_t                   flow_id,
+                                        port_id_t                   port_id,
+                                        int                         result);
+        int  (* flow_deallocate)(struct ipcp_instance_data * data,
                                  port_id_t                   id);
 
-	int  (* application_register)(struct ipcp_instance_data *   data,
+        int  (* application_register)(struct ipcp_instance_data *   data,
                                       const struct name *           source);
-	int  (* application_unregister)(struct ipcp_instance_data * data,
+        int  (* application_unregister)(struct ipcp_instance_data * data,
                                         const struct name *         source);
 
-	int  (* assign_to_dif)(struct ipcp_instance_data * data,
-                               const struct name * 	   dif_name);
+        int  (* assign_to_dif)(struct ipcp_instance_data * data,
+                               const struct dif_info *     information);
+
+        int  (* update_dif_config)(struct ipcp_instance_data * data,
+                                   const struct dif_config *   configuration);
 
         /* Takes the ownership of the passed SDU */
-	int  (* sdu_write)(struct ipcp_instance_data * data,
+        int  (* sdu_write)(struct ipcp_instance_data * data,
                            port_id_t                   id,
                            struct sdu *                sdu);
 };

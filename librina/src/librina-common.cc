@@ -190,6 +190,11 @@ void ApplicationProcessNamingInformation::setProcessName(
 	this->processName = processName;
 }
 
+std::string ApplicationProcessNamingInformation::
+getProcessNamePlusInstance(){
+	return processName + "-" + processInstance;
+}
+
 std::string ApplicationProcessNamingInformation::toString() {
 	return "Process name: " + processName + "; Process instance: "
 			+ processInstance + "; Entity name: " + entityName
@@ -678,6 +683,26 @@ ApplicationUnregistrationRequestEvent::getDIFName() const {
 	return DIFName;
 }
 
+/* CLASS OS PROCESS FINALIZED EVENT */
+OSProcessFinalizedEvent::OSProcessFinalizedEvent(
+		const ApplicationProcessNamingInformation& appName,
+		unsigned int ipcProcessId,
+		unsigned int sequenceNumber) :
+		IPCEvent(OS_PROCESS_FINALIZED,
+				sequenceNumber) {
+	this->applicationName = appName;
+	this->ipcProcessId = ipcProcessId;
+}
+
+const ApplicationProcessNamingInformation&
+OSProcessFinalizedEvent::getApplicationName() const {
+	return applicationName;
+}
+
+unsigned int OSProcessFinalizedEvent::getIPCProcessId() const {
+	return ipcProcessId;
+}
+
 
 /* CLASS IPC EVENT PRODUCER */
 
@@ -739,40 +764,108 @@ IPCException::IPCException(const std::string& description) :
 const std::string IPCException::operation_not_implemented_error =
 		"This operation is not yet implemented";
 
-/** CLASS DIF CONFIGURATION */
+/* CLASS POLICY */
+bool Policy::operator==(const Policy &other) const {
+	return false;
+}
 
-const ApplicationProcessNamingInformation& DIFConfiguration::getDifName()
+bool Policy::operator!=(const Policy &other) const {
+	return !(*this == other);
+}
+
+/* CLASS PARAMETER */
+Parameter::Parameter(){
+}
+
+Parameter::Parameter(const std::string & name, const std::string & value){
+	this->name = name;
+	this->value = value;
+}
+
+bool Parameter::operator==(const Parameter &other) const {
+	if (this->name.compare(other.getName()) == 0 &&
+			this->value.compare(other.getValue()) == 0)
+		return true;
+
+	return false;
+}
+
+bool Parameter::operator!=(const Parameter &other) const {
+	return !(*this == other);
+}
+
+const std::string& Parameter::getName() const {
+	return name;
+}
+
+void Parameter::setName(const std::string& name) {
+	this->name = name;
+}
+
+const std::string& Parameter::getValue() const {
+	return value;
+}
+
+void Parameter::setValue(const std::string& value) {
+	this->value = value;
+}
+
+/* CLASS DIF INFORMATION */
+const ApplicationProcessNamingInformation& DIFInformation::getDifName()
 		const {
 	return difName;
 }
 
-void DIFConfiguration::setDifName(
+void DIFInformation::setDifName(
 		const ApplicationProcessNamingInformation& difName) {
 	this->difName = difName;
 }
 
-const std::string& DIFConfiguration::getDifType() const {
+const std::string& DIFInformation::getDifType() const {
 	return difType;
 }
 
-void DIFConfiguration::setDifType(const std::string& difType) {
+void DIFInformation::setDifType(const std::string& difType) {
 	this->difType = difType;
 }
 
-const std::vector<Policy>& DIFConfiguration::getPolicies() {
+const DIFConfiguration& DIFInformation::getDifConfiguration()
+		const {
+	return difConfiguration;
+}
+
+void DIFInformation::setDifConfiguration(
+		const DIFConfiguration& difConfiguration) {
+	this->difConfiguration = difConfiguration;
+}
+
+/* CLASS DIF CONFIGURATION */
+const std::list<Policy>& DIFConfiguration::getPolicies() {
 	return policies;
 }
 
-void DIFConfiguration::setPolicies(const std::vector<Policy>& policies) {
+void DIFConfiguration::setPolicies(const std::list<Policy>& policies) {
 	this->policies = policies;
 }
 
-const std::vector<QoSCube>& DIFConfiguration::getQosCubes() const {
+const std::list<QoSCube>& DIFConfiguration::getQosCubes() const {
 	return qosCubes;
 }
 
-void DIFConfiguration::setQosCubes(const std::vector<QoSCube>& qosCubes) {
+void DIFConfiguration::setQosCubes(const std::list<QoSCube>& qosCubes) {
 	this->qosCubes = qosCubes;
+}
+
+const std::list<Parameter>& DIFConfiguration::getParameters() const {
+	return parameters;
+}
+
+void DIFConfiguration::setParameters(const std::list<Parameter>& parameters) {
+	this->parameters = parameters;
+}
+
+void DIFConfiguration::addParameter(const Parameter& parameter){
+	parameters.push_back(parameter);
 }
 
 /* CLAS RIBOBJECT */

@@ -7,19 +7,21 @@ import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.AssignToDIFException;
 import eu.irati.librina.CreateIPCProcessException;
 import eu.irati.librina.DIFConfiguration;
+import eu.irati.librina.DIFInformation;
 import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCEvent;
 import eu.irati.librina.IPCEventProducerSingleton;
 import eu.irati.librina.IPCEventType;
+import eu.irati.librina.IPCManagerInitializationException;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IPCProcessPointerVector;
+import eu.irati.librina.OSProcessFinalizedEvent;
 import eu.irati.librina.rina;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
@@ -31,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import rina.ipcmanager.impl.conf.DIFProperties;
 import rina.ipcmanager.impl.conf.IPCProcessToCreate;
 import rina.ipcmanager.impl.conf.RINAConfiguration;
 import rina.ipcmanager.impl.console.IPCManagerConsole;
@@ -77,8 +80,13 @@ public class IPCManager {
 		executorService = Executors.newCachedThreadPool();
 		console = new IPCManagerConsole(this);
 		executorService.execute(console);
-		log.info("Initializing librina...");
-		rina.initialize(1);
+		log.info("Initializing librina-ipcmanager...");
+		try{
+			rina.initializeIPCManager(1);
+		}catch(IPCManagerInitializationException ex){
+			log.fatal("Error initializing IPC Manager: "+ex.getMessage() 
+					+ ". Exiting.");
+		}
 		ipcProcessFactory = rina.getIpcProcessFactory();
 		applicationManager = rina.getApplicationManager();
 		ipcEventProducer = rina.getIpcEventProducer();
@@ -160,7 +168,7 @@ public class IPCManager {
 			processNamingInfo.setProcessInstance(ipcProcessToCreate.getApplicationProcessInstance());
 			
 			try{
-				ipcProcess = ipcProcessFactory.create(processNamingInfo, 
+				ipcProcess = createIPCProcess(processNamingInfo, 
 						ipcProcessToCreate.getType());
 			}catch(CreateIPCProcessException ex){
 				log.error(ex.getMessage() + ". Problems creating IPC Process " 
@@ -169,14 +177,23 @@ public class IPCManager {
 			}
 			
 			if (ipcProcessToCreate.getDifName() != null){
-				DIFConfiguration difConfiguration = new DIFConfiguration();
+				DIFInformation difInformation = new DIFInformation();
 				ApplicationProcessNamingInformation difName = 
 						new ApplicationProcessNamingInformation();
 				difName.setProcessName(ipcProcessToCreate.getDifName());
-				difConfiguration.setDifName(difName);
-				difConfiguration.setDifType(ipcProcess.getType());
+				difInformation.setDifName(difName);
+				difInformation.setDifType(ipcProcess.getType());
+				
+				DIFProperties difProperties = configuration.getDIFConfiguration(ipcProcessToCreate.getDifName());
+				if (difProperties != null && difProperties.getConfigParameters() != null){
+					for(int j=0; j<difProperties.getConfigParameters().size(); j++){
+						difInformation.getDifConfiguration().addParameter(
+								difProperties.getConfigParameters().get(j));
+					}
+				}
+				
 				try{
-					ipcProcess.assignToDIF(difConfiguration);
+					ipcProcess.assignToDIF(difInformation);
 				}catch(AssignToDIFException ex){
 					log.error(ex.getMessage() + ". Problems assigning IPC Process to DIF " 
 							+ ipcProcessToCreate.getDifName());
@@ -222,6 +239,9 @@ public class IPCManager {
 	}
 	
 	private void processEvent(IPCEvent event) throws Exception{
+		log.info("Got event of type: "+event.getType() 
+				+ " and sequence number: "+event.getSequenceNumber());
+		
 		if (event.getType() == IPCEventType.APPLICATION_REGISTRATION_REQUEST_EVENT){
 			ApplicationRegistrationRequestEvent appRegReqEvent = (ApplicationRegistrationRequestEvent) event;
 			applicationRegistrationManager.registerApplication(appRegReqEvent);
@@ -243,19 +263,40 @@ public class IPCManager {
 			flowManager.flowDeallocated(flowDeEvent);
 		}else if (event.getType().equals(IPCEventType.GET_DIF_PROPERTIES)){
 			//TODO
+		}else if (event.getType().equals(IPCEventType.OS_PROCESS_FINALIZED)){
+			OSProcessFinalizedEvent osProcessFinalizedEvent = (OSProcessFinalizedEvent) event;
+			log.info("OS process finalized. Naming info: " 
+					+ osProcessFinalizedEvent.getApplicationName().toString());
+			
+			//Clean up all stuff related to the finalized process (registrations, flows)
+			applicationRegistrationManager.cleanApplicationRegistrations(
+					osProcessFinalizedEvent.getApplicationName());
+			flowManager.cleanFlows(osProcessFinalizedEvent.getApplicationName());
+			
+			if (osProcessFinalizedEvent.getIPCProcessId() != 0){
+				//TODO The process that crashed was an IPC Process in user space
+				//Should we destroy the state in the kernel? Or try to create another
+				//IPC Process in user space to bring it back?
+			}
 		}
 	}
 	
 	public String getIPCProcessesInformationAsString(){
 		IPCProcessPointerVector ipcProcesses = ipcProcessFactory.listIPCProcesses();
 		IPCProcess ipcProcess = null;
+		DIFInformation difInformation = null;
 		String result = "";
 		
 		for(int i=0; i<ipcProcesses.size(); i++){
 			ipcProcess = ipcProcesses.get(i);
-			result = "Id: "+ ipcProcess.getId() + "\n";
-			result = "    Type: " + ipcProcess.getType() + "\n";
-			result = "    Name: " + ipcProcess.getName().toString() + "\n";
+			result = result + "Id: "+ ipcProcess.getId() + "\n";
+			result = result + "    Type: " + ipcProcess.getType() + "\n";
+			result = result + "    Name: " + ipcProcess.getName().toString() + "\n";
+			difInformation = ipcProcess.getDIFInformation();
+			if (difInformation != null){
+				result = result + "    Member of DIF: " + 
+						difInformation.getDifName().getProcessName() + "\n"; 
+			}
 		}
 		
 		return result;
@@ -270,6 +311,29 @@ public class IPCManager {
 		}
 		
 		return result;
+	}
+	
+	/**
+	 * Requests the creation of an IPC Process
+	 * @param name
+	 * @param type
+	 * @throws CreateIPCProcessException
+	 */
+	public IPCProcess createIPCProcess(ApplicationProcessNamingInformation name, 
+			String type) throws CreateIPCProcessException {
+		return ipcProcessFactory.create(name, type);
+	}
+	
+	/**
+	 * Destroys an IPC Process
+	 * @param ipcProcessId
+	 */
+	public void destroyIPCProcess(long ipcProcessId) throws Exception{
+		//TODO if the IPC Process exists, delete all flows that go through the IPC Process,
+		//and terminate all application registrations.
+		
+		//Destroy the IPC Process
+		this.ipcProcessFactory.destroy(ipcProcessId);
 	}
 
 }

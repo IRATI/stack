@@ -308,6 +308,9 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
+	case RINA_C_IPCM_IPC_MANAGER_PRESENT: {
+		return 0;
+	}
 
 	default: {
 		return -1;
@@ -425,6 +428,10 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCM_QUERY_RIB_RESPONSE: {
 		return parseIpcmDIFQueryRIBResponseMessage(netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION: {
+		return parseIpcmNLSocketClosedNotificationMessage(
+				netlinkMessageHeader);
 	}
 	default: {
 		LOG_ERR(
@@ -931,6 +938,104 @@ DIFProperties * parseDIFPropertiesObject(nlattr *nested){
 	}
 
 	return result;
+}
+
+int putParameterObject(nl_msg* netlinkMessage, const Parameter& object){
+	NLA_PUT_STRING(netlinkMessage, PARAM_ATTR_NAME,
+			object.getName().c_str());
+
+	NLA_PUT_STRING(netlinkMessage, PARAM_ATTR_VALUE,
+				object.getValue().c_str());
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building Parameter Netlink object");
+	return -1;
+}
+
+int putListOfParameters(
+		nl_msg* netlinkMessage, const std::list<Parameter>& parameters){
+	std::list<Parameter>::const_iterator iterator;
+	struct nlattr *parameter;
+	int i = 0;
+
+	for (iterator = parameters.begin();
+			iterator != parameters.end();
+			++iterator) {
+		if (!(parameter = nla_nest_start(netlinkMessage, i))){
+			goto nla_put_failure;
+		}
+		if (putParameterObject(netlinkMessage, *iterator) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, parameter);
+		i++;
+	}
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building List of Parameters Netlink object");
+	return -1;
+}
+
+Parameter * parseParameter(nlattr *nested){
+	struct nla_policy attr_policy[PARAM_ATTR_MAX + 1];
+	attr_policy[PARAM_ATTR_NAME].type = NLA_STRING;
+	attr_policy[PARAM_ATTR_NAME].minlen = 0;
+	attr_policy[PARAM_ATTR_NAME].maxlen = 65535;
+	attr_policy[PARAM_ATTR_VALUE].type = NLA_STRING;
+	attr_policy[PARAM_ATTR_VALUE].minlen = 0;
+	attr_policy[PARAM_ATTR_VALUE].maxlen = 65535;
+	struct nlattr *attrs[PARAM_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, PARAM_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing Parameter from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	Parameter * result = new Parameter();
+
+	if (attrs[PARAM_ATTR_NAME]){
+		result->setName(
+				nla_get_string(attrs[PARAM_ATTR_NAME]));
+	}
+
+	if (attrs[PARAM_ATTR_VALUE]){
+		result->setValue(
+				nla_get_string(attrs[PARAM_ATTR_VALUE]));
+	}
+
+	return result;
+}
+
+int parseListOfDIFConfigurationParameters(nlattr *nested,
+		DIFConfiguration * difConfiguration){
+	nlattr * nla;
+	int rem;
+	Parameter * parameter;
+
+	for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+		     nla_ok(nla, rem);
+		     nla = nla_next(nla, &(rem))){
+		/* validate & parse attribute */
+		parameter = parseParameter(nla);
+		if (parameter == 0){
+			return -1;
+		}
+		difConfiguration->addParameter(*parameter);
+		delete parameter;
+	}
+
+	if (rem > 0){
+		LOG_WARN("Missing bits to parse");
+	}
+
+	return 0;
 }
 
 int putApplicationRegistrationInformationObject(nl_msg* netlinkMessage,
@@ -1534,19 +1639,16 @@ int putIpcmUnregisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 
 int putDIFConfigurationObject(nl_msg* netlinkMessage,
 		const DIFConfiguration& object){
-	struct nlattr *difName;
+	struct nlattr *parameters;
 
-	NLA_PUT_STRING(netlinkMessage, DCONF_ATTR_DIF_TYPE,
-			object.getDifType().c_str());
-
-	if (!(difName = nla_nest_start(netlinkMessage, DCONF_ATTR_DIF_NAME))) {
+	if (!(parameters = nla_nest_start(netlinkMessage, DCONF_ATTR_PARAMETERS))) {
 		goto nla_put_failure;
 	}
-	if (putApplicationProcessNamingInformationObject(netlinkMessage,
-			object.getDifName()) < 0) {
+	if (putListOfParameters(netlinkMessage,
+			object.getParameters()) < 0) {
 		goto nla_put_failure;
 	}
-	nla_nest_end(netlinkMessage, difName);
+	nla_nest_end(netlinkMessage, parameters);
 
 	return 0;
 
@@ -1555,21 +1657,53 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
+int putDIFInformationObject(nl_msg* netlinkMessage,
+		const DIFInformation& object){
+	struct nlattr *difName, *configuration;
+
+	NLA_PUT_STRING(netlinkMessage, DINFO_ATTR_DIF_TYPE,
+			object.getDifType().c_str());
+
+	if (!(difName = nla_nest_start(netlinkMessage, DINFO_ATTR_DIF_NAME))) {
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.getDifName()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, difName);
+
+	if (!(configuration = nla_nest_start(netlinkMessage, DINFO_ATTR_DIF_CONFIG))) {
+		goto nla_put_failure;
+	}
+	if (putDIFConfigurationObject(netlinkMessage,
+			object.getDifConfiguration()) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, configuration);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building DIFInformation Netlink object");
+	return -1;
+}
+
 int putIpcmAssignToDIFRequestMessageObject(nl_msg* netlinkMessage,
 		const IpcmAssignToDIFRequestMessage& object){
-	struct nlattr *difConfiguration;
+	struct nlattr *difInformation;
 
-	if (!(difConfiguration =
-			nla_nest_start(netlinkMessage, IATDR_ATTR_DIF_CONFIGURATION))) {
+	if (!(difInformation =
+			nla_nest_start(netlinkMessage, IATDR_ATTR_DIF_INFORMATION))) {
 		goto nla_put_failure;
 	}
 
-	if (putDIFConfigurationObject(
-			netlinkMessage, object.getDIFConfiguration()) < 0) {
+	if (putDIFInformationObject(
+			netlinkMessage, object.getDIFInformation()) < 0) {
 		goto nla_put_failure;
 	}
 
-	nla_nest_end(netlinkMessage, difConfiguration);
+	nla_nest_end(netlinkMessage, difInformation);
 
 	return 0;
 
@@ -2943,12 +3077,9 @@ parseIpcmUnregisterApplicationResponseMessage(nlmsghdr *hdr) {
 
 DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	struct nla_policy attr_policy[DCONF_ATTR_MAX + 1];
-	attr_policy[DCONF_ATTR_DIF_TYPE].type = NLA_STRING;
-	attr_policy[DCONF_ATTR_DIF_TYPE].minlen = 0;
-	attr_policy[DCONF_ATTR_DIF_TYPE].maxlen = 65535;
-	attr_policy[DCONF_ATTR_DIF_NAME].type = NLA_NESTED;
-	attr_policy[DCONF_ATTR_DIF_NAME].minlen = 0;
-	attr_policy[DCONF_ATTR_DIF_NAME].maxlen = 0;
+	attr_policy[DCONF_ATTR_PARAMETERS].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_PARAMETERS].minlen = 0;
+	attr_policy[DCONF_ATTR_PARAMETERS].maxlen = 0;
 	struct nlattr *attrs[DCONF_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, DCONF_ATTR_MAX, nested, attr_policy);
@@ -2960,16 +3091,53 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	}
 
 	DIFConfiguration * result = new DIFConfiguration();
-	ApplicationProcessNamingInformation * difName;
 
-	if (attrs[DCONF_ATTR_DIF_TYPE]) {
-		result->setDifType(
-				nla_get_string(attrs[DCONF_ATTR_DIF_TYPE]));
+	int status = 0;
+	if (attrs[DCONF_ATTR_PARAMETERS]) {
+		status = parseListOfDIFConfigurationParameters(
+				attrs[DCONF_ATTR_PARAMETERS], result);
+		if (status != 0){
+			delete result;
+			return 0;
+		}
 	}
 
-	if (attrs[DCONF_ATTR_DIF_NAME]) {
+	return result;
+}
+
+DIFInformation * parseDIFInformationObject(nlattr *nested){
+	struct nla_policy attr_policy[DINFO_ATTR_MAX + 1];
+	attr_policy[DINFO_ATTR_DIF_TYPE].type = NLA_STRING;
+	attr_policy[DINFO_ATTR_DIF_TYPE].minlen = 0;
+	attr_policy[DINFO_ATTR_DIF_TYPE].maxlen = 65535;
+	attr_policy[DINFO_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[DINFO_ATTR_DIF_NAME].minlen = 0;
+	attr_policy[DINFO_ATTR_DIF_NAME].maxlen = 0;
+	attr_policy[DINFO_ATTR_DIF_CONFIG].type = NLA_NESTED;
+	attr_policy[DINFO_ATTR_DIF_CONFIG].minlen = 0;
+	attr_policy[DINFO_ATTR_DIF_CONFIG].maxlen = 0;
+	struct nlattr *attrs[DINFO_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, DINFO_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing DIFInformation information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	DIFInformation * result = new DIFInformation();
+	ApplicationProcessNamingInformation * difName;
+	DIFConfiguration * difConfiguration;
+
+	if (attrs[DINFO_ATTR_DIF_TYPE]) {
+		result->setDifType(
+				nla_get_string(attrs[DINFO_ATTR_DIF_TYPE]));
+	}
+
+	if (attrs[DINFO_ATTR_DIF_NAME]) {
 		difName = parseApplicationProcessNamingInformationObject(
-				attrs[DCONF_ATTR_DIF_NAME]);
+				attrs[DINFO_ATTR_DIF_NAME]);
 		if (difName == 0) {
 			delete result;
 			return 0;
@@ -2979,15 +3147,27 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 		}
 	}
 
+	if (attrs[DINFO_ATTR_DIF_CONFIG]) {
+		difConfiguration = parseDIFConfigurationObject(
+				attrs[DINFO_ATTR_DIF_CONFIG]);
+		if (difConfiguration == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->setDifConfiguration(*difConfiguration);
+			delete difConfiguration;
+		}
+	}
+
 	return result;
 }
 
 IpcmAssignToDIFRequestMessage *
 parseIpcmAssignToDIFRequestMessage(nlmsghdr *hdr){
 	struct nla_policy attr_policy[IATDR_ATTR_MAX + 1];
-	attr_policy[IATDR_ATTR_DIF_CONFIGURATION].type = NLA_NESTED;
-	attr_policy[IATDR_ATTR_DIF_CONFIGURATION].minlen = 0;
-	attr_policy[IATDR_ATTR_DIF_CONFIGURATION].maxlen = 0;
+	attr_policy[IATDR_ATTR_DIF_INFORMATION].type = NLA_NESTED;
+	attr_policy[IATDR_ATTR_DIF_INFORMATION].minlen = 0;
+	attr_policy[IATDR_ATTR_DIF_INFORMATION].maxlen = 0;
 	struct nlattr *attrs[IRARE_ATTR_MAX + 1];
 
 	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -3001,17 +3181,17 @@ parseIpcmAssignToDIFRequestMessage(nlmsghdr *hdr){
 
 	IpcmAssignToDIFRequestMessage * result =
 			new IpcmAssignToDIFRequestMessage();
-	DIFConfiguration * difConfiguration;
+	DIFInformation * difInformation;
 
-	if (attrs[IATDR_ATTR_DIF_CONFIGURATION]) {
-		difConfiguration = parseDIFConfigurationObject(
-				attrs[IATDR_ATTR_DIF_CONFIGURATION]);
-		if (difConfiguration == 0) {
+	if (attrs[IATDR_ATTR_DIF_INFORMATION]) {
+		difInformation = parseDIFInformationObject(
+				attrs[IATDR_ATTR_DIF_INFORMATION]);
+		if (difInformation == 0) {
 			delete result;
 			return 0;
 		} else {
-			result->setDIFConfiguration(*difConfiguration);
-			delete difConfiguration;
+			result->setDIFInformation(*difInformation);
+			delete difInformation;
 		}
 	}
 
@@ -3624,6 +3804,34 @@ IpcmDIFQueryRIBResponseMessage *
 			delete result;
 			return 0;
 		}
+	}
+
+	return result;
+}
+
+IpcmNLSocketClosedNotificationMessage *
+	parseIpcmNLSocketClosedNotificationMessage(nlmsghdr *hdr)
+{
+	struct nla_policy attr_policy[INSCN_ATTR_MAX + 1];
+	attr_policy[INSCN_ATTR_PORT].type = NLA_U32;
+	attr_policy[INSCN_ATTR_PORT].minlen = 4;
+	attr_policy[INSCN_ATTR_PORT].maxlen = 4;
+	struct nlattr *attrs[INSCN_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			INSCN_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing IpcmNLSocketClosedNotificationMessage information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	IpcmNLSocketClosedNotificationMessage * result =
+					new IpcmNLSocketClosedNotificationMessage ();
+
+	if (attrs[INSCN_ATTR_PORT]){
+		result->setPortId(nla_get_u32(attrs[INSCN_ATTR_PORT]));
 	}
 
 	return result;

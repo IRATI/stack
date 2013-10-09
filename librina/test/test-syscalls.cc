@@ -14,11 +14,36 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+
 #include <iostream>
+#include <dirent.h>
+#include <errno.h>
+#include <iostream>
+#include <signal.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sstream>
+#include <cstring>
+#include <stdio.h>
 
 #include "rina-syscalls.h"
 
 using namespace rina;
+
+
+char * stringToCharArray(std::string s){
+	char * result = new char[s.size()+1];
+	result[s.size()]=0;
+	memcpy(result, s.c_str(), s.size());
+	return result;
+}
+
+char * intToCharArray(int i){
+	std::stringstream strs;
+	strs << i;
+	return stringToCharArray(strs.str());
+}
 
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING RINA SYSCALLS\n";
@@ -51,5 +76,28 @@ int main(int argc, char * argv[]) {
 			<<result<<std::endl;
 
 	delete ipcProcessName;
+/*
+	char * args[] =
+	{
+			stringToCharArray("/usr/bin/java"),
+			stringToCharArray("-jar"),
+			stringToCharArray("/usr/local/rina/rinad/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar"),
+			stringToCharArray("test"),
+			stringToCharArray("1"),
+			intToCharArray(2),
+			(char*) 0
+	};
 
+	char * envp[] =
+	{
+			stringToCharArray("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"),
+			stringToCharArray("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/rina/lib"),
+			(char*) 0
+	};
+
+	execve(args[0], &args[0], envp);
+	perror ("execve");
+
+	std::cout<<"I shouldn't be here";
+	*/
 }

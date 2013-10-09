@@ -1,6 +1,10 @@
 package rina.ipcmanager.impl.helpers;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
@@ -14,7 +18,7 @@ import eu.irati.librina.ApplicationRegistrationInformation;
 import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.ApplicationRegistrationType;
 import eu.irati.librina.ApplicationUnregistrationRequestEvent;
-import eu.irati.librina.DIFConfiguration;
+import eu.irati.librina.DIFInformation;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IPCProcessPointerVector;
@@ -64,7 +68,7 @@ public class ApplicationRegistrationManager {
 								applicationRegistration);
 			}
 
-			applicationRegistration.getDIFNames().add(ipcProcess.getConfiguration().getDifName().getProcessName());
+			applicationRegistration.getDIFNames().add(ipcProcess.getDIFInformation().getDifName().getProcessName());
 		}catch(Exception ex){
 			log.error("Error registering application. "+ex.getMessage());
 			applicationManager.applicationRegistered(event, new ApplicationProcessNamingInformation(), 
@@ -72,8 +76,52 @@ public class ApplicationRegistrationManager {
 			return;
 		}
 		
-		applicationManager.applicationRegistered(event, ipcProcess.getConfiguration().getDifName(), 
+		applicationManager.applicationRegistered(event, ipcProcess.getDIFInformation().getDifName(), 
 				0);
+	}
+	
+	/**
+	 * Called when the IPC Manager is informed that the application identified by apName (process + instance) 
+	 * has terminated. We have to look for potential registrations of the application and cancel them
+	 * @param apName
+	 */
+	public synchronized void cleanApplicationRegistrations(ApplicationProcessNamingInformation apName){
+		Iterator<Entry<String, ApplicationRegistrationState>> iterator = 
+				applicationRegistrations.entrySet().iterator();
+		Entry<String, ApplicationRegistrationState> currentEntry = null;
+		ApplicationRegistrationState state = null;
+		List<Entry<String, ApplicationRegistrationState>> entriesToRemove = 
+				new ArrayList<Entry<String, ApplicationRegistrationState>>();
+		
+		while(iterator.hasNext()){
+			currentEntry = iterator.next();
+			if (currentEntry.getValue().getApplicationName().getProcessNamePlusInstance().equals(
+					apName.getProcessNamePlusInstance())){
+				entriesToRemove.add(currentEntry);
+			}
+		}
+		
+		log.info(entriesToRemove.size() + " application registrations are going to be canceled");
+		String difName = null;
+		IPCProcess ipcProcess = null;
+		for(int i=0; i<entriesToRemove.size(); i++){
+			currentEntry = entriesToRemove.get(i);
+			state = currentEntry.getValue();
+			applicationRegistrations.remove(currentEntry.getKey());
+			
+			for(int j=0; j<state.getDIFNames().size(); j++){
+				difName = state.getDIFNames().get(j);
+				try{
+					ipcProcess = selectIPCProcessOfDIF(difName);
+					ipcProcess.unregisterApplication(state.getApplicationName());
+				}catch(Exception ex){
+					log.error("Error unregistering application " + 
+							state.getApplicationName().toString() + " from DIF "+difName);
+				}
+				
+			}
+			
+		}
 	}
 	
 	/**
@@ -183,9 +231,9 @@ public class ApplicationRegistrationManager {
 		
 		for(int i=0; i<ipcProcesses.size(); i++){
 			ipcProcess = ipcProcesses.get(i);
-			DIFConfiguration difConfiguration = ipcProcess.getConfiguration();
-			if (difConfiguration != null && 
-					difConfiguration.getDifName().getProcessName().equals(difName)){
+			DIFInformation difInformation = ipcProcess.getDIFInformation();
+			if (difInformation != null && 
+					difInformation.getDifName().getProcessName().equals(difName)){
 				return ipcProcess;
 			}
 		}

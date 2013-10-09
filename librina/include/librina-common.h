@@ -104,6 +104,7 @@ public:
 	void setProcessInstance(const std::string& processInstance);
 	const std::string& getProcessName() const;
 	void setProcessName(const std::string& processName);
+	std::string getProcessNamePlusInstance();
     std::string toString();
 };
 
@@ -308,7 +309,8 @@ enum IPCEventType {
 	IPC_PROCESS_REGISTERED_TO_DIF,
 	IPC_PROCESS_UNREGISTERED_FROM_DIF,
 	IPC_PROCESS_QUERY_RIB,
-	GET_DIF_PROPERTIES
+	GET_DIF_PROPERTIES,
+	OS_PROCESS_FINALIZED
 };
 
 /**
@@ -497,6 +499,31 @@ public:
 };
 
 /**
+ * Event informing that an OS process (an application or an
+ * IPC Process daemon) has finalized
+ */
+class OSProcessFinalizedEvent: public IPCEvent {
+	/**
+	 * The naming information of the application that has
+	 * finalized
+	 */
+	ApplicationProcessNamingInformation applicationName;
+
+	/**
+	 * If this id is greater than 0, it means that the process
+	 * that finalized was an IPC Process Daemon. Otherwise it is an
+	 * application process.
+	 */
+	unsigned int ipcProcessId;
+
+public:
+	OSProcessFinalizedEvent(const ApplicationProcessNamingInformation& appName,
+			unsigned int ipcProcessId, unsigned int sequenceNumber);
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	unsigned int getIPCProcessId() const;
+};
+
+/**
  * Stores IPC Events that have happened, ready to be consumed and
  * processed by client classes.
  */
@@ -535,34 +562,74 @@ public:
  */
 class Policy {
 
+public:
+	bool operator==(const Policy &other) const;
+	bool operator!=(const Policy &other) const;
+};
+
+/**
+ * Represents a parameter that has a name and value
+ */
+class Parameter {
+	std::string name;
+	std::string value;
+
+public:
+	Parameter();
+	Parameter(const std::string & name, const std::string & value);
+	bool operator==(const Parameter &other) const;
+	bool operator!=(const Parameter &other) const;
+	const std::string& getName() const;
+	void setName(const std::string& name);
+	const std::string& getValue() const;
+	void setValue(const std::string& value);
 };
 
 /**
  * Contains the data about a DIF Configuration
+ * (QoS cubes, policies, parameters, etc)
  */
 class DIFConfiguration {
 
+	/** The QoS cubes supported by the DIF */
+	std::list<QoSCube> qosCubes;
+
+	/** The policies of the DIF */
+	std::list<Policy> policies;
+
+	/** Configuration parameters */
+	std::list<Parameter> parameters;
+
+public:
+	const std::list<Policy>& getPolicies();
+	void setPolicies(const std::list<Policy>& policies);
+	const std::list<QoSCube>& getQosCubes() const;
+	void setQosCubes(const std::list<QoSCube>& qosCubes);
+	const std::list<Parameter>& getParameters() const;
+	void setParameters(const std::list<Parameter>& parameters);
+	void addParameter(const Parameter& parameter);
+};
+
+/**
+ * Contains the information about a DIF (name, type, configuration)
+ */
+class DIFInformation{
 	/** The type of DIF */
 	std::string difType;
 
 	/** The name of the DIF */
 	ApplicationProcessNamingInformation difName;
 
-	/** The QoS cubes supported by the DIF */
-	std::vector<QoSCube> qosCubes;
-
-	/** The policies of the DIF */
-	std::vector<Policy> policies;
+	/** The DIF Configuration (qoscubes, policies, parameters, etc) */
+	DIFConfiguration difConfiguration;
 
 public:
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
 	const std::string& getDifType() const;
 	void setDifType(const std::string& difType);
-	const std::vector<Policy>& getPolicies();
-	void setPolicies(const std::vector<Policy>& policies);
-	const std::vector<QoSCube>& getQosCubes() const;
-	void setQosCubes(const std::vector<QoSCube>& qosCubes);
+	const DIFConfiguration& getDifConfiguration() const;
+	void setDifConfiguration(const DIFConfiguration& difConfiguration);
 };
 
 /**

@@ -3,6 +3,8 @@ package rina.ipcmanager.impl.conf;
 import java.util.ArrayList;
 import java.util.List;
 
+import eu.irati.librina.Parameter;
+
 import rina.efcp.api.DataTransferConstants;
 import rina.flowallocator.api.QoSCube;
 
@@ -62,6 +64,11 @@ public class DIFProperties {
 	 * The address prefixes, assigned to different organizations
 	 */
 	private List<AddressPrefixConfiguration> addressPrefixes = null;
+	
+	/**
+	 * Extra configuration parameters (name/value pairs)
+	 */
+	private List<Parameter> configParameters = null;
 
 	public NMinusOneFlowsConfiguration getnMinusOneFlowsConfiguration() {
 		return nMinusOneFlowsConfiguration;
@@ -157,5 +164,13 @@ public class DIFProperties {
 	}
 	public void setDifType(String difType) {
 		this.difType = difType;
+	}
+	
+	public List<Parameter> getConfigParameters() {
+		return configParameters;
+	}
+
+	public void setConfigParameters(List<Parameter> configParameters) {
+		this.configParameters = configParameters;
 	}
 }

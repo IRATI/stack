@@ -2,7 +2,6 @@
  * EFCP (Error and Flow Control Protocol)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,52 +21,53 @@
 #ifndef RINA_EFCP_H
 #define RINA_EFCP_H
 
-#include <linux/kobject.h>
-
 #include "common.h"
-//#include "kipcm.h"
-#include "dtp.h"
-#include "dtcp.h"
+#include "du.h"
+#include "qos.h"
 
-struct efcp_conf {
+typedef uint cep_id_t;
 
-        /* Length of the address fields of the PCI */
-        int address_length;
+struct connection {
+        port_id_t port_id;
 
-        /* Length of the port_id fields of the PCI */
-        int port_id_length;
+        address_t source_address;
+        address_t destination_address;
 
-        /* Length of the cep_id fields of the PCI */
-        int cep_id_length;
+        cep_id_t  source_cep_id;
+        cep_id_t  destination_cep_id;
 
-        /* Length of the qos_id field of the PCI */
-        int qos_id_length;
+        qos_id_t  qos_id;
 
-        /* Length of the length field of the PCI */
-        int length_length;
-
-        /* Length of the sequence number fields of the PCI */
-        int seq_number_length;
+        /* FIXME: Add the list of policies associated with this connection */
 };
+
+/* The container holding all the EFCP instances for an IPC Process */
+struct efcp_container;
+
+struct efcp_container * efcp_container_create(void);
+int                     efcp_container_destroy(struct efcp_container * c);
+
+/* FIXME: Should a cep_id_t be returned instead ? */
+int           efcp_connection_create(struct efcp_container *   container,
+                                     const struct connection * connection);
+
+int           efcp_connection_destroy(struct efcp_container * container,
+                                      cep_id_t                id);
+int           efcp_connection_update(struct efcp_container * container,
+                                     cep_id_t                from,
+                                     cep_id_t                to);
 
 struct efcp;
 
-struct efcp * efcp_init(struct kobject * parent);
-int           efcp_fini(struct efcp * instance);
+struct efcp * efcp_find(struct efcp_container * container,
+                        cep_id_t                id);
 
-int           efcp_create(struct efcp *             instance,
-                          const struct connection * connection,
-                          cep_id_t *                id);
-int           efcp_destroy(struct efcp *   instance,
-                           cep_id_t id);
-int           efcp_update(struct efcp * instance,
-                          cep_id_t      from,
-                          cep_id_t      to);
+/* NOTE: efcp_send() takes the ownership of the passed SDU */
+int           efcp_send(struct efcp * instance,
+                        port_id_t     id,
+                        struct sdu *  sdu);
 
-int           efcp_write(struct efcp *      instance,
-                         port_id_t          id,
-                         const struct sdu * sdu);
-int           efcp_receive_pdu(struct efcp * instance,
-                               struct pdu *  pdu);
+/* NOTE: efcp_receive() gives the ownership of the returned PDU */
+struct pdu *  efcp_receive(struct efcp * instance);
 
 #endif

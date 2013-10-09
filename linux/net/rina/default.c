@@ -25,21 +25,17 @@
 #include "logs.h"
 #include "utils.h"
 #include "personality.h"
-#include "netlink.h"
+#include "rnl.h"
 #include "kipcm.h"
-#include "efcp.h"
-#include "rmt.h"
+#include "kfa.h"
 #include "debug.h"
 
 #define DEFAULT_LABEL "default"
 
 struct personality_data {
-        struct kipcm *       kipcm;
-        struct rina_nl_set * nlset;
-
-        /* FIXME: Types to be rearranged */
-        void *               efcp;
-        void *               rmt;
+        struct kipcm *   kipcm;
+        struct rnl_set * nlset;
+        struct kfa *     kfa;
 };
 
 static int is_personality_ok(const struct personality_data * p)
@@ -48,11 +44,13 @@ static int is_personality_ok(const struct personality_data * p)
                 return 0;
         if (!p->kipcm)
                 return 0;
-        if (!p->efcp)
+        if (!p->nlset)
+                return 0;
+        if (!p->kfa)
                 return 0;
 
         return 1;
-} 
+}
 
 static int default_ipc_create(struct personality_data * data,
                               const struct name *       name,
@@ -64,17 +62,6 @@ static int default_ipc_create(struct personality_data * data,
         LOG_DBG("Calling wrapped function");
 
         return kipcm_ipcp_create(data->kipcm, name, id, type);
-}
-
-static int default_ipc_configure(struct personality_data *  data,
-                                 ipc_process_id_t           id,
-                                 const struct ipcp_config * configuration)
-{
-        if (!is_personality_ok(data)) return -1;
-
-        LOG_DBG("Calling wrapped function");
-
-        return kipcm_ipcp_configure(data->kipcm, id, configuration);
 }
 
 static int default_ipc_destroy(struct personality_data * data,
@@ -90,34 +77,40 @@ static int default_ipc_destroy(struct personality_data * data,
 static int default_connection_create(struct personality_data * data,
                                      const struct connection * connection)
 {
-        cep_id_t id; /* FIXME: Remains unused !!! */
+#if 0
+        cep_id_t id;
 
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
+#endif
 
-        return efcp_create(data->efcp, connection, &id);
+        return -1; /* efcp_create(data->efcp, connection, &id); */
 }
 
 static int default_connection_destroy(struct personality_data * data,
                                       cep_id_t                  id)
 {
+#if 0
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
+#endif
 
-        return efcp_destroy(data->efcp, id);
+        return -1; /* efcp_destroy(data->efcp, id); */
 }
 
 static int default_connection_update(struct personality_data * data,
                                      cep_id_t                  id_from,
                                      cep_id_t                  id_to)
 {
+#if 0
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
+#endif
 
-        return efcp_update(data->efcp, id_from, id_to);
+        return -1; /* efcp_update(data->efcp, id_from, id_to); */
 }
 
 static int default_sdu_write(struct personality_data * data,
@@ -155,20 +148,16 @@ static int default_fini(struct personality_data * data)
 
         LOG_DBG("Finalizing default personality");
 
-        if (tmp->rmt) {
-                err = rmt_fini(tmp->rmt);
-                if (err) return err;
-        }
-        if (tmp->efcp) {
-                err = efcp_fini(tmp->efcp);
-                if (err) return err;
-        }
         if (tmp->kipcm) {
-                err = kipcm_fini(tmp->kipcm);
+                err = kipcm_destroy(tmp->kipcm);
                 if (err) return err;
         }
         if (tmp->nlset) {
-                err = rina_netlink_set_destroy(tmp->nlset);
+                err = rnl_set_destroy(tmp->nlset);
+                if (err) return err;
+        }
+        if (tmp->kfa) {
+                err = kfa_destroy(tmp->kfa);
                 if (err) return err;
         }
 
@@ -193,8 +182,17 @@ static int default_init(struct kobject *          parent,
 
         LOG_DBG("Initializing default personality");
 
+        LOG_DBG("Initializing kfa component");
+        data->kfa = kfa_create();
+        if (!data->kfa) {
+                if (default_fini(data)) {
+                        LOG_CRIT("The system might become unstable ...");
+                        return -1;
+                }
+        }
+
         LOG_DBG("Initializing default Netlink component");
-        data->nlset = rina_netlink_set_create(id);
+        data->nlset = rnl_set_create(id);
         if (!data->nlset) {
                 if (default_fini(data)) {
                         LOG_CRIT("The system might become unstable ...");
@@ -202,8 +200,17 @@ static int default_init(struct kobject *          parent,
                 }
         }
 
+        LOG_DBG("Initializing default kfa component");
+        data->kfa = kfa_create();
+        if (!data->kfa) {
+                if (default_fini(data)) {
+                        LOG_CRIT("The system might become unstable ...");
+                        return -1;
+                }
+        }
+
         LOG_DBG("Initializing kipcm component");
-        data->kipcm = kipcm_init(parent, data->nlset);
+        data->kipcm = kipcm_create(parent, data->nlset);
         if (!data->kipcm) {
                 if (default_fini(data)) {
                         LOG_CRIT("The system might become unstable ...");
@@ -214,24 +221,6 @@ static int default_init(struct kobject *          parent,
         /* FIXME: To be removed */
         default_kipcm = data->kipcm;
 
-        LOG_DBG("Initializing efcp component");
-        data->efcp = efcp_init(parent);
-        if (!data->efcp) {
-                if (default_fini(data)) {
-                        LOG_CRIT("The system might become unstable ...");
-                        return -1;
-                }
-        }
-
-        LOG_DBG("Initializing rmt component");
-        data->rmt = rmt_init(parent);
-        if (!data->rmt) {
-                if (default_fini(data)) {
-                        LOG_CRIT("The system might become unstable ...");
-                        return -1;
-                }
-        }
-
         LOG_DBG("Default personality initialized successfully");
 
         return 0;
@@ -241,7 +230,6 @@ struct personality_ops ops = {
         .init               = default_init,
         .fini               = default_fini,
         .ipc_create         = default_ipc_create,
-        .ipc_configure      = default_ipc_configure,
         .ipc_destroy        = default_ipc_destroy,
         .sdu_read           = default_sdu_read,
         .sdu_write          = default_sdu_write,
@@ -252,7 +240,7 @@ struct personality_ops ops = {
 
 static struct personality_data data;
 
-static struct personality *    personality = NULL;
+static struct personality * personality = NULL;
 
 static int __init mod_init(void)
 {

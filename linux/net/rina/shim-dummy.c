@@ -20,13 +20,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define USE_WQ 1
-
 #include <linux/module.h>
 #include <linux/list.h>
-#if USE_WQ
-#include <linux/workqueue.h>
-#endif
 
 #define SHIM_NAME   "shim-dummy"
 
@@ -40,80 +35,8 @@
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 #include "du.h"
-#include "netlink.h"
-#include "netlink-utils.h"
-
-#if USE_WQ
-/* DO NOT REMOVE THIS CODE, IT WILL BE MOVED TO utils.[ch] */
-/* DO NOT REMOVE THIS CODE, IT WILL BE MOVED TO utils.[ch] */
-/* DO NOT REMOVE THIS CODE, IT WILL BE MOVED TO utils.[ch] */
-
-/* It's global BUT should be placed into a shim-dummy handle */
-static struct workqueue_struct * wq;
-
-struct work_item {
-        struct work_struct work; /* Must be at the beginning */
-
-        struct sdu *       sdu;
-};
-
-/* FIXME: Statics commented out to prevent compiler from barfing */
-
-/* static */ void wq_worker(struct work_struct * work)
-{
-        struct work_item * data = (struct work_item *) work;
-
-        LOG_DBG("Working on a new SDU (%pK)", data->sdu);
-
-        /* We're the owner of the data, let's free it */
-        rkfree(data->sdu);
-        rkfree(data);
-
-        return;
-}
-
-/* static */ int wq_init(void)
-{
-        ASSERT(!wq); /* Already initialized */
-
-        wq = create_workqueue("shim-dummy-workqueue");
-
-        return 0;
-}
-
-/* static */ int wq_post(struct sdu * sdu)
-{
-        struct work_item * work;
-
-        if (!sdu)
-                return -1;
-
-        work = (struct work_item *) rkzalloc(sizeof(struct work_item),
-                                             GFP_KERNEL);
-        if (!work)
-                return -1;
-
-        /* Filling workqueue item */
-        INIT_WORK((struct work_struct *) work, wq_worker);
-        work->sdu = sdu;
-
-        /* Finally posting the work to do */
-        if (queue_work(wq, (struct work_struct *) work)) {
-                LOG_ERR("Cannot post work on workqueue");
-                return -1;
-        }
-
-        LOG_DBG("Work posted on the workqueue, please wait ...");
-
-        return 0;
-}
-
-/* static */ void wq_fini(void)
-{
-        flush_workqueue(wq);
-        destroy_workqueue(wq);
-}
-#endif
+#include "kfa.h"
+#include "rnl-utils.h"
 
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -138,6 +61,9 @@ struct ipcp_instance_data {
         struct dummy_info * info;
 
         struct list_head    apps_registered;
+
+        /* FIXME: Remove it as soon as the kipcm_kfa gets removed*/
+        struct kfa *        kfa;
 };
 
 enum dummy_flow_state {
@@ -154,10 +80,10 @@ struct dummy_flow {
         struct name *         dest;
         struct list_head      list;
         enum dummy_flow_state state;
-        uint_t                dst_seq_num;
-        uint_t                seq_num; /* Required to notify back to the */
-        ipc_process_id_t      dst_id;  /* IPC Manager the result of the
-                                        * allocation */
+        flow_id_t             dst_fid;
+        flow_id_t             src_fid; /* Required to notify back to the */
+        ipc_process_id_t      dst_id;  /* IPC Manager the result of the */
+        struct flow_spec *    fspec;   /* allocation */
 };
 
 struct app_register {
@@ -166,7 +92,7 @@ struct app_register {
 };
 
 static int is_app_registered(struct ipcp_instance_data * data,
-                const struct name *         name)
+                             const struct name *         name)
 {
         struct app_register * app;
 
@@ -207,11 +133,11 @@ static struct dummy_flow * find_flow(struct ipcp_instance_data * data,
 }
 
 static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
-                const struct name *         source,
-                const struct name *         dest,
-                const struct flow_spec *    fspec,
-                port_id_t                   id,
-                uint_t                     seq_num)
+                                       const struct name *         source,
+                                       const struct name *         dest,
+                                       const struct flow_spec *    fspec,
+                                       port_id_t                   id,
+                                       flow_id_t                   fid)
 {
         struct dummy_flow * flow;
 
@@ -230,7 +156,9 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         }
 
         if (!is_app_registered(data, dest)) {
-                LOG_ERR("Application is not registered in this IPC Process");
+                char * tmp = name_tostring(dest);
+                LOG_ERR("Application %s is not registered in IPC process %d",
+                        tmp, data->id);
                 return -1;
         }
 
@@ -243,7 +171,6 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         if (!flow)
                 return -1;
 
-        flow->seq_num = seq_num;
         flow->dest    = name_dup(dest);
         if (!flow->dest) {
                 rkfree(flow);
@@ -256,36 +183,41 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        flow->state = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
+        /* Only for readability reasons */
+        ASSERT(flow->dest);
+        ASSERT(flow->source);
+
+        flow->state   = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
         flow->port_id = id;
-        flow->dst_seq_num = 666; /*FIXME!!!*/
+        flow->src_fid = fid;
+        flow->fspec   = flow_spec_dup(fspec);
+        flow->dst_fid = kfa_flow_create(data->kfa);
+        ASSERT(is_flow_id_ok(flow->dst_fid));
+
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, &data->flows);
 
-        if (rnl_app_alloc_flow_req_arrived_msg(data->id,
-                                               data->info->dif_name,
-                                               source,
-                                               dest,
-                                               fspec,
-                                               flow->dst_seq_num,
-                                               1)) {
-                list_del(&flow->list);
-                name_destroy(flow->source);
-                name_destroy(flow->dest);
-                rkfree(flow);
+        if (kipcm_flow_arrived(default_kipcm,
+                               data->id,
+                               flow->dst_fid,
+                               data->info->dif_name,
+                               flow->source,
+                               flow->dest,
+                               flow->fspec)) {
                 return -1;
         }
 
         return 0;
 }
 
-static struct dummy_flow * find_flow_by_seq_num(struct ipcp_instance_data * data,
-                                                uint_t                      seq_num)
+static struct dummy_flow *
+find_flow_by_fid(struct ipcp_instance_data * data,
+                 uint_t                      fid)
 {
         struct dummy_flow * flow;
 
         list_for_each_entry(flow, &data->flows, list) {
-                if (flow->dst_seq_num == seq_num) {
+                if (flow->dst_fid == fid) {
                         return flow;
                 }
         }
@@ -294,14 +226,13 @@ static struct dummy_flow * find_flow_by_seq_num(struct ipcp_instance_data * data
 }
 
 static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
-                                        port_id_t                   id,
-                                        uint_t                      seq_num,
-                                        response_reason_t *         response)
+                                        flow_id_t                   flow_id,
+                                        port_id_t                   port_id,
+                                        int                         result)
 {
         struct dummy_flow * flow;
 
         ASSERT(data);
-        ASSERT(response);
 
         if (!data->info) {
                 LOG_ERR("There is not info in this IPC Process");
@@ -313,40 +244,41 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        flow = find_flow_by_seq_num(data, seq_num);
+        flow = find_flow_by_fid(data, flow_id);
         if (!flow) {
                 LOG_ERR("Flow does not exist, cannot allocate");
                 return -1;
         }
 
-        if (flow->state != PORT_STATE_INITIATOR_ALLOCATE_PENDING)
+        if (flow->state != PORT_STATE_INITIATOR_ALLOCATE_PENDING) {
+                LOG_ERR("Wrong flow state");
                 return -1;
+        }
 
         /* On positive response, flow should transition to allocated state */
-        if (*response == 0) {
-                flow->dst_port_id = id;
+        if (result == 0) {
+                flow->dst_port_id = port_id;
                 flow->state = PORT_STATE_ALLOCATED;
-                if (kipcm_flow_add(default_kipcm, data->id, flow->port_id)) {
+                if (kipcm_flow_add(default_kipcm,
+                                   data->id, flow->port_id, flow->src_fid)) {
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
                         rkfree(flow);
                         return -1;
                 }
-                if (kipcm_flow_add(default_kipcm, data->id, id)) {
-                        kipcm_flow_remove(default_kipcm, id);
+                if (kipcm_flow_add(default_kipcm,
+                                   data->id, port_id, flow_id)) {
+                        kipcm_flow_remove(default_kipcm, port_id);
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
                         rkfree(flow);
                         return -1;
                 }
-                if (rnl_app_alloc_flow_result_msg(data->id,
-                                0,
-                                flow->seq_num,
-                                1)) {
+                if (kipcm_flow_res(default_kipcm, data->id, flow->src_fid, 0)) {
                         kipcm_flow_remove(default_kipcm, flow->port_id);
-                        kipcm_flow_remove(default_kipcm, flow->dst_port_id);
+                        kipcm_flow_remove(default_kipcm, port_id);
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
@@ -354,16 +286,14 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         return -1;
                 }
         } else {
-                if (rnl_app_alloc_flow_result_msg(data->id,
-                                -1,
-                                flow->seq_num,
-                                1))
                 list_del(&flow->list);
                 name_destroy(flow->source);
                 name_destroy(flow->dest);
                 rkfree(flow);
                 return -1;
         }
+
+
 
         /*
          * NOTE:
@@ -375,44 +305,65 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
 }
 
 static int dummy_flow_deallocate(struct ipcp_instance_data * data,
-		port_id_t                   id)
+                                 port_id_t                   id)
 {
-	struct dummy_flow * flow;
-	port_id_t dest_port_id;
+        struct dummy_flow * flow;
+        port_id_t dest_port_id;
+        flow_id_t rm_fid;
+        flow_id_t rm_dst_fid;
 
-	ASSERT(data);
-	flow = find_flow(data, id);
-	if (!flow) {
-		LOG_ERR("Flow does not exist, cannot remove");
-		return -1;
-	}
+        ASSERT(data);
+        flow = find_flow(data, id);
+        if (!flow) {
+                LOG_ERR("Flow does not exist, cannot remove");
+                return -1;
+        }
 
-	if (id == flow->port_id)
-		dest_port_id = flow->dst_port_id;
-	else
-		dest_port_id = flow->port_id;
+        if (id == flow->port_id)
+                dest_port_id = flow->dst_port_id;
+        else
+                dest_port_id = flow->port_id;
 
-	if (kipcm_flow_remove(default_kipcm, id))
-		return -1;
+        /* FIXME: dummy_flow is not updated after unbinding cause it is going
+         * to be deleted. Is it really needed to unbind+destroy?
+         */
+        rm_fid = kfa_flow_unbind(data->kfa, id);
+        if (!is_flow_id_ok(rm_fid)){
+                LOG_ERR("Could not unbind flow at port %d", id);
+                return -1;
+                }
+        rm_dst_fid = kfa_flow_unbind(data->kfa, dest_port_id);
+        if (!is_flow_id_ok(rm_dst_fid)){
+                LOG_ERR("Could not unbind flow at port %d", dest_port_id);
+                return -1;
+        }
 
-	if (kipcm_flow_remove(default_kipcm, dest_port_id))
-		return -1;
+        if (kfa_flow_destroy(data->kfa, rm_fid)) {
+                LOG_ERR("Could not destroy flow with fid: %d", rm_fid);
+                return -1;
+        }
 
-	/* Notify the destination application */
-	rnl_flow_dealloc_not_msg(data->id, 0, dest_port_id, 1);
+        if (kfa_flow_destroy(data->kfa, rm_dst_fid)) {
+                LOG_ERR("Could not destroy flow with fid: %d", rm_dst_fid);
+                return -1;
+        }
 
-	list_del(&flow->list);
-	name_destroy(flow->dest);
-	name_destroy(flow->source);
-	rkfree(flow);
+        /* Notify the destination application */
+        rnl_flow_dealloc_not_msg(data->id, 0, dest_port_id, 1);
 
-	return 0;
+        list_del(&flow->list);
+        name_destroy(flow->dest);
+        name_destroy(flow->source);
+        rkfree(flow);
+
+        return 0;
 }
 
 static int dummy_application_register(struct ipcp_instance_data * data,
                                       const struct name *         source)
 {
         struct app_register * app_reg;
+        char * tmp;
 
         ASSERT(source);
 
@@ -457,8 +408,12 @@ static int dummy_application_register(struct ipcp_instance_data * data,
 
                 return -1;
         }
+
         INIT_LIST_HEAD(&app_reg->list);
         list_add(&app_reg->list, &data->apps_registered);
+        tmp = name_tostring(source);
+        LOG_DBG("Application %s registered successfully", tmp);
+        rkfree(tmp);
 
         return 0;
 }
@@ -510,11 +465,13 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
-                        kipcm_sdu_post(default_kipcm, flow->dst_port_id, sdu);
+                        kfa_sdu_post(data->kfa,
+                                     flow->dst_port_id, sdu);
                         return 0;
                 }
                 if (flow->dst_port_id == id) {
-                        kipcm_sdu_post(default_kipcm, flow->port_id, sdu);
+                        kfa_sdu_post(data->kfa,
+                                     flow->port_id, sdu);
                         return 0;
                 }
         }
@@ -562,18 +519,21 @@ static int dummy_fini(struct ipcp_factory_data * data)
 }
 
 static int dummy_assign_to_dif(struct ipcp_instance_data * data,
-                const struct name *         dif_name)
+                               const struct dif_info *  dif_information)
 {
+        struct ipcp_config * pos;
+
         ASSERT(data);
+        ASSERT(dif_information);
 
         if (!data->info) {
                 LOG_ERR("There is no info for this IPC process");
                 return -1;
         }
 
-        data->info->dif_name = name_dup(dif_name);
+        data->info->dif_name = name_dup(dif_information->dif_name);
         if (!data->info->dif_name) {
-                char * tmp = name_tostring(dif_name);
+                char * tmp = name_tostring(dif_information->dif_name);
                 LOG_ERR("Assingment of IPC Process to DIF %s failed", tmp);
                 rkfree(tmp);
                 rkfree(data->info);
@@ -581,10 +541,27 @@ static int dummy_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        if (dif_information->configuration)
+                list_for_each_entry(
+                                    pos,
+                                    &(dif_information->configuration->ipcp_config_entries),
+                                    next)
+                        LOG_DBG("Configuration entry name: %s; value: %s",
+                                pos->entry->name,
+                                pos->entry->value);
+
         LOG_DBG("Assigned IPC Process to DIF %s",
-                        data->info->dif_name->process_name);
+                data->info->dif_name->process_name);
 
         return 0;
+}
+
+static int dummy_update_dif_config(struct ipcp_instance_data * data,
+                                   const struct dif_config *   new_config)
+{
+        /* Nothing to be reconfigured */
+
+        return -1;
 }
 
 static struct ipcp_instance_ops dummy_instance_ops = {
@@ -595,6 +572,7 @@ static struct ipcp_instance_ops dummy_instance_ops = {
         .application_unregister = dummy_application_unregister,
         .sdu_write              = dummy_sdu_write,
         .assign_to_dif          = dummy_assign_to_dif,
+        .update_dif_config      = dummy_update_dif_config,
 };
 
 static struct ipcp_instance_data *
@@ -614,6 +592,7 @@ find_instance(struct ipcp_factory_data * data,
 }
 
 static struct ipcp_instance * dummy_create(struct ipcp_factory_data * data,
+                                           const struct name *        name,
                                            ipc_process_id_t           id)
 {
         struct ipcp_instance * inst;
@@ -652,15 +631,18 @@ static struct ipcp_instance * dummy_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-        inst->data->info->name = name_create();
+        inst->data->info->name = name_dup(name);
         if (!inst->data->info->name) {
                 LOG_DBG("Failed creation of ipc name");
-                name_destroy(inst->data->info->dif_name);
                 rkfree(inst->data->info);
                 rkfree(inst->data);
                 rkfree(inst);
                 return NULL;
         }
+
+        /* FIXME: Remove as soon as the kipcm_kfa gets removed*/
+        inst->data->kfa = kipcm_kfa(default_kipcm);
+        LOG_DBG("KFA instance %pK bound to the shim dummy", inst->data->kfa);
 
         /*
          * Bind the shim-instance to the shims set, to keep all our data
@@ -675,60 +657,6 @@ static struct ipcp_instance * dummy_create(struct ipcp_factory_data * data,
         LOG_DBG("Initialization of instance list: %pK", &inst->data->list);
         list_add(&(inst->data->list), &(data->instances));
         LOG_DBG("Inst %pK added to the dummy instances", inst);
-
-        return inst;
-}
-
-/* FIXME: It doesn't allow reconfiguration */
-static struct ipcp_instance * dummy_configure(struct ipcp_factory_data * data,
-                                              struct ipcp_instance *     inst,
-                                              const struct ipcp_config * conf)
-{
-        struct ipcp_instance_data * instance;
-        struct ipcp_config *        tmp;
-
-        ASSERT(data);
-        ASSERT(inst);
-        ASSERT(conf);
-
-        instance = find_instance(data, inst->data->id);
-        if (!instance) {
-                LOG_ERR("There's no instance with id %d", inst->data->id);
-                return inst;
-        }
-
-        /* Use configuration values on that instance */
-        list_for_each_entry(tmp, &(conf->list), list) {
-                if (!strcmp(tmp->entry->name, "dif-name") &&
-                    tmp->entry->value->type == IPCP_CONFIG_STRING) {
-                        if (name_cpy(instance->info->dif_name,
-                                     (struct name *)
-                                     tmp->entry->value->data)) {
-                                LOG_ERR("Failed to copy DIF name");
-                                return inst;
-                        }
-                }
-                else if (!strcmp(tmp->entry->name, "name") &&
-                         tmp->entry->value->type == IPCP_CONFIG_STRING) {
-                        if (name_cpy(instance->info->name,
-                                     (struct name *)
-                                     tmp->entry->value->data)) {
-                                LOG_ERR("Failed to copy name");
-                                return inst;
-                        }
-                }
-                else {
-                        LOG_ERR("Cannot identify parameter '%s'",
-                                tmp->entry->name);
-                        return NULL;
-                }
-        }
-
-        /*
-         * Instance might change (reallocation), return the updated pointer
-         * if needed. We don't re-allocate our instance so we'll be returning
-         * the same pointer.
-         */
 
         return inst;
 }
@@ -748,9 +676,14 @@ static int dummy_destroy(struct ipcp_factory_data * data,
                         list_del(&pos->list);
                         dummy_deallocate_all(pos);
                         dummy_unregister_all(pos);
+
                         /* Destroy it */
-                        name_destroy(pos->info->dif_name);
-                        name_destroy(pos->info->name);
+                        if (pos->info->dif_name)
+                                name_destroy(pos->info->dif_name);
+
+                        if (pos->info->name)
+                                name_destroy(pos->info->name);
+
                         rkfree(pos->info);
                         rkfree(pos);
                         rkfree(instance);
@@ -767,10 +700,9 @@ static struct ipcp_factory_ops dummy_ops = {
         .fini      = dummy_fini,
         .create    = dummy_create,
         .destroy   = dummy_destroy,
-        .configure = dummy_configure,
 };
 
-struct ipcp_factory * shim;
+struct ipcp_factory * shim = NULL;
 
 static int __init mod_init(void)
 {

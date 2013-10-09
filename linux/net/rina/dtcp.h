@@ -24,145 +24,18 @@
 #include "common.h"
 #include "du.h"
 
-struct dtcp_state_vector {
-        /* Control state */
-        uint_t    max_pdu_size;
-
-        /* TimeOuts */
-
-        /*
-         * Time interval sender waits for a positive ack before
-         * retransmitting
-         */
-        timeout_t trd;
-
-        /*
-         * When flow control is rate based this timeout may be
-         * used to pace number of PDUs sent in TimeUnit
-         */
-        uint_t    pdus_per_time_unit;
-
-        /* DTCP sequencing */
-
-        /*
-         * Outbound: NextSndCtlSeq contains the Sequence Number to
-         * be assigned to a control PDU
-         */
-        seq_num_t next_snd_ctl_seq;
-
-        /*
-         * Inbound: LastRcvCtlSeq - Sequence number of the next
-         * expected // Transfer(? seems an error in the spec’s
-         * doc should be Control) PDU received on this connection
-         */
-        seq_num_t last_rcv_ctl_seq;
-
-        /*
-         * DTCP retransmission: There’s no retransmission queue,
-         * when a lost PDU is detected a new one is generated
-         */
-
-        /* Outbound */
-        seq_num_t last_snd_data_ack;
-
-        /*
-         * Seq number of the lowest seq number expected to be
-         * Acked. Seq number of the first PDU on the
-         * RetransmissionQ.
-         */
-        seq_num_t send_left_wind_edge;
-
-        /*
-         * Maximum number of retransmissions of PDUs without a
-         * positive ack before declaring an error
-         */
-        uint_t    data_retransmit_max;
-
-        /* Inbound */
-        seq_num_t last_rcv_data_ack;
-        seq_num_t rcv_left_wind_edge;
-
-        /* Time (ms) over which the rate is computed */
-        uint_t    time_unit;
-
-        /* Flow Control State */
-
-        /* Outbound */
-        uint_t    sndr_credit;
-
-        /* snd_rt_wind_edge = LastSendDataAck + PDU(credit) */
-        seq_num_t snd_rt_wind_edge;
-
-        /* PDUs per TimeUnit */
-        uint_t    sndr_rate;
-
-        /* PDUs already sent in this time unit */
-        uint_t    pdus_sent_in_time_unit;
-
-        /* Inbound */
-
-        /*
-         * PDUs receiver believes sender may send before extending
-         * credit or stopping the flow on the connection
-         */
-        uint_t    rcvr_credit;
-
-        /* Value of credit in this flow */
-        uint_t    rcvr_rt_wind_edge;
-
-        /*
-         * Current rate receiver has told sender it may send PDUs
-         * at.
-         */
-        uint_t    rcvr_rate;
-
-        /*
-         * PDUs received in this time unit. When it equals
-         * rcvr_rate, receiver is allowed to discard any PDUs
-         * received until a new time unit begins
-         */
-        uint_t    pdus_rcvd_in_time_unit;
-
-        /* The companion DTP state vector */
-        struct dtp_state_vector * dtp_state_vector;
-};
-
+struct dtp;
 struct dtcp;
-
-struct dtcp_policies {
-        int (* flow_init)(struct dtcp * instance);
-        int (* sv_update)(struct dtcp * instance);
-        int (* lost_control_pdu)(struct dtcp * instance);
-        int (* rtt_estimator)(struct dtcp * instance);
-        int (* retransmission_timer_expiry)(struct dtcp * instance);
-        int (* received_retransmission_policy)(struct dtcp * instance);
-        int (* sending_ack_policy)(struct dtcp * instance);
-        int (* sending_ack_list_policy)(struct dtcp * instance);
-        int (* initial_creadit_policy)(struct dtcp * instance);
-        int (* initial_rate_policy)(struct dtcp * instance);
-        int (* receiving_flow_control)(struct dtcp * instance);
-        int (* update_credit)(struct dtcp * instance);
-        int (* flow_control_overrun)(struct dtcp * instance);
-        int (* reconcile_flow_conflict_policy)(struct dtcp * instance);
-};
-
-struct dtcp {
-        struct dtcp_state_vector * state_vector;
-
-        struct dtcp_policies       policies;
-
-        /* FIXME: Queues must be added
-         * QUEUE(flow_control_queue, pdu);
-         * QUEUE(closed_window_queue, pdu);
-         * struct workqueue_struct * rx_control_queue;
-         */
-};
 
 struct dtcp * dtcp_create(void);
 int           dtcp_destroy(struct dtcp * instance);
 
-int           dtcp_state_vector_bind(struct dtcp *             instance,
-                                     struct dtp_state_vector * state_vector);
-int           dtcp_state_vector_unbind(struct dtcp * instance);
+int           dtcp_bind(struct dtcp * instance,
+                        struct dtp *  peer);
+int           dtcp_unbind(struct dtcp * instance);
+
+/* NOTE: Takes the ownership of the passed PDU */
+int           dtcp_send(struct dtcp * instance,
+                        struct sdu *  sdu);
 
 #endif

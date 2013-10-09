@@ -24,54 +24,259 @@
 
 #include "logs.h"
 #include "utils.h"
-#include "efcp.h"
 #include "debug.h"
+#include "efcp.h"
+#include "efcp-utils.h"
+#include "dtp.h"
+#include "dtcp.h"
 
 struct efcp {
-        /* The connection endpoint id that identifies this instance */
-        cep_id_t      id;
-
-        /* The Data transfer protocol state machine instance */
         struct dtp *  dtp;
-
-        /* The Data transfer control protocol state machine instance */
         struct dtcp * dtcp;
-
-#if 0
-        /* Pointer to the flow data structure of the K-IPC Manager */
-        /* FIXME: Do we really need this pointer ? */
-        struct flow * flow;
-#endif
 };
 
-struct efcp * efcp_init(struct kobject * parent)
+static struct efcp * efcp_create(void)
 {
-        struct efcp * e = NULL;
+        struct efcp * instance;
 
-        LOG_DBG("Initializing instance");
+        instance = rkzalloc(sizeof(*instance), GFP_KERNEL);
+        if (!instance) {
+                LOG_ERR("Cannot create a new instance");
+                return NULL;
+        }
 
-        e = rkzalloc(sizeof(*e), GFP_KERNEL);
+        LOG_DBG("Instance %pK initialized successfully", instance);
 
-        return e;
+        return instance;
 }
 
-int efcp_fini(struct efcp * instance)
+static int efcp_destroy(struct efcp * instance)
 {
-        ASSERT(instance);
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
 
-        LOG_DBG("Finalizing instance %pK", instance);
+        if (instance->dtp)  dtp_unbind(instance->dtp);
+        if (instance->dtcp) dtcp_unbind(instance->dtcp);
+
+        if (instance->dtp)  dtp_destroy(instance->dtp);
+        if (instance->dtcp) dtcp_destroy(instance->dtcp);
 
         rkfree(instance);
+
+        LOG_DBG("Instance %pK finalized successfully", instance);
 
         return 0;
 }
 
-int efcp_write(struct efcp *      instance,
-               port_id_t          id,
-               const struct sdu * sdu)
+struct efcp_container {
+        struct efcp_imap * instances;
+};
+
+// efcp_imap maps cep_id_t to efcp_instances
+
+struct efcp_container * efcp_container_create(void)
 {
-        ASSERT(instance);
-        ASSERT(sdu);
+        struct efcp_container * container;
+
+        container = rkzalloc(sizeof(*container), GFP_KERNEL);
+        if (!container)
+                return NULL;
+
+        container->instances = efcp_imap_create();
+
+        return container;
+}
+
+int efcp_container_destroy(struct efcp_container * container)
+{
+        if (!container) {
+                LOG_ERR("Bogus container passed, bailing out");
+                return -1;
+        }
+
+        efcp_imap_destroy(container->instances, efcp_destroy);
+        rkfree(container);
+
+        return 0;
+}
+
+static int is_cep_id_ok(cep_id_t id)
+{ return 1; /* FIXME: Bummer, add it */ }
+
+static int is_connection_ok(const struct connection * connection)
+{
+        if (!connection)
+                return 0;
+
+        if (!is_cep_id_ok(connection->source_cep_id)      ||
+            !is_cep_id_ok(connection->destination_cep_id) ||
+            !is_port_id_ok(connection->port_id))
+                return 0;
+
+        return 1;
+}
+
+int efcp_connection_create(struct efcp_container *   container,
+                           const struct connection * connection)
+{
+        struct efcp * tmp;
+
+        if (!container) {
+                LOG_ERR("Bogus container passed, bailing out");
+                return -1;
+        }
+        if (!is_connection_ok(connection)) {
+                LOG_ERR("Bogus connection passed, bailing out");
+                return -1;
+        }
+        ASSERT(connection);
+
+        tmp = efcp_create();
+        if (!tmp)
+                return -1;
+
+        /* We must ensure that the DTP is instantiated, at least ... */
+        tmp->dtp = dtp_create(/* connection->port_id */);
+        if (!tmp->dtp) {
+                efcp_destroy(tmp);
+                return -1;
+        }
+
+        /* FIXME: We need to know if DTCP is needed ... */
+        tmp->dtcp = dtcp_create();
+        if (!tmp->dtcp) {
+                efcp_destroy(tmp);
+                return -1;
+        }
+
+        /* No needs to check here, bindings are straightforward */
+        dtp_bind(tmp->dtp,   tmp->dtcp);
+        dtcp_bind(tmp->dtcp, tmp->dtp);
+
+        if (efcp_imap_add(container->instances,
+                          connection->source_cep_id,
+                          tmp)) {
+                LOG_ERR("Cannot add a new instance into container %pK",
+                        container);
+                efcp_destroy(tmp);
+                return -1;
+        }
+
+        return 0;
+}
+
+int efcp_connection_destroy(struct efcp_container * container,
+                            cep_id_t                id)
+{
+        struct efcp * tmp;
+
+        if (!container) {
+                LOG_ERR("Bogus container passed, bailing out");
+                return -1;
+        }
+
+        tmp = efcp_imap_find(container->instances, id);
+        if (!tmp) {
+                LOG_ERR("Cannot find instance %d in container %pK",
+                        id, container);
+                return -1;
+        }
+
+        if (efcp_imap_remove(container->instances, id)) {
+                LOG_ERR("Cannot remove instance %d from container %pK",
+                        id, container);
+                return -1;
+        }
+
+        if (efcp_destroy(tmp)) {
+                LOG_ERR("Cannot destroy instance %d, instance lost", id);
+                return -1;
+        }
+
+        return 0;
+}
+
+int efcp_connection_update(struct efcp_container * container,
+                           cep_id_t                from,
+                           cep_id_t                to)
+{
+        struct efcp * tmp;
+
+        if (!container) {
+                LOG_ERR("Bogus container passed, bailing out");
+                return -1;
+        }
+
+        tmp = efcp_imap_find(container->instances, from);
+        if (!tmp) {
+                LOG_ERR("Cannot get instance %d from container %pK",
+                        from, container);
+                return -1;
+        }
+
+        if (!efcp_imap_remove(container->instances, from)) {
+                LOG_ERR("Cannot update connection %d -> %d in container %pK",
+                        from, to, container);
+                return -1;
+        }
+
+        if (!efcp_imap_add(container->instances, to, tmp)) {
+                LOG_ERR("Cannot add instance %d to container %pK, "
+                        "rolling back changes",
+                        to, container);
+
+                if (!efcp_imap_add(container->instances, from, tmp)) {
+                        LOG_ERR("Cannot rollback, "
+                                "instance %pK is lost forever, sigh!", tmp);
+
+                        if (efcp_destroy(tmp)) {
+                                LOG_ERR("... and its associated memory also!");
+                        }
+
+                        return -1;
+                }
+
+                return -1;
+        }
+
+        return 0;
+}
+
+struct efcp * efcp_find(struct efcp_container * container,
+                        cep_id_t                id)
+{
+        struct efcp * tmp;
+
+        if (!container) {
+                LOG_ERR("Bogus container passed, bailing out");
+                return NULL;
+        }
+
+        tmp = efcp_imap_find(container->instances, id);
+
+        return tmp;
+}
+
+int efcp_send(struct efcp * instance,
+              port_id_t     id,
+              struct sdu *  sdu)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Wrong port-id passed");
+                return -1;
+        }
+
+        if (!is_sdu_ok(sdu)) {
+                LOG_ERR("Bogus SDU passed");
+                return -1;
+        }
 
         if (!instance->dtp) {
                 LOG_ERR("No DTP instance available, cannot send");
@@ -81,78 +286,12 @@ int efcp_write(struct efcp *      instance,
         return dtp_send(instance->dtp, sdu);
 }
 
-int efcp_receive_pdu(struct efcp * instance,
-                     struct pdu *  pdu)
+struct pdu * efcp_receive_pdu(struct efcp * instance)
 {
-        ASSERT(instance);
-        ASSERT(pdu);
-
-        LOG_MISSING;
-
-        LOG_DBG("PDU received in the EFCP");
-
-        return 0;
-}
-
-int efcp_create(struct efcp *             instance,
-                const struct connection * connection,
-                cep_id_t *                id)
-{
-        ASSERT(instance);
-        ASSERT(connection);
-
-        instance->dtp  = dtp_create(connection->port_id);
-        if (!instance->dtp)
-                return -1;
-
-        instance->dtcp = dtcp_create();
-        if (!instance->dtcp) {
-                if (dtp_destroy(instance->dtp))
-                        return -1;
-                instance->dtp = 0;
-                return -1;
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return NULL;
         }
 
-        /* No needs to check here, bindings are straightforward */
-        dtp_state_vector_bind(instance->dtp,   instance->dtcp->state_vector);
-        dtcp_state_vector_bind(instance->dtcp, instance->dtp->state_vector);
-
-        /* FIXME: We need to assign the id */
-        LOG_MISSING;
-
-        LOG_DBG("EFCP instance created");
-
-        return 0;
-}
-
-int efcp_destroy(struct efcp * instance,
-                 cep_id_t      id)
-{
-        ASSERT(instance);
-
-        dtp_state_vector_unbind(instance->dtp);
-        dtcp_state_vector_unbind(instance->dtcp);
-
-        if (dtp_destroy(instance->dtp))
-                return -1;
-        instance->dtp = 0;
-
-        if (dtcp_destroy(instance->dtcp))
-                return -1;
-        instance->dtcp = 0;
-
-        LOG_DBG("EFCP instance destroyed");
-
-        return 0;
-}
-
-int efcp_update(struct efcp * instance,
-                cep_id_t      from,
-                cep_id_t      to)
-{
-        ASSERT(instance);
-
-        LOG_UNSUPPORTED;
-
-        return -1;
+        return dtp_receive(instance->dtp);
 }

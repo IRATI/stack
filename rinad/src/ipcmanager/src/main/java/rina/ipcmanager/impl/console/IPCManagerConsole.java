@@ -39,6 +39,8 @@ public class IPCManagerConsole implements Runnable{
 		commands.put(GetSystemCapabilitiesCommand.ID, new GetSystemCapabilitiesCommand(ipcManager));
 		commands.put(PrintConfigurationCommand.ID, new PrintConfigurationCommand(ipcManager));
 		commands.put(ListIPCProcessesCommand.ID, new ListIPCProcessesCommand(ipcManager));
+		commands.put(CreateIPCProcessCommand.ID, new CreateIPCProcessCommand(ipcManager));
+		commands.put(DestroyIPCProcessCommand.ID, new DestroyIPCProcessCommand(ipcManager));
 	}
 	
 	public void stop(){
@@ -133,8 +135,6 @@ public class IPCManagerConsole implements Runnable{
 
 			}
 		}catch(IOException e){
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 			log.error(e.getMessage());
 		}
 	}

@@ -19,7 +19,7 @@ config RINA_DEBUG
 	  No help for the time being
 
 config RINA_KIPCM_LOCKS_DEBUG
-	bool "K-IPC Manager spinlocks debugging"
+	bool "K-IPC Manager locks debugging"
 	default n
         depends on RINA_DEBUG
 	help
@@ -75,33 +75,33 @@ config RINA_ASSERTIONS
 
 config RINA_PERSONALITY_DEFAULT
        	tristate "Default Personality support"
-	default y
+	default m
 	---help---
 	  No help for the time being
 
-config RINA_ARP
-	tristate "RINA ARP implementation support"
-	default n
+config ARP826
+	tristate "RFC-826 ARP compliant implementation"
+	default m
 	help
 	  No help for the time being
 
 config RINA_SHIM_DUMMY
 	tristate "Dummy Shim IPC"
-	default y
+	default m
         depends on RINA_PERSONALITY_DEFAULT && RINA_DEBUG
 	help
 	  No help for the time being
 
 config RINA_SHIM_ETH_VLAN
 	tristate "Shim IPC over Ethernet (using VLANs) support"
-	default y
-        depends on RINA_PERSONALITY_DEFAULT && RINA_ARP
+	default m
+        depends on RINA_PERSONALITY_DEFAULT && ARP826
 	help
 	  No help for the time being
 
 config RINA_SHIM_TCP_UDP
 	tristate "Shim IPC over TCP/UDP support"
-	default y
+	default m
         depends on RINA_PERSONALITY_DEFAULT
 	help
 	  No help for the time being

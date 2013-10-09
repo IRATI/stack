@@ -27,9 +27,16 @@
 
 #include "logs.h"
 #include "debug.h"
-#include "netlink.h"
+#include "rnl.h"
 #include "personality.h"
 #include "utils.h"
+
+#define MK_RINA_VERSION(MAJOR, MINOR, MICRO)                            \
+        (((MAJOR & 0xFF) << 24) | ((MINOR & 0xFF) << 16) | (MICRO & 0xFFFF))
+
+#define RINA_VERSION_MAJOR(V) ((V >> 24) & 0xFF)
+#define RINA_VERSION_MINOR(V) ((V >> 16) & 0xFF)
+#define RINA_VERSION_MICRO(V) ((V      ) & 0xFFFF)
 
 static struct kset * root_kset = NULL;
 static uint32_t      version   = MK_RINA_VERSION(0, 1, 4);
@@ -81,14 +88,14 @@ static int __init rina_core_init(void)
                 return -1;
         }
 
-        if (rina_netlink_init()) {
+        if (rnl_init()) {
                 kset_unregister(root_kset);
                 rina_debug_exit();
                 return -1;
         }
 
         if (rina_personality_init(&root_kset->kobj)) {
-                rina_netlink_exit();
+                rnl_exit();
                 kset_unregister(root_kset);
                 rina_debug_exit();
                 return -1;

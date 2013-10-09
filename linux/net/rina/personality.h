@@ -26,6 +26,7 @@
 #include "common.h"
 #include "ipcp.h"
 #include "du.h"
+#include "efcp.h"
 
 /* Pre-declared, the personality should define it properly */
 struct personality_data;
@@ -46,10 +47,6 @@ struct personality_ops {
                            const struct name *       name,
                            ipc_process_id_t          id,
                            const char *              type);
-
-        int (* ipc_configure)(struct personality_data *  data,
-                              ipc_process_id_t           id,
-                              const struct ipcp_config * configuration);
         int (* ipc_destroy)(struct personality_data * data,
                             ipc_process_id_t          id);
 

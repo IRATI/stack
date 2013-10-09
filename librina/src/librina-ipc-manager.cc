@@ -16,10 +16,13 @@
 
 #define RINA_PREFIX "ipc-manager"
 
-#include <sys/types.h>
 #include <dirent.h>
 #include <errno.h>
 #include <iostream>
+#include <signal.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "logs.h"
 #include "librina-ipc-manager.h"
@@ -28,6 +31,21 @@
 #include "rina-syscalls.h"
 
 namespace rina{
+
+void initializeIPCManager(unsigned int localPort)
+	throw (IPCManagerInitializationException){
+	initialize(localPort);
+
+	IpcmIPCManagerPresentMessage message;
+	message.setDestPortId(0);
+	message.setNotificationMessage(true);
+
+	try{
+		rinaManager->sendResponseOrNotficationMessage(&message);
+	}catch(NetlinkException &e){
+		throw IPCManagerInitializationException(e.what());
+	}
+}
 
 /* CLASS IPC PROCESS*/
 const std::string IPCProcess::error_assigning_to_dif =
@@ -48,14 +66,16 @@ const std::string IPCProcess::error_querying_rib =
 IPCProcess::IPCProcess() {
 	id = 0;
 	portId = 0;
+	pid = 0;
 	difMember = false;
 }
 
-IPCProcess::IPCProcess(unsigned short id,
-		unsigned int portId, const std::string& type,
+IPCProcess::IPCProcess(unsigned short id, unsigned int portId,
+		pid_t pid, const std::string& type,
 		const ApplicationProcessNamingInformation& name) {
 	this->id = id;
 	this->portId = portId;
+	this->pid = pid;
 	this->type = type;
 	this->name = name;
 	difMember = false;
@@ -89,22 +109,30 @@ void IPCProcess::setPortId(unsigned int portId){
 	this->portId = portId;
 }
 
-const DIFConfiguration& IPCProcess::getConfiguration() const{
-	return difConfiguration;
+pid_t IPCProcess::getPid() const{
+	return pid;
 }
 
-void IPCProcess::setConfiguration(const DIFConfiguration& difConfiguration){
-	this->difConfiguration = difConfiguration;
+void IPCProcess::setPid(pid_t pid){
+	this->pid = pid;
+}
+
+const DIFInformation& IPCProcess::getDIFInformation() const{
+	return difInformation;
+}
+
+void IPCProcess::setDIFInformation(const DIFInformation& difInformation){
+	this->difInformation = difInformation;
 }
 
 void IPCProcess::assignToDIF(
-		const DIFConfiguration& difConfiguration) throw (AssignToDIFException) {
+		const DIFInformation& difInformation) throw (AssignToDIFException) {
 	LOG_DBG("IPCProcess::assign to DIF called");
 #if STUB_API
 	//Do nothing
 #else
 	IpcmAssignToDIFRequestMessage message;
-	message.setDIFConfiguration(difConfiguration);
+	message.setDIFInformation(difInformation);
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -126,11 +154,11 @@ void IPCProcess::assignToDIF(
 	}
 
 	LOG_DBG("Assigned IPC Process %d to DIF %s", id,
-			difConfiguration.getDifName().getProcessName().c_str());
+			difInformation.getDifName().getProcessName().c_str());
 	delete assignToDIFResponse;
 #endif
 
-	this->difConfiguration = difConfiguration;
+	this->difInformation = difInformation;
 	this->difMember = true;
 }
 
@@ -208,7 +236,7 @@ throw (IpcmRegisterApplicationException) {
 #else
 	IpcmRegisterApplicationRequestMessage message;
 	message.setApplicationName(applicationName);
-	message.setDifName(difConfiguration.getDifName());
+	message.setDifName(difInformation.getDifName());
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -231,7 +259,7 @@ throw (IpcmRegisterApplicationException) {
 
 	LOG_DBG("Registered app %s to DIF %s",
 			applicationName.getProcessName().c_str(),
-			difConfiguration.getDifName().getProcessName().c_str());
+			difInformation.getDifName().getProcessName().c_str());
 	delete registerAppResponse;
 #endif
 }
@@ -245,7 +273,7 @@ throw (IpcmUnregisterApplicationException) {
 #else
 	IpcmUnregisterApplicationRequestMessage message;
 	message.setApplicationName(applicationName);
-	message.setDifName(difConfiguration.getDifName());
+	message.setDifName(difInformation.getDifName());
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -267,7 +295,7 @@ throw (IpcmUnregisterApplicationException) {
 	}
 	LOG_DBG("Unregistered app %s from DIF %s",
 			applicationName.getProcessName().c_str(),
-			difConfiguration.getDifName().getProcessName().c_str());
+			difInformation.getDifName().getProcessName().c_str());
 	delete unregisterAppResponse;
 #endif
 }
@@ -330,7 +358,7 @@ void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 	responseMessage.setDestIpcProcessId(id);
 	responseMessage.setDestPortId(portId);
 	responseMessage.setSequenceNumber(flowRequest.getSequenceNumber());
-	responseMessage.setRequestMessage(true);
+	responseMessage.setResponseMessage(true);
 
 	try{
 		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
@@ -464,6 +492,7 @@ IPCProcess * IPCProcessFactory::create(
 
 	lock();
 	int ipcProcessId = 1;
+	pid_t pid=0;
 	for (int i = 1; i < 1000; i++) {
 		if (ipcProcesses.find(i) == ipcProcesses.end()) {
 			ipcProcessId = i;
@@ -474,15 +503,58 @@ IPCProcess * IPCProcessFactory::create(
 #if STUB_API
 	//Do nothing
 #else
-	int result = syscallCreateIPCProcess(
-			ipcProcessName, ipcProcessId, difType);
-	if (result != 0){
-		unlock();
-		throw CreateIPCProcessException();
+	//FIXME when the kernel supports normal IPC Process creation, first
+	//perform the syscall for normal IPC Processes and later
+	//create a new user-space process
+	if (difType.compare(NORMAL_IPC_PROCESS) == 0){
+		pid = fork();
+		if (pid == 0){
+			//This is the OS process that has to execute the IPC Process
+			//program and then exit
+			LOG_DBG("New OS Process created, executing IPC Process ...");
+
+			char * argv[] =
+			{
+					stringToCharArray("/usr/bin/java"),
+					stringToCharArray("-jar"),
+					stringToCharArray("/usr/local/rina/rinad/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar"),
+					stringToCharArray(ipcProcessName.getProcessName()),
+					stringToCharArray(ipcProcessName.getProcessInstance()),
+					intToCharArray(ipcProcessId),
+					0
+			};
+
+			char * envp[] =
+			{
+					stringToCharArray("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"),
+					stringToCharArray("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/rina/lib"),
+					(char*) 0
+			};
+
+			execve(argv[0], &argv[0], envp);
+
+			LOG_ERR("Problems loading IPC Process program, finalizing OS Process");
+
+			exit(-1);
+		}else if (pid < 0){
+			//This is the IPC Manager, and fork failed
+			unlock();
+			throw CreateIPCProcessException();
+		}else{
+			//This is the IPC Manager, and fork was successful
+			LOG_DBG("Craeted a new IPC Process with pid = %d", pid);
+		}
+	}else{
+		int result = syscallCreateIPCProcess(
+				ipcProcessName, ipcProcessId, difType);
+		if (result != 0){
+			unlock();
+			throw CreateIPCProcessException();
+		}
 	}
 #endif
 
-	IPCProcess * ipcProcess = new IPCProcess(ipcProcessId, 0, difType,
+	IPCProcess * ipcProcess = new IPCProcess(ipcProcessId, 0, pid, difType,
 			ipcProcessName);
 	ipcProcesses[ipcProcessId] = ipcProcess;
 	unlock();
@@ -498,16 +570,29 @@ throw (DestroyIPCProcessException) {
 	std::map<int, IPCProcess*>::iterator iterator;
 	iterator = ipcProcesses.find(ipcProcessId);
 	if (iterator == ipcProcesses.end()) {
-		throw IPCException(IPCProcessFactory::unknown_ipc_process_error);
+		unlock();
+		throw DestroyIPCProcessException(IPCProcessFactory::unknown_ipc_process_error);
 	}
 
 #if STUB_API
 	//Do nothing
 #else
-	int result = syscallDestroyIPCProcess(ipcProcessId);
-	if (result != 0){
-		unlock();
-		throw DestroyIPCProcessException();
+	//FIXME: Have to call the syscall for normal IPC Processes as well
+	//Will do when the kernel supports creation/destruction of normal
+	//IPC Processes
+	IPCProcess * ipcProcess = iterator->second;
+	if (ipcProcess->getType().compare(NORMAL_IPC_PROCESS) == 0){
+		int result = kill(ipcProcess->getPid(), SIGKILL);
+		if (result)
+			LOG_ERR("Error killing OS process with PID %d: %d",
+					ipcProcess->getPid(), result);
+		LOG_DBG("OS process with PID %d destroyed", ipcProcess->getPid());
+	}else{
+		int result = syscallDestroyIPCProcess(ipcProcessId);
+		if (result != 0){
+			unlock();
+			throw DestroyIPCProcessException();
+		}
 	}
 #endif
 

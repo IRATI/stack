@@ -1,8 +1,9 @@
 /*
- * K-IPCM (Kernel-IPC Manager)
+ * KIPCM (Kernel IPC Manager)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,13 +26,18 @@
 #include "common.h"
 #include "ipcp.h"
 #include "ipcp-factories.h"
-#include "netlink.h"
+#include "du.h"
+#include "rnl.h"
+#include "kfa.h"
 
 struct kipcm;
 
-/* The following functions represent the KIPCM northbound interface */
-struct kipcm * kipcm_init(struct kobject * parent, struct rina_nl_set * set);
-int            kipcm_fini(struct kipcm * kipcm);
+/*
+ * The following functions represent the KIPCM northbound interface
+ */
+
+struct kipcm * kipcm_create(struct kobject * parent, struct rnl_set * set);
+int            kipcm_destroy(struct kipcm * kipcm);
 
 /*
  * NOTE: factory_name must be the string published by the choosen IPC
@@ -41,9 +47,6 @@ int            kipcm_ipcp_create(struct kipcm *      kipcm,
                                  const struct name * name,
                                  ipc_process_id_t    id,
                                  const char *        factory_name);
-int            kipcm_ipcp_configure(struct kipcm *             kipcm,
-                                    ipc_process_id_t           id,
-                                    const struct ipcp_config * config);
 int            kipcm_ipcp_destroy(struct kipcm *   kipcm,
                                   ipc_process_id_t id);
 
@@ -56,7 +59,24 @@ int            kipcm_sdu_read(struct kipcm * kipcm,
                               port_id_t      id,
                               struct sdu **  sdu);
 
-/* The following functions represent the KIPCM southbound interface */
+/*
+ * The following functions represent the KIPCM southbound interface
+ */
+
+/* 
+ * FIXME: This is a core "accessor", to be removed ASAP. It's currently here
+ *        in the meanwhile we find the best way to settle the component in its
+ *        final position.
+ *
+ * NOTE: The KFA lifetime is "contained" into the KIPCM one; if the KIPCM is
+ *       alive and running, its KFA will also be. For the time being, IPCPs
+ *       (shims as well the normal-ipc) are allowed to store the kfa instance
+ *       returned by the KIPCM (through kipcm_kfa()). DO NOT TRUST THIS
+ *       BEHAVIOR BURYING IT INTO THE CODE, WE WILL TRY TO GET RID OF IT
+ *       ASAP
+ */
+struct kfa *   kipcm_kfa(struct kipcm * kipcm);
+
 struct ipcp_factory *
 kipcm_ipcp_factory_register(struct kipcm *             kipcm,
                             const char *               name,
@@ -64,16 +84,28 @@ kipcm_ipcp_factory_register(struct kipcm *             kipcm,
                             struct ipcp_factory_ops *  ops);
 int            kipcm_ipcp_factory_unregister(struct kipcm *        kipcm,
                                              struct ipcp_factory * factory);
+/* On the destination */
+int            kipcm_flow_arrived(struct kipcm *     kipcm,
+                                  ipc_process_id_t   ipc_id,
+                                  flow_id_t          flow_id,
+                                  struct name *      dif_name,
+                                  struct name *      source,
+                                  struct name *      dest,
+                                  struct flow_spec * fspec);
 
+/* On both source and destination */
 int            kipcm_flow_add(struct kipcm *   kipcm,
                               ipc_process_id_t ipc_id,
-                              port_id_t        id);
+                              port_id_t        id,
+                              flow_id_t	       fid);
+
+/* On both source and destination */
 int            kipcm_flow_remove(struct kipcm * kipcm,
                                  port_id_t      id);
 
-/* If successul: takes the ownership of the SDU */
-int            kipcm_sdu_post(struct kipcm * kipcm,
-                              port_id_t      id,
-                              struct sdu *   sdu);
+int            kipcm_flow_res(struct kipcm *   kipcm,
+                              ipc_process_id_t id,
+                              flow_id_t        fid,
+                              uint_t	       res);
 
 #endif

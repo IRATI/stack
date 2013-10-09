@@ -57,8 +57,8 @@ struct sdu * sdu_create_from(void * data, size_t size)
 {
         struct sdu * tmp;
 
-        LOG_DBG("Trying to create an SDU of size %d from data in the buffer",
-        		size);
+        LOG_DBG("Trying to create an SDU of size %zd from data in the buffer",
+                size);
 
         if (!data)
                 return NULL;
@@ -97,7 +97,7 @@ int sdu_destroy(struct sdu * s)
 }
 EXPORT_SYMBOL(sdu_destroy);
 
-int sdu_is_ok(const struct sdu * s)
+int is_sdu_ok(const struct sdu * s)
 {
         /* FIXME: Should we assert here ? */
         if (!s)
@@ -116,7 +116,7 @@ int sdu_is_ok(const struct sdu * s)
 
         return 1;
 }
-EXPORT_SYMBOL(sdu_is_ok);
+EXPORT_SYMBOL(is_sdu_ok);
 
 struct sdu * sdu_protect(struct sdu * s)
 {

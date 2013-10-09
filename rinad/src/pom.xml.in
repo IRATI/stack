@@ -17,8 +17,9 @@
 	<properties>
 		<commons.logging.version>1.1.1</commons.logging.version>
 		<guava.version>13.0.1</guava.version>
-        <jackson.version>2.1.2</jackson.version>
+                <jackson.version>2.1.2</jackson.version>
 		<junit.version>4.5</junit.version>
+                <installation.path>@pkgdatadir@</installation.path>
 		<librina.version>@LIBRINA_VERSION@</librina.version>
 		<log4j.version>1.2.16</log4j.version>
 		<protobuf.version>2.3.0</protobuf.version>
@@ -95,6 +96,7 @@
 	<modules>
 		<module>commons</module>
 		<module>ipcmanager</module>
+		<module>ipcprocess</module>
 		<module>applications</module>
 	</modules>
 	<!--

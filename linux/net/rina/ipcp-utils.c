@@ -24,10 +24,10 @@
 #define RINA_PREFIX "ipcp-utils"
 
 #include "logs.h"
-#include "common.h"
-#include "ipcp-utils.h"
 #include "utils.h"
 #include "debug.h"
+#include "common.h"
+#include "ipcp-utils.h"
 
 struct name * name_create(void)
 { return rkzalloc(sizeof(struct name), GFP_KERNEL); }
@@ -114,10 +114,12 @@ void name_fini(struct name * n)
 {
         ASSERT(n);
 
-        LOG_DBG("Process name at %pK", n->process_name);
+#if 0
+        LOG_DBG("Process name at %pK",     n->process_name);
         LOG_DBG("Process instance at %pK", n->process_instance);
-        LOG_DBG("Entity name at %pK", n->entity_name);
-        LOG_DBG("Entity instance at %pK", n->entity_instance);
+        LOG_DBG("Entity name at %pK",      n->entity_name);
+        LOG_DBG("Entity instance at %pK",  n->entity_instance);
+#endif
 
         if (n->process_name) {
                 rkfree(n->process_name);
@@ -159,9 +161,10 @@ struct name * name_create_and_init(const string_t * process_name,
                                    const string_t * entity_name,
                                    const string_t * entity_instance)
 {
-        struct name * tmp1 = name_create();
+        struct name * tmp1;
         struct name * tmp2;
 
+        tmp1 = name_create();
         if (!tmp1)
                 return NULL;
         tmp2 = name_init(tmp1,
@@ -240,11 +243,13 @@ int name_cmp(const struct name * a, const struct name * b)
 }
 EXPORT_SYMBOL(name_cmp);
 
+#define DELIMITER "/"
+
 char * name_tostring(const struct name * n)
 {
         char *       tmp;
         size_t       size;
-        const char * none = "<NONE>";
+        const char * none     = "<NONE>";
         size_t       none_len = strlen(none);
 
         if (!n)
@@ -254,28 +259,32 @@ char * name_tostring(const struct name * n)
 
         size += (n->process_name                 ?
                  string_len(n->process_name)     : none_len);
-        size += 1; /* SEPARATOR */
+        size += strlen(DELIMITER);
 
         size += (n->process_instance             ?
                  string_len(n->process_instance) : none_len);
-        size += 1;  /* SEPARATOR */
+        size += strlen(DELIMITER);
 
         size += (n->entity_name                  ?
                  string_len(n->entity_name)      : none_len);
-        size += 1;  /* SEPARATOR */
+        size += strlen(DELIMITER);
 
         size += (n->entity_instance              ?
                  string_len(n->entity_instance)  : none_len);
-        size += 1;  /* TERMINATOR */
+        size += strlen(DELIMITER);
 
         tmp = rkmalloc(size, GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
-        if (snprintf(tmp, size, "%s/%s/%s/%s",
+        if (snprintf(tmp, size,
+                     "%s%s%s%s%s%s%s",
                      (n->process_name     ? n->process_name     : none),
+                     DELIMITER,
                      (n->process_instance ? n->process_instance : none),
+                     DELIMITER,
                      (n->entity_name      ? n->entity_name      : none),
+                     DELIMITER,
                      (n->entity_instance  ? n->entity_instance  : none)) !=
             size - 1) {
                 rkfree(tmp);
@@ -285,6 +294,42 @@ char * name_tostring(const struct name * n)
         return tmp;
 }
 EXPORT_SYMBOL(name_tostring);
+
+
+struct name * string_toname(const string_t * input) 
+{
+	struct name * name;
+
+        string_t *    tmp1   = NULL;
+	string_t *    tmp_pn = NULL;
+	string_t *    tmp_pi = NULL;
+	string_t *    tmp_en = NULL;
+	string_t *    tmp_ei = NULL;
+
+        if (input) {
+                string_t * tmp2;
+
+                string_dup(input, &tmp1);
+                if (!tmp1) {
+                        return NULL;
+                } 
+                tmp2 = tmp1;
+                
+                tmp_pn = strsep(&tmp2, DELIMITER);
+                tmp_pi = strsep(&tmp2, DELIMITER);
+                tmp_en = strsep(&tmp2, DELIMITER);
+                tmp_ei = strsep(&tmp2, DELIMITER);
+        }
+        
+        name = name_create_and_init(tmp_pn, tmp_pi, tmp_en, tmp_ei);
+        if (!name) {
+                if (tmp1) rkfree(tmp1);
+                return NULL;
+        }
+
+        return name;
+}
+EXPORT_SYMBOL(string_toname); 
 
 static int string_dup_from_user(const string_t __user * src, string_t ** dst)
 {
@@ -359,7 +404,7 @@ struct ipcp_config * ipcp_config_create(void)
                 return NULL;
 
         tmp->entry = NULL;
-        INIT_LIST_HEAD(&tmp->list);
+        INIT_LIST_HEAD(&tmp->next);
 
         return tmp;
 }
@@ -369,8 +414,12 @@ int ipcp_config_destroy(struct ipcp_config * cfg)
         if (!cfg)
                 return -1;
 
-        LOG_MISSING;
-        return -1;
+        if (cfg->entry)
+                rkfree(cfg->entry);
+
+        rkfree(cfg);
+
+        return 0;
 }
 
 struct ipcp_config *
@@ -412,3 +461,33 @@ int connection_destroy(struct connection * conn)
         rkfree(conn);
         return 0;
 }
+
+struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
+{
+        struct flow_spec * tmp;
+
+        if (!fspec)
+                return NULL;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp) {
+                return NULL;
+        }
+
+        /* FIXME: Are these field by field copy really needed ? */
+        /* FIXME: Please use proper indentation */
+        tmp->average_bandwidth           = fspec->average_bandwidth;
+        tmp->average_sdu_bandwidth       = fspec->average_sdu_bandwidth;
+        tmp->delay                       = fspec->delay;
+        tmp->jitter                      = fspec->jitter;
+        tmp->max_allowable_gap           = fspec->max_allowable_gap;
+        tmp->max_sdu_size                = fspec->max_sdu_size;
+        tmp->ordered_delivery            = fspec->ordered_delivery;
+        tmp->partial_delivery            = fspec->partial_delivery;
+        tmp->peak_bandwidth_duration     = fspec->peak_bandwidth_duration;
+        tmp->peak_sdu_bandwidth_duration = fspec->peak_sdu_bandwidth_duration;
+        tmp->undetected_bit_error_rate   = fspec->undetected_bit_error_rate;
+
+        return tmp;
+}
+EXPORT_SYMBOL(flow_spec_dup);

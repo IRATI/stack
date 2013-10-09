@@ -26,6 +26,8 @@
 
 namespace rina {
 
+static std::string NORMAL_IPC_PROCESS= "normal";
+
 /**
  * Thrown when there are problems assigning an IPC Process to a DIF
  */
@@ -272,6 +274,28 @@ public:
 };
 
 /**
+ * Thrown when there are problems initializing the IPC Manager
+ */
+class IPCManagerInitializationException: public IPCException {
+public:
+	IPCManagerInitializationException():
+		IPCException("Problems initializing librina-ipcmanager. "){
+	}
+	IPCManagerInitializationException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
+ * Initializes the IPC Manager, opening a NL socket
+ * to the specified local port, and sending an IPC
+ * Manager present message to the kernel
+ * @param localPort
+ */
+void initializeIPCManager(unsigned int localPort)
+	throw (IPCManagerInitializationException);
+
+/**
  * Event informing that an application has requested the
  * properties of one or more DIFs
  */
@@ -307,14 +331,17 @@ class IPCProcess {
 	/** The port at which the IPC Process is listening */
 	unsigned int portId;
 
+	/** The OS process identifier */
+	pid_t pid;
+
 	/** The IPC Process type */
 	std::string type;
 
 	/** The name of the IPC Process */
 	ApplicationProcessNamingInformation name;
 
-	/** The current configuration of the IPC Process*/
-	DIFConfiguration difConfiguration;
+	/** The current information of the DIF where the IPC Process is assigned*/
+	DIFInformation difInformation;
 
 	/** True if the IPC Process is a member of the DIF, false otherwise */
 	bool difMember;
@@ -328,15 +355,17 @@ public:
 	static const std::string error_deallocating_flow;
 	static const std::string error_querying_rib;
 	IPCProcess();
-	IPCProcess(unsigned short id, unsigned int portId, const std::string& type,
+	IPCProcess(unsigned short id, unsigned int portId, pid_t pid, const std::string& type,
 			const ApplicationProcessNamingInformation& name);
 	unsigned int getId() const;
 	const std::string& getType() const;
 	const ApplicationProcessNamingInformation& getName() const;
 	unsigned int getPortId() const;
 	void setPortId(unsigned int portId);
-	const DIFConfiguration& getConfiguration() const;
-	void setConfiguration(const DIFConfiguration& difConfiguration);
+	pid_t getPid() const;
+	void setPid(pid_t pid);
+	const DIFInformation& getDIFInformation() const;
+	void setDIFInformation(const DIFInformation& difInformation);
 	bool isDIFMember() const;
 	void setDIFMember(bool difMember);
 
@@ -349,11 +378,11 @@ public:
 	 * credentials, etc). The operation will block until the IPC Process is
 	 * assigned to the DIF or an error is returned.
 	 *
-	 * @param difConfiguration The configuration of the DIF
+	 * @param difInformation The information of the DIF (name, type configuration)
 	 * @throws AssignToDIFException if an error happens during the process
 	 */
 	void assignToDIF(
-			const DIFConfiguration& difConfiguration) throw (AssignToDIFException);
+			const DIFInformation& difInformation) throw (AssignToDIFException);
 
 	/**
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been

@@ -9,8 +9,8 @@ import rina.ipcmanager.impl.IPCManager;
  */
 public class ListIPCProcessesCommand extends ConsoleCommand{
 
-	public static final String ID = "listipcprocesses";
-	private static final String USAGE = "listipcprocesses";
+	public static final String ID = "listipcp";
+	private static final String USAGE = "listipcp";
 	
 	public ListIPCProcessesCommand(IPCManager ipcManager){
 		super(ID, ipcManager);

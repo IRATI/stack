@@ -125,7 +125,6 @@ static int are_ops_ok(const struct personality_ops * ops)
         }
 
         if (!(ops->ipc_create    &&
-              ops->ipc_configure &&
               ops->ipc_destroy)) {
                 LOG_ERR("Bogus IPC related ops");
                 return 0;
