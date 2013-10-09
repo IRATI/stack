@@ -423,7 +423,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 spin_unlock(&instance->lock);
 
                 wait_event_interruptible(flow->wait_queue,
-                                       ready_queue_not_empty(&flow->sdu_ready));
+                                         ready_queue_not_empty(&flow->sdu_ready));
 
                 spin_lock(&instance->lock);
                 LOG_DBG("Woken up");

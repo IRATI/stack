@@ -331,7 +331,7 @@ static int dummy_flow_deallocate(struct ipcp_instance_data * data,
         if (!is_flow_id_ok(rm_fid)){
                 LOG_ERR("Could not unbind flow at port %d", id);
                 return -1;
-                }
+        }
         rm_dst_fid = kfa_flow_unbind(data->kfa, dest_port_id);
         if (!is_flow_id_ok(rm_dst_fid)){
                 LOG_ERR("Could not unbind flow at port %d", dest_port_id);
