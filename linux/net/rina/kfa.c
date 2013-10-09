@@ -154,6 +154,7 @@ flow_id_t kfa_flow_create(struct kfa * instance)
         atomic_set(&flow->flag, 0);
 
         init_waitqueue_head(&flow->wait_queue);
+        INIT_LIST_HEAD(&flow->wait_queue.task_list);
 
         if (kfa_fmap_add(instance->flows.pending, fid, flow)) {
                 LOG_ERR("Could not map Flow and Flow ID");
@@ -362,11 +363,9 @@ int kfa_flow_sdu_write(struct kfa * instance,
                 return -1;
         }
 
-        //spin_lock(&instance->lock);
         flow = kfa_pmap_find(instance->flows.committed, id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
-                //spin_unlock(&instance->lock);
                 return -1;
         }
 
@@ -374,10 +373,8 @@ int kfa_flow_sdu_write(struct kfa * instance,
         ASSERT(instance);
         if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
                 LOG_ERR("Couldn't write SDU on port-id %d", id);
-                //spin_unlock(&instance->lock);
                 return -1;
         }
-        //spin_unlock(&instance->lock);
 
         return 0;
 }
@@ -408,11 +405,12 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 return -1;
         }
         while (kfifo_is_empty(&flow->sdu_ready)) {
-                LOG_DBG("Going to sleep");
+                LOG_DBG("Going to sleep on wait queue %pK", &flow->wait_queue);
                 atomic_set(&flow->flag, 0);
                 spin_unlock(&instance->lock);
-                wait_event_interruptible(flow->wait_queue,
+                wait_event_interruptible((flow->wait_queue),
                                 ((atomic_read(&flow->flag)) == 1));
+                //interruptible_sleep_on(&flow->wait_queue);
 
                 spin_lock(&instance->lock);
                 LOG_DBG("Woken up");
@@ -523,13 +521,16 @@ int kfa_sdu_post(struct kfa * instance,
 
         wq = &flow->wait_queue;
 
+        LOG_DBG("Wait queue %pK, next: %pK, prev: %pK",
+                        wq, wq->task_list.next, wq->task_list.prev);
+
         atomic_set(&flow->flag, 1);
 
         spin_unlock(&instance->lock);
 
         LOG_DBG("SDU posted");
 
-        wake_up_interruptible(wq);
+        wake_up(wq);
 
         LOG_DBG("Sleeping read syscall should be working now");
 
