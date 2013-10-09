@@ -54,7 +54,7 @@ public class IPCManager {
 	
 	private static final Log log = LogFactory.getLog(IPCManager.class);
 	
-	public static final String CONFIG_FILE_LOCATION = "config/config.rina"; 
+	public static final String CONFIG_FILE_LOCATION = "../conf/ipcmanager.conf"; 
 	public static final long CONFIG_FILE_POLL_PERIOD_IN_MS = 5000;
 	
 	public static final String NORMAL_IPC_PROCESS_TYPE = "normal";
@@ -321,7 +321,8 @@ public class IPCManager {
 	 */
 	public IPCProcess createIPCProcess(ApplicationProcessNamingInformation name, 
 			String type) throws CreateIPCProcessException {
-		return ipcProcessFactory.create(name, type);
+		return ipcProcessFactory.create(name, type, 
+				RINAConfiguration.getInstance().getLocalConfiguration().getInstallationPath());
 	}
 	
 	/**
