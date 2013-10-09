@@ -29,6 +29,7 @@ void         gpa_destroy(struct gpa * gpa);
 struct gpa * gpa_dup(const struct gpa * gpa);
 bool         gpa_is_equal(const struct gpa * a,
                           const struct gpa * b);
+bool         gpa_is_ok(const struct gpa * gpa);
 
 struct cache_line;
 
