@@ -237,6 +237,9 @@ int kfa_flow_bind(struct kfa *           instance,
                 return -1;
         }
 
+        LOG_DBG("Flow bound to port id %d with waitqueue %pK",
+                pid, &flow->wait_queue);
+
         spin_unlock(&instance->lock);
 
         return 0;
@@ -379,6 +382,11 @@ int kfa_flow_sdu_write(struct kfa * instance,
         }
 
         return 0;
+}
+
+static int ready_queue_not_empty(struct kfifo * sdu_ready)
+{
+        return (!kfifo_is_empty(sdu_ready));
 }
 
 int kfa_flow_sdu_read(struct kfa *  instance,
