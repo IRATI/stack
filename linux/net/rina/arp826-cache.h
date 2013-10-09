@@ -21,14 +21,17 @@
 #ifndef ARP_826_CACHE_H
 #define ARP_826_CACHE_H
 
-int arp826_cache_init(void);
-int arp826_cache_fini(void);
+struct cache_line;
 
-int arp826_cache_add(size_t                protocol_address_length,
-                     const unsigned char * source_protocol_address,
-                     const unsigned char * target_protocol_address,
-                     size_t                hardware_address_length,
-                     const unsigned char * source_hardware_address,
-                     const unsigned char * target_hardware_address);
+struct cache_line * cl_create(void);
+void                cl_destroy(struct cache_line * instance);
+
+int                 cl_add(struct cache_line *   instance,
+                           size_t                protocol_address_length,
+                           const unsigned char * source_protocol_address,
+                           const unsigned char * target_protocol_address,
+                           size_t                hardware_address_length,
+                           const unsigned char * source_hardware_address,
+                           const unsigned char * target_hardware_address);
 
 #endif
