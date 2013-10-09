@@ -27,7 +27,7 @@
 #include "utils.h"
 #include "fidm.h"
 
-#define BITS_IN_BITMAP (2 ^ BITS_PER_BYTE * sizeof(flow_id_t))
+#define BITS_IN_BITMAP ((2 << BITS_PER_BYTE) * sizeof(flow_id_t))
 
 struct fidm {
         DECLARE_BITMAP(bitmap, BITS_IN_BITMAP);
