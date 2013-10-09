@@ -195,6 +195,7 @@ struct cache_entry * ce_create(struct gpa *    gpa,
         return entry;
 }
 
+#if 0
 static bool ce_is_equal(struct cache_entry * entry1,
                         struct cache_entry * entry2)
 {
@@ -207,10 +208,11 @@ static bool ce_is_equal(struct cache_entry * entry1,
                 return 0;
         if (entry1->hal != entry2->hal)
                 return 0;
-        if (memcmp(entry1->ha, entry2->ha, entry1->pal)) return 0;
+        if (memcmp(entry1->ha, entry2->ha, entry1->hal)) return 0;
 
         return 1;
 }
+#endif
 
 const struct gpa * ce_pa(struct cache_entry * entry)
 {
