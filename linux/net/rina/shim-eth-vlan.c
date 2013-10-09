@@ -27,6 +27,7 @@
 #include <linux/list.h>
 #include <linux/netdevice.h>
 #include <linux/if_packet.h>
+#include <linux/kfifo.h>
 
 #define PROTO_LEN   32
 #define SHIM_NAME   "shim-eth-vlan"
@@ -68,8 +69,8 @@ struct shim_eth_flow {
         port_id_t          port_id;
         enum port_id_state port_id_state;
 
-        /* FIXME: Will be a kfifo holding the SDUs or a sk_buff_head */
-        /* QUEUE(sdu_queue, sdu *); */
+	/* Used when flow is not allocated yet */
+	struct kfifo sdu_queue;
 };
 
 /*
@@ -242,6 +243,12 @@ static void arp_req_handler(void *                         opaque,
                 if (!flow)
                         return;
 
+		if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
+			LOG_ERR("Couldn't create the sdu queue");
+			rkfree(flow);
+			return;
+		}
+
                 flow->port_id_state = PORT_STATE_RECIPIENT_PENDING;
 
 		flow->dest = string_toname((char *) dest_paddr->buf);
@@ -329,11 +336,19 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 if (!flow)
                         return -1;
 
+		if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
+			LOG_ERR("Couldn't create the sdu queue");
+			rkfree(flow);
+			return -1;
+		}
+		
+
                 flow->port_id = id;
                 flow->port_id_state = PORT_STATE_NULL;
 
                 flow->dest = name_dup(dest);
                 if (!flow->dest) {
+			kfifo_free(&flow->sdu_queue);
                         rkfree(flow);
                         return -1;
                 }
@@ -397,8 +412,8 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                         return -1;
                 }
         } else {
-                /* FIXME: Drop all frames in queue */
                 flow->port_id_state = PORT_STATE_NULL;
+		kfifo_free(&flow->sdu_queue);
         }
 
         return 0;
