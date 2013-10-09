@@ -194,7 +194,8 @@ int kfa_flow_bind(struct kfa *           instance,
 
         spin_lock(&instance->lock);
 
-        if (!kfa_fmap_find(instance->flows.pending, fid)) {
+        flow = kfa_fmap_find(instance->flows.pending, fid);
+        if (!flow) {
                 LOG_ERR("The flow with flow-id %d is not pending, "
                         "cannot bind it to port %d", fid, pid);
                 spin_unlock(&instance->lock);
@@ -202,12 +203,6 @@ int kfa_flow_bind(struct kfa *           instance,
         }
         if (kfa_pmap_find(instance->flows.committed, pid)) {
                 LOG_ERR("Flow on port-id %d already exists", pid);
-                spin_unlock(&instance->lock);
-                return -1;
-        }
-
-        flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
-        if (!flow) {
                 spin_unlock(&instance->lock);
                 return -1;
         }
@@ -368,7 +363,7 @@ int kfa_flow_sdu_write(struct kfa * instance,
         }
 
         ipcp = flow->ipc_process;
-        ASSERT(instance);
+        ASSERT(ipcp);
         if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
                 LOG_ERR("Couldn't write SDU on port-id %d", id);
                 //spin_unlock(&instance->lock);
@@ -414,7 +409,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 spin_unlock(&instance->lock);
 
                 wait_event_interruptible(flow->wait_queue,
-                                         ready_queue_not_empty(&flow->sdu_ready));
+                                       ready_queue_not_empty(&flow->sdu_ready));
 
                 spin_lock(&instance->lock);
                 LOG_DBG("Woken up");
