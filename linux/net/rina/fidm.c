@@ -86,7 +86,7 @@ flow_id_t fidm_allocate(struct fidm * instance)
         LOG_DBG("The fidm bitmap find returned id %d (bad = %d)",
                 id, FLOW_ID_WRONG);
 
-        LOG_DBG("Bits in bitmap %d", BITS_IN_BITMAP);
+        LOG_DBG("Bits in bitmap %zd", BITS_IN_BITMAP);
 
         if (!is_flow_id_ok(id)) {
                 LOG_WARN("Got an out-of-range flow-id (%d) from "
