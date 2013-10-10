@@ -332,6 +332,27 @@ int kfa_flow_destroy(struct kfa * instance,
 }
 EXPORT_SYMBOL(kfa_flow_destroy);
 
+int kfa_flow_unbind_and_destroy(struct kfa * instance,
+                          	port_id_t    id)
+{
+
+	flow_id_t rm_fid;
+
+	rm_fid = kfa_flow_unbind(instance, id);
+        if (!is_flow_id_ok(rm_fid)){
+                LOG_ERR("Could not unbind flow at port %d", id);
+                return -1; 
+        }   
+
+        if (kfa_flow_destroy(instance, rm_fid)) {
+                LOG_ERR("Could not destroy flow with fid: %d", rm_fid);
+                return -1; 
+        }   
+
+	return 0;
+}
+EXPORT_SYMBOL(kfa_flow_unbind_and_destroy);
+
 /* FIXME: To be removed ASAP */
 int kfa_remove_all_for_id(struct kfa *     instance,
                           ipc_process_id_t id)
