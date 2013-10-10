@@ -245,7 +245,7 @@ struct cache_entry * ce_create(struct gpa *    gpa,
         return entry;
 }
 
-static bool ce_is_ok(struct cache_entry * entry)
+static bool ce_is_ok(const struct cache_entry * entry)
 {
         if (entry == NULL                           ||
             !gpa_is_ok(entry->pa)                   ||
