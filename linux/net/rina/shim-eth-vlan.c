@@ -287,9 +287,9 @@ static void arp_rep_handler(void *                         opaque,
                                                        data->id,
                                                        flow->flow_id,
                                                        0)) {
-                        /* FIXME: change this with kfa_flow_destroy
-                         * kipcm_flow_remove(default_kipcm, flow->port_id);
-                         */
+                        flow_id_t fid = kfa_flow_unbind(data->kfa,
+                                                        flow->port_id);
+                        kfa_flow_destroy(data->kfa, fid);
                         list_del(&flow->list);
                         name_destroy(flow->dest);
                         rkfree(flow);
@@ -413,9 +413,9 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                                        data->id,
                                                        flow->flow_id,
                                                        0)) {
-                        /* FIXME: change this with kfa_flow_destroy
-                         * kipcm_flow_remove(default_kipcm, flow->port_id);
-                         */
+                        flow_id_t fid = kfa_flow_unbind(data->kfa,
+                                                        flow->port_id);
+                        kfa_flow_destroy(data->kfa, fid);
                         list_del(&flow->list);
                         name_destroy(flow->dest);
                         rkfree(flow);
@@ -433,6 +433,7 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
                                     port_id_t                   id)
 {
         struct shim_eth_flow * flow;
+        flow_id_t              fid;
 
         ASSERT(data);
         flow = find_flow(data, id);
@@ -455,10 +456,9 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
                 rinarp_paddr_unregister(data->handle);
         }
 
-        /* FIXME: change this with kfa_flow_destroy
-         * if (kipcm_flow_remove(default_kipcm, id))
-         *         return -1;
-         */
+        fid = kfa_flow_unbind(data->kfa,
+                              flow->port_id);
+        kfa_flow_destroy(data->kfa, fid);
 
         return 0;
 }
