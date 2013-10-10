@@ -79,7 +79,7 @@ flow_id_t fidm_allocate(struct fidm * instance)
                 LOG_ERR("Bogus instance passed, bailing out");
                 return FLOW_ID_WRONG;
         }
-        
+
         id = (flow_id_t) bitmap_find_next_zero_area(instance->bitmap,
                                                     BITS_IN_BITMAP,
                                                     0, 1, 0);
