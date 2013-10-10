@@ -48,10 +48,15 @@
 #include "arp826.h"
 #include "arp826-cache.h"
 
-#define HW_TYPE_ETHER    1              /* Ethernet    */
+enum optypes {
+        ARP_REQUEST = 1,
+        ARP_REPLY   = 2,
+};
 
-#define RINARP_REQUEST   1              /* ARP request */
-#define RINARP_REPLY     2              /* ARP reply   */
+enum htypes {
+        HW_TYPE_ETHER = 1,
+        HW_TYPE_MAX,
+};
 
 struct arp_header {
         __be16        htype; /* Hardware type */
@@ -114,7 +119,8 @@ EXPORT_SYMBOL(rinarp_send_request);
 static struct arp_header * arp826_header(const struct sk_buff * skb)
 { return (struct arp_header *) skb_network_header(skb); }
 
-static int arp826_process(struct sk_buff * skb)
+static int arp826_process(struct sk_buff *    skb,
+                          struct cache_line * cl)
 {
         struct arp_header * header;
         uint16_t            operation;
@@ -126,6 +132,9 @@ static int arp826_process(struct sk_buff * skb)
         unsigned char *     sha; /* Source protocol address pointer */
         unsigned char *     tha; /* Target protocol address pointer */
         
+        ASSERT(skb);
+        ASSERT(cl);
+
         LOG_DBG("Processing ARP skb %pK", skb);
         
         header = arp826_header(skb);
@@ -144,12 +153,12 @@ static int arp826_process(struct sk_buff * skb)
                 return 0;
         }
         if (header->htype != htons(HW_TYPE_ETHER)) {
-                LOG_ERR("Wrong ARP hardware address %d", header->htype);
+                LOG_ERR("Unhandled ARP hardware address %d", header->htype);
                 return 0;
         }
 
         operation = ntohs(header->oper);
-        if (operation != RINARP_REPLY && operation != RINARP_REQUEST) {
+        if (operation != ARP_REPLY && operation != ARP_REQUEST) {
                 LOG_ERR("Unhandled ARP operation %d", operation);
                 return 0;
         }
@@ -189,12 +198,12 @@ static int arp826_process(struct sk_buff * skb)
          */
 
         switch (operation) {
-        case RINARP_REQUEST:
+        case ARP_REQUEST:
                 /* Are we advertising this network address? */
 
                 LOG_MISSING;
                 break;
-        case RINARP_REPLY:
+        case ARP_REPLY:
                 /* Is the reply for one of our network addresses? */
 
                 LOG_MISSING;
@@ -208,6 +217,8 @@ static int arp826_process(struct sk_buff * skb)
         return 0;
 }
 
+struct cache_line * cache_lines[HW_TYPE_MAX - 1] = { NULL };
+
 static int arp826_receive(struct sk_buff *     skb,
                           struct net_device *  dev,
                           struct packet_type * pkt,
@@ -215,6 +226,8 @@ static int arp826_receive(struct sk_buff *     skb,
 {
         const struct arp_header * header;
         int                       total_length;
+        struct cache_line *       cl;
+        int                       line;
 
         if (!dev || !skb)
                 return -1;
@@ -227,10 +240,16 @@ static int arp826_receive(struct sk_buff *     skb,
                 return 0;
         }
 
-        /* We only handle type-1 headers */
+        /* We only receive type-1 headers (this handler could be reused) */
         if (skb->dev->type != HW_TYPE_ETHER) {
-                LOG_DBG("Unknown device type (%d)", skb->dev->type);
+                LOG_DBG("Unhandled device type %d", skb->dev->type);
                 return 0;
+        }
+        line = skb->dev->type;
+        cl   = cache_lines[line - 1];
+        if (!cl) {
+                LOG_ERR("I don't have a CL to handle this ARP");
+                return -1;
         }
 
         /* FIXME: We should move pre-checks from arp826_process() here ... */
@@ -269,8 +288,8 @@ static int arp826_receive(struct sk_buff *     skb,
                 return 0;
         }
 
-        if (arp826_process(skb)) {
-                /* FIXME: What should we do here? */
+        if (arp826_process(skb, cl)) {
+                LOG_ERR("Cannot process this ARP");
         }
         consume_skb(skb);
 
@@ -282,20 +301,13 @@ static struct packet_type arp_packet_type __read_mostly = {
         .func = arp826_receive,
 };
 
-struct cache_line * cache_lines[7] = { NULL };
-
 static int __init mod_init(void)
 {
-        cache_lines[0] = NULL;
-        cache_lines[1] = NULL;
-        cache_lines[2] = NULL;
-        cache_lines[3] = NULL;
-        cache_lines[4] = NULL;
-        cache_lines[5] = NULL;
-        cache_lines[6] = cl_create(6); /* MAC */
-
-        if (!cache_lines[6])
+        cache_lines[HW_TYPE_ETHER - 1] = cl_create(6); /* MAC */
+        if (!cache_lines[HW_TYPE_ETHER - 1]) {
+                LOG_ERR("Cannot intialize, bailing out");
                 return -1;
+        }
 
         dev_add_pack(&arp_packet_type);
 
@@ -308,9 +320,9 @@ static void __exit mod_exit(void)
 {
         dev_remove_pack(&arp_packet_type);
 
-        ASSERT(cache_lines[6]);
+        ASSERT(cache_lines[HW_TYPE_ETHER - 1]);
 
-        cl_destroy(cache_lines[6]);
+        cl_destroy(cache_lines[HW_TYPE_ETHER - 1]);
 
         LOG_DBG("Destroyed successfully");
 }
