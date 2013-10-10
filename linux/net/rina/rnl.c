@@ -32,7 +32,6 @@
 #define NETLINK_RINA_C_MIN (RINA_C_MIN + 1)
 #define NETLINK_RINA_C_MAX (RINA_C_MAX - 1)
 
-
 struct message_handler {
         void *             data;
         message_handler_cb cb;
