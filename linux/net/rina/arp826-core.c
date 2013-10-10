@@ -130,6 +130,12 @@ static int arp826_process(struct sk_buff *    skb,
         struct arp_header * header;
         uint16_t            operation;
 
+        uint16_t            htype;
+        uint16_t            ptype;
+        uint8_t             hlen;
+        uint8_t             plen;
+        uint16_t            oper;
+
         uint8_t *           ptr;
 
         uint8_t *           spa; /* Source protocol address pointer */
@@ -148,11 +154,18 @@ static int arp826_process(struct sk_buff *    skb,
                 return 0;
         }
 
-        LOG_DBG("Hardware type           = 0x%02x", header->htype);
-        LOG_DBG("Protocol type           = 0x%02x", header->ptype);
-        LOG_DBG("Hardware address length = %d",     header->hlen);
-        LOG_DBG("Protocol address length = %d",     header->plen);
-        LOG_DBG("Operation               = 0x%02x", operation);
+        htype = ntohs(header->htype);
+        ptype = ntohs(header->ptype);
+        hlen  = header->hlen;
+        plen  = header->plen;
+        oper  = ntohs(header->oper);
+
+        LOG_DBG("ARP header:");
+        LOG_DBG("  Hardware type           = 0x%02x", htype);
+        LOG_DBG("  Protocol type           = 0x%02x", ptype);
+        LOG_DBG("  Hardware address length = %d",     hlen);
+        LOG_DBG("  Protocol address length = %d",     plen);
+        LOG_DBG("  Operation               = 0x%02x", oper);
 
         /*
          * FIXME: Check if we know the protocol specified. Only accept RINA
@@ -185,15 +198,10 @@ static int arp826_process(struct sk_buff *    skb,
         tha = ptr; ptr += header->hlen;
         tpa = ptr; ptr += header->plen;
 
-#if 0
-        /* FIXME: To be rearranged */
-        ASSERT(sha == 6);
-        ASSERT(tha == 6);
-        if (cl_add(NULL, gpa_create(spa, header->plen), sha, header->hlen)) {
+        if (cl_add(cl, gpa_create(spa, header->plen), sha)) {
                 LOG_ERR("Could not add this entry to its cache-line");
                 return -1;
         }
-#endif
 
         /*
          *  And finally process the entry ...
@@ -263,7 +271,8 @@ static int arp826_receive(struct sk_buff *     skb,
                 LOG_ERR("Wrong cache line %d", line_id);
                 return 0;
         }
-        cl   = cache_lines[line_id];
+
+        cl = cache_lines[line_id];
         if (!cl) {
                 LOG_ERR("I don't have a CL to handle this ARP");
                 return 0;
@@ -323,10 +332,10 @@ static int cache_line_create(int idx, size_t hwlen)
 {
         cache_lines[idx] = cl_create(hwlen);
         if (!cache_lines[idx]) {
-                LOG_ERR("Cannot intialize CL %d, bailing out", idx);
+                LOG_ERR("Cannot intialize CL on index %d, bailing out", idx);
                 return -1;
         }
-        LOG_DBG("CL %d created successfully", idx);
+        LOG_DBG("CL on index %d created successfully", idx);
 
         return 0;
 }
@@ -343,6 +352,7 @@ static int __init mod_init(void)
         if (cache_line_create(HW_TYPE_ETHER - 1, 6))
                 return -1;
 
+        /* That's all */
         dev_add_pack(&arp_packet_type);
 
         LOG_DBG("Initialized successfully");
