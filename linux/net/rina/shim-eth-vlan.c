@@ -166,9 +166,9 @@ static string_t * create_vlan_interface_name(string_t * interface_name,
         sprintf(string_vlan_id,"%d",vlan_id);
 
         complete_interface = rkzalloc(
-                        strlen(interface_name) + 2*sizeof(char)
-                                + strlen(string_vlan_id),
-                        GFP_KERNEL);
+                                      strlen(interface_name) + 2*sizeof(char)
+                                      + strlen(string_vlan_id),
+                                      GFP_KERNEL);
         strcat(complete_interface, interface_name);
         strcat(complete_interface, ".");
         strcat(complete_interface, string_vlan_id);
@@ -698,7 +698,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
 
         if (data->dif_name){
                 LOG_ERR("This IPC Process is already assigned to the DIF %s",
-                                data->dif_name->process_name);
+                        data->dif_name->process_name);
                 LOG_ERR("An IPC Process can only be assigned to a DIF once");
                 return -1;
         }
@@ -722,7 +722,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 entry = tmp->entry;
                 if (!strcmp(entry->name,"interface-name")) {
                         info->interface_name =
-                                        kstrdup(entry->value, GFP_KERNEL);
+                                kstrdup(entry->value, GFP_KERNEL);
                         if (!info->interface_name) {
                                 LOG_ERR("Cannot copy interface name");
                                 name_destroy(data->dif_name);
@@ -758,7 +758,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         }
 
         LOG_DBG("Got device driver of %s, trying to register handler",
-                        complete_interface);
+                complete_interface);
 
         /* Store in list for retrieval later on */
         mapping = rkmalloc(sizeof(*mapping), GFP_KERNEL);
