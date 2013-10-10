@@ -959,7 +959,7 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
          * structures linked (somewhat) together
          */
         INIT_LIST_HEAD(&(inst->data->list));
-        list_add(&(data->instances), &(inst->data->list));
+        list_add(&(inst->data->list), &(data->instances));
 
         return inst;
 }
@@ -967,43 +967,57 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
 static int eth_vlan_destroy(struct ipcp_factory_data * data,
                             struct ipcp_instance *     instance)
 {
-        struct list_head * pos, * q;
+        struct ipcp_instance_data * pos, * next;
 
         ASSERT(data);
         ASSERT(instance);
 
         /* Retrieve the instance */
-        list_for_each_safe(pos, q, &(data->instances)) {
-                struct ipcp_instance_data * inst;
+        list_for_each_entry_safe(pos, next, &data->instances, list) {
+                if (pos->id == instance->data->id) {
 
-                inst = list_entry(pos, struct ipcp_instance_data, list);
-
-                if (inst->id == instance->data->id) {
                         /* Remove packet handler if there is one */
-                        if (inst->eth_vlan_packet_type->dev)
-                                __dev_remove_pack(inst->eth_vlan_packet_type);
+                        if (pos->eth_vlan_packet_type->dev)
+                                __dev_remove_pack(pos->eth_vlan_packet_type);
 
                         /* Unbind from the instances set */
-                        list_del(pos);
+                        list_del(&pos->list);
 
                         /* Destroy it */
-                        name_destroy(inst->name);
-                        name_destroy(inst->reg_app);
-                        name_destroy(inst->app_name);
-                        rkfree(inst->info->interface_name);
-                        rkfree(inst->info);
+                        if (pos->name)
+                        	name_destroy(pos->name);
+
+                        if(pos->reg_app)
+                        	name_destroy(pos->reg_app);
+
+                        if (pos->app_name)
+                        	name_destroy(pos->app_name);
+
+                        if (pos->info->interface_name)
+                        	rkfree(pos->info->interface_name);
+
+                        if (pos->info)
+                        	rkfree(pos->info);
+
                         /*
                          * Might cause problems:
                          * The packet type might still be in use by receivers
                          * and must not be freed until after all
                          * the CPU's have gone through a quiescent state.
                          */
-                        rkfree(inst->eth_vlan_packet_type);
-                        rkfree(inst);
+                        if (pos->eth_vlan_packet_type)
+                        	rkfree(pos->eth_vlan_packet_type);
+
+                        rkfree(pos);
+                        rkfree(instance);
+
+                        return 0;
                 }
         }
 
-        return 0;
+        LOG_DBG("Didn't find instance, returning error");
+
+        return -1;
 }
 
 static struct ipcp_factory_ops eth_vlan_ops = {

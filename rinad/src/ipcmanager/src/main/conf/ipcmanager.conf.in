@@ -16,7 +16,12 @@
     "applicationProcessName" : "edu.mac.dummy.i2cat",
     "applicationProcessInstance" : "1",
     "difName" : "loopback.DIF"
-  }],
+  }, {
+    "type" : "shim-eth-vlan",
+    "applicationProcessName" : "test",
+    "applicationProcessInstance" : "1",
+    "difName" : "100"
+  } ],
   "difConfigurations" : [ {
     "difName" : "loopback.DIF", 
     "configParameters" : [ {
@@ -26,5 +31,11 @@
     	"name" : "vlanid", 
     	"value" : "987"
     } ]
+  }, {
+    "difName" : "100",
+    "configParameters" : [ {
+    	"name" : "interface-name", 
+    	"value" : "eth0"
+      } ]
   } ]
 }
