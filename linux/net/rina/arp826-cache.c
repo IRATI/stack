@@ -145,6 +145,7 @@ static bool ce_is_ok(const struct cache_entry * entry)
         return 1;
 }
 
+#if 0
 static bool ce_is_equal(struct cache_entry * entry1,
                         struct cache_entry * entry2)
 {
@@ -161,6 +162,7 @@ static bool ce_is_equal(struct cache_entry * entry1,
 
         return 1;
 }
+#endif
 
 const struct gpa * ce_pa(struct cache_entry * entry)
 {
@@ -300,11 +302,21 @@ int cl_add(struct cache_line * instance,
         spin_lock(&instance->lock);
 
         list_for_each_entry(pos, &instance->entries, next) {
+                const uint8_t * ha;
+
+                ha = ce_ha(pos);
+                ASSERT(ha);
+
+#if 0
+                /* FIXME: Fix this mess */
+                if (!memcmp
+                if (gpa_is_equal(ce_pa(pos), protocol_address)
                 if (ce_is_equal(pos, entry)) {
                         LOG_WARN("CE already present in this CL");
                         ce_destroy(entry);
                         return 0;
                 }
+#endif
         }
 
         list_add(&instance->entries, &entry->next);
