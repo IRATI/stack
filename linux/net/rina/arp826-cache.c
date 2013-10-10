@@ -62,7 +62,7 @@ struct gpa * gpa_create(const uint8_t * address,
                 rkfree(tmp);
                 return NULL;
         }
-        memcpy(tmp->address, address, length);
+        memcpy(tmp->address, address, tmp->length);
 
         return tmp;
 }
@@ -86,6 +86,19 @@ struct gpa * gpa_dup(const struct gpa * gpa)
 bool gpa_is_ok(const struct gpa * gpa)
 { return (!gpa || gpa->length == 0 || gpa->address == NULL) ? 0 : 1; }
 
+const char * gpa_address_value(const struct gpa * gpa)
+{
+        ASSERT(gpa);
+        return gpa->address;
+}
+
+size_t gpa_address_length(const struct gpa * gpa);
+{
+        ASSERT(gpa);
+        return gpa->length;
+}
+
+/* FIXME: Please fix this, it's broken */
 bool gpa_is_equal(const struct gpa * a, const struct gpa * b)
 {
         if (a != b) {
@@ -178,8 +191,8 @@ int ce_init(struct cache_entry * entry,
 
 /* Takes the ownership of the passed gpa */
 struct cache_entry * ce_create(struct gpa *    gpa,
-                                      const uint8_t * hardware_address,
-                                      size_t          hardware_address_length)
+                               const uint8_t * hardware_address,
+                               size_t          hardware_address_length)
 {
         struct cache_entry * entry;
 
@@ -207,11 +220,23 @@ static bool ce_is_equal(struct cache_entry * entry1,
                 return 0;
         if (entry1->hal != entry2->hal)
                 return 0;
-        if (memcmp(entry1->ha, entry2->ha, entry1->pal)) return 0;
+        if (memcmp(entry1->ha, entry2->ha, entry1->hal)) return 0;
 
         return 1;
 }
 #endif
+
+const struct gpa * ce_pa(struct cache_entry * entry)
+{
+        ASSERT(entry);
+        return entry->pa;
+}
+
+const uint8_t * ce_ha(struct cache_entry * entry)
+{
+        ASSERT(entry);
+        return entry->ha;
+}
 
 struct cache_line {
         size_t           hal;     /* Hardware address length */
@@ -254,22 +279,98 @@ void cl_destroy(struct cache_line * instance)
         rkfree(instance);
 }
 
+const struct cache_entry * cl_find_by_ha(struct cache_line * instance,
+                                         const uint8_t *     hardware_address)
+{
+        struct cache_entry * pos;
+
+        ASSERT(instance);
+        ASSERT(hardware_address);
+
+        spin_lock(&instance->lock);
+
+        list_for_each_entry(pos, &instance->entries, next) {
+                if (!memcmp(pos->ha, hardware_address, instance->hal)) {
+                        spin_unlock(&instance->lock);
+                        return pos;
+                }
+        }
+
+        spin_unlock(&instance->lock);
+
+        return NULL;
+}
+
+const struct cache_entry * cl_find_by_pa(struct cache_line * instance,
+                                         const struct gpa *  protocol_address)
+{
+        struct cache_entry * pos;
+
+        ASSERT(instance);
+        ASSERT(protocol_address);
+
+        spin_lock(&instance->lock);
+
+        list_for_each_entry(pos, &instance->entries, next) {
+                if (gpa_is_equal(pos->pa, protocol_address)) {
+                        spin_unlock(&instance->lock);
+                        return pos;
+                }
+        }
+
+        spin_unlock(&instance->lock);
+
+        return NULL;
+}
+
 int cl_add(struct cache_line * instance,
            struct gpa *        protocol_address,
            const uint8_t *     hardware_address)
 {
-        struct cache_entry * entry;
+        struct cache_entry *       entry;
+        const struct cache_entry * tmp;
 
         if (!instance)
+                return -1;
+
+        /* FIXME: Use ce_is_equal() instead !!! */
+        tmp = cl_find_by_ha(instance, hardware_address);
+        if (tmp)
+                return -1;
+        tmp = cl_find_by_pa(instance, protocol_address);
+        if (tmp)
                 return -1;
 
         entry = ce_create(protocol_address, hardware_address, instance->hal);
         if (!entry)
                 return -1;
 
-        ce_destroy(entry);
+        list_add(&instance->entries, &entry->next);
 
-        LOG_MISSING;
+        return 0;
+}
 
-        return -1;
+void cl_remove(struct cache_line *        instance,
+               const struct cache_entry * entry)
+{
+        struct cache_entry * pos, * q;
+
+        ASSERT(instance);
+        ASSERT(entry);
+
+        spin_lock(&instance->lock);
+
+        list_for_each_entry_safe(pos, q, &instance->entries, next) {
+                if (pos == entry) {
+                        struct cache_entry * tmp = pos;
+                        list_del(&pos->next);
+                        ce_destroy(tmp);
+                        spin_unlock(&instance->lock);
+                        return;
+                }
+        }
+
+        spin_unlock(&instance->lock);
+
+        rkfree(instance);
 }
