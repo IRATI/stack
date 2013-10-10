@@ -277,7 +277,10 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         rkfree(flow);
                         return -1;
                 }
-                if (kipcm_flow_res(default_kipcm, data->id, flow->src_fid, 0)) {
+                if (kipcm_notify_flow_alloc_req_result(default_kipcm,
+                                                       data->id,
+                                                       flow->src_fid,
+                                                       0)) {
                         /* FIXME: change this with kfa_flow_destroy
                            kipcm_flow_remove(default_kipcm, flow->port_id);
                            kipcm_flow_remove(default_kipcm, port_id); */
