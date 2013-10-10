@@ -321,10 +321,14 @@ int kfa_flow_destroy(struct kfa * instance,
                 return -1;
         }
 
+        kfifo_free(&flow->sdu_ready);
+        rkfree(flow);
+
         if (kfa_fmap_remove(instance->flows.pending, id)) {
                 LOG_ERR("Could not remove pending flow with fid %d", id);
                 spin_unlock(&instance->lock);
-                return -1;        }
+                return -1;
+        }
 
         spin_unlock(&instance->lock);
 

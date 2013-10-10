@@ -416,6 +416,9 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                         /* FIXME: change this with kfa_flow_destroy
                          * kipcm_flow_remove(default_kipcm, flow->port_id);
                          */
+                        flow_id_t fid = kfa_flow_unbind(data->kfa,
+                                                        flow->port_id);
+                        kfa_flow_destroy(data->kfa, fid);
                         list_del(&flow->list);
                         name_destroy(flow->dest);
                         rkfree(flow);
