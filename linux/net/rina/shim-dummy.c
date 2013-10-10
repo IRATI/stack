@@ -269,8 +269,6 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 }
                 if (kipcm_flow_add(default_kipcm,
                                    data->id, port_id, flow_id)) {
-                        /* FIXME: change this with kfa_flow_destroy
-                        kipcm_flow_remove(default_kipcm, port_id); */
                         kfa_flow_unbind_and_destroy(data->kfa, port_id);
                         list_del(&flow->list);
                         name_destroy(flow->source);
@@ -279,11 +277,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         return -1;
                 }
                 if (kipcm_flow_res(default_kipcm, data->id, flow->src_fid, 0)) {
-                        /* FIXME: change this with kfa_flow_destroy
-                        kipcm_flow_remove(default_kipcm, flow->port_id);
-                        kipcm_flow_remove(default_kipcm, port_id); */
                         kfa_flow_unbind_and_destroy(data->kfa, flow->port_id);
-
                         kfa_flow_unbind_and_destroy(data->kfa, port_id);
                         list_del(&flow->list);
                         name_destroy(flow->source);
@@ -333,33 +327,11 @@ static int dummy_flow_deallocate(struct ipcp_instance_data * data,
          */
 
 	if (kfa_flow_unbind_and_destroy(data->kfa, id) ||
-	    kfa_flow_unbind_and_destroy(data->kfa, id)) {
+	    kfa_flow_unbind_and_destroy(data->kfa, dest_port_id)) {
 		return -1;
 	}
-	/*  
-	rm_fid = kfa_flow_unbind(data->kfa, id);
-        if (!is_flow_id_ok(rm_fid)){
-                LOG_ERR("Could not unbind flow at port %d", id);
-                return -1;
-        }
-        rm_dst_fid = kfa_flow_unbind(data->kfa, dest_port_id);
-        if (!is_flow_id_ok(rm_dst_fid)){
-                LOG_ERR("Could not unbind flow at port %d", dest_port_id);
-                return -1;
-        }
-
-        if (kfa_flow_destroy(data->kfa, rm_fid)) {
-                LOG_ERR("Could not destroy flow with fid: %d", rm_fid);
-                return -1;
-        }
-
-        if (kfa_flow_destroy(data->kfa, rm_dst_fid)) {
-                LOG_ERR("Could not destroy flow with fid: %d", rm_dst_fid);
-                return -1;
-        }
-	*/
-
-        /* Notify the destination application */
+        
+	/* Notify the destination application */
         kipcm_notify_flow_dealloc(data->id, 0, dest_port_id, 1);
 
         list_del(&flow->list);
