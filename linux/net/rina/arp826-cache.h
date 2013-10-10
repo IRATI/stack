@@ -47,6 +47,8 @@ struct cache_line;
 struct cache_line *        cl_create(size_t hw_address_length);
 void                       cl_destroy(struct cache_line * instance);
 
+size_t                     cl_hwa_length(struct cache_line * instance);
+
 /*
  * NOTE:
  *   Takes the ownership of the passed gpa. Hardware address length is

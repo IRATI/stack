@@ -340,6 +340,8 @@ void cl_destroy(struct cache_line * instance)
         rkfree(instance);
 }
 
+size_t cl_hwa_length(struct cache_line * instance);
+
 const struct cache_entry * cl_find_by_ha(struct cache_line * instance,
                                          const uint8_t *     hardware_address)
 {
