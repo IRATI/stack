@@ -30,6 +30,8 @@ struct gpa * gpa_dup(const struct gpa * gpa);
 bool         gpa_is_equal(const struct gpa * a,
                           const struct gpa * b);
 bool         gpa_is_ok(const struct gpa * gpa);
+const char * gpa_address_value(const struct gpa * gpa);
+size_t       gpa_address_length(const struct gpa * gpa);
 
 struct cache_entry;
 
