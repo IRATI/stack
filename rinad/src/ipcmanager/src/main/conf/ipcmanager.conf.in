@@ -16,7 +16,7 @@
     "applicationProcessName" : "edu.mac.dummy.i2cat",
     "applicationProcessInstance" : "1",
     "difName" : "loopback.DIF"
-  }],
+  } ],
   "difConfigurations" : [ {
     "difName" : "loopback.DIF", 
     "configParameters" : [ {
@@ -26,5 +26,11 @@
     	"name" : "vlanid", 
     	"value" : "987"
     } ]
+  }, {
+    "difName" : "100",
+    "configParameters" : [ {
+    	"name" : "interface-name", 
+    	"value" : "eth0"
+      } ]
   } ]
 }

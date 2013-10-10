@@ -41,6 +41,7 @@ public class IPCManagerConsole implements Runnable{
 		commands.put(ListIPCProcessesCommand.ID, new ListIPCProcessesCommand(ipcManager));
 		commands.put(CreateIPCProcessCommand.ID, new CreateIPCProcessCommand(ipcManager));
 		commands.put(DestroyIPCProcessCommand.ID, new DestroyIPCProcessCommand(ipcManager));
+		commands.put(AssignToDIFCommand.ID, new AssignToDIFCommand(ipcManager));
 	}
 	
 	public void stop(){

@@ -4,6 +4,7 @@
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -276,7 +277,11 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         rkfree(flow);
                         return -1;
                 }
-                if (kipcm_flow_res(default_kipcm, data->id, flow->src_fid, 0)) {
+
+                if (kipcm_notify_flow_alloc_req_result(default_kipcm,
+                                                       data->id,
+                                                       flow->src_fid,
+                                                       0)) {
                         kfa_flow_unbind_and_destroy(data->kfa, flow->port_id);
                         kfa_flow_unbind_and_destroy(data->kfa, port_id);
                         list_del(&flow->list);
@@ -284,7 +289,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         name_destroy(flow->dest);
                         rkfree(flow);
                         return -1;
-                }
+		}
         } else {
                 list_del(&flow->list);
                 name_destroy(flow->source);

@@ -164,6 +164,20 @@ public:
 };
 
 /**
+ * Thrown when there are problems looking for an IPC Process
+ */
+class GetIPCProcessException: public IPCException {
+public:
+        GetIPCProcessException():
+                IPCException("Problems while searching an IPC Process"){
+        }
+        GetIPCProcessException(const std::string& description):
+                IPCException(description){
+        }
+};
+
+
+/**
  * Thrown when there are problems destroying an IPC Process
  */
 class DestroyIPCProcessException: public IPCException {
@@ -527,59 +541,71 @@ public:
  */
 class IPCProcessFactory: public Lockable {
 
-	/** The current IPC Processes in the system*/
-	std::map<int, IPCProcess*> ipcProcesses;
+        /** The current IPC Processes in the system*/
+        std::map<int, IPCProcess*> ipcProcesses;
 
 public:
-	static const std::string unknown_ipc_process_error;
-	static const std::string path_to_ipc_process_types;
-	static const std::string normal_ipc_process_type;
+        static const std::string unknown_ipc_process_error;
+        static const std::string path_to_ipc_process_types;
+        static const std::string normal_ipc_process_type;
 
-	IPCProcessFactory();
-	~IPCProcessFactory() throw();
+        IPCProcessFactory();
+        ~IPCProcessFactory() throw();
 
-	/**
-	 * Read the sysfs folder and get the list of IPC Process types supported
-	 * by the kernel
-	 * @return the list of supported IPC Process types
-	 */
-	std::list<std::string> getSupportedIPCProcessTypes();
+        /**
+         * Read the sysfs folder and get the list of IPC Process types supported
+         * by the kernel
+         * @return the list of supported IPC Process types
+         */
+        std::list<std::string> getSupportedIPCProcessTypes();
 
-	/**
-	 * Invoked by the IPC Manager to instantiate a new IPC Process in the
-	 * system. The operation will block until the IPC Process is created or an
-	 * error is returned.
-	 *
-	 * @param ipcProcessId An identifier that uniquely identifies an IPC Process
-	 * within a aystem.
-	 * @param ipcProcessName The naming information of the IPC Process
-	 * @param difType The type of IPC Process (Normal or one of the shims)
-	 * @param installationPath The installation path of the IRATI software
-	 * @return a pointer to a data structure holding the IPC Process state
-	 * @throws CreateIPCProcessException if an error happens during the creation
-	 */
-	IPCProcess * create(
-			const ApplicationProcessNamingInformation& ipcProcessName,
-			const std::string& difType,
-			const std::string& installationPath) throw (CreateIPCProcessException);
+        /**
+         * Invoked by the IPC Manager to instantiate a new IPC Process in the
+         * system. The operation will block until the IPC Process is created or an
+         * error is returned.
+         *
+         * @param ipcProcessId An identifier that uniquely identifies an IPC Process
+         * within a aystem.
+         * @param ipcProcessName The naming information of the IPC Process
+         * @param difType The type of IPC Process (Normal or one of the shims)
+         * @param installationPath The installation path of the IRATI software
+         * @return a pointer to a data structure holding the IPC Process state
+         * @throws CreateIPCProcessException if an error happens during the creation
+         */
+        IPCProcess * create(
+                        const ApplicationProcessNamingInformation& ipcProcessName,
+                        const std::string& difType,
+                        const std::string& installationPath)
+                throw (CreateIPCProcessException);
 
-	/**
-	 * Invoked by the IPC Manager to delete an IPC Process from the system. The
-	 * operation will block until the IPC Process is destroyed or an error is
-	 * returned.
-	 *
-	 * @param ipcProcessId The identifier of the IPC Process to be destroyed
-	 * @throws DestroyIPCProcessException if an error happens during the operation execution
-	 */
-	void destroy(unsigned int ipcProcessId) throw (DestroyIPCProcessException);
+        /**
+         * Invoked by the IPC Manager to delete an IPC Process from the system. The
+         * operation will block until the IPC Process is destroyed or an error is
+         * returned.
+         *
+         * @param ipcProcessId The identifier of the IPC Process to be destroyed
+         * @throws DestroyIPCProcessException if an error happens during the operation execution
+         */
+        void destroy(unsigned int ipcProcessId)
+        throw (DestroyIPCProcessException);
 
-	/**
-	 * Returns a list to all the IPC Processes that are currently running in
-	 * the system.
-	 *
-	 * @return vector<IPCProcess *> A list of the IPC Processes in the system
-	 */
-	std::vector<IPCProcess *> listIPCProcesses();
+        /**
+         * Returns a list to all the IPC Processes that are currently running in
+         * the system.
+         *
+         * @return vector<IPCProcess *> A list of the IPC Processes in the system
+         */
+        std::vector<IPCProcess *> listIPCProcesses();
+
+        /**
+         * Returns a pointer to the IPCProcess identified by ipcProcessId
+         * @param ipcProcessId
+         * @return a pointer to an IPC Process
+         * @throws GetIPCProcessException if no IPC Process with the specified
+         * id is found
+         */
+        IPCProcess * getIPCProcess(unsigned int ipcProcessId)
+                throw (GetIPCProcessException);
 };
 
 /**

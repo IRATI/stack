@@ -27,7 +27,7 @@
 #include "utils.h"
 #include "fidm.h"
 
-#define BITS_IN_BITMAP (2 ^ BITS_PER_BYTE * sizeof(flow_id_t))
+#define BITS_IN_BITMAP ((2 << BITS_PER_BYTE) * sizeof(flow_id_t))
 
 struct fidm {
         DECLARE_BITMAP(bitmap, BITS_IN_BITMAP);
@@ -79,12 +79,14 @@ flow_id_t fidm_allocate(struct fidm * instance)
                 LOG_ERR("Bogus instance passed, bailing out");
                 return FLOW_ID_WRONG;
         }
-        
+
         id = (flow_id_t) bitmap_find_next_zero_area(instance->bitmap,
                                                     BITS_IN_BITMAP,
                                                     0, 1, 0);
         LOG_DBG("The fidm bitmap find returned id %d (bad = %d)",
                 id, FLOW_ID_WRONG);
+
+        LOG_DBG("Bits in bitmap %zd", BITS_IN_BITMAP);
 
         if (!is_flow_id_ok(id)) {
                 LOG_WARN("Got an out-of-range flow-id (%d) from "
