@@ -4,6 +4,7 @@
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -269,21 +270,20 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 }
                 if (kipcm_flow_add(default_kipcm,
                                    data->id, port_id, flow_id)) {
-                        /* FIXME: change this with kfa_flow_destroy
-                           kipcm_flow_remove(default_kipcm, port_id); */
+                        kfa_flow_unbind_and_destroy(data->kfa, port_id);
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
                         rkfree(flow);
                         return -1;
                 }
+
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
                                                        flow->src_fid,
                                                        0)) {
-                        /* FIXME: change this with kfa_flow_destroy
-                           kipcm_flow_remove(default_kipcm, flow->port_id);
-                           kipcm_flow_remove(default_kipcm, port_id); */
+                        kfa_flow_unbind_and_destroy(data->kfa, flow->port_id);
+                        kfa_flow_unbind_and_destroy(data->kfa, port_id);
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
@@ -314,8 +314,6 @@ static int dummy_flow_deallocate(struct ipcp_instance_data * data,
 {
         struct dummy_flow * flow;
         port_id_t dest_port_id;
-        flow_id_t rm_fid;
-        flow_id_t rm_dst_fid;
 
         ASSERT(data);
         flow = find_flow(data, id);
@@ -332,24 +330,9 @@ static int dummy_flow_deallocate(struct ipcp_instance_data * data,
         /* FIXME: dummy_flow is not updated after unbinding cause it is going
          * to be deleted. Is it really needed to unbind+destroy?
          */
-        rm_fid = kfa_flow_unbind(data->kfa, id);
-        if (!is_flow_id_ok(rm_fid)){
-                LOG_ERR("Could not unbind flow at port %d", id);
-                return -1;
-        }
-        rm_dst_fid = kfa_flow_unbind(data->kfa, dest_port_id);
-        if (!is_flow_id_ok(rm_dst_fid)){
-                LOG_ERR("Could not unbind flow at port %d", dest_port_id);
-                return -1;
-        }
 
-        if (kfa_flow_destroy(data->kfa, rm_fid)) {
-                LOG_ERR("Could not destroy flow with fid: %d", rm_fid);
-                return -1;
-        }
-
-        if (kfa_flow_destroy(data->kfa, rm_dst_fid)) {
-                LOG_ERR("Could not destroy flow with fid: %d", rm_dst_fid);
+        if (kfa_flow_unbind_and_destroy(data->kfa, id) ||
+            kfa_flow_unbind_and_destroy(data->kfa, dest_port_id)) {
                 return -1;
         }
 
