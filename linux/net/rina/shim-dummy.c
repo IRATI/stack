@@ -289,7 +289,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         name_destroy(flow->dest);
                         rkfree(flow);
                         return -1;
-		}
+                }
         } else {
                 list_del(&flow->list);
                 name_destroy(flow->source);
@@ -331,12 +331,12 @@ static int dummy_flow_deallocate(struct ipcp_instance_data * data,
          * to be deleted. Is it really needed to unbind+destroy?
          */
 
-	if (kfa_flow_unbind_and_destroy(data->kfa, id) ||
-	    kfa_flow_unbind_and_destroy(data->kfa, dest_port_id)) {
-		return -1;
-	}
-        
-	/* Notify the destination application */
+        if (kfa_flow_unbind_and_destroy(data->kfa, id) ||
+            kfa_flow_unbind_and_destroy(data->kfa, dest_port_id)) {
+                return -1;
+        }
+
+        /* Notify the destination application */
         kipcm_notify_flow_dealloc(data->id, 0, dest_port_id, 1);
 
         list_del(&flow->list);

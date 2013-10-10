@@ -5,7 +5,6 @@
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
- *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -337,23 +336,23 @@ int kfa_flow_destroy(struct kfa * instance,
 EXPORT_SYMBOL(kfa_flow_destroy);
 
 int kfa_flow_unbind_and_destroy(struct kfa * instance,
-                          	port_id_t    id)
+                                port_id_t    id)
 {
 
-	flow_id_t rm_fid;
+        flow_id_t rm_fid;
 
-	rm_fid = kfa_flow_unbind(instance, id);
+        rm_fid = kfa_flow_unbind(instance, id);
         if (!is_flow_id_ok(rm_fid)){
                 LOG_ERR("Could not unbind flow at port %d", id);
-                return -1; 
-        }   
+                return -1;
+        }
 
         if (kfa_flow_destroy(instance, rm_fid)) {
                 LOG_ERR("Could not destroy flow with fid: %d", rm_fid);
-                return -1; 
-        }   
+                return -1;
+        }
 
-	return 0;
+        return 0;
 }
 EXPORT_SYMBOL(kfa_flow_unbind_and_destroy);
 
