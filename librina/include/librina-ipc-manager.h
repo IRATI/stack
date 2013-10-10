@@ -306,7 +306,9 @@ public:
  * Manager present message to the kernel
  * @param localPort
  */
-void initializeIPCManager(unsigned int localPort)
+void initializeIPCManager(unsigned int localPort,
+                const std::string& installationPath,
+                const std::string& libraryPath)
 	throw (IPCManagerInitializationException);
 
 /**
@@ -568,14 +570,12 @@ public:
          * within a aystem.
          * @param ipcProcessName The naming information of the IPC Process
          * @param difType The type of IPC Process (Normal or one of the shims)
-         * @param installationPath The installation path of the IRATI software
          * @return a pointer to a data structure holding the IPC Process state
          * @throws CreateIPCProcessException if an error happens during the creation
          */
         IPCProcess * create(
                         const ApplicationProcessNamingInformation& ipcProcessName,
-                        const std::string& difType,
-                        const std::string& installationPath)
+                        const std::string& difType)
                 throw (CreateIPCProcessException);
 
         /**

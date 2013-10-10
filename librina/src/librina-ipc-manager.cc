@@ -32,9 +32,17 @@
 
 namespace rina{
 
-void initializeIPCManager(unsigned int localPort)
+std::string _installationPath;
+std::string _libraryPath;
+
+void initializeIPCManager(unsigned int localPort,
+                const std::string& installationPath,
+                const std::string& libraryPath)
 	throw (IPCManagerInitializationException){
 	initialize(localPort);
+
+	_installationPath = installationPath;
+	_libraryPath = libraryPath;
 
 	IpcmIPCManagerPresentMessage message;
 	message.setDestPortId(0);
@@ -487,8 +495,7 @@ std::list<std::string> IPCProcessFactory::getSupportedIPCProcessTypes(){
 
 IPCProcess * IPCProcessFactory::create(
 		const ApplicationProcessNamingInformation& ipcProcessName,
-		const std::string& difType,
-		const std::string& installationPath) throw (CreateIPCProcessException) {
+		const std::string& difType) throw (CreateIPCProcessException) {
 	lock();
 	int ipcProcessId = 1;
 	pid_t pid=0;
@@ -516,7 +523,8 @@ IPCProcess * IPCProcessFactory::create(
 			{
 					stringToCharArray("/usr/bin/java"),
 					stringToCharArray("-jar"),
-					stringToCharArray(installationPath + "/share/rinad/ipcprocess/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar"),
+					stringToCharArray(_installationPath +
+					                "/ipcprocess/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar"),
 					stringToCharArray(ipcProcessName.getProcessName()),
 					stringToCharArray(ipcProcessName.getProcessInstance()),
 					intToCharArray(ipcProcessId),
@@ -526,7 +534,8 @@ IPCProcess * IPCProcessFactory::create(
 			char * envp[] =
 			{
 					stringToCharArray("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"),
-					stringToCharArray("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:"+installationPath+"/lib"),
+					stringToCharArray("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:"
+					                +_libraryPath),
 					(char*) 0
 			};
 

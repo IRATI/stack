@@ -84,7 +84,7 @@
                   					<type>${project.packaging}</type>
                 				</artifactItem>
              				 </artifactItems>
-              				<outputDirectory>${installation.path}/../apps/echo</outputDirectory>
+              				<outputDirectory>${installation.path}/apps/echo</outputDirectory>
             			</configuration>
           			</execution>
           			<execution>
@@ -94,7 +94,7 @@
               				<goal>copy-dependencies</goal>
             			</goals>
             			<configuration>
-              				<outputDirectory>${installation.path}/../apps/echo/lib</outputDirectory>
+              				<outputDirectory>${installation.path}/apps/echo/lib</outputDirectory>
               				<overWriteReleases>false</overWriteReleases>
               				<overWriteSnapshots>false</overWriteSnapshots>
               				<overWriteIfNewer>true</overWriteIfNewer>

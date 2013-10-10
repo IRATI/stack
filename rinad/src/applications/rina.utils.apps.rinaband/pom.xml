@@ -102,7 +102,7 @@
                   					<type>${project.packaging}</type>
                 				</artifactItem>
              				 </artifactItems>
-              				<outputDirectory>${installation.path}/../apps/rinaband</outputDirectory>
+              				<outputDirectory>${installation.path}/apps/rinaband</outputDirectory>
             			</configuration>
           			</execution>
           			<execution>
@@ -112,7 +112,7 @@
               				<goal>copy-dependencies</goal>
             			</goals>
             			<configuration>
-              				<outputDirectory>${installation.path}/../apps/rinaband/lib</outputDirectory>
+              				<outputDirectory>${installation.path}/apps/rinaband/lib</outputDirectory>
               				<overWriteReleases>false</overWriteReleases>
               				<overWriteSnapshots>false</overWriteSnapshots>
               				<overWriteIfNewer>true</overWriteIfNewer>
