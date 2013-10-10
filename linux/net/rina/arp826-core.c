@@ -58,6 +58,9 @@ enum htypes {
         HW_TYPE_MAX,
 };
 
+static bool is_line_id_ok(int line)
+{ return (line < HW_TYPE_ETHER || line >= HW_TYPE_MAX) ? 0 : 1; }
+
 struct arp_header {
         __be16        htype; /* Hardware type */
         __be16        ptype; /* Protocol type */
@@ -143,23 +146,29 @@ static int arp826_process(struct sk_buff *    skb,
                 return 0;
         }
 
+        LOG_DBG("Protocol type = 0x%02x", header->ptype);
+        LOG_DBG("Hardware type = 0x%02x", header->htype);
+        LOG_DBG("Operation     = 0x%02x", operation);
+
         /*
          * FIXME: Check if we know the protocol specified. Only accept RINA
          *        packets for the time being. Others will be added later ...
          */
-        
+#if 0
         if (header->ptype != htons(ETH_P_RINA)) {
-                LOG_ERR("Unknown protocol address %d", header->ptype);
+                LOG_ERR("Unknown protocol type 0x%02x", header->ptype);
                 return 0;
         }
+#endif
+
         if (header->htype != htons(HW_TYPE_ETHER)) {
-                LOG_ERR("Unhandled ARP hardware address %d", header->htype);
+                LOG_ERR("Unhandled ARP hardware type 0x%02x", header->htype);
                 return 0;
         }
 
         operation = ntohs(header->oper);
         if (operation != ARP_REPLY && operation != ARP_REQUEST) {
-                LOG_ERR("Unhandled ARP operation %d", operation);
+                LOG_ERR("Unhandled ARP operation 0x%02x", operation);
                 return 0;
         }
 
@@ -219,6 +228,7 @@ static int arp826_process(struct sk_buff *    skb,
 
 struct cache_line * cache_lines[HW_TYPE_MAX - 1] = { NULL };
 
+/* NOTE: The following function uses a different mapping for return values */
 static int arp826_receive(struct sk_buff *     skb,
                           struct net_device *  dev,
                           struct packet_type * pkt,
@@ -227,16 +237,19 @@ static int arp826_receive(struct sk_buff *     skb,
         const struct arp_header * header;
         int                       total_length;
         struct cache_line *       cl;
-        int                       line;
+        int                       line_id;
 
-        if (!dev || !skb)
-                return -1;
+        if (!dev || !skb) {
+                LOG_ERR("Wrong device or skb");
+                return 0;
+        }
 
         if (dev->flags & IFF_NOARP            ||
             skb->pkt_type == PACKET_OTHERHOST ||
             skb->pkt_type == PACKET_LOOPBACK) {
                 kfree_skb(skb);
-                LOG_DBG("This ARP is not for us");
+                LOG_DBG("This ARP is not for us "
+                        "(no arp, other-host or loopback)");
                 return 0;
         }
 
@@ -245,11 +258,15 @@ static int arp826_receive(struct sk_buff *     skb,
                 LOG_DBG("Unhandled device type %d", skb->dev->type);
                 return 0;
         }
-        line = skb->dev->type;
-        cl   = cache_lines[line - 1];
+        line_id = skb->dev->type - 1;
+        if (!is_line_id_ok(line_id)) {
+                LOG_ERR("Wrong cache line %d", line_id);
+                return 0;
+        }
+        cl   = cache_lines[line_id];
         if (!cl) {
                 LOG_ERR("I don't have a CL to handle this ARP");
-                return -1;
+                return 0;
         }
 
         /* FIXME: We should move pre-checks from arp826_process() here ... */
@@ -290,6 +307,7 @@ static int arp826_receive(struct sk_buff *     skb,
 
         if (arp826_process(skb, cl)) {
                 LOG_ERR("Cannot process this ARP");
+                return 0;
         }
         consume_skb(skb);
 
@@ -301,13 +319,29 @@ static struct packet_type arp_packet_type __read_mostly = {
         .func = arp826_receive,
 };
 
-static int __init mod_init(void)
+static int cache_line_create(int idx, size_t hwlen)
 {
-        cache_lines[HW_TYPE_ETHER - 1] = cl_create(6); /* MAC */
-        if (!cache_lines[HW_TYPE_ETHER - 1]) {
-                LOG_ERR("Cannot intialize, bailing out");
+        cache_lines[idx] = cl_create(hwlen);
+        if (!cache_lines[idx]) {
+                LOG_ERR("Cannot intialize CL %d, bailing out", idx);
                 return -1;
         }
+        LOG_DBG("CL %d created successfully", idx);
+
+        return 0;
+}
+
+static void cache_line_destroy(int idx)
+{
+        if (cache_lines[idx])
+                cl_destroy(cache_lines[idx]);
+}
+
+static int __init mod_init(void)
+{
+        /* MAC */
+        if (cache_line_create(HW_TYPE_ETHER - 1, 6))
+                return -1;
 
         dev_add_pack(&arp_packet_type);
 
@@ -320,9 +354,7 @@ static void __exit mod_exit(void)
 {
         dev_remove_pack(&arp_packet_type);
 
-        ASSERT(cache_lines[HW_TYPE_ETHER - 1]);
-
-        cl_destroy(cache_lines[HW_TYPE_ETHER - 1]);
+        cache_line_destroy(HW_TYPE_ETHER - 1);
 
         LOG_DBG("Destroyed successfully");
 }
