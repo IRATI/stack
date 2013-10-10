@@ -86,6 +86,18 @@ struct gpa * gpa_dup(const struct gpa * gpa)
 bool gpa_is_ok(const struct gpa * gpa)
 { return (!gpa || gpa->length == 0 || gpa->address == NULL) ? 0 : 1; }
 
+const char * gpa_address_value(const struct gpa * gpa)
+{
+        ASSERT(gpa);
+        return gpa->address;
+}
+
+size_t gpa_address_length(const struct gpa * gpa);
+{
+        ASSERT(gpa);
+        return gpa->length;
+}
+
 /* FIXME: Please fix this, it's broken */
 bool gpa_is_equal(const struct gpa * a, const struct gpa * b)
 {
