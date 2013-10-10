@@ -47,6 +47,7 @@
 
 #include "arp826.h"
 #include "arp826-cache.h"
+#include "arp826-utils.h"
 
 enum optypes {
         ARP_REQUEST = 1,

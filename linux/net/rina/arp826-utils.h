@@ -1,5 +1,5 @@
 /*
- * ARP 826 cache
+ * ARP 826 cache utilities
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -32,5 +32,8 @@ bool         gpa_is_equal(const struct gpa * a,
 bool         gpa_is_ok(const struct gpa * gpa);
 const char * gpa_address_value(const struct gpa * gpa);
 size_t       gpa_address_length(const struct gpa * gpa);
+int          gpa_address_grow(struct gpa * gpa,
+                              size_t       length,
+                              uint8_t      filler);
 
 #endif

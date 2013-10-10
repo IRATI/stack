@@ -120,6 +120,39 @@ size_t gpa_address_length(const struct gpa * gpa)
         return gpa->length;
 }
 
+int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
+{
+        uint8_t * new_address;
+
+        if (!gpa_is_ok(gpa)) {
+                LOG_ERR("Bad input parameter, "
+                        "cannot grow the GPA");
+                return 0;
+        }
+
+        /* Can't grow */
+        if (gpa->length > length)
+                return -1;
+
+        /* No needs to grow */
+        if (gpa->length == length)
+                return 1;
+
+        ASSERT(length > gpa->length);
+
+        new_address = rkmalloc(length, GFP_KERNEL);
+        if (!new_address)
+                return -1;
+
+        memcpy(new_address, gpa->address, gpa->length);
+        memset(new_address + gpa->length, filler, length - gpa->length);
+        rkfree(gpa->address);
+        gpa->address = new_address;
+        gpa->length  = length;
+
+        return 1;
+}
+
 bool gpa_is_equal(const struct gpa * a, const struct gpa * b)
 {
         if (!gpa_is_ok(a) || !gpa_is_ok(b)) {
