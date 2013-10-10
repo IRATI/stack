@@ -58,8 +58,10 @@ enum htypes {
         HW_TYPE_MAX,
 };
 
+struct cache_line * cache_lines[HW_TYPE_MAX - 1] = { NULL };
+
 static bool is_line_id_ok(int line)
-{ return (line < HW_TYPE_ETHER || line >= HW_TYPE_MAX) ? 0 : 1; }
+{ return (line < HW_TYPE_ETHER - 1 || line >= HW_TYPE_MAX - 1) ? 0 : 1; }
 
 struct arp_header {
         __be16        htype; /* Hardware type */
@@ -128,12 +130,12 @@ static int arp826_process(struct sk_buff *    skb,
         struct arp_header * header;
         uint16_t            operation;
 
-        unsigned char *     ptr;
+        uint8_t *           ptr;
 
-        unsigned char *     spa; /* Source protocol address pointer */
-        unsigned char *     tpa; /* Target protocol address pointer */
-        unsigned char *     sha; /* Source protocol address pointer */
-        unsigned char *     tha; /* Target protocol address pointer */
+        uint8_t *           spa; /* Source protocol address pointer */
+        uint8_t *           tpa; /* Target protocol address pointer */
+        uint8_t *           sha; /* Source protocol address pointer */
+        uint8_t *           tha; /* Target protocol address pointer */
         
         ASSERT(skb);
         ASSERT(cl);
@@ -146,9 +148,11 @@ static int arp826_process(struct sk_buff *    skb,
                 return 0;
         }
 
-        LOG_DBG("Protocol type = 0x%02x", header->ptype);
-        LOG_DBG("Hardware type = 0x%02x", header->htype);
-        LOG_DBG("Operation     = 0x%02x", operation);
+        LOG_DBG("Hardware type           = 0x%02x", header->htype);
+        LOG_DBG("Protocol type           = 0x%02x", header->ptype);
+        LOG_DBG("Hardware address length = %d",     header->hlen);
+        LOG_DBG("Protocol address length = %d",     header->plen);
+        LOG_DBG("Operation               = 0x%02x", operation);
 
         /*
          * FIXME: Check if we know the protocol specified. Only accept RINA
@@ -174,9 +178,7 @@ static int arp826_process(struct sk_buff *    skb,
 
         /* Hooray, we can handle this ARP (probably ...) */
 
-        LOG_DBG("Extracting information");
-
-        ptr = (unsigned char *) header + 8;
+        ptr = (uint8_t *) header + 8;
 
         sha = ptr; ptr += header->hlen;
         spa = ptr; ptr += header->plen;
@@ -225,8 +227,6 @@ static int arp826_process(struct sk_buff *    skb,
                 
         return 0;
 }
-
-struct cache_line * cache_lines[HW_TYPE_MAX - 1] = { NULL };
 
 /* NOTE: The following function uses a different mapping for return values */
 static int arp826_receive(struct sk_buff *     skb,
