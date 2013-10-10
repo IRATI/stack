@@ -55,8 +55,8 @@ struct ipcp_flow {
         struct ipcp_instance * ipc_process;
 
         /* FIXME: To be wiped out */
-        struct kfifo           sdu_ready;
-        wait_queue_head_t      wait_queue;
+        struct kfifo            sdu_ready;
+        wait_queue_head_t       wait_queue;
 };
 
 struct kfa * kfa_create(void)
@@ -368,11 +368,9 @@ int kfa_flow_sdu_write(struct kfa * instance,
                 return -1;
         }
 
-        //spin_lock(&instance->lock);
         flow = kfa_pmap_find(instance->flows.committed, id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
-                //spin_unlock(&instance->lock);
                 return -1;
         }
 
@@ -380,10 +378,8 @@ int kfa_flow_sdu_write(struct kfa * instance,
         ASSERT(ipcp);
         if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
                 LOG_ERR("Couldn't write SDU on port-id %d", id);
-                //spin_unlock(&instance->lock);
                 return -1;
         }
-        //spin_unlock(&instance->lock);
 
         return 0;
 }
@@ -419,9 +415,8 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 return -1;
         }
         while (kfifo_is_empty(&flow->sdu_ready)) {
-                LOG_DBG("Going to sleep");
+                LOG_DBG("Going to sleep on wait queue %pK", &flow->wait_queue);
                 spin_unlock(&instance->lock);
-
                 wait_event_interruptible(flow->wait_queue,
                                          ready_queue_not_empty(&flow->sdu_ready));
 
@@ -482,6 +477,7 @@ int kfa_sdu_post(struct kfa * instance,
 {
         struct ipcp_flow * flow;
         unsigned int       avail;
+        wait_queue_head_t *wq;
 
         if (!instance) {
                 LOG_ERR("Bogus kfa instance passed, cannot post SDU");
@@ -531,11 +527,16 @@ int kfa_sdu_post(struct kfa * instance,
                 return -1;
         }
 
-        LOG_DBG("SDU posted");
+        wq = &flow->wait_queue;
+
+        LOG_DBG("Wait queue %pK, next: %pK, prev: %pK",
+                        wq, wq->task_list.next, wq->task_list.prev);
 
         spin_unlock(&instance->lock);
 
-        wake_up_interruptible(&flow->wait_queue);
+        LOG_DBG("SDU posted");
+
+        wake_up(wq);
 
         LOG_DBG("Sleeping read syscall should be working now");
 
