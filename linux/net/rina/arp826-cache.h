@@ -35,9 +35,9 @@ size_t       gpa_address_length(const struct gpa * gpa);
 
 struct cache_entry;
 
-struct cache_entry * ce_create(struct gpa *    gpa,
-                               const uint8_t * hardware_address,
-                               size_t          hardware_address_length);
+struct cache_entry * ce_create(const struct gpa * gpa,
+                               const uint8_t *    hardware_address,
+                               size_t             hardware_address_length);
 void                 ce_destroy(struct cache_entry * entry);
 const struct gpa *   ce_pa(struct cache_entry * entry);
 const uint8_t *      ce_ha(struct cache_entry * entry);
@@ -60,8 +60,8 @@ void                       cl_remove(struct cache_line *        instance,
                                      const struct cache_entry * entry);
 
 const struct cache_entry * cl_find_by_ha(struct cache_line * instance,
-                                         const uint8_t *     hardware_address);
-const struct cache_entry * cl_find_by_pa(struct cache_line * instance,
-                                         const struct gpa *  protocol_address);
+                                         const uint8_t *     hardware_addr);
+const struct cache_entry * cl_find_by_gpa(struct cache_line * instance,
+                                          const struct gpa *  proto_addr);
 
 #endif
