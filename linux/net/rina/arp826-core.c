@@ -56,8 +56,8 @@
 struct arp_header {
         __be16        htype; /* Hardware type */
         __be16        ptype; /* Protocol type */
-        __u8          hlen; /* Hardware address length */
-        __u8          plen; /* Protocol address length */
+        __u8          hlen;  /* Hardware address length */
+        __u8          plen;  /* Protocol address length */
         __be16        oper;  /* Operation */
 
 #if 0 /* IPv4 over Ethernet */
@@ -286,7 +286,14 @@ struct cache_line * cache_lines[7] = { NULL };
 
 static int __init mod_init(void)
 {
-        cache_lines[6] = cl_create(6);
+        cache_lines[0] = NULL;
+        cache_lines[1] = NULL;
+        cache_lines[2] = NULL;
+        cache_lines[3] = NULL;
+        cache_lines[4] = NULL;
+        cache_lines[5] = NULL;
+        cache_lines[6] = cl_create(6); /* MAC */
+
         if (!cache_lines[6])
                 return -1;
 
