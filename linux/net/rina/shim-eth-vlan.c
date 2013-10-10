@@ -985,19 +985,19 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
 
                         /* Destroy it */
                         if (pos->name)
-                        	name_destroy(pos->name);
+                                name_destroy(pos->name);
 
                         if(pos->reg_app)
-                        	name_destroy(pos->reg_app);
+                                name_destroy(pos->reg_app);
 
                         if (pos->app_name)
-                        	name_destroy(pos->app_name);
+                                name_destroy(pos->app_name);
 
                         if (pos->info->interface_name)
-                        	rkfree(pos->info->interface_name);
+                                rkfree(pos->info->interface_name);
 
                         if (pos->info)
-                        	rkfree(pos->info);
+                                rkfree(pos->info);
 
                         /*
                          * Might cause problems:
@@ -1006,7 +1006,7 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                          * the CPU's have gone through a quiescent state.
                          */
                         if (pos->eth_vlan_packet_type)
-                        	rkfree(pos->eth_vlan_packet_type);
+                                rkfree(pos->eth_vlan_packet_type);
 
                         rkfree(pos);
                         rkfree(instance);
