@@ -134,8 +134,21 @@ void IPCProcess::setDIFInformation(const DIFInformation& difInformation){
 }
 
 void IPCProcess::assignToDIF(
-		const DIFInformation& difInformation) throw (AssignToDIFException) {
-	LOG_DBG("IPCProcess::assign to DIF called");
+                const DIFInformation& difInformation)
+throw (AssignToDIFException) {
+
+        std::string currentDIFName =
+                        this->difInformation.getDifName().getProcessName();
+        LOG_DBG("Current DIF name is %s", currentDIFName.c_str());
+
+        if(currentDIFName.compare("") != 0) {
+                std::string message;
+                message =  message + "This IPC Process is already assigned "+
+                                "to the DIF " + currentDIFName;
+                LOG_ERR("%s", message.c_str());
+                throw AssignToDIFException(message);
+        }
+
 #if STUB_API
 	//Do nothing
 #else
