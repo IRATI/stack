@@ -35,9 +35,9 @@ struct rinarp_handle * rinarp_register(const struct net_device * device,
                                        const struct gpa *        address);
 int                    rinarp_unregister(struct rinarp_handle * handle);
 
-typedef void (* rinarp_handler_t)(void *              opaque,
-                                  const struct gpa ** dest_pa,
-                                  const struct gha ** dest_ha);
+typedef void (* rinarp_handler_t)(void *             opaque,
+                                  const struct gpa * pa,
+                                  const struct gha * ha);
 
 int                    rinarp_resolve(struct rinarp_handle * handle, 
                                       rinarp_handler_t       handler,

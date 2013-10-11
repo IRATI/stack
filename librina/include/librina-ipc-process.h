@@ -40,6 +40,22 @@ public:
 };
 
 /**
+ * The IPC Manager requests the IPC Process to update the configuration
+ * of the DIF he is currently a member of
+ */
+class UpdateDIFConfigurationRequestEvent: public IPCEvent {
+
+        /** The new configuration of the DIF*/
+        DIFConfiguration difConfiguration;
+
+public:
+        UpdateDIFConfigurationRequestEvent(
+                        const DIFConfiguration& difConfiguration,
+                        unsigned int sequenceNumber);
+        const DIFConfiguration& getDIFConfiguration() const;
+};
+
+/**
  * Supporting class for IPC Process DIF Registration events
  */
 class IPCProcessDIFRegistrationEvent: public IPCEvent {

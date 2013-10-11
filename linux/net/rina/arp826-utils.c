@@ -26,13 +26,15 @@
 #include "utils.h"
 /* FIXME: End of dependencies ... */
 
+#include "arp826-utils.h"
+
 /*
  * NOTE: In 'static' functions there should be no input parameters checks while
  *       in non-static ones there should be plenty
  */
 
 /*
- * General Protocol Address - GPA
+ * Generic Protocol Address - GPA
  */
 
 struct gpa {
@@ -122,28 +124,18 @@ size_t gpa_address_length(const struct gpa * gpa)
 }
 EXPORT_SYMBOL(gpa_address_length);
 
-int gpa_address_shrink(struct gpa * gpa, size_t length, uint8_t filler)
+int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
 {
         uint8_t * new_address;
         uint8_t * position;
         uint8_t * tmp;
         size_t    count;
+        size_t    length;
 
         if (!gpa_is_ok(gpa)) {
                 LOG_ERR("Bad input parameter, cannot shrink the GPA");
                 return -1;
         }
-
-        if (length == 0 || length > gpa->length) {
-                LOG_ERR("Can't shrink the GPA, bad length");
-                return -1;
-        }
-
-        /* No needs to shrink */
-        if (gpa->length == length)
-                return 1;
-
-        ASSERT(length < gpa->length);
 
         position = strnchr(gpa->address, filler, gpa->length);
         if (!position) {
@@ -152,8 +144,12 @@ int gpa_address_shrink(struct gpa * gpa, size_t length, uint8_t filler)
         }
 
         count = position - gpa->address;
+        if (!count)
+                return 0;
+
         ASSERT(count);
 
+        length      = gpa->length - count;
         new_address = rkmalloc(length, GFP_KERNEL);
         if (!new_address)
                 return -1;
@@ -225,3 +221,135 @@ bool gpa_is_equal(const struct gpa * a, const struct gpa * b)
         return 1;
 }
 EXPORT_SYMBOL(gpa_is_equal);
+
+/*
+ * Generic Protocol Address - GPA
+ */
+
+struct gha {
+        gha_type_t type;
+        union {
+                uint8_t mac_802_3[6];
+        } data;
+};
+
+bool gha_is_ok(const struct gha * gha)
+{ return (!gha || gha->type != MAC_ADDR_802_3) ? 0 : 1; }
+EXPORT_SYMBOL(gha_is_ok);
+
+struct gha * gha_create(gha_type_t      type,
+                        const uint8_t * address)
+{
+        struct gha * gha;
+
+        if (type != MAC_ADDR_802_3 || !address) {
+                LOG_ERR("Wrong input parameters, cannot create GHA");
+                return NULL;
+        }
+
+        gha = rkzalloc(sizeof(*gha), GFP_KERNEL);
+        if (!gha)
+                return NULL;
+        
+        gha->type = type;
+        switch (type) {
+        case MAC_ADDR_802_3:
+                memcpy(gha->data.mac_802_3,
+                       address,
+                       sizeof(gha->data.mac_802_3));
+                break;
+        default:
+                BUG();
+                break; /* Only to stop the compiler from barfing */
+        }
+
+        return gha;
+}
+EXPORT_SYMBOL(gha_create);
+
+int gha_destroy(struct gha * gha)
+{
+        if (!gha_is_ok(gha)) {
+                LOG_ERR("Bogus GHA, cannot destroy");
+                return -1;
+        }
+
+        rkfree(gha);
+
+        return 0;
+}
+EXPORT_SYMBOL(gha_destroy);
+
+struct gha * gha_dup(const struct gha * gha)
+{
+        struct gha * tmp;
+
+        if (!gha_is_ok(gha)) {
+                LOG_ERR("Bogus GHA, cannot duplicate");
+                return NULL;
+        }
+
+        tmp = rkmalloc(sizeof(*gha), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        *tmp = *gha;
+
+        return tmp;
+}
+EXPORT_SYMBOL(gha_dup);
+
+const uint8_t * gha_address(const struct gha * gha)
+{
+        uint8_t * tmp;
+
+        if (!gha_is_ok(gha)) {
+                LOG_ERR("Bogus GHA passed, cannot get address");
+                return NULL;
+        }
+
+        switch (gha->type) {
+        case MAC_ADDR_802_3: tmp = gha->data.mac_802_3; break;
+        default:             BUG();                     break; /* shut up */
+        }
+        
+        return tmp;
+}
+EXPORT_SYMBOL(gha_address);
+
+gha_type_t gha_type(const struct gha * gha)
+{
+        ASSERT(gha_is_ok(gha));
+
+        return gha->type;
+}
+EXPORT_SYMBOL(gha_type);
+
+bool gha_is_equal(const struct gha * a,
+                  const struct gha * b)
+{
+        bool v;
+
+        v = 0;
+        if (!gha_is_ok(a) || !gha_is_ok(b))
+                return v;
+
+        if (a->type != b->type)
+                return v;
+
+        ASSERT(a->type == b->type);
+
+        switch (a->type) {
+        case MAC_ADDR_802_3:
+                v = !memcmp(a->data.mac_802_3,
+                            b->data.mac_802_3,
+                            sizeof(a->data.mac_802_3));
+                break;
+        default:
+                BUG(); /* As usual, shut up compiler! */
+                break;
+        }
+
+        return v;
+}
+EXPORT_SYMBOL(gha_is_equal);

@@ -1357,6 +1357,109 @@ int testIpcmAssignToDIFResponseMessage() {
 	return returnValue;
 }
 
+int testIpcmUpdateDIFConfigurationRequestMessage() {
+        std::cout << "TESTING IPCM UPDATE DIF CONFIGURATION REQUEST MESSAGE\n";
+        int returnValue = 0;
+
+        IpcmUpdateDIFConfigurationRequestMessage message;
+        DIFConfiguration difConfiguration;
+        Parameter * parameter = new Parameter("interface", "eth0");
+        difConfiguration.addParameter(*parameter);
+        delete parameter;
+        parameter = new Parameter("vlanid", "430");
+        difConfiguration.addParameter(*parameter);
+        delete parameter;
+        message.setDIFConfiguration(difConfiguration);
+
+        struct nl_msg* netlinkMessage;
+        netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing Ipcm Update DIF Configuration Request "
+                                << "Message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IpcmUpdateDIFConfigurationRequestMessage * recoveredMessage =
+                        dynamic_cast<IpcmUpdateDIFConfigurationRequestMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing Ipcm Update DIF Configuration Message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.getDIFConfiguration().getParameters().size() !=
+                        recoveredMessage->getDIFConfiguration().getParameters().size()){
+                std::cout << "DIFConfiguration.parameters.size on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IpcmUpdateDIFConfigurationRequest test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
+int testIpcmUpdateDIFConfigurationResponseMessage() {
+        std::cout << "TESTING IPCM UPDATE DIF CONFIGURATION RESPONSE MESSAGE\n";
+        int returnValue = 0;
+
+        IpcmUpdateDIFConfigurationResponseMessage * message =
+                        new IpcmUpdateDIFConfigurationResponseMessage();
+        message->setResult(-25);
+
+        struct nl_msg* netlinkMessage;
+        netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, message);
+        if (result < 0) {
+                std::cout << "Error constructing Ipcm Update DIF Configuration Response "
+                                << "Message \n";
+                nlmsg_free(netlinkMessage);
+                delete message;
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IpcmUpdateDIFConfigurationResponseMessage * recoveredMessage =
+                        dynamic_cast<IpcmUpdateDIFConfigurationResponseMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+        if (message == 0) {
+                std::cout << "Error parsing Ipcm Update DIF Configuration Response Message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message->getResult() != recoveredMessage->getResult()) {
+                std::cout << "Result on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IpcmUpdateDIFConfigurationResponse test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete message;
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
 int testIpcmAllocateFlowRequestMessage() {
 	std::cout << "TESTING IPCM ALLOCATE FLOW REQUEST MESSAGE\n";
 	int returnValue = 0;
@@ -2112,6 +2215,16 @@ int main(int argc, char * argv[]) {
 	result = testIpcmAssignToDIFResponseMessage();
 	if (result < 0) {
 		return result;
+	}
+
+	result = testIpcmUpdateDIFConfigurationRequestMessage();
+	if (result < 0) {
+	        return result;
+	}
+
+	result = testIpcmUpdateDIFConfigurationResponseMessage();
+	if (result < 0) {
+	        return result;
 	}
 
 	result = testIpcmAllocateFlowRequestMessage();

@@ -278,6 +278,13 @@
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
+%typemap(throws, throws="eu.irati.librina.UpdateDIFConfigurationException") rina::UpdateDIFConfigurationException {
+  jclass excep = jenv->FindClass("eu/irati/librina/UpdateDIFConfigurationException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
+
 
 /* Typemaps to allow eventWait, eventPoll and eventTimedWait to downcast IPCEvent to the correct class */
 %define DOWNCAST_IPC_EVENT_CONSUMER( OPERATION )

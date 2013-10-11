@@ -217,6 +217,24 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
+	case RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST: {
+                IpcmUpdateDIFConfigurationRequestMessage * updateDIFConfigurationRequest =
+                                dynamic_cast<IpcmUpdateDIFConfigurationRequestMessage *>(message);
+                if (putIpcmUpdateDIFConfigurationRequestMessageObject(netlinkMessage,
+                                *updateDIFConfigurationRequest) < 0) {
+                        return -1;
+                }
+                return 0;
+	}
+	case RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE: {
+	        IpcmUpdateDIFConfigurationResponseMessage * updateDIFConfigurationResponse =
+	                        dynamic_cast<IpcmUpdateDIFConfigurationResponseMessage *>(message);
+	        if (putIpcmUpdateDIFConfigurationResponseMessageObject(netlinkMessage,
+	                        *updateDIFConfigurationResponse) < 0) {
+	                return -1;
+	        }
+	        return 0;
+	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST: {
 		IpcmAllocateFlowRequestMessage * allocateFlowRequestObject =
 				dynamic_cast<IpcmAllocateFlowRequestMessage *>(message);
@@ -396,6 +414,12 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE: {
 		return parseIpcmAssignToDIFResponseMessage(netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST: {
+	        return parseIpcmUpdateDIFConfigurationRequestMessage(netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE: {
+	        return parseIpcmUpdateDIFConfigurationResponseMessage(netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST: {
 		return parseIpcmAllocateFlowRequestMessage(netlinkMessageHeader);
@@ -1722,6 +1746,41 @@ int putIpcmAssignToDIFResponseMessageObject(nl_msg* netlinkMessage,
 	nla_put_failure: LOG_ERR(
 			"Error building IpcmAssignToDIFResponseMessage Netlink object");
 	return -1;
+}
+
+int putIpcmUpdateDIFConfigurationRequestMessageObject(nl_msg* netlinkMessage,
+                const IpcmUpdateDIFConfigurationRequestMessage& object){
+        struct nlattr *difConfiguration;
+
+        if (!(difConfiguration =
+                        nla_nest_start(netlinkMessage, IUDCR_ATTR_DIF_CONFIGURATION))) {
+                goto nla_put_failure;
+        }
+
+        if (putDIFConfigurationObject(
+                        netlinkMessage, object.getDIFConfiguration()) < 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, difConfiguration);
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IpcmUpdateDIFConfigurationRequestMessage Netlink object");
+        return -1;
+}
+
+int putIpcmUpdateDIFConfigurationResponseMessageObject(nl_msg* netlinkMessage,
+                const IpcmUpdateDIFConfigurationResponseMessage& object){
+
+        NLA_PUT_U32(netlinkMessage, IUDCRE_ATTR_RESULT, object.getResult());
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IpcmUpdateDIFConfigurationResponseMessage Netlink object");
+        return -1;
 }
 
 int putIpcmAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
@@ -3223,6 +3282,69 @@ parseIpcmAssignToDIFResponseMessage(nlmsghdr *hdr){
 	}
 
 	return result;
+}
+
+IpcmUpdateDIFConfigurationRequestMessage *
+parseIpcmUpdateDIFConfigurationRequestMessage(nlmsghdr *hdr){
+        struct nla_policy attr_policy[IUDCR_ATTR_MAX + 1];
+        attr_policy[IUDCR_ATTR_DIF_CONFIGURATION].type = NLA_NESTED;
+        attr_policy[IUDCR_ATTR_DIF_CONFIGURATION].minlen = 0;
+        attr_policy[IUDCR_ATTR_DIF_CONFIGURATION].maxlen = 0;
+        struct nlattr *attrs[IUDCR_ATTR_MAX + 1];
+
+        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+                        IUDCR_ATTR_MAX, attr_policy);
+        if (err < 0) {
+                LOG_ERR(
+                        "Error parsing IpcmUpdateDIFConfigurationRequestMessage information from Netlink message: %d",
+                        err);
+                return 0;
+        }
+
+        IpcmUpdateDIFConfigurationRequestMessage * result =
+                        new IpcmUpdateDIFConfigurationRequestMessage();
+        DIFConfiguration * difConfiguration;
+
+        if (attrs[IUDCR_ATTR_DIF_CONFIGURATION]) {
+                difConfiguration = parseDIFConfigurationObject(
+                                attrs[IUDCR_ATTR_DIF_CONFIGURATION]);
+                if (difConfiguration == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setDIFConfiguration(*difConfiguration);
+                        delete difConfiguration;
+                }
+        }
+
+        return result;
+}
+
+IpcmUpdateDIFConfigurationResponseMessage *
+parseIpcmUpdateDIFConfigurationResponseMessage(nlmsghdr *hdr){
+        struct nla_policy attr_policy[IUDCRE_ATTR_MAX + 1];
+        attr_policy[IUDCRE_ATTR_RESULT].type = NLA_U32;
+        attr_policy[IUDCRE_ATTR_RESULT].minlen = 4;
+        attr_policy[IUDCRE_ATTR_RESULT].maxlen = 4;
+        struct nlattr *attrs[IUDCRE_ATTR_MAX + 1];
+
+        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+                        IUDCRE_ATTR_MAX, attr_policy);
+        if (err < 0) {
+                LOG_ERR(
+                        "Error parsing IpcmAssignToDIFResponseMessage information from Netlink message: %d",
+                        err);
+                return 0;
+        }
+
+        IpcmUpdateDIFConfigurationResponseMessage * result =
+                        new IpcmUpdateDIFConfigurationResponseMessage();
+
+        if (attrs[IUDCRE_ATTR_RESULT]) {
+                result->setResult(nla_get_u32(attrs[IUDCRE_ATTR_RESULT]));
+        }
+
+        return result;
 }
 
 IpcmAllocateFlowRequestMessage *

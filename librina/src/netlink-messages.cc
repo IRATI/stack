@@ -775,14 +775,48 @@ void IpcmAssignToDIFRequestMessage::setDIFInformation(
 
 IPCEvent* IpcmAssignToDIFRequestMessage::toIPCEvent(){
 	AssignToDIFRequestEvent * event =
-			new AssignToDIFRequestEvent(getDIFInformation(),
+			new AssignToDIFRequestEvent(
+			                getDIFInformation(),
 					getSequenceNumber());
 	return event;
 }
 
 /* CLASS IPCM ASSIGN TO DIF RESPONSE MESSAGE */
-IpcmAssignToDIFResponseMessage::IpcmAssignToDIFResponseMessage():
-				BaseNetlinkResponseMessage(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE) {
+IpcmAssignToDIFResponseMessage::
+IpcmAssignToDIFResponseMessage():
+BaseNetlinkResponseMessage(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE) {
+}
+
+/* CLASS IPCM UPDATE DIF CONFIGURATION REQUEST MESSAGE */
+IpcmUpdateDIFConfigurationRequestMessage::
+IpcmUpdateDIFConfigurationRequestMessage():
+NetlinkRequestOrNotificationMessage(RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST) {
+}
+
+const DIFConfiguration&
+IpcmUpdateDIFConfigurationRequestMessage::getDIFConfiguration() const{
+        return difConfiguration;
+}
+
+void IpcmUpdateDIFConfigurationRequestMessage::setDIFConfiguration(
+                const DIFConfiguration& difConfiguration)
+{
+        this->difConfiguration = difConfiguration;
+}
+
+IPCEvent* IpcmUpdateDIFConfigurationRequestMessage::toIPCEvent()
+{
+        UpdateDIFConfigurationRequestEvent * event =
+                        new UpdateDIFConfigurationRequestEvent(
+                                        getDIFConfiguration(),
+                                        getSequenceNumber());
+        return event;
+}
+
+/* CLASS IPCM UPDATE DIF CONFIGURATION RESPONSE MESSAGE */
+IpcmUpdateDIFConfigurationResponseMessage::
+IpcmUpdateDIFConfigurationResponseMessage():
+BaseNetlinkResponseMessage(RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE) {
 }
 
 /* CLASS IPCM ALLOCATE FLOW REQUEST MESSAGE */

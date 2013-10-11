@@ -100,7 +100,7 @@ struct ipcp_instance_data {
         /* FIXME: Remove it as soon as the kipcm_kfa gets removed */
         struct kfa * kfa;
 
-        /* RINA-ARP related */
+        /* RINARP related */
         struct naddr_handle *  handle;
 };
 
@@ -157,28 +157,27 @@ find_flow_by_flow_id(struct ipcp_instance_data * data,
         return NULL;
 }
 
-/* FIXME: Should be name_to_gpa  */
-static struct paddr name_to_paddr(const struct name * name)
+static struct gpa * name_to_gpa(const struct name * name)
 {
         char *       delimited_name;
-        struct paddr addr;
+        struct gpa * addr;
 
         delimited_name = name_tostring(name);
-        addr.buf       = delimited_name;
-        addr.length    = strlen(delimited_name);
+        addr = gpa_create(delimited_name, 
+			  strlen(delimited_name));
+	
 
         return addr;
 }
 
-/* FIXME: Should be find_flow_by_gha*/
 static struct shim_eth_flow *
-find_flow_by_addr(struct ipcp_instance_data * data,
-                  const struct paddr *        addr)
+find_flow_by_gha(struct ipcp_instance_data * data,
+                 const struct gha *          addr)
 {
         struct shim_eth_flow * flow;
 
         list_for_each_entry(flow, &data->flows, list) {
-                if (!strcmp(name_tostring(flow->dest), (char *) addr->buf)) {
+                if (gha_is_equal(addr, flow->dest_ha)) {
                         return flow;
                 }
         }
@@ -212,8 +211,12 @@ static int flow_destroy(struct ipcp_instance_data * data,
 
 	flow = &f;
 	list_del(&flow->list);
-        /* FIXME: Destroy names */
-	
+ 
+	if(flow->dest_pa) 
+		gpa_destroy(flow->dest_pa);
+	if(flow->dest_ha) 
+		gha_destroy(flow->dest_ha);
+      
         /*
          * Remove from ARP cache if this was
          *  the last flow and no app registered
@@ -244,6 +247,8 @@ static void rinarp_resolve_handler(void *              opaque,
 
 	if (flow && flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
+		flow->dest_ha = dest_ha;
+
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
                                                        flow->flow_id,
@@ -273,15 +278,15 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 LOG_ERR("Shim IPC process can have only one user");
                 return -1;
         }
+	
 
         flow = find_flow(data, id);
-
+	
         /*
          * If it is the first flow and no app is registered ...
          * ... add to the ARP cache
          */
         if (list_empty(&data->flows) && !data->reg_app) {
-		/* FIXME: Create GPA */
                 data->handle = rinarp_register(data->dev,
 					       name_to_gpa(source));
 	}
@@ -294,8 +299,8 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 flow->port_id = id;
 		flow->flow_id = fid;
                 flow->port_id_state = PORT_STATE_PENDING;
-		
-		/* FIXME: Add gpa to flow struct */
+
+		flow->dest_pa = name_to_gpa(dest);
 
 		INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
@@ -399,7 +404,6 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
                 }
         }
 
-
         data->reg_app = name_dup(name);
         if (!data->reg_app) {
                 char * tmp = name_tostring(name);
@@ -481,8 +485,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         }
 
         src_hw = data->dev->dev_addr;
-	/* FIXME: Change to gha */
-        dest_hw = desthw->data.mac_802_3;
+        dest_hw = flow->dest_ha;
 
         skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
         if (skb == NULL)
@@ -593,8 +596,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         }
 
         /* Get vlan id */
-        info->vlan_id =
-                simple_strtol(dif_information->dif_name->process_name, 0, 10);
+        info->vlan_id = dif_information->dif_name->process_name;
 
         data->dif_name = name_dup(dif_information->dif_name);
         if (!data->dif_name) {
