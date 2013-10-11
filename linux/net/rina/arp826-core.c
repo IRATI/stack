@@ -4,11 +4,6 @@
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
- *    Code reused from:
- *      net/ipv4/arp.c
- *      include/linux/if_arp.h
- *      include/uapi/linux/if_arp.h
- *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -23,8 +18,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-
-#if 0
 
 #include <linux/module.h>
 #include <linux/types.h>
@@ -63,62 +56,19 @@ static bool is_line_id_ok(int line)
 { return (line < HW_TYPE_ETHER - 1 || line >= HW_TYPE_MAX - 1) ? 0 : 1; }
 
 struct arp_header {
-        __be16        htype; /* Hardware type */
-        __be16        ptype; /* Protocol type */
-        __u8          hlen;  /* Hardware address length */
-        __u8          plen;  /* Protocol address length */
-        __be16        oper;  /* Operation */
+        __be16     htype; /* Hardware type */
+        __be16     ptype; /* Protocol type */
+        __u8       hlen;  /* Hardware address length */
+        __u8       plen;  /* Protocol address length */
+        __be16     oper;  /* Operation */
 
-#if 0 /* IPv4 over Ethernet */
-        __u8[6]       sha; /* Sender hardware address */
-        __u8[4]       spa; /* Sender protocol address */
-        __u8[6]       tha; /* Target hardware address */
-        __u8[4]       tpa; /* Target protocol address */
+#if 0
+        __u8[hlen] sha; /* Sender hardware address */
+        __u8[plen] spa; /* Sender protocol address */
+        __u8[hlen] tha; /* Target hardware address */
+        __u8[plen] tpa; /* Target protocol address */
 #endif
 };
-
-struct naddr_handle * rinarp_paddr_register(__be16              proto_name,
-                                            __be16              proto_len,
-                                            struct net_device * device,
-                                            struct paddr        address)
-{ return NULL; }
-EXPORT_SYMBOL(rinarp_paddr_register);
-
-int rinarp_paddr_unregister(struct naddr_handle * h)
-{ return -1; }
-EXPORT_SYMBOL(rinarp_paddr_unregister);
-
-struct naddr_filter * naddr_filter_create(struct naddr_handle * handle)
-{ return NULL; }
-EXPORT_SYMBOL(naddr_filter_create);
-
-int naddr_filter_set(struct naddr_filter * filter,
-                     void *                opaque,
-                     arp_handler_t         request,
-                     arp_handler_t         reply)
-{ return -1; }
-EXPORT_SYMBOL(naddr_filter_set);
-
-int naddr_filter_destroy(struct naddr_filter * filter)
-{ return -1; }
-EXPORT_SYMBOL(naddr_filter_destroy);
-
-int rinarp_hwaddr_get(struct naddr_filter *    filter,
-                      struct paddr             in_address,
-                      struct rinarp_mac_addr * out_addr)
-{ return -1; }
-EXPORT_SYMBOL(rinarp_hwaddr_get);
-
-int rinarp_paddr_get(struct naddr_filter *  filter, 
-                     struct rinarp_mac_addr in_address,
-                     struct paddr         * out_addr)
-{ return -1; }
-EXPORT_SYMBOL(rinarp_paddr_get);
-
-int rinarp_send_request(struct naddr_filter * filter,
-                        struct paddr          address)
-{ return -1; }
-EXPORT_SYMBOL(rinarp_send_request);
 
 static struct arp_header * arp826_header(const struct sk_buff * skb)
 { return (struct arp_header *) skb_network_header(skb); }
@@ -908,6 +858,4 @@ MODULE_LICENSE("GPL");
 
 MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
-#endif
-
 #endif
