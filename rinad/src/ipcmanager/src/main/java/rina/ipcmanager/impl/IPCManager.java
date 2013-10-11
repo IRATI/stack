@@ -6,7 +6,6 @@ import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.AssignToDIFException;
 import eu.irati.librina.CreateIPCProcessException;
-import eu.irati.librina.DIFConfiguration;
 import eu.irati.librina.DIFInformation;
 import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowDeallocatedEvent;
@@ -81,9 +80,13 @@ public class IPCManager {
 		executorService = Executors.newCachedThreadPool();
 		console = new IPCManagerConsole(this);
 		executorService.execute(console);
+		log.info("IPC Manager daemon initializing, reading RINA configuration ...");
+		initializeConfiguration();
 		log.info("Initializing librina-ipcmanager...");
 		try{
-			rina.initializeIPCManager(1);
+			rina.initializeIPCManager(1, 
+					RINAConfiguration.getInstance().getLocalConfiguration().getInstallationPath(), 
+					RINAConfiguration.getInstance().getLocalConfiguration().getLibraryPath());
 		}catch(IPCManagerInitializationException ex){
 			log.fatal("Error initializing IPC Manager: "+ex.getMessage() 
 					+ ". Exiting.");
@@ -94,8 +97,7 @@ public class IPCManager {
 		applicationRegistrationManager = new ApplicationRegistrationManager(
 				ipcProcessFactory, applicationManager);
 		flowManager = new FlowManager(ipcProcessFactory, applicationManager);
-		log.info("IPC Manager daemon initializing, reading RINA configuration ...");
-		initializeConfiguration();
+		
 		log.info("Bootstrapping IPC Manager ...");
 		bootstrap();
 	}
@@ -307,8 +309,7 @@ public class IPCManager {
 	 */
 	public IPCProcess createIPCProcess(ApplicationProcessNamingInformation name, 
 			String type) throws CreateIPCProcessException {
-		return ipcProcessFactory.create(name, type, 
-				RINAConfiguration.getInstance().getLocalConfiguration().getInstallationPath());
+		return ipcProcessFactory.create(name, type);
 	}
 	
 	/**
