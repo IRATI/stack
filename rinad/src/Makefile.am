@@ -12,6 +12,7 @@ edit = $(SED)						\
         -e 's|@pkgdatadir[@]|$(pkgdatadir)|g'		\
         -e 's|@libdir[@]|$(libdir)|g'			\
         -e 's|@bindir[@]|$(bindir)|g'			\
+        -e 's|@sbindir[@]|$(bindir)|g'			\
 	-e 's|@prefix[@]|$(prefix)|g'			\
         -e 's|@LIBRINA_VERSION[@]|$(LIBRINA_VERSION)|g'
 
