@@ -200,15 +200,6 @@ static int default_init(struct kobject *          parent,
                 }
         }
 
-        LOG_DBG("Initializing default kfa component");
-        data->kfa = kfa_create();
-        if (!data->kfa) {
-                if (default_fini(data)) {
-                        LOG_CRIT("The system might become unstable ...");
-                        return -1;
-                }
-        }
-
         LOG_DBG("Initializing kipcm component");
         data->kipcm = kipcm_create(parent, data->nlset);
         if (!data->kipcm) {

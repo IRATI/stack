@@ -107,12 +107,13 @@ alloc_flow_req_free(struct name *                              source_name,
                     struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
                     struct rnl_msg *                           msg)
 {
-        if (attrs)       rkfree(attrs);
-        if (source_name) rkfree(source_name);
-        if (dest_name)   rkfree(dest_name);
-        if (fspec)       rkfree(fspec);
-        if (dif_name)    rkfree(dif_name);
-        if (msg)         rkfree(msg);
+        if (attrs)         rkfree(attrs);
+        if (source_name)   rkfree(source_name);
+        if (dest_name)     rkfree(dest_name);
+        if (fspec)         rkfree(fspec);
+        if (dif_name)      rkfree(dif_name);
+        if (msg->rina_hdr) rkfree(msg->rina_hdr);
+        if (msg)           rkfree(msg);
 }
 
 static int

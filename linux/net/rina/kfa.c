@@ -116,6 +116,7 @@ int kfa_destroy(struct kfa * instance)
         /* FIXME: Destroy all the committed flows */
         ASSERT(kfa_pmap_empty(instance->flows.committed));
         kfa_pmap_destroy(instance->flows.committed);
+        fidm_destroy(instance->fidm);
         rkfree(instance);
 
         return 0;
