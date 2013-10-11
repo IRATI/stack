@@ -22,60 +22,25 @@
 #ifndef ARP_826_H
 #define ARP_826_H
 
-#if 0
-
 #include <linux/types.h>
 #include <linux/kernel.h>
 #include <linux/netdevice.h>
 #include <linux/if_ether.h>
 
-struct naddr_handle;
-struct naddr_filter;
+#include "arp826-utils.h"
 
-struct paddr {
-	void * buf;
-	size_t length;
-};
+struct arp826_handle;
 
-enum rinarp_mac_addr_type {
-        MAC_ADDR_802_3
-};
+struct arp826_handle * arp826_register(const struct net_device * device,
+                                       const struct gpa *        address);
+int                    arp826_unregister(struct arp826_handle * handle);
 
-struct rinarp_mac_addr {
-        enum rinarp_mac_addr_type type;
-        union {
-                uint8_t mac_802_3[6];
-        } data;
-};
+typedef void (* arp826_handler_t)(void *             opaque,
+                                  const struct gpa * pa,
+                                  const struct gha * ha);
 
-/* FIXME: All these rinarp_* thingies have to be removed */
-
-struct naddr_handle * rinarp_paddr_register(__be16              proto_name,
-					    __be16              proto_len,
-                                            struct net_device * device,
-                                            struct paddr        address);
-int                   rinarp_paddr_unregister(struct naddr_handle * h);
-
-typedef void (* arp_handler_t)(void *                         opaque,
-			       const struct paddr *           dest_paddr,
-                               const struct rinarp_mac_addr * dest_hw_addr);
-
-struct naddr_filter * naddr_filter_create(struct naddr_handle * handle);
-int                   naddr_filter_set(struct naddr_filter * filter,
-				       void *                opaque,
-                                       arp_handler_t         request,
-                                       arp_handler_t         reply);
-int                   naddr_filter_destroy(struct naddr_filter * filter);
-
-int                   rinarp_hwaddr_get(struct naddr_filter *    filter, 
-                                        struct paddr             in_address,
-                                        struct rinarp_mac_addr * out_addr);
-int                   rinarp_paddr_get(struct naddr_filter *  filter, 
-				       struct rinarp_mac_addr in_address,
-				       struct paddr         * out_addr);
-
-int                   rinarp_send_request(struct naddr_filter * filter, 
-                                          struct paddr          address);
-#endif
+int                    arp826_resolve(struct arp826_handle * handle, 
+                                      arp826_handler_t       handler,
+                                      void *                 opaque);
 
 #endif
