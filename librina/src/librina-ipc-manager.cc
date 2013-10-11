@@ -198,7 +198,7 @@ void IPCProcess::updateDIFConfiguration(
                 message =  message + "This IPC Process is not yet assigned "+
                                 "to any DIF.";
                 LOG_ERR("%s", message.c_str());
-                throw AssignToDIFException(message);
+                throw UpdateDIFConfigurationException(message);
         }
 
 #if STUB_API
