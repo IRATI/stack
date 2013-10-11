@@ -327,6 +327,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         if (kipcm_fmap_add(kipcm->fid_messages->ingress, fid, info->snd_seq)) {
                 LOG_ERR("Could not add map [fid, seq_num]: [%d, %d]",
                         fid, info->snd_seq);
+                kfa_flow_destroy(kipcm->kfa, fid);
                 return alloc_flow_req_free_and_reply(source,
                                                      dest,
                                                      fspec,
@@ -348,6 +349,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                     fid)) {
                 LOG_ERR("Failed allocating flow request "
                         "for port id: %d", attrs->id);
+                kfa_flow_destroy(kipcm->kfa, fid);
                 return alloc_flow_req_free_and_reply(source,
                                                      dest,
                                                      fspec,
@@ -366,6 +368,17 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         return 0;
 }
 
+
+static void
+alloc_flow_resp_free(struct rnl_alloc_flow_resp_msg_attrs * attrs,
+                     struct rnl_msg *                       msg,
+                     struct rina_msg_hdr *                  hdr)
+{
+        if (attrs)         rkfree(attrs);
+        if (hdr)           rkfree(hdr);
+        if (msg)           rkfree(msg);
+}
+
 static int notify_ipcp_allocate_flow_response(void *             data,
                                               struct sk_buff *   buff,
                                               struct genl_info * info)
@@ -380,6 +393,11 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 #if 0
         response_reason_t                      reason;
 #endif
+
+        msg         = NULL;
+	hdr         = NULL;
+	attrs       = NULL;
+	ipc_process = NULL;
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -399,32 +417,27 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 
         msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
         if (!msg) {
-                rkfree(attrs);
+		alloc_flow_resp_free(attrs, msg, hdr);
                 return -1;
         }
 
         hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
         if (!hdr) {
-                rkfree(attrs);
-                rkfree(msg);
+		alloc_flow_resp_free(attrs, msg, hdr);
                 return -1;
         }
         msg->attrs    = attrs;
         msg->rina_hdr = hdr;
 
         if (rnl_parse_msg(info, msg)) {
-                rkfree(hdr);
-                rkfree(attrs);
-                rkfree(msg);
+		alloc_flow_resp_free(attrs, msg, hdr);
                 return -1;
         }
         ipc_id      = msg->rina_hdr->dst_ipc_id;
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
                 LOG_ERR("IPC process %d not found", ipc_id);
-                rkfree(hdr);
-                rkfree(attrs);
-                rkfree(msg);
+		alloc_flow_resp_free(attrs, msg, hdr);
                 return -1;
         }
 
@@ -432,9 +445,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         if (!is_flow_id_ok(fid)) {
                 LOG_ERR("Could not find flow id %d for response %d",
                         fid, info->snd_seq);
-                rkfree(hdr);
-                rkfree(attrs);
-                rkfree(msg);
+		alloc_flow_resp_free(attrs, msg, hdr);
                 return -1;
         }
 
@@ -444,9 +455,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                                                      0)) {
                 LOG_ERR("Failed allocate flow response for port id: %d",
                         attrs->id);
-                rkfree(hdr);
-                rkfree(attrs);
-                rkfree(msg);
+		alloc_flow_resp_free(attrs, msg, hdr);
                 return -1;
         }
 
