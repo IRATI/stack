@@ -28,31 +28,36 @@ struct gpa;
 struct gpa *    gpa_create(const uint8_t * address,
                            size_t          length);
 void            gpa_destroy(struct gpa * gpa);
+bool            gpa_is_ok(const struct gpa * gpa);
 struct gpa *    gpa_dup(const struct gpa * gpa);
 bool            gpa_is_equal(const struct gpa * a,
                              const struct gpa * b);
-bool            gpa_is_ok(const struct gpa * gpa);
 const uint8_t * gpa_address_value(const struct gpa * gpa);
 size_t          gpa_address_length(const struct gpa * gpa);
 
-/* Grows a GPA adding the filler symbols (if any) */
+/* Grows a GPA adding the filler symbols up to length (if needed) */
 int             gpa_address_grow(struct gpa * gpa,
                                  size_t       length,
                                  uint8_t      filler);
 
-/* Shrinks a GPA removing the filler symbols (if any) */
+/* Shrinks a GPA removing all the filler symbols (if any) */
 int             gpa_address_shrink(struct gpa * gpa,
-                                   size_t       length);
+                                   uint8_t      filler);
 
-enum gha_type {
+typedef enum {
         MAC_ADDR_802_3
-};
+} gha_type_t;
 
-struct gha {
-        enum gha_type type;
-        union {
-                uint8_t mac_802_3[6];
-        } data;
-};
+struct gha;
+
+struct gha *    gha_create(gha_type_t      type,
+                           const uint8_t * address);
+int             gha_destroy(struct gha * gha);
+bool            gha_is_ok(const struct gha * gha);
+struct gha *    gha_dup(const struct gha * gha);
+const uint8_t * gha_address(const struct gha * gha);
+gha_type_t      gha_type(const struct gha * gha);
+bool            gha_is_equal(const struct gha * a,
+                             const struct gha * b);
 
 #endif
