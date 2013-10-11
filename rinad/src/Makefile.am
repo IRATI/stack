@@ -11,8 +11,9 @@ edit = $(SED)						\
         -e 's|@JAVA[@]|$(JAVA)|g'			\
         -e 's|@pkgdatadir[@]|$(pkgdatadir)|g'		\
         -e 's|@libdir[@]|$(libdir)|g'			\
-        -e 's|@LIBRINA_VERSION[@]|$(LIBRINA_VERSION)|g' \
-	-e 's|@prefix[@]|$(prefix)|g'		
+        -e 's|@bindir[@]|$(bindir)|g'			\
+	-e 's|@prefix[@]|$(prefix)|g'			\
+        -e 's|@LIBRINA_VERSION[@]|$(LIBRINA_VERSION)|g'
 
 CLEANFILES    =
 BUILT_SOURCES =
