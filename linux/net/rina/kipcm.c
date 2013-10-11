@@ -614,7 +614,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
         struct rnl_msg *                              msg;
         struct dif_info *                             dif_info;
         struct name *                                 dif_name;
-        struct dif_config *                                               dif_config;
+        struct dif_config *                           dif_config;
         struct ipcp_instance *                        ipc_process;
         ipc_process_id_t                              ipc_id;
 
@@ -729,9 +729,6 @@ static int notify_ipcp_assign_dif_request(void *             data,
         }
         LOG_DBG("Found IPC Process with id %d", ipc_id);
 
-        /* FIXME: The configuration has to be fetched from the NL message */
-        LOG_MISSING;
-
         if (ipc_process->ops->assign_to_dif(ipc_process->data,
                                             attrs->dif_info)) {
                 char * tmp = name_tostring(attrs->dif_info->dif_name);
@@ -759,6 +756,132 @@ static int notify_ipcp_assign_dif_request(void *             data,
                                             0,
                                             info->snd_seq,
                                             info->snd_portid);
+}
+
+static int
+update_dif_config_free_and_reply(struct dif_config * dif_config,
+                                 struct rnl_ipcm_update_dif_config_req_msg_attrs * attrs,
+                                 struct rnl_msg *    msg,
+                                 ipc_process_id_t    id,
+                                 uint_t              res,
+                                 uint_t              seq_num,
+                                 uint_t              port_id)
+{
+        if (attrs)      rkfree(attrs);
+        if (dif_config)   rkfree(dif_config);
+        if (msg)        rkfree(msg);
+
+        if (rnl_update_dif_config_response(id, res, seq_num, port_id))
+                return -1;
+
+        return 0;
+}
+
+static int notify_ipcp_update_dif_config_request(void *             data,
+                                                 struct sk_buff *   buff,
+                                                 struct genl_info * info)
+{
+        struct kipcm *                                kipcm;
+        struct rnl_ipcm_update_dif_config_req_msg_attrs * attrs;
+        struct rnl_msg *                              msg;
+        struct dif_config *                           dif_config;
+        struct ipcp_instance *                        ipc_process;
+        ipc_process_id_t                              ipc_id;
+
+        attrs      = NULL;
+        msg        = NULL;
+        dif_config = NULL;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        kipcm = (struct kipcm *) data;
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+        if (!attrs)
+                return update_dif_config_free_and_reply(dif_config,
+                                                        attrs,
+                                                        msg,
+                                                        0,
+                                                       -1,
+                                                        info->snd_seq,
+                                                        info->snd_portid);
+
+        dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
+        if (!dif_config)
+                return update_dif_config_free_and_reply(dif_config,
+                                                        attrs,
+                                                        msg,
+                                                        0,
+                                                        -1,
+                                                        info->snd_seq,
+                                                        info->snd_portid);;
+        INIT_LIST_HEAD(&(dif_config->ipcp_config_entries));
+        attrs->dif_config = dif_config;
+
+        msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+        if (!msg)
+                return update_dif_config_free_and_reply(dif_config,
+                                                        attrs,
+                                                        msg,
+                                                        0,
+                                                        -1,
+                                                        info->snd_seq,
+                                                        info->snd_portid);
+
+        msg->attrs = attrs;
+
+        if (rnl_parse_msg(info, msg))
+                return update_dif_config_free_and_reply(dif_config,
+                                                        attrs,
+                                                        msg,
+                                                        0,
+                                                        -1,
+                                                        info->snd_seq,
+                                                        info->snd_portid);
+        ipc_id = msg->rina_hdr->dst_ipc_id;
+
+        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipc_process) {
+                LOG_ERR("IPC process %d not found", ipc_id);
+                return update_dif_config_free_and_reply(dif_config,
+                                                        attrs,
+                                                        msg,
+                                                        0,
+                                                        -1,
+                                                        info->snd_seq,
+                                                        info->snd_portid);
+        }
+        LOG_DBG("Found IPC Process with id %d", ipc_id);
+
+        if (ipc_process->ops->update_dif_config(ipc_process->data,
+                                                attrs->dif_config)) {
+                LOG_ERR("Update DIF config operation failed for IPC process %d"
+                                ,ipc_id);
+
+                return update_dif_config_free_and_reply(dif_config,
+                                                        attrs,
+                                                        msg,
+                                                        0,
+                                                        -1,
+                                                        info->snd_seq,
+                                                        info->snd_portid);
+        }
+
+        return update_dif_config_free_and_reply(dif_config,
+                                                attrs,
+                                                msg,
+                                                0,
+                                                0,
+                                                info->snd_seq,
+                                                info->snd_portid);
 }
 
 static int
@@ -1104,6 +1227,10 @@ static int netlink_handlers_unregister(struct rnl_set * rnls)
                                    RINA_C_IPCM_IPC_MANAGER_PRESENT))
                 retval = -1;
 
+        if (rnl_handler_unregister(rnls,
+                                   RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST))
+                retval = -1;
+
         LOG_DBG("NL handlers unregistered %s",
                 (retval == 0) ? "successfully" : "unsuccessfully");
 
@@ -1274,6 +1401,48 @@ static int netlink_handlers_register(struct kipcm * kipcm)
                 return -1;
         }
 
+        handler = notify_ipcp_update_dif_config_request;
+        if (rnl_handler_register(kipcm->rnls,
+                                 RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST,
+                                 kipcm,
+                                 handler)) {
+                if (rnl_handler_unregister(kipcm->rnls,
+                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                if (rnl_handler_unregister(kipcm->rnls,
+                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                if (rnl_handler_unregister(kipcm->rnls,
+                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                if (rnl_handler_unregister(kipcm->rnls,
+                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                if (rnl_handler_unregister(kipcm->rnls,
+                                           RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                if (rnl_handler_unregister(kipcm->rnls,
+                                           RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                if (rnl_handler_unregister(kipcm->rnls,
+                                           RINA_C_IPCM_IPC_MANAGER_PRESENT)) {
+                        LOG_ERR("Failed handler unregister while bailing out");
+                        /* FIXME: What else could be done here?" */
+                }
+                return -1;
+        }
 
         LOG_DBG("NL handlers registered successfully");
 

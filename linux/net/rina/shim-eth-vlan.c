@@ -482,7 +482,6 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
                 }
         }
 
-
         data->reg_app = name_dup(name);
         if (!data->reg_app) {
                 char * tmp = name_tostring(name);

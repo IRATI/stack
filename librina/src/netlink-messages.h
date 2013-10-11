@@ -32,6 +32,8 @@ enum RINANetlinkOperationCode{
 	RINA_C_UNSPEC, /* Unespecified operation */
 	RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST, /* IPC Manager -> IPC Process */
 	RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE, /* IPC Process -> IPC Manager */
+        RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST, /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE, /* IPC Process -> IPC Manager */
 	RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION, /* IPC Manager -> IPC Process */
 	RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION, /* TODO IPC Manager -> IPC Process */
 	RINA_C_IPCM_ENROLL_TO_DIF_REQUEST, /* TODO IPC Manager -> IPC Process */
@@ -640,7 +642,7 @@ class IpcmAssignToDIFRequestMessage: public NetlinkRequestOrNotificationMessage 
 public:
 	IpcmAssignToDIFRequestMessage();
 	const DIFInformation& getDIFInformation() const;
-	void setDIFInformation(const DIFInformation&);
+	void setDIFInformation(const DIFInformation& difInformation);
 	IPCEvent* toIPCEvent();
 };
 
@@ -653,6 +655,35 @@ class IpcmAssignToDIFResponseMessage: public BaseNetlinkResponseMessage {
 
 public:
 	IpcmAssignToDIFResponseMessage();
+};
+
+/**
+ * Updates the configuration of the DIF the IPC process is a member of
+ * IPC Manager -> IPC Process
+ */
+class IpcmUpdateDIFConfigurationRequestMessage:
+                public NetlinkRequestOrNotificationMessage {
+
+        /** The new configuration of the DIF */
+        DIFConfiguration difConfiguration;
+
+public:
+        IpcmUpdateDIFConfigurationRequestMessage();
+        const DIFConfiguration& getDIFConfiguration() const;
+        void setDIFConfiguration(const DIFConfiguration& difConfiguration);
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * Reports the IPC Manager about the result of an Update DIF Config operation
+ * IPC Process -> IPC Manager
+ */
+
+class IpcmUpdateDIFConfigurationResponseMessage:
+                public BaseNetlinkResponseMessage {
+
+public:
+        IpcmUpdateDIFConfigurationResponseMessage();
 };
 
 class IpcmAllocateFlowRequestMessage: public NetlinkRequestOrNotificationMessage {

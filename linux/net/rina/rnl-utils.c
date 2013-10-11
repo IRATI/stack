@@ -496,6 +496,39 @@ static int rnl_parse_ipcm_assign_to_dif_resp_msg(struct genl_info * info,
                                                "RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE");
 }
 
+static int rnl_parse_ipcm_update_dif_config_req_msg(struct genl_info * info,
+                                                    struct rnl_ipcm_update_dif_config_req_msg_attrs * msg_attrs)
+{
+        struct nla_policy attr_policy[IUDCR_ATTR_MAX + 1];
+        struct nlattr *attrs[IUDCR_ATTR_MAX + 1];
+        int result;
+
+        attr_policy[IUDCR_ATTR_DIF_CONFIGURATION].type = NLA_NESTED;
+        attr_policy[IUDCR_ATTR_DIF_CONFIGURATION].len = 0;
+
+        result = nlmsg_parse(info->nlhdr,
+                             sizeof(struct genlmsghdr) +
+                             sizeof(struct rina_msg_hdr),
+                             attrs,
+                             IUDCR_ATTR_MAX,
+                             attr_policy);
+
+        if (result < 0) {
+                LOG_ERR("Error %d; could not validate nl message policy", result);
+                goto parse_fail;
+        }
+
+        if (parse_dif_config(attrs[IUDCR_ATTR_DIF_CONFIGURATION],
+                           msg_attrs->dif_config) < 0)
+                goto parse_fail;
+
+        return 0;
+
+ parse_fail:
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST"));
+        return -1;
+}
+
 static int rnl_parse_ipcm_ipcp_dif_reg_noti_msg(struct genl_info * info,
                                                 struct rnl_ipcm_ipcp_dif_reg_noti_msg_attrs * msg_attrs)
 {
@@ -1067,6 +1100,11 @@ int rnl_parse_msg(struct genl_info * info,
                                                           msg->attrs) < 0)
                         goto fail;
                 break;
+        case RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST:
+                if (rnl_parse_ipcm_update_dif_config_req_msg(info,
+                                                             msg->attrs) < 0)
+                        goto fail;
+                break;
         case RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:
                 if (rnl_parse_ipcm_ipcp_dif_reg_noti_msg(info,
                                                          msg->attrs) < 0)
@@ -1364,6 +1402,16 @@ int rnl_format_ipcm_assign_to_dif_resp_msg(uint_t          result,
                                                 skb_out);
 }
 EXPORT_SYMBOL(rnl_format_ipcm_assign_to_dif_resp_msg);
+
+int rnl_format_ipcm_update_dif_config_resp_msg(uint_t          result,
+                                               struct sk_buff  * skb_out)
+{
+        return rnl_format_generic_u32_param_msg(result,
+                                                IAFRRM_ATTR_RESULT,
+                                                "rnl_ipcm_update_dif_config_resp_msg",
+                                                skb_out);
+}
+EXPORT_SYMBOL(rnl_format_ipcm_update_dif_config_resp_msg);
 
 int rnl_format_ipcm_ipcp_dif_reg_noti_msg(const struct name * ipcp_name,
                                           const struct name * dif_name,
@@ -2042,6 +2090,59 @@ int rnl_assign_dif_response(ipc_process_id_t id,
         return 0;
 }
 EXPORT_SYMBOL(rnl_assign_dif_response);
+
+int rnl_update_dif_config_response(ipc_process_id_t id,
+                                   uint_t           res,
+                                   rnl_sn_t         seq_num,
+                                   u32              nl_port_id)
+{
+        struct sk_buff *      out_msg;
+        struct rina_msg_hdr * out_hdr;
+        int                   result;
+
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
+        if (!out_msg) {
+                LOG_ERR("Could not allocate memory for message");
+                return -1;
+        }
+
+        out_hdr = (struct rina_msg_hdr *)
+                genlmsg_put(out_msg,
+                            0,
+                            seq_num,
+                            &rnl_nl_family,
+                            0,
+                            RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE);
+        if (!out_hdr) {
+                LOG_ERR("Could not use genlmsg_put");
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        out_hdr->src_ipc_id = id;
+        out_hdr->dst_ipc_id = 0;
+
+        if (rnl_format_ipcm_update_dif_config_resp_msg(res, out_msg)) {
+                LOG_ERR("Could not format message...");
+                nlmsg_free(out_msg);
+                return -1;
+        }
+        result = genlmsg_end(out_msg, out_hdr);
+
+        if (result) {
+                LOG_DBG("Result of genlmesg_end: %d", result);
+        }
+
+        result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
+        if (result) {
+                LOG_ERR("Could not send unicast msg: %d", result);
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        return 0;
+}
+EXPORT_SYMBOL(rnl_update_dif_config_response);
 
 int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
                                              uint_t           res,
