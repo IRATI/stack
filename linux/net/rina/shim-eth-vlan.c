@@ -64,7 +64,7 @@ enum port_id_state {
 struct shim_eth_flow {
         struct list_head   list;
         struct gha *       dest_ha;
-	struct gpa *       dest_pa;
+        struct gpa *       dest_pa;
         /* Only used once for allocate_response */
         flow_id_t          flow_id;
         port_id_t          port_id;
@@ -163,9 +163,9 @@ static struct gpa * name_to_gpa(const struct name * name)
         struct gpa * addr;
 
         delimited_name = name_tostring(name);
-        addr = gpa_create(delimited_name, 
-			  strlen(delimited_name));
-	
+        addr = gpa_create(delimited_name,
+                          strlen(delimited_name));
+
 
         return addr;
 }
@@ -223,50 +223,50 @@ static string_t * create_vlan_interface_name(string_t * interface_name,
 }
 
 static int flow_destroy(struct ipcp_instance_data * data,
-			struct shim_eth_flow **     f)
+                        struct shim_eth_flow **     f)
 {
-	struct shim_eth_flow * flow;
-	flow_id_t fid;
+        struct shim_eth_flow * flow;
+        flow_id_t fid;
 
-	flow = *f;
-	list_del(&flow->list);
- 
-	if(flow->dest_pa) 
-		gpa_destroy(flow->dest_pa);
-	if(flow->dest_ha) 
-		gha_destroy(flow->dest_ha);
-      
+        flow = *f;
+        list_del(&flow->list);
+
+        if(flow->dest_pa)
+                gpa_destroy(flow->dest_pa);
+        if(flow->dest_ha)
+                gha_destroy(flow->dest_ha);
+
         /*
          * Remove from ARP cache if this was
          *  the last flow and no app registered
          */
-	if (list_empty(&data->flows) && !data->reg_app) {
+        if (list_empty(&data->flows) && !data->reg_app) {
                 rinarp_unregister(data->handle);
         }
 
-	fid = kfa_flow_unbind(data->kfa,
+        fid = kfa_flow_unbind(data->kfa,
                               flow->port_id);
         kfa_flow_destroy(data->kfa, fid);
 
-	rkfree(flow);
-	return 0;
+        rkfree(flow);
+        return 0;
 }
 
 
 
 static void rinarp_resolve_handler(void *              opaque,
-				   const struct gpa * dest_pa,
-				   const struct gha * dest_ha)
+                                   const struct gpa * dest_pa,
+                                   const struct gha * dest_ha)
 {
-	struct ipcp_instance_data * data;
+        struct ipcp_instance_data * data;
         struct shim_eth_flow * flow;
-	
+
         data = (struct ipcp_instance_data *) opaque;
         flow = find_flow_by_gpa(data, dest_pa);
 
-	if (flow && flow->port_id_state == PORT_STATE_PENDING) {
+        if (flow && flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
-		flow->dest_ha = gha_dup(dest_ha);
+                flow->dest_ha = gha_dup(dest_ha);
 
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
@@ -297,35 +297,35 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 LOG_ERR("Shim IPC process can have only one user");
                 return -1;
         }
-	
+
 
         flow = find_flow(data, id);
-	
+
         /*
          * If it is the first flow and no app is registered ...
          * ... add to the ARP cache
          */
         if (list_empty(&data->flows) && !data->reg_app) {
                 data->handle = rinarp_register(data->dev,
-					       name_to_gpa(source));
-	}
+                                               name_to_gpa(source));
+        }
 
         if (!flow) {
                 flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
                 if (!flow)
                         return -1;
-		
+
                 flow->port_id = id;
-		flow->flow_id = fid;
+                flow->flow_id = fid;
                 flow->port_id_state = PORT_STATE_PENDING;
 
-		flow->dest_pa = name_to_gpa(dest);
+                flow->dest_pa = name_to_gpa(dest);
 
-		INIT_LIST_HEAD(&flow->list);
+                INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
 
-                if (!rinarp_resolve(data->handle, rinarp_resolve_handler, data)) 
-			LOG_ERR("Failed to lookup ARP entry");
+                if (!rinarp_resolve(data->handle, rinarp_resolve_handler, data))
+                        LOG_ERR("Failed to lookup ARP entry");
 
         } else if (flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
@@ -373,7 +373,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                                        data->id,
                                                        flow->flow_id,
                                                        0)) {
-			flow_destroy(data, &flow);
+                        flow_destroy(data, &flow);
                         return -1;
                 }
         } else {
@@ -395,10 +395,10 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
                 LOG_ERR("Flow does not exist, cannot remove");
                 return -1;
         }
-	
-	flow_destroy(data, &flow);
-	
-	return 0;
+
+        flow_destroy(data, &flow);
+
+        return 0;
 }
 
 static int eth_vlan_application_register(struct ipcp_instance_data * data,
@@ -433,7 +433,7 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
         /* Add in ARP cache if no AP was using the shim */
         if(!data->app_name) {
                 data->handle = rinarp_register(data->dev,
-					       name_to_gpa(name));
+                                               name_to_gpa(name));
         }
 
         data->app_name = name_dup(name);
@@ -540,7 +540,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         struct ethhdr *mh;
         unsigned char * saddr;
         struct ipcp_instance_data * data;
-	struct interface_data_mapping * mapping;
+        struct interface_data_mapping * mapping;
 
         /* C-c-c-checks */
         mapping = inst_data_mapping_get(dev);
@@ -549,8 +549,8 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 return -1;
         }
 
-	data = mapping->data;
-	if (!data) {
+        data = mapping->data;
+        if (!data) {
                 kfree_skb(skb);
                 return -1;
         }
@@ -571,9 +571,9 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         saddr = mh->h_source;
 
 #if 0
-	/* FIXME: Get correct flow based on hwaddr */
+        /* FIXME: Get correct flow based on hwaddr */
 
-	/* If the flow cannot be found --> New Flow! */
+        /* If the flow cannot be found --> New Flow! */
 
         /* FIXME: */
         /* If the port id state is ALLOCATED deliver to application */
