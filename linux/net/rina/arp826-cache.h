@@ -1,5 +1,5 @@
 /*
- * ARP 826 cache
+ * ARP 826 (wonnabe) cache
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -21,17 +21,7 @@
 #ifndef ARP_826_CACHE_H
 #define ARP_826_CACHE_H
 
-struct gpa;
-
-struct gpa * gpa_create(const uint8_t * address,
-                        size_t          length);
-void         gpa_destroy(struct gpa * gpa);
-struct gpa * gpa_dup(const struct gpa * gpa);
-bool         gpa_is_equal(const struct gpa * a,
-                          const struct gpa * b);
-bool         gpa_is_ok(const struct gpa * gpa);
-const char * gpa_address_value(const struct gpa * gpa);
-size_t       gpa_address_length(const struct gpa * gpa);
+#include "arp826-utils.h"
 
 struct cache_entry;
 

@@ -160,17 +160,16 @@ static struct paddr name_to_paddr(const struct name * name)
 static string_t * create_vlan_interface_name(string_t * interface_name,
                                              uint16_t   vlan_id)
 {
-        char       string_vlan_id[4];
+        char       string_vlan_id[5];
         string_t * complete_interface;
 
-        complete_interface =
-                rkmalloc(sizeof(*complete_interface),
-                         GFP_KERNEL);
-        if (!complete_interface)
-                return NULL;
-
-        strcpy(complete_interface, interface_name);
         sprintf(string_vlan_id,"%d",vlan_id);
+
+        complete_interface = rkzalloc(
+                                      strlen(interface_name) + 2*sizeof(char)
+                                      + strlen(string_vlan_id),
+                                      GFP_KERNEL);
+        strcat(complete_interface, interface_name);
         strcat(complete_interface, ".");
         strcat(complete_interface, string_vlan_id);
 
@@ -697,10 +696,22 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
 
         info = data->info;
 
+        if (data->dif_name){
+                LOG_ERR("This IPC Process is already assigned to the DIF %s",
+                        data->dif_name->process_name);
+                LOG_ERR("An IPC Process can only be assigned to a DIF once");
+                return -1;
+        }
+
         /* Get vlan id */
         info->vlan_id =
                 simple_strtol(dif_information->dif_name->process_name, 0, 10);
+
         data->dif_name = name_dup(dif_information->dif_name);
+        if (!data->dif_name) {
+                LOG_ERR("Error duplicating name, bailing out");
+                return -1;
+        }
 
         /* Retrieve configuration of IPC process from params */
         list_for_each_entry(tmp, &(dif_information->
@@ -710,13 +721,15 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
 
                 entry = tmp->entry;
                 if (!strcmp(entry->name,"interface-name")) {
-                        if (!strcpy(info->interface_name,
-                                    entry->value)) {
+                        info->interface_name =
+                                kstrdup(entry->value, GFP_KERNEL);
+                        if (!info->interface_name) {
                                 LOG_ERR("Cannot copy interface name");
+                                name_destroy(data->dif_name);
+                                return -1;
                         }
-                } else {
+                } else
                         LOG_WARN("Unknown config param for eth shim");
-                }
         }
 
         data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
@@ -725,21 +738,37 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         complete_interface =
                 create_vlan_interface_name(info->interface_name,
                                            info->vlan_id);
-        if (!complete_interface)
+        if (!complete_interface) {
+                name_destroy(data->dif_name);
+                rkfree(info->interface_name);
                 return -1;
+        }
+
         /* Add the handler */
         read_lock(&dev_base_lock);
         data->dev = __dev_get_by_name(&init_net, complete_interface);
         if (!data->dev) {
                 LOG_ERR("Invalid device to configure: %s",
                         complete_interface);
+                read_unlock(&dev_base_lock);
+                name_destroy(data->dif_name);
+                rkfree(info->interface_name);
+                rkfree(complete_interface);
                 return -1;
         }
 
+        LOG_DBG("Got device driver of %s, trying to register handler",
+                complete_interface);
+
         /* Store in list for retrieval later on */
         mapping = rkmalloc(sizeof(*mapping), GFP_KERNEL);
-        if (!mapping)
+        if (!mapping) {
+                read_unlock(&dev_base_lock);
+                name_destroy(data->dif_name);
+                rkfree(info->interface_name);
+                rkfree(complete_interface);
                 return -1;
+        }
         mapping->dev = data->dev;
         mapping->data = data;
         INIT_LIST_HEAD(&mapping->list);
@@ -855,6 +884,8 @@ static int eth_vlan_init(struct ipcp_factory_data * data)
         bzero(&eth_vlan_data, sizeof(eth_vlan_data));
         INIT_LIST_HEAD(&(data->instances));
 
+        INIT_LIST_HEAD(&data_instances_list);
+
         LOG_INFO("%s intialized", SHIM_NAME);
 
         return 0;
@@ -942,18 +973,6 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-        inst->data->info->interface_name =
-                rkzalloc(sizeof(*inst->data->info->interface_name),
-                         GFP_KERNEL);
-        if (!inst->data->info->interface_name) {
-                LOG_DBG("Failed creation of interface_name");
-                rkfree(inst->data->info);
-                rkfree(inst->data->eth_vlan_packet_type);
-                rkfree(inst->data);
-                rkfree(inst);
-                return NULL;
-        }
-
         /* FIXME: Remove as soon as the kipcm_kfa gets removed*/
         inst->data->kfa = kipcm_kfa(default_kipcm);
         LOG_DBG("KFA instance %pK bound to the shim eth", inst->data->kfa);
@@ -990,6 +1009,9 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         /* Destroy it */
                         if (pos->name)
                                 name_destroy(pos->name);
+
+                        if (pos->dif_name)
+                                name_destroy(pos->dif_name);
 
                         if(pos->reg_app)
                                 name_destroy(pos->reg_app);

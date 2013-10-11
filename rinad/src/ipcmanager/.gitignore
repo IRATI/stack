@@ -5,5 +5,5 @@ target/
 .classpath
 .project
 
-ipcmanager
+src/main/scripts/ipcmanager
 src/main/conf/ipcmanager.conf

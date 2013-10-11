@@ -3,7 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
- *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>    
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,9 +37,9 @@ int          kfa_destroy(struct kfa * instance);
 flow_id_t    kfa_flow_create(struct kfa * instance);
 
 /* Commits the flow, binds the flow to a port-id, frees the flow-id */
-int          kfa_flow_bind(struct kfa * 	  instance,
-                           flow_id_t    	  fid,
-                           port_id_t    	  pid,
+int          kfa_flow_bind(struct kfa *           instance,
+                           flow_id_t              fid,
+                           port_id_t              pid,
                            struct ipcp_instance * ipc_process,
                            ipc_process_id_t       ipc_id);
 
@@ -57,23 +57,23 @@ int          kfa_flow_destroy(struct kfa * instance,
 int          kfa_flow_unbind_and_destroy(struct kfa * instance,
                                          port_id_t    id);
 
-int 	     kfa_remove_all_for_id(struct kfa *     instance,
-				   ipc_process_id_t id);
+int          kfa_remove_all_for_id(struct kfa *     instance,
+                                   ipc_process_id_t id);
 
 /* Once the flow is bound to a port, we can write/read SDUs */
 int          kfa_flow_sdu_write(struct kfa *  instance,
                                 port_id_t     id,
                                 struct sdu *  sdu);
 
-int 	     kfa_flow_sdu_read(struct kfa *  instance,
+int          kfa_flow_sdu_read(struct kfa *  instance,
                                port_id_t     id,
                                struct sdu ** sdu);
 
-int 	     kfa_sdu_post(struct kfa * instance,
-			  port_id_t    id,
-			  struct sdu * sdu);
+int          kfa_sdu_post(struct kfa * instance,
+                          port_id_t    id,
+                          struct sdu * sdu);
 
 struct ipcp_flow * kfa_find_flow_by_fid(struct kfa * instance,
-                       	       	       	flow_id_t    fid);
+                                        flow_id_t    fid);
 
 #endif

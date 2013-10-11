@@ -92,9 +92,9 @@ int main(int argc, char * argv[]) {
 			new ApplicationProcessNamingInformation("/difs/Test.DIF", "");
 
 	IPCProcess * ipcProcess1 = ipcProcessFactory->create(*ipcProcessName1,
-			"normal", "");
+			"normal");
 	IPCProcess * ipcProcess2 = ipcProcessFactory->create(*ipcProcessName2,
-			"shim-ethernet", "");
+			"shim-ethernet");
 
 	/* TEST LIST IPC PROCESSES */
 	if (!checkIPCProcesses(2)) {

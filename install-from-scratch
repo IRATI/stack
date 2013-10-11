@@ -2,23 +2,27 @@
 # -*- sh -*-
 
 #
-# install-from-scratch
-#
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-ME=install-from-scratch
+ME=configure
+
+PREFIX=$1
 
 echo "$ME: Starting phase librina"
-(cd librina && ./bootstrap && ./configure --enable-java-bindings --prefix=$1 && make install) || {
+(cd librina && ./bootstrap && ./configure --enable-java-bindings --prefix=$PREFIX && make install) || {
     echo "$ME: Cannot complete librina phase"
     exit 1
 }
 
 echo "$ME: Starting phase rinad"
-(cd rinad && ./bootstrap && PKG_CONFIG_PATH=$1/lib/pkgconfig ./configure --prefix=$1 && make install) || {
-    echo "$ME: Cannot install rinad phase"
+(cd rinad && ./bootstrap && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PREFIX/lib ./configure --prefix=$PREFIX && make install) || {
+    echo "$ME: Cannot complete rinad phase"
     exit 1
 }
 
 echo "$ME: Starting phase rina-tools"
+(cd rina-tools && ./bootstrap && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PREFIX/lib ./configure --prefix=$PREFIX  && make install) || {
+    echo "$ME: Cannot complete rina-tools phase"
+    exit 1
+}

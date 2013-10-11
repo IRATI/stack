@@ -1,5 +1,5 @@
 /*
- * ARP 826 cache
+ * ARP 826 (wonnabe) cache
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -27,11 +27,7 @@
 
 #include <linux/kernel.h>
 
-/*
- * FIXME: The following lines provide basic framework and utilities. These
- *        dependencies will be removed ASAP to let this module live its own
- *        life
- */
+/* FIXME: The following dependencies have to be removed */
 #define RINA_PREFIX "arp826-cache"
 
 #include "logs.h"
@@ -39,116 +35,7 @@
 #include "utils.h"
 /* FIXME: End of dependencies ... */
 
-/*
- * NOTE: In 'static' functions there should be no input parameters checks while
- *       in non-static ones there should be plenty
- */
-
-/*
- * General Protocol Address - GPA
- */
-
-struct gpa {
-        uint8_t * address;
-        size_t    length;
-};
-
-/*
- * NOTE: Even if GPA is a base type we avoid ASSERTions here, preferring a
- *       merciful approach. Look at the logs guys ...
- */
-
-struct gpa * gpa_create(const uint8_t * address,
-                        size_t          length)
-{
-        struct gpa * tmp;
-
-        if (!address || length == 0) {
-                LOG_ERR("Bad input parameters, cannot create GPA");
-                return NULL;
-        }
-
-        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
-        tmp->length  = length;
-        tmp->address = rkmalloc(tmp->length, GFP_KERNEL);
-        if (!tmp->address) {
-                rkfree(tmp);
-                return NULL;
-        }
-        memcpy(tmp->address, address, tmp->length);
-
-        return tmp;
-}
-
-bool gpa_is_ok(const struct gpa * gpa)
-{ return (!gpa || gpa->address == NULL || gpa->length == 0) ? 0 : 1; }
-
-void gpa_destroy(struct gpa * gpa)
-{
-        if (!gpa_is_ok(gpa)) {
-                LOG_ERR("Bogus GPA, cannot destroy");
-                return;
-        }
-
-        rkfree(gpa->address);
-        rkfree(gpa);
-}
-
-struct gpa * gpa_dup(const struct gpa * gpa)
-{
-        if (!gpa_is_ok(gpa)) {
-                LOG_ERR("Bogus input parameter, cannot duplicate GPA");
-                return NULL;
-        }
-
-        return gpa_create(gpa->address, gpa->length);
-}
-
-const char * gpa_address_value(const struct gpa * gpa)
-{
-        if (!gpa_is_ok(gpa)) {
-                LOG_ERR("Bad input parameter, "
-                        "cannot get a meaningful address from GPA");
-                return NULL;
-        }
-
-        return gpa->address;
-}
-
-size_t gpa_address_length(const struct gpa * gpa)
-{
-        if (!gpa_is_ok(gpa)) {
-                LOG_ERR("Bad input parameter, "
-                        "cannot get a meaningful size from GPA");
-                return 0;
-        }
-
-        return gpa->length;
-}
-
-bool gpa_is_equal(const struct gpa * a, const struct gpa * b)
-{
-        if (!gpa_is_ok(a) || !gpa_is_ok(b)) {
-                LOG_ERR("Bad input parameters, cannot compare GPAs");
-                return 0;
-        }
-
-        ASSERT(a && a->length != 0 && a->address != NULL);
-        ASSERT(b && b->length != 0 && b->address != NULL);
-
-        if (a->length != b->length)
-                return 0;
-
-        ASSERT(a->length == b->length);
-
-        if (memcmp(a->address, b->address, a->length))
-                return 0;
-
-        return 1;
-}
+#include "arp826-utils.h"
 
 /*
  * Cache Entries - CE
@@ -254,6 +141,7 @@ static bool ce_is_ok(const struct cache_entry * entry)
         return 1;
 }
 
+#if 0
 static bool ce_is_equal(struct cache_entry * entry1,
                         struct cache_entry * entry2)
 {
@@ -270,6 +158,7 @@ static bool ce_is_equal(struct cache_entry * entry1,
 
         return 1;
 }
+#endif
 
 const struct gpa * ce_pa(struct cache_entry * entry)
 {
@@ -409,11 +298,21 @@ int cl_add(struct cache_line * instance,
         spin_lock(&instance->lock);
 
         list_for_each_entry(pos, &instance->entries, next) {
+                const uint8_t * ha;
+
+                ha = ce_ha(pos);
+                ASSERT(ha);
+
+#if 0
+                /* FIXME: Fix this mess */
+                if (!memcmp
+                if (gpa_is_equal(ce_pa(pos), protocol_address)
                 if (ce_is_equal(pos, entry)) {
                         LOG_WARN("CE already present in this CL");
                         ce_destroy(entry);
                         return 0;
                 }
+#endif
         }
 
         list_add(&instance->entries, &entry->next);
