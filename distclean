@@ -8,19 +8,19 @@
 ME=uninstall
 
 echo "$ME: Starting phase rina-tools"
-(cd rinad && make uninstall) || {
-    echo "$ME: Cannot complete rina-tools phase"
+(cd rinad && make distclean) || {
+    echo "$ME: Cannot install rina-tools phase"
     exit 1
 }
 
 echo "$ME: Starting phase rinad"
-(cd rinad && make uninstall) || {
-    echo "$ME: Cannot complete rinad phase"
+(cd rinad && make distclean) || {
+    echo "$ME: Cannot install rinad phase"
     exit 1
 }
 
 echo "$ME: Starting phase librina"
-(cd librina && make uninstall) || {
+(cd librina && make distclean) || {
     echo "$ME: Cannot complete librina phase"
     exit 1
 }

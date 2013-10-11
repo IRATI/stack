@@ -1,0 +1,26 @@
+#!/bin/sh
+# -*- sh -*-
+
+#
+# Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
+#
+
+ME=install
+
+echo "$ME: Starting phase librina"
+(cd librina && make install) || {
+    echo "$ME: Cannot complete librina phase"
+    exit 1
+}
+
+echo "$ME: Starting phase rinad"
+(cd rinad && make install) || {
+    echo "$ME: Cannot complete rinad phase"
+    exit 1
+}
+
+echo "$ME: Starting phase rina-tools"
+(cd rina-tools && make install) || {
+    echo "$ME: Cannot complete rina-tools phase"
+    exit 1
+}
