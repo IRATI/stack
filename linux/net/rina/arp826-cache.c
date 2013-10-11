@@ -1,5 +1,5 @@
 /*
- * ARP 826 cache
+ * ARP 826 (wonnabe) cache
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -27,11 +27,7 @@
 
 #include <linux/kernel.h>
 
-/*
- * FIXME: The following lines provide basic framework and utilities. These
- *        dependencies will be removed ASAP to let this module live its own
- *        life
- */
+/* FIXME: The following dependencies have to be removed */
 #define RINA_PREFIX "arp826-cache"
 
 #include "logs.h"

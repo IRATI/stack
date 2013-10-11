@@ -1,5 +1,5 @@
 /*
- * An RFC 826 ARP implementation
+ * ARP 826 (wonnabe) core
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,11 +18,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/*
- * FIXME: The following lines provide basic framework and utilities. These
- *        dependencies will be removed ASAP to let this module live its own
- *        life
- */
+/* FIXME: The following dependencies have to be removed */
 #define RINA_PREFIX "arp826-utils"
 
 #include "logs.h"
@@ -120,19 +116,66 @@ size_t gpa_address_length(const struct gpa * gpa)
         return gpa->length;
 }
 
+int gpa_address_shrink(struct gpa * gpa, size_t length, uint8_t filler)
+{
+        uint8_t * new_address;
+        uint8_t * position;
+        uint8_t * tmp;
+        size_t    count;
+
+        if (!gpa_is_ok(gpa)) {
+                LOG_ERR("Bad input parameter, cannot shrink the GPA");
+                return -1;
+        }
+
+        if (length == 0 || length > gpa->length) {
+                LOG_ERR("Can't shrink the GPA, bad length");
+                return -1;
+        }
+
+        /* No needs to shrink */
+        if (gpa->length == length)
+                return 1;
+
+        ASSERT(length < gpa->length);
+
+        position = strnchr(gpa->address, filler, gpa->length);
+        if (!position) {
+                LOG_ERR("No filler in the GPA, cannot shrink");
+                return -1;
+        }
+
+        count = position - gpa->address;
+        ASSERT(count);
+
+        new_address = rkmalloc(length, GFP_KERNEL);
+        if (!new_address)
+                return -1;
+
+        memcpy(new_address, gpa->address, gpa->length - count);
+        for (tmp = new_address + count; count != 0; tmp++, count--)
+                *tmp = filler;
+
+        rkfree(gpa->address);
+        gpa->address = new_address;
+        gpa->length  = length;
+
+        return 0;
+}
+
 int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
 {
         uint8_t * new_address;
 
         if (!gpa_is_ok(gpa)) {
-                LOG_ERR("Bad input parameter, "
-                        "cannot grow the GPA");
-                return 0;
+                LOG_ERR("Bad input parameter, cannot grow the GPA");
+                return -1;
         }
 
-        /* Can't grow */
-        if (gpa->length > length)
+        if (length == 0 || length < gpa->length) {
+                LOG_ERR("Can't grow the GPA, bad length");
                 return -1;
+        }
 
         /* No needs to grow */
         if (gpa->length == length)

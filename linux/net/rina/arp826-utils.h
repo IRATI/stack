@@ -32,8 +32,14 @@ bool         gpa_is_equal(const struct gpa * a,
 bool         gpa_is_ok(const struct gpa * gpa);
 const char * gpa_address_value(const struct gpa * gpa);
 size_t       gpa_address_length(const struct gpa * gpa);
+
+/* Grows a GPA adding the filler symbols */
 int          gpa_address_grow(struct gpa * gpa,
                               size_t       length,
                               uint8_t      filler);
+
+/* Shrinks a GPA removing the filler symbols */
+int          gpa_address_shrink(struct gpa * gpa,
+                                size_t       length);
 
 #endif
