@@ -182,7 +182,7 @@ static int default_init(struct kobject *          parent,
 
         LOG_DBG("Initializing default personality");
 
-        LOG_DBG("Initializing kfa component");
+        LOG_DBG("Initializing KFA");
         data->kfa = kfa_create();
         if (!data->kfa) {
                 if (default_fini(data)) {
@@ -191,7 +191,7 @@ static int default_init(struct kobject *          parent,
                 }
         }
 
-        LOG_DBG("Initializing default Netlink component");
+        LOG_DBG("Initializing RNL");
         data->nlset = rnl_set_create(id);
         if (!data->nlset) {
                 if (default_fini(data)) {
@@ -200,7 +200,7 @@ static int default_init(struct kobject *          parent,
                 }
         }
 
-        LOG_DBG("Initializing kipcm component");
+        LOG_DBG("Initializing KIPCM");
         data->kipcm = kipcm_create(parent, data->nlset);
         if (!data->kipcm) {
                 if (default_fini(data)) {

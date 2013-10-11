@@ -49,9 +49,9 @@ struct kfa {
 };
 
 struct ipcp_flow {
-        port_id_t              port_id;
+        port_id_t               port_id;
 
-        struct ipcp_instance * ipc_process;
+        struct ipcp_instance *  ipc_process;
 
         /* FIXME: To be wiped out */
         struct kfifo            sdu_ready;

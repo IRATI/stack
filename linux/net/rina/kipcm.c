@@ -395,9 +395,9 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 #endif
 
         msg         = NULL;
-	hdr         = NULL;
-	attrs       = NULL;
-	ipc_process = NULL;
+        hdr         = NULL;
+        attrs       = NULL;
+        ipc_process = NULL;
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -417,27 +417,27 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 
         msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
         if (!msg) {
-		alloc_flow_resp_free(attrs, msg, hdr);
+                alloc_flow_resp_free(attrs, msg, hdr);
                 return -1;
         }
 
         hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
         if (!hdr) {
-		alloc_flow_resp_free(attrs, msg, hdr);
+                alloc_flow_resp_free(attrs, msg, hdr);
                 return -1;
         }
         msg->attrs    = attrs;
         msg->rina_hdr = hdr;
 
         if (rnl_parse_msg(info, msg)) {
-		alloc_flow_resp_free(attrs, msg, hdr);
+                alloc_flow_resp_free(attrs, msg, hdr);
                 return -1;
         }
         ipc_id      = msg->rina_hdr->dst_ipc_id;
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
                 LOG_ERR("IPC process %d not found", ipc_id);
-		alloc_flow_resp_free(attrs, msg, hdr);
+                alloc_flow_resp_free(attrs, msg, hdr);
                 return -1;
         }
 
@@ -445,7 +445,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         if (!is_flow_id_ok(fid)) {
                 LOG_ERR("Could not find flow id %d for response %d",
                         fid, info->snd_seq);
-		alloc_flow_resp_free(attrs, msg, hdr);
+                alloc_flow_resp_free(attrs, msg, hdr);
                 return -1;
         }
 
@@ -455,7 +455,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                                                      0)) {
                 LOG_ERR("Failed allocate flow response for port id: %d",
                         attrs->id);
-		alloc_flow_resp_free(attrs, msg, hdr);
+                alloc_flow_resp_free(attrs, msg, hdr);
                 return -1;
         }
 
@@ -819,7 +819,7 @@ static int notify_ipcp_update_dif_config_request(void *             data,
                                                         attrs,
                                                         msg,
                                                         0,
-                                                       -1,
+                                                        -1,
                                                         info->snd_seq,
                                                         info->snd_portid);
 
@@ -873,7 +873,7 @@ static int notify_ipcp_update_dif_config_request(void *             data,
         if (ipc_process->ops->update_dif_config(ipc_process->data,
                                                 attrs->dif_config)) {
                 LOG_ERR("Update DIF config operation failed for IPC process %d"
-                                ,ipc_id);
+                        ,ipc_id);
 
                 return update_dif_config_free_and_reply(dif_config,
                                                         attrs,
