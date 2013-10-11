@@ -105,7 +105,8 @@ alloc_flow_req_free(struct name *                              source_name,
                     struct flow_spec *                         fspec,
                     struct name *                              dif_name,
                     struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
-                    struct rnl_msg *                           msg)
+                    struct rnl_msg *                           msg,
+                    struct rina_msg_hdr *                      hdr)
 {
         if (attrs)       rkfree(attrs);
         if (source_name) rkfree(source_name);
@@ -113,22 +114,24 @@ alloc_flow_req_free(struct name *                              source_name,
         if (fspec)       rkfree(fspec);
         if (dif_name)    rkfree(dif_name);
         if (msg)         rkfree(msg);
+        if (hdr)         rkfree(hdr);
 }
 
 static int
-alloc_flow_req_free_and_reply(struct name *      source_name,
-                              struct name *      dest_name,
-                              struct flow_spec * fspec,
-                              struct name *      dif_name,
+alloc_flow_req_free_and_reply(struct name *         source_name,
+                              struct name *         dest_name,
+                              struct flow_spec *    fspec,
+                              struct name *         dif_name,
                               struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
-                              struct rnl_msg *   msg,
-                              ipc_process_id_t   id,
-                              uint_t             res,
-                              uint_t             seq_num,
-                              uint_t             port_id)
+                              struct rnl_msg *      msg,
+                              struct rina_msg_hdr * hdr,
+                              ipc_process_id_t      id,
+                              uint_t                res,
+                              uint_t                seq_num,
+                              uint_t                port_id)
 {
         alloc_flow_req_free(source_name, dest_name, fspec, dif_name,
-                            attrs, msg);
+                            attrs, msg, hdr);
 
         if (rnl_app_alloc_flow_result_msg(id, res, seq_num, port_id)) {
                 LOG_ERR("Could not send flow_result_msg");
@@ -164,6 +167,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         fspec    = NULL;
         attrs    = NULL;
         msg      = NULL;
+        hdr      = NULL;
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -184,6 +188,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      dif_name,
                                                      attrs,
                                                      msg,
+                                                     hdr,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
@@ -198,6 +203,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      dif_name,
                                                      attrs,
                                                      msg,
+                                                     hdr,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
@@ -213,6 +219,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      dif_name,
                                                      attrs,
                                                      msg,
+                                                     hdr,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
@@ -228,6 +235,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      dif_name,
                                                      attrs,
                                                      msg,
+                                                     hdr,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
@@ -243,6 +251,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      dif_name,
                                                      attrs,
                                                      msg,
+                                                     hdr,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
@@ -258,6 +267,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      dif_name,
                                                      attrs,
                                                      msg,
+                                                     hdr,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
@@ -273,6 +283,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      dif_name,
                                                      attrs,
                                                      msg,
+                                                     hdr,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
@@ -287,6 +298,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      dif_name,
                                                      attrs,
                                                      msg,
+                                                     hdr,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
@@ -303,6 +315,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      dif_name,
                                                      attrs,
                                                      msg,
+                                                     hdr,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
@@ -320,6 +333,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      dif_name,
                                                      attrs,
                                                      msg,
+                                                     hdr,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
@@ -340,13 +354,14 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      dif_name,
                                                      attrs,
                                                      msg,
+                                                     hdr,
                                                      ipc_id,
                                                      -1,
                                                      info->snd_seq,
                                                      info->snd_portid);
         }
 
-        alloc_flow_req_free(source, dest, fspec, dif_name, attrs, msg);
+        alloc_flow_req_free(source, dest, fspec, dif_name, attrs, msg, hdr);
 
         return 0;
 }
@@ -444,14 +459,16 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 
 static int
 dealloc_flow_req_free_and_reply(struct rnl_ipcm_dealloc_flow_req_msg_attrs * attrs,
-                                struct rnl_msg * msg,
-                                ipc_process_id_t id,
-                                uint_t           res,
-                                uint_t           seq_num,
-                                uint_t           port_id)
+                                struct rnl_msg *      msg,
+                                struct rina_msg_hdr * hdr,
+                                ipc_process_id_t      id,
+                                uint_t                res,
+                                uint_t                seq_num,
+                                uint_t                port_id)
 {
         if (attrs) rkfree(attrs);
         if (msg)   rkfree(msg);
+        if (hdr)   rkfree(hdr);
 
         if (rnl_app_dealloc_flow_resp_msg(id, res, seq_num, port_id))
                 return -1;
@@ -476,6 +493,7 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
 
         attrs = NULL;
         msg   = NULL;
+        hdr   = NULL;
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -492,6 +510,7 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
         if (!attrs)
                 return dealloc_flow_req_free_and_reply(attrs,
                                                        msg,
+                                                       hdr,
                                                        0,
                                                        -1,
                                                        info->snd_seq,
@@ -501,6 +520,7 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
         if (!msg)
                 return dealloc_flow_req_free_and_reply(attrs,
                                                        msg,
+                                                       hdr,
                                                        0,
                                                        -1,
                                                        info->snd_seq,
@@ -511,6 +531,7 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
         if (!hdr)
                 return dealloc_flow_req_free_and_reply(attrs,
                                                        msg,
+                                                       hdr,
                                                        0,
                                                        -1,
                                                        info->snd_seq,
@@ -521,6 +542,7 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
         if (rnl_parse_msg(info, msg))
                 return dealloc_flow_req_free_and_reply(attrs,
                                                        msg,
+                                                       hdr,
                                                        0,
                                                        -1,
                                                        info->snd_seq,
@@ -532,6 +554,7 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
                 LOG_ERR("IPC process %d not found", ipc_id);
                 return dealloc_flow_req_free_and_reply(attrs,
                                                        msg,
+                                                       hdr,
                                                        0,
                                                        -1,
                                                        info->snd_seq,
@@ -543,6 +566,7 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
                         "for port id: %d", attrs->id);
                 return dealloc_flow_req_free_and_reply(attrs,
                                                        msg,
+                                                       hdr,
                                                        ipc_id,
                                                        -1,
                                                        info->snd_seq,
@@ -551,6 +575,7 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
 
         return dealloc_flow_req_free_and_reply(attrs,
                                                msg,
+                                               hdr,
                                                ipc_id,
                                                0,
                                                info->snd_seq,
