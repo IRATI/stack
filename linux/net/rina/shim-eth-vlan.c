@@ -455,8 +455,7 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
                 rinarp_paddr_unregister(data->handle);
         }
 
-        fid = kfa_flow_unbind(data->kfa,
-                              flow->port_id);
+        fid = kfa_flow_unbind(data->kfa, port_id);
         kfa_flow_destroy(data->kfa, fid);
 
         return 0;

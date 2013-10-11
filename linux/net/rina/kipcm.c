@@ -435,6 +435,10 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 return -1;
         }
 
+        rkfree(hdr);
+        rkfree(attrs);
+        rkfree(msg);
+
         return 0;
 }
 

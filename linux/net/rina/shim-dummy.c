@@ -342,6 +342,7 @@ static int dummy_flow_deallocate(struct ipcp_instance_data * data,
         list_del(&flow->list);
         name_destroy(flow->dest);
         name_destroy(flow->source);
+        rkfree(flow->fspec);
         rkfree(flow);
 
         return 0;
