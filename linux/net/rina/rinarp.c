@@ -19,7 +19,14 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#define RINA_PREFIX "rinarp"
+
+#include "logs.h"
+#include "debug.h"
+#include "utils.h"
+
 #include "rinarp.h"
+#include "arp826-utils.h"
 
 struct rinarp_handle {
         int empty;
@@ -28,18 +35,42 @@ struct rinarp_handle {
 struct rinarp_handle * rinarp_register(struct net_device * device,
                                        const struct gpa *  address)
 {
+        if (!device || !gpa_is_ok(address)) {
+                LOG_ERR("Bogus input parameters, cannot register");
+                return NULL;
+        }
+
+        LOG_MISSING;
+
         return NULL;
 }
 EXPORT_SYMBOL(rinarp_register);
 
 int rinarp_unregister(struct rinarp_handle * handle)
-{ return -1; }
+{
+        if (!handle) {
+                LOG_ERR("Bogus input parameters, cannot unregister");
+                return -1;
+        }
+
+        LOG_MISSING;
+
+        return -1;
+}
 EXPORT_SYMBOL(rinarp_unregister);
 
 int rinarp_resolve(struct rinarp_handle * handle, 
-                   const struct gpa *     in_address,
+                   const struct gpa *     address,
                    rinarp_handler_t       handler,
                    void *                 opaque)
-{ return -1; }
-EXPORT_SYMBOL(rinarp_resolve);
+{
+        if (!handle || !gpa_is_ok(address) || !handler) {
+                LOG_ERR("Bogus input parameter, won't resolve");
+                return -1;
+        }
 
+        LOG_MISSING;
+
+        return -1;
+}
+EXPORT_SYMBOL(rinarp_resolve);

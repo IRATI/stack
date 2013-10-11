@@ -40,7 +40,7 @@ typedef void (* rinarp_handler_t)(void *             opaque,
                                   const struct gha * dest_ha);
 
 int                    rinarp_resolve(struct rinarp_handle * handle, 
-                                      const struct gpa *     in_address,
+                                      const struct gpa *     address,
                                       rinarp_handler_t       handler,
                                       void *                 opaque);
 
