@@ -58,6 +58,8 @@ void initializeIPCManager(unsigned int localPort,
 /* CLASS IPC PROCESS*/
 const std::string IPCProcess::error_assigning_to_dif =
 		"Error assigning IPC Process to DIF";
+const std::string IPCProcess::error_update_dif_config =
+                "Error updating DIF Configuration";
 const std::string IPCProcess::error_registering_app =
 		"Error registering application";
 const std::string IPCProcess::error_unregistering_app =
@@ -141,7 +143,7 @@ throw (AssignToDIFException) {
                         this->difInformation.getDifName().getProcessName();
         LOG_DBG("Current DIF name is %s", currentDIFName.c_str());
 
-        if(currentDIFName.compare("") != 0) {
+        if(difMember) {
                 std::string message;
                 message =  message + "This IPC Process is already assigned "+
                                 "to the DIF " + currentDIFName;
@@ -181,6 +183,55 @@ throw (AssignToDIFException) {
 
 	this->difInformation = difInformation;
 	this->difMember = true;
+}
+
+void IPCProcess::updateDIFConfiguration(
+                        const DIFConfiguration& difConfiguration)
+        throw (UpdateDIFConfigurationException)
+{
+        std::string currentDIFName =
+                        this->difInformation.getDifName().getProcessName();
+        LOG_DBG("Current DIF name is %s", currentDIFName.c_str());
+
+        if(!difMember) {
+                std::string message;
+                message =  message + "This IPC Process is not yet assigned "+
+                                "to any DIF.";
+                LOG_ERR("%s", message.c_str());
+                throw AssignToDIFException(message);
+        }
+
+#if STUB_API
+        //Do nothing
+#else
+        IpcmUpdateDIFConfigurationRequestMessage message;
+        message.setDIFConfiguration(difConfiguration);
+        message.setDestIpcProcessId(id);
+        message.setDestPortId(portId);
+        message.setRequestMessage(true);
+
+        IpcmUpdateDIFConfigurationResponseMessage * updateConfigResponse;
+        try{
+                updateConfigResponse =
+                                dynamic_cast<IpcmUpdateDIFConfigurationResponseMessage *>(
+                                                rinaManager->sendRequestAndWaitForResponse(&message,
+                                                                IPCProcess::error_update_dif_config));
+        }catch(NetlinkException &e){
+                throw UpdateDIFConfigurationException(e.what());
+        }
+
+        if (updateConfigResponse->getResult() < 0){
+                delete updateConfigResponse;
+                throw UpdateDIFConfigurationException(
+                                IPCProcess::error_update_dif_config);
+        }
+
+        LOG_DBG("Updated configuratin of DIF %s",
+                        difInformation.getDifName().getProcessName().c_str());
+        delete updateConfigResponse;
+
+#endif
+        this->difInformation.setDifConfiguration(difConfiguration);
 }
 
 void IPCProcess::notifyRegistrationToSupportingDIF(

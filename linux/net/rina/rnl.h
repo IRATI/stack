@@ -44,6 +44,12 @@ typedef enum {
         RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE,
 
         /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST,
+
+        /* IPC Process -> IPC Manager */
+        RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE,
+
+        /* IPC Manager -> IPC Process */
         RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
 
         /* IPC Manager -> IPC Process */

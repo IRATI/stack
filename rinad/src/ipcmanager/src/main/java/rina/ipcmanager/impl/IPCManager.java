@@ -6,6 +6,7 @@ import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.AssignToDIFException;
 import eu.irati.librina.CreateIPCProcessException;
+import eu.irati.librina.DIFConfiguration;
 import eu.irati.librina.DIFInformation;
 import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowDeallocatedEvent;
@@ -355,6 +356,12 @@ public class IPCManager {
 		}
 		
 		ipcProcess.assignToDIF(difInformation);
+	}
+	
+	public void updateDIFConfiguration(long ipcProcessID,
+				DIFConfiguration difConfiguration) throws Exception{
+		IPCProcess ipcProcess = this.ipcProcessFactory.getIPCProcess(ipcProcessID);
+		ipcProcess.updateDIFConfiguration(difConfiguration);
 	}
 
 }

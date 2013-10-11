@@ -488,6 +488,34 @@ int putIpcmAssignToDIFResponseMessageObject(nl_msg* netlinkMessage,
 IpcmAssignToDIFResponseMessage *
 	parseIpcmAssignToDIFResponseMessage(nlmsghdr *hdr);
 
+/* IpcmUpdateDIFConfiguraiotnRequestMessage CLASS*/
+enum IpcmUpdateDIFConfigurationRequestMessageAttributes {
+        IUDCR_ATTR_DIF_CONFIGURATION = 1,
+        __IUDCR_ATTR_MAX,
+};
+
+#define IUDCR_ATTR_MAX (__IUDCR_ATTR_MAX -1)
+
+int putIpcmUpdateDIFConfigurationRequestMessageObject(nl_msg* netlinkMessage,
+                const IpcmUpdateDIFConfigurationRequestMessage& object);
+
+IpcmUpdateDIFConfigurationRequestMessage *
+        parseIpcmUpdateDIFConfigurationRequestMessage(nlmsghdr *hdr);
+
+/* IpcmAssignToDIFResponseMessage CLASS*/
+enum IpcmUpdateDIFConfigurationResponseMessageAttributes {
+        IUDCRE_ATTR_RESULT = 1,
+        __IUDCRE_ATTR_MAX,
+};
+
+#define IUDCRE_ATTR_MAX (__IUDCRE_ATTR_MAX -1)
+
+int putIpcmUpdateDIFConfigurationResponseMessageObject(nl_msg* netlinkMessage,
+                const IpcmUpdateDIFConfigurationResponseMessage& object);
+
+IpcmUpdateDIFConfigurationResponseMessage *
+        parseIpcmUpdateDIFConfigurationResponseMessage(nlmsghdr *hdr);
+
 /* IpcmAllocateFlowRequestMessage CLASS*/
 enum IpcmAllocateFlowRequestMessageAttributes {
 	IAFRM_ATTR_SOURCE_APP_NAME = 1,

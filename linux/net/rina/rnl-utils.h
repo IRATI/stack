@@ -193,6 +193,12 @@ enum ipcm_assign_to_dif_req_attrs_list {
 };
 #define IATDR_ATTR_MAX (__IATDR_ATTR_MAX -1)
 
+enum ipcm_update_dif_config_req_attrs_list {
+        IUDCR_ATTR_DIF_CONFIGURATION = 1,
+        __IUDCR_ATTR_MAX,
+};
+#define IUDCR_ATTR_MAX (__IUDCR_ATTR_MAX -1)
+
 enum dif_info_attrs_list {
         DINFO_ATTR_DIF_TYPE = 1,
         DINFO_ATTR_DIF_NAME,
@@ -303,6 +309,10 @@ struct rnl_msg {
 
 struct rnl_ipcm_assign_to_dif_req_msg_attrs {
         struct dif_info * dif_info;
+};
+
+struct rnl_ipcm_update_dif_config_req_msg_attrs {
+        struct dif_config * dif_config;
 };
 
 struct rnl_ipcm_assign_to_dif_resp_msg_attrs {
@@ -431,6 +441,9 @@ int rnl_format_ipcm_assign_to_dif_req_msg(const struct dif_config * config,
 int rnl_format_ipcm_assign_to_dif_resp_msg(uint_t          result,
                                            struct sk_buff  * skb_out);
 
+int rnl_format_ipcm_update_dif_config_resp_msg(uint_t          result,
+                                               struct sk_buff  * skb_out);
+
 int rnl_format_ipcm_ipcp_dif_reg_noti_msg(const struct name * ipcp_name,
                                           const struct name * dif_name,
                                           bool                is_registered,
@@ -523,6 +536,11 @@ int rnl_assign_dif_response(ipc_process_id_t id,
                             uint_t           res,
                             rnl_sn_t         seq_num,
                             u32              nl_port_id);
+
+int rnl_update_dif_config_response(ipc_process_id_t id,
+                                   uint_t           res,
+                                   rnl_sn_t         seq_num,
+                                   u32              nl_port_id);
 
 int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
                                        const struct name *      dif_name,

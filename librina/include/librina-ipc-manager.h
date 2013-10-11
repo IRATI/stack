@@ -42,6 +42,19 @@ public:
 };
 
 /**
+ * Thrown when there are problems updating a DIF configuration
+ */
+class UpdateDIFConfigurationException: public IPCException {
+public:
+        UpdateDIFConfigurationException():
+                IPCException("Problems updating DIF configuration"){
+        }
+        UpdateDIFConfigurationException(const std::string& description):
+                IPCException(description){
+        }
+};
+
+/**
  * Thrown when there are problems notifying an IPC Process that it has been
  * registered to an N-1 DIF
  */
@@ -364,6 +377,7 @@ class IPCProcess {
 
 public:
 	static const std::string error_assigning_to_dif;
+	static const std::string error_update_dif_config;
 	static const std::string error_registering_app;
 	static const std::string error_unregistering_app;
 	static const std::string error_not_a_dif_member;
@@ -399,6 +413,18 @@ public:
 	 */
 	void assignToDIF(
 			const DIFInformation& difInformation) throw (AssignToDIFException);
+
+	/**
+	 * Invoked by the IPC Manager to modify the configuration of an existing IPC
+	 * process that is a member of a DIF. This oepration doesn't change the
+	 * DIF membership, it just changes the configuration of the current DIF.
+	 *
+	 * @param difConfiguration The configuration of the DIF
+	 * @throws UpdateDIFConfigurationException if an error happens during the process
+	 */
+	void updateDIFConfiguration(
+	                const DIFConfiguration& difConfiguration)
+	throw (UpdateDIFConfigurationException);
 
 	/**
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been

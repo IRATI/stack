@@ -26,8 +26,8 @@ namespace rina{
 AssignToDIFRequestEvent::AssignToDIFRequestEvent(
 		const DIFInformation& difInformation,
 			unsigned int sequenceNumber):
-		IPCEvent(ASSIGN_TO_DIF_REQUEST_EVENT,
-										sequenceNumber){
+		IPCEvent(ASSIGN_TO_DIF_REQUEST_EVENT, sequenceNumber)
+{
 	this->difInformation = difInformation;
 }
 
@@ -35,6 +35,22 @@ const DIFInformation&
 AssignToDIFRequestEvent::getDIFInformation() const{
 	return difInformation;
 }
+
+/* CLASS UPDATE DIF CONFIGURATION REQUEST EVENT */
+UpdateDIFConfigurationRequestEvent::UpdateDIFConfigurationRequestEvent(
+                const DIFConfiguration& difConfiguration,
+                        unsigned int sequenceNumber):
+                IPCEvent(UPDATE_DIF_CONFIG_REQUEST_EVENT, sequenceNumber)
+{
+        this->difConfiguration = difConfiguration;
+}
+
+const DIFConfiguration&
+UpdateDIFConfigurationRequestEvent::getDIFConfiguration() const
+{
+        return difConfiguration;
+}
+
 
 /* CLASS IPC PROCESS DIF REGISTRATION EVENT */
 IPCProcessDIFRegistrationEvent::IPCProcessDIFRegistrationEvent(
