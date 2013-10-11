@@ -521,6 +521,7 @@ IPCProcess * IPCProcessFactory::create(
 
 			char * argv[] =
 			{
+                                /* FIXME: These hardwired things must disappear */
 					stringToCharArray("/usr/bin/java"),
 					stringToCharArray("-jar"),
 					stringToCharArray(_installationPath +
@@ -533,6 +534,7 @@ IPCProcess * IPCProcessFactory::create(
 
 			char * envp[] =
 			{
+                                /* FIXME: These hardwired things must disappear */
 					stringToCharArray("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"),
 					stringToCharArray("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:"
 					                +_libraryPath),
