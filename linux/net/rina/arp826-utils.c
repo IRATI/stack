@@ -301,7 +301,7 @@ EXPORT_SYMBOL(gha_dup);
 
 const uint8_t * gha_address(const struct gha * gha)
 {
-        uint8_t * tmp;
+        const uint8_t * tmp;
 
         if (!gha_is_ok(gha)) {
                 LOG_ERR("Bogus GHA passed, cannot get address");
