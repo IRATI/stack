@@ -21,6 +21,8 @@
 #ifndef ARP_826_UTILS_H
 #define ARP_826_UTILS_H
 
+#include <linux/types.h>
+
 struct gpa;
 
 struct gpa * gpa_create(const uint8_t * address,
@@ -41,5 +43,16 @@ int          gpa_address_grow(struct gpa * gpa,
 /* Shrinks a GPA removing the filler symbols (if any) */
 int          gpa_address_shrink(struct gpa * gpa,
                                 size_t       length);
+
+enum gha_type {
+        MAC_ADDR_802_3
+};
+
+struct gha {
+        enum gha_type type;
+        union {
+                uint8_t mac_802_3[6];
+        } data;
+};
 
 #endif
