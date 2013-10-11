@@ -22,6 +22,8 @@
 #ifndef ARP_826_H
 #define ARP_826_H
 
+#if 0
+
 #include <linux/types.h>
 #include <linux/kernel.h>
 #include <linux/netdevice.h>
@@ -74,22 +76,6 @@ int                   rinarp_paddr_get(struct naddr_filter *  filter,
 
 int                   rinarp_send_request(struct naddr_filter * filter, 
                                           struct paddr          address);
-
 #endif
-
-#if 0
-struct naddr_handle * rinarp_paddr_register(__be16              proto_name,
-					    __be16              proto_len,
-                                            struct net_device * device,
-                                            struct paddr        address);
-int                   rinarp_paddr_unregister(struct naddr_handle * h);
-
-typedef void (* arp_handler_t)(void *                         opaque,
-			       const struct paddr *           dest_paddr,
-                               const struct rinarp_mac_addr * dest_hw_addr);
-
-int                   rinarp_hwaddr_get(struct naddr_handle *    handle, 
-                                        struct paddr             in_address,
-                                        arp_handler_t            handler);
 
 #endif

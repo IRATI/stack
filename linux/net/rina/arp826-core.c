@@ -24,6 +24,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#if 0
+
 #include <linux/module.h>
 #include <linux/types.h>
 #include <linux/kernel.h>
@@ -906,4 +908,6 @@ MODULE_LICENSE("GPL");
 
 MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+#endif
+
 #endif
