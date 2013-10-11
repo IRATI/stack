@@ -101,7 +101,7 @@ struct ipcp_instance_data {
         struct kfa * kfa;
 
         /* RINARP related */
-        struct naddr_handle *  handle;
+        struct rinarp_handle *  handle;
 };
 
 /* Needed for eth_vlan_rcv function */
@@ -170,6 +170,8 @@ static struct gpa * name_to_gpa(const struct name * name)
         return addr;
 }
 
+#if 0
+/* Unused at the moment, will be called from eth_vlan_rcv */
 static struct shim_eth_flow *
 find_flow_by_gha(struct ipcp_instance_data * data,
                  const struct gha *          addr)
@@ -178,6 +180,22 @@ find_flow_by_gha(struct ipcp_instance_data * data,
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (gha_is_equal(addr, flow->dest_ha)) {
+                        return flow;
+                }
+        }
+
+        return NULL;
+}
+#endif
+
+static struct shim_eth_flow *
+find_flow_by_gpa(struct ipcp_instance_data * data,
+                 const struct gpa *          addr)
+{
+        struct shim_eth_flow * flow;
+
+        list_for_each_entry(flow, &data->flows, list) {
+                if (gpa_is_equal(addr, flow->dest_pa)) {
                         return flow;
                 }
         }
@@ -208,8 +226,9 @@ static int flow_destroy(struct ipcp_instance_data * data,
 			struct shim_eth_flow **     f)
 {
 	struct shim_eth_flow * flow;
+	flow_id_t fid;
 
-	flow = &f;
+	flow = *f;
 	list_del(&flow->list);
  
 	if(flow->dest_pa) 
@@ -243,11 +262,11 @@ static void rinarp_resolve_handler(void *              opaque,
         struct shim_eth_flow * flow;
 	
         data = (struct ipcp_instance_data *) opaque;
-        flow = find_flow_by_gpa(data, dest_paddr);
+        flow = find_flow_by_gpa(data, dest_pa);
 
 	if (flow && flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
-		flow->dest_ha = dest_ha;
+		flow->dest_ha = gha_dup(dest_ha);
 
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
@@ -369,7 +388,6 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
                                     port_id_t                   id)
 {
         struct shim_eth_flow * flow;
-        flow_id_t              fid;
 
         ASSERT(data);
         flow = find_flow(data, id);
@@ -446,7 +464,7 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
 
         /* Remove from ARP cache if no flows left */
         if (list_empty(&data->flows)) {
-                rinarp_paddr_unregister(data->handle);
+                rinarp_unregister(data->handle);
         }
 
         name_destroy(data->reg_app);
@@ -485,7 +503,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         }
 
         src_hw = data->dev->dev_addr;
-        dest_hw = flow->dest_ha;
+        dest_hw = gha_address(flow->dest_ha);
 
         skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
         if (skb == NULL)
@@ -522,9 +540,6 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         struct ethhdr *mh;
         unsigned char * saddr;
         struct ipcp_instance_data * data;
-        struct rinarp_mac_addr shwaddr;
-        struct paddr * paddr;
-        struct shim_eth_flow * flow;
 	struct interface_data_mapping * mapping;
 
         /* C-c-c-checks */
@@ -554,7 +569,6 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 
         mh = eth_hdr(skb);
         saddr = mh->h_source;
-        shwaddr.type = MAC_ADDR_802_3;
 
 #if 0
 	/* FIXME: Get correct flow based on hwaddr */
@@ -596,7 +610,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         }
 
         /* Get vlan id */
-        info->vlan_id = dif_information->dif_name->process_name;
+        info->vlan_id = *(dif_information->dif_name->process_name);
 
         data->dif_name = name_dup(dif_information->dif_name);
         if (!data->dif_name) {
