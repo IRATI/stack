@@ -1,5 +1,5 @@
 /*
- * ARP 826 cache utilities
+ * ARP 826 (wonnabe) cache utilities
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -21,25 +21,38 @@
 #ifndef ARP_826_UTILS_H
 #define ARP_826_UTILS_H
 
+#include <linux/types.h>
+
 struct gpa;
 
-struct gpa * gpa_create(const uint8_t * address,
-                        size_t          length);
-void         gpa_destroy(struct gpa * gpa);
-struct gpa * gpa_dup(const struct gpa * gpa);
-bool         gpa_is_equal(const struct gpa * a,
-                          const struct gpa * b);
-bool         gpa_is_ok(const struct gpa * gpa);
-const char * gpa_address_value(const struct gpa * gpa);
-size_t       gpa_address_length(const struct gpa * gpa);
+struct gpa *    gpa_create(const uint8_t * address,
+                           size_t          length);
+void            gpa_destroy(struct gpa * gpa);
+struct gpa *    gpa_dup(const struct gpa * gpa);
+bool            gpa_is_equal(const struct gpa * a,
+                             const struct gpa * b);
+bool            gpa_is_ok(const struct gpa * gpa);
+const uint8_t * gpa_address_value(const struct gpa * gpa);
+size_t          gpa_address_length(const struct gpa * gpa);
 
 /* Grows a GPA adding the filler symbols (if any) */
-int          gpa_address_grow(struct gpa * gpa,
-                              size_t       length,
-                              uint8_t      filler);
+int             gpa_address_grow(struct gpa * gpa,
+                                 size_t       length,
+                                 uint8_t      filler);
 
 /* Shrinks a GPA removing the filler symbols (if any) */
-int          gpa_address_shrink(struct gpa * gpa,
-                                size_t       length);
+int             gpa_address_shrink(struct gpa * gpa,
+                                   size_t       length);
+
+enum gha_type {
+        MAC_ADDR_802_3
+};
+
+struct gha {
+        enum gha_type type;
+        union {
+                uint8_t mac_802_3[6];
+        } data;
+};
 
 #endif

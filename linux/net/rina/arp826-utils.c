@@ -69,9 +69,11 @@ struct gpa * gpa_create(const uint8_t * address,
 
         return tmp;
 }
+EXPORT_SYMBOL(gpa_create);
 
 bool gpa_is_ok(const struct gpa * gpa)
 { return (!gpa || gpa->address == NULL || gpa->length == 0) ? 0 : 1; }
+EXPORT_SYMBOL(gpa_is_ok);
 
 void gpa_destroy(struct gpa * gpa)
 {
@@ -83,6 +85,7 @@ void gpa_destroy(struct gpa * gpa)
         rkfree(gpa->address);
         rkfree(gpa);
 }
+EXPORT_SYMBOL(gpa_destroy);
 
 struct gpa * gpa_dup(const struct gpa * gpa)
 {
@@ -93,8 +96,9 @@ struct gpa * gpa_dup(const struct gpa * gpa)
 
         return gpa_create(gpa->address, gpa->length);
 }
+EXPORT_SYMBOL(gpa_dup);
 
-const char * gpa_address_value(const struct gpa * gpa)
+const uint8_t * gpa_address_value(const struct gpa * gpa)
 {
         if (!gpa_is_ok(gpa)) {
                 LOG_ERR("Bad input parameter, "
@@ -104,6 +108,7 @@ const char * gpa_address_value(const struct gpa * gpa)
 
         return gpa->address;
 }
+EXPORT_SYMBOL(gpa_address_value);
 
 size_t gpa_address_length(const struct gpa * gpa)
 {
@@ -115,6 +120,7 @@ size_t gpa_address_length(const struct gpa * gpa)
 
         return gpa->length;
 }
+EXPORT_SYMBOL(gpa_address_length);
 
 int gpa_address_shrink(struct gpa * gpa, size_t length, uint8_t filler)
 {
@@ -162,6 +168,7 @@ int gpa_address_shrink(struct gpa * gpa, size_t length, uint8_t filler)
 
         return 0;
 }
+EXPORT_SYMBOL(gpa_address_shrink);
 
 int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
 {
@@ -195,6 +202,7 @@ int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
 
         return 1;
 }
+EXPORT_SYMBOL(gpa_address_grow);
 
 bool gpa_is_equal(const struct gpa * a, const struct gpa * b)
 {
@@ -216,3 +224,4 @@ bool gpa_is_equal(const struct gpa * a, const struct gpa * b)
 
         return 1;
 }
+EXPORT_SYMBOL(gpa_is_equal);

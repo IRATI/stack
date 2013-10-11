@@ -22,6 +22,8 @@
 #ifndef ARP_826_H
 #define ARP_826_H
 
+#if 0
+
 #include <linux/types.h>
 #include <linux/kernel.h>
 #include <linux/netdevice.h>
@@ -74,5 +76,6 @@ int                   rinarp_paddr_get(struct naddr_filter *  filter,
 
 int                   rinarp_send_request(struct naddr_filter * filter, 
                                           struct paddr          address);
+#endif
 
 #endif
