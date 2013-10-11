@@ -125,11 +125,11 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 
 /* NOTE: Let's avoid silly (and dangerous) copy&paste-like initializations */
 #define DECL_NL_OP(X) {                         \
-        	.cmd    = X,                    \
-        	.flags  = 0,                    \
-        	.doit   = dispatcher,           \
-        	.dumpit = NULL,                 \
-        }
+                .cmd    = X,                    \
+                .flags  = 0,                    \
+                .doit   = dispatcher,           \
+                .dumpit = NULL,                 \
+}
 
 static struct genl_ops nl_ops[] = {
         DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST),
@@ -349,33 +349,33 @@ static int kipcm_netlink_notify(struct notifier_block * nb,
                                 unsigned long           state,
                                 void *                  notification)
 {
-	struct netlink_notify * notify = notification;
+        struct netlink_notify * notify = notification;
 
         /* FIXME: Why? why have another static with the same name ! */
-	rnl_port_t ipc_manager_port;
+        rnl_port_t ipc_manager_port;
 
-	if (state != NETLINK_URELEASE)
-		return NOTIFY_DONE;
+        if (state != NETLINK_URELEASE)
+                return NOTIFY_DONE;
 
-	if (!notify) {
-		LOG_ERR("Wrong data obtained in netlink notifier callback");
-		return NOTIFY_BAD;
-	}
+        if (!notify) {
+                LOG_ERR("Wrong data obtained in netlink notifier callback");
+                return NOTIFY_BAD;
+        }
 
-	ipc_manager_port = rnl_get_ipc_manager_port();
+        ipc_manager_port = rnl_get_ipc_manager_port();
 
-	if (ipc_manager_port) {
-		/* Check if the IPC Manager is the process that died */
-		if (ipc_manager_port == notify->portid) {
-			rnl_set_ipc_manager_port(0);
+        if (ipc_manager_port) {
+                /* Check if the IPC Manager is the process that died */
+                if (ipc_manager_port == notify->portid) {
+                        rnl_set_ipc_manager_port(0);
 
-			LOG_WARN("IPC Manager process has been destroyed");
-		} else
-			rnl_ipcm_sock_closed_notif_msg(notify->portid,
+                        LOG_WARN("IPC Manager process has been destroyed");
+                } else
+                        rnl_ipcm_sock_closed_notif_msg(notify->portid,
                                                        ipc_manager_port);
-	}
+        }
 
-	return NOTIFY_DONE;
+        return NOTIFY_DONE;
 }
 
 static struct notifier_block kipcm_netlink_notifier = {
