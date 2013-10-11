@@ -42,7 +42,8 @@
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 #include "fidm.h"
-#include "arp826.h"
+#include "rinarp.h"
+#include "arp826-utils.h"
 
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -55,15 +56,15 @@ struct eth_vlan_info {
 
 enum port_id_state {
         PORT_STATE_NULL = 1,
-        PORT_STATE_RECIPIENT_PENDING,
-        PORT_STATE_INITIATOR_PENDING,
+        PORT_STATE_PENDING,
         PORT_STATE_ALLOCATED
 };
 
 /* Holds the information related to one flow */
 struct shim_eth_flow {
         struct list_head   list;
-        struct name *      dest;
+        struct gha *       dest_ha;
+	struct gpa *       dest_pa;
         /* Only used once for allocate_response */
         flow_id_t          flow_id;
         port_id_t          port_id;
@@ -101,7 +102,6 @@ struct ipcp_instance_data {
 
         /* RINA-ARP related */
         struct naddr_handle *  handle;
-        struct naddr_filter *  filter;
 };
 
 /* Needed for eth_vlan_rcv function */
@@ -113,6 +113,20 @@ struct interface_data_mapping {
 };
 
 static struct list_head data_instances_list;
+
+static struct interface_data_mapping *
+inst_data_mapping_get(struct net_device * dev)
+{
+        struct interface_data_mapping * mapping;
+
+        list_for_each_entry(mapping, &data_instances_list, list) {
+                if (mapping->dev == dev) {
+                        return mapping;
+                }
+        }
+
+        return NULL;
+}
 
 static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
                                         port_id_t                   id)
@@ -143,7 +157,7 @@ find_flow_by_flow_id(struct ipcp_instance_data * data,
         return NULL;
 }
 
-
+/* FIXME: Should be name_to_gpa  */
 static struct paddr name_to_paddr(const struct name * name)
 {
         char *       delimited_name;
@@ -156,6 +170,21 @@ static struct paddr name_to_paddr(const struct name * name)
         return addr;
 }
 
+/* FIXME: Should be find_flow_by_gha*/
+static struct shim_eth_flow *
+find_flow_by_addr(struct ipcp_instance_data * data,
+                  const struct paddr *        addr)
+{
+        struct shim_eth_flow * flow;
+
+        list_for_each_entry(flow, &data->flows, list) {
+                if (!strcmp(name_tostring(flow->dest), (char *) addr->buf)) {
+                        return flow;
+                }
+        }
+
+        return NULL;
+}
 
 static string_t * create_vlan_interface_name(string_t * interface_name,
                                              uint16_t   vlan_id)
@@ -176,128 +205,56 @@ static string_t * create_vlan_interface_name(string_t * interface_name,
         return complete_interface;
 }
 
-
-static struct ipcp_instance_data * inst_data_get(struct net_device * dev)
+static int flow_destroy(struct ipcp_instance_data * data,
+			struct shim_eth_flow **     f)
 {
-        struct interface_data_mapping * mapping;
+	struct shim_eth_flow * flow;
 
-        list_for_each_entry(mapping, &data_instances_list, list) {
-                if (mapping->dev == dev) {
-                        return mapping->data;
-                }
+	flow = &f;
+	list_del(&flow->list);
+        /* FIXME: Destroy names */
+	
+        /*
+         * Remove from ARP cache if this was
+         *  the last flow and no app registered
+         */
+	if (list_empty(&data->flows) && !data->reg_app) {
+                rinarp_unregister(data->handle);
         }
 
-        return NULL;
-}
+	fid = kfa_flow_unbind(data->kfa,
+                              flow->port_id);
+        kfa_flow_destroy(data->kfa, fid);
 
-static struct interface_data_mapping *
-inst_data_mapping_get(struct net_device * dev)
-{
-        struct interface_data_mapping * mapping;
-
-        list_for_each_entry(mapping, &data_instances_list, list) {
-                if (mapping->dev == dev) {
-                        return mapping;
-                }
-        }
-
-        return NULL;
+	rkfree(flow);
+	return 0;
 }
 
 
 
-static struct shim_eth_flow *
-find_flow_by_addr(struct ipcp_instance_data * data,
-                  const struct paddr *        addr)
+static void rinarp_resolve_handler(void *              opaque,
+				   const struct gpa * dest_pa,
+				   const struct gha * dest_ha)
 {
+	struct ipcp_instance_data * data;
         struct shim_eth_flow * flow;
-
-        list_for_each_entry(flow, &data->flows, list) {
-                if (!strcmp(name_tostring(flow->dest), (char *) addr->buf)) {
-                        return flow;
-                }
-        }
-
-        return NULL;
-}
-
-static void arp_req_handler(void *                         opaque,
-                            const struct paddr *           dest_paddr,
-                            const struct rinarp_mac_addr * dest_hw_addr)
-{
-
-        struct ipcp_instance_data * data;
-        struct shim_eth_flow *      flow;
-
+	
         data = (struct ipcp_instance_data *) opaque;
-        flow = find_flow_by_addr(data, dest_paddr);
+        flow = find_flow_by_gpa(data, dest_paddr);
 
-        if (flow && flow->port_id_state == PORT_STATE_INITIATOR_PENDING) {
-                flow->port_id_state = PORT_STATE_ALLOCATED;
-                kipcm_flow_add(default_kipcm, data->id,
-                               flow->port_id, flow->flow_id);
-        } else if (!flow && data->reg_app) {
-
-                flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
-                if (!flow)
-                        return;
-
-                if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
-                        LOG_ERR("Couldn't create the sdu queue");
-                        rkfree(flow);
-                        return;
-                }
-
-                flow->port_id_state = PORT_STATE_RECIPIENT_PENDING;
-
-                flow->dest = string_toname((char *) dest_paddr->buf);
-                if (!flow->dest)
-                        LOG_ERR("Destination name is NULL");
-
-                flow->flow_id =  kfa_flow_create(data->kfa);
-                INIT_LIST_HEAD(&flow->list);
-                list_add(&flow->list, &data->flows);
-
-                if (kipcm_flow_arrived(default_kipcm,
-                                       data->id,
-                                       flow->flow_id,
-                                       data->dif_name,
-                                       data->app_name,
-                                       flow->dest, 0)) {
-                        LOG_ERR("Flow was not reported to KIPCM");
-                }
-        }
-
-}
-
-static void arp_rep_handler(void *                         opaque,
-                            const struct paddr *           dest_paddr,
-                            const struct rinarp_mac_addr * dest_hw_addr)
-{
-        struct ipcp_instance_data * data;
-        struct shim_eth_flow * flow;
-
-        data = (struct ipcp_instance_data *) opaque;
-        flow = find_flow_by_addr(data, dest_paddr);
-
-        if (flow && flow->port_id_state == PORT_STATE_INITIATOR_PENDING) {
+	if (flow && flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
                                                        flow->flow_id,
                                                        0)) {
-                        flow_id_t fid = kfa_flow_unbind(data->kfa,
-                                                        flow->port_id);
-                        kfa_flow_destroy(data->kfa, fid);
-                        list_del(&flow->list);
-                        name_destroy(flow->dest);
-                        rkfree(flow);
+                        flow_destroy(data, &flow);
                         LOG_ERR("Couldn't tell KIPCM flow is allocated");
                 }
-        } else if (flow && flow->port_id_state != PORT_STATE_ALLOCATED) {
-                LOG_ERR("ARP response received when we shouldn't");
         }
 }
+
+
 
 static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                                           const struct name *         source,
@@ -324,49 +281,29 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
          * ... add to the ARP cache
          */
         if (list_empty(&data->flows) && !data->reg_app) {
-                data->handle = rinarp_paddr_register(ETH_P_RINA,
-                                                     PROTO_LEN,
-                                                     data->dev,
-                                                     name_to_paddr(source));
-                data->filter = naddr_filter_create(data->handle);
-                naddr_filter_set(data->filter,
-                                 data,
-                                 &arp_req_handler,
-                                 &arp_rep_handler);
-        }
+		/* FIXME: Create GPA */
+                data->handle = rinarp_register(data->dev,
+					       name_to_gpa(source));
+	}
 
         if (!flow) {
                 flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
                 if (!flow)
                         return -1;
-
-                if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
-                        LOG_ERR("Couldn't create the sdu queue");
-                        rkfree(flow);
-                        return -1;
-                }
-
-
+		
                 flow->port_id = id;
-                flow->port_id_state = PORT_STATE_NULL;
+		flow->flow_id = fid;
+                flow->port_id_state = PORT_STATE_PENDING;
+		
+		/* FIXME: Add gpa to flow struct */
 
-                flow->dest = name_dup(dest);
-                if (!flow->dest) {
-                        kfifo_free(&flow->sdu_queue);
-                        rkfree(flow);
-                        return -1;
-                }
-
-                /* Send an ARP request and transition the state */
-                rinarp_send_request(data->filter, name_to_paddr(dest));
-                flow->port_id_state = PORT_STATE_INITIATOR_PENDING;
-
-                flow->flow_id = fid;
-
-                INIT_LIST_HEAD(&flow->list);
+		INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
 
-        } else if (flow->port_id_state == PORT_STATE_RECIPIENT_PENDING) {
+                if (!rinarp_resolve(data->handle, rinarp_resolve_handler, data)) 
+			LOG_ERR("Failed to lookup ARP entry");
+
+        } else if (flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 kipcm_flow_add(default_kipcm, data->id,
                                flow->port_id, flow->flow_id);
@@ -394,8 +331,8 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if (flow->port_id_state != PORT_STATE_RECIPIENT_PENDING) {
-                LOG_ERR("Flow is not in the right state to call this");
+        if (flow->port_id_state != PORT_STATE_PENDING) {
+                LOG_ERR("Flow is already allocated");
                 return -1;
         }
 
@@ -412,12 +349,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                                        data->id,
                                                        flow->flow_id,
                                                        0)) {
-                        flow_id_t fid = kfa_flow_unbind(data->kfa,
-                                                        flow->port_id);
-                        kfa_flow_destroy(data->kfa, fid);
-                        list_del(&flow->list);
-                        name_destroy(flow->dest);
-                        rkfree(flow);
+			flow_destroy(data, &flow);
                         return -1;
                 }
         } else {
@@ -440,26 +372,10 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
                 LOG_ERR("Flow does not exist, cannot remove");
                 return -1;
         }
-
-        list_del(&flow->list);
-        name_destroy(flow->dest);
-        rkfree(flow);
-
-        /*
-         * Remove from ARP cache if this was
-         *  the last flow and no app registered
-         */
-
-        if (list_empty(&data->flows) && !data->reg_app) {
-                naddr_filter_destroy(data->filter);
-                rinarp_paddr_unregister(data->handle);
-        }
-
-        fid = kfa_flow_unbind(data->kfa,
-                              flow->port_id);
-        kfa_flow_destroy(data->kfa, fid);
-
-        return 0;
+	
+	flow_destroy(data, &flow);
+	
+	return 0;
 }
 
 static int eth_vlan_application_register(struct ipcp_instance_data * data,
@@ -494,15 +410,8 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
 
         /* Add in ARP cache if no AP was using the shim */
         if(!data->app_name) {
-                data->handle = rinarp_paddr_register(ETH_P_RINA,
-                                                     PROTO_LEN,
-                                                     data->dev,
-                                                     name_to_paddr(name));
-                data->filter = naddr_filter_create(data->handle);
-                naddr_filter_set(data->filter,
-                                 data,
-                                 &arp_req_handler,
-                                 &arp_rep_handler);
+                data->handle = rinarp_register(data->dev,
+					       name_to_gpa(name));
         }
 
         data->app_name = name_dup(name);
@@ -533,7 +442,6 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
 
         /* Remove from ARP cache if no flows left */
         if (list_empty(&data->flows)) {
-                naddr_filter_destroy(data->filter);
                 rinarp_paddr_unregister(data->handle);
         }
 
@@ -573,20 +481,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         }
 
         src_hw = data->dev->dev_addr;
-        rinarp_hwaddr_get(data->filter,
-                          name_to_paddr(flow->dest),
-                          desthw);
-        if (!desthw) {
-                rinarp_send_request(data->filter, name_to_paddr(flow->dest));
-
-                /* Dropping SDU in this case */
-                rkfree(sdu);
-                return -1;
-        }
-        if (desthw->type != MAC_ADDR_802_3) {
-                rkfree(sdu);
-                return -1;
-        }
+	/* FIXME: Change to gha */
         dest_hw = desthw->data.mac_802_3;
 
         skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
@@ -627,10 +522,17 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         struct rinarp_mac_addr shwaddr;
         struct paddr * paddr;
         struct shim_eth_flow * flow;
+	struct interface_data_mapping * mapping;
 
         /* C-c-c-checks */
-        data = inst_data_get(dev);
-        if (!data) {
+        mapping = inst_data_mapping_get(dev);
+        if (!mapping) {
+                kfree_skb(skb);
+                return -1;
+        }
+
+	data = mapping->data;
+	if (!data) {
                 kfree_skb(skb);
                 return -1;
         }
@@ -650,29 +552,16 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         mh = eth_hdr(skb);
         saddr = mh->h_source;
         shwaddr.type = MAC_ADDR_802_3;
-        /* shwaddr.data.mac_802_3 = simple_strtol(saddr,0,10); */
-
-        sprintf(shwaddr.data.mac_802_3, "%d", (int) simple_strtol(saddr,0,10));
-
-        paddr = 0;
-        if (rinarp_paddr_get(data->filter, shwaddr, paddr)) {
-                LOG_DBG("Don't know the application that send this :(");
-                kfree(skb);
-                return -1;
-        }
-
-        flow = find_flow_by_addr(data,paddr);
-        if (!flow) {
-                LOG_DBG("Don't know the application that send this :(");
-                kfree(skb);
-                return -1;
-        }
 
 #if 0
+	/* FIXME: Get correct flow based on hwaddr */
+
+	/* If the flow cannot be found --> New Flow! */
+
         /* FIXME: */
         /* If the port id state is ALLOCATED deliver to application */
 
-        /* If the port id state is RECIPIENT_PENDING, the SDU is queued */
+        /* If the port id state is PENDING, the SDU is queued */
 
         /* Get the SDU out of the sk_buff */
         skb->nh.raw;
