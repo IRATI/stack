@@ -26,7 +26,7 @@
  */
 
 /* FIXME: The following dependencies have to be removed */
-#define RINA_PREFIX "arp826-cache"
+#define RINA_PREFIX "arp826-tables"
 
 #include "logs.h"
 #include "debug.h"
@@ -211,8 +211,34 @@ void cl_destroy(struct cache_line * instance)
         rkfree(instance);
 }
 
-const struct cache_entry * cl_find_by_gha(struct cache_line * instance,
-                                         const struct gha *   address)
+const struct cache_entry * cl_entry_find(struct cache_line * instance,
+                                         const struct gpa *  pa,
+                                         const struct gha *  ha)
+{
+        struct cache_entry * pos;
+
+        if (!instance || !gpa_is_ok(pa) || !gha_is_ok(ha)) {
+                LOG_ERR("Bogus input parameters, cannot find");
+                return NULL;
+        }
+
+        spin_lock(&instance->lock);
+
+        list_for_each_entry(pos, &instance->entries, next) {
+                if (gpa_is_equal(pos->pa, pa) &&
+                    gha_is_equal(pos->ha, ha)) {
+                        spin_unlock(&instance->lock);
+                        return pos;
+                }
+        }
+
+        spin_unlock(&instance->lock);
+
+        return NULL;
+}
+
+const struct cache_entry * cl_entry_find_by_gha(struct cache_line * instance,
+                                                const struct gha *   address)
 {
         struct cache_entry * pos;
 
@@ -235,8 +261,8 @@ const struct cache_entry * cl_find_by_gha(struct cache_line * instance,
         return NULL;
 }
 
-const struct cache_entry * cl_find_by_gpa(struct cache_line * instance,
-                                          const struct gpa *  address)
+const struct cache_entry * cl_entry_find_by_gpa(struct cache_line * instance,
+                                                const struct gpa *  address)
 {
         struct cache_entry * pos;
 
@@ -259,9 +285,9 @@ const struct cache_entry * cl_find_by_gpa(struct cache_line * instance,
         return NULL;
 }
 
-int cl_add(struct cache_line * instance,
-           struct gpa *        pa,
-           struct gha *        ha)
+int cl_entry_add(struct cache_line * instance,
+                 struct gpa *        pa,
+                 struct gha *        ha)
 {
         struct cache_entry * entry;
         struct cache_entry * pos;
@@ -310,8 +336,8 @@ int cl_add(struct cache_line * instance,
         return 0;
 }
 
-void cl_remove(struct cache_line *        instance,
-               const struct cache_entry * entry)
+void cl_entry_remove(struct cache_line *        instance,
+                     const struct cache_entry * entry)
 {
         struct cache_entry * pos, * q;
 
@@ -337,32 +363,123 @@ void cl_remove(struct cache_line *        instance,
         rkfree(instance);
 }
 
+
+static spinlock_t          tables_lock;
+static struct cache_line * tables[HW_TYPE_MAX - 1] = { NULL };
+
+static bool is_line_id_ok(int line)
+{ return (line < HW_TYPE_ETHER - 1 || line >= HW_TYPE_MAX - 1) ? 0 : 1; }
+
+struct cache_line * tbls_find(uint16_t ptype)
+{
+        int                 idx;
+        struct cache_line * cl;
+
+        idx = ptype - 1;
+        if (!is_line_id_ok(idx)) {
+                LOG_ERR("Wrong ptype %d, cannot find table", ptype);
+                return NULL;
+        }
+
+        spin_lock(&tables_lock);
+        cl = tables[idx];
+        spin_unlock(&tables_lock);
+
+        return cl;
+}
+
+int tbls_create(uint16_t ptype, size_t hwlen)
+{
+        int                 idx;
+
+        idx = ptype - 1;
+        if (!is_line_id_ok(idx)) {
+                LOG_ERR("Wrong ptype %d, cannot create table", ptype);
+                return -1;
+        }
+
+        spin_lock(&tables_lock);
+        if (tables[idx]) {
+                LOG_ERR("Table for ptype %d already created", ptype);
+                spin_unlock(&tables_lock);
+                return 0;
+        }
+
+        /* FIXME: Is the hwlen correct ? */
+
+        tables[idx] = cl_create(hwlen);
+        if (!tables[idx]) {
+                spin_unlock(&tables_lock);
+                return -1;
+        }
+
+        spin_unlock(&tables_lock);
+
+        LOG_DBG("Table for ptype %d created successfully", ptype);
+
+        return 0;
+}
+
+int tbls_destroy(uint16_t ptype)
+{
+        int idx;
+
+        idx = ptype - 1;
+        if (!is_line_id_ok(idx)) {
+                LOG_ERR("Wrong ptype %d, cannot destroy table", ptype);
+                return -1;
+        }
+
+        spin_lock(&tables_lock);
+        if (tables[idx]) {
+                cl_destroy(tables[idx]);
+                tables[idx] = NULL;
+        }
+        spin_unlock(&tables_lock);
+
+        LOG_DBG("Table for ptype %d destroyed successfully", ptype);
+
+        return 0;
+}
+
 int arp826_add(uint16_t           ptype,
                const struct gpa * pa,
                const struct gha * ha,
                arp826_timeout_t   timeout)
 {
+        struct cache_line * cl;
+
         if (!gpa_is_ok(pa) || !gha_is_ok(ha)) {
                 LOG_ERR("Cannot remove, bad input parameters");
                 return -1;
         }
         
-        LOG_MISSING;
-        
-        return 0;
+        cl = tbls_find(ptype);
+        if (!cl)
+                return -1;
+
+        return cl_entry_add(cl, gpa_dup(pa), gha_dup(ha));
 }
- EXPORT_SYMBOL(arp826_add);
+EXPORT_SYMBOL(arp826_add);
 
 int arp826_remove(uint16_t           ptype,
                   const struct gpa * pa,
                   const struct gha * ha)
 {
+        struct cache_line *        cl;
+        const struct cache_entry * ce;
+
         if (!gpa_is_ok(pa) || !gha_is_ok(ha)) {
                 LOG_ERR("Cannot remove, bad input parameters");
                 return -1;
         }
 
-        LOG_MISSING;
+        cl = tbls_find(ptype);
+        if (!cl)
+                return -1;
+
+        ce = cl_entry_find(cl, pa, ha);
+        cl_entry_remove(cl, ce);
 
         return 0;
 }
