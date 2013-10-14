@@ -26,18 +26,17 @@
 #include "utils.h"
 
 #include "rinarp.h"
+#include "arp826.h"
 #include "arp826-utils.h"
 
 /* This is an observer (a single one) */
 struct rinarp_handle {
-        struct gpa *     subject;
-
-        rinarp_handler_t handler;
-        void *           opaque;
+        struct gpa * pa;
+        struct gha * ha;
 };
 
-struct rinarp_handle * rinarp_register(const struct net_device * device,
-                                       const struct gpa *        address)
+struct rinarp_handle * rinarp_add(const struct net_device * device,
+                                  const struct gpa *        address)
 {
         struct rinarp_handle * handle;
 
@@ -50,57 +49,55 @@ struct rinarp_handle * rinarp_register(const struct net_device * device,
         if (!handle)
                 return NULL;
 
-        handle->handler = NULL;
-        handle->opaque  = NULL; /* Useless ... */
-        handle->subject = gpa_dup(address);
-        if (!handle->subject) {
+        handle->pa = gpa_dup(address);
+        if (!handle->pa) {
+                rkfree(handle);
+                return NULL;
+        }
+
+        handle->ha = NULL; /* FIXME: !!! */
+
+        if (arp826_add(handle->pa, handle->ha, -1)) {
+                gpa_destroy(handle->pa);
+                gha_destroy(handle->ha);
                 rkfree(handle);
                 return NULL;
         }
 
         return handle;
 }
-EXPORT_SYMBOL(rinarp_register);
+EXPORT_SYMBOL(rinarp_add);
 
-int rinarp_unregister(struct rinarp_handle * handle)
+int rinarp_remove(struct rinarp_handle * handle)
 {
         if (!handle) {
                 LOG_ERR("Bogus input parameters, cannot unregister");
                 return -1;
         }
 
-        ASSERT(handle->subject);
+        ASSERT(handle->pa);
+        ASSERT(handle->ha);
 
-        gpa_destroy(handle->subject);
+        arp826_remove(handle->pa, handle->ha);
+        gpa_destroy(handle->pa);
+        gha_destroy(handle->ha);
         rkfree(handle);
 
         return 0;
 }
-EXPORT_SYMBOL(rinarp_unregister);
+EXPORT_SYMBOL(rinarp_remove);
 
-int rinarp_resolve(struct rinarp_handle * handle, 
-                   rinarp_handler_t       handler,
+int rinarp_resolve(struct rinarp_handle * handle,
+                   const struct gpa *     tpa,
+                   rinarp_notification_t  notify,
                    void *                 opaque)
 {
-        if (!handle || !handler /* the opaque can be NULL */) {
+        if (!handle || !gpa_is_ok(tpa) || !notify /* opaque can be NULL */) {
                 LOG_ERR("Bogus input parameter, won't resolve");
                 return -1;
         }
 
-        ASSERT(handle->subject);
-
-        if (handle->handler) {
-                LOG_ERR("A resolution is in progress, try it later ...");
-                return -1;
-        }
-
-        ASSERT(handle->handler == NULL);
-
-        handle->handler = handler;
-        handle->opaque  = opaque;
-
-        LOG_MISSING;
-
-        return -1;
+        return arp826_resolve(handle->pa, handle->ha, tpa,
+                              (arp826_notify_t) notify, opaque);
 }
 EXPORT_SYMBOL(rinarp_resolve);

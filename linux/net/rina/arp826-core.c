@@ -70,6 +70,53 @@ struct arp_header {
 #endif
 };
 
+
+int arp826_add(const struct gpa * pa,
+               const struct gha * ha,
+               arp826_timeout_t   timeout)
+{
+        if (!gpa_is_ok(pa) || !gha_is_ok(ha)) {
+                LOG_ERR("Cannot remove, bad input parameters");
+                return -1;
+        }
+
+        LOG_MISSING;
+
+        return 0;
+}
+EXPORT_SYMBOL(arp826_add);
+
+int arp826_remove(const struct gpa * pa,
+                  const struct gha * ha)
+{
+        if (!gpa_is_ok(pa) || !gha_is_ok(ha)) {
+                LOG_ERR("Cannot remove, bad input parameters");
+                return -1;
+        }
+
+        LOG_MISSING;
+
+        return 0;
+}
+EXPORT_SYMBOL(arp826_remove);
+
+int arp826_resolve(const struct gpa * spa,
+                   const struct gha * sha,
+                   const struct gpa * tpa,
+                   arp826_notify_t    notify,
+                   void *             opaque)
+{
+        if (!gpa_is_ok(spa) || !gha_is_ok(sha) || !gpa_is_ok(tpa) || notify) {
+                LOG_ERR("Cannot resolve, bad input parameters");
+                return -1;
+        }
+
+        LOG_MISSING;
+
+        return 0;
+}
+EXPORT_SYMBOL(arp826_resolve);
+
 static struct arp_header * arp826_header(const struct sk_buff * skb)
 { return (struct arp_header *) skb_network_header(skb); }
 

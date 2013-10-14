@@ -240,9 +240,8 @@ static int flow_destroy(struct ipcp_instance_data * data,
          * Remove from ARP cache if this was
          *  the last flow and no app registered
          */
-        if (list_empty(&data->flows) && !data->reg_app) {
-                rinarp_unregister(data->handle);
-        }
+        if (list_empty(&data->flows) && !data->reg_app)
+                rinarp_remove(data->handle);
 
         fid = kfa_flow_unbind(data->kfa,
                               flow->port_id);
@@ -254,7 +253,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
 
 
 
-static void rinarp_resolve_handler(void *              opaque,
+static void rinarp_resolve_handler(void *             opaque,
                                    const struct gpa * dest_pa,
                                    const struct gha * dest_ha)
 {
@@ -306,8 +305,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
          * ... add to the ARP cache
          */
         if (list_empty(&data->flows) && !data->reg_app) {
-                data->handle = rinarp_register(data->dev,
-                                               name_to_gpa(source));
+                data->handle = rinarp_add(data->dev, name_to_gpa(source));
         }
 
         if (!flow) {
@@ -324,7 +322,10 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
 
-                if (!rinarp_resolve(data->handle, rinarp_resolve_handler, data))
+                if (!rinarp_resolve(data->handle,
+                                    NULL /* FIXME */,
+                                    rinarp_resolve_handler,
+                                    data))
                         LOG_ERR("Failed to lookup ARP entry");
 
         } else if (flow->port_id_state == PORT_STATE_PENDING) {
@@ -432,8 +433,7 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
 
         /* Add in ARP cache if no AP was using the shim */
         if(!data->app_name) {
-                data->handle = rinarp_register(data->dev,
-                                               name_to_gpa(name));
+                data->handle = rinarp_add(data->dev, name_to_gpa(name));
         }
 
         data->app_name = name_dup(name);
@@ -464,7 +464,7 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
 
         /* Remove from ARP cache if no flows left */
         if (list_empty(&data->flows)) {
-                rinarp_unregister(data->handle);
+                rinarp_remove(data->handle);
         }
 
         name_destroy(data->reg_app);

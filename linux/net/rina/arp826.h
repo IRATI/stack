@@ -29,18 +29,22 @@
 
 #include "arp826-utils.h"
 
-struct arp826_handle;
+typedef int arp826_timeout_t; /* In seconds, < 0 mean infinite */
 
-struct arp826_handle * arp826_register(const struct net_device * device,
-                                       const struct gpa *        address);
-int                    arp826_unregister(struct arp826_handle * handle);
+int arp826_add(const struct gpa * pa,
+               const struct gha * ha,
+               arp826_timeout_t   timeout);
+int arp826_remove(const struct gpa * pa,
+                  const struct gha * ha);
 
-typedef void (* arp826_handler_t)(void *             opaque,
-                                  const struct gpa * pa,
-                                  const struct gha * ha);
+typedef void (* arp826_notify_t)(void *             opaque,
+                                 const struct gpa * tpa,
+                                 const struct gha * tha);
 
-int                    arp826_resolve(struct arp826_handle * handle, 
-                                      arp826_handler_t       handler,
-                                      void *                 opaque);
+int arp826_resolve(const struct gpa * spa,
+                   const struct gha * sha,
+                   const struct gpa * tpa,
+                   arp826_notify_t    notify,
+                   void *             opaque);
 
 #endif

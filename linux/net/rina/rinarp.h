@@ -31,16 +31,21 @@
 
 struct rinarp_handle;
 
-struct rinarp_handle * rinarp_register(const struct net_device * device,
-                                       const struct gpa *        address);
-int                    rinarp_unregister(struct rinarp_handle * handle);
+struct rinarp_handle * rinarp_add(const struct net_device * device,
+                                  const struct gpa *        address);
+int                    rinarp_remove(struct rinarp_handle * handle);
 
-typedef void (* rinarp_handler_t)(void *             opaque,
-                                  const struct gpa * pa,
-                                  const struct gha * ha);
+typedef void (* rinarp_notification_t)(void *             opaque,
+                                       const struct gpa * tpa,
+                                       const struct gha * tha);
 
-int                    rinarp_resolve(struct rinarp_handle * handle, 
-                                      rinarp_handler_t       handler,
+/*
+ * NOTE: Resolve is constrained this way since registration is needed on target
+ *       ... anyway ...
+*/
+int                    rinarp_resolve(struct rinarp_handle * handle,
+                                      const struct gpa *     tpa,
+                                      rinarp_notification_t  notify,
                                       void *                 opaque);
 
 #endif
