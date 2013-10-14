@@ -306,6 +306,7 @@ struct workqueue_struct * rwq_create(const char * name)
 
         return wq;
 }
+EXPORT_SYMBOL(rwq_create);
 
 int rwq_post(struct workqueue_struct * wq,
              int                       (* worker)(void * data),
@@ -344,6 +345,7 @@ int rwq_post(struct workqueue_struct * wq,
 
         return 0;
 }
+EXPORT_SYMBOL(rwq_post);
 
 int rwq_destroy(struct workqueue_struct * wq)
 {
@@ -359,3 +361,4 @@ int rwq_destroy(struct workqueue_struct * wq)
 
         return 0;
 }
+EXPORT_SYMBOL(rwq_destroy);
