@@ -101,17 +101,6 @@ static int arp826_process(struct sk_buff *    skb,
         LOG_DBG("  Protocol address length = %d",     plen);
         LOG_DBG("  Operation               = 0x%02x", oper);
 
-        /*
-         * FIXME: Check if we know the protocol specified. Only accept RINA
-         *        packets for the time being. Others will be added later ...
-         */
-#if 0
-        if (header->ptype != htons(ETH_P_RINA)) {
-                LOG_ERR("Unknown protocol type 0x%02x", header->ptype);
-                return -1;
-        }
-#endif
-
         if (header->htype != htons(HW_TYPE_ETHER)) {
                 LOG_ERR("Unhandled ARP hardware type 0x%02x", header->htype);
                 return -1;
@@ -132,24 +121,18 @@ static int arp826_process(struct sk_buff *    skb,
         tha = ptr; ptr += header->hlen;
         tpa = ptr; ptr += header->plen;
 
-#if 0
-        if (cl_add(cl, gpa_create(spa, header->plen), sha)) {
-                LOG_ERR("Could not add this entry to its cache-line");
-                return -1;
-        }
-#endif
-
         /* Finally process the entry (if needed) */
 
         switch (operation) {
-        case ARP_REQUEST:
+        case ARP_REQUEST: {
                 /* Do we have it in the cache ? */
                 
                 /* No */
                 return -1;
 
                 /* Yes */
-
+        }
+                
                 break;
 
         case ARP_REPLY:
@@ -167,6 +150,19 @@ static int arp826_process(struct sk_buff *    skb,
         return 0;
 }
 
+static struct cache_line * ptype_to_cl(uint16_t ptype)
+{
+        uint16_t line_id;
+
+        line_id = ptype - 1;
+        if (!is_line_id_ok(line_id)) {
+                LOG_ERR("Wrong cache line %d", line_id);
+                return NULL;
+        }
+
+        return cache_lines[line_id];
+}
+
 /* NOTE: The following function uses a different mapping for return values */
 static int arp826_receive(struct sk_buff *     skb,
                           struct net_device *  dev,
@@ -176,7 +172,6 @@ static int arp826_receive(struct sk_buff *     skb,
         const struct arp_header * header;
         int                       total_length;
         struct cache_line *       cl;
-        int                       line_id;
 
         if (!dev || !skb) {
                 LOG_ERR("Wrong device or skb");
@@ -195,17 +190,6 @@ static int arp826_receive(struct sk_buff *     skb,
         /* We only receive type-1 headers (this handler could be reused) */
         if (skb->dev->type != HW_TYPE_ETHER) {
                 LOG_DBG("Unhandled device type %d", skb->dev->type);
-                return 0;
-        }
-        line_id = skb->dev->type - 1;
-        if (!is_line_id_ok(line_id)) {
-                LOG_ERR("Wrong cache line %d", line_id);
-                return 0;
-        }
-
-        cl = cache_lines[line_id];
-        if (!cl) {
-                LOG_ERR("I don't have a CL to handle this ARP");
                 return 0;
         }
 
@@ -233,6 +217,13 @@ static int arp826_receive(struct sk_buff *     skb,
                 return 0;
         }
 
+        /* FIXME: There's no need to lookup it here ... */
+        cl = ptype_to_cl(header->ptype);
+        if (!cl) {
+                LOG_ERR("I don't have a CL to handle this ARP");
+                return 0;
+        }
+
         total_length = sizeof(struct arp_header) +
                 (dev->addr_len + header->plen) * 2;
 
@@ -254,6 +245,7 @@ static int arp826_receive(struct sk_buff *     skb,
         return 0;
 }
 
+/* FIXME : This has to be managed dinamically ... */
 static struct packet_type arp_packet_type __read_mostly = {
         .type = cpu_to_be16(ETH_P_ARP),
         .func = arp826_receive,
@@ -277,13 +269,17 @@ static void cache_line_destroy(int idx)
                 cl_destroy(cache_lines[idx]);
 }
 
+struct workqueue_struct * arp826_armq = NULL;
+
 static int __init mod_init(void)
 {
-        /* MAC */
-        if (cache_line_create(HW_TYPE_ETHER - 1, 6))
+        arp826_armq = rwq_create("arp826-wq");
+        if (!arp826_armq)
                 return -1;
 
-        /* That's all */
+        /* FIXME: Pack these two lines together */
+        if (cache_line_create(HW_TYPE_ETHER - 1, 6))
+                return -1;
         dev_add_pack(&arp_packet_type);
 
         LOG_DBG("Initialized successfully");
@@ -294,8 +290,10 @@ static int __init mod_init(void)
 static void __exit mod_exit(void)
 {
         dev_remove_pack(&arp_packet_type);
-
         cache_line_destroy(HW_TYPE_ETHER - 1);
+
+        rwq_destroy(arp826_armq);
+        arp826_armq = NULL;
 
         LOG_DBG("Destroyed successfully");
 }
