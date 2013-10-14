@@ -40,9 +40,19 @@
 /*  FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
 
+struct normal_info {
+        struct name * name;
+        struct name * dif_name;
+};
+
 struct ipcp_instance_data {
-        /* FIXME add needed attributes */
-        int dummy_attr;
+        /* FIXME add missing needed attributes */
+        ipc_process_id_t     id;
+        struct list_head     list;
+        struct normal_info * info;
+        struct list_head     apps_registered;
+        /*  FIXME: Remove it as soon as the kipcm_kfa gets removed*/
+        struct kfa *         kfa;
 };
 
 struct ipcp_factory_data {
@@ -68,12 +78,86 @@ static int normal_fini(struct ipcp_factory_data * data)
         return 0;
 }
 
+
+struct ipcp_factory * normal = NULL;
+
+static struct ipcp_instance_data *
+find_instance(struct ipcp_factory_data * data,
+              ipc_process_id_t           id)
+{
+
+        struct ipcp_instance_data * pos;
+
+        list_for_each_entry(pos, &(data->instances), list) {
+                if (pos->id == id) {
+                        return pos;
+                }
+        }
+
+        return NULL;
+}
+
+
+static struct ipcp_instance_ops normal_instance_ops = {
+        .flow_allocate_request  = NULL,
+        .flow_allocate_response = NULL,
+        .flow_deallocate        = NULL,
+        .application_register   = NULL,
+        .application_unregister = NULL,
+        .sdu_write              = NULL,
+        .assign_to_dif          = NULL,
+        .update_dif_config      = NULL,
+};
+
 static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                                             const struct name *        name,
                                             ipc_process_id_t          id)
 {
-        LOG_MISSING;
-        return 0;
+        struct ipcp_instance * instance;
+
+        ASSERT(data);
+
+        if (find_instance(data, id)) {
+                LOG_ERR("There is already a normal ipcp instance with id %d",
+                        id);
+                return NULL;
+        }
+
+        LOG_DBG("Creating normal IPC process...");
+        instance = rkzalloc(sizeof(*instance), GFP_KERNEL);
+        if (!instance) {
+                LOG_ERR("Could not allocate memory for normal ipc process " \
+                        "with id %d", id);
+                return NULL;
+        }
+
+        instance->ops  = &normal_instance_ops;
+        instance->data = rkzalloc(sizeof(struct ipcp_instance_data), GFP_KERNEL);
+        if (!instance->data) {
+                LOG_ERR("Could not allocate memory for normal ipcp " \
+                        "internal data");
+                rkfree(instance);
+                return NULL;
+        }
+
+        instance->data->id = id;
+        instance->data->info = rkzalloc(sizeof(struct normal_info *), GFP_KERNEL);
+        if (!instance->data->info) {
+                LOG_ERR("Could not allocate momory for normal ipcp info");
+                rkfree(instance->data);
+                rkfree(instance);
+                return NULL;
+        }
+
+        /*  FIXME: Remove as soon as the kipcm_kfa gets removed */
+        instance->data->kfa = kipcm_kfa(default_kipcm);
+        
+        INIT_LIST_HEAD(&instance->data->apps_registered);
+        INIT_LIST_HEAD(&instance->data->list);
+        list_add(&(instance->data->list), &(data->instances));
+        LOG_DBG("Normal IPC process instance created and added to the list");
+
+        return instance;
 }
 
 static int normal_destroy(struct ipcp_factory_data * data,
@@ -89,8 +173,6 @@ static struct ipcp_factory_ops normal_ops = {
         .create  = normal_create,
         .destroy = normal_destroy,
 };
-
-struct ipcp_factory * normal = NULL;
 
 static int __init mod_init(void)
 {
