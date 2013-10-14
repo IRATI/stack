@@ -70,7 +70,7 @@ struct rinarp_handle * rinarp_add(const struct net_device * device,
                 return NULL;
         }
 
-        if (arp826_add(handle->pa, handle->ha, -1)) {
+        if (arp826_add(ETH_P_RINA, handle->pa, handle->ha, -1)) {
                 gpa_destroy(handle->pa);
                 gha_destroy(handle->ha);
                 rkfree(handle);
@@ -91,7 +91,8 @@ int rinarp_remove(struct rinarp_handle * handle)
         ASSERT(handle->pa);
         ASSERT(handle->ha);
 
-        arp826_remove(handle->pa, handle->ha);
+        arp826_remove(ETH_P_RINA, handle->pa, handle->ha);
+
         gpa_destroy(handle->pa);
         gha_destroy(handle->ha);
         rkfree(handle);
@@ -110,7 +111,8 @@ int rinarp_resolve_gpa(struct rinarp_handle * handle,
                 return -1;
         }
 
-        return arp826_resolve_gpa(handle->pa, handle->ha, tpa,
+        return arp826_resolve_gpa(ETH_P_RINA,
+                                  handle->pa, handle->ha, tpa,
                                   (arp826_notify_t) notify, opaque);
 }
 EXPORT_SYMBOL(rinarp_resolve_gpa);
@@ -125,7 +127,8 @@ const struct gpa * rinarp_resolve_gha(struct rinarp_handle * handle,
                 LOG_ERR("Bogus input parameters, won't resolve GHA");
         }
 
-        if (arp826_resolve_gha(handle->pa, handle->ha, tha,
+        if (arp826_resolve_gha(ETH_P_RINA,
+                               handle->pa, handle->ha, tha,
                                (arp826_notify_t) notify, opaque))
                 return NULL;
 
