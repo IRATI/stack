@@ -17,3 +17,47 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+
+/* FIXME: The following dependencies have to be removed */
+#define RINA_PREFIX "arp826-arm"
+
+#include "logs.h"
+#include "debug.h"
+#include "utils.h"
+/* FIXME: End of dependencies ... */
+
+#include "arp826.h"
+
+int arp826_resolve_gpa(const struct gpa * spa,
+                       const struct gha * sha,
+                       const struct gpa * tpa,
+                       arp826_notify_t    notify,
+                       void *             opaque)
+{
+        if (!gpa_is_ok(spa) || !gha_is_ok(sha) || !gpa_is_ok(tpa) || notify) {
+                LOG_ERR("Cannot resolve, bad input parameters");
+                return -1;
+        }
+
+        LOG_MISSING;
+        
+        return 0;
+}
+EXPORT_SYMBOL(arp826_resolve_gpa);
+
+int arp826_resolve_gha(const struct gpa * spa,
+                       const struct gha * sha,
+                       const struct gha * tha,
+                       arp826_notify_t    notify,
+                       void *             opaque)
+{
+        if (!gpa_is_ok(spa) || !gha_is_ok(sha) || !gha_is_ok(tha) || notify) {
+                LOG_ERR("Cannot resolve, bad input parameters");
+                return -1;
+        }
+
+        LOG_MISSING;
+
+        return 0;
+}
+EXPORT_SYMBOL(arp826_resolve_gha);

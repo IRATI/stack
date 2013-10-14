@@ -46,7 +46,6 @@ int arp826_resolve_gpa(const struct gpa * spa,
                        const struct gpa * tpa,
                        arp826_notify_t    notify,
                        void *             opaque);
-
 int arp826_resolve_gha(const struct gpa * spa,
                        const struct gha * sha,
                        const struct gha * tha,
