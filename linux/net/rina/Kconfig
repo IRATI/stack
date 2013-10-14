@@ -92,6 +92,13 @@ config ARP826
 	help
 	  No help for the time being
 
+config RINA_NORMAL_IPCP
+	tristate "Normal IPC Process"
+	default y
+        depends on RINA_PERSONALITY_DEFAULT
+	help
+	  No help for the time being
+
 config RINA_SHIM_DUMMY
 	tristate "Dummy Shim IPC"
 	default m
