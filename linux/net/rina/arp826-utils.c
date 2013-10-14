@@ -354,9 +354,9 @@ bool gha_is_equal(const struct gha * a,
 }
 EXPORT_SYMBOL(gha_is_equal);
 
-struct sk_buff * arp826_create(int                   oper,
-                               int                   ptype,
-                               int                   plen,
+struct sk_buff * arp826_create(__be16                oper,
+                               __be16                ptype,
+                               __u8                  plen,
                                struct net_device *   dev,
                                const unsigned char * src_nwaddr,
                                const unsigned char * dest_nwaddr,
