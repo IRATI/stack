@@ -36,18 +36,14 @@
 #include "arp826.h"
 #include "arp826-utils.h"
 
-/*
- * Cache Entries - CE
- */
-
-struct cache_entry {
+struct table_entry {
         struct gpa *     pa; /* Protocol address */
         struct gha *     ha; /* Hardware address */
 
         struct list_head next;
 };
 
-static void ce_fini(struct cache_entry * entry)
+static void tble_fini(struct table_entry * entry)
 {
         ASSERT(entry);
 
@@ -62,21 +58,21 @@ static void ce_fini(struct cache_entry * entry)
         }
 }
 
-void ce_destroy(struct cache_entry * entry)
+void tble_destroy(struct table_entry * entry)
 {
         if (!entry) {
-                LOG_ERR("Bogus CE, cannot destroy");
+                LOG_ERR("Bogus table entry, cannot destroy");
                 return;
         }
 
-        ce_fini(entry);
+        tble_fini(entry);
         rkfree(entry);
 }
 
 /* Takes the ownership of the input GPA */
-static int ce_init(struct cache_entry * entry,
-                   struct gpa *         pa,
-                   struct gha *         ha)
+static int tble_init(struct table_entry * entry,
+                     struct gpa *         pa,
+                     struct gha *         ha)
 {
         ASSERT(entry);
         ASSERT(pa);
@@ -94,13 +90,13 @@ static int ce_init(struct cache_entry * entry,
         return 0;
 }
 
-struct cache_entry * ce_create(struct gpa * gpa,
-                               struct gha * gha)
+struct table_entry * tble_create(struct gpa * gpa,
+                                 struct gha * gha)
 {
-        struct cache_entry * entry;
+        struct table_entry * entry;
 
         if (!gpa_is_ok(gpa) || !gha_is_ok(gha)) {
-                LOG_DBG("Bogus input parameters, cannot create CE");
+                LOG_DBG("Bogus input parameters, cannot create table entry");
                 return NULL;
         }
 
@@ -108,7 +104,7 @@ struct cache_entry * ce_create(struct gpa * gpa,
         if (!entry)
                 return NULL;
  
-        if (ce_init(entry, gpa_dup(gpa), gha_dup(gha))) {
+        if (tble_init(entry, gpa_dup(gpa), gha_dup(gha))) {
                 rkfree(entry);
                 return NULL;
         }
@@ -116,7 +112,7 @@ struct cache_entry * ce_create(struct gpa * gpa,
         return entry;
 }
 
-static bool ce_is_ok(const struct cache_entry * entry)
+static bool tble_is_ok(const struct table_entry * entry)
 {
         return (entry == NULL         ||
                 !gpa_is_ok(entry->pa) ||
@@ -124,12 +120,12 @@ static bool ce_is_ok(const struct cache_entry * entry)
 }
 
 #if 0
-static bool ce_is_equal(struct cache_entry * entry1,
-                        struct cache_entry * entry2)
+static bool tble_is_equal(struct table_entry * entry1,
+                          struct table_entry * entry2)
 {
-        if (!ce_is_ok(entry1))
+        if (!tble_is_ok(entry1))
                 return 0;
-        if (!ce_is_ok(entry2))
+        if (!tble_is_ok(entry2))
                 return 0;
 
         if (!gpa_is_equal(entry1->pa, entry2->pa))
@@ -142,40 +138,36 @@ static bool ce_is_equal(struct cache_entry * entry1,
 }
 #endif
 
-const struct gpa * ce_pa(struct cache_entry * entry)
+const struct gpa * tble_pa(struct table_entry * entry)
 {
         if (!entry) {
-                LOG_ERR("Bogus input parameter, cannot get CE-PA");
+                LOG_ERR("Bogus input parameter, cannot get PA");
                 return NULL;
         }
         return entry->pa;
 }
 
-const struct gha * ce_ha(struct cache_entry * entry)
+const struct gha * tble_ha(struct table_entry * entry)
 {
         if (!entry) {
-                LOG_ERR("Bogus input parameter, cannot get CE-HA");
+                LOG_ERR("Bogus input parameter, cannot get HA");
                 return NULL;
         }
         return entry->ha;
 }
 
-/*
- * Cache Line - CL
- */
-
-struct cache_line {
+struct table {
         size_t           hal;     /* Hardware address length */
         spinlock_t       lock;
         struct list_head entries;
 };
 
-static struct cache_line * cl_create(size_t ha_length)
+static struct table * tbl_create(size_t ha_length)
 {
-        struct cache_line * instance;
+        struct table * instance;
 
         if (ha_length == 0) {
-                LOG_ERR("Bad CL HA size, cannot create");
+                LOG_ERR("Bad CL HA size, cannot create table");
                 return NULL;
         }
 
@@ -190,12 +182,12 @@ static struct cache_line * cl_create(size_t ha_length)
         return instance;
 }
 
-static void cl_destroy(struct cache_line * instance)
+static void tbl_destroy(struct table * instance)
 {
-        struct cache_entry * pos, * q;
+        struct table_entry * pos, * q;
 
         if (!instance) {
-                LOG_ERR("Bogus input parameter, cannot destroy");
+                LOG_ERR("Bogus input parameter, cannot destroy table");
                 return;
         }
 
@@ -203,7 +195,7 @@ static void cl_destroy(struct cache_line * instance)
 
         list_for_each_entry_safe(pos, q, &instance->entries, next) {
                 ASSERT(pos);
-                ce_destroy(pos);
+                tble_destroy(pos);
         }
 
         spin_unlock(&instance->lock);
@@ -211,14 +203,14 @@ static void cl_destroy(struct cache_line * instance)
         rkfree(instance);
 }
 
-const struct cache_entry * cl_entry_find(struct cache_line * instance,
-                                         const struct gpa *  pa,
-                                         const struct gha *  ha)
+const struct table_entry * tbl_find(struct table *     instance,
+                                    const struct gpa * pa,
+                                    const struct gha * ha)
 {
-        struct cache_entry * pos;
+        struct table_entry * pos;
 
         if (!instance || !gpa_is_ok(pa) || !gha_is_ok(ha)) {
-                LOG_ERR("Bogus input parameters, cannot find");
+                LOG_ERR("Bogus input parameters, cannot find entry");
                 return NULL;
         }
 
@@ -237,10 +229,10 @@ const struct cache_entry * cl_entry_find(struct cache_line * instance,
         return NULL;
 }
 
-const struct cache_entry * cl_entry_find_by_gha(struct cache_line * instance,
-                                                const struct gha *   address)
+const struct table_entry * tbl_find_by_gha(struct table *     instance,
+                                           const struct gha * address)
 {
-        struct cache_entry * pos;
+        struct table_entry * pos;
 
         if (!instance || !address) {
                 LOG_ERR("Bogus input parameters, cannot find-by HA");
@@ -261,10 +253,10 @@ const struct cache_entry * cl_entry_find_by_gha(struct cache_line * instance,
         return NULL;
 }
 
-const struct cache_entry * cl_entry_find_by_gpa(struct cache_line * instance,
-                                                const struct gpa *  address)
+const struct table_entry * tbl_find_by_gpa(struct table *     instance,
+                                           const struct gpa * address)
 {
-        struct cache_entry * pos;
+        struct table_entry * pos;
 
         if (!instance || !gpa_is_ok(address)) {
                 LOG_ERR("Bogus input parameters, cannot find-by by GPA");
@@ -285,34 +277,34 @@ const struct cache_entry * cl_entry_find_by_gpa(struct cache_line * instance,
         return NULL;
 }
 
-int cl_entry_add(struct cache_line * instance,
-                 struct gpa *        pa,
-                 struct gha *        ha)
+int tbl_add(struct table * instance,
+            struct gpa *   pa,
+            struct gha *   ha)
 {
-        struct cache_entry * entry;
-        struct cache_entry * pos;
+        struct table_entry * entry;
+        struct table_entry * pos;
 
         if (!instance || !gpa_is_ok(pa) || !gha_is_ok(ha)) {
-                LOG_ERR("Bogus input parameters, cannot add CE to CL");
+                LOG_ERR("Bogus input parameters, cannot add entry to table");
                 return -1;
         }
 
-        entry = ce_create(pa, ha);
+        entry = tble_create(pa, ha);
         if (!entry)
                 return -1;
 
         spin_lock(&instance->lock);
 
         list_for_each_entry(pos, &instance->entries, next) {
-                if (gha_is_equal(ce_ha(pos), ha) &&
-                    gpa_is_equal(ce_pa(pos), pa)) {
+                if (gha_is_equal(tble_ha(pos), ha) &&
+                    gpa_is_equal(tble_pa(pos), pa)) {
                         LOG_WARN("We already have this entry ...");
                         spin_unlock(&instance->lock);
                         return 0;
                 }
 
                 /* FIXME: What about the other conditions ??? */
-                if (gha_is_equal(ce_ha(pos), ha)) {
+                if (gha_is_equal(tble_ha(pos), ha)) {
                         LOG_DBG("We already have the same GHA in the cache");
 
                         /* FIXME: What should we do here? */
@@ -320,7 +312,7 @@ int cl_entry_add(struct cache_line * instance,
                         /* Remember to: spin_unlock(&instance->lock); */
                 }
 
-                if (gpa_is_equal(ce_pa(pos), pa)) {
+                if (gpa_is_equal(tble_pa(pos), pa)) {
                         LOG_DBG("We already have the same GPA in the cache");
 
                         /* FIXME: What should we do here? */
@@ -336,13 +328,14 @@ int cl_entry_add(struct cache_line * instance,
         return 0;
 }
 
-void cl_entry_remove(struct cache_line *        instance,
-                     const struct cache_entry * entry)
+void tbl_remove(struct table *             instance,
+                const struct table_entry * entry)
 {
-        struct cache_entry * pos, * q;
+        struct table_entry * pos, * q;
 
-        if (!instance || !ce_is_ok(entry)) {
-                LOG_ERR("Bogus input parameters, cannot remove CE");
+        if (!instance || !tble_is_ok(entry)) {
+                LOG_ERR("Bogus input parameters, "
+                        "cannot remove entry from table");
                 return;
         }
 
@@ -350,9 +343,9 @@ void cl_entry_remove(struct cache_line *        instance,
 
         list_for_each_entry_safe(pos, q, &instance->entries, next) {
                 if (pos == entry) {
-                        struct cache_entry * tmp = pos;
+                        struct table_entry * tmp = pos;
                         list_del(&pos->next);
-                        ce_destroy(tmp);
+                        tble_destroy(tmp);
                         spin_unlock(&instance->lock);
                         return;
                 }
@@ -364,16 +357,16 @@ void cl_entry_remove(struct cache_line *        instance,
 }
 
 
-static spinlock_t          tables_lock;
-static struct cache_line * tables[HW_TYPE_MAX - 1] = { NULL };
+static spinlock_t     tables_lock;
+static struct table * tables[HW_TYPE_MAX - 1] = { NULL };
 
 static bool is_line_id_ok(int line)
 { return (line < HW_TYPE_ETHER - 1 || line >= HW_TYPE_MAX - 1) ? 0 : 1; }
 
-struct cache_line * tbls_find(uint16_t ptype)
+struct table * tbls_find(uint16_t ptype)
 {
-        int                 idx;
-        struct cache_line * cl;
+        int            idx;
+        struct table * cl;
 
         idx = ptype - 1;
         if (!is_line_id_ok(idx)) {
@@ -407,7 +400,7 @@ int tbls_create(uint16_t ptype, size_t hwlen)
 
         /* FIXME: Is the hwlen correct ? */
 
-        tables[idx] = cl_create(hwlen);
+        tables[idx] = tbl_create(hwlen);
         if (!tables[idx]) {
                 spin_unlock(&tables_lock);
                 return -1;
@@ -432,7 +425,7 @@ int tbls_destroy(uint16_t ptype)
 
         spin_lock(&tables_lock);
         if (tables[idx]) {
-                cl_destroy(tables[idx]);
+                tbl_destroy(tables[idx]);
                 tables[idx] = NULL;
         }
         spin_unlock(&tables_lock);
@@ -447,7 +440,7 @@ int arp826_add(uint16_t           ptype,
                const struct gha * ha,
                arp826_timeout_t   timeout)
 {
-        struct cache_line * cl;
+        struct table * cl;
 
         if (!gpa_is_ok(pa) || !gha_is_ok(ha)) {
                 LOG_ERR("Cannot remove, bad input parameters");
@@ -458,7 +451,7 @@ int arp826_add(uint16_t           ptype,
         if (!cl)
                 return -1;
 
-        return cl_entry_add(cl, gpa_dup(pa), gha_dup(ha));
+        return tbl_add(cl, gpa_dup(pa), gha_dup(ha));
 }
 EXPORT_SYMBOL(arp826_add);
 
@@ -466,8 +459,8 @@ int arp826_remove(uint16_t           ptype,
                   const struct gpa * pa,
                   const struct gha * ha)
 {
-        struct cache_line *        cl;
-        const struct cache_entry * ce;
+        struct table *             cl;
+        const struct table_entry * ce;
 
         if (!gpa_is_ok(pa) || !gha_is_ok(ha)) {
                 LOG_ERR("Cannot remove, bad input parameters");
@@ -478,8 +471,8 @@ int arp826_remove(uint16_t           ptype,
         if (!cl)
                 return -1;
 
-        ce = cl_entry_find(cl, pa, ha);
-        cl_entry_remove(cl, ce);
+        ce = tbl_find(cl, pa, ha);
+        tbl_remove(cl, ce);
 
         return 0;
 }

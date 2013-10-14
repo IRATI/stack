@@ -43,8 +43,8 @@
 static struct arp_header * arp826_header(const struct sk_buff * skb)
 { return (struct arp_header *) skb_network_header(skb); }
 
-static int arp826_process(struct sk_buff *    skb,
-                          struct cache_line * cl)
+static int arp826_process(struct sk_buff * skb,
+                          struct table *   cl)
 {
         struct arp_header * header;
         uint16_t            operation;
@@ -143,7 +143,7 @@ static int arp826_receive(struct sk_buff *     skb,
 {
         const struct arp_header * header;
         int                       total_length;
-        struct cache_line *       cl;
+        struct table *            cl;
 
         if (!dev || !skb) {
                 LOG_ERR("Wrong device or skb");
