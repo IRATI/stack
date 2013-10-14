@@ -19,6 +19,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include "../net/netlink/af_netlink.h"
+#include <linux/rwlock.h>
+
 #define RINA_PREFIX "rnl"
 
 #include "logs.h"
@@ -383,12 +386,17 @@ static struct notifier_block kipcm_netlink_notifier = {
 };
 
 
-
 int rnl_init(void)
 {
         int ret;
 
         LOG_DBG("Initializing Netlink layer");
+
+        LOG_DBG("Setting NL_CFG_F_NONROOT_SEND flag for NL_GENERIC sockets");
+        write_lock(&nl_table_lock);
+        nl_table[NETLINK_GENERIC].flags = NL_CFG_F_NONROOT_SEND;
+        write_unlock(&nl_table_lock);
+        LOG_DBG("NL_CFG_F_NONROOT_SEND flag set");
 
         ret = genl_register_family_with_ops(&rnl_nl_family,
                                             nl_ops,
