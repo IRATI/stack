@@ -168,8 +168,6 @@ static struct gpa * name_to_gpa(const struct name * name)
         return addr;
 }
 
-#if 0
-/* Unused at the moment, will be called from eth_vlan_rcv */
 static struct shim_eth_flow *
 find_flow_by_gha(struct ipcp_instance_data * data,
                  const struct gha *          addr)
@@ -184,7 +182,6 @@ find_flow_by_gha(struct ipcp_instance_data * data,
 
         return NULL;
 }
-#endif
 
 static struct shim_eth_flow *
 find_flow_by_gpa(struct ipcp_instance_data * data,
@@ -304,10 +301,10 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
 
-                if (!rinarp_resolve(data->handle,
-                                    flow->dest_pa,
-                                    rinarp_resolve_handler,
-                                    data)) {
+                if (!rinarp_resolve_gpa(data->handle,
+					flow->dest_pa,
+					rinarp_resolve_handler,
+					data)) {
                         LOG_ERR("Failed to lookup ARP entry");
 			return -1;
 		}
@@ -505,7 +502,8 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         struct ipcp_instance_data * data;
         struct interface_data_mapping * mapping;
 	struct shim_eth_flow * flow;
-	const struct gha * ghaddr;
+	struct gha * ghaddr;
+	const struct gpa * gpaddr;
 
         /* C-c-c-checks */
         mapping = inst_data_mapping_get(dev);
@@ -535,15 +533,12 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         mh = eth_hdr(skb);
         saddr = mh->h_source;
 
-#if 0
         /* Get correct flow based on hwaddr */
-	ghaddr = gha_create(saddr, strlen(saddr));
+	ghaddr = gha_create(MAC_ADDR_802_3, saddr);
 	flow = find_flow_by_gha(data, ghaddr);
 
-
-
         /* FIXME: Get the SDU out of the sk_buff */
-        skb->nh.raw;
+        /* skb->nh.raw; */
 
         /* If the flow cannot be found --> New Flow! */
 	if (!flow) {
@@ -552,9 +547,11 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                         return -1;
 		 flow->port_id_state = PORT_STATE_PENDING;
 		 flow->dest_ha = ghaddr;
+	
+		 gpaddr = rinarp_resolve_gha(data->handle, flow->dest_ha);
+		 if (gpaddr)
+			 flow->dest_pa = gpa_dup(gpaddr);
 
-		 flow->dest_pa = rinarp_resolve_gha(data->handle, 
-						    flow->dest_ha);
 		 /* FIXME: Call KIPCM and store in queue */
 		
 
@@ -569,9 +566,6 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 		}
 	
 	}
-
-
-#endif
 
         kfree_skb(skb);
         return 0;
