@@ -25,19 +25,19 @@
 
 struct cache_entry;
 
-struct cache_entry * ce_create(const struct gpa * gpa,
-                               const uint8_t *    hardware_address,
-                               size_t             hardware_address_length);
-void                 ce_destroy(struct cache_entry * entry);
-const struct gpa *   ce_pa(struct cache_entry * entry);
-const uint8_t *      ce_ha(struct cache_entry * entry);
+/* FIXME: There's no need to have this "method" public ... */
+struct cache_entry *       ce_create(const struct gpa * gpa,
+                                     const struct gha * gha);
+/* FIXME: There's no need to have this "method" public ... */
+void                       ce_destroy(struct cache_entry * entry);
+
+const struct gpa *         ce_pa(struct cache_entry * entry);
+const struct gha *         ce_ha(struct cache_entry * entry);
 
 struct cache_line;
 
-struct cache_line *  cl_create(size_t hw_address_length);
-void                 cl_destroy(struct cache_line * instance);
-
-size_t               cl_hwa_length(struct cache_line * instance);
+struct cache_line *        cl_create(size_t ha_length);
+void                       cl_destroy(struct cache_line * instance);
 
 /*
  * NOTE:
@@ -46,14 +46,14 @@ size_t               cl_hwa_length(struct cache_line * instance);
  *   needs to pass the length here
  */
 int                        cl_add(struct cache_line * instance,
-                                  struct gpa *        protocol_address,
-                                  const uint8_t *     hardware_address);
+                                  struct gpa *        pa,
+                                  struct gha *        ha);
 void                       cl_remove(struct cache_line *        instance,
                                      const struct cache_entry * entry);
 
-const struct cache_entry * cl_find_by_ha(struct cache_line * instance,
-                                         const uint8_t *     hardware_addr);
+const struct cache_entry * cl_find_by_gha(struct cache_line * instance,
+                                          const struct gha *  address);
 const struct cache_entry * cl_find_by_gpa(struct cache_line * instance,
-                                          const struct gpa *  proto_addr);
+                                          const struct gpa *  address);
 
 #endif

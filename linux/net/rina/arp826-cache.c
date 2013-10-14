@@ -41,10 +41,8 @@
  */
 
 struct cache_entry {
-        struct gpa *     pa;  /* Protocol address */
-
-        unsigned char *  ha;  /* Hardware address */
-        size_t           hal; /* Hardware address length (FIXME: REMOVE!) */
+        struct gpa *     pa; /* Protocol address */
+        struct gha *     ha; /* Hardware address */
 
         struct list_head next;
 };
@@ -59,10 +57,9 @@ static void ce_fini(struct cache_entry * entry)
                 entry->pa = NULL;
         }
         if (entry->ha) {
-                rkfree(entry->ha);
+                gha_destroy(entry->ha);
                 entry->ha = NULL;
         }
-        entry->hal = 0;
 }
 
 void ce_destroy(struct cache_entry * entry)
@@ -78,41 +75,31 @@ void ce_destroy(struct cache_entry * entry)
 
 /* Takes the ownership of the input GPA */
 static int ce_init(struct cache_entry * entry,
-                   struct gpa *         protocol_address,
-                   const uint8_t *      hardware_address,
-                   size_t               hardware_address_length)
+                   struct gpa *         pa,
+                   struct gha *         ha)
 {
         ASSERT(entry);
-        ASSERT(hardware_address);
-        ASSERT(hardware_address_length > 0);
+        ASSERT(pa);
+        ASSERT(ha);
 
-        /* It has been duplicated */
-        if (!gpa_is_ok(protocol_address))
+        /* It has been duplicated therefore, no assertions here */
+        if (!gpa_is_ok(pa) || !gha_is_ok(ha))
                 return -1;
 
-        entry->pa  = protocol_address;
-        entry->hal = hardware_address_length;
-        entry->ha  = rkmalloc(entry->hal, GFP_KERNEL);
-        if (!entry->ha) {
-                gpa_destroy(entry->pa);
-                entry->pa  = NULL; /* Useless but merciful */
-                entry->hal = 0;    /* Useless but merciful */
-                return -1;
-        }
-        memcpy(entry->ha, hardware_address, entry->hal);
+        entry->pa = pa;
+        entry->ha = ha;
         
         INIT_LIST_HEAD(&entry->next);
 
         return 0;
 }
 
-struct cache_entry * ce_create(struct gpa *    gpa,
-                               const uint8_t * hardware_address,
-                               size_t          hardware_address_length)
+struct cache_entry * ce_create(struct gpa * gpa,
+                               struct gha * gha)
 {
         struct cache_entry * entry;
 
-        if (!gpa_is_ok(gpa) || hardware_address || hardware_address_length) {
+        if (!gpa_is_ok(gpa) || !gha_is_ok(gha)) {
                 LOG_DBG("Bogus input parameters, cannot create CE");
                 return NULL;
         }
@@ -121,9 +108,7 @@ struct cache_entry * ce_create(struct gpa *    gpa,
         if (!entry)
                 return NULL;
  
-        if (ce_init(entry,
-                    gpa_dup(gpa),
-                    hardware_address, hardware_address_length)) {
+        if (ce_init(entry, gpa_dup(gpa), gha_dup(gha))) {
                 rkfree(entry);
                 return NULL;
         }
@@ -133,11 +118,9 @@ struct cache_entry * ce_create(struct gpa *    gpa,
 
 static bool ce_is_ok(const struct cache_entry * entry)
 {
-        if (entry == NULL                           ||
-            !gpa_is_ok(entry->pa)                   ||
-            (entry->hal == 0 || entry->ha  == NULL))
-                return 0;
-        return 1;
+        return (entry == NULL         ||
+                !gpa_is_ok(entry->pa) ||
+                !gha_is_ok(entry->ha)) ? 0 : 1;
 }
 
 #if 0
@@ -168,7 +151,7 @@ const struct gpa * ce_pa(struct cache_entry * entry)
         return entry->pa;
 }
 
-const uint8_t * ce_ha(struct cache_entry * entry)
+const struct gha * ce_ha(struct cache_entry * entry)
 {
         if (!entry) {
                 LOG_ERR("Bogus input parameter, cannot get CE-HA");
@@ -187,12 +170,12 @@ struct cache_line {
         struct list_head entries;
 };
 
-struct cache_line * cl_create(size_t hw_address_length)
+struct cache_line * cl_create(size_t ha_length)
 {
         struct cache_line * instance;
 
-        if (hw_address_length == 0) {
-                LOG_ERR("Bad CL size, cannot create");
+        if (ha_length == 0) {
+                LOG_ERR("Bad CL HA size, cannot create");
                 return NULL;
         }
 
@@ -200,7 +183,7 @@ struct cache_line * cl_create(size_t hw_address_length)
         if (!instance)
                 return NULL;
 
-        instance->hal = hw_address_length;
+        instance->hal = ha_length;
         INIT_LIST_HEAD(&instance->entries);
         spin_lock_init(&instance->lock);
 
@@ -228,14 +211,12 @@ void cl_destroy(struct cache_line * instance)
         rkfree(instance);
 }
 
-size_t cl_hwa_length(struct cache_line * instance);
-
-const struct cache_entry * cl_find_by_ha(struct cache_line * instance,
-                                         const uint8_t *     hardware_address)
+const struct cache_entry * cl_find_by_gha(struct cache_line * instance,
+                                         const struct gha *   address)
 {
         struct cache_entry * pos;
 
-        if (!instance || !hardware_address) {
+        if (!instance || !address) {
                 LOG_ERR("Bogus input parameters, cannot find-by HA");
                 return NULL;
         }
@@ -243,7 +224,7 @@ const struct cache_entry * cl_find_by_ha(struct cache_line * instance,
         spin_lock(&instance->lock);
 
         list_for_each_entry(pos, &instance->entries, next) {
-                if (!memcmp(pos->ha, hardware_address, instance->hal)) {
+                if (gha_is_equal(pos->ha, address)) {
                         spin_unlock(&instance->lock);
                         return pos;
                 }
@@ -255,11 +236,11 @@ const struct cache_entry * cl_find_by_ha(struct cache_line * instance,
 }
 
 const struct cache_entry * cl_find_by_gpa(struct cache_line * instance,
-                                          const struct gpa *  protocol_address)
+                                          const struct gpa *  address)
 {
         struct cache_entry * pos;
 
-        if (!instance || !gpa_is_ok(protocol_address)) {
+        if (!instance || !gpa_is_ok(address)) {
                 LOG_ERR("Bogus input parameters, cannot find-by by GPA");
                 return NULL;
         }
@@ -267,7 +248,7 @@ const struct cache_entry * cl_find_by_gpa(struct cache_line * instance,
         spin_lock(&instance->lock);
 
         list_for_each_entry(pos, &instance->entries, next) {
-                if (gpa_is_equal(pos->pa, protocol_address)) {
+                if (gpa_is_equal(pos->pa, address)) {
                         spin_unlock(&instance->lock);
                         return pos;
                 }
@@ -279,39 +260,47 @@ const struct cache_entry * cl_find_by_gpa(struct cache_line * instance,
 }
 
 int cl_add(struct cache_line * instance,
-           struct gpa *        protocol_address,
-           const uint8_t *     hardware_address)
+           struct gpa *        pa,
+           struct gha *        ha)
 {
         struct cache_entry * entry;
         struct cache_entry * pos;
 
-        if (!instance || !gpa_is_ok(protocol_address) || !hardware_address) {
+        if (!instance || !gpa_is_ok(pa) || !gha_is_ok(ha)) {
                 LOG_ERR("Bogus input parameters, cannot add CE to CL");
                 return -1;
         }
 
-        entry = ce_create(protocol_address, hardware_address, instance->hal);
+        entry = ce_create(pa, ha);
         if (!entry)
                 return -1;
 
         spin_lock(&instance->lock);
 
         list_for_each_entry(pos, &instance->entries, next) {
-                const uint8_t * ha;
-
-                ha = ce_ha(pos);
-                ASSERT(ha);
-
-#if 0
-                /* FIXME: Fix this mess */
-                if (!memcmp
-                if (gpa_is_equal(ce_pa(pos), protocol_address)
-                if (ce_is_equal(pos, entry)) {
-                        LOG_WARN("CE already present in this CL");
-                        ce_destroy(entry);
+                if (gha_is_equal(ce_ha(pos), ha) &&
+                    gpa_is_equal(ce_pa(pos), pa)) {
+                        LOG_WARN("We already have this entry ...");
+                        spin_unlock(&instance->lock);
                         return 0;
                 }
-#endif
+
+                /* FIXME: What about the other conditions ??? */
+                if (gha_is_equal(ce_ha(pos), ha)) {
+                        LOG_DBG("We already have the same GHA in the cache");
+
+                        /* FIXME: What should we do here? */
+
+                        /* Remember to: spin_unlock(&instance->lock); */
+                }
+
+                if (gpa_is_equal(ce_pa(pos), pa)) {
+                        LOG_DBG("We already have the same GPA in the cache");
+
+                        /* FIXME: What should we do here? */
+
+                        /* Remember to: spin_unlock(&instance->lock); */
+                }
         }
 
         list_add(&instance->entries, &entry->next);
@@ -348,7 +337,8 @@ void cl_remove(struct cache_line *        instance,
         rkfree(instance);
 }
 
-int arp826_add(const struct gpa * pa,
+int arp826_add(uint16_t           ptype,
+               const struct gpa * pa,
                const struct gha * ha,
                arp826_timeout_t   timeout)
 {
@@ -363,7 +353,8 @@ int arp826_add(const struct gpa * pa,
 }
  EXPORT_SYMBOL(arp826_add);
 
-int arp826_remove(const struct gpa * pa,
+int arp826_remove(uint16_t           ptype,
+                  const struct gpa * pa,
                   const struct gha * ha)
 {
         if (!gpa_is_ok(pa) || !gha_is_ok(ha)) {
