@@ -29,7 +29,8 @@
 #include "arp826.h"
 #include "arp826-cache.h"
 
-int arp826_resolve_gpa(const struct gpa * spa,
+int arp826_resolve_gpa(uint16_t           ptype,
+                       const struct gpa * spa,
                        const struct gha * sha,
                        const struct gpa * tpa,
                        arp826_notify_t    notify,
@@ -46,7 +47,8 @@ int arp826_resolve_gpa(const struct gpa * spa,
 }
 EXPORT_SYMBOL(arp826_resolve_gpa);
 
-int arp826_resolve_gha(const struct gpa * spa,
+int arp826_resolve_gha(uint16_t           ptype,
+                       const struct gpa * spa,
                        const struct gha * sha,
                        const struct gha * tha,
                        arp826_notify_t    notify,
