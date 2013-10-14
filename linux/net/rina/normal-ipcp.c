@@ -1,5 +1,5 @@
 /*
- *  IPC Processes layer
+ *  Normal IPC Process
  *
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
@@ -23,10 +23,10 @@
 #include <linux/list.h>
 
 #define IPCP_NAME "normal-ipc"
+
 #define RINA_PREFIX IPCP_NAME
 
 #include "logs.h"
-#include "normal-ipcp.h"
 #include "common.h"
 #include "debug.h"
 #include "utils.h"
@@ -61,7 +61,7 @@ struct ipcp_factory_data {
 
 static struct ipcp_factory_data normal_data;
 
-static int normal_init(struct ipcp_factory_data * data) 
+static int normal_init(struct ipcp_factory_data * data)
 {
         ASSERT(data);
 
@@ -111,7 +111,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
 
 static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                                             const struct name *        name,
-                                            ipc_process_id_t          id)
+                                            ipc_process_id_t           id)
 {
         struct ipcp_instance * instance;
 
@@ -132,7 +132,8 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         }
 
         instance->ops  = &normal_instance_ops;
-        instance->data = rkzalloc(sizeof(struct ipcp_instance_data), GFP_KERNEL);
+        instance->data = rkzalloc(sizeof(struct ipcp_instance_data),
+                                  GFP_KERNEL);
         if (!instance->data) {
                 LOG_ERR("Could not allocate memory for normal ipcp " \
                         "internal data");
@@ -141,7 +142,8 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         }
 
         instance->data->id = id;
-        instance->data->info = rkzalloc(sizeof(struct normal_info *), GFP_KERNEL);
+        instance->data->info = rkzalloc(sizeof(struct normal_info *),
+                                        GFP_KERNEL);
         if (!instance->data->info) {
                 LOG_ERR("Could not allocate momory for normal ipcp info");
                 rkfree(instance->data);
@@ -151,7 +153,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
 
         /*  FIXME: Remove as soon as the kipcm_kfa gets removed */
         instance->data->kfa = kipcm_kfa(default_kipcm);
-        
+
         INIT_LIST_HEAD(&instance->data->apps_registered);
         INIT_LIST_HEAD(&instance->data->list);
         list_add(&(instance->data->list), &(data->instances));
@@ -180,8 +182,8 @@ static int __init mod_init(void)
 
         if (normal) {
                 LOG_ERR("RINA normal IPCP already initialized, bailing out");
-                return -1; 
-        }   
+                return -1;
+        }
 
         normal = kipcm_ipcp_factory_register(default_kipcm,
                                              IPCP_NAME,
@@ -209,7 +211,7 @@ static void __exit mod_exit(void)
                 LOG_CRIT("Could not unregister %s factory, bailing out",
                          IPCP_NAME);
                 return;
-        }   
+        }
 
         LOG_DBG("RINA normal IPCP unloaded successfully");
 }
