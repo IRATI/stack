@@ -27,6 +27,7 @@
 /* FIXME: End of dependencies ... */
 
 #include "arp826.h"
+#include "arp826-cache.h"
 
 int arp826_resolve_gpa(const struct gpa * spa,
                        const struct gha * sha,
