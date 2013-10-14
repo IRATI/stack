@@ -85,7 +85,7 @@ static int arp826_process(struct sk_buff *    skb,
         header = arp826_header(skb);
         if (!header) {
                 LOG_ERR("Cannot get the header");
-                return 0;
+                return -1;
         }
 
         htype = ntohs(header->htype);
@@ -108,19 +108,19 @@ static int arp826_process(struct sk_buff *    skb,
 #if 0
         if (header->ptype != htons(ETH_P_RINA)) {
                 LOG_ERR("Unknown protocol type 0x%02x", header->ptype);
-                return 0;
+                return -1;
         }
 #endif
 
         if (header->htype != htons(HW_TYPE_ETHER)) {
                 LOG_ERR("Unhandled ARP hardware type 0x%02x", header->htype);
-                return 0;
+                return -1;
         }
 
         operation = ntohs(header->oper);
         if (operation != ARP_REPLY && operation != ARP_REQUEST) {
                 LOG_ERR("Unhandled ARP operation 0x%02x", operation);
-                return 0;
+                return -1;
         }
 
         /* Hooray, we can handle this ARP (probably ...) */
@@ -132,34 +132,31 @@ static int arp826_process(struct sk_buff *    skb,
         tha = ptr; ptr += header->hlen;
         tpa = ptr; ptr += header->plen;
 
+#if 0
         if (cl_add(cl, gpa_create(spa, header->plen), sha)) {
                 LOG_ERR("Could not add this entry to its cache-line");
                 return -1;
         }
+#endif
 
-        /*
-         *  And finally process the entry ...
-         *
-         *  The idea is that we want to send a reply if the request is for us.
-         *  We want to add an entry to our cache if it is a reply to us or if
-         *  it is a request for one of our addresses.
-         *
-         *  Putting this another way, we only care about replies if
-         *  they are to us, in which case we add them to the cache.
-         *  For requests, we care about those for us. We add the
-         *  requester to the arp cache.
-         */
+        /* Finally process the entry (if needed) */
 
         switch (operation) {
         case ARP_REQUEST:
-                /* Are we advertising this network address? */
+                /* Do we have it in the cache ? */
+                
+                /* No */
+                return -1;
 
-                LOG_MISSING;
+                /* Yes */
+
                 break;
+
         case ARP_REPLY:
-                /* Is the reply for one of our network addresses? */
+                /* Is there a pending request originated by us ? */
 
                 LOG_MISSING;
+
                 break;
         default:
                 BUG();
@@ -220,7 +217,7 @@ static int arp826_receive(struct sk_buff *     skb,
                 return 0;
         }
 
-        /* ARP header, without 2 device and 2 network addresses */
+        /* ARP header, without 2 device and 2 network addresses (???) */
         if (!pskb_may_pull(skb, sizeof(struct arp_header))) {
                 LOG_WARN("Got an ARP header "
                          "without 2 devices and 2 network addresses "
@@ -239,7 +236,7 @@ static int arp826_receive(struct sk_buff *     skb,
         total_length = sizeof(struct arp_header) +
                 (dev->addr_len + header->plen) * 2;
 
-        /* ARP header, with 2 device and 2 network addresses */
+        /* ARP header, with 2 device and 2 network addresses (???) */
         if (!pskb_may_pull(skb, total_length)) {
                 LOG_WARN("Got an ARP header "
                          "without 2 devices and 2 network addresses "
