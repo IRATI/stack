@@ -112,23 +112,22 @@ struct interface_data_mapping {
         struct ipcp_instance_data * data;
 };
 
-#if 0
-/* FIXME: Add spinlocks */
 static spinlock_t       data_instances_lock;
-#endif
 static struct list_head data_instances_list;
 
 static struct interface_data_mapping *
 inst_data_mapping_get(struct net_device * dev)
 {
         struct interface_data_mapping * mapping;
+	spin_lock(&data_instances_lock);
 
         list_for_each_entry(mapping, &data_instances_list, list) {
                 if (mapping->dev == dev) {
+			spin_unlock(&data_instances_lock);
                         return mapping;
                 }
         }
-
+	spin_unlock(&data_instances_lock);
         return NULL;
 }
 
@@ -136,13 +135,15 @@ static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
                                         port_id_t                   id)
 {
         struct shim_eth_flow * flow;
+	spin_lock(&data->lock);
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
+			spin_unlock(&data->lock);
                         return flow;
                 }
         }
-
+	spin_unlock(&data->lock);
         return NULL;
 }
 
@@ -151,13 +152,14 @@ find_flow_by_flow_id(struct ipcp_instance_data * data,
                      flow_id_t                   id)
 {
         struct shim_eth_flow * flow;
-
+	spin_lock(&data->lock);
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->flow_id == id) {
-                        return flow;
+			spin_unlock(&data->lock);
+			return flow;
                 }
         }
-
+	spin_unlock(&data->lock);
         return NULL;
 }
 
@@ -179,13 +181,14 @@ find_flow_by_gha(struct ipcp_instance_data * data,
                  const struct gha *          addr)
 {
         struct shim_eth_flow * flow;
-
+	spin_lock(&data->lock);
         list_for_each_entry(flow, &data->flows, list) {
                 if (gha_is_equal(addr, flow->dest_ha)) {
-                        return flow;
+			spin_unlock(&data->lock);
+			return flow;
                 }
         }
-
+	spin_unlock(&data->lock);
         return NULL;
 }
 
@@ -194,13 +197,14 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
                  const struct gpa *          addr)
 {
         struct shim_eth_flow * flow;
-
+	spin_lock(&data->lock);
         list_for_each_entry(flow, &data->flows, list) {
                 if (gpa_is_equal(addr, flow->dest_pa)) {
-                        return flow;
+                        spin_unlock(&data->lock);
+			return flow;
                 }
         }
-
+	spin_unlock(&data->lock);
         return NULL;
 }
 
@@ -228,6 +232,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
 {
         struct shim_eth_flow * flow;
         flow_id_t fid;
+	spin_lock(&data->lock);
 
         flow = *f;
 
@@ -242,6 +247,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
         kfa_flow_destroy(data->kfa, fid);
 
         rkfree(flow);
+	spin_unlock(&data->lock);
         return 0;
 }
 
@@ -303,10 +309,12 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 flow->port_id_state = PORT_STATE_PENDING;
 
                 flow->dest_pa = name_to_gpa(dest);
-
+		
+		spin_lock(&data->lock);
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
-
+		spin_unlock(&data->lock);
+		
 		if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
 			LOG_ERR("Couldn't create the sdu queue"
 				"for a new flow");
@@ -573,7 +581,11 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 		flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
                 if (!flow)
                         return -1;
-		list_add(&flow->list, &data->flows);
+		spin_lock(&data->lock);
+                INIT_LIST_HEAD(&flow->list);
+                list_add(&flow->list, &data->flows);
+		spin_unlock(&data->lock);
+
 		flow->port_id_state = PORT_STATE_PENDING;
 		flow->dest_ha = ghaddr;
 		flow->flow_id = kfa_flow_create(data->kfa);
@@ -707,7 +719,10 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         mapping->dev = data->dev;
         mapping->data = data;
         INIT_LIST_HEAD(&mapping->list);
+
+	spin_lock(&data_instances_lock);
         list_add(&mapping->list, &data_instances_list);
+	spin_unlock(&data_instances_lock);
 
         data->eth_vlan_packet_type->dev = data->dev;
         dev_add_pack(data->eth_vlan_packet_type);
@@ -785,7 +800,10 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         mapping->dev = data->dev;
         mapping->data = data;
         INIT_LIST_HEAD(&mapping->list);
+	
+	spin_lock(&data_instances_lock);
         list_add(&mapping->list, &data_instances_list);
+	spin_unlock(&data_instances_lock);
 
         data->eth_vlan_packet_type->dev = data->dev;
         dev_add_pack(data->eth_vlan_packet_type);
@@ -911,7 +929,9 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
         /* FIXME: Remove as soon as the kipcm_kfa gets removed*/
         inst->data->kfa = kipcm_kfa(default_kipcm);
         LOG_DBG("KFA instance %pK bound to the shim eth", inst->data->kfa);
-
+	
+	spin_lock_init(&inst->data->lock);
+	
         /*
          * Bind the shim-instance to the shims set, to keep all our data
          * structures linked (somewhat) together
@@ -997,6 +1017,8 @@ static int __init mod_init(void)
                 LOG_CRIT("Cannot register %s factory", SHIM_NAME);
                 return -1;
         }
+
+	spin_lock_init(&data_instances_lock);
 
         return 0;
 }
