@@ -41,10 +41,16 @@ typedef void (* arp826_notify_t)(void *             opaque,
                                  const struct gpa * tpa,
                                  const struct gha * tha);
 
-int arp826_resolve(const struct gpa * spa,
-                   const struct gha * sha,
-                   const struct gpa * tpa,
-                   arp826_notify_t    notify,
-                   void *             opaque);
+int arp826_resolve_gpa(const struct gpa * spa,
+                       const struct gha * sha,
+                       const struct gpa * tpa,
+                       arp826_notify_t    notify,
+                       void *             opaque);
+
+int arp826_resolve_gha(const struct gpa * spa,
+                       const struct gha * sha,
+                       const struct gha * tha,
+                       arp826_notify_t    notify,
+                       void *             opaque);
 
 #endif

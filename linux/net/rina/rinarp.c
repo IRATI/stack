@@ -19,6 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/if_arp.h>
+
 #define RINA_PREFIX "rinarp"
 
 #include "logs.h"
@@ -40,7 +42,11 @@ struct rinarp_handle * rinarp_add(const struct net_device * device,
 {
         struct rinarp_handle * handle;
 
-        if (!device || !gpa_is_ok(address)) {
+        if (!device                      ||
+            !gpa_is_ok(address)          ||
+            !device->dev_addr            ||
+            device->type != ARPHRD_ETHER ||
+            device->addr_len != 6) {
                 LOG_ERR("Bogus input parameters, cannot register");
                 return NULL;
         }
@@ -55,7 +61,14 @@ struct rinarp_handle * rinarp_add(const struct net_device * device,
                 return NULL;
         }
 
-        handle->ha = NULL; /* FIXME: !!! */
+        ASSERT(device->type     == ARPHRD_ETHER);
+        ASSERT(device->addr_len == 6);
+        handle->ha = gha_create(MAC_ADDR_802_3, device->dev_addr);
+        if (!handle->ha) {
+                gpa_destroy(handle->pa);
+                rkfree(handle);
+                return NULL;
+        }
 
         if (arp826_add(handle->pa, handle->ha, -1)) {
                 gpa_destroy(handle->pa);
@@ -87,17 +100,37 @@ int rinarp_remove(struct rinarp_handle * handle)
 }
 EXPORT_SYMBOL(rinarp_remove);
 
-int rinarp_resolve(struct rinarp_handle * handle,
-                   const struct gpa *     tpa,
-                   rinarp_notification_t  notify,
-                   void *                 opaque)
+int rinarp_resolve_gpa(struct rinarp_handle * handle,
+                       const struct gpa *     tpa,
+                       rinarp_notification_t  notify,
+                       void *                 opaque)
 {
         if (!handle || !gpa_is_ok(tpa) || !notify /* opaque can be NULL */) {
-                LOG_ERR("Bogus input parameter, won't resolve");
+                LOG_ERR("Bogus input parameters, won't resolve GPA");
                 return -1;
         }
 
-        return arp826_resolve(handle->pa, handle->ha, tpa,
-                              (arp826_notify_t) notify, opaque);
+        return arp826_resolve_gpa(handle->pa, handle->ha, tpa,
+                                  (arp826_notify_t) notify, opaque);
 }
-EXPORT_SYMBOL(rinarp_resolve);
+EXPORT_SYMBOL(rinarp_resolve_gpa);
+
+const struct gpa * rinarp_resolve_gha(struct rinarp_handle * handle,
+                                      const struct gha *     tha)
+{
+        rinarp_notification_t notify = NULL;
+        void *                opaque = NULL;
+
+        if (!handle || !gha_is_ok(tha)) {
+                LOG_ERR("Bogus input parameters, won't resolve GHA");
+        }
+
+        if (arp826_resolve_gha(handle->pa, handle->ha, tha,
+                               (arp826_notify_t) notify, opaque))
+                return NULL;
+
+        LOG_MISSING;
+
+        return NULL;
+}
+EXPORT_SYMBOL(rinarp_resolve_gha);

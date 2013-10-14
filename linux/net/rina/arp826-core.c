@@ -100,13 +100,30 @@ int arp826_remove(const struct gpa * pa,
 }
 EXPORT_SYMBOL(arp826_remove);
 
-int arp826_resolve(const struct gpa * spa,
-                   const struct gha * sha,
-                   const struct gpa * tpa,
-                   arp826_notify_t    notify,
-                   void *             opaque)
+int arp826_resolve_gpa(const struct gpa * spa,
+                       const struct gha * sha,
+                       const struct gpa * tpa,
+                       arp826_notify_t    notify,
+                       void *             opaque)
 {
         if (!gpa_is_ok(spa) || !gha_is_ok(sha) || !gpa_is_ok(tpa) || notify) {
+                LOG_ERR("Cannot resolve, bad input parameters");
+                return -1;
+        }
+
+        LOG_MISSING;
+        
+        return 0;
+}
+EXPORT_SYMBOL(arp826_resolve_gpa);
+
+int arp826_resolve_gha(const struct gpa * spa,
+                       const struct gha * sha,
+                       const struct gha * tha,
+                       arp826_notify_t    notify,
+                       void *             opaque)
+{
+        if (!gpa_is_ok(spa) || !gha_is_ok(sha) || !gha_is_ok(tha) || notify) {
                 LOG_ERR("Cannot resolve, bad input parameters");
                 return -1;
         }
@@ -115,7 +132,7 @@ int arp826_resolve(const struct gpa * spa,
 
         return 0;
 }
-EXPORT_SYMBOL(arp826_resolve);
+EXPORT_SYMBOL(arp826_resolve_gha);
 
 static struct arp_header * arp826_header(const struct sk_buff * skb)
 { return (struct arp_header *) skb_network_header(skb); }

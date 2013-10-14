@@ -43,9 +43,12 @@ typedef void (* rinarp_notification_t)(void *             opaque,
  * NOTE: Resolve is constrained this way since registration is needed on target
  *       ... anyway ...
 */
-int                    rinarp_resolve(struct rinarp_handle * handle,
-                                      const struct gpa *     tpa,
-                                      rinarp_notification_t  notify,
-                                      void *                 opaque);
+int                    rinarp_resolve_gpa(struct rinarp_handle * handle,
+                                          const struct gpa *     tpa,
+                                          rinarp_notification_t  notify,
+                                          void *                 opaque);
+
+const struct gpa *     rinarp_resolve_gha(struct rinarp_handle * handle,
+                                          const struct gha *     tha);
 
 #endif

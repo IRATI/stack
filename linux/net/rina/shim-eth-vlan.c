@@ -322,10 +322,10 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
 
-                if (!rinarp_resolve(data->handle,
-                                    NULL /* FIXME */,
-                                    rinarp_resolve_handler,
-                                    data))
+                if (!rinarp_resolve_gpa(data->handle,
+                                        NULL /* FIXME */,
+                                        rinarp_resolve_handler,
+                                        data))
                         LOG_ERR("Failed to lookup ARP entry");
 
         } else if (flow->port_id_state == PORT_STATE_PENDING) {
