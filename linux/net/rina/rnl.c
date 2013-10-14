@@ -19,11 +19,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "../net/netlink/af_netlink.h"
 #include <linux/rwlock.h>
 
 #define RINA_PREFIX "rnl"
 
+#include "../net/netlink/af_netlink.h"
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
