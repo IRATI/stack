@@ -36,9 +36,6 @@ const struct gha *         ce_ha(struct cache_entry * entry);
 
 struct cache_line;
 
-struct cache_line *        cl_create(size_t ha_length);
-void                       cl_destroy(struct cache_line * instance);
-
 /*
  * NOTE:
  *   Takes the ownership of the passed gpa. Hardware address length is
