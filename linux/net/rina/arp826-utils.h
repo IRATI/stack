@@ -106,4 +106,21 @@ enum arp826_htypes {
         HW_TYPE_MAX,
 };
 
+struct table;
+
+struct tmap *  tmap_create(void);
+int            tmap_destroy(struct tmap * map);
+
+int            tmap_empty(struct tmap * map);
+int            tmap_add(struct tmap *  map,
+                        uint16_t       key,
+                        struct table * value);
+struct table * tmap_find(struct tmap * map,
+                         uint16_t      key);
+int            tmap_update(struct tmap *  map,
+                           uint16_t       key,
+                           struct table * value);
+int            tmap_remove(struct tmap * map,
+                           uint16_t      key);
+
 #endif
