@@ -44,6 +44,7 @@
 #include "fidm.h"
 #include "rinarp.h"
 #include "arp826-utils.h"
+#include "du.h"
 
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -93,6 +94,7 @@ struct ipcp_instance_data {
         struct name *          app_name;
 
         /* Stores the state of flows indexed by port_id */
+	spinlock_t             lock;
         struct list_head       flows;
 
         /* FIXME: Remove it as soon as the kipcm_kfa gets removed */
@@ -110,6 +112,10 @@ struct interface_data_mapping {
         struct ipcp_instance_data * data;
 };
 
+#if 0
+/* FIXME: Add spinlocks */
+static spinlock_t       data_instances_lock;
+#endif
 static struct list_head data_instances_list;
 
 static struct interface_data_mapping *
@@ -301,6 +307,13 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
 
+		if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
+			LOG_ERR("Couldn't create the sdu queue"
+				"for a new flow");
+			flow_destroy(data, &flow);
+			return -1;
+		}
+
                 if (!rinarp_resolve_gpa(data->handle,
 					flow->dest_pa,
 					rinarp_resolve_handler,
@@ -326,6 +339,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                            int                         result)
 {
         struct shim_eth_flow * flow;
+	struct sdu * du;
 
         ASSERT(data);
         ASSERT(is_flow_id_ok(flow_id));
@@ -345,7 +359,6 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
          * On positive response, flow should transition to allocated state
          */
         if (!result) {
-                /* FIXME: Deliver frames to application */
                 flow->port_id = port_id;
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 kipcm_flow_add(default_kipcm, data->id,
@@ -357,6 +370,10 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                         flow_destroy(data, &flow);
                         return -1;
                 }
+		du = NULL;
+		while(kfifo_get(&flow->sdu_queue, du)) {
+			kfa_sdu_post(data->kfa, flow->port_id, du);
+		}
         } else {
                 flow->port_id_state = PORT_STATE_NULL;
                 kfifo_free(&flow->sdu_queue);
@@ -504,6 +521,9 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 	struct shim_eth_flow * flow;
 	struct gha * ghaddr;
 	const struct gpa * gpaddr;
+	struct sdu * du;
+	unsigned char * nh;
+	struct name * sname;
 
         /* C-c-c-checks */
         mapping = inst_data_mapping_get(dev);
@@ -517,6 +537,13 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 kfree_skb(skb);
                 return -1;
         }
+
+	if (!data->app_name) {
+		LOG_ERR("No app registered yet! "
+			"Someone is doing something bad on the network");
+		kfree_skb(skb);
+		return -1;
+	}
 
         if (skb->pkt_type == PACKET_OTHERHOST ||
             skb->pkt_type == PACKET_LOOPBACK) {
@@ -537,34 +564,55 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 	ghaddr = gha_create(MAC_ADDR_802_3, saddr);
 	flow = find_flow_by_gha(data, ghaddr);
 
-        /* FIXME: Get the SDU out of the sk_buff */
-        /* skb->nh.raw; */
+        /* Get the SDU out of the sk_buff */
+	nh = skb_network_header(skb);
+        du = sdu_create_from(nh, strlen(nh)); 
 
         /* If the flow cannot be found --> New Flow! */
 	if (!flow) {
 		flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
                 if (!flow)
                         return -1;
-		 flow->port_id_state = PORT_STATE_PENDING;
-		 flow->dest_ha = ghaddr;
-	
-		 gpaddr = rinarp_resolve_gha(data->handle, flow->dest_ha);
-		 if (gpaddr)
-			 flow->dest_pa = gpa_dup(gpaddr);
-
-		 /* FIXME: Call KIPCM and store in queue */
+		list_add(&flow->list, &data->flows);
+		flow->port_id_state = PORT_STATE_PENDING;
+		flow->dest_ha = ghaddr;
+		flow->flow_id = kfa_flow_create(data->kfa);
 		
+		sname = NULL;
+		gpaddr = rinarp_resolve_gha(data->handle, flow->dest_ha);
+		if (gpaddr) {
+			flow->dest_pa = gpa_dup(gpaddr);
+			sname = string_toname(gpa_address_value(gpaddr));
+		}
 
+		if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
+			LOG_ERR("Couldn't create the sdu queue"
+				"for a new flow");
+			flow_destroy(data, &flow);
+			return -1;
+		}
+		/* Store SDU in queue */
+		kfifo_put(&flow->sdu_queue, du);
+
+		if (kipcm_flow_arrived(default_kipcm,
+				       data->id,
+				       flow->flow_id,
+				       data->dif_name,
+				       sname,
+				       data->app_name,
+				       NULL)) {
+			LOG_ERR("Couldn't tell the KIPCM about the flow");
+			kfifo_free(&flow->sdu_queue);
+			flow_destroy(data, &flow);
+			return -1;
+		}
 	} else {
 		gha_destroy(ghaddr);
 		if (flow->port_id_state == PORT_STATE_ALLOCATED) {
-			/* FIXME: If the port id state is ALLOCATED deliver to application */
+			kfa_sdu_post(data->kfa, flow->port_id, du);
 		} else if (flow->port_id_state == PORT_STATE_PENDING) {
-	
-			/* FIXME: If the port id state is PENDING, the SDU is queued */
-		
+			kfifo_put(&flow->sdu_queue, du);
 		}
-	
 	}
 
         kfree_skb(skb);
