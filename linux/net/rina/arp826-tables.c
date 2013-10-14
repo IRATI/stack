@@ -138,7 +138,7 @@ static bool tble_is_equal(struct table_entry * entry1,
 }
 #endif
 
-const struct gpa * tble_pa(struct table_entry * entry)
+const struct gpa * tble_pa(const struct table_entry * entry)
 {
         if (!entry) {
                 LOG_ERR("Bogus input parameter, cannot get PA");
@@ -147,7 +147,7 @@ const struct gpa * tble_pa(struct table_entry * entry)
         return entry->pa;
 }
 
-const struct gha * tble_ha(struct table_entry * entry)
+const struct gha * tble_ha(const struct table_entry * entry)
 {
         if (!entry) {
                 LOG_ERR("Bogus input parameter, cannot get HA");
@@ -234,8 +234,8 @@ const struct table_entry * tbl_find_by_gha(struct table *     instance,
 {
         struct table_entry * pos;
 
-        if (!instance || !address) {
-                LOG_ERR("Bogus input parameters, cannot find-by HA");
+        if (!instance || !gha_is_ok(address)) {
+                LOG_ERR("Bogus input parameters, cannot find by GHA");
                 return NULL;
         }
 
@@ -259,7 +259,7 @@ const struct table_entry * tbl_find_by_gpa(struct table *     instance,
         struct table_entry * pos;
 
         if (!instance || !gpa_is_ok(address)) {
-                LOG_ERR("Bogus input parameters, cannot find-by by GPA");
+                LOG_ERR("Bogus input parameters, cannot find by GPA");
                 return NULL;
         }
 
@@ -355,7 +355,6 @@ void tbl_remove(struct table *             instance,
 
         rkfree(instance);
 }
-
 
 static spinlock_t     tables_lock;
 static struct table * tables[HW_TYPE_MAX - 1] = { NULL };
@@ -472,8 +471,34 @@ int arp826_remove(uint16_t           ptype,
                 return -1;
 
         ce = tbl_find(cl, pa, ha);
+        if (!ce)
+                return -1;
+
         tbl_remove(cl, ce);
 
         return 0;
 }
 EXPORT_SYMBOL(arp826_remove);
+
+const struct gpa * arp826_find_gpa(uint16_t           ptype,
+                                   const struct gha * ha)
+{
+        struct table *             cl;
+        const struct table_entry * ce;
+
+        if (!gha_is_ok(ha)) {
+                LOG_ERR("Cannot resolve, bad input parameters");
+                return NULL;
+        }
+
+        cl = tbls_find(ptype);
+        if (!cl)
+                return NULL;
+
+        ce = tbl_find_by_gha(cl, ha);
+        if (!ce)
+                return NULL;
+
+        return tble_pa(ce);
+}
+EXPORT_SYMBOL(arp826_find_gpa);

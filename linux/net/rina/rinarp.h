@@ -44,7 +44,7 @@ int                    rinarp_resolve_gpa(struct rinarp_handle * handle,
                                           rinarp_notification_t  notify,
                                           void *                 opaque);
 
-const struct gpa *     rinarp_resolve_gha(struct rinarp_handle * handle,
-                                          const struct gha *     tha);
+const struct gpa *     rinarp_find_gpa(struct rinarp_handle * handle,
+                                       const struct gha *     tha);
 
 #endif

@@ -25,8 +25,8 @@
 
 struct table_entry;
 
-const struct gpa *         tble_pa(struct table_entry * entry);
-const struct gha *         tble_ha(struct table_entry * entry);
+const struct gpa *         tble_pa(const struct table_entry * entry);
+const struct gha *         tble_ha(const struct table_entry * entry);
 
 struct table;
 
