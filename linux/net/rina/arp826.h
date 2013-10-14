@@ -27,22 +27,26 @@
 typedef int arp826_timeout_t;
 
 /* In seconds. A negative time means infinite */
-int arp826_add(const struct gpa * pa,
+int arp826_add(uint16_t           ptype,
+               const struct gpa * pa,
                const struct gha * ha,
                arp826_timeout_t   timeout);
-int arp826_remove(const struct gpa * pa,
+int arp826_remove(uint16_t           ptype,
+                  const struct gpa * pa,
                   const struct gha * ha);
 
 typedef void (* arp826_notify_t)(void *             opaque,
                                  const struct gpa * tpa,
                                  const struct gha * tha);
 
-int arp826_resolve_gpa(const struct gpa * spa,
+int arp826_resolve_gpa(uint16_t           ptype,
+                       const struct gpa * spa,
                        const struct gha * sha,
                        const struct gpa * tpa,
                        arp826_notify_t    notify,
                        void *             opaque);
-int arp826_resolve_gha(const struct gpa * spa,
+int arp826_resolve_gha(uint16_t           ptype,
+                       const struct gpa * spa,
                        const struct gha * sha,
                        const struct gha * tha,
                        arp826_notify_t    notify,
