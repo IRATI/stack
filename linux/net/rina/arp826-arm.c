@@ -29,6 +29,8 @@
 #include "arp826.h"
 #include "arp826-cache.h"
 
+extern struct workqueue_struct * arp826_armq;
+
 int arp826_resolve_gpa(uint16_t           ptype,
                        const struct gpa * spa,
                        const struct gha * sha,

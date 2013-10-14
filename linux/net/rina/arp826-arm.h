@@ -21,4 +21,16 @@
 #ifndef ARP_826_ARM_H
 #define ARP_826_ARM_H
 
+#include "arp826.h"
+#include "arp826-utils.h"
+
+struct arp826_arm_resolve {
+        const struct gpa * spa;
+        const struct gha * sha;
+        const struct gpa * tpa;
+        const struct gpa * tha;
+        arp826_notify_t    notify;
+        void *             opaque;
+};
+
 #endif
