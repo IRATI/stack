@@ -24,7 +24,7 @@
 #include <linux/module.h>
 #include <linux/list.h>
 
-#define IPCP_NAME   "normal-ipcp"
+#define IPCP_NAME   "normal-ipc"
 
 #define RINA_PREFIX IPCP_NAME
 
