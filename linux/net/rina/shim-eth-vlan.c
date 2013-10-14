@@ -91,8 +91,6 @@ struct ipcp_instance_data {
 
         /* The IPC Process using the shim-eth-vlan */
         struct name *          app_name;
-        /* The registered application */
-        struct name *          reg_app;
 
         /* Stores the state of flows indexed by port_id */
         struct list_head       flows;
@@ -170,8 +168,6 @@ static struct gpa * name_to_gpa(const struct name * name)
         return addr;
 }
 
-#if 0
-/* Unused at the moment, will be called from eth_vlan_rcv */
 static struct shim_eth_flow *
 find_flow_by_gha(struct ipcp_instance_data * data,
                  const struct gha *          addr)
@@ -186,7 +182,6 @@ find_flow_by_gha(struct ipcp_instance_data * data,
 
         return NULL;
 }
-#endif
 
 static struct shim_eth_flow *
 find_flow_by_gpa(struct ipcp_instance_data * data,
@@ -229,19 +224,12 @@ static int flow_destroy(struct ipcp_instance_data * data,
         flow_id_t fid;
 
         flow = *f;
-        list_del(&flow->list);
 
         if(flow->dest_pa)
                 gpa_destroy(flow->dest_pa);
         if(flow->dest_ha)
                 gha_destroy(flow->dest_ha);
-
-        /*
-         * Remove from ARP cache if this was
-         *  the last flow and no app registered
-         */
-        if (list_empty(&data->flows) && !data->reg_app)
-                rinarp_remove(data->handle);
+        list_del(&flow->list);
 
         fid = kfa_flow_unbind(data->kfa,
                               flow->port_id);
@@ -292,22 +280,13 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
         ASSERT(source);
         ASSERT(dest);
 
-        if (!name_cmp(source, data->app_name)) {
-                LOG_ERR("Shim IPC process can have only one user");
+        if (!data->app_name || !name_cmp(source, data->app_name)) {
+                LOG_ERR("Not the app that was registered");
                 return -1;
         }
 
 
         flow = find_flow(data, id);
-
-        /*
-         * If it is the first flow and no app is registered ...
-         * ... add to the ARP cache
-         */
-        if (list_empty(&data->flows) && !data->reg_app) {
-                data->handle = rinarp_add(data->dev, name_to_gpa(source));
-        }
-
         if (!flow) {
                 flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
                 if (!flow)
@@ -323,11 +302,12 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 list_add(&flow->list, &data->flows);
 
                 if (!rinarp_resolve_gpa(data->handle,
-                                        NULL /* FIXME */,
-                                        rinarp_resolve_handler,
-                                        data))
+					flow->dest_pa,
+					rinarp_resolve_handler,
+					data)) {
                         LOG_ERR("Failed to lookup ARP entry");
-
+			return -1;
+		}
         } else if (flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 kipcm_flow_add(default_kipcm, data->id,
@@ -408,32 +388,11 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(name);
 
-        if (data->reg_app) {
-                char * tmp = name_tostring(data->reg_app);
+        if (data->app_name) {
+                char * tmp = name_tostring(data->app_name);
                 LOG_ERR("Application %s is already registered", tmp);
                 rkfree(tmp);
                 return -1;
-        }
-
-        /* Who's the user of the shim DIF? */
-        if (data->app_name) {
-                if (!name_cmp(name, data->app_name)) {
-                        LOG_ERR("Shim already has a different user");
-                        return -1;
-                }
-        }
-
-        data->reg_app = name_dup(name);
-        if (!data->reg_app) {
-                char * tmp = name_tostring(name);
-                LOG_ERR("Application %s registration has failed", tmp);
-                rkfree(tmp);
-                return -1;
-        }
-
-        /* Add in ARP cache if no AP was using the shim */
-        if(!data->app_name) {
-                data->handle = rinarp_add(data->dev, name_to_gpa(name));
         }
 
         data->app_name = name_dup(name);
@@ -444,6 +403,9 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        /* Add in ARP cache */
+	data->handle = rinarp_add(data->dev, name_to_gpa(name));
+ 
         return 0;
 }
 
@@ -452,23 +414,21 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
 {
         ASSERT(data);
         ASSERT(name);
-        if (!data->reg_app) {
+        if (!data->app_name) {
                 LOG_ERR("Shim-eth-vlan has no application registered");
                 return -1;
         }
 
-        if (!name_cmp(data->reg_app,name)) {
+        if (!name_cmp(data->app_name,name)) {
                 LOG_ERR("Application registered != application specified");
                 return -1;
         }
 
-        /* Remove from ARP cache if no flows left */
-        if (list_empty(&data->flows)) {
-                rinarp_remove(data->handle);
-        }
+        /* Remove from ARP cache */
+	rinarp_remove(data->handle);
 
-        name_destroy(data->reg_app);
-        data->reg_app = NULL;
+        name_destroy(data->app_name);
+        data->app_name = NULL;
         return 0;
 }
 
@@ -541,6 +501,9 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         unsigned char * saddr;
         struct ipcp_instance_data * data;
         struct interface_data_mapping * mapping;
+	struct shim_eth_flow * flow;
+	struct gha * ghaddr;
+	const struct gpa * gpaddr;
 
         /* C-c-c-checks */
         mapping = inst_data_mapping_get(dev);
@@ -570,20 +533,39 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         mh = eth_hdr(skb);
         saddr = mh->h_source;
 
-#if 0
-        /* FIXME: Get correct flow based on hwaddr */
+        /* Get correct flow based on hwaddr */
+	ghaddr = gha_create(MAC_ADDR_802_3, saddr);
+	flow = find_flow_by_gha(data, ghaddr);
+
+        /* FIXME: Get the SDU out of the sk_buff */
+        /* skb->nh.raw; */
 
         /* If the flow cannot be found --> New Flow! */
+	if (!flow) {
+		flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+                if (!flow)
+                        return -1;
+		 flow->port_id_state = PORT_STATE_PENDING;
+		 flow->dest_ha = ghaddr;
+	
+		 gpaddr = rinarp_resolve_gha(data->handle, flow->dest_ha);
+		 if (gpaddr)
+			 flow->dest_pa = gpa_dup(gpaddr);
 
-        /* FIXME: */
-        /* If the port id state is ALLOCATED deliver to application */
+		 /* FIXME: Call KIPCM and store in queue */
+		
 
-        /* If the port id state is PENDING, the SDU is queued */
-
-        /* Get the SDU out of the sk_buff */
-        skb->nh.raw;
-
-#endif
+	} else {
+		gha_destroy(ghaddr);
+		if (flow->port_id_state == PORT_STATE_ALLOCATED) {
+			/* FIXME: If the port id state is ALLOCATED deliver to application */
+		} else if (flow->port_id_state == PORT_STATE_PENDING) {
+	
+			/* FIXME: If the port id state is PENDING, the SDU is queued */
+		
+		}
+	
+	}
 
         kfree_skb(skb);
         return 0;
@@ -917,9 +899,6 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
 
                         if (pos->dif_name)
                                 name_destroy(pos->dif_name);
-
-                        if(pos->reg_app)
-                                name_destroy(pos->reg_app);
 
                         if (pos->app_name)
                                 name_destroy(pos->app_name);
