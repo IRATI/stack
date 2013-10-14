@@ -22,15 +22,11 @@
 #ifndef ARP_826_H
 #define ARP_826_H
 
-#include <linux/types.h>
-#include <linux/kernel.h>
-#include <linux/netdevice.h>
-#include <linux/if_ether.h>
-
 #include "arp826-utils.h"
 
-typedef int arp826_timeout_t; /* In seconds, < 0 mean infinite */
+typedef int arp826_timeout_t;
 
+/* In seconds. A negative time means infinite */
 int arp826_add(const struct gpa * pa,
                const struct gha * ha,
                arp826_timeout_t   timeout);

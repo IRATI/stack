@@ -21,7 +21,9 @@
 #ifndef ARP_826_UTILS_H
 #define ARP_826_UTILS_H
 
-#include <linux/types.h>
+/*
+ * Generic Protocol Address - GPA
+ */
 
 struct gpa;
 
@@ -48,6 +50,10 @@ typedef enum {
         MAC_ADDR_802_3
 } gha_type_t;
 
+/*
+ * Generic Hardware Address - GHA
+ */
+
 struct gha;
 
 struct gha *    gha_create(gha_type_t      type,
@@ -59,5 +65,35 @@ const uint8_t * gha_address(const struct gha * gha);
 gha_type_t      gha_type(const struct gha * gha);
 bool            gha_is_equal(const struct gha * a,
                              const struct gha * b);
+
+/*
+ * Miscellaneous
+ */
+
+#include <linux/types.h>
+#include <linux/netdevice.h>
+
+struct arp_header {
+        __be16     htype; /* Hardware type */
+        __be16     ptype; /* Protocol type */
+        __u8       hlen;  /* Hardware address length */
+        __u8       plen;  /* Protocol address length */
+        __be16     oper;  /* Operation */
+
+#if 0
+        __u8[hlen] sha; /* Sender hardware address */
+        __u8[plen] spa; /* Sender protocol address */
+        __u8[hlen] tha; /* Target hardware address */
+        __u8[plen] tpa; /* Target protocol address */
+#endif
+};
+
+struct sk_buff * arp826_create(int                   oper,
+                               int                   ptype,
+                               int                   plen,
+                               struct net_device *   dev,
+                               const unsigned char * src_nwaddr,
+                               const unsigned char * dest_nwaddr,
+                               const unsigned char * dest_hw);
 
 #endif

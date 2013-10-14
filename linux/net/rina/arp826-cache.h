@@ -34,10 +34,10 @@ const uint8_t *      ce_ha(struct cache_entry * entry);
 
 struct cache_line;
 
-struct cache_line *        cl_create(size_t hw_address_length);
-void                       cl_destroy(struct cache_line * instance);
+struct cache_line *  cl_create(size_t hw_address_length);
+void                 cl_destroy(struct cache_line * instance);
 
-size_t                     cl_hwa_length(struct cache_line * instance);
+size_t               cl_hwa_length(struct cache_line * instance);
 
 /*
  * NOTE:

@@ -25,8 +25,6 @@
  *       one completely.
  */
 
-#include <linux/kernel.h>
-
 /* FIXME: The following dependencies have to be removed */
 #define RINA_PREFIX "arp826-cache"
 
@@ -35,6 +33,7 @@
 #include "utils.h"
 /* FIXME: End of dependencies ... */
 
+#include "arp826.h"
 #include "arp826-utils.h"
 
 /*
@@ -348,3 +347,32 @@ void cl_remove(struct cache_line *        instance,
 
         rkfree(instance);
 }
+
+int arp826_add(const struct gpa * pa,
+               const struct gha * ha,
+               arp826_timeout_t   timeout)
+{
+        if (!gpa_is_ok(pa) || !gha_is_ok(ha)) {
+                LOG_ERR("Cannot remove, bad input parameters");
+                return -1;
+        }
+        
+        LOG_MISSING;
+        
+        return 0;
+}
+ EXPORT_SYMBOL(arp826_add);
+
+int arp826_remove(const struct gpa * pa,
+                  const struct gha * ha)
+{
+        if (!gpa_is_ok(pa) || !gha_is_ok(ha)) {
+                LOG_ERR("Cannot remove, bad input parameters");
+                return -1;
+        }
+
+        LOG_MISSING;
+
+        return 0;
+}
+EXPORT_SYMBOL(arp826_remove);
