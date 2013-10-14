@@ -727,3 +727,4 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
 MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
 MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
+MODULE_AUTHOR("Leonardo Bergesio     <leonardo.bergesio@i2cat.net>");
