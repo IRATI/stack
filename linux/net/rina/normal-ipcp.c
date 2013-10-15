@@ -113,50 +113,6 @@ static struct normal_flow * find_flow_by_fid(struct ipcp_instance_data * data,
         return NULL;
 }
 
-
-#if 0
-static int normal_flow_allocate_request(struct ipcp_instance_data * data,
-                                        const struct name *         source,
-                                        const struct name *         dest,
-                                        const struct flow_spec *    fspec,
-                                        port_id_t                   id,
-                                        flow_id_t                   fid)
-{
-        LOG_MISSING;
-        return 0;
-}
-
-static int normal_flow_allocate_response(struct ipcp_instance_data * data,
-                                         flow_id_t                   flow_id,
-                                         port_id_t                   port_id,
-                                         int                         result)
-{
-        LOG_MISSING;
-        return 0;
-}
-
-static int normal_flow_deallocate(struct ipcp_instance_data * data,
-                                  port_id_t                   id)
-{
-        LOG_MISSING;
-        return 0;
-}
-
-static int normal_application_register(struct ipcp_instance_data * data,
-                                       const struct name *         source)
-{
-        LOG_MISSING;
-        return 0;
-}
-
-static int normal_application_unregister(struct ipcp_instance_data * data,
-                                         const struct name *         source)
-{
-        LOG_MISSING;
-        return 0;
-}
-#endif
-
 static int normal_init(struct ipcp_factory_data * data)
 {
         ASSERT(data);
