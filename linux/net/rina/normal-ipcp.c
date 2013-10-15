@@ -48,11 +48,35 @@ struct normal_info {
 struct ipcp_instance_data {
         /* FIXME add missing needed attributes */
         ipc_process_id_t     id;
+        struct list_head     flows;
         struct list_head     list;
         struct normal_info * info;
         struct list_head     apps_registered;
         /*  FIXME: Remove it as soon as the kipcm_kfa gets removed*/
         struct kfa *         kfa;
+};
+
+enum normal_flow_state {
+        PORT_STATE_NULL = 1,
+        PORT_STATE_RECIPIENT_ALLOCATE_PENDING,
+        PORT_STATE_INITIATOR_ALLOCATE_PENDING,
+        PORT_STATE_ALLOCATED
+};
+
+struct normal_flow {
+        port_id_t               port_id;
+        port_id_t               dst_port_id;
+        struct name *           source;
+        struct name *           dest;
+        struct list_head        list;
+        enum normal_flow_state  state;
+        flow_id_t               dst_fid;
+        flow_id_t               src_fid; /* Required to notify back to the */
+        ipc_process_id_t        dst_id;  /* IPC Manager the result of the */
+        struct flow_spec *      fspec;   /* allocation */
+        struct efcp_container * efcps;
+        struct rmt *            rmt;
+
 };
 
 struct ipcp_factory_data {
@@ -97,7 +121,7 @@ find_instance(struct ipcp_factory_data * data,
         return NULL;
 }
 
-
+/*  FIXME: register ops */
 static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request  = NULL,
         .flow_allocate_response = NULL,
@@ -151,11 +175,20 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
+        instance->data->info->name = name_dup(name);
+        if (!instance->data->info->name) {
+                LOG_DBG("Failed creation of ipc name");
+                rkfree(instance->data->info);
+                rkfree(instance->data);
+                rkfree(instance);
+                return NULL;
+        }
+
         /*  FIXME: Remove as soon as the kipcm_kfa gets removed */
         instance->data->kfa = kipcm_kfa(default_kipcm);
 
         /* FIXME: Probably missing normal flow structures creation */
-        
+        INIT_LIST_HEAD(&instance->data->flows);
         INIT_LIST_HEAD(&instance->data->apps_registered);
         INIT_LIST_HEAD(&instance->data->list);
         list_add(&(instance->data->list), &(data->instances));
