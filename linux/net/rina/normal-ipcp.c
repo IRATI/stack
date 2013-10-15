@@ -154,6 +154,8 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         /*  FIXME: Remove as soon as the kipcm_kfa gets removed */
         instance->data->kfa = kipcm_kfa(default_kipcm);
 
+        /* FIXME: Probably missing normal flow structures creation */
+        
         INIT_LIST_HEAD(&instance->data->apps_registered);
         INIT_LIST_HEAD(&instance->data->list);
         list_add(&(instance->data->list), &(data->instances));
@@ -162,10 +164,56 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         return instance;
 }
 
+static int normal_deallocate_all(struct ipcp_instance_data * data)
+{
+        LOG_MISSING;
+        return 0;
+}
+
+static int normal_unregister_all(struct ipcp_instance_data * data)
+{
+        LOG_MISSING;
+        return 0;
+}
+
 static int normal_destroy(struct ipcp_factory_data * data,
                           struct ipcp_instance *     instance)
 {
-        LOG_MISSING;
+
+        struct ipcp_instance_data * tmp;
+
+        ASSERT(data);
+        ASSERT(instance);
+
+        tmp = find_instance(data, instance->data->id);
+        if (!tmp) {
+                LOG_ERR("Could not find normal ipcp instance to destroy");
+                return -1;
+        }
+   
+        list_del(&tmp->list);
+
+        /* FIXME: flow deallocation and apps unregistration not implemented */
+        if (normal_deallocate_all(tmp)) {
+                LOG_ERR("Could not deallocate normal ipcp flows");
+                return -1;
+        }
+
+        if (normal_unregister_all(tmp)) {
+                LOG_ERR("Could not unregister apps for  normal ipcp");
+                return -1;
+        }
+
+        if (tmp->info->dif_name)
+                name_destroy(tmp->info->dif_name);
+
+        if (tmp->info->name)
+                name_destroy(tmp->info->name);
+
+        rkfree(tmp->info);
+        rkfree(tmp);
+        rkfree(instance);
+
         return 0;
 }
 
