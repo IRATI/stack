@@ -156,15 +156,6 @@ find_instance(struct ipcp_factory_data * data,
         return NULL;
 }
 
-static int normal_assign_to_dif(struct ipcp_instance_data * data,
-                                const struct dif_info *  dif_information)
-{
-        LOG_MISSING;
-        return 0;
-}
-
-
-
 /*  FIXME: register ops */
 static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request  = NULL,
@@ -184,7 +175,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         struct ipcp_instance * instance;
 
         ASSERT(data);
-:/
+
         if (find_instance(data, id)) {
                 LOG_ERR("There is already a normal ipcp instance with id %d",
                         id);
