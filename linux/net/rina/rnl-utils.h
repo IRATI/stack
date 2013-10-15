@@ -122,12 +122,24 @@ enum ipcm_dealloc_flow_resp_attrs_list {
  * descriptions strings in US */
 #define DEALLOC_RESP_ERR_DESC_1 "FAILED"
 
-enum ipcm_resultlow_dealloc_noti_attrs_list {
+enum ipcm_flow_dealloc_noti_attrs_list {
         IFDN_ATTR_PORT_ID = 1,
         IFDN_ATTR_CODE,
         __IFDN_ATTR_MAX,
 };
 #define IFDN_ATTR_MAX (__IFDN_ATTR_MAX -1)
+
+enum ipcm_conn_req_attrs_list {
+        ICRQ_ATTR_PORT_ID = 1,
+        ICRQ_ATTR_SOURCE_ADDR,
+        ICRQ_ATTR_DEST_ADDR,
+        ICRQ_ATTR_SOURCE_CEP_ID,
+        ICRQ_ATTR_DEST_CEP_ID,
+        ICRQ_ATTR_QOS_ID,
+        ICRQ_ATTR_POLICY_ID,
+        __ICRQ_ATTR_MAX,
+};
+#define ICRQ_ATTR_MAX (__ICRQ_ATTR_MAX - 1)
 
 enum ipcm_reg_app_req_attrs_list {
         IRAR_ATTR_APP_NAME = 1,

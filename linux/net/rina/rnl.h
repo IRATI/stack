@@ -90,6 +90,30 @@ typedef enum {
         /*  application having requested it */
         RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION,
 
+        /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_CONN_CREATE_REQUEST,
+
+        /* IPC Process -> IPC Manager*/
+        RINA_C_IPCM_CONN_CREATE_RESPONSE,
+
+        /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_CONN_CREATE_ARRIVED,
+
+        /* IPC Process -> IPC Manager*/
+        RINA_C_IPCM_CONN_CREATE_RESULT,
+
+        /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_CONN_UPDATE_REQUEST,
+
+        /* IPC Process -> IPC Manager*/
+        RINA_C_IPCM_CONN_UPDATE_RESULT,
+
+        /* IPC Manager -> IPC Process */
+        RINA_C_IPCM_CONN_DESTROY_REQUEST,
+
+        /* IPC Process -> IPC Manager*/
+        RINA_C_IPCM_CONN_DESTROY_RESULT,
+
         /*IPC Manager -> IPC Process */
         RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,
 
