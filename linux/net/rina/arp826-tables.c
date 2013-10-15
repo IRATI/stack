@@ -203,6 +203,33 @@ static void tbl_destroy(struct table * instance)
         rkfree(instance);
 }
 
+int tbl_update_by_gpa(struct table *     instance,
+                      const struct gpa * pa,
+                      struct gha *       ha)
+{
+        struct table_entry * pos;
+
+        if (!instance || !gpa_is_ok(pa) || !gha_is_ok(ha)) {
+                LOG_ERR("Bogus input parameters, cannot update GPA");
+                return -1;
+        }
+
+        spin_lock(&instance->lock);
+
+        list_for_each_entry(pos, &instance->entries, next) {
+                if (gpa_is_equal(pos->pa, pa)) {
+                        gha_destroy(pos->ha);
+                        pos->ha = ha;
+                        spin_unlock(&instance->lock);
+                        return 0;
+                }
+        }
+
+        spin_unlock(&instance->lock);
+
+        return -1;
+}
+
 const struct table_entry * tbl_find(struct table *     instance,
                                     const struct gpa * pa,
                                     const struct gha * ha)

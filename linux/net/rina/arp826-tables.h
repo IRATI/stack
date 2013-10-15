@@ -41,6 +41,11 @@ int                        tbl_add(struct table * instance,
 void                       tbl_remove(struct table *             instance,
                                       const struct table_entry * entry);
 
+/* Replaces the old gha with the new one, takes the ownership */
+int                        tbl_update_by_gpa(struct table *     instance,
+                                             const struct gpa * gpa,
+                                             struct gha *       gha);
+
 const struct table_entry * tbl_find(struct table *     instance,
                                     const struct gpa * pa,
                                     const struct gha * ha);
