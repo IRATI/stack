@@ -22,7 +22,7 @@
 #include <linux/module.h>
 #include <linux/list.h>
 
-#define IPCP_NAME "normal-ipc"
+#define IPCP_NAME   "normal-ipc"
 
 #define RINA_PREFIX IPCP_NAME
 
@@ -184,7 +184,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         LOG_DBG("Creating normal IPC process...");
         instance = rkzalloc(sizeof(*instance), GFP_KERNEL);
         if (!instance) {
-                LOG_ERR("Could not allocate memory for normal ipc process " \
+                LOG_ERR("Could not allocate memory for normal ipc process "
                         "with id %d", id);
                 return NULL;
         }
@@ -193,7 +193,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         instance->data = rkzalloc(sizeof(struct ipcp_instance_data),
                                   GFP_KERNEL);
         if (!instance->data) {
-                LOG_ERR("Could not allocate memory for normal ipcp " \
+                LOG_ERR("Could not allocate memory for normal ipcp "
                         "internal data");
                 rkfree(instance);
                 return NULL;
@@ -250,7 +250,7 @@ static int normal_destroy(struct ipcp_factory_data * data,
                 LOG_ERR("Could not find normal ipcp instance to destroy");
                 return -1;
         }
-   
+
         list_del(&tmp->list);
 
         /* FIXME: flow deallocation not implemented */
