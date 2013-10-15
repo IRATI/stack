@@ -170,7 +170,7 @@ struct cache_line {
         struct list_head entries;
 };
 
-struct cache_line * cl_create(size_t ha_length)
+static struct cache_line * cl_create(size_t ha_length)
 {
         struct cache_line * instance;
 
@@ -190,7 +190,7 @@ struct cache_line * cl_create(size_t ha_length)
         return instance;
 }
 
-void cl_destroy(struct cache_line * instance)
+static void cl_destroy(struct cache_line * instance)
 {
         struct cache_entry * pos, * q;
 
