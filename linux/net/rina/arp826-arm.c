@@ -33,12 +33,51 @@
 #include "arp826-tables.h"
 
 struct resolve_data {
-        uint16_t         ptype;
-        struct gpa *     spa;
-        struct gha *     sha;
-        struct gpa *     tpa;
-        struct gha *     tha;
+        uint16_t     ptype;
+        struct gpa * spa;
+        struct gha * sha;
+        struct gpa * tpa;
+        struct gha * tha;
 };
+
+bool is_resolve_data_complete(const struct resolve_data * data)
+{
+        return (!data                    ||
+                !data->spa || !data->sha ||
+                !data->tpa || !data->tha) ? 0 : 1;
+}
+
+static void resolve_data_destroy(struct resolve_data * data)
+{
+        ASSERT(data);
+
+        if (data->spa) gpa_destroy(data->spa);
+        if (data->sha) gha_destroy(data->sha);
+        if (data->tpa) gpa_destroy(data->tpa);
+        if (data->tha) gha_destroy(data->tha);
+        rkfree(data);
+}
+
+static struct resolve_data * resolve_data_create(uint16_t     ptype,
+                                                 struct gpa * spa,
+                                                 struct gha * sha,
+                                                 struct gpa * tpa,
+                                                 struct gha * tha)
+{
+        struct resolve_data * tmp;
+
+        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->ptype = ptype;
+        tmp->spa   = spa;
+        tmp->sha   = sha;
+        tmp->tpa   = tpa;
+        tmp->tha   = tha;
+
+        return tmp;
+}
 
 struct resolution {
         struct resolve_data resolution;
@@ -59,17 +98,19 @@ static int resolver(void * o)
         if (!tmp)
                 return -1;
 
+        if (!is_resolve_data_complete(tmp)) {
+                LOG_ERR("Wrong data passed to resolver ...");
+                resolve_data_destroy(tmp);
+                return -1;
+        }
+
         /* FIXME: Find the entry */
         /* FIXME: Update the tables */
         /* FIXME: Call the callback */
         /* FIXME: Finally, update the ARP cache */
 
         /* Finally destroy the data */
-        gpa_destroy(tmp->spa);
-        gha_destroy(tmp->sha);
-        gpa_destroy(tmp->tpa);
-        gha_destroy(tmp->tha);
-        rkfree(tmp);
+        resolve_data_destroy(tmp);
 
         return 0;
 }
@@ -88,15 +129,9 @@ int arm_resolve(uint16_t     ptype,
             !gpa_is_ok(tpa) || !gha_is_ok(tha))
                 return -1;
 
-        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = resolve_data_create(ptype, spa, sha, tpa, tha);
         if (!tmp)
                 return -1;
-
-        tmp->ptype = ptype;
-        tmp->spa   = spa;
-        tmp->sha   = sha;
-        tmp->tpa   = tpa;
-        tmp->tha   = tha;
 
         /* Takes the ownership ... and disposes everything */
         return rwq_post(arm_wq, resolver, tmp);
