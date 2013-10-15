@@ -223,20 +223,10 @@ static struct packet_type arp_packet_type __read_mostly = {
         .func = arp826_receive,
 };
 
-struct workqueue_struct * arp826_armq = NULL;
-
 static int __init mod_init(void)
 {
         if (tbls_init())
                 return -1;
-
-        /* FIXME: Do we really need it ??? */
-        arp826_armq = rwq_create("arp826-wq");
-        if (!arp826_armq) {
-                rwq_destroy(arp_826_armq);
-                arp826_armq = NULL;
-                return -1;
-        }
 
         /* FIXME: Pack these two lines together */
         if (tbls_create(ETH_P_RINA, 6))
@@ -250,12 +240,11 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
+        /* FIXME: Pack these two lines together */
         dev_remove_pack(&arp_packet_type);
         tbls_destroy(ETH_P_RINA);
-        tbls_fini();
 
-        rwq_destroy(arp826_armq);
-        arp826_armq = NULL;
+        tbls_fini();
 
         LOG_DBG("Destroyed successfully");
 }
