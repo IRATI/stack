@@ -117,23 +117,14 @@ int rinarp_resolve_gpa(struct rinarp_handle * handle,
 }
 EXPORT_SYMBOL(rinarp_resolve_gpa);
 
-const struct gpa * rinarp_resolve_gha(struct rinarp_handle * handle,
-                                      const struct gha *     tha)
+const struct gpa * rinarp_find_gpa(struct rinarp_handle * handle,
+                                   const struct gha *     ha)
 {
-        rinarp_notification_t notify = NULL;
-        void *                opaque = NULL;
-
-        if (!handle || !gha_is_ok(tha)) {
-                LOG_ERR("Bogus input parameters, won't resolve GHA");
+        if (!handle || !gha_is_ok(ha)) {
+                LOG_ERR("Cannot find GPA, bad input parameters");
+                return NULL;
         }
 
-        if (arp826_resolve_gha(ETH_P_RINA,
-                               handle->pa, handle->ha, tha,
-                               (arp826_notify_t) notify, opaque))
-                return NULL;
-
-        LOG_MISSING;
-
-        return NULL;
+        return arp826_find_gpa(ETH_P_RINA, ha);
 }
-EXPORT_SYMBOL(rinarp_resolve_gha);
+EXPORT_SYMBOL(rinarp_find_gpa);
