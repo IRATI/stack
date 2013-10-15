@@ -85,6 +85,78 @@ struct ipcp_factory_data {
 
 static struct ipcp_factory_data normal_data;
 
+static struct normal_flow * find_flow_by_pid(struct ipcp_instance_data * data,
+                                             port_id_t                   id)
+{
+        struct normal_flow * flow;
+
+        list_for_each_entry(flow, &data->flows, list) {
+                if (flow->port_id == id) {
+                        return flow;
+                }
+        }
+
+        return NULL;
+}
+
+static struct normal_flow * find_flow_by_fid(struct ipcp_instance_data * data,
+                                             uint_t                      fid)
+{
+        struct normal_flow * flow;
+
+        list_for_each_entry(flow, &data->flows, list) {
+                if (flow->dst_fid == fid) {
+                        return flow;
+                }
+        }
+
+        return NULL;
+}
+
+
+#if 0
+static int normal_flow_allocate_request(struct ipcp_instance_data * data,
+                                        const struct name *         source,
+                                        const struct name *         dest,
+                                        const struct flow_spec *    fspec,
+                                        port_id_t                   id,
+                                        flow_id_t                   fid)
+{
+        LOG_MISSING;
+        return 0;
+}
+
+static int normal_flow_allocate_response(struct ipcp_instance_data * data,
+                                         flow_id_t                   flow_id,
+                                         port_id_t                   port_id,
+                                         int                         result)
+{
+        LOG_MISSING;
+        return 0;
+}
+
+static int normal_flow_deallocate(struct ipcp_instance_data * data,
+                                  port_id_t                   id)
+{
+        LOG_MISSING;
+        return 0;
+}
+
+static int normal_application_register(struct ipcp_instance_data * data,
+                                       const struct name *         source)
+{
+        LOG_MISSING;
+        return 0;
+}
+
+static int normal_application_unregister(struct ipcp_instance_data * data,
+                                         const struct name *         source)
+{
+        LOG_MISSING;
+        return 0;
+}
+#endif
+
 static int normal_init(struct ipcp_factory_data * data)
 {
         ASSERT(data);
@@ -102,6 +174,13 @@ static int normal_fini(struct ipcp_factory_data * data)
         return 0;
 }
 
+static int normal_sdu_write(struct ipcp_instance_data * data,
+                            port_id_t                   id,
+                            struct sdu *                sdu)
+{
+        LOG_MISSING;
+        return 0;
+}
 
 struct ipcp_factory * normal = NULL;
 
@@ -120,6 +199,15 @@ find_instance(struct ipcp_factory_data * data,
 
         return NULL;
 }
+
+static int normal_assign_to_dif(struct ipcp_instance_data * data,
+                                const struct dif_info *  dif_information)
+{
+        LOG_MISSING;
+        return 0;
+}
+
+
 
 /*  FIXME: register ops */
 static struct ipcp_instance_ops normal_instance_ops = {
@@ -140,7 +228,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         struct ipcp_instance * instance;
 
         ASSERT(data);
-
+:/
         if (find_instance(data, id)) {
                 LOG_ERR("There is already a normal ipcp instance with id %d",
                         id);
