@@ -27,10 +27,10 @@ int arm_init(void);
 int arm_fini(void);
 
 /* Marks a resolution, takes the ownership of all the passed data */
-int arm_resolved(uint16_t     ptype,
-                 struct gpa * spa,
-                 struct gha * sha,
-                 struct gpa * tpa,
-                 struct gha * tha);
+int arm_resolve(uint16_t     ptype,
+                struct gpa * spa,
+                struct gha * sha,
+                struct gpa * tpa,
+                struct gha * tha);
 
 #endif

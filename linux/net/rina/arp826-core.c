@@ -41,11 +41,96 @@
 #include "arp826-arm.h"
 #include "arp826-tables.h"
 
-static struct arp_header * arp826_header(const struct sk_buff * skb)
+static struct arp_header * header_get(const struct sk_buff * skb)
 { return (struct arp_header *) skb_network_header(skb); }
 
-static int arp826_process(struct sk_buff * skb,
-                          struct table *   cl)
+struct net_device * device_from_gha(const struct gha * ha) 
+{
+	LOG_MISSING;
+	return NULL;
+}
+
+struct sk_buff * create_arp_packet(int op, int ptype,
+				  struct net_device * dev,
+				  const struct gpa * spa,
+				  const struct gpa * tpa,
+				  const struct gha * tha)
+{
+#if 0
+	struct sk_buff * skb;
+	struct arp_hdr * arp;
+	unsigned char * arp_ptr;
+	int hlen = LL_RESERVED_SPACE(dev);
+	int tlen = dev->needed_tailroom;
+	const unsigned char *src_hw;
+
+/*
+ * Allocate a buffer
+ */
+	int length = sizeof(struct arp_hdr) + (dev->addr_len + plen) * 2;
+
+	skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
+	if (skb == NULL)
+		return NULL;
+
+	skb_reserve(skb, hlen);
+	skb_reset_network_header(skb);
+	arp = (struct arp_hdr *) skb_put(skb, length);
+	skb->dev = dev;
+	skb->protocol = htons(ETH_P_ARP);
+	src_hw = dev->dev_addr;
+	if (dest_hw == NULL)
+		dest_hw = dev->broadcast;
+
+/*
+ * Fill the device header for the ARP frame
+ */
+	if (dev_hard_header(skb, dev, ptype, dest_hw, src_hw, skb->len) < 0)
+		goto out;
+
+/*
+ * Fill out the arp protocol part.
+ */
+
+	switch (dev->type) {
+	default:
+		arp->ar_hrd = htons(dev->type);
+		arp->ar_pro = htons(ptype);
+		break;
+	}
+
+	arp->ar_hln = dev->addr_len;
+	arp->ar_pln = plen;
+	arp->ar_op = htons(op);
+
+	arp_ptr = (unsigned char *)(arp + 1);
+
+	memcpy(arp_ptr, src_hw, dev->addr_len);
+	arp_ptr += dev->addr_len;
+	memcpy(arp_ptr, src_nwaddr, plen);
+	arp_ptr += plen;
+
+	switch (dev->type) {
+	default:
+		if (dest_hw != NULL)
+			memcpy(arp_ptr, dest_hw, dev->addr_len);
+		else
+			memset(arp_ptr, 0, dev->addr_len);
+		arp_ptr += dev->addr_len;
+	}
+	memcpy(arp_ptr, dest_nwaddr, plen);
+
+	return skb;
+
+out:
+	kfree_skb(skb);
+#endif
+	LOG_MISSING;
+	return NULL;
+}
+
+static int process(const struct sk_buff * skb,
+                   struct table *         cl)
 {
         struct arp_header * header;
         uint16_t            operation;
@@ -62,13 +147,19 @@ static int arp826_process(struct sk_buff * skb,
         uint8_t *           tpa; /* Target protocol address pointer */
         uint8_t *           sha; /* Source protocol address pointer */
         uint8_t *           tha; /* Target protocol address pointer */
+
+	struct gpa *        tmp_spa;
+	struct gha *        tmp_sha;
+	struct gpa *        tmp_tpa;
+	struct gha *        tmp_tha;
+
         
         ASSERT(skb);
         ASSERT(cl);
 
         LOG_DBG("Processing ARP skb %pK", skb);
         
-        header = arp826_header(skb);
+        header = header_get(skb);
         if (!header) {
                 LOG_ERR("Cannot get the header");
                 return -1;
@@ -80,7 +171,7 @@ static int arp826_process(struct sk_buff * skb,
         plen  = header->plen;
         oper  = ntohs(header->oper);
 
-        LOG_DBG("ARP header:");
+        LOG_DBG("Decoded ARP header:");
         LOG_DBG("  Hardware type           = 0x%02x", htype);
         LOG_DBG("  Protocol type           = 0x%02x", ptype);
         LOG_DBG("  Hardware address length = %d",     hlen);
@@ -89,6 +180,10 @@ static int arp826_process(struct sk_buff * skb,
 
         if (header->htype != htons(HW_TYPE_ETHER)) {
                 LOG_ERR("Unhandled ARP hardware type 0x%02x", header->htype);
+                return -1;
+        }
+        if (hlen != 6) {
+                LOG_ERR("Unhandled ARP hardware address length (%d)", hlen);
                 return -1;
         }
 
@@ -107,40 +202,73 @@ static int arp826_process(struct sk_buff * skb,
         tha = ptr; ptr += header->hlen;
         tpa = ptr; ptr += header->plen;
 
-        /* Finally process the entry (if needed) */
+	tmp_spa = gpa_create(spa, plen);
+	tmp_sha = gha_create(MAC_ADDR_802_3, sha);
+	tmp_tpa = gpa_create(tpa, plen);
+	tmp_tha = gha_create(MAC_ADDR_802_3, tha);
 
+        /* Finally process the entry */
         switch (operation) {
         case ARP_REQUEST: {
+		struct table *       tbl;
+		const struct table_entry * entry;
+		const struct table_entry * req_addr;
+		const struct gha *   target_ha;
+		struct net_device *  dev;
+
+		/* FIXME: Should we add all ARP Requests? */
                 /* Do we have it in the cache ? */
-                
-                /* No */
-                return -1;
+		tbl = tbls_find(ptype);
+		entry = tbl_find_by_gpa(tbl, tmp_spa);
+		
+                if (!entry) {
+			if (tbl_add(tbl, tmp_spa, tmp_sha)) {
+				LOG_ERR("Bollocks. Can't add in table.");
+				return -1;
+			}
+		} else {
+			if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha))
+				LOG_ERR("Failed to update table");
+				return -1;
+		}
+          
+		req_addr = tbl_find_by_gpa(tbl, tmp_tpa);
+		target_ha = tble_ha(req_addr);
+		/* FIXME: Get lock here */
+		dev = device_from_gha(target_ha);
+		if (dev) {
+			struct sk_buff * skb;
+			/* This is our gpa and gha. Send reply */
+			skb = create_arp_packet(ARP_REPLY, ptype, 
+						dev, tmp_tpa, 
+						tmp_spa, tmp_sha);
+			if (skb == NULL) 
+				return -1;
+			dev_queue_xmit(skb);
+		}
+         }
+                break;
 
-                /* Yes */
+        case ARP_REPLY: {
+                if (arm_resolve(ptype, tmp_spa, tmp_sha, tmp_tpa, tmp_tha)) {
+                        LOG_ERR("Canot resolve with this reply ...");
+                        return -1;
+                }
         }
-                
                 break;
 
-        case ARP_REPLY:
-                /* Is there a pending request originated by us ? */
-
-                LOG_MISSING;
-
-                break;
         default:
                 BUG();
         }
 
-        /* Finally, update the ARP cache */
-                
         return 0;
 }
 
 /* NOTE: The following function uses a different mapping for return values */
-static int arp826_receive(struct sk_buff *     skb,
-                          struct net_device *  dev,
-                          struct packet_type * pkt,
-                          struct net_device *  orig_dev)
+static int receive(struct sk_buff *     skb,
+                   struct net_device *  dev,
+                   struct packet_type * pkt,
+                   struct net_device *  orig_dev)
 {
         const struct arp_header * header;
         int                       total_length;
@@ -183,7 +311,7 @@ static int arp826_receive(struct sk_buff *     skb,
                 return 0;
         }
 
-        header = arp826_header(skb);
+        header = header_get(skb);
         if (header->hlen != dev->addr_len) {
                 LOG_WARN("Cannot process this ARP");
                 kfree_skb(skb);
@@ -209,7 +337,7 @@ static int arp826_receive(struct sk_buff *     skb,
                 return 0;
         }
 
-        if (arp826_process(skb, cl)) {
+        if (process(skb, cl)) {
                 LOG_ERR("Cannot process this ARP");
                 return 0;
         }
@@ -221,7 +349,7 @@ static int arp826_receive(struct sk_buff *     skb,
 /* FIXME : This has to be managed dinamically ... */
 static struct packet_type arp_packet_type __read_mostly = {
         .type = cpu_to_be16(ETH_P_ARP),
-        .func = arp826_receive,
+        .func = receive,
 };
 
 static int __init mod_init(void)
