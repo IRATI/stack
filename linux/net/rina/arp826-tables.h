@@ -23,41 +23,40 @@
 
 #include "arp826-utils.h"
 
-struct cache_entry;
+struct table_entry;
 
 /* FIXME: There's no need to have this "method" public ... */
-struct cache_entry *       ce_create(const struct gpa * gpa,
-                                     const struct gha * gha);
+struct table_entry *       tble_create(const struct gpa * gpa,
+                                       const struct gha * gha);
 /* FIXME: There's no need to have this "method" public ... */
-void                       ce_destroy(struct cache_entry * entry);
+void                       tble_destroy(struct table_entry * entry);
 
-const struct gpa *         ce_pa(struct cache_entry * entry);
-const struct gha *         ce_ha(struct cache_entry * entry);
+const struct gpa *         tble_pa(struct table_entry * entry);
+const struct gha *         tble_ha(struct table_entry * entry);
 
-struct cache_line;
+struct table;
 
 /*
  * NOTE:
  *   Takes the ownership of the passed gpa. Hardware address length is
- *   implicitly obtained from the cache-line (cl_create) so there are no
- *   needs to pass the length here
+ *   implicitly obtained so there are no needs to pass the length here
  */
-int                        cl_entry_add(struct cache_line * instance,
-                                        struct gpa *        pa,
-                                        struct gha *        ha);
-void                       cl_entry_remove(struct cache_line *        instance,
-                                           const struct cache_entry * entry);
+int                        tbl_add(struct table * instance,
+                                   struct gpa *        pa,
+                                   struct gha *        ha);
+void                       tbl_remove(struct table *             instance,
+                                      const struct table_entry * entry);
 
-const struct cache_entry * cl_entry_find(struct cache_line * instance,
-                                         const struct gpa *  pa,
-                                         const struct gha *  ha);
-const struct cache_entry * cl_entry_find_by_gha(struct cache_line * instance,
-                                                const struct gha *  address);
-const struct cache_entry * cl_entry_find_by_gpa(struct cache_line * instance,
-                                                const struct gpa *  address);
+const struct table_entry * tbl_find(struct table *      instance,
+                                    const struct gpa *  pa,
+                                    const struct gha *  ha);
+const struct table_entry * tbl_find_by_gha(struct table *     instance,
+                                           const struct gha * address);
+const struct table_entry * tbl_find_by_gpa(struct table *     instance,
+                                           const struct gpa * address);
 
 int                        tbls_create(uint16_t ptype, size_t hwl);
 int                        tbls_destroy(uint16_t ptype);
-struct cache_line *        tbls_find(uint16_t ptype);
+struct table *             tbls_find(uint16_t ptype);
 
 #endif
