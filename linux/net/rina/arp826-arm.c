@@ -62,6 +62,7 @@ static int resolver(void * o)
         /* FIXME: Find the entry */
         /* FIXME: Update the tables */
         /* FIXME: Call the callback */
+        /* FIXME: Finally, update the ARP cache */
 
         /* Finally destroy the data */
         gpa_destroy(tmp->spa);
@@ -75,11 +76,11 @@ static int resolver(void * o)
 
 static struct workqueue_struct * arm_wq = NULL;
 
-int arm_resolved(uint16_t     ptype,
-                 struct gpa * spa,
-                 struct gha * sha,
-                 struct gpa * tpa,
-                 struct gha * tha)
+int arm_resolve(uint16_t     ptype,
+                struct gpa * spa,
+                struct gha * sha,
+                struct gpa * tpa,
+                struct gha * tha)
 {
         struct resolve_data * tmp;
 
@@ -97,9 +98,8 @@ int arm_resolved(uint16_t     ptype,
         tmp->tpa   = tpa;
         tmp->tha   = tha;
 
-        rwq_post(arm_wq, resolver, tmp);
-
-        return 0;
+        /* Takes the ownership ... and disposes everything */
+        return rwq_post(arm_wq, resolver, tmp);
 }
 
 int arm_init(void)
