@@ -364,7 +364,7 @@ struct table * tbls_find(uint16_t ptype)
         struct table * cl;
 
         spin_lock(&tables_lock);
-        cl = tmap_find(ptype);
+        cl = tmap_find(tables, ptype);
         spin_unlock(&tables_lock);
 
         return cl;
@@ -375,7 +375,7 @@ int tbls_create(uint16_t ptype, size_t hwlen)
         struct table * cl;
 
         spin_lock(&tables_lock);
-        if (tmap_find(ptype)) {
+        if (tmap_find(tables, ptype)) {
                 LOG_ERR("Table for ptype %d already created", ptype);
                 spin_unlock(&tables_lock);
                 return 0;
@@ -384,7 +384,7 @@ int tbls_create(uint16_t ptype, size_t hwlen)
         /* FIXME: Is the hwlen correct ? */
 
         cl = tbl_create(hwlen);
-        if (tmap_add(ptype, ptype, cl)) {
+        if (tmap_add(tables, ptype, cl)) {
                 tbl_destroy(cl);
                 spin_unlock(&tables_lock);
                 return -1;
@@ -402,7 +402,7 @@ int tbls_destroy(uint16_t ptype)
         struct table * cl;
 
         spin_lock(&tables_lock);
-        cl = tmap_find(ptype);
+        cl = tmap_find(tables, ptype);
         if (!cl) {
                 LOG_ERR("Table for ptype %d is missing, "
                         "cannot destroy", ptype);
@@ -411,8 +411,9 @@ int tbls_destroy(uint16_t ptype)
         }
 
         tmap_remove(tables, ptype);
-        tbl_destrpy(cl);
-        spin_unlock(&tables_lock);
+        spin_unlock(&tables_lock); /* No need to hold the lock anymore */
+
+        tbl_destroy(cl);
 
         LOG_DBG("Table for ptype %d destroyed successfully", ptype);
 
@@ -424,14 +425,15 @@ int tbls_init(void)
         tables = tmap_create();
         if (!tables)
                 return -1;
-        spinlock_init(&tables_lock);
+        spin_lock_init(&tables_lock);
 
         return 0;
 }
 
 void tbls_fini(void)
 {
-        /* FIXME: Destroy all the contents */
+        ASSERT(tmap_empty(tables));
+
         tmap_destroy(tables);
 }
 
