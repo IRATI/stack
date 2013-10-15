@@ -32,6 +32,17 @@
 #include "arp826-utils.h"
 #include "arp826-tables.h"
 
+struct resolution {
+        struct resolve_data * data;
+
+        arp826_notify_t       notify;
+        void *                opaque;
+
+        struct list_head      next;
+};
+
+struct list_head resolutions_ongoing;
+
 struct resolve_data {
         uint16_t     ptype;
         struct gpa * spa;
@@ -39,6 +50,21 @@ struct resolve_data {
         struct gpa * tpa;
         struct gha * tha;
 };
+
+static bool is_resolve_data_equal(struct resolve_data * a,
+                                  struct resolve_data * b)
+{
+        if (a == b)
+                return 1;
+
+        if (!(a->ptype == b->ptype)       ||
+            !gha_is_equal(a->sha, b->sha) ||
+            !gpa_is_equal(a->tpa, b->tpa) ||
+            !gha_is_equal(a->tha, b->tha))
+                return 0;
+
+        return 1;
+}
 
 bool is_resolve_data_complete(const struct resolve_data * data)
 {
@@ -78,17 +104,6 @@ static struct resolve_data * resolve_data_create(uint16_t     ptype,
 
         return tmp;
 }
-
-struct resolution {
-        struct resolve_data resolution;
-
-        arp826_notify_t     notify;
-        void *              opaque;
-
-        struct list_head    next;
-};
-
-struct resolution * ongoing = NULL;
 
 static int resolver(void * o)
 {
@@ -142,11 +157,23 @@ int arm_init(void)
         arm_wq = rwq_create("arp826-wq");
         if (!arm_wq)
                 return -1;
+
+        INIT_LIST_HEAD(&resolutions_ongoing);
+
         return 0;
 }
 
 int arm_fini(void)
-{ return rwq_destroy(arm_wq); }
+{
+        struct resolution * pos, * nxt;
+
+        list_for_each_entry_safe(pos, nxt, &resolutions_ongoing, next) {
+                resolve_data_destroy(pos->data);
+                rkfree(pos);
+        }
+
+        return rwq_destroy(arm_wq);
+}
 
 int arp826_resolve_gpa(uint16_t           ptype,
                        const struct gpa * spa,
@@ -155,34 +182,31 @@ int arp826_resolve_gpa(uint16_t           ptype,
                        arp826_notify_t    notify,
                        void *             opaque)
 {
-#if 0
-        struct arp826_arm_resolve * tmp;
+        struct resolution * resolution;
 
         if (!gpa_is_ok(spa) || !gha_is_ok(sha) || !gpa_is_ok(tpa) || notify) {
                 LOG_ERR("Cannot resolve, bad input parameters");
                 return -1;
         }
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
+        resolution = rkzalloc(sizeof(*resolution), GFP_KERNEL);
+        if (!resolution)
                 return -1;
-
-        tmp->ptype  = ptype;
-        tmp->spa    = gpa_dup(spa);
-        tmp->sha    = gha_dup(sha);
-        tmp->tpa    = gpa_dup(tpa);
-        tmp->tha    = NULL;
-
-        tmp->notify = notify;
-        tmp->opaque = opaque;
-
-        /* Do we really need to resolve it or ... do we have it already ??? */
-
-        LOG_MISSING;
-#else
-        LOG_MISSING;
-#endif
         
+        resolution->data = resolve_data_create(ptype,
+                                               gpa_dup(spa), gha_dup(sha),
+                                               gpa_dup(tpa), NULL); 
+        if (!resolution->data) {
+                rkfree(resolution);
+                return -1;
+        }
+
+        resolution->notify = notify;
+        resolution->opaque = opaque;
+        INIT_LIST_HEAD(&resolution->next);
+
+        list_add(&resolutions_ongoing, &resolution->next);
+
         return 0;
 }
 EXPORT_SYMBOL(arp826_resolve_gpa);
