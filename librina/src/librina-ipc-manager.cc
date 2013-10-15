@@ -534,7 +534,6 @@ IPCProcessFactory::~IPCProcessFactory() throw(){
 
 std::list<std::string> IPCProcessFactory::getSupportedIPCProcessTypes(){
 	std::list<std::string> result;
-	result.push_back(normal_ipc_process_type);
 
 	DIR *dp;
 	struct dirent *dirp;
@@ -573,9 +572,14 @@ IPCProcess * IPCProcessFactory::create(
 #if STUB_API
 	//Do nothing
 #else
-	//FIXME when the kernel supports normal IPC Process creation, first
-	//perform the syscall for normal IPC Processes and later
-	//create a new user-space process
+	int result = syscallCreateIPCProcess(
+	                ipcProcessName, ipcProcessId, difType);
+	if (result != 0)
+	{
+	        unlock();
+	        throw CreateIPCProcessException();
+	}
+
 	if (difType.compare(NORMAL_IPC_PROCESS) == 0){
 		pid = fork();
 		if (pid == 0){
@@ -609,21 +613,20 @@ IPCProcess * IPCProcessFactory::create(
 
 			LOG_ERR("Problems loading IPC Process program, finalizing OS Process");
 
+			//Destroy the IPC Process in the kernel
+			syscallDestroyIPCProcess(ipcProcessId);
+
 			exit(-1);
 		}else if (pid < 0){
 			//This is the IPC Manager, and fork failed
+		        //Try to destroy the IPC Process in the kernel and return error
+		        syscallDestroyIPCProcess(ipcProcessId);
+
 			unlock();
 			throw CreateIPCProcessException();
 		}else{
 			//This is the IPC Manager, and fork was successful
 			LOG_DBG("Craeted a new IPC Process with pid = %d", pid);
-		}
-	}else{
-		int result = syscallCreateIPCProcess(
-				ipcProcessName, ipcProcessId, difType);
-		if (result != 0){
-			unlock();
-			throw CreateIPCProcessException();
 		}
 	}
 #endif
@@ -640,39 +643,43 @@ void IPCProcessFactory::destroy(unsigned int ipcProcessId)
 throw (DestroyIPCProcessException) {
 	lock();
 
+	int resultUserSpace = 0;
+	int resultKernel = 0;
 	std::map<int, IPCProcess*>::iterator iterator;
 	iterator = ipcProcesses.find(ipcProcessId);
-	if (iterator == ipcProcesses.end()) {
+	if (iterator == ipcProcesses.end())
+	{
 		unlock();
-		throw DestroyIPCProcessException(IPCProcessFactory::unknown_ipc_process_error);
+		throw DestroyIPCProcessException(
+		                IPCProcessFactory::unknown_ipc_process_error);
 	}
 
 #if STUB_API
 	//Do nothing
 #else
-	//FIXME: Have to call the syscall for normal IPC Processes as well
-	//Will do when the kernel supports creation/destruction of normal
-	//IPC Processes
 	IPCProcess * ipcProcess = iterator->second;
-	if (ipcProcess->getType().compare(NORMAL_IPC_PROCESS) == 0){
-		int result = kill(ipcProcess->getPid(), SIGKILL);
-		if (result)
-			LOG_ERR("Error killing OS process with PID %d: %d",
-					ipcProcess->getPid(), result);
-		LOG_DBG("OS process with PID %d destroyed", ipcProcess->getPid());
-	}else{
-		int result = syscallDestroyIPCProcess(ipcProcessId);
-		if (result != 0){
-			unlock();
-			throw DestroyIPCProcessException();
-		}
-	}
+
+	resultKernel = syscallDestroyIPCProcess(ipcProcessId);
+
+	if (ipcProcess->getType().compare(NORMAL_IPC_PROCESS) == 0)
+		resultUserSpace = kill(ipcProcess->getPid(), SIGKILL);
 #endif
 
 	delete iterator->second;
 	ipcProcesses.erase(ipcProcessId);
 
 	unlock();
+
+	if (resultKernel || resultUserSpace)
+	{
+	        std::string error = "Problems destroying IPCP.";
+	        error = error + "Result in the kernel: " +
+	                        intToCharArray(resultKernel);
+	        error = error + "Result in user space:  " +
+	                        intToCharArray(resultUserSpace);
+	        LOG_ERR("%s", error.c_str());
+	        throw DestroyIPCProcessException(error);
+	}
 }
 
 std::vector<IPCProcess *> IPCProcessFactory::listIPCProcesses() {

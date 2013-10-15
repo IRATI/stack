@@ -26,7 +26,7 @@
 
 namespace rina {
 
-static std::string NORMAL_IPC_PROCESS= "normal";
+static std::string NORMAL_IPC_PROCESS= "normal-ipc";
 
 /**
  * Thrown when there are problems assigning an IPC Process to a DIF
