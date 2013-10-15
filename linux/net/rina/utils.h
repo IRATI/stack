@@ -53,8 +53,8 @@ struct workqueue_struct * rwq_create(const char * name);
 int                       rwq_destroy(struct workqueue_struct * rwq);
 
 /*
- * NOTE: The worker is the owner of the data passed. It must return 0 if its
- *       work completed successfully.
+ * NOTE: The worker is the owner of the data passed (and must dispose it). It
+ *       must return 0 if its work completed successfully.
  */
 int                       rwq_post(struct workqueue_struct * rwq,
                                    int                       (* job)(void * o),

@@ -283,7 +283,7 @@ static void rwq_worker(struct work_struct * work)
         ASSERT(item->worker); /* Ensured by post */
 
         /* We're the owner of the data, let's free it */
-        if (!item->worker(item->data)) {
+        if (item->worker(item->data)) {
                 LOG_ERR("The worker could not process its data!");
                 /* FIXME: We should do something here ... */
         }
