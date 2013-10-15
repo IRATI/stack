@@ -41,11 +41,11 @@
 #include "arp826-arm.h"
 #include "arp826-tables.h"
 
-static struct arp_header * arp826_header(const struct sk_buff * skb)
+static struct arp_header * header_get(const struct sk_buff * skb)
 { return (struct arp_header *) skb_network_header(skb); }
 
-static int arp826_process(struct sk_buff * skb,
-                          struct table *   cl)
+static int process(const struct sk_buff * skb,
+                   struct table *         cl)
 {
         struct arp_header * header;
         uint16_t            operation;
@@ -68,7 +68,7 @@ static int arp826_process(struct sk_buff * skb,
 
         LOG_DBG("Processing ARP skb %pK", skb);
         
-        header = arp826_header(skb);
+        header = header_get(skb);
         if (!header) {
                 LOG_ERR("Cannot get the header");
                 return -1;
@@ -80,7 +80,7 @@ static int arp826_process(struct sk_buff * skb,
         plen  = header->plen;
         oper  = ntohs(header->oper);
 
-        LOG_DBG("ARP header:");
+        LOG_DBG("Decoded ARP header:");
         LOG_DBG("  Hardware type           = 0x%02x", htype);
         LOG_DBG("  Protocol type           = 0x%02x", ptype);
         LOG_DBG("  Hardware address length = %d",     hlen);
@@ -89,6 +89,10 @@ static int arp826_process(struct sk_buff * skb,
 
         if (header->htype != htons(HW_TYPE_ETHER)) {
                 LOG_ERR("Unhandled ARP hardware type 0x%02x", header->htype);
+                return -1;
+        }
+        if (hlen != 6) {
+                LOG_ERR("Unhandled ARP hardware address length (%d)", hlen);
                 return -1;
         }
 
@@ -107,8 +111,7 @@ static int arp826_process(struct sk_buff * skb,
         tha = ptr; ptr += header->hlen;
         tpa = ptr; ptr += header->plen;
 
-        /* Finally process the entry (if needed) */
-
+        /* Finally process the entry */
         switch (operation) {
         case ARP_REQUEST: {
                 /* Do we have it in the cache ? */
@@ -118,29 +121,33 @@ static int arp826_process(struct sk_buff * skb,
 
                 /* Yes */
         }
-                
                 break;
 
-        case ARP_REPLY:
-                /* Is there a pending request originated by us ? */
+        case ARP_REPLY: {
+                struct gpa * tmp_spa = gpa_create(spa, plen);
+                struct gha * tmp_sha = gha_create(MAC_ADDR_802_3, sha);
+                struct gpa * tmp_tpa = gpa_create(tpa, plen);
+                struct gha * tmp_tha = gha_create(MAC_ADDR_802_3, tha);
 
-                LOG_MISSING;
-
+                if (arm_resolve(ptype, tmp_spa, tmp_sha, tmp_tpa, tmp_tha)) {
+                        LOG_ERR("Canot resolve with this reply ...");
+                        return -1;
+                }
+        }
                 break;
+
         default:
                 BUG();
         }
 
-        /* Finally, update the ARP cache */
-                
         return 0;
 }
 
 /* NOTE: The following function uses a different mapping for return values */
-static int arp826_receive(struct sk_buff *     skb,
-                          struct net_device *  dev,
-                          struct packet_type * pkt,
-                          struct net_device *  orig_dev)
+static int receive(struct sk_buff *     skb,
+                   struct net_device *  dev,
+                   struct packet_type * pkt,
+                   struct net_device *  orig_dev)
 {
         const struct arp_header * header;
         int                       total_length;
@@ -183,7 +190,7 @@ static int arp826_receive(struct sk_buff *     skb,
                 return 0;
         }
 
-        header = arp826_header(skb);
+        header = header_get(skb);
         if (header->hlen != dev->addr_len) {
                 LOG_WARN("Cannot process this ARP");
                 kfree_skb(skb);
@@ -209,7 +216,7 @@ static int arp826_receive(struct sk_buff *     skb,
                 return 0;
         }
 
-        if (arp826_process(skb, cl)) {
+        if (process(skb, cl)) {
                 LOG_ERR("Cannot process this ARP");
                 return 0;
         }
@@ -221,7 +228,7 @@ static int arp826_receive(struct sk_buff *     skb,
 /* FIXME : This has to be managed dinamically ... */
 static struct packet_type arp_packet_type __read_mostly = {
         .type = cpu_to_be16(ETH_P_ARP),
-        .func = arp826_receive,
+        .func = receive,
 };
 
 static int __init mod_init(void)
