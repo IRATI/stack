@@ -383,7 +383,6 @@ static struct notifier_block kipcm_netlink_notifier = {
         .notifier_call = kipcm_netlink_notify,
 };
 
-
 int rnl_init(void)
 {
         int ret;
