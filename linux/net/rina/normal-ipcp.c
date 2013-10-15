@@ -84,6 +84,7 @@ struct ipcp_factory_data {
 
 static struct ipcp_factory_data normal_data;
 
+#if 0
 static struct normal_flow * find_flow_by_pid(struct ipcp_instance_data * data,
                                              port_id_t                   id)
 {
@@ -111,6 +112,7 @@ static struct normal_flow * find_flow_by_fid(struct ipcp_instance_data * data,
 
         return NULL;
 }
+#endif
 
 static int normal_init(struct ipcp_factory_data * data)
 {
@@ -129,6 +131,7 @@ static int normal_fini(struct ipcp_factory_data * data)
         return 0;
 }
 
+#if 0
 static int normal_sdu_write(struct ipcp_instance_data * data,
                             port_id_t                   id,
                             struct sdu *                sdu)
@@ -136,6 +139,7 @@ static int normal_sdu_write(struct ipcp_instance_data * data,
         LOG_MISSING;
         return 0;
 }
+#endif
 
 struct ipcp_factory * normal = NULL;
 
