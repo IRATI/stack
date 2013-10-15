@@ -50,9 +50,7 @@ struct net_device * device_from_gha(const struct gha * ha)
 	return NULL;
 }
 
-
-
-struct sk_buff *create_arp_packet(int op, int ptype,
+struct sk_buff * create_arp_packet(int op, int ptype,
 				  struct net_device * dev,
 				  const struct gpa * spa,
 				  const struct gpa * tpa,
