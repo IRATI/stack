@@ -48,21 +48,3 @@ int arp826_resolve_gpa(uint16_t           ptype,
         return 0;
 }
 EXPORT_SYMBOL(arp826_resolve_gpa);
-
-int arp826_resolve_gha(uint16_t           ptype,
-                       const struct gpa * spa,
-                       const struct gha * sha,
-                       const struct gha * tha,
-                       arp826_notify_t    notify,
-                       void *             opaque)
-{
-        if (!gpa_is_ok(spa) || !gha_is_ok(sha) || !gha_is_ok(tha) || notify) {
-                LOG_ERR("Cannot resolve, bad input parameters");
-                return -1;
-        }
-
-        LOG_MISSING;
-
-        return 0;
-}
-EXPORT_SYMBOL(arp826_resolve_gha);

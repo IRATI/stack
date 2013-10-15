@@ -19,6 +19,8 @@
  */
 
 #include <linux/types.h>
+#include <linux/hashtable.h>
+#include <linux/list.h>
 #include <linux/kernel.h>
 #include <linux/skbuff.h>
 #include <linux/netdevice.h>
@@ -425,4 +427,144 @@ struct sk_buff * arp826_create(__be16                oper,
         memcpy(arp_ptr, dest_nwaddr, plen);
 
         return skb;
+}
+
+#define TMAP_HASH_BITS 7
+
+struct tmap {
+        DECLARE_HASHTABLE(table, TMAP_HASH_BITS);
+};
+
+struct tmap_entry {
+        uint16_t          key;
+        struct table *    value;
+        struct hlist_node hlist;
+};
+
+struct tmap * tmap_create(void)
+{
+        struct tmap * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        hash_init(tmp->table);
+
+        return tmp;
+}
+
+int tmap_destroy(struct tmap * map)
+{
+        struct tmap_entry * entry;
+        struct hlist_node * tmp;
+        int                 bucket;
+
+        ASSERT(map);
+
+        hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
+                hash_del(&entry->hlist);
+                rkfree(entry);
+        }
+
+        rkfree(map);
+
+        return 0;
+}
+
+int tmap_empty(struct tmap * map)
+{
+        ASSERT(map);
+        return hash_empty(map->table);
+}
+
+#define tmap_hash(T, K) hash_min(K, HASH_BITS(T))
+
+static struct tmap_entry * tmap_entry_find(struct tmap * map,
+                                           uint16_t      key)
+{
+        struct tmap_entry * entry;
+        struct hlist_head * head;
+
+        ASSERT(map);
+
+        head = &map->table[tmap_hash(map->table, key)];
+        hlist_for_each_entry(entry, head, hlist) {
+                if (entry->key == key)
+                        return entry;
+        }
+
+        return NULL;
+}
+
+struct table * tmap_find(struct tmap * map,
+                         uint16_t      key)
+{
+        struct tmap_entry * entry;
+
+        ASSERT(map);
+
+        entry = tmap_entry_find(map, key);
+        if (!entry)
+                return NULL;
+
+        return entry->value;
+}
+
+int tmap_update(struct tmap *   map,
+                uint16_t        key,
+                struct table *  value)
+{
+        struct tmap_entry * cur;
+
+        ASSERT(map);
+
+        cur = tmap_entry_find(map, key);
+        if (!cur)
+                return -1;
+
+        cur->value = value;
+
+        return 0;
+}
+
+int tmap_add(struct tmap *  map,
+             uint16_t       key,
+             struct table * value)
+{
+        struct tmap_entry * tmp;
+
+        ASSERT(map);
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return -1;
+
+        tmp->key   = key;
+        tmp->value = value;
+        INIT_HLIST_NODE(&tmp->hlist);
+
+        hash_add(map->table, &tmp->hlist, key);
+
+        LOG_DBG("Added flow %pK to the tmap %pk with key %d",
+                tmp->value, map, tmp->key);
+
+        return 0;
+}
+
+int tmap_remove(struct tmap * map,
+                uint16_t      key)
+{
+        struct tmap_entry * cur;
+
+        ASSERT(map);
+
+        cur = tmap_entry_find(map, key);
+        if (!cur)
+                return -1;
+
+        hash_del(&cur->hlist);
+        rkfree(cur);
+
+        return 0;
 }

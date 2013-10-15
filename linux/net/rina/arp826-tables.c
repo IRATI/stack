@@ -138,7 +138,7 @@ static bool tble_is_equal(struct table_entry * entry1,
 }
 #endif
 
-const struct gpa * tble_pa(struct table_entry * entry)
+const struct gpa * tble_pa(const struct table_entry * entry)
 {
         if (!entry) {
                 LOG_ERR("Bogus input parameter, cannot get PA");
@@ -147,7 +147,7 @@ const struct gpa * tble_pa(struct table_entry * entry)
         return entry->pa;
 }
 
-const struct gha * tble_ha(struct table_entry * entry)
+const struct gha * tble_ha(const struct table_entry * entry)
 {
         if (!entry) {
                 LOG_ERR("Bogus input parameter, cannot get HA");
@@ -234,8 +234,8 @@ const struct table_entry * tbl_find_by_gha(struct table *     instance,
 {
         struct table_entry * pos;
 
-        if (!instance || !address) {
-                LOG_ERR("Bogus input parameters, cannot find-by HA");
+        if (!instance || !gha_is_ok(address)) {
+                LOG_ERR("Bogus input parameters, cannot find by GHA");
                 return NULL;
         }
 
@@ -259,7 +259,7 @@ const struct table_entry * tbl_find_by_gpa(struct table *     instance,
         struct table_entry * pos;
 
         if (!instance || !gpa_is_ok(address)) {
-                LOG_ERR("Bogus input parameters, cannot find-by by GPA");
+                LOG_ERR("Bogus input parameters, cannot find by GPA");
                 return NULL;
         }
 
@@ -356,26 +356,15 @@ void tbl_remove(struct table *             instance,
         rkfree(instance);
 }
 
-
-static spinlock_t     tables_lock;
-static struct table * tables[HW_TYPE_MAX - 1] = { NULL };
-
-static bool is_line_id_ok(int line)
-{ return (line < HW_TYPE_ETHER - 1 || line >= HW_TYPE_MAX - 1) ? 0 : 1; }
+static spinlock_t tables_lock;
+struct tmap *     tables;
 
 struct table * tbls_find(uint16_t ptype)
 {
-        int            idx;
         struct table * cl;
 
-        idx = ptype - 1;
-        if (!is_line_id_ok(idx)) {
-                LOG_ERR("Wrong ptype %d, cannot find table", ptype);
-                return NULL;
-        }
-
         spin_lock(&tables_lock);
-        cl = tables[idx];
+        cl = tmap_find(tables, ptype);
         spin_unlock(&tables_lock);
 
         return cl;
@@ -383,16 +372,10 @@ struct table * tbls_find(uint16_t ptype)
 
 int tbls_create(uint16_t ptype, size_t hwlen)
 {
-        int                 idx;
-
-        idx = ptype - 1;
-        if (!is_line_id_ok(idx)) {
-                LOG_ERR("Wrong ptype %d, cannot create table", ptype);
-                return -1;
-        }
+        struct table * cl;
 
         spin_lock(&tables_lock);
-        if (tables[idx]) {
+        if (tmap_find(tables, ptype)) {
                 LOG_ERR("Table for ptype %d already created", ptype);
                 spin_unlock(&tables_lock);
                 return 0;
@@ -400,8 +383,9 @@ int tbls_create(uint16_t ptype, size_t hwlen)
 
         /* FIXME: Is the hwlen correct ? */
 
-        tables[idx] = tbl_create(hwlen);
-        if (!tables[idx]) {
+        cl = tbl_create(hwlen);
+        if (tmap_add(tables, ptype, cl)) {
+                tbl_destroy(cl);
                 spin_unlock(&tables_lock);
                 return -1;
         }
@@ -415,24 +399,42 @@ int tbls_create(uint16_t ptype, size_t hwlen)
 
 int tbls_destroy(uint16_t ptype)
 {
-        int idx;
+        struct table * cl;
 
-        idx = ptype - 1;
-        if (!is_line_id_ok(idx)) {
-                LOG_ERR("Wrong ptype %d, cannot destroy table", ptype);
+        spin_lock(&tables_lock);
+        cl = tmap_find(tables, ptype);
+        if (!cl) {
+                LOG_ERR("Table for ptype %d is missing, "
+                        "cannot destroy", ptype);
+                spin_unlock(&tables_lock);
                 return -1;
         }
 
-        spin_lock(&tables_lock);
-        if (tables[idx]) {
-                tbl_destroy(tables[idx]);
-                tables[idx] = NULL;
-        }
-        spin_unlock(&tables_lock);
+        tmap_remove(tables, ptype);
+        spin_unlock(&tables_lock); /* No need to hold the lock anymore */
+
+        tbl_destroy(cl);
 
         LOG_DBG("Table for ptype %d destroyed successfully", ptype);
 
         return 0;
+}
+
+int tbls_init(void)
+{
+        tables = tmap_create();
+        if (!tables)
+                return -1;
+        spin_lock_init(&tables_lock);
+
+        return 0;
+}
+
+void tbls_fini(void)
+{
+        ASSERT(tmap_empty(tables));
+
+        tmap_destroy(tables);
 }
 
 int arp826_add(uint16_t           ptype,
@@ -472,8 +474,34 @@ int arp826_remove(uint16_t           ptype,
                 return -1;
 
         ce = tbl_find(cl, pa, ha);
+        if (!ce)
+                return -1;
+
         tbl_remove(cl, ce);
 
         return 0;
 }
 EXPORT_SYMBOL(arp826_remove);
+
+const struct gpa * arp826_find_gpa(uint16_t           ptype,
+                                   const struct gha * ha)
+{
+        struct table *             cl;
+        const struct table_entry * ce;
+
+        if (!gha_is_ok(ha)) {
+                LOG_ERR("Cannot resolve, bad input parameters");
+                return NULL;
+        }
+
+        cl = tbls_find(ptype);
+        if (!cl)
+                return NULL;
+
+        ce = tbl_find_by_gha(cl, ha);
+        if (!ce)
+                return NULL;
+
+        return tble_pa(ce);
+}
+EXPORT_SYMBOL(arp826_find_gpa);

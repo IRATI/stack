@@ -72,7 +72,7 @@ struct shim_eth_flow {
         enum port_id_state port_id_state;
 
         /* Used when flow is not allocated yet */
-        struct kfifo sdu_queue;
+        struct kfifo       sdu_queue;
 };
 
 /*
@@ -94,7 +94,7 @@ struct ipcp_instance_data {
         struct name *          app_name;
 
         /* Stores the state of flows indexed by port_id */
-	spinlock_t             lock;
+        spinlock_t             lock;
         struct list_head       flows;
 
         /* FIXME: Remove it as soon as the kipcm_kfa gets removed */
@@ -106,9 +106,9 @@ struct ipcp_instance_data {
 
 /* Needed for eth_vlan_rcv function */
 struct interface_data_mapping {
-        struct list_head list;
+        struct list_head            list;
 
-        struct net_device * dev;
+        struct net_device *         dev;
         struct ipcp_instance_data * data;
 };
 
@@ -119,15 +119,15 @@ static struct interface_data_mapping *
 inst_data_mapping_get(struct net_device * dev)
 {
         struct interface_data_mapping * mapping;
-	spin_lock(&data_instances_lock);
+        spin_lock(&data_instances_lock);
 
         list_for_each_entry(mapping, &data_instances_list, list) {
                 if (mapping->dev == dev) {
-			spin_unlock(&data_instances_lock);
+                        spin_unlock(&data_instances_lock);
                         return mapping;
                 }
         }
-	spin_unlock(&data_instances_lock);
+        spin_unlock(&data_instances_lock);
         return NULL;
 }
 
@@ -135,15 +135,15 @@ static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
                                         port_id_t                   id)
 {
         struct shim_eth_flow * flow;
-	spin_lock(&data->lock);
+        spin_lock(&data->lock);
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
-			spin_unlock(&data->lock);
+                        spin_unlock(&data->lock);
                         return flow;
                 }
         }
-	spin_unlock(&data->lock);
+        spin_unlock(&data->lock);
         return NULL;
 }
 
@@ -152,14 +152,14 @@ find_flow_by_flow_id(struct ipcp_instance_data * data,
                      flow_id_t                   id)
 {
         struct shim_eth_flow * flow;
-	spin_lock(&data->lock);
+        spin_lock(&data->lock);
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->flow_id == id) {
-			spin_unlock(&data->lock);
-			return flow;
+                        spin_unlock(&data->lock);
+                        return flow;
                 }
         }
-	spin_unlock(&data->lock);
+        spin_unlock(&data->lock);
         return NULL;
 }
 
@@ -181,14 +181,14 @@ find_flow_by_gha(struct ipcp_instance_data * data,
                  const struct gha *          addr)
 {
         struct shim_eth_flow * flow;
-	spin_lock(&data->lock);
+        spin_lock(&data->lock);
         list_for_each_entry(flow, &data->flows, list) {
                 if (gha_is_equal(addr, flow->dest_ha)) {
-			spin_unlock(&data->lock);
-			return flow;
+                        spin_unlock(&data->lock);
+                        return flow;
                 }
         }
-	spin_unlock(&data->lock);
+        spin_unlock(&data->lock);
         return NULL;
 }
 
@@ -197,14 +197,14 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
                  const struct gpa *          addr)
 {
         struct shim_eth_flow * flow;
-	spin_lock(&data->lock);
+        spin_lock(&data->lock);
         list_for_each_entry(flow, &data->flows, list) {
                 if (gpa_is_equal(addr, flow->dest_pa)) {
                         spin_unlock(&data->lock);
-			return flow;
+                        return flow;
                 }
         }
-	spin_unlock(&data->lock);
+        spin_unlock(&data->lock);
         return NULL;
 }
 
@@ -232,7 +232,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
 {
         struct shim_eth_flow * flow;
         flow_id_t fid;
-	spin_lock(&data->lock);
+        spin_lock(&data->lock);
 
         flow = *f;
 
@@ -247,7 +247,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
         kfa_flow_destroy(data->kfa, fid);
 
         rkfree(flow);
-	spin_unlock(&data->lock);
+        spin_unlock(&data->lock);
         return 0;
 }
 
@@ -309,26 +309,26 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 flow->port_id_state = PORT_STATE_PENDING;
 
                 flow->dest_pa = name_to_gpa(dest);
-		
-		spin_lock(&data->lock);
+
+                spin_lock(&data->lock);
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
-		spin_unlock(&data->lock);
-		
-		if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
-			LOG_ERR("Couldn't create the sdu queue"
-				"for a new flow");
-			flow_destroy(data, &flow);
-			return -1;
-		}
+                spin_unlock(&data->lock);
+
+                if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
+                        LOG_ERR("Couldn't create the sdu queue"
+                                "for a new flow");
+                        flow_destroy(data, &flow);
+                        return -1;
+                }
 
                 if (!rinarp_resolve_gpa(data->handle,
-					flow->dest_pa,
-					rinarp_resolve_handler,
-					data)) {
+                                        flow->dest_pa,
+                                        rinarp_resolve_handler,
+                                        data)) {
                         LOG_ERR("Failed to lookup ARP entry");
-			return -1;
-		}
+                        return -1;
+                }
         } else if (flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 kipcm_flow_add(default_kipcm, data->id,
@@ -347,7 +347,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                            int                         result)
 {
         struct shim_eth_flow * flow;
-	struct sdu * du;
+        struct sdu * du;
 
         ASSERT(data);
         ASSERT(is_flow_id_ok(flow_id));
@@ -378,10 +378,10 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                         flow_destroy(data, &flow);
                         return -1;
                 }
-		du = NULL;
-		while(kfifo_get(&flow->sdu_queue, du)) {
-			kfa_sdu_post(data->kfa, flow->port_id, du);
-		}
+                du = NULL;
+                while(kfifo_get(&flow->sdu_queue, du)) {
+                        kfa_sdu_post(data->kfa, flow->port_id, du);
+                }
         } else {
                 flow->port_id_state = PORT_STATE_NULL;
                 kfifo_free(&flow->sdu_queue);
@@ -429,8 +429,8 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
         }
 
         /* Add in ARP cache */
-	data->handle = rinarp_add(data->dev, name_to_gpa(name));
- 
+        data->handle = rinarp_add(data->dev, name_to_gpa(name));
+
         return 0;
 }
 
@@ -450,7 +450,7 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
         }
 
         /* Remove from ARP cache */
-	rinarp_remove(data->handle);
+        rinarp_remove(data->handle);
 
         name_destroy(data->app_name);
         data->app_name = NULL;
@@ -526,12 +526,12 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         unsigned char * saddr;
         struct ipcp_instance_data * data;
         struct interface_data_mapping * mapping;
-	struct shim_eth_flow * flow;
-	struct gha * ghaddr;
-	const struct gpa * gpaddr;
-	struct sdu * du;
-	unsigned char * nh;
-	struct name * sname;
+        struct shim_eth_flow * flow;
+        struct gha * ghaddr;
+        const struct gpa * gpaddr;
+        struct sdu * du;
+        unsigned char * nh;
+        struct name * sname;
 
         /* C-c-c-checks */
         mapping = inst_data_mapping_get(dev);
@@ -546,12 +546,12 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 return -1;
         }
 
-	if (!data->app_name) {
-		LOG_ERR("No app registered yet! "
-			"Someone is doing something bad on the network");
-		kfree_skb(skb);
-		return -1;
-	}
+        if (!data->app_name) {
+                LOG_ERR("No app registered yet! "
+                        "Someone is doing something bad on the network");
+                kfree_skb(skb);
+                return -1;
+        }
 
         if (skb->pkt_type == PACKET_OTHERHOST ||
             skb->pkt_type == PACKET_LOOPBACK) {
@@ -569,63 +569,63 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         saddr = mh->h_source;
 
         /* Get correct flow based on hwaddr */
-	ghaddr = gha_create(MAC_ADDR_802_3, saddr);
-	flow = find_flow_by_gha(data, ghaddr);
+        ghaddr = gha_create(MAC_ADDR_802_3, saddr);
+        flow = find_flow_by_gha(data, ghaddr);
 
         /* Get the SDU out of the sk_buff */
-	nh = skb_network_header(skb);
-        du = sdu_create_from(nh, strlen(nh)); 
+        nh = skb_network_header(skb);
+        du = sdu_create_from(nh, strlen(nh));
 
         /* If the flow cannot be found --> New Flow! */
-	if (!flow) {
-		flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+        if (!flow) {
+                flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
                 if (!flow)
                         return -1;
-		spin_lock(&data->lock);
+                spin_lock(&data->lock);
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
-		spin_unlock(&data->lock);
+                spin_unlock(&data->lock);
 
-		flow->port_id_state = PORT_STATE_PENDING;
-		flow->dest_ha = ghaddr;
-		flow->flow_id = kfa_flow_create(data->kfa);
-		
-		sname = NULL;
-		gpaddr = rinarp_resolve_gha(data->handle, flow->dest_ha);
-		if (gpaddr) {
-			flow->dest_pa = gpa_dup(gpaddr);
-			sname = string_toname(gpa_address_value(gpaddr));
-		}
+                flow->port_id_state = PORT_STATE_PENDING;
+                flow->dest_ha = ghaddr;
+                flow->flow_id = kfa_flow_create(data->kfa);
 
-		if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
-			LOG_ERR("Couldn't create the sdu queue"
-				"for a new flow");
-			flow_destroy(data, &flow);
-			return -1;
-		}
-		/* Store SDU in queue */
-		kfifo_put(&flow->sdu_queue, du);
+                sname  = NULL;
+                gpaddr = rinarp_find_gpa(data->handle, flow->dest_ha);
+                if (gpaddr) {
+                        flow->dest_pa = gpa_dup(gpaddr);
+                        sname = string_toname(gpa_address_value(gpaddr));
+                }
 
-		if (kipcm_flow_arrived(default_kipcm,
-				       data->id,
-				       flow->flow_id,
-				       data->dif_name,
-				       sname,
-				       data->app_name,
-				       NULL)) {
-			LOG_ERR("Couldn't tell the KIPCM about the flow");
-			kfifo_free(&flow->sdu_queue);
-			flow_destroy(data, &flow);
-			return -1;
-		}
-	} else {
-		gha_destroy(ghaddr);
-		if (flow->port_id_state == PORT_STATE_ALLOCATED) {
-			kfa_sdu_post(data->kfa, flow->port_id, du);
-		} else if (flow->port_id_state == PORT_STATE_PENDING) {
-			kfifo_put(&flow->sdu_queue, du);
-		}
-	}
+                if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
+                        LOG_ERR("Couldn't create the sdu queue"
+                                "for a new flow");
+                        flow_destroy(data, &flow);
+                        return -1;
+                }
+                /* Store SDU in queue */
+                kfifo_put(&flow->sdu_queue, du);
+
+                if (kipcm_flow_arrived(default_kipcm,
+                                       data->id,
+                                       flow->flow_id,
+                                       data->dif_name,
+                                       sname,
+                                       data->app_name,
+                                       NULL)) {
+                        LOG_ERR("Couldn't tell the KIPCM about the flow");
+                        kfifo_free(&flow->sdu_queue);
+                        flow_destroy(data, &flow);
+                        return -1;
+                }
+        } else {
+                gha_destroy(ghaddr);
+                if (flow->port_id_state == PORT_STATE_ALLOCATED) {
+                        kfa_sdu_post(data->kfa, flow->port_id, du);
+                } else if (flow->port_id_state == PORT_STATE_PENDING) {
+                        kfifo_put(&flow->sdu_queue, du);
+                }
+        }
 
         kfree_skb(skb);
         return 0;
@@ -720,9 +720,9 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         mapping->data = data;
         INIT_LIST_HEAD(&mapping->list);
 
-	spin_lock(&data_instances_lock);
+        spin_lock(&data_instances_lock);
         list_add(&mapping->list, &data_instances_list);
-	spin_unlock(&data_instances_lock);
+        spin_unlock(&data_instances_lock);
 
         data->eth_vlan_packet_type->dev = data->dev;
         dev_add_pack(data->eth_vlan_packet_type);
@@ -800,10 +800,10 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         mapping->dev = data->dev;
         mapping->data = data;
         INIT_LIST_HEAD(&mapping->list);
-	
-	spin_lock(&data_instances_lock);
+
+        spin_lock(&data_instances_lock);
         list_add(&mapping->list, &data_instances_list);
-	spin_unlock(&data_instances_lock);
+        spin_unlock(&data_instances_lock);
 
         data->eth_vlan_packet_type->dev = data->dev;
         dev_add_pack(data->eth_vlan_packet_type);
@@ -929,9 +929,9 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
         /* FIXME: Remove as soon as the kipcm_kfa gets removed*/
         inst->data->kfa = kipcm_kfa(default_kipcm);
         LOG_DBG("KFA instance %pK bound to the shim eth", inst->data->kfa);
-	
-	spin_lock_init(&inst->data->lock);
-	
+
+        spin_lock_init(&inst->data->lock);
+
         /*
          * Bind the shim-instance to the shims set, to keep all our data
          * structures linked (somewhat) together
@@ -1018,7 +1018,7 @@ static int __init mod_init(void)
                 return -1;
         }
 
-	spin_lock_init(&data_instances_lock);
+        spin_lock_init(&data_instances_lock);
 
         return 0;
 }
