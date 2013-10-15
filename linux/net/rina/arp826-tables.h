@@ -25,12 +25,6 @@
 
 struct table_entry;
 
-/* FIXME: There's no need to have this "method" public ... */
-struct table_entry *       tble_create(const struct gpa * gpa,
-                                       const struct gha * gha);
-/* FIXME: There's no need to have this "method" public ... */
-void                       tble_destroy(struct table_entry * entry);
-
 const struct gpa *         tble_pa(struct table_entry * entry);
 const struct gha *         tble_ha(struct table_entry * entry);
 
@@ -42,14 +36,14 @@ struct table;
  *   implicitly obtained so there are no needs to pass the length here
  */
 int                        tbl_add(struct table * instance,
-                                   struct gpa *        pa,
-                                   struct gha *        ha);
+                                   struct gpa *   pa,
+                                   struct gha *   ha);
 void                       tbl_remove(struct table *             instance,
                                       const struct table_entry * entry);
 
-const struct table_entry * tbl_find(struct table *      instance,
-                                    const struct gpa *  pa,
-                                    const struct gha *  ha);
+const struct table_entry * tbl_find(struct table *     instance,
+                                    const struct gpa * pa,
+                                    const struct gha * ha);
 const struct table_entry * tbl_find_by_gha(struct table *     instance,
                                            const struct gha * address);
 const struct table_entry * tbl_find_by_gpa(struct table *     instance,

@@ -156,10 +156,6 @@ const struct gha * tble_ha(struct table_entry * entry)
         return entry->ha;
 }
 
-/*
- * Cache Line - CL
- */
-
 struct table {
         size_t           hal;     /* Hardware address length */
         spinlock_t       lock;
@@ -207,9 +203,9 @@ static void tbl_destroy(struct table * instance)
         rkfree(instance);
 }
 
-const struct table_entry * tbl_find(struct table *      instance,
-                                    const struct gpa *  pa,
-                                    const struct gha *  ha)
+const struct table_entry * tbl_find(struct table *     instance,
+                                    const struct gpa * pa,
+                                    const struct gha * ha)
 {
         struct table_entry * pos;
 
