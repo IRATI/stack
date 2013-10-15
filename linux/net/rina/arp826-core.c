@@ -38,6 +38,7 @@
 
 #include "arp826.h"
 #include "arp826-utils.h"
+#include "arp826-arm.h"
 #include "arp826-tables.h"
 
 static struct arp_header * arp826_header(const struct sk_buff * skb)
@@ -228,9 +229,18 @@ static int __init mod_init(void)
         if (tbls_init())
                 return -1;
 
-        /* FIXME: Pack these two lines together */
-        if (tbls_create(ETH_P_RINA, 6))
+        if (arm_init()) {
+                tbls_fini();
                 return -1;
+        }
+
+        /* FIXME: Pack these two lines together */
+        if (tbls_create(ETH_P_RINA, 6)) {
+                tbls_fini();
+                arm_fini();
+                return -1;
+        }
+
         dev_add_pack(&arp_packet_type);
 
         LOG_DBG("Initialized successfully");
@@ -240,6 +250,8 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
+        arm_fini();
+
         /* FIXME: Pack these two lines together */
         dev_remove_pack(&arp_packet_type);
         tbls_destroy(ETH_P_RINA);
