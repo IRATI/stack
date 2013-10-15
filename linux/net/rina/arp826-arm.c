@@ -41,6 +41,7 @@ struct resolution {
         struct list_head      next;
 };
 
+spinlock_t       resolutions_lock;
 struct list_head resolutions_ongoing;
 
 struct resolve_data {
@@ -108,6 +109,7 @@ static struct resolve_data * resolve_data_create(uint16_t     ptype,
 static int resolver(void * o)
 {
         struct resolve_data * tmp;
+        struct resolution *   pos, * nxt;
 
         tmp = (struct resolve_data *) o;
         if (!tmp)
@@ -119,10 +121,30 @@ static int resolver(void * o)
                 return -1;
         }
 
-        /* FIXME: Find the entry */
-        /* FIXME: Update the tables */
-        /* FIXME: Call the callback */
-        /* FIXME: Finally, update the ARP cache */
+        spin_lock(&resolutions_lock);
+
+        /* FIXME: Find the entry in the ongoing resolutions */
+        list_for_each_entry_safe(pos, nxt, &resolutions_ongoing, next) {
+                if (is_resolve_data_equal(pos->data, tmp)) {
+
+                        ASSERT(pos->notify);
+
+                        pos->notify(pos->opaque,
+                                    pos->data->tpa,
+                                    pos->data->tha);
+
+                        list_del(&pos->next);
+                        resolve_data_destroy(pos->data);
+
+                        /*
+                         * NOTE: The opaque should have been disposed by the
+                         *       worker
+                         */
+                        rkfree(pos);
+                }
+        }
+
+        spin_unlock(&resolutions_lock);
 
         /* Finally destroy the data */
         resolve_data_destroy(tmp);
@@ -158,6 +180,7 @@ int arm_init(void)
         if (!arm_wq)
                 return -1;
 
+        spin_lock_init(&resolutions_lock);
         INIT_LIST_HEAD(&resolutions_ongoing);
 
         return 0;
@@ -205,7 +228,9 @@ int arp826_resolve_gpa(uint16_t           ptype,
         resolution->opaque = opaque;
         INIT_LIST_HEAD(&resolution->next);
 
+        spin_lock(&resolutions_lock);
         list_add(&resolutions_ongoing, &resolution->next);
+        spin_unlock(&resolutions_lock);
 
         return 0;
 }
