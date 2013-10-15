@@ -352,7 +352,7 @@ public:
  * Encapsulates the state and operations that can be performed over
  * a single IPC Process (besides creation/destruction)
  */
-class IPCProcess {
+class IPCProcess : public Lockable{
 
 	/** The identifier of the IPC Process, unique within the system */
 	unsigned short id;
@@ -374,6 +374,15 @@ class IPCProcess {
 
 	/** True if the IPC Process is a member of the DIF, false otherwise */
 	bool difMember;
+
+	/** True if an assign to DIF operation is in process */
+	bool assignInProcess;
+
+	/** True if a configure operation is in process */
+	bool configureInProcess;
+
+	/** The configuration that is in progress to be setup */
+	DIFConfiguration newConfiguration;
 
 public:
 	static const std::string error_assigning_to_dif;
@@ -405,14 +414,22 @@ public:
 	 * member of the DIF. Assigning an IPC Process to a DIF will initialize the
 	 * IPC Process with all the information required to operate in the DIF (DIF
 	 * name, data transfer constants, qos cubes, supported policies, address,
-	 * credentials, etc). The operation will block until the IPC Process is
-	 * assigned to the DIF or an error is returned.
+	 * credentials, etc).
 	 *
 	 * @param difInformation The information of the DIF (name, type configuration)
 	 * @throws AssignToDIFException if an error happens during the process
+	 * @returns the handle to the response message
 	 */
-	void assignToDIF(
+	unsigned int assignToDIF(
 			const DIFInformation& difInformation) throw (AssignToDIFException);
+
+	/**
+	 * Update the internal data structures based on the result of the assignToDIF
+	 * operation
+	 * @param success true if the operation was successful, false otherwise
+	 * @throws AssignToDIFException if there was not an assingment operation ongoing
+	 */
+	void assignToDIFResult(bool success) throw (AssignToDIFException);
 
 	/**
 	 * Invoked by the IPC Manager to modify the configuration of an existing IPC
@@ -421,9 +438,20 @@ public:
 	 *
 	 * @param difConfiguration The configuration of the DIF
 	 * @throws UpdateDIFConfigurationException if an error happens during the process
+	 * @returns the handle to the response message
 	 */
-	void updateDIFConfiguration(
+	unsigned int updateDIFConfiguration(
 	                const DIFConfiguration& difConfiguration)
+	throw (UpdateDIFConfigurationException);
+
+	/**
+	 * Update the internal data structures based on the result of the updateConfig
+	 * operation
+	 * @param success true if the operation was successful, false otherwise
+	 * @throws  UpdateDIFConfigurationException if there was no update config
+	 * operation ongoing
+	 */
+	void updateDIFConfigurationResult(bool success)
 	throw (UpdateDIFConfigurationException);
 
 	/**
@@ -485,25 +513,25 @@ public:
 
 	/**
 	 * Invoked by the IPC Manager to register an application in a DIF through
-	 * an IPC Process. The operation blocks until the IPC Process has
-	 * successfully registered the application or an error occurs.
+	 * an IPC Process.
 	 *
 	 * @param applicationName The name of the application to be registered
 	 * @throws IpcmRegisterApplicationException if an error occurs
+	 * @returns the handle to the response message
 	 */
-	void registerApplication(
+	unsigned int registerApplication(
 			const ApplicationProcessNamingInformation& applicationName)
 	throw (IpcmRegisterApplicationException);
 
 	/**
 	 * Invoked by the IPC Manager to unregister an application in a DIF through
-	 * an IPC Process. The operation blocks until the IPC Process has
-	 * successfully unregistered the application or an error occurs.
+	 * an IPC Process.
 	 *
 	 * @param applicationName The name of the application to be unregistered
 	 * @throws IpcmUnregisterApplicationException if an error occurs
+	 * @returns the handle to the response message
 	 */
-	void unregisterApplication(
+	unsigned int unregisterApplication(
 			const ApplicationProcessNamingInformation& applicationName)
 	throw (IpcmUnregisterApplicationException);
 
@@ -518,9 +546,10 @@ public:
 	 * flow
 	 * @param applicationPortId the port where the application that requested the
 	 * flow can be contacted
+	 * @returns the handle to the response message
 	 * @throws AllocateFlowException if an error occurs
 	 */
-	void allocateFlow(const FlowRequestEvent& flowRequest)
+	unsigned int allocateFlow(const FlowRequestEvent& flowRequest)
 		throw (AllocateFlowException);
 
 	/**
@@ -533,7 +562,7 @@ public:
 	 * @throws AllocateFlowException if something goes wrong
 	 */
 	void allocateFlowResponse(const FlowRequestEvent& flowRequest,
-			int result)
+			int result, bool notifySource)
 		throw(AllocateFlowException);
 
 	/**
@@ -541,8 +570,9 @@ public:
 	 * @param portId
 	 * @throws IpcmDeallocateFlowException if there is an error during
 	 * the flow deallocation procedure
+	 * @returns the handle to the response message
 	 */
-	void deallocateFlow(int portId) throw (IpcmDeallocateFlowException);
+	unsigned int deallocateFlow(int portId) throw (IpcmDeallocateFlowException);
 
 	/**
 	 * Invoked by the IPC Manager to query a subset of the RIB of the IPC
@@ -555,9 +585,9 @@ public:
 	 * base object - that are affected by the query
 	 * @param filter An expression evaluated for each object, to determine
 	 * wether the object should be returned by the query
-	 * @return A list contaning zero or more RIB objects
+	 * @returns the handle to the response message
 	 */
-	const std::list<RIBObject> queryRIB(const std::string& objectClass,
+	unsigned int queryRIB(const std::string& objectClass,
 			const std::string& objectName, unsigned long objectInstance,
 			unsigned int scope, const std::string& filter)
 					throw (QueryRIBException);
@@ -689,8 +719,10 @@ public:
 	 * @param portId
 	 * @throws AppFlowArrivedException if something goes wrong or the application
 	 * doesn't accept the flow
+	 * @returns the handle to be able to identify the applicaiton response when
+	 * it arrives
 	 */
-	void flowRequestArrived(
+	unsigned int flowRequestArrived(
 			const ApplicationProcessNamingInformation& localAppName,
 			const ApplicationProcessNamingInformation& remoteAppName,
 			const FlowSpecification& flowSpec,
@@ -734,6 +766,55 @@ public:
  * Make Application Manager singleton
  */
 extern Singleton<ApplicationManager> applicationManager;
+
+/**
+ * Event informing about the result of an application registration
+ */
+class IpcmRegisterApplicationResponseEvent: public BaseResponseEvent {
+public:
+        IpcmRegisterApplicationResponseEvent(
+                        int result, unsigned int sequenceNumber);
+};
+
+/**
+ * Event informing about the result of an application unregistration
+ */
+class IpcmUnregisterApplicationResponseEvent: public BaseResponseEvent {
+public:
+        IpcmUnregisterApplicationResponseEvent(
+                        int result, unsigned int sequenceNumber);
+};
+
+/**
+ * Event informing about the result of a flow deallocation
+ */
+class IpcmDeallocateFlowResponseEvent: public BaseResponseEvent {
+public:
+        IpcmDeallocateFlowResponseEvent(
+                        int result, unsigned int sequenceNumber);
+};
+
+/**
+ * Event informing about the result of a flow allocation
+ */
+class IpcmAllocateFlowRequestResultEvent: public BaseResponseEvent {
+public:
+        IpcmAllocateFlowRequestResultEvent(
+                        int result, unsigned int sequenceNumber);
+};
+
+/**
+ * Event informing about the result of a query RIB operation
+ */
+class QueryRIBResponseEvent: public BaseResponseEvent {
+        std::list<RIBObject> ribObjects;
+public:
+        QueryRIBResponseEvent(const std::list<RIBObject>& ribObjects,
+                        int result,
+                        unsigned int sequenceNumber);
+        const std::list<RIBObject>& getRIBObject() const;
+};
+
 
 }
 

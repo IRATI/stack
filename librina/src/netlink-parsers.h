@@ -148,8 +148,7 @@ AppAllocateFlowRequestArrivedMessage * parseAppAllocateFlowRequestArrivedMessage
 
 /* AppAllocateFlowResponseMessage CLASS*/
 enum AppAllocateFlowResponseAttributes {
-	AAFRE_ATTR_ACCEPT = 1,
-	AAFRE_ATTR_DENY_REASON,
+	AAFRE_ATTR_RESULT = 1,
 	AAFRE_ATTR_NOTIFY_SOURCE,
 	__AAFRE_ATTR_MAX,
 };

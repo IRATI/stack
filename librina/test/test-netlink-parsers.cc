@@ -289,8 +289,7 @@ int testAppAllocateFlowResponseMessage() {
 	int returnValue = 0;
 
 	AppAllocateFlowResponseMessage message;
-	message.setAccept(true);
-	message.setDenyReason("No, we cannot!");
+	message.setResult(0);
 	message.setNotifySource(true);
 
 	struct nl_msg* netlinkMessage;
@@ -318,13 +317,9 @@ int testAppAllocateFlowResponseMessage() {
 				<< "\n";
 		returnValue = -1;
 
-	} else if (message.isAccept() != recoveredMessage->isAccept()) {
-		std::cout << "Accept flag on original and recovered messages"
+	} else if (message.getResult() != recoveredMessage->getResult()) {
+		std::cout << "Result on original and recovered messages"
 				<< " are different\n";
-		returnValue = -1;
-	} else if (message.getDenyReason() != recoveredMessage->getDenyReason()) {
-		std::cout << "Deny reason on original and recovered "
-				<< "messages are different\n";
 		returnValue = -1;
 	} else if (message.isNotifySource()
 			!= recoveredMessage->isNotifySource()) {

@@ -299,10 +299,14 @@ public:
  */
 enum IPCEventType {
 	FLOW_ALLOCATION_REQUESTED_EVENT,
+	ALLOCATE_FLOW_REQUEST_RESULT_EVENT,
+	ALLOCATE_FLOW_RESPONSE_EVENT,
 	FLOW_DEALLOCATION_REQUESTED_EVENT,
+	DEALLOCATE_FLOW_RESPONSE_EVENT,
 	APPLICATION_UNREGISTERED_EVENT,
 	FLOW_DEALLOCATED_EVENT,
 	APPLICATION_REGISTRATION_REQUEST_EVENT,
+	REGISTER_APPLICATION_RESPONSE_EVENT,
 	APPLICATION_UNREGISTRATION_REQUEST_EVENT,
 	APPLICATION_REGISTRATION_CANCELED_EVENT,
 	ASSIGN_TO_DIF_REQUEST_EVENT,
@@ -311,11 +315,13 @@ enum IPCEventType {
 	IPC_PROCESS_UNREGISTERED_FROM_DIF,
 	IPC_PROCESS_QUERY_RIB,
 	GET_DIF_PROPERTIES,
+	GET_DIF_PROPERTIES_RESPONSE_EVENT,
 	OS_PROCESS_FINALIZED,
-	ALLOCATE_FLOW_REQUEST_RESULT_EVENT,
-	ALLOCATE_FLOW_RESPONSE_EVENT,
-	REGISTER_APPLICATION_RESPONSE_EVENT,
-	UNREGISTER_APPLICATION_RESPONSE_EVENT
+	IPCM_REGISTER_APP_RESPONSE_EVENT,
+	IPCM_UNREGISTER_APP_RESPONSE_EVENT,
+	IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT,
+	IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
+	QUERY_RIB_RESPONSE_EVENT
 };
 
 /**
@@ -346,6 +352,18 @@ public:
 	unsigned int getSequenceNumber() const{
 		return sequenceNumber;
 	}
+};
+
+class BaseResponseEvent: public IPCEvent {
+        /** The result of the operation */
+        int result;
+
+public:
+        BaseResponseEvent(
+                        int result,
+                        IPCEventType eventType,
+                        unsigned int sequenceNumber);
+        int getResult() const;
 };
 
 /**
@@ -566,30 +584,26 @@ public:
  * Event informing about the application decision regarding the
  * acceptance/denial of a flow request
  */
-class AllocateFlowResponseEvent: public IPCEvent {
-        /** True if the application accepts the flow, false otherwise */
-        bool accept;
-
-        /**
-         * If the flow was denied and the application wishes to do so, it
-         * can provide an explanation of why this decision was taken
-         */
-        std::string denyReason;
-
+class AllocateFlowResponseEvent: public BaseResponseEvent {
         /**
          * If the flow was denied, this field controls wether the application
          * wants the IPC Process to reply to the source or not
          */
         bool notifySource;
 
+        /** the portId of the flow */
+        int portId;
+
 public:
         AllocateFlowResponseEvent(
-                        bool accept,
-                        const std::string& denyReason,
+                        int result,
                         bool notifysource);
-        bool isAccept() const;
-        const std::string& getDenyReason() const;
+        AllocateFlowResponseEvent(
+                        int result,
+                        bool notifysource,
+                        int portId);
         bool isNotifySource() const;
+        int getPortId() const;
 };
 
 /**

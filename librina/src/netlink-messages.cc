@@ -334,25 +334,16 @@ IPCEvent* AppAllocateFlowRequestArrivedMessage::toIPCEvent(){
 /* CLASS APP ALLOCATE FLOW RESPONSE MESSAGE */
 AppAllocateFlowResponseMessage::AppAllocateFlowResponseMessage() :
 				BaseNetlinkMessage(RINA_C_APP_ALLOCATE_FLOW_RESPONSE) {
-	this->accept = false;
-	this->notifySource = false;
+	this->result = 0;
+	this->notifySource = true;
 }
 
-bool AppAllocateFlowResponseMessage::isAccept() const {
-	return accept;
+int AppAllocateFlowResponseMessage::getResult() const {
+        return result;
 }
 
-void AppAllocateFlowResponseMessage::setAccept(bool accept) {
-	this->accept = accept;
-}
-
-const std::string& AppAllocateFlowResponseMessage::getDenyReason() const {
-	return denyReason;
-}
-
-void AppAllocateFlowResponseMessage::setDenyReason(
-		const std::string& denyReason) {
-	this->denyReason = denyReason;
+void AppAllocateFlowResponseMessage::setResult(int result){
+        this->result = result;
 }
 
 bool AppAllocateFlowResponseMessage::isNotifySource() const {
@@ -366,8 +357,7 @@ void AppAllocateFlowResponseMessage::setNotifySource(bool notifySource) {
 IPCEvent* AppAllocateFlowResponseMessage::toIPCEvent(){
         AllocateFlowResponseEvent * event =
                         new AllocateFlowResponseEvent(
-                                        accept,
-                                        denyReason,
+                                        result,
                                         notifySource);
         return event;
 }
@@ -415,6 +405,12 @@ AppDeallocateFlowResponseMessage::getApplicationName() const {
 void AppDeallocateFlowResponseMessage::setApplicationName(
 		const ApplicationProcessNamingInformation& applicationName) {
 	this->applicationName = applicationName;
+}
+
+IPCEvent* AppDeallocateFlowResponseMessage::toIPCEvent(){
+        DeallocateFlowResponseEvent * event = new DeallocateFlowResponseEvent(
+                        applicationName, result, getSequenceNumber());
+        return event;
 }
 
 /* CLASS APP FLOW DEALLOCATED NOTIFICATION MESSAGE */
@@ -700,6 +696,17 @@ void AppGetDIFPropertiesResponseMessage::addDIFProperty(
 	this->difProperties.push_back(difProperties);
 }
 
+IPCEvent* AppGetDIFPropertiesResponseMessage::toIPCEvent(){
+        GetDIFPropertiesResponseEvent * event =
+                        new GetDIFPropertiesResponseEvent(
+                                        applicationName,
+                                        difProperties,
+                                        result,
+                                        getSequenceNumber());
+
+        return event;
+}
+
 /* CLASS IPCM REGISTER APPLICATION REQUEST MESSAGE */
 IpcmRegisterApplicationRequestMessage::IpcmRegisterApplicationRequestMessage():
                 BaseNetlinkResponseMessage(
@@ -744,6 +751,14 @@ IpcmRegisterApplicationResponseMessage::IpcmRegisterApplicationResponseMessage()
 				BaseNetlinkResponseMessage(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE) {
 }
 
+IPCEvent* IpcmRegisterApplicationResponseMessage::toIPCEvent(){
+        IpcmRegisterApplicationResponseEvent * event =
+                        new IpcmRegisterApplicationResponseEvent(
+                                        getResult(),
+                                        getSequenceNumber());
+        return event;
+}
+
 /* CLASS IPCM UNREGISTER APPLICATION REQUEST MESSAGE */
 IpcmUnregisterApplicationRequestMessage::IpcmUnregisterApplicationRequestMessage() :
                 BaseNetlinkResponseMessage(
@@ -783,6 +798,14 @@ IPCEvent* IpcmUnregisterApplicationRequestMessage::toIPCEvent(){
 IpcmUnregisterApplicationResponseMessage::
 IpcmUnregisterApplicationResponseMessage() :
 	BaseNetlinkResponseMessage(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE) {
+}
+
+IPCEvent* IpcmUnregisterApplicationResponseMessage::toIPCEvent(){
+        IpcmUnregisterApplicationResponseEvent * event =
+                        new IpcmUnregisterApplicationResponseEvent(
+                                        getResult(),
+                                        getSequenceNumber());
+        return event;
 }
 
 
@@ -915,6 +938,13 @@ IpcmAllocateFlowRequestResultMessage::IpcmAllocateFlowRequestResultMessage():
 	BaseNetlinkResponseMessage(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT) {
 }
 
+IPCEvent* IpcmAllocateFlowRequestResultMessage::toIPCEvent(){
+        IpcmAllocateFlowRequestResultEvent * event =
+                        new IpcmAllocateFlowRequestResultEvent(
+                                        getResult(), getSequenceNumber());
+        return event;
+}
+
 /* CLASS IPCM ALLOCATE FLOW REQUEST ARRIVED MESSAGE */
 IpcmAllocateFlowRequestArrivedMessage::IpcmAllocateFlowRequestArrivedMessage()
 	: BaseNetlinkResponseMessage(
@@ -1006,6 +1036,15 @@ void IpcmAllocateFlowResponseMessage::setPortId(int portId){
 	this->portId = portId;
 }
 
+IPCEvent* IpcmAllocateFlowResponseMessage::toIPCEvent(){
+        AllocateFlowResponseEvent * event =
+                        new AllocateFlowResponseEvent(
+                                        result,
+                                        portId,
+                                        notifySource);
+        return event;
+}
+
 /* CLASS IPCM DEALLOCATE FLOW REQUEST MESSAGE */
 IpcmDeallocateFlowRequestMessage::IpcmDeallocateFlowRequestMessage() :
                 BaseNetlinkResponseMessage(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST) {
@@ -1029,6 +1068,13 @@ IPCEvent* IpcmDeallocateFlowRequestMessage::toIPCEvent(){
 /* CLASS IPCM DEALLOCATE FLOW RESPONSE MESSAGE */
 IpcmDeallocateFlowResponseMessage::IpcmDeallocateFlowResponseMessage() :
 	BaseNetlinkResponseMessage(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE) {
+}
+
+IPCEvent* IpcmDeallocateFlowResponseMessage::toIPCEvent(){
+        IpcmDeallocateFlowResponseEvent * event =
+                        new IpcmDeallocateFlowResponseEvent(
+                                        getResult(), getSequenceNumber());
+        return event;
 }
 
 /* CLASS IPCM FLOW DEALLOCATED NOTIFICATION MESSAGE */
@@ -1186,6 +1232,13 @@ void IpcmDIFQueryRIBResponseMessage::addRIBObject(const RIBObject& ribObject){
 	ribObjects.push_back(ribObject);
 }
 
+IPCEvent* IpcmDIFQueryRIBResponseMessage::toIPCEvent(){
+        IPCEvent * event = new QueryRIBResponseEvent(
+                        ribObjects, getResult(),
+                        getSequenceNumber());
+        return event;
+}
+
 /* CLASS IPCM SOCKET CLOSED NOTIFICATION MESSAGE */
 IpcmNLSocketClosedNotificationMessage::IpcmNLSocketClosedNotificationMessage() :
                                 BaseNetlinkResponseMessage(
@@ -1208,6 +1261,10 @@ IPCEvent* IpcmNLSocketClosedNotificationMessage::toIPCEvent(){
 /* CLAS IPCM IPC MANAGER PRESENT MESSAGE */
 IpcmIPCManagerPresentMessage::IpcmIPCManagerPresentMessage() :
 BaseNetlinkMessage(RINA_C_IPCM_IPC_MANAGER_PRESENT){
+}
+
+IPCEvent* IpcmIPCManagerPresentMessage::toIPCEvent(){
+        return 0;
 }
 
 }

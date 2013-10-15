@@ -39,31 +39,6 @@ bool checkIPCProcesses(unsigned int expectedProcesses) {
 	return true;
 }
 
-bool checkRecognizedEvent(IPCEvent * event) {
-	switch (event->getType()) {
-	case APPLICATION_REGISTRATION_REQUEST_EVENT: {
-		ApplicationRegistrationRequestEvent * appREvent =
-				dynamic_cast<ApplicationRegistrationRequestEvent *>(event);
-		std::cout << "Got application registration request from application "
-				<< appREvent->getApplicationName().getProcessName() << "\n";
-		break;
-	}
-	case APPLICATION_UNREGISTRATION_REQUEST_EVENT: {
-		ApplicationUnregistrationRequestEvent * appUEvent =
-				dynamic_cast<ApplicationUnregistrationRequestEvent *>(event);
-		std::cout
-				<< "Got application unregistration request from application "
-				<< appUEvent->getApplicationName().getProcessName() << "\n";
-		break;
-	}
-	default:
-		std::cout << "Unrecognized event type\n";
-		return false;
-	}
-
-	return true;
-}
-
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING LIBRINA-IPCMANAGER\n";
 
@@ -110,6 +85,7 @@ int main(int argc, char * argv[]) {
 	/* TEST ASSIGN TO DIF */
 	DIFInformation * difInformation = new DIFInformation();
 	ipcProcess1->assignToDIF(*difInformation);
+	ipcProcess1->assignToDIFResult(true);
 
 	/* TEST REGISTER APPLICATION */
 	ipcProcess1->registerApplication(*sourceName);

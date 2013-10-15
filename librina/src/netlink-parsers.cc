@@ -1291,9 +1291,8 @@ int putAppAllocateFlowRequestArrivedMessageObject(nl_msg* netlinkMessage,
 
 int putAppAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 		const AppAllocateFlowResponseMessage& object) {
-	NLA_PUT_FLAG(netlinkMessage, AAFRE_ATTR_ACCEPT);
-	NLA_PUT_STRING(netlinkMessage, AAFRE_ATTR_DENY_REASON,
-			object.getDenyReason().c_str());
+	NLA_PUT_U32(netlinkMessage, AAFRE_ATTR_RESULT,
+			object.getResult());
 	NLA_PUT_FLAG(netlinkMessage, AAFRE_ATTR_NOTIFY_SOURCE);
 
 	return 0;
@@ -2328,12 +2327,9 @@ AppAllocateFlowRequestArrivedMessage * parseAppAllocateFlowRequestArrivedMessage
 AppAllocateFlowResponseMessage * parseAppAllocateFlowResponseMessage(
 		nlmsghdr *hdr) {
 	struct nla_policy attr_policy[AAFRE_ATTR_MAX + 1];
-	attr_policy[AAFRE_ATTR_ACCEPT].type = NLA_FLAG;
-	attr_policy[AAFRE_ATTR_ACCEPT].minlen = 0;
-	attr_policy[AAFRE_ATTR_ACCEPT].maxlen = 0;
-	attr_policy[AAFRE_ATTR_DENY_REASON].type = NLA_STRING;
-	attr_policy[AAFRE_ATTR_DENY_REASON].minlen = 0;
-	attr_policy[AAFRE_ATTR_DENY_REASON].maxlen = 65535;
+	attr_policy[AAFRE_ATTR_RESULT].type = NLA_U32;
+	attr_policy[AAFRE_ATTR_RESULT].minlen = 0;
+	attr_policy[AAFRE_ATTR_RESULT].maxlen = 0;
 	attr_policy[AAFRE_ATTR_NOTIFY_SOURCE].type = NLA_FLAG;
 	attr_policy[AAFRE_ATTR_NOTIFY_SOURCE].minlen = 0;
 	attr_policy[AAFRE_ATTR_NOTIFY_SOURCE].maxlen = 0;
@@ -2357,13 +2353,10 @@ AppAllocateFlowResponseMessage * parseAppAllocateFlowResponseMessage(
 	AppAllocateFlowResponseMessage * result =
 			new AppAllocateFlowResponseMessage();
 
-	if (attrs[AAFRE_ATTR_ACCEPT]) {
-		result->setAccept((nla_get_flag(attrs[AAFRE_ATTR_ACCEPT])));
+	if (attrs[AAFRE_ATTR_RESULT]) {
+		result->setResult((nla_get_u32(attrs[AAFRE_ATTR_RESULT])));
 	}
 
-	if (attrs[AAFRE_ATTR_DENY_REASON]) {
-		result->setDenyReason(nla_get_string(attrs[AAFRE_ATTR_DENY_REASON]));
-	}
 	if (attrs[AAFRE_ATTR_NOTIFY_SOURCE]) {
 		result->setNotifySource(
 				(nla_get_flag(attrs[AAFRE_ATTR_NOTIFY_SOURCE])));

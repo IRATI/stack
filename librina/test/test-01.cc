@@ -38,11 +38,11 @@ bool checkAllocatedFlows(unsigned int expectedFlows) {
         return true;
 }
 
-bool checkRegisteredApplications(unsigned int expectedFlows) {
+bool checkRegisteredApplications(unsigned int expectedApps) {
         std::vector<ApplicationRegistration *> registeredApplications = ipcManager
                         ->getRegisteredApplications();
-        if (registeredApplications.size() != expectedFlows) {
-                std::cout << "ERROR: Expected " << expectedFlows
+        if (registeredApplications.size() != expectedApps) {
+                std::cout << "ERROR: Expected " << expectedApps
                                 << " registered applications, but only found "
                                                 + registeredApplications.size() << "²n";
                 return false;
@@ -128,7 +128,7 @@ int main(int argc, char * argv[]) {
 	}
 	ipcManager->flowDeallocationResult(flow2->getPortId(), true);
 	if (!checkAllocatedFlows(0)) {
-		return 1;
+		return -1;
 	}
 
 	try {
@@ -145,10 +145,16 @@ int main(int argc, char * argv[]) {
 	info.setApplicationName(sourceName);
 	seqNumber = ipcManager->requestApplicationRegistration(info);
 	ipcManager->commitPendingResitration(seqNumber, difName);
+	if (!checkRegisteredApplications(1)) {
+	        return -1;
+	}
 
 	/* TEST UNREGISTER APPLICATION */
 	seqNumber = ipcManager->requestApplicationUnregistration(sourceName, difName);
 	ipcManager->appUnregistrationResult(seqNumber, true);
+        if (!checkRegisteredApplications(0)) {
+                return -1;
+        }
 
 	return 0;
 }

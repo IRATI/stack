@@ -274,14 +274,8 @@ public:
  */
 class AppAllocateFlowResponseMessage: public BaseNetlinkMessage {
 
-	/** True if the application accepts the flow, false otherwise */
-	bool accept;
-
-	/**
-	 * If the flow was denied and the application wishes to do so, it
-	 * can provide an explanation of why this decision was taken
-	 */
-	std::string denyReason;
+	/** 0 if the application accepts the flow, error code otherwise */
+	int result;
 
 	/**
 	 * If the flow was denied, this field controls wether the application
@@ -291,10 +285,8 @@ class AppAllocateFlowResponseMessage: public BaseNetlinkMessage {
 
 public:
 	AppAllocateFlowResponseMessage();
-	bool isAccept() const;
-	void setAccept(bool accept);
-	const std::string& getDenyReason() const;
-	void setDenyReason(const std::string& denyReason);
+	int getResult() const;
+	void setResult(int result);
 	bool isNotifySource() const;
 	void setNotifySource(bool notifySource);
 };

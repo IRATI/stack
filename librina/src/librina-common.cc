@@ -503,6 +503,21 @@ void DIFProperties::removeQoSCube(const QoSCube& qosCube) {
 	this->qosCubes.remove(qosCube);
 }
 
+/* CLASS BASE RESPONSE EVENT */
+BaseResponseEvent::BaseResponseEvent(
+                        int result,
+                        IPCEventType eventType,
+                        unsigned int sequenceNumber) :
+                              IPCEvent(eventType,
+                                             sequenceNumber){
+        this->result = result;
+}
+
+
+int BaseResponseEvent::getResult() const {
+        return result;
+}
+
 /* CLASS FLOW REQUEST EVENT */
 FlowRequestEvent::FlowRequestEvent(
 		const FlowSpecification& flowSpecification,
@@ -760,22 +775,28 @@ UnregisterApplicationResponseEvent::UnregisterApplicationResponseEvent(
 
 /* CLASS ALLOCATE FLOW RESPONSE EVENT */
 AllocateFlowResponseEvent::AllocateFlowResponseEvent(
-                bool accept,
-                const std::string& denyReason,
+                int result,
                 bool notifysource) :
-                IPCEvent(ALLOCATE_FLOW_RESPONSE_EVENT,
-                                sequenceNumber) {
-        this->accept = accept;
-        this->denyReason = denyReason;
+                BaseResponseEvent(result,
+                                 ALLOCATE_FLOW_RESPONSE_EVENT,
+                                 sequenceNumber) {
         this->notifySource = notifySource;
+        this->portId = 0;
 }
 
-bool AllocateFlowResponseEvent::isAccept() const {
-        return accept;
+AllocateFlowResponseEvent::AllocateFlowResponseEvent(
+                int result,
+                bool notifysource,
+                int portId) :
+                BaseResponseEvent(result,
+                                ALLOCATE_FLOW_RESPONSE_EVENT,
+                                sequenceNumber) {
+        this->notifySource = notifySource;
+        this->portId = portId;
 }
 
-const std::string& AllocateFlowResponseEvent::getDenyReason() const {
-        return denyReason;
+int AllocateFlowResponseEvent::getResult() const{
+        return result;
 }
 
 bool AllocateFlowResponseEvent::isNotifySource() const {

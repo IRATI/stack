@@ -23,6 +23,7 @@
 
 #include "librina-common.h"
 #include "patterns.h"
+#include "concurrency.h"
 
 /**
  * The librina-application library provides the native RINA API,
@@ -255,7 +256,7 @@ public:
  * Point of entry to the IPC functionality available in the system. This class
  * is a singleton.
  */
-class IPCManager {
+class IPCManager : public Lockable{
 	/** The flows that are currently allocated */
 	std::map<int, Flow*> allocatedFlows;
 
@@ -409,15 +410,16 @@ public:
 	 * Confirms or denies the request for a flow to this application.
 	 *
 	 * @param flowRequestEvent information of the flow request
-	 * @param accept true if the flow is accepted, false otherwise
-	 * @param reason IF the flow was denied, contains a short explanation
-	 * providing some motivation
+	 * @param result 0 means the flow is accepted, a different number
+	 * indicates the deny code
+	 * @param notifySource if true the source IPC Process will get
+	 * the allocate flow response message back, otherwise it will be ignored
 	 * @return Flow If the flow is accepted, returns the flow object
 	 * @throws FlowAllocationException If there are problems
 	 * confirming/denying the flow
 	 */
 	Flow * allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
-			bool accept, const std::string& reason)
+			int result, bool notifySource)
 			throw (FlowAllocationException);
 
 	/**
@@ -533,6 +535,41 @@ public:
         const ApplicationProcessNamingInformation& getAppName() const;
         const ApplicationProcessNamingInformation& getDIFName() const;
         int getPortId() const;
+};
+
+/**
+ * Event informing about the result of a flow deallocation request
+ */
+class DeallocateFlowResponseEvent: public BaseResponseEvent {
+        /** The application that requested the flow deallocation */
+        ApplicationProcessNamingInformation appName;
+
+public:
+        DeallocateFlowResponseEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        int result, unsigned int sequenceNumber);
+        const ApplicationProcessNamingInformation& getAppName() const;
+};
+
+/**
+ * Event informing about the result of a get DIF properties operation
+ */
+class GetDIFPropertiesResponseEvent: public BaseResponseEvent {
+        /**
+         * The name of the application that is querying the DIF properties
+         */
+        ApplicationProcessNamingInformation applicationName;
+
+        /** The properties of zero or more DIFs */
+        std::list<DIFProperties> difProperties;
+
+public:
+        GetDIFPropertiesResponseEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        const std::list<DIFProperties>& difProperties,
+                        int result, unsigned int sequenceNumber);
+        const ApplicationProcessNamingInformation& getAppName() const;
+        const std::list<DIFProperties>& getDIFProperties() const;
 };
 
 }
