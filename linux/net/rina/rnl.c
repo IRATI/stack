@@ -26,6 +26,7 @@
 #include "debug.h"
 #include "rnl.h"
 #include "rnl-utils.h"
+#include "rnl-workarounds.h"
 
 #define NETLINK_RINA "rina"
 
@@ -383,12 +384,20 @@ static struct notifier_block kipcm_netlink_notifier = {
 };
 
 
-
 int rnl_init(void)
 {
         int ret;
 
         LOG_DBG("Initializing Netlink layer");
+
+        /* FIXME:
+         *   This is to allow user-space processes to exchange NL messages
+         *   without requiring the CAP_NET_ADMIN capability. We should find
+         *   a better way to do it since we're modifying an internal NL
+         *   data structure, but apparently there's no other way around.
+         */
+        set_netlink_non_root_send_flag();
+
 
         ret = genl_register_family_with_ops(&rnl_nl_family,
                                             nl_ops,
