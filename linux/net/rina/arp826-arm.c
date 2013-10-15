@@ -27,7 +27,7 @@
 /* FIXME: End of dependencies ... */
 
 #include "arp826.h"
-#include "arp826-cache.h"
+#include "arp826-tables.h"
 
 extern struct workqueue_struct * arp826_armq;
 

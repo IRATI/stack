@@ -96,4 +96,14 @@ struct sk_buff * arp826_create(__be16                oper,
                                const unsigned char * dest_nwaddr,
                                const unsigned char * dest_hw);
 
+enum arp826_optypes {
+        ARP_REQUEST = 1,
+        ARP_REPLY   = 2,
+};
+
+enum arp826_htypes {
+        HW_TYPE_ETHER = 1,
+        HW_TYPE_MAX,
+};
+
 #endif

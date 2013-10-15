@@ -38,22 +38,7 @@
 
 #include "arp826.h"
 #include "arp826-utils.h"
-#include "arp826-cache.h"
-
-enum arp826_optypes {
-        ARP_REQUEST = 1,
-        ARP_REPLY   = 2,
-};
-
-enum arp826_htypes {
-        HW_TYPE_ETHER = 1,
-        HW_TYPE_MAX,
-};
-
-struct cache_line * cache_lines[HW_TYPE_MAX - 1] = { NULL };
-
-static bool is_line_id_ok(int line)
-{ return (line < HW_TYPE_ETHER - 1 || line >= HW_TYPE_MAX - 1) ? 0 : 1; }
+#include "arp826-tables.h"
 
 static struct arp_header * arp826_header(const struct sk_buff * skb)
 { return (struct arp_header *) skb_network_header(skb); }
@@ -150,19 +135,6 @@ static int arp826_process(struct sk_buff *    skb,
         return 0;
 }
 
-static struct cache_line * ptype_to_cl(uint16_t ptype)
-{
-        uint16_t line_id;
-
-        line_id = ptype - 1;
-        if (!is_line_id_ok(line_id)) {
-                LOG_ERR("Wrong cache line %d", line_id);
-                return NULL;
-        }
-
-        return cache_lines[line_id];
-}
-
 /* NOTE: The following function uses a different mapping for return values */
 static int arp826_receive(struct sk_buff *     skb,
                           struct net_device *  dev,
@@ -218,7 +190,7 @@ static int arp826_receive(struct sk_buff *     skb,
         }
 
         /* FIXME: There's no need to lookup it here ... */
-        cl = ptype_to_cl(header->ptype);
+        cl = tbls_find(header->ptype);
         if (!cl) {
                 LOG_ERR("I don't have a CL to handle this ARP");
                 return 0;
@@ -251,24 +223,6 @@ static struct packet_type arp_packet_type __read_mostly = {
         .func = arp826_receive,
 };
 
-static int cache_line_create(int idx, size_t hwlen)
-{
-        cache_lines[idx] = cl_create(hwlen);
-        if (!cache_lines[idx]) {
-                LOG_ERR("Cannot intialize CL on index %d, bailing out", idx);
-                return -1;
-        }
-        LOG_DBG("CL on index %d created successfully", idx);
-
-        return 0;
-}
-
-static void cache_line_destroy(int idx)
-{
-        if (cache_lines[idx])
-                cl_destroy(cache_lines[idx]);
-}
-
 struct workqueue_struct * arp826_armq = NULL;
 
 static int __init mod_init(void)
@@ -278,7 +232,7 @@ static int __init mod_init(void)
                 return -1;
 
         /* FIXME: Pack these two lines together */
-        if (cache_line_create(HW_TYPE_ETHER - 1, 6))
+        if (tbls_create(HW_TYPE_ETHER, 6))
                 return -1;
         dev_add_pack(&arp_packet_type);
 
@@ -290,7 +244,7 @@ static int __init mod_init(void)
 static void __exit mod_exit(void)
 {
         dev_remove_pack(&arp_packet_type);
-        cache_line_destroy(HW_TYPE_ETHER - 1);
+        tbls_destroy(HW_TYPE_ETHER);
 
         rwq_destroy(arp826_armq);
         arp826_armq = NULL;
