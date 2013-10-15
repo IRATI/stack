@@ -185,22 +185,32 @@ class RINAManager {
 	/** Return an existing Netlink session -NULL if there is none -*/
 	NetlinkSession* getNetlinkSession(unsigned int sessionId);
 
+	/** Send a Netlink request message */
+	void RINAManager::_sendRequestMessage(
+	                BaseNetlinkMessage * netlinkMessage);
 public:
 	RINAManager();
 	RINAManager(unsigned int netlinkPort);
 	~RINAManager();
 
 	BaseNetlinkMessage * sendRequestAndWaitForResponse(
-			BaseNetlinkMessage * request, const std::string& errorDescription)
+			BaseNetlinkMessage * request,
+			const std::string& errorDescription)
 			throw(NetlinkException);
 
 	/** Sends a request message and waits for the reply*/
 	BaseNetlinkMessage * sendRequestMessageAndWaitForResponse(
-			BaseNetlinkMessage * netlinkMessage) throw (NetlinkException);
+			BaseNetlinkMessage * netlinkMessage)
+	throw (NetlinkException);
+
+	/** Sends a message without waiting for reply */
+	void sendRequestMessage(BaseNetlinkMessage * netlinkMessage)
+	throw (NetlinkException);
 
 	/** Send a response message or a notificaiton message */
 	void sendResponseOrNotficationMessage(
-			BaseNetlinkMessage * netlinkMessage) throw (NetlinkException);
+			BaseNetlinkMessage * netlinkMessage)
+	throw (NetlinkException);
 
 	/**
 	 * Notify about the reception of a Netlink response message. Will

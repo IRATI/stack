@@ -638,31 +638,31 @@ throw(NetlinkException){
 	return response;
 }
 
+void RINAManager::_sendRequestMessage(BaseNetlinkMessage * netlinkMessage)
+        throw (NetlinkException)
+{
+        netlinkPortIdMap.updateMessageOrPortIdMap(netlinkMessage, true);
+        netlinkMessage->setSequenceNumber(netlinkManager->getSequenceNumber());
+        netlinkManager->sendMessage(netlinkMessage);
+}
+
 BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForResponse(
-		BaseNetlinkMessage * netlinkMessage) throw (NetlinkException) {
+		BaseNetlinkMessage * netlinkMessage) throw (NetlinkException)
+{
 	sendReceiveLock.lock();
 
 	//1 Populate destination port id
 	try {
-		netlinkPortIdMap.updateMessageOrPortIdMap(netlinkMessage, true);
-	} catch (NetlinkException &e) {
-		sendReceiveLock.unlock();
-		throw e;
-	}
-
-	NetlinkSession * netlinkSession =
-			getAndCreateNetlinkSession(netlinkMessage->getDestPortId());
-	netlinkMessage->setSequenceNumber(netlinkManager->getSequenceNumber());
-
-	//2 Send the message
-	try {
-		netlinkManager->sendMessage(netlinkMessage);
+	        _sendRequestMessage(netlinkMessage);
 	} catch (NetlinkException &e) {
 		sendReceiveLock.unlock();
 		throw e;
 	}
 
 	//3 Put message in the queue
+	NetlinkSession * netlinkSession =
+	                        getAndCreateNetlinkSession(
+	                                        netlinkMessage->getDestPortId());
 	PendingNetlinkMessage pendingMessage(netlinkMessage->getSequenceNumber());
 	netlinkSession->putLocalPendingMessage(&pendingMessage);
 
@@ -676,6 +676,21 @@ BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForResponse(
 	}
 
 	return response;
+}
+
+void RINAManager::sendRequestMessage(BaseNetlinkMessage * netlinkMessage)
+        throw (NetlinkException)
+{
+        sendReceiveLock.lock();
+
+        try{
+                _sendRequestMessage(netlinkMessage);
+        }catch (NetlinkException &e) {
+                sendReceiveLock.unlock();
+                throw e;
+        }
+
+        sendReceiveLock.unlock();
 }
 
 void RINAManager::sendResponseOrNotficationMessage(
