@@ -210,7 +210,8 @@ AppFlowDeallocatedNotificationMessage * parseAppFlowDeallocatedNotificationMessa
 
 /* ApplicationRegistrationInformation CLASS*/
 enum ApplicationRegistrationInformationAttributes {
-	ARIA_ATTR_APP_REG_TYPE = 1,
+        ARIA_ATTR_APP_NAME = 1,
+	ARIA_ATTR_APP_REG_TYPE,
 	ARIA_ATTR_APP_DIF_NAME,
 	__ARIA_ATTR_MAX,
 };
@@ -225,8 +226,7 @@ ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 
 /* AppRegisterApplicationRequestMessage CLASS*/
 enum AppRegisterApplicationRequestMessageAttributes {
-	ARAR_ATTR_APP_NAME = 1,
-	ARAR_ATTR_APP_REG_INFO,
+	ARAR_ATTR_APP_REG_INFO = 1,
 	__ARAR_ATTR_MAX,
 };
 

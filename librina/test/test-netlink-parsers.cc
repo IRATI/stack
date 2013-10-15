@@ -547,9 +547,9 @@ int testAppRegisterApplicationRequestMessage() {
 		ApplicationRegistrationInformation(
 				APPLICATION_REGISTRATION_SINGLE_DIF);
 	appRegInfo.setDIFName(*difName);
+	appRegInfo.setApplicationName(*applicationName);
 
 	message->setApplicationRegistrationInformation(appRegInfo);
-	message->setApplicationName(*applicationName);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -578,8 +578,9 @@ int testAppRegisterApplicationRequestMessage() {
 		std::cout << "Error parsing Register Application Request Message "
 				<< "\n";
 		returnValue = -1;
-	} else if (message->getApplicationName()
-			!= recoveredMessage->getApplicationName()) {
+	} else if (message->getApplicationRegistrationInformation().getApplicationName()
+			!= recoveredMessage->getApplicationRegistrationInformation().
+			getApplicationName()) {
 		std::cout << "Application name on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;

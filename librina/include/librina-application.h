@@ -51,7 +51,7 @@
 namespace rina {
 
 enum FlowState {
-	FLOW_ALLOCATED, FLOW_DEALLOCATED
+	FLOW_ALLOCATED, FLOW_DEALLOCATION_REQUESTED, FLOW_DEALLOCATED
 };
 
 /**
@@ -183,9 +183,18 @@ class Flow {
 	FlowState flowState;
 
 	Flow(const ApplicationProcessNamingInformation& localApplicationName,
-			const ApplicationProcessNamingInformation& remoteApplicationName,
-			const FlowSpecification& flowSpecification, FlowState flowState,
-			const ApplicationProcessNamingInformation& DIFName, int portId);
+	     const ApplicationProcessNamingInformation& remoteApplicationName,
+	     const FlowSpecification& flowSpecification, FlowState flowState);
+
+	Flow(const ApplicationProcessNamingInformation& localApplicationName,
+	     const ApplicationProcessNamingInformation& remoteApplicationName,
+	     const FlowSpecification& flowSpecification, FlowState flowState,
+	     const ApplicationProcessNamingInformation& DIFName, int portId);
+
+	void setPortId(int portId);
+	void setDIFName(const ApplicationProcessNamingInformation& DIFName);
+	void setState(FlowState flowState);
+
 public:
 	Flow();
 	const FlowState& getState() const;
@@ -250,9 +259,29 @@ class IPCManager {
 	/** The flows that are currently allocated */
 	std::map<int, Flow*> allocatedFlows;
 
+	/** The flows that are currently allocated */
+	std::map<unsigned int, Flow*> pendingFlows;
+
+	/** The flows that are currently allocated */
+	std::map<unsigned int, ApplicationRegistrationInformation>
+	        registrationInformation;
+
 	/** The applications that are currently registered in one or more DIFs */
 	std::map<ApplicationProcessNamingInformation,
-	ApplicationRegistration*> applicationRegistrations;
+	        ApplicationRegistration*> applicationRegistrations;
+
+	/** Return the pending flow at sequenceNumber */
+	Flow * getPendingFlow(unsigned int seqNumber);
+
+	/** Return the allocated flow at portId */
+	Flow * getAllocatedFlow(int portId);
+
+	/** Return the information of a registration request */
+	ApplicationRegistrationInformation getRegistrationInfo(
+	                unsigned int seqNumber) throw (IPCException);
+
+	ApplicationRegistration * getApplicationRegistration(
+	                const ApplicationProcessNamingInformation& appName);
 public:
 	IPCManager();
 	~IPCManager();
@@ -264,6 +293,7 @@ public:
 	static const std::string error_requesting_flow_allocation;
 	static const std::string error_requesting_flow_deallocation;
 	static const std::string error_getting_dif_properties;
+	static const std::string wrong_flow_state;
 
 	/**
 	 * Retrieves the names and characteristics of a single DIF or of all the
@@ -274,41 +304,71 @@ public:
 	 * @param DIFName If provided, the function will return the information of
 	 * the requested DIF, otherwise it will return the properties of all the
 	 * DIFs available to the application.
-	 * @return The properties of one or more DIFs
+	 * @return A handler to be able to identify the proper response event
 	 * @throws GetDIFPropertiesException
 	 */
-	std::list<DIFProperties> getDIFProperties(
+	unsigned int getDIFProperties(
 			const ApplicationProcessNamingInformation& applicationName,
 			const ApplicationProcessNamingInformation& DIFName)
 			throw (GetDIFPropertiesException);
 
 	/**
-	 * Registers an application to a DIF.
+	 * Requests an application to be registered in a DIF
 	 *
-	 * @param applicationName The name of the application to be registered
 	 * @param appRegistrationInfo Information about the registration request
-	 * (hoy many DIFs, what specific DIFs)
-	 * @throws IPCException if the DIF doesn't exist or the application doesn't
-	 * have enough rights to use it.
+	 * (what application, how many DIFs, what specific DIFs)
+	 * @throws ApplicationRegistrationException
+	 * @return A handler to be able to identify the proper response event
 	 */
-	ApplicationRegistration registerApplication(
-			const ApplicationProcessNamingInformation& applicationName,
+	unsigned int requestApplicationRegistration(
 			const ApplicationRegistrationInformation& appRegistrationInfo)
 			throw (ApplicationRegistrationException);
 
 	/**
-	 * Unregisters an application from a DIF.
+	 * The application registration has been successful,
+	 * update data structures
+	 * @param seqNumber the id of the registration request
+	 * @param DIFName the DIF where the application has been registered
+	 * @throws ApplicationRegistrationException if there are issues
+	 * registering the application
+	 * @return the information on the application registration
+	 */
+	ApplicationRegistration * commitPendingResitration(
+	                unsigned int seqNumber,
+	                const ApplicationProcessNamingInformation& DIFName)
+	throw (ApplicationRegistrationException);
+
+	/**
+	 * The application registration has been unsucesful,
+	 * update data structures
+	 * @param seqNumber the if of the registration request
+	 * @throws ApplicationRegistrationException if the pending registration
+	 * is not found
+	 */
+	void withdrawPendingRegistration(unsigned int seqNumber)
+	throw (ApplicationRegistrationException);
+
+	/**
+	 * Requests an application to be unregistered from a DIF
 	 *
 	 * @param applicationName The name of the application to be unregistered
 	 * @param DIFName Then name of the DIF where the application has to be
 	 * unregistered from
-	 * @throws IPCException if the DIF doesn't exist or the application was not
-	 * registered there
+	 * @return A handler to be able to identify the proper response event
+	 * @throws ApplicationUnregistrationException
 	 */
-	void unregisterApplication(
+	unsigned int requestApplicationUnregistration(
 			ApplicationProcessNamingInformation applicationName,
 			ApplicationProcessNamingInformation DIFName)
 			throw (ApplicationUnregistrationException);
+
+	/**
+	 * Inform about the result of a pending application unregistration request
+	 * @param seqNumber the id of the request
+	 * @param success true if request was successful, false otherwise
+	 */
+	void appUnregistrationResult(unsigned int seqNumber, bool success)
+	                        throw (ApplicationUnregistrationException);
 
 	/**
 	 * Requests the allocation of a Flow
@@ -316,13 +376,34 @@ public:
 	 * @param localAppName The naming information of the local application
 	 * @param remoteAppName The naming information of the remote application
 	 * @param flowSpecifiction The characteristics required for the flow
-	 * @return A Flow object encapsulating the flow service
-	 * @throws IPCException if there are problems during the flow allocation
+	 * @return A handler to be able to identify the proper response event
+	 * @throws FlowAllocationException if there are problems during the flow allocation
 	 */
-	Flow * allocateFlowRequest(
+	unsigned int requestFlowAllocation(
 			const ApplicationProcessNamingInformation& localAppName,
 			const ApplicationProcessNamingInformation& remoteAppName,
 			const FlowSpecification& flow) throw (FlowAllocationException);
+
+	/**
+	 * Tell the IPC Manager that a pending flow has been allocated, and
+	 * get the flow structure
+	 * @param sequenceNumber the handler of the pending flow
+	 * @param portId the portId that has been allocated to the pending flow
+	 * @param DIFName the name of the DIF where the flow has been allocated
+	 * @return the flow, ready to be used
+	 * @throws FlowAllocationException if the pending flow is not found
+	 */
+	Flow * commitPendingFlow(unsigned int sequenceNumber, int portId,
+	                const ApplicationProcessNamingInformation& DIFName)
+	        throw (FlowAllocationException);
+
+	/**
+	 * Tell the IPC Manager that a pending flow allocation has been denied
+	 * @param sequenceNumber the handler of the pending flow
+	 * @throws FlowAllocationException if the pending flow is not found
+	 */
+	void withdrawPendingFlow(unsigned int sequenceNumber)
+	        throw (FlowAllocationException);
 
 	/**
 	 * Confirms or denies the request for a flow to this application.
@@ -332,21 +413,31 @@ public:
 	 * @param reason IF the flow was denied, contains a short explanation
 	 * providing some motivation
 	 * @return Flow If the flow is accepted, returns the flow object
-	 * @throws IPCException If there are problems confirming/denying the flow
+	 * @throws FlowAllocationException If there are problems
+	 * confirming/denying the flow
 	 */
 	Flow * allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
 			bool accept, const std::string& reason)
 			throw (FlowAllocationException);
 
 	/**
-	 * Causes the flow to be deallocated, and the object deleted.
+	 * Requests the deallocation of a flow
 	 *
-	 * @param portId the flow to be deallocated
-	 * @throws IPCException if the flow is not in the ALLOCATED state or
-	 * there are problems deallocating the flow
+	 * @param portId, the portId of the flow to be deallocated
+	 * @throws FlowDeallocationException if the flow is not in
+	 * the ALLOCATED state or there are problems deallocating the flow
 	 */
-	void deallocateFlow(int portId)
+	unsigned int requestFlowDeallocation(int portId)
 			throw (FlowDeallocationException);
+
+	/**
+	 * Inform about the success/failure of a flow deallocation request
+	 * @param success true if request has been successful, false otherwise
+	 * @param portId the portId of the flow to be deallocated
+	 * @throws flowDeallocationException if there are problems
+	 */
+	void flowDeallocationResult(int portId, bool success)
+	                throw (FlowDeallocationException);
 
 	/**
 	 * Returns the flows that are currently allocated
@@ -389,7 +480,6 @@ public:
 	const ApplicationProcessNamingInformation& getDIFName() const;
 };
 
-
 /**
  * Event informing that an application registration has been canceled
  * without the application having requested it
@@ -415,6 +505,34 @@ public:
 	const std::string getReason() const;
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const ApplicationProcessNamingInformation getDIFName() const;
+};
+
+/**
+ * Event informing about the result of a flow allocation request
+ */
+class AllocateFlowRequestResultEvent: public IPCEvent {
+        /** The application that requested the flow allocation */
+        ApplicationProcessNamingInformation sourceAppName;
+
+        /**
+         * The port-id assigned to the flow, or error code if the value is
+         * negative
+         */
+        int portId;
+
+        /**
+         * The DIF where the flow has been allocated
+         */
+        ApplicationProcessNamingInformation difName;
+
+public:
+        AllocateFlowRequestResultEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        const ApplicationProcessNamingInformation& difName,
+                        int portId, unsigned int sequenceNumber);
+        const ApplicationProcessNamingInformation& getAppName() const;
+        const ApplicationProcessNamingInformation& getDIFName() const;
+        int getPortId() const;
 };
 
 }

@@ -1064,7 +1064,18 @@ int parseListOfDIFConfigurationParameters(nlattr *nested,
 
 int putApplicationRegistrationInformationObject(nl_msg* netlinkMessage,
 		const ApplicationRegistrationInformation& object){
-	struct nlattr *difName;
+	struct nlattr *appName, *difName;
+	if (!(appName = nla_nest_start(netlinkMessage,
+	                ARIA_ATTR_APP_NAME))) {
+	        goto nla_put_failure;
+	}
+
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+	                object.getApplicationName()) < 0) {
+	        goto nla_put_failure;
+	}
+
+	nla_nest_end(netlinkMessage, appName);
 
 	NLA_PUT_U32(netlinkMessage, ARIA_ATTR_APP_REG_TYPE,
 			object.getRegistrationType());
@@ -1093,6 +1104,9 @@ int putApplicationRegistrationInformationObject(nl_msg* netlinkMessage,
 ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 		nlattr *nested){
 	struct nla_policy attr_policy[ARIA_ATTR_MAX + 1];
+	attr_policy[ARIA_ATTR_APP_NAME].type = NLA_NESTED;
+	attr_policy[ARIA_ATTR_APP_NAME].minlen = 0;
+	attr_policy[ARIA_ATTR_APP_DIF_NAME].maxlen = 0;
 	attr_policy[ARIA_ATTR_APP_REG_TYPE].type = NLA_U32;
 	attr_policy[ARIA_ATTR_APP_REG_TYPE].minlen = 0;
 	attr_policy[ARIA_ATTR_APP_REG_TYPE].maxlen = 65535;
@@ -1113,6 +1127,19 @@ ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 			static_cast<ApplicationRegistrationType>(
 					nla_get_u32(attrs[ARIA_ATTR_APP_REG_TYPE])));
 	ApplicationProcessNamingInformation * difName;
+	ApplicationProcessNamingInformation * appName;
+
+	if (attrs[ARIA_ATTR_APP_NAME]) {
+	        appName = parseApplicationProcessNamingInformationObject(
+	                        attrs[ARIA_ATTR_APP_NAME]);
+	        if (appName == 0) {
+	                delete result;
+	                return 0;
+	        } else {
+	                result->setApplicationName(*appName);
+	                delete appName;
+	        }
+	}
 
 	if (attrs[ARIA_ATTR_APP_DIF_NAME]) {
 		difName = parseApplicationProcessNamingInformationObject(
@@ -1346,25 +1373,16 @@ int putAppFlowDeallocatedNotificationMessageObject(nl_msg* netlinkMessage,
 
 int putAppRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 		const AppRegisterApplicationRequestMessage& object) {
-	struct nlattr *difName, *applicationName;
+	struct nlattr *appRegInfo;
 
-	if (!(applicationName = nla_nest_start(netlinkMessage, ARAR_ATTR_APP_NAME))) {
-		goto nla_put_failure;
-	}
-	if (putApplicationProcessNamingInformationObject(netlinkMessage,
-			object.getApplicationName()) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, applicationName);
-
-	if (!(difName = nla_nest_start(netlinkMessage, ARAR_ATTR_APP_REG_INFO))) {
+	if (!(appRegInfo = nla_nest_start(netlinkMessage, ARAR_ATTR_APP_REG_INFO))) {
 		goto nla_put_failure;
 	}
 	if (putApplicationRegistrationInformationObject(netlinkMessage,
 			object.getApplicationRegistrationInformation()) < 0) {
 		goto nla_put_failure;
 	}
-	nla_nest_end(netlinkMessage, difName);
+	nla_nest_end(netlinkMessage, appRegInfo);
 
 	return 0;
 
@@ -2514,9 +2532,6 @@ AppFlowDeallocatedNotificationMessage * parseAppFlowDeallocatedNotificationMessa
 AppRegisterApplicationRequestMessage * parseAppRegisterApplicationRequestMessage(
 		nlmsghdr *hdr) {
 	struct nla_policy attr_policy[ARAR_ATTR_MAX + 1];
-	attr_policy[ARAR_ATTR_APP_NAME].type = NLA_NESTED;
-	attr_policy[ARAR_ATTR_APP_NAME].minlen = 0;
-	attr_policy[ARAR_ATTR_APP_NAME].maxlen = 0;
 	attr_policy[ARAR_ATTR_APP_REG_INFO].type = NLA_NESTED;
 	attr_policy[ARAR_ATTR_APP_REG_INFO].minlen = 0;
 	attr_policy[ARAR_ATTR_APP_REG_INFO].maxlen = 0;
@@ -2540,20 +2555,8 @@ AppRegisterApplicationRequestMessage * parseAppRegisterApplicationRequestMessage
 	AppRegisterApplicationRequestMessage * result =
 			new AppRegisterApplicationRequestMessage();
 
-	ApplicationProcessNamingInformation * applicationName;
 	ApplicationRegistrationInformation * appRegInfo;
 
-	if (attrs[ARAR_ATTR_APP_NAME]) {
-		applicationName = parseApplicationProcessNamingInformationObject(
-				attrs[ARAR_ATTR_APP_NAME]);
-		if (applicationName == 0) {
-			delete result;
-			return 0;
-		} else {
-			result->setApplicationName(*applicationName);
-			delete applicationName;
-		}
-	}
 	if (attrs[ARAR_ATTR_APP_REG_INFO]) {
 		appRegInfo = parseApplicationRegistrationInformation(
 				attrs[ARAR_ATTR_APP_REG_INFO]);

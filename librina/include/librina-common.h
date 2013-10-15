@@ -311,7 +311,11 @@ enum IPCEventType {
 	IPC_PROCESS_UNREGISTERED_FROM_DIF,
 	IPC_PROCESS_QUERY_RIB,
 	GET_DIF_PROPERTIES,
-	OS_PROCESS_FINALIZED
+	OS_PROCESS_FINALIZED,
+	ALLOCATE_FLOW_REQUEST_RESULT_EVENT,
+	ALLOCATE_FLOW_RESPONSE_EVENT,
+	REGISTER_APPLICATION_RESPONSE_EVENT,
+	UNREGISTER_APPLICATION_RESPONSE_EVENT
 };
 
 /**
@@ -443,6 +447,9 @@ enum ApplicationRegistrationType {
  */
 class ApplicationRegistrationInformation {
 
+        /** The name of the application being registered */
+        ApplicationProcessNamingInformation appName;
+
 	/** The type of registration requested */
 	ApplicationRegistrationType applicationRegistrationType;
 
@@ -452,7 +459,10 @@ class ApplicationRegistrationInformation {
 public:
 	ApplicationRegistrationInformation();
 	ApplicationRegistrationInformation(
-			ApplicationRegistrationType applicationRegistrationType);
+		ApplicationRegistrationType applicationRegistrationType);
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	void setApplicationName(
+	                const ApplicationProcessNamingInformation& appName);
 	ApplicationRegistrationType getRegistrationType() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
 	void setDIFName(const ApplicationProcessNamingInformation& difName);
@@ -463,40 +473,123 @@ public:
  * registration to a DIF
  */
 class ApplicationRegistrationRequestEvent: public IPCEvent {
-	/** The application that wants to register */
-	ApplicationProcessNamingInformation applicationName;
 
 	/** The application registration information*/
 	ApplicationRegistrationInformation applicationRegistrationInformation;
 
 public:
 	ApplicationRegistrationRequestEvent(
-		const ApplicationProcessNamingInformation& appName,
 		const ApplicationRegistrationInformation&
 		applicationRegistrationInformation, unsigned int sequenceNumber);
-	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const ApplicationRegistrationInformation&
 		getApplicationRegistrationInformation() const;
+};
+
+class BaseApplicationRegistrationEvent: public IPCEvent {
+        /** The application that wants to unregister */
+        ApplicationProcessNamingInformation applicationName;
+
+        /** The DIF to which the application wants to cancel the registration */
+        ApplicationProcessNamingInformation DIFName;
+
+public:
+        BaseApplicationRegistrationEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        const ApplicationProcessNamingInformation& DIFName,
+                        IPCEventType eventType,
+                        unsigned int sequenceNumber);
+        BaseApplicationRegistrationEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        IPCEventType eventType,
+                        unsigned int sequenceNumber);
+        const ApplicationProcessNamingInformation& getApplicationName() const;
+        const ApplicationProcessNamingInformation& getDIFName() const;
 };
 
 /**
  * Event informing that an application has requested the
  * unregistration from a DIF
  */
-class ApplicationUnregistrationRequestEvent: public IPCEvent {
-	/** The application that wants to unregister */
-	ApplicationProcessNamingInformation applicationName;
-
-	/** The DIF to which the application wants to cancel the registration */
-	ApplicationProcessNamingInformation DIFName;
-
+class ApplicationUnregistrationRequestEvent:
+                public BaseApplicationRegistrationEvent {
 public:
 	ApplicationUnregistrationRequestEvent(
 			const ApplicationProcessNamingInformation& appName,
 			const ApplicationProcessNamingInformation& DIFName,
 			unsigned int sequenceNumber);
-	const ApplicationProcessNamingInformation& getApplicationName() const;
-	const ApplicationProcessNamingInformation& getDIFName() const;
+};
+
+class BaseApplicationRegistrationResponseEvent:
+                public BaseApplicationRegistrationEvent {
+        /** The result of the operation */
+        int result;
+
+public:
+        BaseApplicationRegistrationResponseEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        const ApplicationProcessNamingInformation& DIFName,
+                        int result,
+                        IPCEventType eventType,
+                        unsigned int sequenceNumber);
+        BaseApplicationRegistrationResponseEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        int result,
+                        IPCEventType eventType,
+                        unsigned int sequenceNumber);
+        int getResult() const;
+};
+
+/**
+ * Event informing about the result of an application registration request
+ */
+class RegisterApplicationResponseEvent:
+                public BaseApplicationRegistrationResponseEvent {
+public:
+        RegisterApplicationResponseEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        const ApplicationProcessNamingInformation& difName,
+                        int result, unsigned int sequenceNumber);
+};
+
+/**
+ * Event informing about the result of an application unregistration request
+ */
+class UnregisterApplicationResponseEvent:
+                public BaseApplicationRegistrationResponseEvent {
+public:
+        UnregisterApplicationResponseEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        int result, unsigned int sequenceNumber);
+};
+
+/**
+ * Event informing about the application decision regarding the
+ * acceptance/denial of a flow request
+ */
+class AllocateFlowResponseEvent: public IPCEvent {
+        /** True if the application accepts the flow, false otherwise */
+        bool accept;
+
+        /**
+         * If the flow was denied and the application wishes to do so, it
+         * can provide an explanation of why this decision was taken
+         */
+        std::string denyReason;
+
+        /**
+         * If the flow was denied, this field controls wether the application
+         * wants the IPC Process to reply to the source or not
+         */
+        bool notifySource;
+
+public:
+        AllocateFlowResponseEvent(
+                        bool accept,
+                        const std::string& denyReason,
+                        bool notifysource);
+        bool isAccept() const;
+        const std::string& getDenyReason() const;
+        bool isNotifySource() const;
 };
 
 /**
