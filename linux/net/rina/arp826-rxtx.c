@@ -141,6 +141,12 @@ int arp_send_reply(uint16_t            ptype,
                    const struct gpa *  tpa,
                    const struct gha *  tha)
 {
+#ifdef CONFIG_RINARP
+        struct gpa *        tmp_spa;
+        struct gpa *        tmp_tpa;
+        uint8_t             filler;
+        size_t              max_len;
+#endif
         struct net_device * dev;
         struct sk_buff *    skb;
 
@@ -156,9 +162,28 @@ int arp_send_reply(uint16_t            ptype,
                 return -1;
         }
 
+#ifdef CONFIG_RINARP
+        max_len = max(gpa_address_length(spa), gpa_address_length(tpa));
+        tmp_spa = gpa_dup(spa);
+        if (gpa_address_grow(tmp_spa, max_len, 0x00))
+                return -1;
+        tmp_tpa = gpa_dup(tpa);
+        if (gpa_address_grow(tmp_tpa, max_len, 0x00)) {
+                gpa_destroy(tmp_spa);
+                return -1;
+        }
+
+        skb = arp_create(dev,
+                         ARP_REPLY, ptype, 
+                         tmp_spa, sha, tmp_tpa, tha);
+
+        gpa_destroy(tmp_spa);
+        gpa_destroy(tmp_tpa);
+#else
         skb = arp_create(dev,
                          ARP_REPLY, ptype, 
                          spa, sha, tpa, tha);
+#endif
         if (skb == NULL)
                 return -1;
 
@@ -173,6 +198,12 @@ int arp_send_request(uint16_t            ptype,
                      const struct gha *  sha,
                      const struct gpa *  tpa)
 {
+#ifdef CONFIG_RINARP
+        struct gpa *        tmp_spa;
+        struct gpa *        tmp_tpa;
+        uint8_t             filler;
+        size_t              max_len;
+#endif
         struct net_device * dev;
         struct sk_buff *    skb;
         struct gha *        tha;
@@ -195,15 +226,36 @@ int arp_send_request(uint16_t            ptype,
                 return -1;
         }
 
+#ifdef CONFIG_RINARP
+        max_len = max(gpa_address_length(spa), gpa_address_length(tpa));
+        tmp_spa = gpa_dup(spa);
+        if (gpa_address_grow(tmp_spa, max_len, 0x00))
+                return -1;
+        tmp_tpa = gpa_dup(tpa);
+        if (gpa_address_grow(tmp_tpa, max_len, 0x00)) {
+                gpa_destroy(tmp_spa);
+                return -1;
+        }
+
         skb = arp_create(dev,
-                         ARP_REQUEST, ptype, 
+                         ARP_REPLY, ptype, 
+                         tmp_spa, sha, tmp_tpa, tha);
+
+        gpa_destroy(tmp_spa);
+        gpa_destroy(tmp_tpa);
+#else
+        skb = arp_create(dev,
+                         ARP_REPLY, ptype, 
                          spa, sha, tpa, tha);
+#endif
+
         if (skb == NULL) {
                 gha_destroy(tha);
                 return -1;
         }
 
         dev_queue_xmit(skb);
+
         gha_destroy(tha);
 
         return 0;

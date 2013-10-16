@@ -122,6 +122,17 @@ static int process(const struct sk_buff * skb,
 	tmp_tpa = gpa_create(tpa, plen);
 	tmp_tha = gha_create(MAC_ADDR_802_3, tha);
 
+#ifdef CONFIG_RINARP
+        if (gpa_address_shrink(tmp_spa, 0x00)) {
+                LOG_ERR("Problems parsing the source GPA");
+                return -1;
+        }
+        if (gpa_address_shrink(tmp_tpa, 0x00)) {
+                LOG_ERR("Got problems parsing the target GPA");
+                return -1;
+        }
+#endif
+
         /* Finally process the entry */
         switch (operation) {
         case ARP_REQUEST: {
@@ -173,10 +184,10 @@ static int process(const struct sk_buff * skb,
 }
 
 /* NOTE: The following function uses a different mapping for return values */
-static int receive(struct sk_buff *     skb,
-                   struct net_device *  dev,
-                   struct packet_type * pkt,
-                   struct net_device *  orig_dev)
+static int arp_receive(struct sk_buff *     skb,
+                       struct net_device *  dev,
+                       struct packet_type * pkt,
+                       struct net_device *  orig_dev)
 {
         const struct arp_header * header;
         int                       total_length;
@@ -379,7 +390,7 @@ static int __init mod_init(void)
                 return -1;
         }
 
-        if (!protocol_add(ETH_P_RINA, 6, receive)) {
+        if (!protocol_add(ETH_P_RINA, 6, arp_receive)) {
                 tbls_fini();
                 arm_fini();
                 return -1;
