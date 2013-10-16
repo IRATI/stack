@@ -44,7 +44,7 @@ int                efcp_imap_remove(struct efcp_imap * map,
 
 struct cidm;
 
-/* ALWAYS use this function to get a bad port-id */
+/* ALWAYS use this function to get a bad cep-id */
 cep_id_t            cep_id_bad(void);
 
 /* ALWAYS use this function to check if the id looks good */

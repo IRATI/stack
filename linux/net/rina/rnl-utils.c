@@ -1935,8 +1935,8 @@ int rnl_format_ipcm_flow_dealloc_noti_msg(port_id_t        id,
 }
 EXPORT_SYMBOL(rnl_format_ipcm_flow_dealloc_noti_msg);
 
-int rnl_format_ipcm_conn_create_resp_msg(port_id_t id,
-                                         cep_id_t  src_cep,
+int rnl_format_ipcm_conn_create_resp_msg(port_id_t        id,
+                                         cep_id_t         src_cep,
                                          struct sk_buff * skb_out)
 {
         if (!skb_out) {
