@@ -126,15 +126,14 @@ static int process(const struct sk_buff * skb,
         /* Finally process the entry */
         switch (operation) {
         case ARP_REQUEST: {
-		struct table *       tbl;
+		struct table *             tbl;
 		const struct table_entry * entry;
 		const struct table_entry * req_addr;
-		const struct gha *   target_ha;
-		struct net_device *  dev;
+		const struct gha *         target_ha;
 
 		/* FIXME: Should we add all ARP Requests? */
                 /* Do we have it in the cache ? */
-		tbl = tbls_find(ptype);
+		tbl   = tbls_find(ptype);
 		entry = tbl_find_by_gpa(tbl, tmp_spa);
 		
                 if (!entry) {
@@ -151,7 +150,8 @@ static int process(const struct sk_buff * skb,
 		req_addr  = tbl_find_by_gpa(tbl, tmp_tpa);
 		target_ha = tble_ha(req_addr);
 
-                if (arp_send_reply(ptype, tmp_tpa, tmp_spa, tmp_sha)) {
+                if (arp_send_reply(ptype,
+                                   tmp_tpa, tmp_tha, tmp_spa, tmp_sha)) {
                         /* FIXME: Couldn't send reply ... */
                         return -1;
                 }
