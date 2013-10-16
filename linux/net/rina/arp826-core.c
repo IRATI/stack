@@ -59,7 +59,7 @@ protocol_create(uint16_t ptype,
 
         if (!receiver) {
                 LOG_ERR("Bad input parameters, "
-                        "cannot create protocol %d", ptype);
+                        "cannot create protocol 0x%02x", ptype);
                 return NULL;
         }
 
@@ -94,10 +94,13 @@ static struct list_head protocols;
 static int protocol_add(uint16_t ptype,
                         size_t   hlen)
 {
-        struct protocol * p = protocol_create(ptype, hlen, arp_receive);
+        struct protocol * p;
 
+        LOG_DBG("Adding protocol 0x%02x, hlen = %zd", ptype, hlen);
+
+        p = protocol_create(ptype, hlen, arp_receive);
         if (!p) {
-                LOG_ERR("Cannot add protocol type %d", ptype);
+                LOG_ERR("Cannot create protocol type 0x%02x", ptype);
                 return -1;
         }
 
@@ -112,7 +115,7 @@ static int protocol_add(uint16_t ptype,
         list_add(&protocols, &p->next); 
         spin_unlock(&protocols_lock);
 
-        LOG_DBG("Protocol type %d added successfully", ptype);
+        LOG_DBG("Protocol type 0x%02x added successfully", ptype);
 
         return 0;
 }
@@ -138,7 +141,7 @@ static void protocol_remove(uint16_t ptype)
         spin_unlock(&protocols_lock);
 
         if (!p) {
-                LOG_ERR("Cannot remove protocol type %d, it's unknown", ptype);
+                LOG_ERR("Cannot remove protocol type 0x%02x", ptype);
                 return;
         }
 
