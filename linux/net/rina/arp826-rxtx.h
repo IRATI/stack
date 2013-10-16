@@ -29,12 +29,13 @@
 
 int arp_send_reply(uint16_t            ptype,
                    const struct gpa *  spa,
+                   const struct gha *  sha,
                    const struct gpa *  tpa,
                    const struct gha *  tha);
 
-int arp_send_request(uint16_t            ptype,
-                     const struct gpa *  spa,
-                     const struct gpa *  sha,
-                     const struct gha *  tpa);
+int arp_send_request(uint16_t           ptype,
+                     const struct gpa * spa,
+                     const struct gha * sha,
+                     const struct gpa * tpa);
 
 #endif
