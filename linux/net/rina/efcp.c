@@ -58,11 +58,11 @@ static int efcp_destroy(struct efcp * instance)
                 return -1;
         }
 
-        if (instance->dtp)  dtp_unbind(instance->dtp);
-        if (instance->dtcp) dtcp_unbind(instance->dtcp);
+        if (instance->dtp)        dtp_unbind(instance->dtp);
+        if (instance->dtcp)       dtcp_unbind(instance->dtcp);
 
-        if (instance->dtp)  dtp_destroy(instance->dtp);
-        if (instance->dtcp) dtcp_destroy(instance->dtcp);
+        if (instance->dtp)        dtp_destroy(instance->dtp);
+        if (instance->dtcp)       dtcp_destroy(instance->dtcp);
 
         if (instance->connection) rkfree(instance->connection);
 
@@ -110,10 +110,8 @@ int efcp_container_destroy(struct efcp_container * container)
 
 static int is_connection_ok(const struct connection * connection)
 {
-        if (!connection)
-                return 0;
-
-        if (!is_cep_id_ok(connection->source_cep_id)      ||
+        if (!connection                                   ||
+            !is_cep_id_ok(connection->source_cep_id)      ||
             !is_cep_id_ok(connection->destination_cep_id) ||
             !is_port_id_ok(connection->port_id))
                 return 0;
@@ -145,7 +143,7 @@ cep_id_t efcp_connection_create(struct efcp_container *   container,
         /* We must ensure that the DTP is instantiated, at least ... */
         connection->source_cep_id = cep_id;
         tmp->connection = connection;
-        tmp->dtp = dtp_create(/* connection->port_id */);
+        tmp->dtp        = dtp_create(/* connection->port_id */);
         if (!tmp->dtp) {
                 efcp_destroy(tmp);
                 return -1;
