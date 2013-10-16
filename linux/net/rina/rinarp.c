@@ -76,30 +76,6 @@ static void handle_destroy(struct rinarp_handle * handle)
 
 static bool handle_is_ok(struct rinarp_handle * handle)
 { return (handle && gpa_is_ok(handle->pa) && gha_is_ok(handle->ha)); }
-
-#if 0
-const struct net_device * device
-
-
-        if (!device                      ||
-            !gpa_is_ok(address)          ||
-            !device->dev_addr            ||
-            device->type != ARPHRD_ETHER ||
-            device->addr_len != 6) {
-                LOG_ERR("Bogus input parameters, cannot register");
-                return NULL;
-        }
-
-        ASSERT(device->type     == ARPHRD_ETHER);
-        ASSERT(device->addr_len == 6);
-        handle->ha = gha_create(MAC_ADDR_802_3, device->dev_addr);
-        if (!handle->ha) {
-                gpa_destroy(handle->pa);
-                rkfree(handle);
-                return NULL;
-        }
-
-#endif
                                   
 struct rinarp_handle * rinarp_add(const struct gpa * pa,
                                   const struct gha * ha)

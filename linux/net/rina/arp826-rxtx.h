@@ -38,4 +38,10 @@ int arp_send_request(uint16_t           ptype,
                      const struct gha * sha,
                      const struct gpa * tpa);
 
+/* NOTE: The following function uses a different mapping for return values */
+int arp_receive(struct sk_buff *     skb,
+                struct net_device *  dev,
+                struct packet_type * pkt,
+                struct net_device *  orig_dev);
+
 #endif

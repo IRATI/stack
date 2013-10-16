@@ -134,13 +134,9 @@ static int resolver(void * o)
                                     pos->data->tpa,
                                     pos->data->tha);
 
+                        /* Get rid of the (now useless) data */
                         list_del(&pos->next);
                         resolve_data_destroy(pos->data);
-
-                        /*
-                         * NOTE: The opaque should have been disposed by the
-                         *       worker
-                         */
                         rkfree(pos);
                 }
         }
@@ -171,32 +167,10 @@ int arm_resolve(uint16_t     ptype,
         if (!tmp)
                 return -1;
 
+        ASSERT(arm_wq);
+
         /* Takes the ownership ... and disposes everything */
         return rwq_post(arm_wq, resolver, tmp);
-}
-
-int arm_init(void)
-{
-        arm_wq = rwq_create("arp826-wq");
-        if (!arm_wq)
-                return -1;
-
-        spin_lock_init(&resolutions_lock);
-        INIT_LIST_HEAD(&resolutions_ongoing);
-
-        return 0;
-}
-
-int arm_fini(void)
-{
-        struct resolution * pos, * nxt;
-
-        list_for_each_entry_safe(pos, nxt, &resolutions_ongoing, next) {
-                resolve_data_destroy(pos->data);
-                rkfree(pos);
-        }
-
-        return rwq_destroy(arm_wq);
 }
 
 int arp826_resolve_gpa(uint16_t           ptype,
@@ -241,3 +215,38 @@ int arp826_resolve_gpa(uint16_t           ptype,
         return 0;
 }
 EXPORT_SYMBOL(arp826_resolve_gpa);
+
+int arm_init(void)
+{
+        LOG_DBG("Initializing");
+
+        arm_wq = rwq_create("arp826-wq");
+        if (!arm_wq)
+                return -1;
+
+        spin_lock_init(&resolutions_lock);
+        INIT_LIST_HEAD(&resolutions_ongoing);
+
+        LOG_DBG("Initialed successfully");
+
+        return 0;
+}
+
+int arm_fini(void)
+{
+        struct resolution * pos, * nxt;
+        int                 ret;
+
+        LOG_DBG("Finalizing");
+
+        list_for_each_entry_safe(pos, nxt, &resolutions_ongoing, next) {
+                resolve_data_destroy(pos->data);
+                rkfree(pos);
+        }
+
+        ret = rwq_destroy(arm_wq);
+
+        LOG_DBG("Finalized successfully");
+
+        return ret;
+}

@@ -29,7 +29,7 @@
 struct rmt {
         struct pft * pft; /* The PDU Forwarding Table */
 
-	/* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
+        /* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
 };
 
 struct rmt * rmt_create(void)
