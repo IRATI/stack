@@ -63,6 +63,7 @@ int                 gha_destroy(struct gha * gha);
 bool                gha_is_ok(const struct gha * gha);
 struct gha *        gha_dup(const struct gha * gha);
 const uint8_t *     gha_address(const struct gha * gha);
+size_t              gha_address_length(const struct gha * gha);
 gha_type_t          gha_type(const struct gha * gha);
 bool                gha_is_equal(const struct gha * a,
                                  const struct gha * b);
