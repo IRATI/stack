@@ -23,6 +23,7 @@
 #include <linux/kernel.h>
 #include <linux/skbuff.h>
 #include <linux/netdevice.h>
+#include <linux/if_arp.h>
 
 /* FIXME: The following dependencies have to be removed */
 #define RINA_PREFIX "arp826-rxtx"
@@ -42,22 +43,46 @@ static struct sk_buff * arp_create(struct net_device * dev,
                                    const struct gpa *  tpa,
                                    const struct gha *  tha)
 {
+	struct sk_buff *    skb;
+	struct arp_header * arp;
+	unsigned char *     arp_ptr;
+        size_t              hlen;
+        size_t              tlen;
+	size_t              length;
+
         ASSERT(dev &&
                gpa_is_ok(spa) && gha_is_ok(sha) &&
                gpa_is_ok(tpa) && gha_is_ok(tha));
 
-#if 0
-	struct sk_buff * skb;
-	struct arp_hdr * arp;
-	unsigned char * arp_ptr;
-	int hlen = LL_RESERVED_SPACE(dev);
-	int tlen = dev->needed_tailroom;
-	const unsigned char *src_hw;
+        if (gpa_address_length(spa) != gpa_address_length(tpa)) {
+                LOG_ERR("Mismatched source and target GPA lengths, "
+                        "cannot create ARP");
+                return NULL;
+        }
+        if (gha_type(sha) != gha_type(tha)) {
+                LOG_ERR("Mismatched source and target GHA types, "
+                        "cannot create ARP");
+                return NULL;
+        }
 
-/*
- * Allocate a buffer
- */
-	int length = sizeof(struct arp_hdr) + (dev->addr_len + plen) * 2;
+        ASSERT(dev);
+        ASSERT(gpa_address_length(spa) == gpa_address_length(tpa));
+        ASSERT(gha_type(sha)           == gha_type(tha));
+
+        if (gha_type(sha) != MAC_ADDR_802_3) {
+                LOG_ERR("Cannot process GHAs != 802.3");
+                return NULL;
+        }
+
+        if (dev->type != ARPHRD_ETHER) {
+                LOG_ERR("Wrong device, cannot use the passed GHAs");
+                return NULL;
+        }
+
+	hlen   = LL_RESERVED_SPACE(dev);
+	tlen   = dev->needed_tailroom;
+        length = sizeof(struct arp_header) +
+                (gpa_address_length(spa) + gha_address_length(sha)) * 2;
 
 	skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
 	if (skb == NULL)
@@ -65,60 +90,49 @@ static struct sk_buff * arp_create(struct net_device * dev,
 
 	skb_reserve(skb, hlen);
 	skb_reset_network_header(skb);
-	arp = (struct arp_hdr *) skb_put(skb, length);
-	skb->dev = dev;
-	skb->protocol = htons(ETH_P_ARP);
-	src_hw = dev->dev_addr;
-	if (dest_hw == NULL)
-		dest_hw = dev->broadcast;
+	arp = (struct arp_header *) skb_put(skb, length);
 
-/*
- * Fill the device header for the ARP frame
- */
-	if (dev_hard_header(skb, dev, ptype, dest_hw, src_hw, skb->len) < 0)
-		goto out;
+	skb->dev      = dev;
+	skb->protocol = htons(ptype);
 
-/*
- * Fill out the arp protocol part.
- */
+        /* Fill the device header for the ARP frame */
+	if (dev_hard_header(skb, dev,
+                            ptype,
+                            gha_address(tha),
+                            gha_address(sha),
+                            skb->len) < 0) {
+                LOG_ERR("Cannot create hard-header");
+                kfree_skb(skb);
+                return NULL;
+        }
 
-	switch (dev->type) {
-	default:
-		arp->ar_hrd = htons(dev->type);
-		arp->ar_pro = htons(ptype);
-		break;
-	}
+        /* Fill out the packet, finally */
 
-	arp->ar_hln = dev->addr_len;
-	arp->ar_pln = plen;
-	arp->ar_op = htons(op);
+        arp->htype = htons(dev->type);
+        arp->ptype = htons(ptype);
+	arp->hlen  = gha_address_length(sha);
+	arp->plen  = gpa_address_length(spa);
+	arp->oper  = htons(oper);
 
 	arp_ptr = (unsigned char *)(arp + 1);
 
-	memcpy(arp_ptr, src_hw, dev->addr_len);
-	arp_ptr += dev->addr_len;
-	memcpy(arp_ptr, src_nwaddr, plen);
-	arp_ptr += plen;
+        /* SHA */
+	memcpy(arp_ptr, gha_address(sha), gha_address_length(sha));
+	arp_ptr += gha_address_length(sha);
 
-	switch (dev->type) {
-	default:
-		if (dest_hw != NULL)
-			memcpy(arp_ptr, dest_hw, dev->addr_len);
-		else
-			memset(arp_ptr, 0, dev->addr_len);
-		arp_ptr += dev->addr_len;
-	}
-	memcpy(arp_ptr, dest_nwaddr, plen);
+        /* SPA */
+	memcpy(arp_ptr, gpa_address_value(spa), gpa_address_length(spa));
+	arp_ptr += gpa_address_length(spa);
+
+        /* THA */
+	memcpy(arp_ptr, gha_address(tha), gha_address_length(tha));
+	arp_ptr += gha_address_length(tha);
+
+        /* TPA */
+	memcpy(arp_ptr, gpa_address_value(tpa), gpa_address_length(tpa));
+	arp_ptr += gpa_address_length(tpa);
 
 	return skb;
-
-out:
-	kfree_skb(skb);
-#endif
-
-	LOG_MISSING;
-
-	return NULL;
 }
 
 int arp_send_reply(uint16_t            ptype,
