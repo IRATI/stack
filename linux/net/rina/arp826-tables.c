@@ -407,16 +407,17 @@ int tbls_create(uint16_t ptype, size_t hwlen)
                 spin_unlock(&tables_lock);
                 return 0;
         }
+        spin_unlock(&tables_lock);
 
         /* FIXME: Is the hwlen correct ? */
-
         cl = tbl_create(hwlen);
+
+        spin_lock(&tables_lock);
         if (tmap_add(tables, ptype, cl)) {
                 tbl_destroy(cl);
                 spin_unlock(&tables_lock);
                 return -1;
         }
-
         spin_unlock(&tables_lock);
 
         LOG_DBG("Table for ptype %d created successfully", ptype);

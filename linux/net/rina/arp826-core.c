@@ -153,6 +153,8 @@ static void protocol_remove(uint16_t ptype)
 
 static int __init mod_init(void)
 {
+        LOG_DBG("Initializing");
+
         spin_lock_init(&protocols_lock);
 
         if (tbls_init())
@@ -176,12 +178,14 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
+        LOG_DBG("Finalizing");
+
         protocol_remove(ETH_P_RINA);
 
         arm_fini();
         tbls_fini();
 
-        LOG_DBG("Destroyed successfully");
+        LOG_DBG("Finalized successfully");
 }
 
 module_init(mod_init);
