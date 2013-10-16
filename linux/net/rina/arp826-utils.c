@@ -269,6 +269,16 @@ struct gha * gha_create(gha_type_t      type,
 }
 EXPORT_SYMBOL(gha_create);
 
+struct gha * gha_create_broadcast(gha_type_t type)
+{
+        const uint8_t addr[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+
+        if (type == MAC_ADDR_802_3)
+                return gha_create(MAC_ADDR_802_3, addr);
+
+        return NULL;
+}
+
 int gha_destroy(struct gha * gha)
 {
         if (!gha_is_ok(gha)) {
@@ -355,6 +365,19 @@ bool gha_is_equal(const struct gha * a,
         return v;
 }
 EXPORT_SYMBOL(gha_is_equal);
+
+struct net_device * gha_to_device(const struct gha * ha) 
+{
+        if (!gha_is_ok(ha)) {
+                LOG_ERR("Wrong input, cannot get device from GHA");
+                return NULL;
+        }
+
+	LOG_MISSING;
+
+	return NULL;
+}
+EXPORT_SYMBOL(gha_to_device);
 
 struct sk_buff * arp826_create(__be16                oper,
                                __be16                ptype,
@@ -545,9 +568,6 @@ int tmap_add(struct tmap *  map,
         INIT_HLIST_NODE(&tmp->hlist);
 
         hash_add(map->table, &tmp->hlist, key);
-
-        LOG_DBG("Added flow %pK to the tmap %pk with key %d",
-                tmp->value, map, tmp->key);
 
         return 0;
 }
