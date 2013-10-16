@@ -169,8 +169,6 @@ enum ipcm_conn_update_req_attrs_list {
         ICURQ_ATTR_PORT_ID = 1,
         ICURQ_ATTR_SOURCE_CEP_ID,
         ICURQ_ATTR_DEST_CEP_ID,
-        ICURQ_ATTR_QOS_ID,
-        ICURQ_ATTR_POLICIES,
         __ICURQ_ATTR_MAX,
 };
 #define ICURQ_ATTR_MAX (__ICURQ_ATTR_MAX - 1)
