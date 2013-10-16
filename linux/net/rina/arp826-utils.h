@@ -123,6 +123,6 @@ int            tmap_update(struct tmap *  map,
 int            tmap_remove(struct tmap * map,
                            uint16_t      key);
 
-struct net_device * device_from_gha(const struct gha * ha);
+struct net_device * gha_to_device(const struct gha * ha);
 
 #endif
