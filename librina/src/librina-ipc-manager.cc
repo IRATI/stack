@@ -73,6 +73,19 @@ const std::string IPCProcess::error_deallocating_flow =
 const std::string IPCProcess::error_querying_rib =
 		"Error querying rib";
 
+/** Return the information of a registration request */
+ApplicationProcessNamingInformation IPCProcess::getPendingRegistration(
+                unsigned int seqNumber) throw (IPCException) {
+        std::map<unsigned int, ApplicationProcessNamingInformation>::iterator iterator;
+
+        iterator = pendingRegistrations.find(seqNumber);
+        if (iterator == pendingRegistrations.end()) {
+                throw IPCException("Could not find pending registration");
+        }
+
+        return iterator->second;
+}
+
 IPCProcess::IPCProcess() {
 	id = 0;
 	portId = 0;
@@ -320,10 +333,14 @@ unsigned int IPCProcess::registerApplication(
 		const ApplicationProcessNamingInformation& applicationName)
 throw (IpcmRegisterApplicationException) {
 	if (!difMember){
-		throw IPCException(IPCProcess::error_not_a_dif_member);
+		throw IpcmRegisterApplicationException(
+		                IPCProcess::error_not_a_dif_member);
 	}
+
+	unsigned int seqNum = 0;
+
 #if STUB_API
-	return 0;
+	//Do nothing
 #else
 	IpcmRegisterApplicationRequestMessage message;
 	message.setApplicationName(applicationName);
@@ -338,15 +355,66 @@ throw (IpcmRegisterApplicationException) {
 	        throw IpcmRegisterApplicationException(e.what());
 	}
 
-	return message.getSequenceNumber();
+	seqNum = message.getSequenceNumber();
 #endif
+	pendingRegistrations[seqNum] = applicationName;
+	return seqNum;
+}
+
+void IPCProcess::registerApplicationResult(
+                unsigned int sequenceNumber, bool success)
+throw (IpcmRegisterApplicationException) {
+        if (!difMember){
+                throw IpcmRegisterApplicationException(
+                                IPCProcess::error_not_a_dif_member);
+        }
+
+        ApplicationProcessNamingInformation appName;
+        try {
+                getPendingRegistration(sequenceNumber);
+        } catch(IPCException &e){
+                throw IpcmRegisterApplicationException(e.what());
+        }
+
+        pendingRegistrations.erase(sequenceNumber);
+        if (success) {
+                registeredApplications.push_back(appName);
+        }
+}
+
+std::list<ApplicationProcessNamingInformation>
+        IPCProcess::getRegisteredApplications() {
+        return registeredApplications;
 }
 
 unsigned int IPCProcess::unregisterApplication(
 		const ApplicationProcessNamingInformation& applicationName)
 throw (IpcmUnregisterApplicationException) {
+        if (!difMember){
+                throw IpcmUnregisterApplicationException(
+                                IPCProcess::error_not_a_dif_member);
+        }
+
+        bool found = false;
+        std::list<ApplicationProcessNamingInformation>::iterator iterator;
+        for (iterator = registeredApplications.begin();
+                        iterator != registeredApplications.end();
+                        iterator++) {
+              if (*iterator == applicationName){
+                      found = true;
+                      break;
+              }
+        }
+
+        if (!found)
+                throw IpcmUnregisterApplicationException(
+                                "The application is not registered");
+
+
+        unsigned int seqNum = 0;
+
 #if STUB_API
-	return 0;
+	//Do nothing
 #else
 	IpcmUnregisterApplicationRequestMessage message;
 	message.setApplicationName(applicationName);
@@ -361,8 +429,31 @@ throw (IpcmUnregisterApplicationException) {
                 throw IpcmUnregisterApplicationException(e.what());
         }
 
-        return message.getSequenceNumber();
+        seqNum = message.getSequenceNumber();
 #endif
+        pendingRegistrations[seqNum] = applicationName;
+        return seqNum;
+}
+
+void IPCProcess::unregisterApplicationResult(unsigned int sequenceNumber, bool success)
+throw (IpcmUnregisterApplicationException) {
+        if (!difMember){
+                throw IpcmRegisterApplicationException(
+                                IPCProcess::error_not_a_dif_member);
+        }
+
+        ApplicationProcessNamingInformation appName;
+        try {
+                getPendingRegistration(sequenceNumber);
+        } catch(IPCException &e){
+                throw IpcmRegisterApplicationException(e.what());
+        }
+
+        pendingRegistrations.erase(sequenceNumber);
+
+        if (success) {
+                registeredApplications.remove(appName);
+        }
 }
 
 unsigned int IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest)
@@ -628,8 +719,8 @@ throw (DestroyIPCProcessException) {
 	}
 }
 
-std::list<IPCProcess *> IPCProcessFactory::listIPCProcesses() {
-	std::list<IPCProcess *> response;
+std::vector<IPCProcess *> IPCProcessFactory::listIPCProcesses() {
+	std::vector<IPCProcess *> response;
 
 	lock();
 	for (std::map<int, IPCProcess*>::iterator it = ipcProcesses.begin();

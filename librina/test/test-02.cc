@@ -21,7 +21,7 @@
 using namespace rina;
 
 bool checkIPCProcesses(unsigned int expectedProcesses) {
-	std::list<IPCProcess *> ipcProcesses = ipcProcessFactory
+	std::vector<IPCProcess *> ipcProcesses = ipcProcessFactory
 			->listIPCProcesses();
 	if (ipcProcesses.size() != expectedProcesses) {
 		std::cout << "ERROR: Expected " << expectedProcesses

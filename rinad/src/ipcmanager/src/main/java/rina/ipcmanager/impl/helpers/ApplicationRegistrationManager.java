@@ -1,10 +1,6 @@
 package rina.ipcmanager.impl.helpers;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
@@ -14,6 +10,7 @@ import rina.ipcmanager.impl.IPCManager;
 
 import eu.irati.librina.ApplicationManagerSingleton;
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.ApplicationProcessNamingInformationListIterator;
 import eu.irati.librina.ApplicationRegistrationInformation;
 import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.ApplicationRegistrationType;
@@ -22,6 +19,8 @@ import eu.irati.librina.DIFInformation;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IPCProcessPointerVector;
+import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
+import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
 
 /**
  * Manages application registrations:
@@ -36,14 +35,17 @@ public class ApplicationRegistrationManager {
 	private static final Log log = LogFactory.getLog(ApplicationRegistrationManager.class);
 	private IPCProcessFactorySingleton ipcProcessFactory = null;
 	private ApplicationManagerSingleton applicationManager = null;
-	private Map<String, ApplicationRegistrationState> applicationRegistrations;
+	private Map<Long, PendingRegistration> pendingRegistrations = null;
+	private Map<Long, PendingUnregistration> pendingUnregistrations = null;
 
 	public ApplicationRegistrationManager(IPCProcessFactorySingleton ipcProcessFactory, 
 			ApplicationManagerSingleton applicationManager){
 		this.ipcProcessFactory = ipcProcessFactory;
 		this.applicationManager = applicationManager;
-		applicationRegistrations = 
-				new ConcurrentHashMap<String, ApplicationRegistrationState>();
+		pendingRegistrations = 
+				new ConcurrentHashMap<Long, PendingRegistration>();
+		pendingUnregistrations = 
+				new ConcurrentHashMap<Long, PendingUnregistration>();
 	}
 	
 	/**
@@ -52,32 +54,76 @@ public class ApplicationRegistrationManager {
 	 * @param event
 	 * @throws Exception
 	 */
-	public synchronized void registerApplication(
-			ApplicationRegistrationRequestEvent event) throws Exception{
+	public synchronized void requestApplicationRegistration(
+			ApplicationRegistrationRequestEvent event) throws Exception {
 		IPCProcess ipcProcess = null;
+		ApplicationProcessNamingInformation applicationName = 
+				event.getApplicationRegistrationInformation().getApplicationName();
+		
 		try{
-			ApplicationRegistrationState applicationRegistration = 
-					applicationRegistrations.get(event.getApplicationName());
-			ipcProcess = getIPCProcessToRegisterAt(event, applicationRegistration);
-			ipcProcess.registerApplication(event.getApplicationName());
-			if (applicationRegistration == null){
-				applicationRegistration = new ApplicationRegistrationState(event.getApplicationName());
-				applicationRegistrations.put(
-						Utils.geApplicationNamingInformationCode(
-								event.getApplicationName()), 
-								applicationRegistration);
-			}
-
-			applicationRegistration.getDIFNames().add(ipcProcess.getDIFInformation().getDifName().getProcessName());
+			ipcProcess = getIPCProcessToRegisterAt(event);
+			long handle = ipcProcess.registerApplication(event.
+					getApplicationRegistrationInformation().getApplicationName());
+			pendingRegistrations.put(handle, new PendingRegistration(event, ipcProcess));
+			log.debug("Requested registration of application "+applicationName.toString() 
+					+" to DIF "+ipcProcess.getDIFInformation().getDifName().toString() + 
+					". Got handle "+handle);
 		}catch(Exception ex){
-			log.error("Error registering application. "+ex.getMessage());
+			log.error("Error requesting application registration "+ex.getMessage());
 			applicationManager.applicationRegistered(event, new ApplicationProcessNamingInformation(), 
 					-1);
 			return;
 		}
+	}
+	
+	/**
+	 * Looks for the pending registration with the event sequence number, and updates the 
+	 * registration state based on the result
+	 * @throws Exception
+	 */
+	public synchronized void registerApplicationResponse(
+			IpcmRegisterApplicationResponseEvent event) throws Exception {
+		PendingRegistration pendingRegistration = null;
+		IPCProcess ipcProcess = null;
+		ApplicationRegistrationRequestEvent appReqEvent = null;
+		boolean success;
 		
-		applicationManager.applicationRegistered(event, ipcProcess.getDIFInformation().getDifName(), 
-				0);
+		pendingRegistration = pendingRegistrations.remove(event.getSequenceNumber());
+		if (pendingRegistration == null){
+			throw new Exception("Could not find a pending registration associated to the handle "
+					+event.getSequenceNumber());
+		}
+		
+		ipcProcess = pendingRegistration.getIpcProcess();
+		appReqEvent = pendingRegistration.getEvent();
+		if (event.getResult() == 0){
+			success = true;
+		}else{
+			success = false;
+		}
+		
+		try {
+			ipcProcess.registerApplicationResult(event.getSequenceNumber(), success);
+			if (success){
+				log.info("Successfully registered application "+ 
+						appReqEvent.getApplicationRegistrationInformation().getApplicationName().toString() + 
+						" to DIF "+ipcProcess.getDIFInformation().getDifName().toString());
+			} else {
+				log.info("Could not register application "+ 
+						appReqEvent.getApplicationRegistrationInformation().getApplicationName().toString() + 
+						" to DIF "+ipcProcess.getDIFInformation().getDifName().toString());
+			}
+
+			applicationManager.applicationRegistered(appReqEvent, 
+					ipcProcess.getDIFInformation().getDifName(), event.getResult());
+		}catch(Exception ex){
+			log.error("Problems processing IPCMRegisterApplicationResponseEvent. Handle: "+event.getSequenceNumber() + 
+					  "; Application name: "+ appReqEvent.getApplicationRegistrationInformation().getApplicationName().toString() + 
+					  "; DIF name: " + ipcProcess.getDIFInformation().getDifName().toString());
+			
+			applicationManager.applicationRegistered(appReqEvent, 
+					ipcProcess.getDIFInformation().getDifName(), -1);
+		}
 	}
 	
 	/**
@@ -85,42 +131,28 @@ public class ApplicationRegistrationManager {
 	 * has terminated. We have to look for potential registrations of the application and cancel them
 	 * @param apName
 	 */
-	public synchronized void cleanApplicationRegistrations(ApplicationProcessNamingInformation apName){
-		Iterator<Entry<String, ApplicationRegistrationState>> iterator = 
-				applicationRegistrations.entrySet().iterator();
-		Entry<String, ApplicationRegistrationState> currentEntry = null;
-		ApplicationRegistrationState state = null;
-		List<Entry<String, ApplicationRegistrationState>> entriesToRemove = 
-				new ArrayList<Entry<String, ApplicationRegistrationState>>();
-		
-		while(iterator.hasNext()){
-			currentEntry = iterator.next();
-			if (currentEntry.getValue().getApplicationName().getProcessNamePlusInstance().equals(
-					apName.getProcessNamePlusInstance())){
-				entriesToRemove.add(currentEntry);
-			}
-		}
-		
-		log.info(entriesToRemove.size() + " application registrations are going to be canceled");
-		String difName = null;
+	public synchronized void cleanApplicationRegistrations(ApplicationProcessNamingInformation appName){
+		IPCProcessPointerVector ipcProcesses = ipcProcessFactory.listIPCProcesses();
 		IPCProcess ipcProcess = null;
-		for(int i=0; i<entriesToRemove.size(); i++){
-			currentEntry = entriesToRemove.get(i);
-			state = currentEntry.getValue();
-			applicationRegistrations.remove(currentEntry.getKey());
-			
-			for(int j=0; j<state.getDIFNames().size(); j++){
-				difName = state.getDIFNames().get(j);
+		long handle = 0;
+		ApplicationUnregistrationRequestEvent event = null;
+		
+		for(int i=0; i<ipcProcesses.size(); i++){
+			ipcProcess = ipcProcesses.get(i);
+			if (isRegisteredAt(ipcProcess, appName)){
 				try{
-					ipcProcess = selectIPCProcessOfDIF(difName);
-					ipcProcess.unregisterApplication(state.getApplicationName());
+					handle = ipcProcess.unregisterApplication(appName);
+					log.debug("Requested unregitration of application "+event.getApplicationName().toString() 
+							+" from DIF "+ipcProcess.getDIFInformation().getDifName().toString() + 
+							". Got handle "+handle);
+					event = new ApplicationUnregistrationRequestEvent(appName, 
+							ipcProcess.getDIFInformation().getDifName(), 
+							0);
+					pendingUnregistrations.put(handle, new PendingUnregistration(event, ipcProcess));
 				}catch(Exception ex){
-					log.error("Error unregistering application " + 
-							state.getApplicationName().toString() + " from DIF "+difName);
+					log.warn("Error requesting application unregistration "+ex.getMessage());
 				}
-				
 			}
-			
 		}
 	}
 	
@@ -129,61 +161,93 @@ public class ApplicationRegistrationManager {
 	 * @param event
 	 * @throws Exception
 	 */
-	public synchronized void unregisterApplication(
+	public synchronized void requestApplicationUnregistration(
 			ApplicationUnregistrationRequestEvent event) throws Exception{
 		IPCProcess ipcProcess = null;
+		
 		try{
-			ApplicationRegistrationState applicationRegistration = 
-					applicationRegistrations.get(
-							Utils.geApplicationNamingInformationCode(
-									event.getApplicationName()));
-			if (applicationRegistration == null){
-				throw new Exception("Application "+event.getApplicationName().toString() 
-						+ " was not registered to any DIF");
-			}
-			
 			String difName = event.getDIFName().getProcessName();
-			if (applicationRegistration.getDIFNames().contains(difName)){
-				ipcProcess = selectIPCProcessOfDIF(difName);
-				ipcProcess.unregisterApplication(event.getApplicationName());
-				applicationRegistration.getDIFNames().remove(difName);
-				if (applicationRegistration.getDIFNames().size() == 0){
-					applicationRegistrations.remove(event.getApplicationName());
-				}
-			}else{
-				throw new Exception("Application "+ event.getApplicationName().toString() 
-						+ " was not registered to DIF "+difName);
-			}
+			ipcProcess = selectIPCProcessOfDIF(difName);
+			long handle = ipcProcess.unregisterApplication(event.getApplicationName());
+			pendingUnregistrations.put(handle, 
+					new PendingUnregistration(event, ipcProcess));
+			log.debug("Requested unregitration of application "+event.getApplicationName().toString() 
+					+" from DIF "+ipcProcess.getDIFInformation().getDifName().toString() + 
+					". Got handle "+handle);
 		}catch(Exception ex){
 			log.error("Error unregistering application. "+ex.getMessage());
 			applicationManager.applicationUnregistered(event, -1);
-			return;
 		}
-		
-		applicationManager.applicationUnregistered(event, 0);
 	}
 	
-	private IPCProcess getIPCProcessToRegisterAt(ApplicationRegistrationRequestEvent event, 
-			ApplicationRegistrationState applicationRegistration) throws Exception{
+	/**
+	 * Looks for the pending unregistration with the event sequence number, and updates the 
+	 * registration state based on the result
+	 * @throws Exception
+	 */
+	public synchronized void unregisterApplicationResponse(
+			IpcmUnregisterApplicationResponseEvent event) throws Exception {
+		PendingUnregistration pendingUnregistration = null;
+		IPCProcess ipcProcess = null;
+		ApplicationUnregistrationRequestEvent appReqEvent = null;
+		boolean success;
+		
+		pendingUnregistration = pendingUnregistrations.remove(event.getSequenceNumber());
+		if (pendingUnregistration == null){
+			throw new Exception("Could not find a pending unregistration associated to the handle "
+					+event.getSequenceNumber());
+		}
+		
+		ipcProcess = pendingUnregistration.getIpcProcess();
+		appReqEvent = pendingUnregistration.getEvent();
+		if (event.getResult() == 0){
+			success = true;
+		}else{
+			success = false;
+		}
+		
+		try {
+			ipcProcess.unregisterApplicationResult(event.getSequenceNumber(), success);
+			if (success){
+				log.info("Successfully unregistered application "+ 
+						appReqEvent.getApplicationName().toString() + 
+						" from DIF "+ipcProcess.getDIFInformation().getDifName().toString());
+			} else {
+				log.info("Could not unregister application "+ 
+						appReqEvent.getApplicationName().toString() + 
+						" from DIF "+ipcProcess.getDIFInformation().getDifName().toString());
+			}
+			
+			if (appReqEvent.getSequenceNumber() > 0) {
+				applicationManager.applicationUnregistered(appReqEvent, event.getResult());
+			}
+		}catch(Exception ex){
+			log.error("Problems processing IPCMUnregisterApplicationResponseEvent. Handle: "+event.getSequenceNumber() + 
+					  "; Application name: "+ appReqEvent.getApplicationName().toString() + 
+					  "; DIF name: " + ipcProcess.getDIFInformation().getDifName().toString());
+			
+			if (appReqEvent.getSequenceNumber() > 0) {
+				applicationManager.applicationUnregistered(appReqEvent, -1);
+			}
+		}
+	}
+	
+	private IPCProcess getIPCProcessToRegisterAt(ApplicationRegistrationRequestEvent event) 
+			throws Exception{
 		ApplicationRegistrationInformation info = event.getApplicationRegistrationInformation();
 		
 		if (info.getRegistrationType() == ApplicationRegistrationType.APPLICATION_REGISTRATION_ANY_DIF){
-			if (applicationRegistration != null){
-				throw new Exception("Application already registered in a DIF");
-			}
-			
 			return selectAnyIPCProcess();
 		}
 		
 		if (info.getRegistrationType() == ApplicationRegistrationType.APPLICATION_REGISTRATION_SINGLE_DIF){
 			String difName = info.getDIFName().getProcessName();
-			if (applicationRegistration != null){
-				if (applicationRegistration.getDIFNames().contains(difName)){
-					throw new Exception("Application already registered in DIF "+difName);
-				}
+			IPCProcess ipcProcess = selectIPCProcessOfDIF(difName);
+			if (isRegisteredAt(ipcProcess, 
+					event.getApplicationRegistrationInformation().getApplicationName())) {
+				throw new Exception("Application already registered in DIF "+difName);
 			}
-			
-			return selectIPCProcessOfDIF(difName);
+			return ipcProcess;
 		}
 		
 		throw new Exception("Unsupported registration type: "+info.getRegistrationType());
@@ -239,6 +303,21 @@ public class ApplicationRegistrationManager {
 		}
 		
 		throw new Exception("Could not find IPC Process belonging to DIF "+difName);
+	}
+	
+	private boolean isRegisteredAt(
+			IPCProcess ipcProcess, 
+			ApplicationProcessNamingInformation appName) {
+		ApplicationProcessNamingInformationListIterator iterator = 
+				ipcProcess.getRegisteredApplications().iterator();
+		String encodedAppName = appName.toString();
+		while (iterator.hasNext()){
+			if (iterator.next().toString().equals(encodedAppName)){
+				return true;
+			}
+		}
+		
+		return false;
 	}
 
 }

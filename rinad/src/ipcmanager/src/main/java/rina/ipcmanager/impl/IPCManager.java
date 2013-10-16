@@ -18,6 +18,8 @@ import eu.irati.librina.IPCManagerInitializationException;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IPCProcessPointerVector;
+import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
+import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
 import eu.irati.librina.OSProcessFinalizedEvent;
 import eu.irati.librina.rina;
 
@@ -231,13 +233,19 @@ public class IPCManager {
 		log.info("Got event of type: "+event.getType() 
 				+ " and sequence number: "+event.getSequenceNumber());
 		
-		if (event.getType() == IPCEventType.APPLICATION_REGISTRATION_REQUEST_EVENT){
+		if (event.getType() == IPCEventType.APPLICATION_REGISTRATION_REQUEST_EVENT) {
 			ApplicationRegistrationRequestEvent appRegReqEvent = (ApplicationRegistrationRequestEvent) event;
-			applicationRegistrationManager.registerApplication(appRegReqEvent);
-		}else if (event.getType() == IPCEventType.APPLICATION_UNREGISTRATION_REQUEST_EVENT){
+			applicationRegistrationManager.requestApplicationRegistration(appRegReqEvent);
+		} else if (event.getType() == IPCEventType.IPCM_REGISTER_APP_RESPONSE_EVENT) {
+			IpcmRegisterApplicationResponseEvent appRespEvent = (IpcmRegisterApplicationResponseEvent) event;
+			applicationRegistrationManager.registerApplicationResponse(appRespEvent);
+		} else if (event.getType() == IPCEventType.APPLICATION_UNREGISTRATION_REQUEST_EVENT){
 			ApplicationUnregistrationRequestEvent appUnregReqEvent = (ApplicationUnregistrationRequestEvent) event;
-			applicationRegistrationManager.unregisterApplication(appUnregReqEvent);
-		}else if (event.getType() == IPCEventType.FLOW_ALLOCATION_REQUESTED_EVENT){
+			applicationRegistrationManager.requestApplicationUnregistration(appUnregReqEvent);
+		} else if (event.getType() == IPCEventType.IPCM_UNREGISTER_APP_RESPONSE_EVENT) {
+			IpcmUnregisterApplicationResponseEvent appRespEvent = (IpcmUnregisterApplicationResponseEvent) event;
+			applicationRegistrationManager.unregisterApplicationResponse(appRespEvent);
+		} else if (event.getType() == IPCEventType.FLOW_ALLOCATION_REQUESTED_EVENT){
 			FlowRequestEvent flowReqEvent = (FlowRequestEvent) event;
 			if (flowReqEvent.isLocalRequest()){
 				flowManager.allocateFlowLocal(flowReqEvent);

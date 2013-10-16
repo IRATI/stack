@@ -384,6 +384,17 @@ class IPCProcess {
 	/** The configuration that is in progress to be setup */
 	DIFConfiguration newConfiguration;
 
+	/** The list of applications registered in this IPC Process */
+	std::list<ApplicationProcessNamingInformation> registeredApplications;
+
+	/** The map of pending registrations */
+	std::map<unsigned int, ApplicationProcessNamingInformation>
+	        pendingRegistrations;
+
+	/** Return the information of a registration request */
+	ApplicationProcessNamingInformation getPendingRegistration(
+	                unsigned int seqNumber) throw (IPCException);
+
 public:
 	static const std::string error_assigning_to_dif;
 	static const std::string error_update_dif_config;
@@ -524,6 +535,23 @@ public:
 	throw (IpcmRegisterApplicationException);
 
 	/**
+	 * Invoked by the IPC Manager to inform about the result of a registration
+	 * operation and update the internal data structures
+	 * @param sequenceNumber the handle associated to the pending registration
+	 * @param success true if success, false otherwise
+	 * @throws IpcmRegisterApplicationException if the pending registration
+	 * is not found
+	 */
+	void registerApplicationResult(unsigned int sequenceNumber, bool success)
+	throw (IpcmRegisterApplicationException);
+
+	/**
+	 * Return the list of applications registered in this IPC Process
+	 * @return
+	 */
+	std::list<ApplicationProcessNamingInformation> getRegisteredApplications();
+
+	/**
 	 * Invoked by the IPC Manager to unregister an application in a DIF through
 	 * an IPC Process.
 	 *
@@ -533,6 +561,17 @@ public:
 	 */
 	unsigned int unregisterApplication(
 			const ApplicationProcessNamingInformation& applicationName)
+	throw (IpcmUnregisterApplicationException);
+
+	/**
+	 * Invoked by the IPC Manager to inform about the result of an unregistration
+	 * operation and update the internal data structures
+	 * @param sequenceNumber the handle associated to the pending unregistration
+	 * @param success true if success, false otherwise
+	 * @throws IpcmUnregisterApplicationException if the pending unregistration
+	 * is not found
+	 */
+	void unregisterApplicationResult(unsigned int sequenceNumber, bool success)
 	throw (IpcmUnregisterApplicationException);
 
 	/**
@@ -651,7 +690,7 @@ public:
          *
          * @return list<IPCProcess *> A list of the IPC Processes in the system
          */
-        std::list<IPCProcess *> listIPCProcesses();
+        std::vector<IPCProcess *> listIPCProcesses();
 
         /**
          * Returns a pointer to the IPCProcess identified by ipcProcessId

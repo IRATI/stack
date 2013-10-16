@@ -616,7 +616,7 @@ MAKE_COLLECTION_ITERABLE(StringListIterator, String, std::list, std::string);
 %template(IPCEventProducerSingleton) Singleton<rina::IPCEventProducer>;
 %template(IPCProcessFactorySingleton) Singleton<rina::IPCProcessFactory>;
 %template(IPCProcessVector) std::vector<rina::IPCProcess>;
-%template(IPCProcessPointerList) std::list<rina::IPCProcess *>;
+%template(IPCProcessPointerVector) std::vector<rina::IPCProcess *>;
 %template(ApplicationManagerSingleton) Singleton<rina::ApplicationManager>;
 %template(ExtendedIPCManagerSingleton) Singleton<rina::ExtendedIPCManager>;
 %template(RIBObjectList) std::list<rina::RIBObject>;

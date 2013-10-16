@@ -19,7 +19,7 @@ import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
-import eu.irati.librina.IPCProcessPointerVector;
+import eu.irati.librina.IPCProcessPointerList;
 
 public class FlowManager {
 
