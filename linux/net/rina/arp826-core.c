@@ -38,96 +38,12 @@
 
 #include "arp826.h"
 #include "arp826-utils.h"
+#include "arp826-rxtx.h"
 #include "arp826-arm.h"
 #include "arp826-tables.h"
 
 static struct arp_header * header_get(const struct sk_buff * skb)
 { return (struct arp_header *) skb_network_header(skb); }
-
-struct net_device * device_from_gha(const struct gha * ha) 
-{
-	LOG_MISSING;
-	return NULL;
-}
-
-struct sk_buff * create_arp_packet(int op, int ptype,
-				  struct net_device * dev,
-				  const struct gpa * spa,
-				  const struct gpa * tpa,
-				  const struct gha * tha)
-{
-#if 0
-	struct sk_buff * skb;
-	struct arp_hdr * arp;
-	unsigned char * arp_ptr;
-	int hlen = LL_RESERVED_SPACE(dev);
-	int tlen = dev->needed_tailroom;
-	const unsigned char *src_hw;
-
-/*
- * Allocate a buffer
- */
-	int length = sizeof(struct arp_hdr) + (dev->addr_len + plen) * 2;
-
-	skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
-	if (skb == NULL)
-		return NULL;
-
-	skb_reserve(skb, hlen);
-	skb_reset_network_header(skb);
-	arp = (struct arp_hdr *) skb_put(skb, length);
-	skb->dev = dev;
-	skb->protocol = htons(ETH_P_ARP);
-	src_hw = dev->dev_addr;
-	if (dest_hw == NULL)
-		dest_hw = dev->broadcast;
-
-/*
- * Fill the device header for the ARP frame
- */
-	if (dev_hard_header(skb, dev, ptype, dest_hw, src_hw, skb->len) < 0)
-		goto out;
-
-/*
- * Fill out the arp protocol part.
- */
-
-	switch (dev->type) {
-	default:
-		arp->ar_hrd = htons(dev->type);
-		arp->ar_pro = htons(ptype);
-		break;
-	}
-
-	arp->ar_hln = dev->addr_len;
-	arp->ar_pln = plen;
-	arp->ar_op = htons(op);
-
-	arp_ptr = (unsigned char *)(arp + 1);
-
-	memcpy(arp_ptr, src_hw, dev->addr_len);
-	arp_ptr += dev->addr_len;
-	memcpy(arp_ptr, src_nwaddr, plen);
-	arp_ptr += plen;
-
-	switch (dev->type) {
-	default:
-		if (dest_hw != NULL)
-			memcpy(arp_ptr, dest_hw, dev->addr_len);
-		else
-			memset(arp_ptr, 0, dev->addr_len);
-		arp_ptr += dev->addr_len;
-	}
-	memcpy(arp_ptr, dest_nwaddr, plen);
-
-	return skb;
-
-out:
-	kfree_skb(skb);
-#endif
-	LOG_MISSING;
-	return NULL;
-}
 
 static int process(const struct sk_buff * skb,
                    struct table *         cl)
@@ -232,16 +148,16 @@ static int process(const struct sk_buff * skb,
 				return -1;
 		}
           
-		req_addr = tbl_find_by_gpa(tbl, tmp_tpa);
+		req_addr  = tbl_find_by_gpa(tbl, tmp_tpa);
 		target_ha = tble_ha(req_addr);
 		/* FIXME: Get lock here */
-		dev = device_from_gha(target_ha);
+		dev       = gha_to_device(target_ha);
 		if (dev) {
 			struct sk_buff * skb;
 			/* This is our gpa and gha. Send reply */
-			skb = create_arp_packet(ARP_REPLY, ptype, 
-						dev, tmp_tpa, 
-						tmp_spa, tmp_sha);
+			skb = arp_create(dev,
+                                         ARP_REPLY, ptype, 
+                                         tmp_tpa, tmp_spa, tmp_sha);
 			if (skb == NULL) 
 				return -1;
 			dev_queue_xmit(skb);
