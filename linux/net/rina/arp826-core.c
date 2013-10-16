@@ -69,7 +69,6 @@ static int process(const struct sk_buff * skb,
 	struct gpa *        tmp_tpa;
 	struct gha *        tmp_tha;
 
-        
         ASSERT(skb);
         ASSERT(cl);
 
@@ -160,7 +159,7 @@ static int process(const struct sk_buff * skb,
 
         case ARP_REPLY: {
                 if (arm_resolve(ptype, tmp_spa, tmp_sha, tmp_tpa, tmp_tha)) {
-                        LOG_ERR("Canot resolve with this reply ...");
+                        LOG_ERR("Cannot resolve with this reply ...");
                         return -1;
                 }
         }
