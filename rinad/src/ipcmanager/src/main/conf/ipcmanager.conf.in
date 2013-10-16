@@ -13,10 +13,10 @@
     "lengthOfFlowQueues" : 10
   },
   "ipcProcessesToCreate" : [ {
-    "type" : "shim-dummy",
-    "applicationProcessName" : "edu.mac.dummy.i2cat",
+    "type" : "shim-eth-vlan",
+    "applicationProcessName" : "test",
     "applicationProcessInstance" : "1",
-    "difName" : "loopback.DIF"
+    "difName" : "100"
   } ],
   "difConfigurations" : [ {
     "difName" : "loopback.DIF", 

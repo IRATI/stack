@@ -186,8 +186,9 @@ class RINAManager {
 	NetlinkSession* getNetlinkSession(unsigned int sessionId);
 
 	/** Send a Netlink request message */
-	void RINAManager::_sendRequestMessage(
-	                BaseNetlinkMessage * netlinkMessage);
+	void _sendRequestMessage(
+	                BaseNetlinkMessage * netlinkMessage)
+	throw (NetlinkException);
 public:
 	RINAManager();
 	RINAManager(unsigned int netlinkPort);
