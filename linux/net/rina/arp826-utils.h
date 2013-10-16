@@ -56,15 +56,19 @@ typedef enum {
 
 struct gha;
 
-struct gha *    gha_create(gha_type_t      type,
-                           const uint8_t * address);
-int             gha_destroy(struct gha * gha);
-bool            gha_is_ok(const struct gha * gha);
-struct gha *    gha_dup(const struct gha * gha);
-const uint8_t * gha_address(const struct gha * gha);
-gha_type_t      gha_type(const struct gha * gha);
-bool            gha_is_equal(const struct gha * a,
-                             const struct gha * b);
+struct gha *        gha_create(gha_type_t      type,
+                               const uint8_t * address);
+struct gha *        gha_create_broadcast(gha_type_t type);
+int                 gha_destroy(struct gha * gha);
+bool                gha_is_ok(const struct gha * gha);
+struct gha *        gha_dup(const struct gha * gha);
+const uint8_t *     gha_address(const struct gha * gha);
+size_t              gha_address_length(const struct gha * gha);
+gha_type_t          gha_type(const struct gha * gha);
+bool                gha_is_equal(const struct gha * a,
+                                 const struct gha * b);
+struct net_device * gha_to_device(const struct gha * ha);
+
 
 /*
  * Miscellaneous
@@ -87,14 +91,6 @@ struct arp_header {
         __u8[plen] tpa; /* Target protocol address */
 #endif
 };
-
-struct sk_buff * arp826_create(__be16                oper,
-                               __be16                ptype,
-                               __u8                  plen,
-                               struct net_device *   dev,
-                               const unsigned char * src_nwaddr,
-                               const unsigned char * dest_nwaddr,
-                               const unsigned char * dest_hw);
 
 enum arp826_optypes {
         ARP_REQUEST = 1,

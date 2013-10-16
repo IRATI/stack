@@ -269,6 +269,16 @@ struct gha * gha_create(gha_type_t      type,
 }
 EXPORT_SYMBOL(gha_create);
 
+struct gha * gha_create_broadcast(gha_type_t type)
+{
+        const uint8_t addr[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+
+        if (type == MAC_ADDR_802_3)
+                return gha_create(MAC_ADDR_802_3, addr);
+
+        return NULL;
+}
+
 int gha_destroy(struct gha * gha)
 {
         if (!gha_is_ok(gha)) {
@@ -300,6 +310,22 @@ struct gha * gha_dup(const struct gha * gha)
         return tmp;
 }
 EXPORT_SYMBOL(gha_dup);
+
+size_t gha_address_length(const struct gha * gha)
+{
+        size_t tmp;
+
+        if (!gha_is_ok(gha))
+                return 0;
+
+        switch (gha->type) {
+        case MAC_ADDR_802_3: tmp = sizeof(gha->data.mac_802_3); break;
+        default:             BUG();                             break;
+        }
+        
+        return tmp;
+
+}
 
 const uint8_t * gha_address(const struct gha * gha)
 {
@@ -356,78 +382,39 @@ bool gha_is_equal(const struct gha * a,
 }
 EXPORT_SYMBOL(gha_is_equal);
 
-struct sk_buff * arp826_create(__be16                oper,
-                               __be16                ptype,
-                               __u8                  plen,
-                               struct net_device *   dev,
-                               const unsigned char * src_nwaddr,
-                               const unsigned char * dest_nwaddr,
-                               const unsigned char * dest_hw)
+struct net_device * gha_to_device(const struct gha * ha) 
 {
-        struct sk_buff *      skb;
-        struct arp_header *   arp;
-        unsigned char *       arp_ptr;
-        int                   hlen = LL_RESERVED_SPACE(dev);
-        int                   tlen = dev->needed_tailroom;
-        const unsigned char * src_hw;
+	struct net_device *     dev;
+	struct netdev_hw_addr * hwa;
 
-        /* Allocate a buffer */
-        int length = sizeof(struct arp_header) + (dev->addr_len + plen) * 2;
-
-        skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
-        if (skb == NULL)
-                return NULL;
-
-        skb_reserve(skb, hlen);
-        skb_reset_network_header(skb);
-        arp = (struct arp_header *) skb_put(skb, length);
-        skb->dev = dev;
-        skb->protocol = htons(ETH_P_ARP);
-        src_hw = dev->dev_addr;
-        if (dest_hw == NULL)
-                dest_hw = dev->broadcast;
-
-        /*
-         *      Fill the device header for the ARP frame
-         */
-        if (dev_hard_header(skb, dev, ptype, dest_hw, src_hw, skb->len) < 0) {
-                kfree_skb(skb);
+        if (!gha_is_ok(ha)) {
+                LOG_ERR("Wrong input, cannot get device from GHA");
                 return NULL;
         }
 
-        /*
-         * Fill out the arp protocol part.
-         */
+	read_lock(&dev_base_lock);
 
-        switch (dev->type) {
-        default:
-                arp->htype = htons(dev->type);
-                arp->ptype = htons(ptype);
-                break;
-        }
+	dev = first_net_device(&init_net);
+	while (dev) {
+		if (dev->addr_len == gha_address_length(ha)) {
+			for_each_dev_addr(dev, hwa) {
+				if (!memcmp(hwa->addr, 
+					    gha_address(ha), 
+					    gha_address_length(ha))) {
 
-        arp->hlen = dev->addr_len;
-        arp->plen = plen;
-        arp->oper = htons(oper);
+                                        read_unlock(&dev_base_lock);
+					return dev;
+                                }
+			}
+		}
+		dev = next_net_device(dev);
+	}
 
-        arp_ptr = (unsigned char *)(arp + 1);
-        memcpy(arp_ptr, src_hw, dev->addr_len);
-        arp_ptr += dev->addr_len;
-        memcpy(arp_ptr, src_nwaddr, plen);
-        arp_ptr += plen;
+	read_unlock(&dev_base_lock);
 
-        switch (dev->type) {
-        default:
-                if (dest_hw != NULL)
-                        memcpy(arp_ptr, dest_hw, dev->addr_len);
-                else
-                        memset(arp_ptr, 0, dev->addr_len);
-                arp_ptr += dev->addr_len;
-        }
-        memcpy(arp_ptr, dest_nwaddr, plen);
-
-        return skb;
+	return NULL;
 }
+EXPORT_SYMBOL(gha_to_device);
 
 #define TMAP_HASH_BITS 7
 
@@ -545,9 +532,6 @@ int tmap_add(struct tmap *  map,
         INIT_HLIST_NODE(&tmp->hlist);
 
         hash_add(map->table, &tmp->hlist, key);
-
-        LOG_DBG("Added flow %pK to the tmap %pk with key %d",
-                tmp->value, map, tmp->key);
 
         return 0;
 }
