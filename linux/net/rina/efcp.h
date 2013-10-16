@@ -24,8 +24,7 @@
 #include "common.h"
 #include "du.h"
 #include "qos.h"
-
-typedef uint cep_id_t;
+#include "cidm.h"
 
 struct connection {
         port_id_t port_id;
@@ -48,7 +47,7 @@ struct efcp_container * efcp_container_create(void);
 int                     efcp_container_destroy(struct efcp_container * c);
 
 /* FIXME: Should a cep_id_t be returned instead ? */
-int           efcp_connection_create(struct efcp_container *   container,
+cep_id_t      efcp_connection_create(struct efcp_container *   container,
                                      const struct connection * connection);
 
 int           efcp_connection_destroy(struct efcp_container * container,

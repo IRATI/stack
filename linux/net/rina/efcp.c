@@ -72,6 +72,7 @@ static int efcp_destroy(struct efcp * instance)
 
 struct efcp_container {
         struct efcp_imap * instances;
+        struct cidm *      cidm;
 };
 
 // efcp_imap maps cep_id_t to efcp_instances
@@ -85,9 +86,11 @@ struct efcp_container * efcp_container_create(void)
                 return NULL;
 
         container->instances = efcp_imap_create();
+        container->cidm      = cidm_create();
 
         return container;
 }
+EXPORT_SYMBOL(efcp_container_create);
 
 int efcp_container_destroy(struct efcp_container * container)
 {
@@ -102,9 +105,6 @@ int efcp_container_destroy(struct efcp_container * container)
         return 0;
 }
 
-static int is_cep_id_ok(cep_id_t id)
-{ return 1; /* FIXME: Bummer, add it */ }
-
 static int is_connection_ok(const struct connection * connection)
 {
         if (!connection)
@@ -118,10 +118,11 @@ static int is_connection_ok(const struct connection * connection)
         return 1;
 }
 
-int efcp_connection_create(struct efcp_container *   container,
-                           const struct connection * connection)
+cep_id_t efcp_connection_create(struct efcp_container *   container,
+                                const struct connection * connection)
 {
         struct efcp * tmp;
+        cep_id_t      cep_id;
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
@@ -137,6 +138,7 @@ int efcp_connection_create(struct efcp_container *   container,
         if (!tmp)
                 return -1;
 
+        cep_id = cidm_allocate(container->cidm);
         /* We must ensure that the DTP is instantiated, at least ... */
         tmp->dtp = dtp_create(/* connection->port_id */);
         if (!tmp->dtp) {
@@ -166,6 +168,7 @@ int efcp_connection_create(struct efcp_container *   container,
 
         return 0;
 }
+EXPORT_SYMBOL(efcp_connection_create);
 
 int efcp_connection_destroy(struct efcp_container * container,
                             cep_id_t                id)
