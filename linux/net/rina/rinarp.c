@@ -37,17 +37,12 @@ struct rinarp_handle {
         struct gha * ha;
 };
 
-struct rinarp_handle * rinarp_add(const struct net_device * device,
-                                  const struct gpa *        address)
+static struct rinarp_handle * handle_create(struct gpa * pa, struct gha * ha)
 {
         struct rinarp_handle * handle;
 
-        if (!device                      ||
-            !gpa_is_ok(address)          ||
-            !device->dev_addr            ||
-            device->type != ARPHRD_ETHER ||
-            device->addr_len != 6) {
-                LOG_ERR("Bogus input parameters, cannot register");
+        if (!gpa_is_ok(pa) || !gha_is_ok(ha)) {
+                LOG_ERR("Bad input parameters, cannot create a handle");
                 return NULL;
         }
 
@@ -55,9 +50,43 @@ struct rinarp_handle * rinarp_add(const struct net_device * device,
         if (!handle)
                 return NULL;
 
-        handle->pa = gpa_dup(address);
+        handle->pa = gpa_dup(pa);
         if (!handle->pa) {
                 rkfree(handle);
+                return NULL;
+        }
+                
+        handle->ha = gha_dup(ha);
+        if (!handle->ha) {
+                gpa_destroy(handle->pa);
+                rkfree(handle);
+        }
+
+        return handle;
+}
+
+static void handle_destroy(struct rinarp_handle * handle)
+{
+        ASSERT(handle);
+
+        if (handle->pa) gpa_destroy(handle->pa);
+        if (handle->ha) gha_destroy(handle->ha);
+        rkfree(handle);
+}
+
+static bool handle_is_ok(struct rinarp_handle * handle)
+{ return (handle && gpa_is_ok(handle->pa) && gha_is_ok(handle->ha)); }
+
+#if 0
+const struct net_device * device
+
+
+        if (!device                      ||
+            !gpa_is_ok(address)          ||
+            !device->dev_addr            ||
+            device->type != ARPHRD_ETHER ||
+            device->addr_len != 6) {
+                LOG_ERR("Bogus input parameters, cannot register");
                 return NULL;
         }
 
@@ -70,12 +99,23 @@ struct rinarp_handle * rinarp_add(const struct net_device * device,
                 return NULL;
         }
 
-        if (arp826_add(ETH_P_RINA, handle->pa, handle->ha, -1)) {
-                gpa_destroy(handle->pa);
-                gha_destroy(handle->ha);
-                rkfree(handle);
+#endif
+                                  
+struct rinarp_handle * rinarp_add(const struct gpa * pa,
+                                  const struct gha * ha)
+{
+        struct rinarp_handle * handle;
+
+        handle = handle_create(gpa_dup(pa), gha_dup(ha));
+        if (!handle)
+                return NULL;
+
+        if (arp826_add(ETH_P_RINA, handle->pa, handle->ha)) {
+                handle_destroy(handle);
                 return NULL;
         }
+
+        ASSERT(handle_is_ok(handle));
 
         return handle;
 }
@@ -83,19 +123,13 @@ EXPORT_SYMBOL(rinarp_add);
 
 int rinarp_remove(struct rinarp_handle * handle)
 {
-        if (!handle) {
-                LOG_ERR("Bogus input parameters, cannot unregister");
+        if (!handle_is_ok(handle)) {
+                LOG_ERR("Bogus input parameter, cannot unregister");
                 return -1;
         }
 
-        ASSERT(handle->pa);
-        ASSERT(handle->ha);
-
         arp826_remove(ETH_P_RINA, handle->pa, handle->ha);
-
-        gpa_destroy(handle->pa);
-        gha_destroy(handle->ha);
-        rkfree(handle);
+        handle_destroy(handle);
 
         return 0;
 }
@@ -106,7 +140,10 @@ int rinarp_resolve_gpa(struct rinarp_handle * handle,
                        rinarp_notification_t  notify,
                        void *                 opaque)
 {
-        if (!handle || !gpa_is_ok(tpa) || !notify /* opaque can be NULL */) {
+        if (!handle_is_ok(handle) ||
+            !gpa_is_ok(tpa)       ||
+            !notify
+            /* opaque can be NULL */) {
                 LOG_ERR("Bogus input parameters, won't resolve GPA");
                 return -1;
         }
@@ -120,7 +157,7 @@ EXPORT_SYMBOL(rinarp_resolve_gpa);
 const struct gpa * rinarp_find_gpa(struct rinarp_handle * handle,
                                    const struct gha *     ha)
 {
-        if (!handle || !gha_is_ok(ha)) {
+        if (!handle_is_ok(handle) || !gha_is_ok(ha)) {
                 LOG_ERR("Cannot find GPA, bad input parameters");
                 return NULL;
         }

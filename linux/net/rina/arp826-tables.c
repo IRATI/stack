@@ -466,8 +466,7 @@ void tbls_fini(void)
 
 int arp826_add(uint16_t           ptype,
                const struct gpa * pa,
-               const struct gha * ha,
-               arp826_timeout_t   timeout)
+               const struct gha * ha)
 {
         struct table * cl;
 

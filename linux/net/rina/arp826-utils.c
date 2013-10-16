@@ -384,12 +384,23 @@ EXPORT_SYMBOL(gha_is_equal);
 
 struct net_device * gha_to_device(const struct gha * ha) 
 {
+	struct net_device *dev;
+	
         if (!gha_is_ok(ha)) {
                 LOG_ERR("Wrong input, cannot get device from GHA");
                 return NULL;
         }
 
-	LOG_MISSING;
+	read_lock(&dev_base_lock);
+	dev = first_net_device(&init_net);
+	while (dev) {
+		if (!memcmp(dev->dev_addr, 
+			    gha_address(ha), 
+			    strlen(dev->dev_addr))) 
+			return dev;
+		dev = next_net_device(dev);
+	}
+	read_unlock(&dev_base_lock);
 
 	return NULL;
 }

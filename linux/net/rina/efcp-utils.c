@@ -223,8 +223,8 @@ cep_id_t cidm_allocate(struct cidm * instance)
         }
 
         id = (cep_id_t) bitmap_find_next_zero_area(instance->bitmap,
-                                                    BITS_IN_BITMAP,
-                                                    0, 1, 0);
+                                                   BITS_IN_BITMAP,
+                                                   0, 1, 0);
         LOG_DBG("The cidm bitmap find returned id %d (bad = %d)",
                 id, CEP_ID_WRONG);
 

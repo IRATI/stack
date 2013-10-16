@@ -42,6 +42,7 @@
 #include "rnl-utils.h"
 #include "kfa.h"
 #include "kfa-utils.h"
+#include "efcp-utils.h"
 
 #define DEFAULT_FACTORY "normal-ipc"
 
@@ -1161,7 +1162,7 @@ static int notify_ipcp_unregister_app_request(void *             data,
                                                      dif_name,
                                                      attrs,
                                                      msg,
-                                                     0,
+                                                     ipc_id,
                                                      -1,
                                                      info->snd_seq,
                                                      info->snd_portid,
@@ -1198,7 +1199,6 @@ conn_create_resp_free_and_reply(struct rnl_ipcm_conn_create_req_msg_attrs * attr
                                 struct rina_msg_hdr *                hdr,
                                 ipc_process_id_t                     ipc_id,
                                 port_id_t                            pid,
-                                uint_t                               res,
                                 cep_id_t                             src_cep,
                                 rnl_sn_t                             seq_num,
                                 u32                                  nl_port_id)
@@ -1209,7 +1209,6 @@ conn_create_resp_free_and_reply(struct rnl_ipcm_conn_create_req_msg_attrs * attr
 
         if (rnl_ipcm_conn_create_resp_msg(ipc_id,
                                           pid,
-                                          res, 
                                           src_cep,
                                           seq_num,
                                           nl_port_id)) {
@@ -1222,15 +1221,15 @@ conn_create_resp_free_and_reply(struct rnl_ipcm_conn_create_req_msg_attrs * attr
 
 static int notify_ipcp_conn_create_req(void *             data,
                                        struct sk_buff *   buff,
-                                       struct genl_info * info) {
-
+                                       struct genl_info * info) 
+{
         struct rnl_ipcm_conn_create_req_msg_attrs * attrs;
         struct rnl_msg *                            msg; 
         struct ipcp_instance *                      ipcp;
         struct rina_msg_hdr *                       hdr; 
         struct kipcm *                              kipcm;
-        ipc_process_id_t                            ipc_id;
-        port_id_t                                   port_id;
+        ipc_process_id_t                            ipc_id = 0;
+        port_id_t                                   port_id = 0;
         cep_id_t                                    src_cep;
         flow_id_t                                   fid = flow_id_bad(); 
 
@@ -1266,7 +1265,7 @@ static int notify_ipcp_conn_create_req(void *             data,
        
         port_id = attrs->port_id; 
         ipc_id  = hdr->dst_ipc_id;
-        ipcp     = ipcp_imap_find(kipcm->instances, ipc_id);
+        ipcp    = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipcp) {
                 goto process_fail;
         }
@@ -1275,12 +1274,12 @@ static int notify_ipcp_conn_create_req(void *             data,
         fid = kfa_flow_create(kipcm->kfa);
         ASSERT(is_flow_id_ok(fid));
         
-        src_cep = ipcp->ops->connection_create_request(ipcp->data,
-                                                       attrs->port_id,
-                                                       attrs->src_addr,
-                                                       attrs->dst_addr,
-                                                       attrs->qos_id,
-                                                       attrs->policies);
+        src_cep = ipcp->ops->connection_create(ipcp->data,
+                                               attrs->port_id,
+                                               attrs->src_addr,
+                                               attrs->dst_addr,
+                                               attrs->qos_id,
+                                               attrs->policies);
 
         if (!is_cep_id_ok(src_cep)) {
                 LOG_ERR("IPC process could not create connection");
@@ -1297,7 +1296,6 @@ static int notify_ipcp_conn_create_req(void *             data,
                                                hdr,
                                                ipc_id,
                                                port_id,
-                                               0,
                                                src_cep,
                                                info->snd_seq,
                                                info->snd_portid);
@@ -1309,8 +1307,7 @@ process_fail:
                                                hdr,
                                                ipc_id,
                                                port_id,
-                                               -1,
-                                               0,
+                                               cep_id_bad(),
                                                info->snd_seq,
                                                info->snd_portid);
 

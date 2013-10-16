@@ -92,14 +92,6 @@ struct arp_header {
 #endif
 };
 
-struct sk_buff * arp826_create(__be16                oper,
-                               __be16                ptype,
-                               __u8                  plen,
-                               struct net_device *   dev,
-                               const unsigned char * src_nwaddr,
-                               const unsigned char * dest_nwaddr,
-                               const unsigned char * dest_hw);
-
 enum arp826_optypes {
         ARP_REQUEST = 1,
         ARP_REPLY   = 2,
