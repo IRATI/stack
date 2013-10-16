@@ -36,6 +36,9 @@
 #include "du.h"
 #include "kfa.h"
 #include "rnl-utils.h"
+#include "efcp.h"
+#include "rmt.h"
+#include "efcp-utils.h"
 
 /*  FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -53,6 +56,8 @@ struct ipcp_instance_data {
         struct normal_info * info;
         /*  FIXME: Remove it as soon as the kipcm_kfa gets removed*/
         struct kfa *         kfa;
+        struct efcp_container * efcpc;
+        struct rmt *            rmt;
 };
 
 enum normal_flow_state {
@@ -84,36 +89,6 @@ struct ipcp_factory_data {
 
 static struct ipcp_factory_data normal_data;
 
-#if 0
-static struct normal_flow * find_flow_by_pid(struct ipcp_instance_data * data,
-                                             port_id_t                   id)
-{
-        struct normal_flow * flow;
-
-        list_for_each_entry(flow, &data->flows, list) {
-                if (flow->port_id == id) {
-                        return flow;
-                }
-        }
-
-        return NULL;
-}
-
-static struct normal_flow * find_flow_by_fid(struct ipcp_instance_data * data,
-                                             uint_t                      fid)
-{
-        struct normal_flow * flow;
-
-        list_for_each_entry(flow, &data->flows, list) {
-                if (flow->dst_fid == fid) {
-                        return flow;
-                }
-        }
-
-        return NULL;
-}
-#endif
-
 static int normal_init(struct ipcp_factory_data * data)
 {
         ASSERT(data);
@@ -131,7 +106,6 @@ static int normal_fini(struct ipcp_factory_data * data)
         return 0;
 }
 
-#if 0
 static int normal_sdu_write(struct ipcp_instance_data * data,
                             port_id_t                   id,
                             struct sdu *                sdu)
@@ -139,7 +113,6 @@ static int normal_sdu_write(struct ipcp_instance_data * data,
         LOG_MISSING;
         return 0;
 }
-#endif
 
 struct ipcp_factory * normal = NULL;
 
@@ -159,6 +132,61 @@ find_instance(struct ipcp_factory_data * data,
         return NULL;
 }
 
+static int connection_create_response(cep_id_t src_cep_id)
+{
+        LOG_MISSING;
+        return -1;
+}
+
+static int connection_create_request(struct ipcp_instance_data * data,
+                                     port_id_t                   port_id,
+                                     address_t                   source,
+                                     address_t                   dest,
+                                     qos_id_t                    qos_id,
+                                     int                         policies)
+{
+        cep_id_t cep_id;
+        struct connection * conn;
+
+        conn = rkzalloc(sizeof(*conn), GFP_KERNEL);
+        if (!conn) {
+                LOG_ERR("Failed connection creation");
+                return -1;
+        }
+        conn->destination_address = dest;
+        conn->source_address      = source;
+        conn->port_id             = port_id;
+        conn->qos_id              = qos_id;
+
+        cep_id = efcp_connection_create(data->efcpc, conn);
+        if (!is_cep_id_ok(cep_id)) {
+                LOG_ERR("Failed EFCP connection creation");
+                return -1;
+        }
+        conn->source_cep_id = cep_id;
+
+        connection_create_response(cep_id);
+
+        return 0;
+}
+
+static int connection_update_request(struct ipcp_instance_data * data,
+                                     port_id_t                   port_id,
+                                     cep_id_t                    src_cep_id,
+                                     cep_id_t                    dst_cep_id)
+{
+        LOG_MISSING;
+        return -1;
+}
+
+static int connection_destroy_request(struct ipcp_instance_data * data,
+                                      port_id_t                   port_id,
+                                      cep_id_t                    src_cep_id)
+{
+        LOG_MISSING;
+        return -1;
+}
+
 /*  FIXME: register ops */
 static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request  = NULL,
@@ -166,9 +194,12 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .flow_deallocate        = NULL,
         .application_register   = NULL,
         .application_unregister = NULL,
-        .sdu_write              = NULL,
+        .sdu_write              = normal_sdu_write,
         .assign_to_dif          = NULL,
         .update_dif_config      = NULL,
+        .connection_create      = connection_create_request,
+        .connection_update      = connection_update_request,
+        .connection_destroy     = connection_destroy_request,
 };
 
 static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
@@ -215,7 +246,27 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
 
         instance->data->info->name = name_dup(name);
         if (!instance->data->info->name) {
-                LOG_DBG("Failed creation of ipc name");
+                LOG_ERR("Failed creation of ipc name");
+                rkfree(instance->data->info);
+                rkfree(instance->data);
+                rkfree(instance);
+                return NULL;
+        }
+
+        instance->data->efcpc = efcp_container_create();
+        if (!instance->data->efcpc) {
+                LOG_ERR("Failed creation of EFCP container");
+                rkfree(instance->data->info->name);
+                rkfree(instance->data->info);
+                rkfree(instance->data);
+                rkfree(instance);
+                return NULL;
+        }
+
+        instance->data->rmt = rmt_create();
+        if (!instance->data->rmt) {
+                LOG_ERR("Failed creation of EFCP container");
+                rkfree(instance->data->info->name);
                 rkfree(instance->data->info);
                 rkfree(instance->data);
                 rkfree(instance);

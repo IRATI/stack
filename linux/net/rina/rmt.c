@@ -50,6 +50,7 @@ struct rmt * rmt_create(void)
 
         return tmp;
 }
+EXPORT_SYMBOL(rmt_create);
 
 int rmt_destroy(struct rmt * instance)
 {
