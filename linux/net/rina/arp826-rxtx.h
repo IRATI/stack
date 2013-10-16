@@ -27,11 +27,14 @@
 
 #include "arp826-utils.h"
 
-struct sk_buff * arp_create(struct net_device * dev,
-                            uint16_t            oper,
-                            uint16_t            ptype,
-                            const struct gpa *  spa,
-                            const struct gpa *  tpa,
-                            const struct gha *  tha);
+int arp_send_reply(uint16_t            ptype,
+                   const struct gpa *  spa,
+                   const struct gpa *  tpa,
+                   const struct gha *  tha);
+
+int arp_send_request(uint16_t            ptype,
+                     const struct gpa *  spa,
+                     const struct gpa *  sha,
+                     const struct gha *  tpa);
 
 #endif

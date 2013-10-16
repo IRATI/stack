@@ -34,17 +34,15 @@
 
 #include "arp826-utils.h"
 
-struct sk_buff * arp_create(struct net_device * dev,
-                            uint16_t            oper,
-                            uint16_t            ptype,
-                            const struct gpa *  spa,
-                            const struct gpa *  tpa,
-                            const struct gha *  tha)
+#if 0
+static struct sk_buff * arp_create(struct net_device * dev,
+                                   uint16_t            oper,
+                                   uint16_t            ptype,
+                                   const struct gpa *  spa,
+                                   const struct gpa *  tpa,
+                                   const struct gha *  tha)
 {
-        if (!dev || !gpa_is_ok(spa) || !gpa_is_ok(tpa) || !gha_is_ok(tha)) {
-                LOG_ERR("Wrong input parameters, cannot create ARP packet");
-                return NULL;
-        }
+        ASSERT(gpa_is_ok(spa) && gpa_is_ok(tpa) && gha_is_ok(tha));
 
 #if 0
 	struct sk_buff * skb;
@@ -119,4 +117,69 @@ out:
 	LOG_MISSING;
 
 	return NULL;
+}
+#endif
+
+int arp_send_reply(uint16_t            ptype,
+                   const struct gpa *  spa,
+                   const struct gpa *  tpa,
+                   const struct gha *  tha)
+{
+#if 0
+        struct net_device * dev;
+        struct sk_buff *    skb;
+
+        if (!gpa_is_ok(spa) || !gpa_is_ok(tpa) || !gha_is_ok(tha)) {
+                LOG_ERR("Wrong input parameters, cannot send ARP reply");
+                return -1;
+        }
+
+        dev = gha_to_device(target_ha);
+        if (!dev) {
+                LOG_ERR("Cannot get the device for this GHA");
+                return -1;
+        }
+
+        skb = arp_create(dev,
+                         ARP_REPLY, ptype, 
+                         tmp_tpa, tmp_spa, tmp_sha);
+        if (skb == NULL)
+                return -1;
+
+        dev_queue_xmit(skb);
+#endif
+
+        return 0;
+}
+
+int arp_send_request(uint16_t            ptype,
+                     const struct gpa *  spa,
+                     const struct gha *  sha,
+                     const struct gpa *  tpa)
+{
+#if 0
+        struct net_device * dev;
+        struct sk_buff *    skb;
+
+        if (!gpa_is_ok(spa) || !gha_is_ok(sha) || !gpa_is_ok(tpa)) {
+                LOG_ERR("Wrong input parameters, cannot send ARP request");
+                return -1;
+        }
+
+        dev = gha_to_device(target_ha);
+        if (!dev) {
+                LOG_ERR("Cannot get the device for this GHA");
+                return -1;
+        }
+
+        skb = arp_create(dev,
+                         ARP_REQUEST, ptype, 
+                         tmp_tpa, tmp_spa, tmp_sha);
+        if (skb == NULL)
+                return -1;
+
+        dev_queue_xmit(skb);
+#endif
+
+        return 0;
 }
