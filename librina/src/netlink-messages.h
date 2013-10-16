@@ -230,6 +230,7 @@ public:
 	const ApplicationProcessNamingInformation& getSourceAppName() const;
 	void setSourceAppName(
 			const ApplicationProcessNamingInformation& sourceAppName);
+	IPCEvent* toIPCEvent();
 };
 
 /**
@@ -289,6 +290,7 @@ public:
 	void setResult(int result);
 	bool isNotifySource() const;
 	void setNotifySource(bool notifySource);
+	IPCEvent* toIPCEvent();
 };
 
 /**
@@ -331,6 +333,7 @@ public:
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	void setApplicationName(
 			const ApplicationProcessNamingInformation& applicationName);
+	IPCEvent* toIPCEvent();
 };
 
 /**
@@ -400,6 +403,7 @@ public:
 			const ApplicationProcessNamingInformation& applicationName);
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
+	IPCEvent* toIPCEvent();
 };
 
 /**
@@ -439,6 +443,7 @@ public:
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	void setApplicationName(
 			const ApplicationProcessNamingInformation& applicationName);
+	IPCEvent* toIPCEvent();
 };
 
 /**
@@ -532,6 +537,7 @@ public:
 	const std::list<DIFProperties>& getDIFProperties() const;
 	void setDIFProperties(const std::list<DIFProperties>& difProperties);
 	void addDIFProperty(const DIFProperties& difProperties);
+	IPCEvent* toIPCEvent();
 };
 
 /**
@@ -565,6 +571,7 @@ class IpcmRegisterApplicationResponseMessage: public BaseNetlinkResponseMessage 
 
 public:
 	IpcmRegisterApplicationResponseMessage();
+	IPCEvent* toIPCEvent();
 };
 
 
@@ -599,6 +606,7 @@ class IpcmUnregisterApplicationResponseMessage: public BaseNetlinkResponseMessag
 
 public:
 	IpcmUnregisterApplicationResponseMessage();
+	IPCEvent* toIPCEvent();
 };
 
 
@@ -628,6 +636,7 @@ class IpcmAssignToDIFResponseMessage: public BaseNetlinkResponseMessage {
 
 public:
 	IpcmAssignToDIFResponseMessage();
+	IPCEvent* toIPCEvent();
 };
 
 /**
@@ -657,6 +666,7 @@ class IpcmUpdateDIFConfigurationResponseMessage:
 
 public:
         IpcmUpdateDIFConfigurationResponseMessage();
+        IPCEvent* toIPCEvent();
 };
 
 class IpcmAllocateFlowRequestMessage: public BaseNetlinkResponseMessage {
@@ -699,6 +709,7 @@ class IpcmAllocateFlowRequestResultMessage: public BaseNetlinkResponseMessage {
 
 public:
 	IpcmAllocateFlowRequestResultMessage();
+	IPCEvent* toIPCEvent();
 };
 
 /**
@@ -761,6 +772,7 @@ public:
 	void setNotifySource(bool notifySource);
 	int getPortId() const;
 	void setPortId(int portId);
+	IPCEvent* toIPCEvent();
 };
 
 /**
@@ -785,6 +797,7 @@ class IpcmDeallocateFlowResponseMessage: public BaseNetlinkResponseMessage {
 
 public:
 	IpcmDeallocateFlowResponseMessage();
+	IPCEvent* toIPCEvent();
 };
 
 /**
@@ -837,10 +850,6 @@ public:
 	bool isRegistered() const;
 	IPCEvent* toIPCEvent();
 };
-
-
-
-
 
 /**
  * Used by the IPC Manager to request information from an IPC Process RIB
@@ -899,6 +908,7 @@ public:
 	const std::list<RIBObject>& getRIBObjects() const;
 	void setRIBObjects(const std::list<RIBObject>& ribObjects);
 	void addRIBObject(const RIBObject& ribObject);
+	IPCEvent* toIPCEvent();
 };
 
 /**
@@ -926,6 +936,7 @@ public:
 class IpcmIPCManagerPresentMessage: public BaseNetlinkMessage {
 public:
 	IpcmIPCManagerPresentMessage();
+	IPCEvent* toIPCEvent();
 };
 
 }

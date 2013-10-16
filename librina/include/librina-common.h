@@ -308,9 +308,12 @@ enum IPCEventType {
 	APPLICATION_REGISTRATION_REQUEST_EVENT,
 	REGISTER_APPLICATION_RESPONSE_EVENT,
 	APPLICATION_UNREGISTRATION_REQUEST_EVENT,
+	UNREGISTER_APPLICATION_RESPONSE_EVENT,
 	APPLICATION_REGISTRATION_CANCELED_EVENT,
 	ASSIGN_TO_DIF_REQUEST_EVENT,
+	ASSIGN_TO_DIF_RESPONSE_EVENT,
 	UPDATE_DIF_CONFIG_REQUEST_EVENT,
+	UPDATE_DIF_CONFIG_RESPONSE_EVENT,
 	IPC_PROCESS_REGISTERED_TO_DIF,
 	IPC_PROCESS_UNREGISTERED_FROM_DIF,
 	IPC_PROCESS_QUERY_RIB,
@@ -597,11 +600,13 @@ class AllocateFlowResponseEvent: public BaseResponseEvent {
 public:
         AllocateFlowResponseEvent(
                         int result,
-                        bool notifysource);
+                        bool notifysource,
+                        unsigned int sequenceNumber);
         AllocateFlowResponseEvent(
                         int result,
                         bool notifysource,
-                        int portId);
+                        int portId,
+                        unsigned int sequenceNumber);
         bool isNotifySource() const;
         int getPortId() const;
 };

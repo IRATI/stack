@@ -156,7 +156,7 @@ void ApplicationRegistration::removeDIFName(
 IPCManager::IPCManager() : Lockable() {
 }
 
-IPCManager::~IPCManager() {
+IPCManager::~IPCManager() throw(){
 }
 
 const std::string IPCManager::application_registered_error =
@@ -200,13 +200,13 @@ Flow * IPCManager::getAllocatedFlow(int portId) {
         return iterator->second;
 }
 
-ApplicationRegistrationInformation IPCManager::getRegistrationInfo(
+ApplicationRegistrationInformation * IPCManager::getRegistrationInfo(
                         unsigned int seqNumber) throw (IPCException) {
-        std::map<int, ApplicationRegistrationInformation>::iterator iterator;
+        std::map<unsigned int, ApplicationRegistrationInformation*>::iterator iterator;
 
         iterator = registrationInformation.find(seqNumber);
         if (iterator == registrationInformation.end()) {
-                throw IPCException();
+                return 0;
         }
 
         return iterator->second;
@@ -249,14 +249,14 @@ throw (GetDIFPropertiesException) {
 }
 
 unsigned int IPCManager::requestApplicationRegistration(
-		const ApplicationRegistrationInformation& appRegistrationInfo)
+                ApplicationRegistrationInformation * appRegistrationInfo)
 throw (ApplicationRegistrationException) {
 #if STUB_API
         registrationInformation[0] = appRegistrationInfo;
 	return 0;
 #else
 	AppRegisterApplicationRequestMessage message;
-	message.setApplicationRegistrationInformation(appRegistrationInfo);
+	message.setApplicationRegistrationInformation(*appRegistrationInfo);
 	message.setRequestMessage(true);
 
 	try{
@@ -277,13 +277,12 @@ ApplicationRegistration * IPCManager::commitPendingResitration(
                         unsigned int seqNumber,
                         const ApplicationProcessNamingInformation& DIFName)
 throw (ApplicationRegistrationException) {
-        ApplicationRegistrationInformation appRegInfo;
+        ApplicationRegistrationInformation * appRegInfo;
         ApplicationRegistration * applicationRegistration;
 
         lock();
-        try {
-                appRegInfo = getRegistrationInfo(seqNumber);
-        } catch (IPCException &e) {
+        appRegInfo = getRegistrationInfo(seqNumber);
+        if (!appRegInfo) {
                 unlock();
                 throw ApplicationRegistrationException("Unknown registration");
         }
@@ -291,15 +290,16 @@ throw (ApplicationRegistrationException) {
         registrationInformation.erase(seqNumber);
 
         applicationRegistration = getApplicationRegistration(
-                        appRegInfo.getApplicationName());
+                        appRegInfo->getApplicationName());
         if (!applicationRegistration){
                 applicationRegistration = new ApplicationRegistration(
-                                appRegInfo.getApplicationName());
-                applicationRegistrations[appRegInfo.getApplicationName()] =
+                                appRegInfo->getApplicationName());
+                applicationRegistrations[appRegInfo->getApplicationName()] =
                                 applicationRegistration;
         }
 
         applicationRegistration->addDIFName(DIFName);
+        delete appRegInfo;
         unlock();
 
         return applicationRegistration;
@@ -307,12 +307,11 @@ throw (ApplicationRegistrationException) {
 
 void IPCManager::withdrawPendingRegistration(unsigned int seqNumber)
 throw (ApplicationRegistrationException) {
-        ApplicationRegistrationInformation appRegInfo;
+        ApplicationRegistrationInformation * appRegInfo;
 
         lock();
-        try {
-                appRegInfo = getRegistrationInfo(seqNumber);
-        } catch (IPCException &e) {
+        appRegInfo = getRegistrationInfo(seqNumber);
+        if (!appRegInfo) {
                 unlock();
                 throw ApplicationRegistrationException("Unknown registration");
         }
@@ -351,9 +350,10 @@ unsigned int IPCManager::requestApplicationUnregistration(
                                 IPCManager::application_not_registered_error);
         }
 
-        ApplicationRegistrationInformation appRegInfo;
-        appRegInfo.setApplicationName(applicationName);
-        appRegInfo.setDIFName(DIFName);
+        ApplicationRegistrationInformation * appRegInfo =
+                        new ApplicationRegistrationInformation();
+        appRegInfo->setApplicationName(applicationName);
+        appRegInfo->setDIFName(DIFName);
 
 #if STUB_API
         registrationInformation[0] = appRegInfo;
@@ -373,7 +373,7 @@ unsigned int IPCManager::requestApplicationUnregistration(
 	}
 
 	registrationInformation[message.getSequenceNumber()] =
-	                message.getSequenceNumber();
+	                appRegInfo;
 	unlock();
 	return message.getSequenceNumber();
 #endif
@@ -382,12 +382,12 @@ unsigned int IPCManager::requestApplicationUnregistration(
 
 void IPCManager::appUnregistrationResult(unsigned int seqNumber, bool success)
                                 throw (ApplicationUnregistrationException) {
-        ApplicationRegistrationInformation appRegInfo;
+        ApplicationRegistrationInformation * appRegInfo;
 
         lock();
-        try {
-                appRegInfo = getRegistrationInfo(seqNumber);
-        } catch(IPCException &e){
+
+        appRegInfo = getRegistrationInfo(seqNumber);
+        if (!appRegInfo){
                 unlock();
                 throw ApplicationUnregistrationException(
                                 "Pending unregistration not found");
@@ -395,12 +395,12 @@ void IPCManager::appUnregistrationResult(unsigned int seqNumber, bool success)
 
        registrationInformation.erase(seqNumber);
        ApplicationRegistration * applicationRegistration;
-       bool found = false;
 
        applicationRegistration = getApplicationRegistration(
-                       appRegInfo.getApplicationName());
+                       appRegInfo->getApplicationName());
        if (!applicationRegistration){
                unlock();
+               delete appRegInfo;
                throw ApplicationUnregistrationException(
                        IPCManager::application_not_registered_error);
        }
@@ -409,18 +409,19 @@ void IPCManager::appUnregistrationResult(unsigned int seqNumber, bool success)
        for (iterator = applicationRegistration->getDIFNames().begin();
                        iterator != applicationRegistration->getDIFNames().end();
                        ++iterator) {
-               if (*iterator == appRegInfo.getDIFName()) {
+               if (*iterator == appRegInfo->getDIFName()) {
                        applicationRegistration->removeDIFName(
-                                       appRegInfo.getDIFName());
+                                       appRegInfo->getDIFName());
                        if (applicationRegistration->getDIFNames().size() == 0) {
                                applicationRegistrations.erase(
-                                       appRegInfo.getApplicationName());
+                                       appRegInfo->getApplicationName());
                        }
 
                        break;
                }
        }
 
+       delete appRegInfo;
        unlock();
 }
 

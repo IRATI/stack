@@ -228,9 +228,10 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			specificMessage->setDestPortId(getIPCManagerPortId());
 		}else{
 			putAPNametoNetlinkPortIdMapping(
-					specificMessage->getApplicationName(),
-					specificMessage->getSourcePortId(),
-					specificMessage->getSourceIpcProcessId());
+			        specificMessage->getApplicationRegistrationInformation().
+			                getApplicationName(),
+			        specificMessage->getSourcePortId(),
+				specificMessage->getSourceIpcProcessId());
 		}
 		break;
 	}

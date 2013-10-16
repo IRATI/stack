@@ -352,7 +352,7 @@ public:
  * Encapsulates the state and operations that can be performed over
  * a single IPC Process (besides creation/destruction)
  */
-class IPCProcess : public Lockable{
+class IPCProcess {
 
 	/** The identifier of the IPC Process, unique within the system */
 	unsigned short id;
@@ -649,9 +649,9 @@ public:
          * Returns a list to all the IPC Processes that are currently running in
          * the system.
          *
-         * @return vector<IPCProcess *> A list of the IPC Processes in the system
+         * @return list<IPCProcess *> A list of the IPC Processes in the system
          */
-        std::vector<IPCProcess *> listIPCProcesses();
+        std::list<IPCProcess *> listIPCProcesses();
 
         /**
          * Returns a pointer to the IPCProcess identified by ipcProcessId
@@ -814,6 +814,25 @@ public:
                         unsigned int sequenceNumber);
         const std::list<RIBObject>& getRIBObject() const;
 };
+
+/**
+ * Event informing about the result of an assign to DIF operation
+ */
+class AssignToDIFResponseEvent: public BaseResponseEvent {
+public:
+        AssignToDIFResponseEvent(
+                        int result, unsigned int sequenceNumber);
+};
+
+/**
+ * Event informing about the result of an update DIF config operation
+ */
+class UpdateDIFConfigurationResponseEvent: public BaseResponseEvent {
+public:
+        UpdateDIFConfigurationResponseEvent(
+                        int result, unsigned int sequenceNumber);
+};
+
 
 
 }

@@ -49,7 +49,7 @@ void initializeIPCManager(unsigned int localPort,
 	message.setNotificationMessage(true);
 
 	try{
-		rinaManager->sendResponseOrNotficationMessage(&message);
+		rinaManager->sendMessage(&message);
 	}catch(NetlinkException &e){
 		throw IPCManagerInitializationException(e.what());
 	}
@@ -73,7 +73,7 @@ const std::string IPCProcess::error_deallocating_flow =
 const std::string IPCProcess::error_querying_rib =
 		"Error querying rib";
 
-IPCProcess::IPCProcess():Lockable() {
+IPCProcess::IPCProcess() {
 	id = 0;
 	portId = 0;
 	pid = 0;
@@ -84,8 +84,7 @@ IPCProcess::IPCProcess():Lockable() {
 
 IPCProcess::IPCProcess(unsigned short id, unsigned int portId,
 		pid_t pid, const std::string& type,
-		const ApplicationProcessNamingInformation& name) :
-		        Lockable(){
+		const ApplicationProcessNamingInformation& name) {
 	this->id = id;
 	this->portId = portId;
 	this->pid = pid;
@@ -143,8 +142,6 @@ void IPCProcess::setDIFInformation(const DIFInformation& difInformation){
 unsigned int IPCProcess::assignToDIF(
                 const DIFInformation& difInformation)
 throw (AssignToDIFException) {
-        lock();
-
         unsigned int seqNum = 0;
 
         std::string currentDIFName =
@@ -152,7 +149,6 @@ throw (AssignToDIFException) {
         LOG_DBG("Current DIF name is %s", currentDIFName.c_str());
 
         if(difMember || assignInProcess) {
-                unlock();
                 std::string message;
                 message =  message + "This IPC Process is already assigned "+
                                 "to the DIF " + currentDIFName;
@@ -172,7 +168,6 @@ throw (AssignToDIFException) {
 	try{
 	        rinaManager->sendMessage(&message);
 	}catch(NetlinkException &e){
-	        unlock();
 	        throw AssignToDIFException(e.what());
 	}
 
@@ -181,15 +176,11 @@ throw (AssignToDIFException) {
 
 	this->difInformation = difInformation;
 	assignInProcess = true;
-	unlock();
 	return seqNum;
 }
 
 void IPCProcess::assignToDIFResult(bool success) throw (AssignToDIFException) {
-        lock();
-
         if (!assignInProcess) {
-                unlock();
                 throw AssignToDIFException(
                                 "There was no assignment operation in process");
         }
@@ -204,7 +195,6 @@ void IPCProcess::assignToDIFResult(bool success) throw (AssignToDIFException) {
         }
 
         assignInProcess = false;
-        unlock();
 }
 
 unsigned int IPCProcess::updateDIFConfiguration(
@@ -213,14 +203,11 @@ unsigned int IPCProcess::updateDIFConfiguration(
 {
         unsigned int seqNum=0;
 
-        lock();
-
         std::string currentDIFName =
                         this->difInformation.getDifName().getProcessName();
         LOG_DBG("Current DIF name is %s", currentDIFName.c_str());
 
         if(!difMember || configureInProcess) {
-                unlock();
                 std::string message;
                 message =  message + "This IPC Process is not yet assigned "+
                                 "to any DIF, or a DIF configuration " +
@@ -241,7 +228,6 @@ unsigned int IPCProcess::updateDIFConfiguration(
         try{
                 rinaManager->sendMessage(&message);
         }catch(NetlinkException &e){
-                unlock();
                 throw UpdateDIFConfigurationException(e.what());
         }
 
@@ -250,15 +236,14 @@ unsigned int IPCProcess::updateDIFConfiguration(
 #endif
         configureInProcess = true;
         newConfiguration = difConfiguration;
-        unlock();
+
+        return seqNum;
 }
 
 void IPCProcess::updateDIFConfigurationResult(bool success)
         throw (UpdateDIFConfigurationException) {
-        lock();
 
         if(!configureInProcess){
-                unlock();
                 throw UpdateDIFConfigurationException(
                                 "No config operation in process");
         }
@@ -269,7 +254,6 @@ void IPCProcess::updateDIFConfigurationResult(bool success)
 
         newConfiguration = DIFConfiguration();
         configureInProcess = false;
-        unlock();
 }
 
 void IPCProcess::notifyRegistrationToSupportingDIF(
@@ -644,8 +628,8 @@ throw (DestroyIPCProcessException) {
 	}
 }
 
-std::vector<IPCProcess *> IPCProcessFactory::listIPCProcesses() {
-	std::vector<IPCProcess *> response;
+std::list<IPCProcess *> IPCProcessFactory::listIPCProcesses() {
+	std::list<IPCProcess *> response;
 
 	lock();
 	for (std::map<int, IPCProcess*>::iterator it = ipcProcesses.begin();
@@ -900,6 +884,22 @@ QueryRIBResponseEvent::QueryRIBResponseEvent(
 
 const std::list<RIBObject>& QueryRIBResponseEvent::getRIBObject() const {
         return ribObjects;
+}
+
+/* CLASS ASSIGN TO DIF RESPONSE EVENT */
+AssignToDIFResponseEvent::AssignToDIFResponseEvent(
+                int result, unsigned int sequenceNumber):
+                        BaseResponseEvent(result,
+                                        ASSIGN_TO_DIF_RESPONSE_EVENT,
+                                        sequenceNumber) {
+}
+
+/* CLASS UPDATE DIF CONFIGURATION RESPONSE EVENT */
+UpdateDIFConfigurationResponseEvent::UpdateDIFConfigurationResponseEvent(
+                int result, unsigned int sequenceNumber):
+                        BaseResponseEvent(result,
+                                        UPDATE_DIF_CONFIG_RESPONSE_EVENT,
+                                        sequenceNumber) {
 }
 
 }

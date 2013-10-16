@@ -757,7 +757,7 @@ RegisterApplicationResponseEvent::RegisterApplicationResponseEvent(
                         int result,
                         unsigned int sequenceNumber):
                 BaseApplicationRegistrationResponseEvent(
-                                       appName, DIFName, result,
+                                       appName, difName, result,
                                        REGISTER_APPLICATION_RESPONSE_EVENT,
                                        sequenceNumber){
 }
@@ -776,7 +776,8 @@ UnregisterApplicationResponseEvent::UnregisterApplicationResponseEvent(
 /* CLASS ALLOCATE FLOW RESPONSE EVENT */
 AllocateFlowResponseEvent::AllocateFlowResponseEvent(
                 int result,
-                bool notifysource) :
+                bool notifysource,
+                unsigned int sequenceNumber) :
                 BaseResponseEvent(result,
                                  ALLOCATE_FLOW_RESPONSE_EVENT,
                                  sequenceNumber) {
@@ -787,7 +788,8 @@ AllocateFlowResponseEvent::AllocateFlowResponseEvent(
 AllocateFlowResponseEvent::AllocateFlowResponseEvent(
                 int result,
                 bool notifysource,
-                int portId) :
+                int portId,
+                unsigned int sequenceNumber) :
                 BaseResponseEvent(result,
                                 ALLOCATE_FLOW_RESPONSE_EVENT,
                                 sequenceNumber) {
@@ -795,8 +797,8 @@ AllocateFlowResponseEvent::AllocateFlowResponseEvent(
         this->portId = portId;
 }
 
-int AllocateFlowResponseEvent::getResult() const{
-        return result;
+int AllocateFlowResponseEvent::getPortId() const{
+        return portId;
 }
 
 bool AllocateFlowResponseEvent::isNotifySource() const {

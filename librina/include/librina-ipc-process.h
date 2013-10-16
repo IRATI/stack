@@ -252,6 +252,7 @@ class ExtendedIPCManager: public IPCManager {
 
 public:
 	static const std::string error_allocate_flow;
+	~ExtendedIPCManager() throw();
 	const DIFInformation& getCurrentDIFInformation() const;
 	void setCurrentDIFInformation(const DIFInformation& currentDIFInformation);
 	unsigned int getIpcProcessId() const;

@@ -358,7 +358,8 @@ IPCEvent* AppAllocateFlowResponseMessage::toIPCEvent(){
         AllocateFlowResponseEvent * event =
                         new AllocateFlowResponseEvent(
                                         result,
-                                        notifySource);
+                                        notifySource,
+                                        getSequenceNumber());
         return event;
 }
 
@@ -409,7 +410,7 @@ void AppDeallocateFlowResponseMessage::setApplicationName(
 
 IPCEvent* AppDeallocateFlowResponseMessage::toIPCEvent(){
         DeallocateFlowResponseEvent * event = new DeallocateFlowResponseEvent(
-                        applicationName, result, getSequenceNumber());
+                        applicationName, getResult(), getSequenceNumber());
         return event;
 }
 
@@ -510,7 +511,7 @@ IPCEvent* AppRegisterApplicationResponseMessage::toIPCEvent(){
                         new RegisterApplicationResponseEvent(
                                         applicationName,
                                         difName,
-                                        result,
+                                        getResult(),
                                         getSequenceNumber());
 
         return event;
@@ -573,7 +574,7 @@ IPCEvent* AppUnregisterApplicationResponseMessage::toIPCEvent(){
         UnregisterApplicationResponseEvent * event =
                         new UnregisterApplicationResponseEvent(
                                         applicationName,
-                                        result,
+                                        getResult(),
                                         getSequenceNumber());
 
         return event;
@@ -701,7 +702,7 @@ IPCEvent* AppGetDIFPropertiesResponseMessage::toIPCEvent(){
                         new GetDIFPropertiesResponseEvent(
                                         applicationName,
                                         difProperties,
-                                        result,
+                                        getResult(),
                                         getSequenceNumber());
 
         return event;
@@ -739,7 +740,6 @@ IPCEvent* IpcmRegisterApplicationRequestMessage::toIPCEvent(){
 	information.setDIFName(difName);
 	ApplicationRegistrationRequestEvent * event =
 			new ApplicationRegistrationRequestEvent(
-					applicationName,
 					information,
 					getSequenceNumber());
 
@@ -839,6 +839,14 @@ IpcmAssignToDIFResponseMessage():
 BaseNetlinkResponseMessage(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE) {
 }
 
+IPCEvent* IpcmAssignToDIFResponseMessage::toIPCEvent(){
+        AssignToDIFResponseEvent * event =
+                        new AssignToDIFResponseEvent(
+                                        getResult(),
+                                        getSequenceNumber());
+        return event;
+}
+
 /* CLASS IPCM UPDATE DIF CONFIGURATION REQUEST MESSAGE */
 IpcmUpdateDIFConfigurationRequestMessage::
 IpcmUpdateDIFConfigurationRequestMessage():
@@ -869,6 +877,14 @@ IPCEvent* IpcmUpdateDIFConfigurationRequestMessage::toIPCEvent()
 IpcmUpdateDIFConfigurationResponseMessage::
 IpcmUpdateDIFConfigurationResponseMessage():
 BaseNetlinkResponseMessage(RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE) {
+}
+
+IPCEvent* IpcmUpdateDIFConfigurationResponseMessage::toIPCEvent(){
+        UpdateDIFConfigurationResponseEvent * event =
+                        new UpdateDIFConfigurationResponseEvent(
+                                        getResult(),
+                                        getSequenceNumber());
+        return event;
 }
 
 /* CLASS IPCM ALLOCATE FLOW REQUEST MESSAGE */

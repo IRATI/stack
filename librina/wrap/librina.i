@@ -362,8 +362,151 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
+    } else if ($1->getType() == rina::REGISTER_APPLICATION_RESPONSE_EVENT) {
+    	rina::RegisterApplicationResponseEvent *flowReqEvent = dynamic_cast<rina::RegisterApplicationResponseEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/RegisterApplicationResponseEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::RegisterApplicationResponseEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::UNREGISTER_APPLICATION_RESPONSE_EVENT) {
+    	rina::UnregisterApplicationResponseEvent *flowReqEvent = dynamic_cast<rina::UnregisterApplicationResponseEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/UnregisterApplicationResponseEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::UnregisterApplicationResponseEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::ALLOCATE_FLOW_RESPONSE_EVENT) {
+    	rina::AllocateFlowResponseEvent *flowReqEvent = dynamic_cast<rina::AllocateFlowResponseEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/AllocateFlowResponseEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::AllocateFlowResponseEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT) {
+    	rina::AllocateFlowRequestResultEvent *flowReqEvent = dynamic_cast<rina::AllocateFlowRequestResultEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/AllocateFlowRequestResultEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::AllocateFlowRequestResultEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::DEALLOCATE_FLOW_RESPONSE_EVENT) {
+    	rina::DeallocateFlowResponseEvent *flowReqEvent = dynamic_cast<rina::DeallocateFlowResponseEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/DeallocateFlowResponseEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::DeallocateFlowResponseEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::GET_DIF_PROPERTIES_RESPONSE_EVENT) {
+    	rina::GetDIFPropertiesResponseEvent *flowReqEvent = dynamic_cast<rina::GetDIFPropertiesResponseEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/GetDIFPropertiesResponseEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::GetDIFPropertiesResponseEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::IPCM_REGISTER_APP_RESPONSE_EVENT) {
+    	rina::IpcmRegisterApplicationResponseEvent *flowReqEvent = dynamic_cast<rina::IpcmRegisterApplicationResponseEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/IpcmRegisterApplicationResponseEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::IpcmRegisterApplicationResponseEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT) {
+    	rina::IpcmUnregisterApplicationResponseEvent *flowReqEvent = dynamic_cast<rina::IpcmUnregisterApplicationResponseEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/IpcmUnregisterApplicationResponseEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::IpcmUnregisterApplicationResponseEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT) {
+    	rina::IpcmDeallocateFlowResponseEvent *flowReqEvent = dynamic_cast<rina::IpcmDeallocateFlowResponseEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/IpcmDeallocateFlowResponseEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::IpcmDeallocateFlowResponseEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::IPCM_ALLOCATE_FLOW_REQUEST_RESULT) {
+    	rina::IpcmAllocateFlowRequestResultEvent *flowReqEvent = dynamic_cast<rina::IpcmAllocateFlowRequestResultEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/IpcmAllocateFlowRequestResultEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::IpcmAllocateFlowRequestResultEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::QUERY_RIB_RESPONSE_EVENT) {
+    	rina::QueryRIBResponseEvent *flowReqEvent = dynamic_cast<rina::QueryRIBResponseEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/QueryRIBResponseEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::QueryRIBResponseEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::ASSIGN_TO_DIF_RESPONSE_EVENT) {
+    	rina::AssignToDIFResponseEvent *flowReqEvent = dynamic_cast<rina::AssignToDIFResponseEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/AssignToDIFResponseEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::AssignToDIFResponseEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT) {
+    	rina::UpdateDIFConfigurationResponseEvent *flowReqEvent = dynamic_cast<rina::UpdateDIFConfigurationResponseEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/UpdateDIFConfigurationResponseEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::UpdateDIFConfigurationResponseEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
     }
-}
+} 
 %enddef
 
 DOWNCAST_IPC_EVENT_CONSUMER(eventWait);
@@ -473,7 +616,7 @@ MAKE_COLLECTION_ITERABLE(StringListIterator, String, std::list, std::string);
 %template(IPCEventProducerSingleton) Singleton<rina::IPCEventProducer>;
 %template(IPCProcessFactorySingleton) Singleton<rina::IPCProcessFactory>;
 %template(IPCProcessVector) std::vector<rina::IPCProcess>;
-%template(IPCProcessPointerVector) std::vector<rina::IPCProcess *>;
+%template(IPCProcessPointerList) std::list<rina::IPCProcess *>;
 %template(ApplicationManagerSingleton) Singleton<rina::ApplicationManager>;
 %template(ExtendedIPCManagerSingleton) Singleton<rina::ExtendedIPCManager>;
 %template(RIBObjectList) std::list<rina::RIBObject>;

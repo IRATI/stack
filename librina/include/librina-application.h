@@ -264,7 +264,7 @@ class IPCManager : public Lockable{
 	std::map<unsigned int, Flow*> pendingFlows;
 
 	/** The flows that are currently allocated */
-	std::map<unsigned int, ApplicationRegistrationInformation>
+	std::map<unsigned int, ApplicationRegistrationInformation*>
 	        registrationInformation;
 
 	/** The applications that are currently registered in one or more DIFs */
@@ -278,14 +278,14 @@ class IPCManager : public Lockable{
 	Flow * getAllocatedFlow(int portId);
 
 	/** Return the information of a registration request */
-	ApplicationRegistrationInformation getRegistrationInfo(
+	ApplicationRegistrationInformation * getRegistrationInfo(
 	                unsigned int seqNumber) throw (IPCException);
 
 	ApplicationRegistration * getApplicationRegistration(
 	                const ApplicationProcessNamingInformation& appName);
 public:
 	IPCManager();
-	~IPCManager();
+	~IPCManager() throw();
 	static const std::string application_registered_error;
 	static const std::string application_not_registered_error;
 	static const std::string unknown_flow_error;
@@ -322,7 +322,7 @@ public:
 	 * @return A handler to be able to identify the proper response event
 	 */
 	unsigned int requestApplicationRegistration(
-			const ApplicationRegistrationInformation& appRegistrationInfo)
+			ApplicationRegistrationInformation * appRegistrationInfo)
 			throw (ApplicationRegistrationException);
 
 	/**

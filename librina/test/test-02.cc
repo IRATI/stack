@@ -21,7 +21,7 @@
 using namespace rina;
 
 bool checkIPCProcesses(unsigned int expectedProcesses) {
-	std::vector<IPCProcess *> ipcProcesses = ipcProcessFactory
+	std::list<IPCProcess *> ipcProcesses = ipcProcessFactory
 			->listIPCProcesses();
 	if (ipcProcesses.size() != expectedProcesses) {
 		std::cout << "ERROR: Expected " << expectedProcesses
@@ -29,12 +29,6 @@ bool checkIPCProcesses(unsigned int expectedProcesses) {
 				<< "\n";
 		return false;
 	}
-
-	std::cout << "Ids of existing processes:";
-	for (unsigned int i = 0; i < ipcProcesses.size(); i++) {
-		std::cout << " " << ipcProcesses.at(i)->getId() << ",";
-	}
-	std::cout << "\n";
 
 	return true;
 }
@@ -109,7 +103,7 @@ int main(int argc, char * argv[]) {
 			ApplicationRegistrationInformation(APPLICATION_REGISTRATION_SINGLE_DIF);
 	appRegInfo.setDIFName(*difName);
 	ApplicationRegistrationRequestEvent * event = new
-			ApplicationRegistrationRequestEvent(*sourceName, appRegInfo, 34);
+			ApplicationRegistrationRequestEvent(appRegInfo, 34);
 	applicationManager->applicationRegistered(*event, *difName, 0);
 
 	/* TEST APPLICATION UNREGISTERED */

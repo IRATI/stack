@@ -93,7 +93,7 @@ int main(int argc, char * argv[]) {
 	/* TEST ALLOCATE RESPONSE */
 	FlowRequestEvent flowRequestEvent = FlowRequestEvent(25, flowSpecification,
 			true, sourceName, destinationName, difName, 23);
-	Flow * flow2 = ipcManager->allocateFlowResponse(flowRequestEvent, true, "");
+	Flow * flow2 = ipcManager->allocateFlowResponse(flowRequestEvent, 0, true);
 	std::cout << "Accepted flow allocation, portId is " << flow2->getPortId()
 			<< "; DIF name is: " << flow2->getDIFName().getProcessName()
 			<< "\n";
@@ -138,11 +138,11 @@ int main(int argc, char * argv[]) {
 	}
 
 	/* TEST REGISTER APPLICATION */
-	ApplicationRegistrationInformation info =
-			ApplicationRegistrationInformation(
+	ApplicationRegistrationInformation * info =
+			new ApplicationRegistrationInformation(
 					APPLICATION_REGISTRATION_SINGLE_DIF);
-	info.setDIFName(difName);
-	info.setApplicationName(sourceName);
+	info->setDIFName(difName);
+	info->setApplicationName(sourceName);
 	seqNumber = ipcManager->requestApplicationRegistration(info);
 	ipcManager->commitPendingResitration(seqNumber, difName);
 	if (!checkRegisteredApplications(1)) {
