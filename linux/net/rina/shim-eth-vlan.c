@@ -410,6 +410,8 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
 static int eth_vlan_application_register(struct ipcp_instance_data * data,
                                          const struct name *         name)
 {
+        struct gpa * pa;
+        struct gha * ha;
         ASSERT(data);
         ASSERT(name);
 
@@ -428,12 +430,18 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        /* FIXME: Adding to the ARP may return errors, unroll things then */
-	data->handle = rinarp_add(name_to_gpa(name), 
-				  gha_create(MAC_ADDR_802_3, 
-					     data->dev->dev_addr));
-        if (!data->handle)
+        pa = name_to_gpa(name);
+        ha = gha_create(MAC_ADDR_802_3, data->dev->dev_addr);
+        data->handle = rinarp_add(pa,ha);
+        if (!data->handle) {
+                LOG_ERR("Failed to register application in ARP");
+                name_destroy(data->app_name);
+                gpa_destroy(pa);
+                gha_destroy(ha);
                 return -1;
+        }
+        gpa_destroy(pa);
+        gha_destroy(ha);
 
         return 0;
 }
