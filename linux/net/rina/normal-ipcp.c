@@ -163,7 +163,6 @@ static cep_id_t connection_create_request(struct ipcp_instance_data * data,
 }
 
 static int connection_update_request(struct ipcp_instance_data * data,
-                                     port_id_t                   port_id,
                                      cep_id_t                    src_cep_id,
                                      cep_id_t                    dst_cep_id)
 {
@@ -174,7 +173,6 @@ static int connection_update_request(struct ipcp_instance_data * data,
 }
 
 static int connection_destroy_request(struct ipcp_instance_data * data,
-                                      port_id_t                   port_id,
                                       cep_id_t                    src_cep_id)
 {
         if (efcp_connection_destroy(data->efcpc, src_cep_id))
@@ -186,10 +184,34 @@ static int connection_destroy_request(struct ipcp_instance_data * data,
 static cep_id_t
 connection_create_arrived(struct ipcp_instance_data * data,
                           port_id_t                   port_id,
-                          cep_id_t                    src_cep_id)
+                          address_t                   source,
+                          address_t                   dest,
+                          qos_id_t                    qos_id,
+                          cep_id_t                    dst_cep_id,
+                          int                         policies)
 {
-        LOG_MISSING;
-        return -1;
+        cep_id_t cep_id;
+        struct connection * conn;
+
+        conn = rkzalloc(sizeof(*conn), GFP_KERNEL);
+        if (!conn) {
+                LOG_ERR("Failed connection creation");
+                return -1;
+        }
+        conn->destination_address = dest;
+        conn->source_address      = source;
+        conn->port_id             = port_id;
+        conn->qos_id              = qos_id;
+        conn->destination_cep_id  = dst_cep_id;
+
+        cep_id = efcp_connection_create(data->efcpc, conn);
+        if (!is_cep_id_ok(cep_id)) {
+                LOG_ERR("Failed EFCP connection creation");
+                rkfree(conn);
+                return cep_id_bad();
+        }
+
+        return cep_id;
 }
 
 /*  FIXME: register ops */
