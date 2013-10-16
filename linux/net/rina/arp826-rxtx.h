@@ -22,4 +22,16 @@
 #ifndef ARP_826_RXTX_H
 #define ARP_826_RXTX_H
 
+#include <linux/skbuff.h>
+#include <linux/netdevice.h>
+
+#include "arp826-utils.h"
+
+struct sk_buff * arp_create(struct net_device * dev,
+                            uint16_t            oper,
+                            uint16_t            ptype,
+                            const struct gpa *  spa,
+                            const struct gpa *  tpa,
+                            const struct gha *  tha);
+
 #endif

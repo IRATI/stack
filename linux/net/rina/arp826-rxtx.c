@@ -2,6 +2,7 @@
  * ARP 826 (wonnabe) RX/TX functions
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +19,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/types.h>
+#include <linux/kernel.h>
+#include <linux/skbuff.h>
+#include <linux/netdevice.h>
+
 /* FIXME: The following dependencies have to be removed */
 #define RINA_PREFIX "arp826-rxtx"
 
@@ -25,3 +31,92 @@
 #include "debug.h"
 #include "utils.h"
 /* FIXME: End of dependencies ... */
+
+#include "arp826-utils.h"
+
+struct sk_buff * arp_create(struct net_device * dev,
+                            uint16_t            oper,
+                            uint16_t            ptype,
+                            const struct gpa *  spa,
+                            const struct gpa *  tpa,
+                            const struct gha *  tha)
+{
+        if (!dev || !gpa_is_ok(spa) || !gpa_is_ok(tpa) || !gha_is_ok(tha)) {
+                LOG_ERR("Wrong input parameters, cannot create ARP packet");
+                return NULL;
+        }
+
+#if 0
+	struct sk_buff * skb;
+	struct arp_hdr * arp;
+	unsigned char * arp_ptr;
+	int hlen = LL_RESERVED_SPACE(dev);
+	int tlen = dev->needed_tailroom;
+	const unsigned char *src_hw;
+
+/*
+ * Allocate a buffer
+ */
+	int length = sizeof(struct arp_hdr) + (dev->addr_len + plen) * 2;
+
+	skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
+	if (skb == NULL)
+		return NULL;
+
+	skb_reserve(skb, hlen);
+	skb_reset_network_header(skb);
+	arp = (struct arp_hdr *) skb_put(skb, length);
+	skb->dev = dev;
+	skb->protocol = htons(ETH_P_ARP);
+	src_hw = dev->dev_addr;
+	if (dest_hw == NULL)
+		dest_hw = dev->broadcast;
+
+/*
+ * Fill the device header for the ARP frame
+ */
+	if (dev_hard_header(skb, dev, ptype, dest_hw, src_hw, skb->len) < 0)
+		goto out;
+
+/*
+ * Fill out the arp protocol part.
+ */
+
+	switch (dev->type) {
+	default:
+		arp->ar_hrd = htons(dev->type);
+		arp->ar_pro = htons(ptype);
+		break;
+	}
+
+	arp->ar_hln = dev->addr_len;
+	arp->ar_pln = plen;
+	arp->ar_op = htons(op);
+
+	arp_ptr = (unsigned char *)(arp + 1);
+
+	memcpy(arp_ptr, src_hw, dev->addr_len);
+	arp_ptr += dev->addr_len;
+	memcpy(arp_ptr, src_nwaddr, plen);
+	arp_ptr += plen;
+
+	switch (dev->type) {
+	default:
+		if (dest_hw != NULL)
+			memcpy(arp_ptr, dest_hw, dev->addr_len);
+		else
+			memset(arp_ptr, 0, dev->addr_len);
+		arp_ptr += dev->addr_len;
+	}
+	memcpy(arp_ptr, dest_nwaddr, plen);
+
+	return skb;
+
+out:
+	kfree_skb(skb);
+#endif
+
+	LOG_MISSING;
+
+	return NULL;
+}
