@@ -115,6 +115,10 @@ struct ipcp_instance_ops {
         int  (* connection_destroy)(struct ipcp_instance_data * data,
                                     port_id_t                   port_id,
                                     cep_id_t                    src_cep_id);
+
+        int (* connection_create_arrived)(struct ipcp_instance_data * data,
+                                          port_id_t                   port_id,
+                                          cep_id_t                    cep_id);
 };
 
 #endif

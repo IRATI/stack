@@ -187,19 +187,38 @@ static int connection_destroy_request(struct ipcp_instance_data * data,
         return -1;
 }
 
+static int
+connection_create_arrived_result(struct ipcp_instance_data * data,
+                                 port_id_t                   port_id,
+                                 cep_id_t                    src_cep_id,
+                                 cep_id_t                    dst_cep_id)
+{
+        LOG_MISSING;
+        return -1;
+}
+
+static int connection_create_arrived(struct ipcp_instance_data * data,
+                                     port_id_t                   port_id,
+                                     cep_id_t                    src_cep_id)
+{
+        LOG_MISSING;
+        return -1;
+}
+
 /*  FIXME: register ops */
 static struct ipcp_instance_ops normal_instance_ops = {
-        .flow_allocate_request  = NULL,
-        .flow_allocate_response = NULL,
-        .flow_deallocate        = NULL,
-        .application_register   = NULL,
-        .application_unregister = NULL,
-        .sdu_write              = normal_sdu_write,
-        .assign_to_dif          = NULL,
-        .update_dif_config      = NULL,
-        .connection_create      = connection_create_request,
-        .connection_update      = connection_update_request,
-        .connection_destroy     = connection_destroy_request,
+        .flow_allocate_request     = NULL,
+        .flow_allocate_response    = NULL,
+        .flow_deallocate           = NULL,
+        .application_register      = NULL,
+        .application_unregister    = NULL,
+        .sdu_write                 = normal_sdu_write,
+        .assign_to_dif             = NULL,
+        .update_dif_config         = NULL,
+        .connection_create         = connection_create_request,
+        .connection_update         = connection_update_request,
+        .connection_destroy        = connection_destroy_request,
+        .connection_create_arrived = connection_create_arrived,
 };
 
 static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
