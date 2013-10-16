@@ -100,12 +100,12 @@ struct ipcp_instance_ops {
                            port_id_t                   id,
                            struct sdu *                sdu);
 
-        int  (* connection_create)(struct ipcp_instance_data * data,
-                                   port_id_t                   port_id,
-                                   address_t                   source,
-                                   address_t                   dest,
-                                   qos_id_t                    qos_id,
-                                   int                         policies);
+        cep_id_t  (* connection_create)(struct ipcp_instance_data * data,
+                                        port_id_t                   port_id,
+                                        address_t                   source,
+                                        address_t                   dest,
+                                        qos_id_t                    qos_id,
+                                        int                         policies);
 
         int  (* connection_update)(struct ipcp_instance_data * data,
                                    port_id_t                   port_id,
@@ -116,9 +116,10 @@ struct ipcp_instance_ops {
                                     port_id_t                   port_id,
                                     cep_id_t                    src_cep_id);
 
-        int (* connection_create_arrived)(struct ipcp_instance_data * data,
-                                          port_id_t                   port_id,
-                                          cep_id_t                    cep_id);
+        cep_id_t
+        (* connection_create_arrived)(struct ipcp_instance_data * data,
+                                      port_id_t                   port_id,
+                                      cep_id_t                    cep_id);
 };
 
 #endif
