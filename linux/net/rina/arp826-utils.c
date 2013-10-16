@@ -546,9 +546,6 @@ int tmap_add(struct tmap *  map,
 
         hash_add(map->table, &tmp->hlist, key);
 
-        LOG_DBG("Added flow %pK to the tmap %pk with key %d",
-                tmp->value, map, tmp->key);
-
         return 0;
 }
 
@@ -567,4 +564,16 @@ int tmap_remove(struct tmap * map,
         rkfree(cur);
 
         return 0;
+}
+
+struct net_device * gha_to_device(const struct gha * ha) 
+{
+        if (!gha_is_ok(ha)) {
+                LOG_ERR("Wrong input, cannot get device from GHA");
+                return NULL;
+        }
+
+	LOG_MISSING;
+
+	return NULL;
 }
