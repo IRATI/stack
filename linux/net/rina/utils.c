@@ -278,14 +278,15 @@ static void rwq_worker(struct work_struct * work)
         struct rwq_work_item * item = (struct rwq_work_item *) work;
 
         if (!item) {
-                LOG_ERR("No item to work on ?");
+                LOG_ERR("No item to work on, bailing out");
+                return;
         }
         ASSERT(item->worker); /* Ensured by post */
 
         /* We're the owner of the data, let's free it */
         if (item->worker(item->data)) {
                 LOG_ERR("The worker could not process its data!");
-                /* FIXME: We should do something here ... */
+                return;
         }
 
         return;
@@ -296,11 +297,15 @@ struct workqueue_struct * rwq_create(const char * name)
         struct workqueue_struct * wq;
 
         if (!name) {
-                LOG_ERR("No workqueue name passed, cannot create a workqueue");
+                LOG_ERR("No workqueue name passed, cannot create it");
                 return NULL;
         }
 
         wq = create_workqueue(name);
+        if (!wq) {
+                LOG_ERR("Cannot create workqueue '%s'", name);
+                return NULL;
+        }
 
         LOG_DBG("Workqueue '%s' (%pK) created successfully", name, wq);
 
@@ -319,13 +324,14 @@ int rwq_post(struct workqueue_struct * wq,
                 return -1;
         }
         if (!worker) {
-                LOG_ERR("No worker passed, cannot post work");
+                LOG_ERR("No worker passed, "
+                        "cannot post work on workqueue %pK", wq);
                 return -1;
         }
 
         tmp = rkzalloc(sizeof(struct rwq_work_item), GFP_KERNEL);
         if (!tmp) {
-                LOG_ERR("Cannot post work");
+                LOG_ERR("Cannot post work on workqueue %pK", wq);
                 return -1;
         }
 
@@ -353,6 +359,8 @@ int rwq_destroy(struct workqueue_struct * wq)
                 LOG_ERR("The passed workqueue is NULL, cannot destroy");
                 return -1;
         }
+
+        LOG_DBG("Destroying workqueue %pK", wq);
 
         flush_workqueue(wq);
         destroy_workqueue(wq);
