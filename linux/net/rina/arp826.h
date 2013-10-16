@@ -24,6 +24,8 @@
 
 #include "arp826-utils.h"
 
+/* FIXME: This API should get the htype also ... */
+
 int                arp826_add(uint16_t           ptype,
                               const struct gpa * pa,
                               const struct gha * ha);

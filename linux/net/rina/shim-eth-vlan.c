@@ -428,8 +428,12 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        /* Add in ARP cache */
-        data->handle = rinarp_add(data->dev, name_to_gpa(name));
+        /* FIXME: Adding to the ARP may return errors, unroll things then */
+	data->handle = rinarp_add(name_to_gpa(name), 
+				  gha_create(MAC_ADDR_802_3, 
+					     data->dev->dev_addr));
+        if (!data->handle)
+                return -1;
 
         return 0;
 }

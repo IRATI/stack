@@ -276,7 +276,7 @@ static int parse_list_of_ipcp_config_entries(struct nlattr *     nested_attr,
              nla_ok(nla, rem);
              nla = nla_next(nla, &(rem))) {
                 total_entries++;
-                
+
                 entry = rkzalloc(sizeof(*entry), GFP_KERNEL);
                 if (!entry) {
                         entries_with_problems++;
@@ -326,7 +326,7 @@ static int parse_dif_config(struct nlattr * dif_config_attr,
                              attr_policy) < 0)
                 goto parse_fail;
 
-        if(attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES]) {
+        if (attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES]) {
                 if (parse_list_of_ipcp_config_entries(attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES],
                                                       dif_config) < 0)
                         goto parse_fail;
@@ -388,7 +388,8 @@ static int parse_rib_object(struct nlattr     * rib_obj_attr,
         attr_policy[RIBO_ATTR_OBJECT_NAME].type = NLA_STRING;
         attr_policy[RIBO_ATTR_OBJECT_INSTANCE].type = NLA_U32;
 
-        if (nla_parse_nested(attrs, RIBO_ATTR_MAX, rib_obj_attr, attr_policy) < 0)
+        if (nla_parse_nested(attrs,
+                             RIBO_ATTR_MAX, rib_obj_attr, attr_policy) < 0)
                 return -1;
 
         if (attrs[RIBO_ATTR_OBJECT_CLASS])
@@ -411,7 +412,8 @@ static int parse_rib_objects_list(struct nlattr     * rib_objs_attr,
 {
         int i;
         for (i=0; i < count; i++) {
-                if (parse_rib_object(&rib_objs_attr[i], &rib_objs_struct[i]) < 0) {
+                if (parse_rib_object(&rib_objs_attr[i],
+                                     &rib_objs_struct[i]) < 0) {
                         LOG_ERR("Could not parse rib_objs_list attribute");
                         return -1;
                 }
@@ -470,7 +472,8 @@ static int rnl_parse_ipcm_assign_to_dif_req_msg(struct genl_info * info,
                              attr_policy);
 
         if (result < 0) {
-                LOG_ERR("Error %d; could not validate nl message policy", result);
+                LOG_ERR("Error %d; could not validate nl message policy",
+                        result);
                 goto parse_fail;
         }
 
@@ -514,12 +517,13 @@ static int rnl_parse_ipcm_update_dif_config_req_msg(struct genl_info * info,
                              attr_policy);
 
         if (result < 0) {
-                LOG_ERR("Error %d; could not validate nl message policy", result);
+                LOG_ERR("Error %d; could not validate nl message policy",
+                        result);
                 goto parse_fail;
         }
 
         if (parse_dif_config(attrs[IUDCR_ATTR_DIF_CONFIGURATION],
-                           msg_attrs->dif_config) < 0)
+                             msg_attrs->dif_config) < 0)
                 goto parse_fail;
 
         return 0;
@@ -844,7 +848,7 @@ static int rnl_parse_ipcm_flow_dealloc_noti_msg(struct genl_info * info,
 }
 
 static int rnl_parse_ipcm_conn_create_req_msg(struct genl_info * info,
-                         struct rnl_ipcm_conn_create_req_msg_attrs * msg_attrs)
+                                              struct rnl_ipcm_conn_create_req_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[ICCRQ_ATTR_MAX + 1];
         struct nlattr *attrs[ICCRQ_ATTR_MAX + 1];
@@ -896,7 +900,7 @@ static int rnl_parse_ipcm_conn_create_req_msg(struct genl_info * info,
 }
 
 static int rnl_parse_ipcm_conn_create_arrived_msg(struct genl_info * info,
-                     struct rnl_ipcm_conn_create_arrived_msg_attrs * msg_attrs)
+                                                  struct rnl_ipcm_conn_create_arrived_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[ICCA_ATTR_MAX + 1];
         struct nlattr *attrs[ICCA_ATTR_MAX + 1];
@@ -953,7 +957,7 @@ static int rnl_parse_ipcm_conn_create_arrived_msg(struct genl_info * info,
 }
 
 static int rnl_parse_ipcm_conn_update_req_msg(struct genl_info * info,
-                         struct rnl_ipcm_conn_update_req_msg_attrs * msg_attrs)
+                                              struct rnl_ipcm_conn_update_req_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[ICURQ_ATTR_MAX + 1];
         struct nlattr *attrs[ICURQ_ATTR_MAX + 1];
@@ -2746,7 +2750,9 @@ int rnl_ipcm_conn_create_result_msg(ipc_process_id_t ipc_id,
         out_hdr->src_ipc_id = ipc_id; /* This IPC process */
         out_hdr->dst_ipc_id = 0;
 
-        if (rnl_format_ipcm_conn_create_result_msg(pid, src_cep, dst_cep, out_msg)) {
+        if (rnl_format_ipcm_conn_create_result_msg(pid,
+                                                   src_cep, dst_cep,
+                                                   out_msg)) {
                 LOG_ERR("Could not format message...");
                 nlmsg_free(out_msg);
                 return -1;
