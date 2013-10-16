@@ -166,8 +166,10 @@ static struct table * tbl_create(size_t ha_length)
 {
         struct table * instance;
 
+        LOG_DBG("Creating tbl instance for ha-len %zd", ha_length);
+
         if (ha_length == 0) {
-                LOG_ERR("Bad CL HA size, cannot create table");
+                LOG_ERR("Bad HA length, cannot create table");
                 return NULL;
         }
 
@@ -178,6 +180,8 @@ static struct table * tbl_create(size_t ha_length)
         instance->hal = ha_length;
         INIT_LIST_HEAD(&instance->entries);
         spin_lock_init(&instance->lock);
+
+        LOG_DBG("Table instance created successfully");
 
         return instance;
 }
@@ -414,9 +418,12 @@ int tbls_create(uint16_t ptype, size_t hwlen)
 
         cl = tbl_create(hwlen);
         if (!cl) {
-                LOG_ERR("Cannot create table");
+                LOG_ERR("Cannot create table for ptype 0%02x, hwlen %zd",
+                        ptype, hwlen);
                 return -1;
         }
+
+        LOG_DBG("Now adding table to the tables map");
 
         spin_lock(&tables_lock);
         if (tmap_add(tables, ptype, cl)) {
