@@ -1931,8 +1931,9 @@ int rnl_format_ipcm_flow_dealloc_noti_msg(port_id_t        id,
 }
 EXPORT_SYMBOL(rnl_format_ipcm_flow_dealloc_noti_msg);
 
-int rnl_format_ipcm_conn_create_resp_msg(port_id_t id,
-                                         cep_id_t  src_cep,
+int rnl_format_ipcm_conn_create_resp_msg(port_id_t        id,
+                                         uint_t           res,
+                                         cep_id_t         src_cep,
                                          struct sk_buff * skb_out)
 {
         if (!skb_out) {
@@ -1941,6 +1942,9 @@ int rnl_format_ipcm_conn_create_resp_msg(port_id_t id,
         }
 
         if (nla_put_u32(skb_out, ICCRE_ATTR_PORT_ID, id))
+                goto format_fail;
+
+        if (nla_put_u32(skb_out, ICCRE_ATTR_RESULT, res))
                 goto format_fail;
 
         if (nla_put_u32(skb_out, ICCRE_ATTR_SOURCE_CEP_ID, src_cep ))
@@ -2662,6 +2666,7 @@ EXPORT_SYMBOL(rnl_flow_dealloc_not_msg);
 
 int rnl_ipcm_conn_create_resp_msg(ipc_process_id_t ipc_id,
                                   port_id_t        pid,
+                                  uint_t           res,
                                   cep_id_t         src_cep,
                                   rnl_sn_t         seq_num,
                                   u32              nl_port_id)
@@ -2692,7 +2697,7 @@ int rnl_ipcm_conn_create_resp_msg(ipc_process_id_t ipc_id,
         out_hdr->src_ipc_id = ipc_id; /* This IPC process */
         out_hdr->dst_ipc_id = 0;
 
-        if (rnl_format_ipcm_conn_create_resp_msg(pid, src_cep, out_msg)) {
+        if (rnl_format_ipcm_conn_create_resp_msg(pid, res, src_cep, out_msg)) {
                 LOG_ERR("Could not format message...");
                 nlmsg_free(out_msg);
                 return -1;

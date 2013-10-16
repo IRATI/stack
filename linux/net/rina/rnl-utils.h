@@ -141,6 +141,7 @@ enum ipcm_conn_create_req_attrs_list {
 
 enum ipcm_conn_create_resp_attrs_list {
         ICCRE_ATTR_PORT_ID = 1,
+        ICCRE_ATTR_RESULT,
         ICCRE_ATTR_SOURCE_CEP_ID,
         __ICCRE_ATTR_MAX,
 };
@@ -587,6 +588,7 @@ int rnl_format_ipcm_flow_dealloc_noti_msg(port_id_t        id,
                                           struct sk_buff * skb_out);
 
 int rnl_format_ipcm_conn_create_resp_msg(port_id_t id,
+                                         uint_t    res,
                                          cep_id_t  src_cep,
                                          struct sk_buff * skb_out);
 
@@ -684,6 +686,7 @@ int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
 
 int rnl_ipcm_conn_create_resp_msg(ipc_process_id_t ipc_id,
                                   port_id_t        pid,
+                                  uint_t           res,
                                   cep_id_t         src_cep,
                                   rnl_sn_t         seq_num,
                                   u32              nl_port_id);
