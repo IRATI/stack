@@ -150,18 +150,11 @@ static int process(const struct sk_buff * skb,
           
 		req_addr  = tbl_find_by_gpa(tbl, tmp_tpa);
 		target_ha = tble_ha(req_addr);
-		/* FIXME: Get lock here */
-		dev       = gha_to_device(target_ha);
-		if (dev) {
-			struct sk_buff * skb;
-			/* This is our gpa and gha. Send reply */
-			skb = arp_create(dev,
-                                         ARP_REPLY, ptype, 
-                                         tmp_tpa, tmp_spa, tmp_sha);
-			if (skb == NULL) 
-				return -1;
-			dev_queue_xmit(skb);
-		}
+
+                if (arp_send_reply(ptype, tmp_tpa, tmp_spa, tmp_sha)) {
+                        /* FIXME: Couldn't send reply ... */
+                        return -1;
+                }
          }
                 break;
 
