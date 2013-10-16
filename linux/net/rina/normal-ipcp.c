@@ -186,7 +186,11 @@ static int connection_destroy_request(struct ipcp_instance_data * data,
 static cep_id_t
 connection_create_arrived(struct ipcp_instance_data * data,
                           port_id_t                   port_id,
-                          cep_id_t                    src_cep_id)
+                          address_t                   source,
+                          address_t                   dest,
+                          qos_id_t                    qos_id,
+                          cep_id_t                    src_cep_id,
+                          int                         policies)
 {
         LOG_MISSING;
         return -1;
