@@ -1193,8 +1193,8 @@ static int notify_ipcp_unregister_app_request(void *             data,
 }
 
 static int notify_ipcp_conn_create_req(void *             data,
-                                           struct sk_buff *   buff,
-                                           struct genl_info * info) {
+                                       struct sk_buff *   buff,
+                                       struct genl_info * info) {
         LOG_MISSING;
         return 0;
 }

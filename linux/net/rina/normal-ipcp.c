@@ -50,12 +50,12 @@ struct normal_info {
 
 struct ipcp_instance_data {
         /* FIXME add missing needed attributes */
-        ipc_process_id_t     id;
-        struct list_head     flows;
-        struct list_head     list;
-        struct normal_info * info;
+        ipc_process_id_t        id;
+        struct list_head        flows;
+        struct list_head        list;
+        struct normal_info *    info;
         /*  FIXME: Remove it as soon as the kipcm_kfa gets removed*/
-        struct kfa *         kfa;
+        struct kfa *            kfa;
         struct efcp_container * efcpc;
         struct rmt *            rmt;
 };
