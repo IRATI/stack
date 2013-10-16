@@ -38,6 +38,7 @@
 
 #include "arp826.h"
 #include "arp826-utils.h"
+#include "arp826-rxtx.h"
 #include "arp826-arm.h"
 #include "arp826-tables.h"
 
@@ -62,6 +63,12 @@ static int process(const struct sk_buff * skb,
         uint8_t *           tpa; /* Target protocol address pointer */
         uint8_t *           sha; /* Source protocol address pointer */
         uint8_t *           tha; /* Target protocol address pointer */
+
+	struct gpa *        tmp_spa;
+	struct gha *        tmp_sha;
+	struct gpa *        tmp_tpa;
+	struct gha *        tmp_tha;
+
         
         ASSERT(skb);
         ASSERT(cl);
@@ -111,24 +118,47 @@ static int process(const struct sk_buff * skb,
         tha = ptr; ptr += header->hlen;
         tpa = ptr; ptr += header->plen;
 
+	tmp_spa = gpa_create(spa, plen);
+	tmp_sha = gha_create(MAC_ADDR_802_3, sha);
+	tmp_tpa = gpa_create(tpa, plen);
+	tmp_tha = gha_create(MAC_ADDR_802_3, tha);
+
         /* Finally process the entry */
         switch (operation) {
         case ARP_REQUEST: {
-                /* Do we have it in the cache ? */
-                
-                /* No */
-                return -1;
+		struct table *             tbl;
+		const struct table_entry * entry;
+		const struct table_entry * req_addr;
+		const struct gha *         target_ha;
 
-                /* Yes */
-        }
+		/* FIXME: Should we add all ARP Requests? */
+                /* Do we have it in the cache ? */
+		tbl   = tbls_find(ptype);
+		entry = tbl_find_by_gpa(tbl, tmp_spa);
+		
+                if (!entry) {
+			if (tbl_add(tbl, tmp_spa, tmp_sha)) {
+				LOG_ERR("Bollocks. Can't add in table.");
+				return -1;
+			}
+		} else {
+			if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha))
+				LOG_ERR("Failed to update table");
+				return -1;
+		}
+          
+		req_addr  = tbl_find_by_gpa(tbl, tmp_tpa);
+		target_ha = tble_ha(req_addr);
+
+                if (arp_send_reply(ptype,
+                                   tmp_tpa, tmp_tha, tmp_spa, tmp_sha)) {
+                        /* FIXME: Couldn't send reply ... */
+                        return -1;
+                }
+         }
                 break;
 
         case ARP_REPLY: {
-                struct gpa * tmp_spa = gpa_create(spa, plen);
-                struct gha * tmp_sha = gha_create(MAC_ADDR_802_3, sha);
-                struct gpa * tmp_tpa = gpa_create(tpa, plen);
-                struct gha * tmp_tha = gha_create(MAC_ADDR_802_3, tha);
-
                 if (arm_resolve(ptype, tmp_spa, tmp_sha, tmp_tpa, tmp_tha)) {
                         LOG_ERR("Canot resolve with this reply ...");
                         return -1;

@@ -31,6 +31,7 @@
 #include "arp826.h"
 #include "arp826-utils.h"
 #include "arp826-tables.h"
+#include "arp826-rxtx.h"
 
 struct resolution {
         struct resolve_data * data;
@@ -209,6 +210,11 @@ int arp826_resolve_gpa(uint16_t           ptype,
 
         if (!gpa_is_ok(spa) || !gha_is_ok(sha) || !gpa_is_ok(tpa) || notify) {
                 LOG_ERR("Cannot resolve, bad input parameters");
+                return -1;
+        }
+
+        if (!arp_send_request(ARP_REQUEST, spa, sha, tpa)) {
+                LOG_ERR("Cannot send request, cannot resolve GPA");
                 return -1;
         }
 
