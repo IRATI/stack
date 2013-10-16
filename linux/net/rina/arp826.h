@@ -24,13 +24,9 @@
 
 #include "arp826-utils.h"
 
-typedef int arp826_timeout_t;
-
-/* In seconds. A negative time means infinite */
 int                arp826_add(uint16_t           ptype,
                               const struct gpa * pa,
-                              const struct gha * ha,
-                              arp826_timeout_t   timeout);
+                              const struct gha * ha);
 int                arp826_remove(uint16_t           ptype,
                                  const struct gpa * pa,
                                  const struct gha * ha);
