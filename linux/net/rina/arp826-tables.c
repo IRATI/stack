@@ -166,8 +166,10 @@ static struct table * tbl_create(size_t ha_length)
 {
         struct table * instance;
 
+        LOG_DBG("Creating tbl instance for ha-len %zd", ha_length);
+
         if (ha_length == 0) {
-                LOG_ERR("Bad CL HA size, cannot create table");
+                LOG_ERR("Bad HA length, cannot create table");
                 return NULL;
         }
 
@@ -178,6 +180,8 @@ static struct table * tbl_create(size_t ha_length)
         instance->hal = ha_length;
         INIT_LIST_HEAD(&instance->entries);
         spin_lock_init(&instance->lock);
+
+        LOG_DBG("Table instance created successfully");
 
         return instance;
 }
@@ -201,6 +205,33 @@ static void tbl_destroy(struct table * instance)
         spin_unlock(&instance->lock);
 
         rkfree(instance);
+}
+
+int tbl_update_by_gpa(struct table *     instance,
+                      const struct gpa * pa,
+                      struct gha *       ha)
+{
+        struct table_entry * pos;
+
+        if (!instance || !gpa_is_ok(pa) || !gha_is_ok(ha)) {
+                LOG_ERR("Bogus input parameters, cannot update GPA");
+                return -1;
+        }
+
+        spin_lock(&instance->lock);
+
+        list_for_each_entry(pos, &instance->entries, next) {
+                if (gpa_is_equal(pos->pa, pa)) {
+                        gha_destroy(pos->ha);
+                        pos->ha = ha;
+                        spin_unlock(&instance->lock);
+                        return 0;
+                }
+        }
+
+        spin_unlock(&instance->lock);
+
+        return -1;
 }
 
 const struct table_entry * tbl_find(struct table *     instance,
@@ -374,25 +405,38 @@ int tbls_create(uint16_t ptype, size_t hwlen)
 {
         struct table * cl;
 
-        spin_lock(&tables_lock);
-        if (tmap_find(tables, ptype)) {
-                LOG_ERR("Table for ptype %d already created", ptype);
-                spin_unlock(&tables_lock);
+        /* FIXME: Crappy, please rearrange it better */
+        cl = tbls_find(ptype);
+        if (cl) {
+                LOG_WARN("Table for ptype 0x%02x already created",ptype);
                 return 0;
         }
 
         /* FIXME: Is the hwlen correct ? */
+        LOG_DBG("Creating table for ptype = 0x%02x, hwlen = %zd",
+                ptype, hwlen);
 
         cl = tbl_create(hwlen);
-        if (tmap_add(tables, ptype, cl)) {
-                tbl_destroy(cl);
-                spin_unlock(&tables_lock);
+        if (!cl) {
+                LOG_ERR("Cannot create table for ptype 0%02x, hwlen %zd",
+                        ptype, hwlen);
                 return -1;
         }
 
+        LOG_DBG("Now adding table to the tables map");
+
+        spin_lock(&tables_lock);
+        if (tmap_add(tables, ptype, cl)) {
+                spin_unlock(&tables_lock);
+
+                LOG_ERR("Cannot add table for ptype 0x%02x", ptype);
+                tbl_destroy(cl);
+
+                return -1;
+        }
         spin_unlock(&tables_lock);
 
-        LOG_DBG("Table for ptype %d created successfully", ptype);
+        LOG_DBG("Table for ptype 0x%02x created successfully", ptype);
 
         return 0;
 }
@@ -404,8 +448,8 @@ int tbls_destroy(uint16_t ptype)
         spin_lock(&tables_lock);
         cl = tmap_find(tables, ptype);
         if (!cl) {
-                LOG_ERR("Table for ptype %d is missing, "
-                        "cannot destroy", ptype);
+                LOG_ERR("Table for ptype 0x%02x is missing, cannot destroy",
+                        ptype);
                 spin_unlock(&tables_lock);
                 return -1;
         }
@@ -415,32 +459,39 @@ int tbls_destroy(uint16_t ptype)
 
         tbl_destroy(cl);
 
-        LOG_DBG("Table for ptype %d destroyed successfully", ptype);
+        LOG_DBG("Table for ptype 0x%02x destroyed successfully", ptype);
 
         return 0;
 }
 
 int tbls_init(void)
 {
+        LOG_DBG("Initializing");
+
         tables = tmap_create();
         if (!tables)
                 return -1;
         spin_lock_init(&tables_lock);
+
+        LOG_DBG("Initialized successfully");
 
         return 0;
 }
 
 void tbls_fini(void)
 {
+        LOG_DBG("Finalizing");
+
         ASSERT(tmap_empty(tables));
 
         tmap_destroy(tables);
+
+        LOG_DBG("Finalized successfully");
 }
 
 int arp826_add(uint16_t           ptype,
                const struct gpa * pa,
-               const struct gha * ha,
-               arp826_timeout_t   timeout)
+               const struct gha * ha)
 {
         struct table * cl;
 

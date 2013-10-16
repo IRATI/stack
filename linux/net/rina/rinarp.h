@@ -31,8 +31,8 @@
 
 struct rinarp_handle;
 
-struct rinarp_handle * rinarp_add(const struct net_device * device,
-                                  const struct gpa *        address);
+struct rinarp_handle * rinarp_add(const struct gpa * pa,
+                                  const struct gha * ha);
 int                    rinarp_remove(struct rinarp_handle * handle);
 
 typedef void (* rinarp_notification_t)(void *             opaque,
