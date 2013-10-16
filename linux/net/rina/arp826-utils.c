@@ -311,6 +311,22 @@ struct gha * gha_dup(const struct gha * gha)
 }
 EXPORT_SYMBOL(gha_dup);
 
+size_t gha_address_length(const struct gha * gha)
+{
+        size_t tmp;
+
+        if (!gha_is_ok(gha))
+                return 0;
+
+        switch (gha->type) {
+        case MAC_ADDR_802_3: tmp = sizeof(gha->data.mac_802_3); break;
+        default:             BUG();                             break;
+        }
+        
+        return tmp;
+
+}
+
 const uint8_t * gha_address(const struct gha * gha)
 {
         const uint8_t * tmp;
@@ -378,79 +394,6 @@ struct net_device * gha_to_device(const struct gha * ha)
 	return NULL;
 }
 EXPORT_SYMBOL(gha_to_device);
-
-struct sk_buff * arp826_create(__be16                oper,
-                               __be16                ptype,
-                               __u8                  plen,
-                               struct net_device *   dev,
-                               const unsigned char * src_nwaddr,
-                               const unsigned char * dest_nwaddr,
-                               const unsigned char * dest_hw)
-{
-        struct sk_buff *      skb;
-        struct arp_header *   arp;
-        unsigned char *       arp_ptr;
-        int                   hlen = LL_RESERVED_SPACE(dev);
-        int                   tlen = dev->needed_tailroom;
-        const unsigned char * src_hw;
-
-        /* Allocate a buffer */
-        int length = sizeof(struct arp_header) + (dev->addr_len + plen) * 2;
-
-        skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
-        if (skb == NULL)
-                return NULL;
-
-        skb_reserve(skb, hlen);
-        skb_reset_network_header(skb);
-        arp = (struct arp_header *) skb_put(skb, length);
-        skb->dev = dev;
-        skb->protocol = htons(ETH_P_ARP);
-        src_hw = dev->dev_addr;
-        if (dest_hw == NULL)
-                dest_hw = dev->broadcast;
-
-        /*
-         *      Fill the device header for the ARP frame
-         */
-        if (dev_hard_header(skb, dev, ptype, dest_hw, src_hw, skb->len) < 0) {
-                kfree_skb(skb);
-                return NULL;
-        }
-
-        /*
-         * Fill out the arp protocol part.
-         */
-
-        switch (dev->type) {
-        default:
-                arp->htype = htons(dev->type);
-                arp->ptype = htons(ptype);
-                break;
-        }
-
-        arp->hlen = dev->addr_len;
-        arp->plen = plen;
-        arp->oper = htons(oper);
-
-        arp_ptr = (unsigned char *)(arp + 1);
-        memcpy(arp_ptr, src_hw, dev->addr_len);
-        arp_ptr += dev->addr_len;
-        memcpy(arp_ptr, src_nwaddr, plen);
-        arp_ptr += plen;
-
-        switch (dev->type) {
-        default:
-                if (dest_hw != NULL)
-                        memcpy(arp_ptr, dest_hw, dev->addr_len);
-                else
-                        memset(arp_ptr, 0, dev->addr_len);
-                arp_ptr += dev->addr_len;
-        }
-        memcpy(arp_ptr, dest_nwaddr, plen);
-
-        return skb;
-}
 
 #define TMAP_HASH_BITS 7
 
