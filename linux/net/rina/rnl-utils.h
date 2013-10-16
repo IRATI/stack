@@ -106,7 +106,7 @@ enum ipcm_alloc_flow_req_result_attrs_list {
  * descriptions strings in US */
 #define ALLOC_RESP_ERR_DESC_1 "FAILED"
 
-enum ipcm_dealloc_flow_req_msg_attrs_list {
+enum ipcm_dealloc_flow_req_attrs_list {
         IDFRT_ATTR_PORT_ID = 1,
         __IDFRT_ATTR_MAX,
 };
@@ -129,17 +129,58 @@ enum ipcm_flow_dealloc_noti_attrs_list {
 };
 #define IFDN_ATTR_MAX (__IFDN_ATTR_MAX -1)
 
-enum ipcm_conn_req_attrs_list {
-        ICRQ_ATTR_PORT_ID = 1,
-        ICRQ_ATTR_SOURCE_ADDR,
-        ICRQ_ATTR_DEST_ADDR,
-        ICRQ_ATTR_SOURCE_CEP_ID,
-        ICRQ_ATTR_DEST_CEP_ID,
-        ICRQ_ATTR_QOS_ID,
-        ICRQ_ATTR_POLICY_ID,
-        __ICRQ_ATTR_MAX,
+enum ipcm_conn_create_req_attrs_list {
+        ICCRQ_ATTR_PORT_ID = 1,
+        ICCRQ_ATTR_SOURCE_ADDR,
+        ICCRQ_ATTR_DEST_ADDR,
+        ICCRQ_ATTR_QOS_ID,
+        ICCRQ_ATTR_POLICIES,
+        __ICCRQ_ATTR_MAX,
 };
-#define ICRQ_ATTR_MAX (__ICRQ_ATTR_MAX - 1)
+#define ICCRQ_ATTR_MAX (__ICCRQ_ATTR_MAX - 1)
+
+enum ipcm_conn_create_resp_attrs_list {
+        ICCRE_ATTR_PORT_ID = 1,
+        ICCRE_ATTR_SOURCE_CEP_ID,
+        __ICCRE_ATTR_MAX,
+};
+#define ICCRE_ATTR_MAX (__ICCRE_ATTR_MAX - 1)
+
+enum ipcm_conn_create_arrived_attrs_list {
+        ICCA_ATTR_PORT_ID = 1,
+        ICCA_ATTR_SOURCE_ADDR,
+        ICCA_ATTR_DEST_ADDR,
+        ICCA_ATTR_DEST_CEP_ID,
+        ICCA_ATTR_QOS_ID,
+        ICCA_ATTR_POLICIES,
+        __ICCA_ATTR_MAX,
+};
+#define ICCA_ATTR_MAX (__ICCA_ATTR_MAX - 1)
+
+enum ipcm_conn_create_result_attrs_list {
+        ICCRS_ATTR_PORT_ID = 1,
+        ICCRS_ATTR_SOURCE_CEP_ID,
+        ICCRS_ATTR_DEST_CEP_ID,
+        __ICCRS_ATTR_MAX,
+};
+#define ICCRS_ATTR_MAX (__ICCRS_ATTR_MAX - 1)
+
+enum ipcm_conn_update_req_attrs_list {
+        ICURQ_ATTR_PORT_ID = 1,
+        ICURQ_ATTR_SOURCE_CEP_ID,
+        ICURQ_ATTR_DEST_CEP_ID,
+        ICURQ_ATTR_QOS_ID,
+        ICURQ_ATTR_POLICIES,
+        __ICURQ_ATTR_MAX,
+};
+#define ICURQ_ATTR_MAX (__ICURQ_ATTR_MAX - 1)
+
+enum ipcm_conn_update_result_attrs_list {
+        ICURS_ATTR_PORT_ID = 1,
+        ICURS_ATTR_RESULT,
+        __ICURS_ATTR_MAX,
+};
+#define ICURS_ATTR_MAX (__ICURS_ATTR_MAX - 1)
 
 enum ipcm_reg_app_req_attrs_list {
         IRAR_ATTR_APP_NAME = 1,
@@ -397,6 +438,46 @@ struct rnl_ipcm_flow_dealloc_noti_msg_attrs {
         uint_t    code;
 };
 
+/*  FIXME: policies should not be int */
+struct rnl_ipcm_conn_create_req_msg_attrs {
+        port_id_t port_id;
+        address_t src_addr;
+        address_t dst_addr;
+        qos_id_t  qos_id;
+        int       policies;
+};
+
+struct rnl_ipcm_conn_create_resp_msg_attrs {
+        port_id_t port_id;
+        cep_id_t  src_cep;
+};
+
+struct rnl_ipcm_conn_create_arrived_msg_attrs {
+        port_id_t port_id;
+        address_t src_addr;
+        address_t dst_addr;
+        cep_id_t  dst_cep;
+        qos_id_t  qos_id;
+        int       policies;
+};
+
+struct rnl_ipcm_conn_create_result_msg_attrs {
+        port_id_t port_id;
+        cep_id_t  src_cep;
+        cep_id_t  dst_cep;
+};
+
+struct rnl_ipcm_conn_update_req_msg_attrs {
+        port_id_t port_id;
+        cep_id_t  src_cep;
+        cep_id_t  dst_cep;
+};
+struct rnl_ipcm_conn_update_result_msg_attrs {
+        port_id_t port_id;
+        uint_t    result;
+};
+
+
 struct rnl_ipcm_reg_app_req_msg_attrs {
         struct name * app_name;
         struct name * dif_name;
@@ -507,6 +588,19 @@ int rnl_format_ipcm_flow_dealloc_noti_msg(port_id_t        id,
                                           uint_t           code,
                                           struct sk_buff * skb_out);
 
+int rnl_format_ipcm_conn_create_resp_msg(port_id_t id,
+                                         cep_id_t  src_cep,
+                                         struct sk_buff * skb_out);
+
+int rnl_format_ipcm_conn_create_result_msg(port_id_t        id,
+                                           cep_id_t         src_cep,
+                                           cep_id_t         dst_cep,
+                                           struct sk_buff * skb_out);
+
+int rnl_format_ipcm_conn_update_result_msg(port_id_t        id,
+                                           uint_t           result,
+                                           struct sk_buff * skb_out);
+
 int rnl_format_ipcm_reg_app_req_msg(const struct name * app_name,
                                     const struct name * dif_name,
                                     struct sk_buff *    skb_out);
@@ -589,6 +683,25 @@ int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
                              uint_t           code,
                              port_id_t        port_id,
                              u32              nl_port_id);
+
+int rnl_ipcm_conn_create_resp_msg(ipc_process_id_t ipc_id,
+                                  port_id_t        pid,
+                                  cep_id_t         src_cep,
+                                  rnl_sn_t         seq_num,
+                                  u32              nl_port_id);
+
+int rnl_ipcm_conn_create_result_msg(ipc_process_id_t ipc_id,
+                                    port_id_t        pid,
+                                    cep_id_t         src_cep,
+                                    cep_id_t         dst_cep,
+                                    rnl_sn_t         seq_num,
+                                    u32              nl_port_id);
+
+int rnl_ipcm_conn_update_result_msg(ipc_process_id_t ipc_id,
+                                    port_id_t        pid,
+                                    uint_t           result,
+                                    rnl_sn_t         seq_num,
+                                    u32              nl_port_id);
 
 int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port);
 
