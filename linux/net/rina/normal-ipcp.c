@@ -167,8 +167,6 @@ static int connection_update_request(struct ipcp_instance_data * data,
                                      cep_id_t                    src_cep_id,
                                      cep_id_t                    dst_cep_id)
 {
-        struct connection * conn;
-
         if (efcp_connection_update(data->efcpc, src_cep_id, dst_cep_id))
                 return -1;
 
