@@ -38,6 +38,7 @@
 #include "rnl-utils.h"
 #include "efcp.h"
 #include "rmt.h"
+#include "efcp-utils.h"
 
 /*  FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;

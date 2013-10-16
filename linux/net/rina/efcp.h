@@ -24,7 +24,8 @@
 #include "common.h"
 #include "du.h"
 #include "qos.h"
-#include "cidm.h"
+
+typedef int16_t cep_id_t;
 
 struct connection {
         port_id_t port_id;
