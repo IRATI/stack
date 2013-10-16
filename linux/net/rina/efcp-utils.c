@@ -173,13 +173,17 @@ int efcp_imap_remove(struct efcp_imap * map,
         return 0;
 }
 
+#define BITS_IN_BITMAP ((2 << BITS_PER_BYTE) * sizeof(cep_id_t))
+
+#define CEP_ID_WRONG -1
+
 int is_cep_id_ok(cep_id_t id)
 { return 1; /* FIXME: Bummer, add it */ }
 EXPORT_SYMBOL(is_cep_id_ok);
 
-#define BITS_IN_BITMAP ((2 << BITS_PER_BYTE) * sizeof(cep_id_t))
-
-#define CEP_ID_WRONG -1
+cep_id_t cep_id_bad(void)
+{ return CEP_ID_WRONG; }
+EXPORT_SYMBOL(cep_id_bad);
 
 struct cidm {
         DECLARE_BITMAP(bitmap, BITS_IN_BITMAP);

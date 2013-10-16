@@ -49,7 +49,7 @@ int                     efcp_container_destroy(struct efcp_container * c);
 
 /* FIXME: Should a cep_id_t be returned instead ? */
 cep_id_t      efcp_connection_create(struct efcp_container *   container,
-                                     const struct connection * connection);
+                                     struct connection * connection);
 
 int           efcp_connection_destroy(struct efcp_container * container,
                                       cep_id_t                id);

@@ -132,18 +132,12 @@ find_instance(struct ipcp_factory_data * data,
         return NULL;
 }
 
-static int connection_create_response(cep_id_t src_cep_id)
-{
-        LOG_MISSING;
-        return -1;
-}
-
-static int connection_create_request(struct ipcp_instance_data * data,
-                                     port_id_t                   port_id,
-                                     address_t                   source,
-                                     address_t                   dest,
-                                     qos_id_t                    qos_id,
-                                     int                         policies)
+static cep_id_t connection_create_request(struct ipcp_instance_data * data,
+                                          port_id_t                   port_id,
+                                          address_t                   source,
+                                          address_t                   dest,
+                                          qos_id_t                    qos_id,
+                                          int                         policies)
 {
         cep_id_t cep_id;
         struct connection * conn;
@@ -161,13 +155,11 @@ static int connection_create_request(struct ipcp_instance_data * data,
         cep_id = efcp_connection_create(data->efcpc, conn);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
-                return -1;
+                rkfree(conn);
+                return cep_id_bad();
         }
-        conn->source_cep_id = cep_id;
 
-        connection_create_response(cep_id);
-
-        return 0;
+        return cep_id;
 }
 
 static int connection_update_request(struct ipcp_instance_data * data,
@@ -175,31 +167,26 @@ static int connection_update_request(struct ipcp_instance_data * data,
                                      cep_id_t                    src_cep_id,
                                      cep_id_t                    dst_cep_id)
 {
-        LOG_MISSING;
-        return -1;
+        if (efcp_connection_update(data->efcpc, src_cep_id, dst_cep_id))
+                return -1;
+
+        return 0;
 }
 
 static int connection_destroy_request(struct ipcp_instance_data * data,
                                       port_id_t                   port_id,
                                       cep_id_t                    src_cep_id)
 {
-        LOG_MISSING;
-        return -1;
+        if (efcp_connection_destroy(data->efcpc, src_cep_id))
+                return -1;
+
+        return 0;
 }
 
-static int
-connection_create_arrived_result(struct ipcp_instance_data * data,
-                                 port_id_t                   port_id,
-                                 cep_id_t                    src_cep_id,
-                                 cep_id_t                    dst_cep_id)
-{
-        LOG_MISSING;
-        return -1;
-}
-
-static int connection_create_arrived(struct ipcp_instance_data * data,
-                                     port_id_t                   port_id,
-                                     cep_id_t                    src_cep_id)
+static cep_id_t
+connection_create_arrived(struct ipcp_instance_data * data,
+                          port_id_t                   port_id,
+                          cep_id_t                    src_cep_id)
 {
         LOG_MISSING;
         return -1;

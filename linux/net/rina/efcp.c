@@ -31,8 +31,9 @@
 #include "dtcp.h"
 
 struct efcp {
-        struct dtp *  dtp;
-        struct dtcp * dtcp;
+        struct connection * connection;
+        struct dtp *        dtp;
+        struct dtcp *       dtcp;
 };
 
 static struct efcp * efcp_create(void)
@@ -62,6 +63,8 @@ static int efcp_destroy(struct efcp * instance)
 
         if (instance->dtp)  dtp_destroy(instance->dtp);
         if (instance->dtcp) dtcp_destroy(instance->dtcp);
+
+        if (instance->connection) rkfree(instance->connection);
 
         rkfree(instance);
 
@@ -119,7 +122,7 @@ static int is_connection_ok(const struct connection * connection)
 }
 
 cep_id_t efcp_connection_create(struct efcp_container *   container,
-                                const struct connection * connection)
+                                struct connection * connection)
 {
         struct efcp * tmp;
         cep_id_t      cep_id;
@@ -140,6 +143,8 @@ cep_id_t efcp_connection_create(struct efcp_container *   container,
 
         cep_id = cidm_allocate(container->cidm);
         /* We must ensure that the DTP is instantiated, at least ... */
+        connection->source_cep_id = cep_id;
+        tmp->connection = connection;
         tmp->dtp = dtp_create(/* connection->port_id */);
         if (!tmp->dtp) {
                 efcp_destroy(tmp);
@@ -200,6 +205,7 @@ int efcp_connection_destroy(struct efcp_container * container,
 
         return 0;
 }
+EXPORT_SYMBOL(efcp_connection_destroy);
 
 int efcp_connection_update(struct efcp_container * container,
                            cep_id_t                from,
@@ -218,34 +224,11 @@ int efcp_connection_update(struct efcp_container * container,
                         from, container);
                 return -1;
         }
-
-        if (!efcp_imap_remove(container->instances, from)) {
-                LOG_ERR("Cannot update connection %d -> %d in container %pK",
-                        from, to, container);
-                return -1;
-        }
-
-        if (!efcp_imap_add(container->instances, to, tmp)) {
-                LOG_ERR("Cannot add instance %d to container %pK, "
-                        "rolling back changes",
-                        to, container);
-
-                if (!efcp_imap_add(container->instances, from, tmp)) {
-                        LOG_ERR("Cannot rollback, "
-                                "instance %pK is lost forever, sigh!", tmp);
-
-                        if (efcp_destroy(tmp)) {
-                                LOG_ERR("... and its associated memory also!");
-                        }
-
-                        return -1;
-                }
-
-                return -1;
-        }
+        tmp->connection->destination_cep_id = to;
 
         return 0;
 }
+EXPORT_SYMBOL(efcp_connection_update);
 
 struct efcp * efcp_find(struct efcp_container * container,
                         cep_id_t                id)
