@@ -39,7 +39,7 @@
 #define RINA_VERSION_MICRO(V) ((V      ) & 0xFFFF)
 
 static struct kset * root_kset = NULL;
-static uint32_t      version   = MK_RINA_VERSION(0, 1, 4);
+static uint32_t      version   = MK_RINA_VERSION(0, 2, 4);
 
 uint32_t rina_version(void)
 { return version; }

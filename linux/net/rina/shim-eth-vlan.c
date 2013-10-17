@@ -51,8 +51,8 @@ extern struct kipcm * default_kipcm;
 
 /* Holds the configuration of one shim instance */
 struct eth_vlan_info {
-        uint16_t vlan_id;
-        char *   interface_name;
+        unsigned long   vlan_id;
+        char *          interface_name;
 };
 
 enum port_id_state {
@@ -209,12 +209,12 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
 }
 
 static string_t * create_vlan_interface_name(string_t * interface_name,
-                                             uint16_t   vlan_id)
+                                             unsigned long   vlan_id)
 {
         char       string_vlan_id[5];
         string_t * complete_interface;
 
-        sprintf(string_vlan_id,"%d",vlan_id);
+        sprintf(string_vlan_id,"%lu",vlan_id);
 
         complete_interface = rkzalloc(
                                       strlen(interface_name) + 2*sizeof(char)
@@ -650,13 +650,14 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         struct ipcp_config *            tmp;
         string_t *                      complete_interface;
         struct interface_data_mapping * mapping;
+        int result;
 
         ASSERT(data);
         ASSERT(dif_information);
 
         info = data->info;
 
-        if (data->dif_name){
+        if (data->dif_name) {
                 LOG_ERR("This IPC Process is already assigned to the DIF %s",
                         data->dif_name->process_name);
                 LOG_ERR("An IPC Process can only be assigned to a DIF once");
@@ -664,7 +665,14 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         }
 
         /* Get vlan id */
-        info->vlan_id = *(dif_information->dif_name->process_name);
+        result = kstrtoul(dif_information->dif_name->process_name,
+                          10, &(info->vlan_id));
+
+        if (result) {
+                LOG_ERR("Error converting DIF Name to VLAN ID: %s",
+                        dif_information->dif_name->process_name);
+                return -1;
+        }
 
         data->dif_name = name_dup(dif_information->dif_name);
         if (!data->dif_name) {
