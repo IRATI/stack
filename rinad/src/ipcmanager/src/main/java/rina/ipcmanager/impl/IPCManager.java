@@ -4,10 +4,9 @@ import eu.irati.librina.ApplicationManagerSingleton;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.ApplicationUnregistrationRequestEvent;
-import eu.irati.librina.AssignToDIFException;
+import eu.irati.librina.AssignToDIFResponseEvent;
 import eu.irati.librina.CreateIPCProcessException;
 import eu.irati.librina.DIFConfiguration;
-import eu.irati.librina.DIFInformation;
 import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
@@ -17,7 +16,6 @@ import eu.irati.librina.IPCEventType;
 import eu.irati.librina.IPCManagerInitializationException;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
-import eu.irati.librina.IPCProcessPointerVector;
 import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
 import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
 import eu.irati.librina.OSProcessFinalizedEvent;
@@ -36,7 +34,6 @@ import org.apache.commons.logging.LogFactory;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import rina.ipcmanager.impl.conf.DIFProperties;
 import rina.ipcmanager.impl.conf.IPCProcessToCreate;
 import rina.ipcmanager.impl.conf.RINAConfiguration;
 import rina.ipcmanager.impl.console.IPCManagerConsole;
@@ -187,8 +184,8 @@ public class IPCManager {
 			
 			if (ipcProcessToCreate.getDifName() != null){
 				try{
-					assignToDIF(ipcProcess, ipcProcessToCreate.getDifName());
-				}catch(AssignToDIFException ex){
+					ipcProcessManager.requestAssignToDIF(ipcProcess.getId(), ipcProcessToCreate.getDifName());
+				}catch(Exception ex){
 					log.error(ex.getMessage() + ". Problems assigning IPC Process to DIF " 
 							+ ipcProcessToCreate.getDifName());
 					continue;
@@ -278,6 +275,9 @@ public class IPCManager {
 				//Should we destroy the state in the kernel? Or try to create another
 				//IPC Process in user space to bring it back?
 			}
+		}else if (event.getType().equals(IPCEventType.ASSIGN_TO_DIF_RESPONSE_EVENT)){
+			AssignToDIFResponseEvent atrEvent = (AssignToDIFResponseEvent) event;
+			ipcProcessManager.assignToDIFResponse(atrEvent);
 		}
 	}
 	
@@ -327,30 +327,10 @@ public class IPCManager {
 	 * @param difName
 	 * @throws Exception
 	 */
-	public void assignToDIF(long ipcProcessID, String difName) throws Exception{
-		IPCProcess ipcProcess = ipcProcessManager.getIPCProcess(ipcProcessID);
-		assignToDIF(ipcProcess, difName);
+	public void requestAssignToDIF(long ipcProcessID, String difName) throws Exception{
+		ipcProcessManager.requestAssignToDIF(ipcProcessID, difName);
 	}
 	
-	private void assignToDIF(IPCProcess ipcProcess, String difName) throws AssignToDIFException{
-		DIFInformation difInformation = new DIFInformation();
-		ApplicationProcessNamingInformation difNamingInfo = 
-				new ApplicationProcessNamingInformation();
-		difNamingInfo.setProcessName(difName);
-		difInformation.setDifName(difNamingInfo);
-		difInformation.setDifType(ipcProcess.getType());
-		
-		DIFProperties difProperties = 
-				RINAConfiguration.getInstance().getDIFConfiguration(difName);
-		if (difProperties != null && difProperties.getConfigParameters() != null){
-			for(int j=0; j<difProperties.getConfigParameters().size(); j++){
-				difInformation.getDifConfiguration().addParameter(
-						difProperties.getConfigParameters().get(j));
-			}
-		}
-		
-		ipcProcess.assignToDIF(difInformation);
-	}
 	
 	public void updateDIFConfiguration(long ipcProcessID,
 				DIFConfiguration difConfiguration) throws Exception{

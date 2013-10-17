@@ -28,7 +28,7 @@ public class AssignToDIFCommand extends ConsoleCommand{
 		try{
 			ipcProcessId = Long.parseLong(splittedCommand[1]);
 			difName = splittedCommand[2];
-			getIPCManager().assignToDIF(ipcProcessId, difName);
+			getIPCManager().requestAssignToDIF(ipcProcessId, difName);
 			return "IPC Process " + ipcProcessId + " successfully assigned to DIF "+difName;
 		}catch(Exception ex){
 			return "Error executing assign IPC Process to DIF command: " + ex.getMessage();

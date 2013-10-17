@@ -19,7 +19,7 @@ import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
-import eu.irati.librina.IPCProcessPointerList;
+import eu.irati.librina.IPCProcessPointerVector;
 
 public class FlowManager {
 
@@ -61,7 +61,7 @@ public class FlowManager {
 	}
 	
 	public void allocateFlowRemote(FlowRequestEvent event) throws Exception{
-		String difName = event.getDIFName().getProcessName();
+		/*String difName = event.getDIFName().getProcessName();
 		IPCProcess ipcProcess = selectIPCProcessOfDIF(difName);
 		if (ipcProcess == null){
 			log.error("Received an allocate remote flow request event, but could not " 
@@ -87,7 +87,7 @@ public class FlowManager {
 			return;
 		}
 		
-		ipcProcess.allocateFlowResponse(event, 0);
+		ipcProcess.allocateFlowResponse(event, 0);*/
 	}
 	
 	/**
