@@ -74,8 +74,8 @@ static void protocol_remove(uint16_t ptype)
 static int regression_tests(void)
 {
         struct gpa * a;
-        uint8_t      name_tmp[] = { 0x01, 0x02, 0x03, 0x04 };
         struct gpa * b;
+        uint8_t      name_tmp[] = { 0x01, 0x02, 0x03, 0x04 };
         size_t       len_a_1, len_a_2;
         size_t       len_b_1, len_b_2;
 
@@ -114,8 +114,11 @@ static int regression_tests(void)
                 return -1;
 
         LOG_DBG("Regression test #3.3");
-        if ((len_a_1 == len_a_2) ||
-            (len_b_1 == len_b_2))
+        if (len_a_1 == len_a_2)
+                return -1;
+
+        LOG_DBG("Regression test #3.4");
+        if (len_b_1 == len_b_2)
                 return -1;
 
         LOG_DBG("Regression test #4.1");
