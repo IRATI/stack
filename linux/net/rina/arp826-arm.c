@@ -227,7 +227,7 @@ int arm_init(void)
         spin_lock_init(&resolutions_lock);
         INIT_LIST_HEAD(&resolutions_ongoing);
 
-        LOG_DBG("Initialed successfully");
+        LOG_DBG("Initialized successfully");
 
         return 0;
 }
