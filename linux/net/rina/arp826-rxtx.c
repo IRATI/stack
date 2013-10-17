@@ -166,6 +166,7 @@ int arp_send_reply(uint16_t            ptype,
 
 #ifdef CONFIG_RINARP
         max_len = max(gpa_address_length(spa), gpa_address_length(tpa));
+        LOG_DBG("Growing addresses to %zd", max_len);
         tmp_spa = gpa_dup(spa);
         if (gpa_address_grow(tmp_spa, max_len, 0x00))
                 return -1;
@@ -230,6 +231,7 @@ int arp_send_request(uint16_t            ptype,
 
 #ifdef CONFIG_RINARP
         max_len = max(gpa_address_length(spa), gpa_address_length(tpa));
+        LOG_DBG("Growing addresses to %zd", max_len);
         tmp_spa = gpa_dup(spa);
         if (gpa_address_grow(tmp_spa, max_len, 0x00))
                 return -1;
@@ -329,7 +331,7 @@ static int process(const struct sk_buff * skb,
                 return -1;
         }
 
-        /* Hooray, we can handle this ARP (probably ...) */
+        LOG_DBG("We can handle this ARP");
 
         ptr = (uint8_t *) header + 8;
 
@@ -338,12 +340,14 @@ static int process(const struct sk_buff * skb,
         tha = ptr; ptr += header->hlen;
         tpa = ptr; ptr += header->plen;
 
-	tmp_spa = gpa_create(spa, plen);
-	tmp_sha = gha_create(MAC_ADDR_802_3, sha);
-	tmp_tpa = gpa_create(tpa, plen);
-	tmp_tha = gha_create(MAC_ADDR_802_3, tha);
+        LOG_DBG("Fetching addresses");
+	tmp_spa = gpa_create_gfp(GFP_ATOMIC, spa, plen);
+	tmp_sha = gha_create_gfp(GFP_ATOMIC, MAC_ADDR_802_3, sha);
+	tmp_tpa = gpa_create_gfp(GFP_ATOMIC, tpa, plen);
+	tmp_tha = gha_create_gfp(GFP_ATOMIC, MAC_ADDR_802_3, tha);
 
 #ifdef CONFIG_RINARP
+        LOG_DBG("Shrinking as needed");
         if (gpa_address_shrink(tmp_spa, 0x00)) {
                 LOG_ERR("Problems parsing the source GPA");
                 return -1;
