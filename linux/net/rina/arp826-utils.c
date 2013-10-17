@@ -149,7 +149,7 @@ int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
                 return -1;
         }
 
-        LOG_DBG("Loocking for filler 0x%01x in GPA (length = %zd)",
+        LOG_DBG("Looking for filler 0x%01x in GPA (length = %zd)",
                 filler, gpa->length);
 
         position = strnchr(gpa->address, filler, gpa->length);
@@ -206,7 +206,7 @@ int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
 
         ASSERT(length > gpa->length);
 
-        LOG_DBG("Growing GPA to %zd", length);
+        LOG_DBG("Growing GPA to %zd with filler 0x%01x", length, filler);
         new_address = rkmalloc(length, GFP_KERNEL);
         if (!new_address)
                 return -1;
@@ -216,6 +216,8 @@ int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
         rkfree(gpa->address);
         gpa->address = new_address;
         gpa->length  = length;
+
+        LOG_DBG("GPA is now %zd long", gpa->length);
 
         return 0;
 }
