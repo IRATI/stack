@@ -53,8 +53,9 @@ struct gpa {
  *       merciful approach. Look at the logs guys ...
  */
 
-struct gpa * gpa_create(const uint8_t * address,
-                        size_t          length)
+struct gpa * gpa_create_gfp(gfp_t           flags,
+                            const uint8_t * address,
+                            size_t          length)
 {
         struct gpa * tmp;
 
@@ -63,12 +64,12 @@ struct gpa * gpa_create(const uint8_t * address,
                 return NULL;
         }
 
-        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkmalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
 
         tmp->length  = length;
-        tmp->address = rkmalloc(tmp->length, GFP_KERNEL);
+        tmp->address = rkmalloc(tmp->length, flags);
         if (!tmp->address) {
                 rkfree(tmp);
                 return NULL;
@@ -77,6 +78,11 @@ struct gpa * gpa_create(const uint8_t * address,
 
         return tmp;
 }
+EXPORT_SYMBOL(gpa_create_gfp);
+
+struct gpa * gpa_create(const uint8_t * address,
+                        size_t          length)
+{ return gpa_create_gfp(GFP_KERNEL, address, length); }
 EXPORT_SYMBOL(gpa_create);
 
 bool gpa_is_ok(const struct gpa * gpa)
@@ -145,8 +151,8 @@ int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
 
         position = strnchr(gpa->address, filler, gpa->length);
         if (!position) {
-                LOG_ERR("No filler in the GPA, cannot shrink");
-                return -1;
+                LOG_ERR("No filler in the GPA, no needs to shrink");
+                return 0;
         }
 
         count = position - gpa->address;
@@ -154,6 +160,8 @@ int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
                 return 0;
 
         ASSERT(count);
+
+        LOG_DBG("Shrinking GPA to %zd", count);
 
         length      = gpa->length - count;
         new_address = rkmalloc(length, GFP_KERNEL);
@@ -186,12 +194,14 @@ int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
                 return -1;
         }
 
-        /* No needs to grow */
-        if (gpa->length == length)
-                return 1;
+        if (gpa->length == length) {
+                LOG_DBG("No needs to grow the GPA");
+                return 0;
+        }
 
         ASSERT(length > gpa->length);
 
+        LOG_DBG("Growing GPA to %zd", length);
         new_address = rkmalloc(length, GFP_KERNEL);
         if (!new_address)
                 return -1;
@@ -202,7 +212,7 @@ int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
         gpa->address = new_address;
         gpa->length  = length;
 
-        return 1;
+        return 0;
 }
 EXPORT_SYMBOL(gpa_address_grow);
 
@@ -239,8 +249,9 @@ bool gha_is_ok(const struct gha * gha)
 { return (!gha || gha->type != MAC_ADDR_802_3) ? 0 : 1; }
 EXPORT_SYMBOL(gha_is_ok);
 
-struct gha * gha_create(gha_type_t      type,
-                        const uint8_t * address)
+struct gha * gha_create_gfp(gfp_t           flags,
+                            gha_type_t      type,
+                            const uint8_t * address)
 {
         struct gha * gha;
 
@@ -249,7 +260,7 @@ struct gha * gha_create(gha_type_t      type,
                 return NULL;
         }
 
-        gha = rkzalloc(sizeof(*gha), GFP_KERNEL);
+        gha = rkzalloc(sizeof(*gha), flags);
         if (!gha)
                 return NULL;
         
@@ -267,17 +278,28 @@ struct gha * gha_create(gha_type_t      type,
 
         return gha;
 }
+EXPORT_SYMBOL(gha_create_gfp);
+
+struct gha * gha_create(gha_type_t      type,
+                        const uint8_t * address)
+{ return gha_create_gfp(GFP_KERNEL, type, address); }
 EXPORT_SYMBOL(gha_create);
 
-struct gha * gha_create_broadcast(gha_type_t type)
+struct gha * gha_create_broadcast_gfp(gfp_t      flags,
+                                      gha_type_t type)
 {
         const uint8_t addr[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
         if (type == MAC_ADDR_802_3)
-                return gha_create(MAC_ADDR_802_3, addr);
+                return gha_create_gfp(flags, MAC_ADDR_802_3, addr);
 
         return NULL;
 }
+EXPORT_SYMBOL(gha_create_broadcast_gfp);
+
+struct gha * gha_create_broadcast(gha_type_t type)
+{ return gha_create_broadcast_gfp(GFP_KERNEL, type); }
+EXPORT_SYMBOL(gha_create_broadcast);
 
 int gha_destroy(struct gha * gha)
 {
@@ -326,6 +348,7 @@ size_t gha_address_length(const struct gha * gha)
         return tmp;
 
 }
+EXPORT_SYMBOL(gha_address_length);
 
 const uint8_t * gha_address(const struct gha * gha)
 {
@@ -443,16 +466,21 @@ struct tmap * tmap_create(void)
 
 int tmap_destroy(struct tmap * map)
 {
+#if 0
         struct tmap_entry * entry;
         struct hlist_node * tmp;
         int                 bucket;
+#endif
 
         ASSERT(map);
+        ASSERT(hash_empty(map->table));
 
+#if 0
         hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
                 hash_del(&entry->hlist);
                 rkfree(entry);
         }
+#endif
 
         rkfree(map);
 
@@ -462,27 +490,11 @@ int tmap_destroy(struct tmap * map)
 int tmap_empty(struct tmap * map)
 {
         ASSERT(map);
+
         return hash_empty(map->table);
 }
 
 #define tmap_hash(T, K) hash_min(K, HASH_BITS(T))
-
-static struct tmap_entry * tmap_entry_find(struct tmap * map,
-                                           uint16_t      key)
-{
-        struct tmap_entry * entry;
-        struct hlist_head * head;
-
-        ASSERT(map);
-
-        head = &map->table[tmap_hash(map->table, key)];
-        hlist_for_each_entry(entry, head, hlist) {
-                if (entry->key == key)
-                        return entry;
-        }
-
-        return NULL;
-}
 
 struct table * tmap_find(struct tmap * map,
                          uint16_t      key)
@@ -515,40 +527,72 @@ int tmap_update(struct tmap *   map,
         return 0;
 }
 
-int tmap_add(struct tmap *  map,
-             uint16_t       key,
-             struct table * value)
+struct tmap_entry * tmap_entry_create(uint16_t       key,
+                                      struct table * value)
 {
         struct tmap_entry * tmp;
 
-        ASSERT(map);
-
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
-                return -1;
+                return NULL;
 
         tmp->key   = key;
         tmp->value = value;
         INIT_HLIST_NODE(&tmp->hlist);
 
-        hash_add(map->table, &tmp->hlist, key);
+        return tmp;
+}
+
+int tmap_entry_insert(struct tmap *       map,
+                      uint16_t            key,
+                      struct tmap_entry * entry)
+{
+        ASSERT(map);
+        ASSERT(entry);
+
+        hash_add(map->table, &entry->hlist, key);
+
+        return 1;
+}
+
+struct tmap_entry * tmap_entry_find(struct tmap * map,
+                                    uint16_t      key)
+{
+        struct tmap_entry * entry;
+        struct hlist_head * head;
+
+        ASSERT(map);
+
+        head = &map->table[tmap_hash(map->table, key)];
+        hlist_for_each_entry(entry, head, hlist) {
+                if (entry->key == key)
+                        return entry;
+        }
+
+        return NULL;
+}
+
+int tmap_entry_remove(struct tmap_entry * entry)
+{
+        ASSERT(entry);
+
+        hash_del(&entry->hlist);
 
         return 0;
 }
 
-int tmap_remove(struct tmap * map,
-                uint16_t      key)
+struct table * tmap_entry_value(struct tmap_entry * entry)
 {
-        struct tmap_entry * cur;
+        ASSERT(entry);
 
-        ASSERT(map);
+        return entry->value;
+}
 
-        cur = tmap_entry_find(map, key);
-        if (!cur)
-                return -1;
+int tmap_entry_destroy(struct tmap_entry * entry)
+{
+        ASSERT(entry);
 
-        hash_del(&cur->hlist);
-        rkfree(cur);
+        rkfree(entry);
 
         return 0;
 }

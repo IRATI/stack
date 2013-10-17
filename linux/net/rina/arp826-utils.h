@@ -29,6 +29,9 @@ struct gpa;
 
 struct gpa *    gpa_create(const uint8_t * address,
                            size_t          length);
+struct gpa *    gpa_create_gfp(gfp_t           flags,
+                               const uint8_t * address,
+                               size_t          length);
 void            gpa_destroy(struct gpa * gpa);
 bool            gpa_is_ok(const struct gpa * gpa);
 struct gpa *    gpa_dup(const struct gpa * gpa);
@@ -58,7 +61,12 @@ struct gha;
 
 struct gha *        gha_create(gha_type_t      type,
                                const uint8_t * address);
+struct gha *        gha_create_gfp(gfp_t           flags,
+                                   gha_type_t      type,
+                                   const uint8_t * address);
 struct gha *        gha_create_broadcast(gha_type_t type);
+struct gha *        gha_create_broadcast_gfp(gfp_t      flags,
+                                             gha_type_t type);
 int                 gha_destroy(struct gha * gha);
 bool                gha_is_ok(const struct gha * gha);
 struct gha *        gha_dup(const struct gha * gha);
@@ -104,19 +112,24 @@ enum arp826_htypes {
 
 struct table;
 
-struct tmap *  tmap_create(void);
-int            tmap_destroy(struct tmap * map);
+struct tmap;
+struct tmap_entry;
 
-int            tmap_empty(struct tmap * map);
-int            tmap_add(struct tmap *  map,
-                        uint16_t       key,
-                        struct table * value);
-struct table * tmap_find(struct tmap * map,
-                         uint16_t      key);
-int            tmap_update(struct tmap *  map,
-                           uint16_t       key,
-                           struct table * value);
-int            tmap_remove(struct tmap * map,
-                           uint16_t      key);
+struct tmap *       tmap_create(void);
+int                 tmap_destroy(struct tmap * map);
+int                 tmap_empty(struct tmap * map);
+
+struct tmap_entry * tmap_entry_create(uint16_t       key,
+                                      struct table * value);
+int                 tmap_entry_insert(struct tmap *       map,
+                                      uint16_t            key,
+                                      struct tmap_entry * entry);
+struct tmap_entry * tmap_entry_find(struct tmap * map,
+                                    uint16_t      key);
+int                 tmap_entry_remove(struct tmap_entry * entry);
+struct table *      tmap_entry_value(struct tmap_entry * entry);
+int                 tmap_entry_update(struct tmap_entry * entry,
+                                      struct table *      value);
+int                 tmap_entry_destroy(struct tmap_entry * entry);
 
 #endif
