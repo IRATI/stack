@@ -126,7 +126,6 @@ class RINAManager {
 	NetlinkPortIdMap netlinkPortIdMap;
 
 	void initialize();
-
 public:
 	RINAManager();
 	RINAManager(unsigned int netlinkPort);
