@@ -29,6 +29,11 @@ except NameError:
 
 
 src_mac = getHwAddr(interface_name)
+try:
+    src_mac
+except NameError:
+    print 'Failed to get the source mac of your interface :('
+
 dst_mac = "ff:ff:ff:ff:ff:ff"
 
 len_a = len(paddr_a)
@@ -80,5 +85,6 @@ print 'Kazakh pride launching...'
 print 'Arp packet:'
 print(list(arp_packet))
 
-sendp(Ether(src=src_mac,dst=dst_mac)/arp_packet)
+if sendp(Ether(src=src_mac,dst=dst_mac,type=0x0806)/arp_packet, loop=10)==0:
+    print "Failed to send packet"
 
