@@ -85,6 +85,6 @@ print 'Kazakh pride launching...'
 print 'Arp packet:'
 print(list(arp_packet))
 
-if sendp(Ether(src=src_mac,dst=dst_mac,type=0x0806)/arp_packet, loop=10)==0:
+if sendp(Ether(src=src_mac,dst=dst_mac,type=0x0806)/arp_packet)==0:
     print "Failed to send packet"
 
