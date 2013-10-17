@@ -552,7 +552,7 @@ int tmap_entry_insert(struct tmap *       map,
 
         hash_add(map->table, &entry->hlist, key);
 
-        return 1;
+        return 0;
 }
 
 struct tmap_entry * tmap_entry_find(struct tmap * map,
