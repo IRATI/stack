@@ -6,8 +6,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import rina.ipcmanager.impl.IPCManager;
-
 import eu.irati.librina.ApplicationManagerSingleton;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationProcessNamingInformationListIterator;
@@ -15,9 +13,7 @@ import eu.irati.librina.ApplicationRegistrationInformation;
 import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.ApplicationRegistrationType;
 import eu.irati.librina.ApplicationUnregistrationRequestEvent;
-import eu.irati.librina.DIFInformation;
 import eu.irati.librina.IPCProcess;
-import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IPCProcessPointerVector;
 import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
 import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
@@ -33,14 +29,14 @@ import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
 public class ApplicationRegistrationManager {
 	
 	private static final Log log = LogFactory.getLog(ApplicationRegistrationManager.class);
-	private IPCProcessFactorySingleton ipcProcessFactory = null;
+	private IPCProcessManager ipcProcessManager = null;
 	private ApplicationManagerSingleton applicationManager = null;
 	private Map<Long, PendingRegistration> pendingRegistrations = null;
 	private Map<Long, PendingUnregistration> pendingUnregistrations = null;
 
-	public ApplicationRegistrationManager(IPCProcessFactorySingleton ipcProcessFactory, 
+	public ApplicationRegistrationManager(IPCProcessManager ipcProcessManager, 
 			ApplicationManagerSingleton applicationManager){
-		this.ipcProcessFactory = ipcProcessFactory;
+		this.ipcProcessManager = ipcProcessManager;
 		this.applicationManager = applicationManager;
 		pendingRegistrations = 
 				new ConcurrentHashMap<Long, PendingRegistration>();
@@ -132,7 +128,7 @@ public class ApplicationRegistrationManager {
 	 * @param apName
 	 */
 	public synchronized void cleanApplicationRegistrations(ApplicationProcessNamingInformation appName){
-		IPCProcessPointerVector ipcProcesses = ipcProcessFactory.listIPCProcesses();
+		IPCProcessPointerVector ipcProcesses = ipcProcessManager.listIPCProcesses();
 		IPCProcess ipcProcess = null;
 		long handle = 0;
 		ApplicationUnregistrationRequestEvent event = null;
@@ -167,7 +163,7 @@ public class ApplicationRegistrationManager {
 		
 		try{
 			String difName = event.getDIFName().getProcessName();
-			ipcProcess = selectIPCProcessOfDIF(difName);
+			ipcProcess = ipcProcessManager.selectIPCProcessOfDIF(difName);
 			long handle = ipcProcess.unregisterApplication(event.getApplicationName());
 			pendingUnregistrations.put(handle, 
 					new PendingUnregistration(event, ipcProcess));
@@ -237,12 +233,12 @@ public class ApplicationRegistrationManager {
 		ApplicationRegistrationInformation info = event.getApplicationRegistrationInformation();
 		
 		if (info.getRegistrationType() == ApplicationRegistrationType.APPLICATION_REGISTRATION_ANY_DIF){
-			return selectAnyIPCProcess();
+			return ipcProcessManager.selectAnyIPCProcess();
 		}
 		
 		if (info.getRegistrationType() == ApplicationRegistrationType.APPLICATION_REGISTRATION_SINGLE_DIF){
 			String difName = info.getDIFName().getProcessName();
-			IPCProcess ipcProcess = selectIPCProcessOfDIF(difName);
+			IPCProcess ipcProcess = ipcProcessManager.selectIPCProcessOfDIF(difName);
 			if (isRegisteredAt(ipcProcess, 
 					event.getApplicationRegistrationInformation().getApplicationName())) {
 				throw new Exception("Application already registered in DIF "+difName);
@@ -251,58 +247,6 @@ public class ApplicationRegistrationManager {
 		}
 		
 		throw new Exception("Unsupported registration type: "+info.getRegistrationType());
-	}
-	
-	/**
-	 * 1 Look for a normal IPC Process, otherwise for a shim Ethernet one, otherwise
-	 * for a shim dummy one
-	 * @return
-	 */
-	private IPCProcess selectAnyIPCProcess() throws Exception{
-		IPCProcessPointerVector ipcProcesses = ipcProcessFactory.listIPCProcesses();
-		if (ipcProcesses.size() == 0){
-			throw new Exception("Could not find IPC Process to register at");
-		}
-		
-		IPCProcess ipcProcess = null;
-		for(int i=0; i<ipcProcesses.size(); i++){
-			ipcProcess = ipcProcesses.get(i);
-			if (ipcProcess.getType().equals(IPCManager.NORMAL_IPC_PROCESS_TYPE)){
-				return ipcProcess;
-			}
-		}
-		
-		for(int i=0; i<ipcProcesses.size(); i++){
-			ipcProcess = ipcProcesses.get(i);
-			if (ipcProcess.getType().equals(IPCManager.SHIM_ETHERNET_IPC_PROCESS_TYPE)){
-				return ipcProcess;
-			}
-		}
-		
-		for(int i=0; i<ipcProcesses.size(); i++){
-			ipcProcess = ipcProcesses.get(i);
-			if (ipcProcess.getType().equals(IPCManager.SHIM_DUMMY_IPC_PROCESS_TYPE)){
-				return ipcProcess;
-			}
-		}
-		
-		throw new Exception("Could not find IPC Process to register at");
-	}
-	
-	private IPCProcess selectIPCProcessOfDIF(String difName) throws Exception{
-		IPCProcessPointerVector ipcProcesses = ipcProcessFactory.listIPCProcesses();
-		IPCProcess ipcProcess = null;
-		
-		for(int i=0; i<ipcProcesses.size(); i++){
-			ipcProcess = ipcProcesses.get(i);
-			DIFInformation difInformation = ipcProcess.getDIFInformation();
-			if (difInformation != null && 
-					difInformation.getDifName().getProcessName().equals(difName)){
-				return ipcProcess;
-			}
-		}
-		
-		throw new Exception("Could not find IPC Process belonging to DIF "+difName);
 	}
 	
 	private boolean isRegisteredAt(

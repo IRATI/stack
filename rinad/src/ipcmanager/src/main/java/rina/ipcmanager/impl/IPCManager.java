@@ -42,6 +42,7 @@ import rina.ipcmanager.impl.conf.RINAConfiguration;
 import rina.ipcmanager.impl.console.IPCManagerConsole;
 import rina.ipcmanager.impl.helpers.ApplicationRegistrationManager;
 import rina.ipcmanager.impl.helpers.FlowManager;
+import rina.ipcmanager.impl.helpers.IPCProcessManager;
 
 /**
  * The IPC Manager is the component of a DAF that manages the local IPC 
@@ -75,6 +76,7 @@ public class IPCManager {
 	private ApplicationManagerSingleton applicationManager = null;
 	private IPCEventProducerSingleton ipcEventProducer = null;
 	
+	private IPCProcessManager ipcProcessManager = null;
 	private ApplicationRegistrationManager applicationRegistrationManager = null;
 	private FlowManager flowManager = null;
 	
@@ -97,8 +99,9 @@ public class IPCManager {
 		ipcProcessFactory = rina.getIpcProcessFactory();
 		applicationManager = rina.getApplicationManager();
 		ipcEventProducer = rina.getIpcEventProducer();
+		ipcProcessManager = new IPCProcessManager(ipcProcessFactory);
 		applicationRegistrationManager = new ApplicationRegistrationManager(
-				ipcProcessFactory, applicationManager);
+				ipcProcessManager, applicationManager);
 		flowManager = new FlowManager(ipcProcessFactory, applicationManager);
 		
 		log.info("Bootstrapping IPC Manager ...");
@@ -279,24 +282,7 @@ public class IPCManager {
 	}
 	
 	public String getIPCProcessesInformationAsString(){
-		IPCProcessPointerVector ipcProcesses = ipcProcessFactory.listIPCProcesses();
-		IPCProcess ipcProcess = null;
-		DIFInformation difInformation = null;
-		String result = "";
-		
-		for(int i=0; i<ipcProcesses.size(); i++){
-			ipcProcess = ipcProcesses.get(i);
-			result = result + "Id: "+ ipcProcess.getId() + "\n";
-			result = result + "    Type: " + ipcProcess.getType() + "\n";
-			result = result + "    Name: " + ipcProcess.getName().toString() + "\n";
-			difInformation = ipcProcess.getDIFInformation();
-			if (difInformation != null){
-				result = result + "    Member of DIF: " + 
-						difInformation.getDifName().getProcessName() + "\n"; 
-			}
-		}
-		
-		return result;
+		return ipcProcessManager.getIPCProcessesInformationAsString();
 	}
 	
 	public String getSystemCapabilitiesAsString(){
@@ -318,7 +304,7 @@ public class IPCManager {
 	 */
 	public IPCProcess createIPCProcess(ApplicationProcessNamingInformation name, 
 			String type) throws CreateIPCProcessException {
-		return ipcProcessFactory.create(name, type);
+		return ipcProcessManager.createIPCProcess(name, type);
 	}
 	
 	/**
@@ -330,7 +316,7 @@ public class IPCManager {
 		//and terminate all application registrations.
 		
 		//Destroy the IPC Process
-		this.ipcProcessFactory.destroy(ipcProcessId);
+		ipcProcessManager.destroyIPCProcess(ipcProcessId);
 	}
 	
 	/**
@@ -342,7 +328,7 @@ public class IPCManager {
 	 * @throws Exception
 	 */
 	public void assignToDIF(long ipcProcessID, String difName) throws Exception{
-		IPCProcess ipcProcess = this.ipcProcessFactory.getIPCProcess(ipcProcessID);
+		IPCProcess ipcProcess = ipcProcessManager.getIPCProcess(ipcProcessID);
 		assignToDIF(ipcProcess, difName);
 	}
 	
