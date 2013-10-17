@@ -69,9 +69,8 @@ static void protocol_remove(uint16_t ptype)
         tbls_destroy(ptype);
 }
 
-#define CONFIG_ARP826_REGRESSION_TESTS
-
-static int regression_tests(void)
+#ifdef CONFIG_ARP826_REGRESSION_TESTS
+static int regression_tests_gpa(void)
 {
         struct gpa * a;
         struct gpa * b;
@@ -139,6 +138,7 @@ static int regression_tests(void)
 
         return 0;
 }
+#endif
 
 static int __init mod_init(void)
 {
@@ -153,11 +153,12 @@ static int __init mod_init(void)
         }
 
 #ifdef CONFIG_ARP826_REGRESSION_TESTS
-        if (regression_tests()) {
-                LOG_ERR("Regression tests do not pass, bailing out");
+        if (regression_tests_gpa()) {
+                LOG_ERR("GPA regression tests do not pass, bailing out");
                 return -1;
         }
 #endif
+
         if (protocol_add(ETH_P_RINA, 6)) {
                 tbls_fini();
                 arm_fini();
