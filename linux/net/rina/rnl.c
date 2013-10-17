@@ -85,7 +85,7 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         }
 
         /* FIXME: Is this ok ? */
-        if (skb_in) {
+        if (!skb_in) {
                 LOG_ERR("No skb to dispatch, bailing out");
                 return -1;
         }
