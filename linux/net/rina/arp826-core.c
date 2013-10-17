@@ -42,78 +42,20 @@
 #include "arp826-arm.h"
 #include "arp826-tables.h"
 
-struct protocol {
-        struct packet_type * packet;
-        struct list_head     next;
+static struct packet_type arp826_packet_type __read_mostly = {
+        .type = cpu_to_be16(ETH_P_ARP),
+        .func = arp_receive,
 };
-
-static struct protocol *
-protocol_create(uint16_t ptype,
-                size_t   hlen,
-                int   (* receiver)(struct sk_buff *     skb,
-                                   struct net_device *  dev,
-                                   struct packet_type * pkt,
-                                   struct net_device *  orig_dev))
-{
-        struct protocol * p;
-
-        if (!receiver) {
-                LOG_ERR("Bad input parameters, "
-                        "cannot create protocol 0x%02x", ptype);
-                return NULL;
-        }
-
-        p = rkzalloc(sizeof(*p), GFP_KERNEL);
-        if (!p)
-                return NULL;
-        p->packet = rkzalloc(sizeof(*p->packet), GFP_KERNEL);
-        if (!p->packet) {
-                rkfree(p);
-                return NULL;
-        }
-        
-        p->packet->type = cpu_to_be16(ptype);
-        p->packet->func = receiver;
-        INIT_LIST_HEAD(&p->next);
-
-        return p;
-}
-
-static void protocol_destroy(struct protocol * p)
-{
-        ASSERT(p);
-        ASSERT(p->packet);
-
-        rkfree(p->packet);
-        rkfree(p);
-}
-
-static spinlock_t       protocols_lock;
-static struct list_head protocols;
 
 static int protocol_add(uint16_t ptype,
                         size_t   hlen)
 {
-        struct protocol * p;
-
         LOG_DBG("Adding protocol 0x%02x, hlen = %zd", ptype, hlen);
-
-        p = protocol_create(ptype, hlen, arp_receive);
-        if (!p) {
-                LOG_ERR("Cannot create protocol type 0x%02x", ptype);
-                return -1;
-        }
-
+      
         if (tbls_create(ptype, hlen)) {
-                protocol_destroy(p);
+                LOG_ERR("Cannot add protocol 0x%02x, hlen = %zd", ptype, hlen);
                 return -1;
         }
-
-        dev_add_pack(p->packet);
-
-        spin_lock(&protocols_lock);
-        list_add(&protocols, &p->next); 
-        spin_unlock(&protocols_lock);
 
         LOG_DBG("Protocol type 0x%02x added successfully", ptype);
 
@@ -122,43 +64,14 @@ static int protocol_add(uint16_t ptype,
 
 static void protocol_remove(uint16_t ptype)
 {
-        struct protocol * pos, * q;
-        struct protocol * p;
+        LOG_DBG("Removing protocol 0x%02x", ptype);
 
-        p = NULL;
-        
-        spin_lock(&protocols_lock);
-        list_for_each_entry_safe(pos, q, &protocols, next) {
-                ASSERT(pos);
-                ASSERT(pos->packet);
-
-                if (be16_to_cpu(pos->packet->type) == ptype) {
-                        p = pos;
-                        list_del(&pos->next);
-                        break;
-                }
-        }
-        spin_unlock(&protocols_lock);
-
-        if (!p) {
-                LOG_ERR("Cannot remove protocol type 0x%02x", ptype);
-                return;
-        }
-
-        ASSERT(p);
-        ASSERT(p->packet);
-
-        dev_remove_pack(p->packet);
         tbls_destroy(ptype);
-
-        protocol_destroy(p);
 }
 
 static int __init mod_init(void)
 {
         LOG_DBG("Initializing");
-
-        spin_lock_init(&protocols_lock);
 
         if (tbls_init())
                 return -1;
@@ -168,11 +81,13 @@ static int __init mod_init(void)
                 return -1;
         }
 
-        if (!protocol_add(ETH_P_RINA, 6)) {
+        if (protocol_add(ETH_P_RINA, 6)) {
                 tbls_fini();
                 arm_fini();
                 return -1;
         }
+
+	dev_add_pack(&arp826_packet_type);
 
         LOG_DBG("Initialized successfully");
 
@@ -182,6 +97,8 @@ static int __init mod_init(void)
 static void __exit mod_exit(void)
 {
         LOG_DBG("Finalizing");
+
+	dev_remove_pack(&arp826_packet_type);
 
         protocol_remove(ETH_P_RINA);
 
@@ -198,5 +115,5 @@ MODULE_DESCRIPTION("Basic RFC 826 compliant ARP implementation");
 
 MODULE_LICENSE("GPL");
 
-MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");

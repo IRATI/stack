@@ -392,18 +392,28 @@ struct tmap *     tables;
 
 struct table * tbls_find(uint16_t ptype)
 {
-        struct table * cl;
+        struct tmap_entry * e;
+        struct table *      tmp;
 
         spin_lock(&tables_lock);
-        cl = tmap_find(tables, ptype);
+
+        e = tmap_entry_find(tables, ptype);
+        if (!e) {
+                spin_unlock(&tables_lock);
+                return NULL;
+        }
+
+        tmp = tmap_entry_value(e);
+
         spin_unlock(&tables_lock);
 
-        return cl;
+        return tmp;
 }
 
 int tbls_create(uint16_t ptype, size_t hwlen)
 {
-        struct table * cl;
+        struct table *      cl;
+        struct tmap_entry * e;
 
         /* FIXME: Crappy, please rearrange it better */
         cl = tbls_find(ptype);
@@ -423,13 +433,22 @@ int tbls_create(uint16_t ptype, size_t hwlen)
                 return -1;
         }
 
-        LOG_DBG("Now adding table to the tables map");
+        LOG_DBG("Creating new tmap-entry");
+        e = tmap_entry_create(ptype, cl);
+        if (!e) {
+                LOG_ERR("Cannot create new entry, bailing out");
+                return -1;
+        }
+
+        LOG_DBG("Now adding the new table to the tables map");
 
         spin_lock(&tables_lock);
-        if (tmap_add(tables, ptype, cl)) {
+        if (tmap_entry_insert(tables, ptype, e)) {
                 spin_unlock(&tables_lock);
 
-                LOG_ERR("Cannot add table for ptype 0x%02x", ptype);
+                LOG_ERR("Cannot insert new entry into table for ptype 0x%02x",
+                        ptype);
+                tmap_entry_destroy(e);
                 tbl_destroy(cl);
 
                 return -1;
@@ -443,21 +462,28 @@ int tbls_create(uint16_t ptype, size_t hwlen)
 
 int tbls_destroy(uint16_t ptype)
 {
-        struct table * cl;
+        struct tmap_entry * e;
+        struct table *      cl;
 
         spin_lock(&tables_lock);
-        cl = tmap_find(tables, ptype);
-        if (!cl) {
+
+        e = tmap_entry_find(tables, ptype);
+        if (!e) {
                 LOG_ERR("Table for ptype 0x%02x is missing, cannot destroy",
                         ptype);
                 spin_unlock(&tables_lock);
                 return -1;
         }
-
-        tmap_remove(tables, ptype);
+        tmap_entry_remove(e);
+        
         spin_unlock(&tables_lock); /* No need to hold the lock anymore */
 
+        cl = tmap_entry_value(e);
+
+        ASSERT(cl);
+
         tbl_destroy(cl);
+        tmap_entry_destroy(e);
 
         LOG_DBG("Table for ptype 0x%02x destroyed successfully", ptype);
 

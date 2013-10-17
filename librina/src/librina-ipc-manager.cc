@@ -376,7 +376,7 @@ void IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest)
 throw (AllocateFlowException) {
 	LOG_DBG("IPCProcess::allocate flow called");
 	if (!difMember){
-		throw IPCException(IPCProcess::error_not_a_dif_member);
+		throw AllocateFlowException(IPCProcess::error_not_a_dif_member);
 	}
 #if STUB_API
 	//Do nothing

@@ -31,7 +31,7 @@ void set_netlink_non_root_send_flag(void)
         LOG_DBG("Setting NL_CFG_F_NONROOT_SEND flag for NL_GENERIC sockets");
 
         write_lock(&nl_table_lock);
-        nl_table[NETLINK_GENERIC].flags = NL_CFG_F_NONROOT_SEND;
+        nl_table[NETLINK_GENERIC].flags |= NL_CFG_F_NONROOT_SEND;
         write_unlock(&nl_table_lock);
 
         LOG_DBG("NL_CFG_F_NONROOT_SEND flag set");
