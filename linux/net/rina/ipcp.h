@@ -108,18 +108,20 @@ struct ipcp_instance_ops {
                                         int                         policies);
 
         int  (* connection_update)(struct ipcp_instance_data * data,
-                                   port_id_t                   port_id,
                                    cep_id_t                    src_cep_id,
                                    cep_id_t                    dst_cep_id);
 
         int  (* connection_destroy)(struct ipcp_instance_data * data,
-                                    port_id_t                   port_id,
                                     cep_id_t                    src_cep_id);
 
         cep_id_t
         (* connection_create_arrived)(struct ipcp_instance_data * data,
                                       port_id_t                   port_id,
-                                      cep_id_t                    cep_id);
+                                      address_t                   source,
+                                      address_t                   dest,
+                                      qos_id_t                    qos_id,
+                                      cep_id_t                    dst_cep_id,
+                                      int                         policies);
 };
 
 #endif
