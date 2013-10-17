@@ -72,8 +72,6 @@ static int __init mod_init(void)
 {
         LOG_DBG("Initializing");
 
-	dev_add_pack(&arp826_packet_type);
-
         if (tbls_init())
                 return -1;
 
@@ -87,6 +85,8 @@ static int __init mod_init(void)
                 arm_fini();
                 return -1;
         }
+
+	dev_add_pack(&arp826_packet_type);
 
         LOG_DBG("Initialized successfully");
 
