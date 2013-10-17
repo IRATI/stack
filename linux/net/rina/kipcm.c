@@ -1221,17 +1221,17 @@ conn_create_resp_free_and_reply(struct rnl_ipcm_conn_create_req_msg_attrs * attr
 
 static int notify_ipcp_conn_create_req(void *             data,
                                        struct sk_buff *   buff,
-                                       struct genl_info * info) 
+                                       struct genl_info * info)
 {
         struct rnl_ipcm_conn_create_req_msg_attrs * attrs;
-        struct rnl_msg *                            msg; 
+        struct rnl_msg *                            msg;
         struct ipcp_instance *                      ipcp;
-        struct rina_msg_hdr *                       hdr; 
+        struct rina_msg_hdr *                       hdr;
         struct kipcm *                              kipcm;
         ipc_process_id_t                            ipc_id = 0;
         port_id_t                                   port_id = 0;
         cep_id_t                                    src_cep;
-        flow_id_t                                   fid = flow_id_bad(); 
+        flow_id_t                                   fid = flow_id_bad();
 
         attrs    = NULL;
         msg      = NULL;
@@ -1240,12 +1240,12 @@ static int notify_ipcp_conn_create_req(void *             data,
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
                 return -1;
-        }    
+        }
 
         if (!info) {
                 LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
                 return -1;
-        }    
+        }
 
         kipcm = (struct kipcm *) data;
         attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
@@ -1262,18 +1262,18 @@ static int notify_ipcp_conn_create_req(void *             data,
         if (rnl_parse_msg(info, msg)) {
                 goto process_fail;
         }
-       
-        port_id = attrs->port_id; 
+
+        port_id = attrs->port_id;
         ipc_id  = hdr->dst_ipc_id;
         ipcp    = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipcp) {
                 goto process_fail;
         }
-        
-        
+
+
         fid = kfa_flow_create(kipcm->kfa);
         ASSERT(is_flow_id_ok(fid));
-        
+
         src_cep = ipcp->ops->connection_create(ipcp->data,
                                                attrs->port_id,
                                                attrs->src_addr,
@@ -1285,7 +1285,7 @@ static int notify_ipcp_conn_create_req(void *             data,
                 LOG_ERR("IPC process could not create connection");
                 goto process_fail;
         }
-                                                       
+
         if (kfa_flow_bind(kipcm->kfa, fid, port_id, ipcp, ipc_id)) {
                 LOG_ERR("Cound not bind flow (normal ipcp)");
                 goto process_fail;
@@ -1300,7 +1300,7 @@ static int notify_ipcp_conn_create_req(void *             data,
                                                info->snd_seq,
                                                info->snd_portid);
 
-process_fail:
+ process_fail:
         if (is_flow_id_ok(fid)) kfa_flow_destroy(kipcm->kfa, fid);
         return conn_create_resp_free_and_reply(attrs,
                                                msg,
@@ -1314,20 +1314,20 @@ process_fail:
 
 }
 
-/* FIXME: create_req and create_arrived are almost identicall, 
-*  code should be reused */
+/* FIXME: create_req and create_arrived are almost identicall,
+ *  code should be reused */
 
 static int
 conn_create_result_free_and_reply(
-        struct rnl_ipcm_conn_create_arrived_msg_attrs * attrs,
-        struct rnl_msg *                                msg,
-        struct rina_msg_hdr *                           hdr,
-        ipc_process_id_t                                ipc_id,
-        port_id_t                                       pid,
-        cep_id_t                                        src_cep,
-        cep_id_t                                        dst_cep,
-        rnl_sn_t                                        seq_num,
-        u32                                             nl_port_id)
+                                  struct rnl_ipcm_conn_create_arrived_msg_attrs * attrs,
+                                  struct rnl_msg *                                msg,
+                                  struct rina_msg_hdr *                           hdr,
+                                  ipc_process_id_t                                ipc_id,
+                                  port_id_t                                       pid,
+                                  cep_id_t                                        src_cep,
+                                  cep_id_t                                        dst_cep,
+                                  rnl_sn_t                                        seq_num,
+                                  u32                                             nl_port_id)
 {
         if (attrs) rkfree(attrs);
         if (msg)   rkfree(msg);
@@ -1348,17 +1348,17 @@ conn_create_result_free_and_reply(
 
 static int notify_ipcp_conn_create_arrived(void *             data,
                                            struct sk_buff *   buff,
-                                           struct genl_info * info) 
+                                           struct genl_info * info)
 {
         struct rnl_ipcm_conn_create_arrived_msg_attrs * attrs;
-        struct rnl_msg *                                msg; 
+        struct rnl_msg *                                msg;
         struct ipcp_instance *                          ipcp;
-        struct rina_msg_hdr *                           hdr; 
+        struct rina_msg_hdr *                           hdr;
         struct kipcm *                                  kipcm;
         ipc_process_id_t                                ipc_id = 0;
         port_id_t                                       port_id = 0;
         cep_id_t                                        src_cep;
-        flow_id_t                                       fid = flow_id_bad(); 
+        flow_id_t                                       fid = flow_id_bad();
 
         attrs    = NULL;
         msg      = NULL;
@@ -1367,12 +1367,12 @@ static int notify_ipcp_conn_create_arrived(void *             data,
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
                 return -1;
-        }    
+        }
 
         if (!info) {
                 LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
                 return -1;
-        }    
+        }
 
         kipcm = (struct kipcm *) data;
         attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
@@ -1389,18 +1389,18 @@ static int notify_ipcp_conn_create_arrived(void *             data,
         if (rnl_parse_msg(info, msg)) {
                 goto process_fail;
         }
-       
-        port_id = attrs->port_id; 
+
+        port_id = attrs->port_id;
         ipc_id  = hdr->dst_ipc_id;
         ipcp    = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipcp) {
                 goto process_fail;
         }
-        
-        
+
+
         fid = kfa_flow_create(kipcm->kfa);
         ASSERT(is_flow_id_ok(fid));
-        
+
         src_cep = ipcp->ops->connection_create_arrived(ipcp->data,
                                                        attrs->port_id,
                                                        attrs->src_addr,
@@ -1413,7 +1413,7 @@ static int notify_ipcp_conn_create_arrived(void *             data,
                 LOG_ERR("IPC process could not create connection");
                 goto process_fail;
         }
-                                                       
+
         if (kfa_flow_bind(kipcm->kfa, fid, port_id, ipcp, ipc_id)) {
                 LOG_ERR("Cound not bind flow (normal ipcp)");
                 goto process_fail;
@@ -1429,7 +1429,7 @@ static int notify_ipcp_conn_create_arrived(void *             data,
                                                  info->snd_seq,
                                                  info->snd_portid);
 
-process_fail:
+ process_fail:
         if (is_flow_id_ok(fid)) kfa_flow_destroy(kipcm->kfa, fid);
         return conn_create_result_free_and_reply(attrs,
                                                  msg,

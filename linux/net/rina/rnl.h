@@ -127,7 +127,7 @@ typedef enum {
         RINA_C_IPCM_IPC_MANAGER_PRESENT,
 
         /* FIXME: Need to be logically moved after flow
-         * allocation messages. Put here in order to maintain 
+         * allocation messages. Put here in order to maintain
          * compatibility with MS7 version of user space*/
         /* IPC Manager -> IPC Process */
         RINA_C_IPCM_CONN_CREATE_REQUEST,
