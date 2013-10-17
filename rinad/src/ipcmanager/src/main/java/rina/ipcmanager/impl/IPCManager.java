@@ -59,7 +59,7 @@ public class IPCManager {
 	public static final long CONFIG_FILE_POLL_PERIOD_IN_MS = 5000;
 	
 	public static final String NORMAL_IPC_PROCESS_TYPE = "normal";
-	public static final String SHIM_ETHERNET_IPC_PROCESS_TYPE = "shim-ethernet";
+	public static final String SHIM_ETHERNET_IPC_PROCESS_TYPE = "shim-eth-vlan";
 	public static final String SHIM_DUMMY_IPC_PROCESS_TYPE = "shim-dummy";
 	
 	private IPCManagerConsole console = null;
