@@ -1,5 +1,5 @@
 /*
- * ARP 826 (wonnabe) core
+ * ARP 826 (wonnabe) related utilities
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -149,6 +149,9 @@ int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
                 return -1;
         }
 
+        LOG_DBG("Loocking for filler 0x%01x in GPA (length = %zd)",
+                filler, gpa->length);
+
         position = strnchr(gpa->address, filler, gpa->length);
         if (!position) {
                 LOG_ERR("No filler in the GPA, no needs to shrink");
@@ -156,8 +159,10 @@ int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
         }
 
         count = position - gpa->address;
-        if (!count)
+        if (!count) {
+                LOG_DBG("GPA has nothing to shrink ...");
                 return 0;
+        }
 
         ASSERT(count);
 

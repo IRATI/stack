@@ -1,5 +1,5 @@
 /*
- * ARP 826 (wonnabe) cache utilities
+ * ARP 826 (wonnabe) related utilities
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
