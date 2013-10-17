@@ -467,6 +467,7 @@ int arp_receive(struct sk_buff *     skb,
         if (!cl) {
                 LOG_DBG("I don't have a table to handle this ARP "
                         "(ptype = 0x%02x)", header->ptype);
+		kfree_skb(skb);
                 return 0;
         }
 
@@ -484,6 +485,7 @@ int arp_receive(struct sk_buff *     skb,
 
         if (process(skb, cl)) {
                 LOG_ERR("Cannot process this ARP");
+		kfree_skb(skb);
                 return 0;
         }
         consume_skb(skb);

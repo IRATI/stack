@@ -152,7 +152,7 @@ int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
         LOG_DBG("Loocking for filler 0x%01x in GPA (length = %zd)",
                 filler, gpa->length);
 
-        position = strnchr(gpa->address, filler, gpa->length);
+        position = strnchr(gpa->address, gpa->length, filler);
         if (!position) {
                 LOG_ERR("No filler in the GPA, no needs to shrink");
                 return 0;
