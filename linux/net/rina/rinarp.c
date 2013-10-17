@@ -141,3 +141,19 @@ const struct gpa * rinarp_find_gpa(struct rinarp_handle * handle,
         return arp826_find_gpa(ETH_P_RINA, ha);
 }
 EXPORT_SYMBOL(rinarp_find_gpa);
+
+static int __init mod_init(void)
+{ return 0; }
+
+static void __exit mod_exit(void)
+{ }
+
+module_init(mod_init);
+module_exit(mod_exit);
+
+MODULE_DESCRIPTION("RINA ARP wrapper");
+
+MODULE_LICENSE("GPL");
+
+MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");

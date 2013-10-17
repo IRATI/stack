@@ -115,5 +115,5 @@ MODULE_DESCRIPTION("Basic RFC 826 compliant ARP implementation");
 
 MODULE_LICENSE("GPL");
 
-MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");
