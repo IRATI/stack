@@ -92,6 +92,13 @@ config ARP826
 	help
 	  No help for the time being
 
+config ARP826_REGRESSION_TESTS
+	bool "Perform regression testing upon loading"
+	default n
+        depends on ARP826
+	help
+	  No help for the time being
+
 config RINA_NORMAL_IPCP
 	tristate "Normal IPC Process"
 	default y
