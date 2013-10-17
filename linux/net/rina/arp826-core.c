@@ -81,7 +81,7 @@ static int __init mod_init(void)
                 return -1;
         }
 
-        if (!protocol_add(ETH_P_RINA, 6)) {
+        if (protocol_add(ETH_P_RINA, 6)) {
                 tbls_fini();
                 arm_fini();
                 return -1;
