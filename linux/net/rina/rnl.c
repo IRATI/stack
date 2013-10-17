@@ -110,10 +110,10 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         }
 
         LOG_DBG("Fetching handler callback and data");
-        spin_lock(tmp->lock);
+        spin_lock(&tmp->lock);
         cb_function = tmp->handlers[msg_type].cb;
         data        = tmp->handlers[msg_type].data;
-        spin_unlock(tmp->lock);
+        spin_unlock(&tmp->lock);
 
         if (!cb_function) {
                 LOG_ERR("There's no handler callback registered for "
@@ -204,8 +204,8 @@ int rnl_handler_register(struct rnl_set *   set,
         spin_lock(&set->lock);
         if (set->handlers[msg_type].cb) {
                 spin_unlock(&set->lock);
-                LOG_ERR("The message handler for message type %d "
-                        "has been already registered, unregister it first",
+                LOG_ERR("There is a handler for message type %d still "
+                        "registered, unregister it first",
                         msg_type);
                 return -1;
         }
