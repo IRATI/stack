@@ -153,10 +153,14 @@ static int __init mod_init(void)
         }
 
 #ifdef CONFIG_ARP826_REGRESSION_TESTS
+        LOG_DBG("Starting regression tests");
+
         if (regression_tests_gpa()) {
                 LOG_ERR("GPA regression tests do not pass, bailing out");
                 return -1;
         }
+
+        LOG_DBG("Regression tests completed successfully");
 #endif
 
         if (protocol_add(ETH_P_RINA, 6)) {
