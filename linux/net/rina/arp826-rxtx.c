@@ -465,7 +465,8 @@ int arp_receive(struct sk_buff *     skb,
         /* FIXME: There's no need to lookup it here ... */
         cl = tbls_find(header->ptype);
         if (!cl) {
-                LOG_ERR("I don't have a CL to handle this ARP");
+                LOG_DBG("I don't have a table to handle this ARP "
+                        "(ptype = 0x%02x)", header->ptype);
                 return 0;
         }
 
