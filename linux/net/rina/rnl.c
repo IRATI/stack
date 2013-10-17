@@ -73,7 +73,6 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         int                ret_val;
         struct rnl_set *   tmp;
 
-        LOG_DBG("Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
         if (!info) {
                 LOG_ERR("Can't dispatch message, info parameter is empty");
                 return -1;
@@ -84,6 +83,14 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
                         "bailing out");
                 return -1;
         }
+
+        /* FIXME: Is this ok ? */
+        if (skb_in) {
+                LOG_ERR("No skb to dispatch, bailing out");
+                return -1;
+        }
+
+        LOG_DBG("Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
 
         msg_type = (msg_type_t) info->genlhdr->cmd;
         LOG_DBG("Multiplexing message type %d", msg_type);
@@ -102,16 +109,18 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
                 return -1;
         }
 
+        LOG_DBG("Fetching handler callback and data");
+        spin_lock(tmp->lock);
         cb_function = tmp->handlers[msg_type].cb;
-        LOG_DBG("[LDBG] Catching callback cb_function =%pK)", cb_function);
+        data        = tmp->handlers[msg_type].data;
+        spin_unlock(tmp->lock);
+
         if (!cb_function) {
                 LOG_ERR("There's no handler callback registered for "
                         "message type %d", msg_type);
                 return -1;
         }
-
         /* Data might be empty, no check strictly necessary */
-        data = tmp->handlers[msg_type].data;
 
         ret_val = cb_function(data, skb_in, info);
         if (ret_val) {
@@ -192,7 +201,9 @@ int rnl_handler_register(struct rnl_set *   set,
                msg_type <= NETLINK_RINA_C_MAX);
         ASSERT(handler != NULL);
 
+        spin_lock(&set->lock);
         if (set->handlers[msg_type].cb) {
+                spin_unlock(&set->lock);
                 LOG_ERR("The message handler for message type %d "
                         "has been already registered, unregister it first",
                         msg_type);
@@ -201,6 +212,7 @@ int rnl_handler_register(struct rnl_set *   set,
 
         set->handlers[msg_type].cb   = handler;
         set->handlers[msg_type].data = data;
+        spin_unlock(&set->lock);
 
         LOG_DBG("Handler %pK (data %pK) registered for message type %d",
                 handler, data, msg_type);
@@ -227,7 +239,9 @@ int rnl_handler_unregister(struct rnl_set * set,
         ASSERT(msg_type >= NETLINK_RINA_C_MIN &&
                msg_type <= NETLINK_RINA_C_MAX);
 
+        spin_lock(&set->lock);
         bzero(&set->handlers[msg_type], sizeof(set->handlers[msg_type]));
+        spin_unlock(&set->lock);
 
         LOG_DBG("Handler for message type %d unregistered successfully",
                 msg_type);
@@ -284,9 +298,8 @@ struct rnl_set * rnl_set_create(personality_id id)
         if (!tmp)
                 return NULL;
 
-        tmp->sn_counter = 0;
-
         spin_lock_init(&tmp->lock);
+
         LOG_DBG("Set %pK created successfully", tmp);
 
         return tmp;
@@ -312,6 +325,7 @@ int rnl_set_destroy(struct rnl_set * set)
                         break;
                 }
         }
+
         if (count)
                 LOG_WARN("Set %pK had %zd handler(s) that have not been "
                          "unregistered ...", set, count);
@@ -331,9 +345,8 @@ rnl_sn_t rnl_get_next_seqn(struct rnl_set * set)
         spin_lock(&set->lock);
 
         tmp = set->sn_counter++;
-
         if (set->sn_counter == 0) {
-                LOG_DBG("RN Layer Sequence number roll-overed!");
+                LOG_WARN("RNL Sequence number rolled-over for set %pK!", set);
         }
 
         spin_unlock(&set->lock);
@@ -396,7 +409,6 @@ int rnl_init(void)
          *   data structure, but apparently there's no other way around.
          */
         set_netlink_non_root_send_flag();
-
 
         ret = genl_register_family_with_ops(&rnl_nl_family,
                                             nl_ops,
