@@ -50,11 +50,10 @@ static struct packet_type arp826_packet_type __read_mostly = {
 static int protocol_add(uint16_t ptype,
                         size_t   hlen)
 {
-        struct protocol * p;
-
         LOG_DBG("Adding protocol 0x%02x, hlen = %zd", ptype, hlen);
       
         if (tbls_create(ptype, hlen)) {
+                LOG_ERR("Cannot add protocol 0x%02x, hlen = %zd", ptype, hlen);
                 return -1;
         }
 
@@ -65,6 +64,8 @@ static int protocol_add(uint16_t ptype,
 
 static void protocol_remove(uint16_t ptype)
 {
+        LOG_DBG("Removing protocol 0x%02x", ptype);
+
         tbls_destroy(ptype);
 }
 
