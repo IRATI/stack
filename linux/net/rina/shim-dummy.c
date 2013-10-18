@@ -98,7 +98,7 @@ static int is_app_registered(struct ipcp_instance_data * data,
         struct app_register * app;
 
         list_for_each_entry(app, &data->apps_registered, list) {
-                if (!name_cmp(app->app_name, name)) {
+                if (name_is_equal(app->app_name, name)) {
                         return 1;
                 }
         }
@@ -111,7 +111,7 @@ static struct app_register * find_app(struct ipcp_instance_data * data,
         struct app_register * app;
 
         list_for_each_entry(app, &data->apps_registered, list) {
-                if (!name_cmp(app->app_name, name)) {
+                if (name_is_equal(app->app_name, name)) {
                         return app;
                 }
         }
