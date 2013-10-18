@@ -51,8 +51,8 @@ extern struct kipcm * default_kipcm;
 
 /* Holds the configuration of one shim instance */
 struct eth_vlan_info {
-        unsigned long   vlan_id;
-        char *          interface_name;
+        unsigned long vlan_id;
+        char *        interface_name;
 };
 
 enum port_id_state {
@@ -64,6 +64,7 @@ enum port_id_state {
 /* Holds the information related to one flow */
 struct shim_eth_flow {
         struct list_head   list;
+
         struct gha *       dest_ha;
         struct gpa *       dest_pa;
         /* Only used once for allocate_response */
@@ -124,12 +125,14 @@ inst_data_mapping_get(struct net_device * dev)
                 return NULL;
 
         spin_lock(&data_instances_lock);
+
         list_for_each_entry(mapping, &data_instances_list, list) {
                 if (mapping->dev == dev) {
                         spin_unlock(&data_instances_lock);
                         return mapping;
                 }
         }
+
         spin_unlock(&data_instances_lock);
 
         return NULL;
@@ -139,6 +142,7 @@ static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
                                         port_id_t                   id)
 {
         struct shim_eth_flow * flow;
+
         spin_lock(&data->lock);
 
         list_for_each_entry(flow, &data->flows, list) {
@@ -147,7 +151,9 @@ static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
                         return flow;
                 }
         }
+
         spin_unlock(&data->lock);
+
         return NULL;
 }
 
@@ -158,12 +164,14 @@ find_flow_by_flow_id(struct ipcp_instance_data * data,
         struct shim_eth_flow * flow;
 
         spin_lock(&data->lock);
+
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->flow_id == id) {
                         spin_unlock(&data->lock);
                         return flow;
                 }
         }
+
         spin_unlock(&data->lock);
 
         return NULL;
@@ -171,13 +179,12 @@ find_flow_by_flow_id(struct ipcp_instance_data * data,
 
 static struct gpa * name_to_gpa(const struct name * name)
 {
-        char * delimited_name;
+        char * tmp = name_tostring(name);
 
-        delimited_name = name_tostring(name);
-        if (!delimited_name)
+        if (!tmp)
                 return NULL;
 
-        return gpa_create(delimited_name, strlen(delimited_name));
+        return gpa_create(tmp, strlen(tmp));
 }
 
 static struct shim_eth_flow *
@@ -186,16 +193,20 @@ find_flow_by_gha(struct ipcp_instance_data * data,
 {
         struct shim_eth_flow * flow;
 
-        if (!gha_is_ok(addr))
+        if (!data || !gha_is_ok(addr))
                 return NULL;
+
         spin_lock(&data->lock);
+
         list_for_each_entry(flow, &data->flows, list) {
                 if (gha_is_equal(addr, flow->dest_ha)) {
                         spin_unlock(&data->lock);
                         return flow;
                 }
         }
+
         spin_unlock(&data->lock);
+
         return NULL;
 }
 
@@ -205,16 +216,18 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
 {
         struct shim_eth_flow * flow;
 
-        if (!gpa_is_ok(addr))
+        if (!data || !gpa_is_ok(addr))
                 return NULL;
 
         spin_lock(&data->lock);
+
         list_for_each_entry(flow, &data->flows, list) {
                 if (gpa_is_equal(addr, flow->dest_pa)) {
                         spin_unlock(&data->lock);
                         return flow;
                 }
         }
+
         spin_unlock(&data->lock);
 
         return NULL;
@@ -254,6 +267,7 @@ static string_t * create_vlan_interface_name(string_t *    interface_name,
         return complete_interface;
 }
 
+/* FIXME: Why f is passed as pointer of pointer ??? */
 static int flow_destroy(struct ipcp_instance_data * data,
                         struct shim_eth_flow **     f)
 {
@@ -265,6 +279,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        /* FIXME: Why this lock is held starting so early ??? */
         spin_lock(&data->lock);
 
         flow = *f;
@@ -275,9 +290,10 @@ static int flow_destroy(struct ipcp_instance_data * data,
         list_del(&flow->list);
 
         fid = kfa_flow_unbind(data->kfa, flow->port_id);
-        kfa_flow_destroy(data->kfa, fid);
 
+        kfa_flow_destroy(data->kfa, fid);
         rkfree(flow);
+
         spin_unlock(&data->lock);
 
         return 0;
@@ -302,7 +318,7 @@ static void rinarp_resolve_handler(void *             opaque,
 
         if (flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
-                flow->dest_ha = gha_dup(dest_ha);
+                flow->dest_ha       = gha_dup(dest_ha);
 
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
@@ -313,8 +329,6 @@ static void rinarp_resolve_handler(void *             opaque,
                 }
         }
 }
-
-
 
 static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                                           const struct name *         source,
@@ -340,19 +354,20 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 if (!flow)
                         return -1;
 
-                flow->port_id = id;
-                flow->flow_id = fid;
+                flow->port_id       = id;
+                flow->flow_id       = fid;
                 flow->port_id_state = PORT_STATE_PENDING;
+                flow->dest_pa       = name_to_gpa(dest);
 
-                flow->dest_pa = name_to_gpa(dest);
                 if (!gpa_is_ok(flow->dest_pa)) {
                         if (flow_destroy(data, &flow))
                                 LOG_ERR("Failed to destroy flow");
                         return -1;
                 }
 
-                spin_lock(&data->lock);
                 INIT_LIST_HEAD(&flow->list);
+
+                spin_lock(&data->lock);
                 list_add(&flow->list, &data->flows);
                 spin_unlock(&data->lock);
 
@@ -688,8 +703,9 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 if (!flow)
                         return -1;
 
-                spin_lock(&data->lock);
                 INIT_LIST_HEAD(&flow->list);
+
+                spin_lock(&data->lock);
                 list_add(&flow->list, &data->flows);
                 spin_unlock(&data->lock);
 
@@ -766,7 +782,6 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         result = kstrtoul(dif_information->dif_name->process_name,
                           10, &(info->vlan_id));
 
-
         if (result) {
                 ASSERT(dif_information->dif_name->process_name);
 
@@ -785,9 +800,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         list_for_each_entry(tmp, &(dif_information->
                                    configuration->
                                    ipcp_config_entries), next) {
-                const struct ipcp_config_entry * entry;
-
-                entry = tmp->entry;
+                const struct ipcp_config_entry * entry = tmp->entry;
                 if (!strcmp(entry->name, "interface-name")) {
                         ASSERT(entry->value);
 
@@ -840,7 +853,8 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 rkfree(complete_interface);
                 return -1;
         }
-        mapping->dev = data->dev;
+
+        mapping->dev  = data->dev;
         mapping->data = data;
         INIT_LIST_HEAD(&mapping->list);
 
