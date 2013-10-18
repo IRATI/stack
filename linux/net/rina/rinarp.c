@@ -56,7 +56,7 @@ static struct rinarp_handle * handle_create(struct gpa * pa, struct gha * ha)
                 rkfree(handle);
                 return NULL;
         }
-                
+
         handle->ha = gha_dup(ha);
         if (!handle->ha) {
                 gpa_destroy(handle->pa);
@@ -77,7 +77,7 @@ static void handle_destroy(struct rinarp_handle * handle)
 
 static bool handle_is_ok(struct rinarp_handle * handle)
 { return (handle && gpa_is_ok(handle->pa) && gha_is_ok(handle->ha)); }
-                                  
+
 struct rinarp_handle * rinarp_add(const struct gpa * pa,
                                   const struct gha * ha)
 {

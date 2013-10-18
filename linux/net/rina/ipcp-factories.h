@@ -44,10 +44,10 @@ struct ipcp_factory_ops {
         int                    (* init)(struct ipcp_factory_data * data);
         int                    (* fini)(struct ipcp_factory_data * data);
 
-	struct ipcp_instance * (* create)(struct ipcp_factory_data * data,
+        struct ipcp_instance * (* create)(struct ipcp_factory_data * data,
                                           const struct name *        name,
                                           ipc_process_id_t           id);
-	int                    (* destroy)(struct ipcp_factory_data * data,
+        int                    (* destroy)(struct ipcp_factory_data * data,
                                            struct ipcp_instance *     inst);
 };
 
@@ -55,7 +55,7 @@ struct ipcp_factory_ops {
 struct ipcp_factory {
         struct kobject                  kobj;
         struct ipcp_factory_data *      data;
-        const struct ipcp_factory_ops * ops; 
+        const struct ipcp_factory_ops * ops;
 };
 
 struct ipcp_factories;

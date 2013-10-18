@@ -51,7 +51,7 @@ static int protocol_add(uint16_t ptype,
                         size_t   hlen)
 {
         LOG_DBG("Adding protocol 0x%02x, hlen = %zd", ptype, hlen);
-      
+
         if (tbls_create(ptype, hlen)) {
                 LOG_ERR("Cannot add protocol 0x%02x, hlen = %zd", ptype, hlen);
                 return -1;
@@ -221,7 +221,7 @@ static int __init mod_init(void)
                 return -1;
         }
 
-	dev_add_pack(&arp826_packet_type);
+        dev_add_pack(&arp826_packet_type);
 
         LOG_DBG("Initialized successfully");
 
@@ -232,7 +232,7 @@ static void __exit mod_exit(void)
 {
         LOG_DBG("Finalizing");
 
-	dev_remove_pack(&arp826_packet_type);
+        dev_remove_pack(&arp826_packet_type);
 
         protocol_remove(ETH_P_RINA);
 

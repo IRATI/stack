@@ -308,15 +308,15 @@ char * name_tostring(const struct name * n)
 EXPORT_SYMBOL(name_tostring);
 
 
-struct name * string_toname(const string_t * input) 
+struct name * string_toname(const string_t * input)
 {
-	struct name * name;
+        struct name * name;
 
         string_t *    tmp1   = NULL;
-	string_t *    tmp_pn = NULL;
-	string_t *    tmp_pi = NULL;
-	string_t *    tmp_en = NULL;
-	string_t *    tmp_ei = NULL;
+        string_t *    tmp_pn = NULL;
+        string_t *    tmp_pi = NULL;
+        string_t *    tmp_en = NULL;
+        string_t *    tmp_ei = NULL;
 
         if (input) {
                 string_t * tmp2;
@@ -324,15 +324,15 @@ struct name * string_toname(const string_t * input)
                 string_dup(input, &tmp1);
                 if (!tmp1) {
                         return NULL;
-                } 
+                }
                 tmp2 = tmp1;
-                
+
                 tmp_pn = strsep(&tmp2, DELIMITER);
                 tmp_pi = strsep(&tmp2, DELIMITER);
                 tmp_en = strsep(&tmp2, DELIMITER);
                 tmp_ei = strsep(&tmp2, DELIMITER);
         }
-        
+
         name = name_create_and_init(tmp_pn, tmp_pi, tmp_en, tmp_ei);
         if (!name) {
                 if (tmp1) rkfree(tmp1);
@@ -341,7 +341,7 @@ struct name * string_toname(const string_t * input)
 
         return name;
 }
-EXPORT_SYMBOL(string_toname); 
+EXPORT_SYMBOL(string_toname);
 
 static int string_dup_from_user(const string_t __user * src, string_t ** dst)
 {
