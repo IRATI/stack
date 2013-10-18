@@ -167,14 +167,13 @@ find_flow_by_flow_id(struct ipcp_instance_data * data,
 
 static struct gpa * name_to_gpa(const struct name * name)
 {
-        char *       delimited_name;
-        struct gpa * addr;
+        char * delimited_name;
 
         delimited_name = name_tostring(name);
-        addr           = gpa_create(delimited_name,
-                                    strlen(delimited_name));
+        if (!delimited_name)
+                return NULL;
 
-        return addr;
+        return gpa_create(delimited_name, strlen(delimited_name));
 }
 
 static struct shim_eth_flow *
@@ -209,21 +208,36 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
         return NULL;
 }
 
-static string_t * create_vlan_interface_name(string_t * interface_name,
-                                             unsigned long   vlan_id)
+static string_t * create_vlan_interface_name(string_t *    interface_name,
+                                             unsigned long vlan_id)
 {
         char       string_vlan_id[5];
         string_t * complete_interface;
+        size_t     length;
 
-        sprintf(string_vlan_id,"%lu",vlan_id);
+        if (!interface_name)
+                return NULL;
 
-        complete_interface = rkzalloc(strlen(interface_name) +
-                                      2 * sizeof(char)       +
-                                      strlen(string_vlan_id),
-                                      GFP_KERNEL);
+        LOG_DBG("Building complete VLAN interface name ('%s', %lu)",
+                interface_name, vlan_id);
+
+        snprintf(string_vlan_id, sizeof(string_vlan_id), "%lu", vlan_id);
+
+        length = strlen(interface_name) +
+                sizeof(char)            +
+                strlen(string_vlan_id)  +
+                1 /* Terminator */;
+
+        complete_interface = rkmalloc(length, GFP_KERNEL);
+        if (!complete_interface)
+                return NULL;
+
         strcat(complete_interface, interface_name);
         strcat(complete_interface, ".");
         strcat(complete_interface, string_vlan_id);
+        complete_interface[length] = 0; /* Final terminator */
+
+        LOG_DBG("Complete vlan-interface-name = '%s'", complete_interface);
 
         return complete_interface;
 }
@@ -598,6 +612,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
                 if (!flow)
                         return -1;
+
                 spin_lock(&data->lock);
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
@@ -829,6 +844,7 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         mapping = rkmalloc(sizeof(*mapping), GFP_KERNEL);
         if (!mapping)
                 return -1;
+
         mapping->dev = data->dev;
         mapping->data = data;
         INIT_LIST_HEAD(&mapping->list);
