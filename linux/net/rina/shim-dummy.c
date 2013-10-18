@@ -158,8 +158,9 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
 
         if (!is_app_registered(data, dest)) {
                 char * tmp = name_tostring(dest);
-                LOG_ERR("Application %s is not registered in IPC process %d",
+                LOG_ERR("Application %s not registered to IPC process %d",
                         tmp, data->id);
+                if (tmp) rkfree(tmp);
                 return -1;
         }
 
@@ -367,11 +368,8 @@ static int dummy_application_register(struct ipcp_instance_data * data,
 
         if (is_app_registered(data, source)) {
                 char * tmp = name_tostring(source);
-
                 LOG_ERR("Application %s has been already registered", tmp);
-
-                rkfree(tmp);
-
+                if (tmp) rkfree(tmp);
                 return -1;
         }
 
@@ -388,21 +386,21 @@ static int dummy_application_register(struct ipcp_instance_data * data,
         if (name_cpy(source, app_reg->app_name)) {
                 char * tmp = name_tostring(source);
 
+                LOG_ERR("Application %s registration has failed", tmp);
+                if (tmp) rkfree(tmp);
+
                 name_destroy(app_reg->app_name);
                 rkfree(app_reg);
-
-                LOG_ERR("Application %s registration has failed", tmp);
-
-                rkfree(tmp);
 
                 return -1;
         }
 
         INIT_LIST_HEAD(&app_reg->list);
         list_add(&app_reg->list, &data->apps_registered);
+
         tmp = name_tostring(source);
         LOG_DBG("Application %s registered successfully", tmp);
-        rkfree(tmp);
+        if (tmp) rkfree(tmp);
 
         return 0;
 }
@@ -416,11 +414,8 @@ static int dummy_application_unregister(struct ipcp_instance_data * data,
 
         if (!is_app_registered(data, source)) {
                 char * tmp = name_tostring(source);
-
                 LOG_ERR("Application %s is not registered", tmp);
-
-                rkfree(tmp);
-
+                if (tmp) rkfree(tmp);
                 return -1;
         }
         app = find_app(data, source);
@@ -524,16 +519,17 @@ static int dummy_assign_to_dif(struct ipcp_instance_data * data,
         if (!data->info->dif_name) {
                 char * tmp = name_tostring(dif_information->dif_name);
                 LOG_ERR("Assingment of IPC Process to DIF %s failed", tmp);
-                rkfree(tmp);
+                if (tmp) rkfree(tmp);
+
                 rkfree(data->info);
 
                 return -1;
         }
 
         if (dif_information->configuration)
-                list_for_each_entry(
-                                    pos,
-                                    &(dif_information->configuration->ipcp_config_entries),
+                list_for_each_entry(pos,
+                                    &(dif_information->configuration->
+                                      ipcp_config_entries),
                                     next)
                         LOG_DBG("Configuration entry name: %s; value: %s",
                                 pos->entry->name,
