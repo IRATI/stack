@@ -177,6 +177,8 @@ static struct table * tbl_create(size_t ha_length)
         if (!instance)
                 return NULL;
 
+        LOG_DBG("Got memory, fillin' it up");
+
         instance->hal = ha_length;
         INIT_LIST_HEAD(&instance->entries);
         spin_lock_init(&instance->lock);
