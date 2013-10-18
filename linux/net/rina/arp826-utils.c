@@ -270,7 +270,7 @@ struct gha * gha_create_gfp(gfp_t           flags,
         gha = rkzalloc(sizeof(*gha), flags);
         if (!gha)
                 return NULL;
-        
+
         gha->type = type;
         switch (type) {
         case MAC_ADDR_802_3:
@@ -351,7 +351,7 @@ size_t gha_address_length(const struct gha * gha)
         case MAC_ADDR_802_3: tmp = sizeof(gha->data.mac_802_3); break;
         default:             BUG();                             break;
         }
-        
+
         return tmp;
 
 }
@@ -370,7 +370,7 @@ const uint8_t * gha_address(const struct gha * gha)
         case MAC_ADDR_802_3: tmp = gha->data.mac_802_3; break;
         default:             BUG();                     break; /* shut up */
         }
-        
+
         return tmp;
 }
 EXPORT_SYMBOL(gha_address);
@@ -412,37 +412,37 @@ bool gha_is_equal(const struct gha * a,
 }
 EXPORT_SYMBOL(gha_is_equal);
 
-struct net_device * gha_to_device(const struct gha * ha) 
+struct net_device * gha_to_device(const struct gha * ha)
 {
-	struct net_device *     dev;
-	struct netdev_hw_addr * hwa;
+        struct net_device *     dev;
+        struct netdev_hw_addr * hwa;
 
         if (!gha_is_ok(ha)) {
                 LOG_ERR("Wrong input, cannot get device from GHA");
                 return NULL;
         }
 
-	read_lock(&dev_base_lock);
+        read_lock(&dev_base_lock);
 
-	dev = first_net_device(&init_net);
-	while (dev) {
-		if (dev->addr_len == gha_address_length(ha)) {
-			for_each_dev_addr(dev, hwa) {
-				if (!memcmp(hwa->addr, 
-					    gha_address(ha), 
-					    gha_address_length(ha))) {
+        dev = first_net_device(&init_net);
+        while (dev) {
+                if (dev->addr_len == gha_address_length(ha)) {
+                        for_each_dev_addr(dev, hwa) {
+                                if (!memcmp(hwa->addr,
+                                            gha_address(ha),
+                                            gha_address_length(ha))) {
 
                                         read_unlock(&dev_base_lock);
-					return dev;
+                                        return dev;
                                 }
-			}
-		}
-		dev = next_net_device(dev);
-	}
+                        }
+                }
+                dev = next_net_device(dev);
+        }
 
-	read_unlock(&dev_base_lock);
+        read_unlock(&dev_base_lock);
 
-	return NULL;
+        return NULL;
 }
 EXPORT_SYMBOL(gha_to_device);
 

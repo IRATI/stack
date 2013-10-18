@@ -225,10 +225,15 @@ EXPORT_SYMBOL(name_dup);
 #define NAME_CMP_FIELD(X, Y, FIELD)                                     \
         ((X->FIELD && Y->FIELD) ? string_cmp(X->FIELD, Y->FIELD) : -1)
 
-int name_cmp(const struct name * a, const struct name * b)
+static int name_is_equal_internal(const struct name * a,
+                                  const struct name * b)
 {
-        if (!a || !b)
-                return -1;
+        if (a == b)
+                return 0;
+
+        ASSERT(a != b);
+
+        /* Now compare field by field */
 
         if (NAME_CMP_FIELD(a, b, process_name))
                 return -1;
@@ -241,7 +246,18 @@ int name_cmp(const struct name * a, const struct name * b)
 
         return 0;
 }
+
+int name_cmp(const struct name * a, const struct name * b)
+{
+        LOG_OBSOLETE_FUNC;
+
+        return name_is_equal_internal(a, b);
+}
 EXPORT_SYMBOL(name_cmp);
+
+bool name_is_equal(const struct name * a, const struct name * b)
+{ return !name_is_equal_internal(a, b) ? 1 : 0; }
+EXPORT_SYMBOL(name_is_equal);
 
 #define DELIMITER "/"
 
@@ -296,15 +312,15 @@ char * name_tostring(const struct name * n)
 EXPORT_SYMBOL(name_tostring);
 
 
-struct name * string_toname(const string_t * input) 
+struct name * string_toname(const string_t * input)
 {
-	struct name * name;
+        struct name * name;
 
         string_t *    tmp1   = NULL;
-	string_t *    tmp_pn = NULL;
-	string_t *    tmp_pi = NULL;
-	string_t *    tmp_en = NULL;
-	string_t *    tmp_ei = NULL;
+        string_t *    tmp_pn = NULL;
+        string_t *    tmp_pi = NULL;
+        string_t *    tmp_en = NULL;
+        string_t *    tmp_ei = NULL;
 
         if (input) {
                 string_t * tmp2;
@@ -312,15 +328,15 @@ struct name * string_toname(const string_t * input)
                 string_dup(input, &tmp1);
                 if (!tmp1) {
                         return NULL;
-                } 
+                }
                 tmp2 = tmp1;
-                
+
                 tmp_pn = strsep(&tmp2, DELIMITER);
                 tmp_pi = strsep(&tmp2, DELIMITER);
                 tmp_en = strsep(&tmp2, DELIMITER);
                 tmp_ei = strsep(&tmp2, DELIMITER);
         }
-        
+
         name = name_create_and_init(tmp_pn, tmp_pi, tmp_en, tmp_ei);
         if (!name) {
                 if (tmp1) rkfree(tmp1);
@@ -329,7 +345,7 @@ struct name * string_toname(const string_t * input)
 
         return name;
 }
-EXPORT_SYMBOL(string_toname); 
+EXPORT_SYMBOL(string_toname);
 
 static int string_dup_from_user(const string_t __user * src, string_t ** dst)
 {

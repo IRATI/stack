@@ -102,7 +102,7 @@ int dtp_destroy(struct dtp * instance)
 
         /* NOTE: The DTP State Vector cannot be discarded */
         ASSERT(instance->state_vector);
-        
+
         rkfree(instance->state_vector);
         rkfree(instance);
 
@@ -234,7 +234,7 @@ int dtp_send(struct dtp * instance,
 
         if (apply_policy_RexmsnQ(instance, sdu))
                 return -1;
-        
+
         /* Give the data to RMT now ! */
 
         LOG_MISSING;
@@ -262,7 +262,7 @@ static int delimiting_reassembly_separation(struct dtp * instance,
                                             struct pdu * pdu)
 {
         LOG_MISSING;
-        
+
         return -1;
 }
 

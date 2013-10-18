@@ -55,8 +55,11 @@
 #define LOG_HBEAT
 #endif
 
-#define LOG_MISSING     LOG_ERR("Missing code in %s:%d", __FILE__, __LINE__)
-#define LOG_UNSUPPORTED LOG_WARN("Unsupported feature hit in %s:%d",    \
-                                 __FILE__, __LINE__)
+#define LOG_OBSOLETE_FUNC LOG_ERR("Function %s is obsolete and it will be " \
+                                  "removed soon, do not use",           \
+                                  __FUNCTION__)
+#define LOG_MISSING       LOG_ERR("Missing code in %s:%d", __FILE__, __LINE__)
+#define LOG_UNSUPPORTED   LOG_WARN("Unsupported feature hit in %s:%d",  \
+                                   __FILE__, __LINE__)
 
 #endif

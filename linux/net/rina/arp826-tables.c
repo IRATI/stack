@@ -84,7 +84,7 @@ static int tble_init(struct table_entry * entry,
 
         entry->pa = pa;
         entry->ha = ha;
-        
+
         INIT_LIST_HEAD(&entry->next);
 
         return 0;
@@ -103,7 +103,7 @@ struct table_entry * tble_create(struct gpa * gpa,
         entry = rkmalloc(sizeof(*entry), GFP_KERNEL);
         if (!entry)
                 return NULL;
- 
+
         if (tble_init(entry, gpa_dup(gpa), gha_dup(gha))) {
                 rkfree(entry);
                 return NULL;
@@ -176,6 +176,8 @@ static struct table * tbl_create(size_t ha_length)
         instance = rkmalloc(sizeof(*instance), GFP_KERNEL);
         if (!instance)
                 return NULL;
+
+        LOG_DBG("Got memory, fillin' it up");
 
         instance->hal = ha_length;
         INIT_LIST_HEAD(&instance->entries);
@@ -475,7 +477,7 @@ int tbls_destroy(uint16_t ptype)
                 return -1;
         }
         tmap_entry_remove(e);
-        
+
         spin_unlock(&tables_lock); /* No need to hold the lock anymore */
 
         cl = tmap_entry_value(e);
@@ -525,7 +527,7 @@ int arp826_add(uint16_t           ptype,
                 LOG_ERR("Cannot remove, bad input parameters");
                 return -1;
         }
-        
+
         cl = tbls_find(ptype);
         if (!cl)
                 return -1;

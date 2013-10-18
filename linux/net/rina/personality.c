@@ -87,7 +87,7 @@ void rina_personality_exit(void)
 
         kset_unregister(personalities);
         personalities       = NULL;
-        default_personality = NULL;        
+        default_personality = NULL;
 
         LOG_DBG("Personality layer finalized successfully");
 }
@@ -203,7 +203,7 @@ struct personality * rina_personality_register(const char *              name,
                 LOG_ERR("Personality '%s' already registered", name);
                 return NULL;
         }
-        
+
         pers = rkzalloc(sizeof(*pers), GFP_KERNEL);
         if (!pers)
                 return NULL;
