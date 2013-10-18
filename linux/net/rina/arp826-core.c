@@ -245,16 +245,6 @@ static int regression_tests_table(void)
 
 static int __init mod_init(void)
 {
-        LOG_DBG("Initializing");
-
-        if (tbls_init())
-                return -1;
-
-        if (arm_init()) {
-                tbls_fini();
-                return -1;
-        }
-
 #ifdef CONFIG_ARP826_REGRESSION_TESTS
         LOG_DBG("Starting regression tests");
 
@@ -273,6 +263,16 @@ static int __init mod_init(void)
 
         LOG_DBG("Regression tests completed successfully");
 #endif
+
+        LOG_DBG("Initializing");
+
+        if (tbls_init())
+                return -1;
+
+        if (arm_init()) {
+                tbls_fini();
+                return -1;
+        }
 
         if (protocol_add(ETH_P_RINA, 6)) {
                 tbls_fini();
