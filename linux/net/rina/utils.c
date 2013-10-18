@@ -26,10 +26,6 @@
 /* For RWQ */
 #include <linux/workqueue.h>
 
-/* For RMAP */
-#include <linux/hashtable.h>
-#include <linux/list.h>
-
 #define RINA_PREFIX "utils"
 
 #include "logs.h"
@@ -112,7 +108,7 @@ static void mb_poison(void * ptr, size_t size)
         p = (uint8_t *) ptr;
 
         LOG_DBG("Poisoning memory %pK-%pK (%zd bytes)", p, p + size - 1, size);
-        
+
         for (i = 0; i < size; i++) {
                 *p = (uint8_t) i;
                 p++;
@@ -146,7 +142,7 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
         real_size += sizeof(*header) + sizeof(*footer);
 #endif
-        
+
         ptr = alloc_func(real_size, flags);
         if (!ptr) {
                 LOG_ERR("Cannot allocate %zd bytes", size);
@@ -244,7 +240,7 @@ char * strdup_from_user(const char __user * src)
         char * tmp;
 
         if (!src)
-        	return NULL;
+                return NULL;
 
         size = strlen_user(src); /* Includes the terminating NUL */
         if (!size)

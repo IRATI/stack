@@ -46,7 +46,7 @@ int rina_debug_init(void)
                 LOG_DBG("Cannot setup debug-fs support");
                 return -1;
         }
-        
+
         LOG_DBG("Debug-fs support initialized successfully");
 #endif
 

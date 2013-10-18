@@ -195,10 +195,10 @@ int arp826_resolve_gpa(uint16_t           ptype,
         resolution = rkzalloc(sizeof(*resolution), GFP_KERNEL);
         if (!resolution)
                 return -1;
-        
+
         resolution->data = resolve_data_create(ptype,
                                                gpa_dup(spa), gha_dup(sha),
-                                               gpa_dup(tpa), NULL); 
+                                               gpa_dup(tpa), NULL);
         if (!resolution->data) {
                 rkfree(resolution);
                 return -1;
@@ -227,7 +227,7 @@ int arm_init(void)
         spin_lock_init(&resolutions_lock);
         INIT_LIST_HEAD(&resolutions_ongoing);
 
-        LOG_DBG("Initialed successfully");
+        LOG_DBG("Initialized successfully");
 
         return 0;
 }

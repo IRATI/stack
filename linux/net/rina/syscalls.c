@@ -120,9 +120,9 @@ SYSCALL_DEFINE1(connection_destroy,
                 cep_id_t, id)
 {
         long retval;
-        
+
         CALL_DEFAULT_PERSONALITY(retval, connection_destroy, id);
-        
+
         return retval;
 }
 
@@ -138,49 +138,49 @@ SYSCALL_DEFINE2(connection_update,
 }
 
 SYSCALL_DEFINE3(sdu_read,
-		port_id_t,     id,
-		void __user *, buffer,
-		size_t,        size)
+                port_id_t,     id,
+                void __user *, buffer,
+                size_t,        size)
 {
-	ssize_t      retval;
+        ssize_t      retval;
 
-	struct sdu * tmp;
-	size_t       retsize;
+        struct sdu * tmp;
+        size_t       retsize;
 
-	tmp = NULL;
+        tmp = NULL;
 
-	CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, &tmp);
-	/* Taking ownership from the internal layers */
+        CALL_DEFAULT_PERSONALITY(retval, sdu_read, id, &tmp);
+        /* Taking ownership from the internal layers */
 
-	LOG_DBG("Personality returned value %zd", retval);
+        LOG_DBG("Personality returned value %zd", retval);
 
-	if (retval)
-		return -EFAULT;
+        if (retval)
+                return -EFAULT;
 
-	if (!is_sdu_ok(tmp))
-		return -EFAULT;
+        if (!is_sdu_ok(tmp))
+                return -EFAULT;
 
-	/* NOTE: We don't handle partial copies */
-	if (tmp->buffer->size > size) {
-		LOG_ERR("Partial copies not handled. SDU size: %zd, "
+        /* NOTE: We don't handle partial copies */
+        if (tmp->buffer->size > size) {
+                LOG_ERR("Partial copies not handled. SDU size: %zd, "
                         "User space buffer size: %zd",
                         tmp->buffer->size, size);
-		sdu_destroy(tmp);
-		return -EFAULT;
-	}
+                sdu_destroy(tmp);
+                return -EFAULT;
+        }
 
-	if (copy_to_user(buffer,
-			tmp->buffer->data,
-			tmp->buffer->size)) {
-		LOG_ERR("Error copying data to user-space");
-		sdu_destroy(tmp);
-		return -EFAULT;
-	}
+        if (copy_to_user(buffer,
+                         tmp->buffer->data,
+                         tmp->buffer->size)) {
+                LOG_ERR("Error copying data to user-space");
+                sdu_destroy(tmp);
+                return -EFAULT;
+        }
 
-	retsize = tmp->buffer->size;
-	sdu_destroy(tmp);
+        retsize = tmp->buffer->size;
+        sdu_destroy(tmp);
 
-	return retsize;
+        return retsize;
 }
 
 SYSCALL_DEFINE3(sdu_write,
@@ -195,7 +195,7 @@ SYSCALL_DEFINE3(sdu_write,
 
         if (!buffer || !size)
                 return -EFAULT;
-        
+
         LOG_DBG("Syscall write SDU of size %zd called with port-id %d",
                 size, id);
 

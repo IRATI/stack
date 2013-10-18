@@ -86,6 +86,8 @@ int           name_cpy_from_user(const struct name __user * src,
 /* Compares two names, returns 0 if they are equal */
 int           name_cmp(const struct name * a, const struct name * b);
 
+bool          name_is_equal(const struct name * a, const struct name * b);
+
 /* Returns a name as a (newly allocated) string */
 char *        name_tostring(const struct name * n);
 

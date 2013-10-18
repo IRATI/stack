@@ -65,7 +65,7 @@ struct dtcp_sv {
 
         /* Outbound */
         seq_num_t    last_snd_data_ack;
-        
+
         /*
          * Seq number of the lowest seq number expected to be
          * Acked. Seq number of the first PDU on the
@@ -110,7 +110,7 @@ struct dtcp_sv {
 
         /* Value of credit in this flow */
         uint_t       rcvr_rt_wind_edge;
-        
+
         /*
          * Current rate receiver has told sender it may send PDUs
          * at.
@@ -181,19 +181,19 @@ static struct dtcp_sv default_sv = {
 
 static struct dtcp_policies default_policies = {
         .flow_init                   = NULL,
-        .sv_update                   = NULL, 
-        .lost_control_pdu            = NULL, 
-        .rtt_estimator               = NULL, 
-        .retransmission_timer_expiry = NULL, 
-        .received_retransmission     = NULL, 
-        .sending_ack                 = NULL, 
-        .sending_ack_list            = NULL, 
-        .initial_creadit             = NULL, 
-        .initial_rate                = NULL, 
-        .receiving_flow_control      = NULL, 
-        .update_credit               = NULL, 
-        .flow_control_overrun        = NULL, 
-        .reconcile_flow_conflict     = NULL, 
+        .sv_update                   = NULL,
+        .lost_control_pdu            = NULL,
+        .rtt_estimator               = NULL,
+        .retransmission_timer_expiry = NULL,
+        .received_retransmission     = NULL,
+        .sending_ack                 = NULL,
+        .sending_ack_list            = NULL,
+        .initial_creadit             = NULL,
+        .initial_rate                = NULL,
+        .receiving_flow_control      = NULL,
+        .update_credit               = NULL,
+        .flow_control_overrun        = NULL,
+        .reconcile_flow_conflict     = NULL,
 };
 
 struct dtcp * dtcp_create(void)

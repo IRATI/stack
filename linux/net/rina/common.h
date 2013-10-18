@@ -95,7 +95,7 @@ struct flow_spec {
         uint_t peak_sdu_bandwidth_duration;
 
         /* A value of 0 indicates 'do not care' */
-	/* FIXME: This uint_t has to be transformed back to double */
+        /* FIXME: This uint_t has to be transformed back to double */
         uint_t undetected_bit_error_rate;
         /* Indicates if partial delivery of SDUs is allowed or not */
         bool   partial_delivery;
@@ -126,18 +126,18 @@ struct flow_spec {
 
 /* FIXME: Move RNL related types to RNL header(s) */
 
-typedef char	      regex_t; /* FIXME: must be a string */
+typedef char          regex_t; /* FIXME: must be a string */
 
 /* FIXME: needed for nl api */
 enum rib_object_class_t {
-	EMPTY,
+        EMPTY,
 };
 
 /* FIXME: Remove rib_obj_ prefix, it's unneeded */
 struct rib_object {
-	enum rib_object_class_t rib_obj_class;
-	string_t *              rib_obj_name;
-	long unsigned int	rib_obj_instance;
+        enum rib_object_class_t rib_obj_class;
+        string_t *              rib_obj_name;
+        long unsigned int       rib_obj_instance;
 };
 
 #endif
