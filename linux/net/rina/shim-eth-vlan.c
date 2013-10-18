@@ -591,7 +591,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 
         /* Get the SDU out of the sk_buff */
         nh = skb_network_header(skb);
-        du = sdu_create_from(nh, strlen(nh));
+        du = sdu_create_from(nh, skb->tail - skb->network_header);
 
         /* If the flow cannot be found --> New Flow! */
         if (!flow) {
