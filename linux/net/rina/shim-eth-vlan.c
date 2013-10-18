@@ -456,6 +456,10 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
 
         if (data->app_name) {
                 char * tmp = name_tostring(data->app_name);
+		if (!tmp) {
+			LOG_ERR("Failed to construct string from name");
+			return -1;
+		}
                 LOG_ERR("Application %s is already registered", tmp);
                 rkfree(tmp);
                 return -1;
@@ -464,6 +468,10 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
         data->app_name = name_dup(name);
         if (!data->app_name) {
                 char * tmp = name_tostring(name);
+		if (!tmp) {
+			LOG_ERR("Failed to construct string from name");
+			return -1;
+		}
                 LOG_ERR("Application %s registration has failed", tmp);
                 rkfree(tmp);
                 return -1;
@@ -539,32 +547,37 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         flow = find_flow(data, id);
         if (!flow) {
                 LOG_ERR("Flow does not exist, you shouldn't call this");
-		rkfree(sdu);
+		if (sdu_destroy(sdu))
+			LOG_ERR("Could not destroy SDU");
                 return -1;
         }
 
         if (flow->port_id_state != PORT_STATE_ALLOCATED) {
                 LOG_ERR("Flow is not in the right state to call this"); 
-		rkfree(sdu);
+		if (sdu_destroy(sdu))
+			LOG_ERR("Could not destroy SDU");
                 return -1;
         }
 
         src_hw = data->dev->dev_addr;
 	if (!src_hw) {
 		LOG_ERR("Failed to get src hw addr");
-		rkfree(sdu);
+		if (sdu_destroy(sdu))
+			LOG_ERR("Could not destroy SDU");
 		return -1;
 	}
         dest_hw = gha_address(flow->dest_ha);
 	if (!dest_hw) {
 		LOG_ERR("Dest hw is not known");
-		rkfree(sdu);
+		if (sdu_destroy(sdu))
+			LOG_ERR("Could not destroy SDU");
 		return -1;
 	}
 
         skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
         if (skb == NULL) {
-		rkfree(sdu);
+		if (sdu_destroy(sdu))
+			LOG_ERR("Could not destroy SDU");
 		return -1;
 	}
 
@@ -579,14 +592,17 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         if (dev_hard_header(skb, data->dev, ETH_P_RINA,
                             dest_hw, src_hw, skb->len) < 0) {
                 kfree_skb(skb);
-                rkfree(sdu);
+		if (sdu_destroy(sdu))
+			LOG_ERR("Could not destroy SDU");
                 return -1;
         }
 
         dev_queue_xmit(skb);
 
-        rkfree(sdu);
-
+	if (sdu_destroy(sdu)) {
+		LOG_ERR("Could not destroy SDU");
+                return -1;
+	}
         return 0;
 }
 
