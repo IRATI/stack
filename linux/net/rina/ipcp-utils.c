@@ -225,7 +225,8 @@ EXPORT_SYMBOL(name_dup);
 #define NAME_CMP_FIELD(X, Y, FIELD)                                     \
         ((X->FIELD && Y->FIELD) ? string_cmp(X->FIELD, Y->FIELD) : -1)
 
-int name_cmp(const struct name * a, const struct name * b)
+static int name_is_equal_internal(const struct name * a,
+                                  const struct name * b)
 {
         if (!a || !b)
                 return -1;
@@ -241,7 +242,18 @@ int name_cmp(const struct name * a, const struct name * b)
 
         return 0;
 }
+
+int name_cmp(const struct name * a, const struct name * b)
+{
+        LOG_OBSOLETE_FUNC;
+
+        return name_is_equal_internal(a, b);
+}
 EXPORT_SYMBOL(name_cmp);
+
+bool name_is_equal(const struct name * a, const struct name * b)
+{ return !name_cmp(a, b) ? 1 : 0; }
+EXPORT_SYMBOL(name_is_equal);
 
 #define DELIMITER "/"
 
