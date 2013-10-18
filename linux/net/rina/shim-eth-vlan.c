@@ -248,8 +248,26 @@ static string_t * create_vlan_interface_name(string_t *    interface_name,
         LOG_DBG("Building complete VLAN interface name ('%s', %lu)",
                 interface_name, vlan_id);
 
-        snprintf(string_vlan_id, sizeof(string_vlan_id), "%4lu", vlan_id);
-        string_vlan_id[sizeof(string_vlan_id) - 1] = 0;
+        if (vlan_id < 10) {
+                snprintf(string_vlan_id, sizeof(string_vlan_id), "%1lu",
+                                vlan_id);
+                string_vlan_id[1] = 0;
+        } else if (vlan_id < 100) {
+                snprintf(string_vlan_id, sizeof(string_vlan_id), "%2lu",
+                                vlan_id);
+                string_vlan_id[2] = 0;
+        } else if (vlan_id < 1000) {
+                snprintf(string_vlan_id, sizeof(string_vlan_id), "%3lu",
+                                vlan_id);
+                string_vlan_id[3] = 0;
+        } else if (vlan_id < 10000) {
+                snprintf(string_vlan_id, sizeof(string_vlan_id), "%4lu",
+                                vlan_id);
+                string_vlan_id[4] = 0;
+        } else {
+                LOG_ERR("VLAN id is to high: %lu", vlan_id);
+                return NULL;
+        }
 
         LOG_DBG("VLAN id is '%s'", string_vlan_id);
 
