@@ -390,7 +390,7 @@ void tbl_remove(struct table *             instance,
 }
 
 static spinlock_t tables_lock;
-struct tmap *     tables;
+struct tmap *     tables = NULL;
 
 struct table * tbls_find(uint16_t ptype)
 {
@@ -417,16 +417,14 @@ int tbls_create(uint16_t ptype, size_t hwlen)
         struct table *      cl;
         struct tmap_entry * e;
 
-        /* FIXME: Crappy, please rearrange it better */
+        LOG_DBG("Creating table for ptype = 0x%02x, hwlen = %zd",
+                ptype, hwlen);
+
         cl = tbls_find(ptype);
         if (cl) {
                 LOG_WARN("Table for ptype 0x%02x already created",ptype);
                 return 0;
         }
-
-        /* FIXME: Is the hwlen correct ? */
-        LOG_DBG("Creating table for ptype = 0x%02x, hwlen = %zd",
-                ptype, hwlen);
 
         cl = tbl_create(hwlen);
         if (!cl) {
@@ -496,9 +494,15 @@ int tbls_init(void)
 {
         LOG_DBG("Initializing");
 
+        if (tables) {
+                LOG_WARN("Tables already initialized, bailing out");
+                return 0;
+        }
+
         tables = tmap_create();
         if (!tables)
                 return -1;
+
         spin_lock_init(&tables_lock);
 
         LOG_DBG("Initialized successfully");
@@ -508,13 +512,18 @@ int tbls_init(void)
 
 void tbls_fini(void)
 {
+        if (!tables) {
+                LOG_WARN("Already finalized, bailing out ...");
+                return;
+        }
+
         LOG_DBG("Finalizing");
 
         ASSERT(tmap_empty(tables));
 
         tmap_destroy(tables);
 
-        LOG_DBG("Finalized successfully");
+        tables = NULL;
 }
 
 int arp826_add(uint16_t           ptype,
