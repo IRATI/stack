@@ -171,9 +171,8 @@ static struct gpa * name_to_gpa(const struct name * name)
         struct gpa * addr;
 
         delimited_name = name_tostring(name);
-        addr = gpa_create(delimited_name,
-                          strlen(delimited_name));
-
+        addr           = gpa_create(delimited_name,
+                                    strlen(delimited_name));
 
         return addr;
 }
@@ -218,9 +217,9 @@ static string_t * create_vlan_interface_name(string_t * interface_name,
 
         sprintf(string_vlan_id,"%lu",vlan_id);
 
-        complete_interface = rkzalloc(
-                                      strlen(interface_name) + 2*sizeof(char)
-                                      + strlen(string_vlan_id),
+        complete_interface = rkzalloc(strlen(interface_name) +
+                                      2 * sizeof(char)       +
+                                      strlen(string_vlan_id),
                                       GFP_KERNEL);
         strcat(complete_interface, interface_name);
         strcat(complete_interface, ".");
