@@ -176,7 +176,7 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
 #endif
 
 #ifdef CONFIG_RINA_MEMORY_PTRS_DUMP
-        LOG_DBG("rkmalloc(%zd) = %pK %s", size, ptr);
+        LOG_DBG("rkmalloc(%zd) = %pK", size, ptr);
 #endif
 
         return ptr;
