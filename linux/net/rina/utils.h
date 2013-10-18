@@ -24,11 +24,11 @@
 #include <linux/kobject.h>
 #define RINA_ATTR_RO(NAME)                              \
         static struct kobj_attribute NAME##_attr =      \
-		 __ATTR_RO(NAME)
+                __ATTR_RO(NAME)
 
 #define RINA_ATTR_RW(NAME)                                      \
         static struct kobj_attribute NAME##_attr =              \
-		__ATTR(NAME, 0644, NAME##show, NAME##store)
+                __ATTR(NAME, 0644, NAME##show, NAME##store)
 
 #include <linux/string.h>
 
@@ -67,158 +67,158 @@ int                       rwq_post(struct workqueue_struct * rwq,
 #define RMAP_ITERATOR_TYPE(PREFIX) struct PREFIX##_map_iterator
 
 #define DECLARE_RMAP(PREFIX, BITS)              \
-RMAP_TYPE(PREFIX) {                             \
-        DECLARE_HASHTABLE(table, BITS);         \
-};
+        RMAP_TYPE(PREFIX) {                     \
+                DECLARE_HASHTABLE(table, BITS); \
+        };
 
 #define DEFINE_RMAP_ITERATOR(PREFIX, KEY_TYPE, VALUE_TYPE)      \
-struct PREFIX##_map_iterator {                                  \
-        KEY_TYPE          key;                                  \
-        VALUE_TYPE *      value;                                \
-        struct hlist_node hlist;                                \
-};
+        struct PREFIX##_map_iterator {                          \
+                KEY_TYPE          key;                          \
+                VALUE_TYPE *      value;                        \
+                struct hlist_node hlist;                        \
+        };
 
-#define DEFINE_RMAP_CREATE(PREFIX)                      \
-RMAP_TYPE(PREFIX) * PREFIX##_create(void)               \
-{                                                       \
-        RMAP_TYPE(PREFIX) * tmp;                        \
-                                                        \
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);       \
-        if (!tmp)                                       \
-                return NULL;                            \
-                                                        \
-        hash_init(tmp->table);                          \
-                                                        \
-        return tmp;                                     \
-}
+#define DEFINE_RMAP_CREATE(PREFIX)                              \
+        RMAP_TYPE(PREFIX) * PREFIX##_create(void)               \
+        {                                                       \
+                RMAP_TYPE(PREFIX) * tmp;                        \
+                                                                \
+                tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);       \
+                if (!tmp)                                       \
+                        return NULL;                            \
+                                                                \
+                hash_init(tmp->table);                          \
+                                                                \
+                return tmp;                                     \
+        }
 
-#define DEFINE_RMAP_EMPTY(PREFIX)               \
-int PREFIX_##_empty(RMAP_TYPE(PREFIX) * map))   \
-{                                               \
-        ASSERT(map);                            \
-                                                \
-        return hash_empty(map->table);          \
-}
+#define DEFINE_RMAP_EMPTY(PREFIX)                       \
+        int PREFIX_##_empty(RMAP_TYPE(PREFIX) * map))   \
+        {                                               \
+                ASSERT(map);                            \
+                                                        \
+                return hash_empty(map->table);          \
+        }
 
 #define DEFINE_RMAP_DESTROY(PREFIX, VALUE_TYPE)                         \
-int PREFIX##_destroy(RMAP_TYPE(PREFIX) * map,                           \
-                     void             (* dtor)(VALUE_TYPE * value))     \
-{                                                                       \
-        RMAP_ITERATOR_TYPE(PREFIX) *  iter;                             \
-        struct hlist_node *           tmp;                              \
-        int                           bucket;                           \
+        int PREFIX##_destroy(RMAP_TYPE(PREFIX) * map,                   \
+                             void             (* dtor)(VALUE_TYPE * value)) \
+        {                                                               \
+                RMAP_ITERATOR_TYPE(PREFIX) *  iter;                     \
+                struct hlist_node *           tmp;                      \
+                int                           bucket;                   \
                                                                         \
-        ASSERT(map);                                                    \
+                ASSERT(map);                                            \
                                                                         \
-        hash_for_each_safe(map->table, bucket, tmp, iter, hlist) {      \
-                hash_del(&iter->hlist);                                 \
-                if (dtor) dtor(iter->value); 	                        \
-                rkfree(iter);                                           \
-        }                                                               \
+                hash_for_each_safe(map->table, bucket, tmp, iter, hlist) { \
+                        hash_del(&iter->hlist);                         \
+                        if (dtor) dtor(iter->value);                    \
+                        rkfree(iter);                                   \
+                }                                                       \
                                                                         \
-        rkfree(map);                                                    \
+                rkfree(map);                                            \
                                                                         \
-        return 0;                                                       \
-}
+                return 0;                                               \
+        }
 
 #define DEFINE_RMAP_FIND(PREFIX)                                        \
-static RMAP_ITERATOR_TYPE(PREFIX) * rmap_find(RMAP_TYPE(PREFIX) * map,  \
-                                              KEY_TYPE            key)  \
-{                                                                       \
-        RMAP_ITERATOR_TYPE(PREFIX) * iter;                              \
-        struct hlist_head *          head;                              \
+        static RMAP_ITERATOR_TYPE(PREFIX) * rmap_find(RMAP_TYPE(PREFIX) * map, \
+                                                      KEY_TYPE            key) \
+        {                                                               \
+                RMAP_ITERATOR_TYPE(PREFIX) * iter;                      \
+                struct hlist_head *          head;                      \
                                                                         \
-        ASSERT(map);                                                    \
+                ASSERT(map);                                            \
                                                                         \
-        head = &map->table[__RMAP_HASH(map->table, key)];               \
-        hlist_for_each_entry(iter, head, hlist) {                       \
-                if (iter->key == key)                                   \
-                        return iter;                                    \
-        }                                                               \
+                head = &map->table[__RMAP_HASH(map->table, key)];       \
+                hlist_for_each_entry(iter, head, hlist) {               \
+                        if (iter->key == key)                           \
+                                return iter;                            \
+                }                                                       \
                                                                         \
-        return NULL;                                                    \
-}
+                return NULL;                                            \
+        }
 
-#define DEFINE_RMAP_UPDATE(PREFIX)              \
-int rmap_update(RMAP_TYPE(PREFIX) * map,        \
-                KEY_TYPE            key,        \
-                VALUE_TYPE          value)      \
-{                                               \
-        RMAP_ITERATOR_TYPE(PREFIX) * cur;       \
-                                                \
-        ASSERT(map);                            \
-                                                \
-        cur = PREFIX##_find(map, key);          \
-        if (!cur)                               \
-                return -1;                      \
-                                                \
-        cur->value = value;                     \
-                                                \
-        return 0;                               \
-}
+#define DEFINE_RMAP_UPDATE(PREFIX)                      \
+        int rmap_update(RMAP_TYPE(PREFIX) * map,        \
+                        KEY_TYPE            key,        \
+                        VALUE_TYPE          value)      \
+        {                                               \
+                RMAP_ITERATOR_TYPE(PREFIX) * cur;       \
+                                                        \
+                ASSERT(map);                            \
+                                                        \
+                cur = PREFIX##_find(map, key);          \
+                if (!cur)                               \
+                        return -1;                      \
+                                                        \
+                cur->value = value;                     \
+                                                        \
+                return 0;                               \
+        }
 
-#define DEFINE_RMAP_ADD(PREFIX)                         \
-int PREFIX##_add(RMAP_TYPE(PREFIX) * map,               \
-                 KEY_TYPE            key,               \
-                 VALUE_TYPE *        value)             \
-{                                                       \
-        RMAP_ITERATOR_TYPE(PREFIX) * tmp;               \
-                                                        \
-        ASSERT(map);                                    \
-                                                        \
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);       \
-        if (!tmp)                                       \
-                return -1;                              \
-                                                        \
-        tmp->key   = key;                               \
-        tmp->value = value;                             \
-        INIT_HLIST_NODE(&tmp->hlist);                   \
-                                                        \
-        hash_add(map->table, &tmp->hlist, key);         \
-                                                        \
-        return 0;                                       \
-}
+#define DEFINE_RMAP_ADD(PREFIX)                                 \
+        int PREFIX##_add(RMAP_TYPE(PREFIX) * map,               \
+                         KEY_TYPE            key,               \
+                         VALUE_TYPE *        value)             \
+        {                                                       \
+                RMAP_ITERATOR_TYPE(PREFIX) * tmp;               \
+                                                                \
+                ASSERT(map);                                    \
+                                                                \
+                tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);       \
+                if (!tmp)                                       \
+                        return -1;                              \
+                                                                \
+                tmp->key   = key;                               \
+                tmp->value = value;                             \
+                INIT_HLIST_NODE(&tmp->hlist);                   \
+                                                                \
+                hash_add(map->table, &tmp->hlist, key);         \
+                                                                \
+                return 0;                                       \
+        }
 
-#define RMAP_REMOVE(PREFIX)                     \
-int PREFIX##_remove(RMAP_TYPE(PREFIX) * map,    \
-                    TYPE_KEY            key)    \
-{                                               \
-        RMAP_ITERATOR_TYPE(PREFIX) * iter;      \
-                                                \
-        ASSERT(map);                            \
-                                                \
-        iter = PREFIX_##_find(map, key);        \
-        if (!iter)                              \
-                return -1;                      \
-                                                \
-        hash_del(&iter->hlist);                 \
-        rkfree(iter);                           \
-                                                \
-        return 0;                               \
-}
+#define RMAP_REMOVE(PREFIX)                             \
+        int PREFIX##_remove(RMAP_TYPE(PREFIX) * map,    \
+                            TYPE_KEY            key)    \
+        {                                               \
+                RMAP_ITERATOR_TYPE(PREFIX) * iter;      \
+                                                        \
+                ASSERT(map);                            \
+                                                        \
+                iter = PREFIX_##_find(map, key);        \
+                if (!iter)                              \
+                        return -1;                      \
+                                                        \
+                hash_del(&iter->hlist);                 \
+                rkfree(iter);                           \
+                                                        \
+                return 0;                               \
+        }
 
-#define RMAP_ERASE(PREFIX)                              \
-int PREFIX##_erase(RMAP_TYPE(PREFIX) *          map,    \
-                   RMAP_ITERATOR_TYPE(PREFIX) * iter)   \
-{                                                       \
-        ASSERT(map);                                    \
-                                                        \
-        hash_del(&iter->hlist);                         \
-        rkfree(iter);                                   \
-                                                        \
-        return 0;                                       \
-}
+#define RMAP_ERASE(PREFIX)                                      \
+        int PREFIX##_erase(RMAP_TYPE(PREFIX) *          map,    \
+                           RMAP_ITERATOR_TYPE(PREFIX) * iter)   \
+        {                                                       \
+                ASSERT(map);                                    \
+                                                                \
+                hash_del(&iter->hlist);                         \
+                rkfree(iter);                                   \
+                                                                \
+                return 0;                                       \
+        }
 
 #define RMAP_FIND(PREFIX)                                               \
-RMAP_ITERATOR_TYPE(PREFIX) * PREFIX##find(RMAP_TYPE(PREFIX) * map,      \
-                                          TYPE_KEY            key)      \
-{                                                                       \
-        RMAP_ITERATOR_TYPE(PREFIX) * iter;                              \
+        RMAP_ITERATOR_TYPE(PREFIX) * PREFIX##find(RMAP_TYPE(PREFIX) * map, \
+                                                  TYPE_KEY            key) \
+        {                                                               \
+                RMAP_ITERATOR_TYPE(PREFIX) * iter;                      \
                                                                         \
-        ASSERT(map);                                                    \
+                ASSERT(map);                                            \
                                                                         \
-        iter = PREFIX##_find(map, key);                                 \
-        return iter;                                                    \
-}
+                iter = PREFIX##_find(map, key);                         \
+                return iter;                                            \
+        }
 
 #endif
