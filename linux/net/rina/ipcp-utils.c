@@ -228,8 +228,12 @@ EXPORT_SYMBOL(name_dup);
 static int name_is_equal_internal(const struct name * a,
                                   const struct name * b)
 {
-        if (!a || !b)
-                return -1;
+        if (a == b)
+                return 0;
+
+        ASSERT(a != b);
+
+        /* Now compare field by field */
 
         if (NAME_CMP_FIELD(a, b, process_name))
                 return -1;
@@ -252,7 +256,7 @@ int name_cmp(const struct name * a, const struct name * b)
 EXPORT_SYMBOL(name_cmp);
 
 bool name_is_equal(const struct name * a, const struct name * b)
-{ return !name_cmp(a, b) ? 1 : 0; }
+{ return !name_is_equal_internal(a, b) ? 1 : 0; }
 EXPORT_SYMBOL(name_is_equal);
 
 #define DELIMITER "/"
