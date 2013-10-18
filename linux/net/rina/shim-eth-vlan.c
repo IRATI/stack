@@ -953,6 +953,8 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
 
         spin_lock_init(&inst->data->lock);
 
+        INIT_LIST_HEAD(&(inst->data->flows));
+
         /*
          * Bind the shim-instance to the shims set, to keep all our data
          * structures linked (somewhat) together
