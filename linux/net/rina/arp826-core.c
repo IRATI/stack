@@ -186,6 +186,61 @@ static int regression_tests_gha(void)
 
         return 0;
 }
+
+static int regression_tests_table(void)
+{
+        struct table * x;
+
+        LOG_DBG("Table regression tests");
+
+        LOG_DBG("Regression test #1");
+        if (tbls_init())
+                return -1;
+
+        LOG_DBG("Regression test #2");
+
+        LOG_DBG("Regression test #2.1");
+        if (tbls_create(10, 3))
+                return -1;
+        LOG_DBG("Regression test #2.2");
+        if (tbls_create(21, 6))
+                return -1;
+        LOG_DBG("Regression test #2.3");
+        if (tbls_create(37, 31))
+                return -1;
+
+        LOG_DBG("Regression test #3");
+
+        LOG_DBG("Regression test #3.1");
+        x = tbls_find(10);
+        if (!x)
+                return -1;
+        LOG_DBG("Regression test #3.2");
+        x = tbls_find(21);
+        if (!x)
+                return -1;
+        LOG_DBG("Regression test #3.3");
+        x = tbls_find(37);
+        if (!x)
+                return -1;
+        
+        LOG_DBG("Regression test #4");
+
+        LOG_DBG("Regression test #4.1");
+        if (tbls_destroy(10))
+                return -1;
+        LOG_DBG("Regression test #4.2");
+        if (tbls_destroy(21))
+                return -1;
+        LOG_DBG("Regression test #4.3");
+        if (tbls_destroy(37))
+            return -1;
+
+        LOG_DBG("Regression test #5");        
+        tbls_fini();
+
+        return 0;
+}
 #endif
 
 static int __init mod_init(void)
@@ -209,6 +264,10 @@ static int __init mod_init(void)
         }
         if (regression_tests_gha()) {
                 LOG_ERR("GHA regression tests failed, bailing out");
+                return -1;
+        }
+        if (regression_tests_table()) {
+                LOG_ERR("Table regression tests failed, bailing out");
                 return -1;
         }
 
