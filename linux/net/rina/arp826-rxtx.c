@@ -45,12 +45,12 @@ static struct sk_buff * arp_create(struct net_device * dev,
                                    const struct gpa *  tpa,
                                    const struct gha *  tha)
 {
-	struct sk_buff *    skb;
-	struct arp_header * arp;
-	unsigned char *     arp_ptr;
+        struct sk_buff *    skb;
+        struct arp_header * arp;
+        unsigned char *     arp_ptr;
         size_t              hlen;
         size_t              tlen;
-	size_t              length;
+        size_t              length;
 
         ASSERT(dev &&
                gpa_is_ok(spa) && gha_is_ok(sha) &&
@@ -81,24 +81,24 @@ static struct sk_buff * arp_create(struct net_device * dev,
                 return NULL;
         }
 
-	hlen   = LL_RESERVED_SPACE(dev);
-	tlen   = dev->needed_tailroom;
+        hlen   = LL_RESERVED_SPACE(dev);
+        tlen   = dev->needed_tailroom;
         length = sizeof(struct arp_header) +
                 (gpa_address_length(spa) + gha_address_length(sha)) * 2;
 
-	skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
-	if (skb == NULL)
-		return NULL;
+        skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
+        if (skb == NULL)
+                return NULL;
 
-	skb_reserve(skb, hlen);
-	skb_reset_network_header(skb);
-	arp = (struct arp_header *) skb_put(skb, length);
+        skb_reserve(skb, hlen);
+        skb_reset_network_header(skb);
+        arp = (struct arp_header *) skb_put(skb, length);
 
-	skb->dev      = dev;
-	skb->protocol = htons(ptype);
+        skb->dev      = dev;
+        skb->protocol = htons(ptype);
 
         /* Fill the device header for the ARP frame */
-	if (dev_hard_header(skb, dev,
+        if (dev_hard_header(skb, dev,
                             ptype,
                             gha_address(tha),
                             gha_address(sha),
@@ -112,29 +112,29 @@ static struct sk_buff * arp_create(struct net_device * dev,
 
         arp->htype = htons(dev->type);
         arp->ptype = htons(ptype);
-	arp->hlen  = gha_address_length(sha);
-	arp->plen  = gpa_address_length(spa);
-	arp->oper  = htons(oper);
+        arp->hlen  = gha_address_length(sha);
+        arp->plen  = gpa_address_length(spa);
+        arp->oper  = htons(oper);
 
-	arp_ptr = (unsigned char *)(arp + 1);
+        arp_ptr = (unsigned char *)(arp + 1);
 
         /* SHA */
-	memcpy(arp_ptr, gha_address(sha), gha_address_length(sha));
-	arp_ptr += gha_address_length(sha);
+        memcpy(arp_ptr, gha_address(sha), gha_address_length(sha));
+        arp_ptr += gha_address_length(sha);
 
         /* SPA */
-	memcpy(arp_ptr, gpa_address_value(spa), gpa_address_length(spa));
-	arp_ptr += gpa_address_length(spa);
+        memcpy(arp_ptr, gpa_address_value(spa), gpa_address_length(spa));
+        arp_ptr += gpa_address_length(spa);
 
         /* THA */
-	memcpy(arp_ptr, gha_address(tha), gha_address_length(tha));
-	arp_ptr += gha_address_length(tha);
+        memcpy(arp_ptr, gha_address(tha), gha_address_length(tha));
+        arp_ptr += gha_address_length(tha);
 
         /* TPA */
-	memcpy(arp_ptr, gpa_address_value(tpa), gpa_address_length(tpa));
-	arp_ptr += gpa_address_length(tpa);
+        memcpy(arp_ptr, gpa_address_value(tpa), gpa_address_length(tpa));
+        arp_ptr += gpa_address_length(tpa);
 
-	return skb;
+        return skb;
 }
 
 int arp_send_reply(uint16_t            ptype,
@@ -177,14 +177,14 @@ int arp_send_reply(uint16_t            ptype,
         }
 
         skb = arp_create(dev,
-                         ARP_REPLY, ptype, 
+                         ARP_REPLY, ptype,
                          tmp_spa, sha, tmp_tpa, tha);
 
         gpa_destroy(tmp_spa);
         gpa_destroy(tmp_tpa);
 #else
         skb = arp_create(dev,
-                         ARP_REPLY, ptype, 
+                         ARP_REPLY, ptype,
                          spa, sha, tpa, tha);
 #endif
         if (skb == NULL)
@@ -215,7 +215,7 @@ int arp_send_request(uint16_t            ptype,
                 LOG_ERR("Wrong input parameters, cannot send ARP request");
                 return -1;
         }
-       
+
         tha = gha_create_broadcast(gha_type(sha));
         if (!tha) {
                 LOG_ERR("Cannot create broadcast GHA");
@@ -242,14 +242,14 @@ int arp_send_request(uint16_t            ptype,
         }
 
         skb = arp_create(dev,
-                         ARP_REPLY, ptype, 
+                         ARP_REPLY, ptype,
                          tmp_spa, sha, tmp_tpa, tha);
 
         gpa_destroy(tmp_spa);
         gpa_destroy(tmp_tpa);
 #else
         skb = arp_create(dev,
-                         ARP_REPLY, ptype, 
+                         ARP_REPLY, ptype,
                          spa, sha, tpa, tha);
 #endif
 
@@ -287,16 +287,16 @@ static int process(const struct sk_buff * skb,
         uint8_t *           sha; /* Source protocol address pointer */
         uint8_t *           tha; /* Target protocol address pointer */
 
-	struct gpa *        tmp_spa;
-	struct gha *        tmp_sha;
-	struct gpa *        tmp_tpa;
-	struct gha *        tmp_tha;
+        struct gpa *        tmp_spa;
+        struct gha *        tmp_sha;
+        struct gpa *        tmp_tpa;
+        struct gha *        tmp_tha;
 
         ASSERT(skb);
         ASSERT(cl);
 
         LOG_DBG("Processing ARP skb %pK", skb);
-        
+
         header = header_get(skb);
         if (!header) {
                 LOG_ERR("Cannot get the header");
@@ -341,10 +341,10 @@ static int process(const struct sk_buff * skb,
         tpa = ptr; ptr += header->plen;
 
         LOG_DBG("Fetching addresses");
-	tmp_spa = gpa_create_gfp(GFP_ATOMIC, spa, plen);
-	tmp_sha = gha_create_gfp(GFP_ATOMIC, MAC_ADDR_802_3, sha);
-	tmp_tpa = gpa_create_gfp(GFP_ATOMIC, tpa, plen);
-	tmp_tha = gha_create_gfp(GFP_ATOMIC, MAC_ADDR_802_3, tha);
+        tmp_spa = gpa_create_gfp(GFP_ATOMIC, spa, plen);
+        tmp_sha = gha_create_gfp(GFP_ATOMIC, MAC_ADDR_802_3, sha);
+        tmp_tpa = gpa_create_gfp(GFP_ATOMIC, tpa, plen);
+        tmp_tha = gha_create_gfp(GFP_ATOMIC, MAC_ADDR_802_3, tha);
 
 #ifdef CONFIG_RINARP
         LOG_DBG("Shrinking as needed");
@@ -361,36 +361,36 @@ static int process(const struct sk_buff * skb,
         /* Finally process the entry */
         switch (operation) {
         case ARP_REQUEST: {
-		struct table *             tbl;
-		const struct table_entry * entry;
-		const struct table_entry * req_addr;
-		const struct gha *         target_ha;
+                struct table *             tbl;
+                const struct table_entry * entry;
+                const struct table_entry * req_addr;
+                const struct gha *         target_ha;
 
-		/* FIXME: Should we add all ARP Requests? */
+                /* FIXME: Should we add all ARP Requests? */
                 /* Do we have it in the cache ? */
-		tbl   = tbls_find(ptype);
-		entry = tbl_find_by_gpa(tbl, tmp_spa);
-		
+                tbl   = tbls_find(ptype);
+                entry = tbl_find_by_gpa(tbl, tmp_spa);
+
                 if (!entry) {
-			if (tbl_add(tbl, tmp_spa, tmp_sha)) {
-				LOG_ERR("Bollocks. Can't add in table.");
-				return -1;
-			}
-		} else {
-			if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha))
-				LOG_ERR("Failed to update table");
-				return -1;
-		}
-          
-		req_addr  = tbl_find_by_gpa(tbl, tmp_tpa);
-		target_ha = tble_ha(req_addr);
+                        if (tbl_add(tbl, tmp_spa, tmp_sha)) {
+                                LOG_ERR("Bollocks. Can't add in table.");
+                                return -1;
+                        }
+                } else {
+                        if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha))
+                                LOG_ERR("Failed to update table");
+                        return -1;
+                }
+
+                req_addr  = tbl_find_by_gpa(tbl, tmp_tpa);
+                target_ha = tble_ha(req_addr);
 
                 if (arp_send_reply(ptype,
                                    tmp_tpa, tmp_tha, tmp_spa, tmp_sha)) {
                         /* FIXME: Couldn't send reply ... */
                         return -1;
                 }
-         }
+        }
                 break;
 
         case ARP_REPLY: {
@@ -467,6 +467,7 @@ int arp_receive(struct sk_buff *     skb,
         if (!cl) {
                 LOG_DBG("I don't have a table to handle this ARP "
                         "(ptype = 0x%02x)", header->ptype);
+                kfree_skb(skb);
                 return 0;
         }
 
@@ -484,6 +485,7 @@ int arp_receive(struct sk_buff *     skb,
 
         if (process(skb, cl)) {
                 LOG_ERR("Cannot process this ARP");
+                kfree_skb(skb);
                 return 0;
         }
         consume_skb(skb);

@@ -456,7 +456,7 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if (!name_cmp(data->app_name,name)) {
+        if (name_cmp(data->app_name,name)) {
                 LOG_ERR("Application registered != application specified");
                 return -1;
         }
@@ -667,6 +667,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         /* Get vlan id */
         result = kstrtoul(dif_information->dif_name->process_name,
                           10, &(info->vlan_id));
+
 
         if (result) {
                 LOG_ERR("Error converting DIF Name to VLAN ID: %s",

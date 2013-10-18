@@ -78,6 +78,8 @@ static int regression_tests_gpa(void)
         size_t       len_a_1, len_a_2;
         size_t       len_b_1, len_b_2;
 
+        LOG_DBG("GPA regression tests");
+
         LOG_DBG("Regression test #1.1");
         a = gpa_create(name_tmp, sizeof(name_tmp));
         if (!a)
@@ -133,8 +135,54 @@ static int regression_tests_gpa(void)
         if (gpa_address_length(b) != len_b_1)
                 return -1;
 
+        LOG_DBG("Regression test #5");
+        if (!gpa_is_equal(a, a))
+                return -1;
+
         gpa_destroy(b);
         gpa_destroy(a);
+
+        return 0;
+}
+
+static int regression_tests_gha(void)
+{
+        uint8_t      mac_1[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06 };
+        struct gha * a;
+        struct gha * b;
+        uint8_t      mac_2[] = { 0x06, 0x05, 0x04, 0x03, 0x02, 0x01 };
+        struct gha * c;
+
+        LOG_DBG("GHA regression tests");
+
+        LOG_DBG("Regression test #1");
+        a = gha_create(MAC_ADDR_802_3, mac_1);
+        if (!a)
+                return -1;
+        b = gha_create(MAC_ADDR_802_3, mac_1);
+        if (!b)
+                return -1;
+
+        LOG_DBG("Regression test #2");
+        if (!gha_is_equal(a, b))
+                return -1;
+
+        LOG_DBG("Regression test #3");
+        c = gha_create(MAC_ADDR_802_3, mac_2);
+        if (!c)
+                return -1;
+        if (gha_is_equal(a, c))
+                return -1;
+        if (gha_is_equal(b, c))
+                return -1;
+
+        LOG_DBG("Regression test #4");
+        if (!gha_is_equal(c, c))
+                return -1;
+
+        gha_destroy(a);
+        gha_destroy(b);
+        gha_destroy(c);
 
         return 0;
 }
@@ -153,10 +201,18 @@ static int __init mod_init(void)
         }
 
 #ifdef CONFIG_ARP826_REGRESSION_TESTS
+        LOG_DBG("Starting regression tests");
+
         if (regression_tests_gpa()) {
-                LOG_ERR("GPA regression tests do not pass, bailing out");
+                LOG_ERR("GPA regression tests failed, bailing out");
                 return -1;
         }
+        if (regression_tests_gha()) {
+                LOG_ERR("GHA regression tests failed, bailing out");
+                return -1;
+        }
+
+        LOG_DBG("Regression tests completed successfully");
 #endif
 
         if (protocol_add(ETH_P_RINA, 6)) {
