@@ -152,6 +152,7 @@ find_flow_by_flow_id(struct ipcp_instance_data * data,
                      flow_id_t                   id)
 {
         struct shim_eth_flow * flow;
+
         spin_lock(&data->lock);
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->flow_id == id) {
@@ -160,6 +161,7 @@ find_flow_by_flow_id(struct ipcp_instance_data * data,
                 }
         }
         spin_unlock(&data->lock);
+
         return NULL;
 }
 
@@ -292,7 +294,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
         ASSERT(source);
         ASSERT(dest);
 
-        if (!data->app_name || name_cmp(source, data->app_name)) {
+        if (!data->app_name || !name_is_equal(source, data->app_name)) {
                 LOG_ERR("Wrong request, that app is not registered");
                 return -1;
         }
@@ -460,7 +462,7 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if (name_cmp(data->app_name,name)) {
+        if (!name_is_equal(data->app_name,name)) {
                 LOG_ERR("Application registered != application specified");
                 return -1;
         }
