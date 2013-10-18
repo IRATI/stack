@@ -292,7 +292,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
         ASSERT(source);
         ASSERT(dest);
 
-        if (!data->app_name || !name_cmp(source, data->app_name)) {
+        if (!data->app_name || name_cmp(source, data->app_name)) {
                 LOG_ERR("Not the app that was registered");
                 return -1;
         }
