@@ -47,25 +47,25 @@ typedef uint8_t pdu_flags_t;
 
 typedef uint16_t pdu_type_t;
 
-#define is_pdu_type_ok(X)                       \
-	((X && PDU_TYPE_EFCP)       ? 1 :       \
-	((X && PDU_TYPE_DT)         ? 1 :       \
-	((X && PDU_TYPE_CC)         ? 1 :       \
-	((X && PDU_TYPE_SACK)       ? 1 :       \
-	((X && PDU_TYPE_NACK)       ? 1 :       \
-	((X && PDU_TYPE_FC)         ? 1 :       \
-	((X && PDU_TYPE_ACK)        ? 1 :       \
-	((X && PDU_TYPE_ACK_AND_FC) ? 1 :       \
-	((X && PDU_TYPE_MGMT)       ? 1 :       \
-	 0)))))
+#define is_pdu_type_ok(X)                               \
+        ((X && PDU_TYPE_EFCP)       ? 1 :               \
+         ((X && PDU_TYPE_DT)         ? 1 :              \
+          ((X && PDU_TYPE_CC)         ? 1 :             \
+           ((X && PDU_TYPE_SACK)       ? 1 :            \
+            ((X && PDU_TYPE_NACK)       ? 1 :           \
+             ((X && PDU_TYPE_FC)         ? 1 :          \
+              ((X && PDU_TYPE_ACK)        ? 1 :         \
+               ((X && PDU_TYPE_ACK_AND_FC) ? 1 :        \
+                ((X && PDU_TYPE_MGMT)       ? 1 :       \
+                 0)))))))))
 
 typedef uint seq_num_t;
 
 struct pci {
-	address_t  source;
-	address_t  destination;
+        address_t  source;
+        address_t  destination;
 
-	pdu_type_t type;
+        pdu_type_t type;
 
         /* FIXME: Do we really need CEP-IDs ? */
 #if 0
@@ -74,19 +74,19 @@ struct pci {
                 cep_id_t dest_id;
         } ceps;
 #endif
-	qos_id_t   qos_id;
-	seq_num_t  sequence_number;
+        qos_id_t   qos_id;
+        seq_num_t  sequence_number;
 };
 
 /* This structure represents raw data */
 struct buffer {
-	char * data;
-	size_t size;
+        char * data;
+        size_t size;
 };
 
 struct pdu {
-	struct pci *    pci;
-	struct buffer * buffer;
+        struct pci *    pci;
+        struct buffer * buffer;
 };
 
 struct sdu {
