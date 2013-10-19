@@ -240,18 +240,24 @@ static string_t * create_vlan_interface_name(string_t *    interface_name,
         string_t * complete_interface;
         size_t     length;
 
+        /* FIXME: Please remove all the unnecessary cruft from this function */
+
         if (!interface_name)
                 return NULL;
 
         LOG_DBG("Building complete VLAN interface name ('%s', %lu)",
                 interface_name, vlan_id);
 
-        snprintf(string_vlan_id, sizeof(string_vlan_id), "%lu", vlan_id);
+        snprintf(string_vlan_id, sizeof(string_vlan_id), "%4lu", vlan_id);
+        string_vlan_id[sizeof(string_vlan_id) - 1] = 0;
+
+        LOG_DBG("VLAN id is '%s'", string_vlan_id);
 
         length = strlen(interface_name) +
                 sizeof(char)            +
                 strlen(string_vlan_id)  +
                 1 /* Terminator */;
+        LOG_DBG("Complete vlan-interface-name length will be %zd", length);
 
         complete_interface = rkmalloc(length, GFP_KERNEL);
         if (!complete_interface)
@@ -260,7 +266,7 @@ static string_t * create_vlan_interface_name(string_t *    interface_name,
         strcat(complete_interface, interface_name);
         strcat(complete_interface, ".");
         strcat(complete_interface, string_vlan_id);
-        complete_interface[length] = 0; /* Final terminator */
+        complete_interface[length - 1] = 0; /* Final terminator */
 
         LOG_DBG("Complete vlan-interface-name = '%s'", complete_interface);
 
@@ -818,9 +824,8 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
         data->eth_vlan_packet_type->func = eth_vlan_rcv;
 
-        complete_interface =
-                create_vlan_interface_name(info->interface_name,
-                                           info->vlan_id);
+        complete_interface = create_vlan_interface_name(info->interface_name,
+                                                        info->vlan_id);
         if (!complete_interface) {
                 name_destroy(data->dif_name);
                 rkfree(info->interface_name);
@@ -916,9 +921,8 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
         data->eth_vlan_packet_type->func = eth_vlan_rcv;
 
-        complete_interface =
-                create_vlan_interface_name(info->interface_name,
-                                           info->vlan_id);
+        complete_interface = create_vlan_interface_name(info->interface_name,
+                                                        info->vlan_id);
         if (!complete_interface)
                 return -1;
 
