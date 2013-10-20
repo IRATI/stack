@@ -263,6 +263,7 @@ static string_t * create_vlan_interface_name(string_t *    interface_name,
         if (!complete_interface)
                 return NULL;
 
+        complete_interface[0] = 0;
         strcat(complete_interface, interface_name);
         strcat(complete_interface, ".");
         strcat(complete_interface, string_vlan_id);
@@ -838,7 +839,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         read_lock(&dev_base_lock);
         data->dev = __dev_get_by_name(&init_net, complete_interface);
         if (!data->dev) {
-                LOG_ERR("Invalid device to configure: %s", complete_interface);
+                LOG_ERR("Can't get device '%s'", complete_interface);
                 read_unlock(&dev_base_lock);
                 name_destroy(data->dif_name);
                 rkfree(info->interface_name);
@@ -846,7 +847,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        LOG_DBG("Got device driver for %s, trying to register handler",
+        LOG_DBG("Got device '%s', trying to register handler",
                 complete_interface);
 
         /* Store in list for retrieval later on */
