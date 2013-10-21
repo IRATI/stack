@@ -1231,7 +1231,6 @@ static int notify_ipcp_conn_create_req(void *             data,
         ipc_process_id_t                            ipc_id = 0;
         port_id_t                                   port_id = 0;
         cep_id_t                                    src_cep;
-        flow_id_t                                   fid = flow_id_bad();
 
         attrs    = NULL;
         msg      = NULL;
@@ -1270,10 +1269,6 @@ static int notify_ipcp_conn_create_req(void *             data,
                 goto process_fail;
         }
 
-
-        fid = kfa_flow_create(kipcm->kfa);
-        ASSERT(is_flow_id_ok(fid));
-
         src_cep = ipcp->ops->connection_create(ipcp->data,
                                                attrs->port_id,
                                                attrs->src_addr,
@@ -1283,11 +1278,6 @@ static int notify_ipcp_conn_create_req(void *             data,
 
         if (!is_cep_id_ok(src_cep)) {
                 LOG_ERR("IPC process could not create connection");
-                goto process_fail;
-        }
-
-        if (kfa_flow_bind(kipcm->kfa, fid, port_id, ipcp, ipc_id)) {
-                LOG_ERR("Cound not bind flow (normal ipcp)");
                 goto process_fail;
         }
 
@@ -1301,7 +1291,6 @@ static int notify_ipcp_conn_create_req(void *             data,
                                                info->snd_portid);
 
  process_fail:
-        if (is_flow_id_ok(fid)) kfa_flow_destroy(kipcm->kfa, fid);
         return conn_create_resp_free_and_reply(attrs,
                                                msg,
                                                hdr,
@@ -1358,7 +1347,6 @@ static int notify_ipcp_conn_create_arrived(void *             data,
         ipc_process_id_t                                ipc_id = 0;
         port_id_t                                       port_id = 0;
         cep_id_t                                        src_cep;
-        flow_id_t                                       fid = flow_id_bad();
 
         attrs    = NULL;
         msg      = NULL;
@@ -1398,9 +1386,6 @@ static int notify_ipcp_conn_create_arrived(void *             data,
         }
 
 
-        fid = kfa_flow_create(kipcm->kfa);
-        ASSERT(is_flow_id_ok(fid));
-
         src_cep = ipcp->ops->connection_create_arrived(ipcp->data,
                                                        attrs->port_id,
                                                        attrs->src_addr,
@@ -1411,11 +1396,6 @@ static int notify_ipcp_conn_create_arrived(void *             data,
 
         if (!is_cep_id_ok(src_cep)) {
                 LOG_ERR("IPC process could not create connection");
-                goto process_fail;
-        }
-
-        if (kfa_flow_bind(kipcm->kfa, fid, port_id, ipcp, ipc_id)) {
-                LOG_ERR("Cound not bind flow (normal ipcp)");
                 goto process_fail;
         }
 
@@ -1430,7 +1410,6 @@ static int notify_ipcp_conn_create_arrived(void *             data,
                                                  info->snd_portid);
 
  process_fail:
-        if (is_flow_id_ok(fid)) kfa_flow_destroy(kipcm->kfa, fid);
         return conn_create_result_free_and_reply(attrs,
                                                  msg,
                                                  hdr,
