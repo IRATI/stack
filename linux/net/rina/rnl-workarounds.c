@@ -19,7 +19,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* FIXME: This is another workaround we would like to avoid ... */ 
+/* FIXME: This is another workaround we would like to avoid ... */
 #include "../net/netlink/af_netlink.h"
 #include <linux/rwlock.h>
 
