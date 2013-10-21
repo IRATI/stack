@@ -303,34 +303,26 @@ static string_t * create_vlan_interface_name(string_t *    interface_name,
         return complete_interface;
 }
 
-/* FIXME: Why f is passed as pointer of pointer ??? */
 static int flow_destroy(struct ipcp_instance_data * data,
-                        struct shim_eth_flow **     f)
+                        struct shim_eth_flow *     flow)
 {
-        struct shim_eth_flow * flow;
         flow_id_t              fid;
 
-        if (!f || !*f) {
+        if (!flow) {
                 LOG_ERR("Couldn't destroy flow. No flow given");
                 return -1;
         }
 
-        /* FIXME: Why this lock is held starting so early ??? */
-        spin_lock(&data->lock);
-
-        flow = *f;
-
         if (flow->dest_pa) gpa_destroy(flow->dest_pa);
         if (flow->dest_ha) gha_destroy(flow->dest_ha);
 
+        spin_lock(&data->lock);
         list_del(&flow->list);
+	spin_unlock(&data->lock);
 
         fid = kfa_flow_unbind(data->kfa, flow->port_id);
-
         kfa_flow_destroy(data->kfa, fid);
         rkfree(flow);
-
-        spin_unlock(&data->lock);
 
         return 0;
 }
@@ -360,7 +352,7 @@ static void rinarp_resolve_handler(void *             opaque,
                                                        data->id,
                                                        flow->flow_id,
                                                        0)) {
-                        flow_destroy(data, &flow);
+                        flow_destroy(data, flow);
                         LOG_ERR("Couldn't tell KIPCM flow is allocated");
                 }
         }
@@ -396,7 +388,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 flow->dest_pa       = name_to_gpa(dest);
 
                 if (!gpa_is_ok(flow->dest_pa)) {
-                        if (flow_destroy(data, &flow))
+                        if (flow_destroy(data, flow))
                                 LOG_ERR("Failed to destroy flow");
                         return -1;
                 }
@@ -410,7 +402,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
                         LOG_ERR("Couldn't create the sdu queue "
                                 "for a new flow");
-                        if (flow_destroy(data, &flow))
+                        if (flow_destroy(data, flow))
                                 LOG_ERR("Failed to destroy flow");
                         return -1;
                 }
@@ -420,7 +412,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                                         rinarp_resolve_handler,
                                         data)) {
                         LOG_ERR("Failed to lookup ARP entry");
-                        if (flow_destroy(data, &flow))
+                        if (flow_destroy(data, flow))
                                 LOG_ERR("Failed to destroy flow");
                         return -1;
                 }
@@ -468,7 +460,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                                        data->id,
                                                        flow->flow_id,
                                                        0)) {
-                        if (flow_destroy(data, &flow))
+                        if (flow_destroy(data, flow))
                                 LOG_ERR("Failed to destroy flow");
                         return -1;
                 }
@@ -496,7 +488,7 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if (!flow_destroy(data, &flow))
+        if (!flow_destroy(data, flow))
                 LOG_ERR("Failed to destroy flow");
 
         return 0;
@@ -759,7 +751,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
                         LOG_ERR("Couldn't create the sdu queue"
                                 "for a new flow");
-                        flow_destroy(data, &flow);
+                        flow_destroy(data, flow);
                         return -1;
                 }
                 /* Store SDU in queue */
@@ -774,7 +766,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                                        NULL)) {
                         LOG_ERR("Couldn't tell the KIPCM about the flow");
                         kfifo_free(&flow->sdu_queue);
-                        if (flow_destroy(data, &flow))
+                        if (flow_destroy(data, flow))
                                 LOG_ERR("Couldn't destroy flow");
                         return -1;
                 }
