@@ -661,16 +661,16 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                         struct packet_type * pt,
                         struct net_device *  orig_dev)
 {
-        struct ethhdr *mh;
-        unsigned char * saddr;
-        struct ipcp_instance_data * data;
+        struct ethhdr *                 mh;
+        unsigned char *                 saddr;
+        struct ipcp_instance_data *     data;
         struct interface_data_mapping * mapping;
-        struct shim_eth_flow * flow;
-        struct gha * ghaddr;
-        const struct gpa * gpaddr;
-        struct sdu * du;
-        unsigned char * nh;
-        struct name * sname;
+        struct shim_eth_flow *          flow;
+        struct gha *                    ghaddr;
+        const struct gpa *              gpaddr;
+        struct sdu *                    du;
+        unsigned char *                 nh;
+        struct name *                   sname;
 
         /* C-c-c-checks */
         mapping = inst_data_mapping_get(dev);
@@ -1200,8 +1200,27 @@ static int __init mod_init(void)
         return 0;
 }
 
+#ifdef CONFIG_RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
+static bool regression_tests(void)
+{
+        return true;
+}
+#endif
+
 static void __exit mod_exit(void)
 {
+#ifdef CONFIG_RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
+        LOG_DBG("Starting regression tests");
+
+        if (!regression_tests()) {
+                LOG_ERR("Regression tests failed, bailing out");
+                return -1;
+        }
+
+        LOG_DBG("Regression tests completed successfully");
+
+#endif
+
         ASSERT(shim);
 
         if (kipcm_ipcp_factory_unregister(default_kipcm, shim)) {
