@@ -1193,8 +1193,78 @@ static int __init mod_init(void)
 }
 
 #ifdef CONFIG_RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
+static bool regression_test_create_vlan_interface_name(void)
+{
+        string_t * tmp;
+
+        LOG_DBG("Create-vlan-name regression tests");
+
+        LOG_DBG("Regression test #1");
+
+        LOG_DBG("Regression test #1.1");
+        tmp = create_vlan_interface_name("eth0", 1);
+        if (!tmp)
+                return false;
+        if (strlen(tmp) != 5) {
+                rkfree(tmp);
+                return false;
+        }
+        rkfree(tmp);
+
+        LOG_DBG("Regression test #1.2");
+        tmp = create_vlan_interface_name("eth0", 10);
+        if (!tmp)
+                return false;
+        if (strlen(tmp) != 6) {
+                rkfree(tmp);
+                return false;
+        }
+        rkfree(tmp);
+
+        LOG_DBG("Regression test #1.3");
+        tmp = create_vlan_interface_name("eth0", 100);
+        if (!tmp)
+                return false;
+        if (strlen(tmp) != 7) {
+                rkfree(tmp);
+                return false;
+        }
+        rkfree(tmp);
+
+        LOG_DBG("Regression test #1.4");
+        tmp = create_vlan_interface_name("eth0", 1000);
+        if (!tmp)
+                return false;
+        if (strlen(tmp) != 8) {
+                rkfree(tmp);
+                return false;
+        }
+        rkfree(tmp);
+
+        LOG_DBG("Regression test #2");
+
+        LOG_DBG("Regression test #2.1");
+        tmp = create_vlan_interface_name("eth0", 0);
+        if (tmp)
+                return false;
+        rkfree(tmp);
+
+        LOG_DBG("Regression test #2.2");
+        tmp = create_vlan_interface_name("eth0", 4095);
+        if (tmp)
+                return false;
+        rkfree(tmp);
+
+        return true;
+}
+
 static bool regression_tests(void)
 {
+        if (!) {
+                LOG_ERR("Create-vlan-interface tests failed, bailing out");
+                return false;
+        }
+
         return true;
 }
 #endif
