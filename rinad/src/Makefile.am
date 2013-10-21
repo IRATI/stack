@@ -145,8 +145,14 @@ CLEANFILES    += pom.xml
 BUILT_SOURCES += pom.xml
 EXTRA_DIST    += pom.xml.in
 
-all-local: pom.xml Makefile.am
+all-local: pom.xml \
+	Makefile
 #	$(MVN) package
 
-install-data-local:
+clean-local: pom.xml \
+	Makefile
+	$(MVN) clean
+
+install-data-local: pom.xml \
+	Makefile
 	$(MVN) install
