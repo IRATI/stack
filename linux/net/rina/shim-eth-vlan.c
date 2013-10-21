@@ -1206,7 +1206,34 @@ static bool regression_test_create_vlan_interface_name(void)
         LOG_DBG("Regression test #1");
 
         LOG_DBG("Regression test #1.1");
+        tmp = create_vlan_interface_name("eth0", 0);
+        if (tmp)
+                return false;
+        rkfree(tmp);
+
+        LOG_DBG("Regression test #1.2");
         tmp = create_vlan_interface_name("eth0", 1);
+        if (tmp)
+                return false;
+        rkfree(tmp);
+
+        LOG_DBG("Regression test #1.3");
+        tmp = create_vlan_interface_name("eth0", 4095);
+        if (tmp)
+                return false;
+        rkfree(tmp);
+
+        LOG_DBG("Regression test #1.4");
+        tmp = create_vlan_interface_name("eth0", 4096);
+        if (tmp)
+                return false;
+        rkfree(tmp);
+
+
+        LOG_DBG("Regression test #2");
+
+        LOG_DBG("Regression test #2.1");
+        tmp = create_vlan_interface_name("eth0", 2);
         if (!tmp)
                 return false;
         if (strlen(tmp) != 6) {
@@ -1215,7 +1242,7 @@ static bool regression_test_create_vlan_interface_name(void)
         }
         rkfree(tmp);
 
-        LOG_DBG("Regression test #1.2");
+        LOG_DBG("Regression test #2.2");
         tmp = create_vlan_interface_name("eth0", 10);
         if (!tmp)
                 return false;
@@ -1225,7 +1252,7 @@ static bool regression_test_create_vlan_interface_name(void)
         }
         rkfree(tmp);
 
-        LOG_DBG("Regression test #1.3");
+        LOG_DBG("Regression test #2.3");
         tmp = create_vlan_interface_name("eth0", 100);
         if (!tmp)
                 return false;
@@ -1235,7 +1262,7 @@ static bool regression_test_create_vlan_interface_name(void)
         }
         rkfree(tmp);
 
-        LOG_DBG("Regression test #1.4");
+        LOG_DBG("Regression test #2.4");
         tmp = create_vlan_interface_name("eth0", 1000);
         if (!tmp)
                 return false;
@@ -1243,32 +1270,6 @@ static bool regression_test_create_vlan_interface_name(void)
                 rkfree(tmp);
                 return false;
         }
-        rkfree(tmp);
-
-        LOG_DBG("Regression test #2");
-
-        LOG_DBG("Regression test #2.1");
-        tmp = create_vlan_interface_name("eth0", 0);
-        if (tmp)
-                return false;
-        rkfree(tmp);
-
-        LOG_DBG("Regression test #2.2");
-        tmp = create_vlan_interface_name("eth0", 1);
-        if (tmp)
-                return false;
-        rkfree(tmp);
-
-        LOG_DBG("Regression test #2.3");
-        tmp = create_vlan_interface_name("eth0", 4095);
-        if (tmp)
-                return false;
-        rkfree(tmp);
-
-        LOG_DBG("Regression test #2.4");
-        tmp = create_vlan_interface_name("eth0", 4096);
-        if (tmp)
-                return false;
         rkfree(tmp);
 
         return true;
