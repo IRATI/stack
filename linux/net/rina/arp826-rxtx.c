@@ -178,6 +178,7 @@ int arp_send_reply(uint16_t            ptype,
         if (gpa_address_grow(tmp_spa, max_len, 0x00)) {
 		LOG_ERR("Failed to grow tmp_spa");
                 return -1;
+	}
         tmp_tpa = gpa_dup(tpa);
         if (gpa_address_grow(tmp_tpa, max_len, 0x00)) {
                 LOG_ERR("Failed to grow tmp_tpa");
