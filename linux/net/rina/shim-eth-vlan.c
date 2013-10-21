@@ -1176,22 +1176,6 @@ static struct ipcp_factory_ops eth_vlan_ops = {
 
 struct ipcp_factory * shim = NULL;
 
-static int __init mod_init(void)
-{
-        shim =  kipcm_ipcp_factory_register(default_kipcm,
-                                            SHIM_NAME,
-                                            &eth_vlan_data,
-                                            &eth_vlan_ops);
-        if (!shim) {
-                LOG_CRIT("Cannot register %s factory", SHIM_NAME);
-                return -1;
-        }
-
-        spin_lock_init(&data_instances_lock);
-
-        return 0;
-}
-
 #ifdef CONFIG_RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
 static bool regression_test_create_vlan_interface_name(void)
 {
@@ -1260,7 +1244,7 @@ static bool regression_test_create_vlan_interface_name(void)
 
 static bool regression_tests(void)
 {
-        if (!) {
+        if (!regression_test_create_vlan_interface_name()) {
                 LOG_ERR("Create-vlan-interface tests failed, bailing out");
                 return false;
         }
@@ -1269,7 +1253,7 @@ static bool regression_tests(void)
 }
 #endif
 
-static void __exit mod_exit(void)
+static int __init mod_init(void)
 {
 #ifdef CONFIG_RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
         LOG_DBG("Starting regression tests");
@@ -1283,6 +1267,22 @@ static void __exit mod_exit(void)
 
 #endif
 
+        shim =  kipcm_ipcp_factory_register(default_kipcm,
+                                            SHIM_NAME,
+                                            &eth_vlan_data,
+                                            &eth_vlan_ops);
+        if (!shim) {
+                LOG_CRIT("Cannot register %s factory", SHIM_NAME);
+                return -1;
+        }
+
+        spin_lock_init(&data_instances_lock);
+
+        return 0;
+}
+
+static void __exit mod_exit(void)
+{
         ASSERT(shim);
 
         if (kipcm_ipcp_factory_unregister(default_kipcm, shim)) {
