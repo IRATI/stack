@@ -248,6 +248,7 @@ static string_t * create_vlan_interface_name(string_t *    interface_name,
         LOG_DBG("Building complete VLAN interface name ('%s', %lu)",
                 interface_name, vlan_id);
 
+#if 0
         if (vlan_id < 10) {
                 snprintf(string_vlan_id, sizeof(string_vlan_id), "%1lu",
                                 vlan_id);
@@ -268,6 +269,16 @@ static string_t * create_vlan_interface_name(string_t *    interface_name,
                 LOG_ERR("VLAN id is to high: %lu", vlan_id);
                 return NULL;
         }
+#endif
+        if (vlan_id <= 0 && vlan_id > 0xFFF /* 4095 is reserved */) {
+                LOG_ERR("VLAN id is to high: %lu", vlan_id);
+                return NULL;
+        } else {
+                bzero(string_vlan_id, sizeof(string_vlan_id));
+                snprintf(string_vlan_id, sizeof(string_vlan_id), "%-4lu",
+                         vlan_id);
+        }
+#else
 
         LOG_DBG("VLAN id is '%s'", string_vlan_id);
 
