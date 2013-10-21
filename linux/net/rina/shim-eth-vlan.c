@@ -241,7 +241,16 @@ static bool is_vlan_id_ok(unsigned long vlan_id)
                 return 0;
         }
 
-        /* FIXME: Add checks here, please */
+        /*
+         * Reserved values:
+         *   0    Contains user_priority data (802.1Q)
+         *   1    Default Port VID (802.1Q)
+         *   4095 Reserved (802.1Q)
+         */
+
+        /* FIXME: Add or fix the following checks here, please */
+        if (vlan_id == 0 || vlan_id == 1 || vlan_id == 4095)
+                return 0;
 
         return 1;
 }
@@ -1245,6 +1254,18 @@ static bool regression_test_create_vlan_interface_name(void)
         rkfree(tmp);
 
         LOG_DBG("Regression test #2.2");
+        tmp = create_vlan_interface_name("eth0", 1);
+        if (tmp)
+                return false;
+        rkfree(tmp);
+
+        LOG_DBG("Regression test #2.3");
+        tmp = create_vlan_interface_name("eth0", 4095);
+        if (tmp)
+                return false;
+        rkfree(tmp);
+
+        LOG_DBG("Regression test #2.4");
         tmp = create_vlan_interface_name("eth0", 4096);
         if (tmp)
                 return false;
