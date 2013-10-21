@@ -248,9 +248,10 @@ static bool is_vlan_id_ok(unsigned long vlan_id)
          *   4095 Reserved (802.1Q)
          */
 
-        /* FIXME: Add or fix the following checks here, please */
-        if (vlan_id == 0 || vlan_id == 1 || vlan_id == 4095)
+        if (vlan_id == 0 || vlan_id == 1 || vlan_id == 4095) {
+                /* Reserved */
                 return 0;
+        }
 
         return 1;
 }
@@ -271,7 +272,7 @@ static string_t * create_vlan_interface_name(string_t *    interface_name,
                 interface_name, vlan_id);
 
         if (!is_vlan_id_ok(vlan_id)) {
-                LOG_ERR("VLAN id is to high: %lu", vlan_id);
+                LOG_ERR("Wrong vlan-id %lu", vlan_id);
                 return NULL;
         }
         ASSERT(vlan_id < 9999); /* Buffer overflow check */
@@ -1207,28 +1208,31 @@ static bool regression_test_create_vlan_interface_name(void)
 
         LOG_DBG("Regression test #1.1");
         tmp = create_vlan_interface_name("eth0", 0);
-        if (tmp)
+        if (tmp) {
+                rkfree(tmp);
                 return false;
-        rkfree(tmp);
+        }
 
         LOG_DBG("Regression test #1.2");
         tmp = create_vlan_interface_name("eth0", 1);
-        if (tmp)
+        if (tmp) {
+                rkfree(tmp);
                 return false;
-        rkfree(tmp);
+        }
 
         LOG_DBG("Regression test #1.3");
         tmp = create_vlan_interface_name("eth0", 4095);
-        if (tmp)
+        if (tmp) {
+                rkfree(tmp);
                 return false;
-        rkfree(tmp);
+        }
 
         LOG_DBG("Regression test #1.4");
         tmp = create_vlan_interface_name("eth0", 4096);
-        if (tmp)
+        if (tmp) {
+                rkfree(tmp);
                 return false;
-        rkfree(tmp);
-
+        }
 
         LOG_DBG("Regression test #2");
 
