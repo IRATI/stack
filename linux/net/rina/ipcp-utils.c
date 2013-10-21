@@ -151,7 +151,8 @@ void name_destroy(struct name * ptr)
         ASSERT(name_is_initialized(ptr));
 
         rkfree(ptr);
-        ptr = NULL;
+
+        /* ptr = NULL; */
 
         LOG_DBG("Name at %pK destroyed successfully", ptr);
 }
