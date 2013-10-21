@@ -129,28 +129,28 @@ typedef enum {
         /* FIXME: Need to be logically moved after flow
          * allocation messages. Put here in order to maintain
          * compatibility with MS7 version of user space*/
-        /* IPC Manager -> IPC Process */
+        /* IPC Process (user space) -> KIPCM*/
         RINA_C_IPCM_CONN_CREATE_REQUEST,
 
-        /* IPC Process -> IPC Manager*/
+        /* KIPCM -> IPC Process (user space)*/
         RINA_C_IPCM_CONN_CREATE_RESPONSE,
 
-        /* IPC Manager -> IPC Process */
+        /* IPC Process (user space) -> KIPCM */
         RINA_C_IPCM_CONN_CREATE_ARRIVED,
 
-        /* IPC Process -> IPC Manager*/
+        /* KIPCM -> IPC Process (user space)*/
         RINA_C_IPCM_CONN_CREATE_RESULT,
 
-        /* IPC Manager -> IPC Process */
+        /* IPC Process (user space) -> KIPCM */
         RINA_C_IPCM_CONN_UPDATE_REQUEST,
 
-        /* IPC Process -> IPC Manager*/
+        /* KIPCM -> IPC Process (user space)*/
         RINA_C_IPCM_CONN_UPDATE_RESULT,
 
-        /* IPC Manager -> IPC Process */
+        /* IPC Process (user space) -> KIPCM */
         RINA_C_IPCM_CONN_DESTROY_REQUEST,
 
-        /* IPC Process -> IPC Manager*/
+        /* KIPCM -> IPC Process (user space)*/
         RINA_C_IPCM_CONN_DESTROY_RESULT,
 
         RINA_C_MAX,

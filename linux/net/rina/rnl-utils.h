@@ -180,6 +180,20 @@ enum ipcm_conn_update_result_attrs_list {
 };
 #define ICURS_ATTR_MAX (__ICURS_ATTR_MAX - 1)
 
+enum ipcm_conn_destroy_req_attrs_list {
+        ICDR_ATTR_PORT_ID = 1,
+        ICDR_ATTR_SOURCE_CEP_ID,
+        __ICDR_ATTR_MAX,
+};
+#define ICDR_ATTR_MAX (__ICDR_ATTR_MAX - 1)
+
+enum ipcm_conn_destroy_result_attrs_list {
+        ICDRS_ATTR_PORT_ID = 1,
+        ICDRS_ATTR_RESULT,
+        __ICDRS_ATTR_MAX,
+};
+#define ICDRS_ATTR_MAX (__ICDRS_ATTR_MAX - 1)
+
 enum ipcm_reg_app_req_attrs_list {
         IRAR_ATTR_APP_NAME = 1,
         IRAR_ATTR_DIF_NAME,
@@ -470,11 +484,21 @@ struct rnl_ipcm_conn_update_req_msg_attrs {
         cep_id_t  src_cep;
         cep_id_t  dst_cep;
 };
+
 struct rnl_ipcm_conn_update_result_msg_attrs {
         port_id_t port_id;
         uint_t    result;
 };
 
+struct rnl_ipcm_conn_destroy_req_msg_attrs {
+        port_id_t port_id;
+        cep_id_t  src_cep;
+};
+
+struct rnl_ipcm_conn_destroy_result_msg_attrs {
+        port_id_t port_id;
+        uint_t    result;
+};
 
 struct rnl_ipcm_reg_app_req_msg_attrs {
         struct name * app_name;
@@ -599,6 +623,10 @@ int rnl_format_ipcm_conn_update_result_msg(port_id_t        id,
                                            uint_t           result,
                                            struct sk_buff * skb_out);
 
+int rnl_format_ipcm_conn_destroy_result_msg(port_id_t        id,
+                                            uint_t           result,
+                                            struct sk_buff * skb_out);
+
 int rnl_format_ipcm_reg_app_req_msg(const struct name * app_name,
                                     const struct name * dif_name,
                                     struct sk_buff *    skb_out);
@@ -700,6 +728,12 @@ int rnl_ipcm_conn_update_result_msg(ipc_process_id_t ipc_id,
                                     uint_t           result,
                                     rnl_sn_t         seq_num,
                                     u32              nl_port_id);
+
+int rnl_ipcm_conn_destroy_result_msg(ipc_process_id_t ipc_id,
+                                     port_id_t        pid,
+                                     uint_t           result,
+                                     rnl_sn_t         seq_num,
+                                     u32              nl_port_id);
 
 int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port);
 
