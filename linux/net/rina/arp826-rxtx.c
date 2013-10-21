@@ -93,8 +93,10 @@ static struct sk_buff * arp_create(struct net_device * dev,
                 (gpa_address_length(spa) + gha_address_length(sha)) * 2;
 
         skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
-        if (skb == NULL)
+        if (skb == NULL) {
+		LOG_DBG("Couldn't allocate skb");
                 return NULL;
+	}
 
         skb_reserve(skb, hlen);
         skb_reset_network_header(skb);
@@ -258,6 +260,7 @@ int arp_send_request(uint16_t            ptype,
 #endif
 
         if (skb == NULL) {
+		LOG_DBG("Sk_buff was null");
                 gha_destroy(tha);
                 return -1;
         }
