@@ -37,6 +37,12 @@
 #include "arp826-tables.h"
 #include "arp826-arm.h"
 
+#if defined(CONFIG_RINARP) || defined(CONFIG_RINARP_MODULE)
+#define HAVE_RINARP 1
+#else
+#define HAVE_RINARP 0
+#endif
+
 static struct sk_buff * arp_create(struct net_device * dev,
                                    uint16_t            oper,
                                    uint16_t            ptype,
@@ -143,10 +149,9 @@ int arp_send_reply(uint16_t            ptype,
                    const struct gpa *  tpa,
                    const struct gha *  tha)
 {
-#ifdef CONFIG_RINARP
+#if HAVE_RINARP
         struct gpa *        tmp_spa;
         struct gpa *        tmp_tpa;
-        uint8_t             filler;
         size_t              max_len;
 #endif
         struct net_device * dev;
@@ -164,7 +169,7 @@ int arp_send_reply(uint16_t            ptype,
                 return -1;
         }
 
-#ifdef CONFIG_RINARP
+#if HAVE_RINARP
         max_len = max(gpa_address_length(spa), gpa_address_length(tpa));
         LOG_DBG("Growing addresses to %zd", max_len);
         tmp_spa = gpa_dup(spa);
@@ -201,10 +206,9 @@ int arp_send_request(uint16_t            ptype,
                      const struct gha *  sha,
                      const struct gpa *  tpa)
 {
-#ifdef CONFIG_RINARP
+#if HAVE_RINARP
         struct gpa *        tmp_spa;
         struct gpa *        tmp_tpa;
-        uint8_t             filler;
         size_t              max_len;
 #endif
         struct net_device * dev;
@@ -229,7 +233,7 @@ int arp_send_request(uint16_t            ptype,
                 return -1;
         }
 
-#ifdef CONFIG_RINARP
+#if HAVE_RINARP
         max_len = max(gpa_address_length(spa), gpa_address_length(tpa));
         LOG_DBG("Growing addresses to %zd", max_len);
         tmp_spa = gpa_dup(spa);
@@ -346,7 +350,7 @@ static int process(const struct sk_buff * skb,
         tmp_tpa = gpa_create_gfp(GFP_ATOMIC, tpa, plen);
         tmp_tha = gha_create_gfp(GFP_ATOMIC, MAC_ADDR_802_3, tha);
 
-#ifdef CONFIG_RINARP
+#if HAVE_RINARP
         LOG_DBG("Shrinking as needed");
         if (gpa_address_shrink(tmp_spa, 0x00)) {
                 LOG_ERR("Problems parsing the source GPA");
