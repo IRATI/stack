@@ -196,8 +196,7 @@ struct connection_imap * connection_imap_create(void)
         return tmp;
 }
 
-int connection_imap_destroy(struct connection_imap * map,
-                            int (* destructor)(struct connection * instance))
+int connection_imap_destroy(struct connection_imap * map)
 {
         struct connection_imap_entry * entry;
         struct hlist_node *            tmp;
@@ -207,8 +206,7 @@ int connection_imap_destroy(struct connection_imap * map,
 
         hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
                 hash_del(&entry->hlist);
-                if (destructor)
-                        destructor(entry->value);
+                rkfree(entry->value);
                 rkfree(entry);
         }
 
@@ -223,8 +221,9 @@ int connection_imap_empty(struct connection_imap * map)
         return hash_empty(map->table);
 }
 
-static struct conn_imap_entry * conn_entry_find(struct connection_imap * map,
-                                                port_id_t                key)
+static struct connection_imap_entry *
+connection_entry_find(struct connection_imap * map,
+                      port_id_t                key)
 {
         struct connection_imap_entry * entry;
         struct hlist_head *            head;
@@ -240,14 +239,14 @@ static struct conn_imap_entry * conn_entry_find(struct connection_imap * map,
         return NULL;
 }
 
-struct connection * conn_imap_find(struct connection_imap * map,
-                                   port_id_t                key)
+struct connection * connection_imap_find(struct connection_imap * map,
+                                         port_id_t                key)
 {
         struct connection_imap_entry * entry;
 
         ASSERT(map);
 
-        entry = imap_entry_find(map, key);
+        entry = connection_entry_find(map, key);
         if (!entry)
                 return NULL;
 
@@ -262,7 +261,7 @@ int connection_imap_update(struct connection_imap *  map,
 
         ASSERT(map);
 
-        cur = conn_entry_find(map, key);
+        cur = connection_entry_find(map, key);
         if (!cur)
                 return -1;
 
@@ -299,7 +298,7 @@ int connection_imap_remove(struct connection_imap * map,
 
         ASSERT(map);
 
-        cur = imap_entry_find(map, key);
+        cur = connection_entry_find(map, key);
         if (!cur)
                 return -1;
 

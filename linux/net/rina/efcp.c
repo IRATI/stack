@@ -105,6 +105,7 @@ int efcp_container_destroy(struct efcp_container * container)
         }
 
         efcp_imap_destroy(container->instances, efcp_destroy);
+        connection_imap_destroy(container->connections);
         rkfree(container);
 
         return 0;
@@ -118,7 +119,7 @@ int efcp_container_write(struct efcp_container * container,
         struct connection * conn;
         struct efcp *       efcp;
 
-        conn = conn_imap_find(container->connections, port_id);
+        conn = connection_imap_find(container->connections, port_id);
         if (!conn) {
                 LOG_ERR("There is no connection bound to this port_id %d",
                         port_id);
@@ -195,7 +196,7 @@ cep_id_t efcp_connection_create(struct efcp_container *   container,
                           tmp)) {
                 LOG_ERR("Cannot add a new instance into container %pK",
                         container);
-                connection_destroy(connection);
+                rkfree(connection);
                 dtp_destroy(tmp->dtp);
                 efcp_destroy(tmp);
                 return -1;
@@ -208,7 +209,7 @@ cep_id_t efcp_connection_create(struct efcp_container *   container,
                         container);
                 efcp_imap_remove(container->instances,
                                  connection->source_cep_id);
-                connection_destroy(connection);
+                rkfree(connection);
                 dtp_destroy(tmp->dtp);
                 efcp_destroy(tmp);
                 return -1;
