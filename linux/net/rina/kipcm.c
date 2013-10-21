@@ -1532,8 +1532,74 @@ static int notify_ipcp_conn_update_req(void *             data,
 static int notify_ipcp_conn_destroy_req(void *             data,
                                         struct sk_buff *   buff,
                                         struct genl_info * info) {
-        LOG_MISSING;
-        return 0;
+        struct rnl_ipcm_conn_destroy_req_msg_attrs * attrs;
+        struct rnl_msg *                             msg;
+        struct ipcp_instance *                       ipcp;
+        struct rina_msg_hdr *                        hdr;
+        struct kipcm *                               kipcm;
+        ipc_process_id_t                             ipc_id = 0;
+        port_id_t                                    port_id = 0;
+        cep_id_t                                     src_cep;
+
+        attrs    = NULL;
+        msg      = NULL;
+        hdr      = NULL;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        kipcm = (struct kipcm *) data;
+        attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+        msg   = rkzalloc(sizeof(*msg), GFP_KERNEL);
+        hdr   = rkzalloc(sizeof(*hdr), GFP_KERNEL);
+
+        if (!attrs || !msg || !hdr) {
+                goto process_fail;
+        }
+
+        msg->rina_hdr = hdr;
+        msg->attrs    = attrs;
+
+        if (rnl_parse_msg(info, msg)) {
+                goto process_fail;
+        }
+
+        port_id = attrs->port_id;
+        ipc_id  = hdr->dst_ipc_id;
+        ipcp    = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipcp) {
+                goto process_fail;
+        }
+
+        if (ipcp->ops->connection_destroy(ipcp->data, attrs->src_cep)) {
+                goto process_fail;
+        }
+        
+        return conn_destroy_result_free_and_reply(attrs,
+                                                  msg,
+                                                  hdr,
+                                                  ipc_id,
+                                                  0
+                                                  port_id,
+                                                  info->snd_seq,
+                                                  info->snd_portid);
+
+ process_fail:
+        return conn_destroy_result_free_and_reply(attrs,
+                                                  msg,
+                                                  hdr,
+                                                  ipc_id,
+                                                  -1,
+                                                  port_id,
+                                                  info->snd_seq,
+                                                  info->snd_portid);
 }
 
 static int notify_ipc_manager_present(void *             data,
