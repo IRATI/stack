@@ -120,6 +120,13 @@ config RINA_SHIM_ETH_VLAN
 	help
 	  No help for the time being
 
+config RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
+	bool "Perform regression testing upon loading"
+	default n
+        depends on RINA_SHIM_ETH_VLAN
+	help
+	  No help for the time being
+
 config RINA_SHIM_TCP_UDP
 	tristate "Shim IPC over TCP/UDP support"
 	default m
