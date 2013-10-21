@@ -243,11 +243,9 @@ static int regression_tests_table(void)
 }
 #endif
 
-static int __init mod_init(void)
-{
 #ifdef CONFIG_ARP826_REGRESSION_TESTS
-        LOG_DBG("Starting regression tests");
-
+static bool regression_tests(void)
+{
         if (regression_tests_gpa()) {
                 LOG_ERR("GPA regression tests failed, bailing out");
                 return -1;
@@ -258,6 +256,19 @@ static int __init mod_init(void)
         }
         if (regression_tests_table()) {
                 LOG_ERR("Table regression tests failed, bailing out");
+                return -1;
+        }
+
+        return true;
+}
+#endif
+
+static int __init mod_init(void)
+{
+#ifdef CONFIG_ARP826_REGRESSION_TESTS
+        LOG_DBG("Starting regression tests");
+
+        if (!regression_tests()) {
                 return -1;
         }
 
