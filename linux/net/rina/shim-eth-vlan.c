@@ -236,10 +236,12 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
 /* FIXME: Why vlan-id is a "long" ??? */
 static bool is_vlan_id_ok(unsigned long vlan_id)
 {
-        if (vlan_id < 0 && vlan_id > 0xFFF) {
+        if (vlan_id < 0 || vlan_id > 4095 /* 0xFFF */) {
                 /* Out of bounds */
                 return 0;
         }
+
+        ASSERT(vlan_id >= 0 && vlan_id <= 4095);
 
         /*
          * Reserved values:
@@ -275,8 +277,8 @@ static string_t * create_vlan_interface_name(string_t *    interface_name,
                 LOG_ERR("Wrong vlan-id %lu", vlan_id);
                 return NULL;
         }
-        ASSERT(vlan_id < 9999); /* Buffer overflow check */
 
+        ASSERT(vlan_id < 9999); /* Buffer overflow check */
         bzero(string_vlan_id, sizeof(string_vlan_id)); /* Be safe */
 #if 0
         if (vlan_id < 10) {
