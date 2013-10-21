@@ -1529,6 +1529,33 @@ static int notify_ipcp_conn_update_req(void *             data,
 
 }
 
+static int
+conn_destroy_result_free_and_reply(
+                                   struct rnl_ipcm_conn_destroy_req_msg_attrs * attrs,
+                                   struct rnl_msg *                             msg,
+                                   struct rina_msg_hdr *                        hdr,
+                                   ipc_process_id_t                             ipc_id,
+                                   uint_t                                       result,
+                                   port_id_t                                    pid,
+                                   rnl_sn_t                                     seq_num,
+                                   u32                                          nl_port_id)
+{
+        if (attrs) rkfree(attrs);
+        if (msg)   rkfree(msg);
+        if (hdr)   rkfree(hdr);
+
+        if (rnl_ipcm_conn_destroy_result_msg(ipc_id,
+                                             pid,
+                                             result,
+                                             seq_num,
+                                             nl_port_id)) {
+                LOG_ERR("Could not snd conn_destroy_result_msg");
+                return -1;
+        }
+
+        return 0;
+}
+
 static int notify_ipcp_conn_destroy_req(void *             data,
                                         struct sk_buff *   buff,
                                         struct genl_info * info) {
