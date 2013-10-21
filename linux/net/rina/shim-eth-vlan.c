@@ -1141,10 +1141,13 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
 
         ASSERT(data);
         ASSERT(instance);
+        
+        LOG_DBG("Looking for the eth-vlan-instance to destroy");
 
         /* Retrieve the instance */
         list_for_each_entry_safe(pos, next, &data->instances, list) {
                 if (pos->id == instance->data->id) {
+                        LOG_DBG("Got !");
 
                         /* Remove packet handler if there is one */
                         if (pos->eth_vlan_packet_type->dev)
@@ -1180,6 +1183,8 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
 
                         rkfree(pos);
                         rkfree(instance);
+
+                        LOG_DBG("Eth-vlan instance destroyed, returning");
 
                         return 0;
                 }
