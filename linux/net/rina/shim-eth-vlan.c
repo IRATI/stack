@@ -430,7 +430,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                         return -1;
                 }
 
-                if (!rinarp_resolve_gpa(data->handle,
+                if (rinarp_resolve_gpa(data->handle,
                                         flow->dest_pa,
                                         rinarp_resolve_handler,
                                         data)) {
