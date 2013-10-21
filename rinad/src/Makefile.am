@@ -22,7 +22,8 @@ EXTRA_DIST    =
 bin_SCRIPTS   =
 
 ipcmanager/src/main/scripts/ipcmanager: \
-	ipcmanager/src/main/scripts/ipcmanager.in
+	ipcmanager/src/main/scripts/ipcmanager.in \
+	Makefile
 	rm -f $@ $@.tmp
 	srcdir=''; \
 	  test -f ./$@.in || srcdir=$(srcdir)/; \
@@ -38,7 +39,8 @@ EXTRA_DIST    += ipcmanager/src/main/scripts/ipcmanager.in
 bin_SCRIPTS   += ipcmanager/src/main/scripts/ipcmanager
 
 ipcmanager/src/main/conf/ipcmanager.conf: \
-	ipcmanager/src/main/conf/ipcmanager.conf.in
+	ipcmanager/src/main/conf/ipcmanager.conf.in \
+	Makefile
 	rm -f $@ $@.tmp
 	srcdir=''; \
 	  test -f ./$@.in || srcdir=$(srcdir)/; \
@@ -51,7 +53,8 @@ BUILT_SOURCES += ipcmanager/src/main/conf/ipcmanager.conf
 EXTRA_DIST    += ipcmanager/src/main/conf/ipcmanager.conf.in
 
 ipcprocess/src/main/scripts/ipcprocess: \
-	ipcprocess/src/main/scripts/ipcprocess.in
+	ipcprocess/src/main/scripts/ipcprocess.in \
+	Makefile
 	rm -f $@ $@.tmp
 	srcdir=''; \
 	  test -f ./$@.in || srcdir=$(srcdir)/; \
@@ -66,7 +69,8 @@ EXTRA_DIST    += ipcprocess/src/main/scripts/ipcprocess.in
 bin_SCRIPTS   += ipcprocess/src/main/scripts/ipcprocess
 
 applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-server: \
-	applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-server.in
+	applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-server.in \
+	Makefile
 	rm -f $@ $@.tmp
 	srcdir=''; \
 	  test -f ./$@.in || srcdir=$(srcdir)/; \
@@ -81,7 +85,8 @@ EXTRA_DIST    += applications/rina.utils.apps.rinaband/src/main/scripts/rinaband
 bin_SCRIPTS   += applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-server
 
 applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-client: \
-	applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-client.in
+	applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-client.in \
+	Makefile
 	rm -f $@ $@.tmp
 	srcdir=''; \
 	  test -f ./$@.in || srcdir=$(srcdir)/; \
@@ -96,7 +101,8 @@ EXTRA_DIST    += applications/rina.utils.apps.rinaband/src/main/scripts/rinaband
 bin_SCRIPTS   += applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-client
 
 applications/rina.utils.apps.echo/src/main/scripts/echo-server: \
-	applications/rina.utils.apps.echo/src/main/scripts/echo-server.in
+	applications/rina.utils.apps.echo/src/main/scripts/echo-server.in \
+	Makefile
 	rm -f $@ $@.tmp
 	srcdir=''; \
 	  test -f ./$@.in || srcdir=$(srcdir)/; \
@@ -111,7 +117,8 @@ EXTRA_DIST    += applications/rina.utils.apps.echo/src/main/scripts/echo-server.
 bin_SCRIPTS   += applications/rina.utils.apps.echo/src/main/scripts/echo-server
 
 applications/rina.utils.apps.echo/src/main/scripts/echo-client: \
-	applications/rina.utils.apps.echo/src/main/scripts/echo-client.in
+	applications/rina.utils.apps.echo/src/main/scripts/echo-client.in \
+	Makefile
 	rm -f $@ $@.tmp
 	srcdir=''; \
 	  test -f ./$@.in || srcdir=$(srcdir)/; \
@@ -125,7 +132,8 @@ BUILT_SOURCES += applications/rina.utils.apps.echo/src/main/scripts/echo-client
 EXTRA_DIST    += applications/rina.utils.apps.echo/src/main/scripts/echo-client.in
 bin_SCRIPTS   += applications/rina.utils.apps.echo/src/main/scripts/echo-client
 
-pom.xml: Makefile pom.xml.in
+pom.xml: pom.xml.in \
+	Makefile
 	rm -f $@ $@.tmp
 	srcdir=''; \
 	  test -f ./$@.in || srcdir=$(srcdir)/; \

@@ -283,19 +283,19 @@ static string_t * create_vlan_interface_name(string_t *    interface_name,
 #if 0
         if (vlan_id < 10) {
                 snprintf(string_vlan_id, sizeof(string_vlan_id), "%1lu",
-                                vlan_id);
+                         vlan_id);
                 string_vlan_id[1] = 0;
         } else if (vlan_id < 100) {
                 snprintf(string_vlan_id, sizeof(string_vlan_id), "%2lu",
-                                vlan_id);
+                         vlan_id);
                 string_vlan_id[2] = 0;
         } else if (vlan_id < 1000) {
                 snprintf(string_vlan_id, sizeof(string_vlan_id), "%3lu",
-                                vlan_id);
+                         vlan_id);
                 string_vlan_id[3] = 0;
         } else if (vlan_id < 10000) {
                 snprintf(string_vlan_id, sizeof(string_vlan_id), "%4lu",
-                                vlan_id);
+                         vlan_id);
                 string_vlan_id[4] = 0;
         } else
                 BUG();
@@ -341,7 +341,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
 
         spin_lock(&data->lock);
         list_del(&flow->list);
-	spin_unlock(&data->lock);
+        spin_unlock(&data->lock);
 
         fid = kfa_flow_unbind(data->kfa, flow->port_id);
         kfa_flow_destroy(data->kfa, fid);
