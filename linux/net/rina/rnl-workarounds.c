@@ -1,7 +1,8 @@
 /*
- * RNL workarounds (we should find a better solution if possible)
+ * RNL workarounds
  *
- *    Eduard Grasa <eduard.grasa@i2cat.net>
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +19,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* FIXME: This is another workaround we would like to avoid ... */ 
 #include "../net/netlink/af_netlink.h"
 #include <linux/rwlock.h>
 
@@ -26,13 +28,24 @@
 #include "logs.h"
 #include "rnl-workarounds.h"
 
+/* FIXME: Yet another workaround ... */
+void netlink_table_grab(void);
+void netlink_table_ungrab(void);
+
 void set_netlink_non_root_send_flag(void)
 {
         LOG_DBG("Setting NL_CFG_F_NONROOT_SEND flag for NL_GENERIC sockets");
 
-        write_lock(&nl_table_lock);
+        netlink_table_grab();
+
+        /*
+         * FIXME: this is the most pigsty workaround here, it would be good to
+         * have a fine granularity on these flags to avoid patching the
+         * situation as we're doing now ...
+         */
         nl_table[NETLINK_GENERIC].flags |= NL_CFG_F_NONROOT_SEND;
-        write_unlock(&nl_table_lock);
+
+        netlink_table_ungrab();
 
         LOG_DBG("NL_CFG_F_NONROOT_SEND flag set");
 }
