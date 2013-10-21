@@ -70,7 +70,7 @@ static void protocol_remove(uint16_t ptype)
 }
 
 #ifdef CONFIG_ARP826_REGRESSION_TESTS
-static int regression_tests_gpa(void)
+static bool regression_tests_gpa(void)
 {
         struct gpa * a;
         struct gpa * b;
@@ -83,69 +83,69 @@ static int regression_tests_gpa(void)
         LOG_DBG("Regression test #1.1");
         a = gpa_create(name_tmp, sizeof(name_tmp));
         if (!a)
-                return -1;
+                return false;
         len_a_1 = gpa_address_length(a);
 
         LOG_DBG("Regression test #1.2");
         b = gpa_create(name_tmp, sizeof(name_tmp));
         if (!b)
-                return -1;
+                return false;
         len_b_1 = gpa_address_length(b);
 
         LOG_DBG("Regression test #2");
         if (!gpa_is_equal(a, b))
-                return -1;
+                return false;
         if (len_a_1 != len_b_1)
-                return -1;
+                return false;
 
         LOG_DBG("Regression test #3.1");
         if (gpa_address_grow(a, sizeof(name_tmp) * 2, 0xff))
-                return -1;
+                return false;
         len_a_2 = gpa_address_length(a);
 
         if (gpa_address_grow(b, sizeof(name_tmp) * 2, 0xff))
-                return -1;
+                return false;
         len_b_2 = gpa_address_length(b);
 
         if (!gpa_is_equal(a, b))
-                return -1;
+                return false;
 
         LOG_DBG("Regression test #3.2");
         if (len_a_2 != len_b_2)
-                return -1;
+                return false;
 
         LOG_DBG("Regression test #3.3");
         if (len_a_1 == len_a_2)
-                return -1;
+                return false;
 
         LOG_DBG("Regression test #3.4");
         if (len_b_1 == len_b_2)
-                return -1;
+                return false;
 
         LOG_DBG("Regression test #4.1");
         if (gpa_address_shrink(a, 0xff))
-                return -1;
+                return false;
         if (gpa_address_shrink(b, 0xff))
-                return -1;
+                return false;
 
         LOG_DBG("Regression test #4.2");
         if (gpa_address_length(a) != len_a_1)
-                return -1;
+                return false;
         LOG_DBG("Regression test #4.3");
         if (gpa_address_length(b) != len_b_1)
-                return -1;
+                return false;
 
         LOG_DBG("Regression test #5");
         if (!gpa_is_equal(a, a))
-                return -1;
+                return false;
 
         gpa_destroy(b);
         gpa_destroy(a);
 
-        return 0;
+        return true;
 }
 
-static int regression_tests_gha(void)
+static bool regression_tests_gha(void)
 {
         uint8_t      mac_1[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06 };
         struct gha * a;
@@ -158,36 +158,36 @@ static int regression_tests_gha(void)
         LOG_DBG("Regression test #1");
         a = gha_create(MAC_ADDR_802_3, mac_1);
         if (!a)
-                return -1;
+                return false;
         b = gha_create(MAC_ADDR_802_3, mac_1);
         if (!b)
-                return -1;
+                return false;
 
         LOG_DBG("Regression test #2");
         if (!gha_is_equal(a, b))
-                return -1;
+                return false;
 
         LOG_DBG("Regression test #3");
         c = gha_create(MAC_ADDR_802_3, mac_2);
         if (!c)
-                return -1;
+                return false;
         if (gha_is_equal(a, c))
-                return -1;
+                return false;
         if (gha_is_equal(b, c))
-                return -1;
+                return false;
 
         LOG_DBG("Regression test #4");
         if (!gha_is_equal(c, c))
-                return -1;
+                return false;
 
         gha_destroy(a);
         gha_destroy(b);
         gha_destroy(c);
 
-        return 0;
+        return true;
 }
 
-static int regression_tests_table(void)
+static bool regression_tests_table(void)
 {
         struct table * x;
 
@@ -195,68 +195,68 @@ static int regression_tests_table(void)
 
         LOG_DBG("Regression test #1");
         if (tbls_init())
-                return -1;
+                return false;
 
         LOG_DBG("Regression test #2");
 
         LOG_DBG("Regression test #2.1");
         if (tbls_create(10, 3))
-                return -1;
+                return false;
         LOG_DBG("Regression test #2.2");
         if (tbls_create(21, 6))
-                return -1;
+                return false;
         LOG_DBG("Regression test #2.3");
         if (tbls_create(37, 31))
-                return -1;
+                return false;
 
         LOG_DBG("Regression test #3");
 
         LOG_DBG("Regression test #3.1");
         x = tbls_find(10);
         if (!x)
-                return -1;
+                return false;
         LOG_DBG("Regression test #3.2");
         x = tbls_find(21);
         if (!x)
-                return -1;
+                return false;
         LOG_DBG("Regression test #3.3");
         x = tbls_find(37);
         if (!x)
-                return -1;
+                return false;
         
         LOG_DBG("Regression test #4");
 
         LOG_DBG("Regression test #4.1");
         if (tbls_destroy(10))
-                return -1;
+                return false;
         LOG_DBG("Regression test #4.2");
         if (tbls_destroy(21))
-                return -1;
+                return false;
         LOG_DBG("Regression test #4.3");
         if (tbls_destroy(37))
-            return -1;
+            return false;
 
         LOG_DBG("Regression test #5");        
         tbls_fini();
 
-        return 0;
+        return true;
 }
 #endif
 
 #ifdef CONFIG_ARP826_REGRESSION_TESTS
 static bool regression_tests(void)
 {
-        if (regression_tests_gpa()) {
+        if (!regression_tests_gpa()) {
                 LOG_ERR("GPA regression tests failed, bailing out");
-                return -1;
+                return false;
         }
-        if (regression_tests_gha()) {
+        if (!regression_tests_gha()) {
                 LOG_ERR("GHA regression tests failed, bailing out");
-                return -1;
+                return false;
         }
-        if (regression_tests_table()) {
+        if (!regression_tests_table()) {
                 LOG_ERR("Table regression tests failed, bailing out");
-                return -1;
+                return false;
         }
 
         return true;
