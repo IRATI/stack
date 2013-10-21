@@ -511,7 +511,7 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if (!flow_destroy(data, flow))
+        if (flow_destroy(data, flow))
                 LOG_ERR("Failed to destroy flow");
 
         return 0;
