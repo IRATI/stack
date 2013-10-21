@@ -74,8 +74,9 @@ static int efcp_destroy(struct efcp * instance)
 }
 
 struct efcp_container {
-        struct efcp_imap * instances;
-        struct cidm *      cidm;
+        struct efcp_imap *       instances;
+        struct connection_imap * connections;
+        struct cidm *            cidm;
 };
 
 // efcp_imap maps cep_id_t to efcp_instances
@@ -88,8 +89,9 @@ struct efcp_container * efcp_container_create(void)
         if (!container)
                 return NULL;
 
-        container->instances = efcp_imap_create();
-        container->cidm      = cidm_create();
+        container->instances   = efcp_imap_create();
+        container->connections = connection_imap_create();
+        container->cidm        = cidm_create();
 
         return container;
 }
@@ -103,10 +105,38 @@ int efcp_container_destroy(struct efcp_container * container)
         }
 
         efcp_imap_destroy(container->instances, efcp_destroy);
+        connection_imap_destroy(container->connections);
         rkfree(container);
 
         return 0;
 }
+EXPORT_SYMBOL(efcp_container_destroy);
+
+int efcp_container_write(struct efcp_container * container,
+                         port_id_t               port_id,
+                         struct sdu *            sdu)
+{
+        struct connection * conn;
+        struct efcp *       efcp;
+
+        conn = connection_imap_find(container->connections, port_id);
+        if (!conn) {
+                LOG_ERR("There is no connection bound to this port_id %d",
+                        port_id);
+                return -1;
+        }
+
+        efcp = efcp_imap_find(container->instances, conn->source_cep_id);
+        if (!efcp) {
+                LOG_ERR("There is no EFCP bound to this port_id %d", port_id);
+                return -1;
+        }
+        if (efcp_send(efcp, port_id, sdu))
+                return -1;
+
+        return 0;
+}
+EXPORT_SYMBOL(efcp_container_write);
 
 static int is_connection_ok(const struct connection * connection)
 {
@@ -149,22 +179,38 @@ cep_id_t efcp_connection_create(struct efcp_container *   container,
                 return -1;
         }
 
-        /* FIXME: We need to know if DTCP is needed ... */
+        /* FIXME: We need to know if DTCP is needed ...
         tmp->dtcp = dtcp_create();
         if (!tmp->dtcp) {
                 efcp_destroy(tmp);
                 return -1;
         }
+        */
 
         /* No needs to check here, bindings are straightforward */
         dtp_bind(tmp->dtp,   tmp->dtcp);
-        dtcp_bind(tmp->dtcp, tmp->dtp);
+        /* dtcp_bind(tmp->dtcp, tmp->dtp); */
 
         if (efcp_imap_add(container->instances,
                           connection->source_cep_id,
                           tmp)) {
                 LOG_ERR("Cannot add a new instance into container %pK",
                         container);
+                rkfree(connection);
+                dtp_destroy(tmp->dtp);
+                efcp_destroy(tmp);
+                return -1;
+        }
+
+        if (connection_imap_add(container->connections,
+                                connection->port_id,
+                                connection)) {
+                LOG_ERR("Cannot add a new connection into container %pK",
+                        container);
+                efcp_imap_remove(container->instances,
+                                 connection->source_cep_id);
+                rkfree(connection);
+                dtp_destroy(tmp->dtp);
                 efcp_destroy(tmp);
                 return -1;
         }
