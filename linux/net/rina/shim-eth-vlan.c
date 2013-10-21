@@ -233,6 +233,19 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
         return NULL;
 }
 
+/* FIXME: Why vlan-id is a "long" ??? */
+static bool is_vlan_id_ok(unsigned long vlan_id)
+{
+        if (vlan_id < 0 && vlan_id > 0xFFF) {
+                /* Out of bounds */
+                return 0;
+        }
+
+        /* FIXME: Add checks here, please */
+
+        return 1;
+}
+
 static string_t * create_vlan_interface_name(string_t *    interface_name,
                                              unsigned long vlan_id)
 {
@@ -248,13 +261,14 @@ static string_t * create_vlan_interface_name(string_t *    interface_name,
         LOG_DBG("Building complete VLAN interface name ('%s', %lu)",
                 interface_name, vlan_id);
 
-        if (vlan_id <= 0 && vlan_id > 0xFFF /* 4095 is reserved */) {
+        if (!is_vlan_id_ok(vlan_id)) {
                 LOG_ERR("VLAN id is to high: %lu", vlan_id);
                 return NULL;
         }
+        ASSERT(vlan_id < 9999); /* Buffer overflow check */
 
         bzero(string_vlan_id, sizeof(string_vlan_id)); /* Be safe */
-
+#if 0
         if (vlan_id < 10) {
                 snprintf(string_vlan_id, sizeof(string_vlan_id), "%1lu",
                                 vlan_id);
@@ -273,6 +287,9 @@ static string_t * create_vlan_interface_name(string_t *    interface_name,
                 string_vlan_id[4] = 0;
         } else
                 BUG();
+#else
+        snprintf(string_vlan_id, sizeof(string_vlan_id), "%lu", vlan_id);
+#endif
 
         LOG_DBG("VLAN id is '%s'", string_vlan_id);
 
@@ -1183,7 +1200,7 @@ static bool regression_test_create_vlan_interface_name(void)
         tmp = create_vlan_interface_name("eth0", 1);
         if (!tmp)
                 return false;
-        if (strlen(tmp) != 5) {
+        if (strlen(tmp) != 6) {
                 rkfree(tmp);
                 return false;
         }
@@ -1193,7 +1210,7 @@ static bool regression_test_create_vlan_interface_name(void)
         tmp = create_vlan_interface_name("eth0", 10);
         if (!tmp)
                 return false;
-        if (strlen(tmp) != 6) {
+        if (strlen(tmp) != 7) {
                 rkfree(tmp);
                 return false;
         }
@@ -1203,7 +1220,7 @@ static bool regression_test_create_vlan_interface_name(void)
         tmp = create_vlan_interface_name("eth0", 100);
         if (!tmp)
                 return false;
-        if (strlen(tmp) != 7) {
+        if (strlen(tmp) != 8) {
                 rkfree(tmp);
                 return false;
         }
@@ -1213,7 +1230,7 @@ static bool regression_test_create_vlan_interface_name(void)
         tmp = create_vlan_interface_name("eth0", 1000);
         if (!tmp)
                 return false;
-        if (strlen(tmp) != 8) {
+        if (strlen(tmp) != 9) {
                 rkfree(tmp);
                 return false;
         }
@@ -1228,7 +1245,7 @@ static bool regression_test_create_vlan_interface_name(void)
         rkfree(tmp);
 
         LOG_DBG("Regression test #2.2");
-        tmp = create_vlan_interface_name("eth0", 4095);
+        tmp = create_vlan_interface_name("eth0", 4096);
         if (tmp)
                 return false;
         rkfree(tmp);
