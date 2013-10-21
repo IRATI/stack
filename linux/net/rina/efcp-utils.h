@@ -42,25 +42,6 @@ int                efcp_imap_update(struct efcp_imap * map,
 int                efcp_imap_remove(struct efcp_imap * map,
                                     cep_id_t           key);
 
-struct connection_imap;
-
-struct connection_imap * connection_imap_create(void);
-int                      connection_imap_destroy(struct connection_imap * map);
-
-int                      connection_imap_empty(struct connection_imap * map);
-struct connection *      connection_imap_find(struct connection_imap * map,
-                                              port_id_t                key);
-int
-connection_imap_update(struct connection_imap *  map,
-                       port_id_t                 key,
-                       struct connection *       value);
-
-int                      connection_imap_add(struct connection_imap *  map,
-                                             port_id_t                 key,
-                                             struct connection *       value);
-int                      connection_imap_remove(struct connection_imap * map,
-                                                port_id_t                key);
-
 struct cidm;
 
 /* ALWAYS use this function to get a bad cep-id */
