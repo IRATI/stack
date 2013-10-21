@@ -484,11 +484,21 @@ struct rnl_ipcm_conn_update_req_msg_attrs {
         cep_id_t  src_cep;
         cep_id_t  dst_cep;
 };
+
 struct rnl_ipcm_conn_update_result_msg_attrs {
         port_id_t port_id;
         uint_t    result;
 };
 
+struct rnl_ipcm_conn_destroy_req_msg_attrs {
+        port_id_t port_id;
+        cep_id_t  src_cep;
+};
+
+struct rnl_ipcm_conn_destroy_result_msg_attrs {
+        port_id_t port_id;
+        uint_t    result;
+};
 
 struct rnl_ipcm_reg_app_req_msg_attrs {
         struct name * app_name;
