@@ -175,14 +175,17 @@ int arp_send_reply(uint16_t            ptype,
         max_len = max(gpa_address_length(spa), gpa_address_length(tpa));
         LOG_DBG("Growing addresses to %zd", max_len);
         tmp_spa = gpa_dup(spa);
-        if (gpa_address_grow(tmp_spa, max_len, 0x00))
+        if (gpa_address_grow(tmp_spa, max_len, 0x00)) {
+		LOG_ERR("Failed to grow tmp_spa");
                 return -1;
         tmp_tpa = gpa_dup(tpa);
         if (gpa_address_grow(tmp_tpa, max_len, 0x00)) {
-                gpa_destroy(tmp_spa);
+                LOG_ERR("Failed to grow tmp_tpa");
+		gpa_destroy(tmp_spa);
                 return -1;
         }
-
+	
+	LOG_DBG("Creating an ARP packet");
         skb = arp_create(dev,
                          ARP_REPLY, ptype,
                          tmp_spa, sha, tmp_tpa, tha);
@@ -194,8 +197,10 @@ int arp_send_reply(uint16_t            ptype,
                          ARP_REPLY, ptype,
                          spa, sha, tpa, tha);
 #endif
-        if (skb == NULL)
+        if (skb == NULL) {
+		LOG_ERR("Skb was NULL");
                 return -1;
+	}
 
         dev_queue_xmit(skb);
 
@@ -250,6 +255,7 @@ int arp_send_request(uint16_t            ptype,
                 return -1;
         }
 
+	LOG_DBG("Creating an ARP packet");
         skb = arp_create(dev,
                          ARP_REPLY, ptype,
                          tmp_spa, sha, tmp_tpa, tha);
