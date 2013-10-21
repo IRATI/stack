@@ -886,6 +886,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 LOG_ERR("Can't get device '%s'", complete_interface);
                 read_unlock(&dev_base_lock);
                 name_destroy(data->dif_name);
+                LOG_DBG("DIF name at %pK", data->dif_name);
                 rkfree(info->interface_name);
                 rkfree(complete_interface);
                 return -1;
@@ -1156,6 +1157,8 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         /* Destroy it */
                         if (pos->name)
                                 name_destroy(pos->name);
+
+                        LOG_DBG("DIF name at %pK", pos->dif_name);
 
                         if (pos->dif_name)
                                 name_destroy(pos->dif_name);
