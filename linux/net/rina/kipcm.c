@@ -1566,7 +1566,6 @@ static int notify_ipcp_conn_destroy_req(void *             data,
         struct kipcm *                               kipcm;
         ipc_process_id_t                             ipc_id = 0;
         port_id_t                                    port_id = 0;
-        cep_id_t                                     src_cep;
 
         attrs    = NULL;
         msg      = NULL;
@@ -1613,7 +1612,7 @@ static int notify_ipcp_conn_destroy_req(void *             data,
                                                   msg,
                                                   hdr,
                                                   ipc_id,
-                                                  0
+                                                  0,
                                                   port_id,
                                                   info->snd_seq,
                                                   info->snd_portid);
