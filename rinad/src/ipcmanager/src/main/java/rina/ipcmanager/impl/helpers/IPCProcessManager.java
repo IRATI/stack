@@ -20,11 +20,13 @@ import eu.irati.librina.IPCException;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IPCProcessPointerVector;
+import eu.irati.librina.UpdateDIFConfigurationResponseEvent;
 
 public class IPCProcessManager {
 	
 	private IPCProcessFactorySingleton ipcProcessFactory = null;
 	private Map<Long, PendingDIFAssignment> pendingDIFAssignments = null;
+	private Map<Long, PendingDIFConfiguration> pendingDIFConfigurations = null;
 	private static final Log log = 
 			LogFactory.getLog(IPCProcessManager.class);
 	
@@ -32,6 +34,8 @@ public class IPCProcessManager {
 		this.ipcProcessFactory = ipcProcessFactory;
 		this.pendingDIFAssignments = 
 				new ConcurrentHashMap<Long, PendingDIFAssignment>();
+		this.pendingDIFConfigurations = 
+				new ConcurrentHashMap<Long, PendingDIFConfiguration>();
 	}
 	
 	public synchronized IPCProcessPointerVector listIPCProcesses(){
@@ -155,13 +159,13 @@ public class IPCProcessManager {
 		return ipcProcessFactory.getIPCProcess(ipcProcessId);
 	}
 	
-	public synchronized void requestAssignToDIF(
+	public synchronized long requestAssignToDIF(
 			long ipcProcessID, String difName) throws Exception{
 		IPCProcess ipcProcess = getIPCProcess(ipcProcessID);
-		requestAssignToDIF(ipcProcess, difName);
+		return requestAssignToDIF(ipcProcess, difName);
 	}
 
-	private void requestAssignToDIF(IPCProcess ipcProcess, String difName) 
+	private long requestAssignToDIF(IPCProcess ipcProcess, String difName) 
 			throws AssignToDIFException{
 		DIFInformation difInformation = new DIFInformation();
 		ApplicationProcessNamingInformation difNamingInfo = 
@@ -183,6 +187,8 @@ public class IPCProcessManager {
 		pendingDIFAssignments.put(handle, new PendingDIFAssignment(difInformation, ipcProcess));
 		log.debug("Requested the assignment of IPC Process "+ipcProcess.getId() 
 				+ " to DIF "+difName);
+		
+		return handle;
 	}
 	
 	public synchronized void assignToDIFResponse(
@@ -193,7 +199,7 @@ public class IPCProcessManager {
 
 		pendingDIFAssignment = pendingDIFAssignments.remove(event.getSequenceNumber());
 		if (pendingDIFAssignment == null){
-			throw new Exception("Could not find a pending DIF assignment to the handle "
+			throw new Exception("Could not find a pending DIF assignment with the handle "
 					+event.getSequenceNumber());
 		}
 
@@ -218,11 +224,46 @@ public class IPCProcessManager {
 					"; DIF name: " + pendingDIFAssignment.getDIFInformation().getDifName().getProcessName());
 		}
 	}
-
-	public void updateDIFConfiguration(long ipcProcessID,
+	
+	public synchronized long requestUpdateDIFConfiguration(long ipcProcessID,
 			DIFConfiguration difConfiguration) throws Exception{
 		IPCProcess ipcProcess = this.ipcProcessFactory.getIPCProcess(ipcProcessID);
-		ipcProcess.updateDIFConfiguration(difConfiguration);
+		long handle = ipcProcess.updateDIFConfiguration(difConfiguration);
+		pendingDIFConfigurations.put(handle, new PendingDIFConfiguration(difConfiguration, ipcProcess));
+		log.debug("Requested the configuration of IPC Process "+ipcProcess.getId());
+		return handle;
+	}
+
+	public synchronized void updateDIFConfigurationResponse(
+			UpdateDIFConfigurationResponseEvent event) throws Exception{
+		IPCProcess ipcProcess = null;
+		PendingDIFConfiguration pendingDIFConfiguration = null;
+		boolean success;
+
+		pendingDIFConfiguration = pendingDIFConfigurations.remove(event.getSequenceNumber());
+		if (pendingDIFConfiguration == null){
+			throw new Exception("Could not find a pending DIF configuration with the handle "
+					+event.getSequenceNumber());
+		}
+
+		ipcProcess = pendingDIFConfiguration.getIpcProcess();
+		if (event.getResult() == 0){
+			success = true;
+		}else{
+			success = false;
+		}
+
+		try {
+			ipcProcess.updateDIFConfigurationResult(success);
+			if (success){
+				log.info("Successfully configured IPC Process "+ ipcProcess.getId());
+			} else {
+				log.info("Could not configure IPC Process "+ ipcProcess.getId());
+			}
+		}catch(Exception ex){
+			log.error("Problems processing UpdateDIFConfigurationResponseEvent. Handle: "+
+					event.getSequenceNumber());
+		};
 	}
 
 }

@@ -22,6 +22,7 @@ import eu.irati.librina.IpcmDeallocateFlowResponseEvent;
 import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
 import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
 import eu.irati.librina.OSProcessFinalizedEvent;
+import eu.irati.librina.UpdateDIFConfigurationResponseEvent;
 import eu.irati.librina.rina;
 
 import java.io.ByteArrayOutputStream;
@@ -288,9 +289,13 @@ public class IPCManager {
 				//Should we destroy the state in the kernel? Or try to create another
 				//IPC Process in user space to bring it back?
 			}
-		}else if (event.getType().equals(IPCEventType.ASSIGN_TO_DIF_RESPONSE_EVENT)){
+		} else if (event.getType().equals(IPCEventType.ASSIGN_TO_DIF_RESPONSE_EVENT)){
 			AssignToDIFResponseEvent atrEvent = (AssignToDIFResponseEvent) event;
 			ipcProcessManager.assignToDIFResponse(atrEvent);
+			console.responseArrived(event);
+		} else if (event.getType().equals(IPCEventType.UPDATE_DIF_CONFIG_RESPONSE_EVENT)){
+			UpdateDIFConfigurationResponseEvent atrEvent = (UpdateDIFConfigurationResponseEvent) event;
+			ipcProcessManager.updateDIFConfigurationResponse(atrEvent);
 		}
 	}
 	
@@ -340,15 +345,20 @@ public class IPCManager {
 	 * @param difName
 	 * @throws Exception
 	 */
-	public void requestAssignToDIF(long ipcProcessID, String difName) throws Exception{
-		ipcProcessManager.requestAssignToDIF(ipcProcessID, difName);
+	public long requestAssignToDIF(long ipcProcessID, String difName) throws Exception{
+		return ipcProcessManager.requestAssignToDIF(ipcProcessID, difName);
 	}
 	
 	
-	public void updateDIFConfiguration(long ipcProcessID,
+	/**
+	 * Updates the configuration of the IPC Process identified by 'ipcProcessId'
+	 * @param ipcProcessID
+	 * @param difConfiguration
+	 * @throws Exception
+	 */
+	public long requestUpdateDIFConfiguration(long ipcProcessID,
 				DIFConfiguration difConfiguration) throws Exception{
-		IPCProcess ipcProcess = this.ipcProcessFactory.getIPCProcess(ipcProcessID);
-		ipcProcess.updateDIFConfiguration(difConfiguration);
+		 return ipcProcessManager.requestUpdateDIFConfiguration(ipcProcessID, difConfiguration);
 	}
 
 }
