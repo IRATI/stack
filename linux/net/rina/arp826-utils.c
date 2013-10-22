@@ -173,8 +173,6 @@ int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
 {
         uint8_t * new_address;
         uint8_t * position;
-        uint8_t * tmp;
-        ssize_t   count;
         size_t    length;
 
         if (!gpa_is_ok(gpa)) {
@@ -188,30 +186,21 @@ int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
                 filler, gpa->length);
 
         position = memscan(gpa->address, filler, gpa->length);
-
-        LOG_DBG("  position     = %pK", position);
-        LOG_DBG("  gpa->address = %pK", gpa->address);
-        LOG_DBG("  gpa->length  = %zd", gpa->length);
-
         if (position >= gpa->address + gpa->length) {
                 LOG_DBG("GPA doesn't need to be shrinked ...");
                 return 0;
         }
 
-        count = position - gpa->address;
+        length = position - gpa->address;
+        ASSERT(length >= 0);
 
-        ASSERT(count > 0);
+        LOG_DBG("Shrinking GPA to %zd", length);
 
-        LOG_DBG("Shrinking GPA to %zd", count);
-
-        length      = gpa->length - count;
         new_address = rkmalloc(length, GFP_KERNEL);
         if (!new_address)
                 return -1;
 
-        memcpy(new_address, gpa->address, gpa->length - count);
-        for (tmp = new_address + count; count != 0; tmp++, count--)
-                *tmp = filler;
+        memcpy(new_address, gpa->address, length);
 
         rkfree(gpa->address);
         gpa->address = new_address;
