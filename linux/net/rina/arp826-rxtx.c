@@ -94,9 +94,9 @@ static struct sk_buff * arp_create(struct net_device * dev,
 
         skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
         if (skb == NULL) {
-		LOG_ERR("Couldn't allocate skb");
+                LOG_ERR("Couldn't allocate skb");
                 return NULL;
-	}
+        }
 
         skb_reserve(skb, hlen);
         skb_reset_network_header(skb);
@@ -178,17 +178,17 @@ int arp_send_reply(uint16_t            ptype,
         LOG_DBG("Growing addresses to %zd", max_len);
         tmp_spa = gpa_dup(spa);
         if (gpa_address_grow(tmp_spa, max_len, 0x00)) {
-		LOG_ERR("Failed to grow SPA");
+                LOG_ERR("Failed to grow SPA");
                 return -1;
-	}
+        }
         tmp_tpa = gpa_dup(tpa);
         if (gpa_address_grow(tmp_tpa, max_len, 0x00)) {
                 LOG_ERR("Failed to grow TPA");
-		gpa_destroy(tmp_spa);
+                gpa_destroy(tmp_spa);
                 return -1;
         }
-	
-	LOG_DBG("Creating an ARP packet");
+
+        LOG_DBG("Creating an ARP packet");
         skb = arp_create(dev,
                          ARP_REPLY, ptype,
                          tmp_spa, sha, tmp_tpa, tha);
@@ -201,9 +201,9 @@ int arp_send_reply(uint16_t            ptype,
                          spa, sha, tpa, tha);
 #endif
         if (skb == NULL) {
-		LOG_ERR("Skb was NULL");
+                LOG_ERR("Skb was NULL");
                 return -1;
-	}
+        }
 
         dev_queue_xmit(skb);
 
@@ -250,17 +250,17 @@ int arp_send_request(uint16_t            ptype,
         LOG_DBG("Growing addresses to %zd", max_len);
         tmp_spa = gpa_dup(spa);
         if (gpa_address_grow(tmp_spa, max_len, 0x00)) {
-		LOG_ERR("Failed to grow SPA");
+                LOG_ERR("Failed to grow SPA");
                 return -1;
-	}
+        }
         tmp_tpa = gpa_dup(tpa);
         if (gpa_address_grow(tmp_tpa, max_len, 0x00)) {
                 LOG_ERR("Failed to grow TPA");
-		gpa_destroy(tmp_spa);
+                gpa_destroy(tmp_spa);
                 return -1;
         }
 
-	LOG_DBG("Creating an ARP packet");
+        LOG_DBG("Creating an ARP packet");
         skb = arp_create(dev,
                          ARP_REPLY, ptype,
                          tmp_spa, sha, tmp_tpa, tha);
@@ -274,7 +274,7 @@ int arp_send_request(uint16_t            ptype,
 #endif
 
         if (skb == NULL) {
-		LOG_ERR("Sk_buff was null");
+                LOG_ERR("Sk_buff was null");
                 gha_destroy(tha);
                 return -1;
         }
