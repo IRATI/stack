@@ -106,8 +106,6 @@ int kfa_destroy(struct kfa * instance)
                 return -1;
         }
 
-        fidm_destroy(instance->fidm);
-
         /* FIXME: Destroy all the pending flows */
         ASSERT(kfa_fmap_empty(instance->flows.pending));
         kfa_fmap_destroy(instance->flows.pending);
@@ -115,6 +113,7 @@ int kfa_destroy(struct kfa * instance)
         /* FIXME: Destroy all the committed flows */
         ASSERT(kfa_pmap_empty(instance->flows.committed));
         kfa_pmap_destroy(instance->flows.committed);
+
         fidm_destroy(instance->fidm);
         rkfree(instance);
 
