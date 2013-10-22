@@ -336,14 +336,14 @@ static int process(const struct sk_buff * skb,
         oper  = ntohs(header->oper);
 
         LOG_DBG("Decoded ARP header:");
-        LOG_DBG("  Hardware type           = 0x%02x", htype);
-        LOG_DBG("  Protocol type           = 0x%02x", ptype);
+        LOG_DBG("  Hardware type           = 0x%04x", htype);
+        LOG_DBG("  Protocol type           = 0x%04x", ptype);
         LOG_DBG("  Hardware address length = %d",     hlen);
         LOG_DBG("  Protocol address length = %d",     plen);
-        LOG_DBG("  Operation               = 0x%02x", oper);
+        LOG_DBG("  Operation               = 0x%04x", oper);
 
         if (header->htype != htons(HW_TYPE_ETHER)) {
-                LOG_ERR("Unhandled ARP hardware type 0x%02x", header->htype);
+                LOG_ERR("Unhandled ARP hardware type 0x%04x", header->htype);
                 return -1;
         }
         if (hlen != 6) {
@@ -353,7 +353,7 @@ static int process(const struct sk_buff * skb,
 
         operation = ntohs(header->oper);
         if (operation != ARP_REPLY && operation != ARP_REQUEST) {
-                LOG_ERR("Unhandled ARP operation 0x%02x", operation);
+                LOG_ERR("Unhandled ARP operation 0x%04x", operation);
                 return -1;
         }
 
@@ -367,6 +367,8 @@ static int process(const struct sk_buff * skb,
         tpa = ptr; ptr += header->plen;
 
         LOG_DBG("Fetching addresses");
+
+        /* FIXME: Add some dumps of these addresses */
         tmp_spa = gpa_create_gfp(GFP_ATOMIC, spa, plen);
         tmp_sha = gha_create_gfp(GFP_ATOMIC, MAC_ADDR_802_3, sha);
         tmp_tpa = gpa_create_gfp(GFP_ATOMIC, tpa, plen);
@@ -393,19 +395,30 @@ static int process(const struct sk_buff * skb,
                 const struct gha *         target_ha;
 
                 /* FIXME: Should we add all ARP Requests? */
-                /* Do we have it in the cache ? */
-                tbl   = tbls_find(ptype);
-                entry = tbl_find_by_gpa(tbl, tmp_spa);
 
+                /* Do we have it in the cache ? */
+                tbl = tbls_find(ptype);
+                if (!tbl) {
+                        LOG_ERR("I don't have a table for ptype 0x%04x",
+                                ptype);
+                        return -1;
+                }
+
+                /*
+                 * FIXME: We do a double lookup here. Please remove it, all
+                 *        the CPUs (and trees) out there will apreciate that...
+                 */
+                entry = tbl_find_by_gpa(tbl, tmp_spa);
                 if (!entry) {
                         if (tbl_add(tbl, tmp_spa, tmp_sha)) {
-                                LOG_ERR("Bollocks. Can't add in table.");
+                                LOG_ERR("AAAAAAARRggh can't add in table");
                                 return -1;
                         }
                 } else {
-                        if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha))
+                        if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha)) {
                                 LOG_ERR("Failed to update table");
-                        return -1;
+                                return -1;
+                        }
                 }
 
                 req_addr  = tbl_find_by_gpa(tbl, tmp_tpa);
@@ -494,7 +507,7 @@ int arp_receive(struct sk_buff *     skb,
 #if 0
                 /* This log is too noisy */
                 LOG_DBG("I don't have a table to handle this ARP "
-                        "(ptype = 0x%02x)", header->ptype);
+                        "(ptype = 0x%04x)", header->ptype);
 #endif
                 kfree_skb(skb);
                 return 0;
