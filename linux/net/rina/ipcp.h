@@ -48,6 +48,13 @@ struct ipcp_config {
         struct ipcp_config_entry * entry;
 };
 
+/* Represents a DIF configuration (policies, parameters, etc) */
+struct dif_config {
+
+        /* List of configuration entries */
+        struct list_head ipcp_config_entries;
+};
+
 /* Represents the information about a DIF (name, type, configuration) */
 struct dif_info {
         /* The DIF type. Can be 'NORMAL' or one of the shims */
@@ -58,13 +65,6 @@ struct dif_info {
 
         /* The DIF configuration (policies, parameters, etc) */
         struct dif_config * configuration;
-};
-
-/* Represents a DIF configuration (policies, parameters, etc) */
-struct dif_config {
-
-        /* List of configuration entries */
-        struct list_head ipcp_config_entries;
 };
 
 /* Pre-declared, the implementation should define it properly */

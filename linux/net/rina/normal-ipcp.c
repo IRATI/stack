@@ -258,6 +258,14 @@ connection_create_arrived(struct ipcp_instance_data * data,
         return cep_id;
 }
 
+static int normal_assign_to_dif(struct ipcp_instance_data * data,
+                                const struct dif_info *     dif_information)
+{
+        data->info->dif_name = name_dup(dif_information->dif_name);
+
+        return 0;
+}
+
 /*  FIXME: register ops */
 static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request     = NULL,
@@ -266,7 +274,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .application_register      = NULL,
         .application_unregister    = NULL,
         .sdu_write                 = normal_sdu_write,
-        .assign_to_dif             = NULL,
+        .assign_to_dif             = normal_assign_to_dif,
         .update_dif_config         = NULL,
         .connection_create         = connection_create_request,
         .connection_update         = connection_update_request,
