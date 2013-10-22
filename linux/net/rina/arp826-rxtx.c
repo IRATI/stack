@@ -207,6 +207,8 @@ int arp_send_reply(uint16_t            ptype,
 
         dev_queue_xmit(skb);
 
+        LOG_DBG("ARP packet sent successfully");
+
         return 0;
 }
 
@@ -280,6 +282,8 @@ int arp_send_request(uint16_t            ptype,
         }
 
         dev_queue_xmit(skb);
+
+        LOG_DBG("ARP packet sent successfully");
 
         gha_destroy(tha);
 
