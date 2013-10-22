@@ -430,10 +430,10 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                         return -1;
                 }
 
-                if (!rinarp_resolve_gpa(data->handle,
-                                        flow->dest_pa,
-                                        rinarp_resolve_handler,
-                                        data)) {
+                if (rinarp_resolve_gpa(data->handle,
+                                       flow->dest_pa,
+                                       rinarp_resolve_handler,
+                                       data)) {
                         LOG_ERR("Failed to lookup ARP entry");
                         if (flow_destroy(data, flow))
                                 LOG_ERR("Failed to destroy flow");
@@ -1142,9 +1142,12 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
         ASSERT(data);
         ASSERT(instance);
 
+        LOG_DBG("Looking for the eth-vlan-instance to destroy");
+
         /* Retrieve the instance */
         list_for_each_entry_safe(pos, next, &data->instances, list) {
                 if (pos->id == instance->data->id) {
+                        LOG_DBG("Got !");
 
                         /* Remove packet handler if there is one */
                         if (pos->eth_vlan_packet_type->dev)
@@ -1180,6 +1183,8 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
 
                         rkfree(pos);
                         rkfree(instance);
+
+                        LOG_DBG("Eth-vlan instance destroyed, returning");
 
                         return 0;
                 }
