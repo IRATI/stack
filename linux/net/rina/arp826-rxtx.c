@@ -24,6 +24,7 @@
 #include <linux/skbuff.h>
 #include <linux/netdevice.h>
 #include <linux/if_arp.h>
+#include <linux/if_ether.h>
 
 /* FIXME: The following dependencies have to be removed */
 #define RINA_PREFIX "arp826-rxtx"
@@ -103,7 +104,7 @@ static struct sk_buff * arp_create(struct net_device * dev,
         arp = (struct arp_header *) skb_put(skb, length);
 
         skb->dev      = dev;
-        skb->protocol = htons(ptype);
+        skb->protocol = htons(ETH_P_ARP);
 
         /* Fill the device header for the ARP frame */
         if (dev_hard_header(skb, dev,
