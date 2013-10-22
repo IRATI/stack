@@ -174,7 +174,7 @@ int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
         uint8_t * new_address;
         uint8_t * position;
         uint8_t * tmp;
-        size_t    count;
+        ssize_t   count;
         size_t    length;
 
         if (!gpa_is_ok(gpa)) {
@@ -187,19 +187,20 @@ int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
         LOG_DBG("Looking for filler 0x%02X in GPA (length = %zd)",
                 filler, gpa->length);
 
-        position = strnchr(gpa->address, gpa->length, filler);
-        if (!position) {
-                LOG_ERR("No filler in the GPA, no needs to shrink");
-                return 0;
-        }
+        position = memscan(gpa->address, filler, gpa->length);
 
-        count = position - gpa->address;
-        if (!count) {
+        LOG_DBG("  position     = %pK", position);
+        LOG_DBG("  gpa->address = %pK", gpa->address);
+        LOG_DBG("  gpa->length  = %zd", gpa->length);
+
+        if (position >= gpa->address + gpa->length) {
                 LOG_DBG("GPA doesn't need to be shrinked ...");
                 return 0;
         }
 
-        ASSERT(count);
+        count = position - gpa->address;
+
+        ASSERT(count > 0);
 
         LOG_DBG("Shrinking GPA to %zd", count);
 
@@ -472,7 +473,6 @@ struct net_device * gha_to_device(const struct gha * ha)
                                 if (!memcmp(hwa->addr,
                                             gha_address(ha),
                                             gha_address_length(ha))) {
-
                                         read_unlock(&dev_base_lock);
                                         return dev;
                                 }
