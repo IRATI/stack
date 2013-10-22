@@ -860,6 +860,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                         if (!info->interface_name) {
                                 LOG_ERR("Cannot copy interface name");
                                 name_destroy(data->dif_name);
+                                data->dif_name = NULL;
                                 return -1;
                         }
                 } else
@@ -873,7 +874,9 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                                                         info->vlan_id);
         if (!complete_interface) {
                 name_destroy(data->dif_name);
+                data->dif_name = NULL;
                 rkfree(info->interface_name);
+                info->interface_name = NULL;
                 return -1;
         }
 
@@ -886,8 +889,9 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 LOG_ERR("Can't get device '%s'", complete_interface);
                 read_unlock(&dev_base_lock);
                 name_destroy(data->dif_name);
-                LOG_DBG("DIF name at %pK", data->dif_name);
+                data->dif_name = NULL;
                 rkfree(info->interface_name);
+                info->interface_name = NULL;
                 rkfree(complete_interface);
                 return -1;
         }
@@ -900,7 +904,9 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         if (!mapping) {
                 read_unlock(&dev_base_lock);
                 name_destroy(data->dif_name);
+                data->dif_name = NULL;
                 rkfree(info->interface_name);
+                info->interface_name = NULL;
                 rkfree(complete_interface);
                 return -1;
         }
