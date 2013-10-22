@@ -139,7 +139,8 @@ public class TestWorker implements Runnable, SDUListener{
 		
 		if (this.flow.getState() == FlowState.FLOW_ALLOCATED){
 			try{
-				rina.getIpcManager().deallocateFlow(this.flow.getPortId());
+				rina.getIpcManager().requestFlowDeallocation(
+						this.flow.getPortId());
 			}catch(Exception ex){
 			}
 		}

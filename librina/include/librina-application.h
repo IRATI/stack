@@ -340,7 +340,7 @@ public:
 	throw (ApplicationRegistrationException);
 
 	/**
-	 * The application registration has been unsucesful,
+	 * The application registration has been unsuccessful,
 	 * update data structures
 	 * @param seqNumber the if of the registration request
 	 * @throws ApplicationRegistrationException if the pending registration

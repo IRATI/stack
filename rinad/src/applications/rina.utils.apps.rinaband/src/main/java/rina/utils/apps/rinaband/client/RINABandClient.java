@@ -9,6 +9,7 @@ import java.util.concurrent.Executors;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import eu.irati.librina.AllocateFlowRequestResultEvent;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.Flow;
 import eu.irati.librina.FlowSpecification;
@@ -23,7 +24,9 @@ import rina.utils.apps.rinaband.StatisticsInformation;
 import rina.utils.apps.rinaband.TestInformation;
 import rina.utils.apps.rinaband.protobuf.RINABandStatisticsMessageEncoder;
 import rina.utils.apps.rinaband.protobuf.RINABandTestMessageEncoder;
+import rina.utils.apps.rinaband.utils.FlowAllocationListener;
 import rina.utils.apps.rinaband.utils.FlowReader;
+import rina.utils.apps.rinaband.utils.IPCEventConsumer;
 import rina.utils.apps.rinaband.utils.SDUListener;
 
 /**
@@ -31,7 +34,7 @@ import rina.utils.apps.rinaband.utils.SDUListener;
  * @author eduardgrasa
  *
  */
-public class RINABandClient implements SDUListener{
+public class RINABandClient implements SDUListener, FlowAllocationListener{
 	
 	public static final String TEST_OBJECT_CLASS = "RINAband test";
 	public static final String TEST_OBJECT_NAME = "/rina/utils/apps/rinaband/test";
@@ -106,6 +109,11 @@ public class RINABandClient implements SDUListener{
 	
 	private static final Log log = LogFactory.getLog(RINABandClient.class);
 	
+	private long controlFlowHandle = -1;
+	private List<Long> dataFlowHandles = null;
+	
+	private IPCEventConsumer ipcEventConsumer = null;
+	
 	public RINABandClient(TestInformation testInformation, ApplicationProcessNamingInformation controlApNamingInfo, 
 			ApplicationProcessNamingInformation dataApNamingInfo){
 		this.testInformation = testInformation;
@@ -115,14 +123,76 @@ public class RINABandClient implements SDUListener{
 		this.cdapSessionManager = new CDAPSessionManagerImpl(new GoogleProtocolBufWireMessageProviderFactory());
 		this.testWorkers = new ArrayList<TestWorker>();
 		this.executorService = Executors.newCachedThreadPool();
+		ipcEventConsumer = new IPCEventConsumer();
+		executorService.execute(ipcEventConsumer);
+		dataFlowHandles = new ArrayList<Long>();
 		rina.initialize();
 	}
 	
 	public void execute(){
 		try{
-			//1 Allocate a flow to the RINABand Server control AE
+			//1 Request a flow allocationto the RINABand server control AE
 			FlowSpecification qosSpec = new FlowSpecification();
-			this.controlFlow = rina.getIpcManager().allocateFlowRequest(this.clientApNamingInfo, this.controlApNamingInfo, qosSpec);
+			controlFlowHandle = rina.getIpcManager().requestFlowAllocation(
+					this.clientApNamingInfo, this.controlApNamingInfo, qosSpec);
+			ipcEventConsumer.addFlowAllocationListener(this, controlFlowHandle);
+		}catch(Exception ex){
+			ex.printStackTrace();
+			abortTest("Problems requesting test");
+		}
+	}
+	
+	@Override
+	public synchronized void dispatchAllocateFlowRequestResultEvent(
+			AllocateFlowRequestResultEvent event) {
+		ipcEventConsumer.removeFlowAllocationListener(event.getSequenceNumber());
+
+		if (event.getSequenceNumber() == controlFlowHandle){
+			if (event.getPortId() > 0){
+				processControlFlowAllocated(event);
+			} else {
+				log.error("Problems allocating flow to control AE: " + controlApNamingInfo.toString());
+				try{
+					rina.getIpcManager().withdrawPendingFlow(event.getSequenceNumber());
+				} catch (Exception ex) {
+					log.error(ex.getMessage());
+				}
+				abortTest("Problems requesting test");
+			}
+		} else if (dataFlowHandles.contains(event.getSequenceNumber())){
+			dataFlowHandles.remove(event.getSequenceNumber());
+			processDataFlowAllocated(event);
+
+			if (dataFlowHandles.size() == 0) {
+				state = State.EXECUTING;
+
+				log.info("Allocated "+testWorkers.size()+" flows. Executing the test ...");
+
+				//2 Tell the server to start the test
+				try{
+					CDAPMessage startTestMessage = CDAPMessage.getStartObjectRequestMessage(
+							null, null, TEST_OBJECT_CLASS, null, 0, TEST_OBJECT_NAME, 0);
+					byte[] sdu = cdapSessionManager.encodeCDAPMessage(startTestMessage);
+					controlFlow.writeSDU(sdu, sdu.length);
+
+					//3 If the client has to send SDUs, execute the TestWorkers in separate threads
+					if (testInformation.isClientSendsSDUs()){
+						for(int i=0; i<testWorkers.size(); i++){
+							executorService.execute(testWorkers.get(i));
+						}
+					}
+				}catch(Exception ex){
+					ex.printStackTrace();
+				}
+			}
+		}
+	}
+	
+	private void processControlFlowAllocated(AllocateFlowRequestResultEvent event){
+		try{
+			//1 Commit flow
+			controlFlow = rina.getIpcManager().commitPendingFlow(event.getSequenceNumber(), 
+					event.getPortId(), event.getDIFName());
 			
 			//2 Start flowReader
 			FlowReader flowReader = new FlowReader(this.controlFlow, this, 10000);
@@ -141,8 +211,33 @@ public class RINABandClient implements SDUListener{
 			this.controlFlow.writeSDU(sdu, sdu.length);
 			log.info("Requested a new test with the following parameters:");
 			log.info(this.testInformation.toString());
-		}catch(Exception ex){
-			ex.printStackTrace();
+			
+		} catch(Exception ex){
+			log.error(ex.getMessage());
+			abortTest("Problems requesting test");
+		}
+	}
+
+	private void processDataFlowAllocated(AllocateFlowRequestResultEvent event){
+		try{
+			if (event.getPortId() > 0){
+				//1 Commit flow
+				Flow flow = rina.getIpcManager().commitPendingFlow(event.getSequenceNumber(), 
+						event.getPortId(), event.getDIFName());
+				
+				//2 Start test worker
+				TestWorker testWorker = new TestWorker(testInformation, this, timer);
+				testWorker.setFlow(flow, 0);
+				testWorkers.add(testWorker);
+				FlowReader flowReader = new FlowReader(flow, testWorker, testInformation.getSduSize());
+				testWorker.setFlowReader(flowReader);
+				executorService.execute(flowReader);
+			} else {
+				rina.getIpcManager().withdrawPendingFlow(event.getSequenceNumber());
+				log.error("Allocation of flow with portId " + event.getPortId()+ " failed");
+			}
+		} catch(Exception ex){
+			log.error(ex.getMessage());
 			abortTest("Problems requesting test");
 		}
 	}
@@ -197,62 +292,24 @@ public class RINABandClient implements SDUListener{
 			log.info(testInformation.toString());
 			
 			//Setup all the flows
-			Flow flow = null;
-			TestWorker testWorker = null;
-			long before = 0;
-			int retries = 0;
 			FlowSpecification qosSpec = new FlowSpecification();
-			/*if (testInformation.getQos().equals(Main.RELIABLE)){
-				qosSpec.setQosCubeId(2);
-			}else{
-				qosSpec.setQosCubeId(1);
-			}*/
+			
+			//Give time to the RINABand data AE registration to reach our directory
+			try{
+				Thread.sleep(500);
+			}catch(Exception ex){
+				log.error(ex.getMessage());
+			}
+			
 			this.timer = new Timer();
+			long handle = -1;
 			for(int i=0; i<testInformation.getNumberOfFlows(); i++){
 				try{
-					testWorker = new TestWorker(testInformation, this, timer);
-					before = System.currentTimeMillis();
-					retries = 0;
-					
-					//Retry flow allocation for up to 3 times in case the RINABand data AE registration update had not 
-					//reached the directory of the IPC process running in the local system
-					while(retries < 3){
-						try{
-							flow = rina.getIpcManager().allocateFlowRequest(clientApNamingInfo, dataApNamingInfo, qosSpec);
-							testWorker.setFlow(flow, System.currentTimeMillis() - before);
-							testWorkers.add(testWorker);
-							FlowReader flowReader = new FlowReader(flow, testWorker, testInformation.getSduSize());
-							testWorker.setFlowReader(flowReader);
-							executorService.execute(flowReader);
-							break;
-						}catch(Exception ex){
-							if (ex.getMessage().indexOf("Could not find an entry in the directory forwarding table") != 0){
-								System.out.println("Flow request failed, trying again");
-								retries++;
-							}else{
-								break;
-							}
-						}
-					}
+					handle = rina.getIpcManager().requestFlowAllocation(clientApNamingInfo, dataApNamingInfo, qosSpec);
+					ipcEventConsumer.addFlowAllocationListener(this, handle);
+					dataFlowHandles.add(handle);
 				}catch(Exception ex){
-					System.out.println("Flow setup failed");
-					ex.printStackTrace();
-				}
-			}
-			state = State.EXECUTING;
-			
-			log.info("Allocated "+testWorkers.size()+" flows. Executing the test ...");
-			
-			//2 Tell the server to start the test
-			CDAPMessage startTestMessage = CDAPMessage.getStartObjectRequestMessage(
-					null, null, TEST_OBJECT_CLASS, null, 0, TEST_OBJECT_NAME, 0);
-			byte[] sdu = cdapSessionManager.encodeCDAPMessage(startTestMessage);
-			controlFlow.writeSDU(sdu, sdu.length);
-			
-			//3 If the client has to send SDUs, execute the TestWorkers in separate threads
-			if (testInformation.isClientSendsSDUs()){
-				for(int i=0; i<testWorkers.size(); i++){
-					executorService.execute(testWorkers.get(i));
+					log.error("Flow request failed: "+ex.getMessage());
 				}
 			}
 		}catch(Exception ex){
@@ -407,7 +464,7 @@ public class RINABandClient implements SDUListener{
 			log.info("Estimated round-trip time (RTT) in ms: "+rttInMs);
 			
 			//4 Deallocate the control flow
-			rina.getIpcManager().deallocateFlow(this.controlFlow.getPortId());
+			rina.getIpcManager().requestFlowDeallocation(this.controlFlow.getPortId());
 			this.state = State.COMPLETED;
 			
 			//5 Exit
@@ -456,5 +513,4 @@ public class RINABandClient implements SDUListener{
 		log.info(message + ". Aborting the test.");
 		System.exit(-1);
 	}
-	
 }
