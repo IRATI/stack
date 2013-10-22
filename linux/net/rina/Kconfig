@@ -116,7 +116,7 @@ config RINA_SHIM_DUMMY
 config RINA_SHIM_ETH_VLAN
 	tristate "Shim IPC over Ethernet (using VLANs) support"
 	default m
-        depends on RINA_PERSONALITY_DEFAULT && RINARP
+        depends on RINA_PERSONALITY_DEFAULT && RINARP && VLAN_8021Q
 	help
 	  No help for the time being
 

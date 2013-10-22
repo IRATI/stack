@@ -223,7 +223,7 @@ static bool regression_tests_table(void)
         x = tbls_find(37);
         if (!x)
                 return false;
-        
+
         LOG_DBG("Regression test #4");
 
         LOG_DBG("Regression test #4.1");
@@ -234,9 +234,9 @@ static bool regression_tests_table(void)
                 return false;
         LOG_DBG("Regression test #4.3");
         if (tbls_destroy(37))
-            return false;
+                return false;
 
-        LOG_DBG("Regression test #5");        
+        LOG_DBG("Regression test #5");
         tbls_fini();
 
         return true;

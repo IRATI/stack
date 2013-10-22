@@ -24,6 +24,7 @@
 #include <linux/skbuff.h>
 #include <linux/netdevice.h>
 #include <linux/if_arp.h>
+#include <linux/if_ether.h>
 
 /* FIXME: The following dependencies have to be removed */
 #define RINA_PREFIX "arp826-rxtx"
@@ -36,6 +37,12 @@
 #include "arp826-utils.h"
 #include "arp826-tables.h"
 #include "arp826-arm.h"
+
+#if defined(CONFIG_RINARP) || defined(CONFIG_RINARP_MODULE)
+#define HAVE_RINARP 1
+#else
+#define HAVE_RINARP 0
+#endif
 
 static struct sk_buff * arp_create(struct net_device * dev,
                                    uint16_t            oper,
@@ -87,19 +94,21 @@ static struct sk_buff * arp_create(struct net_device * dev,
                 (gpa_address_length(spa) + gha_address_length(sha)) * 2;
 
         skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
-        if (skb == NULL)
+        if (skb == NULL) {
+                LOG_ERR("Couldn't allocate skb");
                 return NULL;
+        }
 
         skb_reserve(skb, hlen);
         skb_reset_network_header(skb);
         arp = (struct arp_header *) skb_put(skb, length);
 
         skb->dev      = dev;
-        skb->protocol = htons(ptype);
+        skb->protocol = htons(ETH_P_ARP);
 
         /* Fill the device header for the ARP frame */
         if (dev_hard_header(skb, dev,
-                            ptype,
+                            ETH_P_ARP,
                             gha_address(tha),
                             gha_address(sha),
                             skb->len) < 0) {
@@ -143,14 +152,15 @@ int arp_send_reply(uint16_t            ptype,
                    const struct gpa *  tpa,
                    const struct gha *  tha)
 {
-#ifdef CONFIG_RINARP
+#if HAVE_RINARP
         struct gpa *        tmp_spa;
         struct gpa *        tmp_tpa;
-        uint8_t             filler;
         size_t              max_len;
 #endif
         struct net_device * dev;
         struct sk_buff *    skb;
+
+        LOG_DBG("Sending ARP reply");
 
         if (!gpa_is_ok(spa) || !gha_is_ok(sha) ||
             !gpa_is_ok(tpa) || !gha_is_ok(tha)) {
@@ -164,18 +174,22 @@ int arp_send_reply(uint16_t            ptype,
                 return -1;
         }
 
-#ifdef CONFIG_RINARP
+#if HAVE_RINARP
         max_len = max(gpa_address_length(spa), gpa_address_length(tpa));
         LOG_DBG("Growing addresses to %zd", max_len);
         tmp_spa = gpa_dup(spa);
-        if (gpa_address_grow(tmp_spa, max_len, 0x00))
+        if (gpa_address_grow(tmp_spa, max_len, 0x00)) {
+                LOG_ERR("Failed to grow SPA");
                 return -1;
+        }
         tmp_tpa = gpa_dup(tpa);
         if (gpa_address_grow(tmp_tpa, max_len, 0x00)) {
+                LOG_ERR("Failed to grow TPA");
                 gpa_destroy(tmp_spa);
                 return -1;
         }
 
+        LOG_DBG("Creating an ARP packet");
         skb = arp_create(dev,
                          ARP_REPLY, ptype,
                          tmp_spa, sha, tmp_tpa, tha);
@@ -187,10 +201,14 @@ int arp_send_reply(uint16_t            ptype,
                          ARP_REPLY, ptype,
                          spa, sha, tpa, tha);
 #endif
-        if (skb == NULL)
+        if (skb == NULL) {
+                LOG_ERR("Skb was NULL");
                 return -1;
+        }
 
         dev_queue_xmit(skb);
+
+        LOG_DBG("ARP packet sent successfully");
 
         return 0;
 }
@@ -201,15 +219,16 @@ int arp_send_request(uint16_t            ptype,
                      const struct gha *  sha,
                      const struct gpa *  tpa)
 {
-#ifdef CONFIG_RINARP
+#if HAVE_RINARP
         struct gpa *        tmp_spa;
         struct gpa *        tmp_tpa;
-        uint8_t             filler;
         size_t              max_len;
 #endif
         struct net_device * dev;
         struct sk_buff *    skb;
         struct gha *        tha;
+
+        LOG_DBG("Sending ARP request");
 
         if (!gpa_is_ok(spa) || !gha_is_ok(sha) || !gpa_is_ok(tpa)) {
                 LOG_ERR("Wrong input parameters, cannot send ARP request");
@@ -229,36 +248,43 @@ int arp_send_request(uint16_t            ptype,
                 return -1;
         }
 
-#ifdef CONFIG_RINARP
+#if HAVE_RINARP
         max_len = max(gpa_address_length(spa), gpa_address_length(tpa));
         LOG_DBG("Growing addresses to %zd", max_len);
         tmp_spa = gpa_dup(spa);
-        if (gpa_address_grow(tmp_spa, max_len, 0x00))
+        if (gpa_address_grow(tmp_spa, max_len, 0x00)) {
+                LOG_ERR("Failed to grow SPA");
                 return -1;
+        }
         tmp_tpa = gpa_dup(tpa);
         if (gpa_address_grow(tmp_tpa, max_len, 0x00)) {
+                LOG_ERR("Failed to grow TPA");
                 gpa_destroy(tmp_spa);
                 return -1;
         }
 
+        LOG_DBG("Creating an ARP packet");
         skb = arp_create(dev,
-                         ARP_REPLY, ptype,
+                         ARP_REQUEST, ptype,
                          tmp_spa, sha, tmp_tpa, tha);
 
         gpa_destroy(tmp_spa);
         gpa_destroy(tmp_tpa);
 #else
         skb = arp_create(dev,
-                         ARP_REPLY, ptype,
+                         ARP_REQUEST, ptype,
                          spa, sha, tpa, tha);
 #endif
 
         if (skb == NULL) {
+                LOG_ERR("Sk_buff was null");
                 gha_destroy(tha);
                 return -1;
         }
 
         dev_queue_xmit(skb);
+
+        LOG_DBG("ARP packet sent successfully");
 
         gha_destroy(tha);
 
@@ -346,7 +372,7 @@ static int process(const struct sk_buff * skb,
         tmp_tpa = gpa_create_gfp(GFP_ATOMIC, tpa, plen);
         tmp_tha = gha_create_gfp(GFP_ATOMIC, MAC_ADDR_802_3, tha);
 
-#ifdef CONFIG_RINARP
+#if HAVE_RINARP
         LOG_DBG("Shrinking as needed");
         if (gpa_address_shrink(tmp_spa, 0x00)) {
                 LOG_ERR("Problems parsing the source GPA");
@@ -465,8 +491,11 @@ int arp_receive(struct sk_buff *     skb,
         /* FIXME: There's no need to lookup it here ... */
         cl = tbls_find(header->ptype);
         if (!cl) {
+#if 0
+                /* This log is too noisy */
                 LOG_DBG("I don't have a table to handle this ARP "
                         "(ptype = 0x%02x)", header->ptype);
+#endif
                 kfree_skb(skb);
                 return 0;
         }

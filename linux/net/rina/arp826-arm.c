@@ -199,7 +199,7 @@ int arp826_resolve_gpa(uint16_t           ptype,
                 return -1;
         }
 
-        if (!arp_send_request(ARP_REQUEST, spa, sha, tpa)) {
+        if (arp_send_request(ptype, spa, sha, tpa)) {
                 LOG_ERR("Cannot send request, cannot resolve GPA");
                 return -1;
         }
