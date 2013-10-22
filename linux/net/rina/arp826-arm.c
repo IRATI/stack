@@ -182,12 +182,24 @@ int arp826_resolve_gpa(uint16_t           ptype,
 {
         struct resolution * resolution;
 
-        if (!gpa_is_ok(spa) || !gha_is_ok(sha) || !gpa_is_ok(tpa) || notify) {
-                LOG_ERR("Cannot resolve, bad input parameters");
+        if (!notify) {
+                LOG_ERR("No notify callback passed, this call is useless");
+                return -1;
+        }
+        if (!gpa_is_ok(spa)) {
+                LOG_ERR("Cannot resolve, bad input parameters (GPA)");
+                return -1;
+        }
+        if (!gha_is_ok(sha)) {
+                LOG_ERR("Cannot resolve, bad input parameters (SHA)");
+                return -1;
+        }
+        if (!gpa_is_ok(tpa)) {
+                LOG_ERR("Cannot resolve, bad input parameters (TPA)");
                 return -1;
         }
 
-        if (!arp_send_request(ARP_REQUEST, spa, sha, tpa)) {
+        if (arp_send_request(ARP_REQUEST, spa, sha, tpa)) {
                 LOG_ERR("Cannot send request, cannot resolve GPA");
                 return -1;
         }
