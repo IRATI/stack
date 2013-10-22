@@ -336,14 +336,14 @@ static int process(const struct sk_buff * skb,
         oper  = ntohs(header->oper);
 
         LOG_DBG("Decoded ARP header:");
-        LOG_DBG("  Hardware type           = 0x%04x", htype);
-        LOG_DBG("  Protocol type           = 0x%04x", ptype);
+        LOG_DBG("  Hardware type           = 0x%04X", htype);
+        LOG_DBG("  Protocol type           = 0x%04X", ptype);
         LOG_DBG("  Hardware address length = %d",     hlen);
         LOG_DBG("  Protocol address length = %d",     plen);
-        LOG_DBG("  Operation               = 0x%04x", oper);
+        LOG_DBG("  Operation               = 0x%04X", oper);
 
         if (header->htype != htons(HW_TYPE_ETHER)) {
-                LOG_ERR("Unhandled ARP hardware type 0x%04x", header->htype);
+                LOG_ERR("Unhandled ARP hardware type 0x%04X", header->htype);
                 return -1;
         }
         if (hlen != 6) {
@@ -353,7 +353,7 @@ static int process(const struct sk_buff * skb,
 
         operation = ntohs(header->oper);
         if (operation != ARP_REPLY && operation != ARP_REQUEST) {
-                LOG_ERR("Unhandled ARP operation 0x%04x", operation);
+                LOG_ERR("Unhandled ARP operation 0x%04X", operation);
                 return -1;
         }
 
@@ -399,7 +399,7 @@ static int process(const struct sk_buff * skb,
                 /* Do we have it in the cache ? */
                 tbl = tbls_find(ptype);
                 if (!tbl) {
-                        LOG_ERR("I don't have a table for ptype 0x%04x",
+                        LOG_ERR("I don't have a table for ptype 0x%04X",
                                 ptype);
                         return -1;
                 }
@@ -506,7 +506,7 @@ int arp_receive(struct sk_buff *     skb,
         if (!cl) {
                 /* This log is too noisy ... but necessary for now :) */
                 LOG_DBG("I don't have a table to handle this ARP "
-                        "(ptype = 0x%04x)", ntohs(header->ptype));
+                        "(ptype = 0x%04X)", ntohs(header->ptype));
                 kfree_skb(skb);
                 return 0;
         }
