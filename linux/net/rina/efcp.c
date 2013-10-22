@@ -75,7 +75,6 @@ static int efcp_destroy(struct efcp * instance)
 
 struct efcp_container {
         struct efcp_imap *       instances;
-        struct connection_imap * connections;
         struct cidm *            cidm;
 };
 
@@ -90,7 +89,6 @@ struct efcp_container * efcp_container_create(void)
                 return NULL;
 
         container->instances   = efcp_imap_create();
-        container->connections = connection_imap_create();
         container->cidm        = cidm_create();
 
         return container;
@@ -105,7 +103,6 @@ int efcp_container_destroy(struct efcp_container * container)
         }
 
         efcp_imap_destroy(container->instances, efcp_destroy);
-        connection_imap_destroy(container->connections);
         rkfree(container);
 
         return 0;
@@ -113,25 +110,17 @@ int efcp_container_destroy(struct efcp_container * container)
 EXPORT_SYMBOL(efcp_container_destroy);
 
 int efcp_container_write(struct efcp_container * container,
-                         port_id_t               port_id,
+                         cep_id_t                cep_id,
                          struct sdu *            sdu)
 {
-        struct connection * conn;
         struct efcp *       efcp;
 
-        conn = connection_imap_find(container->connections, port_id);
-        if (!conn) {
-                LOG_ERR("There is no connection bound to this port_id %d",
-                        port_id);
-                return -1;
-        }
-
-        efcp = efcp_imap_find(container->instances, conn->source_cep_id);
+        efcp = efcp_imap_find(container->instances, cep_id);
         if (!efcp) {
-                LOG_ERR("There is no EFCP bound to this port_id %d", port_id);
+                LOG_ERR("There is no EFCP bound to this cep_id %d", cep_id);
                 return -1;
         }
-        if (efcp_send(efcp, port_id, sdu))
+        if (efcp_send(efcp, sdu))
                 return -1;
 
         return 0;
@@ -196,19 +185,6 @@ cep_id_t efcp_connection_create(struct efcp_container *   container,
                           tmp)) {
                 LOG_ERR("Cannot add a new instance into container %pK",
                         container);
-                rkfree(connection);
-                dtp_destroy(tmp->dtp);
-                efcp_destroy(tmp);
-                return -1;
-        }
-
-        if (connection_imap_add(container->connections,
-                                connection->port_id,
-                                connection)) {
-                LOG_ERR("Cannot add a new connection into container %pK",
-                        container);
-                efcp_imap_remove(container->instances,
-                                 connection->source_cep_id);
                 rkfree(connection);
                 dtp_destroy(tmp->dtp);
                 efcp_destroy(tmp);
@@ -290,16 +266,10 @@ struct efcp * efcp_find(struct efcp_container * container,
 }
 
 int efcp_send(struct efcp * instance,
-              port_id_t     id,
               struct sdu *  sdu)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
-        }
-
-        if (!is_port_id_ok(id)) {
-                LOG_ERR("Wrong port-id passed");
                 return -1;
         }
 
