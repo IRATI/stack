@@ -152,8 +152,6 @@ void name_destroy(struct name * ptr)
 
         rkfree(ptr);
 
-        /* ptr = NULL; */
-
         LOG_DBG("Name at %pK destroyed successfully", ptr);
 }
 EXPORT_SYMBOL(name_destroy);
