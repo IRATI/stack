@@ -1,5 +1,6 @@
 package rina.ipcmanager.impl.helpers;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -15,6 +16,7 @@ import eu.irati.librina.AssignToDIFResponseEvent;
 import eu.irati.librina.CreateIPCProcessException;
 import eu.irati.librina.DIFConfiguration;
 import eu.irati.librina.DIFInformation;
+import eu.irati.librina.IPCException;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IPCProcessPointerVector;
@@ -34,6 +36,23 @@ public class IPCProcessManager {
 	
 	public synchronized IPCProcessPointerVector listIPCProcesses(){
 		return ipcProcessFactory.listIPCProcesses();
+	}
+	
+	public synchronized IPCProcess selectIPCProcessWithFlow(int portId) throws Exception{
+		IPCProcessPointerVector ipcProcesses = listIPCProcesses();
+		IPCProcess ipcProcess = null;
+		
+		for(int i=0; i<ipcProcesses.size(); i++) {
+			ipcProcess = ipcProcesses.get(i);
+			try{
+				ipcProcess.getFlowInformation(portId);
+				return ipcProcess;
+			}catch(IPCException ex){
+				continue;
+			}
+		}
+		
+		throw new Exception("Could not find IPC Process wifh a flow with portId "+portId);
 	}
 	
 	/**
@@ -69,7 +88,7 @@ public class IPCProcessManager {
 			}
 		}
 		
-		throw new Exception("Could not find IPC Process to register at");
+		throw new Exception("Could not find any IPC Process");
 	}
 	
 	public synchronized IPCProcess selectIPCProcessOfDIF(String difName) throws Exception{
@@ -86,6 +105,17 @@ public class IPCProcessManager {
 		}
 		
 		throw new Exception("Could not find IPC Process belonging to DIF "+difName);
+	}
+	
+	public synchronized IPCProcess getIPCProcessNotInList(List<String> ipcProcessList){
+		IPCProcessPointerVector ipcProcesses = ipcProcessFactory.listIPCProcesses();
+		for(int i=0; i<ipcProcesses.size(); i++) {
+			if (!ipcProcessList.contains(ipcProcesses.get(i).toString())){
+				return ipcProcesses.get(i);
+			}
+		}
+		
+		return null;
 	}
 	
 	public String getIPCProcessesInformationAsString(){

@@ -86,6 +86,18 @@ ApplicationProcessNamingInformation IPCProcess::getPendingRegistration(
         return iterator->second;
 }
 
+FlowInformation IPCProcess::getPendingFlowOperation(unsigned int seqNumber)
+throw (IPCException) {
+	std::map<unsigned int, FlowInformation>::iterator iterator;
+
+	iterator = pendingFlowOperations.find(seqNumber);
+	if (iterator == pendingFlowOperations.end()) {
+		throw IPCException("Could not find pending flow operation");
+	}
+
+	return iterator->second;
+}
+
 IPCProcess::IPCProcess() {
 	id = 0;
 	portId = 0;
@@ -461,8 +473,11 @@ throw (AllocateFlowException) {
 	if (!difMember){
 		throw AllocateFlowException(IPCProcess::error_not_a_dif_member);
 	}
+
+	unsigned int seqNum = 0;
+
 #if STUB_API
-	return 0;
+	//Do nothing
 #else
 	IpcmAllocateFlowRequestMessage message;
 	message.setSourceAppName(flowRequest.getLocalApplicationName());
@@ -480,13 +495,56 @@ throw (AllocateFlowException) {
 	        throw AllocateFlowException(e.what());
 	}
 
-	return message.getSequenceNumber();
+	seqNum = message.getSequenceNumber();
 #endif
+
+	FlowInformation flowInformation;
+	flowInformation.setLocalAppName(flowRequest.getLocalApplicationName());
+	flowInformation.setRemoteAppName(flowRequest.getRemoteApplicationName());
+	flowInformation.setDifName(difInformation.getDifName());
+	flowInformation.setFlowSpecification(flowRequest.getFlowSpecification());
+	flowInformation.setPortId(flowRequest.getPortId());
+
+	pendingFlowOperations[seqNum] = flowInformation;
+
+	return seqNum;
+}
+
+void IPCProcess::allocateFlowResult(unsigned int sequenceNumber, bool success)
+	throw (AllocateFlowException) {
+	if (!difMember){
+		throw AllocateFlowException(
+				IPCProcess::error_not_a_dif_member);
+	}
+
+	FlowInformation flowInformation;
+	try {
+		flowInformation = getPendingFlowOperation(sequenceNumber);
+	} catch(IPCException &e){
+		throw AllocateFlowException(e.what());
+	}
+
+	pendingFlowOperations.erase(sequenceNumber);
+	if (success) {
+		allocatedFlows.push_back(flowInformation);
+	}
 }
 
 void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 		int result, bool notifySource)
 		throw(AllocateFlowException){
+
+	if (result == 0) {
+		FlowInformation flowInformation;
+		flowInformation.setLocalAppName(flowRequest.getLocalApplicationName());
+		flowInformation.setRemoteAppName(flowRequest.getRemoteApplicationName());
+		flowInformation.setDifName(difInformation.getDifName());
+		flowInformation.setFlowSpecification(flowRequest.getFlowSpecification());
+		flowInformation.setPortId(flowRequest.getPortId());
+
+		allocatedFlows.push_back(flowInformation);
+	}
+
 #if STUB_API
 	//Do nothing
 #else
@@ -505,15 +563,42 @@ void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 		throw AllocateFlowException(e.what());
 	}
 #endif
+
 }
 
-unsigned int IPCProcess::deallocateFlow(int flowPortId)
+std::list<FlowInformation> IPCProcess::getAllocatedFlows() {
+	return allocatedFlows;
+}
+
+FlowInformation IPCProcess::getFlowInformation(int portId)
+throw(IPCException) {
+	std::list<FlowInformation>::const_iterator iterator;
+	for (iterator = allocatedFlows.begin();
+			iterator != allocatedFlows.end(); ++iterator) {
+	    if (iterator->getPortId() == portId)
+	    	return *iterator;
+	}
+
+	throw IPCException("Unknown flow");
+}
+
+unsigned int IPCProcess::deallocateFlow(int portId)
 	throw (IpcmDeallocateFlowException){
+	unsigned int seqNum = 0;
+	FlowInformation flowInformation;
+
+	try{
+		flowInformation = getFlowInformation(portId);
+	}catch (IPCException &e) {
+		LOG_ERR("Could not find flow with port-id %d", portId);
+		throw IpcmDeallocateFlowException("Unknown flow");
+	}
+
 #if STUB_API
-	return 0;
+	//Do nothing
 #else
 	IpcmDeallocateFlowRequestMessage message;
-	message.setPortId(flowPortId);
+	message.setPortId(portId);
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -524,8 +609,40 @@ unsigned int IPCProcess::deallocateFlow(int flowPortId)
 	        throw IpcmDeallocateFlowException(e.what());
 	}
 
-	return message.getSequenceNumber();
+	seqNum = message.getSequenceNumber();
 #endif
+
+	pendingFlowOperations[seqNum] = flowInformation;
+	return seqNum;
+}
+
+void IPCProcess::deallocateFlowResult(unsigned int sequenceNumber, bool success)
+	throw (IpcmDeallocateFlowException) {
+	FlowInformation flowInformation;
+
+	try {
+		flowInformation = getPendingFlowOperation(sequenceNumber);
+	} catch(IPCException &e){
+		throw IpcmDeallocateFlowException(e.what());
+	}
+
+	pendingFlowOperations.erase(sequenceNumber);
+	if (success) {
+		allocatedFlows.remove(flowInformation);
+	}
+}
+
+FlowInformation IPCProcess::flowDeallocated(int portId)
+throw (IpcmDeallocateFlowException) {
+	FlowInformation flowInformation;
+
+	try {
+		flowInformation = getFlowInformation(portId);
+		allocatedFlows.remove(flowInformation);
+		return flowInformation;
+	} catch (IPCException &e) {
+		throw IpcmDeallocateFlowException(e.what());
+	}
 }
 
 unsigned int IPCProcess::queryRIB(const std::string& objectClass,

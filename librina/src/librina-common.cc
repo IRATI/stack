@@ -361,8 +361,65 @@ bool FlowSpecification::operator!=(const FlowSpecification &other) const {
 	return !(*this == other);
 }
 
-/* CLASS QoS CUBE */
+/* CLASS FLOW INFORMATION */
+bool FlowInformation::operator==(
+		const FlowInformation &other) const {
+	return getPortId() == other.getPortId();
+}
 
+bool FlowInformation::operator!=(
+		const FlowInformation &other) const {
+	return !(*this == other);
+}
+
+const ApplicationProcessNamingInformation&
+FlowInformation::getDifName() const {
+	return difName;
+}
+
+void FlowInformation::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
+const FlowSpecification& FlowInformation::getFlowSpecification() const {
+	return flowSpecification;
+}
+
+void FlowInformation::setFlowSpecification(
+		const FlowSpecification& flowSpecification) {
+	this->flowSpecification = flowSpecification;
+}
+
+const ApplicationProcessNamingInformation&
+FlowInformation::getLocalAppName() const {
+	return localAppName;
+}
+
+void FlowInformation::setLocalAppName(
+		const ApplicationProcessNamingInformation& localAppName) {
+	this->localAppName = localAppName;
+}
+
+int FlowInformation::getPortId() const {
+	return portId;
+}
+
+void FlowInformation::setPortId(int portId) {
+	this->portId = portId;
+}
+
+const ApplicationProcessNamingInformation&
+FlowInformation::getRemoteAppName() const {
+	return remoteAppName;
+}
+
+void FlowInformation::setRemoteAppName(
+		const ApplicationProcessNamingInformation& remoteAppName) {
+	this->remoteAppName = remoteAppName;
+}
+
+/* CLASS QoS CUBE */
 QoSCube::QoSCube(const std::string& name, int id) {
 	this->name = name;
 	this->id = id;

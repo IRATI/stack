@@ -391,9 +391,20 @@ class IPCProcess {
 	std::map<unsigned int, ApplicationProcessNamingInformation>
 	        pendingRegistrations;
 
+	/** The list of flows currently allocated in this IPC Process */
+	std::list<FlowInformation> allocatedFlows;
+
+	/** The map of pending flow operations */
+	std::map<unsigned int, FlowInformation>
+	pendingFlowOperations;
+
 	/** Return the information of a registration request */
 	ApplicationProcessNamingInformation getPendingRegistration(
 	                unsigned int seqNumber) throw (IPCException);
+
+	/** Return the information of a flow operation */
+	FlowInformation getPendingFlowOperation(unsigned int seqNumber)
+	throw (IPCException);
 
 public:
 	static const std::string error_assigning_to_dif;
@@ -592,6 +603,17 @@ public:
 		throw (AllocateFlowException);
 
 	/**
+	 * Invoked by the IPC Manager to inform about the result of an allocate
+	 * flow operation and update the internal data structures
+	 * @param sequenceNumber the handle associated to the pending allocation
+	 * @param success true if success, false otherwise
+	 * @throws AllocateFlowException if the pending allocation
+	 * is not found
+	 */
+	void allocateFlowResult(unsigned int sequenceNumber, bool success)
+	throw (AllocateFlowException);
+
+	/**
 	 * Reply an IPC Process about the fate of a flow allocation request (wether
 	 * it has been accepted or denied by the application). If it has been
 	 * accepted, communicate the portId to the IPC Process
@@ -605,6 +627,18 @@ public:
 		throw(AllocateFlowException);
 
 	/**
+	 * Return the list of flows allocated by this IPC Process
+	 * @return
+	 */
+	std::list<FlowInformation> getAllocatedFlows();
+
+	/**
+	 * Returns the information of the flow identified by portId
+	 * @throws IPCException if no flow with the requested portId is found
+	 */
+	FlowInformation getFlowInformation(int portId) throw(IPCException);
+
+	/**
 	 * Tell the IPC Process to deallocate a flow
 	 * @param portId
 	 * @throws IpcmDeallocateFlowException if there is an error during
@@ -612,6 +646,27 @@ public:
 	 * @returns the handle to the response message
 	 */
 	unsigned int deallocateFlow(int portId) throw (IpcmDeallocateFlowException);
+
+	/**
+	 * Invoked by the IPC Manager to inform about the result of a deallocate
+	 * flow operation and update the internal data structures
+	 * @param sequenceNumber the handle associated to the pending allocation
+	 * @param success true if success, false otherwise
+	 * @throws IpcmDeallocateFlowException if the pending deallocation
+	 * is not found
+	 */
+	void deallocateFlowResult(unsigned int sequenceNumber, bool success)
+	throw (IpcmDeallocateFlowException);
+
+	/**
+	 * Invoked by the IPC Manager to notify that a flow has been remotely
+	 * deallocated, so that librina updates the internal data structures
+	 * @returns the information of the flow deallocated
+	 * @throws IpcmDeallocateFlowException if now flow with the given
+	 * portId is found
+	 */
+	FlowInformation flowDeallocated(int portId)
+	throw (IpcmDeallocateFlowException);
 
 	/**
 	 * Invoked by the IPC Manager to query a subset of the RIB of the IPC
@@ -750,7 +805,7 @@ public:
 	/**
 	 * Invoked by the IPC Manager to inform the Application Process that a remote
 	 * application wants to allocate a flow to it. The remote application will
-	 * decide wether it accepts or not the flow
+	 * decide whether it accepts or not the flow
 	 * @param localAppName
 	 * @param remoteAppName
 	 * @param flowSpec

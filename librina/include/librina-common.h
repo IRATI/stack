@@ -187,6 +187,43 @@ public:
 };
 
 /**
+ * Contains the information of an allocated flow
+ */
+class FlowInformation {
+
+	/** The local application name */
+	ApplicationProcessNamingInformation localAppName;
+
+	/** The remote application name */
+	ApplicationProcessNamingInformation remoteAppName;
+
+	/** The flow characteristics */
+	FlowSpecification flowSpecification;
+
+	/** The portId of the flow */
+	int portId;
+
+	/** The name of the DIF where the flow has been allocated */
+	ApplicationProcessNamingInformation difName;
+
+public:
+	bool operator==(const FlowInformation &other) const;
+	bool operator!=(const FlowInformation &other) const;
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
+	const FlowSpecification& getFlowSpecification() const;
+	void setFlowSpecification(const FlowSpecification& flowSpecification);
+	const ApplicationProcessNamingInformation& getLocalAppName() const;
+	void setLocalAppName(
+			const ApplicationProcessNamingInformation& localAppName);
+	int getPortId() const;
+	void setPortId(int portId);
+	const ApplicationProcessNamingInformation& getRemoteAppName() const;
+	void setRemoteAppName(
+			const ApplicationProcessNamingInformation& remoteAppName);
+};
+
+/**
  * Defines the properties that a QoSCube is able to provide
  */
 class QoSCube {

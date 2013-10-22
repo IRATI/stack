@@ -1,5 +1,6 @@
 package rina.ipcmanager.impl;
 
+import eu.irati.librina.AllocateFlowResponseEvent;
 import eu.irati.librina.ApplicationManagerSingleton;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistrationRequestEvent;
@@ -16,6 +17,8 @@ import eu.irati.librina.IPCEventType;
 import eu.irati.librina.IPCManagerInitializationException;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
+import eu.irati.librina.IpcmAllocateFlowRequestResultEvent;
+import eu.irati.librina.IpcmDeallocateFlowResponseEvent;
 import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
 import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
 import eu.irati.librina.OSProcessFinalizedEvent;
@@ -99,7 +102,7 @@ public class IPCManager {
 		ipcProcessManager = new IPCProcessManager(ipcProcessFactory);
 		applicationRegistrationManager = new ApplicationRegistrationManager(
 				ipcProcessManager, applicationManager);
-		flowManager = new FlowManager(ipcProcessFactory, applicationManager);
+		flowManager = new FlowManager(ipcProcessManager, applicationManager);
 		
 		log.info("Bootstrapping IPC Manager ...");
 		bootstrap();
@@ -224,7 +227,8 @@ public class IPCManager {
 				event = ipcEventProducer.eventWait();
 				processEvent(event);
 			}catch(Exception ex){
-				ex.printStackTrace();
+				log.error("Problems processing event of type " + event.getType() + 
+						". " + ex.getMessage());
 			}
 		}
 	}
@@ -248,14 +252,23 @@ public class IPCManager {
 		} else if (event.getType() == IPCEventType.FLOW_ALLOCATION_REQUESTED_EVENT){
 			FlowRequestEvent flowReqEvent = (FlowRequestEvent) event;
 			if (flowReqEvent.isLocalRequest()){
-				flowManager.allocateFlowLocal(flowReqEvent);
+				flowManager.requestAllocateFlowLocal(flowReqEvent);
 			}else{
 				flowManager.allocateFlowRemote(flowReqEvent);
 			}
-		}else if (event.getType() == IPCEventType.FLOW_DEALLOCATION_REQUESTED_EVENT){
+		} else if (event.getType() == IPCEventType.IPCM_ALLOCATE_FLOW_REQUEST_RESULT){
+			IpcmAllocateFlowRequestResultEvent flowEvent = (IpcmAllocateFlowRequestResultEvent) event;
+			flowManager.allocateFlowRequestResult(flowEvent);
+		} else if (event.getType() == IPCEventType.ALLOCATE_FLOW_RESPONSE_EVENT){
+			AllocateFlowResponseEvent flowEvent = (AllocateFlowResponseEvent) event;
+			flowManager.allocateFlowResponse(flowEvent);
+		} else if (event.getType() == IPCEventType.FLOW_DEALLOCATION_REQUESTED_EVENT){
 			FlowDeallocateRequestEvent flowDeReqEvent = (FlowDeallocateRequestEvent) event;
-			flowManager.deallocateFlow(flowDeReqEvent);
-		}else if (event.getType() == IPCEventType.FLOW_DEALLOCATED_EVENT){
+			flowManager.deallocateFlowRequest(flowDeReqEvent);
+		} else if (event.getType() == IPCEventType.IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT){
+			IpcmDeallocateFlowResponseEvent flowDeEvent = (IpcmDeallocateFlowResponseEvent) event;
+			flowManager.deallocateFlowResponse(flowDeEvent);
+		} else if (event.getType() == IPCEventType.FLOW_DEALLOCATED_EVENT){
 			FlowDeallocatedEvent flowDeEvent = (FlowDeallocatedEvent) event;
 			flowManager.flowDeallocated(flowDeEvent);
 		}else if (event.getType().equals(IPCEventType.GET_DIF_PROPERTIES)){

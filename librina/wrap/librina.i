@@ -542,6 +542,8 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(differs) rina::Parameter::operator!=(const Parameter &other) const;
 %rename(equals) rina::Policy::operator==(const Policy &other) const;
 %rename(differs) rina::Policy::operator!=(const Policy &other) const;
+%rename(equals) rina::FlowInformation::operator==(const FlowInformation &other) const;
+%rename(differs) rina::FlowInformation::operator!=(const FlowInformation &other) const;
 
 %include "exceptions.h"
 %include "patterns.h"
@@ -602,6 +604,8 @@ MAKE_COLLECTION_ITERABLE(ApplicationProcessNamingInformationListIterator, Applic
 MAKE_COLLECTION_ITERABLE(RIBObjectListIterator, RIBObject, std::list, rina::RIBObject);
 /* Define iterator for String list */
 MAKE_COLLECTION_ITERABLE(StringListIterator, String, std::list, std::string);
+/* Define iterator for Flow Information list */
+MAKE_COLLECTION_ITERABLE(FlowInformationListIterator, FlowInformation, std::list, rina::FlowInformation);
 
 %template(DIFPropertiesVector) std::vector<rina::DIFProperties>;
 %template(FlowVector) std::vector<rina::Flow>;
@@ -621,4 +625,5 @@ MAKE_COLLECTION_ITERABLE(StringListIterator, String, std::list, std::string);
 %template(ExtendedIPCManagerSingleton) Singleton<rina::ExtendedIPCManager>;
 %template(RIBObjectList) std::list<rina::RIBObject>;
 %template(StringList) std::list<std::string>;
+%template(FlowInformationList) std::list<rina::FlowInformation>;
 

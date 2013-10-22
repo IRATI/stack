@@ -4,176 +4,48 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import eu.irati.librina.AllocateFlowException;
+import eu.irati.librina.AllocateFlowResponseEvent;
 import eu.irati.librina.ApplicationManagerSingleton;
 import eu.irati.librina.ApplicationProcessNamingInformation;
-import eu.irati.librina.DIFInformation;
 import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowDeallocatedEvent;
+import eu.irati.librina.FlowInformation;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCProcess;
-import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IPCProcessPointerVector;
+import eu.irati.librina.IpcmAllocateFlowRequestResultEvent;
+import eu.irati.librina.IpcmDeallocateFlowResponseEvent;
 
 public class FlowManager {
 
 	private static final Log log = LogFactory.getLog(FlowManager.class);
 	public static final int MAX_FLOWS = 1000;
 	
-	private IPCProcessFactorySingleton ipcProcessFactory = null;
+	private IPCProcessManager ipcProcessManager = null;
 	private ApplicationManagerSingleton applicationManager = null;
-	private Map<Integer, FlowState> flows;
+	private Map<Long, PendingFlowAllocation> pendingFlowAllocations = null;
+	private Map<Long, PendingFlowDeallocation> pendingFlowDeallocations = null;
+	private List<Integer> portIdsInUse = null;
 	
-	public FlowManager(IPCProcessFactorySingleton ipcProcessFactory, 
+	public FlowManager(IPCProcessManager ipcProcessManager, 
 			ApplicationManagerSingleton applicationManager){
-		this.ipcProcessFactory = ipcProcessFactory;
+		this.ipcProcessManager = ipcProcessManager;
 		this.applicationManager = applicationManager;
-		this.flows = new ConcurrentHashMap<Integer, FlowState>();
+		this.portIdsInUse = new ArrayList<Integer>();
+		this.pendingFlowAllocations = 
+				new ConcurrentHashMap<Long, PendingFlowAllocation>();
+		this.pendingFlowDeallocations = 
+				new ConcurrentHashMap<Long, PendingFlowDeallocation>();
 	}
 	
-	public void allocateFlowLocal(FlowRequestEvent event) throws Exception{
-		int portId = 0;
-		
-		try{
-			portId = getAvailablePortId();
-			event.setPortId(portId);
-			FlowState flowState = new FlowState(event);
-			flows.put(portId, flowState);
-			IPCProcess ipcProcess = tryFlowAllocation(event);
-			event.setDIFName(ipcProcess.getDIFInformation().getDifName());
-			flowState.setIpcProcessId(ipcProcess.getId());
-			flowState.setDifName(ipcProcess.getDIFInformation().getDifName().getProcessName());
-		}catch(Exception ex){
-			log.error("Error allocating flow. "+ex.getMessage());
-			flows.remove(portId);
-			event.setPortId(-1);
-			applicationManager.flowAllocated(event);
-			return;
-		}
-		
-		applicationManager.flowAllocated(event);
-	}
-	
-	public void allocateFlowRemote(FlowRequestEvent event) throws Exception{
-		/*String difName = event.getDIFName().getProcessName();
-		IPCProcess ipcProcess = selectIPCProcessOfDIF(difName);
-		if (ipcProcess == null){
-			log.error("Received an allocate remote flow request event, but could not " 
-						+ "find a local IPC Process belonging to DIF "+difName);
-			return;
-		}
-
-		int portId = 0;
-		try{
-			portId = getAvailablePortId();
-			event.setPortId(portId);
-			FlowState flowState = new FlowState(event);
-			flowState.setIpcProcessId(ipcProcess.getId());
-			flowState.setDifName(ipcProcess.getDIFInformation().getDifName().getProcessName());
-			flows.put(portId, flowState);
-			applicationManager.flowRequestArrived(event.getLocalApplicationName(), 
-					event.getRemoteApplicationName(), event.getFlowSpecification(), 
-					event.getDIFName(), event.getPortId());
-		}catch(Exception ex){
-			log.error("Error allocating flow. "+ex.getMessage());
-			flows.remove(portId);
-			ipcProcess.allocateFlowResponse(event, -1);
-			return;
-		}
-		
-		ipcProcess.allocateFlowResponse(event, 0);*/
-	}
-	
-	/**
-	 * Called when the IPC Manager is informed that the application identified by apName (process + instance) 
-	 * has terminated. We have to look for potential flows of the application and deallocate them
-	 * @param apName
-	 */
-	public synchronized void cleanFlows(ApplicationProcessNamingInformation apName){
-		Iterator<Entry<Integer, FlowState>> iterator = flows.entrySet().iterator();
-		Entry<Integer, FlowState> currentEntry = null;
-		FlowState state = null;
-		List<Entry<Integer, FlowState>> entriesToRemove = 
-				new ArrayList<Entry<Integer, FlowState>>();
-		
-		while(iterator.hasNext()){
-			currentEntry = iterator.next();
-			state = currentEntry.getValue();
-			if (state.getLocalApplication().getProcessNamePlusInstance().equals(
-					apName.getProcessNamePlusInstance())){
-				entriesToRemove.add(currentEntry);
-			}
-		}
-		
-		log.info(entriesToRemove.size() + " flows are going to be deallocated");
-		IPCProcess ipcProcess = null;
-		for(int i=0; i<entriesToRemove.size(); i++){
-			currentEntry = entriesToRemove.get(i);
-			state = currentEntry.getValue();
-			flows.remove(currentEntry.getKey());
-			try{
-				ipcProcess = selectIPCProcessOfDIF(state.getDifName());
-				if (ipcProcess == null){
-					log.error("Could not find IPC Process of DIF "+state.getDifName());
-					continue;
-				}
-
-				ipcProcess.deallocateFlow(state.getPortId());
-			}catch(Exception ex){
-				log.error("Error deallocating flow with port id " + state.getPortId());
-			}
-		}
-	}
-	
-	public void deallocateFlow(FlowDeallocateRequestEvent event) throws Exception{
-		FlowState flow = null;
-		IPCProcess ipcProcess = null;
-		String difName = null;
-		
-		log.info("Got flow deallocate request event, for local application: "+ 
-				event.getApplicationName().getProcessName());
-		
-		try{
-			flow = getFlow(event.getPortId());
-			difName = flow.getDifName();
-			ipcProcess = selectIPCProcessOfDIF(difName);
-			if (ipcProcess == null){
-				throw new Exception("Could not find IPC process belonging to DIF "+difName);
-			}
-			
-			ipcProcess.deallocateFlow(event.getPortId());
-			flows.remove(event.getPortId());
-		}catch(Exception ex){
-			log.error("Error deallocating flow. "+ex.getMessage());
-			applicationManager.flowDeallocated(event, -1);
-			return;
-		}
-		
-		applicationManager.flowDeallocated(event, 0);
-	}
-	
-	public void flowDeallocated(FlowDeallocatedEvent event) throws Exception{
-		FlowState flow = null;
-		try{
-			flow = getFlow(event.getPortId());
-			flows.remove(event.getPortId());
-			applicationManager.flowDeallocatedRemotely(
-					event.getPortId(), event.getCode(), 
-					flow.getLocalApplication());
-		}catch(Exception ex){
-			log.error("Error processing notification of flow deallocation. "+ex.getMessage());
-		}
-	}
-	
-	private int getAvailablePortId() throws Exception{
+	private synchronized int reservePortId() throws Exception{
 		for(int i=1; i<=MAX_FLOWS; i++){
-			if (flows.containsKey(i)){
+			if (portIdsInUse.contains(i)){
 				continue;
 			}
 			
@@ -183,49 +55,299 @@ public class FlowManager {
 		throw new Exception("Cannot allocate flow: reached maximum number of flows ("+MAX_FLOWS+")");
 	}
 	
-	private IPCProcess tryFlowAllocation(FlowRequestEvent event) throws Exception{
-		IPCProcessPointerVector ipcProcesses = ipcProcessFactory.listIPCProcesses();
-		if (ipcProcesses.size() == 0){
-			throw new Exception("Could not find IPC Process to allocate the flow");
+	private synchronized void freePortId(int portId) {
+		portIdsInUse.remove(portId);
+	}
+	
+	public void requestAllocateFlowLocal(FlowRequestEvent event) throws Exception{
+		int portId = -1;
+		PendingFlowAllocation pendingFlowAllocation = null;
+		long handle = 0;
+		
+		try{
+			portId = reservePortId();
+			event.setPortId(portId);
+			IPCProcess ipcProcess = ipcProcessManager.selectAnyIPCProcess();
+			handle = ipcProcess.allocateFlow(event);
+			log.debug("Requested allocation of flow from "+event.getLocalApplicationName().toString()
+					+ "to remote application "+event.getRemoteApplicationName().toString()
+					+" to the DIF "+ipcProcess.getDIFInformation().getDifName().toString() + 
+					". Got handle "+handle + " and portId " + portId);
+			pendingFlowAllocation = new PendingFlowAllocation(event, ipcProcess);
+			pendingFlowAllocations.put(handle, pendingFlowAllocation);
+		}catch(Exception ex){
+			log.error("Error allocating flow. "+ex.getMessage());
+			if (portId != -1){
+				freePortId(portId);
+			}
+			event.setPortId(-1);
+			applicationManager.flowAllocated(event);
+			return;
+		}
+	}
+	
+	/**
+	 * Looks for the pending registration with the event sequence number, and updates the 
+	 * registration state based on the result
+	 * @throws Exception
+	 */
+	public synchronized void allocateFlowRequestResult(
+			IpcmAllocateFlowRequestResultEvent event) throws Exception {
+		PendingFlowAllocation pendingFlowAllocation = null;
+		IPCProcess ipcProcess = null;
+		FlowRequestEvent flowReqEvent = null;
+		boolean success;
+		long handle;
+		
+		pendingFlowAllocation = pendingFlowAllocations.remove(event.getSequenceNumber());
+		if (pendingFlowAllocation == null){
+			throw new Exception("Could not find a pending local flow allocation associated to the handle "
+					+event.getSequenceNumber());
+		}
+		
+		ipcProcess = pendingFlowAllocation.getIpcProcess();
+		flowReqEvent = pendingFlowAllocation.getEvent();
+		if (event.getResult() == 0){
+			success = true;
+		}else{
+			success = false;
+		}
+		
+		try {
+			ipcProcess.allocateFlowResult(event.getSequenceNumber(), success);
+			if (success){
+				log.info("Successfully allocated flow from "+ 
+						flowReqEvent.getLocalApplicationName().toString() + " to remote application "
+						+ flowReqEvent.getRemoteApplicationName().toString() +
+						" in DIF "+ipcProcess.getDIFInformation().getDifName().toString());
+			} else {
+				log.info("Could not allocate flow from application "+ 
+						flowReqEvent.getLocalApplicationName().toString() + " to remote application "
+						+ flowReqEvent.getRemoteApplicationName().toString() +
+						" in DIF "+ipcProcess.getDIFInformation().getDifName().toString());
+				pendingFlowAllocation.addTriedIPCProcess(ipcProcess.getName().toString());
+				ipcProcess = ipcProcessManager.getIPCProcessNotInList(
+						pendingFlowAllocation.getTriedIPCProcesses());
+				
+				if (ipcProcess == null){
+					log.info("No more IPC Processes to try, giving up");
+					freePortId(flowReqEvent.getPortId());
+					flowReqEvent.setPortId(-1);
+				}else{
+					log.info("Trying flow allocation again with IPC Process " + 
+							ipcProcess.getDIFInformation().getDifName().toString());
+					handle = ipcProcess.allocateFlow(flowReqEvent);
+					pendingFlowAllocations.put(handle, pendingFlowAllocation);
+					return;
+				}
+			}
+		}catch(Exception ex){
+			log.error("Problems processing IpcmAllocateFlowRequestResultEvent. Handle: "+event.getSequenceNumber() + 
+					  "; Local application name: "+ flowReqEvent.getLocalApplicationName().toString() +
+					  "; Remote application name: "+ flowReqEvent.getRemoteApplicationName().toString() +
+					  "; DIF name: " + ipcProcess.getDIFInformation().getDifName().toString());
+			
+			freePortId(flowReqEvent.getPortId());
+			flowReqEvent.setPortId(-1);
+		}
+		
+		applicationManager.flowAllocated(flowReqEvent);
+	}
+	
+	public synchronized void allocateFlowRemote(FlowRequestEvent event) throws Exception{
+		int portId = -1;
+		PendingFlowAllocation pendingFlowAllocation = null;
+		IPCProcess ipcProcess = null;
+		String difName = null;
+		long handle = 0;
+		
+		difName = event.getDIFName().getProcessName();
+		ipcProcess = ipcProcessManager.selectIPCProcessOfDIF(difName);
+		if (ipcProcess == null){
+			log.error("Received an allocate remote flow request event, but could not " 
+						+ "find a local IPC Process belonging to DIF "+difName);
+			return;
 		}
 
+		try{
+			portId = reservePortId();
+			event.setPortId(portId);
+			handle = applicationManager.flowRequestArrived(event.getLocalApplicationName(), 
+					event.getRemoteApplicationName(), event.getFlowSpecification(), 
+					event.getDIFName(), event.getPortId());
+			log.debug("Requested allocation of remote flow from "+event.getRemoteApplicationName().toString()
+					+ "to remote application "+event.getLocalApplicationName().toString()
+					+" through the DIF "+ipcProcess.getDIFInformation().getDifName().toString() + 
+					". Got handle "+handle + " and portId " + portId);
+			pendingFlowAllocation = new PendingFlowAllocation(event, ipcProcess);
+			pendingFlowAllocations.put(handle, pendingFlowAllocation);
+		}catch(Exception ex){
+			log.error("Error allocating flow. "+ex.getMessage());
+			freePortId(portId);
+			ipcProcess.allocateFlowResponse(event, -1, true);
+			return;
+		}
+	}
+	
+	public synchronized void allocateFlowResponse(AllocateFlowResponseEvent event) throws Exception{
+		PendingFlowAllocation pendingFlowAllocation = null;
 		IPCProcess ipcProcess = null;
-		for(int i=0; i<ipcProcesses.size(); i++){
-			ipcProcess = ipcProcesses.get(i);
+		FlowRequestEvent flowReqEvent = null;
+		boolean success;
+
+		pendingFlowAllocation = pendingFlowAllocations.remove(event.getSequenceNumber());
+		if (pendingFlowAllocation == null){
+			throw new Exception("Could not find a pending local flow allocation associated to the handle "
+					+event.getSequenceNumber());
+		}
+
+		ipcProcess = pendingFlowAllocation.getIpcProcess();
+		flowReqEvent = pendingFlowAllocation.getEvent();
+		if (event.getResult() == 0){
+			success = true;
+		}else{
+			success = false;
+		}
+
+		try {
+			ipcProcess.allocateFlowResponse(flowReqEvent, event.getResult(), event.isNotifySource());
+			if (success){
+				log.info("Successfully allocated flow from "+ 
+						flowReqEvent.getLocalApplicationName().toString() + " to remote application "
+						+ flowReqEvent.getRemoteApplicationName().toString() +
+						" in DIF "+ipcProcess.getDIFInformation().getDifName().toString());
+			} else {
+				log.info("Could not allocate flow from application "+ 
+						flowReqEvent.getLocalApplicationName().toString() + " to remote application "
+						+ flowReqEvent.getRemoteApplicationName().toString() +
+						" in DIF "+ipcProcess.getDIFInformation().getDifName().toString());
+				freePortId(flowReqEvent.getPortId());
+				flowReqEvent.setPortId(-1);
+			}
+		}catch(Exception ex){
+			log.error("Problems processing IpcmAllocateFlowRequestResultEvent. Handle: "+event.getSequenceNumber() + 
+					"; Local application name: "+ flowReqEvent.getLocalApplicationName().toString() +
+					"; Remote application name: "+ flowReqEvent.getRemoteApplicationName().toString() +
+					"; DIF name: " + ipcProcess.getDIFInformation().getDifName().toString());
+
+			freePortId(flowReqEvent.getPortId());
+			flowReqEvent.setPortId(-1);
+		}
+	}
+	
+	public void deallocateFlowRequest(FlowDeallocateRequestEvent event) throws Exception{
+		PendingFlowDeallocation pendingFlowDeallocation = null;
+		long handle = 0;
+		IPCProcess ipcProcess = null;
+		
+		try{
+			ipcProcess = ipcProcessManager.selectIPCProcessWithFlow(event.getPortId());
+			handle = ipcProcess.deallocateFlow(event.getPortId());
+			log.debug("Requested deallocation of flow with portId " + event.getPortId() + 
+					" to DIF " + ipcProcess.getDIFInformation().getDifName().getProcessName());
+			pendingFlowDeallocation = new PendingFlowDeallocation(event, ipcProcess);
+			pendingFlowDeallocations.put(handle, pendingFlowDeallocation);
+		}catch(Exception ex){
+			log.error("Error deallocating flow. "+ex.getMessage());
+			applicationManager.flowDeallocated(event, -1);
+			return;
+		}
+	}
+	
+	public synchronized void deallocateFlowResponse(IpcmDeallocateFlowResponseEvent event) throws Exception{
+		PendingFlowDeallocation pendingFlowDeallocation = null;
+		IPCProcess ipcProcess = null;
+		FlowDeallocateRequestEvent flowDelEvent = null;
+		boolean success;
+
+		pendingFlowDeallocation = pendingFlowDeallocations.remove(event.getSequenceNumber());
+		if (pendingFlowDeallocation == null){
+			throw new Exception("Could not find a pending local flow deallocation associated to the handle "
+					+event.getSequenceNumber());
+		}
+
+		ipcProcess = pendingFlowDeallocation.getIpcProcess();
+		flowDelEvent = pendingFlowDeallocation.getEvent();
+		if (event.getResult() == 0){
+			success = true;
+		}else{
+			success = false;
+		}
+
+		try {
+			ipcProcess.deallocateFlowResult(event.getSequenceNumber(), success);
+			if (success){
+				log.info("Successfully deallocated flow with portId "+ flowDelEvent.getPortId() + 
+						" in DIF "+ipcProcess.getDIFInformation().getDifName().toString());
+				freePortId(flowDelEvent.getPortId());
+			} else {
+				log.info("Could not deallocate flow from application with portId "+ flowDelEvent.getPortId() + 
+						" in DIF "+ipcProcess.getDIFInformation().getDifName().toString());
+			}
+			
+			applicationManager.flowDeallocated(flowDelEvent, event.getResult());
+		}catch(Exception ex){
+			log.error("Problems processing IpcmDeallocateFlowResponseEvent. Handle: "+event.getSequenceNumber() + 
+					"; Port id: "+ flowDelEvent.getPortId()+
+					"; DIF name: " + ipcProcess.getDIFInformation().getDifName().toString());
+
+			applicationManager.flowDeallocated(flowDelEvent, -1);
+		}
+	}
+	
+	public void flowDeallocated(FlowDeallocatedEvent event) throws Exception{
+		FlowInformation flowInformation = null;
+		
+		IPCProcess ipcProcess = ipcProcessManager.selectIPCProcessWithFlow(event.getPortId());
+		flowInformation = ipcProcess.flowDeallocated(event.getPortId());
+		applicationManager.flowDeallocatedRemotely(event.getPortId(), event.getCode(), 
+				flowInformation.getLocalAppName());
+	}
+	
+	/**
+	 * Called when the IPC Manager is informed that the application identified by apName (process + instance) 
+	 * has terminated. We have to look for potential flows of the application and deallocate them
+	 * @param apName
+	 */
+	public synchronized void cleanFlows(ApplicationProcessNamingInformation apName){
+		List<FlowInformation> flows = getFlowsForApplication(apName);
+		log.info(flows.size() + " flows are going to be deallocated");
+		
+		IPCProcess ipcProcess = null;
+		FlowInformation currentFlow = null;
+		for(int i=0; i<flows.size(); i++){
+			currentFlow = flows.get(i);
 			try{
-				ipcProcess.allocateFlow(event);
-				return ipcProcess;
-			}catch(AllocateFlowException ex){
-				log.info("Tried to allocate a flow in IPC Process "+
-						ipcProcess.getId()+" but failed: "+ex.getMessage());
-				continue;
+				ipcProcess = ipcProcessManager.selectIPCProcessOfDIF(
+						currentFlow.getDifName().getProcessName());
+				if (ipcProcess == null){
+					log.error("Could not find IPC Process of DIF "+ 
+							currentFlow.getDifName().getProcessName());
+					continue;
+				}
+
+				ipcProcess.deallocateFlow(currentFlow.getPortId());
+			}catch(Exception ex){
+				log.error("Error deallocating flow with port id " + currentFlow.getPortId());
 			}
 		}
-		
-		throw new Exception("Flow allocation failed after trying in all the IPC Processes.");
 	}
 	
-	private IPCProcess selectIPCProcessOfDIF(String difName) {
-		IPCProcessPointerVector ipcProcesses = ipcProcessFactory.listIPCProcesses();
-		IPCProcess ipcProcess = null;
+	private List<FlowInformation> getFlowsForApplication(ApplicationProcessNamingInformation apName){
+		List<FlowInformation> result = new ArrayList<FlowInformation>();
+		IPCProcessPointerVector ipcProcesses = ipcProcessManager.listIPCProcesses();
+		Iterator<FlowInformation> ipcProcessFlowsIterator = null;
+		FlowInformation currentFlow = null;
 		
-		for(int i=0; i<ipcProcesses.size(); i++){
-			ipcProcess = ipcProcesses.get(i);
-			log.info("Trying IPC Process "+ipcProcess.getId());
-			DIFInformation difInformation = ipcProcess.getDIFInformation();
-			if (difInformation != null && 
-					difInformation.getDifName().getProcessName().equals(difName)){
-				return ipcProcess;
+		for(int i=0; i<ipcProcesses.size(); i++) {
+			ipcProcessFlowsIterator = ipcProcesses.get(i).getAllocatedFlows().iterator();
+			while (ipcProcessFlowsIterator.hasNext()) {
+				currentFlow = ipcProcessFlowsIterator.next();
+				if (currentFlow.getLocalAppName().getProcessName().equals(apName.getProcessName()) && 
+						currentFlow.getLocalAppName().getProcessInstance().equals(apName.getProcessInstance())){
+					result.add(currentFlow);
+				}
 			}
-		}
-		
-		return null;
-	}
-	
-	private FlowState getFlow(int portId) throws Exception{
-		FlowState result = flows.get(portId);
-		if (result == null){
-			throw new Exception("Could not find flow with portId "+portId);
 		}
 		
 		return result;
