@@ -57,7 +57,7 @@ else:
 # print 'len_a, len_b after:',len(paddr_a)," ",len(paddr_b)
 
 # hw type/protocol type/hw length
-arp_packet='\x00\x01\x0d\x1f\x06'
+arp_packet='\x00\x01\xd1\xf0\x06'
 
 # pa Length
 hex_len=bytes(chr(max_len))
