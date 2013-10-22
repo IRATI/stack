@@ -417,18 +417,18 @@ int tbls_create(uint16_t ptype, size_t hwlen)
         struct table *      cl;
         struct tmap_entry * e;
 
-        LOG_DBG("Creating table for ptype = 0x%02x, hwlen = %zd",
+        LOG_DBG("Creating table for ptype = 0x%04x, hwlen = %zd",
                 ptype, hwlen);
 
         cl = tbls_find(ptype);
         if (cl) {
-                LOG_WARN("Table for ptype 0x%02x already created",ptype);
+                LOG_WARN("Table for ptype 0x%04x already created",ptype);
                 return 0;
         }
 
         cl = tbl_create(hwlen);
         if (!cl) {
-                LOG_ERR("Cannot create table for ptype 0%02x, hwlen %zd",
+                LOG_ERR("Cannot create table for ptype 0x%04x, hwlen %zd",
                         ptype, hwlen);
                 return -1;
         }
@@ -446,7 +446,7 @@ int tbls_create(uint16_t ptype, size_t hwlen)
         if (tmap_entry_insert(tables, ptype, e)) {
                 spin_unlock(&tables_lock);
 
-                LOG_ERR("Cannot insert new entry into table for ptype 0x%02x",
+                LOG_ERR("Cannot insert new entry into table for ptype 0x%04x",
                         ptype);
                 tmap_entry_destroy(e);
                 tbl_destroy(cl);
@@ -455,7 +455,7 @@ int tbls_create(uint16_t ptype, size_t hwlen)
         }
         spin_unlock(&tables_lock);
 
-        LOG_DBG("Table for ptype 0x%02x created successfully", ptype);
+        LOG_DBG("Table for ptype 0x%04x created successfully", ptype);
 
         return 0;
 }
@@ -469,7 +469,7 @@ int tbls_destroy(uint16_t ptype)
 
         e = tmap_entry_find(tables, ptype);
         if (!e) {
-                LOG_ERR("Table for ptype 0x%02x is missing, cannot destroy",
+                LOG_ERR("Table for ptype 0x%04x is missing, cannot destroy",
                         ptype);
                 spin_unlock(&tables_lock);
                 return -1;
@@ -485,7 +485,7 @@ int tbls_destroy(uint16_t ptype)
         tbl_destroy(cl);
         tmap_entry_destroy(e);
 
-        LOG_DBG("Table for ptype 0x%02x destroyed successfully", ptype);
+        LOG_DBG("Table for ptype 0x%04x destroyed successfully", ptype);
 
         return 0;
 }
