@@ -136,6 +136,39 @@ size_t gpa_address_length(const struct gpa * gpa)
 }
 EXPORT_SYMBOL(gpa_address_length);
 
+/* FIXME: Crappy ... we should avoid rkmalloc and rkfree as much as possible */
+static void gpa_dump(const struct gpa * gpa)
+{
+        uint8_t * tmp;
+        uint8_t * p;
+        size_t    i;
+
+        if (!gpa) {
+                LOG_DBG("GPA %pK: <null>", gpa);
+                return;
+        }
+        if (gpa->length == 0) {
+                LOG_DBG("GPA %pK: <empty>", gpa);
+                return;
+        }
+
+        tmp = rkmalloc(gpa->length * 2 + 1, GFP_KERNEL);
+        if (!tmp) {
+                LOG_DBG("GPA %pK: <ouch!>", gpa);
+                return;
+        }
+
+        p = tmp;
+        for (i = 0; i < gpa->length; i++) {
+                p += sprintf(p, "%02X", gpa->address[i]);
+        }
+        *(p + 1) = 0x00;
+
+        LOG_DBG("GPA %pK: 0x%s", gpa, tmp);
+
+        rkfree(tmp);
+}
+
 int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
 {
         uint8_t * new_address;
@@ -149,6 +182,8 @@ int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
                 return -1;
         }
 
+        gpa_dump(gpa);
+
         LOG_DBG("Looking for filler 0x%02x in GPA (length = %zd)",
                 filler, gpa->length);
 
@@ -160,7 +195,7 @@ int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
 
         count = position - gpa->address;
         if (!count) {
-                LOG_DBG("GPA has nothing to shrink ...");
+                LOG_DBG("GPA doesn't need to be shrinked ...");
                 return 0;
         }
 
@@ -181,6 +216,8 @@ int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
         gpa->address = new_address;
         gpa->length  = length;
 
+        gpa_dump(gpa);
+
         return 0;
 }
 EXPORT_SYMBOL(gpa_address_shrink);
@@ -193,6 +230,8 @@ int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
                 LOG_ERR("Bad input parameter, cannot grow the GPA");
                 return -1;
         }
+
+        gpa_dump(gpa);
 
         if (length == 0 || length < gpa->length) {
                 LOG_ERR("Can't grow the GPA, bad length");
@@ -218,6 +257,8 @@ int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
         gpa->length  = length;
 
         LOG_DBG("GPA is now %zd characters long", gpa->length);
+
+        gpa_dump(gpa);
 
         return 0;
 }
