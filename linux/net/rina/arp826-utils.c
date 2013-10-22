@@ -86,7 +86,7 @@ struct gpa * gpa_create(const uint8_t * address,
 EXPORT_SYMBOL(gpa_create);
 
 bool gpa_is_ok(const struct gpa * gpa)
-{ return (!gpa || gpa->address == NULL || gpa->length == 0) ? 0 : 1; }
+{ return (!gpa || gpa->address == NULL || gpa->length == 0) ? false : true; }
 EXPORT_SYMBOL(gpa_is_ok);
 
 void gpa_destroy(struct gpa * gpa)
@@ -217,7 +217,7 @@ int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
         gpa->address = new_address;
         gpa->length  = length;
 
-        LOG_DBG("GPA is now %zd long", gpa->length);
+        LOG_DBG("GPA is now %zd characters long", gpa->length);
 
         return 0;
 }
@@ -227,21 +227,21 @@ bool gpa_is_equal(const struct gpa * a, const struct gpa * b)
 {
         if (!gpa_is_ok(a) || !gpa_is_ok(b)) {
                 LOG_ERR("Bad input parameters, cannot compare GPAs");
-                return 0;
+                return false;
         }
 
         ASSERT(a && a->length != 0 && a->address != NULL);
         ASSERT(b && b->length != 0 && b->address != NULL);
 
         if (a->length != b->length)
-                return 0;
+                return false;
 
         ASSERT(a->length == b->length);
 
         if (memcmp(a->address, b->address, a->length))
-                return 0;
+                return false;
 
-        return 1;
+        return true;
 }
 EXPORT_SYMBOL(gpa_is_equal);
 
@@ -253,7 +253,7 @@ struct gha {
 };
 
 bool gha_is_ok(const struct gha * gha)
-{ return (!gha || gha->type != MAC_ADDR_802_3) ? 0 : 1; }
+{ return (!gha || gha->type != MAC_ADDR_802_3) ? false : true; }
 EXPORT_SYMBOL(gha_is_ok);
 
 struct gha * gha_create_gfp(gfp_t           flags,
@@ -388,7 +388,7 @@ bool gha_is_equal(const struct gha * a,
 {
         bool v;
 
-        v = 0;
+        v = false;
         if (!gha_is_ok(a) || !gha_is_ok(b))
                 return v;
 
@@ -399,9 +399,9 @@ bool gha_is_equal(const struct gha * a,
 
         switch (a->type) {
         case MAC_ADDR_802_3:
-                v = !memcmp(a->data.mac_802_3,
+                v = (memcmp(a->data.mac_802_3,
                             b->data.mac_802_3,
-                            sizeof(a->data.mac_802_3));
+                            sizeof(a->data.mac_802_3)) == 0) ? true : false;
                 break;
         default:
                 BUG(); /* As usual, shut up compiler! */

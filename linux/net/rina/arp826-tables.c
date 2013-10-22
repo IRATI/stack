@@ -116,7 +116,7 @@ static bool tble_is_ok(const struct table_entry * entry)
 {
         return (entry == NULL         ||
                 !gpa_is_ok(entry->pa) ||
-                !gha_is_ok(entry->ha)) ? 0 : 1;
+                !gha_is_ok(entry->ha)) ? false : true;
 }
 
 #if 0
