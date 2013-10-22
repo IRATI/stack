@@ -60,6 +60,8 @@ struct kipcm {
         struct kfa *            kfa;
 };
 
+message_handler_cb kipcm_handlers[RINA_C_MAX];
+
 #ifdef CONFIG_RINA_KIPCM_LOCKS_DEBUG
 
 #define KIPCM_LOCK_HEADER(X)   do {                             \
@@ -1640,57 +1642,18 @@ static int notify_ipc_manager_present(void *             data,
         return 0;
 }
 
+
 static int netlink_handlers_unregister(struct rnl_set * rnls)
 {
         int retval = 0;
+        int i;
 
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_ALLOCATE_FLOW_REQUEST))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_REGISTER_APPLICATION_REQUEST))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_IPC_MANAGER_PRESENT))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_CONN_CREATE_REQUEST))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_CONN_CREATE_ARRIVED))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_CONN_UPDATE_REQUEST))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_CONN_DESTROY_REQUEST))
-                retval = -1;
+        for (i=1; i < RINA_C_MAX; i++) {
+                if (kipcm_handlers[i] != NULL) {
+                        if (rnl_handler_unregister(rnls, i)) 
+                                retval = -1;
+                }
+        }
 
         LOG_DBG("NL handlers unregistered %s",
                 (retval == 0) ? "successfully" : "unsuccessfully");
@@ -1700,435 +1663,52 @@ static int netlink_handlers_unregister(struct rnl_set * rnls)
 
 static int netlink_handlers_register(struct kipcm * kipcm)
 {
-        message_handler_cb handler;
+        int i,j;
+        kipcm_handlers[RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST]          = 
+                notify_ipcp_assign_dif_request;
+        kipcm_handlers[RINA_C_IPCM_ALLOCATE_FLOW_REQUEST]          = 
+                notify_ipcp_allocate_flow_request;
+        kipcm_handlers[RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE]         = 
+                notify_ipcp_allocate_flow_response;
+        kipcm_handlers[RINA_C_IPCM_REGISTER_APPLICATION_REQUEST]   = 
+                notify_ipcp_register_app_request;
+        kipcm_handlers[RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST] = 
+                notify_ipcp_unregister_app_request;
+        kipcm_handlers[RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST]        = 
+                notify_ipcp_deallocate_flow_request;        
+        kipcm_handlers[RINA_C_IPCM_IPC_MANAGER_PRESENT]            = 
+                notify_ipc_manager_present;
+        kipcm_handlers[RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST]      = 
+                notify_ipcp_update_dif_config_request;
+        kipcm_handlers[RINA_C_IPCM_CONN_CREATE_REQUEST]            = 
+                notify_ipcp_conn_create_req;
+        kipcm_handlers[RINA_C_IPCM_CONN_CREATE_ARRIVED]            = 
+                notify_ipcp_conn_create_arrived;
+        kipcm_handlers[RINA_C_IPCM_CONN_UPDATE_REQUEST]            = 
+                notify_ipcp_conn_update_req;
+        kipcm_handlers[RINA_C_IPCM_CONN_DESTROY_REQUEST]           = 
+                notify_ipcp_conn_destroy_req;
 
-        handler = notify_ipcp_assign_dif_request;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST,
-                                 kipcm,
-                                 handler))
-                return -1;
-
-        handler = notify_ipcp_allocate_flow_request;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
+        for (i=1; i < RINA_C_MAX; i++) {
+                if (kipcm_handlers[i] != NULL) {
+                        if (rnl_handler_register(kipcm->rnls,
+                                                 i,
+                                                 kipcm,
+                                                 kipcm_handlers[i])) {
+                                for (j = i-1; j > 0; j--) {
+                                        if (kipcm_handlers[j] != NULL) { 
+                                                if (rnl_handler_unregister(kipcm->rnls, j)) {
+                                                        LOG_ERR("Failed handler unregister while bailing out");
+                                                        /* FIXME: What else could be done here?" */
+                                                }
+                                        }
+                                }
+                                return -1;
+                        }
                 }
-                return -1;
-        }
-
-        handler = notify_ipcp_allocate_flow_response;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipcp_register_app_request;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipcp_unregister_app_request;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipcp_deallocate_flow_request;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipc_manager_present;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_IPC_MANAGER_PRESENT,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipcp_update_dif_config_request;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_IPC_MANAGER_PRESENT)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipcp_conn_create_req;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_CONN_CREATE_REQUEST,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_IPC_MANAGER_PRESENT)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipcp_conn_create_arrived;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_CONN_CREATE_ARRIVED,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_IPC_MANAGER_PRESENT)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_CONN_CREATE_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipcp_conn_update_req;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_CONN_UPDATE_REQUEST,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_IPC_MANAGER_PRESENT)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_CONN_CREATE_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_CONN_CREATE_ARRIVED)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipcp_conn_destroy_req;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_CONN_DESTROY_REQUEST,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_IPC_MANAGER_PRESENT)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_CONN_CREATE_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_CONN_CREATE_ARRIVED)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_CONN_UPDATE_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
         }
 
         LOG_DBG("NL handlers registered successfully");
-
         return 0;
 }
 
