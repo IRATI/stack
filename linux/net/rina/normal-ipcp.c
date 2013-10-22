@@ -216,11 +216,51 @@ static int connection_update_request(struct ipcp_instance_data * data,
         return 0;
 }
 
+static struct normal_flow * find_flow_cepid(struct ipcp_instance_data * data,
+                                            cep_id_t                    id)
+{
+        struct normal_flow * pos;
+
+        list_for_each_entry(pos, &(data->flows), list) {
+                if (pos->active == id) {
+                        return pos;
+                }
+        }
+        return NULL;
+}
+
+static int remove_cep_id_from_flow(struct normal_flow * flow,
+                                   cep_id_t             id)
+{
+        struct cep_ids_entry *pos, *next;
+
+        list_for_each_entry_safe(pos, next, &(flow->cep_ids_list), list) {
+                if (pos->cep_id == id) {
+                        list_del(&pos->list);
+                        rkfree(pos);
+                        return 0;
+                }
+        }
+        return -1;
+}
+
 static int connection_destroy_request(struct ipcp_instance_data * data,
                                       cep_id_t                    src_cep_id)
 {
+        struct normal_flow * flow;
+
         if (efcp_connection_destroy(data->efcpc, src_cep_id))
                 return -1;
+
+        flow = find_flow_cepid(data, src_cep_id);
+        if (!flow) {
+                LOG_ERR("Could not retrieve flow by cep_id :%d", src_cep_id);
+        }
+        if (remove_cep_id_from_flow(flow, src_cep_id)) {
+                LOG_ERR("Could not remove cep_id: %d", src_cep_id);
+        }
+        if (list_empty(&flow->cep_ids_list))
+                rkfree(flow);
 
         return 0;
 }
