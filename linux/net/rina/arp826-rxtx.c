@@ -367,6 +367,8 @@ static int process(const struct sk_buff * skb,
         tpa = ptr; ptr += header->plen;
 
         LOG_DBG("Fetching addresses");
+
+        /* FIXME: Add some dumps of these addresses */
         tmp_spa = gpa_create_gfp(GFP_ATOMIC, spa, plen);
         tmp_sha = gha_create_gfp(GFP_ATOMIC, MAC_ADDR_802_3, sha);
         tmp_tpa = gpa_create_gfp(GFP_ATOMIC, tpa, plen);
@@ -393,19 +395,30 @@ static int process(const struct sk_buff * skb,
                 const struct gha *         target_ha;
 
                 /* FIXME: Should we add all ARP Requests? */
-                /* Do we have it in the cache ? */
-                tbl   = tbls_find(ptype);
-                entry = tbl_find_by_gpa(tbl, tmp_spa);
 
+                /* Do we have it in the cache ? */
+                tbl = tbls_find(ptype);
+                if (!tbl) {
+                        LOG_ERR("I don't have a table for ptype 0x%04x",
+                                ptype);
+                        return -1;
+                }
+
+                /*
+                 * FIXME: We do a double lookup here. Please remove it, all
+                 *        the CPUs (and trees) out there will apreciate that...
+                 */
+                entry = tbl_find_by_gpa(tbl, tmp_spa);
                 if (!entry) {
                         if (tbl_add(tbl, tmp_spa, tmp_sha)) {
                                 LOG_ERR("Bollocks. Can't add in table.");
                                 return -1;
                         }
                 } else {
-                        if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha))
+                        if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha)) {
                                 LOG_ERR("Failed to update table");
-                        return -1;
+                                return -1;
+                        }
                 }
 
                 req_addr  = tbl_find_by_gpa(tbl, tmp_tpa);
