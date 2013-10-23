@@ -414,18 +414,18 @@ int tbl_add(struct table * instance,
         return 0;
 }
 
-void tbl_remove(struct table *             instance,
-                const struct table_entry * entry)
+int tbl_remove(struct table *             instance,
+               const struct table_entry * entry)
 {
         struct table_entry * pos, * q;
 
         if (!instance) {
                 LOG_ERR("Bogus instance, cannot remove entry from table");
-                return;
+                return -1;
         }
         if (!entry) {
                 LOG_ERR("Bogus entry, cannot remove entry from table");
-                return;
+                return -1;
         }
 
         spin_lock(&instance->lock);
@@ -436,13 +436,15 @@ void tbl_remove(struct table *             instance,
                         list_del(&pos->next);
                         tble_destroy(tmp);
                         spin_unlock(&instance->lock);
-                        return;
+                        return -1;
                 }
         }
 
         spin_unlock(&instance->lock);
 
         rkfree(instance);
+
+        return 0;
 }
 
 static spinlock_t tables_lock;
@@ -629,7 +631,8 @@ int arp826_remove(uint16_t           ptype,
         if (!ce)
                 return -1;
 
-        tbl_remove(cl, ce);
+        if (tbl_remove(cl, ce))
+                return -1;
 
         return 0;
 }

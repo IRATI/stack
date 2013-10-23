@@ -46,7 +46,7 @@ struct table;
 int                        tbl_add(struct table * instance,
                                    struct gpa *   pa,
                                    struct gha *   ha);
-void                       tbl_remove(struct table *             instance,
+int                        tbl_remove(struct table *             instance,
                                       const struct table_entry * entry);
 
 /* Replaces the old gha with the new one, takes the ownership */
