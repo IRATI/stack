@@ -1196,20 +1196,20 @@ static int notify_ipcp_unregister_app_request(void *             data,
 }
 
 static int
-conn_create_resp_free_and_reply(struct rnl_ipcm_conn_create_req_msg_attrs * attrs,
-                                struct rnl_msg *                     msg,
-                                struct rina_msg_hdr *                hdr,
-                                ipc_process_id_t                     ipc_id,
-                                port_id_t                            pid,
-                                cep_id_t                             src_cep,
-                                rnl_sn_t                             seq_num,
-                                u32                                  nl_port_id)
+conn_create_resp_free_and_reply(struct rnl_ipcp_conn_create_req_msg_attrs * attrs,
+                                struct rnl_msg *                            msg,
+                                struct rina_msg_hdr *                       hdr,
+                                ipc_process_id_t                            ipc_id,
+                                port_id_t                                   pid,
+                                cep_id_t                                    src_cep,
+                                rnl_sn_t                                    seq_num,
+                                u32                                         nl_port_id)
 {
         if (attrs) rkfree(attrs);
         if (msg)   rkfree(msg);
         if (hdr)   rkfree(hdr);
 
-        if (rnl_ipcm_conn_create_resp_msg(ipc_id,
+        if (rnl_ipcp_conn_create_resp_msg(ipc_id,
                                           pid,
                                           src_cep,
                                           seq_num,
@@ -1225,7 +1225,7 @@ static int notify_ipcp_conn_create_req(void *             data,
                                        struct sk_buff *   buff,
                                        struct genl_info * info)
 {
-        struct rnl_ipcm_conn_create_req_msg_attrs * attrs;
+        struct rnl_ipcp_conn_create_req_msg_attrs * attrs;
         struct rnl_msg *                            msg;
         struct ipcp_instance *                      ipcp;
         struct rina_msg_hdr *                       hdr;
@@ -1310,7 +1310,7 @@ static int notify_ipcp_conn_create_req(void *             data,
 
 static int
 conn_create_result_free_and_reply(
-                                  struct rnl_ipcm_conn_create_arrived_msg_attrs * attrs,
+                                  struct rnl_ipcp_conn_create_arrived_msg_attrs * attrs,
                                   struct rnl_msg *                                msg,
                                   struct rina_msg_hdr *                           hdr,
                                   ipc_process_id_t                                ipc_id,
@@ -1324,7 +1324,7 @@ conn_create_result_free_and_reply(
         if (msg)   rkfree(msg);
         if (hdr)   rkfree(hdr);
 
-        if (rnl_ipcm_conn_create_result_msg(ipc_id,
+        if (rnl_ipcp_conn_create_result_msg(ipc_id,
                                             pid,
                                             src_cep,
                                             dst_cep,
@@ -1341,7 +1341,7 @@ static int notify_ipcp_conn_create_arrived(void *             data,
                                            struct sk_buff *   buff,
                                            struct genl_info * info)
 {
-        struct rnl_ipcm_conn_create_arrived_msg_attrs * attrs;
+        struct rnl_ipcp_conn_create_arrived_msg_attrs * attrs;
         struct rnl_msg *                                msg;
         struct ipcp_instance *                          ipcp;
         struct rina_msg_hdr *                           hdr;
@@ -1428,7 +1428,7 @@ static int notify_ipcp_conn_create_arrived(void *             data,
 
 static int
 conn_update_result_free_and_reply(
-                                  struct rnl_ipcm_conn_update_req_msg_attrs * attrs,
+                                  struct rnl_ipcp_conn_update_req_msg_attrs * attrs,
                                   struct rnl_msg *                            msg,
                                   struct rina_msg_hdr *                       hdr,
                                   ipc_process_id_t                            ipc_id,
@@ -1441,7 +1441,7 @@ conn_update_result_free_and_reply(
         if (msg)   rkfree(msg);
         if (hdr)   rkfree(hdr);
 
-        if (rnl_ipcm_conn_update_result_msg(ipc_id,
+        if (rnl_ipcp_conn_update_result_msg(ipc_id,
                                             pid,
                                             result,
                                             seq_num,
@@ -1457,7 +1457,7 @@ static int notify_ipcp_conn_update_req(void *             data,
                                        struct sk_buff *   buff,
                                        struct genl_info * info)
 {
-        struct rnl_ipcm_conn_update_req_msg_attrs * attrs;
+        struct rnl_ipcp_conn_update_req_msg_attrs * attrs;
         struct rnl_msg *                            msg;
         struct ipcp_instance *                      ipcp;
         struct rina_msg_hdr *                       hdr;
@@ -1533,7 +1533,7 @@ static int notify_ipcp_conn_update_req(void *             data,
 
 static int
 conn_destroy_result_free_and_reply(
-                                   struct rnl_ipcm_conn_destroy_req_msg_attrs * attrs,
+                                   struct rnl_ipcp_conn_destroy_req_msg_attrs * attrs,
                                    struct rnl_msg *                             msg,
                                    struct rina_msg_hdr *                        hdr,
                                    ipc_process_id_t                             ipc_id,
@@ -1546,7 +1546,7 @@ conn_destroy_result_free_and_reply(
         if (msg)   rkfree(msg);
         if (hdr)   rkfree(hdr);
 
-        if (rnl_ipcm_conn_destroy_result_msg(ipc_id,
+        if (rnl_ipcp_conn_destroy_result_msg(ipc_id,
                                              pid,
                                              result,
                                              seq_num,
@@ -1561,7 +1561,7 @@ conn_destroy_result_free_and_reply(
 static int notify_ipcp_conn_destroy_req(void *             data,
                                         struct sk_buff *   buff,
                                         struct genl_info * info) {
-        struct rnl_ipcm_conn_destroy_req_msg_attrs * attrs;
+        struct rnl_ipcp_conn_destroy_req_msg_attrs * attrs;
         struct rnl_msg *                             msg;
         struct ipcp_instance *                       ipcp;
         struct rina_msg_hdr *                        hdr;
@@ -1680,13 +1680,13 @@ static int netlink_handlers_register(struct kipcm * kipcm)
                 notify_ipc_manager_present;
         kipcm_handlers[RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST]      = 
                 notify_ipcp_update_dif_config_request;
-        kipcm_handlers[RINA_C_IPCM_CONN_CREATE_REQUEST]            = 
+        kipcm_handlers[RINA_C_IPCP_CONN_CREATE_REQUEST]            = 
                 notify_ipcp_conn_create_req;
-        kipcm_handlers[RINA_C_IPCM_CONN_CREATE_ARRIVED]            = 
+        kipcm_handlers[RINA_C_IPCP_CONN_CREATE_ARRIVED]            = 
                 notify_ipcp_conn_create_arrived;
-        kipcm_handlers[RINA_C_IPCM_CONN_UPDATE_REQUEST]            = 
+        kipcm_handlers[RINA_C_IPCP_CONN_UPDATE_REQUEST]            = 
                 notify_ipcp_conn_update_req;
-        kipcm_handlers[RINA_C_IPCM_CONN_DESTROY_REQUEST]           = 
+        kipcm_handlers[RINA_C_IPCP_CONN_DESTROY_REQUEST]           = 
                 notify_ipcp_conn_destroy_req;
 
         for (i=1; i < RINA_C_MAX; i++) {
@@ -2231,8 +2231,8 @@ conn_generic_free_and_reply(msg_type_t            op_code;
         if (hdr)   rkfree(hdr);
 
         switch(op_code) {
-                case RINA_C_IPCM_CONN_CREATE_REQUEST:
-                        if (rnl_ipcm_conn_create_resp_msg(ipc_id,
+                case RINA_C_IPCP_CONN_CREATE_REQUEST:
+                        if (rnl_ipcp_conn_create_resp_msg(ipc_id,
                                                             pid,
                                                             src_cep,
                                                             seq_num,
@@ -2241,8 +2241,8 @@ conn_generic_free_and_reply(msg_type_t            op_code;
                                 return -1;
                         }
 
-                case RINA_C_IPCM_CONN_CREATE_ARRIVED: 
-                        if (rnl_ipcm_conn_create_result_msg(ipc_id,
+                case RINA_C_IPCP_CONN_CREATE_ARRIVED: 
+                        if (rnl_ipcp_conn_create_result_msg(ipc_id,
                                                             pid,
                                                             src_cep,
                                                             dst_cep,
@@ -2261,7 +2261,7 @@ static int notify_ipcp_conn_create_generic(void *             data,
                                            struct sk_buff *   buff,
                                            struct genl_info * info)
 {
-        struct rnl_ipcm_conn_create_arrived_msg_attrs * attrs;
+        struct rnl_ipcp_conn_create_arrived_msg_attrs * attrs;
         struct rnl_msg *                                msg;
         struct ipcp_instance *                          ipcp;
         struct rina_msg_hdr *                           hdr;

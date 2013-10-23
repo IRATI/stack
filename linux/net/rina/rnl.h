@@ -130,28 +130,28 @@ typedef enum {
          * allocation messages. Put here in order to maintain
          * compatibility with MS7 version of user space*/
         /* IPC Process (user space) -> KIPCM*/
-        RINA_C_IPCM_CONN_CREATE_REQUEST,
+        RINA_C_IPCP_CONN_CREATE_REQUEST,
 
         /* KIPCM -> IPC Process (user space)*/
-        RINA_C_IPCM_CONN_CREATE_RESPONSE,
+        RINA_C_IPCP_CONN_CREATE_RESPONSE,
 
         /* IPC Process (user space) -> KIPCM */
-        RINA_C_IPCM_CONN_CREATE_ARRIVED,
+        RINA_C_IPCP_CONN_CREATE_ARRIVED,
 
         /* KIPCM -> IPC Process (user space)*/
-        RINA_C_IPCM_CONN_CREATE_RESULT,
+        RINA_C_IPCP_CONN_CREATE_RESULT,
 
         /* IPC Process (user space) -> KIPCM */
-        RINA_C_IPCM_CONN_UPDATE_REQUEST,
+        RINA_C_IPCP_CONN_UPDATE_REQUEST,
 
         /* KIPCM -> IPC Process (user space)*/
-        RINA_C_IPCM_CONN_UPDATE_RESULT,
+        RINA_C_IPCP_CONN_UPDATE_RESULT,
 
         /* IPC Process (user space) -> KIPCM */
-        RINA_C_IPCM_CONN_DESTROY_REQUEST,
+        RINA_C_IPCP_CONN_DESTROY_REQUEST,
 
         /* KIPCM -> IPC Process (user space)*/
-        RINA_C_IPCM_CONN_DESTROY_RESULT,
+        RINA_C_IPCP_CONN_DESTROY_RESULT,
 
         RINA_C_MAX,
 } msg_type_t;

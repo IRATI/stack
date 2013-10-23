@@ -451,7 +451,7 @@ struct rnl_ipcm_flow_dealloc_noti_msg_attrs {
 };
 
 /*  FIXME: policies should not be int */
-struct rnl_ipcm_conn_create_req_msg_attrs {
+struct rnl_ipcp_conn_create_req_msg_attrs {
         port_id_t port_id;
         address_t src_addr;
         address_t dst_addr;
@@ -459,12 +459,12 @@ struct rnl_ipcm_conn_create_req_msg_attrs {
         int       policies;
 };
 
-struct rnl_ipcm_conn_create_resp_msg_attrs {
+struct rnl_ipcp_conn_create_resp_msg_attrs {
         port_id_t port_id;
         cep_id_t  src_cep;
 };
 
-struct rnl_ipcm_conn_create_arrived_msg_attrs {
+struct rnl_ipcp_conn_create_arrived_msg_attrs {
         port_id_t port_id;
         address_t src_addr;
         address_t dst_addr;
@@ -473,29 +473,29 @@ struct rnl_ipcm_conn_create_arrived_msg_attrs {
         int       policies;
 };
 
-struct rnl_ipcm_conn_create_result_msg_attrs {
+struct rnl_ipcp_conn_create_result_msg_attrs {
         port_id_t port_id;
         cep_id_t  src_cep;
         cep_id_t  dst_cep;
 };
 
-struct rnl_ipcm_conn_update_req_msg_attrs {
+struct rnl_ipcp_conn_update_req_msg_attrs {
         port_id_t port_id;
         cep_id_t  src_cep;
         cep_id_t  dst_cep;
 };
 
-struct rnl_ipcm_conn_update_result_msg_attrs {
+struct rnl_ipcp_conn_update_result_msg_attrs {
         port_id_t port_id;
         uint_t    result;
 };
 
-struct rnl_ipcm_conn_destroy_req_msg_attrs {
+struct rnl_ipcp_conn_destroy_req_msg_attrs {
         port_id_t port_id;
         cep_id_t  src_cep;
 };
 
-struct rnl_ipcm_conn_destroy_result_msg_attrs {
+struct rnl_ipcp_conn_destroy_result_msg_attrs {
         port_id_t port_id;
         uint_t    result;
 };
@@ -710,26 +710,26 @@ int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
                              port_id_t        port_id,
                              u32              nl_port_id);
 
-int rnl_ipcm_conn_create_resp_msg(ipc_process_id_t ipc_id,
+int rnl_ipcp_conn_create_resp_msg(ipc_process_id_t ipc_id,
                                   port_id_t        pid,
                                   cep_id_t         src_cep,
                                   rnl_sn_t         seq_num,
                                   u32              nl_port_id);
 
-int rnl_ipcm_conn_create_result_msg(ipc_process_id_t ipc_id,
+int rnl_ipcp_conn_create_result_msg(ipc_process_id_t ipc_id,
                                     port_id_t        pid,
                                     cep_id_t         src_cep,
                                     cep_id_t         dst_cep,
                                     rnl_sn_t         seq_num,
                                     u32              nl_port_id);
 
-int rnl_ipcm_conn_update_result_msg(ipc_process_id_t ipc_id,
+int rnl_ipcp_conn_update_result_msg(ipc_process_id_t ipc_id,
                                     port_id_t        pid,
                                     uint_t           result,
                                     rnl_sn_t         seq_num,
                                     u32              nl_port_id);
 
-int rnl_ipcm_conn_destroy_result_msg(ipc_process_id_t ipc_id,
+int rnl_ipcp_conn_destroy_result_msg(ipc_process_id_t ipc_id,
                                      port_id_t        pid,
                                      uint_t           result,
                                      rnl_sn_t         seq_num,

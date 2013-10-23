@@ -848,7 +848,7 @@ static int rnl_parse_ipcm_flow_dealloc_noti_msg(struct genl_info * info,
 }
 
 static int rnl_parse_ipcm_conn_create_req_msg(struct genl_info * info,
-                                              struct rnl_ipcm_conn_create_req_msg_attrs * msg_attrs)
+                                              struct rnl_ipcp_conn_create_req_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[ICCRQ_ATTR_MAX + 1];
         struct nlattr *attrs[ICCRQ_ATTR_MAX + 1];
@@ -895,12 +895,12 @@ static int rnl_parse_ipcm_conn_create_req_msg(struct genl_info * info,
         return 0;
 
  parse_fail:
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONN_CREATE_REQUEST"));
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCP_CONN_CREATE_REQUEST"));
         return -1;
 }
 
 static int rnl_parse_ipcm_conn_create_arrived_msg(struct genl_info * info,
-                                                  struct rnl_ipcm_conn_create_arrived_msg_attrs * msg_attrs)
+                                                  struct rnl_ipcp_conn_create_arrived_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[ICCA_ATTR_MAX + 1];
         struct nlattr *attrs[ICCA_ATTR_MAX + 1];
@@ -952,12 +952,12 @@ static int rnl_parse_ipcm_conn_create_arrived_msg(struct genl_info * info,
         return 0;
 
  parse_fail:
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONN_CREATE_ARRIVED"));
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCP_CONN_CREATE_ARRIVED"));
         return -1;
 }
 
 static int rnl_parse_ipcm_conn_update_req_msg(struct genl_info * info,
-                                              struct rnl_ipcm_conn_update_req_msg_attrs * msg_attrs)
+                                              struct rnl_ipcp_conn_update_req_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[ICURQ_ATTR_MAX + 1];
         struct nlattr *attrs[ICURQ_ATTR_MAX + 1];
@@ -994,12 +994,12 @@ static int rnl_parse_ipcm_conn_update_req_msg(struct genl_info * info,
         return 0;
 
  parse_fail:
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONN_UPDATE_REQUEST"));
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCP_CONN_UPDATE_REQUEST"));
         return -1;
 }
 
 static int rnl_parse_ipcm_conn_destroy_req_msg(struct genl_info * info,
-                                               struct rnl_ipcm_conn_destroy_req_msg_attrs * msg_attrs)
+                                               struct rnl_ipcp_conn_destroy_req_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[ICDR_ATTR_MAX + 1];
         struct nlattr *attrs[ICDR_ATTR_MAX + 1];
@@ -1031,7 +1031,7 @@ static int rnl_parse_ipcm_conn_destroy_req_msg(struct genl_info * info,
         return 0;
 
  parse_fail:
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONN_DESTROY_REQUEST"));
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCP_CONN_DESTROY_REQUEST"));
         return -1;
 }
 
@@ -1371,22 +1371,22 @@ int rnl_parse_msg(struct genl_info * info,
                                                          msg->attrs) < 0)
                         goto fail;
                 break;
-        case RINA_C_IPCM_CONN_CREATE_REQUEST:
+        case RINA_C_IPCP_CONN_CREATE_REQUEST:
                 if (rnl_parse_ipcm_conn_create_req_msg(info,
                                                        msg->attrs) < 0)
                         goto fail;
                 break;
-        case RINA_C_IPCM_CONN_CREATE_ARRIVED:
+        case RINA_C_IPCP_CONN_CREATE_ARRIVED:
                 if (rnl_parse_ipcm_conn_create_arrived_msg(info,
                                                            msg->attrs) < 0)
                         goto fail;
                 break;
-        case RINA_C_IPCM_CONN_UPDATE_REQUEST:
+        case RINA_C_IPCP_CONN_UPDATE_REQUEST:
                 if (rnl_parse_ipcm_conn_update_req_msg(info,
                                                        msg->attrs) < 0)
                         goto fail;
                 break;
-        case RINA_C_IPCM_CONN_DESTROY_REQUEST:
+        case RINA_C_IPCP_CONN_DESTROY_REQUEST:
                 if (rnl_parse_ipcm_conn_destroy_req_msg(info,
                                                         msg->attrs) < 0)
                         goto fail;
@@ -2740,7 +2740,7 @@ int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
 }
 EXPORT_SYMBOL(rnl_flow_dealloc_not_msg);
 
-int rnl_ipcm_conn_create_resp_msg(ipc_process_id_t ipc_id,
+int rnl_ipcp_conn_create_resp_msg(ipc_process_id_t ipc_id,
                                   port_id_t        pid,
                                   cep_id_t         src_cep,
                                   rnl_sn_t         seq_num,
@@ -2762,7 +2762,7 @@ int rnl_ipcm_conn_create_resp_msg(ipc_process_id_t ipc_id,
                             seq_num,
                             &rnl_nl_family,
                             0,
-                            RINA_C_IPCM_CONN_CREATE_RESPONSE);
+                            RINA_C_IPCP_CONN_CREATE_RESPONSE);
         if (!out_hdr) {
                 LOG_ERR("Could not use genlmsg_put");
                 nlmsg_free(out_msg);
@@ -2791,9 +2791,9 @@ int rnl_ipcm_conn_create_resp_msg(ipc_process_id_t ipc_id,
 
         return 0;
 }
-EXPORT_SYMBOL(rnl_ipcm_conn_create_resp_msg);
+EXPORT_SYMBOL(rnl_ipcp_conn_create_resp_msg);
 
-int rnl_ipcm_conn_create_result_msg(ipc_process_id_t ipc_id,
+int rnl_ipcp_conn_create_result_msg(ipc_process_id_t ipc_id,
                                     port_id_t        pid,
                                     cep_id_t         src_cep,
                                     cep_id_t         dst_cep,
@@ -2816,7 +2816,7 @@ int rnl_ipcm_conn_create_result_msg(ipc_process_id_t ipc_id,
                             seq_num,
                             &rnl_nl_family,
                             0,
-                            RINA_C_IPCM_CONN_CREATE_RESULT);
+                            RINA_C_IPCP_CONN_CREATE_RESULT);
         if (!out_hdr) {
                 LOG_ERR("Could not use genlmsg_put");
                 nlmsg_free(out_msg);
@@ -2847,9 +2847,9 @@ int rnl_ipcm_conn_create_result_msg(ipc_process_id_t ipc_id,
 
         return 0;
 }
-EXPORT_SYMBOL(rnl_ipcm_conn_create_result_msg);
+EXPORT_SYMBOL(rnl_ipcp_conn_create_result_msg);
 
-int rnl_ipcm_conn_update_result_msg(ipc_process_id_t ipc_id,
+int rnl_ipcp_conn_update_result_msg(ipc_process_id_t ipc_id,
                                     port_id_t        pid,
                                     uint_t           res,
                                     rnl_sn_t         seq_num,
@@ -2871,7 +2871,7 @@ int rnl_ipcm_conn_update_result_msg(ipc_process_id_t ipc_id,
                             seq_num,
                             &rnl_nl_family,
                             0,
-                            RINA_C_IPCM_CONN_UPDATE_RESULT);
+                            RINA_C_IPCP_CONN_UPDATE_RESULT);
         if (!out_hdr) {
                 LOG_ERR("Could not use genlmsg_put");
                 nlmsg_free(out_msg);
@@ -2900,9 +2900,9 @@ int rnl_ipcm_conn_update_result_msg(ipc_process_id_t ipc_id,
 
         return 0;
 }
-EXPORT_SYMBOL(rnl_ipcm_conn_update_result_msg);
+EXPORT_SYMBOL(rnl_ipcp_conn_update_result_msg);
 
-int rnl_ipcm_conn_destroy_result_msg(ipc_process_id_t ipc_id,
+int rnl_ipcp_conn_destroy_result_msg(ipc_process_id_t ipc_id,
                                      port_id_t        pid,
                                      uint_t           res,
                                      rnl_sn_t         seq_num,
@@ -2924,7 +2924,7 @@ int rnl_ipcm_conn_destroy_result_msg(ipc_process_id_t ipc_id,
                             seq_num,
                             &rnl_nl_family,
                             0,
-                            RINA_C_IPCM_CONN_UPDATE_RESULT);
+                            RINA_C_IPCP_CONN_UPDATE_RESULT);
         if (!out_hdr) {
                 LOG_ERR("Could not use genlmsg_put");
                 nlmsg_free(out_msg);
@@ -2953,7 +2953,7 @@ int rnl_ipcm_conn_destroy_result_msg(ipc_process_id_t ipc_id,
 
         return 0;
 }
-EXPORT_SYMBOL(rnl_ipcm_conn_destroy_result_msg);
+EXPORT_SYMBOL(rnl_ipcp_conn_destroy_result_msg);
 
 int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port)
 {
