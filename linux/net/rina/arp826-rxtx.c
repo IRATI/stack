@@ -422,11 +422,11 @@ static int process(const struct sk_buff * skb,
                 }
 
                 req_addr = tbl_find_by_gpa(tbl, tmp_tpa);
-		if (!req_addr) {
-			LOG_ERR("Cannot find this TPA in my tables, "
+                if (!req_addr) {
+                        LOG_ERR("Cannot find this TPA in my tables, "
                                 "bailing out");
-			return -1;
-		}
+                        return -1;
+                }
 
                 target_ha = tble_ha(req_addr);
                 if (!target_ha) {
@@ -437,7 +437,7 @@ static int process(const struct sk_buff * skb,
                 if (arp_send_reply(ptype,
                                    tmp_tpa, tmp_tha, tmp_spa, tmp_sha)) {
                         /* FIXME: Couldn't send reply ... */
-			LOG_ERR("Couldn't send reply");
+                        LOG_ERR("Couldn't send reply");
                         return -1;
                 }
         }

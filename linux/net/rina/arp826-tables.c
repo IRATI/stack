@@ -324,14 +324,14 @@ const struct table_entry * tbl_find_by_gpa(struct table *     instance,
                 return NULL;
         }
 
-	LOG_DBG("Looking for the following address in table");
-	gpa_dump(address);
+        LOG_DBG("Looking for the following address in table");
+        gpa_dump(address);
 
-	LOG_DBG("Showing addresses in table");
+        LOG_DBG("Showing addresses in table");
 
         spin_lock(&instance->lock);
         list_for_each_entry(pos, &instance->entries, next) {
-		gpa_dump(pos->pa);
+                gpa_dump(pos->pa);
                 if (gpa_is_equal(pos->pa, address)) {
                         spin_unlock(&instance->lock);
                         return pos;
@@ -339,7 +339,7 @@ const struct table_entry * tbl_find_by_gpa(struct table *     instance,
         }
         spin_unlock(&instance->lock);
 
-	LOG_DBG("Dump complete");
+        LOG_DBG("Dump complete");
 
         return NULL;
 }
