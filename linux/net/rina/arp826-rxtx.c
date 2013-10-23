@@ -422,11 +422,17 @@ static int process(const struct sk_buff * skb,
                 }
 
                 req_addr  = tbl_find_by_gpa(tbl, tmp_tpa);
+		if (!req_addr) {
+			LOG_ERR("Oh looord! They gave us a NULL pointer");
+			return -1;
+		}
+
                 target_ha = tble_ha(req_addr);
 
                 if (arp_send_reply(ptype,
                                    tmp_tpa, tmp_tha, tmp_spa, tmp_sha)) {
                         /* FIXME: Couldn't send reply ... */
+			LOG_ERR("Couldn't send reply");
                         return -1;
                 }
         }
