@@ -25,6 +25,13 @@
 
 struct table_entry;
 
+struct table_entry *       tble_create(struct gpa * gpa,
+                                       struct gha * gha);
+struct table_entry *       tble_create_gfp(struct gpa * gpa,
+                                           struct gha * gha,
+                                           gfp_t        flags);
+int                        tble_destroy(struct table_entry * entry);
+
 const struct gpa *         tble_pa(const struct table_entry * entry);
 const struct gha *         tble_ha(const struct table_entry * entry);
 
@@ -35,6 +42,7 @@ struct table;
  *   Takes the ownership of the passed gpa. Hardware address length is
  *   implicitly obtained so there are no needs to pass the length here
  */
+
 int                        tbl_add(struct table * instance,
                                    struct gpa *   pa,
                                    struct gha *   ha);

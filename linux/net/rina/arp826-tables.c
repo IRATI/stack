@@ -58,16 +58,19 @@ static void tble_fini(struct table_entry * entry)
         }
 }
 
-void tble_destroy(struct table_entry * entry)
+int tble_destroy(struct table_entry * entry)
 {
         if (!entry) {
                 LOG_ERR("Bogus table entry, cannot destroy");
-                return;
+                return -1;
         }
 
         tble_fini(entry);
         rkfree(entry);
+
+        return 0;
 }
+EXPORT_SYMBOL(tble_destroy);
 
 /* Takes the ownership of the input GPA */
 static int tble_init(struct table_entry * entry,
@@ -90,8 +93,9 @@ static int tble_init(struct table_entry * entry,
         return 0;
 }
 
-struct table_entry * tble_create(struct gpa * gpa,
-                                 struct gha * gha)
+struct table_entry * tble_create_gfp(struct gpa * gpa,
+                                     struct gha * gha,
+                                     gfp_t        flags)
 {
         struct table_entry * entry;
 
@@ -104,7 +108,7 @@ struct table_entry * tble_create(struct gpa * gpa,
                 return NULL;
         }
 
-        entry = rkmalloc(sizeof(*entry), GFP_KERNEL);
+        entry = rkmalloc(sizeof(*entry), flags);
         if (!entry)
                 return NULL;
 
@@ -115,6 +119,12 @@ struct table_entry * tble_create(struct gpa * gpa,
 
         return entry;
 }
+EXPORT_SYMBOL(tble_create_gfp);
+
+struct table_entry * tble_create(struct gpa * gpa,
+                                 struct gha * gha)
+{ return tble_create_gfp(gpa, gha, GFP_KERNEL); }
+EXPORT_SYMBOL(tble_create);
 
 #if 0
 static bool tble_is_ok(const struct table_entry * entry)
