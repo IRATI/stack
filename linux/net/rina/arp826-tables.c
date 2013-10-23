@@ -116,6 +116,7 @@ struct table_entry * tble_create(struct gpa * gpa,
         return entry;
 }
 
+#if 0
 static bool tble_is_ok(const struct table_entry * entry)
 {
         return (entry == NULL         ||
@@ -123,7 +124,6 @@ static bool tble_is_ok(const struct table_entry * entry)
                 !gha_is_ok(entry->ha)) ? false : true;
 }
 
-#if 0
 static bool tble_is_equal(struct table_entry * entry1,
                           struct table_entry * entry2)
 {
@@ -406,7 +406,7 @@ void tbl_remove(struct table *             instance,
                 LOG_ERR("Bogus instance, cannot remove entry from table");
                 return;
         }
-        if (!tble_is_ok(entry)) {
+        if (!entry) {
                 LOG_ERR("Bogus entry, cannot remove entry from table");
                 return;
         }
