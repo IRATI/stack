@@ -86,7 +86,7 @@ struct gpa * gpa_create(const uint8_t * address,
 EXPORT_SYMBOL(gpa_create);
 
 bool gpa_is_ok(const struct gpa * gpa)
-{ return (!gpa || gpa->address == NULL || gpa->length == 0) ? 0 : 1; }
+{ return (!gpa || gpa->address == NULL || gpa->length == 0) ? false : true; }
 EXPORT_SYMBOL(gpa_is_ok);
 
 void gpa_destroy(struct gpa * gpa)
@@ -136,12 +136,43 @@ size_t gpa_address_length(const struct gpa * gpa)
 }
 EXPORT_SYMBOL(gpa_address_length);
 
-int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
+/* FIXME: Crappy ... we should avoid rkmalloc and rkfree as much as possible */
+void gpa_dump(const struct gpa * gpa)
+{
+        uint8_t * tmp;
+        uint8_t * p;
+        size_t    i;
+
+        if (!gpa) {
+                LOG_DBG("GPA %pK: <null>", gpa);
+                return;
+        }
+        if (gpa->length == 0) {
+                LOG_DBG("GPA %pK: <empty>", gpa);
+                return;
+        }
+
+        tmp = rkmalloc(gpa->length * 2 + 1, GFP_ATOMIC);
+        if (!tmp) {
+                LOG_DBG("GPA %pK: <ouch!>", gpa);
+                return;
+        }
+
+        p = tmp;
+        for (i = 0; i < gpa->length; i++) {
+                p += sprintf(p, "%02X", gpa->address[i]);
+        }
+        *(p + 1) = 0x00;
+
+        LOG_DBG("GPA %pK: 0x%s", gpa, tmp);
+
+        rkfree(tmp);
+}
+
+int gpa_address_shrink_gfp(struct gpa * gpa, uint8_t filler, gfp_t flags)
 {
         uint8_t * new_address;
         uint8_t * position;
-        uint8_t * tmp;
-        size_t    count;
         size_t    length;
 
         if (!gpa_is_ok(gpa)) {
@@ -149,43 +180,47 @@ int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
                 return -1;
         }
 
-        LOG_DBG("Looking for filler 0x%01x in GPA (length = %zd)",
+        gpa_dump(gpa);
+
+        LOG_DBG("Looking for filler 0x%02X in GPA (length = %zd)",
                 filler, gpa->length);
 
-        position = strnchr(gpa->address, gpa->length, filler);
-        if (!position) {
-                LOG_ERR("No filler in the GPA, no needs to shrink");
+        position = memscan(gpa->address, filler, gpa->length);
+        if (position >= gpa->address + gpa->length) {
+                LOG_DBG("GPA doesn't need to be shrinked ...");
                 return 0;
         }
 
-        count = position - gpa->address;
-        if (!count) {
-                LOG_DBG("GPA has nothing to shrink ...");
-                return 0;
-        }
+        length = position - gpa->address;
+        ASSERT(length >= 0);
 
-        ASSERT(count);
+        LOG_DBG("Shrinking GPA to %zd", length);
 
-        LOG_DBG("Shrinking GPA to %zd", count);
-
-        length      = gpa->length - count;
-        new_address = rkmalloc(length, GFP_KERNEL);
+        new_address = rkmalloc(length, flags);
         if (!new_address)
                 return -1;
 
-        memcpy(new_address, gpa->address, gpa->length - count);
-        for (tmp = new_address + count; count != 0; tmp++, count--)
-                *tmp = filler;
+        memcpy(new_address, gpa->address, length);
 
         rkfree(gpa->address);
         gpa->address = new_address;
         gpa->length  = length;
 
+        gpa_dump(gpa);
+
         return 0;
 }
+EXPORT_SYMBOL(gpa_address_shrink_gfp);
+
+int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
+{ return gpa_address_shrink_gfp(gpa, filler, GFP_KERNEL); }
 EXPORT_SYMBOL(gpa_address_shrink);
 
-int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
+
+int gpa_address_grow_gfp(struct gpa * gpa,
+                         size_t       length,
+                         uint8_t      filler,
+                         gfp_t        flags)
 {
         uint8_t * new_address;
 
@@ -193,6 +228,8 @@ int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
                 LOG_ERR("Bad input parameter, cannot grow the GPA");
                 return -1;
         }
+
+        gpa_dump(gpa);
 
         if (length == 0 || length < gpa->length) {
                 LOG_ERR("Can't grow the GPA, bad length");
@@ -206,8 +243,8 @@ int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
 
         ASSERT(length > gpa->length);
 
-        LOG_DBG("Growing GPA to %zd with filler 0x%01x", length, filler);
-        new_address = rkmalloc(length, GFP_KERNEL);
+        LOG_DBG("Growing GPA to %zd with filler 0x%02X", length, filler);
+        new_address = rkmalloc(length, flags);
         if (!new_address)
                 return -1;
 
@@ -217,31 +254,41 @@ int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
         gpa->address = new_address;
         gpa->length  = length;
 
-        LOG_DBG("GPA is now %zd long", gpa->length);
+        LOG_DBG("GPA is now %zd characters long", gpa->length);
+
+        gpa_dump(gpa);
 
         return 0;
 }
+EXPORT_SYMBOL(gpa_address_grow_gfp);
+
+int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
+{ return gpa_address_grow_gfp(gpa, length, filler, GFP_KERNEL); }
 EXPORT_SYMBOL(gpa_address_grow);
 
 bool gpa_is_equal(const struct gpa * a, const struct gpa * b)
 {
-        if (!gpa_is_ok(a) || !gpa_is_ok(b)) {
-                LOG_ERR("Bad input parameters, cannot compare GPAs");
-                return 0;
+        if (!gpa_is_ok(a)) {
+                LOG_ERR("Bad input parameter (LHS), cannot compare GPAs");
+                return false;
+        }
+        if (!gpa_is_ok(b)) {
+                LOG_ERR("Bad input parameter (RHS), cannot compare GPAs");
+                return false;
         }
 
         ASSERT(a && a->length != 0 && a->address != NULL);
         ASSERT(b && b->length != 0 && b->address != NULL);
 
         if (a->length != b->length)
-                return 0;
+                return false;
 
         ASSERT(a->length == b->length);
 
         if (memcmp(a->address, b->address, a->length))
-                return 0;
+                return false;
 
-        return 1;
+        return true;
 }
 EXPORT_SYMBOL(gpa_is_equal);
 
@@ -253,7 +300,7 @@ struct gha {
 };
 
 bool gha_is_ok(const struct gha * gha)
-{ return (!gha || gha->type != MAC_ADDR_802_3) ? 0 : 1; }
+{ return (!gha || gha->type != MAC_ADDR_802_3) ? false : true; }
 EXPORT_SYMBOL(gha_is_ok);
 
 struct gha * gha_create_gfp(gfp_t           flags,
@@ -388,7 +435,7 @@ bool gha_is_equal(const struct gha * a,
 {
         bool v;
 
-        v = 0;
+        v = false;
         if (!gha_is_ok(a) || !gha_is_ok(b))
                 return v;
 
@@ -399,9 +446,9 @@ bool gha_is_equal(const struct gha * a,
 
         switch (a->type) {
         case MAC_ADDR_802_3:
-                v = !memcmp(a->data.mac_802_3,
+                v = (memcmp(a->data.mac_802_3,
                             b->data.mac_802_3,
-                            sizeof(a->data.mac_802_3));
+                            sizeof(a->data.mac_802_3)) == 0) ? true : false;
                 break;
         default:
                 BUG(); /* As usual, shut up compiler! */
@@ -431,7 +478,6 @@ struct net_device * gha_to_device(const struct gha * ha)
                                 if (!memcmp(hwa->addr,
                                             gha_address(ha),
                                             gha_address_length(ha))) {
-
                                         read_unlock(&dev_base_lock);
                                         return dev;
                                 }

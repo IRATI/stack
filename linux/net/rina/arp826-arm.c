@@ -57,22 +57,22 @@ static bool is_resolve_data_equal(struct resolve_data * a,
                                   struct resolve_data * b)
 {
         if (a == b)
-                return 1;
+                return true;
 
         if (!(a->ptype == b->ptype)       ||
             !gha_is_equal(a->sha, b->sha) ||
             !gpa_is_equal(a->tpa, b->tpa) ||
             !gha_is_equal(a->tha, b->tha))
-                return 0;
+                return false;
 
-        return 1;
+        return true;
 }
 
 bool is_resolve_data_complete(const struct resolve_data * data)
 {
         return (!data                    ||
                 !data->spa || !data->sha ||
-                !data->tpa || !data->tha) ? 0 : 1;
+                !data->tpa || !data->tha) ? false : true;
 }
 
 static void resolve_data_destroy(struct resolve_data * data)
