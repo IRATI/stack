@@ -410,7 +410,7 @@ static int process(const struct sk_buff * skb,
                  */
                 entry = tbl_find_by_gpa(tbl, tmp_spa);
                 if (!entry) {
-                        if (tbl_add(tbl, tmp_spa, tmp_sha)) {
+                        if (tbl_add(tbl, tble_create(tmp_spa, tmp_sha))) {
                                 LOG_ERR("AAAAAAARRggh can't add in table");
                                 return -1;
                         }

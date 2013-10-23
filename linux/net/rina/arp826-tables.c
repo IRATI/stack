@@ -126,31 +126,28 @@ struct table_entry * tble_create(struct gpa * gpa,
 { return tble_create_gfp(gpa, gha, GFP_KERNEL); }
 EXPORT_SYMBOL(tble_create);
 
-#if 0
-static bool tble_is_ok(const struct table_entry * entry)
+bool tble_is_ok(const struct table_entry * entry)
 {
         return (entry == NULL         ||
                 !gpa_is_ok(entry->pa) ||
                 !gha_is_ok(entry->ha)) ? false : true;
 }
 
-static bool tble_is_equal(struct table_entry * entry1,
-                          struct table_entry * entry2)
+bool tble_is_equal(const struct table_entry * entry1,
+                   const struct table_entry * entry2)
 {
         if (!tble_is_ok(entry1))
-                return 0;
+                return false;
         if (!tble_is_ok(entry2))
-                return 0;
+                return false;
 
         if (!gpa_is_equal(entry1->pa, entry2->pa))
-                return 0;
-        if (entry1->hal != entry2->hal)
-                return 0;
-        if (memcmp(entry1->ha, entry2->ha, entry1->hal)) return 0;
+                return false;
+        if (!gha_is_equal(entry1->ha, entry2->ha))
+                return false;
 
-        return 1;
+        return true;
 }
-#endif
 
 const struct gpa * tble_pa(const struct table_entry * entry)
 {
@@ -258,9 +255,9 @@ int tbl_update_by_gpa(struct table *     instance,
         return -1;
 }
 
-const struct table_entry * tbl_find(struct table *     instance,
-                                    const struct gpa * pa,
-                                    const struct gha * ha)
+struct table_entry * tbl_find(struct table *     instance,
+                              const struct gpa * pa,
+                              const struct gha * ha)
 {
         struct table_entry * pos;
 
@@ -292,8 +289,8 @@ const struct table_entry * tbl_find(struct table *     instance,
         return NULL;
 }
 
-const struct table_entry * tbl_find_by_gha(struct table *     instance,
-                                           const struct gha * address)
+struct table_entry * tbl_find_by_gha(struct table *     instance,
+                                     const struct gha * address)
 {
         struct table_entry * pos;
 
@@ -320,8 +317,8 @@ const struct table_entry * tbl_find_by_gha(struct table *     instance,
         return NULL;
 }
 
-const struct table_entry * tbl_find_by_gpa(struct table *     instance,
-                                           const struct gpa * address)
+struct table_entry * tbl_find_by_gpa(struct table *     instance,
+                                     const struct gpa * address)
 {
         struct table_entry * pos;
 
@@ -355,51 +352,40 @@ const struct table_entry * tbl_find_by_gpa(struct table *     instance,
         return NULL;
 }
 
-int tbl_add(struct table * instance,
-            struct gpa *   pa,
-            struct gha *   ha)
+int tbl_add(struct table *       instance,
+            struct table_entry * entry)
 {
-        struct table_entry * entry;
         struct table_entry * pos;
 
         if (!instance) {
                 LOG_ERR("Bogus instance, cannot add entry to table");
                 return -1;
         }
-        if (!gpa_is_ok(pa)) {
-                LOG_ERR("Bogus PA, cannot add entry to table");
+        if (!entry) {
+                LOG_ERR("Bogus entry, cannot add it to table");
                 return -1;
         }
-        if (!gha_is_ok(ha)) {
-                LOG_ERR("Bogus HA, cannot add entry to table");
-                return -1;
-        }
-
-        entry = tble_create(pa, ha);
-        if (!entry)
-                return -1;
 
         spin_lock(&instance->lock);
 
         list_for_each_entry(pos, &instance->entries, next) {
-                if (gha_is_equal(tble_ha(pos), ha) &&
-                    gpa_is_equal(tble_pa(pos), pa)) {
-                        LOG_WARN("We already have this entry ...");
+                if (tble_is_equal(pos, entry)) {
+                        LOG_WARN("We already have an equal entry ...");
                         spin_unlock(&instance->lock);
                         return 0;
                 }
 
                 /* FIXME: What about the other conditions ??? */
-                if (gha_is_equal(tble_ha(pos), ha)) {
-                        LOG_DBG("We already have the same GHA in the cache");
+                if (gha_is_equal(tble_ha(pos), tble_ha(entry))) {
+                        LOG_WARN("We already have the same GHA in the cache");
 
                         /* FIXME: What should we do here? */
 
                         /* Remember to: spin_unlock(&instance->lock); */
                 }
 
-                if (gpa_is_equal(tble_pa(pos), pa)) {
-                        LOG_DBG("We already have the same GPA in the cache");
+                if (gpa_is_equal(tble_pa(pos), tble_pa(entry))) {
+                        LOG_WARN("We already have the same GPA in the cache");
 
                         /* FIXME: What should we do here? */
 
@@ -432,7 +418,6 @@ int tbl_remove(struct table *             instance,
 
         list_for_each_entry_safe(pos, q, &instance->entries, next) {
                 if (pos == entry) {
-                        struct table_entry * tmp = pos;
                         list_del(&pos->next);
                         spin_unlock(&instance->lock);
                         return 0;
@@ -600,7 +585,7 @@ int arp826_add(uint16_t           ptype,
         if (!cl)
                 return -1;
 
-        return tbl_add(cl, gpa_dup(pa), gha_dup(ha));
+        return tbl_add(cl, tble_create(gpa_dup(pa), gha_dup(ha)));
 }
 EXPORT_SYMBOL(arp826_add);
 
@@ -608,8 +593,8 @@ int arp826_remove(uint16_t           ptype,
                   const struct gpa * pa,
                   const struct gha * ha)
 {
-        struct table *             cl;
-        const struct table_entry * ce;
+        struct table *       cl;
+        struct table_entry * ce;
 
         if (!gpa_is_ok(pa)) {
                 LOG_ERR("Cannot remove, bad PA");

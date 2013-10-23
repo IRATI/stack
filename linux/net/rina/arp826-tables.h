@@ -30,41 +30,43 @@ struct table_entry;
  *   Non const parameters indicate ownership takeover in parameters
  */
 
-struct table_entry *       tble_create(struct gpa * gpa,
-                                       struct gha * gha);
-struct table_entry *       tble_create_gfp(struct gpa * gpa,
-                                           struct gha * gha,
-                                           gfp_t        flags);
-int                        tble_destroy(struct table_entry * entry);
+struct table_entry * tble_create(struct gpa * gpa,
+                                 struct gha * gha);
+struct table_entry * tble_create_gfp(struct gpa * gpa,
+                                     struct gha * gha,
+                                     gfp_t        flags);
+int                  tble_destroy(struct table_entry * entry);
 
-const struct gpa *         tble_pa(const struct table_entry * entry);
-const struct gha *         tble_ha(const struct table_entry * entry);
+bool                 tble_is_ok(const struct table_entry * entry);
+bool                 tble_is_equal(const struct table_entry * entry1,
+                                   const struct table_entry * entry2);
+const struct gpa *   tble_pa(const struct table_entry * entry);
+const struct gha *   tble_ha(const struct table_entry * entry);
 
 struct table;
 
-int                        tbl_add(struct table * instance,
-                                   struct gpa *   pa,
-                                   struct gha *   ha);
-int                        tbl_remove(struct table *             instance,
-                                      const struct table_entry * entry);
+int                  tbl_add(struct table *       instance,
+                             struct table_entry * entry);
+int                  tbl_remove(struct table *             instance,
+                                const struct table_entry * entry);
 
 /* Replaces the old gha with the new one, takes the ownership */
-int                        tbl_update_by_gpa(struct table *     instance,
-                                             const struct gpa * gpa,
-                                             struct gha *       gha);
+int                  tbl_update_by_gpa(struct table *     instance,
+                                       const struct gpa * gpa,
+                                       struct gha *       gha);
 
-const struct table_entry * tbl_find(struct table *     instance,
-                                    const struct gpa * pa,
-                                    const struct gha * ha);
-const struct table_entry * tbl_find_by_gha(struct table *     instance,
-                                           const struct gha * address);
-const struct table_entry * tbl_find_by_gpa(struct table *     instance,
-                                           const struct gpa * address);
+struct table_entry * tbl_find(struct table *     instance,
+                              const struct gpa * pa,
+                              const struct gha * ha);
+struct table_entry * tbl_find_by_gha(struct table *     instance,
+                                     const struct gha * address);
+struct table_entry * tbl_find_by_gpa(struct table *     instance,
+                                     const struct gpa * address);
 
-int                        tbls_init(void);
-void                       tbls_fini(void);
-int                        tbls_create(uint16_t ptype, size_t hwl);
-int                        tbls_destroy(uint16_t ptype);
-struct table *             tbls_find(uint16_t ptype);
+int                  tbls_init(void);
+void                 tbls_fini(void);
+int                  tbls_create(uint16_t ptype, size_t hwl);
+int                  tbls_destroy(uint16_t ptype);
+struct table *       tbls_find(uint16_t ptype);
 
 #endif
