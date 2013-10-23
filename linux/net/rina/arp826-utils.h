@@ -49,6 +49,8 @@ int             gpa_address_grow(struct gpa * gpa,
 int             gpa_address_shrink(struct gpa * gpa,
                                    uint8_t      filler);
 
+void            gpa_dump(const struct gpa * gpa);
+
 typedef enum {
         MAC_ADDR_802_3
 } gha_type_t;

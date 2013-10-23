@@ -137,7 +137,7 @@ size_t gpa_address_length(const struct gpa * gpa)
 EXPORT_SYMBOL(gpa_address_length);
 
 /* FIXME: Crappy ... we should avoid rkmalloc and rkfree as much as possible */
-static void gpa_dump(const struct gpa * gpa)
+void gpa_dump(const struct gpa * gpa)
 {
         uint8_t * tmp;
         uint8_t * p;
@@ -168,6 +168,7 @@ static void gpa_dump(const struct gpa * gpa)
 
         rkfree(tmp);
 }
+EXPORT_SYMBOL(gpa_dump);
 
 int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
 {
