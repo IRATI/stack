@@ -169,7 +169,7 @@ void gpa_dump(const struct gpa * gpa)
         rkfree(tmp);
 }
 
-int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
+int gpa_address_shrink_gfp(struct gpa * gpa, uint8_t filler, gfp_t flags)
 {
         uint8_t * new_address;
         uint8_t * position;
@@ -196,7 +196,7 @@ int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
 
         LOG_DBG("Shrinking GPA to %zd", length);
 
-        new_address = rkmalloc(length, GFP_KERNEL);
+        new_address = rkmalloc(length, flags);
         if (!new_address)
                 return -1;
 
@@ -210,9 +210,17 @@ int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
 
         return 0;
 }
+EXPORT_SYMBOL(gpa_address_shrink_gfp);
+
+int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
+{ return gpa_address_shrink(gpa, filler, GFP_KERNEL); }
 EXPORT_SYMBOL(gpa_address_shrink);
 
-int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
+
+int gpa_address_grow_gfp(struct gpa * gpa,
+                         size_t       length,
+                         uint8_t      filler,
+                         gfp_t        flags)
 {
         uint8_t * new_address;
 
@@ -236,7 +244,7 @@ int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
         ASSERT(length > gpa->length);
 
         LOG_DBG("Growing GPA to %zd with filler 0x%02X", length, filler);
-        new_address = rkmalloc(length, GFP_KERNEL);
+        new_address = rkmalloc(length, flags);
         if (!new_address)
                 return -1;
 
@@ -252,6 +260,10 @@ int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
 
         return 0;
 }
+EXPORT_SYMBOL(gpa_address_grow_gfp);
+
+int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
+{ return gpa_address_grow_gfp(gpa, length, filler, GFP_KERNEL); }
 EXPORT_SYMBOL(gpa_address_grow);
 
 bool gpa_is_equal(const struct gpa * a, const struct gpa * b)
