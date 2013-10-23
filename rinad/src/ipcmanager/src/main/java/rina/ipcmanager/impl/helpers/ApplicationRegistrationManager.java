@@ -138,7 +138,7 @@ public class ApplicationRegistrationManager {
 			if (isRegisteredAt(ipcProcess, appName)){
 				try{
 					handle = ipcProcess.unregisterApplication(appName);
-					log.debug("Requested unregitration of application "+event.getApplicationName().toString() 
+					log.debug("Requested unregitration of application "+appName.toString() 
 							+" from DIF "+ipcProcess.getDIFInformation().getDifName().toString() + 
 							". Got handle "+handle);
 					event = new ApplicationUnregistrationRequestEvent(appName, 
@@ -254,9 +254,12 @@ public class ApplicationRegistrationManager {
 			ApplicationProcessNamingInformation appName) {
 		ApplicationProcessNamingInformationListIterator iterator = 
 				ipcProcess.getRegisteredApplications().iterator();
+		
+		ApplicationProcessNamingInformation next = null;
 		String encodedAppName = appName.toString();
 		while (iterator.hasNext()){
-			if (iterator.next().toString().equals(encodedAppName)){
+			next = iterator.next();
+			if (next.toString().equals(encodedAppName)){
 				return true;
 			}
 		}

@@ -116,6 +116,7 @@ public class RINABandClient implements SDUListener, FlowAllocationListener{
 	
 	public RINABandClient(TestInformation testInformation, ApplicationProcessNamingInformation controlApNamingInfo, 
 			ApplicationProcessNamingInformation dataApNamingInfo){
+		rina.initialize();
 		this.testInformation = testInformation;
 		this.controlApNamingInfo = controlApNamingInfo;
 		this.dataApNamingInfo = dataApNamingInfo;
@@ -126,7 +127,6 @@ public class RINABandClient implements SDUListener, FlowAllocationListener{
 		ipcEventConsumer = new IPCEventConsumer();
 		executorService.execute(ipcEventConsumer);
 		dataFlowHandles = new ArrayList<Long>();
-		rina.initialize();
 	}
 	
 	public void execute(){
@@ -211,7 +211,6 @@ public class RINABandClient implements SDUListener, FlowAllocationListener{
 			this.controlFlow.writeSDU(sdu, sdu.length);
 			log.info("Requested a new test with the following parameters:");
 			log.info(this.testInformation.toString());
-			
 		} catch(Exception ex){
 			log.error(ex.getMessage());
 			abortTest("Problems requesting test");

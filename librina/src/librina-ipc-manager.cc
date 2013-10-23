@@ -383,7 +383,7 @@ throw (IpcmRegisterApplicationException) {
 
         ApplicationProcessNamingInformation appName;
         try {
-                getPendingRegistration(sequenceNumber);
+                appName = getPendingRegistration(sequenceNumber);
         } catch(IPCException &e){
                 throw IpcmRegisterApplicationException(e.what());
         }
@@ -422,23 +422,23 @@ throw (IpcmUnregisterApplicationException) {
                 throw IpcmUnregisterApplicationException(
                                 "The application is not registered");
 
-
         unsigned int seqNum = 0;
 
 #if STUB_API
 	//Do nothing
 #else
-	IpcmUnregisterApplicationRequestMessage message;
-	message.setApplicationName(applicationName);
-	message.setDifName(difInformation.getDifName());
-	message.setDestIpcProcessId(id);
-	message.setDestPortId(portId);
-	message.setRequestMessage(true);
+        IpcmUnregisterApplicationRequestMessage message;
+        message.setApplicationName(applicationName);
+        message.setDifName(difInformation.getDifName());
+        message.setDestIpcProcessId(id);
+        message.setDestPortId(portId);
+        message.setRequestMessage(true);
 
         try{
-                rinaManager->sendMessage(&message);
+        	rinaManager->sendMessage(&message);
         }catch(NetlinkException &e){
-                throw IpcmUnregisterApplicationException(e.what());
+        	LOG_DBG("Error %s", e.what());
+        	throw IpcmUnregisterApplicationException(e.what());
         }
 
         seqNum = message.getSequenceNumber();
@@ -456,7 +456,7 @@ throw (IpcmUnregisterApplicationException) {
 
         ApplicationProcessNamingInformation appName;
         try {
-                getPendingRegistration(sequenceNumber);
+                appName = getPendingRegistration(sequenceNumber);
         } catch(IPCException &e){
                 throw IpcmRegisterApplicationException(e.what());
         }
@@ -570,27 +570,27 @@ std::list<FlowInformation> IPCProcess::getAllocatedFlows() {
 	return allocatedFlows;
 }
 
-FlowInformation IPCProcess::getFlowInformation(int portId)
+FlowInformation IPCProcess::getFlowInformation(int flowPortId)
 throw(IPCException) {
 	std::list<FlowInformation>::const_iterator iterator;
 	for (iterator = allocatedFlows.begin();
 			iterator != allocatedFlows.end(); ++iterator) {
-	    if (iterator->getPortId() == portId)
+	    if (iterator->getPortId() == flowPortId)
 	    	return *iterator;
 	}
 
 	throw IPCException("Unknown flow");
 }
 
-unsigned int IPCProcess::deallocateFlow(int portId)
+unsigned int IPCProcess::deallocateFlow(int flowPortId)
 	throw (IpcmDeallocateFlowException){
 	unsigned int seqNum = 0;
 	FlowInformation flowInformation;
 
 	try{
-		flowInformation = getFlowInformation(portId);
+		flowInformation = getFlowInformation(flowPortId);
 	}catch (IPCException &e) {
-		LOG_ERR("Could not find flow with port-id %d", portId);
+		LOG_ERR("Could not find flow with port-id %d", flowPortId);
 		throw IpcmDeallocateFlowException("Unknown flow");
 	}
 
@@ -598,7 +598,7 @@ unsigned int IPCProcess::deallocateFlow(int portId)
 	//Do nothing
 #else
 	IpcmDeallocateFlowRequestMessage message;
-	message.setPortId(portId);
+	message.setPortId(flowPortId);
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -632,12 +632,12 @@ void IPCProcess::deallocateFlowResult(unsigned int sequenceNumber, bool success)
 	}
 }
 
-FlowInformation IPCProcess::flowDeallocated(int portId)
+FlowInformation IPCProcess::flowDeallocated(int flowPortId)
 throw (IpcmDeallocateFlowException) {
 	FlowInformation flowInformation;
 
 	try {
-		flowInformation = getFlowInformation(portId);
+		flowInformation = getFlowInformation(flowPortId);
 		allocatedFlows.remove(flowInformation);
 		return flowInformation;
 	} catch (IPCException &e) {

@@ -495,22 +495,24 @@ RINAManager::~RINAManager() {
 }
 
 void RINAManager::sendMessage(BaseNetlinkMessage * netlinkMessage)
-        throw (NetlinkException)
+throw (NetlinkException)
 {
-        sendReceiveLock.lock();
+	sendReceiveLock.lock();
 
-        try{
-                netlinkPortIdMap.updateMessageOrPortIdMap(
-                                netlinkMessage, true);
-                netlinkMessage->setSequenceNumber(
-                                netlinkManager->getSequenceNumber());
-                netlinkManager->sendMessage(netlinkMessage);
-        }catch (NetlinkException &e) {
-                sendReceiveLock.unlock();
-                throw e;
-        }
+	try{
+		netlinkPortIdMap.updateMessageOrPortIdMap(
+				netlinkMessage, true);
+		if (netlinkMessage->isRequestMessage()){
+			netlinkMessage->setSequenceNumber(
+					netlinkManager->getSequenceNumber());
+		}
+		netlinkManager->sendMessage(netlinkMessage);
+	}catch (NetlinkException &e) {
+		sendReceiveLock.unlock();
+		throw e;
+	}
 
-        sendReceiveLock.unlock();
+	sendReceiveLock.unlock();
 }
 
 void RINAManager::netlinkMessageArrived(

@@ -260,11 +260,11 @@ class IPCManager : public Lockable{
 	/** The flows that are currently allocated */
 	std::map<int, Flow*> allocatedFlows;
 
-	/** The flows that are currently allocated */
+	/** The flows that are pending to be allocated or deallocated*/
 	std::map<unsigned int, Flow*> pendingFlows;
 
-	/** The flows that are currently allocated */
-	std::map<unsigned int, ApplicationRegistrationInformation*>
+	/** The applications that are pending to be registered or unregistered */
+	std::map<unsigned int, ApplicationRegistrationInformation>
 	        registrationInformation;
 
 	/** The applications that are currently registered in one or more DIFs */
@@ -278,7 +278,7 @@ class IPCManager : public Lockable{
 	Flow * getAllocatedFlow(int portId);
 
 	/** Return the information of a registration request */
-	ApplicationRegistrationInformation * getRegistrationInfo(
+	ApplicationRegistrationInformation getRegistrationInfo(
 	                unsigned int seqNumber) throw (IPCException);
 
 	ApplicationRegistration * getApplicationRegistration(
@@ -322,7 +322,7 @@ public:
 	 * @return A handler to be able to identify the proper response event
 	 */
 	unsigned int requestApplicationRegistration(
-			ApplicationRegistrationInformation * appRegistrationInfo)
+			const ApplicationRegistrationInformation& appRegistrationInfo)
 			throw (ApplicationRegistrationException);
 
 	/**
@@ -359,8 +359,8 @@ public:
 	 * @throws ApplicationUnregistrationException
 	 */
 	unsigned int requestApplicationUnregistration(
-			ApplicationProcessNamingInformation applicationName,
-			ApplicationProcessNamingInformation DIFName)
+			const ApplicationProcessNamingInformation& applicationName,
+			const ApplicationProcessNamingInformation& DIFName)
 			throw (ApplicationUnregistrationException);
 
 	/**

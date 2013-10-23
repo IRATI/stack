@@ -49,6 +49,7 @@ public class FlowManager {
 				continue;
 			}
 			
+			portIdsInUse.add(i);
 			return i;
 		}
 		
@@ -56,10 +57,10 @@ public class FlowManager {
 	}
 	
 	private synchronized void freePortId(int portId) {
-		portIdsInUse.remove(portId);
+		portIdsInUse.remove(new Integer(portId));
 	}
 	
-	public void requestAllocateFlowLocal(FlowRequestEvent event) throws Exception{
+	public synchronized void requestAllocateFlowLocal(FlowRequestEvent event) throws Exception{
 		int portId = -1;
 		PendingFlowAllocation pendingFlowAllocation = null;
 		long handle = 0;
@@ -235,7 +236,7 @@ public class FlowManager {
 		}
 	}
 	
-	public void deallocateFlowRequest(FlowDeallocateRequestEvent event) throws Exception{
+	public synchronized void deallocateFlowRequest(FlowDeallocateRequestEvent event) throws Exception{
 		PendingFlowDeallocation pendingFlowDeallocation = null;
 		long handle = 0;
 		IPCProcess ipcProcess = null;
@@ -295,9 +296,10 @@ public class FlowManager {
 		}
 	}
 	
-	public void flowDeallocated(FlowDeallocatedEvent event) throws Exception{
+	public synchronized void flowDeallocated(FlowDeallocatedEvent event) throws Exception{
 		FlowInformation flowInformation = null;
 		
+		freePortId(event.getPortId());
 		IPCProcess ipcProcess = ipcProcessManager.selectIPCProcessWithFlow(event.getPortId());
 		flowInformation = ipcProcess.flowDeallocated(event.getPortId());
 		applicationManager.flowDeallocatedRemotely(event.getPortId(), event.getCode(), 

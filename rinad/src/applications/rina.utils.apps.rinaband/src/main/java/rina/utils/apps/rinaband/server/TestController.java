@@ -187,6 +187,7 @@ public class TestController implements SDUListener, FlowAcceptor,
 			ipcEventConsumer.addApplicationRegistrationListener(this, dataApNamingInfo);
 			ApplicationRegistrationInformation appRegInfo = 
 					new ApplicationRegistrationInformation(ApplicationRegistrationType.APPLICATION_REGISTRATION_SINGLE_DIF);
+			appRegInfo.setApplicationName(dataApNamingInfo);
 			appRegInfo.setDIFName(difName);
 			rina.getIpcManager().requestApplicationRegistration(appRegInfo);
 			storedCDAPMessage = cdapMessage;
@@ -213,7 +214,7 @@ public class TestController implements SDUListener, FlowAcceptor,
 		}
 		
 		try{
-			rina.getIpcManager().commitPendingResitration(event.getSequenceNumber(), 
+			dataAERegistration = rina.getIpcManager().commitPendingResitration(event.getSequenceNumber(), 
 					event.getDIFName());
 		} catch(Exception ex){
 			log.error(ex.getMessage());
