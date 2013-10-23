@@ -376,11 +376,11 @@ static int process(const struct sk_buff * skb,
 
 #if HAVE_RINARP
         LOG_DBG("Shrinking as needed");
-        if (gpa_address_shrink(tmp_spa, 0x00)) {
+        if (gpa_address_shrink_gfp(tmp_spa, 0x00, GFP_ATOMIC)) {
                 LOG_ERR("Problems parsing the source GPA");
                 return -1;
         }
-        if (gpa_address_shrink(tmp_tpa, 0x00)) {
+        if (gpa_address_shrink_gfp(tmp_tpa, 0x00, GFP_ATOMIC)) {
                 LOG_ERR("Got problems parsing the target GPA");
                 return -1;
         }
