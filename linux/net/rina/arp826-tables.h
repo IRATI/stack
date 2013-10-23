@@ -30,6 +30,9 @@ struct table_entry;
  *   Non const parameters indicate ownership takeover in parameters
  */
 
+/*
+ * Table entries
+ */
 struct table_entry * tble_create(struct gpa * gpa,
                                  struct gha * gha);
 struct table_entry * tble_create_gfp(struct gpa * gpa,
@@ -45,6 +48,9 @@ const struct gha *   tble_ha(const struct table_entry * entry);
 
 struct table;
 
+/*
+ * Table
+ */
 int                  tbl_add(struct table *       instance,
                              struct table_entry * entry);
 int                  tbl_remove(struct table *             instance,
@@ -63,6 +69,9 @@ struct table_entry * tbl_find_by_gha(struct table *     instance,
 struct table_entry * tbl_find_by_gpa(struct table *     instance,
                                      const struct gpa * address);
 
+/*
+ * Tables
+ */
 int                  tbls_init(void);
 void                 tbls_fini(void);
 int                  tbls_create(uint16_t ptype, size_t hwl);
