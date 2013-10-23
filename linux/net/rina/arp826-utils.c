@@ -256,8 +256,12 @@ EXPORT_SYMBOL(gpa_address_grow);
 
 bool gpa_is_equal(const struct gpa * a, const struct gpa * b)
 {
-        if (!gpa_is_ok(a) || !gpa_is_ok(b)) {
-                LOG_ERR("Bad input parameters, cannot compare GPAs");
+        if (!gpa_is_ok(a)) {
+                LOG_ERR("Bad input parameter (LHS), cannot compare GPAs");
+                return false;
+        }
+        if (!gpa_is_ok(b)) {
+                LOG_ERR("Bad input parameter (RHS), cannot compare GPAs");
                 return false;
         }
 

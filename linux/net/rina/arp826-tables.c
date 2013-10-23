@@ -95,8 +95,12 @@ struct table_entry * tble_create(struct gpa * gpa,
 {
         struct table_entry * entry;
 
-        if (!gpa_is_ok(gpa) || !gha_is_ok(gha)) {
-                LOG_DBG("Bogus input parameters, cannot create table entry");
+        if (!gpa_is_ok(gpa)) {
+                LOG_DBG("Bogus GPA, cannot create table entry");
+                return NULL;
+        }
+        if (!gha_is_ok(gha)) {
+                LOG_DBG("Bogus GHA, cannot create table entry");
                 return NULL;
         }
 
@@ -215,8 +219,16 @@ int tbl_update_by_gpa(struct table *     instance,
 {
         struct table_entry * pos;
 
-        if (!instance || !gpa_is_ok(pa) || !gha_is_ok(ha)) {
-                LOG_ERR("Bogus input parameters, cannot update GPA");
+        if (!instance) {
+                LOG_ERR("Bogus instance, cannot update GPA");
+                return -1;
+        }
+        if (!gpa_is_ok(pa)) {
+                LOG_ERR("Bogus PA, cannot update GPA");
+                return -1;
+        }
+        if (!gha_is_ok(ha)) {
+                LOG_ERR("Bogus HA, cannot update GPA");
                 return -1;
         }
 
@@ -242,8 +254,16 @@ const struct table_entry * tbl_find(struct table *     instance,
 {
         struct table_entry * pos;
 
-        if (!instance || !gpa_is_ok(pa) || !gha_is_ok(ha)) {
-                LOG_ERR("Bogus input parameters, cannot find entry");
+        if (!instance) {
+                LOG_ERR("Bogus instance, cannot find entry");
+                return NULL;
+        }
+        if (!gpa_is_ok(pa)) {
+                LOG_ERR("Bogus PA, cannot find entry");
+                return NULL;
+        }
+        if (!gha_is_ok(ha)) {
+                LOG_ERR("Bogus HA, cannot find entry");
                 return NULL;
         }
 
@@ -267,8 +287,12 @@ const struct table_entry * tbl_find_by_gha(struct table *     instance,
 {
         struct table_entry * pos;
 
-        if (!instance || !gha_is_ok(address)) {
-                LOG_ERR("Bogus input parameters, cannot find by GHA");
+        if (!instance) {
+                LOG_ERR("Bogus instance, cannot find by GHA");
+                return NULL;
+        }
+        if (!gha_is_ok(address)) {
+                LOG_ERR("Bogus address, cannot find by GHA");
                 return NULL;
         }
 
@@ -291,8 +315,12 @@ const struct table_entry * tbl_find_by_gpa(struct table *     instance,
 {
         struct table_entry * pos;
 
-        if (!instance || !gpa_is_ok(address)) {
-                LOG_ERR("Bogus input parameters, cannot find by GPA");
+        if (!instance) {
+                LOG_ERR("Bogus instance, cannot find by GPA");
+                return NULL;
+        }
+        if (!gpa_is_ok(address)) {
+                LOG_ERR("Bogus address, cannot find by GPA");
                 return NULL;
         }
 
@@ -317,8 +345,16 @@ int tbl_add(struct table * instance,
         struct table_entry * entry;
         struct table_entry * pos;
 
-        if (!instance || !gpa_is_ok(pa) || !gha_is_ok(ha)) {
-                LOG_ERR("Bogus input parameters, cannot add entry to table");
+        if (!instance) {
+                LOG_ERR("Bogus instance, cannot add entry to table");
+                return -1;
+        }
+        if (!gpa_is_ok(pa)) {
+                LOG_ERR("Bogus PA, cannot add entry to table");
+                return -1;
+        }
+        if (!gha_is_ok(ha)) {
+                LOG_ERR("Bogus HA, cannot add entry to table");
                 return -1;
         }
 
@@ -366,9 +402,12 @@ void tbl_remove(struct table *             instance,
 {
         struct table_entry * pos, * q;
 
-        if (!instance || !tble_is_ok(entry)) {
-                LOG_ERR("Bogus input parameters, "
-                        "cannot remove entry from table");
+        if (!instance) {
+                LOG_ERR("Bogus instance, cannot remove entry from table");
+                return;
+        }
+        if (!tble_is_ok(entry)) {
+                LOG_ERR("Bogus entry, cannot remove entry from table");
                 return;
         }
 
@@ -532,8 +571,12 @@ int arp826_add(uint16_t           ptype,
 {
         struct table * cl;
 
-        if (!gpa_is_ok(pa) || !gha_is_ok(ha)) {
-                LOG_ERR("Cannot remove, bad input parameters");
+        if (!gpa_is_ok(pa)) {
+                LOG_ERR("Cannot add, bad PA");
+                return -1;
+        }
+        if (!gha_is_ok(ha)) {
+                LOG_ERR("Cannot add, bad HA");
                 return -1;
         }
 
@@ -552,8 +595,12 @@ int arp826_remove(uint16_t           ptype,
         struct table *             cl;
         const struct table_entry * ce;
 
-        if (!gpa_is_ok(pa) || !gha_is_ok(ha)) {
-                LOG_ERR("Cannot remove, bad input parameters");
+        if (!gpa_is_ok(pa)) {
+                LOG_ERR("Cannot remove, bad PA");
+                return -1;
+        }
+        if (!gha_is_ok(ha)) {
+                LOG_ERR("Cannot remove, bad HA");
                 return -1;
         }
 
@@ -578,7 +625,7 @@ const struct gpa * arp826_find_gpa(uint16_t           ptype,
         const struct table_entry * ce;
 
         if (!gha_is_ok(ha)) {
-                LOG_ERR("Cannot resolve, bad input parameters");
+                LOG_ERR("Cannot resolve, bad HA");
                 return NULL;
         }
 
