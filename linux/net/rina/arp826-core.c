@@ -172,7 +172,7 @@ static bool regression_tests_gpa(void)
 
         LOG_DBG("Regression test #6.5");
         if (gpa_address_shrink(c, 0x00))
-            return false;
+                return false;
 
         LOG_DBG("Regression test #6.5");
         if (gpa_address_length(c) != 30)
