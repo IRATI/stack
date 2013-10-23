@@ -168,7 +168,6 @@ void gpa_dump(const struct gpa * gpa)
 
         rkfree(tmp);
 }
-EXPORT_SYMBOL(gpa_dump);
 
 int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
 {
