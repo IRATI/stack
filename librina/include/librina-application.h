@@ -442,6 +442,15 @@ public:
 	                throw (FlowDeallocationException);
 
 	/**
+	 * Inform the IPC Manager that a flow has been deallocated remotely,
+	 * so that the local data structures can be updated
+	 * @param portId the portId of the flow deallocated
+	 * @throws FlowDeallocationException if no flow with the provided
+	 * portId was allocated
+	 */
+	void flowDeallocated(int portId) throw (FlowDeallocationException);
+
+	/**
 	 * Returns the flows that are currently allocated
 	 *
 	 * @return the flows allocated

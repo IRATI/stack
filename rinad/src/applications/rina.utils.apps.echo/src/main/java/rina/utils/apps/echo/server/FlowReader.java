@@ -19,12 +19,14 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 	private int maxSDUSize;
 	private boolean stop;
 	private Timer timer = null;
+	private int portId = 0;
 	
 	public FlowReader(Flow flow, int maxSDUSize){
 		this.flow = flow;
 		this.maxSDUSize =  maxSDUSize;
 		this.stop = false;
 		this.timer = new Timer();
+		this.portId = flow.getPortId();
 	}
 
 	@Override
@@ -49,7 +51,7 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 		
 		if (flow.isAllocated()){
 			try{
-				rina.getIpcManager().deallocateFlow(flow.getPortId());
+				rina.getIpcManager().requestFlowDeallocation(flow.getPortId());
 			}catch(FlowDeallocationException ex){
 				ex.printStackTrace();
 			}

@@ -104,9 +104,6 @@ public class IPCManager {
 		applicationRegistrationManager = new ApplicationRegistrationManager(
 				ipcProcessManager, applicationManager);
 		flowManager = new FlowManager(ipcProcessManager, applicationManager);
-		
-		log.info("Bootstrapping IPC Manager ...");
-		bootstrap();
 	}
 	
 	private void initializeConfiguration(){
@@ -165,7 +162,7 @@ public class IPCManager {
 	 * to DIFs, cause them to enroll to other IPC processes etc, as 
 	 * specified in the config file.
 	 */
-	private void bootstrap(){
+	public void bootstrap(){
 		RINAConfiguration configuration = RINAConfiguration.getInstance();
 		IPCProcessToCreate ipcProcessToCreate = null;
 		ApplicationProcessNamingInformation processNamingInfo = null;
@@ -205,18 +202,6 @@ public class IPCManager {
 					ipcProcessToCreate.getNeighbors().size() > 0){
 				//TODO cause enrollment to be initiated
 			}
-		}
-	}
-	
-	public void startEventLoopWorkers(){
-		int eventLoopWorkers = 
-				RINAConfiguration.getInstance().getLocalConfiguration().getEventLoopWorkers();
-		log.info("Starting " + eventLoopWorkers + " event loop workers");
-		
-		Runnable worker = null;
-		for(int i=0; i<eventLoopWorkers; i++){
-			worker = new IPCManagerEventLoopWorker(this);
-			executorService.execute(worker);
 		}
 	}
 	

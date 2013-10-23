@@ -286,19 +286,22 @@ public class FlowManager {
 						" in DIF "+ipcProcess.getDIFInformation().getDifName().toString());
 			}
 			
-			applicationManager.flowDeallocated(flowDelEvent, event.getResult());
+			if (flowDelEvent.getSequenceNumber() > 0) {
+				applicationManager.flowDeallocated(flowDelEvent, event.getResult());
+			}
 		}catch(Exception ex){
 			log.error("Problems processing IpcmDeallocateFlowResponseEvent. Handle: "+event.getSequenceNumber() + 
 					"; Port id: "+ flowDelEvent.getPortId()+
 					"; DIF name: " + ipcProcess.getDIFInformation().getDifName().toString());
 
-			applicationManager.flowDeallocated(flowDelEvent, -1);
+			if (flowDelEvent.getSequenceNumber() > 0) {
+				applicationManager.flowDeallocated(flowDelEvent, -1);
+			}
 		}
 	}
 	
 	public synchronized void flowDeallocated(FlowDeallocatedEvent event) throws Exception{
 		FlowInformation flowInformation = null;
-		
 		freePortId(event.getPortId());
 		IPCProcess ipcProcess = ipcProcessManager.selectIPCProcessWithFlow(event.getPortId());
 		flowInformation = ipcProcess.flowDeallocated(event.getPortId());
@@ -317,6 +320,9 @@ public class FlowManager {
 		
 		IPCProcess ipcProcess = null;
 		FlowInformation currentFlow = null;
+		long handle = -1;
+		FlowDeallocateRequestEvent event = null;
+		PendingFlowDeallocation pendingFlowDeallocation = null;
 		for(int i=0; i<flows.size(); i++){
 			currentFlow = flows.get(i);
 			try{
@@ -328,7 +334,12 @@ public class FlowManager {
 					continue;
 				}
 
-				ipcProcess.deallocateFlow(currentFlow.getPortId());
+				handle = ipcProcess.deallocateFlow(currentFlow.getPortId());
+				log.debug("Requested deallocation of flow with portId " + currentFlow.getPortId() + 
+						" to DIF " + ipcProcess.getDIFInformation().getDifName().getProcessName());
+				event = new FlowDeallocateRequestEvent(currentFlow.getPortId(), 0);
+				pendingFlowDeallocation = new PendingFlowDeallocation(event, ipcProcess);
+				pendingFlowDeallocations.put(handle, pendingFlowDeallocation);
 			}catch(Exception ex){
 				log.error("Error deallocating flow with port id " + currentFlow.getPortId());
 			}

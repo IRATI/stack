@@ -604,6 +604,23 @@ void IPCManager::flowDeallocationResult(int portId, bool success)
         unlock();
 }
 
+void IPCManager::flowDeallocated(int portId)
+throw (FlowDeallocationException) {
+	lock();
+
+	Flow * flow = getAllocatedFlow(portId);
+
+	if (flow == 0) {
+		unlock();
+		throw FlowDeallocationException("Unknown flow");
+	}
+
+	allocatedFlows.erase(portId);
+	delete flow;
+
+	unlock();
+}
+
 std::vector<Flow *> IPCManager::getAllocatedFlows() {
 	LOG_DBG("IPCManager.getAllocatedFlows called");
 	std::vector<Flow *> response;

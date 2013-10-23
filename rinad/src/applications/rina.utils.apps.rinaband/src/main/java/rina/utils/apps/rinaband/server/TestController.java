@@ -451,6 +451,14 @@ public class TestController implements SDUListener, FlowAcceptor,
 		testWorker.getFlowReader().stop();
 		log.info("Data flow with portId "+portId+ " deallocated");
 		ipcEventConsumer.removeFlowDeallocationListener(portId);
+		
+		try{
+			rina.getIpcManager().flowDeallocated(portId);
+		} catch (Exception ex){
+			log.warn("Error updating librina data structures for flow " + portId 
+					+ ". " + ex.getMessage());
+		}
+		
 		if (this.allocatedFlows.size() == 0){
 			//Cancel the registration of the data AE
 			try{

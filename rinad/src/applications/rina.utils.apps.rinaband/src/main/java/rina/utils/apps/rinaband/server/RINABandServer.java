@@ -89,7 +89,6 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener, A
 	public void execute(){
 		//Register the control AE and wait for new RINABand clients to come
 		try{
-			
 			ApplicationRegistrationInformation appRegInfo = 
 					new ApplicationRegistrationInformation(
 							ApplicationRegistrationType.APPLICATION_REGISTRATION_ANY_DIF);
@@ -163,6 +162,14 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener, A
 		TestController testController = ongoingTests.remove(new Integer(portId));
 		testController.getFlowReader().stop();
 		ipcEventConsumer.removeFlowDeallocationListener(portId);
+		
+		try {
+			rina.getIpcManager().flowDeallocated(portId);
+		} catch (Exception ex) {
+			log.warn("Error updating allcocated flows for flow "+portId
+					 + ". " + ex.getMessage());
+		}
+		
 		log.info("Control flow with port id "+portId+" deallocated");
 	}
 
