@@ -25,6 +25,11 @@
 
 struct table_entry;
 
+/*
+ * NOTE:
+ *   Non const parameters indicate ownership takeover in parameters
+ */
+
 struct table_entry *       tble_create(struct gpa * gpa,
                                        struct gha * gha);
 struct table_entry *       tble_create_gfp(struct gpa * gpa,
@@ -36,12 +41,6 @@ const struct gpa *         tble_pa(const struct table_entry * entry);
 const struct gha *         tble_ha(const struct table_entry * entry);
 
 struct table;
-
-/*
- * NOTE:
- *   Takes the ownership of the passed gpa. Hardware address length is
- *   implicitly obtained so there are no needs to pass the length here
- */
 
 int                        tbl_add(struct table * instance,
                                    struct gpa *   pa,

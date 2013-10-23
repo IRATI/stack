@@ -434,7 +434,6 @@ int tbl_remove(struct table *             instance,
                 if (pos == entry) {
                         struct table_entry * tmp = pos;
                         list_del(&pos->next);
-                        tble_destroy(tmp);
                         spin_unlock(&instance->lock);
                         return 0;
                 }
@@ -631,6 +630,8 @@ int arp826_remove(uint16_t           ptype,
 
         if (tbl_remove(cl, ce))
                 return -1;
+
+        tble_destroy(ce);
 
         return 0;
 }
