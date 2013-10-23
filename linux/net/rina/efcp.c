@@ -156,7 +156,7 @@ cep_id_t efcp_connection_create(struct efcp_container *   container,
 
         tmp = efcp_create();
         if (!tmp)
-                return -1;
+                return cep_id_bad();
 
         cep_id = cidm_allocate(container->cidm);
         /* We must ensure that the DTP is instantiated, at least ... */
@@ -165,7 +165,7 @@ cep_id_t efcp_connection_create(struct efcp_container *   container,
         tmp->dtp        = dtp_create(/* connection->port_id */);
         if (!tmp->dtp) {
                 efcp_destroy(tmp);
-                return -1;
+                return cep_id_bad();
         }
 
         /* FIXME: We need to know if DTCP is needed ...
@@ -188,10 +188,20 @@ cep_id_t efcp_connection_create(struct efcp_container *   container,
                 rkfree(connection);
                 dtp_destroy(tmp->dtp);
                 efcp_destroy(tmp);
-                return -1;
+                return cep_id_bad();
         }
 
-        return 0;
+        LOG_DBG("Connection created \n "
+                "Source address: %d \n"
+                "Destination address %d \n"
+                "Destination cep id: %d \n"
+                "Source cep id: %d \n",
+                connection->source_address,
+                connection->destination_address,
+                connection->destination_cep_id,
+                connection->source_cep_id);
+
+        return cep_id;
 }
 EXPORT_SYMBOL(efcp_connection_create);
 
@@ -245,6 +255,16 @@ int efcp_connection_update(struct efcp_container * container,
                 return -1;
         }
         tmp->connection->destination_cep_id = to;
+
+        LOG_DBG("Connection updated \n "
+                "Source address: %d \n"
+                "Destination address %d \n"
+                "Destination cep id: %d \n"
+                "Source cep id: %d \n",
+                tmp->connection->source_address,
+                tmp->connection->destination_address,
+                tmp->connection->destination_cep_id,
+                tmp->connection->source_cep_id);
 
         return 0;
 }

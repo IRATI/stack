@@ -252,6 +252,9 @@ static int connection_destroy_request(struct ipcp_instance_data * data,
         if (efcp_connection_destroy(data->efcpc, src_cep_id))
                 return -1;
 
+        if (!(&data->flows))
+                return -1;
+
         flow = find_flow_cepid(data, src_cep_id);
         if (!flow) {
                 LOG_ERR("Could not retrieve flow by cep_id :%d", src_cep_id);
@@ -274,8 +277,10 @@ connection_create_arrived(struct ipcp_instance_data * data,
                           cep_id_t                    dst_cep_id,
                           int                         policies)
 {
-        cep_id_t cep_id;
-        struct connection * conn;
+        struct connection *    conn;
+        cep_id_t               cep_id;
+        struct normal_flow *   flow;
+        struct cep_ids_entry * cep_entry;
 
         conn = rkzalloc(sizeof(*conn), GFP_KERNEL);
         if (!conn) {
@@ -289,11 +294,38 @@ connection_create_arrived(struct ipcp_instance_data * data,
         conn->destination_cep_id  = dst_cep_id;
 
         cep_id = efcp_connection_create(data->efcpc, conn);
+        LOG_DBG("Cep_id allocated for the arrived connection request: %d", cep_id);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
                 rkfree(conn);
                 return cep_id_bad();
         }
+
+        cep_entry = rkzalloc(sizeof(*cep_entry), GFP_KERNEL);
+        if (!cep_entry) {
+                LOG_ERR("Could not create a cep_id entry, bailing out");
+                efcp_connection_destroy(data->efcpc, cep_id);
+                return cep_id_bad();
+        }
+        INIT_LIST_HEAD(&cep_entry->list);
+        cep_entry->cep_id = cep_id;
+
+        flow = find_flow(data, port_id);
+        if (!flow) {
+                flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+                if (!flow) {
+                        LOG_ERR("Could not create a flow in normal-ipcp");
+                        efcp_connection_destroy(data->efcpc, cep_id);
+                        return cep_id_bad();
+                }
+                flow->port_id = port_id;
+                INIT_LIST_HEAD(&flow->list);
+                INIT_LIST_HEAD(&flow->cep_ids_list);
+                list_add(&flow->list, &data->flows);
+        }
+
+        list_add(&cep_entry->list, &flow->cep_ids_list);
+        flow->active = cep_id;
 
         return cep_id;
 }
