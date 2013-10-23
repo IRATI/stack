@@ -570,7 +570,8 @@ int arp826_add(uint16_t           ptype,
                const struct gpa * pa,
                const struct gha * ha)
 {
-        struct table * cl;
+        struct table *       cl;
+        struct table_entry * e;
 
         if (!gpa_is_ok(pa)) {
                 LOG_ERR("Cannot add, bad PA");
@@ -585,7 +586,11 @@ int arp826_add(uint16_t           ptype,
         if (!cl)
                 return -1;
 
-        return tbl_add(cl, tble_create(gpa_dup(pa), gha_dup(ha)));
+        e = tble_create_gfp(gpa_dup(pa), gha_dup(ha), GFP_ATOMIC);
+        if (!e)
+                return -1;
+
+        return tbl_add(cl, e);
 }
 EXPORT_SYMBOL(arp826_add);
 
