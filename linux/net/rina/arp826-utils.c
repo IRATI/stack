@@ -213,7 +213,7 @@ int gpa_address_shrink_gfp(struct gpa * gpa, uint8_t filler, gfp_t flags)
 EXPORT_SYMBOL(gpa_address_shrink_gfp);
 
 int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
-{ return gpa_address_shrink(gpa, filler, GFP_KERNEL); }
+{ return gpa_address_shrink_gfp(gpa, filler, GFP_KERNEL); }
 EXPORT_SYMBOL(gpa_address_shrink);
 
 
