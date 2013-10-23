@@ -152,7 +152,7 @@ void gpa_dump(const struct gpa * gpa)
                 return;
         }
 
-        tmp = rkmalloc(gpa->length * 2 + 1, GFP_KERNEL);
+        tmp = rkmalloc(gpa->length * 2 + 1, GFP_ATOMIC);
         if (!tmp) {
                 LOG_DBG("GPA %pK: <ouch!>", gpa);
                 return;
