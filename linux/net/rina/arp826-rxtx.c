@@ -457,23 +457,30 @@ int arp_receive(struct sk_buff *     skb,
         int                       total_length;
         struct table *            cl;
 
-        if (!dev || !skb) {
-                LOG_ERR("Wrong device or skb");
+        if (!skb) {
+                LOG_ERR("No skb passed ?");
+                return 0;
+        }
+
+        if (!dev) {
+                LOG_ERR("No device passed ?");
+                kfree_skb(skb);
                 return 0;
         }
 
         if (dev->flags & IFF_NOARP            ||
             skb->pkt_type == PACKET_OTHERHOST ||
             skb->pkt_type == PACKET_LOOPBACK) {
-                kfree_skb(skb);
                 LOG_DBG("This ARP is not for us "
                         "(no arp, other-host or loopback)");
+                kfree_skb(skb);
                 return 0;
         }
 
         /* We only receive type-1 headers (this handler could be reused) */
         if (skb->dev->type != HW_TYPE_ETHER) {
                 LOG_DBG("Unhandled device type %d", skb->dev->type);
+                kfree_skb(skb);
                 return 0;
         }
 
@@ -482,6 +489,7 @@ int arp_receive(struct sk_buff *     skb,
         skb = skb_share_check(skb, GFP_ATOMIC);
         if (!skb) {
                 LOG_ERR("This ARP cannot be shared!");
+                kfree_skb(skb);
                 return 0;
         }
 
@@ -528,6 +536,7 @@ int arp_receive(struct sk_buff *     skb,
                 kfree_skb(skb);
                 return 0;
         }
+
         consume_skb(skb);
 
         return 0;
