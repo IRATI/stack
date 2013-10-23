@@ -436,15 +436,13 @@ int tbl_remove(struct table *             instance,
                         list_del(&pos->next);
                         tble_destroy(tmp);
                         spin_unlock(&instance->lock);
-                        return -1;
+                        return 0;
                 }
         }
 
         spin_unlock(&instance->lock);
 
-        rkfree(instance);
-
-        return 0;
+        return -1;
 }
 
 static spinlock_t tables_lock;
