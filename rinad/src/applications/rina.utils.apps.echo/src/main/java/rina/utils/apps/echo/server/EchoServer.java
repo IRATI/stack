@@ -1,5 +1,7 @@
 package rina.utils.apps.echo.server;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -8,11 +10,13 @@ import org.apache.commons.logging.LogFactory;
 
 import rina.utils.apps.echo.utils.ApplicationRegistrationListener;
 import rina.utils.apps.echo.utils.FlowAcceptor;
+import rina.utils.apps.echo.utils.FlowDeallocationListener;
 import rina.utils.apps.echo.utils.IPCEventConsumer;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistrationInformation;
 import eu.irati.librina.ApplicationRegistrationType;
 import eu.irati.librina.Flow;
+import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCManagerSingleton;
 import eu.irati.librina.RegisterApplicationResponseEvent;
@@ -24,7 +28,7 @@ import eu.irati.librina.rina;
  * @author eduardgrasa
  *
  */
-public class EchoServer implements FlowAcceptor, ApplicationRegistrationListener {
+public class EchoServer implements FlowAcceptor, ApplicationRegistrationListener, FlowDeallocationListener {
 	
 	public static final int MAX_SDU_SIZE_IN_BYTES = 10000;
 	public static final int MAX_SDUS_PER_FLOW = 1000000;
@@ -43,13 +47,15 @@ public class EchoServer implements FlowAcceptor, ApplicationRegistrationListener
 	
 	private static final Log log = LogFactory.getLog(EchoServer.class);
 	
-	private FlowReader flowReader = null;
+	private Map<Integer, FlowReader> ongoingTests = null;
 	
 	public EchoServer(ApplicationProcessNamingInformation echoApNamingInfo){
 		rina.initialize();
 		this.echoApNamingInfo = echoApNamingInfo;
+		this.ongoingTests = new ConcurrentHashMap<Integer, FlowReader>();
 		ipcEventConsumer = new IPCEventConsumer();
 		ipcEventConsumer.addFlowAcceptor(this, echoApNamingInfo);
+		ipcEventConsumer.addApplicationRegistrationListener(this, echoApNamingInfo);
 		executeRunnable(ipcEventConsumer);
 	}
 	
@@ -116,9 +122,10 @@ public class EchoServer implements FlowAcceptor, ApplicationRegistrationListener
 	 * of the RINABand Server, in order to negotiate the new test parameters
 	 */
 	public synchronized void flowAllocated(Flow flow) {
-		flowReader = new FlowReader(flow, 10000);
+		FlowReader flowReader = new FlowReader(flow, 10000);
+		ongoingTests.put(flow.getPortId(), flowReader);
+		ipcEventConsumer.addFlowDeallocationListener(this, flow.getPortId());
 		EchoServer.executeRunnable(flowReader);
-		ipcEventConsumer.addFlowDeallocationListener(flowReader, flow.getPortId());
 		log.info("New flow to the echo AE allocated, with port id "+flow.getPortId());
 	}
 
@@ -134,5 +141,20 @@ public class EchoServer implements FlowAcceptor, ApplicationRegistrationListener
 		}catch(Exception ex){
 			ex.printStackTrace();
 		}
+	}
+	
+	@Override
+	public void dispatchFlowDeallocatedEvent(FlowDeallocatedEvent event) {
+		ipcEventConsumer.removeFlowDeallocationListener(event.getPortId());
+		FlowReader flowReader = ongoingTests.remove(event.getPortId());
+		if (flowReader == null){
+			log.warn("Flowreader of flow "+event.getPortId()
+					+" not found in ongoing tests table");
+			return;
+		}
+		
+		log.info("Requesting Flowreader of flow "+event.getPortId() 
+				+ " to stop");
+		flowReader.stop();
 	}
 }
