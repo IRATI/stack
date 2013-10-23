@@ -327,19 +327,20 @@ const struct table_entry * tbl_find_by_gpa(struct table *     instance,
         LOG_DBG("Looking for the following address in table");
         gpa_dump(address);
 
-        LOG_DBG("Showing addresses in table");
+        LOG_DBG("Showing addresses in table in the meanwhile");
 
         spin_lock(&instance->lock);
         list_for_each_entry(pos, &instance->entries, next) {
                 gpa_dump(pos->pa);
                 if (gpa_is_equal(pos->pa, address)) {
+                        LOG_DBG("That's the address I need");
                         spin_unlock(&instance->lock);
                         return pos;
                 }
         }
         spin_unlock(&instance->lock);
 
-        LOG_DBG("Dump complete");
+        LOG_DBG("Got no matching address");
 
         return NULL;
 }
