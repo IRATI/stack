@@ -256,7 +256,7 @@ int name_cmp(const struct name * a, const struct name * b)
 EXPORT_SYMBOL(name_cmp);
 
 bool name_is_equal(const struct name * a, const struct name * b)
-{ return !name_is_equal_internal(a, b) ? 1 : 0; }
+{ return !name_is_equal_internal(a, b) ? true : false; }
 EXPORT_SYMBOL(name_is_equal);
 
 #define DELIMITER "/"

@@ -1594,7 +1594,7 @@ EXPORT_SYMBOL(rnl_format_ipcm_update_dif_config_resp_msg);
 
 int rnl_format_ipcm_ipcp_dif_reg_noti_msg(const struct name * ipcp_name,
                                           const struct name * dif_name,
-                                          bool              is_registered,
+                                          bool                is_registered,
                                           struct sk_buff    * skb_out)
 {
         struct nlattr * msg_ipcp_name, * msg_dif_name;

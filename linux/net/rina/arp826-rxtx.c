@@ -336,14 +336,14 @@ static int process(const struct sk_buff * skb,
         oper  = ntohs(header->oper);
 
         LOG_DBG("Decoded ARP header:");
-        LOG_DBG("  Hardware type           = 0x%04x", htype);
-        LOG_DBG("  Protocol type           = 0x%04x", ptype);
+        LOG_DBG("  Hardware type           = 0x%04X", htype);
+        LOG_DBG("  Protocol type           = 0x%04X", ptype);
         LOG_DBG("  Hardware address length = %d",     hlen);
         LOG_DBG("  Protocol address length = %d",     plen);
-        LOG_DBG("  Operation               = 0x%04x", oper);
+        LOG_DBG("  Operation               = 0x%04X", oper);
 
         if (header->htype != htons(HW_TYPE_ETHER)) {
-                LOG_ERR("Unhandled ARP hardware type 0x%04x", header->htype);
+                LOG_ERR("Unhandled ARP hardware type 0x%04X", header->htype);
                 return -1;
         }
         if (hlen != 6) {
@@ -353,7 +353,7 @@ static int process(const struct sk_buff * skb,
 
         operation = ntohs(header->oper);
         if (operation != ARP_REPLY && operation != ARP_REQUEST) {
-                LOG_ERR("Unhandled ARP operation 0x%04x", operation);
+                LOG_ERR("Unhandled ARP operation 0x%04X", operation);
                 return -1;
         }
 
@@ -376,11 +376,11 @@ static int process(const struct sk_buff * skb,
 
 #if HAVE_RINARP
         LOG_DBG("Shrinking as needed");
-        if (gpa_address_shrink(tmp_spa, 0x00)) {
+        if (gpa_address_shrink_gfp(tmp_spa, 0x00, GFP_ATOMIC)) {
                 LOG_ERR("Problems parsing the source GPA");
                 return -1;
         }
-        if (gpa_address_shrink(tmp_tpa, 0x00)) {
+        if (gpa_address_shrink_gfp(tmp_tpa, 0x00, GFP_ATOMIC)) {
                 LOG_ERR("Got problems parsing the target GPA");
                 return -1;
         }
@@ -399,7 +399,7 @@ static int process(const struct sk_buff * skb,
                 /* Do we have it in the cache ? */
                 tbl = tbls_find(ptype);
                 if (!tbl) {
-                        LOG_ERR("I don't have a table for ptype 0x%04x",
+                        LOG_ERR("I don't have a table for ptype 0x%04X",
                                 ptype);
                         return -1;
                 }
@@ -421,12 +421,23 @@ static int process(const struct sk_buff * skb,
                         }
                 }
 
-                req_addr  = tbl_find_by_gpa(tbl, tmp_tpa);
+                req_addr = tbl_find_by_gpa(tbl, tmp_tpa);
+                if (!req_addr) {
+                        LOG_ERR("Cannot find this TPA in my tables, "
+                                "bailing out");
+                        return -1;
+                }
+
                 target_ha = tble_ha(req_addr);
+                if (!target_ha) {
+                        LOG_ERR("Cannot get a good target HA");
+                        return -1;
+                }
 
                 if (arp_send_reply(ptype,
                                    tmp_tpa, tmp_tha, tmp_spa, tmp_sha)) {
                         /* FIXME: Couldn't send reply ... */
+                        LOG_ERR("Couldn't send reply");
                         return -1;
                 }
         }
@@ -457,23 +468,30 @@ int arp_receive(struct sk_buff *     skb,
         int                       total_length;
         struct table *            cl;
 
-        if (!dev || !skb) {
-                LOG_ERR("Wrong device or skb");
+        if (!skb) {
+                LOG_ERR("No skb passed ?");
+                return 0;
+        }
+
+        if (!dev) {
+                LOG_ERR("No device passed ?");
+                kfree_skb(skb);
                 return 0;
         }
 
         if (dev->flags & IFF_NOARP            ||
             skb->pkt_type == PACKET_OTHERHOST ||
             skb->pkt_type == PACKET_LOOPBACK) {
-                kfree_skb(skb);
                 LOG_DBG("This ARP is not for us "
                         "(no arp, other-host or loopback)");
+                kfree_skb(skb);
                 return 0;
         }
 
         /* We only receive type-1 headers (this handler could be reused) */
         if (skb->dev->type != HW_TYPE_ETHER) {
                 LOG_DBG("Unhandled device type %d", skb->dev->type);
+                kfree_skb(skb);
                 return 0;
         }
 
@@ -482,6 +500,7 @@ int arp_receive(struct sk_buff *     skb,
         skb = skb_share_check(skb, GFP_ATOMIC);
         if (!skb) {
                 LOG_ERR("This ARP cannot be shared!");
+                kfree_skb(skb);
                 return 0;
         }
 
@@ -502,13 +521,11 @@ int arp_receive(struct sk_buff *     skb,
         }
 
         /* FIXME: There's no need to lookup it here ... */
-        cl = tbls_find(header->ptype);
+        cl = tbls_find(ntohs(header->ptype));
         if (!cl) {
-#if 0
-                /* This log is too noisy */
+                /* This log is too noisy ... but necessary for now :) */
                 LOG_DBG("I don't have a table to handle this ARP "
-                        "(ptype = 0x%04x)", header->ptype);
-#endif
+                        "(ptype = 0x%04X)", ntohs(header->ptype));
                 kfree_skb(skb);
                 return 0;
         }
@@ -530,6 +547,7 @@ int arp_receive(struct sk_buff *     skb,
                 kfree_skb(skb);
                 return 0;
         }
+
         consume_skb(skb);
 
         return 0;
