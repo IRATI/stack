@@ -1154,8 +1154,6 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
         /* Retrieve the instance */
         list_for_each_entry_safe(pos, next, &data->instances, list) {
                 if (pos->id == instance->data->id) {
-                        LOG_DBG("Got !");
-
                         /* Remove packet handler if there is one */
                         if (pos->eth_vlan_packet_type->dev)
                                 __dev_remove_pack(pos->eth_vlan_packet_type);
@@ -1166,8 +1164,6 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         /* Destroy it */
                         if (pos->name)
                                 name_destroy(pos->name);
-
-                        LOG_DBG("DIF name at %pK", pos->dif_name);
 
                         if (pos->dif_name)
                                 name_destroy(pos->dif_name);
