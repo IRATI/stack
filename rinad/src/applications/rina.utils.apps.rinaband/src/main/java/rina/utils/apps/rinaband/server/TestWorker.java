@@ -87,7 +87,7 @@ public class TestWorker implements SDUListener{
 				this.flowReader.stop();
 				
 				if (this.flow.getState() == FlowState.FLOW_ALLOCATED){
-					rina.getIpcManager().deallocateFlow(this.flow.getPortId());
+					rina.getIpcManager().requestFlowDeallocation(this.flow.getPortId());
 				}
 			}catch(Exception ex){
 			}

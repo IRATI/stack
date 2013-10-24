@@ -375,6 +375,37 @@ class IPCProcess {
 	/** True if the IPC Process is a member of the DIF, false otherwise */
 	bool difMember;
 
+	/** True if an assign to DIF operation is in process */
+	bool assignInProcess;
+
+	/** True if a configure operation is in process */
+	bool configureInProcess;
+
+	/** The configuration that is in progress to be setup */
+	DIFConfiguration newConfiguration;
+
+	/** The list of applications registered in this IPC Process */
+	std::list<ApplicationProcessNamingInformation> registeredApplications;
+
+	/** The map of pending registrations */
+	std::map<unsigned int, ApplicationProcessNamingInformation>
+	        pendingRegistrations;
+
+	/** The list of flows currently allocated in this IPC Process */
+	std::list<FlowInformation> allocatedFlows;
+
+	/** The map of pending flow operations */
+	std::map<unsigned int, FlowInformation>
+	pendingFlowOperations;
+
+	/** Return the information of a registration request */
+	ApplicationProcessNamingInformation getPendingRegistration(
+	                unsigned int seqNumber) throw (IPCException);
+
+	/** Return the information of a flow operation */
+	FlowInformation getPendingFlowOperation(unsigned int seqNumber)
+	throw (IPCException);
+
 public:
 	static const std::string error_assigning_to_dif;
 	static const std::string error_update_dif_config;
@@ -405,14 +436,22 @@ public:
 	 * member of the DIF. Assigning an IPC Process to a DIF will initialize the
 	 * IPC Process with all the information required to operate in the DIF (DIF
 	 * name, data transfer constants, qos cubes, supported policies, address,
-	 * credentials, etc). The operation will block until the IPC Process is
-	 * assigned to the DIF or an error is returned.
+	 * credentials, etc).
 	 *
 	 * @param difInformation The information of the DIF (name, type configuration)
 	 * @throws AssignToDIFException if an error happens during the process
+	 * @returns the handle to the response message
 	 */
-	void assignToDIF(
+	unsigned int assignToDIF(
 			const DIFInformation& difInformation) throw (AssignToDIFException);
+
+	/**
+	 * Update the internal data structures based on the result of the assignToDIF
+	 * operation
+	 * @param success true if the operation was successful, false otherwise
+	 * @throws AssignToDIFException if there was not an assingment operation ongoing
+	 */
+	void assignToDIFResult(bool success) throw (AssignToDIFException);
 
 	/**
 	 * Invoked by the IPC Manager to modify the configuration of an existing IPC
@@ -421,9 +460,20 @@ public:
 	 *
 	 * @param difConfiguration The configuration of the DIF
 	 * @throws UpdateDIFConfigurationException if an error happens during the process
+	 * @returns the handle to the response message
 	 */
-	void updateDIFConfiguration(
+	unsigned int updateDIFConfiguration(
 	                const DIFConfiguration& difConfiguration)
+	throw (UpdateDIFConfigurationException);
+
+	/**
+	 * Update the internal data structures based on the result of the updateConfig
+	 * operation
+	 * @param success true if the operation was successful, false otherwise
+	 * @throws  UpdateDIFConfigurationException if there was no update config
+	 * operation ongoing
+	 */
+	void updateDIFConfigurationResult(bool success)
 	throw (UpdateDIFConfigurationException);
 
 	/**
@@ -485,26 +535,54 @@ public:
 
 	/**
 	 * Invoked by the IPC Manager to register an application in a DIF through
-	 * an IPC Process. The operation blocks until the IPC Process has
-	 * successfully registered the application or an error occurs.
+	 * an IPC Process.
 	 *
 	 * @param applicationName The name of the application to be registered
 	 * @throws IpcmRegisterApplicationException if an error occurs
+	 * @returns the handle to the response message
 	 */
-	void registerApplication(
+	unsigned int registerApplication(
 			const ApplicationProcessNamingInformation& applicationName)
 	throw (IpcmRegisterApplicationException);
 
 	/**
+	 * Invoked by the IPC Manager to inform about the result of a registration
+	 * operation and update the internal data structures
+	 * @param sequenceNumber the handle associated to the pending registration
+	 * @param success true if success, false otherwise
+	 * @throws IpcmRegisterApplicationException if the pending registration
+	 * is not found
+	 */
+	void registerApplicationResult(unsigned int sequenceNumber, bool success)
+	throw (IpcmRegisterApplicationException);
+
+	/**
+	 * Return the list of applications registered in this IPC Process
+	 * @return
+	 */
+	std::list<ApplicationProcessNamingInformation> getRegisteredApplications();
+
+	/**
 	 * Invoked by the IPC Manager to unregister an application in a DIF through
-	 * an IPC Process. The operation blocks until the IPC Process has
-	 * successfully unregistered the application or an error occurs.
+	 * an IPC Process.
 	 *
 	 * @param applicationName The name of the application to be unregistered
 	 * @throws IpcmUnregisterApplicationException if an error occurs
+	 * @returns the handle to the response message
 	 */
-	void unregisterApplication(
+	unsigned int unregisterApplication(
 			const ApplicationProcessNamingInformation& applicationName)
+	throw (IpcmUnregisterApplicationException);
+
+	/**
+	 * Invoked by the IPC Manager to inform about the result of an unregistration
+	 * operation and update the internal data structures
+	 * @param sequenceNumber the handle associated to the pending unregistration
+	 * @param success true if success, false otherwise
+	 * @throws IpcmUnregisterApplicationException if the pending unregistration
+	 * is not found
+	 */
+	void unregisterApplicationResult(unsigned int sequenceNumber, bool success)
 	throw (IpcmUnregisterApplicationException);
 
 	/**
@@ -518,10 +596,22 @@ public:
 	 * flow
 	 * @param applicationPortId the port where the application that requested the
 	 * flow can be contacted
+	 * @returns the handle to the response message
 	 * @throws AllocateFlowException if an error occurs
 	 */
-	void allocateFlow(const FlowRequestEvent& flowRequest)
+	unsigned int allocateFlow(const FlowRequestEvent& flowRequest)
 		throw (AllocateFlowException);
+
+	/**
+	 * Invoked by the IPC Manager to inform about the result of an allocate
+	 * flow operation and update the internal data structures
+	 * @param sequenceNumber the handle associated to the pending allocation
+	 * @param success true if success, false otherwise
+	 * @throws AllocateFlowException if the pending allocation
+	 * is not found
+	 */
+	void allocateFlowResult(unsigned int sequenceNumber, bool success)
+	throw (AllocateFlowException);
 
 	/**
 	 * Reply an IPC Process about the fate of a flow allocation request (wether
@@ -533,16 +623,50 @@ public:
 	 * @throws AllocateFlowException if something goes wrong
 	 */
 	void allocateFlowResponse(const FlowRequestEvent& flowRequest,
-			int result)
+			int result, bool notifySource)
 		throw(AllocateFlowException);
+
+	/**
+	 * Return the list of flows allocated by this IPC Process
+	 * @return
+	 */
+	std::list<FlowInformation> getAllocatedFlows();
+
+	/**
+	 * Returns the information of the flow identified by portId
+	 * @throws IPCException if no flow with the requested portId is found
+	 */
+	FlowInformation getFlowInformation(int portId) throw(IPCException);
 
 	/**
 	 * Tell the IPC Process to deallocate a flow
 	 * @param portId
 	 * @throws IpcmDeallocateFlowException if there is an error during
 	 * the flow deallocation procedure
+	 * @returns the handle to the response message
 	 */
-	void deallocateFlow(int portId) throw (IpcmDeallocateFlowException);
+	unsigned int deallocateFlow(int portId) throw (IpcmDeallocateFlowException);
+
+	/**
+	 * Invoked by the IPC Manager to inform about the result of a deallocate
+	 * flow operation and update the internal data structures
+	 * @param sequenceNumber the handle associated to the pending allocation
+	 * @param success true if success, false otherwise
+	 * @throws IpcmDeallocateFlowException if the pending deallocation
+	 * is not found
+	 */
+	void deallocateFlowResult(unsigned int sequenceNumber, bool success)
+	throw (IpcmDeallocateFlowException);
+
+	/**
+	 * Invoked by the IPC Manager to notify that a flow has been remotely
+	 * deallocated, so that librina updates the internal data structures
+	 * @returns the information of the flow deallocated
+	 * @throws IpcmDeallocateFlowException if now flow with the given
+	 * portId is found
+	 */
+	FlowInformation flowDeallocated(int portId)
+	throw (IpcmDeallocateFlowException);
 
 	/**
 	 * Invoked by the IPC Manager to query a subset of the RIB of the IPC
@@ -555,9 +679,9 @@ public:
 	 * base object - that are affected by the query
 	 * @param filter An expression evaluated for each object, to determine
 	 * wether the object should be returned by the query
-	 * @return A list contaning zero or more RIB objects
+	 * @returns the handle to the response message
 	 */
-	const std::list<RIBObject> queryRIB(const std::string& objectClass,
+	unsigned int queryRIB(const std::string& objectClass,
 			const std::string& objectName, unsigned long objectInstance,
 			unsigned int scope, const std::string& filter)
 					throw (QueryRIBException);
@@ -619,7 +743,7 @@ public:
          * Returns a list to all the IPC Processes that are currently running in
          * the system.
          *
-         * @return vector<IPCProcess *> A list of the IPC Processes in the system
+         * @return list<IPCProcess *> A list of the IPC Processes in the system
          */
         std::vector<IPCProcess *> listIPCProcesses();
 
@@ -681,7 +805,7 @@ public:
 	/**
 	 * Invoked by the IPC Manager to inform the Application Process that a remote
 	 * application wants to allocate a flow to it. The remote application will
-	 * decide wether it accepts or not the flow
+	 * decide whether it accepts or not the flow
 	 * @param localAppName
 	 * @param remoteAppName
 	 * @param flowSpec
@@ -689,8 +813,10 @@ public:
 	 * @param portId
 	 * @throws AppFlowArrivedException if something goes wrong or the application
 	 * doesn't accept the flow
+	 * @returns the handle to be able to identify the applicaiton response when
+	 * it arrives
 	 */
-	void flowRequestArrived(
+	unsigned int flowRequestArrived(
 			const ApplicationProcessNamingInformation& localAppName,
 			const ApplicationProcessNamingInformation& remoteAppName,
 			const FlowSpecification& flowSpec,
@@ -734,6 +860,74 @@ public:
  * Make Application Manager singleton
  */
 extern Singleton<ApplicationManager> applicationManager;
+
+/**
+ * Event informing about the result of an application registration
+ */
+class IpcmRegisterApplicationResponseEvent: public BaseResponseEvent {
+public:
+        IpcmRegisterApplicationResponseEvent(
+                        int result, unsigned int sequenceNumber);
+};
+
+/**
+ * Event informing about the result of an application unregistration
+ */
+class IpcmUnregisterApplicationResponseEvent: public BaseResponseEvent {
+public:
+        IpcmUnregisterApplicationResponseEvent(
+                        int result, unsigned int sequenceNumber);
+};
+
+/**
+ * Event informing about the result of a flow deallocation
+ */
+class IpcmDeallocateFlowResponseEvent: public BaseResponseEvent {
+public:
+        IpcmDeallocateFlowResponseEvent(
+                        int result, unsigned int sequenceNumber);
+};
+
+/**
+ * Event informing about the result of a flow allocation
+ */
+class IpcmAllocateFlowRequestResultEvent: public BaseResponseEvent {
+public:
+        IpcmAllocateFlowRequestResultEvent(
+                        int result, unsigned int sequenceNumber);
+};
+
+/**
+ * Event informing about the result of a query RIB operation
+ */
+class QueryRIBResponseEvent: public BaseResponseEvent {
+        std::list<RIBObject> ribObjects;
+public:
+        QueryRIBResponseEvent(const std::list<RIBObject>& ribObjects,
+                        int result,
+                        unsigned int sequenceNumber);
+        const std::list<RIBObject>& getRIBObject() const;
+};
+
+/**
+ * Event informing about the result of an assign to DIF operation
+ */
+class AssignToDIFResponseEvent: public BaseResponseEvent {
+public:
+        AssignToDIFResponseEvent(
+                        int result, unsigned int sequenceNumber);
+};
+
+/**
+ * Event informing about the result of an update DIF config operation
+ */
+class UpdateDIFConfigurationResponseEvent: public BaseResponseEvent {
+public:
+        UpdateDIFConfigurationResponseEvent(
+                        int result, unsigned int sequenceNumber);
+};
+
+
 
 }
 

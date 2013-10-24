@@ -4,7 +4,7 @@ import eu.irati.librina.ApplicationProcessNamingInformation;
 
 public class Utils {
 
-	public static String geApplicationNamingInformationCode(
+	public static String getApplicationNamingInformationCode(
 			ApplicationProcessNamingInformation name){
 		String result = "-";
 		if (name.getProcessName() != null){

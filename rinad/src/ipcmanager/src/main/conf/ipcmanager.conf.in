@@ -2,7 +2,6 @@
   "localConfiguration" : {
     "installationPath" : "@pkgdatadir@",
     "libraryPath" : "@libdir@",
-    "eventLoopWorkers" : 3,
     "consolePort" : 32766,
     "cdapTimeoutInMs" : 10000,
     "enrollmentTimeoutInMs" : 10000,

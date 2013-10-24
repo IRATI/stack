@@ -125,6 +125,9 @@ const std::string& QueryRIBRequestEvent::getFilter() const{
 const std::string ExtendedIPCManager::error_allocate_flow =
 		"Error allocating flow";
 
+ExtendedIPCManager::~ExtendedIPCManager() throw(){
+}
+
 const DIFInformation& ExtendedIPCManager::getCurrentDIFInformation() const{
 	return currentDIFInformation;
 }
@@ -156,7 +159,7 @@ void ExtendedIPCManager::assignToDIFResponse(
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage);
 	}catch(NetlinkException &e){
 		throw AssignToDIFResponseException(e.what());
 	}
@@ -174,7 +177,7 @@ void ExtendedIPCManager::registerApplicationResponse(
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage);
 	}catch(NetlinkException &e){
 		throw RegisterApplicationResponseException(e.what());
 	}
@@ -192,7 +195,7 @@ void ExtendedIPCManager::unregisterApplicationResponse(
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage);
 	}catch(NetlinkException &e){
 		throw UnregisterApplicationResponseException(e.what());
 	}
@@ -210,7 +213,7 @@ void ExtendedIPCManager::allocateFlowRequestResult(
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage);
 	}catch(NetlinkException &e){
 		throw AllocateFlowResponseException(e.what());
 	}
@@ -222,6 +225,7 @@ int ExtendedIPCManager::allocateFlowRequestArrived(
 			const ApplicationProcessNamingInformation& remoteAppName,
 			const FlowSpecification& flowSpecification)
 		throw (AllocateFlowRequestArrivedException){
+        /*
 #if STUP_API
 	return 25;
 #else
@@ -255,7 +259,8 @@ int ExtendedIPCManager::allocateFlowRequestArrived(
 	delete allocateFlowResponse;
 
 	return portId;
-#endif
+#endif*/
+        return 0;
 }
 
 void ExtendedIPCManager::flowDeallocated(
@@ -271,7 +276,7 @@ void ExtendedIPCManager::flowDeallocated(
 	responseMessage.setSequenceNumber(flowDeallocateEvent.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage);
 	}catch(NetlinkException &e){
 		throw DeallocateFlowResponseException(e.what());
 	}
@@ -290,7 +295,7 @@ void ExtendedIPCManager::flowDeallocatedRemotely(
 	message.setSourceIpcProcessId(ipcProcessId);
 	message.setNotificationMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(&message);
+		rinaManager->sendMessage(&message);
 	}catch(NetlinkException &e){
 		throw DeallocateFlowResponseException(e.what());
 	}
@@ -310,7 +315,7 @@ void ExtendedIPCManager::queryRIBResponse(
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage);
 	}catch(NetlinkException &e){
 		throw QueryRIBResponseException(e.what());
 	}

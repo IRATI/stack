@@ -9,18 +9,20 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
-import eu.irati.librina.ApplicationRegistration;
 import eu.irati.librina.ApplicationRegistrationInformation;
 import eu.irati.librina.ApplicationRegistrationType;
 import eu.irati.librina.Flow;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCManagerSingleton;
+import eu.irati.librina.RegisterApplicationResponseEvent;
+import eu.irati.librina.UnregisterApplicationResponseEvent;
 import eu.irati.librina.rina;
 
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.impl.CDAPSessionManagerImpl;
 import rina.cdap.impl.googleprotobuf.GoogleProtocolBufWireMessageProviderFactory;
+import rina.utils.apps.rinaband.utils.ApplicationRegistrationListener;
 import rina.utils.apps.rinaband.utils.FlowAcceptor;
 import rina.utils.apps.rinaband.utils.FlowDeallocationListener;
 import rina.utils.apps.rinaband.utils.FlowReader;
@@ -31,7 +33,7 @@ import rina.utils.apps.rinaband.utils.IPCEventConsumer;
  * @author eduardgrasa
  *
  */
-public class RINABandServer implements FlowAcceptor, FlowDeallocationListener{
+public class RINABandServer implements FlowAcceptor, FlowDeallocationListener, ApplicationRegistrationListener {
 	
 	public static final int MAX_CONCURRENT_TESTS = 10;
 	public static final int MAX_NUMBER_OF_FLOWS = 100;
@@ -68,14 +70,15 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener{
 	private static final Log log = LogFactory.getLog(RINABandServer.class);
 	
 	public RINABandServer(ApplicationProcessNamingInformation controlApNamingInfo, 
-			ApplicationProcessNamingInformation dataApNamingInfo){
+			ApplicationProcessNamingInformation dataApNamingInfo) {
+		rina.initialize();
 		this.controlApNamingInfo = controlApNamingInfo;
 		this.dataApNamingInfo = dataApNamingInfo;
 		ongoingTests = new Hashtable<Integer, TestController>();
 		cdapSessionManager = new CDAPSessionManagerImpl(new GoogleProtocolBufWireMessageProviderFactory());
-		rina.initialize();
 		ipcEventConsumer = new IPCEventConsumer();
 		ipcEventConsumer.addFlowAcceptor(this, controlApNamingInfo);
+		ipcEventConsumer.addApplicationRegistrationListener(this, controlApNamingInfo);
 		executeRunnable(ipcEventConsumer);
 	}
 	
@@ -89,14 +92,51 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener{
 			ApplicationRegistrationInformation appRegInfo = 
 					new ApplicationRegistrationInformation(
 							ApplicationRegistrationType.APPLICATION_REGISTRATION_ANY_DIF);
-			ApplicationRegistration appRegistration = 
-					rina.getIpcManager().registerApplication(controlApNamingInfo, appRegInfo);
-			difName = appRegistration.getDIFNames().getFirst();
-			log.info("Registered application "+controlApNamingInfo.toString() + 
-					" to DIF " + difName.toString());
+			appRegInfo.setApplicationName(controlApNamingInfo);
+			rina.getIpcManager().requestApplicationRegistration(appRegInfo);
+			log.info("Requested registration of control AE: "+controlApNamingInfo.toString());
 		}catch(Exception ex){
 			ex.printStackTrace();
 			System.exit(-1);
+		}
+	}
+	
+	public synchronized void dispatchApplicationRegistrationResponseEvent(
+			RegisterApplicationResponseEvent event) {
+		if (event.getResult() == 0) {
+			try {
+				rina.getIpcManager().commitPendingResitration(
+						event.getSequenceNumber(), event.getDIFName());
+				difName = event.getDIFName();
+				log.info("Succesfully registered control AE " + event.getApplicationName().toString() 
+						+ " to DIF" + difName.getProcessName());
+			} catch (Exception ex){
+				log.error(ex.getMessage());
+			}
+		} else {
+			try{
+				log.error("Problems registering control AE "+ event.getApplicationName().toString() 
+						+ ". Error code: " + event.getResult());
+				rina.getIpcManager().withdrawPendingRegistration(event.getSequenceNumber());
+			}catch(Exception ex) {
+				log.error(ex.getMessage());
+			}
+			System.exit(event.getResult());
+		}
+	}
+
+	public synchronized void dispatchApplicationUnregistrationResponseEvent(
+			UnregisterApplicationResponseEvent event) {
+		boolean success = false;
+		
+		if (event.getResult() == 0){
+			success = true;
+		}
+		
+		try {
+			rina.getIpcManager().appUnregistrationResult(event.getSequenceNumber(), success);
+		} catch (Exception ex) {
+			log.error(ex.getMessage());
 		}
 	}
 
@@ -122,6 +162,14 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener{
 		TestController testController = ongoingTests.remove(new Integer(portId));
 		testController.getFlowReader().stop();
 		ipcEventConsumer.removeFlowDeallocationListener(portId);
+		
+		try {
+			rina.getIpcManager().flowDeallocated(portId);
+		} catch (Exception ex) {
+			log.warn("Error updating allcocated flows for flow "+portId
+					 + ". " + ex.getMessage());
+		}
+		
 		log.info("Control flow with port id "+portId+" deallocated");
 	}
 
@@ -130,10 +178,14 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener{
 	 */
 	public void dispatchFlowRequestEvent(FlowRequestEvent event){
 		IPCManagerSingleton ipcManager = rina.getIpcManager();
+		if (this.difName == null) {
+			log.error("Cannot process flow requests until the control AE is registered");
+			return;
+		}
+		
 		if (this.ongoingTests.size() >= MAX_CONCURRENT_TESTS){
 			try{
-				ipcManager.allocateFlowResponse(
-						event, false, "Cannot execute more concurrent tests now. Try later");
+				ipcManager.allocateFlowResponse(event, -1, true);
 			}catch(Exception ex){
 				ex.printStackTrace();
 			}
@@ -141,7 +193,7 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener{
 		}
 
 		try{
-			Flow flow = ipcManager.allocateFlowResponse(event, true, "ok");
+			Flow flow = ipcManager.allocateFlowResponse(event, 0, true);
 			flowAllocated(flow);
 		}catch(Exception ex){
 			ex.printStackTrace();

@@ -36,7 +36,7 @@ public class Main {
 	public static final int DEFAULT_SDU_SIZE_IN_BYTES = 1500;
 	public static final int DEFAULT_SDU_COUNT = 5000;
 	public static final String DEFAULT_ROLE = SERVER;
-	public static final String DEFAULT_AP_NAME = "rina.utils.apps.ehco";
+	public static final String DEFAULT_AP_NAME = "rina.utils.apps.echo";
 	public static final String DEFAULT_AP_INSTANCE = "1";
 	
 	public static final String USAGE = "java -jar rina.utils.apps.echo [-role] (client|server)" +
