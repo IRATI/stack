@@ -582,6 +582,9 @@ int arp826_add(uint16_t           ptype,
 {
         struct table *       cl;
         struct table_entry * e;
+        struct gpa *         tmp_pa;
+        struct gha *         tmp_ha;
+        int                  ret;
 
         if (!gpa_is_ok(pa)) {
                 LOG_ERR("Cannot add, bad PA");
@@ -592,15 +595,53 @@ int arp826_add(uint16_t           ptype,
                 return -1;
         }
 
+        LOG_DBG("Adding GPA/GHA couple to the 0x%04x ptype table", ptype);
+
         cl = tbls_find(ptype);
-        if (!cl)
+        if (!cl) {
+                LOG_ERR("Cannot add GPA/GHA couple, "
+                        "there is no table for ptype 0x%04x", ptype);
+                return -1;
+        }
+
+        tmp_pa = gpa_dup_gfp(GFP_ATOMIC, pa);
+        if (!tmp_pa)
                 return -1;
 
-        e = tble_create_gfp(gpa_dup(pa), gha_dup(ha), GFP_ATOMIC);
-        if (!e)
+        tmp_ha = gha_dup_gfp(GFP_ATOMIC, ha);
+        if (!tmp_ha) {
+                gpa_destroy(tmp_pa);
                 return -1;
+        }
 
-        return tbl_add(cl, e);
+        LOG_DBG("Creating a new table entry for this ARP-add request");
+
+        e = tble_create_gfp(tmp_pa, tmp_ha, GFP_ATOMIC);
+        if (!e) {
+                gpa_destroy(tmp_pa);
+                gha_destroy(tmp_ha);
+                return -1;
+        }
+
+        LOG_DBG("Adding the GPA/GHA entry to the 0x%x04 table", ptype);
+
+        ret = tbl_add(cl, e);
+        if (ret) {
+                LOG_ERR("Cannot add to the 0x%04x table, rolling back", ptype);
+                gpa_destroy(tmp_pa);
+                gha_destroy(tmp_ha);
+                tble_destroy(e);
+                return -1;
+        }
+
+        /*
+         * NOTE: There are no needs to destroy the duplicated entries, the
+         *       callee took their ownership
+         */
+
+        LOG_DBG("GPA/GHA couple for ptype 0x%04x added successfully", ptype);
+
+        return 0;
 }
 EXPORT_SYMBOL(arp826_add);
 
