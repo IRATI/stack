@@ -425,17 +425,14 @@ static int process(const struct sk_buff * skb,
                                 return -1;
                         }
                 } else {
-                        LOG_DBG("Updating old entry into the table");
+                        LOG_DBG("Updating old entry %pK into the table",
+                                entry);
 
                         if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha)) {
                                 LOG_ERR("Failed to update table");
                                 return -1;
                         }
                 }
-
-                ASSERT(entry);
-
-                LOG_DBG("Got the entry, anyway (%pK)", entry);
 
                 req_addr = tbl_find_by_gpa(tbl, tmp_tpa);
                 if (!req_addr) {
