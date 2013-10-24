@@ -82,10 +82,12 @@ int main(int argc, char * argv[]) {
 	ipcProcess1->assignToDIFResult(true);
 
 	/* TEST REGISTER APPLICATION */
-	ipcProcess1->registerApplication(*sourceName);
+	unsigned int handle = ipcProcess1->registerApplication(*sourceName);
+	ipcProcess1->registerApplicationResult(handle, true);
 
 	/* TEST UNREGISTER APPLICATION */
-	ipcProcess1->unregisterApplication(*sourceName);
+	handle = ipcProcess1->unregisterApplication(*sourceName);
+	ipcProcess1->unregisterApplicationResult(handle, true);
 
 	/* TEST ALLOCATE FLOW */
 	FlowSpecification *flowSpec = new FlowSpecification();

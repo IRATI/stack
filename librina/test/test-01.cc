@@ -138,11 +138,11 @@ int main(int argc, char * argv[]) {
 	}
 
 	/* TEST REGISTER APPLICATION */
-	ApplicationRegistrationInformation * info =
-			new ApplicationRegistrationInformation(
+	ApplicationRegistrationInformation info =
+			 ApplicationRegistrationInformation(
 					APPLICATION_REGISTRATION_SINGLE_DIF);
-	info->setDIFName(difName);
-	info->setApplicationName(sourceName);
+	info.setDIFName(difName);
+	info.setApplicationName(sourceName);
 	seqNumber = ipcManager->requestApplicationRegistration(info);
 	ipcManager->commitPendingResitration(seqNumber, difName);
 	if (!checkRegisteredApplications(1)) {
