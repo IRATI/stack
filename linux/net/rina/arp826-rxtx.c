@@ -389,10 +389,10 @@ static int process(const struct sk_buff * skb,
         /* Finally process the entry */
         switch (operation) {
         case ARP_REQUEST: {
-                struct table *             tbl;
-                const struct table_entry * entry;
-                const struct table_entry * req_addr;
-                const struct gha *         target_ha;
+                struct table *             tbl       = NULL;
+                const struct table_entry * entry     = NULL;
+                const struct table_entry * req_addr  = NULL;
+                const struct gha *         target_ha = NULL;
 
                 /* FIXME: Should we add all ARP Requests? */
 
@@ -410,16 +410,32 @@ static int process(const struct sk_buff * skb,
                  */
                 entry = tbl_find_by_gpa(tbl, tmp_spa);
                 if (!entry) {
-                        if (tbl_add(tbl, tmp_spa, tmp_sha)) {
+                        struct table_entry * tmp;
+
+                        LOG_DBG("Adding new entry to the table");
+
+                        tmp = tble_create_gfp(tmp_spa,
+                                              tmp_sha,
+                                              GFP_ATOMIC);
+                        if (!tmp)
+                                return -1;
+                        if (tbl_add(tbl, tmp)) {
                                 LOG_ERR("AAAAAAARRggh can't add in table");
+                                tble_destroy(tmp);
                                 return -1;
                         }
                 } else {
+                        LOG_DBG("Updating old entry into the table");
+
                         if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha)) {
                                 LOG_ERR("Failed to update table");
                                 return -1;
                         }
                 }
+
+                ASSERT(entry);
+
+                LOG_DBG("Got the entry, anyway (%pK)", entry);
 
                 req_addr = tbl_find_by_gpa(tbl, tmp_tpa);
                 if (!req_addr) {
@@ -440,6 +456,8 @@ static int process(const struct sk_buff * skb,
                         LOG_ERR("Couldn't send reply");
                         return -1;
                 }
+
+                LOG_DBG("Request replied successfully");
         }
                 break;
 
@@ -448,12 +466,16 @@ static int process(const struct sk_buff * skb,
                         LOG_ERR("Cannot resolve with this reply ...");
                         return -1;
                 }
+
+                LOG_DBG("Resolution in progress, please wait ...");
         }
                 break;
 
         default:
                 BUG();
         }
+
+        LOG_DBG("Processing completed successfully");
 
         return 0;
 }

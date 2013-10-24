@@ -582,7 +582,7 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
         }
 
         /* Remove from ARP cache */
-        rinarp_remove(data->handle);
+        rinarp_remove(data->handle); /* FIXME: check data->handle first ? */
 
         name_destroy(data->app_name);
         data->app_name = NULL;
