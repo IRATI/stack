@@ -46,17 +46,17 @@ size_t          gpa_address_length(const struct gpa * gpa);
 int             gpa_address_grow(struct gpa * gpa,
                                  size_t       length,
                                  uint8_t      filler);
-int             gpa_address_grow_gfp(struct gpa * gpa,
+int             gpa_address_grow_gfp(gfp_t        flags,
+                                     struct gpa * gpa,
                                      size_t       length,
-                                     uint8_t      filler,
-                                     gfp_t        flags);
+                                     uint8_t      filler);
 
 /* Shrinks a GPA removing all the filler symbols (if any) */
 int             gpa_address_shrink(struct gpa * gpa,
                                    uint8_t      filler);
-int             gpa_address_shrink_gfp(struct gpa * gpa,
-                                       uint8_t      filler,
-                                       gfp_t        flags);
+int             gpa_address_shrink_gfp(gfp_t        flags,
+                                       struct gpa * gpa,
+                                       uint8_t      filler);
 
 void            gpa_dump(const struct gpa * gpa);
 

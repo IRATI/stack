@@ -108,6 +108,8 @@ struct table_entry * tble_create_gfp(struct gpa * gpa,
                 return NULL;
         }
 
+        LOG_DBG("Creating new table entry");
+
         entry = rkmalloc(sizeof(*entry), flags);
         if (!entry)
                 return NULL;
@@ -118,6 +120,8 @@ struct table_entry * tble_create_gfp(struct gpa * gpa,
                 rkfree(entry);
                 return NULL;
         }
+
+        LOG_DBG("Table entry %pK created successfully", entry);
 
         return entry;
 }
@@ -368,6 +372,8 @@ int tbl_add(struct table *       instance,
                 return -1;
         }
 
+        LOG_DBG("Adding entry %pK to the table", entry);
+
         spin_lock(&instance->lock);
 
         list_for_each_entry(pos, &instance->entries, next) {
@@ -398,6 +404,8 @@ int tbl_add(struct table *       instance,
         list_add(&instance->entries, &entry->next);
 
         spin_unlock(&instance->lock);
+
+        LOG_DBG("Entry %pK added successfully to the table", entry);
 
         return 0;
 }
