@@ -385,7 +385,7 @@ struct gha * gha_dup_gfp(gfp_t              flags,
                 return NULL;
         }
 
-        tmp = rkmalloc(sizeof(*gha), GFP_KERNEL);
+        tmp = rkmalloc(sizeof(*gha), flags);
         if (!tmp)
                 return NULL;
 
