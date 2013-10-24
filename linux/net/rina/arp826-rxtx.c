@@ -24,6 +24,7 @@
 #include <linux/skbuff.h>
 #include <linux/netdevice.h>
 #include <linux/if_arp.h>
+#include <linux/if_ether.h>
 
 /* FIXME: The following dependencies have to be removed */
 #define RINA_PREFIX "arp826-rxtx"
@@ -103,11 +104,11 @@ static struct sk_buff * arp_create(struct net_device * dev,
         arp = (struct arp_header *) skb_put(skb, length);
 
         skb->dev      = dev;
-        skb->protocol = htons(ptype);
+        skb->protocol = htons(ETH_P_ARP);
 
         /* Fill the device header for the ARP frame */
         if (dev_hard_header(skb, dev,
-                            ptype,
+                            ETH_P_ARP,
                             gha_address(tha),
                             gha_address(sha),
                             skb->len) < 0) {
@@ -264,14 +265,14 @@ int arp_send_request(uint16_t            ptype,
 
         LOG_DBG("Creating an ARP packet");
         skb = arp_create(dev,
-                         ARP_REPLY, ptype,
+                         ARP_REQUEST, ptype,
                          tmp_spa, sha, tmp_tpa, tha);
 
         gpa_destroy(tmp_spa);
         gpa_destroy(tmp_tpa);
 #else
         skb = arp_create(dev,
-                         ARP_REPLY, ptype,
+                         ARP_REQUEST, ptype,
                          spa, sha, tpa, tha);
 #endif
 
@@ -335,14 +336,14 @@ static int process(const struct sk_buff * skb,
         oper  = ntohs(header->oper);
 
         LOG_DBG("Decoded ARP header:");
-        LOG_DBG("  Hardware type           = 0x%02x", htype);
-        LOG_DBG("  Protocol type           = 0x%02x", ptype);
+        LOG_DBG("  Hardware type           = 0x%04X", htype);
+        LOG_DBG("  Protocol type           = 0x%04X", ptype);
         LOG_DBG("  Hardware address length = %d",     hlen);
         LOG_DBG("  Protocol address length = %d",     plen);
-        LOG_DBG("  Operation               = 0x%02x", oper);
+        LOG_DBG("  Operation               = 0x%04X", oper);
 
         if (header->htype != htons(HW_TYPE_ETHER)) {
-                LOG_ERR("Unhandled ARP hardware type 0x%02x", header->htype);
+                LOG_ERR("Unhandled ARP hardware type 0x%04X", header->htype);
                 return -1;
         }
         if (hlen != 6) {
@@ -352,7 +353,7 @@ static int process(const struct sk_buff * skb,
 
         operation = ntohs(header->oper);
         if (operation != ARP_REPLY && operation != ARP_REQUEST) {
-                LOG_ERR("Unhandled ARP operation 0x%02x", operation);
+                LOG_ERR("Unhandled ARP operation 0x%04X", operation);
                 return -1;
         }
 
@@ -366,6 +367,8 @@ static int process(const struct sk_buff * skb,
         tpa = ptr; ptr += header->plen;
 
         LOG_DBG("Fetching addresses");
+
+        /* FIXME: Add some dumps of these addresses */
         tmp_spa = gpa_create_gfp(GFP_ATOMIC, spa, plen);
         tmp_sha = gha_create_gfp(GFP_ATOMIC, MAC_ADDR_802_3, sha);
         tmp_tpa = gpa_create_gfp(GFP_ATOMIC, tpa, plen);
@@ -373,11 +376,11 @@ static int process(const struct sk_buff * skb,
 
 #if HAVE_RINARP
         LOG_DBG("Shrinking as needed");
-        if (gpa_address_shrink(tmp_spa, 0x00)) {
+        if (gpa_address_shrink_gfp(tmp_spa, 0x00, GFP_ATOMIC)) {
                 LOG_ERR("Problems parsing the source GPA");
                 return -1;
         }
-        if (gpa_address_shrink(tmp_tpa, 0x00)) {
+        if (gpa_address_shrink_gfp(tmp_tpa, 0x00, GFP_ATOMIC)) {
                 LOG_ERR("Got problems parsing the target GPA");
                 return -1;
         }
@@ -386,35 +389,75 @@ static int process(const struct sk_buff * skb,
         /* Finally process the entry */
         switch (operation) {
         case ARP_REQUEST: {
-                struct table *             tbl;
-                const struct table_entry * entry;
-                const struct table_entry * req_addr;
-                const struct gha *         target_ha;
+                struct table *             tbl       = NULL;
+                const struct table_entry * entry     = NULL;
+                const struct table_entry * req_addr  = NULL;
+                const struct gha *         target_ha = NULL;
 
                 /* FIXME: Should we add all ARP Requests? */
-                /* Do we have it in the cache ? */
-                tbl   = tbls_find(ptype);
-                entry = tbl_find_by_gpa(tbl, tmp_spa);
 
-                if (!entry) {
-                        if (tbl_add(tbl, tmp_spa, tmp_sha)) {
-                                LOG_ERR("Bollocks. Can't add in table.");
-                                return -1;
-                        }
-                } else {
-                        if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha))
-                                LOG_ERR("Failed to update table");
+                /* Do we have it in the cache ? */
+                tbl = tbls_find(ptype);
+                if (!tbl) {
+                        LOG_ERR("I don't have a table for ptype 0x%04X",
+                                ptype);
                         return -1;
                 }
 
-                req_addr  = tbl_find_by_gpa(tbl, tmp_tpa);
+                /*
+                 * FIXME: We do a double lookup here. Please remove it, all
+                 *        the CPUs (and trees) out there will apreciate that...
+                 */
+                entry = tbl_find_by_gpa(tbl, tmp_spa);
+                if (!entry) {
+                        struct table_entry * tmp;
+
+                        LOG_DBG("Adding new entry to the table");
+
+                        tmp = tble_create_gfp(tmp_spa,
+                                              tmp_sha,
+                                              GFP_ATOMIC);
+                        if (!tmp)
+                                return -1;
+                        if (tbl_add(tbl, tmp)) {
+                                LOG_ERR("AAAAAAARRggh can't add in table");
+                                tble_destroy(tmp);
+                                return -1;
+                        }
+                } else {
+                        LOG_DBG("Updating old entry into the table");
+
+                        if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha)) {
+                                LOG_ERR("Failed to update table");
+                                return -1;
+                        }
+                }
+
+                ASSERT(entry);
+
+                LOG_DBG("Got the entry, anyway (%pK)", entry);
+
+                req_addr = tbl_find_by_gpa(tbl, tmp_tpa);
+                if (!req_addr) {
+                        LOG_ERR("Cannot find this TPA in my tables, "
+                                "bailing out");
+                        return -1;
+                }
+
                 target_ha = tble_ha(req_addr);
+                if (!target_ha) {
+                        LOG_ERR("Cannot get a good target HA");
+                        return -1;
+                }
 
                 if (arp_send_reply(ptype,
                                    tmp_tpa, tmp_tha, tmp_spa, tmp_sha)) {
                         /* FIXME: Couldn't send reply ... */
+                        LOG_ERR("Couldn't send reply");
                         return -1;
                 }
+
+                LOG_DBG("Request replied successfully");
         }
                 break;
 
@@ -423,12 +466,16 @@ static int process(const struct sk_buff * skb,
                         LOG_ERR("Cannot resolve with this reply ...");
                         return -1;
                 }
+
+                LOG_DBG("Resolution in progress, please wait ...");
         }
                 break;
 
         default:
                 BUG();
         }
+
+        LOG_DBG("Processing completed successfully");
 
         return 0;
 }
@@ -443,23 +490,30 @@ int arp_receive(struct sk_buff *     skb,
         int                       total_length;
         struct table *            cl;
 
-        if (!dev || !skb) {
-                LOG_ERR("Wrong device or skb");
+        if (!skb) {
+                LOG_ERR("No skb passed ?");
+                return 0;
+        }
+
+        if (!dev) {
+                LOG_ERR("No device passed ?");
+                kfree_skb(skb);
                 return 0;
         }
 
         if (dev->flags & IFF_NOARP            ||
             skb->pkt_type == PACKET_OTHERHOST ||
             skb->pkt_type == PACKET_LOOPBACK) {
-                kfree_skb(skb);
                 LOG_DBG("This ARP is not for us "
                         "(no arp, other-host or loopback)");
+                kfree_skb(skb);
                 return 0;
         }
 
         /* We only receive type-1 headers (this handler could be reused) */
         if (skb->dev->type != HW_TYPE_ETHER) {
                 LOG_DBG("Unhandled device type %d", skb->dev->type);
+                kfree_skb(skb);
                 return 0;
         }
 
@@ -468,6 +522,7 @@ int arp_receive(struct sk_buff *     skb,
         skb = skb_share_check(skb, GFP_ATOMIC);
         if (!skb) {
                 LOG_ERR("This ARP cannot be shared!");
+                kfree_skb(skb);
                 return 0;
         }
 
@@ -488,13 +543,11 @@ int arp_receive(struct sk_buff *     skb,
         }
 
         /* FIXME: There's no need to lookup it here ... */
-        cl = tbls_find(header->ptype);
+        cl = tbls_find(ntohs(header->ptype));
         if (!cl) {
-#if 0
-                /* This log is too noisy */
+                /* This log is too noisy ... but necessary for now :) */
                 LOG_DBG("I don't have a table to handle this ARP "
-                        "(ptype = 0x%02x)", header->ptype);
-#endif
+                        "(ptype = 0x%04X)", ntohs(header->ptype));
                 kfree_skb(skb);
                 return 0;
         }
@@ -516,6 +569,7 @@ int arp_receive(struct sk_buff *     skb,
                 kfree_skb(skb);
                 return 0;
         }
+
         consume_skb(skb);
 
         return 0;

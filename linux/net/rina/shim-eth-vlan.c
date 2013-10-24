@@ -238,7 +238,7 @@ static bool is_vlan_id_ok(unsigned long vlan_id)
 {
         if (vlan_id < 0 || vlan_id > 4095 /* 0xFFF */) {
                 /* Out of bounds */
-                return 0;
+                return false;
         }
 
         ASSERT(vlan_id >= 0 && vlan_id <= 4095);
@@ -252,10 +252,10 @@ static bool is_vlan_id_ok(unsigned long vlan_id)
 
         if (vlan_id == 0 || vlan_id == 1 || vlan_id == 4095) {
                 /* Reserved */
-                return 0;
+                return false;
         }
 
-        return 1;
+        return true;
 }
 
 static string_t * create_vlan_interface_name(string_t *    interface_name,
@@ -582,7 +582,7 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
         }
 
         /* Remove from ARP cache */
-        rinarp_remove(data->handle);
+        rinarp_remove(data->handle); /* FIXME: check data->handle first ? */
 
         name_destroy(data->app_name);
         data->app_name = NULL;

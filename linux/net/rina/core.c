@@ -106,6 +106,8 @@ static int __init rina_core_init(void)
                  RINA_VERSION_MINOR(version),
                  RINA_VERSION_MICRO(version));
 
+        LOG_INFO("Don't panic ...");
+
         return 0;
 }
 
