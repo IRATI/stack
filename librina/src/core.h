@@ -105,52 +105,6 @@ public:
 };
 
 /**
- * Class used by the thread that sent a Netlink message
- * to wait for the response
- */
-class PendingNetlinkMessage: public ConditionVariable {
-	BaseNetlinkMessage * responseMessage;
-	unsigned int sequenceNumber;
-
-public:
-	PendingNetlinkMessage(unsigned int sequenceNumber);
-	~PendingNetlinkMessage() throw ();
-	BaseNetlinkMessage * getResponseMessage();
-	void setResponseMessage(BaseNetlinkMessage * responseMessage);
-	unsigned int getSequenceNumber() const;
-};
-
-/**
- * Encapsulates the information of a Netlink session (defined as a exchange of
- * messages between two netlink sockets)
- */
-class NetlinkSession {
-
-	/** The port id where the destination Netlink socket is listening */
-	unsigned int sessionId;
-
-	/**
-	 * Stores the local Netlink request messages that are waiting for a reply
-	 */
-	std::map<unsigned int, PendingNetlinkMessage *> localPendingMessages;
-
-	/**
-	 * Stores the Netlink request messages from peers
-	 * that are waiting for a response
-	 */
-	std::map<unsigned int, BaseNetlinkMessage *> remotePendingMessages;
-
-public:
-	NetlinkSession(int sessionId);
-	~NetlinkSession();
-	void putLocalPendingMessage(PendingNetlinkMessage* pendingMessage);
-	PendingNetlinkMessage* takeLocalPendingMessage(
-			unsigned int sequenceNumber);
-	void putRemotePendingMessage(BaseNetlinkMessage* pendingMessage);
-	BaseNetlinkMessage* takeRemotePendingMessage(unsigned int sequenceNumber);
-};
-
-/**
  * Main class of libRINA. Initializes the NetlinkManager,
  * the eventsQueue, and the NetlinkMessageReader thread.
  */
@@ -168,66 +122,23 @@ class RINAManager {
 	/** The lock for send/receive operations */
 	Lockable sendReceiveLock;
 
-	/** State of the netlink sessions */
-	std::map<unsigned int, NetlinkSession*> netlinkSessions;
-
 	/** Keeps the mappings between netlink port ids and app/dif names */
 	NetlinkPortIdMap netlinkPortIdMap;
 
 	void initialize();
-
-	/**
-	 * Retrieves an existing Netlink session, or creates one if none is
-	 * available
-	 */
-	NetlinkSession* getAndCreateNetlinkSession(unsigned int sessionId);
-
-	/** Return an existing Netlink session -NULL if there is none -*/
-	NetlinkSession* getNetlinkSession(unsigned int sessionId);
-
-	/** Send a Netlink request message */
-	void _sendRequestMessage(
-	                BaseNetlinkMessage * netlinkMessage)
-	throw (NetlinkException);
 public:
 	RINAManager();
 	RINAManager(unsigned int netlinkPort);
 	~RINAManager();
 
-	BaseNetlinkMessage * sendRequestAndWaitForResponse(
-			BaseNetlinkMessage * request,
-			const std::string& errorDescription)
-			throw(NetlinkException);
-
-	/** Sends a request message and waits for the reply*/
-	BaseNetlinkMessage * sendRequestMessageAndWaitForResponse(
-			BaseNetlinkMessage * netlinkMessage)
-	throw (NetlinkException);
-
-	/** Sends a message without waiting for reply */
-	void sendRequestMessage(BaseNetlinkMessage * netlinkMessage)
-	throw (NetlinkException);
-
-	/** Send a response message or a notificaiton message */
-	void sendResponseOrNotficationMessage(
-			BaseNetlinkMessage * netlinkMessage)
+	/** Sends a NL message*/
+	void sendMessage(BaseNetlinkMessage * netlinkMessage)
 	throw (NetlinkException);
 
 	/**
-	 * Notify about the reception of a Netlink response message. Will
-	 * cause the thread that was waiting for the response to wake up.
+	 * Notify about the reception of a Netlink message
 	 */
-	void netlinkResponseMessageArrived(BaseNetlinkMessage * response);
-
-	/**
-	 * Notify about the reception of a Netlink request message.
-	 */
-	void netlinkRequestMessageArrived(BaseNetlinkMessage * request);
-
-	/**
-	 * Notify about the reception of a Netlink notificaiton message
-	 */
-	void netlinkNotificationMessageArrived(BaseNetlinkMessage * notification);
+	void netlinkMessageArrived(BaseNetlinkMessage * notification);
 
 	/**
 	 * An OS Process has finalized. Retrieve the information associated to

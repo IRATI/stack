@@ -14,8 +14,8 @@ public class DestroyIPCProcessCommand extends ConsoleCommand{
 	
 	private long ipcProcessId = 0;
 	
-	public DestroyIPCProcessCommand(IPCManager ipcManager){
-		super(ID, ipcManager);
+	public DestroyIPCProcessCommand(IPCManager ipcManager, IPCManagerConsole console){
+		super(ID, ipcManager, console);
 	}
 	
 	@Override

@@ -289,8 +289,7 @@ int testAppAllocateFlowResponseMessage() {
 	int returnValue = 0;
 
 	AppAllocateFlowResponseMessage message;
-	message.setAccept(true);
-	message.setDenyReason("No, we cannot!");
+	message.setResult(0);
 	message.setNotifySource(true);
 
 	struct nl_msg* netlinkMessage;
@@ -318,13 +317,9 @@ int testAppAllocateFlowResponseMessage() {
 				<< "\n";
 		returnValue = -1;
 
-	} else if (message.isAccept() != recoveredMessage->isAccept()) {
-		std::cout << "Accept flag on original and recovered messages"
+	} else if (message.getResult() != recoveredMessage->getResult()) {
+		std::cout << "Result on original and recovered messages"
 				<< " are different\n";
-		returnValue = -1;
-	} else if (message.getDenyReason() != recoveredMessage->getDenyReason()) {
-		std::cout << "Deny reason on original and recovered "
-				<< "messages are different\n";
 		returnValue = -1;
 	} else if (message.isNotifySource()
 			!= recoveredMessage->isNotifySource()) {
@@ -547,9 +542,9 @@ int testAppRegisterApplicationRequestMessage() {
 		ApplicationRegistrationInformation(
 				APPLICATION_REGISTRATION_SINGLE_DIF);
 	appRegInfo.setDIFName(*difName);
+	appRegInfo.setApplicationName(*applicationName);
 
 	message->setApplicationRegistrationInformation(appRegInfo);
-	message->setApplicationName(*applicationName);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -578,8 +573,9 @@ int testAppRegisterApplicationRequestMessage() {
 		std::cout << "Error parsing Register Application Request Message "
 				<< "\n";
 		returnValue = -1;
-	} else if (message->getApplicationName()
-			!= recoveredMessage->getApplicationName()) {
+	} else if (message->getApplicationRegistrationInformation().getApplicationName()
+			!= recoveredMessage->getApplicationRegistrationInformation().
+			getApplicationName()) {
 		std::cout << "Application name on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;

@@ -238,7 +238,7 @@ static bool is_vlan_id_ok(unsigned long vlan_id)
 {
         if (vlan_id < 0 || vlan_id > 4095 /* 0xFFF */) {
                 /* Out of bounds */
-                return 0;
+                return false;
         }
 
         ASSERT(vlan_id >= 0 && vlan_id <= 4095);
@@ -252,10 +252,10 @@ static bool is_vlan_id_ok(unsigned long vlan_id)
 
         if (vlan_id == 0 || vlan_id == 1 || vlan_id == 4095) {
                 /* Reserved */
-                return 0;
+                return false;
         }
 
-        return 1;
+        return true;
 }
 
 static string_t * create_vlan_interface_name(string_t *    interface_name,
@@ -582,7 +582,7 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
         }
 
         /* Remove from ARP cache */
-        rinarp_remove(data->handle);
+        rinarp_remove(data->handle); /* FIXME: check data->handle first ? */
 
         name_destroy(data->app_name);
         data->app_name = NULL;
@@ -1154,8 +1154,6 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
         /* Retrieve the instance */
         list_for_each_entry_safe(pos, next, &data->instances, list) {
                 if (pos->id == instance->data->id) {
-                        LOG_DBG("Got !");
-
                         /* Remove packet handler if there is one */
                         if (pos->eth_vlan_packet_type->dev)
                                 __dev_remove_pack(pos->eth_vlan_packet_type);
@@ -1166,8 +1164,6 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         /* Destroy it */
                         if (pos->name)
                                 name_destroy(pos->name);
-
-                        LOG_DBG("DIF name at %pK", pos->dif_name);
 
                         if (pos->dif_name)
                                 name_destroy(pos->dif_name);

@@ -73,7 +73,7 @@ public class SDUSender implements Runnable {
 				ex.printStackTrace();
 				try{
 					if (flow.getState() == FlowState.FLOW_ALLOCATED){
-						rina.getIpcManager().deallocateFlow(flow.getPortId());
+						rina.getIpcManager().requestFlowDeallocation(flow.getPortId());
 					}
 				}catch(Exception e){
 				}

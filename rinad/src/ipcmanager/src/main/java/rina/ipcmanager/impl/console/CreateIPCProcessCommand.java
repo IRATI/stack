@@ -17,8 +17,8 @@ public class CreateIPCProcessCommand extends ConsoleCommand{
 	ApplicationProcessNamingInformation namingInfo = null;
 	private String type = null;
 	
-	public CreateIPCProcessCommand(IPCManager ipcManager){
-		super(ID, ipcManager);
+	public CreateIPCProcessCommand(IPCManager ipcManager, IPCManagerConsole console){
+		super(ID, ipcManager, console);
 	}
 	
 	@Override

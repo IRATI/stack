@@ -13,8 +13,8 @@ public class PrintConfigurationCommand extends ConsoleCommand{
 	public static final String ID = "printconfig";
 	private static final String USAGE = "printconfig";
 	
-	public PrintConfigurationCommand(IPCManager ipcManager){
-		super(ID, ipcManager);
+	public PrintConfigurationCommand(IPCManager ipcManager, IPCManagerConsole console){
+		super(ID, ipcManager, console);
 	}
 	
 	@Override

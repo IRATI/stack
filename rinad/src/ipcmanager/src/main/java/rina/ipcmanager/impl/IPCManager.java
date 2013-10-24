@@ -1,13 +1,13 @@
 package rina.ipcmanager.impl;
 
+import eu.irati.librina.AllocateFlowResponseEvent;
 import eu.irati.librina.ApplicationManagerSingleton;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.ApplicationUnregistrationRequestEvent;
-import eu.irati.librina.AssignToDIFException;
+import eu.irati.librina.AssignToDIFResponseEvent;
 import eu.irati.librina.CreateIPCProcessException;
 import eu.irati.librina.DIFConfiguration;
-import eu.irati.librina.DIFInformation;
 import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
@@ -17,8 +17,12 @@ import eu.irati.librina.IPCEventType;
 import eu.irati.librina.IPCManagerInitializationException;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
-import eu.irati.librina.IPCProcessPointerVector;
+import eu.irati.librina.IpcmAllocateFlowRequestResultEvent;
+import eu.irati.librina.IpcmDeallocateFlowResponseEvent;
+import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
+import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
 import eu.irati.librina.OSProcessFinalizedEvent;
+import eu.irati.librina.UpdateDIFConfigurationResponseEvent;
 import eu.irati.librina.rina;
 
 import java.io.ByteArrayOutputStream;
@@ -34,12 +38,12 @@ import org.apache.commons.logging.LogFactory;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import rina.ipcmanager.impl.conf.DIFProperties;
 import rina.ipcmanager.impl.conf.IPCProcessToCreate;
 import rina.ipcmanager.impl.conf.RINAConfiguration;
 import rina.ipcmanager.impl.console.IPCManagerConsole;
 import rina.ipcmanager.impl.helpers.ApplicationRegistrationManager;
 import rina.ipcmanager.impl.helpers.FlowManager;
+import rina.ipcmanager.impl.helpers.IPCProcessManager;
 
 /**
  * The IPC Manager is the component of a DAF that manages the local IPC 
@@ -73,6 +77,7 @@ public class IPCManager {
 	private ApplicationManagerSingleton applicationManager = null;
 	private IPCEventProducerSingleton ipcEventProducer = null;
 	
+	private IPCProcessManager ipcProcessManager = null;
 	private ApplicationRegistrationManager applicationRegistrationManager = null;
 	private FlowManager flowManager = null;
 	
@@ -95,12 +100,10 @@ public class IPCManager {
 		ipcProcessFactory = rina.getIpcProcessFactory();
 		applicationManager = rina.getApplicationManager();
 		ipcEventProducer = rina.getIpcEventProducer();
+		ipcProcessManager = new IPCProcessManager(ipcProcessFactory);
 		applicationRegistrationManager = new ApplicationRegistrationManager(
-				ipcProcessFactory, applicationManager);
-		flowManager = new FlowManager(ipcProcessFactory, applicationManager);
-		
-		log.info("Bootstrapping IPC Manager ...");
-		bootstrap();
+				ipcProcessManager, applicationManager);
+		flowManager = new FlowManager(ipcProcessManager, applicationManager);
 	}
 	
 	private void initializeConfiguration(){
@@ -159,7 +162,7 @@ public class IPCManager {
 	 * to DIFs, cause them to enroll to other IPC processes etc, as 
 	 * specified in the config file.
 	 */
-	private void bootstrap(){
+	public void bootstrap(){
 		RINAConfiguration configuration = RINAConfiguration.getInstance();
 		IPCProcessToCreate ipcProcessToCreate = null;
 		ApplicationProcessNamingInformation processNamingInfo = null;
@@ -182,8 +185,8 @@ public class IPCManager {
 			
 			if (ipcProcessToCreate.getDifName() != null){
 				try{
-					assignToDIF(ipcProcess, ipcProcessToCreate.getDifName());
-				}catch(AssignToDIFException ex){
+					ipcProcessManager.requestAssignToDIF(ipcProcess.getId(), ipcProcessToCreate.getDifName());
+				}catch(Exception ex){
 					log.error(ex.getMessage() + ". Problems assigning IPC Process to DIF " 
 							+ ipcProcessToCreate.getDifName());
 					continue;
@@ -202,18 +205,6 @@ public class IPCManager {
 		}
 	}
 	
-	public void startEventLoopWorkers(){
-		int eventLoopWorkers = 
-				RINAConfiguration.getInstance().getLocalConfiguration().getEventLoopWorkers();
-		log.info("Starting " + eventLoopWorkers + " event loop workers");
-		
-		Runnable worker = null;
-		for(int i=0; i<eventLoopWorkers; i++){
-			worker = new IPCManagerEventLoopWorker(this);
-			executorService.execute(worker);
-		}
-	}
-	
 	public void executeEventLoop(){
 		IPCEvent event = null;
 		
@@ -222,7 +213,8 @@ public class IPCManager {
 				event = ipcEventProducer.eventWait();
 				processEvent(event);
 			}catch(Exception ex){
-				ex.printStackTrace();
+				log.error("Problems processing event of type " + event.getType() + 
+						". " + ex.getMessage());
 			}
 		}
 	}
@@ -231,23 +223,38 @@ public class IPCManager {
 		log.info("Got event of type: "+event.getType() 
 				+ " and sequence number: "+event.getSequenceNumber());
 		
-		if (event.getType() == IPCEventType.APPLICATION_REGISTRATION_REQUEST_EVENT){
+		if (event.getType() == IPCEventType.APPLICATION_REGISTRATION_REQUEST_EVENT) {
 			ApplicationRegistrationRequestEvent appRegReqEvent = (ApplicationRegistrationRequestEvent) event;
-			applicationRegistrationManager.registerApplication(appRegReqEvent);
-		}else if (event.getType() == IPCEventType.APPLICATION_UNREGISTRATION_REQUEST_EVENT){
+			applicationRegistrationManager.requestApplicationRegistration(appRegReqEvent);
+		} else if (event.getType() == IPCEventType.IPCM_REGISTER_APP_RESPONSE_EVENT) {
+			IpcmRegisterApplicationResponseEvent appRespEvent = (IpcmRegisterApplicationResponseEvent) event;
+			applicationRegistrationManager.registerApplicationResponse(appRespEvent);
+		} else if (event.getType() == IPCEventType.APPLICATION_UNREGISTRATION_REQUEST_EVENT){
 			ApplicationUnregistrationRequestEvent appUnregReqEvent = (ApplicationUnregistrationRequestEvent) event;
-			applicationRegistrationManager.unregisterApplication(appUnregReqEvent);
-		}else if (event.getType() == IPCEventType.FLOW_ALLOCATION_REQUESTED_EVENT){
+			applicationRegistrationManager.requestApplicationUnregistration(appUnregReqEvent);
+		} else if (event.getType() == IPCEventType.IPCM_UNREGISTER_APP_RESPONSE_EVENT) {
+			IpcmUnregisterApplicationResponseEvent appRespEvent = (IpcmUnregisterApplicationResponseEvent) event;
+			applicationRegistrationManager.unregisterApplicationResponse(appRespEvent);
+		} else if (event.getType() == IPCEventType.FLOW_ALLOCATION_REQUESTED_EVENT){
 			FlowRequestEvent flowReqEvent = (FlowRequestEvent) event;
 			if (flowReqEvent.isLocalRequest()){
-				flowManager.allocateFlowLocal(flowReqEvent);
+				flowManager.requestAllocateFlowLocal(flowReqEvent);
 			}else{
 				flowManager.allocateFlowRemote(flowReqEvent);
 			}
-		}else if (event.getType() == IPCEventType.FLOW_DEALLOCATION_REQUESTED_EVENT){
+		} else if (event.getType() == IPCEventType.IPCM_ALLOCATE_FLOW_REQUEST_RESULT){
+			IpcmAllocateFlowRequestResultEvent flowEvent = (IpcmAllocateFlowRequestResultEvent) event;
+			flowManager.allocateFlowRequestResult(flowEvent);
+		} else if (event.getType() == IPCEventType.ALLOCATE_FLOW_RESPONSE_EVENT){
+			AllocateFlowResponseEvent flowEvent = (AllocateFlowResponseEvent) event;
+			flowManager.allocateFlowResponse(flowEvent);
+		} else if (event.getType() == IPCEventType.FLOW_DEALLOCATION_REQUESTED_EVENT){
 			FlowDeallocateRequestEvent flowDeReqEvent = (FlowDeallocateRequestEvent) event;
-			flowManager.deallocateFlow(flowDeReqEvent);
-		}else if (event.getType() == IPCEventType.FLOW_DEALLOCATED_EVENT){
+			flowManager.deallocateFlowRequest(flowDeReqEvent);
+		} else if (event.getType() == IPCEventType.IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT){
+			IpcmDeallocateFlowResponseEvent flowDeEvent = (IpcmDeallocateFlowResponseEvent) event;
+			flowManager.deallocateFlowResponse(flowDeEvent);
+		} else if (event.getType() == IPCEventType.FLOW_DEALLOCATED_EVENT){
 			FlowDeallocatedEvent flowDeEvent = (FlowDeallocatedEvent) event;
 			flowManager.flowDeallocated(flowDeEvent);
 		}else if (event.getType().equals(IPCEventType.GET_DIF_PROPERTIES)){
@@ -267,28 +274,18 @@ public class IPCManager {
 				//Should we destroy the state in the kernel? Or try to create another
 				//IPC Process in user space to bring it back?
 			}
+		} else if (event.getType().equals(IPCEventType.ASSIGN_TO_DIF_RESPONSE_EVENT)){
+			AssignToDIFResponseEvent atrEvent = (AssignToDIFResponseEvent) event;
+			ipcProcessManager.assignToDIFResponse(atrEvent);
+			console.responseArrived(event);
+		} else if (event.getType().equals(IPCEventType.UPDATE_DIF_CONFIG_RESPONSE_EVENT)){
+			UpdateDIFConfigurationResponseEvent atrEvent = (UpdateDIFConfigurationResponseEvent) event;
+			ipcProcessManager.updateDIFConfigurationResponse(atrEvent);
 		}
 	}
 	
 	public String getIPCProcessesInformationAsString(){
-		IPCProcessPointerVector ipcProcesses = ipcProcessFactory.listIPCProcesses();
-		IPCProcess ipcProcess = null;
-		DIFInformation difInformation = null;
-		String result = "";
-		
-		for(int i=0; i<ipcProcesses.size(); i++){
-			ipcProcess = ipcProcesses.get(i);
-			result = result + "Id: "+ ipcProcess.getId() + "\n";
-			result = result + "    Type: " + ipcProcess.getType() + "\n";
-			result = result + "    Name: " + ipcProcess.getName().toString() + "\n";
-			difInformation = ipcProcess.getDIFInformation();
-			if (difInformation != null){
-				result = result + "    Member of DIF: " + 
-						difInformation.getDifName().getProcessName() + "\n"; 
-			}
-		}
-		
-		return result;
+		return ipcProcessManager.getIPCProcessesInformationAsString();
 	}
 	
 	public String getSystemCapabilitiesAsString(){
@@ -310,7 +307,7 @@ public class IPCManager {
 	 */
 	public IPCProcess createIPCProcess(ApplicationProcessNamingInformation name, 
 			String type) throws CreateIPCProcessException {
-		return ipcProcessFactory.create(name, type);
+		return ipcProcessManager.createIPCProcess(name, type);
 	}
 	
 	/**
@@ -322,7 +319,7 @@ public class IPCManager {
 		//and terminate all application registrations.
 		
 		//Destroy the IPC Process
-		this.ipcProcessFactory.destroy(ipcProcessId);
+		ipcProcessManager.destroyIPCProcess(ipcProcessId);
 	}
 	
 	/**
@@ -333,35 +330,20 @@ public class IPCManager {
 	 * @param difName
 	 * @throws Exception
 	 */
-	public void assignToDIF(long ipcProcessID, String difName) throws Exception{
-		IPCProcess ipcProcess = this.ipcProcessFactory.getIPCProcess(ipcProcessID);
-		assignToDIF(ipcProcess, difName);
+	public long requestAssignToDIF(long ipcProcessID, String difName) throws Exception{
+		return ipcProcessManager.requestAssignToDIF(ipcProcessID, difName);
 	}
 	
-	private void assignToDIF(IPCProcess ipcProcess, String difName) throws AssignToDIFException{
-		DIFInformation difInformation = new DIFInformation();
-		ApplicationProcessNamingInformation difNamingInfo = 
-				new ApplicationProcessNamingInformation();
-		difNamingInfo.setProcessName(difName);
-		difInformation.setDifName(difNamingInfo);
-		difInformation.setDifType(ipcProcess.getType());
-		
-		DIFProperties difProperties = 
-				RINAConfiguration.getInstance().getDIFConfiguration(difName);
-		if (difProperties != null && difProperties.getConfigParameters() != null){
-			for(int j=0; j<difProperties.getConfigParameters().size(); j++){
-				difInformation.getDifConfiguration().addParameter(
-						difProperties.getConfigParameters().get(j));
-			}
-		}
-		
-		ipcProcess.assignToDIF(difInformation);
-	}
 	
-	public void updateDIFConfiguration(long ipcProcessID,
+	/**
+	 * Updates the configuration of the IPC Process identified by 'ipcProcessId'
+	 * @param ipcProcessID
+	 * @param difConfiguration
+	 * @throws Exception
+	 */
+	public long requestUpdateDIFConfiguration(long ipcProcessID,
 				DIFConfiguration difConfiguration) throws Exception{
-		IPCProcess ipcProcess = this.ipcProcessFactory.getIPCProcess(ipcProcessID);
-		ipcProcess.updateDIFConfiguration(difConfiguration);
+		 return ipcProcessManager.requestUpdateDIFConfiguration(ipcProcessID, difConfiguration);
 	}
 
 }

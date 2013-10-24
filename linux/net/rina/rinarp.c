@@ -1,8 +1,8 @@
 /*
  * RINARP
  *
- *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,6 +38,18 @@ struct rinarp_handle {
         struct gha * ha;
 };
 
+static void handle_destroy(struct rinarp_handle * handle)
+{
+        ASSERT(handle);
+
+        /* This function should work in (almost) all cases */
+
+        if (handle->pa) gpa_destroy(handle->pa);
+        if (handle->ha) gha_destroy(handle->ha);
+
+        rkfree(handle);
+}
+
 static struct rinarp_handle * handle_create(struct gpa * pa, struct gha * ha)
 {
         struct rinarp_handle * handle;
@@ -47,32 +59,18 @@ static struct rinarp_handle * handle_create(struct gpa * pa, struct gha * ha)
                 return NULL;
         }
 
-        handle = rkmalloc(sizeof(*handle), GFP_KERNEL);
+        handle = rkzalloc(sizeof(*handle), GFP_KERNEL);
         if (!handle)
                 return NULL;
 
         handle->pa = gpa_dup(pa);
-        if (!handle->pa) {
-                rkfree(handle);
+        handle->ha = gha_dup(ha);
+        if (!handle->pa || !handle->ha) {
+                handle_destroy(handle);
                 return NULL;
         }
 
-        handle->ha = gha_dup(ha);
-        if (!handle->ha) {
-                gpa_destroy(handle->pa);
-                rkfree(handle);
-        }
-
         return handle;
-}
-
-static void handle_destroy(struct rinarp_handle * handle)
-{
-        ASSERT(handle);
-
-        if (handle->pa) gpa_destroy(handle->pa);
-        if (handle->ha) gha_destroy(handle->ha);
-        rkfree(handle);
 }
 
 static bool handle_is_ok(struct rinarp_handle * handle)

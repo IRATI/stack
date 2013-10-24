@@ -50,21 +50,21 @@ static struct packet_type arp826_packet_type __read_mostly = {
 static int protocol_add(uint16_t ptype,
                         size_t   hlen)
 {
-        LOG_DBG("Adding protocol 0x%02x, hlen = %zd", ptype, hlen);
+        LOG_DBG("Adding protocol 0x%04X, hlen = %zd", ptype, hlen);
 
         if (tbls_create(ptype, hlen)) {
-                LOG_ERR("Cannot add protocol 0x%02x, hlen = %zd", ptype, hlen);
+                LOG_ERR("Cannot add protocol 0x%04X, hlen = %zd", ptype, hlen);
                 return -1;
         }
 
-        LOG_DBG("Protocol type 0x%02x added successfully", ptype);
+        LOG_DBG("Protocol type 0x%04X added successfully", ptype);
 
         return 0;
 }
 
 static void protocol_remove(uint16_t ptype)
 {
-        LOG_DBG("Removing protocol 0x%02x", ptype);
+        LOG_DBG("Removing protocol 0x%04X", ptype);
 
         tbls_destroy(ptype);
 }
@@ -74,9 +74,18 @@ static bool regression_tests_gpa(void)
 {
         struct gpa * a;
         struct gpa * b;
+        struct gpa * c;
         uint8_t      name_tmp[] = { 0x01, 0x02, 0x03, 0x04 };
         size_t       len_a_1, len_a_2;
         size_t       len_b_1, len_b_2;
+        uint8_t      gs_tmp[]   = {
+                0x01, 0x02, 0x03, 0x04, 0x05,
+                0x01, 0x02, 0x03, 0x04, 0x05,
+                0x01, 0x02, 0x03, 0x04, 0x05,
+                0x01, 0x02, 0x03, 0x04, 0x05,
+                0x01, 0x02, 0x03, 0x04, 0x05,
+                0x01, 0x02, 0x03, 0x04, 0x05
+        };
 
         LOG_DBG("GPA regression tests");
 
@@ -141,6 +150,35 @@ static bool regression_tests_gpa(void)
 
         gpa_destroy(b);
         gpa_destroy(a);
+
+        LOG_DBG("Regression test #6");
+
+        LOG_DBG("Regression test #6.1");
+        c = gpa_create(gs_tmp, sizeof(gs_tmp));
+        if (!a)
+                return false;
+
+        LOG_DBG("Regression test #6.2");
+        if (gpa_address_length(c) != 30)
+                return false;
+
+        LOG_DBG("Regression test #6.3");
+        if (gpa_address_grow(c, 36, 0x00))
+                return false;
+
+        LOG_DBG("Regression test #6.4");
+        if (gpa_address_length(c) != 36)
+                return false;
+
+        LOG_DBG("Regression test #6.5");
+        if (gpa_address_shrink(c, 0x00))
+                return false;
+
+        LOG_DBG("Regression test #6.5");
+        if (gpa_address_length(c) != 30)
+                return false;
+
+        gpa_destroy(c);
 
         return true;
 }

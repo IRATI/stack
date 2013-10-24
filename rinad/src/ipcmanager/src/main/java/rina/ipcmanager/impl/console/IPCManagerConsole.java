@@ -10,9 +10,14 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import eu.irati.librina.IPCEvent;
 
 import rina.ipcmanager.impl.IPCManager;
 import rina.ipcmanager.impl.conf.RINAConfiguration;
@@ -34,17 +39,60 @@ public class IPCManagerConsole implements Runnable{
 	
 	private Map<String, ConsoleCommand> commands = null;
 	
+	private ReentrantLock lock = null;
+	
+	private long pendingRequestId = -1;
+	
+	private BlockingQueue<IPCEvent> responsesQueue = null;
+	
 	public IPCManagerConsole(IPCManager ipcManager){
 		commands = new Hashtable<String, ConsoleCommand>();
-		commands.put(GetSystemCapabilitiesCommand.ID, new GetSystemCapabilitiesCommand(ipcManager));
-		commands.put(PrintConfigurationCommand.ID, new PrintConfigurationCommand(ipcManager));
-		commands.put(ListIPCProcessesCommand.ID, new ListIPCProcessesCommand(ipcManager));
-		commands.put(CreateIPCProcessCommand.ID, new CreateIPCProcessCommand(ipcManager));
-		commands.put(DestroyIPCProcessCommand.ID, new DestroyIPCProcessCommand(ipcManager));
-		commands.put(AssignToDIFCommand.ID, new AssignToDIFCommand(ipcManager));
-		commands.put(UpdateDIFConfigurationCommand.ID, new UpdateDIFConfigurationCommand(ipcManager));
+		commands.put(GetSystemCapabilitiesCommand.ID, new GetSystemCapabilitiesCommand(ipcManager, this));
+		commands.put(PrintConfigurationCommand.ID, new PrintConfigurationCommand(ipcManager, this));
+		commands.put(ListIPCProcessesCommand.ID, new ListIPCProcessesCommand(ipcManager, this));
+		commands.put(CreateIPCProcessCommand.ID, new CreateIPCProcessCommand(ipcManager, this));
+		commands.put(DestroyIPCProcessCommand.ID, new DestroyIPCProcessCommand(ipcManager, this));
+		commands.put(AssignToDIFCommand.ID, new AssignToDIFCommand(ipcManager, this));
+		commands.put(UpdateDIFConfigurationCommand.ID, new UpdateDIFConfigurationCommand(ipcManager, this));
+		
+		lock = new ReentrantLock();
+		responsesQueue = new LinkedBlockingQueue<IPCEvent>();
 	}
 	
+	public void lock() {
+		lock.lock();
+	}
+	
+	public void unlock() {
+		lock.unlock();
+	}
+
+	public void setPendingRequestId(long pendingRequestId) {
+		this.pendingRequestId = pendingRequestId;
+	}
+	
+	public void responseArrived(IPCEvent ipcEvent) {
+		lock.lock();
+		if (ipcEvent.getSequenceNumber() == pendingRequestId) {
+			try {
+				responsesQueue.put(ipcEvent);
+			} catch (InterruptedException e) {
+			}
+			
+			this.pendingRequestId = -1;
+		}
+		lock.unlock();
+	}
+	
+	public IPCEvent getResponse(){
+		try {
+			return responsesQueue.take();
+		} catch (InterruptedException e) {
+		}
+		
+		return null;
+	}
+
 	public void stop(){
 		try{
 			serverSocket.close();

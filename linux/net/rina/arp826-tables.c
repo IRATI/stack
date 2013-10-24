@@ -58,16 +58,19 @@ static void tble_fini(struct table_entry * entry)
         }
 }
 
-void tble_destroy(struct table_entry * entry)
+int tble_destroy(struct table_entry * entry)
 {
         if (!entry) {
                 LOG_ERR("Bogus table entry, cannot destroy");
-                return;
+                return -1;
         }
 
         tble_fini(entry);
         rkfree(entry);
+
+        return 0;
 }
+EXPORT_SYMBOL(tble_destroy);
 
 /* Takes the ownership of the input GPA */
 static int tble_init(struct table_entry * entry,
@@ -90,17 +93,22 @@ static int tble_init(struct table_entry * entry,
         return 0;
 }
 
-struct table_entry * tble_create(struct gpa * gpa,
-                                 struct gha * gha)
+struct table_entry * tble_create_gfp(struct gpa * gpa,
+                                     struct gha * gha,
+                                     gfp_t        flags)
 {
         struct table_entry * entry;
 
-        if (!gpa_is_ok(gpa) || !gha_is_ok(gha)) {
-                LOG_DBG("Bogus input parameters, cannot create table entry");
+        if (!gpa_is_ok(gpa)) {
+                LOG_DBG("Bogus GPA, cannot create table entry");
+                return NULL;
+        }
+        if (!gha_is_ok(gha)) {
+                LOG_DBG("Bogus GHA, cannot create table entry");
                 return NULL;
         }
 
-        entry = rkmalloc(sizeof(*entry), GFP_KERNEL);
+        entry = rkmalloc(sizeof(*entry), flags);
         if (!entry)
                 return NULL;
 
@@ -111,32 +119,35 @@ struct table_entry * tble_create(struct gpa * gpa,
 
         return entry;
 }
+EXPORT_SYMBOL(tble_create_gfp);
 
-static bool tble_is_ok(const struct table_entry * entry)
+struct table_entry * tble_create(struct gpa * gpa,
+                                 struct gha * gha)
+{ return tble_create_gfp(gpa, gha, GFP_KERNEL); }
+EXPORT_SYMBOL(tble_create);
+
+bool tble_is_ok(const struct table_entry * entry)
 {
         return (entry == NULL         ||
                 !gpa_is_ok(entry->pa) ||
-                !gha_is_ok(entry->ha)) ? 0 : 1;
+                !gha_is_ok(entry->ha)) ? false : true;
 }
 
-#if 0
-static bool tble_is_equal(struct table_entry * entry1,
-                          struct table_entry * entry2)
+bool tble_is_equal(const struct table_entry * entry1,
+                   const struct table_entry * entry2)
 {
         if (!tble_is_ok(entry1))
-                return 0;
+                return false;
         if (!tble_is_ok(entry2))
-                return 0;
+                return false;
 
         if (!gpa_is_equal(entry1->pa, entry2->pa))
-                return 0;
-        if (entry1->hal != entry2->hal)
-                return 0;
-        if (memcmp(entry1->ha, entry2->ha, entry1->hal)) return 0;
+                return false;
+        if (!gha_is_equal(entry1->ha, entry2->ha))
+                return false;
 
-        return 1;
+        return true;
 }
-#endif
 
 const struct gpa * tble_pa(const struct table_entry * entry)
 {
@@ -215,8 +226,16 @@ int tbl_update_by_gpa(struct table *     instance,
 {
         struct table_entry * pos;
 
-        if (!instance || !gpa_is_ok(pa) || !gha_is_ok(ha)) {
-                LOG_ERR("Bogus input parameters, cannot update GPA");
+        if (!instance) {
+                LOG_ERR("Bogus instance, cannot update GPA");
+                return -1;
+        }
+        if (!gpa_is_ok(pa)) {
+                LOG_ERR("Bogus PA, cannot update GPA");
+                return -1;
+        }
+        if (!gha_is_ok(ha)) {
+                LOG_ERR("Bogus HA, cannot update GPA");
                 return -1;
         }
 
@@ -236,14 +255,22 @@ int tbl_update_by_gpa(struct table *     instance,
         return -1;
 }
 
-const struct table_entry * tbl_find(struct table *     instance,
-                                    const struct gpa * pa,
-                                    const struct gha * ha)
+struct table_entry * tbl_find(struct table *     instance,
+                              const struct gpa * pa,
+                              const struct gha * ha)
 {
         struct table_entry * pos;
 
-        if (!instance || !gpa_is_ok(pa) || !gha_is_ok(ha)) {
-                LOG_ERR("Bogus input parameters, cannot find entry");
+        if (!instance) {
+                LOG_ERR("Bogus instance, cannot find entry");
+                return NULL;
+        }
+        if (!gpa_is_ok(pa)) {
+                LOG_ERR("Bogus PA, cannot find entry");
+                return NULL;
+        }
+        if (!gha_is_ok(ha)) {
+                LOG_ERR("Bogus HA, cannot find entry");
                 return NULL;
         }
 
@@ -262,13 +289,17 @@ const struct table_entry * tbl_find(struct table *     instance,
         return NULL;
 }
 
-const struct table_entry * tbl_find_by_gha(struct table *     instance,
-                                           const struct gha * address)
+struct table_entry * tbl_find_by_gha(struct table *     instance,
+                                     const struct gha * address)
 {
         struct table_entry * pos;
 
-        if (!instance || !gha_is_ok(address)) {
-                LOG_ERR("Bogus input parameters, cannot find by GHA");
+        if (!instance) {
+                LOG_ERR("Bogus instance, cannot find by GHA");
+                return NULL;
+        }
+        if (!gha_is_ok(address)) {
+                LOG_ERR("Bogus address, cannot find by GHA");
                 return NULL;
         }
 
@@ -286,67 +317,75 @@ const struct table_entry * tbl_find_by_gha(struct table *     instance,
         return NULL;
 }
 
-const struct table_entry * tbl_find_by_gpa(struct table *     instance,
-                                           const struct gpa * address)
+struct table_entry * tbl_find_by_gpa(struct table *     instance,
+                                     const struct gpa * address)
 {
         struct table_entry * pos;
 
-        if (!instance || !gpa_is_ok(address)) {
-                LOG_ERR("Bogus input parameters, cannot find by GPA");
+        if (!instance) {
+                LOG_ERR("Bogus instance, cannot find by GPA");
+                return NULL;
+        }
+        if (!gpa_is_ok(address)) {
+                LOG_ERR("Bogus address, cannot find by GPA");
                 return NULL;
         }
 
-        spin_lock(&instance->lock);
+        LOG_DBG("Looking for the following address in table");
+        gpa_dump(address);
 
+        LOG_DBG("Showing addresses in table in the meanwhile");
+
+        spin_lock(&instance->lock);
         list_for_each_entry(pos, &instance->entries, next) {
+                gpa_dump(pos->pa);
                 if (gpa_is_equal(pos->pa, address)) {
+                        LOG_DBG("That's the address I need");
                         spin_unlock(&instance->lock);
                         return pos;
                 }
         }
-
         spin_unlock(&instance->lock);
+
+        LOG_DBG("Got no matching address");
 
         return NULL;
 }
 
-int tbl_add(struct table * instance,
-            struct gpa *   pa,
-            struct gha *   ha)
+int tbl_add(struct table *       instance,
+            struct table_entry * entry)
 {
-        struct table_entry * entry;
         struct table_entry * pos;
 
-        if (!instance || !gpa_is_ok(pa) || !gha_is_ok(ha)) {
-                LOG_ERR("Bogus input parameters, cannot add entry to table");
+        if (!instance) {
+                LOG_ERR("Bogus instance, cannot add entry to table");
                 return -1;
         }
-
-        entry = tble_create(pa, ha);
-        if (!entry)
+        if (!entry) {
+                LOG_ERR("Bogus entry, cannot add it to table");
                 return -1;
+        }
 
         spin_lock(&instance->lock);
 
         list_for_each_entry(pos, &instance->entries, next) {
-                if (gha_is_equal(tble_ha(pos), ha) &&
-                    gpa_is_equal(tble_pa(pos), pa)) {
-                        LOG_WARN("We already have this entry ...");
+                if (tble_is_equal(pos, entry)) {
+                        LOG_WARN("We already have an equal entry ...");
                         spin_unlock(&instance->lock);
                         return 0;
                 }
 
                 /* FIXME: What about the other conditions ??? */
-                if (gha_is_equal(tble_ha(pos), ha)) {
-                        LOG_DBG("We already have the same GHA in the cache");
+                if (gha_is_equal(tble_ha(pos), tble_ha(entry))) {
+                        LOG_WARN("We already have the same GHA in the cache");
 
                         /* FIXME: What should we do here? */
 
                         /* Remember to: spin_unlock(&instance->lock); */
                 }
 
-                if (gpa_is_equal(tble_pa(pos), pa)) {
-                        LOG_DBG("We already have the same GPA in the cache");
+                if (gpa_is_equal(tble_pa(pos), tble_pa(entry))) {
+                        LOG_WARN("We already have the same GPA in the cache");
 
                         /* FIXME: What should we do here? */
 
@@ -361,32 +400,33 @@ int tbl_add(struct table * instance,
         return 0;
 }
 
-void tbl_remove(struct table *             instance,
-                const struct table_entry * entry)
+int tbl_remove(struct table *             instance,
+               const struct table_entry * entry)
 {
         struct table_entry * pos, * q;
 
-        if (!instance || !tble_is_ok(entry)) {
-                LOG_ERR("Bogus input parameters, "
-                        "cannot remove entry from table");
-                return;
+        if (!instance) {
+                LOG_ERR("Bogus instance, cannot remove entry from table");
+                return -1;
+        }
+        if (!entry) {
+                LOG_ERR("Bogus entry, cannot remove entry from table");
+                return -1;
         }
 
         spin_lock(&instance->lock);
 
         list_for_each_entry_safe(pos, q, &instance->entries, next) {
                 if (pos == entry) {
-                        struct table_entry * tmp = pos;
                         list_del(&pos->next);
-                        tble_destroy(tmp);
                         spin_unlock(&instance->lock);
-                        return;
+                        return 0;
                 }
         }
 
         spin_unlock(&instance->lock);
 
-        rkfree(instance);
+        return -1;
 }
 
 static spinlock_t tables_lock;
@@ -417,18 +457,18 @@ int tbls_create(uint16_t ptype, size_t hwlen)
         struct table *      cl;
         struct tmap_entry * e;
 
-        LOG_DBG("Creating table for ptype = 0x%02x, hwlen = %zd",
+        LOG_DBG("Creating table for ptype = 0x%04X, hwlen = %zd",
                 ptype, hwlen);
 
         cl = tbls_find(ptype);
         if (cl) {
-                LOG_WARN("Table for ptype 0x%02x already created",ptype);
+                LOG_WARN("Table for ptype 0x%04X already created",ptype);
                 return 0;
         }
 
         cl = tbl_create(hwlen);
         if (!cl) {
-                LOG_ERR("Cannot create table for ptype 0%02x, hwlen %zd",
+                LOG_ERR("Cannot create table for ptype 0x%04X, hwlen %zd",
                         ptype, hwlen);
                 return -1;
         }
@@ -446,7 +486,7 @@ int tbls_create(uint16_t ptype, size_t hwlen)
         if (tmap_entry_insert(tables, ptype, e)) {
                 spin_unlock(&tables_lock);
 
-                LOG_ERR("Cannot insert new entry into table for ptype 0x%02x",
+                LOG_ERR("Cannot insert new entry into table for ptype 0x%04X",
                         ptype);
                 tmap_entry_destroy(e);
                 tbl_destroy(cl);
@@ -455,7 +495,7 @@ int tbls_create(uint16_t ptype, size_t hwlen)
         }
         spin_unlock(&tables_lock);
 
-        LOG_DBG("Table for ptype 0x%02x created successfully", ptype);
+        LOG_DBG("Table for ptype 0x%04X created successfully", ptype);
 
         return 0;
 }
@@ -469,7 +509,7 @@ int tbls_destroy(uint16_t ptype)
 
         e = tmap_entry_find(tables, ptype);
         if (!e) {
-                LOG_ERR("Table for ptype 0x%02x is missing, cannot destroy",
+                LOG_ERR("Table for ptype 0x%04X is missing, cannot destroy",
                         ptype);
                 spin_unlock(&tables_lock);
                 return -1;
@@ -485,7 +525,7 @@ int tbls_destroy(uint16_t ptype)
         tbl_destroy(cl);
         tmap_entry_destroy(e);
 
-        LOG_DBG("Table for ptype 0x%02x destroyed successfully", ptype);
+        LOG_DBG("Table for ptype 0x%04X destroyed successfully", ptype);
 
         return 0;
 }
@@ -530,10 +570,15 @@ int arp826_add(uint16_t           ptype,
                const struct gpa * pa,
                const struct gha * ha)
 {
-        struct table * cl;
+        struct table *       cl;
+        struct table_entry * e;
 
-        if (!gpa_is_ok(pa) || !gha_is_ok(ha)) {
-                LOG_ERR("Cannot remove, bad input parameters");
+        if (!gpa_is_ok(pa)) {
+                LOG_ERR("Cannot add, bad PA");
+                return -1;
+        }
+        if (!gha_is_ok(ha)) {
+                LOG_ERR("Cannot add, bad HA");
                 return -1;
         }
 
@@ -541,7 +586,11 @@ int arp826_add(uint16_t           ptype,
         if (!cl)
                 return -1;
 
-        return tbl_add(cl, gpa_dup(pa), gha_dup(ha));
+        e = tble_create_gfp(gpa_dup(pa), gha_dup(ha), GFP_ATOMIC);
+        if (!e)
+                return -1;
+
+        return tbl_add(cl, e);
 }
 EXPORT_SYMBOL(arp826_add);
 
@@ -549,11 +598,15 @@ int arp826_remove(uint16_t           ptype,
                   const struct gpa * pa,
                   const struct gha * ha)
 {
-        struct table *             cl;
-        const struct table_entry * ce;
+        struct table *       cl;
+        struct table_entry * ce;
 
-        if (!gpa_is_ok(pa) || !gha_is_ok(ha)) {
-                LOG_ERR("Cannot remove, bad input parameters");
+        if (!gpa_is_ok(pa)) {
+                LOG_ERR("Cannot remove, bad PA");
+                return -1;
+        }
+        if (!gha_is_ok(ha)) {
+                LOG_ERR("Cannot remove, bad HA");
                 return -1;
         }
 
@@ -565,7 +618,10 @@ int arp826_remove(uint16_t           ptype,
         if (!ce)
                 return -1;
 
-        tbl_remove(cl, ce);
+        if (tbl_remove(cl, ce))
+                return -1;
+
+        tble_destroy(ce);
 
         return 0;
 }
@@ -578,7 +634,7 @@ const struct gpa * arp826_find_gpa(uint16_t           ptype,
         const struct table_entry * ce;
 
         if (!gha_is_ok(ha)) {
-                LOG_ERR("Cannot resolve, bad input parameters");
+                LOG_ERR("Cannot resolve, bad HA");
                 return NULL;
         }
 
