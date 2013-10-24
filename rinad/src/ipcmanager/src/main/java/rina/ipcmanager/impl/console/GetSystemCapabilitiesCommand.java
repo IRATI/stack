@@ -12,8 +12,8 @@ public class GetSystemCapabilitiesCommand extends ConsoleCommand{
 	public static final String ID = "getsystemcapabilities";
 	private static final String USAGE = "getsystemcapabilities";
 	
-	public GetSystemCapabilitiesCommand(IPCManager ipcManager){
-		super(ID, ipcManager);
+	public GetSystemCapabilitiesCommand(IPCManager ipcManager, IPCManagerConsole console){
+		super(ID, ipcManager, console);
 	}
 	
 	@Override

@@ -11,11 +11,15 @@ public abstract class ConsoleCommand {
 	
 	private IPCManager ipcManager = null;
 	
+	private IPCManagerConsole ipcManagerConsole = null;
+	
 	private String commandId = null;
 	
-	public ConsoleCommand(String commandId, IPCManager ipcManager){
+	public ConsoleCommand(String commandId, IPCManager ipcManager, 
+			IPCManagerConsole ipcManagerConsole){
 		this.commandId = commandId;
 		this.ipcManager = ipcManager;
+		this.ipcManagerConsole = ipcManagerConsole;
 	}
 	
 	public String getCommandId(){
@@ -24,6 +28,10 @@ public abstract class ConsoleCommand {
 	
 	public IPCManager getIPCManager(){
 		return this.ipcManager;
+	}
+	
+	public IPCManagerConsole getIPCManagerConsole(){
+		return this.ipcManagerConsole;
 	}
 	
 	public boolean equals(Object candidate){

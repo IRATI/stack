@@ -12,8 +12,8 @@ public class ListIPCProcessesCommand extends ConsoleCommand{
 	public static final String ID = "listipcp";
 	private static final String USAGE = "listipcp";
 	
-	public ListIPCProcessesCommand(IPCManager ipcManager){
-		super(ID, ipcManager);
+	public ListIPCProcessesCommand(IPCManager ipcManager, IPCManagerConsole console){
+		super(ID, ipcManager, console);
 	}
 	
 	@Override

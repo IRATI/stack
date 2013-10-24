@@ -15,8 +15,8 @@ public class UpdateDIFConfigurationCommand extends ConsoleCommand{
 	
 	private long ipcProcessId;
 	
-	public UpdateDIFConfigurationCommand(IPCManager ipcManager){
-		super(ID, ipcManager);
+	public UpdateDIFConfigurationCommand(IPCManager ipcManager, IPCManagerConsole console){
+		super(ID, ipcManager, console);
 	}
 	
 	@Override
@@ -27,7 +27,8 @@ public class UpdateDIFConfigurationCommand extends ConsoleCommand{
 		
 		try{
 			ipcProcessId = Long.parseLong(splittedCommand[1]);
-			getIPCManager().updateDIFConfiguration(ipcProcessId, new DIFConfiguration());
+			getIPCManager().requestUpdateDIFConfiguration(ipcProcessId, 
+					new DIFConfiguration());
 			return "Modified configuraiton of " + ipcProcessId + " successfully";
 		}catch(Exception ex){
 			return "Error executing update DIF configuration command: " + ex.getMessage();

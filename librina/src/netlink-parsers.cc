@@ -1064,7 +1064,18 @@ int parseListOfDIFConfigurationParameters(nlattr *nested,
 
 int putApplicationRegistrationInformationObject(nl_msg* netlinkMessage,
 		const ApplicationRegistrationInformation& object){
-	struct nlattr *difName;
+	struct nlattr *appName, *difName;
+	if (!(appName = nla_nest_start(netlinkMessage,
+	                ARIA_ATTR_APP_NAME))) {
+	        goto nla_put_failure;
+	}
+
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+	                object.getApplicationName()) < 0) {
+	        goto nla_put_failure;
+	}
+
+	nla_nest_end(netlinkMessage, appName);
 
 	NLA_PUT_U32(netlinkMessage, ARIA_ATTR_APP_REG_TYPE,
 			object.getRegistrationType());
@@ -1093,6 +1104,9 @@ int putApplicationRegistrationInformationObject(nl_msg* netlinkMessage,
 ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 		nlattr *nested){
 	struct nla_policy attr_policy[ARIA_ATTR_MAX + 1];
+	attr_policy[ARIA_ATTR_APP_NAME].type = NLA_NESTED;
+	attr_policy[ARIA_ATTR_APP_NAME].minlen = 0;
+	attr_policy[ARIA_ATTR_APP_DIF_NAME].maxlen = 0;
 	attr_policy[ARIA_ATTR_APP_REG_TYPE].type = NLA_U32;
 	attr_policy[ARIA_ATTR_APP_REG_TYPE].minlen = 0;
 	attr_policy[ARIA_ATTR_APP_REG_TYPE].maxlen = 65535;
@@ -1113,6 +1127,19 @@ ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 			static_cast<ApplicationRegistrationType>(
 					nla_get_u32(attrs[ARIA_ATTR_APP_REG_TYPE])));
 	ApplicationProcessNamingInformation * difName;
+	ApplicationProcessNamingInformation * appName;
+
+	if (attrs[ARIA_ATTR_APP_NAME]) {
+	        appName = parseApplicationProcessNamingInformationObject(
+	                        attrs[ARIA_ATTR_APP_NAME]);
+	        if (appName == 0) {
+	                delete result;
+	                return 0;
+	        } else {
+	                result->setApplicationName(*appName);
+	                delete appName;
+	        }
+	}
 
 	if (attrs[ARIA_ATTR_APP_DIF_NAME]) {
 		difName = parseApplicationProcessNamingInformationObject(
@@ -1264,9 +1291,8 @@ int putAppAllocateFlowRequestArrivedMessageObject(nl_msg* netlinkMessage,
 
 int putAppAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 		const AppAllocateFlowResponseMessage& object) {
-	NLA_PUT_FLAG(netlinkMessage, AAFRE_ATTR_ACCEPT);
-	NLA_PUT_STRING(netlinkMessage, AAFRE_ATTR_DENY_REASON,
-			object.getDenyReason().c_str());
+	NLA_PUT_U32(netlinkMessage, AAFRE_ATTR_RESULT,
+			object.getResult());
 	NLA_PUT_FLAG(netlinkMessage, AAFRE_ATTR_NOTIFY_SOURCE);
 
 	return 0;
@@ -1346,25 +1372,16 @@ int putAppFlowDeallocatedNotificationMessageObject(nl_msg* netlinkMessage,
 
 int putAppRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 		const AppRegisterApplicationRequestMessage& object) {
-	struct nlattr *difName, *applicationName;
+	struct nlattr *appRegInfo;
 
-	if (!(applicationName = nla_nest_start(netlinkMessage, ARAR_ATTR_APP_NAME))) {
-		goto nla_put_failure;
-	}
-	if (putApplicationProcessNamingInformationObject(netlinkMessage,
-			object.getApplicationName()) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, applicationName);
-
-	if (!(difName = nla_nest_start(netlinkMessage, ARAR_ATTR_APP_REG_INFO))) {
+	if (!(appRegInfo = nla_nest_start(netlinkMessage, ARAR_ATTR_APP_REG_INFO))) {
 		goto nla_put_failure;
 	}
 	if (putApplicationRegistrationInformationObject(netlinkMessage,
 			object.getApplicationRegistrationInformation()) < 0) {
 		goto nla_put_failure;
 	}
-	nla_nest_end(netlinkMessage, difName);
+	nla_nest_end(netlinkMessage, appRegInfo);
 
 	return 0;
 
@@ -2310,12 +2327,9 @@ AppAllocateFlowRequestArrivedMessage * parseAppAllocateFlowRequestArrivedMessage
 AppAllocateFlowResponseMessage * parseAppAllocateFlowResponseMessage(
 		nlmsghdr *hdr) {
 	struct nla_policy attr_policy[AAFRE_ATTR_MAX + 1];
-	attr_policy[AAFRE_ATTR_ACCEPT].type = NLA_FLAG;
-	attr_policy[AAFRE_ATTR_ACCEPT].minlen = 0;
-	attr_policy[AAFRE_ATTR_ACCEPT].maxlen = 0;
-	attr_policy[AAFRE_ATTR_DENY_REASON].type = NLA_STRING;
-	attr_policy[AAFRE_ATTR_DENY_REASON].minlen = 0;
-	attr_policy[AAFRE_ATTR_DENY_REASON].maxlen = 65535;
+	attr_policy[AAFRE_ATTR_RESULT].type = NLA_U32;
+	attr_policy[AAFRE_ATTR_RESULT].minlen = 0;
+	attr_policy[AAFRE_ATTR_RESULT].maxlen = 0;
 	attr_policy[AAFRE_ATTR_NOTIFY_SOURCE].type = NLA_FLAG;
 	attr_policy[AAFRE_ATTR_NOTIFY_SOURCE].minlen = 0;
 	attr_policy[AAFRE_ATTR_NOTIFY_SOURCE].maxlen = 0;
@@ -2339,13 +2353,10 @@ AppAllocateFlowResponseMessage * parseAppAllocateFlowResponseMessage(
 	AppAllocateFlowResponseMessage * result =
 			new AppAllocateFlowResponseMessage();
 
-	if (attrs[AAFRE_ATTR_ACCEPT]) {
-		result->setAccept((nla_get_flag(attrs[AAFRE_ATTR_ACCEPT])));
+	if (attrs[AAFRE_ATTR_RESULT]) {
+		result->setResult((nla_get_u32(attrs[AAFRE_ATTR_RESULT])));
 	}
 
-	if (attrs[AAFRE_ATTR_DENY_REASON]) {
-		result->setDenyReason(nla_get_string(attrs[AAFRE_ATTR_DENY_REASON]));
-	}
 	if (attrs[AAFRE_ATTR_NOTIFY_SOURCE]) {
 		result->setNotifySource(
 				(nla_get_flag(attrs[AAFRE_ATTR_NOTIFY_SOURCE])));
@@ -2514,9 +2525,6 @@ AppFlowDeallocatedNotificationMessage * parseAppFlowDeallocatedNotificationMessa
 AppRegisterApplicationRequestMessage * parseAppRegisterApplicationRequestMessage(
 		nlmsghdr *hdr) {
 	struct nla_policy attr_policy[ARAR_ATTR_MAX + 1];
-	attr_policy[ARAR_ATTR_APP_NAME].type = NLA_NESTED;
-	attr_policy[ARAR_ATTR_APP_NAME].minlen = 0;
-	attr_policy[ARAR_ATTR_APP_NAME].maxlen = 0;
 	attr_policy[ARAR_ATTR_APP_REG_INFO].type = NLA_NESTED;
 	attr_policy[ARAR_ATTR_APP_REG_INFO].minlen = 0;
 	attr_policy[ARAR_ATTR_APP_REG_INFO].maxlen = 0;
@@ -2540,20 +2548,8 @@ AppRegisterApplicationRequestMessage * parseAppRegisterApplicationRequestMessage
 	AppRegisterApplicationRequestMessage * result =
 			new AppRegisterApplicationRequestMessage();
 
-	ApplicationProcessNamingInformation * applicationName;
 	ApplicationRegistrationInformation * appRegInfo;
 
-	if (attrs[ARAR_ATTR_APP_NAME]) {
-		applicationName = parseApplicationProcessNamingInformationObject(
-				attrs[ARAR_ATTR_APP_NAME]);
-		if (applicationName == 0) {
-			delete result;
-			return 0;
-		} else {
-			result->setApplicationName(*applicationName);
-			delete applicationName;
-		}
-	}
 	if (attrs[ARAR_ATTR_APP_REG_INFO]) {
 		appRegInfo = parseApplicationRegistrationInformation(
 				attrs[ARAR_ATTR_APP_REG_INFO]);

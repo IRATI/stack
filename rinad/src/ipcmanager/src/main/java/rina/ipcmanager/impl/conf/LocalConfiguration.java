@@ -6,12 +6,6 @@ package rina.ipcmanager.impl.conf;
  *
  */
 public class LocalConfiguration {
-	
-	/**
-	 * The number of threads that will be executing the 
-	 * IPC Manager event loop
-	 */
-	private int eventLoopWorkers = 2;
 
 	/**
 	 * The port where the IPC Manager is listening for incoming local TCP connections from administrators
@@ -83,15 +77,7 @@ public class LocalConfiguration {
 	public void setInstallationPath(String installationPath) {
 		this.installationPath = installationPath;
 	}
-
-	public int getEventLoopWorkers() {
-		return eventLoopWorkers;
-	}
-
-	public void setEventLoopWorkers(int eventLoopWorkers) {
-		this.eventLoopWorkers = eventLoopWorkers;
-	}
-
+	
 	public int getConsolePort() {
 		return consolePort;
 	}
@@ -160,7 +146,6 @@ public class LocalConfiguration {
 		String result = "Local Configuration \n";
 		result = result + "   Installation path: " + installationPath + "\n";
 		result = result + "   Library path: " + libraryPath + "\n";
-		result = result + "   Number of event loop workers: " + eventLoopWorkers + "\n";
 		result = result + "   Console port: " + consolePort + "\n";
 		result = result + "   CDAP timeout in ms: "+ cdapTimeoutInMs + "\n";
 		result = result + "   Enrollment timeout in ms: " + enrollmentTimeoutInMs + "\n";
