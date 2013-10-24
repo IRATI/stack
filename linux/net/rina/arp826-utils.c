@@ -101,15 +101,20 @@ void gpa_destroy(struct gpa * gpa)
 }
 EXPORT_SYMBOL(gpa_destroy);
 
-struct gpa * gpa_dup(const struct gpa * gpa)
+struct gpa * gpa_dup_gfp(gfp_t              flags,
+                         const struct gpa * gpa)
 {
         if (!gpa_is_ok(gpa)) {
                 LOG_ERR("Bogus input parameter, cannot duplicate GPA");
                 return NULL;
         }
 
-        return gpa_create(gpa->address, gpa->length);
+        return gpa_create_gfp(flags, gpa->address, gpa->length);
 }
+EXPORT_SYMBOL(gpa_dup_gfp);
+
+struct gpa * gpa_dup(const struct gpa * gpa)
+{ return gpa_dup_gfp(GFP_KERNEL, gpa); }
 EXPORT_SYMBOL(gpa_dup);
 
 const uint8_t * gpa_address_value(const struct gpa * gpa)
@@ -368,7 +373,8 @@ int gha_destroy(struct gha * gha)
 }
 EXPORT_SYMBOL(gha_destroy);
 
-struct gha * gha_dup(const struct gha * gha)
+struct gha * gha_dup_gfp(gfp_t              flags,
+                         const struct gha * gha)
 {
         struct gha * tmp;
 
@@ -385,6 +391,10 @@ struct gha * gha_dup(const struct gha * gha)
 
         return tmp;
 }
+EXPORT_SYMBOL(gha_dup_gfp);
+
+struct gha * gha_dup(const struct gha * gha)
+{ return gha_dup_gfp(GFP_KERNEL, gha); }
 EXPORT_SYMBOL(gha_dup);
 
 size_t gha_address_length(const struct gha * gha)

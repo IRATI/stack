@@ -112,7 +112,9 @@ struct table_entry * tble_create_gfp(struct gpa * gpa,
         if (!entry)
                 return NULL;
 
-        if (tble_init(entry, gpa_dup(gpa), gha_dup(gha))) {
+        if (tble_init(entry,
+                      gpa_dup_gfp(flags, gpa),
+                      gha_dup_gfp(flags, gha))) {
                 rkfree(entry);
                 return NULL;
         }

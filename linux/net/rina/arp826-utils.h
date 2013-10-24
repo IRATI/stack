@@ -35,6 +35,8 @@ struct gpa *    gpa_create_gfp(gfp_t           flags,
 void            gpa_destroy(struct gpa * gpa);
 bool            gpa_is_ok(const struct gpa * gpa);
 struct gpa *    gpa_dup(const struct gpa * gpa);
+struct gpa *    gpa_dup_gfp(gfp_t              flags,
+                            const struct gpa * gpa);
 bool            gpa_is_equal(const struct gpa * a,
                              const struct gpa * b);
 const uint8_t * gpa_address_value(const struct gpa * gpa);
@@ -79,6 +81,8 @@ struct gha *        gha_create_broadcast_gfp(gfp_t      flags,
 int                 gha_destroy(struct gha * gha);
 bool                gha_is_ok(const struct gha * gha);
 struct gha *        gha_dup(const struct gha * gha);
+struct gha *        gha_dup_gfp(gfp_t              flags,
+                                const struct gha * gha);
 const uint8_t *     gha_address(const struct gha * gha);
 size_t              gha_address_length(const struct gha * gha);
 gha_type_t          gha_type(const struct gha * gha);
