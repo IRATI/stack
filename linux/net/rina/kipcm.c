@@ -2402,8 +2402,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 {
         /* The SDU is theirs now */
         if(kfa_flow_sdu_read(kipcm->kfa, port_id, sdu)) {
-                LOG_DBG("Failed to read sdu");
-                KIPCM_UNLOCK(kipcm);
+                LOG_ERR("Failed to read sdu");
                 return -1;
         }
 
