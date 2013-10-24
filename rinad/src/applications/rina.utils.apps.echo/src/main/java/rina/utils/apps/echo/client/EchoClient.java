@@ -59,6 +59,7 @@ FlowAllocationListener, FlowDeallocationListener {
 	
 	public EchoClient(int numberOfSdus, int sduSize, 
 			ApplicationProcessNamingInformation echoApNamingInfo){
+		rina.initialize();
 		this.numberOfSdus = numberOfSdus;
 		this.sduSize = sduSize;
 		this.echoApNamingInfo = echoApNamingInfo;
@@ -67,7 +68,6 @@ FlowAllocationListener, FlowDeallocationListener {
 		ipcEventConsumer.addApplicationRegistrationListener(this, clientApNamingInfo);
 		executorService = Executors.newCachedThreadPool();
 		executorService.execute(ipcEventConsumer);
-		rina.initialize();
 	}
 	
 	public void execute(){
