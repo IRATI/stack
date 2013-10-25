@@ -57,7 +57,6 @@ struct sdu * sdu_create_from_gfp(gfp_t  flags,
                                  void * data,
                                  size_t size)
 {
-
         struct sdu * tmp;
 
         LOG_DBG("Trying to create an SDU of size %zd from data in the buffer",
@@ -66,11 +65,11 @@ struct sdu * sdu_create_from_gfp(gfp_t  flags,
         if (!data)
                 return NULL;
 
-        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkmalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
 
-        tmp->buffer = rkmalloc(sizeof(struct buffer), GFP_KERNEL);
+        tmp->buffer = rkmalloc(sizeof(struct buffer), flags);
         if (!tmp->buffer) {
                 rkfree(tmp);
                 return NULL;

@@ -132,15 +132,16 @@ int kfa_fmap_update(struct kfa_fmap *   map,
         return 0;
 }
 
-int kfa_fmap_add(struct kfa_fmap *  map,
-                 flow_id_t          key,
-                 struct ipcp_flow * value)
+int kfa_fmap_add_gfp(gfp_t  flags,
+                     struct kfa_fmap *  map,
+                     flow_id_t          key,
+                     struct ipcp_flow * value)
 {
         struct kfa_fmap_entry * tmp;
 
         ASSERT(map);
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return -1;
 
@@ -151,10 +152,15 @@ int kfa_fmap_add(struct kfa_fmap *  map,
         hash_add(map->table, &tmp->hlist, key);
 
         LOG_DBG("Added flow %pK to the kfa_fmap %pk with key %d",
-                tmp->value, map, tmp->key);
+                        tmp->value, map, tmp->key);
 
         return 0;
 }
+
+int kfa_fmap_add(struct kfa_fmap *  map,
+                 flow_id_t          key,
+                 struct ipcp_flow * value)
+{ return kfa_fmap_add_gfp(GFP_KERNEL, map, key, value); }
 
 int kfa_fmap_remove(struct kfa_fmap * map,
                     flow_id_t         key)
