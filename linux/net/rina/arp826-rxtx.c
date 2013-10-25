@@ -449,7 +449,7 @@ static int process(const struct sk_buff * skb,
                 }
 
                 if (arp_send_reply(ptype,
-                                   tmp_tpa, tmp_tha, tmp_spa, tmp_sha)) {
+                                   tmp_tpa, target_ha, tmp_spa, tmp_sha)) {
                         /* FIXME: Couldn't send reply ... */
                         LOG_ERR("Couldn't send reply");
                         return -1;
