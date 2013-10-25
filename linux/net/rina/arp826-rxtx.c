@@ -376,11 +376,11 @@ static int process(const struct sk_buff * skb,
 
 #if HAVE_RINARP
         LOG_DBG("Shrinking as needed");
-        if (gpa_address_shrink_gfp(tmp_spa, 0x00, GFP_ATOMIC)) {
+        if (gpa_address_shrink_gfp(GFP_ATOMIC, tmp_spa, 0x00)) {
                 LOG_ERR("Problems parsing the source GPA");
                 return -1;
         }
-        if (gpa_address_shrink_gfp(tmp_tpa, 0x00, GFP_ATOMIC)) {
+        if (gpa_address_shrink_gfp(GFP_ATOMIC, tmp_tpa, 0x00)) {
                 LOG_ERR("Got problems parsing the target GPA");
                 return -1;
         }
@@ -419,23 +419,21 @@ static int process(const struct sk_buff * skb,
                                               GFP_ATOMIC);
                         if (!tmp)
                                 return -1;
+
                         if (tbl_add(tbl, tmp)) {
                                 LOG_ERR("AAAAAAARRggh can't add in table");
                                 tble_destroy(tmp);
                                 return -1;
                         }
                 } else {
-                        LOG_DBG("Updating old entry into the table");
+                        LOG_DBG("Updating old entry %pK into the table",
+                                entry);
 
                         if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha)) {
                                 LOG_ERR("Failed to update table");
                                 return -1;
                         }
                 }
-
-                ASSERT(entry);
-
-                LOG_DBG("Got the entry, anyway (%pK)", entry);
 
                 req_addr = tbl_find_by_gpa(tbl, tmp_tpa);
                 if (!req_addr) {
