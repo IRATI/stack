@@ -401,7 +401,7 @@ int tbl_add(struct table *       instance,
                 }
         }
 
-        list_add(&instance->entries, &entry->next);
+        list_add(&entry->next, &instance->entries);
 
         spin_unlock(&instance->lock);
 
