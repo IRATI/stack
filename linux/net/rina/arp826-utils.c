@@ -312,10 +312,6 @@ void gha_dump(const struct gha * gha)
                 LOG_DBG("GHA %pK: <null>", gha);
                 return;
         }
-        if (gha->type == 0) {
-                LOG_DBG("GHA %pK: <empty>", gha);
-                return;
-        }
 
         if (gha->type == MAC_ADDR_802_3) {
                 LOG_DBG("GHA %pK: %02X:%02X:%02X:%02X:%02X:%02X",
