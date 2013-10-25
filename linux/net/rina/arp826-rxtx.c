@@ -178,12 +178,12 @@ int arp_send_reply(uint16_t            ptype,
         max_len = max(gpa_address_length(spa), gpa_address_length(tpa));
         LOG_DBG("Growing addresses to %zd", max_len);
         tmp_spa = gpa_dup(spa);
-        if (gpa_address_grow(tmp_spa, max_len, 0x00)) {
+        if (gpa_address_grow_gfp(GFP_ATOMIC, tmp_spa, max_len, 0x00)) {
                 LOG_ERR("Failed to grow SPA");
                 return -1;
         }
         tmp_tpa = gpa_dup(tpa);
-        if (gpa_address_grow(tmp_tpa, max_len, 0x00)) {
+        if (gpa_address_grow_gfp(GFP_ATOMIC, tmp_tpa, max_len, 0x00)) {
                 LOG_ERR("Failed to grow TPA");
                 gpa_destroy(tmp_spa);
                 return -1;

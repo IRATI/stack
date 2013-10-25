@@ -86,15 +86,16 @@ static void resolve_data_destroy(struct resolve_data * data)
         rkfree(data);
 }
 
-static struct resolve_data * resolve_data_create(uint16_t     ptype,
-                                                 struct gpa * spa,
-                                                 struct gha * sha,
-                                                 struct gpa * tpa,
-                                                 struct gha * tha)
+static struct resolve_data * resolve_data_create_gfp(gfp_t        flags,
+						     uint16_t     ptype,
+						     struct gpa * spa,
+						     struct gha * sha,
+						     struct gpa * tpa,
+						     struct gha * tha)
 {
         struct resolve_data * tmp;
 
-        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkmalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
 
@@ -106,6 +107,13 @@ static struct resolve_data * resolve_data_create(uint16_t     ptype,
 
         return tmp;
 }
+
+static struct resolve_data * resolve_data_create(uint16_t     ptype,
+						 struct gpa * spa,
+						 struct gha * sha,
+						 struct gpa * tpa,
+						 struct gha * tha)
+{ return resolve_data_create_gfp(GFP_KERNEL, ptype, spa, sha, tpa, tha); }
 
 static int resolver(void * o)
 {
@@ -163,7 +171,7 @@ int arm_resolve(uint16_t     ptype,
             !gpa_is_ok(tpa) || !gha_is_ok(tha))
                 return -1;
 
-        tmp = resolve_data_create(ptype, spa, sha, tpa, tha);
+        tmp = resolve_data_create_gfp(GFP_ATOMIC, ptype, spa, sha, tpa, tha);
         if (!tmp)
                 return -1;
 
