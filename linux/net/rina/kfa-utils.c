@@ -152,7 +152,7 @@ int kfa_fmap_add_gfp(gfp_t  flags,
         hash_add(map->table, &tmp->hlist, key);
 
         LOG_DBG("Added flow %pK to the kfa_fmap %pk with key %d",
-                        tmp->value, map, tmp->key);
+                tmp->value, map, tmp->key);
 
         return 0;
 }

@@ -448,8 +448,8 @@ static int process(const struct sk_buff * skb,
                         return -1;
                 }
 
-		LOG_DBG("Showing the target ha");
-		gha_dump(target_ha);
+                LOG_DBG("Showing the target ha");
+                gha_dump(target_ha);
 
                 if (arp_send_reply(ptype,
                                    tmp_tpa, target_ha, tmp_spa, tmp_sha)) {

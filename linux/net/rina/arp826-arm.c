@@ -87,11 +87,11 @@ static void resolve_data_destroy(struct resolve_data * data)
 }
 
 static struct resolve_data * resolve_data_create_gfp(gfp_t        flags,
-						     uint16_t     ptype,
-						     struct gpa * spa,
-						     struct gha * sha,
-						     struct gpa * tpa,
-						     struct gha * tha)
+                                                     uint16_t     ptype,
+                                                     struct gpa * spa,
+                                                     struct gha * sha,
+                                                     struct gpa * tpa,
+                                                     struct gha * tha)
 {
         struct resolve_data * tmp;
 
@@ -109,10 +109,10 @@ static struct resolve_data * resolve_data_create_gfp(gfp_t        flags,
 }
 
 static struct resolve_data * resolve_data_create(uint16_t     ptype,
-						 struct gpa * spa,
-						 struct gha * sha,
-						 struct gpa * tpa,
-						 struct gha * tha)
+                                                 struct gpa * spa,
+                                                 struct gha * sha,
+                                                 struct gpa * tpa,
+                                                 struct gha * tha)
 { return resolve_data_create_gfp(GFP_KERNEL, ptype, spa, sha, tpa, tha); }
 
 static int resolver(void * o)
