@@ -53,8 +53,11 @@ int pdu_destroy(struct pdu * p)
         return 0;
 }
 
-struct sdu * sdu_create_from(void * data, size_t size)
+struct sdu * sdu_create_from_gfp(gfp_t  flags,
+                                 void * data,
+                                 size_t size)
 {
+
         struct sdu * tmp;
 
         LOG_DBG("Trying to create an SDU of size %zd from data in the buffer",
@@ -78,6 +81,10 @@ struct sdu * sdu_create_from(void * data, size_t size)
 
         return tmp;
 }
+EXPORT_SYMBOL(sdu_create_from_gfp);
+
+struct sdu * sdu_create_from(void * data, size_t size)
+{ return sdu_create_from_gfp(GFP_KERNEL, data, size); }
 EXPORT_SYMBOL(sdu_create_from);
 
 int sdu_destroy(struct sdu * s)

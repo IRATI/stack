@@ -94,7 +94,11 @@ struct sdu {
 };
 
 /* NOTE: sdu_create_from() takes the ownership of the buffer passed */
-struct sdu * sdu_create_from(void * data, size_t size);
+struct sdu * sdu_create_from(void * data,
+                             size_t size);
+struct sdu * sdu_create_from_gfp(gfp_t  flags,
+                                 void * data,
+                                 size_t size);
 int          sdu_destroy(struct sdu * s);
 
 int          is_sdu_ok(const struct sdu * sdu);
