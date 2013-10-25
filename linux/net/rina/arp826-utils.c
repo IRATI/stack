@@ -169,7 +169,7 @@ void gpa_dump(const struct gpa * gpa)
         }
         *(p + 1) = 0x00;
 
-        LOG_DBG("GPA %pK: 0x%s", gpa, tmp);
+        LOG_DBG("GPA %pK (%zd): 0x%s", gpa, gpa->length, tmp);
 
         rkfree(tmp);
 }
@@ -305,6 +305,31 @@ struct gha {
                 uint8_t mac_802_3[6];
         } data;
 };
+
+void gha_dump(const struct gha * gha)
+{
+        if (!gha) {
+                LOG_DBG("GHA %pK: <null>", gha);
+                return;
+        }
+        if (gha->type == 0) {
+                LOG_DBG("GHA %pK: <empty>", gha);
+                return;
+        }
+
+        if (gha->type == MAC_ADDR_802_3) {
+                LOG_DBG("GHA %pK: %02X:%02X:%02X:%02X:%02X:%02X",
+                        gha,
+                        gha->data.mac_802_3[5],
+                        gha->data.mac_802_3[4],
+                        gha->data.mac_802_3[3],
+                        gha->data.mac_802_3[2],
+                        gha->data.mac_802_3[1],
+                        gha->data.mac_802_3[0]);
+        } else {
+                LOG_DBG("GHA %pK: <unknown format>", gha);
+        }
+}
 
 bool gha_is_ok(const struct gha * gha)
 { return (!gha || gha->type != MAC_ADDR_802_3) ? false : true; }

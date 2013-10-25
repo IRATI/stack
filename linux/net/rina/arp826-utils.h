@@ -89,6 +89,7 @@ gha_type_t          gha_type(const struct gha * gha);
 bool                gha_is_equal(const struct gha * a,
                                  const struct gha * b);
 struct net_device * gha_to_device(const struct gha * ha);
+void                gha_dump(const struct gha * gha);
 
 
 /*
