@@ -145,6 +145,40 @@ void ExtendedIPCManager::setIpcProcessId(unsigned int ipcProcessId){
 	this->ipcProcessId = ipcProcessId;
 }
 
+const ApplicationProcessNamingInformation&
+        ExtendedIPCManager::getIpcProcessName() {
+        return ipcProcessName;
+}
+
+void ExtendedIPCManager::setIpcProcessName(
+                const ApplicationProcessNamingInformation& name) {
+        ipcProcessName = name;
+}
+
+ApplicationRegistration * ExtendedIPCManager::commitPendingResitration(
+                        unsigned int seqNumber,
+                        const ApplicationProcessNamingInformation& DIFName)
+throw (ApplicationRegistrationException) {
+        ApplicationRegistration * applicationRegistration;
+
+        lock();
+
+        applicationRegistration = getApplicationRegistration(
+                        getIpcProcessName());
+
+        if (!applicationRegistration){
+                applicationRegistration = new ApplicationRegistration(
+                                getIpcProcessName());
+                putApplicationRegistration(getIpcProcessName(),
+                                applicationRegistration);
+        }
+
+        applicationRegistration->addDIFName(DIFName);
+        unlock();
+
+        return applicationRegistration;
+}
+
 void ExtendedIPCManager::assignToDIFResponse(
 		const AssignToDIFRequestEvent& event, int result)
 	throw(AssignToDIFResponseException){

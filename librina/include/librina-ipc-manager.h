@@ -398,6 +398,9 @@ class IPCProcess {
 	std::map<unsigned int, FlowInformation>
 	pendingFlowOperations;
 
+	/** The N-1 DIFs where this IPC Process is registered at */
+	std::list<ApplicationProcessNamingInformation> nMinusOneDIFs;
+
 	/** Return the information of a registration request */
 	ApplicationProcessNamingInformation getPendingRegistration(
 	                unsigned int seqNumber) throw (IPCException);
@@ -480,9 +483,10 @@ public:
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been
 	 * registered to the N-1 DIF designed by difName
 	 *
-	 * @param ipcProcessName The name of the IPC Process being registered
 	 * @param difName The name of the N-1 DIF where the IPC Process has been
 	 * registered
+	 * @param ipcProcessName the name of the N-1 IPC Process where the IPC Process
+	 * has been registered (member of difName)
 	 * @throws NotifyRegistrationToDIFException if the IPC Process was already registered to
 	 * that DIF
 	 */

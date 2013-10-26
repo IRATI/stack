@@ -244,6 +244,8 @@ class ExtendedIPCManager: public IPCManager {
 	/** The ID of the IPC Process */
 	unsigned int ipcProcessId;
 
+	ApplicationProcessNamingInformation ipcProcessName;
+
 	/** The portId of the IPC Manager */
 	unsigned int ipcManagerPort;
 
@@ -257,6 +259,19 @@ public:
 	void setCurrentDIFInformation(const DIFInformation& currentDIFInformation);
 	unsigned int getIpcProcessId() const;
 	void setIpcProcessId(unsigned int ipcProcessId);
+	const ApplicationProcessNamingInformation& getIpcProcessName();
+	void setIpcProcessName(const ApplicationProcessNamingInformation& name);
+
+	/**
+	 * Override function of IPC Manager
+	 * @param seqNumber
+	 * @param DIFName
+	 * @return
+	 */
+	ApplicationRegistration * commitPendingResitration(
+	                        unsigned int seqNumber,
+	                        const ApplicationProcessNamingInformation& DIFName)
+	        throw (ApplicationRegistrationException);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of an "assign

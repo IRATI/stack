@@ -16,6 +16,7 @@
 
 #define RINA_PREFIX "ipc-manager"
 
+#include <algorithm>
 #include <dirent.h>
 #include <errno.h>
 #include <iostream>
@@ -285,6 +286,15 @@ void IPCProcess::notifyRegistrationToSupportingDIF(
 		const ApplicationProcessNamingInformation& ipcProcessName,
 		const ApplicationProcessNamingInformation& difName)
 throw (NotifyRegistrationToDIFException) {
+        std::list<ApplicationProcessNamingInformation>::iterator it =
+                        std::find(nMinusOneDIFs.begin(),
+                                  nMinusOneDIFs.end(), difName);
+        if (it != nMinusOneDIFs.end()) {
+                throw NotifyRegistrationToDIFException(
+                                "IPCProcess already registered to N-1 DIF"
+                                + difName.getProcessName());
+        }
+
 #if STUB_API
 	//Do nothing
 #else
@@ -302,6 +312,7 @@ throw (NotifyRegistrationToDIFException) {
 		throw NotifyRegistrationToDIFException(e.what());
 	}
 #endif
+	nMinusOneDIFs.push_back(difName);
 }
 
 void IPCProcess::notifyUnregistrationFromSupportingDIF(
@@ -715,6 +726,7 @@ IPCProcess * IPCProcessFactory::create(
 		const std::string& difType) throw (CreateIPCProcessException) {
 	lock();
 	int ipcProcessId = 1;
+	unsigned int portId = 0;
 	pid_t pid=0;
 	for (int i = 1; i < 1000; i++) {
 		if (ipcProcesses.find(i) == ipcProcesses.end()) {
@@ -780,12 +792,13 @@ IPCProcess * IPCProcessFactory::create(
 			throw CreateIPCProcessException();
 		}else{
 			//This is the IPC Manager, and fork was successful
+		        portId = pid;
 			LOG_DBG("Craeted a new IPC Process with pid = %d", pid);
 		}
 	}
 #endif
 
-	IPCProcess * ipcProcess = new IPCProcess(ipcProcessId, 0, pid, difType,
+	IPCProcess * ipcProcess = new IPCProcess(ipcProcessId, portId, pid, difType,
 			ipcProcessName);
 	ipcProcesses[ipcProcessId] = ipcProcess;
 	unlock();

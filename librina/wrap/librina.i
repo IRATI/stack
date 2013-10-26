@@ -505,6 +505,17 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
+    } else if ($1->getType() == rina::IPC_PROCESS_REGISTERED_TO_DIF) {
+    	rina::IPCProcessRegisteredToDIFEvent *flowReqEvent = dynamic_cast<rina::IPCProcessRegisteredToDIFEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/IPCProcessRegisteredToDIFEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::IPCProcessRegisteredToDIFEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
     }
 } 
 %enddef

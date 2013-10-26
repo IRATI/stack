@@ -29,6 +29,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -66,6 +67,9 @@ public class IPCManager {
 	public static final String SHIM_ETHERNET_IPC_PROCESS_TYPE = "shim-eth-vlan";
 	public static final String SHIM_DUMMY_IPC_PROCESS_TYPE = "shim-dummy";
 	
+	public static final long NO_IPC_PROCESS_ID = -1;
+	public static final long ERROR = -1;
+	
 	private IPCManagerConsole console = null;
 	
 	/**
@@ -100,9 +104,10 @@ public class IPCManager {
 		ipcProcessFactory = rina.getIpcProcessFactory();
 		applicationManager = rina.getApplicationManager();
 		ipcEventProducer = rina.getIpcEventProducer();
-		ipcProcessManager = new IPCProcessManager(ipcProcessFactory);
+		ipcProcessManager = new IPCProcessManager(ipcProcessFactory, console);
 		applicationRegistrationManager = new ApplicationRegistrationManager(
 				ipcProcessManager, applicationManager);
+		ipcProcessManager.setApplicationRegistrationManager(applicationRegistrationManager);
 		flowManager = new FlowManager(ipcProcessManager, applicationManager);
 	}
 	
@@ -167,6 +172,7 @@ public class IPCManager {
 		IPCProcessToCreate ipcProcessToCreate = null;
 		ApplicationProcessNamingInformation processNamingInfo = null;
 		IPCProcess ipcProcess = null;
+		List<String> difsToRegisterAt = null;
 		
 		for(int i=0; i<configuration.getIpcProcessesToCreate().size(); i++){
 			ipcProcessToCreate = configuration.getIpcProcessesToCreate().get(i);
@@ -193,9 +199,17 @@ public class IPCManager {
 				}
 			}
 			
-			if (ipcProcessToCreate.getDifsToRegisterAt() != null && 
-					ipcProcessToCreate.getDifsToRegisterAt().size() > 0){
-				//TODO register in underlying DIFs
+			difsToRegisterAt = ipcProcessToCreate.getDifsToRegisterAt();
+			if (difsToRegisterAt != null && difsToRegisterAt.size() > 0){
+				for(int j=0; j<difsToRegisterAt.size(); j++){
+					try{
+						this.requestRegistrationToNMinusOneDIF(
+								ipcProcess.getId(), difsToRegisterAt.get(j));
+					}catch(Exception ex){
+						log.error("Error requesting registration of IPC Process " + ipcProcess.getId() 
+								+" to DIF " + difsToRegisterAt.get(j) + ": "+ex.getMessage());
+					}
+				}
 			}
 			
 			if (ipcProcessToCreate.getNeighbors() != null && 
@@ -225,7 +239,7 @@ public class IPCManager {
 		
 		if (event.getType() == IPCEventType.APPLICATION_REGISTRATION_REQUEST_EVENT) {
 			ApplicationRegistrationRequestEvent appRegReqEvent = (ApplicationRegistrationRequestEvent) event;
-			applicationRegistrationManager.requestApplicationRegistration(appRegReqEvent);
+			applicationRegistrationManager.requestApplicationRegistration(appRegReqEvent, NO_IPC_PROCESS_ID);
 		} else if (event.getType() == IPCEventType.IPCM_REGISTER_APP_RESPONSE_EVENT) {
 			IpcmRegisterApplicationResponseEvent appRespEvent = (IpcmRegisterApplicationResponseEvent) event;
 			applicationRegistrationManager.registerApplicationResponse(appRespEvent);
@@ -323,9 +337,9 @@ public class IPCManager {
 	}
 	
 	/**
-	 * Assigns the IPC Process identified by ipcProcessID to the DIF called 'difName'
-	 * The DIF configuration must be available in the IPC Manager configuration file, 
-	 * otherwise this operation will return an error
+	 * Requests the assignment of the IPC Process identified by ipcProcessID to the 
+	 * DIF called 'difName'. The DIF configuration must be available in the IPC Manager 
+	 * configuration file, otherwise this operation will return an error
 	 * @param ipcProcessID
 	 * @param difName
 	 * @throws Exception
@@ -346,4 +360,15 @@ public class IPCManager {
 		 return ipcProcessManager.requestUpdateDIFConfiguration(ipcProcessID, difConfiguration);
 	}
 
+	/**
+	 * Requests the registration of the IPC Process identified by ipcProcessID to the 
+	 * N-1 DIF called 'difName'. If the IPC Process is already registered to the N-1 DIF
+	 * an error will be returned
+	 * @param ipcProcessID
+	 * @param difName
+	 * @throws Exception
+	 */
+	public long requestRegistrationToNMinusOneDIF(long ipcProcessID, String difName) throws Exception{
+		return ipcProcessManager.requestRegistrationToNMinusOneDIF(ipcProcessID, difName);
+	}
 }
