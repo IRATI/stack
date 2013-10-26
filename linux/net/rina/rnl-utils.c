@@ -182,7 +182,7 @@ static int parse_app_name_info(struct nlattr * name_attr,
         struct nla_policy attr_policy[APNI_ATTR_MAX + 1];
         struct nlattr *attrs[APNI_ATTR_MAX + 1];
 
-        LOG_DBG("[LDBG] Entering parse_app_name_info with nlattr "
+        LOG_DBG("Entering parse_app_name_info with nlattr "
                 "at %p and name_struct at %p", name_attr, name_struct);
 
         attr_policy[APNI_ATTR_PROCESS_NAME].type = NLA_STRING;
@@ -1243,14 +1243,14 @@ int rnl_parse_msg(struct genl_info * info,
                 msg->rina_hdr->dst_ipc_id);
 #endif
 
-        LOG_DBG("[LDBG] msg is at %pK", msg);
-        LOG_DBG("[LDBG] msg->rina_hdr is at %pK and size is: %zd",
+        LOG_DBG("msg is at %pK", msg);
+        LOG_DBG("  msg->rina_hdr is at %pK and size is: %zd",
                 msg->rina_hdr, sizeof(msg->rina_hdr));
-        LOG_DBG("[LDBG] msg->attrs is at %pK",
+        LOG_DBG("  msg->attrs is at %pK",
                 msg->attrs);
-        LOG_DBG("[LDBG] (msg->rina_hdr)->src_ipc_id is %d",
+        LOG_DBG("  (msg->rina_hdr)->src_ipc_id is %d",
                 (msg->rina_hdr)->src_ipc_id);
-        LOG_DBG("[LDBG] (msg->rina_hdr)->dst_ipc_id is %d",
+        LOG_DBG("  (msg->rina_hdr)->dst_ipc_id is %d",
                 (msg->rina_hdr)->dst_ipc_id);
 
         switch(info->genlhdr->cmd) {
