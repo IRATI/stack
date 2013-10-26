@@ -67,6 +67,7 @@ public class IPCManager {
 	public static final String SHIM_ETHERNET_IPC_PROCESS_TYPE = "shim-eth-vlan";
 	public static final String SHIM_DUMMY_IPC_PROCESS_TYPE = "shim-dummy";
 	
+	public static final int BOOTSTRAP_PHASE_RESPONSE_WAIT_TIME = 2;
 	public static final long NO_IPC_PROCESS_ID = -1;
 	public static final long ERROR = -1;
 	
@@ -173,6 +174,7 @@ public class IPCManager {
 		ApplicationProcessNamingInformation processNamingInfo = null;
 		IPCProcess ipcProcess = null;
 		List<String> difsToRegisterAt = null;
+		IPCEvent event = null;
 		
 		for(int i=0; i<configuration.getIpcProcessesToCreate().size(); i++){
 			ipcProcessToCreate = configuration.getIpcProcessesToCreate().get(i);
@@ -192,6 +194,15 @@ public class IPCManager {
 			if (ipcProcessToCreate.getDifName() != null){
 				try{
 					ipcProcessManager.requestAssignToDIF(ipcProcess.getId(), ipcProcessToCreate.getDifName());
+					event = ipcEventProducer.eventWait();
+					if (event.getType().equals(IPCEventType.ASSIGN_TO_DIF_RESPONSE_EVENT)) {
+						AssignToDIFResponseEvent atrEvent = (AssignToDIFResponseEvent) event;
+						ipcProcessManager.assignToDIFResponse(atrEvent);
+					} else {
+						log.error("Problems assigning IPC Process to DIF. Expected event of type " + 
+									"ASSIGN_TO_DIF_RESPONSE, but got event of type "+ event.getType());
+						continue;
+					}
 				}catch(Exception ex){
 					log.error(ex.getMessage() + ". Problems assigning IPC Process to DIF " 
 							+ ipcProcessToCreate.getDifName());
@@ -205,6 +216,18 @@ public class IPCManager {
 					try{
 						this.requestRegistrationToNMinusOneDIF(
 								ipcProcess.getId(), difsToRegisterAt.get(j));
+						log.debug("Aqui");
+						event = ipcEventProducer.eventWait();
+						log.debug("Aqui 2");
+						if (event.getType().equals(IPCEventType.IPCM_REGISTER_APP_RESPONSE_EVENT)) {
+							log.debug("Aqui 3");
+							IpcmRegisterApplicationResponseEvent appRespEvent = (IpcmRegisterApplicationResponseEvent) event;
+							applicationRegistrationManager.registerApplicationResponse(appRespEvent);
+						} else {
+							log.error("Problems assigning IPC Process to DIF. Expected event of type " + 
+										"IPCM_REGISTER_APP_RESPONSE_EVENT, but got event of type "+ event.getType());
+							continue;
+						}
 					}catch(Exception ex){
 						log.error("Error requesting registration of IPC Process " + ipcProcess.getId() 
 								+" to DIF " + difsToRegisterAt.get(j) + ": "+ex.getMessage());

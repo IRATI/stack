@@ -427,16 +427,23 @@ void * doNetlinkMessageReaderWork(void * arg) {
 			LOG_DBG("NL socket at port %d is closed", message->getPortId());
 
 			event = myRINAManager->osProcessFinalized(message->getPortId());
-			if (event)
+			if (event) {
 				eventsQueue->put(event);
+				LOG_DBG("Added event of type %d and sequence number %u to events queue",
+				                (int)event->getType(),
+				                event->getSequenceNumber());
+			}
 
 			delete message;
 		}else{
 			myRINAManager->netlinkMessageArrived(incomingMessage);
 			event = incomingMessage->toIPCEvent();
-			if (event)
+			if (event) {
 			        eventsQueue->put(event);
-			else
+			        LOG_DBG("Added event of type %d and sequence number %u to events queue",
+			                        (int)event->getType(),
+			                        event->getSequenceNumber());
+			} else
 			        LOG_WARN("Event is null for message type %d",
 			                        incomingMessage->getOperationCode());
 
