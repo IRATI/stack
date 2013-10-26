@@ -56,8 +56,14 @@ int                       rwq_destroy(struct workqueue_struct * rwq);
  * NOTE: The worker is the owner of the data passed (and must dispose it). It
  *       must return 0 if its work completed successfully.
  */
-int                       rwq_post(struct workqueue_struct * rwq,
-                                   int                       (* job)(void * o),
-                                   void *                    data);
+struct rwq_work_item * rwq_work_create(gfp_t     flags,
+                                       int    (* worker)(void * data),
+                                       void *    data);
+/*
+ * NOTE: This function will dispose the rwq_work_item on failure. The item
+ *       will be disposed automatically upon work completion.
+ */
+int                    rwq_work_post(struct workqueue_struct * rwq,
+                                     struct rwq_work_item *    item);
 
 #endif
