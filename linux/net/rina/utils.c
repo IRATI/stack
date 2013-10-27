@@ -337,7 +337,7 @@ int rwq_post(struct workqueue_struct * wq,
         tmp->data   = data;
 
         /* Finally posting the work to do */
-        if (queue_work(wq, (struct work_struct *) tmp)) {
+        if (!queue_work(wq, (struct work_struct *) tmp)) {
                 /* FIXME: Add workqueue name in the log */
                 LOG_ERR("Cannot post work on workqueue %pK", wq);
                 return -1;
