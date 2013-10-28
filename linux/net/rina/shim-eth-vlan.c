@@ -361,10 +361,9 @@ static void rinarp_resolve_handler(void *             opaque,
 
         LOG_DBG("Entered the ARP resolve handler of the shim-eth");
 
-        LOG_DBG("Dumping them addresses yo!");
+        LOG_DBG("Dumping the addresses!");
         gpa_dump(dest_pa);
         gha_dump(dest_ha);
-        LOG_DBG("Hope you found some updog");
 
         data = (struct ipcp_instance_data *) opaque;
         flow = find_flow_by_gpa(data, dest_pa);
@@ -619,6 +618,8 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(sdu);
 
+        LOG_DBG("Entered the sdu write");
+
         hlen = LL_RESERVED_SPACE(data->dev);
         tlen = data->dev->needed_tailroom;
         length = sdu->buffer->size;
@@ -627,39 +628,35 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         flow = find_flow(data, id);
         if (!flow) {
                 LOG_ERR("Flow does not exist, you shouldn't call this");
-                if (sdu_destroy(sdu))
-                        LOG_ERR("Could not destroy SDU");
                 return -1;
         }
 
+        LOG_DBG("Found the flow associated with the id");
+
         if (flow->port_id_state != PORT_STATE_ALLOCATED) {
                 LOG_ERR("Flow is not in the right state to call this");
-                if (sdu_destroy(sdu))
-                        LOG_ERR("Could not destroy SDU");
                 return -1;
         }
 
         src_hw = data->dev->dev_addr;
         if (!src_hw) {
                 LOG_ERR("Failed to get src hw addr");
-                if (sdu_destroy(sdu))
-                        LOG_ERR("Could not destroy SDU");
                 return -1;
         }
         dest_hw = gha_address(flow->dest_ha);
         if (!dest_hw) {
                 LOG_ERR("Dest hw is not known");
-                if (sdu_destroy(sdu))
-                        LOG_ERR("Could not destroy SDU");
                 return -1;
         }
 
+        LOG_DBG("Converted the hw addresses");
+
         skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
         if (skb == NULL) {
-                if (sdu_destroy(sdu))
-                        LOG_ERR("Could not destroy SDU");
                 return -1;
         }
+
+        LOG_DBG("Filling up the sk_buff");
 
         skb_reserve(skb, hlen);
         skb_reset_network_header(skb);
@@ -672,17 +669,13 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         if (dev_hard_header(skb, data->dev, ETH_P_RINA,
                             dest_hw, src_hw, skb->len) < 0) {
                 kfree_skb(skb);
-                if (sdu_destroy(sdu))
-                        LOG_ERR("Could not destroy SDU");
                 return -1;
         }
+
+        LOG_DBG("Gonna send it now");
 
         dev_queue_xmit(skb);
 
-        if (sdu_destroy(sdu)) {
-                LOG_ERR("Could not destroy SDU");
-                return -1;
-        }
         return 0;
 }
 
