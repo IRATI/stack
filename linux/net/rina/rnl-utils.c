@@ -2296,6 +2296,23 @@ int rnl_format_socket_closed_notification_msg(u32              nl_port,
 }
 EXPORT_SYMBOL(rnl_format_socket_closed_notification_msg);
 
+int send_nl_unicast_msg(struct net *net, struct sk_buff *skb, u32 portid,
+                msg_type_t type, rnl_sn_t seq_num) {
+        int result;
+        result = genlmsg_unicast(net, skb, portid);
+        if (result) {
+                LOG_ERR("Could not send NL unicast msg of type %d " \
+                                "with seq num %u to %u: %d",
+                                (int) type, seq_num, portid, result);
+                nlmsg_free(skb);
+                return -1;
+        } else {
+                LOG_DBG("Sent NL unicast msg of type %d with seq num " \
+                                "%u to %u", (int) type, seq_num, portid);
+                return 0;
+        }
+}
+
 int rnl_assign_dif_response(ipc_process_id_t id,
                             uint_t           res,
                             rnl_sn_t         seq_num,
@@ -2338,14 +2355,8 @@ int rnl_assign_dif_response(ipc_process_id_t id,
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
 
-        result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
-        if (result) {
-                LOG_ERR("Could not send unicast msg: %d", result);
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        return 0;
+        return send_nl_unicast_msg(&init_net, out_msg, nl_port_id,
+                        RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE, seq_num);
 }
 EXPORT_SYMBOL(rnl_assign_dif_response);
 
@@ -2391,14 +2402,8 @@ int rnl_update_dif_config_response(ipc_process_id_t id,
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
 
-        result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
-        if (result) {
-                LOG_ERR("Could not send unicast msg: %d", result);
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        return 0;
+        return send_nl_unicast_msg(&init_net, out_msg, nl_port_id,
+                        RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE, seq_num);
 }
 EXPORT_SYMBOL(rnl_update_dif_config_response);
 
@@ -2449,13 +2454,8 @@ int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
 
-        result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
-        if (result) {
-                LOG_ERR("Could not send unicast msg: %d", result);
-                return -1;
-        }
-
-        return 0;
+        return send_nl_unicast_msg(&init_net, out_msg, nl_port_id,
+                        command, seq_num);
 }
 EXPORT_SYMBOL(rnl_app_register_unregister_response_msg);
 
@@ -2506,14 +2506,8 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
 
-        result = genlmsg_unicast(&init_net, msg, nl_port_id);
-        if (result) {
-                LOG_ERR("Could not send unicast msg: %d", result);
-                nlmsg_free(msg);
-                return -1;
-        }
-
-        return 0;
+        return send_nl_unicast_msg(&init_net, msg, nl_port_id,
+                        RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED, seq_num);
 }
 EXPORT_SYMBOL(rnl_app_alloc_flow_req_arrived_msg);
 
@@ -2559,13 +2553,9 @@ int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
-        result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
-        if (result) {
-                LOG_ERR("Could not send unicast msg: %d", result);
-                return -1;
-        }
 
-        return 0;
+        return send_nl_unicast_msg(&init_net, out_msg, nl_port_id,
+                        RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT, seq_num);
 }
 EXPORT_SYMBOL(rnl_app_alloc_flow_result_msg);
 
@@ -2611,13 +2601,9 @@ int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
-        result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
-        if (result) {
-                LOG_ERR("Could not send unicast msg: %d", result);
-                return -1;
-        }
 
-        return 0;
+        return send_nl_unicast_msg(&init_net, out_msg, nl_port_id,
+                        RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE, seq_num);
 }
 EXPORT_SYMBOL(rnl_app_dealloc_flow_resp_msg);
 
@@ -2663,13 +2649,9 @@ int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
-        result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
-        if (result) {
-                LOG_ERR("Could not send unicast msg: %d", result);
-                return -1;
-        }
 
-        return 0;
+        return send_nl_unicast_msg(&init_net, out_msg, nl_port_id,
+                        RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION, 0);
 }
 EXPORT_SYMBOL(rnl_flow_dealloc_not_msg);
 
@@ -2717,12 +2699,9 @@ int rnl_ipcm_conn_create_resp_msg(ipc_process_id_t ipc_id,
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
         result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
-        if (result) {
-                LOG_ERR("Could not send unicast msg: %d", result);
-                return -1;
-        }
 
-        return 0;
+        return send_nl_unicast_msg(&init_net, out_msg, nl_port_id,
+                        RINA_C_IPCM_CONN_CREATE_RESPONSE, seq_num);
 }
 EXPORT_SYMBOL(rnl_ipcm_conn_create_resp_msg);
 
@@ -2772,13 +2751,9 @@ int rnl_ipcm_conn_create_result_msg(ipc_process_id_t ipc_id,
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
-        result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
-        if (result) {
-                LOG_ERR("Could not send unicast msg: %d", result);
-                return -1;
-        }
 
-        return 0;
+        return send_nl_unicast_msg(&init_net, out_msg, nl_port_id,
+                        RINA_C_IPCM_CONN_CREATE_RESULT, seq_num);
 }
 EXPORT_SYMBOL(rnl_ipcm_conn_create_result_msg);
 
@@ -2825,13 +2800,9 @@ int rnl_ipcm_conn_update_result_msg(ipc_process_id_t ipc_id,
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
-        result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
-        if (result) {
-                LOG_ERR("Could not send unicast msg: %d", result);
-                return -1;
-        }
 
-        return 0;
+        return send_nl_unicast_msg(&init_net, out_msg, nl_port_id,
+                        RINA_C_IPCM_CONN_UPDATE_RESULT, seq_num);
 }
 EXPORT_SYMBOL(rnl_ipcm_conn_update_result_msg);
 
@@ -2874,12 +2845,7 @@ int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port)
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
 
-        result = genlmsg_unicast(&init_net, out_msg, dest_port);
-        if (result) {
-                LOG_ERR("Could not send unicast msg: %d", result);
-                return -1;
-        }
-
-        return 0;
+        return send_nl_unicast_msg(&init_net, out_msg, dest_port,
+                        RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION, 0);
 }
 EXPORT_SYMBOL(rnl_ipcm_sock_closed_notif_msg);
