@@ -173,6 +173,7 @@ void gpa_dump(const struct gpa * gpa)
 
         rkfree(tmp);
 }
+EXPORT_SYMBOL(gpa_dump);
 
 int gpa_address_shrink_gfp(gfp_t        flags,
                            struct gpa * gpa,
@@ -326,6 +327,7 @@ void gha_dump(const struct gha * gha)
                 LOG_DBG("GHA %pK: <unknown format>", gha);
         }
 }
+EXPORT_SYMBOL(gha_dump);
 
 bool gha_is_ok(const struct gha * gha)
 { return (!gha || gha->type != MAC_ADDR_802_3) ? false : true; }

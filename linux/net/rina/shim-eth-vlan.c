@@ -361,6 +361,11 @@ static void rinarp_resolve_handler(void *             opaque,
 
         LOG_DBG("Entered the ARP resolve handler of the shim-eth");
 
+        LOG_DBG("Dumping them addresses yo!");
+        gpa_dump(dest_pa);
+        gha_dump(dest_ha);
+        LOG_DBG("Hope you found some updog");
+
         data = (struct ipcp_instance_data *) opaque;
         flow = find_flow_by_gpa(data, dest_pa);
 
