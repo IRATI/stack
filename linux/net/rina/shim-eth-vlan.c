@@ -179,12 +179,20 @@ find_flow_by_flow_id(struct ipcp_instance_data * data,
 
 static struct gpa * name_to_gpa(const struct name * name)
 {
-        char * tmp = name_tostring(name);
+        char *       tmp;
+        struct gpa * gpa;
 
+        tmp = name_tostring(name);
         if (!tmp)
                 return NULL;
 
-        return gpa_create(tmp, strlen(tmp));
+        gpa = gpa_create(tmp, strlen(tmp));
+        if (!gpa) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        return gpa;
 }
 
 static struct shim_eth_flow *
@@ -329,7 +337,7 @@ static string_t * create_vlan_interface_name(string_t *    interface_name,
 static int flow_destroy(struct ipcp_instance_data * data,
                         struct shim_eth_flow *     flow)
 {
-        flow_id_t              fid;
+        flow_id_t fid;
 
         if (!flow) {
                 LOG_ERR("Couldn't destroy flow. No flow given");
@@ -349,8 +357,6 @@ static int flow_destroy(struct ipcp_instance_data * data,
 
         return 0;
 }
-
-
 
 static void rinarp_resolve_handler(void *             opaque,
                                    const struct gpa * dest_pa,
@@ -467,7 +473,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                            int                         result)
 {
         struct shim_eth_flow * flow;
-        struct sdu * du;
+        struct sdu *           du;
 
         ASSERT(data);
         ASSERT(is_flow_id_ok(flow_id));
@@ -733,18 +739,15 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         saddr = mh->h_source;
         if (!saddr) {
                 LOG_ERR("Couldn't get source address");
+                kfree_skb(skb);
                 return -1;
         }
 
         /* Get correct flow based on hwaddr */
-        ghaddr = gha_create(MAC_ADDR_802_3, saddr);
+        ghaddr = gha_create_gfp(GFP_ATOMIC, MAC_ADDR_802_3, saddr);
         if (!gha_is_ok(ghaddr)) {
-                LOG_ERR("Badd ghaddr");
-                return -1;
-        }
-        flow = find_flow_by_gha(data, ghaddr);
-        if (!flow) {
-                LOG_ERR("Couldn't find flow");
+                LOG_ERR("Bad GHA, cannot receive");
+                kfree_skb(skb);
                 return -1;
         }
 
@@ -753,15 +756,21 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         ASSERT(skb->tail - skb->network_header >= 0);
         du = sdu_create_from(nh, skb->tail - skb->network_header);
         if (!du) {
-                LOG_ERR("Couldn't create data unut");
+                LOG_ERR("Couldn't create data unit");
+                gha_destroy(ghaddr);
+                kfree_skb(skb);
                 return -1;
         }
 
+        flow = find_flow_by_gha(data, ghaddr);
         /* If the flow cannot be found --> New Flow! */
         if (!flow) {
-                flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
-                if (!flow)
+                flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
+                if (!flow) {
+                        gha_destroy(ghaddr);
+                        kfree_skb(skb);
                         return -1;
+                }
 
                 INIT_LIST_HEAD(&flow->list);
 
@@ -770,17 +779,17 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 spin_unlock(&data->lock);
 
                 flow->port_id_state = PORT_STATE_PENDING;
-                flow->dest_ha = ghaddr;
-                flow->flow_id = kfa_flow_create(data->kfa);
-
-                sname  = NULL;
-                gpaddr = rinarp_find_gpa(data->handle, flow->dest_ha);
+                flow->dest_ha       = ghaddr;
+                flow->flow_id       = kfa_flow_create(data->kfa);
+                sname               = NULL;
+                gpaddr              = rinarp_find_gpa(data->handle,
+                                                      flow->dest_ha);
                 if (gpaddr && gpa_is_ok(gpaddr)) {
-                        flow->dest_pa = gpa_dup(gpaddr);
+                        flow->dest_pa = gpa_dup_gfp(GFP_ATOMIC, gpaddr);
                         sname = string_toname(gpa_address_value(gpaddr));
                 }
 
-                if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
+                if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_ATOMIC)) {
                         LOG_ERR("Couldn't create the sdu queue"
                                 "for a new flow");
                         flow_destroy(data, flow);
