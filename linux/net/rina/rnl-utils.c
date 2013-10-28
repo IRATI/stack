@@ -1458,10 +1458,16 @@ static int format_app_name_info(const struct name * name,
 }
 
 static int format_flow_spec(const struct flow_spec * fspec,
-                            struct sk_buff   * msg)
+                            struct sk_buff *         msg)
 {
+        if (!fspec) {
+                LOG_ERR("Cannot format flow-spec, "
+                        "fspec parameter is NULL ...");
+                return -1;
+        }
         if (!msg) {
-                LOG_ERR("Bogus input parameter(s), bailing out");
+                LOG_ERR("Cannot format flow-spec, "
+                        "message parameter is NULL ...");
                 return -1;
         }
 
@@ -1472,7 +1478,9 @@ static int format_flow_spec(const struct flow_spec * fspec,
          * FIXME: only->max or min attributes are taken from
          *  uint_range types
          */
+
         /* FIXME: ??? only max is accessed, what do you mean ? */
+
         /* FIXME: librina does not define ranges for these attributes, just
          * unique values. So far I seleced only the max or min value depending
          * on the most restrincting (in this case all max).
@@ -1705,19 +1713,17 @@ int rnl_format_ipcm_disconn_neighbor_req_msg(const struct name    * neighbor_nam
 }
 EXPORT_SYMBOL(rnl_format_ipcm_disconn_neighbor_req_msg);
 
-int rnl_format_ipcm_disconn_neighbor_resp_msg(uint_t         result,
+int rnl_format_ipcm_disconn_neighbor_resp_msg(uint_t           result,
                                               struct sk_buff * skb_out)
-{
-        return 0;
-}
+{ return 0; }
 EXPORT_SYMBOL(rnl_format_ipcm_disconn_neighbor_resp_msg);
 
-int rnl_format_ipcm_alloc_flow_req_msg(const struct name      * source,
-                                       const struct name      * dest,
+int rnl_format_ipcm_alloc_flow_req_msg(const struct name *      source,
+                                       const struct name *      dest,
                                        const struct flow_spec * fspec,
-                                       port_id_t              id,
-                                       const struct name      * dif_name,
-                                       struct sk_buff         * skb_out)
+                                       port_id_t                id,
+                                       const struct name *      dif_name,
+                                       struct sk_buff *         skb_out)
 {
         struct nlattr * msg_src_name, * msg_dst_name;
         struct nlattr * msg_fspec,    * msg_dif_name;
@@ -1770,6 +1776,7 @@ int rnl_format_ipcm_alloc_flow_req_msg(const struct name      * source,
 
         if (format_flow_spec(fspec, skb_out) < 0)
                 goto format_fail;
+
         nla_nest_end(skb_out, msg_fspec);
 
         if (nla_put_u32(skb_out, IAFRM_ATTR_PORT_ID, id))
