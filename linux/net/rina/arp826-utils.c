@@ -312,10 +312,6 @@ void gha_dump(const struct gha * gha)
                 LOG_DBG("GHA %pK: <null>", gha);
                 return;
         }
-        if (gha->type == 0) {
-                LOG_DBG("GHA %pK: <empty>", gha);
-                return;
-        }
 
         if (gha->type == MAC_ADDR_802_3) {
                 LOG_DBG("GHA %pK: %02X:%02X:%02X:%02X:%02X:%02X",
@@ -506,12 +502,27 @@ struct net_device * gha_to_device(const struct gha * ha)
                 return NULL;
         }
 
+        LOG_DBG("Looking for a device with this ha");
+        gha_dump(ha);
+        LOG_DBG("Showing all device+addresses");
+
         read_lock(&dev_base_lock);
 
         dev = first_net_device(&init_net);
         while (dev) {
+                LOG_DBG("Next device");
+                LOG_DBG("addr_len: %d", dev->addr_len);
                 if (dev->addr_len == gha_address_length(ha)) {
                         for_each_dev_addr(dev, hwa) {
+                                if (dev->addr_len == 6) {
+                                        LOG_DBG("HA: %02X:%02X:%02X:%02X:%02X:%02X",
+                                                hwa->addr[5],
+                                                hwa->addr[4],
+                                                hwa->addr[3],
+                                                hwa->addr[2],
+                                                hwa->addr[1],
+                                                hwa->addr[0]);
+                                }
                                 if (!memcmp(hwa->addr,
                                             gha_address(ha),
                                             gha_address_length(ha))) {
