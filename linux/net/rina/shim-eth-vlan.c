@@ -618,7 +618,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(sdu);
 
-	LOG_DBG("Entered the sdu write");
+        LOG_DBG("Entered the sdu write");
 
         hlen = LL_RESERVED_SPACE(data->dev);
         tlen = data->dev->needed_tailroom;
@@ -631,7 +631,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-	LOG_DBG("Found the flow associated with the id");
+        LOG_DBG("Found the flow associated with the id");
 
         if (flow->port_id_state != PORT_STATE_ALLOCATED) {
                 LOG_ERR("Flow is not in the right state to call this");
@@ -649,14 +649,14 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-	LOG_DBG("Converted the hw addresses");
+        LOG_DBG("Converted the hw addresses");
 
         skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
         if (skb == NULL) {
                 return -1;
         }
 
-	LOG_DBG("Filling up the sk_buff");
+        LOG_DBG("Filling up the sk_buff");
 
         skb_reserve(skb, hlen);
         skb_reset_network_header(skb);
@@ -672,7 +672,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-	LOG_DBG("Gonna send it now");
+        LOG_DBG("Gonna send it now");
 
         dev_queue_xmit(skb);
 
