@@ -68,7 +68,6 @@ int rmt_destroy(struct rmt * instance)
 
         return 0;
 }
-EXPORT_SYMBOL(rmt_destroy);
 
 int rmt_send_sdu(struct rmt * instance,
                  address_t    address,

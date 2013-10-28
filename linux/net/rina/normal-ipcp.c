@@ -110,7 +110,7 @@ static int normal_sdu_write(struct ipcp_instance_data * data,
                             port_id_t                   id,
                             struct sdu *                sdu)
 {
-        efcp_container_write(data->efcpc, id, sdu);
+        LOG_MISSING;
         return 0;
 }
 
@@ -347,10 +347,6 @@ static int normal_destroy(struct ipcp_factory_data * data,
 
         if (tmp->info->name)
                 name_destroy(tmp->info->name);
-
-        efcp_container_destroy(tmp->efcpc);
-
-        rmt_destroy(tmp->rmt);
 
         rkfree(tmp->info);
         rkfree(tmp);

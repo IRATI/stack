@@ -107,16 +107,6 @@ int efcp_container_destroy(struct efcp_container * container)
 
         return 0;
 }
-EXPORT_SYMBOL(efcp_container_destroy);
-
-int efcp_container_write(struct efcp_container * container,
-                         port_id_t               port_id,
-                         struct sdu *            sdu)
-{
-        LOG_MISSING;
-        return -1;
-}
-EXPORT_SYMBOL(efcp_container_write);
 
 static int is_connection_ok(const struct connection * connection)
 {

@@ -46,9 +46,6 @@ struct efcp_container;
 
 struct efcp_container * efcp_container_create(void);
 int                     efcp_container_destroy(struct efcp_container * c);
-int                     efcp_container_write(struct efcp_container * container,
-                                             port_id_t               port_id,
-                                             struct sdu *            sdu);
 
 /* FIXME: Should a cep_id_t be returned instead ? */
 cep_id_t      efcp_connection_create(struct efcp_container *   container,
