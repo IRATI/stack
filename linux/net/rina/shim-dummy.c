@@ -497,9 +497,10 @@ static int dummy_write(void * o)
                 return -1;
         }
 
-        kfa_sdu_post(tmp->kfa,
-                     tmp->port_id,
-                     tmp->sdu);
+        if (kfa_sdu_post(tmp->kfa,
+                         tmp->port_id,
+                         tmp->sdu))
+                return -1;
 
         write_data_destroy(tmp);
 
@@ -510,16 +511,38 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                            port_id_t                   id,
                            struct sdu *                sdu)
 {
-        struct dummy_flow * flow;
-        struct write_data * tmp;
+        struct dummy_flow *    flow;
+        struct write_data *    tmp;
         struct rwq_work_item * item;
+        struct sdu *           copy_sdu;
 
         LOG_DBG("Dummy SDU write invoked.");
+
+        if (!sdu)
+                return -1;
+
+        copy_sdu = rkzalloc(sizeof(*copy_sdu), GFP_ATOMIC);
+        if (!copy_sdu)
+                return -1;
+
+	copy_sdu->buffer = rkzalloc(sizeof(struct buffer), GFP_ATOMIC);
+	if (!copy_sdu->buffer)
+		return -1;
+
+        copy_sdu->buffer->data = (char *) rkzalloc(sdu->buffer->size, GFP_ATOMIC);
+        if (!copy_sdu->buffer->data)
+                return -1;
+
+        memcpy(copy_sdu->buffer->data, sdu->buffer->data, sdu->buffer->size);
+        copy_sdu->buffer->size = sdu->buffer->size;
+
+
+        sdu_destroy(sdu);
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
                         tmp = write_data_create(data->kfa,
-                                                sdu,
+                                                copy_sdu,
                                                 flow->dst_port_id);
                         if (!is_write_data_complete(tmp))
                                 return -1;
@@ -530,12 +553,11 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                                 return -1;
                         }
                         ASSERT(dummy_wq);
-                        LOG_DBG("Our beloved dummy workqueue: %pK", dummy_wq);
                         return rwq_work_post(dummy_wq, item);
                 }
                 if (flow->dst_port_id == id) {
                         tmp = write_data_create(data->kfa,
-                                                sdu,
+                                                copy_sdu,
                                                 flow->port_id);
                         if (!is_write_data_complete(tmp))
                                 return -1;
@@ -546,7 +568,6 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                                 return -1;
                         }
                         ASSERT(dummy_wq);
-                        LOG_DBG("Our beloved dummy workqueue: %pK", dummy_wq);
                         return rwq_work_post(dummy_wq, item);
                 }
         }

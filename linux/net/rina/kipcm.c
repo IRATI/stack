@@ -2385,7 +2385,8 @@ int kipcm_sdu_write(struct kipcm * kipcm,
         LOG_DBG("Tring to write SDU of size %zd to port_id %d",
                 sdu->buffer->size, port_id);
 
-        kfa_flow_sdu_write(kipcm->kfa, port_id, sdu);
+        if (kfa_flow_sdu_write(kipcm->kfa, port_id, sdu))
+                return -1;
 
         /* The SDU is ours */
 
