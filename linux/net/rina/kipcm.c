@@ -460,9 +460,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 return -1;
         }
 
-        rkfree(hdr);
-        rkfree(attrs);
-        rkfree(msg);
+        alloc_flow_resp_free(attrs, msg, hdr);
 
         return 0;
 }
@@ -2387,9 +2385,8 @@ int kipcm_sdu_write(struct kipcm * kipcm,
         LOG_DBG("Tring to write SDU of size %zd to port_id %d",
                 sdu->buffer->size, port_id);
 
-        kfa_flow_sdu_write(kipcm->kfa, port_id, sdu);
-
-        sdu_destroy(sdu);
+        if (kfa_flow_sdu_write(kipcm->kfa, port_id, sdu))
+                return -1;
 
         /* The SDU is ours */
 

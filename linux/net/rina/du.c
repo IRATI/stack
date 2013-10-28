@@ -116,8 +116,10 @@ struct sdu * sdu_dup_gfp(gfp_t        flags,
                 return NULL;
 
         tmp->buffer = rkzalloc(sizeof(struct buffer), flags);
-        if (!tmp->buffer)
+        if (!tmp->buffer) {
+                rkfree(tmp);
                 return NULL;
+        }
 
         tmp->buffer->data = (char *) rkzalloc(sdu->buffer->size, flags);
         if (!tmp->buffer->data) {
@@ -128,7 +130,7 @@ struct sdu * sdu_dup_gfp(gfp_t        flags,
 
         memcpy(tmp->buffer->data, sdu->buffer->data, sdu->buffer->size);
         tmp->buffer->size = sdu->buffer->size;
-        
+
         return tmp;
 }
 EXPORT_SYMBOL(sdu_dup_gfp);
