@@ -282,8 +282,9 @@ static void rwq_worker(struct work_struct * work)
         /* We're the owner of the data, let's free it */
         if (item->worker(item->data)) {
                 LOG_ERR("The worker could not process its data!");
-                return;
         }
+
+        rkfree(item);
 
         return;
 }
@@ -309,26 +310,22 @@ struct workqueue_struct * rwq_create(const char * name)
 }
 EXPORT_SYMBOL(rwq_create);
 
-int rwq_post(struct workqueue_struct * wq,
-             int                       (* worker)(void * data),
-             void *                    data)
+struct rwq_work_item * rwq_work_create(gfp_t     flags,
+                                       int    (* worker)(void * data),
+                                       void *    data)
 {
         struct rwq_work_item * tmp;
 
-        if (!wq) {
-                LOG_ERR("No workqueue passed, cannot post work");
-                return -1;
-        }
         if (!worker) {
-                LOG_ERR("No worker passed, "
-                        "cannot post work on workqueue %pK", wq);
-                return -1;
+                LOG_ERR("No worker passed, cannot create work");
+                return NULL;
         }
+        /* The data parameter can be empty ... */
 
-        tmp = rkzalloc(sizeof(struct rwq_work_item), GFP_KERNEL);
+        tmp = rkzalloc(sizeof(struct rwq_work_item), flags);
         if (!tmp) {
-                LOG_ERR("Cannot post work on workqueue %pK", wq);
-                return -1;
+                LOG_ERR("Cannot create work item");
+                return NULL;
         }
 
         /* Filling the workqueue item */
@@ -336,8 +333,23 @@ int rwq_post(struct workqueue_struct * wq,
         tmp->worker = worker;
         tmp->data   = data;
 
-        /* Finally posting the work to do */
-        if (!queue_work(wq, (struct work_struct *) tmp)) {
+        return tmp;
+}
+EXPORT_SYMBOL(rwq_work_create);
+
+int rwq_work_post(struct workqueue_struct * wq,
+                  struct rwq_work_item *    item)
+{
+        if (!wq) {
+                LOG_ERR("No workqueue passed, cannot post work");
+                return -1;
+        }
+        if (!item) {
+                LOG_ERR("No item passed, cannot post work");
+                return -1;
+        }
+
+        if (!queue_work(wq, (struct work_struct *) item)) {
                 /* FIXME: Add workqueue name in the log */
                 LOG_ERR("Cannot post work on workqueue %pK", wq);
                 return -1;
@@ -347,7 +359,7 @@ int rwq_post(struct workqueue_struct * wq,
 
         return 0;
 }
-EXPORT_SYMBOL(rwq_post);
+EXPORT_SYMBOL(rwq_work_post);
 
 int rwq_destroy(struct workqueue_struct * wq)
 {
