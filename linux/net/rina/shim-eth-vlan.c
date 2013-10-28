@@ -448,7 +448,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                         return -1;
                 }
         } else if (flow->port_id_state == PORT_STATE_PENDING) {
-                LOG_ERR("Port-id state is already pending...");
+                LOG_ERR("Port-id state is already pending ...");
         } else {
                 LOG_ERR("Allocate called in a wrong state, how dare you!");
                 return -1;
