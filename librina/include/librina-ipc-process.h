@@ -242,25 +242,49 @@ public:
  */
 class ExtendedIPCManager: public IPCManager {
 	/** The ID of the IPC Process */
-	unsigned int ipcProcessId;
+	unsigned short ipcProcessId;
 
+	/** The IPC Process naming information */
 	ApplicationProcessNamingInformation ipcProcessName;
 
 	/** The portId of the IPC Manager */
 	unsigned int ipcManagerPort;
+
+	/**
+	 * True if the IPC Process has been initialized,
+	 * false otherwise
+	 */
+	bool ipcProcessInitialized;
 
 	/** The current configuration of the IPC Process */
 	DIFInformation currentDIFInformation;
 
 public:
 	static const std::string error_allocate_flow;
+	ExtendedIPCManager();
 	~ExtendedIPCManager() throw();
 	const DIFInformation& getCurrentDIFInformation() const;
 	void setCurrentDIFInformation(const DIFInformation& currentDIFInformation);
-	unsigned int getIpcProcessId() const;
-	void setIpcProcessId(unsigned int ipcProcessId);
+	unsigned short getIpcProcessId() const;
+	void setIpcProcessId(unsigned short ipcProcessId);
 	const ApplicationProcessNamingInformation& getIpcProcessName();
 	void setIpcProcessName(const ApplicationProcessNamingInformation& name);
+	void setIPCManagerPort(unsigned int ipcManagerPort);
+
+	/**
+	 * Notify the IPC Manager about the successful initialization of the
+	 * IPC Process Daemon. Now it is ready to receive messages.
+	 * @throws IPCException if the process is already initialized or
+	 * an error occurs
+	 */
+	void notifyIPCProcessInitialized() throw (IPCException);
+
+	/**
+	 * True if the IPC Process has been successfully initialized, false
+	 * otherwise
+	 * @return
+	 */
+	bool isIPCProcessInitialized() const;
 
 	/**
 	 * Override function of IPC Manager

@@ -1283,5 +1283,16 @@ IPCEvent* IpcmIPCManagerPresentMessage::toIPCEvent(){
         return 0;
 }
 
+/* CLAS IPCM IPC PROCESS INITIALIZED MESSAGE */
+IpcmIPCProcessInitializedMessage::IpcmIPCProcessInitializedMessage() :
+BaseNetlinkMessage(RINA_C_IPCM_IPC_PROCESS_INITIALIZED){
+}
+
+IPCEvent* IpcmIPCProcessInitializedMessage::toIPCEvent(){
+        IPCEvent * event = new IPCProcessDaemonInitializedEvent(
+                        getSourceIpcProcessId(), getSequenceNumber());
+        return event;
+}
+
 }
 

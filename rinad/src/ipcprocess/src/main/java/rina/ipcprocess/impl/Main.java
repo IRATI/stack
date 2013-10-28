@@ -20,7 +20,7 @@ public class Main {
 		try{
 			log.info("Instantiating IPC Process ...");
 			
-			if (args.length != 3){
+			if (args.length != 4){
 				log.error("Don't have enough arguments, exiting");
 				System.exit(-1);
 			}
@@ -30,8 +30,9 @@ public class Main {
 			namingInfo.setProcessName(args[0]);
 			namingInfo.setProcessInstance(args[1]);
 			int ipcProcessId = Integer.parseInt(args[2]);
+			long ipcManagerPort = Long.parseLong(args[3]);
 			
-			IPCProcess ipcProcess = new IPCProcess(namingInfo, ipcProcessId);
+			IPCProcess ipcProcess = new IPCProcess(namingInfo, ipcProcessId, ipcManagerPort);
 			ipcProcess.executeEventLoop();
 		}catch(Exception ex){
 			log.error("Problems: " + ex.getMessage() + ". Closing down IPC Process.");

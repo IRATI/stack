@@ -125,6 +125,12 @@ const std::string& QueryRIBRequestEvent::getFilter() const{
 const std::string ExtendedIPCManager::error_allocate_flow =
 		"Error allocating flow";
 
+ExtendedIPCManager::ExtendedIPCManager() {
+        ipcManagerPort = 0;
+        ipcProcessId = 0;
+        ipcProcessInitialized = false;
+}
+
 ExtendedIPCManager::~ExtendedIPCManager() throw(){
 }
 
@@ -137,11 +143,11 @@ void ExtendedIPCManager::setCurrentDIFInformation(
 	this->currentDIFInformation = currentDIFInformation;
 }
 
-unsigned int ExtendedIPCManager::getIpcProcessId() const{
+unsigned short ExtendedIPCManager::getIpcProcessId() const{
 	return ipcProcessId;
 }
 
-void ExtendedIPCManager::setIpcProcessId(unsigned int ipcProcessId){
+void ExtendedIPCManager::setIpcProcessId(unsigned short ipcProcessId){
 	this->ipcProcessId = ipcProcessId;
 }
 
@@ -153,6 +159,41 @@ const ApplicationProcessNamingInformation&
 void ExtendedIPCManager::setIpcProcessName(
                 const ApplicationProcessNamingInformation& name) {
         ipcProcessName = name;
+}
+
+void ExtendedIPCManager::setIPCManagerPort(
+                unsigned int ipcManagerPort) {
+        this->ipcManagerPort = ipcManagerPort;
+}
+
+void ExtendedIPCManager::notifyIPCProcessInitialized() throw(IPCException){
+        lock();
+        if (ipcProcessInitialized) {
+                unlock();
+                throw IPCException("IPC Process already initialized");
+        }
+
+#if STUB_API
+        //Do nothing
+#else
+        IpcmIPCProcessInitializedMessage message;
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestPortId(ipcManagerPort);
+        message.setNotificationMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                unlock();
+                throw IPCException(e.what());
+        }
+#endif
+        ipcProcessInitialized = true;
+        unlock();
+}
+
+bool ExtendedIPCManager::isIPCProcessInitialized() const {
+        return ipcProcessInitialized;
 }
 
 ApplicationRegistration * ExtendedIPCManager::commitPendingResitration(

@@ -372,6 +372,9 @@ class IPCProcess {
 	/** The current information of the DIF where the IPC Process is assigned*/
 	DIFInformation difInformation;
 
+	/** True if the IPC Process is initialized and can start processing operations*/
+	bool initialized;
+
 	/** True if the IPC Process is a member of the DIF, false otherwise */
 	bool difMember;
 
@@ -432,6 +435,11 @@ public:
 	void setDIFInformation(const DIFInformation& difInformation);
 	bool isDIFMember() const;
 	void setDIFMember(bool difMember);
+
+	/**
+	 * Invoked by the IPC Manager to set the IPC Process as initialized.
+	 */
+	void setInitialized();
 
 	/**
 	 * Invoked by the IPC Manager to make an existing IPC Process a member of a
@@ -931,7 +939,17 @@ public:
                         int result, unsigned int sequenceNumber);
 };
 
-
+/**
+ * Event informing about the successful initialization of an IPC Process
+ * Daemon
+ */
+class IPCProcessDaemonInitializedEvent: public IPCEvent {
+        unsigned short ipcProcessId;
+public:
+        IPCProcessDaemonInitializedEvent(unsigned short ipcProcessId,
+                        unsigned int sequenceNumber);
+        unsigned short getIPCProcessId() const;
+};
 
 }
 

@@ -59,6 +59,7 @@ enum RINANetlinkOperationCode{
 	RINA_C_RMT_DUMP_FT_REPLY, /* TODO RMT (kernel) -> IPC Process (user space) */
 	RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION, /* Kernel (NL layer) -> IPC Manager */
 	RINA_C_IPCM_IPC_MANAGER_PRESENT, /* IPC Manager -> Kernel (NL layer) */
+	RINA_C_IPCM_IPC_PROCESS_INITIALIZED, /* IPC Process -> IPC Manager */
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST, /* Allocate flow request, Application -> IPC Manager */
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* Response to an application allocate flow request, IPC Manager -> Application */
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, /* Allocate flow request from a remote application, IPC Manager -> Application */
@@ -937,6 +938,16 @@ class IpcmIPCManagerPresentMessage: public BaseNetlinkMessage {
 public:
 	IpcmIPCManagerPresentMessage();
 	IPCEvent* toIPCEvent();
+};
+
+/**
+ * IPC Process -> IPC Manager. Sent after the IPC Process daemon has initialized
+ * the NL infrastructure and is ready to receive messages.
+ */
+class IpcmIPCProcessInitializedMessage: public BaseNetlinkMessage {
+public:
+        IpcmIPCProcessInitializedMessage();
+        IPCEvent* toIPCEvent();
 };
 
 }

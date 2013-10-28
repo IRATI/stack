@@ -16,6 +16,7 @@ import eu.irati.librina.IPCEventProducerSingleton;
 import eu.irati.librina.IPCEventType;
 import eu.irati.librina.IPCManagerInitializationException;
 import eu.irati.librina.IPCProcess;
+import eu.irati.librina.IPCProcessDaemonInitializedEvent;
 import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IpcmAllocateFlowRequestResultEvent;
 import eu.irati.librina.IpcmDeallocateFlowResponseEvent;
@@ -63,7 +64,7 @@ public class IPCManager {
 	public static final String CONFIG_FILE_LOCATION = "../conf/ipcmanager.conf"; 
 	public static final long CONFIG_FILE_POLL_PERIOD_IN_MS = 5000;
 	
-	public static final String NORMAL_IPC_PROCESS_TYPE = "normal";
+	public static final String NORMAL_IPC_PROCESS_TYPE = "normal-ipc";
 	public static final String SHIM_ETHERNET_IPC_PROCESS_TYPE = "shim-eth-vlan";
 	public static final String SHIM_DUMMY_IPC_PROCESS_TYPE = "shim-dummy";
 	
@@ -185,6 +186,23 @@ public class IPCManager {
 			try{
 				ipcProcess = createIPCProcess(processNamingInfo, 
 						ipcProcessToCreate.getType());
+				if (ipcProcess.getType().equals(NORMAL_IPC_PROCESS_TYPE)) {
+					//Wait for IPC Process Daemon initialized event
+					event = ipcEventProducer.eventWait();
+					if (event.getType().equals(IPCEventType.IPC_PROCESS_DAEMON_INITIALIZED_EVENT)) {
+						IPCProcessDaemonInitializedEvent ipcEvent = (IPCProcessDaemonInitializedEvent) event;
+						if (ipcEvent.getIPCProcessId() != ipcProcess.getId()) {
+							log.error("Expected IPC Process id "+ipcProcess.getId() 
+									+ " but got " + ipcEvent.getIPCProcessId());
+							continue;
+						}
+					} else {
+						log.error("Expected IPC Process Daemon Initialized event, but got "+event.getType());
+						continue;
+					}
+				}
+				
+				ipcProcess.setInitialized();
 			}catch(CreateIPCProcessException ex){
 				log.error(ex.getMessage() + ". Problems creating IPC Process " 
 						+ processNamingInfo.toString());
@@ -216,11 +234,8 @@ public class IPCManager {
 					try{
 						this.requestRegistrationToNMinusOneDIF(
 								ipcProcess.getId(), difsToRegisterAt.get(j));
-						log.debug("Aqui");
 						event = ipcEventProducer.eventWait();
-						log.debug("Aqui 2");
 						if (event.getType().equals(IPCEventType.IPCM_REGISTER_APP_RESPONSE_EVENT)) {
-							log.debug("Aqui 3");
 							IpcmRegisterApplicationResponseEvent appRespEvent = (IpcmRegisterApplicationResponseEvent) event;
 							applicationRegistrationManager.registerApplicationResponse(appRespEvent);
 						} else {

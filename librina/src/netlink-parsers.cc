@@ -329,6 +329,9 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 	case RINA_C_IPCM_IPC_MANAGER_PRESENT: {
 		return 0;
 	}
+	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED: {
+	        return 0;
+	}
 
 	default: {
 		return -1;
@@ -456,6 +459,9 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	case RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION: {
 		return parseIpcmNLSocketClosedNotificationMessage(
 				netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED: {
+	        return new IpcmIPCProcessInitializedMessage();
 	}
 	default: {
 		LOG_ERR(

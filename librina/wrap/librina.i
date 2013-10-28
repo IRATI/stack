@@ -516,6 +516,17 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
+    } else if ($1->getType() == rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT) {
+    	rina::IPCProcessDaemonInitializedEvent *flowReqEvent = dynamic_cast<rina::IPCProcessDaemonInitializedEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/IPCProcessDaemonInitializedEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::IPCProcessDaemonInitializedEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
     }
 } 
 %enddef
