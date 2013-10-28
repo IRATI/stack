@@ -53,8 +53,8 @@ struct resolve_data {
         struct gha * tha;
 };
 
-static bool is_resolve_data_equal(struct resolve_data * a,
-                                  struct resolve_data * b)
+static bool is_resolve_data_matching(struct resolve_data * a,
+				     struct resolve_data * b)
 {
         if (a == b)
                 return true;
@@ -65,10 +65,21 @@ static bool is_resolve_data_equal(struct resolve_data * a,
         ASSERT(a);
         ASSERT(b);
 
-        if ((a->ptype != b->ptype)        ||
-            !gha_is_equal(a->sha, b->sha) ||
-            !gpa_is_equal(a->tpa, b->tpa) ||
-            !gha_is_equal(a->tha, b->tha))
+	LOG_DBG("Dumping a->sha");
+	gha_dump(a->sha);
+	gha_dump(b->tha);
+	LOG_DBG("Dumping a->tpa");
+	gpa_dump(a->tpa);
+	gpa_dump(b->spa);
+	LOG_DBG("Dumping a->spa");
+	gpa_dump(a->spa);
+	gpa_dump(b->tpa);
+	LOG_DBG("Dumping ptype");
+
+        if (!(a->ptype == b->ptype)       ||
+            !gha_is_equal(a->sha, b->tha) ||
+            !gpa_is_equal(a->tpa, b->spa) ||
+            !gpa_is_equal(a->spa, b->tpa))
                 return false;
 
         return true;
@@ -144,15 +155,15 @@ static int resolver(void * o)
         /* FIXME: Find the entry in the ongoing resolutions */
         list_for_each_entry_safe(pos, nxt, &resolutions_ongoing, next) {
                 LOG_DBG("Next entry of the resolutions list");
-                if (is_resolve_data_equal(pos->data, tmp)) {
+                if (is_resolve_data_matching(pos->data, tmp)) {
                         LOG_DBG("Found an equal resolution");
 
                         ASSERT(pos->notify);
 
                         LOG_DBG("Calling the notifier hook");
                         pos->notify(pos->opaque,
-                                    pos->data->tpa,
-                                    pos->data->tha);
+                                    tmp->spa,
+                                    tmp->sha);
 
                         LOG_DBG("Notifier called, disposing the leftovers");
                         list_del(&pos->next);
