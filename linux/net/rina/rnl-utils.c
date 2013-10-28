@@ -2296,21 +2296,26 @@ int rnl_format_socket_closed_notification_msg(u32              nl_port,
 }
 EXPORT_SYMBOL(rnl_format_socket_closed_notification_msg);
 
-int send_nl_unicast_msg(struct net *net, struct sk_buff *skb, u32 portid,
-                msg_type_t type, rnl_sn_t seq_num) {
+int send_nl_unicast_msg(struct net *     net,
+                        struct sk_buff * skb,
+                        u32              portid,
+                        msg_type_t       type,
+                        rnl_sn_t         seq_num)
+{
         int result;
+
         result = genlmsg_unicast(net, skb, portid);
         if (result) {
-                LOG_ERR("Could not send NL unicast msg of type %d " \
-                                "with seq num %u to %u: %d",
-                                (int) type, seq_num, portid, result);
+                LOG_ERR("Could not send NL unicast msg of type %d "
+                        "with seq num %u to %u: %d",
+                        (int) type, seq_num, portid, result);
                 nlmsg_free(skb);
                 return -1;
-        } else {
-                LOG_DBG("Sent NL unicast msg of type %d with seq num " \
-                                "%u to %u", (int) type, seq_num, portid);
-                return 0;
         }
+
+        LOG_DBG("Sent NL unicast msg of type %d with seq num %u to %u",
+                (int) type, seq_num, portid);
+        return 0;
 }
 
 int rnl_assign_dif_response(ipc_process_id_t id,
