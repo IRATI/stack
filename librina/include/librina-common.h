@@ -707,32 +707,114 @@ public:
 };
 
 /**
+ * Represents a parameter that has a name and value
+ */
+class Parameter {
+        std::string name;
+        std::string value;
+
+public:
+        Parameter();
+        Parameter(const std::string & name, const std::string & value);
+        bool operator==(const Parameter &other) const;
+        bool operator!=(const Parameter &other) const;
+        const std::string& getName() const;
+        void setName(const std::string& name);
+        const std::string& getValue() const;
+        void setValue(const std::string& value);
+};
+
+/**
  * Represents a policy. This is a generic placeholder which should be defined
  * during the second prototype activities
  */
 class Policy {
 
+        /** The id of the policy */
+        unsigned int id;
+
+        /** The name of the policy */
+        std::string name;
+
+        /** Parameters of the policy */
+        std::list<Parameter> parameters;
+
 public:
 	bool operator==(const Policy &other) const;
 	bool operator!=(const Policy &other) const;
+	Policy();
+	Policy(unsigned int id, std::string name);
+        unsigned int getId() const;
+        void setId(unsigned int id);
+        const std::string& getName() const;
+        void setName(const std::string& name);
+        const std::list<Parameter>& getParameters() const;
+        void setParameters(const std::list<Parameter>& parameters);
+        void addParameter(const Parameter& parameter);
 };
 
 /**
- * Represents a parameter that has a name and value
+ * Contains the values of the constants for the Error and Flow Control
+ * Protocol (EFCP)
  */
-class Parameter {
-	std::string name;
-	std::string value;
+class DataTransferConstants {
+
+        /** The length of QoS-id field in the DTP PCI, in bytes */
+        unsigned short qosIdLenght;
+
+        /** The length of the Port-id field in the DTP PCI, in bytes */
+        unsigned short portIdLength;
+
+        /** The length of the CEP-id field in the DTP PCI, in bytes */
+        unsigned short cepIdLength;
+
+        /** The length of the sequence number field in the DTP PCI, in bytes */
+        unsigned short sequenceNumberLength;
+
+        /** The length of the address field in the DTP PCI, in bytes */
+        unsigned short addressLength;
+
+        /** The length of the length field in the DTP PCI, in bytes */
+        unsigned short lengthLength;
+
+        /** The maximum length allowed for a PDU in this DIF, in bytes */
+        unsigned int maxPDUSize;
+
+        /**
+         * True if the PDUs in this DIF have CRC, TTL, and/or encryption. Since
+         * headers are encrypted, not just user data, if any flow uses encryption,
+         * all flows within the same DIF must do so and the same encryption
+         * algorithm must be used for every PDU; we cannot identify which flow
+         * owns a particular PDU until it has been decrypted.
+         */
+        bool DIFIntegrity;
+
+        /**
+         * The maximum PDU lifetime in this DIF, in milliseconds. This is MPL
+         * in delta-T
+         */
+        unsigned int maxPDULifetime;
 
 public:
-	Parameter();
-	Parameter(const std::string & name, const std::string & value);
-	bool operator==(const Parameter &other) const;
-	bool operator!=(const Parameter &other) const;
-	const std::string& getName() const;
-	void setName(const std::string& name);
-	const std::string& getValue() const;
-	void setValue(const std::string& value);
+        DataTransferConstants();
+        unsigned short getAddressLength() const;
+        void setAddressLength(unsigned short addressLength);
+        unsigned short getCepIdLength() const;
+        void setCepIdLength(unsigned short cepIdLength);
+        bool isDifIntegrity() const;
+        void setDifIntegrity(bool difIntegrity);
+        unsigned short getLengthLength() const;
+        void setLengthLength(unsigned short lengthLength);
+        unsigned int getMaxPduLifetime() const;
+        void setMaxPduLifetime(unsigned int maxPduLifetime);
+        unsigned int getMaxPduSize() const;
+        void setMaxPduSize(unsigned int maxPduSize);
+        unsigned short getPortIdLength() const;
+        void setPortIdLength(unsigned short portIdLength);
+        unsigned short getQosIdLenght() const;
+        void setQosIdLenght(unsigned short qosIdLenght);
+        unsigned short getSequenceNumberLength() const;
+        void setSequenceNumberLength(unsigned short sequenceNumberLength);
 };
 
 /**
@@ -740,6 +822,9 @@ public:
  * (QoS cubes, policies, parameters, etc)
  */
 class DIFConfiguration {
+
+        /** The DIF Data Transfer constants */
+        DataTransferConstants dataTransferConstants;
 
 	/** The QoS cubes supported by the DIF */
 	std::list<QoSCube> qosCubes;
@@ -753,11 +838,16 @@ class DIFConfiguration {
 public:
 	const std::list<Policy>& getPolicies();
 	void setPolicies(const std::list<Policy>& policies);
+	void addPolicy(const Policy& policy);
 	const std::list<QoSCube>& getQosCubes() const;
 	void setQosCubes(const std::list<QoSCube>& qosCubes);
+	void adQoSCube(const QoSCube& qosCube);
 	const std::list<Parameter>& getParameters() const;
 	void setParameters(const std::list<Parameter>& parameters);
 	void addParameter(const Parameter& parameter);
+        const DataTransferConstants& getDataTransferConstants() const;
+        void setDataTransferConstants(
+                        const DataTransferConstants& dataTransferConstants);
 };
 
 /**

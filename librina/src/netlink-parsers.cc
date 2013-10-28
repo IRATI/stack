@@ -1684,11 +1684,38 @@ int putIpcmUnregisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
+int putDataTransferConstantsObject(nl_msg* netlinkMessage,
+                const DataTransferConstants& object) {
+        NLA_PUT_U16(netlinkMessage, DTC_ATTR_QOS_ID, object.getQosIdLenght());
+        NLA_PUT_U16(netlinkMessage, DTC_ATTR_PORT_ID,
+                        object.getPortIdLength());
+        NLA_PUT_U16(netlinkMessage, DTC_ATTR_CEP_ID, object.getCepIdLength());
+        NLA_PUT_U16(netlinkMessage, DTC_ATTR_SEQ_NUM,
+                        object.getSequenceNumberLength());
+        NLA_PUT_U16(netlinkMessage, DTC_ATTR_ADDRESS,
+                        object.getAddressLength());
+        NLA_PUT_U16(netlinkMessage, DTC_ATTR_LENGTH, object.getLengthLength());
+        NLA_PUT_U32(netlinkMessage, DTC_ATTR_MAX_PDU_SIZE,
+                        object.getMaxPduSize());
+        NLA_PUT_U32(netlinkMessage, DTC_ATTR_MAX_PDU_LIFE,
+                                object.getMaxPduLifetime());
+        if (object.isDifIntegrity()){
+                NLA_PUT_FLAG(netlinkMessage, DTC_ATTR_DIF_INTEGRITY);
+        }
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building DataTransferConstants Netlink object");
+        return -1;
+}
+
 int putDIFConfigurationObject(nl_msg* netlinkMessage,
 		const DIFConfiguration& object){
-	struct nlattr *parameters;
+	struct nlattr *parameters, *dataTransferConstants;
 
-	if (!(parameters = nla_nest_start(netlinkMessage, DCONF_ATTR_PARAMETERS))) {
+	if (!(parameters = nla_nest_start(
+	                netlinkMessage, DCONF_ATTR_PARAMETERS))) {
 		goto nla_put_failure;
 	}
 	if (putListOfParameters(netlinkMessage,
@@ -1696,6 +1723,16 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, parameters);
+
+	if (!(dataTransferConstants = nla_nest_start(
+	                netlinkMessage, DCONF_ATTR_DATA_TRANS_CONST))) {
+	        goto nla_put_failure;
+	}
+	if (putDataTransferConstantsObject(netlinkMessage,
+	                object.getDataTransferConstants()) < 0) {
+	        goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, dataTransferConstants);
 
 	return 0;
 
@@ -2442,8 +2479,8 @@ AppDeallocateFlowResponseMessage * parseAppDeallocateFlowResponseMessage(
 			ADFRE_ATTR_MAX, attr_policy);
 	if (err < 0) {
 		LOG_ERR(
-				"Error parsing AppDeallocateFlowResponseMessage information from Netlink message: %d",
-				err);
+			"Error parsing AppDeallocateFlowResponseMessage information from Netlink message: %d",
+			err);
 		return 0;
 	}
 
@@ -3136,22 +3173,110 @@ parseIpcmUnregisterApplicationResponseMessage(nlmsghdr *hdr) {
 	return result;
 }
 
+DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested) {
+        struct nla_policy attr_policy[DTC_ATTR_MAX + 1];
+        attr_policy[DTC_ATTR_QOS_ID].type = NLA_U16;
+        attr_policy[DTC_ATTR_QOS_ID].minlen = 2;
+        attr_policy[DTC_ATTR_QOS_ID].maxlen = 2;
+        attr_policy[DTC_ATTR_PORT_ID].type = NLA_U16;
+        attr_policy[DTC_ATTR_PORT_ID].minlen = 2;
+        attr_policy[DTC_ATTR_PORT_ID].maxlen = 2;
+        attr_policy[DTC_ATTR_CEP_ID].type = NLA_U16;
+        attr_policy[DTC_ATTR_CEP_ID].minlen = 2;
+        attr_policy[DTC_ATTR_CEP_ID].maxlen = 2;
+        attr_policy[DTC_ATTR_SEQ_NUM].type = NLA_U16;
+        attr_policy[DTC_ATTR_SEQ_NUM].minlen = 2;
+        attr_policy[DTC_ATTR_SEQ_NUM].maxlen = 2;
+        attr_policy[DTC_ATTR_ADDRESS].type = NLA_U16;
+        attr_policy[DTC_ATTR_ADDRESS].minlen = 2;
+        attr_policy[DTC_ATTR_ADDRESS].maxlen = 2;
+        attr_policy[DTC_ATTR_LENGTH].type = NLA_U16;
+        attr_policy[DTC_ATTR_LENGTH].minlen = 2;
+        attr_policy[DTC_ATTR_LENGTH].maxlen = 2;
+        attr_policy[DTC_ATTR_MAX_PDU_SIZE].type = NLA_U32;
+        attr_policy[DTC_ATTR_MAX_PDU_SIZE].minlen = 4;
+        attr_policy[DTC_ATTR_MAX_PDU_SIZE].maxlen = 4;
+        attr_policy[DTC_ATTR_MAX_PDU_LIFE].type = NLA_U32;
+        attr_policy[DTC_ATTR_MAX_PDU_LIFE].minlen = 4;
+        attr_policy[DTC_ATTR_MAX_PDU_LIFE].maxlen = 4;
+        attr_policy[DTC_ATTR_DIF_INTEGRITY].type = NLA_FLAG;
+        attr_policy[DTC_ATTR_DIF_INTEGRITY].minlen = 0;
+        attr_policy[DTC_ATTR_DIF_INTEGRITY].maxlen = 0;
+        struct nlattr *attrs[DTC_ATTR_MAX + 1];
+
+        int err = nla_parse_nested(attrs, DTC_ATTR_MAX, nested, attr_policy);
+
+        if (err < 0) {
+                LOG_ERR(
+                        "Error parsing DataTransferConstants information from Netlink message: %d",
+                         err);
+                return 0;
+        }
+
+        DataTransferConstants * result = new DataTransferConstants();
+
+        if (attrs[DTC_ATTR_QOS_ID]) {
+                result->setQosIdLenght(nla_get_u16(attrs[DTC_ATTR_QOS_ID]));
+        }
+
+        if (attrs[DTC_ATTR_PORT_ID]) {
+                result->setPortIdLength(nla_get_u16(attrs[DTC_ATTR_PORT_ID]));
+        }
+
+        if (attrs[DTC_ATTR_CEP_ID]) {
+                result->setCepIdLength(nla_get_u16(attrs[DTC_ATTR_CEP_ID]));
+        }
+
+        if (attrs[DTC_ATTR_SEQ_NUM]) {
+                result->setSequenceNumberLength(
+                                nla_get_u16(attrs[DTC_ATTR_SEQ_NUM]));
+        }
+
+        if (attrs[DTC_ATTR_ADDRESS]) {
+                result->setAddressLength(nla_get_u16(attrs[DTC_ATTR_ADDRESS]));
+        }
+
+        if (attrs[DTC_ATTR_LENGTH]) {
+                result->setLengthLength(nla_get_u16(attrs[DTC_ATTR_LENGTH]));
+        }
+
+        if (attrs[DTC_ATTR_MAX_PDU_SIZE]) {
+                result->setMaxPduSize(
+                                nla_get_u32(attrs[DTC_ATTR_MAX_PDU_SIZE]));
+        }
+
+        if (attrs[DTC_ATTR_MAX_PDU_LIFE]) {
+                result->setMaxPduLifetime(
+                                nla_get_u32(attrs[DTC_ATTR_MAX_PDU_LIFE]));
+        }
+
+        if (attrs[DTC_ATTR_DIF_INTEGRITY]) {
+                result->setDifIntegrity(true);
+        }
+
+        return result;
+}
+
 DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	struct nla_policy attr_policy[DCONF_ATTR_MAX + 1];
 	attr_policy[DCONF_ATTR_PARAMETERS].type = NLA_NESTED;
 	attr_policy[DCONF_ATTR_PARAMETERS].minlen = 0;
 	attr_policy[DCONF_ATTR_PARAMETERS].maxlen = 0;
+	attr_policy[DCONF_ATTR_DATA_TRANS_CONST].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_DATA_TRANS_CONST].minlen = 0;
+	attr_policy[DCONF_ATTR_DATA_TRANS_CONST].maxlen = 0;
 	struct nlattr *attrs[DCONF_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, DCONF_ATTR_MAX, nested, attr_policy);
 	if (err < 0) {
 		LOG_ERR(
-				"Error parsing DIFConfiguration information from Netlink message: %d",
-				err);
+			"Error parsing DIFConfiguration information from Netlink message: %d",
+			err);
 		return 0;
 	}
 
 	DIFConfiguration * result = new DIFConfiguration();
+	DataTransferConstants * dataTransferConstants;
 
 	int status = 0;
 	if (attrs[DCONF_ATTR_PARAMETERS]) {
@@ -3162,6 +3287,19 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 			return 0;
 		}
 	}
+
+        if (attrs[DCONF_ATTR_DATA_TRANS_CONST]) {
+                dataTransferConstants = parseDataTransferConstantsObject(
+                                attrs[DCONF_ATTR_DATA_TRANS_CONST]);
+                if (dataTransferConstants == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setDataTransferConstants(
+                                        *dataTransferConstants);
+                        delete dataTransferConstants;
+                }
+        }
 
 	return result;
 }

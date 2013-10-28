@@ -431,9 +431,31 @@ int putIpcmUnregisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 IpcmUnregisterApplicationResponseMessage *
 	parseIpcmUnregisterApplicationResponseMessage(nlmsghdr *hdr);
 
+/* DataTransferConstants CLASS */
+enum DataTransferConstantsAttributes {
+        DTC_ATTR_QOS_ID = 1,
+        DTC_ATTR_PORT_ID,
+        DTC_ATTR_CEP_ID,
+        DTC_ATTR_SEQ_NUM,
+        DTC_ATTR_ADDRESS,
+        DTC_ATTR_LENGTH,
+        DTC_ATTR_MAX_PDU_SIZE,
+        DTC_ATTR_MAX_PDU_LIFE,
+        DTC_ATTR_DIF_INTEGRITY,
+        __DTC_ATTR_MAX,
+};
+
+#define DTC_ATTR_MAX (__DTC_ATTR_MAX -1)
+
+int putDataTransferConstantsObject(nl_msg* netlinkMessage,
+                const DataTransferConstants& object);
+
+DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested);
+
 /* DIF Configuration CLASS */
 enum DIFConfigurationAttributes {
 	DCONF_ATTR_PARAMETERS = 1,
+	DCONF_ATTR_DATA_TRANS_CONST,
 	__DCONF_ATTR_MAX,
 };
 

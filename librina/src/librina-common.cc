@@ -952,6 +952,43 @@ bool Policy::operator!=(const Policy &other) const {
 	return !(*this == other);
 }
 
+Policy::Policy() {
+        this->id = 0;
+}
+
+Policy::Policy(unsigned int id, std::string name) {
+        this->id = id;
+        this->name = name;
+}
+
+unsigned int Policy::getId() const {
+        return id;
+}
+
+void Policy::setId(unsigned int id) {
+        this->id = id;
+}
+
+const std::string& Policy::getName() const {
+        return name;
+}
+
+void Policy::setName(const std::string& name) {
+        this->name = name;
+}
+
+const std::list<Parameter>& Policy::getParameters() const {
+        return parameters;
+}
+
+void Policy::setParameters(const std::list<Parameter>& parameters) {
+        this->parameters = parameters;
+}
+
+void Policy::addParameter(const Parameter& parameter) {
+        parameters.push_back(parameter);
+}
+
 /* CLASS PARAMETER */
 Parameter::Parameter(){
 }
@@ -987,6 +1024,92 @@ const std::string& Parameter::getValue() const {
 
 void Parameter::setValue(const std::string& value) {
 	this->value = value;
+}
+
+/* CLASS DATA TRANSFER CONSTANTS */
+DataTransferConstants::DataTransferConstants() {
+        qosIdLenght = 0;
+        portIdLength = 0;
+        cepIdLength = 0;
+        sequenceNumberLength = 0;
+        addressLength = 0;
+        lengthLength = 0;
+        maxPDUSize = 0;
+        DIFIntegrity = false;
+        maxPDULifetime = 0;
+}
+
+unsigned short DataTransferConstants::getAddressLength() const {
+        return addressLength;
+}
+
+void DataTransferConstants::setAddressLength(unsigned short addressLength) {
+        this->addressLength = addressLength;
+}
+
+unsigned short DataTransferConstants::getCepIdLength() const {
+        return cepIdLength;
+}
+
+void DataTransferConstants::setCepIdLength(unsigned short cepIdLength) {
+        this->cepIdLength = cepIdLength;
+}
+
+bool DataTransferConstants::isDifIntegrity() const {
+        return DIFIntegrity;
+}
+
+void DataTransferConstants::setDifIntegrity(bool difIntegrity) {
+        DIFIntegrity = difIntegrity;
+}
+
+unsigned short DataTransferConstants::getLengthLength() const {
+        return lengthLength;
+}
+
+void DataTransferConstants::setLengthLength(unsigned short lengthLength) {
+        this->lengthLength = lengthLength;
+}
+
+unsigned int DataTransferConstants::getMaxPduLifetime() const {
+        return maxPDULifetime;
+}
+
+void DataTransferConstants::setMaxPduLifetime(unsigned int maxPduLifetime) {
+        maxPDULifetime = maxPduLifetime;
+}
+
+unsigned int DataTransferConstants::getMaxPduSize() const {
+        return maxPDUSize;
+}
+
+void DataTransferConstants::setMaxPduSize(unsigned int maxPduSize) {
+        maxPDUSize = maxPduSize;
+}
+
+unsigned short DataTransferConstants::getPortIdLength() const {
+        return portIdLength;
+}
+
+void DataTransferConstants::setPortIdLength(unsigned short portIdLength) {
+        this->portIdLength = portIdLength;
+}
+
+unsigned short DataTransferConstants::getQosIdLenght() const {
+        return qosIdLenght;
+}
+
+void DataTransferConstants::setQosIdLenght(unsigned short qosIdLenght) {
+        this->qosIdLenght = qosIdLenght;
+}
+
+unsigned short DataTransferConstants::getSequenceNumberLength() const {
+        return sequenceNumberLength;
+}
+
+void DataTransferConstants::setSequenceNumberLength(
+                unsigned short sequenceNumberLength) {
+        this->sequenceNumberLength = sequenceNumberLength;
 }
 
 /* CLASS DIF INFORMATION */
@@ -1027,12 +1150,20 @@ void DIFConfiguration::setPolicies(const std::list<Policy>& policies) {
 	this->policies = policies;
 }
 
+void DIFConfiguration::addPolicy(const Policy& policy) {
+        policies.push_back(policy);
+}
+
 const std::list<QoSCube>& DIFConfiguration::getQosCubes() const {
 	return qosCubes;
 }
 
 void DIFConfiguration::setQosCubes(const std::list<QoSCube>& qosCubes) {
 	this->qosCubes = qosCubes;
+}
+
+void DIFConfiguration::adQoSCube(const QoSCube& qosCube) {
+        qosCubes.push_back(qosCube);
 }
 
 const std::list<Parameter>& DIFConfiguration::getParameters() const {
@@ -1045,6 +1176,16 @@ void DIFConfiguration::setParameters(const std::list<Parameter>& parameters) {
 
 void DIFConfiguration::addParameter(const Parameter& parameter){
 	parameters.push_back(parameter);
+}
+
+const DataTransferConstants&
+DIFConfiguration::getDataTransferConstants() const {
+        return dataTransferConstants;
+}
+
+void DIFConfiguration::setDataTransferConstants(
+                const DataTransferConstants& dataTransferConstants) {
+        this->dataTransferConstants = dataTransferConstants;
 }
 
 /* CLAS RIBOBJECT */
