@@ -439,24 +439,100 @@ static int dummy_unregister_all(struct ipcp_instance_data * data)
         return 0;
 }
 
+static struct workqueue_struct * dummy_wq = NULL;
+
+struct write_data {
+        struct kfa * kfa;
+        port_id_t    port_id;
+        struct sdu * sdu;
+};
+
+bool is_write_data_complete(const struct write_data * data)
+{
+	bool ret;
+
+	ret = ((!data || !data->kfa || !data->sdu) ? false : true);
+	LOG_DBG("Write data complete? %d", ret);
+
+        return ret;
+}
+
+static void write_data_destroy(struct write_data * data)
+{
+        ASSERT(data);
+
+        rkfree(data);
+}
+
+static struct write_data * write_data_create(struct kfa * kfa,
+                                             struct sdu * sdu,
+                                             port_id_t    port_id)
+{
+        struct write_data * tmp;
+
+        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->kfa = kfa;
+        tmp->sdu = sdu;
+        tmp->port_id = port_id;
+
+        return tmp;
+}
+
+static int dummy_write(void * o)
+{
+        struct write_data * tmp;
+
+        tmp = (struct write_data *) o;
+        if (!tmp) {
+		LOG_ERR("No write data passed");
+                return -1;
+	}
+	LOG_DBG("KFA: %pK", tmp->kfa);
+	LOG_DBG("PID: %d", tmp->port_id);
+	LOG_DBG("SDU: %pk", tmp->sdu);
+
+        if (!is_write_data_complete(tmp)) {
+                LOG_ERR("Wrong data passed to dummy_write");
+                write_data_destroy(tmp);
+                return -1;
+        }
+
+        if (kfa_sdu_post(tmp->kfa,
+                         tmp->port_id,
+                         tmp->sdu))
+                return -1;
+
+        write_data_destroy(tmp);
+
+        return 0;
+}
+
 static int dummy_sdu_write(struct ipcp_instance_data * data,
                            port_id_t                   id,
                            struct sdu *                sdu)
 {
         struct dummy_flow * flow;
+        struct write_data * tmp;
 
         LOG_DBG("Dummy SDU write invoked.");
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
-                        kfa_sdu_post(data->kfa,
-                                     flow->dst_port_id, sdu);
-                        return 0;
+                        tmp = write_data_create(data->kfa,
+                                                sdu,
+                                                flow->dst_port_id);
+                        ASSERT(dummy_wq);
+                        return rwq_post(dummy_wq, dummy_write, tmp);
                 }
                 if (flow->dst_port_id == id) {
-                        kfa_sdu_post(data->kfa,
-                                     flow->port_id, sdu);
-                        return 0;
+                        tmp = write_data_create(data->kfa,
+                                                sdu,
+                                                flow->port_id);
+                        ASSERT(dummy_wq);
+                        return rwq_post(dummy_wq, dummy_write, tmp);
                 }
         }
         LOG_ERR("There is no flow allocated for port-id %d", id);
@@ -490,16 +566,26 @@ static int dummy_init(struct ipcp_factory_data * data)
         bzero(&dummy_data, sizeof(dummy_data));
         INIT_LIST_HEAD(&data->instances);
 
+        dummy_wq = rwq_create("dummy-wq");
+        if (!dummy_wq) {
+                LOG_CRIT("Cannot create dummy workqueue");
+                return -1;
+        }
+
         return 0;
 }
 
 static int dummy_fini(struct ipcp_factory_data * data)
 {
+        int ret;
+
         ASSERT(data);
+
+        ret = rwq_destroy(dummy_wq);
 
         ASSERT(list_empty(&data->instances));
 
-        return 0;
+        return ret;
 }
 
 static int dummy_assign_to_dif(struct ipcp_instance_data * data,
@@ -601,7 +687,7 @@ static struct ipcp_instance * dummy_create(struct ipcp_factory_data * data,
         inst->ops  = &dummy_instance_ops;
         inst->data = rkzalloc(sizeof(struct ipcp_instance_data), GFP_KERNEL);
         if (!inst->data) {
-                LOG_DBG("Fill it properly failed");
+                LOG_ERR("Fill it properly failed");
                 rkfree(inst);
                 return NULL;
         }
@@ -610,7 +696,7 @@ static struct ipcp_instance * dummy_create(struct ipcp_factory_data * data,
         INIT_LIST_HEAD(&inst->data->flows);
         inst->data->info = rkzalloc(sizeof(*inst->data->info), GFP_KERNEL);
         if (!inst->data->info) {
-                LOG_DBG("Failed creation of inst->data->info");
+                LOG_ERR("Failed creation of inst->data->info");
                 rkfree(inst->data);
                 rkfree(inst);
                 return NULL;
@@ -618,7 +704,7 @@ static struct ipcp_instance * dummy_create(struct ipcp_factory_data * data,
 
         inst->data->info->name = name_dup(name);
         if (!inst->data->info->name) {
-                LOG_DBG("Failed creation of ipc name");
+                LOG_ERR("Failed creation of ipc name");
                 rkfree(inst->data->info);
                 rkfree(inst->data);
                 rkfree(inst);
