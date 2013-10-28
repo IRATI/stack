@@ -120,6 +120,8 @@ static int resolver(void * o)
         struct resolve_data * tmp;
         struct resolution *   pos, * nxt;
 
+	LOG_DBG("In the resolver, looking for handler");
+
         tmp = (struct resolve_data *) o;
         if (!tmp)
                 return -1;
@@ -132,10 +134,12 @@ static int resolver(void * o)
 
         spin_lock(&resolutions_lock);
 
+	LOG_DBG("Gonna browse the list of resolutions now");
         /* FIXME: Find the entry in the ongoing resolutions */
         list_for_each_entry_safe(pos, nxt, &resolutions_ongoing, next) {
-                if (is_resolve_data_equal(pos->data, tmp)) {
-
+                LOG_DBG("Next entry of the resolutions list");
+		if (is_resolve_data_equal(pos->data, tmp)) {
+			LOG_DBG("Found an equal resolution");
                         ASSERT(pos->notify);
 
                         pos->notify(pos->opaque,
@@ -153,7 +157,7 @@ static int resolver(void * o)
 
         /* Finally destroy the data */
         resolve_data_destroy(tmp);
-
+	LOG_DBG("Leaving this resolver function");
         return 0;
 }
 

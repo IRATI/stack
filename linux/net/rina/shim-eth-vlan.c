@@ -359,6 +359,8 @@ static void rinarp_resolve_handler(void *             opaque,
         struct ipcp_instance_data * data;
         struct shim_eth_flow *      flow;
 
+	LOG_DBG("Entered the ARP resolve handler of the shim-eth");
+
         data = (struct ipcp_instance_data *) opaque;
         flow = find_flow_by_gpa(data, dest_pa);
 
@@ -370,13 +372,19 @@ static void rinarp_resolve_handler(void *             opaque,
         if (flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 flow->dest_ha       = gha_dup(dest_ha);
-
-                if (kipcm_notify_flow_alloc_req_result(default_kipcm,
+		
+		if (kipcm_flow_add(default_kipcm,
+                                   data->id, flow->port_id, flow->flow_id)) {
+                        flow_destroy(data, flow);
+                        LOG_ERR("Flow is not added");
+                }
+		if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
                                                        flow->flow_id,
                                                        0)) {
-                        flow_destroy(data, flow);
-                        LOG_ERR("Couldn't tell KIPCM flow is allocated");
+                        kfa_flow_unbind_and_destroy(data->kfa, flow->port_id);
+			flow_destroy(data, flow);
+                        LOG_ERR("Couldn't tell flow is allocated to KIPCM");
                 }
         }
 }
@@ -440,9 +448,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                         return -1;
                 }
         } else if (flow->port_id_state == PORT_STATE_PENDING) {
-                flow->port_id_state = PORT_STATE_ALLOCATED;
-                kipcm_flow_add(default_kipcm, data->id,
-                               flow->port_id, flow->flow_id);
+                LOG_ERR("Port-id state is already pending...");
         } else {
                 LOG_ERR("Allocate called in a wrong state, how dare you!");
                 return -1;
@@ -477,8 +483,13 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
         if (!result) {
                 flow->port_id = port_id;
                 flow->port_id_state = PORT_STATE_ALLOCATED;
-                kipcm_flow_add(default_kipcm, data->id,
-                               flow->port_id, flow->flow_id);
+                if (kipcm_flow_add(default_kipcm, data->id,
+				   flow->port_id, flow->flow_id)) {
+			if (flow_destroy(data, flow))
+                                LOG_ERR("Failed to destroy flow");
+                        LOG_ERR("KIPCM flow add failed");
+			return -1;
+		}
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
                                                        flow->flow_id,
