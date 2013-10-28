@@ -2308,7 +2308,7 @@ int send_nl_unicast_msg(struct net *net, struct sk_buff *skb, u32 portid,
                 return -1;
         } else {
                 LOG_DBG("Sent NL unicast msg of type %d with seq num " \
-                                "%u to %u: ", (int) type, seq_num, portid);
+                                "%u to %u", (int) type, seq_num, portid);
                 return 0;
         }
 }
