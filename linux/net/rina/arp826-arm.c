@@ -59,7 +59,7 @@ static bool is_resolve_data_equal(struct resolve_data * a,
         if (a == b)
                 return true;
 
-        if (a && !b || !a && b)
+        if ((a && !b) || (!a && b))
                 return false;
 
         ASSERT(a);
