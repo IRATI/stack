@@ -1,7 +1,7 @@
 package rina.ipcmanager.impl.console;
 
 import eu.irati.librina.IPCEvent;
-import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
+import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
 import rina.ipcmanager.impl.IPCManager;
 
 /**
@@ -9,15 +9,15 @@ import rina.ipcmanager.impl.IPCManager;
  * @author eduardgrasa
  *
  */
-public class RegisterIPCProcessToNMinusOneDIF extends ConsoleCommand{
+public class UnregisterIPCProcessFromNMinusOneDIF extends ConsoleCommand{
 
-	public static final String ID = "regn1dif";
-	private static final String USAGE = "regn1dif <ipcp_id> <dif_name>";
+	public static final String ID = "unregn1dif";
+	private static final String USAGE = "unregn1dif <ipcp_id> <dif_name>";
 	
 	private long ipcProcessId;
 	private String difName;
 	
-	public RegisterIPCProcessToNMinusOneDIF(IPCManager ipcManager, IPCManagerConsole console){
+	public UnregisterIPCProcessFromNMinusOneDIF(IPCManager ipcManager, IPCManagerConsole console){
 		super(ID, ipcManager, console);
 	}
 	
@@ -38,10 +38,10 @@ public class RegisterIPCProcessToNMinusOneDIF extends ConsoleCommand{
 		long handle = -1;
 		
 		try{
-			handle = getIPCManager().requestRegistrationToNMinusOneDIF(ipcProcessId, difName);
+			handle = getIPCManager().requestUnregistrationFromNMinusOneDIF(ipcProcessId, difName);
 		}catch(Exception ex){
 			getIPCManagerConsole().unlock();
-			return "Error executing register IPC Process to N-1 DIF command: " + ex.getMessage();
+			return "Error executing unregister IPC Process from N-1 DIF command: " + ex.getMessage();
 		}
 		
 		getIPCManagerConsole().setPendingRequestId(handle);
@@ -58,15 +58,15 @@ public class RegisterIPCProcessToNMinusOneDIF extends ConsoleCommand{
 			return "Got a null response";
 		}
 		
-		if (!(response instanceof IpcmRegisterApplicationResponseEvent)) {
+		if (!(response instanceof IpcmUnregisterApplicationResponseEvent)) {
 			return "Got a wrong response to an event";
 		}
 		
-		IpcmRegisterApplicationResponseEvent event = (IpcmRegisterApplicationResponseEvent) response;
+		IpcmUnregisterApplicationResponseEvent event = (IpcmUnregisterApplicationResponseEvent) response;
 		if (event.getResult() == 0) {
-			return "Successfully registered IPC Process " + ipcProcessId + " to DIF " + difName;
+			return "Successfully unregistered IPC Process " + ipcProcessId + " from DIF " + difName;
 		} else {
-			return "Problems registering IPC Process " + ipcProcessId + " to DIF " + difName +
+			return "Problems unregistering IPC Process " + ipcProcessId + " from DIF " + difName +
 					". Error code: " + event.getResult();
 		}
 	}

@@ -288,6 +288,9 @@ protected:
 	void putApplicationRegistration(
 	                const ApplicationProcessNamingInformation& key,
 	                ApplicationRegistration * value);
+
+	void removeApplicationRegistration(
+	                const ApplicationProcessNamingInformation& key);
 public:
 	IPCManager();
 	~IPCManager() throw();
@@ -339,7 +342,7 @@ public:
 	 * registering the application
 	 * @return the information on the application registration
 	 */
-	virtual ApplicationRegistration * commitPendingResitration(
+	ApplicationRegistration * commitPendingResitration(
 	                unsigned int seqNumber,
 	                const ApplicationProcessNamingInformation& DIFName)
 	throw (ApplicationRegistrationException);
@@ -373,7 +376,7 @@ public:
 	 * @param seqNumber the id of the request
 	 * @param success true if request was successful, false otherwise
 	 */
-	void appUnregistrationResult(unsigned int seqNumber, bool success)
+	 void appUnregistrationResult(unsigned int seqNumber, bool success)
 	                        throw (ApplicationUnregistrationException);
 
 	/**

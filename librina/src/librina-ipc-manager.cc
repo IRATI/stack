@@ -328,6 +328,15 @@ void IPCProcess::notifyUnregistrationFromSupportingDIF(
 		const ApplicationProcessNamingInformation& ipcProcessName,
 		const ApplicationProcessNamingInformation& difName)
 throw (NotifyUnregistrationFromDIFException) {
+        std::list<ApplicationProcessNamingInformation>::iterator it =
+                        std::find(nMinusOneDIFs.begin(),
+                                        nMinusOneDIFs.end(), difName);
+        if (it == nMinusOneDIFs.end()) {
+                throw NotifyRegistrationToDIFException(
+                                "IPCProcess not registered to N-1 DIF"
+                                + difName.getProcessName());
+        }
+
 #if STUB_API
 	//Do nothing
 #else
@@ -345,6 +354,12 @@ throw (NotifyUnregistrationFromDIFException) {
 		throw NotifyUnregistrationFromDIFException(e.what());
 	}
 #endif
+	nMinusOneDIFs.remove(difName);
+}
+
+std::list<ApplicationProcessNamingInformation>
+IPCProcess::getSupportingDIFs() {
+        return nMinusOneDIFs;
 }
 
 void IPCProcess::enroll(const ApplicationProcessNamingInformation& difName,

@@ -8,7 +8,7 @@ import eu.irati.librina.ExtendedIPCManagerSingleton;
 import eu.irati.librina.IPCEvent;
 import eu.irati.librina.IPCEventProducerSingleton;
 import eu.irati.librina.IPCEventType;
-import eu.irati.librina.IPCProcessRegisteredToDIFEvent;
+import eu.irati.librina.IPCProcessDIFRegistrationEvent;
 import eu.irati.librina.rina;
 
 public class IPCProcess {
@@ -57,10 +57,16 @@ public class IPCProcess {
 		log.info("Got event of type: "+event.getType() 
 				+ " and sequence number: "+event.getSequenceNumber());
 		
-		if (event.getType() == IPCEventType.IPC_PROCESS_REGISTERED_TO_DIF) {
-			IPCProcessRegisteredToDIFEvent regEvent = (IPCProcessRegisteredToDIFEvent) event;
-			ipcManager.commitPendingResitration(0, regEvent.getDIFName());
-		}
+		if (event.getType() == IPCEventType.IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION) {
+			IPCProcessDIFRegistrationEvent regEvent = (IPCProcessDIFRegistrationEvent) event;
+			if (regEvent.isRegistered()) {
+				ipcManager.appRegistered(regEvent.getIPCProcessName(), regEvent.getDIFName());
+				log.info("IPC Process registered to N-1 DIF "+ regEvent.getDIFName().getProcessName());
+			} else{
+				ipcManager.appUnregistered(regEvent.getIPCProcessName(), regEvent.getDIFName());
+				log.info("IPC Process unregistered from N-1 DIF "+ regEvent.getDIFName().getProcessName());
+			}
+		} 
 	}
 
 }

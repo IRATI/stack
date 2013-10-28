@@ -70,6 +70,7 @@ public class IPCManager {
 	
 	public static final int BOOTSTRAP_PHASE_RESPONSE_WAIT_TIME = 2;
 	public static final long NO_IPC_PROCESS_ID = -1;
+	public static final long NO_SEQ_NUMBER = -1;
 	public static final long ERROR = -1;
 	
 	private IPCManagerConsole console = null;
@@ -283,7 +284,7 @@ public class IPCManager {
 			applicationRegistrationManager.registerApplicationResponse(appRespEvent);
 		} else if (event.getType() == IPCEventType.APPLICATION_UNREGISTRATION_REQUEST_EVENT){
 			ApplicationUnregistrationRequestEvent appUnregReqEvent = (ApplicationUnregistrationRequestEvent) event;
-			applicationRegistrationManager.requestApplicationUnregistration(appUnregReqEvent);
+			applicationRegistrationManager.requestApplicationUnregistration(appUnregReqEvent, IPCManager.NO_IPC_PROCESS_ID);
 		} else if (event.getType() == IPCEventType.IPCM_UNREGISTER_APP_RESPONSE_EVENT) {
 			IpcmUnregisterApplicationResponseEvent appRespEvent = (IpcmUnregisterApplicationResponseEvent) event;
 			applicationRegistrationManager.unregisterApplicationResponse(appRespEvent);
@@ -406,7 +407,21 @@ public class IPCManager {
 	 * @param difName
 	 * @throws Exception
 	 */
-	public long requestRegistrationToNMinusOneDIF(long ipcProcessID, String difName) throws Exception{
+	public long requestRegistrationToNMinusOneDIF(long ipcProcessID, 
+			String difName) throws Exception{
 		return ipcProcessManager.requestRegistrationToNMinusOneDIF(ipcProcessID, difName);
+	}
+	
+	/**
+	 * Requests the unregistration of the IPC Process identified by ipcProcessID from the 
+	 * N-1 DIF called 'difName'. If the IPC Process is not registered to the N-1 DIF
+	 * an error will be returned
+	 * @param ipcProcessID
+	 * @param difName
+	 * @throws Exception
+	 */
+	public long requestUnregistrationFromNMinusOneDIF(long ipcProcessID, 
+			String difName) throws Exception{
+		return ipcProcessManager.requestUnregistrationFromNMinusOneDIF(ipcProcessID, difName);
 	}
 }

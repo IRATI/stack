@@ -178,24 +178,33 @@ public class ApplicationRegistrationManager {
 	/**
 	 * Get application registration (if existent) and cancel it.
 	 * @param event
+	 * @param ipcProcessId if the application to be registered is an IPC Process, this is the 
+	 * identifier of the IPC process. Otherwise it has the value of NO_IPC_PROCESS_ID
 	 * @throws Exception
 	 */
-	public synchronized void requestApplicationUnregistration(
-			ApplicationUnregistrationRequestEvent event) throws Exception{
+	public synchronized long requestApplicationUnregistration(
+			ApplicationUnregistrationRequestEvent event, long ipcProcessId) throws Exception{
 		IPCProcess ipcProcess = null;
+		long handle = -1;
 		
 		try{
 			String difName = event.getDIFName().getProcessName();
 			ipcProcess = ipcProcessManager.selectIPCProcessOfDIF(difName);
-			long handle = ipcProcess.unregisterApplication(event.getApplicationName());
+			handle = ipcProcess.unregisterApplication(event.getApplicationName());
 			pendingUnregistrations.put(handle, 
-					new PendingUnregistration(event, ipcProcess));
+					new PendingUnregistration(event, ipcProcess, ipcProcessId));
 			log.debug("Requested unregitration of application "+event.getApplicationName().toString() 
 					+" from DIF "+ipcProcess.getDIFInformation().getDifName().toString() + 
 					". Got handle "+handle);
+			return handle;
 		}catch(Exception ex){
 			log.error("Error unregistering application. "+ex.getMessage());
-			applicationManager.applicationUnregistered(event, -1);
+			
+			if (event.getSequenceNumber() > 0) {
+				applicationManager.applicationUnregistered(event, -1);
+			}
+			
+			throw ex;
 		}
 	}
 	
@@ -237,7 +246,9 @@ public class ApplicationRegistrationManager {
 						" from DIF "+ipcProcess.getDIFInformation().getDifName().toString());
 			}
 			
-			if (appReqEvent.getSequenceNumber() > 0) {
+			if (pendingUnregistration.isApplicationRegisteredIPCProcess()) {
+				ipcProcessManager.unregistrationFromNMinusOneDIFResponse(event);
+			} else if (appReqEvent.getSequenceNumber() > 0) {
 				applicationManager.applicationUnregistered(appReqEvent, event.getResult());
 			}
 		}catch(Exception ex){
@@ -245,7 +256,9 @@ public class ApplicationRegistrationManager {
 					  "; Application name: "+ appReqEvent.getApplicationName().toString() + 
 					  "; DIF name: " + ipcProcess.getDIFInformation().getDifName().toString());
 			
-			if (appReqEvent.getSequenceNumber() > 0) {
+			if (pendingUnregistration.isApplicationRegisteredIPCProcess()) {
+				ipcProcessManager.unregistrationFromNMinusOneDIFResponse(event);
+			} else if (appReqEvent.getSequenceNumber() > 0) {
 				applicationManager.applicationUnregistered(appReqEvent, -1);
 			}
 		}

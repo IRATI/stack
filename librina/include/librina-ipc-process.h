@@ -66,37 +66,18 @@ class IPCProcessDIFRegistrationEvent: public IPCEvent {
 	/** The name of the N-1 DIF where the IPC Process has been registered*/
 	ApplicationProcessNamingInformation difName;
 
+	/** True if the IPC Process has been registered in a DIF, false otherwise */
+	bool registered;
+
 public:
-	IPCProcessDIFRegistrationEvent(IPCEventType eventType,
-			const ApplicationProcessNamingInformation& ipcProcessName,
+	IPCProcessDIFRegistrationEvent(
+	                const ApplicationProcessNamingInformation& ipcProcessName,
 			const ApplicationProcessNamingInformation& difName,
+			bool registered,
 			unsigned int sequenceNumber);
 	const ApplicationProcessNamingInformation& getIPCProcessName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
-};
-
-/**
- * The IPC Manager informs the IPC Process that it has been registered
- * to an N-1 DIF
- */
-class IPCProcessRegisteredToDIFEvent: public IPCProcessDIFRegistrationEvent {
-public:
-	IPCProcessRegisteredToDIFEvent(
-			const ApplicationProcessNamingInformation& ipcProcessName,
-			const ApplicationProcessNamingInformation& difName,
-			unsigned int sequenceNumber);
-};
-
-/**
- * The IPC Manager informs the IPC Process that it has been unregistered
- * from an N-1 DIF
- */
-class IPCProcessUnregisteredFromDIFEvent: public IPCProcessDIFRegistrationEvent {
-public:
-	IPCProcessUnregisteredFromDIFEvent(
-			const ApplicationProcessNamingInformation& ipcProcessName,
-			const ApplicationProcessNamingInformation& difName,
-			unsigned int sequenceNumber);
+	bool isRegistered() const;
 };
 
 /**
@@ -287,15 +268,25 @@ public:
 	bool isIPCProcessInitialized() const;
 
 	/**
-	 * Override function of IPC Manager
-	 * @param seqNumber
+	 * The IPC Process has been registered to an N-1 DIF
+	 * @param appName
 	 * @param DIFName
 	 * @return
 	 */
-	ApplicationRegistration * commitPendingResitration(
-	                        unsigned int seqNumber,
+	ApplicationRegistration * appRegistered(
+	                        const ApplicationProcessNamingInformation& appName,
 	                        const ApplicationProcessNamingInformation& DIFName)
 	        throw (ApplicationRegistrationException);
+
+	/**
+	 * The IPC Process has been unregistered from the DIF called DIFName,
+	 * update the internal data structrues
+	 * @param appName
+	 * @param DIFName
+	 */
+	void appUnregistered(const ApplicationProcessNamingInformation& appName,
+	                const ApplicationProcessNamingInformation& DIFName)
+	                                throw (ApplicationUnregistrationException);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of an "assign

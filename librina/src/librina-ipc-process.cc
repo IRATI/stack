@@ -54,10 +54,15 @@ UpdateDIFConfigurationRequestEvent::getDIFConfiguration() const
 
 /* CLASS IPC PROCESS DIF REGISTRATION EVENT */
 IPCProcessDIFRegistrationEvent::IPCProcessDIFRegistrationEvent(
-		IPCEventType eventType,
 		const ApplicationProcessNamingInformation& ipcProcessName,
 		const ApplicationProcessNamingInformation& difName,
-		unsigned int sequenceNumber): IPCEvent(eventType, sequenceNumber){
+		bool registered,
+		unsigned int sequenceNumber): IPCEvent(
+		                IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
+		                sequenceNumber){
+        this->ipcProcessName = ipcProcessName;
+        this->difName = difName;
+        this->registered = registered;
 }
 
 const ApplicationProcessNamingInformation&
@@ -70,22 +75,8 @@ IPCProcessDIFRegistrationEvent::getDIFName() const{
 	return difName;
 }
 
-/* CLASS IPC PROCESS REGISTERED TO DIF EVENT */
-IPCProcessRegisteredToDIFEvent::IPCProcessRegisteredToDIFEvent(
-		const ApplicationProcessNamingInformation& ipcProcessName,
-		const ApplicationProcessNamingInformation& difName,
-		unsigned int sequenceNumber): IPCProcessDIFRegistrationEvent(
-				IPC_PROCESS_REGISTERED_TO_DIF, ipcProcessName,
-				difName, sequenceNumber){
-}
-
-/* CLASS IPC PROCESS UNREGISTERED FROM DIF EVENT */
-IPCProcessUnregisteredFromDIFEvent::IPCProcessUnregisteredFromDIFEvent(
-		const ApplicationProcessNamingInformation& ipcProcessName,
-		const ApplicationProcessNamingInformation& difName,
-		unsigned int sequenceNumber): IPCProcessDIFRegistrationEvent(
-				IPC_PROCESS_UNREGISTERED_FROM_DIF, ipcProcessName,
-				difName, sequenceNumber){
+bool IPCProcessDIFRegistrationEvent::isRegistered() const {
+        return registered;
 }
 
 /* CLASS QUERY RIB REQUEST EVENT */
@@ -196,8 +187,8 @@ bool ExtendedIPCManager::isIPCProcessInitialized() const {
         return ipcProcessInitialized;
 }
 
-ApplicationRegistration * ExtendedIPCManager::commitPendingResitration(
-                        unsigned int seqNumber,
+ApplicationRegistration * ExtendedIPCManager::appRegistered(
+                        const ApplicationProcessNamingInformation& appName,
                         const ApplicationProcessNamingInformation& DIFName)
 throw (ApplicationRegistrationException) {
         ApplicationRegistration * applicationRegistration;
@@ -205,12 +196,12 @@ throw (ApplicationRegistrationException) {
         lock();
 
         applicationRegistration = getApplicationRegistration(
-                        getIpcProcessName());
+                        appName);
 
         if (!applicationRegistration){
                 applicationRegistration = new ApplicationRegistration(
-                                getIpcProcessName());
-                putApplicationRegistration(getIpcProcessName(),
+                                appName);
+                putApplicationRegistration(appName,
                                 applicationRegistration);
         }
 
@@ -218,6 +209,36 @@ throw (ApplicationRegistrationException) {
         unlock();
 
         return applicationRegistration;
+}
+
+void ExtendedIPCManager::appUnregistered(
+                const ApplicationProcessNamingInformation& appName,
+                const ApplicationProcessNamingInformation& DIFName)
+                throw (ApplicationUnregistrationException) {
+        lock();
+        ApplicationRegistration * applicationRegistration =
+                        getApplicationRegistration(appName);
+        if (!applicationRegistration){
+                unlock();
+                throw ApplicationUnregistrationException(
+                                IPCManager::application_not_registered_error);
+        }
+
+        std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
+        for (iterator = applicationRegistration->getDIFNames().begin();
+                        iterator != applicationRegistration->getDIFNames().end();
+                        ++iterator) {
+                if (*iterator == DIFName) {
+                        applicationRegistration->removeDIFName(DIFName);
+                        if (applicationRegistration->getDIFNames().size() == 0) {
+                                removeApplicationRegistration(appName);
+                        }
+
+                        break;
+                }
+        }
+
+        unlock();
 }
 
 void ExtendedIPCManager::assignToDIFResponse(

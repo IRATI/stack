@@ -518,6 +518,12 @@ public:
 	throw (NotifyUnregistrationFromDIFException);
 
 	/**
+	 * Return the list of supporting DIFs where this IPC Process is registered at
+	 * @return
+	 */
+	std::list<ApplicationProcessNamingInformation> getSupportingDIFs();
+
+	/**
 	 * Invoked by the IPC Manager to trigger the enrollment of an IPC Process
 	 * in the system with a DIF, reachable through a certain N-1 DIF. The
 	 * operation blocks until the IPC Process has successfully enrolled or an

@@ -1159,15 +1159,10 @@ bool IpcmDIFRegistrationNotification::isRegistered() const{
 }
 
 IPCEvent* IpcmDIFRegistrationNotification::toIPCEvent(){
-	IPCEvent * event;
-	if (registered){
-		event = new IPCProcessRegisteredToDIFEvent(ipcProcessName, difName,
-					getSequenceNumber());
-	}else{
-		event = new IPCProcessUnregisteredFromDIFEvent(ipcProcessName, difName,
-							getSequenceNumber());
-	}
-
+	IPCEvent * event =
+	        new IPCProcessDIFRegistrationEvent(ipcProcessName,
+	                                difName, registered,
+	                                getSequenceNumber());
 	return event;
 }
 
