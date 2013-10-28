@@ -54,7 +54,7 @@ struct resolve_data {
 };
 
 static bool is_resolve_data_matching(struct resolve_data * a,
-				     struct resolve_data * b)
+                                     struct resolve_data * b)
 {
         if (a == b)
                 return true;
@@ -65,16 +65,16 @@ static bool is_resolve_data_matching(struct resolve_data * a,
         ASSERT(a);
         ASSERT(b);
 
-	LOG_DBG("Dumping a->sha");
-	gha_dump(a->sha);
-	gha_dump(b->tha);
-	LOG_DBG("Dumping a->tpa");
-	gpa_dump(a->tpa);
-	gpa_dump(b->spa);
-	LOG_DBG("Dumping a->spa");
-	gpa_dump(a->spa);
-	gpa_dump(b->tpa);
-	LOG_DBG("Dumping ptype");
+        LOG_DBG("Dumping a->sha");
+        gha_dump(a->sha);
+        gha_dump(b->tha);
+        LOG_DBG("Dumping a->tpa");
+        gpa_dump(a->tpa);
+        gpa_dump(b->spa);
+        LOG_DBG("Dumping a->spa");
+        gpa_dump(a->spa);
+        gpa_dump(b->tpa);
+        LOG_DBG("Dumping ptype");
 
         if (!(a->ptype == b->ptype)       ||
             !gha_is_equal(a->sha, b->tha) ||
