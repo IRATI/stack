@@ -159,13 +159,15 @@ static int resolver(void * o)
 
 static struct workqueue_struct * arm_wq = NULL;
 
+/* FIXME: We should have a wq-alike job posting approach ... */
 int arm_resolve(uint16_t     ptype,
                 struct gpa * spa,
                 struct gha * sha,
                 struct gpa * tpa,
                 struct gha * tha)
 {
-        struct resolve_data * tmp;
+        struct resolve_data *  tmp;
+        struct rwq_work_item * r;
 
         if (!gpa_is_ok(spa) || !gha_is_ok(sha) ||
             !gpa_is_ok(tpa) || !gha_is_ok(tha))
@@ -177,8 +179,14 @@ int arm_resolve(uint16_t     ptype,
 
         ASSERT(arm_wq);
 
+        r = rwq_work_create(GFP_ATOMIC, resolver, tmp);
+        if (!r) {
+                resolve_data_destroy(tmp);
+                return -1;
+        }
+
         /* Takes the ownership ... and disposes everything */
-        return rwq_post(arm_wq, resolver, tmp);
+        return rwq_work_post(arm_wq, r);
 }
 
 int arp826_resolve_gpa(uint16_t           ptype,
