@@ -393,18 +393,27 @@ int kfa_flow_sdu_write(struct kfa * instance,
                 return -1;
         }
 
+        spin_lock(&instance->lock);
+
         flow = kfa_pmap_find(instance->flows.committed, id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
+                spin_unlock(&instance->lock);
                 return -1;
         }
 
         ipcp = flow->ipc_process;
-        ASSERT(ipcp);
-        if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
-                LOG_ERR("Couldn't write SDU on port-id %d", id);
+        if (!ipcp) {
+                spin_unlock(&instance->lock);
                 return -1;
         }
+        if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
+                LOG_ERR("Couldn't write SDU on port-id %d", id);
+                spin_unlock(&instance->lock);
+                return -1;
+        }
+
+        spin_unlock(&instance->lock);
 
         return 0;
 }
@@ -512,6 +521,7 @@ int kfa_sdu_post(struct kfa * instance,
                 LOG_ERR("Bogus port-id, bailing out");
                 return -1;
         }
+
         if (!sdu || !is_sdu_ok(sdu)) {
                 LOG_ERR("Bogus parameters passed, bailing out");
                 return -1;
@@ -551,6 +561,8 @@ int kfa_sdu_post(struct kfa * instance,
                 spin_unlock(&instance->lock);
                 return -1;
         }
+
+        sdu_destroy(sdu);
 
         wq = &flow->wait_queue;
 

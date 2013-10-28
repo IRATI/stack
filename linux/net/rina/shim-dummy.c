@@ -470,7 +470,7 @@ static struct write_data * write_data_create(struct kfa * kfa,
 {
         struct write_data * tmp;
 
-        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkmalloc(sizeof(*tmp), GFP_ATOMIC);
         if (!tmp)
                 return NULL;
 
@@ -490,9 +490,6 @@ static int dummy_write(void * o)
 		LOG_ERR("No write data passed");
                 return -1;
 	}
-	LOG_DBG("KFA: %pK", tmp->kfa);
-	LOG_DBG("PID: %d", tmp->port_id);
-	LOG_DBG("SDU: %pk", tmp->sdu);
 
         if (!is_write_data_complete(tmp)) {
                 LOG_ERR("Wrong data passed to dummy_write");
@@ -500,10 +497,9 @@ static int dummy_write(void * o)
                 return -1;
         }
 
-        if (kfa_sdu_post(tmp->kfa,
-                         tmp->port_id,
-                         tmp->sdu))
-                return -1;
+        kfa_sdu_post(tmp->kfa,
+                     tmp->port_id,
+                     tmp->sdu);
 
         write_data_destroy(tmp);
 
@@ -516,6 +512,7 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
 {
         struct dummy_flow * flow;
         struct write_data * tmp;
+        struct rwq_work_item * item;
 
         LOG_DBG("Dummy SDU write invoked.");
 
@@ -524,15 +521,33 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                         tmp = write_data_create(data->kfa,
                                                 sdu,
                                                 flow->dst_port_id);
+                        if (!is_write_data_complete(tmp))
+                                return -1;
+
+                        item = rwq_work_create(GFP_ATOMIC, dummy_write, tmp);
+                        if (!item) {
+                                write_data_destroy(tmp);
+                                return -1;
+                        }
                         ASSERT(dummy_wq);
-                        return rwq_post(dummy_wq, dummy_write, tmp);
+                        LOG_DBG("Our beloved dummy workqueue: %pK", dummy_wq);
+                        return rwq_work_post(dummy_wq, item);
                 }
                 if (flow->dst_port_id == id) {
                         tmp = write_data_create(data->kfa,
                                                 sdu,
                                                 flow->port_id);
+                        if (!is_write_data_complete(tmp))
+                                return -1;
+
+                        item = rwq_work_create(GFP_ATOMIC, dummy_write, tmp);
+                        if (!item) {
+                                write_data_destroy(tmp);
+                                return -1;
+                        }
                         ASSERT(dummy_wq);
-                        return rwq_post(dummy_wq, dummy_write, tmp);
+                        LOG_DBG("Our beloved dummy workqueue: %pK", dummy_wq);
+                        return rwq_work_post(dummy_wq, item);
                 }
         }
         LOG_ERR("There is no flow allocated for port-id %d", id);
