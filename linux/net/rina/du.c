@@ -103,24 +103,57 @@ int sdu_destroy(struct sdu * s)
 }
 EXPORT_SYMBOL(sdu_destroy);
 
-int is_sdu_ok(const struct sdu * s)
+struct sdu * sdu_dup_gfp(gfp_t        flags,
+                         struct sdu * sdu)
 {
-        /* FIXME: Should we assert here ? */
+        struct sdu * tmp;
+
+        if (!is_sdu_ok(sdu))
+                return NULL;
+
+        tmp = rkzalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        tmp->buffer = rkzalloc(sizeof(struct buffer), flags);
+        if (!tmp->buffer)
+                return NULL;
+
+        tmp->buffer->data = (char *) rkzalloc(sdu->buffer->size, flags);
+        if (!tmp->buffer->data) {
+                rkfree(tmp->buffer);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        memcpy(tmp->buffer->data, sdu->buffer->data, sdu->buffer->size);
+        tmp->buffer->size = sdu->buffer->size;
+        
+        return tmp;
+}
+EXPORT_SYMBOL(sdu_dup_gfp);
+
+struct sdu * sdu_dup(struct sdu * sdu)
+{ return sdu_dup_gfp(GFP_KERNEL, sdu); }
+EXPORT_SYMBOL(sdu_dup);
+
+bool is_sdu_ok(const struct sdu * s)
+{
         if (!s)
-                return 0;
+                return false;
 
         if (!s->buffer)
-                return 0;
+                return false;
 
         /* Should we accept an empty sdu ? */
         if (!s->buffer->data)
-                return 0;
+                return false;
         if (!s->buffer->size)
-                return 0;
+                return false;
 
         /* FIXME: More checks expected here ... */
 
-        return 1;
+        return true;
 }
 EXPORT_SYMBOL(is_sdu_ok);
 
