@@ -547,7 +547,13 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                                 return -1;
                         }
                         ASSERT(dummy_wq);
-                        return rwq_work_post(dummy_wq, item);
+                        if (rwq_work_post(dummy_wq, item)) {
+				write_data_destroy(tmp);
+				sdu_destroy(copy_sdu);
+				return -1;
+			} else {
+				return 0;
+			}
                 }
                 if (flow->dst_port_id == id) {
                         tmp = write_data_create(data->kfa,
@@ -562,7 +568,13 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                                 return -1;
                         }
                         ASSERT(dummy_wq);
-                        return rwq_work_post(dummy_wq, item);
+                        if (rwq_work_post(dummy_wq, item)) {
+				write_data_destroy(tmp);
+				sdu_destroy(copy_sdu);
+				return -1;
+			} else {
+				return 0;
+			}
                 }
         }
         LOG_ERR("There is no flow allocated for port-id %d", id);
@@ -612,8 +624,6 @@ static int dummy_fini(struct ipcp_factory_data * data)
         ASSERT(data);
 
         ret = rwq_destroy(dummy_wq);
-
-        ASSERT(list_empty(&data->instances));
 
         return ret;
 }
