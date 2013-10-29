@@ -29,32 +29,6 @@ namespace rina {
 static std::string NORMAL_IPC_PROCESS= "normal-ipc";
 
 /**
- * Thrown when there are problems assigning an IPC Process to a DIF
- */
-class AssignToDIFException: public IPCException {
-public:
-	AssignToDIFException():
-		IPCException("Problems assigning ICP Process to DIF"){
-	}
-	AssignToDIFException(const std::string& description):
-		IPCException(description){
-	}
-};
-
-/**
- * Thrown when there are problems updating a DIF configuration
- */
-class UpdateDIFConfigurationException: public IPCException {
-public:
-        UpdateDIFConfigurationException():
-                IPCException("Problems updating DIF configuration"){
-        }
-        UpdateDIFConfigurationException(const std::string& description):
-                IPCException(description){
-        }
-};
-
-/**
  * Thrown when there are problems notifying an IPC Process that it has been
  * registered to an N-1 DIF
  */

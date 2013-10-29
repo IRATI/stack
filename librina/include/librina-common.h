@@ -707,6 +707,32 @@ public:
 };
 
 /**
+ * Thrown when there are problems assigning an IPC Process to a DIF
+ */
+class AssignToDIFException: public IPCException {
+public:
+        AssignToDIFException():
+                IPCException("Problems assigning IPC Process to DIF"){
+        }
+        AssignToDIFException(const std::string& description):
+                IPCException(description){
+        }
+};
+
+/**
+ * Thrown when there are problems updating a DIF configuration
+ */
+class UpdateDIFConfigurationException: public IPCException {
+public:
+        UpdateDIFConfigurationException():
+                IPCException("Problems updating DIF configuration"){
+        }
+        UpdateDIFConfigurationException(const std::string& description):
+                IPCException(description){
+        }
+};
+
+/**
  * Represents a parameter that has a name and value
  */
 class Parameter {

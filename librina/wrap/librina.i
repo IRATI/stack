@@ -659,4 +659,5 @@ MAKE_COLLECTION_ITERABLE(FlowInformationListIterator, FlowInformation, std::list
 %template(RIBObjectList) std::list<rina::RIBObject>;
 %template(StringList) std::list<std::string>;
 %template(FlowInformationList) std::list<rina::FlowInformation>;
+%template(KernelIPCProcessSingleton) Singleton<rina::KernelIPCProcess>;
 

@@ -386,9 +386,54 @@ public:
 };
 
 /**
- * Make Application Manager singleton
+ * Make Extended IPC Manager singleton
  */
 extern Singleton<ExtendedIPCManager> extendedIPCManager;
+
+/**
+ * Abstraction of the data transfer and data transfer control parts of the
+ * IPC Process, which are implemented in the Kernel. This class allows the
+ * IPC Process Daemon to communicate with its components in the kernel
+ */
+class KernelIPCProcess {
+        /** The ID of the IPC Process */
+        unsigned short ipcProcessId;
+
+public:
+        void setIPCProcessId(unsigned short ipcProcessId);
+        unsigned short getIPCProcessId() const;
+
+        /**
+         * Invoked by the IPC Process Deamon to allow the kernel components
+         * to update its internal configuration based on the DIF the IPC
+         * Process has been assigned to.
+         *
+         * @param difInformation The information of the DIF (name, type,
+         * configuration)
+         * @throws AssignToDIFException if an error happens during the process
+         * @returns the handle to the response message
+         */
+        unsigned int assignToDIF(const DIFInformation& difInformation)
+                throw (AssignToDIFException);
+
+        /**
+         * Invoked by the IPC Process Deamon to modify the configuration of
+         * the kernel components of the IPC Process.
+         *
+         * @param difConfiguration The configuration of the DIF
+         * @throws UpdateDIFConfigurationException if an error happens during
+         * the process
+         * @returns the handle to the response message
+         */
+        unsigned int updateDIFConfiguration(
+                        const DIFConfiguration& difConfiguration)
+        throw (UpdateDIFConfigurationException);
+};
+
+/**
+ * Make Kernel IPC Process singleton
+ */
+extern Singleton<KernelIPCProcess> kernelIPCProcess;
 
 }
 

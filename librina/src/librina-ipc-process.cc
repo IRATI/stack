@@ -420,4 +420,66 @@ void ExtendedIPCManager::queryRIBResponse(
 
 Singleton<ExtendedIPCManager> extendedIPCManager;
 
+/* CLASS KERNEL IPC PROCESS */
+void KernelIPCProcess::setIPCProcessId(unsigned short ipcProcessId) {
+        this->ipcProcessId = ipcProcessId;
+}
+
+unsigned short KernelIPCProcess::getIPCProcessId() const {
+        return ipcProcessId;
+}
+
+unsigned int KernelIPCProcess::assignToDIF(
+                const DIFInformation& difInformation)
+throw (AssignToDIFException) {
+        unsigned int seqNum = 0;
+
+#if STUB_API
+        //Do nothing
+#else
+        IpcmAssignToDIFRequestMessage message;
+        message.setDIFInformation(difInformation);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                throw AssignToDIFException(e.what());
+        }
+
+        seqNum = message.getSequenceNumber();
+#endif
+        return seqNum;
+}
+
+unsigned int KernelIPCProcess::updateDIFConfiguration(
+                const DIFConfiguration& difConfiguration)
+throw (UpdateDIFConfigurationException) {
+        unsigned int seqNum=0;
+
+#if STUB_API
+        //Do nothing
+#else
+        IpcmUpdateDIFConfigurationRequestMessage message;
+        message.setDIFConfiguration(difConfiguration);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                throw UpdateDIFConfigurationException(e.what());
+        }
+
+        seqNum = message.getSequenceNumber();
+
+#endif
+        return seqNum;
+}
+
+Singleton<KernelIPCProcess> kernelIPCProcess;
+
 }
