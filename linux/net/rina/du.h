@@ -105,7 +105,7 @@ struct sdu * sdu_dup(struct sdu * sdu);
 struct sdu * sdu_dup_gfp(gfp_t        flags,
                          struct sdu * sdu);
 
-int          is_sdu_ok(const struct sdu * sdu);
+bool         is_sdu_ok(const struct sdu * sdu);
 
 struct sdu * sdu_protect(struct sdu * sdu);
 struct sdu * sdu_unprotect(struct sdu * sdu);

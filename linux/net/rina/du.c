@@ -140,20 +140,20 @@ EXPORT_SYMBOL(sdu_dup);
 int is_sdu_ok(const struct sdu * s)
 {
         if (!s)
-                return 0;
+                return false;
 
         if (!s->buffer)
-                return 0;
+                return false;
 
         /* Should we accept an empty sdu ? */
         if (!s->buffer->data)
-                return 0;
+                return false;
         if (!s->buffer->size)
-                return 0;
+                return false;
 
         /* FIXME: More checks expected here ... */
 
-        return 1;
+        return true;
 }
 EXPORT_SYMBOL(is_sdu_ok);
 
