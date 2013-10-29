@@ -811,7 +811,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                                        data->dif_name,
                                        sname,
                                        data->app_name,
-                                       NULL)) {
+                                       data->fspec)) {
                         LOG_ERR("Couldn't tell the KIPCM about the flow");
                         kfifo_free(&flow->sdu_queue);
                         if (flow_destroy(data, flow))
