@@ -177,13 +177,13 @@ int arp_send_reply(uint16_t            ptype,
 #if HAVE_RINARP
         max_len = max(gpa_address_length(spa), gpa_address_length(tpa));
         LOG_DBG("Growing addresses to %zd", max_len);
-        tmp_spa = gpa_dup(spa);
-        if (gpa_address_grow(tmp_spa, max_len, 0x00)) {
+        tmp_spa = gpa_dup_gfp(GFP_ATOMIC, spa);
+        if (gpa_address_grow_gfp(GFP_ATOMIC, tmp_spa, max_len, 0x00)) {
                 LOG_ERR("Failed to grow SPA");
                 return -1;
         }
-        tmp_tpa = gpa_dup(tpa);
-        if (gpa_address_grow(tmp_tpa, max_len, 0x00)) {
+        tmp_tpa = gpa_dup_gfp(GFP_ATOMIC, tpa);
+        if (gpa_address_grow_gfp(GFP_ATOMIC, tmp_tpa, max_len, 0x00)) {
                 LOG_ERR("Failed to grow TPA");
                 gpa_destroy(tmp_spa);
                 return -1;
@@ -376,11 +376,11 @@ static int process(const struct sk_buff * skb,
 
 #if HAVE_RINARP
         LOG_DBG("Shrinking as needed");
-        if (gpa_address_shrink_gfp(tmp_spa, 0x00, GFP_ATOMIC)) {
+        if (gpa_address_shrink_gfp(GFP_ATOMIC, tmp_spa, 0x00)) {
                 LOG_ERR("Problems parsing the source GPA");
                 return -1;
         }
-        if (gpa_address_shrink_gfp(tmp_tpa, 0x00, GFP_ATOMIC)) {
+        if (gpa_address_shrink_gfp(GFP_ATOMIC, tmp_tpa, 0x00)) {
                 LOG_ERR("Got problems parsing the target GPA");
                 return -1;
         }
@@ -389,10 +389,10 @@ static int process(const struct sk_buff * skb,
         /* Finally process the entry */
         switch (operation) {
         case ARP_REQUEST: {
-                struct table *             tbl;
-                const struct table_entry * entry;
-                const struct table_entry * req_addr;
-                const struct gha *         target_ha;
+                struct table *             tbl       = NULL;
+                const struct table_entry * entry     = NULL;
+                const struct table_entry * req_addr  = NULL;
+                const struct gha *         target_ha = NULL;
 
                 /* FIXME: Should we add all ARP Requests? */
 
@@ -410,11 +410,25 @@ static int process(const struct sk_buff * skb,
                  */
                 entry = tbl_find_by_gpa(tbl, tmp_spa);
                 if (!entry) {
-                        if (tbl_add(tbl, tmp_spa, tmp_sha)) {
+                        struct table_entry * tmp;
+
+                        LOG_DBG("Adding new entry to the table");
+
+                        tmp = tble_create_gfp(tmp_spa,
+                                              tmp_sha,
+                                              GFP_ATOMIC);
+                        if (!tmp)
+                                return -1;
+
+                        if (tbl_add(tbl, tmp)) {
                                 LOG_ERR("AAAAAAARRggh can't add in table");
+                                tble_destroy(tmp);
                                 return -1;
                         }
                 } else {
+                        LOG_DBG("Updating old entry %pK into the table",
+                                entry);
+
                         if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha)) {
                                 LOG_ERR("Failed to update table");
                                 return -1;
@@ -434,12 +448,17 @@ static int process(const struct sk_buff * skb,
                         return -1;
                 }
 
+                LOG_DBG("Showing the target ha");
+                gha_dump(target_ha);
+
                 if (arp_send_reply(ptype,
-                                   tmp_tpa, tmp_tha, tmp_spa, tmp_sha)) {
+                                   tmp_tpa, target_ha, tmp_spa, tmp_sha)) {
                         /* FIXME: Couldn't send reply ... */
                         LOG_ERR("Couldn't send reply");
                         return -1;
                 }
+
+                LOG_DBG("Request replied successfully");
         }
                 break;
 
@@ -448,12 +467,16 @@ static int process(const struct sk_buff * skb,
                         LOG_ERR("Cannot resolve with this reply ...");
                         return -1;
                 }
+
+                LOG_DBG("Resolution in progress, please wait ...");
         }
                 break;
 
         default:
                 BUG();
         }
+
+        LOG_DBG("Processing completed successfully");
 
         return 0;
 }

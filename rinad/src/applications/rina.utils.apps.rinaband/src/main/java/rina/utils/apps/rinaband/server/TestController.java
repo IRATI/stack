@@ -12,10 +12,13 @@ import org.apache.commons.logging.LogFactory;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistration;
 import eu.irati.librina.ApplicationRegistrationInformation;
+import eu.irati.librina.ApplicationRegistrationType;
 import eu.irati.librina.Flow;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCManagerSingleton;
+import eu.irati.librina.RegisterApplicationResponseEvent;
+import eu.irati.librina.UnregisterApplicationResponseEvent;
 import eu.irati.librina.rina;
 
 import rina.cdap.api.CDAPSessionManager;
@@ -25,6 +28,7 @@ import rina.utils.apps.rinaband.StatisticsInformation;
 import rina.utils.apps.rinaband.TestInformation;
 import rina.utils.apps.rinaband.protobuf.RINABandStatisticsMessageEncoder;
 import rina.utils.apps.rinaband.protobuf.RINABandTestMessageEncoder;
+import rina.utils.apps.rinaband.utils.ApplicationRegistrationListener;
 import rina.utils.apps.rinaband.utils.FlowAcceptor;
 import rina.utils.apps.rinaband.utils.FlowDeallocationListener;
 import rina.utils.apps.rinaband.utils.FlowReader;
@@ -37,7 +41,8 @@ import rina.utils.apps.rinaband.utils.SDUListener;
  * @author eduardgrasa
  *
  */
-public class TestController implements SDUListener, FlowAcceptor, FlowDeallocationListener{
+public class TestController implements SDUListener, FlowAcceptor, 
+	FlowDeallocationListener, ApplicationRegistrationListener{
 	
 	private enum State {WAIT_CREATE, WAIT_START, EXECUTING, WAIT_STOP, COMPLETED};
 	
@@ -99,6 +104,7 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 	private static final Log log = LogFactory.getLog(TestController.class);
 	
 	private Timer timer = null;
+	private CDAPMessage storedCDAPMessage = null;
 	
 	public TestController(ApplicationProcessNamingInformation dataApNamingInfo, 
 			ApplicationProcessNamingInformation difName, Flow flow,
@@ -176,28 +182,88 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 				this.testInformation.setSduSize(RINABandServer.MAX_SDU_SIZE_IN_BYTES);
 			}
 			
-			//2 Update the DATA AE and register it
-			this.dataApNamingInfo.setEntityInstance(this.testInformation.getAei());
-			ApplicationRegistrationInformation appRegInfo = new ApplicationRegistrationInformation();
-			//TODO fix this and replace it for the = new ApplicationRegistrationInformation();
-					/*new ApplicationRegistrationInformation(ApplicationRegistrationType.APPLICATION_REGISTRATION_SINGLE_DIF);
-			appRegInfo.setDIFName(difName);*/
-			dataAERegistration = rina.getIpcManager().registerApplication(this.dataApNamingInfo, appRegInfo);
-			ipcEventConsumer.addFlowAcceptor(this, dataApNamingInfo);
+			//2 Update the DATA AE and request its registration
+			dataApNamingInfo.setEntityInstance(this.testInformation.getAei());
+			ipcEventConsumer.addApplicationRegistrationListener(this, dataApNamingInfo);
+			ApplicationRegistrationInformation appRegInfo = 
+					new ApplicationRegistrationInformation(ApplicationRegistrationType.APPLICATION_REGISTRATION_SINGLE_DIF);
+			appRegInfo.setApplicationName(dataApNamingInfo);
+			appRegInfo.setDIFName(difName);
+			rina.getIpcManager().requestApplicationRegistration(appRegInfo);
+			storedCDAPMessage = cdapMessage;
+		}catch(Exception ex){
+			log.info("Error handling CREATE Test message.");
+			ex.printStackTrace();
+		}
+	}
+	
+	@Override
+	public synchronized void dispatchApplicationRegistrationResponseEvent(
+			RegisterApplicationResponseEvent event) {
+		if (event.getResult() != 0) {
+			log.error("Problems registering data AE: "+ event.getApplicationName().toString() 
+					+ ". Error code is "+event.getResult());
+			try {
+				rina.getIpcManager().withdrawPendingRegistration(event.getSequenceNumber());
+			} catch(Exception ex) {
+				log.error(ex.getMessage());
+			}
 			
-			//3 Reply and update state
-			CDAPMessage replyMessage = cdapMessage.getReplyMessage();
+			//FIXME properly clean up and cancel the test
+			return;
+		}
+		
+		try{
+			dataAERegistration = rina.getIpcManager().commitPendingResitration(event.getSequenceNumber(), 
+					event.getDIFName());
+		} catch(Exception ex){
+			log.error(ex.getMessage());
+			//FIXME what to do now?
+		}
+		
+		log.info("Registered data AE " + event.getApplicationName().toString() 
+			+ " to DIF " + difName.getProcessName());
+		
+		ipcEventConsumer.addFlowAcceptor(this, dataApNamingInfo);
+
+		//3 Reply and update state
+		try {
+			CDAPMessage replyMessage = storedCDAPMessage.getReplyMessage();
+			ObjectValue objectValue = new ObjectValue();
 			objectValue.setByteval(RINABandTestMessageEncoder.encode(this.testInformation));
 			replyMessage.setObjValue(objectValue);
 			sendCDAPMessage(replyMessage);
 			this.state = State.WAIT_START;
 			log.info("Waiting to START a new test with the following parameters.");
 			log.info(this.testInformation.toString());
-		}catch(Exception ex){
+		} catch (Exception ex){
 			log.info("Error handling CREATE Test message.");
 			ex.printStackTrace();
 		}
+	}
+
+	@Override
+	public void dispatchApplicationUnregistrationResponseEvent(
+			UnregisterApplicationResponseEvent event) {
+		boolean success = false;
 		
+		if (event.getResult() == 0){
+			success = true;
+		}
+		
+		try {
+			rina.getIpcManager().appUnregistrationResult(event.getSequenceNumber(), success);
+		} catch (Exception ex) {
+			log.error(ex.getMessage());
+		}	
+		
+		if (event.getResult() == 0){
+			log.info("Data AE " + event.getApplicationName().toString() 
+					+ " successfully unregistered from DIF " + event.getDIFName().getProcessName());
+		} else {
+			log.info("Problems unregistering data AE from DIF " + 
+					event.getDIFName().getProcessName() + ". Error code: "+event.getResult());
+		}
 	}
 	
 	/**
@@ -361,7 +427,7 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 		if (this.state != State.WAIT_START){
 			log.info("New flow allocated, but we're not in the WAIT_START state. Requesting deallocation.");
 			try{
-				rina.getIpcManager().deallocateFlow(flow.getPortId());
+				rina.getIpcManager().requestFlowDeallocation(flow.getPortId());
 			}catch(Exception ex){
 				ex.printStackTrace();
 			}
@@ -385,10 +451,19 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 		testWorker.getFlowReader().stop();
 		log.info("Data flow with portId "+portId+ " deallocated");
 		ipcEventConsumer.removeFlowDeallocationListener(portId);
+		
+		try{
+			rina.getIpcManager().flowDeallocated(portId);
+		} catch (Exception ex){
+			log.warn("Error updating librina data structures for flow " + portId 
+					+ ". " + ex.getMessage());
+		}
+		
 		if (this.allocatedFlows.size() == 0){
 			//Cancel the registration of the data AE
 			try{
-				rina.getIpcManager().unregisterApplication(dataApNamingInfo, dataAERegistration.getDIFNames().getFirst());
+				rina.getIpcManager().requestApplicationUnregistration(dataApNamingInfo, 
+						dataAERegistration.getDIFNames().getFirst());
 				ipcEventConsumer.removeFlowAcceptor(dataApNamingInfo);
 			}catch(Exception ex){
 				log.info("Problems unregistering data AE");
@@ -404,7 +479,7 @@ public class TestController implements SDUListener, FlowAcceptor, FlowDeallocati
 		IPCManagerSingleton ipcManager = rina.getIpcManager();
 		
 		try{
-			Flow flow = ipcManager.allocateFlowResponse(event, true, "ok");
+			Flow flow = ipcManager.allocateFlowResponse(event, 0, true);
 			flowAllocated(flow);
 		}catch(Exception ex){
 			ex.printStackTrace();

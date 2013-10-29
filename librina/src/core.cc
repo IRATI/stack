@@ -228,9 +228,10 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 			specificMessage->setDestPortId(getIPCManagerPortId());
 		}else{
 			putAPNametoNetlinkPortIdMapping(
-					specificMessage->getApplicationName(),
-					specificMessage->getSourcePortId(),
-					specificMessage->getSourceIpcProcessId());
+			        specificMessage->getApplicationRegistrationInformation().
+			                getApplicationName(),
+			        specificMessage->getSourcePortId(),
+				specificMessage->getSourceIpcProcessId());
 		}
 		break;
 	}
@@ -393,100 +394,6 @@ IPCEvent * NetlinkPortIdMap::osProcessFinalized(unsigned int nl_portid){
 	return event;
 }
 
-/* CLASS PENDING NETLINK MESSAGE */
-PendingNetlinkMessage::PendingNetlinkMessage(unsigned int sequenceNumber) :
-				ConditionVariable() {
-	this->responseMessage = NULL;
-	this->sequenceNumber = sequenceNumber;
-}
-
-PendingNetlinkMessage::~PendingNetlinkMessage() throw(){
-}
-
-BaseNetlinkMessage * PendingNetlinkMessage::getResponseMessage() {
-	lock();
-
-	if (responseMessage == 0){
-		try{
-			timedwait(WAIT_RESPONSE_TIMEOUT, 0);
-		}catch(ConcurrentException &e){
-		}
-	}
-
-	unlock();
-	if (responseMessage != 0){
-		LOG_DBG("Got Netlink reply to request with sequence number %d",
-				sequenceNumber);
-	}else{
-		LOG_ERR("Timed out while waiting for response message");
-	}
-
-	return responseMessage;
-}
-
-void PendingNetlinkMessage::setResponseMessage(
-		BaseNetlinkMessage * responseMessage) {
-	lock();
-	this->responseMessage = responseMessage;
-	signal();
-	unlock();
-}
-
-unsigned int PendingNetlinkMessage::getSequenceNumber() const{
-	return sequenceNumber;
-}
-
-/* Class Netlink Session */
-NetlinkSession::NetlinkSession(int sessionId){
-	this->sessionId = sessionId;
-}
-
-NetlinkSession::~NetlinkSession(){
-}
-
-void NetlinkSession::putLocalPendingMessage(
-		PendingNetlinkMessage* pendingMessage){
-	localPendingMessages[pendingMessage->getSequenceNumber()]
-	                     = pendingMessage;
-}
-
-PendingNetlinkMessage*
-NetlinkSession::takeLocalPendingMessage(unsigned int sequenceNumber){
-	std::map<unsigned int, PendingNetlinkMessage *>::iterator it =
-			localPendingMessages.find(sequenceNumber);
-
-	if(it == localPendingMessages.end()){
-		LOG_ERR("Could not find the matching request for a local response message with sequence number %d",
-				sequenceNumber);
-		return NULL;
-	}
-
-	//2 Remove pending Netlink message from table
-	localPendingMessages.erase(sequenceNumber);
-	return it->second;
-}
-
-void NetlinkSession::putRemotePendingMessage(BaseNetlinkMessage* pendingMessage){
-	remotePendingMessages[pendingMessage->getSequenceNumber()]
-	                      = pendingMessage;
-}
-
-BaseNetlinkMessage*
-NetlinkSession::takeRemotePendingMessage(unsigned int sequenceNumber){
-	std::map<unsigned int, BaseNetlinkMessage *>::iterator it =
-			remotePendingMessages.find(sequenceNumber);
-	if(it == remotePendingMessages.end()){
-		LOG_ERR("Could not find the matching request for a remote response message with sequence number %d",
-				sequenceNumber);
-		return NULL;
-	}
-
-	//2 Remove pending Netlink message from table
-	remotePendingMessages.erase(sequenceNumber);
-
-	return it->second;
-}
-
 /* CLASS RINA Manager */
 /** main function of the Netlink message reader thread */
 void * doNetlinkMessageReaderWork(void * arg) {
@@ -495,6 +402,7 @@ void * doNetlinkMessageReaderWork(void * arg) {
 	BlockingFIFOQueue<IPCEvent> * eventsQueue =
 			myRINAManager->getEventQueue();
 	BaseNetlinkMessage * incomingMessage;
+	IPCEvent * event;
 
 	//Continuously try to read incoming Netlink messages
 	while (true) {
@@ -518,35 +426,28 @@ void * doNetlinkMessageReaderWork(void * arg) {
 			(incomingMessage);
 			LOG_DBG("NL socket at port %d is closed", message->getPortId());
 
-			IPCEvent * event = myRINAManager->osProcessFinalized(message->getPortId());
-			if (event)
+			event = myRINAManager->osProcessFinalized(message->getPortId());
+			if (event) {
 				eventsQueue->put(event);
+				LOG_DBG("Added event of type %d and sequence number %u to events queue",
+				                (int)event->getType(),
+				                event->getSequenceNumber());
+			}
 
 			delete message;
-		}else if (incomingMessage->isResponseMessage()){
-			myRINAManager->netlinkResponseMessageArrived(incomingMessage);
 		}else{
-			NetlinkRequestOrNotificationMessage * message =
-					dynamic_cast<NetlinkRequestOrNotificationMessage *>
-			(incomingMessage);
+			myRINAManager->netlinkMessageArrived(incomingMessage);
+			event = incomingMessage->toIPCEvent();
+			if (event) {
+			        eventsQueue->put(event);
+			        LOG_DBG("Added event of type %d and sequence number %u to events queue",
+			                        (int)event->getType(),
+			                        event->getSequenceNumber());
+			} else
+			        LOG_WARN("Event is null for message type %d",
+			                        incomingMessage->getOperationCode());
 
-			bool notification = incomingMessage->isNotificationMessage();
-			bool request = incomingMessage->isRequestMessage();
-			IPCEvent * ipcEvent = message->toIPCEvent();
-
-			if (request){
-				myRINAManager->netlinkRequestMessageArrived(incomingMessage);
-			}else{
-				myRINAManager->netlinkNotificationMessageArrived(
-						incomingMessage);
-			}
-
-			eventsQueue->put(ipcEvent);
-
-			if (notification){
-				delete message;
-				message = 0;
-			}
+			delete incomingMessage;
 		}
 	}
 
@@ -600,140 +501,20 @@ RINAManager::~RINAManager() {
 	delete eventQueue;
 }
 
-NetlinkSession* RINAManager::getAndCreateNetlinkSession(
-		unsigned int sessionId){
-	NetlinkSession* response = NULL;
-
-	std::map<unsigned int, NetlinkSession*>::iterator it =
-			netlinkSessions.find(sessionId);
-	if(it == netlinkSessions.end()){
-		LOG_DBG("Creating a new Netlink session with id %d",
-				sessionId);
-		response = new NetlinkSession(sessionId);
-		netlinkSessions[sessionId] = response;
-	}else{
-		response = it->second;
-	}
-
-	return response;
-}
-
-NetlinkSession* RINAManager::getNetlinkSession(unsigned int sessionId){
-	NetlinkSession* response = NULL;
-
-	std::map<unsigned int, NetlinkSession*>::iterator it =
-			netlinkSessions.find(sessionId);
-	if(it != netlinkSessions.end()){
-		response = it->second;
-	}
-
-	return response;
-}
-
-BaseNetlinkMessage * RINAManager::sendRequestAndWaitForResponse(
-		BaseNetlinkMessage * request, const std::string& errorDescription)
-throw(NetlinkException){
-	BaseNetlinkMessage* response = 0;
-	response = sendRequestMessageAndWaitForResponse(request);
-	return response;
-}
-
-void RINAManager::_sendRequestMessage(BaseNetlinkMessage * netlinkMessage)
-        throw (NetlinkException)
-{
-        netlinkPortIdMap.updateMessageOrPortIdMap(netlinkMessage, true);
-        netlinkMessage->setSequenceNumber(netlinkManager->getSequenceNumber());
-        netlinkManager->sendMessage(netlinkMessage);
-}
-
-BaseNetlinkMessage * RINAManager::sendRequestMessageAndWaitForResponse(
-		BaseNetlinkMessage * netlinkMessage) throw (NetlinkException)
+void RINAManager::sendMessage(BaseNetlinkMessage * netlinkMessage)
+throw (NetlinkException)
 {
 	sendReceiveLock.lock();
 
-	//1 Populate destination port id
-	try {
-	        _sendRequestMessage(netlinkMessage);
-	} catch (NetlinkException &e) {
-		sendReceiveLock.unlock();
-		throw e;
-	}
-
-	//3 Put message in the queue
-	NetlinkSession * netlinkSession =
-	                        getAndCreateNetlinkSession(
-	                                        netlinkMessage->getDestPortId());
-	PendingNetlinkMessage pendingMessage(netlinkMessage->getSequenceNumber());
-	netlinkSession->putLocalPendingMessage(&pendingMessage);
-
-	sendReceiveLock.unlock();
-
-	//4 wait for reply
-	BaseNetlinkMessage * response = pendingMessage.getResponseMessage();
-
-	if (response == 0){
-		throw NetlinkException(NetlinkException::error_waiting_for_response);
-	}
-
-	return response;
-}
-
-void RINAManager::sendRequestMessage(BaseNetlinkMessage * netlinkMessage)
-        throw (NetlinkException)
-{
-        sendReceiveLock.lock();
-
-        try{
-                _sendRequestMessage(netlinkMessage);
-        }catch (NetlinkException &e) {
-                sendReceiveLock.unlock();
-                throw e;
-        }
-
-        sendReceiveLock.unlock();
-}
-
-void RINAManager::sendResponseOrNotficationMessage(
-		BaseNetlinkMessage * netlinkMessage) throw (NetlinkException) {
-	sendReceiveLock.lock();
-
-	//1 Populate destination port id
-	try {
-		netlinkPortIdMap.updateMessageOrPortIdMap(netlinkMessage, true);
-	} catch (NetlinkException &e) {
-		sendReceiveLock.unlock();
-		throw e;
-	}
-
-	if (netlinkMessage->isResponseMessage()) {
-		NetlinkSession * netlinkSession = getNetlinkSession(
-				netlinkMessage->getDestPortId());
-		if (netlinkSession == NULL) {
-			LOG_ERR("Could not find an existing Netlink session with id %d",
-					netlinkMessage->getDestPortId());
-			sendReceiveLock.unlock();
-			throw NetlinkException(
-					NetlinkException::error_fetching_netlink_session);
+	try{
+		netlinkPortIdMap.updateMessageOrPortIdMap(
+				netlinkMessage, true);
+		if (netlinkMessage->isRequestMessage()){
+			netlinkMessage->setSequenceNumber(
+					netlinkManager->getSequenceNumber());
 		}
-
-		BaseNetlinkMessage * requestMessage = netlinkSession
-				->takeRemotePendingMessage(
-						netlinkMessage->getSequenceNumber());
-		if (requestMessage == NULL) {
-			sendReceiveLock.unlock();
-			throw NetlinkException(
-					NetlinkException::
-					error_fetching_pending_netlink_request_message);
-		}
-
-		delete requestMessage;
-		requestMessage = 0;
-	}
-
-	//2 Send the message
-	try {
 		netlinkManager->sendMessage(netlinkMessage);
-	} catch (NetlinkException &e) {
+	}catch (NetlinkException &e) {
 		sendReceiveLock.unlock();
 		throw e;
 	}
@@ -741,65 +522,13 @@ void RINAManager::sendResponseOrNotficationMessage(
 	sendReceiveLock.unlock();
 }
 
-void RINAManager::netlinkResponseMessageArrived(
-		BaseNetlinkMessage * response){
+void RINAManager::netlinkMessageArrived(
+		BaseNetlinkMessage * message){
 	sendReceiveLock.lock();
 
 	//Try to update netlink port id map
 	try {
-		netlinkPortIdMap.updateMessageOrPortIdMap(response, false);
-	} catch (NetlinkException &e) {
-		LOG_WARN("Exception while trying to update netlink portId map. %s",
-				e.what());
-	}
-
-	NetlinkSession *netlinkSession = getNetlinkSession(
-			response->getSourcePortId());
-	if  (netlinkSession == 0){
-		LOG_ERR("Could not find an existing Netlink session with id %d",
-				response->getSourcePortId());
-		sendReceiveLock.unlock();
-		return;
-	}
-
-	PendingNetlinkMessage* pendingMessage = netlinkSession->
-			takeLocalPendingMessage(response->getSequenceNumber());
-	sendReceiveLock.unlock();
-	if(pendingMessage == 0){
-		sendReceiveLock.unlock();
-		return;
-	}
-
-	//3 Notify thread that sent the Netlink request message
-	pendingMessage->setResponseMessage(response);
-}
-
-void RINAManager::netlinkRequestMessageArrived(
-		BaseNetlinkMessage * request){
-	sendReceiveLock.lock();
-
-	//Try to update netlink port id map
-	try {
-		netlinkPortIdMap.updateMessageOrPortIdMap(request, false);
-	} catch (NetlinkException &e) {
-		LOG_WARN("Exception while trying to update netlink portId map. %s",
-				e.what());
-	}
-
-	NetlinkSession *netlinkSession = getAndCreateNetlinkSession(
-			request->getSourcePortId());
-
-	netlinkSession->putRemotePendingMessage(request);
-	sendReceiveLock.unlock();
-}
-
-void RINAManager::netlinkNotificationMessageArrived(
-		BaseNetlinkMessage * notification){
-	sendReceiveLock.lock();
-
-	//Try to update netlink port id map
-	try {
-		netlinkPortIdMap.updateMessageOrPortIdMap(notification, false);
+		netlinkPortIdMap.updateMessageOrPortIdMap(message, false);
 	} catch (NetlinkException &e) {
 		LOG_WARN("Exception while trying to update netlink portId map. %s",
 				e.what());

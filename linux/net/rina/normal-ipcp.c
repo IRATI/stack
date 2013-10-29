@@ -472,10 +472,6 @@ static int normal_destroy(struct ipcp_factory_data * data,
         if (tmp->info->name)
                 name_destroy(tmp->info->name);
 
-        efcp_container_destroy(tmp->efcpc);
-
-        rmt_destroy(tmp->rmt);
-
         rkfree(tmp->info);
         rkfree(tmp);
         rkfree(instance);

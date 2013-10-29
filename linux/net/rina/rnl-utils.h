@@ -272,8 +272,23 @@ enum dif_info_attrs_list {
 };
 #define DINFO_ATTR_MAX (__DINFO_ATTR_MAX -1)
 
+enum data_transfer_cons_attrs_list {
+        DTC_ATTR_QOS_ID = 1,
+        DTC_ATTR_PORT_ID,
+        DTC_ATTR_CEP_ID,
+        DTC_ATTR_SEQ_NUM,
+        DTC_ATTR_ADDRESS,
+        DTC_ATTR_LENGTH,
+        DTC_ATTR_MAX_PDU_SIZE,
+        DTC_ATTR_MAX_PDU_LIFE,
+        DTC_ATTR_DIF_INTEGRITY,
+        __DTC_ATTR_MAX,
+};
+#define DTC_ATTR_MAX (__DTC_ATTR_MAX -1)
+
 enum dif_config_attrs_list {
         DCONF_ATTR_IPCP_CONFIG_ENTRIES = 1,
+        DCONF_ATTR_DATA_TRANS_CONS,
         __DCONF_ATTR_MAX,
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)

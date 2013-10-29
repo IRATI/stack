@@ -187,6 +187,43 @@ public:
 };
 
 /**
+ * Contains the information of an allocated flow
+ */
+class FlowInformation {
+
+	/** The local application name */
+	ApplicationProcessNamingInformation localAppName;
+
+	/** The remote application name */
+	ApplicationProcessNamingInformation remoteAppName;
+
+	/** The flow characteristics */
+	FlowSpecification flowSpecification;
+
+	/** The portId of the flow */
+	int portId;
+
+	/** The name of the DIF where the flow has been allocated */
+	ApplicationProcessNamingInformation difName;
+
+public:
+	bool operator==(const FlowInformation &other) const;
+	bool operator!=(const FlowInformation &other) const;
+	const ApplicationProcessNamingInformation& getDifName() const;
+	void setDifName(const ApplicationProcessNamingInformation& difName);
+	const FlowSpecification& getFlowSpecification() const;
+	void setFlowSpecification(const FlowSpecification& flowSpecification);
+	const ApplicationProcessNamingInformation& getLocalAppName() const;
+	void setLocalAppName(
+			const ApplicationProcessNamingInformation& localAppName);
+	int getPortId() const;
+	void setPortId(int portId);
+	const ApplicationProcessNamingInformation& getRemoteAppName() const;
+	void setRemoteAppName(
+			const ApplicationProcessNamingInformation& remoteAppName);
+};
+
+/**
  * Defines the properties that a QoSCube is able to provide
  */
 class QoSCube {
@@ -299,19 +336,32 @@ public:
  */
 enum IPCEventType {
 	FLOW_ALLOCATION_REQUESTED_EVENT,
+	ALLOCATE_FLOW_REQUEST_RESULT_EVENT,
+	ALLOCATE_FLOW_RESPONSE_EVENT,
 	FLOW_DEALLOCATION_REQUESTED_EVENT,
+	DEALLOCATE_FLOW_RESPONSE_EVENT,
 	APPLICATION_UNREGISTERED_EVENT,
 	FLOW_DEALLOCATED_EVENT,
 	APPLICATION_REGISTRATION_REQUEST_EVENT,
+	REGISTER_APPLICATION_RESPONSE_EVENT,
 	APPLICATION_UNREGISTRATION_REQUEST_EVENT,
+	UNREGISTER_APPLICATION_RESPONSE_EVENT,
 	APPLICATION_REGISTRATION_CANCELED_EVENT,
 	ASSIGN_TO_DIF_REQUEST_EVENT,
+	ASSIGN_TO_DIF_RESPONSE_EVENT,
 	UPDATE_DIF_CONFIG_REQUEST_EVENT,
-	IPC_PROCESS_REGISTERED_TO_DIF,
-	IPC_PROCESS_UNREGISTERED_FROM_DIF,
+	UPDATE_DIF_CONFIG_RESPONSE_EVENT,
+	IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
 	IPC_PROCESS_QUERY_RIB,
 	GET_DIF_PROPERTIES,
-	OS_PROCESS_FINALIZED
+	GET_DIF_PROPERTIES_RESPONSE_EVENT,
+	OS_PROCESS_FINALIZED,
+	IPCM_REGISTER_APP_RESPONSE_EVENT,
+	IPCM_UNREGISTER_APP_RESPONSE_EVENT,
+	IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT,
+	IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
+	QUERY_RIB_RESPONSE_EVENT,
+	IPC_PROCESS_DAEMON_INITIALIZED_EVENT
 };
 
 /**
@@ -342,6 +392,18 @@ public:
 	unsigned int getSequenceNumber() const{
 		return sequenceNumber;
 	}
+};
+
+class BaseResponseEvent: public IPCEvent {
+        /** The result of the operation */
+        int result;
+
+public:
+        BaseResponseEvent(
+                        int result,
+                        IPCEventType eventType,
+                        unsigned int sequenceNumber);
+        int getResult() const;
 };
 
 /**
@@ -443,6 +505,9 @@ enum ApplicationRegistrationType {
  */
 class ApplicationRegistrationInformation {
 
+        /** The name of the application being registered */
+        ApplicationProcessNamingInformation appName;
+
 	/** The type of registration requested */
 	ApplicationRegistrationType applicationRegistrationType;
 
@@ -452,7 +517,10 @@ class ApplicationRegistrationInformation {
 public:
 	ApplicationRegistrationInformation();
 	ApplicationRegistrationInformation(
-			ApplicationRegistrationType applicationRegistrationType);
+		ApplicationRegistrationType applicationRegistrationType);
+	const ApplicationProcessNamingInformation& getApplicationName() const;
+	void setApplicationName(
+	                const ApplicationProcessNamingInformation& appName);
 	ApplicationRegistrationType getRegistrationType() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
 	void setDIFName(const ApplicationProcessNamingInformation& difName);
@@ -463,40 +531,121 @@ public:
  * registration to a DIF
  */
 class ApplicationRegistrationRequestEvent: public IPCEvent {
-	/** The application that wants to register */
-	ApplicationProcessNamingInformation applicationName;
 
 	/** The application registration information*/
 	ApplicationRegistrationInformation applicationRegistrationInformation;
 
 public:
 	ApplicationRegistrationRequestEvent(
-		const ApplicationProcessNamingInformation& appName,
 		const ApplicationRegistrationInformation&
 		applicationRegistrationInformation, unsigned int sequenceNumber);
-	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const ApplicationRegistrationInformation&
 		getApplicationRegistrationInformation() const;
+};
+
+class BaseApplicationRegistrationEvent: public IPCEvent {
+        /** The application that wants to unregister */
+        ApplicationProcessNamingInformation applicationName;
+
+        /** The DIF to which the application wants to cancel the registration */
+        ApplicationProcessNamingInformation DIFName;
+
+public:
+        BaseApplicationRegistrationEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        const ApplicationProcessNamingInformation& DIFName,
+                        IPCEventType eventType,
+                        unsigned int sequenceNumber);
+        BaseApplicationRegistrationEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        IPCEventType eventType,
+                        unsigned int sequenceNumber);
+        const ApplicationProcessNamingInformation& getApplicationName() const;
+        const ApplicationProcessNamingInformation& getDIFName() const;
 };
 
 /**
  * Event informing that an application has requested the
  * unregistration from a DIF
  */
-class ApplicationUnregistrationRequestEvent: public IPCEvent {
-	/** The application that wants to unregister */
-	ApplicationProcessNamingInformation applicationName;
-
-	/** The DIF to which the application wants to cancel the registration */
-	ApplicationProcessNamingInformation DIFName;
-
+class ApplicationUnregistrationRequestEvent:
+                public BaseApplicationRegistrationEvent {
 public:
 	ApplicationUnregistrationRequestEvent(
 			const ApplicationProcessNamingInformation& appName,
 			const ApplicationProcessNamingInformation& DIFName,
 			unsigned int sequenceNumber);
-	const ApplicationProcessNamingInformation& getApplicationName() const;
-	const ApplicationProcessNamingInformation& getDIFName() const;
+};
+
+class BaseApplicationRegistrationResponseEvent:
+                public BaseApplicationRegistrationEvent {
+        /** The result of the operation */
+        int result;
+
+public:
+        BaseApplicationRegistrationResponseEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        const ApplicationProcessNamingInformation& DIFName,
+                        int result,
+                        IPCEventType eventType,
+                        unsigned int sequenceNumber);
+        BaseApplicationRegistrationResponseEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        int result,
+                        IPCEventType eventType,
+                        unsigned int sequenceNumber);
+        int getResult() const;
+};
+
+/**
+ * Event informing about the result of an application registration request
+ */
+class RegisterApplicationResponseEvent:
+                public BaseApplicationRegistrationResponseEvent {
+public:
+        RegisterApplicationResponseEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        const ApplicationProcessNamingInformation& difName,
+                        int result, unsigned int sequenceNumber);
+};
+
+/**
+ * Event informing about the result of an application unregistration request
+ */
+class UnregisterApplicationResponseEvent:
+                public BaseApplicationRegistrationResponseEvent {
+public:
+        UnregisterApplicationResponseEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        int result, unsigned int sequenceNumber);
+};
+
+/**
+ * Event informing about the application decision regarding the
+ * acceptance/denial of a flow request
+ */
+class AllocateFlowResponseEvent: public BaseResponseEvent {
+        /**
+         * If the flow was denied, this field controls wether the application
+         * wants the IPC Process to reply to the source or not
+         */
+        bool notifySource;
+
+        /** the portId of the flow */
+        int portId;
+
+public:
+        AllocateFlowResponseEvent(
+                        int result,
+                        bool notifysource,
+                        unsigned int sequenceNumber);
+        AllocateFlowResponseEvent(
+                        int result,
+                        bool notifysource,
+                        int portId,
+                        unsigned int sequenceNumber);
+        bool isNotifySource() const;
+        int getPortId() const;
 };
 
 /**
@@ -558,32 +707,140 @@ public:
 };
 
 /**
- * Represents a policy. This is a generic placeholder which should be defined
- * during the second prototype activities
+ * Thrown when there are problems assigning an IPC Process to a DIF
  */
-class Policy {
-
+class AssignToDIFException: public IPCException {
 public:
-	bool operator==(const Policy &other) const;
-	bool operator!=(const Policy &other) const;
+        AssignToDIFException():
+                IPCException("Problems assigning IPC Process to DIF"){
+        }
+        AssignToDIFException(const std::string& description):
+                IPCException(description){
+        }
+};
+
+/**
+ * Thrown when there are problems updating a DIF configuration
+ */
+class UpdateDIFConfigurationException: public IPCException {
+public:
+        UpdateDIFConfigurationException():
+                IPCException("Problems updating DIF configuration"){
+        }
+        UpdateDIFConfigurationException(const std::string& description):
+                IPCException(description){
+        }
 };
 
 /**
  * Represents a parameter that has a name and value
  */
 class Parameter {
-	std::string name;
-	std::string value;
+        std::string name;
+        std::string value;
 
 public:
-	Parameter();
-	Parameter(const std::string & name, const std::string & value);
-	bool operator==(const Parameter &other) const;
-	bool operator!=(const Parameter &other) const;
-	const std::string& getName() const;
-	void setName(const std::string& name);
-	const std::string& getValue() const;
-	void setValue(const std::string& value);
+        Parameter();
+        Parameter(const std::string & name, const std::string & value);
+        bool operator==(const Parameter &other) const;
+        bool operator!=(const Parameter &other) const;
+        const std::string& getName() const;
+        void setName(const std::string& name);
+        const std::string& getValue() const;
+        void setValue(const std::string& value);
+};
+
+/**
+ * Represents a policy. This is a generic placeholder which should be defined
+ * during the second prototype activities
+ */
+class Policy {
+
+        /** The id of the policy */
+        unsigned int id;
+
+        /** The name of the policy */
+        std::string name;
+
+        /** Parameters of the policy */
+        std::list<Parameter> parameters;
+
+public:
+	bool operator==(const Policy &other) const;
+	bool operator!=(const Policy &other) const;
+	Policy();
+	Policy(unsigned int id, std::string name);
+        unsigned int getId() const;
+        void setId(unsigned int id);
+        const std::string& getName() const;
+        void setName(const std::string& name);
+        const std::list<Parameter>& getParameters() const;
+        void setParameters(const std::list<Parameter>& parameters);
+        void addParameter(const Parameter& parameter);
+};
+
+/**
+ * Contains the values of the constants for the Error and Flow Control
+ * Protocol (EFCP)
+ */
+class DataTransferConstants {
+
+        /** The length of QoS-id field in the DTP PCI, in bytes */
+        unsigned short qosIdLenght;
+
+        /** The length of the Port-id field in the DTP PCI, in bytes */
+        unsigned short portIdLength;
+
+        /** The length of the CEP-id field in the DTP PCI, in bytes */
+        unsigned short cepIdLength;
+
+        /** The length of the sequence number field in the DTP PCI, in bytes */
+        unsigned short sequenceNumberLength;
+
+        /** The length of the address field in the DTP PCI, in bytes */
+        unsigned short addressLength;
+
+        /** The length of the length field in the DTP PCI, in bytes */
+        unsigned short lengthLength;
+
+        /** The maximum length allowed for a PDU in this DIF, in bytes */
+        unsigned int maxPDUSize;
+
+        /**
+         * True if the PDUs in this DIF have CRC, TTL, and/or encryption. Since
+         * headers are encrypted, not just user data, if any flow uses encryption,
+         * all flows within the same DIF must do so and the same encryption
+         * algorithm must be used for every PDU; we cannot identify which flow
+         * owns a particular PDU until it has been decrypted.
+         */
+        bool DIFIntegrity;
+
+        /**
+         * The maximum PDU lifetime in this DIF, in milliseconds. This is MPL
+         * in delta-T
+         */
+        unsigned int maxPDULifetime;
+
+public:
+        DataTransferConstants();
+        unsigned short getAddressLength() const;
+        void setAddressLength(unsigned short addressLength);
+        unsigned short getCepIdLength() const;
+        void setCepIdLength(unsigned short cepIdLength);
+        bool isDifIntegrity() const;
+        void setDifIntegrity(bool difIntegrity);
+        unsigned short getLengthLength() const;
+        void setLengthLength(unsigned short lengthLength);
+        unsigned int getMaxPduLifetime() const;
+        void setMaxPduLifetime(unsigned int maxPduLifetime);
+        unsigned int getMaxPduSize() const;
+        void setMaxPduSize(unsigned int maxPduSize);
+        unsigned short getPortIdLength() const;
+        void setPortIdLength(unsigned short portIdLength);
+        unsigned short getQosIdLenght() const;
+        void setQosIdLenght(unsigned short qosIdLenght);
+        unsigned short getSequenceNumberLength() const;
+        void setSequenceNumberLength(unsigned short sequenceNumberLength);
 };
 
 /**
@@ -591,6 +848,9 @@ public:
  * (QoS cubes, policies, parameters, etc)
  */
 class DIFConfiguration {
+
+        /** The DIF Data Transfer constants */
+        DataTransferConstants dataTransferConstants;
 
 	/** The QoS cubes supported by the DIF */
 	std::list<QoSCube> qosCubes;
@@ -604,11 +864,16 @@ class DIFConfiguration {
 public:
 	const std::list<Policy>& getPolicies();
 	void setPolicies(const std::list<Policy>& policies);
+	void addPolicy(const Policy& policy);
 	const std::list<QoSCube>& getQosCubes() const;
 	void setQosCubes(const std::list<QoSCube>& qosCubes);
+	void adQoSCube(const QoSCube& qosCube);
 	const std::list<Parameter>& getParameters() const;
 	void setParameters(const std::list<Parameter>& parameters);
 	void addParameter(const Parameter& parameter);
+        const DataTransferConstants& getDataTransferConstants() const;
+        void setDataTransferConstants(
+                        const DataTransferConstants& dataTransferConstants);
 };
 
 /**

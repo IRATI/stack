@@ -54,10 +54,15 @@ UpdateDIFConfigurationRequestEvent::getDIFConfiguration() const
 
 /* CLASS IPC PROCESS DIF REGISTRATION EVENT */
 IPCProcessDIFRegistrationEvent::IPCProcessDIFRegistrationEvent(
-		IPCEventType eventType,
 		const ApplicationProcessNamingInformation& ipcProcessName,
 		const ApplicationProcessNamingInformation& difName,
-		unsigned int sequenceNumber): IPCEvent(eventType, sequenceNumber){
+		bool registered,
+		unsigned int sequenceNumber): IPCEvent(
+		                IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
+		                sequenceNumber){
+        this->ipcProcessName = ipcProcessName;
+        this->difName = difName;
+        this->registered = registered;
 }
 
 const ApplicationProcessNamingInformation&
@@ -70,22 +75,8 @@ IPCProcessDIFRegistrationEvent::getDIFName() const{
 	return difName;
 }
 
-/* CLASS IPC PROCESS REGISTERED TO DIF EVENT */
-IPCProcessRegisteredToDIFEvent::IPCProcessRegisteredToDIFEvent(
-		const ApplicationProcessNamingInformation& ipcProcessName,
-		const ApplicationProcessNamingInformation& difName,
-		unsigned int sequenceNumber): IPCProcessDIFRegistrationEvent(
-				IPC_PROCESS_REGISTERED_TO_DIF, ipcProcessName,
-				difName, sequenceNumber){
-}
-
-/* CLASS IPC PROCESS UNREGISTERED FROM DIF EVENT */
-IPCProcessUnregisteredFromDIFEvent::IPCProcessUnregisteredFromDIFEvent(
-		const ApplicationProcessNamingInformation& ipcProcessName,
-		const ApplicationProcessNamingInformation& difName,
-		unsigned int sequenceNumber): IPCProcessDIFRegistrationEvent(
-				IPC_PROCESS_UNREGISTERED_FROM_DIF, ipcProcessName,
-				difName, sequenceNumber){
+bool IPCProcessDIFRegistrationEvent::isRegistered() const {
+        return registered;
 }
 
 /* CLASS QUERY RIB REQUEST EVENT */
@@ -125,6 +116,15 @@ const std::string& QueryRIBRequestEvent::getFilter() const{
 const std::string ExtendedIPCManager::error_allocate_flow =
 		"Error allocating flow";
 
+ExtendedIPCManager::ExtendedIPCManager() {
+        ipcManagerPort = 0;
+        ipcProcessId = 0;
+        ipcProcessInitialized = false;
+}
+
+ExtendedIPCManager::~ExtendedIPCManager() throw(){
+}
+
 const DIFInformation& ExtendedIPCManager::getCurrentDIFInformation() const{
 	return currentDIFInformation;
 }
@@ -134,12 +134,111 @@ void ExtendedIPCManager::setCurrentDIFInformation(
 	this->currentDIFInformation = currentDIFInformation;
 }
 
-unsigned int ExtendedIPCManager::getIpcProcessId() const{
+unsigned short ExtendedIPCManager::getIpcProcessId() const{
 	return ipcProcessId;
 }
 
-void ExtendedIPCManager::setIpcProcessId(unsigned int ipcProcessId){
+void ExtendedIPCManager::setIpcProcessId(unsigned short ipcProcessId){
 	this->ipcProcessId = ipcProcessId;
+}
+
+const ApplicationProcessNamingInformation&
+        ExtendedIPCManager::getIpcProcessName() {
+        return ipcProcessName;
+}
+
+void ExtendedIPCManager::setIpcProcessName(
+                const ApplicationProcessNamingInformation& name) {
+        ipcProcessName = name;
+}
+
+void ExtendedIPCManager::setIPCManagerPort(
+                unsigned int ipcManagerPort) {
+        this->ipcManagerPort = ipcManagerPort;
+}
+
+void ExtendedIPCManager::notifyIPCProcessInitialized() throw(IPCException){
+        lock();
+        if (ipcProcessInitialized) {
+                unlock();
+                throw IPCException("IPC Process already initialized");
+        }
+
+#if STUB_API
+        //Do nothing
+#else
+        IpcmIPCProcessInitializedMessage message;
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestPortId(ipcManagerPort);
+        message.setNotificationMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                unlock();
+                throw IPCException(e.what());
+        }
+#endif
+        ipcProcessInitialized = true;
+        unlock();
+}
+
+bool ExtendedIPCManager::isIPCProcessInitialized() const {
+        return ipcProcessInitialized;
+}
+
+ApplicationRegistration * ExtendedIPCManager::appRegistered(
+                        const ApplicationProcessNamingInformation& appName,
+                        const ApplicationProcessNamingInformation& DIFName)
+throw (ApplicationRegistrationException) {
+        ApplicationRegistration * applicationRegistration;
+
+        lock();
+
+        applicationRegistration = getApplicationRegistration(
+                        appName);
+
+        if (!applicationRegistration){
+                applicationRegistration = new ApplicationRegistration(
+                                appName);
+                putApplicationRegistration(appName,
+                                applicationRegistration);
+        }
+
+        applicationRegistration->addDIFName(DIFName);
+        unlock();
+
+        return applicationRegistration;
+}
+
+void ExtendedIPCManager::appUnregistered(
+                const ApplicationProcessNamingInformation& appName,
+                const ApplicationProcessNamingInformation& DIFName)
+                throw (ApplicationUnregistrationException) {
+        lock();
+        ApplicationRegistration * applicationRegistration =
+                        getApplicationRegistration(appName);
+        if (!applicationRegistration){
+                unlock();
+                throw ApplicationUnregistrationException(
+                                IPCManager::application_not_registered_error);
+        }
+
+        std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
+        for (iterator = applicationRegistration->getDIFNames().begin();
+                        iterator != applicationRegistration->getDIFNames().end();
+                        ++iterator) {
+                if (*iterator == DIFName) {
+                        applicationRegistration->removeDIFName(DIFName);
+                        if (applicationRegistration->getDIFNames().size() == 0) {
+                                removeApplicationRegistration(appName);
+                        }
+
+                        break;
+                }
+        }
+
+        unlock();
 }
 
 void ExtendedIPCManager::assignToDIFResponse(
@@ -156,7 +255,7 @@ void ExtendedIPCManager::assignToDIFResponse(
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage);
 	}catch(NetlinkException &e){
 		throw AssignToDIFResponseException(e.what());
 	}
@@ -174,7 +273,7 @@ void ExtendedIPCManager::registerApplicationResponse(
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage);
 	}catch(NetlinkException &e){
 		throw RegisterApplicationResponseException(e.what());
 	}
@@ -192,7 +291,7 @@ void ExtendedIPCManager::unregisterApplicationResponse(
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage);
 	}catch(NetlinkException &e){
 		throw UnregisterApplicationResponseException(e.what());
 	}
@@ -210,7 +309,7 @@ void ExtendedIPCManager::allocateFlowRequestResult(
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage);
 	}catch(NetlinkException &e){
 		throw AllocateFlowResponseException(e.what());
 	}
@@ -222,6 +321,7 @@ int ExtendedIPCManager::allocateFlowRequestArrived(
 			const ApplicationProcessNamingInformation& remoteAppName,
 			const FlowSpecification& flowSpecification)
 		throw (AllocateFlowRequestArrivedException){
+        /*
 #if STUP_API
 	return 25;
 #else
@@ -255,7 +355,8 @@ int ExtendedIPCManager::allocateFlowRequestArrived(
 	delete allocateFlowResponse;
 
 	return portId;
-#endif
+#endif*/
+        return 0;
 }
 
 void ExtendedIPCManager::flowDeallocated(
@@ -271,7 +372,7 @@ void ExtendedIPCManager::flowDeallocated(
 	responseMessage.setSequenceNumber(flowDeallocateEvent.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage);
 	}catch(NetlinkException &e){
 		throw DeallocateFlowResponseException(e.what());
 	}
@@ -290,7 +391,7 @@ void ExtendedIPCManager::flowDeallocatedRemotely(
 	message.setSourceIpcProcessId(ipcProcessId);
 	message.setNotificationMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(&message);
+		rinaManager->sendMessage(&message);
 	}catch(NetlinkException &e){
 		throw DeallocateFlowResponseException(e.what());
 	}
@@ -310,7 +411,7 @@ void ExtendedIPCManager::queryRIBResponse(
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendResponseOrNotficationMessage(&responseMessage);
+		rinaManager->sendMessage(&responseMessage);
 	}catch(NetlinkException &e){
 		throw QueryRIBResponseException(e.what());
 	}
@@ -318,5 +419,67 @@ void ExtendedIPCManager::queryRIBResponse(
 }
 
 Singleton<ExtendedIPCManager> extendedIPCManager;
+
+/* CLASS KERNEL IPC PROCESS */
+void KernelIPCProcess::setIPCProcessId(unsigned short ipcProcessId) {
+        this->ipcProcessId = ipcProcessId;
+}
+
+unsigned short KernelIPCProcess::getIPCProcessId() const {
+        return ipcProcessId;
+}
+
+unsigned int KernelIPCProcess::assignToDIF(
+                const DIFInformation& difInformation)
+throw (AssignToDIFException) {
+        unsigned int seqNum = 0;
+
+#if STUB_API
+        //Do nothing
+#else
+        IpcmAssignToDIFRequestMessage message;
+        message.setDIFInformation(difInformation);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                throw AssignToDIFException(e.what());
+        }
+
+        seqNum = message.getSequenceNumber();
+#endif
+        return seqNum;
+}
+
+unsigned int KernelIPCProcess::updateDIFConfiguration(
+                const DIFConfiguration& difConfiguration)
+throw (UpdateDIFConfigurationException) {
+        unsigned int seqNum=0;
+
+#if STUB_API
+        //Do nothing
+#else
+        IpcmUpdateDIFConfigurationRequestMessage message;
+        message.setDIFConfiguration(difConfiguration);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                throw UpdateDIFConfigurationException(e.what());
+        }
+
+        seqNum = message.getSequenceNumber();
+
+#endif
+        return seqNum;
+}
+
+Singleton<KernelIPCProcess> kernelIPCProcess;
 
 }

@@ -361,8 +361,65 @@ bool FlowSpecification::operator!=(const FlowSpecification &other) const {
 	return !(*this == other);
 }
 
-/* CLASS QoS CUBE */
+/* CLASS FLOW INFORMATION */
+bool FlowInformation::operator==(
+		const FlowInformation &other) const {
+	return getPortId() == other.getPortId();
+}
 
+bool FlowInformation::operator!=(
+		const FlowInformation &other) const {
+	return !(*this == other);
+}
+
+const ApplicationProcessNamingInformation&
+FlowInformation::getDifName() const {
+	return difName;
+}
+
+void FlowInformation::setDifName(
+		const ApplicationProcessNamingInformation& difName) {
+	this->difName = difName;
+}
+
+const FlowSpecification& FlowInformation::getFlowSpecification() const {
+	return flowSpecification;
+}
+
+void FlowInformation::setFlowSpecification(
+		const FlowSpecification& flowSpecification) {
+	this->flowSpecification = flowSpecification;
+}
+
+const ApplicationProcessNamingInformation&
+FlowInformation::getLocalAppName() const {
+	return localAppName;
+}
+
+void FlowInformation::setLocalAppName(
+		const ApplicationProcessNamingInformation& localAppName) {
+	this->localAppName = localAppName;
+}
+
+int FlowInformation::getPortId() const {
+	return portId;
+}
+
+void FlowInformation::setPortId(int portId) {
+	this->portId = portId;
+}
+
+const ApplicationProcessNamingInformation&
+FlowInformation::getRemoteAppName() const {
+	return remoteAppName;
+}
+
+void FlowInformation::setRemoteAppName(
+		const ApplicationProcessNamingInformation& remoteAppName) {
+	this->remoteAppName = remoteAppName;
+}
+
+/* CLASS QoS CUBE */
 QoSCube::QoSCube(const std::string& name, int id) {
 	this->name = name;
 	this->id = id;
@@ -503,6 +560,21 @@ void DIFProperties::removeQoSCube(const QoSCube& qosCube) {
 	this->qosCubes.remove(qosCube);
 }
 
+/* CLASS BASE RESPONSE EVENT */
+BaseResponseEvent::BaseResponseEvent(
+                        int result,
+                        IPCEventType eventType,
+                        unsigned int sequenceNumber) :
+                              IPCEvent(eventType,
+                                             sequenceNumber){
+        this->result = result;
+}
+
+
+int BaseResponseEvent::getResult() const {
+        return result;
+}
+
 /* CLASS FLOW REQUEST EVENT */
 FlowRequestEvent::FlowRequestEvent(
 		const FlowSpecification& flowSpecification,
@@ -639,21 +711,24 @@ void ApplicationRegistrationInformation::setDIFName(
 	this->difName = difName;
 }
 
+const ApplicationProcessNamingInformation&
+        ApplicationRegistrationInformation::getApplicationName() const {
+        return appName;
+}
+
+void ApplicationRegistrationInformation::setApplicationName(
+                const ApplicationProcessNamingInformation& appName) {
+        this->appName = appName;
+}
+
 /* CLASS APPLICATION REGISTRATION REQUEST */
 ApplicationRegistrationRequestEvent::ApplicationRegistrationRequestEvent(
-	const ApplicationProcessNamingInformation& appName,
 	const ApplicationRegistrationInformation&
 	applicationRegistrationInformation, unsigned int sequenceNumber) :
 		IPCEvent(APPLICATION_REGISTRATION_REQUEST_EVENT,
 				sequenceNumber) {
-	this->applicationName = appName;
 	this->applicationRegistrationInformation =
 			applicationRegistrationInformation;
-}
-
-const ApplicationProcessNamingInformation&
-ApplicationRegistrationRequestEvent::getApplicationName() const {
-	return applicationName;
 }
 
 const ApplicationRegistrationInformation&
@@ -662,25 +737,129 @@ const {
 	return applicationRegistrationInformation;
 }
 
-/* CLASS APPLICATION UNREGISTRATION REQUEST */
+/* CLASS BASE APPLICATION REGISTRATION EVENT */
+BaseApplicationRegistrationEvent::BaseApplicationRegistrationEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        const ApplicationProcessNamingInformation& DIFName,
+                        IPCEventType eventType,
+                        unsigned int sequenceNumber):
+                                IPCEvent(eventType, sequenceNumber) {
+        this->applicationName = appName;
+        this->DIFName = DIFName;
+}
+
+BaseApplicationRegistrationEvent::BaseApplicationRegistrationEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        IPCEventType eventType,
+                        unsigned int sequenceNumber):
+                                IPCEvent(eventType, sequenceNumber) {
+        this->applicationName = appName;
+}
+
+const ApplicationProcessNamingInformation&
+BaseApplicationRegistrationEvent::getApplicationName() const {
+        return applicationName;
+}
+
+const ApplicationProcessNamingInformation&
+BaseApplicationRegistrationEvent::getDIFName() const {
+        return DIFName;
+}
+
+/* CLASS APPLICATION UNREGISTRATION REQUEST EVENT */
 ApplicationUnregistrationRequestEvent::ApplicationUnregistrationRequestEvent(
 		const ApplicationProcessNamingInformation& appName,
 		const ApplicationProcessNamingInformation& DIFName,
 		unsigned int sequenceNumber) :
-		IPCEvent(APPLICATION_UNREGISTRATION_REQUEST_EVENT,
+                BaseApplicationRegistrationEvent(
+                                appName, DIFName,
+                                APPLICATION_UNREGISTRATION_REQUEST_EVENT,
 				sequenceNumber) {
-	this->applicationName = appName;
-	this->DIFName = DIFName;
 }
 
-const ApplicationProcessNamingInformation&
-ApplicationUnregistrationRequestEvent::getApplicationName() const {
-	return applicationName;
+/* CLASS BASE APPLICATION RESPONSE EVENT */
+BaseApplicationRegistrationResponseEvent::
+        BaseApplicationRegistrationResponseEvent(
+                const ApplicationProcessNamingInformation& appName,
+                const ApplicationProcessNamingInformation& DIFName,
+                int result,
+                IPCEventType eventType,
+                unsigned int sequenceNumber) :
+                BaseApplicationRegistrationEvent (
+                                appName, DIFName,
+                                eventType, sequenceNumber){
+        this->result = result;
 }
 
-const ApplicationProcessNamingInformation&
-ApplicationUnregistrationRequestEvent::getDIFName() const {
-	return DIFName;
+BaseApplicationRegistrationResponseEvent::
+        BaseApplicationRegistrationResponseEvent(
+                const ApplicationProcessNamingInformation& appName,
+                int result,
+                IPCEventType eventType,
+                unsigned int sequenceNumber) :
+                BaseApplicationRegistrationEvent (
+                                appName,
+                                eventType, sequenceNumber){
+        this->result = result;
+}
+
+int BaseApplicationRegistrationResponseEvent::getResult() const{
+        return result;
+}
+
+/* CLASS REGISTER APPLICATION RESPONSE EVENT */
+RegisterApplicationResponseEvent::RegisterApplicationResponseEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        const ApplicationProcessNamingInformation& difName,
+                        int result,
+                        unsigned int sequenceNumber):
+                BaseApplicationRegistrationResponseEvent(
+                                       appName, difName, result,
+                                       REGISTER_APPLICATION_RESPONSE_EVENT,
+                                       sequenceNumber){
+}
+
+/* CLASS UNREGISTER APPLICATION RESPONSE EVENT */
+UnregisterApplicationResponseEvent::UnregisterApplicationResponseEvent(
+                        const ApplicationProcessNamingInformation& appName,
+                        int result,
+                        unsigned int sequenceNumber):
+                BaseApplicationRegistrationResponseEvent(
+                                       appName, result,
+                                       UNREGISTER_APPLICATION_RESPONSE_EVENT,
+                                       sequenceNumber){
+}
+
+/* CLASS ALLOCATE FLOW RESPONSE EVENT */
+AllocateFlowResponseEvent::AllocateFlowResponseEvent(
+                int result,
+                bool notifysource,
+                unsigned int sequenceNumber) :
+                BaseResponseEvent(result,
+                                 ALLOCATE_FLOW_RESPONSE_EVENT,
+                                 sequenceNumber) {
+        this->notifySource = notifySource;
+        this->portId = 0;
+}
+
+AllocateFlowResponseEvent::AllocateFlowResponseEvent(
+                int result,
+                bool notifysource,
+                int portId,
+                unsigned int sequenceNumber) :
+                BaseResponseEvent(result,
+                                ALLOCATE_FLOW_RESPONSE_EVENT,
+                                sequenceNumber) {
+        this->notifySource = notifySource;
+        this->portId = portId;
+}
+
+int AllocateFlowResponseEvent::getPortId() const{
+        return portId;
+}
+
+bool AllocateFlowResponseEvent::isNotifySource() const {
+        return notifySource;
 }
 
 /* CLASS OS PROCESS FINALIZED EVENT */
@@ -773,6 +952,43 @@ bool Policy::operator!=(const Policy &other) const {
 	return !(*this == other);
 }
 
+Policy::Policy() {
+        this->id = 0;
+}
+
+Policy::Policy(unsigned int id, std::string name) {
+        this->id = id;
+        this->name = name;
+}
+
+unsigned int Policy::getId() const {
+        return id;
+}
+
+void Policy::setId(unsigned int id) {
+        this->id = id;
+}
+
+const std::string& Policy::getName() const {
+        return name;
+}
+
+void Policy::setName(const std::string& name) {
+        this->name = name;
+}
+
+const std::list<Parameter>& Policy::getParameters() const {
+        return parameters;
+}
+
+void Policy::setParameters(const std::list<Parameter>& parameters) {
+        this->parameters = parameters;
+}
+
+void Policy::addParameter(const Parameter& parameter) {
+        parameters.push_back(parameter);
+}
+
 /* CLASS PARAMETER */
 Parameter::Parameter(){
 }
@@ -808,6 +1024,92 @@ const std::string& Parameter::getValue() const {
 
 void Parameter::setValue(const std::string& value) {
 	this->value = value;
+}
+
+/* CLASS DATA TRANSFER CONSTANTS */
+DataTransferConstants::DataTransferConstants() {
+        qosIdLenght = 0;
+        portIdLength = 0;
+        cepIdLength = 0;
+        sequenceNumberLength = 0;
+        addressLength = 0;
+        lengthLength = 0;
+        maxPDUSize = 0;
+        DIFIntegrity = false;
+        maxPDULifetime = 0;
+}
+
+unsigned short DataTransferConstants::getAddressLength() const {
+        return addressLength;
+}
+
+void DataTransferConstants::setAddressLength(unsigned short addressLength) {
+        this->addressLength = addressLength;
+}
+
+unsigned short DataTransferConstants::getCepIdLength() const {
+        return cepIdLength;
+}
+
+void DataTransferConstants::setCepIdLength(unsigned short cepIdLength) {
+        this->cepIdLength = cepIdLength;
+}
+
+bool DataTransferConstants::isDifIntegrity() const {
+        return DIFIntegrity;
+}
+
+void DataTransferConstants::setDifIntegrity(bool difIntegrity) {
+        DIFIntegrity = difIntegrity;
+}
+
+unsigned short DataTransferConstants::getLengthLength() const {
+        return lengthLength;
+}
+
+void DataTransferConstants::setLengthLength(unsigned short lengthLength) {
+        this->lengthLength = lengthLength;
+}
+
+unsigned int DataTransferConstants::getMaxPduLifetime() const {
+        return maxPDULifetime;
+}
+
+void DataTransferConstants::setMaxPduLifetime(unsigned int maxPduLifetime) {
+        maxPDULifetime = maxPduLifetime;
+}
+
+unsigned int DataTransferConstants::getMaxPduSize() const {
+        return maxPDUSize;
+}
+
+void DataTransferConstants::setMaxPduSize(unsigned int maxPduSize) {
+        maxPDUSize = maxPduSize;
+}
+
+unsigned short DataTransferConstants::getPortIdLength() const {
+        return portIdLength;
+}
+
+void DataTransferConstants::setPortIdLength(unsigned short portIdLength) {
+        this->portIdLength = portIdLength;
+}
+
+unsigned short DataTransferConstants::getQosIdLenght() const {
+        return qosIdLenght;
+}
+
+void DataTransferConstants::setQosIdLenght(unsigned short qosIdLenght) {
+        this->qosIdLenght = qosIdLenght;
+}
+
+unsigned short DataTransferConstants::getSequenceNumberLength() const {
+        return sequenceNumberLength;
+}
+
+void DataTransferConstants::setSequenceNumberLength(
+                unsigned short sequenceNumberLength) {
+        this->sequenceNumberLength = sequenceNumberLength;
 }
 
 /* CLASS DIF INFORMATION */
@@ -848,12 +1150,20 @@ void DIFConfiguration::setPolicies(const std::list<Policy>& policies) {
 	this->policies = policies;
 }
 
+void DIFConfiguration::addPolicy(const Policy& policy) {
+        policies.push_back(policy);
+}
+
 const std::list<QoSCube>& DIFConfiguration::getQosCubes() const {
 	return qosCubes;
 }
 
 void DIFConfiguration::setQosCubes(const std::list<QoSCube>& qosCubes) {
 	this->qosCubes = qosCubes;
+}
+
+void DIFConfiguration::adQoSCube(const QoSCube& qosCube) {
+        qosCubes.push_back(qosCube);
 }
 
 const std::list<Parameter>& DIFConfiguration::getParameters() const {
@@ -866,6 +1176,16 @@ void DIFConfiguration::setParameters(const std::list<Parameter>& parameters) {
 
 void DIFConfiguration::addParameter(const Parameter& parameter){
 	parameters.push_back(parameter);
+}
+
+const DataTransferConstants&
+DIFConfiguration::getDataTransferConstants() const {
+        return dataTransferConstants;
+}
+
+void DIFConfiguration::setDataTransferConstants(
+                const DataTransferConstants& dataTransferConstants) {
+        this->dataTransferConstants = dataTransferConstants;
 }
 
 /* CLAS RIBOBJECT */

@@ -53,13 +53,14 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 		
 		if (flow.isAllocated()){
 			try{
-				rina.getIpcManager().deallocateFlow(flow.getPortId());
+				rina.getIpcManager().requestFlowDeallocation(flow.getPortId());
 			}catch(FlowDeallocationException ex){
 				ex.printStackTrace();
 			}
 		}
 		
 		timer.cancel();
+		System.exit(0);
 	}
 	
 	public synchronized void stop(){

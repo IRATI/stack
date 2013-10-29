@@ -66,37 +66,18 @@ class IPCProcessDIFRegistrationEvent: public IPCEvent {
 	/** The name of the N-1 DIF where the IPC Process has been registered*/
 	ApplicationProcessNamingInformation difName;
 
+	/** True if the IPC Process has been registered in a DIF, false otherwise */
+	bool registered;
+
 public:
-	IPCProcessDIFRegistrationEvent(IPCEventType eventType,
-			const ApplicationProcessNamingInformation& ipcProcessName,
+	IPCProcessDIFRegistrationEvent(
+	                const ApplicationProcessNamingInformation& ipcProcessName,
 			const ApplicationProcessNamingInformation& difName,
+			bool registered,
 			unsigned int sequenceNumber);
 	const ApplicationProcessNamingInformation& getIPCProcessName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
-};
-
-/**
- * The IPC Manager informs the IPC Process that it has been registered
- * to an N-1 DIF
- */
-class IPCProcessRegisteredToDIFEvent: public IPCProcessDIFRegistrationEvent {
-public:
-	IPCProcessRegisteredToDIFEvent(
-			const ApplicationProcessNamingInformation& ipcProcessName,
-			const ApplicationProcessNamingInformation& difName,
-			unsigned int sequenceNumber);
-};
-
-/**
- * The IPC Manager informs the IPC Process that it has been unregistered
- * from an N-1 DIF
- */
-class IPCProcessUnregisteredFromDIFEvent: public IPCProcessDIFRegistrationEvent {
-public:
-	IPCProcessUnregisteredFromDIFEvent(
-			const ApplicationProcessNamingInformation& ipcProcessName,
-			const ApplicationProcessNamingInformation& difName,
-			unsigned int sequenceNumber);
+	bool isRegistered() const;
 };
 
 /**
@@ -242,20 +223,70 @@ public:
  */
 class ExtendedIPCManager: public IPCManager {
 	/** The ID of the IPC Process */
-	unsigned int ipcProcessId;
+	unsigned short ipcProcessId;
+
+	/** The IPC Process naming information */
+	ApplicationProcessNamingInformation ipcProcessName;
 
 	/** The portId of the IPC Manager */
 	unsigned int ipcManagerPort;
+
+	/**
+	 * True if the IPC Process has been initialized,
+	 * false otherwise
+	 */
+	bool ipcProcessInitialized;
 
 	/** The current configuration of the IPC Process */
 	DIFInformation currentDIFInformation;
 
 public:
 	static const std::string error_allocate_flow;
+	ExtendedIPCManager();
+	~ExtendedIPCManager() throw();
 	const DIFInformation& getCurrentDIFInformation() const;
 	void setCurrentDIFInformation(const DIFInformation& currentDIFInformation);
-	unsigned int getIpcProcessId() const;
-	void setIpcProcessId(unsigned int ipcProcessId);
+	unsigned short getIpcProcessId() const;
+	void setIpcProcessId(unsigned short ipcProcessId);
+	const ApplicationProcessNamingInformation& getIpcProcessName();
+	void setIpcProcessName(const ApplicationProcessNamingInformation& name);
+	void setIPCManagerPort(unsigned int ipcManagerPort);
+
+	/**
+	 * Notify the IPC Manager about the successful initialization of the
+	 * IPC Process Daemon. Now it is ready to receive messages.
+	 * @throws IPCException if the process is already initialized or
+	 * an error occurs
+	 */
+	void notifyIPCProcessInitialized() throw (IPCException);
+
+	/**
+	 * True if the IPC Process has been successfully initialized, false
+	 * otherwise
+	 * @return
+	 */
+	bool isIPCProcessInitialized() const;
+
+	/**
+	 * The IPC Process has been registered to an N-1 DIF
+	 * @param appName
+	 * @param DIFName
+	 * @return
+	 */
+	ApplicationRegistration * appRegistered(
+	                        const ApplicationProcessNamingInformation& appName,
+	                        const ApplicationProcessNamingInformation& DIFName)
+	        throw (ApplicationRegistrationException);
+
+	/**
+	 * The IPC Process has been unregistered from the DIF called DIFName,
+	 * update the internal data structrues
+	 * @param appName
+	 * @param DIFName
+	 */
+	void appUnregistered(const ApplicationProcessNamingInformation& appName,
+	                const ApplicationProcessNamingInformation& DIFName)
+	                                throw (ApplicationUnregistrationException);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of an "assign
@@ -355,9 +386,54 @@ public:
 };
 
 /**
- * Make Application Manager singleton
+ * Make Extended IPC Manager singleton
  */
 extern Singleton<ExtendedIPCManager> extendedIPCManager;
+
+/**
+ * Abstraction of the data transfer and data transfer control parts of the
+ * IPC Process, which are implemented in the Kernel. This class allows the
+ * IPC Process Daemon to communicate with its components in the kernel
+ */
+class KernelIPCProcess {
+        /** The ID of the IPC Process */
+        unsigned short ipcProcessId;
+
+public:
+        void setIPCProcessId(unsigned short ipcProcessId);
+        unsigned short getIPCProcessId() const;
+
+        /**
+         * Invoked by the IPC Process Deamon to allow the kernel components
+         * to update its internal configuration based on the DIF the IPC
+         * Process has been assigned to.
+         *
+         * @param difInformation The information of the DIF (name, type,
+         * configuration)
+         * @throws AssignToDIFException if an error happens during the process
+         * @returns the handle to the response message
+         */
+        unsigned int assignToDIF(const DIFInformation& difInformation)
+                throw (AssignToDIFException);
+
+        /**
+         * Invoked by the IPC Process Deamon to modify the configuration of
+         * the kernel components of the IPC Process.
+         *
+         * @param difConfiguration The configuration of the DIF
+         * @throws UpdateDIFConfigurationException if an error happens during
+         * the process
+         * @returns the handle to the response message
+         */
+        unsigned int updateDIFConfiguration(
+                        const DIFConfiguration& difConfiguration)
+        throw (UpdateDIFConfigurationException);
+};
+
+/**
+ * Make Kernel IPC Process singleton
+ */
+extern Singleton<KernelIPCProcess> kernelIPCProcess;
 
 }
 

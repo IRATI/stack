@@ -30,37 +30,6 @@ bool checkIPCProcesses(unsigned int expectedProcesses) {
 		return false;
 	}
 
-	std::cout << "Ids of existing processes:";
-	for (unsigned int i = 0; i < ipcProcesses.size(); i++) {
-		std::cout << " " << ipcProcesses.at(i)->getId() << ",";
-	}
-	std::cout << "\n";
-
-	return true;
-}
-
-bool checkRecognizedEvent(IPCEvent * event) {
-	switch (event->getType()) {
-	case APPLICATION_REGISTRATION_REQUEST_EVENT: {
-		ApplicationRegistrationRequestEvent * appREvent =
-				dynamic_cast<ApplicationRegistrationRequestEvent *>(event);
-		std::cout << "Got application registration request from application "
-				<< appREvent->getApplicationName().getProcessName() << "\n";
-		break;
-	}
-	case APPLICATION_UNREGISTRATION_REQUEST_EVENT: {
-		ApplicationUnregistrationRequestEvent * appUEvent =
-				dynamic_cast<ApplicationUnregistrationRequestEvent *>(event);
-		std::cout
-				<< "Got application unregistration request from application "
-				<< appUEvent->getApplicationName().getProcessName() << "\n";
-		break;
-	}
-	default:
-		std::cout << "Unrecognized event type\n";
-		return false;
-	}
-
 	return true;
 }
 
@@ -110,12 +79,15 @@ int main(int argc, char * argv[]) {
 	/* TEST ASSIGN TO DIF */
 	DIFInformation * difInformation = new DIFInformation();
 	ipcProcess1->assignToDIF(*difInformation);
+	ipcProcess1->assignToDIFResult(true);
 
 	/* TEST REGISTER APPLICATION */
-	ipcProcess1->registerApplication(*sourceName);
+	unsigned int handle = ipcProcess1->registerApplication(*sourceName);
+	ipcProcess1->registerApplicationResult(handle, true);
 
 	/* TEST UNREGISTER APPLICATION */
-	ipcProcess1->unregisterApplication(*sourceName);
+	handle = ipcProcess1->unregisterApplication(*sourceName);
+	ipcProcess1->unregisterApplicationResult(handle, true);
 
 	/* TEST ALLOCATE FLOW */
 	FlowSpecification *flowSpec = new FlowSpecification();
@@ -133,7 +105,7 @@ int main(int argc, char * argv[]) {
 			ApplicationRegistrationInformation(APPLICATION_REGISTRATION_SINGLE_DIF);
 	appRegInfo.setDIFName(*difName);
 	ApplicationRegistrationRequestEvent * event = new
-			ApplicationRegistrationRequestEvent(*sourceName, appRegInfo, 34);
+			ApplicationRegistrationRequestEvent(appRegInfo, 34);
 	applicationManager->applicationRegistered(*event, *difName, 0);
 
 	/* TEST APPLICATION UNREGISTERED */

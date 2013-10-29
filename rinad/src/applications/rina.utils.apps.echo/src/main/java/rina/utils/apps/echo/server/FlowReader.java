@@ -2,10 +2,7 @@ package rina.utils.apps.echo.server;
 
 import java.util.Timer;
 
-import rina.utils.apps.echo.utils.FlowDeallocationListener;
-
 import eu.irati.librina.Flow;
-import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowDeallocationException;
 import eu.irati.librina.rina;
 
@@ -13,7 +10,7 @@ import eu.irati.librina.rina;
  * Reads sdus from a flow
  * @author eduardgrasa
  */
-public class FlowReader implements Runnable, FlowDeallocationListener{
+public class FlowReader implements Runnable {
 	
 	private Flow flow;
 	private int maxSDUSize;
@@ -49,7 +46,7 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 		
 		if (flow.isAllocated()){
 			try{
-				rina.getIpcManager().deallocateFlow(flow.getPortId());
+				rina.getIpcManager().requestFlowDeallocation(flow.getPortId());
 			}catch(FlowDeallocationException ex){
 				ex.printStackTrace();
 			}
@@ -66,15 +63,4 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 	public synchronized boolean isStopped(){
 		return stop;
 	}
-
-	@Override
-	public void dispatchFlowDeallocatedEvent(FlowDeallocatedEvent event) {
-		if (flow.getPortId() == event.getPortId()){
-			System.out.println("The flow "+flow.getPortId()+
-					" has been deallocated, stopping the fow reader");
-		}
-		
-		stop();
-	}
-	
 }

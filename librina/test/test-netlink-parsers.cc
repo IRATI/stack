@@ -289,8 +289,7 @@ int testAppAllocateFlowResponseMessage() {
 	int returnValue = 0;
 
 	AppAllocateFlowResponseMessage message;
-	message.setAccept(true);
-	message.setDenyReason("No, we cannot!");
+	message.setResult(0);
 	message.setNotifySource(true);
 
 	struct nl_msg* netlinkMessage;
@@ -318,13 +317,9 @@ int testAppAllocateFlowResponseMessage() {
 				<< "\n";
 		returnValue = -1;
 
-	} else if (message.isAccept() != recoveredMessage->isAccept()) {
-		std::cout << "Accept flag on original and recovered messages"
+	} else if (message.getResult() != recoveredMessage->getResult()) {
+		std::cout << "Result on original and recovered messages"
 				<< " are different\n";
-		returnValue = -1;
-	} else if (message.getDenyReason() != recoveredMessage->getDenyReason()) {
-		std::cout << "Deny reason on original and recovered "
-				<< "messages are different\n";
 		returnValue = -1;
 	} else if (message.isNotifySource()
 			!= recoveredMessage->isNotifySource()) {
@@ -547,9 +542,9 @@ int testAppRegisterApplicationRequestMessage() {
 		ApplicationRegistrationInformation(
 				APPLICATION_REGISTRATION_SINGLE_DIF);
 	appRegInfo.setDIFName(*difName);
+	appRegInfo.setApplicationName(*applicationName);
 
 	message->setApplicationRegistrationInformation(appRegInfo);
-	message->setApplicationName(*applicationName);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -578,8 +573,9 @@ int testAppRegisterApplicationRequestMessage() {
 		std::cout << "Error parsing Register Application Request Message "
 				<< "\n";
 		returnValue = -1;
-	} else if (message->getApplicationName()
-			!= recoveredMessage->getApplicationName()) {
+	} else if (message->getApplicationRegistrationInformation().getApplicationName()
+			!= recoveredMessage->getApplicationRegistrationInformation().
+			getApplicationName()) {
 		std::cout << "Application name on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
@@ -1255,6 +1251,17 @@ int testIpcmAssignToDIFRequestMessage() {
 	parameter = new Parameter("vlanid", "430");
 	difConfiguration.addParameter(*parameter);
 	delete parameter;
+	DataTransferConstants dataTransferConstants;
+	dataTransferConstants.setAddressLength(1);
+	dataTransferConstants.setCepIdLength(2);
+	dataTransferConstants.setDifIntegrity(true);
+	dataTransferConstants.setLengthLength(3);
+	dataTransferConstants.setMaxPduLifetime(4);
+	dataTransferConstants.setMaxPduSize(5);
+	dataTransferConstants.setPortIdLength(6);
+	dataTransferConstants.setQosIdLenght(7);
+	dataTransferConstants.setSequenceNumberLength(8);
+	difConfiguration.setDataTransferConstants(dataTransferConstants);
 	difInformation.setDifConfiguration(difConfiguration);
 	message.setDIFInformation(difInformation);
 
@@ -1297,7 +1304,71 @@ int testIpcmAssignToDIFRequestMessage() {
 		std::cout << "DIFInformation.DIFConfiguration.parameters.size on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
-	}
+	} else if (message.getDIFInformation().getDifConfiguration().
+	                getDataTransferConstants().getAddressLength() !=
+	                                recoveredMessage->getDIFInformation().getDifConfiguration().
+	                                getDataTransferConstants().getAddressLength()) {
+	        std::cout << "DIFInformation.DIFConfiguration.dtc.addrLength on original and recovered messages"
+	                        << " are different\n";
+	        returnValue = -1;
+	} else if (message.getDIFInformation().getDifConfiguration().
+                        getDataTransferConstants().getCepIdLength() !=
+                                        recoveredMessage->getDIFInformation().getDifConfiguration().
+                                        getDataTransferConstants().getCepIdLength()) {
+                std::cout << "DIFInformation.DIFConfiguration.dtc.cepIdLength on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getDIFInformation().getDifConfiguration().
+                        getDataTransferConstants().getLengthLength() !=
+                                        recoveredMessage->getDIFInformation().getDifConfiguration().
+                                        getDataTransferConstants().getLengthLength()) {
+                std::cout << "DIFInformation.DIFConfiguration.dtc.lengthLength on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getDIFInformation().getDifConfiguration().
+                        getDataTransferConstants().getMaxPduLifetime() !=
+                                        recoveredMessage->getDIFInformation().getDifConfiguration().
+                                        getDataTransferConstants().getMaxPduLifetime()) {
+                std::cout << "DIFInformation.DIFConfiguration.dtc.maxPDULifetime on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getDIFInformation().getDifConfiguration().
+                        getDataTransferConstants().getMaxPduSize() !=
+                                        recoveredMessage->getDIFInformation().getDifConfiguration().
+                                        getDataTransferConstants().getMaxPduSize()) {
+                std::cout << "DIFInformation.DIFConfiguration.dtc.maxPDUSize on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getDIFInformation().getDifConfiguration().
+                        getDataTransferConstants().getPortIdLength() !=
+                                        recoveredMessage->getDIFInformation().getDifConfiguration().
+                                        getDataTransferConstants().getPortIdLength()) {
+                std::cout << "DIFInformation.DIFConfiguration.dtc.portIdLength on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getDIFInformation().getDifConfiguration().
+                        getDataTransferConstants().getQosIdLenght() !=
+                                        recoveredMessage->getDIFInformation().getDifConfiguration().
+                                        getDataTransferConstants().getQosIdLenght()) {
+                std::cout << "DIFInformation.DIFConfiguration.dtc.qosIdLength on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getDIFInformation().getDifConfiguration().
+                        getDataTransferConstants().getSequenceNumberLength() !=
+                                        recoveredMessage->getDIFInformation().getDifConfiguration().
+                                        getDataTransferConstants().getSequenceNumberLength()) {
+                std::cout << "DIFInformation.DIFConfiguration.dtc.seqNumLength on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getDIFInformation().getDifConfiguration().
+                        getDataTransferConstants().isDifIntegrity() !=
+                                        recoveredMessage->getDIFInformation().getDifConfiguration().
+                                        getDataTransferConstants().isDifIntegrity()) {
+                std::cout << "DIFInformation.DIFConfiguration.dtc.difIntegrity on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        }
+
 
 	if (returnValue == 0) {
 		std::cout << "IpcmAssignToDIFRequest test ok\n";

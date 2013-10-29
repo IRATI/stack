@@ -122,7 +122,6 @@ int kfa_destroy(struct kfa * instance)
 
 flow_id_t kfa_flow_create(struct kfa * instance)
 {
-
         struct ipcp_flow * flow;
         flow_id_t          fid;
 
@@ -143,7 +142,7 @@ flow_id_t kfa_flow_create(struct kfa * instance)
                 return flow_id_bad();
         }
 
-        flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+        flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
         if (!flow) {
                 spin_unlock(&instance->lock);
                 return flow_id_bad();
@@ -151,7 +150,7 @@ flow_id_t kfa_flow_create(struct kfa * instance)
 
         init_waitqueue_head(&flow->wait_queue);
 
-        if (kfa_fmap_add(instance->flows.pending, fid, flow)) {
+        if (kfa_fmap_add_gfp(GFP_ATOMIC, instance->flows.pending, fid, flow)) {
                 LOG_ERR("Could not map Flow and Flow ID");
                 rkfree(flow);
                 spin_unlock(&instance->lock);
@@ -209,7 +208,7 @@ int kfa_flow_bind(struct kfa *           instance,
         flow->port_id     = pid;
         flow->ipc_process = ipc_process;
 
-        if (kfifo_alloc(&flow->sdu_ready, PAGE_SIZE, GFP_KERNEL)) {
+        if (kfifo_alloc(&flow->sdu_ready, PAGE_SIZE, GFP_ATOMIC)) {
                 LOG_ERR("Couldn't create the sdu-ready queue for "
                         "flow on port-id %d", pid);
                 rkfree(flow);
@@ -224,9 +223,11 @@ int kfa_flow_bind(struct kfa *           instance,
                 spin_unlock(&instance->lock);
                 return -1;
         }
-        if (kfa_pmap_add(instance->flows.committed, pid, flow, ipc_id)) {
+        if (kfa_pmap_add_gfp(GFP_ATOMIC, instance->flows.committed,
+                             pid, flow, ipc_id)) {
                 LOG_ERR("Cannot bind flow %d to port %d (#1)", fid, pid);
-                if (kfa_fmap_add(instance->flows.pending, fid, flow)) {
+                if (kfa_fmap_add_gfp(GFP_ATOMIC, instance->flows.pending,
+                                     fid, flow)) {
                         LOG_ERR("Cannot roll-back changes for flow %d", fid);
                 }
 
@@ -284,7 +285,7 @@ flow_id_t kfa_flow_unbind(struct kfa * instance,
                 return flow_id_bad();
         }
 
-        if (kfa_fmap_add(instance->flows.pending, fid, flow)) {
+        if (kfa_fmap_add_gfp(GFP_ATOMIC, instance->flows.pending, fid, flow)) {
                 LOG_ERR("Could not map Flow and Flow ID");
                 rkfree(flow);
                 spin_unlock(&instance->lock);
@@ -392,18 +393,27 @@ int kfa_flow_sdu_write(struct kfa * instance,
                 return -1;
         }
 
+        spin_lock(&instance->lock);
+
         flow = kfa_pmap_find(instance->flows.committed, id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
+                spin_unlock(&instance->lock);
                 return -1;
         }
 
         ipcp = flow->ipc_process;
-        ASSERT(ipcp);
-        if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
-                LOG_ERR("Couldn't write SDU on port-id %d", id);
+        if (!ipcp) {
+                spin_unlock(&instance->lock);
                 return -1;
         }
+        if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
+                LOG_ERR("Couldn't write SDU on port-id %d", id);
+                spin_unlock(&instance->lock);
+                return -1;
+        }
+
+        spin_unlock(&instance->lock);
 
         return 0;
 }
@@ -471,7 +481,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 return -1;
         }
 
-        data = rkzalloc(size, GFP_KERNEL);
+        data = rkzalloc(size, GFP_ATOMIC);
         if (!data) {
                 spin_unlock(&instance->lock);
                 return -1;
@@ -484,7 +494,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 return -1;
         }
 
-        *sdu = sdu_create_from(data, size);
+        *sdu = sdu_create_from_gfp(GFP_ATOMIC, data, size);
         if (!*sdu) {
                 rkfree(data);
                 spin_unlock(&instance->lock);
@@ -495,6 +505,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
 
         return 0;
 }
+
 int kfa_sdu_post(struct kfa * instance,
                  port_id_t    id,
                  struct sdu * sdu)
@@ -503,6 +514,12 @@ int kfa_sdu_post(struct kfa * instance,
         unsigned int       avail;
         wait_queue_head_t *wq;
 
+        /*
+         * FIXME: kfa_sdu_post copies the contents of the SDU in the kfifo,
+         * which forces the reader of the port id to create a new SDU from
+         * this data. This is too much of a burden for the two operations and
+         * should change, probably through a fifo of pointers.
+         */
         if (!instance) {
                 LOG_ERR("Bogus kfa instance passed, cannot post SDU");
                 return -1;
@@ -511,6 +528,7 @@ int kfa_sdu_post(struct kfa * instance,
                 LOG_ERR("Bogus port-id, bailing out");
                 return -1;
         }
+
         if (!sdu || !is_sdu_ok(sdu)) {
                 LOG_ERR("Bogus parameters passed, bailing out");
                 return -1;
@@ -550,6 +568,8 @@ int kfa_sdu_post(struct kfa * instance,
                 spin_unlock(&instance->lock);
                 return -1;
         }
+
+        sdu_destroy(sdu);
 
         wq = &flow->wait_queue;
 

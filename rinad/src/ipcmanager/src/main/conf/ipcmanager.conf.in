@@ -2,7 +2,6 @@
   "localConfiguration" : {
     "installationPath" : "@pkgdatadir@",
     "libraryPath" : "@libdir@",
-    "eventLoopWorkers" : 3,
     "consolePort" : 32766,
     "cdapTimeoutInMs" : 10000,
     "enrollmentTimeoutInMs" : 10000,
@@ -19,19 +18,28 @@
     "difName" : "100"
   } ],
   "difConfigurations" : [ {
-    "difName" : "loopback.DIF", 
-    "configParameters" : [ {
-    	"name" : "interface", 
-    	"value" : "eth0"
-    	}, {
-    	"name" : "vlanid", 
-    	"value" : "987"
-    } ]
+    "difName" : "loopback.DIF"
   }, {
     "difName" : "100",
     "configParameters" : [ {
     	"name" : "interface-name", 
     	"value" : "eth0"
+      } ]
+  }, {
+    "difName" : "normal.DIF",
+    "dataTransferConstants" : {
+    	"addressLength" : 2,
+    	"cepIdLength" : 2,
+    	"lengthLength" : 2,
+    	"portIdLength" : 2,
+    	"qosIdLenght" : 2,
+    	"sequenceNumberLength" : 4,
+    	"maxPduSize" : 10000,
+    	"maxPduLifetime" : 30
+    },
+    "configParameters" : [ {
+    	"name" : "bar", 
+    	"value" : "foo"
       } ]
   } ]
 }

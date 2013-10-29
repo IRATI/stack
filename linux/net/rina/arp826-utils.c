@@ -101,15 +101,20 @@ void gpa_destroy(struct gpa * gpa)
 }
 EXPORT_SYMBOL(gpa_destroy);
 
-struct gpa * gpa_dup(const struct gpa * gpa)
+struct gpa * gpa_dup_gfp(gfp_t              flags,
+                         const struct gpa * gpa)
 {
         if (!gpa_is_ok(gpa)) {
                 LOG_ERR("Bogus input parameter, cannot duplicate GPA");
                 return NULL;
         }
 
-        return gpa_create(gpa->address, gpa->length);
+        return gpa_create_gfp(flags, gpa->address, gpa->length);
 }
+EXPORT_SYMBOL(gpa_dup_gfp);
+
+struct gpa * gpa_dup(const struct gpa * gpa)
+{ return gpa_dup_gfp(GFP_KERNEL, gpa); }
 EXPORT_SYMBOL(gpa_dup);
 
 const uint8_t * gpa_address_value(const struct gpa * gpa)
@@ -164,12 +169,15 @@ void gpa_dump(const struct gpa * gpa)
         }
         *(p + 1) = 0x00;
 
-        LOG_DBG("GPA %pK: 0x%s", gpa, tmp);
+        LOG_DBG("GPA %pK (%zd): 0x%s", gpa, gpa->length, tmp);
 
         rkfree(tmp);
 }
+EXPORT_SYMBOL(gpa_dump);
 
-int gpa_address_shrink_gfp(struct gpa * gpa, uint8_t filler, gfp_t flags)
+int gpa_address_shrink_gfp(gfp_t        flags,
+                           struct gpa * gpa,
+                           uint8_t      filler)
 {
         uint8_t * new_address;
         uint8_t * position;
@@ -213,14 +221,14 @@ int gpa_address_shrink_gfp(struct gpa * gpa, uint8_t filler, gfp_t flags)
 EXPORT_SYMBOL(gpa_address_shrink_gfp);
 
 int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
-{ return gpa_address_shrink_gfp(gpa, filler, GFP_KERNEL); }
+{ return gpa_address_shrink_gfp(GFP_KERNEL, gpa, filler); }
 EXPORT_SYMBOL(gpa_address_shrink);
 
 
-int gpa_address_grow_gfp(struct gpa * gpa,
+int gpa_address_grow_gfp(gfp_t        flags,
+                         struct gpa * gpa,
                          size_t       length,
-                         uint8_t      filler,
-                         gfp_t        flags)
+                         uint8_t      filler)
 {
         uint8_t * new_address;
 
@@ -263,7 +271,7 @@ int gpa_address_grow_gfp(struct gpa * gpa,
 EXPORT_SYMBOL(gpa_address_grow_gfp);
 
 int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
-{ return gpa_address_grow_gfp(gpa, length, filler, GFP_KERNEL); }
+{ return gpa_address_grow_gfp(GFP_KERNEL, gpa, length, filler); }
 EXPORT_SYMBOL(gpa_address_grow);
 
 bool gpa_is_equal(const struct gpa * a, const struct gpa * b)
@@ -298,6 +306,28 @@ struct gha {
                 uint8_t mac_802_3[6];
         } data;
 };
+
+void gha_dump(const struct gha * gha)
+{
+        if (!gha) {
+                LOG_DBG("GHA %pK: <null>", gha);
+                return;
+        }
+
+        if (gha->type == MAC_ADDR_802_3) {
+                LOG_DBG("GHA %pK: %02X:%02X:%02X:%02X:%02X:%02X",
+                        gha,
+                        gha->data.mac_802_3[5],
+                        gha->data.mac_802_3[4],
+                        gha->data.mac_802_3[3],
+                        gha->data.mac_802_3[2],
+                        gha->data.mac_802_3[1],
+                        gha->data.mac_802_3[0]);
+        } else {
+                LOG_DBG("GHA %pK: <unknown format>", gha);
+        }
+}
+EXPORT_SYMBOL(gha_dump);
 
 bool gha_is_ok(const struct gha * gha)
 { return (!gha || gha->type != MAC_ADDR_802_3) ? false : true; }
@@ -368,7 +398,8 @@ int gha_destroy(struct gha * gha)
 }
 EXPORT_SYMBOL(gha_destroy);
 
-struct gha * gha_dup(const struct gha * gha)
+struct gha * gha_dup_gfp(gfp_t              flags,
+                         const struct gha * gha)
 {
         struct gha * tmp;
 
@@ -377,7 +408,7 @@ struct gha * gha_dup(const struct gha * gha)
                 return NULL;
         }
 
-        tmp = rkmalloc(sizeof(*gha), GFP_KERNEL);
+        tmp = rkmalloc(sizeof(*gha), flags);
         if (!tmp)
                 return NULL;
 
@@ -385,6 +416,10 @@ struct gha * gha_dup(const struct gha * gha)
 
         return tmp;
 }
+EXPORT_SYMBOL(gha_dup_gfp);
+
+struct gha * gha_dup(const struct gha * gha)
+{ return gha_dup_gfp(GFP_KERNEL, gha); }
 EXPORT_SYMBOL(gha_dup);
 
 size_t gha_address_length(const struct gha * gha)
@@ -469,12 +504,27 @@ struct net_device * gha_to_device(const struct gha * ha)
                 return NULL;
         }
 
+        LOG_DBG("Looking for a device with this ha");
+        gha_dump(ha);
+        LOG_DBG("Showing all device+addresses");
+
         read_lock(&dev_base_lock);
 
         dev = first_net_device(&init_net);
         while (dev) {
+                LOG_DBG("Next device");
+                LOG_DBG("addr_len: %d", dev->addr_len);
                 if (dev->addr_len == gha_address_length(ha)) {
                         for_each_dev_addr(dev, hwa) {
+                                if (dev->addr_len == 6) {
+                                        LOG_DBG("HA: %02X:%02X:%02X:%02X:%02X:%02X",
+                                                hwa->addr[5],
+                                                hwa->addr[4],
+                                                hwa->addr[3],
+                                                hwa->addr[2],
+                                                hwa->addr[1],
+                                                hwa->addr[0]);
+                                }
                                 if (!memcmp(hwa->addr,
                                             gha_address(ha),
                                             gha_address_length(ha))) {
