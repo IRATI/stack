@@ -137,7 +137,7 @@ struct sdu * sdu_dup(struct sdu * sdu)
 { return sdu_dup_gfp(GFP_KERNEL, sdu); }
 EXPORT_SYMBOL(sdu_dup);
 
-int is_sdu_ok(const struct sdu * s)
+bool is_sdu_ok(const struct sdu * s)
 {
         if (!s)
                 return false;
