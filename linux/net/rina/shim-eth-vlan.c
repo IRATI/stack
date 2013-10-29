@@ -90,7 +90,7 @@ struct ipcp_instance_data {
         struct eth_vlan_info * info;
         struct packet_type *   eth_vlan_packet_type;
         struct net_device *    dev;
-	struct flow_spec *     fspec; 
+        struct flow_spec *     fspec;
 
         /* The IPC Process using the shim-eth-vlan */
         struct name *          app_name;
@@ -635,7 +635,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         flow = find_flow(data, id);
         if (!flow) {
                 LOG_ERR("Flow does not exist, you shouldn't call this");
-		sdu_destroy(sdu);
+                sdu_destroy(sdu);
                 return -1;
         }
 
@@ -643,20 +643,20 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
         if (flow->port_id_state != PORT_STATE_ALLOCATED) {
                 LOG_ERR("Flow is not in the right state to call this");
-		sdu_destroy(sdu);
+                sdu_destroy(sdu);
                 return -1;
         }
 
         src_hw = data->dev->dev_addr;
         if (!src_hw) {
                 LOG_ERR("Failed to get src hw addr");
-		sdu_destroy(sdu);
+                sdu_destroy(sdu);
                 return -1;
         }
         dest_hw = gha_address(flow->dest_ha);
         if (!dest_hw) {
                 LOG_ERR("Dest hw is not known");
-		sdu_destroy(sdu);
+                sdu_destroy(sdu);
                 return -1;
         }
 
@@ -664,7 +664,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
         skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
         if (skb == NULL) {
-		sdu_destroy(sdu);
+                sdu_destroy(sdu);
                 return -1;
         }
 
@@ -681,14 +681,14 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         if (dev_hard_header(skb, data->dev, ETH_P_RINA,
                             dest_hw, src_hw, skb->len) < 0) {
                 kfree_skb(skb);
-		sdu_destroy(sdu);
+                sdu_destroy(sdu);
                 return -1;
         }
 
         LOG_DBG("Gonna send it now");
 
         dev_queue_xmit(skb);
-	sdu_destroy(sdu);
+        sdu_destroy(sdu);
         return 0;
 }
 
@@ -1145,17 +1145,17 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-	inst->data->fspec = rkzalloc(sizeof(*inst->data->fspec), GFP_KERNEL);
+        inst->data->fspec = rkzalloc(sizeof(*inst->data->fspec), GFP_KERNEL);
         if (!inst->data->fspec) {
-		LOG_ERR("Instance creation failed (#3)");
-		rkfree(inst->data->info);
+                LOG_ERR("Instance creation failed (#3)");
+                rkfree(inst->data->info);
                 rkfree(inst->data->eth_vlan_packet_type);
                 rkfree(inst->data);
                 rkfree(inst);
                 return NULL;
         }
 
-	inst->data->fspec->average_bandwidth           = 0;
+        inst->data->fspec->average_bandwidth           = 0;
         inst->data->fspec->average_sdu_bandwidth       = 0;
         inst->data->fspec->delay                       = 0;
         inst->data->fspec->jitter                      = 0;
@@ -1224,8 +1224,8 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         if (pos->info)
                                 rkfree(pos->info);
 
-			if(pos->fspec)
-				rkfree(pos->fspec);
+                        if(pos->fspec)
+                                rkfree(pos->fspec);
 
                         /*
                          * Might cause problems:
