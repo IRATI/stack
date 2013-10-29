@@ -92,17 +92,18 @@ struct app_register {
         struct list_head list;
 };
 
-static int is_app_registered(struct ipcp_instance_data * data,
+static bool is_app_registered(struct ipcp_instance_data * data,
                              const struct name *         name)
 {
         struct app_register * app;
 
         list_for_each_entry(app, &data->apps_registered, list) {
                 if (name_is_equal(app->app_name, name)) {
-                        return 1;
+                        return true;
                 }
         }
-        return 0;
+
+        return false;
 }
 
 static struct app_register * find_app(struct ipcp_instance_data * data,
@@ -158,9 +159,12 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
 
         if (!is_app_registered(data, dest)) {
                 char * tmp = name_tostring(dest);
+
                 LOG_ERR("Application %s not registered to IPC process %d",
                         tmp, data->id);
+
                 if (tmp) rkfree(tmp);
+
                 return -1;
         }
 
@@ -298,8 +302,6 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 rkfree(flow);
                 return -1;
         }
-
-
 
         /*
          * NOTE:
@@ -452,6 +454,7 @@ bool is_write_data_complete(const struct write_data * data)
 	bool ret;
 
 	ret = ((!data || !data->kfa || !data->sdu) ? false : true);
+
 	LOG_DBG("Write data complete? %d", ret);
 
         return ret;
@@ -474,8 +477,8 @@ static struct write_data * write_data_create(struct kfa * kfa,
         if (!tmp)
                 return NULL;
 
-        tmp->kfa = kfa;
-        tmp->sdu = sdu;
+        tmp->kfa     = kfa;
+        tmp->sdu     = sdu;
         tmp->port_id = port_id;
 
         return tmp;
@@ -546,14 +549,16 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                                 write_data_destroy(tmp);
                                 return -1;
                         }
+
                         ASSERT(dummy_wq);
+
                         if (rwq_work_post(dummy_wq, item)) {
 				write_data_destroy(tmp);
 				sdu_destroy(copy_sdu);
 				return -1;
-			} else {
-				return 0;
 			}
+
+                        return 0;
                 }
                 if (flow->dst_port_id == id) {
                         tmp = write_data_create(data->kfa,
@@ -567,14 +572,17 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                                 write_data_destroy(tmp);
                                 return -1;
                         }
+
                         ASSERT(dummy_wq);
+
                         if (rwq_work_post(dummy_wq, item)) {
 				write_data_destroy(tmp);
 				sdu_destroy(copy_sdu);
 				return -1;
-			} else {
-				return 0;
 			}
+
+                        return 0;
+
                 }
         }
         LOG_ERR("There is no flow allocated for port-id %d", id);
