@@ -130,7 +130,7 @@ struct sdu * sdu_dup_gfp(gfp_t        flags,
 
         memcpy(tmp->buffer->data, sdu->buffer->data, sdu->buffer->size);
         tmp->buffer->size = sdu->buffer->size;
-        
+
         return tmp;
 }
 EXPORT_SYMBOL(sdu_dup_gfp);

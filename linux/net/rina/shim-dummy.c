@@ -93,7 +93,7 @@ struct app_register {
 };
 
 static bool is_app_registered(struct ipcp_instance_data * data,
-                             const struct name *         name)
+                              const struct name *         name)
 {
         struct app_register * app;
 
@@ -451,11 +451,11 @@ struct write_data {
 
 bool is_write_data_complete(const struct write_data * data)
 {
-	bool ret;
+        bool ret;
 
-	ret = ((!data || !data->kfa || !data->sdu) ? false : true);
+        ret = ((!data || !data->kfa || !data->sdu) ? false : true);
 
-	LOG_DBG("Write data complete? %d", ret);
+        LOG_DBG("Write data complete? %d", ret);
 
         return ret;
 }
@@ -490,9 +490,9 @@ static int dummy_write(void * o)
 
         tmp = (struct write_data *) o;
         if (!tmp) {
-		LOG_ERR("No write data passed");
+                LOG_ERR("No write data passed");
                 return -1;
-	}
+        }
 
         if (!is_write_data_complete(tmp)) {
                 LOG_ERR("Wrong data passed to dummy_write");
@@ -553,10 +553,10 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                         ASSERT(dummy_wq);
 
                         if (rwq_work_post(dummy_wq, item)) {
-				write_data_destroy(tmp);
-				sdu_destroy(copy_sdu);
-				return -1;
-			}
+                                write_data_destroy(tmp);
+                                sdu_destroy(copy_sdu);
+                                return -1;
+                        }
 
                         return 0;
                 }
@@ -576,10 +576,10 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                         ASSERT(dummy_wq);
 
                         if (rwq_work_post(dummy_wq, item)) {
-				write_data_destroy(tmp);
-				sdu_destroy(copy_sdu);
-				return -1;
-			}
+                                write_data_destroy(tmp);
+                                sdu_destroy(copy_sdu);
+                                return -1;
+                        }
 
                         return 0;
 
