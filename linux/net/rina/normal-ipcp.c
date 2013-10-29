@@ -67,21 +67,30 @@ enum normal_flow_state {
         PORT_STATE_ALLOCATED
 };
 
-struct normal_flow {
-        port_id_t               port_id;
-        port_id_t               dst_port_id;
-        struct name *           source;
-        struct name *           dest;
-        struct list_head        list;
-        enum normal_flow_state  state;
-        flow_id_t               dst_fid;
-        flow_id_t               src_fid; /* Required to notify back to the */
-        ipc_process_id_t        dst_id;  /* IPC Manager the result of the */
-        struct flow_spec *      fspec;   /* allocation */
-        struct efcp_container * efcps;
-        struct rmt *            rmt;
-
+struct cep_ids_entry {
+        struct list_head list;
+        cep_id_t         cep_id;
 };
+
+struct normal_flow {
+        port_id_t        port_id;
+        cep_id_t         active;
+        struct list_head cep_ids_list;
+        struct list_head list;
+};
+
+static struct normal_flow * find_flow(struct ipcp_instance_data * data,
+                                      port_id_t                   port_id)
+{
+        struct normal_flow * flow;
+
+        list_for_each_entry(flow, &(data->flows), list) {
+                if (flow->port_id == port_id)
+                        return flow;
+        }
+
+        return NULL;
+}
 
 struct ipcp_factory_data {
         struct list_head instances;
@@ -110,7 +119,14 @@ static int normal_sdu_write(struct ipcp_instance_data * data,
                             port_id_t                   id,
                             struct sdu *                sdu)
 {
-        LOG_MISSING;
+        struct normal_flow * flow;
+
+        flow = find_flow(data, id);
+        if (!flow) {
+                LOG_ERR("There is no flow bound to this port_id: %d", id);
+                return -1;
+        }
+        efcp_container_write(data->efcpc, flow->active, sdu);
         return 0;
 }
 
@@ -141,6 +157,8 @@ static cep_id_t connection_create_request(struct ipcp_instance_data * data,
 {
         cep_id_t cep_id;
         struct connection * conn;
+        struct normal_flow * flow;
+        struct cep_ids_entry * cep_entry;
 
         conn = rkzalloc(sizeof(*conn), GFP_KERNEL);
         if (!conn) {
@@ -158,6 +176,32 @@ static cep_id_t connection_create_request(struct ipcp_instance_data * data,
                 rkfree(conn);
                 return cep_id_bad();
         }
+
+        cep_entry = rkzalloc(sizeof(*cep_entry), GFP_KERNEL);
+        if (!cep_entry) {
+                LOG_ERR("Could not create a cep_id entry, bailing out");
+                efcp_connection_destroy(data->efcpc, cep_id);
+                return cep_id_bad();
+        }
+        INIT_LIST_HEAD(&cep_entry->list);
+        cep_entry->cep_id = cep_id;
+
+        flow = find_flow(data, port_id);
+        if (!flow) {
+                flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+                if (!flow) {
+                        LOG_ERR("Could not create a flow in normal-ipcp");
+                        efcp_connection_destroy(data->efcpc, cep_id);
+                        return cep_id_bad();
+                }
+                flow->port_id = port_id;
+                INIT_LIST_HEAD(&flow->list);
+                INIT_LIST_HEAD(&flow->cep_ids_list);
+                list_add(&flow->list, &data->flows);
+        }
+
+        list_add(&cep_entry->list, &flow->cep_ids_list);
+        flow->active = cep_id;
 
         return cep_id;
 }
@@ -172,11 +216,54 @@ static int connection_update_request(struct ipcp_instance_data * data,
         return 0;
 }
 
+static struct normal_flow * find_flow_cepid(struct ipcp_instance_data * data,
+                                            cep_id_t                    id)
+{
+        struct normal_flow * pos;
+
+        list_for_each_entry(pos, &(data->flows), list) {
+                if (pos->active == id) {
+                        return pos;
+                }
+        }
+        return NULL;
+}
+
+static int remove_cep_id_from_flow(struct normal_flow * flow,
+                                   cep_id_t             id)
+{
+        struct cep_ids_entry *pos, *next;
+
+        list_for_each_entry_safe(pos, next, &(flow->cep_ids_list), list) {
+                if (pos->cep_id == id) {
+                        list_del(&pos->list);
+                        rkfree(pos);
+                        return 0;
+                }
+        }
+        return -1;
+}
+
 static int connection_destroy_request(struct ipcp_instance_data * data,
                                       cep_id_t                    src_cep_id)
 {
+        struct normal_flow * flow;
+
         if (efcp_connection_destroy(data->efcpc, src_cep_id))
                 return -1;
+
+        if (!(&data->flows))
+                return -1;
+
+        flow = find_flow_cepid(data, src_cep_id);
+        if (!flow) {
+                LOG_ERR("Could not retrieve flow by cep_id :%d", src_cep_id);
+        }
+        if (remove_cep_id_from_flow(flow, src_cep_id)) {
+                LOG_ERR("Could not remove cep_id: %d", src_cep_id);
+        }
+        if (list_empty(&flow->cep_ids_list))
+                rkfree(flow);
 
         return 0;
 }
@@ -190,8 +277,10 @@ connection_create_arrived(struct ipcp_instance_data * data,
                           cep_id_t                    dst_cep_id,
                           int                         policies)
 {
-        cep_id_t cep_id;
-        struct connection * conn;
+        struct connection *    conn;
+        cep_id_t               cep_id;
+        struct normal_flow *   flow;
+        struct cep_ids_entry * cep_entry;
 
         conn = rkzalloc(sizeof(*conn), GFP_KERNEL);
         if (!conn) {
@@ -205,13 +294,48 @@ connection_create_arrived(struct ipcp_instance_data * data,
         conn->destination_cep_id  = dst_cep_id;
 
         cep_id = efcp_connection_create(data->efcpc, conn);
+        LOG_DBG("Cep_id allocated for the arrived connection request: %d", cep_id);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
                 rkfree(conn);
                 return cep_id_bad();
         }
 
+        cep_entry = rkzalloc(sizeof(*cep_entry), GFP_KERNEL);
+        if (!cep_entry) {
+                LOG_ERR("Could not create a cep_id entry, bailing out");
+                efcp_connection_destroy(data->efcpc, cep_id);
+                return cep_id_bad();
+        }
+        INIT_LIST_HEAD(&cep_entry->list);
+        cep_entry->cep_id = cep_id;
+
+        flow = find_flow(data, port_id);
+        if (!flow) {
+                flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+                if (!flow) {
+                        LOG_ERR("Could not create a flow in normal-ipcp");
+                        efcp_connection_destroy(data->efcpc, cep_id);
+                        return cep_id_bad();
+                }
+                flow->port_id = port_id;
+                INIT_LIST_HEAD(&flow->list);
+                INIT_LIST_HEAD(&flow->cep_ids_list);
+                list_add(&flow->list, &data->flows);
+        }
+
+        list_add(&cep_entry->list, &flow->cep_ids_list);
+        flow->active = cep_id;
+
         return cep_id;
+}
+
+static int normal_assign_to_dif(struct ipcp_instance_data * data,
+                                const struct dif_info *     dif_information)
+{
+        data->info->dif_name = name_dup(dif_information->dif_name);
+
+        return 0;
 }
 
 /*  FIXME: register ops */
@@ -222,7 +346,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .application_register      = NULL,
         .application_unregister    = NULL,
         .sdu_write                 = normal_sdu_write,
-        .assign_to_dif             = NULL,
+        .assign_to_dif             = normal_assign_to_dif,
         .update_dif_config         = NULL,
         .connection_create         = connection_create_request,
         .connection_update         = connection_update_request,

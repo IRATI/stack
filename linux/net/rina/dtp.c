@@ -160,7 +160,7 @@ static int delimit_fragment_concatenate(struct dtp * dtp,
 
         LOG_MISSING;
 
-        return -1;
+        return 0;
 }
 
 static int sequence_address(struct dtp * dtp,
@@ -171,7 +171,7 @@ static int sequence_address(struct dtp * dtp,
 
         LOG_MISSING;
 
-        return -1;
+        return 0;
 }
 
 static int crc_apply(struct dtp * dtp,
@@ -182,7 +182,7 @@ static int crc_apply(struct dtp * dtp,
 
         LOG_MISSING;
 
-        return -1;
+        return 0;
 }
 
 /* Closed Window Queue policy */
@@ -194,7 +194,7 @@ int apply_policy_CsldWinQ(struct dtp * dtp,
 
         LOG_MISSING;
 
-        return -1;
+        return 0;
 }
 
 int apply_policy_RexmsnQ(struct dtp * dtp,
@@ -205,7 +205,7 @@ int apply_policy_RexmsnQ(struct dtp * dtp,
 
         LOG_MISSING;
 
-        return -1;
+        return 0;
 }
 
 int dtp_send(struct dtp * instance,
