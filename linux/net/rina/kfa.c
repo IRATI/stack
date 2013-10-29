@@ -505,6 +505,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
 
         return 0;
 }
+
 int kfa_sdu_post(struct kfa * instance,
                  port_id_t    id,
                  struct sdu * sdu)
@@ -513,6 +514,12 @@ int kfa_sdu_post(struct kfa * instance,
         unsigned int       avail;
         wait_queue_head_t *wq;
 
+	/* 
+	 * FIXME: kfa_sdu_post copies the contents of the SDU in the kfifo, 
+	 * which forces the reader of the port id to create a new SDU from 
+	 * this data. This is too much of a burden for the two operations and 
+	 * should change, probably through a fifo of pointers.
+	 */
         if (!instance) {
                 LOG_ERR("Bogus kfa instance passed, cannot post SDU");
                 return -1;

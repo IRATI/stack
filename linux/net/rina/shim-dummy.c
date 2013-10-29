@@ -521,21 +521,15 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
         if (!sdu)
                 return -1;
 
-        copy_sdu = rkzalloc(sizeof(*copy_sdu), GFP_ATOMIC);
-        if (!copy_sdu)
+        /* We are going to dup the SDU since the shim has now the ownership
+         * and it is always its burden to free it whenever the processing of
+         * the SDU is finished (e.g. the SDU has been sent through a wire).
+         * For the shim-dummy the processing consists of sending the new SDU
+         * to the sdu_ready kfifo, which will take the ownership of this copy.
+         */
+        copy_sdu = sdu_dup_gfp(GFP_ATOMIC, sdu);
+        if(!copy_sdu)
                 return -1;
-
-	copy_sdu->buffer = rkzalloc(sizeof(struct buffer), GFP_ATOMIC);
-	if (!copy_sdu->buffer)
-		return -1;
-
-        copy_sdu->buffer->data = (char *) rkzalloc(sdu->buffer->size, GFP_ATOMIC);
-        if (!copy_sdu->buffer->data)
-                return -1;
-
-        memcpy(copy_sdu->buffer->data, sdu->buffer->data, sdu->buffer->size);
-        copy_sdu->buffer->size = sdu->buffer->size;
-
 
         sdu_destroy(sdu);
 
