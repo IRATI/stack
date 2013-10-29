@@ -48,6 +48,7 @@ public class IPCProcess {
 		rina.initialize();
 		ipcEventProducer = rina.getIpcEventProducer();
 		kernelIPCProcess = rina.getKernelIPCProcess();
+		kernelIPCProcess.setIPCProcessId(id);
 		ipcManager = rina.getExtendedIPCManager();
 		ipcManager.setIpcProcessId(id);
 		ipcManager.setIpcProcessName(namingInfo);

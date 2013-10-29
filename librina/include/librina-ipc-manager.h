@@ -931,6 +931,15 @@ public:
         unsigned short getIPCProcessId() const;
 };
 
+/**
+ * Event informing about the expiration of a timer
+ */
+class TimerExpiredEvent: public IPCEvent {
+public:
+        TimerExpiredEvent(unsigned int sequenceNumber);
+};
+
+
 }
 
 #endif
