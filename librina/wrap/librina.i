@@ -494,6 +494,17 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
+    } else if ($1->getType() == rina::ASSIGN_TO_DIF_REQUEST_EVENT) {
+    	rina::AssignToDIFRequestEvent *flowReqEvent = dynamic_cast<rina::AssignToDIFRequestEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/AssignToDIFRequestEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::AssignToDIFRequestEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
     } else if ($1->getType() == rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT) {
     	rina::UpdateDIFConfigurationResponseEvent *flowReqEvent = dynamic_cast<rina::UpdateDIFConfigurationResponseEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/UpdateDIFConfigurationResponseEvent");

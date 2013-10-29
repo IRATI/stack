@@ -4,6 +4,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.AssignToDIFRequestEvent;
 import eu.irati.librina.ExtendedIPCManagerSingleton;
 import eu.irati.librina.IPCEvent;
 import eu.irati.librina.IPCEventProducerSingleton;
@@ -66,7 +67,9 @@ public class IPCProcess {
 				ipcManager.appUnregistered(regEvent.getIPCProcessName(), regEvent.getDIFName());
 				log.info("IPC Process unregistered from N-1 DIF "+ regEvent.getDIFName().getProcessName());
 			}
-		} 
+		} else if (event.getType() == IPCEventType.ASSIGN_TO_DIF_REQUEST_EVENT) {
+			AssignToDIFRequestEvent asEvent = (AssignToDIFRequestEvent) event;
+		}
 	}
 
 }

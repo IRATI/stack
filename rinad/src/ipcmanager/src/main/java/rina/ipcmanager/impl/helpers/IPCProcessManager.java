@@ -208,6 +208,11 @@ public class IPCProcessManager {
 						difProperties.getConfigParameters().get(j));
 			}
 		}
+		
+		if (difProperties.getDataTransferConstants() != null) {
+			difInformation.getDifConfiguration().setDataTransferConstants(
+					difProperties.getDataTransferConstants());
+		}
 
 		long handle = ipcProcess.assignToDIF(difInformation);
 		pendingDIFAssignments.put(handle, new PendingDIFAssignment(difInformation, ipcProcess));
@@ -389,6 +394,11 @@ public class IPCProcessManager {
 		}
 		
 		console.responseArrived(event);
+	}
+	
+	public synchronized void setInitialized(long ipcProcessId) throws Exception {
+		IPCProcess ipcProcess = this.getIPCProcess(ipcProcessId);
+		ipcProcess.setInitialized();
 	}
 
 }

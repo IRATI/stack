@@ -311,14 +311,83 @@ static int parse_list_of_ipcp_config_entries(struct nlattr *     nested_attr,
         return 0;
 }
 
+static int parse_data_transfer_constants(struct nlattr * attr,
+                struct data_transfer_constants * data_transfer_constants)
+{
+        struct nla_policy attr_policy[DTC_ATTR_MAX + 1];
+        struct nlattr *attrs[DTC_ATTR_MAX + 1];
+
+        attr_policy[DTC_ATTR_QOS_ID].type = NLA_U16;
+        attr_policy[DTC_ATTR_QOS_ID].len = 2;
+        attr_policy[DTC_ATTR_PORT_ID].type = NLA_U16;
+        attr_policy[DTC_ATTR_PORT_ID].len = 2;
+        attr_policy[DTC_ATTR_CEP_ID].type = NLA_U16;
+        attr_policy[DTC_ATTR_CEP_ID].len = 2;
+        attr_policy[DTC_ATTR_SEQ_NUM].type = NLA_U16;
+        attr_policy[DTC_ATTR_SEQ_NUM].len = 2;
+        attr_policy[DTC_ATTR_ADDRESS].type = NLA_U16;
+        attr_policy[DTC_ATTR_ADDRESS].len = 2;
+        attr_policy[DTC_ATTR_LENGTH].type = NLA_U16;
+        attr_policy[DTC_ATTR_LENGTH].len = 2;
+        attr_policy[DTC_ATTR_MAX_PDU_SIZE].type = NLA_U32;
+        attr_policy[DTC_ATTR_MAX_PDU_SIZE].len = 4;
+        attr_policy[DTC_ATTR_MAX_PDU_LIFE].type = NLA_U32;
+        attr_policy[DTC_ATTR_MAX_PDU_LIFE].len = 4;
+        attr_policy[DTC_ATTR_DIF_INTEGRITY].type = NLA_FLAG;
+        attr_policy[DTC_ATTR_DIF_INTEGRITY].len = 0;
+
+        if (nla_parse_nested(attrs, DTC_ATTR_MAX, attr, attr_policy) < 0)
+                return -1;
+
+        if (attrs[DTC_ATTR_QOS_ID])
+                data_transfer_constants->qos_id_length =
+                        nla_get_u16(attrs[DTC_ATTR_QOS_ID]);
+
+        if (attrs[DTC_ATTR_PORT_ID])
+                data_transfer_constants->port_id_length =
+                                nla_get_u16(attrs[DTC_ATTR_PORT_ID]);
+
+        if (attrs[DTC_ATTR_CEP_ID])
+                data_transfer_constants->cep_id_length =
+                                nla_get_u16(attrs[DTC_ATTR_CEP_ID]);
+
+        if (attrs[DTC_ATTR_SEQ_NUM])
+                data_transfer_constants->seq_num_length =
+                                nla_get_u16(attrs[DTC_ATTR_SEQ_NUM]);
+
+        if (attrs[DTC_ATTR_ADDRESS])
+                data_transfer_constants->address_length =
+                                nla_get_u16(attrs[DTC_ATTR_ADDRESS]);
+
+        if (attrs[DTC_ATTR_LENGTH])
+                data_transfer_constants->length_length =
+                                nla_get_u16(attrs[DTC_ATTR_LENGTH]);
+
+        if (attrs[DTC_ATTR_MAX_PDU_SIZE])
+                data_transfer_constants->max_pdu_size =
+                                nla_get_u32(attrs[DTC_ATTR_MAX_PDU_SIZE]);
+
+        if (attrs[DTC_ATTR_MAX_PDU_LIFE])
+                data_transfer_constants->max_pdu_life =
+                                nla_get_u32(attrs[DTC_ATTR_MAX_PDU_LIFE]);
+
+        if (attrs[DTC_ATTR_DIF_INTEGRITY])
+                        data_transfer_constants->dif_integrity = true;
+
+        return 0;
+}
+
 static int parse_dif_config(struct nlattr * dif_config_attr,
                             struct dif_config  * dif_config)
 {
         struct nla_policy attr_policy[DCONF_ATTR_MAX + 1];
         struct nlattr *attrs[DCONF_ATTR_MAX + 1];
+        struct data_transfer_constants * data_transfer_constants;
 
         attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].type = NLA_NESTED;
         attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].len = 0;
+        attr_policy[DCONF_ATTR_DATA_TRANS_CONS].type = NLA_NESTED;
+        attr_policy[DCONF_ATTR_DATA_TRANS_CONS].len = 0;
 
         if (nla_parse_nested(attrs,
                              DCONF_ATTR_MAX,
@@ -327,15 +396,32 @@ static int parse_dif_config(struct nlattr * dif_config_attr,
                 goto parse_fail;
 
         if (attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES]) {
-                if (parse_list_of_ipcp_config_entries(attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES],
-                                                      dif_config) < 0)
+                if (parse_list_of_ipcp_config_entries(
+                                attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES],
+                                dif_config) < 0)
                         goto parse_fail;
+        }
+
+        if (attrs[DCONF_ATTR_DATA_TRANS_CONS]) {
+                data_transfer_constants = rkzalloc(
+                                sizeof(struct data_transfer_constants),
+                                GFP_KERNEL);
+                if (!data_transfer_constants)
+                        goto parse_fail;
+                dif_config->data_transfer_constants = data_transfer_constants;
+
+                if (parse_data_transfer_constants(
+                                attrs[DCONF_ATTR_DATA_TRANS_CONS],
+                                dif_config->data_transfer_constants) < 0) {
+                        rkfree(dif_config->data_transfer_constants);
+                        goto parse_fail;
+                }
         }
 
         return 0;
 
  parse_fail:
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("dif config attribute"));
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("dif config attributes"));
         return -1;
 }
 

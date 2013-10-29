@@ -334,6 +334,9 @@ public class IPCManager {
 		} else if (event.getType().equals(IPCEventType.UPDATE_DIF_CONFIG_RESPONSE_EVENT)){
 			UpdateDIFConfigurationResponseEvent atrEvent = (UpdateDIFConfigurationResponseEvent) event;
 			ipcProcessManager.updateDIFConfigurationResponse(atrEvent);
+		} else if (event.getType().equals(IPCEventType.IPC_PROCESS_DAEMON_INITIALIZED_EVENT)) {
+			IPCProcessDaemonInitializedEvent ipcEvent = (IPCProcessDaemonInitializedEvent) event;
+			ipcProcessManager.setInitialized(ipcEvent.getIPCProcessId());
 		}
 	}
 	
