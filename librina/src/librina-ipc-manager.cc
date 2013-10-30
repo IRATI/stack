@@ -1160,4 +1160,9 @@ unsigned short IPCProcessDaemonInitializedEvent::getIPCProcessId() const {
         return ipcProcessId;
 }
 
+/* CLASS TIMER EXPIRED EVENT */
+TimerExpiredEvent::TimerExpiredEvent(unsigned int sequenceNumber) :
+                IPCEvent(TIMER_EXPIRED_EVENT, sequenceNumber) {
+}
+
 }
