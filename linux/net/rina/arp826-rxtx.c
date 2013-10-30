@@ -213,7 +213,7 @@ int arp_send_reply(uint16_t            ptype,
         return 0;
 }
 
-/* Fills the packet fields, sets TPA to broadcast */
+/* Fills the packet fields, sets THA to unkown */
 int arp_send_request(uint16_t            ptype,
                      const struct gpa *  spa,
                      const struct gha *  sha,
@@ -235,7 +235,7 @@ int arp_send_request(uint16_t            ptype,
                 return -1;
         }
 
-        tha = gha_create_broadcast(gha_type(sha));
+        tha = gha_create_unknown(gha_type(sha));
         if (!tha) {
                 LOG_ERR("Cannot create broadcast GHA");
                 return -1;
