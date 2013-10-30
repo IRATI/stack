@@ -464,12 +464,6 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 }
         }
 
-        *sdu = (struct sdu *) rkzalloc(sizeof(struct sdu *), GFP_ATOMIC);
-        if (!sdu) {
-                spin_unlock(&instance->lock);
-                return -1;
-        }
-
         if (kfifo_out(&flow->sdu_ready, sdu, sizeof(struct sdu *)) <
             sizeof(struct sdu *)) {
                 LOG_ERR("There is not enough data in port-id %d fifo",
