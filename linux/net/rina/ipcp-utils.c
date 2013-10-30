@@ -58,7 +58,7 @@ static int string_dup_gfp(gfp_t            flags,
          * provoke no consequeunces
          */
         if (src) {
-                *dst = kstrdup(src, GFP_KERNEL);
+                *dst = kstrdup(src, flags);
                 if (!*dst) {
                         LOG_ERR("Cannot duplicate source string");
                         return -1;
