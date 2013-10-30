@@ -464,7 +464,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 }
         }
 
-        *sdu = rkzalloc(sizeof(struct sdu *), GFP_ATOMIC);
+        *sdu = (struct sdu *) rkzalloc(sizeof(struct sdu *), GFP_ATOMIC);
         if (!sdu) {
                 spin_unlock(&instance->lock);
                 return -1;
@@ -477,8 +477,6 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 spin_unlock(&instance->lock);
                 return -1;
         }
-
-        *sdu = (struct sdu *) *sdu;
 
         spin_unlock(&instance->lock);
 
