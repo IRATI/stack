@@ -6,7 +6,6 @@ import java.util.concurrent.Executors;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import rina.utils.apps.echo.server.EchoServer;
 import rina.utils.apps.echo.utils.ApplicationRegistrationListener;
 import rina.utils.apps.echo.utils.FlowAllocationListener;
 import rina.utils.apps.echo.utils.FlowDeallocationListener;
@@ -33,7 +32,7 @@ FlowAllocationListener, FlowDeallocationListener {
 	private int numberOfSdus = 0;
 	private int sduSize = 0;
 	
-	private static final Log log = LogFactory.getLog(EchoServer.class);
+	private static final Log log = LogFactory.getLog(EchoClient.class);
 	
 	/**
 	 * The APNamingInfo associated to the control AE of the Echo application
@@ -156,6 +155,8 @@ FlowAllocationListener, FlowDeallocationListener {
 				for(int i=0; i<numberOfSdus; i++){
 					try{
 						flow.writeSDU(buffer, sduSize);
+						log.debug("Wrote SDU of size " + sduSize 
+								+ " to portId "+flow.getPortId());
 					}catch(Exception ex){
 						ex.printStackTrace();
 					}
@@ -166,7 +167,7 @@ FlowAllocationListener, FlowDeallocationListener {
 					rina.getIpcManager().withdrawPendingFlow(event.getSequenceNumber());
 				} catch (Exception ex) {
 					log.error(ex.getMessage());
-				System.exit(-1);
+					System.exit(-1);
 				}
 			}
 		}
