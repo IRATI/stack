@@ -155,6 +155,8 @@ FlowAllocationListener, FlowDeallocationListener {
 				for(int i=0; i<numberOfSdus; i++){
 					try{
 						flow.writeSDU(buffer, sduSize);
+						log.debug("Wrote SDU of size " + sduSize 
+								+ " to portId "+flow.getPortId());
 					}catch(Exception ex){
 						ex.printStackTrace();
 					}
