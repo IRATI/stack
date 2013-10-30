@@ -812,7 +812,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 		
                 /* Store SDU in queue */
                 kfifo_put(&flow->sdu_queue, du);
-	
+
                 if (kipcm_flow_arrived(default_kipcm,
                                        data->id,
                                        flow->flow_id,
@@ -825,9 +825,10 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                         flow_destroy(data, flow);
 			kfree_skb(skb);
 			return 0;
-                }
+                }	
         } else {
-                LOG_DBG("Flow exists, queueing or delivering");
+#if 0
+		LOG_DBG("Flow exists, queueing or delivering");
                 gha_destroy(ghaddr);
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
 			LOG_DBG("Posting to kipcm");
@@ -836,6 +837,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 			LOG_DBG("Queueing frame");
                         kfifo_put(&flow->sdu_queue, du);
                 }
+#endif
         }
 
         kfree_skb(skb);
