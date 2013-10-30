@@ -24,8 +24,8 @@
 #include "common.h"
 #include "du.h"
 #include "qos.h"
+#include "ipcp.h"
 
-typedef int16_t cep_id_t;
 
 struct connection {
         port_id_t port_id;
@@ -46,14 +46,15 @@ struct efcp_container;
 
 struct efcp_container * efcp_container_create(void);
 int                     efcp_container_destroy(struct efcp_container * c);
+int                     efcp_container_set_dt_cons(struct data_transfer_constants * dt_cons,
+                                                   struct efcp_container          * container);
 int                     efcp_container_write(struct efcp_container * container,
                                              cep_id_t                cep_id,
                                              struct sdu *            sdu);
 
 /* FIXME: Should a cep_id_t be returned instead ? */
-cep_id_t      efcp_connection_create(struct efcp_container *   container,
-                                     struct connection * connection);
-
+cep_id_t      efcp_connection_create(struct efcp_container * container,
+                                     struct connection     * connection);
 int           efcp_connection_destroy(struct efcp_container * container,
                                       cep_id_t                id);
 int           efcp_connection_update(struct efcp_container * container,

@@ -2,6 +2,8 @@
  * EFCP (Error and Flow Control Protocol)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -74,11 +76,13 @@ static int efcp_destroy(struct efcp * instance)
 }
 
 struct efcp_container {
-        struct efcp_imap *       instances;
-        struct cidm *            cidm;
+        struct efcp_imap               * instances;
+        struct cidm                    * cidm;
+        struct data_transfer_constants   dt_cons;
 };
 
 // efcp_imap maps cep_id_t to efcp_instances
+
 
 struct efcp_container * efcp_container_create(void)
 {
@@ -108,6 +112,24 @@ int efcp_container_destroy(struct efcp_container * container)
         return 0;
 }
 EXPORT_SYMBOL(efcp_container_destroy);
+
+int efcp_container_set_dt_cons(struct data_transfer_constants * dt_cons,
+                               struct efcp_container          * container)
+{
+        container->dt_cons.address_length = dt_cons->address_length;
+        container->dt_cons.cep_id_length  = dt_cons->cep_id_length;
+        container->dt_cons.length_length  = dt_cons->length_length;
+        container->dt_cons.port_id_length = dt_cons->port_id_length;
+        container->dt_cons.qos_id_length  = dt_cons->qos_id_length;
+        container->dt_cons.seq_num_length = dt_cons->seq_num_length;
+        container->dt_cons.max_pdu_size   = dt_cons->max_pdu_size;
+        container->dt_cons.max_pdu_life   = dt_cons->max_pdu_life;
+        container->dt_cons.dif_integrity  = dt_cons->dif_integrity;
+        
+        LOG_DBG("Succesfully set data transfer constants to efcp container");
+        return 0;
+}
+EXPORT_SYMBOL(efcp_container_set_dt_cons);
 
 int efcp_container_write(struct efcp_container * container,
                          cep_id_t                cep_id,

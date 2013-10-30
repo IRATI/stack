@@ -2889,7 +2889,7 @@ int rnl_ipcp_conn_create_resp_msg(ipc_process_id_t ipc_id,
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
                                    nl_port_id,
-                                   RINA_C_IPCM_CONN_CREATE_RESPONSE,
+                                   RINA_C_IPCP_CONN_CREATE_RESPONSE,
                                    seq_num);
 }
 EXPORT_SYMBOL(rnl_ipcp_conn_create_resp_msg);
@@ -2944,7 +2944,7 @@ int rnl_ipcp_conn_create_result_msg(ipc_process_id_t ipc_id,
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
                                    nl_port_id,
-                                   RINA_C_IPCM_CONN_CREATE_RESULT,
+                                   RINA_C_IPCP_CONN_CREATE_RESULT,
                                    seq_num);
 }
 EXPORT_SYMBOL(rnl_ipcp_conn_create_result_msg);
@@ -2996,7 +2996,7 @@ int rnl_ipcp_conn_update_result_msg(ipc_process_id_t ipc_id,
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
                                    nl_port_id,
-                                   RINA_C_IPCM_CONN_UPDATE_RESULT,
+                                   RINA_C_IPCP_CONN_UPDATE_RESULT,
                                    seq_num);
 }
 EXPORT_SYMBOL(rnl_ipcp_conn_update_result_msg);
