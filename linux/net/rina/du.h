@@ -84,11 +84,6 @@ struct buffer {
         size_t size;
 };
 
-struct pdu {
-        struct pci *    pci;
-        struct buffer * buffer;
-};
-
 /*
  * FIXME: This structure will be hidden soon. Do not access its field(s)
  *        directly, prefer the access functions below.
@@ -117,6 +112,15 @@ bool                  is_sdu_ok(const struct sdu * sdu);
 
 struct sdu *          sdu_protect(struct sdu * sdu);
 struct sdu *          sdu_unprotect(struct sdu * sdu);
+
+/*
+ * FIXME: This structure will be hidden soon. Do not access its field(s)
+ *        directly, prefer the access functions below.
+ */
+struct pdu {
+        struct pci *    pci;
+        struct buffer * buffer;
+};
 
 struct pdu *          pdu_create(void);
 int                   pdu_destroy(struct pdu * pdu);
