@@ -797,7 +797,8 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                                                       flow->dest_ha);
                 if (gpaddr && gpa_is_ok(gpaddr)) {
                         flow->dest_pa = gpa_dup_gfp(GFP_ATOMIC, gpaddr);
-                        sname = string_toname(gpa_address_value(gpaddr));
+                        sname = string_toname_gfp(GFP_ATOMIC,
+                                                  gpa_address_value(gpaddr));
                 }
 		LOG_DBG("Got the address from ARP");
 		
@@ -825,10 +826,8 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 			kfree_skb(skb);
 			return 0;
                 }
-	
         } else {
-	
-		LOG_DBG("Flow exists, queueing or delivering");
+                LOG_DBG("Flow exists, queueing or delivering");
                 gha_destroy(ghaddr);
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
 			LOG_DBG("Posting to kipcm");
@@ -837,7 +836,6 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 			LOG_DBG("Queueing frame");
                         kfifo_put(&flow->sdu_queue, du);
                 }
-	
         }
 
         kfree_skb(skb);
