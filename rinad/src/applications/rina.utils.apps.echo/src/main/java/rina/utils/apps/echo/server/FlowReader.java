@@ -47,9 +47,7 @@ public class FlowReader implements Runnable {
 						+ " to portId "+flow.getPortId());
 			}catch(Exception ex){
 				log.error("Problems reading SDU from flow "+flow.getPortId());
-				if (isStopped()){
-					return;
-				}
+				stop();
 			}
 		}
 		
@@ -65,8 +63,10 @@ public class FlowReader implements Runnable {
 	}
 	
 	public synchronized void stop(){
-		log.info("Requesting reader of flow "+flow.getPortId()+ " to stop");
-		stop = true;
+		if (!stop) {
+			log.info("Requesting reader of flow "+flow.getPortId()+ " to stop");
+			stop = true;
+		}
 	}
 	
 	public synchronized boolean isStopped(){
