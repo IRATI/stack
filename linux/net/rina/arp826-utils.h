@@ -78,6 +78,9 @@ struct gha *        gha_create_gfp(gfp_t           flags,
 struct gha *        gha_create_broadcast(gha_type_t type);
 struct gha *        gha_create_broadcast_gfp(gfp_t      flags,
                                              gha_type_t type);
+struct gha *        gha_create_unknown(gha_type_t type);
+struct gha *        gha_create_unknown_gfp(gfp_t      flags,
+                                           gha_type_t type);
 int                 gha_destroy(struct gha * gha);
 bool                gha_is_ok(const struct gha * gha);
 struct gha *        gha_dup(const struct gha * gha);
