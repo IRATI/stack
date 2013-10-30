@@ -90,8 +90,8 @@ struct pdu {
 };
 
 /*
- * FIXME: This structure will be soon hidden, do not access its field(s)
- *        directly
+ * FIXME: This structure will be hidden soon. Do not access its field(s)
+ *        directly, prefer the access functions below.
  */
 struct sdu {
         struct buffer * buffer;
