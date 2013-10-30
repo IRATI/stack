@@ -64,7 +64,7 @@ struct name * name_create_and_init(const string_t * process_name,
                                    const string_t * process_instance,
                                    const string_t * entity_name,
                                    const string_t * entity_instance);
-struct name * name_create_and_init_gfp(gfp_t            flags,  
+struct name * name_create_and_init_gfp(gfp_t            flags,
                                        const string_t * process_name,
                                        const string_t * process_instance,
                                        const string_t * entity_name,
