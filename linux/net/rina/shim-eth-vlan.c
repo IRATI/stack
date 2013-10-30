@@ -781,17 +781,12 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                         return 0;
                 }
 
-                INIT_LIST_HEAD(&flow->list);
-
-                spin_lock(&data->lock);
-                list_add(&flow->list, &data->flows);
-                spin_unlock(&data->lock);
-
-		LOG_DBG("Added flow to the list");
-
-                flow->port_id_state = PORT_STATE_PENDING;
+		flow->port_id_state = PORT_STATE_PENDING;
                 flow->dest_ha       = ghaddr;
                 flow->flow_id       = kfa_flow_create(data->kfa);
+
+		LOG_DBG("Added flow to the list");
+            
                 sname               = NULL;
                 gpaddr              = rinarp_find_gpa(data->handle,
                                                       flow->dest_ha);
@@ -813,6 +808,12 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 /* Store SDU in queue */
                 kfifo_put(&flow->sdu_queue, du);
 
+		INIT_LIST_HEAD(&flow->list);
+
+                spin_lock(&data->lock);
+                list_add(&flow->list, &data->flows);
+                spin_unlock(&data->lock);
+
                 if (kipcm_flow_arrived(default_kipcm,
                                        data->id,
                                        flow->flow_id,
@@ -827,7 +828,6 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 			return 0;
                 }	
         } else {
-#if 0
 		LOG_DBG("Flow exists, queueing or delivering");
                 gha_destroy(ghaddr);
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
@@ -837,7 +837,6 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 			LOG_DBG("Queueing frame");
                         kfifo_put(&flow->sdu_queue, du);
                 }
-#endif
         }
 
         kfree_skb(skb);
