@@ -84,33 +84,45 @@ struct buffer {
         size_t size;
 };
 
-struct pdu {
-        struct pci *    pci;
-        struct buffer * buffer;
-};
-
+/*
+ * FIXME: This structure will be hidden soon. Do not access its field(s)
+ *        directly, prefer the access functions below.
+ */
 struct sdu {
         struct buffer * buffer;
 };
 
 /* NOTE: sdu_create_from() takes the ownership of the buffer passed */
-struct sdu * sdu_create_from(void * data,
-                             size_t size);
-struct sdu * sdu_create_from_gfp(gfp_t  flags,
-                                 void * data,
-                                 size_t size);
-int          sdu_destroy(struct sdu * s);
+struct sdu *          sdu_create_from(void * data,
+                                      size_t size);
+struct sdu *          sdu_create_from_gfp(gfp_t  flags,
+                                          void * data,
+                                          size_t size);
+int                   sdu_destroy(struct sdu * s);
 
-struct sdu * sdu_dup(struct sdu * sdu);
-struct sdu * sdu_dup_gfp(gfp_t        flags,
-                         struct sdu * sdu);
+const struct buffer * sdu_buffer(const struct sdu * s);
+/* FIXME: should be returning a ssize_t instead ... */
+size_t                sdu_buffer_length(const struct sdu *s);
 
-bool         is_sdu_ok(const struct sdu * sdu);
+struct sdu *          sdu_dup(struct sdu * sdu);
+struct sdu *          sdu_dup_gfp(gfp_t        flags,
+                                  struct sdu * sdu);
 
-struct sdu * sdu_protect(struct sdu * sdu);
-struct sdu * sdu_unprotect(struct sdu * sdu);
+bool                  is_sdu_ok(const struct sdu * sdu);
 
-struct pdu * pdu_create(void);
-int          pdu_destroy(struct pdu * pdu);
+struct sdu *          sdu_protect(struct sdu * sdu);
+struct sdu *          sdu_unprotect(struct sdu * sdu);
+
+/*
+ * FIXME: This structure will be hidden soon. Do not access its field(s)
+ *        directly, prefer the access functions below.
+ */
+struct pdu {
+        struct pci *    pci;
+        struct buffer * buffer;
+};
+
+struct pdu *          pdu_create(void);
+int                   pdu_destroy(struct pdu * pdu);
 
 #endif
