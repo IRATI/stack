@@ -1,25 +1,25 @@
 package rina.ipcmanager.impl.console;
 
-import eu.irati.librina.AssignToDIFResponseEvent;
 import eu.irati.librina.IPCEvent;
+import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
 import eu.irati.librina.TimerExpiredEvent;
 import rina.ipcmanager.impl.IPCManager;
 
 /**
- * The command to create a new IPC Process
+ * The command to register an IPC Process to an N-1 DIF
  * @author eduardgrasa
  *
  */
-public class AssignToDIFCommand extends ConsoleCommand{
+public class UnregisterIPCProcessFromNMinusOneDIF extends ConsoleCommand{
 
-	public static final String ID = "assigndif";
-	private static final String USAGE = "assigndif <ipcp_id> <dif_name>";
+	public static final String ID = "unregn1dif";
+	private static final String USAGE = "unregn1dif <ipcp_id> <dif_name>";
 	
 	private CancelCommandTimerTask cancelCommandTask = null;
 	private long ipcProcessId;
 	private String difName;
 	
-	public AssignToDIFCommand(IPCManager ipcManager, IPCManagerConsole console){
+	public UnregisterIPCProcessFromNMinusOneDIF(IPCManager ipcManager, IPCManagerConsole console){
 		super(ID, ipcManager, console);
 	}
 	
@@ -40,10 +40,10 @@ public class AssignToDIFCommand extends ConsoleCommand{
 		long handle = -1;
 		
 		try{
-			handle = getIPCManager().requestAssignToDIF(ipcProcessId, difName);
+			handle = getIPCManager().requestUnregistrationFromNMinusOneDIF(ipcProcessId, difName);
 		}catch(Exception ex){
 			getIPCManagerConsole().unlock();
-			return "Error executing assign IPC Process to DIF command: " + ex.getMessage();
+			return "Error executing unregister IPC Process from N-1 DIF command: " + ex.getMessage();
 		}
 		
 		getIPCManagerConsole().setPendingRequestId(handle);
@@ -56,7 +56,7 @@ public class AssignToDIFCommand extends ConsoleCommand{
 		try{
 			response = getIPCManagerConsole().getResponse();
 		}catch(Exception ex){
-			return "Error waiting for assign to DIF response: "+ex.getMessage();
+			return "Error waiting for register IPC Process to N-1 DIF response: "+ex.getMessage();
 		}
 		
 		if (response == null) {
@@ -70,15 +70,15 @@ public class AssignToDIFCommand extends ConsoleCommand{
 		
 		cancelCommandTask.cancel();
 		
-		if (!(response instanceof AssignToDIFResponseEvent)) {
+		if (!(response instanceof IpcmUnregisterApplicationResponseEvent)) {
 			return "Got a wrong response to an event";
 		}
 		
-		AssignToDIFResponseEvent event = (AssignToDIFResponseEvent) response;
+		IpcmUnregisterApplicationResponseEvent event = (IpcmUnregisterApplicationResponseEvent) response;
 		if (event.getResult() == 0) {
-			return "Successfully assigned IPC Process " + ipcProcessId + " to DIF " + difName;
+			return "Successfully unregistered IPC Process " + ipcProcessId + " from DIF " + difName;
 		} else {
-			return "Problems assigning IPC Process " + ipcProcessId + " to DIF " + difName +
+			return "Problems unregistering IPC Process " + ipcProcessId + " from DIF " + difName +
 					". Error code: " + event.getResult();
 		}
 	}

@@ -494,6 +494,17 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
+    } else if ($1->getType() == rina::ASSIGN_TO_DIF_REQUEST_EVENT) {
+    	rina::AssignToDIFRequestEvent *flowReqEvent = dynamic_cast<rina::AssignToDIFRequestEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/AssignToDIFRequestEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::AssignToDIFRequestEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
     } else if ($1->getType() == rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT) {
     	rina::UpdateDIFConfigurationResponseEvent *flowReqEvent = dynamic_cast<rina::UpdateDIFConfigurationResponseEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/UpdateDIFConfigurationResponseEvent");
@@ -502,6 +513,28 @@
             if (mid) {
                 jlong cptr = 0;
                 *(rina::UpdateDIFConfigurationResponseEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION) {
+    	rina::IPCProcessDIFRegistrationEvent *flowReqEvent = dynamic_cast<rina::IPCProcessDIFRegistrationEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/IPCProcessDIFRegistrationEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::IPCProcessDIFRegistrationEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT) {
+    	rina::IPCProcessDaemonInitializedEvent *flowReqEvent = dynamic_cast<rina::IPCProcessDaemonInitializedEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/IPCProcessDaemonInitializedEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::IPCProcessDaemonInitializedEvent **)&cptr = flowReqEvent; 
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
@@ -626,4 +659,5 @@ MAKE_COLLECTION_ITERABLE(FlowInformationListIterator, FlowInformation, std::list
 %template(RIBObjectList) std::list<rina::RIBObject>;
 %template(StringList) std::list<std::string>;
 %template(FlowInformationList) std::list<rina::FlowInformation>;
+%template(KernelIPCProcessSingleton) Singleton<rina::KernelIPCProcess>;
 

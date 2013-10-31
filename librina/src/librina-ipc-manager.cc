@@ -16,6 +16,7 @@
 
 #define RINA_PREFIX "ipc-manager"
 
+#include <algorithm>
 #include <dirent.h>
 #include <errno.h>
 #include <iostream>
@@ -105,6 +106,7 @@ IPCProcess::IPCProcess() {
 	difMember = false;
 	assignInProcess = false;
 	configureInProcess = false;
+	initialized = false;
 }
 
 IPCProcess::IPCProcess(unsigned short id, unsigned int portId,
@@ -115,6 +117,7 @@ IPCProcess::IPCProcess(unsigned short id, unsigned int portId,
 	this->pid = pid;
 	this->type = type;
 	this->name = name;
+	initialized = false;
 	difMember = false;
 	assignInProcess = false;
 	configureInProcess = false;
@@ -164,10 +167,17 @@ void IPCProcess::setDIFInformation(const DIFInformation& difInformation){
 	this->difInformation = difInformation;
 }
 
+void IPCProcess::setInitialized() {
+        initialized = true;
+}
+
 unsigned int IPCProcess::assignToDIF(
                 const DIFInformation& difInformation)
 throw (AssignToDIFException) {
         unsigned int seqNum = 0;
+
+        if (!initialized)
+                throw AssignToDIFException("IPC Process not yet initialized");
 
         std::string currentDIFName =
                         this->difInformation.getDifName().getProcessName();
@@ -285,6 +295,15 @@ void IPCProcess::notifyRegistrationToSupportingDIF(
 		const ApplicationProcessNamingInformation& ipcProcessName,
 		const ApplicationProcessNamingInformation& difName)
 throw (NotifyRegistrationToDIFException) {
+        std::list<ApplicationProcessNamingInformation>::iterator it =
+                        std::find(nMinusOneDIFs.begin(),
+                                  nMinusOneDIFs.end(), difName);
+        if (it != nMinusOneDIFs.end()) {
+                throw NotifyRegistrationToDIFException(
+                                "IPCProcess already registered to N-1 DIF"
+                                + difName.getProcessName());
+        }
+
 #if STUB_API
 	//Do nothing
 #else
@@ -302,12 +321,22 @@ throw (NotifyRegistrationToDIFException) {
 		throw NotifyRegistrationToDIFException(e.what());
 	}
 #endif
+	nMinusOneDIFs.push_back(difName);
 }
 
 void IPCProcess::notifyUnregistrationFromSupportingDIF(
 		const ApplicationProcessNamingInformation& ipcProcessName,
 		const ApplicationProcessNamingInformation& difName)
 throw (NotifyUnregistrationFromDIFException) {
+        std::list<ApplicationProcessNamingInformation>::iterator it =
+                        std::find(nMinusOneDIFs.begin(),
+                                        nMinusOneDIFs.end(), difName);
+        if (it == nMinusOneDIFs.end()) {
+                throw NotifyRegistrationToDIFException(
+                                "IPCProcess not registered to N-1 DIF"
+                                + difName.getProcessName());
+        }
+
 #if STUB_API
 	//Do nothing
 #else
@@ -325,6 +354,12 @@ throw (NotifyUnregistrationFromDIFException) {
 		throw NotifyUnregistrationFromDIFException(e.what());
 	}
 #endif
+	nMinusOneDIFs.remove(difName);
+}
+
+std::list<ApplicationProcessNamingInformation>
+IPCProcess::getSupportingDIFs() {
+        return nMinusOneDIFs;
 }
 
 void IPCProcess::enroll(const ApplicationProcessNamingInformation& difName,
@@ -715,6 +750,7 @@ IPCProcess * IPCProcessFactory::create(
 		const std::string& difType) throw (CreateIPCProcessException) {
 	lock();
 	int ipcProcessId = 1;
+	unsigned int portId = 0;
 	pid_t pid=0;
 	for (int i = 1; i < 1000; i++) {
 		if (ipcProcesses.find(i) == ipcProcesses.end()) {
@@ -744,23 +780,24 @@ IPCProcess * IPCProcessFactory::create(
 			char * argv[] =
 			{
                                 /* FIXME: These hardwired things must disappear */
-					stringToCharArray("/usr/bin/java"),
-					stringToCharArray("-jar"),
-					stringToCharArray(_installationPath +
-					                "/ipcprocess/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar"),
-					stringToCharArray(ipcProcessName.getProcessName()),
-					stringToCharArray(ipcProcessName.getProcessInstance()),
-					intToCharArray(ipcProcessId),
-					0
+				stringToCharArray("/usr/bin/java"),
+				stringToCharArray("-jar"),
+				stringToCharArray(_installationPath +
+					          "/ipcprocess/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar"),
+				stringToCharArray(ipcProcessName.getProcessName()),
+				stringToCharArray(ipcProcessName.getProcessInstance()),
+				intToCharArray(ipcProcessId),
+				intToCharArray(getNelinkPortId()),
+				0
 			};
 
 			char * envp[] =
 			{
                                 /* FIXME: These hardwired things must disappear */
-					stringToCharArray("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"),
-					stringToCharArray("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:"
-					                +_libraryPath),
-					(char*) 0
+				stringToCharArray("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"),
+				stringToCharArray("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:"
+					          +_libraryPath),
+				(char*) 0
 			};
 
 			execve(argv[0], &argv[0], envp);
@@ -780,12 +817,13 @@ IPCProcess * IPCProcessFactory::create(
 			throw CreateIPCProcessException();
 		}else{
 			//This is the IPC Manager, and fork was successful
+		        portId = pid;
 			LOG_DBG("Craeted a new IPC Process with pid = %d", pid);
 		}
 	}
 #endif
 
-	IPCProcess * ipcProcess = new IPCProcess(ipcProcessId, 0, pid, difType,
+	IPCProcess * ipcProcess = new IPCProcess(ipcProcessId, portId, pid, difType,
 			ipcProcessName);
 	ipcProcesses[ipcProcessId] = ipcProcess;
 	unlock();
@@ -1108,6 +1146,23 @@ UpdateDIFConfigurationResponseEvent::UpdateDIFConfigurationResponseEvent(
                         BaseResponseEvent(result,
                                         UPDATE_DIF_CONFIG_RESPONSE_EVENT,
                                         sequenceNumber) {
+}
+
+/* CLASS IPC PROCESS DAEMON INITIALIZED EVENT */
+IPCProcessDaemonInitializedEvent::IPCProcessDaemonInitializedEvent(
+                unsigned short ipcProcessId, unsigned int sequenceNumber):
+                        IPCEvent(IPC_PROCESS_DAEMON_INITIALIZED_EVENT,
+                                        sequenceNumber) {
+        this->ipcProcessId = ipcProcessId;
+}
+
+unsigned short IPCProcessDaemonInitializedEvent::getIPCProcessId() const {
+        return ipcProcessId;
+}
+
+/* CLASS TIMER EXPIRED EVENT */
+TimerExpiredEvent::TimerExpiredEvent(unsigned int sequenceNumber) :
+                IPCEvent(TIMER_EXPIRED_EVENT, sequenceNumber) {
 }
 
 }

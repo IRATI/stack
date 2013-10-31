@@ -29,32 +29,6 @@ namespace rina {
 static std::string NORMAL_IPC_PROCESS= "normal-ipc";
 
 /**
- * Thrown when there are problems assigning an IPC Process to a DIF
- */
-class AssignToDIFException: public IPCException {
-public:
-	AssignToDIFException():
-		IPCException("Problems assigning ICP Process to DIF"){
-	}
-	AssignToDIFException(const std::string& description):
-		IPCException(description){
-	}
-};
-
-/**
- * Thrown when there are problems updating a DIF configuration
- */
-class UpdateDIFConfigurationException: public IPCException {
-public:
-        UpdateDIFConfigurationException():
-                IPCException("Problems updating DIF configuration"){
-        }
-        UpdateDIFConfigurationException(const std::string& description):
-                IPCException(description){
-        }
-};
-
-/**
  * Thrown when there are problems notifying an IPC Process that it has been
  * registered to an N-1 DIF
  */
@@ -372,6 +346,9 @@ class IPCProcess {
 	/** The current information of the DIF where the IPC Process is assigned*/
 	DIFInformation difInformation;
 
+	/** True if the IPC Process is initialized and can start processing operations*/
+	bool initialized;
+
 	/** True if the IPC Process is a member of the DIF, false otherwise */
 	bool difMember;
 
@@ -397,6 +374,9 @@ class IPCProcess {
 	/** The map of pending flow operations */
 	std::map<unsigned int, FlowInformation>
 	pendingFlowOperations;
+
+	/** The N-1 DIFs where this IPC Process is registered at */
+	std::list<ApplicationProcessNamingInformation> nMinusOneDIFs;
 
 	/** Return the information of a registration request */
 	ApplicationProcessNamingInformation getPendingRegistration(
@@ -429,6 +409,11 @@ public:
 	void setDIFInformation(const DIFInformation& difInformation);
 	bool isDIFMember() const;
 	void setDIFMember(bool difMember);
+
+	/**
+	 * Invoked by the IPC Manager to set the IPC Process as initialized.
+	 */
+	void setInitialized();
 
 	/**
 	 * Invoked by the IPC Manager to make an existing IPC Process a member of a
@@ -480,9 +465,10 @@ public:
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been
 	 * registered to the N-1 DIF designed by difName
 	 *
-	 * @param ipcProcessName The name of the IPC Process being registered
 	 * @param difName The name of the N-1 DIF where the IPC Process has been
 	 * registered
+	 * @param ipcProcessName the name of the N-1 IPC Process where the IPC Process
+	 * has been registered (member of difName)
 	 * @throws NotifyRegistrationToDIFException if the IPC Process was already registered to
 	 * that DIF
 	 */
@@ -504,6 +490,12 @@ public:
 			const ApplicationProcessNamingInformation& ipcProcessName,
 			const ApplicationProcessNamingInformation& difName)
 	throw (NotifyUnregistrationFromDIFException);
+
+	/**
+	 * Return the list of supporting DIFs where this IPC Process is registered at
+	 * @return
+	 */
+	std::list<ApplicationProcessNamingInformation> getSupportingDIFs();
 
 	/**
 	 * Invoked by the IPC Manager to trigger the enrollment of an IPC Process
@@ -927,6 +919,25 @@ public:
                         int result, unsigned int sequenceNumber);
 };
 
+/**
+ * Event informing about the successful initialization of an IPC Process
+ * Daemon
+ */
+class IPCProcessDaemonInitializedEvent: public IPCEvent {
+        unsigned short ipcProcessId;
+public:
+        IPCProcessDaemonInitializedEvent(unsigned short ipcProcessId,
+                        unsigned int sequenceNumber);
+        unsigned short getIPCProcessId() const;
+};
+
+/**
+ * Event informing about the expiration of a timer
+ */
+class TimerExpiredEvent: public IPCEvent {
+public:
+        TimerExpiredEvent(unsigned int sequenceNumber);
+};
 
 
 }

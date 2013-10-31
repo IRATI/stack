@@ -10,6 +10,8 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.ReentrantLock;
@@ -45,6 +47,8 @@ public class IPCManagerConsole implements Runnable{
 	
 	private BlockingQueue<IPCEvent> responsesQueue = null;
 	
+	private Timer timer = null;
+	
 	public IPCManagerConsole(IPCManager ipcManager){
 		commands = new Hashtable<String, ConsoleCommand>();
 		commands.put(GetSystemCapabilitiesCommand.ID, new GetSystemCapabilitiesCommand(ipcManager, this));
@@ -54,9 +58,16 @@ public class IPCManagerConsole implements Runnable{
 		commands.put(DestroyIPCProcessCommand.ID, new DestroyIPCProcessCommand(ipcManager, this));
 		commands.put(AssignToDIFCommand.ID, new AssignToDIFCommand(ipcManager, this));
 		commands.put(UpdateDIFConfigurationCommand.ID, new UpdateDIFConfigurationCommand(ipcManager, this));
+		commands.put(RegisterIPCProcessToNMinusOneDIF.ID, new RegisterIPCProcessToNMinusOneDIF(ipcManager, this));
+		commands.put(UnregisterIPCProcessFromNMinusOneDIF.ID, new UnregisterIPCProcessFromNMinusOneDIF(ipcManager, this));
 		
 		lock = new ReentrantLock();
 		responsesQueue = new LinkedBlockingQueue<IPCEvent>();
+		timer = new Timer();
+	}
+	
+	public void scheduleTask(TimerTask task, long delay) {
+		timer.schedule(task, delay);
 	}
 	
 	public void lock() {
