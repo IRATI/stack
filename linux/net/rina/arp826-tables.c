@@ -576,9 +576,11 @@ void tbls_fini(void)
         tables = NULL;
 }
 
-int arp826_add(uint16_t           ptype,
-               const struct gpa * pa,
-               const struct gha * ha)
+/* FIXME: Use dev */
+int arp826_add(uint16_t            ptype,
+               const struct gpa *  pa,
+               const struct gha *  ha,
+	       struct net_device * dev)
 {
         struct table *       cl;
         struct table_entry * e;
@@ -645,9 +647,11 @@ int arp826_add(uint16_t           ptype,
 }
 EXPORT_SYMBOL(arp826_add);
 
-int arp826_remove(uint16_t           ptype,
-                  const struct gpa * pa,
-                  const struct gha * ha)
+/* FIXME: Use dev */ 
+int arp826_remove(uint16_t            ptype,
+                  const struct gpa *  pa,
+                  const struct gha *  ha,
+		  struct net_device * dev)
 {
         struct table *       cl;
         struct table_entry * ce;
@@ -678,8 +682,10 @@ int arp826_remove(uint16_t           ptype,
 }
 EXPORT_SYMBOL(arp826_remove);
 
-const struct gpa * arp826_find_gpa(uint16_t           ptype,
-                                   const struct gha * ha)
+/* FIXME: Use dev */
+const struct gpa * arp826_find_gpa(uint16_t            ptype,
+                                   const struct gha *  ha,
+				   struct net_device * dev)
 {
         struct table *             cl;
         const struct table_entry * ce;

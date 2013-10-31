@@ -34,8 +34,9 @@
 
 /* This is an observer (a single one) */
 struct rinarp_handle {
-        struct gpa * pa;
-        struct gha * ha;
+        struct gpa *        pa;
+        struct gha *        ha;
+	struct net_device * dev;
 };
 
 static void handle_destroy(struct rinarp_handle * handle)
@@ -50,9 +51,13 @@ static void handle_destroy(struct rinarp_handle * handle)
         rkfree(handle);
 }
 
-static struct rinarp_handle * handle_create(struct gpa * pa, struct gha * ha)
+static struct rinarp_handle * handle_create(struct gpa *        pa, 
+					    struct gha *        ha,
+					    struct net_device * dev)
 {
         struct rinarp_handle * handle;
+
+	ASSERT(dev);
 
         if (!gpa_is_ok(pa) || !gha_is_ok(ha)) {
                 LOG_ERR("Bad input parameters, cannot create a handle");
@@ -65,7 +70,8 @@ static struct rinarp_handle * handle_create(struct gpa * pa, struct gha * ha)
 
         handle->pa = gpa_dup(pa);
         handle->ha = gha_dup(ha);
-        if (!handle->pa || !handle->ha) {
+	handle->dev = dev;
+        if (!handle->pa || !handle->ha || !handle->dev) {
                 handle_destroy(handle);
                 return NULL;
         }
@@ -74,18 +80,20 @@ static struct rinarp_handle * handle_create(struct gpa * pa, struct gha * ha)
 }
 
 static bool handle_is_ok(struct rinarp_handle * handle)
-{ return (handle && gpa_is_ok(handle->pa) && gha_is_ok(handle->ha)); }
+{ return (handle && gpa_is_ok(handle->pa) && 
+	  gha_is_ok(handle->ha) && handle->dev); }
 
 struct rinarp_handle * rinarp_add(const struct gpa * pa,
-                                  const struct gha * ha)
+                                  const struct gha * ha,
+				  struct net_device * dev)
 {
         struct rinarp_handle * handle;
 
-        handle = handle_create(gpa_dup(pa), gha_dup(ha));
+        handle = handle_create(gpa_dup(pa), gha_dup(ha), dev);
         if (!handle)
                 return NULL;
 
-        if (arp826_add(ETH_P_RINA, handle->pa, handle->ha)) {
+        if (arp826_add(ETH_P_RINA, handle->pa, handle->ha, dev)) {
                 handle_destroy(handle);
                 return NULL;
         }
@@ -103,7 +111,7 @@ int rinarp_remove(struct rinarp_handle * handle)
                 return -1;
         }
 
-        arp826_remove(ETH_P_RINA, handle->pa, handle->ha);
+        arp826_remove(ETH_P_RINA, handle->pa, handle->ha, handle->dev);
         handle_destroy(handle);
 
         return 0;
@@ -124,7 +132,7 @@ int rinarp_resolve_gpa(struct rinarp_handle * handle,
         }
 
         return arp826_resolve_gpa(ETH_P_RINA,
-                                  handle->pa, handle->ha, tpa,
+                                  handle->pa, handle->ha, tpa, handle->dev,
                                   (arp826_notify_t) notify, opaque);
 }
 EXPORT_SYMBOL(rinarp_resolve_gpa);
@@ -137,7 +145,7 @@ const struct gpa * rinarp_find_gpa(struct rinarp_handle * handle,
                 return NULL;
         }
 
-        return arp826_find_gpa(ETH_P_RINA, ha);
+        return arp826_find_gpa(ETH_P_RINA, ha, handle->dev);
 }
 EXPORT_SYMBOL(rinarp_find_gpa);
 
