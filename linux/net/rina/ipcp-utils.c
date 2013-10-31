@@ -131,22 +131,27 @@ void name_fini(struct name * n)
         LOG_DBG("Entity instance at %pK",  n->entity_instance);
 #endif
 
+        LOG_DBG("LEODEBUG NAME ENTRO");
         if (n->process_name) {
                 rkfree(n->process_name);
                 n->process_name = NULL;
         }
+        LOG_DBG("LEODEBUG NAME STEP 1");
         if (n->process_instance) {
                 rkfree(n->process_instance);
                 n->process_instance = NULL;
         }
+        LOG_DBG("LEODEBUG NAME STEP 2");
         if (n->entity_name) {
                 rkfree(n->entity_name);
                 n->entity_name = NULL;
         }
+        LOG_DBG("LEODEBUG NAME STEP 3");
         if (n->entity_instance) {
                 rkfree(n->entity_instance);
                 n->entity_instance = NULL;
         }
+        LOG_DBG("LEODEBUG NAME STEP 4");
 
         LOG_DBG("Name at %pK finalized successfully", n);
 }
@@ -154,8 +159,10 @@ EXPORT_SYMBOL(name_fini);
 
 void name_destroy(struct name * ptr)
 {
+        LOG_DBG("LEODEBUG NAME_DESTROY ENTRO");
         ASSERT(ptr);
 
+        LOG_DBG("LEODEBUG NAME_DESTROY EN MEDIO");
         name_fini(ptr);
 
         ASSERT(name_is_initialized(ptr));

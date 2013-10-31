@@ -603,7 +603,13 @@ assign_to_dif_free_and_reply(struct name *       dif_name,
 {
         struct ipcp_config * pos, * nxt;
         if (attrs)      rkfree(attrs);
-        LOG_DBG("STEP1");
+        LOG_DBG("STEP2");
+        if (dif_name)   name_destroy(dif_name);
+        LOG_DBG("STEP3");
+        if (dif_config) rkfree(dif_config);
+        LOG_DBG("STEP4");
+        if (msg)        rkfree(msg);
+        LOG_DBG("STEP5");
         if (dif_info) { 
                 LOG_DBG("LEODEBUG  ENTRANDO EN DIF_INFO_DESTROY");
                 list_for_each_entry_safe(pos, nxt, &dif_config->ipcp_config_entries, next) {
@@ -614,13 +620,7 @@ assign_to_dif_free_and_reply(struct name *       dif_name,
                 }
                 rkfree(dif_info);
         }
-        LOG_DBG("STEP2");
-        if (dif_name)   rkfree(dif_name);
-        LOG_DBG("STEP3");
-        if (dif_config) rkfree(dif_config);
-        LOG_DBG("STEP4");
-        if (msg)        rkfree(msg);
-        LOG_DBG("STEP5");
+        LOG_DBG("STEP1");
 
         if (rnl_assign_dif_response(id, res, seq_num, port_id))
                 return -1;
