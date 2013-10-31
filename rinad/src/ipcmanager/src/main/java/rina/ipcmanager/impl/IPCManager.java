@@ -177,7 +177,6 @@ public class IPCManager {
 			try{
 				ipcProcess = createIPCProcess(processNamingInfo, 
 						ipcProcessToCreate.getType());
-				ipcProcess.setInitialized();
 			}catch(CreateIPCProcessException ex){
 				log.error(ex.getMessage() + ". Problems creating IPC Process " 
 						+ processNamingInfo.toString());
