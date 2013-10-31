@@ -578,7 +578,7 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
                 LOG_ERR("Failed to create gha");
                 return -1;
         }
-        data->handle = rinarp_add(pa,ha);
+        data->handle = rinarp_add(pa, ha, data->dev);
         if (!data->handle) {
                 LOG_ERR("Failed to register application in ARP");
                 name_destroy(data->app_name);
