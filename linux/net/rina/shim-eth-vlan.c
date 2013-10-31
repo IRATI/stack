@@ -774,13 +774,13 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 
         flow = find_flow_by_gha(data, ghaddr);
         /* If the flow cannot be found --> New Flow! */
-	if (!flow) {
-		spin_lock(&receive_lock);
-		/* Used to check if by now a flow is created */
-		flow = find_flow_by_gha(data, ghaddr);
-		if (flow)
-			spin_unlock(&receive_lock);
-	}
+        if (!flow) {
+                spin_lock(&receive_lock);
+                /* Used to check if by now a flow is created */
+                flow = find_flow_by_gha(data, ghaddr);
+                if (flow)
+                        spin_unlock(&receive_lock);
+        }
 
         if (!flow) {
                 LOG_DBG("Have to create a new flow");
@@ -788,7 +788,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 if (!flow) {
                         gha_destroy(ghaddr);
                         kfree_skb(skb);
-			spin_unlock(&receive_lock);
+                        spin_unlock(&receive_lock);
                         return 0;
                 }
 
@@ -812,7 +812,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                         LOG_ERR("Couldn't create the sdu queue"
                                 "for a new flow");
                         flow_destroy(data, flow);
-			spin_unlock(&receive_lock);
+                        spin_unlock(&receive_lock);
                         return 0;
                 }
                 LOG_DBG("Created the queue");
@@ -837,10 +837,10 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                         kfifo_free(&flow->sdu_queue);
                         flow_destroy(data, flow);
                         kfree_skb(skb);
-			spin_unlock(&receive_lock);
+                        spin_unlock(&receive_lock);
                         return 0;
                 }
-		spin_unlock(&receive_lock);
+                spin_unlock(&receive_lock);
         } else {
                 LOG_DBG("Flow exists, queueing or delivering");
                 gha_destroy(ghaddr);
