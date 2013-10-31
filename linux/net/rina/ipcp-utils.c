@@ -536,3 +536,30 @@ struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
         return tmp;
 }
 EXPORT_SYMBOL(flow_spec_dup);
+
+int dif_info_destroy(struct dif_info * dif_info)
+{
+#if 0
+        struct ipcp_config * pos, * nxt;
+
+        LOG_DBG("LEODEBUG ENTRO");
+        if (!dif_info){
+                LOG_DBG("LEODEBUG  NI INFO");
+                return -1;
+        }
+        if (dif_info->dif_name)
+                name_destroy(dif_info->dif_name);
+        if (dif_info->configuration){
+                LOG_DBG("LEODEBUG  ENTRANDO EN DIF_INFO_DESTROY");
+                list_for_each_entry_safe(pos, nxt, &dif_info->configuration->ipcp_config_entries, next) {
+                        LOG_DBG("LEODEBUG  BORRANDO pos EN %pK:", pos);
+                        list_del(&pos->next);
+                        ipcp_config_destroy(pos);
+                } 
+        }
+       
+        rkfree(dif_info);
+#endif
+        return 0;
+}
+EXPORT_SYMBOL(dif_info_destroy);
