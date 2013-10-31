@@ -500,7 +500,6 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 spin_unlock(&data->lock);
 
-                du = NULL;
                 while(kfifo_get(&flow->sdu_queue, du)) {
                         kfa_sdu_post(data->kfa, flow->port_id, du);
                 }
@@ -752,7 +751,13 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         /* Get the SDU out of the sk_buff */
         nh = skb_network_header(skb);
         ASSERT(skb->tail - skb->network_header >= 0);
-        du = sdu_create_from_gfp(GFP_ATOMIC, nh, skb->tail - skb->network_header);
+        /* FIXME We should avoid this extra copy, but then we cannot free the
+         * skb at the end of the eth_vlan_rcv function. To do so we have to
+         * either find a way to free all the data of the skb except for the
+         * SDU, or delay freeing the skb until it is safe to do so.
+         */
+        du = sdu_create_from_gfp_copying(
+                        GFP_ATOMIC, nh, skb->tail - skb->network_header);
         if (!du) {
                 LOG_ERR("Couldn't create data unit");
                 gha_destroy(ghaddr);
