@@ -1607,7 +1607,7 @@ static int notify_ipcp_conn_destroy_req(void *             data,
         if (ipcp->ops->connection_destroy(ipcp->data, attrs->src_cep)) {
                 goto process_fail;
         }
-        
+
         return conn_destroy_result_free_and_reply(attrs,
                                                   msg,
                                                   hdr,
@@ -1648,7 +1648,7 @@ static int netlink_handlers_unregister(struct rnl_set * rnls)
 
         for (i=1; i < RINA_C_MAX; i++) {
                 if (kipcm_handlers[i] != NULL) {
-                        if (rnl_handler_unregister(rnls, i)) 
+                        if (rnl_handler_unregister(rnls, i))
                                 retval = -1;
                 }
         }
@@ -1662,29 +1662,29 @@ static int netlink_handlers_unregister(struct rnl_set * rnls)
 static int netlink_handlers_register(struct kipcm * kipcm)
 {
         int i,j;
-        kipcm_handlers[RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST]          = 
+        kipcm_handlers[RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST]          =
                 notify_ipcp_assign_dif_request;
-        kipcm_handlers[RINA_C_IPCM_ALLOCATE_FLOW_REQUEST]          = 
+        kipcm_handlers[RINA_C_IPCM_ALLOCATE_FLOW_REQUEST]          =
                 notify_ipcp_allocate_flow_request;
-        kipcm_handlers[RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE]         = 
+        kipcm_handlers[RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE]         =
                 notify_ipcp_allocate_flow_response;
-        kipcm_handlers[RINA_C_IPCM_REGISTER_APPLICATION_REQUEST]   = 
+        kipcm_handlers[RINA_C_IPCM_REGISTER_APPLICATION_REQUEST]   =
                 notify_ipcp_register_app_request;
-        kipcm_handlers[RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST] = 
+        kipcm_handlers[RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST] =
                 notify_ipcp_unregister_app_request;
-        kipcm_handlers[RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST]        = 
-                notify_ipcp_deallocate_flow_request;        
-        kipcm_handlers[RINA_C_IPCM_IPC_MANAGER_PRESENT]            = 
+        kipcm_handlers[RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST]        =
+                notify_ipcp_deallocate_flow_request;
+        kipcm_handlers[RINA_C_IPCM_IPC_MANAGER_PRESENT]            =
                 notify_ipc_manager_present;
-        kipcm_handlers[RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST]      = 
+        kipcm_handlers[RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST]      =
                 notify_ipcp_update_dif_config_request;
-        kipcm_handlers[RINA_C_IPCP_CONN_CREATE_REQUEST]            = 
+        kipcm_handlers[RINA_C_IPCP_CONN_CREATE_REQUEST]            =
                 notify_ipcp_conn_create_req;
-        kipcm_handlers[RINA_C_IPCP_CONN_CREATE_ARRIVED]            = 
+        kipcm_handlers[RINA_C_IPCP_CONN_CREATE_ARRIVED]            =
                 notify_ipcp_conn_create_arrived;
-        kipcm_handlers[RINA_C_IPCP_CONN_UPDATE_REQUEST]            = 
+        kipcm_handlers[RINA_C_IPCP_CONN_UPDATE_REQUEST]            =
                 notify_ipcp_conn_update_req;
-        kipcm_handlers[RINA_C_IPCP_CONN_DESTROY_REQUEST]           = 
+        kipcm_handlers[RINA_C_IPCP_CONN_DESTROY_REQUEST]           =
                 notify_ipcp_conn_destroy_req;
 
         for (i=1; i < RINA_C_MAX; i++) {
@@ -1694,7 +1694,7 @@ static int netlink_handlers_register(struct kipcm * kipcm)
                                                  kipcm,
                                                  kipcm_handlers[i])) {
                                 for (j = i-1; j > 0; j--) {
-                                        if (kipcm_handlers[j] != NULL) { 
+                                        if (kipcm_handlers[j] != NULL) {
                                                 if (rnl_handler_unregister(kipcm->rnls, j)) {
                                                         LOG_ERR("Failed handler unregister while bailing out");
                                                         /* FIXME: What else could be done here?" */
@@ -2227,26 +2227,26 @@ conn_generic_free_and_reply(msg_type_t            op_code;
         if (hdr)   rkfree(hdr);
 
         switch(op_code) {
-                case RINA_C_IPCP_CONN_CREATE_REQUEST:
-                        if (rnl_ipcp_conn_create_resp_msg(ipc_id,
-                                                            pid,
-                                                            src_cep,
-                                                            seq_num,
-                                                            nl_port_id)) {
-                                LOG_ERR("Could not snd conn_create_resp_msg");
-                                return -1;
-                        }
+        case RINA_C_IPCP_CONN_CREATE_REQUEST:
+                if (rnl_ipcp_conn_create_resp_msg(ipc_id,
+                                                  pid,
+                                                  src_cep,
+                                                  seq_num,
+                                                  nl_port_id)) {
+                        LOG_ERR("Could not snd conn_create_resp_msg");
+                        return -1;
+                }
 
-                case RINA_C_IPCP_CONN_CREATE_ARRIVED: 
-                        if (rnl_ipcp_conn_create_result_msg(ipc_id,
-                                                            pid,
-                                                            src_cep,
-                                                            dst_cep,
-                                                            seq_num,
-                                                            nl_port_id)) {
-                                LOG_ERR("Could not snd conn_create_result_msg");
-                                return -1;
-                        }
+        case RINA_C_IPCP_CONN_CREATE_ARRIVED:
+                if (rnl_ipcp_conn_create_result_msg(ipc_id,
+                                                    pid,
+                                                    src_cep,
+                                                    dst_cep,
+                                                    seq_num,
+                                                    nl_port_id)) {
+                        LOG_ERR("Could not snd conn_create_result_msg");
+                        return -1;
+                }
 
         }
 

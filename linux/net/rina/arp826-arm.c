@@ -217,7 +217,7 @@ int arp826_resolve_gpa(uint16_t            ptype,
                        const struct gpa *  spa,
                        const struct gha *  sha,
                        const struct gpa *  tpa,
-		       struct net_device * dev,
+                       struct net_device * dev,
                        arp826_notify_t     notify,
                        void *              opaque)
 {

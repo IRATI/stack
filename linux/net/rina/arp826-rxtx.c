@@ -151,7 +151,7 @@ int arp_send_reply(uint16_t            ptype,
                    const struct gha *  sha,
                    const struct gpa *  tpa,
                    const struct gha *  tha,
-		   struct net_device * dev)
+                   struct net_device * dev)
 {
 #if HAVE_RINARP
         struct gpa *        tmp_spa;
@@ -290,7 +290,7 @@ static struct arp_header * header_get(const struct sk_buff * skb)
 
 static int process(const struct sk_buff * skb,
                    struct table *         cl,
-		   struct net_device *    dev)
+                   struct net_device *    dev)
 {
         struct arp_header * header;
         uint16_t            operation;
@@ -447,8 +447,8 @@ static int process(const struct sk_buff * skb,
                 gha_dump(target_ha);
 
                 if (arp_send_reply(ptype,
-                                   tmp_tpa, target_ha, 
-				   tmp_spa, tmp_sha, dev)) {
+                                   tmp_tpa, target_ha,
+                                   tmp_spa, tmp_sha, dev)) {
                         /* FIXME: Couldn't send reply ... */
                         LOG_ERR("Couldn't send reply");
                         return -1;
