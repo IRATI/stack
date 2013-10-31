@@ -47,18 +47,17 @@ public class FlowReader implements Runnable{
 				}
 				sduListener.sduDelivered(sdu);
 			}catch(Exception ex){
-				System.out.println("Problems reading SDU from flow "+flow.getPortId());
-				return;
-				/*if (isStopped()){
-					return;
-				}*/
+				log.error("Problems reading SDU from flow "+flow.getPortId());
+				stop();
 			}
 		}
 	}
 	
 	public synchronized void stop(){
-		System.out.println("Requesting reader of flow "+flow.getPortId()+ " to stop");
-		stop = true;
+		if (!stop) {
+			log.info("Requesting reader of flow "+flow.getPortId()+ " to stop");
+			stop = true;
+		}
 	}
 	
 	public synchronized boolean isStopped(){

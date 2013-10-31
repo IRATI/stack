@@ -2,6 +2,9 @@ package rina.utils.apps.echo.server;
 
 import java.util.Timer;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import eu.irati.librina.Flow;
 import eu.irati.librina.FlowDeallocationException;
 import eu.irati.librina.rina;
@@ -16,6 +19,8 @@ public class FlowReader implements Runnable {
 	private int maxSDUSize;
 	private boolean stop;
 	private Timer timer = null;
+	
+	private static final Log log = LogFactory.getLog(FlowReader.class);
 	
 	public FlowReader(Flow flow, int maxSDUSize){
 		this.flow = flow;
@@ -35,12 +40,14 @@ public class FlowReader implements Runnable {
 		while(!isStopped()){
 			try{
 				bytesRead = flow.readSDU(buffer, maxSDUSize);
+				log.debug("Read SDU of size " + bytesRead 
+						+ " from portId "+flow.getPortId());
 				flow.writeSDU(buffer, bytesRead);
+				log.debug("Wrote SDU of size " + bytesRead 
+						+ " to portId "+flow.getPortId());
 			}catch(Exception ex){
-				System.out.println("Problems reading SDU from flow "+flow.getPortId());
-				if (isStopped()){
-					return;
-				}
+				log.error("Problems reading SDU from flow "+flow.getPortId());
+				stop();
 			}
 		}
 		
@@ -56,8 +63,10 @@ public class FlowReader implements Runnable {
 	}
 	
 	public synchronized void stop(){
-		System.out.println("Requesting reader of flow "+flow.getPortId()+ " to stop");
-		stop = true;
+		if (!stop) {
+			log.info("Requesting reader of flow "+flow.getPortId()+ " to stop");
+			stop = true;
+		}
 	}
 	
 	public synchronized boolean isStopped(){

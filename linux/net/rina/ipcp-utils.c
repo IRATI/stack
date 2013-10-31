@@ -29,8 +29,12 @@
 #include "common.h"
 #include "ipcp-utils.h"
 
+struct name * name_create_gfp(gfp_t flags)
+{ return rkzalloc(sizeof(struct name), flags); }
+EXPORT_SYMBOL(name_create_gfp);
+
 struct name * name_create(void)
-{ return rkzalloc(sizeof(struct name), GFP_KERNEL); }
+{ return name_create_gfp(GFP_KERNEL); }
 EXPORT_SYMBOL(name_create);
 
 /*
@@ -42,16 +46,19 @@ EXPORT_SYMBOL(name_create);
  *
  *   Francesco
  */
-static int string_dup(const string_t * src, string_t ** dst)
+static int string_dup_gfp(gfp_t            flags,
+                          const string_t * src,
+                          string_t **      dst)
 {
-        ASSERT(dst);
+        if (!dst)
+                return -1;
 
         /*
          * An empty source is allowed (ref. the chain of calls) and it must
          * provoke no consequeunces
          */
         if (src) {
-                *dst = kstrdup(src, GFP_KERNEL);
+                *dst = kstrdup(src, flags);
                 if (!*dst) {
                         LOG_ERR("Cannot duplicate source string");
                         return -1;
@@ -61,6 +68,9 @@ static int string_dup(const string_t * src, string_t ** dst)
 
         return 0;
 }
+
+static int string_dup(const string_t * src, string_t ** dst)
+{ return string_dup_gfp(GFP_KERNEL, src, dst); }
 
 static int string_cmp(const string_t * a, const string_t * b)
 { return strcmp(a, b); }
@@ -156,17 +166,19 @@ void name_destroy(struct name * ptr)
 }
 EXPORT_SYMBOL(name_destroy);
 
-struct name * name_create_and_init(const string_t * process_name,
-                                   const string_t * process_instance,
-                                   const string_t * entity_name,
-                                   const string_t * entity_instance)
+struct name * name_create_and_init_gfp(gfp_t            flags,
+                                       const string_t * process_name,
+                                       const string_t * process_instance,
+                                       const string_t * entity_name,
+                                       const string_t * entity_instance)
 {
         struct name * tmp1;
         struct name * tmp2;
 
-        tmp1 = name_create();
+        tmp1 = name_create_gfp(flags);
         if (!tmp1)
                 return NULL;
+
         tmp2 = name_init(tmp1,
                          process_name,
                          process_instance,
@@ -178,6 +190,19 @@ struct name * name_create_and_init(const string_t * process_name,
         }
 
         return tmp2;
+}
+EXPORT_SYMBOL(name_create_and_init_gfp);
+
+struct name * name_create_and_init(const string_t * process_name,
+                                   const string_t * process_instance,
+                                   const string_t * entity_name,
+                                   const string_t * entity_instance)
+{
+        return name_create_and_init_gfp(GFP_KERNEL,
+                                        process_name,
+                                        process_instance,
+                                        entity_name,
+                                        entity_instance);
 }
 EXPORT_SYMBOL(name_create_and_init);
 
@@ -311,8 +336,8 @@ char * name_tostring(const struct name * n)
 }
 EXPORT_SYMBOL(name_tostring);
 
-
-struct name * string_toname(const string_t * input)
+struct name * string_toname_gfp(gfp_t            flags,
+                                const string_t * input)
 {
         struct name * name;
 
@@ -325,7 +350,7 @@ struct name * string_toname(const string_t * input)
         if (input) {
                 string_t * tmp2;
 
-                string_dup(input, &tmp1);
+                string_dup_gfp(flags, input, &tmp1);
                 if (!tmp1) {
                         return NULL;
                 }
@@ -337,7 +362,7 @@ struct name * string_toname(const string_t * input)
                 tmp_ei = strsep(&tmp2, DELIMITER);
         }
 
-        name = name_create_and_init(tmp_pn, tmp_pi, tmp_en, tmp_ei);
+        name = name_create_and_init_gfp(flags, tmp_pn, tmp_pi, tmp_en, tmp_ei);
         if (!name) {
                 if (tmp1) rkfree(tmp1);
                 return NULL;
@@ -345,6 +370,10 @@ struct name * string_toname(const string_t * input)
 
         return name;
 }
+EXPORT_SYMBOL(string_toname_gfp);
+
+struct name * string_toname(const string_t * input)
+{ return string_toname_gfp(GFP_KERNEL, input); }
 EXPORT_SYMBOL(string_toname);
 
 static int string_dup_from_user(const string_t __user * src, string_t ** dst)

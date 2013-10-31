@@ -35,6 +35,7 @@
  * NULL is returned.
  */
 struct name * name_create(void);
+struct name * name_create_gfp(gfp_t flags);
 
 
 /*
@@ -63,6 +64,11 @@ struct name * name_create_and_init(const string_t * process_name,
                                    const string_t * process_instance,
                                    const string_t * entity_name,
                                    const string_t * entity_instance);
+struct name * name_create_and_init_gfp(gfp_t            flags,
+                                       const string_t * process_name,
+                                       const string_t * process_instance,
+                                       const string_t * entity_name,
+                                       const string_t * entity_instance);
 
 /* Releases all the associated resources bound to a name object */
 void          name_destroy(struct name * ptr);
@@ -93,6 +99,8 @@ char *        name_tostring(const struct name * n);
 
 /* Inverse of name_tostring() */
 struct name * string_toname(const string_t * s);
+struct name * string_toname_gfp(gfp_t            flags,
+                                const string_t * s);
 
 struct ipcp_config * ipcp_config_create(void);
 int                  ipcp_config_destroy(struct ipcp_config * cfg);

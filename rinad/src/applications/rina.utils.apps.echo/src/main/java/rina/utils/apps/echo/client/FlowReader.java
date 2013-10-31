@@ -2,6 +2,9 @@ package rina.utils.apps.echo.client;
 
 import java.util.Timer;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import rina.utils.apps.echo.utils.FlowDeallocationListener;
 
 import eu.irati.librina.Flow;
@@ -20,6 +23,8 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 	private int numberOfSDUs;
 	private boolean stop;
 	private Timer timer = null;
+	
+	private static final Log log = LogFactory.getLog(FlowReader.class);
 	
 	public FlowReader(Flow flow, int sduSize, int numberOfSDUs){
 		this.flow = flow;
@@ -41,13 +46,12 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 		while(!isStopped() && receivedSDUs < numberOfSDUs){
 			try{
 				bytesRead = flow.readSDU(buffer, buffer.length);
-				System.out.println("Received SDU of size " + bytesRead);
+				log.debug("Read SDU of size " + bytesRead 
+						+ " from portId "+flow.getPortId());
 				receivedSDUs++;
 			}catch(Exception ex){
-				System.out.println("Problems reading SDU from flow "+flow.getPortId());
-				if (isStopped()){
-					return;
-				}
+				log.error("Problems reading SDU from flow "+flow.getPortId());
+				stop();
 			}
 		}
 		
@@ -64,8 +68,10 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 	}
 	
 	public synchronized void stop(){
-		System.out.println("Requesting reader of flow "+flow.getPortId()+ " to stop");
-		stop = true;
+		if (!stop) {
+			log.info("Requesting reader of flow "+flow.getPortId()+ " to stop");
+			stop = true;
+		}
 	}
 	
 	public synchronized boolean isStopped(){
@@ -75,7 +81,7 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 	@Override
 	public void dispatchFlowDeallocatedEvent(FlowDeallocatedEvent event) {
 		if (flow.getPortId() == event.getPortId()){
-			System.out.println("The flow "+flow.getPortId()+
+			log.info("The flow "+flow.getPortId()+
 					" has been deallocated, stopping the fow reader");
 		}
 		

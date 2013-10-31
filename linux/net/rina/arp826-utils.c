@@ -385,6 +385,22 @@ struct gha * gha_create_broadcast(gha_type_t type)
 { return gha_create_broadcast_gfp(GFP_KERNEL, type); }
 EXPORT_SYMBOL(gha_create_broadcast);
 
+struct gha * gha_create_unknown_gfp(gfp_t      flags,
+                                    gha_type_t type)
+{
+        const uint8_t addr[6] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+
+        if (type == MAC_ADDR_802_3)
+                return gha_create_gfp(flags, MAC_ADDR_802_3, addr);
+
+        return NULL;
+}
+EXPORT_SYMBOL(gha_create_unknown_gfp);
+
+struct gha * gha_create_unknown(gha_type_t type)
+{ return gha_create_broadcast_gfp(GFP_KERNEL, type); }
+EXPORT_SYMBOL(gha_create_unknown);
+
 int gha_destroy(struct gha * gha)
 {
         if (!gha_is_ok(gha)) {
