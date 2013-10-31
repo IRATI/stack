@@ -114,6 +114,7 @@ struct interface_data_mapping {
         struct ipcp_instance_data * data;
 };
 
+static spinlock_t       receive_lock;
 static spinlock_t       data_instances_lock;
 static struct list_head data_instances_list;
 
@@ -775,14 +776,24 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         }
 
         LOG_DBG("Already got past getting the data and some checks");
+
         flow = find_flow_by_gha(data, ghaddr);
         /* If the flow cannot be found --> New Flow! */
+        if (!flow) {
+                spin_lock(&receive_lock);
+                /* Used to check if by now a flow is created */
+                flow = find_flow_by_gha(data, ghaddr);
+                if (flow)
+                        spin_unlock(&receive_lock);
+        }
+
         if (!flow) {
                 LOG_DBG("Have to create a new flow");
                 flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
                 if (!flow) {
                         gha_destroy(ghaddr);
-                        kfree_skb(skb);\
+                        kfree_skb(skb);
+                        spin_unlock(&receive_lock);
                         return 0;
                 }
 
@@ -806,6 +817,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                         LOG_ERR("Couldn't create the sdu queue"
                                 "for a new flow");
                         flow_destroy(data, flow);
+                        spin_unlock(&receive_lock);
                         return 0;
                 }
                 LOG_DBG("Created the queue");
@@ -830,8 +842,10 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                         kfifo_free(&flow->sdu_queue);
                         flow_destroy(data, flow);
                         kfree_skb(skb);
+                        spin_unlock(&receive_lock);
                         return 0;
                 }
+                spin_unlock(&receive_lock);
         } else {
                 LOG_DBG("Flow exists, queueing or delivering");
                 gha_destroy(ghaddr);

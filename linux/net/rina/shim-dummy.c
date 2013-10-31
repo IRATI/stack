@@ -841,6 +841,9 @@ static void __exit mod_exit(void)
 {
         ASSERT(shim);
 
+        if (dummy_wq)
+                rwq_destroy(dummy_wq);
+
         if (kipcm_ipcp_factory_unregister(default_kipcm, shim)) {
                 LOG_CRIT("Cannot unregister %s factory", SHIM_NAME);
                 return;
