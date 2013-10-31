@@ -141,22 +141,27 @@ void name_fini(struct name * n)
         LOG_DBG("Entity instance at %pK",  n->entity_instance);
 #endif
 
+        LOG_DBG("LEODEBUG NAME ENTRO");
         if (n->process_name) {
                 rkfree(n->process_name);
                 n->process_name = NULL;
         }
+        LOG_DBG("LEODEBUG NAME STEP 1");
         if (n->process_instance) {
                 rkfree(n->process_instance);
                 n->process_instance = NULL;
         }
+        LOG_DBG("LEODEBUG NAME STEP 2");
         if (n->entity_name) {
                 rkfree(n->entity_name);
                 n->entity_name = NULL;
         }
+        LOG_DBG("LEODEBUG NAME STEP 3");
         if (n->entity_instance) {
                 rkfree(n->entity_instance);
                 n->entity_instance = NULL;
         }
+        LOG_DBG("LEODEBUG NAME STEP 4");
 
         LOG_DBG("Name at %pK finalized successfully", n);
 }
@@ -164,8 +169,10 @@ EXPORT_SYMBOL(name_fini);
 
 void name_destroy(struct name * ptr)
 {
+        LOG_DBG("LEODEBUG NAME_DESTROY ENTRO");
         ASSERT(ptr);
 
+        LOG_DBG("LEODEBUG NAME_DESTROY EN MEDIO");
         name_fini(ptr);
 
         ASSERT(name_is_initialized(ptr));
@@ -547,3 +554,30 @@ struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
         return tmp;
 }
 EXPORT_SYMBOL(flow_spec_dup);
+
+int dif_info_destroy(struct dif_info * dif_info)
+{
+#if 0
+        struct ipcp_config * pos, * nxt;
+
+        LOG_DBG("LEODEBUG ENTRO");
+        if (!dif_info){
+                LOG_DBG("LEODEBUG  NI INFO");
+                return -1;
+        }
+        if (dif_info->dif_name)
+                name_destroy(dif_info->dif_name);
+        if (dif_info->configuration){
+                LOG_DBG("LEODEBUG  ENTRANDO EN DIF_INFO_DESTROY");
+                list_for_each_entry_safe(pos, nxt, &dif_info->configuration->ipcp_config_entries, next) {
+                        LOG_DBG("LEODEBUG  BORRANDO pos EN %pK:", pos);
+                        list_del(&pos->next);
+                        ipcp_config_destroy(pos);
+                } 
+        }
+       
+        rkfree(dif_info);
+#endif
+        return 0;
+}
+EXPORT_SYMBOL(dif_info_destroy);
