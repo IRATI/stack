@@ -53,9 +53,9 @@ int pdu_destroy(struct pdu * p)
         return 0;
 }
 
-struct sdu * sdu_create_from_gfp_copying(gfp_t  flags,
-                                         void * data,
-                                         size_t size)
+struct sdu * sdu_create_from_gfp_copying(gfp_t        flags,
+                                         const void * data,
+                                         size_t       size)
 {
         struct sdu * tmp;
 
