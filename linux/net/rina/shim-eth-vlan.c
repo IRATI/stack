@@ -414,13 +414,8 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
         ASSERT(source);
         ASSERT(dest);
 
-        if (!data->info->dif_name) {
-                LOG_ERR("This IPC Process doesn't belong to a DIF");
-                return -1;
-        }
-
         if (!data->app_name || !name_is_equal(source, data->app_name)) {
-                LOG_ERR("Wrong request, app %s is not registered", data->app_name);
+                LOG_ERR("Wrong request, app is not registered");
                 return -1;
         }
 
