@@ -87,6 +87,49 @@ struct sdu * sdu_create_from_gfp_copying(gfp_t        flags,
 }
 EXPORT_SYMBOL(sdu_create_from_gfp_copying);
 
+struct buffer * buffer_create_gfp(gfp_t  flags,
+                                  void * data,
+                                  size_t size)
+{
+        struct buffer * tmp;
+
+        tmp = rkmalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        tmp->data = data;
+        tmp->size = size;
+
+        return tmp;
+}
+EXPORT_SYMBOL(buffer_create_gfp);
+
+struct buffer * buffer_create(void * data,
+                              size_t size)
+{ return buffer_create_gfp(GFP_KERNEL, data, size); }
+EXPORT_SYMBOL(buffer_create);
+
+int buffer_destroy(struct buffer * b)
+{
+        if (!b)
+                return -1;
+
+        if (b->data) rkfree(b->data);
+        rkfree(b);
+
+        return 0;
+}
+EXPORT_SYMBOL(buffer_destroy);
+
+ssize_t buffer_length(const struct buffer * b)
+{
+        if (!b)
+                return -1;
+
+        return b->size;
+}
+EXPORT_SYMBOL(buffer_length);
+
 struct sdu * sdu_create_from_gfp(gfp_t  flags,
                                  void * data,
                                  size_t size)

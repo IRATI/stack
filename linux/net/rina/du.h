@@ -78,11 +78,23 @@ struct pci {
         seq_num_t  sequence_number;
 };
 
-/* This structure represents raw data */
+/*
+ * FIXME: This structure will be hidden soon. Do not access its field(s)
+ *        directly, prefer the access functions below.
+ */
 struct buffer {
         char * data;
         size_t size;
 };
+
+struct buffer * buffer_create_gfp(gfp_t  flags,
+                                  void * data,
+                                  size_t size);
+struct buffer * buffer_create(void * data,
+                              size_t size);
+int             buffer_destroy(struct buffer * b);
+/* NOTE: The following function may return -1 */
+ssize_t         buffer_length(const struct buffer * b);
 
 /*
  * FIXME: This structure will be hidden soon. Do not access its field(s)
