@@ -67,6 +67,7 @@ struct shim_eth_flow {
 
         struct gha *       dest_ha;
         struct gpa *       dest_pa;
+
         /* Only used once for allocate_response */
         flow_id_t          flow_id;
         port_id_t          port_id;
