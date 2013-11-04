@@ -188,10 +188,10 @@ SYSCALL_DEFINE3(sdu_write,
                 const void __user *, buffer,
                 size_t,              size)
 {
-        ssize_t      retval;
+        ssize_t         retval;
 
-        struct sdu * sdu;
-        void *       tmp_buffer;
+        struct sdu *    sdu;
+        struct buffer * tmp_buffer;
 
         if (!buffer || !size)
                 return -EFAULT;
@@ -199,20 +199,23 @@ SYSCALL_DEFINE3(sdu_write,
         LOG_DBG("Syscall write SDU of size %zd called with port-id %d",
                 size, id);
 
-        tmp_buffer = rkmalloc(size, GFP_KERNEL);
+        tmp_buffer = buffer_create(size);
         if (!tmp_buffer)
                 return -EFAULT;
 
+        ASSERT(is_buffer_ok(tmp_buffer));
+        ASSERT(buffer_data(tmp_buffer));
+
         /* NOTE: We don't handle partial copies */
-        if (copy_from_user(tmp_buffer, buffer, size)) {
-                rkfree(tmp_buffer);
+        if (copy_from_user(buffer_data(tmp_buffer), buffer, size)) {
+                buffer_destroy(tmp_buffer);
                 return -EFAULT;
         }
 
         /* NOTE: sdu_create takes the ownership of the buffer */
-        sdu = sdu_create_from(tmp_buffer, size);
+        sdu = sdu_create_from_buffer(tmp_buffer);
         if (!sdu) {
-                rkfree(tmp_buffer);
+                buffer_destroy(tmp_buffer);
                 return -EFAULT;
         }
         ASSERT(is_sdu_ok(sdu));
