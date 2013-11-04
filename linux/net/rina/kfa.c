@@ -488,7 +488,6 @@ int kfa_sdu_post(struct kfa * instance,
                  struct sdu * sdu)
 {
         struct ipcp_flow *  flow;
-        unsigned int        avail;
         wait_queue_head_t * wq;
 
         /*
@@ -522,8 +521,7 @@ int kfa_sdu_post(struct kfa * instance,
                 return -1;
         }
 
-        avail = kfifo_avail(&flow->sdu_ready);
-        if (avail < (sizeof(struct sdu *))) {
+        if (kfifo_avail(&flow->sdu_ready) < (sizeof(struct sdu *))) {
                 LOG_ERR("There is no space in the port-id %d fifo", id);
                 spin_unlock(&instance->lock);
                 return -1;
@@ -532,7 +530,7 @@ int kfa_sdu_post(struct kfa * instance,
                      &sdu,
                      sizeof(struct sdu *)) != sizeof(struct sdu *)) {
                 LOG_ERR("Could not write %zd bytes into port-id %d fifo",
-                        sizeof(size_t), id);
+                        sizeof(struct sdu *), id);
                 spin_unlock(&instance->lock);
                 return -1;
         }
