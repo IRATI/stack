@@ -762,8 +762,10 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
          *        except for the SDU, or delay freeing the skb until it is
          *        safe to do so.
          */
-        buffer = buffer_create_gfp(GFP_ATOMIC,
-                        skb->tail - skb->network_header);
+        buffer = buffer_create_gfp(GFP_ATOMIC,skb->tail - skb->network_header);
+        if (!buffer)
+                return 0;
+
         buff_data = buffer_data(buffer);
         if (!buff_data) {
                 LOG_ERR("Buffer data is NULL");
@@ -773,6 +775,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 return 0;
         }
         memcpy_fromio(buff_data, nh, skb->tail - skb->network_header);
+
         du = sdu_create_from_buffer_gfp(GFP_ATOMIC, buffer);
         if (!du) {
                 LOG_ERR("Couldn't create data unit");
