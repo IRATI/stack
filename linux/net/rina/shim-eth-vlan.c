@@ -339,9 +339,6 @@ static int flow_destroy(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if (kfa_flow_unbind_and_destroy(data->kfa, flow->port_id))
-                return -1;
-
         if (!list_empty(&flow->list)) {
                 spin_lock(&data->lock);
                 list_del(&flow->list);
@@ -540,8 +537,15 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if (flow_destroy(data, flow))
+        if (kfa_flow_unbind_and_destroy(data->kfa, flow->port_id)) {
+                LOG_ERR("Failed to unbind and destroy flow in KFA");
+                return -1;
+        }
+
+        if (flow_destroy(data, flow)) {
                 LOG_ERR("Failed to destroy flow");
+                return -1;
+        }
 
         return 0;
 }
