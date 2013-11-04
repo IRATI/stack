@@ -340,15 +340,16 @@ static int flow_destroy(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if (flow->dest_pa) gpa_destroy(flow->dest_pa);
-        if (flow->dest_ha) gha_destroy(flow->dest_ha);
+        if (kfa_flow_unbind_and_destroy(data->kfa, flow->port_id))
+                return -1;
 
         spin_lock(&data->lock);
         list_del(&flow->list);
         spin_unlock(&data->lock);
 
-        fid = kfa_flow_unbind(data->kfa, flow->port_id);
-        kfa_flow_destroy(data->kfa, fid);
+        if (flow->dest_pa) gpa_destroy(flow->dest_pa);
+        if (flow->dest_ha) gha_destroy(flow->dest_ha);
+        kfifo_free(&flow->sdu_queue);
         rkfree(flow);
 
         return 0;
@@ -501,7 +502,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 spin_unlock(&data->lock);
 
-                while (kfifo_get(&flow->sdu_queue, du)) {
+                while (kfifo_out(&flow->sdu_queue, du, sizeof(struct sdu *))) {
                         kfa_sdu_post(data->kfa, flow->port_id, du);
                 }
         } else {
