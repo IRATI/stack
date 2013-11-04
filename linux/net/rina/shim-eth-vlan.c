@@ -469,7 +469,6 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                            int                         result)
 {
         struct shim_eth_flow * flow;
-        struct sdu *           du;
 
         ASSERT(data);
         ASSERT(is_flow_id_ok(flow_id));
@@ -487,6 +486,8 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
 
         /* On positive response, flow should transition to allocated state */
         if (!result) {
+                struct sdu * du = NULL;
+
                 flow->port_id = port_id;
                 if (kipcm_flow_add(default_kipcm, data->id,
                                    flow->port_id, flow->flow_id)) {
@@ -500,7 +501,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 spin_unlock(&data->lock);
 
-                while(kfifo_get(&flow->sdu_queue, du)) {
+                while (kfifo_get(&flow->sdu_queue, du)) {
                         kfa_sdu_post(data->kfa, flow->port_id, du);
                 }
         } else {
@@ -751,13 +752,14 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         /* Get the SDU out of the sk_buff */
         nh = skb_network_header(skb);
         ASSERT(skb->tail - skb->network_header >= 0);
+
         /* FIXME We should avoid this extra copy, but then we cannot free the
          * skb at the end of the eth_vlan_rcv function. To do so we have to
          * either find a way to free all the data of the skb except for the
          * SDU, or delay freeing the skb until it is safe to do so.
          */
-        du = sdu_create_from_gfp_copying(
-                        GFP_ATOMIC, nh, skb->tail - skb->network_header);
+        du = sdu_create_from_gfp_copying(GFP_ATOMIC, nh,
+                                         skb->tail - skb->network_header);
         if (!du) {
                 LOG_ERR("Couldn't create data unit");
                 gha_destroy(ghaddr);
@@ -790,7 +792,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 
                 if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_ATOMIC)) {
                         LOG_ERR("Couldn't create the sdu queue"
-                                        "for a new flow");
+                                "for a new flow");
                         flow_destroy(data, flow);
                         spin_unlock(&data->lock);
                         return 0;
@@ -802,13 +804,12 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 
                 spin_unlock(&data->lock);
 
-                sname               = NULL;
-                gpaddr              = rinarp_find_gpa(data->handle,
-                                flow->dest_ha);
+                sname  = NULL;
+                gpaddr = rinarp_find_gpa(data->handle, flow->dest_ha);
                 if (gpaddr && gpa_is_ok(gpaddr)) {
                         flow->dest_pa = gpa_dup_gfp(GFP_ATOMIC, gpaddr);
                         sname = string_toname_gfp(GFP_ATOMIC,
-                                        gpa_address_value(gpaddr));
+                                                  gpa_address_value(gpaddr));
                 }
                 LOG_DBG("Got the address from ARP");
 
@@ -1237,7 +1238,7 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         if (pos->info)
                                 rkfree(pos->info);
 
-                        if(pos->fspec)
+                        if (pos->fspec)
                                 rkfree(pos->fspec);
 
                         /*

@@ -99,8 +99,8 @@ struct sdu *          sdu_create_from_gfp(gfp_t  flags,
                                           void * data,
                                           size_t size);
 struct sdu *          sdu_create_from_gfp_copying(gfp_t  flags,
-                                                void * data,
-                                                size_t size);
+                                                  void * data,
+                                                  size_t size);
 int                   sdu_destroy(struct sdu * s);
 
 const struct buffer * sdu_buffer(const struct sdu * s);
