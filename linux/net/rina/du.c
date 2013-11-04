@@ -65,41 +65,6 @@ bool is_buffer_ok(const struct buffer * b)
 }
 EXPORT_SYMBOL(is_buffer_ok);
 
-/* FIXME: This function must disappear, please remove it */
-struct sdu * sdu_create_from_gfp_copying(gfp_t        flags,
-                                         const void * data,
-                                         size_t       size)
-{
-        struct sdu * tmp;
-
-        LOG_DBG("Trying to create an SDU of size %zd from data in the buffer",
-                size);
-
-        if (!data)
-                return NULL;
-
-        tmp = rkmalloc(sizeof(*tmp), flags);
-        if (!tmp)
-                return NULL;
-
-        tmp->buffer = rkmalloc(sizeof(struct buffer), flags);
-        if (!tmp->buffer) {
-                rkfree(tmp);
-                return NULL;
-        }
-
-        if (!memcpy(tmp->buffer->data, data, size)) {
-                LOG_ERR("Problems copying data to SDU buffer");
-                rkfree(tmp->buffer);
-                rkfree(tmp);
-                return NULL;
-        }
-        tmp->buffer->size = size;
-
-        return tmp;
-}
-EXPORT_SYMBOL(sdu_create_from_gfp_copying);
-
 struct sdu * sdu_create_from_buffer_gfp(gfp_t           flags,
                                         struct buffer * buffer)
 {
