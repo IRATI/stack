@@ -342,9 +342,11 @@ static int flow_destroy(struct ipcp_instance_data * data,
         if (kfa_flow_unbind_and_destroy(data->kfa, flow->port_id))
                 return -1;
 
-        spin_lock(&data->lock);
-        list_del(&flow->list);
-        spin_unlock(&data->lock);
+        if (!list_empty(&flow->list)) {
+                spin_lock(&data->lock);
+                list_del(&flow->list);
+                spin_unlock(&data->lock);
+        }
 
         if (flow->dest_pa) gpa_destroy(flow->dest_pa);
         if (flow->dest_ha) gha_destroy(flow->dest_ha);
