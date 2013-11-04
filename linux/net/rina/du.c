@@ -121,9 +121,9 @@ bool is_buffer_ok(struct buffer * b)
 }
 EXPORT_SYMBOL(is_buffer_ok);
 
-struct buffer * buffer_create_gfp(gfp_t  flags,
-                                  void * data,
-                                  size_t size)
+struct buffer * buffer_create_from_gfp(gfp_t  flags,
+                                       void * data,
+                                       size_t size)
 {
         struct buffer * tmp;
 
@@ -145,11 +145,41 @@ struct buffer * buffer_create_gfp(gfp_t  flags,
 
         return tmp;
 }
+EXPORT_SYMBOL(buffer_create_from_gfp);
+
+struct buffer * buffer_create_from(void * data,
+                                   size_t size)
+{ return buffer_create_from_gfp(GFP_KERNEL, data, size); }
+EXPORT_SYMBOL(buffer_create_from);
+
+struct buffer * buffer_create_gfp(gfp_t  flags,
+                                  size_t size)
+{
+        struct buffer * tmp;
+
+        if (!size) {
+                LOG_ERR("Cannot create buffer, data is 0 size");
+                return NULL;
+        }
+
+        tmp = rkmalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        tmp->data = rkmalloc(size, flags);
+        if (!tmp->data) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->size = size;
+
+        return tmp;
+}
 EXPORT_SYMBOL(buffer_create_gfp);
 
-struct buffer * buffer_create(void * data,
-                              size_t size)
-{ return buffer_create_gfp(GFP_KERNEL, data, size); }
+struct buffer * buffer_create(size_t size)
+{ return buffer_create_gfp(GFP_KERNEL, size); }
 EXPORT_SYMBOL(buffer_create);
 
 struct buffer * buffer_dup_gfp(gfp_t           flags,
@@ -173,7 +203,7 @@ struct buffer * buffer_dup_gfp(gfp_t           flags,
                 return NULL;
         }
 
-        tmp = buffer_create_gfp(flags, m, b->size);
+        tmp = buffer_create_from_gfp(flags, m, b->size);
         if (!tmp) {
                 rkfree(m);
                 return NULL;

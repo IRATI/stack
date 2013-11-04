@@ -87,11 +87,17 @@ struct buffer {
         size_t size;
 };
 
+struct buffer * buffer_create_from_gfp(gfp_t  flags,
+                                       void * data,
+                                       size_t size);
+struct buffer * buffer_create_from(void * data,
+                                   size_t size);
+
+/* NOTE: Creates an uninitialized buffer (data might be garbage) */
+struct buffer * buffer_create(size_t size);
 struct buffer * buffer_create_gfp(gfp_t  flags,
-                                  void * data,
                                   size_t size);
-struct buffer * buffer_create(void * data,
-                              size_t size);
+
 int             buffer_destroy(struct buffer * b);
 /* NOTE: The following function may return -1 */
 ssize_t         buffer_length(const struct buffer * b);
