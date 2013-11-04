@@ -374,9 +374,10 @@ static void rinarp_resolve_handler(void *             opaque,
                 return;
         }
 
+        spin_lock(&data->lock);
         if (flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
-                flow->dest_ha       = gha_dup(dest_ha);
+                flow->dest_ha = gha_dup(dest_ha);
 
                 if (kipcm_flow_add(default_kipcm,
                                    data->id, flow->port_id, flow->flow_id)) {
@@ -391,6 +392,7 @@ static void rinarp_resolve_handler(void *             opaque,
                         flow_destroy(data, flow);
                         LOG_ERR("Couldn't tell flow is allocated to KIPCM");
                 }
+                spin_unlock(&data->lock);
         }
 }
 
@@ -430,7 +432,6 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 }
 
                 INIT_LIST_HEAD(&flow->list);
-
                 spin_lock(&data->lock);
                 list_add(&flow->list, &data->flows);
                 spin_unlock(&data->lock);
@@ -478,10 +479,12 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        spin_lock(&data->lock);
         if (flow->port_id_state != PORT_STATE_PENDING) {
                 LOG_ERR("Flow is already allocated");
                 return -1;
         }
+        spin_unlock(&data->lock);
 
         /* On positive response, flow should transition to allocated state */
         if (!result) {
@@ -517,8 +520,9 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                         }
                 }
         } else {
-                /* FIXME: Please add the required spinlocking here */
+                spin_lock(&data->lock);
                 flow->port_id_state = PORT_STATE_NULL;
+                spin_unlock(&data->lock);
                 kfifo_free(&flow->sdu_queue);
         }
 
@@ -615,7 +619,8 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
         }
 
         /* Remove from ARP cache */
-        rinarp_remove(data->handle); /* FIXME: check data->handle first ? */
+        if (data->handle)
+                rinarp_remove(data->handle);
 
         name_destroy(data->app_name);
         data->app_name = NULL;
@@ -652,11 +657,14 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
         LOG_DBG("Found the flow associated with the id");
 
+        spin_lock(&data->lock);
         if (flow->port_id_state != PORT_STATE_ALLOCATED) {
                 LOG_ERR("Flow is not in the right state to call this");
                 sdu_destroy(sdu);
+                spin_unlock(&data->lock);
                 return -1;
         }
+        spin_unlock(&data->lock);
 
         src_hw = data->dev->dev_addr;
         if (!src_hw) {
