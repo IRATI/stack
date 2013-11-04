@@ -753,10 +753,12 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         nh = skb_network_header(skb);
         ASSERT(skb->tail - skb->network_header >= 0);
 
-        /* FIXME We should avoid this extra copy, but then we cannot free the
-         * skb at the end of the eth_vlan_rcv function. To do so we have to
-         * either find a way to free all the data of the skb except for the
-         * SDU, or delay freeing the skb until it is safe to do so.
+        /*
+         * FIXME: We should avoid this extra copy, but then we cannot free the
+         *        skb at the end of the eth_vlan_rcv function. To do so we
+         *        have to either find a way to free all the data of the skb
+         *        except for the SDU, or delay freeing the skb until it is
+         *        safe to do so.
          */
         du = sdu_create_from_gfp_copying(GFP_ATOMIC, nh,
                                          skb->tail - skb->network_header);
