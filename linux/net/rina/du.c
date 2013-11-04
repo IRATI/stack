@@ -170,8 +170,7 @@ int sdu_destroy(struct sdu * s)
                 return -1;
 
         if (s->buffer) {
-                if (s->buffer->data)
-                        rkfree(s->buffer->data);
+                if (s->buffer->data) rkfree(s->buffer->data);
                 rkfree(s->buffer);
         }
 
@@ -188,16 +187,6 @@ const struct buffer * sdu_buffer(const struct sdu * s)
         return s->buffer;
 }
 EXPORT_SYMBOL(sdu_buffer);
-
-/* FIXME: Should be returning ssize_t */
-size_t sdu_buffer_length(const struct sdu *s)
-{
-        if (!is_sdu_ok(s))
-                return 0; /* FIXME: should be returning -1 */
-
-        return s->buffer->size;
-}
-EXPORT_SYMBOL(sdu_buffer_length);
 
 struct sdu * sdu_dup_gfp(gfp_t        flags,
                          struct sdu * sdu)
