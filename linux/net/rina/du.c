@@ -46,8 +46,9 @@ int pdu_destroy(struct pdu * p)
 
         if (p->pci)
                 rkfree(p->pci);
-        if (p->buffer)
-                rkfree(p->buffer);
+
+        buffer_destroy(p->buffer);
+
         rkfree(p);
 
         return 0;
@@ -190,6 +191,7 @@ int buffer_destroy(struct buffer * b)
 
         /* NOTE: Be merciful and destroy even a non-ok buffer ... */
         if (b->data) rkfree(b->data);
+
         rkfree(b);
 
         return 0;
