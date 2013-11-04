@@ -393,8 +393,8 @@ static void rinarp_resolve_handler(void *             opaque,
                         flow_destroy(data, flow);
                         LOG_ERR("Couldn't tell flow is allocated to KIPCM");
                 }
-                spin_unlock(&data->lock);
         }
+        spin_unlock(&data->lock);
 }
 
 static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
@@ -483,6 +483,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
         spin_lock(&data->lock);
         if (flow->port_id_state != PORT_STATE_PENDING) {
                 LOG_ERR("Flow is already allocated");
+                spin_unlock(&data->lock);
                 return -1;
         }
         spin_unlock(&data->lock);
