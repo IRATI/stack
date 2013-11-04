@@ -242,6 +242,7 @@ int arp826_resolve_gpa(uint16_t           ptype,
                 LOG_ERR("Cannot send request, cannot resolve GPA");
                 return -1;
         }
+        LOG_DBG("Passed the checks in resolve_gpa");
 
         resolution = rkzalloc(sizeof(*resolution), GFP_KERNEL);
         if (!resolution)
@@ -258,10 +259,12 @@ int arp826_resolve_gpa(uint16_t           ptype,
         resolution->notify = notify;
         resolution->opaque = opaque;
         INIT_LIST_HEAD(&resolution->next);
+        LOG_DBG("Initialised the list_head of this resolution");
 
         spin_lock(&resolutions_lock);
-        list_add(&resolutions_ongoing, &resolution->next);
+        list_add(&resolution->next, &resolutions_ongoing);
         spin_unlock(&resolutions_lock);
+        LOG_DBG("Added it to the list of resolutions");
 
         return 0;
 }
