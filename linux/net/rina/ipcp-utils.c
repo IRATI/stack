@@ -60,7 +60,8 @@ static int string_dup_gfp(gfp_t            flags,
         if (src) {
                 *dst = kstrdup(src, flags);
                 if (!*dst) {
-                        LOG_ERR("Cannot duplicate source string");
+                        LOG_ERR("Cannot duplicate source string "
+                                "in kernel-space");
                         return -1;
                 }
         } else
@@ -398,7 +399,8 @@ static int string_dup_from_user(const string_t __user * src, string_t ** dst)
         if (src) {
                 *dst = strdup_from_user(src);
                 if (!*dst) {
-                        LOG_ERR("Cannot duplicate source string");
+                        LOG_ERR("Cannot duplicate source string "
+                                "from user-space");
                         return -1;
                 }
         } else

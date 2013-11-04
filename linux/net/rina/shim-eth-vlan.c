@@ -114,7 +114,6 @@ struct interface_data_mapping {
         struct ipcp_instance_data * data;
 };
 
-static spinlock_t       receive_lock;
 static spinlock_t       data_instances_lock;
 static struct list_head data_instances_list;
 
@@ -206,16 +205,11 @@ find_flow_by_gha(struct ipcp_instance_data * data,
         if (!data || !gha_is_ok(addr))
                 return NULL;
 
-        spin_lock(&data->lock);
-
         list_for_each_entry(flow, &data->flows, list) {
                 if (gha_is_equal(addr, flow->dest_ha)) {
-                        spin_unlock(&data->lock);
                         return flow;
                 }
         }
-
-        spin_unlock(&data->lock);
 
         return NULL;
 }
@@ -475,7 +469,6 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                            int                         result)
 {
         struct shim_eth_flow * flow;
-        struct sdu *           du;
 
         ASSERT(data);
         ASSERT(is_flow_id_ok(flow_id));
@@ -493,8 +486,9 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
 
         /* On positive response, flow should transition to allocated state */
         if (!result) {
+                struct sdu * du = NULL;
+
                 flow->port_id = port_id;
-                flow->port_id_state = PORT_STATE_ALLOCATED;
                 if (kipcm_flow_add(default_kipcm, data->id,
                                    flow->port_id, flow->flow_id)) {
                         if (flow_destroy(data, flow))
@@ -502,16 +496,12 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                         LOG_ERR("KIPCM flow add failed");
                         return -1;
                 }
-                if (kipcm_notify_flow_alloc_req_result(default_kipcm,
-                                                       data->id,
-                                                       flow->flow_id,
-                                                       0)) {
-                        if (flow_destroy(data, flow))
-                                LOG_ERR("Failed to destroy flow");
-                        return -1;
-                }
-                du = NULL;
-                while(kfifo_get(&flow->sdu_queue, du)) {
+
+                spin_lock(&data->lock);
+                flow->port_id_state = PORT_STATE_ALLOCATED;
+                spin_unlock(&data->lock);
+
+                while (kfifo_get(&flow->sdu_queue, du)) {
                         kfa_sdu_post(data->kfa, flow->port_id, du);
                 }
         } else {
@@ -707,6 +697,8 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         struct gha *                    ghaddr;
         const struct gpa *              gpaddr;
         struct sdu *                    du;
+        struct buffer *                 buffer;
+        char *                          buff_data;
         unsigned char *                 nh;
         struct name *                   sname;
 
@@ -762,9 +754,32 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         /* Get the SDU out of the sk_buff */
         nh = skb_network_header(skb);
         ASSERT(skb->tail - skb->network_header >= 0);
-        du = sdu_create_from_gfp(GFP_ATOMIC, nh, skb->tail - skb->network_header);
+
+        /*
+         * FIXME: We should avoid this extra copy, but then we cannot free the
+         *        skb at the end of the eth_vlan_rcv function. To do so we
+         *        have to either find a way to free all the data of the skb
+         *        except for the SDU, or delay freeing the skb until it is
+         *        safe to do so.
+         */
+        buffer = buffer_create_gfp(GFP_ATOMIC,skb->tail - skb->network_header);
+        if (!buffer)
+                return 0;
+
+        buff_data = buffer_data(buffer);
+        if (!buff_data) {
+                LOG_ERR("Buffer data is NULL");
+                buffer_destroy(buffer);
+                gha_destroy(ghaddr);
+                kfree_skb(skb);
+                return 0;
+        }
+        memcpy_fromio(buff_data, nh, skb->tail - skb->network_header);
+
+        du = sdu_create_from_buffer_gfp(GFP_ATOMIC, buffer);
         if (!du) {
                 LOG_ERR("Couldn't create data unit");
+                buffer_destroy(buffer);
                 gha_destroy(ghaddr);
                 kfree_skb(skb);
                 return 0;
@@ -772,23 +787,15 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 
         LOG_DBG("Already got past getting the data and some checks");
 
+        spin_lock(&data->lock);
         flow = find_flow_by_gha(data, ghaddr);
-        /* If the flow cannot be found --> New Flow! */
-        if (!flow) {
-                spin_lock(&receive_lock);
-                /* Used to check if by now a flow is created */
-                flow = find_flow_by_gha(data, ghaddr);
-                if (flow)
-                        spin_unlock(&receive_lock);
-        }
-
         if (!flow) {
                 LOG_DBG("Have to create a new flow");
                 flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
                 if (!flow) {
+                        spin_unlock(&data->lock);
                         gha_destroy(ghaddr);
                         kfree_skb(skb);
-                        spin_unlock(&receive_lock);
                         return 0;
                 }
 
@@ -796,23 +803,16 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 flow->dest_ha       = ghaddr;
                 flow->flow_id       = kfa_flow_create(data->kfa);
 
-                LOG_DBG("Added flow to the list");
+                INIT_LIST_HEAD(&flow->list);
+                list_add(&flow->list, &data->flows);
 
-                sname               = NULL;
-                gpaddr              = rinarp_find_gpa(data->handle,
-                                                      flow->dest_ha);
-                if (gpaddr && gpa_is_ok(gpaddr)) {
-                        flow->dest_pa = gpa_dup_gfp(GFP_ATOMIC, gpaddr);
-                        sname = string_toname_gfp(GFP_ATOMIC,
-                                                  gpa_address_value(gpaddr));
-                }
-                LOG_DBG("Got the address from ARP");
+                LOG_DBG("Added flow to the list");
 
                 if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_ATOMIC)) {
                         LOG_ERR("Couldn't create the sdu queue"
                                 "for a new flow");
                         flow_destroy(data, flow);
-                        spin_unlock(&receive_lock);
+                        spin_unlock(&data->lock);
                         return 0;
                 }
                 LOG_DBG("Created the queue");
@@ -820,11 +820,16 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 /* Store SDU in queue */
                 kfifo_put(&flow->sdu_queue, du);
 
-                INIT_LIST_HEAD(&flow->list);
-
-                spin_lock(&data->lock);
-                list_add(&flow->list, &data->flows);
                 spin_unlock(&data->lock);
+
+                sname  = NULL;
+                gpaddr = rinarp_find_gpa(data->handle, flow->dest_ha);
+                if (gpaddr && gpa_is_ok(gpaddr)) {
+                        flow->dest_pa = gpa_dup_gfp(GFP_ATOMIC, gpaddr);
+                        sname = string_toname_gfp(GFP_ATOMIC,
+                                                  gpa_address_value(gpaddr));
+                }
+                LOG_DBG("Got the address from ARP");
 
                 if (kipcm_flow_arrived(default_kipcm,
                                        data->id,
@@ -837,20 +842,21 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                         kfifo_free(&flow->sdu_queue);
                         flow_destroy(data, flow);
                         kfree_skb(skb);
-                        spin_unlock(&receive_lock);
                         return 0;
                 }
-                spin_unlock(&receive_lock);
         } else {
                 LOG_DBG("Flow exists, queueing or delivering");
-                gha_destroy(ghaddr);
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
+                        spin_unlock(&data->lock);
                         LOG_DBG("Posting to kipcm");
                         kfa_sdu_post(data->kfa, flow->port_id, du);
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
                         LOG_DBG("Queueing frame");
                         kfifo_put(&flow->sdu_queue, du);
+                        spin_unlock(&data->lock);
                 }
+
+                gha_destroy(ghaddr);
         }
 
         kfree_skb(skb);
@@ -1250,7 +1256,7 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         if (pos->info)
                                 rkfree(pos->info);
 
-                        if(pos->fspec)
+                        if (pos->fspec)
                                 rkfree(pos->fspec);
 
                         /*

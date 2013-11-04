@@ -330,6 +330,12 @@ int kfa_flow_destroy(struct kfa * instance,
                 return -1;
         }
 
+        if (fidm_release(instance->fidm, id)) {
+                LOG_ERR("Could not release fid %d from the map", id);
+                spin_unlock(&instance->lock);
+                return -1;
+        }
+
         spin_unlock(&instance->lock);
 
         return 0;

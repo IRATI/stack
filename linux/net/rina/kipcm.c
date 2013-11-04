@@ -2059,7 +2059,7 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
                 return -1;
         }
         seq_num = rnl_get_next_seqn(kipcm->rnls);
-        if (kipcm_smap_add_gfp(GFP_ATOMIC, kipcm->fid_messages->egress, 
+        if (kipcm_smap_add_gfp(GFP_ATOMIC, kipcm->fid_messages->egress,
                                seq_num, flow_id)) {
                 LOG_DBG("Could not get next sequence number");
                 return -1;
