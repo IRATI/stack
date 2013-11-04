@@ -501,7 +501,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 spin_unlock(&data->lock);
 
-                while (kfifo_get(&flow->sdu_queue, du)) {
+                while (kfifo_out(&flow->sdu_queue, du, sizeof(struct sdu *))) {
                         kfa_sdu_post(data->kfa, flow->port_id, du);
                 }
         } else {
