@@ -67,6 +67,7 @@ struct shim_eth_flow {
 
         struct gha *       dest_ha;
         struct gpa *       dest_pa;
+
         /* Only used once for allocate_response */
         flow_id_t          flow_id;
         port_id_t          port_id;
@@ -333,8 +334,6 @@ static string_t * create_vlan_interface_name(string_t *    interface_name,
 static int flow_destroy(struct ipcp_instance_data * data,
                         struct shim_eth_flow *     flow)
 {
-        flow_id_t fid;
-
         if (!flow) {
                 LOG_ERR("Couldn't destroy flow. No flow given");
                 return -1;
