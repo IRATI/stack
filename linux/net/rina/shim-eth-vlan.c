@@ -486,8 +486,6 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
 
         /* On positive response, flow should transition to allocated state */
         if (!result) {
-                struct sdu * du = NULL;
-
                 flow->port_id = port_id;
                 if (kipcm_flow_add(default_kipcm, data->id,
                                    flow->port_id, flow->flow_id)) {
@@ -501,10 +499,26 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 spin_unlock(&data->lock);
 
-                while (kfifo_out(&flow->sdu_queue, du, sizeof(struct sdu *))) {
-                        kfa_sdu_post(data->kfa, flow->port_id, du);
+                while (!kfifo_is_empty(&flow->sdu_queue)) {
+                        struct sdu * tmp = NULL;
+
+                        if (kfifo_out(&flow->sdu_queue,
+                                      &tmp,
+                                      sizeof(struct sdu *)) <
+                            sizeof(struct sdu *)) {
+                                LOG_ERR("There is not enough data in fifo");
+                                return -1;
+                        }
+
+                        LOG_DBG("Got a new element from the fifo");
+                        
+                        if (kfa_sdu_post(data->kfa, flow->port_id, tmp)) {
+                                LOG_ERR("Couldn't post SDU to KFA ...");
+                                return -1;
+                        }
                 }
         } else {
+                /* FIXME: Please add the required spinlocking here */
                 flow->port_id_state = PORT_STATE_NULL;
                 kfifo_free(&flow->sdu_queue);
         }
@@ -791,6 +805,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         flow = find_flow_by_gha(data, ghaddr);
         if (!flow) {
                 LOG_DBG("Have to create a new flow");
+
                 flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
                 if (!flow) {
                         spin_unlock(&data->lock);
@@ -818,7 +833,19 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 LOG_DBG("Created the queue");
 
                 /* Store SDU in queue */
-                kfifo_put(&flow->sdu_queue, du);
+                if (kfifo_avail(&flow->sdu_queue) < (sizeof(struct sdu *))) {
+                        LOG_ERR("There is no space in the fifo");
+                        spin_unlock(&data->lock);
+                        return 0;
+                }
+                if (kfifo_in(&flow->sdu_queue,
+                             &du,
+                             sizeof(struct sdu *)) != sizeof(struct sdu *)) {
+                        LOG_ERR("Could not write %zd bytes into the fifo",
+                                sizeof(struct sdu *));
+                        spin_unlock(&data->lock);
+                        return 0;
+                }
 
                 spin_unlock(&data->lock);
 
@@ -848,11 +875,31 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 LOG_DBG("Flow exists, queueing or delivering");
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
                         spin_unlock(&data->lock);
-                        LOG_DBG("Posting to kipcm");
-                        kfa_sdu_post(data->kfa, flow->port_id, du);
+
+                        if (kfa_sdu_post(data->kfa, flow->port_id, du)) {
+                                return 0;
+                        }
+
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
                         LOG_DBG("Queueing frame");
-                        kfifo_put(&flow->sdu_queue, du);
+
+                        if (kfifo_avail(&flow->sdu_queue) <
+                            (sizeof(struct sdu *))) {
+                                LOG_ERR("There is no space in the fifo");
+                                spin_unlock(&data->lock);
+                                return 0;
+                        }
+                        if (kfifo_in(&flow->sdu_queue,
+                                     &du,
+                                     sizeof(struct sdu *)) !=
+                            sizeof(struct sdu *)) {
+                                LOG_ERR("Could not write %zd bytes into the "
+                                        "fifo",
+                                        sizeof(struct sdu *));
+                                spin_unlock(&data->lock);
+                                return 0;
+                        }
+
                         spin_unlock(&data->lock);
                 }
 
