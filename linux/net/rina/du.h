@@ -105,7 +105,7 @@ int                   sdu_destroy(struct sdu * s);
 
 const struct buffer * sdu_buffer(const struct sdu * s);
 /* FIXME: should be returning a ssize_t instead ... */
-size_t                sdu_buffer_length(const struct sdu *s);
+size_t                sdu_buffer_length(const struct sdu * s);
 
 struct sdu *          sdu_dup(struct sdu * sdu);
 struct sdu *          sdu_dup_gfp(gfp_t        flags,
