@@ -75,12 +75,7 @@ struct sdu * sdu_create_from_gfp_copying(gfp_t        flags,
                 return NULL;
         }
 
-        if (!memcpy_fromio(tmp->buffer->data, data, size)) {
-                LOG_ERR("Problems copying data to SDU buffer");
-                rkfree(tmp->buffer);
-                rkfree(tmp);
-                return NULL;
-        }
+        memcpy_fromio(tmp->buffer->data, data, size);
         tmp->buffer->size = size;
 
         return tmp;
