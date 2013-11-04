@@ -53,6 +53,19 @@ int pdu_destroy(struct pdu * p)
         return 0;
 }
 
+bool is_buffer_ok(const struct buffer * b)
+{
+        if (!b)
+                return false;
+
+        if (!b->data || !b->size)
+                return false;
+
+        return true;
+}
+EXPORT_SYMBOL(is_buffer_ok);
+
+/* FIXME: This function must disappear, please remove it */
 struct sdu * sdu_create_from_gfp_copying(gfp_t        flags,
                                          const void * data,
                                          size_t       size)
@@ -108,18 +121,6 @@ EXPORT_SYMBOL(sdu_create_from_buffer_gfp);
 struct sdu * sdu_create_from_buffer(struct buffer * buffer)
 { return sdu_create_from_buffer_gfp(GFP_KERNEL, buffer); }
 EXPORT_SYMBOL(sdu_create_from_buffer);
-
-bool is_buffer_ok(struct buffer * b)
-{
-        if (!b)
-                return false;
-
-        if (!b->data || !b->size)
-                return false;
-
-        return true;
-}
-EXPORT_SYMBOL(is_buffer_ok);
 
 struct buffer * buffer_create_from_gfp(gfp_t  flags,
                                        void * data,
@@ -222,6 +223,7 @@ int buffer_destroy(struct buffer * b)
         if (!b)
                 return -1;
 
+        /* NOTE: Be merciful and destroy even a non-ok buffer ... */
         if (b->data) rkfree(b->data);
         rkfree(b);
 
@@ -231,7 +233,7 @@ EXPORT_SYMBOL(buffer_destroy);
 
 ssize_t buffer_length(const struct buffer * b)
 {
-        if (!b)
+        if (!is_buffer_ok(b))
                 return -1;
 
         return b->size;
@@ -240,7 +242,7 @@ EXPORT_SYMBOL(buffer_length);
 
 void * buffer_data(struct buffer * b)
 {
-        if (!b)
+        if (!is_buffer_ok(b))
                 return NULL;
 
         return b->data;
@@ -256,7 +258,7 @@ struct sdu * sdu_create_from_gfp(gfp_t  flags,
         LOG_DBG("Trying to create an SDU of size %zd from data in the buffer",
                 size);
 
-        if (!data)
+        if (!data || !size)
                 return NULL;
 
         tmp = rkmalloc(sizeof(*tmp), flags);

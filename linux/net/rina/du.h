@@ -87,6 +87,7 @@ struct buffer {
         size_t size;
 };
 
+/* NOTE: Creates a buffer from raw data */
 struct buffer * buffer_create_from_gfp(gfp_t  flags,
                                        void * data,
                                        size_t size);
@@ -99,13 +100,18 @@ struct buffer * buffer_create_gfp(gfp_t  flags,
                                   size_t size);
 
 int             buffer_destroy(struct buffer * b);
+
 /* NOTE: The following function may return -1 */
 ssize_t         buffer_length(const struct buffer * b);
+
+/* NOTE: Returns the raw buffer memory, watch-out ... */
 void *          buffer_data(struct buffer * b);
+
 struct buffer * buffer_dup(struct buffer * b);
 struct buffer * buffer_dup_gfp(gfp_t           flags,
                                struct buffer * b);
-bool            is_buffer_ok(struct buffer * b);
+
+bool            is_buffer_ok(const struct buffer * b);
 
 /*
  * FIXME: This structure will be hidden soon. Do not access its field(s)
