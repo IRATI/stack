@@ -95,6 +95,7 @@ struct buffer * buffer_create(void * data,
 int             buffer_destroy(struct buffer * b);
 /* NOTE: The following function may return -1 */
 ssize_t         buffer_length(const struct buffer * b);
+void *          buffer_data(const struct buffer * b);
 
 /*
  * FIXME: This structure will be hidden soon. Do not access its field(s)

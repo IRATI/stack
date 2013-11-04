@@ -130,6 +130,15 @@ ssize_t buffer_length(const struct buffer * b)
 }
 EXPORT_SYMBOL(buffer_length);
 
+void * buffer_data(const struct buffer * b)
+{
+        if (!b)
+                return NULL;
+
+        return b->data;
+}
+EXPORT_SYMBOL(buffer_data);
+
 struct sdu * sdu_create_from_gfp(gfp_t  flags,
                                  void * data,
                                  size_t size)
