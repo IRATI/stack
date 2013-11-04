@@ -126,11 +126,6 @@ struct sdu *          sdu_create_from_buffer(struct buffer * buffer);
 struct sdu *          sdu_create_from_buffer_gfp(gfp_t           flags,
                                                  struct buffer * buffer);
 
-/* FIXME: This function must disappear */
-struct sdu *          sdu_create_from_gfp_copying(gfp_t        flags,
-                                                  const void * data,
-                                                  size_t       size);
-
 int                   sdu_destroy(struct sdu * s);
 
 const struct buffer * sdu_buffer(const struct sdu * s);
