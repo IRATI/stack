@@ -95,7 +95,11 @@ struct buffer * buffer_create(void * data,
 int             buffer_destroy(struct buffer * b);
 /* NOTE: The following function may return -1 */
 ssize_t         buffer_length(const struct buffer * b);
-void *          buffer_data(const struct buffer * b);
+void *          buffer_data(struct buffer * b);
+struct buffer * buffer_dup(struct buffer * b);
+struct buffer * buffer_dup_gfp(gfp_t           flags,
+                               struct buffer * b);
+bool            is_buffer_ok(struct buffer * b);
 
 /*
  * FIXME: This structure will be hidden soon. Do not access its field(s)
@@ -105,15 +109,22 @@ struct sdu {
         struct buffer * buffer;
 };
 
-/* NOTE: sdu_create_from() takes the ownership of the buffer passed */
+/* NOTE: The following function take the ownership of the buffer passed */
 struct sdu *          sdu_create_from(void * data,
                                       size_t size);
 struct sdu *          sdu_create_from_gfp(gfp_t  flags,
                                           void * data,
                                           size_t size);
+
+struct sdu *          sdu_create_from_buffer(struct buffer * buffer);
+struct sdu *          sdu_create_from_buffer_gfp(gfp_t           flags,
+                                                 struct buffer * buffer);
+
+/* FIXME: This function must disappear */
 struct sdu *          sdu_create_from_gfp_copying(gfp_t        flags,
                                                   const void * data,
                                                   size_t       size);
+
 int                   sdu_destroy(struct sdu * s);
 
 const struct buffer * sdu_buffer(const struct sdu * s);
