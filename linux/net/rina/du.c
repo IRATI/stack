@@ -82,6 +82,166 @@ struct sdu * sdu_create_from_gfp_copying(gfp_t        flags,
 }
 EXPORT_SYMBOL(sdu_create_from_gfp_copying);
 
+struct sdu * sdu_create_from_buffer_gfp(gfp_t           flags,
+                                        struct buffer * buffer)
+{
+        struct sdu * tmp;
+
+        if (!is_buffer_ok(buffer))
+                return NULL;
+
+        tmp = rkmalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        tmp->buffer = buffer;
+
+        return tmp;
+}
+EXPORT_SYMBOL(sdu_create_from_buffer_gfp);
+
+struct sdu * sdu_create_from_buffer(struct buffer * buffer)
+{ return sdu_create_from_buffer_gfp(GFP_KERNEL, buffer); }
+EXPORT_SYMBOL(sdu_create_from_buffer);
+
+bool is_buffer_ok(struct buffer * b)
+{
+        if (!b)
+                return false;
+
+        if (!b->data || !b->size)
+                return false;
+
+        return true;
+}
+EXPORT_SYMBOL(is_buffer_ok);
+
+struct buffer * buffer_create_from_gfp(gfp_t  flags,
+                                       void * data,
+                                       size_t size)
+{
+        struct buffer * tmp;
+
+        if (!data) {
+                LOG_ERR("Cannot create buffer, data is NULL");
+                return NULL;
+        }
+        if (!size) {
+                LOG_ERR("Cannot create buffer, data is 0 size");
+                return NULL;
+        }
+
+        tmp = rkmalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        tmp->data = data;
+        tmp->size = size;
+
+        return tmp;
+}
+EXPORT_SYMBOL(buffer_create_from_gfp);
+
+struct buffer * buffer_create_from(void * data,
+                                   size_t size)
+{ return buffer_create_from_gfp(GFP_KERNEL, data, size); }
+EXPORT_SYMBOL(buffer_create_from);
+
+struct buffer * buffer_create_gfp(gfp_t  flags,
+                                  size_t size)
+{
+        struct buffer * tmp;
+
+        if (!size) {
+                LOG_ERR("Cannot create buffer, data is 0 size");
+                return NULL;
+        }
+
+        tmp = rkmalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        tmp->data = rkmalloc(size, flags);
+        if (!tmp->data) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->size = size;
+
+        return tmp;
+}
+EXPORT_SYMBOL(buffer_create_gfp);
+
+struct buffer * buffer_create(size_t size)
+{ return buffer_create_gfp(GFP_KERNEL, size); }
+EXPORT_SYMBOL(buffer_create);
+
+struct buffer * buffer_dup_gfp(gfp_t           flags,
+                               struct buffer * b)
+{
+        struct buffer * tmp;
+        void *          m;
+
+        if (!is_buffer_ok(b)) {
+                LOG_ERR("Cannot duplicate buffer, bad input parameter");
+                return NULL;
+        }
+
+        m = rkmalloc(b->size, flags);
+        if (!m)
+                return NULL;
+
+        if (!memcpy(m, b->data, b->size)) {
+                LOG_ERR("Cannot copy memory block, cannot duplicate buffer");
+                rkfree(m);
+                return NULL;
+        }
+
+        tmp = buffer_create_from_gfp(flags, m, b->size);
+        if (!tmp) {
+                rkfree(m);
+                return NULL;
+        }
+
+        return tmp;
+}
+EXPORT_SYMBOL(buffer_dup_gfp);
+
+struct buffer * buffer_dup(struct buffer * b)
+{ return buffer_dup_gfp(GFP_KERNEL, b); }
+EXPORT_SYMBOL(buffer_dup);
+
+int buffer_destroy(struct buffer * b)
+{
+        if (!b)
+                return -1;
+
+        if (b->data) rkfree(b->data);
+        rkfree(b);
+
+        return 0;
+}
+EXPORT_SYMBOL(buffer_destroy);
+
+ssize_t buffer_length(const struct buffer * b)
+{
+        if (!b)
+                return -1;
+
+        return b->size;
+}
+EXPORT_SYMBOL(buffer_length);
+
+void * buffer_data(struct buffer * b)
+{
+        if (!b)
+                return NULL;
+
+        return b->data;
+}
+EXPORT_SYMBOL(buffer_data);
+
 struct sdu * sdu_create_from_gfp(gfp_t  flags,
                                  void * data,
                                  size_t size)
@@ -122,8 +282,7 @@ int sdu_destroy(struct sdu * s)
                 return -1;
 
         if (s->buffer) {
-                if (s->buffer->data)
-                        rkfree(s->buffer->data);
+                if (s->buffer->data) rkfree(s->buffer->data);
                 rkfree(s->buffer);
         }
 
@@ -140,16 +299,6 @@ const struct buffer * sdu_buffer(const struct sdu * s)
         return s->buffer;
 }
 EXPORT_SYMBOL(sdu_buffer);
-
-/* FIXME: Should be returning ssize_t */
-size_t sdu_buffer_length(const struct sdu *s)
-{
-        if (!is_sdu_ok(s))
-                return 0; /* FIXME: should be returning -1 */
-
-        return s->buffer->size;
-}
-EXPORT_SYMBOL(sdu_buffer_length);
 
 struct sdu * sdu_dup_gfp(gfp_t        flags,
                          struct sdu * sdu)
