@@ -66,28 +66,6 @@ bool is_buffer_ok(const struct buffer * b)
 }
 EXPORT_SYMBOL(is_buffer_ok);
 
-struct sdu * sdu_create_from_buffer_gfp(gfp_t           flags,
-                                        struct buffer * buffer)
-{
-        struct sdu * tmp;
-
-        if (!is_buffer_ok(buffer))
-                return NULL;
-
-        tmp = rkmalloc(sizeof(*tmp), flags);
-        if (!tmp)
-                return NULL;
-
-        tmp->buffer = buffer;
-
-        return tmp;
-}
-EXPORT_SYMBOL(sdu_create_from_buffer_gfp);
-
-struct sdu * sdu_create_from_buffer(struct buffer * buffer)
-{ return sdu_create_from_buffer_gfp(GFP_KERNEL, buffer); }
-EXPORT_SYMBOL(sdu_create_from_buffer);
-
 struct buffer * buffer_create_from_gfp(gfp_t  flags,
                                        void * data,
                                        size_t size)
@@ -216,38 +194,27 @@ void * buffer_data(struct buffer * b)
 }
 EXPORT_SYMBOL(buffer_data);
 
-struct sdu * sdu_create_from_gfp(gfp_t  flags,
-                                 void * data,
-                                 size_t size)
+struct sdu * sdu_create_from_buffer_gfp(gfp_t           flags,
+                                        struct buffer * buffer)
 {
         struct sdu * tmp;
 
-        LOG_DBG("Trying to create an SDU of size %zd from data in the buffer",
-                size);
-
-        if (!data || !size)
+        if (!is_buffer_ok(buffer))
                 return NULL;
 
         tmp = rkmalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
 
-        tmp->buffer = rkmalloc(sizeof(struct buffer), flags);
-        if (!tmp->buffer) {
-                rkfree(tmp);
-                return NULL;
-        }
-
-        tmp->buffer->data = data;
-        tmp->buffer->size = size;
+        tmp->buffer = buffer;
 
         return tmp;
 }
-EXPORT_SYMBOL(sdu_create_from_gfp);
+EXPORT_SYMBOL(sdu_create_from_buffer_gfp);
 
-struct sdu * sdu_create_from(void * data, size_t size)
-{ return sdu_create_from_gfp(GFP_KERNEL, data, size); }
-EXPORT_SYMBOL(sdu_create_from);
+struct sdu * sdu_create_from_buffer(struct buffer * buffer)
+{ return sdu_create_from_buffer_gfp(GFP_KERNEL, buffer); }
+EXPORT_SYMBOL(sdu_create_from_buffer);
 
 int sdu_destroy(struct sdu * s)
 {

@@ -121,14 +121,6 @@ struct sdu {
         struct buffer * buffer;
 };
 
-#if 0
-struct sdu *          sdu_create_from(void * data,
-                                      size_t size);
-struct sdu *          sdu_create_from_gfp(gfp_t  flags,
-                                          void * data,
-                                          size_t size);
-#endif
-
 /* NOTE: The following function take the ownership of the buffer passed */
 struct sdu *          sdu_create_from_buffer(struct buffer * buffer);
 struct sdu *          sdu_create_from_buffer_gfp(gfp_t           flags,
