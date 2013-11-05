@@ -334,16 +334,19 @@ static string_t * create_vlan_interface_name(string_t *    interface_name,
 static int flow_destroy(struct ipcp_instance_data * data,
                         struct shim_eth_flow *     flow)
 {
+        if (!data) {
+                LOG_ERR("Couldn't destroy flow. No instance given");
+                return -1;
+        }
         if (!flow) {
                 LOG_ERR("Couldn't destroy flow. No flow given");
                 return -1;
         }
 
-        if (kfa_flow_unbind_and_destroy(data->kfa, flow->port_id))
-                return -1;
-
         spin_lock(&data->lock);
-        list_del(&flow->list);
+        if (!list_empty(&flow->list)) {
+                list_del(&flow->list);
+        }
         spin_unlock(&data->lock);
 
         if (flow->dest_pa) gpa_destroy(flow->dest_pa);
@@ -375,24 +378,30 @@ static void rinarp_resolve_handler(void *             opaque,
                 return;
         }
 
+        spin_lock(&data->lock);
         if (flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
-                flow->dest_ha       = gha_dup(dest_ha);
+                flow->dest_ha = gha_dup(dest_ha);
 
                 if (kipcm_flow_add(default_kipcm,
                                    data->id, flow->port_id, flow->flow_id)) {
+                        LOG_ERR("Cannot add flow");
                         flow_destroy(data, flow);
-                        LOG_ERR("Flow is not added");
+                        spin_unlock(&data->lock);
+                        return;
                 }
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
                                                        flow->flow_id,
                                                        0)) {
+                        LOG_ERR("Couldn't tell flow is allocated to KIPCM");
                         kfa_flow_unbind_and_destroy(data->kfa, flow->port_id);
                         flow_destroy(data, flow);
-                        LOG_ERR("Couldn't tell flow is allocated to KIPCM");
+                        spin_unlock(&data->lock);
+                        return;
                 }
         }
+        spin_unlock(&data->lock);
 }
 
 static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
@@ -431,7 +440,6 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 }
 
                 INIT_LIST_HEAD(&flow->list);
-
                 spin_lock(&data->lock);
                 list_add(&flow->list, &data->flows);
                 spin_unlock(&data->lock);
@@ -479,10 +487,13 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        spin_lock(&data->lock);
         if (flow->port_id_state != PORT_STATE_PENDING) {
                 LOG_ERR("Flow is already allocated");
+                spin_unlock(&data->lock);
                 return -1;
         }
+        spin_unlock(&data->lock);
 
         /* On positive response, flow should transition to allocated state */
         if (!result) {
@@ -511,15 +522,16 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                         }
 
                         LOG_DBG("Got a new element from the fifo");
-                        
+
                         if (kfa_sdu_post(data->kfa, flow->port_id, tmp)) {
                                 LOG_ERR("Couldn't post SDU to KFA ...");
                                 return -1;
                         }
                 }
         } else {
-                /* FIXME: Please add the required spinlocking here */
+                spin_lock(&data->lock);
                 flow->port_id_state = PORT_STATE_NULL;
+                spin_unlock(&data->lock);
                 kfifo_free(&flow->sdu_queue);
         }
 
@@ -538,8 +550,15 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if (flow_destroy(data, flow))
+        if (kfa_flow_unbind_and_destroy(data->kfa, flow->port_id)) {
+                LOG_ERR("Failed to unbind and destroy flow in KFA");
+                return -1;
+        }
+
+        if (flow_destroy(data, flow)) {
                 LOG_ERR("Failed to destroy flow");
+                return -1;
+        }
 
         return 0;
 }
@@ -609,7 +628,8 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
         }
 
         /* Remove from ARP cache */
-        rinarp_remove(data->handle); /* FIXME: check data->handle first ? */
+        if (data->handle)
+                rinarp_remove(data->handle);
 
         name_destroy(data->app_name);
         data->app_name = NULL;
@@ -646,11 +666,14 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
         LOG_DBG("Found the flow associated with the id");
 
+        spin_lock(&data->lock);
         if (flow->port_id_state != PORT_STATE_ALLOCATED) {
                 LOG_ERR("Flow is not in the right state to call this");
                 sdu_destroy(sdu);
+                spin_unlock(&data->lock);
                 return -1;
         }
+        spin_unlock(&data->lock);
 
         src_hw = data->dev->dev_addr;
         if (!src_hw) {

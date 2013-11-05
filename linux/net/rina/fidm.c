@@ -113,7 +113,7 @@ int fidm_release(struct fidm * instance,
 
         bitmap_clear(instance->bitmap, id, 1);
 
-        LOG_DBG("Bitmap release completed successfully");
+        LOG_DBG("Bitmap release for id %d completed successfully", id);
 
         return 0;
 }

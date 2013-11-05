@@ -124,27 +124,35 @@ flow_id_t kfa_flow_create(struct kfa * instance)
 {
         struct ipcp_flow * flow;
         flow_id_t          fid;
+        unsigned long      flags;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return flow_id_bad();
         }
 
-        ASSERT(instance->fidm);
+        spin_lock_irqsave(&instance->lock, flags);
 
-        spin_lock(&instance->lock);
+        if (!instance->fidm) {
+                LOG_ERR("This instance doesn't have a FIDM");
+
+                spin_unlock_irqrestore(&instance->lock, flags);
+                return flow_id_bad();
+        }
 
         fid = fidm_allocate(instance->fidm);
         if (!is_flow_id_ok(fid)) {
                 LOG_ERR("Cannot get a flow-id");
 
-                spin_unlock(&instance->lock);
+                spin_unlock_irqrestore(&instance->lock, flags);
                 return flow_id_bad();
         }
 
         flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
         if (!flow) {
-                spin_unlock(&instance->lock);
+                fidm_release(instance->fidm, fid);
+
+                spin_unlock_irqrestore(&instance->lock, flags);
                 return flow_id_bad();
         }
 
@@ -152,12 +160,15 @@ flow_id_t kfa_flow_create(struct kfa * instance)
 
         if (kfa_fmap_add_gfp(GFP_ATOMIC, instance->flows.pending, fid, flow)) {
                 LOG_ERR("Could not map Flow and Flow ID");
+
+                fidm_release(instance->fidm, fid);
                 rkfree(flow);
-                spin_unlock(&instance->lock);
+
+                spin_unlock_irqrestore(&instance->lock, flags);
                 return flow_id_bad();
         }
 
-        spin_unlock(&instance->lock);
+        spin_unlock_irqrestore(&instance->lock, flags);
 
         return fid;
 
