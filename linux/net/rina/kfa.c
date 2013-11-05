@@ -291,10 +291,6 @@ int kfa_flow_sdu_write(struct kfa * instance,
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
         }
-        if (!is_port_id_ok(id)) {
-                LOG_ERR("Bogus port-id, bailing out");
-                return -1;
-        }
         if (!is_sdu_ok(sdu)) {
                 LOG_ERR("Bogus port-id, bailing out");
                 return -1;
@@ -302,11 +298,36 @@ int kfa_flow_sdu_write(struct kfa * instance,
 
         spin_lock(&instance->lock);
 
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Bogus port-id, bailing out");
+                spin_unlock(&instance->lock);
+                return -1;
+        }
+
         flow = kfa_pmap_find(instance->flows, id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
                 spin_unlock(&instance->lock);
                 return -1;
+        }
+
+        while (flow->state != PORT_STATE_ALLOCATED) {
+                LOG_DBG("Write is going to sleep on wait queue %pK",
+                        &flow->wait_queue);
+                spin_unlock(&instance->lock);
+                wait_event_interruptible(flow->wait_queue,
+                                         (flow->state == PORT_STATE_ALLOCATED));
+
+                spin_lock(&instance->lock);
+                LOG_DBG("Write woken up");
+
+                flow = kfa_pmap_find(instance->flows, id);
+                if (!flow) {
+                        LOG_ERR("There is no flow bound to port-id %d anymore",
+                                id);
+                        spin_unlock(&instance->lock);
+                        return -1;
+                }
         }
 
         ipcp = flow->ipc_process;
