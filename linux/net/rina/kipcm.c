@@ -591,10 +591,7 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
 }
 
 static int
-assign_to_dif_free_and_reply(struct name *       dif_name,
-                             struct dif_config * dif_config,
-                             struct dif_info *   dif_info,
-                             struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs,
+assign_to_dif_free_and_reply(struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs,
                              struct rnl_msg *    msg,
                              ipc_process_id_t    id,
                              uint_t              res,
@@ -602,14 +599,39 @@ assign_to_dif_free_and_reply(struct name *       dif_name,
                              uint_t              port_id)
 {
         struct ipcp_config * pos, * nxt;
-        if (attrs)      rkfree(attrs);
-        LOG_DBG("STEP2");
-        if (dif_name)   name_destroy(dif_name);
-        LOG_DBG("STEP3");
-        if (dif_config) rkfree(dif_config);
-        LOG_DBG("STEP4");
-        if (msg)        rkfree(msg);
+
+        if (attrs){
+                if (attrs->dif_info){
+                        if (attrs->dif_info->dif_name){
+                                name_destroy(attrs->dif_info->dif_name);
+                                LOG_DBG("STEP1");
+                        }
+                        if (attrs->dif_info->configuration){
+                                LOG_DBG("LEODEBUG  ENTRANDO EN DIF_INFO_DESTROY");
+                                list_for_each_entry_safe(pos, nxt, &attrs->dif_info->configuration->ipcp_config_entries, next) {
+                                        LOG_DBG("LEODEBUG  BORRANDO pos EN %pK:", pos);
+                                        list_del(&pos->next);
+                                        rkfree(pos->entry);
+                                        rkfree(pos);
+                                        }
+                                rkfree(attrs->dif_info->configuration);
+                                LOG_DBG("STEP2");
+                        }
+
+                        rkfree(attrs->dif_info);
+                        LOG_DBG("STEP3");
+                }
+                rkfree(attrs);
+                LOG_DBG("STEP4");
+        }
+
+        if (msg) rkfree(msg);
         LOG_DBG("STEP5");
+
+
+#if 0
+        if (dif_name)   name_destroy(dif_name);
+        LOG_DBG("STEP1");
         if (dif_info) { 
                 LOG_DBG("LEODEBUG  ENTRANDO EN DIF_INFO_DESTROY");
                 list_for_each_entry_safe(pos, nxt, &dif_config->ipcp_config_entries, next) {
@@ -618,9 +640,17 @@ assign_to_dif_free_and_reply(struct name *       dif_name,
                         rkfree(pos->entry);
                         rkfree(pos);
                 }
-                rkfree(dif_info);
         }
-        LOG_DBG("STEP1");
+        LOG_DBG("STEP2");
+        if (dif_config) rkfree(dif_config);
+        LOG_DBG("STEP3");
+	if (dif_info) rkfree(dif_info);
+        LOG_DBG("STEP4");
+        if (attrs)      rkfree(attrs);
+        LOG_DBG("STEP5");
+        if (msg)        rkfree(msg);
+        LOG_DBG("STEP6");
+#endif
 
         if (rnl_assign_dif_response(id, res, seq_num, port_id))
                 return -1;
@@ -639,7 +669,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
         struct name *                                 dif_name;
         struct dif_config *                           dif_config;
         struct ipcp_instance *                        ipc_process;
-        ipc_process_id_t                              ipc_id;
+        ipc_process_id_t                              ipc_id = 0;
 
         attrs      = NULL;
         msg        = NULL;
@@ -661,94 +691,42 @@ static int notify_ipcp_assign_dif_request(void *             data,
 
         attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
         if (!attrs)
-                return assign_to_dif_free_and_reply(dif_name,
-                                                    dif_config,
-                                                    dif_info,
-                                                    attrs,
-                                                    msg,
-                                                    0,
-                                                    -1,
-                                                    info->snd_seq,
-                                                    info->snd_portid);
+                goto fail;
 
         dif_info = rkzalloc(sizeof(struct dif_info), GFP_KERNEL);
         if (!dif_info)
-                return assign_to_dif_free_and_reply(dif_name,
-                                                    dif_config,
-                                                    dif_info,
-                                                    attrs,
-                                                    msg,
-                                                    0,
-                                                    -1,
-                                                    info->snd_seq,
-                                                    info->snd_portid);
+                goto fail;
+
         attrs->dif_info = dif_info;
 
         dif_name = name_create();
         if (!dif_name)
-                return assign_to_dif_free_and_reply(dif_name,
-                                                    dif_config,
-                                                    dif_info,
-                                                    attrs,
-                                                    msg,
-                                                    0,
-                                                    -1,
-                                                    info->snd_seq,
-                                                    info->snd_portid);
+                goto fail;
+
         dif_info->dif_name = dif_name;
 
         dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
         if (!dif_config)
-                return assign_to_dif_free_and_reply(dif_name,
-                                                    dif_config,
-                                                    dif_info,
-                                                    attrs,
-                                                    msg,
-                                                    0,
-                                                    -1,
-                                                    info->snd_seq,
-                                                    info->snd_portid);
+                goto fail;
+
         INIT_LIST_HEAD(&(dif_config->ipcp_config_entries));
         dif_info->configuration = dif_config;
 
         msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
         if (!msg)
-                return assign_to_dif_free_and_reply(dif_name,
-                                                    dif_config,
-                                                    dif_info,
-                                                    attrs,
-                                                    msg,
-                                                    0,
-                                                    -1,
-                                                    info->snd_seq,
-                                                    info->snd_portid);
+                goto fail;
 
         msg->attrs = attrs;
 
         if (rnl_parse_msg(info, msg))
-                return assign_to_dif_free_and_reply(dif_name,
-                                                    dif_config,
-                                                    dif_info,
-                                                    attrs,
-                                                    msg,
-                                                    0,
-                                                    -1,
-                                                    info->snd_seq,
-                                                    info->snd_portid);
+                goto fail;
+
         ipc_id = msg->rina_hdr->dst_ipc_id;
 
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
                 LOG_ERR("IPC process %d not found", ipc_id);
-                return assign_to_dif_free_and_reply(dif_name,
-                                                    dif_config,
-                                                    dif_info,
-                                                    attrs,
-                                                    msg,
-                                                    0,
-                                                    -1,
-                                                    info->snd_seq,
-                                                    info->snd_portid);
+                goto fail;
         }
         LOG_DBG("Found IPC Process with id %d", ipc_id);
 
@@ -759,24 +737,21 @@ static int notify_ipcp_assign_dif_request(void *             data,
                         tmp, ipc_id);
                 rkfree(tmp);
 
-                return assign_to_dif_free_and_reply(dif_name,
-                                                    dif_config,
-                                                    dif_info,
-                                                    attrs,
-                                                    msg,
-                                                    ipc_id,
-                                                    -1,
-                                                    info->snd_seq,
-                                                    info->snd_portid);
+                goto fail;
         }
 
-        return assign_to_dif_free_and_reply(dif_name,
-                                            dif_config,
-                                            dif_info,
-                                            attrs,
+        return assign_to_dif_free_and_reply(attrs,
                                             msg,
                                             ipc_id,
                                             0,
+                                            info->snd_seq,
+                                            info->snd_portid);
+
+fail:
+        return assign_to_dif_free_and_reply(attrs,
+                                            msg,
+                                            ipc_id,
+                                            -1,
                                             info->snd_seq,
                                             info->snd_portid);
 }
