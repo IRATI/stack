@@ -334,16 +334,20 @@ static string_t * create_vlan_interface_name(string_t *    interface_name,
 static int flow_destroy(struct ipcp_instance_data * data,
                         struct shim_eth_flow *     flow)
 {
+        if (!data) {
+                LOG_ERR("Couldn't destroy flow. No instance given");
+                return -1;
+        }
         if (!flow) {
                 LOG_ERR("Couldn't destroy flow. No flow given");
                 return -1;
         }
 
+        spin_lock(&data->lock);
         if (!list_empty(&flow->list)) {
-                spin_lock(&data->lock);
                 list_del(&flow->list);
-                spin_unlock(&data->lock);
         }
+        spin_unlock(&data->lock);
 
         if (flow->dest_pa) gpa_destroy(flow->dest_pa);
         if (flow->dest_ha) gha_destroy(flow->dest_ha);
@@ -381,16 +385,20 @@ static void rinarp_resolve_handler(void *             opaque,
 
                 if (kipcm_flow_add(default_kipcm,
                                    data->id, flow->port_id, flow->flow_id)) {
+                        LOG_ERR("Cannot add flow");
                         flow_destroy(data, flow);
-                        LOG_ERR("Flow is not added");
+                        spin_unlock(&data->lock);
+                        return;
                 }
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
                                                        flow->flow_id,
                                                        0)) {
+                        LOG_ERR("Couldn't tell flow is allocated to KIPCM");
                         kfa_flow_unbind_and_destroy(data->kfa, flow->port_id);
                         flow_destroy(data, flow);
-                        LOG_ERR("Couldn't tell flow is allocated to KIPCM");
+                        spin_unlock(&data->lock);
+                        return;
                 }
         }
         spin_unlock(&data->lock);
@@ -514,7 +522,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                         }
 
                         LOG_DBG("Got a new element from the fifo");
-                        
+
                         if (kfa_sdu_post(data->kfa, flow->port_id, tmp)) {
                                 LOG_ERR("Couldn't post SDU to KFA ...");
                                 return -1;
