@@ -1118,6 +1118,10 @@ IpcmAllocateFlowRequestResultEvent::IpcmAllocateFlowRequestResultEvent(
         this->portId = portId;
 }
 
+int IpcmAllocateFlowRequestResultEvent::getPortId() const {
+        return portId;
+}
+
 /* CLASS QUERY RIB RESPONSE EVENT */
 QueryRIBResponseEvent::QueryRIBResponseEvent(
                 const std::list<RIBObject>& ribObjects,

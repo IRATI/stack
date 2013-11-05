@@ -891,6 +891,7 @@ class IpcmAllocateFlowRequestResultEvent: public BaseResponseEvent {
 public:
         IpcmAllocateFlowRequestResultEvent(
                         int result, int portId, unsigned int sequenceNumber);
+        int getPortId() const;
 };
 
 /**
