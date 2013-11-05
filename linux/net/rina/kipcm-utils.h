@@ -23,7 +23,6 @@
 
 #include "common.h"
 #include "kipcm.h"
-#include "fidm.h"
 
 struct ipcp_imap;
 struct kipcm_pmap;

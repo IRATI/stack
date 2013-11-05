@@ -25,7 +25,6 @@
 #include <linux/kobject.h>
 
 #include "du.h"
-#include "fidm.h"
 
 typedef int16_t cep_id_t;
 
