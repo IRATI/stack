@@ -30,7 +30,6 @@
 #include "common.h"
 #include "kipcm-utils.h"
 #include "rnl-utils.h"
-#include "fidm.h"
 
 /*
  * IMAPs
@@ -189,19 +188,19 @@ int is_seq_num_ok(rnl_sn_t sn)
 { return (sn >= 0 && sn < SNVALUE_WRONG) ? 1 : 0; }
 EXPORT_SYMBOL(is_seq_num_ok);
 
-struct kipcm_fmap {
+struct kipcm_pmap {
         DECLARE_HASHTABLE(table, FMAP_HASH_BITS);
 };
 
-struct kipcm_fmap_entry {
-        flow_id_t         key;
+struct kipcm_pmap_entry {
+        port_id_t         key;
         rnl_sn_t          value;
         struct hlist_node hlist;
 };
 
-struct kipcm_fmap * kipcm_fmap_create(void)
+struct kipcm_pmap * kipcm_pmap_create(void)
 {
-        struct kipcm_fmap * tmp;
+        struct kipcm_pmap * tmp;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
@@ -212,9 +211,9 @@ struct kipcm_fmap * kipcm_fmap_create(void)
         return tmp;
 }
 
-int kipcm_fmap_destroy(struct kipcm_fmap * map)
+int kipcm_pmap_destroy(struct kipcm_pmap * map)
 {
-        struct kipcm_fmap_entry * entry;
+        struct kipcm_pmap_entry * entry;
         struct hlist_node *      tmp;
         int                      bucket;
 
@@ -230,23 +229,23 @@ int kipcm_fmap_destroy(struct kipcm_fmap * map)
         return 0;
 }
 
-int kipcm_fmap_empty(struct kipcm_fmap * map)
+int kipcm_pmap_empty(struct kipcm_pmap * map)
 {
         ASSERT(map);
         return hash_empty(map->table);
 }
 
-#define fmap_hash(T, K) hash_min(K, HASH_BITS(T))
+#define pmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
-static struct kipcm_fmap_entry * fmap_entry_find(struct kipcm_fmap * map,
-                                                 flow_id_t           key)
+static struct kipcm_pmap_entry * pmap_entry_find(struct kipcm_pmap * map,
+                                                 port_id_t           key)
 {
-        struct kipcm_fmap_entry * entry;
+        struct kipcm_pmap_entry * entry;
         struct hlist_head *      head;
 
         ASSERT(map);
 
-        head = &map->table[fmap_hash(map->table, key)];
+        head = &map->table[pmap_hash(map->table, key)];
         hlist_for_each_entry(entry, head, hlist) {
                 if (entry->key == key)
                         return entry;
@@ -255,29 +254,29 @@ static struct kipcm_fmap_entry * fmap_entry_find(struct kipcm_fmap * map,
         return NULL;
 }
 
-rnl_sn_t kipcm_fmap_find(struct kipcm_fmap * map,
-                         flow_id_t           key)
+rnl_sn_t kipcm_pmap_find(struct kipcm_pmap * map,
+                         port_id_t           key)
 {
-        struct kipcm_fmap_entry * entry;
+        struct kipcm_pmap_entry * entry;
 
         ASSERT(map);
 
-        entry = fmap_entry_find(map, key);
+        entry = pmap_entry_find(map, key);
         if (!entry)
                 return SNVALUE_WRONG;
 
         return entry->value;
 }
 
-int kipcm_fmap_update(struct kipcm_fmap * map,
-                      flow_id_t           key,
+int kipcm_pmap_update(struct kipcm_pmap * map,
+                      port_id_t           key,
                       rnl_sn_t            value)
 {
-        struct kipcm_fmap_entry * cur;
+        struct kipcm_pmap_entry * cur;
 
         ASSERT(map);
 
-        cur = fmap_entry_find(map, key);
+        cur = pmap_entry_find(map, key);
         if (!cur)
                 return -1;
 
@@ -286,11 +285,11 @@ int kipcm_fmap_update(struct kipcm_fmap * map,
         return 0;
 }
 
-int kipcm_fmap_add(struct kipcm_fmap * map,
-                   flow_id_t           key,
+int kipcm_pmap_add(struct kipcm_pmap * map,
+                   port_id_t           key,
                    rnl_sn_t            value)
 {
-        struct kipcm_fmap_entry * tmp;
+        struct kipcm_pmap_entry * tmp;
 
         ASSERT(map);
 
@@ -307,14 +306,14 @@ int kipcm_fmap_add(struct kipcm_fmap * map,
         return 0;
 }
 
-int kipcm_fmap_remove(struct kipcm_fmap * map,
-                      flow_id_t           key)
+int kipcm_pmap_remove(struct kipcm_pmap * map,
+                      port_id_t           key)
 {
-        struct kipcm_fmap_entry * cur;
+        struct kipcm_pmap_entry * cur;
 
         ASSERT(map);
 
-        cur = fmap_entry_find(map, key);
+        cur = pmap_entry_find(map, key);
         if (!cur)
                 return -1;
 
@@ -336,7 +335,7 @@ struct kipcm_smap {
 
 struct kipcm_smap_entry {
         rnl_sn_t          key;
-        flow_id_t         value;
+        port_id_t         value;
         struct hlist_node hlist;
 };
 
@@ -396,7 +395,7 @@ static struct kipcm_smap_entry * smap_entry_find(struct kipcm_smap * map,
         return NULL;
 }
 
-flow_id_t kipcm_smap_find(struct kipcm_smap * map,
+port_id_t kipcm_smap_find(struct kipcm_smap * map,
                           rnl_sn_t            key)
 {
         struct kipcm_smap_entry * entry;
@@ -405,14 +404,14 @@ flow_id_t kipcm_smap_find(struct kipcm_smap * map,
 
         entry = smap_entry_find(map, key);
         if (!entry)
-                return flow_id_bad();
+                return port_id_bad();
 
         return entry->value;
 }
 
 int kipcm_smap_update(struct kipcm_smap * map,
                       rnl_sn_t            key,
-                      flow_id_t           value)
+                      port_id_t           value)
 {
         struct kipcm_smap_entry * cur;
 
@@ -430,7 +429,7 @@ int kipcm_smap_update(struct kipcm_smap * map,
 int kipcm_smap_add_gfp(gfp_t               flags,
                        struct kipcm_smap * map,
                        rnl_sn_t            key,
-                       flow_id_t           value)
+                       port_id_t           value)
 {
         struct kipcm_smap_entry * tmp;
 
@@ -451,7 +450,7 @@ int kipcm_smap_add_gfp(gfp_t               flags,
 
 int kipcm_smap_add(struct kipcm_smap * map,
                    rnl_sn_t             key,
-                   flow_id_t            value)
+                   port_id_t            value)
 { return kipcm_smap_add_gfp(GFP_KERNEL, map, key, value); }
 
 

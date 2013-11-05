@@ -28,6 +28,8 @@
 /* FIXME: Shouldn't we keep contrained to int32 ids ? */
 typedef int           port_id_t;
 
+#define PORT_ID_WRONG -1
+
 /* ALWAYS use this function to check if the id looks good */
 int       is_port_id_ok(port_id_t id);
 

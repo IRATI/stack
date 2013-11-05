@@ -116,10 +116,8 @@ struct ipcp_instance_ops {
                                        const struct name *         source,
                                        const struct name *         dest,
                                        const struct flow_spec *    flow_spec,
-                                       port_id_t                   id,
-                                       flow_id_t                   fid);
+                                       port_id_t                   id);
         int  (* flow_allocate_response)(struct ipcp_instance_data * data,
-                                        flow_id_t                   flow_id,
                                         port_id_t                   port_id,
                                         int                         result);
         int  (* flow_deallocate)(struct ipcp_instance_data * data,

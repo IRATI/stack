@@ -34,22 +34,26 @@
 #include "logs.h"
 #include "debug.h"
 #include "utils.h"
-#include "fidm.h"
+#include "pidm.h"
 #include "kfa.h"
 #include "kfa-utils.h"
 
 struct kfa {
         spinlock_t    lock;
-        struct fidm * fidm;
+        struct pidm * pidm;
+        struct kfa_pmap * flows;
+};
 
-        struct {
-                struct kfa_fmap * pending;
-                struct kfa_pmap * committed;
-        } flows;
+enum flow_state {
+        PORT_STATE_NULL = 1,
+        PORT_STATE_PENDING,
+        PORT_STATE_ALLOCATED
 };
 
 struct ipcp_flow {
         port_id_t               port_id;
+
+        enum flow_state         state;
 
         struct ipcp_instance *  ipc_process;
 
@@ -66,30 +70,15 @@ struct kfa * kfa_create(void)
         if (!instance)
                 return NULL;
 
-        instance->fidm = fidm_create();
-        if (!instance->fidm) {
+        instance->pidm = pidm_create();
+        if (!instance->pidm) {
                 rkfree(instance);
                 return NULL;
         }
 
-        instance->flows.pending   = kfa_fmap_create();
-        instance->flows.committed = kfa_pmap_create();
+        instance->flows = kfa_pmap_create();
 
-        if (!instance->flows.pending || !instance->flows.committed) {
-                if (instance->flows.pending)
-                        if (kfa_fmap_destroy(instance->flows.pending)) {
-                                /* FIXME: What could we do here ? */
-                        }
-
-                if (instance->flows.committed)
-                        if (kfa_pmap_destroy(instance->flows.committed)) {
-                                /* FIXME: What could we do here ? */
-                        }
-
-                if (fidm_destroy(instance->fidm)) {
-                        /* FIXME: What could we do here ? */
-                }
-
+        if (!instance->flows) {
                 rkfree(instance);
                 return NULL;
         }
@@ -106,76 +95,72 @@ int kfa_destroy(struct kfa * instance)
                 return -1;
         }
 
-        /* FIXME: Destroy all the pending flows */
-        ASSERT(kfa_fmap_empty(instance->flows.pending));
-        kfa_fmap_destroy(instance->flows.pending);
-
         /* FIXME: Destroy all the committed flows */
-        ASSERT(kfa_pmap_empty(instance->flows.committed));
-        kfa_pmap_destroy(instance->flows.committed);
+        ASSERT(kfa_pmap_empty(instance->flows));
+        kfa_pmap_destroy(instance->flows);
 
-        fidm_destroy(instance->fidm);
+        pidm_destroy(instance->pidm);
         rkfree(instance);
 
         return 0;
 }
 
-flow_id_t kfa_flow_create(struct kfa * instance)
+port_id_t kfa_flow_create(struct kfa *     instance,
+                          ipc_process_id_t id)
 {
         struct ipcp_flow * flow;
-        flow_id_t          fid;
+        port_id_t          pid;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return flow_id_bad();
+                return port_id_bad();
         }
 
         spin_lock(&instance->lock);
 
-        if (!instance->fidm) {
+        if (!instance->pidm) {
                 LOG_ERR("This instance doesn't have a FIDM");
 
                 spin_unlock(&instance->lock);
-                return flow_id_bad();
+                return port_id_bad();
         }
 
-        fid = fidm_allocate(instance->fidm);
-        if (!is_flow_id_ok(fid)) {
+        pid = pidm_allocate(instance->pidm);
+        if (!is_port_id_ok(pid)) {
                 LOG_ERR("Cannot get a flow-id");
 
                 spin_unlock(&instance->lock);
-                return flow_id_bad();
+                return port_id_bad();
         }
 
         flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
         if (!flow) {
-                fidm_release(instance->fidm, fid);
-
+                pidm_release(instance->pidm, pid);
                 spin_unlock(&instance->lock);
-                return flow_id_bad();
+                return port_id_bad();
         }
+
+        flow->state = PORT_STATE_PENDING;
 
         init_waitqueue_head(&flow->wait_queue);
 
-        if (kfa_fmap_add_gfp(GFP_ATOMIC, instance->flows.pending, fid, flow)) {
-                LOG_ERR("Could not map Flow and Flow ID");
-
-                fidm_release(instance->fidm, fid);
+        if (kfa_pmap_add_gfp(GFP_ATOMIC, instance->flows, pid, flow, id)) {
+                LOG_ERR("Could not map Flow and Port ID");
+                pidm_release(instance->pidm, pid);
                 rkfree(flow);
 
                 spin_unlock(&instance->lock);
-                return flow_id_bad();
+                return port_id_bad();
         }
 
         spin_unlock(&instance->lock);
 
-        return fid;
+        return pid;
 
 }
 EXPORT_SYMBOL(kfa_flow_create);
 
 int kfa_flow_bind(struct kfa *           instance,
-                  flow_id_t              fid,
                   port_id_t              pid,
                   struct ipcp_instance * ipc_process,
                   ipc_process_id_t       ipc_id)
@@ -186,7 +171,7 @@ int kfa_flow_bind(struct kfa *           instance,
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
         }
-        if (!is_flow_id_ok(fid)) {
+        if (!is_port_id_ok(pid)) {
                 LOG_ERR("Bogus flow-id, bailing out");
                 return -1;
         }
@@ -202,46 +187,25 @@ int kfa_flow_bind(struct kfa *           instance,
 
         spin_lock(&instance->lock);
 
-        flow = kfa_fmap_find(instance->flows.pending, fid);
+        flow = kfa_pmap_find(instance->flows, pid);
         if (!flow) {
-                LOG_ERR("The flow with flow-id %d is not pending, "
-                        "cannot bind it to port %d", fid, pid);
+                LOG_ERR("The flow with port-id %d is not pending, "
+                        "cannot commit it", pid);
                 spin_unlock(&instance->lock);
                 return -1;
         }
-        if (kfa_pmap_find(instance->flows.committed, pid)) {
-                LOG_ERR("Flow on port-id %d already exists", pid);
+        if (flow->state != PORT_STATE_PENDING) {
+                LOG_ERR("Flow on port-id %d already committed", pid);
                 spin_unlock(&instance->lock);
                 return -1;
         }
 
-        flow->port_id     = pid;
+        flow->state = PORT_STATE_ALLOCATED;
         flow->ipc_process = ipc_process;
 
         if (kfifo_alloc(&flow->sdu_ready, PAGE_SIZE, GFP_ATOMIC)) {
                 LOG_ERR("Couldn't create the sdu-ready queue for "
                         "flow on port-id %d", pid);
-                rkfree(flow);
-                spin_unlock(&instance->lock);
-                return -1;
-        }
-
-        if (kfa_fmap_remove(instance->flows.pending, fid)) {
-                LOG_ERR("Cannot bind flow %d to port %d (#1)", fid, pid);
-                kfifo_free(&flow->sdu_ready);
-                rkfree(flow);
-                spin_unlock(&instance->lock);
-                return -1;
-        }
-        if (kfa_pmap_add_gfp(GFP_ATOMIC, instance->flows.committed,
-                             pid, flow, ipc_id)) {
-                LOG_ERR("Cannot bind flow %d to port %d (#1)", fid, pid);
-                if (kfa_fmap_add_gfp(GFP_ATOMIC, instance->flows.pending,
-                                     fid, flow)) {
-                        LOG_ERR("Cannot roll-back changes for flow %d", fid);
-                }
-
-                kfifo_free(&flow->sdu_ready);
                 rkfree(flow);
                 spin_unlock(&instance->lock);
                 return -1;
@@ -256,77 +220,25 @@ int kfa_flow_bind(struct kfa *           instance,
 }
 EXPORT_SYMBOL(kfa_flow_bind);
 
-flow_id_t kfa_flow_unbind(struct kfa * instance,
-                          port_id_t    id)
+int kfa_flow_destroy(struct kfa * instance,
+                     port_id_t    id)
 {
         struct ipcp_flow * flow;
-        flow_id_t          fid;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
         }
         if (!is_port_id_ok(id)) {
-                LOG_ERR("Bogus port-id, bailing out");
-                return -1;
-        }
-
-        spin_lock(&instance->lock);
-
-        flow = kfa_pmap_find(instance->flows.committed, id);
-        if (!flow) {
-                LOG_ERR("There is no flow binded on port-id %d", id);
-                spin_unlock(&instance->lock);
-                return -1;
-        }
-
-        if (kfa_pmap_remove(instance->flows.committed, id)) {
-                LOG_ERR("Could not remove commited flow at port %d", id);
-                spin_unlock(&instance->lock);
-                return -1;
-        }
-
-        fid = fidm_allocate(instance->fidm);
-
-        if (!is_flow_id_ok(fid)) {
-                LOG_ERR("Flow ID could not be generated (bitmap is full)");
-                rkfree(flow);
-                spin_unlock(&instance->lock);
-                return flow_id_bad();
-        }
-
-        if (kfa_fmap_add_gfp(GFP_ATOMIC, instance->flows.pending, fid, flow)) {
-                LOG_ERR("Could not map Flow and Flow ID");
-                rkfree(flow);
-                spin_unlock(&instance->lock);
-                return flow_id_bad();
-        }
-
-        spin_unlock(&instance->lock);
-
-        return fid;
-}
-EXPORT_SYMBOL(kfa_flow_unbind);
-
-int kfa_flow_destroy(struct kfa * instance,
-                     flow_id_t    id)
-{
-        struct ipcp_flow * flow;
-
-        if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
-        }
-        if (!is_flow_id_ok(id)) {
                 LOG_ERR("Bogus flow-id, bailing out");
                 return -1;
         }
 
         spin_lock(&instance->lock);
 
-        flow = kfa_fmap_find(instance->flows.pending, id);
+        flow = kfa_pmap_find(instance->flows, id);
         if (!flow) {
-                LOG_ERR("There is no flow created with fid %d", id);
+                LOG_ERR("There is no flow created with port_id %d", id);
                 spin_unlock(&instance->lock);
                 return -1;
         }
@@ -334,14 +246,14 @@ int kfa_flow_destroy(struct kfa * instance,
         kfifo_free(&flow->sdu_ready);
         rkfree(flow);
 
-        if (kfa_fmap_remove(instance->flows.pending, id)) {
-                LOG_ERR("Could not remove pending flow with fid %d", id);
+        if (kfa_pmap_remove(instance->flows, id)) {
+                LOG_ERR("Could not remove pending flow with port_id %d", id);
                 spin_unlock(&instance->lock);
                 return -1;
         }
 
-        if (fidm_release(instance->fidm, id)) {
-                LOG_ERR("Could not release fid %d from the map", id);
+        if (pidm_release(instance->pidm, id)) {
+                LOG_ERR("Could not release pid %d from the map", id);
                 spin_unlock(&instance->lock);
                 return -1;
         }
@@ -352,27 +264,6 @@ int kfa_flow_destroy(struct kfa * instance,
 }
 EXPORT_SYMBOL(kfa_flow_destroy);
 
-int kfa_flow_unbind_and_destroy(struct kfa * instance,
-                                port_id_t    id)
-{
-
-        flow_id_t rm_fid;
-
-        rm_fid = kfa_flow_unbind(instance, id);
-        if (!is_flow_id_ok(rm_fid)){
-                LOG_ERR("Could not unbind flow at port %d", id);
-                return -1;
-        }
-
-        if (kfa_flow_destroy(instance, rm_fid)) {
-                LOG_ERR("Could not destroy flow with fid: %d", rm_fid);
-                return -1;
-        }
-
-        return 0;
-}
-EXPORT_SYMBOL(kfa_flow_unbind_and_destroy);
-
 /* FIXME: To be removed ASAP */
 int kfa_remove_all_for_id(struct kfa *     instance,
                           ipc_process_id_t id)
@@ -382,7 +273,7 @@ int kfa_remove_all_for_id(struct kfa *     instance,
                 return -1;
         }
 
-        if (kfa_pmap_remove_all_for_id(instance->flows.committed, id))
+        if (kfa_pmap_remove_all_for_id(instance->flows, id))
                 return -1;
 
         return 0;
@@ -411,7 +302,7 @@ int kfa_flow_sdu_write(struct kfa * instance,
 
         spin_lock(&instance->lock);
 
-        flow = kfa_pmap_find(instance->flows.committed, id);
+        flow = kfa_pmap_find(instance->flows, id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
                 spin_unlock(&instance->lock);
@@ -456,7 +347,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
 
         LOG_DBG("Trying to read SDU from port-id %d", id);
         spin_lock(&instance->lock);
-        flow = kfa_pmap_find(instance->flows.committed, id);
+        flow = kfa_pmap_find(instance->flows, id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
                 spin_unlock(&instance->lock);
@@ -471,7 +362,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 spin_lock(&instance->lock);
                 LOG_DBG("Woken up");
 
-                flow = kfa_pmap_find(instance->flows.committed, id);
+                flow = kfa_pmap_find(instance->flows, id);
                 if (!flow) {
                         LOG_ERR("There is no flow bound to port-id %d anymore",
                                 id);
@@ -524,7 +415,7 @@ int kfa_sdu_post(struct kfa * instance,
                 sdu->buffer->size, id);
 
         spin_lock(&instance->lock);
-        flow = kfa_pmap_find(instance->flows.committed, id);
+        flow = kfa_pmap_find(instance->flows, id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
                 spin_unlock(&instance->lock);
@@ -562,6 +453,6 @@ int kfa_sdu_post(struct kfa * instance,
 }
 EXPORT_SYMBOL(kfa_sdu_post);
 
-struct ipcp_flow * kfa_find_flow_by_fid(struct kfa * instance, flow_id_t fid)
-{ return kfa_fmap_find(instance->flows.pending, fid); }
-EXPORT_SYMBOL(kfa_find_flow_by_fid);
+struct ipcp_flow * kfa_find_flow_by_pid(struct kfa * instance, port_id_t pid)
+{ return kfa_pmap_find(instance->flows, pid); }
+EXPORT_SYMBOL(kfa_find_flow_by_pid);
