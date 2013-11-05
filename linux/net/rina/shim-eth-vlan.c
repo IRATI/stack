@@ -514,7 +514,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                         }
 
                         LOG_DBG("Got a new element from the fifo");
-                        
+
                         if (kfa_sdu_post(data->kfa, flow->port_id, tmp)) {
                                 LOG_ERR("Couldn't post SDU to KFA ...");
                                 return -1;
