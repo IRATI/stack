@@ -94,7 +94,7 @@ static struct normal_flow * find_flow(struct ipcp_instance_data * data,
 }
 
 struct ipcp_factory_data {
-        u32    nl_port; 
+        u32    nl_port;
         struct list_head instances;
 };
 
@@ -346,11 +346,11 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         data->info->dif_name = name_dup(dif_information->dif_name);
         dt_cons = dif_information->configuration->data_transfer_constants;
 
-        if (normal_check_dt_cons(dt_cons)) 
+        if (normal_check_dt_cons(dt_cons))
                 return -1;
 
         efcp_container_set_dt_cons(dt_cons, data->efcpc);
-        
+
         return 0;
 }
 
@@ -394,7 +394,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
 
         instance->ops     = &normal_instance_ops;
         instance->data    = rkzalloc(sizeof(struct ipcp_instance_data),
-                                  GFP_KERNEL);
+                                     GFP_KERNEL);
         if (!instance->data) {
                 LOG_ERR("Could not allocate memory for normal ipcp "
                         "internal data");
@@ -403,7 +403,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         }
 
         instance->data->id = id;
-        instance->data->nl_port = data->nl_port; 
+        instance->data->nl_port = data->nl_port;
         instance->data->info = rkzalloc(sizeof(struct normal_info *),
                                         GFP_KERNEL);
         if (!instance->data->info) {

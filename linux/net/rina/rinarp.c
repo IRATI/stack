@@ -36,7 +36,7 @@
 struct rinarp_handle {
         struct gpa *        pa;
         struct gha *        ha;
-	struct net_device * dev;
+        struct net_device * dev;
 };
 
 static void handle_destroy(struct rinarp_handle * handle)
@@ -51,13 +51,13 @@ static void handle_destroy(struct rinarp_handle * handle)
         rkfree(handle);
 }
 
-static struct rinarp_handle * handle_create(struct gpa *        pa, 
-					    struct gha *        ha,
-					    struct net_device * dev)
+static struct rinarp_handle * handle_create(struct gpa *        pa,
+                                            struct gha *        ha,
+                                            struct net_device * dev)
 {
         struct rinarp_handle * handle;
 
-	ASSERT(dev);
+        ASSERT(dev);
 
         if (!gpa_is_ok(pa) || !gha_is_ok(ha)) {
                 LOG_ERR("Bad input parameters, cannot create a handle");
@@ -70,7 +70,7 @@ static struct rinarp_handle * handle_create(struct gpa *        pa,
 
         handle->pa = gpa_dup(pa);
         handle->ha = gha_dup(ha);
-	handle->dev = dev;
+        handle->dev = dev;
         if (!handle->pa || !handle->ha || !handle->dev) {
                 handle_destroy(handle);
                 return NULL;
@@ -80,12 +80,12 @@ static struct rinarp_handle * handle_create(struct gpa *        pa,
 }
 
 static bool handle_is_ok(struct rinarp_handle * handle)
-{ return (handle && gpa_is_ok(handle->pa) && 
-	  gha_is_ok(handle->ha) && handle->dev); }
+{ return (handle && gpa_is_ok(handle->pa) &&
+          gha_is_ok(handle->ha) && handle->dev); }
 
 struct rinarp_handle * rinarp_add(const struct gpa * pa,
                                   const struct gha * ha,
-				  struct net_device * dev)
+                                  struct net_device * dev)
 {
         struct rinarp_handle * handle;
 

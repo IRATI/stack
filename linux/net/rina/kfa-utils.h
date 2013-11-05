@@ -26,26 +26,6 @@
 
 struct ipcp_flow;
 
-/* FMAPs */
-struct kfa_fmap *  kfa_fmap_create(void);
-int                kfa_fmap_destroy(struct kfa_fmap * map);
-
-int                kfa_fmap_empty(struct kfa_fmap * map);
-int                kfa_fmap_add(struct kfa_fmap *  map,
-                                flow_id_t          key,
-                                struct ipcp_flow * value);
-int                kfa_fmap_add_gfp(gfp_t  flags,
-                                    struct kfa_fmap *  map,
-                                    flow_id_t          key,
-                                    struct ipcp_flow * value);
-struct ipcp_flow * kfa_fmap_find(struct kfa_fmap * map,
-                                 flow_id_t         key);
-int                kfa_fmap_update(struct kfa_fmap *  map,
-                                   flow_id_t          key,
-                                   struct ipcp_flow * value);
-int                kfa_fmap_remove(struct kfa_fmap * map,
-                                   flow_id_t         key);
-
 /* PMAPs */
 struct kfa_pmap;
 

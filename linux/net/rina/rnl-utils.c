@@ -312,7 +312,7 @@ static int parse_list_of_ipcp_config_entries(struct nlattr *     nested_attr,
 }
 
 static int parse_data_transfer_constants(struct nlattr * attr,
-                struct data_transfer_constants * data_transfer_constants)
+                                         struct data_transfer_constants * data_transfer_constants)
 {
         struct nla_policy attr_policy[DTC_ATTR_MAX + 1];
         struct nlattr *attrs[DTC_ATTR_MAX + 1];
@@ -345,34 +345,34 @@ static int parse_data_transfer_constants(struct nlattr * attr,
 
         if (attrs[DTC_ATTR_PORT_ID])
                 data_transfer_constants->port_id_length =
-                                nla_get_u16(attrs[DTC_ATTR_PORT_ID]);
+                        nla_get_u16(attrs[DTC_ATTR_PORT_ID]);
 
         if (attrs[DTC_ATTR_CEP_ID])
                 data_transfer_constants->cep_id_length =
-                                nla_get_u16(attrs[DTC_ATTR_CEP_ID]);
+                        nla_get_u16(attrs[DTC_ATTR_CEP_ID]);
 
         if (attrs[DTC_ATTR_SEQ_NUM])
                 data_transfer_constants->seq_num_length =
-                                nla_get_u16(attrs[DTC_ATTR_SEQ_NUM]);
+                        nla_get_u16(attrs[DTC_ATTR_SEQ_NUM]);
 
         if (attrs[DTC_ATTR_ADDRESS])
                 data_transfer_constants->address_length =
-                                nla_get_u16(attrs[DTC_ATTR_ADDRESS]);
+                        nla_get_u16(attrs[DTC_ATTR_ADDRESS]);
 
         if (attrs[DTC_ATTR_LENGTH])
                 data_transfer_constants->length_length =
-                                nla_get_u16(attrs[DTC_ATTR_LENGTH]);
+                        nla_get_u16(attrs[DTC_ATTR_LENGTH]);
 
         if (attrs[DTC_ATTR_MAX_PDU_SIZE])
                 data_transfer_constants->max_pdu_size =
-                                nla_get_u32(attrs[DTC_ATTR_MAX_PDU_SIZE]);
+                        nla_get_u32(attrs[DTC_ATTR_MAX_PDU_SIZE]);
 
         if (attrs[DTC_ATTR_MAX_PDU_LIFE])
                 data_transfer_constants->max_pdu_life =
-                                nla_get_u32(attrs[DTC_ATTR_MAX_PDU_LIFE]);
+                        nla_get_u32(attrs[DTC_ATTR_MAX_PDU_LIFE]);
 
         if (attrs[DTC_ATTR_DIF_INTEGRITY])
-                        data_transfer_constants->dif_integrity = true;
+                data_transfer_constants->dif_integrity = true;
 
         return 0;
 }
@@ -397,22 +397,22 @@ static int parse_dif_config(struct nlattr * dif_config_attr,
 
         if (attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES]) {
                 if (parse_list_of_ipcp_config_entries(
-                                attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES],
-                                dif_config) < 0)
+                                                      attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES],
+                                                      dif_config) < 0)
                         goto parse_fail;
         }
 
         if (attrs[DCONF_ATTR_DATA_TRANS_CONS]) {
                 data_transfer_constants = rkzalloc(
-                                sizeof(struct data_transfer_constants),
-                                GFP_KERNEL);
+                                                   sizeof(struct data_transfer_constants),
+                                                   GFP_KERNEL);
                 if (!data_transfer_constants)
                         goto parse_fail;
                 dif_config->data_transfer_constants = data_transfer_constants;
 
                 if (parse_data_transfer_constants(
-                                attrs[DCONF_ATTR_DATA_TRANS_CONS],
-                                dif_config->data_transfer_constants) < 0) {
+                                                  attrs[DCONF_ATTR_DATA_TRANS_CONS],
+                                                  dif_config->data_transfer_constants) < 0) {
                         rkfree(dif_config->data_transfer_constants);
                         goto parse_fail;
                 }

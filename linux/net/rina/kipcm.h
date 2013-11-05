@@ -87,21 +87,20 @@ int            kipcm_ipcp_factory_unregister(struct kipcm *        kipcm,
 /* On the destination */
 int            kipcm_flow_arrived(struct kipcm *     kipcm,
                                   ipc_process_id_t   ipc_id,
-                                  flow_id_t          flow_id,
+                                  port_id_t          port_id,
                                   struct name *      dif_name,
                                   struct name *      source,
                                   struct name *      dest,
                                   struct flow_spec * fspec);
 
 /* On both source and destination */
-int            kipcm_flow_add(struct kipcm *   kipcm,
-                              ipc_process_id_t ipc_id,
-                              port_id_t        id,
-                              flow_id_t        fid);
+int            kipcm_flow_commit(struct kipcm *   kipcm,
+                                 ipc_process_id_t ipc_id,
+                                 port_id_t        id);
 
 int            kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
                                                   ipc_process_id_t id,
-                                                  flow_id_t        fid,
+                                                  port_id_t        pid,
                                                   uint_t           res);
 
 int            kipcm_notify_flow_dealloc(ipc_process_id_t ipc_id,

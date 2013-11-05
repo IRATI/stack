@@ -125,7 +125,7 @@ int efcp_container_set_dt_cons(struct data_transfer_constants * dt_cons,
         container->dt_cons.max_pdu_size   = dt_cons->max_pdu_size;
         container->dt_cons.max_pdu_life   = dt_cons->max_pdu_life;
         container->dt_cons.dif_integrity  = dt_cons->dif_integrity;
-        
+
         LOG_DBG("Succesfully set data transfer constants to efcp container");
         return 0;
 }
@@ -191,11 +191,11 @@ cep_id_t efcp_connection_create(struct efcp_container *   container,
         }
 
         /* FIXME: We need to know if DTCP is needed ...
-        tmp->dtcp = dtcp_create();
-        if (!tmp->dtcp) {
-                efcp_destroy(tmp);
-                return -1;
-        }
+           tmp->dtcp = dtcp_create();
+           if (!tmp->dtcp) {
+           efcp_destroy(tmp);
+           return -1;
+           }
         */
 
         /* No needs to check here, bindings are straightforward */

@@ -1,5 +1,5 @@
 /*
- * FIDM (Flows-IDs Manager)
+ * PIDM (Port-IDs Manager)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,24 +18,21 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_FIDM_H
-#define RINA_FIDM_H
+#ifndef RINA_PIDM_H
+#define RINA_PIDM_H
 
-typedef int16_t flow_id_t;
-
-/* ALWAYS use this function to check if the id looks good */
-int           is_flow_id_ok(flow_id_t id);
+#include "common.h"
 
 /* ALWAYS use this function to get a bad port-id */
-flow_id_t     flow_id_bad(void);
+port_id_t     port_id_bad(void);
 
-struct fidm;
+struct pidm;
 
-struct fidm * fidm_create(void);
-int           fidm_destroy(struct fidm * instance);
+struct pidm * pidm_create(void);
+int           pidm_destroy(struct pidm * instance);
 
-flow_id_t     fidm_allocate(struct fidm * instance);
-int           fidm_release(struct fidm * instance,
-                           flow_id_t     id);
+port_id_t     pidm_allocate(struct pidm * instance);
+int           pidm_release(struct pidm * instance,
+                           port_id_t     id);
 
 #endif
