@@ -49,13 +49,13 @@ struct kfa {
 };
 
 struct ipcp_flow {
-        port_id_t               port_id;
+        port_id_t              port_id;
 
-        struct ipcp_instance *  ipc_process;
+        struct ipcp_instance * ipc_process;
 
         /* FIXME: To be wiped out */
-        struct kfifo            sdu_ready;
-        wait_queue_head_t       wait_queue;
+        struct kfifo           sdu_ready;
+        wait_queue_head_t      wait_queue;
 };
 
 struct kfa * kfa_create(void)
@@ -120,6 +120,7 @@ int kfa_destroy(struct kfa * instance)
         return 0;
 }
 
+/* FIXME: this kfa_flow_create should be work-queued, to avoid IRQ disable */
 flow_id_t kfa_flow_create(struct kfa * instance)
 {
         struct ipcp_flow * flow;
