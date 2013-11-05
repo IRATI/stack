@@ -891,7 +891,6 @@ IPCEvent* IpcmUpdateDIFConfigurationResponseMessage::toIPCEvent(){
 IpcmAllocateFlowRequestMessage::IpcmAllocateFlowRequestMessage():
                                 BaseNetlinkResponseMessage(
                                                 RINA_C_IPCM_ALLOCATE_FLOW_REQUEST) {
-        portId = 0;
 }
 
 const ApplicationProcessNamingInformation&
@@ -912,14 +911,6 @@ IpcmAllocateFlowRequestMessage::getFlowSpec() const {
 void IpcmAllocateFlowRequestMessage::setFlowSpec(
 		const FlowSpecification& flowSpec) {
 	this->flowSpec = flowSpec;
-}
-
-int IpcmAllocateFlowRequestMessage::getPortId() const {
-	return portId;
-}
-
-void IpcmAllocateFlowRequestMessage::setPortId(int portId) {
-	this->portId = portId;
 }
 
 const ApplicationProcessNamingInformation&
@@ -944,7 +935,7 @@ void IpcmAllocateFlowRequestMessage::setDifName(
 
 IPCEvent* IpcmAllocateFlowRequestMessage::toIPCEvent(){
 	FlowRequestEvent * event =
-			new FlowRequestEvent(portId, flowSpec, true, sourceAppName, destAppName,
+			new FlowRequestEvent(-1, flowSpec, true, sourceAppName, destAppName,
 					difName, getSequenceNumber());
 	return event;
 }
@@ -952,12 +943,22 @@ IPCEvent* IpcmAllocateFlowRequestMessage::toIPCEvent(){
 /* CLASS IPCM ALLOCATE FLOW REQUEST RESULT MESSAGE */
 IpcmAllocateFlowRequestResultMessage::IpcmAllocateFlowRequestResultMessage():
 	BaseNetlinkResponseMessage(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT) {
+        portId = 0;
+}
+
+int IpcmAllocateFlowRequestResultMessage::getPortId() const {
+        return portId;
+}
+
+void IpcmAllocateFlowRequestResultMessage::setPortId(int portId) {
+        this->portId = portId;
 }
 
 IPCEvent* IpcmAllocateFlowRequestResultMessage::toIPCEvent(){
         IpcmAllocateFlowRequestResultEvent * event =
                         new IpcmAllocateFlowRequestResultEvent(
-                                        getResult(), getSequenceNumber());
+                                        getResult(), portId,
+                                        getSequenceNumber());
         return event;
 }
 
@@ -965,6 +966,7 @@ IPCEvent* IpcmAllocateFlowRequestResultMessage::toIPCEvent(){
 IpcmAllocateFlowRequestArrivedMessage::IpcmAllocateFlowRequestArrivedMessage()
 	: BaseNetlinkResponseMessage(
 			RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED) {
+        portId = 0;
 }
 
 const ApplicationProcessNamingInformation&
@@ -1007,10 +1009,18 @@ void IpcmAllocateFlowRequestArrivedMessage::setDifName(
 	this->difName = difName;
 }
 
+int IpcmAllocateFlowRequestArrivedMessage::getPortId() const {
+        return portId;
+}
+
+void IpcmAllocateFlowRequestArrivedMessage::setPortId(int portId){
+        this->portId = portId;
+}
+
 IPCEvent* IpcmAllocateFlowRequestArrivedMessage::toIPCEvent(){
 	FlowRequestEvent * event =
 			new FlowRequestEvent(
-					0,
+					this->portId,
 					this->flowSpecification,
 					false,
 					this->destAppName,
@@ -1025,7 +1035,6 @@ IpcmAllocateFlowResponseMessage::IpcmAllocateFlowResponseMessage() :
 				BaseNetlinkMessage(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE) {
 	this->result = 0;
 	this->notifySource = false;
-	this->portId = 0;
 }
 
 void IpcmAllocateFlowResponseMessage::setResult(int result) {
@@ -1044,19 +1053,11 @@ void IpcmAllocateFlowResponseMessage::setNotifySource(bool notifySource) {
 	this->notifySource = notifySource;
 }
 
-int IpcmAllocateFlowResponseMessage::getPortId() const{
-	return portId;
-}
-
-void IpcmAllocateFlowResponseMessage::setPortId(int portId){
-	this->portId = portId;
-}
-
 IPCEvent* IpcmAllocateFlowResponseMessage::toIPCEvent(){
         AllocateFlowResponseEvent * event =
                         new AllocateFlowResponseEvent(
                                         result,
-                                        portId,
+                                        this->getSequenceNumber(),
                                         notifySource);
         return event;
 }

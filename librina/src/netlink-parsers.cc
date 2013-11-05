@@ -1882,8 +1882,6 @@ int putIpcmAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 	}
 	nla_nest_end(netlinkMessage, difName);
 
-	NLA_PUT_U32(netlinkMessage, IAFRM_ATTR_PORT_ID, object.getPortId());
-
 	return 0;
 
 	nla_put_failure: LOG_ERR(
@@ -1895,6 +1893,7 @@ int putIpcmAllocateFlowRequestResultMessageObject(nl_msg* netlinkMessage,
 		const IpcmAllocateFlowRequestResultMessage& object){
 
 	NLA_PUT_U32(netlinkMessage, IAFRRM_ATTR_RESULT, object.getResult());
+	NLA_PUT_U32(netlinkMessage, IAFRRM_ATTR_PORT_ID, object.getPortId());
 
 	return 0;
 
@@ -1947,6 +1946,8 @@ int putIpcmAllocateFlowRequestArrivedMessageObject(nl_msg* netlinkMessage,
 	}
 	nla_nest_end(netlinkMessage, difName);
 
+	NLA_PUT_U32(netlinkMessage, IAFRA_ATTR_PORT_ID, object.getPortId());
+
 	return 0;
 
 	nla_put_failure: LOG_ERR(
@@ -1959,7 +1960,6 @@ int putIpcmAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 	NLA_PUT_U32(netlinkMessage, IAFRE_ATTR_RESULT,
 			object.getResult());
 	NLA_PUT_FLAG(netlinkMessage, IAFRE_ATTR_NOTIFY_SOURCE);
-	NLA_PUT_U32(netlinkMessage, IAFRE_ATTR_PORT_ID, object.getPortId());
 
 	return 0;
 
@@ -3502,9 +3502,6 @@ IpcmAllocateFlowRequestMessage *
 	attr_policy[IAFRM_ATTR_DIF_NAME].type = NLA_NESTED;
 	attr_policy[IAFRM_ATTR_DIF_NAME].minlen = 0;
 	attr_policy[IAFRM_ATTR_DIF_NAME].maxlen = 0;
-	attr_policy[IAFRM_ATTR_PORT_ID].type = NLA_U32;
-	attr_policy[IAFRM_ATTR_PORT_ID].minlen = 0;
-	attr_policy[IAFRM_ATTR_PORT_ID].maxlen = 0;
 	struct nlattr *attrs[IAFRM_ATTR_MAX + 1];
 
 	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -3570,10 +3567,6 @@ IpcmAllocateFlowRequestMessage *
 		}
 	}
 
-	if (attrs[IAFRM_ATTR_PORT_ID]) {
-		result->setPortId(nla_get_u32(attrs[IAFRM_ATTR_PORT_ID]));
-	}
-
 	return result;
 }
 
@@ -3583,14 +3576,17 @@ IpcmAllocateFlowRequestResultMessage *
 	attr_policy[IAFRRM_ATTR_RESULT].type = NLA_U32;
 	attr_policy[IAFRRM_ATTR_RESULT].minlen = 4;
 	attr_policy[IAFRRM_ATTR_RESULT].maxlen = 4;
+	attr_policy[IAFRRM_ATTR_PORT_ID].type = NLA_U32;
+	attr_policy[IAFRRM_ATTR_PORT_ID].minlen = 4;
+	attr_policy[IAFRRM_ATTR_PORT_ID].maxlen = 4;
 	struct nlattr *attrs[IAFRRM_ATTR_MAX + 1];
 
 	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
 			IAFRRM_ATTR_MAX, attr_policy);
 	if (err < 0) {
 		LOG_ERR(
-				"Error parsing IpcmAllocateFlowRequestResultMessage information from Netlink message: %d",
-				err);
+		        "Error parsing IpcmAllocateFlowRequestResultMessage information from Netlink message: %d",
+		         err);
 		return 0;
 	}
 
@@ -3599,6 +3595,10 @@ IpcmAllocateFlowRequestResultMessage *
 
 	if (attrs[IAFRRM_ATTR_RESULT]) {
 		result->setResult(nla_get_u32(attrs[IAFRRM_ATTR_RESULT]));
+	}
+
+	if (attrs[IAFRRM_ATTR_PORT_ID]) {
+	        result->setPortId(nla_get_u32(attrs[IAFRRM_ATTR_PORT_ID]));
 	}
 
 	return result;
@@ -3619,6 +3619,9 @@ IpcmAllocateFlowRequestArrivedMessage * parseIpcmAllocateFlowRequestArrivedMessa
 	attr_policy[IAFRA_ATTR_DIF_NAME].type = NLA_NESTED;
 	attr_policy[IAFRA_ATTR_DIF_NAME].minlen = 0;
 	attr_policy[IAFRA_ATTR_DIF_NAME].maxlen = 0;
+	attr_policy[IAFRA_ATTR_PORT_ID].type = NLA_U32;
+	attr_policy[IAFRA_ATTR_PORT_ID].minlen = 0;
+	attr_policy[IAFRA_ATTR_PORT_ID].maxlen = 0;
 	struct nlattr *attrs[IAFRA_ATTR_MAX + 1];
 
 	/*
@@ -3690,6 +3693,10 @@ IpcmAllocateFlowRequestArrivedMessage * parseIpcmAllocateFlowRequestArrivedMessa
 		}
 	}
 
+	if (attrs[IAFRA_ATTR_PORT_ID]) {
+	        result->setPortId(nla_get_u32(attrs[IAFRA_ATTR_PORT_ID]));
+	}
+
 	return result;
 }
 
@@ -3702,9 +3709,6 @@ IpcmAllocateFlowResponseMessage * parseIpcmAllocateFlowResponseMessage(
 	attr_policy[IAFRE_ATTR_NOTIFY_SOURCE].type = NLA_FLAG;
 	attr_policy[IAFRE_ATTR_NOTIFY_SOURCE].minlen = 0;
 	attr_policy[IAFRE_ATTR_NOTIFY_SOURCE].maxlen = 0;
-	attr_policy[IAFRE_ATTR_PORT_ID].type = NLA_U32;
-	attr_policy[IAFRE_ATTR_PORT_ID].minlen = 4;
-	attr_policy[IAFRE_ATTR_PORT_ID].maxlen = 4;
 	struct nlattr *attrs[IAFRE_ATTR_MAX + 1];
 
 	/*
@@ -3732,10 +3736,6 @@ IpcmAllocateFlowResponseMessage * parseIpcmAllocateFlowResponseMessage(
 	if (attrs[IAFRE_ATTR_NOTIFY_SOURCE]) {
 		result->setNotifySource(
 				(nla_get_flag(attrs[IAFRE_ATTR_NOTIFY_SOURCE])));
-	}
-
-	if (attrs[IAFRE_ATTR_PORT_ID]) {
-		result->setPortId((nla_get_u32(attrs[IAFRE_ATTR_PORT_ID])));
 	}
 
 	return result;

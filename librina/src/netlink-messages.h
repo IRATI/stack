@@ -683,17 +683,12 @@ class IpcmAllocateFlowRequestMessage: public BaseNetlinkResponseMessage {
 	/** The DIF where the Flow is being allocated */
 	ApplicationProcessNamingInformation difName;
 
-	/** The portId assigned tot he flow */
-	int portId;
-
 public:
 	IpcmAllocateFlowRequestMessage();
 	const ApplicationProcessNamingInformation& getDestAppName() const;
 	void setDestAppName(const ApplicationProcessNamingInformation& destAppName);
 	const FlowSpecification& getFlowSpec() const;
 	void setFlowSpec(const FlowSpecification& flowSpec);
-	int getPortId() const;
-	void setPortId(int portId);
 	const ApplicationProcessNamingInformation& getSourceAppName() const;
 	void setSourceAppName(
 			const ApplicationProcessNamingInformation& sourceAppName);
@@ -708,8 +703,12 @@ public:
  */
 class IpcmAllocateFlowRequestResultMessage: public BaseNetlinkResponseMessage {
 
+        /** The port id allocated to the flow */
+        int portId;
 public:
 	IpcmAllocateFlowRequestResultMessage();
+	int getPortId() const;
+	void setPortId(int portId);
 	IPCEvent* toIPCEvent();
 };
 
@@ -731,6 +730,9 @@ class IpcmAllocateFlowRequestArrivedMessage:
 	/** The dif Name */
 	ApplicationProcessNamingInformation difName;
 
+	/** The port id allocated to the flow */
+	int portId;
+
 public:
 	IpcmAllocateFlowRequestArrivedMessage();
 	const ApplicationProcessNamingInformation& getDestAppName() const;
@@ -742,6 +744,8 @@ public:
 			const ApplicationProcessNamingInformation& sourceAppName);
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
+	int getPortId() const;
+	void setPortId(int portId);
 	IPCEvent* toIPCEvent();
 };
 
@@ -760,19 +764,12 @@ class IpcmAllocateFlowResponseMessage: public BaseNetlinkMessage {
 	 */
 	bool notifySource;
 
-	/**
-	 * The portId assigned to the flow by the IPC Manager
-	 */
-	int portId;
-
 public:
 	IpcmAllocateFlowResponseMessage();
 	int getResult() const;
 	void setResult(int result);
 	bool isNotifySource() const;
 	void setNotifySource(bool notifySource);
-	int getPortId() const;
-	void setPortId(int portId);
 	IPCEvent* toIPCEvent();
 };
 

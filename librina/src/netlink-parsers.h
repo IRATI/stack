@@ -542,7 +542,6 @@ enum IpcmAllocateFlowRequestMessageAttributes {
 	IAFRM_ATTR_SOURCE_APP_NAME = 1,
 	IAFRM_ATTR_DEST_APP_NAME,
 	IAFRM_ATTR_FLOW_SPEC,
-	IAFRM_ATTR_PORT_ID,
 	IAFRM_ATTR_DIF_NAME,
 	__IAFRM_ATTR_MAX,
 };
@@ -558,6 +557,7 @@ IpcmAllocateFlowRequestMessage *
 /* IpcmAllocateFlowRequestResultMessage CLASS*/
 enum IpcmAllocateFlowRequestResultMessageAttributes {
 	IAFRRM_ATTR_RESULT = 1,
+	IAFRRM_ATTR_PORT_ID,
 	__IAFRRM_ATTR_MAX,
 };
 
@@ -575,6 +575,7 @@ enum IpcmAllocateFlowRequestArrivedMessageAttributes {
 	IAFRA_ATTR_DEST_APP_NAME,
 	IAFRA_ATTR_FLOW_SPEC,
 	IAFRA_ATTR_DIF_NAME,
+	IAFRA_ATTR_PORT_ID,
 	__IAFRA_ATTR_MAX,
 };
 
@@ -590,7 +591,6 @@ IpcmAllocateFlowRequestArrivedMessage * parseIpcmAllocateFlowRequestArrivedMessa
 enum IpcmAllocateFlowResponseAttributes {
 	IAFRE_ATTR_RESULT = 1,
 	IAFRE_ATTR_NOTIFY_SOURCE,
-	IAFRE_ATTR_PORT_ID,
 	__IAFRE_ATTR_MAX,
 };
 

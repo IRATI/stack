@@ -632,18 +632,10 @@ class AllocateFlowResponseEvent: public BaseResponseEvent {
          */
         bool notifySource;
 
-        /** the portId of the flow */
-        int portId;
-
 public:
         AllocateFlowResponseEvent(
                         int result,
                         bool notifysource,
-                        unsigned int sequenceNumber);
-        AllocateFlowResponseEvent(
-                        int result,
-                        bool notifysource,
-                        int portId,
                         unsigned int sequenceNumber);
         bool isNotifySource() const;
         int getPortId() const;

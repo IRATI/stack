@@ -519,7 +519,6 @@ throw (AllocateFlowException) {
 	message.setDestAppName(flowRequest.getRemoteApplicationName());
 	message.setFlowSpec(flowRequest.getFlowSpecification());
 	message.setDifName(flowRequest.getDIFName());
-	message.setPortId(flowRequest.getPortId());
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -545,7 +544,8 @@ throw (AllocateFlowException) {
 	return seqNum;
 }
 
-void IPCProcess::allocateFlowResult(unsigned int sequenceNumber, bool success)
+void IPCProcess::allocateFlowResult(
+                unsigned int sequenceNumber, bool success, int portId)
 	throw (AllocateFlowException) {
 	if (!difMember){
 		throw AllocateFlowException(
@@ -555,6 +555,7 @@ void IPCProcess::allocateFlowResult(unsigned int sequenceNumber, bool success)
 	FlowInformation flowInformation;
 	try {
 		flowInformation = getPendingFlowOperation(sequenceNumber);
+		flowInformation.setPortId(portId);
 	} catch(IPCException &e){
 		throw AllocateFlowException(e.what());
 	}
@@ -585,7 +586,6 @@ void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 #else
 	IpcmAllocateFlowResponseMessage responseMessage;
 	responseMessage.setResult(result);
-	responseMessage.setPortId(flowRequest.getPortId());
 	responseMessage.setNotifySource(notifySource);
 	responseMessage.setDestIpcProcessId(id);
 	responseMessage.setDestPortId(portId);
@@ -1111,10 +1111,11 @@ IpcmDeallocateFlowResponseEvent::IpcmDeallocateFlowResponseEvent(
 
 /* CLASS IPCM ALLOCATE FLOW REQUEST RESULT EVENT */
 IpcmAllocateFlowRequestResultEvent::IpcmAllocateFlowRequestResultEvent(
-                int result, unsigned int sequenceNumber):
+                int result, int portId, unsigned int sequenceNumber):
                         BaseResponseEvent(result,
                                         IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
                                         sequenceNumber) {
+        this->portId = portId;
 }
 
 /* CLASS QUERY RIB RESPONSE EVENT */

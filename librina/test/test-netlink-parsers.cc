@@ -1553,7 +1553,6 @@ int testIpcmAllocateFlowRequestMessage() {
 	ApplicationProcessNamingInformation difName;
 	difName.setProcessName("/difs/Test.DIF");
 	message.setDifName(difName);
-	message.setPortId(34);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -1597,11 +1596,6 @@ int testIpcmAllocateFlowRequestMessage() {
 	} else if (message.getDifName() !=
 			recoveredMessage->getDifName()) {
 		std::cout << "DIF name on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	} else if (message.getPortId()!=
-			recoveredMessage->getPortId()) {
-		std::cout << "Port id on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	}
@@ -1687,6 +1681,7 @@ int testIpcmAllocateFlowRequestArrivedMessage() {
 	message.setDestAppName(destName);
 	message.setFlowSpecification(flowSpec);
 	message.setDifName(difName);
+	message.setPortId(34);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -1752,7 +1747,6 @@ int testIpcmAllocateFlowResponseMessage() {
 	IpcmAllocateFlowResponseMessage message;
 	message.setResult(0);
 	message.setNotifySource(true);
-	message.setPortId(345);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -1786,10 +1780,6 @@ int testIpcmAllocateFlowResponseMessage() {
 	} else if (message.isNotifySource()
 			!= recoveredMessage->isNotifySource()) {
 		std::cout << "Notify source flag on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	} else if (message.getPortId() != recoveredMessage->getPortId()) {
-		std::cout << "Port id on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	}

@@ -76,6 +76,9 @@ int main(int argc, char * argv[]) {
 		return 1;
 	}
 
+	/* TEST INITIALIZE */
+	ipcProcess1->setInitialized();
+
 	/* TEST ASSIGN TO DIF */
 	DIFInformation * difInformation = new DIFInformation();
 	ipcProcess1->assignToDIF(*difInformation);
