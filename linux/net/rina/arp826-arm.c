@@ -146,13 +146,14 @@ static int resolver(void * o)
         if (!is_resolve_data_complete(tmp)) {
                 LOG_ERR("Wrong data passed to resolver ...");
                 resolve_data_destroy(tmp);
+                /* FIXME: A missing free seems to be missing here ... */
                 return -1;
         }
 
         spin_lock(&resolutions_lock);
 
         LOG_DBG("Gonna browse the list of resolutions now");
-        /* FIXME: Find the entry in the ongoing resolutions */
+
         list_for_each_entry_safe(pos, nxt, &resolutions_ongoing, next) {
                 LOG_DBG("Next entry of the resolutions list");
                 if (is_resolve_data_matching(pos->data, tmp)) {
@@ -176,7 +177,10 @@ static int resolver(void * o)
 
         /* Finally destroy the data */
         resolve_data_destroy(tmp);
+        /* FIXME: A missing free seems to be missing here ... */
+
         LOG_DBG("Leaving this resolver function");
+
         return 0;
 }
 
@@ -223,6 +227,10 @@ int arp826_resolve_gpa(uint16_t            ptype,
 {
         struct resolution * resolution;
 
+        struct gpa * tmp_spa;
+        struct gpa * tmp_tpa;
+        struct gha * tmp_sha;
+
         if (!notify) {
                 LOG_ERR("No notify callback passed, this call is useless");
                 return -1;
@@ -240,19 +248,36 @@ int arp826_resolve_gpa(uint16_t            ptype,
                 return -1;
         }
 
-        if (arp_send_request(ptype, spa, sha, tpa)) {
-                LOG_ERR("Cannot send request, cannot resolve GPA");
+        tmp_spa = gpa_dup(spa);
+        if (!tmp_spa)
+                return -1;
+        tmp_tpa = gpa_dup(tpa);
+        if (!tmp_tpa) {
+                gpa_destroy(tmp_spa);
+                return -1;
+        }
+        tmp_sha = gha_dup(sha);
+        if (!tmp_sha) {
+                gpa_destroy(tmp_spa);
+                gpa_destroy(tmp_tpa);
                 return -1;
         }
 
         resolution = rkzalloc(sizeof(*resolution), GFP_KERNEL);
-        if (!resolution)
+        if (!resolution) {
+                gpa_destroy(tmp_spa);
+                gpa_destroy(tmp_tpa);
+                gha_destroy(tmp_sha);
                 return -1;
+        }
 
         resolution->data = resolve_data_create(ptype,
-                                               gpa_dup(spa), gha_dup(sha),
-                                               gpa_dup(tpa), NULL);
+                                               tmp_spa, tmp_sha,
+                                               tmp_tpa, NULL);
         if (!resolution->data) {
+                gpa_destroy(tmp_spa);
+                gpa_destroy(tmp_tpa);
+                gha_destroy(tmp_sha);
                 rkfree(resolution);
                 return -1;
         }
@@ -260,10 +285,21 @@ int arp826_resolve_gpa(uint16_t            ptype,
         resolution->notify = notify;
         resolution->opaque = opaque;
         INIT_LIST_HEAD(&resolution->next);
+        LOG_DBG("Initialised the list_head of this resolution");
 
         spin_lock(&resolutions_lock);
-        list_add(&resolutions_ongoing, &resolution->next);
+        list_add(&resolution->next, &resolutions_ongoing);
         spin_unlock(&resolutions_lock);
+        LOG_DBG("Added it to the list of resolutions");
+
+        if (arp_send_request(ptype, spa, sha, tpa)) {
+                LOG_ERR("Cannot send request, cannot resolve GPA");
+
+                resolve_data_destroy(resolution->data);
+                rkfree(resolution);
+
+                return -1;
+        }
 
         return 0;
 }
