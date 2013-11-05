@@ -130,9 +130,14 @@ flow_id_t kfa_flow_create(struct kfa * instance)
                 return flow_id_bad();
         }
 
-        ASSERT(instance->fidm);
-
         spin_lock(&instance->lock);
+
+        if (!instance->fidm) {
+                LOG_ERR("This instance doesn't have a FIDM");
+
+                spin_unlock(&instance->lock);
+                return flow_id_bad();
+        }
 
         fid = fidm_allocate(instance->fidm);
         if (!is_flow_id_ok(fid)) {
@@ -144,6 +149,8 @@ flow_id_t kfa_flow_create(struct kfa * instance)
 
         flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
         if (!flow) {
+                fidm_release(instance->fidm, fid);
+
                 spin_unlock(&instance->lock);
                 return flow_id_bad();
         }
@@ -152,7 +159,10 @@ flow_id_t kfa_flow_create(struct kfa * instance)
 
         if (kfa_fmap_add_gfp(GFP_ATOMIC, instance->flows.pending, fid, flow)) {
                 LOG_ERR("Could not map Flow and Flow ID");
+
+                fidm_release(instance->fidm, fid);
                 rkfree(flow);
+
                 spin_unlock(&instance->lock);
                 return flow_id_bad();
         }
