@@ -124,18 +124,19 @@ flow_id_t kfa_flow_create(struct kfa * instance)
 {
         struct ipcp_flow * flow;
         flow_id_t          fid;
+        unsigned long      flags;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return flow_id_bad();
         }
 
-        spin_lock(&instance->lock);
+        spin_lock_irqsave(&instance->lock, flags);
 
         if (!instance->fidm) {
                 LOG_ERR("This instance doesn't have a FIDM");
 
-                spin_unlock(&instance->lock);
+                spin_unlock_irqrestore(&instance->lock, flags);
                 return flow_id_bad();
         }
 
@@ -143,7 +144,7 @@ flow_id_t kfa_flow_create(struct kfa * instance)
         if (!is_flow_id_ok(fid)) {
                 LOG_ERR("Cannot get a flow-id");
 
-                spin_unlock(&instance->lock);
+                spin_unlock_irqrestore(&instance->lock, flags);
                 return flow_id_bad();
         }
 
@@ -151,7 +152,7 @@ flow_id_t kfa_flow_create(struct kfa * instance)
         if (!flow) {
                 fidm_release(instance->fidm, fid);
 
-                spin_unlock(&instance->lock);
+                spin_unlock_irqrestore(&instance->lock, flags);
                 return flow_id_bad();
         }
 
@@ -163,11 +164,11 @@ flow_id_t kfa_flow_create(struct kfa * instance)
                 fidm_release(instance->fidm, fid);
                 rkfree(flow);
 
-                spin_unlock(&instance->lock);
+                spin_unlock_irqrestore(&instance->lock, flags);
                 return flow_id_bad();
         }
 
-        spin_unlock(&instance->lock);
+        spin_unlock_irqrestore(&instance->lock, flags);
 
         return fid;
 
