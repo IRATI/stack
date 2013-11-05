@@ -60,7 +60,8 @@ static int string_dup_gfp(gfp_t            flags,
         if (src) {
                 *dst = kstrdup(src, flags);
                 if (!*dst) {
-                        LOG_ERR("Cannot duplicate source string");
+                        LOG_ERR("Cannot duplicate source string "
+                                "in kernel-space");
                         return -1;
                 }
         } else
@@ -93,11 +94,12 @@ static int name_is_initialized(struct name * dst)
 }
 #endif
 
-struct name * name_init(struct name *    dst,
-                        const string_t * process_name,
-                        const string_t * process_instance,
-                        const string_t * entity_name,
-                        const string_t * entity_instance)
+struct name * name_init_gfp(gfp_t            flags,
+                            struct name *    dst,
+                            const string_t * process_name,
+                            const string_t * process_instance,
+                            const string_t * entity_name,
+                            const string_t * entity_instance)
 {
         if (!dst)
                 return NULL;
@@ -108,16 +110,25 @@ struct name * name_init(struct name *    dst,
         ASSERT(name_is_initialized(dst));
 
         /* Boolean shortcuits ... */
-        if (string_dup(process_name,     &dst->process_name)     ||
-            string_dup(process_instance, &dst->process_instance) ||
-            string_dup(entity_name,      &dst->entity_name)      ||
-            string_dup(entity_instance,  &dst->entity_instance)) {
+        if (string_dup_gfp(flags, process_name,     &dst->process_name)     ||
+            string_dup_gfp(flags, process_instance, &dst->process_instance) ||
+            string_dup_gfp(flags, entity_name,      &dst->entity_name)      ||
+            string_dup_gfp(flags, entity_instance,  &dst->entity_instance)) {
                 name_fini(dst);
                 return NULL;
         }
 
         return dst;
 }
+EXPORT_SYMBOL(name_init_gfp);
+
+struct name * name_init(struct name *    dst,
+                        const string_t * process_name,
+                        const string_t * process_instance,
+                        const string_t * entity_name,
+                        const string_t * entity_instance)
+{ return name_init_gfp(GFP_KERNEL, dst, process_name, process_instance,
+                       entity_name, entity_instance); }
 EXPORT_SYMBOL(name_init);
 
 void name_fini(struct name * n)
@@ -186,11 +197,12 @@ struct name * name_create_and_init_gfp(gfp_t            flags,
         if (!tmp1)
                 return NULL;
 
-        tmp2 = name_init(tmp1,
-                         process_name,
-                         process_instance,
-                         entity_name,
-                         entity_instance);
+        tmp2 = name_init_gfp(flags,
+                             tmp1,
+                             process_name,
+                             process_instance,
+                             entity_name,
+                             entity_instance);
         if (!tmp2) {
                 name_destroy(tmp1);
                 return NULL;
@@ -394,7 +406,8 @@ static int string_dup_from_user(const string_t __user * src, string_t ** dst)
         if (src) {
                 *dst = strdup_from_user(src);
                 if (!*dst) {
-                        LOG_ERR("Cannot duplicate source string");
+                        LOG_ERR("Cannot duplicate source string "
+                                "from user-space");
                         return -1;
                 }
         } else

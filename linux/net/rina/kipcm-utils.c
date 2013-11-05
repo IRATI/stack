@@ -427,15 +427,16 @@ int kipcm_smap_update(struct kipcm_smap * map,
         return 0;
 }
 
-int kipcm_smap_add(struct kipcm_smap * map,
-                   rnl_sn_t             key,
-                   flow_id_t            value)
+int kipcm_smap_add_gfp(gfp_t               flags,
+                       struct kipcm_smap * map,
+                       rnl_sn_t            key,
+                       flow_id_t           value)
 {
         struct kipcm_smap_entry * tmp;
 
         ASSERT(map);
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return -1;
 
@@ -447,6 +448,12 @@ int kipcm_smap_add(struct kipcm_smap * map,
 
         return 0;
 }
+
+int kipcm_smap_add(struct kipcm_smap * map,
+                   rnl_sn_t             key,
+                   flow_id_t            value)
+{ return kipcm_smap_add_gfp(GFP_KERNEL, map, key, value); }
+
 
 int kipcm_smap_remove(struct kipcm_smap * map,
                       rnl_sn_t            key)

@@ -114,7 +114,7 @@ public class IPCProcessManager {
 	public synchronized IPCProcess getIPCProcessNotInList(List<String> ipcProcessList){
 		IPCProcessPointerVector ipcProcesses = ipcProcessFactory.listIPCProcesses();
 		for(int i=0; i<ipcProcesses.size(); i++) {
-			if (!ipcProcessList.contains(ipcProcesses.get(i).toString())){
+			if (!ipcProcessList.contains(ipcProcesses.get(i).getName().toString())){
 				return ipcProcesses.get(i);
 			}
 		}
