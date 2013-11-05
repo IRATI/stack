@@ -78,11 +78,40 @@ struct pci {
         seq_num_t  sequence_number;
 };
 
-/* This structure represents raw data */
+/*
+ * FIXME: This structure will be hidden soon. Do not access its field(s)
+ *        directly, prefer the access functions below.
+ */
 struct buffer {
         char * data;
         size_t size;
 };
+
+/* NOTE: Creates a buffer from raw data */
+struct buffer * buffer_create_from_gfp(gfp_t  flags,
+                                       void * data,
+                                       size_t size);
+struct buffer * buffer_create_from(void * data,
+                                   size_t size);
+
+/* NOTE: Creates an uninitialized buffer (data might be garbage) */
+struct buffer * buffer_create(size_t size);
+struct buffer * buffer_create_gfp(gfp_t  flags,
+                                  size_t size);
+
+int             buffer_destroy(struct buffer * b);
+
+/* NOTE: The following function may return -1 */
+ssize_t         buffer_length(const struct buffer * b);
+
+/* NOTE: Returns the raw buffer memory, watch-out ... */
+void *          buffer_data(struct buffer * b);
+
+struct buffer * buffer_dup(struct buffer * b);
+struct buffer * buffer_dup_gfp(gfp_t           flags,
+                               struct buffer * b);
+
+bool            is_buffer_ok(const struct buffer * b);
 
 /*
  * FIXME: This structure will be hidden soon. Do not access its field(s)
@@ -92,17 +121,14 @@ struct sdu {
         struct buffer * buffer;
 };
 
-/* NOTE: sdu_create_from() takes the ownership of the buffer passed */
-struct sdu *          sdu_create_from(void * data,
-                                      size_t size);
-struct sdu *          sdu_create_from_gfp(gfp_t  flags,
-                                          void * data,
-                                          size_t size);
+/* NOTE: The following function take the ownership of the buffer passed */
+struct sdu *          sdu_create_from_buffer(struct buffer * buffer);
+struct sdu *          sdu_create_from_buffer_gfp(gfp_t           flags,
+                                                 struct buffer * buffer);
+
 int                   sdu_destroy(struct sdu * s);
 
 const struct buffer * sdu_buffer(const struct sdu * s);
-/* FIXME: should be returning a ssize_t instead ... */
-size_t                sdu_buffer_length(const struct sdu *s);
 
 struct sdu *          sdu_dup(struct sdu * sdu);
 struct sdu *          sdu_dup_gfp(gfp_t        flags,

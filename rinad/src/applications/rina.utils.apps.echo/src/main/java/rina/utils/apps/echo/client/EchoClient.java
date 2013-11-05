@@ -163,12 +163,14 @@ FlowAllocationListener, FlowDeallocationListener {
 				}
 			} else {
 				log.error("Problems allocating flow to control AE: " + echoApNamingInfo.toString());
+				
 				try{
 					rina.getIpcManager().withdrawPendingFlow(event.getSequenceNumber());
 				} catch (Exception ex) {
 					log.error(ex.getMessage());
-					System.exit(-1);
 				}
+				
+				System.exit(-1);
 			}
 		}
 	}
