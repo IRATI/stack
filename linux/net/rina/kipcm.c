@@ -359,8 +359,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                     attrs->dest,
                                                     attrs->fspec,
                                                     pid)) {
-                LOG_ERR("Failed allocating flow request "
-                        "for port id: %d", attrs->id);
+                LOG_ERR("Failed allocating flow request");
                 kfa_flow_destroy(kipcm->kfa, pid);
                 return alloc_flow_req_free_and_reply(source,
                                                      dest,

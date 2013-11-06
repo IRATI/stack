@@ -87,7 +87,7 @@ port_id_t pidm_allocate(struct pidm * instance)
 
         LOG_DBG("Bitmap allocation completed successfully (id = %d)", id);
 
-        return id;
+        return (id + 1);
 }
 
 int pidm_release(struct pidm * instance,
@@ -102,7 +102,7 @@ int pidm_release(struct pidm * instance,
                 return -1;
         }
 
-        bitmap_clear(instance->bitmap, id, 1);
+        bitmap_clear(instance->bitmap, (id - 1), 1);
 
         LOG_DBG("Bitmap release completed successfully");
 

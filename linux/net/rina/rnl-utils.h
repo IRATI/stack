@@ -431,7 +431,6 @@ struct rnl_ipcm_alloc_flow_req_msg_attrs {
         struct name      * source;
         struct name      * dest;
         struct flow_spec * fspec;
-        port_id_t          id;
         struct name      * dif_name;
 };
 
@@ -440,6 +439,7 @@ struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs {
         struct name      * dest;
         struct flow_spec * fspec;
         struct name      * dif_name;
+        port_id_t          id;
 };
 
 struct rnl_ipcm_alloc_flow_req_result_msg_attrs {
