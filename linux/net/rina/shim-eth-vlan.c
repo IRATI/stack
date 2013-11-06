@@ -50,6 +50,7 @@
 /* FIXME: To be solved properly */
 static struct workqueue_struct * rcv_wq;
 static struct list_head rcv_wq_packets;
+static spinlock_t rcv_wq_lock;
 
 struct rcv_struct {
         struct list_head     list;
@@ -734,24 +735,9 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         return 0;
 }
 
-static void eth_vlan_rcv_worker(struct work_struct *work)
+static int eth_vlan_recv_process_packet(struct sk_buff * skb, 
+                                        struct net_device *dev)
 {
-        struct rcv_struct * packet;
-        struct sk_buff *     skb;
-        struct net_device *  dev;
-        struct packet_type * pt;
-        struct net_device *  orig_dev;
-
-        list_for_each_entry(packet, &rcv_wq_packets, list) {
-                skb = packet->skb;
-                dev = packet->dev;
-                pt = packet->pt;
-                orig_dev = packet->orig_dev;
-                
-                /* Move the thing below the } here*/
-
-        }
-
         struct ethhdr *                 mh;
         unsigned char *                 saddr;
         struct ipcp_instance_data *     data;
@@ -770,32 +756,32 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
         if (!mapping) {
                 LOG_ERR("Failed to get mapping");
                 kfree_skb(skb);
-                return;
+                return -1;
         }
 
         data = mapping->data;
         if (!data) {
                 kfree_skb(skb);
-                return;
+                return -1;
         }
 
         if (!data->app_name) {
                 LOG_ERR("No app registered yet! "
                         "Someone is doing something bad on the network");
                 kfree_skb(skb);
-                return;
+                return -1;
         }
 
         if (skb->pkt_type == PACKET_OTHERHOST ||
             skb->pkt_type == PACKET_LOOPBACK) {
                 kfree_skb(skb);
-                return;
+                return -1;
         }
 
         skb = skb_share_check(skb, GFP_ATOMIC);
         if (!skb) {
                 LOG_ERR("Couldn't obtain ownership of the skb");
-                return;
+                return -1;
         }
 
         mh = eth_hdr(skb);
@@ -803,7 +789,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
         if (!saddr) {
                 LOG_ERR("Couldn't get source address");
                 kfree_skb(skb);
-                return;
+                return -1;
         }
 
         /* Get correct flow based on hwaddr */
@@ -811,7 +797,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
         if (!gha_is_ok(ghaddr)) {
                 LOG_ERR("Bad GHA, cannot receive");
                 kfree_skb(skb);
-                return;
+                return -1;
         }
 
         /* Get the SDU out of the sk_buff */
@@ -827,7 +813,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
          */
         buffer = buffer_create_gfp(GFP_ATOMIC,skb->tail - skb->network_header);
         if (!buffer)
-                return;
+                return -1;
 
         buff_data = buffer_data(buffer);
         if (!buff_data) {
@@ -835,7 +821,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                 buffer_destroy(buffer);
                 gha_destroy(ghaddr);
                 kfree_skb(skb);
-                return;
+                return -1;
         }
         memcpy_fromio(buff_data, nh, skb->tail - skb->network_header);
 
@@ -845,7 +831,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                 buffer_destroy(buffer);
                 gha_destroy(ghaddr);
                 kfree_skb(skb);
-                return;
+                return -1;
         }
 
         LOG_DBG("Already got past getting the data and some checks");
@@ -860,7 +846,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                         spin_unlock(&data->lock);
                         gha_destroy(ghaddr);
                         kfree_skb(skb);
-                        return;
+                        return -1;
                 }
 
                 flow->port_id_state = PORT_STATE_PENDING;
@@ -877,7 +863,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                                 "for a new flow");
                         flow_destroy(data, flow);
                         spin_unlock(&data->lock);
-                        return 0;
+                        return -1;
                 }
                 LOG_DBG("Created the queue");
 
@@ -885,7 +871,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                 if (kfifo_avail(&flow->sdu_queue) < (sizeof(struct sdu *))) {
                         LOG_ERR("There is no space in the fifo");
                         spin_unlock(&data->lock);
-                        return;
+                        return -1;
                 }
                 if (kfifo_in(&flow->sdu_queue,
                              &du,
@@ -893,7 +879,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                         LOG_ERR("Could not write %zd bytes into the fifo",
                                 sizeof(struct sdu *));
                         spin_unlock(&data->lock);
-                        return;
+                        return -1;
                 }
 
                 spin_unlock(&data->lock);
@@ -918,7 +904,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                         kfifo_free(&flow->sdu_queue);
                         flow_destroy(data, flow);
                         kfree_skb(skb);
-                        return;
+                        return -1;
                 }
         } else {
                 LOG_DBG("Flow exists, queueing or delivering");
@@ -926,7 +912,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                         spin_unlock(&data->lock);
 
                         if (kfa_sdu_post(data->kfa, flow->port_id, du)) {
-                                return;
+                                return -1;
                         }
 
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
@@ -936,7 +922,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                             (sizeof(struct sdu *))) {
                                 LOG_ERR("There is no space in the fifo");
                                 spin_unlock(&data->lock);
-                                return;
+                                return -1;
                         }
                         if (kfifo_in(&flow->sdu_queue,
                                      &du,
@@ -946,7 +932,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                                         "fifo",
                                         sizeof(struct sdu *));
                                 spin_unlock(&data->lock);
-                                return;
+                                return -1;
                         }
 
                         spin_unlock(&data->lock);
@@ -956,11 +942,35 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
         }
 
         kfree_skb(skb);
-        return;
+        return 0;
+} 
+
+static void eth_vlan_rcv_worker(struct work_struct *work)
+{
+        struct rcv_struct *  packet;
+        struct sk_buff *     skb;
+        struct net_device *  dev;
+        struct packet_type * pt;
+        struct net_device *  orig_dev;
+
+        list_for_each_entry(packet, &rcv_wq_packets, list) {
+                skb = packet->skb;
+                dev = packet->dev;
+                
+                /* Call eth_vlan_recv_process_packet */
+                if (eth_vlan_recv_process_packet(packet->skb, packet->dev))
+                        LOG_ERR("Failed to process packet");
+
+
+                spin_lock_irqsave(&rcv_wq_lock);
+                list_del(&packet->list);
+                spin_unlock_irqsave(&rcv_wq_lock);
+                rkfree(packet);
+        }
+
+ 
 }
 
-
-/* Filter the devices here. Accept packets from VLANs that are configured */
 static int eth_vlan_rcv(struct sk_buff *     skb,
                         struct net_device *  dev,
                         struct packet_type * pt,
@@ -970,7 +980,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         struct rcv_struct * packet;
         struct work_struct rcv_work;
 
-        packet = rkmalloc(sizeof(struct rcv_struct *), GFP_KERNEL);
+        packet = rkmalloc(sizeof(struct rcv_struct *), GFP_ATOMIC);
         if (!packet) {
                 LOG_ERR("Couldn't malloc packet");
                 return 0;
@@ -981,7 +991,10 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         packet->pt = pt;
         packet->orig_dev = orig_dev;
         INIT_LIST_HEAD(&packet->list);
+
+        spin_lock(&rcv_wq_lock);
         list_add(&packet->list, &rcv_wq_packets);
+        spin_unlock(&rcv_wq_lock);
 
         INIT_WORK(rcv_work, eth_vlan_rcv_worker);
         queue_work(rcv_wq, rcv_work);
@@ -1525,7 +1538,7 @@ static int __init mod_init(void)
 
 #endif
         
-        rcv_wq = create_workqueue("shim-wq");
+        rcv_wq = create_workqueue(SHIM_NAME);
         
         shim =  kipcm_ipcp_factory_register(default_kipcm,
                                             SHIM_NAME,
@@ -1546,6 +1559,9 @@ static void __exit mod_exit(void)
         ASSERT(shim);
         flush_workqueue(rcv_wq);
         destroy_workqueue(rcv_wq);
+        
+        if(!list_empty(&rcv_wq_packets))
+                LOG_ERR("List of packets not empty");
 
         if (kipcm_ipcp_factory_unregister(default_kipcm, shim)) {
                 LOG_CRIT("Cannot unregister %s factory", SHIM_NAME);
