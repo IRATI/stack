@@ -778,11 +778,6 @@ static int eth_vlan_recv_process_packet(struct sk_buff * skb,
                 return -1;
         }
 
-        skb = skb_share_check(skb, GFP_ATOMIC);
-        if (!skb) {
-                LOG_ERR("Couldn't obtain ownership of the skb");
-                return -1;
-        }
 
         mh = eth_hdr(skb);
         saddr = mh->h_source;
@@ -948,26 +943,24 @@ static int eth_vlan_recv_process_packet(struct sk_buff * skb,
 static void eth_vlan_rcv_worker(struct work_struct *work)
 {
         struct rcv_struct *  packet;
-        struct sk_buff *     skb;
-        struct net_device *  dev;
-        struct packet_type * pt;
-        struct net_device *  orig_dev;
+        unsigned long flags;
 
+        spin_lock_irqsave(&rcv_wq_lock, flags);
         list_for_each_entry(packet, &rcv_wq_packets, list) {
-                skb = packet->skb;
-                dev = packet->dev;
-                
+                spin_unlock_irqrestore(&rcv_wq_lock, flags);
+
                 /* Call eth_vlan_recv_process_packet */
                 if (eth_vlan_recv_process_packet(packet->skb, packet->dev))
                         LOG_ERR("Failed to process packet");
 
-
-                spin_lock_irqsave(&rcv_wq_lock);
+                spin_lock_irqsave(&rcv_wq_lock, flags);
                 list_del(&packet->list);
-                spin_unlock_irqsave(&rcv_wq_lock);
-                rkfree(packet);
-        }
+                spin_unlock_irqrestore(&rcv_wq_lock, flags);
 
+                rkfree(packet);
+                spin_lock_irqsave(&rcv_wq_lock, flags);
+        }
+        spin_unlock_irqrestore(&rcv_wq_lock, flags);
  
 }
 
@@ -978,7 +971,13 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 {
 
         struct rcv_struct * packet;
-        struct work_struct rcv_work;
+        struct work_struct * rcv_work = 0;
+
+        skb = skb_share_check(skb, GFP_ATOMIC);
+        if (!skb) {
+                LOG_ERR("Couldn't obtain ownership of the skb");
+                return 0;
+        }
 
         packet = rkmalloc(sizeof(struct rcv_struct *), GFP_ATOMIC);
         if (!packet) {
@@ -1556,12 +1555,17 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
+        struct rcv_struct *  packet;
+        
         ASSERT(shim);
         flush_workqueue(rcv_wq);
         destroy_workqueue(rcv_wq);
-        
-        if(!list_empty(&rcv_wq_packets))
-                LOG_ERR("List of packets not empty");
+           
+        list_for_each_entry(packet, &rcv_wq_packets, list) {
+                kfree_skb(packet->skb);
+                list_del(&packet->list);
+                rkfree(packet);
+        }
 
         if (kipcm_ipcp_factory_unregister(default_kipcm, shim)) {
                 LOG_CRIT("Cannot unregister %s factory", SHIM_NAME);
