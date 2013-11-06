@@ -665,6 +665,24 @@ public:
         IPCEvent* toIPCEvent();
 };
 
+
+/**
+ * Instruct a normal IPC Process to enroll in a given DIF, using the
+ * supporting N-1 DIF.
+ */
+class IpcmEnrollToDIFRequestMessage: public BaseNetlinkMessage {
+
+        /** The DIF to enroll to */
+        ApplicationProcessNamingInformation difName;
+
+        /** The N-1 DIF name to allocate a flow to the member */
+        ApplicationProcessNamingInformation supportingDIFName;
+
+public:
+        IpcmEnrollToDIFRequestMessage();
+        IPCEvent* toIPCEvent();
+};
+
 class IpcmAllocateFlowRequestMessage: public BaseNetlinkMessage {
 	/** The source application name*/
 	ApplicationProcessNamingInformation sourceAppName;
