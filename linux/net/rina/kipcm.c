@@ -604,53 +604,21 @@ assign_to_dif_free_and_reply(struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs
                 if (attrs->dif_info){
                         if (attrs->dif_info->dif_name){
                                 name_destroy(attrs->dif_info->dif_name);
-                                LOG_DBG("STEP1");
                         }
                         if (attrs->dif_info->configuration){
-                                LOG_DBG("LEODEBUG  ENTRANDO EN DIF_INFO_DESTROY");
                                 list_for_each_entry_safe(pos, nxt, &attrs->dif_info->configuration->ipcp_config_entries, next) {
-                                        LOG_DBG("LEODEBUG  BORRANDO pos EN %pK:", pos);
                                         list_del(&pos->next);
                                         rkfree(pos->entry);
                                         rkfree(pos);
                                         }
                                 rkfree(attrs->dif_info->configuration);
-                                LOG_DBG("STEP2");
                         }
 
                         rkfree(attrs->dif_info);
-                        LOG_DBG("STEP3");
                 }
                 rkfree(attrs);
-                LOG_DBG("STEP4");
         }
-
         if (msg) rkfree(msg);
-        LOG_DBG("STEP5");
-
-
-#if 0
-        if (dif_name)   name_destroy(dif_name);
-        LOG_DBG("STEP1");
-        if (dif_info) { 
-                LOG_DBG("LEODEBUG  ENTRANDO EN DIF_INFO_DESTROY");
-                list_for_each_entry_safe(pos, nxt, &dif_config->ipcp_config_entries, next) {
-                        LOG_DBG("LEODEBUG  BORRANDO pos EN %pK:", pos);
-                        list_del(&pos->next);
-                        rkfree(pos->entry);
-                        rkfree(pos);
-                }
-        }
-        LOG_DBG("STEP2");
-        if (dif_config) rkfree(dif_config);
-        LOG_DBG("STEP3");
-	if (dif_info) rkfree(dif_info);
-        LOG_DBG("STEP4");
-        if (attrs)      rkfree(attrs);
-        LOG_DBG("STEP5");
-        if (msg)        rkfree(msg);
-        LOG_DBG("STEP6");
-#endif
 
         if (rnl_assign_dif_response(id, res, seq_num, port_id))
                 return -1;
@@ -702,6 +670,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
         dif_name = name_create();
         if (!dif_name)
                 goto fail;
+        LOG_DBG("LEODEBUG: DIF_NAME CREATED AT %p", dif_name);
 
         dif_info->dif_name = dif_name;
 
@@ -765,8 +734,16 @@ update_dif_config_free_and_reply(struct dif_config * dif_config,
                                  uint_t              seq_num,
                                  uint_t              port_id)
 {
+        struct ipcp_config * pos, * nxt;
         if (attrs)      rkfree(attrs);
-        if (dif_config)   rkfree(dif_config);
+        if (dif_config) {
+                        list_for_each_entry_safe(pos, nxt, &dif_config->ipcp_config_entries, next) {
+                                list_del(&pos->next);
+                                rkfree(pos->entry);
+                                rkfree(pos);
+                        }
+                        rkfree(dif_config);
+        }
         if (msg)        rkfree(msg);
 
         if (rnl_update_dif_config_response(id, res, seq_num, port_id))
