@@ -617,7 +617,7 @@ static int dummy_fini(struct ipcp_factory_data * data)
 }
 
 static int dummy_assign_to_dif(struct ipcp_instance_data * data,
-                               const struct dif_info *  dif_information)
+                               const struct dif_info *     dif_information)
 {
         struct ipcp_config * pos;
 

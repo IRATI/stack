@@ -69,7 +69,6 @@ enum ipcm_alloc_flow_req_attrs_list {
         IAFRM_ATTR_SOURCE_APP_NAME = 1,
         IAFRM_ATTR_DEST_APP_NAME,
         IAFRM_ATTR_FLOW_SPEC,
-        IAFRM_ATTR_PORT_ID,
         IAFRM_ATTR_DIF_NAME,
         __IAFRM_ATTR_MAX,
 };
@@ -80,6 +79,7 @@ enum ipcm_alloc_flow_req_arrived_attrs_list {
         IAFRA_ATTR_DEST_APP_NAME,
         IAFRA_ATTR_FLOW_SPEC,
         IAFRA_ATTR_DIF_NAME,
+        IAFRA_ATTR_PORT_ID,
         __IAFRA_ATTR_MAX,
 };
 #define IAFRA_ATTR_MAX (__IAFRA_ATTR_MAX -1)
@@ -87,7 +87,6 @@ enum ipcm_alloc_flow_req_arrived_attrs_list {
 enum ipcm_alloc_flow_resp_attrs_list {
         IAFRE_ATTR_RESULT = 1,
         IAFRE_ATTR_NOTIFY_SOURCE,
-        IAFRE_ATTR_PORT_ID,
         __IAFRE_ATTR_MAX,
 };
 #define IAFRE_ATTR_MAX (__IAFRE_ATTR_MAX -1)
@@ -98,6 +97,7 @@ enum ipcm_alloc_flow_resp_attrs_list {
 
 enum ipcm_alloc_flow_req_result_attrs_list {
         IAFRRM_ATTR_RESULT = 1,
+        IAFRRM_ATTR_PORT_ID,
         __IAFRRM_ATTR_MAX,
 };
 #define IAFRRM_ATTR_MAX (__IAFRRM_ATTR_MAX -1)
@@ -431,7 +431,6 @@ struct rnl_ipcm_alloc_flow_req_msg_attrs {
         struct name      * source;
         struct name      * dest;
         struct flow_spec * fspec;
-        port_id_t          id;
         struct name      * dif_name;
 };
 
@@ -440,10 +439,12 @@ struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs {
         struct name      * dest;
         struct flow_spec * fspec;
         struct name      * dif_name;
+        port_id_t          id;
 };
 
 struct rnl_ipcm_alloc_flow_req_result_msg_attrs {
-        int result;
+        int       result;
+        port_id_t pid;
 };
 
 struct rnl_alloc_flow_resp_msg_attrs {
@@ -605,14 +606,15 @@ int rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name *      source,
                                                const struct name *      dest,
                                                const struct flow_spec * fspec,
                                                const struct name *      dif_name,
+                                               port_id_t                pid,
                                                struct sk_buff *         skb_out);
 
 int rnl_format_ipcm_alloc_flow_req_result_msg(uint_t           result,
+                                              port_id_t        pid,
                                               struct sk_buff * skb_out);
 
 int rnl_format_ipcm_alloc_flow_resp_msg(uint_t           result,
-                                        bool                     notify_src,
-                                        port_id_t        id,
+                                        bool             notify_src,
                                         struct sk_buff * skb_out);
 
 int rnl_format_ipcm_dealloc_flow_req_msg(port_id_t        id,
@@ -695,7 +697,8 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
                                        const struct name *      dest,
                                        const struct flow_spec * fspec,
                                        rnl_sn_t                 seq_num,
-                                       u32                      nl_port_id);
+                                       u32                      nl_port_id,
+                                       port_id_t                pid);
 
 int rnl_format_socket_closed_notification_msg(u32              nl_port,
                                               struct sk_buff * skb_out);
@@ -703,6 +706,7 @@ int rnl_format_socket_closed_notification_msg(u32              nl_port,
 
 int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
+                                  port_id_t        pid,
                                   rnl_sn_t         seq_num,
                                   u32              nl_port_id);
 
