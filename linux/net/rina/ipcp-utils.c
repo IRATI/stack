@@ -559,32 +559,23 @@ EXPORT_SYMBOL(flow_spec_dup);
 int dif_config_destroy(struct dif_config * dif_config)
 {
         struct ipcp_config * pos, * nxt;
-        list_for_each_entry_safe(pos, nxt, &dif_info->configuration->ipcp_config_entries, next) {
+        list_for_each_entry_safe(pos, nxt, &dif_config->ipcp_config_entries, next) {
                 list_del(&pos->next);
                 ipcp_config_destroy(pos);
         }
         rkfree(dif_config);
+        return 0;
 }
-EXPORT(dif_config_destroy);
+EXPORT_SYMBOL(dif_config_destroy);
 
 int dif_info_destroy(struct dif_info * dif_info)
 {
-        struct ipcp_config * pos, * nxt;
         if (dif_info){
                 if (dif_info->dif_name){
                         name_destroy(dif_info->dif_name);
                 }
                 if (dif_info->configuration){
                         dif_config_destroy(dif_info->configuration);
-                        list_for_each_entry_safe(pos, nxt, &dif_info->configuration->ipcp_config_entries, next) {
-                                list_del(&pos->next);
-                                ipcp_config_destroy(pos);
-                                //rkfree(pos->entry->name);
-                                //rkfree(pos->entry->value);
-                                //rkfree(pos->entry);
-                                //rkfree(pos);
-                        }
-                        rkfree(dif_info->configuration);
                 }
                 rkfree(dif_info->type);
                 rkfree(dif_info);

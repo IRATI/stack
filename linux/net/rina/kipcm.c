@@ -600,15 +600,11 @@ assign_to_dif_free_and_reply(struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs
                              uint_t              seq_num,
                              uint_t              port_id)
 {
-        struct ipcp_config * pos, * nxt;
 
         if (attrs){
-                if (attrs->dif_info){
-                        if (attrs->dif_info->dif_name){
-                                name_destroy(attrs->dif_info->dif_name);
-                        }
+                if (attrs->dif_info)
                         dif_info_destroy(attrs->dif_info);
-                }
+                
                 rkfree(attrs);
         }
         if (msg) rkfree(msg);
@@ -727,16 +723,8 @@ update_dif_config_free_and_reply(struct dif_config * dif_config,
                                  uint_t              seq_num,
                                  uint_t              port_id)
 {
-        struct ipcp_config * pos, * nxt;
         if (attrs)      rkfree(attrs);
-        if (dif_config) {
-                        list_for_each_entry_safe(pos, nxt, &dif_config->ipcp_config_entries, next) {
-                                list_del(&pos->next);
-                                rkfree(pos->entry);
-                                rkfree(pos);
-                        }
-                        rkfree(dif_config);
-        }
+        if (dif_config) dif_config_destroy(dif_config);
         if (msg)        rkfree(msg);
 
         if (rnl_update_dif_config_response(id, res, seq_num, port_id))
