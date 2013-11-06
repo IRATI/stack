@@ -946,7 +946,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
         unsigned long flags;
 
         spin_lock_irqsave(&rcv_wq_lock, flags);
-        list_for_each_entry(packet, &rcv_wq_packets, list) {
+        list_for_each_entry_safe(packet, &rcv_wq_packets, list) {
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
 
                 /* Call eth_vlan_recv_process_packet */
@@ -971,7 +971,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 {
 
         struct rcv_struct * packet;
-        struct work_struct * rcv_work = 0;
+        struct work_struct rcv_work;
 
         skb = skb_share_check(skb, GFP_ATOMIC);
         if (!skb) {
@@ -995,8 +995,8 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         list_add(&packet->list, &rcv_wq_packets);
         spin_unlock(&rcv_wq_lock);
 
-        INIT_WORK(rcv_work, eth_vlan_rcv_worker);
-        queue_work(rcv_wq, rcv_work);
+        INIT_WORK(&rcv_work, eth_vlan_rcv_worker);
+        queue_work(rcv_wq, &rcv_work);
 
         return 0;
 };
