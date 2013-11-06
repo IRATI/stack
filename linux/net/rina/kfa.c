@@ -51,15 +51,15 @@ enum flow_state {
 };
 
 struct ipcp_flow {
-        port_id_t               port_id;
+        port_id_t              port_id;
 
         enum flow_state         state;
 
         struct ipcp_instance *  ipc_process;
 
         /* FIXME: To be wiped out */
-        struct kfifo            sdu_ready;
-        wait_queue_head_t       wait_queue;
+        struct kfifo           sdu_ready;
+        wait_queue_head_t      wait_queue;
 };
 
 struct kfa * kfa_create(void)
@@ -110,33 +110,32 @@ port_id_t kfa_flow_create(struct kfa *     instance,
 {
         struct ipcp_flow * flow;
         port_id_t          pid;
+        unsigned long      flags;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return port_id_bad();
         }
 
-        spin_lock(&instance->lock);
+        spin_lock_irqsave(&instance->lock, flags);
 
         if (!instance->pidm) {
-                LOG_ERR("This instance doesn't have a FIDM");
-
-                spin_unlock(&instance->lock);
+                LOG_ERR("This instance doesn't have a PIDM");
+                spin_unlock_irqrestore(&instance->lock, flags);
                 return port_id_bad();
         }
 
         pid = pidm_allocate(instance->pidm);
         if (!is_port_id_ok(pid)) {
-                LOG_ERR("Cannot get a flow-id");
-
-                spin_unlock(&instance->lock);
+                LOG_ERR("Cannot get a port-id");
+                spin_unlock_irqrestore(&instance->lock, flags);;
                 return port_id_bad();
         }
 
         flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
         if (!flow) {
                 pidm_release(instance->pidm, pid);
-                spin_unlock(&instance->lock);
+                spin_unlock_irqrestore(&instance->lock, flags);
                 return port_id_bad();
         }
 
@@ -148,12 +147,11 @@ port_id_t kfa_flow_create(struct kfa *     instance,
                 LOG_ERR("Could not map Flow and Port ID");
                 pidm_release(instance->pidm, pid);
                 rkfree(flow);
-
-                spin_unlock(&instance->lock);
+                spin_unlock_irqrestore(&instance->lock, flags);
                 return port_id_bad();
         }
 
-        spin_unlock(&instance->lock);
+        spin_unlock_irqrestore(&instance->lock, flags);
 
         return pid;
 

@@ -599,10 +599,11 @@ public:
 	 * flow operation and update the internal data structures
 	 * @param sequenceNumber the handle associated to the pending allocation
 	 * @param success true if success, false otherwise
+	 * @param portId the portId assigned to the flow
 	 * @throws AllocateFlowException if the pending allocation
 	 * is not found
 	 */
-	void allocateFlowResult(unsigned int sequenceNumber, bool success)
+	void allocateFlowResult(unsigned int sequenceNumber, bool success, int portId)
 	throw (AllocateFlowException);
 
 	/**
@@ -884,9 +885,13 @@ public:
  * Event informing about the result of a flow allocation
  */
 class IpcmAllocateFlowRequestResultEvent: public BaseResponseEvent {
+
+        /** The port id assigned to the flow */
+        int portId;
 public:
         IpcmAllocateFlowRequestResultEvent(
-                        int result, unsigned int sequenceNumber);
+                        int result, int portId, unsigned int sequenceNumber);
+        int getPortId() const;
 };
 
 /**

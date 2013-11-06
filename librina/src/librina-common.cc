@@ -839,23 +839,6 @@ AllocateFlowResponseEvent::AllocateFlowResponseEvent(
                                  ALLOCATE_FLOW_RESPONSE_EVENT,
                                  sequenceNumber) {
         this->notifySource = notifySource;
-        this->portId = 0;
-}
-
-AllocateFlowResponseEvent::AllocateFlowResponseEvent(
-                int result,
-                bool notifysource,
-                int portId,
-                unsigned int sequenceNumber) :
-                BaseResponseEvent(result,
-                                ALLOCATE_FLOW_RESPONSE_EVENT,
-                                sequenceNumber) {
-        this->notifySource = notifySource;
-        this->portId = portId;
-}
-
-int AllocateFlowResponseEvent::getPortId() const{
-        return portId;
 }
 
 bool AllocateFlowResponseEvent::isNotifySource() const {
