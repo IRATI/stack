@@ -130,12 +130,13 @@ alloc_flow_req_free_and_reply(struct name *         source_name,
                               ipc_process_id_t      id,
                               uint_t                res,
                               uint_t                seq_num,
-                              uint_t                port_id)
+                              uint_t                port_id,
+                              port_id_t             pid)
 {
         alloc_flow_req_free(source_name, dest_name, fspec, dif_name,
                             attrs, msg, hdr);
 
-        if (rnl_app_alloc_flow_result_msg(id, res, seq_num, port_id)) {
+        if (rnl_app_alloc_flow_result_msg(id, res, pid, seq_num, port_id)) {
                 LOG_ERR("Could not send flow_result_msg");
                 return -1;
         }
@@ -194,7 +195,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
 
         source = name_create();
@@ -209,7 +211,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
         attrs->source = source;
 
@@ -225,7 +228,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
         attrs->dest = dest;
 
@@ -241,7 +245,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
         attrs->dif_name = dif_name;
 
@@ -257,7 +262,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
         attrs->fspec = fspec;
 
@@ -273,7 +279,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
         msg->attrs = attrs;
 
@@ -289,7 +296,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
         msg->rina_hdr = hdr;
 
@@ -304,7 +312,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
 
         ipc_id      = msg->rina_hdr->dst_ipc_id;
@@ -321,7 +330,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
 
         pid = kfa_flow_create(kipcm->kfa, ipc_id);
@@ -340,7 +350,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
 
         if (ipc_process->ops->flow_allocate_request(ipc_process->data,
@@ -361,7 +372,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      ipc_id,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
 
         alloc_flow_req_free(source, dest, fspec, dif_name, attrs, msg, hdr);
@@ -2068,7 +2080,8 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
                                                dest,
                                                fspec,
                                                seq_num,
-                                               nl_port_id)) /* FIXME: Send also port_id, must change */
+                                               nl_port_id,
+                                               port_id))
                 return -1;
 
         return 0;
@@ -2170,7 +2183,7 @@ int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
         /*
          * FIXME: The rnl_port_id shouldn't be hardcoded as 1.
          */
-        if (rnl_app_alloc_flow_result_msg(ipc_id, res, seq_num, 1)) /* FIXME: This also should send port-id */
+        if (rnl_app_alloc_flow_result_msg(ipc_id, res, pid, seq_num, 1))
                 return -1;
 
         return 0;
