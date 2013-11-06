@@ -161,6 +161,9 @@ static int default_fini(struct personality_data * data)
                 if (err) return err;
         }
 
+        /* FIXME: To be removed */
+        default_kipcm = NULL; /* Useless */
+
         LOG_DBG("Default personality finalized successfully");
 
         return 0;
