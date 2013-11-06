@@ -607,16 +607,7 @@ assign_to_dif_free_and_reply(struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs
                         if (attrs->dif_info->dif_name){
                                 name_destroy(attrs->dif_info->dif_name);
                         }
-                        if (attrs->dif_info->configuration){
-                                list_for_each_entry_safe(pos, nxt, &attrs->dif_info->configuration->ipcp_config_entries, next) {
-                                        list_del(&pos->next);
-                                        rkfree(pos->entry);
-                                        rkfree(pos);
-                                        }
-                                rkfree(attrs->dif_info->configuration);
-                        }
-
-                        rkfree(attrs->dif_info);
+                        dif_info_destroy(attrs->dif_info);
                 }
                 rkfree(attrs);
         }

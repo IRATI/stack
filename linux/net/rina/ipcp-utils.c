@@ -143,18 +143,22 @@ void name_fini(struct name * n)
 #endif
 
         if (n->process_name) {
+                LOG_DBG("LEODEBUG Deleting process_name");
                 rkfree(n->process_name);
                 n->process_name = NULL;
         }
         if (n->process_instance) {
+                LOG_DBG("LEODEBUG Deleting process_instance");
                 rkfree(n->process_instance);
                 n->process_instance = NULL;
         }
         if (n->entity_name) {
+                LOG_DBG("LEODEBUG Deleting entity_name");
                 rkfree(n->entity_name);
                 n->entity_name = NULL;
         }
         if (n->entity_instance) {
+                LOG_DBG("LEODEBUG Deleting entity_instance");
                 rkfree(n->entity_instance);
                 n->entity_instance = NULL;
         }
@@ -473,6 +477,8 @@ int ipcp_config_destroy(struct ipcp_config * cfg)
                 return -1;
 
         if (cfg->entry)
+                if (cfg->entry->name) rkfree(cfg->entry->name);
+                if (cfg->entry->value) rkfree(cfg->entry->value);
                 rkfree(cfg->entry);
 
         rkfree(cfg);
@@ -549,3 +555,40 @@ struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
         return tmp;
 }
 EXPORT_SYMBOL(flow_spec_dup);
+
+int dif_config_destroy(struct dif_config * dif_config)
+{
+        struct ipcp_config * pos, * nxt;
+        list_for_each_entry_safe(pos, nxt, &dif_info->configuration->ipcp_config_entries, next) {
+                list_del(&pos->next);
+                ipcp_config_destroy(pos);
+        }
+        rkfree(dif_config);
+}
+EXPORT(dif_config_destroy);
+
+int dif_info_destroy(struct dif_info * dif_info)
+{
+        struct ipcp_config * pos, * nxt;
+        if (dif_info){
+                if (dif_info->dif_name){
+                        name_destroy(dif_info->dif_name);
+                }
+                if (dif_info->configuration){
+                        dif_config_destroy(dif_info->configuration);
+                        list_for_each_entry_safe(pos, nxt, &dif_info->configuration->ipcp_config_entries, next) {
+                                list_del(&pos->next);
+                                ipcp_config_destroy(pos);
+                                //rkfree(pos->entry->name);
+                                //rkfree(pos->entry->value);
+                                //rkfree(pos->entry);
+                                //rkfree(pos);
+                        }
+                        rkfree(dif_info->configuration);
+                }
+                rkfree(dif_info->type);
+                rkfree(dif_info);
+        }
+        return 0;
+}
+EXPORT_SYMBOL(dif_info_destroy);
