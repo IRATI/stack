@@ -2088,8 +2088,8 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
 EXPORT_SYMBOL(kipcm_flow_arrived);
 
 int kipcm_flow_commit(struct kipcm *   kipcm,
-                   ipc_process_id_t ipc_id,
-                   port_id_t        port_id)
+                      ipc_process_id_t ipc_id,
+                      port_id_t        port_id)
 {
         struct ipcp_instance * ipc_process;
 
