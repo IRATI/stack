@@ -130,7 +130,6 @@ public class FlowManager {
 	}
 	
 	public synchronized void allocateFlowRemote(FlowRequestEvent event) throws Exception{
-		int portId = -1;
 		PendingFlowAllocation pendingFlowAllocation = null;
 		IPCProcess ipcProcess = null;
 		String difName = null;
@@ -151,7 +150,7 @@ public class FlowManager {
 			log.debug("Requested allocation of remote flow from "+event.getRemoteApplicationName().toString()
 					+ "to remote application "+event.getLocalApplicationName().toString()
 					+" through the DIF "+ipcProcess.getDIFInformation().getDifName().toString() + 
-					". Got handle "+handle + " and portId " + portId);
+					". Got handle "+handle + " and portId " + event.getPortId());
 			pendingFlowAllocation = new PendingFlowAllocation(event, ipcProcess);
 			pendingFlowAllocations.put(handle, pendingFlowAllocation);
 		}catch(Exception ex){
