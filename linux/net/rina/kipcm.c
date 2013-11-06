@@ -25,6 +25,7 @@
 #include <linux/export.h>
 #include <linux/kfifo.h>
 #include <linux/mutex.h>
+#include <linux/hardirq.h>
 
 #define RINA_PREFIX "kipcm"
 
@@ -325,6 +326,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
         fid = kfa_flow_create(kipcm->kfa);
         ASSERT(is_flow_id_ok(fid));
+
         if (kipcm_fmap_add(kipcm->fid_messages->ingress, fid, info->snd_seq)) {
                 LOG_ERR("Could not add map [fid, seq_num]: [%d, %d]",
                         fid, info->snd_seq);
@@ -1413,14 +1415,16 @@ static int notify_ipcp_conn_create_arrived(void *             data,
 
 static int notify_ipcp_conn_update_req(void *             data,
                                        struct sk_buff *   buff,
-                                       struct genl_info * info) {
+                                       struct genl_info * info)
+{
         LOG_MISSING;
         return 0;
 }
 
 static int notify_ipcp_conn_destroy_req(void *             data,
                                         struct sk_buff *   buff,
-                                        struct genl_info * info) {
+                                        struct genl_info * info)
+{
         LOG_MISSING;
         return 0;
 }
@@ -2107,6 +2111,8 @@ kipcm_ipcp_factory_register(struct kipcm *             kipcm,
 {
         struct ipcp_factory * retval;
 
+        IRQ_BARRIER;
+
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return NULL;
@@ -2124,6 +2130,8 @@ int kipcm_ipcp_factory_unregister(struct kipcm *        kipcm,
                                   struct ipcp_factory * factory)
 {
         int retval;
+
+        IRQ_BARRIER;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
@@ -2154,6 +2162,8 @@ int kipcm_ipcp_create(struct kipcm *      kipcm,
         char *                 name;
         struct ipcp_factory *  factory;
         struct ipcp_instance * instance;
+
+        IRQ_BARRIER;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
@@ -2218,6 +2228,8 @@ int kipcm_ipcp_destroy(struct kipcm *   kipcm,
         struct ipcp_instance * instance;
         struct ipcp_factory *  factory;
 
+        IRQ_BARRIER;
+
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return -1;
@@ -2263,9 +2275,14 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
                        struct name *      dest,
                        struct flow_spec * fspec)
 {
-        uint_t nl_port_id = 1;
-        rnl_sn_t seq_num;
+        uint_t             nl_port_id;
+        rnl_sn_t           seq_num;
         struct ipcp_flow * flow;
+
+        IRQ_BARRIER;
+
+        /* FIXME: Use a constant (define) ! */
+        nl_port_id = 1;
 
         /*
          * NB: This flow find is just a check, I think it's useful to be sure
@@ -2304,6 +2321,8 @@ int kipcm_flow_add(struct kipcm *   kipcm,
 {
         struct ipcp_instance * ipc_process;
 
+        IRQ_BARRIER;
+
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return -1;
@@ -2340,6 +2359,8 @@ int kipcm_sdu_write(struct kipcm * kipcm,
                     port_id_t      port_id,
                     struct sdu *   sdu)
 {
+        IRQ_BARRIER;
+
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return -1;
@@ -2365,6 +2386,8 @@ int kipcm_sdu_read(struct kipcm * kipcm,
                    port_id_t      port_id,
                    struct sdu **  sdu)
 {
+        IRQ_BARRIER;
+
         /* The SDU is theirs now */
         if(kfa_flow_sdu_read(kipcm->kfa, port_id, sdu)) {
                 LOG_DBG("Failed to read sdu");
@@ -2380,6 +2403,8 @@ int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
                                        uint_t           res)
 {
         rnl_sn_t seq_num;
+
+        IRQ_BARRIER;
 
         if(!is_flow_id_ok(fid)) {
                 LOG_ERR("Flow id is not ok");
@@ -2406,6 +2431,8 @@ int kipcm_notify_flow_dealloc(ipc_process_id_t ipc_id,
                               port_id_t        port_id,
                               u32              nl_port_id)
 {
+        IRQ_BARRIER;
+
         if (rnl_flow_dealloc_not_msg(ipc_id, code, port_id, nl_port_id)) {
                 LOG_ERR("Could not notificate application about "
                         "flow deallocation");
