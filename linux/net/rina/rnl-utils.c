@@ -202,12 +202,6 @@ static int parse_app_name_info(struct nlattr * name_attr,
                   nla_get_string(attrs[APNI_ATTR_PROCESS_INSTANCE]),
                   nla_get_string(attrs[APNI_ATTR_ENTITY_NAME]),
                   nla_get_string(attrs[APNI_ATTR_ENTITY_INSTANCE]));
-        LOG_DBG("LEODEBUG: name struc strings: \n"
-                "name->process-name: %p\n"
-                "name->process-instance: %p\n"
-                "name->entity-name: %p\n"
-                "name->entity-intance: %p\n", name_struct->process_name, name_struct->process_instance,
-                name_struct->entity_name, name_struct->entity_instance);
         return 0;
 }
 
@@ -238,15 +232,9 @@ static int parse_ipcp_config_entry_value(struct nlattr *            name_attr,
 
         if (attrs[IPCP_CONFIG_ENTRY_ATTR_NAME])
                 entry->name = kstrdup(nla_get_string(attrs[IPCP_CONFIG_ENTRY_ATTR_NAME]), GFP_KERNEL);
-                LOG_DBG("LEODEBUG entry->name at %p", entry->name);
-                //entry->name =
-                //        nla_get_string(attrs[IPCP_CONFIG_ENTRY_ATTR_NAME]);
 
         if (attrs[IPCP_CONFIG_ENTRY_ATTR_VALUE])
                 entry->value = kstrdup(nla_get_string(attrs[IPCP_CONFIG_ENTRY_ATTR_VALUE]), GFP_KERNEL);
-                LOG_DBG("LEODEBUG entry->value at %p", entry->value);
-                //entry->value =
-                //        nla_get_string(attrs[IPCP_CONFIG_ENTRY_ATTR_VALUE]);
 
         return 0;
 }

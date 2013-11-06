@@ -659,7 +659,6 @@ static int notify_ipcp_assign_dif_request(void *             data,
         dif_name = name_create();
         if (!dif_name)
                 goto fail;
-        LOG_DBG("LEODEBUG: DIF_NAME CREATED AT %p", dif_name);
 
         dif_info->dif_name = dif_name;
 

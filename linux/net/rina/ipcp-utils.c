@@ -143,22 +143,18 @@ void name_fini(struct name * n)
 #endif
 
         if (n->process_name) {
-                LOG_DBG("LEODEBUG Deleting process_name");
                 rkfree(n->process_name);
                 n->process_name = NULL;
         }
         if (n->process_instance) {
-                LOG_DBG("LEODEBUG Deleting process_instance");
                 rkfree(n->process_instance);
                 n->process_instance = NULL;
         }
         if (n->entity_name) {
-                LOG_DBG("LEODEBUG Deleting entity_name");
                 rkfree(n->entity_name);
                 n->entity_name = NULL;
         }
         if (n->entity_instance) {
-                LOG_DBG("LEODEBUG Deleting entity_instance");
                 rkfree(n->entity_instance);
                 n->entity_instance = NULL;
         }
