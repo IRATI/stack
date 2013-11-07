@@ -255,7 +255,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 }
                 if (kipcm_flow_commit(default_kipcm,
                                       data->id, port_id)) {
-                        kfa_flow_destroy(data->kfa, port_id);
+                        kfa_flow_deallocate(data->kfa, port_id);
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
@@ -267,8 +267,8 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                                                        data->id,
                                                        flow->port_id,
                                                        0)) {
-                        kfa_flow_destroy(data->kfa, flow->port_id);
-                        kfa_flow_destroy(data->kfa, port_id);
+                        kfa_flow_deallocate(data->kfa, flow->port_id);
+                        kfa_flow_deallocate(data->kfa, port_id);
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
@@ -314,8 +314,8 @@ static int dummy_flow_deallocate(struct ipcp_instance_data * data,
          * to be deleted. Is it really needed to unbind+destroy?
          */
 
-        if (kfa_flow_destroy(data->kfa, id) ||
-            kfa_flow_destroy(data->kfa, dest_port_id)) {
+        if (kfa_flow_deallocate(data->kfa, id) ||
+            kfa_flow_deallocate(data->kfa, dest_port_id)) {
                 return -1;
         }
 
