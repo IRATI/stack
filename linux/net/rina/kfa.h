@@ -42,8 +42,8 @@ int          kfa_flow_bind(struct kfa *           instance,
                            struct ipcp_instance * ipc_process,
                            ipc_process_id_t       ipc_id);
 
-int          kfa_flow_destroy(struct kfa * instance,
-                              port_id_t    id);
+int          kfa_flow_deallocate(struct kfa * instance,
+                                 port_id_t    id);
 
 int          kfa_remove_all_for_id(struct kfa *     instance,
                                    ipc_process_id_t id);

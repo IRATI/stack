@@ -339,7 +339,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         if (kipcm_pmap_add(kipcm->messages->ingress, pid, info->snd_seq)) {
                 LOG_ERR("Could not add map [pid, seq_num]: [%d, %d]",
                         pid, info->snd_seq);
-                kfa_flow_destroy(kipcm->kfa, pid);
+                kfa_flow_deallocate(kipcm->kfa, pid);
                 return alloc_flow_req_free_and_reply(source,
                                                      dest,
                                                      fspec,
@@ -360,7 +360,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                     attrs->fspec,
                                                     pid)) {
                 LOG_ERR("Failed allocating flow request");
-                kfa_flow_destroy(kipcm->kfa, pid);
+                kfa_flow_deallocate(kipcm->kfa, pid);
                 return alloc_flow_req_free_and_reply(source,
                                                      dest,
                                                      fspec,
@@ -2345,7 +2345,7 @@ static int notify_ipcp_conn_create_generic(void *             data,
                                                  info->snd_portid);
 
  process_fail:
-        if (is_flow_id_ok(fid)) kfa_flow_destroy(kipcm->kfa, fid);
+        if (is_flow_id_ok(fid)) kfa_flow_deallocate(kipcm->kfa, fid);
         return conn_create_result_free_and_reply(attrs,
                                                  msg,
                                                  hdr,
