@@ -49,9 +49,9 @@
 
 /* FIXME: To be solved properly */
 static struct workqueue_struct * rcv_wq;
-struct work_struct rcv_work;
-static struct list_head rcv_wq_packets;
-static spinlock_t rcv_wq_lock;
+static struct work_struct        rcv_work;
+static struct list_head          rcv_wq_packets;
+static spinlock_t                rcv_wq_lock;
 
 struct rcv_struct {
         struct list_head     list;
