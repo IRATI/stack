@@ -704,7 +704,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
                                             info->snd_seq,
                                             info->snd_portid);
 
-fail:
+ fail:
         return assign_to_dif_free_and_reply(attrs,
                                             msg,
                                             ipc_id,
