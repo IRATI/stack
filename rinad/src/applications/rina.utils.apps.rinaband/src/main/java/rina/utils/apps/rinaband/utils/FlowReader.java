@@ -30,13 +30,7 @@ public class FlowReader implements Runnable{
 		byte[] sdu = null;
 		int bytesRead = 0;
 		
-		log.info("Starting reader of flow "+flow.getPortId()+", sleeping for 1 second");
-		try{
-			Thread.sleep(1000);
-		}catch(Exception ex){
-			ex.printStackTrace();
-		}
-		log.info("Flow reader waking up, let's go!");
+		log.info("Starting reader of flow "+flow.getPortId());
 		
 		while(!isStopped()){
 			try{

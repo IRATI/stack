@@ -39,13 +39,6 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 		byte[] buffer = new byte[sduSize];
 		int bytesRead = 0;
 		
-		//FIXME remove this once the kernel  manages port-ids
-		//Now it's here to avoid a race condition
-		try{
-			Thread.sleep(1000);
-		}catch(Exception ex){
-		}
-		
 		TestDeclaredDeadTimerTask timerTask = new TestDeclaredDeadTimerTask(this);
 		timer.schedule(timerTask, 20*1000);
 		int receivedSDUs = 0;

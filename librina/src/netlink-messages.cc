@@ -876,6 +876,49 @@ IPCEvent* IpcmUpdateDIFConfigurationResponseMessage::toIPCEvent(){
         return event;
 }
 
+/* CLASS IPCM ENROLL TO DIF REQUEST MESSAGE */
+IpcmEnrollToDIFRequestMessage:: IpcmEnrollToDIFRequestMessage():
+        BaseNetlinkMessage(RINA_C_IPCM_ENROLL_TO_DIF_REQUEST) {
+}
+
+const ApplicationProcessNamingInformation&
+IpcmEnrollToDIFRequestMessage::getDifName() const {
+        return difName;
+}
+
+void IpcmEnrollToDIFRequestMessage::setDifName(
+                const ApplicationProcessNamingInformation& difName) {
+        this->difName = difName;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmEnrollToDIFRequestMessage::getNeighborName() const {
+        return neighborName;
+}
+
+void IpcmEnrollToDIFRequestMessage::setNeighborName(
+                const ApplicationProcessNamingInformation& neighborName) {
+        this->neighborName = neighborName;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmEnrollToDIFRequestMessage::getSupportingDifName() const {
+        return supportingDIFName;
+}
+
+void IpcmEnrollToDIFRequestMessage::setSupportingDifName(
+                const ApplicationProcessNamingInformation& supportingDifName) {
+        supportingDIFName = supportingDifName;
+}
+
+IPCEvent* IpcmEnrollToDIFRequestMessage::toIPCEvent(){
+        EnrollToDIFRequestEvent * event =
+                        new EnrollToDIFRequestEvent(
+                                        difName, supportingDIFName,
+                                        neighborName, getSequenceNumber());
+        return event;
+}
+
 /* CLASS IPCM ALLOCATE FLOW REQUEST MESSAGE */
 IpcmAllocateFlowRequestMessage::IpcmAllocateFlowRequestMessage():
                 BaseNetlinkMessage(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST) {
