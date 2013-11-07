@@ -735,8 +735,8 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int eth_vlan_recv_process_packet(struct sk_buff * skb,
-                                        struct net_device *dev)
+static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
+                                        struct net_device * dev)
 {
         struct ethhdr *                 mh;
         unsigned char *                 saddr;
@@ -961,7 +961,6 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                 spin_lock_irqsave(&rcv_wq_lock, flags);
         }
         spin_unlock_irqrestore(&rcv_wq_lock, flags);
-
 }
 
 static int eth_vlan_rcv(struct sk_buff *     skb,
@@ -971,7 +970,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 {
 
         struct rcv_struct * packet;
-        struct work_struct rcv_work;
+        struct work_struct  rcv_work;
 
         skb = skb_share_check(skb, GFP_ATOMIC);
         if (!skb) {
@@ -985,9 +984,9 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 return 0;
         }
 
-        packet->skb = skb;
-        packet->dev = dev;
-        packet->pt = pt;
+        packet->skb      = skb;
+        packet->dev      = dev;
+        packet->pt       = pt;
         packet->orig_dev = orig_dev;
         INIT_LIST_HEAD(&packet->list);
 
