@@ -46,13 +46,6 @@ public class FlowReader implements Runnable {
 		byte[] buffer = new byte[maxSDUSize];
 		int bytesRead = 0;
 		
-		//FIXME remove this once the kernel  manages port-ids
-		//Now it's here to avoid a race condition
-		try{
-			Thread.sleep(1000);
-		}catch(Exception ex){
-		}
-		
 		CancelTestTimerTask timerTask = new CancelTestTimerTask(this);
 		timer.schedule(timerTask, TIMER_PERIOD_IN_MS);
 		

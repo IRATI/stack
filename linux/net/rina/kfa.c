@@ -344,9 +344,9 @@ int kfa_flow_sdu_write(struct kfa * instance,
         return 0;
 }
 
-static int ready_queue_not_empty(struct kfifo * sdu_ready)
+static int ready_queue_not_empty(struct ipcp_flow * flow)
 {
-        return (!kfifo_is_empty(sdu_ready));
+        return (!kfifo_is_empty(&(flow->sdu_ready)));
 }
 
 int kfa_flow_sdu_read(struct kfa *  instance,
@@ -376,7 +376,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 LOG_DBG("Going to sleep on wait queue %pK", &flow->wait_queue);
                 spin_unlock(&instance->lock);
                 wait_event_interruptible(flow->wait_queue,
-                                         ready_queue_not_empty(&flow->sdu_ready));
+                                         ready_queue_not_empty(flow));
 
                 spin_lock(&instance->lock);
                 LOG_DBG("Woken up");

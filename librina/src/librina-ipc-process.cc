@@ -37,12 +37,31 @@ AssignToDIFRequestEvent::getDIFInformation() const{
 }
 
 /* CLASS UPDATE DIF CONFIGURATION REQUEST EVENT */
-UpdateDIFConfigurationRequestEvent::UpdateDIFConfigurationRequestEvent(
-                const DIFConfiguration& difConfiguration,
-                        unsigned int sequenceNumber):
-                IPCEvent(UPDATE_DIF_CONFIG_REQUEST_EVENT, sequenceNumber)
+EnrollToDIFRequestEvent::EnrollToDIFRequestEvent(
+                const ApplicationProcessNamingInformation& difName,
+                const ApplicationProcessNamingInformation& supportingDIFName,
+                const ApplicationProcessNamingInformation& neighborName,
+                unsigned int sequenceNumber):
+                IPCEvent(ENROLL_TO_DIF_REQUEST_EVENT, sequenceNumber)
 {
-        this->difConfiguration = difConfiguration;
+        this->difName = difName;
+        this->supportingDIFName = supportingDIFName;
+        this->neighborName = neighborName;
+}
+
+const ApplicationProcessNamingInformation&
+EnrollToDIFRequestEvent::getDifName() const {
+        return difName;
+}
+
+const ApplicationProcessNamingInformation&
+EnrollToDIFRequestEvent::getNeighborName() const {
+        return neighborName;
+}
+
+const ApplicationProcessNamingInformation&
+EnrollToDIFRequestEvent::getSupportingDifName() const {
+        return supportingDIFName;
 }
 
 const DIFConfiguration&
@@ -51,6 +70,14 @@ UpdateDIFConfigurationRequestEvent::getDIFConfiguration() const
         return difConfiguration;
 }
 
+/* CLASS ENROLL TO DIF REQUEST EVENT */
+AssignToDIFRequestEvent::AssignToDIFRequestEvent(
+                const DIFInformation& difInformation,
+                        unsigned int sequenceNumber):
+                IPCEvent(ASSIGN_TO_DIF_REQUEST_EVENT, sequenceNumber)
+{
+        this->difInformation = difInformation;
+}
 
 /* CLASS IPC PROCESS DIF REGISTRATION EVENT */
 IPCProcessDIFRegistrationEvent::IPCProcessDIFRegistrationEvent(

@@ -56,6 +56,34 @@ public:
 };
 
 /**
+ * The IPC Manager requests the IPC Process to enroll to a DIF,
+ * through neighbour neighbourName, which can be reached by allocating
+ * a flow through the supportingDIFName
+ */
+class EnrollToDIFRequestEvent: public IPCEvent {
+
+        /** The DIF to enroll to */
+        ApplicationProcessNamingInformation difName;
+
+        /** The N-1 DIF name to allocate a flow to the member */
+        ApplicationProcessNamingInformation supportingDIFName;
+
+        /** The neighbor to contact */
+        ApplicationProcessNamingInformation neighborName;
+
+public:
+        EnrollToDIFRequestEvent(
+                const ApplicationProcessNamingInformation& difName,
+                const ApplicationProcessNamingInformation& supportingDIFName,
+                const ApplicationProcessNamingInformation& neighbourName,
+                unsigned int sequenceNumber);
+        const ApplicationProcessNamingInformation& getDifName() const;
+        const ApplicationProcessNamingInformation& getNeighborName() const;
+        const ApplicationProcessNamingInformation&
+                getSupportingDifName() const;
+};
+
+/**
  * Supporting class for IPC Process DIF Registration events
  */
 class IPCProcessDIFRegistrationEvent: public IPCEvent {

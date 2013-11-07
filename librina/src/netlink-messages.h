@@ -36,7 +36,7 @@ enum RINANetlinkOperationCode{
         RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE, /* IPC Process -> IPC Manager */
 	RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION, /* IPC Manager -> IPC Process */
 	RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION, /* IPC Manager -> IPC Process */
-	RINA_C_IPCM_ENROLL_TO_DIF_REQUEST, /* TODO IPC Manager -> IPC Process */
+	RINA_C_IPCM_ENROLL_TO_DIF_REQUEST, /* IPC Manager -> IPC Process */
 	RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE, /* TODO IPC Process -> IPC Manager */
 	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST, /* TODO IPC Manager -> IPC Process */
 	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE, /* TODO IPC Process -> IPC Manager */
@@ -668,7 +668,7 @@ public:
 
 /**
  * Instruct a normal IPC Process to enroll in a given DIF, using the
- * supporting N-1 DIF.
+ * supporting N-1 DIF (IPC Manager -> IPC Process)
  */
 class IpcmEnrollToDIFRequestMessage: public BaseNetlinkMessage {
 
@@ -678,11 +678,26 @@ class IpcmEnrollToDIFRequestMessage: public BaseNetlinkMessage {
         /** The N-1 DIF name to allocate a flow to the member */
         ApplicationProcessNamingInformation supportingDIFName;
 
+        /** The neighbor to enroll to */
+        ApplicationProcessNamingInformation neighborName;
+
 public:
         IpcmEnrollToDIFRequestMessage();
+        const ApplicationProcessNamingInformation& getDifName() const;
+        void setDifName(const ApplicationProcessNamingInformation& difName);
+        const ApplicationProcessNamingInformation& getNeighborName() const;
+        void setNeighborName(
+                const ApplicationProcessNamingInformation& neighborName);
+        const ApplicationProcessNamingInformation&
+                getSupportingDifName() const;
+        void setSupportingDifName(
+                const ApplicationProcessNamingInformation& supportingDifName);
         IPCEvent* toIPCEvent();
 };
 
+/**
+ * Used by the IPC Manager to request a flow allocation to an IPC Process
+ */
 class IpcmAllocateFlowRequestMessage: public BaseNetlinkMessage {
 	/** The source application name*/
 	ApplicationProcessNamingInformation sourceAppName;
