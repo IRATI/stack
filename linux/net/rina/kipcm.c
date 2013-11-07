@@ -601,10 +601,10 @@ assign_to_dif_free_and_reply(struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs
                              uint_t              port_id)
 {
 
-        if (attrs){
+        if (attrs) {
                 if (attrs->dif_info)
                         dif_info_destroy(attrs->dif_info);
-                
+
                 rkfree(attrs);
         }
         if (msg) rkfree(msg);
