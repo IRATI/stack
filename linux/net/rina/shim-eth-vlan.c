@@ -49,6 +49,7 @@
 
 /* FIXME: To be solved properly */
 static struct workqueue_struct * rcv_wq;
+struct work_struct rcv_work;
 static struct list_head rcv_wq_packets;
 static spinlock_t rcv_wq_lock;
 
@@ -971,7 +972,6 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 {
 
         struct rcv_struct * packet;
-        struct work_struct rcv_work;
 
         skb = skb_share_check(skb, GFP_ATOMIC);
         if (!skb) {
@@ -995,7 +995,6 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         list_add_tail(&packet->list, &rcv_wq_packets);
         spin_unlock(&rcv_wq_lock);
 
-        INIT_WORK(&rcv_work, eth_vlan_rcv_worker);
         queue_work(rcv_wq, &rcv_work);
 
         return 0;
@@ -1229,6 +1228,8 @@ static int eth_vlan_init(struct ipcp_factory_data * data)
         INIT_LIST_HEAD(&data_instances_list);
 
         INIT_LIST_HEAD(&rcv_wq_packets);
+
+        INIT_WORK(&rcv_work, eth_vlan_rcv_worker);
 
         LOG_INFO("%s intialized", SHIM_NAME);
 
