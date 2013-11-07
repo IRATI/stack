@@ -110,32 +110,33 @@ port_id_t kfa_flow_create(struct kfa *     instance,
 {
         struct ipcp_flow * flow;
         port_id_t          pid;
-        unsigned long      flags;
+
+        IRQ_BARRIER;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return port_id_bad();
         }
 
-        spin_lock_irqsave(&instance->lock, flags);
+        spin_lock(&instance->lock);
 
         if (!instance->pidm) {
                 LOG_ERR("This instance doesn't have a PIDM");
-                spin_unlock_irqrestore(&instance->lock, flags);
+                spin_unlock(&instance->lock);
                 return port_id_bad();
         }
 
         pid = pidm_allocate(instance->pidm);
         if (!is_port_id_ok(pid)) {
                 LOG_ERR("Cannot get a port-id");
-                spin_unlock_irqrestore(&instance->lock, flags);;
+                spin_unlock(&instance->lock);
                 return port_id_bad();
         }
 
         flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
         if (!flow) {
                 pidm_release(instance->pidm, pid);
-                spin_unlock_irqrestore(&instance->lock, flags);
+                spin_unlock(&instance->lock);
                 return port_id_bad();
         }
 
@@ -147,11 +148,11 @@ port_id_t kfa_flow_create(struct kfa *     instance,
                 LOG_ERR("Could not map Flow and Port ID");
                 pidm_release(instance->pidm, pid);
                 rkfree(flow);
-                spin_unlock_irqrestore(&instance->lock, flags);
+                spin_unlock(&instance->lock);
                 return port_id_bad();
         }
 
-        spin_unlock_irqrestore(&instance->lock, flags);
+        spin_unlock(&instance->lock);
 
         return pid;
 
@@ -164,6 +165,8 @@ int kfa_flow_bind(struct kfa *           instance,
                   ipc_process_id_t       ipc_id)
 {
         struct ipcp_flow * flow;
+
+        IRQ_BARRIER;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
@@ -223,6 +226,8 @@ int kfa_flow_destroy(struct kfa * instance,
 {
         struct ipcp_flow * flow;
 
+        IRQ_BARRIER;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
@@ -266,6 +271,8 @@ EXPORT_SYMBOL(kfa_flow_destroy);
 int kfa_remove_all_for_id(struct kfa *     instance,
                           ipc_process_id_t id)
 {
+        IRQ_BARRIER;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
@@ -284,6 +291,8 @@ int kfa_flow_sdu_write(struct kfa * instance,
 {
         struct ipcp_flow *     flow;
         struct ipcp_instance * ipcp;
+
+        IRQ_BARRIER;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
@@ -314,7 +323,8 @@ int kfa_flow_sdu_write(struct kfa * instance,
                         &flow->wait_queue);
                 spin_unlock(&instance->lock);
                 wait_event_interruptible(flow->wait_queue,
-                                         (flow->state == PORT_STATE_ALLOCATED));
+                                         (flow->state ==
+                                          PORT_STATE_ALLOCATED));
 
                 spin_lock(&instance->lock);
                 LOG_DBG("Write woken up");
@@ -354,6 +364,8 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                       struct sdu ** sdu)
 {
         struct ipcp_flow * flow;
+
+        IRQ_BARRIER;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
@@ -409,6 +421,8 @@ int kfa_sdu_post(struct kfa * instance,
 {
         struct ipcp_flow *  flow;
         wait_queue_head_t * wq;
+
+        IRQ_BARRIER;
 
         /*
          * FIXME: kfa_sdu_post copies the contents of the SDU in the kfifo,

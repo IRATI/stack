@@ -115,11 +115,14 @@ int                  ipcp_config_destroy(struct ipcp_config * cfg);
 struct ipcp_config *
 ipcp_config_dup_from_user(const struct ipcp_config __user * cfg);
 
+int                  dif_config_destroy(struct dif_config * dif_config);
+int                  dif_info_destroy(struct dif_info * dif_info);
+
 struct connection * connection_create(void);
 struct connection *
 connection_dup_from_user(const struct connection __user * conn);
 int                 connection_destroy(struct connection * conn);
 
-struct flow_spec * flow_spec_dup(const struct flow_spec * fspec);
+struct flow_spec *  flow_spec_dup(const struct flow_spec * fspec);
 
 #endif
