@@ -379,7 +379,7 @@ int kfa_flow_sdu_write(struct kfa * instance,
                 goto finish;
         }
 
-finish:
+ finish:
         if ((atomic_dec_and_test(&flow->writers)) &&
             (atomic_read(&flow->readers) == 0) &&
             (flow->state == PORT_STATE_DEALLOCATED))
@@ -393,7 +393,7 @@ finish:
 static int queue_ready(struct ipcp_flow * flow)
 {
         if (flow->state == PORT_STATE_DEALLOCATED ||
-                        !kfifo_is_empty(&flow->sdu_ready))
+            !kfifo_is_empty(&flow->sdu_ready))
                 return 1;
         return 0;
 }
@@ -460,7 +460,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 retval = -1;
         }
 
-finish:
+ finish:
         if (atomic_dec_and_test(&flow->readers) &&
             (atomic_read(&flow->writers) == 0) &&
             (flow->state == PORT_STATE_DEALLOCATED))
