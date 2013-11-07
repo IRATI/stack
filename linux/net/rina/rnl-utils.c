@@ -2731,7 +2731,7 @@ int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
         out_hdr->src_ipc_id = ipc_id; /* This IPC process */
         out_hdr->dst_ipc_id = 0;
 
-        if (rnl_format_ipcm_alloc_flow_req_result_msg(pid, res, out_msg)) {
+        if (rnl_format_ipcm_alloc_flow_req_result_msg(res, pid, out_msg)) {
                 LOG_ERR("Could not format message ...");
                 nlmsg_free(out_msg);
                 return -1;
