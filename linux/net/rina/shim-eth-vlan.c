@@ -992,7 +992,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         INIT_LIST_HEAD(&packet->list);
 
         spin_lock(&rcv_wq_lock);
-        list_add(&packet->list, &rcv_wq_packets);
+        list_add_tail(&packet->list, &rcv_wq_packets);
         spin_unlock(&rcv_wq_lock);
 
         INIT_WORK(&rcv_work, eth_vlan_rcv_worker);
@@ -1227,6 +1227,8 @@ static int eth_vlan_init(struct ipcp_factory_data * data)
         INIT_LIST_HEAD(&(data->instances));
 
         INIT_LIST_HEAD(&data_instances_list);
+
+        INIT_LIST_HEAD(&rcv_wq_packets);
 
         LOG_INFO("%s intialized", SHIM_NAME);
 
