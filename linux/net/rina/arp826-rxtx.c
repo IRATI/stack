@@ -373,10 +373,18 @@ static int process(const struct sk_buff * skb,
         LOG_DBG("Shrinking as needed");
         if (gpa_address_shrink_gfp(GFP_ATOMIC, tmp_spa, 0x00)) {
                 LOG_ERR("Problems parsing the source GPA");
+                gpa_destroy(tmp_spa);
+                gpa_destroy(tmp_tpa);
+                gha_destroy(tmp_sha);
+                gha_destroy(tmp_tha);
                 return -1;
         }
         if (gpa_address_shrink_gfp(GFP_ATOMIC, tmp_tpa, 0x00)) {
                 LOG_ERR("Got problems parsing the target GPA");
+                gpa_destroy(tmp_spa);
+                gpa_destroy(tmp_tpa);
+                gha_destroy(tmp_sha);
+                gha_destroy(tmp_tha);
                 return -1;
         }
 #endif
@@ -396,6 +404,10 @@ static int process(const struct sk_buff * skb,
                 if (!tbl) {
                         LOG_ERR("I don't have a table for ptype 0x%04X",
                                 ptype);
+                        gpa_destroy(tmp_spa);
+                        gpa_destroy(tmp_tpa);
+                        gha_destroy(tmp_sha);
+                        gha_destroy(tmp_tha);
                         return -1;
                 }
 
@@ -418,6 +430,10 @@ static int process(const struct sk_buff * skb,
                         if (tbl_add(tbl, tmp)) {
                                 LOG_ERR("AAAAAAARRggh can't add in table");
                                 tble_destroy(tmp);
+                                gpa_destroy(tmp_spa);
+                                gpa_destroy(tmp_tpa);
+                                gha_destroy(tmp_sha);
+                                gha_destroy(tmp_tha);
                                 return -1;
                         }
                 } else {
@@ -426,6 +442,10 @@ static int process(const struct sk_buff * skb,
 
                         if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha)) {
                                 LOG_ERR("Failed to update table");
+                                gpa_destroy(tmp_spa);
+                                gpa_destroy(tmp_tpa);
+                                gha_destroy(tmp_sha);
+                                gha_destroy(tmp_tha);
                                 return -1;
                         }
                 }
@@ -434,12 +454,20 @@ static int process(const struct sk_buff * skb,
                 if (!req_addr) {
                         LOG_ERR("Cannot find this TPA in my tables, "
                                 "bailing out");
+                        gpa_destroy(tmp_spa);
+                        gpa_destroy(tmp_tpa);
+                        gha_destroy(tmp_sha);
+                        gha_destroy(tmp_tha);
                         return -1;
                 }
 
                 target_ha = tble_ha(req_addr);
                 if (!target_ha) {
                         LOG_ERR("Cannot get a good target HA");
+                        gpa_destroy(tmp_spa);
+                        gpa_destroy(tmp_tpa);
+                        gha_destroy(tmp_sha);
+                        gha_destroy(tmp_tha);
                         return -1;
                 }
 
@@ -451,6 +479,10 @@ static int process(const struct sk_buff * skb,
                                    tmp_spa, tmp_sha, dev)) {
                         /* FIXME: Couldn't send reply ... */
                         LOG_ERR("Couldn't send reply");
+                        gpa_destroy(tmp_spa);
+                        gpa_destroy(tmp_tpa);
+                        gha_destroy(tmp_sha);
+                        gha_destroy(tmp_tha);
                         return -1;
                 }
 
@@ -461,6 +493,10 @@ static int process(const struct sk_buff * skb,
         case ARP_REPLY: {
                 if (arm_resolve(ptype, tmp_spa, tmp_sha, tmp_tpa, tmp_tha)) {
                         LOG_ERR("Cannot resolve with this reply ...");
+                        gpa_destroy(tmp_spa);
+                        gpa_destroy(tmp_tpa);
+                        gha_destroy(tmp_sha);
+                        gha_destroy(tmp_tha);
                         return -1;
                 }
 
@@ -473,7 +509,10 @@ static int process(const struct sk_buff * skb,
         }
 
         LOG_DBG("Processing completed successfully");
-
+        gpa_destroy(tmp_spa);
+        gpa_destroy(tmp_tpa);
+        gha_destroy(tmp_sha);
+        gha_destroy(tmp_tha);
         return 0;
 }
 
