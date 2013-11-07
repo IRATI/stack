@@ -135,6 +135,10 @@ static int default_sdu_read(struct personality_data * data,
         return kipcm_sdu_read(data->kipcm, id, sdu);
 }
 
+/* FIXME: To be removed ABSOLUTELY */
+struct kipcm * default_kipcm = NULL;
+EXPORT_SYMBOL(default_kipcm);
+
 static int default_fini(struct personality_data * data)
 {
         struct personality_data * tmp = data;
@@ -161,14 +165,13 @@ static int default_fini(struct personality_data * data)
                 if (err) return err;
         }
 
+        /* FIXME: To be removed */
+        default_kipcm = NULL; /* Useless */
+
         LOG_DBG("Default personality finalized successfully");
 
         return 0;
 }
-
-/* FIXME: To be removed ABSOLUTELY */
-struct kipcm * default_kipcm = NULL;
-EXPORT_SYMBOL(default_kipcm);
 
 static int default_init(struct kobject *          parent,
                         personality_id            id,

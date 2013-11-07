@@ -25,6 +25,7 @@
 #include <linux/export.h>
 #include <linux/kfifo.h>
 #include <linux/mutex.h>
+#include <linux/hardirq.h>
 
 #define RINA_PREFIX "kipcm"
 
@@ -327,6 +328,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
         fid = kfa_flow_create(kipcm->kfa);
         ASSERT(is_flow_id_ok(fid));
+
         if (kipcm_fmap_add(kipcm->fid_messages->ingress, fid, info->snd_seq)) {
                 LOG_ERR("Could not add map [fid, seq_num]: [%d, %d]",
                         fid, info->snd_seq);
@@ -593,21 +595,21 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
 }
 
 static int
-assign_to_dif_free_and_reply(struct name *       dif_name,
-                             struct dif_config * dif_config,
-                             struct dif_info *   dif_info,
-                             struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs,
+assign_to_dif_free_and_reply(struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs,
                              struct rnl_msg *    msg,
                              ipc_process_id_t    id,
                              uint_t              res,
                              uint_t              seq_num,
                              uint_t              port_id)
 {
-        if (attrs)      rkfree(attrs);
-        if (dif_name)   rkfree(dif_name);
-        if (dif_config)   rkfree(dif_config);
-        if (dif_info)   rkfree(dif_info);
-        if (msg)        rkfree(msg);
+
+        if (attrs) {
+                if (attrs->dif_info)
+                        dif_info_destroy(attrs->dif_info);
+
+                rkfree(attrs);
+        }
+        if (msg) rkfree(msg);
 
         if (rnl_assign_dif_response(id, res, seq_num, port_id))
                 return -1;
@@ -626,7 +628,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
         struct name *                                 dif_name;
         struct dif_config *                           dif_config;
         struct ipcp_instance *                        ipc_process;
-        ipc_process_id_t                              ipc_id;
+        ipc_process_id_t                              ipc_id = 0;
 
         attrs      = NULL;
         msg        = NULL;
@@ -648,94 +650,42 @@ static int notify_ipcp_assign_dif_request(void *             data,
 
         attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
         if (!attrs)
-                return assign_to_dif_free_and_reply(dif_name,
-                                                    dif_config,
-                                                    dif_info,
-                                                    attrs,
-                                                    msg,
-                                                    0,
-                                                    -1,
-                                                    info->snd_seq,
-                                                    info->snd_portid);
+                goto fail;
 
         dif_info = rkzalloc(sizeof(struct dif_info), GFP_KERNEL);
         if (!dif_info)
-                return assign_to_dif_free_and_reply(dif_name,
-                                                    dif_config,
-                                                    dif_info,
-                                                    attrs,
-                                                    msg,
-                                                    0,
-                                                    -1,
-                                                    info->snd_seq,
-                                                    info->snd_portid);
+                goto fail;
+
         attrs->dif_info = dif_info;
 
         dif_name = name_create();
         if (!dif_name)
-                return assign_to_dif_free_and_reply(dif_name,
-                                                    dif_config,
-                                                    dif_info,
-                                                    attrs,
-                                                    msg,
-                                                    0,
-                                                    -1,
-                                                    info->snd_seq,
-                                                    info->snd_portid);
+                goto fail;
+
         dif_info->dif_name = dif_name;
 
         dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
         if (!dif_config)
-                return assign_to_dif_free_and_reply(dif_name,
-                                                    dif_config,
-                                                    dif_info,
-                                                    attrs,
-                                                    msg,
-                                                    0,
-                                                    -1,
-                                                    info->snd_seq,
-                                                    info->snd_portid);
+                goto fail;
+
         INIT_LIST_HEAD(&(dif_config->ipcp_config_entries));
         dif_info->configuration = dif_config;
 
         msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
         if (!msg)
-                return assign_to_dif_free_and_reply(dif_name,
-                                                    dif_config,
-                                                    dif_info,
-                                                    attrs,
-                                                    msg,
-                                                    0,
-                                                    -1,
-                                                    info->snd_seq,
-                                                    info->snd_portid);
+                goto fail;
 
         msg->attrs = attrs;
 
         if (rnl_parse_msg(info, msg))
-                return assign_to_dif_free_and_reply(dif_name,
-                                                    dif_config,
-                                                    dif_info,
-                                                    attrs,
-                                                    msg,
-                                                    0,
-                                                    -1,
-                                                    info->snd_seq,
-                                                    info->snd_portid);
+                goto fail;
+
         ipc_id = msg->rina_hdr->dst_ipc_id;
 
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
                 LOG_ERR("IPC process %d not found", ipc_id);
-                return assign_to_dif_free_and_reply(dif_name,
-                                                    dif_config,
-                                                    dif_info,
-                                                    attrs,
-                                                    msg,
-                                                    0,
-                                                    -1,
-                                                    info->snd_seq,
-                                                    info->snd_portid);
+                goto fail;
         }
         LOG_DBG("Found IPC Process with id %d", ipc_id);
 
@@ -746,24 +696,21 @@ static int notify_ipcp_assign_dif_request(void *             data,
                         tmp, ipc_id);
                 rkfree(tmp);
 
-                return assign_to_dif_free_and_reply(dif_name,
-                                                    dif_config,
-                                                    dif_info,
-                                                    attrs,
-                                                    msg,
-                                                    ipc_id,
-                                                    -1,
-                                                    info->snd_seq,
-                                                    info->snd_portid);
+                goto fail;
         }
 
-        return assign_to_dif_free_and_reply(dif_name,
-                                            dif_config,
-                                            dif_info,
-                                            attrs,
+        return assign_to_dif_free_and_reply(attrs,
                                             msg,
                                             ipc_id,
                                             0,
+                                            info->snd_seq,
+                                            info->snd_portid);
+
+ fail:
+        return assign_to_dif_free_and_reply(attrs,
+                                            msg,
+                                            ipc_id,
+                                            -1,
                                             info->snd_seq,
                                             info->snd_portid);
 }
@@ -778,7 +725,7 @@ update_dif_config_free_and_reply(struct dif_config * dif_config,
                                  uint_t              port_id)
 {
         if (attrs)      rkfree(attrs);
-        if (dif_config)   rkfree(dif_config);
+        if (dif_config) dif_config_destroy(dif_config);
         if (msg)        rkfree(msg);
 
         if (rnl_update_dif_config_response(id, res, seq_num, port_id))
@@ -1423,7 +1370,6 @@ static int notify_ipcp_conn_create_arrived(void *             data,
 
 }
 
-
 static int
 conn_update_result_free_and_reply(
                                   struct rnl_ipcp_conn_update_req_msg_attrs * attrs,
@@ -1888,6 +1834,8 @@ kipcm_ipcp_factory_register(struct kipcm *             kipcm,
 {
         struct ipcp_factory * retval;
 
+        IRQ_BARRIER;
+
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return NULL;
@@ -1905,6 +1853,8 @@ int kipcm_ipcp_factory_unregister(struct kipcm *        kipcm,
                                   struct ipcp_factory * factory)
 {
         int retval;
+
+        IRQ_BARRIER;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
@@ -1935,6 +1885,8 @@ int kipcm_ipcp_create(struct kipcm *      kipcm,
         char *                 name;
         struct ipcp_factory *  factory;
         struct ipcp_instance * instance;
+
+        IRQ_BARRIER;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
@@ -1999,6 +1951,8 @@ int kipcm_ipcp_destroy(struct kipcm *   kipcm,
         struct ipcp_instance * instance;
         struct ipcp_factory *  factory;
 
+        IRQ_BARRIER;
+
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return -1;
@@ -2044,9 +1998,14 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
                        struct name *      dest,
                        struct flow_spec * fspec)
 {
-        uint_t nl_port_id = 1;
-        rnl_sn_t seq_num;
+        uint_t             nl_port_id;
+        rnl_sn_t           seq_num;
         struct ipcp_flow * flow;
+
+        IRQ_BARRIER;
+
+        /* FIXME: Use a constant (define) ! */
+        nl_port_id = 1;
 
         /*
          * NB: This flow find is just a check, I think it's useful to be sure
@@ -2085,6 +2044,8 @@ int kipcm_flow_add(struct kipcm *   kipcm,
 {
         struct ipcp_instance * ipc_process;
 
+        IRQ_BARRIER;
+
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return -1;
@@ -2121,6 +2082,8 @@ int kipcm_sdu_write(struct kipcm * kipcm,
                     port_id_t      port_id,
                     struct sdu *   sdu)
 {
+        IRQ_BARRIER;
+
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 return -1;
@@ -2146,6 +2109,8 @@ int kipcm_sdu_read(struct kipcm * kipcm,
                    port_id_t      port_id,
                    struct sdu **  sdu)
 {
+        IRQ_BARRIER;
+
         /* The SDU is theirs now */
         if(kfa_flow_sdu_read(kipcm->kfa, port_id, sdu)) {
                 LOG_DBG("Failed to read sdu");
@@ -2161,6 +2126,8 @@ int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
                                        uint_t           res)
 {
         rnl_sn_t seq_num;
+
+        IRQ_BARRIER;
 
         if(!is_flow_id_ok(fid)) {
                 LOG_ERR("Flow id is not ok");
@@ -2187,6 +2154,8 @@ int kipcm_notify_flow_dealloc(ipc_process_id_t ipc_id,
                               port_id_t        port_id,
                               u32              nl_port_id)
 {
+        IRQ_BARRIER;
+
         if (rnl_flow_dealloc_not_msg(ipc_id, code, port_id, nl_port_id)) {
                 LOG_ERR("Could not notificate application about "
                         "flow deallocation");

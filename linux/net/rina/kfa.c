@@ -49,13 +49,13 @@ struct kfa {
 };
 
 struct ipcp_flow {
-        port_id_t               port_id;
+        port_id_t              port_id;
 
-        struct ipcp_instance *  ipc_process;
+        struct ipcp_instance * ipc_process;
 
         /* FIXME: To be wiped out */
-        struct kfifo            sdu_ready;
-        wait_queue_head_t       wait_queue;
+        struct kfifo           sdu_ready;
+        wait_queue_head_t      wait_queue;
 };
 
 struct kfa * kfa_create(void)
@@ -120,10 +120,13 @@ int kfa_destroy(struct kfa * instance)
         return 0;
 }
 
+/* FIXME: this kfa_flow_create should be work-queued, to avoid IRQ disable */
 flow_id_t kfa_flow_create(struct kfa * instance)
 {
         struct ipcp_flow * flow;
         flow_id_t          fid;
+
+        IRQ_BARRIER;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
@@ -181,6 +184,8 @@ int kfa_flow_bind(struct kfa *           instance,
                   ipc_process_id_t       ipc_id)
 {
         struct ipcp_flow * flow;
+
+        IRQ_BARRIER;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
@@ -262,6 +267,8 @@ flow_id_t kfa_flow_unbind(struct kfa * instance,
         struct ipcp_flow * flow;
         flow_id_t          fid;
 
+        IRQ_BARRIER;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
@@ -313,6 +320,8 @@ int kfa_flow_destroy(struct kfa * instance,
 {
         struct ipcp_flow * flow;
 
+        IRQ_BARRIER;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
@@ -358,6 +367,8 @@ int kfa_flow_unbind_and_destroy(struct kfa * instance,
 
         flow_id_t rm_fid;
 
+        IRQ_BARRIER;
+
         rm_fid = kfa_flow_unbind(instance, id);
         if (!is_flow_id_ok(rm_fid)){
                 LOG_ERR("Could not unbind flow at port %d", id);
@@ -377,6 +388,8 @@ EXPORT_SYMBOL(kfa_flow_unbind_and_destroy);
 int kfa_remove_all_for_id(struct kfa *     instance,
                           ipc_process_id_t id)
 {
+        IRQ_BARRIER;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
@@ -395,6 +408,8 @@ int kfa_flow_sdu_write(struct kfa * instance,
 {
         struct ipcp_flow *     flow;
         struct ipcp_instance * ipcp;
+
+        IRQ_BARRIER;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
@@ -444,6 +459,8 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                       struct sdu ** sdu)
 {
         struct ipcp_flow * flow;
+
+        IRQ_BARRIER;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
@@ -499,6 +516,8 @@ int kfa_sdu_post(struct kfa * instance,
 {
         struct ipcp_flow *  flow;
         wait_queue_head_t * wq;
+
+        IRQ_BARRIER;
 
         /*
          * FIXME: kfa_sdu_post copies the contents of the SDU in the kfifo,
@@ -563,5 +582,14 @@ int kfa_sdu_post(struct kfa * instance,
 EXPORT_SYMBOL(kfa_sdu_post);
 
 struct ipcp_flow * kfa_find_flow_by_fid(struct kfa * instance, flow_id_t fid)
-{ return kfa_fmap_find(instance->flows.pending, fid); }
+{
+        IRQ_BARRIER;
+
+        if (!instance) {
+                LOG_ERR("Bogus kfa instance passed, cannot find flow %d", fid);
+                return NULL;
+        }
+
+        return kfa_fmap_find(instance->flows.pending, fid);
+}
 EXPORT_SYMBOL(kfa_find_flow_by_fid);

@@ -197,21 +197,11 @@ static int parse_app_name_info(struct nlattr * name_attr,
         if (nla_parse_nested(attrs, APNI_ATTR_MAX, name_attr, attr_policy) < 0)
                 return -1;
 
-        if (attrs[APNI_ATTR_PROCESS_NAME])
-                name_struct->process_name =
-                        nla_get_string(attrs[APNI_ATTR_PROCESS_NAME]);
-
-        if (attrs[APNI_ATTR_PROCESS_INSTANCE])
-                name_struct->process_instance =
-                        nla_get_string(attrs[APNI_ATTR_PROCESS_INSTANCE]);
-
-        if (attrs[APNI_ATTR_ENTITY_NAME])
-                name_struct->entity_name =
-                        nla_get_string(attrs[APNI_ATTR_ENTITY_NAME]);
-
-        if (attrs[APNI_ATTR_ENTITY_INSTANCE])
-                name_struct->entity_instance =
-                        nla_get_string(attrs[APNI_ATTR_ENTITY_INSTANCE]);
+        name_init(name_struct,
+                  nla_get_string(attrs[APNI_ATTR_PROCESS_NAME]),
+                  nla_get_string(attrs[APNI_ATTR_PROCESS_INSTANCE]),
+                  nla_get_string(attrs[APNI_ATTR_ENTITY_NAME]),
+                  nla_get_string(attrs[APNI_ATTR_ENTITY_INSTANCE]));
         return 0;
 }
 
@@ -241,12 +231,10 @@ static int parse_ipcp_config_entry_value(struct nlattr *            name_attr,
                 return -1;
 
         if (attrs[IPCP_CONFIG_ENTRY_ATTR_NAME])
-                entry->name =
-                        nla_get_string(attrs[IPCP_CONFIG_ENTRY_ATTR_NAME]);
+                entry->name = kstrdup(nla_get_string(attrs[IPCP_CONFIG_ENTRY_ATTR_NAME]), GFP_KERNEL);
 
         if (attrs[IPCP_CONFIG_ENTRY_ATTR_VALUE])
-                entry->value =
-                        nla_get_string(attrs[IPCP_CONFIG_ENTRY_ATTR_VALUE]);
+                entry->value = kstrdup(nla_get_string(attrs[IPCP_CONFIG_ENTRY_ATTR_VALUE]), GFP_KERNEL);
 
         return 0;
 }
@@ -445,8 +433,9 @@ static int parse_dif_info(struct nlattr * dif_config_attr,
                 goto parse_fail;
 
         if (attrs[DINFO_ATTR_DIF_TYPE])
-                dif_info->type =
-                        nla_get_string(attrs[DINFO_ATTR_DIF_TYPE]);
+                dif_info->type = kstrdup(nla_get_string(attrs[DINFO_ATTR_DIF_TYPE]), GFP_KERNEL);
+        //dif_info->type =
+        //        nla_get_string(attrs[DINFO_ATTR_DIF_TYPE]);
 
         if (parse_app_name_info(attrs[DINFO_ATTR_DIF_NAME],
                                 dif_info->dif_name) < 0)
