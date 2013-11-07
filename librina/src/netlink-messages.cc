@@ -878,7 +878,7 @@ IPCEvent* IpcmUpdateDIFConfigurationResponseMessage::toIPCEvent(){
 
 /* CLASS IPCM ENROLL TO DIF REQUEST MESSAGE */
 IpcmEnrollToDIFRequestMessage:: IpcmEnrollToDIFRequestMessage():
-        BaseNetlinkResponseMessage(RINA_C_IPCM_ENROLL_TO_DIF_REQUEST) {
+        BaseNetlinkMessage(RINA_C_IPCM_ENROLL_TO_DIF_REQUEST) {
 }
 
 const ApplicationProcessNamingInformation&
