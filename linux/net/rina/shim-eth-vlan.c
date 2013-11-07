@@ -978,7 +978,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 return 0;
         }
 
-        packet = rkmalloc(sizeof(struct rcv_struct), GFP_ATOMIC);
+        packet = rkmalloc(sizeof(*packet), GFP_ATOMIC);
         if (!packet) {
                 LOG_ERR("Couldn't malloc packet");
                 return 0;
