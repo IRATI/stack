@@ -26,7 +26,6 @@
 #include "common.h"
 #include "ipcp.h"
 #include "du.h"
-#include "efcp.h"
 
 /* Pre-declared, the personality should define it properly */
 struct personality_data;
@@ -50,13 +49,10 @@ struct personality_ops {
         int (* ipc_destroy)(struct personality_data * data,
                             ipc_process_id_t          id);
 
-        int (* connection_create)(struct personality_data * data,
-                                  const struct connection * connection);
-        int (* connection_destroy)(struct personality_data * data,
-                                   cep_id_t                  id);
-        int (* connection_update)(struct personality_data * data,
-                                  cep_id_t                  from,
-                                  cep_id_t                  to);
+        int (* allocate_port_id)(struct personality_data * data,
+                                 ipc_process_id_t          pid);
+        int (* deallocate_port_id)(struct personality_data * data,
+                                   port_id_t         pid);
 
         /* Takes the ownership of the sdu */
         int (* sdu_write)(struct personality_data * data,

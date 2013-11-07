@@ -74,45 +74,6 @@ static int default_ipc_destroy(struct personality_data * data,
         return kipcm_ipcp_destroy(data->kipcm, id);
 }
 
-static int default_connection_create(struct personality_data * data,
-                                     const struct connection * connection)
-{
-#if 0
-        cep_id_t id;
-
-        if (!is_personality_ok(data)) return -1;
-
-        LOG_DBG("Calling wrapped function");
-#endif
-
-        return -1; /* efcp_create(data->efcp, connection, &id); */
-}
-
-static int default_connection_destroy(struct personality_data * data,
-                                      cep_id_t                  id)
-{
-#if 0
-        if (!is_personality_ok(data)) return -1;
-
-        LOG_DBG("Calling wrapped function");
-#endif
-
-        return -1; /* efcp_destroy(data->efcp, id); */
-}
-
-static int default_connection_update(struct personality_data * data,
-                                     cep_id_t                  id_from,
-                                     cep_id_t                  id_to)
-{
-#if 0
-        if (!is_personality_ok(data)) return -1;
-
-        LOG_DBG("Calling wrapped function");
-#endif
-
-        return -1; /* efcp_update(data->efcp, id_from, id_to); */
-}
-
 static int default_sdu_write(struct personality_data * data,
                              port_id_t                 id,
                              struct sdu *              sdu)
@@ -133,6 +94,34 @@ static int default_sdu_read(struct personality_data * data,
         LOG_DBG("Calling wrapped function");
 
         return kipcm_sdu_read(data->kipcm, id, sdu);
+}
+
+static int default_allocate_port_id(struct personality_data * data,
+                                    ipc_process_id_t          pid)
+{
+#if 0
+        cep_id_t id;
+
+        if (!is_personality_ok(data)) return -1;
+
+        LOG_DBG("Calling wrapped function");
+#endif
+
+        return -1; /* efcp_create(data->efcp, connection, &id); */
+}
+
+static int default_deallocate_port_id(struct personality_data * data,
+                                      port_id_t                 port_id)
+{
+#if 0
+        cep_id_t id;
+
+        if (!is_personality_ok(data)) return -1;
+
+        LOG_DBG("Calling wrapped function");
+#endif
+
+        return -1; /* efcp_create(data->efcp, connection, &id); */
 }
 
 static int default_fini(struct personality_data * data)
@@ -224,9 +213,8 @@ struct personality_ops ops = {
         .ipc_destroy        = default_ipc_destroy,
         .sdu_read           = default_sdu_read,
         .sdu_write          = default_sdu_write,
-        .connection_create  = default_connection_create,
-        .connection_destroy = default_connection_destroy,
-        .connection_update  = default_connection_update,
+        .allocate_port_id   = default_allocate_port_id,
+        .deallocate_port_id = default_deallocate_port_id,
 };
 
 static struct personality_data data;

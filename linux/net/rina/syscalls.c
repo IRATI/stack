@@ -98,45 +98,6 @@ SYSCALL_DEFINE1(ipc_destroy,
         return retval;
 }
 
-SYSCALL_DEFINE1(connection_create,
-                const struct connection __user *, conn)
-{
-        long                retval;
-
-        struct connection * tmp;
-
-        tmp = connection_dup_from_user(conn);
-        if (!tmp)
-                return -EFAULT;
-
-        CALL_DEFAULT_PERSONALITY(retval, connection_create, tmp);
-
-        connection_destroy(tmp);
-
-        return retval;
-}
-
-SYSCALL_DEFINE1(connection_destroy,
-                cep_id_t, id)
-{
-        long retval;
-
-        CALL_DEFAULT_PERSONALITY(retval, connection_destroy, id);
-
-        return retval;
-}
-
-SYSCALL_DEFINE2(connection_update,
-                cep_id_t, from_id,
-                cep_id_t, to_id)
-{
-        long retval;
-
-        CALL_DEFAULT_PERSONALITY(retval, connection_update, from_id, to_id);
-
-        return retval;
-}
-
 SYSCALL_DEFINE3(sdu_read,
                 port_id_t,     id,
                 void __user *, buffer,
@@ -228,4 +189,27 @@ SYSCALL_DEFINE3(sdu_write,
         }
 
         return size;
+}
+
+SYSCALL_DEFINE1(allocate_port_id,
+                ipc_process_id_t,   id)
+{
+        port_id_t retval;
+
+        if (!id) 
+                return -EFAULT;
+
+        CALL_DEFAULT_PERSONALITY(retval, allocate_port_id, id);
+
+        return retval;
+}
+
+SYSCALL_DEFINE1(deallocate_port_id,
+                port_id_t,          port_id)
+{
+        int retval;
+
+        CALL_DEFAULT_PERSONALITY(retval, deallocate_port_id, port_id);
+
+        return retval;
 }

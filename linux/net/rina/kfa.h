@@ -33,7 +33,7 @@ struct kfa * kfa_create(void);
 int          kfa_destroy(struct kfa * instance);
 
 /* Returns a port-id, the flow is uncommitted yet */
-port_id_t    kfa_flow_create(struct kfa * instance,
+port_id_t    kfa_flow_create(struct kfa *     instance,
                              ipc_process_id_t id);
 
 /* Commits the flow, binds the flow to a port-id */

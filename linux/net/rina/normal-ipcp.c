@@ -296,12 +296,12 @@ connection_create_arrived(struct ipcp_instance_data * data,
         conn->destination_cep_id  = dst_cep_id;
 
         cep_id = efcp_connection_create(data->efcpc, conn);
-        LOG_DBG("Cep_id allocated for the arrived connection request: %d", cep_id);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
                 rkfree(conn);
                 return cep_id_bad();
         }
+        LOG_DBG("Cep_id allocated for the arrived connection request: %d", cep_id);
 
         cep_entry = rkzalloc(sizeof(*cep_entry), GFP_KERNEL);
         if (!cep_entry) {
@@ -346,8 +346,10 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         data->info->dif_name = name_dup(dif_information->dif_name);
         dt_cons = dif_information->configuration->data_transfer_constants;
 
-        if (normal_check_dt_cons(dt_cons))
+        if (normal_check_dt_cons(dt_cons)) {
+                LOG_ERR("Configuration constants for the DIF are bogus...");
                 return -1;
+        }
 
         efcp_container_set_dt_cons(dt_cons, data->efcpc);
         rkfree(dt_cons);
