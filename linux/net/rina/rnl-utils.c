@@ -823,7 +823,7 @@ static int rnl_parse_ipcm_alloc_flow_req_arrived_msg(struct genl_info * info,
 static int rnl_parse_ipcm_alloc_flow_req_result_msg(struct genl_info * info,
                                                     struct rnl_ipcm_alloc_flow_req_result_msg_attrs * msg_attrs)
 {
-	/* FIXME: It should parse the port-id as well */
+        /* FIXME: It should parse the port-id as well */
         return rnl_parse_generic_u32_param_msg(info,
                                                &(msg_attrs->result),
                                                IAFRRM_ATTR_RESULT,

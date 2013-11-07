@@ -246,7 +246,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 flow->dst_port_id = port_id;
                 flow->state = PORT_STATE_ALLOCATED;
                 if (kipcm_flow_commit(default_kipcm,
-                                   data->id, flow->port_id)) {
+                                      data->id, flow->port_id)) {
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
