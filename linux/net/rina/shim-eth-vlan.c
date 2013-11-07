@@ -736,8 +736,8 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int eth_vlan_recv_process_packet(struct sk_buff * skb, 
-                                        struct net_device *dev)
+static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
+                                        struct net_device * dev)
 {
         struct ethhdr *                 mh;
         unsigned char *                 saddr;
@@ -939,7 +939,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff * skb,
 
         kfree_skb(skb);
         return 0;
-} 
+}
 
 static void eth_vlan_rcv_worker(struct work_struct *work)
 {
@@ -962,7 +962,6 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                 spin_lock_irqsave(&rcv_wq_lock, flags);
         }
         spin_unlock_irqrestore(&rcv_wq_lock, flags);
- 
 }
 
 static int eth_vlan_rcv(struct sk_buff *     skb,
@@ -985,9 +984,9 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 return 0;
         }
 
-        packet->skb = skb;
-        packet->dev = dev;
-        packet->pt = pt;
+        packet->skb      = skb;
+        packet->dev      = dev;
+        packet->pt       = pt;
         packet->orig_dev = orig_dev;
         INIT_LIST_HEAD(&packet->list);
 
@@ -1539,9 +1538,9 @@ static int __init mod_init(void)
         LOG_DBG("Regression tests completed successfully");
 
 #endif
-        
+
         rcv_wq = create_workqueue(SHIM_NAME);
-        
+
         shim =  kipcm_ipcp_factory_register(default_kipcm,
                                             SHIM_NAME,
                                             &eth_vlan_data,
@@ -1559,11 +1558,12 @@ static int __init mod_init(void)
 static void __exit mod_exit(void)
 {
         struct rcv_struct *  packet;
-        
+
         ASSERT(shim);
+
         flush_workqueue(rcv_wq);
         destroy_workqueue(rcv_wq);
-           
+
         list_for_each_entry(packet, &rcv_wq_packets, list) {
                 kfree_skb(packet->skb);
                 list_del(&packet->list);
