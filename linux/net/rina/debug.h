@@ -32,13 +32,13 @@
 
 #include <linux/hardirq.h>
 #define IRQ_BARRIER                                                     \
-do {                                                                    \
-        if (in_interrupt()) {                                           \
-                LOG_CRIT("Do not call %s in an interrupt context",      \
-			 __FUNCTION__);                                 \
-                BUG();                                                  \
-        }                                                               \
-} while(0)
+        do {                                                            \
+                if (in_interrupt()) {                                   \
+                        LOG_CRIT("Do not call %s in IRQ context",       \
+                                 __FUNCTION__);                         \
+                        BUG();                                          \
+                }                                                       \
+        } while(0)
 
 int  rina_debug_init(void);
 void rina_debug_exit(void);
