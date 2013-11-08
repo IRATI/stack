@@ -99,29 +99,21 @@ static int default_sdu_read(struct personality_data * data,
 static int default_allocate_port_id(struct personality_data * data,
                                     ipc_process_id_t          pid)
 {
-#if 0
-        cep_id_t id;
-
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
-#endif
-
-        return -1; /* efcp_create(data->efcp, connection, &id); */
+        
+        return kfa_flow_create(data->kfa, pid);
 }
 
 static int default_deallocate_port_id(struct personality_data * data,
                                       port_id_t                 port_id)
 {
-#if 0
-        cep_id_t id;
-
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
-#endif
-
-        return -1; /* efcp_create(data->efcp, connection, &id); */
+        
+        return kfa_flow_deallocate(data->kfa, port_id);
 }
 
 /* FIXME: To be removed ABSOLUTELY */
