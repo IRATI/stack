@@ -177,7 +177,7 @@ static int parse_flow_spec(struct nlattr * fspec_attr,
 }
 
 static int parse_app_name_info(struct nlattr * name_attr,
-                               struct name * name_struct)
+                               struct name *   name_struct)
 {
         struct nla_policy attr_policy[APNI_ATTR_MAX + 1];
         struct nlattr *attrs[APNI_ATTR_MAX + 1];
@@ -186,8 +186,14 @@ static int parse_app_name_info(struct nlattr * name_attr,
         string_t * entity_name;
         string_t * entity_instance;
 
-        LOG_DBG("Entering parse_app_name_info with nlattr "
-                "at %p and name_struct at %p", name_attr, name_struct);
+        if (!name_attr || !name_struct) {
+                LOG_ERR("Bogus input parameters, cannot parse name app info");
+                return -1;
+        }
+
+        LOG_DBG("Entering parse_app_name_info with "
+                "nlattr at %p and name_struct at %p",
+                name_attr, name_struct);
 
         attr_policy[APNI_ATTR_PROCESS_NAME].type = NLA_STRING;
         attr_policy[APNI_ATTR_PROCESS_NAME].len = 0;
