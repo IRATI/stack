@@ -440,7 +440,7 @@ static int process(const struct sk_buff * skb,
                         LOG_DBG("Updating old entry %pK into the table",
                                 entry);
 
-                        if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha)) {
+                        if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha, GFP_ATOMIC)) {
                                 LOG_ERR("Failed to update table");
                                 gpa_destroy(tmp_spa);
                                 gpa_destroy(tmp_tpa);
