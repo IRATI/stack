@@ -786,7 +786,7 @@ static int notify_ipcp_update_dif_config_request(void *             data,
                                                         0,
                                                         -1,
                                                         info->snd_seq,
-                                                        info->snd_portid);;
+                                                        info->snd_portid);
         INIT_LIST_HEAD(&(dif_config->ipcp_config_entries));
         attrs->dif_config = dif_config;
 

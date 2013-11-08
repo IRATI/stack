@@ -127,8 +127,14 @@ struct name * name_init(struct name *    dst,
                         const string_t * process_instance,
                         const string_t * entity_name,
                         const string_t * entity_instance)
-{ return name_init_gfp(GFP_KERNEL, dst, process_name, process_instance,
-                       entity_name, entity_instance); }
+{
+        return name_init_gfp(GFP_KERNEL,
+                             dst,
+                             process_name,
+                             process_instance,
+                             entity_name,
+                             entity_instance);
+}
 EXPORT_SYMBOL(name_init);
 
 void name_fini(struct name * n)
