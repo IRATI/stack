@@ -506,10 +506,6 @@ static int process(const struct sk_buff * skb,
 
         default:
                 BUG();
-                gpa_destroy(tmp_spa);
-                gpa_destroy(tmp_tpa);
-                gha_destroy(tmp_sha);
-                gha_destroy(tmp_tha);
         }
 
         LOG_DBG("Processing completed successfully");
