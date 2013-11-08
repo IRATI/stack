@@ -352,7 +352,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
 }
 
 static void deallocate_and_destroy_flow(struct ipcp_instance_data * data,
-                struct shim_eth_flow * flow)
+                                        struct shim_eth_flow * flow)
 {
         if (kfa_flow_deallocate(data->kfa, flow->port_id))
                 LOG_ERR("Failed to destroy KFA flow");
@@ -387,7 +387,7 @@ static void rinarp_resolve_handler(void *             opaque,
                 flow->dest_ha = gha_dup(dest_ha);
 
                 if (kipcm_flow_commit(default_kipcm,
-                                   data->id, flow->port_id)) {
+                                      data->id, flow->port_id)) {
                         LOG_ERR("Cannot add flow");
                         deallocate_and_destroy_flow(data, flow);
                         spin_unlock(&data->lock);
@@ -498,7 +498,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
         if (!result) {
                 flow->port_id = port_id;
                 if (kipcm_flow_commit(default_kipcm, data->id,
-                                   flow->port_id)) {
+                                      flow->port_id)) {
                         LOG_ERR("KIPCM flow add failed");
                         deallocate_and_destroy_flow(data, flow);
                         return -1;
