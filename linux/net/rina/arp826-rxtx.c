@@ -485,6 +485,10 @@ static int process(const struct sk_buff * skb,
                         gha_destroy(tmp_tha);
                         return -1;
                 }
+                gpa_destroy(tmp_spa);
+                gpa_destroy(tmp_tpa);
+                gha_destroy(tmp_sha);
+                gha_destroy(tmp_tha);
 
                 LOG_DBG("Request replied successfully");
         }
@@ -493,10 +497,6 @@ static int process(const struct sk_buff * skb,
         case ARP_REPLY: {
                 if (arm_resolve(ptype, tmp_spa, tmp_sha, tmp_tpa, tmp_tha)) {
                         LOG_ERR("Cannot resolve with this reply ...");
-                        gpa_destroy(tmp_spa);
-                        gpa_destroy(tmp_tpa);
-                        gha_destroy(tmp_sha);
-                        gha_destroy(tmp_tha);
                         return -1;
                 }
 
@@ -506,13 +506,14 @@ static int process(const struct sk_buff * skb,
 
         default:
                 BUG();
+                gpa_destroy(tmp_spa);
+                gpa_destroy(tmp_tpa);
+                gha_destroy(tmp_sha);
+                gha_destroy(tmp_tha);
         }
 
         LOG_DBG("Processing completed successfully");
-        gpa_destroy(tmp_spa);
-        gpa_destroy(tmp_tpa);
-        gha_destroy(tmp_sha);
-        gha_destroy(tmp_tha);
+
         return 0;
 }
 
