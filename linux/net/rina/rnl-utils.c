@@ -463,7 +463,6 @@ static int parse_dif_info(struct nlattr * dif_config_attr,
 
         if (attrs[DINFO_ATTR_DIF_TYPE])
                 dif_info->type = kstrdup(nla_get_string(attrs[DINFO_ATTR_DIF_TYPE]), GFP_KERNEL);
-        LOG_DBG("LEODEBUG dif_info->type at %p", dif_info->type);
 
         if (parse_app_name_info(attrs[DINFO_ATTR_DIF_NAME],
                                 dif_info->dif_name) < 0)

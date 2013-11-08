@@ -110,10 +110,6 @@ struct name * name_init_gfp(gfp_t            flags,
         ASSERT(name_is_initialized(dst));
 
         /* Boolean shortcuits ... */
-        LOG_DBG("LEODEBUG DUPPING: %p", process_name);
-        LOG_DBG("LEODEBUG DUPPING: %p", process_instance);
-        LOG_DBG("LEODEBUG DUPPING: %p", entity_name);
-        LOG_DBG("LEODEBUG DUPPING: %p", entity_instance);
         if (string_dup_gfp(flags, process_name,     &dst->process_name)     ||
             string_dup_gfp(flags, process_instance, &dst->process_instance) ||
             string_dup_gfp(flags, entity_name,      &dst->entity_name)      ||
@@ -121,10 +117,6 @@ struct name * name_init_gfp(gfp_t            flags,
                 name_fini(dst);
                 return NULL;
         }
-        LOG_DBG("LEODEBUG DUPPING DST: %p", dst->process_name);
-        LOG_DBG("LEODEBUG DUPPING DST: %p", dst->process_instance);
-        LOG_DBG("LEODEBUG DUPPING DST: %p", dst->entity_name);
-        LOG_DBG("LEODEBUG DUPPING DST: %p", dst->entity_instance);
 
         return dst;
 }
@@ -588,7 +580,6 @@ int dif_info_destroy(struct dif_info * dif_info)
 {
         if (dif_info) {
                 if (dif_info->dif_name) {
-                        LOG_DBG("LEODEBUG about to destroy name at: %p and strings at\n%p\n%p\n%p\n%p",
                         dif_info->dif_name, dif_info->dif_name->process_name, dif_info->dif_name->process_instance,
                         dif_info->dif_name->entity_name, dif_info->dif_name->entity_instance);
                         name_destroy(dif_info->dif_name);
