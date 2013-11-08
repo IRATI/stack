@@ -181,6 +181,10 @@ static int parse_app_name_info(struct nlattr * name_attr,
 {
         struct nla_policy attr_policy[APNI_ATTR_MAX + 1];
         struct nlattr *attrs[APNI_ATTR_MAX + 1];
+        string_t * process_name;
+        string_t * process_instance;
+        string_t * entity_name;
+        string_t * entity_instance;
 
         LOG_DBG("Entering parse_app_name_info with nlattr "
                 "at %p and name_struct at %p", name_attr, name_struct);
@@ -197,11 +201,36 @@ static int parse_app_name_info(struct nlattr * name_attr,
         if (nla_parse_nested(attrs, APNI_ATTR_MAX, name_attr, attr_policy) < 0)
                 return -1;
 
-        name_init(name_struct,
-                  nla_get_string(attrs[APNI_ATTR_PROCESS_NAME]),
-                  nla_get_string(attrs[APNI_ATTR_PROCESS_INSTANCE]),
-                  nla_get_string(attrs[APNI_ATTR_ENTITY_NAME]),
-                  nla_get_string(attrs[APNI_ATTR_ENTITY_INSTANCE]));
+
+        if (attrs[APNI_ATTR_PROCESS_NAME])
+                process_name =
+                        nla_get_string(attrs[APNI_ATTR_PROCESS_NAME]);
+        else
+                process_name = NULL;
+        
+        if (attrs[APNI_ATTR_PROCESS_INSTANCE])
+                process_instance =
+                        nla_get_string(attrs[APNI_ATTR_PROCESS_INSTANCE]);
+        else
+                process_instance = NULL;
+
+        if (attrs[APNI_ATTR_ENTITY_NAME])
+                entity_name =
+                        nla_get_string(attrs[APNI_ATTR_ENTITY_NAME]);
+        else
+                entity_name = NULL;
+
+        if (attrs[APNI_ATTR_ENTITY_INSTANCE])
+                entity_instance =
+                        nla_get_string(attrs[APNI_ATTR_ENTITY_INSTANCE]);
+        else
+                entity_instance = NULL;
+
+        if (!name_init(name_struct,
+                       process_name, process_instance,
+                       entity_name,  entity_instance))
+                return -1;
+        
         return 0;
 }
 
