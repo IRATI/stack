@@ -76,9 +76,9 @@ static int efcp_destroy(struct efcp * instance)
 }
 
 struct efcp_container {
-        struct efcp_imap               * instances;
-        struct cidm                    * cidm;
-        struct data_transfer_constants   dt_cons;
+        struct efcp_imap *              instances;
+        struct cidm *                   cidm;
+        struct data_transfer_constants  dt_cons;
 };
 
 // efcp_imap maps cep_id_t to efcp_instances
