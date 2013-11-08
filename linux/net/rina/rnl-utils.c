@@ -1562,9 +1562,9 @@ EXPORT_SYMBOL(rnl_parse_msg);
 /* FORMATTING */
 
 static int format_app_name_info(const struct name * name,
-                                struct sk_buff * msg)
+                                struct sk_buff *    msg)
 {
-        if (!msg) {
+        if (!msg || !name) {
                 LOG_ERR("Bogus input parameter(s), bailing out");
                 return -1;
         }
@@ -1601,6 +1601,7 @@ static int format_app_name_info(const struct name * name,
                         return -1;
 
         LOG_DBG("Format app name successs");
+
         return 0;
 }
 
