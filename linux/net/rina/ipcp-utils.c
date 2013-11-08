@@ -568,7 +568,8 @@ int dif_config_destroy(struct dif_config * dif_config)
                 list_del(&pos->next);
                 ipcp_config_destroy(pos);
         }
-
+        if(dif_config->data_transfer_constants)
+                rkfree(dif_config->data_transfer_constants);
         rkfree(dif_config);
 
         return 0;
@@ -579,6 +580,8 @@ int dif_info_destroy(struct dif_info * dif_info)
 {
         if (dif_info) {
                 if (dif_info->dif_name) {
+                        dif_info->dif_name, dif_info->dif_name->process_name, dif_info->dif_name->process_instance,
+                        dif_info->dif_name->entity_name, dif_info->dif_name->entity_instance);
                         name_destroy(dif_info->dif_name);
                 }
                 if (dif_info->configuration) {
