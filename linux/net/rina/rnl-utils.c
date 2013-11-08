@@ -203,30 +203,34 @@ static int parse_app_name_info(struct nlattr * name_attr,
 
 
         if (attrs[APNI_ATTR_PROCESS_NAME])
-                process_name = nla_get_string(attrs[APNI_ATTR_PROCESS_NAME]);
+                process_name =
+                        nla_get_string(attrs[APNI_ATTR_PROCESS_NAME]);
         else
                 process_name = NULL;
-
+        
         if (attrs[APNI_ATTR_PROCESS_INSTANCE])
-                process_instance = nla_get_string(
-                                attrs[APNI_ATTR_PROCESS_INSTANCE]);
+                process_instance =
+                        nla_get_string(attrs[APNI_ATTR_PROCESS_INSTANCE]);
         else
                 process_instance = NULL;
 
         if (attrs[APNI_ATTR_ENTITY_NAME])
-                entity_name = nla_get_string(attrs[APNI_ATTR_ENTITY_NAME]);
+                entity_name =
+                        nla_get_string(attrs[APNI_ATTR_ENTITY_NAME]);
         else
                 entity_name = NULL;
 
         if (attrs[APNI_ATTR_ENTITY_INSTANCE])
-                entity_instance = nla_get_string(
-                                attrs[APNI_ATTR_ENTITY_INSTANCE]);
+                entity_instance =
+                        nla_get_string(attrs[APNI_ATTR_ENTITY_INSTANCE]);
         else
                 entity_instance = NULL;
 
-        name_init(name_struct, process_name, process_instance,
-                        entity_name, entity_instance);
-
+        if (!name_init(name_struct,
+                       process_name, process_instance,
+                       entity_name,  entity_instance))
+                return -1;
+        
         return 0;
 }
 
