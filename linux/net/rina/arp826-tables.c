@@ -228,7 +228,8 @@ static void tbl_destroy(struct table * instance)
 
 int tbl_update_by_gpa(struct table *     instance,
                       const struct gpa * pa,
-                      struct gha *       ha)
+                      struct gha *       ha,
+                      gfp_t              flags)
 {
         struct table_entry * pos;
 
@@ -250,7 +251,7 @@ int tbl_update_by_gpa(struct table *     instance,
         list_for_each_entry(pos, &instance->entries, next) {
                 if (gpa_is_equal(pos->pa, pa)) {
                         gha_destroy(pos->ha);
-                        pos->ha = ha;
+                        pos->ha = gha_dup_gfp(flags, ha);
                         spin_unlock(&instance->lock);
                         return 0;
                 }
