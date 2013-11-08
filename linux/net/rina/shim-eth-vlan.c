@@ -891,7 +891,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         flow->dest_pa = name_to_gpa(sname);
                         LOG_DBG("Flow request from unkown app received");
                 }
-                
+
                 if (kipcm_flow_arrived(default_kipcm,
                                        data->id,
                                        flow->port_id,

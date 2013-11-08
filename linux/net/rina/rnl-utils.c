@@ -213,7 +213,7 @@ static int parse_app_name_info(struct nlattr * name_attr,
                         nla_get_string(attrs[APNI_ATTR_PROCESS_NAME]);
         else
                 process_name = NULL;
-        
+
         if (attrs[APNI_ATTR_PROCESS_INSTANCE])
                 process_instance =
                         nla_get_string(attrs[APNI_ATTR_PROCESS_INSTANCE]);
@@ -236,7 +236,7 @@ static int parse_app_name_info(struct nlattr * name_attr,
                        process_name, process_instance,
                        entity_name,  entity_instance))
                 return -1;
-        
+
         return 0;
 }
 
