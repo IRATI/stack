@@ -172,7 +172,12 @@ public class IPCProcessManager {
 	public synchronized IPCProcess createIPCProcess(
 			ApplicationProcessNamingInformation name, 
 			String type) throws CreateIPCProcessException {
-		return ipcProcessFactory.create(name, type);
+		IPCProcess ipcProcess = ipcProcessFactory.create(name, type);
+		if (!type.equals(IPCManager.NORMAL_IPC_PROCESS_TYPE)) {
+			ipcProcess.setInitialized();
+		}
+		
+		return ipcProcess;
 	}
 	
 	public synchronized void destroyIPCProcess(long ipcProcessId)
