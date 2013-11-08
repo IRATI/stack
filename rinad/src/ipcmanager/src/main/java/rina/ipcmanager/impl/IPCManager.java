@@ -202,8 +202,6 @@ public class IPCManager {
 						continue;
 					}
 				}
-				
-				ipcProcess.setInitialized();
 			}catch(CreateIPCProcessException ex){
 				log.error(ex.getMessage() + ". Problems creating IPC Process " 
 						+ processNamingInfo.toString());
