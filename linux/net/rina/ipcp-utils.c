@@ -304,7 +304,8 @@ EXPORT_SYMBOL(name_is_equal);
 
 #define DELIMITER "/"
 
-char * name_tostring(const struct name * n)
+char * name_tostring_gfp(gfp_t               flags,
+                         const struct name * n)
 {
         char *       tmp;
         size_t       size;
@@ -332,7 +333,7 @@ char * name_tostring(const struct name * n)
                  string_len(n->entity_instance)  : none_len);
         size += strlen(DELIMITER);
 
-        tmp = rkmalloc(size, GFP_KERNEL);
+        tmp = rkmalloc(size, flags);
         if (!tmp)
                 return NULL;
 
@@ -352,6 +353,10 @@ char * name_tostring(const struct name * n)
 
         return tmp;
 }
+EXPORT_SYMBOL(name_tostring_gfp);
+
+char * name_tostring(const struct name * n)
+{ return name_tostring_gfp(GFP_KERNEL, n); }
 EXPORT_SYMBOL(name_tostring);
 
 struct name * string_toname_gfp(gfp_t            flags,

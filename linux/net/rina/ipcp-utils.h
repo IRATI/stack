@@ -104,6 +104,8 @@ bool          name_is_equal(const struct name * a, const struct name * b);
 
 /* Returns a name as a (newly allocated) string */
 char *        name_tostring(const struct name * n);
+char *        name_tostring_gfp(gfp_t               flags,
+                                const struct name * n);
 
 /* Inverse of name_tostring() */
 struct name * string_toname(const string_t * s);
