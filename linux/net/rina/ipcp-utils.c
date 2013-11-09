@@ -591,13 +591,17 @@ int dif_config_destroy(struct dif_config * dif_config)
 {
         struct ipcp_config * pos, * nxt;
 
+        if (!dif_config)
+                return -1;
+
         list_for_each_entry_safe(pos, nxt,
                                  &dif_config->ipcp_config_entries,
                                  next) {
                 list_del(&pos->next);
                 ipcp_config_destroy(pos);
         }
-        if(dif_config->data_transfer_constants)
+
+        if (dif_config->data_transfer_constants)
                 rkfree(dif_config->data_transfer_constants);
         rkfree(dif_config);
 
@@ -611,9 +615,12 @@ int dif_info_destroy(struct dif_info * dif_info)
                 if (dif_info->dif_name) {
                         name_destroy(dif_info->dif_name);
                 }
+
                 if (dif_info->configuration) {
-                        dif_config_destroy(dif_info->configuration);
+                        if (dif_config_destroy(dif_info->configuration))
+                                return -1;
                 }
+
                 rkfree(dif_info->type);
                 rkfree(dif_info);
         }

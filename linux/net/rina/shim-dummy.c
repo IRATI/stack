@@ -310,8 +310,9 @@ static int dummy_flow_deallocate(struct ipcp_instance_data * data,
         else
                 dest_port_id = flow->port_id;
 
-        /* FIXME: dummy_flow is not updated after unbinding cause it is going
-         * to be deleted. Is it really needed to unbind+destroy?
+        /*
+         *FIXME: dummy_flow is not updated after unbinding cause it is going
+         *       to be deleted. Is it really needed to unbind+destroy?
          */
 
         if (kfa_flow_deallocate(data->kfa, id) ||
@@ -504,14 +505,15 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
         if (!sdu)
                 return -1;
 
-        /* We are going to dup the SDU since the shim has now the ownership
+        /*
+         * We are going to dup the SDU since the shim has now the ownership
          * and it is always its burden to free it whenever the processing of
          * the SDU is finished (e.g. the SDU has been sent through a wire).
          * For the shim-dummy the processing consists of sending the new SDU
          * to the sdu_ready kfifo, which will take the ownership of this copy.
          */
         copy_sdu = sdu_dup_gfp(GFP_ATOMIC, sdu);
-        if(!copy_sdu)
+        if (!copy_sdu)
                 return -1;
 
         sdu_destroy(sdu);
