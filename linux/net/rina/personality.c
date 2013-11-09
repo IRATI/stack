@@ -136,8 +136,8 @@ static int are_ops_ok(const struct personality_ops * ops)
                 return 0;
         }
 
-        if (!(ops->allocate_port_id  &&
-              ops->deallocate_port_id)) {
+        if (!(ops->allocate_port  &&
+              ops->deallocate_port)) {
                 LOG_ERR("Bogus Port ID related ops");
                 return 0;
         }

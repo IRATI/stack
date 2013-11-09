@@ -96,8 +96,8 @@ static int default_sdu_read(struct personality_data * data,
         return kipcm_sdu_read(data->kipcm, id, sdu);
 }
 
-static int default_allocate_port_id(struct personality_data * data,
-                                    ipc_process_id_t          pid)
+static int default_allocate_port(struct personality_data * data,
+                                 ipc_process_id_t          pid)
 {
         if (!is_personality_ok(data)) return -1;
 
@@ -106,8 +106,8 @@ static int default_allocate_port_id(struct personality_data * data,
         return kfa_flow_create(data->kfa, pid);
 }
 
-static int default_deallocate_port_id(struct personality_data * data,
-                                      port_id_t                 port_id)
+static int default_deallocate_port(struct personality_data * data,
+                                   port_id_t                 port_id)
 {
         if (!is_personality_ok(data)) return -1;
 
@@ -208,8 +208,8 @@ struct personality_ops ops = {
         .ipc_destroy        = default_ipc_destroy,
         .sdu_read           = default_sdu_read,
         .sdu_write          = default_sdu_write,
-        .allocate_port_id   = default_allocate_port_id,
-        .deallocate_port_id = default_deallocate_port_id,
+        .allocate_port      = default_allocate_port,
+        .deallocate_port    = default_deallocate_port,
 };
 
 static struct personality_data data;

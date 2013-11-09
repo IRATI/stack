@@ -571,6 +571,22 @@ struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
 }
 EXPORT_SYMBOL(flow_spec_dup);
 
+struct dif_config * dif_config_create(void)
+{
+        struct dif_config * tmp;
+        
+        tmp = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
+        if (!tmp) {
+                LOG_DBG("Could not create new dif_config");
+                return NULL;
+        }
+
+        INIT_LIST_HEAD(&(tmp->ipcp_config_entries));
+        return tmp;
+                
+}
+EXPORT_SYMBOL(dif_config_create);
+
 int dif_config_destroy(struct dif_config * dif_config)
 {
         struct ipcp_config * pos, * nxt;

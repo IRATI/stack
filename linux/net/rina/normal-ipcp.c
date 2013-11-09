@@ -352,7 +352,6 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         }
 
         efcp_container_set_dt_cons(dt_cons, data->efcpc);
-        rkfree(dt_cons);
 
         return 0;
 }

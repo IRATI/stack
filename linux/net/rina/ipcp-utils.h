@@ -117,6 +117,7 @@ int                  ipcp_config_destroy(struct ipcp_config * cfg);
 struct ipcp_config *
 ipcp_config_dup_from_user(const struct ipcp_config __user * cfg);
 
+struct dif_config *  dif_config_create(void);
 int                  dif_config_destroy(struct dif_config * dif_config);
 int                  dif_info_destroy(struct dif_info * dif_info);
 

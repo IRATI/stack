@@ -671,11 +671,10 @@ static int notify_ipcp_assign_dif_request(void *             data,
 
         dif_info->dif_name = dif_name;
 
-        dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
+        dif_config = dif_config_create();
         if (!dif_config)
                 goto fail;
 
-        INIT_LIST_HEAD(&(dif_config->ipcp_config_entries));
         dif_info->configuration = dif_config;
 
         msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
