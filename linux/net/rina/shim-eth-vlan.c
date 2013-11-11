@@ -700,7 +700,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
         skb_reserve(skb, hlen);
         skb_reset_network_header(skb);
-        sdu_ptr = (unsigned char *) skb_put(skb, sdu->buffer->size) + 1;
+        sdu_ptr = (unsigned char *) skb_put(skb, sdu->buffer->size);
         memcpy(sdu_ptr, sdu->buffer->data, sdu->buffer->size);
 
         skb->dev = data->dev;
