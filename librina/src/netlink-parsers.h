@@ -537,6 +537,22 @@ int putIpcmUpdateDIFConfigurationResponseMessageObject(nl_msg* netlinkMessage,
 IpcmUpdateDIFConfigurationResponseMessage *
         parseIpcmUpdateDIFConfigurationResponseMessage(nlmsghdr *hdr);
 
+/* IpcmEnrollToDIFRequestMessage CLASS*/
+enum IpcmEnrollToDIFRequestMessageAttributes {
+        IETDR_ATTR_DIF_NAME = 1,
+        IETDR_ATTR_SUP_DIF_NAME,
+        IETDR_ATTR_NEIGH,
+        __IETDR_ATTR_MAX,
+};
+
+#define IETDR_ATTR_MAX (__IETDR_ATTR_MAX -1)
+
+int putIpcmEnrollToDIFRequestMessageObject(nl_msg* netlinkMessage,
+                const IpcmEnrollToDIFRequestMessage& object);
+
+IpcmEnrollToDIFRequestMessage *
+        parseIpcmEnrollToDIFRequestMessage(nlmsghdr *hdr);
+
 /* IpcmAllocateFlowRequestMessage CLASS*/
 enum IpcmAllocateFlowRequestMessageAttributes {
 	IAFRM_ATTR_SOURCE_APP_NAME = 1,

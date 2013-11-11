@@ -8,6 +8,9 @@ import java.util.concurrent.Executors;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import rina.cdap.api.CDAPSessionManager;
+import rina.cdap.impl.CDAPSessionManagerImpl;
+import rina.cdap.impl.googleprotobuf.GoogleProtocolBufWireMessageProviderFactory;
 import rina.utils.apps.echo.utils.ApplicationRegistrationListener;
 import rina.utils.apps.echo.utils.FlowAcceptor;
 import rina.utils.apps.echo.utils.FlowDeallocationListener;
@@ -47,12 +50,19 @@ public class EchoServer implements FlowAcceptor, ApplicationRegistrationListener
 	
 	private static final Log log = LogFactory.getLog(EchoServer.class);
 	
-	private Map<Integer, FlowReader> ongoingTests = null;
+	private Map<Integer, TestController> ongoingTests = null;
+	
+	/**
+	 * Manages the CDAP sessions to the control AE
+	 */
+	private CDAPSessionManager cdapSessionManager = null;
 	
 	public EchoServer(ApplicationProcessNamingInformation echoApNamingInfo){
 		rina.initialize();
+		this.cdapSessionManager = new CDAPSessionManagerImpl(
+				new GoogleProtocolBufWireMessageProviderFactory());
 		this.echoApNamingInfo = echoApNamingInfo;
-		this.ongoingTests = new ConcurrentHashMap<Integer, FlowReader>();
+		this.ongoingTests = new ConcurrentHashMap<Integer, TestController>();
 		ipcEventConsumer = new IPCEventConsumer();
 		ipcEventConsumer.addFlowAcceptor(this, echoApNamingInfo);
 		ipcEventConsumer.addApplicationRegistrationListener(this, echoApNamingInfo);
@@ -122,7 +132,7 @@ public class EchoServer implements FlowAcceptor, ApplicationRegistrationListener
 	 * of the RINABand Server, in order to negotiate the new test parameters
 	 */
 	public synchronized void flowAllocated(Flow flow) {
-		FlowReader flowReader = new FlowReader(flow, 10000);
+		TestController flowReader = new TestController(flow, 10000, cdapSessionManager);
 		ongoingTests.put(flow.getPortId(), flowReader);
 		ipcEventConsumer.addFlowDeallocationListener(this, flow.getPortId());
 		EchoServer.executeRunnable(flowReader);
@@ -146,7 +156,7 @@ public class EchoServer implements FlowAcceptor, ApplicationRegistrationListener
 	@Override
 	public void dispatchFlowDeallocatedEvent(FlowDeallocatedEvent event) {
 		ipcEventConsumer.removeFlowDeallocationListener(event.getPortId());
-		FlowReader flowReader = ongoingTests.remove(event.getPortId());
+		TestController flowReader = ongoingTests.remove(event.getPortId());
 		if (flowReader == null){
 			log.warn("Flowreader of flow "+event.getPortId()
 					+" not found in ongoing tests table");

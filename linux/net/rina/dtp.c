@@ -161,39 +161,6 @@ int dtp_unbind(struct dtp * instance)
 
 }
 
-static int delimit_fragment_concatenate(struct dtp * dtp,
-                                        struct sdu * sdu)
-{
-        ASSERT(dtp);
-        ASSERT(sdu);
-
-        LOG_MISSING;
-
-        return 0;
-}
-
-static int sequence_address(struct dtp * dtp,
-                            struct sdu * sdu)
-{
-        ASSERT(dtp);
-        ASSERT(sdu);
-
-        LOG_MISSING;
-
-        return 0;
-}
-
-static int crc_apply(struct dtp * dtp,
-                     struct sdu * sdu)
-{
-        ASSERT(dtp);
-        ASSERT(sdu);
-
-        LOG_MISSING;
-
-        return 0;
-}
-
 /* Closed Window Queue policy */
 int apply_policy_CsldWinQ(struct dtp * dtp,
                           struct sdu * sdu)
