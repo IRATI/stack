@@ -97,13 +97,14 @@ static int default_sdu_read(struct personality_data * data,
 }
 
 static int default_allocate_port(struct personality_data * data,
-                                 ipc_process_id_t          pid)
+                                 ipc_process_id_t          pid,
+                                 bool                      to_app)
 {
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
         
-        return kfa_flow_create(data->kfa, pid);
+        return kfa_flow_create(data->kfa, pid, to_app);
 }
 
 static int default_deallocate_port(struct personality_data * data,

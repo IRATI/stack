@@ -335,7 +335,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      port_id_bad());
         }
 
-        pid = kfa_flow_create(kipcm->kfa, ipc_id);
+        pid = kfa_flow_create(kipcm->kfa, ipc_id, false);
         ASSERT(is_port_id_ok(pid));
         if (kipcm_pmap_add(kipcm->messages->ingress, pid, info->snd_seq)) {
                 LOG_ERR("Could not add map [pid, seq_num]: [%d, %d]",

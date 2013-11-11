@@ -109,7 +109,8 @@ int kfa_destroy(struct kfa * instance)
 }
 
 port_id_t kfa_flow_create(struct kfa *     instance,
-                          ipc_process_id_t id)
+                          ipc_process_id_t id,
+                          bool             to_app)
 {
         struct ipcp_flow * flow;
         port_id_t          pid;
