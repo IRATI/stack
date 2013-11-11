@@ -2,6 +2,7 @@
  * RINA default personality
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -264,3 +265,4 @@ MODULE_DESCRIPTION("RINA default personality");
 MODULE_LICENSE("GPL");
 
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+MODULE_AUTHOR("Leonardo Bergesio <leonardo.bergesio@i2cat.net>");

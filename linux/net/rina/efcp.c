@@ -81,14 +81,20 @@ struct efcp_container {
         struct cidm *                   cidm;
         struct data_transfer_constants  dt_cons;
         struct rmt *                    rmt;
+        struct kfa *                    kfa;
 };
 
 // efcp_imap maps cep_id_t to efcp_instances
 
 
-struct efcp_container * efcp_container_create(void)
+struct efcp_container * efcp_container_create(struct kfa * kfa)
 {
         struct efcp_container * container;
+
+        if (!kfa) {
+                LOG_ERR("Bogus KFA instances passed, bailing out");
+                return NULL;
+        }
 
         container = rkzalloc(sizeof(*container), GFP_KERNEL);
         if (!container) {
@@ -98,15 +104,14 @@ struct efcp_container * efcp_container_create(void)
 
         container->instances   = efcp_imap_create();
         container->cidm        = cidm_create();
-        container->rmt         = rmt_create();
         if (!container->instances || 
-            !container->cidm      || 
-            !container->rmt) {
+            !container->cidm) {
                 LOG_ERR("Failed to create EFCP container instance");
                 efcp_container_destroy(container);
                 return NULL;
         }
 
+        container->kfa = kfa;
         return container;
 }
 EXPORT_SYMBOL(efcp_container_create);
@@ -121,7 +126,6 @@ int efcp_container_destroy(struct efcp_container * container)
         if (container->instances) 
                 efcp_imap_destroy(container->instances, efcp_destroy);
         if (container->cidm) cidm_destroy(container->cidm);
-        if (container->rmt) rmt_destroy(container->rmt);
         rkfree(container);
 
         return 0;
@@ -199,8 +203,7 @@ cep_id_t efcp_connection_create(struct efcp_container *   container,
         /* We must ensure that the DTP is instantiated, at least ... */
         connection->source_cep_id = cep_id;
         tmp->connection = connection;
-        tmp->dtp        = dtp_create(container->rmt
-                                     /* connection->port_id */);
+        tmp->dtp        = dtp_create(container->rmt);
         if (!tmp->dtp) {
                 efcp_destroy(tmp);
                 return cep_id_bad();

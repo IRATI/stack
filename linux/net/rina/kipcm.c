@@ -1937,8 +1937,6 @@ int kipcm_ipcp_create(struct kipcm *      kipcm,
 
         /* FIXME: The following fixups are "ugly as hell" (TM) */
         instance->factory = factory;
-        instance->efcpc   = NULL;
-        instance->rmt     = NULL;
 
         if (ipcp_imap_add(kipcm->instances, id, instance)) {
                 factory->ops->destroy(factory->data, instance);
