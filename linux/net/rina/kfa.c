@@ -55,9 +55,8 @@ struct ipcp_flow {
         port_id_t              port_id;
 
         enum flow_state        state;
-
         struct ipcp_instance * ipc_process;
-
+        bool                   to_app;
         /* FIXME: To be wiped out */
         struct kfifo           sdu_ready;
         wait_queue_head_t      wait_queue;
@@ -109,7 +108,8 @@ int kfa_destroy(struct kfa * instance)
 }
 
 port_id_t kfa_flow_create(struct kfa *     instance,
-                          ipc_process_id_t id)
+                          ipc_process_id_t id,
+                          bool             to_app)
 {
         struct ipcp_flow * flow;
         port_id_t          pid;
@@ -143,7 +143,8 @@ port_id_t kfa_flow_create(struct kfa *     instance,
                 return port_id_bad();
         }
 
-        flow->state = PORT_STATE_PENDING;
+        flow->state  = PORT_STATE_PENDING;
+        flow->to_app = to_app;
         atomic_set(&flow->readers, 0);
         atomic_set(&flow->writers, 0);
 

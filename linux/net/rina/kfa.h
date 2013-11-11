@@ -34,7 +34,8 @@ int          kfa_destroy(struct kfa * instance);
 
 /* Returns a port-id, the flow is uncommitted yet */
 port_id_t    kfa_flow_create(struct kfa *     instance,
-                             ipc_process_id_t id);
+                             ipc_process_id_t id,
+                             bool             to_app);
 
 /* Commits the flow, binds the flow to a port-id */
 int          kfa_flow_bind(struct kfa *           instance,

@@ -191,15 +191,16 @@ SYSCALL_DEFINE3(sdu_write,
         return size;
 }
 
-SYSCALL_DEFINE1(allocate_port,
-                ipc_process_id_t, id)
+SYSCALL_DEFINE2(allocate_port,
+                ipc_process_id_t, id,
+                bool,             to_app)
 {
         port_id_t retval;
 
         if (!id) 
                 return -EFAULT;
 
-        CALL_DEFAULT_PERSONALITY(retval, allocate_port, id);
+        CALL_DEFAULT_PERSONALITY(retval, allocate_port, id, to_app);
 
         return retval;
 }

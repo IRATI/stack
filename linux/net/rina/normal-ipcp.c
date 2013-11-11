@@ -37,7 +37,6 @@
 #include "kfa.h"
 #include "rnl-utils.h"
 #include "efcp.h"
-#include "rmt.h"
 #include "efcp-utils.h"
 
 /*  FIXME: To be removed ABSOLUTELY */
@@ -58,7 +57,6 @@ struct ipcp_instance_data {
         /*  FIXME: Remove it as soon as the kipcm_kfa gets removed*/
         struct kfa *            kfa;
         struct efcp_container * efcpc;
-        struct rmt *            rmt;
 };
 
 enum normal_flow_state {
@@ -426,17 +424,6 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
 
         instance->data->efcpc = efcp_container_create();
         if (!instance->data->efcpc) {
-                LOG_ERR("Failed creation of EFCP container");
-                rkfree(instance->data->info->name);
-                rkfree(instance->data->info);
-                rkfree(instance->data);
-                rkfree(instance);
-                return NULL;
-        }
-
-        instance->data->rmt = rmt_create();
-        if (!instance->data->rmt) {
-                LOG_ERR("Failed creation of EFCP container");
                 rkfree(instance->data->info->name);
                 rkfree(instance->data->info);
                 rkfree(instance->data);

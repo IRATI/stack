@@ -50,6 +50,7 @@ struct dtp {
         struct dtp_sv *       state_vector;
         struct dtp_policies * policies;
         struct dtcp *         peer;
+        struct rmt *          rmt;
 };
 
 static struct dtp_sv default_sv = {
@@ -67,9 +68,14 @@ static struct dtp_policies default_policies = {
         .xxx_fixme_add_policies_here = NULL
 };
 
-struct dtp * dtp_create(void)
+struct dtp * dtp_create(struct rmt * rmt)
 {
         struct dtp * tmp;
+        
+        if (!rmt) {
+                LOG_ERR("Bogus rmt, bailing out");
+                return NULL;
+        }
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp) {
@@ -87,7 +93,7 @@ struct dtp * dtp_create(void)
         *tmp->state_vector = default_sv;
         tmp->policies      = &default_policies;
         tmp->peer          = NULL;
-
+        tmp->rmt           = rmt;
         LOG_DBG("Instance %pK created successfully", tmp);
 
         return tmp;
@@ -105,6 +111,9 @@ int dtp_destroy(struct dtp * instance)
 
         rkfree(instance->state_vector);
         rkfree(instance);
+
+        /* FIXME: RMT is destroyed by EFCP Container, should be fine
+         * but better check it */
 
         LOG_DBG("Instance %pK destroyed successfully", instance);
 
@@ -152,39 +161,6 @@ int dtp_unbind(struct dtp * instance)
 
 }
 
-static int delimit_fragment_concatenate(struct dtp * dtp,
-                                        struct sdu * sdu)
-{
-        ASSERT(dtp);
-        ASSERT(sdu);
-
-        LOG_MISSING;
-
-        return 0;
-}
-
-static int sequence_address(struct dtp * dtp,
-                            struct sdu * sdu)
-{
-        ASSERT(dtp);
-        ASSERT(sdu);
-
-        LOG_MISSING;
-
-        return 0;
-}
-
-static int crc_apply(struct dtp * dtp,
-                     struct sdu * sdu)
-{
-        ASSERT(dtp);
-        ASSERT(sdu);
-
-        LOG_MISSING;
-
-        return 0;
-}
-
 /* Closed Window Queue policy */
 int apply_policy_CsldWinQ(struct dtp * dtp,
                           struct sdu * sdu)
@@ -220,25 +196,13 @@ int dtp_send(struct dtp * instance,
                 return -1;
         }
 
-        if (delimit_fragment_concatenate(instance, sdu))
-                return -1;
-
-        if (sequence_address(instance, sdu))
-                return -1;
-
-        if (crc_apply(instance, sdu))
-                return -1;
-
-        if (apply_policy_CsldWinQ(instance, sdu))
-                return -1;
-
-        if (apply_policy_RexmsnQ(instance, sdu))
-                return -1;
-
         /* Give the data to RMT now ! */
-
-        LOG_MISSING;
-
+#if 0
+        return rmt_send_sdu(instace->rmt,
+                            address,
+                            cep_id,
+                            sdu);
+#endif
         return -1;
 }
 

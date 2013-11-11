@@ -50,7 +50,8 @@ struct personality_ops {
                             ipc_process_id_t          id);
 
         int (* allocate_port)(struct personality_data * data,
-                              ipc_process_id_t          pid);
+                              ipc_process_id_t          pid,
+                              bool                      to_app);
         int (* deallocate_port)(struct personality_data * data,
                                 port_id_t         pid);
 

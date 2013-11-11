@@ -23,11 +23,12 @@
 
 #include "common.h"
 #include "du.h"
+#include "rmt.h"
 
 struct dtcp;
 struct dtp;
 
-struct dtp * dtp_create(void);
+struct dtp * dtp_create(struct rmt * rmt);
 int          dtp_destroy(struct dtp * instance);
 
 int          dtp_bind(struct dtp *  instance,
