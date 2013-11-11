@@ -1,10 +1,12 @@
 package rina.utils.apps.echo.client;
 
+import java.util.Calendar;
 import java.util.Timer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import rina.utils.apps.echo.TestInformation;
 import rina.utils.apps.echo.utils.FlowDeallocationListener;
 
 import eu.irati.librina.Flow;
@@ -18,43 +20,67 @@ import eu.irati.librina.rina;
  */
 public class FlowReader implements Runnable, FlowDeallocationListener{
 	
-	private Flow flow;
-	private int sduSize;
-	private int numberOfSDUs;
+	private Flow flow = null;
+	private TestInformation testInformation = null;
 	private boolean stop;
 	private Timer timer = null;
 	
 	private static final Log log = LogFactory.getLog(FlowReader.class);
 	
-	public FlowReader(Flow flow, int sduSize, int numberOfSDUs){
+	public FlowReader(Flow flow, TestInformation testInformation){
 		this.flow = flow;
-		this.sduSize = sduSize;
-		this.numberOfSDUs =  numberOfSDUs;
-		this.stop = false;
+		this.testInformation = testInformation;
 		this.timer = new Timer();
 	}
 
 	@Override
 	public void run() {
-		byte[] buffer = new byte[sduSize];
-		int bytesRead = 0;
+		byte[] buffer = new byte[EchoClient.MAX_SDU_SIZE];
 		
 		TestDeclaredDeadTimerTask timerTask = new TestDeclaredDeadTimerTask(this);
 		timer.schedule(timerTask, 20*1000);
-		int receivedSDUs = 0;
 		
-		while(!isStopped() && receivedSDUs < numberOfSDUs){
+		while(!isStopped()){
 			try{
-				bytesRead = flow.readSDU(buffer, buffer.length);
-				log.debug("Read SDU of size " + bytesRead 
-						+ " from portId "+flow.getPortId());
-				receivedSDUs++;
+				flow.readSDU(buffer, buffer.length);
+				testInformation.sduReceived();
+				if (testInformation.receivedAllSDUs()) {
+					testInformation.setLastSDUReceivedTime(
+							Calendar.getInstance().getTimeInMillis());
+					long testDuration = testInformation.getLastSDUReceivedTime() 
+							- testInformation.getFirstSDUSentTime();
+					if (testDuration == 0) {
+						testDuration = 1;
+					}
+					log.info("Test completed, sent and received " + 
+							testInformation.getNumberOfSDUs() + " of " 
+							+ testInformation.getSduSize() + 
+							" in " +testDuration + " ms.");
+					long bandwidthInBps = 1000*testInformation.getNumberOfSDUs()*testInformation.getSduSize()/testDuration;
+					log.info("Send and received at " + bandwidthInBps 
+							+ " Bytes per second ( " +bandwidthInBps*8/1024 + " Kbps)");
+					stop();
+				}
 			}catch(Exception ex){
 				log.error("Problems reading SDU from flow "+flow.getPortId());
 				stop();
 			}
 		}
 		
+		terminateReader();
+		System.exit(0);
+	}
+	
+	public synchronized void stop(){
+		if (!stop) {
+			log.info("Requesting reader of flow "+flow.getPortId()+ " to stop");
+			stop = true;
+		}
+		
+		terminateReader();
+	}
+	
+	private void terminateReader() {
 		if (flow.isAllocated()){
 			try{
 				rina.getIpcManager().requestFlowDeallocation(flow.getPortId());
@@ -64,14 +90,6 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 		}
 		
 		timer.cancel();
-		System.exit(0);
-	}
-	
-	public synchronized void stop(){
-		if (!stop) {
-			log.info("Requesting reader of flow "+flow.getPortId()+ " to stop");
-			stop = true;
-		}
 	}
 	
 	public synchronized boolean isStopped(){
