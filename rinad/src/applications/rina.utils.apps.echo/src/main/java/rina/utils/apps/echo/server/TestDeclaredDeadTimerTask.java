@@ -11,8 +11,6 @@ import java.util.TimerTask;
  */
 public class TestDeclaredDeadTimerTask extends TimerTask{
 	
-	public static final long DEFAULT_DELAY_IN_MS = 20*1000;
-	
 	private TestController flowReader = null;
 	private Timer timer = null;
 	

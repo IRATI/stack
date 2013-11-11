@@ -1,5 +1,6 @@
 package rina.utils.apps.echo.client;
 
+import java.util.Timer;
 import java.util.TimerTask;
 
 /**
@@ -10,17 +11,24 @@ import java.util.TimerTask;
  */
 public class TestDeclaredDeadTimerTask extends TimerTask{
 	
-	public static final long DEFAULT_DELAY_IN_MS = 20*1000;
-	
 	private FlowReader flowReader = null;
+	private Timer timer = null;
 	
-	public TestDeclaredDeadTimerTask(FlowReader flowReader){
+	public TestDeclaredDeadTimerTask(FlowReader flowReader, Timer timer){
 		this.flowReader = flowReader;
+		this.timer = timer;
 	}
 
 	@Override
 	public void run() {
-		this.flowReader.stop();
+		if (this.flowReader.shouldStop()) {
+			this.flowReader.stop();
+		} else {
+			timer.schedule(
+					new TestDeclaredDeadTimerTask(flowReader, timer), 
+					FlowReader.TIMER_PERIOD_IN_MS);
+		}
+
 	}
 
 }

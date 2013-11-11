@@ -65,7 +65,7 @@ public class TestController implements Runnable {
 		byte[] buffer = new byte[maxSDUSize];
 		int bytesRead = 0;
 		
-		CancelTestTimerTask timerTask = new CancelTestTimerTask(this);
+		TestDeclaredDeadTimerTask timerTask = new TestDeclaredDeadTimerTask(this, timer);
 		timer.schedule(timerTask, TIMER_PERIOD_IN_MS);
 		
 		while(!isStopped()){

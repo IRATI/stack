@@ -1,6 +1,7 @@
 package rina.utils.apps.echo.client;
 
 import java.util.Calendar;
+import java.util.Timer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -72,6 +73,8 @@ FlowAllocationListener, FlowDeallocationListener {
 	
 	private FlowReader flowReader = null;
 	
+	private Timer timer = null;
+	
 	public EchoClient(int numberOfSdus, int sduSize, 
 			ApplicationProcessNamingInformation echoApNamingInfo){
 		rina.initialize();
@@ -93,6 +96,8 @@ FlowAllocationListener, FlowDeallocationListener {
 		cdapSessionManager = new CDAPSessionManagerImpl(
 				new GoogleProtocolBufWireMessageProviderFactory());
 		
+		timer = new Timer();
+		
 		ipcEventConsumer = new IPCEventConsumer();
 		ipcEventConsumer.addApplicationRegistrationListener(this, clientApNamingInfo);
 		executorService = Executors.newCachedThreadPool();
@@ -112,6 +117,14 @@ FlowAllocationListener, FlowDeallocationListener {
 			ex.printStackTrace();
 			System.exit(-1);
 		}
+	}
+	
+	public void cancelTest(int status) {
+		if (flowReader != null) {
+			flowReader.stop();
+		}
+		
+		System.exit(status);
 	}
 	
 	public synchronized void dispatchApplicationRegistrationResponseEvent(
@@ -189,8 +202,12 @@ FlowAllocationListener, FlowDeallocationListener {
 					log.info("Requested echo server to start a test with the following parameters: \n" 
 							+ testInformation.toString());
 					
+					CancelTestTimerTask timerTask = new CancelTestTimerTask(this);
+					timer.schedule(timerTask, 2*1000);
+					
 					buffer = new byte[MAX_SDU_SIZE];
 					bytesRead = flow.readSDU(buffer, buffer.length);
+					timerTask.cancel();
 					byte[] sdu = new byte[bytesRead];
 					for(int i=0; i<sdu.length; i++) {
 						sdu[i] = buffer[i];
@@ -215,9 +232,8 @@ FlowAllocationListener, FlowDeallocationListener {
 					return;
 				}
 				
-				
 				//2 Start flowReader
-				flowReader = new FlowReader(flow, this.testInformation);
+				flowReader = new FlowReader(flow, this.testInformation, timer);
 				this.executorService.execute(flowReader);
 
 				//3 Send SDUs to server

@@ -316,9 +316,9 @@ public class IPCManager {
 					+ osProcessFinalizedEvent.getApplicationName().toString());
 			
 			//Clean up all stuff related to the finalized process (registrations, flows)
+			flowManager.cleanFlows(osProcessFinalizedEvent.getApplicationName());
 			applicationRegistrationManager.cleanApplicationRegistrations(
 					osProcessFinalizedEvent.getApplicationName());
-			flowManager.cleanFlows(osProcessFinalizedEvent.getApplicationName());
 			
 			if (osProcessFinalizedEvent.getIPCProcessId() != 0){
 				//TODO The process that crashed was an IPC Process in user space

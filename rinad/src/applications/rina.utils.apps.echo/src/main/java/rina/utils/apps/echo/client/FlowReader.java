@@ -20,29 +20,51 @@ import eu.irati.librina.rina;
  */
 public class FlowReader implements Runnable, FlowDeallocationListener{
 	
+	private static final long MAX_TIME_WITH_NO_DATA_IN_MS = 2*1000;
+	public static final long TIMER_PERIOD_IN_MS = 1000;
+	
 	private Flow flow = null;
 	private TestInformation testInformation = null;
 	private boolean stop;
 	private Timer timer = null;
+	private long latestSDUReceivedTime = 0;
 	
 	private static final Log log = LogFactory.getLog(FlowReader.class);
 	
-	public FlowReader(Flow flow, TestInformation testInformation){
+	public FlowReader(Flow flow, TestInformation testInformation, Timer timer){
 		this.flow = flow;
 		this.testInformation = testInformation;
-		this.timer = new Timer();
+		this.timer = timer;
+	}
+	
+	private synchronized void setLatestSDUReceivedTime(long time){
+		this.latestSDUReceivedTime = time;
+	}
+	
+	private synchronized long getLatestSDUReceivedTime(){
+		return latestSDUReceivedTime;
+	}
+	
+	public boolean shouldStop(){
+		if (getLatestSDUReceivedTime() + MAX_TIME_WITH_NO_DATA_IN_MS < 
+				Calendar.getInstance().getTimeInMillis()) {
+			return true;
+		}
+		
+		return false;
 	}
 
 	@Override
 	public void run() {
 		byte[] buffer = new byte[EchoClient.MAX_SDU_SIZE];
 		
-		TestDeclaredDeadTimerTask timerTask = new TestDeclaredDeadTimerTask(this);
-		timer.schedule(timerTask, 20*1000);
+		TestDeclaredDeadTimerTask timerTask = new TestDeclaredDeadTimerTask(this, timer);
+		timer.schedule(timerTask, TIMER_PERIOD_IN_MS);
 		
 		while(!isStopped()){
 			try{
 				flow.readSDU(buffer, buffer.length);
+				setLatestSDUReceivedTime(Calendar.getInstance().getTimeInMillis());
 				testInformation.sduReceived();
 				if (testInformation.receivedAllSDUs()) {
 					testInformation.setLastSDUReceivedTime(
