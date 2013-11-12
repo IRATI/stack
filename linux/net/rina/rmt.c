@@ -29,12 +29,14 @@
 #include "pft.h"
 
 struct rmt {
-        struct pft * pft; /* The PDU Forwarding Table */
-        struct kfa * kfa;
+        struct pft *            pft; /* The PDU Forwarding Table */
+        struct kfa *            kfa;
+        struct efcp_container * efcpc;
         /* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
 };
 
-struct rmt * rmt_create(struct kfa * kfa)
+struct rmt * rmt_create(struct kfa * kfa,
+                        struct efcp_container * efcpc)
 {
         struct rmt * tmp;
 
@@ -51,7 +53,8 @@ struct rmt * rmt_create(struct kfa * kfa)
                 return NULL;
         }
         
-        tmp->kfa = kfa;
+        tmp->kfa   = kfa;
+        tmp->efcpc = efcpc;
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
         return tmp;
@@ -83,7 +86,7 @@ int rmt_send_sdu(struct rmt * instance,
 {
         LOG_MISSING;
 
-        return -1;
+        return 0;
 }
 
 int rmt_send_pdu(struct rmt * instance,
@@ -91,6 +94,17 @@ int rmt_send_pdu(struct rmt * instance,
 {
         LOG_MISSING;
 
-        return -1;
+        return 0;
+}
+
+int rmt_sdu_post(struct rmt * instance,
+                 struct sdu * sdu,
+                 port_id_t    from)
+{
+        LOG_MISSING;
+
+        kfa_sdu_post_to_user_space(instance->kfa, sdu, -1);
+
+        return 0;
 }
 
