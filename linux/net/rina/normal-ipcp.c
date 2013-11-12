@@ -3,6 +3,7 @@
  *
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,6 +38,7 @@
 #include "kfa.h"
 #include "rnl-utils.h"
 #include "efcp.h"
+#include "rmt.h"
 #include "efcp-utils.h"
 
 /*  FIXME: To be removed ABSOLUTELY */
@@ -57,6 +59,7 @@ struct ipcp_instance_data {
         /*  FIXME: Remove it as soon as the kipcm_kfa gets removed*/
         struct kfa *            kfa;
         struct efcp_container * efcpc;
+        struct rmt *            rmt;
 };
 
 enum normal_flow_state {
@@ -422,7 +425,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-        instance->data->efcpc = efcp_container_create();
+        instance->data->efcpc = efcp_container_create(instance->data->kfa);
         if (!instance->data->efcpc) {
                 rkfree(instance->data->info->name);
                 rkfree(instance->data->info);
@@ -430,7 +433,16 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 rkfree(instance);
                 return NULL;
         }
-
+        instance->data->rmt = rmt_create(instance->data->kfa);
+        if (!instance->data->rmt) {
+                LOG_ERR("Failed creation of RMT instance");
+                efcp_container_destroy(instance->data->efcpc);
+                rkfree(instance->data->info->name);
+                rkfree(instance->data->info);
+                rkfree(instance->data);
+                rkfree(instance);
+                return NULL;
+        }
         /*  FIXME: Remove as soon as the kipcm_kfa gets removed */
         instance->data->kfa = kipcm_kfa(default_kipcm);
 
@@ -478,6 +490,8 @@ static int normal_destroy(struct ipcp_factory_data * data,
         if (tmp->info->name)
                 name_destroy(tmp->info->name);
 
+        efcp_container_destroy(tmp->efcpc);
+        rmt_destroy(tmp->rmt);
         rkfree(tmp->info);
         rkfree(tmp);
         rkfree(instance);

@@ -22,8 +22,6 @@
 #define RINA_IPCP_FACTORIES_H
 
 #include "ipcp.h"
-#include "efcp.h"
-#include "rmt.h"
 
 struct ipcp_factory_data;
 
@@ -33,8 +31,6 @@ struct ipcp_instance {
 
         /* FIXME: Should be hidden and not fixed up in KIPCM ... */
         struct ipcp_factory *       factory; /* The parent factory */
-        struct efcp_container *     efcpc;
-        struct rmt *                rmt;
 
         struct ipcp_instance_data * data;
         struct ipcp_instance_ops *  ops;

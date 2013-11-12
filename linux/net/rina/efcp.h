@@ -25,6 +25,7 @@
 #include "du.h"
 #include "qos.h"
 #include "ipcp.h"
+#include "kfa.h"
 
 
 struct connection {
@@ -44,10 +45,10 @@ struct connection {
 /* The container holding all the EFCP instances for an IPC Process */
 struct efcp_container;
 
-struct efcp_container * efcp_container_create(void);
+struct efcp_container * efcp_container_create(struct kfa * kfa);
 int                     efcp_container_destroy(struct efcp_container * c);
 int                     efcp_container_set_dt_cons(struct data_transfer_constants * dt_cons,
-                                                   struct efcp_container          * container);
+                                                   struct efcp_container *          container);
 int                     efcp_container_write(struct efcp_container * container,
                                              cep_id_t                cep_id,
                                              struct sdu *            sdu);
