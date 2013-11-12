@@ -42,7 +42,7 @@ struct rmap {
 
 struct rmap_entry {
         uint16_t          key;
-        void *    value;
+        void *            value;
         struct hlist_node hlist;
 };
 
@@ -69,13 +69,13 @@ struct rmap * rmap_create(void)
 int rmap_destroy(struct rmap * map)
 {
         if (!map) {
-                LOG_ERR("Bogus input parameter, cannot destroy a NULL map");
+                LOG_ERR("Cannot destroy a NULL map");
                 return -1;
         }
         
         if (!hash_empty(map->table)) {
                 LOG_ERR("Map %pK is not empty and I won't destroy it. "
-                        "You would be lossing memory ...", map);
+                        "You would be loosing memory ...", map);
                 return -1;
         }
 
@@ -89,8 +89,7 @@ int rmap_destroy(struct rmap * map)
 bool rmap_is_empty(struct rmap * map)
 {
         if (!map) {
-                LOG_ERR("Map %pK is NULL, returning false (check your code!)",
-                        map);
+                LOG_ERR("Map %pK is NULL, returning false", map);
                 return false;
         }
 
@@ -174,7 +173,7 @@ void rmap_for_each(struct rmap * map,
 }
 
 int rmap_entry_update(struct rmap_entry * entry,
-                      void *      value)
+                      void *              value)
 {
         if (!entry) {
                 LOG_ERR("Cannot update a NULL entry");
