@@ -264,9 +264,7 @@ int kfa_flow_deallocate(struct kfa * instance,
                 return -1;
         }
 
-        LOG_DBG("Trying to get lock");
         spin_lock(&instance->lock);
-        LOG_DBG("Got lock");
 
         flow = kfa_pmap_find(instance->flows, id);
         if (!flow) {
@@ -279,7 +277,6 @@ int kfa_flow_deallocate(struct kfa * instance,
 
         if ((atomic_read(&flow->readers) == 0) &&
             (atomic_read(&flow->writers) == 0)) {
-                LOG_DBG("Destroying flow");
                 kfa_flow_destroy(instance, flow, id);
                 spin_unlock(&instance->lock);
                 return 0;
