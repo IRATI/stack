@@ -433,8 +433,13 @@ int kfa_flow_sdu_read(struct kfa *  instance,
         while (kfifo_is_empty(&flow->sdu_ready)) {
                 LOG_DBG("Going to sleep on wait queue %pK", &flow->wait_queue);
                 spin_unlock(&instance->lock);
-                wait_event_interruptible(flow->wait_queue,
+                retval = wait_event_interruptible(flow->wait_queue,
                                          queue_ready(flow));
+                if (retval) {
+                        LOG_DBG("Wait-event interrupted, returned error %d",
+                                        retval);
+                        goto finish;
+                }
 
                 spin_lock(&instance->lock);
                 LOG_DBG("Woken up");
@@ -451,8 +456,10 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 }
         }
 
-        if (kfifo_is_empty(&flow->sdu_ready))
+        if (kfifo_is_empty(&flow->sdu_ready)) {
+                retval = -1;
                 goto finish;
+        }
 
         if (kfifo_out(&flow->sdu_ready, sdu, sizeof(struct sdu *)) <
             sizeof(struct sdu *)) {

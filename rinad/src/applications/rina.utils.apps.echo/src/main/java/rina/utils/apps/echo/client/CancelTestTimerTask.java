@@ -14,6 +14,4 @@ public class CancelTestTimerTask extends TimerTask {
 	public void run() {
 		echoClient.cancelTest(-1);
 	}
-
-
 }
