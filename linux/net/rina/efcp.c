@@ -168,6 +168,23 @@ int efcp_container_write(struct efcp_container * container,
 }
 EXPORT_SYMBOL(efcp_container_write);
 
+int efcp_container_receive(struct efcp_container * container,
+                           cep_id_t                cep_id,
+                           struct sdu *            sdu)
+{
+        struct efcp * tmp;
+        LOG_MISSING;
+
+        tmp = efcp_find(container, cep_id);
+        if (!tmp)
+                return -1;
+
+        dtp_receive(tmp->dtp, NULL);
+
+        return 0;
+}
+EXPORT_SYMBOL(efcp_container_receive);
+
 static int is_connection_ok(const struct connection * connection)
 {
         if (!connection                                   ||
@@ -203,7 +220,7 @@ cep_id_t efcp_connection_create(struct efcp_container *   container,
         /* We must ensure that the DTP is instantiated, at least ... */
         connection->source_cep_id = cep_id;
         tmp->connection = connection;
-        tmp->dtp        = dtp_create(container->rmt);
+        tmp->dtp        = dtp_create(container->rmt, container->kfa);
         if (!tmp->dtp) {
                 efcp_destroy(tmp);
                 return cep_id_bad();
@@ -297,15 +314,13 @@ int efcp_connection_update(struct efcp_container * container,
         }
         tmp->connection->destination_cep_id = to;
 
-        LOG_DBG("Connection updated \n "
-                "Source address: %d \n"
-                "Destination address %d \n"
-                "Destination cep id: %d \n"
-                "Source cep id: %d \n",
-                tmp->connection->source_address,
-                tmp->connection->destination_address,
-                tmp->connection->destination_cep_id,
-                tmp->connection->source_cep_id);
+        LOG_DBG("Connection updated \n ");
+        LOG_DBG("Source address: %d \n", tmp->connection->source_address);
+        LOG_DBG("Destination address %d \n",
+                        tmp->connection->destination_address);
+        LOG_DBG("Destination cep id: %d \n",
+                        tmp->connection->destination_cep_id);
+        LOG_DBG("Source cep id: %d \n", tmp->connection->source_cep_id);
 
         return 0;
 }
@@ -345,14 +360,4 @@ int efcp_send(struct efcp * instance,
         }
 
         return dtp_send(instance->dtp, sdu);
-}
-
-struct pdu * efcp_receive_pdu(struct efcp * instance)
-{
-        if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
-                return NULL;
-        }
-
-        return dtp_receive(instance->dtp);
 }

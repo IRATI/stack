@@ -51,6 +51,7 @@ struct dtp {
         struct dtp_policies * policies;
         struct dtcp *         peer;
         struct rmt *          rmt;
+        struct kfa *          kfa;
 };
 
 static struct dtp_sv default_sv = {
@@ -68,7 +69,8 @@ static struct dtp_policies default_policies = {
         .xxx_fixme_add_policies_here = NULL
 };
 
-struct dtp * dtp_create(struct rmt * rmt)
+struct dtp * dtp_create(struct rmt * rmt,
+                        struct kfa * kfa)
 {
         struct dtp * tmp;
         
@@ -94,6 +96,7 @@ struct dtp * dtp_create(struct rmt * rmt)
         tmp->policies      = &default_policies;
         tmp->peer          = NULL;
         tmp->rmt           = rmt;
+        tmp->kfa           = kfa;
         LOG_DBG("Instance %pK created successfully", tmp);
 
         return tmp;
@@ -206,49 +209,15 @@ int dtp_send(struct dtp * instance,
         return -1;
 }
 
-static int crc_check(struct dtp * instance,
-                     struct pdu * pdu)
+int dtp_receive(struct dtp * instance,
+                struct pdu * pdu)
 {
         LOG_MISSING;
-
-        return -1;
-}
-
-static int sequencing(struct dtp * instance,
-                      struct pdu * pdu)
-{
-        LOG_MISSING;
-
-        return -1;
-}
-
-static int delimiting_reassembly_separation(struct dtp * instance,
-                                            struct pdu * pdu)
-{
-        LOG_MISSING;
-
-        return -1;
-}
-
-struct pdu * dtp_receive(struct dtp * instance)
-{
-        struct pdu * tmp;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return NULL;
+                return -1;
         }
 
-        tmp = NULL;
-
-        if (crc_check(instance, tmp))
-                return NULL;
-
-        if (sequencing(instance, tmp))
-                return NULL;
-
-        if (delimiting_reassembly_separation(instance, tmp))
-                return NULL;
-
-        return tmp;
+        return 0;
 }

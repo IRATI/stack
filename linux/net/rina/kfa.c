@@ -552,3 +552,12 @@ EXPORT_SYMBOL(kfa_sdu_post);
 struct ipcp_flow * kfa_find_flow_by_pid(struct kfa * instance, port_id_t pid)
 { return kfa_pmap_find(instance->flows, pid); }
 EXPORT_SYMBOL(kfa_find_flow_by_pid);
+
+int kfa_sdu_post_to_user_space(struct kfa * instance,
+                               struct sdu * sdu,
+                               cep_id_t     cep_id)
+{
+
+        return 0;
+}
+EXPORT_SYMBOL(kfa_sdu_post_to_user_space);
