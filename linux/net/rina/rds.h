@@ -21,14 +21,6 @@
 #ifndef RINA_RDS_H
 #define RINA_RDS_H
 
-/* Maps */
-struct rmap;
-
-struct rmap *       rmap_create(void);
-struct rmap *       rmap_create_gfp(gfp_t flags);
-int                 rmap_destroy(struct rmap * map);
-bool                rmap_is_empty(struct rmap * map);
-
 /* Map entries */
 struct rmap_entry;
 struct table;       /* To be removed */
@@ -40,16 +32,24 @@ struct rmap_entry * rmap_entry_create_gfp(gfp_t          gfp,
                                           struct table * value);
 int                 rmap_entry_destroy(struct rmap_entry * entry);
 
-struct rmap_entry * rmap_entry_find(struct rmap * map,
-                                    uint16_t      key);
-struct table *      rmap_entry_value(struct rmap_entry * entry);
-int                 rmap_entry_insert(struct rmap *       map,
-                                      uint16_t            key,
-                                      struct rmap_entry * entry);
-int                 rmap_entry_remove(struct rmap_entry * entry);
+struct table *      rmap_entry_value(const struct rmap_entry * entry);
 int                 rmap_entry_update(struct rmap_entry * entry,
                                       struct table *      value);
-struct rmap_entry * rmap_entry_find(struct rmap * map,
-                                    uint16_t      key);
 
+/* Maps */
+struct rmap;
+
+struct rmap *       rmap_create(void);
+struct rmap *       rmap_create_gfp(gfp_t flags);
+int                 rmap_destroy(struct rmap * map);
+bool                rmap_is_empty(const struct rmap * map);
+int                 rmap_insert(struct rmap *       map,
+                                uint16_t            key,
+                                struct rmap_entry * entry);
+struct rmap_entry * rmap_find(const struct rmap * map,
+                              uint16_t            key);
+int                 rmap_remove(struct rmap *             map,
+                                const struct rmap_entry * entry);
+void                rmap_for_each(struct rmap * map,
+                                  int        (* f)(struct rmap_entry * entry));
 #endif

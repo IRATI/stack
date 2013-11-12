@@ -33,6 +33,7 @@
 /*
  * Maps
  */
+
 #define RMAP_HASH_BITS 7
 
 struct rmap {
@@ -83,7 +84,7 @@ int rmap_destroy(struct rmap * map)
         return 0;
 }
 
-bool rmap_is_empty(struct rmap * map)
+bool rmap_is_empty(const struct rmap * map)
 {
         if (!map) {
                 LOG_ERR("Map %pK is NULL, returning false (check your code!)",
@@ -94,40 +95,69 @@ bool rmap_is_empty(struct rmap * map)
         return hash_empty(map->table) ? true : false;
 }
 
-#define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
-
-struct table * rmap_find(struct rmap * map,
-                         uint16_t      key)
+int rmap_insert(struct rmap *       map,
+                uint16_t            key,
+                struct rmap_entry * entry)
 {
-        struct rmap_entry * entry;
-
         if (!map) {
-                LOG_ERR("Bogus input parameter, "
-                        "I cannot do a lookup on a NULL map ...");
-                return NULL;
-        }
-
-        entry = rmap_entry_find(map, key);
-        if (!entry)
-                return NULL;
-
-        return entry->value;
-}
-
-int rmap_update(struct rmap *   map,
-                uint16_t        key,
-                struct table *  value)
-{
-        struct rmap_entry * cur;
-
-        if (!map) {
-                LOG_ERR("Bogus input parameter, cannot update a NULL map");
+                LOG_ERR("Cannot insert an entry into a NULL map");
                 return -1;
         }
 
-        cur = rmap_entry_find(map, key);
-        if (!cur) {
-                LOG_ERR("Cannot find entry. I won't be updating it ...");
+        if (!entry) {
+                LOG_ERR("Cannot insert a NULL entry in map %pK", map);
+                return -1;
+        }
+
+        hash_add(map->table, &entry->hlist, key);
+
+        return 0;
+}
+
+struct rmap_entry * rmap_find(const struct rmap * map,
+                              uint16_t            key)
+{
+        struct rmap_entry * entry;
+        struct hlist_head * head;
+
+        if (!map) {
+                LOG_ERR("Cannot look-up in a empty map");
+                return NULL;
+        }
+
+        head = &map->table[rmap_hash(map->table, key)];
+        hlist_for_each_entry(entry, head, hlist) {
+                if (entry->key == key)
+                        return entry;
+        }
+
+        return NULL;
+}
+
+int rmap_remove(struct rmap *             map,
+                const struct rmap_entry * entry)
+{
+        if (!map) {
+                LOG_ERR("Cannot remove an entry from a NULL map");
+                return -1;
+        }
+               
+        if (!entry) {
+                return -1;
+        }
+
+        hash_del(&entry->hlist);
+
+        return 0;
+}
+
+#define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
+
+int rmap_entry_update(struct rmap_entry * entry,
+                      struct table *      value)
+{
+        if (!entry) {
+                LOG_ERR("Cannot update a NULL entry");
                 return -1;
         }
 
@@ -159,56 +189,7 @@ struct rmap_entry * rmap_entry_create(uint16_t       key,
                                       struct table * value)
 { return rmap_entry_create_gfp(GFP_KERNEL, key, value); }
 
-int rmap_entry_insert(struct rmap *       map,
-                      uint16_t            key,
-                      struct rmap_entry * entry)
-{
-        if (!map) {
-                LOG_ERR("Cannot insert an entry into a NULL map");
-                return -1;
-        }
-
-        if (!entry) {
-                LOG_ERR("Cannot insert a NULL entry in map %pK", map);
-                return -1;
-        }
-
-        hash_add(map->table, &entry->hlist, key);
-
-        return 0;
-}
-
-struct rmap_entry * rmap_entry_find(struct rmap * map,
-                                    uint16_t      key)
-{
-        struct rmap_entry * entry;
-        struct hlist_head * head;
-
-        if (!map) {
-                LOG_ERR("Cannot look-up in a empty map");
-                return NULL;
-        }
-
-        head = &map->table[rmap_hash(map->table, key)];
-        hlist_for_each_entry(entry, head, hlist) {
-                if (entry->key == key)
-                        return entry;
-        }
-
-        return NULL;
-}
-
-int rmap_entry_remove(struct rmap_entry * entry)
-{
-        if (!entry)
-                return -1;
-
-        hash_del(&entry->hlist);
-
-        return 0;
-}
-
-struct table * rmap_entry_value(struct rmap_entry * entry)
+struct table * rmap_entry_value(const struct rmap_entry * entry)
 {
         if (!entry) {
                 LOG_ERR("Entry is NULL, cannot return its value");
