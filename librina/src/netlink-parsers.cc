@@ -243,6 +243,22 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 	        }
 	        return 0;
 	}
+	case RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE: {
+	        IpcmEnrollToDIFResponseMessage * request =
+	                        dynamic_cast<IpcmEnrollToDIFResponseMessage *>(message);
+	        if (putIpcmEnrollToDIFResponseMessageObject(netlinkMessage, *request) < 0) {
+	                return -1;
+	        }
+	        return 0;
+	}
+	case RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION: {
+	        IpcmNotifyNeighborsModifiedMessage * request =
+	                        dynamic_cast<IpcmNotifyNeighborsModifiedMessage *>(message);
+	        if (putIpcmNotifyNeighborsModifiedMessageObject(netlinkMessage, *request) < 0) {
+	                return -1;
+	        }
+	        return 0;
+	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST: {
 		IpcmAllocateFlowRequestMessage * allocateFlowRequestObject =
 				dynamic_cast<IpcmAllocateFlowRequestMessage *>(message);
@@ -434,6 +450,12 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCM_ENROLL_TO_DIF_REQUEST: {
 	        return parseIpcmEnrollToDIFRequestMessage(netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE: {
+	        return parseIpcmEnrollToDIFResponseMessage(netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION: {
+	        return parseIpcmNotifyNeighborsModifiedMessage(netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST: {
 		return parseIpcmAllocateFlowRequestMessage(netlinkMessageHeader);
@@ -1077,6 +1099,163 @@ int parseListOfDIFConfigurationParameters(nlattr *nested,
 	}
 
 	return 0;
+}
+
+int putNeighborObject(nl_msg* netlinkMessage,
+                const Neighbor& object) {
+        struct nlattr *name, *supportingDIFName;
+
+        if (!(name = nla_nest_start(netlinkMessage,
+                        NEIGH_ATTR_NAME))) {
+                goto nla_put_failure;
+        }
+        if (putApplicationProcessNamingInformationObject(netlinkMessage,
+                        object.getName()) < 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, name);
+
+        if (!(supportingDIFName = nla_nest_start(netlinkMessage,
+                        NEIGH_ATTR_SUPP_DIF))) {
+                goto nla_put_failure;
+        }
+        if (putApplicationProcessNamingInformationObject(netlinkMessage,
+                        object.getSupportingDifName()) < 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, supportingDIFName);
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building Neighbor Netlink object");
+        return -1;
+}
+
+int putListOfNeighbors(
+                nl_msg* netlinkMessage, const std::list<Neighbor>& neighbors){
+        std::list<Neighbor>::const_iterator iterator;
+        struct nlattr *neighbor;
+        int i = 0;
+
+        for (iterator = neighbors.begin();
+                        iterator != neighbors.end();
+                        ++iterator) {
+                if (!(neighbor = nla_nest_start(netlinkMessage, i))){
+                        goto nla_put_failure;
+                }
+                if (putNeighborObject(netlinkMessage, *iterator) < 0) {
+                        goto nla_put_failure;
+                }
+                nla_nest_end(netlinkMessage, neighbor);
+                i++;
+        }
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                "Error building List of Neighbors Netlink object");
+        return -1;
+}
+
+Neighbor * parseNeighborObject(nlattr *nested) {
+        struct nla_policy attr_policy[NEIGH_ATTR_MAX + 1];
+        attr_policy[NEIGH_ATTR_NAME].type = NLA_NESTED;
+        attr_policy[NEIGH_ATTR_NAME].minlen = 0;
+        attr_policy[NEIGH_ATTR_NAME].maxlen = 0;
+        attr_policy[NEIGH_ATTR_SUPP_DIF].type = NLA_NESTED;
+        attr_policy[NEIGH_ATTR_SUPP_DIF].minlen = 0;
+        attr_policy[NEIGH_ATTR_SUPP_DIF].maxlen = 0;
+        struct nlattr *attrs[NEIGH_ATTR_MAX + 1];
+
+        int err = nla_parse_nested(attrs, NEIGH_ATTR_MAX, nested, attr_policy);
+        if (err < 0) {
+                LOG_ERR("Error parsing DIF Properties object from Netlink message: %d",
+                        err);
+                return 0;
+        }
+
+        Neighbor * result = new Neighbor();
+        ApplicationProcessNamingInformation * name = 0;
+        ApplicationProcessNamingInformation * supportingDIF = 0;
+
+        if (attrs[NEIGH_ATTR_NAME]) {
+                name = parseApplicationProcessNamingInformationObject(
+                                attrs[NEIGH_ATTR_NAME]);
+                if (name == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setName(*name);
+                        delete name;
+                }
+        }
+
+        if (attrs[NEIGH_ATTR_SUPP_DIF]) {
+                supportingDIF = parseApplicationProcessNamingInformationObject(
+                                attrs[NEIGH_ATTR_SUPP_DIF]);
+                if (supportingDIF == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setSupportingDifName(*supportingDIF);
+                        delete supportingDIF;
+                }
+        }
+
+        return result;
+}
+
+int parseListOfEnrollToDIFResponseNeighbors(nlattr *nested,
+                IpcmEnrollToDIFResponseMessage * message){
+        nlattr * nla;
+        int rem;
+        Neighbor * neighbor;
+
+        for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+                     nla_ok(nla, rem);
+                     nla = nla_next(nla, &(rem))){
+                /* validate & parse attribute */
+                neighbor = parseNeighborObject(nla);
+                if (neighbor == 0){
+                        return -1;
+                }
+                message->addNeighbor(*neighbor);
+                delete neighbor;
+        }
+
+        if (rem > 0){
+                LOG_WARN("Missing bits to parse");
+        }
+
+        return 0;
+}
+
+int parseListOfNotifyNeighborsModifiedMessageNeighbors(nlattr *nested,
+                IpcmNotifyNeighborsModifiedMessage * message) {
+        nlattr * nla;
+        int rem;
+        Neighbor * neighbor;
+
+        for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+                        nla_ok(nla, rem);
+                        nla = nla_next(nla, &(rem))){
+                /* validate & parse attribute */
+                neighbor = parseNeighborObject(nla);
+                if (neighbor == 0){
+                        return -1;
+                }
+                message->addNeighbor(*neighbor);
+                delete neighbor;
+        }
+
+        if (rem > 0){
+                LOG_WARN("Missing bits to parse");
+        }
+
+        return 0;
 }
 
 int putApplicationRegistrationInformationObject(nl_msg* netlinkMessage,
@@ -1891,6 +2070,52 @@ int putIpcmEnrollToDIFRequestMessageObject(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
                 "Error building IpcmEnrollToDIFRequestMessage Netlink object");
+        return -1;
+}
+
+int putIpcmEnrollToDIFResponseMessageObject(nl_msg* netlinkMessage,
+                const IpcmEnrollToDIFResponseMessage& object) {
+        struct nlattr *neighbors;
+
+        NLA_PUT_U32(netlinkMessage, IETDRE_ATTR_RESULT, object.getResult());
+
+        if (!(neighbors = nla_nest_start(
+                        netlinkMessage, IETDRE_ATTR_NEIGHBORS))){
+                goto nla_put_failure;
+        }
+        if (putListOfNeighbors(netlinkMessage, object.getNeighbors()) < 0) {
+                goto nla_put_failure;
+        }
+        nla_nest_end(netlinkMessage, neighbors);
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                "Error building IpcmEnrollToDIFResponseMessage Netlink object");
+        return -1;
+}
+
+int putIpcmNotifyNeighborsModifiedMessageObject(nl_msg* netlinkMessage,
+                const IpcmNotifyNeighborsModifiedMessage& object) {
+        struct nlattr *neighbors;
+
+        if (object.isAdded()) {
+                NLA_PUT_FLAG(netlinkMessage, INNMM_ATTR_ADDED);
+        }
+
+        if (!(neighbors = nla_nest_start(
+                        netlinkMessage, INNMM_ATTR_NEIGHBORS))){
+                goto nla_put_failure;
+        }
+        if (putListOfNeighbors(netlinkMessage, object.getNeighbors()) < 0) {
+                goto nla_put_failure;
+        }
+        nla_nest_end(netlinkMessage, neighbors);
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                "Error building IpcmNotifyNeighborsModifiedMessage Netlink object");
         return -1;
 }
 
@@ -3538,6 +3763,46 @@ parseIpcmUpdateDIFConfigurationResponseMessage(nlmsghdr *hdr){
         return result;
 }
 
+IpcmEnrollToDIFResponseMessage *
+parseIpcmEnrollToDIFResponseMessage(nlmsghdr *hdr){
+        struct nla_policy attr_policy[IETDRE_ATTR_MAX + 1];
+        attr_policy[IETDRE_ATTR_RESULT].type = NLA_U32;
+        attr_policy[IETDRE_ATTR_RESULT].minlen = 4;
+        attr_policy[IETDRE_ATTR_RESULT].maxlen = 4;
+        attr_policy[IETDRE_ATTR_NEIGHBORS].type = NLA_NESTED;
+        attr_policy[IETDRE_ATTR_NEIGHBORS].minlen = 0;
+        attr_policy[IETDRE_ATTR_NEIGHBORS].maxlen = 0;
+        struct nlattr *attrs[IETDRE_ATTR_MAX + 1];
+
+        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+                        IETDRE_ATTR_MAX, attr_policy);
+        if (err < 0) {
+                LOG_ERR(
+                        "Error parsing IpcmEnrollToDIFResponseMessage information from Netlink message: %d",
+                        err);
+                return 0;
+        }
+
+        IpcmEnrollToDIFResponseMessage * result =
+                        new IpcmEnrollToDIFResponseMessage();
+
+        if (attrs[IETDRE_ATTR_RESULT]) {
+                result->setResult(nla_get_u32(attrs[IETDRE_ATTR_RESULT]));
+        }
+
+        int status = 0;
+        if (attrs[IETDRE_ATTR_NEIGHBORS]) {
+                status = parseListOfEnrollToDIFResponseNeighbors(
+                                attrs[IETDRE_ATTR_NEIGHBORS], result);
+                if (status != 0){
+                        delete result;
+                        return 0;
+                }
+        }
+
+        return result;
+}
+
 IpcmEnrollToDIFRequestMessage *
 parseIpcmEnrollToDIFRequestMessage(nlmsghdr *hdr) {
         struct nla_policy attr_policy[IETDR_ATTR_MAX + 1];
@@ -3600,6 +3865,48 @@ parseIpcmEnrollToDIFRequestMessage(nlmsghdr *hdr) {
                 } else {
                         result->setNeighborName(*neighbour);
                         delete neighbour;
+                }
+        }
+
+        return result;
+}
+
+IpcmNotifyNeighborsModifiedMessage *
+        parseIpcmNotifyNeighborsModifiedMessage(nlmsghdr *hdr) {
+        struct nla_policy attr_policy[INNMM_ATTR_MAX + 1];
+        attr_policy[INNMM_ATTR_ADDED].type = NLA_FLAG;
+        attr_policy[INNMM_ATTR_ADDED].minlen = 0;
+        attr_policy[INNMM_ATTR_ADDED].maxlen = 0;
+        attr_policy[INNMM_ATTR_NEIGHBORS].type = NLA_NESTED;
+        attr_policy[INNMM_ATTR_NEIGHBORS].minlen = 0;
+        attr_policy[INNMM_ATTR_NEIGHBORS].maxlen = 0;
+        struct nlattr *attrs[INNMM_ATTR_MAX + 1];
+
+        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+                        INNMM_ATTR_MAX, attr_policy);
+        if (err < 0) {
+                LOG_ERR(
+                        "Error parsing IpcmNotifyNeighborsModifiedMessage information from Netlink message: %d",
+                        err);
+                return 0;
+        }
+
+        IpcmNotifyNeighborsModifiedMessage * result =
+                        new IpcmNotifyNeighborsModifiedMessage();
+
+        if (attrs[INNMM_ATTR_ADDED]) {
+                result->setAdded(true);
+        } else {
+                result->setAdded(false);
+        }
+
+        int status = 0;
+        if (attrs[INNMM_ATTR_NEIGHBORS]) {
+                status = parseListOfNotifyNeighborsModifiedMessageNeighbors(
+                                attrs[INNMM_ATTR_NEIGHBORS], result);
+                if (status != 0){
+                        delete result;
+                        return 0;
                 }
         }
 

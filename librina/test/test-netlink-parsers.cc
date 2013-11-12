@@ -1531,6 +1531,189 @@ int testIpcmUpdateDIFConfigurationResponseMessage() {
         return returnValue;
 }
 
+int testIpcmEnrollToDIFRequestMessage() {
+        std::cout << "TESTING IPCM ENROLL TO DIF REQUEST MESSAGE\n";
+        int returnValue = 0;
+
+        IpcmEnrollToDIFRequestMessage message;
+        ApplicationProcessNamingInformation difName;
+        difName.setProcessName("normal.DIF");
+        ApplicationProcessNamingInformation supportingDifName;
+        supportingDifName.setProcessName("100");
+        ApplicationProcessNamingInformation neighborName;
+        neighborName.setProcessName("test");
+        neighborName.setProcessInstance("1");
+        message.setDifName(difName);
+        message.setSupportingDifName(supportingDifName);
+        message.setNeighborName(neighborName);
+
+        struct nl_msg* netlinkMessage;
+        netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing Ipcm Enroll to DIF Request "
+                                << "Message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IpcmEnrollToDIFRequestMessage * recoveredMessage =
+                        dynamic_cast<IpcmEnrollToDIFRequestMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing Enroll to DIF Request Message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.getDifName() != recoveredMessage->getDifName()){
+                std::cout << "DIF Name on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getSupportingDifName() != recoveredMessage->getSupportingDifName()){
+                std::cout << "Supporting DIF Name on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getNeighborName() != recoveredMessage->getNeighborName()){
+                std::cout << "Neighbour Name on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IpcmEnrollToDIFRequestMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
+int testIpcmEnrollToDIFResponseMessage() {
+        std::cout << "TESTING IPCM ENROLL TO DIF RESPONSE MESSAGE\n";
+        int returnValue = 0;
+
+        IpcmEnrollToDIFResponseMessage message;
+        message.setResult(-25);
+        Neighbor neighbor;
+        ApplicationProcessNamingInformation name;
+        name.setProcessName("test");
+        name.setProcessInstance("1");
+        neighbor.setName(name);
+        ApplicationProcessNamingInformation supportingDIF;
+        supportingDIF.setProcessName("100");
+        neighbor.setSupportingDifName(supportingDIF);
+        message.addNeighbor(neighbor);
+
+        struct nl_msg* netlinkMessage;
+        netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing Ipcm Enroll To DIF Response "
+                                << "Message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IpcmEnrollToDIFResponseMessage * recoveredMessage =
+                        dynamic_cast<IpcmEnrollToDIFResponseMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing Ipcm Enroll to DIF Response Message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.getResult() != recoveredMessage->getResult()) {
+                std::cout << "Result on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getNeighbors().size() !=
+                        recoveredMessage->getNeighbors().size()) {
+                std::cout << "Number of neighbors on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IpcmEnrollToDIFResponseMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
+int testIpcmNeighborsModifiedNotificaiton() {
+        std::cout << "TESTING IPCM NEIGHBORS MODIFIED NOTIFICATION MESSAGE\n";
+        int returnValue = 0;
+
+        IpcmNotifyNeighborsModifiedMessage message;
+        message.setAdded(false);
+        Neighbor neighbor;
+        ApplicationProcessNamingInformation name;
+        name.setProcessName("test");
+        name.setProcessInstance("1");
+        neighbor.setName(name);
+        ApplicationProcessNamingInformation supportingDIF;
+        supportingDIF.setProcessName("100");
+        neighbor.setSupportingDifName(supportingDIF);
+        message.addNeighbor(neighbor);
+
+        struct nl_msg* netlinkMessage;
+        netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing Ipcm Modify Neighbors notificaiton "
+                                << "Message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IpcmNotifyNeighborsModifiedMessage * recoveredMessage =
+                        dynamic_cast<IpcmNotifyNeighborsModifiedMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing Ipcm Modify Neighbors notification Message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.isAdded() != recoveredMessage->isAdded()) {
+                std::cout << "Added on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getNeighbors().size() !=
+                        recoveredMessage->getNeighbors().size()) {
+                std::cout << "Number of neighbors on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IpcmNotifyNeighborsModifiedMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
 int testIpcmAllocateFlowRequestMessage() {
 	std::cout << "TESTING IPCM ALLOCATE FLOW REQUEST MESSAGE\n";
 	int returnValue = 0;
@@ -2284,6 +2467,21 @@ int main(int argc, char * argv[]) {
 	}
 
 	result = testIpcmUpdateDIFConfigurationResponseMessage();
+	if (result < 0) {
+	        return result;
+	}
+
+	result = testIpcmEnrollToDIFRequestMessage();
+	if (result < 0) {
+	        return result;
+	}
+
+	result = testIpcmNeighborsModifiedNotificaiton();
+	if (result < 0) {
+	        return result;
+	}
+
+	result = testIpcmEnrollToDIFResponseMessage();
 	if (result < 0) {
 	        return result;
 	}

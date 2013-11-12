@@ -57,19 +57,6 @@ public:
 };
 
 /**
- * Thrown when there are problems instructing an IPC Process to enroll to a DIF
- */
-class EnrollException: public IPCException {
-public:
-	EnrollException():
-		IPCException("Problems causing an IPC Process to enroll to a DIF"){
-	}
-	EnrollException(const std::string& description):
-		IPCException(description){
-	}
-};
-
-/**
  * Thrown when there are problems instructing an IPC Process to disconnect
  * from a neighbour
  */
@@ -372,11 +359,13 @@ class IPCProcess {
 	std::list<FlowInformation> allocatedFlows;
 
 	/** The map of pending flow operations */
-	std::map<unsigned int, FlowInformation>
-	pendingFlowOperations;
+	std::map<unsigned int, FlowInformation> pendingFlowOperations;
 
 	/** The N-1 DIFs where this IPC Process is registered at */
 	std::list<ApplicationProcessNamingInformation> nMinusOneDIFs;
+
+	/** The list of neighbors of this IPC Process */
+	std::list<Neighbor> neighbors;
 
 	/** Return the information of a registration request */
 	ApplicationProcessNamingInformation getPendingRegistration(
@@ -506,11 +495,28 @@ public:
 	 * @param difName The DIF that the IPC Process will try to join
 	 * @param supportingDifName The supporting DIF used to contact the DIF to
 	 * join
+	 * @param neighborName The name of the neighbor we're enrolling to
+	 * @returns the handle to the response message
 	 * @throws EnrollException if the enrollment is unsuccessful
 	 */
-	void enroll(const ApplicationProcessNamingInformation& difName,
-			const ApplicationProcessNamingInformation& supportinDifName)
+	unsigned int enroll(const ApplicationProcessNamingInformation& difName,
+			const ApplicationProcessNamingInformation& supportingDifName,
+			const ApplicationProcessNamingInformation& neighborName)
 	throw (EnrollException);
+
+	/**
+	 * Add new neighbors of the IPC Process
+	 * operation
+	 * @param neighbors the new neighbors of the IPC Process
+	 */
+	void addNeighbors(const std::list<Neighbor>& neighbors);
+
+	/**
+	 * Returns the list of neighbors that this IPC Process is currently enrolled
+	 * to
+	 * @return
+	 */
+	std::list<Neighbor> getNeighbors();
 
 	/**
 	 * Invoked by the IPC Manager to force an IPC Process to deallocate all the
@@ -922,6 +928,35 @@ class UpdateDIFConfigurationResponseEvent: public BaseResponseEvent {
 public:
         UpdateDIFConfigurationResponseEvent(
                         int result, unsigned int sequenceNumber);
+};
+
+/**
+ * Event informing about the result of an enroll to DIF operation
+ */
+class EnrollToDIFResponseEvent: public BaseResponseEvent {
+        std::list<Neighbor> neighbors;
+
+public:
+        EnrollToDIFResponseEvent(
+                        const std::list<Neighbor> & neighbors,
+                        int result, unsigned int sequenceNumber);
+        const std::list<Neighbor>& getNeighbors() const;
+};
+
+/**
+ * Event informing about new neighbors being added or existing
+ * neighbors being removed
+ */
+class NeighborsModifiedNotificationEvent: public IPCEvent {
+        std::list<Neighbor> neighbors;
+        bool added;
+
+public:
+        NeighborsModifiedNotificationEvent(
+                        const std::list<Neighbor> & neighbors,
+                        bool added, unsigned int sequenceNumber);
+        const std::list<Neighbor>& getNeighbors() const;
+        bool isAdded() const;
 };
 
 /**

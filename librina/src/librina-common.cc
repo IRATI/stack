@@ -1171,6 +1171,35 @@ void DIFConfiguration::setDataTransferConstants(
         this->dataTransferConstants = dataTransferConstants;
 }
 
+/* CLASS NEIGHBOR */
+bool Neighbor::operator==(const Neighbor &other) const{
+        return name == other.getName();
+}
+
+bool Neighbor::operator!=(const Neighbor &other) const{
+        return !(*this == other);
+}
+
+const ApplicationProcessNamingInformation&
+Neighbor::getName() const {
+        return name;
+}
+
+void Neighbor::setName(
+        const ApplicationProcessNamingInformation& name) {
+        this->name = name;
+}
+
+const ApplicationProcessNamingInformation&
+Neighbor::getSupportingDifName() const {
+        return supportingDifName;
+}
+
+void Neighbor::setSupportingDifName(
+        const ApplicationProcessNamingInformation& supportingDifName) {
+        this->supportingDifName = supportingDifName;
+}
+
 /* CLAS RIBOBJECT */
 RIBObject::RIBObject(){
 	instance = generateObjectInstance();

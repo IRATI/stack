@@ -362,11 +362,46 @@ IPCProcess::getSupportingDIFs() {
         return nMinusOneDIFs;
 }
 
-void IPCProcess::enroll(const ApplicationProcessNamingInformation& difName,
-		const ApplicationProcessNamingInformation& supportinDifName)
+unsigned int IPCProcess::enroll(
+        const ApplicationProcessNamingInformation& difName,
+        const ApplicationProcessNamingInformation& supportingDifName,
+        const ApplicationProcessNamingInformation& neighborName)
 throw (EnrollException) {
-	LOG_DBG("IPCProcess::enroll called");
-	throw IPCException(IPCException::operation_not_implemented_error);
+        unsigned int seqNum=0;
+
+#if STUB_API
+        //Do nothing
+#else
+        IpcmEnrollToDIFRequestMessage message;
+        message.setDifName(difName);
+        message.setSupportingDifName(supportingDifName);
+        message.setNeighborName(neighborName);
+        message.setDestIpcProcessId(id);
+        message.setDestPortId(portId);
+        message.setRequestMessage(true);
+
+        try {
+                rinaManager->sendMessage(&message);
+        } catch(NetlinkException &e) {
+                throw EnrollException(e.what());
+        }
+
+        seqNum = message.getSequenceNumber();
+
+#endif
+        return seqNum;
+}
+
+void IPCProcess::addNeighbors(const std::list<Neighbor>& newNeighbors) {
+        std::list<Neighbor>::const_iterator iterator;
+        for (iterator = newNeighbors.begin();
+                        iterator != newNeighbors.end(); ++iterator) {
+                neighbors.push_back(*iterator);
+        }
+}
+
+std::list<Neighbor> IPCProcess::getNeighbors() {
+        return neighbors;
 }
 
 void IPCProcess::disconnectFromNeighbor(
@@ -1151,6 +1186,40 @@ UpdateDIFConfigurationResponseEvent::UpdateDIFConfigurationResponseEvent(
                         BaseResponseEvent(result,
                                         UPDATE_DIF_CONFIG_RESPONSE_EVENT,
                                         sequenceNumber) {
+}
+
+/* CLASS ENROLL TO DIF RESPONSE EVENT */
+EnrollToDIFResponseEvent::EnrollToDIFResponseEvent(
+                const std::list<Neighbor>& neighbors,
+                int result, unsigned int sequenceNumber):
+                        BaseResponseEvent(result,
+                                        ENROLL_TO_DIF_RESPONSE_EVENT,
+                                        sequenceNumber) {
+        this->neighbors = neighbors;
+}
+
+const std::list<Neighbor>&
+EnrollToDIFResponseEvent::getNeighbors() const {
+        return neighbors;
+}
+
+/* CLASS NEIGHBORS MODIFIED NOTIFICATION EVENT */
+NeighborsModifiedNotificationEvent::NeighborsModifiedNotificationEvent(
+                        const std::list<Neighbor> & neighbors,
+                        bool added, unsigned int sequenceNumber) :
+                                IPCEvent(NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT,
+                                                sequenceNumber) {
+        this->neighbors = neighbors;
+        this->added = added;
+}
+
+const std::list<Neighbor>&
+NeighborsModifiedNotificationEvent::getNeighbors() const {
+        return neighbors;
+}
+
+bool NeighborsModifiedNotificationEvent::isAdded() const {
+        return added;
 }
 
 /* CLASS IPC PROCESS DAEMON INITIALIZED EVENT */

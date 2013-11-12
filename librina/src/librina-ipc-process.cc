@@ -289,6 +289,45 @@ void ExtendedIPCManager::assignToDIFResponse(
 #endif
 }
 
+void enrollToDIFResponse(const EnrollToDIFRequestEvent& event,
+                        int result, const std::list<Neighbor> & newNeighbors)
+        throw (EnrollException) {
+#if STUB_API
+        //Do nothing
+#else
+        IpcmEnrollToDIFResponseMessage responseMessage;
+        responseMessage.setResult(result);
+        responseMessage.setNeighbors(newNeighbors);
+        responseMessage.setSequenceNumber(event.getSequenceNumber());
+        responseMessage.setResponseMessage(true);
+        try{
+                rinaManager->sendMessage(&responseMessage);
+        }catch(NetlinkException &e){
+                throw EnrollException(e.what());
+        }
+#endif
+}
+
+void notifyNeighborsModified(bool added,
+                        const std::list<Neighbor> & neighbors)
+        throw (EnrollException) {
+#if STUB_API
+        //Do nothing
+#else
+        IpcmNotifyNeighborsModifiedMessage message;
+        message.setAdded(added);
+        message.setNeighbors(neighbors);
+        message.setSequenceNumber(0);
+        message.setNotificationMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                throw EnrollException(e.what());
+        }
+#endif
+}
+
 void ExtendedIPCManager::registerApplicationResponse(
 		const ApplicationRegistrationRequestEvent& event, int result)
 	throw(RegisterApplicationResponseException){

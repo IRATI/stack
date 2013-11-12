@@ -37,7 +37,7 @@ enum RINANetlinkOperationCode{
 	RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION, /* IPC Manager -> IPC Process */
 	RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION, /* IPC Manager -> IPC Process */
 	RINA_C_IPCM_ENROLL_TO_DIF_REQUEST, /* IPC Manager -> IPC Process */
-	RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE, /* TODO IPC Process -> IPC Manager */
+	RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE, /* IPC Process -> IPC Manager */
 	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST, /* TODO IPC Manager -> IPC Process */
 	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE, /* TODO IPC Process -> IPC Manager */
 	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST, /* IPC Manager -> IPC Process */
@@ -74,6 +74,7 @@ enum RINANetlinkOperationCode{
 	RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION, /* IPC Manager -> Application, application unregistered without the application having requested it */
 	RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* Application -> IPC Manager */
 	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* IPC Manager -> Application */
+	RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION, /* IPC Process -> IPC Manager */
 	__RINA_C_MAX,
  };
 
@@ -656,7 +657,6 @@ public:
  * Reports the IPC Manager about the result of an Update DIF Config operation
  * IPC Process -> IPC Manager
  */
-
 class IpcmUpdateDIFConfigurationResponseMessage:
                 public BaseNetlinkResponseMessage {
 
@@ -692,6 +692,50 @@ public:
                 getSupportingDifName() const;
         void setSupportingDifName(
                 const ApplicationProcessNamingInformation& supportingDifName);
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * Reports the IPC Manager about the result of an Enroll to DIF operation
+ * IPC Process -> IPC Manager
+ */
+class IpcmEnrollToDIFResponseMessage:
+                public BaseNetlinkResponseMessage {
+        /**
+         * The new neighbors of the IPC Process after the enrollment
+         * operation
+         */
+        std::list<Neighbor> neighbors;
+
+public:
+        IpcmEnrollToDIFResponseMessage();
+        const std::list<Neighbor>& getNeighbors() const;
+        void setNeighbors(const std::list<Neighbor>& neighbors);
+        void addNeighbor(const Neighbor& qosCube);
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * Notify the IPC Manager that the IPC Process has one or more new neighbors
+ * IPC Process -> IPC Manager.
+ */
+class IpcmNotifyNeighborsModifiedMessage:
+                public BaseNetlinkMessage {
+        /** The new neighbors of the IPC Process */
+        std::list<Neighbor> neighbors;
+
+        /**
+         * True if the neighbors have been added, false if they have
+         * been removed
+         */
+        bool added;
+public:
+        IpcmNotifyNeighborsModifiedMessage();
+        const std::list<Neighbor>& getNeighbors() const;
+        void setNeighbors(const std::list<Neighbor>& neighbors);
+        void addNeighbor(const Neighbor& qosCube);
+        bool isAdded() const;
+        void setAdded(bool added);
         IPCEvent* toIPCEvent();
 };
 
