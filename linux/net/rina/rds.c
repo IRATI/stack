@@ -42,9 +42,11 @@ struct rmap {
 
 struct rmap_entry {
         uint16_t          key;
-        struct table *    value;
+        void *    value;
         struct hlist_node hlist;
 };
+
+#define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 struct rmap * rmap_create_gfp(gfp_t flags)
 {
@@ -84,7 +86,7 @@ int rmap_destroy(struct rmap * map)
         return 0;
 }
 
-bool rmap_is_empty(const struct rmap * map)
+bool rmap_is_empty(struct rmap * map)
 {
         if (!map) {
                 LOG_ERR("Map %pK is NULL, returning false (check your code!)",
@@ -118,7 +120,7 @@ struct rmap_entry * rmap_find(const struct rmap * map,
                               uint16_t            key)
 {
         struct rmap_entry * entry;
-        struct hlist_head * head;
+        const struct hlist_head * head;
 
         if (!map) {
                 LOG_ERR("Cannot look-up in a empty map");
@@ -134,8 +136,8 @@ struct rmap_entry * rmap_find(const struct rmap * map,
         return NULL;
 }
 
-int rmap_remove(struct rmap *             map,
-                const struct rmap_entry * entry)
+int rmap_remove(struct rmap *       map,
+                struct rmap_entry * entry)
 {
         if (!map) {
                 LOG_ERR("Cannot remove an entry from a NULL map");
@@ -151,24 +153,42 @@ int rmap_remove(struct rmap *             map,
         return 0;
 }
 
-#define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
+void rmap_for_each(struct rmap * map,
+                   int        (* f)(struct rmap_entry * entry))
+{
+        struct rmap_entry * entry;
+        struct hlist_node * tmp;
+        int                 bucket;
+
+        if (!map) {
+                LOG_ERR("Input map is NULL, cannot iterate");
+                return;
+        }
+        if (!f) {
+                LOG_ERR("Iterator function is NULL");
+                return;
+        }
+
+        hash_for_each_safe(map->table, bucket, tmp, entry, hlist)
+                f(entry);
+}
 
 int rmap_entry_update(struct rmap_entry * entry,
-                      struct table *      value)
+                      void *      value)
 {
         if (!entry) {
                 LOG_ERR("Cannot update a NULL entry");
                 return -1;
         }
 
-        cur->value = value;
+        entry->value = value;
 
         return 0;
 }
 
-struct rmap_entry * rmap_entry_create_gfp(gfp_t          flags,
-                                          uint16_t       key,
-                                          struct table * value)
+struct rmap_entry * rmap_entry_create_gfp(gfp_t    flags,
+                                          uint16_t key,
+                                          void *   value)
 {
         struct rmap_entry * tmp;
 
@@ -185,11 +205,11 @@ struct rmap_entry * rmap_entry_create_gfp(gfp_t          flags,
         return tmp;
 }
 
-struct rmap_entry * rmap_entry_create(uint16_t       key,
-                                      struct table * value)
+struct rmap_entry * rmap_entry_create(uint16_t key,
+                                      void *   value)
 { return rmap_entry_create_gfp(GFP_KERNEL, key, value); }
 
-struct table * rmap_entry_value(const struct rmap_entry * entry)
+void * rmap_entry_value(const struct rmap_entry * entry)
 {
         if (!entry) {
                 LOG_ERR("Entry is NULL, cannot return its value");
