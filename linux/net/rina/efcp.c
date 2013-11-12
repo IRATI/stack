@@ -220,7 +220,9 @@ cep_id_t efcp_connection_create(struct efcp_container *   container,
         /* We must ensure that the DTP is instantiated, at least ... */
         connection->source_cep_id = cep_id;
         tmp->connection = connection;
-        tmp->dtp        = dtp_create(container->rmt, container->kfa);
+        tmp->dtp        = dtp_create(container->rmt,
+                                     container->kfa,
+                                     connection);
         if (!tmp->dtp) {
                 efcp_destroy(tmp);
                 return cep_id_bad();

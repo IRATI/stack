@@ -69,8 +69,9 @@ static struct dtp_policies default_policies = {
         .xxx_fixme_add_policies_here = NULL
 };
 
-struct dtp * dtp_create(struct rmt * rmt,
-                        struct kfa * kfa)
+struct dtp * dtp_create(struct rmt *        rmt,
+                        struct kfa *        kfa,
+                        struct connection * connection)
 {
         struct dtp * tmp;
         
@@ -92,6 +93,7 @@ struct dtp * dtp_create(struct rmt * rmt,
                 rkfree(tmp);
                 return NULL;
         }
+        default_sv.connection = connection;
         *tmp->state_vector = default_sv;
         tmp->policies      = &default_policies;
         tmp->peer          = NULL;

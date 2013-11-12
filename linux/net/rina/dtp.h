@@ -28,8 +28,9 @@
 struct dtcp;
 struct dtp;
 
-struct dtp * dtp_create(struct rmt * rmt,
-                        struct kfa * kfa);
+struct dtp * dtp_create(struct rmt *        rmt,
+                        struct kfa *        kfa,
+                        struct connection * connection);
 int          dtp_destroy(struct dtp * instance);
 
 int          dtp_bind(struct dtp *  instance,

@@ -103,7 +103,10 @@ int rmt_sdu_post(struct rmt * instance,
 {
         LOG_MISSING;
 
-        kfa_sdu_post_to_user_space(instance->kfa, sdu, -1);
+        /* Examples:
+         * kfa_sdu_post_to_user_space(instance->kfa, sdu, from);
+         * efcp_container_receive(instance->efcpc, -1, sdu);
+         */
 
         return 0;
 }

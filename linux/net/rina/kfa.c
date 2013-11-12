@@ -555,7 +555,7 @@ EXPORT_SYMBOL(kfa_find_flow_by_pid);
 
 int kfa_sdu_post_to_user_space(struct kfa * instance,
                                struct sdu * sdu,
-                               cep_id_t     cep_id)
+                               port_id_t    to)
 {
 
         return 0;
