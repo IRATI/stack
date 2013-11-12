@@ -43,7 +43,8 @@ struct rmt;
 
 /* NOTE: There's one RMT for each IPC Process */
 
-struct rmt * rmt_create(struct kfa * kfa);
+struct rmt * rmt_create(struct kfa *            kfa,
+                        struct efcp_container * efcpc);
 int          rmt_destroy(struct rmt * instance);
 
 /* FIXME: Please check the following APIs */
@@ -63,5 +64,13 @@ int          rmt_send_sdu(struct rmt * instance,
  */
 int          rmt_send_pdu(struct rmt * instance,
                           struct pdu * pdu);
+
+/*
+ * NOTES: Used by the KFA, sends SDU to the RMT.
+ *        Takes the ownership of the passed SDU
+ */
+int          rmt_sdu_post(struct rmt * instance,
+                          struct sdu * sdu,
+                          port_id_t    from);
 
 #endif

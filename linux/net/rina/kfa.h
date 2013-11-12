@@ -65,4 +65,12 @@ int          kfa_sdu_post(struct kfa * instance,
 struct ipcp_flow * kfa_find_flow_by_pid(struct kfa * instance,
                                         port_id_t    pid);
 
+/*
+ * Used by the RMT to push SDU intended for user
+ * space apps, not to follow the flow through the DIF stack
+ */
+int          kfa_sdu_post_to_user_space(struct kfa * instance,
+                                        struct sdu * sdu,
+                                        cep_id_t     cep_id);
+
 #endif

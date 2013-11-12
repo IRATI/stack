@@ -52,6 +52,9 @@ int                     efcp_container_set_dt_cons(struct data_transfer_constant
 int                     efcp_container_write(struct efcp_container * container,
                                              cep_id_t                cep_id,
                                              struct sdu *            sdu);
+int                     efcp_container_receive(struct efcp_container * container,
+                                               cep_id_t                cep_id,
+                                               struct sdu *            sdu);
 
 /* FIXME: Should a cep_id_t be returned instead ? */
 cep_id_t      efcp_connection_create(struct efcp_container * container,
@@ -70,8 +73,5 @@ struct efcp * efcp_find(struct efcp_container * container,
 /* NOTE: efcp_send() takes the ownership of the passed SDU */
 int           efcp_send(struct efcp * instance,
                         struct sdu *  sdu);
-
-/* NOTE: efcp_receive() gives the ownership of the returned PDU */
-struct pdu *  efcp_receive(struct efcp * instance);
 
 #endif

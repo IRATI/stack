@@ -28,7 +28,8 @@
 struct dtcp;
 struct dtp;
 
-struct dtp * dtp_create(struct rmt * rmt);
+struct dtp * dtp_create(struct rmt * rmt,
+                        struct kfa * kfa);
 int          dtp_destroy(struct dtp * instance);
 
 int          dtp_bind(struct dtp *  instance,
@@ -39,7 +40,8 @@ int          dtp_unbind(struct dtp * instance);
 int          dtp_send(struct dtp * instance,
                       struct sdu * sdu);
 
-/* Receives a PDU from DTP (DTP gives the ownership of the returned PDU) */
-struct pdu * dtp_receive(struct dtp * instance);
+/* DTP receives a PDU from RMT */
+int          dtp_receive(struct dtp * instance,
+                         struct pdu * pdu);
 
 #endif
