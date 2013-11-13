@@ -274,7 +274,8 @@ struct name * name_dup(const struct name * src)
 EXPORT_SYMBOL(name_dup);
 
 #define NAME_CMP_FIELD(X, Y, FIELD)                                     \
-        ((X->FIELD && Y->FIELD) ? string_cmp(X->FIELD, Y->FIELD) : -1)
+        ((X->FIELD && Y->FIELD) ? string_cmp(X->FIELD, Y->FIELD) :      \
+        ((!X->FIELD && !Y->FIELD) ? 0 : -1))
 
 static int name_is_equal_internal(const struct name * a,
                                   const struct name * b)
