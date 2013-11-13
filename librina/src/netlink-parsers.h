@@ -357,6 +357,20 @@ int putDIFPropertiesObject(nl_msg* netlinkMessage,
 
 DIFProperties * parseDIFPropertiesObject(nlmsghdr *hdr);
 
+/* NEIGHBOR CLASS */
+enum NeighborAttributes {
+        NEIGH_ATTR_NAME = 1,
+        NEIGH_ATTR_SUPP_DIF,
+        __NEIGH_ATTR_MAX,
+};
+
+#define NEIGH_ATTR_MAX (__NEIGH_ATTR_MAX -1)
+
+int putNeighborObject(nl_msg* netlinkMessage,
+                const Neighbor& object);
+
+Neighbor * parseNeighborObject(nlmsghdr *hdr);
+
 /* AppGetDIFPropertiesResponseMessage CLASS*/
 enum AppGetDIFPropertiesResponseMessageAttributes {
 	AGDPR_ATTR_RESULT = 1,
@@ -523,7 +537,7 @@ int putIpcmUpdateDIFConfigurationRequestMessageObject(nl_msg* netlinkMessage,
 IpcmUpdateDIFConfigurationRequestMessage *
         parseIpcmUpdateDIFConfigurationRequestMessage(nlmsghdr *hdr);
 
-/* IpcmAssignToDIFResponseMessage CLASS*/
+/* IpcmUpdateDIFConfigurationResponseMessage CLASS*/
 enum IpcmUpdateDIFConfigurationResponseMessageAttributes {
         IUDCRE_ATTR_RESULT = 1,
         __IUDCRE_ATTR_MAX,
@@ -552,6 +566,36 @@ int putIpcmEnrollToDIFRequestMessageObject(nl_msg* netlinkMessage,
 
 IpcmEnrollToDIFRequestMessage *
         parseIpcmEnrollToDIFRequestMessage(nlmsghdr *hdr);
+
+/* IpcmEnrollToDIFResponseMessage CLASS*/
+enum IpcmEnrollToDIFResponseMessageAttributes {
+        IETDRE_ATTR_RESULT = 1,
+        IETDRE_ATTR_NEIGHBORS,
+        __IETDRE_ATTR_MAX,
+};
+
+#define IETDRE_ATTR_MAX (__IETDRE_ATTR_MAX -1)
+
+int putIpcmEnrollToDIFResponseMessageObject(nl_msg* netlinkMessage,
+                const IpcmEnrollToDIFResponseMessage& object);
+
+IpcmEnrollToDIFResponseMessage *
+        parseIpcmEnrollToDIFResponseMessage(nlmsghdr *hdr);
+
+/* IpcmNotifyNeighborsModifiedMessage CLASS*/
+enum IpcmNotifyNeighborsModifiedMessageAttributes {
+        INNMM_ATTR_ADDED = 1,
+        INNMM_ATTR_NEIGHBORS,
+        __INNMM_ATTR_MAX,
+};
+
+#define INNMM_ATTR_MAX (__INNMM_ATTR_MAX -1)
+
+int putIpcmNotifyNeighborsModifiedMessageObject(nl_msg* netlinkMessage,
+                const IpcmNotifyNeighborsModifiedMessage& object);
+
+IpcmNotifyNeighborsModifiedMessage *
+        parseIpcmNotifyNeighborsModifiedMessage(nlmsghdr *hdr);
 
 /* IpcmAllocateFlowRequestMessage CLASS*/
 enum IpcmAllocateFlowRequestMessageAttributes {

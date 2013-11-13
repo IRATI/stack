@@ -919,6 +919,70 @@ IPCEvent* IpcmEnrollToDIFRequestMessage::toIPCEvent(){
         return event;
 }
 
+/* CLASS ENROLL TO DIF RESPONSE MESSAGE */
+IpcmEnrollToDIFResponseMessage::IpcmEnrollToDIFResponseMessage():
+        BaseNetlinkResponseMessage(RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE) {
+}
+
+const std::list<Neighbor>&
+IpcmEnrollToDIFResponseMessage::getNeighbors() const {
+        return neighbors;
+}
+
+void IpcmEnrollToDIFResponseMessage::setNeighbors(
+                const std::list<Neighbor>& neighbors) {
+        this->neighbors = neighbors;
+}
+
+void IpcmEnrollToDIFResponseMessage::addNeighbor(
+                const Neighbor& neighbor) {
+        neighbors.push_back(neighbor);
+}
+
+IPCEvent* IpcmEnrollToDIFResponseMessage::toIPCEvent(){
+        EnrollToDIFResponseEvent * event =
+                        new EnrollToDIFResponseEvent(neighbors,
+                                        getResult(), getSequenceNumber());
+        return event;
+}
+
+/* CLASS IPCM NEIGHBORS MODIFIED MESSAGE */
+IpcmNotifyNeighborsModifiedMessage::
+IpcmNotifyNeighborsModifiedMessage():
+        BaseNetlinkMessage(RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION) {
+        added = true;
+}
+
+const std::list<Neighbor>&
+IpcmNotifyNeighborsModifiedMessage::getNeighbors() const {
+        return neighbors;
+}
+
+void IpcmNotifyNeighborsModifiedMessage::setNeighbors(
+                const std::list<Neighbor>& neighbors) {
+        this->neighbors = neighbors;
+}
+
+void IpcmNotifyNeighborsModifiedMessage::addNeighbor(
+                const Neighbor& neighbor) {
+        neighbors.push_back(neighbor);
+}
+
+bool IpcmNotifyNeighborsModifiedMessage::isAdded() const {
+        return added;
+}
+
+void IpcmNotifyNeighborsModifiedMessage::setAdded(bool added) {
+        this->added = added;
+}
+
+IPCEvent* IpcmNotifyNeighborsModifiedMessage::toIPCEvent() {
+        NeighborsModifiedNotificationEvent * event =
+                        new NeighborsModifiedNotificationEvent(neighbors,
+                                        added, getSequenceNumber());
+        return event;
+}
+
 /* CLASS IPCM ALLOCATE FLOW REQUEST MESSAGE */
 IpcmAllocateFlowRequestMessage::IpcmAllocateFlowRequestMessage():
                 BaseNetlinkMessage(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST) {

@@ -352,7 +352,8 @@ enum IPCEventType {
 	UPDATE_DIF_CONFIG_REQUEST_EVENT,
 	UPDATE_DIF_CONFIG_RESPONSE_EVENT,
 	ENROLL_TO_DIF_REQUEST_EVENT,
-	ENROLL_TO_DIF_RESPONE_EVENT,
+	ENROLL_TO_DIF_RESPONSE_EVENT,
+	NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT,
 	IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
 	IPC_PROCESS_QUERY_RIB,
 	GET_DIF_PROPERTIES,
@@ -894,6 +895,31 @@ public:
 };
 
 /**
+ * Represents an IPC Process with whom we're enrolled
+ */
+class Neighbor {
+
+        /** The IPC Process name of the neighbor */
+        ApplicationProcessNamingInformation name;
+
+        /**
+         * The name of the supporting DIF used to exchange data
+         * with the neighbor
+         */
+        ApplicationProcessNamingInformation supportingDifName;
+
+public:
+        bool operator==(const Neighbor &other) const;
+        bool operator!=(const Neighbor &other) const;
+        const ApplicationProcessNamingInformation& getName() const;
+        void setName(const ApplicationProcessNamingInformation& name);
+        const ApplicationProcessNamingInformation&
+                getSupportingDifName() const;
+        void setSupportingDifName(
+                const ApplicationProcessNamingInformation& supportingDifName);
+};
+
+/**
  * Represents the value of an object stored in the RIB
  */
 class RIBObjectValue{
@@ -946,6 +972,19 @@ public:
 	InitializationException(const std::string& description):
 		IPCException(description){
 	}
+};
+
+/**
+ * Thrown when there are problems instructing an IPC Process to enroll to a DIF
+ */
+class EnrollException: public IPCException {
+public:
+        EnrollException():
+                IPCException("Problems causing an IPC Process to enroll to a DIF"){
+        }
+        EnrollException(const std::string& description):
+                IPCException(description){
+        }
 };
 
 /**

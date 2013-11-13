@@ -327,6 +327,31 @@ public:
 		throw (AssignToDIFResponseException);
 
 	/**
+	 * Reply to the IPC Manager, informing it about the result of an "enroll
+	 * to DIF" operation
+	 * @param event the event that trigerred the operation
+	 * @param result the result of the operation (0 successful)
+	 * @param newNeighbors the new neighbors after the enrollment operation
+	 * @throws EnrollException if there are problems communicating with the
+	 * IPC Manager
+	 */
+	void enrollToDIFResponse(const EnrollToDIFRequestEvent& event,
+	                int result, const std::list<Neighbor> & newNeighbors)
+	throw (EnrollException);
+
+	/**
+	 * Inform the IPC Manager about new neighbors being added or existing
+	 * neighbors that have been removed
+	 * @param added true if the neighbors have been added, false if removed
+	 * @param neighbors
+	 * @throws EnrollException if there are problems communicating with the
+	 * IPC Manager
+	 */
+	void notifyNeighborsModified(bool added,
+	                const std::list<Neighbor> & neighbors)
+	throw (EnrollException);
+
+	/**
 	 * Reply to the IPC Manager, informing it about the result of a "register
 	 * application request" operation
 	 * @param event

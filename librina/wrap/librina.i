@@ -538,6 +538,39 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
+    } else if ($1->getType() == rina::ENROLL_TO_DIF_REQUEST_EVENT) {
+    	rina::EnrollToDIFRequestEvent *flowReqEvent = dynamic_cast<rina::EnrollToDIFRequestEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/EnrollToDIFRequestEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::EnrollToDIFRequestEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::ENROLL_TO_DIF_RESPONSE_EVENT) {
+    	 rina::EnrollToDIFResponseEvent *flowReqEvent = dynamic_cast<rina::EnrollToDIFResponseEvent *>($1);
+         jclass clazz = jenv->FindClass("eu/irati/librina/EnrollToDIFResponseEvent");
+         if (clazz) {
+             jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+             if (mid) {
+                 jlong cptr = 0;
+                 *(rina::EnrollToDIFResponseEvent **)&cptr = flowReqEvent; 
+                 $result = jenv->NewObject(clazz, mid, cptr, false);
+          }
+       }
+    } else if ($1->getType() == rina::NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT) {
+    	 rina::NeighborsModifiedNotificationEvent *flowReqEvent = dynamic_cast<rina::NeighborsModifiedNotificationEvent *>($1);
+         jclass clazz = jenv->FindClass("eu/irati/librina/NeighborsModifiedNotificationEvent");
+         if (clazz) {
+             jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+             if (mid) {
+                 jlong cptr = 0;
+                 *(rina::NeighborsModifiedNotificationEvent **)&cptr = flowReqEvent; 
+                 $result = jenv->NewObject(clazz, mid, cptr, false);
+          }
+       }
     }
 } 
 %enddef
@@ -577,6 +610,8 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(differs) rina::Policy::operator!=(const Policy &other) const;
 %rename(equals) rina::FlowInformation::operator==(const FlowInformation &other) const;
 %rename(differs) rina::FlowInformation::operator!=(const FlowInformation &other) const;
+%rename(equals) rina::Neighbor::operator==(const Neighbor &other) const;
+%rename(differs) rina::Neighbor::operator!=(const Neighbor &other) const;
 
 %include "exceptions.h"
 %include "patterns.h"
@@ -660,4 +695,5 @@ MAKE_COLLECTION_ITERABLE(FlowInformationListIterator, FlowInformation, std::list
 %template(StringList) std::list<std::string>;
 %template(FlowInformationList) std::list<rina::FlowInformation>;
 %template(KernelIPCProcessSingleton) Singleton<rina::KernelIPCProcess>;
+%template(NeighborList) std::list<rina::Neighbor>;
 
