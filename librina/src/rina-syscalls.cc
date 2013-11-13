@@ -29,6 +29,11 @@
 #include "rina-syscalls.h"
 #include "rina-systypes.h"
 
+#define SYS_createIPCProcess  351
+#define SYS_destroyIPCProcess 352
+#define SYS_readSDU           353
+#define SYS_writeSDU          354
+
 namespace rina {
 
         int syscallWriteSDU(int portId, void * sdu, int size)
