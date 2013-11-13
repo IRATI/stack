@@ -23,9 +23,9 @@ To compile user-space:
 
 Compile and install kernel: 
 
-sudo make menuconfig --> Enable RINA features
-sudo make bzImage modules -j[number of cores] && sudo make modules_install install
+   - sudo make menuconfig --> Enable RINA features
+   - sudo make bzImage modules -j[number of cores] && sudo make modules_install install
 
 Compile and install user-space: 
 
-./install-from-sratch [absolute path where you want the binaries to be installed]
+   - ./install-from-sratch [absolute path where you want the binaries to be installed]
