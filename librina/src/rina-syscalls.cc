@@ -21,13 +21,17 @@
 
 #include <errno.h>
 #include <sys/syscall.h>
-#include <unistd.h>
 
 #define RINA_PREFIX "syscalls"
 
 #include "logs.h"
 #include "rina-syscalls.h"
 #include "rina-systypes.h"
+
+/* FIXME: PIGSTY HACK TO USER OUR SYSCALLS, PLEASE FIX ASAP !!! */
+//#include <unistd.h>
+//#include "/tmp/irati/usr/include/linux/include/asm-x86/unistd_32.h"
+//#include "/tmp/irati/usr/include/linux/include/asm-x86/unistd_64.h"
 
 #define SYS_createIPCProcess  351
 #define SYS_destroyIPCProcess 352
