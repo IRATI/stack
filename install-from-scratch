@@ -10,10 +10,11 @@ ME=configure
 PREFIX=`echo "$1"|sed -e "s,\/$,,"`
 
 echo "$ME: Prefix is \`$PREFIX'"
-
-mkdir -p $PREFIX || {
-    echo "$ME: Cannot create directory \`$PREFIX'"
-}
+if test -n "$PREFIX" ; then
+    mkdir -p $PREFIX || {
+        echo "$ME: Cannot create directory \`$PREFIX'"
+    }
+fi
 
 #
 # FIXME: we should definitely do a VPATH build ...
