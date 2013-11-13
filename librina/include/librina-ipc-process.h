@@ -411,7 +411,7 @@ public:
 	 * @throws DeallocateFlowResponseException if there are issues
 	 * replying ot the application
 	 */
-	void flowDeallocated(const FlowDeallocateRequestEvent flowDeallocateEvent,
+	void notifyflowDeallocated(const FlowDeallocateRequestEvent flowDeallocateEvent,
 			int result)
 		throw (DeallocateFlowResponseException);
 

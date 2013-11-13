@@ -24,44 +24,42 @@ int testAppAllocateFlowRequestMessage() {
 	std::cout << "TESTING APP ALLOCATE FLOW REQUEST MESSAGE\n";
 	int returnValue = 0;
 
-	ApplicationProcessNamingInformation * sourceName =
-			new ApplicationProcessNamingInformation();
-	sourceName->setProcessName("/apps/source");
-	sourceName->setProcessInstance("12");
-	sourceName->setEntityName("database");
-	sourceName->setEntityInstance("12");
+	ApplicationProcessNamingInformation sourceName;
+	sourceName.setProcessName("/apps/source");
+	sourceName.setProcessInstance("12");
+	sourceName.setEntityName("database");
+	sourceName.setEntityInstance("12");
 
-	ApplicationProcessNamingInformation * destName =
-			new ApplicationProcessNamingInformation();
-	destName->setProcessName("/apps/dest");
-	destName->setProcessInstance("12345");
-	destName->setEntityName("printer");
-	destName->setEntityInstance("12623456");
+	ApplicationProcessNamingInformation destName;
+	destName.setProcessName("/apps/dest");
+	destName.setProcessInstance("12345");
+	destName.setEntityName("printer");
+	destName.setEntityInstance("12623456");
 
-	FlowSpecification * flowSpec = new FlowSpecification();
+	FlowSpecification flowSpec;
 
-	AppAllocateFlowRequestMessage * message =
-			new AppAllocateFlowRequestMessage();
-	message->setSourceAppName(*sourceName);
-	message->setDestAppName(*destName);
-	message->setFlowSpecification(*flowSpec);
+	ApplicationProcessNamingInformation difName;
+	difName.setProcessName("test.DIF");
+
+	AppAllocateFlowRequestMessage message;
+	message.setSourceAppName(sourceName);
+	message.setDestAppName(destName);
+	message.setFlowSpecification(flowSpec);
+	message.setDifName(difName);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
 	if (!netlinkMessage) {
 		std::cout << "Error allocating Netlink message\n";
 	}
-	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
-			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+			sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
 
-	int result = putBaseNetlinkMessage(netlinkMessage, message);
+	int result = putBaseNetlinkMessage(netlinkMessage, &message);
 	if (result < 0) {
 		std::cout << "Error constructing Application Allocate Flow request "
 				<< "Message \n";
 		nlmsg_free(netlinkMessage);
-		delete destName;
-		delete sourceName;
-		delete message;
 		return result;
 	}
 
@@ -69,35 +67,37 @@ int testAppAllocateFlowRequestMessage() {
 	AppAllocateFlowRequestMessage * recoveredMessage =
 			dynamic_cast<AppAllocateFlowRequestMessage *>(parseBaseNetlinkMessage(
 					netlinkMessageHeader));
-	if (message == NULL) {
+	if (recoveredMessage == NULL) {
 		std::cout << "Error parsing Application Allocate Flow request Message "
 				<< "\n";
 		returnValue = -1;
-	} else if (message->getSourceAppName()
+	} else if (message.getSourceAppName()
 			!= recoveredMessage->getSourceAppName()) {
 		std::cout
 		<< "Source application name on original and recovered messages"
 		<< " are different\n";
 		returnValue = -1;
-	} else if (message->getDestAppName()
+	} else if (message.getDestAppName()
 			!= recoveredMessage->getDestAppName()) {
 		std::cout << "Destination application name on original and recovered "
 				<< "messages are different\n";
 		returnValue = -1;
-	} else if (message->getFlowSpecification()
-			!= recoveredMessage->getFlowSpecification()) {
-		std::cout << "Destination flow specification on original and recovered "
+	} else if (message.getDifName()
+			!= recoveredMessage->getDifName()) {
+		std::cout << "DIF name on original and recovered "
 				<< "messages are different\n";
 		returnValue = -1;
-	}
+	} else if (message.getFlowSpecification()
+                        != recoveredMessage->getFlowSpecification()) {
+                std::cout << "Destination flow specification on original and recovered "
+                                << "messages are different\n";
+                returnValue = -1;
+        }
 
 	if (returnValue == 0) {
 		std::cout << "AppAllocateFlowRequestMessage test ok\n";
 	}
 	nlmsg_free(netlinkMessage);
-	delete destName;
-	delete sourceName;
-	delete message;
 	delete recoveredMessage;
 
 	return returnValue;
@@ -408,6 +408,7 @@ int testAppDeallocateFlowResponseMessage() {
 
 	AppDeallocateFlowResponseMessage message;
 	message.setResult(0);
+	message.setPortId(234);
 	message.setApplicationName(applicationName);
 
 	struct nl_msg* netlinkMessage;
@@ -439,7 +440,11 @@ int testAppDeallocateFlowResponseMessage() {
 		std::cout << "Result on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
-	} else if (message.getApplicationName()
+	} else if (message.getPortId() != recoveredMessage->getPortId()) {
+                std::cout << "Port id on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getApplicationName()
 			!= recoveredMessage->getApplicationName()) {
 		std::cout << "Application name on original and recovered messages"
 				<< " are different\n";

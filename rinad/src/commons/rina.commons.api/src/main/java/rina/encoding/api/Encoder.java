@@ -1,13 +1,11 @@
 package rina.encoding.api;
 
-import rina.ipcprocess.api.IPCProcessComponent;
-
 /**
  * Encodes and Decodes an object to/from bytes)
  * @author eduardgrasa
  *
  */
-public interface Encoder extends IPCProcessComponent{
+public interface Encoder {
 	
 	/**
 	 * Converts an object to a byte array, if this object is recognized by the encoder

@@ -1,16 +1,14 @@
 package rina.flowallocator.api;
 
+import eu.irati.librina.FlowInformation;
+import eu.irati.librina.IPCException;
 import rina.cdap.api.message.CDAPMessage;
-import rina.ipcprocess.api.IPCProcessComponent;
-import rina.ipcservice.api.APService;
-import rina.ipcservice.api.FlowService;
-import rina.ipcservice.api.IPCException;
 
 /**
  * This interface must be implemented by the class that implements the flow allocator
  * @author eduardgrasa
  */
-public interface FlowAllocator extends IPCProcessComponent{
+public interface FlowAllocator {
 	
 	/**
 	 * Returns the directory
@@ -27,22 +25,20 @@ public interface FlowAllocator extends IPCProcessComponent{
 	 * with a status of pending, or whether a response is withheld until an Allocate_Response can be delivered 
 	 * with a status of success or failure.
 	 * @param allocateRequest the characteristics of the flow to be allocated.
-	 * @param APService the application process that requested the allocation of the flow
 	 * @return the portId
 	 * @throws IPCException if the request is not well formed or there are not enough resources
 	 * to honour the request
 	 */
-	public int submitAllocateRequest(FlowService allocateRequest, APService application) throws IPCException;
+	public int submitAllocateRequest(FlowInformation allocateRequest) throws IPCException;
 	
 	/**
 	 * Forward the allocate response to the Flow Allocator Instance.
 	 * @param portId the portId associated to the allocate response
 	 * @param success successful or unsucessful allocate request
-	 * @param reason
-	 * @param application the callback to invoke the application for any call
+	 * @param reasonl
 	 * @throws IPCException
 	 */
-	public void submitAllocateResponse(int portId, boolean success, String reason, APService applicationCallback) throws IPCException;
+	public void submitAllocateResponse(int portId, boolean success, String reason) throws IPCException;
 	
 	/**
 	 * Forward the deallocate request to the Flow Allocator Instance.
@@ -70,10 +66,10 @@ public interface FlowAllocator extends IPCProcessComponent{
 	
 	/**
 	 * Called by the flow allocator instance when a request for a local flow is received
-	 * @param flowService
+	 * @param flowInformation
 	 * @throws IPCException
 	 */
-	public void receivedLocalFlowRequest(FlowService flowService) throws IPCException;
+	public void receivedLocalFlowRequest(FlowInformation flowInformation) throws IPCException;
 	
 	/**
 	 * Called by the flow allocator instance when a response for a local flow is received

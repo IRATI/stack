@@ -1,8 +1,8 @@
 package rina.events.api.events;
 
+import eu.irati.librina.FlowInformation;
 import rina.events.api.BaseEvent;
 import rina.events.api.Event;
-import rina.resourceallocator.api.NMinus1FlowDescriptor;
 
 /**
  * Event that signals the deallocation of an 
@@ -12,21 +12,21 @@ import rina.resourceallocator.api.NMinus1FlowDescriptor;
  */
 public class NMinusOneFlowAllocatedEvent extends BaseEvent{
 
-	private NMinus1FlowDescriptor nMinus1FlowDescriptor = null;
+	private FlowInformation flowInformation = null;
 	
-	public NMinusOneFlowAllocatedEvent(NMinus1FlowDescriptor nMinus1FlowDescriptor) {
+	public NMinusOneFlowAllocatedEvent(FlowInformation flowInformation) {
 		super(Event.N_MINUS_1_FLOW_ALLOCATED);
-		this.nMinus1FlowDescriptor = nMinus1FlowDescriptor;
+		this.flowInformation = flowInformation;
 	}
 
-	public NMinus1FlowDescriptor getNMinusOneFlowDescriptor(){
-		return this.nMinus1FlowDescriptor;
+	public FlowInformation getFlowInformation(){
+		return this.flowInformation;
 	}
 	
 	@Override
 	public String toString(){
 		String result = "Event id: "+this.getId()+" \n";
-		result = result + "N-1 Flow Descriptor: "+this.getNMinusOneFlowDescriptor()+ "\n";
+		result = result + "Flow information: "+this.getFlowInformation()+ "\n";
 		
 		return result;
 	}

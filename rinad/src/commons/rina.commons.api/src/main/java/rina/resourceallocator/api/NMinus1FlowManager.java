@@ -1,9 +1,12 @@
 package rina.resourceallocator.api;
 
-import java.util.List;
-
-import rina.ipcservice.api.FlowService;
-import rina.ipcservice.api.IPCException;
+import eu.irati.librina.AllocateFlowRequestResultEvent;
+import eu.irati.librina.DeallocateFlowResponseEvent;
+import eu.irati.librina.FlowDeallocatedEvent;
+import eu.irati.librina.FlowInformation;
+import eu.irati.librina.FlowRequestEvent;
+import eu.irati.librina.IPCException;
+import eu.irati.librina.IPCProcessDIFRegistrationEvent;
 
 /**
  * Manages the allocation and lifetime of N-1 Flows for 
@@ -16,9 +19,24 @@ public interface NMinus1FlowManager {
 	/**
 	 * Allocate an N-1 Flow with the requested QoS to the destination 
 	 * IPC Process 
-	 * @param flowService contains the destination IPC Process and requested QoS information
+	 * @param flowInformation contains the destination IPC Process and requested 
+	 * QoS information
 	 */
-	public void allocateNMinus1Flow(FlowService flowService);
+	public void allocateNMinus1Flow(FlowInformation flowInformation);
+	
+	/**
+	 * Process the result of an allocate request event
+	 * @param event
+	 * @throws IPCException
+	 */
+	public void allocateRequestResult(AllocateFlowRequestResultEvent event) throws IPCException;
+	
+	/**
+	 * Process a flow allocation request
+	 * @param event 
+	 * @throws IPCException if something goes wrong
+	 */
+	public void flowAllocationRequested(FlowRequestEvent event) throws IPCException;
 	
 	/**
 	 * Deallocate the N-1 Flow identified by portId
@@ -28,31 +46,29 @@ public interface NMinus1FlowManager {
 	public void deallocateNMinus1Flow(int portId) throws IPCException;
 	
 	/**
-	 * Return the N-1 Flow descriptor associated to the flow identified by portId
-	 * @param portId
-	 * @return the N-1 Flow descriptor
-	 * @throws IPCException if no N-1 Flow identified by portId exists
-	 */
-	public NMinus1FlowDescriptor getNMinus1FlowDescriptor(int portId) throws IPCException;
-	
-	/**
-	 * Register the IPC Process to one or more N-1 DIFs
-	 * @param difName The N-1 DIF where this IPC Process will register
+	 * Process the response of a flow deallocation request
 	 * @throws IPCException
 	 */
-	public void registerIPCProcess(String difName) throws IPCException;
+	public void deallocateFlowResponse(DeallocateFlowResponseEvent event) throws IPCException;
 	
 	/**
-	 * Set the list of preferred SDU protection options as specified by management
-	 * @param sduProtectionOptions
+	 * A flow has been deallocated remotely, process
+	 * @param portId
 	 */
-	//public void setSDUProtecionOptions(List<SDUProtectionOption> sduProtectionOptions);
+	public void flowDeallocatedRemotely(FlowDeallocatedEvent event) throws IPCException;
 	
 	/**
-	 * Return the type of SDU Protection module to be used for the DIF called "nminus1DIFName"
-	 * (return the NULL type if no entries for "nminus1DIFName" are found)
-	 * @param nMinus1DIFName
-	 * @return
+	 * Return the N-1 Flow descriptor associated to the flow identified by portId
+	 * @param portId
+	 * @return the N-1 Flow information
+	 * @throws IPCException if no N-1 Flow identified by portId exists
 	 */
-	public String getSDUProtectionOption(String nMinus1DIFName);
+	public FlowInformation getNMinus1FlowInformation(int portId) throws IPCException;
+	
+	/**
+	 * The IPC Process has been unregistered from or registered to an N-1 DIF
+	 * @param evet
+	 * @throws IPCException
+	 */
+	public void processRegistrationNotification(IPCProcessDIFRegistrationEvent evet) throws IPCException;
 }

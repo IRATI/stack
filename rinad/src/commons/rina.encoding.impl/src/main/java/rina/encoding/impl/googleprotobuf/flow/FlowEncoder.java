@@ -3,7 +3,7 @@ package rina.encoding.impl.googleprotobuf.flow;
 import java.util.ArrayList;
 import java.util.List;
 
-import rina.encoding.api.BaseEncoder;
+import rina.encoding.api.Encoder;
 import rina.encoding.impl.googleprotobuf.GPBUtils;
 import rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionId_t;
 import rina.encoding.impl.googleprotobuf.qosspecification.QoSSpecification.qosSpecification_t;
@@ -16,7 +16,7 @@ import rina.flowallocator.api.Flow.State;
  * @author eduardgrasa
  *
  */
-public class FlowEncoder extends BaseEncoder{
+public class FlowEncoder implements Encoder{
 
 	public synchronized Object decode(byte[] serializedObject, Class<?> objectClass) throws Exception {
 		if (objectClass == null || !(objectClass.equals(Flow.class))){
@@ -40,7 +40,7 @@ public class FlowEncoder extends BaseEncoder{
 		flow.setPolicyParameters(GPBUtils.getProperties(gpbFlow.getPolicyParemetersList()));
 		qosSpecification_t qosParams = gpbFlow.getQosParameters();
 		if (!qosParams.equals(qosSpecification_t.getDefaultInstance())){
-			flow.setQosParameters(GPBUtils.getQualityOfServiceSpecification(qosParams));
+			flow.setFlowSpecification(GPBUtils.getFlowSpecification(qosParams));
 		}
 		flow.setSourceAddress(gpbFlow.getSourceAddress());
 		flow.setSourceNamingInfo(GPBUtils.getApplicationProcessNamingInfo(gpbFlow.getSourceNamingInfo()));
@@ -94,7 +94,7 @@ public class FlowEncoder extends BaseEncoder{
 		}
 		
 		Flow flow = (Flow) object;
-		qosSpecification_t qosSpecificationT = GPBUtils.getQoSSpecificationT(flow.getQosParameters());
+		qosSpecification_t qosSpecificationT = GPBUtils.getQoSSpecificationT(flow.getFlowSpecification());
 		if (qosSpecificationT == null){
 			qosSpecificationT = qosSpecification_t.getDefaultInstance();
 		}

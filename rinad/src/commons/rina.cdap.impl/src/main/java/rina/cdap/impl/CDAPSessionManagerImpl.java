@@ -11,10 +11,10 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import rina.cdap.api.BaseCDAPSessionManager;
 import rina.cdap.api.CDAPException;
 import rina.cdap.api.CDAPSession;
 import rina.cdap.api.CDAPSessionDescriptor;
+import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.AuthValue;
 import rina.cdap.api.message.CDAPMessage;
 import rina.cdap.api.message.ObjectValue;
@@ -22,7 +22,7 @@ import rina.cdap.api.message.CDAPMessage.AuthTypes;
 import rina.cdap.api.message.CDAPMessage.Flags;
 import rina.cdap.api.message.CDAPMessage.Opcode;
 
-public class CDAPSessionManagerImpl extends BaseCDAPSessionManager{
+public class CDAPSessionManagerImpl implements CDAPSessionManager{
 	
 	public static final long DEFAULT_TIMEOUT_IN_MS = 10000;
 	

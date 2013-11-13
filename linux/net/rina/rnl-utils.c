@@ -75,7 +75,6 @@ static int rnl_check_attr_policy(struct nlmsghdr *   nlh,
         struct nlattr * attrs[max_attr + 1];
         int             result;
 
-        LOG_DBG("Entering rnl_check_attr_policy ...");
         result = nlmsg_parse(nlh,
                              /* FIXME: Check if this is correct */
                              sizeof(struct genlmsghdr) +
@@ -88,7 +87,7 @@ static int rnl_check_attr_policy(struct nlmsghdr *   nlh,
                         result);
                 return -1;
         }
-        LOG_DBG("Leaving rnl_check_attr_policy ...");
+
         return 0;
 }
 
@@ -190,10 +189,6 @@ static int parse_app_name_info(struct nlattr * name_attr,
                 LOG_ERR("Bogus input parameters, cannot parse name app info");
                 return -1;
         }
-
-        LOG_DBG("Entering parse_app_name_info with "
-                "nlattr at %p and name_struct at %p",
-                name_attr, name_struct);
 
         attr_policy[APNI_ATTR_PROCESS_NAME].type = NLA_STRING;
         attr_policy[APNI_ATTR_PROCESS_NAME].len = 0;
@@ -538,8 +533,6 @@ static int rnl_parse_generic_u32_param_msg (struct genl_info * info,
         struct nla_policy attr_policy[max_params + 1];
         struct nlattr *attrs[max_params + 1];
 
-        LOG_DBG("rnl_parse_generic_u32_param_msg started ...");
-
         attr_policy[param_name].type = NLA_U32;
         attr_policy[param_name].len = 4;
 
@@ -556,7 +549,6 @@ static int rnl_parse_generic_u32_param_msg (struct genl_info * info,
 
         if (attrs[param_name]) {
                 * param_var = nla_get_u32(attrs[param_name]);
-                LOG_DBG("Parsed result: %d", * param_var);
         }
 
         return 0;
@@ -599,7 +591,6 @@ static int rnl_parse_ipcm_assign_to_dif_req_msg(struct genl_info * info,
 static int rnl_parse_ipcm_assign_to_dif_resp_msg(struct genl_info * info,
                                                  struct rnl_ipcm_assign_to_dif_resp_msg_attrs * msg_attrs)
 {
-        LOG_DBG("rnl_parse_ipcm_assign_to_dif_resp_msg started ...");
         return rnl_parse_generic_u32_param_msg(info,
                                                &(msg_attrs->result),
                                                IATDRE_ATTR_RESULT,
@@ -1567,9 +1558,6 @@ static int format_app_name_info(const struct name * name,
                 return -1;
         }
 
-        LOG_DBG("Entering format_app_name_info with name "
-                "at %p and sk_buff at %p", name, msg);
-
         /*
          * Components might be missing (and nla_put_string wonna have NUL
          * terminated strings, otherwise kernel panics are on the way).
@@ -1598,8 +1586,6 @@ static int format_app_name_info(const struct name * name,
                                    name->entity_instance))
                         return -1;
 
-        LOG_DBG("Format app name successs");
-
         return 0;
 }
 
@@ -1616,9 +1602,6 @@ static int format_flow_spec(const struct flow_spec * fspec,
                         "message parameter is NULL ...");
                 return -1;
         }
-
-        LOG_DBG("Entering format_flow_spec with fspec "
-                "at %p and sk_buff at %p", fspec, msg);
 
         /*
          * FIXME: only->max or min attributes are taken from
@@ -1686,7 +1669,6 @@ static int format_flow_spec(const struct flow_spec * fspec,
                                 fspec->undetected_bit_error_rate))
                         return -1;
 
-        LOG_DBG("Format flow spec success");
         return 0;
 }
 
@@ -2016,8 +1998,6 @@ int rnl_format_ipcm_alloc_flow_req_result_msg(uint_t           result,
                                               port_id_t        pid,
                                               struct sk_buff * skb_out)
 {
-        LOG_DBG("Entring rnl_format_ipcm_alloc_flow_req_result_msg");
-
         if (!skb_out) {
                 LOG_ERR("Bogus input parameter(s), bailing out");
                 return -1;

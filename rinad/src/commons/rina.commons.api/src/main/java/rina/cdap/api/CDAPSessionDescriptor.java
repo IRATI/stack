@@ -1,6 +1,6 @@
 package rina.cdap.api;
 
-import rina.applicationprocess.api.ApplicationProcessNamingInfo;
+import eu.irati.librina.ApplicationProcessNamingInformation;
 import rina.cdap.api.message.AuthValue;
 import rina.cdap.api.message.CDAPMessage.AuthTypes;
 
@@ -209,11 +209,12 @@ public class CDAPSessionDescriptor {
 	 * The source naming information is always the naming information of the local Application process
 	 * @return
 	 */
-	public ApplicationProcessNamingInfo getSourceApplicationProcessNamingInfo(){
-		ApplicationProcessNamingInfo apNamingInfo = new ApplicationProcessNamingInfo(this.getSrcApName(), this.getSrcApInst());
+	public ApplicationProcessNamingInformation getSourceApplicationProcessNamingInfo(){
+		ApplicationProcessNamingInformation apNamingInfo = 
+				new ApplicationProcessNamingInformation(this.getSrcApName(), this.getSrcApInst());
 		if (this.getSrcAEName() != null){
-			apNamingInfo.setApplicationEntityName(this.getSrcAEName());
-			apNamingInfo.setApplicationEntityInstance(this.getSrcAEInst());
+			apNamingInfo.setEntityName(this.getSrcAEName());
+			apNamingInfo.setEntityInstance(this.getSrcAEInst());
 		}
 		
 		return apNamingInfo;
@@ -223,11 +224,12 @@ public class CDAPSessionDescriptor {
 	 * The destination naming information is always the naming information of the remote application process
 	 * @return
 	 */
-	public ApplicationProcessNamingInfo getDestinationApplicationProcessNamingInfo(){
-		ApplicationProcessNamingInfo apNamingInfo = new ApplicationProcessNamingInfo(this.getDestApName(), this.getDestApInst());
+	public ApplicationProcessNamingInformation getDestinationApplicationProcessNamingInfo(){
+		ApplicationProcessNamingInformation apNamingInfo = 
+				new ApplicationProcessNamingInformation(this.getDestApName(), this.getDestApInst());
 		if (this.getDestAEName() != null){
-			apNamingInfo.setApplicationEntityName(this.getDestAEName());
-			apNamingInfo.setApplicationEntityInstance(this.getDestAEInst());
+			apNamingInfo.setEntityName(this.getDestAEName());
+			apNamingInfo.setEntityInstance(this.getDestAEInst());
 		}
 		
 		return apNamingInfo;

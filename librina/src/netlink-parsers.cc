@@ -1354,7 +1354,8 @@ ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 
 int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 		const AppAllocateFlowRequestMessage& object) {
-	struct nlattr *sourceAppName, *destinationAppName, *flowSpec;
+	struct nlattr *sourceAppName, *destinationAppName, *flowSpec ,
+	              *difName;
 
 	if (!(sourceAppName = nla_nest_start(netlinkMessage,
 			AAFR_ATTR_SOURCE_APP_NAME))) {
@@ -1386,6 +1387,16 @@ int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, flowSpec);
+
+	if (!(difName = nla_nest_start(netlinkMessage,
+	                AAFR_ATTR_DIF_NAME))) {
+	        goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+	                object.getDifName()) < 0) {
+	        goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, difName);
 
 	return 0;
 
@@ -1535,6 +1546,8 @@ int putAppDeallocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, applicationName);
+
+	NLA_PUT_U32(netlinkMessage, ADFRE_ATTR_PORT_ID, object.getPortId());
 
 	return 0;
 
@@ -2412,6 +2425,9 @@ AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 	attr_policy[AAFR_ATTR_FLOW_SPEC].type = NLA_NESTED;
 	attr_policy[AAFR_ATTR_FLOW_SPEC].minlen = 0;
 	attr_policy[AAFR_ATTR_FLOW_SPEC].maxlen = 0;
+	attr_policy[AAFR_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[AAFR_ATTR_DIF_NAME].minlen = 0;
+	attr_policy[AAFR_ATTR_DIF_NAME].maxlen = 0;
 	struct nlattr *attrs[AAFR_ATTR_MAX + 1];
 
 	/*
@@ -2434,6 +2450,7 @@ AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 	ApplicationProcessNamingInformation * sourceName;
 	ApplicationProcessNamingInformation * destName;
 	FlowSpecification * flowSpec;
+	ApplicationProcessNamingInformation * difName;
 
 	if (attrs[AAFR_ATTR_SOURCE_APP_NAME]) {
 		sourceName = parseApplicationProcessNamingInformationObject(
@@ -2468,6 +2485,18 @@ AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 			result->setFlowSpecification(*flowSpec);
 			delete flowSpec;
 		}
+	}
+
+	if (attrs[AAFR_ATTR_DIF_NAME]) {
+	        difName = parseApplicationProcessNamingInformationObject(
+	                        attrs[AAFR_ATTR_DIF_NAME]);
+	        if (difName == 0) {
+	                delete result;
+	                return 0;
+	        } else {
+	                result->setDifName(*difName);
+	                delete difName;
+	        }
 	}
 
 	return result;
@@ -2743,6 +2772,9 @@ AppDeallocateFlowResponseMessage * parseAppDeallocateFlowResponseMessage(
 	attr_policy[ADFRE_ATTR_APP_NAME].type = NLA_NESTED;
 	attr_policy[ADFRE_ATTR_APP_NAME].minlen = 0;
 	attr_policy[ADFRE_ATTR_APP_NAME].maxlen = 0;
+	attr_policy[ADFRE_ATTR_PORT_ID].type = NLA_U32;
+	attr_policy[ADFRE_ATTR_PORT_ID].minlen = 4;
+	attr_policy[ADFRE_ATTR_PORT_ID].maxlen = 4;
 	struct nlattr *attrs[ADFRE_ATTR_MAX + 1];
 
 	/*
@@ -2779,6 +2811,10 @@ AppDeallocateFlowResponseMessage * parseAppDeallocateFlowResponseMessage(
 			result->setApplicationName(*applicationName);
 			delete applicationName;
 		}
+	}
+
+	if (attrs[ADFRE_ATTR_PORT_ID]) {
+	        result->setPortId(nla_get_u32(attrs[ADFRE_ATTR_PORT_ID]));
 	}
 
 	return result;

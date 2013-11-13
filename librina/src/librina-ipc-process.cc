@@ -425,7 +425,7 @@ int ExtendedIPCManager::allocateFlowRequestArrived(
         return 0;
 }
 
-void ExtendedIPCManager::flowDeallocated(
+void ExtendedIPCManager::notifyflowDeallocated(
 		const FlowDeallocateRequestEvent flowDeallocateEvent,
 		int result)
 	throw (DeallocateFlowResponseException){

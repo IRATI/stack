@@ -1,8 +1,8 @@
 package rina.events.api.events;
 
+import eu.irati.librina.FlowInformation;
 import rina.events.api.BaseEvent;
 import rina.events.api.Event;
-import rina.ipcservice.api.FlowService;
 
 /**
  * Event that signals the deallocation of an 
@@ -16,25 +16,26 @@ public class NMinusOneFlowAllocationFailedEvent extends BaseEvent{
 	private int portId = 0;
 	
 	/** The FlowService object describing the flow **/
-	private FlowService flowService = null;
+	private FlowInformation flowInformation = null;
 	
 	/**
 	 * The reason why the allocation failed
 	 */
 	private String resultReason = null;
 	
-	public NMinusOneFlowAllocationFailedEvent(int portId, FlowService flowService, String resultReason) {
+	public NMinusOneFlowAllocationFailedEvent(int portId, 
+			FlowInformation flowInformation, String resultReason) {
 		super(Event.N_MINUS_1_FLOW_ALLOCATION_FAILED);
 		this.portId = portId;
-		this.flowService = flowService;
+		this.flowInformation = flowInformation;
 	}
 
 	public int getPortId() {
 		return this.portId;
 	}
 	
-	public FlowService getFlowService() {
-		return this.flowService;
+	public FlowInformation getFlowInformation() {
+		return this.flowInformation;
 	}
 	
 	public String getResultReason(){
@@ -45,7 +46,7 @@ public class NMinusOneFlowAllocationFailedEvent extends BaseEvent{
 	public String toString(){
 		String result = "Event id: "+this.getId()+" \n";
 		result = result + "Port id: "+this.getPortId() + "\n";
-		result = result + "Flow description: " + this.getFlowService() + "\n";
+		result = result + "Flow description: " + this.getFlowInformation() + "\n";
 		result = result + "Result reason: " + this.getResultReason() + "\n";
 		
 		return result;

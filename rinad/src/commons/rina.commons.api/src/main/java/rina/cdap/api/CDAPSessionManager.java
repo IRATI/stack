@@ -5,14 +5,13 @@ import rina.cdap.api.message.CDAPMessage;
 import rina.cdap.api.message.ObjectValue;
 import rina.cdap.api.message.CDAPMessage.AuthTypes;
 import rina.cdap.api.message.CDAPMessage.Flags;
-import rina.ipcprocess.api.IPCProcessComponent;
 
 /**
  * Manages the creation/deletion of CDAP sessions within an IPC process
  * @author eduardgrasa
  *
  */
-public interface CDAPSessionManager extends IPCProcessComponent{
+public interface CDAPSessionManager {
 	
 	/**
 	 * Depending on the message received, it will create a new CDAP state machine (CDAP Session), or update 

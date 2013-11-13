@@ -2,7 +2,7 @@ package rina.ribdaemon.api;
 
 import java.util.List;
 
-import rina.applicationprocess.api.ApplicationProcessNamingInfo;
+import eu.irati.librina.ApplicationProcessNamingInformation;
 
 /**
  * Permissions of a certain application on 
@@ -14,7 +14,7 @@ public class Permissions {
 	/**
 	 * All the applications that have these permissions
 	 */
-	private List<ApplicationProcessNamingInfo> applications = null;
+	private List<ApplicationProcessNamingInformation> applications = null;
 	
 	/**
 	 * Information of the CDAP operations that are allowed 
@@ -22,17 +22,17 @@ public class Permissions {
 	 */
 	private CDAPOperationsPermission cdapOperationPermissions = null;
 	
-	public Permissions(List<ApplicationProcessNamingInfo> applications, 
+	public Permissions(List<ApplicationProcessNamingInformation> applications, 
 			CDAPOperationsPermission cdapOperationPermissions){
 		this.applications = applications;
 		this.cdapOperationPermissions = cdapOperationPermissions;
 	}
 
-	public List<ApplicationProcessNamingInfo> getApplications() {
+	public List<ApplicationProcessNamingInformation> getApplications() {
 		return applications;
 	}
 
-	public void setApplications(List<ApplicationProcessNamingInfo> applications) {
+	public void setApplications(List<ApplicationProcessNamingInformation> applications) {
 		this.applications = applications;
 	}
 

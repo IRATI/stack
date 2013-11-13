@@ -6,19 +6,55 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import rina.applicationprocess.api.WhatevercastName;
+import rina.cdap.api.CDAPSessionManager;
+import rina.cdap.impl.CDAPSessionManagerImpl;
+import rina.cdap.impl.googleprotobuf.GoogleProtocolBufWireMessageProviderFactory;
+import rina.delimiting.api.Delimiter;
+import rina.delimiting.impl.DIFDelimiter;
+import rina.encoding.api.Encoder;
+import rina.encoding.impl.EncoderImpl;
+import rina.encoding.impl.googleprotobuf.applicationregistration.ApplicationRegistrationEncoder;
+import rina.encoding.impl.googleprotobuf.datatransferconstants.DataTransferConstantsEncoder;
+import rina.encoding.impl.googleprotobuf.directoryforwardingtable.DirectoryForwardingTableEntryArrayEncoder;
+import rina.encoding.impl.googleprotobuf.directoryforwardingtable.DirectoryForwardingTableEntryEncoder;
+import rina.encoding.impl.googleprotobuf.enrollment.EnrollmentInformationEncoder;
+import rina.encoding.impl.googleprotobuf.flow.FlowEncoder;
+import rina.encoding.impl.googleprotobuf.flowservice.FlowServiceEncoder;
+import rina.encoding.impl.googleprotobuf.qoscube.QoSCubeArrayEncoder;
+import rina.encoding.impl.googleprotobuf.qoscube.QoSCubeEncoder;
+import rina.encoding.impl.googleprotobuf.whatevercast.WhatevercastNameArrayEncoder;
+import rina.encoding.impl.googleprotobuf.whatevercast.WhatevercastNameEncoder;
+import rina.enrollment.api.EnrollmentInformationRequest;
+import rina.flowallocator.api.DirectoryForwardingTableEntry;
+import rina.flowallocator.api.Flow;
+import rina.resourceallocator.api.ResourceAllocator;
+import rina.ribdaemon.api.RIBDaemon;
+
+import eu.irati.librina.AllocateFlowRequestResultEvent;
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.ApplicationRegistration;
 import eu.irati.librina.AssignToDIFRequestEvent;
 import eu.irati.librina.AssignToDIFResponseEvent;
 import eu.irati.librina.DIFInformation;
+import eu.irati.librina.DataTransferConstants;
+import eu.irati.librina.DeallocateFlowResponseEvent;
 import eu.irati.librina.ExtendedIPCManagerSingleton;
+import eu.irati.librina.FlowDeallocatedEvent;
+import eu.irati.librina.FlowInformation;
+import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCEvent;
 import eu.irati.librina.IPCEventProducerSingleton;
 import eu.irati.librina.IPCEventType;
 import eu.irati.librina.IPCProcessDIFRegistrationEvent;
 import eu.irati.librina.KernelIPCProcessSingleton;
+import eu.irati.librina.QoSCube;
 import eu.irati.librina.rina;
 
 public class IPCProcess {
+	
+	public static final String MANAGEMENT_AE = "Management";
+    public static final String DATA_TRANSFER_AE = "Data Transfer";
 	
 	public enum State {NULL, INITIALIZED, ASSIGN_TO_DIF_IN_PROCESS, ASSIGNED_TO_DIF};
 	
@@ -42,6 +78,21 @@ public class IPCProcess {
 	/** Information about the dif where the IPC Process is currently assigned */
 	private DIFInformation difInformation = null;
 	
+	/** The DIF Delimiter */
+	private Delimiter delimiter = null;
+	
+	/** The CDAP Session Manager */
+	private CDAPSessionManager cdapSessionManager = null;
+	
+	/** The Encoder of objects, to that they can be carried as CDAP object values */
+	private Encoder encoder = null;
+	
+	/** The RIB Daemon */
+	private RIBDaemon ribDaemon = null;
+	
+	/** The Resource Allocator */
+	private ResourceAllocator resourceAllocator = null;
+	
 	public IPCProcess(ApplicationProcessNamingInformation namingInfo, int id, long ipcManagerPort){
 		log.info("Initializing librina...");
 		
@@ -54,6 +105,11 @@ public class IPCProcess {
 		ipcManager.setIpcProcessName(namingInfo);
 		ipcManager.setIPCManagerPort(ipcManagerPort);
 		pendingEvents = new ConcurrentHashMap<Long, IPCEvent>();
+		delimiter = new DIFDelimiter();
+		cdapSessionManager = new CDAPSessionManagerImpl(
+				new GoogleProtocolBufWireMessageProviderFactory());
+		encoder = createEncoder();
+		ribDaemon = new RIBDaemonImpl();
 		
 		log.info("Initialized IPC Process with AP name: "+namingInfo.getProcessName()
 				+ "; AP instance: "+namingInfo.getProcessInstance() + "; id: "+id);
@@ -69,6 +125,43 @@ public class IPCProcess {
 		setState(State.INITIALIZED);
 		
 		log.info("IPC Manager notified successfully");
+	}
+	
+	public Delimiter getDelimiter() {
+		return delimiter;
+	}
+	
+	public CDAPSessionManager getCDAPSessionManager() {
+		return cdapSessionManager;
+	}
+	
+	public Encoder getEncoder() {
+		return encoder;
+	}
+	
+	public RIBDaemon getRIBDaemon() {
+		return ribDaemon;
+	}
+	
+	public ResourceAllocator getResourceAllocator() {
+		return resourceAllocator;
+	}
+	
+	public Encoder createEncoder() {
+		  EncoderImpl encoder = new EncoderImpl();
+          encoder.addEncoder(DataTransferConstants.class.getName(), new DataTransferConstantsEncoder());
+          encoder.addEncoder(DirectoryForwardingTableEntry.class.getName(), new DirectoryForwardingTableEntryEncoder());
+          encoder.addEncoder(DirectoryForwardingTableEntry[].class.getName(), new DirectoryForwardingTableEntryArrayEncoder());
+          encoder.addEncoder(EnrollmentInformationRequest.class.getName(), new EnrollmentInformationEncoder());
+          encoder.addEncoder(Flow.class.getName(), new FlowEncoder());
+          encoder.addEncoder(QoSCube.class.getName(), new QoSCubeEncoder());
+          encoder.addEncoder(QoSCube[].class.getName(), new QoSCubeArrayEncoder());
+          encoder.addEncoder(WhatevercastName.class.getName(), new WhatevercastNameEncoder());
+          encoder.addEncoder(WhatevercastName[].class.getName(), new WhatevercastNameArrayEncoder());
+          encoder.addEncoder(FlowInformation.class.getName(), new FlowServiceEncoder());
+          encoder.addEncoder(ApplicationRegistration.class.getName(), new ApplicationRegistrationEncoder());
+          
+          return encoder;
 	}
 	
 	public State getState() {
@@ -99,19 +192,25 @@ public class IPCProcess {
 		
 		if (event.getType() == IPCEventType.IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION) {
 			IPCProcessDIFRegistrationEvent regEvent = (IPCProcessDIFRegistrationEvent) event;
-			if (regEvent.isRegistered()) {
-				ipcManager.appRegistered(regEvent.getIPCProcessName(), regEvent.getDIFName());
-				log.info("IPC Process registered to N-1 DIF "+ regEvent.getDIFName().getProcessName());
-			} else{
-				ipcManager.appUnregistered(regEvent.getIPCProcessName(), regEvent.getDIFName());
-				log.info("IPC Process unregistered from N-1 DIF "+ regEvent.getDIFName().getProcessName());
-			}
+			resourceAllocator.getNMinus1FlowManager().processRegistrationNotification(regEvent);
 		} else if (event.getType() == IPCEventType.ASSIGN_TO_DIF_REQUEST_EVENT) {
 			AssignToDIFRequestEvent asEvent = (AssignToDIFRequestEvent) event;
 			processAssignToDIFRequest(asEvent);
 		} else if (event.getType() == IPCEventType.ASSIGN_TO_DIF_RESPONSE_EVENT) {
 			AssignToDIFResponseEvent asEvent = (AssignToDIFResponseEvent) event;
 			processAssignToDIFResponseEvent(asEvent);
+		} else if (event.getType() == IPCEventType.ALLOCATE_FLOW_REQUEST_RESULT_EVENT) {
+			AllocateFlowRequestResultEvent flowEvent = (AllocateFlowRequestResultEvent) event;
+			resourceAllocator.getNMinus1FlowManager().allocateRequestResult(flowEvent);
+		} else if (event.getType() == IPCEventType.FLOW_ALLOCATION_REQUESTED_EVENT) {
+			FlowRequestEvent flowRequestEvent = (FlowRequestEvent) event;
+			resourceAllocator.getNMinus1FlowManager().flowAllocationRequested(flowRequestEvent);
+		} else if (event.getType() == IPCEventType.DEALLOCATE_FLOW_RESPONSE_EVENT) {
+			DeallocateFlowResponseEvent flowEvent = (DeallocateFlowResponseEvent) event;
+			resourceAllocator.getNMinus1FlowManager().deallocateFlowResponse(flowEvent);
+		} else if (event.getType() == IPCEventType.FLOW_DEALLOCATED_EVENT) {
+			FlowDeallocatedEvent flowEvent = (FlowDeallocatedEvent) event;
+			resourceAllocator.getNMinus1FlowManager().flowDeallocatedRemotely(flowEvent);
 		}
 	}
 	

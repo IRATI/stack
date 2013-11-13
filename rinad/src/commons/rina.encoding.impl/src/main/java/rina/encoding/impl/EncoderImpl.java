@@ -3,7 +3,6 @@ package rina.encoding.impl;
 import java.util.HashMap;
 import java.util.Map;
 
-import rina.encoding.api.BaseEncoder;
 import rina.encoding.api.Encoder;
 
 /**
@@ -13,7 +12,7 @@ import rina.encoding.api.Encoder;
  * @author eduardgrasa
  *
  */
-public class EncoderImpl extends BaseEncoder{
+public class EncoderImpl implements Encoder{
 	
 	private Map<String, Encoder> encoders = null;
 	
@@ -27,7 +26,6 @@ public class EncoderImpl extends BaseEncoder{
 	 * @param serializer
 	 */
 	public void addEncoder(String objectClass, Encoder encoder){
-		encoder.setIPCProcess(getIPCProcess());
 		encoders.put(objectClass, encoder);
 	}
 
