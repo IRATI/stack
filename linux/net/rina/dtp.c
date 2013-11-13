@@ -189,8 +189,8 @@ int apply_policy_RexmsnQ(struct dtp * dtp,
         return 0;
 }
 
-int dtp_send(struct dtp * instance,
-             struct sdu * sdu)
+int dtp_write(struct dtp * instance,
+	      struct sdu * sdu)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");

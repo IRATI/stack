@@ -38,8 +38,8 @@ int          dtp_bind(struct dtp *  instance,
 int          dtp_unbind(struct dtp * instance);
 
 /* Sends a SDU to the DTP (DTP takes the ownership of the passed SDU) */
-int          dtp_send(struct dtp * instance,
-                      struct sdu * sdu);
+int          dtp_write(struct dtp * instance,
+                       struct sdu * sdu);
 
 /* DTP receives a PDU from RMT */
 int          dtp_receive(struct dtp * instance,

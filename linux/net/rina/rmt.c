@@ -79,18 +79,10 @@ int rmt_destroy(struct rmt * instance)
 }
 EXPORT_SYMBOL(rmt_destroy);
 
-int rmt_send_sdu(struct rmt * instance,
-                 address_t    address,
-                 cep_id_t     connection_id,
-                 struct sdu * sdu)
-{
-        LOG_MISSING;
-
-        return 0;
-}
-
-int rmt_send_pdu(struct rmt * instance,
-                 struct pdu * pdu)
+int rmt_send(struct rmt * instance,
+             address_t    address,
+             cep_id_t     connection_id,
+             struct pdu * pdu)
 {
         LOG_MISSING;
 

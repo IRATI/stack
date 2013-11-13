@@ -70,8 +70,8 @@ struct efcp;
 struct efcp * efcp_find(struct efcp_container * container,
                         cep_id_t                id);
 
-/* NOTE: efcp_send() takes the ownership of the passed SDU */
-int           efcp_send(struct efcp * instance,
-                        struct sdu *  sdu);
+/* NOTE: efcp_write() takes the ownership of the passed SDU */
+int           efcp_write(struct efcp * instance,
+                         struct sdu *  sdu);
 
 #endif

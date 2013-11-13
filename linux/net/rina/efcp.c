@@ -161,7 +161,7 @@ int efcp_container_write(struct efcp_container * container,
                 LOG_ERR("There is no EFCP bound to this cep_id %d", cep_id);
                 return -1;
         }
-        if (efcp_send(efcp, sdu))
+        if (efcp_write(efcp, sdu))
                 return -1;
 
         return 0;
@@ -343,8 +343,8 @@ struct efcp * efcp_find(struct efcp_container * container,
         return tmp;
 }
 
-int efcp_send(struct efcp * instance,
-              struct sdu *  sdu)
+int efcp_write(struct efcp * instance,
+               struct sdu *  sdu)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
@@ -361,5 +361,5 @@ int efcp_send(struct efcp * instance,
                 return -1;
         }
 
-        return dtp_send(instance->dtp, sdu);
+        return dtp_write(instance->dtp, sdu);
 }
