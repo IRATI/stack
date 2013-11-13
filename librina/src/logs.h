@@ -23,9 +23,6 @@
 #define LIBRINA_LOGS_H
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string>
 
 #ifndef RINA_PREFIX
 #error You must define RINA_PREFIX before including this file
