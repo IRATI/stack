@@ -1821,6 +1821,10 @@ int kipcm_destroy(struct kipcm * kipcm)
                 /* FIXME: What should we do here ? */
         }
 
+	if (rnl_set_unregister(kipcm->rnls)) {
+		/* FIXME: What should we do here? */
+	}
+
         KIPCM_UNLOCK(kipcm);
 
         KIPCM_LOCK_FINI(kipcm);
