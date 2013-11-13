@@ -10,6 +10,7 @@ To compile kernel:
    - fakeroot 
    - wget 
    - bzip2
+
 To compile user-space:
    - maven 
    - libnl-genl-3-dev 
@@ -18,6 +19,7 @@ To compile user-space:
    - autoconf2.13 
    - openjdk-6-jdk 
    - git
+
    Latest SWIG version from http://swig.org
 
 Compile and install kernel: 
