@@ -21,9 +21,9 @@
 
 /* FIXME: PIGSTY HACK TO USER OUR SYSCALLS, PLEASE FIX ASAP !!! */
 #undef _ASM_X86_UNISTD_32_H
-#undef _ASM_X86_UNISTD_64_H
-
 #include "/usr/include/linux/include/asm-x86/unistd_32.h"
+
+//#undef _ASM_X86_UNISTD_64_H
 //#include "/usr/include/linux/include/asm-x86/unistd_64.h"
 
 #define SYS_createIPCProcess  __NR_ipc_create
