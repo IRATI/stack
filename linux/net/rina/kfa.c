@@ -353,14 +353,14 @@ int kfa_flow_sdu_write(struct kfa * instance,
                         &flow->wait_queue);
                 spin_unlock(&instance->lock);
                 retval = wait_event_interruptible(flow->wait_queue,
-                                         (flow->state != PORT_STATE_PENDING));
+                                                  (flow->state != PORT_STATE_PENDING));
 
                 spin_lock(&instance->lock);
                 LOG_DBG("Write woken up");
 
                 if (retval) {
                         LOG_ERR("Wait-event interrupted, returned error %d",
-                                        retval);
+                                retval);
                         goto finish;
                 }
 
@@ -440,14 +440,14 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 LOG_DBG("Going to sleep on wait queue %pK", &flow->wait_queue);
                 spin_unlock(&instance->lock);
                 retval = wait_event_interruptible(flow->wait_queue,
-                                         queue_ready(flow));
+                                                  queue_ready(flow));
 
                 spin_lock(&instance->lock);
                 LOG_DBG("Woken up");
 
                 if (retval) {
                         LOG_ERR("Wait-event interrupted, returned error %d",
-                                        retval);
+                                retval);
                         goto finish;
                 }
 

@@ -74,7 +74,7 @@ struct dtp * dtp_create(struct rmt *        rmt,
                         struct connection * connection)
 {
         struct dtp * tmp;
-        
+
         if (!rmt) {
                 LOG_ERR("Bogus rmt, bailing out");
                 return NULL;
@@ -199,7 +199,7 @@ int apply_policy_RexmsnQ(struct dtp * dtp,
 }
 
 int dtp_write(struct dtp * instance,
-	      struct sdu * sdu)
+              struct sdu * sdu)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");

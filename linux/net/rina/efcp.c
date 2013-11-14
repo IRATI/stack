@@ -101,7 +101,7 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
 
         container->instances   = efcp_imap_create();
         container->cidm        = cidm_create();
-        if (!container->instances || 
+        if (!container->instances ||
             !container->cidm) {
                 LOG_ERR("Failed to create EFCP container instance");
                 efcp_container_destroy(container);
@@ -258,8 +258,8 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
          *
          *  tmp->dtcp = dtcp_create();
          *  if (!tmp->dtcp) {
-         *  	efcp_destroy(tmp);
-         *  	return -1;
+         *      efcp_destroy(tmp);
+         *      return -1;
          *  }
          */
 

@@ -275,7 +275,7 @@ EXPORT_SYMBOL(name_dup);
 
 #define NAME_CMP_FIELD(X, Y, FIELD)                                     \
         ((X->FIELD && Y->FIELD) ? string_cmp(X->FIELD, Y->FIELD) :      \
-        ((!X->FIELD && !Y->FIELD) ? 0 : -1))
+         ((!X->FIELD && !Y->FIELD) ? 0 : -1))
 
 static int name_is_equal_internal(const struct name * a,
                                   const struct name * b)
@@ -575,7 +575,7 @@ EXPORT_SYMBOL(flow_spec_dup);
 struct dif_config * dif_config_create(void)
 {
         struct dif_config * tmp;
-        
+
         tmp = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
         if (!tmp) {
                 LOG_DBG("Could not create new dif_config");
@@ -584,7 +584,7 @@ struct dif_config * dif_config_create(void)
 
         INIT_LIST_HEAD(&(tmp->ipcp_config_entries));
         return tmp;
-                
+
 }
 EXPORT_SYMBOL(dif_config_create);
 

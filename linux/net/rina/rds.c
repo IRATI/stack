@@ -72,7 +72,7 @@ int rmap_destroy(struct rmap * map)
                 LOG_ERR("Cannot destroy a NULL map");
                 return -1;
         }
-        
+
         if (!hash_empty(map->table)) {
                 LOG_ERR("Map %pK is not empty and I won't destroy it. "
                         "You would be loosing memory ...", map);
@@ -142,7 +142,7 @@ int rmap_remove(struct rmap *       map,
                 LOG_ERR("Cannot remove an entry from a NULL map");
                 return -1;
         }
-               
+
         if (!entry) {
                 return -1;
         }
