@@ -69,8 +69,9 @@ static struct dtp_policies default_policies = {
         .xxx_fixme_add_policies_here = NULL
 };
 
-struct dtp * dtp_create(struct rmt * rmt,
-                        struct kfa * kfa)
+struct dtp * dtp_create(struct rmt *        rmt,
+                        struct kfa *        kfa,
+                        struct connection * connection)
 {
         struct dtp * tmp;
         
@@ -92,11 +93,19 @@ struct dtp * dtp_create(struct rmt * rmt,
                 rkfree(tmp);
                 return NULL;
         }
-        *tmp->state_vector = default_sv;
+
+        *tmp->state_vector            = default_sv;
+
+        /* FIXME: fixups to the state-vector should be placed here */
+        tmp->state_vector->connection = connection;
+
         tmp->policies      = &default_policies;
+        /* FIXME: fixups to the policies should be placed here */
+
         tmp->peer          = NULL;
         tmp->rmt           = rmt;
         tmp->kfa           = kfa;
+
         LOG_DBG("Instance %pK created successfully", tmp);
 
         return tmp;
@@ -189,8 +198,8 @@ int apply_policy_RexmsnQ(struct dtp * dtp,
         return 0;
 }
 
-int dtp_send(struct dtp * instance,
-             struct sdu * sdu)
+int dtp_write(struct dtp * instance,
+	      struct sdu * sdu)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");

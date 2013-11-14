@@ -176,7 +176,7 @@ int efcp_container_write(struct efcp_container * container,
                 return -1;
         }
 
-        if (efcp_send(efcp, sdu))
+        if (efcp_write(efcp, sdu))
                 return -1;
 
         return 0;
@@ -245,7 +245,9 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         /* We must ensure that the DTP is instantiated, at least ... */
         connection->source_cep_id = cep_id;
         tmp->connection = connection;
-        tmp->dtp        = dtp_create(container->rmt, container->kfa);
+        tmp->dtp        = dtp_create(container->rmt,
+                                     container->kfa,
+                                     connection);
         if (!tmp->dtp) {
                 efcp_destroy(tmp);
                 return cep_id_bad();
@@ -366,8 +368,8 @@ struct efcp * efcp_find(struct efcp_container * container,
         return efcp_imap_find(container->instances, id);
 }
 
-int efcp_send(struct efcp * instance,
-              struct sdu *  sdu)
+int efcp_write(struct efcp * instance,
+               struct sdu *  sdu)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
@@ -384,5 +386,5 @@ int efcp_send(struct efcp * instance,
                 return -1;
         }
 
-        return dtp_send(instance->dtp, sdu);
+        return dtp_write(instance->dtp, sdu);
 }
