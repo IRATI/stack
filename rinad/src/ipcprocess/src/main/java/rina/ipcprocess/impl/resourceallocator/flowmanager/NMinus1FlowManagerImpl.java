@@ -6,10 +6,10 @@ import org.apache.commons.logging.LogFactory;
 import rina.cdap.api.CDAPSession;
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.CDAPSessionManager;
-import rina.events.api.events.NMinusOneFlowAllocatedEvent;
-import rina.events.api.events.NMinusOneFlowAllocationFailedEvent;
-import rina.events.api.events.NMinusOneFlowDeallocatedEvent;
 import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.impl.events.NMinusOneFlowAllocatedEvent;
+import rina.ipcprocess.impl.events.NMinusOneFlowAllocationFailedEvent;
+import rina.ipcprocess.impl.events.NMinusOneFlowDeallocatedEvent;
 import rina.ipcprocess.impl.resourceallocator.ribobjects.DIFRegistrationSetRIBObject;
 import rina.ipcprocess.impl.resourceallocator.ribobjects.NMinus1FlowRIBObject;
 import rina.ipcprocess.impl.resourceallocator.ribobjects.NMinus1FlowSetRIBObject;
@@ -50,12 +50,14 @@ public class NMinus1FlowManagerImpl implements NMinus1FlowManager{
 	private CDAPSessionManager cdapSessionManager = null;
 	
 	private ExtendedIPCManagerSingleton ipcManager = null;
+	private IPCProcess ipcProcess = null;
 
 	public NMinus1FlowManagerImpl(){
 		ipcManager = rina.getExtendedIPCManager();
 	}
 	
 	public void setIPCProcess(IPCProcess ipcProcess){
+		this.ipcProcess = ipcProcess;
 		this.ribDaemon = ipcProcess.getRIBDaemon();
 		this.cdapSessionManager = ipcProcess.getCDAPSessionManager();
 		populateRIB();
@@ -93,18 +95,14 @@ public class NMinus1FlowManagerImpl implements NMinus1FlowManager{
 	 * to the destination IPC Process 
 	 * @param flowService contains the destination IPC Process and requested QoS information
 	 */
-	public synchronized void allocateNMinus1Flow(FlowInformation flowInformation) {
-		try{
-			ipcManager.requestFlowAllocationInDIF(flowInformation.getLocalAppName(), 
-					flowInformation.getRemoteAppName(), flowInformation.getDifName(), 
-					flowInformation.getFlowSpecification());
-			log.info("Requested the allocation of N-1 flow to application " + 
-					flowInformation.getRemoteAppName() + " through DIF " + 
-					flowInformation.getDifName().getProcessName());
-		}catch(Exception ex){
-			log.error("Issues allocating an N-1 flow to "+flowInformation.getRemoteAppName() + 
-					". Details: "+ex);
-		}
+	public synchronized long allocateNMinus1Flow(FlowInformation flowInformation) throws IPCException {
+		long handle =	ipcManager.requestFlowAllocationInDIF(flowInformation.getLocalAppName(), 
+				flowInformation.getRemoteAppName(), flowInformation.getDifName(), 
+				flowInformation.getFlowSpecification());
+		log.info("Requested the allocation of N-1 flow to application " + 
+				flowInformation.getRemoteAppName() + " through DIF " + 
+				flowInformation.getDifName().getProcessName());
+		return handle;
 	}
 	
 	public synchronized void allocateRequestResult(AllocateFlowRequestResultEvent event) throws IPCException{
@@ -146,7 +144,7 @@ public class NMinus1FlowManagerImpl implements NMinus1FlowManager{
 			
 			//Notify about the event
 			NMinusOneFlowAllocatedEvent allocEvent = new NMinusOneFlowAllocatedEvent(
-					flow.getFlowInformation());
+					flow.getFlowInformation(), event.getSequenceNumber());
 			ribDaemon.deliverEvent(allocEvent);
 		}else{
 			log.error("Allocation of N-1 flow denied. Error code "+event.getPortId());
@@ -154,7 +152,7 @@ public class NMinus1FlowManagerImpl implements NMinus1FlowManager{
 			
 			//Notify about the event
 			NMinusOneFlowAllocationFailedEvent failedEvent = new NMinusOneFlowAllocationFailedEvent(
-					event.getPortId(), flowInformation, ""+event.getPortId());
+					event.getSequenceNumber(), flowInformation, ""+event.getPortId());
 			ribDaemon.deliverEvent(failedEvent);
 		}
 	}
@@ -164,9 +162,9 @@ public class NMinus1FlowManagerImpl implements NMinus1FlowManager{
 	 */
 	public synchronized void flowAllocationRequested(FlowRequestEvent event) throws IPCException {
 		if (event.getRemoteApplicationName().getProcessName().equals(
-				ipcManager.getIpcProcessName().getProcessName())
+				ipcProcess.getName().getProcessName())
 				&& event.getRemoteApplicationName().getProcessInstance().equals(
-						ipcManager.getIpcProcessName().getProcessInstance())){
+						ipcProcess.getName().getProcessInstance())){
 			
 			//TODO deal with the different AEs (Management vs. Data transfer), right now assuming the flow
 			//is both used for data transfer and management purposes
@@ -192,7 +190,8 @@ public class NMinus1FlowManagerImpl implements NMinus1FlowManager{
 			}
 			
 			//Notify about the event
-			NMinusOneFlowAllocatedEvent allocEvent = new NMinusOneFlowAllocatedEvent(flow.getFlowInformation());
+			NMinusOneFlowAllocatedEvent allocEvent = new NMinusOneFlowAllocatedEvent(
+					flow.getFlowInformation(), event.getSequenceNumber());
 			this.ribDaemon.deliverEvent(allocEvent);
 		}else{
 			log.error("Rejected flow from "+event.getRemoteApplicationName() + 

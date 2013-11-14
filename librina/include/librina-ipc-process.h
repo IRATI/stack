@@ -253,9 +253,6 @@ class ExtendedIPCManager: public IPCManager {
 	/** The ID of the IPC Process */
 	unsigned short ipcProcessId;
 
-	/** The IPC Process naming information */
-	ApplicationProcessNamingInformation ipcProcessName;
-
 	/** The portId of the IPC Manager */
 	unsigned int ipcManagerPort;
 
@@ -276,8 +273,6 @@ public:
 	void setCurrentDIFInformation(const DIFInformation& currentDIFInformation);
 	unsigned short getIpcProcessId() const;
 	void setIpcProcessId(unsigned short ipcProcessId);
-	const ApplicationProcessNamingInformation& getIpcProcessName();
-	void setIpcProcessName(const ApplicationProcessNamingInformation& name);
 	void setIPCManagerPort(unsigned int ipcManagerPort);
 
 	/**

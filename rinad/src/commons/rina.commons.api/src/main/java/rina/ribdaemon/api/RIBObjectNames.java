@@ -38,12 +38,6 @@ public interface RIBObjectNames {
 	
 	public static final String OPERATIONAL_STATUS_RIB_OBJECT_CLASS = "operationstatus";
 	
-	public static final String ADDRESS_RIB_OBJECT_NAME = RIBObjectNames.SEPARATOR + RIBObjectNames.DAF + 
-		RIBObjectNames.SEPARATOR + RIBObjectNames.MANAGEMENT + RIBObjectNames.SEPARATOR + RIBObjectNames.NAMING + 
-		RIBObjectNames.SEPARATOR + RIBObjectNames.ADDRESS;
-
-	public static final String ADDRESS_RIB_OBJECT_CLASS = "address";
-	
 	public static final String PDU_FORWARDING_TABLE_RIB_OBJECT_CLASS = "pdu forwarding table";
 	public static final String PDU_FORWARDING_TABLE_RIB_OBJECT_NAME = RIBObjectNames.SEPARATOR + RIBObjectNames.DIF + 
 		RIBObjectNames.SEPARATOR + RIBObjectNames.RESOURCE_ALLOCATION + RIBObjectNames.SEPARATOR + RIBObjectNames.PDU_FORWARDING_TABLE;

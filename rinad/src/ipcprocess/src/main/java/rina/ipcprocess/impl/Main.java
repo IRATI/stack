@@ -32,7 +32,8 @@ public class Main {
 			int ipcProcessId = Integer.parseInt(args[2]);
 			long ipcManagerPort = Long.parseLong(args[3]);
 			
-			IPCProcess ipcProcess = new IPCProcess(namingInfo, ipcProcessId, ipcManagerPort);
+			IPCProcess ipcProcess = IPCProcess.getInstance();
+			ipcProcess.initialize(namingInfo, ipcProcessId, ipcManagerPort);
 			ipcProcess.executeEventLoop();
 		}catch(Exception ex){
 			log.error("Problems: " + ex.getMessage() + ". Closing down IPC Process.");

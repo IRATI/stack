@@ -4,12 +4,14 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import eu.irati.librina.ExtendedIPCManagerSingleton;
+import eu.irati.librina.Flow;
+import eu.irati.librina.rina;
 
 import rina.cdap.api.CDAPException;
 import rina.cdap.api.CDAPMessageHandler;
@@ -23,13 +25,12 @@ import rina.encoding.api.Encoder;
 import rina.enrollment.api.EnrollmentTask;
 import rina.events.api.Event;
 import rina.events.api.EventListener;
-import rina.events.api.events.NMinusOneFlowDeallocatedEvent;
 import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.impl.events.NMinusOneFlowAllocatedEvent;
+import rina.ipcprocess.impl.events.NMinusOneFlowDeallocatedEvent;
 import rina.ipcprocess.impl.ribdaemon.rib.RIB;
-import rina.resourceallocator.api.ResourceAllocator;
 import rina.resourceallocator.api.NMinus1FlowManager;
 import rina.ribdaemon.api.NotificationPolicy;
-import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBDaemonException;
 import rina.ribdaemon.api.RIBObject;
 import rina.ribdaemon.api.RIBObjectNames;
@@ -40,7 +41,7 @@ import rina.ribdaemon.api.UpdateStrategy;
  * @author eduardgrasa
  *
  */
-public class RIBDaemonImpl implements RIBDaemon, EventListener{
+public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 	
 	private static final Log log = LogFactory.getLog(RIBDaemonImpl.class);
 	
@@ -56,77 +57,44 @@ public class RIBDaemonImpl implements RIBDaemon, EventListener{
 	/** CDAP Message handlers that have sent a CDAP message and are waiting for a reply **/
 	private Map<String, CDAPMessageHandler> messageHandlersWaitingForReply = null;
 	
-	/** Lock to control that when sending a message requiring a reply the 
-	 * CDAP Session manager has been updated before receiving the response message **/
+	/** 
+	 * Lock to control that when sending a message requiring a reply the 
+	 * CDAP Session manager has been updated before receiving the response message 
+	 */
 	private Object atomicSendLock = null;
 	
+	/**
+	 * Store the readers of the management flows
+	 */
+	private Map<Integer, FlowReader> flowReaders = null;
+	
 	private IPCProcess ipcProcess = null;
+	private ExtendedIPCManagerSingleton ipcManager = null;
 	
 	/**
 	 * The N-1 Flow Manager
 	 */
 	private NMinus1FlowManager nMinus1FlowManager = null;
 	
-	/**
-	 * The queue of incoming management SDUs
-	 */
-	private BlockingQueue<IncomingManagementSDU> incomingManagementSDUs = null;
-	
-	/**
-	 * The class that will execute in a separate thread and process incoming 
-	 * management SDUs
-	 */
-	private IncomingManagementSDUsReader incomingManagementSDUsReader = null;
-	
 	public RIBDaemonImpl(){
 		rib = new RIB();
 		messageHandlersWaitingForReply = new ConcurrentHashMap<String, CDAPMessageHandler>();
+		flowReaders = new ConcurrentHashMap<Integer, FlowReader>();
 		atomicSendLock = new Object();
-		this.incomingManagementSDUs = new LinkedBlockingQueue<IncomingManagementSDU>();
+		ipcManager = rina.getExtendedIPCManager();
 	}
 	
 	public void setIPCProcess(IPCProcess ipcProcess){
 		this.ipcProcess = ipcProcess;
-		this.encoder = ipcProcess.getEncoder();
-		this.cdapSessionManager = ipcProcess.getCDAPSessionManager();
+		encoder = ipcProcess.getEncoder();
+		cdapSessionManager = ipcProcess.getCDAPSessionManager();
+		nMinus1FlowManager = ipcProcess.getResourceAllocator().getNMinus1FlowManager();
 		subscribeToEvents();
-		
-		this.incomingManagementSDUsReader = new IncomingManagementSDUsReader(incomingManagementSDUs, this);
-		ipcProcess.execute(this.incomingManagementSDUsReader);
 	}
 	
 	private void subscribeToEvents(){
-		this.subscribeToEvent(Event.N_MINUS_1_FLOW_DEALLOCATED, this);
-	}
-	
-	private NMinus1FlowManager getNMinus1FlowManager(){
-		if (this.nMinus1FlowManager == null){
-			ResourceAllocator resourceAllocator = (ResourceAllocator) getIPCProcess().getIPCProcessComponent(BaseResourceAllocator.getComponentName());
-			this.nMinus1FlowManager = resourceAllocator.getNMinus1FlowManager();
-		}
-		
-		return this.nMinus1FlowManager;
-	}
-	
-	@Override
-	public void stop(){
-		this.incomingManagementSDUsReader.stop();
-	}
-	
-	/**
-	 * A new management SDU has been delivered, the RIB Daemon will process it
-	 * @param managementSDU
-	 * @param portId
-	 */
-	public void managementSDUDelivered(byte[] managementSDU, int portId){
-		IncomingManagementSDU incomingManagementSDU = new IncomingManagementSDU();
-		incomingManagementSDU.setManagementSDU(managementSDU);
-		incomingManagementSDU.setPortId(portId);
-		try {
-			this.incomingManagementSDUs.put(incomingManagementSDU);
-		} catch (InterruptedException ex) {
-			log.error("Problems adding incoming management SDU to queue", ex);
-		}
+		subscribeToEvent(Event.N_MINUS_1_FLOW_ALLOCATED, this);
+		subscribeToEvent(Event.N_MINUS_1_FLOW_DEALLOCATED, this);
 	}
 
 	/**
@@ -147,7 +115,8 @@ public class RIBDaemonImpl implements RIBDaemon, EventListener{
 			synchronized(atomicSendLock){
 				cdapMessage = cdapSessionManager.messageReceived(encodedCDAPMessage, portId);
 				cdapSessionDescriptor = cdapSessionManager.getCDAPSession(portId).getSessionDescriptor();
-				log.debug("Received CDAP Message through N-1 flow identified by portId "+portId+":"+cdapMessage.toString());
+				log.debug("Received CDAP Message through N-1 flow identified by portId "
+						+portId+":"+cdapMessage.toString());
 			}
 		}catch(CDAPException ex){
 			log.error("Error decoding CDAP message: " + ex.getMessage());
@@ -165,8 +134,9 @@ public class RIBDaemonImpl implements RIBDaemon, EventListener{
 			CDAPMessageHandler cdapMessageHandler = null;
 
 			//M_CONNECT, M_CONNECT_R, M_RELEASE and M_RELEASE_R are handled by the Enrollment task
-			if (opcode.equals(Opcode.M_CONNECT) || opcode.equals(Opcode.M_CONNECT_R) || opcode.equals(Opcode.M_RELEASE) || opcode.equals(Opcode.M_RELEASE_R)){
-				EnrollmentTask enrollmentTask = (EnrollmentTask) this.getIPCProcess().getIPCProcessComponent(BaseEnrollmentTask.getComponentName());
+			if (opcode.equals(Opcode.M_CONNECT) || opcode.equals(Opcode.M_CONNECT_R) || 
+					opcode.equals(Opcode.M_RELEASE) || opcode.equals(Opcode.M_RELEASE_R)){
+				EnrollmentTask enrollmentTask = ipcProcess.getEnrollmentTask();
 				switch(opcode){
 				case M_CONNECT:
 					enrollmentTask.connect(cdapMessage, cdapSessionDescriptor);
@@ -333,9 +303,12 @@ public class RIBDaemonImpl implements RIBDaemon, EventListener{
 	 * Called when an event has happened
 	 */
 	public void eventHappened(Event event) {
-		if (event.getId().equals(Event.N_MINUS_1_FLOW_DEALLOCATED)){
+		if (event.getId().equals(Event.N_MINUS_1_FLOW_DEALLOCATED)) {
 			NMinusOneFlowDeallocatedEvent flowEvent = (NMinusOneFlowDeallocatedEvent) event;
-			this.nMinusOneFlowDeallocated(flowEvent.getPortId());
+			nMinusOneFlowDeallocated(flowEvent.getPortId());
+		} else if (event.getId().equals(Event.N_MINUS_1_FLOW_ALLOCATED)) {
+			NMinusOneFlowAllocatedEvent flowEvent = (NMinusOneFlowAllocatedEvent) event;
+			nMinusOneFlowAllocated(flowEvent);
 		}
 	}
 	
@@ -347,6 +320,24 @@ public class RIBDaemonImpl implements RIBDaemon, EventListener{
 	private void nMinusOneFlowDeallocated(int portId) {
 		cdapSessionManager.removeCDAPSession(portId);
 		cleanMessageHandlersWaitingForReply(portId);
+		FlowReader flowReader = flowReaders.remove(portId);
+		if (flowReader != null) {
+			flowReader.stop();
+		}
+	}
+	
+	private void nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent event) {
+		Flow flow = ipcManager.getAllocatedFlow(event.getFlowInformation().getPortId());
+		if (flow == null) {
+			log.error("Received a notification about a new flow having been allocated at "
+					+ event.getFlowInformation().getPortId()+ " but could not find a flow "
+				+ "at this portId");
+			return;
+		}
+		
+		FlowReader flowReader = new FlowReader(flow, this, IPCProcess.DEFAULT_MAX_SDU_SIZE_IN_BYTES);
+		flowReaders.put(event.getFlowInformation().getPortId(), flowReader);
+		ipcProcess.execute(flowReader);
 	}
 	
 	/**
@@ -377,9 +368,8 @@ public class RIBDaemonImpl implements RIBDaemon, EventListener{
 	 * @param cdapMessageHandler the class to be called when the response message is received (if required)
 	 * @throws RIBDaemonException
 	 */
-	public void sendMessage(CDAPMessage cdapMessage, int portId, CDAPMessageHandler cdapMessageHandler) throws RIBDaemonException{
-		PDU managementPDU = null;
-		
+	public void sendMessage(CDAPMessage cdapMessage, int portId, 
+			CDAPMessageHandler cdapMessageHandler) throws RIBDaemonException{
 		if (cdapMessage.getInvokeID() != 0 && !cdapMessage.getOpCode().equals(Opcode.M_CONNECT) 
 				&& !cdapMessage.getOpCode().equals(Opcode.M_RELEASE) 
 				&& !cdapMessage.getOpCode().equals(Opcode.M_CANCELREAD_R)
@@ -398,15 +388,23 @@ public class RIBDaemonImpl implements RIBDaemon, EventListener{
 		synchronized(atomicSendLock){
 			try{
 				this.cdapSessionManager.getCDAPSession(portId).getSessionDescriptor();
-				managementPDU = this.getPDUParser().generateManagementPDU(
-						cdapSessionManager.encodeNextMessageToBeSent(cdapMessage, portId));
-				byte[] sdu = getNMinus1FlowManager().getNMinus1FlowDescriptor(portId).
-						getSduProtectionModule().protectPDU(managementPDU);
+				
+				//FIXME I've removed the DTP encoding of CDAP PDUs.. just to enable initial tests
+				//and figure out how we do it now that EFCP is in the kernel
+				byte[] sdu = cdapSessionManager.encodeNextMessageToBeSent(cdapMessage, portId);
+				
 				log.debug("About to send through underlying portId "+portId+" : "+cdapMessage.toString());
-				this.ipcManager.getOutgoingFlowQueue(portId).writeDataToQueue(sdu);
+				Flow flow = ipcManager.getAllocatedFlow(portId);
+				if (flow == null) {
+					throw new RIBDaemonException(-1, "Could not find a flow at portId "+portId);
+				}
+				flow.writeSDU(sdu, sdu.length);
+				
 				cdapSessionManager.messageSent(cdapMessage, portId);
+				
 				String destination = cdapSessionManager.getCDAPSession(portId).getSessionDescriptor().getDestApName();
-				log.debug("Sent CDAP Message to "+destination+" through underlying portId "+portId+": "+ cdapMessage.toString());
+				log.debug("Sent CDAP Message to "+destination+" through underlying portId "
+						+portId+": "+ cdapMessage.toString());
 			}catch(Exception ex){
 				ex.printStackTrace();
 				if (ex.getMessage().equals("Flow closed")){
@@ -714,8 +712,9 @@ public class RIBDaemonImpl implements RIBDaemon, EventListener{
 			throw new RIBDaemonException(RIBDaemonException.OBJECTCLASS_AND_OBJECT_NAME_OR_OBJECT_INSTANCE_NOT_SPECIFIED);
 		}
 	}
-	
-	public List<RIBObject> getRIBObjects(){
-		return this.rib.getRIBObjects();
+
+	@Override
+	public List<RIBObject> getRIBObjects() {
+		return rib.getRIBObjects();
 	}
 }

@@ -21,8 +21,9 @@ public interface NMinus1FlowManager {
 	 * IPC Process 
 	 * @param flowInformation contains the destination IPC Process and requested 
 	 * QoS information
+	 * @return handle to the flow request
 	 */
-	public void allocateNMinus1Flow(FlowInformation flowInformation);
+	public long allocateNMinus1Flow(FlowInformation flowInformation) throws IPCException;
 	
 	/**
 	 * Process the result of an allocate request event

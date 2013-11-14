@@ -1,4 +1,4 @@
-package rina.events.api.events;
+package rina.ipcprocess.impl.events;
 
 import rina.events.api.BaseEvent;
 import rina.events.api.Event;

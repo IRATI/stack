@@ -1,6 +1,6 @@
-package rina.events.api.events;
+package rina.ipcprocess.impl.events;
 
-import rina.enrollment.api.Neighbor;
+import eu.irati.librina.Neighbor;
 import rina.events.api.BaseEvent;
 import rina.events.api.Event;
 

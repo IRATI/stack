@@ -14,13 +14,6 @@ import rina.events.api.EventManager;
 public interface RIBDaemon extends EventManager{
 	
 	/**
-	 * A new management SDU has been delivered, the RIB Daemon will process it
-	 * @param managementSDU
-	 * @param portId
-	 */
-	public void managementSDUDelivered(byte[] managementSDU, int portId);
-	
-	/**
 	 * Add a RIB object to the RIB
 	 * @param ribHandler
 	 * @param objectName

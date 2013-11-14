@@ -1,4 +1,4 @@
-package rina.events.api.events;
+package rina.ipcprocess.impl.events;
 
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.events.api.BaseEvent;
@@ -10,19 +10,16 @@ import rina.events.api.Event;
  * @author eduardgrasa
  *
  */
-public class NMinusOneFlowDeallocatedEvent extends BaseEvent{
+public class ManagementFlowDeallocatedEvent extends BaseEvent{
 
 	/** The portId of the deallocated flow **/
 	private int portId = 0;
 	
-	/**
-	 * If the N-1 flow deallocated was a management flow, this is 
-	 * the CDAP Session descriptor associated to it
-	 */
+	/** The descriptor of the CDAP session running over the flow that has been deallocated**/
 	private CDAPSessionDescriptor cdapSessionDescriptor = null;
 	
-	public NMinusOneFlowDeallocatedEvent(int portId, CDAPSessionDescriptor cdapSessionDescriptor) {
-		super(Event.N_MINUS_1_FLOW_DEALLOCATED);
+	public ManagementFlowDeallocatedEvent(int portId, CDAPSessionDescriptor cdapSessionDescriptor) {
+		super(Event.MANAGEMENT_FLOW_DEALLOCATED);
 		this.portId = portId;
 		this.cdapSessionDescriptor = cdapSessionDescriptor;
 	}
@@ -30,16 +27,16 @@ public class NMinusOneFlowDeallocatedEvent extends BaseEvent{
 	public int getPortId() {
 		return this.portId;
 	}
-	
-	public CDAPSessionDescriptor getCdapSessionDescriptor() {
-		return cdapSessionDescriptor;
-	}
 
+	public CDAPSessionDescriptor getCDAPSessionDescriptor() {
+		return this.cdapSessionDescriptor;
+	}
+	
 	@Override
 	public String toString(){
 		String result = "Event id: "+this.getId()+" \n";
 		result = result + "Port id: "+this.getPortId() + "\n";
-		result = result + "CDAP Session descriptor: " + this.getCdapSessionDescriptor() + "\n";
+		result = result + "CDAP Session Descriptor: "+this.cdapSessionDescriptor.toString();
 		
 		return result;
 	}

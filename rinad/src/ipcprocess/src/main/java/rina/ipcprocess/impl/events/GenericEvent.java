@@ -1,4 +1,4 @@
-package rina.events.api.events;
+package rina.ipcprocess.impl.events;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -3,7 +3,7 @@ package rina.ipcmanager.impl.conf;
 import java.util.List;
 import java.util.Map;
 
-import rina.enrollment.api.Neighbor;
+import eu.irati.librina.Neighbor;
 
 /**
  * Contains enough information to create an IPC Process

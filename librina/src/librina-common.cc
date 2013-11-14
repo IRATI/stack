@@ -1172,6 +1172,14 @@ void DIFConfiguration::setDataTransferConstants(
 }
 
 /* CLASS NEIGHBOR */
+Neighbor::Neighbor() {
+        address = false;
+        averageRTTInMs = 0;
+        lastHeardFromTimeInMs = 0;
+        enrolled = false;
+        underlyingPortId = 0;
+}
+
 bool Neighbor::operator==(const Neighbor &other) const{
         return name == other.getName();
 }
@@ -1199,6 +1207,47 @@ void Neighbor::setSupportingDifName(
         const ApplicationProcessNamingInformation& supportingDifName) {
         this->supportingDifName = supportingDifName;
 }
+
+unsigned int Neighbor::getAddress() const {
+        return address;
+}
+
+void Neighbor::setAddress(unsigned int address) {
+        this->address = address;
+}
+
+unsigned int Neighbor::getAverageRttInMs() const {
+        return averageRTTInMs;
+}
+
+void Neighbor::setAverageRttInMs(unsigned int averageRttInMs) {
+        averageRTTInMs = averageRttInMs;
+}
+
+bool Neighbor::isEnrolled() const {
+        return enrolled;
+}
+
+void Neighbor::setEnrolled(bool enrolled){
+        this->enrolled = enrolled;
+}
+
+unsigned int Neighbor::getLastHeardFromTimeInMs() const {
+        return lastHeardFromTimeInMs;
+}
+
+void Neighbor::setLastHeardFromTimeInMs(unsigned int lastHeardFromTimeInMs) {
+        this->lastHeardFromTimeInMs = lastHeardFromTimeInMs;
+}
+
+int Neighbor::getUnderlyingPortId() const {
+        return underlyingPortId;
+}
+
+void Neighbor::setUnderlyingPortId(int underlyingPortId) {
+        this->underlyingPortId = underlyingPortId;
+}
+
 
 /* CLAS RIBOBJECT */
 RIBObject::RIBObject(){

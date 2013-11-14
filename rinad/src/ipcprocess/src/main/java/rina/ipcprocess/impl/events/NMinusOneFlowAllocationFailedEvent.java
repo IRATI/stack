@@ -1,4 +1,4 @@
-package rina.events.api.events;
+package rina.ipcprocess.impl.events;
 
 import eu.irati.librina.FlowInformation;
 import rina.events.api.BaseEvent;
@@ -13,7 +13,7 @@ import rina.events.api.Event;
 public class NMinusOneFlowAllocationFailedEvent extends BaseEvent{
 
 	/** The portId of the denied flow **/
-	private int portId = 0;
+	private long handle = 0;
 	
 	/** The FlowService object describing the flow **/
 	private FlowInformation flowInformation = null;
@@ -23,15 +23,15 @@ public class NMinusOneFlowAllocationFailedEvent extends BaseEvent{
 	 */
 	private String resultReason = null;
 	
-	public NMinusOneFlowAllocationFailedEvent(int portId, 
+	public NMinusOneFlowAllocationFailedEvent(long handle, 
 			FlowInformation flowInformation, String resultReason) {
 		super(Event.N_MINUS_1_FLOW_ALLOCATION_FAILED);
-		this.portId = portId;
+		this.handle = handle;
 		this.flowInformation = flowInformation;
 	}
 
-	public int getPortId() {
-		return this.portId;
+	public long getHandle() {
+		return handle;
 	}
 	
 	public FlowInformation getFlowInformation() {
@@ -45,7 +45,7 @@ public class NMinusOneFlowAllocationFailedEvent extends BaseEvent{
 	@Override
 	public String toString(){
 		String result = "Event id: "+this.getId()+" \n";
-		result = result + "Port id: "+this.getPortId() + "\n";
+		result = result + "Handle: "+this.getHandle() + "\n";
 		result = result + "Flow description: " + this.getFlowInformation() + "\n";
 		result = result + "Result reason: " + this.getResultReason() + "\n";
 		

@@ -1,7 +1,11 @@
 package rina.ipcprocess.impl;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,10 +30,21 @@ import rina.encoding.impl.googleprotobuf.qoscube.QoSCubeEncoder;
 import rina.encoding.impl.googleprotobuf.whatevercast.WhatevercastNameArrayEncoder;
 import rina.encoding.impl.googleprotobuf.whatevercast.WhatevercastNameEncoder;
 import rina.enrollment.api.EnrollmentInformationRequest;
+import rina.enrollment.api.EnrollmentTask;
 import rina.flowallocator.api.DirectoryForwardingTableEntry;
 import rina.flowallocator.api.Flow;
+import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
+import rina.ipcprocess.impl.enrollment.ribobjects.AddressRIBObject;
+import rina.ipcprocess.impl.enrollment.ribobjects.NeighborRIBObject;
+import rina.ipcprocess.impl.enrollment.ribobjects.NeighborSetRIBObject;
+import rina.ipcprocess.impl.enrollment.statemachines.BaseEnrollmentStateMachine.State;
+import rina.ipcprocess.impl.resourceallocator.ResourceAllocatorImpl;
+import rina.ipcprocess.impl.ribdaemon.RIBDaemonImpl;
 import rina.resourceallocator.api.ResourceAllocator;
 import rina.ribdaemon.api.RIBDaemon;
+import rina.ribdaemon.api.RIBDaemonException;
+import rina.ribdaemon.api.RIBObject;
+import rina.ribdaemon.api.RIBObjectNames;
 
 import eu.irati.librina.AllocateFlowRequestResultEvent;
 import eu.irati.librina.ApplicationProcessNamingInformation;
@@ -48,6 +63,7 @@ import eu.irati.librina.IPCEventProducerSingleton;
 import eu.irati.librina.IPCEventType;
 import eu.irati.librina.IPCProcessDIFRegistrationEvent;
 import eu.irati.librina.KernelIPCProcessSingleton;
+import eu.irati.librina.Neighbor;
 import eu.irati.librina.QoSCube;
 import eu.irati.librina.rina;
 
@@ -55,10 +71,14 @@ public class IPCProcess {
 	
 	public static final String MANAGEMENT_AE = "Management";
     public static final String DATA_TRANSFER_AE = "Data Transfer";
-	
-	public enum State {NULL, INITIALIZED, ASSIGN_TO_DIF_IN_PROCESS, ASSIGNED_TO_DIF};
+    public static final int DEFAULT_MAX_SDU_SIZE_IN_BYTES = 10000;
+    
+    public enum State {NULL, INITIALIZED, ASSIGN_TO_DIF_IN_PROCESS, ASSIGNED_TO_DIF};
 	
 	private static final Log log = LogFactory.getLog(IPCProcess.class);
+	
+	/** The state */
+	private State operationalState = State.NULL;
 	
 	/** To get events from the Kernel IPC Process or the IPC Manager */
 	private IPCEventProducerSingleton ipcEventProducer = null;
@@ -68,9 +88,6 @@ public class IPCProcess {
 	
 	/** To communicate with the IPC Process components in the kernel */
 	private KernelIPCProcessSingleton kernelIPCProcess = null;
-	
-	/** The state of the IPC Process */ 
-	private State state = State.NULL;
 	
 	/** Map of events pending to be replied */
 	private Map<Long, IPCEvent> pendingEvents = null;
@@ -90,30 +107,59 @@ public class IPCProcess {
 	/** The RIB Daemon */
 	private RIBDaemon ribDaemon = null;
 	
+	/** The enrollment task */
+	private EnrollmentTask enrollmentTask = null;
+	
 	/** The Resource Allocator */
 	private ResourceAllocator resourceAllocator = null;
 	
-	public IPCProcess(ApplicationProcessNamingInformation namingInfo, int id, long ipcManagerPort){
-		log.info("Initializing librina...");
+	/** Static instance to implement the singleton pattern */
+	private static IPCProcess instance = null;
+	
+	/** The IPC Process name */
+	private ApplicationProcessNamingInformation name = null;
+	
+	/** The thread pool implementation */
+	private ExecutorService executorService = null;
+	
+	public static IPCProcess getInstance() {
+		if (instance == null) {
+			instance = new IPCProcess();
+		}
 		
+		return instance;
+	}
+	
+	private IPCProcess(){
+	}
+	
+	public void initialize(ApplicationProcessNamingInformation namingInfo, int id, long ipcManagerPort) {
+		log.info("Initializing librina...");
+
 		rina.initialize();
 		ipcEventProducer = rina.getIpcEventProducer();
 		kernelIPCProcess = rina.getKernelIPCProcess();
 		kernelIPCProcess.setIPCProcessId(id);
 		ipcManager = rina.getExtendedIPCManager();
 		ipcManager.setIpcProcessId(id);
-		ipcManager.setIpcProcessName(namingInfo);
 		ipcManager.setIPCManagerPort(ipcManagerPort);
+		name = namingInfo;
 		pendingEvents = new ConcurrentHashMap<Long, IPCEvent>();
+		executorService = Executors.newCachedThreadPool();
 		delimiter = new DIFDelimiter();
 		cdapSessionManager = new CDAPSessionManagerImpl(
 				new GoogleProtocolBufWireMessageProviderFactory());
 		encoder = createEncoder();
 		ribDaemon = new RIBDaemonImpl();
-		
+		enrollmentTask = new EnrollmentTaskImpl();
+		resourceAllocator = new ResourceAllocatorImpl();
+		((RIBDaemonImpl) ribDaemon).setIPCProcess(this);
+		((EnrollmentTaskImpl) enrollmentTask).setIPCProcess(this);
+		((ResourceAllocatorImpl) resourceAllocator).setIPCProcess(this);
+
 		log.info("Initialized IPC Process with AP name: "+namingInfo.getProcessName()
 				+ "; AP instance: "+namingInfo.getProcessInstance() + "; id: "+id);
-		
+
 		log.info("Notifying IPC Manager about successful initialization... ");
 		try {
 			ipcManager.notifyIPCProcessInitialized();
@@ -122,9 +168,13 @@ public class IPCProcess {
 			log.error("Shutting down IPC Process");
 			System.exit(-1);
 		}
-		setState(State.INITIALIZED);
-		
+		setOperationalState(State.INITIALIZED);
+
 		log.info("IPC Manager notified successfully");
+	}
+	
+	public void execute(Runnable runnable) {
+		executorService.execute(runnable);
 	}
 	
 	public Delimiter getDelimiter() {
@@ -141,6 +191,10 @@ public class IPCProcess {
 	
 	public RIBDaemon getRIBDaemon() {
 		return ribDaemon;
+	}
+	
+	public EnrollmentTask getEnrollmentTask() {
+		return enrollmentTask;
 	}
 	
 	public ResourceAllocator getResourceAllocator() {
@@ -164,12 +218,16 @@ public class IPCProcess {
           return encoder;
 	}
 	
-	public State getState() {
-		return state;
+	public State getOperationalState(){
+        return operationalState;
 	}
 	
-	private void setState(State state) {
-		this.state = state;
+	public void setOperationalState(State state) {
+		this.operationalState = state;
+	}
+	
+	public ApplicationProcessNamingInformation getName() {
+		return name;
 	}
 	
 	public void executeEventLoop(){
@@ -215,10 +273,10 @@ public class IPCProcess {
 	}
 	
 	private synchronized void processAssignToDIFRequest(AssignToDIFRequestEvent event) throws Exception{
-		if (getState() != State.INITIALIZED) {
+		if (getOperationalState() != State.INITIALIZED) {
 			//The IPC Process can only be assigned to a DIF once, reply with error message
 			log.error("Got a DIF assignment request while not in INITIALIZED state. " 
-						+ "Current state is: " + getState());
+						+ "Current state is: " + getOperationalState());
 			ipcManager.assignToDIFResponse(event, -1);
 			return;
 		}
@@ -226,7 +284,7 @@ public class IPCProcess {
 		try {
 			long handle = kernelIPCProcess.assignToDIF(event.getDIFInformation());
 			pendingEvents.put(handle, event);
-			setState(State.ASSIGN_TO_DIF_IN_PROCESS);
+			setOperationalState(State.ASSIGN_TO_DIF_IN_PROCESS);
 		} catch (Exception ex) {
 			log.error("Problems sending DIF Assignment request to the kernel: "+ex.getMessage());
 			ipcManager.assignToDIFResponse(event, -1);
@@ -234,9 +292,9 @@ public class IPCProcess {
 	}
 	
 	private synchronized void processAssignToDIFResponseEvent(AssignToDIFResponseEvent event) throws Exception{
-		if (getState() != State.ASSIGN_TO_DIF_IN_PROCESS) {
+		if (getOperationalState() != State.ASSIGN_TO_DIF_IN_PROCESS) {
 			log.error("Got a DIF assignment response while not in ASSIGN_TO_DIF_IN_CPORCES state." 
-						+ " Current state is " + getState());
+						+ " Current state is " + getOperationalState());
 			return;
 		}
 		
@@ -256,15 +314,55 @@ public class IPCProcess {
 		if (event.getResult() == 0) {
 			log.debug("The kernel processed successfully the Assign to DIF Request");
 			ipcManager.assignToDIFResponse(arEvent, 0);
-			setState(State.ASSIGNED_TO_DIF);
+			setOperationalState(State.ASSIGNED_TO_DIF);
 			difInformation = arEvent.getDIFInformation();
 			log.info("IPC Process successfully assigned to DIF "+ difInformation.getDifName());
 		} else {
 			log.error("The kernel couldn't successfully process the Assign to DIF Request: "+ event.getResult());
 			ipcManager.assignToDIFResponse(arEvent, -1);
-			setState(State.INITIALIZED);
+			setOperationalState(State.INITIALIZED);
 			log.error("Could not assign IPC Process to DIF " + difInformation.getDifName());
 		}
 	}
+	
+	public Long getAddress() {
+		Long result = null;
+        RIBDaemon ribDaemon = null;
+        
+        try{
+                result = (Long) ribDaemon.read(AddressRIBObject.ADDRESS_RIB_OBJECT_CLASS, 
+                		AddressRIBObject.ADDRESS_RIB_OBJECT_NAME).getObjectValue();
+        }catch(Exception ex){
+                ex.printStackTrace();
+        }
+
+        return result;
+	}
+	
+	/**
+     * Returns the list of IPC processes that are part of the DIF this IPC Process is part of
+     * @return
+     */
+    public List<Neighbor> getNeighbors(){
+            List<Neighbor> result = new ArrayList<Neighbor>();
+            RIBDaemon ribDaemon = null;
+            RIBObject ribObject = null;
+            RIBObject childRibObject = null;
+            
+            try{
+                    ribObject = ribDaemon.read(NeighborSetRIBObject.NEIGHBOR_SET_RIB_OBJECT_CLASS, 
+                    		NeighborSetRIBObject.NEIGHBOR_SET_RIB_OBJECT_NAME);
+                    if (ribObject != null && ribObject.getChildren() != null){
+                            for(int i=0; i<ribObject.getChildren().size(); i++){
+                                    childRibObject = ribObject.getChildren().get(i);
+                                    result.add((Neighbor)childRibObject.getObjectValue());
+                            }
+                    }
+            }catch(Exception ex){
+                    ex.printStackTrace();
+            }
+
+            return result;
+    }
 
 }

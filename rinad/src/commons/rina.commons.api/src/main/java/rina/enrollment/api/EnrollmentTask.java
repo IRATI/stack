@@ -3,6 +3,7 @@ package rina.enrollment.api;
 import java.util.List;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.Neighbor;
 
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;

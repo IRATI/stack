@@ -908,7 +908,26 @@ class Neighbor {
          */
         ApplicationProcessNamingInformation supportingDifName;
 
+        /** The address */
+        unsigned int address;
+
+        /** Tells if it is enrolled or not */
+        bool enrolled;
+
+        /** The average RTT in ms */
+        unsigned int averageRTTInMs;
+
+        /** The underlying portId used to communicate with this neighbor */
+        int underlyingPortId;
+
+        /**
+         * The last time a KeepAlive message was received from
+         * that neighbor, in ms
+         */
+        unsigned int lastHeardFromTimeInMs;
+
 public:
+        Neighbor();
         bool operator==(const Neighbor &other) const;
         bool operator!=(const Neighbor &other) const;
         const ApplicationProcessNamingInformation& getName() const;
@@ -917,6 +936,16 @@ public:
                 getSupportingDifName() const;
         void setSupportingDifName(
                 const ApplicationProcessNamingInformation& supportingDifName);
+        unsigned int getAddress() const;
+        void setAddress(unsigned int address);
+        unsigned int getAverageRttInMs() const;
+        void setAverageRttInMs(unsigned int averageRttInMs);
+        bool isEnrolled() const;
+        void setEnrolled(bool enrolled);
+        unsigned int getLastHeardFromTimeInMs() const;
+        void setLastHeardFromTimeInMs(unsigned int lastHeardFromTimeInMs);
+        int getUnderlyingPortId() const;
+        void setUnderlyingPortId(int underlyingPortId);
 };
 
 /**
