@@ -472,6 +472,8 @@ DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested);
 enum DIFConfigurationAttributes {
 	DCONF_ATTR_PARAMETERS = 1,
 	DCONF_ATTR_DATA_TRANS_CONST,
+	DCONF_ATTR_ADDRESS,
+	DCONF_ATTR_QOS_CUBES,
 	__DCONF_ATTR_MAX,
 };
 

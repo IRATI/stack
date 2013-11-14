@@ -21,7 +21,9 @@ import rina.enrollment.api.EnrollmentInformationRequest;
 import rina.enrollment.api.EnrollmentTask;
 import rina.flowallocator.api.DirectoryForwardingTable;
 import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
 import rina.ipcprocess.impl.enrollment.ribobjects.NeighborSetRIBObject;
+import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
 import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBDaemonException;
 import rina.ribdaemon.api.RIBObject;
@@ -261,10 +263,11 @@ public class EnrollerStateMachine extends BaseEnrollmentStateMachine{
 		}
 		
 		//Check if the address is in use
-		List<Neighbor> neighbors = this.ribDaemon.getIPCProcess().getNeighbors();
+		List<Neighbor> neighbors = ipcProcess.getNeighbors();
 		for(int i=0; i<neighbors.size(); i++){
 			if(neighbors.get(i).getAddress() == address){
-				if (neighbors.get(i).getApplicationProcessName().equals(this.remotePeer.getApplicationProcessName())){
+				if (neighbors.get(i).getName().getProcessName().equals(
+						this.remotePeer.getName().getProcessName())){
 					//We knew about this IPC Process
 					return true;
 				}else{
@@ -287,22 +290,22 @@ public class EnrollerStateMachine extends BaseEnrollmentStateMachine{
 		
 		//See if we know the configuration of the remote IPC Process
 		KnownIPCProcessAddress ipcAddress = rinaConf.getIPCProcessAddress(this.enrollmentTask.getIPCProcess().getDIFName(),
-				this.remotePeer.getApplicationProcessName(), 
-				this.remotePeer.getApplicationProcessInstance());
+				this.remotePeer.getName().getProcessName(), 
+				this.remotePeer.getName().getProcessInstance());
 		if (ipcAddress != null){
 			return ipcAddress.getAddress();
 		}
 		
 		//See if we know the prefix of the remote IPC Process
-		long prefix = rinaConf.getAddressPrefixConfiguration(this.enrollmentTask.getIPCProcess().getDIFName(), 
-				this.remotePeer.getApplicationProcessName());
+		long prefix = rinaConf.getAddressPrefixConfiguration(difInformation.ge, 
+				this.remotePeer.getName().getProcessName());
 		if (prefix == -1){
 			//We don't know the prefix, return an invalid address indicating 
 			//that the IPC Process cannot join the DIF
 			return prefix;
 		}else{
 			//Get an address that is not in use
-			List<Neighbor> neighbors = this.ribDaemon.getIPCProcess().getNeighbors();
+			List<Neighbor> neighbors = ipcProcess.getNeighbors();
 			long candidateAddress = prefix;
 			while(candidateAddress < prefix + AddressPrefixConfiguration.MAX_ADDRESSES_PER_PREFIX){
 				for(int i=0; i<neighbors.size(); i++){
@@ -334,12 +337,12 @@ public class EnrollerStateMachine extends BaseEnrollmentStateMachine{
 				WhatevercastName.WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME);
 		
 		//Send data transfer constants
-		sendCreateInformation(DataTransferConstants.DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS, 
-				DataTransferConstants.DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME);
+		sendCreateInformation(DataTransferConstantsRIBObject.DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS, 
+				DataTransferConstantsRIBObject.DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME);
 		
 		//Send QoS Cubes
-		sendCreateInformation(QoSCube.QOSCUBE_SET_RIB_OBJECT_CLASS, 
-				QoSCube.QOSCUBE_SET_RIB_OBJECT_NAME);
+		sendCreateInformation(QoSCubeSetRIBObject.QOSCUBE_SET_RIB_OBJECT_CLASS, 
+				QoSCubeSetRIBObject.QOSCUBE_SET_RIB_OBJECT_NAME);
 	}
 	
 	/**

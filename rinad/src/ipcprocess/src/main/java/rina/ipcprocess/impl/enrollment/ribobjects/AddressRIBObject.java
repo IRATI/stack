@@ -1,5 +1,9 @@
 package rina.ipcprocess.impl.enrollment.ribobjects;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import rina.ipcprocess.impl.IPCProcess;
 import rina.ribdaemon.api.BaseRIBObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
 import rina.ribdaemon.api.RIBDaemonException;
@@ -17,13 +21,16 @@ public class AddressRIBObject extends BaseRIBObject{
 			RIBObjectNames.SEPARATOR + RIBObjectNames.MANAGEMENT + RIBObjectNames.SEPARATOR + RIBObjectNames.NAMING + 
 			RIBObjectNames.SEPARATOR + RIBObjectNames.ADDRESS;
 
+	private static final Log log = LogFactory.getLog(AddressRIBObject.class);
+	
 	public static final String ADDRESS_RIB_OBJECT_CLASS = "address";
 
-	private Long address = null;
+	private IPCProcess ipcProcess = null;
 
 	public AddressRIBObject(){
 		super(ADDRESS_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), 
 				ADDRESS_RIB_OBJECT_NAME);
+		ipcProcess = IPCProcess.getInstance();
 	}
 	
 	@Override
@@ -38,14 +45,19 @@ public class AddressRIBObject extends BaseRIBObject{
 					"Object class ("+object.getClass().getName()+") does not match object name "+this.getObjectName());
 		}
 		
-		synchronized(this){
-			this.address = (Long) object;
+		if (ipcProcess.getDIFInformation() == null) {
+			log.warn("Tried to wite address, but DIF information is NULL, shouldn't have happened");
+		} else {
+			ipcProcess.getDIFInformation().getDifConfiguration().setAddress(
+					((Long)object).longValue());
 		}
+		
+		
 	}
 	
 	@Override
 	public synchronized Object getObjectValue(){
-		return address;
+		return ipcProcess.getAddress();
 	}
 
 }

@@ -955,6 +955,31 @@ int parseListOfQoSCubes(nlattr *nested,
 	return 0;
 }
 
+int parseListOfQoSCubesForDIFConfiguration(nlattr *nested,
+                DIFConfiguration * difConfiguration){
+        nlattr * nla;
+        int rem;
+        QoSCube * qosCube;
+
+        for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+                     nla_ok(nla, rem);
+                     nla = nla_next(nla, &(rem))){
+                /* validate & parse attribute */
+                qosCube = parseQoSCubeObject(nla);
+                if (qosCube == 0){
+                        return -1;
+                }
+                difConfiguration->addQoSCube(*qosCube);
+                delete qosCube;
+        }
+
+        if (rem > 0){
+                LOG_WARN("Missing bits to parse");
+        }
+
+        return 0;
+}
+
 DIFProperties * parseDIFPropertiesObject(nlattr *nested){
 	struct nla_policy attr_policy[DIF_PROP_ATTR_MAX + 1];
 	attr_policy[DIF_PROP_ATTR_DIF_NAME].type = NLA_NESTED;
@@ -1915,7 +1940,7 @@ int putDataTransferConstantsObject(nl_msg* netlinkMessage,
 
 int putDIFConfigurationObject(nl_msg* netlinkMessage,
 		const DIFConfiguration& object){
-	struct nlattr *parameters, *dataTransferConstants;
+	struct nlattr *parameters, *dataTransferConstants, *qosCubes;
 
 	if (!(parameters = nla_nest_start(
 	                netlinkMessage, DCONF_ATTR_PARAMETERS))) {
@@ -1936,6 +1961,19 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 	        goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, dataTransferConstants);
+
+	NLA_PUT_U32(netlinkMessage, DCONF_ATTR_ADDRESS,
+	                object.getAddress());
+
+	if (!(qosCubes = nla_nest_start(
+	                netlinkMessage, DCONF_ATTR_QOS_CUBES))) {
+	        goto nla_put_failure;
+	}
+	if (putListOfQoSCubeObjects(netlinkMessage,
+	                object.getQosCubes()) < 0) {
+	        goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, qosCubes);
 
 	return 0;
 
@@ -3577,6 +3615,12 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	attr_policy[DCONF_ATTR_DATA_TRANS_CONST].type = NLA_NESTED;
 	attr_policy[DCONF_ATTR_DATA_TRANS_CONST].minlen = 0;
 	attr_policy[DCONF_ATTR_DATA_TRANS_CONST].maxlen = 0;
+	attr_policy[DCONF_ATTR_ADDRESS].type = NLA_U32;
+	attr_policy[DCONF_ATTR_ADDRESS].minlen = 4;
+	attr_policy[DCONF_ATTR_ADDRESS].maxlen = 4;
+	attr_policy[DCONF_ATTR_QOS_CUBES].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_QOS_CUBES].minlen = 0;
+	attr_policy[DCONF_ATTR_QOS_CUBES].maxlen = 0;
 	struct nlattr *attrs[DCONF_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, DCONF_ATTR_MAX, nested, attr_policy);
@@ -3610,6 +3654,19 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
                         result->setDataTransferConstants(
                                         *dataTransferConstants);
                         delete dataTransferConstants;
+                }
+        }
+
+        if (attrs[DCONF_ATTR_ADDRESS]) {
+                result->setAddress(nla_get_u32(attrs[DCONF_ATTR_ADDRESS]));
+        }
+
+        if (attrs[DIF_PROP_ATTR_QOS_CUBES]) {
+                status = parseListOfQoSCubesForDIFConfiguration(
+                                attrs[DIF_PROP_ATTR_QOS_CUBES], result);
+                if (status != 0){
+                        delete result;
+                        return 0;
                 }
         }
 

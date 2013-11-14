@@ -1244,10 +1244,13 @@ int testIpcmAssignToDIFRequestMessage() {
 
 	ApplicationProcessNamingInformation  difName;
 	difName.setProcessName("/difs/Test.DIF");
+	std::cout<<"Here";
 
 	IpcmAssignToDIFRequestMessage message;
 	DIFInformation difInformation;
+	std::cout<<"Here";
 	DIFConfiguration difConfiguration;
+	std::cout<<"Here";
 	difInformation.setDifType("shim-ethernet");
 	difInformation.setDifName(difName);
 	Parameter * parameter = new Parameter("interface", "eth0");
@@ -1267,6 +1270,13 @@ int testIpcmAssignToDIFRequestMessage() {
 	dataTransferConstants.setQosIdLenght(7);
 	dataTransferConstants.setSequenceNumberLength(8);
 	difConfiguration.setDataTransferConstants(dataTransferConstants);
+	difConfiguration.setAddress(34);
+	QoSCube * qosCube = new QoSCube("cube 1", 1);
+	//difConfiguration.addQoSCube(*qosCube);
+	delete qosCube;
+	qosCube = new QoSCube("cube 2", 2);
+	//difConfiguration.addQoSCube(*qosCube);
+	delete qosCube;
 	difInformation.setDifConfiguration(difConfiguration);
 	message.setDIFInformation(difInformation);
 
@@ -1290,6 +1300,7 @@ int testIpcmAssignToDIFRequestMessage() {
 	IpcmAssignToDIFRequestMessage * recoveredMessage =
 			dynamic_cast<IpcmAssignToDIFRequestMessage *>(
 					parseBaseNetlinkMessage(netlinkMessageHeader));
+	std::cout<<"Here";
 	if (recoveredMessage == 0) {
 		std::cout << "Error parsing Ipcm Assign To DIF Request Message "
 				<< "\n";
@@ -1370,6 +1381,18 @@ int testIpcmAssignToDIFRequestMessage() {
                                         recoveredMessage->getDIFInformation().getDifConfiguration().
                                         getDataTransferConstants().isDifIntegrity()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.difIntegrity on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getDIFInformation().getDifConfiguration().getAddress() !=
+                                        recoveredMessage->getDIFInformation().getDifConfiguration().
+                                        getAddress()) {
+                std::cout << "DIFInformation.DIFConfiguration.address original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getDIFInformation().getDifConfiguration().getQosCubes().size() !=
+                        recoveredMessage->getDIFInformation().getDifConfiguration().
+                        getQosCubes().size()) {
+                std::cout << "DIFInformation.DIFConfiguration.qosCubes.size original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
         }

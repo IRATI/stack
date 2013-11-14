@@ -4,10 +4,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
-import eu.irati.librina.ExtendedIPCManagerSingleton;
+import eu.irati.librina.DIFInformation;
+import eu.irati.librina.DataTransferConstants;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.Neighbor;
-import eu.irati.librina.rina;
+import eu.irati.librina.QoSCube;
 
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.CDAPSessionManager;
@@ -18,6 +19,10 @@ import rina.encoding.api.Encoder;
 import rina.enrollment.api.EnrollmentInformationRequest;
 import rina.enrollment.api.EnrollmentTask;
 import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
+import rina.ipcprocess.impl.enrollment.ribobjects.AddressRIBObject;
+import rina.ipcprocess.impl.enrollment.ribobjects.NeighborSetRIBObject;
+import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
 import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBDaemonException;
 import rina.ribdaemon.api.RIBObjectNames;
@@ -41,10 +46,18 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 	
 	private CDAPMessage stopEnrollmentRequestMessage = null;
 	
+	/** The DIF Information */
+	private DIFInformation difInformation = null;
+	
 	public EnrolleeStateMachine(RIBDaemon ribDaemon, CDAPSessionManager cdapSessionManager, Encoder encoder, 
 			ApplicationProcessNamingInformation remoteNamingInfo, EnrollmentTask enrollmentTask, long timeout){
 		super(ribDaemon, cdapSessionManager, encoder, remoteNamingInfo, enrollmentTask, timeout);
 		ipcProcess = IPCProcess.getInstance();
+		difInformation = ipcProcess.getDIFInformation();
+		if (difInformation == null) {
+			difInformation = new DIFInformation();
+			ipcProcess.setDIFInformation(difInformation);
+		}
 	}
 	
 	
@@ -177,7 +190,7 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 			try{
 				long address = ((EnrollmentInformationRequest) encoder.decode(
 						cdapMessage.getObjValue().getByteval(), EnrollmentInformationRequest.class)).getAddress();
-				ribDaemon.write(RIBObjectNames.ADDRESS_RIB_OBJECT_CLASS, RIBObjectNames.ADDRESS_RIB_OBJECT_NAME, 
+				ribDaemon.write(AddressRIBObject.ADDRESS_RIB_OBJECT_CLASS, AddressRIBObject.ADDRESS_RIB_OBJECT_NAME, 
 						new Long(address), null);
 			}catch(Exception ex){
 				ex.printStackTrace();
@@ -307,18 +320,18 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 	private CDAPMessage nextObjectRequired() throws Exception{
 		CDAPMessage cdapMessage = null;
 		
-		if (ribDaemon.getIPCProcess().getDataTransferConstants() == null){
+		if (!difInformation.getDifConfiguration().getDataTransferConstants().isInitialized()) {
 			cdapMessage = cdapSessionManager.getReadObjectRequestMessage(portId, null, null, 
-					DataTransferConstants.DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS, 0, 
-					DataTransferConstants.DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME, 0, true);
-		}else if (ribDaemon.getIPCProcess().getQoSCubes().size() == 0){
+					DataTransferConstantsRIBObject.DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS, 0, 
+					DataTransferConstantsRIBObject.DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME, 0, true);
+		} else if (difInformation.getDifConfiguration().getQosCubes().size() == 0){
 			cdapMessage = cdapSessionManager.getReadObjectRequestMessage(portId, null, null, 
-					QoSCube.QOSCUBE_SET_RIB_OBJECT_CLASS, 0, QoSCube.QOSCUBE_SET_RIB_OBJECT_NAME, 
-					0, true);
-		}else if (ribDaemon.getIPCProcess().getNeighbors().size() == 0){
+					QoSCubeSetRIBObject.QOSCUBE_SET_RIB_OBJECT_CLASS, 0, 
+					QoSCubeSetRIBObject.QOSCUBE_SET_RIB_OBJECT_NAME, 0, true);
+		}else if (ipcProcess.getNeighbors().size() == 0){
 			cdapMessage = cdapSessionManager.getReadObjectRequestMessage(portId, null, null, 
-					Neighbor.NEIGHBOR_SET_RIB_OBJECT_CLASS, 0, Neighbor.NEIGHBOR_SET_RIB_OBJECT_NAME, 
-					0, true);
+					NeighborSetRIBObject.NEIGHBOR_SET_RIB_OBJECT_CLASS, 0, 
+					NeighborSetRIBObject.NEIGHBOR_SET_RIB_OBJECT_NAME, 0, true);
 		}
 		
 		return cdapMessage;
@@ -376,7 +389,8 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 			return;
 		}
 		
-		if (cdapMessage.getObjName().equals(DataTransferConstants.DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME)){
+		if (cdapMessage.getObjName().equals(
+				DataTransferConstantsRIBObject.DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME)){
 			try{
 				DataTransferConstants constants = (DataTransferConstants) encoder.decode(
 						cdapMessage.getObjValue().getByteval(), DataTransferConstants.class);
@@ -385,7 +399,7 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 			}catch(Exception ex){
 				log.error(ex);
 			}
-		}else if (cdapMessage.getObjName().equals(QoSCube.QOSCUBE_SET_RIB_OBJECT_NAME)){
+		}else if (cdapMessage.getObjName().equals(QoSCubeSetRIBObject.QOSCUBE_SET_RIB_OBJECT_NAME)){
 			try{
 				QoSCube[] cubesArray = (QoSCube[]) encoder.decode(
 						cdapMessage.getObjValue().getByteval(), QoSCube[].class);
@@ -394,7 +408,8 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 			}catch(Exception ex){
 				log.error(ex);
 			}
-		}else if (cdapMessage.getObjName().equals(Neighbor.NEIGHBOR_SET_RIB_OBJECT_NAME)){
+		}else if (cdapMessage.getObjName().equals(
+				NeighborSetRIBObject.NEIGHBOR_SET_RIB_OBJECT_NAME)){
 			try{
 				Neighbor[] neighborsArray = (Neighbor[]) encoder.decode(
 						cdapMessage.getObjValue().getByteval(), Neighbor[].class);

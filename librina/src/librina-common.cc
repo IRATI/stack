@@ -420,6 +420,20 @@ void FlowInformation::setRemoteAppName(
 }
 
 /* CLASS QoS CUBE */
+QoSCube::QoSCube(){
+        id = 0;
+        averageBandwidth = 0;
+        averageSDUBandwidth = 0;
+        peakBandwidthDuration = 0;
+        peakSDUBandwidthDuration = 0;
+        undetectedBitErrorRate = 0;
+        partialDelivery = true;
+        orderedDelivery = false;
+        maxAllowableGap = -1;
+        jitter = 0;
+        delay = 0;
+}
+
 QoSCube::QoSCube(const std::string& name, int id) {
 	this->name = name;
 	this->id = id;
@@ -1095,6 +1109,15 @@ void DataTransferConstants::setSequenceNumberLength(
         this->sequenceNumberLength = sequenceNumberLength;
 }
 
+bool DataTransferConstants::isInitialized() {
+        if (qosIdLenght == 0 || addressLength == 0 || cepIdLength == 0 ||
+            qosIdLenght == 0 || lengthLength == 0 ){
+                return false;
+        }
+
+        return true;
+}
+
 /* CLASS DIF INFORMATION */
 const ApplicationProcessNamingInformation& DIFInformation::getDifName()
 		const {
@@ -1125,6 +1148,14 @@ void DIFInformation::setDifConfiguration(
 }
 
 /* CLASS DIF CONFIGURATION */
+unsigned int DIFConfiguration::getAddress() const {
+        return address;
+}
+
+void DIFConfiguration::setAddress(unsigned int address) {
+        this->address = address;
+}
+
 const std::list<Policy>& DIFConfiguration::getPolicies() {
 	return policies;
 }
@@ -1145,7 +1176,7 @@ void DIFConfiguration::setQosCubes(const std::list<QoSCube>& qosCubes) {
 	this->qosCubes = qosCubes;
 }
 
-void DIFConfiguration::adQoSCube(const QoSCube& qosCube) {
+void DIFConfiguration::addQoSCube(const QoSCube& qosCube) {
         qosCubes.push_back(qosCube);
 }
 

@@ -837,6 +837,7 @@ public:
         void setQosIdLenght(unsigned short qosIdLenght);
         unsigned short getSequenceNumberLength() const;
         void setSequenceNumberLength(unsigned short sequenceNumberLength);
+        bool isInitialized();
 };
 
 /**
@@ -847,6 +848,9 @@ class DIFConfiguration {
 
         /** The DIF Data Transfer constants */
         DataTransferConstants dataTransferConstants;
+
+        /** The address of the IPC Process in the DIF */
+        unsigned int address;
 
 	/** The QoS cubes supported by the DIF */
 	std::list<QoSCube> qosCubes;
@@ -863,13 +867,15 @@ public:
 	void addPolicy(const Policy& policy);
 	const std::list<QoSCube>& getQosCubes() const;
 	void setQosCubes(const std::list<QoSCube>& qosCubes);
-	void adQoSCube(const QoSCube& qosCube);
+	void addQoSCube(const QoSCube& qosCube);
 	const std::list<Parameter>& getParameters() const;
 	void setParameters(const std::list<Parameter>& parameters);
 	void addParameter(const Parameter& parameter);
         const DataTransferConstants& getDataTransferConstants() const;
         void setDataTransferConstants(
                         const DataTransferConstants& dataTransferConstants);
+        unsigned int getAddress() const;
+        void setAddress(unsigned int address);
 };
 
 /**

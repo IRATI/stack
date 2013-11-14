@@ -35,16 +35,12 @@ import rina.flowallocator.api.DirectoryForwardingTableEntry;
 import rina.flowallocator.api.Flow;
 import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
 import rina.ipcprocess.impl.enrollment.ribobjects.AddressRIBObject;
-import rina.ipcprocess.impl.enrollment.ribobjects.NeighborRIBObject;
 import rina.ipcprocess.impl.enrollment.ribobjects.NeighborSetRIBObject;
-import rina.ipcprocess.impl.enrollment.statemachines.BaseEnrollmentStateMachine.State;
 import rina.ipcprocess.impl.resourceallocator.ResourceAllocatorImpl;
 import rina.ipcprocess.impl.ribdaemon.RIBDaemonImpl;
 import rina.resourceallocator.api.ResourceAllocator;
 import rina.ribdaemon.api.RIBDaemon;
-import rina.ribdaemon.api.RIBDaemonException;
 import rina.ribdaemon.api.RIBObject;
-import rina.ribdaemon.api.RIBObjectNames;
 
 import eu.irati.librina.AllocateFlowRequestResultEvent;
 import eu.irati.librina.ApplicationProcessNamingInformation;
@@ -316,6 +312,8 @@ public class IPCProcess {
 			ipcManager.assignToDIFResponse(arEvent, 0);
 			setOperationalState(State.ASSIGNED_TO_DIF);
 			difInformation = arEvent.getDIFInformation();
+			
+			//TODO create the RIB Objects (address, DataTransferConstants, QoS cubes)
 			log.info("IPC Process successfully assigned to DIF "+ difInformation.getDifName());
 		} else {
 			log.error("The kernel couldn't successfully process the Assign to DIF Request: "+ event.getResult());
@@ -325,18 +323,20 @@ public class IPCProcess {
 		}
 	}
 	
+	public DIFInformation getDIFInformation() {
+		return difInformation;
+	}
+	
+	public void setDIFInformation(DIFInformation difInformation) {
+		this.difInformation = difInformation;
+	}
+	
 	public Long getAddress() {
-		Long result = null;
-        RIBDaemon ribDaemon = null;
-        
-        try{
-                result = (Long) ribDaemon.read(AddressRIBObject.ADDRESS_RIB_OBJECT_CLASS, 
-                		AddressRIBObject.ADDRESS_RIB_OBJECT_NAME).getObjectValue();
-        }catch(Exception ex){
-                ex.printStackTrace();
-        }
-
-        return result;
+		if (difInformation == null) {
+			return null;
+		}
+		
+		return new Long(difInformation.getDifConfiguration().getAddress());
 	}
 	
 	/**
