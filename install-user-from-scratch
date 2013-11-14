@@ -1,0 +1,45 @@
+#!/bin/sh
+# -*- sh -*-
+
+#
+# Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
+#
+
+ME=install-user-from-scratch
+
+PREFIX=`echo "$1"|sed -e "s,\/$,,"`
+
+echo "$ME: Prefix is \`$PREFIX'"
+if test -n "$PREFIX" ; then
+    mkdir -p $PREFIX || {
+        echo "$ME: Cannot create directory \`$PREFIX'"
+    }
+fi
+
+#
+# FIXME: we should definitely do a VPATH build ...
+#
+
+#echo "$ME: Starting kernel phase"
+#(cd linux && INSTALL_PATH=$PREFIX/boot INSTALL_MOD_PATH=$PREFIX make bzImage modules modules_install install) || {
+#    echo "$ME: Cannot complete kernel phase"
+#    exit 1
+#}
+
+echo "$ME: Starting librina phase"
+(cd librina && ./bootstrap && ./configure --enable-java-bindings --prefix=$PREFIX && make CPPFLAGS="-I $PREFIX/usr/include" clean install installcheck) || {
+    echo "$ME: Cannot complete librina phase"
+    exit 1
+}
+
+echo "$ME: Starting rinad phase"
+(cd rinad && ./bootstrap && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PREFIX/lib ./configure --prefix=$PREFIX && make clean install installcheck) || {
+    echo "$ME: Cannot complete rinad phase"
+    exit 1
+}
+
+echo "$ME: Starting rina-tools phase"
+(cd rina-tools && ./bootstrap && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PREFIX/lib ./configure --prefix=$PREFIX  && make clean install installcheck) || {
+    echo "$ME: Cannot complete rina-tools phase"
+    exit 1
+}

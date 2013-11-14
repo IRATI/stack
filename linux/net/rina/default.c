@@ -2,7 +2,6 @@
  * RINA default personality
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -104,7 +103,7 @@ static int default_allocate_port(struct personality_data * data,
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
-        
+
         return kfa_flow_create(data->kfa, pid, to_app);
 }
 
@@ -114,7 +113,7 @@ static int default_deallocate_port(struct personality_data * data,
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
-        
+
         return kfa_flow_deallocate(data->kfa, port_id);
 }
 
@@ -265,4 +264,3 @@ MODULE_DESCRIPTION("RINA default personality");
 MODULE_LICENSE("GPL");
 
 MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
-MODULE_AUTHOR("Leonardo Bergesio <leonardo.bergesio@i2cat.net>");

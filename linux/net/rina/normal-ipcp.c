@@ -425,6 +425,9 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
+        /*  FIXME: Remove as soon as the kipcm_kfa gets removed */
+        instance->data->kfa = kipcm_kfa(default_kipcm);
+
         instance->data->efcpc = efcp_container_create(instance->data->kfa);
         if (!instance->data->efcpc) {
                 rkfree(instance->data->info->name);
@@ -444,8 +447,6 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 rkfree(instance);
                 return NULL;
         }
-        /*  FIXME: Remove as soon as the kipcm_kfa gets removed */
-        instance->data->kfa = kipcm_kfa(default_kipcm);
 
         /* FIXME: Probably missing normal flow structures creation */
         INIT_LIST_HEAD(&instance->data->flows);

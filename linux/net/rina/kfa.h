@@ -71,6 +71,6 @@ struct ipcp_flow * kfa_find_flow_by_pid(struct kfa * instance,
  */
 int          kfa_sdu_post_to_user_space(struct kfa * instance,
                                         struct sdu * sdu,
-                                        cep_id_t     cep_id);
+                                        port_id_t    to);
 
 #endif

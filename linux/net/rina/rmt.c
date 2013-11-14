@@ -52,9 +52,10 @@ struct rmt * rmt_create(struct kfa * kfa,
                 rkfree(tmp);
                 return NULL;
         }
-        
+
         tmp->kfa   = kfa;
         tmp->efcpc = efcpc;
+
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
         return tmp;
@@ -79,18 +80,10 @@ int rmt_destroy(struct rmt * instance)
 }
 EXPORT_SYMBOL(rmt_destroy);
 
-int rmt_send_sdu(struct rmt * instance,
-                 address_t    address,
-                 cep_id_t     connection_id,
-                 struct sdu * sdu)
-{
-        LOG_MISSING;
-
-        return 0;
-}
-
-int rmt_send_pdu(struct rmt * instance,
-                 struct pdu * pdu)
+int rmt_send(struct rmt * instance,
+             address_t    address,
+             cep_id_t     connection_id,
+             struct pdu * pdu)
 {
         LOG_MISSING;
 
@@ -103,7 +96,10 @@ int rmt_sdu_post(struct rmt * instance,
 {
         LOG_MISSING;
 
-        kfa_sdu_post_to_user_space(instance->kfa, sdu, -1);
+        /* Examples:
+         * kfa_sdu_post_to_user_space(instance->kfa, sdu, from);
+         * efcp_container_receive(instance->efcpc, -1, sdu);
+         */
 
         return 0;
 }

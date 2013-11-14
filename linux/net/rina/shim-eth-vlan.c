@@ -831,12 +831,14 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
                 flow->port_id_state = PORT_STATE_PENDING;
                 flow->dest_ha       = ghaddr;
-                flow->port_id       = kfa_flow_create(data->kfa, data->id, false);
+                flow->port_id       = kfa_flow_create(data->kfa, data->id,
+                                                      false);
 
                 if (!is_port_id_ok(flow->port_id)) {
                         LOG_DBG("Port id is not ok");
                         if (flow_destroy(data, flow))
-                                LOG_ERR("Problems destroying shim-eth-vlan flow");
+                                LOG_ERR("Problems destroying shim-eth-vlan "
+                                        "flow");
                         kfree_skb(skb);
                         return -1;
                 }

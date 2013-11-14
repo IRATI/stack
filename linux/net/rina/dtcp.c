@@ -209,12 +209,22 @@ struct dtcp * dtcp_create(void)
         tmp->state_vector = rkzalloc(sizeof(*tmp->state_vector), GFP_KERNEL);
         if (!tmp->state_vector) {
                 LOG_ERR("Cannot create DTCP state-vector");
-
-                rkfree(tmp);
+                dtcp_destroy(tmp);
                 return NULL;
         }
+        tmp->policies = rkzalloc(sizeof(*tmp->policies), GFP_KERNEL);
+        if (!tmp->policies) {
+                LOG_ERR("Cannot create DTCP policies");
+                dtcp_destroy(tmp);
+                return NULL;
+        }
+
         *tmp->state_vector = default_sv;
-        tmp->policies      = &default_policies;
+        /* FIXME: fixups to the state-vector should be placed here */
+
+        *tmp->policies      = default_policies;
+        /* FIXME: fixups to the policies should be placed here */
+
         tmp->peer          = NULL;
 
         LOG_DBG("Instance %pK created successfully", tmp);
@@ -231,6 +241,8 @@ int dtcp_destroy(struct dtcp * instance)
 
         if (instance->state_vector)
                 rkfree(instance->state_vector);
+        if (instance->policies)
+                rkfree(instance->policies);
         rkfree(instance);
 
         LOG_DBG("Instance %pK destroyed successfully", instance);
@@ -279,15 +291,6 @@ int dtcp_unbind(struct dtcp * instance)
         return 0;
 
 }
-
-#if 0
-static void dtcp_task(void)
-{
-        /* TODO: Perform transmission control */
-        /* TODO: Perform re-transmission control */
-        /* TODO: Perform flow control */
-}
-#endif
 
 int dtcp_send(struct dtcp * instance,
               struct sdu *  sdu)

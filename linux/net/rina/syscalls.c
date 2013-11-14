@@ -197,7 +197,7 @@ SYSCALL_DEFINE2(allocate_port,
 {
         port_id_t retval;
 
-        if (!id) 
+        if (!id)
                 return -EFAULT;
 
         CALL_DEFAULT_PERSONALITY(retval, allocate_port, id, (to_app != 0) );
