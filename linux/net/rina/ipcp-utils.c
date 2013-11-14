@@ -275,18 +275,24 @@ EXPORT_SYMBOL(name_dup);
 
 #define NAME_CMP_FIELD(X, Y, FIELD)                                     \
         ((X->FIELD && Y->FIELD) ? string_cmp(X->FIELD, Y->FIELD) :      \
-        ((!X->FIELD && !Y->FIELD) ? 0 : -1))
+         ((!X->FIELD && !Y->FIELD) ? 0 : -1))
+
+bool is_name_ok(const struct name * n)
+{ return (!n && n->process_name); }
 
 static int name_is_equal_internal(const struct name * a,
                                   const struct name * b)
 {
         if (a == b)
                 return 0;
+        if (!a || !b)
+                return -1;
 
         ASSERT(a != b);
+        ASSERT(a != NULL);
+        ASSERT(b != NULL);
 
         /* Now compare field by field */
-
         if (NAME_CMP_FIELD(a, b, process_name))
                 return -1;
         if (NAME_CMP_FIELD(a, b, process_instance))
@@ -298,14 +304,6 @@ static int name_is_equal_internal(const struct name * a,
 
         return 0;
 }
-
-int name_cmp(const struct name * a, const struct name * b)
-{
-        LOG_OBSOLETE_FUNC;
-
-        return name_is_equal_internal(a, b);
-}
-EXPORT_SYMBOL(name_cmp);
 
 bool name_is_equal(const struct name * a, const struct name * b)
 { return !name_is_equal_internal(a, b) ? true : false; }

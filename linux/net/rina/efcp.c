@@ -84,9 +84,6 @@ struct efcp_container {
         struct kfa *                    kfa;
 };
 
-// efcp_imap maps cep_id_t to efcp_instances
-
-
 struct efcp_container * efcp_container_create(struct kfa * kfa)
 {
         struct efcp_container * container;
@@ -112,6 +109,7 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
         }
 
         container->kfa = kfa;
+
         return container;
 }
 EXPORT_SYMBOL(efcp_container_create);
@@ -123,9 +121,10 @@ int efcp_container_destroy(struct efcp_container * container)
                 return -1;
         }
 
-        if (container->instances)
-                efcp_imap_destroy(container->instances, efcp_destroy);
-        if (container->cidm) cidm_destroy(container->cidm);
+        if (container->instances) efcp_imap_destroy(container->instances,
+                                                    efcp_destroy);
+        if (container->cidm)      cidm_destroy(container->cidm);
+
         rkfree(container);
 
         return 0;
@@ -135,6 +134,11 @@ EXPORT_SYMBOL(efcp_container_destroy);
 int efcp_container_set_dt_cons(struct data_transfer_constants * dt_cons,
                                struct efcp_container          * container)
 {
+        if (!dt_cons || !container) {
+                LOG_ERR("Bogus input parameters, bailing out");
+                return -1;
+        }
+
         container->dt_cons.address_length = dt_cons->address_length;
         container->dt_cons.cep_id_length  = dt_cons->cep_id_length;
         container->dt_cons.length_length  = dt_cons->length_length;
@@ -146,6 +150,7 @@ int efcp_container_set_dt_cons(struct data_transfer_constants * dt_cons,
         container->dt_cons.dif_integrity  = dt_cons->dif_integrity;
 
         LOG_DBG("Succesfully set data transfer constants to efcp container");
+
         return 0;
 }
 EXPORT_SYMBOL(efcp_container_set_dt_cons);
@@ -154,13 +159,23 @@ int efcp_container_write(struct efcp_container * container,
                          cep_id_t                cep_id,
                          struct sdu *            sdu)
 {
-        struct efcp *       efcp;
+        struct efcp * efcp;
+
+        if (!container || sdu) {
+                LOG_ERR("Bogus input parameters, cannot write into container");
+                return -1;
+        }
+        if (!is_cep_id_ok(cep_id)) {
+                LOG_ERR("Bad cep-id, cannot write into container");
+                return -1;
+        }
 
         efcp = efcp_imap_find(container->instances, cep_id);
         if (!efcp) {
                 LOG_ERR("There is no EFCP bound to this cep_id %d", cep_id);
                 return -1;
         }
+
         if (efcp_write(efcp, sdu))
                 return -1;
 
@@ -173,7 +188,15 @@ int efcp_container_receive(struct efcp_container * container,
                            struct sdu *            sdu)
 {
         struct efcp * tmp;
-        LOG_MISSING;
+
+        if (!container || sdu) {
+                LOG_ERR("Bogus input parameters, cannot write into container");
+                return -1;
+        }
+        if (!is_cep_id_ok(cep_id)) {
+                LOG_ERR("Bad cep-id, cannot write into container");
+                return -1;
+        }
 
         tmp = efcp_find(container, cep_id);
         if (!tmp)
@@ -196,20 +219,21 @@ static int is_connection_ok(const struct connection * connection)
         return 1;
 }
 
-cep_id_t efcp_connection_create(struct efcp_container *   container,
-                                struct connection * connection)
+cep_id_t efcp_connection_create(struct efcp_container * container,
+                                struct connection *     connection)
 {
         struct efcp * tmp;
         cep_id_t      cep_id;
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
-                return -1;
+                return cep_id_bad();
         }
         if (!is_connection_ok(connection)) {
                 LOG_ERR("Bogus connection passed, bailing out");
-                return -1;
+                return cep_id_bad();
         }
+
         ASSERT(connection);
 
         tmp = efcp_create();
@@ -217,6 +241,7 @@ cep_id_t efcp_connection_create(struct efcp_container *   container,
                 return cep_id_bad();
 
         cep_id = cidm_allocate(container->cidm);
+
         /* We must ensure that the DTP is instantiated, at least ... */
         connection->source_cep_id = cep_id;
         tmp->connection = connection;
@@ -228,13 +253,15 @@ cep_id_t efcp_connection_create(struct efcp_container *   container,
                 return cep_id_bad();
         }
 
-        /* FIXME: We need to know if DTCP is needed ...
-           tmp->dtcp = dtcp_create();
-           if (!tmp->dtcp) {
-           efcp_destroy(tmp);
-           return -1;
-           }
-        */
+        /*
+         *  FIXME: We need to know if DTCP is needed ...
+         *
+         *  tmp->dtcp = dtcp_create();
+         *  if (!tmp->dtcp) {
+         *      efcp_destroy(tmp);
+         *      return -1;
+         *  }
+         */
 
         /* No needs to check here, bindings are straightforward */
         dtp_bind(tmp->dtp,   tmp->dtcp);
@@ -251,11 +278,11 @@ cep_id_t efcp_connection_create(struct efcp_container *   container,
                 return cep_id_bad();
         }
 
-        LOG_DBG("Connection created \n "
-                "Source address: %d \n"
-                "Destination address %d \n"
-                "Destination cep id: %d \n"
-                "Source cep id: %d \n",
+        LOG_DBG("Connection created ("
+                "Source address %d,"
+                "Destination address %d, "
+                "Destination cep-id %d, "
+                "Source cep-id %d)",
                 connection->source_address,
                 connection->destination_address,
                 connection->destination_cep_id,
@@ -316,13 +343,15 @@ int efcp_connection_update(struct efcp_container * container,
         }
         tmp->connection->destination_cep_id = to;
 
-        LOG_DBG("Connection updated \n ");
-        LOG_DBG("Source address: %d \n", tmp->connection->source_address);
-        LOG_DBG("Destination address %d \n",
-                        tmp->connection->destination_address);
-        LOG_DBG("Destination cep id: %d \n",
-                        tmp->connection->destination_cep_id);
-        LOG_DBG("Source cep id: %d \n", tmp->connection->source_cep_id);
+        LOG_DBG("Connection updated");
+        LOG_DBG("  Source address:     %d",
+                tmp->connection->source_address);
+        LOG_DBG("  Destination address %d",
+                tmp->connection->destination_address);
+        LOG_DBG("  Destination cep id: %d",
+                tmp->connection->destination_cep_id);
+        LOG_DBG("  Source cep id:      %d",
+                tmp->connection->source_cep_id);
 
         return 0;
 }
@@ -331,16 +360,12 @@ EXPORT_SYMBOL(efcp_connection_update);
 struct efcp * efcp_find(struct efcp_container * container,
                         cep_id_t                id)
 {
-        struct efcp * tmp;
-
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
                 return NULL;
         }
 
-        tmp = efcp_imap_find(container->instances, id);
-
-        return tmp;
+        return efcp_imap_find(container->instances, id);
 }
 
 int efcp_write(struct efcp * instance,

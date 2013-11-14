@@ -23,9 +23,6 @@
 #define LIBRINA_LOGS_H
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string>
 
 #ifndef RINA_PREFIX
 #error You must define RINA_PREFIX before including this file
@@ -83,9 +80,9 @@ void log(LOG_LEVEL level, const char * fmt, ...);
 #define __STRINGIZE(x) #x
 
 #define __LOG(PREFIX, LEVEL, FMT, ARGS...)                              \
-        do {      \
+        do {                                                            \
 		log(LEVEL,                                              \
-				"#" PREFIX " (" __STRINGIZE(LEVEL) "): " FMT "\n",      \
+                    "#" PREFIX " (" __STRINGIZE(LEVEL) "): " FMT "\n",  \
                     ##ARGS);                                            \
 	} while (0)
 

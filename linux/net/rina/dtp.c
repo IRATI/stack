@@ -93,12 +93,19 @@ struct dtp * dtp_create(struct rmt *        rmt,
                 rkfree(tmp);
                 return NULL;
         }
-        default_sv.connection = connection;
-        *tmp->state_vector = default_sv;
+
+        *tmp->state_vector            = default_sv;
+
+        /* FIXME: fixups to the state-vector should be placed here */
+        tmp->state_vector->connection = connection;
+
         tmp->policies      = &default_policies;
+        /* FIXME: fixups to the policies should be placed here */
+
         tmp->peer          = NULL;
         tmp->rmt           = rmt;
         tmp->kfa           = kfa;
+
         LOG_DBG("Instance %pK created successfully", tmp);
 
         return tmp;
@@ -117,8 +124,10 @@ int dtp_destroy(struct dtp * instance)
         rkfree(instance->state_vector);
         rkfree(instance);
 
-        /* FIXME: RMT is destroyed by EFCP Container, should be fine
-         * but better check it */
+        /*
+         * FIXME: RMT is destroyed by EFCP Container, should be fine
+         *        but better check it ...
+         */
 
         LOG_DBG("Instance %pK destroyed successfully", instance);
 
@@ -190,7 +199,7 @@ int apply_policy_RexmsnQ(struct dtp * dtp,
 }
 
 int dtp_write(struct dtp * instance,
-	      struct sdu * sdu)
+              struct sdu * sdu)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
