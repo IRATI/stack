@@ -5,7 +5,7 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-ME=configure
+ME=install-user-from-scratch
 
 PREFIX=`echo "$1"|sed -e "s,\/$,,"`
 
