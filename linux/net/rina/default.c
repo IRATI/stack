@@ -104,7 +104,7 @@ static int default_allocate_port(struct personality_data * data,
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
-        
+
         return kfa_flow_create(data->kfa, pid, to_app);
 }
 
@@ -114,7 +114,7 @@ static int default_deallocate_port(struct personality_data * data,
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
-        
+
         return kfa_flow_deallocate(data->kfa, port_id);
 }
 

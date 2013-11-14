@@ -71,7 +71,7 @@ static struct dtp_policies default_policies = {
 struct dtp * dtp_create(struct rmt * rmt)
 {
         struct dtp * tmp;
-        
+
         if (!rmt) {
                 LOG_ERR("Bogus rmt, bailing out");
                 return NULL;

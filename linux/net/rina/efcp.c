@@ -104,7 +104,7 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
 
         container->instances   = efcp_imap_create();
         container->cidm        = cidm_create();
-        if (!container->instances || 
+        if (!container->instances ||
             !container->cidm) {
                 LOG_ERR("Failed to create EFCP container instance");
                 efcp_container_destroy(container);
@@ -123,7 +123,7 @@ int efcp_container_destroy(struct efcp_container * container)
                 return -1;
         }
 
-        if (container->instances) 
+        if (container->instances)
                 efcp_imap_destroy(container->instances, efcp_destroy);
         if (container->cidm) cidm_destroy(container->cidm);
         rkfree(container);
