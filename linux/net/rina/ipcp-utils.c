@@ -277,6 +277,9 @@ EXPORT_SYMBOL(name_dup);
         ((X->FIELD && Y->FIELD) ? string_cmp(X->FIELD, Y->FIELD) :      \
          ((!X->FIELD && !Y->FIELD) ? 0 : -1))
 
+bool is_name_ok(const struct name * n)
+{ return (!n && n->process_name); }
+
 static int name_is_equal_internal(const struct name * a,
                                   const struct name * b)
 {
