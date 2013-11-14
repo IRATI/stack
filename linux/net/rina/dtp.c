@@ -115,8 +115,10 @@ int dtp_destroy(struct dtp * instance)
         rkfree(instance->state_vector);
         rkfree(instance);
 
-        /* FIXME: RMT is destroyed by EFCP Container, should be fine
-         * but better check it */
+        /*
+         * FIXME: RMT is destroyed by EFCP Container, should be fine
+         *        but better check it ...
+         */
 
         LOG_DBG("Instance %pK destroyed successfully", instance);
 
