@@ -81,10 +81,8 @@ struct dummy_flow {
         struct name *         dest;
         struct list_head      list;
         enum dummy_flow_state state;
-        flow_id_t             dst_fid;
-        flow_id_t             src_fid; /* Required to notify back to the */
-        ipc_process_id_t      dst_id;  /* IPC Manager the result of the */
-        struct flow_spec *    fspec;   /* allocation */
+        ipc_process_id_t      dst_id;
+        struct flow_spec *    fspec;
 };
 
 struct app_register {
@@ -126,7 +124,7 @@ static struct dummy_flow * find_flow(struct ipcp_instance_data * data,
         struct dummy_flow * flow;
 
         list_for_each_entry(flow, &data->flows, list) {
-                if (flow->port_id == id) {
+                if (flow->port_id == id || flow->dst_port_id == id) {
                         return flow;
                 }
         }
@@ -138,8 +136,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                                        const struct name *         source,
                                        const struct name *         dest,
                                        const struct flow_spec *    fspec,
-                                       port_id_t                   id,
-                                       flow_id_t                   fid)
+                                       port_id_t                   id)
 {
         struct dummy_flow * flow;
 
@@ -195,17 +192,16 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
 
         flow->state   = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
         flow->port_id = id;
-        flow->src_fid = fid;
         flow->fspec   = flow_spec_dup(fspec);
-        flow->dst_fid = kfa_flow_create(data->kfa);
-        ASSERT(is_flow_id_ok(flow->dst_fid));
+        flow->dst_port_id = kfa_flow_create(data->kfa, data->id, false);
+        ASSERT(is_port_id_ok(flow->dst_port_id));
 
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, &data->flows);
 
         if (kipcm_flow_arrived(default_kipcm,
                                data->id,
-                               flow->dst_fid,
+                               flow->dst_port_id,
                                data->info->dif_name,
                                flow->source,
                                flow->dest,
@@ -216,23 +212,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         return 0;
 }
 
-static struct dummy_flow *
-find_flow_by_fid(struct ipcp_instance_data * data,
-                 uint_t                      fid)
-{
-        struct dummy_flow * flow;
-
-        list_for_each_entry(flow, &data->flows, list) {
-                if (flow->dst_fid == fid) {
-                        return flow;
-                }
-        }
-
-        return NULL;
-}
-
 static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
-                                        flow_id_t                   flow_id,
                                         port_id_t                   port_id,
                                         int                         result)
 {
@@ -250,7 +230,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        flow = find_flow_by_fid(data, flow_id);
+        flow = find_flow(data, port_id);
         if (!flow) {
                 LOG_ERR("Flow does not exist, cannot allocate");
                 return -1;
@@ -265,17 +245,17 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
         if (result == 0) {
                 flow->dst_port_id = port_id;
                 flow->state = PORT_STATE_ALLOCATED;
-                if (kipcm_flow_add(default_kipcm,
-                                   data->id, flow->port_id, flow->src_fid)) {
+                if (kipcm_flow_commit(default_kipcm,
+                                      data->id, flow->port_id)) {
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
                         rkfree(flow);
                         return -1;
                 }
-                if (kipcm_flow_add(default_kipcm,
-                                   data->id, port_id, flow_id)) {
-                        kfa_flow_unbind_and_destroy(data->kfa, port_id);
+                if (kipcm_flow_commit(default_kipcm,
+                                      data->id, port_id)) {
+                        kfa_flow_deallocate(data->kfa, port_id);
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
@@ -285,10 +265,10 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
 
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
-                                                       flow->src_fid,
+                                                       flow->port_id,
                                                        0)) {
-                        kfa_flow_unbind_and_destroy(data->kfa, flow->port_id);
-                        kfa_flow_unbind_and_destroy(data->kfa, port_id);
+                        kfa_flow_deallocate(data->kfa, flow->port_id);
+                        kfa_flow_deallocate(data->kfa, port_id);
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
@@ -330,12 +310,13 @@ static int dummy_flow_deallocate(struct ipcp_instance_data * data,
         else
                 dest_port_id = flow->port_id;
 
-        /* FIXME: dummy_flow is not updated after unbinding cause it is going
-         * to be deleted. Is it really needed to unbind+destroy?
+        /*
+         *FIXME: dummy_flow is not updated after unbinding cause it is going
+         *       to be deleted. Is it really needed to unbind+destroy?
          */
 
-        if (kfa_flow_unbind_and_destroy(data->kfa, id) ||
-            kfa_flow_unbind_and_destroy(data->kfa, dest_port_id)) {
+        if (kfa_flow_deallocate(data->kfa, id) ||
+            kfa_flow_deallocate(data->kfa, dest_port_id)) {
                 return -1;
         }
 
@@ -524,14 +505,15 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
         if (!sdu)
                 return -1;
 
-        /* We are going to dup the SDU since the shim has now the ownership
+        /*
+         * We are going to dup the SDU since the shim has now the ownership
          * and it is always its burden to free it whenever the processing of
          * the SDU is finished (e.g. the SDU has been sent through a wire).
          * For the shim-dummy the processing consists of sending the new SDU
          * to the sdu_ready kfifo, which will take the ownership of this copy.
          */
         copy_sdu = sdu_dup_gfp(GFP_ATOMIC, sdu);
-        if(!copy_sdu)
+        if (!copy_sdu)
                 return -1;
 
         sdu_destroy(sdu);
@@ -637,7 +619,7 @@ static int dummy_fini(struct ipcp_factory_data * data)
 }
 
 static int dummy_assign_to_dif(struct ipcp_instance_data * data,
-                               const struct dif_info *  dif_information)
+                               const struct dif_info *     dif_information)
 {
         struct ipcp_config * pos;
 

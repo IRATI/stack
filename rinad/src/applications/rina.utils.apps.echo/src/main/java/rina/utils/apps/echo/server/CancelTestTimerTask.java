@@ -4,9 +4,9 @@ import java.util.TimerTask;
 
 public class CancelTestTimerTask extends TimerTask{
 	
-	private FlowReader flowReader = null;
+	private TestController flowReader = null;
 	
-	public CancelTestTimerTask(FlowReader flowReader){
+	public CancelTestTimerTask(TestController flowReader){
 		this.flowReader = flowReader;
 	}
 

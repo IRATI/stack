@@ -27,6 +27,25 @@
 			<artifactId>rina.commons.api</artifactId>
 			<version>1.0.0-irati-SNAPSHOT</version>
 		</dependency>
+		<dependency>
+			<groupId>com.google.protobuf</groupId>
+			<artifactId>protobuf-java</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.pouzinsociety.alba</groupId>
+			<artifactId>rina.cdap.impl</artifactId>
+			<version>1.0.0-irati-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>org.pouzinsociety.alba</groupId>
+			<artifactId>rina.delimiting.impl</artifactId>
+			<version>1.0.0-irati-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>org.pouzinsociety.alba</groupId>
+			<artifactId>rina.encoding.impl</artifactId>
+			<version>1.0.0-irati-SNAPSHOT</version>
+		</dependency>
 	</dependencies>
 
 	<build>

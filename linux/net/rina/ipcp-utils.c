@@ -80,6 +80,7 @@ static int string_cmp(const string_t * a, const string_t * b)
 static int string_len(const string_t * s)
 { return strlen(s); }
 
+/* FIXME: This thing is bogus and has to be fixed properly */
 #ifdef CONFIG_RINA_DEBUG
 static int name_is_initialized(struct name * dst)
 {
@@ -90,6 +91,13 @@ static int name_is_initialized(struct name * dst)
             !dst->entity_name      &&
             !dst->entity_instance)
                 return 1;
+        return 0;
+}
+#else
+static int name_is_initialized(struct name * dst)
+{
+        ASSERT(dst);
+
         return 0;
 }
 #endif
@@ -127,8 +135,14 @@ struct name * name_init(struct name *    dst,
                         const string_t * process_instance,
                         const string_t * entity_name,
                         const string_t * entity_instance)
-{ return name_init_gfp(GFP_KERNEL, dst, process_name, process_instance,
-                       entity_name, entity_instance); }
+{
+        return name_init_gfp(GFP_KERNEL,
+                             dst,
+                             process_name,
+                             process_instance,
+                             entity_name,
+                             entity_instance);
+}
 EXPORT_SYMBOL(name_init);
 
 void name_fini(struct name * n)
@@ -298,7 +312,8 @@ EXPORT_SYMBOL(name_is_equal);
 
 #define DELIMITER "/"
 
-char * name_tostring(const struct name * n)
+char * name_tostring_gfp(gfp_t               flags,
+                         const struct name * n)
 {
         char *       tmp;
         size_t       size;
@@ -326,7 +341,7 @@ char * name_tostring(const struct name * n)
                  string_len(n->entity_instance)  : none_len);
         size += strlen(DELIMITER);
 
-        tmp = rkmalloc(size, GFP_KERNEL);
+        tmp = rkmalloc(size, flags);
         if (!tmp)
                 return NULL;
 
@@ -346,6 +361,10 @@ char * name_tostring(const struct name * n)
 
         return tmp;
 }
+EXPORT_SYMBOL(name_tostring_gfp);
+
+char * name_tostring(const struct name * n)
+{ return name_tostring_gfp(GFP_KERNEL, n); }
 EXPORT_SYMBOL(name_tostring);
 
 struct name * string_toname_gfp(gfp_t            flags,
@@ -552,9 +571,28 @@ struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
 }
 EXPORT_SYMBOL(flow_spec_dup);
 
+struct dif_config * dif_config_create(void)
+{
+        struct dif_config * tmp;
+        
+        tmp = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
+        if (!tmp) {
+                LOG_DBG("Could not create new dif_config");
+                return NULL;
+        }
+
+        INIT_LIST_HEAD(&(tmp->ipcp_config_entries));
+        return tmp;
+                
+}
+EXPORT_SYMBOL(dif_config_create);
+
 int dif_config_destroy(struct dif_config * dif_config)
 {
         struct ipcp_config * pos, * nxt;
+
+        if (!dif_config)
+                return -1;
 
         list_for_each_entry_safe(pos, nxt,
                                  &dif_config->ipcp_config_entries,
@@ -563,6 +601,8 @@ int dif_config_destroy(struct dif_config * dif_config)
                 ipcp_config_destroy(pos);
         }
 
+        if (dif_config->data_transfer_constants)
+                rkfree(dif_config->data_transfer_constants);
         rkfree(dif_config);
 
         return 0;
@@ -575,9 +615,12 @@ int dif_info_destroy(struct dif_info * dif_info)
                 if (dif_info->dif_name) {
                         name_destroy(dif_info->dif_name);
                 }
+
                 if (dif_info->configuration) {
-                        dif_config_destroy(dif_info->configuration);
+                        if (dif_config_destroy(dif_info->configuration))
+                                return -1;
                 }
+
                 rkfree(dif_info->type);
                 rkfree(dif_info);
         }

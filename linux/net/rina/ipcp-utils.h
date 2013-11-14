@@ -104,6 +104,8 @@ bool          name_is_equal(const struct name * a, const struct name * b);
 
 /* Returns a name as a (newly allocated) string */
 char *        name_tostring(const struct name * n);
+char *        name_tostring_gfp(gfp_t               flags,
+                                const struct name * n);
 
 /* Inverse of name_tostring() */
 struct name * string_toname(const string_t * s);
@@ -115,6 +117,7 @@ int                  ipcp_config_destroy(struct ipcp_config * cfg);
 struct ipcp_config *
 ipcp_config_dup_from_user(const struct ipcp_config __user * cfg);
 
+struct dif_config *  dif_config_create(void);
 int                  dif_config_destroy(struct dif_config * dif_config);
 int                  dif_info_destroy(struct dif_info * dif_info);
 

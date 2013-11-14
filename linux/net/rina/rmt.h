@@ -43,7 +43,7 @@ struct rmt;
 
 /* NOTE: There's one RMT for each IPC Process */
 
-struct rmt * rmt_create(void);
+struct rmt * rmt_create(struct kfa * kfa);
 int          rmt_destroy(struct rmt * instance);
 
 /* FIXME: Please check the following APIs */

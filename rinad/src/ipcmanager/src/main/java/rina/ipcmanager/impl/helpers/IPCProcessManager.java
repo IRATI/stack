@@ -1,5 +1,6 @@
 package rina.ipcmanager.impl.helpers;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -10,7 +11,12 @@ import org.apache.commons.logging.LogFactory;
 import rina.ipcmanager.impl.IPCManager;
 import rina.ipcmanager.impl.conf.DIFProperties;
 import rina.ipcmanager.impl.conf.RINAConfiguration;
+import rina.ipcmanager.impl.console.IPCManagerConsole;
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.ApplicationRegistrationInformation;
+import eu.irati.librina.ApplicationRegistrationRequestEvent;
+import eu.irati.librina.ApplicationRegistrationType;
+import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.AssignToDIFException;
 import eu.irati.librina.AssignToDIFResponseEvent;
 import eu.irati.librina.CreateIPCProcessException;
@@ -20,6 +26,8 @@ import eu.irati.librina.IPCException;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IPCProcessPointerVector;
+import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
+import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
 import eu.irati.librina.UpdateDIFConfigurationResponseEvent;
 
 public class IPCProcessManager {
@@ -27,15 +35,27 @@ public class IPCProcessManager {
 	private IPCProcessFactorySingleton ipcProcessFactory = null;
 	private Map<Long, PendingDIFAssignment> pendingDIFAssignments = null;
 	private Map<Long, PendingDIFConfiguration> pendingDIFConfigurations = null;
+	private Map<Long, PendingIPCProcessRegistration> pendingIPCProcessRegistrations = null;
 	private static final Log log = 
 			LogFactory.getLog(IPCProcessManager.class);
+	private ApplicationRegistrationManager applicationRegistrationManager = null;
+	private IPCManagerConsole console = null;
 	
-	public IPCProcessManager(IPCProcessFactorySingleton ipcProcessFactory) {
+	public IPCProcessManager(IPCProcessFactorySingleton ipcProcessFactory, 
+			IPCManagerConsole console) {
 		this.ipcProcessFactory = ipcProcessFactory;
+		this.console = console;
 		this.pendingDIFAssignments = 
 				new ConcurrentHashMap<Long, PendingDIFAssignment>();
 		this.pendingDIFConfigurations = 
 				new ConcurrentHashMap<Long, PendingDIFConfiguration>();
+		this.pendingIPCProcessRegistrations = 
+				new ConcurrentHashMap<Long, PendingIPCProcessRegistration>();
+	}
+	
+	public void setApplicationRegistrationManager(ApplicationRegistrationManager 
+			applicationRegistrationManager) {
+		this.applicationRegistrationManager = applicationRegistrationManager;
 	}
 	
 	public synchronized IPCProcessPointerVector listIPCProcesses(){
@@ -138,6 +158,12 @@ public class IPCProcessManager {
 				result = result + "    Member of DIF: " + 
 						difInformation.getDifName().getProcessName() + "\n"; 
 			}
+			result = result + "    Supporting DIFs: " + "\n"; 
+			Iterator<ApplicationProcessNamingInformation> iterator = 
+					ipcProcess.getSupportingDIFs().iterator();
+			while (iterator.hasNext()){
+				result = result + "        " + iterator.next().getProcessName() + "\n";
+			}
 		}
 		
 		return result;
@@ -146,7 +172,12 @@ public class IPCProcessManager {
 	public synchronized IPCProcess createIPCProcess(
 			ApplicationProcessNamingInformation name, 
 			String type) throws CreateIPCProcessException {
-		return ipcProcessFactory.create(name, type);
+		IPCProcess ipcProcess = ipcProcessFactory.create(name, type);
+		if (!type.equals(IPCManager.NORMAL_IPC_PROCESS_TYPE)) {
+			ipcProcess.setInitialized();
+		}
+		
+		return ipcProcess;
 	}
 	
 	public synchronized void destroyIPCProcess(long ipcProcessId)
@@ -181,6 +212,11 @@ public class IPCProcessManager {
 				difInformation.getDifConfiguration().addParameter(
 						difProperties.getConfigParameters().get(j));
 			}
+		}
+		
+		if (difProperties.getDataTransferConstants() != null) {
+			difInformation.getDifConfiguration().setDataTransferConstants(
+					difProperties.getDataTransferConstants());
 		}
 
 		long handle = ipcProcess.assignToDIF(difInformation);
@@ -264,6 +300,110 @@ public class IPCProcessManager {
 			log.error("Problems processing UpdateDIFConfigurationResponseEvent. Handle: "+
 					event.getSequenceNumber());
 		};
+	}
+	
+	public synchronized long requestRegistrationToNMinusOneDIF(long ipcProcessId, String difName) 
+			throws Exception{
+		IPCProcess ipcProcess = getIPCProcess(ipcProcessId);
+		IPCProcess nMinusOneIpcProcess = selectIPCProcessOfDIF(difName);
+		ApplicationProcessNamingInformation difNamingInfo = 
+				new ApplicationProcessNamingInformation();
+		difNamingInfo.setProcessName(difName);
+	
+		ApplicationRegistrationInformation arInfo = new ApplicationRegistrationInformation(
+				ApplicationRegistrationType.APPLICATION_REGISTRATION_SINGLE_DIF);
+		arInfo.setApplicationName(ipcProcess.getName());
+		arInfo.setDIFName(difNamingInfo);
+		ApplicationRegistrationRequestEvent event = 
+				new ApplicationRegistrationRequestEvent(arInfo, 0);
+		long handle = 
+				applicationRegistrationManager.requestApplicationRegistration(event, ipcProcessId);
+
+		pendingIPCProcessRegistrations.put(
+				handle, new PendingIPCProcessRegistration(difName, ipcProcess, nMinusOneIpcProcess));
+		log.debug("Requested the registration of IPC Process "+ipcProcess.getId() 
+				+ " to N-1 DIF "+difName);
+		
+		return handle;
+	}
+	
+	public synchronized void registrationToNMinusOneDIFResponse(IpcmRegisterApplicationResponseEvent event) {
+		PendingIPCProcessRegistration pendingRegistration = 
+				pendingIPCProcessRegistrations.remove(event.getSequenceNumber());
+		if (pendingRegistration == null) {
+			log.error("Could not find pending IPC Process registration associated to handle " + 
+					   event.getSequenceNumber());
+			return;
+		}
+		
+		if (event.getResult() == 0) {
+			try {
+				pendingRegistration.getIpcProcess().notifyRegistrationToSupportingDIF(
+						pendingRegistration.getnMinusOneIPCProcess().getName(), 
+						pendingRegistration.getnMinusOneIPCProcess().getDIFInformation().getDifName());
+			} catch(Exception ex) {
+				log.error("Problems notifying IPC Process about successfull registration to DIF" 
+						+ pendingRegistration.getDifName() + ". "+ex.getMessage());
+			}
+		} else {
+			log.error("Could not register IPC Process "+ pendingRegistration.getIpcProcess().getId() 
+					+ " to DIF " + pendingRegistration.getDifName()+ ". Error code: "+event.getResult());
+		}
+		
+		console.responseArrived(event);
+	}
+	
+	public synchronized long requestUnregistrationFromNMinusOneDIF(long ipcProcessId, String difName) 
+			throws Exception{
+		IPCProcess ipcProcess = getIPCProcess(ipcProcessId);
+		IPCProcess nMinusOneIpcProcess = selectIPCProcessOfDIF(difName);
+		ApplicationProcessNamingInformation difNamingInfo = 
+				new ApplicationProcessNamingInformation();
+		difNamingInfo.setProcessName(difName);
+	
+		ApplicationUnregistrationRequestEvent event = 
+				new ApplicationUnregistrationRequestEvent(
+						ipcProcess.getName(), difNamingInfo, 0);
+		long handle = 
+				applicationRegistrationManager.requestApplicationUnregistration(event, ipcProcessId);
+
+		pendingIPCProcessRegistrations.put(
+				handle, new PendingIPCProcessRegistration(difName, ipcProcess, nMinusOneIpcProcess));
+		log.debug("Requested the unregistration of IPC Process "+ipcProcess.getId() 
+				+ " from N-1 DIF "+difName);
+		
+		return handle;
+	}
+	
+	public synchronized void unregistrationFromNMinusOneDIFResponse(IpcmUnregisterApplicationResponseEvent event) {
+		PendingIPCProcessRegistration pendingRegistration = 
+				pendingIPCProcessRegistrations.remove(event.getSequenceNumber());
+		if (pendingRegistration == null) {
+			log.error("Could not find pending IPC Process registration associated to handle " + 
+					   event.getSequenceNumber());
+			return;
+		}
+		
+		if (event.getResult() == 0) {
+			try {
+				pendingRegistration.getIpcProcess().notifyUnregistrationFromSupportingDIF(
+						pendingRegistration.getnMinusOneIPCProcess().getName(), 
+						pendingRegistration.getnMinusOneIPCProcess().getDIFInformation().getDifName());
+			} catch(Exception ex) {
+				log.error("Problems notifying IPC Process about successful unregistration from DIF" 
+						+ pendingRegistration.getDifName() + ". "+ex.getMessage());
+			}
+		} else {
+			log.error("Could not unregister IPC Process "+ pendingRegistration.getIpcProcess().getId() 
+					+ " from DIF " + pendingRegistration.getDifName()+ ". Error code: "+event.getResult());
+		}
+		
+		console.responseArrived(event);
+	}
+	
+	public synchronized void setInitialized(long ipcProcessId) throws Exception {
+		IPCProcess ipcProcess = this.getIPCProcess(ipcProcessId);
+		ipcProcess.setInitialized();
 	}
 
 }

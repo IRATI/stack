@@ -1,5 +1,5 @@
 /*
- * FIDM (Flows-IDs Manager)
+ * PIDM (Port-IDs Manager)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -20,22 +20,23 @@
 
 #include <linux/bitmap.h>
 
-#define RINA_PREFIX "fidm"
+#define RINA_PREFIX "pidm"
 
 #include "logs.h"
 #include "debug.h"
 #include "utils.h"
-#include "fidm.h"
+#include "pidm.h"
+#include "common.h"
 
-#define BITS_IN_BITMAP ((2 << BITS_PER_BYTE) * sizeof(flow_id_t))
+#define BITS_IN_BITMAP ((2 << BITS_PER_BYTE) * sizeof(port_id_t))
 
-struct fidm {
+struct pidm {
         DECLARE_BITMAP(bitmap, BITS_IN_BITMAP);
 };
 
-struct fidm * fidm_create(void)
+struct pidm * pidm_create(void)
 {
-        struct fidm * instance;
+        struct pidm * instance;
 
         instance = rkmalloc(sizeof(*instance), GFP_KERNEL);
         if (!instance)
@@ -49,7 +50,7 @@ struct fidm * fidm_create(void)
         return instance;
 }
 
-int fidm_destroy(struct fidm * instance)
+int pidm_destroy(struct pidm * instance)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
@@ -61,48 +62,38 @@ int fidm_destroy(struct fidm * instance)
         return 0;
 }
 
-#define FLOW_ID_WRONG -1
-
-flow_id_t flow_id_bad(void)
-{ return FLOW_ID_WRONG; }
-EXPORT_SYMBOL(flow_id_bad);
-
-int is_flow_id_ok(flow_id_t id)
-{ return (id >= 0 && id < BITS_IN_BITMAP) ? 1 : 0; }
-EXPORT_SYMBOL(is_flow_id_ok);
-
-flow_id_t fidm_allocate(struct fidm * instance)
+port_id_t pidm_allocate(struct pidm * instance)
 {
-        flow_id_t id;
+        port_id_t id;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return FLOW_ID_WRONG;
+                return PORT_ID_WRONG;
         }
 
-        id = (flow_id_t) bitmap_find_next_zero_area(instance->bitmap,
+        id = (port_id_t) bitmap_find_next_zero_area(instance->bitmap,
                                                     BITS_IN_BITMAP,
                                                     0, 1, 0);
-        LOG_DBG("The fidm bitmap find returned id %d (bad = %d)",
-                id, FLOW_ID_WRONG);
+        LOG_DBG("The pidm bitmap find returned id %d (bad = %d)",
+                id, PORT_ID_WRONG);
 
-        if (!is_flow_id_ok(id)) {
+        if (!is_port_id_ok(id)) {
                 LOG_WARN("Got an out-of-range flow-id (%d) from "
                          "the bitmap allocator, the bitmap is full ...", id);
-                return FLOW_ID_WRONG;
+                return PORT_ID_WRONG;
         }
 
         bitmap_set(instance->bitmap, id, 1);
 
         LOG_DBG("Bitmap allocation completed successfully (id = %d)", id);
 
-        return id;
+        return (id + 1);
 }
 
-int fidm_release(struct fidm * instance,
-                 flow_id_t     id)
+int pidm_release(struct pidm * instance,
+                 port_id_t     id)
 {
-        if (!is_flow_id_ok(id)) {
+        if (!is_port_id_ok(id)) {
                 LOG_ERR("Bad flow-id passed, bailing out");
                 return -1;
         }
@@ -111,9 +102,9 @@ int fidm_release(struct fidm * instance,
                 return -1;
         }
 
-        bitmap_clear(instance->bitmap, id, 1);
+        bitmap_clear(instance->bitmap, (id - 1), 1);
 
-        LOG_DBG("Bitmap release for id %d completed successfully", id);
+        LOG_DBG("Bitmap release completed successfully");
 
         return 0;
 }

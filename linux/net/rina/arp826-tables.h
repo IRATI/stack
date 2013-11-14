@@ -59,7 +59,8 @@ int                  tbl_remove(struct table *             instance,
 /* Replaces the old gha with the new one, takes the ownership */
 int                  tbl_update_by_gpa(struct table *     instance,
                                        const struct gpa * gpa,
-                                       struct gha *       gha);
+                                       struct gha *       gha,
+                                       gfp_t              flags);
 
 struct table_entry * tbl_find(struct table *     instance,
                               const struct gpa * pa,

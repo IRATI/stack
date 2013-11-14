@@ -25,8 +25,8 @@
 #include <linux/kobject.h>
 
 #include "du.h"
-#include "fidm.h"
-#include "efcp.h"
+
+typedef int16_t cep_id_t;
 
 enum ipcp_config_type {
         IPCP_CONFIG_UINT   = 1,
@@ -48,6 +48,53 @@ struct ipcp_config {
         struct ipcp_config_entry * entry;
 };
 
+struct data_transfer_constants {
+        /* The length of the address field in the DTP PCI, in bytes */
+        u_int16_t address_length;
+
+        /* The length of the CEP-id field in the DTP PCI, in bytes */
+        u_int16_t cep_id_length;
+
+        /* The length of the length field in the DTP PCI, in bytes */
+        u_int16_t length_length;
+
+        /* The length of the Port-id field in the DTP PCI, in bytes */
+        u_int16_t port_id_length;
+
+        /* The length of QoS-id field in the DTP PCI, in bytes */
+        u_int16_t qos_id_length;
+
+        /* The length of the sequence number field in the DTP PCI, in bytes */
+        u_int16_t seq_num_length;
+
+        /* The maximum length allowed for a PDU in this DIF, in bytes */
+        u_int32_t max_pdu_size;
+
+        /*
+         * The maximum PDU lifetime in this DIF, in milliseconds. This is MPL
+         * in delta-T
+         */
+        u_int32_t max_pdu_life;
+
+        /*
+         * True if the PDUs in this DIF have CRC, TTL, and/or encryption.
+         * Since headers are encrypted, not just user data, if any flow uses
+         * encryption, all flows within the same DIF must do so and the same
+         * encryption algorithm must be used for every PDU; we cannot identify
+         * which flow owns a particular PDU until it has been decrypted.
+         */
+        bool dif_integrity;
+};
+
+/* Represents a DIF configuration (policies, parameters, etc) */
+struct dif_config {
+        /* List of configuration entries */
+        struct list_head ipcp_config_entries;
+
+        /* The data transfer constants */
+        struct data_transfer_constants * data_transfer_constants;
+};
+
 /* Represents the information about a DIF (name, type, configuration) */
 struct dif_info {
         /* The DIF type. Can be 'NORMAL' or one of the shims */
@@ -60,13 +107,6 @@ struct dif_info {
         struct dif_config * configuration;
 };
 
-/* Represents a DIF configuration (policies, parameters, etc) */
-struct dif_config {
-
-        /* List of configuration entries */
-        struct list_head ipcp_config_entries;
-};
-
 /* Pre-declared, the implementation should define it properly */
 struct ipcp_instance_data;
 
@@ -75,10 +115,8 @@ struct ipcp_instance_ops {
                                        const struct name *         source,
                                        const struct name *         dest,
                                        const struct flow_spec *    flow_spec,
-                                       port_id_t                   id,
-                                       flow_id_t                   fid);
+                                       port_id_t                   id);
         int  (* flow_allocate_response)(struct ipcp_instance_data * data,
-                                        flow_id_t                   flow_id,
                                         port_id_t                   port_id,
                                         int                         result);
         int  (* flow_deallocate)(struct ipcp_instance_data * data,

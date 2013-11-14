@@ -271,6 +271,7 @@ class IPCManager : public Lockable{
 	std::map<ApplicationProcessNamingInformation,
 	        ApplicationRegistration*> applicationRegistrations;
 
+protected:
 	/** Return the pending flow at sequenceNumber */
 	Flow * getPendingFlow(unsigned int seqNumber);
 
@@ -283,6 +284,13 @@ class IPCManager : public Lockable{
 
 	ApplicationRegistration * getApplicationRegistration(
 	                const ApplicationProcessNamingInformation& appName);
+
+	void putApplicationRegistration(
+	                const ApplicationProcessNamingInformation& key,
+	                ApplicationRegistration * value);
+
+	void removeApplicationRegistration(
+	                const ApplicationProcessNamingInformation& key);
 public:
 	IPCManager();
 	~IPCManager() throw();
@@ -368,7 +376,7 @@ public:
 	 * @param seqNumber the id of the request
 	 * @param success true if request was successful, false otherwise
 	 */
-	void appUnregistrationResult(unsigned int seqNumber, bool success)
+	 void appUnregistrationResult(unsigned int seqNumber, bool success)
 	                        throw (ApplicationUnregistrationException);
 
 	/**

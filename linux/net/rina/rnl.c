@@ -378,6 +378,8 @@ static int kipcm_netlink_notify(struct notifier_block * nb,
 
         ipc_manager_port = rnl_get_ipc_manager_port();
 
+        LOG_DBG("IPC Manager port: %u", ipc_manager_port);
+
         if (ipc_manager_port) {
                 /* Check if the IPC Manager is the process that died */
                 if (ipc_manager_port == notify->portid) {

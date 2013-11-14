@@ -225,6 +225,17 @@ ApplicationRegistration * IPCManager::getApplicationRegistration(
         return iterator->second;
 }
 
+void IPCManager::putApplicationRegistration(
+                        const ApplicationProcessNamingInformation& key,
+                        ApplicationRegistration * value) {
+        applicationRegistrations[key] = value;
+}
+
+void IPCManager::removeApplicationRegistration(
+                        const ApplicationProcessNamingInformation& key) {
+        applicationRegistrations.erase(key);
+}
+
 unsigned int IPCManager::getDIFProperties(
 		const ApplicationProcessNamingInformation& applicationName,
 		const ApplicationProcessNamingInformation& DIFName)

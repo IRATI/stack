@@ -11,12 +11,10 @@ import java.util.TimerTask;
  */
 public class TestDeclaredDeadTimerTask extends TimerTask{
 	
-	public static final long DEFAULT_DELAY_IN_MS = 20*1000;
-	
-	private FlowReader flowReader = null;
+	private TestController flowReader = null;
 	private Timer timer = null;
 	
-	public TestDeclaredDeadTimerTask(FlowReader flowReader, Timer timer){
+	public TestDeclaredDeadTimerTask(TestController flowReader, Timer timer){
 		this.flowReader = flowReader;
 		this.timer = timer;
 	}
@@ -28,7 +26,7 @@ public class TestDeclaredDeadTimerTask extends TimerTask{
 		} else {
 			timer.schedule(
 					new TestDeclaredDeadTimerTask(flowReader, timer), 
-					FlowReader.TIMER_PERIOD_IN_MS);
+					TestController.TIMER_PERIOD_IN_MS);
 		}
 
 	}

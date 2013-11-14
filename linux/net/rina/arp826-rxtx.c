@@ -150,14 +150,14 @@ int arp_send_reply(uint16_t            ptype,
                    const struct gpa *  spa,
                    const struct gha *  sha,
                    const struct gpa *  tpa,
-                   const struct gha *  tha)
+                   const struct gha *  tha,
+                   struct net_device * dev)
 {
 #if HAVE_RINARP
         struct gpa *        tmp_spa;
         struct gpa *        tmp_tpa;
         size_t              max_len;
 #endif
-        struct net_device * dev;
         struct sk_buff *    skb;
 
         LOG_DBG("Sending ARP reply");
@@ -165,12 +165,6 @@ int arp_send_reply(uint16_t            ptype,
         if (!gpa_is_ok(spa) || !gha_is_ok(sha) ||
             !gpa_is_ok(tpa) || !gha_is_ok(tha)) {
                 LOG_ERR("Wrong input parameters, cannot send ARP reply");
-                return -1;
-        }
-
-        dev = gha_to_device(sha);
-        if (!dev) {
-                LOG_ERR("Cannot get the device for this GHA");
                 return -1;
         }
 
@@ -295,7 +289,8 @@ static struct arp_header * header_get(const struct sk_buff * skb)
 { return (struct arp_header *) skb_network_header(skb); }
 
 static int process(const struct sk_buff * skb,
-                   struct table *         cl)
+                   struct table *         cl,
+                   struct net_device *    dev)
 {
         struct arp_header * header;
         uint16_t            operation;
@@ -445,7 +440,7 @@ static int process(const struct sk_buff * skb,
                         LOG_DBG("Updating old entry %pK into the table",
                                 entry);
 
-                        if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha)) {
+                        if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha, GFP_ATOMIC)) {
                                 LOG_ERR("Failed to update table");
                                 gpa_destroy(tmp_spa);
                                 gpa_destroy(tmp_tpa);
@@ -480,7 +475,8 @@ static int process(const struct sk_buff * skb,
                 gha_dump(target_ha);
 
                 if (arp_send_reply(ptype,
-                                   tmp_tpa, target_ha, tmp_spa, tmp_sha)) {
+                                   tmp_tpa, target_ha,
+                                   tmp_spa, tmp_sha, dev)) {
                         /* FIXME: Couldn't send reply ... */
                         LOG_ERR("Couldn't send reply");
                         gpa_destroy(tmp_spa);
@@ -489,6 +485,10 @@ static int process(const struct sk_buff * skb,
                         gha_destroy(tmp_tha);
                         return -1;
                 }
+                gpa_destroy(tmp_spa);
+                gpa_destroy(tmp_tpa);
+                gha_destroy(tmp_sha);
+                gha_destroy(tmp_tha);
 
                 LOG_DBG("Request replied successfully");
         }
@@ -497,10 +497,6 @@ static int process(const struct sk_buff * skb,
         case ARP_REPLY: {
                 if (arm_resolve(ptype, tmp_spa, tmp_sha, tmp_tpa, tmp_tha)) {
                         LOG_ERR("Cannot resolve with this reply ...");
-                        gpa_destroy(tmp_spa);
-                        gpa_destroy(tmp_tpa);
-                        gha_destroy(tmp_sha);
-                        gha_destroy(tmp_tha);
                         return -1;
                 }
 
@@ -513,10 +509,7 @@ static int process(const struct sk_buff * skb,
         }
 
         LOG_DBG("Processing completed successfully");
-        gpa_destroy(tmp_spa);
-        gpa_destroy(tmp_tpa);
-        gha_destroy(tmp_sha);
-        gha_destroy(tmp_tha);
+
         return 0;
 }
 
@@ -604,7 +597,7 @@ int arp_receive(struct sk_buff *     skb,
                 return 0;
         }
 
-        if (process(skb, cl)) {
+        if (process(skb, cl, dev)) {
                 LOG_ERR("Cannot process this ARP");
                 kfree_skb(skb);
                 return 0;

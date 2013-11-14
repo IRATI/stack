@@ -216,12 +216,14 @@ int arm_resolve(uint16_t     ptype,
         return rwq_work_post(arm_wq, r);
 }
 
-int arp826_resolve_gpa(uint16_t           ptype,
-                       const struct gpa * spa,
-                       const struct gha * sha,
-                       const struct gpa * tpa,
-                       arp826_notify_t    notify,
-                       void *             opaque)
+/* FIXME: Use dev */
+int arp826_resolve_gpa(uint16_t            ptype,
+                       const struct gpa *  spa,
+                       const struct gha *  sha,
+                       const struct gpa *  tpa,
+                       struct net_device * dev,
+                       arp826_notify_t     notify,
+                       void *              opaque)
 {
         struct resolution * resolution;
 

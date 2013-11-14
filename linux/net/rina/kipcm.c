@@ -38,7 +38,6 @@
 #include "kipcm-utils.h"
 #include "common.h"
 #include "du.h"
-#include "fidm.h"
 #include "rnl.h"
 #include "rnl-utils.h"
 #include "kfa.h"
@@ -48,7 +47,7 @@
 #define DEFAULT_FACTORY "normal-ipc"
 
 struct flow_messages {
-        struct kipcm_fmap * ingress;
+        struct kipcm_pmap * ingress;
         struct kipcm_smap * egress;
 };
 
@@ -56,10 +55,12 @@ struct kipcm {
         struct mutex            lock;
         struct ipcp_factories * factories;
         struct ipcp_imap *      instances;
-        struct flow_messages *  fid_messages;
+        struct flow_messages *  messages;
         struct rnl_set *        rnls;
         struct kfa *            kfa;
 };
+
+message_handler_cb kipcm_handlers[RINA_C_MAX];
 
 #ifdef CONFIG_RINA_KIPCM_LOCKS_DEBUG
 
@@ -130,12 +131,13 @@ alloc_flow_req_free_and_reply(struct name *         source_name,
                               ipc_process_id_t      id,
                               uint_t                res,
                               uint_t                seq_num,
-                              uint_t                port_id)
+                              uint_t                port_id,
+                              port_id_t             pid)
 {
         alloc_flow_req_free(source_name, dest_name, fspec, dif_name,
                             attrs, msg, hdr);
 
-        if (rnl_app_alloc_flow_result_msg(id, res, seq_num, port_id)) {
+        if (rnl_app_alloc_flow_result_msg(id, res, pid, seq_num, port_id)) {
                 LOG_ERR("Could not send flow_result_msg");
                 return -1;
         }
@@ -161,7 +163,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         struct name *                              dest;
         struct name *                              dif_name;
         struct flow_spec *                         fspec;
-        flow_id_t                                  fid;
+        port_id_t                                  pid;
 
         source   = NULL;
         dest     = NULL;
@@ -194,7 +196,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
 
         source = name_create();
@@ -209,7 +212,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
         attrs->source = source;
 
@@ -225,7 +229,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
         attrs->dest = dest;
 
@@ -241,7 +246,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
         attrs->dif_name = dif_name;
 
@@ -257,7 +263,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
         attrs->fspec = fspec;
 
@@ -273,7 +280,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
         msg->attrs = attrs;
 
@@ -289,7 +297,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
         msg->rina_hdr = hdr;
 
@@ -304,7 +313,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
 
         ipc_id      = msg->rina_hdr->dst_ipc_id;
@@ -321,16 +331,16 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
 
-        fid = kfa_flow_create(kipcm->kfa);
-        ASSERT(is_flow_id_ok(fid));
-
-        if (kipcm_fmap_add(kipcm->fid_messages->ingress, fid, info->snd_seq)) {
-                LOG_ERR("Could not add map [fid, seq_num]: [%d, %d]",
-                        fid, info->snd_seq);
-                kfa_flow_destroy(kipcm->kfa, fid);
+        pid = kfa_flow_create(kipcm->kfa, ipc_id, false);
+        ASSERT(is_port_id_ok(pid));
+        if (kipcm_pmap_add(kipcm->messages->ingress, pid, info->snd_seq)) {
+                LOG_ERR("Could not add map [pid, seq_num]: [%d, %d]",
+                        pid, info->snd_seq);
+                kfa_flow_deallocate(kipcm->kfa, pid);
                 return alloc_flow_req_free_and_reply(source,
                                                      dest,
                                                      fspec,
@@ -341,18 +351,17 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
 
         if (ipc_process->ops->flow_allocate_request(ipc_process->data,
                                                     attrs->source,
                                                     attrs->dest,
                                                     attrs->fspec,
-                                                    attrs->id,
-                                                    fid)) {
-                LOG_ERR("Failed allocating flow request "
-                        "for port id: %d", attrs->id);
-                kfa_flow_destroy(kipcm->kfa, fid);
+                                                    pid)) {
+                LOG_ERR("Failed allocating flow request");
+                kfa_flow_deallocate(kipcm->kfa, pid);
                 return alloc_flow_req_free_and_reply(source,
                                                      dest,
                                                      fspec,
@@ -363,7 +372,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      ipc_id,
                                                      -1,
                                                      info->snd_seq,
-                                                     info->snd_portid);
+                                                     info->snd_portid,
+                                                     port_id_bad());
         }
 
         alloc_flow_req_free(source, dest, fspec, dif_name, attrs, msg, hdr);
@@ -392,7 +402,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         struct rina_msg_hdr *                  hdr;
         struct ipcp_instance *                 ipc_process;
         ipc_process_id_t                       ipc_id;
-        flow_id_t                              fid;
+        port_id_t                              pid;
 #if 0
         response_reason_t                      reason;
 #endif
@@ -444,17 +454,16 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 return -1;
         }
 
-        fid = kipcm_smap_find(kipcm->fid_messages->egress, info->snd_seq);
-        if (!is_flow_id_ok(fid)) {
-                LOG_ERR("Could not find flow id %d for response %d",
-                        fid, info->snd_seq);
+        pid = kipcm_smap_find(kipcm->messages->egress, info->snd_seq);
+        if (!is_port_id_ok(pid)) {
+                LOG_ERR("Could not find port id %d for response %d",
+                        pid, info->snd_seq);
                 alloc_flow_resp_free(attrs, msg, hdr);
                 return -1;
         }
 
         if (ipc_process->ops->flow_allocate_response(ipc_process->data,
-                                                     fid,
-                                                     attrs->id,
+                                                     pid,
                                                      0)) {
                 LOG_ERR("Failed allocate flow response for port id: %d",
                         attrs->id);
@@ -662,11 +671,10 @@ static int notify_ipcp_assign_dif_request(void *             data,
 
         dif_info->dif_name = dif_name;
 
-        dif_config = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
+        dif_config = dif_config_create();
         if (!dif_config)
                 goto fail;
 
-        INIT_LIST_HEAD(&(dif_config->ipcp_config_entries));
         dif_info->configuration = dif_config;
 
         msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
@@ -777,7 +785,7 @@ static int notify_ipcp_update_dif_config_request(void *             data,
                                                         0,
                                                         -1,
                                                         info->snd_seq,
-                                                        info->snd_portid);;
+                                                        info->snd_portid);
         INIT_LIST_HEAD(&(dif_config->ipcp_config_entries));
         attrs->dif_config = dif_config;
 
@@ -1139,25 +1147,25 @@ static int notify_ipcp_unregister_app_request(void *             data,
 }
 
 static int
-conn_create_resp_free_and_reply(struct rnl_ipcm_conn_create_req_msg_attrs * attrs,
-                                struct rnl_msg *                     msg,
-                                struct rina_msg_hdr *                hdr,
-                                ipc_process_id_t                     ipc_id,
-                                port_id_t                            pid,
-                                cep_id_t                             src_cep,
-                                rnl_sn_t                             seq_num,
-                                u32                                  nl_port_id)
+conn_create_resp_free_and_reply(struct rnl_ipcp_conn_create_req_msg_attrs * attrs,
+                                struct rnl_msg *                            msg,
+                                struct rina_msg_hdr *                       hdr,
+                                ipc_process_id_t                            ipc_id,
+                                port_id_t                                   pid,
+                                cep_id_t                                    src_cep,
+                                rnl_sn_t                                    seq_num,
+                                u32                                         nl_port_id)
 {
         if (attrs) rkfree(attrs);
         if (msg)   rkfree(msg);
         if (hdr)   rkfree(hdr);
 
-        if (rnl_ipcm_conn_create_resp_msg(ipc_id,
+        if (rnl_ipcp_conn_create_resp_msg(ipc_id,
                                           pid,
                                           src_cep,
                                           seq_num,
                                           nl_port_id)) {
-                LOG_ERR("Could not snd conn_reate_resp_msg");
+                LOG_ERR("Could not snd conn_create_resp_msg");
                 return -1;
         }
 
@@ -1168,7 +1176,7 @@ static int notify_ipcp_conn_create_req(void *             data,
                                        struct sk_buff *   buff,
                                        struct genl_info * info)
 {
-        struct rnl_ipcm_conn_create_req_msg_attrs * attrs;
+        struct rnl_ipcp_conn_create_req_msg_attrs * attrs;
         struct rnl_msg *                            msg;
         struct ipcp_instance *                      ipcp;
         struct rina_msg_hdr *                       hdr;
@@ -1176,7 +1184,6 @@ static int notify_ipcp_conn_create_req(void *             data,
         ipc_process_id_t                            ipc_id = 0;
         port_id_t                                   port_id = 0;
         cep_id_t                                    src_cep;
-        flow_id_t                                   fid = flow_id_bad();
 
         attrs    = NULL;
         msg      = NULL;
@@ -1215,10 +1222,6 @@ static int notify_ipcp_conn_create_req(void *             data,
                 goto process_fail;
         }
 
-
-        fid = kfa_flow_create(kipcm->kfa);
-        ASSERT(is_flow_id_ok(fid));
-
         src_cep = ipcp->ops->connection_create(ipcp->data,
                                                attrs->port_id,
                                                attrs->src_addr,
@@ -1228,11 +1231,6 @@ static int notify_ipcp_conn_create_req(void *             data,
 
         if (!is_cep_id_ok(src_cep)) {
                 LOG_ERR("IPC process could not create connection");
-                goto process_fail;
-        }
-
-        if (kfa_flow_bind(kipcm->kfa, fid, port_id, ipcp, ipc_id)) {
-                LOG_ERR("Cound not bind flow (normal ipcp)");
                 goto process_fail;
         }
 
@@ -1246,7 +1244,6 @@ static int notify_ipcp_conn_create_req(void *             data,
                                                info->snd_portid);
 
  process_fail:
-        if (is_flow_id_ok(fid)) kfa_flow_destroy(kipcm->kfa, fid);
         return conn_create_resp_free_and_reply(attrs,
                                                msg,
                                                hdr,
@@ -1264,7 +1261,7 @@ static int notify_ipcp_conn_create_req(void *             data,
 
 static int
 conn_create_result_free_and_reply(
-                                  struct rnl_ipcm_conn_create_arrived_msg_attrs * attrs,
+                                  struct rnl_ipcp_conn_create_arrived_msg_attrs * attrs,
                                   struct rnl_msg *                                msg,
                                   struct rina_msg_hdr *                           hdr,
                                   ipc_process_id_t                                ipc_id,
@@ -1278,13 +1275,13 @@ conn_create_result_free_and_reply(
         if (msg)   rkfree(msg);
         if (hdr)   rkfree(hdr);
 
-        if (rnl_ipcm_conn_create_result_msg(ipc_id,
+        if (rnl_ipcp_conn_create_result_msg(ipc_id,
                                             pid,
                                             src_cep,
                                             dst_cep,
                                             seq_num,
                                             nl_port_id)) {
-                LOG_ERR("Could not snd conn_reate_resp_msg");
+                LOG_ERR("Could not snd conn_create_result_msg");
                 return -1;
         }
 
@@ -1295,7 +1292,7 @@ static int notify_ipcp_conn_create_arrived(void *             data,
                                            struct sk_buff *   buff,
                                            struct genl_info * info)
 {
-        struct rnl_ipcm_conn_create_arrived_msg_attrs * attrs;
+        struct rnl_ipcp_conn_create_arrived_msg_attrs * attrs;
         struct rnl_msg *                                msg;
         struct ipcp_instance *                          ipcp;
         struct rina_msg_hdr *                           hdr;
@@ -1303,7 +1300,6 @@ static int notify_ipcp_conn_create_arrived(void *             data,
         ipc_process_id_t                                ipc_id = 0;
         port_id_t                                       port_id = 0;
         cep_id_t                                        src_cep;
-        flow_id_t                                       fid = flow_id_bad();
 
         attrs    = NULL;
         msg      = NULL;
@@ -1343,9 +1339,6 @@ static int notify_ipcp_conn_create_arrived(void *             data,
         }
 
 
-        fid = kfa_flow_create(kipcm->kfa);
-        ASSERT(is_flow_id_ok(fid));
-
         src_cep = ipcp->ops->connection_create_arrived(ipcp->data,
                                                        attrs->port_id,
                                                        attrs->src_addr,
@@ -1356,11 +1349,6 @@ static int notify_ipcp_conn_create_arrived(void *             data,
 
         if (!is_cep_id_ok(src_cep)) {
                 LOG_ERR("IPC process could not create connection");
-                goto process_fail;
-        }
-
-        if (kfa_flow_bind(kipcm->kfa, fid, port_id, ipcp, ipc_id)) {
-                LOG_ERR("Cound not bind flow (normal ipcp)");
                 goto process_fail;
         }
 
@@ -1375,7 +1363,6 @@ static int notify_ipcp_conn_create_arrived(void *             data,
                                                  info->snd_portid);
 
  process_fail:
-        if (is_flow_id_ok(fid)) kfa_flow_destroy(kipcm->kfa, fid);
         return conn_create_result_free_and_reply(attrs,
                                                  msg,
                                                  hdr,
@@ -1389,22 +1376,208 @@ static int notify_ipcp_conn_create_arrived(void *             data,
 
 }
 
+static int
+conn_update_result_free_and_reply(
+                                  struct rnl_ipcp_conn_update_req_msg_attrs * attrs,
+                                  struct rnl_msg *                            msg,
+                                  struct rina_msg_hdr *                       hdr,
+                                  ipc_process_id_t                            ipc_id,
+                                  uint_t                                      result,
+                                  port_id_t                                   pid,
+                                  rnl_sn_t                                    seq_num,
+                                  u32                                         nl_port_id)
+{
+        if (attrs) rkfree(attrs);
+        if (msg)   rkfree(msg);
+        if (hdr)   rkfree(hdr);
 
+        if (rnl_ipcp_conn_update_result_msg(ipc_id,
+                                            pid,
+                                            result,
+                                            seq_num,
+                                            nl_port_id)) {
+                LOG_ERR("Could not snd conn_update_result_msg");
+                return -1;
+        }
+
+        return 0;
+}
 
 static int notify_ipcp_conn_update_req(void *             data,
                                        struct sk_buff *   buff,
                                        struct genl_info * info)
 {
-        LOG_MISSING;
+        struct rnl_ipcp_conn_update_req_msg_attrs * attrs;
+        struct rnl_msg *                            msg;
+        struct ipcp_instance *                      ipcp;
+        struct rina_msg_hdr *                       hdr;
+        struct kipcm *                              kipcm;
+        ipc_process_id_t                            ipc_id = 0;
+        port_id_t                                   port_id = 0;
+
+        attrs    = NULL;
+        msg      = NULL;
+        hdr      = NULL;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        kipcm = (struct kipcm *) data;
+        attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+        msg   = rkzalloc(sizeof(*msg), GFP_KERNEL);
+        hdr   = rkzalloc(sizeof(*hdr), GFP_KERNEL);
+
+        if (!attrs || !msg || !hdr) {
+                goto process_fail;
+        }
+
+        msg->rina_hdr = hdr;
+        msg->attrs    = attrs;
+
+        if (rnl_parse_msg(info, msg)) {
+                goto process_fail;
+        }
+
+        port_id = attrs->port_id;
+        ipc_id  = hdr->dst_ipc_id;
+        ipcp    = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipcp) {
+                goto process_fail;
+        }
+
+
+        if (ipcp->ops->connection_update(ipcp->data,
+                                         attrs->src_cep,
+                                         attrs->dst_cep)) {
+                goto process_fail;
+        }
+
+        return conn_update_result_free_and_reply(attrs,
+                                                 msg,
+                                                 hdr,
+                                                 ipc_id,
+                                                 0,
+                                                 port_id,
+                                                 info->snd_seq,
+                                                 info->snd_portid);
+
+ process_fail:
+        return conn_update_result_free_and_reply(attrs,
+                                                 msg,
+                                                 hdr,
+                                                 ipc_id,
+                                                 -1,
+                                                 port_id,
+                                                 info->snd_seq,
+                                                 info->snd_portid);
+
+
+}
+
+static int
+conn_destroy_result_free_and_reply(
+                                   struct rnl_ipcp_conn_destroy_req_msg_attrs * attrs,
+                                   struct rnl_msg *                             msg,
+                                   struct rina_msg_hdr *                        hdr,
+                                   ipc_process_id_t                             ipc_id,
+                                   uint_t                                       result,
+                                   port_id_t                                    pid,
+                                   rnl_sn_t                                     seq_num,
+                                   u32                                          nl_port_id)
+{
+        if (attrs) rkfree(attrs);
+        if (msg)   rkfree(msg);
+        if (hdr)   rkfree(hdr);
+
+        if (rnl_ipcp_conn_destroy_result_msg(ipc_id,
+                                             pid,
+                                             result,
+                                             seq_num,
+                                             nl_port_id)) {
+                LOG_ERR("Could not snd conn_destroy_result_msg");
+                return -1;
+        }
+
         return 0;
 }
 
 static int notify_ipcp_conn_destroy_req(void *             data,
                                         struct sk_buff *   buff,
-                                        struct genl_info * info)
-{
-        LOG_MISSING;
-        return 0;
+                                        struct genl_info * info) {
+        struct rnl_ipcp_conn_destroy_req_msg_attrs * attrs;
+        struct rnl_msg *                             msg;
+        struct ipcp_instance *                       ipcp;
+        struct rina_msg_hdr *                        hdr;
+        struct kipcm *                               kipcm;
+        ipc_process_id_t                             ipc_id = 0;
+        port_id_t                                    port_id = 0;
+
+        attrs    = NULL;
+        msg      = NULL;
+        hdr      = NULL;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        kipcm = (struct kipcm *) data;
+        attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+        msg   = rkzalloc(sizeof(*msg), GFP_KERNEL);
+        hdr   = rkzalloc(sizeof(*hdr), GFP_KERNEL);
+
+        if (!attrs || !msg || !hdr) {
+                goto process_fail;
+        }
+
+        msg->rina_hdr = hdr;
+        msg->attrs    = attrs;
+
+        if (rnl_parse_msg(info, msg)) {
+                goto process_fail;
+        }
+
+        port_id = attrs->port_id;
+        ipc_id  = hdr->dst_ipc_id;
+        ipcp    = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipcp) {
+                goto process_fail;
+        }
+
+        if (ipcp->ops->connection_destroy(ipcp->data, attrs->src_cep)) {
+                goto process_fail;
+        }
+
+        return conn_destroy_result_free_and_reply(attrs,
+                                                  msg,
+                                                  hdr,
+                                                  ipc_id,
+                                                  0,
+                                                  port_id,
+                                                  info->snd_seq,
+                                                  info->snd_portid);
+
+ process_fail:
+        return conn_destroy_result_free_and_reply(attrs,
+                                                  msg,
+                                                  hdr,
+                                                  ipc_id,
+                                                  -1,
+                                                  port_id,
+                                                  info->snd_seq,
+                                                  info->snd_portid);
 }
 
 static int notify_ipc_manager_present(void *             data,
@@ -1419,57 +1592,18 @@ static int notify_ipc_manager_present(void *             data,
         return 0;
 }
 
+
 static int netlink_handlers_unregister(struct rnl_set * rnls)
 {
         int retval = 0;
+        int i;
 
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_ALLOCATE_FLOW_REQUEST))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_REGISTER_APPLICATION_REQUEST))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_IPC_MANAGER_PRESENT))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_CONN_CREATE_REQUEST))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_CONN_CREATE_ARRIVED))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_CONN_UPDATE_REQUEST))
-                retval = -1;
-
-        if (rnl_handler_unregister(rnls,
-                                   RINA_C_IPCM_CONN_DESTROY_REQUEST))
-                retval = -1;
+        for (i=1; i < RINA_C_MAX; i++) {
+                if (kipcm_handlers[i] != NULL) {
+                        if (rnl_handler_unregister(rnls, i))
+                                retval = -1;
+                }
+        }
 
         LOG_DBG("NL handlers unregistered %s",
                 (retval == 0) ? "successfully" : "unsuccessfully");
@@ -1479,435 +1613,52 @@ static int netlink_handlers_unregister(struct rnl_set * rnls)
 
 static int netlink_handlers_register(struct kipcm * kipcm)
 {
-        message_handler_cb handler;
+        int i,j;
+        kipcm_handlers[RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST]          =
+                notify_ipcp_assign_dif_request;
+        kipcm_handlers[RINA_C_IPCM_ALLOCATE_FLOW_REQUEST]          =
+                notify_ipcp_allocate_flow_request;
+        kipcm_handlers[RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE]         =
+                notify_ipcp_allocate_flow_response;
+        kipcm_handlers[RINA_C_IPCM_REGISTER_APPLICATION_REQUEST]   =
+                notify_ipcp_register_app_request;
+        kipcm_handlers[RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST] =
+                notify_ipcp_unregister_app_request;
+        kipcm_handlers[RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST]        =
+                notify_ipcp_deallocate_flow_request;
+        kipcm_handlers[RINA_C_IPCM_IPC_MANAGER_PRESENT]            =
+                notify_ipc_manager_present;
+        kipcm_handlers[RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST]      =
+                notify_ipcp_update_dif_config_request;
+        kipcm_handlers[RINA_C_IPCP_CONN_CREATE_REQUEST]            =
+                notify_ipcp_conn_create_req;
+        kipcm_handlers[RINA_C_IPCP_CONN_CREATE_ARRIVED]            =
+                notify_ipcp_conn_create_arrived;
+        kipcm_handlers[RINA_C_IPCP_CONN_UPDATE_REQUEST]            =
+                notify_ipcp_conn_update_req;
+        kipcm_handlers[RINA_C_IPCP_CONN_DESTROY_REQUEST]           =
+                notify_ipcp_conn_destroy_req;
 
-        handler = notify_ipcp_assign_dif_request;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST,
-                                 kipcm,
-                                 handler))
-                return -1;
-
-        handler = notify_ipcp_allocate_flow_request;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
+        for (i=1; i < RINA_C_MAX; i++) {
+                if (kipcm_handlers[i] != NULL) {
+                        if (rnl_handler_register(kipcm->rnls,
+                                                 i,
+                                                 kipcm,
+                                                 kipcm_handlers[i])) {
+                                for (j = i-1; j > 0; j--) {
+                                        if (kipcm_handlers[j] != NULL) {
+                                                if (rnl_handler_unregister(kipcm->rnls, j)) {
+                                                        LOG_ERR("Failed handler unregister while bailing out");
+                                                        /* FIXME: What else could be done here?" */
+                                                }
+                                        }
+                                }
+                                return -1;
+                        }
                 }
-                return -1;
-        }
-
-        handler = notify_ipcp_allocate_flow_response;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipcp_register_app_request;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipcp_unregister_app_request;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipcp_deallocate_flow_request;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipc_manager_present;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_IPC_MANAGER_PRESENT,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipcp_update_dif_config_request;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_IPC_MANAGER_PRESENT)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipcp_conn_create_req;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_CONN_CREATE_REQUEST,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_IPC_MANAGER_PRESENT)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipcp_conn_create_arrived;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_CONN_CREATE_ARRIVED,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_IPC_MANAGER_PRESENT)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_CONN_CREATE_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipcp_conn_update_req;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_CONN_UPDATE_REQUEST,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_IPC_MANAGER_PRESENT)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_CONN_CREATE_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_CONN_CREATE_ARRIVED)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
-        }
-
-        handler = notify_ipcp_conn_destroy_req;
-        if (rnl_handler_register(kipcm->rnls,
-                                 RINA_C_IPCM_CONN_DESTROY_REQUEST,
-                                 kipcm,
-                                 handler)) {
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_REGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_IPC_MANAGER_PRESENT)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_CONN_CREATE_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_CONN_CREATE_ARRIVED)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                if (rnl_handler_unregister(kipcm->rnls,
-                                           RINA_C_IPCM_CONN_UPDATE_REQUEST)) {
-                        LOG_ERR("Failed handler unregister while bailing out");
-                        /* FIXME: What else could be done here?" */
-                }
-                return -1;
         }
 
         LOG_DBG("NL handlers registered successfully");
-
         return 0;
 }
 
@@ -1939,8 +1690,8 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 return NULL;
         }
 
-        tmp->fid_messages = rkzalloc(sizeof(struct flow_messages), GFP_KERNEL);
-        if(!tmp->fid_messages) {
+        tmp->messages = rkzalloc(sizeof(struct flow_messages), GFP_KERNEL);
+        if (!tmp->messages) {
                 LOG_ERR("Failed to build flow maps");
                 if (ipcpf_fini(tmp->factories)) {
                         /* FIXME: What could we do here ? */
@@ -1952,16 +1703,16 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 return NULL;
         }
 
-        tmp->fid_messages->ingress = kipcm_fmap_create();
-        tmp->fid_messages->egress  = kipcm_smap_create();
-        if (!tmp->fid_messages->ingress || !tmp->fid_messages->egress) {
-                if (tmp->fid_messages->ingress)
-                        if (kipcm_fmap_destroy(tmp->fid_messages->ingress)) {
+        tmp->messages->ingress = kipcm_pmap_create();
+        tmp->messages->egress  = kipcm_smap_create();
+        if (!tmp->messages->ingress || !tmp->messages->egress) {
+                if (tmp->messages->ingress)
+                        if (kipcm_pmap_destroy(tmp->messages->ingress)) {
                                 /* FIXME: What could we do here ? */
                         }
 
-                if (tmp->fid_messages->egress)
-                        if (kipcm_smap_destroy(tmp->fid_messages->egress)) {
+                if (tmp->messages->egress)
+                        if (kipcm_smap_destroy(tmp->messages->egress)) {
                                 /* FIXME: What could we do here ? */
                         }
                 rkfree(tmp);
@@ -1971,10 +1722,10 @@ struct kipcm * kipcm_create(struct kobject * parent,
 
         tmp->kfa = kfa_create();
         if (!tmp->kfa) {
-                if (kipcm_fmap_destroy(tmp->fid_messages->ingress)) {
+                if (kipcm_pmap_destroy(tmp->messages->ingress)) {
                         /* FIXME: What could we do here ? */
                 }
-                if (kipcm_smap_destroy(tmp->fid_messages->egress)) {
+                if (kipcm_smap_destroy(tmp->messages->egress)) {
                         /* FIXME: What could we do here ? */
                 }
                 if (ipcp_imap_destroy(tmp->instances)) {
@@ -1988,10 +1739,10 @@ struct kipcm * kipcm_create(struct kobject * parent,
         }
 
         if (rnl_set_register(rnls)) {
-                if (kipcm_fmap_destroy(tmp->fid_messages->ingress)) {
+                if (kipcm_pmap_destroy(tmp->messages->ingress)) {
                         /* FIXME: What could we do here ? */
                 }
-                if (kipcm_smap_destroy(tmp->fid_messages->egress)) {
+                if (kipcm_smap_destroy(tmp->messages->egress)) {
                         /* FIXME: What could we do here ? */
                 }
                 if (kfa_destroy(tmp->kfa)) {
@@ -2009,10 +1760,10 @@ struct kipcm * kipcm_create(struct kobject * parent,
         tmp->rnls = rnls;
 
         if (netlink_handlers_register(tmp)) {
-                if (kipcm_fmap_destroy(tmp->fid_messages->ingress)) {
+                if (kipcm_pmap_destroy(tmp->messages->ingress)) {
                         /* FIXME: What could we do here ? */
                 }
-                if (kipcm_smap_destroy(tmp->fid_messages->egress)) {
+                if (kipcm_smap_destroy(tmp->messages->egress)) {
                         /* FIXME: What could we do here ? */
                 }
                 if (ipcp_imap_destroy(tmp->instances)) {
@@ -2060,11 +1811,11 @@ int kipcm_destroy(struct kipcm * kipcm)
                 /* FIXME: What should we do here ? */
         }
 
-        ASSERT(kipcm_fmap_empty(kipcm->fid_messages->ingress));
-        kipcm_fmap_destroy(kipcm->fid_messages->ingress);
+        ASSERT(kipcm_pmap_empty(kipcm->messages->ingress));
+        kipcm_pmap_destroy(kipcm->messages->ingress);
 
-        ASSERT(kipcm_smap_empty(kipcm->fid_messages->egress));
-        kipcm_smap_destroy(kipcm->fid_messages->egress);
+        ASSERT(kipcm_smap_empty(kipcm->messages->egress));
+        kipcm_smap_destroy(kipcm->messages->egress);
 
         if (netlink_handlers_unregister(kipcm->rnls)) {
                 /* FIXME: What should we do here ? */
@@ -2186,8 +1937,6 @@ int kipcm_ipcp_create(struct kipcm *      kipcm,
 
         /* FIXME: The following fixups are "ugly as hell" (TM) */
         instance->factory = factory;
-        instance->efcpc   = NULL;
-        instance->rmt     = NULL;
 
         if (ipcp_imap_add(kipcm->instances, id, instance)) {
                 factory->ops->destroy(factory->data, instance);
@@ -2247,7 +1996,7 @@ int kipcm_ipcp_destroy(struct kipcm *   kipcm,
 
 int kipcm_flow_arrived(struct kipcm *     kipcm,
                        ipc_process_id_t   ipc_id,
-                       flow_id_t          flow_id,
+                       port_id_t          port_id,
                        struct name *      dif_name,
                        struct name *      source,
                        struct name *      dest,
@@ -2267,14 +2016,14 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
          * the arrived flow request has been properly processed by the
          * IPC process calling this API.
          */
-        flow = kfa_find_flow_by_fid(kipcm->kfa, flow_id);
+        flow = kfa_find_flow_by_pid(kipcm->kfa, port_id);
         if (!flow) {
-                LOG_DBG("There's no flow pending for flow_id: %d", flow_id);
+                LOG_DBG("There's no flow pending for port_id: %d", port_id);
                 return -1;
         }
         seq_num = rnl_get_next_seqn(kipcm->rnls);
-        if (kipcm_smap_add_gfp(GFP_ATOMIC, kipcm->fid_messages->egress,
-                               seq_num, flow_id)) {
+        if (kipcm_smap_add_gfp(GFP_ATOMIC, kipcm->messages->egress,
+                               seq_num, port_id)) {
                 LOG_DBG("Could not get next sequence number");
                 return -1;
         }
@@ -2285,17 +2034,17 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
                                                dest,
                                                fspec,
                                                seq_num,
-                                               nl_port_id))
+                                               nl_port_id,
+                                               port_id))
                 return -1;
 
         return 0;
 }
 EXPORT_SYMBOL(kipcm_flow_arrived);
 
-int kipcm_flow_add(struct kipcm *   kipcm,
-                   ipc_process_id_t ipc_id,
-                   port_id_t        port_id,
-                   flow_id_t        fid)
+int kipcm_flow_commit(struct kipcm *   kipcm,
+                      ipc_process_id_t ipc_id,
+                      port_id_t        port_id)
 {
         struct ipcp_instance * ipc_process;
 
@@ -2317,11 +2066,10 @@ int kipcm_flow_add(struct kipcm *   kipcm,
                 return -1;
         }
 
-        if(kfa_flow_bind(kipcm->kfa,
-                         fid,
-                         port_id,
-                         ipc_process,
-                         ipc_id)) {
+        if (kfa_flow_bind(kipcm->kfa,
+                          port_id,
+                          ipc_process,
+                          ipc_id)) {
                 LOG_ERR("Couldn't commit flow");
                 KIPCM_UNLOCK(kipcm);
                 return -1;
@@ -2331,7 +2079,7 @@ int kipcm_flow_add(struct kipcm *   kipcm,
 
         return 0;
 }
-EXPORT_SYMBOL(kipcm_flow_add);
+EXPORT_SYMBOL(kipcm_flow_commit);
 
 int kipcm_sdu_write(struct kipcm * kipcm,
                     port_id_t      port_id,
@@ -2367,7 +2115,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         IRQ_BARRIER;
 
         /* The SDU is theirs now */
-        if(kfa_flow_sdu_read(kipcm->kfa, port_id, sdu)) {
+        if (kfa_flow_sdu_read(kipcm->kfa, port_id, sdu)) {
                 LOG_DBG("Failed to read sdu");
                 return -1;
         }
@@ -2377,18 +2125,18 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 
 int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
                                        ipc_process_id_t ipc_id,
-                                       flow_id_t        fid,
+                                       port_id_t        pid,
                                        uint_t           res)
 {
         rnl_sn_t seq_num;
 
         IRQ_BARRIER;
 
-        if(!is_flow_id_ok(fid)) {
+        if (!is_port_id_ok(pid)) {
                 LOG_ERR("Flow id is not ok");
         }
 
-        seq_num = kipcm_fmap_find(kipcm->fid_messages->ingress, fid);
+        seq_num = kipcm_pmap_find(kipcm->messages->ingress, pid);
         if (!is_seq_num_ok(seq_num)) {
                 LOG_ERR("Could not find request message id (seq num)");
                 return -1;
@@ -2397,7 +2145,7 @@ int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
         /*
          * FIXME: The rnl_port_id shouldn't be hardcoded as 1.
          */
-        if (rnl_app_alloc_flow_result_msg(ipc_id, res, seq_num, 1))
+        if (rnl_app_alloc_flow_result_msg(ipc_id, res, pid, seq_num, 1))
                 return -1;
 
         return 0;
@@ -2431,3 +2179,148 @@ struct kfa * kipcm_kfa(struct kipcm * kipcm)
         return kipcm->kfa;
 }
 EXPORT_SYMBOL(kipcm_kfa);
+
+/*  FIXME: Testng code reutilization regarding connections */
+#if 0
+static int
+conn_generic_free_and_reply(msg_type_t            op_code;
+                            void *                attrs,
+                            struct rnl_msg *      msg,
+                            struct rina_msg_hdr * hdr,
+                            ipc_process_id_t      ipc_id,
+                            port_id_t             pid,
+                            cep_id_t              src_cep,
+                            cep_id_t              dst_cep,
+                            rnl_sn_t              seq_num,
+                            u32                   nl_port_id)
+{
+
+        if (attrs) rkfree(attrs);
+        if (msg)   rkfree(msg);
+        if (hdr)   rkfree(hdr);
+
+        switch(op_code) {
+        case RINA_C_IPCP_CONN_CREATE_REQUEST:
+                if (rnl_ipcp_conn_create_resp_msg(ipc_id,
+                                                  pid,
+                                                  src_cep,
+                                                  seq_num,
+                                                  nl_port_id)) {
+                        LOG_ERR("Could not snd conn_create_resp_msg");
+                        return -1;
+                }
+
+        case RINA_C_IPCP_CONN_CREATE_ARRIVED:
+                if (rnl_ipcp_conn_create_result_msg(ipc_id,
+                                                    pid,
+                                                    src_cep,
+                                                    dst_cep,
+                                                    seq_num,
+                                                    nl_port_id)) {
+                        LOG_ERR("Could not snd conn_create_result_msg");
+                        return -1;
+                }
+
+        }
+
+        return 0;
+}
+
+static int notify_ipcp_conn_create_generic(void *             data,
+                                           struct sk_buff *   buff,
+                                           struct genl_info * info)
+{
+        struct rnl_ipcp_conn_create_arrived_msg_attrs * attrs;
+        struct rnl_msg *                                msg;
+        struct ipcp_instance *                          ipcp;
+        struct rina_msg_hdr *                           hdr;
+        struct kipcm *                                  kipcm;
+        ipc_process_id_t                                ipc_id = 0;
+        port_id_t                                       port_id = 0;
+        cep_id_t                                        src_cep;
+        flow_id_t                                       fid = flow_id_bad();
+
+        attrs    = NULL;
+        msg      = NULL;
+        hdr      = NULL;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        kipcm = (struct kipcm *) data;
+        attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+        msg   = rkzalloc(sizeof(*msg), GFP_KERNEL);
+        hdr   = rkzalloc(sizeof(*hdr), GFP_KERNEL);
+
+        if (!attrs || !msg || !hdr) {
+                goto process_fail;
+        }
+
+        msg->rina_hdr = hdr;
+        msg->attrs    = attrs;
+
+        if (rnl_parse_msg(info, msg)) {
+                goto process_fail;
+        }
+
+        port_id = attrs->port_id;
+        ipc_id  = hdr->dst_ipc_id;
+        ipcp    = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipcp) {
+                goto process_fail;
+        }
+
+
+        fid = kfa_flow_create(kipcm->kfa);
+        ASSERT(is_flow_id_ok(fid));
+
+        src_cep = ipcp->ops->connection_create_arrived(ipcp->data,
+                                                       attrs->port_id,
+                                                       attrs->src_addr,
+                                                       attrs->dst_addr,
+                                                       attrs->qos_id,
+                                                       attrs->dst_cep,
+                                                       attrs->policies);
+
+        if (!is_cep_id_ok(src_cep)) {
+                LOG_ERR("IPC process could not create connection");
+                goto process_fail;
+        }
+
+        if (kfa_flow_bind(kipcm->kfa, fid, port_id, ipcp, ipc_id)) {
+                LOG_ERR("Cound not bind flow (normal ipcp)");
+                goto process_fail;
+        }
+
+        return conn_create_result_free_and_reply(attrs,
+                                                 msg,
+                                                 hdr,
+                                                 ipc_id,
+                                                 port_id,
+                                                 src_cep,
+                                                 attrs->dst_cep,
+                                                 info->snd_seq,
+                                                 info->snd_portid);
+
+ process_fail:
+        if (is_flow_id_ok(fid)) kfa_flow_deallocate(kipcm->kfa, fid);
+        return conn_create_result_free_and_reply(attrs,
+                                                 msg,
+                                                 hdr,
+                                                 ipc_id,
+                                                 port_id,
+                                                 cep_id_bad(),
+                                                 cep_id_bad(),
+                                                 info->snd_seq,
+                                                 info->snd_portid);
+
+
+}
+#endif

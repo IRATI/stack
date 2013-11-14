@@ -35,8 +35,8 @@ enum RINANetlinkOperationCode{
         RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST, /* IPC Manager -> IPC Process */
         RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE, /* IPC Process -> IPC Manager */
 	RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION, /* IPC Manager -> IPC Process */
-	RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION, /* TODO IPC Manager -> IPC Process */
-	RINA_C_IPCM_ENROLL_TO_DIF_REQUEST, /* TODO IPC Manager -> IPC Process */
+	RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION, /* IPC Manager -> IPC Process */
+	RINA_C_IPCM_ENROLL_TO_DIF_REQUEST, /* IPC Manager -> IPC Process */
 	RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE, /* TODO IPC Process -> IPC Manager */
 	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST, /* TODO IPC Manager -> IPC Process */
 	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE, /* TODO IPC Process -> IPC Manager */
@@ -59,6 +59,7 @@ enum RINANetlinkOperationCode{
 	RINA_C_RMT_DUMP_FT_REPLY, /* TODO RMT (kernel) -> IPC Process (user space) */
 	RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION, /* Kernel (NL layer) -> IPC Manager */
 	RINA_C_IPCM_IPC_MANAGER_PRESENT, /* IPC Manager -> Kernel (NL layer) */
+	RINA_C_IPCM_IPC_PROCESS_INITIALIZED, /* IPC Process -> IPC Manager */
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST, /* Allocate flow request, Application -> IPC Manager */
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* Response to an application allocate flow request, IPC Manager -> Application */
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, /* Allocate flow request from a remote application, IPC Manager -> Application */
@@ -171,7 +172,7 @@ public:
  * and the IPC Manager.
  */
 
-class AppAllocateFlowRequestMessage: public BaseNetlinkResponseMessage {
+class AppAllocateFlowRequestMessage: public BaseNetlinkMessage {
 
 	/** The source application name */
 	ApplicationProcessNamingInformation sourceAppName;
@@ -234,9 +235,9 @@ public:
 };
 
 /**
- * Allocate flow request from a remote application, IPC Process -> Application
+ * Allocate flow request from a remote application, IPC Process -> IPC Manager
  */
-class AppAllocateFlowRequestArrivedMessage: public BaseNetlinkResponseMessage {
+class AppAllocateFlowRequestArrivedMessage: public BaseNetlinkMessage {
 
 	/** The source application name */
 	ApplicationProcessNamingInformation sourceAppName;
@@ -273,10 +274,7 @@ public:
  * Allocate flow response to an allocate request arrived operation,
  * Application -> IPC Process
  */
-class AppAllocateFlowResponseMessage: public BaseNetlinkMessage {
-
-	/** 0 if the application accepts the flow, error code otherwise */
-	int result;
+class AppAllocateFlowResponseMessage: public BaseNetlinkResponseMessage {
 
 	/**
 	 * If the flow was denied, this field controls wether the application
@@ -286,8 +284,6 @@ class AppAllocateFlowResponseMessage: public BaseNetlinkMessage {
 
 public:
 	AppAllocateFlowResponseMessage();
-	int getResult() const;
-	void setResult(int result);
 	bool isNotifySource() const;
 	void setNotifySource(bool notifySource);
 	IPCEvent* toIPCEvent();
@@ -297,7 +293,7 @@ public:
  * Issued by the application process when it whishes to deallocate a flow.
  * Application -> IPC Process
  */
-class AppDeallocateFlowRequestMessage: public BaseNetlinkResponseMessage {
+class AppDeallocateFlowRequestMessage: public BaseNetlinkMessage {
 
 	/** The id of the flow to be deallocated */
 	int portId;
@@ -370,7 +366,7 @@ public:
  * Invoked by the application when it wants to register an application
  * to a DIF. Application -> IPC Manager
  */
-class AppRegisterApplicationRequestMessage: public BaseNetlinkResponseMessage {
+class AppRegisterApplicationRequestMessage: public BaseNetlinkMessage {
 
 	/** Information about the registration request */
 	ApplicationRegistrationInformation applicationRegistrationInformation;
@@ -410,7 +406,7 @@ public:
  * Invoked by the application when it wants to unregister an application.
  * Application -> IPC Manager
  */
-class AppUnregisterApplicationRequestMessage: public BaseNetlinkResponseMessage {
+class AppUnregisterApplicationRequestMessage: public BaseNetlinkMessage {
 
 	/** The name of the application to be registered */
 	ApplicationProcessNamingInformation applicationName;
@@ -494,7 +490,7 @@ public:
  * one or more DIFs (Application -> IPC Manager)
  */
 class AppGetDIFPropertiesRequestMessage:
-		public BaseNetlinkResponseMessage {
+		public BaseNetlinkMessage {
 	/**
 	 * The name of the application that is querying the DIF properties
 	 */
@@ -545,7 +541,7 @@ public:
  * to a DIF. IPC Manager -> IPC Process
  */
 class IpcmRegisterApplicationRequestMessage:
-		public BaseNetlinkResponseMessage {
+		public BaseNetlinkMessage {
 
 	/** The name of the application to be registered */
 	ApplicationProcessNamingInformation applicationName;
@@ -579,7 +575,7 @@ public:
  * Invoked by the IPC Manager when it wants to unregister an application.
  * IPC Manager -> IPC Process
  */
-class IpcmUnregisterApplicationRequestMessage: public BaseNetlinkResponseMessage {
+class IpcmUnregisterApplicationRequestMessage: public BaseNetlinkMessage {
 
 	/** The name of the application to be registered */
 	ApplicationProcessNamingInformation applicationName;
@@ -615,7 +611,7 @@ public:
  * Makes an IPC Process a member of a DIF.
  * IPC Manager -> IPC Process
  */
-class IpcmAssignToDIFRequestMessage: public BaseNetlinkResponseMessage {
+class IpcmAssignToDIFRequestMessage: public BaseNetlinkMessage {
 
 	/** The information of the DIF where the IPC Process is assigned */
 	DIFInformation difInformation;
@@ -644,7 +640,7 @@ public:
  * IPC Manager -> IPC Process
  */
 class IpcmUpdateDIFConfigurationRequestMessage:
-                public BaseNetlinkResponseMessage {
+                public BaseNetlinkMessage {
 
         /** The new configuration of the DIF */
         DIFConfiguration difConfiguration;
@@ -669,7 +665,40 @@ public:
         IPCEvent* toIPCEvent();
 };
 
-class IpcmAllocateFlowRequestMessage: public BaseNetlinkResponseMessage {
+
+/**
+ * Instruct a normal IPC Process to enroll in a given DIF, using the
+ * supporting N-1 DIF (IPC Manager -> IPC Process)
+ */
+class IpcmEnrollToDIFRequestMessage: public BaseNetlinkMessage {
+
+        /** The DIF to enroll to */
+        ApplicationProcessNamingInformation difName;
+
+        /** The N-1 DIF name to allocate a flow to the member */
+        ApplicationProcessNamingInformation supportingDIFName;
+
+        /** The neighbor to enroll to */
+        ApplicationProcessNamingInformation neighborName;
+
+public:
+        IpcmEnrollToDIFRequestMessage();
+        const ApplicationProcessNamingInformation& getDifName() const;
+        void setDifName(const ApplicationProcessNamingInformation& difName);
+        const ApplicationProcessNamingInformation& getNeighborName() const;
+        void setNeighborName(
+                const ApplicationProcessNamingInformation& neighborName);
+        const ApplicationProcessNamingInformation&
+                getSupportingDifName() const;
+        void setSupportingDifName(
+                const ApplicationProcessNamingInformation& supportingDifName);
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * Used by the IPC Manager to request a flow allocation to an IPC Process
+ */
+class IpcmAllocateFlowRequestMessage: public BaseNetlinkMessage {
 	/** The source application name*/
 	ApplicationProcessNamingInformation sourceAppName;
 
@@ -682,17 +711,12 @@ class IpcmAllocateFlowRequestMessage: public BaseNetlinkResponseMessage {
 	/** The DIF where the Flow is being allocated */
 	ApplicationProcessNamingInformation difName;
 
-	/** The portId assigned tot he flow */
-	int portId;
-
 public:
 	IpcmAllocateFlowRequestMessage();
 	const ApplicationProcessNamingInformation& getDestAppName() const;
 	void setDestAppName(const ApplicationProcessNamingInformation& destAppName);
 	const FlowSpecification& getFlowSpec() const;
 	void setFlowSpec(const FlowSpecification& flowSpec);
-	int getPortId() const;
-	void setPortId(int portId);
 	const ApplicationProcessNamingInformation& getSourceAppName() const;
 	void setSourceAppName(
 			const ApplicationProcessNamingInformation& sourceAppName);
@@ -707,8 +731,12 @@ public:
  */
 class IpcmAllocateFlowRequestResultMessage: public BaseNetlinkResponseMessage {
 
+        /** The port id allocated to the flow */
+        int portId;
 public:
 	IpcmAllocateFlowRequestResultMessage();
+	int getPortId() const;
+	void setPortId(int portId);
 	IPCEvent* toIPCEvent();
 };
 
@@ -716,7 +744,7 @@ public:
  * Allocate flow request from a remote application, IPC Process -> IPC Manager
  */
 class IpcmAllocateFlowRequestArrivedMessage:
-		public BaseNetlinkResponseMessage {
+		public BaseNetlinkMessage {
 
 	/** The source application name */
 	ApplicationProcessNamingInformation sourceAppName;
@@ -730,6 +758,9 @@ class IpcmAllocateFlowRequestArrivedMessage:
 	/** The dif Name */
 	ApplicationProcessNamingInformation difName;
 
+	/** The port id allocated to the flow */
+	int portId;
+
 public:
 	IpcmAllocateFlowRequestArrivedMessage();
 	const ApplicationProcessNamingInformation& getDestAppName() const;
@@ -741,6 +772,8 @@ public:
 			const ApplicationProcessNamingInformation& sourceAppName);
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
+	int getPortId() const;
+	void setPortId(int portId);
 	IPCEvent* toIPCEvent();
 };
 
@@ -759,26 +792,19 @@ class IpcmAllocateFlowResponseMessage: public BaseNetlinkMessage {
 	 */
 	bool notifySource;
 
-	/**
-	 * The portId assigned to the flow by the IPC Manager
-	 */
-	int portId;
-
 public:
 	IpcmAllocateFlowResponseMessage();
 	int getResult() const;
 	void setResult(int result);
 	bool isNotifySource() const;
 	void setNotifySource(bool notifySource);
-	int getPortId() const;
-	void setPortId(int portId);
 	IPCEvent* toIPCEvent();
 };
 
 /**
  * IPC Manager -> IPC Process
  */
-class IpcmDeallocateFlowRequestMessage: public BaseNetlinkResponseMessage {
+class IpcmDeallocateFlowRequestMessage: public BaseNetlinkMessage {
 
 	/** The id of the flow to be deallocated */
 	int portId;
@@ -856,7 +882,7 @@ public:
  * IPC Manager -> IPC Process
  */
 class IpcmDIFQueryRIBRequestMessage:
-		public BaseNetlinkResponseMessage {
+		public BaseNetlinkMessage {
 
 	/** The class of the object being queried*/
 	std::string objectClass;
@@ -937,6 +963,16 @@ class IpcmIPCManagerPresentMessage: public BaseNetlinkMessage {
 public:
 	IpcmIPCManagerPresentMessage();
 	IPCEvent* toIPCEvent();
+};
+
+/**
+ * IPC Process -> IPC Manager. Sent after the IPC Process daemon has initialized
+ * the NL infrastructure and is ready to receive messages.
+ */
+class IpcmIPCProcessInitializedMessage: public BaseNetlinkMessage {
+public:
+        IpcmIPCProcessInitializedMessage();
+        IPCEvent* toIPCEvent();
 };
 
 }

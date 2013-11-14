@@ -2,6 +2,8 @@
  * RMT (Relaying and Multiplexing Task)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,13 +30,16 @@
 
 struct rmt {
         struct pft * pft; /* The PDU Forwarding Table */
-
+        struct kfa * kfa;
         /* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
 };
 
-struct rmt * rmt_create(void)
+struct rmt * rmt_create(struct kfa * kfa)
 {
         struct rmt * tmp;
+
+        if (!kfa)
+                return NULL;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
@@ -45,7 +50,8 @@ struct rmt * rmt_create(void)
                 rkfree(tmp);
                 return NULL;
         }
-
+        
+        tmp->kfa = kfa;
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
         return tmp;
@@ -68,6 +74,7 @@ int rmt_destroy(struct rmt * instance)
 
         return 0;
 }
+EXPORT_SYMBOL(rmt_destroy);
 
 int rmt_send_sdu(struct rmt * instance,
                  address_t    address,

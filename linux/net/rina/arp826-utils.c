@@ -25,7 +25,6 @@
 #include <linux/skbuff.h>
 #include <linux/netdevice.h>
 #include <linux/slab.h>
-#include <linux/list.h>
 #include <linux/if_ether.h>
 
 /* FIXME: The following dependencies have to be removed */

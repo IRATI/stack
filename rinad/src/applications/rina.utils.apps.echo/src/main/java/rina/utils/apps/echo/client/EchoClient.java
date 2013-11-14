@@ -1,11 +1,21 @@
 package rina.utils.apps.echo.client;
 
+import java.util.Calendar;
+import java.util.Timer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import rina.cdap.api.CDAPSessionManager;
+import rina.cdap.api.message.CDAPMessage;
+import rina.cdap.api.message.CDAPMessage.Opcode;
+import rina.cdap.api.message.ObjectValue;
+import rina.cdap.impl.CDAPSessionManagerImpl;
+import rina.cdap.impl.googleprotobuf.GoogleProtocolBufWireMessageProviderFactory;
+import rina.utils.apps.echo.TestInformation;
+import rina.utils.apps.echo.protobuf.EchoTestMessageEncoder;
 import rina.utils.apps.echo.utils.ApplicationRegistrationListener;
 import rina.utils.apps.echo.utils.FlowAllocationListener;
 import rina.utils.apps.echo.utils.FlowDeallocationListener;
@@ -29,8 +39,12 @@ import eu.irati.librina.rina;
 public class EchoClient implements  ApplicationRegistrationListener, 
 FlowAllocationListener, FlowDeallocationListener {
 	
-	private int numberOfSdus = 0;
-	private int sduSize = 0;
+	public static final int MAX_SDU_SIZE = 10000;
+	public static final int MAX_NUM_OF_SDUS = 10000;
+	public static final String TEST_OBJECT_CLASS = "Echo test";
+	public static final String TEST_OBJECT_NAME = "/rina/utils/apps/echo/test";
+	
+	private TestInformation testInformation = null;
 	
 	private static final Log log = LogFactory.getLog(EchoClient.class);
 	
@@ -55,14 +69,35 @@ FlowAllocationListener, FlowDeallocationListener {
 	
 	private IPCEventConsumer ipcEventConsumer = null;
 	private long handle = -1;
+	private CDAPSessionManager cdapSessionManager = null;
+	
+	private FlowReader flowReader = null;
+	
+	private Timer timer = null;
 	
 	public EchoClient(int numberOfSdus, int sduSize, 
 			ApplicationProcessNamingInformation echoApNamingInfo){
 		rina.initialize();
-		this.numberOfSdus = numberOfSdus;
-		this.sduSize = sduSize;
+		
+		testInformation = new TestInformation();
+		if (numberOfSdus > MAX_NUM_OF_SDUS) {
+			numberOfSdus = MAX_NUM_OF_SDUS;
+		}
+		testInformation.setNumberOfSDUs(numberOfSdus);
+		
+		if (sduSize > MAX_SDU_SIZE) {
+			sduSize = MAX_SDU_SIZE;
+		}
+		testInformation.setSduSize(sduSize);
+		
 		this.echoApNamingInfo = echoApNamingInfo;
-		this.clientApNamingInfo = new ApplicationProcessNamingInformation("rina.utils.apps.echoclient", "1");
+		clientApNamingInfo = new ApplicationProcessNamingInformation("rina.utils.apps.echoclient", "1");
+		
+		cdapSessionManager = new CDAPSessionManagerImpl(
+				new GoogleProtocolBufWireMessageProviderFactory());
+		
+		timer = new Timer();
+		
 		ipcEventConsumer = new IPCEventConsumer();
 		ipcEventConsumer.addApplicationRegistrationListener(this, clientApNamingInfo);
 		executorService = Executors.newCachedThreadPool();
@@ -82,6 +117,14 @@ FlowAllocationListener, FlowDeallocationListener {
 			ex.printStackTrace();
 			System.exit(-1);
 		}
+	}
+	
+	public void cancelTest(int status) {
+		if (flowReader != null) {
+			flowReader.stop();
+		}
+		
+		System.exit(status);
 	}
 	
 	public synchronized void dispatchApplicationRegistrationResponseEvent(
@@ -146,19 +189,64 @@ FlowAllocationListener, FlowDeallocationListener {
 				
 				ipcEventConsumer.addFlowDeallocationListener(this, event.getPortId());
 				
-				//2 Start flowReader
-				FlowReader flowReader = new FlowReader(this.flow, this.sduSize, this.numberOfSdus);
-				this.executorService.execute(flowReader);
+				byte[] buffer = null;
+				int bytesRead = 0;
+				try{
+					ObjectValue objectValue = new ObjectValue();
+					objectValue.setByteval(EchoTestMessageEncoder.encode(this.testInformation));
+					CDAPMessage cdapMessage = CDAPMessage.getStartObjectRequestMessage(
+							null, null, TEST_OBJECT_CLASS, objectValue, 0, TEST_OBJECT_NAME, 0);
+					cdapMessage.setInvokeID(1);
+					buffer = this.cdapSessionManager.encodeCDAPMessage(cdapMessage);
+					flow.writeSDU(buffer, buffer.length);
+					log.info("Requested echo server to start a test with the following parameters: \n" 
+							+ testInformation.toString());
+					
+					CancelTestTimerTask timerTask = new CancelTestTimerTask(this);
+					timer.schedule(timerTask, 2*1000);
+					
+					buffer = new byte[MAX_SDU_SIZE];
+					bytesRead = flow.readSDU(buffer, buffer.length);
+					timerTask.cancel();
+					byte[] sdu = new byte[bytesRead];
+					for(int i=0; i<sdu.length; i++) {
+						sdu[i] = buffer[i];
+					}
+					cdapMessage = cdapSessionManager.decodeCDAPMessage(sdu);
+					if (cdapMessage.getOpCode() != Opcode.M_START_R) {
+						throw new Exception("Received wrong CDAP message code: "+cdapMessage.getOpCode());
+					} else if (cdapMessage.getResult() != 0) {
+						throw new Exception("Echo server rejected the test");
+					}
+					
+					log.info("Echo server accepted the test, starting...");
+				} catch(Exception ex) {
+					log.error("Error initiating test: "+ex.getMessage() 
+							+ ". Deallocating flow and terminating");
+					try {
+						rina.getIpcManager().requestFlowDeallocation(flow.getPortId());
+					} catch(Exception e) {
+						log.error("Problems requesting flow deallocation " +e.getMessage());
+						System.exit(-1);
+					}
+					return;
+				}
 				
+				//2 Start flowReader
+				flowReader = new FlowReader(flow, this.testInformation, timer);
+				this.executorService.execute(flowReader);
+
 				//3 Send SDUs to server
-				byte[] buffer = new byte[sduSize];
-				for(int i=0; i<numberOfSdus; i++){
+				buffer = new byte[testInformation.getSduSize()];
+				for(int i=0; i<testInformation.getNumberOfSDUs(); i++){
 					try{
-						flow.writeSDU(buffer, sduSize);
-						log.debug("Wrote SDU of size " + sduSize 
-								+ " to portId "+flow.getPortId());
+						flow.writeSDU(buffer, buffer.length);
+						if (i==0) {
+							testInformation.setFirstSDUSentTime(
+									Calendar.getInstance().getTimeInMillis());
+						}
 					}catch(Exception ex){
-						ex.printStackTrace();
+						log.error("Error writing SDU "+i+" to port-id "+flow.getPortId());
 					}
 				}
 			} else {
@@ -174,10 +262,13 @@ FlowAllocationListener, FlowDeallocationListener {
 			}
 		}
 	}
-
+	
 	@Override
 	public void dispatchFlowDeallocatedEvent(FlowDeallocatedEvent event) {
-		// TODO Auto-generated method stub
+		if (flowReader != null) {
+			flowReader.stop();
+		}
 		
+		System.exit(0);
 	}
 }

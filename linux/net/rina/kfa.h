@@ -25,7 +25,6 @@
 
 #include "common.h"
 #include "du.h"
-#include "fidm.h"
 #include "ipcp-factories.h"
 
 struct kfa;
@@ -33,29 +32,19 @@ struct kfa;
 struct kfa * kfa_create(void);
 int          kfa_destroy(struct kfa * instance);
 
-/* Returns a flow-id, the flow is uncommitted yet */
-flow_id_t    kfa_flow_create(struct kfa * instance);
+/* Returns a port-id, the flow is uncommitted yet */
+port_id_t    kfa_flow_create(struct kfa *     instance,
+                             ipc_process_id_t id,
+                             bool             to_app);
 
-/* Commits the flow, binds the flow to a port-id, frees the flow-id */
+/* Commits the flow, binds the flow to a port-id */
 int          kfa_flow_bind(struct kfa *           instance,
-                           flow_id_t              fid,
                            port_id_t              pid,
                            struct ipcp_instance * ipc_process,
                            ipc_process_id_t       ipc_id);
 
-/*
- * Un-commits the flow, binds the flow to a flow-id (different from the one
- * obtained during creation
- */
-flow_id_t    kfa_flow_unbind(struct kfa * instance,
-                             port_id_t    id);
-
-/* Finally destroys the flow */
-int          kfa_flow_destroy(struct kfa * instance,
-                              flow_id_t    id);
-
-int          kfa_flow_unbind_and_destroy(struct kfa * instance,
-                                         port_id_t    id);
+int          kfa_flow_deallocate(struct kfa * instance,
+                                 port_id_t    id);
 
 int          kfa_remove_all_for_id(struct kfa *     instance,
                                    ipc_process_id_t id);
@@ -73,7 +62,7 @@ int          kfa_sdu_post(struct kfa * instance,
                           port_id_t    id,
                           struct sdu * sdu);
 
-struct ipcp_flow * kfa_find_flow_by_fid(struct kfa * instance,
-                                        flow_id_t    fid);
+struct ipcp_flow * kfa_find_flow_by_pid(struct kfa * instance,
+                                        port_id_t    pid);
 
 #endif

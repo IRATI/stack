@@ -431,9 +431,31 @@ int putIpcmUnregisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 IpcmUnregisterApplicationResponseMessage *
 	parseIpcmUnregisterApplicationResponseMessage(nlmsghdr *hdr);
 
+/* DataTransferConstants CLASS */
+enum DataTransferConstantsAttributes {
+        DTC_ATTR_QOS_ID = 1,
+        DTC_ATTR_PORT_ID,
+        DTC_ATTR_CEP_ID,
+        DTC_ATTR_SEQ_NUM,
+        DTC_ATTR_ADDRESS,
+        DTC_ATTR_LENGTH,
+        DTC_ATTR_MAX_PDU_SIZE,
+        DTC_ATTR_MAX_PDU_LIFE,
+        DTC_ATTR_DIF_INTEGRITY,
+        __DTC_ATTR_MAX,
+};
+
+#define DTC_ATTR_MAX (__DTC_ATTR_MAX -1)
+
+int putDataTransferConstantsObject(nl_msg* netlinkMessage,
+                const DataTransferConstants& object);
+
+DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested);
+
 /* DIF Configuration CLASS */
 enum DIFConfigurationAttributes {
 	DCONF_ATTR_PARAMETERS = 1,
+	DCONF_ATTR_DATA_TRANS_CONST,
 	__DCONF_ATTR_MAX,
 };
 
@@ -515,12 +537,27 @@ int putIpcmUpdateDIFConfigurationResponseMessageObject(nl_msg* netlinkMessage,
 IpcmUpdateDIFConfigurationResponseMessage *
         parseIpcmUpdateDIFConfigurationResponseMessage(nlmsghdr *hdr);
 
+/* IpcmEnrollToDIFRequestMessage CLASS*/
+enum IpcmEnrollToDIFRequestMessageAttributes {
+        IETDR_ATTR_DIF_NAME = 1,
+        IETDR_ATTR_SUP_DIF_NAME,
+        IETDR_ATTR_NEIGH,
+        __IETDR_ATTR_MAX,
+};
+
+#define IETDR_ATTR_MAX (__IETDR_ATTR_MAX -1)
+
+int putIpcmEnrollToDIFRequestMessageObject(nl_msg* netlinkMessage,
+                const IpcmEnrollToDIFRequestMessage& object);
+
+IpcmEnrollToDIFRequestMessage *
+        parseIpcmEnrollToDIFRequestMessage(nlmsghdr *hdr);
+
 /* IpcmAllocateFlowRequestMessage CLASS*/
 enum IpcmAllocateFlowRequestMessageAttributes {
 	IAFRM_ATTR_SOURCE_APP_NAME = 1,
 	IAFRM_ATTR_DEST_APP_NAME,
 	IAFRM_ATTR_FLOW_SPEC,
-	IAFRM_ATTR_PORT_ID,
 	IAFRM_ATTR_DIF_NAME,
 	__IAFRM_ATTR_MAX,
 };
@@ -536,6 +573,7 @@ IpcmAllocateFlowRequestMessage *
 /* IpcmAllocateFlowRequestResultMessage CLASS*/
 enum IpcmAllocateFlowRequestResultMessageAttributes {
 	IAFRRM_ATTR_RESULT = 1,
+	IAFRRM_ATTR_PORT_ID,
 	__IAFRRM_ATTR_MAX,
 };
 
@@ -553,6 +591,7 @@ enum IpcmAllocateFlowRequestArrivedMessageAttributes {
 	IAFRA_ATTR_DEST_APP_NAME,
 	IAFRA_ATTR_FLOW_SPEC,
 	IAFRA_ATTR_DIF_NAME,
+	IAFRA_ATTR_PORT_ID,
 	__IAFRA_ATTR_MAX,
 };
 
@@ -568,7 +607,6 @@ IpcmAllocateFlowRequestArrivedMessage * parseIpcmAllocateFlowRequestArrivedMessa
 enum IpcmAllocateFlowResponseAttributes {
 	IAFRE_ATTR_RESULT = 1,
 	IAFRE_ATTR_NOTIFY_SOURCE,
-	IAFRE_ATTR_PORT_ID,
 	__IAFRE_ATTR_MAX,
 };
 

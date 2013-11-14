@@ -1,12 +1,10 @@
 package rina.ipcmanager.impl.conf;
 
-import java.util.ArrayList;
 import java.util.List;
 
+import eu.irati.librina.DataTransferConstants;
 import eu.irati.librina.Parameter;
-
-import rina.efcp.api.DataTransferConstants;
-import rina.flowallocator.api.QoSCube;
+import eu.irati.librina.QoSCube;
 
 /**
  * The configuration required to create a DIF
@@ -139,17 +137,6 @@ public class DIFProperties {
 	}
 	public void setPolicyParameters(List<Property> policyParameters) {
 		this.policyParameters = policyParameters;
-	}
-	public static DIFProperties getDefaultNormalDIFConfiguration(){
-		DIFProperties result = new DIFProperties();
-		result.setDifName("RINA-Demo.DIF");
-		result.setDataTransferConstants(DataTransferConstants.getDefaultInstance());
-		List<QoSCube> qosCubes = new ArrayList<QoSCube>();
-		qosCubes.add(QoSCube.getDefaultReliableQoSCube());
-		qosCubes.add(QoSCube.getDefaultUnreliableQoSCube());
-		result.setQosCubes(qosCubes);
-		
-		return result;
 	}
 
 	public String getDifName() {

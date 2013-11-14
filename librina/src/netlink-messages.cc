@@ -165,7 +165,7 @@ void BaseNetlinkResponseMessage::setResult(int result){
 
 /* CLASS RINA APP ALLOCATE FLOW MESSAGE */
 AppAllocateFlowRequestMessage::AppAllocateFlowRequestMessage() :
-                BaseNetlinkResponseMessage(RINA_C_APP_ALLOCATE_FLOW_REQUEST) {
+                BaseNetlinkMessage(RINA_C_APP_ALLOCATE_FLOW_REQUEST) {
 }
 
 const ApplicationProcessNamingInformation&
@@ -265,7 +265,7 @@ IPCEvent* AppAllocateFlowRequestResultMessage::toIPCEvent(){
 
 /* CLASS APP ALLOCATE FLOW REQUEST ARRIVED MESSAGE */
 AppAllocateFlowRequestArrivedMessage::AppAllocateFlowRequestArrivedMessage() :
-                BaseNetlinkResponseMessage(
+                BaseNetlinkMessage(
                                 RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED) {
 	this->portId = 0;
 }
@@ -333,17 +333,8 @@ IPCEvent* AppAllocateFlowRequestArrivedMessage::toIPCEvent(){
 
 /* CLASS APP ALLOCATE FLOW RESPONSE MESSAGE */
 AppAllocateFlowResponseMessage::AppAllocateFlowResponseMessage() :
-				BaseNetlinkMessage(RINA_C_APP_ALLOCATE_FLOW_RESPONSE) {
-	this->result = 0;
+                BaseNetlinkResponseMessage(RINA_C_APP_ALLOCATE_FLOW_RESPONSE) {
 	this->notifySource = true;
-}
-
-int AppAllocateFlowResponseMessage::getResult() const {
-        return result;
-}
-
-void AppAllocateFlowResponseMessage::setResult(int result){
-        this->result = result;
 }
 
 bool AppAllocateFlowResponseMessage::isNotifySource() const {
@@ -357,7 +348,7 @@ void AppAllocateFlowResponseMessage::setNotifySource(bool notifySource) {
 IPCEvent* AppAllocateFlowResponseMessage::toIPCEvent(){
         AllocateFlowResponseEvent * event =
                         new AllocateFlowResponseEvent(
-                                        result,
+                                        getResult(),
                                         notifySource,
                                         getSequenceNumber());
         return event;
@@ -365,7 +356,7 @@ IPCEvent* AppAllocateFlowResponseMessage::toIPCEvent(){
 
 /* CLASS APP DEALLOCATE FLOW REQUEST MESSAGE */
 AppDeallocateFlowRequestMessage::AppDeallocateFlowRequestMessage() :
-                BaseNetlinkResponseMessage(RINA_C_APP_DEALLOCATE_FLOW_REQUEST) {
+                BaseNetlinkMessage(RINA_C_APP_DEALLOCATE_FLOW_REQUEST) {
 	this->portId = 0;
 }
 
@@ -456,8 +447,7 @@ IPCEvent* AppFlowDeallocatedNotificationMessage::toIPCEvent(){
 
 /* CLASS APP REGISTER APPLICATION REQUEST MESSAGE */
 AppRegisterApplicationRequestMessage::AppRegisterApplicationRequestMessage() :
-                BaseNetlinkResponseMessage(
-					RINA_C_APP_REGISTER_APPLICATION_REQUEST) {
+                BaseNetlinkMessage(RINA_C_APP_REGISTER_APPLICATION_REQUEST) {
 }
 
 const ApplicationRegistrationInformation&
@@ -519,8 +509,7 @@ IPCEvent* AppRegisterApplicationResponseMessage::toIPCEvent(){
 
 /* CLASS APP UNREGISTER APPLICATION REQUEST MESSAGE */
 AppUnregisterApplicationRequestMessage::AppUnregisterApplicationRequestMessage() :
-                BaseNetlinkResponseMessage(
-					RINA_C_APP_UNREGISTER_APPLICATION_REQUEST) {
+                BaseNetlinkMessage(RINA_C_APP_UNREGISTER_APPLICATION_REQUEST) {
 }
 
 const ApplicationProcessNamingInformation&
@@ -633,7 +622,7 @@ IPCEvent* AppRegistrationCanceledNotificationMessage::toIPCEvent(){
 
 /*CLASS APP GET DIF PROPERTIES REQUEST MESSAGE */
 AppGetDIFPropertiesRequestMessage::AppGetDIFPropertiesRequestMessage():
-                BaseNetlinkResponseMessage(
+                BaseNetlinkMessage(
 				RINA_C_APP_GET_DIF_PROPERTIES_REQUEST){
 }
 
@@ -710,7 +699,7 @@ IPCEvent* AppGetDIFPropertiesResponseMessage::toIPCEvent(){
 
 /* CLASS IPCM REGISTER APPLICATION REQUEST MESSAGE */
 IpcmRegisterApplicationRequestMessage::IpcmRegisterApplicationRequestMessage():
-                BaseNetlinkResponseMessage(
+                BaseNetlinkMessage(
 			RINA_C_IPCM_REGISTER_APPLICATION_REQUEST) {
 }
 
@@ -761,7 +750,7 @@ IPCEvent* IpcmRegisterApplicationResponseMessage::toIPCEvent(){
 
 /* CLASS IPCM UNREGISTER APPLICATION REQUEST MESSAGE */
 IpcmUnregisterApplicationRequestMessage::IpcmUnregisterApplicationRequestMessage() :
-                BaseNetlinkResponseMessage(
+                BaseNetlinkMessage(
 			RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST) {
 }
 
@@ -811,7 +800,7 @@ IPCEvent* IpcmUnregisterApplicationResponseMessage::toIPCEvent(){
 
 /* CLASS IPCM ASSIGN TO DIF REQUEST MESSAGE */
 IpcmAssignToDIFRequestMessage::IpcmAssignToDIFRequestMessage():
-                BaseNetlinkResponseMessage(
+                BaseNetlinkMessage(
 				RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST) {
 }
 
@@ -850,7 +839,7 @@ IPCEvent* IpcmAssignToDIFResponseMessage::toIPCEvent(){
 /* CLASS IPCM UPDATE DIF CONFIGURATION REQUEST MESSAGE */
 IpcmUpdateDIFConfigurationRequestMessage::
 IpcmUpdateDIFConfigurationRequestMessage():
-BaseNetlinkResponseMessage(RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST) {
+BaseNetlinkMessage(RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST) {
 }
 
 const DIFConfiguration&
@@ -887,11 +876,52 @@ IPCEvent* IpcmUpdateDIFConfigurationResponseMessage::toIPCEvent(){
         return event;
 }
 
+/* CLASS IPCM ENROLL TO DIF REQUEST MESSAGE */
+IpcmEnrollToDIFRequestMessage:: IpcmEnrollToDIFRequestMessage():
+        BaseNetlinkMessage(RINA_C_IPCM_ENROLL_TO_DIF_REQUEST) {
+}
+
+const ApplicationProcessNamingInformation&
+IpcmEnrollToDIFRequestMessage::getDifName() const {
+        return difName;
+}
+
+void IpcmEnrollToDIFRequestMessage::setDifName(
+                const ApplicationProcessNamingInformation& difName) {
+        this->difName = difName;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmEnrollToDIFRequestMessage::getNeighborName() const {
+        return neighborName;
+}
+
+void IpcmEnrollToDIFRequestMessage::setNeighborName(
+                const ApplicationProcessNamingInformation& neighborName) {
+        this->neighborName = neighborName;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmEnrollToDIFRequestMessage::getSupportingDifName() const {
+        return supportingDIFName;
+}
+
+void IpcmEnrollToDIFRequestMessage::setSupportingDifName(
+                const ApplicationProcessNamingInformation& supportingDifName) {
+        supportingDIFName = supportingDifName;
+}
+
+IPCEvent* IpcmEnrollToDIFRequestMessage::toIPCEvent(){
+        EnrollToDIFRequestEvent * event =
+                        new EnrollToDIFRequestEvent(
+                                        difName, supportingDIFName,
+                                        neighborName, getSequenceNumber());
+        return event;
+}
+
 /* CLASS IPCM ALLOCATE FLOW REQUEST MESSAGE */
 IpcmAllocateFlowRequestMessage::IpcmAllocateFlowRequestMessage():
-                                BaseNetlinkResponseMessage(
-                                                RINA_C_IPCM_ALLOCATE_FLOW_REQUEST) {
-        portId = 0;
+                BaseNetlinkMessage(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST) {
 }
 
 const ApplicationProcessNamingInformation&
@@ -912,14 +942,6 @@ IpcmAllocateFlowRequestMessage::getFlowSpec() const {
 void IpcmAllocateFlowRequestMessage::setFlowSpec(
 		const FlowSpecification& flowSpec) {
 	this->flowSpec = flowSpec;
-}
-
-int IpcmAllocateFlowRequestMessage::getPortId() const {
-	return portId;
-}
-
-void IpcmAllocateFlowRequestMessage::setPortId(int portId) {
-	this->portId = portId;
 }
 
 const ApplicationProcessNamingInformation&
@@ -944,7 +966,7 @@ void IpcmAllocateFlowRequestMessage::setDifName(
 
 IPCEvent* IpcmAllocateFlowRequestMessage::toIPCEvent(){
 	FlowRequestEvent * event =
-			new FlowRequestEvent(portId, flowSpec, true, sourceAppName, destAppName,
+			new FlowRequestEvent(-1, flowSpec, true, sourceAppName, destAppName,
 					difName, getSequenceNumber());
 	return event;
 }
@@ -952,19 +974,30 @@ IPCEvent* IpcmAllocateFlowRequestMessage::toIPCEvent(){
 /* CLASS IPCM ALLOCATE FLOW REQUEST RESULT MESSAGE */
 IpcmAllocateFlowRequestResultMessage::IpcmAllocateFlowRequestResultMessage():
 	BaseNetlinkResponseMessage(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT) {
+        portId = 0;
+}
+
+int IpcmAllocateFlowRequestResultMessage::getPortId() const {
+        return portId;
+}
+
+void IpcmAllocateFlowRequestResultMessage::setPortId(int portId) {
+        this->portId = portId;
 }
 
 IPCEvent* IpcmAllocateFlowRequestResultMessage::toIPCEvent(){
         IpcmAllocateFlowRequestResultEvent * event =
                         new IpcmAllocateFlowRequestResultEvent(
-                                        getResult(), getSequenceNumber());
+                                        getResult(), portId,
+                                        getSequenceNumber());
         return event;
 }
 
 /* CLASS IPCM ALLOCATE FLOW REQUEST ARRIVED MESSAGE */
 IpcmAllocateFlowRequestArrivedMessage::IpcmAllocateFlowRequestArrivedMessage()
-	: BaseNetlinkResponseMessage(
+	: BaseNetlinkMessage(
 			RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED) {
+        portId = 0;
 }
 
 const ApplicationProcessNamingInformation&
@@ -1007,10 +1040,18 @@ void IpcmAllocateFlowRequestArrivedMessage::setDifName(
 	this->difName = difName;
 }
 
+int IpcmAllocateFlowRequestArrivedMessage::getPortId() const {
+        return portId;
+}
+
+void IpcmAllocateFlowRequestArrivedMessage::setPortId(int portId){
+        this->portId = portId;
+}
+
 IPCEvent* IpcmAllocateFlowRequestArrivedMessage::toIPCEvent(){
 	FlowRequestEvent * event =
 			new FlowRequestEvent(
-					0,
+					this->portId,
 					this->flowSpecification,
 					false,
 					this->destAppName,
@@ -1025,7 +1066,6 @@ IpcmAllocateFlowResponseMessage::IpcmAllocateFlowResponseMessage() :
 				BaseNetlinkMessage(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE) {
 	this->result = 0;
 	this->notifySource = false;
-	this->portId = 0;
 }
 
 void IpcmAllocateFlowResponseMessage::setResult(int result) {
@@ -1044,26 +1084,18 @@ void IpcmAllocateFlowResponseMessage::setNotifySource(bool notifySource) {
 	this->notifySource = notifySource;
 }
 
-int IpcmAllocateFlowResponseMessage::getPortId() const{
-	return portId;
-}
-
-void IpcmAllocateFlowResponseMessage::setPortId(int portId){
-	this->portId = portId;
-}
-
 IPCEvent* IpcmAllocateFlowResponseMessage::toIPCEvent(){
         AllocateFlowResponseEvent * event =
                         new AllocateFlowResponseEvent(
                                         result,
-                                        portId,
+                                        this->getSequenceNumber(),
                                         notifySource);
         return event;
 }
 
 /* CLASS IPCM DEALLOCATE FLOW REQUEST MESSAGE */
 IpcmDeallocateFlowRequestMessage::IpcmDeallocateFlowRequestMessage() :
-                BaseNetlinkResponseMessage(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST) {
+                BaseNetlinkMessage(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST) {
 	this->portId = 0;
 }
 
@@ -1159,22 +1191,17 @@ bool IpcmDIFRegistrationNotification::isRegistered() const{
 }
 
 IPCEvent* IpcmDIFRegistrationNotification::toIPCEvent(){
-	IPCEvent * event;
-	if (registered){
-		event = new IPCProcessRegisteredToDIFEvent(ipcProcessName, difName,
-					getSequenceNumber());
-	}else{
-		event = new IPCProcessUnregisteredFromDIFEvent(ipcProcessName, difName,
-							getSequenceNumber());
-	}
-
+	IPCEvent * event =
+	        new IPCProcessDIFRegistrationEvent(ipcProcessName,
+	                                difName, registered,
+	                                getSequenceNumber());
 	return event;
 }
 
 
 /* CLASS QUERY RIB REQUEST MESSAGE */
 IpcmDIFQueryRIBRequestMessage::IpcmDIFQueryRIBRequestMessage():
-                BaseNetlinkResponseMessage(RINA_C_IPCM_QUERY_RIB_REQUEST) {
+                BaseNetlinkMessage(RINA_C_IPCM_QUERY_RIB_REQUEST) {
 	objectInstance = -1;
 	scope = 0;
 }
@@ -1281,6 +1308,17 @@ BaseNetlinkMessage(RINA_C_IPCM_IPC_MANAGER_PRESENT){
 
 IPCEvent* IpcmIPCManagerPresentMessage::toIPCEvent(){
         return 0;
+}
+
+/* CLAS IPCM IPC PROCESS INITIALIZED MESSAGE */
+IpcmIPCProcessInitializedMessage::IpcmIPCProcessInitializedMessage() :
+BaseNetlinkMessage(RINA_C_IPCM_IPC_PROCESS_INITIALIZED){
+}
+
+IPCEvent* IpcmIPCProcessInitializedMessage::toIPCEvent(){
+        IPCEvent * event = new IPCProcessDaemonInitializedEvent(
+                        getSourceIpcProcessId(), getSequenceNumber());
+        return event;
 }
 
 }

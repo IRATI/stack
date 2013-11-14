@@ -16,6 +16,7 @@ import eu.irati.librina.IPCEventProducerSingleton;
 import eu.irati.librina.IPCEventType;
 import eu.irati.librina.IPCManagerInitializationException;
 import eu.irati.librina.IPCProcess;
+import eu.irati.librina.IPCProcessDaemonInitializedEvent;
 import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IpcmAllocateFlowRequestResultEvent;
 import eu.irati.librina.IpcmDeallocateFlowResponseEvent;
@@ -29,6 +30,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -62,9 +64,14 @@ public class IPCManager {
 	public static final String CONFIG_FILE_LOCATION = "../conf/ipcmanager.conf"; 
 	public static final long CONFIG_FILE_POLL_PERIOD_IN_MS = 5000;
 	
-	public static final String NORMAL_IPC_PROCESS_TYPE = "normal";
+	public static final String NORMAL_IPC_PROCESS_TYPE = "normal-ipc";
 	public static final String SHIM_ETHERNET_IPC_PROCESS_TYPE = "shim-eth-vlan";
 	public static final String SHIM_DUMMY_IPC_PROCESS_TYPE = "shim-dummy";
+	
+	public static final int BOOTSTRAP_PHASE_RESPONSE_WAIT_TIME = 2;
+	public static final long NO_IPC_PROCESS_ID = -1;
+	public static final long NO_SEQ_NUMBER = -1;
+	public static final long ERROR = -1;
 	
 	private IPCManagerConsole console = null;
 	
@@ -100,9 +107,10 @@ public class IPCManager {
 		ipcProcessFactory = rina.getIpcProcessFactory();
 		applicationManager = rina.getApplicationManager();
 		ipcEventProducer = rina.getIpcEventProducer();
-		ipcProcessManager = new IPCProcessManager(ipcProcessFactory);
+		ipcProcessManager = new IPCProcessManager(ipcProcessFactory, console);
 		applicationRegistrationManager = new ApplicationRegistrationManager(
 				ipcProcessManager, applicationManager);
+		ipcProcessManager.setApplicationRegistrationManager(applicationRegistrationManager);
 		flowManager = new FlowManager(ipcProcessManager, applicationManager);
 	}
 	
@@ -167,6 +175,8 @@ public class IPCManager {
 		IPCProcessToCreate ipcProcessToCreate = null;
 		ApplicationProcessNamingInformation processNamingInfo = null;
 		IPCProcess ipcProcess = null;
+		List<String> difsToRegisterAt = null;
+		IPCEvent event = null;
 		
 		for(int i=0; i<configuration.getIpcProcessesToCreate().size(); i++){
 			ipcProcessToCreate = configuration.getIpcProcessesToCreate().get(i);
@@ -177,6 +187,21 @@ public class IPCManager {
 			try{
 				ipcProcess = createIPCProcess(processNamingInfo, 
 						ipcProcessToCreate.getType());
+				if (ipcProcess.getType().equals(NORMAL_IPC_PROCESS_TYPE)) {
+					//Wait for IPC Process Daemon initialized event
+					event = ipcEventProducer.eventWait();
+					if (event.getType().equals(IPCEventType.IPC_PROCESS_DAEMON_INITIALIZED_EVENT)) {
+						IPCProcessDaemonInitializedEvent ipcEvent = (IPCProcessDaemonInitializedEvent) event;
+						if (ipcEvent.getIPCProcessId() != ipcProcess.getId()) {
+							log.error("Expected IPC Process id "+ipcProcess.getId() 
+									+ " but got " + ipcEvent.getIPCProcessId());
+							continue;
+						}
+					} else {
+						log.error("Expected IPC Process Daemon Initialized event, but got "+event.getType());
+						continue;
+					}
+				}
 			}catch(CreateIPCProcessException ex){
 				log.error(ex.getMessage() + ". Problems creating IPC Process " 
 						+ processNamingInfo.toString());
@@ -186,6 +211,15 @@ public class IPCManager {
 			if (ipcProcessToCreate.getDifName() != null){
 				try{
 					ipcProcessManager.requestAssignToDIF(ipcProcess.getId(), ipcProcessToCreate.getDifName());
+					event = ipcEventProducer.eventWait();
+					if (event.getType().equals(IPCEventType.ASSIGN_TO_DIF_RESPONSE_EVENT)) {
+						AssignToDIFResponseEvent atrEvent = (AssignToDIFResponseEvent) event;
+						ipcProcessManager.assignToDIFResponse(atrEvent);
+					} else {
+						log.error("Problems assigning IPC Process to DIF. Expected event of type " + 
+									"ASSIGN_TO_DIF_RESPONSE, but got event of type "+ event.getType());
+						continue;
+					}
 				}catch(Exception ex){
 					log.error(ex.getMessage() + ". Problems assigning IPC Process to DIF " 
 							+ ipcProcessToCreate.getDifName());
@@ -193,9 +227,26 @@ public class IPCManager {
 				}
 			}
 			
-			if (ipcProcessToCreate.getDifsToRegisterAt() != null && 
-					ipcProcessToCreate.getDifsToRegisterAt().size() > 0){
-				//TODO register in underlying DIFs
+			difsToRegisterAt = ipcProcessToCreate.getDifsToRegisterAt();
+			if (difsToRegisterAt != null && difsToRegisterAt.size() > 0){
+				for(int j=0; j<difsToRegisterAt.size(); j++){
+					try{
+						this.requestRegistrationToNMinusOneDIF(
+								ipcProcess.getId(), difsToRegisterAt.get(j));
+						event = ipcEventProducer.eventWait();
+						if (event.getType().equals(IPCEventType.IPCM_REGISTER_APP_RESPONSE_EVENT)) {
+							IpcmRegisterApplicationResponseEvent appRespEvent = (IpcmRegisterApplicationResponseEvent) event;
+							applicationRegistrationManager.registerApplicationResponse(appRespEvent);
+						} else {
+							log.error("Problems assigning IPC Process to DIF. Expected event of type " + 
+										"IPCM_REGISTER_APP_RESPONSE_EVENT, but got event of type "+ event.getType());
+							continue;
+						}
+					}catch(Exception ex){
+						log.error("Error requesting registration of IPC Process " + ipcProcess.getId() 
+								+" to DIF " + difsToRegisterAt.get(j) + ": "+ex.getMessage());
+					}
+				}
 			}
 			
 			if (ipcProcessToCreate.getNeighbors() != null && 
@@ -225,13 +276,13 @@ public class IPCManager {
 		
 		if (event.getType() == IPCEventType.APPLICATION_REGISTRATION_REQUEST_EVENT) {
 			ApplicationRegistrationRequestEvent appRegReqEvent = (ApplicationRegistrationRequestEvent) event;
-			applicationRegistrationManager.requestApplicationRegistration(appRegReqEvent);
+			applicationRegistrationManager.requestApplicationRegistration(appRegReqEvent, NO_IPC_PROCESS_ID);
 		} else if (event.getType() == IPCEventType.IPCM_REGISTER_APP_RESPONSE_EVENT) {
 			IpcmRegisterApplicationResponseEvent appRespEvent = (IpcmRegisterApplicationResponseEvent) event;
 			applicationRegistrationManager.registerApplicationResponse(appRespEvent);
 		} else if (event.getType() == IPCEventType.APPLICATION_UNREGISTRATION_REQUEST_EVENT){
 			ApplicationUnregistrationRequestEvent appUnregReqEvent = (ApplicationUnregistrationRequestEvent) event;
-			applicationRegistrationManager.requestApplicationUnregistration(appUnregReqEvent);
+			applicationRegistrationManager.requestApplicationUnregistration(appUnregReqEvent, IPCManager.NO_IPC_PROCESS_ID);
 		} else if (event.getType() == IPCEventType.IPCM_UNREGISTER_APP_RESPONSE_EVENT) {
 			IpcmUnregisterApplicationResponseEvent appRespEvent = (IpcmUnregisterApplicationResponseEvent) event;
 			applicationRegistrationManager.unregisterApplicationResponse(appRespEvent);
@@ -265,9 +316,9 @@ public class IPCManager {
 					+ osProcessFinalizedEvent.getApplicationName().toString());
 			
 			//Clean up all stuff related to the finalized process (registrations, flows)
+			flowManager.cleanFlows(osProcessFinalizedEvent.getApplicationName());
 			applicationRegistrationManager.cleanApplicationRegistrations(
 					osProcessFinalizedEvent.getApplicationName());
-			flowManager.cleanFlows(osProcessFinalizedEvent.getApplicationName());
 			
 			if (osProcessFinalizedEvent.getIPCProcessId() != 0){
 				//TODO The process that crashed was an IPC Process in user space
@@ -281,6 +332,9 @@ public class IPCManager {
 		} else if (event.getType().equals(IPCEventType.UPDATE_DIF_CONFIG_RESPONSE_EVENT)){
 			UpdateDIFConfigurationResponseEvent atrEvent = (UpdateDIFConfigurationResponseEvent) event;
 			ipcProcessManager.updateDIFConfigurationResponse(atrEvent);
+		} else if (event.getType().equals(IPCEventType.IPC_PROCESS_DAEMON_INITIALIZED_EVENT)) {
+			IPCProcessDaemonInitializedEvent ipcEvent = (IPCProcessDaemonInitializedEvent) event;
+			ipcProcessManager.setInitialized(ipcEvent.getIPCProcessId());
 		}
 	}
 	
@@ -323,9 +377,9 @@ public class IPCManager {
 	}
 	
 	/**
-	 * Assigns the IPC Process identified by ipcProcessID to the DIF called 'difName'
-	 * The DIF configuration must be available in the IPC Manager configuration file, 
-	 * otherwise this operation will return an error
+	 * Requests the assignment of the IPC Process identified by ipcProcessID to the 
+	 * DIF called 'difName'. The DIF configuration must be available in the IPC Manager 
+	 * configuration file, otherwise this operation will return an error
 	 * @param ipcProcessID
 	 * @param difName
 	 * @throws Exception
@@ -346,4 +400,29 @@ public class IPCManager {
 		 return ipcProcessManager.requestUpdateDIFConfiguration(ipcProcessID, difConfiguration);
 	}
 
+	/**
+	 * Requests the registration of the IPC Process identified by ipcProcessID to the 
+	 * N-1 DIF called 'difName'. If the IPC Process is already registered to the N-1 DIF
+	 * an error will be returned
+	 * @param ipcProcessID
+	 * @param difName
+	 * @throws Exception
+	 */
+	public long requestRegistrationToNMinusOneDIF(long ipcProcessID, 
+			String difName) throws Exception{
+		return ipcProcessManager.requestRegistrationToNMinusOneDIF(ipcProcessID, difName);
+	}
+	
+	/**
+	 * Requests the unregistration of the IPC Process identified by ipcProcessID from the 
+	 * N-1 DIF called 'difName'. If the IPC Process is not registered to the N-1 DIF
+	 * an error will be returned
+	 * @param ipcProcessID
+	 * @param difName
+	 * @throws Exception
+	 */
+	public long requestUnregistrationFromNMinusOneDIF(long ipcProcessID, 
+			String difName) throws Exception{
+		return ipcProcessManager.requestUnregistrationFromNMinusOneDIF(ipcProcessID, difName);
+	}
 }

@@ -26,24 +26,28 @@
 
 /* FIXME: This API should get the htype also ... */
 
-int                arp826_add(uint16_t           ptype,
-                              const struct gpa * pa,
-                              const struct gha * ha);
-int                arp826_remove(uint16_t           ptype,
-                                 const struct gpa * pa,
-                                 const struct gha * ha);
+int                arp826_add(uint16_t            ptype,
+                              const struct gpa *  pa,
+                              const struct gha *  ha,
+                              struct net_device * dev);
+int                arp826_remove(uint16_t            ptype,
+                                 const struct gpa *  pa,
+                                 const struct gha *  ha,
+                                 struct net_device * dev);
 
 typedef void (* arp826_notify_t)(void *             opaque,
                                  const struct gpa * tpa,
                                  const struct gha * tha);
 
-int                arp826_resolve_gpa(uint16_t           ptype,
-                                      const struct gpa * spa,
-                                      const struct gha * sha,
-                                      const struct gpa * tpa,
-                                      arp826_notify_t    notify,
-                                      void *             opaque);
-const struct gpa * arp826_find_gpa(uint16_t           ptype,
-                                   const struct gha * ha);
+int                arp826_resolve_gpa(uint16_t            ptype,
+                                      const struct gpa *  spa,
+                                      const struct gha *  sha,
+                                      const struct gpa *  tpa,
+                                      struct net_device * dev,
+                                      arp826_notify_t     notify,
+                                      void *              opaque);
+const struct gpa * arp826_find_gpa(uint16_t            ptype,
+                                   const struct gha *  ha,
+                                   struct net_device * dev);
 
 #endif

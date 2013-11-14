@@ -136,10 +136,9 @@ static int are_ops_ok(const struct personality_ops * ops)
                 return 0;
         }
 
-        if (!(ops->connection_create  &&
-              ops->connection_destroy &&
-              ops->connection_update)) {
-                LOG_ERR("Bogus connection related ops");
+        if (!(ops->allocate_port  &&
+              ops->deallocate_port)) {
+                LOG_ERR("Bogus Port ID related ops");
                 return 0;
         }
 

@@ -325,9 +325,8 @@
 315	common	ipc_destroy		sys_ipc_destroy
 316	common	sdu_read		sys_sdu_read
 317	common	sdu_write		sys_sdu_write
-318	common	connection_create	sys_connection_create
-319	common	connection_destroy	sys_connection_destroy
-320	common	connection_update	sys_connection_update
+318	common	allocate_port	        sys_allocate_port
+319	common	deallocate_port	        sys_deallocate_port
 
 #
 # x32-specific system call numbers start at 512 to avoid cache impact
