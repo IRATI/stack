@@ -55,6 +55,7 @@ struct rmt * rmt_create(struct kfa * kfa,
 
         tmp->kfa   = kfa;
         tmp->efcpc = efcpc;
+
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
         return tmp;
