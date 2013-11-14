@@ -109,6 +109,7 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
         }
 
         container->kfa = kfa;
+
         return container;
 }
 EXPORT_SYMBOL(efcp_container_create);
@@ -120,9 +121,10 @@ int efcp_container_destroy(struct efcp_container * container)
                 return -1;
         }
 
-        if (container->instances) 
-                efcp_imap_destroy(container->instances, efcp_destroy);
-        if (container->cidm) cidm_destroy(container->cidm);
+        if (container->instances) efcp_imap_destroy(container->instances,
+                                                    efcp_destroy);
+        if (container->cidm)      cidm_destroy(container->cidm);
+
         rkfree(container);
 
         return 0;
@@ -132,6 +134,11 @@ EXPORT_SYMBOL(efcp_container_destroy);
 int efcp_container_set_dt_cons(struct data_transfer_constants * dt_cons,
                                struct efcp_container          * container)
 {
+        if (!dt_cons || !container) {
+                LOG_ERR("Bogus input parameters, bailing out");
+                return -1;
+        }
+
         container->dt_cons.address_length = dt_cons->address_length;
         container->dt_cons.cep_id_length  = dt_cons->cep_id_length;
         container->dt_cons.length_length  = dt_cons->length_length;
@@ -143,6 +150,7 @@ int efcp_container_set_dt_cons(struct data_transfer_constants * dt_cons,
         container->dt_cons.dif_integrity  = dt_cons->dif_integrity;
 
         LOG_DBG("Succesfully set data transfer constants to efcp container");
+
         return 0;
 }
 EXPORT_SYMBOL(efcp_container_set_dt_cons);
@@ -151,13 +159,23 @@ int efcp_container_write(struct efcp_container * container,
                          cep_id_t                cep_id,
                          struct sdu *            sdu)
 {
-        struct efcp *       efcp;
+        struct efcp * efcp;
+
+        if (!container || sdu) {
+                LOG_ERR("Bogus input parameters, cannot write into container");
+                return -1;
+        }
+        if (!is_cep_id_ok(cep_id)) {
+                LOG_ERR("Bad cep-id, cannot write into container");
+                return -1;
+        }
 
         efcp = efcp_imap_find(container->instances, cep_id);
         if (!efcp) {
                 LOG_ERR("There is no EFCP bound to this cep_id %d", cep_id);
                 return -1;
         }
+
         if (efcp_send(efcp, sdu))
                 return -1;
 
@@ -170,7 +188,15 @@ int efcp_container_receive(struct efcp_container * container,
                            struct sdu *            sdu)
 {
         struct efcp * tmp;
-        LOG_MISSING;
+
+        if (!container || sdu) {
+                LOG_ERR("Bogus input parameters, cannot write into container");
+                return -1;
+        }
+        if (!is_cep_id_ok(cep_id)) {
+                LOG_ERR("Bad cep-id, cannot write into container");
+                return -1;
+        }
 
         tmp = efcp_find(container, cep_id);
         if (!tmp)
