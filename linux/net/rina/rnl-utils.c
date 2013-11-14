@@ -406,6 +406,10 @@ static int parse_dif_config(struct nlattr * dif_config_attr,
         attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].len = 0;
         attr_policy[DCONF_ATTR_DATA_TRANS_CONS].type = NLA_NESTED;
         attr_policy[DCONF_ATTR_DATA_TRANS_CONS].len = 0;
+        attr_policy[DCONF_ATTR_ADDRESS].type = NLA_U32;
+        attr_policy[DCONF_ATTR_ADDRESS].len = 4;
+        attr_policy[DCONF_ATTR_QOS_CUBES].type = NLA_NESTED;
+        attr_policy[DCONF_ATTR_QOS_CUBES].len = 0;
 
         if (nla_parse_nested(attrs,
                              DCONF_ATTR_MAX,
@@ -435,6 +439,9 @@ static int parse_dif_config(struct nlattr * dif_config_attr,
                         goto parse_fail;
                 }
         }
+
+        if (attrs[DCONF_ATTR_ADDRESS])
+                dif_config->address = nla_get_u32(attrs[DCONF_ATTR_ADDRESS]);
 
         return 0;
 
