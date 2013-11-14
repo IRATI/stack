@@ -176,7 +176,7 @@ int efcp_container_write(struct efcp_container * container,
                 return -1;
         }
 
-        if (efcp_write(efcp, sdu))
+        if (dtp_write(efcp->dtp, sdu))
                 return -1;
 
         return 0;
@@ -366,25 +366,4 @@ struct efcp * efcp_find(struct efcp_container * container,
         }
 
         return efcp_imap_find(container->instances, id);
-}
-
-int efcp_write(struct efcp * instance,
-               struct sdu *  sdu)
-{
-        if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
-        }
-
-        if (!is_sdu_ok(sdu)) {
-                LOG_ERR("Bogus SDU passed");
-                return -1;
-        }
-
-        if (!instance->dtp) {
-                LOG_ERR("No DTP instance available, cannot send");
-                return -1;
-        }
-
-        return dtp_write(instance->dtp, sdu);
 }

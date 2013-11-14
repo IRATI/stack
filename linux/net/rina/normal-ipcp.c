@@ -60,6 +60,7 @@ struct ipcp_instance_data {
         struct kfa *            kfa;
         struct efcp_container * efcpc;
         struct rmt *            rmt;
+	address_t               address;
 };
 
 enum normal_flow_state {
