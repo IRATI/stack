@@ -1,9 +1,8 @@
 package rina.flowallocator.api;
 
+import eu.irati.librina.FlowInformation;
+import eu.irati.librina.IPCException;
 import rina.cdap.api.message.CDAPMessage;
-import rina.ipcservice.api.APService;
-import rina.ipcservice.api.FlowService;
-import rina.ipcservice.api.IPCException;
 
 /**
  * The interface between the FA and the FAI
@@ -30,7 +29,7 @@ public interface FlowAllocatorInstance{
 	 * @param applicationCallback the callback to invoke the application for allocateResponse and any other calls
 	 * @throws IPCException
 	 */
-	public void submitAllocateRequest(FlowService request, APService applicationCallback) throws IPCException;
+	public void submitAllocateRequest(FlowInformation request) throws IPCException;
 	
 	/**
 	 * Called by the Flow Allocator when an M_CREATE CDAP PDU with a Flow object 
@@ -52,10 +51,9 @@ public interface FlowAllocatorInstance{
 	 * If the response was negative, the FAI does any necessary housekeeping and terminates.
 	 * @param success
 	 * @param reason
-	 * @param application the callback to invoke the application for any call
 	 * @throws IPCException
 	 */
-	public void submitAllocateResponse(boolean success, String reason, APService applicationCallback) throws IPCException;
+	public void submitAllocateResponse(boolean success, String reason) throws IPCException;
 	
 	/**
 	 * When a deallocate primitive is invoked, it is passed to the FAI responsible for that port-id.  
@@ -73,21 +71,15 @@ public interface FlowAllocatorInstance{
 	 */
 	public void deleteFlowRequestMessageReceived(CDAPMessage requestMessage, int underlyingPortId);
 	
-	/**
-	 * Set the application callback for this flow allocation
-	 * @param applicationCallback
-	 */
-	public void setApplicationCallback(APService applicationCallback);
-	
 	/* Deal with local flows (flows between applications from the same system) */
 	
 	/**
 	 * Called when the Flow Allocator receives a request for a local flow
-	 * @param flowService
+	 * @param flowInformation
 	 * @param objectName
 	 * @throws IPCException
 	 */
-	public void receivedLocalFlowRequest(FlowService flowService) throws IPCException;
+	public void receivedLocalFlowRequest(FlowInformation flowInformation) throws IPCException;
 	
 	/**
 	 * Called when the Flow Allocator receives a response to a request for a local flow

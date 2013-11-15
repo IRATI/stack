@@ -2,10 +2,11 @@ package rina.enrollment.api;
 
 import java.util.List;
 
-import rina.applicationprocess.api.ApplicationProcessNamingInfo;
+import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.Neighbor;
+
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
-import rina.ipcprocess.api.IPCProcessComponent;
 import rina.ribdaemon.api.RIBObjectNames;
 
 /**
@@ -14,10 +15,11 @@ import rina.ribdaemon.api.RIBObjectNames;
  * @author eduardgrasa
  *
  */
-public interface EnrollmentTask extends IPCProcessComponent{
+public interface EnrollmentTask {
 	
-	public static final String ENROLLMENT_RIB_OBJECT_NAME = RIBObjectNames.SEPARATOR + RIBObjectNames.DAF + 
-		RIBObjectNames.SEPARATOR + RIBObjectNames.MANAGEMENT + RIBObjectNames.SEPARATOR + RIBObjectNames.ENROLLMENT;
+	public static final String ENROLLMENT_RIB_OBJECT_NAME = RIBObjectNames.SEPARATOR + 
+			RIBObjectNames.DAF + RIBObjectNames.SEPARATOR + RIBObjectNames.MANAGEMENT + 
+			RIBObjectNames.SEPARATOR + RIBObjectNames.ENROLLMENT;
 
 	public static final String ENROLLMENT_RIB_OBJECT_CLASS = "enrollment information";	
 	
@@ -57,7 +59,8 @@ public interface EnrollmentTask extends IPCProcessComponent{
 	public void initiateEnrollment(Neighbor candidate);
 	
 	 /**
-	 * Called by the enrollment state machine when the enrollment request has been completed, either successfully or unsuccessfully
+	 * Called by the enrollment state machine when the enrollment request has been completed, 
+	 * either successfully or unsuccessfully
 	 * @param candidate the IPC process we were trying to enroll to
 	 * @param enrollee true if this IPC process is the one that initiated the 
 	 * enrollment sequence (i.e. it is the application process that wants to 
@@ -73,7 +76,8 @@ public interface EnrollmentTask extends IPCProcessComponent{
 	 * @param sendMessage
 	 * @param reason
 	 */
-	 public void enrollmentFailed(ApplicationProcessNamingInfo remotePeerNamingInfo, int portId, String reason, boolean enrolle, boolean sendReleaseMessage);
+	 public void enrollmentFailed(ApplicationProcessNamingInformation remotePeerNamingInfo, 
+			 int portId, String reason, boolean enrolle, boolean sendReleaseMessage);
 	
 	/**
 	 * Finds out if the ICP process is already enrolled to the IPC process identified by 

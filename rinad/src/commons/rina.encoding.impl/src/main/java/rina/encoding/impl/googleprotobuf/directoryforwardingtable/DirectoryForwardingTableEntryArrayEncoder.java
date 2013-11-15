@@ -2,12 +2,12 @@ package rina.encoding.impl.googleprotobuf.directoryforwardingtable;
 
 import java.util.List;
 
-import rina.encoding.api.BaseEncoder;
+import rina.encoding.api.Encoder;
 import rina.encoding.impl.googleprotobuf.directoryforwardingtable.DirectoryForwardingTableEntryArrayMessage.directoryForwardingTableEntrySet_t.Builder;
 import rina.encoding.impl.googleprotobuf.directoryforwardingtable.DirectoryForwardingTableEntryMessage.directoryForwardingTableEntry_t;
 import rina.flowallocator.api.DirectoryForwardingTableEntry;
 
-public class DirectoryForwardingTableEntryArrayEncoder extends BaseEncoder{
+public class DirectoryForwardingTableEntryArrayEncoder implements Encoder{
 
 	public synchronized Object decode(byte[] encodedObject, Class<?> objectClass) throws Exception{
 		if (objectClass == null || !(objectClass.equals(DirectoryForwardingTableEntry[].class))){

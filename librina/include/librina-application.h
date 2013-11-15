@@ -203,8 +203,9 @@ public:
 	const ApplicationProcessNamingInformation& getDIFName() const;
 	const ApplicationProcessNamingInformation& getLocalApplicationName() const;
 	const ApplicationProcessNamingInformation& getRemoteApplcationName() const;
-	const FlowSpecification getFlowSpecification() const;
+	const FlowSpecification& getFlowSpecification() const;
 	bool isAllocated() const;
+	FlowInformation getFlowInformation() const;
 
 	/**
 	 * Reads an SDU from the flow. This function will block until there is an
@@ -275,9 +276,6 @@ protected:
 	/** Return the pending flow at sequenceNumber */
 	Flow * getPendingFlow(unsigned int seqNumber);
 
-	/** Return the allocated flow at portId */
-	Flow * getAllocatedFlow(int portId);
-
 	/** Return the information of a registration request */
 	ApplicationRegistrationInformation getRegistrationInfo(
 	                unsigned int seqNumber) throw (IPCException);
@@ -303,6 +301,13 @@ public:
 	static const std::string error_requesting_flow_deallocation;
 	static const std::string error_getting_dif_properties;
 	static const std::string wrong_flow_state;
+
+        /** Return the allocated flow at portId */
+        Flow * getAllocatedFlow(int portId);
+
+        /** Return a flow allocated to the remote application name */
+        Flow * getFlowToRemoteApp(
+                        ApplicationProcessNamingInformation remoteAppName);
 
 	/**
 	 * Retrieves the names and characteristics of a single DIF or of all the
@@ -394,6 +399,21 @@ public:
 			const FlowSpecification& flow) throw (FlowAllocationException);
 
 	/**
+	 * Requests the allocation of a flow using a speficif dIF
+         * @param localAppName The naming information of the local application
+         * @param remoteAppName The naming information of the remote application
+         * @param flowSpecifiction The characteristics required for the flow
+         * @param difName The DIF through which we want the flow allocated
+         * @return A handler to be able to identify the proper response event
+         * @throws FlowAllocationException if there are problems during the flow allocation
+	 */
+	unsigned int requestFlowAllocationInDIF(
+	                const ApplicationProcessNamingInformation& localAppName,
+	                const ApplicationProcessNamingInformation& remoteAppName,
+	                const ApplicationProcessNamingInformation& difName,
+	                const FlowSpecification& flow) throw (FlowAllocationException);
+
+	/**
 	 * Tell the IPC Manager that a pending flow has been allocated, and
 	 * get the flow structure
 	 * @param sequenceNumber the handler of the pending flow
@@ -409,9 +429,10 @@ public:
 	/**
 	 * Tell the IPC Manager that a pending flow allocation has been denied
 	 * @param sequenceNumber the handler of the pending flow
+	 * @returns the information of the flow that has been withdrawn
 	 * @throws FlowAllocationException if the pending flow is not found
 	 */
-	void withdrawPendingFlow(unsigned int sequenceNumber)
+	FlowInformation withdrawPendingFlow(unsigned int sequenceNumber)
 	        throw (FlowAllocationException);
 
 	/**
@@ -561,11 +582,14 @@ class DeallocateFlowResponseEvent: public BaseResponseEvent {
         /** The application that requested the flow deallocation */
         ApplicationProcessNamingInformation appName;
 
+        /** The portId of the flow */
+        int portId;
 public:
         DeallocateFlowResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
-                        int result, unsigned int sequenceNumber);
+                        int portId, int result, unsigned int sequenceNumber);
         const ApplicationProcessNamingInformation& getAppName() const;
+        int getPortId() const;
 };
 
 /**

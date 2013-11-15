@@ -4,7 +4,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import rina.ipcservice.api.IPCException;
+import eu.irati.librina.IPCException;
 
 /**
  * Represents a blocking queue with a certain capacity, identified by an Integer.

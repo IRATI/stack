@@ -1,11 +1,11 @@
 package rina.encoding.impl.googleprotobuf.directoryforwardingtable;
 
-import rina.encoding.api.BaseEncoder;
+import rina.encoding.api.Encoder;
 import rina.encoding.impl.googleprotobuf.GPBUtils;
 import rina.encoding.impl.googleprotobuf.directoryforwardingtable.DirectoryForwardingTableEntryMessage.directoryForwardingTableEntry_t;
 import rina.flowallocator.api.DirectoryForwardingTableEntry;
 
-public class DirectoryForwardingTableEntryEncoder extends BaseEncoder{
+public class DirectoryForwardingTableEntryEncoder implements Encoder{
 	
 	public synchronized Object decode(byte[] encodedObject, Class<?> objectClass) throws Exception {
 		if (objectClass == null || !(objectClass.equals(DirectoryForwardingTableEntry.class))){

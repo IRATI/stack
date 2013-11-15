@@ -55,6 +55,7 @@ enum AppAllocateFlowRequestAttributes {
 	AAFR_ATTR_SOURCE_APP_NAME = 1,
 	AAFR_ATTR_DEST_APP_NAME,
 	AAFR_ATTR_FLOW_SPEC,
+	AAFR_ATTR_DIF_NAME,
 	__AAFR_ATTR_MAX,
 };
 
@@ -177,6 +178,7 @@ AppDeallocateFlowRequestMessage * parseAppDeallocateFlowRequestMessage(
 enum AppDeallocateFlowResponseMessageAttributes {
 	ADFRE_ATTR_RESULT = 1,
 	ADFRE_ATTR_APP_NAME,
+	ADFRE_ATTR_PORT_ID,
 	__ADFRE_ATTR_MAX,
 };
 
@@ -467,6 +469,8 @@ DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested);
 enum DIFConfigurationAttributes {
 	DCONF_ATTR_PARAMETERS = 1,
 	DCONF_ATTR_DATA_TRANS_CONST,
+	DCONF_ATTR_ADDRESS,
+	DCONF_ATTR_QOS_CUBES,
 	__DCONF_ATTR_MAX,
 };
 

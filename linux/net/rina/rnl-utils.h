@@ -289,6 +289,8 @@ enum data_transfer_cons_attrs_list {
 enum dif_config_attrs_list {
         DCONF_ATTR_IPCP_CONFIG_ENTRIES = 1,
         DCONF_ATTR_DATA_TRANS_CONS,
+        DCONF_ATTR_ADDRESS,
+        DCONF_ATTR_QOS_CUBES,
         __DCONF_ATTR_MAX,
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)

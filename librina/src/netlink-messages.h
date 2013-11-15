@@ -177,6 +177,9 @@ class AppAllocateFlowRequestMessage: public BaseNetlinkMessage {
 	/** The characteristics of the flow */
 	FlowSpecification flowSpecification;
 
+	/** The DIF name where the flow is to be allocated, optional*/
+	ApplicationProcessNamingInformation difName;
+
 public:
 	AppAllocateFlowRequestMessage();
 	const ApplicationProcessNamingInformation& getDestAppName() const;
@@ -186,6 +189,8 @@ public:
 	const ApplicationProcessNamingInformation& getSourceAppName() const;
 	void setSourceAppName(
 			const ApplicationProcessNamingInformation& sourceAppName);
+        const ApplicationProcessNamingInformation& getDifName() const;
+        void setDifName(const ApplicationProcessNamingInformation& difName);
 	IPCEvent* toIPCEvent();
 };
 
@@ -318,11 +323,16 @@ class AppDeallocateFlowResponseMessage: public BaseNetlinkResponseMessage {
 	 */
 	ApplicationProcessNamingInformation applicationName;
 
+	/** the portid of the flow deallocated */
+	int portId;
+
 public:
 	AppDeallocateFlowResponseMessage();
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	void setApplicationName(
 			const ApplicationProcessNamingInformation& applicationName);
+	void setPortId(int portId);
+	int getPortId() const;
 	IPCEvent* toIPCEvent();
 };
 

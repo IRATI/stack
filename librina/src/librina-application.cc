@@ -84,12 +84,23 @@ Flow::getRemoteApplcationName() const {
 	return remoteApplicationName;
 }
 
-const FlowSpecification Flow::getFlowSpecification() const {
+const FlowSpecification& Flow::getFlowSpecification() const {
 	return flowSpecification;
 }
 
 bool Flow::isAllocated() const{
 	return flowState == FLOW_ALLOCATED;
+}
+
+FlowInformation Flow::getFlowInformation() const {
+   FlowInformation flowInformation;
+   flowInformation.setDifName(DIFName);
+   flowInformation.setFlowSpecification(flowSpecification);
+   flowInformation.setLocalAppName(localApplicationName);
+   flowInformation.setRemoteAppName(remoteApplicationName);
+   flowInformation.setPortId(portId);
+
+   return flowInformation;
 }
 
 int Flow::readSDU(void * sdu, int maxBytes)
@@ -198,6 +209,21 @@ Flow * IPCManager::getAllocatedFlow(int portId) {
         }
 
         return iterator->second;
+}
+
+Flow * IPCManager::getFlowToRemoteApp(
+                ApplicationProcessNamingInformation remoteAppName) {
+        std::map<int, Flow*>::iterator iterator;
+
+        for(iterator = allocatedFlows.begin(); iterator != allocatedFlows.end();
+                        ++iterator) {
+                if (iterator->second->getRemoteApplcationName() ==
+                                remoteAppName) {
+                        return iterator->second;
+                }
+        }
+
+        return NULL;
 }
 
 ApplicationRegistrationInformation IPCManager::getRegistrationInfo(
@@ -439,7 +465,8 @@ void IPCManager::appUnregistrationResult(unsigned int seqNumber, bool success)
 unsigned int IPCManager::requestFlowAllocation(
 		const ApplicationProcessNamingInformation& localAppName,
 		const ApplicationProcessNamingInformation& remoteAppName,
-		const FlowSpecification& flowSpec) throw (FlowAllocationException) {
+		const FlowSpecification& flowSpec)
+throw (FlowAllocationException) {
         Flow * flow;
 
 #if STUB_API
@@ -468,6 +495,41 @@ unsigned int IPCManager::requestFlowAllocation(
 #endif
 }
 
+unsigned int IPCManager::requestFlowAllocationInDIF(
+                const ApplicationProcessNamingInformation& localAppName,
+                const ApplicationProcessNamingInformation& remoteAppName,
+                const ApplicationProcessNamingInformation& difName,
+                const FlowSpecification& flowSpec)
+throw (FlowAllocationException) {
+        Flow * flow;
+
+#if STUB_API
+        flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED);
+        pendingFlows[0] = flow;
+        return 0;
+#else
+        AppAllocateFlowRequestMessage message;
+        message.setSourceAppName(localAppName);
+        message.setDestAppName(remoteAppName);
+        message.setFlowSpecification(flowSpec);
+        message.setDifName(difName);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                throw FlowAllocationException(e.what());
+        }
+
+        flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED);
+        lock();
+        pendingFlows[message.getSequenceNumber()] = flow;
+        unlock();
+
+        return message.getSequenceNumber();
+#endif
+}
+
 Flow * IPCManager::commitPendingFlow(unsigned int sequenceNumber, int portId,
                         const ApplicationProcessNamingInformation& DIFName)
                 throw (FlowAllocationException) {
@@ -490,10 +552,11 @@ Flow * IPCManager::commitPendingFlow(unsigned int sequenceNumber, int portId,
         return flow;
 }
 
-void IPCManager::withdrawPendingFlow(unsigned int sequenceNumber)
+FlowInformation IPCManager::withdrawPendingFlow(unsigned int sequenceNumber)
                 throw (FlowAllocationException) {
         std::map<int, Flow*>::iterator iterator;
         Flow * flow;
+        FlowInformation flowInformation;
 
         lock();
         flow = getPendingFlow(sequenceNumber);
@@ -503,17 +566,16 @@ void IPCManager::withdrawPendingFlow(unsigned int sequenceNumber)
         }
 
         pendingFlows.erase(sequenceNumber);
+        flowInformation = flow->getFlowInformation();
         delete flow;
         unlock();
+
+        return flowInformation;
 }
 
 Flow * IPCManager::allocateFlowResponse(
 		const FlowRequestEvent& flowRequestEvent, int result,
 		bool notifySource) throw (FlowAllocationException) {
-	if (result != 0) {
-		LOG_WARN("Flow was not accepted, error code: %d", result);
-		return 0;
-	}
 
 #if STUB_API
 	//Do nothing
@@ -529,6 +591,10 @@ Flow * IPCManager::allocateFlowResponse(
 		throw FlowAllocationException(e.what());
 	}
 #endif
+        if (result != 0) {
+                LOG_WARN("Flow was not accepted, error code: %d", result);
+                return 0;
+        }
 
 	Flow * flow = new Flow(flowRequestEvent.getLocalApplicationName(),
 			flowRequestEvent.getRemoteApplicationName(),
@@ -744,17 +810,22 @@ int AllocateFlowRequestResultEvent::getPortId() const{
 /* CLASS Deallocate Flow Response EVENT*/
 DeallocateFlowResponseEvent::DeallocateFlowResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
-                        int result,
+                        int portId, int result,
                         unsigned int sequenceNumber):
                                 BaseResponseEvent(result,
                                          DEALLOCATE_FLOW_RESPONSE_EVENT,
                                          sequenceNumber){
         this->appName = appName;
+        this->portId = portId;
 }
 
 const ApplicationProcessNamingInformation&
 DeallocateFlowResponseEvent::getAppName() const{
         return appName;
+}
+
+int DeallocateFlowResponseEvent::getPortId() const{
+        return portId;
 }
 
 /* CLASS Get DIF Properties Response EVENT*/

@@ -11,6 +11,7 @@ public class PendingFlowAllocation {
 	FlowRequestEvent event = null;
 	IPCProcess ipcProcess = null;
 	List<String> triedIPCProcesses = null;
+	boolean tryOnlyOneDIF = false;
 	
 	public PendingFlowAllocation(
 			FlowRequestEvent event, IPCProcess ipcProcess){
@@ -37,5 +38,12 @@ public class PendingFlowAllocation {
 	public List<String> getTriedIPCProcesses(){
 		return triedIPCProcesses;
 	}
-	
+
+	public boolean isTryOnlyOneDIF() {
+		return tryOnlyOneDIF;
+	}
+
+	public void setTryOnlyOneDIF(boolean tryOnlyOneDIF) {
+		this.tryOnlyOneDIF = tryOnlyOneDIF;
+	}
 }

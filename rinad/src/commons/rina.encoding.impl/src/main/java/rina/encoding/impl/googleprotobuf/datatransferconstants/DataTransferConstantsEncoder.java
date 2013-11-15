@@ -1,14 +1,11 @@
 package rina.encoding.impl.googleprotobuf.datatransferconstants;
 
-import rina.efcp.api.DataTransferConstants;
-import rina.encoding.api.BaseEncoder;
-import rina.ipcprocess.api.IPCProcess;
+import eu.irati.librina.DataTransferConstants;
+import rina.encoding.api.Encoder;
 
-public class DataTransferConstantsEncoder extends BaseEncoder{
+
+public class DataTransferConstantsEncoder implements Encoder{
 	
-	public void setIPCProcess(IPCProcess ipcProcess) {
-	}
-
 	public synchronized Object decode(byte[] serializedObject, Class<?> objectClass) throws Exception {
 		if (objectClass == null || !(objectClass.equals(DataTransferConstants.class))){
 			throw new Exception("This is not the encoder for objects of type "+objectClass.getName());
@@ -20,16 +17,12 @@ public class DataTransferConstantsEncoder extends BaseEncoder{
 		DataTransferConstants dataTransferConstants = new DataTransferConstants();
 		dataTransferConstants.setAddressLength(gpbDataTransferConstants.getAddressLength());
 		dataTransferConstants.setCepIdLength(gpbDataTransferConstants.getCepIdLength());
-		dataTransferConstants.setDIFConcatenation(gpbDataTransferConstants.getDIFConcatenation());
-		dataTransferConstants.setDIFFragmentation(gpbDataTransferConstants.getDIFFragmentation());
-		dataTransferConstants.setDIFIntegrity(gpbDataTransferConstants.getDIFIntegrity());
+		dataTransferConstants.setDifIntegrity(gpbDataTransferConstants.getDIFIntegrity());
 		dataTransferConstants.setLengthLength(gpbDataTransferConstants.getLengthLength());
-		dataTransferConstants.setMaxPDULifetime(gpbDataTransferConstants.getMaxPDULifetime());
-		dataTransferConstants.setMaxPDUSize(gpbDataTransferConstants.getMaxPDUSize());
-		dataTransferConstants.setMaxTimeToKeepRetransmitting(gpbDataTransferConstants.getMaxTimeToKeepRetransmitting());
-		dataTransferConstants.setMaxTimeToACK(gpbDataTransferConstants.getMaxTimeToACK());
+		dataTransferConstants.setMaxPduLifetime(gpbDataTransferConstants.getMaxPDULifetime());
+		dataTransferConstants.setMaxPduSize(gpbDataTransferConstants.getMaxPDUSize());
 		dataTransferConstants.setPortIdLength(gpbDataTransferConstants.getPortIdLength());
-		dataTransferConstants.setQosIdLength(gpbDataTransferConstants.getQosidLength());
+		dataTransferConstants.setQosIdLenght(gpbDataTransferConstants.getQosidLength());
 		dataTransferConstants.setSequenceNumberLength(gpbDataTransferConstants.getSequenceNumberLength());
 		
 		return dataTransferConstants;
@@ -46,16 +39,14 @@ public class DataTransferConstantsEncoder extends BaseEncoder{
 			DataTransferConstantsMessage.dataTransferConstants_t.newBuilder().
 										setAddressLength(dataTransferConstants.getAddressLength()).
 										setCepIdLength(dataTransferConstants.getCepIdLength()).
-										setDIFConcatenation(dataTransferConstants.isDIFConcatenation()).
-										setDIFFragmentation(dataTransferConstants.isDIFFragmentation()).
-										setDIFIntegrity(dataTransferConstants.isDIFIntegrity()).
+										setDIFConcatenation(false).
+										setDIFFragmentation(false).
+										setDIFIntegrity(dataTransferConstants.isDifIntegrity()).
 										setLengthLength(dataTransferConstants.getLengthLength()).
-										setMaxPDULifetime(dataTransferConstants.getMaxPDULifetime()).
-										setMaxTimeToKeepRetransmitting(dataTransferConstants.getMaxTimeToKeepRetransmitting()).
-										setMaxTimeToACK(dataTransferConstants.getMaxTimeToACK()).
-										setMaxPDUSize(dataTransferConstants.getMaxPDUSize()).
+										setMaxPDULifetime((int)dataTransferConstants.getMaxPduLifetime()).
+										setMaxPDUSize((int)dataTransferConstants.getMaxPduSize()).
 										setPortIdLength(dataTransferConstants.getPortIdLength()).
-										setQosidLength(dataTransferConstants.getQosIdLength()).
+										setQosidLength(dataTransferConstants.getQosIdLenght()).
 										setSequenceNumberLength(dataTransferConstants.getSequenceNumberLength()).
 										build();
 		

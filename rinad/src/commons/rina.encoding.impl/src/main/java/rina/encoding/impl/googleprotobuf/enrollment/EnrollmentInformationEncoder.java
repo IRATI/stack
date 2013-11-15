@@ -1,10 +1,10 @@
 package rina.encoding.impl.googleprotobuf.enrollment;
 
-import rina.encoding.api.BaseEncoder;
+import rina.encoding.api.Encoder;
 import rina.encoding.impl.googleprotobuf.enrollment.EnrollmentInformationMessage.enrollmentInformation_t;
 import rina.enrollment.api.EnrollmentInformationRequest;
 
-public class EnrollmentInformationEncoder extends BaseEncoder{
+public class EnrollmentInformationEncoder implements Encoder{
 
 	public synchronized Object decode(byte[] encodedObject, Class<?> objectClass) throws Exception {
 		if (objectClass == null || !(objectClass.equals(EnrollmentInformationRequest.class))){

@@ -40,8 +40,8 @@ import org.apache.commons.logging.LogFactory;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import rina.ipcmanager.impl.conf.IPCProcessToCreate;
-import rina.ipcmanager.impl.conf.RINAConfiguration;
+import rina.configuration.IPCProcessToCreate;
+import rina.configuration.RINAConfiguration;
 import rina.ipcmanager.impl.console.IPCManagerConsole;
 import rina.ipcmanager.impl.helpers.ApplicationRegistrationManager;
 import rina.ipcmanager.impl.helpers.FlowManager;
@@ -132,7 +132,9 @@ public class IPCManager {
 						log.debug("Configuration file changed, loading the new content");
 						currentLastModified = file.lastModified();
 						rinaConfiguration = readConfigurationFile();
-						RINAConfiguration.setConfiguration(rinaConfiguration);
+						if (rinaConfiguration != null) {
+							RINAConfiguration.setConfiguration(rinaConfiguration);
+						}
 					}
 					try {
 						Thread.sleep(CONFIG_FILE_POLL_PERIOD_IN_MS);

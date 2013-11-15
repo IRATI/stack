@@ -1,10 +1,11 @@
 package rina.encoding.impl.googleprotobuf.neighbor;
 
-import rina.encoding.api.BaseEncoder;
+import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.Neighbor;
+import rina.encoding.api.Encoder;
 import rina.encoding.impl.googleprotobuf.neighbor.NeighborMessage.neighbor_t;
-import rina.enrollment.api.Neighbor;
 
-public class NeighborEncoder extends BaseEncoder{
+public class NeighborEncoder implements Encoder{
 
 	public synchronized Object decode(byte[] encodedObject, Class<?> objectClass) throws Exception {
 		if (objectClass == null || !(objectClass.equals(Neighbor.class))){
@@ -17,8 +18,11 @@ public class NeighborEncoder extends BaseEncoder{
 	
 	public static Neighbor convertGPBToModel(neighbor_t gpbNeighbor){
 		Neighbor neighbor = new Neighbor();
-		neighbor.setApplicationProcessInstance(gpbNeighbor.getApplicationProcessInstance());
-		neighbor.setApplicationProcessName(gpbNeighbor.getApplicationProcessName());
+		ApplicationProcessNamingInformation namingInfo = 
+				new ApplicationProcessNamingInformation(
+						gpbNeighbor.getApplicationProcessName(),
+						gpbNeighbor.getApplicationProcessInstance()); 
+		neighbor.setName(namingInfo);
 		neighbor.setAddress(gpbNeighbor.getAddress());
 
 		return neighbor;
@@ -34,8 +38,8 @@ public class NeighborEncoder extends BaseEncoder{
 	
 	public static neighbor_t convertModelToGPB(Neighbor neighbor){
 		neighbor_t gpbNeighbor = NeighborMessage.neighbor_t.newBuilder().
-			setApplicationProcessName(neighbor.getApplicationProcessName()).
-			setApplicationProcessInstance(neighbor.getApplicationProcessInstance()).
+			setApplicationProcessName(neighbor.getName().getProcessName()).
+			setApplicationProcessInstance(neighbor.getName().getProcessInstance()).
 			setAddress(neighbor.getAddress()).
 			build();
 		

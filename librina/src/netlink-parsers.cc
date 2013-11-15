@@ -816,6 +816,7 @@ QoSCube * parseQoSCubeObject(nlattr *nested) {
 
 int putQoSCubeObject(nl_msg* netlinkMessage,
 		const QoSCube& object){
+
 	NLA_PUT_STRING(netlinkMessage, QOS_CUBE_ATTR_NAME,
 			object.getName().c_str());
 
@@ -825,38 +826,47 @@ int putQoSCubeObject(nl_msg* netlinkMessage,
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_AVG_BAND,
 				object.getAverageBandwidth());
 	}
+
 	if (object.getAverageSduBandwidth() > 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_AVG_SDU_BAND,
 				object.getAverageSduBandwidth());
 	}
+
 	if (object.getDelay() > 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_DELAY, object.getDelay());
 	}
+
 	if (object.getJitter() > 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_JITTER, object.getJitter());
 	}
+
 	if (object.getMaxAllowableGap() >= 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_MAX_GAP,
 				object.getMaxAllowableGap());
 	}
+
 	if (object.isOrderedDelivery()) {
 		NLA_PUT_FLAG(netlinkMessage, QOS_CUBE_ATTR_ORD_DEL);
 	}
+
 	if (object.isPartialDelivery()) {
 		NLA_PUT_FLAG(netlinkMessage, QOS_CUBE_ATTR_PART_DEL);
 	}
+
 	if (object.getPeakBandwidthDuration() > 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_PEAK_BAND_DUR,
 				object.getPeakBandwidthDuration());
 	}
+
 	if (object.getPeakSduBandwidthDuration() > 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_PEAK_SDU_BAND_DUR,
 				object.getPeakSduBandwidthDuration());
 	}
-	if (object.getUndetectedBitErrorRate() > 0) {
+
+	/*if (object.getUndetectedBitErrorRate() > 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_UND_BER,
 				object.getUndetectedBitErrorRate());
-	}
+	}*/
 
 	return 0;
 
@@ -953,6 +963,31 @@ int parseListOfQoSCubes(nlattr *nested,
 	}
 
 	return 0;
+}
+
+int parseListOfQoSCubesForDIFConfiguration(nlattr *nested,
+                DIFConfiguration * difConfiguration){
+        nlattr * nla;
+        int rem;
+        QoSCube * qosCube;
+
+        for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+                     nla_ok(nla, rem);
+                     nla = nla_next(nla, &(rem))){
+                /* validate & parse attribute */
+                qosCube = parseQoSCubeObject(nla);
+                if (qosCube == 0){
+                        return -1;
+                }
+                difConfiguration->addQoSCube(*qosCube);
+                delete qosCube;
+        }
+
+        if (rem > 0){
+                LOG_WARN("Missing bits to parse");
+        }
+
+        return 0;
 }
 
 DIFProperties * parseDIFPropertiesObject(nlattr *nested){
@@ -1354,7 +1389,8 @@ ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 
 int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 		const AppAllocateFlowRequestMessage& object) {
-	struct nlattr *sourceAppName, *destinationAppName, *flowSpec;
+	struct nlattr *sourceAppName, *destinationAppName, *flowSpec ,
+	              *difName;
 
 	if (!(sourceAppName = nla_nest_start(netlinkMessage,
 			AAFR_ATTR_SOURCE_APP_NAME))) {
@@ -1386,6 +1422,16 @@ int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, flowSpec);
+
+	if (!(difName = nla_nest_start(netlinkMessage,
+	                AAFR_ATTR_DIF_NAME))) {
+	        goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+	                object.getDifName()) < 0) {
+	        goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, difName);
 
 	return 0;
 
@@ -1535,6 +1581,8 @@ int putAppDeallocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, applicationName);
+
+	NLA_PUT_U32(netlinkMessage, ADFRE_ATTR_PORT_ID, object.getPortId());
 
 	return 0;
 
@@ -1902,17 +1950,19 @@ int putDataTransferConstantsObject(nl_msg* netlinkMessage,
 
 int putDIFConfigurationObject(nl_msg* netlinkMessage,
 		const DIFConfiguration& object){
-	struct nlattr *parameters, *dataTransferConstants;
+	struct nlattr *parameters, *dataTransferConstants, *qosCubes;
 
-	if (!(parameters = nla_nest_start(
-	                netlinkMessage, DCONF_ATTR_PARAMETERS))) {
-		goto nla_put_failure;
+	if  (object.getParameters().size() > 0) {
+	        if (!(parameters = nla_nest_start(
+	                        netlinkMessage, DCONF_ATTR_PARAMETERS))) {
+	                goto nla_put_failure;
+	        }
+	        if (putListOfParameters(netlinkMessage,
+	                        object.getParameters()) < 0) {
+	                goto nla_put_failure;
+	        }
+	        nla_nest_end(netlinkMessage, parameters);
 	}
-	if (putListOfParameters(netlinkMessage,
-			object.getParameters()) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, parameters);
 
 	if (!(dataTransferConstants = nla_nest_start(
 	                netlinkMessage, DCONF_ATTR_DATA_TRANS_CONST))) {
@@ -1923,6 +1973,23 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 	        goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, dataTransferConstants);
+
+	NLA_PUT_U32(netlinkMessage, DCONF_ATTR_ADDRESS,
+	                object.getAddress());
+
+	if (object.getQosCubes().size() > 0) {
+	        if (!(qosCubes = nla_nest_start(
+	                        netlinkMessage, DCONF_ATTR_QOS_CUBES))) {
+	                goto nla_put_failure;
+	        }
+
+	        if (putListOfQoSCubeObjects(netlinkMessage,
+	                        object.getQosCubes()) < 0) {
+	                goto nla_put_failure;
+	        }
+
+	        nla_nest_end(netlinkMessage, qosCubes);
+	}
 
 	return 0;
 
@@ -2412,6 +2479,9 @@ AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 	attr_policy[AAFR_ATTR_FLOW_SPEC].type = NLA_NESTED;
 	attr_policy[AAFR_ATTR_FLOW_SPEC].minlen = 0;
 	attr_policy[AAFR_ATTR_FLOW_SPEC].maxlen = 0;
+	attr_policy[AAFR_ATTR_DIF_NAME].type = NLA_NESTED;
+	attr_policy[AAFR_ATTR_DIF_NAME].minlen = 0;
+	attr_policy[AAFR_ATTR_DIF_NAME].maxlen = 0;
 	struct nlattr *attrs[AAFR_ATTR_MAX + 1];
 
 	/*
@@ -2434,6 +2504,7 @@ AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 	ApplicationProcessNamingInformation * sourceName;
 	ApplicationProcessNamingInformation * destName;
 	FlowSpecification * flowSpec;
+	ApplicationProcessNamingInformation * difName;
 
 	if (attrs[AAFR_ATTR_SOURCE_APP_NAME]) {
 		sourceName = parseApplicationProcessNamingInformationObject(
@@ -2468,6 +2539,18 @@ AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 			result->setFlowSpecification(*flowSpec);
 			delete flowSpec;
 		}
+	}
+
+	if (attrs[AAFR_ATTR_DIF_NAME]) {
+	        difName = parseApplicationProcessNamingInformationObject(
+	                        attrs[AAFR_ATTR_DIF_NAME]);
+	        if (difName == 0) {
+	                delete result;
+	                return 0;
+	        } else {
+	                result->setDifName(*difName);
+	                delete difName;
+	        }
 	}
 
 	return result;
@@ -2743,6 +2826,9 @@ AppDeallocateFlowResponseMessage * parseAppDeallocateFlowResponseMessage(
 	attr_policy[ADFRE_ATTR_APP_NAME].type = NLA_NESTED;
 	attr_policy[ADFRE_ATTR_APP_NAME].minlen = 0;
 	attr_policy[ADFRE_ATTR_APP_NAME].maxlen = 0;
+	attr_policy[ADFRE_ATTR_PORT_ID].type = NLA_U32;
+	attr_policy[ADFRE_ATTR_PORT_ID].minlen = 4;
+	attr_policy[ADFRE_ATTR_PORT_ID].maxlen = 4;
 	struct nlattr *attrs[ADFRE_ATTR_MAX + 1];
 
 	/*
@@ -2779,6 +2865,10 @@ AppDeallocateFlowResponseMessage * parseAppDeallocateFlowResponseMessage(
 			result->setApplicationName(*applicationName);
 			delete applicationName;
 		}
+	}
+
+	if (attrs[ADFRE_ATTR_PORT_ID]) {
+	        result->setPortId(nla_get_u32(attrs[ADFRE_ATTR_PORT_ID]));
 	}
 
 	return result;
@@ -3541,6 +3631,12 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	attr_policy[DCONF_ATTR_DATA_TRANS_CONST].type = NLA_NESTED;
 	attr_policy[DCONF_ATTR_DATA_TRANS_CONST].minlen = 0;
 	attr_policy[DCONF_ATTR_DATA_TRANS_CONST].maxlen = 0;
+	attr_policy[DCONF_ATTR_ADDRESS].type = NLA_U32;
+	attr_policy[DCONF_ATTR_ADDRESS].minlen = 4;
+	attr_policy[DCONF_ATTR_ADDRESS].maxlen = 4;
+	attr_policy[DCONF_ATTR_QOS_CUBES].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_QOS_CUBES].minlen = 0;
+	attr_policy[DCONF_ATTR_QOS_CUBES].maxlen = 0;
 	struct nlattr *attrs[DCONF_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, DCONF_ATTR_MAX, nested, attr_policy);
@@ -3574,6 +3670,19 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
                         result->setDataTransferConstants(
                                         *dataTransferConstants);
                         delete dataTransferConstants;
+                }
+        }
+
+        if (attrs[DCONF_ATTR_ADDRESS]) {
+                result->setAddress(nla_get_u32(attrs[DCONF_ATTR_ADDRESS]));
+        }
+
+        if (attrs[DCONF_ATTR_QOS_CUBES]) {
+                status = parseListOfQoSCubesForDIFConfiguration(
+                                attrs[DCONF_ATTR_QOS_CUBES], result);
+                if (status != 0){
+                        delete result;
+                        return 0;
                 }
         }
 

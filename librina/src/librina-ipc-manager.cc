@@ -1046,6 +1046,7 @@ void ApplicationManager::flowDeallocated(
 #else
 	AppDeallocateFlowResponseMessage responseMessage;
 	responseMessage.setApplicationName(event.getApplicationName());
+	responseMessage.setPortId(event.getPortId());
 	responseMessage.setResult(result);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);

@@ -135,10 +135,10 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 
 #define DECL_NL_OP(X) {                         \
                 .cmd    = X,                    \
-                .flags  = 0,                    \
-                .doit   = dispatcher,           \
-                .dumpit = NULL,                 \
-}
+                        .flags  = 0,            \
+                        .doit   = dispatcher,   \
+                        .dumpit = NULL,         \
+                        }
 
 static struct genl_ops nl_ops[] = {
         DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST),
