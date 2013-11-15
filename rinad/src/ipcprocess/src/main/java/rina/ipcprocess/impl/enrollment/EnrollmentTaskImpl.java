@@ -114,8 +114,7 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 			this.ribDaemon.addRIBObject(ribObject);
 			ribObject = new WatchdogRIBObject();
 			this.ribDaemon.addRIBObject(ribObject);
-		}catch(RIBDaemonException ex){
-			ex.printStackTrace();
+		}catch(Exception ex){
 			log.error("Could not subscribe to RIB Daemon:" +ex.getMessage());
 		}
 	}

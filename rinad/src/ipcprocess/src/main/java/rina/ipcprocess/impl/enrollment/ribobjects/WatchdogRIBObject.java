@@ -58,6 +58,7 @@ public class WatchdogRIBObject extends BaseRIBObject implements CDAPMessageHandl
 	 */
 	public WatchdogRIBObject(){
 		super(WATCHDOG_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), WATCHDOG_OBJECT_NAME);
+		ipcProcess = IPCProcess.getInstance();
 		this.cdapSessionManager = ipcProcess.getCDAPSessionManager();
 		this.timer = new Timer();
 		timerTask = new WatchdogTimerTask(this);
@@ -68,6 +69,7 @@ public class WatchdogRIBObject extends BaseRIBObject implements CDAPMessageHandl
 		this.neighborStatistics = new ConcurrentHashMap<String, NeighborStatistics>();
 		ipcProcess = IPCProcess.getInstance();
 		timer.schedule(timerTask, new Double(periodInMs*Math.random()).longValue(), periodInMs);
+		setRIBDaemon(ipcProcess.getRIBDaemon());
 	}
 	
 	@Override

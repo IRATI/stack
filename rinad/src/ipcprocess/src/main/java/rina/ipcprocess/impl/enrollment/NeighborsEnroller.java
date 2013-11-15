@@ -33,6 +33,7 @@ public class NeighborsEnroller implements Runnable{
 	
 	public NeighborsEnroller(EnrollmentTask enrollmentTask){
 		this.enrollmentTask = enrollmentTask;
+		ipcProcess = IPCProcess.getInstance();
 	}
 	
 	public void run() {

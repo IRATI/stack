@@ -35,6 +35,7 @@ public class OperationalStatusRIBObject extends BaseRIBObject{
 		this.enrollmentTask = enrollmentTaskImpl;
 		this.ipcProcess = IPCProcess.getInstance();
 		this.cdapSessionManager = ipcProcess.getCDAPSessionManager();
+		setRIBDaemon(ipcProcess.getRIBDaemon());
 	}
 	
 	@Override

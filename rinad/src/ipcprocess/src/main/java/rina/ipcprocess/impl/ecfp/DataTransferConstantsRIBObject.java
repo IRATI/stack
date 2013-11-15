@@ -30,6 +30,7 @@ public class DataTransferConstantsRIBObject extends BaseRIBObject{
 				ObjectInstanceGenerator.getObjectInstance(), 
 				DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME);
 		ipcProcess = IPCProcess.getInstance();
+		setRIBDaemon(ipcProcess.getRIBDaemon());
 	}
 
 	@Override

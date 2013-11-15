@@ -10,6 +10,7 @@ import rina.ipcprocess.impl.IPCProcess;
 import rina.ipcprocess.impl.events.NMinusOneFlowAllocatedEvent;
 import rina.ipcprocess.impl.events.NMinusOneFlowAllocationFailedEvent;
 import rina.ipcprocess.impl.events.NMinusOneFlowDeallocatedEvent;
+import rina.ipcprocess.impl.resourceallocator.ribobjects.DIFRegistrationRIBObject;
 import rina.ipcprocess.impl.resourceallocator.ribobjects.DIFRegistrationSetRIBObject;
 import rina.ipcprocess.impl.resourceallocator.ribobjects.NMinus1FlowRIBObject;
 import rina.ipcprocess.impl.resourceallocator.ribobjects.NMinus1FlowSetRIBObject;
@@ -268,13 +269,13 @@ public class NMinus1FlowManagerImpl implements NMinus1FlowManager{
 			log.info("IPC Process registered to N-1 DIF "+ event.getDIFName().getProcessName());
 			
 			//TODO add RIBDaemon entry
-			/*try{
+			try{
 				this.ribDaemon.create(DIFRegistrationRIBObject.DIF_REGISTRATION_RIB_OBJECT_CLASS, 
-						DIFRegistrationSetRIBObject.DIF_REGISTRATION_SET_RIB_OBJECT_NAME + RIBObjectNames.SEPARATOR + difName, 
-						difName);
+						DIFRegistrationSetRIBObject.DIF_REGISTRATION_SET_RIB_OBJECT_NAME + RIBObjectNames.SEPARATOR 
+						+ event.getDIFName().getProcessName(), event.getDIFName().getProcessName());
 			}catch(RIBDaemonException ex){
 				log.warn("Error creating DIF Registration RIB Object", ex);
-			}*/
+			}
 			
 		} else{
 			ipcManager.appUnregistered(event.getIPCProcessName(), event.getDIFName());

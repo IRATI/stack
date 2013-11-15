@@ -36,6 +36,7 @@ public class NeighborSetRIBObject extends BaseRIBObject{
 		super(NEIGHBOR_SET_RIB_OBJECT_CLASS, 
 				ObjectInstanceGenerator.getObjectInstance(), NEIGHBOR_SET_RIB_OBJECT_NAME);
 		ipcProcess = IPCProcess.getInstance();
+		setRIBDaemon(ipcProcess.getRIBDaemon());
 	}
 	
 	@Override

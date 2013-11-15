@@ -1,6 +1,7 @@
 package rina.ipcprocess.impl.enrollment.ribobjects;
 
 import eu.irati.librina.Neighbor;
+import rina.ipcprocess.impl.IPCProcess;
 import rina.ribdaemon.api.BaseRIBObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
 import rina.ribdaemon.api.RIBDaemonException;
@@ -16,6 +17,7 @@ public class NeighborRIBObject extends BaseRIBObject{
 		super(NEIGHBOR_RIB_OBJECT_CLASS, 
 				ObjectInstanceGenerator.getObjectInstance(), objectName);
 		this.neighbor = neighbor;
+		setRIBDaemon(IPCProcess.getInstance().getRIBDaemon());
 	}
 	
 	@Override

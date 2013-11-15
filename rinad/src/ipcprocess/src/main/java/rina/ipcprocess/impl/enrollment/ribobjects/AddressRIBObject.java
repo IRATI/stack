@@ -31,6 +31,7 @@ public class AddressRIBObject extends BaseRIBObject{
 		super(ADDRESS_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), 
 				ADDRESS_RIB_OBJECT_NAME);
 		ipcProcess = IPCProcess.getInstance();
+		setRIBDaemon(ipcProcess.getRIBDaemon());
 	}
 	
 	@Override

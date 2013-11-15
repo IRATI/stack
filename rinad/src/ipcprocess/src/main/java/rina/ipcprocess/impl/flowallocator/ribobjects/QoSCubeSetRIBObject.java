@@ -10,6 +10,7 @@ import eu.irati.librina.QoSCube;
 
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
+import rina.ipcprocess.impl.IPCProcess;
 import rina.ribdaemon.api.BaseRIBObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
 import rina.ribdaemon.api.RIBDaemonException;
@@ -32,6 +33,7 @@ public class QoSCubeSetRIBObject extends BaseRIBObject{
 	public QoSCubeSetRIBObject(){
 		super(QOSCUBE_SET_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), 
 				QOSCUBE_SET_RIB_OBJECT_NAME);
+		setRIBDaemon(IPCProcess.getInstance().getRIBDaemon());
 	}
 	
 	@Override

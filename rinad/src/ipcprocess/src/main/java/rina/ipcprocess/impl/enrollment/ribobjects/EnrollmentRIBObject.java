@@ -35,6 +35,7 @@ public class EnrollmentRIBObject extends BaseRIBObject{
 		ipcProcess = IPCProcess.getInstance();
 		this.enrollmentTask = enrollmentTaskImpl;
 		this.cdapSessionManager = ipcProcess.getCDAPSessionManager();
+		setRIBDaemon(ipcProcess.getRIBDaemon());
 	}
 	
 	/**

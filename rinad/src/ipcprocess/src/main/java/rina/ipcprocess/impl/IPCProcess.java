@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,8 +41,10 @@ import rina.enrollment.api.EnrollmentInformationRequest;
 import rina.enrollment.api.EnrollmentTask;
 import rina.flowallocator.api.DirectoryForwardingTableEntry;
 import rina.flowallocator.api.Flow;
+import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
 import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
 import rina.ipcprocess.impl.enrollment.ribobjects.NeighborSetRIBObject;
+import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
 import rina.ipcprocess.impl.resourceallocator.ResourceAllocatorImpl;
 import rina.ipcprocess.impl.ribdaemon.RIBDaemonImpl;
 import rina.resourceallocator.api.ResourceAllocator;
@@ -161,6 +164,8 @@ public class IPCProcess {
 		((RIBDaemonImpl) ribDaemon).setIPCProcess(this);
 		((EnrollmentTaskImpl) enrollmentTask).setIPCProcess(this);
 		((ResourceAllocatorImpl) resourceAllocator).setIPCProcess(this);
+		
+		populateRIB();
 
 		log.info("Initialized IPC Process with AP name: "+namingInfo.getProcessName()
 				+ "; AP instance: "+namingInfo.getProcessInstance() + "; id: "+id);
@@ -276,6 +281,17 @@ public class IPCProcess {
           return encoder;
 	}
 	
+	private void populateRIB(){
+		try {
+			RIBObject ribObject = new QoSCubeSetRIBObject();
+			this.ribDaemon.addRIBObject(ribObject);
+			ribObject = new DataTransferConstantsRIBObject();
+			this.ribDaemon.addRIBObject(ribObject);
+		} catch(Exception ex) {
+			log.error("Problems populating RIB: "+ex.getMessage());
+		}
+	}
+	
 	public State getOperationalState(){
         return operationalState;
 	}
@@ -375,7 +391,19 @@ public class IPCProcess {
 			setOperationalState(State.ASSIGNED_TO_DIF);
 			difInformation = arEvent.getDIFInformation();
 			
-			//TODO create the RIB Objects (address, DataTransferConstants, QoS cubes)
+			if (difInformation.getDifConfiguration().getQosCubes().size() > 0) {
+				QoSCube[] qosCubes = new QoSCube[(int)difInformation.getDifConfiguration().getQosCubes().size()];
+				Iterator<QoSCube> iterator = difInformation.getDifConfiguration().getQosCubes().iterator();
+				int i = 0;
+				while(iterator.hasNext()) {
+					qosCubes[i] = iterator.next();
+					i++;
+				}
+				
+				ribDaemon.create(QoSCubeSetRIBObject.QOSCUBE_RIB_OBJECT_CLASS, 
+						QoSCubeSetRIBObject.QOSCUBE_SET_RIB_OBJECT_NAME, qosCubes);
+			}
+			
 			log.info("IPC Process successfully assigned to DIF "+ difInformation.getDifName());
 		} else {
 			log.error("The kernel couldn't successfully process the Assign to DIF Request: "+ event.getResult());
@@ -407,7 +435,6 @@ public class IPCProcess {
      */
     public List<Neighbor> getNeighbors(){
             List<Neighbor> result = new ArrayList<Neighbor>();
-            RIBDaemon ribDaemon = null;
             RIBObject ribObject = null;
             RIBObject childRibObject = null;
             
