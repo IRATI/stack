@@ -19,8 +19,8 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#ifndef CORE_H_
-#define CORE_H_
+#ifndef LIBRINA_CORE_H
+#define LIBRINA_CORE_H
 
 #include <map>
 #include "concurrency.h"
@@ -163,4 +163,4 @@ unsigned int getNelinkPortId();
 
 }
 
-#endif /* CORE_H_ */
+#endif
