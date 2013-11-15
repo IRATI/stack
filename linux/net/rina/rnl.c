@@ -294,7 +294,7 @@ struct rnl_set * rnl_set_create(personality_id id)
 {
         struct rnl_set * tmp;
 
-        tmp = rkzalloc(sizeof(struct rnl_set), GFP_ATOMIC);
+        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
         if (!tmp)
                 return NULL;
 
