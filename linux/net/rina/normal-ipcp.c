@@ -431,7 +431,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
 
         instance->data->efcpc = efcp_container_create(instance->data->kfa);
         if (!instance->data->efcpc) {
-                rkfree(instance->data->info->name);
+                name_destroy(instance->data->info->name);
                 rkfree(instance->data->info);
                 rkfree(instance->data);
                 rkfree(instance);
@@ -442,7 +442,18 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         if (!instance->data->rmt) {
                 LOG_ERR("Failed creation of RMT instance");
                 efcp_container_destroy(instance->data->efcpc);
-                rkfree(instance->data->info->name);
+                name_destroy(instance->data->info->name);
+                rkfree(instance->data->info);
+                rkfree(instance->data);
+                rkfree(instance);
+                return NULL;
+        }
+
+        if (efcp_bind_rmt(instance->data->efcpc, instance->data->rmt)) {
+                LOG_ERR("Failed binding of RMT and EFCPC");
+                rmt_destroy(instance->data->rmt);
+                efcp_container_destroy(instance->data->efcpc);
+                name_destroy(instance->data->info->name);
                 rkfree(instance->data->info);
                 rkfree(instance->data);
                 rkfree(instance);

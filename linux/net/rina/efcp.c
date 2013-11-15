@@ -367,3 +367,20 @@ struct efcp * efcp_find(struct efcp_container * container,
 
         return efcp_imap_find(container->instances, id);
 }
+
+int efcp_bind_rmt(struct efcp_container * container,
+                  struct rmt *            rmt)
+{
+        if (!container) {
+                LOG_ERR("Bogus EFCP container passed");
+                return -1;
+        }
+        if (!container) {
+                LOG_ERR("Bogus RMT instance passed");
+                return -1;
+        }
+        container->rmt = rmt;
+
+        return -1;
+}
+EXPORT_SYMBOL(efcp_bind_rmt);
