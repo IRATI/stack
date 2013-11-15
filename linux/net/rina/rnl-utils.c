@@ -419,22 +419,19 @@ static int parse_dif_config(struct nlattr * dif_config_attr,
                 goto parse_fail;
 
         if (attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES]) {
-                if (parse_list_of_ipcp_config_entries(
-                                                      attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES],
+                if (parse_list_of_ipcp_config_entries(attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES],
                                                       dif_config) < 0)
                         goto parse_fail;
         }
 
         if (attrs[DCONF_ATTR_DATA_TRANS_CONS]) {
-                data_transfer_constants = rkzalloc(
-                                                   sizeof(struct data_transfer_constants),
+                data_transfer_constants = rkzalloc(sizeof(struct data_transfer_constants),
                                                    GFP_KERNEL);
                 if (!data_transfer_constants)
                         goto parse_fail;
                 dif_config->data_transfer_constants = data_transfer_constants;
 
-                if (parse_data_transfer_constants(
-                                                  attrs[DCONF_ATTR_DATA_TRANS_CONS],
+                if (parse_data_transfer_constants(attrs[DCONF_ATTR_DATA_TRANS_CONS],
                                                   dif_config->data_transfer_constants) < 0) {
                         rkfree(dif_config->data_transfer_constants);
                         goto parse_fail;
@@ -448,18 +445,18 @@ static int parse_dif_config(struct nlattr * dif_config_attr,
         return -1;
 }
 
-static int parse_dif_info(struct nlattr * dif_config_attr,
+static int parse_dif_info(struct nlattr *    dif_config_attr,
                           struct dif_info  * dif_info)
 {
         struct nla_policy attr_policy[DINFO_ATTR_MAX + 1];
-        struct nlattr *attrs[DINFO_ATTR_MAX + 1];
+        struct nlattr *   attrs[DINFO_ATTR_MAX + 1];
 
         attr_policy[DINFO_ATTR_DIF_TYPE].type = NLA_STRING;
-        attr_policy[DINFO_ATTR_DIF_TYPE].len = 0;
+        attr_policy[DINFO_ATTR_DIF_TYPE].len  = 0;
         attr_policy[DINFO_ATTR_DIF_NAME].type = NLA_NESTED;
-        attr_policy[DINFO_ATTR_DIF_NAME].len = 0;
-        attr_policy[DINFO_ATTR_CONFIG].type = NLA_NESTED;
-        attr_policy[DINFO_ATTR_CONFIG].len = 0;
+        attr_policy[DINFO_ATTR_DIF_NAME].len  = 0;
+        attr_policy[DINFO_ATTR_CONFIG].type   = NLA_NESTED;
+        attr_policy[DINFO_ATTR_CONFIG].len    = 0;
 
         if (nla_parse_nested(attrs,
                              DINFO_ATTR_MAX,
@@ -468,7 +465,9 @@ static int parse_dif_info(struct nlattr * dif_config_attr,
                 goto parse_fail;
 
         if (attrs[DINFO_ATTR_DIF_TYPE])
-                dif_info->type = kstrdup(nla_get_string(attrs[DINFO_ATTR_DIF_TYPE]), GFP_KERNEL);
+                dif_info->type =
+                        kstrdup(nla_get_string(attrs[DINFO_ATTR_DIF_TYPE]),
+                                GFP_KERNEL);
 
         if (parse_app_name_info(attrs[DINFO_ATTR_DIF_NAME],
                                 dif_info->dif_name) < 0)
@@ -529,19 +528,19 @@ static int parse_rib_objects_list(struct nlattr     * rib_objs_attr,
         return 0;
 }
 
-static int rnl_parse_generic_u32_param_msg (struct genl_info * info,
-                                            uint_t           * param_var,
-                                            uint_t           param_name,
-                                            uint_t           max_params,
-                                            string_t         * msg_name)
+static int rnl_parse_generic_u32_param_msg(struct genl_info * info,
+                                           uint_t *           param_var,
+                                           uint_t             param_name,
+                                           uint_t             max_params,
+                                           string_t *         msg_name)
 {
         struct nla_policy attr_policy[max_params + 1];
-        struct nlattr *attrs[max_params + 1];
+        struct nlattr *   attrs[max_params + 1];
 
         LOG_DBG("rnl_parse_generic_u32_param_msg started ...");
 
         attr_policy[param_name].type = NLA_U32;
-        attr_policy[param_name].len = 4;
+        attr_policy[param_name].len  = 4;
 
         if (nlmsg_parse(info->nlhdr,
                         /* FIXME: Check if this is correct */
@@ -566,11 +565,11 @@ static int rnl_parse_ipcm_assign_to_dif_req_msg(struct genl_info * info,
                                                 struct rnl_ipcm_assign_to_dif_req_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[IATDR_ATTR_MAX + 1];
-        struct nlattr *attrs[IATDR_ATTR_MAX + 1];
-        int result;
+        struct nlattr *   attrs[IATDR_ATTR_MAX + 1];
+        int               result;
 
         attr_policy[IATDR_ATTR_DIF_INFORMATION].type = NLA_NESTED;
-        attr_policy[IATDR_ATTR_DIF_INFORMATION].len = 0;
+        attr_policy[IATDR_ATTR_DIF_INFORMATION].len  = 0;
 
         result = nlmsg_parse(info->nlhdr,
                              sizeof(struct genlmsghdr) +
@@ -3093,7 +3092,7 @@ int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port)
         struct rina_msg_hdr * out_hdr;
         int                   result;
 
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE, GFP_ATOMIC);
         if (!out_msg) {
                 LOG_ERR("Could not allocate memory for message");
                 return -1;
