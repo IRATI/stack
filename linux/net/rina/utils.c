@@ -239,12 +239,17 @@ char * strdup_from_user(const char __user * src)
         size_t size;
         char * tmp;
 
-        if (!src)
+        if (!src) {
+                LOG_ERR("Source buffer from user is NULL, "
+                        "cannot-strdup-from-user");
                 return NULL;
+        }
 
         size = strlen_user(src); /* Includes the terminating NUL */
-        if (!size)
+        if (!size) {
+                LOG_ERR("String size is 0, cannot strdup-from-user");
                 return NULL;
+        }
 
         tmp = rkmalloc(size, GFP_KERNEL);
         if (!tmp)
@@ -256,6 +261,7 @@ char * strdup_from_user(const char __user * src)
          * on having the complete-copy, parts of it are a no-go
          */
         if (strncpy_from_user(tmp, src, size) != (size - 1)) {
+                LOG_ERR("Cannot strncpy-from-user!");
                 rkfree(tmp);
                 return NULL;
         }
