@@ -27,6 +27,7 @@
 #include "ipcp.h"
 #include "kfa.h"
 
+struct rmt;
 
 struct connection {
         port_id_t port_id;
@@ -70,8 +71,7 @@ struct efcp;
 struct efcp * efcp_find(struct efcp_container * container,
                         cep_id_t                id);
 
-/* NOTE: efcp_write() takes the ownership of the passed SDU */
-int           efcp_write(struct efcp * instance,
-                         struct sdu *  sdu);
+int           efcp_bind_rmt(struct efcp_container * container,
+                            struct rmt *            rmt);
 
 #endif
