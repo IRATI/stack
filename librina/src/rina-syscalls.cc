@@ -120,6 +120,12 @@ namespace rina {
 
                 DUMP_SYSCALL(SYS_createIPCProcess);
 
+                LOG_DBG("name:");
+                LOG_DBG("  processName     = '%s'", name.process_name);
+                LOG_DBG("  processInstance = '%s'", name.process_instance);
+                LOG_DBG("  entityName      = '%s'", name.entity_name);
+                LOG_DBG("  entityInstance  = '%s'", name.entity_instance);
+
                 LOG_DBG("Parms: name = %p, id = %d, dif-type = %s",
                         &name, ipcProcessId, difType.c_str());
 
