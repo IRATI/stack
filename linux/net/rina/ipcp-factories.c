@@ -113,22 +113,22 @@ int ipcpf_fini(struct ipcp_factories * factories)
         return 0;
 }
 
-static int is_name_ok(const char * name)
+static bool is_name_ok(const char * name)
 {
         LOG_DBG("Checking name");
 
         if (!name) {
                 LOG_DBG("Name is empty");
-                return 0;
+                return false;
         }
         if (strlen(name) == 0) {
                 LOG_DBG("Name has 0 length");
-                return 0;
+                return false;
         }
 
-        LOG_DBG("Name is ok");
+        LOG_DBG("Name '%s' is ok", name);
 
-        return 1;
+        return true;
 }
 
 struct ipcp_factory * ipcpf_find(struct ipcp_factories * factories,
