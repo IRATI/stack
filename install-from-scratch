@@ -7,7 +7,7 @@
 
 ME=install-from-scratch
 
-./install-kernel-from-scratch $@ || {
+./install-kernel-from-scratch || {
     echo "$ME: Cannot install kernel"
     exit 1
 }
