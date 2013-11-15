@@ -61,12 +61,12 @@
 #define CALL_DEFAULT_PERSONALITY(RETVAL, HOOK, ARGS...)                 \
         CALL_PERSONALITY(RETVAL, default_personality, HOOK, ##ARGS)
 
-#ifdef RINA_SYSCALLS_DEBUG
+#ifdef CONFIG_RINA_SYSCALLS_DEBUG
 #define SYSCALL_DUMP_ENTER LOG_DBG("Entered %s syscall body", __FUNCTION__)
 #define SYSCALL_DUMP_EXIT  LOG_DBG("Exiting %s syscall body", __FUNCTION__)
 #else
-#define SYSCALL_DUMP_ENTER do { } while 0
-#define SYSCALL_DUMP_EXIT  do { } while 0
+#define SYSCALL_DUMP_ENTER do { } while (0)
+#define SYSCALL_DUMP_EXIT  do { } while (0)
 #endif
 
 SYSCALL_DEFINE3(ipc_create,
