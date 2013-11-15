@@ -51,18 +51,19 @@
 #define RINA_PREFIX "syscalls"
 
 #include "logs.h"
+#include "utils.h"
 #include "rina-syscalls.h"
 #include "rina-systypes.h"
 
-//
-// We're 
-//
+#define DUMP_SYSCALL(X) LOG_DBG("Gonna call syscall %d (" stringify(X) ")", X);
 
 namespace rina {
 
         int syscallWriteSDU(int portId, void * sdu, int size)
         {
                 int result;
+
+                DUMP_SYSCALL(SYS_writeSDU);
 
                 result = syscall(SYS_writeSDU, portId, sdu, size);
                 if (result < 0) {
@@ -77,6 +78,8 @@ namespace rina {
         {
                 int result;
 
+                DUMP_SYSCALL(SYS_readSDU);
+
                 result = syscall(SYS_readSDU, portId, sdu, maxBytes);
                 if (result < 0) {
                         LOG_ERR("Read SDU failed (errno = %d)", errno);
@@ -89,6 +92,8 @@ namespace rina {
         int syscallDestroyIPCProcess(unsigned int ipcProcessId)
         {
                 int result;
+
+                DUMP_SYSCALL(SYS_destroyIPCProcess);
 
                 result = syscall(SYS_destroyIPCProcess, ipcProcessId);
                 if (result < 0) {
@@ -112,6 +117,9 @@ namespace rina {
                 name.entity_instance  = const_cast<char *>(ipcProcessName.getEntityInstance().c_str());
 
                 int result;
+
+                DUMP_SYSCALL(SYS_createIPCProcess);
+
                 result = syscall(SYS_createIPCProcess,
                                  &name,
                                  ipcProcessId,

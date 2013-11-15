@@ -23,6 +23,7 @@ allsources =					\
 
 EXTRA_DIST =					\
 	logs.h					\
+	utils.h					\
 	core.h					\
 	netlink-messages.h			\
 	netlink-manager.h			\

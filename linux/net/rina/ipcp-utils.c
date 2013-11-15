@@ -50,8 +50,10 @@ static int string_dup_gfp(gfp_t            flags,
                           const string_t * src,
                           string_t **      dst)
 {
-        if (!dst)
+        if (!dst) {
+                LOG_ERR("Destination string is NULL, cannot copy");
                 return -1;
+        }
 
         /*
          * An empty source is allowed (ref. the chain of calls) and it must
@@ -64,8 +66,10 @@ static int string_dup_gfp(gfp_t            flags,
                                 "in kernel-space");
                         return -1;
                 }
-        } else
+        } else {
+                LOG_DBG("Duplicating a NULL source string ...");
                 *dst = NULL;
+        }
 
         return 0;
 }
@@ -237,6 +241,8 @@ int name_cpy(const struct name * src, struct name * dst)
         if (!src || !dst)
                 return -1;
 
+        LOG_DBG("Copying name %pK into %pK", src, dst);
+
         name_fini(dst);
 
         ASSERT(name_is_initialized(dst));
@@ -249,6 +255,8 @@ int name_cpy(const struct name * src, struct name * dst)
                 name_fini(dst);
                 return -1;
         }
+
+        LOG_DBG("Name %pK copied successfully into %pK", src, dst);
 
         return 0;
 }
