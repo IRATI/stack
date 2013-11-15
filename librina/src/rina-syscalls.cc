@@ -120,6 +120,9 @@ namespace rina {
 
                 DUMP_SYSCALL(SYS_createIPCProcess);
 
+                LOG_DBG("Parms: name = %p, id = %d, dif-type = %s",
+                        &name, ipcProcessId, difType.c_str());
+
                 result = syscall(SYS_createIPCProcess,
                                  &name,
                                  ipcProcessId,
