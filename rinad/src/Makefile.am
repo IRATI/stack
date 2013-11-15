@@ -11,6 +11,7 @@ edit = $(SED)						\
         -e 's|@JAVA[@]|$(JAVA)|g'			\
         -e 's|@pkgdatadir[@]|$(pkgdatadir)|g'		\
         -e 's|@sysconfdir[@]|$(sysconfdir)|g'		\
+        -e 's|@localstatedir[@]|$(localstatedir)|g'	\
         -e 's|@libdir[@]|$(libdir)|g'			\
         -e 's|@bindir[@]|$(bindir)|g'			\
         -e 's|@sbindir[@]|$(bindir)|g'			\
