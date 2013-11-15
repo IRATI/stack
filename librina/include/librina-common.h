@@ -278,8 +278,10 @@ public:
 	QoSCube(const std::string& name, int id);
 	bool operator==(const QoSCube &other) const;
 	bool operator!=(const QoSCube &other) const;
+	void setId(int id);
 	int getId() const;
 	const std::string& getName() const;
+	void setName(const std::string& name);
 	unsigned int getAverageBandwidth() const;
 	void setAverageBandwidth(unsigned int averageBandwidth);
 	unsigned int getAverageSduBandwidth() const;

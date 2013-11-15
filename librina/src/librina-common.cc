@@ -461,8 +461,16 @@ const std::string& QoSCube::getName() const {
 	return this->name;
 }
 
+void QoSCube::setName(const std::string& name) {
+        this->name = name;
+}
+
 int QoSCube::getId() const{
 	return id;
+}
+
+void QoSCube::setId(int id) {
+        this->id = id;
 }
 
 unsigned int QoSCube::getAverageBandwidth() const {
@@ -539,7 +547,7 @@ void QoSCube::setPeakSduBandwidthDuration(
 }
 
 double QoSCube::getUndetectedBitErrorRate() const {
-	return getUndetectedBitErrorRate();
+	return undetectedBitErrorRate;
 }
 
 void QoSCube::setUndetectedBitErrorRate(double undetectedBitErrorRate) {
@@ -547,7 +555,6 @@ void QoSCube::setUndetectedBitErrorRate(double undetectedBitErrorRate) {
 }
 
 /* CLASS DIF PROPERTIES */
-
 DIFProperties::DIFProperties(
 		const ApplicationProcessNamingInformation& DIFName, int maxSDUSize) {
 	this->DIFName = DIFName;

@@ -12,10 +12,10 @@
     "lengthOfFlowQueues" : 10
   },
   "ipcProcessesToCreate" : [ {
-    "type" : "shim-eth-vlan",
-    "applicationProcessName" : "test",
+    "type" : "shim-dummy",
+    "applicationProcessName" : "test-dummy",
     "applicationProcessInstance" : "1",
-    "difName" : "100"
+    "difName" : "loopback.DIF"
   } ],
   "difConfigurations" : [ {
     "difName" : "loopback.DIF"
@@ -40,6 +40,33 @@
     "configParameters" : [ {
     	"name" : "bar", 
     	"value" : "foo"
+      } ],
+     "qosCubes" : [ {
+         "name" : "reliable",
+         "id" : 1, 
+         "partialDelivery" : false,
+         "orderedDelivery" : true
+      }, {
+         "name" : "unreliable",
+         "id" : 2, 
+         "partialDelivery" : true,
+         "orderedDelivery" : false 
+     } ], 
+     "knownIPCProcessAddresses" : [ {
+    	 "apName" : "test1.IRATI",
+    	 "apInstance" : "1",
+    	 "address" : 16
+  	  }, {
+    	 "apName" : "test2.IRATI",
+    	 "apInstance" : "1",
+    	 "address" : 17
+  	} ], 
+  	"addressPrefixes" : [ {
+    	 "addressPrefix" : 0,
+    	 "organization" : "N.Bourbaki"
+  	  }, {
+    	 "addressPrefix" : 16,
+    	 "organization" : "IRATI"
       } ]
   } ]
 }
