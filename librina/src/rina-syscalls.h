@@ -19,8 +19,8 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#ifndef RINA_SYSCALLS_H
-#define	RINA_SYSCALLS_H
+#ifndef LIBRINA_SYSCALLS_H
+#define	LIBRINA_SYSCALLS_H
 
 #include "librina-common.h"
 
