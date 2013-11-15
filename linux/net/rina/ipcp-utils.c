@@ -471,6 +471,7 @@ struct name * name_dup_from_user(const struct name __user * src)
         tmp = name_create();
         if (!tmp)
                 return NULL;
+
         if (name_cpy_from_user(src, tmp)) {
                 name_destroy(tmp);
                 return NULL;
