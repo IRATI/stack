@@ -134,6 +134,8 @@ int efcp_container_destroy(struct efcp_container * container)
                                                     efcp_destroy);
         if (container->cidm)      cidm_destroy(container->cidm);
 
+        if (container->egress_wq) rwq_destroy(container->egress_wq);
+
         rkfree(container);
 
         return 0;
