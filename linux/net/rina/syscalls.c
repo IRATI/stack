@@ -80,7 +80,9 @@ SYSCALL_DEFINE3(ipc_create,
 
         SYSCALL_DUMP_ENTER;
 
-        LOG_DBG("Pointers passed are name = %pK, type = %pK", name, type);
+        LOG_DBG("Pointers passed are:");
+        LOG_DBG("  name = %pK", name);
+        LOG_DBG("  type = %pK", type);
 
         tn = name_dup_from_user(name);
         if (!tn) {

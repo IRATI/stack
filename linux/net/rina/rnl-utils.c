@@ -2483,7 +2483,7 @@ static int send_nl_unicast_msg(struct net *     net,
         result = genlmsg_unicast(net, skb, portid);
         if (result) {
                 LOG_ERR("Could not send NL unicast msg of type %d "
-                        "with seq num %u to %u: %d",
+                        "with seq num %u to %u (result = %d)",
                         (int) type, seq_num, portid, result);
                 nlmsg_free(skb);
                 return -1;
@@ -2491,6 +2491,7 @@ static int send_nl_unicast_msg(struct net *     net,
 
         LOG_DBG("Sent NL unicast msg of type %d with seq num %u to %u",
                 (int) type, seq_num, portid);
+
         return 0;
 }
 
@@ -2530,17 +2531,21 @@ int rnl_assign_dif_response(ipc_process_id_t id,
                 nlmsg_free(out_msg);
                 return -1;
         }
-        result = genlmsg_end(out_msg, out_hdr);
 
+        result = genlmsg_end(out_msg, out_hdr);
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
 
-        return send_nl_unicast_msg(&init_net,
-                                   out_msg,
-                                   nl_port_id,
-                                   RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE,
-                                   seq_num);
+        LOG_DBG("Gonna send NL unicast message now");
+        result = send_nl_unicast_msg(&init_net,
+                                     out_msg,
+                                     nl_port_id,
+                                     RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE,
+                                     seq_num);
+        LOG_DBG("NL unicast message sent (result = %d)", result);
+
+        return result;
 }
 EXPORT_SYMBOL(rnl_assign_dif_response);
 
