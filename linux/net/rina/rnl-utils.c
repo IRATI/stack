@@ -1917,9 +1917,7 @@ int rnl_format_ipcm_alloc_flow_req_msg(const struct name *      source,
         return 0;
 
  format_fail:
-        LOG_ERR("Could not format "
-                "rnl_ipcm_alloc_flow_req_msg "
-                "message correctly");
+        LOG_ERR("Could not format rnl_ipcm_alloc_flow_req_msg message");
         return -1;
 }
 EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_msg);
