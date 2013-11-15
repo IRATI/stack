@@ -375,12 +375,12 @@ int efcp_bind_rmt(struct efcp_container * container,
                 LOG_ERR("Bogus EFCP container passed");
                 return -1;
         }
-        if (!container) {
+        if (!rmt) {
                 LOG_ERR("Bogus RMT instance passed");
                 return -1;
         }
         container->rmt = rmt;
 
-        return -1;
+        return 0;
 }
 EXPORT_SYMBOL(efcp_bind_rmt);
