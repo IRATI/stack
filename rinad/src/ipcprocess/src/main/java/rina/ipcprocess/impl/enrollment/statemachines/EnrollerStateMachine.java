@@ -6,9 +6,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
-import eu.irati.librina.DataTransferConstants;
 import eu.irati.librina.Neighbor;
-import eu.irati.librina.QoSCube;
 
 import rina.applicationprocess.api.WhatevercastName;
 import rina.cdap.api.CDAPException;
@@ -16,6 +14,9 @@ import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
 import rina.cdap.api.message.ObjectValue;
+import rina.configuration.AddressPrefixConfiguration;
+import rina.configuration.KnownIPCProcessAddress;
+import rina.configuration.RINAConfiguration;
 import rina.encoding.api.Encoder;
 import rina.enrollment.api.EnrollmentInformationRequest;
 import rina.enrollment.api.EnrollmentTask;
@@ -238,9 +239,10 @@ public class EnrollerStateMachine extends BaseEnrollmentStateMachine{
 		
 		//Check if we know the remote IPC Process
 		RINAConfiguration rinaConf = RINAConfiguration.getInstance();
-		KnownIPCProcessAddress ipcAddress = rinaConf.getIPCProcessAddress(this.enrollmentTask.getIPCProcess().getDIFName(),
-				this.remotePeer.getApplicationProcessName(), 
-				this.remotePeer.getApplicationProcessInstance());
+		KnownIPCProcessAddress ipcAddress = rinaConf.getIPCProcessAddress(
+				ipcProcess.getDIFInformation().getDifName().getProcessName(),
+				this.remotePeer.getName().getProcessName(), 
+				this.remotePeer.getName().getProcessInstance());
 		if (ipcAddress != null){
 			if (ipcAddress.getAddress() == address){
 				return true;
@@ -250,8 +252,9 @@ public class EnrollerStateMachine extends BaseEnrollmentStateMachine{
 		}
 		
 		//Check if we know the prefix assigned to the organization
-		long prefix = rinaConf.getAddressPrefixConfiguration(this.enrollmentTask.getIPCProcess().getDIFName(), 
-				this.remotePeer.getApplicationProcessName());
+		long prefix = rinaConf.getAddressPrefixConfiguration(
+				ipcProcess.getDIFInformation().getDifName().getProcessName(), 
+				this.remotePeer.getName().getProcessName());
 		if (prefix == -1){
 			//We don't know the organization of the IPC Process
 			return false;
@@ -289,7 +292,8 @@ public class EnrollerStateMachine extends BaseEnrollmentStateMachine{
 		RINAConfiguration rinaConf = RINAConfiguration.getInstance();
 		
 		//See if we know the configuration of the remote IPC Process
-		KnownIPCProcessAddress ipcAddress = rinaConf.getIPCProcessAddress(this.enrollmentTask.getIPCProcess().getDIFName(),
+		KnownIPCProcessAddress ipcAddress = rinaConf.getIPCProcessAddress(
+				ipcProcess.getDIFInformation().getDifName().getProcessName(),
 				this.remotePeer.getName().getProcessName(), 
 				this.remotePeer.getName().getProcessInstance());
 		if (ipcAddress != null){
@@ -297,7 +301,8 @@ public class EnrollerStateMachine extends BaseEnrollmentStateMachine{
 		}
 		
 		//See if we know the prefix of the remote IPC Process
-		long prefix = rinaConf.getAddressPrefixConfiguration(difInformation.ge, 
+		long prefix = rinaConf.getAddressPrefixConfiguration(
+				ipcProcess.getDIFInformation().getDifName().getProcessName(), 
 				this.remotePeer.getName().getProcessName());
 		if (prefix == -1){
 			//We don't know the prefix, return an invalid address indicating 

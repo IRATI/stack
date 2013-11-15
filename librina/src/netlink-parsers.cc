@@ -816,6 +816,7 @@ QoSCube * parseQoSCubeObject(nlattr *nested) {
 
 int putQoSCubeObject(nl_msg* netlinkMessage,
 		const QoSCube& object){
+
 	NLA_PUT_STRING(netlinkMessage, QOS_CUBE_ATTR_NAME,
 			object.getName().c_str());
 
@@ -825,38 +826,47 @@ int putQoSCubeObject(nl_msg* netlinkMessage,
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_AVG_BAND,
 				object.getAverageBandwidth());
 	}
+
 	if (object.getAverageSduBandwidth() > 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_AVG_SDU_BAND,
 				object.getAverageSduBandwidth());
 	}
+
 	if (object.getDelay() > 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_DELAY, object.getDelay());
 	}
+
 	if (object.getJitter() > 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_JITTER, object.getJitter());
 	}
+
 	if (object.getMaxAllowableGap() >= 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_MAX_GAP,
 				object.getMaxAllowableGap());
 	}
+
 	if (object.isOrderedDelivery()) {
 		NLA_PUT_FLAG(netlinkMessage, QOS_CUBE_ATTR_ORD_DEL);
 	}
+
 	if (object.isPartialDelivery()) {
 		NLA_PUT_FLAG(netlinkMessage, QOS_CUBE_ATTR_PART_DEL);
 	}
+
 	if (object.getPeakBandwidthDuration() > 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_PEAK_BAND_DUR,
 				object.getPeakBandwidthDuration());
 	}
+
 	if (object.getPeakSduBandwidthDuration() > 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_PEAK_SDU_BAND_DUR,
 				object.getPeakSduBandwidthDuration());
 	}
-	if (object.getUndetectedBitErrorRate() > 0) {
+
+	/*if (object.getUndetectedBitErrorRate() > 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_UND_BER,
 				object.getUndetectedBitErrorRate());
-	}
+	}*/
 
 	return 0;
 
@@ -1942,15 +1952,17 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 		const DIFConfiguration& object){
 	struct nlattr *parameters, *dataTransferConstants, *qosCubes;
 
-	if (!(parameters = nla_nest_start(
-	                netlinkMessage, DCONF_ATTR_PARAMETERS))) {
-		goto nla_put_failure;
+	if  (object.getParameters().size() > 0) {
+	        if (!(parameters = nla_nest_start(
+	                        netlinkMessage, DCONF_ATTR_PARAMETERS))) {
+	                goto nla_put_failure;
+	        }
+	        if (putListOfParameters(netlinkMessage,
+	                        object.getParameters()) < 0) {
+	                goto nla_put_failure;
+	        }
+	        nla_nest_end(netlinkMessage, parameters);
 	}
-	if (putListOfParameters(netlinkMessage,
-			object.getParameters()) < 0) {
-		goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, parameters);
 
 	if (!(dataTransferConstants = nla_nest_start(
 	                netlinkMessage, DCONF_ATTR_DATA_TRANS_CONST))) {
@@ -1965,15 +1977,19 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 	NLA_PUT_U32(netlinkMessage, DCONF_ATTR_ADDRESS,
 	                object.getAddress());
 
-	if (!(qosCubes = nla_nest_start(
-	                netlinkMessage, DCONF_ATTR_QOS_CUBES))) {
-	        goto nla_put_failure;
+	if (object.getQosCubes().size() > 0) {
+	        if (!(qosCubes = nla_nest_start(
+	                        netlinkMessage, DCONF_ATTR_QOS_CUBES))) {
+	                goto nla_put_failure;
+	        }
+
+	        if (putListOfQoSCubeObjects(netlinkMessage,
+	                        object.getQosCubes()) < 0) {
+	                goto nla_put_failure;
+	        }
+
+	        nla_nest_end(netlinkMessage, qosCubes);
 	}
-	if (putListOfQoSCubeObjects(netlinkMessage,
-	                object.getQosCubes()) < 0) {
-	        goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, qosCubes);
 
 	return 0;
 
@@ -3661,9 +3677,9 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
                 result->setAddress(nla_get_u32(attrs[DCONF_ATTR_ADDRESS]));
         }
 
-        if (attrs[DIF_PROP_ATTR_QOS_CUBES]) {
+        if (attrs[DCONF_ATTR_QOS_CUBES]) {
                 status = parseListOfQoSCubesForDIFConfiguration(
-                                attrs[DIF_PROP_ATTR_QOS_CUBES], result);
+                                attrs[DCONF_ATTR_QOS_CUBES], result);
                 if (status != 0){
                         delete result;
                         return 0;

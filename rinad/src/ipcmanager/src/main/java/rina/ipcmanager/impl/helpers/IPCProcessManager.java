@@ -8,9 +8,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import rina.configuration.DIFProperties;
+import rina.configuration.RINAConfiguration;
 import rina.ipcmanager.impl.IPCManager;
-import rina.ipcmanager.impl.conf.DIFProperties;
-import rina.ipcmanager.impl.conf.RINAConfiguration;
 import rina.ipcmanager.impl.console.IPCManagerConsole;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistrationInformation;
@@ -207,16 +207,27 @@ public class IPCProcessManager {
 
 		DIFProperties difProperties = 
 				RINAConfiguration.getInstance().getDIFConfiguration(difName);
-		if (difProperties != null && difProperties.getConfigParameters() != null){
-			for(int j=0; j<difProperties.getConfigParameters().size(); j++){
+		if (difProperties == null) {
+			throw new AssignToDIFException("Could not find description of DIF " + difName);
+		}
+		
+		if (difProperties.getConfigParameters() != null){
+			for(int i=0; i<difProperties.getConfigParameters().size(); i++){
 				difInformation.getDifConfiguration().addParameter(
-						difProperties.getConfigParameters().get(j));
+						difProperties.getConfigParameters().get(i));
 			}
 		}
 		
 		if (difProperties.getDataTransferConstants() != null) {
 			difInformation.getDifConfiguration().setDataTransferConstants(
 					difProperties.getDataTransferConstants());
+		}
+		
+		if (difProperties.getQosCubes() != null) {
+			for(int i=0; i<difProperties.getQosCubes().size(); i++) {
+				difInformation.getDifConfiguration().addQoSCube(
+						difProperties.getQosCubes().get(i));
+			}
 		}
 
 		long handle = ipcProcess.assignToDIF(difInformation);

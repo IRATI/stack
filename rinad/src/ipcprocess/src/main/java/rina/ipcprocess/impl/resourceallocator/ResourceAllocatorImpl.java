@@ -10,18 +10,18 @@ import rina.resourceallocator.api.ResourceAllocator;
  * The Resource Allocator (RA) is the core of management in the IPC Process. 
  * The degree of decentralization depends on the policies and how it is used. The RA has a set of meters 
  * and dials that it can manipulate. The meters fall in 3 categories:
- * 		Ð Traffic characteristics from the user of the DIF
- * 		Ð Traffic characteristics of incoming and outgoing flows
- * 		Ð Information from other members of the DIF
+ * 		Traffic characteristics from the user of the DIF
+ * 		Traffic characteristics of incoming and outgoing flows
+ * 		Information from other members of the DIF
  * The Dials:
- * 		Ð Creation/Deletion of QoS Classes
- * 		Ð Data Transfer QoS Sets
- *		Ð Modifying Data Transfer Policy Parameters
- * 		Ð Creation/Deletion of RMT Queues
- * 		Ð Modify RMT Queue Servicing
- * 		Ð Creation/Deletion of (N-1)-flows
- * 		Ð Assignment of RMT Queues to (N-1)-flows
- * 		Ð Forwarding Table Generator Output
+ * 		Creation/Deletion of QoS Classes
+ * 		Data Transfer QoS Sets
+ *		Modifying Data Transfer Policy Parameters
+ * 		Creation/Deletion of RMT Queues
+ * 		Modify RMT Queue Servicing
+ * 		Creation/Deletion of (N-1)-flows
+ * 		Assignment of RMT Queues to (N-1)-flows
+ * 		Forwarding Table Generator Output
  * 
  * @author eduardgrasa
  *

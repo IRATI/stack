@@ -1,4 +1,4 @@
-package rina.ipcmanager.impl.conf;
+package rina.configuration;
 
 import java.util.ArrayList;
 import java.util.List;

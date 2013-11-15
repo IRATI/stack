@@ -1,4 +1,4 @@
-package rina.ipcmanager.impl.conf;
+package rina.configuration;
 
 /**
  * The configuration of a known IPC Process

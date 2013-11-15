@@ -14,6 +14,7 @@ import rina.cdap.api.CDAPMessageHandler;
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
+import rina.configuration.RINAConfiguration;
 import rina.ipcprocess.impl.IPCProcess;
 import rina.ipcprocess.impl.events.NeighborDeclaredDeadEvent;
 import rina.ribdaemon.api.BaseRIBObject;
@@ -25,8 +26,6 @@ public class WatchdogRIBObject extends BaseRIBObject implements CDAPMessageHandl
 	
 	private static final Log log = LogFactory.getLog(WatchdogRIBObject.class);
 	
-	public static final long DEFAULT_WATCHDOG_PERIOD_IN_MS = 60*1000;
-	public static final long DEFAULT_DECLARED_DEAD_INTERVAL_IN_MS = 120*1000;
 	public static final String WATCHDOG_OBJECT_NAME = "/dif/management/watchdog";
 	public static final String WATCHDOG_OBJECT_CLASS = "watchdog timer";
 	
@@ -62,8 +61,10 @@ public class WatchdogRIBObject extends BaseRIBObject implements CDAPMessageHandl
 		this.cdapSessionManager = ipcProcess.getCDAPSessionManager();
 		this.timer = new Timer();
 		timerTask = new WatchdogTimerTask(this);
-		this.periodInMs = DEFAULT_WATCHDOG_PERIOD_IN_MS;
-		this.declaredDeadIntervalInMs = DEFAULT_DECLARED_DEAD_INTERVAL_IN_MS;
+		this.periodInMs = 
+				RINAConfiguration.getInstance().getLocalConfiguration().getWatchdogPeriodInMs();
+		this.declaredDeadIntervalInMs = 
+				RINAConfiguration.getInstance().getLocalConfiguration().getDeclaredDeadIntervalInMs();
 		this.neighborStatistics = new ConcurrentHashMap<String, NeighborStatistics>();
 		ipcProcess = IPCProcess.getInstance();
 		timer.schedule(timerTask, new Double(periodInMs*Math.random()).longValue(), periodInMs);

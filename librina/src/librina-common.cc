@@ -482,7 +482,7 @@ void QoSCube::setAverageSduBandwidth(unsigned int averageSduBandwidth) {
 }
 
 unsigned int QoSCube::getDelay() const {
-	return getDelay();
+	return delay;
 }
 
 void QoSCube::setDelay(unsigned int delay) {

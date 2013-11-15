@@ -4,6 +4,7 @@ import java.util.List;
 
 import eu.irati.librina.Neighbor;
 
+import rina.configuration.RINAConfiguration;
 import rina.enrollment.api.EnrollmentTask;
 import rina.ipcprocess.impl.IPCProcess;
 
@@ -14,8 +15,6 @@ import rina.ipcprocess.impl.IPCProcess;
  *
  */
 public class NeighborsEnroller implements Runnable{
-	
-	public static final long DEFAULT_NEIGHBORS_ENROLLER_PERIOD_IN_MS = 60000;
 
 	/**
 	 * The list of known neighbors
@@ -50,7 +49,8 @@ public class NeighborsEnroller implements Runnable{
 			}
 			
 			try{
-				Thread.sleep(DEFAULT_NEIGHBORS_ENROLLER_PERIOD_IN_MS);
+				Thread.sleep(
+						RINAConfiguration.getInstance().getLocalConfiguration().getNeighborsEnrollerPeriodInMs());
 			}catch(Exception ex){
 				ex.printStackTrace();
 			}

@@ -1,4 +1,4 @@
-package rina.ipcmanager.impl.conf;
+package rina.configuration;
 
 /**
  * Specifies what SDU Protection Module should be used for each possible 

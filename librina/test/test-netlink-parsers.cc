@@ -1244,13 +1244,10 @@ int testIpcmAssignToDIFRequestMessage() {
 
 	ApplicationProcessNamingInformation  difName;
 	difName.setProcessName("/difs/Test.DIF");
-	std::cout<<"Here";
 
 	IpcmAssignToDIFRequestMessage message;
 	DIFInformation difInformation;
-	std::cout<<"Here";
 	DIFConfiguration difConfiguration;
-	std::cout<<"Here";
 	difInformation.setDifType("shim-ethernet");
 	difInformation.setDifName(difName);
 	Parameter * parameter = new Parameter("interface", "eth0");
@@ -1272,10 +1269,10 @@ int testIpcmAssignToDIFRequestMessage() {
 	difConfiguration.setDataTransferConstants(dataTransferConstants);
 	difConfiguration.setAddress(34);
 	QoSCube * qosCube = new QoSCube("cube 1", 1);
-	//difConfiguration.addQoSCube(*qosCube);
+	difConfiguration.addQoSCube(*qosCube);
 	delete qosCube;
 	qosCube = new QoSCube("cube 2", 2);
-	//difConfiguration.addQoSCube(*qosCube);
+	difConfiguration.addQoSCube(*qosCube);
 	delete qosCube;
 	difInformation.setDifConfiguration(difConfiguration);
 	message.setDIFInformation(difInformation);
@@ -1300,7 +1297,7 @@ int testIpcmAssignToDIFRequestMessage() {
 	IpcmAssignToDIFRequestMessage * recoveredMessage =
 			dynamic_cast<IpcmAssignToDIFRequestMessage *>(
 					parseBaseNetlinkMessage(netlinkMessageHeader));
-	std::cout<<"Here";
+
 	if (recoveredMessage == 0) {
 		std::cout << "Error parsing Ipcm Assign To DIF Request Message "
 				<< "\n";

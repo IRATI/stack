@@ -1,5 +1,8 @@
 package rina.ipcprocess.impl;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -10,10 +13,14 @@ import java.util.concurrent.Executors;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import rina.applicationprocess.api.WhatevercastName;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.impl.CDAPSessionManagerImpl;
 import rina.cdap.impl.googleprotobuf.GoogleProtocolBufWireMessageProviderFactory;
+import rina.configuration.RINAConfiguration;
 import rina.delimiting.api.Delimiter;
 import rina.delimiting.impl.DIFDelimiter;
 import rina.encoding.api.Encoder;
@@ -34,7 +41,6 @@ import rina.enrollment.api.EnrollmentTask;
 import rina.flowallocator.api.DirectoryForwardingTableEntry;
 import rina.flowallocator.api.Flow;
 import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
-import rina.ipcprocess.impl.enrollment.ribobjects.AddressRIBObject;
 import rina.ipcprocess.impl.enrollment.ribobjects.NeighborSetRIBObject;
 import rina.ipcprocess.impl.resourceallocator.ResourceAllocatorImpl;
 import rina.ipcprocess.impl.ribdaemon.RIBDaemonImpl;
@@ -68,6 +74,8 @@ public class IPCProcess {
 	public static final String MANAGEMENT_AE = "Management";
     public static final String DATA_TRANSFER_AE = "Data Transfer";
     public static final int DEFAULT_MAX_SDU_SIZE_IN_BYTES = 10000;
+    public static final String CONFIG_FILE_LOCATION = "../conf/ipcmanager.conf"; 
+	public static final long CONFIG_FILE_POLL_PERIOD_IN_MS = 5000;
     
     public enum State {NULL, INITIALIZED, ASSIGN_TO_DIF_IN_PROCESS, ASSIGNED_TO_DIF};
 	
@@ -130,8 +138,10 @@ public class IPCProcess {
 	}
 	
 	public void initialize(ApplicationProcessNamingInformation namingInfo, int id, long ipcManagerPort) {
+		log.info("Initializing configuration... ");
+		executorService = Executors.newCachedThreadPool();
+		initializeConfiguration();
 		log.info("Initializing librina...");
-
 		rina.initialize();
 		ipcEventProducer = rina.getIpcEventProducer();
 		kernelIPCProcess = rina.getKernelIPCProcess();
@@ -141,7 +151,6 @@ public class IPCProcess {
 		ipcManager.setIPCManagerPort(ipcManagerPort);
 		name = namingInfo;
 		pendingEvents = new ConcurrentHashMap<Long, IPCEvent>();
-		executorService = Executors.newCachedThreadPool();
 		delimiter = new DIFDelimiter();
 		cdapSessionManager = new CDAPSessionManagerImpl(
 				new GoogleProtocolBufWireMessageProviderFactory());
@@ -167,6 +176,59 @@ public class IPCProcess {
 		setOperationalState(State.INITIALIZED);
 
 		log.info("IPC Manager notified successfully");
+	}
+	
+	private void initializeConfiguration(){
+		//Read config file
+		RINAConfiguration rinaConfiguration = readConfigurationFile();
+		RINAConfiguration.setConfiguration(rinaConfiguration);
+		
+		//Start thread that will look for config file changes
+		Runnable configFileChangeRunnable = new Runnable(){
+			private long currentLastModified = System.currentTimeMillis();
+			private RINAConfiguration rinaConfiguration = null;
+
+			public void run(){
+				File file = new File(CONFIG_FILE_LOCATION);
+
+				while(true){
+					if (file.lastModified() > currentLastModified) {
+						log.debug("Configuration file changed, loading the new content");
+						currentLastModified = file.lastModified();
+						rinaConfiguration = readConfigurationFile();
+						if (rinaConfiguration != null) {
+							RINAConfiguration.setConfiguration(rinaConfiguration);
+						};
+					}
+					try {
+						Thread.sleep(CONFIG_FILE_POLL_PERIOD_IN_MS);
+					}catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+
+		};
+
+		executorService.execute(configFileChangeRunnable);
+	}
+	
+	private RINAConfiguration readConfigurationFile(){
+		try {
+    		ObjectMapper objectMapper = new ObjectMapper();
+    		RINAConfiguration rinaConfiguration = (RINAConfiguration) 
+    			objectMapper.readValue(new FileInputStream(CONFIG_FILE_LOCATION), RINAConfiguration.class);
+    		log.info("Read configuration file");
+    		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+    		objectMapper.writer(new DefaultPrettyPrinter()).writeValue(outputStream, rinaConfiguration);
+    		log.info(outputStream.toString());
+    		return rinaConfiguration;
+    	} catch (Exception ex) {
+    		log.error(ex);
+    		ex.printStackTrace();
+    		log.debug("Could not find the main configuration file.");
+    		return null;
+        }
 	}
 	
 	public void execute(Runnable runnable) {
