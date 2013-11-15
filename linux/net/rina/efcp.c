@@ -225,6 +225,11 @@ static int efcp_write_worker(void * o)
                 return -1;
         }
 
+        if (dtp_write(tmp->efcp->dtp, tmp->sdu)) {
+                LOG_ERR("Could not send SDU to DTP");
+                return -1;
+        }
+
         return 0;
 }
 
