@@ -445,15 +445,27 @@ int name_cpy_from_user(const struct name __user * src,
 
         ASSERT(name_is_initialized(dst));
 
-        /* We rely on short-boolean evaluation ... :-) */
         if (string_dup_from_user(src->process_name,
-                                 &dst->process_name)     ||
-            string_dup_from_user(src->process_instance,
-                                 &dst->process_instance) ||
-            string_dup_from_user(src->entity_name,
-                                 &dst->entity_name)      ||
-            string_dup_from_user(src->entity_instance,
+                                 &dst->process_name)) {
+                LOG_ERR("Cannot dup process-name");
+                name_fini(dst);
+                return -1;
+        }
+        if (string_dup_from_user(src->process_instance,
+                                 &dst->process_instance)) {
+                LOG_ERR("Cannot dup process-instance");
+                name_fini(dst);
+                return -1;
+        }
+        if (string_dup_from_user(src->entity_name,
+                                 &dst->entity_name)) {
+                LOG_ERR("Cannot dup entity-name");
+                name_fini(dst);
+                return -1;
+        }
+        if (string_dup_from_user(src->entity_instance,
                                  &dst->entity_instance)) {
+                LOG_ERR("Cannot dup entity-instance");
                 name_fini(dst);
                 return -1;
         }
@@ -464,6 +476,8 @@ int name_cpy_from_user(const struct name __user * src,
 struct name * name_dup_from_user(const struct name __user * src)
 {
         struct name * tmp;
+
+        LOG_DBG("Name duplication (from user) in progress");
 
         if (!src)
                 return NULL;
@@ -476,6 +490,8 @@ struct name * name_dup_from_user(const struct name __user * src)
                 name_destroy(tmp);
                 return NULL;
         }
+
+        LOG_DBG("Name duplication (from user) completed successfully");
 
         return tmp;
 }
