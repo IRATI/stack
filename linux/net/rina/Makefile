@@ -3,7 +3,7 @@
 #
 
 obj-$(CONFIG_RINA) +=				\
-	utils.o rds.o debug.o			\
+	utils.o debug.o rmem.o rmap.o rwq.o	\
 	core.o personality.o syscalls.o		\
 	rnl.o rnl-utils.o rnl-workarounds.o	\
 	du.o ipcp-utils.o common.o
