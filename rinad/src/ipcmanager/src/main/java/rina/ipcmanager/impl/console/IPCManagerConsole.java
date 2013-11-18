@@ -60,6 +60,7 @@ public class IPCManagerConsole implements Runnable{
 		commands.put(UpdateDIFConfigurationCommand.ID, new UpdateDIFConfigurationCommand(ipcManager, this));
 		commands.put(RegisterIPCProcessToNMinusOneDIF.ID, new RegisterIPCProcessToNMinusOneDIF(ipcManager, this));
 		commands.put(UnregisterIPCProcessFromNMinusOneDIF.ID, new UnregisterIPCProcessFromNMinusOneDIF(ipcManager, this));
+		commands.put(EnrollToDIFCommand.ID, new EnrollToDIFCommand(ipcManager, this));
 		
 		lock = new ReentrantLock();
 		responsesQueue = new LinkedBlockingQueue<IPCEvent>();

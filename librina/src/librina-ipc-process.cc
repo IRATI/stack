@@ -174,7 +174,9 @@ void ExtendedIPCManager::setIPCManagerPort(
         this->ipcManagerPort = ipcManagerPort;
 }
 
-void ExtendedIPCManager::notifyIPCProcessInitialized() throw(IPCException){
+void ExtendedIPCManager::notifyIPCProcessInitialized(
+                const ApplicationProcessNamingInformation& name)
+throw(IPCException){
         lock();
         if (ipcProcessInitialized) {
                 unlock();
@@ -185,6 +187,7 @@ void ExtendedIPCManager::notifyIPCProcessInitialized() throw(IPCException){
         //Do nothing
 #else
         IpcmIPCProcessInitializedMessage message;
+        message.setName(name);
         message.setSourceIpcProcessId(ipcProcessId);
         message.setDestPortId(ipcManagerPort);
         message.setNotificationMessage(true);
@@ -270,6 +273,8 @@ void ExtendedIPCManager::assignToDIFResponse(
 	IpcmAssignToDIFResponseMessage responseMessage;
 	responseMessage.setResult(result);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setSourceIpcProcessId(ipcProcessId);
+        responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try{
 		rinaManager->sendMessage(&responseMessage);
@@ -279,7 +284,7 @@ void ExtendedIPCManager::assignToDIFResponse(
 #endif
 }
 
-void enrollToDIFResponse(const EnrollToDIFRequestEvent& event,
+void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDIFRequestEvent& event,
                         int result, const std::list<Neighbor> & newNeighbors)
         throw (EnrollException) {
 #if STUB_API
@@ -288,6 +293,8 @@ void enrollToDIFResponse(const EnrollToDIFRequestEvent& event,
         IpcmEnrollToDIFResponseMessage responseMessage;
         responseMessage.setResult(result);
         responseMessage.setNeighbors(newNeighbors);
+        responseMessage.setSourceIpcProcessId(ipcProcessId);
+        responseMessage.setDestPortId(ipcManagerPort);
         responseMessage.setSequenceNumber(event.getSequenceNumber());
         responseMessage.setResponseMessage(true);
         try{
@@ -298,7 +305,7 @@ void enrollToDIFResponse(const EnrollToDIFRequestEvent& event,
 #endif
 }
 
-void notifyNeighborsModified(bool added,
+void ExtendedIPCManager::notifyNeighborsModified(bool added,
                         const std::list<Neighbor> & neighbors)
         throw (EnrollException) {
 #if STUB_API
@@ -307,6 +314,8 @@ void notifyNeighborsModified(bool added,
         IpcmNotifyNeighborsModifiedMessage message;
         message.setAdded(added);
         message.setNeighbors(neighbors);
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestPortId(ipcManagerPort);
         message.setSequenceNumber(0);
         message.setNotificationMessage(true);
 
@@ -327,6 +336,8 @@ void ExtendedIPCManager::registerApplicationResponse(
 	IpcmRegisterApplicationResponseMessage responseMessage;
 	responseMessage.setResult(result);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setSourceIpcProcessId(ipcProcessId);
+	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try{
 		rinaManager->sendMessage(&responseMessage);
@@ -345,6 +356,8 @@ void ExtendedIPCManager::unregisterApplicationResponse(
 	IpcmUnregisterApplicationResponseMessage responseMessage;
 	responseMessage.setResult(result);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setSourceIpcProcessId(ipcProcessId);
+	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try{
 		rinaManager->sendMessage(&responseMessage);
@@ -363,6 +376,8 @@ void ExtendedIPCManager::allocateFlowRequestResult(
 	IpcmAllocateFlowRequestResultMessage responseMessage;
 	responseMessage.setResult(result);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setSourceIpcProcessId(ipcProcessId);
+	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try{
 		rinaManager->sendMessage(&responseMessage);
@@ -445,6 +460,7 @@ void ExtendedIPCManager::flowDeallocatedRemotely(
 	message.setPortId(portId);
 	message.setCode(code);
 	message.setSourceIpcProcessId(ipcProcessId);
+	message.setDestPortId(ipcManagerPort);
 	message.setNotificationMessage(true);
 	try{
 		rinaManager->sendMessage(&message);
@@ -465,6 +481,8 @@ void ExtendedIPCManager::queryRIBResponse(
 	responseMessage.setResult(result);
 	responseMessage.setRIBObjects(ribObjects);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setSourceIpcProcessId(ipcProcessId);
+	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try{
 		rinaManager->sendMessage(&responseMessage);

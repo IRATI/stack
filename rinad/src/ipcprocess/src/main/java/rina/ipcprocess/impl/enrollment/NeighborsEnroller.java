@@ -5,6 +5,7 @@ import java.util.List;
 import eu.irati.librina.Neighbor;
 
 import rina.configuration.RINAConfiguration;
+import rina.enrollment.api.EnrollmentRequest;
 import rina.enrollment.api.EnrollmentTask;
 import rina.ipcprocess.impl.IPCProcess;
 
@@ -46,7 +47,8 @@ public class NeighborsEnroller implements Runnable{
 					continue;
 				}
 				
-				enrollmentTask.initiateEnrollment(this.knownNeighbors.get(i));
+				EnrollmentRequest request = new EnrollmentRequest(this.knownNeighbors.get(i), null);
+				enrollmentTask.initiateEnrollment(request);
 			}
 			
 			try{
