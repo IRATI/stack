@@ -149,8 +149,16 @@ static int rmt_send_worker(void * o)
         }
 
         if (!is_send_data_complete(tmp)) {
-                LOG_ERR("Wrong data passed to RMT_write_worker");
+                LOG_ERR("Wrong data passed to RMT send worker");
                 send_data_destroy(tmp);
+                return -1;
+        }
+
+        /*
+         * FIXME : Port id will be retrieved from the pduft, and the cast from
+         * PDU to SDU might be changed for a better solution
+         */
+        if (kfa_flow_sdu_write(tmp->rmt->kfa, -1, (struct sdu *) tmp->pdu)) {
                 return -1;
         }
 
