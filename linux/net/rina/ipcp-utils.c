@@ -189,49 +189,6 @@ void name_destroy(struct name * ptr)
 }
 EXPORT_SYMBOL(name_destroy);
 
-#if 0
-struct name * name_create_and_init_gfp(gfp_t            flags,
-                                       const string_t * process_name,
-                                       const string_t * process_instance,
-                                       const string_t * entity_name,
-                                       const string_t * entity_instance)
-{
-        struct name * tmp1;
-        struct name * tmp2;
-
-        tmp1 = name_create_gfp(flags);
-        if (!tmp1)
-                return NULL;
-
-        tmp2 = name_init_gfp(flags,
-                             tmp1,
-                             process_name,
-                             process_instance,
-                             entity_name,
-                             entity_instance);
-        if (!tmp2) {
-                name_destroy(tmp1);
-                return NULL;
-        }
-
-        return tmp2;
-}
-EXPORT_SYMBOL(name_create_and_init_gfp);
-
-struct name * name_create_and_init(const string_t * process_name,
-                                   const string_t * process_instance,
-                                   const string_t * entity_name,
-                                   const string_t * entity_instance)
-{
-        return name_create_and_init_gfp(GFP_KERNEL,
-                                        process_name,
-                                        process_instance,
-                                        entity_name,
-                                        entity_instance);
-}
-EXPORT_SYMBOL(name_create_and_init);
-#endif
-
 int name_cpy(const struct name * src, struct name * dst)
 {
         if (!src || !dst)
