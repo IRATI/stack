@@ -86,7 +86,7 @@ static int string_len(const string_t * s)
 
 /* FIXME: This thing is bogus and has to be fixed properly */
 #ifdef CONFIG_RINA_DEBUG
-static int name_is_initialized(struct name * dst)
+static bool name_is_initialized(struct name * dst)
 {
         ASSERT(dst);
 
@@ -94,15 +94,16 @@ static int name_is_initialized(struct name * dst)
             !dst->process_instance &&
             !dst->entity_name      &&
             !dst->entity_instance)
-                return 1;
-        return 0;
+                return true;
+
+        return false;
 }
 #else
-static int name_is_initialized(struct name * dst)
+static bool name_is_initialized(struct name * dst)
 {
         ASSERT(dst);
 
-        return 0;
+        return true;
 }
 #endif
 
