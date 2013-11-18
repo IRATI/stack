@@ -44,7 +44,7 @@ typedef char          string_t;
 typedef uint          uint_t;
 
 /* FIXME: Is this address_t definition correct ??? */
-typedef uint16_t      address_t;
+typedef uint32_t      address_t;
 
 typedef uint          timeout_t;
 

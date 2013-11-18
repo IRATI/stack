@@ -44,15 +44,32 @@ public class FlowManager {
 	public synchronized void requestAllocateFlowLocal(FlowRequestEvent event) throws Exception{
 		PendingFlowAllocation pendingFlowAllocation = null;
 		long handle = 0;
+		IPCProcess ipcProcess = null;
+		String difName = null;
+		
+		if (event.getDIFName() != null && event.getDIFName().getProcessName() != null && 
+				!event.getDIFName().getProcessName().equals("")) {
+			difName = event.getDIFName().getProcessName();
+		}
 		
 		try{
-			IPCProcess ipcProcess = ipcProcessManager.selectAnyIPCProcess();
+			if (difName == null){
+				ipcProcess = ipcProcessManager.selectAnyIPCProcess();
+			} else {
+				ipcProcess = ipcProcessManager.selectIPCProcessOfDIF(difName);
+			}
+			
 			handle = ipcProcess.allocateFlow(event);
+			
 			log.debug("Requested allocation of flow from "+event.getLocalApplicationName().toString()
 					+ "to remote application "+event.getRemoteApplicationName().toString()
 					+" to the DIF "+ipcProcess.getDIFInformation().getDifName().toString() + 
 					". Got handle "+handle);
+			
 			pendingFlowAllocation = new PendingFlowAllocation(event, ipcProcess);
+			if (difName != null) {
+				pendingFlowAllocation.setTryOnlyOneDIF(true);
+			}
 			pendingFlowAllocations.put(handle, pendingFlowAllocation);
 		}catch(Exception ex){
 			log.error("Error allocating flow. "+ex.getMessage());
@@ -103,19 +120,25 @@ public class FlowManager {
 						flowReqEvent.getLocalApplicationName().toString() + " to remote application "
 						+ flowReqEvent.getRemoteApplicationName().toString() +
 						" in DIF "+ipcProcess.getDIFInformation().getDifName().toString());
-				pendingFlowAllocation.addTriedIPCProcess(ipcProcess.getName().toString());
-				ipcProcess = ipcProcessManager.getIPCProcessNotInList(
-						pendingFlowAllocation.getTriedIPCProcesses());
 				
-				if (ipcProcess == null){
+				if (pendingFlowAllocation.isTryOnlyOneDIF()) {
 					log.info("No more IPC Processes to try, giving up");
 					flowReqEvent.setPortId(-1);
-				}else{
-					log.info("Trying flow allocation again with IPC Process " + 
-							ipcProcess.getDIFInformation().getDifName().toString());
-					handle = ipcProcess.allocateFlow(flowReqEvent);
-					pendingFlowAllocations.put(handle, pendingFlowAllocation);
-					return;
+				}else {
+					pendingFlowAllocation.addTriedIPCProcess(ipcProcess.getName().toString());
+					ipcProcess = ipcProcessManager.getIPCProcessNotInList(
+							pendingFlowAllocation.getTriedIPCProcesses());
+
+					if (ipcProcess == null){
+						log.info("No more IPC Processes to try, giving up");
+						flowReqEvent.setPortId(-1);
+					}else{
+						log.info("Trying flow allocation again with IPC Process " + 
+								ipcProcess.getDIFInformation().getDifName().toString());
+						handle = ipcProcess.allocateFlow(flowReqEvent);
+						pendingFlowAllocations.put(handle, pendingFlowAllocation);
+						return;
+					}
 				}
 			}
 		}catch(Exception ex){

@@ -1,14 +1,17 @@
 package rina.encoding.impl.googleprotobuf.applicationregistration;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
-import rina.encoding.api.BaseEncoder;
-import rina.encoding.impl.googleprotobuf.GPBUtils;
-import rina.applicationprocess.api.ApplicationProcessNamingInfo;
-import rina.ipcservice.api.ApplicationRegistration;
+import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.ApplicationProcessNamingInformationList;
+import eu.irati.librina.ApplicationRegistration;
 
-public class ApplicationRegistrationEncoder extends BaseEncoder{
+import rina.encoding.api.Encoder;
+import rina.encoding.impl.googleprotobuf.GPBUtils;
+
+public class ApplicationRegistrationEncoder implements Encoder{
 	
 	public synchronized Object decode(byte[] serializedObject, Class<?> objectClass) throws Exception {
 		if (objectClass == null || !(objectClass.equals(ApplicationRegistration.class))){
@@ -17,12 +20,17 @@ public class ApplicationRegistrationEncoder extends BaseEncoder{
 		
 		ApplicationRegistrationMessage.ApplicationRegistration gpbApplicationRegistration = ApplicationRegistrationMessage.ApplicationRegistration.parseFrom(serializedObject);
 		
-		ApplicationProcessNamingInfo apName = GPBUtils.getApplicationProcessNamingInfo(gpbApplicationRegistration.getNamingInfo());
+		ApplicationProcessNamingInformation apName = GPBUtils.
+				getApplicationProcessNamingInfo(gpbApplicationRegistration.getNamingInfo());
 		
-		ApplicationRegistration result = new ApplicationRegistration();
-		result.setApNamingInfo(apName);
-		result.setSocketNumber(gpbApplicationRegistration.getSocketNumber());
-		result.setDifNames(gpbApplicationRegistration.getDifNamesList());
+		ApplicationRegistration result = new ApplicationRegistration(apName);
+		List<String> difs = gpbApplicationRegistration.getDifNamesList();
+		ApplicationProcessNamingInformation aux = null;
+		for(int i=0; i<difs.size(); i++) {
+			aux = new ApplicationProcessNamingInformation();
+			aux.setProcessName(difs.get(i));
+			result.addDIFName(aux);
+		}
 		
 		return result;
 	}
@@ -33,18 +41,25 @@ public class ApplicationRegistrationEncoder extends BaseEncoder{
 		}
 
 		ApplicationRegistration applicationRegistration = (ApplicationRegistration) object;
-		List<String> difNames = applicationRegistration.getDifNames();
-		if (difNames == null){
-			difNames = new ArrayList<String>();
-		}
+		List<String> difNames = getDIFNamesAsStrings(applicationRegistration.getDIFNames());
 		
 		ApplicationRegistrationMessage.ApplicationRegistration gpbApplicationRegistration = 
 			ApplicationRegistrationMessage.ApplicationRegistration.newBuilder().
-						setNamingInfo(GPBUtils.getApplicationProcessNamingInfoT(applicationRegistration.getApNamingInfo())).
-						setSocketNumber(applicationRegistration.getSocketNumber()).
+						setNamingInfo(GPBUtils.getApplicationProcessNamingInfoT(applicationRegistration.getApplicationName())).
+						setSocketNumber(0).
 						addAllDifNames(difNames).
 						build();
 
 		return gpbApplicationRegistration.toByteArray();
+	}
+	
+	private List<String> getDIFNamesAsStrings(ApplicationProcessNamingInformationList list) {
+		List<String> result = new ArrayList<String>();
+		Iterator<ApplicationProcessNamingInformation> iterator = list.iterator();
+		while (iterator.hasNext()) {
+			result.add(iterator.next().getProcessName());
+		}
+		
+		return result;
 	}
 }

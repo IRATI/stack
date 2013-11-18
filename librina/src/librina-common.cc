@@ -420,6 +420,20 @@ void FlowInformation::setRemoteAppName(
 }
 
 /* CLASS QoS CUBE */
+QoSCube::QoSCube(){
+        id = 0;
+        averageBandwidth = 0;
+        averageSDUBandwidth = 0;
+        peakBandwidthDuration = 0;
+        peakSDUBandwidthDuration = 0;
+        undetectedBitErrorRate = 0;
+        partialDelivery = true;
+        orderedDelivery = false;
+        maxAllowableGap = -1;
+        jitter = 0;
+        delay = 0;
+}
+
 QoSCube::QoSCube(const std::string& name, int id) {
 	this->name = name;
 	this->id = id;
@@ -447,8 +461,16 @@ const std::string& QoSCube::getName() const {
 	return this->name;
 }
 
+void QoSCube::setName(const std::string& name) {
+        this->name = name;
+}
+
 int QoSCube::getId() const{
 	return id;
+}
+
+void QoSCube::setId(int id) {
+        this->id = id;
 }
 
 unsigned int QoSCube::getAverageBandwidth() const {
@@ -468,7 +490,7 @@ void QoSCube::setAverageSduBandwidth(unsigned int averageSduBandwidth) {
 }
 
 unsigned int QoSCube::getDelay() const {
-	return getDelay();
+	return delay;
 }
 
 void QoSCube::setDelay(unsigned int delay) {
@@ -525,7 +547,7 @@ void QoSCube::setPeakSduBandwidthDuration(
 }
 
 double QoSCube::getUndetectedBitErrorRate() const {
-	return getUndetectedBitErrorRate();
+	return undetectedBitErrorRate;
 }
 
 void QoSCube::setUndetectedBitErrorRate(double undetectedBitErrorRate) {
@@ -533,7 +555,6 @@ void QoSCube::setUndetectedBitErrorRate(double undetectedBitErrorRate) {
 }
 
 /* CLASS DIF PROPERTIES */
-
 DIFProperties::DIFProperties(
 		const ApplicationProcessNamingInformation& DIFName, int maxSDUSize) {
 	this->DIFName = DIFName;
@@ -1095,6 +1116,15 @@ void DataTransferConstants::setSequenceNumberLength(
         this->sequenceNumberLength = sequenceNumberLength;
 }
 
+bool DataTransferConstants::isInitialized() {
+        if (qosIdLenght == 0 || addressLength == 0 || cepIdLength == 0 ||
+            qosIdLenght == 0 || lengthLength == 0 ){
+                return false;
+        }
+
+        return true;
+}
+
 /* CLASS DIF INFORMATION */
 const ApplicationProcessNamingInformation& DIFInformation::getDifName()
 		const {
@@ -1125,6 +1155,14 @@ void DIFInformation::setDifConfiguration(
 }
 
 /* CLASS DIF CONFIGURATION */
+unsigned int DIFConfiguration::getAddress() const {
+        return address;
+}
+
+void DIFConfiguration::setAddress(unsigned int address) {
+        this->address = address;
+}
+
 const std::list<Policy>& DIFConfiguration::getPolicies() {
 	return policies;
 }
@@ -1145,7 +1183,7 @@ void DIFConfiguration::setQosCubes(const std::list<QoSCube>& qosCubes) {
 	this->qosCubes = qosCubes;
 }
 
-void DIFConfiguration::adQoSCube(const QoSCube& qosCube) {
+void DIFConfiguration::addQoSCube(const QoSCube& qosCube) {
         qosCubes.push_back(qosCube);
 }
 
@@ -1172,6 +1210,14 @@ void DIFConfiguration::setDataTransferConstants(
 }
 
 /* CLASS NEIGHBOR */
+Neighbor::Neighbor() {
+        address = false;
+        averageRTTInMs = 0;
+        lastHeardFromTimeInMs = 0;
+        enrolled = false;
+        underlyingPortId = 0;
+}
+
 bool Neighbor::operator==(const Neighbor &other) const{
         return name == other.getName();
 }
@@ -1199,6 +1245,47 @@ void Neighbor::setSupportingDifName(
         const ApplicationProcessNamingInformation& supportingDifName) {
         this->supportingDifName = supportingDifName;
 }
+
+unsigned int Neighbor::getAddress() const {
+        return address;
+}
+
+void Neighbor::setAddress(unsigned int address) {
+        this->address = address;
+}
+
+unsigned int Neighbor::getAverageRttInMs() const {
+        return averageRTTInMs;
+}
+
+void Neighbor::setAverageRttInMs(unsigned int averageRttInMs) {
+        averageRTTInMs = averageRttInMs;
+}
+
+bool Neighbor::isEnrolled() const {
+        return enrolled;
+}
+
+void Neighbor::setEnrolled(bool enrolled){
+        this->enrolled = enrolled;
+}
+
+unsigned int Neighbor::getLastHeardFromTimeInMs() const {
+        return lastHeardFromTimeInMs;
+}
+
+void Neighbor::setLastHeardFromTimeInMs(unsigned int lastHeardFromTimeInMs) {
+        this->lastHeardFromTimeInMs = lastHeardFromTimeInMs;
+}
+
+int Neighbor::getUnderlyingPortId() const {
+        return underlyingPortId;
+}
+
+void Neighbor::setUnderlyingPortId(int underlyingPortId) {
+        this->underlyingPortId = underlyingPortId;
+}
+
 
 /* CLAS RIBOBJECT */
 RIBObject::RIBObject(){

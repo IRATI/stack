@@ -3,11 +3,11 @@ package rina.encoding.impl.googleprotobuf.whatevercast;
 import java.util.List;
 
 import rina.applicationprocess.api.WhatevercastName;
-import rina.encoding.api.BaseEncoder;
+import rina.encoding.api.Encoder;
 import rina.encoding.impl.googleprotobuf.whatevercast.WhatevercastNameArrayMessage.whatevercastNames_t.Builder;
 import rina.encoding.impl.googleprotobuf.whatevercast.WhatevercastNameMessage.whatevercastName_t;
 
-public class WhatevercastNameArrayEncoder extends BaseEncoder{
+public class WhatevercastNameArrayEncoder implements Encoder{
 
 	public synchronized Object decode(byte[] encodedObject, Class<?> objectClass) throws Exception{
 		if (objectClass == null || !(objectClass.equals(WhatevercastName[].class))){

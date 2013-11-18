@@ -1,7 +1,6 @@
 package rina.flowallocator.api;
 
-import rina.applicationprocess.api.ApplicationProcessNamingInfo;
-import rina.ipcservice.api.APService;
+import eu.irati.librina.ApplicationProcessNamingInformation;
 
 /**
  * An entry of the directory forwarding table
@@ -12,7 +11,7 @@ public class DirectoryForwardingTableEntry {
 	/**
 	 * The name of the application process
 	 */
-	private ApplicationProcessNamingInfo apNamingInfo = null;
+	private ApplicationProcessNamingInformation apNamingInfo = null;
 	
 	/**
 	 * The address of the IPC process it is currently attached to
@@ -24,26 +23,21 @@ public class DirectoryForwardingTableEntry {
 	 */
 	private long timestamp = 0L;
 	
-	/**
-	 * If the application is registered in this IPC Process, this
-	 * is the callback to contact it
-	 */
-	private APService localApplicationCallback = null;
-	
 	public DirectoryForwardingTableEntry(){
 	}
 	
-	public DirectoryForwardingTableEntry(ApplicationProcessNamingInfo apNamingInfo, long address, long timestamp){
+	public DirectoryForwardingTableEntry(
+			ApplicationProcessNamingInformation apNamingInfo, long address, long timestamp){
 		this.apNamingInfo = apNamingInfo;
 		this.address = address;
 		this.timestamp = timestamp;
 	}
 
-	public ApplicationProcessNamingInfo getApNamingInfo() {
+	public ApplicationProcessNamingInformation getApNamingInfo() {
 		return apNamingInfo;
 	}
 
-	public void setApNamingInfo(ApplicationProcessNamingInfo apNamingInfo) {
+	public void setApNamingInfo(ApplicationProcessNamingInformation apNamingInfo) {
 		this.apNamingInfo = apNamingInfo;
 	}
 
@@ -62,21 +56,15 @@ public class DirectoryForwardingTableEntry {
 	public void setTimestamp(long timestamp) {
 		this.timestamp = timestamp;
 	}
-	
-	public APService getLocalApplicationCallback() {
-		return localApplicationCallback;
-	}
-
-	public void setLocalApplicationCallback(APService localApplicationCallback) {
-		this.localApplicationCallback = localApplicationCallback;
-	}
 
 	/**
 	 * Returns a key identifying this entry
 	 * @return
 	 */
 	public String getKey(){
-		return this.apNamingInfo.getEncodedString();
+		return this.apNamingInfo.getProcessNamePlusInstance() +
+				"-" + this.apNamingInfo.getEntityName() + 
+				"-" + this.apNamingInfo.getEntityInstance();
 	}
 	
 	@Override

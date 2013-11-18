@@ -133,7 +133,6 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         return 0;
 }
 
-/* NOTE: Let's avoid silly (and dangerous) copy&paste-like initializations */
 #define DECL_NL_OP(X) {                         \
                 .cmd    = X,                    \
                         .flags  = 0,            \
@@ -294,7 +293,7 @@ struct rnl_set * rnl_set_create(personality_id id)
 {
         struct rnl_set * tmp;
 
-        tmp = rkzalloc(sizeof(struct rnl_set), GFP_ATOMIC);
+        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
         if (!tmp)
                 return NULL;
 
@@ -364,9 +363,7 @@ static int kipcm_netlink_notify(struct notifier_block * nb,
                                 void *                  notification)
 {
         struct netlink_notify * notify = notification;
-
-        /* FIXME: Why? why have another static with the same name ! */
-        rnl_port_t ipc_manager_port;
+        rnl_port_t              port;
 
         if (state != NETLINK_URELEASE)
                 return NOTIFY_DONE;
@@ -376,19 +373,18 @@ static int kipcm_netlink_notify(struct notifier_block * nb,
                 return NOTIFY_BAD;
         }
 
-        ipc_manager_port = rnl_get_ipc_manager_port();
+        port = rnl_get_ipc_manager_port();
 
-        LOG_DBG("IPC Manager port: %u", ipc_manager_port);
+        if (port) {
+                LOG_DBG("IPC Manager port: %u", port);
 
-        if (ipc_manager_port) {
                 /* Check if the IPC Manager is the process that died */
-                if (ipc_manager_port == notify->portid) {
+                if (port == notify->portid) {
                         rnl_set_ipc_manager_port(0);
 
                         LOG_WARN("IPC Manager process has been destroyed");
                 } else
-                        rnl_ipcm_sock_closed_notif_msg(notify->portid,
-                                                       ipc_manager_port);
+                        rnl_ipcm_sock_closed_notif_msg(notify->portid, port);
         }
 
         return NOTIFY_DONE;
@@ -466,8 +462,7 @@ void rnl_exit(void)
         LOG_DBG("NetLink layer finalized successfully");
 }
 
-/* FIXME: Noooo */
-rnl_port_t ipc_manager_port = 0;
+static rnl_port_t ipc_manager_port = 0;
 
 rnl_port_t rnl_get_ipc_manager_port(void)
 { return ipc_manager_port; }

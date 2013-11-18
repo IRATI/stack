@@ -1,62 +1,74 @@
 package rina.encoding.impl.googleprotobuf.flowservice;
 
-import rina.encoding.api.BaseEncoder;
+import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.FlowInformation;
+import eu.irati.librina.FlowSpecification;
+import rina.encoding.api.Encoder;
 import rina.encoding.impl.googleprotobuf.GPBUtils;
-import rina.applicationprocess.api.ApplicationProcessNamingInfo;
-import rina.ipcservice.api.FlowService;
-import rina.ipcservice.api.QualityOfServiceSpecification;
 
-public class FlowServiceEncoder extends BaseEncoder{
+public class FlowServiceEncoder implements Encoder{
 
 	public synchronized Object decode(byte[] serializedObject, Class<?> objectClass) throws Exception {
-		if (objectClass == null || !(objectClass.equals(FlowService.class))){
-			throw new Exception("This is not the serializer for objects of type "+objectClass.getName());
+		if (objectClass == null || !(objectClass.equals(FlowInformation.class))){
+			throw new Exception("This is not the serializer for objects of type "+
+					objectClass.getName());
 		}
 		
-		FlowServiceMessage.FlowService gpbFlowService = FlowServiceMessage.FlowService.parseFrom(serializedObject);
+		FlowServiceMessage.FlowService gpbFlowService = 
+				FlowServiceMessage.FlowService.parseFrom(serializedObject);
 		
-		ApplicationProcessNamingInfo destinationAPName = GPBUtils.getApplicationProcessNamingInfo(gpbFlowService.getDestinationNamingInfo());
-		ApplicationProcessNamingInfo sourceAPName = GPBUtils.getApplicationProcessNamingInfo(gpbFlowService.getSourceNamingInfo());
-		QualityOfServiceSpecification qosSpec = GPBUtils.getQualityOfServiceSpecification(gpbFlowService.getQosSpecification());
+		ApplicationProcessNamingInformation destinationAPName = 
+				GPBUtils.getApplicationProcessNamingInfo(
+						gpbFlowService.getDestinationNamingInfo());
+		ApplicationProcessNamingInformation sourceAPName = 
+				GPBUtils.getApplicationProcessNamingInfo(
+						gpbFlowService.getSourceNamingInfo());
+		FlowSpecification flowSpec = GPBUtils.getFlowSpecification(
+				gpbFlowService.getQosSpecification());
 		
-		FlowService result = new FlowService();
-		result.setSourceAPNamingInfo(sourceAPName);
-		result.setDestinationAPNamingInfo(destinationAPName);
-		result.setQoSSpecification(qosSpec);
+		FlowInformation result = new FlowInformation();
+		result.setLocalAppName(sourceAPName);
+		result.setRemoteAppName(destinationAPName);
+		result.setFlowSpecification(flowSpec);
 		result.setPortId((int)gpbFlowService.getPortId());
 		
 		return result;
 	}
 
 	public synchronized byte[] encode(Object object) throws Exception {
-		if (object == null || !(object instanceof FlowService)){
-			throw new Exception("This is not the serializer for objects of type "+FlowService.class.toString());
+		if (object == null || !(object instanceof FlowInformation)){
+			throw new Exception("This is not the serializer for objects of type "
+					+FlowInformation.class.toString());
 		}
 
-		FlowService flowService = (FlowService) object;
+		FlowInformation flowInformation = (FlowInformation) object;
 		FlowServiceMessage.FlowService gpbFlowService = null;
 
-		if (flowService.getSourceAPNamingInfo() == null && flowService.getQoSSpecification() == null){
+		if (flowInformation.getLocalAppName() == null && flowInformation.getFlowSpecification() == null){
 			gpbFlowService = FlowServiceMessage.FlowService.newBuilder().
-			setDestinationNamingInfo(GPBUtils.getApplicationProcessNamingInfoT(flowService.getDestinationAPNamingInfo())).
-			setPortId(flowService.getPortId()).build();
-		}else if (flowService.getSourceAPNamingInfo() == null && flowService.getQoSSpecification() != null){
+			setDestinationNamingInfo(GPBUtils.getApplicationProcessNamingInfoT(flowInformation.getRemoteAppName())).
+			setPortId(flowInformation.getPortId()).build();
+		}else if (flowInformation.getLocalAppName() == null && flowInformation.getFlowSpecification() != null){
 			gpbFlowService = FlowServiceMessage.FlowService.newBuilder().
-			setDestinationNamingInfo(GPBUtils.getApplicationProcessNamingInfoT(flowService.getDestinationAPNamingInfo())).
-			setQosSpecification(GPBUtils.getQoSSpecificationT(flowService.getQoSSpecification())).
-			setPortId(flowService.getPortId()).build();
-		}
-		else if (flowService.getSourceAPNamingInfo() != null && flowService.getQoSSpecification() == null){
+			setDestinationNamingInfo(GPBUtils.getApplicationProcessNamingInfoT(flowInformation.getRemoteAppName())).
+			setQosSpecification(GPBUtils.getQoSSpecificationT(flowInformation.getFlowSpecification())).
+			setPortId(flowInformation.getPortId()).build();
+		}else if (flowInformation.getLocalAppName() != null && flowInformation.getFlowSpecification() == null){
 			gpbFlowService = FlowServiceMessage.FlowService.newBuilder().
-			setDestinationNamingInfo(GPBUtils.getApplicationProcessNamingInfoT(flowService.getDestinationAPNamingInfo())).
-			setSourceNamingInfo(GPBUtils.getApplicationProcessNamingInfoT(flowService.getSourceAPNamingInfo())).
-			setPortId(flowService.getPortId()).build();
+			setDestinationNamingInfo(GPBUtils.getApplicationProcessNamingInfoT(
+					flowInformation.getRemoteAppName())).
+			setSourceNamingInfo(GPBUtils.getApplicationProcessNamingInfoT(
+					flowInformation.getLocalAppName())).
+			setPortId(flowInformation.getPortId()).build();
 		}else{
 			gpbFlowService = FlowServiceMessage.FlowService.newBuilder().
-			setDestinationNamingInfo(GPBUtils.getApplicationProcessNamingInfoT(flowService.getDestinationAPNamingInfo())).
-			setSourceNamingInfo(GPBUtils.getApplicationProcessNamingInfoT(flowService.getSourceAPNamingInfo())).
-			setQosSpecification(GPBUtils.getQoSSpecificationT(flowService.getQoSSpecification())).
-			setPortId(flowService.getPortId()).build();
+			setDestinationNamingInfo(GPBUtils.getApplicationProcessNamingInfoT(
+					flowInformation.getRemoteAppName())).
+			setSourceNamingInfo(GPBUtils.getApplicationProcessNamingInfoT(
+					flowInformation.getLocalAppName())).
+			setQosSpecification(GPBUtils.getQoSSpecificationT(
+					flowInformation.getFlowSpecification())).
+			setPortId(flowInformation.getPortId()).build();
 		}
 
 		return gpbFlowService.toByteArray();

@@ -19,24 +19,43 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#include <errno.h>
+/* FIXME: PIGSTY HACK TO USER OUR SYSCALLS, PLEASE FIX ASAP !!! */
+#undef _ASM_X86_UNISTD_32_H
+#include "/usr/include/linux/include/asm-x86/unistd_32.h"
+
+//#undef _ASM_X86_UNISTD_64_H
+//#include "/usr/include/linux/include/asm-x86/unistd_64.h"
+
+#define SYS_createIPCProcess  __NR_ipc_create
+#define SYS_destroyIPCProcess __NR_ipc_destroy
+#define SYS_readSDU           __NR_sdu_read
+#define SYS_writeSDU          __NR_sdu_write
+
+#if !defined(__NR_ipc_create)
+#error No ipc_create syscall defined
+#endif
+#if !defined(__NR_ipc_destroy)
+#error No ipc_create syscall defined
+#endif
+#if !defined(__NR_sdu_read)
+#error No sdu_read syscall defined
+#endif
+#if !defined(__NR_sdu_write)
+#error No sdu_write syscall defined
+#endif
+
 #include <sys/syscall.h>
+#include <unistd.h>
+#include <errno.h>
 
 #define RINA_PREFIX "syscalls"
 
 #include "logs.h"
+#include "utils.h"
 #include "rina-syscalls.h"
 #include "rina-systypes.h"
 
-/* FIXME: PIGSTY HACK TO USER OUR SYSCALLS, PLEASE FIX ASAP !!! */
-//#include <unistd.h>
-//#include "/tmp/irati/usr/include/linux/include/asm-x86/unistd_32.h"
-//#include "/tmp/irati/usr/include/linux/include/asm-x86/unistd_64.h"
-
-#define SYS_createIPCProcess  351
-#define SYS_destroyIPCProcess 352
-#define SYS_readSDU           353
-#define SYS_writeSDU          354
+#define DUMP_SYSCALL(X) LOG_DBG("Gonna call syscall %d (" stringify(X) ")", X);
 
 namespace rina {
 
@@ -44,10 +63,12 @@ namespace rina {
         {
                 int result;
 
+                DUMP_SYSCALL(SYS_writeSDU);
+
                 result = syscall(SYS_writeSDU, portId, sdu, size);
                 if (result < 0) {
                         LOG_ERR("Write SDU failed (errno = %d)", errno);
-                        return -errno;
+                        return errno;
                 }
 
                 return 0;
@@ -57,10 +78,12 @@ namespace rina {
         {
                 int result;
 
+                DUMP_SYSCALL(SYS_readSDU);
+
                 result = syscall(SYS_readSDU, portId, sdu, maxBytes);
                 if (result < 0) {
                         LOG_ERR("Read SDU failed (errno = %d)", errno);
-                        return -errno;
+                        return errno;
                 }
 
                 return result;
@@ -70,11 +93,13 @@ namespace rina {
         {
                 int result;
 
+                DUMP_SYSCALL(SYS_destroyIPCProcess);
+
                 result = syscall(SYS_destroyIPCProcess, ipcProcessId);
                 if (result < 0) {
                         LOG_ERR("Destroy IPC Process failed (errno = %d)",
                                 errno);
-                        return -errno;
+                        return errno;
                 }
 
                 return 0;
@@ -92,6 +117,18 @@ namespace rina {
                 name.entity_instance  = const_cast<char *>(ipcProcessName.getEntityInstance().c_str());
 
                 int result;
+
+                DUMP_SYSCALL(SYS_createIPCProcess);
+
+                LOG_DBG("name:");
+                LOG_DBG("  processName     = '%s'", name.process_name);
+                LOG_DBG("  processInstance = '%s'", name.process_instance);
+                LOG_DBG("  entityName      = '%s'", name.entity_name);
+                LOG_DBG("  entityInstance  = '%s'", name.entity_instance);
+
+                LOG_DBG("Parms: name = %p, id = %d, dif-type = %s",
+                        &name, ipcProcessId, difType.c_str());
+
                 result = syscall(SYS_createIPCProcess,
                                  &name,
                                  ipcProcessId,
@@ -99,7 +136,7 @@ namespace rina {
                 if (result < 0) {
                         LOG_ERR("Create IPC Process failed (errno = %d)",
                                 errno);
-                        return -errno;
+                        return errno;
                 }
 
                 return 0;

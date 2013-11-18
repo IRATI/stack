@@ -6,20 +6,12 @@ import rina.cdap.api.CDAPMessageHandler;
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
 import rina.events.api.EventManager;
-import rina.ipcprocess.api.IPCProcessComponent;
 
 /**
  * Specifies the interface of the RIB Daemon
  * @author eduardgrasa
  */
-public interface RIBDaemon extends IPCProcessComponent, EventManager{
-	
-	/**
-	 * A new management SDU has been delivered, the RIB Daemon will process it
-	 * @param managementSDU
-	 * @param portId
-	 */
-	public void managementSDUDelivered(byte[] managementSDU, int portId);
+public interface RIBDaemon extends EventManager{
 	
 	/**
 	 * Add a RIB object to the RIB

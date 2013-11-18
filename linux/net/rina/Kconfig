@@ -18,6 +18,13 @@ config RINA_DEBUG
 	help
 	  No help for the time being
 
+config RINA_SYSCALLS_DEBUG
+       bool "Debug RINA syscalls"
+       default y
+       depends on RINA_DEBUG
+       help
+         no help for the time being
+
 config RINA_KIPCM_LOCKS_DEBUG
 	bool "K-IPC Manager locks debugging"
 	default n

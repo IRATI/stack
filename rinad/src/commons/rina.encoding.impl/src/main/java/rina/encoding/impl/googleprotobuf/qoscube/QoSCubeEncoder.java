@@ -1,11 +1,11 @@
 package rina.encoding.impl.googleprotobuf.qoscube;
 
-import rina.encoding.api.BaseEncoder;
+import eu.irati.librina.QoSCube;
+import rina.encoding.api.Encoder;
 import rina.encoding.impl.googleprotobuf.GPBUtils;
 import rina.encoding.impl.googleprotobuf.qoscube.QoSCubeMessage.qosCube_t;
-import rina.flowallocator.api.QoSCube;
 
-public class QoSCubeEncoder extends BaseEncoder{
+public class QoSCubeEncoder implements Encoder{
 
 	public synchronized Object decode(byte[] serializedObject, Class<?> objectClass) throws Exception {
 		if (objectClass == null || !(objectClass.equals(QoSCube.class))){
@@ -17,18 +17,17 @@ public class QoSCubeEncoder extends BaseEncoder{
 	}
 	
 	public static QoSCube convertGPBToModel(qosCube_t gpbQoSCube){
-		QoSCube qosCube = new QoSCube();
+		QoSCube qosCube = new QoSCube(GPBUtils.getString(gpbQoSCube.getName()), 
+				gpbQoSCube.getQosId());
 		qosCube.setAverageBandwidth(gpbQoSCube.getAverageBandwidth());
-		qosCube.setAverageSDUBandwidth(gpbQoSCube.getAverageSDUBandwidth());
+		qosCube.setAverageSduBandwidth(gpbQoSCube.getAverageSDUBandwidth());
 		qosCube.setDelay(gpbQoSCube.getDelay());
 		qosCube.setJitter(gpbQoSCube.getJitter());
-		qosCube.setMaxAllowableGapSdu(gpbQoSCube.getMaxAllowableGapSdu());
-		qosCube.setName(GPBUtils.getString(gpbQoSCube.getName()));
-		qosCube.setOrder(gpbQoSCube.getOrder());
+		qosCube.setMaxAllowableGap(gpbQoSCube.getMaxAllowableGapSdu());
+		qosCube.setOrderedDelivery(gpbQoSCube.getOrder());
 		qosCube.setPartialDelivery(gpbQoSCube.getPartialDelivery());
 		qosCube.setPeakBandwidthDuration(gpbQoSCube.getPeakBandwidthDuration());
-		qosCube.setPeakSDUBandwidthDuration(gpbQoSCube.getPeakSDUBandwidthDuration());
-		qosCube.setQosId(gpbQoSCube.getQosId());
+		qosCube.setPeakSduBandwidthDuration(gpbQoSCube.getPeakSDUBandwidthDuration());
 		qosCube.setUndetectedBitErrorRate(gpbQoSCube.getUndetectedBitErrorRate());
 		
 		return qosCube;
@@ -46,16 +45,16 @@ public class QoSCubeEncoder extends BaseEncoder{
 	public static qosCube_t convertModelToGPB(QoSCube qosCube){
 		QoSCubeMessage.qosCube_t gpbQoSCube = QoSCubeMessage.qosCube_t.newBuilder().
 			setAverageBandwidth(qosCube.getAverageBandwidth()).
-			setAverageSDUBandwidth(qosCube.getAverageSDUBandwidth()).
-			setDelay(qosCube.getDelay()).
-			setJitter(qosCube.getJitter()).
-			setMaxAllowableGapSdu(qosCube.getMaxAllowableGapSdu()).
+			setAverageSDUBandwidth(qosCube.getAverageSduBandwidth()).
+			setDelay((int)qosCube.getDelay()).
+			setJitter((int)qosCube.getJitter()).
+			setMaxAllowableGapSdu(qosCube.getMaxAllowableGap()).
 			setName(GPBUtils.getGPBString(qosCube.getName())).
-			setOrder(qosCube.isOrder()).
+			setOrder(qosCube.isOrderedDelivery()).
 			setPartialDelivery(qosCube.isPartialDelivery()).
-			setPeakBandwidthDuration(qosCube.getPeakBandwidthDuration()).
-			setPeakSDUBandwidthDuration(qosCube.getPeakSDUBandwidthDuration()).
-			setQosId(qosCube.getQosId()).
+			setPeakBandwidthDuration((int)qosCube.getPeakBandwidthDuration()).
+			setPeakSDUBandwidthDuration((int)qosCube.getPeakSduBandwidthDuration()).
+			setQosId(qosCube.getId()).
 			setUndetectedBitErrorRate(qosCube.getUndetectedBitErrorRate()).
 			build();
 		

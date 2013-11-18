@@ -9,8 +9,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.primitives.UnsignedLongs;
 
-import rina.applicationprocess.api.ApplicationProcessNamingInfo;
-import rina.ipcservice.api.QualityOfServiceSpecification;
+import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.FlowSpecification;
+
 import rina.ribdaemon.api.RIBObjectNames;
 
 /**
@@ -20,9 +21,10 @@ import rina.ribdaemon.api.RIBObjectNames;
  */
 public class Flow {
 	
-	public static final String FLOW_SET_RIB_OBJECT_NAME = RIBObjectNames.SEPARATOR + RIBObjectNames.DIF + 
-		RIBObjectNames.SEPARATOR + RIBObjectNames.RESOURCE_ALLOCATION + RIBObjectNames.SEPARATOR + 
-		RIBObjectNames.FLOW_ALLOCATOR + RIBObjectNames.SEPARATOR + RIBObjectNames.FLOWS;
+	public static final String FLOW_SET_RIB_OBJECT_NAME = RIBObjectNames.SEPARATOR + 
+			RIBObjectNames.DIF + RIBObjectNames.SEPARATOR + RIBObjectNames.RESOURCE_ALLOCATION 
+			+ RIBObjectNames.SEPARATOR + RIBObjectNames.FLOW_ALLOCATOR + RIBObjectNames.SEPARATOR 
+			+ RIBObjectNames.FLOWS;
 	
 	public static final String FLOW_SET_RIB_OBJECT_CLASS = "flow set";
 	
@@ -33,12 +35,12 @@ public class Flow {
 	/**
 	 * The application that requested the flow
 	 */
-	private ApplicationProcessNamingInfo sourceNamingInfo = null;
+	private ApplicationProcessNamingInformation sourceNamingInfo = null;
 	
 	/**
 	 * The destination application of the flow
 	 */
-	private ApplicationProcessNamingInfo destinationNamingInfo = null;
+	private ApplicationProcessNamingInformation destinationNamingInfo = null;
 	
 	/**
 	 * The port-id returned to the Application process that requested the flow. This port-id is used for 
@@ -80,7 +82,7 @@ public class Flow {
 	/**
 	 * The list of parameters from the AllocateRequest that generated this flow
 	 */
-	private QualityOfServiceSpecification qosParameters = null;
+	private FlowSpecification flowSpec = null;
 	
 	/**
 	 * The list of policies that are used to control this flow. NOTE: Does this provide 
@@ -134,20 +136,20 @@ public class Flow {
 		this.source = source;
 	}
 	
-	public ApplicationProcessNamingInfo getSourceNamingInfo() {
+	public ApplicationProcessNamingInformation getSourceNamingInfo() {
 		return sourceNamingInfo;
 	}
 
-	public void setSourceNamingInfo(ApplicationProcessNamingInfo sourceNamingInfo) {
+	public void setSourceNamingInfo(ApplicationProcessNamingInformation sourceNamingInfo) {
 		this.sourceNamingInfo = sourceNamingInfo;
 	}
 
-	public ApplicationProcessNamingInfo getDestinationNamingInfo() {
+	public ApplicationProcessNamingInformation getDestinationNamingInfo() {
 		return destinationNamingInfo;
 	}
 
 	public void setDestinationNamingInfo(
-			ApplicationProcessNamingInfo destinationNamingInfo) {
+			ApplicationProcessNamingInformation destinationNamingInfo) {
 		this.destinationNamingInfo = destinationNamingInfo;
 	}
 
@@ -207,12 +209,12 @@ public class Flow {
 		this.state = state;
 	}
 
-	public QualityOfServiceSpecification getQosParameters() {
-		return qosParameters;
+	public FlowSpecification getFlowSpecification() {
+		return flowSpec;
 	}
 
-	public void setQosParameters(QualityOfServiceSpecification qosParameters) {
-		this.qosParameters = qosParameters;
+	public void setFlowSpecification(FlowSpecification flowSpec) {
+		this.flowSpec = flowSpec;
 	}
 
 	public Map<String, String> getPolicies() {

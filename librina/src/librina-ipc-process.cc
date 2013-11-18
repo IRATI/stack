@@ -169,16 +169,6 @@ void ExtendedIPCManager::setIpcProcessId(unsigned short ipcProcessId){
 	this->ipcProcessId = ipcProcessId;
 }
 
-const ApplicationProcessNamingInformation&
-        ExtendedIPCManager::getIpcProcessName() {
-        return ipcProcessName;
-}
-
-void ExtendedIPCManager::setIpcProcessName(
-                const ApplicationProcessNamingInformation& name) {
-        ipcProcessName = name;
-}
-
 void ExtendedIPCManager::setIPCManagerPort(
                 unsigned int ipcManagerPort) {
         this->ipcManagerPort = ipcManagerPort;
@@ -425,7 +415,7 @@ int ExtendedIPCManager::allocateFlowRequestArrived(
         return 0;
 }
 
-void ExtendedIPCManager::flowDeallocated(
+void ExtendedIPCManager::notifyflowDeallocated(
 		const FlowDeallocateRequestEvent flowDeallocateEvent,
 		int result)
 	throw (DeallocateFlowResponseException){
