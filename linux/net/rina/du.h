@@ -26,6 +26,8 @@
 #include "common.h"
 #include "qos.h"
 
+typedef int16_t cep_id_t;
+
 #define PDU_FLAGS_FRAG_MIDDLE         0x00
 #define PDU_FLAGS_FRAG_FIRST          0x01
 #define PDU_FLAGS_FRAG_LAST           0x02
@@ -67,13 +69,11 @@ struct pci {
 
         pdu_type_t type;
 
-        /* FIXME: Do we really need CEP-IDs ? */
-#if 0
         struct {
                 cep_id_t source_id;
                 cep_id_t dest_id;
         } ceps;
-#endif
+
         qos_id_t   qos_id;
         seq_num_t  sequence_number;
 };

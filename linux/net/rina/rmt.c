@@ -34,6 +34,7 @@ struct rmt {
         struct kfa *              kfa;
         struct efcp_container *   efcpc;
         struct workqueue_struct * egress_wq;
+        struct workqueue_struct * ingress_wq;
         /* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
 };
 
@@ -149,8 +150,16 @@ static int rmt_send_worker(void * o)
         }
 
         if (!is_send_data_complete(tmp)) {
-                LOG_ERR("Wrong data passed to RMT_write_worker");
+                LOG_ERR("Wrong data passed to RMT send worker");
                 send_data_destroy(tmp);
+                return -1;
+        }
+
+        /*
+         * FIXME : Port id will be retrieved from the pduft, and the cast from
+         * PDU to SDU might be changed for a better solution
+         */
+        if (kfa_flow_sdu_write(tmp->rmt->kfa, -1, (struct sdu *) tmp->pdu)) {
                 return -1;
         }
 
@@ -201,16 +210,140 @@ int rmt_send(struct rmt * instance,
         return 0;
 }
 
-int rmt_sdu_post(struct rmt * instance,
-                 struct sdu * sdu,
-                 port_id_t    from)
+struct receive_data {
+        port_id_t               from;
+        struct pdu *            pdu;
+        struct kfa *            kfa;
+        struct efcp_container * efcpc;
+};
+
+static struct receive_data *
+receive_data_create(port_id_t               from,
+                    struct pdu *            pdu,
+                    struct kfa *            kfa,
+                    struct efcp_container * efcpc)
+{
+        struct receive_data * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp) {
+                LOG_ERR("Could not allocate memory for receive data");
+                return NULL;
+        }
+
+        tmp->from  = from;
+        tmp->pdu   = pdu;
+        tmp->kfa   = kfa;
+        tmp->efcpc = efcpc;
+
+        return tmp;
+}
+
+static bool is_receive_data_complete(const struct receive_data * data)
 {
         LOG_MISSING;
 
-        /* Examples:
-         * kfa_sdu_post_to_user_space(instance->kfa, sdu, from);
-         * efcp_container_receive(instance->efcpc, -1, sdu);
+        return true;
+}
+
+static int receive_data_destroy(struct receive_data * data)
+{
+        if (!data) {
+                LOG_ERR("No receive data passed");
+                return -1;
+        }
+
+        if (data->pdu->pci) rkfree(data->pdu->pci);
+
+        if (data->pdu)      rkfree(data->pdu);
+
+        rkfree(data);
+
+        return 0;
+}
+
+static int rmt_receive_worker(void * o)
+{
+        struct receive_data * tmp;
+        struct sdu *          sdu;
+
+        tmp = (struct receive_data *) o;
+        if (!tmp) {
+                LOG_ERR("No data passed");
+                return -1;
+        }
+
+        if (!is_receive_data_complete(tmp)) {
+                LOG_ERR("Wrong receive data passed");
+                receive_data_destroy(tmp);
+                return -1;
+        }
+
+
+
+        if (tmp->pdu->pci->type == PDU_TYPE_MGMT) {
+                /* FIXME : Change this for a better solution */
+                sdu = rkzalloc(sizeof(*sdu), GFP_KERNEL);
+                if (!sdu)
+                        return -1;
+
+                sdu->buffer = tmp->pdu->buffer;
+                if (kfa_sdu_post_to_user_space(tmp->kfa, sdu, tmp->from)) {
+                        receive_data_destroy(tmp);
+                        return -1;
+                }
+        }
+
+        if (efcp_container_receive(tmp->efcpc,
+                        tmp->pdu->pci->ceps.dest_id,
+                        tmp->pdu)) {
+                receive_data_destroy(tmp);
+                return -1;
+        }
+
+        return 0;
+}
+
+int rmt_sdu_receive(struct rmt * instance,
+                    struct sdu * sdu,
+                    port_id_t    from)
+{
+        struct pdu * pdu;
+        struct receive_data * data;
+        struct rwq_work_item * item;
+
+        if (!instance) {
+                LOG_ERR("No RMT passed");
+                return -1;
+        }
+        /*
+         * FIXME : Remove this ASAP, we need a proper way to handle PDU <-> SDU
+         * conversions.
          */
+        pdu = (struct pdu *) sdu;
+        if (!pdu) {
+                LOG_ERR("No PDU received");
+                return -1;
+        }
+
+        data = receive_data_create(from, pdu, instance->kfa, instance->efcpc);
+        if (!is_receive_data_complete(data))
+                return -1;
+
+        item = rwq_work_create(GFP_ATOMIC, rmt_receive_worker, data);
+        if (!item) {
+                buffer_destroy(data->pdu->buffer);
+                receive_data_destroy(data);
+                return -1;
+        }
+
+        ASSERT(instance->ingress_wq);
+
+        if (rwq_work_post(instance->ingress_wq, item)) {
+                buffer_destroy(pdu->buffer);
+                receive_data_destroy(data);
+                return -1;
+        }
 
         return 0;
 }

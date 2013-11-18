@@ -201,6 +201,9 @@ int apply_policy_RexmsnQ(struct dtp * dtp,
 int dtp_write(struct dtp * instance,
               struct sdu * sdu)
 {
+        struct pdu * pdu;
+        struct pci * pci;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
@@ -210,14 +213,33 @@ int dtp_write(struct dtp * instance,
                 return -1;
         }
 
+        pdu = rkzalloc(sizeof(*pdu), GFP_KERNEL);
+        if (!pdu) {
+                LOG_ERR("Could not allocate memory for PDU");
+                return -1;
+        }
+        pci = rkzalloc(sizeof(*pci), GFP_KERNEL);
+        if (!pci) {
+                LOG_ERR("Could not allocate memory for PCI");
+                return -1;
+        }
+
+        /* FIXME : This is ugly as hell (c), must be removed asap */
+        pdu->pci = pci;
+        pci->ceps.dest_id   = instance->state_vector->
+                        connection->destination_cep_id;
+        pci->ceps.source_id = instance->state_vector->
+                        connection->source_cep_id;
+        pci->destination    = instance->state_vector->
+                        connection->destination_address;
+        pci->source = instance->state_vector->connection->source_address;
+        pci->sequence_number = instance->state_vector->next_sequence_to_send;
+        instance->state_vector->next_sequence_to_send++;
+        pci->type = PDU_TYPE_DT;
+        pci->qos_id = instance->state_vector->connection->qos_id;
+        pdu->buffer = sdu->buffer;
         /* Give the data to RMT now ! */
-#if 0
-        return rmt_send_sdu(instace->rmt,
-                            address,
-                            cep_id,
-                            sdu);
-#endif
-        return -1;
+        return rmt_send(instance->rmt, pci->destination, pci->ceps.dest_id, pdu);
 }
 
 int dtp_receive(struct dtp * instance,
