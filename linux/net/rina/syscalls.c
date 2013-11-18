@@ -69,32 +69,57 @@
 #define SYSCALL_DUMP_EXIT  do { } while (0)
 #endif
 
-SYSCALL_DEFINE3(ipc_create,
-                const struct name __user *, name,
-                ipc_process_id_t,           id,
-                const char __user *,        type)
+SYSCALL_DEFINE6(ipc_create,
+                const char __user *, process_name,
+                const char __user *, process_instance,
+                const char __user *, entity_name,
+                const char __user *, entity_instance,
+                ipc_process_id_t,    id,
+                const char __user *, type)
 {
         long          retval;
+
         struct name * tn;
+        char *        tpn;
+        char *        tpi;
+        char *        ten;
+        char *        tei;
         char *        tt;
 
         SYSCALL_DUMP_ENTER;
 
-        LOG_DBG("Pointers passed are name = %pK, type = %pK", name, type);
-
-        tn = name_dup_from_user(name);
+        tn = name_create();
         if (!tn) {
                 SYSCALL_DUMP_EXIT;
                 return -EFAULT;
         }
 
-        tt = strdup_from_user(type);
-        if (!tt) {
+        /* FIXME: Fix this crappiness */
+        tpn = string_from_user(process_name);
+        tpi = string_from_user(process_instance);
+        ten = string_from_user(entity_name);
+        tei = string_from_user(entity_instance);
+        if (!name_init_with(tn, tpn, tpi, ten, tei)) {
                 SYSCALL_DUMP_EXIT;
-
                 name_destroy(tn);
                 return -EFAULT;
         }
+
+        /* Ownership taken, name_destroy() will be enough from now on */
+
+        tt = strdup_from_user(type);
+        if (!tt) {
+                SYSCALL_DUMP_EXIT;
+                name_destroy(tn);
+                return -EFAULT;
+        }
+
+        LOG_DBG("Parms:");
+        LOG_DBG("  Process name     = %s", tn->process_name);
+        LOG_DBG("  Process instance = %s", tn->process_instance);
+        LOG_DBG("  Entity name      = %s", tn->entity_name);
+        LOG_DBG("  Entity instance  = %s", tn->entity_instance);
+        LOG_DBG("  Type             = %s", tt);
 
         CALL_DEFAULT_PERSONALITY(retval, ipc_create, tn, id, tt);
 
