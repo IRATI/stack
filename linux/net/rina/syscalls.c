@@ -69,10 +69,13 @@
 #define SYSCALL_DUMP_EXIT  do { } while (0)
 #endif
 
-SYSCALL_DEFINE3(ipc_create,
-                const struct name __user *, name,
-                ipc_process_id_t,           id,
-                const char __user *,        type)
+SYSCALL_DEFINE6(ipc_create,
+                const char __user *, process_name,
+                const char __user *, process_instance,
+                const char __user *, entity_name,
+                const char __user *, entity_instance,
+                ipc_process_id_t,    id,
+                const char __user *, type)
 {
         long          retval;
         struct name * tn;
@@ -80,15 +83,17 @@ SYSCALL_DEFINE3(ipc_create,
 
         SYSCALL_DUMP_ENTER;
 
-        LOG_DBG("Pointers passed are:");
-        LOG_DBG("  name = %pK", name);
-        LOG_DBG("  type = %pK", type);
-
-        tn = name_dup_from_user(name);
+        tn = name_create();
         if (!tn) {
                 SYSCALL_DUMP_EXIT;
                 return -EFAULT;
         }
+
+        /* FIXME: Fix this crappiness */
+        tn->process_name     = strdup_from_user(process_name);
+        tn->process_instance = strdup_from_user(process_instance);
+        tn->entity_name      = strdup_from_user(entity_name);
+        tn->entity_instance  = strdup_from_user(entity_instance);
 
         tt = strdup_from_user(type);
         if (!tt) {
@@ -97,6 +102,13 @@ SYSCALL_DEFINE3(ipc_create,
                 name_destroy(tn);
                 return -EFAULT;
         }
+
+        LOG_DBG("Parms:");
+        LOG_DBG("  Process name     = %s", tn->process_name);
+        LOG_DBG("  Process instance = %s", tn->process_instance);
+        LOG_DBG("  Entity name      = %s", tn->entity_name);
+        LOG_DBG("  Entity instance  = %s", tn->entity_instance);
+        LOG_DBG("  Type             = %s", tt);
 
         CALL_DEFAULT_PERSONALITY(retval, ipc_create, tn, id, tt);
 
