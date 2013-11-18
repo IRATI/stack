@@ -8,7 +8,9 @@ import eu.irati.librina.DIFInformation;
 import eu.irati.librina.DataTransferConstants;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.Neighbor;
+import eu.irati.librina.NeighborList;
 import eu.irati.librina.QoSCube;
+import eu.irati.librina.rina;
 
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.CDAPSessionManager;
@@ -17,6 +19,7 @@ import rina.cdap.api.message.CDAPMessage.AuthTypes;
 import rina.cdap.api.message.ObjectValue;
 import rina.encoding.api.Encoder;
 import rina.enrollment.api.EnrollmentInformationRequest;
+import rina.enrollment.api.EnrollmentRequest;
 import rina.enrollment.api.EnrollmentTask;
 import rina.ipcprocess.impl.IPCProcess;
 import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
@@ -49,6 +52,9 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 	/** The DIF Information */
 	private DIFInformation difInformation = null;
 	
+	/** The enrollment request, issued by the IPC Manager */
+	private EnrollmentRequest enrollmentRequest = null;
+	
 	public EnrolleeStateMachine(RIBDaemon ribDaemon, CDAPSessionManager cdapSessionManager, Encoder encoder, 
 			ApplicationProcessNamingInformation remoteNamingInfo, EnrollmentTask enrollmentTask, long timeout){
 		super(ribDaemon, cdapSessionManager, encoder, remoteNamingInfo, enrollmentTask, timeout);
@@ -60,15 +66,20 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 		}
 	}
 	
+	public EnrollmentRequest getEnrollmentRequest() {
+		return enrollmentRequest;
+	}
 	
 	/**
 	 * Called by the DIFMembersSetObject to initiate the enrollment sequence 
 	 * with a remote IPC Process
-	 * @param cdapMessage
+	 * @param enrollment request contains information on the neighbor and on the 
+	 * enrollment request event
 	 * @param portId
 	 */
-	public synchronized void initiateEnrollment(Neighbor candidate, int portId) throws IPCException{
-		remotePeer = candidate;
+	public synchronized void initiateEnrollment(EnrollmentRequest enrollmentRequest, int portId) throws IPCException{
+		this.enrollmentRequest = enrollmentRequest;
+		remotePeer = enrollmentRequest.getNeighbor();
 		switch(state){
 		case NULL:
 			try{
@@ -129,6 +140,14 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 			Long address = ipcProcess.getAddress();
 			if (address != null){
 				eiRequest.setAddress(ipcProcess.getAddress());
+			} else {
+				DIFInformation difInformation = new DIFInformation();
+				if (enrollmentRequest.getEvent() != null) {
+					difInformation.setDifName(
+							enrollmentRequest.getEvent().getDifName());
+				}
+				
+				ipcProcess.setDIFInformation(new DIFInformation());
 			}
 			ObjectValue objectValue = new ObjectValue();
 			objectValue.setByteval(encoder.encode(eiRequest));
@@ -291,7 +310,7 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 						null, stopEnrollmentRequestMessage.getInvokeID());
 				sendCDAPMessage(stopResponseMessage);
 				
-				enrollmentCompleted(true);
+				enrollmentCompleted();
 			}catch(RIBDaemonException ex){
 				log.error(ex);
 				stopResponseMessage = cdapSessionManager.getStopObjectResponseMessage(portId, null, 3, 
@@ -471,10 +490,36 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 		
 		try{
 			commitEnrollment();
-			enrollmentCompleted(true);
+			enrollmentCompleted();
 		}catch(Exception ex){
 			log.error(ex);
 			this.abortEnrollment(remotePeer.getName(), portId, PROBLEMS_COMITING_ENROLLMENT_INFO, true, true);
 		}
+	}
+	
+	private void enrollmentCompleted(){
+		synchronized(this){
+			timer.cancel();
+			this.setState(State.ENROLLED);
+		}
+		
+		//Create or update the neighbor information in the RIB
+		createOrUpdateNeighborInformation(true);
+		
+		enrollmentTask.enrollmentCompleted(remotePeer, true);
+
+		//Notify the IPC Manager
+		if (enrollmentRequest != null && enrollmentRequest.getEvent() != null){
+			try {
+				NeighborList list = new NeighborList();
+				list.addFirst(enrollmentRequest.getNeighbor());
+				rina.getExtendedIPCManager().enrollToDIFResponse(
+						enrollmentRequest.getEvent(), 0, list);
+			} catch (Exception ex) {
+				log.error("Problems sending message to IPC Manager: "+ex.getMessage());
+			}
+		}
+
+		log.info("Remote IPC Process enrolled!");
 	}
 }

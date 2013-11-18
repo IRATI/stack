@@ -5,22 +5,28 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Timer;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.DIFInformation;
+import eu.irati.librina.EnrollToDIFRequestEvent;
 import eu.irati.librina.FlowInformation;
 import eu.irati.librina.FlowSpecification;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.Neighbor;
+import eu.irati.librina.NeighborList;
+import eu.irati.librina.rina;
 
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
+import rina.configuration.KnownIPCProcessAddress;
+import rina.configuration.RINAConfiguration;
 import rina.encoding.api.Encoder;
+import rina.enrollment.api.EnrollmentRequest;
 import rina.enrollment.api.EnrollmentTask;
 import rina.events.api.Event;
 import rina.events.api.EventListener;
@@ -75,16 +81,13 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 	private ResourceAllocator resourceAllocator = null;
 	private CDAPSessionManager cdapSessionManager = null;
 	private Encoder encoder = null;
-	private Map<Long, Neighbor> portIdsPendingToBeAllocated = null;
+	private Map<Long, EnrollmentRequest> portIdsPendingToBeAllocated = null;
 	private IPCProcess ipcProcess = null;
-	
-	private Timer timer = null;
 
 	public EnrollmentTaskImpl(){
 		this.enrollmentStateMachines = new ConcurrentHashMap<String, BaseEnrollmentStateMachine>();
 		this.timeout = DEFAULT_ENROLLMENT_TIMEOUT_IN_MS;
-		this.portIdsPendingToBeAllocated = new ConcurrentHashMap<Long, Neighbor>();
-		this.timer = new Timer();
+		this.portIdsPendingToBeAllocated = new ConcurrentHashMap<Long, EnrollmentRequest>();
 	}
 	
 	public void setIPCProcess(IPCProcess ipcProcess){
@@ -243,40 +246,86 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 	}
 	
 	/**
+	 * Process a request to initiate enrollment with a new Neighbor, triggered by the IPC Manager
+	 * @param event
+	 * @param flowInformation
+	 */
+	public synchronized void processEnrollmentRequestEvent(
+			EnrollToDIFRequestEvent event, DIFInformation difInformation) {
+		if (difInformation != null) {
+			if (!difInformation.getDifName().getProcessName().equals(
+					event.getDifName().getProcessName())) {
+				log.error("Was requeste to enroll to a neighbour who is member of DIF " 
+					+ event.getDifName().getProcessName() + "; but I'm member of DIF " 
+					+ difInformation.getDifName().getProcessName());
+				
+				try {
+					rina.getExtendedIPCManager().enrollToDIFResponse(
+							event, -1, new NeighborList());
+				} catch(Exception ex){
+					log.error("Problems sending a message to the IPC Manager: "+ex.getMessage());
+				}
+				
+				return;
+			}
+		}
+		
+		Neighbor neighbor = new Neighbor();
+		neighbor.setName(event.getNeighborName());
+		neighbor.setSupportingDifName(event.getSupportingDifName());
+		KnownIPCProcessAddress address = RINAConfiguration.getInstance().getIPCProcessAddress
+				(event.getDifName().getProcessName(), 
+				event.getNeighborName().getProcessName(), 
+				event.getNeighborName().getProcessInstance());
+		if (address != null) {
+			neighbor.setAddress(address.getAddress());
+		}
+		
+		EnrollmentRequest request = new EnrollmentRequest(neighbor, event);
+		initiateEnrollment(request);
+	}
+	
+	/**
 	 * Starts the enrollment program
 	 * @param cdapMessage
 	 * @param cdapSessionDescriptor
 	 */
-	public void initiateEnrollment(Neighbor candidate){
-		if (this.isEnrolledTo(candidate.getName().getProcessName())){
-			String message = "Already enrolled to IPC Process "+candidate.getName().getProcessNamePlusInstance();
+	public void initiateEnrollment(EnrollmentRequest request){
+		if (this.isEnrolledTo(request.getNeighbor().getName().getProcessName())){
+			String message = "Already enrolled to IPC Process "
+								+ request.getNeighbor().getName().getProcessNamePlusInstance();
 			log.error(message);
 			return;
 		}
 
 		//Request the allocation of a new N-1 Flow to the destination IPC Process, dedicated to layer management
 		//FIXME not providing FlowSpec information
-		ApplicationProcessNamingInformation candidateNamingInfo = candidate.getName();
-		candidateNamingInfo.setEntityName(IPCProcess.MANAGEMENT_AE);
-		ApplicationProcessNamingInformation apNamingInfo = 
-				new ApplicationProcessNamingInformation(ipcProcess.getName().getProcessName(), 
-						ipcProcess.getName().getProcessInstance());
-		apNamingInfo.setEntityName(IPCProcess.MANAGEMENT_AE);
+		//FIXME not distinguishing between AEs
 		FlowInformation flowInformation = new FlowInformation();
-		flowInformation.setRemoteAppName(candidate.getName());
-		flowInformation.setLocalAppName(candidateNamingInfo);
+		flowInformation.setRemoteAppName(request.getNeighbor().getName());
+		flowInformation.setLocalAppName(ipcProcess.getName());
 		flowInformation.setFlowSpecification(new FlowSpecification());
-		flowInformation.setDifName(candidate.getSupportingDifName());
+		flowInformation.setDifName(request.getNeighbor().getSupportingDifName());
 		long handle = -1;
 		try{
 			handle = this.resourceAllocator.getNMinus1FlowManager().allocateNMinus1Flow(flowInformation);
 		} catch(IPCException ex) {
 			log.error("Problems allocating flow through N-1 DIF: "+ex.getMessage());
+			
+			if (request.getEvent() != null) {
+				try {
+					rina.getExtendedIPCManager().enrollToDIFResponse(
+							request.getEvent(), -1, new NeighborList());
+				} catch(Exception e) {
+					log.error("Could not send a message to the IPC Manager: "+ex.getMessage());
+				}
+			}
+			
 			return;
 		}
 
 		//Store state of pending flows
-		this.portIdsPendingToBeAllocated.put(handle, candidate);
+		this.portIdsPendingToBeAllocated.put(handle, request);
 	}
 
 	/**
@@ -472,8 +521,8 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 	 * @param portId
 	 */
 	private void nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent flowEvent){
-		Neighbor neighbor = this.portIdsPendingToBeAllocated.remove(flowEvent.getHandle());
-		if (neighbor == null){
+		EnrollmentRequest request = this.portIdsPendingToBeAllocated.remove(flowEvent.getHandle());
+		if (request == null){
 			return;
 		}
 		
@@ -482,7 +531,7 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 		//1 Tell the enrollment task to create a new Enrollment state machine
 		try{
 			enrollmentStateMachine = (EnrolleeStateMachine) this.createEnrollmentStateMachine(
-					neighbor.getName(), flowEvent.getFlowInformation().getPortId(), true);
+					request.getNeighbor().getName(), flowEvent.getFlowInformation().getPortId(), true);
 		}catch(Exception ex){
 			//Should never happen, fix it!
 			log.error(ex);
@@ -491,7 +540,8 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 		
 		//2 Tell the enrollment state machine to initiate the enrollment (will require an M_CONNECT message and a port Id)
 		try{
-			enrollmentStateMachine.initiateEnrollment(neighbor, flowEvent.getFlowInformation().getPortId());
+			enrollmentStateMachine.initiateEnrollment(
+					request, flowEvent.getFlowInformation().getPortId());
 		}catch(IPCException ex){
 			log.error(ex);
 		}
@@ -504,8 +554,8 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 	 * @param resultReason
 	 */
 	private void nMinusOneFlowAllocationFailed(NMinusOneFlowAllocationFailedEvent event){
-		Neighbor neighbor = this.portIdsPendingToBeAllocated.remove(event.getHandle());
-		if (neighbor == null){
+		EnrollmentRequest request = this.portIdsPendingToBeAllocated.remove(event.getHandle());
+		if (request == null){
 			return;
 		}
 		
@@ -514,6 +564,14 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 				+" has failed. Error code: "+event.getFlowInformation().getPortId());
 		
 		//TODO inform the one that triggered the enrollment?
+		if (request.getEvent() != null) {
+			try {
+				rina.getExtendedIPCManager().enrollToDIFResponse(
+						request.getEvent(), -1, new NeighborList());
+			} catch(Exception ex) {
+				log.error("Could not send a message to the IPC Manager: "+ex.getMessage());
+			}
+		}
 	}
 	
 	/**
@@ -529,7 +587,13 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 		log.error("An error happened during enrollment of remote IPC Process "+ 
 				remotePeerNamingInfo.getProcessNamePlusInstance()+ " because of " +reason+". Aborting the operation");
 		//1 Remove enrollment state machine from the store
-		this.getEnrollmentStateMachine(remotePeerNamingInfo.getProcessName(), portId, true);
+		BaseEnrollmentStateMachine stateMachine = 
+				this.getEnrollmentStateMachine(remotePeerNamingInfo.getProcessName(), portId, true);
+		if (stateMachine == null) {
+			log.error("Could not find the enrollment state machine associated to neighbor " 
+					+ remotePeerNamingInfo.getProcessName() + " and portId "+ portId);
+			return;
+		}
 
 		//2 Send message and deallocate flow if required
 		if(sendReleaseMessage){
@@ -538,6 +602,19 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 				sendErrorMessageAndDeallocateFlow(errorMessage, portId);
 			}catch(Exception ex){
 				log.error(ex);
+			}
+		}
+		
+		//3 In the case of the enrollee state machine, reply to the IPC Manager
+		if (stateMachine instanceof EnrolleeStateMachine) {
+			EnrollmentRequest request = ((EnrolleeStateMachine) stateMachine).getEnrollmentRequest();
+			if (request != null && request.getEvent() != null) {
+				try {
+					rina.getExtendedIPCManager().enrollToDIFResponse(
+							request.getEvent(), -1, new NeighborList());
+				} catch (Exception ex) {
+					log.error("Problems sending message to IPC Manager: "+ex.getMessage());
+				}
 			}
 		}
 	}

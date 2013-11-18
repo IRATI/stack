@@ -449,7 +449,20 @@ public class EnrollerStateMachine extends BaseEnrollmentStateMachine{
 				log.error(ex);
 			}
 			
-			enrollmentCompleted(false);
+			enrollmentCompleted();
 		}
+	}
+	
+	private void enrollmentCompleted(){
+		synchronized(this){
+			timer.cancel();
+			this.setState(State.ENROLLED);
+		}
+		
+		//Create or update the neighbor information in the RIB
+		createOrUpdateNeighborInformation(true);
+		
+		enrollmentTask.enrollmentCompleted(remotePeer, false);
+		log.info("Remote IPC Process enrolled!");
 	}
 }

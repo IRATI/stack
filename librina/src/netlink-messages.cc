@@ -1400,9 +1400,25 @@ IpcmIPCProcessInitializedMessage::IpcmIPCProcessInitializedMessage() :
 BaseNetlinkMessage(RINA_C_IPCM_IPC_PROCESS_INITIALIZED){
 }
 
+IpcmIPCProcessInitializedMessage::IpcmIPCProcessInitializedMessage(
+                const ApplicationProcessNamingInformation& name) :
+BaseNetlinkMessage(RINA_C_IPCM_IPC_PROCESS_INITIALIZED){
+        this->name = name;
+}
+
+const ApplicationProcessNamingInformation&
+IpcmIPCProcessInitializedMessage::getName() const {
+        return name;
+}
+
+void IpcmIPCProcessInitializedMessage::setName(
+                const ApplicationProcessNamingInformation& name) {
+        this->name = name;
+}
+
 IPCEvent* IpcmIPCProcessInitializedMessage::toIPCEvent(){
         IPCEvent * event = new IPCProcessDaemonInitializedEvent(
-                        getSourceIpcProcessId(), getSequenceNumber());
+                        getSourceIpcProcessId(), name, getSequenceNumber());
         return event;
 }
 

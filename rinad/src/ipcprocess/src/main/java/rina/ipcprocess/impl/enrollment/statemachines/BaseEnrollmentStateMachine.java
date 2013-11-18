@@ -181,19 +181,6 @@ public abstract class BaseEnrollmentStateMachine extends BaseCDAPMessageHandler{
 		return true;
 	}
 	
-	protected void enrollmentCompleted(boolean enrollee){
-		synchronized(this){
-			timer.cancel();
-			this.setState(State.ENROLLED);
-		}
-		
-		//Create or update the neighbor information in the RIB
-		createOrUpdateNeighborInformation(true);
-		
-		enrollmentTask.enrollmentCompleted(remotePeer, enrollee);
-		log.info("Remote IPC Process enrolled!");
-	}
-	
 	/**
 	 * Called by the enrollment state machine when the enrollment sequence fails
 	 * @param remotePeer
@@ -289,7 +276,7 @@ public abstract class BaseEnrollmentStateMachine extends BaseCDAPMessageHandler{
 	 * Create or update the neighbor information in the RIB
 	 * @param enrolled true if the neighbor is enrolled, false otherwise
 	 */
-	private void createOrUpdateNeighborInformation(boolean enrolled){
+	protected void createOrUpdateNeighborInformation(boolean enrolled){
 		//Create or update the neighbor information in the RIB
 		try{
 			remotePeer.setEnrolled(enrolled);

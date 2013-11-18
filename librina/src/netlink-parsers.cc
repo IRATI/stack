@@ -354,6 +354,12 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		return 0;
 	}
 	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED: {
+	        IpcmIPCProcessInitializedMessage * queryRIBMessage =
+	                        dynamic_cast<IpcmIPCProcessInitializedMessage *>(message);
+	        if (putIpcmIPCProcessInitializedMessageObject(netlinkMessage,
+	                        *queryRIBMessage) < 0) {
+	                return -1;
+	        }
 	        return 0;
 	}
 
@@ -494,7 +500,7 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 				netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED: {
-	        return new IpcmIPCProcessInitializedMessage();
+	        return parseIpcmIPCProcessInitializedMessage(netlinkMessageHeader);
 	}
 	default: {
 		LOG_ERR(
@@ -2137,6 +2143,26 @@ int putIpcmEnrollToDIFRequestMessageObject(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
                 "Error building IpcmEnrollToDIFRequestMessage Netlink object");
+        return -1;
+}
+
+int putIpcmIPCProcessInitializedMessageObject(nl_msg* netlinkMessage,
+                const IpcmIPCProcessInitializedMessage& object) {
+        struct nlattr *name;
+
+        if (!(name = nla_nest_start(netlinkMessage, IIPM_ATTR_NAME))){
+                goto nla_put_failure;
+        }
+        if (putApplicationProcessNamingInformationObject(netlinkMessage,
+                        object.getName()) < 0) {
+                goto nla_put_failure;
+        }
+        nla_nest_end(netlinkMessage, name);
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IpcmIPCProcessInitializedMessage Netlink object");
         return -1;
 }
 
@@ -4632,6 +4658,42 @@ IpcmNLSocketClosedNotificationMessage *
 	}
 
 	return result;
+}
+
+IpcmIPCProcessInitializedMessage * parseIpcmIPCProcessInitializedMessage(
+                nlmsghdr *hdr) {
+        struct nla_policy attr_policy[IIPM_ATTR_MAX + 1];
+        attr_policy[IIPM_ATTR_NAME].type = NLA_NESTED;
+        attr_policy[IIPM_ATTR_NAME].minlen = 0;
+        attr_policy[IIPM_ATTR_NAME].maxlen = 0;
+        struct nlattr *attrs[IIPM_ATTR_MAX + 1];
+
+        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+                        IIPM_ATTR_MAX, attr_policy);
+        if (err < 0) {
+                LOG_ERR(
+                                "Error parsing IpcmIPCProcessInitializedMessage information from Netlink message: %d",
+                                err);
+                return 0;
+        }
+
+        IpcmIPCProcessInitializedMessage * result =
+                        new IpcmIPCProcessInitializedMessage ();
+        ApplicationProcessNamingInformation * ipcProcessName;
+
+        if (attrs[IIPM_ATTR_NAME]) {
+                ipcProcessName = parseApplicationProcessNamingInformationObject(
+                                attrs[IIPM_ATTR_NAME]);
+                if (ipcProcessName == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setName(*ipcProcessName);
+                        delete ipcProcessName;
+                }
+        }
+
+        return result;
 }
 
 }

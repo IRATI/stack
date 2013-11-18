@@ -965,10 +965,13 @@ public:
  */
 class IPCProcessDaemonInitializedEvent: public IPCEvent {
         unsigned short ipcProcessId;
+        ApplicationProcessNamingInformation name;
 public:
         IPCProcessDaemonInitializedEvent(unsigned short ipcProcessId,
+                        const ApplicationProcessNamingInformation& name,
                         unsigned int sequenceNumber);
         unsigned short getIPCProcessId() const;
+        const ApplicationProcessNamingInformation& getName() const;
 };
 
 /**
