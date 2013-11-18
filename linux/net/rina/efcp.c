@@ -139,7 +139,7 @@ int efcp_container_destroy(struct efcp_container * container)
         }
 
         if (container->instances)  efcp_imap_destroy(container->instances,
-                                                    efcp_destroy);
+                                                     efcp_destroy);
         if (container->cidm)       cidm_destroy(container->cidm);
 
         if (container->egress_wq)  rwq_destroy(container->egress_wq);

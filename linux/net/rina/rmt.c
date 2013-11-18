@@ -295,8 +295,8 @@ static int rmt_receive_worker(void * o)
         }
 
         if (efcp_container_receive(tmp->efcpc,
-                        tmp->pdu->pci->ceps.dest_id,
-                        tmp->pdu)) {
+                                   tmp->pdu->pci->ceps.dest_id,
+                                   tmp->pdu)) {
                 receive_data_destroy(tmp);
                 return -1;
         }

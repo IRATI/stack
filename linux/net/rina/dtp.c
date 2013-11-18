@@ -227,11 +227,11 @@ int dtp_write(struct dtp * instance,
         /* FIXME : This is ugly as hell (c), must be removed asap */
         pdu->pci = pci;
         pci->ceps.dest_id   = instance->state_vector->
-                        connection->destination_cep_id;
+                connection->destination_cep_id;
         pci->ceps.source_id = instance->state_vector->
-                        connection->source_cep_id;
+                connection->source_cep_id;
         pci->destination    = instance->state_vector->
-                        connection->destination_address;
+                connection->destination_address;
         pci->source = instance->state_vector->connection->source_address;
         pci->sequence_number = instance->state_vector->next_sequence_to_send;
         instance->state_vector->next_sequence_to_send++;
