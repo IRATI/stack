@@ -189,6 +189,7 @@ void name_destroy(struct name * ptr)
 }
 EXPORT_SYMBOL(name_destroy);
 
+#if 0
 struct name * name_create_and_init_gfp(gfp_t            flags,
                                        const string_t * process_name,
                                        const string_t * process_instance,
@@ -229,6 +230,7 @@ struct name * name_create_and_init(const string_t * process_name,
                                         entity_instance);
 }
 EXPORT_SYMBOL(name_create_and_init);
+#endif
 
 int name_cpy(const struct name * src, struct name * dst)
 {
@@ -394,8 +396,14 @@ struct name * string_toname_gfp(gfp_t            flags,
                 tmp_ei = strsep(&tmp2, DELIMITER);
         }
 
-        name = name_create_and_init_gfp(flags, tmp_pn, tmp_pi, tmp_en, tmp_ei);
+        name = name_create_gfp(flags);
         if (!name) {
+                if (tmp1) rkfree(tmp1);
+                return NULL;
+        }
+
+        if (!name_init_gfp(flags, name, tmp_pn, tmp_pi, tmp_en, tmp_ei)) {
+                name_destroy(name);
                 if (tmp1) rkfree(tmp1);
                 return NULL;
         }
