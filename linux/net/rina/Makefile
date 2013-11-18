@@ -14,7 +14,7 @@ obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 rina_personality_default-y :=			\
 	ipcp-factories.o ipcp.o			\
 	qos.o					\
-	dtcp.o dtp.o efcp-utils.o efcp.o	\
+	cidm.o dtcp.o dtp.o efcp-utils.o efcp.o	\
 	pft.o rmt.o				\
 	pidm.o kfa-utils.o kfa.o		\
 	kipcm-utils.o kipcm.o			\

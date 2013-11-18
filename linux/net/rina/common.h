@@ -34,7 +34,7 @@ int       is_port_id_ok(port_id_t id);
 /* ALWAYS use this function to get a bad id */
 port_id_t port_id_bad(void);
 
-typedef int16_t        cep_id_t;
+typedef int           cep_id_t;
 
 /* ALWAYS use this function to check if the id looks good */
 int      is_cep_id_ok(cep_id_t id);
