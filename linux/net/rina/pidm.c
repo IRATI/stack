@@ -68,19 +68,19 @@ port_id_t pidm_allocate(struct pidm * instance)
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return PORT_ID_WRONG;
+                return port_id_bad();
         }
 
         id = (port_id_t) bitmap_find_next_zero_area(instance->bitmap,
                                                     BITS_IN_BITMAP,
                                                     0, 1, 0);
         LOG_DBG("The pidm bitmap find returned id %d (bad = %d)",
-                id, PORT_ID_WRONG);
+                id, port_id_bad());
 
         if (!is_port_id_ok(id)) {
                 LOG_WARN("Got an out-of-range flow-id (%d) from "
                          "the bitmap allocator, the bitmap is full ...", id);
-                return PORT_ID_WRONG;
+                return port_id_bad();
         }
 
         bitmap_set(instance->bitmap, id, 1);
