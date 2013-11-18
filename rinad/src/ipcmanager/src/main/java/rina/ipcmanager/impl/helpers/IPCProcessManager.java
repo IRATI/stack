@@ -165,6 +165,8 @@ public class IPCProcessManager {
 			while (iterator.hasNext()){
 				result = result + "        " + iterator.next().getProcessName() + "\n";
 			}
+			
+			result = result + "\n";
 		}
 		
 		return result;
