@@ -55,15 +55,20 @@
 #include "rina-syscalls.h"
 #include "rina-systypes.h"
 
-#define DUMP_SYSCALL(X) LOG_DBG("Gonna call syscall %d (" stringify(X) ")", X);
+#define DEBUG_SYSCALLS 1
+#if DEBUG_SYSCALLS
+#define DUMP_SYSCALL(X, Y) LOG_DBG("Gonna call syscall %s (%d)", X, Y);
+#else
+#define DUMP_SYSCALL(X, Y) do { } while (0);
+#endif
 
 namespace rina {
 
         int syscallWriteSDU(int portId, void * sdu, int size)
         {
                 int result;
-
-                DUMP_SYSCALL(SYS_writeSDU);
+                
+                DUMP_SYSCALL("SYS_writeSDU", SYS_writeSDU);
 
                 result = syscall(SYS_writeSDU, portId, sdu, size);
                 if (result < 0) {
@@ -78,7 +83,7 @@ namespace rina {
         {
                 int result;
 
-                DUMP_SYSCALL(SYS_readSDU);
+                DUMP_SYSCALL("SYS_readSDU", SYS_readSDU);
 
                 result = syscall(SYS_readSDU, portId, sdu, maxBytes);
                 if (result < 0) {
@@ -93,7 +98,7 @@ namespace rina {
         {
                 int result;
 
-                DUMP_SYSCALL(SYS_destroyIPCProcess);
+                DUMP_SYSCALL("SYS_destroyIPCProcess", SYS_destroyIPCProcess);
 
                 result = syscall(SYS_destroyIPCProcess, ipcProcessId);
                 if (result < 0) {
@@ -109,28 +114,15 @@ namespace rina {
                                     unsigned int                                ipcProcessId,
                                     const std::string &                         difType)
         {
-                name_t name;
-
-                name.process_name     = const_cast<char *>(ipcProcessName.getProcessName().c_str());
-                name.process_instance = const_cast<char *>(ipcProcessName.getProcessInstance().c_str());
-                name.entity_name      = const_cast<char *>(ipcProcessName.getEntityName().c_str());
-                name.entity_instance  = const_cast<char *>(ipcProcessName.getEntityInstance().c_str());
-
                 int result;
 
-                DUMP_SYSCALL(SYS_createIPCProcess);
-
-                LOG_DBG("name:");
-                LOG_DBG("  processName     = '%s'", name.process_name);
-                LOG_DBG("  processInstance = '%s'", name.process_instance);
-                LOG_DBG("  entityName      = '%s'", name.entity_name);
-                LOG_DBG("  entityInstance  = '%s'", name.entity_instance);
-
-                LOG_DBG("Parms: name = %p, id = %d, dif-type = %s",
-                        &name, ipcProcessId, difType.c_str());
+                DUMP_SYSCALL("SYS_createIPCProcess", SYS_createIPCProcess);
 
                 result = syscall(SYS_createIPCProcess,
-                                 &name,
+                                 ipcProcessName.getProcessName().c_str(),
+                                 ipcProcessName.getProcessInstance().c_str(),
+                                 ipcProcessName.getEntityName().c_str(),
+                                 ipcProcessName.getEntityInstance().c_str(),
                                  ipcProcessId,
                                  difType.c_str());
                 if (result < 0) {
