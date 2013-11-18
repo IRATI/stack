@@ -23,9 +23,6 @@
 
 #include "common.h"
 
-/* ALWAYS use this function to get a bad port-id */
-port_id_t     port_id_bad(void);
-
 struct pidm;
 
 struct pidm * pidm_create(void);
