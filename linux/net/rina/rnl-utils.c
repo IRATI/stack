@@ -227,9 +227,9 @@ static int parse_app_name_info(struct nlattr * name_attr,
         else
                 entity_instance = NULL;
 
-        if (!name_init(name_struct,
-                       process_name, process_instance,
-                       entity_name,  entity_instance))
+        if (!name_init_from(name_struct,
+                            process_name, process_instance,
+                            entity_name,  entity_instance))
                 return -1;
 
         return 0;
