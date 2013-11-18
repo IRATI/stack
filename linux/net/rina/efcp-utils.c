@@ -175,16 +175,6 @@ int efcp_imap_remove(struct efcp_imap * map,
 
 #define BITS_IN_BITMAP ((2 << BITS_PER_BYTE) * sizeof(cep_id_t))
 
-#define CEP_ID_WRONG -1
-
-int is_cep_id_ok(cep_id_t id)
-{ return 1; /* FIXME: Bummer, add it */ }
-EXPORT_SYMBOL(is_cep_id_ok);
-
-cep_id_t cep_id_bad(void)
-{ return CEP_ID_WRONG; }
-EXPORT_SYMBOL(cep_id_bad);
-
 struct cidm {
         DECLARE_BITMAP(bitmap, BITS_IN_BITMAP);
 };
@@ -223,21 +213,21 @@ cep_id_t cidm_allocate(struct cidm * instance)
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return CEP_ID_WRONG;
+                return cep_id_bad();
         }
 
         id = (cep_id_t) bitmap_find_next_zero_area(instance->bitmap,
                                                    BITS_IN_BITMAP,
                                                    0, 1, 0);
         LOG_DBG("The cidm bitmap find returned id %d (bad = %d)",
-                id, CEP_ID_WRONG);
+                id, cep_id_bad());
 
         LOG_DBG("Bits in bitmap %zd", BITS_IN_BITMAP);
 
         if (!is_cep_id_ok(id)) {
                 LOG_WARN("Got an out-of-range cep-id (%d) from "
                          "the bitmap allocator, the bitmap is full ...", id);
-                return CEP_ID_WRONG;
+                return cep_id_bad();
         }
 
         bitmap_set(instance->bitmap, id, 1);
