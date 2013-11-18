@@ -53,6 +53,7 @@ int pdu_destroy(struct pdu * p)
 
         return 0;
 }
+EXPORT_SYMBOL(pdu_destroy);
 
 bool is_buffer_ok(const struct buffer * b)
 {

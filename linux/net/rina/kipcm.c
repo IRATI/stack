@@ -111,11 +111,19 @@ alloc_flow_req_free(struct name *                              source_name,
                     struct rnl_msg *                           msg,
                     struct rina_msg_hdr *                      hdr)
 {
-        if (attrs)       rkfree(attrs);
-        if (source_name) rkfree(source_name);
-        if (dest_name)   rkfree(dest_name);
+        if (source_name) name_destroy(source_name);
+        if (dest_name)   name_destroy(dest_name);
         if (fspec)       rkfree(fspec);
-        if (dif_name)    rkfree(dif_name);
+        if (dif_name)    name_destroy(dif_name);
+        if (attrs) {
+#if 0
+                if (attrs->source)   name_destroy(attrs->source);
+                if (attrs->dest)     name_destroy(attrs->dest);
+                if (attrs->fspec)    rkfree(attrs->fspec);
+                if (attrs->dif_name) name_destroy(attrs->dif_name);
+#endif
+                rkfree(attrs);
+        }
         if (msg)         rkfree(msg);
         if (hdr)         rkfree(hdr);
 }
@@ -387,9 +395,10 @@ alloc_flow_resp_free(struct rnl_alloc_flow_resp_msg_attrs * attrs,
                      struct rnl_msg *                       msg,
                      struct rina_msg_hdr *                  hdr)
 {
-        if (attrs)         rkfree(attrs);
-        if (hdr)           rkfree(hdr);
-        if (msg)           rkfree(msg);
+        /* FIXME: Do it recursively ! */
+        if (attrs) rkfree(attrs);
+        if (hdr)   rkfree(hdr);
+        if (msg)   rkfree(msg);
 }
 
 static int notify_ipcp_allocate_flow_response(void *             data,
@@ -403,9 +412,6 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         struct ipcp_instance *                 ipc_process;
         ipc_process_id_t                       ipc_id;
         port_id_t                              pid;
-#if 0
-        response_reason_t                      reason;
-#endif
 
         msg         = NULL;
         hdr         = NULL;
@@ -858,9 +864,17 @@ reg_unreg_resp_free_and_reply(struct name *     app_name,
                               uint_t            port_id,
                               bool              is_register)
 {
-        if (app_name) rkfree(app_name);
-        if (dif_name) rkfree(dif_name);
-        if (attrs)    rkfree(attrs);
+        if (app_name) name_destroy(app_name);
+        if (dif_name) name_destroy(dif_name);
+        if (attrs)    {
+#if 0
+                /* FIXME: Code using reg_unreg_resp_free_and_reply is bogus */
+                /* FIXME: Fix it first ! */
+                if (attrs->app_name) name_destroy(attrs->app_name);
+                if (attrs->dif_name) name_destroy(attrs->dif_name);
+#endif
+                rkfree(attrs);
+        }
         if (msg)      rkfree(msg);
 
         if (rnl_app_register_unregister_response_msg(id,

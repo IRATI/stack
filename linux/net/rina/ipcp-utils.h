@@ -39,26 +39,35 @@ struct name * name_create_gfp(gfp_t flags);
 
 
 /*
- * Initializes a previously dynamically allocated name (i.e. name_alloc())
+ * Initializes a previously dynamically allocated name (i.e. name_create())
  * or a statically one (e.g. declared into a struct not as a pointer).
- * Returns the passed object pointer  in case everything is ok, a NULL
- * otherwise. In case of error a call to name_free() is allowed in order to
+ * Returns the passed object pointer in case everything is ok, a NULL
+ * otherwise.
+ *
+ * A call to name_destroy() is allowed in case of error, in order to
  * release the associated resources.
+ *
  * It is allowed to call name_init() over an already initialized object
  */
-struct name * name_init(struct name *    dst,
-                        const string_t * process_name,
-                        const string_t * process_instance,
-                        const string_t * entity_name,
-                        const string_t * entity_instance);
+struct name * name_init_from(struct name *    dst,
+                             const string_t * process_name,
+                             const string_t * process_instance,
+                             const string_t * entity_name,
+                             const string_t * entity_instance);
 
-struct name * name_init_gfp(gfp_t            flags,
-                            struct name *    dst,
-                            const string_t * process_name,
-                            const string_t * process_instance,
-                            const string_t * entity_name,
-                            const string_t * entity_instance);
+struct name * name_init_from_gfp(gfp_t            flags,
+                                 struct name *    dst,
+                                 const string_t * process_name,
+                                 const string_t * process_instance,
+                                 const string_t * entity_name,
+                                 const string_t * entity_instance);
 
+/* Takes ownership of the passed parameters */
+struct name * name_init_with(struct name * dst,
+                             string_t *    process_name,
+                             string_t *    process_instance,
+                             string_t *    entity_name,
+                             string_t *    entity_instance);
 
 /*
  * Finalize a name object, releasing all the embedded resources (without
@@ -66,17 +75,6 @@ struct name * name_init_gfp(gfp_t            flags,
  * object will be in the same states as at the end of name_init().
  */
 void          name_fini(struct name * dst);
-
-/* This function performs as name_alloc() and name_init() */
-struct name * name_create_and_init(const string_t * process_name,
-                                   const string_t * process_instance,
-                                   const string_t * entity_name,
-                                   const string_t * entity_instance);
-struct name * name_create_and_init_gfp(gfp_t            flags,
-                                       const string_t * process_name,
-                                       const string_t * process_instance,
-                                       const string_t * entity_name,
-                                       const string_t * entity_instance);
 
 /* Releases all the associated resources bound to a name object */
 void          name_destroy(struct name * ptr);
@@ -106,6 +104,7 @@ char *        name_tostring_gfp(gfp_t               flags,
                                 const struct name * n);
 
 /* Inverse of name_tostring() */
+string_t *    string_from_user(const char __user * src);
 struct name * string_toname(const string_t * s);
 struct name * string_toname_gfp(gfp_t            flags,
                                 const string_t * s);
