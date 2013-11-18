@@ -1,9 +1,10 @@
 #
-# Makefile for the Linux RINA layer.
+# Makefile for the Linux RINA layer
 #
 
 obj-$(CONFIG_RINA) +=				\
-	utils.o debug.o rmem.o rmap.o rwq.o	\
+	utils.o debug.o				\
+	rds/rwq.o rds/rmem.o rds/rmap.o		\
 	core.o personality.o syscalls.o		\
 	rnl.o rnl-utils.o rnl-workarounds.o	\
 	du.o ipcp-utils.o common.o

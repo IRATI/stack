@@ -20,9 +20,9 @@
 
 #define RINA_PREFIX "rwq"
 
-#include "logs.h"
-#include "debug.h"
-#include "utils.h"
+#include "../logs.h"
+#include "../debug.h"
+#include "rmem.h"
 
 struct rwq_work_item {
         struct work_struct work; /* KEEP AT TOP AND DO NOT MOVE ! */

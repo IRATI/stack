@@ -25,10 +25,11 @@
 
 #define RINA_PREFIX "rmap"
 
-#include "logs.h"
-#include "debug.h"
-#include "utils.h"
-#include "rmap.h"
+#include "../logs.h"
+#include "../debug.h"
+#include "rmem.h"
+
+//#include "rmap.h"
 
 #define RMAP_HASH_BITS 7
 
