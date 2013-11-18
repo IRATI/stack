@@ -363,9 +363,9 @@ EXPORT_SYMBOL(rnl_get_next_seqn);
  * Invoked when an event related to a NL socket occurs. We're only interested
  * in socket closed events.
  */
-static int kipcm_netlink_notify(struct notifier_block * nb,
-                                unsigned long           state,
-                                void *                  notification)
+static int netlink_notify_callback(struct notifier_block * nb,
+                                   unsigned long           state,
+                                   void *                  notification)
 {
         struct netlink_notify * notify = notification;
         rnl_port_t              port;
@@ -379,7 +379,6 @@ static int kipcm_netlink_notify(struct notifier_block * nb,
         }
 
         port = rnl_get_ipc_manager_port();
-
         if (port) {
                 LOG_DBG("IPC Manager port: %u", port);
 
@@ -395,8 +394,8 @@ static int kipcm_netlink_notify(struct notifier_block * nb,
         return NOTIFY_DONE;
 }
 
-static struct notifier_block kipcm_netlink_notifier = {
-        .notifier_call = kipcm_netlink_notify,
+static struct notifier_block netlink_notifier = {
+        .notifier_call = netlink_notify_callback,
 };
 
 int rnl_init(void)
@@ -427,7 +426,7 @@ int rnl_init(void)
          * Register a NETLINK notifier so that the kernel is
          * informed when a Netlink socket in user-space is closed
          */
-        ret = netlink_register_notifier(&kipcm_netlink_notifier);
+        ret = netlink_register_notifier(&netlink_notifier);
         if (ret) {
                 LOG_ERR("Cannot register Netlink notifier (error=%i), "
                         "bailing out", ret);
@@ -447,12 +446,13 @@ void rnl_exit(void)
         LOG_DBG("Finalizing Netlink layer");
 
         /* Unregister the notifier */
-        netlink_unregister_notifier(&kipcm_netlink_notifier);
+        netlink_unregister_notifier(&netlink_notifier);
 
         ret = genl_unregister_family(&rnl_nl_family);
         if (ret) {
-                LOG_ERR("Could not unregister Netlink family (error=%i), "
-                        "bailing out. Your system might become unstable", ret);
+                LOG_ERR("Could not unregister Netlink family (error = %i), "
+                        "bailing out", ret);
+                LOG_CRIT("Your system might become unstable");
                 return;
         }
 
