@@ -78,7 +78,12 @@ SYSCALL_DEFINE6(ipc_create,
                 const char __user *, type)
 {
         long          retval;
+
         struct name * tn;
+        char *        tpn;
+        char *        tpi;
+        char *        ten;
+        char *        tei;
         char *        tt;
 
         SYSCALL_DUMP_ENTER;
@@ -90,15 +95,21 @@ SYSCALL_DEFINE6(ipc_create,
         }
 
         /* FIXME: Fix this crappiness */
-        tn->process_name     = strdup_from_user(process_name);
-        tn->process_instance = strdup_from_user(process_instance);
-        tn->entity_name      = strdup_from_user(entity_name);
-        tn->entity_instance  = strdup_from_user(entity_instance);
+        tpn = string_from_user(process_name);
+        tpi = string_from_user(process_instance);
+        ten = string_from_user(entity_name);
+        tei = string_from_user(entity_instance);
+        if (!name_init_with(tn, tpn, tpi, ten, tei)) {
+                SYSCALL_DUMP_EXIT;
+                name_destroy(tn);
+                return -EFAULT;
+        }
+
+        /* Ownership taken, name_destroy() will be enough from now on */
 
         tt = strdup_from_user(type);
         if (!tt) {
                 SYSCALL_DUMP_EXIT;
-
                 name_destroy(tn);
                 return -EFAULT;
         }
