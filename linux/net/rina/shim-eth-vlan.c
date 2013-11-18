@@ -887,9 +887,13 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                                                   gpa_address_value(gpaddr));
                         LOG_DBG("Got the address from ARP");
                 } else {
-                        sname = name_create_and_init_gfp(GFP_ATOMIC,
-                                                         "Unknown app",
-                                                         "", "", "");
+                        sname = name_create_gfp(GFP_ATOMIC);
+                        if (!name_init_gfp(GFP_ATOMIC,
+                                           sname,
+                                           "Unknown app", "", "", "")) {
+                                name_destroy(sname);
+                                return -1;
+                        }
                         flow->dest_pa = name_to_gpa(sname);
                         LOG_DBG("Flow request from unkown app received");
                 }
