@@ -26,8 +26,6 @@
 #include "common.h"
 #include "qos.h"
 
-typedef int16_t cep_id_t;
-
 #define PDU_FLAGS_FRAG_MIDDLE         0x00
 #define PDU_FLAGS_FRAG_FIRST          0x01
 #define PDU_FLAGS_FRAG_LAST           0x02
