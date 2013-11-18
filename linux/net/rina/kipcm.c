@@ -111,11 +111,17 @@ alloc_flow_req_free(struct name *                              source_name,
                     struct rnl_msg *                           msg,
                     struct rina_msg_hdr *                      hdr)
 {
-        if (attrs)       rkfree(attrs);
-        if (source_name) rkfree(source_name);
-        if (dest_name)   rkfree(dest_name);
+        if (source_name) name_destroy(source_name);
+        if (dest_name)   name_destroy(dest_name);
         if (fspec)       rkfree(fspec);
-        if (dif_name)    rkfree(dif_name);
+        if (dif_name)    name_destroy(dif_name);
+        if (attrs) {
+                if (attrs->source)   name_destroy(attrs->source);
+                if (attrs->dest)     name_destroy(attrs->dest);
+                if (attrs->fspec)    rkfree(attrs->fspec);
+                if (attrs->dif_name) name_destroy(attrs->dif_name);
+                rkfree(attrs);
+        }
         if (msg)         rkfree(msg);
         if (hdr)         rkfree(hdr);
 }
@@ -858,9 +864,13 @@ reg_unreg_resp_free_and_reply(struct name *     app_name,
                               uint_t            port_id,
                               bool              is_register)
 {
-        if (app_name) rkfree(app_name);
-        if (dif_name) rkfree(dif_name);
-        if (attrs)    rkfree(attrs);
+        if (app_name) name_destroy(app_name);
+        if (dif_name) name_destroy(dif_name);
+        if (attrs)    {
+                if (attrs->app_name) name_destroy(attrs->app_name);
+                if (attrs->dif_name) name_destroy(attrs->dif_name);
+                rkfree(attrs);
+        }
         if (msg)      rkfree(msg);
 
         if (rnl_app_register_unregister_response_msg(id,
