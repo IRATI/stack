@@ -39,11 +39,14 @@ struct name * name_create_gfp(gfp_t flags);
 
 
 /*
- * Initializes a previously dynamically allocated name (i.e. name_alloc())
+ * Initializes a previously dynamically allocated name (i.e. name_create())
  * or a statically one (e.g. declared into a struct not as a pointer).
- * Returns the passed object pointer  in case everything is ok, a NULL
- * otherwise. In case of error a call to name_free() is allowed in order to
+ * Returns the passed object pointer in case everything is ok, a NULL
+ * otherwise.
+ *
+ * A call to name_destroy() is allowed in case of error, in order to
  * release the associated resources.
+ *
  * It is allowed to call name_init() over an already initialized object
  */
 struct name * name_init(struct name *    dst,
