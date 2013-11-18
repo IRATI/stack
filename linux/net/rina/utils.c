@@ -247,7 +247,7 @@ char * strdup_from_user(const char __user * src)
 
         size = strlen_user(src); /* Includes the terminating NUL */
         if (!size) {
-                LOG_ERR("String size is 0, cannot strdup-from-user");
+                LOG_ERR("Got exception while detecting string length");
                 return NULL;
         }
 

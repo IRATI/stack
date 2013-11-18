@@ -71,6 +71,9 @@ struct efcp;
 struct efcp * efcp_find(struct efcp_container * container,
                         cep_id_t                id);
 
+int           efcp_write(struct efcp * efcp,
+                         struct sdu *  sdu);
+
 int           efcp_bind_rmt(struct efcp_container * container,
                             struct rmt *            rmt);
 

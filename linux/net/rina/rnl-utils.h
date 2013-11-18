@@ -427,8 +427,9 @@ struct rnl_ipcm_disconn_neighbor_resp_msg_attrs {
         uint_t result;
 };
 
-/* FIXME: all the alloc flow structs are the same
- * we can use only a generic one */
+/*
+ * FIXME: all the alloc flow structs are the same we can use only a generic one
+ */
 struct rnl_ipcm_alloc_flow_req_msg_attrs {
         struct name      * source;
         struct name      * dest;

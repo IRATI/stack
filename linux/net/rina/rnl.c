@@ -104,8 +104,9 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 
         tmp = default_set;
         if (!tmp) {
+                /* FIXME: Shouldn't this failback instead (returning 0) ?*/
                 LOG_ERR("There is no set registered, "
-                        "first register a (default) set");
+                        "please register a set first");
                 return -1;
         }
 
@@ -116,11 +117,15 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         spin_unlock(&tmp->lock);
 
         if (!cb_function) {
+                /* FIXME: Shouldn't this failback instead (returning 0) ?*/
                 LOG_ERR("There's no handler callback registered for "
                         "message type %d", msg_type);
                 return -1;
         }
         /* Data might be empty, no check strictly necessary */
+
+        LOG_DBG("Gonna call %pK(%pK, %pK, %pK)",
+                cb_function, data, skb_in, info);
 
         ret_val = cb_function(data, skb_in, info);
         if (ret_val) {
