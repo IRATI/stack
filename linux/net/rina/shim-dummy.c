@@ -574,7 +574,7 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
 
 static int dummy_deallocate_all(struct ipcp_instance_data * data)
 {
-        struct dummy_flow *pos, *next;
+        struct dummy_flow * pos, * next;
 
         list_for_each_entry_safe(pos, next, &data->flows, list) {
                 list_del(&pos->list);
@@ -822,9 +822,6 @@ static int __init mod_init(void)
 static void __exit mod_exit(void)
 {
         ASSERT(shim);
-
-        if (dummy_wq)
-                rwq_destroy(dummy_wq);
 
         if (kipcm_ipcp_factory_unregister(default_kipcm, shim)) {
                 LOG_CRIT("Cannot unregister %s factory", SHIM_NAME);
