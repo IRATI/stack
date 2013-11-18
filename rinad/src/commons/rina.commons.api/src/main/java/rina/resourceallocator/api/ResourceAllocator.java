@@ -1,7 +1,5 @@
 package rina.resourceallocator.api;
 
-import rina.ipcprocess.api.IPCProcessComponent;
-
 /**
  * The Resource Allocator (RA) is the core of management in the IPC Process. 
  * The degree of decentralization depends on the policies and how it is used. The RA has a set of meters 
@@ -22,7 +20,7 @@ import rina.ipcprocess.api.IPCProcessComponent;
  * @author eduardgrasa
  *
  */
-public interface ResourceAllocator extends IPCProcessComponent{
+public interface ResourceAllocator {
 
 	/**
 	 * Returns the N-1 Flow Manager of this IPC Process

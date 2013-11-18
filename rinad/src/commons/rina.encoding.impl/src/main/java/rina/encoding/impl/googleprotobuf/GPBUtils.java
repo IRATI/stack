@@ -17,10 +17,11 @@ import rina.encoding.impl.googleprotobuf.qosspecification.QoSSpecification;
 import rina.encoding.impl.googleprotobuf.property.PropertyMessage;
 import rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t;
 import rina.encoding.impl.googleprotobuf.qosspecification.QoSSpecification.qosSpecification_t;
-import rina.applicationprocess.api.ApplicationProcessNamingInfo;
-import rina.ipcservice.api.QualityOfServiceSpecification;
 
 import com.google.protobuf.ByteString;
+
+import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.FlowSpecification;
 
 /**
  * Utility classes to work with Google Protocol Buffers
@@ -31,24 +32,26 @@ public class GPBUtils {
 	
 	private static final Log log = LogFactory.getLog(GPBUtils.class);
 	
-	public static ApplicationProcessNamingInfo getApplicationProcessNamingInfo(applicationProcessNamingInfo_t apNamingInfo) {
+	public static ApplicationProcessNamingInformation getApplicationProcessNamingInfo(applicationProcessNamingInfo_t apNamingInfo) {
 		String apName = GPBUtils.getString(apNamingInfo.getApplicationProcessName());
 		String apInstance = GPBUtils.getString(apNamingInfo.getApplicationProcessInstance());
 		String aeName = GPBUtils.getString(apNamingInfo.getApplicationEntityName());
 		String aeInstance = GPBUtils.getString(apNamingInfo.getApplicationEntityInstance());
 		
-		ApplicationProcessNamingInfo result = new ApplicationProcessNamingInfo(apName, apInstance);
-		result.setApplicationEntityName(aeName);
-		result.setApplicationEntityInstance(aeInstance);
+		ApplicationProcessNamingInformation result = 
+				new ApplicationProcessNamingInformation(apName, apInstance);
+		result.setEntityName(aeName);
+		result.setEntityInstance(aeInstance);
 		return result;
 	}
 	
-	public static applicationProcessNamingInfo_t getApplicationProcessNamingInfoT(ApplicationProcessNamingInfo apNamingInfo){
+	public static applicationProcessNamingInfo_t getApplicationProcessNamingInfoT(
+			ApplicationProcessNamingInformation apNamingInfo){
 		if (apNamingInfo != null){
-			String apName = GPBUtils.getGPBString(apNamingInfo.getApplicationProcessName());
-			String apInstance = GPBUtils.getGPBString(apNamingInfo.getApplicationProcessInstance());
-			String aeName = GPBUtils.getGPBString(apNamingInfo.getApplicationEntityName());
-			String aeInstance = GPBUtils.getGPBString(apNamingInfo.getApplicationEntityInstance());
+			String apName = GPBUtils.getGPBString(apNamingInfo.getProcessName());
+			String apInstance = GPBUtils.getGPBString(apNamingInfo.getProcessInstance());
+			String aeName = GPBUtils.getGPBString(apNamingInfo.getEntityName());
+			String aeInstance = GPBUtils.getGPBString(apNamingInfo.getEntityInstance());
 			return ApplicationProcessNamingInfoMessage.applicationProcessNamingInfo_t.newBuilder().
 			setApplicationProcessName(apName).
 			setApplicationProcessInstance(apInstance).
@@ -119,72 +122,46 @@ public class GPBUtils {
 		return result;
 	}
 	
-	public static QualityOfServiceSpecification getQualityOfServiceSpecification(qosSpecification_t qosSpec_t){
+	public static FlowSpecification getFlowSpecification(qosSpecification_t qosSpec_t){
 		if (qosSpec_t == null){
 			return null;
 		}
 		
-		QualityOfServiceSpecification result = new QualityOfServiceSpecification();
-		result.setName(GPBUtils.getString(qosSpec_t.getName()));
-		result.setQosCubeId(qosSpec_t.getQosid());
+		FlowSpecification result = new FlowSpecification();
 		result.setAverageBandwidth(qosSpec_t.getAverageBandwidth());
-		result.setAverageSDUBandwidth(qosSpec_t.getAverageSDUBandwidth());
+		result.setAverageSduBandwidth(qosSpec_t.getAverageSDUBandwidth());
 		result.setDelay(qosSpec_t.getDelay());
 		result.setJitter(qosSpec_t.getJitter());
-		result.setMaxAllowableGapSDU(qosSpec_t.getMaxAllowableGapSdu());
-		result.setOrder(qosSpec_t.getOrder());
+		result.setMaxAllowableGap(qosSpec_t.getMaxAllowableGapSdu());
+		result.setOrderedDelivery(qosSpec_t.getOrder());
 		result.setPartialDelivery(qosSpec_t.getPartialDelivery());
 		result.setPeakBandwidthDuration(qosSpec_t.getPeakBandwidthDuration());
-		result.setPeakSDUBandwidthDuration(qosSpec_t.getPeakSDUBandwidthDuration());
+		result.setPeakSduBandwidthDuration(qosSpec_t.getPeakSDUBandwidthDuration());
 		result.setUndetectedBitErrorRate(qosSpec_t.getUndetectedBitErrorRate());
-		
-		for(int i=0; i<qosSpec_t.getExtraParametersCount(); i++){
-			result.getExtendedPrameters().put(
-					qosSpec_t.getExtraParametersList().get(i).getName(), qosSpec_t.getExtraParametersList().get(i).getValue());
-		}
 		
 		return result;
 	}
 	
-	public static qosSpecification_t getQoSSpecificationT(QualityOfServiceSpecification qualityOfServiceSpecification){
-		if (qualityOfServiceSpecification != null){
-			List<property_t> extraParameters = getQosSpecExtraParametersType(qualityOfServiceSpecification);
+	public static qosSpecification_t getQoSSpecificationT(FlowSpecification flowSpec){
+		if (flowSpec != null){
 			
 			return QoSSpecification.qosSpecification_t.newBuilder().
-				setName(GPBUtils.getGPBString(qualityOfServiceSpecification.getName())).
-				setQosid(qualityOfServiceSpecification.getQosCubeId()).
-				setAverageBandwidth(qualityOfServiceSpecification.getAverageBandwidth()).
-				setAverageSDUBandwidth(qualityOfServiceSpecification.getAverageSDUBandwidth()).
-				setDelay(qualityOfServiceSpecification.getDelay()).
-				addAllExtraParameters(extraParameters).
-				setJitter(qualityOfServiceSpecification.getJitter()).
-				setMaxAllowableGapSdu(qualityOfServiceSpecification.getMaxAllowableGapSDU()).
-				setOrder(qualityOfServiceSpecification.isOrder()).
-				setPartialDelivery(qualityOfServiceSpecification.isPartialDelivery()).
-				setPeakBandwidthDuration(qualityOfServiceSpecification.getPeakBandwidthDuration()).
-				setPeakSDUBandwidthDuration(qualityOfServiceSpecification.getPeakSDUBandwidthDuration()).
-				setUndetectedBitErrorRate(qualityOfServiceSpecification.getUndetectedBitErrorRate()).
+				setName(GPBUtils.getGPBString("")).
+				setQosid(0).
+				setAverageBandwidth(flowSpec.getAverageBandwidth()).
+				setAverageSDUBandwidth(flowSpec.getAverageSduBandwidth()).
+				setDelay((int)flowSpec.getDelay()).
+				setJitter((int)flowSpec.getJitter()).
+				setMaxAllowableGapSdu(flowSpec.getMaxAllowableGap()).
+				setOrder(flowSpec.isOrderedDelivery()).
+				setPartialDelivery(flowSpec.isPartialDelivery()).
+				setPeakBandwidthDuration((int)flowSpec.getPeakBandwidthDuration()).
+				setPeakSDUBandwidthDuration((int)flowSpec.getPeakSduBandwidthDuration()).
+				setUndetectedBitErrorRate(flowSpec.getUndetectedBitErrorRate()).
 				build();
 		}else{
 			return null;
 		}
-	}
-	
-	private static List<property_t> getQosSpecExtraParametersType(QualityOfServiceSpecification qualityOfServiceSpecification){
-		List<property_t> qosParametersList = new ArrayList<property_t>();
-		
-		if (qualityOfServiceSpecification.getExtendedPrameters().isEmpty()){
-			return qosParametersList;
-		}
-		
-		Iterator<Entry<String, String>> iterator = qualityOfServiceSpecification.getExtendedPrameters().entrySet().iterator();
-		Entry<String, String> entry = null;
-		while(iterator.hasNext()){
-			entry = iterator.next();
-			qosParametersList.add(getPropertyT(entry));
-		}
-		
-		return qosParametersList;
 	}
 	
 	public static byte[] getByteArray(ByteString byteString){

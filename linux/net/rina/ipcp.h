@@ -93,6 +93,9 @@ struct dif_config {
 
         /* The data transfer constants */
         struct data_transfer_constants * data_transfer_constants;
+
+        /* The address of the IPC Process*/
+        address_t address;
 };
 
 /* Represents the information about a DIF (name, type, configuration) */

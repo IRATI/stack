@@ -1,28 +1,25 @@
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- */
+//
+// Core librina logic
+//
+//    Eduard Grasa          <eduard.grasa@i2cat.net>
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+//
 
-/*
- * librina-netlink-parsers.h
- *
- *  Created on: 14/06/2013
- *      Author: eduardgrasa
- */
-
-#ifndef LIBRINA_NETLINK_PARSERS_H_
-#define LIBRINA_NETLINK_PARSERS_H_
+#ifndef LIBRINA_NETLINK_PARSERS_H
+#define LIBRINA_NETLINK_PARSERS_H
 
 #include <netlink/msg.h>
 #include <netlink/attr.h>
@@ -58,6 +55,7 @@ enum AppAllocateFlowRequestAttributes {
 	AAFR_ATTR_SOURCE_APP_NAME = 1,
 	AAFR_ATTR_DEST_APP_NAME,
 	AAFR_ATTR_FLOW_SPEC,
+	AAFR_ATTR_DIF_NAME,
 	__AAFR_ATTR_MAX,
 };
 
@@ -180,6 +178,7 @@ AppDeallocateFlowRequestMessage * parseAppDeallocateFlowRequestMessage(
 enum AppDeallocateFlowResponseMessageAttributes {
 	ADFRE_ATTR_RESULT = 1,
 	ADFRE_ATTR_APP_NAME,
+	ADFRE_ATTR_PORT_ID,
 	__ADFRE_ATTR_MAX,
 };
 
@@ -470,6 +469,8 @@ DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested);
 enum DIFConfigurationAttributes {
 	DCONF_ATTR_PARAMETERS = 1,
 	DCONF_ATTR_DATA_TRANS_CONST,
+	DCONF_ATTR_ADDRESS,
+	DCONF_ATTR_QOS_CUBES,
 	__DCONF_ATTR_MAX,
 };
 

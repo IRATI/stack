@@ -6,11 +6,11 @@ import java.util.List;
 import com.google.protobuf.ByteString;
 
 import rina.applicationprocess.api.WhatevercastName;
-import rina.encoding.api.BaseEncoder;
+import rina.encoding.api.Encoder;
 import rina.encoding.impl.googleprotobuf.GPBUtils;
 import rina.encoding.impl.googleprotobuf.whatevercast.WhatevercastNameMessage.whatevercastName_t;
 
-public class WhatevercastNameEncoder extends BaseEncoder{
+public class WhatevercastNameEncoder implements Encoder{
 	
 	public synchronized Object decode(byte[] serializedObject, Class<?> objectClass) throws Exception {
 		if (objectClass == null || !(objectClass.equals(WhatevercastName.class))){

@@ -75,7 +75,6 @@ static int rnl_check_attr_policy(struct nlmsghdr *   nlh,
         struct nlattr * attrs[max_attr + 1];
         int             result;
 
-        LOG_DBG("Entering rnl_check_attr_policy ...");
         result = nlmsg_parse(nlh,
                              /* FIXME: Check if this is correct */
                              sizeof(struct genlmsghdr) +
@@ -88,7 +87,7 @@ static int rnl_check_attr_policy(struct nlmsghdr *   nlh,
                         result);
                 return -1;
         }
-        LOG_DBG("Leaving rnl_check_attr_policy ...");
+
         return 0;
 }
 
@@ -96,7 +95,7 @@ static int parse_flow_spec(struct nlattr * fspec_attr,
                            struct flow_spec * fspec_struct)
 {
         struct nla_policy attr_policy[FSPEC_ATTR_MAX + 1];
-        struct nlattr *attrs[FSPEC_ATTR_MAX + 1];
+        struct nlattr *   attrs[FSPEC_ATTR_MAX + 1];
 
         attr_policy[FSPEC_ATTR_AVG_BWITH].type = NLA_U32;
         attr_policy[FSPEC_ATTR_AVG_BWITH].len = 4;
@@ -180,20 +179,16 @@ static int parse_app_name_info(struct nlattr * name_attr,
                                struct name *   name_struct)
 {
         struct nla_policy attr_policy[APNI_ATTR_MAX + 1];
-        struct nlattr *attrs[APNI_ATTR_MAX + 1];
-        string_t * process_name;
-        string_t * process_instance;
-        string_t * entity_name;
-        string_t * entity_instance;
+        struct nlattr *   attrs[APNI_ATTR_MAX + 1];
+        string_t *        process_name;
+        string_t *        process_instance;
+        string_t *        entity_name;
+        string_t *        entity_instance;
 
         if (!name_attr || !name_struct) {
                 LOG_ERR("Bogus input parameters, cannot parse name app info");
                 return -1;
         }
-
-        LOG_DBG("Entering parse_app_name_info with "
-                "nlattr at %p and name_struct at %p",
-                name_attr, name_struct);
 
         attr_policy[APNI_ATTR_PROCESS_NAME].type = NLA_STRING;
         attr_policy[APNI_ATTR_PROCESS_NAME].len = 0;
@@ -232,9 +227,9 @@ static int parse_app_name_info(struct nlattr * name_attr,
         else
                 entity_instance = NULL;
 
-        if (!name_init(name_struct,
-                       process_name, process_instance,
-                       entity_name,  entity_instance))
+        if (!name_init_from(name_struct,
+                            process_name, process_instance,
+                            entity_name,  entity_instance))
                 return -1;
 
         return 0;
@@ -244,7 +239,7 @@ static int parse_ipcp_config_entry_value(struct nlattr *            name_attr,
                                          struct ipcp_config_entry * entry)
 {
         struct nla_policy attr_policy[IPCP_CONFIG_ENTRY_ATTR_MAX + 1];
-        struct nlattr *attrs[IPCP_CONFIG_ENTRY_ATTR_MAX + 1];
+        struct nlattr *   attrs[IPCP_CONFIG_ENTRY_ATTR_MAX + 1];
 
         if (!name_attr) {
                 LOG_ERR("Bogus attribute passed, bailing out");
@@ -277,12 +272,12 @@ static int parse_ipcp_config_entry_value(struct nlattr *            name_attr,
 static int parse_list_of_ipcp_config_entries(struct nlattr *     nested_attr,
                                              struct dif_config * dif_config)
 {
-        struct nlattr * nla;
+        struct nlattr *            nla;
         struct ipcp_config_entry * entry;
-        struct ipcp_config * config;
-        int rem = 0;
-        int entries_with_problems = 0;
-        int total_entries = 0;
+        struct ipcp_config *       config;
+        int                        rem = 0;
+        int                        entries_with_problems = 0;
+        int                        total_entries = 0;
 
         if (!nested_attr) {
                 LOG_ERR("Bogus attribute passed, bailing out");
@@ -334,11 +329,12 @@ static int parse_list_of_ipcp_config_entries(struct nlattr *     nested_attr,
         return 0;
 }
 
-static int parse_data_transfer_constants(struct nlattr * attr,
-                                         struct data_transfer_constants * data_transfer_constants)
+static int
+parse_data_transfer_constants(struct nlattr *                  attr,
+                              struct data_transfer_constants * data_transfer_constants)
 {
         struct nla_policy attr_policy[DTC_ATTR_MAX + 1];
-        struct nlattr *attrs[DTC_ATTR_MAX + 1];
+        struct nlattr *   attrs[DTC_ATTR_MAX + 1];
 
         attr_policy[DTC_ATTR_QOS_ID].type = NLA_U16;
         attr_policy[DTC_ATTR_QOS_ID].len = 2;
@@ -411,6 +407,10 @@ static int parse_dif_config(struct nlattr * dif_config_attr,
         attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].len = 0;
         attr_policy[DCONF_ATTR_DATA_TRANS_CONS].type = NLA_NESTED;
         attr_policy[DCONF_ATTR_DATA_TRANS_CONS].len = 0;
+        attr_policy[DCONF_ATTR_ADDRESS].type = NLA_U32;
+        attr_policy[DCONF_ATTR_ADDRESS].len = 4;
+        attr_policy[DCONF_ATTR_QOS_CUBES].type = NLA_NESTED;
+        attr_policy[DCONF_ATTR_QOS_CUBES].len = 0;
 
         if (nla_parse_nested(attrs,
                              DCONF_ATTR_MAX,
@@ -419,27 +419,27 @@ static int parse_dif_config(struct nlattr * dif_config_attr,
                 goto parse_fail;
 
         if (attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES]) {
-                if (parse_list_of_ipcp_config_entries(
-                                                      attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES],
+                if (parse_list_of_ipcp_config_entries(attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES],
                                                       dif_config) < 0)
                         goto parse_fail;
         }
 
         if (attrs[DCONF_ATTR_DATA_TRANS_CONS]) {
-                data_transfer_constants = rkzalloc(
-                                                   sizeof(struct data_transfer_constants),
+                data_transfer_constants = rkzalloc(sizeof(struct data_transfer_constants),
                                                    GFP_KERNEL);
                 if (!data_transfer_constants)
                         goto parse_fail;
                 dif_config->data_transfer_constants = data_transfer_constants;
 
-                if (parse_data_transfer_constants(
-                                                  attrs[DCONF_ATTR_DATA_TRANS_CONS],
+                if (parse_data_transfer_constants(attrs[DCONF_ATTR_DATA_TRANS_CONS],
                                                   dif_config->data_transfer_constants) < 0) {
                         rkfree(dif_config->data_transfer_constants);
                         goto parse_fail;
                 }
         }
+
+        if (attrs[DCONF_ATTR_ADDRESS])
+                dif_config->address = nla_get_u32(attrs[DCONF_ATTR_ADDRESS]);
 
         return 0;
 
@@ -448,18 +448,18 @@ static int parse_dif_config(struct nlattr * dif_config_attr,
         return -1;
 }
 
-static int parse_dif_info(struct nlattr * dif_config_attr,
+static int parse_dif_info(struct nlattr *    dif_config_attr,
                           struct dif_info  * dif_info)
 {
         struct nla_policy attr_policy[DINFO_ATTR_MAX + 1];
-        struct nlattr *attrs[DINFO_ATTR_MAX + 1];
+        struct nlattr *   attrs[DINFO_ATTR_MAX + 1];
 
         attr_policy[DINFO_ATTR_DIF_TYPE].type = NLA_STRING;
-        attr_policy[DINFO_ATTR_DIF_TYPE].len = 0;
+        attr_policy[DINFO_ATTR_DIF_TYPE].len  = 0;
         attr_policy[DINFO_ATTR_DIF_NAME].type = NLA_NESTED;
-        attr_policy[DINFO_ATTR_DIF_NAME].len = 0;
-        attr_policy[DINFO_ATTR_CONFIG].type = NLA_NESTED;
-        attr_policy[DINFO_ATTR_CONFIG].len = 0;
+        attr_policy[DINFO_ATTR_DIF_NAME].len  = 0;
+        attr_policy[DINFO_ATTR_CONFIG].type   = NLA_NESTED;
+        attr_policy[DINFO_ATTR_CONFIG].len    = 0;
 
         if (nla_parse_nested(attrs,
                              DINFO_ATTR_MAX,
@@ -468,7 +468,9 @@ static int parse_dif_info(struct nlattr * dif_config_attr,
                 goto parse_fail;
 
         if (attrs[DINFO_ATTR_DIF_TYPE])
-                dif_info->type = kstrdup(nla_get_string(attrs[DINFO_ATTR_DIF_TYPE]), GFP_KERNEL);
+                dif_info->type =
+                        kstrdup(nla_get_string(attrs[DINFO_ATTR_DIF_TYPE]),
+                                GFP_KERNEL);
 
         if (parse_app_name_info(attrs[DINFO_ATTR_DIF_NAME],
                                 dif_info->dif_name) < 0)
@@ -529,19 +531,17 @@ static int parse_rib_objects_list(struct nlattr     * rib_objs_attr,
         return 0;
 }
 
-static int rnl_parse_generic_u32_param_msg (struct genl_info * info,
-                                            uint_t           * param_var,
-                                            uint_t           param_name,
-                                            uint_t           max_params,
-                                            string_t         * msg_name)
+static int rnl_parse_generic_u32_param_msg(struct genl_info * info,
+                                           uint_t *           param_var,
+                                           uint_t             param_name,
+                                           uint_t             max_params,
+                                           string_t *         msg_name)
 {
         struct nla_policy attr_policy[max_params + 1];
-        struct nlattr *attrs[max_params + 1];
-
-        LOG_DBG("rnl_parse_generic_u32_param_msg started ...");
+        struct nlattr *   attrs[max_params + 1];
 
         attr_policy[param_name].type = NLA_U32;
-        attr_policy[param_name].len = 4;
+        attr_policy[param_name].len  = 4;
 
         if (nlmsg_parse(info->nlhdr,
                         /* FIXME: Check if this is correct */
@@ -556,7 +556,6 @@ static int rnl_parse_generic_u32_param_msg (struct genl_info * info,
 
         if (attrs[param_name]) {
                 * param_var = nla_get_u32(attrs[param_name]);
-                LOG_DBG("Parsed result: %d", * param_var);
         }
 
         return 0;
@@ -566,11 +565,11 @@ static int rnl_parse_ipcm_assign_to_dif_req_msg(struct genl_info * info,
                                                 struct rnl_ipcm_assign_to_dif_req_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[IATDR_ATTR_MAX + 1];
-        struct nlattr *attrs[IATDR_ATTR_MAX + 1];
-        int result;
+        struct nlattr *   attrs[IATDR_ATTR_MAX + 1];
+        int               result;
 
         attr_policy[IATDR_ATTR_DIF_INFORMATION].type = NLA_NESTED;
-        attr_policy[IATDR_ATTR_DIF_INFORMATION].len = 0;
+        attr_policy[IATDR_ATTR_DIF_INFORMATION].len  = 0;
 
         result = nlmsg_parse(info->nlhdr,
                              sizeof(struct genlmsghdr) +
@@ -599,7 +598,6 @@ static int rnl_parse_ipcm_assign_to_dif_req_msg(struct genl_info * info,
 static int rnl_parse_ipcm_assign_to_dif_resp_msg(struct genl_info * info,
                                                  struct rnl_ipcm_assign_to_dif_resp_msg_attrs * msg_attrs)
 {
-        LOG_DBG("rnl_parse_ipcm_assign_to_dif_resp_msg started ...");
         return rnl_parse_generic_u32_param_msg(info,
                                                &(msg_attrs->result),
                                                IATDRE_ATTR_RESULT,
@@ -1158,7 +1156,8 @@ static int rnl_parse_ipcm_reg_app_req_msg(struct genl_info * info,
                              attr_policy);
 
         if (result < 0) {
-                LOG_ERR("Error %d; could not validate nl message policy", result);
+                LOG_ERR("Could not validate nl message policy (error %d)",
+                        result);
                 goto parse_fail;
         }
 
@@ -1195,7 +1194,8 @@ static int rnl_parse_ipcm_reg_app_resp_msg(struct genl_info * info,
                              attr_policy);
 
         if (result < 0) {
-                LOG_ERR("Error %d; could not validate nl message policy", result);
+                LOG_ERR("ould not validate nl message policy (error = %d)",
+                        result);
                 goto parse_fail;
         }
 
@@ -1264,7 +1264,7 @@ static int rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
         struct nla_policy attr_policy[IDQR_ATTR_MAX + 1];
 
         attr_policy[IDQR_ATTR_OBJECT].type = NLA_NESTED;
-        attr_policy[IDQR_ATTR_SCOPE].type = NLA_U32;
+        attr_policy[IDQR_ATTR_SCOPE].type  = NLA_U32;
         attr_policy[IDQR_ATTR_FILTER].type = NLA_STRING;
 
         if (rnl_check_attr_policy(info->nlhdr, IDQR_ATTR_MAX, attr_policy) < 0 ||
@@ -1567,9 +1567,6 @@ static int format_app_name_info(const struct name * name,
                 return -1;
         }
 
-        LOG_DBG("Entering format_app_name_info with name "
-                "at %p and sk_buff at %p", name, msg);
-
         /*
          * Components might be missing (and nla_put_string wonna have NUL
          * terminated strings, otherwise kernel panics are on the way).
@@ -1598,8 +1595,6 @@ static int format_app_name_info(const struct name * name,
                                    name->entity_instance))
                         return -1;
 
-        LOG_DBG("Format app name successs");
-
         return 0;
 }
 
@@ -1616,9 +1611,6 @@ static int format_flow_spec(const struct flow_spec * fspec,
                         "message parameter is NULL ...");
                 return -1;
         }
-
-        LOG_DBG("Entering format_flow_spec with fspec "
-                "at %p and sk_buff at %p", fspec, msg);
 
         /*
          * FIXME: only->max or min attributes are taken from
@@ -1686,7 +1678,6 @@ static int format_flow_spec(const struct flow_spec * fspec,
                                 fspec->undetected_bit_error_rate))
                         return -1;
 
-        LOG_DBG("Format flow spec success");
         return 0;
 }
 
@@ -1928,9 +1919,7 @@ int rnl_format_ipcm_alloc_flow_req_msg(const struct name *      source,
         return 0;
 
  format_fail:
-        LOG_ERR("Could not format "
-                "rnl_ipcm_alloc_flow_req_msg "
-                "message correctly");
+        LOG_ERR("Could not format rnl_ipcm_alloc_flow_req_msg message");
         return -1;
 }
 EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_msg);
@@ -2016,8 +2005,6 @@ int rnl_format_ipcm_alloc_flow_req_result_msg(uint_t           result,
                                               port_id_t        pid,
                                               struct sk_buff * skb_out)
 {
-        LOG_DBG("Entring rnl_format_ipcm_alloc_flow_req_result_msg");
-
         if (!skb_out) {
                 LOG_ERR("Bogus input parameter(s), bailing out");
                 return -1;
@@ -2499,7 +2486,7 @@ static int send_nl_unicast_msg(struct net *     net,
         result = genlmsg_unicast(net, skb, portid);
         if (result) {
                 LOG_ERR("Could not send NL unicast msg of type %d "
-                        "with seq num %u to %u: %d",
+                        "with seq num %u to %u (result = %d)",
                         (int) type, seq_num, portid, result);
                 nlmsg_free(skb);
                 return -1;
@@ -2507,6 +2494,7 @@ static int send_nl_unicast_msg(struct net *     net,
 
         LOG_DBG("Sent NL unicast msg of type %d with seq num %u to %u",
                 (int) type, seq_num, portid);
+
         return 0;
 }
 
@@ -2546,17 +2534,21 @@ int rnl_assign_dif_response(ipc_process_id_t id,
                 nlmsg_free(out_msg);
                 return -1;
         }
-        result = genlmsg_end(out_msg, out_hdr);
 
+        result = genlmsg_end(out_msg, out_hdr);
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
 
-        return send_nl_unicast_msg(&init_net,
-                                   out_msg,
-                                   nl_port_id,
-                                   RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE,
-                                   seq_num);
+        LOG_DBG("Gonna send NL unicast message now");
+        result = send_nl_unicast_msg(&init_net,
+                                     out_msg,
+                                     nl_port_id,
+                                     RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE,
+                                     seq_num);
+        LOG_DBG("NL unicast message sent (result = %d)", result);
+
+        return result;
 }
 EXPORT_SYMBOL(rnl_assign_dif_response);
 
@@ -3095,7 +3087,7 @@ int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port)
         struct rina_msg_hdr * out_hdr;
         int                   result;
 
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE, GFP_ATOMIC);
         if (!out_msg) {
                 LOG_ERR("Could not allocate memory for message");
                 return -1;

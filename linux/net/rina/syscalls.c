@@ -61,29 +61,72 @@
 #define CALL_DEFAULT_PERSONALITY(RETVAL, HOOK, ARGS...)                 \
         CALL_PERSONALITY(RETVAL, default_personality, HOOK, ##ARGS)
 
-SYSCALL_DEFINE3(ipc_create,
-                const struct name __user *, name,
-                ipc_process_id_t,           id,
-                const char __user *,        type)
+#ifdef CONFIG_RINA_SYSCALLS_DEBUG
+#define SYSCALL_DUMP_ENTER LOG_DBG("Entered %s syscall body", __FUNCTION__)
+#define SYSCALL_DUMP_EXIT  LOG_DBG("Exiting %s syscall body", __FUNCTION__)
+#else
+#define SYSCALL_DUMP_ENTER do { } while (0)
+#define SYSCALL_DUMP_EXIT  do { } while (0)
+#endif
+
+SYSCALL_DEFINE6(ipc_create,
+                const char __user *, process_name,
+                const char __user *, process_instance,
+                const char __user *, entity_name,
+                const char __user *, entity_instance,
+                ipc_process_id_t,    id,
+                const char __user *, type)
 {
         long          retval;
 
         struct name * tn;
+        char *        tpn;
+        char *        tpi;
+        char *        ten;
+        char *        tei;
         char *        tt;
 
-        tn = name_dup_from_user(name);
-        if (!tn)
+        SYSCALL_DUMP_ENTER;
+
+        tn = name_create();
+        if (!tn) {
+                SYSCALL_DUMP_EXIT;
                 return -EFAULT;
-        tt = strdup_from_user(type);
-        if (!tt) {
+        }
+
+        /* FIXME: Fix this crappiness */
+        tpn = string_from_user(process_name);
+        tpi = string_from_user(process_instance);
+        ten = string_from_user(entity_name);
+        tei = string_from_user(entity_instance);
+        if (!name_init_with(tn, tpn, tpi, ten, tei)) {
+                SYSCALL_DUMP_EXIT;
                 name_destroy(tn);
                 return -EFAULT;
         }
+
+        /* Ownership taken, name_destroy() will be enough from now on */
+
+        tt = strdup_from_user(type);
+        if (!tt) {
+                SYSCALL_DUMP_EXIT;
+                name_destroy(tn);
+                return -EFAULT;
+        }
+
+        LOG_DBG("Parms:");
+        LOG_DBG("  Process name     = %s", tn->process_name);
+        LOG_DBG("  Process instance = %s", tn->process_instance);
+        LOG_DBG("  Entity name      = %s", tn->entity_name);
+        LOG_DBG("  Entity instance  = %s", tn->entity_instance);
+        LOG_DBG("  Type             = %s", tt);
 
         CALL_DEFAULT_PERSONALITY(retval, ipc_create, tn, id, tt);
 
         name_destroy(tn);
         rkfree(tt);
+
+        SYSCALL_DUMP_EXIT;
 
         return retval;
 }
@@ -93,7 +136,11 @@ SYSCALL_DEFINE1(ipc_destroy,
 {
         long retval;
 
+        SYSCALL_DUMP_ENTER;
+
         CALL_DEFAULT_PERSONALITY(retval, ipc_destroy, id);
+
+        SYSCALL_DUMP_EXIT;
 
         return retval;
 }
@@ -104,9 +151,10 @@ SYSCALL_DEFINE3(sdu_read,
                 size_t,        size)
 {
         ssize_t      retval;
-
         struct sdu * tmp;
         size_t       retsize;
+
+        SYSCALL_DUMP_ENTER;
 
         tmp = NULL;
 
@@ -115,14 +163,20 @@ SYSCALL_DEFINE3(sdu_read,
 
         LOG_DBG("Personality returned value %zd", retval);
 
-        if (retval)
+        if (retval) {
+                SYSCALL_DUMP_EXIT;
                 return -EFAULT;
+        }
 
-        if (!is_sdu_ok(tmp))
+        if (!is_sdu_ok(tmp)) {
+                SYSCALL_DUMP_EXIT;
                 return -EFAULT;
+        }
 
         /* NOTE: We don't handle partial copies */
         if (tmp->buffer->size > size) {
+                SYSCALL_DUMP_EXIT;
+
                 LOG_ERR("Partial copies not handled. SDU size: %zd, "
                         "User space buffer size: %zd",
                         tmp->buffer->size, size);
@@ -133,6 +187,8 @@ SYSCALL_DEFINE3(sdu_read,
         if (copy_to_user(buffer,
                          tmp->buffer->data,
                          tmp->buffer->size)) {
+                SYSCALL_DUMP_EXIT;
+
                 LOG_ERR("Error copying data to user-space");
                 sdu_destroy(tmp);
                 return -EFAULT;
@@ -140,6 +196,8 @@ SYSCALL_DEFINE3(sdu_read,
 
         retsize = tmp->buffer->size;
         sdu_destroy(tmp);
+
+        SYSCALL_DUMP_EXIT;
 
         return retsize;
 }
@@ -150,25 +208,31 @@ SYSCALL_DEFINE3(sdu_write,
                 size_t,              size)
 {
         ssize_t         retval;
-
         struct sdu *    sdu;
         struct buffer * tmp_buffer;
 
-        if (!buffer || !size)
+        SYSCALL_DUMP_ENTER;
+
+        if (!buffer || !size) {
+                SYSCALL_DUMP_EXIT;
                 return -EFAULT;
+        }
 
         LOG_DBG("Syscall write SDU of size %zd called with port-id %d",
                 size, id);
 
         tmp_buffer = buffer_create(size);
-        if (!tmp_buffer)
+        if (!tmp_buffer) {
+                SYSCALL_DUMP_EXIT;
                 return -EFAULT;
+        }
 
         ASSERT(is_buffer_ok(tmp_buffer));
         ASSERT(buffer_data(tmp_buffer));
 
         /* NOTE: We don't handle partial copies */
         if (copy_from_user(buffer_data(tmp_buffer), buffer, size)) {
+                SYSCALL_DUMP_EXIT;
                 buffer_destroy(tmp_buffer);
                 return -EFAULT;
         }
@@ -176,6 +240,7 @@ SYSCALL_DEFINE3(sdu_write,
         /* NOTE: sdu_create takes the ownership of the buffer */
         sdu = sdu_create_from_buffer(tmp_buffer);
         if (!sdu) {
+                SYSCALL_DUMP_EXIT;
                 buffer_destroy(tmp_buffer);
                 return -EFAULT;
         }
@@ -184,23 +249,33 @@ SYSCALL_DEFINE3(sdu_write,
         /* Passing ownership to the internal layers */
         CALL_DEFAULT_PERSONALITY(retval, sdu_write, id, sdu);
         if (retval) {
+                SYSCALL_DUMP_EXIT;
                 sdu_destroy(sdu);
                 return -EFAULT;
         }
+
+        SYSCALL_DUMP_EXIT;
 
         return size;
 }
 
 SYSCALL_DEFINE2(allocate_port,
                 ipc_process_id_t, id,
-                int,             to_app)
+                int,              to_app)
 {
         port_id_t retval;
 
-        if (!id)
-                return -EFAULT;
+        SYSCALL_DUMP_ENTER;
 
-        CALL_DEFAULT_PERSONALITY(retval, allocate_port, id, (to_app != 0) );
+        if (!id) {
+                SYSCALL_DUMP_EXIT;
+                return -EFAULT;
+        }
+
+        CALL_DEFAULT_PERSONALITY(retval, allocate_port, id,
+                                 (to_app != 0) ? true : false);
+
+        SYSCALL_DUMP_EXIT;
 
         return retval;
 }
@@ -210,7 +285,11 @@ SYSCALL_DEFINE1(deallocate_port,
 {
         int retval;
 
+        SYSCALL_DUMP_ENTER;
+
         CALL_DEFAULT_PERSONALITY(retval, deallocate_port, id);
+
+        SYSCALL_DUMP_EXIT;
 
         return retval;
 }

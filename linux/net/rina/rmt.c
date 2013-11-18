@@ -27,11 +27,13 @@
 #include "debug.h"
 #include "rmt.h"
 #include "pft.h"
+#include "efcp-utils.h"
 
 struct rmt {
-        struct pft *            pft; /* The PDU Forwarding Table */
-        struct kfa *            kfa;
-        struct efcp_container * efcpc;
+        struct pft *              pft; /* The PDU Forwarding Table */
+        struct kfa *              kfa;
+        struct efcp_container *   efcpc;
+        struct workqueue_struct * egress_wq;
         /* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
 };
 
@@ -56,6 +58,12 @@ struct rmt * rmt_create(struct kfa * kfa,
         tmp->kfa   = kfa;
         tmp->efcpc = efcpc;
 
+        tmp->egress_wq = rwq_create("rmt-egress-wq");
+        if (!tmp->egress_wq) {
+                LOG_ERR("Cannot create rmt egress workqueue");
+                rmt_destroy(tmp);
+                return NULL;
+        }
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
         return tmp;
@@ -71,6 +79,7 @@ int rmt_destroy(struct rmt * instance)
 
         ASSERT(instance->pft);
         pft_destroy(instance->pft);
+        if (instance->egress_wq) rwq_destroy(instance->egress_wq);
         rkfree(instance);
 
         LOG_DBG("Instance %pK finalized successfully", instance);
@@ -80,12 +89,114 @@ int rmt_destroy(struct rmt * instance)
 }
 EXPORT_SYMBOL(rmt_destroy);
 
+struct send_data {
+        struct rmt * rmt;
+        struct pdu * pdu;
+        address_t    address;
+        cep_id_t     connection_id;
+};
+
+bool is_send_data_complete(const struct send_data * data)
+{
+        bool ret;
+
+        ret = ((!data || !data->rmt || !data->pdu) ? false : true);
+
+        LOG_DBG("Send data complete? %d", ret);
+
+        return ret;
+}
+
+static int send_data_destroy(struct send_data * data)
+{
+        if (!data) {
+                LOG_ERR("No write data passed");
+                return -1;
+        }
+
+        rkfree(data);
+
+        return 0;
+}
+
+static struct send_data * send_data_create(struct rmt * rmt,
+                                           struct pdu * pdu,
+                                           address_t    address,
+                                           cep_id_t     connection_id)
+{
+        struct send_data * tmp;
+
+        tmp = rkmalloc(sizeof(*tmp), GFP_ATOMIC);
+        if (!tmp)
+                return NULL;
+
+        tmp->rmt           = rmt;
+        tmp->pdu           = pdu;
+        tmp->address       = address;
+        tmp->connection_id = connection_id;
+
+        return tmp;
+}
+
+static int rmt_send_worker(void * o)
+{
+        struct send_data * tmp;
+
+        tmp = (struct send_data *) o;
+        if (!tmp) {
+                LOG_ERR("No send data passed");
+                return -1;
+        }
+
+        if (!is_send_data_complete(tmp)) {
+                LOG_ERR("Wrong data passed to RMT_write_worker");
+                send_data_destroy(tmp);
+                return -1;
+        }
+
+        return 0;
+}
+
 int rmt_send(struct rmt * instance,
              address_t    address,
              cep_id_t     connection_id,
              struct pdu * pdu)
 {
+        struct send_data * tmp;
+        struct rwq_work_item * item;
+
         LOG_MISSING;
+
+        if (!instance) {
+                LOG_ERR("Bogus RMT passed");
+                return -1;
+        }
+        if (!pdu) {
+                LOG_ERR("Bogus PDU passed");
+                return -1;
+        }
+        if (!is_cep_id_ok(connection_id)) {
+                LOG_ERR("Bad cep id");
+                return -1;
+        }
+
+        tmp = send_data_create(instance, pdu, address, connection_id);
+        if (!is_send_data_complete(tmp))
+                return -1;
+
+        item = rwq_work_create(GFP_ATOMIC, rmt_send_worker, tmp);
+        if (!item) {
+                send_data_destroy(tmp);
+                return -1;
+        }
+
+        ASSERT(instance->egress_wq);
+
+        if (rwq_work_post(instance->egress_wq, item)) {
+                send_data_destroy(tmp);
+                pdu_destroy(pdu);
+                return -1;
+        }
 
         return 0;
 }

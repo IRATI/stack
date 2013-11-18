@@ -289,6 +289,8 @@ enum data_transfer_cons_attrs_list {
 enum dif_config_attrs_list {
         DCONF_ATTR_IPCP_CONFIG_ENTRIES = 1,
         DCONF_ATTR_DATA_TRANS_CONS,
+        DCONF_ATTR_ADDRESS,
+        DCONF_ATTR_QOS_CUBES,
         __DCONF_ATTR_MAX,
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
@@ -425,8 +427,9 @@ struct rnl_ipcm_disconn_neighbor_resp_msg_attrs {
         uint_t result;
 };
 
-/* FIXME: all the alloc flow structs are the same
- * we can use only a generic one */
+/*
+ * FIXME: all the alloc flow structs are the same we can use only a generic one
+ */
 struct rnl_ipcm_alloc_flow_req_msg_attrs {
         struct name      * source;
         struct name      * dest;

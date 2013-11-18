@@ -797,15 +797,16 @@ IPCProcess * IPCProcessFactory::create(
 #if STUB_API
 	//Do nothing
 #else
-	int result = syscallCreateIPCProcess(
-	                ipcProcessName, ipcProcessId, difType);
+	int result = syscallCreateIPCProcess(ipcProcessName,
+                                             ipcProcessId,
+                                             difType);
 	if (result != 0)
 	{
 	        unlock();
 	        throw CreateIPCProcessException();
 	}
 
-	if (difType.compare(NORMAL_IPC_PROCESS) == 0){
+	if (difType.compare(NORMAL_IPC_PROCESS) == 0) {
 		pid = fork();
 		if (pid == 0){
 			//This is the OS process that has to execute the IPC Process
@@ -1045,6 +1046,7 @@ void ApplicationManager::flowDeallocated(
 #else
 	AppDeallocateFlowResponseMessage responseMessage;
 	responseMessage.setApplicationName(event.getApplicationName());
+	responseMessage.setPortId(event.getPortId());
 	responseMessage.setResult(result);
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setResponseMessage(true);

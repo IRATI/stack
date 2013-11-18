@@ -198,6 +198,16 @@ void AppAllocateFlowRequestMessage::setSourceAppName(
 	this->sourceAppName = sourceAppName;
 }
 
+const ApplicationProcessNamingInformation&
+AppAllocateFlowRequestMessage::getDifName() const {
+        return difName;
+}
+
+void AppAllocateFlowRequestMessage::setDifName(
+                const ApplicationProcessNamingInformation& difName) {
+        this->difName = difName;
+}
+
 IPCEvent* AppAllocateFlowRequestMessage::toIPCEvent(){
 	FlowRequestEvent * event =
 			new FlowRequestEvent(
@@ -206,6 +216,7 @@ IPCEvent* AppAllocateFlowRequestMessage::toIPCEvent(){
 					this->sourceAppName,
 					this->destAppName,
 					this->getSequenceNumber());
+	event->setDIFName(difName);
 	return event;
 }
 
@@ -387,6 +398,7 @@ IPCEvent* AppDeallocateFlowRequestMessage::toIPCEvent(){
 /* CLASS APP DEALLOCATE FLOW RESPONSE MESSAGE */
 AppDeallocateFlowResponseMessage::AppDeallocateFlowResponseMessage() :
                 BaseNetlinkResponseMessage(RINA_C_APP_DEALLOCATE_FLOW_RESPONSE) {
+        portId = 0;
 }
 
 const ApplicationProcessNamingInformation&
@@ -399,9 +411,18 @@ void AppDeallocateFlowResponseMessage::setApplicationName(
 	this->applicationName = applicationName;
 }
 
+void AppDeallocateFlowResponseMessage::setPortId(int portId) {
+        this->portId = portId;
+}
+
+int AppDeallocateFlowResponseMessage::getPortId() const {
+        return portId;
+}
+
 IPCEvent* AppDeallocateFlowResponseMessage::toIPCEvent(){
         DeallocateFlowResponseEvent * event = new DeallocateFlowResponseEvent(
-                        applicationName, getResult(), getSequenceNumber());
+                        applicationName, portId, getResult(),
+                        getSequenceNumber());
         return event;
 }
 

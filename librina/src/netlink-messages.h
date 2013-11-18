@@ -1,28 +1,21 @@
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- */
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+//
 
-/*
- * netlink-messages.h
- *
- *  Created on: 12/06/2013
- *      Author: eduardgrasa
- */
-
-#ifndef NETLINK_MESSAGES_H
-#define NETLINK_MESSAGES_H
+#ifndef LIBRINA_NETLINK_MESSAGES_H
+#define LIBRINA_NETLINK_MESSAGES_H
 
 #include "librina-common.h"
 
@@ -184,6 +177,9 @@ class AppAllocateFlowRequestMessage: public BaseNetlinkMessage {
 	/** The characteristics of the flow */
 	FlowSpecification flowSpecification;
 
+	/** The DIF name where the flow is to be allocated, optional*/
+	ApplicationProcessNamingInformation difName;
+
 public:
 	AppAllocateFlowRequestMessage();
 	const ApplicationProcessNamingInformation& getDestAppName() const;
@@ -193,6 +189,8 @@ public:
 	const ApplicationProcessNamingInformation& getSourceAppName() const;
 	void setSourceAppName(
 			const ApplicationProcessNamingInformation& sourceAppName);
+        const ApplicationProcessNamingInformation& getDifName() const;
+        void setDifName(const ApplicationProcessNamingInformation& difName);
 	IPCEvent* toIPCEvent();
 };
 
@@ -325,11 +323,16 @@ class AppDeallocateFlowResponseMessage: public BaseNetlinkResponseMessage {
 	 */
 	ApplicationProcessNamingInformation applicationName;
 
+	/** the portid of the flow deallocated */
+	int portId;
+
 public:
 	AppDeallocateFlowResponseMessage();
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	void setApplicationName(
 			const ApplicationProcessNamingInformation& applicationName);
+	void setPortId(int portId);
+	int getPortId() const;
 	IPCEvent* toIPCEvent();
 };
 

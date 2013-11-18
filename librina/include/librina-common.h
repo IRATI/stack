@@ -278,8 +278,10 @@ public:
 	QoSCube(const std::string& name, int id);
 	bool operator==(const QoSCube &other) const;
 	bool operator!=(const QoSCube &other) const;
+	void setId(int id);
 	int getId() const;
 	const std::string& getName() const;
+	void setName(const std::string& name);
 	unsigned int getAverageBandwidth() const;
 	void setAverageBandwidth(unsigned int averageBandwidth);
 	unsigned int getAverageSduBandwidth() const;
@@ -837,6 +839,7 @@ public:
         void setQosIdLenght(unsigned short qosIdLenght);
         unsigned short getSequenceNumberLength() const;
         void setSequenceNumberLength(unsigned short sequenceNumberLength);
+        bool isInitialized();
 };
 
 /**
@@ -847,6 +850,9 @@ class DIFConfiguration {
 
         /** The DIF Data Transfer constants */
         DataTransferConstants dataTransferConstants;
+
+        /** The address of the IPC Process in the DIF */
+        unsigned int address;
 
 	/** The QoS cubes supported by the DIF */
 	std::list<QoSCube> qosCubes;
@@ -863,13 +869,15 @@ public:
 	void addPolicy(const Policy& policy);
 	const std::list<QoSCube>& getQosCubes() const;
 	void setQosCubes(const std::list<QoSCube>& qosCubes);
-	void adQoSCube(const QoSCube& qosCube);
+	void addQoSCube(const QoSCube& qosCube);
 	const std::list<Parameter>& getParameters() const;
 	void setParameters(const std::list<Parameter>& parameters);
 	void addParameter(const Parameter& parameter);
         const DataTransferConstants& getDataTransferConstants() const;
         void setDataTransferConstants(
                         const DataTransferConstants& dataTransferConstants);
+        unsigned int getAddress() const;
+        void setAddress(unsigned int address);
 };
 
 /**
@@ -908,7 +916,26 @@ class Neighbor {
          */
         ApplicationProcessNamingInformation supportingDifName;
 
+        /** The address */
+        unsigned int address;
+
+        /** Tells if it is enrolled or not */
+        bool enrolled;
+
+        /** The average RTT in ms */
+        unsigned int averageRTTInMs;
+
+        /** The underlying portId used to communicate with this neighbor */
+        int underlyingPortId;
+
+        /**
+         * The last time a KeepAlive message was received from
+         * that neighbor, in ms
+         */
+        unsigned int lastHeardFromTimeInMs;
+
 public:
+        Neighbor();
         bool operator==(const Neighbor &other) const;
         bool operator!=(const Neighbor &other) const;
         const ApplicationProcessNamingInformation& getName() const;
@@ -917,6 +944,16 @@ public:
                 getSupportingDifName() const;
         void setSupportingDifName(
                 const ApplicationProcessNamingInformation& supportingDifName);
+        unsigned int getAddress() const;
+        void setAddress(unsigned int address);
+        unsigned int getAverageRttInMs() const;
+        void setAverageRttInMs(unsigned int averageRttInMs);
+        bool isEnrolled() const;
+        void setEnrolled(bool enrolled);
+        unsigned int getLastHeardFromTimeInMs() const;
+        void setLastHeardFromTimeInMs(unsigned int lastHeardFromTimeInMs);
+        int getUnderlyingPortId() const;
+        void setUnderlyingPortId(int underlyingPortId);
 };
 
 /**

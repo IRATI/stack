@@ -5,9 +5,7 @@ import java.util.List;
 
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
-import rina.encoding.api.BaseEncoder;
 import rina.encoding.api.Encoder;
-import rina.ipcprocess.api.IPCProcess;
 
 /**
  * The base RIB Handler that provides a default behaviour for the RIB Handlers. 
@@ -22,41 +20,39 @@ import rina.ipcprocess.api.IPCProcess;
  *
  */
 public abstract class BaseRIBObject implements RIBObject{
-	
-	private IPCProcess ipcProcess = null;
+
 	private Encoder encoder = null;
 	private RIBDaemon ribDaemon = null;
-	
+
 	/**
 	 * The attributes of this object: objectName, objectClass, objectInstance, objectValue
 	 */
 	private String objectName = null;
 	private String objectClass = null;
 	private long objectInstance = 0;
-	
+
 	/**
-     * The list of children of this object in the RIB
-     */
-    private List<RIBObject> children = null;
-    
-    /**
-     * The parent object of this object in the RIB
-     */
-    private RIBObject parent = null;
-    
-    /**
-     * The permissions associated to this RIB node
-     */
-    private Permissions permissions = null;
-	
-	public BaseRIBObject(IPCProcess ipcProcess, String objectClass, long objectInstance, String objectName){
+	 * The list of children of this object in the RIB
+	 */
+	private List<RIBObject> children = null;
+
+	/**
+	 * The parent object of this object in the RIB
+	 */
+	private RIBObject parent = null;
+
+	/**
+	 * The permissions associated to this RIB node
+	 */
+	private Permissions permissions = null;
+
+	public BaseRIBObject(String objectClass, long objectInstance, String objectName){
 		children = new ArrayList<RIBObject>();
-		this.ipcProcess = ipcProcess;
 		this.objectName = objectName;
 		this.objectClass = objectClass;
 		this.objectInstance = objectInstance;
 	}
-	
+
 	public Permissions getPermissions() {
 		return permissions;
 	}
@@ -68,121 +64,117 @@ public abstract class BaseRIBObject implements RIBObject{
 	public String getObjectName(){
 		return this.objectName;
 	}
-	
+
 	public String getObjectClass(){
 		return this.objectClass;
 	}
-	
+
 	public long getObjectInstance(){
 		return this.objectInstance;
 	}
-	
-	public IPCProcess getIPCProcess(){
-		return this.ipcProcess;
-	}
-	
+
 	public RIBObject getParent(){
 		return this.parent;
 	}
-	
+
 	public void setParent(RIBObject parent){
 		this.parent = parent;
 	}
-	
+
 	public abstract Object getObjectValue();
-	
+
 	/**
-    * Return the children of RIBObject. The RIB is represented by a single
-    * root RIBObject whose children are represented by a List<RIBObject>. Each of
-    * these RIBObject elements in the List can have children. The getChildren()
-    * method will return the children of a RIBObject.
-    * @return the children of RIBObject
-    */
-   public List<RIBObject> getChildren() {
-       return this.children;
-   }
+	 * Return the children of RIBObject. The RIB is represented by a single
+	 * root RIBObject whose children are represented by a List<RIBObject>. Each of
+	 * these RIBObject elements in the List can have children. The getChildren()
+	 * method will return the children of a RIBObject.
+	 * @return the children of RIBObject
+	 */
+	public List<RIBObject> getChildren() {
+		return this.children;
+	}
 
-   /**
-    * Sets the children of a RIBObject object. See docs for getChildren() for
-    * more information.
-    * @param children the List<RIBObject> to set.
-    */
-   public void setChildren(List<RIBObject> children) {
-       this.children = children;
-   }
+	/**
+	 * Sets the children of a RIBObject object. See docs for getChildren() for
+	 * more information.
+	 * @param children the List<RIBObject> to set.
+	 */
+	public void setChildren(List<RIBObject> children) {
+		this.children = children;
+	}
 
-   /**
-    * Returns the number of immediate children of this RIBNode.
-    * @return the number of immediate children.
-    */
-   public int getNumberOfChildren() {
-       return children.size();
-   }
-    
-   /**
-    * Adds a child to the list of children for this RIBObject. The addition of
-    * the first child will create a new List<RIBObject>.
-    * @param child a RIB object to set.
-    */
-   public void addChild(RIBObject child) throws RIBDaemonException{
-	   for(int i=0; i<children.size(); i++){
-		if (children.get(i).getObjectName().equals(child.getObjectName())){
-			throw new RIBDaemonException(RIBDaemonException.OBJECT_ALREADY_HAS_THIS_CHILD);
+	/**
+	 * Returns the number of immediate children of this RIBNode.
+	 * @return the number of immediate children.
+	 */
+	public int getNumberOfChildren() {
+		return children.size();
+	}
+
+	/**
+	 * Adds a child to the list of children for this RIBObject. The addition of
+	 * the first child will create a new List<RIBObject>.
+	 * @param child a RIB object to set.
+	 */
+	public void addChild(RIBObject child) throws RIBDaemonException{
+		for(int i=0; i<children.size(); i++){
+			if (children.get(i).getObjectName().equals(child.getObjectName())){
+				throw new RIBDaemonException(RIBDaemonException.OBJECT_ALREADY_HAS_THIS_CHILD);
+			}
 		}
-	   }
-	   
-       children.add(child);
-       child.setParent(this);
-   }
-   
-   public void removeChild(String objectName) throws RIBDaemonException{
-	   RIBObject child = null;
-	   
-	   for(int i= 0; i<children.size(); i++){
-		   child = children.get(i);
-		   if (child.getObjectName().equals(objectName)){
-			   children.remove(child);
-			   child.setParent(null);
-			   return;
-		   }
-	   }
-	   
-	   throw new RIBDaemonException(RIBDaemonException.CHILD_NOT_FOUND);
-   }
-   
-   public boolean hasChild(String objectName){
-	   for(int i=0; i<children.size(); i++){
-		   if (children.get(i).getObjectName().equals(objectName)){
-			   return true;
-		   }
-	   }
 
-	   return false;
-   }
+		children.add(child);
+		child.setParent(this);
+	}
 
-   public RIBObject getChild(String objectName){
-	   for(int i=0; i<children.size(); i++){
-		   if (children.get(i).getObjectName().equals(objectName)){
-			   return children.get(i);
-		   }
-	   }
+	public void removeChild(String objectName) throws RIBDaemonException{
+		RIBObject child = null;
 
-	   return null;
-   }
+		for(int i= 0; i<children.size(); i++){
+			child = children.get(i);
+			if (child.getObjectName().equals(objectName)){
+				children.remove(child);
+				child.setParent(null);
+				return;
+			}
+		}
+
+		throw new RIBDaemonException(RIBDaemonException.CHILD_NOT_FOUND);
+	}
+
+	public boolean hasChild(String objectName){
+		for(int i=0; i<children.size(); i++){
+			if (children.get(i).getObjectName().equals(objectName)){
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	public RIBObject getChild(String objectName){
+		for(int i=0; i<children.size(); i++){
+			if (children.get(i).getObjectName().equals(objectName)){
+				return children.get(i);
+			}
+		}
+
+		return null;
+	}
+
+	public void setEncoder(Encoder encoder) {
+		this.encoder = encoder;
+	}
+
+	public void setRIBDaemon(RIBDaemon ribDaemon) {
+		this.ribDaemon = ribDaemon;
+	}
 
 	public Encoder getEncoder(){
-		if (this.encoder == null){
-			this.encoder = (Encoder) ipcProcess.getIPCProcessComponent(BaseEncoder.getComponentName());
-		}
-		
 		return this.encoder;
 	}
-	
+
 	public RIBDaemon getRIBDaemon(){
-		if (this.ribDaemon == null){
-			this.ribDaemon = (RIBDaemon) ipcProcess.getIPCProcessComponent(BaseRIBDaemon.getComponentName());
-		}
-		
 		return this.ribDaemon;
 	}
 
@@ -221,7 +213,7 @@ public abstract class BaseRIBObject implements RIBObject{
 
 	public void write(CDAPMessage cdapMessage, CDAPSessionDescriptor cdapSessionDescriptor) throws RIBDaemonException {
 	}
-	
+
 	public void create(CDAPMessage cdapMessage, CDAPSessionDescriptor cdapSessionDescriptor) throws RIBDaemonException {
 	}
 

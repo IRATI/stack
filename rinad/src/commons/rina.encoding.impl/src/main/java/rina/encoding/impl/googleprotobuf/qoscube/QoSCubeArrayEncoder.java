@@ -2,13 +2,14 @@ package rina.encoding.impl.googleprotobuf.qoscube;
 
 import java.util.List;
 
-import rina.encoding.api.BaseEncoder;
+import eu.irati.librina.QoSCube;
+
+import rina.encoding.api.Encoder;
 import rina.encoding.impl.googleprotobuf.qoscube.QoSCubeArrayMessage;
 import rina.encoding.impl.googleprotobuf.qoscube.QoSCubeArrayMessage.qosCubes_t.Builder;
 import rina.encoding.impl.googleprotobuf.qoscube.QoSCubeMessage.qosCube_t;
-import rina.flowallocator.api.QoSCube;
 
-public class QoSCubeArrayEncoder extends BaseEncoder{
+public class QoSCubeArrayEncoder implements Encoder{
 
 	public synchronized Object decode(byte[] encodedObject, Class<?> objectClass) throws Exception{
 		if (objectClass == null || !(objectClass.equals(QoSCube[].class))){

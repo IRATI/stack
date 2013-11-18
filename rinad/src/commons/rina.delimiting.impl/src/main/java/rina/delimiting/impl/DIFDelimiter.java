@@ -3,14 +3,14 @@ package rina.delimiting.impl;
 import java.util.ArrayList;
 import java.util.List;
 
-import rina.delimiting.api.BaseDelimiter;
+import rina.delimiting.api.Delimiter;
 
 /**
  * Assumes SDUs will have less than 2^32 -1 bytes (the length of the sdu length section will be 4 bytes as maximum)
  * @author eduardgrasa
  *
  */
-public class DIFDelimiter extends BaseDelimiter {
+public class DIFDelimiter implements Delimiter {
 	
 	/** Utility buffer used in some operations **/
 	byte[] buffer = new byte[5];

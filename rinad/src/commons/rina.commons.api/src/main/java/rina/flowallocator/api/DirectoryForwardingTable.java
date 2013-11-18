@@ -1,7 +1,6 @@
 package rina.flowallocator.api;
 
-import rina.applicationprocess.api.ApplicationProcessNamingInfo;
-import rina.ipcservice.api.APService;
+import eu.irati.librina.ApplicationProcessNamingInformation;
 import rina.ribdaemon.api.RIBObjectNames;
 
 /**
@@ -25,12 +24,5 @@ public interface DirectoryForwardingTable {
 	 * @param apNamingInfo
 	 * @return
 	 */
-	public long getAddress(ApplicationProcessNamingInfo apNamingInfo);
-	
-	/**
-	 * Returns the callback to the application registered with this application process naming information
-	 * @param applicationProcessNamingInfo
-	 * @return
-	 */
-	public APService getLocalApplicationCallback(ApplicationProcessNamingInfo applicationProcessNamingInfo);
+	public long getAddress(ApplicationProcessNamingInformation apNamingInfo);
 }

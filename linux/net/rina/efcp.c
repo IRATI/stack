@@ -34,9 +34,10 @@
 #include "rmt.h"
 
 struct efcp {
-        struct connection * connection;
-        struct dtp *        dtp;
-        struct dtcp *       dtcp;
+        struct connection *       connection;
+        struct dtp *              dtp;
+        struct dtcp *             dtcp;
+        struct efcp_container *   efcpc;
 };
 
 static struct efcp * efcp_create(void)
@@ -82,6 +83,7 @@ struct efcp_container {
         struct data_transfer_constants  dt_cons;
         struct rmt *                    rmt;
         struct kfa *                    kfa;
+        struct workqueue_struct *       egress_wq;
 };
 
 struct efcp_container * efcp_container_create(struct kfa * kfa)
@@ -108,6 +110,13 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
                 return NULL;
         }
 
+        container->egress_wq = rwq_create("efcpc-egress-wq");
+        if (!container->egress_wq) {
+                LOG_ERR("Cannot create efcpc egress workqueue");
+                efcp_container_destroy(container);
+                return NULL;
+        }
+
         container->kfa = kfa;
 
         return container;
@@ -124,6 +133,8 @@ int efcp_container_destroy(struct efcp_container * container)
         if (container->instances) efcp_imap_destroy(container->instances,
                                                     efcp_destroy);
         if (container->cidm)      cidm_destroy(container->cidm);
+
+        if (container->egress_wq) rwq_destroy(container->egress_wq);
 
         rkfree(container);
 
@@ -154,6 +165,109 @@ int efcp_container_set_dt_cons(struct data_transfer_constants * dt_cons,
         return 0;
 }
 EXPORT_SYMBOL(efcp_container_set_dt_cons);
+
+struct write_data {
+        struct efcp * efcp;
+        struct sdu *  sdu;
+};
+
+bool is_write_data_complete(const struct write_data * data)
+{
+        bool ret;
+
+        ret = ((!data || !data->efcp || !data->sdu) ? false : true);
+
+        LOG_DBG("Write data complete? %d", ret);
+
+        return ret;
+}
+
+static int write_data_destroy(struct write_data * data)
+{
+        if (!data) {
+                LOG_ERR("No write data passed");
+                return -1;
+        }
+
+        rkfree(data);
+
+        return 0;
+}
+
+static struct write_data * write_data_create(struct efcp * efcp,
+                                             struct sdu *  sdu)
+{
+        struct write_data * tmp;
+
+        tmp = rkmalloc(sizeof(*tmp), GFP_ATOMIC);
+        if (!tmp)
+                return NULL;
+
+        tmp->efcp = efcp;
+        tmp->sdu  = sdu;
+
+        return tmp;
+}
+
+static int efcp_write_worker(void * o)
+{
+        struct write_data * tmp;
+
+        tmp = (struct write_data *) o;
+        if (!tmp) {
+                LOG_ERR("No write data passed");
+                return -1;
+        }
+
+        if (!is_write_data_complete(tmp)) {
+                LOG_ERR("Wrong data passed to efcp_write_worker");
+                write_data_destroy(tmp);
+                return -1;
+        }
+
+        if (dtp_write(tmp->efcp->dtp, tmp->sdu)) {
+                LOG_ERR("Could not send SDU to DTP");
+                return -1;
+        }
+
+        return 0;
+}
+
+int efcp_write(struct efcp * efcp,
+               struct sdu *  sdu)
+{
+        struct write_data * tmp;
+        struct rwq_work_item * item;
+
+        if (!efcp) {
+                LOG_ERR("Bogus EFCP passed");
+                return -1;
+        }
+        if (!sdu) {
+                LOG_ERR("Bogus SDU passed");
+                return -1;
+        }
+
+        tmp = write_data_create(efcp, sdu);
+        if (!is_write_data_complete(tmp))
+                return -1;
+
+        item = rwq_work_create(GFP_ATOMIC, efcp_write_worker, tmp);
+        if (!item) {
+                write_data_destroy(tmp);
+                return -1;
+        }
+
+        ASSERT(efcp->efcpc->egress_wq);
+
+        if (rwq_work_post(efcp->efcpc->egress_wq, item)) {
+                write_data_destroy(tmp);
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        return 0;
+}
 
 int efcp_container_write(struct efcp_container * container,
                          cep_id_t                cep_id,
@@ -243,6 +357,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         cep_id = cidm_allocate(container->cidm);
 
         /* We must ensure that the DTP is instantiated, at least ... */
+        tmp->efcpc = container;
         connection->source_cep_id = cep_id;
         tmp->connection = connection;
         tmp->dtp        = dtp_create(container->rmt,
@@ -261,11 +376,11 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
          *      efcp_destroy(tmp);
          *      return -1;
          *  }
+         *
+         * No needs to check here, bindings are straightforward
+         * dtp_bind(tmp->dtp,   tmp->dtcp);
+         * dtcp_bind(tmp->dtcp, tmp->dtp);
          */
-
-        /* No needs to check here, bindings are straightforward */
-        dtp_bind(tmp->dtp,   tmp->dtcp);
-        /* dtcp_bind(tmp->dtcp, tmp->dtp); */
 
         if (efcp_imap_add(container->instances,
                           connection->source_cep_id,
@@ -368,23 +483,19 @@ struct efcp * efcp_find(struct efcp_container * container,
         return efcp_imap_find(container->instances, id);
 }
 
-int efcp_write(struct efcp * instance,
-               struct sdu *  sdu)
+int efcp_bind_rmt(struct efcp_container * container,
+                  struct rmt *            rmt)
 {
-        if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
+        if (!container) {
+                LOG_ERR("Bogus EFCP container passed");
                 return -1;
         }
-
-        if (!is_sdu_ok(sdu)) {
-                LOG_ERR("Bogus SDU passed");
+        if (!rmt) {
+                LOG_ERR("Bogus RMT instance passed");
                 return -1;
         }
+        container->rmt = rmt;
 
-        if (!instance->dtp) {
-                LOG_ERR("No DTP instance available, cannot send");
-                return -1;
-        }
-
-        return dtp_write(instance->dtp, sdu);
+        return 0;
 }
+EXPORT_SYMBOL(efcp_bind_rmt);
