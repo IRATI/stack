@@ -365,6 +365,8 @@ struct name * string_toname_gfp(gfp_t            flags,
                 return NULL;
         }
 
+        if (tmp1) rkfree(tmp1);
+
         return name;
 }
 EXPORT_SYMBOL(string_toname_gfp);
