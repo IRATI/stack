@@ -62,8 +62,8 @@ int          rmt_send(struct rmt * instance,
  * NOTES: Used by the KFA, sends SDU to the RMT.
  *        Takes the ownership of the passed SDU
  */
-int          rmt_sdu_post(struct rmt * instance,
-                          struct sdu * sdu,
-                          port_id_t    from);
+int          rmt_sdu_receive(struct rmt * instance,
+                             struct sdu * sdu,
+                             port_id_t    from);
 
 #endif

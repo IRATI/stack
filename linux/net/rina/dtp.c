@@ -224,7 +224,7 @@ int dtp_write(struct dtp * instance,
                 return -1;
         }
 
-        /* FIXME : This is ugly as hell (tm), must be removed asap */
+        /* FIXME : This is ugly as hell (c), must be removed asap */
         pdu->pci = pci;
         pci->ceps.dest_id   = instance->state_vector->
                         connection->destination_cep_id;
