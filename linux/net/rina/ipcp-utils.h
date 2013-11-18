@@ -49,19 +49,25 @@ struct name * name_create_gfp(gfp_t flags);
  *
  * It is allowed to call name_init() over an already initialized object
  */
-struct name * name_init(struct name *    dst,
-                        const string_t * process_name,
-                        const string_t * process_instance,
-                        const string_t * entity_name,
-                        const string_t * entity_instance);
+struct name * name_init_from(struct name *    dst,
+                             const string_t * process_name,
+                             const string_t * process_instance,
+                             const string_t * entity_name,
+                             const string_t * entity_instance);
 
-struct name * name_init_gfp(gfp_t            flags,
-                            struct name *    dst,
-                            const string_t * process_name,
-                            const string_t * process_instance,
-                            const string_t * entity_name,
-                            const string_t * entity_instance);
+struct name * name_init_from_gfp(gfp_t            flags,
+                                 struct name *    dst,
+                                 const string_t * process_name,
+                                 const string_t * process_instance,
+                                 const string_t * entity_name,
+                                 const string_t * entity_instance);
 
+/* Takes ownership of the passed parameters */
+struct name * name_init_with(struct name * dst,
+                             string_t *    process_name,
+                             string_t *    process_instance,
+                             string_t *    entity_name,
+                             string_t *    entity_instance);
 
 /*
  * Finalize a name object, releasing all the embedded resources (without
@@ -98,6 +104,7 @@ char *        name_tostring_gfp(gfp_t               flags,
                                 const struct name * n);
 
 /* Inverse of name_tostring() */
+string_t *    string_from_user(const char __user * src);
 struct name * string_toname(const string_t * s);
 struct name * string_toname_gfp(gfp_t            flags,
                                 const string_t * s);

@@ -74,6 +74,10 @@ static int string_dup_gfp(gfp_t            flags,
         return 0;
 }
 
+string_t * string_from_user(const char __user * src)
+{ return strdup_from_user(src); }
+EXPORT_SYMBOL(string_from_user);
+
 static int string_dup(const string_t * src, string_t ** dst)
 { return string_dup_gfp(GFP_KERNEL, src, dst); }
 
@@ -107,12 +111,35 @@ static bool name_is_initialized(struct name * dst)
 }
 #endif
 
-struct name * name_init_gfp(gfp_t            flags,
-                            struct name *    dst,
-                            const string_t * process_name,
-                            const string_t * process_instance,
-                            const string_t * entity_name,
-                            const string_t * entity_instance)
+struct name * name_init_with(struct name * dst,
+                             string_t *    process_name,
+                             string_t *    process_instance,
+                             string_t *    entity_name,
+                             string_t *    entity_instance)
+{
+        if (!dst)
+                return NULL;
+
+        /* Clean up the destination, leftovers might be there ... */
+        name_fini(dst);
+
+        ASSERT(name_is_initialized(dst));
+
+        dst->process_name     = process_name;
+        dst->process_instance = process_instance;
+        dst->entity_name      = entity_name;
+        dst->entity_instance  = entity_instance;
+
+        return dst;
+}
+EXPORT_SYMBOL(name_init_with);
+
+struct name * name_init_from_gfp(gfp_t            flags,
+                                 struct name *    dst,
+                                 const string_t * process_name,
+                                 const string_t * process_instance,
+                                 const string_t * entity_name,
+                                 const string_t * entity_instance)
 {
         if (!dst)
                 return NULL;
@@ -133,22 +160,22 @@ struct name * name_init_gfp(gfp_t            flags,
 
         return dst;
 }
-EXPORT_SYMBOL(name_init_gfp);
+EXPORT_SYMBOL(name_init_from_gfp);
 
-struct name * name_init(struct name *    dst,
-                        const string_t * process_name,
-                        const string_t * process_instance,
-                        const string_t * entity_name,
-                        const string_t * entity_instance)
+struct name * name_init_from(struct name *    dst,
+                             const string_t * process_name,
+                             const string_t * process_instance,
+                             const string_t * entity_name,
+                             const string_t * entity_instance)
 {
-        return name_init_gfp(GFP_KERNEL,
-                             dst,
-                             process_name,
-                             process_instance,
-                             entity_name,
-                             entity_instance);
+        return name_init_from_gfp(GFP_KERNEL,
+                                  dst,
+                                  process_name,
+                                  process_instance,
+                                  entity_name,
+                                  entity_instance);
 }
-EXPORT_SYMBOL(name_init);
+EXPORT_SYMBOL(name_init_from);
 
 void name_fini(struct name * n)
 {
@@ -359,7 +386,7 @@ struct name * string_toname_gfp(gfp_t            flags,
                 return NULL;
         }
 
-        if (!name_init_gfp(flags, name, tmp_pn, tmp_pi, tmp_en, tmp_ei)) {
+        if (!name_init_from_gfp(flags, name, tmp_pn, tmp_pi, tmp_en, tmp_ei)) {
                 name_destroy(name);
                 if (tmp1) rkfree(tmp1);
                 return NULL;
