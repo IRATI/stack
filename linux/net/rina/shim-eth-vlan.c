@@ -885,6 +885,9 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         flow->dest_pa = gpa_dup_gfp(GFP_ATOMIC, gpaddr);
                         sname = string_toname_gfp(GFP_ATOMIC,
                                                   gpa_address_value(gpaddr));
+
+                        /* FIXME: Check the return values */
+
                         LOG_DBG("Got the address from ARP");
                 } else {
                         sname = name_create_gfp(GFP_ATOMIC);
@@ -895,6 +898,9 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                                 return -1;
                         }
                         flow->dest_pa = name_to_gpa(sname);
+
+                        /* FIXME: Check the return values */
+
                         LOG_DBG("Flow request from unkown app received");
                 }
 
