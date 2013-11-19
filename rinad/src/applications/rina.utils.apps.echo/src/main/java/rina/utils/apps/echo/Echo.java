@@ -12,13 +12,12 @@ public class Echo{
 	private EchoServer echoServer = null;
 	private EchoClient echoClient = null;
 	
-	public Echo(boolean server, String apName, String apInstance, int numberOfSDUs, int sduSize){
-		ApplicationProcessNamingInformation echoApNamingInfo = 
-				new ApplicationProcessNamingInformation(apName, apInstance);
+	public Echo(boolean server, ApplicationProcessNamingInformation serverNamingInfo, 
+			ApplicationProcessNamingInformation clientNamingInfo, int numberOfSDUs, int sduSize){
 		if (server){
-			echoServer = new EchoServer(echoApNamingInfo);
+			echoServer = new EchoServer(serverNamingInfo);
 		}else{
-			echoClient = new EchoClient(numberOfSDUs, sduSize, echoApNamingInfo);
+			echoClient = new EchoClient(numberOfSDUs, sduSize, serverNamingInfo, clientNamingInfo);
 		}
 	}
 	
