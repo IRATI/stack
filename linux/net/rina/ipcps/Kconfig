@@ -1,0 +1,40 @@
+#
+# RINA IPCPs configuration
+#
+# Written by Francesco Salvestrini <f.salvestrini@nextworks.it>
+#
+
+config RINA_NORMAL_IPCP
+	tristate "Normal IPC Process"
+	default y
+        depends on RINA_PERSONALITY_DEFAULT
+	help
+	  No help for the time being
+
+config RINA_SHIM_DUMMY
+	tristate "Dummy Shim IPC"
+	default m
+        depends on RINA_PERSONALITY_DEFAULT && RINA_DEBUG
+	help
+	  No help for the time being
+
+config RINA_SHIM_ETH_VLAN
+	tristate "Shim IPC over Ethernet (using VLANs) support"
+	default m
+        depends on RINA_PERSONALITY_DEFAULT && RINARP && VLAN_8021Q
+	help
+	  No help for the time being
+
+config RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
+	bool "Perform regression testing upon loading"
+	default n
+        depends on RINA_SHIM_ETH_VLAN
+	help
+	  No help for the time being
+
+config RINA_SHIM_TCP_UDP
+	tristate "Shim IPC over TCP/UDP support"
+	default m
+        depends on RINA_PERSONALITY_DEFAULT
+	help
+	  No help for the time being

@@ -3,6 +3,8 @@ package rina.enrollment.api;
 import java.util.List;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.DIFInformation;
+import eu.irati.librina.EnrollToDIFRequestEvent;
 import eu.irati.librina.Neighbor;
 
 import rina.cdap.api.CDAPSessionDescriptor;
@@ -52,11 +54,19 @@ public interface EnrollmentTask {
 	public void releaseResponse(CDAPMessage cdapMessage, CDAPSessionDescriptor cdapSessionDescriptor);
 	
 	/**
+	 * Process a request to initiate enrollment with a new Neighbor, triggered by the IPC Manager
+	 * @param event
+	 * @param flowInformation
+	 */
+	public void processEnrollmentRequestEvent(
+			EnrollToDIFRequestEvent event, DIFInformation difInformation);
+	
+	/**
 	 * Starts the enrollment program
 	 * @param cdapMessage
 	 * @param cdapSessionDescriptor
 	 */
-	public void initiateEnrollment(Neighbor candidate);
+	public void initiateEnrollment(EnrollmentRequest request);
 	
 	 /**
 	 * Called by the enrollment state machine when the enrollment request has been completed, 

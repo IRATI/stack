@@ -1029,7 +1029,7 @@ unsigned int ApplicationManager::flowRequestArrived(
 	try{
 	        rinaManager->sendMessage(&message);
 	}catch(NetlinkException &e){
-	        throw NotifyFlowDeallocatedException(e.what());
+	        throw AppFlowArrivedException(e.what());
 	}
 
 	return message.getSequenceNumber();
@@ -1226,14 +1226,22 @@ bool NeighborsModifiedNotificationEvent::isAdded() const {
 
 /* CLASS IPC PROCESS DAEMON INITIALIZED EVENT */
 IPCProcessDaemonInitializedEvent::IPCProcessDaemonInitializedEvent(
-                unsigned short ipcProcessId, unsigned int sequenceNumber):
+                unsigned short ipcProcessId,
+                const ApplicationProcessNamingInformation&  name,
+                unsigned int sequenceNumber):
                         IPCEvent(IPC_PROCESS_DAEMON_INITIALIZED_EVENT,
                                         sequenceNumber) {
         this->ipcProcessId = ipcProcessId;
+        this->name = name;
 }
 
 unsigned short IPCProcessDaemonInitializedEvent::getIPCProcessId() const {
         return ipcProcessId;
+}
+
+const ApplicationProcessNamingInformation&
+IPCProcessDaemonInitializedEvent::getName() const {
+        return name;
 }
 
 /* CLASS TIMER EXPIRED EVENT */

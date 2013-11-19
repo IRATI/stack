@@ -1017,8 +1017,15 @@ public:
  * the NL infrastructure and is ready to receive messages.
  */
 class IpcmIPCProcessInitializedMessage: public BaseNetlinkMessage {
+        /** The IPC Process name */
+        ApplicationProcessNamingInformation name;
+
 public:
         IpcmIPCProcessInitializedMessage();
+        IpcmIPCProcessInitializedMessage(
+                const ApplicationProcessNamingInformation& name);
+        void setName(const ApplicationProcessNamingInformation& name);
+        const ApplicationProcessNamingInformation& getName() const;
         IPCEvent* toIPCEvent();
 };
 

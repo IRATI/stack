@@ -18,8 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef ARP_826_UTILS_H
-#define ARP_826_UTILS_H
+#ifndef ARP826_UTILS_H
+#define ARP826_UTILS_H
 
 /*
  * Generic Protocol Address - GPA

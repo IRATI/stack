@@ -40,11 +40,11 @@
 #include "kipcm.h"
 #include "debug.h"
 #include "utils.h"
+#include "du.h"
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
-#include "rinarp.h"
-#include "arp826-utils.h"
-#include "du.h"
+#include "rinarp/rinarp.h"
+#include "rinarp/arp826-utils.h"
 
 /* FIXME: To be solved properly */
 static struct workqueue_struct * rcv_wq;

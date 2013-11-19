@@ -8,6 +8,7 @@ import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.AssignToDIFResponseEvent;
 import eu.irati.librina.CreateIPCProcessException;
 import eu.irati.librina.DIFConfiguration;
+import eu.irati.librina.EnrollToDIFResponseEvent;
 import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowRequestEvent;
@@ -337,6 +338,9 @@ public class IPCManager {
 		} else if (event.getType().equals(IPCEventType.IPC_PROCESS_DAEMON_INITIALIZED_EVENT)) {
 			IPCProcessDaemonInitializedEvent ipcEvent = (IPCProcessDaemonInitializedEvent) event;
 			ipcProcessManager.setInitialized(ipcEvent.getIPCProcessId());
+		} else if (event.getType().equals(IPCEventType.ENROLL_TO_DIF_RESPONSE_EVENT)) {
+			EnrollToDIFResponseEvent ipcEvent = (EnrollToDIFResponseEvent) event;
+			ipcProcessManager.enrollToDIFResponse(ipcEvent);
 		}
 	}
 	
@@ -426,5 +430,23 @@ public class IPCManager {
 	public long requestUnregistrationFromNMinusOneDIF(long ipcProcessID, 
 			String difName) throws Exception{
 		return ipcProcessManager.requestUnregistrationFromNMinusOneDIF(ipcProcessID, difName);
+	}
+	
+	/**
+	 * Requests the enrollment of the IPC Process identified by ipcProcessID to a DIF 
+	 * through a neighbor using a supportingDIF. The IPC Process may or may not be 
+	 * already a member of the DIF.
+	 * @param ipcProcessId
+	 * @param difName
+	 * @param supportingDifName
+	 * @param neighApName
+	 * @param neighApInstance
+	 * @return
+	 * @throws Exception
+	 */
+	public long requestEnrollmentToDIF(long ipcProcessId, String difName, 
+			String supportingDifName, String neighApName, String neighApInstance) throws Exception {
+		return ipcProcessManager.requestEnrollmentToDIF(ipcProcessId, difName, 
+				supportingDifName, neighApName, neighApInstance);
 	}
 }
