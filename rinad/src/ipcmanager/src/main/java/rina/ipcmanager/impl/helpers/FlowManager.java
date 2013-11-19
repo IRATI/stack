@@ -9,6 +9,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import rina.configuration.RINAConfiguration;
+
 import eu.irati.librina.AllocateFlowResponseEvent;
 import eu.irati.librina.ApplicationManagerSingleton;
 import eu.irati.librina.ApplicationProcessNamingInformation;
@@ -47,9 +49,14 @@ public class FlowManager {
 		IPCProcess ipcProcess = null;
 		String difName = null;
 		
-		if (event.getDIFName() != null && event.getDIFName().getProcessName() != null && 
-				!event.getDIFName().getProcessName().equals("")) {
-			difName = event.getDIFName().getProcessName();
+		difName = RINAConfiguration.getInstance().getDIFNameAssociatedToApName(
+				event.getLocalApplicationName());
+		
+		if (difName == null) {
+			if (event.getDIFName() != null && event.getDIFName().getProcessName() != null && 
+					!event.getDIFName().getProcessName().equals("")) {
+				difName = event.getDIFName().getProcessName();
+			}
 		}
 		
 		try{
