@@ -29,7 +29,6 @@ rina_personality_default-y +=			\
 endif
 
 obj-$(CONFIG_RINARP)             += rinarp/
-
 obj-$(CONFIG_RINA_NORMAL_IPCP)   += normal-ipcp.o
 obj-$(CONFIG_RINA_SHIM_DUMMY)    += shim-dummy.o
 obj-$(CONFIG_RINA_SHIM_ETH_VLAN) += shim-eth-vlan.o
