@@ -39,8 +39,8 @@ int     is_value_in_range(int value, int min_value, int max_value);
 /* Syscalls */
 char *  strdup_from_user(const char __user * src);
 
-#include "rmem.h"
-#include "rwq.h"
-#include "rmap.h"
+#include "rds/rmem.h"
+#include "rds/rwq.h"
+#include "rds/rmap.h"
 
 #endif

@@ -19,10 +19,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef ARP_826_H
-#define ARP_826_H
+#ifndef ARP826_H
+#define ARP826_H
 
-#include "arp826-utils.h"
+#include "rinarp/arp826-utils.h"
 
 /* FIXME: This API should get the htype also ... */
 
