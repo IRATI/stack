@@ -18,6 +18,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/export.h>
 #include <linux/module.h>
 
 #define RINA_PREFIX "personality-default"

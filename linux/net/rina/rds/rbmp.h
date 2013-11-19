@@ -1,5 +1,5 @@
 /*
- * Utilities
+ * RINA Bitmaps
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,26 +18,17 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_UTILS_H
-#define RINA_UTILS_H
+#ifndef RINA_RBMP_H
+#define RINA_RBMP_H
 
-#include <linux/kobject.h>
-#define RINA_ATTR_RO(NAME)                              \
-        static struct kobj_attribute NAME##_attr =      \
-                __ATTR_RO(NAME)
+struct rbmp;
 
-#define RINA_ATTR_RW(NAME)                                      \
-        static struct kobj_attribute NAME##_attr =              \
-                __ATTR(NAME, 0644, NAME##show, NAME##store)
+struct rbmp * rbmp_create(size_t bits, ssize_t offset);
+int           rbmp_destroy(struct rbmp * b);
 
-int     is_value_in_range(int value, int min_value, int max_value);
-
-/* Syscalls */
-char *  strdup_from_user(const char __user * src);
-
-#include "rds/rmem.h"
-#include "rds/rwq.h"
-#include "rds/rmap.h"
-#include "rds/rbmp.h"
+ssize_t       rbmp_allocate(struct rbmp * instance);
+int           rbmp_release(struct rbmp * instance,
+                           ssize_t       id);
+bool          rbmp_is_id_ok(struct rbmp * b, ssize_t id);
 
 #endif

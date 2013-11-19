@@ -27,4 +27,8 @@ void * rkmalloc(size_t size, gfp_t flags);
 void * rkzalloc(size_t size, gfp_t flags);
 void   rkfree(void * ptr);
 
+#include <linux/string.h>
+
+#define bzero(DEST, LEN) do { (void) memset(DEST, 0, LEN); } while (0)
+
 #endif
