@@ -21,7 +21,6 @@
 
 /* FIXME: This is another workaround we would like to avoid ... */
 #include "../net/netlink/af_netlink.h"
-#include <linux/rwlock.h>
 
 #define RINA_PREFIX "rnl-workarounds"
 
@@ -49,4 +48,3 @@ void set_netlink_non_root_send_flag(void)
 
         LOG_DBG("NL_CFG_F_NONROOT_SEND flag set");
 }
-EXPORT_SYMBOL(set_netlink_non_root_send_flag);

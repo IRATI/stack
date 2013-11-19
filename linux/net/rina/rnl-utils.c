@@ -19,9 +19,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/export.h>
 #include <net/netlink.h>
 #include <net/genetlink.h>
-#include <linux/export.h>
 
 #define RINA_PREFIX "rnl-utils"
 

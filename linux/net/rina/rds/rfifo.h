@@ -1,5 +1,5 @@
 /*
- * Common utilities
+ * RINA FIFOs
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,29 +18,17 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/export.h>
+#ifndef RINA_RFIFO_H
+#define RINA_RFIFO_H
 
-#define RINA_PREFIX "common"
+struct rfifo;
 
-#include "logs.h"
-#include "common.h"
+struct rfifo * rfifo_create(void);
+int            rfifo_destroy(struct rfifo * q,
+                             void         (* dtor)(void * e));
 
-#define PORT_ID_WRONG -1
+int            rfifo_add(struct rfifo * q, void * e);
+void *         rfifo_remove(struct rfifo * q);
+bool           rfifo_is_empty(struct rfifo * q);
 
-port_id_t port_id_bad(void)
-{ return PORT_ID_WRONG; }
-EXPORT_SYMBOL(port_id_bad);
-
-int is_port_id_ok(port_id_t id)
-{ return id >= 0 ? 1 : 0; }
-EXPORT_SYMBOL(is_port_id_ok);
-
-#define CEP_ID_WRONG -1
-
-int is_cep_id_ok(cep_id_t id)
-{ return 1; /* FIXME: Bummer, add it */ }
-EXPORT_SYMBOL(is_cep_id_ok);
-
-cep_id_t cep_id_bad(void)
-{ return CEP_ID_WRONG; }
-EXPORT_SYMBOL(cep_id_bad);
+#endif

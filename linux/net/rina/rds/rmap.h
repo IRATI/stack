@@ -40,7 +40,9 @@ struct rmap;
 
 struct rmap *       rmap_create(void);
 struct rmap *       rmap_create_gfp(gfp_t flags);
-int                 rmap_destroy(struct rmap * map);
+int                 rmap_destroy(struct rmap * map,
+                                 void       (* dtor)(struct rmap_entry * e));
+
 /* FIXME: rmap_is_empty has to take a const parameter */
 bool                rmap_is_empty(struct rmap * map);
 int                 rmap_insert(struct rmap *       map,

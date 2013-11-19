@@ -21,6 +21,7 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/export.h>
 #include <linux/kobject.h>
 #include <linux/export.h>
 #include <linux/kfifo.h>

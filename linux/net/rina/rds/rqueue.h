@@ -21,4 +21,16 @@
 #ifndef RINA_RQUEUE_H
 #define RINA_RQUEUE_H
 
+struct rqueue;
+
+struct rqueue * rqueue_create(void);
+int             rqueue_destroy(struct rqueue * q,
+                               void         (* dtor)(void * e));
+
+int             rqueue_tail_push(struct rqueue * q, void * e);
+void *          rqueue_tail_pop(struct rqueue * q);
+int             rqueue_head_push(struct rqueue * q, void * e);
+void *          rqueue_head_pop(struct rqueue * q);
+bool            rqueue_is_empty(struct rqueue * q);
+
 #endif

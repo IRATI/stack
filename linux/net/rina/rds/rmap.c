@@ -65,19 +65,27 @@ struct rmap * rmap_create(void)
 { return rmap_create_gfp(GFP_KERNEL); }
 EXPORT_SYMBOL(rmap_create);
 
-int rmap_destroy(struct rmap * map)
+int rmap_destroy(struct rmap * map,
+                 void       (* dtor)(struct rmap_entry * e))
 {
+        struct hlist_head * tmp;
+        struct rmap_entry * entry;
+        int                 bucket;
+
         if (!map) {
                 LOG_ERR("Cannot destroy a NULL map");
                 return -1;
         }
 
-        if (!hash_empty(map->table)) {
-                LOG_ERR("Map %pK is not empty and I won't destroy it. "
-                        "You would be loosing memory ...", map);
+        if (!dtor) {
+                LOG_ERR("No destructor passed, cannod destroy map %pK", map);
                 return -1;
         }
 
+        hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
+                LOG_DBG("Calling dtor for entry %pK", entry);
+                dtor(entry);
+        }
         rkfree(map);
 
         LOG_DBG("Map %pK destroyed successfully", map);
@@ -120,7 +128,7 @@ EXPORT_SYMBOL(rmap_insert);
 struct rmap_entry * rmap_find(const struct rmap * map,
                               uint16_t            key)
 {
-        struct rmap_entry * entry;
+        struct rmap_entry *       entry;
         const struct hlist_head * head;
 
         if (!map) {
