@@ -38,5 +38,6 @@ char *  strdup_from_user(const char __user * src);
 #include "rds/rmem.h"
 #include "rds/rwq.h"
 #include "rds/rmap.h"
+#include "rds/rbmp.h"
 
 #endif

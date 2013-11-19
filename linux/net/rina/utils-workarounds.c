@@ -26,14 +26,14 @@
  *   In kernel 3.9.2, there's no EXPORT_SYMBOL for kset_find_object so this
  *   is a copy and paste from lib/kobject.c. Please fix that ASAP
  */
-static struct kobject *kobject_get_unless_zero(struct kobject *kobj)
+static struct kobject * kobject_get_unless_zero(struct kobject *kobj)
 {
         if (!kref_get_unless_zero(&kobj->kref))
                 kobj = NULL;
         return kobj;
 }
 
-struct kobject *kset_find_obj(struct kset *kset, const char *name)
+struct kobject * kset_find_obj(struct kset *kset, const char *name)
 {
         struct kobject *k;
         struct kobject *ret = NULL;
