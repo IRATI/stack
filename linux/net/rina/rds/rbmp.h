@@ -23,11 +23,12 @@
 
 struct rbmp;
 
-struct rbmp * rbmp_create(int offset);
+struct rbmp * rbmp_create(size_t bits, ssize_t offset);
 int           rbmp_destroy(struct rbmp * b);
 
-int           rbmp_allocate(struct rbmp * instance);
+ssize_t       rbmp_allocate(struct rbmp * instance);
 int           rbmp_release(struct rbmp * instance,
-                           int           id);
+                           ssize_t       id);
+bool          rbmp_is_id_ok(struct rbmp * b, ssize_t id);
 
 #endif

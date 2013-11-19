@@ -19,29 +19,113 @@
  */
 
 #include <linux/export.h>
+#include <linux/bitmap.h>
 
 #define RINA_PREFIX "rbmp"
 
 #include "logs.h"
 #include "debug.h"
+#include "rmem.h"
+
+#define BITS_IN_BITMAP ((2 << BITS_PER_BYTE) * sizeof(size_t))
 
 struct rbmp {
-        int empty;
+        ssize_t offset;
+        size_t  size;
+
+        DECLARE_BITMAP(bitmap, BITS_IN_BITMAP);
 };
 
-struct rbmp * rbmp_create(int offset)
-{ return NULL; }
+struct rbmp * rbmp_create(size_t bits, ssize_t offset)
+{
+        struct rbmp * tmp;
+
+        if (bits == 0)
+                return NULL;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->size   = bits;
+        tmp->offset = offset;
+        bitmap_zero(tmp->bitmap, BITS_IN_BITMAP);
+
+        return NULL;
+}
 EXPORT_SYMBOL(rbmp_create);
 
 int rbmp_destroy(struct rbmp * b)
-{ return -1; }
+{
+        if (!b)
+                return -1;
+
+        rkfree(b);
+
+        return 0;
+}
 EXPORT_SYMBOL(rbmp_destroy);
 
-int rbmp_allocate(struct rbmp * b)
-{ return -1; }
+static ssize_t bad_id(struct rbmp * b)
+{
+        ASSERT(b);
+
+        return b->offset - 1;
+}
+
+ssize_t rbmp_allocate(struct rbmp * b)
+{
+        ssize_t id;
+
+        if (!b)
+                return bad_id(b);
+
+        id = (ssize_t) bitmap_find_next_zero_area(b->bitmap,
+                                                  BITS_IN_BITMAP,
+                                                  0, 1, 0);
+        if (id < 0)
+                return bad_id(b);
+
+        bitmap_set(b->bitmap, id, 1);
+
+        return id + b->offset;
+}
 EXPORT_SYMBOL(rbmp_allocate);
 
+static bool is_id_ok(struct rbmp * b, ssize_t id)
+{
+        ASSERT(b);
+
+        if ((id < b->offset) || (id > (b->offset + b->size)))
+                return false;
+
+        return true;
+}
+ 
+bool rbmp_is_id_ok(struct rbmp * b, ssize_t id)
+{
+        if (!b)
+                return false;
+
+        return is_id_ok(b, id);
+}
+EXPORT_SYMBOL(rbmp_is_id_ok);
+
 int rbmp_release(struct rbmp * b,
-                 int           id)
-{ return -1; }
+                 size_t        id)
+{
+        ssize_t rid;
+
+        if (!b)
+                return -1;
+
+        if (!is_id_ok(b, id))
+                return -1;
+
+        rid = id - b->offset;
+
+        bitmap_clear(b->bitmap, id, 1);
+
+        return 0;
+}
 EXPORT_SYMBOL(rbmp_release);
