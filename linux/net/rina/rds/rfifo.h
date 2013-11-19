@@ -1,5 +1,5 @@
 /*
- * RINA Memory
+ * RINA FIFOs
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,13 +18,17 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_RMEM_H
-#define RINA_RMEM_H
+#ifndef RINA_RFIFO_H
+#define RINA_RFIFO_H
 
-#include <linux/slab.h>
+struct rfifo;
 
-void * rkmalloc(size_t size, gfp_t flags);
-void * rkzalloc(size_t size, gfp_t flags);
-void   rkfree(void * ptr);
+struct rfifo * rfifo_create(void);
+int            rfifo_destroy(struct rfifo * q,
+                             void         (* dtor)(void * e));
+
+int            rfifo_add(struct rfifo * q, void * e);
+void *         rfifo_remove(struct rfifo * q);
+bool           rfifo_is_empty(struct rfifo * q);
 
 #endif

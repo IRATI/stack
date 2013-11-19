@@ -26,7 +26,6 @@
 #define RINA_PREFIX "rmem"
 
 #include "logs.h"
-#include "utils.h"
 #include "debug.h"
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING

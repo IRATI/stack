@@ -1,5 +1,5 @@
 /*
- * An ARP RFC-826 (wonnabe) compliant implementation
+ * RINA Memory
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,19 +18,17 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef ARP_826_ARM_H
-#define ARP_826_ARM_H
+#ifndef RINA_RMEM_H
+#define RINA_RMEM_H
 
-#include "arp826-utils.h"
+#include <linux/slab.h>
 
-int arm_init(void);
-int arm_fini(void);
+void * rkmalloc(size_t size, gfp_t flags);
+void * rkzalloc(size_t size, gfp_t flags);
+void   rkfree(void * ptr);
 
-/* Marks a resolution, takes the ownership of all the passed data */
-int arm_resolve(uint16_t     ptype,
-                struct gpa * spa,
-                struct gha * sha,
-                struct gpa * tpa,
-                struct gha * tha);
+#include <linux/string.h>
+
+#define bzero(DEST, LEN) do { (void) memset(DEST, 0, LEN); } while (0)
 
 #endif

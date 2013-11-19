@@ -30,17 +30,16 @@
         static struct kobj_attribute NAME##_attr =              \
                 __ATTR(NAME, 0644, NAME##show, NAME##store)
 
-#include <linux/string.h>
-
-#define bzero(DEST, LEN) do { (void) memset(DEST, 0, LEN); } while (0)
-
 int     is_value_in_range(int value, int min_value, int max_value);
 
 /* Syscalls */
 char *  strdup_from_user(const char __user * src);
 
-#include "rmem.h"
-#include "rwq.h"
-#include "rmap.h"
+#include "rds/rmem.h"
+#include "rds/rmap.h"
+#include "rds/rwq.h"
+#include "rds/rbmp.h"
+#include "rds/rqueue.h"
+#include "rds/rfifo.h"
 
 #endif
