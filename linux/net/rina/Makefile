@@ -2,6 +2,8 @@
 # Makefile for the Linux RINA layer
 #
 
+ccflags-y := -I./
+
 obj-$(CONFIG_RINA) +=				\
 	utils.o debug.o				\
 	rds/rwq.o rds/rmem.o rds/rmap.o		\
@@ -26,15 +28,7 @@ rina_personality_default-y +=			\
 	 utils-workarounds.o
 endif
 
-obj-$(CONFIG_RINARP) += rinarp.o
-
-obj-$(CONFIG_ARP826) += arp826.o
-arp826-y             :=				\
-	arp826-tables.o				\
-	arp826-rxtx.o				\
-	arp826-arm.o				\
-	arp826-utils.o				\
-	arp826-core.o
+obj-$(CONFIG_RINARP)             += rinarp/
 
 obj-$(CONFIG_RINA_NORMAL_IPCP)   += normal-ipcp.o
 obj-$(CONFIG_RINA_SHIM_DUMMY)    += shim-dummy.o
