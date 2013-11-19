@@ -239,16 +239,35 @@ int dtp_write(struct dtp * instance,
         pci->qos_id = instance->state_vector->connection->qos_id;
         pdu->buffer = sdu->buffer;
         /* Give the data to RMT now ! */
-        return rmt_send(instance->rmt, pci->destination, pci->ceps.dest_id, pdu);
+        return rmt_send(instance->rmt,
+                        pci->destination,
+                        pci->ceps.dest_id,
+                        pdu);
 }
 
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
 {
+        struct sdu * sdu;
         LOG_MISSING;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+
+        if (!pdu) {
+                LOG_ERR("Bogus data, bailing out");
+                return -1;
+        }
+
+
+        sdu = (struct sdu *) pdu->buffer;
+        if (kfa_sdu_post(instance->kfa,
+                         instance->state_vector->connection->port_id,
+                         (struct sdu *) pdu)) {
+                LOG_ERR("Could not post SDU into KFA");
+                pdu_destroy(pdu);
                 return -1;
         }
 
