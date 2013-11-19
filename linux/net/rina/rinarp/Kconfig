@@ -1,3 +1,9 @@
+#
+# RINA ARP configuration
+#
+# Written by Francesco Salvestrini <f.salvestrini@nextworks.it>
+#
+
 config RINARP
 	tristate "RINA ARP implementation"
 	default m
