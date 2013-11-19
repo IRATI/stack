@@ -19,33 +19,88 @@
  */
 
 #include <linux/export.h>
+#include <linux/list.h>
 
 #define RINA_PREFIX "rqueue"
 
 #include "logs.h"
 #include "debug.h"
+#include "rmem.h"
 
-struct rqueue {
-        int empty;
+struct rqueue_entry {
+        struct list_head next;
+        void *           data;
 };
 
-int rqueue_create(void)
-{ return -1; }
+struct rqueue {
+        struct list_head head;
+};
+
+struct rqueue * rqueue_create(void)
+{
+        struct rqueue * tmp;
+
+        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        INIT_LIST_HEAD(&tmp->head);
+
+        return tmp;
+}
 EXPORT_SYMBOL(rqueue_create);
 
-int rqueue_destroy(struct rqueue * q)
-{ return -1; }
+int rqueue_destroy(struct rqueue * q,
+                   void         (* dtor)(void * e))
+{
+        struct rqueue_entry * pos, * nxt;
+
+        if (!q)
+                return -1;
+        if (!dtor)
+                return -1;
+
+        list_for_each_entry_safe(pos, nxt, &q->head, next) {
+                list_del(&pos->next);
+                dtor(pos->data);
+                rkfree(pos);
+        }
+        rkfree(q);
+
+        return 0;
+}
 EXPORT_SYMBOL(rqueue_destroy);
 
 int rqueue_enqueue(struct rqueue * q, void * e)
-{ return -1; }
+{
+        struct rqueue_entry * tmp;
+
+        if (!q)
+                return -1;
+        if (!e)
+                return -1;
+
+        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return -1;
+
+        tmp->data = e;
+        INIT_LIST_HEAD(&tmp->next);
+        list_add(&q->head, &tmp->next);
+
+        return 0;
+}
 EXPORT_SYMBOL(rqueue_enqueue);
 
 void * rqueue_dequeue(struct rqueue * q)
-{ return NULL; }
+{
+        if (!q)
+                return NULL;
+
+        return NULL;
+}
 EXPORT_SYMBOL(rqueue_dequeue);
 
 bool rqueue_is_empty(struct rqueue * q)
 { return true; }
 EXPORT_SYMBOL(rqueue_is_empty);
-
