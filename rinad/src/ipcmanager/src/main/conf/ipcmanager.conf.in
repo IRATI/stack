@@ -12,10 +12,10 @@
     "lengthOfFlowQueues" : 10
   },
   "applicationToDIFMappings" : [ {
-    "encodedAppName" : "rina.utils.apps.echo-1--",
+    "encodedAppName" : "rina.utils.apps.echo.server-1--",
     "difName" : "loopback.DIF" 
   }, {
-    "encodedAppName" : "rina.utils.apps.echoclient-1--",
+    "encodedAppName" : "rina.utils.apps.echo.client-1--",
     "difName" : "loopback.DIF" 
   }, {
     "encodedAppName" : "rina.utils.apps.echo-2--",
