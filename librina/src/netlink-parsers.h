@@ -780,6 +780,20 @@ enum IpcmNLSocketClosedNotificationMessageAttributes {
 IpcmNLSocketClosedNotificationMessage *
 	parseIpcmNLSocketClosedNotificationMessage(nlmsghdr *hdr);
 
+/* AppDeallocateFlowRequestMessage CLASS*/
+enum IpcmIPCProcessInitializedMessageAttributes {
+        IIPM_ATTR_NAME = 1,
+        __IIPM_ATTR_MAX,
+};
+
+#define IIPM_ATTR_MAX (__IIPM_ATTR_MAX -1)
+
+int putIpcmIPCProcessInitializedMessageObject(nl_msg* netlinkMessage,
+                const IpcmIPCProcessInitializedMessage& object);
+
+IpcmIPCProcessInitializedMessage * parseIpcmIPCProcessInitializedMessage(
+                nlmsghdr *hdr);
+
 }
 
 

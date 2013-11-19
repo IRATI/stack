@@ -1,5 +1,5 @@
 /*
- * RINA Data Structures
+ * RINA Maps
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -23,16 +23,12 @@
 #include <linux/list.h>
 #include <linux/kernel.h>
 
-#define RINA_PREFIX "rds"
+#define RINA_PREFIX "rmap"
 
 #include "logs.h"
 #include "debug.h"
 #include "utils.h"
-#include "rds.h"
-
-/*
- * Maps
- */
+#include "rmap.h"
 
 #define RMAP_HASH_BITS 7
 
@@ -62,9 +58,11 @@ struct rmap * rmap_create_gfp(gfp_t flags)
 
         return tmp;
 }
+EXPORT_SYMBOL(rmap_create_gfp);
 
 struct rmap * rmap_create(void)
 { return rmap_create_gfp(GFP_KERNEL); }
+EXPORT_SYMBOL(rmap_create);
 
 int rmap_destroy(struct rmap * map)
 {
@@ -85,6 +83,7 @@ int rmap_destroy(struct rmap * map)
 
         return 0;
 }
+EXPORT_SYMBOL(rmap_destroy);
 
 bool rmap_is_empty(struct rmap * map)
 {
@@ -95,6 +94,7 @@ bool rmap_is_empty(struct rmap * map)
 
         return hash_empty(map->table) ? true : false;
 }
+EXPORT_SYMBOL(rmap_is_empty);
 
 int rmap_insert(struct rmap *       map,
                 uint16_t            key,
@@ -114,6 +114,7 @@ int rmap_insert(struct rmap *       map,
 
         return 0;
 }
+EXPORT_SYMBOL(rmap_insert);
 
 struct rmap_entry * rmap_find(const struct rmap * map,
                               uint16_t            key)
@@ -134,6 +135,7 @@ struct rmap_entry * rmap_find(const struct rmap * map,
 
         return NULL;
 }
+EXPORT_SYMBOL(rmap_find);
 
 int rmap_remove(struct rmap *       map,
                 struct rmap_entry * entry)
@@ -151,6 +153,7 @@ int rmap_remove(struct rmap *       map,
 
         return 0;
 }
+EXPORT_SYMBOL(rmap_remove);
 
 void rmap_for_each(struct rmap * map,
                    int        (* f)(struct rmap_entry * entry))
@@ -171,6 +174,7 @@ void rmap_for_each(struct rmap * map,
         hash_for_each_safe(map->table, bucket, tmp, entry, hlist)
                 f(entry);
 }
+EXPORT_SYMBOL(rmap_for_each);
 
 int rmap_entry_update(struct rmap_entry * entry,
                       void *              value)
@@ -184,6 +188,7 @@ int rmap_entry_update(struct rmap_entry * entry,
 
         return 0;
 }
+EXPORT_SYMBOL(rmap_entry_update);
 
 struct rmap_entry * rmap_entry_create_gfp(gfp_t    flags,
                                           uint16_t key,
@@ -203,6 +208,7 @@ struct rmap_entry * rmap_entry_create_gfp(gfp_t    flags,
 
         return tmp;
 }
+EXPORT_SYMBOL(rmap_entry_create_gfp);
 
 struct rmap_entry * rmap_entry_create(uint16_t key,
                                       void *   value)
@@ -217,6 +223,7 @@ void * rmap_entry_value(const struct rmap_entry * entry)
 
         return entry->value;
 }
+EXPORT_SYMBOL(rmap_entry_create);
 
 int rmap_entry_destroy(struct rmap_entry * entry)
 {
@@ -229,3 +236,4 @@ int rmap_entry_destroy(struct rmap_entry * entry)
 
         return 0;
 }
+EXPORT_SYMBOL(rmap_entry_destroy);

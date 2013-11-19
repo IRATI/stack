@@ -59,6 +59,7 @@ import eu.irati.librina.AssignToDIFResponseEvent;
 import eu.irati.librina.DIFInformation;
 import eu.irati.librina.DataTransferConstants;
 import eu.irati.librina.DeallocateFlowResponseEvent;
+import eu.irati.librina.EnrollToDIFRequestEvent;
 import eu.irati.librina.ExtendedIPCManagerSingleton;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowInformation;
@@ -172,7 +173,7 @@ public class IPCProcess {
 
 		log.info("Notifying IPC Manager about successful initialization... ");
 		try {
-			ipcManager.notifyIPCProcessInitialized();
+			ipcManager.notifyIPCProcessInitialized(name);
 		} catch (Exception ex) {
 			log.error("Problems notifying IPC Manager about successful initialization: " + ex.getMessage());
 			log.error("Shutting down IPC Process");
@@ -343,6 +344,9 @@ public class IPCProcess {
 		} else if (event.getType() == IPCEventType.FLOW_DEALLOCATED_EVENT) {
 			FlowDeallocatedEvent flowEvent = (FlowDeallocatedEvent) event;
 			resourceAllocator.getNMinus1FlowManager().flowDeallocatedRemotely(flowEvent);
+		} else if (event.getType() == IPCEventType.ENROLL_TO_DIF_REQUEST_EVENT) {
+			EnrollToDIFRequestEvent enrEvent = (EnrollToDIFRequestEvent) event;
+			enrollmentTask.processEnrollmentRequestEvent(enrEvent, difInformation);
 		}
 	}
 	

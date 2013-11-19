@@ -34,36 +34,13 @@
 
 #define bzero(DEST, LEN) do { (void) memset(DEST, 0, LEN); } while (0)
 
-int    is_value_in_range(int value, int min_value, int max_value);
-
-/* Memory */
-#include <linux/slab.h>
-
-void * rkmalloc(size_t size, gfp_t flags);
-void * rkzalloc(size_t size, gfp_t flags);
-void   rkfree(void * ptr);
+int     is_value_in_range(int value, int min_value, int max_value);
 
 /* Syscalls */
-char * strdup_from_user(const char __user * src);
+char *  strdup_from_user(const char __user * src);
 
-/* Workqueues */
-#include <linux/workqueue.h>
-
-struct workqueue_struct * rwq_create(const char * name);
-int                       rwq_destroy(struct workqueue_struct * rwq);
-
-/*
- * NOTE: The worker is the owner of the data passed (and must dispose it). It
- *       must return 0 if its work completed successfully.
- */
-struct rwq_work_item * rwq_work_create(gfp_t     flags,
-                                       int    (* worker)(void * data),
-                                       void *    data);
-/*
- * NOTE: This function will dispose the rwq_work_item on failure. The item
- *       will be disposed automatically upon work completion.
- */
-int                    rwq_work_post(struct workqueue_struct * rwq,
-                                     struct rwq_work_item *    item);
+#include "rmem.h"
+#include "rwq.h"
+#include "rmap.h"
 
 #endif

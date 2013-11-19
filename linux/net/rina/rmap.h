@@ -1,5 +1,5 @@
 /*
- * RINA Data Structures
+ * RINA Maps
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,8 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_RDS_H
-#define RINA_RDS_H
+#ifndef RINA_RMAP_H
+#define RINA_RMAP_H
 
 /* Map entries */
 struct rmap_entry;

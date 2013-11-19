@@ -278,10 +278,13 @@ public:
 	/**
 	 * Notify the IPC Manager about the successful initialization of the
 	 * IPC Process Daemon. Now it is ready to receive messages.
+	 * @param name the name of the IPC Process
 	 * @throws IPCException if the process is already initialized or
 	 * an error occurs
 	 */
-	void notifyIPCProcessInitialized() throw (IPCException);
+	void notifyIPCProcessInitialized(
+	                const ApplicationProcessNamingInformation& name)
+	throw (IPCException);
 
 	/**
 	 * True if the IPC Process has been successfully initialized, false

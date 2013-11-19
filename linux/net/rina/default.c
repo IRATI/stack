@@ -134,14 +134,19 @@ static int default_fini(struct personality_data * data)
 
         LOG_DBG("Finalizing default personality");
 
+        LOG_DBG("Finalizing kipcm");
         if (tmp->kipcm) {
                 err = kipcm_destroy(tmp->kipcm);
                 if (err) return err;
         }
+
+        LOG_DBG("Finalizing nlset");
         if (tmp->nlset) {
                 err = rnl_set_destroy(tmp->nlset);
                 if (err) return err;
         }
+
+        LOG_DBG("Finalizing kfa");
         if (tmp->kfa) {
                 err = kfa_destroy(tmp->kfa);
                 if (err) return err;

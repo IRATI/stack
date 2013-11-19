@@ -1,5 +1,5 @@
 /*
- * Common utilities
+ * RINA Memory
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,29 +18,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/module.h>
+#ifndef RINA_RMEM_H
+#define RINA_RMEM_H
 
-#define RINA_PREFIX "common"
+#include <linux/slab.h>
 
-#include "logs.h"
-#include "common.h"
+void * rkmalloc(size_t size, gfp_t flags);
+void * rkzalloc(size_t size, gfp_t flags);
+void   rkfree(void * ptr);
 
-#define PORT_ID_WRONG -1
-
-port_id_t port_id_bad(void)
-{ return PORT_ID_WRONG; }
-EXPORT_SYMBOL(port_id_bad);
-
-int is_port_id_ok(port_id_t id)
-{ return id >= 0 ? 1 : 0; }
-EXPORT_SYMBOL(is_port_id_ok);
-
-#define CEP_ID_WRONG -1
-
-int is_cep_id_ok(cep_id_t id)
-{ return 1; /* FIXME: Bummer, add it */ }
-EXPORT_SYMBOL(is_cep_id_ok);
-
-cep_id_t cep_id_bad(void)
-{ return CEP_ID_WRONG; }
-EXPORT_SYMBOL(cep_id_bad);
+#endif

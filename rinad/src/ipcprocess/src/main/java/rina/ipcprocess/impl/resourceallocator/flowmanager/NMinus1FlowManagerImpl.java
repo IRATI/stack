@@ -150,6 +150,7 @@ public class NMinus1FlowManagerImpl implements NMinus1FlowManager{
 		}else{
 			log.error("Allocation of N-1 flow denied. Error code "+event.getPortId());
 			FlowInformation flowInformation = ipcManager.withdrawPendingFlow(event.getSequenceNumber());
+			flowInformation.setPortId(event.getPortId());
 			
 			//Notify about the event
 			NMinusOneFlowAllocationFailedEvent failedEvent = new NMinusOneFlowAllocationFailedEvent(
@@ -169,13 +170,11 @@ public class NMinus1FlowManagerImpl implements NMinus1FlowManager{
 			
 			//TODO deal with the different AEs (Management vs. Data transfer), right now assuming the flow
 			//is both used for data transfer and management purposes
-			if (event.getLocalApplicationName().getEntityInstance().equals(IPCProcess.MANAGEMENT_AE)) {
-				if (ipcManager.getFlowToRemoteApp(event.getRemoteApplicationName()) != null) {
-					log.info("Rejecting flow to the MANAGEMENT AE since we already have a" + 
+			if (ipcManager.getFlowToRemoteApp(event.getRemoteApplicationName()) != null) {
+					log.info("Rejecting flow since we already have a" + 
 							" flow to the remote application: " + event.getRemoteApplicationName());
 					ipcManager.allocateFlowResponse(event, -1, true);
 					return;
-				}
 			}
 			
 			Flow flow = ipcManager.allocateFlowResponse(event, 0, true);

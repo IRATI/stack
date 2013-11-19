@@ -74,6 +74,10 @@ static int string_dup_gfp(gfp_t            flags,
         return 0;
 }
 
+string_t * string_from_user(const char __user * src)
+{ return strdup_from_user(src); }
+EXPORT_SYMBOL(string_from_user);
+
 static int string_dup(const string_t * src, string_t ** dst)
 { return string_dup_gfp(GFP_KERNEL, src, dst); }
 
@@ -86,7 +90,7 @@ static int string_len(const string_t * s)
 
 /* FIXME: This thing is bogus and has to be fixed properly */
 #ifdef CONFIG_RINA_DEBUG
-static int name_is_initialized(struct name * dst)
+static bool name_is_initialized(struct name * dst)
 {
         ASSERT(dst);
 
@@ -94,24 +98,48 @@ static int name_is_initialized(struct name * dst)
             !dst->process_instance &&
             !dst->entity_name      &&
             !dst->entity_instance)
-                return 1;
-        return 0;
+                return true;
+
+        return false;
 }
 #else
-static int name_is_initialized(struct name * dst)
+static bool name_is_initialized(struct name * dst)
 {
         ASSERT(dst);
 
-        return 0;
+        return true;
 }
 #endif
 
-struct name * name_init_gfp(gfp_t            flags,
-                            struct name *    dst,
-                            const string_t * process_name,
-                            const string_t * process_instance,
-                            const string_t * entity_name,
-                            const string_t * entity_instance)
+struct name * name_init_with(struct name * dst,
+                             string_t *    process_name,
+                             string_t *    process_instance,
+                             string_t *    entity_name,
+                             string_t *    entity_instance)
+{
+        if (!dst)
+                return NULL;
+
+        /* Clean up the destination, leftovers might be there ... */
+        name_fini(dst);
+
+        ASSERT(name_is_initialized(dst));
+
+        dst->process_name     = process_name;
+        dst->process_instance = process_instance;
+        dst->entity_name      = entity_name;
+        dst->entity_instance  = entity_instance;
+
+        return dst;
+}
+EXPORT_SYMBOL(name_init_with);
+
+struct name * name_init_from_gfp(gfp_t            flags,
+                                 struct name *    dst,
+                                 const string_t * process_name,
+                                 const string_t * process_instance,
+                                 const string_t * entity_name,
+                                 const string_t * entity_instance)
 {
         if (!dst)
                 return NULL;
@@ -132,33 +160,26 @@ struct name * name_init_gfp(gfp_t            flags,
 
         return dst;
 }
-EXPORT_SYMBOL(name_init_gfp);
+EXPORT_SYMBOL(name_init_from_gfp);
 
-struct name * name_init(struct name *    dst,
-                        const string_t * process_name,
-                        const string_t * process_instance,
-                        const string_t * entity_name,
-                        const string_t * entity_instance)
+struct name * name_init_from(struct name *    dst,
+                             const string_t * process_name,
+                             const string_t * process_instance,
+                             const string_t * entity_name,
+                             const string_t * entity_instance)
 {
-        return name_init_gfp(GFP_KERNEL,
-                             dst,
-                             process_name,
-                             process_instance,
-                             entity_name,
-                             entity_instance);
+        return name_init_from_gfp(GFP_KERNEL,
+                                  dst,
+                                  process_name,
+                                  process_instance,
+                                  entity_name,
+                                  entity_instance);
 }
-EXPORT_SYMBOL(name_init);
+EXPORT_SYMBOL(name_init_from);
 
 void name_fini(struct name * n)
 {
         ASSERT(n);
-
-#if 0
-        LOG_DBG("Process name at %pK",     n->process_name);
-        LOG_DBG("Process instance at %pK", n->process_instance);
-        LOG_DBG("Entity name at %pK",      n->entity_name);
-        LOG_DBG("Entity instance at %pK",  n->entity_instance);
-#endif
 
         if (n->process_name) {
                 rkfree(n->process_name);
@@ -194,47 +215,6 @@ void name_destroy(struct name * ptr)
         LOG_DBG("Name at %pK destroyed successfully", ptr);
 }
 EXPORT_SYMBOL(name_destroy);
-
-struct name * name_create_and_init_gfp(gfp_t            flags,
-                                       const string_t * process_name,
-                                       const string_t * process_instance,
-                                       const string_t * entity_name,
-                                       const string_t * entity_instance)
-{
-        struct name * tmp1;
-        struct name * tmp2;
-
-        tmp1 = name_create_gfp(flags);
-        if (!tmp1)
-                return NULL;
-
-        tmp2 = name_init_gfp(flags,
-                             tmp1,
-                             process_name,
-                             process_instance,
-                             entity_name,
-                             entity_instance);
-        if (!tmp2) {
-                name_destroy(tmp1);
-                return NULL;
-        }
-
-        return tmp2;
-}
-EXPORT_SYMBOL(name_create_and_init_gfp);
-
-struct name * name_create_and_init(const string_t * process_name,
-                                   const string_t * process_instance,
-                                   const string_t * entity_name,
-                                   const string_t * entity_instance)
-{
-        return name_create_and_init_gfp(GFP_KERNEL,
-                                        process_name,
-                                        process_instance,
-                                        entity_name,
-                                        entity_instance);
-}
-EXPORT_SYMBOL(name_create_and_init);
 
 int name_cpy(const struct name * src, struct name * dst)
 {
@@ -400,11 +380,19 @@ struct name * string_toname_gfp(gfp_t            flags,
                 tmp_ei = strsep(&tmp2, DELIMITER);
         }
 
-        name = name_create_and_init_gfp(flags, tmp_pn, tmp_pi, tmp_en, tmp_ei);
+        name = name_create_gfp(flags);
         if (!name) {
                 if (tmp1) rkfree(tmp1);
                 return NULL;
         }
+
+        if (!name_init_from_gfp(flags, name, tmp_pn, tmp_pi, tmp_en, tmp_ei)) {
+                name_destroy(name);
+                if (tmp1) rkfree(tmp1);
+                return NULL;
+        }
+
+        if (tmp1) rkfree(tmp1);
 
         return name;
 }
@@ -445,15 +433,27 @@ int name_cpy_from_user(const struct name __user * src,
 
         ASSERT(name_is_initialized(dst));
 
-        /* We rely on short-boolean evaluation ... :-) */
         if (string_dup_from_user(src->process_name,
-                                 &dst->process_name)     ||
-            string_dup_from_user(src->process_instance,
-                                 &dst->process_instance) ||
-            string_dup_from_user(src->entity_name,
-                                 &dst->entity_name)      ||
-            string_dup_from_user(src->entity_instance,
+                                 &dst->process_name)) {
+                LOG_ERR("Cannot dup process-name");
+                name_fini(dst);
+                return -1;
+        }
+        if (string_dup_from_user(src->process_instance,
+                                 &dst->process_instance)) {
+                LOG_ERR("Cannot dup process-instance");
+                name_fini(dst);
+                return -1;
+        }
+        if (string_dup_from_user(src->entity_name,
+                                 &dst->entity_name)) {
+                LOG_ERR("Cannot dup entity-name");
+                name_fini(dst);
+                return -1;
+        }
+        if (string_dup_from_user(src->entity_instance,
                                  &dst->entity_instance)) {
+                LOG_ERR("Cannot dup entity-instance");
                 name_fini(dst);
                 return -1;
         }
@@ -464,6 +464,8 @@ int name_cpy_from_user(const struct name __user * src,
 struct name * name_dup_from_user(const struct name __user * src)
 {
         struct name * tmp;
+
+        LOG_DBG("Name duplication (from user) in progress");
 
         if (!src)
                 return NULL;
@@ -476,6 +478,8 @@ struct name * name_dup_from_user(const struct name __user * src)
                 name_destroy(tmp);
                 return NULL;
         }
+
+        LOG_DBG("Name duplication (from user) completed successfully");
 
         return tmp;
 }

@@ -23,6 +23,7 @@ import eu.irati.librina.AssignToDIFResponseEvent;
 import eu.irati.librina.CreateIPCProcessException;
 import eu.irati.librina.DIFConfiguration;
 import eu.irati.librina.DIFInformation;
+import eu.irati.librina.EnrollToDIFResponseEvent;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessFactorySingleton;
@@ -37,6 +38,7 @@ public class IPCProcessManager {
 	private Map<Long, PendingDIFAssignment> pendingDIFAssignments = null;
 	private Map<Long, PendingDIFConfiguration> pendingDIFConfigurations = null;
 	private Map<Long, PendingIPCProcessRegistration> pendingIPCProcessRegistrations = null;
+	private Map<Long, PendingEnrollmentOperation> pendingEnrollmentOperations = null;
 	private static final Log log = 
 			LogFactory.getLog(IPCProcessManager.class);
 	private ApplicationRegistrationManager applicationRegistrationManager = null;
@@ -52,6 +54,8 @@ public class IPCProcessManager {
 				new ConcurrentHashMap<Long, PendingDIFConfiguration>();
 		this.pendingIPCProcessRegistrations = 
 				new ConcurrentHashMap<Long, PendingIPCProcessRegistration>();
+		this.pendingEnrollmentOperations = 
+				new ConcurrentHashMap<Long, PendingEnrollmentOperation>();
 	}
 	
 	public void setApplicationRegistrationManager(ApplicationRegistrationManager 
@@ -165,6 +169,8 @@ public class IPCProcessManager {
 			while (iterator.hasNext()){
 				result = result + "        " + iterator.next().getProcessName() + "\n";
 			}
+			
+			result = result + "\n";
 		}
 		
 		return result;
@@ -427,5 +433,50 @@ public class IPCProcessManager {
 		IPCProcess ipcProcess = this.getIPCProcess(ipcProcessId);
 		ipcProcess.setInitialized();
 	}
+	
+	public synchronized long requestEnrollmentToDIF(long ipcProcessId, String difName, 
+			String supportingDifName, String neighApName, String neighApInstance) throws Exception {
+		IPCProcess ipcProcess = getIPCProcess(ipcProcessId);
+		ApplicationProcessNamingInformation difNamingInfo = 
+				new ApplicationProcessNamingInformation();
+		difNamingInfo.setProcessName(difName);
+		ApplicationProcessNamingInformation supportingDifNamingInfo = 
+				new ApplicationProcessNamingInformation();
+		supportingDifNamingInfo.setProcessName(supportingDifName);
+		ApplicationProcessNamingInformation neighborNamingInfo = 
+				new ApplicationProcessNamingInformation();
+		neighborNamingInfo.setProcessName(neighApName);
+		neighborNamingInfo.setProcessInstance(neighApInstance);
+		
+		long handle = ipcProcess.enroll(difNamingInfo, supportingDifNamingInfo, neighborNamingInfo);
+		pendingEnrollmentOperations.put(
+				handle, new PendingEnrollmentOperation(ipcProcess, difNamingInfo, 
+						supportingDifNamingInfo, neighborNamingInfo));
+		log.debug("Requested the enrollment of IPC Process "+ipcProcess.getId() 
+				+ " to DIF "+difName + " through N-1 DIF "+ supportingDifName 
+				+ ". The point of contact (neighbor) is "+neighborNamingInfo.toString());
+		
+		return handle;
+	}
 
+	public synchronized void enrollToDIFResponse(EnrollToDIFResponseEvent event) {
+		PendingEnrollmentOperation operation = 
+				pendingEnrollmentOperations.get(event.getSequenceNumber());
+		if (operation == null) {
+			log.error("Could not find pending IPC Process enroll to DIF operation associated to handle " + 
+					   event.getSequenceNumber());
+			return;
+		}
+		
+		if (event.getResult() == 0) {
+			operation.getIpcProcess().addNeighbors(event.getNeighbors());
+			log.debug("Enrollment operation associated to handle "+event.getSequenceNumber() 
+					+" completed successfully.");
+		} else {
+			log.error("Enrollment operation associated to handle " + event.getSequenceNumber() 
+					+ " failed. Error code: "+event.getResult());
+		}
+		
+		console.responseArrived(event);
+	}
 }

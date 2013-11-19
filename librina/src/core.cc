@@ -342,6 +342,19 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		}
 		break;
 	}
+	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED: {
+	        if(send){
+	        }else{
+	                putIPCProcessIdToNelinkPortIdMapping(message->getSourcePortId(),
+	                                message->getSourceIpcProcessId());
+	                IpcmIPCProcessInitializedMessage * specificMessage =
+	                                dynamic_cast<IpcmIPCProcessInitializedMessage *>(message);
+	                putAPNametoNetlinkPortIdMapping(specificMessage->getName(),
+	                                specificMessage->getSourcePortId(),
+	                                specificMessage->getSourceIpcProcessId());
+	        }
+	        break;
+	}
 	default:{
 		//Do nothing
 	}
