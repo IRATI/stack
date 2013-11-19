@@ -84,6 +84,7 @@ struct efcp_container {
         struct rmt *                    rmt;
         struct kfa *                    kfa;
         struct workqueue_struct *       egress_wq;
+        struct workqueue_struct *       ingress_wq;
 };
 
 struct efcp_container * efcp_container_create(struct kfa * kfa)
@@ -117,6 +118,13 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
                 return NULL;
         }
 
+        container->ingress_wq = rwq_create("efcpc-ingress-wq");
+        if (!container->egress_wq) {
+                LOG_ERR("Cannot create efcpc ingress workqueue");
+                efcp_container_destroy(container);
+                return NULL;
+        }
+
         container->kfa = kfa;
 
         return container;
@@ -130,11 +138,13 @@ int efcp_container_destroy(struct efcp_container * container)
                 return -1;
         }
 
-        if (container->instances) efcp_imap_destroy(container->instances,
-                                                    efcp_destroy);
-        if (container->cidm)      cidm_destroy(container->cidm);
+        if (container->instances)  efcp_imap_destroy(container->instances,
+                                                     efcp_destroy);
+        if (container->cidm)       cidm_destroy(container->cidm);
 
-        if (container->egress_wq) rwq_destroy(container->egress_wq);
+        if (container->egress_wq)  rwq_destroy(container->egress_wq);
+
+        if (container->ingress_wq) rwq_destroy(container->ingress_wq);
 
         rkfree(container);
 
@@ -297,14 +307,119 @@ int efcp_container_write(struct efcp_container * container,
 }
 EXPORT_SYMBOL(efcp_container_write);
 
+struct receive_data {
+        struct efcp * efcp;
+        struct pdu *  pdu;
+};
+
+static bool is_receive_data_complete(const struct receive_data * data)
+{
+        bool ret;
+
+        ret = ((!data || !data->efcp || !data->pdu) ? false : true);
+
+        LOG_DBG("Receive data complete? %d", ret);
+
+        return ret;
+}
+
+static int receive_data_destroy(struct receive_data * data)
+{
+        if (!data) {
+                LOG_ERR("No receive data passed");
+                return -1;
+        }
+
+        rkfree(data);
+
+        return 0;
+}
+
+static struct receive_data * receive_data_create(struct efcp * efcp,
+                                                 struct pdu *  pdu)
+{
+        struct receive_data * tmp;
+
+        tmp = rkmalloc(sizeof(*tmp), GFP_ATOMIC);
+        if (!tmp)
+                return NULL;
+
+        tmp->efcp = efcp;
+        tmp->pdu  = pdu;
+
+        return tmp;
+}
+
+static int efcp_receive_worker(void * o)
+{
+        struct receive_data * tmp;
+
+        tmp = (struct receive_data *) o;
+        if (!tmp) {
+                LOG_ERR("No receive data passed");
+                return -1;
+        }
+
+        if (!is_receive_data_complete(tmp)) {
+                LOG_ERR("Wrong data passed to efcp_receive_worker");
+                receive_data_destroy(tmp);
+                return -1;
+        }
+
+        if (dtp_receive(tmp->efcp->dtp, tmp->pdu)) {
+                LOG_ERR("Could not send SDU to DTP");
+                return -1;
+        }
+
+        return 0;
+}
+
+int efcp_receive(struct efcp * efcp,
+                 struct pdu *  pdu)
+{
+        struct receive_data *  data;
+        struct rwq_work_item * item;
+
+        if (!efcp) {
+                LOG_ERR("No efcp instance passed");
+                return -1;
+        }
+        if (!pdu) {
+                LOG_ERR("No pdu passed");
+                return -1;
+        }
+
+        data = receive_data_create(efcp, pdu);
+        if (!is_receive_data_complete(data)) {
+                LOG_ERR("Receive data is not complete");
+                receive_data_destroy(data);
+                return -1;
+        }
+        item = rwq_work_create(GFP_ATOMIC, efcp_receive_worker, data);
+        if (!item) {
+                receive_data_destroy(data);
+                return -1;
+        }
+
+        ASSERT(efcp->efcpc->ingress_wq);
+
+        if (rwq_work_post(efcp->efcpc->ingress_wq, item)) {
+                receive_data_destroy(data);
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        return 0;
+}
+
 int efcp_container_receive(struct efcp_container * container,
                            cep_id_t                cep_id,
-                           struct sdu *            sdu)
+                           struct pdu *            pdu)
 {
         struct efcp * tmp;
 
-        if (!container || sdu) {
-                LOG_ERR("Bogus input parameters, cannot write into container");
+        if (!container || !pdu) {
+                LOG_ERR("Bogus input parameters");
                 return -1;
         }
         if (!is_cep_id_ok(cep_id)) {
@@ -316,7 +431,8 @@ int efcp_container_receive(struct efcp_container * container,
         if (!tmp)
                 return -1;
 
-        dtp_receive(tmp->dtp, NULL);
+        if (efcp_receive(tmp, pdu))
+                return -1;
 
         return 0;
 }

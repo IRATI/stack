@@ -26,8 +26,6 @@
 
 #include "du.h"
 
-typedef int16_t cep_id_t;
-
 enum ipcp_config_type {
         IPCP_CONFIG_UINT   = 1,
         IPCP_CONFIG_STRING,

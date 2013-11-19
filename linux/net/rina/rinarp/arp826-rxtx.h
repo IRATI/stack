@@ -19,8 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef ARP_826_RXTX_H
-#define ARP_826_RXTX_H
+#ifndef ARP826_RXTX_H
+#define ARP826_RXTX_H
 
 #include <linux/skbuff.h>
 #include <linux/netdevice.h>

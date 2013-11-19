@@ -18,8 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef ARP_826_ARM_H
-#define ARP_826_ARM_H
+#ifndef ARP826_ARM_H
+#define ARP826_ARM_H
 
 #include "arp826-utils.h"
 

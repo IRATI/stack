@@ -55,7 +55,7 @@ int                     efcp_container_write(struct efcp_container * container,
                                              struct sdu *            sdu);
 int                     efcp_container_receive(struct efcp_container * container,
                                                cep_id_t                cep_id,
-                                               struct sdu *            sdu);
+                                               struct pdu *            pdu);
 
 /* FIXME: Should a cep_id_t be returned instead ? */
 cep_id_t      efcp_connection_create(struct efcp_container * container,
@@ -73,6 +73,9 @@ struct efcp * efcp_find(struct efcp_container * container,
 
 int           efcp_write(struct efcp * efcp,
                          struct sdu *  sdu);
+
+int           efcp_receive(struct efcp * efcp,
+                           struct pdu *  pdu);
 
 int           efcp_bind_rmt(struct efcp_container * container,
                             struct rmt *            rmt);

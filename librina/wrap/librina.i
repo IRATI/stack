@@ -674,6 +674,8 @@ MAKE_COLLECTION_ITERABLE(RIBObjectListIterator, RIBObject, std::list, rina::RIBO
 MAKE_COLLECTION_ITERABLE(StringListIterator, String, std::list, std::string);
 /* Define iterator for Flow Information list */
 MAKE_COLLECTION_ITERABLE(FlowInformationListIterator, FlowInformation, std::list, rina::FlowInformation);
+/* Define iterator for Neighbors list */
+MAKE_COLLECTION_ITERABLE(NeighborListIterator, Neighbor, std::list, rina::Neighbor);
 
 %template(DIFPropertiesVector) std::vector<rina::DIFProperties>;
 %template(FlowVector) std::vector<rina::Flow>;
