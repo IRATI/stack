@@ -6,5 +6,5 @@
 
 ccflags-y += -I$(srctree)/net/rina
 
-obj-$(CONFIG_RINA) +=				\
-	 rmem.o rmap.o rwq.o rqueue.o rbmp.o
+obj-$(CONFIG_RINA) +=					\
+	 rmem.o rmap.o rwq.o rbmp.o rqueue.o rfifo.o

@@ -1,5 +1,5 @@
 /*
- * RINA Work Queues
+ * RINA Queues
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -71,7 +71,7 @@ int rqueue_destroy(struct rqueue * q,
 }
 EXPORT_SYMBOL(rqueue_destroy);
 
-int rqueue_enqueue(struct rqueue * q, void * e)
+int rqueue_head_push(struct rqueue * q, void * e)
 {
         struct rqueue_entry * tmp;
 
@@ -90,16 +90,52 @@ int rqueue_enqueue(struct rqueue * q, void * e)
 
         return 0;
 }
-EXPORT_SYMBOL(rqueue_enqueue);
+EXPORT_SYMBOL(rqueue_head_push);
 
-void * rqueue_dequeue(struct rqueue * q)
+void * rqueue_head_pop(struct rqueue * q)
 {
         if (!q)
                 return NULL;
 
+        LOG_MISSING;
+
         return NULL;
 }
-EXPORT_SYMBOL(rqueue_dequeue);
+EXPORT_SYMBOL(rqueue_head_pop);
+
+int rqueue_tail_push(struct rqueue * q, void * e)
+{
+        struct rqueue_entry * tmp;
+
+        if (!q)
+                return -1;
+        if (!e)
+                return -1;
+
+        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return -1;
+
+        tmp->data = e;
+        INIT_LIST_HEAD(&tmp->next);
+        list_add(&q->head, &tmp->next);
+
+        LOG_MISSING;
+
+        return 0;
+}
+EXPORT_SYMBOL(rqueue_tail_push);
+
+void * rqueue_tail_pop(struct rqueue * q)
+{
+        if (!q)
+                return NULL;
+
+        LOG_MISSING;
+
+        return NULL;
+}
+EXPORT_SYMBOL(rqueue_tail_pop);
 
 bool rqueue_is_empty(struct rqueue * q)
 { return true; }

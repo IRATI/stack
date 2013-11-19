@@ -1,5 +1,5 @@
 /*
- * Utilities
+ * RINA FIFOs
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,28 +18,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_UTILS_H
-#define RINA_UTILS_H
+#include <linux/export.h>
+#include <linux/list.h>
 
-#include <linux/kobject.h>
-#define RINA_ATTR_RO(NAME)                              \
-        static struct kobj_attribute NAME##_attr =      \
-                __ATTR_RO(NAME)
+#define RINA_PREFIX "rfifo"
 
-#define RINA_ATTR_RW(NAME)                                      \
-        static struct kobj_attribute NAME##_attr =              \
-                __ATTR(NAME, 0644, NAME##show, NAME##store)
-
-int     is_value_in_range(int value, int min_value, int max_value);
-
-/* Syscalls */
-char *  strdup_from_user(const char __user * src);
-
-#include "rds/rmem.h"
-#include "rds/rmap.h"
-#include "rds/rwq.h"
-#include "rds/rbmp.h"
-#include "rds/rqueue.h"
-#include "rds/rfifo.h"
-
-#endif
+#include "logs.h"
+#include "debug.h"
+#include "rmem.h"
