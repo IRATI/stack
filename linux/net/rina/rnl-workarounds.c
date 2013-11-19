@@ -19,8 +19,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-//#include <linux/export.h>
-
 /* FIXME: This is another workaround we would like to avoid ... */
 #include "../net/netlink/af_netlink.h"
 
@@ -50,4 +48,3 @@ void set_netlink_non_root_send_flag(void)
 
         LOG_DBG("NL_CFG_F_NONROOT_SEND flag set");
 }
-//EXPORT_SYMBOL(set_netlink_non_root_send_flag);
