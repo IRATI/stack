@@ -3,7 +3,6 @@ package rina.ipcprocess.impl;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +32,8 @@ import rina.encoding.impl.googleprotobuf.directoryforwardingtable.DirectoryForwa
 import rina.encoding.impl.googleprotobuf.enrollment.EnrollmentInformationEncoder;
 import rina.encoding.impl.googleprotobuf.flow.FlowEncoder;
 import rina.encoding.impl.googleprotobuf.flowservice.FlowServiceEncoder;
+import rina.encoding.impl.googleprotobuf.neighbor.NeighborArrayEncoder;
+import rina.encoding.impl.googleprotobuf.neighbor.NeighborEncoder;
 import rina.encoding.impl.googleprotobuf.qoscube.QoSCubeArrayEncoder;
 import rina.encoding.impl.googleprotobuf.qoscube.QoSCubeEncoder;
 import rina.encoding.impl.googleprotobuf.whatevercast.WhatevercastNameArrayEncoder;
@@ -43,7 +44,7 @@ import rina.flowallocator.api.DirectoryForwardingTableEntry;
 import rina.flowallocator.api.Flow;
 import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
 import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
-import rina.ipcprocess.impl.enrollment.ribobjects.NeighborSetRIBObject;
+import rina.ipcprocess.impl.flowallocator.ribobjects.DirectoryForwardingTableEntrySetRIBObject;
 import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
 import rina.ipcprocess.impl.resourceallocator.ResourceAllocatorImpl;
 import rina.ipcprocess.impl.ribdaemon.RIBDaemonImpl;
@@ -265,7 +266,7 @@ public class IPCProcess {
 		return resourceAllocator;
 	}
 	
-	public Encoder createEncoder() {
+	private Encoder createEncoder() {
 		  EncoderImpl encoder = new EncoderImpl();
           encoder.addEncoder(DataTransferConstants.class.getName(), new DataTransferConstantsEncoder());
           encoder.addEncoder(DirectoryForwardingTableEntry.class.getName(), new DirectoryForwardingTableEntryEncoder());
@@ -278,6 +279,8 @@ public class IPCProcess {
           encoder.addEncoder(WhatevercastName[].class.getName(), new WhatevercastNameArrayEncoder());
           encoder.addEncoder(FlowInformation.class.getName(), new FlowServiceEncoder());
           encoder.addEncoder(ApplicationRegistration.class.getName(), new ApplicationRegistrationEncoder());
+          encoder.addEncoder(Neighbor.class.getName(), new NeighborEncoder());
+          encoder.addEncoder(Neighbor[].class.getName(), new NeighborArrayEncoder());
           
           return encoder;
 	}
@@ -287,6 +290,8 @@ public class IPCProcess {
 			RIBObject ribObject = new QoSCubeSetRIBObject();
 			this.ribDaemon.addRIBObject(ribObject);
 			ribObject = new DataTransferConstantsRIBObject();
+			this.ribDaemon.addRIBObject(ribObject);
+			ribObject = new DirectoryForwardingTableEntrySetRIBObject();
 			this.ribDaemon.addRIBObject(ribObject);
 		} catch(Exception ex) {
 			log.error("Problems populating RIB: "+ex.getMessage());
@@ -438,24 +443,7 @@ public class IPCProcess {
      * @return
      */
     public List<Neighbor> getNeighbors(){
-            List<Neighbor> result = new ArrayList<Neighbor>();
-            RIBObject ribObject = null;
-            RIBObject childRibObject = null;
-            
-            try{
-                    ribObject = ribDaemon.read(NeighborSetRIBObject.NEIGHBOR_SET_RIB_OBJECT_CLASS, 
-                    		NeighborSetRIBObject.NEIGHBOR_SET_RIB_OBJECT_NAME);
-                    if (ribObject != null && ribObject.getChildren() != null){
-                            for(int i=0; i<ribObject.getChildren().size(); i++){
-                                    childRibObject = ribObject.getChildren().get(i);
-                                    result.add((Neighbor)childRibObject.getObjectValue());
-                            }
-                    }
-            }catch(Exception ex){
-                    ex.printStackTrace();
-            }
-
-            return result;
+            return enrollmentTask.getNeighbors();
     }
 
 }

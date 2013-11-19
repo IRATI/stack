@@ -512,6 +512,12 @@ public:
 	void addNeighbors(const std::list<Neighbor>& neighbors);
 
 	/**
+	 * Remove existing neighbors of the IPC Process
+	 * @param neighbors the neighbors to be removed
+	 */
+	void removeNeighbors(const std::list<Neighbor>& neighbors);
+
+	/**
 	 * Returns the list of neighbors that this IPC Process is currently enrolled
 	 * to
 	 * @return
@@ -948,15 +954,18 @@ public:
  * neighbors being removed
  */
 class NeighborsModifiedNotificationEvent: public IPCEvent {
+        unsigned short ipcProcessId;
         std::list<Neighbor> neighbors;
         bool added;
 
 public:
         NeighborsModifiedNotificationEvent(
+                        unsigned short ipcProcessId,
                         const std::list<Neighbor> & neighbors,
                         bool added, unsigned int sequenceNumber);
         const std::list<Neighbor>& getNeighbors() const;
         bool isAdded() const;
+        unsigned short getIpcProcessId() const;
 };
 
 /**
