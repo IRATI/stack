@@ -30,10 +30,6 @@
         static struct kobj_attribute NAME##_attr =              \
                 __ATTR(NAME, 0644, NAME##show, NAME##store)
 
-#include <linux/string.h>
-
-#define bzero(DEST, LEN) do { (void) memset(DEST, 0, LEN); } while (0)
-
 int     is_value_in_range(int value, int min_value, int max_value);
 
 /* Syscalls */
