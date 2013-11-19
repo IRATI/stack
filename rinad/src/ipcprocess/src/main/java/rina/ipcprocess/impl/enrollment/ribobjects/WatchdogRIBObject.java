@@ -120,12 +120,14 @@ public class WatchdogRIBObject extends BaseRIBObject implements CDAPMessageHandl
 		CDAPMessage cdapMessage = null;
 		NeighborStatistics neighborStats = null;
 		long currentTime = System.currentTimeMillis();
+		log.debug("Current time: "+currentTime);
 		for(int i=0; i<neighbors.size(); i++){
 			//Skip non enrolled neighbors
 			if (!neighbors.get(i).isEnrolled()){
 				continue;
 			}
 			
+			log.debug(neighbors.get(i).getLastHeardFromTimeInMs() + this.periodInMs);
 			//Skip neighbors that have sent M_READ messages during the last period
 			if (neighbors.get(i).getLastHeardFromTimeInMs() + this.periodInMs > currentTime){
 				continue;
@@ -133,6 +135,7 @@ public class WatchdogRIBObject extends BaseRIBObject implements CDAPMessageHandl
 			
 			//If we have not heard from the neighbor during long enough, declare the neighbor
 			//dead and fire a NEIGHBOR_DECLARED_DEAD event
+			log.debug(neighbors.get(i).getLastHeardFromTimeInMs() + this.declaredDeadIntervalInMs);
 			if (neighbors.get(i).getLastHeardFromTimeInMs() != 0 && 
 					neighbors.get(i).getLastHeardFromTimeInMs() + this.declaredDeadIntervalInMs < currentTime){
 				NeighborDeclaredDeadEvent event = new NeighborDeclaredDeadEvent(neighbors.get(i));

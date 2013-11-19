@@ -30,6 +30,8 @@ import eu.irati.librina.IPCProcessFactorySingleton;
 import eu.irati.librina.IPCProcessPointerVector;
 import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
 import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
+import eu.irati.librina.Neighbor;
+import eu.irati.librina.NeighborsModifiedNotificationEvent;
 import eu.irati.librina.UpdateDIFConfigurationResponseEvent;
 
 public class IPCProcessManager {
@@ -158,16 +160,25 @@ public class IPCProcessManager {
 			result = result + "Id: "+ ipcProcess.getId() + "\n";
 			result = result + "    Type: " + ipcProcess.getType() + "\n";
 			result = result + "    Name: " + ipcProcess.getName().toString() + "\n";
+			
 			difInformation = ipcProcess.getDIFInformation();
 			if (difInformation != null){
 				result = result + "    Member of DIF: " + 
 						difInformation.getDifName().getProcessName() + "\n"; 
 			}
+			
 			result = result + "    Supporting DIFs: " + "\n"; 
 			Iterator<ApplicationProcessNamingInformation> iterator = 
 					ipcProcess.getSupportingDIFs().iterator();
 			while (iterator.hasNext()){
 				result = result + "        " + iterator.next().getProcessName() + "\n";
+			}
+			
+			result = result + "    Neighbors: " + "\n";
+			Iterator<Neighbor> neighborIterator = ipcProcess.getNeighbors().iterator();
+			while (neighborIterator.hasNext()) {
+				result = result + "        " + 
+						neighborIterator.next().getName().getProcessNamePlusInstance() + "\n";
 			}
 			
 			result = result + "\n";
@@ -478,5 +489,30 @@ public class IPCProcessManager {
 		}
 		
 		console.responseArrived(event);
+	}
+	
+	public synchronized void neighborsModifiedEvent(NeighborsModifiedNotificationEvent event) 
+			throws Exception{
+		IPCProcess ipcProcess = getIPCProcess(event.getIpcProcessId());
+		if (event.getNeighbors() == null) {
+			log.warn("Received a neighbors modified event with an empty neighbors list");
+			return;
+		}
+		
+		Iterator<Neighbor> iterator = event.getNeighbors().iterator();
+		String neighborsString = "";
+		while(iterator.hasNext()) {
+			neighborsString = neighborsString + iterator.next().getName().getProcessNamePlusInstance() + "\n";
+		}
+		
+		if (event.isAdded()) {
+			ipcProcess.addNeighbors(event.getNeighbors());
+			log.info("IPC process "+event.getIpcProcessId()+" has the following new neighbors:\n" 
+					+ neighborsString);
+		} else {
+			ipcProcess.removeNeighbors(event.getNeighbors());
+			log.info("IPC process "+event.getIpcProcessId()+" has lost the following neighbors:\n" 
+					+ neighborsString);
+		}
 	}
 }

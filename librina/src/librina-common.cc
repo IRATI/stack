@@ -1275,11 +1275,11 @@ void Neighbor::setEnrolled(bool enrolled){
         this->enrolled = enrolled;
 }
 
-unsigned int Neighbor::getLastHeardFromTimeInMs() const {
+unsigned long Neighbor::getLastHeardFromTimeInMs() const {
         return lastHeardFromTimeInMs;
 }
 
-void Neighbor::setLastHeardFromTimeInMs(unsigned int lastHeardFromTimeInMs) {
+void Neighbor::setLastHeardFromTimeInMs(unsigned long lastHeardFromTimeInMs) {
         this->lastHeardFromTimeInMs = lastHeardFromTimeInMs;
 }
 

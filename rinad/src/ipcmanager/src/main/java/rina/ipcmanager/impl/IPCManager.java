@@ -23,6 +23,7 @@ import eu.irati.librina.IpcmAllocateFlowRequestResultEvent;
 import eu.irati.librina.IpcmDeallocateFlowResponseEvent;
 import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
 import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
+import eu.irati.librina.NeighborsModifiedNotificationEvent;
 import eu.irati.librina.OSProcessFinalizedEvent;
 import eu.irati.librina.UpdateDIFConfigurationResponseEvent;
 import eu.irati.librina.rina;
@@ -343,6 +344,9 @@ public class IPCManager {
 		} else if (event.getType().equals(IPCEventType.ENROLL_TO_DIF_RESPONSE_EVENT)) {
 			EnrollToDIFResponseEvent ipcEvent = (EnrollToDIFResponseEvent) event;
 			ipcProcessManager.enrollToDIFResponse(ipcEvent);
+		} else if (event.getType().equals(IPCEventType.NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT)) {
+			NeighborsModifiedNotificationEvent ipcEvent = (NeighborsModifiedNotificationEvent) event;
+			ipcProcessManager.neighborsModifiedEvent(ipcEvent);
 		}
 	}
 	

@@ -67,6 +67,13 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 	private Map<String, BaseEnrollmentStateMachine> enrollmentStateMachines = null;
 	
 	/**
+	 * The list of neighbors
+	 */
+	private List<Neighbor> neighbors = null;
+	private Object neighborsLock = null;
+	
+	
+	/**
 	 * The maximum time to wait between steps of the enrollment sequence (in ms)
 	 */
 	private long timeout = 0;
@@ -86,8 +93,31 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 
 	public EnrollmentTaskImpl(){
 		this.enrollmentStateMachines = new ConcurrentHashMap<String, BaseEnrollmentStateMachine>();
+		this.neighbors = new ArrayList<Neighbor>();
+		this.neighborsLock = new Object();
 		this.timeout = DEFAULT_ENROLLMENT_TIMEOUT_IN_MS;
 		this.portIdsPendingToBeAllocated = new ConcurrentHashMap<Long, EnrollmentRequest>();
+	}
+	
+	public List<Neighbor> getNeighbors() {
+		List<Neighbor> result = null;
+		synchronized(neighborsLock) {
+			result = neighbors;
+		}
+		
+		return result;
+	}
+	
+	public void addNeighbor(Neighbor neighbor) {
+		synchronized(neighborsLock) {
+			neighbors.add(neighbor);
+		}
+	}
+	
+	public void removeNeighbor(Neighbor neighbor) {
+		synchronized(neighborsLock) {
+			neighbors.remove(neighbor);
+		}
 	}
 	
 	public void setIPCProcess(IPCProcess ipcProcess){

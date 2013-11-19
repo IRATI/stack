@@ -75,6 +75,7 @@ public class NeighborSetRIBObject extends BaseRIBObject{
 					unknownNeighbors.toArray(new Neighbor[unknownNeighbors.size()]), 
 					null);
 		}catch(Exception ex){
+			ex.printStackTrace();
 			log.error("Problems processing remote CDAP create operation: " +ex.getMessage());
 		}
 	}

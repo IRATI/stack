@@ -3,7 +3,6 @@ package rina.ipcprocess.impl;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +44,6 @@ import rina.flowallocator.api.DirectoryForwardingTableEntry;
 import rina.flowallocator.api.Flow;
 import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
 import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
-import rina.ipcprocess.impl.enrollment.ribobjects.NeighborSetRIBObject;
 import rina.ipcprocess.impl.flowallocator.ribobjects.DirectoryForwardingTableEntrySetRIBObject;
 import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
 import rina.ipcprocess.impl.resourceallocator.ResourceAllocatorImpl;
@@ -445,24 +443,7 @@ public class IPCProcess {
      * @return
      */
     public List<Neighbor> getNeighbors(){
-            List<Neighbor> result = new ArrayList<Neighbor>();
-            RIBObject ribObject = null;
-            RIBObject childRibObject = null;
-            
-            try{
-                    ribObject = ribDaemon.read(NeighborSetRIBObject.NEIGHBOR_SET_RIB_OBJECT_CLASS, 
-                    		NeighborSetRIBObject.NEIGHBOR_SET_RIB_OBJECT_NAME);
-                    if (ribObject != null && ribObject.getChildren() != null){
-                            for(int i=0; i<ribObject.getChildren().size(); i++){
-                                    childRibObject = ribObject.getChildren().get(i);
-                                    result.add((Neighbor)childRibObject.getObjectValue());
-                            }
-                    }
-            }catch(Exception ex){
-                    ex.printStackTrace();
-            }
-
-            return result;
+            return enrollmentTask.getNeighbors();
     }
 
 }
