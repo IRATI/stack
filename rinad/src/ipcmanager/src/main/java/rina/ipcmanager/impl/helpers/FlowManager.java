@@ -171,7 +171,7 @@ public class FlowManager {
 					event.getRemoteApplicationName(), event.getFlowSpecification(), 
 					event.getDIFName(), event.getPortId());
 			log.debug("Requested allocation of remote flow from "+event.getRemoteApplicationName().toString()
-					+ "to remote application "+event.getLocalApplicationName().toString()
+					+ "to local application "+event.getLocalApplicationName().toString()
 					+" through the DIF "+ipcProcess.getDIFInformation().getDifName().toString() + 
 					". Got handle "+handle + " and portId " + event.getPortId());
 			pendingFlowAllocation = new PendingFlowAllocation(event, ipcProcess);

@@ -37,6 +37,7 @@ public class NeighborSetRIBObject extends BaseRIBObject{
 				ObjectInstanceGenerator.getObjectInstance(), NEIGHBOR_SET_RIB_OBJECT_NAME);
 		ipcProcess = IPCProcess.getInstance();
 		setRIBDaemon(ipcProcess.getRIBDaemon());
+		setEncoder(ipcProcess.getEncoder());
 	}
 	
 	@Override
@@ -45,15 +46,26 @@ public class NeighborSetRIBObject extends BaseRIBObject{
 	}
 	
 	@Override
-	public void create(CDAPMessage cdapMessage, CDAPSessionDescriptor cdapSessionDescriptor) throws RIBDaemonException{
+	public void create(CDAPMessage cdapMessage, CDAPSessionDescriptor cdapSessionDescriptor) throws RIBDaemonException {
+		if (cdapMessage.getObjValue() == null || cdapMessage.getObjValue().getByteval() == null) {
+			return;
+		}
+		
 		try{
 			Neighbor[] neighbors = (Neighbor[])
 				this.getEncoder().decode(cdapMessage.getObjValue().getByteval(), Neighbor[].class);
 			
+			if (neighbors == null) {
+				log.warn("Got a null array after trying to decode a Neighbors[] object. " +
+						"Object name: "+cdapMessage.getObjName() + "; object class: "
+						+ cdapMessage.getObjClass());
+				return;
+			}
+			
 			//Only create the neighbors that we don't know about
 			List<Neighbor> unknownNeighbors = new ArrayList<Neighbor>();
 			for(int i=0; i<neighbors.length; i++){
-				if (!this.contains(neighbors[i])){
+				if (!contains(neighbors[i])){
 					unknownNeighbors.add(neighbors[i]);
 				}
 			}
@@ -63,8 +75,7 @@ public class NeighborSetRIBObject extends BaseRIBObject{
 					unknownNeighbors.toArray(new Neighbor[unknownNeighbors.size()]), 
 					null);
 		}catch(Exception ex){
-			log.error(ex);
-			ex.printStackTrace();
+			log.error("Problems processing remote CDAP create operation: " +ex.getMessage());
 		}
 	}
 	

@@ -200,6 +200,8 @@ public class IPCManager {
 									+ " but got " + ipcEvent.getIPCProcessId());
 							continue;
 						}
+						
+						ipcProcess.setInitialized();
 					} else {
 						log.error("Expected IPC Process Daemon Initialized event, but got "+event.getType());
 						continue;
@@ -234,12 +236,12 @@ public class IPCManager {
 			if (difsToRegisterAt != null && difsToRegisterAt.size() > 0){
 				for(int j=0; j<difsToRegisterAt.size(); j++){
 					try{
-						this.requestRegistrationToNMinusOneDIF(
+						requestRegistrationToNMinusOneDIF(
 								ipcProcess.getId(), difsToRegisterAt.get(j));
 						event = ipcEventProducer.eventWait();
 						if (event.getType().equals(IPCEventType.IPCM_REGISTER_APP_RESPONSE_EVENT)) {
 							IpcmRegisterApplicationResponseEvent appRespEvent = (IpcmRegisterApplicationResponseEvent) event;
-							applicationRegistrationManager.registerApplicationResponse(appRespEvent);
+							ipcProcessManager.registrationToNMinusOneDIFResponse(appRespEvent);
 						} else {
 							log.error("Problems assigning IPC Process to DIF. Expected event of type " + 
 										"IPCM_REGISTER_APP_RESPONSE_EVENT, but got event of type "+ event.getType());

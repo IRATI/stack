@@ -195,6 +195,11 @@ getProcessNamePlusInstance(){
 	return processName + "-" + processInstance;
 }
 
+std::string ApplicationProcessNamingInformation::getEncodedString() {
+        return processName + "-" + processInstance +
+                        "-" + entityName + "-" + entityInstance;
+}
+
 std::string ApplicationProcessNamingInformation::toString() {
 	return "Process name: " + processName + "; Process instance: "
 			+ processInstance + "; Entity name: " + entityName

@@ -222,7 +222,7 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 			ApplicationProcessNamingInformation apNamingInfo, int portId, boolean enrollee) throws Exception{
 		BaseEnrollmentStateMachine enrollmentStateMachine = null;
 
-		if (apNamingInfo.getEntityName() == null || 
+		if (apNamingInfo.getEntityName() == null || apNamingInfo.getEntityName().equals("") ||
 				apNamingInfo.getEntityName().equals(IPCProcess.MANAGEMENT_AE)){
 			if (enrollee){
 				enrollmentStateMachine = new EnrolleeStateMachine(ribDaemon, cdapSessionManager, encoder, 
