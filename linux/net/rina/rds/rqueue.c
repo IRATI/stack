@@ -18,7 +18,34 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/export.h>
+
 #define RINA_PREFIX "rqueue"
 
 #include "logs.h"
 #include "debug.h"
+
+struct rqueue {
+        int empty;
+};
+
+int rqueue_create(void)
+{ return -1; }
+EXPORT_SYMBOL(rqueue_create);
+
+int rqueue_destroy(struct rqueue * q)
+{ return -1; }
+EXPORT_SYMBOL(rqueue_destroy);
+
+int rqueue_enqueue(struct rqueue * q, void * e)
+{ return -1; }
+EXPORT_SYMBOL(rqueue_enqueue);
+
+void * rqueue_dequeue(struct rqueue * q)
+{ return NULL; }
+EXPORT_SYMBOL(rqueue_dequeue);
+
+bool rqueue_is_empty(struct rqueue * q)
+{ return true; }
+EXPORT_SYMBOL(rqueue_is_empty);
+
