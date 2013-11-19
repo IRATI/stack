@@ -1,12 +1,12 @@
 #
-# Makefile for the Linux RINA layer
+# Makefile for RINA
 #
-
-ccflags-y := -I./
+# Written by Francesco Salvestrini <f.salvestrini@nextworks.it>
+#
 
 obj-$(CONFIG_RINA) +=				\
 	utils.o debug.o				\
-	rds/rwq.o rds/rmem.o rds/rmap.o		\
+	rds/					\
 	core.o personality.o syscalls.o		\
 	rnl.o rnl-utils.o rnl-workarounds.o	\
 	du.o ipcp-utils.o common.o

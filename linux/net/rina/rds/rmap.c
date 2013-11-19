@@ -25,8 +25,8 @@
 
 #define RINA_PREFIX "rmap"
 
-#include "../logs.h"
-#include "../debug.h"
+#include "logs.h"
+#include "debug.h"
 #include "rmem.h"
 
 //#include "rmap.h"

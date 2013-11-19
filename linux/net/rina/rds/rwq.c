@@ -20,8 +20,8 @@
 
 #define RINA_PREFIX "rwq"
 
-#include "../logs.h"
-#include "../debug.h"
+#include "logs.h"
+#include "debug.h"
 #include "rmem.h"
 
 struct rwq_work_item {

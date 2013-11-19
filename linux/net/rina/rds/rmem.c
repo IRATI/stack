@@ -25,8 +25,8 @@
 
 #define RINA_PREFIX "rmem"
 
-#include "../logs.h"
-#include "../debug.h"
+#include "logs.h"
+#include "debug.h"
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
 struct memblock_header {
