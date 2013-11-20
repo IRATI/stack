@@ -421,9 +421,7 @@ static int process(const struct sk_buff * skb,
 
                         LOG_DBG("Adding new entry to the table");
 
-                        tmp = tble_create_gfp(tmp_spa,
-                                              tmp_sha,
-                                              GFP_ATOMIC);
+                        tmp = tble_create_ni(tmp_spa, tmp_sha);
                         if (!tmp)
                                 return -1;
 
