@@ -79,7 +79,7 @@ static struct rwq_work_item * rwq_work_create_gfp(gfp_t    flags,
 {
         struct rwq_work_item * tmp;
 
-        if (!worker) {
+        if (!work) {
                 LOG_ERR("No worker passed, cannot create work");
                 return NULL;
         }
