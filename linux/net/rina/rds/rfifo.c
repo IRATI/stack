@@ -33,7 +33,7 @@ struct rfifo {
         struct rqueue * q;
 };
 
-struct rfifo * rfifo_create(void)
+struct rfifo * rfifo_create_gfp(gfp_t flags);
 {
         struct rfifo * f;
 
@@ -51,6 +51,10 @@ struct rfifo * rfifo_create(void)
 
         return f;
 }
+EXPORT_SYMBOL(rfifo_create_gfp);
+
+struct rfifo * rfifo_create(void)
+{ return rfifo_create_gfp(GFP_KERNEL); }
 EXPORT_SYMBOL(rfifo_create);
 
 int rfifo_destroy(struct rfifo * f,

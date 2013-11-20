@@ -24,6 +24,9 @@
 struct rfifo;
 
 struct rfifo * rfifo_create(void);
+struct rfifo * rfifo_create_gfp(gfp_t flags);
+
+/* NOTE: dtor has the ownership of freeing the passed element */
 int            rfifo_destroy(struct rfifo * f,
                              void         (* dtor)(void * e));
 
