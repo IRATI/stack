@@ -60,11 +60,15 @@ public class FlowManager {
 		}
 		
 		try{
+			log.debug("Reauest DIF to use: "+difName);
+			
 			if (difName == null){
 				ipcProcess = ipcProcessManager.selectAnyIPCProcess();
 			} else {
 				ipcProcess = ipcProcessManager.selectIPCProcessOfDIF(difName);
 			}
+			
+			log.debug("Chosen IPC Process: "+ipcProcess.getDIFInformation().getDifName().getProcessName());
 			
 			handle = ipcProcess.allocateFlow(event);
 			

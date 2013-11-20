@@ -474,7 +474,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 
         if (ipc_process->ops->flow_allocate_response(ipc_process->data,
                                                      pid,
-                                                     0)) {
+                                                     attrs->result)) {
                 LOG_ERR("Failed allocate flow response for port id: %d",
                         attrs->id);
                 alloc_flow_resp_free(attrs, msg, hdr);
