@@ -31,6 +31,7 @@ public class DataTransferConstantsRIBObject extends BaseRIBObject{
 				DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME);
 		ipcProcess = IPCProcess.getInstance();
 		setRIBDaemon(ipcProcess.getRIBDaemon());
+		setEncoder(ipcProcess.getEncoder());
 	}
 
 	@Override

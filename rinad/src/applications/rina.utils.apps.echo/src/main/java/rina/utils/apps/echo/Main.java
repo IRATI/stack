@@ -55,7 +55,8 @@ public class Main {
 	public static final String DEFAULT_AP_INSTANCE = "1";
 	
 	public static final String USAGE = "java -jar rina.utils.apps.echo [-role] (client|server)" +
-			"[-apname] AP [-instance] AI [-sdusize] sduSizeInBytes [-count] num_sdus ";
+			"[-sapname] serverApName [-sinstance] serverApInstance [-capname] clientApName " + 
+			"[-cinstance] clientApInstance [-sdusize] sduSizeInBytes [-count] num_sdus ";
 	public static final String DEFAULTS = "The defaults are: role=server;  sapname=rina.utils.apps.echo.server; " + 
 			"sinstance=1; capname=rina.utils.apps.echo.client; cinstance=1; sdusize=1500; count=5000";
 	
