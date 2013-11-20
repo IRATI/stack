@@ -20,6 +20,7 @@
 
 #include <linux/export.h>
 #include <linux/list.h>
+#include <linux/types.h>
 
 #define RINA_PREFIX "rqueue"
 
