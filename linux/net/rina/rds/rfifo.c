@@ -20,6 +20,7 @@
 
 #include <linux/export.h>
 #include <linux/list.h>
+#include <linux/types.h>
 
 #define RINA_PREFIX "rfifo"
 
@@ -33,7 +34,7 @@ struct rfifo {
         struct rqueue * q;
 };
 
-struct rfifo * rfifo_create_gfp(gfp_t flags)
+static struct rfifo * rfifo_create_gfp(gfp_t flags)
 {
         struct rfifo * f;
 
@@ -51,11 +52,14 @@ struct rfifo * rfifo_create_gfp(gfp_t flags)
 
         return f;
 }
-EXPORT_SYMBOL(rfifo_create_gfp);
 
 struct rfifo * rfifo_create(void)
 { return rfifo_create_gfp(GFP_KERNEL); }
 EXPORT_SYMBOL(rfifo_create);
+
+struct rfifo * rfifo_create_ni(void)
+{ return rfifo_create_gfp(GFP_ATOPMIC); }
+EXPORT_SYMBOL(rfifo_create_ni);
 
 int rfifo_destroy(struct rfifo * f,
                   void         (* dtor)(void * e))

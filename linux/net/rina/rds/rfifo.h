@@ -21,12 +21,10 @@
 #ifndef RINA_RFIFO_H
 #define RINA_RFIFO_H
 
-#include <linux/types.h>
-
 struct rfifo;
 
 struct rfifo * rfifo_create(void);
-struct rfifo * rfifo_create_gfp(gfp_t flags);
+struct rfifo * rfifo_create_ni(void);
 
 /* NOTE: dtor has the ownership of freeing the passed element */
 int            rfifo_destroy(struct rfifo * f,
