@@ -36,7 +36,7 @@ struct rbmp {
         DECLARE_BITMAP(bitmap, BITS_IN_BITMAP);
 };
 
-struct rbmp * rbmp_create_gfp(gfp_t flags, size_t bits, ssize_t offset);
+struct rbmp * rbmp_create_gfp(gfp_t flags, size_t bits, ssize_t offset)
 {
         struct rbmp * tmp;
 
@@ -57,7 +57,7 @@ EXPORT_SYMBOL(rbmp_create_gfp);
 
 struct rbmp * rbmp_create(size_t bits, ssize_t offset)
 { return rbmp_create_gfp(GFP_KERNEL, bits, offset); }
-EXPORT_SYMBOL(rbmap_create);
+EXPORT_SYMBOL(rbmp_create);
 
 int rbmp_destroy(struct rbmp * b)
 {
