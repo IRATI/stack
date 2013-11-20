@@ -21,9 +21,12 @@
 #ifndef RINA_RBMP_H
 #define RINA_RBMP_H
 
+#include <linux/types.h>
+
 struct rbmp;
 
 struct rbmp * rbmp_create(size_t bits, ssize_t offset);
+struct rbmp * rbmp_create_gfp(gfp_t flags, size_t bits, ssize_t offset);
 int           rbmp_destroy(struct rbmp * b);
 
 ssize_t       rbmp_allocate(struct rbmp * instance);

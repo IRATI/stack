@@ -21,7 +21,7 @@
 #ifndef RINA_RWQ_H
 #define RINA_RWQ_H
 
-/* Workqueues */
+#include <linux/types.h>
 #include <linux/workqueue.h>
 
 struct workqueue_struct * rwq_create(const char * name);
