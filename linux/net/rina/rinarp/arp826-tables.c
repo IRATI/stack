@@ -25,6 +25,8 @@
  *       one completely.
  */
 
+#include <linux/types.h>
+
 /* FIXME: The following dependencies have to be removed */
 #define RINA_PREFIX "arp826-tables"
 
@@ -93,9 +95,9 @@ static int tble_init(struct table_entry * entry,
         return 0;
 }
 
-struct table_entry * tble_create_gfp(struct gpa * gpa,
-                                     struct gha * gha,
-                                     gfp_t        flags)
+static struct table_entry * tble_create_gfp(gfp_t        flags,
+                                            struct gpa * gpa,
+                                            struct gha * gha)
 {
         struct table_entry * entry;
 
@@ -125,12 +127,16 @@ struct table_entry * tble_create_gfp(struct gpa * gpa,
 
         return entry;
 }
-EXPORT_SYMBOL(tble_create_gfp);
 
 struct table_entry * tble_create(struct gpa * gpa,
                                  struct gha * gha)
-{ return tble_create_gfp(gpa, gha, GFP_KERNEL); }
+{ return tble_create_gfp(GFP_KERNEL, gpa, gha); }
 EXPORT_SYMBOL(tble_create);
+
+struct table_entry * tble_create_ni(struct gpa * gpa,
+                                    struct gha * gha)
+{ return tble_create_gfp(GFP_ATOMIC, gpa, gha); }
+EXPORT_SYMBOL(tble_create_ni);
 
 bool tble_is_ok(const struct table_entry * entry)
 {
@@ -619,7 +625,7 @@ int arp826_add(uint16_t            ptype,
 
         LOG_DBG("Creating a new table entry for this ARP-add request");
 
-        e = tble_create_gfp(tmp_pa, tmp_ha, GFP_ATOMIC);
+        e = tble_create_gfp(GFP_ATOMIC, tmp_pa, tmp_ha);
         if (!e) {
                 gpa_destroy(tmp_pa);
                 gha_destroy(tmp_ha);

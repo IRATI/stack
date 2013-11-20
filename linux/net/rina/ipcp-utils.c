@@ -20,6 +20,7 @@
  */
 
 #include <linux/export.h>
+#include <linux/types.h>
 
 #define RINA_PREFIX "ipcp-utils"
 
@@ -29,13 +30,16 @@
 #include "common.h"
 #include "ipcp-utils.h"
 
-struct name * name_create_gfp(gfp_t flags)
+static struct name * name_create_gfp(gfp_t flags)
 { return rkzalloc(sizeof(struct name), flags); }
-EXPORT_SYMBOL(name_create_gfp);
 
 struct name * name_create(void)
 { return name_create_gfp(GFP_KERNEL); }
 EXPORT_SYMBOL(name_create);
+
+struct name * name_create_ni(void)
+{ return name_create_gfp(GFP_ATOMIC); }
+EXPORT_SYMBOL(name_create_ni);
 
 /*
  * NOTE:
@@ -134,12 +138,12 @@ struct name * name_init_with(struct name * dst,
 }
 EXPORT_SYMBOL(name_init_with);
 
-struct name * name_init_from_gfp(gfp_t            flags,
-                                 struct name *    dst,
-                                 const string_t * process_name,
-                                 const string_t * process_instance,
-                                 const string_t * entity_name,
-                                 const string_t * entity_instance)
+static struct name * name_init_from_gfp(gfp_t            flags,
+                                        struct name *    dst,
+                                        const string_t * process_name,
+                                        const string_t * process_instance,
+                                        const string_t * entity_name,
+                                        const string_t * entity_instance)
 {
         if (!dst)
                 return NULL;
@@ -160,7 +164,6 @@ struct name * name_init_from_gfp(gfp_t            flags,
 
         return dst;
 }
-EXPORT_SYMBOL(name_init_from_gfp);
 
 struct name * name_init_from(struct name *    dst,
                              const string_t * process_name,
@@ -176,6 +179,21 @@ struct name * name_init_from(struct name *    dst,
                                   entity_instance);
 }
 EXPORT_SYMBOL(name_init_from);
+
+struct name * name_init_from_ni(struct name *    dst,
+                                const string_t * process_name,
+                                const string_t * process_instance,
+                                const string_t * entity_name,
+                                const string_t * entity_instance)
+{
+        return name_init_from_gfp(GFP_ATOMIC,
+                                  dst,
+                                  process_name,
+                                  process_instance,
+                                  entity_name,
+                                  entity_instance);
+}
+EXPORT_SYMBOL(name_init_from_ni);
 
 void name_fini(struct name * n)
 {
@@ -299,8 +317,8 @@ EXPORT_SYMBOL(name_is_equal);
 
 #define DELIMITER "/"
 
-char * name_tostring_gfp(gfp_t               flags,
-                         const struct name * n)
+static char * name_tostring_gfp(gfp_t               flags,
+                                const struct name * n)
 {
         char *       tmp;
         size_t       size;
@@ -348,14 +366,17 @@ char * name_tostring_gfp(gfp_t               flags,
 
         return tmp;
 }
-EXPORT_SYMBOL(name_tostring_gfp);
 
 char * name_tostring(const struct name * n)
 { return name_tostring_gfp(GFP_KERNEL, n); }
 EXPORT_SYMBOL(name_tostring);
 
-struct name * string_toname_gfp(gfp_t            flags,
-                                const string_t * input)
+char * name_tostring_ni(const struct name * n)
+{ return name_tostring_gfp(GFP_ATOMIC, n); }
+EXPORT_SYMBOL(name_tostring_ni);
+
+static struct name * string_toname_gfp(gfp_t            flags,
+                                       const string_t * input)
 {
         struct name * name;
 
@@ -396,11 +417,14 @@ struct name * string_toname_gfp(gfp_t            flags,
 
         return name;
 }
-EXPORT_SYMBOL(string_toname_gfp);
 
 struct name * string_toname(const string_t * input)
 { return string_toname_gfp(GFP_KERNEL, input); }
 EXPORT_SYMBOL(string_toname);
+
+struct name * string_toname_ni(const string_t * input)
+{ return string_toname_gfp(GFP_ATOMIC, input); }
+EXPORT_SYMBOL(string_toname_ni);
 
 static int string_dup_from_user(const string_t __user * src, string_t ** dst)
 {
