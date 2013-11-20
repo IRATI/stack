@@ -182,7 +182,7 @@ struct write_data {
         struct sdu *  sdu;
 };
 
-bool is_write_data_complete(const struct write_data * data)
+static bool is_write_data_complete(const struct write_data * data)
 {
         bool ret;
 

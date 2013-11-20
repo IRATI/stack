@@ -430,7 +430,7 @@ struct write_data {
         struct sdu * sdu;
 };
 
-bool is_write_data_complete(const struct write_data * data)
+static bool is_write_data_complete(const struct write_data * data)
 {
         bool ret;
 
@@ -803,7 +803,7 @@ static struct ipcp_factory_ops dummy_ops = {
         .destroy   = dummy_destroy,
 };
 
-struct ipcp_factory * shim = NULL;
+static struct ipcp_factory * shim = NULL;
 
 static int __init mod_init(void)
 {
