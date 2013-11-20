@@ -52,7 +52,8 @@ namespace rina {
          * @param ipcProcessName The name of the IPC Process to be created
          * @param ipcProcessId The id of the IPC Process to be created
          * @param difType The DIF type
-         * @return
+         * @return 0 if everything was ok, negative number indicating error
+         *         otherwise
          */
         int syscallCreateIPCProcess(const ApplicationProcessNamingInformation & ipcProcessName,
                                     unsigned int                                ipcProcessId,

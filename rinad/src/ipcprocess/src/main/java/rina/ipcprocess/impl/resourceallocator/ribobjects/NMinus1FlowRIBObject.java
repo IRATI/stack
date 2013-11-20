@@ -3,6 +3,7 @@ package rina.ipcprocess.impl.resourceallocator.ribobjects;
 import eu.irati.librina.FlowInformation;
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
+import rina.ipcprocess.impl.IPCProcess;
 import rina.resourceallocator.api.NMinus1FlowManager;
 import rina.ribdaemon.api.RIBDaemonException;
 import rina.ribdaemon.api.SimpleSetMemberRIBObject;
@@ -19,6 +20,7 @@ public class NMinus1FlowRIBObject extends SimpleSetMemberRIBObject{
 		super(N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS, objectName, flowInformation);
 		this.flowInformation = flowInformation;
 		this.nMinus1FlowManager = nMinus1FlowManager;
+		setRIBDaemon(IPCProcess.getInstance().getRIBDaemon());
 	}
 	
 	@Override

@@ -1,4 +1,4 @@
-package rina.ipcprocess.impl.flowallocator.ribobjects;
+package rina.ipcprocess.impl.ribobjects;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,8 +6,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import eu.irati.librina.QoSCube;
-
+import rina.applicationprocess.api.WhatevercastName;
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
 import rina.ipcprocess.impl.IPCProcess;
@@ -18,24 +17,15 @@ import rina.ribdaemon.api.RIBObject;
 import rina.ribdaemon.api.RIBObjectNames;
 import rina.ribdaemon.api.SimpleSetMemberRIBObject;
 
-public class QoSCubeSetRIBObject extends BaseRIBObject{
+public class WhatevercastNameSetRIBObject extends BaseRIBObject{
 	
-	public static final String QOSCUBE_SET_RIB_OBJECT_NAME = RIBObjectNames.SEPARATOR + RIBObjectNames.DIF + 
-            RIBObjectNames.SEPARATOR + RIBObjectNames.MANAGEMENT + RIBObjectNames.SEPARATOR + RIBObjectNames.FLOW_ALLOCATOR + 
-            RIBObjectNames.SEPARATOR + RIBObjectNames.QOS_CUBES;
-
-    public static final String QOSCUBE_SET_RIB_OBJECT_CLASS = "qoscube set";
-    
-    public static final String QOSCUBE_RIB_OBJECT_CLASS = "qoscube";
-
-	private static final Log log = LogFactory.getLog(QoSCubeSetRIBObject.class);
-	
+	private static final Log log = LogFactory.getLog(WhatevercastNameSetRIBObject.class);
 	private IPCProcess ipcProcess = null;
 	
-	public QoSCubeSetRIBObject(){
-		super(QOSCUBE_SET_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), 
-				QOSCUBE_SET_RIB_OBJECT_NAME);
-		ipcProcess = IPCProcess.getInstance();
+	public WhatevercastNameSetRIBObject(){
+		super(WhatevercastName.WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), 
+				WhatevercastName.WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME);
+		this.ipcProcess = IPCProcess.getInstance();
 		setRIBDaemon(ipcProcess.getRIBDaemon());
 		setEncoder(ipcProcess.getEncoder());
 	}
@@ -48,10 +38,10 @@ public class QoSCubeSetRIBObject extends BaseRIBObject{
 	@Override
 	public void create(CDAPMessage cdapMessage, CDAPSessionDescriptor cdapSessionDescriptor) throws RIBDaemonException{
 		try{
-			QoSCube[] qosCubes = (QoSCube[])
-				this.getEncoder().decode(cdapMessage.getObjValue().getByteval(), QoSCube[].class);
+			WhatevercastName[] whatevercastNames = (WhatevercastName[])
+				this.getEncoder().decode(cdapMessage.getObjValue().getByteval(), WhatevercastName[].class);
 			this.getRIBDaemon().create(cdapMessage.getObjClass(), cdapMessage.getObjInst(), cdapMessage.getObjName(), 
-					qosCubes, null);
+					whatevercastNames, null);
 		}catch(Exception ex){
 			log.error(ex);
 			ex.printStackTrace();
@@ -60,24 +50,22 @@ public class QoSCubeSetRIBObject extends BaseRIBObject{
 	
 	@Override
 	public synchronized void create(String objectClass, long objectInstance, String objectName, Object object) throws RIBDaemonException{
-		if (object instanceof QoSCube){
-			SimpleSetMemberRIBObject ribObject = new SimpleSetMemberRIBObject( 
-					QOSCUBE_RIB_OBJECT_CLASS, objectName, (QoSCube) object);
+		if (object instanceof WhatevercastName){
+			SimpleSetMemberRIBObject ribObject = new SimpleSetMemberRIBObject(
+					WhatevercastName.WHATEVERCAST_NAME_RIB_OBJECT_CLASS, objectName, (WhatevercastName) object);
 			this.addChild(ribObject);
 			getRIBDaemon().addRIBObject(ribObject);
-			ipcProcess.getDIFInformation().getDifConfiguration().addQoSCube((QoSCube) object);
-		}else if (object instanceof QoSCube[]){
-			QoSCube[] cubes = (QoSCube[]) object;
+		}else if (object instanceof WhatevercastName[]){
+			WhatevercastName[] whatevercastNames = (WhatevercastName[]) object;
 			String candidateObjectName = null;
 			
-			for(int i=0; i<cubes.length; i++){
-				candidateObjectName = this.getObjectName() + RIBObjectNames.SEPARATOR + cubes[i].getName();
+			for(int i=0; i<whatevercastNames.length; i++){
+				candidateObjectName = this.getObjectName() + RIBObjectNames.SEPARATOR + whatevercastNames[i].getRule();
 				if (!this.hasChild(candidateObjectName)){
-					SimpleSetMemberRIBObject ribObject = new SimpleSetMemberRIBObject(  
-							QOSCUBE_RIB_OBJECT_CLASS, candidateObjectName, cubes[i]);
+					SimpleSetMemberRIBObject ribObject = new SimpleSetMemberRIBObject(
+							WhatevercastName.WHATEVERCAST_NAME_RIB_OBJECT_CLASS, candidateObjectName, whatevercastNames[i]);
 					this.addChild(ribObject);
 					getRIBDaemon().addRIBObject(ribObject);
-					ipcProcess.getDIFInformation().getDifConfiguration().addQoSCube(cubes[i]);
 				}
 			}
 			
@@ -95,8 +83,7 @@ public class QoSCubeSetRIBObject extends BaseRIBObject{
 		for(int i=0; i<this.getChildren().size(); i++){
 			childName = this.getChildren().get(i).getObjectName();
 			childrenNames.add(childName);
-			getRIBDaemon().delete(QOSCUBE_RIB_OBJECT_CLASS, childName);
-			//TODO remove QoSCube from difConfiguration
+			getRIBDaemon().delete(WhatevercastName.WHATEVERCAST_NAME_RIB_OBJECT_CLASS, childName);
 		}
 		
 		for(int i=0; i<childrenNames.size(); i++){
@@ -106,9 +93,9 @@ public class QoSCubeSetRIBObject extends BaseRIBObject{
 	
 	@Override
 	public synchronized Object getObjectValue(){
-		QoSCube[] result = new QoSCube[this.getChildren().size()];
+		WhatevercastName[] result = new WhatevercastName[this.getChildren().size()];
 		for(int i=0; i<result.length; i++){
-			result[i] = (QoSCube) this.getChildren().get(i).getObjectValue();
+			result[i] = (WhatevercastName) this.getChildren().get(i).getObjectValue();
 		}
 		
 		return result;
