@@ -61,7 +61,7 @@ EXPORT_SYMBOL(rbmp_create);
 
 struct rbmp * rbmp_create_ni(size_t bits, ssize_t offset)
 { return rbmp_create_gfp(GFP_ATOMIC, bits, offset); }
-EXPORT_SYMBOL(rbmp_create);
+EXPORT_SYMBOL(rbmp_create_ni);
 
 int rbmp_destroy(struct rbmp * b)
 {
