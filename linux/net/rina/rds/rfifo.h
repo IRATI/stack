@@ -21,6 +21,8 @@
 #ifndef RINA_RFIFO_H
 #define RINA_RFIFO_H
 
+#include <linux/types.h>
+
 struct rfifo;
 
 struct rfifo * rfifo_create(void);

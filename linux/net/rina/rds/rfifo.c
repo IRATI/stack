@@ -37,7 +37,7 @@ struct rfifo * rfifo_create_gfp(gfp_t flags);
 {
         struct rfifo * f;
 
-        f = rkzalloc(sizeof(*f), GFP_KERNEL);
+        f = rkzalloc(sizeof(*f), flags);
         if (!f)
                 return NULL;
 
