@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import rina.configuration.RINAConfiguration;
 import rina.ipcmanager.impl.IPCManager;
 
 import eu.irati.librina.ApplicationManagerSingleton;
@@ -70,7 +71,7 @@ public class ApplicationRegistrationManager {
 			pendingRegistrations.put(handle, 
 					new PendingRegistration(event, ipcProcess, ipcProcessId));
 			log.debug("Requested registration of application "+applicationName.toString() 
-					+" to DIF "+ipcProcess.getDIFInformation().getDifName().toString() + 
+					+" to DIF "+ipcProcess.getDIFInformation().getDifName().getProcessName() + 
 					". Got handle "+handle);
 			return handle;
 		}catch(Exception ex){
@@ -269,20 +270,29 @@ public class ApplicationRegistrationManager {
 		ApplicationRegistrationInformation info = event.getApplicationRegistrationInformation();
 		
 		if (info.getRegistrationType() == ApplicationRegistrationType.APPLICATION_REGISTRATION_ANY_DIF){
-			return ipcProcessManager.selectAnyIPCProcess();
+			String difName = RINAConfiguration.getInstance().getDIFNameAssociatedToApName(
+					info.getApplicationName());
+			if (difName == null) {
+				return ipcProcessManager.selectAnyIPCProcess();
+			} else {
+				return getIPCProcessOfDIF(difName, info.getApplicationName());
+			}
 		}
 		
 		if (info.getRegistrationType() == ApplicationRegistrationType.APPLICATION_REGISTRATION_SINGLE_DIF){
-			String difName = info.getDIFName().getProcessName();
-			IPCProcess ipcProcess = ipcProcessManager.selectIPCProcessOfDIF(difName);
-			if (isRegisteredAt(ipcProcess, 
-					event.getApplicationRegistrationInformation().getApplicationName())) {
-				throw new Exception("Application already registered in DIF "+difName);
-			}
-			return ipcProcess;
+			return getIPCProcessOfDIF(info.getDIFName().getProcessName(), info.getApplicationName());
 		}
 		
 		throw new Exception("Unsupported registration type: "+info.getRegistrationType());
+	}
+	
+	private IPCProcess getIPCProcessOfDIF(String difName, ApplicationProcessNamingInformation apName) 
+			throws Exception{
+		IPCProcess ipcProcess = ipcProcessManager.selectIPCProcessOfDIF(difName);
+		if (isRegisteredAt(ipcProcess, apName)) {
+			throw new Exception("Application already registered in DIF "+difName);
+		}
+		return ipcProcess;
 	}
 	
 	private boolean isRegisteredAt(

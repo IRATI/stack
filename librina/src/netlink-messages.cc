@@ -999,7 +999,8 @@ void IpcmNotifyNeighborsModifiedMessage::setAdded(bool added) {
 
 IPCEvent* IpcmNotifyNeighborsModifiedMessage::toIPCEvent() {
         NeighborsModifiedNotificationEvent * event =
-                        new NeighborsModifiedNotificationEvent(neighbors,
+                        new NeighborsModifiedNotificationEvent(
+                                        getSourceIpcProcessId(), neighbors,
                                         added, getSequenceNumber());
         return event;
 }

@@ -214,6 +214,9 @@ public class CDAPSessionDescriptor {
 				new ApplicationProcessNamingInformation(this.getSrcApName(), this.getSrcApInst());
 		if (this.getSrcAEName() != null){
 			apNamingInfo.setEntityName(this.getSrcAEName());
+		}
+		
+		if (this.getSrcAEInst() != null){
 			apNamingInfo.setEntityInstance(this.getSrcAEInst());
 		}
 		
@@ -229,6 +232,9 @@ public class CDAPSessionDescriptor {
 				new ApplicationProcessNamingInformation(this.getDestApName(), this.getDestApInst());
 		if (this.getDestAEName() != null){
 			apNamingInfo.setEntityName(this.getDestAEName());
+		}
+		
+		if (this.getDestAEInst() != null) {
 			apNamingInfo.setEntityInstance(this.getDestAEInst());
 		}
 		

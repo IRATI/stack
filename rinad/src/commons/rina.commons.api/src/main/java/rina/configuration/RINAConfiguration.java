@@ -2,6 +2,8 @@ package rina.configuration;
 
 import java.util.List;
 
+import eu.irati.librina.ApplicationProcessNamingInformation;
+
 /**
  * The global configuration of the RINA software
  * @author eduardgrasa
@@ -23,6 +25,11 @@ public class RINAConfiguration {
 	 * The configurations of zero or more DIFs
 	 */
 	private List<DIFProperties> difConfigurations = null;
+	
+	/**
+	 * The list of application to DIF mappings
+	 */
+	private List<ApplicationToDIFMapping> applicationToDIFMappings = null;
 
 	/**
 	 * The single instance of this class
@@ -48,6 +55,19 @@ public class RINAConfiguration {
 	public void setIpcProcessesToCreate(
 			List<IPCProcessToCreate> ipcProcessesToCreate) {
 		this.ipcProcessesToCreate = ipcProcessesToCreate;
+	}
+	
+	public List<ApplicationToDIFMapping> getApplicationToDIFMappings() {
+		return applicationToDIFMappings;
+	}
+
+	public void setApplicationToDIFMappings(
+			List<ApplicationToDIFMapping> applicationToDIFMappings) {
+		this.applicationToDIFMappings = applicationToDIFMappings;
+	}
+
+	public static void setInstance(RINAConfiguration instance) {
+		RINAConfiguration.instance = instance;
 	}
 
 	public void setLocalConfiguration(LocalConfiguration localConfiguration) {
@@ -182,6 +202,21 @@ public class RINAConfiguration {
 		}
 
 		return -1;
+	}
+	
+	public String getDIFNameAssociatedToApName(ApplicationProcessNamingInformation apName){
+		if (applicationToDIFMappings == null || apName == null) {
+			return null;
+		}
+		
+		String encodedApName = apName.getEncodedString();
+		for(int i=0; i<applicationToDIFMappings.size(); i++) {
+			if (encodedApName.equals(applicationToDIFMappings.get(i).getEncodedAppName())) {
+				return applicationToDIFMappings.get(i).getDifName();
+			}
+		}
+		
+		return null;
 	}
 	
 	public String toString(){

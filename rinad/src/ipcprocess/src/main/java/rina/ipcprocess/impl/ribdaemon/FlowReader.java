@@ -36,15 +36,17 @@ public class FlowReader implements Runnable{
 		while(!isStopped()){
 			try{
 				bytesRead = flow.readSDU(buffer, maxSDUSize);
-				sdu = new byte[bytesRead];
-				for(int i=0; i<sdu.length; i++){
-					sdu[i] = buffer[i];
-				}
-				ribDaemon.cdapMessageDelivered(sdu, flow.getPortId());
 			}catch(Exception ex){
 				log.error("Problems reading SDU from flow "+flow.getPortId());
 				stop();
 			}
+			
+			sdu = new byte[bytesRead];
+			for(int i=0; i<sdu.length; i++){
+				sdu[i] = buffer[i];
+			}
+			
+			ribDaemon.cdapMessageDelivered(sdu, flow.getPortId());
 		}
 	}
 	

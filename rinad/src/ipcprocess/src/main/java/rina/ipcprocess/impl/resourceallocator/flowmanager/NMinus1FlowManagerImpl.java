@@ -163,9 +163,9 @@ public class NMinus1FlowManagerImpl implements NMinus1FlowManager{
 	 * Called by an N-1 DIF
 	 */
 	public synchronized void flowAllocationRequested(FlowRequestEvent event) throws IPCException {
-		if (event.getRemoteApplicationName().getProcessName().equals(
+		if (event.getLocalApplicationName().getProcessName().equals(
 				ipcProcess.getName().getProcessName())
-				&& event.getRemoteApplicationName().getProcessInstance().equals(
+				&& event.getLocalApplicationName().getProcessInstance().equals(
 						ipcProcess.getName().getProcessInstance())){
 			
 			//TODO deal with the different AEs (Management vs. Data transfer), right now assuming the flow
