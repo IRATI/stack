@@ -890,10 +890,9 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
                         LOG_DBG("Got the address from ARP");
                 } else {
-                        sname = name_create_gfp(GFP_ATOMIC);
-                        if (!name_init_from_gfp(GFP_ATOMIC,
-                                                sname,
-                                                "Unknown app", "", "", "")) {
+                        sname = name_create_ni();
+                        if (!name_init_from_ni(sname,
+                                               "Unknown app", "", "", "")) {
                                 name_destroy(sname);
                                 return -1;
                         }

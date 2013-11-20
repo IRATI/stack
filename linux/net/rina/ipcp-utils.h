@@ -35,7 +35,7 @@
  * NULL is returned.
  */
 struct name * name_create(void);
-struct name * name_create_gfp(gfp_t flags);
+struct name * name_create_ni(void);
 
 
 /*
@@ -55,12 +55,11 @@ struct name * name_init_from(struct name *    dst,
                              const string_t * entity_name,
                              const string_t * entity_instance);
 
-struct name * name_init_from_gfp(gfp_t            flags,
-                                 struct name *    dst,
-                                 const string_t * process_name,
-                                 const string_t * process_instance,
-                                 const string_t * entity_name,
-                                 const string_t * entity_instance);
+struct name * name_init_from_ni(struct name *    dst,
+                                const string_t * process_name,
+                                const string_t * process_instance,
+                                const string_t * entity_name,
+                                const string_t * entity_instance);
 
 /* Takes ownership of the passed parameters */
 struct name * name_init_with(struct name * dst,
