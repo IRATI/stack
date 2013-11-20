@@ -35,6 +35,7 @@ int            rfifo_destroy(struct rfifo * f,
  *       rfifo_destroy() has to handle them opportunely
  */
 int            rfifo_push(struct rfifo * f, void * e);
+int            rfifo_push_ni(struct rfifo * f, void * e);
 void *         rfifo_pop(struct rfifo * f);
 bool           rfifo_is_empty(struct rfifo * f);
 

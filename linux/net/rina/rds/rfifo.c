@@ -91,6 +91,17 @@ int rfifo_push(struct rfifo * f, void * e)
 }
 EXPORT_SYMBOL(rfifo_push);
 
+int rfifo_push_ni(struct rfifo * f, void * e)
+{
+        if (!f) {
+                LOG_ERR("Can't push into a NULL fifo ...");
+                return -1;
+        }
+
+        return rqueue_tail_push_ni(f->q, e);
+}
+EXPORT_SYMBOL(rfifo_push_ni);
+
 void * rfifo_pop(struct rfifo * f)
 {
         if (!f) {
