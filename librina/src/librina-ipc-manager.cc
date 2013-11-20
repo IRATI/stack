@@ -1201,16 +1201,23 @@ UpdateDIFConfigurationResponseEvent::UpdateDIFConfigurationResponseEvent(
 /* CLASS ENROLL TO DIF RESPONSE EVENT */
 EnrollToDIFResponseEvent::EnrollToDIFResponseEvent(
                 const std::list<Neighbor>& neighbors,
+                const DIFInformation& difInformation,
                 int result, unsigned int sequenceNumber):
                         BaseResponseEvent(result,
                                         ENROLL_TO_DIF_RESPONSE_EVENT,
                                         sequenceNumber) {
         this->neighbors = neighbors;
+        this->difInformation = difInformation;
 }
 
 const std::list<Neighbor>&
 EnrollToDIFResponseEvent::getNeighbors() const {
         return neighbors;
+}
+
+const DIFInformation&
+EnrollToDIFResponseEvent::getDIFInformation() const {
+        return difInformation;
 }
 
 /* CLASS NEIGHBORS MODIFIED NOTIFICATION EVENT */

@@ -426,15 +426,15 @@ public class IPCProcess {
 		}
 	}
 	
-	public DIFInformation getDIFInformation() {
+	public synchronized DIFInformation getDIFInformation() {
 		return difInformation;
 	}
 	
-	public void setDIFInformation(DIFInformation difInformation) {
+	public synchronized void setDIFInformation(DIFInformation difInformation) {
 		this.difInformation = difInformation;
 	}
 	
-	public Long getAddress() {
+	public synchronized Long getAddress() {
 		if (difInformation == null) {
 			return null;
 		}

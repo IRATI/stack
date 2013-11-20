@@ -942,11 +942,15 @@ public:
 class EnrollToDIFResponseEvent: public BaseResponseEvent {
         std::list<Neighbor> neighbors;
 
+        DIFInformation difInformation;
+
 public:
         EnrollToDIFResponseEvent(
                         const std::list<Neighbor> & neighbors,
+                        const DIFInformation& difInformation,
                         int result, unsigned int sequenceNumber);
         const std::list<Neighbor>& getNeighbors() const;
+        const DIFInformation& getDIFInformation() const;
 };
 
 /**
