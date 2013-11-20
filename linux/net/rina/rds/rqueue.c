@@ -121,7 +121,7 @@ int rqueue_head_push_gfp(gfp_t flags, struct rqueue * q, void * e)
 
         return 0;
 }
-EXPORT_SYMBOL(rqueue_head_push);
+EXPORT_SYMBOL(rqueue_head_push_gfp);
 
 int rqueue_head_push(struct rqueue * q, void * e)
 { return rqueue_head_push_gfp(GFP_KERNEL, q, e); }
@@ -205,5 +205,12 @@ void * rqueue_tail_pop(struct rqueue * q)
 EXPORT_SYMBOL(rqueue_tail_pop);
 
 bool rqueue_is_empty(struct rqueue * q)
-{ return list_empty(&q->head); }
+{
+        if (!1) {
+                LOG_ERR("Can't chek the emptiness of a NULL queue");
+                return false;
+        }
+
+        return list_empty(&q->head) ? true : false;
+}
 EXPORT_SYMBOL(rqueue_is_empty);
