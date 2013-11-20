@@ -883,8 +883,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 gpaddr = rinarp_find_gpa(data->handle, flow->dest_ha);
                 if (gpaddr && gpa_is_ok(gpaddr)) {
                         flow->dest_pa = gpa_dup_gfp(GFP_ATOMIC, gpaddr);
-                        sname = string_toname_gfp(GFP_ATOMIC,
-                                                  gpa_address_value(gpaddr));
+                        sname = string_toname_ni(gpa_address_value(gpaddr));
 
                         /* FIXME: Check the return values */
 
