@@ -18,6 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/types.h>
+
 #define RINA_PREFIX "rwq"
 
 #include "logs.h"
@@ -71,9 +73,9 @@ struct workqueue_struct * rwq_create(const char * name)
 }
 EXPORT_SYMBOL(rwq_create);
 
-struct rwq_work_item * rwq_work_create(gfp_t     flags,
-                                       int    (* worker)(void * data),
-                                       void *    data)
+static struct rwq_work_item * rwq_work_create_gfp(gfp_t    flags,
+                                                  int   (* work)(void * data),
+                                                  void *   data)
 {
         struct rwq_work_item * tmp;
 
@@ -91,12 +93,21 @@ struct rwq_work_item * rwq_work_create(gfp_t     flags,
 
         /* Filling the workqueue item */
         INIT_WORK((struct work_struct *) tmp, rwq_worker);
-        tmp->worker = worker;
+        tmp->worker = work;
         tmp->data   = data;
 
         return tmp;
 }
+
+struct rwq_work_item * rwq_work_create(int   (* work)(void * data),
+                                       void *   data)
+{ return rwq_work_create_gfp(GFP_KERNEL, work, data); }
 EXPORT_SYMBOL(rwq_work_create);
+
+struct rwq_work_item * rwq_work_create_ni(int   (* work)(void * data),
+                                          void *   data)
+{ return rwq_work_create_gfp(GFP_ATOMIC, work, data); }
+EXPORT_SYMBOL(rwq_work_create_ni);
 
 int rwq_work_post(struct workqueue_struct * wq,
                   struct rwq_work_item *    item)

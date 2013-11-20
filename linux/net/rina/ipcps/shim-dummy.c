@@ -526,7 +526,7 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                         if (!is_write_data_complete(tmp))
                                 return -1;
 
-                        item = rwq_work_create(GFP_ATOMIC, dummy_write, tmp);
+                        item = rwq_work_create_ni(dummy_write, tmp);
                         if (!item) {
                                 write_data_destroy(tmp);
                                 return -1;
@@ -549,7 +549,7 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                         if (!is_write_data_complete(tmp))
                                 return -1;
 
-                        item = rwq_work_create(GFP_ATOMIC, dummy_write, tmp);
+                        item = rwq_work_create_ni(dummy_write, tmp);
                         if (!item) {
                                 write_data_destroy(tmp);
                                 return -1;
