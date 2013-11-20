@@ -277,9 +277,9 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 }
         } else {
                 kipcm_notify_flow_alloc_req_result(default_kipcm,
-                                data->id,
-                                flow->port_id,
-                                result);
+                                                   data->id,
+                                                   flow->port_id,
+                                                   result);
                 list_del(&flow->list);
                 name_destroy(flow->source);
                 name_destroy(flow->dest);
