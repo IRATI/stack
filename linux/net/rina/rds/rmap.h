@@ -21,6 +21,8 @@
 #ifndef RINA_RMAP_H
 #define RINA_RMAP_H
 
+#include <linux/types.h>
+
 /* Map entries */
 struct rmap_entry;
 

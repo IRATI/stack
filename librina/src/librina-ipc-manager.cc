@@ -400,6 +400,14 @@ void IPCProcess::addNeighbors(const std::list<Neighbor>& newNeighbors) {
         }
 }
 
+void IPCProcess::removeNeighbors(const std::list<Neighbor>& toRemove) {
+        std::list<Neighbor>::const_iterator iterator;
+        for (iterator = toRemove.begin();
+                        iterator != toRemove.end(); ++iterator) {
+                neighbors.remove(*iterator);
+        }
+}
+
 std::list<Neighbor> IPCProcess::getNeighbors() {
         return neighbors;
 }
@@ -1207,10 +1215,12 @@ EnrollToDIFResponseEvent::getNeighbors() const {
 
 /* CLASS NEIGHBORS MODIFIED NOTIFICATION EVENT */
 NeighborsModifiedNotificationEvent::NeighborsModifiedNotificationEvent(
+                        unsigned short ipcProcessId,
                         const std::list<Neighbor> & neighbors,
                         bool added, unsigned int sequenceNumber) :
                                 IPCEvent(NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT,
                                                 sequenceNumber) {
+        this->ipcProcessId = ipcProcessId;
         this->neighbors = neighbors;
         this->added = added;
 }
@@ -1222,6 +1232,10 @@ NeighborsModifiedNotificationEvent::getNeighbors() const {
 
 bool NeighborsModifiedNotificationEvent::isAdded() const {
         return added;
+}
+
+unsigned short NeighborsModifiedNotificationEvent::getIpcProcessId() const {
+        return ipcProcessId;
 }
 
 /* CLASS IPC PROCESS DAEMON INITIALIZED EVENT */

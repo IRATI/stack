@@ -1,7 +1,7 @@
 {
   "localConfiguration" : {
-    "installationPath" : "@pkgdatadir@",
-    "libraryPath" : "@libdir@",
+    "installationPath" : "/usr/local/irati/share/rinad",
+    "libraryPath" : "/usr/local/irati/lib",
     "consolePort" : 32766,
     "cdapTimeoutInMs" : 10000,
     "enrollmentTimeoutInMs" : 10000,
@@ -11,14 +11,34 @@
     "neighborsEnrollerPeriodInMs" : 10000,
     "lengthOfFlowQueues" : 10
   },
+  "applicationToDIFMappings" : [ {
+    "encodedAppName" : "rina.utils.apps.echo.server-1--",
+    "difName" : "loopback.DIF" 
+  }, {
+    "encodedAppName" : "rina.utils.apps.echo.client-1--",
+    "difName" : "loopback.DIF" 
+  }, {
+    "encodedAppName" : "rina.utils.apps.echo-2--",
+    "difName" : "fantastic.DIF" 
+  }, {
+    "encodedAppName" : "rina.utils.apps.echoclient-2--",
+    "difName" : "fantastic.DIF" 
+  }],
   "ipcProcessesToCreate" : [ {
     "type" : "shim-dummy",
     "applicationProcessName" : "test-dummy",
     "applicationProcessInstance" : "1",
     "difName" : "loopback.DIF"
-  } ],
+   }, {
+    "type" : "shim-dummy",
+    "applicationProcessName" : "test",
+    "applicationProcessInstance" : "1",
+    "difName" : "fantastic.DIF"
+   } ],
   "difConfigurations" : [ {
     "difName" : "loopback.DIF"
+  }, {
+    "difName" : "fantastic.DIF"
   }, {
     "difName" : "100",
     "configParameters" : [ {

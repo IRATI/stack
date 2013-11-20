@@ -36,11 +36,11 @@ struct rqueue {
         struct list_head head;
 };
 
-struct rqueue * rqueue_create(void)
+struct rqueue * rqueue_create_gfp(gfp_t flags)
 {
         struct rqueue * tmp;
 
-        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkmalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
 
@@ -48,6 +48,10 @@ struct rqueue * rqueue_create(void)
 
         return tmp;
 }
+EXPORT_SYMBOL(rqueue_create_gfp);
+
+struct rqueue * rqueue_create(void)
+{ return rqueue_create_gfp(GFP_KERNEL); }
 EXPORT_SYMBOL(rqueue_create);
 
 int rqueue_destroy(struct rqueue * q,
@@ -55,88 +59,164 @@ int rqueue_destroy(struct rqueue * q,
 {
         struct rqueue_entry * pos, * nxt;
 
-        if (!q)
+        if (!q) {
+                LOG_ERR("Cannot destroy a NULL queue");
                 return -1;
-        if (!dtor)
+        }
+        if (!dtor) {
+                LOG_ERR("Cannot destroy with a NULL dtor");
                 return -1;
+        }
 
         list_for_each_entry_safe(pos, nxt, &q->head, next) {
+                ASSERT(pos);
+
                 list_del(&pos->next);
                 dtor(pos->data);
-                rkfree(pos);
         }
+
         rkfree(q);
 
         return 0;
 }
 EXPORT_SYMBOL(rqueue_destroy);
 
-int rqueue_head_push(struct rqueue * q, void * e)
+static struct rqueue_entry * entry_create(gfp_t flags, void * e)
 {
         struct rqueue_entry * tmp;
 
-        if (!q)
-                return -1;
-        if (!e)
-                return -1;
-
-        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkmalloc(sizeof(*tmp), flags);
         if (!tmp)
-                return -1;
+                return NULL;
 
         tmp->data = e;
         INIT_LIST_HEAD(&tmp->next);
-        list_add(&q->head, &tmp->next);
+
+        return tmp;
+}
+
+static int entry_destroy(struct rqueue_entry * e)
+{
+        if (!e)
+                return -1;
+
+        rkfree(e);
+        return 0;
+}
+
+int rqueue_head_push_gfp(gfp_t flags, struct rqueue * q, void * e)
+{
+        struct rqueue_entry * tmp;
+
+        if (!q) {
+                LOG_ERR("Cannot head-push on a NULL queue");
+                return -1;
+        }
+
+        tmp = entry_create(flags, e);
+        if (!tmp)
+                return -1;
+
+        list_add(&tmp->next, &q->head);
+
+        LOG_DBG("Element %pK head-pushed into queue %pK", e, q);
 
         return 0;
 }
+EXPORT_SYMBOL(rqueue_head_push_gfp);
+
+int rqueue_head_push(struct rqueue * q, void * e)
+{ return rqueue_head_push_gfp(GFP_KERNEL, q, e); }
 EXPORT_SYMBOL(rqueue_head_push);
 
 void * rqueue_head_pop(struct rqueue * q)
 {
-        if (!q)
+        struct rqueue_entry * tmp;
+        void *                ret;
+
+        if (!q) {
+                LOG_ERR("Cannot head-pop from a NULL queue");
                 return NULL;
+        }
 
-        LOG_MISSING;
+        if (list_empty(&q->head)) {
+                LOG_ERR("Cannot head-pop from an empty queue");
+                return NULL;
+        }
 
-        return NULL;
+        tmp = list_first_entry(&q->head, struct rqueue_entry, next);
+        ASSERT(tmp);
+
+        list_del(&q->head);
+
+        ret = tmp->data;
+        entry_destroy(tmp);
+
+        return ret;
 }
 EXPORT_SYMBOL(rqueue_head_pop);
 
-int rqueue_tail_push(struct rqueue * q, void * e)
+int rqueue_tail_push_gfp(gfp_t flags, struct rqueue * q, void * e)
 {
         struct rqueue_entry * tmp;
 
-        if (!q)
+        if (!q) {
+                LOG_ERR("Cannot tail-push on a NULL queue");
                 return -1;
-        if (!e)
-                return -1;
+        }
 
-        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = entry_create(flags, e);
         if (!tmp)
                 return -1;
 
-        tmp->data = e;
-        INIT_LIST_HEAD(&tmp->next);
-        list_add(&q->head, &tmp->next);
+        list_add_tail(&tmp->next, &q->head);
 
-        LOG_MISSING;
+        LOG_DBG("Element %pK tail-pushed into queue %pK", e, q);
 
         return 0;
 }
+EXPORT_SYMBOL(rqueue_tail_push_gfp);
+
+int rqueue_tail_push(struct rqueue * q, void * e)
+{ return rqueue_tail_push_gfp(GFP_KERNEL, q, e); }
 EXPORT_SYMBOL(rqueue_tail_push);
 
 void * rqueue_tail_pop(struct rqueue * q)
 {
-        if (!q)
+        struct rqueue_entry * tmp;
+        void *                ret;
+        struct list_head *    h = NULL;
+
+        if (!q) {
+                LOG_ERR("Cannot tail-pop from a NULL queue");
                 return NULL;
+        }
 
-        LOG_MISSING;
+        if (list_empty(&q->head)) {
+                LOG_ERR("Cannot tail-pop from an empty queue");
+                return NULL;
+        }
 
-        return NULL;
+        list_move_tail(&q->head, h);
+
+        tmp = ((struct rqueue_entry *) h);
+        ASSERT(tmp);
+
+        ret = tmp->data;
+
+        entry_destroy(tmp);
+
+        return ret;
 }
 EXPORT_SYMBOL(rqueue_tail_pop);
 
 bool rqueue_is_empty(struct rqueue * q)
-{ return true; }
+{
+        if (!1) {
+                LOG_ERR("Can't chek the emptiness of a NULL queue");
+                return false;
+        }
+
+        return list_empty(&q->head) ? true : false;
+}
 EXPORT_SYMBOL(rqueue_is_empty);

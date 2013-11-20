@@ -468,6 +468,9 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 alloc_flow_resp_free(attrs, msg, hdr);
                 return -1;
         }
+        if (kipcm_smap_remove(kipcm->messages->egress, info->snd_seq)) {
+                LOG_ERR("Could not destroy egress messages map entry");
+        }
 
         if (ipc_process->ops->flow_allocate_response(ipc_process->data,
                                                      pid,
@@ -1877,12 +1880,19 @@ EXPORT_SYMBOL(kipcm_ipcp_factory_register);
 int kipcm_ipcp_factory_unregister(struct kipcm *        kipcm,
                                   struct ipcp_factory * factory)
 {
-        int retval;
+        ipc_process_id_t       id;
+        struct ipcp_instance * instance;
+        int                    retval;
 
         IRQ_BARRIER;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return -1;
+        }
+
+        if (!factory) {
+                LOG_ERR("Bogus factory cannot unregister");
                 return -1;
         }
 
@@ -1895,6 +1905,30 @@ int kipcm_ipcp_factory_unregister(struct kipcm *        kipcm,
          *     Francesco
          */
         KIPCM_LOCK(kipcm);
+        id = ipcp_imap_find_factory(kipcm->instances, factory);
+        while (id != 0) {
+                instance = ipcp_imap_find(kipcm->instances, id);
+                if (!instance) {
+                        LOG_ERR("IPC process %d instance does not exist", id);
+                        KIPCM_UNLOCK(kipcm);
+                        return -1;
+                }
+                /* FIXME: Should we look for pending flows from this IPC Process ? */
+                if (kfa_remove_all_for_id(kipcm->kfa, id)) {
+                        KIPCM_UNLOCK(kipcm);
+                        return -1;
+                }
+                if (factory->ops->destroy(factory->data, instance)) {
+                        KIPCM_UNLOCK(kipcm);
+                        return -1;
+                }
+
+                if (ipcp_imap_remove(kipcm->instances, id)) {
+                        KIPCM_UNLOCK(kipcm);
+                        return -1;
+                }
+                id = ipcp_imap_find_factory(kipcm->instances, factory);
+        }
         retval = ipcpf_unregister(kipcm->factories, factory);
         KIPCM_UNLOCK(kipcm);
 
@@ -2159,6 +2193,10 @@ int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
         if (!is_seq_num_ok(seq_num)) {
                 LOG_ERR("Could not find request message id (seq num)");
                 return -1;
+        }
+
+        if (kipcm_pmap_remove(kipcm->messages->ingress, pid)) {
+                LOG_ERR("Could not destroy ingress messages map entry");
         }
 
         /*

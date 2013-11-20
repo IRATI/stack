@@ -118,6 +118,23 @@ struct ipcp_instance * ipcp_imap_find(struct ipcp_imap * map,
         return entry->value;
 }
 
+ipc_process_id_t ipcp_imap_find_factory(struct ipcp_imap *    map,
+                                        struct ipcp_factory * factory)
+{
+        struct ipcp_imap_entry * entry;
+        int                      bucket;
+
+        ASSERT(map);
+
+        hash_for_each(map->table, bucket, entry, hlist) {
+                if (entry->value->factory == factory) {
+                        return entry->key;
+                }
+        }
+
+        return 0;
+}
+
 int ipcp_imap_update(struct ipcp_imap *     map,
                      ipc_process_id_t       key,
                      struct ipcp_instance * value)

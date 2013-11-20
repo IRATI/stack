@@ -42,6 +42,8 @@ int                    ipcp_imap_update(struct ipcp_imap *     map,
                                         struct ipcp_instance * value);
 int                    ipcp_imap_remove(struct ipcp_imap * map,
                                         ipc_process_id_t   key);
+ipc_process_id_t       ipcp_imap_find_factory(struct ipcp_imap *    map,
+                                              struct ipcp_factory * factory);
 
 struct kipcm_pmap *    kipcm_pmap_create(void);
 int                    kipcm_pmap_destroy(struct kipcm_pmap * map);

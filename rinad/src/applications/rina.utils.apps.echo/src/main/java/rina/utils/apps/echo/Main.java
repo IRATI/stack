@@ -2,8 +2,18 @@ package rina.utils.apps.echo;
 
 import java.util.Arrays;
 
+import eu.irati.librina.ApplicationProcessNamingInformation;
+
 /**
  * Here the various options you can specify when starting Echo as either a client or a server.
+ 
+-sappname AP -sinstance AI
+
+The AP and AI that Echo app will register as (if in the SERVER role) or connect to (if in the CLIENT role).
+
+-cappname AP -cinstance AI
+
+The AP and AI that the Echo client will use
 
 -role (client|server) -client -server
 
@@ -32,16 +42,22 @@ public class Main {
 	public static final String COUNT = "count";
 	public static final String SERVER = "server";
 	public static final String CLIENT = "client";
+	public static final String SAPINSTANCE = "sinstance";
+	public static final String SAPNAME = "sapname";
+	public static final String CAPINSTANCE = "cinstance";
+	public static final String CAPNAME = "capname";
 	
 	public static final int DEFAULT_SDU_SIZE_IN_BYTES = 1500;
 	public static final int DEFAULT_SDU_COUNT = 5000;
 	public static final String DEFAULT_ROLE = SERVER;
-	public static final String DEFAULT_AP_NAME = "rina.utils.apps.echo";
+	public static final String DEFAULT_SERVER_AP_NAME = "rina.utils.apps.echo.server";
+	public static final String DEFAULT_CLIENT_AP_NAME = "rina.utils.apps.echo.client";
 	public static final String DEFAULT_AP_INSTANCE = "1";
 	
 	public static final String USAGE = "java -jar rina.utils.apps.echo [-role] (client|server)" +
-			"[-sdusize] sduSizeInBytes [-count] num_sdus ";
-	public static final String DEFAULTS = "The defaults are: role=server; sdusize=1500; count=5000";
+			"[-apname] AP [-instance] AI [-sdusize] sduSizeInBytes [-count] num_sdus ";
+	public static final String DEFAULTS = "The defaults are: role=server;  sapname=rina.utils.apps.echo.server; " + 
+			"sinstance=1; capname=rina.utils.apps.echo.client; cinstance=1; sdusize=1500; count=5000";
 	
 	public static void main(String[] args){
 		System.out.println(Arrays.toString(args));
@@ -49,8 +65,10 @@ public class Main {
 		int sduSizeInBytes = DEFAULT_SDU_SIZE_IN_BYTES;
 		int sduCount = DEFAULT_SDU_COUNT;
 		boolean server = false;
-		String apName = DEFAULT_AP_NAME;
-		String apInstance = DEFAULT_AP_INSTANCE;
+		String serverApName = DEFAULT_SERVER_AP_NAME;
+		String clientApName = DEFAULT_CLIENT_AP_NAME;
+		String serverApInstance = DEFAULT_AP_INSTANCE;
+		String clientApInstance = DEFAULT_AP_INSTANCE;
 		
 		int i=0;
 		while(i<args.length){
@@ -62,6 +80,14 @@ public class Main {
 				}else{
 					showErrorAndExit(ROLE);
 				}
+			}else if (args[i].equals(ARGUMENT_SEPARATOR + SAPNAME)){
+				serverApName = args[i+1];
+			}else if (args[i].equals(ARGUMENT_SEPARATOR + SAPINSTANCE)){
+				serverApInstance = args[i+1];
+			}else if (args[i].equals(ARGUMENT_SEPARATOR + CAPNAME)){
+				clientApName = args[i+1];
+			}else if (args[i].equals(ARGUMENT_SEPARATOR + CAPINSTANCE)){
+				clientApInstance = args[i+1];
 			}else if (args[i].equals(ARGUMENT_SEPARATOR + SDUSIZE)){
 				try{
 					sduSizeInBytes = Integer.parseInt(args[i+1]);
@@ -89,7 +115,12 @@ public class Main {
 			i = i+2;
 		}
 		
-		Echo echo = new Echo(server, apName, apInstance, sduCount, sduSizeInBytes);
+		ApplicationProcessNamingInformation serverAPNamingInfo = 
+				new ApplicationProcessNamingInformation(serverApName, serverApInstance);
+		ApplicationProcessNamingInformation clientApNamingInfo = 
+				new ApplicationProcessNamingInformation(clientApName, clientApInstance);
+		
+		Echo echo = new Echo(server, serverAPNamingInfo, clientApNamingInfo, sduCount, sduSizeInBytes);
 		echo.execute();
 	}
 	

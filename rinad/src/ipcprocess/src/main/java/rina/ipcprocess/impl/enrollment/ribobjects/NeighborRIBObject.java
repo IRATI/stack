@@ -1,6 +1,7 @@
 package rina.ipcprocess.impl.enrollment.ribobjects;
 
 import eu.irati.librina.Neighbor;
+import rina.enrollment.api.EnrollmentTask;
 import rina.ipcprocess.impl.IPCProcess;
 import rina.ribdaemon.api.BaseRIBObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
@@ -11,13 +12,16 @@ public class NeighborRIBObject extends BaseRIBObject{
     
     public static final String NEIGHBOR_RIB_OBJECT_CLASS = "neighbor";
     
+    private EnrollmentTask enrollmentTask = null;
 	private Neighbor neighbor = null;
 	
 	public NeighborRIBObject(String objectName, Neighbor neighbor) {
 		super(NEIGHBOR_RIB_OBJECT_CLASS, 
 				ObjectInstanceGenerator.getObjectInstance(), objectName);
-		this.neighbor = neighbor;
 		setRIBDaemon(IPCProcess.getInstance().getRIBDaemon());
+		enrollmentTask = IPCProcess.getInstance().getEnrollmentTask();
+		enrollmentTask.addNeighbor(neighbor);
+		this.neighbor = neighbor;
 	}
 	
 	@Override
@@ -39,12 +43,23 @@ public class NeighborRIBObject extends BaseRIBObject{
 		}
 		
 		synchronized(this){
-			this.neighbor = (Neighbor) object;
+			if (this.neighbor == null) {
+				enrollmentTask.addNeighbor(neighbor);
+				this.neighbor = (Neighbor) object;
+			} else {
+				this.neighbor.setAddress(this.neighbor.getAddress());
+				this.neighbor.setAverageRttInMs(this.neighbor.getAverageRttInMs());
+				this.neighbor.setLastHeardFromTimeInMs(this.neighbor.getLastHeardFromTimeInMs());
+				this.neighbor.setName(this.neighbor.getName());
+				this.neighbor.setSupportingDifName(this.neighbor.getSupportingDifName());
+				this.neighbor.setUnderlyingPortId(this.neighbor.getUnderlyingPortId());
+			}
 		}
 	}
 	
 	@Override
 	public synchronized void delete(Object object) throws RIBDaemonException {
+		this.enrollmentTask.removeNeighbor(neighbor);
 		this.getParent().removeChild(this.getObjectName());
 	}
 	

@@ -26,6 +26,24 @@ public interface EnrollmentTask {
 	public static final String ENROLLMENT_RIB_OBJECT_CLASS = "enrollment information";	
 	
 	/**
+	 * Return the list of neighbors of this IPC Process
+	 * @return
+	 */
+	public List<Neighbor> getNeighbors();
+	
+	/**
+	 * Add a neighbor
+	 * @param neighbor
+	 */
+	public void addNeighbor(Neighbor neighbor);
+	
+	/**
+	 * Remove a neighbor
+	 * @param neighbor
+	 */
+	public void removeNeighbor(Neighbor neighbor);
+	
+	/**
 	 * A remote IPC process Connect request has been received
 	 * @param cdapMessage
 	 * @param cdapSessionDescriptor

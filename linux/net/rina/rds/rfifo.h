@@ -21,14 +21,23 @@
 #ifndef RINA_RFIFO_H
 #define RINA_RFIFO_H
 
+#include <linux/types.h>
+
 struct rfifo;
 
 struct rfifo * rfifo_create(void);
-int            rfifo_destroy(struct rfifo * q,
+struct rfifo * rfifo_create_gfp(gfp_t flags);
+
+/* NOTE: dtor has the ownership of freeing the passed element */
+int            rfifo_destroy(struct rfifo * f,
                              void         (* dtor)(void * e));
 
-int            rfifo_add(struct rfifo * q, void * e);
-void *         rfifo_remove(struct rfifo * q);
-bool           rfifo_is_empty(struct rfifo * q);
+/*
+ * NOTE: We allow pushing NULL entries in the fifo but the dtor passed to
+ *       rfifo_destroy() has to handle them opportunely
+ */
+int            rfifo_push(struct rfifo * f, void * e);
+void *         rfifo_pop(struct rfifo * f);
+bool           rfifo_is_empty(struct rfifo * f);
 
 #endif
