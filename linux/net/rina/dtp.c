@@ -263,7 +263,7 @@ int dtp_receive(struct dtp * instance,
 
 
         sdu = (struct sdu *) pdu;
-	sdu->buffer = pdu->buffer;
+        sdu->buffer = pdu->buffer;
         if (kfa_sdu_post(instance->kfa,
                          instance->state_vector->connection->port_id,
                          sdu)) {
@@ -271,7 +271,7 @@ int dtp_receive(struct dtp * instance,
                 pdu_destroy(pdu);
                 return -1;
         }
-	rkfree(pdu->pci);
+        rkfree(pdu->pci);
 
         return 0;
 }

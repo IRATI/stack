@@ -164,9 +164,9 @@ int kfa_pmap_add(struct kfa_pmap *  map,
 { return kfa_pmap_add_gfp(GFP_KERNEL, map, key, value, id); }
 
 int kfa_pmap_add_ni(struct kfa_pmap *  map,
-                 port_id_t          key,
-                 struct ipcp_flow * value,
-                 ipc_process_id_t   id)
+                    port_id_t          key,
+                    struct ipcp_flow * value,
+                    ipc_process_id_t   id)
 { return kfa_pmap_add_gfp(GFP_ATOMIC, map, key, value, id); }
 
 int kfa_pmap_remove(struct kfa_pmap * map,

@@ -181,10 +181,10 @@ struct name * name_init_from(struct name *    dst,
 EXPORT_SYMBOL(name_init_from);
 
 struct name * name_init_from_ni(struct name *    dst,
-                             const string_t * process_name,
-                             const string_t * process_instance,
-                             const string_t * entity_name,
-                             const string_t * entity_instance)
+                                const string_t * process_name,
+                                const string_t * process_instance,
+                                const string_t * entity_name,
+                                const string_t * entity_instance)
 {
         return name_init_from_gfp(GFP_ATOMIC,
                                   dst,

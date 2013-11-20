@@ -109,7 +109,7 @@ static bool is_id_ok(struct rbmp * b, ssize_t id)
 
         return true;
 }
- 
+
 bool rbmp_is_id_ok(struct rbmp * b, ssize_t id)
 {
         if (!b)
