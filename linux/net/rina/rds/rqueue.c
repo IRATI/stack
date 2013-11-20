@@ -36,7 +36,7 @@ struct rqueue {
         struct list_head head;
 };
 
-struct rqueue * rqueue_create_gfp(gfp_t flags);
+struct rqueue * rqueue_create_gfp(gfp_t flags)
 {
         struct rqueue * tmp;
 
@@ -79,11 +79,11 @@ int rqueue_destroy(struct rqueue * q,
 }
 EXPORT_SYMBOL(rqueue_destroy);
 
-static struct rqueue_entry * entry_create(void * e)
+static struct rqueue_entry * entry_create(gfp_t flags, void * e)
 {
         struct rqueue_entry * tmp;
 
-        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkmalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
 
@@ -102,7 +102,7 @@ static int entry_destroy(struct rqueue_entry * e)
         return 0;
 }
 
-int rqueue_head_push(struct rqueue * q, void * e)
+int rqueue_head_push_gfp(gfp_t flags, struct rqueue * q, void * e)
 {
         struct rqueue_entry * tmp;
 
@@ -111,7 +111,7 @@ int rqueue_head_push(struct rqueue * q, void * e)
                 return -1;
         }
 
-        tmp = entry_create(e);
+        tmp = entry_create(flags, e);
         if (!tmp)
                 return -1;
 
@@ -121,6 +121,10 @@ int rqueue_head_push(struct rqueue * q, void * e)
 
         return 0;
 }
+EXPORT_SYMBOL(rqueue_head_push);
+
+int rqueue_head_push(struct rqueue * q, void * e)
+{ return rqueue_head_push_gfp(GFP_KERNEL, q, e); }
 EXPORT_SYMBOL(rqueue_head_push);
 
 void * rqueue_head_pop(struct rqueue * q)
@@ -148,7 +152,7 @@ void * rqueue_head_pop(struct rqueue * q)
 }
 EXPORT_SYMBOL(rqueue_head_pop);
 
-int rqueue_tail_push(struct rqueue * q, void * e)
+int rqueue_tail_push_gfp(gfp_t flags, struct rqueue * q, void * e)
 {
         struct rqueue_entry * tmp;
 
@@ -157,7 +161,7 @@ int rqueue_tail_push(struct rqueue * q, void * e)
                 return -1;
         }
 
-        tmp = entry_create(e);
+        tmp = entry_create(flags, e);
         if (!tmp)
                 return -1;
 
@@ -167,6 +171,10 @@ int rqueue_tail_push(struct rqueue * q, void * e)
 
         return 0;
 }
+EXPORT_SYMBOL(rqueue_tail_push_gfp);
+
+int rqueue_tail_push(struct rqueue * q, void * e)
+{ return rqueue_tail_push_gfp(GFP_KERNEL, q, e); }
 EXPORT_SYMBOL(rqueue_tail_push);
 
 void * rqueue_tail_pop(struct rqueue * q)
