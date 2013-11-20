@@ -30,9 +30,9 @@ int                       rwq_destroy(struct workqueue_struct * rwq);
  * NOTE: The worker is the owner of the data passed (and must dispose it). It
  *       must return 0 if its work completed successfully.
  */
-struct rwq_work_item *    rwq_work_create(int    (* worker)(void * data),
+struct rwq_work_item *    rwq_work_create(int (* worker)(void * data),
                                           void * data);
-struct rwq_work_item *    rwq_work_create_ni(int    (* worker)(void * data),
+struct rwq_work_item *    rwq_work_create_ni(int (* worker)(void * data),
                                              void * data);
 
 /*

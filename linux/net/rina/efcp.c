@@ -263,7 +263,8 @@ int efcp_write(struct efcp * efcp,
         if (!is_write_data_complete(tmp))
                 return -1;
 
-        item = rwq_work_create(GFP_ATOMIC, efcp_write_worker, tmp);
+        /* Is this _ni() really necessary ??? */
+        item = rwq_work_create_ni(efcp_write_worker, tmp);
         if (!item) {
                 write_data_destroy(tmp);
                 return -1;
@@ -396,7 +397,9 @@ int efcp_receive(struct efcp * efcp,
                 receive_data_destroy(data);
                 return -1;
         }
-        item = rwq_work_create(GFP_ATOMIC, efcp_receive_worker, data);
+
+        /* Is this _ni() call really necessary ??? */
+        item = rwq_work_create_ni(efcp_receive_worker, data);
         if (!item) {
                 receive_data_destroy(data);
                 return -1;

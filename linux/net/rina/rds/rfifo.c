@@ -58,7 +58,7 @@ struct rfifo * rfifo_create(void)
 EXPORT_SYMBOL(rfifo_create);
 
 struct rfifo * rfifo_create_ni(void)
-{ return rfifo_create_gfp(GFP_ATOPMIC); }
+{ return rfifo_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(rfifo_create_ni);
 
 int rfifo_destroy(struct rfifo * f,
