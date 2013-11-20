@@ -262,14 +262,16 @@ int dtp_receive(struct dtp * instance,
         }
 
 
-        sdu = (struct sdu *) pdu->buffer;
+        sdu = (struct sdu *) pdu;
+	sdu->buffer = pdu->buffer;
         if (kfa_sdu_post(instance->kfa,
                          instance->state_vector->connection->port_id,
-                         (struct sdu *) pdu)) {
+                         sdu)) {
                 LOG_ERR("Could not post SDU into KFA");
                 pdu_destroy(pdu);
                 return -1;
         }
+	rkfree(pdu->pci);
 
         return 0;
 }
