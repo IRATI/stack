@@ -37,11 +37,10 @@ int                kfa_pmap_add(struct kfa_pmap *  map,
                                 port_id_t          key,
                                 struct ipcp_flow * value,
                                 ipc_process_id_t   id);
-int                kfa_pmap_add_gfp(gfp_t flags,
-                                    struct kfa_pmap *  map,
-                                    port_id_t          key,
-                                    struct ipcp_flow * value,
-                                    ipc_process_id_t   id);
+int                kfa_pmap_add_ni(struct kfa_pmap *  map,
+                                   port_id_t          key,
+                                   struct ipcp_flow * value,
+                                   ipc_process_id_t   id);
 struct ipcp_flow * kfa_pmap_find(struct kfa_pmap * map,
                                  port_id_t          key);
 int                kfa_pmap_update(struct kfa_pmap *  map,
