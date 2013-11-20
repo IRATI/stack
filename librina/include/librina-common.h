@@ -933,7 +933,7 @@ class Neighbor {
          * The last time a KeepAlive message was received from
          * that neighbor, in ms
          */
-        unsigned long lastHeardFromTimeInMs;
+        long long lastHeardFromTimeInMs;
 
 public:
         Neighbor();
@@ -951,8 +951,8 @@ public:
         void setAverageRttInMs(unsigned int averageRttInMs);
         bool isEnrolled() const;
         void setEnrolled(bool enrolled);
-        unsigned long getLastHeardFromTimeInMs() const;
-        void setLastHeardFromTimeInMs(unsigned long lastHeardFromTimeInMs);
+        long long getLastHeardFromTimeInMs() const;
+        void setLastHeardFromTimeInMs(long long lastHeardFromTimeInMs);
         int getUnderlyingPortId() const;
         void setUnderlyingPortId(int underlyingPortId);
 };
