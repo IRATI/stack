@@ -1445,7 +1445,7 @@ static struct ipcp_factory_ops eth_vlan_ops = {
         .destroy   = eth_vlan_destroy,
 };
 
-struct ipcp_factory * shim = NULL;
+static struct ipcp_factory * shim = NULL;
 
 #ifdef CONFIG_RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
 static bool regression_test_create_vlan_interface_name(void)
