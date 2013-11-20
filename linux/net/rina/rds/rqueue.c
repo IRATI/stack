@@ -36,7 +36,7 @@ struct rqueue {
         struct list_head head;
 };
 
-struct rqueue * rqueue_create(void)
+struct rqueue * rqueue_create_gfp(gfp_t flags);
 {
         struct rqueue * tmp;
 
@@ -48,6 +48,10 @@ struct rqueue * rqueue_create(void)
 
         return tmp;
 }
+EXPORT_SYMBOL(rqueue_create_gfp);
+
+struct rqueue * rqueue_create(void)
+{ return rqueue_create_gfp(GFP_KERNEL); }
 EXPORT_SYMBOL(rqueue_create);
 
 int rqueue_destroy(struct rqueue * q,
