@@ -24,9 +24,15 @@
 struct rqueue;
 
 struct rqueue * rqueue_create(void);
+
+/* NOTE: dtor has the ownership of freeing the passed element */
 int             rqueue_destroy(struct rqueue * q,
                                void         (* dtor)(void * e));
 
+/*
+ * NOTE: We allow pushing NULL entries in the fifo but the dtor passed to
+ *       rfifo_destroy() has to handle them opportunely
+ */
 int             rqueue_tail_push(struct rqueue * q, void * e);
 void *          rqueue_tail_pop(struct rqueue * q);
 int             rqueue_head_push(struct rqueue * q, void * e);
