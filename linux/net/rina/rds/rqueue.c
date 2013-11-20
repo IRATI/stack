@@ -40,7 +40,7 @@ struct rqueue * rqueue_create_gfp(gfp_t flags);
 {
         struct rqueue * tmp;
 
-        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkmalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
 
