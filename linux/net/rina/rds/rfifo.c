@@ -33,7 +33,7 @@ struct rfifo {
         struct rqueue * q;
 };
 
-struct rfifo * rfifo_create_gfp(gfp_t flags);
+struct rfifo * rfifo_create_gfp(gfp_t flags)
 {
         struct rfifo * f;
 

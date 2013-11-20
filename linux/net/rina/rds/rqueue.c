@@ -69,6 +69,8 @@ int rqueue_destroy(struct rqueue * q,
         }
 
         list_for_each_entry_safe(pos, nxt, &q->head, next) {
+                ASSERT(pos);
+
                 list_del(&pos->next);
                 dtor(pos->data);
         }
@@ -143,6 +145,8 @@ void * rqueue_head_pop(struct rqueue * q)
         }
 
         tmp = list_first_entry(&q->head, struct rqueue_entry, next);
+        ASSERT(tmp);
+
         list_del(&q->head);
 
         ret = tmp->data;
@@ -180,8 +184,8 @@ EXPORT_SYMBOL(rqueue_tail_push);
 void * rqueue_tail_pop(struct rqueue * q)
 {
         struct rqueue_entry * tmp;
-        struct list_head *    h;
         void *                ret;
+        struct list_head *    h = NULL;
 
         if (!q) {
                 LOG_ERR("Cannot tail-pop from a NULL queue");
@@ -196,6 +200,8 @@ void * rqueue_tail_pop(struct rqueue * q)
         list_move_tail(&q->head, h);
 
         tmp = ((struct rqueue_entry *) h);
+        ASSERT(tmp);
+
         ret = tmp->data;
 
         entry_destroy(tmp);
