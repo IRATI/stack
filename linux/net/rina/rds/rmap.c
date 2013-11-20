@@ -71,8 +71,8 @@ EXPORT_SYMBOL(rmap_create_ni);
 int rmap_destroy(struct rmap * map,
                  void       (* dtor)(struct rmap_entry * e))
 {
-        struct hlist_head * tmp;
         struct rmap_entry * entry;
+        struct hlist_node * tmp;
         int                 bucket;
 
         if (!map) {
