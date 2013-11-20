@@ -576,9 +576,11 @@ int arp_receive(struct sk_buff *     skb,
         /* FIXME: There's no need to lookup it here ... */
         cl = tbls_find(ntohs(header->ptype));
         if (!cl) {
+#if 0
                 /* This log is too noisy ... but necessary for now :) */
                 LOG_DBG("I don't have a table to handle this ARP "
                         "(ptype = 0x%04X)", ntohs(header->ptype));
+#endif
                 kfree_skb(skb);
                 return 0;
         }
