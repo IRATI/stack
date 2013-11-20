@@ -99,14 +99,12 @@ bool          is_name_ok(const struct name * n);
 
 /* Returns a name as a (newly allocated) string */
 char *        name_tostring(const struct name * n);
-char *        name_tostring_gfp(gfp_t               flags,
-                                const struct name * n);
+char *        name_tostring_ni(const struct name * n);
 
 /* Inverse of name_tostring() */
 string_t *    string_from_user(const char __user * src);
 struct name * string_toname(const string_t * s);
-struct name * string_toname_gfp(gfp_t            flags,
-                                const string_t * s);
+struct name * string_toname_ni(const string_t * s);
 
 struct ipcp_config * ipcp_config_create(void);
 int                  ipcp_config_destroy(struct ipcp_config * cfg);

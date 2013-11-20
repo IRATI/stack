@@ -317,8 +317,8 @@ EXPORT_SYMBOL(name_is_equal);
 
 #define DELIMITER "/"
 
-char * name_tostring_gfp(gfp_t               flags,
-                         const struct name * n)
+static char * name_tostring_gfp(gfp_t               flags,
+                                const struct name * n)
 {
         char *       tmp;
         size_t       size;
@@ -366,14 +366,17 @@ char * name_tostring_gfp(gfp_t               flags,
 
         return tmp;
 }
-EXPORT_SYMBOL(name_tostring_gfp);
 
 char * name_tostring(const struct name * n)
 { return name_tostring_gfp(GFP_KERNEL, n); }
 EXPORT_SYMBOL(name_tostring);
 
-struct name * string_toname_gfp(gfp_t            flags,
-                                const string_t * input)
+char * name_tostring_ni(const struct name * n)
+{ return name_tostring_gfp(GFP_ATOMIC, n); }
+EXPORT_SYMBOL(name_tostring_ni);
+
+static struct name * string_toname_gfp(gfp_t            flags,
+                                       const string_t * input)
 {
         struct name * name;
 
@@ -414,11 +417,14 @@ struct name * string_toname_gfp(gfp_t            flags,
 
         return name;
 }
-EXPORT_SYMBOL(string_toname_gfp);
 
 struct name * string_toname(const string_t * input)
 { return string_toname_gfp(GFP_KERNEL, input); }
 EXPORT_SYMBOL(string_toname);
+
+struct name * string_toname_ni(const string_t * input)
+{ return string_toname_gfp(GFP_ATOMIC, input); }
+EXPORT_SYMBOL(string_toname_ni);
 
 static int string_dup_from_user(const string_t __user * src, string_t ** dst)
 {
