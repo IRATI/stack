@@ -25,6 +25,7 @@
 #include "logs.h"
 #include "debug.h"
 #include "rmem.h"
+#include "rwq.h"
 
 struct rwq_work_item {
         struct work_struct work; /* KEEP AT TOP AND DO NOT MOVE ! */
