@@ -31,7 +31,8 @@ int arp_send_reply(uint16_t            ptype,
                    const struct gpa *  spa,
                    const struct gha *  sha,
                    const struct gpa *  tpa,
-                   const struct gha *  tha);
+                   const struct gha *  tha,
+                   struct net_device * dev);
 
 int arp_send_request(uint16_t           ptype,
                      const struct gpa * spa,

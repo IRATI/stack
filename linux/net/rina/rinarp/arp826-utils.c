@@ -614,6 +614,7 @@ int tmap_empty(struct tmap * map)
 
 #define tmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
+#if 0
 struct table * tmap_find(struct tmap * map,
                          uint16_t      key)
 {
@@ -644,6 +645,7 @@ int tmap_update(struct tmap *   map,
 
         return 0;
 }
+#endif
 
 struct tmap_entry * tmap_entry_create(uint16_t       key,
                                       struct table * value)

@@ -32,6 +32,7 @@
 #include "arp826-utils.h"
 #include "arp826-tables.h"
 #include "arp826-rxtx.h"
+#include "arp826-arm.h"
 
 struct resolution {
         struct resolve_data * data;
@@ -42,8 +43,8 @@ struct resolution {
         struct list_head      next;
 };
 
-spinlock_t       resolutions_lock;
-struct list_head resolutions_ongoing;
+static spinlock_t       resolutions_lock;
+static struct list_head resolutions_ongoing;
 
 struct resolve_data {
         uint16_t     ptype;
@@ -85,7 +86,7 @@ static bool is_resolve_data_matching(struct resolve_data * a,
         return true;
 }
 
-bool is_resolve_data_complete(const struct resolve_data * data)
+static bool is_resolve_data_complete(const struct resolve_data * data)
 {
         return (!data                    ||
                 !data->spa || !data->sha ||
