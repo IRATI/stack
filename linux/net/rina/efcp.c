@@ -178,16 +178,8 @@ struct write_data {
         struct sdu *  sdu;
 };
 
-static bool is_write_data_complete(const struct write_data * data)
-{
-        bool ret;
-
-        ret = ((!data || !data->efcp || !data->sdu) ? false : true);
-
-        LOG_DBG("Write data complete? %d", ret);
-
-        return ret;
-}
+static bool is_write_data_ok(const struct write_data * data)
+{ return ((!data || !data->efcp || !data->sdu) ? false : true); }
 
 static int write_data_destroy(struct write_data * data)
 {
@@ -226,7 +218,7 @@ static int efcp_write_worker(void * o)
                 return -1;
         }
 
-        if (!is_write_data_complete(tmp)) {
+        if (!is_write_data_ok(tmp)) {
                 LOG_ERR("Wrong data passed to efcp_write_worker");
                 write_data_destroy(tmp);
                 return -1;
@@ -243,7 +235,7 @@ static int efcp_write_worker(void * o)
 static int efcp_write(struct efcp * efcp,
                       struct sdu *  sdu)
 {
-        struct write_data * tmp;
+        struct write_data *    tmp;
         struct rwq_work_item * item;
 
         if (!efcp) {
@@ -256,8 +248,7 @@ static int efcp_write(struct efcp * efcp,
         }
 
         tmp = write_data_create(efcp, sdu);
-        if (!is_write_data_complete(tmp))
-                return -1;
+        ASSERT(is_write_data_ok(tmp));
 
         /* Is this _ni() really necessary ??? */
         item = rwq_work_create_ni(efcp_write_worker, tmp);
@@ -310,16 +301,8 @@ struct receive_data {
         struct pdu *  pdu;
 };
 
-static bool is_receive_data_complete(const struct receive_data * data)
-{
-        bool ret;
-
-        ret = ((!data || !data->efcp || !data->pdu) ? false : true);
-
-        LOG_DBG("Receive data complete? %d", ret);
-
-        return ret;
-}
+static bool is_receive_data_ok(const struct receive_data * data)
+{ return ((!data || !data->efcp || !data->pdu) ? false : true); }
 
 static int receive_data_destroy(struct receive_data * data)
 {
@@ -358,7 +341,7 @@ static int efcp_receive_worker(void * o)
                 return -1;
         }
 
-        if (!is_receive_data_complete(tmp)) {
+        if (!is_receive_data_ok(tmp)) {
                 LOG_ERR("Wrong data passed to efcp_receive_worker");
                 receive_data_destroy(tmp);
                 return -1;
@@ -388,11 +371,7 @@ static int efcp_receive(struct efcp * efcp,
         }
 
         data = receive_data_create(efcp, pdu);
-        if (!is_receive_data_complete(data)) {
-                LOG_ERR("Receive data is not complete");
-                receive_data_destroy(data);
-                return -1;
-        }
+        ASSERT(is_receive_data_ok(data));
 
         /* Is this _ni() call really necessary ??? */
         item = rwq_work_create_ni(efcp_receive_worker, data);
