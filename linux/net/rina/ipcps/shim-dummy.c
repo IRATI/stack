@@ -646,16 +646,19 @@ static int dummy_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if (dif_information->configuration)
+        if (dif_information->configuration) {
+                LOG_DBG("Got DIF configuration, dumping:");
                 list_for_each_entry(pos,
                                     &(dif_information->configuration->
                                       ipcp_config_entries),
                                     next)
-                        LOG_DBG("Configuration entry name: %s; value: %s",
+                        LOG_DBG("  Entry (name = '%s', value '%s')",
                                 pos->entry->name,
                                 pos->entry->value);
+                LOG_DBG("DIF configuration dump complete");
+        }
 
-        LOG_DBG("Assigned IPC Process to DIF %s",
+        LOG_DBG("Assigned IPC Process to DIF '%s'",
                 data->info->dif_name->process_name);
 
         return 0;
