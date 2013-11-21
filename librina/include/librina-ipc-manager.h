@@ -262,19 +262,6 @@ public:
 };
 
 /**
- * Thrown when there are problems initializing the IPC Manager
- */
-class IPCManagerInitializationException: public IPCException {
-public:
-	IPCManagerInitializationException():
-		IPCException("Problems initializing librina-ipcmanager. "){
-	}
-	IPCManagerInitializationException(const std::string& description):
-		IPCException(description){
-	}
-};
-
-/**
  * Initializes the IPC Manager, opening a NL socket
  * to the specified local port, and sending an IPC
  * Manager present message to the kernel
@@ -282,8 +269,9 @@ public:
  */
 void initializeIPCManager(unsigned int localPort,
                 const std::string& installationPath,
-                const std::string& libraryPath)
-	throw (IPCManagerInitializationException);
+                const std::string& libraryPath,
+                const std::string& logLevel)
+	throw (InitializationException);
 
 /**
  * Event informing that an application has requested the

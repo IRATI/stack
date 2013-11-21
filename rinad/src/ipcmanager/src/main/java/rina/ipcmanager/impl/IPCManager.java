@@ -15,10 +15,10 @@ import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCEvent;
 import eu.irati.librina.IPCEventProducerSingleton;
 import eu.irati.librina.IPCEventType;
-import eu.irati.librina.IPCManagerInitializationException;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessDaemonInitializedEvent;
 import eu.irati.librina.IPCProcessFactorySingleton;
+import eu.irati.librina.InitializationException;
 import eu.irati.librina.IpcmAllocateFlowRequestResultEvent;
 import eu.irati.librina.IpcmDeallocateFlowResponseEvent;
 import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
@@ -42,6 +42,7 @@ import org.apache.commons.logging.LogFactory;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import rina.aux.LogHelper;
 import rina.configuration.IPCProcessToCreate;
 import rina.configuration.RINAConfiguration;
 import rina.ipcmanager.impl.console.IPCManagerConsole;
@@ -98,14 +99,17 @@ public class IPCManager {
 		log.info("IPC Manager daemon initializing, reading RINA configuration ...");
 		initializeConfiguration();
 		log.info("Initializing librina-ipcmanager...");
+		
 		try{
 			rina.initializeIPCManager(1, 
 					RINAConfiguration.getInstance().getLocalConfiguration().getInstallationPath(), 
-					RINAConfiguration.getInstance().getLocalConfiguration().getLibraryPath());
-		}catch(IPCManagerInitializationException ex){
+					RINAConfiguration.getInstance().getLocalConfiguration().getLibraryPath(), 
+					LogHelper.getLibrinaLogLevel());
+		}catch(InitializationException ex){
 			log.fatal("Error initializing IPC Manager: "+ex.getMessage() 
 					+ ". Exiting.");
 		}
+		
 		ipcProcessFactory = rina.getIpcProcessFactory();
 		applicationManager = rina.getApplicationManager();
 		ipcEventProducer = rina.getIpcEventProducer();

@@ -1028,15 +1028,19 @@ public:
 /**
  * Initialize librina providing the local Netlink port-id where this librina
  * instantiation will be bound
- * @param localPort
+ * @param localPort NL port used by this instantiation of librina
+ * @param logLevel librina log level
  */
-void initialize(unsigned int localPort);
+void initialize(unsigned int localPort, const std::string& logLevel)
+        throw (InitializationException);
 
 /**
  * Initialize librina letting the OS choose the Netlink port-id where this
  * librina instantiation will be bound
+ * @param logLevel librina log level
  */
-void initialize();
+void initialize(const std::string& logLevel)
+        throw (InitializationException);
 
 }
 #endif

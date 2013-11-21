@@ -23,6 +23,7 @@
 #define LIBRINA_LOGS_H
 
 #include <stdio.h>
+#include <string>
 
 #ifndef RINA_PREFIX
 #error You must define RINA_PREFIX before including this file
@@ -42,6 +43,15 @@ enum LOG_LEVEL {
 	DBG
 };
 
+const std::string LOG_LEVEL_DBG = "DBG";
+const std::string LOG_LEVEL_INFO = "INFO";
+const std::string LOG_LEVEL_NOTE = "NOTE";
+const std::string LOG_LEVEL_WARN = "WARN";
+const std::string LOG_LEVEL_ERR = "ERR";
+const std::string LOG_LEVEL_CRIT = "CRIT";
+const std::string LOG_LEVEL_ALERT = "ALERT";
+const std::string LOG_LEVEL_EMERG = "EMERG";
+
 /**
  * Global log level, default is INFO
  */
@@ -56,9 +66,9 @@ extern FILE * logOutputStream;
 /**
  * Set the log level
  *
- * @param newLogLevel the new log level
+ * @param logLevel the new log level
  */
-void setLogLevel(LOG_LEVEL newLogLevel);
+void setLogLevel(const std::string& logLevel);
 
 /**
  * Set the output stream.

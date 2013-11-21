@@ -1358,13 +1358,40 @@ void RIBObject::setValue(RIBObjectValue value) {
 	this->value = value;
 }
 
-void initialize(unsigned int localPort){
+
+bool librinaInitialized = false;
+Lockable librinaInitializationLock;
+
+void initialize(unsigned int localPort, const std::string& logLevel)
+        throw(InitializationException) {
+
+        librinaInitializationLock.lock();
+        if (librinaInitialized) {
+                librinaInitializationLock.unlock();
+                throw InitializationException("Librina already initialized");
+        }
+
 	setNetlinkPortId(localPort);
+	setLogLevel(logLevel);
 	rinaManager->getNetlinkManager();
+
+	librinaInitialized = true;
+	librinaInitializationLock.unlock();
 }
 
-void initialize(){
-	rinaManager->getNetlinkManager();
+void initialize(const std::string& logLevel) throw (InitializationException){
+
+        librinaInitializationLock.lock();
+        if (librinaInitialized) {
+                librinaInitializationLock.unlock();
+                throw InitializationException("Librina already initialized");
+        }
+
+        rinaManager->getNetlinkManager();
+        setLogLevel(logLevel);
+
+        librinaInitialized = true;
+        librinaInitializationLock.unlock();
 }
 
 }

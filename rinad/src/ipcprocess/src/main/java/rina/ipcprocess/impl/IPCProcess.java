@@ -17,6 +17,7 @@ import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import rina.applicationprocess.api.WhatevercastName;
+import rina.aux.LogHelper;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.impl.CDAPSessionManagerImpl;
 import rina.cdap.impl.googleprotobuf.GoogleProtocolBufWireMessageProviderFactory;
@@ -143,12 +144,13 @@ public class IPCProcess {
 	private IPCProcess(){
 	}
 	
-	public void initialize(ApplicationProcessNamingInformation namingInfo, int id, long ipcManagerPort) {
+	public void initialize(
+			ApplicationProcessNamingInformation namingInfo, int id, long ipcManagerPort) throws Exception{
 		log.info("Initializing configuration... ");
 		executorService = Executors.newCachedThreadPool();
 		initializeConfiguration();
 		log.info("Initializing librina...");
-		rina.initialize();
+		rina.initialize(LogHelper.getLibrinaLogLevel());
 		ipcEventProducer = rina.getIpcEventProducer();
 		kernelIPCProcess = rina.getKernelIPCProcess();
 		kernelIPCProcess.setIPCProcessId(id);

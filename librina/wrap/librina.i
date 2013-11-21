@@ -266,8 +266,8 @@
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
-%typemap(throws, throws="eu.irati.librina.IPCManagerInitializationException") rina::IPCManagerInitializationException {
-  jclass excep = jenv->FindClass("eu/irati/librina/IPCManagerInitializationException");
+%typemap(throws, throws="eu.irati.librina.InitializationException") rina::InitializationException {
+  jclass excep = jenv->FindClass("eu/irati/librina/InitializationException");
   if (excep)
     jenv->ThrowNew(excep, $1.what());
   return $null;

@@ -19,6 +19,7 @@ import eu.irati.librina.RegisterApplicationResponseEvent;
 import eu.irati.librina.UnregisterApplicationResponseEvent;
 import eu.irati.librina.rina;
 
+import rina.aux.LogHelper;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.impl.CDAPSessionManagerImpl;
 import rina.cdap.impl.googleprotobuf.GoogleProtocolBufWireMessageProviderFactory;
@@ -71,7 +72,13 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener, A
 	
 	public RINABandServer(ApplicationProcessNamingInformation controlApNamingInfo, 
 			ApplicationProcessNamingInformation dataApNamingInfo) {
-		rina.initialize();
+		try {
+			rina.initialize(LogHelper.getLibrinaLogLevel());
+		} catch(Exception ex){
+			log.error("Problems initializing librina, exiting: "+ex.getMessage());
+			System.exit(-1);
+		}
+		
 		this.controlApNamingInfo = controlApNamingInfo;
 		this.dataApNamingInfo = dataApNamingInfo;
 		ongoingTests = new Hashtable<Integer, TestController>();

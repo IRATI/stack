@@ -38,9 +38,10 @@ std::string _libraryPath;
 
 void initializeIPCManager(unsigned int localPort,
                 const std::string& installationPath,
-                const std::string& libraryPath)
-	throw (IPCManagerInitializationException){
-	initialize(localPort);
+                const std::string& libraryPath,
+                const std::string& logLevel)
+	throw (InitializationException){
+	initialize(localPort, logLevel);
 
 	_installationPath = installationPath;
 	_libraryPath = libraryPath;
@@ -52,7 +53,7 @@ void initializeIPCManager(unsigned int localPort,
 	try{
 		rinaManager->sendMessage(&message);
 	}catch(NetlinkException &e){
-		throw IPCManagerInitializationException(e.what());
+		throw InitializationException(e.what());
 	}
 }
 
