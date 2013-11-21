@@ -285,7 +285,8 @@ void ExtendedIPCManager::assignToDIFResponse(
 }
 
 void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDIFRequestEvent& event,
-                        int result, const std::list<Neighbor> & newNeighbors)
+                        int result, const std::list<Neighbor> & newNeighbors,
+                        const DIFInformation& difInformation)
         throw (EnrollException) {
 #if STUB_API
         //Do nothing
@@ -293,6 +294,7 @@ void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDIFRequestEvent& even
         IpcmEnrollToDIFResponseMessage responseMessage;
         responseMessage.setResult(result);
         responseMessage.setNeighbors(newNeighbors);
+        responseMessage.setDIFInformation(difInformation);
         responseMessage.setSourceIpcProcessId(ipcProcessId);
         responseMessage.setDestPortId(ipcManagerPort);
         responseMessage.setSequenceNumber(event.getSequenceNumber());

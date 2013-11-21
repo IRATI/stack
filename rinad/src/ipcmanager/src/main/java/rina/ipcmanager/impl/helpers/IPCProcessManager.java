@@ -23,6 +23,7 @@ import eu.irati.librina.AssignToDIFResponseEvent;
 import eu.irati.librina.CreateIPCProcessException;
 import eu.irati.librina.DIFConfiguration;
 import eu.irati.librina.DIFInformation;
+import eu.irati.librina.DataTransferConstants;
 import eu.irati.librina.EnrollToDIFResponseEvent;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.IPCProcess;
@@ -32,6 +33,7 @@ import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
 import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
 import eu.irati.librina.Neighbor;
 import eu.irati.librina.NeighborsModifiedNotificationEvent;
+import eu.irati.librina.QoSCube;
 import eu.irati.librina.UpdateDIFConfigurationResponseEvent;
 
 public class IPCProcessManager {
@@ -161,24 +163,63 @@ public class IPCProcessManager {
 			result = result + "    Type: " + ipcProcess.getType() + "\n";
 			result = result + "    Name: " + ipcProcess.getName().toString() + "\n";
 			
-			difInformation = ipcProcess.getDIFInformation();
-			if (difInformation != null){
-				result = result + "    Member of DIF: " + 
-						difInformation.getDifName().getProcessName() + "\n"; 
-			}
-			
-			result = result + "    Supporting DIFs: " + "\n"; 
 			Iterator<ApplicationProcessNamingInformation> iterator = 
 					ipcProcess.getSupportingDIFs().iterator();
+			if (iterator.hasNext()) {
+				result = result + "    Supporting DIFs: " + "\n"; 
+			}
 			while (iterator.hasNext()){
 				result = result + "        " + iterator.next().getProcessName() + "\n";
 			}
 			
-			result = result + "    Neighbors: " + "\n";
-			Iterator<Neighbor> neighborIterator = ipcProcess.getNeighbors().iterator();
-			while (neighborIterator.hasNext()) {
-				result = result + "        " + 
-						neighborIterator.next().getName().getProcessNamePlusInstance() + "\n";
+			difInformation = ipcProcess.getDIFInformation();
+			if (difInformation != null && difInformation.getDifName() != null && 
+					difInformation.getDifName().getProcessName() != null && 
+					!difInformation.getDifName().getProcessName().equals("")){
+				result = result + "    Member of DIF: " + 
+						difInformation.getDifName().getProcessName() + "\n"; 
+				if (difInformation.getDifConfiguration() != null) {
+					DIFConfiguration difConfiguration = difInformation.getDifConfiguration();
+					if (difConfiguration.getAddress() > 0) {
+						result = result + "        Address: " + difConfiguration.getAddress() + "\n";
+					}
+					
+					if (difConfiguration.getDataTransferConstants() != null && 
+							difConfiguration.getDataTransferConstants().isInitialized()) {
+						DataTransferConstants dtc = difConfiguration.getDataTransferConstants();
+						result = result + "        Data Transfer Constants: \n";
+						result = result + "            Address length: " + dtc.getAddressLength() + "\n";
+						result = result + "            CEP-id length: " + dtc.getCepIdLength() + "\n";
+						result = result + "            Length length: " + dtc.getLengthLength() + "\n";
+						result = result + "            QoS-id length: " + dtc.getQosIdLenght() + "\n";
+						result = result + "            Sequence number length: " + dtc.getSequenceNumberLength()+ "\n";
+						result = result + "            Max PDU lifetime: " + dtc.getMaxPduLifetime()+ "\n";
+						result = result + "            Max PDU size: " + dtc.getMaxPduSize() + "\n";
+					}
+					
+					Iterator<QoSCube> qosCubeIterator = difConfiguration.getQosCubes().iterator();
+					if (qosCubeIterator.hasNext()) {
+						result = result + "        QoS Cubes: \n";
+					}
+					QoSCube qosCube = null;
+					while (qosCubeIterator.hasNext()){
+						qosCube = qosCubeIterator.next();
+						result = result + "            Name: " + qosCube.getName() + "\n";
+						result = result + "            Id: " + qosCube.getId() + "\n";
+						result = result + "            Ordered delivery: " + qosCube.isOrderedDelivery() + "\n";
+						result = result + "            Partial delivery: " + qosCube.isOrderedDelivery() + "\n";
+						result = result + "            --------------------: \n";
+					}
+					
+					Iterator<Neighbor> neighborIterator = ipcProcess.getNeighbors().iterator();
+					if (neighborIterator.hasNext()) {
+						result = result + "        Neighbors: " + "\n";
+					}
+					while (neighborIterator.hasNext()) {
+						result = result + "            " + 
+								neighborIterator.next().getName().getProcessNamePlusInstance() + "\n";
+					}
+				}
 			}
 			
 			result = result + "\n";
@@ -481,6 +522,7 @@ public class IPCProcessManager {
 		
 		if (event.getResult() == 0) {
 			operation.getIpcProcess().addNeighbors(event.getNeighbors());
+			operation.getIpcProcess().setDIFInformation(event.getDIFInformation());
 			log.debug("Enrollment operation associated to handle "+event.getSequenceNumber() 
 					+" completed successfully.");
 		} else {

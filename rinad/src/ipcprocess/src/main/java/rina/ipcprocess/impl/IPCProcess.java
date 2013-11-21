@@ -48,6 +48,7 @@ import rina.ipcprocess.impl.flowallocator.ribobjects.DirectoryForwardingTableEnt
 import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
 import rina.ipcprocess.impl.resourceallocator.ResourceAllocatorImpl;
 import rina.ipcprocess.impl.ribdaemon.RIBDaemonImpl;
+import rina.ipcprocess.impl.ribobjects.WhatevercastNameSetRIBObject;
 import rina.resourceallocator.api.ResourceAllocator;
 import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBObject;
@@ -289,6 +290,8 @@ public class IPCProcess {
 		try {
 			RIBObject ribObject = new QoSCubeSetRIBObject();
 			this.ribDaemon.addRIBObject(ribObject);
+			ribObject = new WhatevercastNameSetRIBObject();
+			this.ribDaemon.addRIBObject(ribObject);
 			ribObject = new DataTransferConstantsRIBObject();
 			this.ribDaemon.addRIBObject(ribObject);
 			ribObject = new DirectoryForwardingTableEntrySetRIBObject();
@@ -318,6 +321,7 @@ public class IPCProcess {
 				event = ipcEventProducer.eventWait();
 				processEvent(event);
 			}catch(Exception ex){
+				ex.printStackTrace();
 				log.error("Problems processing event of type " + event.getType() + 
 						". " + ex.getMessage());
 			}
@@ -422,15 +426,15 @@ public class IPCProcess {
 		}
 	}
 	
-	public DIFInformation getDIFInformation() {
+	public synchronized DIFInformation getDIFInformation() {
 		return difInformation;
 	}
 	
-	public void setDIFInformation(DIFInformation difInformation) {
+	public synchronized void setDIFInformation(DIFInformation difInformation) {
 		this.difInformation = difInformation;
 	}
 	
-	public Long getAddress() {
+	public synchronized Long getAddress() {
 		if (difInformation == null) {
 			return null;
 		}

@@ -35,7 +35,7 @@
  * NULL is returned.
  */
 struct name * name_create(void);
-struct name * name_create_gfp(gfp_t flags);
+struct name * name_create_ni(void);
 
 
 /*
@@ -55,12 +55,11 @@ struct name * name_init_from(struct name *    dst,
                              const string_t * entity_name,
                              const string_t * entity_instance);
 
-struct name * name_init_from_gfp(gfp_t            flags,
-                                 struct name *    dst,
-                                 const string_t * process_name,
-                                 const string_t * process_instance,
-                                 const string_t * entity_name,
-                                 const string_t * entity_instance);
+struct name * name_init_from_ni(struct name *    dst,
+                                const string_t * process_name,
+                                const string_t * process_instance,
+                                const string_t * entity_name,
+                                const string_t * entity_instance);
 
 /* Takes ownership of the passed parameters */
 struct name * name_init_with(struct name * dst,
@@ -100,14 +99,12 @@ bool          is_name_ok(const struct name * n);
 
 /* Returns a name as a (newly allocated) string */
 char *        name_tostring(const struct name * n);
-char *        name_tostring_gfp(gfp_t               flags,
-                                const struct name * n);
+char *        name_tostring_ni(const struct name * n);
 
 /* Inverse of name_tostring() */
 string_t *    string_from_user(const char __user * src);
 struct name * string_toname(const string_t * s);
-struct name * string_toname_gfp(gfp_t            flags,
-                                const string_t * s);
+struct name * string_toname_ni(const string_t * s);
 
 struct ipcp_config * ipcp_config_create(void);
 int                  ipcp_config_destroy(struct ipcp_config * cfg);

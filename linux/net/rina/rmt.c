@@ -173,7 +173,7 @@ int rmt_send(struct rmt * instance,
              cep_id_t     connection_id,
              struct pdu * pdu)
 {
-        struct send_data * tmp;
+        struct send_data *     tmp;
         struct rwq_work_item * item;
 
         LOG_MISSING;
@@ -195,7 +195,8 @@ int rmt_send(struct rmt * instance,
         if (!is_send_data_complete(tmp))
                 return -1;
 
-        item = rwq_work_create(GFP_ATOMIC, rmt_send_worker, tmp);
+        /* Is this _ni() call really necessary ??? */
+        item = rwq_work_create_ni(rmt_send_worker, tmp);
         if (!item) {
                 send_data_destroy(tmp);
                 return -1;
@@ -310,8 +311,8 @@ int rmt_sdu_receive(struct rmt * instance,
                     struct sdu * sdu,
                     port_id_t    from)
 {
-        struct pdu * pdu;
-        struct receive_data * data;
+        struct pdu *           pdu;
+        struct receive_data *  data;
         struct rwq_work_item * item;
 
         if (!instance) {
@@ -332,7 +333,8 @@ int rmt_sdu_receive(struct rmt * instance,
         if (!is_receive_data_complete(data))
                 return -1;
 
-        item = rwq_work_create(GFP_ATOMIC, rmt_receive_worker, data);
+        /* Is this _ni() call really necessary ??? */
+        item = rwq_work_create_ni(rmt_receive_worker, data);
         if (!item) {
                 buffer_destroy(data->pdu->buffer);
                 receive_data_destroy(data);

@@ -20,6 +20,7 @@
 
 #include <linux/export.h>
 #include <linux/list.h>
+#include <linux/types.h>
 
 #define RINA_PREFIX "rfifo"
 
@@ -33,7 +34,7 @@ struct rfifo {
         struct rqueue * q;
 };
 
-struct rfifo * rfifo_create_gfp(gfp_t flags)
+static struct rfifo * rfifo_create_gfp(gfp_t flags)
 {
         struct rfifo * f;
 
@@ -51,11 +52,14 @@ struct rfifo * rfifo_create_gfp(gfp_t flags)
 
         return f;
 }
-EXPORT_SYMBOL(rfifo_create_gfp);
 
 struct rfifo * rfifo_create(void)
 { return rfifo_create_gfp(GFP_KERNEL); }
 EXPORT_SYMBOL(rfifo_create);
+
+struct rfifo * rfifo_create_ni(void)
+{ return rfifo_create_gfp(GFP_ATOMIC); }
+EXPORT_SYMBOL(rfifo_create_ni);
 
 int rfifo_destroy(struct rfifo * f,
                   void         (* dtor)(void * e))
@@ -86,6 +90,17 @@ int rfifo_push(struct rfifo * f, void * e)
         return rqueue_tail_push(f->q, e);
 }
 EXPORT_SYMBOL(rfifo_push);
+
+int rfifo_push_ni(struct rfifo * f, void * e)
+{
+        if (!f) {
+                LOG_ERR("Can't push into a NULL fifo ...");
+                return -1;
+        }
+
+        return rqueue_tail_push_ni(f->q, e);
+}
+EXPORT_SYMBOL(rfifo_push_ni);
 
 void * rfifo_pop(struct rfifo * f)
 {

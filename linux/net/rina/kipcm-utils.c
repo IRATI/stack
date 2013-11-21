@@ -444,10 +444,10 @@ int kipcm_smap_update(struct kipcm_smap * map,
         return 0;
 }
 
-int kipcm_smap_add_gfp(gfp_t               flags,
-                       struct kipcm_smap * map,
-                       rnl_sn_t            key,
-                       port_id_t           value)
+static int kipcm_smap_add_gfp(gfp_t               flags,
+                              struct kipcm_smap * map,
+                              rnl_sn_t            key,
+                              port_id_t           value)
 {
         struct kipcm_smap_entry * tmp;
 
@@ -471,6 +471,10 @@ int kipcm_smap_add(struct kipcm_smap * map,
                    port_id_t            value)
 { return kipcm_smap_add_gfp(GFP_KERNEL, map, key, value); }
 
+int kipcm_smap_add_ni(struct kipcm_smap * map,
+                      rnl_sn_t             key,
+                      port_id_t            value)
+{ return kipcm_smap_add_gfp(GFP_ATOMIC, map, key, value); }
 
 int kipcm_smap_remove(struct kipcm_smap * map,
                       rnl_sn_t            key)

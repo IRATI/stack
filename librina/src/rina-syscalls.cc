@@ -46,7 +46,6 @@
 
 #include <sys/syscall.h>
 #include <unistd.h>
-#include <errno.h>
 
 #define RINA_PREFIX "syscalls"
 
@@ -72,11 +71,10 @@ namespace rina {
 
                 result = syscall(SYS_writeSDU, portId, sdu, size);
                 if (result < 0) {
-                        LOG_ERR("Write SDU failed (errno = %d)", errno);
-                        return errno;
+                        LOG_ERR("Syscall write SDU failed: %d", result);
                 }
 
-                return 0;
+                return result;
         }
 
         int syscallReadSDU(int portId, void * sdu, int maxBytes)
@@ -87,8 +85,7 @@ namespace rina {
 
                 result = syscall(SYS_readSDU, portId, sdu, maxBytes);
                 if (result < 0) {
-                        LOG_ERR("Read SDU failed (errno = %d)", errno);
-                        return errno;
+                        LOG_ERR("Syscall read SDU failed: %d", result);
                 }
 
                 return result;
@@ -102,12 +99,10 @@ namespace rina {
 
                 result = syscall(SYS_destroyIPCProcess, ipcProcessId);
                 if (result < 0) {
-                        LOG_ERR("Destroy IPC Process failed (errno = %d)",
-                                errno);
-                        return errno;
+                        LOG_ERR("Syscall destroy IPC Process failed: %d", result);
                 }
 
-                return 0;
+                return result;
         }
 
         int syscallCreateIPCProcess(const ApplicationProcessNamingInformation & ipcProcessName,
@@ -125,13 +120,12 @@ namespace rina {
                                  ipcProcessName.getEntityInstance().c_str(),
                                  ipcProcessId,
                                  difType.c_str());
+
                 if (result < 0) {
-                        LOG_ERR("Create IPC Process failed (errno = %d)",
-                                errno);
-                        return errno;
+                        LOG_ERR("Syscall create IPC Process failed: %d", result);
                 }
 
-                return 0;
+                return result;
         }
 
 }

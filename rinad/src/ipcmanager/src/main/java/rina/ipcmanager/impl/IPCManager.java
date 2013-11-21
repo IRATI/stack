@@ -242,7 +242,7 @@ public class IPCManager {
 						event = ipcEventProducer.eventWait();
 						if (event.getType().equals(IPCEventType.IPCM_REGISTER_APP_RESPONSE_EVENT)) {
 							IpcmRegisterApplicationResponseEvent appRespEvent = (IpcmRegisterApplicationResponseEvent) event;
-							ipcProcessManager.registrationToNMinusOneDIFResponse(appRespEvent);
+							applicationRegistrationManager.registerApplicationResponse(appRespEvent);
 						} else {
 							log.error("Problems assigning IPC Process to DIF. Expected event of type " + 
 										"IPCM_REGISTER_APP_RESPONSE_EVENT, but got event of type "+ event.getType());

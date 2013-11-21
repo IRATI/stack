@@ -474,7 +474,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 
         if (ipc_process->ops->flow_allocate_response(ipc_process->data,
                                                      pid,
-                                                     0)) {
+                                                     attrs->result)) {
                 LOG_ERR("Failed allocate flow response for port id: %d",
                         attrs->id);
                 alloc_flow_resp_free(attrs, msg, hdr);
@@ -2075,8 +2075,7 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
                 return -1;
         }
         seq_num = rnl_get_next_seqn(kipcm->rnls);
-        if (kipcm_smap_add_gfp(GFP_ATOMIC, kipcm->messages->egress,
-                               seq_num, port_id)) {
+        if (kipcm_smap_add_ni(kipcm->messages->egress, seq_num, port_id)) {
                 LOG_DBG("Could not get next sequence number");
                 return -1;
         }

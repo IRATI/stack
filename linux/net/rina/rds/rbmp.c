@@ -20,6 +20,7 @@
 
 #include <linux/export.h>
 #include <linux/bitmap.h>
+#include <linux/types.h>
 
 #define RINA_PREFIX "rbmp"
 
@@ -36,7 +37,7 @@ struct rbmp {
         DECLARE_BITMAP(bitmap, BITS_IN_BITMAP);
 };
 
-struct rbmp * rbmp_create_gfp(gfp_t flags, size_t bits, ssize_t offset)
+static struct rbmp * rbmp_create_gfp(gfp_t flags, size_t bits, ssize_t offset)
 {
         struct rbmp * tmp;
 
@@ -53,11 +54,14 @@ struct rbmp * rbmp_create_gfp(gfp_t flags, size_t bits, ssize_t offset)
 
         return NULL;
 }
-EXPORT_SYMBOL(rbmp_create_gfp);
 
 struct rbmp * rbmp_create(size_t bits, ssize_t offset)
 { return rbmp_create_gfp(GFP_KERNEL, bits, offset); }
 EXPORT_SYMBOL(rbmp_create);
+
+struct rbmp * rbmp_create_ni(size_t bits, ssize_t offset)
+{ return rbmp_create_gfp(GFP_ATOMIC, bits, offset); }
+EXPORT_SYMBOL(rbmp_create_ni);
 
 int rbmp_destroy(struct rbmp * b)
 {
@@ -105,7 +109,7 @@ static bool is_id_ok(struct rbmp * b, ssize_t id)
 
         return true;
 }
- 
+
 bool rbmp_is_id_ok(struct rbmp * b, ssize_t id)
 {
         if (!b)
