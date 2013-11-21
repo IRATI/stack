@@ -329,9 +329,8 @@ static int parse_list_of_ipcp_config_entries(struct nlattr *     nested_attr,
         return 0;
 }
 
-static int
-parse_data_transfer_constants(struct nlattr *                  attr,
-                              struct data_transfer_constants * data_transfer_constants)
+static int parse_dt_cons(struct nlattr *  attr,
+                         struct dt_cons * dt_cons)
 {
         struct nla_policy attr_policy[DTC_ATTR_MAX + 1];
         struct nlattr *   attrs[DTC_ATTR_MAX + 1];
@@ -359,39 +358,39 @@ parse_data_transfer_constants(struct nlattr *                  attr,
                 return -1;
 
         if (attrs[DTC_ATTR_QOS_ID])
-                data_transfer_constants->qos_id_length =
+                dt_cons->qos_id_length =
                         nla_get_u16(attrs[DTC_ATTR_QOS_ID]);
 
         if (attrs[DTC_ATTR_PORT_ID])
-                data_transfer_constants->port_id_length =
+                dt_cons->port_id_length =
                         nla_get_u16(attrs[DTC_ATTR_PORT_ID]);
 
         if (attrs[DTC_ATTR_CEP_ID])
-                data_transfer_constants->cep_id_length =
+                dt_cons->cep_id_length =
                         nla_get_u16(attrs[DTC_ATTR_CEP_ID]);
 
         if (attrs[DTC_ATTR_SEQ_NUM])
-                data_transfer_constants->seq_num_length =
+                dt_cons->seq_num_length =
                         nla_get_u16(attrs[DTC_ATTR_SEQ_NUM]);
 
         if (attrs[DTC_ATTR_ADDRESS])
-                data_transfer_constants->address_length =
+                dt_cons->address_length =
                         nla_get_u16(attrs[DTC_ATTR_ADDRESS]);
 
         if (attrs[DTC_ATTR_LENGTH])
-                data_transfer_constants->length_length =
+                dt_cons->length_length =
                         nla_get_u16(attrs[DTC_ATTR_LENGTH]);
 
         if (attrs[DTC_ATTR_MAX_PDU_SIZE])
-                data_transfer_constants->max_pdu_size =
+                dt_cons->max_pdu_size =
                         nla_get_u32(attrs[DTC_ATTR_MAX_PDU_SIZE]);
 
         if (attrs[DTC_ATTR_MAX_PDU_LIFE])
-                data_transfer_constants->max_pdu_life =
+                dt_cons->max_pdu_life =
                         nla_get_u32(attrs[DTC_ATTR_MAX_PDU_LIFE]);
 
         if (attrs[DTC_ATTR_DIF_INTEGRITY])
-                data_transfer_constants->dif_integrity = true;
+                dt_cons->dif_integrity = true;
 
         return 0;
 }
@@ -400,8 +399,8 @@ static int parse_dif_config(struct nlattr * dif_config_attr,
                             struct dif_config  * dif_config)
 {
         struct nla_policy attr_policy[DCONF_ATTR_MAX + 1];
-        struct nlattr *attrs[DCONF_ATTR_MAX + 1];
-        struct data_transfer_constants * data_transfer_constants;
+        struct nlattr *   attrs[DCONF_ATTR_MAX + 1];
+        struct dt_cons *  dt_cons;
 
         attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].type = NLA_NESTED;
         attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].len = 0;
@@ -425,15 +424,15 @@ static int parse_dif_config(struct nlattr * dif_config_attr,
         }
 
         if (attrs[DCONF_ATTR_DATA_TRANS_CONS]) {
-                data_transfer_constants = rkzalloc(sizeof(struct data_transfer_constants),
-                                                   GFP_KERNEL);
-                if (!data_transfer_constants)
+                dt_cons = rkzalloc(sizeof(struct dt_cons),GFP_KERNEL);
+                if (!dt_cons)
                         goto parse_fail;
-                dif_config->data_transfer_constants = data_transfer_constants;
 
-                if (parse_data_transfer_constants(attrs[DCONF_ATTR_DATA_TRANS_CONS],
-                                                  dif_config->data_transfer_constants) < 0) {
-                        rkfree(dif_config->data_transfer_constants);
+                dif_config->dt_cons = dt_cons;
+
+                if (parse_dt_cons(attrs[DCONF_ATTR_DATA_TRANS_CONS],
+                                  dif_config->dt_cons) < 0) {
+                        rkfree(dif_config->dt_cons);
                         goto parse_fail;
                 }
         }

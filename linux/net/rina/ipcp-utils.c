@@ -637,8 +637,8 @@ int dif_config_destroy(struct dif_config * dif_config)
                 ipcp_config_destroy(pos);
         }
 
-        if (dif_config->data_transfer_constants)
-                rkfree(dif_config->data_transfer_constants);
+        if (dif_config->dt_cons)
+                rkfree(dif_config->dt_cons);
         rkfree(dif_config);
 
         return 0;
@@ -647,6 +647,8 @@ EXPORT_SYMBOL(dif_config_destroy);
 
 int dif_info_destroy(struct dif_info * dif_info)
 {
+        LOG_DBG("Destroying DIF-info");
+
         if (dif_info) {
                 if (dif_info->dif_name) {
                         name_destroy(dif_info->dif_name);

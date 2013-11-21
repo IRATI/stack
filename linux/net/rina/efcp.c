@@ -35,10 +35,10 @@
 #include "rmt.h"
 
 struct efcp {
-        struct connection *       connection;
-        struct dtp *              dtp;
-        struct dtcp *             dtcp;
-        struct efcp_container *   efcpc;
+        struct connection *     connection;
+        struct dtp *            dtp;
+        struct dtcp *           dtcp;
+        struct efcp_container * efcpc;
 };
 
 static struct efcp * efcp_create(void)
@@ -46,10 +46,8 @@ static struct efcp * efcp_create(void)
         struct efcp * instance;
 
         instance = rkzalloc(sizeof(*instance), GFP_KERNEL);
-        if (!instance) {
-                LOG_ERR("Cannot create a new instance");
+        if (!instance)
                 return NULL;
-        }
 
         LOG_DBG("Instance %pK initialized successfully", instance);
 
@@ -79,13 +77,13 @@ static int efcp_destroy(struct efcp * instance)
 }
 
 struct efcp_container {
-        struct efcp_imap *              instances;
-        struct cidm *                   cidm;
-        struct data_transfer_constants  dt_cons;
-        struct rmt *                    rmt;
-        struct kfa *                    kfa;
-        struct workqueue_struct *       egress_wq;
-        struct workqueue_struct *       ingress_wq;
+        struct efcp_imap *        instances;
+        struct cidm *             cidm;
+        struct dt_cons            dt_cons;
+        struct rmt *              rmt;
+        struct kfa *              kfa;
+        struct workqueue_struct * egress_wq;
+        struct workqueue_struct * ingress_wq;
 };
 
 struct efcp_container * efcp_container_create(struct kfa * kfa)
@@ -98,10 +96,8 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
         }
 
         container = rkzalloc(sizeof(*container), GFP_KERNEL);
-        if (!container) {
-                LOG_ERR("Failed to create EFCP container instance");
+        if (!container)
                 return NULL;
-        }
 
         container->instances   = efcp_imap_create();
         container->cidm        = cidm_create();
@@ -153,14 +149,16 @@ int efcp_container_destroy(struct efcp_container * container)
 }
 EXPORT_SYMBOL(efcp_container_destroy);
 
-int efcp_container_set_dt_cons(struct data_transfer_constants * dt_cons,
-                               struct efcp_container          * container)
+int efcp_container_set_dt_cons(struct dt_cons *        dt_cons,
+                               struct efcp_container * container)
 {
         if (!dt_cons || !container) {
                 LOG_ERR("Bogus input parameters, bailing out");
                 return -1;
         }
 
+#if 0
+        /* FIXME: Why not copying the struct directly ??? */
         container->dt_cons.address_length = dt_cons->address_length;
         container->dt_cons.cep_id_length  = dt_cons->cep_id_length;
         container->dt_cons.length_length  = dt_cons->length_length;
@@ -170,6 +168,8 @@ int efcp_container_set_dt_cons(struct data_transfer_constants * dt_cons,
         container->dt_cons.max_pdu_size   = dt_cons->max_pdu_size;
         container->dt_cons.max_pdu_life   = dt_cons->max_pdu_life;
         container->dt_cons.dif_integrity  = dt_cons->dif_integrity;
+#endif
+        container->dt_cons = *dt_cons;
 
         LOG_DBG("Succesfully set data transfer constants to efcp container");
 
@@ -182,16 +182,8 @@ struct write_data {
         struct sdu *  sdu;
 };
 
-static bool is_write_data_complete(const struct write_data * data)
-{
-        bool ret;
-
-        ret = ((!data || !data->efcp || !data->sdu) ? false : true);
-
-        LOG_DBG("Write data complete? %d", ret);
-
-        return ret;
-}
+static bool is_write_data_ok(const struct write_data * data)
+{ return ((!data || !data->efcp || !data->sdu) ? false : true); }
 
 static int write_data_destroy(struct write_data * data)
 {
@@ -230,7 +222,7 @@ static int efcp_write_worker(void * o)
                 return -1;
         }
 
-        if (!is_write_data_complete(tmp)) {
+        if (!is_write_data_ok(tmp)) {
                 LOG_ERR("Wrong data passed to efcp_write_worker");
                 write_data_destroy(tmp);
                 return -1;
@@ -244,10 +236,10 @@ static int efcp_write_worker(void * o)
         return 0;
 }
 
-int efcp_write(struct efcp * efcp,
-               struct sdu *  sdu)
+static int efcp_write(struct efcp * efcp,
+                      struct sdu *  sdu)
 {
-        struct write_data * tmp;
+        struct write_data *    tmp;
         struct rwq_work_item * item;
 
         if (!efcp) {
@@ -260,8 +252,7 @@ int efcp_write(struct efcp * efcp,
         }
 
         tmp = write_data_create(efcp, sdu);
-        if (!is_write_data_complete(tmp))
-                return -1;
+        ASSERT(is_write_data_ok(tmp));
 
         /* Is this _ni() really necessary ??? */
         item = rwq_work_create_ni(efcp_write_worker, tmp);
@@ -314,16 +305,8 @@ struct receive_data {
         struct pdu *  pdu;
 };
 
-static bool is_receive_data_complete(const struct receive_data * data)
-{
-        bool ret;
-
-        ret = ((!data || !data->efcp || !data->pdu) ? false : true);
-
-        LOG_DBG("Receive data complete? %d", ret);
-
-        return ret;
-}
+static bool is_receive_data_ok(const struct receive_data * data)
+{ return ((!data || !data->efcp || !data->pdu) ? false : true); }
 
 static int receive_data_destroy(struct receive_data * data)
 {
@@ -362,7 +345,7 @@ static int efcp_receive_worker(void * o)
                 return -1;
         }
 
-        if (!is_receive_data_complete(tmp)) {
+        if (!is_receive_data_ok(tmp)) {
                 LOG_ERR("Wrong data passed to efcp_receive_worker");
                 receive_data_destroy(tmp);
                 return -1;
@@ -376,8 +359,8 @@ static int efcp_receive_worker(void * o)
         return 0;
 }
 
-int efcp_receive(struct efcp * efcp,
-                 struct pdu *  pdu)
+static int efcp_receive(struct efcp * efcp,
+                        struct pdu *  pdu)
 {
         struct receive_data *  data;
         struct rwq_work_item * item;
@@ -392,11 +375,7 @@ int efcp_receive(struct efcp * efcp,
         }
 
         data = receive_data_create(efcp, pdu);
-        if (!is_receive_data_complete(data)) {
-                LOG_ERR("Receive data is not complete");
-                receive_data_destroy(data);
-                return -1;
-        }
+        ASSERT(is_receive_data_ok(data));
 
         /* Is this _ni() call really necessary ??? */
         item = rwq_work_create_ni(efcp_receive_worker, data);
@@ -431,9 +410,11 @@ int efcp_container_receive(struct efcp_container * container,
                 return -1;
         }
 
-        tmp = efcp_find(container, cep_id);
-        if (!tmp)
+        tmp = efcp_container_find(container, cep_id);
+        if (!tmp) {
+                LOG_ERR("Cannot find the requested instance");
                 return -1;
+        }
 
         if (efcp_receive(tmp, pdu))
                 return -1;
@@ -477,12 +458,12 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         cep_id = cidm_allocate(container->cidm);
 
         /* We must ensure that the DTP is instantiated, at least ... */
-        tmp->efcpc = container;
+        tmp->efcpc                = container;
         connection->source_cep_id = cep_id;
-        tmp->connection = connection;
-        tmp->dtp        = dtp_create(container->rmt,
-                                     container->kfa,
-                                     connection);
+        tmp->connection           = connection;
+        tmp->dtp                  = dtp_create(container->rmt,
+                                               container->kfa,
+                                               connection);
         if (!tmp->dtp) {
                 efcp_destroy(tmp);
                 return cep_id_bad();
@@ -536,6 +517,10 @@ int efcp_connection_destroy(struct efcp_container * container,
                 LOG_ERR("Bogus container passed, bailing out");
                 return -1;
         }
+        if (!is_cep_id_ok(id)) {
+                LOG_ERR("Bad cep-id, cannot destroy connection");
+                return -1;
+        }
 
         tmp = efcp_imap_find(container->instances, id);
         if (!tmp) {
@@ -569,6 +554,14 @@ int efcp_connection_update(struct efcp_container * container,
                 LOG_ERR("Bogus container passed, bailing out");
                 return -1;
         }
+        if (!is_cep_id_ok(from)) {
+                LOG_ERR("Bad from cep-id, cannot update connection");
+                return -1;
+        }
+        if (!is_cep_id_ok(to)) {
+                LOG_ERR("Bad to cep-id, cannot update connection");
+                return -1;
+        }
 
         tmp = efcp_imap_find(container->instances, from);
         if (!tmp) {
@@ -592,16 +585,21 @@ int efcp_connection_update(struct efcp_container * container,
 }
 EXPORT_SYMBOL(efcp_connection_update);
 
-struct efcp * efcp_find(struct efcp_container * container,
-                        cep_id_t                id)
+struct efcp * efcp_container_find(struct efcp_container * container,
+                                  cep_id_t                id)
 {
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
                 return NULL;
         }
+        if (!is_cep_id_ok(id)) {
+                LOG_ERR("Bad cep-id, cannot find instance");
+                return NULL;
+        }
 
         return efcp_imap_find(container->instances, id);
 }
+EXPORT_SYMBOL(efcp_container_find);
 
 int efcp_bind_rmt(struct efcp_container * container,
                   struct rmt *            rmt)
@@ -614,8 +612,22 @@ int efcp_bind_rmt(struct efcp_container * container,
                 LOG_ERR("Bogus RMT instance passed");
                 return -1;
         }
+
         container->rmt = rmt;
 
         return 0;
 }
 EXPORT_SYMBOL(efcp_bind_rmt);
+
+int efcp_unbind_rmt(struct efcp_container * container)
+{
+        if (!container) {
+                LOG_ERR("Bogus EFCP container passed");
+                return -1;
+        }
+
+        container->rmt = NULL;
+
+        return 0;
+}
+EXPORT_SYMBOL(efcp_unbind_rmt);

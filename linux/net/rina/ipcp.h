@@ -46,7 +46,7 @@ struct ipcp_config {
         struct ipcp_config_entry * entry;
 };
 
-struct data_transfer_constants {
+struct dt_cons {
         /* The length of the address field in the DTP PCI, in bytes */
         u_int16_t address_length;
 
@@ -81,7 +81,7 @@ struct data_transfer_constants {
          * encryption algorithm must be used for every PDU; we cannot identify
          * which flow owns a particular PDU until it has been decrypted.
          */
-        bool dif_integrity;
+        bool      dif_integrity;
 };
 
 /* Represents a DIF configuration (policies, parameters, etc) */
@@ -90,10 +90,10 @@ struct dif_config {
         struct list_head ipcp_config_entries;
 
         /* The data transfer constants */
-        struct data_transfer_constants * data_transfer_constants;
+        struct dt_cons * dt_cons;
 
         /* The address of the IPC Process*/
-        address_t address;
+        address_t        address;
 };
 
 /* Represents the information about a DIF (name, type, configuration) */
