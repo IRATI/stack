@@ -27,6 +27,7 @@
 
 #include "logs.h"
 #include "debug.h"
+#include "rmem.h"
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
 struct memblock_header {
@@ -53,17 +54,38 @@ static void mb_filler_init(uint8_t * f, size_t length)
 
 static int mb_is_filler_ok(const uint8_t * f, size_t length)
 {
-        size_t i;
+        size_t          i;
+        const uint8_t * g;
+
+        ASSERT(f);
+
+        g = f;
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING_VERBOSE
-        LOG_DBG("Checking filler at %pK, size %zd", f, length);
+        LOG_DBG("Checking filler at %pK, size %zd", g, length);
 #endif
         for (i = 0; i < length; i++) {
-                if (*f != i % 0xff) {
-                        LOG_ERR("Filler corrupted at %pK (pos = %zd)", f, i);
+                if (*g != i % 0xff) {
+                        size_t          j;
+                        const uint8_t * h;
+
+                        LOG_ERR("Filler corrupted at %pK "
+                                "(pos = %zd, obt = 0x%02x, exp = 0x%02x)",
+                                g, i, *g, i % 0xff);
+
+                        LOG_ERR("Filler dump begin");
+
+                        h = f;
+                        for (j = 0; j < length; j++) {
+                                LOG_ERR("  %zd = 0x%02x", j, *h);
+                                h++;
+                        }
+
+                        LOG_ERR("Filler dump end");
+
                         return 0;
                 }
-                f++;
+                g++;
         }
 
         return 1;
