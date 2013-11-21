@@ -64,7 +64,6 @@ public class IPCManager {
 	
 	private static final Log log = LogFactory.getLog(IPCManager.class);
 	
-	public static final String CONFIG_FILE_LOCATION = "../conf/ipcmanager.conf"; 
 	public static final long CONFIG_FILE_POLL_PERIOD_IN_MS = 5000;
 	
 	public static final String NORMAL_IPC_PROCESS_TYPE = "normal-ipc";
@@ -92,7 +91,7 @@ public class IPCManager {
 	private FlowManager flowManager = null;
 	
 	public IPCManager(){
-		log.info("Initializing IPCManager console..,");
+		log.info("Initializing IPCManager console...");
 		executorService = Executors.newCachedThreadPool();
 		console = new IPCManagerConsole(this);
 		executorService.execute(console);
@@ -130,7 +129,7 @@ public class IPCManager {
 			private RINAConfiguration rinaConfiguration = null;
 
 			public void run(){
-				File file = new File(CONFIG_FILE_LOCATION);
+				File file = new File(System.getProperty("configFileLocation"));
 
 				while(true){
 					if (file.lastModified() > currentLastModified) {
@@ -158,7 +157,8 @@ public class IPCManager {
 		try {
     		ObjectMapper objectMapper = new ObjectMapper();
     		RINAConfiguration rinaConfiguration = (RINAConfiguration) 
-    			objectMapper.readValue(new FileInputStream(CONFIG_FILE_LOCATION), RINAConfiguration.class);
+    			objectMapper.readValue(new FileInputStream(System.getProperty("configFileLocation")), 
+    					RINAConfiguration.class);
     		log.info("Read configuration file");
     		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     		objectMapper.writer(new DefaultPrettyPrinter()).writeValue(outputStream, rinaConfiguration);

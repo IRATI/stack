@@ -7,3 +7,4 @@ target/
 .project
 rinaband-client
 rinaband-server
+src/main/resources/log4j.properties

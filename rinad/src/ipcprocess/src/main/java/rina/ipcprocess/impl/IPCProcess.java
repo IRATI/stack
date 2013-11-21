@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -81,7 +82,6 @@ public class IPCProcess {
 	public static final String MANAGEMENT_AE = "Management";
     public static final String DATA_TRANSFER_AE = "Data Transfer";
     public static final int DEFAULT_MAX_SDU_SIZE_IN_BYTES = 10000;
-    public static final String CONFIG_FILE_LOCATION = "../conf/ipcmanager.conf"; 
 	public static final long CONFIG_FILE_POLL_PERIOD_IN_MS = 5000;
     
     public enum State {NULL, INITIALIZED, ASSIGN_TO_DIF_IN_PROCESS, ASSIGNED_TO_DIF};
@@ -132,6 +132,9 @@ public class IPCProcess {
 	
 	/** The thread pool implementation */
 	private ExecutorService executorService = null;
+	
+	/** The config file location */
+	private String configFileLocation = null;
 	
 	public static IPCProcess getInstance() {
 		if (instance == null) {
@@ -189,6 +192,21 @@ public class IPCProcess {
 	}
 	
 	private void initializeConfiguration(){
+		
+		Properties prop = new Properties(); 
+		try {
+			prop.load(this.getClass().getResourceAsStream("/ipcprocess.properties"));
+			configFileLocation = prop.getProperty("configFileLocation");
+			if (configFileLocation == null) {
+				log.error("Could not find location of config file, exiting");
+				System.exit(-1);
+			}
+		} 
+		catch (Exception ex) {
+			log.error("Could not find IPC Process properties file, exiting: "+ex.getMessage());
+			System.exit(-1);
+		}
+		
 		//Read config file
 		RINAConfiguration rinaConfiguration = readConfigurationFile();
 		RINAConfiguration.setConfiguration(rinaConfiguration);
@@ -199,7 +217,7 @@ public class IPCProcess {
 			private RINAConfiguration rinaConfiguration = null;
 
 			public void run(){
-				File file = new File(CONFIG_FILE_LOCATION);
+				File file = new File(configFileLocation);
 
 				while(true){
 					if (file.lastModified() > currentLastModified) {
@@ -227,7 +245,8 @@ public class IPCProcess {
 		try {
     		ObjectMapper objectMapper = new ObjectMapper();
     		RINAConfiguration rinaConfiguration = (RINAConfiguration) 
-    			objectMapper.readValue(new FileInputStream(CONFIG_FILE_LOCATION), RINAConfiguration.class);
+    			objectMapper.readValue(new FileInputStream(configFileLocation), 
+    					RINAConfiguration.class);
     		log.info("Read configuration file");
     		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     		objectMapper.writer(new DefaultPrettyPrinter()).writeValue(outputStream, rinaConfiguration);

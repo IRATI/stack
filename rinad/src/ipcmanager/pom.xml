@@ -149,10 +149,10 @@
               				<goal>copy-resources</goal>
             			</goals>
             			<configuration>
-              				<outputDirectory>${installation.path}/../../conf</outputDirectory>
+              				<outputDirectory>${installation.path}/../../etc</outputDirectory>
               				<resources>          
                 				<resource>
-                  					<directory>src/main/conf</directory>
+                  					<directory>src/main/etc</directory>
                   					<filtering>true</filtering>
                 				</resource>
               				</resources>              

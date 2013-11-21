@@ -4,3 +4,5 @@ target/
 .settings/
 .classpath
 .project
+src/main/resources/ipcprocess.properties
+src/main/resources/log4j.properties
