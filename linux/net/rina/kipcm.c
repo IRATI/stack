@@ -619,11 +619,10 @@ assign_to_dif_free_and_reply(struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs
                              uint_t              seq_num,
                              uint_t              port_id)
 {
+        LOG_DBG("Assigning to dif, free and repy");
 
         if (attrs) {
-                if (attrs->dif_info)
-                        dif_info_destroy(attrs->dif_info);
-
+                if (attrs->dif_info) dif_info_destroy(attrs->dif_info);
                 rkfree(attrs);
         }
         if (msg) rkfree(msg);
@@ -645,8 +644,9 @@ static int notify_ipcp_assign_dif_request(void *             data,
         struct name *                                 dif_name;
         struct dif_config *                           dif_config;
         struct ipcp_instance *                        ipc_process;
-        ipc_process_id_t                              ipc_id = 0;
+        ipc_process_id_t                              ipc_id;
 
+        ipc_id     = 0;
         attrs      = NULL;
         msg        = NULL;
         dif_name   = NULL;
@@ -657,7 +657,6 @@ static int notify_ipcp_assign_dif_request(void *             data,
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
                 return -1;
         }
-
         kipcm = (struct kipcm *) data;
 
         if (!info) {
@@ -674,8 +673,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
                 goto fail;
 
         attrs->dif_info = dif_info;
-
-        dif_name = name_create();
+        dif_name        = name_create();
         if (!dif_name)
                 goto fail;
 
@@ -696,8 +694,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
         if (rnl_parse_msg(info, msg))
                 goto fail;
 
-        ipc_id = msg->rina_hdr->dst_ipc_id;
-
+        ipc_id      = msg->rina_hdr->dst_ipc_id;
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
                 LOG_ERR("IPC process %d not found", ipc_id);
@@ -1459,23 +1456,19 @@ static int notify_ipcp_conn_update_req(void *             data,
         msg->rina_hdr = hdr;
         msg->attrs    = attrs;
 
-        if (rnl_parse_msg(info, msg)) {
+        if (rnl_parse_msg(info, msg))
                 goto process_fail;
-        }
 
         port_id = attrs->port_id;
         ipc_id  = hdr->dst_ipc_id;
         ipcp    = ipcp_imap_find(kipcm->instances, ipc_id);
-        if (!ipcp) {
+        if (!ipcp)
                 goto process_fail;
-        }
-
 
         if (ipcp->ops->connection_update(ipcp->data,
                                          attrs->src_cep,
-                                         attrs->dst_cep)) {
+                                         attrs->dst_cep))
                 goto process_fail;
-        }
 
         return conn_update_result_free_and_reply(attrs,
                                                  msg,
@@ -1563,20 +1556,17 @@ static int notify_ipcp_conn_destroy_req(void *             data,
         msg->rina_hdr = hdr;
         msg->attrs    = attrs;
 
-        if (rnl_parse_msg(info, msg)) {
+        if (rnl_parse_msg(info, msg))
                 goto process_fail;
-        }
 
         port_id = attrs->port_id;
         ipc_id  = hdr->dst_ipc_id;
         ipcp    = ipcp_imap_find(kipcm->instances, ipc_id);
-        if (!ipcp) {
+        if (!ipcp)
                 goto process_fail;
-        }
 
-        if (ipcp->ops->connection_destroy(ipcp->data, attrs->src_cep)) {
+        if (ipcp->ops->connection_destroy(ipcp->data, attrs->src_cep))
                 goto process_fail;
-        }
 
         return conn_destroy_result_free_and_reply(attrs,
                                                   msg,
@@ -2322,17 +2312,14 @@ static int notify_ipcp_conn_create_generic(void *             data,
         msg->rina_hdr = hdr;
         msg->attrs    = attrs;
 
-        if (rnl_parse_msg(info, msg)) {
+        if (rnl_parse_msg(info, msg))
                 goto process_fail;
-        }
 
         port_id = attrs->port_id;
         ipc_id  = hdr->dst_ipc_id;
         ipcp    = ipcp_imap_find(kipcm->instances, ipc_id);
-        if (!ipcp) {
+        if (!ipcp)
                 goto process_fail;
-        }
-
 
         fid = kfa_flow_create(kipcm->kfa);
         ASSERT(is_flow_id_ok(fid));

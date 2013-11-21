@@ -647,6 +647,8 @@ EXPORT_SYMBOL(dif_config_destroy);
 
 int dif_info_destroy(struct dif_info * dif_info)
 {
+        LOG_DBG("Destroying DIF-info");
+
         if (dif_info) {
                 if (dif_info->dif_name) {
                         name_destroy(dif_info->dif_name);
