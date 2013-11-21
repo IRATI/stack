@@ -49,21 +49,15 @@ int          rmt_destroy(struct rmt * instance);
 
 /* FIXME: Please check the following APIs */
 
-/*
- * NOTES: Used by EFCP. Sends PDU to DIF-(N).
- *        Takes ownership of the passed PDU
- */
+/* NOTE: Takes ownership of the passed PDU */
 int          rmt_send(struct rmt * instance,
                       address_t    address,
                       cep_id_t     connection_id,
                       struct pdu * pdu);
 
-/*
- * NOTES: Used by the KFA, sends SDU to the RMT.
- *        Takes the ownership of the passed SDU
- */
-int          rmt_sdu_receive(struct rmt * instance,
-                             struct sdu * sdu,
-                             port_id_t    from);
+/* NOTE: Takes the ownership of the passed SDU */
+int          rmt_receive(struct rmt * instance,
+                         struct sdu * sdu,
+                         port_id_t    from);
 
 #endif
