@@ -20,6 +20,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/export.h>
 #include <linux/kobject.h>
 
 #define RINA_PREFIX "efcp"
@@ -181,7 +182,7 @@ struct write_data {
         struct sdu *  sdu;
 };
 
-bool is_write_data_complete(const struct write_data * data)
+static bool is_write_data_complete(const struct write_data * data)
 {
         bool ret;
 
@@ -262,7 +263,8 @@ int efcp_write(struct efcp * efcp,
         if (!is_write_data_complete(tmp))
                 return -1;
 
-        item = rwq_work_create(GFP_ATOMIC, efcp_write_worker, tmp);
+        /* Is this _ni() really necessary ??? */
+        item = rwq_work_create_ni(efcp_write_worker, tmp);
         if (!item) {
                 write_data_destroy(tmp);
                 return -1;
@@ -395,7 +397,9 @@ int efcp_receive(struct efcp * efcp,
                 receive_data_destroy(data);
                 return -1;
         }
-        item = rwq_work_create(GFP_ATOMIC, efcp_receive_worker, data);
+
+        /* Is this _ni() call really necessary ??? */
+        item = rwq_work_create_ni(efcp_receive_worker, data);
         if (!item) {
                 receive_data_destroy(data);
                 return -1;

@@ -35,9 +35,8 @@ struct table_entry;
  */
 struct table_entry * tble_create(struct gpa * gpa,
                                  struct gha * gha);
-struct table_entry * tble_create_gfp(struct gpa * gpa,
-                                     struct gha * gha,
-                                     gfp_t        flags);
+struct table_entry * tble_create_ni(struct gpa * gpa,
+                                    struct gha * gha);
 int                  tble_destroy(struct table_entry * entry);
 
 bool                 tble_is_ok(const struct table_entry * entry);

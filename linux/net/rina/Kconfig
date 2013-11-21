@@ -22,7 +22,7 @@ config RINA_DEBUG
 
 config RINA_SYSCALLS_DEBUG
        bool "Debug RINA syscalls"
-       default y
+       default n
        depends on RINA_DEBUG
        help
          no help for the time being

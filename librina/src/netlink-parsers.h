@@ -572,6 +572,7 @@ IpcmEnrollToDIFRequestMessage *
 enum IpcmEnrollToDIFResponseMessageAttributes {
         IETDRE_ATTR_RESULT = 1,
         IETDRE_ATTR_NEIGHBORS,
+        IETDRE_ATTR_DIF_INFO,
         __IETDRE_ATTR_MAX,
 };
 

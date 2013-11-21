@@ -195,6 +195,11 @@ getProcessNamePlusInstance(){
 	return processName + "-" + processInstance;
 }
 
+std::string ApplicationProcessNamingInformation::getEncodedString() {
+        return processName + "-" + processInstance +
+                        "-" + entityName + "-" + entityInstance;
+}
+
 std::string ApplicationProcessNamingInformation::toString() {
 	return "Process name: " + processName + "; Process instance: "
 			+ processInstance + "; Entity name: " + entityName
@@ -1270,11 +1275,11 @@ void Neighbor::setEnrolled(bool enrolled){
         this->enrolled = enrolled;
 }
 
-unsigned int Neighbor::getLastHeardFromTimeInMs() const {
+long long Neighbor::getLastHeardFromTimeInMs() const {
         return lastHeardFromTimeInMs;
 }
 
-void Neighbor::setLastHeardFromTimeInMs(unsigned int lastHeardFromTimeInMs) {
+void Neighbor::setLastHeardFromTimeInMs(long long lastHeardFromTimeInMs) {
         this->lastHeardFromTimeInMs = lastHeardFromTimeInMs;
 }
 

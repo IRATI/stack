@@ -206,7 +206,7 @@ int arm_resolve(uint16_t     ptype,
 
         ASSERT(arm_wq);
 
-        r = rwq_work_create(GFP_ATOMIC, resolver, tmp);
+        r = rwq_work_create_ni(resolver, tmp);
         if (!r) {
                 resolve_data_destroy(tmp);
                 return -1;

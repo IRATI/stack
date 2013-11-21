@@ -23,6 +23,7 @@ import eu.irati.librina.IpcmAllocateFlowRequestResultEvent;
 import eu.irati.librina.IpcmDeallocateFlowResponseEvent;
 import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
 import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
+import eu.irati.librina.NeighborsModifiedNotificationEvent;
 import eu.irati.librina.OSProcessFinalizedEvent;
 import eu.irati.librina.UpdateDIFConfigurationResponseEvent;
 import eu.irati.librina.rina;
@@ -200,6 +201,8 @@ public class IPCManager {
 									+ " but got " + ipcEvent.getIPCProcessId());
 							continue;
 						}
+						
+						ipcProcess.setInitialized();
 					} else {
 						log.error("Expected IPC Process Daemon Initialized event, but got "+event.getType());
 						continue;
@@ -234,7 +237,7 @@ public class IPCManager {
 			if (difsToRegisterAt != null && difsToRegisterAt.size() > 0){
 				for(int j=0; j<difsToRegisterAt.size(); j++){
 					try{
-						this.requestRegistrationToNMinusOneDIF(
+						requestRegistrationToNMinusOneDIF(
 								ipcProcess.getId(), difsToRegisterAt.get(j));
 						event = ipcEventProducer.eventWait();
 						if (event.getType().equals(IPCEventType.IPCM_REGISTER_APP_RESPONSE_EVENT)) {
@@ -341,6 +344,9 @@ public class IPCManager {
 		} else if (event.getType().equals(IPCEventType.ENROLL_TO_DIF_RESPONSE_EVENT)) {
 			EnrollToDIFResponseEvent ipcEvent = (EnrollToDIFResponseEvent) event;
 			ipcProcessManager.enrollToDIFResponse(ipcEvent);
+		} else if (event.getType().equals(IPCEventType.NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT)) {
+			NeighborsModifiedNotificationEvent ipcEvent = (NeighborsModifiedNotificationEvent) event;
+			ipcProcessManager.neighborsModifiedEvent(ipcEvent);
 		}
 	}
 	

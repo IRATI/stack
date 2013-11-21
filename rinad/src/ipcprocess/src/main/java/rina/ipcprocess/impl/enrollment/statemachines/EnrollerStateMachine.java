@@ -7,6 +7,8 @@ import org.apache.commons.logging.LogFactory;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.Neighbor;
+import eu.irati.librina.NeighborList;
+import eu.irati.librina.rina;
 
 import rina.applicationprocess.api.WhatevercastName;
 import rina.cdap.api.CDAPException;
@@ -463,6 +465,15 @@ public class EnrollerStateMachine extends BaseEnrollmentStateMachine{
 		createOrUpdateNeighborInformation(true);
 		
 		enrollmentTask.enrollmentCompleted(remotePeer, false);
+		
+		try{
+			NeighborList list = new NeighborList();
+			list.addFirst(remotePeer);
+			rina.getExtendedIPCManager().notifyNeighborsModified(true, list);
+		} catch(Exception ex){
+			log.error("Problems notifying IPC Manager about the new neighbor: " + ex.getMessage());
+		}
+		
 		log.info("Remote IPC Process enrolled!");
 	}
 }

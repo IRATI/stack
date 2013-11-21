@@ -20,7 +20,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/module.h>
+#include <linux/export.h>
 
 /* For sdu_ready */
 #include <linux/kfifo.h>
@@ -150,7 +150,7 @@ port_id_t kfa_flow_create(struct kfa *     instance,
 
         init_waitqueue_head(&flow->wait_queue);
 
-        if (kfa_pmap_add_gfp(GFP_ATOMIC, instance->flows, pid, flow, id)) {
+        if (kfa_pmap_add_ni(instance->flows, pid, flow, id)) {
                 LOG_ERR("Could not map Flow and Port ID");
                 pidm_release(instance->pidm, pid);
                 rkfree(flow);

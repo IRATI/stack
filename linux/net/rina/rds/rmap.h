@@ -26,9 +26,8 @@ struct rmap_entry;
 
 struct rmap_entry * rmap_entry_create(uint16_t key,
                                       void *   value);
-struct rmap_entry * rmap_entry_create_gfp(gfp_t    gfp,
-                                          uint16_t key,
-                                          void *   value);
+struct rmap_entry * rmap_entry_create_ni(uint16_t key,
+                                         void *   value);
 int                 rmap_entry_destroy(struct rmap_entry * entry);
 
 void *              rmap_entry_value(const struct rmap_entry * entry);
@@ -39,8 +38,10 @@ int                 rmap_entry_update(struct rmap_entry * entry,
 struct rmap;
 
 struct rmap *       rmap_create(void);
-struct rmap *       rmap_create_gfp(gfp_t flags);
-int                 rmap_destroy(struct rmap * map);
+struct rmap *       rmap_create_ni(void);
+int                 rmap_destroy(struct rmap * map,
+                                 void       (* dtor)(struct rmap_entry * e));
+
 /* FIXME: rmap_is_empty has to take a const parameter */
 bool                rmap_is_empty(struct rmap * map);
 int                 rmap_insert(struct rmap *       map,

@@ -960,9 +960,19 @@ void IpcmEnrollToDIFResponseMessage::addNeighbor(
         neighbors.push_back(neighbor);
 }
 
+void IpcmEnrollToDIFResponseMessage::setDIFInformation(
+                const DIFInformation& difInformation) {
+        this->difInformation = difInformation;
+}
+
+const DIFInformation&
+IpcmEnrollToDIFResponseMessage::getDIFInformation() const {
+        return difInformation;
+}
+
 IPCEvent* IpcmEnrollToDIFResponseMessage::toIPCEvent(){
         EnrollToDIFResponseEvent * event =
-                        new EnrollToDIFResponseEvent(neighbors,
+                        new EnrollToDIFResponseEvent(neighbors, difInformation,
                                         getResult(), getSequenceNumber());
         return event;
 }
@@ -999,7 +1009,8 @@ void IpcmNotifyNeighborsModifiedMessage::setAdded(bool added) {
 
 IPCEvent* IpcmNotifyNeighborsModifiedMessage::toIPCEvent() {
         NeighborsModifiedNotificationEvent * event =
-                        new NeighborsModifiedNotificationEvent(neighbors,
+                        new NeighborsModifiedNotificationEvent(
+                                        getSourceIpcProcessId(), neighbors,
                                         added, getSequenceNumber());
         return event;
 }

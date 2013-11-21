@@ -400,6 +400,14 @@ void IPCProcess::addNeighbors(const std::list<Neighbor>& newNeighbors) {
         }
 }
 
+void IPCProcess::removeNeighbors(const std::list<Neighbor>& toRemove) {
+        std::list<Neighbor>::const_iterator iterator;
+        for (iterator = toRemove.begin();
+                        iterator != toRemove.end(); ++iterator) {
+                neighbors.remove(*iterator);
+        }
+}
+
 std::list<Neighbor> IPCProcess::getNeighbors() {
         return neighbors;
 }
@@ -1193,11 +1201,13 @@ UpdateDIFConfigurationResponseEvent::UpdateDIFConfigurationResponseEvent(
 /* CLASS ENROLL TO DIF RESPONSE EVENT */
 EnrollToDIFResponseEvent::EnrollToDIFResponseEvent(
                 const std::list<Neighbor>& neighbors,
+                const DIFInformation& difInformation,
                 int result, unsigned int sequenceNumber):
                         BaseResponseEvent(result,
                                         ENROLL_TO_DIF_RESPONSE_EVENT,
                                         sequenceNumber) {
         this->neighbors = neighbors;
+        this->difInformation = difInformation;
 }
 
 const std::list<Neighbor>&
@@ -1205,12 +1215,19 @@ EnrollToDIFResponseEvent::getNeighbors() const {
         return neighbors;
 }
 
+const DIFInformation&
+EnrollToDIFResponseEvent::getDIFInformation() const {
+        return difInformation;
+}
+
 /* CLASS NEIGHBORS MODIFIED NOTIFICATION EVENT */
 NeighborsModifiedNotificationEvent::NeighborsModifiedNotificationEvent(
+                        unsigned short ipcProcessId,
                         const std::list<Neighbor> & neighbors,
                         bool added, unsigned int sequenceNumber) :
                                 IPCEvent(NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT,
                                                 sequenceNumber) {
+        this->ipcProcessId = ipcProcessId;
         this->neighbors = neighbors;
         this->added = added;
 }
@@ -1222,6 +1239,10 @@ NeighborsModifiedNotificationEvent::getNeighbors() const {
 
 bool NeighborsModifiedNotificationEvent::isAdded() const {
         return added;
+}
+
+unsigned short NeighborsModifiedNotificationEvent::getIpcProcessId() const {
+        return ipcProcessId;
 }
 
 /* CLASS IPC PROCESS DAEMON INITIALIZED EVENT */

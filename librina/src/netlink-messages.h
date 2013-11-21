@@ -710,11 +710,19 @@ class IpcmEnrollToDIFResponseMessage:
          */
         std::list<Neighbor> neighbors;
 
+        /**
+         * If the IPC Process was not previously enrolled in a DIF,
+         * this contains the DIF configuration
+         */
+        DIFInformation difInformation;
+
 public:
         IpcmEnrollToDIFResponseMessage();
         const std::list<Neighbor>& getNeighbors() const;
         void setNeighbors(const std::list<Neighbor>& neighbors);
         void addNeighbor(const Neighbor& qosCube);
+        void setDIFInformation(const DIFInformation& difInformation);
+        const DIFInformation& getDIFInformation() const;
         IPCEvent* toIPCEvent();
 };
 

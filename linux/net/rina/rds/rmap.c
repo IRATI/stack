@@ -45,7 +45,7 @@ struct rmap_entry {
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
-struct rmap * rmap_create_gfp(gfp_t flags)
+static struct rmap * rmap_create_gfp(gfp_t flags)
 {
         struct rmap * tmp;
 
@@ -59,25 +59,36 @@ struct rmap * rmap_create_gfp(gfp_t flags)
 
         return tmp;
 }
-EXPORT_SYMBOL(rmap_create_gfp);
 
 struct rmap * rmap_create(void)
 { return rmap_create_gfp(GFP_KERNEL); }
 EXPORT_SYMBOL(rmap_create);
 
-int rmap_destroy(struct rmap * map)
+struct rmap * rmap_create_ni(void)
+{ return rmap_create_gfp(GFP_ATOMIC); }
+EXPORT_SYMBOL(rmap_create_ni);
+
+int rmap_destroy(struct rmap * map,
+                 void       (* dtor)(struct rmap_entry * e))
 {
+        struct rmap_entry * entry;
+        struct hlist_node * tmp;
+        int                 bucket;
+
         if (!map) {
                 LOG_ERR("Cannot destroy a NULL map");
                 return -1;
         }
 
-        if (!hash_empty(map->table)) {
-                LOG_ERR("Map %pK is not empty and I won't destroy it. "
-                        "You would be loosing memory ...", map);
+        if (!dtor) {
+                LOG_ERR("No destructor passed, cannod destroy map %pK", map);
                 return -1;
         }
 
+        hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
+                LOG_DBG("Calling dtor for entry %pK", entry);
+                dtor(entry);
+        }
         rkfree(map);
 
         LOG_DBG("Map %pK destroyed successfully", map);
@@ -120,7 +131,7 @@ EXPORT_SYMBOL(rmap_insert);
 struct rmap_entry * rmap_find(const struct rmap * map,
                               uint16_t            key)
 {
-        struct rmap_entry * entry;
+        struct rmap_entry *       entry;
         const struct hlist_head * head;
 
         if (!map) {
@@ -191,9 +202,9 @@ int rmap_entry_update(struct rmap_entry * entry,
 }
 EXPORT_SYMBOL(rmap_entry_update);
 
-struct rmap_entry * rmap_entry_create_gfp(gfp_t    flags,
-                                          uint16_t key,
-                                          void *   value)
+static struct rmap_entry * rmap_entry_create_gfp(gfp_t    flags,
+                                                 uint16_t key,
+                                                 void *   value)
 {
         struct rmap_entry * tmp;
 
@@ -209,11 +220,16 @@ struct rmap_entry * rmap_entry_create_gfp(gfp_t    flags,
 
         return tmp;
 }
-EXPORT_SYMBOL(rmap_entry_create_gfp);
 
 struct rmap_entry * rmap_entry_create(uint16_t key,
                                       void *   value)
 { return rmap_entry_create_gfp(GFP_KERNEL, key, value); }
+EXPORT_SYMBOL(rmap_entry_create);
+
+struct rmap_entry * rmap_entry_create_ni(uint16_t key,
+                                         void *   value)
+{ return rmap_entry_create_gfp(GFP_ATOMIC, key, value); }
+EXPORT_SYMBOL(rmap_entry_create_ni);
 
 void * rmap_entry_value(const struct rmap_entry * entry)
 {
@@ -224,7 +240,7 @@ void * rmap_entry_value(const struct rmap_entry * entry)
 
         return entry->value;
 }
-EXPORT_SYMBOL(rmap_entry_create);
+EXPORT_SYMBOL(rmap_entry_value);
 
 int rmap_entry_destroy(struct rmap_entry * entry)
 {

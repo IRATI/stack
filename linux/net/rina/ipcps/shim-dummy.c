@@ -276,6 +276,10 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         return -1;
                 }
         } else {
+                kipcm_notify_flow_alloc_req_result(default_kipcm,
+                                                   data->id,
+                                                   flow->port_id,
+                                                   result);
                 list_del(&flow->list);
                 name_destroy(flow->source);
                 name_destroy(flow->dest);
@@ -430,7 +434,7 @@ struct write_data {
         struct sdu * sdu;
 };
 
-bool is_write_data_complete(const struct write_data * data)
+static bool is_write_data_complete(const struct write_data * data)
 {
         bool ret;
 
@@ -526,7 +530,7 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                         if (!is_write_data_complete(tmp))
                                 return -1;
 
-                        item = rwq_work_create(GFP_ATOMIC, dummy_write, tmp);
+                        item = rwq_work_create_ni(dummy_write, tmp);
                         if (!item) {
                                 write_data_destroy(tmp);
                                 return -1;
@@ -549,7 +553,7 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                         if (!is_write_data_complete(tmp))
                                 return -1;
 
-                        item = rwq_work_create(GFP_ATOMIC, dummy_write, tmp);
+                        item = rwq_work_create_ni(dummy_write, tmp);
                         if (!item) {
                                 write_data_destroy(tmp);
                                 return -1;
@@ -803,7 +807,7 @@ static struct ipcp_factory_ops dummy_ops = {
         .destroy   = dummy_destroy,
 };
 
-struct ipcp_factory * shim = NULL;
+static struct ipcp_factory * shim = NULL;
 
 static int __init mod_init(void)
 {

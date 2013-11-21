@@ -393,7 +393,6 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 				//and figure out how we do it now that EFCP is in the kernel
 				byte[] sdu = cdapSessionManager.encodeNextMessageToBeSent(cdapMessage, portId);
 				
-				log.debug("About to send through underlying portId "+portId+" : "+cdapMessage.toString());
 				Flow flow = ipcManager.getAllocatedFlow(portId);
 				if (flow == null) {
 					throw new RIBDaemonException(-1, "Could not find a flow at portId "+portId);

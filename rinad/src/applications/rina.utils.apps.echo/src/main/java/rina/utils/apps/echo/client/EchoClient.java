@@ -76,7 +76,8 @@ FlowAllocationListener, FlowDeallocationListener {
 	private Timer timer = null;
 	
 	public EchoClient(int numberOfSdus, int sduSize, 
-			ApplicationProcessNamingInformation echoApNamingInfo){
+			ApplicationProcessNamingInformation echoApNamingInfo, 
+			ApplicationProcessNamingInformation clientApNamingInfo){
 		rina.initialize();
 		
 		testInformation = new TestInformation();
@@ -91,7 +92,7 @@ FlowAllocationListener, FlowDeallocationListener {
 		testInformation.setSduSize(sduSize);
 		
 		this.echoApNamingInfo = echoApNamingInfo;
-		clientApNamingInfo = new ApplicationProcessNamingInformation("rina.utils.apps.echoclient", "1");
+		this.clientApNamingInfo = clientApNamingInfo;
 		
 		cdapSessionManager = new CDAPSessionManagerImpl(
 				new GoogleProtocolBufWireMessageProviderFactory());

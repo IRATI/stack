@@ -67,6 +67,13 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 	private Map<String, BaseEnrollmentStateMachine> enrollmentStateMachines = null;
 	
 	/**
+	 * The list of neighbors
+	 */
+	private List<Neighbor> neighbors = null;
+	private Object neighborsLock = null;
+	
+	
+	/**
 	 * The maximum time to wait between steps of the enrollment sequence (in ms)
 	 */
 	private long timeout = 0;
@@ -86,8 +93,31 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 
 	public EnrollmentTaskImpl(){
 		this.enrollmentStateMachines = new ConcurrentHashMap<String, BaseEnrollmentStateMachine>();
+		this.neighbors = new ArrayList<Neighbor>();
+		this.neighborsLock = new Object();
 		this.timeout = DEFAULT_ENROLLMENT_TIMEOUT_IN_MS;
 		this.portIdsPendingToBeAllocated = new ConcurrentHashMap<Long, EnrollmentRequest>();
+	}
+	
+	public List<Neighbor> getNeighbors() {
+		List<Neighbor> result = null;
+		synchronized(neighborsLock) {
+			result = neighbors;
+		}
+		
+		return result;
+	}
+	
+	public void addNeighbor(Neighbor neighbor) {
+		synchronized(neighborsLock) {
+			neighbors.add(neighbor);
+		}
+	}
+	
+	public void removeNeighbor(Neighbor neighbor) {
+		synchronized(neighborsLock) {
+			neighbors.remove(neighbor);
+		}
 	}
 	
 	public void setIPCProcess(IPCProcess ipcProcess){
@@ -222,7 +252,7 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 			ApplicationProcessNamingInformation apNamingInfo, int portId, boolean enrollee) throws Exception{
 		BaseEnrollmentStateMachine enrollmentStateMachine = null;
 
-		if (apNamingInfo.getEntityName() == null || 
+		if (apNamingInfo.getEntityName() == null || apNamingInfo.getEntityName().equals("") ||
 				apNamingInfo.getEntityName().equals(IPCProcess.MANAGEMENT_AE)){
 			if (enrollee){
 				enrollmentStateMachine = new EnrolleeStateMachine(ribDaemon, cdapSessionManager, encoder, 
@@ -261,7 +291,7 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 				
 				try {
 					rina.getExtendedIPCManager().enrollToDIFResponse(
-							event, -1, new NeighborList());
+							event, -1, new NeighborList(), new DIFInformation());
 				} catch(Exception ex){
 					log.error("Problems sending a message to the IPC Manager: "+ex.getMessage());
 				}
@@ -315,7 +345,8 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 			if (request.getEvent() != null) {
 				try {
 					rina.getExtendedIPCManager().enrollToDIFResponse(
-							request.getEvent(), -1, new NeighborList());
+							request.getEvent(), -1, new NeighborList(), 
+							new DIFInformation());
 				} catch(Exception e) {
 					log.error("Could not send a message to the IPC Manager: "+ex.getMessage());
 				}
@@ -511,6 +542,16 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 				log.debug("Notifying the Event Manager about a new event.");
 				log.debug(event2.toString());
 				this.ribDaemon.deliverEvent(event2);
+				
+				//Notify the IPC Manager that we've lost a neighbor
+				try{
+					NeighborList list = new NeighborList();
+					list.addFirst(neighbors.get(i));
+					rina.getExtendedIPCManager().notifyNeighborsModified(false, list);
+				} catch(Exception ex){
+					log.error("Problems communicating with the IPC Manager: "+ex.getMessage());
+				}
+				
 				return;
 			}
 		}
@@ -567,7 +608,8 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 		if (request.getEvent() != null) {
 			try {
 				rina.getExtendedIPCManager().enrollToDIFResponse(
-						request.getEvent(), -1, new NeighborList());
+						request.getEvent(), -1, new NeighborList(), 
+						new DIFInformation());
 			} catch(Exception ex) {
 				log.error("Could not send a message to the IPC Manager: "+ex.getMessage());
 			}
@@ -611,7 +653,8 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 			if (request != null && request.getEvent() != null) {
 				try {
 					rina.getExtendedIPCManager().enrollToDIFResponse(
-							request.getEvent(), -1, new NeighborList());
+							request.getEvent(), -1, new NeighborList(), 
+							new DIFInformation());
 				} catch (Exception ex) {
 					log.error("Problems sending message to IPC Manager: "+ex.getMessage());
 				}

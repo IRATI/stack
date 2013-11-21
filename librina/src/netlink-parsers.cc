@@ -2168,7 +2168,7 @@ int putIpcmIPCProcessInitializedMessageObject(nl_msg* netlinkMessage,
 
 int putIpcmEnrollToDIFResponseMessageObject(nl_msg* netlinkMessage,
                 const IpcmEnrollToDIFResponseMessage& object) {
-        struct nlattr *neighbors;
+        struct nlattr *neighbors, *difInformation;
 
         NLA_PUT_U32(netlinkMessage, IETDRE_ATTR_RESULT, object.getResult());
 
@@ -2180,6 +2180,16 @@ int putIpcmEnrollToDIFResponseMessageObject(nl_msg* netlinkMessage,
                 goto nla_put_failure;
         }
         nla_nest_end(netlinkMessage, neighbors);
+
+        if (!(difInformation = nla_nest_start(
+                        netlinkMessage, IETDRE_ATTR_DIF_INFO))){
+                goto nla_put_failure;
+        }
+        if (putDIFInformationObject(netlinkMessage,
+                        object.getDIFInformation()) < 0) {
+                goto nla_put_failure;
+        }
+        nla_nest_end(netlinkMessage, difInformation);
 
         return 0;
 
@@ -3907,6 +3917,9 @@ parseIpcmEnrollToDIFResponseMessage(nlmsghdr *hdr){
         attr_policy[IETDRE_ATTR_NEIGHBORS].type = NLA_NESTED;
         attr_policy[IETDRE_ATTR_NEIGHBORS].minlen = 0;
         attr_policy[IETDRE_ATTR_NEIGHBORS].maxlen = 0;
+        attr_policy[IETDRE_ATTR_DIF_INFO].type = NLA_NESTED;
+        attr_policy[IETDRE_ATTR_DIF_INFO].minlen = 0;
+        attr_policy[IETDRE_ATTR_DIF_INFO].maxlen = 0;
         struct nlattr *attrs[IETDRE_ATTR_MAX + 1];
 
         int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -3921,6 +3934,8 @@ parseIpcmEnrollToDIFResponseMessage(nlmsghdr *hdr){
         IpcmEnrollToDIFResponseMessage * result =
                         new IpcmEnrollToDIFResponseMessage();
 
+        DIFInformation * difInformation;
+
         if (attrs[IETDRE_ATTR_RESULT]) {
                 result->setResult(nla_get_u32(attrs[IETDRE_ATTR_RESULT]));
         }
@@ -3932,6 +3947,18 @@ parseIpcmEnrollToDIFResponseMessage(nlmsghdr *hdr){
                 if (status != 0){
                         delete result;
                         return 0;
+                }
+        }
+
+        if (attrs[IETDRE_ATTR_DIF_INFO]) {
+                difInformation = parseDIFInformationObject(
+                                attrs[IETDRE_ATTR_DIF_INFO]);
+                if (difInformation == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setDIFInformation(*difInformation);
+                        delete difInformation;
                 }
         }
 

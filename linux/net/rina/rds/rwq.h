@@ -21,7 +21,6 @@
 #ifndef RINA_RWQ_H
 #define RINA_RWQ_H
 
-/* Workqueues */
 #include <linux/workqueue.h>
 
 struct workqueue_struct * rwq_create(const char * name);
@@ -31,9 +30,11 @@ int                       rwq_destroy(struct workqueue_struct * rwq);
  * NOTE: The worker is the owner of the data passed (and must dispose it). It
  *       must return 0 if its work completed successfully.
  */
-struct rwq_work_item *    rwq_work_create(gfp_t  flags,
-                                          int    (* worker)(void * data),
+struct rwq_work_item *    rwq_work_create(int (* worker)(void * data),
                                           void * data);
+struct rwq_work_item *    rwq_work_create_ni(int (* worker)(void * data),
+                                             void * data);
+
 /*
  * NOTE: This function will dispose the rwq_work_item on failure. The item
  *       will be disposed automatically upon work completion.
