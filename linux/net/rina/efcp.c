@@ -35,10 +35,10 @@
 #include "rmt.h"
 
 struct efcp {
-        struct connection *       connection;
-        struct dtp *              dtp;
-        struct dtcp *             dtcp;
-        struct efcp_container *   efcpc;
+        struct connection *     connection;
+        struct dtp *            dtp;
+        struct dtcp *           dtcp;
+        struct efcp_container * efcpc;
 };
 
 static struct efcp * efcp_create(void)
@@ -46,10 +46,8 @@ static struct efcp * efcp_create(void)
         struct efcp * instance;
 
         instance = rkzalloc(sizeof(*instance), GFP_KERNEL);
-        if (!instance) {
-                LOG_ERR("Cannot create a new instance");
+        if (!instance)
                 return NULL;
-        }
 
         LOG_DBG("Instance %pK initialized successfully", instance);
 
@@ -98,10 +96,8 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
         }
 
         container = rkzalloc(sizeof(*container), GFP_KERNEL);
-        if (!container) {
-                LOG_ERR("Failed to create EFCP container instance");
+        if (!container)
                 return NULL;
-        }
 
         container->instances   = efcp_imap_create();
         container->cidm        = cidm_create();
@@ -244,8 +240,8 @@ static int efcp_write_worker(void * o)
         return 0;
 }
 
-int efcp_write(struct efcp * efcp,
-               struct sdu *  sdu)
+static int efcp_write(struct efcp * efcp,
+                      struct sdu *  sdu)
 {
         struct write_data * tmp;
         struct rwq_work_item * item;
@@ -376,8 +372,8 @@ static int efcp_receive_worker(void * o)
         return 0;
 }
 
-int efcp_receive(struct efcp * efcp,
-                 struct pdu *  pdu)
+static int efcp_receive(struct efcp * efcp,
+                        struct pdu *  pdu)
 {
         struct receive_data *  data;
         struct rwq_work_item * item;
@@ -431,9 +427,11 @@ int efcp_container_receive(struct efcp_container * container,
                 return -1;
         }
 
-        tmp = efcp_find(container, cep_id);
-        if (!tmp)
+        tmp = efcp_container_find(container, cep_id);
+        if (!tmp) {
+                LOG_ERR("Cannot find the requested instance");
                 return -1;
+        }
 
         if (efcp_receive(tmp, pdu))
                 return -1;
@@ -477,12 +475,12 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         cep_id = cidm_allocate(container->cidm);
 
         /* We must ensure that the DTP is instantiated, at least ... */
-        tmp->efcpc = container;
+        tmp->efcpc                = container;
         connection->source_cep_id = cep_id;
-        tmp->connection = connection;
-        tmp->dtp        = dtp_create(container->rmt,
-                                     container->kfa,
-                                     connection);
+        tmp->connection           = connection;
+        tmp->dtp                  = dtp_create(container->rmt,
+                                               container->kfa,
+                                               connection);
         if (!tmp->dtp) {
                 efcp_destroy(tmp);
                 return cep_id_bad();
@@ -536,6 +534,10 @@ int efcp_connection_destroy(struct efcp_container * container,
                 LOG_ERR("Bogus container passed, bailing out");
                 return -1;
         }
+        if (!is_cep_id_ok(id)) {
+                LOG_ERR("Bad cep-id, cannot destroy connection");
+                return -1;
+        }
 
         tmp = efcp_imap_find(container->instances, id);
         if (!tmp) {
@@ -569,6 +571,14 @@ int efcp_connection_update(struct efcp_container * container,
                 LOG_ERR("Bogus container passed, bailing out");
                 return -1;
         }
+        if (!is_cep_id_ok(from)) {
+                LOG_ERR("Bad from cep-id, cannot update connection");
+                return -1;
+        }
+        if (!is_cep_id_ok(to)) {
+                LOG_ERR("Bad to cep-id, cannot update connection");
+                return -1;
+        }
 
         tmp = efcp_imap_find(container->instances, from);
         if (!tmp) {
@@ -592,16 +602,21 @@ int efcp_connection_update(struct efcp_container * container,
 }
 EXPORT_SYMBOL(efcp_connection_update);
 
-struct efcp * efcp_find(struct efcp_container * container,
-                        cep_id_t                id)
+struct efcp * efcp_container_find(struct efcp_container * container,
+                                  cep_id_t                id)
 {
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
                 return NULL;
         }
+        if (!is_cep_id_ok(id)) {
+                LOG_ERR("Bad cep-id, cannot find instance");
+                return NULL;
+        }
 
         return efcp_imap_find(container->instances, id);
 }
+EXPORT_SYMBOL(efcp_container_find);
 
 int efcp_bind_rmt(struct efcp_container * container,
                   struct rmt *            rmt)
@@ -614,8 +629,22 @@ int efcp_bind_rmt(struct efcp_container * container,
                 LOG_ERR("Bogus RMT instance passed");
                 return -1;
         }
+
         container->rmt = rmt;
 
         return 0;
 }
 EXPORT_SYMBOL(efcp_bind_rmt);
+
+int efcp_unbind_rmt(struct efcp_container * container)
+{
+        if (!container) {
+                LOG_ERR("Bogus EFCP container passed");
+                return -1;
+        }
+
+        container->rmt = NULL;
+
+        return 0;
+}
+EXPORT_SYMBOL(efcp_unbind_rmt);
