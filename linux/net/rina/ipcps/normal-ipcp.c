@@ -332,7 +332,7 @@ connection_create_arrived(struct ipcp_instance_data * data,
         return cep_id;
 }
 
-static int normal_check_dt_cons(struct data_transfer_constants * dt_cons)
+static int normal_check_dt_cons(struct dt_cons * dt_cons)
 {
         /* FIXME: What should we check here? */
         return 0;
@@ -341,10 +341,10 @@ static int normal_check_dt_cons(struct data_transfer_constants * dt_cons)
 static int normal_assign_to_dif(struct ipcp_instance_data * data,
                                 const struct dif_info *     dif_information)
 {
-        struct data_transfer_constants * dt_cons;
+        struct dt_cons * dt_cons;
 
         data->info->dif_name = name_dup(dif_information->dif_name);
-        dt_cons = dif_information->configuration->data_transfer_constants;
+        dt_cons = dif_information->configuration->dt_cons;
 
         if (normal_check_dt_cons(dt_cons)) {
                 LOG_ERR("Configuration constants for the DIF are bogus...");

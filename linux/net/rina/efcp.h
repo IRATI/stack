@@ -48,30 +48,30 @@ struct efcp_container;
 
 struct efcp_container * efcp_container_create(struct kfa * kfa);
 int                     efcp_container_destroy(struct efcp_container * c);
-int                     efcp_container_set_dt_cons(struct data_transfer_constants * dt_cons,
-                                                   struct efcp_container *          container);
+int                     efcp_container_set_dt_cons(struct dt_cons *        d,
+                                                   struct efcp_container * c);
 int                     efcp_container_write(struct efcp_container * container,
                                              cep_id_t                cep_id,
                                              struct sdu *            sdu);
-int                     efcp_container_receive(struct efcp_container * container,
+int                     efcp_container_receive(struct efcp_container * c,
                                                cep_id_t                cep_id,
                                                struct pdu *            pdu);
 
-cep_id_t      efcp_connection_create(struct efcp_container * container,
-                                     struct connection     * connection);
-int           efcp_connection_destroy(struct efcp_container * container,
-                                      cep_id_t                id);
-int           efcp_connection_update(struct efcp_container * container,
-                                     cep_id_t                from,
-                                     cep_id_t                to);
+cep_id_t                efcp_connection_create(struct efcp_container * cont,
+                                               struct connection     * conn);
+int                     efcp_connection_destroy(struct efcp_container * cont,
+                                                cep_id_t                id);
+int                     efcp_connection_update(struct efcp_container * cont,
+                                               cep_id_t                from,
+                                               cep_id_t                to);
 
 struct efcp;
 
-struct efcp * efcp_container_find(struct efcp_container * container,
-                                  cep_id_t                id);
+struct efcp *           efcp_container_find(struct efcp_container * container,
+                                            cep_id_t                id);
 
-int           efcp_bind_rmt(struct efcp_container * container,
-                            struct rmt *            rmt);
-int           efcp_unbind_rmt(struct efcp_container * container);
+int                     efcp_bind_rmt(struct efcp_container * container,
+                                      struct rmt *            rmt);
+int                     efcp_unbind_rmt(struct efcp_container * container);
 
 #endif

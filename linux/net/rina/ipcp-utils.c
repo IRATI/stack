@@ -637,8 +637,8 @@ int dif_config_destroy(struct dif_config * dif_config)
                 ipcp_config_destroy(pos);
         }
 
-        if (dif_config->data_transfer_constants)
-                rkfree(dif_config->data_transfer_constants);
+        if (dif_config->dt_cons)
+                rkfree(dif_config->dt_cons);
         rkfree(dif_config);
 
         return 0;

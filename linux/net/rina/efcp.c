@@ -77,13 +77,13 @@ static int efcp_destroy(struct efcp * instance)
 }
 
 struct efcp_container {
-        struct efcp_imap *              instances;
-        struct cidm *                   cidm;
-        struct data_transfer_constants  dt_cons;
-        struct rmt *                    rmt;
-        struct kfa *                    kfa;
-        struct workqueue_struct *       egress_wq;
-        struct workqueue_struct *       ingress_wq;
+        struct efcp_imap *        instances;
+        struct cidm *             cidm;
+        struct dt_cons            dt_cons;
+        struct rmt *              rmt;
+        struct kfa *              kfa;
+        struct workqueue_struct * egress_wq;
+        struct workqueue_struct * ingress_wq;
 };
 
 struct efcp_container * efcp_container_create(struct kfa * kfa)
@@ -149,14 +149,16 @@ int efcp_container_destroy(struct efcp_container * container)
 }
 EXPORT_SYMBOL(efcp_container_destroy);
 
-int efcp_container_set_dt_cons(struct data_transfer_constants * dt_cons,
-                               struct efcp_container          * container)
+int efcp_container_set_dt_cons(struct dt_cons *        dt_cons,
+                               struct efcp_container * container)
 {
         if (!dt_cons || !container) {
                 LOG_ERR("Bogus input parameters, bailing out");
                 return -1;
         }
 
+#if 0
+        /* FIXME: Why not copying the struct directly ??? */
         container->dt_cons.address_length = dt_cons->address_length;
         container->dt_cons.cep_id_length  = dt_cons->cep_id_length;
         container->dt_cons.length_length  = dt_cons->length_length;
@@ -166,6 +168,8 @@ int efcp_container_set_dt_cons(struct data_transfer_constants * dt_cons,
         container->dt_cons.max_pdu_size   = dt_cons->max_pdu_size;
         container->dt_cons.max_pdu_life   = dt_cons->max_pdu_life;
         container->dt_cons.dif_integrity  = dt_cons->dif_integrity;
+#endif
+        container->dt_cons = *dt_cons;
 
         LOG_DBG("Succesfully set data transfer constants to efcp container");
 
