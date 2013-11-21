@@ -42,8 +42,9 @@ static void mb_filler_init(uint8_t * f, size_t length)
 {
         size_t i;
 
+#ifdef CONFIG_RINA_MEMORY_TAMPERING_VERBOSE
         LOG_DBG("Applying filler at %pK, size %zd", f, length);
-
+#endif
         for (i = 0; i < length; i++) {
                 *f = i % 0xff;
                 f++;
@@ -54,11 +55,12 @@ static int mb_is_filler_ok(const uint8_t * f, size_t length)
 {
         size_t i;
 
+#ifdef CONFIG_RINA_MEMORY_TAMPERING_VERBOSE
         LOG_DBG("Checking filler at %pK, size %zd", f, length);
-
+#endif
         for (i = 0; i < length; i++) {
                 if (*f != i % 0xff) {
-                        LOG_ERR("Filler corrupted at %pK", f);
+                        LOG_ERR("Filler corrupted at %pK (pos = %zd)", f, i);
                         return 0;
                 }
                 f++;
@@ -100,8 +102,9 @@ static void mb_poison(void * ptr, size_t size)
 
         p = (uint8_t *) ptr;
 
+#ifdef CONFIG_RINA_MEMORY_POISONING_VERBOSE
         LOG_DBG("Poisoning memory %pK-%pK (%zd bytes)", p, p + size - 1, size);
-
+#endif
         for (i = 0; i < size; i++) {
                 *p = (uint8_t) i;
                 p++;
@@ -143,7 +146,9 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
         }
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
+#ifdef CONFIG_RINA_MEMORY_TAMPERING_VERBOSE
         LOG_DBG("The requested block is at %pK, size %zd", ptr, real_size);
+#endif
         if (!ptr) {
                 LOG_ERR("Cannot tamper a NULL memory block");
                 return ptr;
@@ -162,10 +167,12 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
         ASSERT((uint8_t *) header <= (uint8_t *) ptr);
         ASSERT((uint8_t *) ptr    <= (uint8_t *) footer);
 
+#ifdef CONFIG_RINA_MEMORY_TAMPERING_VERBOSE
         LOG_DBG("Memblock header at %pK/%zd", header, sizeof(*header));
         LOG_DBG("Memblock footer at %pK/%zd", footer, sizeof(*footer));
 
         LOG_DBG("Returning tampered memory block %pK/%zd", ptr, real_size);
+#endif
 #endif
 
 #ifdef CONFIG_RINA_MEMORY_PTRS_DUMP
