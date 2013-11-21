@@ -81,7 +81,7 @@ struct data_transfer_constants {
          * encryption algorithm must be used for every PDU; we cannot identify
          * which flow owns a particular PDU until it has been decrypted.
          */
-        bool dif_integrity;
+        bool      dif_integrity;
 };
 
 /* Represents a DIF configuration (policies, parameters, etc) */
