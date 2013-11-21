@@ -60,7 +60,8 @@ public class EchoServer implements FlowAcceptor, ApplicationRegistrationListener
 	
 	public EchoServer(ApplicationProcessNamingInformation echoApNamingInfo){
 		try {
-			rina.initialize(LogHelper.getLibrinaLogLevel());
+			rina.initialize(LogHelper.getLibrinaLogLevel(), 
+					LogHelper.getLibrinaLogFile());
 		} catch(Exception ex){
 			log.error("Problems initializing librina, exiting: "+ex.getMessage());
 			System.exit(-1);

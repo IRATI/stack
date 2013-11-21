@@ -73,7 +73,8 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener, A
 	public RINABandServer(ApplicationProcessNamingInformation controlApNamingInfo, 
 			ApplicationProcessNamingInformation dataApNamingInfo) {
 		try {
-			rina.initialize(LogHelper.getLibrinaLogLevel());
+			rina.initialize(LogHelper.getLibrinaLogLevel(), 
+					LogHelper.getLibrinaLogFile());
 		} catch(Exception ex){
 			log.error("Problems initializing librina, exiting: "+ex.getMessage());
 			System.exit(-1);

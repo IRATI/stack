@@ -63,14 +63,18 @@ void setLogLevel(const std::string& newLogLevel) {
 	pthread_rwlock_unlock(&logLevelLock);
 }
 
-int setOutputStream(FILE * newOutputStream) {
+int setLogFile(const std::string& pathToFile) {
 	int result = 0;
 
 	pthread_rwlock_wrlock(&outputStreamLock);
-	if (logOutputStream == stdout && newOutputStream != NULL) {
-		logOutputStream = newOutputStream;
+	if (logOutputStream != stdout) {
+	        result = -1;
 	} else {
-		result = -1;
+	        logOutputStream = fopen(pathToFile.c_str(), "w");
+	        if (!logOutputStream) {
+	                logOutputStream = stdout;
+	                result = -1;
+	        }
 	}
 	pthread_rwlock_unlock(&outputStreamLock);
 

@@ -1362,7 +1362,8 @@ void RIBObject::setValue(RIBObjectValue value) {
 bool librinaInitialized = false;
 Lockable librinaInitializationLock;
 
-void initialize(unsigned int localPort, const std::string& logLevel)
+void initialize(unsigned int localPort, const std::string& logLevel,
+                const std::string& pathToLogFile)
         throw(InitializationException) {
 
         librinaInitializationLock.lock();
@@ -1373,13 +1374,18 @@ void initialize(unsigned int localPort, const std::string& logLevel)
 
 	setNetlinkPortId(localPort);
 	setLogLevel(logLevel);
+	if (setLogFile(pathToLogFile) != 0) {
+	        LOG_WARN("Error setting log file, using stdout only");
+	}
 	rinaManager->getNetlinkManager();
 
 	librinaInitialized = true;
 	librinaInitializationLock.unlock();
 }
 
-void initialize(const std::string& logLevel) throw (InitializationException){
+void initialize(const std::string& logLevel,
+                const std::string& pathToLogFile)
+throw (InitializationException){
 
         librinaInitializationLock.lock();
         if (librinaInitialized) {
@@ -1387,8 +1393,12 @@ void initialize(const std::string& logLevel) throw (InitializationException){
                 throw InitializationException("Librina already initialized");
         }
 
-        rinaManager->getNetlinkManager();
         setLogLevel(logLevel);
+        if (setLogFile(pathToLogFile) != 0) {
+                LOG_WARN("Error setting log file, using stdout only");
+        }
+
+        rinaManager->getNetlinkManager();
 
         librinaInitialized = true;
         librinaInitializationLock.unlock();

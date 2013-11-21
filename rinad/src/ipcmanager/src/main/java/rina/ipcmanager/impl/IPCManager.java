@@ -99,12 +99,11 @@ public class IPCManager {
 		log.info("IPC Manager daemon initializing, reading RINA configuration ...");
 		initializeConfiguration();
 		log.info("Initializing librina-ipcmanager...");
-		
 		try{
 			rina.initializeIPCManager(1, 
 					RINAConfiguration.getInstance().getLocalConfiguration().getInstallationPath(), 
 					RINAConfiguration.getInstance().getLocalConfiguration().getLibraryPath(), 
-					LogHelper.getLibrinaLogLevel());
+					LogHelper.getLibrinaLogLevel(), LogHelper.getLibrinaLogFile());
 		}catch(InitializationException ex){
 			log.fatal("Error initializing IPC Manager: "+ex.getMessage() 
 					+ ". Exiting.");

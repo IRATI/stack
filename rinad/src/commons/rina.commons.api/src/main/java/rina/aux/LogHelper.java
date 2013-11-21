@@ -1,5 +1,7 @@
 package rina.aux;
 
+import org.apache.log4j.Appender;
+import org.apache.log4j.FileAppender;
 import org.apache.log4j.Logger;
 
 public class LogHelper {
@@ -28,6 +30,20 @@ public class LogHelper {
 		}
 		
 		return librinaLogLevel;
+	}
+	
+	public static String getLibrinaLogFile() {
+		Appender appender = Logger.getRootLogger().getAppender("file");
+		
+		if (appender == null) {
+			return "";
+		}
+		
+		if (!(appender instanceof FileAppender)) {
+			return "";
+		}
+		
+		return ((FileAppender) appender).getFile();
 	}
 
 }

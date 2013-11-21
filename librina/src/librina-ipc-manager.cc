@@ -39,9 +39,10 @@ std::string _libraryPath;
 void initializeIPCManager(unsigned int localPort,
                 const std::string& installationPath,
                 const std::string& libraryPath,
-                const std::string& logLevel)
+                const std::string& logLevel,
+                const std::string& pathToLogFile)
 	throw (InitializationException){
-	initialize(localPort, logLevel);
+	initialize(localPort, logLevel, pathToLogFile);
 
 	_installationPath = installationPath;
 	_libraryPath = libraryPath;

@@ -73,10 +73,10 @@ void setLogLevel(const std::string& logLevel);
 /**
  * Set the output stream.
  *
- * @param newOutputStream The output stream where to print the log statements
+ * @param pathToFile Path to the log file
  * @returns 0 if successful, -1 if there is an error
  */
-int setOutputStream(FILE * newOutputStream);
+int setLogFile(const std::string& pathToFile);
 
 /**
  * Prints a log statement to the output stream, in case it can be done

@@ -150,7 +150,7 @@ public class IPCProcess {
 		executorService = Executors.newCachedThreadPool();
 		initializeConfiguration();
 		log.info("Initializing librina...");
-		rina.initialize(LogHelper.getLibrinaLogLevel());
+		rina.initialize(LogHelper.getLibrinaLogLevel(), LogHelper.getLibrinaLogFile());
 		ipcEventProducer = rina.getIpcEventProducer();
 		kernelIPCProcess = rina.getKernelIPCProcess();
 		kernelIPCProcess.setIPCProcessId(id);
