@@ -17,7 +17,7 @@ function dump_help() {
     echo "$ME [OPTIONS...]"
     echo " "
     echo "Options:"
-    echo "  -r, --role [client]       set role (default $ROLE)"
+    echo "  -r, --role [STRING]       set role (default $ROLE)"
     echo "  -c, --sdusize [NUMBER]    set SDU size (default $SDUSIZE)"
     echo "  -s, --count [NUMBER]      set count (default $COUNT)"
     echo "  -h, --help                print this help, then exit"
@@ -40,7 +40,7 @@ while test $# -gt 0; do
             if test $# -gt 0; then
                 export ROLE=$1
             else
-                echo "no role specified"
+                dump_hint "no role specified"
                 exit 1
             fi
             shift
