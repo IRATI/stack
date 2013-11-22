@@ -362,45 +362,55 @@ struct rina_msg_hdr {
         unsigned short dst_ipc_id;
 };
 
+enum rnl_msg_attr_type {
+        RNL_MSG_ATTRS_ALLOCATE_FLOW_REQUEST,
+        RNL_MSG_ATTRS_ALLOCATE_FLOW_RESPONSE,
+        RNL_MSG_ATTRS_DEALLOCATE_FLOW_REQUEST,
+        RNL_MSG_ATTRS_ASSIGN_TO_DIF_REQUEST,
+        RNL_MSG_ATTRS_UPDATE_DIF_CONFIG_REQUEST,
+        RNL_MSG_ATTRS_REG_UNREG_REQUEST,
+        RNL_MSG_ATTRS_CONN_CREATE_REQUEST,
+        RNL_MSG_ATTRS_CONN_CREATE_ARRIVED,
+        RNL_MSG_ATTRS_CONN_UPDATE_REQUEST,
+        RNL_MSG_ATTRS_CONN_DESTROY_REQUEST
+};
 
 struct rnl_msg {
         /* Generic RINA Netlink family identifier */
-        int                   family;
+        int                    family;
 
         /* source nl port id */
-        unsigned int          src_port;
+        unsigned int           src_port;
 
         /* destination nl port id */
-        unsigned int          dst_port;
+        unsigned int           dst_port;
 
         /* The message sequence number */
-        rnl_sn_t              seq_num;
+        rnl_sn_t               seq_num;
 
         /* The operation code */
-        msg_type_t            op_code;
+        msg_type_t             op_code;
 
         /* True if this is a request message */
-        bool                  req_msg_flag;
+        bool                   req_msg_flag;
 
         /* True if this is a response message */
-        bool                  resp_msg_flag;
+        bool                   resp_msg_flag;
 
         /* True if this is a notification message */
-        bool                  notification_msg_flag;
+        bool                   notification_msg_flag;
 
         /* RINA header containing IPC processes ids */
-        struct rina_msg_hdr   header;
+        struct rina_msg_hdr    header;
+
+        enum rnl_msg_attr_type attr_type;
 
         /* Specific message attributes */
-        void *                attrs;
+        void *                 attrs;
 };
 
-struct rnl_msg * rnl_msg_create(void);
+struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type);
 int              rnl_msg_destroy(struct rnl_msg * msg);
-struct rnl_ipcm_alloc_flow_req_msg_attrs *
-        rnl_ipcm_alloc_flow_req_msg_attrs_create(void);
-int rnl_ipcm_alloc_flow_req_msg_attrs_destroy(
-        struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs);
 
 struct rnl_ipcm_assign_to_dif_req_msg_attrs {
         struct dif_info * dif_info;
