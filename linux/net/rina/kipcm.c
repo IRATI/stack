@@ -456,6 +456,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 alloc_flow_resp_free(attrs, msg, hdr);
                 return -1;
         }
+
         ipc_id      = msg->rina_hdr->dst_ipc_id;
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
@@ -634,7 +635,10 @@ assign_to_dif_free_and_reply(struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs
                 if (attrs->dif_info) dif_info_destroy(attrs->dif_info);
                 rkfree(attrs);
         }
-        if (msg) rkfree(msg);
+        if (msg) {
+                if (msg->rina_hdr) rkfree(msg->rina_hdr);
+                rkfree(msg);
+        }
 
         if (rnl_assign_dif_response(id, res, seq_num, port_id))
                 return -1;
@@ -649,18 +653,14 @@ static int notify_ipcp_assign_dif_request(void *             data,
         struct kipcm *                                kipcm;
         struct rnl_ipcm_assign_to_dif_req_msg_attrs * attrs;
         struct rnl_msg *                              msg;
-        struct dif_info *                             dif_info;
-        struct name *                                 dif_name;
-        struct dif_config *                           dif_config;
         struct ipcp_instance *                        ipc_process;
         ipc_process_id_t                              ipc_id;
+        uint_t                                        res;
 
-        ipc_id     = 0;
-        attrs      = NULL;
-        msg        = NULL;
-        dif_name   = NULL;
-        dif_info   = NULL;
-        dif_config = NULL;
+        res    = -1;
+        ipc_id = 0;
+        attrs  = NULL;
+        msg    = NULL;
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -673,29 +673,22 @@ static int notify_ipcp_assign_dif_request(void *             data,
                 return -1;
         }
 
+        msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+        if (!msg)
+                goto fail;
+
         attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
         if (!attrs)
                 goto fail;
-
-        dif_info = rkzalloc(sizeof(*dif_info), GFP_KERNEL);
-        if (!dif_info)
+        attrs->dif_info = rkzalloc(sizeof(*attrs->dif_info),
+                                        GFP_KERNEL);
+        if (!attrs->dif_info)
                 goto fail;
-
-        attrs->dif_info = dif_info;
-        dif_name        = name_create();
-        if (!dif_name)
+        attrs->dif_info->dif_name = name_create();
+        if (!attrs->dif_info->dif_name)
                 goto fail;
-
-        dif_info->dif_name = dif_name;
-
-        dif_config = dif_config_create();
-        if (!dif_config)
-                goto fail;
-
-        dif_info->configuration = dif_config;
-
-        msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
-        if (!msg)
+        attrs->dif_info->configuration = dif_config_create();
+        if (!attrs->dif_info->configuration)
                 goto fail;
 
         msg->attrs = attrs;
@@ -724,18 +717,13 @@ static int notify_ipcp_assign_dif_request(void *             data,
                 goto fail;
         }
 
-        return assign_to_dif_free_and_reply(attrs,
-                                            msg,
-                                            ipc_id,
-                                            0,
-                                            info->snd_seq,
-                                            info->snd_portid);
+        res = 0;
 
  fail:
         return assign_to_dif_free_and_reply(attrs,
                                             msg,
                                             ipc_id,
-                                            -1,
+                                            res,
                                             info->snd_seq,
                                             info->snd_portid);
 }
