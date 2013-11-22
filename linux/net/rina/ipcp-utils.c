@@ -426,6 +426,7 @@ struct name * string_toname_ni(const string_t * input)
 { return string_toname_gfp(GFP_ATOMIC, input); }
 EXPORT_SYMBOL(string_toname_ni);
 
+#if 0
 static int string_dup_from_user(const string_t __user * src, string_t ** dst)
 {
         ASSERT(dst);
@@ -507,6 +508,7 @@ struct name * name_dup_from_user(const struct name __user * src)
 
         return tmp;
 }
+#endif
 
 struct ipcp_config * ipcp_config_create(void)
 {

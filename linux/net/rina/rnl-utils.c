@@ -2379,9 +2379,9 @@ static int format_rib_objects_list(const struct rib_object ** objs,
 }
 
 int rnl_format_ipcm_query_rib_req_msg(const struct rib_object * obj,
-                                      uint_t                  scope,
-                                      const const regex_t     * filter,
-                                      struct sk_buff          * skb_out)
+                                      uint_t                    scope,
+                                      const regex_t *           filter,
+                                      struct sk_buff *          skb_out)
 {
         struct nlattr * msg_obj;
 

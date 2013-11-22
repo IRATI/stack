@@ -28,6 +28,7 @@
 #include "debug.h"
 #include "rmem.h"
 #include "rqueue.h"
+#include "rfifo.h"
 
 /* The crappiest implementation we could have at the moment ... */
 struct rfifo {

@@ -34,34 +34,6 @@ config RINA_KIPCM_LOCKS_DEBUG
 	help
 	  No help for the time being
 
-config RINA_MEMORY_CHECKS
-	bool "Memory allocation/deallocation extra checks"
-	default y
-        depends on RINA_DEBUG
-	help
-	  No help for the time being
-
-config RINA_MEMORY_TAMPERING
-	bool "Memory blocks tampering"
-	default n
-        depends on RINA_MEMORY_CHECKS
-	help
-	  No help for the time being
-
-config RINA_MEMORY_POISONING
-	bool "Memory blocks poisoning"
-	default n
-        depends on RINA_MEMORY_CHECKS
-	help
-	  No help for the time being
-
-config RINA_MEMORY_PTRS_DUMP
-	bool "Dump pointers passed to alloc()/returned by free()"
-	default n
-        depends on RINA_MEMORY_CHECKS
-	help
-	  No help for the time being
-
 config RINA_UNFILTERED_LOGS
 	bool "Unfiltered logging"
 	default y
@@ -88,8 +60,8 @@ config RINA_PERSONALITY_DEFAULT
 	---help---
 	  No help for the time being
 
+source "net/rina/rds/Kconfig"
 source "net/rina/rinarp/Kconfig"
 source "net/rina/ipcps/Kconfig"
-source "net/rina/rds/Kconfig"
 
 endif

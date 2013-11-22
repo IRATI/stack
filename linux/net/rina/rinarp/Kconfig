@@ -4,13 +4,6 @@
 # Written by Francesco Salvestrini <f.salvestrini@nextworks.it>
 #
 
-config RINARP
-	tristate "RINA ARP implementation"
-	default m
-        depends on ARP826
-	help
-	  No help for the time being
-
 config ARP826
 	tristate "RFC-826 ARP compliant implementation"
 	default m
@@ -20,6 +13,13 @@ config ARP826
 config ARP826_REGRESSION_TESTS
 	bool "Perform regression testing upon loading"
 	default n
+        depends on ARP826
+	help
+	  No help for the time being
+
+config RINARP
+	tristate "RINA ARP implementation"
+	default m
         depends on ARP826
 	help
 	  No help for the time being
