@@ -21,6 +21,8 @@
 #ifndef ARP826_UTILS_H
 #define ARP826_UTILS_H
 
+#include <linux/types.h>
+
 /*
  * Generic Protocol Address - GPA
  */
@@ -99,7 +101,6 @@ void                gha_dump(const struct gha * gha);
  * Miscellaneous
  */
 
-#include <linux/types.h>
 #include <linux/netdevice.h>
 
 struct arp_header {

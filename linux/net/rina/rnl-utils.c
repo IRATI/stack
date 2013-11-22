@@ -69,12 +69,18 @@ char * nla_get_string(struct nlattr * nla)
 { return (char *) nla_data(nla); }
 
 static int rnl_check_attr_policy(struct nlmsghdr *   nlh,
-                                 int                 max_attr,
+                                 size_t              max_attr,
                                  struct nla_policy * attr_policy)
 {
-        struct nlattr * attrs[max_attr + 1];
+        struct nlattr ** attrs;
         int             result;
+        int             retval;
 
+        attrs = rkzalloc(sizeof(struct nlattr *) * (max_attr + 1), GFP_KERNEL);
+        if (!attrs)
+                return -1;
+
+        retval = 0;
         result = nlmsg_parse(nlh,
                              sizeof(struct genlmsghdr) +
                              sizeof(struct rina_msg_hdr),
@@ -84,10 +90,12 @@ static int rnl_check_attr_policy(struct nlmsghdr *   nlh,
         if (result < 0) {
                 LOG_ERR("Error %d; could not validate nl message policy",
                         result);
-                return -1;
+                retval = -1;
         }
 
-        return 0;
+        rkfree(attrs);
+
+        return retval;
 }
 
 static int parse_flow_spec(struct nlattr * fspec_attr,
@@ -515,17 +523,19 @@ static int parse_rib_object(struct nlattr     * rib_obj_attr,
 }
 
 static int parse_rib_objects_list(struct nlattr     * rib_objs_attr,
-                                  uint_t            count,
+                                  uint_t              count,
                                   struct rib_object * rib_objs_struct)
 {
         int i;
-        for (i=0; i < count; i++) {
+
+        for (i = 0; i < count; i++) {
                 if (parse_rib_object(&rib_objs_attr[i],
                                      &rib_objs_struct[i]) < 0) {
                         LOG_ERR("Could not parse rib_objs_list attribute");
                         return -1;
                 }
         }
+
         return 0;
 }
 
@@ -535,8 +545,21 @@ static int rnl_parse_generic_u32_param_msg(struct genl_info * info,
                                            uint_t             max_params,
                                            string_t *         msg_name)
 {
-        struct nla_policy attr_policy[max_params + 1];
-        struct nlattr *   attrs[max_params + 1];
+        struct nla_policy * attr_policy;
+        struct nlattr **    attrs;
+
+        /* FIXME: This is a workaround, please use fixed sized arrays */
+        attr_policy = rkzalloc(sizeof(struct nla_policy) * (max_params + 1),
+                               GFP_KERNEL);
+        if (!attr_policy)
+                return -1;
+
+        attrs = rkzalloc(sizeof(struct nlattr *) * (max_params + 1),
+                         GFP_KERNEL);
+        if (!attrs) {
+                rkfree(attr_policy);
+                return -1;
+        }
 
         attr_policy[param_name].type = NLA_U32;
         attr_policy[param_name].len  = 4;
@@ -549,6 +572,8 @@ static int rnl_parse_generic_u32_param_msg(struct genl_info * info,
                         max_params,
                         attr_policy) < 0) {
                 LOG_ERR("Could not parse Netlink message type %s", msg_name);
+                rkfree(attr_policy);
+                rkfree(attrs);
                 return -1;
         }
 
@@ -556,11 +581,15 @@ static int rnl_parse_generic_u32_param_msg(struct genl_info * info,
                 * param_var = nla_get_u32(attrs[param_name]);
         }
 
+        rkfree(attr_policy);
+        rkfree(attrs);
+
         return 0;
 }
 
-static int rnl_parse_ipcm_assign_to_dif_req_msg(struct genl_info * info,
-                                                struct rnl_ipcm_assign_to_dif_req_msg_attrs * msg_attrs)
+static int
+rnl_parse_ipcm_assign_to_dif_req_msg(struct genl_info * info,
+                                     struct rnl_ipcm_assign_to_dif_req_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[IATDR_ATTR_MAX + 1];
         struct nlattr *   attrs[IATDR_ATTR_MAX + 1];
@@ -646,7 +675,9 @@ static int rnl_parse_ipcm_ipcp_dif_reg_noti_msg(struct genl_info * info,
         attr_policy[IDRN_ATTR_DIF_NAME].type = NLA_NESTED;
         attr_policy[IDRN_ATTR_REGISTRATION].type = NLA_FLAG;
 
-        if (rnl_check_attr_policy(info->nlhdr, IDRN_ATTR_MAX, attr_policy) < 0 ||
+        if (rnl_check_attr_policy(info->nlhdr,
+                                  IDRN_ATTR_MAX,
+                                  attr_policy) < 0 ||
             parse_app_name_info(info->attrs[IDRN_ATTR_IPC_PROCESS_NAME],
                                 msg_attrs->ipcp_name) < 0               ||
             parse_app_name_info(info->attrs[IDRN_ATTR_DIF_NAME],
@@ -681,7 +712,9 @@ static int rnl_parse_ipcm_enroll_to_dif_req_msg(struct genl_info * info,
 
         attr_policy[IEDR_ATTR_DIF_NAME].type = NLA_NESTED;
 
-        if (rnl_check_attr_policy(info->nlhdr, IEDR_ATTR_MAX, attr_policy) < 0 ||
+        if (rnl_check_attr_policy(info->nlhdr,
+                                  IEDR_ATTR_MAX,
+                                  attr_policy) < 0 ||
             parse_app_name_info(info->attrs[IEDR_ATTR_DIF_NAME],
                                 msg_attrs->dif_name) < 0) {
                 LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_ENROLL_TO_DIF_REQUEST:"));
@@ -709,7 +742,8 @@ static int rnl_parse_ipcm_disconn_neighbor_req_msg(struct genl_info * info,
         attr_policy[IDNR_ATTR_NEIGHBOR_NAME].type = NLA_NESTED;
 
         if (rnl_check_attr_policy(info->nlhdr,
-                                  IDNR_ATTR_MAX, attr_policy) < 0 ||
+                                  IDNR_ATTR_MAX,
+                                  attr_policy) < 0 ||
             parse_app_name_info(info->attrs[IDNR_ATTR_NEIGHBOR_NAME],
                                 msg_attrs->neighbor_name) < 0) {
                 LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST:"));
@@ -1265,7 +1299,9 @@ static int rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
         attr_policy[IDQR_ATTR_SCOPE].type  = NLA_U32;
         attr_policy[IDQR_ATTR_FILTER].type = NLA_STRING;
 
-        if (rnl_check_attr_policy(info->nlhdr, IDQR_ATTR_MAX, attr_policy) < 0 ||
+        if (rnl_check_attr_policy(info->nlhdr,
+                                  IDQR_ATTR_MAX,
+                                  attr_policy) < 0 ||
             parse_rib_object(info->attrs[IDQR_ATTR_OBJECT],
                              msg_attrs->rib_obj) < 0) {
                 LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_QUERY_RIB_REQUEST"));
@@ -1292,7 +1328,9 @@ static int rnl_parse_ipcm_query_rib_resp_msg(struct genl_info * info,
         attr_policy[IDQRE_ATTR_COUNT].type = NLA_U32;
         attr_policy[IDQRE_ATTR_RIB_OBJECTS].type = NLA_NESTED;
 
-        if (rnl_check_attr_policy(info->nlhdr, IDQRE_ATTR_MAX, attr_policy) < 0)
+        if (rnl_check_attr_policy(info->nlhdr,
+                                  IDQRE_ATTR_MAX,
+                                  attr_policy) < 0)
                 goto parse_fail;
 
         if (info->attrs[IDQRE_ATTR_RESULT])
@@ -1642,7 +1680,7 @@ static int format_flow_spec(const struct flow_spec * fspec,
                                 FSPEC_ATTR_JITTER,
                                 fspec->jitter))
                         return -1;
-        if (fspec->max_allowable_gap >=0)
+        if (fspec->max_allowable_gap >= 0)
                 if (nla_put_u32(msg,
                                 FSPEC_ATTR_MAX_GAP,
                                 fspec->max_allowable_gap))
@@ -2361,7 +2399,7 @@ static int format_rib_objects_list(const struct rib_object ** objs,
         int i;
         struct nlattr * msg_obj;
 
-        for (i=0; i< count; i++) {
+        for (i = 0; i< count; i++) {
                 if (!(msg_obj =
                       nla_nest_start(msg, i))) {
                         nla_nest_cancel(msg, msg_obj);

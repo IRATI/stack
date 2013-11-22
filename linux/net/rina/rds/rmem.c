@@ -65,13 +65,13 @@ static int mb_is_filler_ok(const uint8_t * f, size_t length)
         LOG_DBG("Checking filler at %pK, size %zd", g, length);
 #endif
         for (i = 0; i < length; i++) {
-                if (*g != i % 0xff) {
+                if (*g != (uint8_t) i % 0xff) {
                         size_t          j;
                         const uint8_t * h;
 
                         LOG_ERR("Filler corrupted at %pK "
                                 "(pos = %zd, obt = 0x%02x, exp = 0x%02x)",
-                                g, i, *g, i % 0xff);
+                                g, i, *g, (uint8_t) i % 0xff);
 
                         LOG_ERR("Filler dump begin");
 
