@@ -68,8 +68,6 @@ extern struct genl_family rnl_nl_family;
 char * nla_get_string(struct nlattr * nla)
 { return (char *) nla_data(nla); }
 
-<<<<<<< HEAD
-=======
 struct rnl_msg * rnl_msg_create(void)
 {
         struct rnl_msg * tmp;
@@ -99,38 +97,6 @@ int rnl_msg_destroy(struct rnl_msg * msg)
         return 0;
 }
 
-static int rnl_check_attr_policy(struct nlmsghdr *   nlh,
-                                 size_t              max_attr,
-                                 struct nla_policy * attr_policy)
-{
-        struct nlattr ** attrs;
-        int             result;
-        int             retval;
-
-        attrs = rkzalloc(sizeof(struct nlattr *) * (max_attr + 1), GFP_KERNEL);
-        if (!attrs)
-                return -1;
-
-        retval = 0;
-        result = nlmsg_parse(nlh,
-                             /* FIXME: Check if this is correct */
-                             sizeof(struct genlmsghdr) +
-                             sizeof(struct rina_msg_hdr),
-                             attrs,
-                             max_attr,
-                             attr_policy);
-        if (result < 0) {
-                LOG_ERR("Error %d; could not validate nl message policy",
-                        result);
-                retval = -1;
-        }
-
-        rkfree(attrs);
-
-        return retval;
-}
-
->>>>>>> 13fd9b152ae7ba79c6e309030e03eb8e4f468619
 static int parse_flow_spec(struct nlattr * fspec_attr,
                            struct flow_spec * fspec_struct)
 {
