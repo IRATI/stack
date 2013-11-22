@@ -37,6 +37,7 @@
 #include "rinarp/arp826-utils.h"
 #include "rinarp/arp826-tables.h"
 #include "rinarp/arp826-arm.h"
+#include "rinarp/arp826-rxtx.h"
 
 #if defined(CONFIG_RINARP) || defined(CONFIG_RINARP_MODULE)
 #define HAVE_RINARP 1

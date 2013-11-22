@@ -23,6 +23,7 @@
 #define RINA_PREFIX "debug"
 
 #include "logs.h"
+#include "debug.h"
 
 #ifdef CONFIG_RINA_DEBUG
 

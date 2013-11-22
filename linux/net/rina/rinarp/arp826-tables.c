@@ -37,6 +37,7 @@
 
 #include "arp826.h"
 #include "arp826-utils.h"
+#include "arp826-tables.h"
 
 struct table_entry {
         struct gpa *     pa; /* Protocol address */
@@ -446,8 +447,8 @@ int tbl_remove(struct table *             instance,
         return -1;
 }
 
-static spinlock_t tables_lock;
-struct tmap *     tables = NULL;
+static spinlock_t    tables_lock;
+static struct tmap * tables = NULL;
 
 struct table * tbls_find(uint16_t ptype)
 {

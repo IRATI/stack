@@ -28,8 +28,7 @@
 #include "logs.h"
 #include "debug.h"
 #include "rmem.h"
-
-//#include "rmap.h"
+#include "rmap.h"
 
 #define RMAP_HASH_BITS 7
 
