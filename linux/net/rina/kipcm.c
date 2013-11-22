@@ -192,13 +192,13 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
         return 0;
 
-fail:
+ fail:
         return alloc_flow_req_free_and_reply(msg,
-                ipc_id,
-                -1,
-                info->snd_seq,
-                info->snd_portid,
-                port_id_bad());
+                                             ipc_id,
+                                             -1,
+                                             info->snd_seq,
+                                             info->snd_portid,
+                                             port_id_bad());
 }
 
 static int notify_ipcp_allocate_flow_response(void *             data,
@@ -348,20 +348,20 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
                                                info->snd_seq,
                                                info->snd_portid);
 
-fail:
+ fail:
         return dealloc_flow_req_free_and_reply(msg,
-                ipc_id,
-                -1,
-                info->snd_seq,
-                info->snd_portid);
+                                               ipc_id,
+                                               -1,
+                                               info->snd_seq,
+                                               info->snd_portid);
 }
 
 static int
-assign_to_dif_free_and_reply(struct rnl_msg *    msg,
-                             ipc_process_id_t    id,
-                             uint_t              res,
-                             uint_t              seq_num,
-                             uint_t              port_id)
+assign_to_dif_free_and_reply(struct rnl_msg * msg,
+                             ipc_process_id_t id,
+                             uint_t           res,
+                             uint_t           seq_num,
+                             uint_t           port_id)
 {
         rnl_msg_destroy(msg);
 
@@ -425,25 +425,25 @@ static int notify_ipcp_assign_dif_request(void *             data,
         }
 
         return assign_to_dif_free_and_reply(msg,
-                        ipc_id,
-                        0,
-                        info->snd_seq,
-                        info->snd_portid);
+                                            ipc_id,
+                                            0,
+                                            info->snd_seq,
+                                            info->snd_portid);
 
  fail:
-         return assign_to_dif_free_and_reply(msg,
-                 ipc_id,
-                 -1,
-                 info->snd_seq,
-                 info->snd_portid);
+        return assign_to_dif_free_and_reply(msg,
+                                            ipc_id,
+                                            -1,
+                                            info->snd_seq,
+                                            info->snd_portid);
 }
 
 static int
-update_dif_config_free_and_reply(struct rnl_msg *    msg,
-                                 ipc_process_id_t    id,
-                                 uint_t              res,
-                                 uint_t              seq_num,
-                                 uint_t              port_id)
+update_dif_config_free_and_reply(struct rnl_msg * msg,
+                                 ipc_process_id_t id,
+                                 uint_t           res,
+                                 uint_t           seq_num,
+                                 uint_t           port_id)
 {
         rnl_msg_destroy(msg);
 
@@ -457,11 +457,11 @@ static int notify_ipcp_update_dif_config_request(void *             data,
                                                  struct sk_buff *   buff,
                                                  struct genl_info * info)
 {
-        struct kipcm *                                kipcm;
+        struct kipcm *                                    kipcm;
         struct rnl_ipcm_update_dif_config_req_msg_attrs * attrs;
-        struct rnl_msg *                              msg;
-        struct ipcp_instance *                        ipc_process;
-        ipc_process_id_t                              ipc_id;
+        struct rnl_msg *                                  msg;
+        struct ipcp_instance *                            ipc_process;
+        ipc_process_id_t                                  ipc_id;
 
         ipc_id = 0;
 
@@ -509,12 +509,12 @@ static int notify_ipcp_update_dif_config_request(void *             data,
                                                 0,
                                                 info->snd_seq,
                                                 info->snd_portid);
-fail:
+ fail:
         return update_dif_config_free_and_reply(msg,
-                ipc_id,
-                -1,
-                info->snd_seq,
-                info->snd_portid);
+                                                ipc_id,
+                                                -1,
+                                                info->snd_seq,
+                                                info->snd_portid);
 }
 
 static int
@@ -593,13 +593,13 @@ static int notify_ipcp_register_app_request(void *             data,
                                              info->snd_seq,
                                              info->snd_portid,
                                              true);
-fail:
+ fail:
         return reg_unreg_resp_free_and_reply(msg,
-                ipc_id,
-                -1,
-                info->snd_seq,
-                info->snd_portid,
-                true);
+                                             ipc_id,
+                                             -1,
+                                             info->snd_seq,
+                                             info->snd_portid,
+                                             true);
 }
 
 static int notify_ipcp_unregister_app_request(void *             data,
@@ -658,22 +658,22 @@ static int notify_ipcp_unregister_app_request(void *             data,
                                              info->snd_seq,
                                              info->snd_portid,
                                              false);
-fail:
+ fail:
         return reg_unreg_resp_free_and_reply(msg,
-                        ipc_id,
-                        -1,
-                        info->snd_seq,
-                        info->snd_portid,
-                        true);
+                                             ipc_id,
+                                             -1,
+                                             info->snd_seq,
+                                             info->snd_portid,
+                                             true);
 }
 
 static int
-conn_create_resp_free_and_reply(struct rnl_msg *                            msg,
-                                ipc_process_id_t                            ipc_id,
-                                port_id_t                                   pid,
-                                cep_id_t                                    src_cep,
-                                rnl_sn_t                                    seq_num,
-                                u32                                         nl_port_id)
+conn_create_resp_free_and_reply(struct rnl_msg * msg,
+                                ipc_process_id_t ipc_id,
+                                port_id_t        pid,
+                                cep_id_t         src_cep,
+                                rnl_sn_t         seq_num,
+                                u32              nl_port_id)
 {
         rnl_msg_destroy(msg);
 
@@ -764,13 +764,13 @@ static int notify_ipcp_conn_create_req(void *             data,
  *  code should be reused */
 
 static int
-conn_create_result_free_and_reply(struct rnl_msg *                                msg,
-                                  ipc_process_id_t                                ipc_id,
-                                  port_id_t                                       pid,
-                                  cep_id_t                                        src_cep,
-                                  cep_id_t                                        dst_cep,
-                                  rnl_sn_t                                        seq_num,
-                                  u32                                             nl_port_id)
+conn_create_result_free_and_reply(struct rnl_msg * msg,
+                                  ipc_process_id_t ipc_id,
+                                  port_id_t        pid,
+                                  cep_id_t         src_cep,
+                                  cep_id_t         dst_cep,
+                                  rnl_sn_t         seq_num,
+                                  u32              nl_port_id)
 {
         rnl_msg_destroy(msg);
 
@@ -864,12 +864,12 @@ static int notify_ipcp_conn_create_arrived(void *             data,
 }
 
 static int
-conn_update_result_free_and_reply(struct rnl_msg *                            msg,
-                                  ipc_process_id_t                            ipc_id,
-                                  uint_t                                      result,
-                                  port_id_t                                   pid,
-                                  rnl_sn_t                                    seq_num,
-                                  u32                                         nl_port_id)
+conn_update_result_free_and_reply(struct rnl_msg * msg,
+                                  ipc_process_id_t ipc_id,
+                                  uint_t           result,
+                                  port_id_t        pid,
+                                  rnl_sn_t         seq_num,
+                                  u32              nl_port_id)
 {
         rnl_msg_destroy(msg);
 
@@ -950,12 +950,12 @@ static int notify_ipcp_conn_update_req(void *             data,
 }
 
 static int
-conn_destroy_result_free_and_reply(struct rnl_msg *                             msg,
-                                   ipc_process_id_t                             ipc_id,
-                                   uint_t                                       result,
-                                   port_id_t                                    pid,
-                                   rnl_sn_t                                     seq_num,
-                                   u32                                          nl_port_id)
+conn_destroy_result_free_and_reply(struct rnl_msg * msg,
+                                   ipc_process_id_t ipc_id,
+                                   uint_t           result,
+                                   port_id_t        pid,
+                                   rnl_sn_t         seq_num,
+                                   u32              nl_port_id)
 {
         rnl_msg_destroy(msg);
 
@@ -973,7 +973,8 @@ conn_destroy_result_free_and_reply(struct rnl_msg *                             
 
 static int notify_ipcp_conn_destroy_req(void *             data,
                                         struct sk_buff *   buff,
-                                        struct genl_info * info) {
+                                        struct genl_info * info)
+{
         struct rnl_ipcp_conn_destroy_req_msg_attrs * attrs;
         struct rnl_msg *                             msg;
         struct ipcp_instance *                       ipcp;
@@ -1048,7 +1049,7 @@ static int netlink_handlers_unregister(struct rnl_set * rnls)
         int retval = 0;
         int i;
 
-        for (i=1; i < RINA_C_MAX; i++) {
+        for (i = 1; i < RINA_C_MAX; i++) {
                 if (kipcm_handlers[i] != NULL) {
                         if (rnl_handler_unregister(rnls, i))
                                 retval = -1;
@@ -1089,13 +1090,13 @@ static int netlink_handlers_register(struct kipcm * kipcm)
         kipcm_handlers[RINA_C_IPCP_CONN_DESTROY_REQUEST]           =
                 notify_ipcp_conn_destroy_req;
 
-        for (i=1; i < RINA_C_MAX; i++) {
+        for (i = 1; i < RINA_C_MAX; i++) {
                 if (kipcm_handlers[i] != NULL) {
                         if (rnl_handler_register(kipcm->rnls,
                                                  i,
                                                  kipcm,
                                                  kipcm_handlers[i])) {
-                                for (j = i-1; j > 0; j--) {
+                                for (j = i - 1; j > 0; j--) {
                                         if (kipcm_handlers[j] != NULL) {
                                                 if (rnl_handler_unregister(kipcm->rnls, j)) {
                                                         LOG_ERR("Failed handler unregister while bailing out");
@@ -1103,6 +1104,7 @@ static int netlink_handlers_register(struct kipcm * kipcm)
                                                 }
                                         }
                                 }
+
                                 return -1;
                         }
                 }
@@ -1328,7 +1330,8 @@ int kipcm_ipcp_factory_unregister(struct kipcm *        kipcm,
                 return -1;
         }
 
-        /* FIXME:
+        /*
+         * FIXME:
          *
          *   We have to do the body of kipcm_ipcp_destroy() on all the
          *   instances remaining (and not explicitly destroyed), previously
@@ -1337,6 +1340,7 @@ int kipcm_ipcp_factory_unregister(struct kipcm *        kipcm,
          *     Francesco
          */
         KIPCM_LOCK(kipcm);
+
         id = ipcp_imap_find_factory(kipcm->instances, factory);
         while (id != 0) {
                 instance = ipcp_imap_find(kipcm->instances, id);
@@ -1345,7 +1349,10 @@ int kipcm_ipcp_factory_unregister(struct kipcm *        kipcm,
                         KIPCM_UNLOCK(kipcm);
                         return -1;
                 }
-                /* FIXME: Should we look for pending flows from this IPC Process ? */
+                /*
+                 * FIXME: Should we look for pending flows from this
+                 *        IPC Process ?
+                 */
                 if (kfa_remove_all_for_id(kipcm->kfa, id)) {
                         KIPCM_UNLOCK(kipcm);
                         return -1;
@@ -1726,8 +1733,9 @@ static int notify_ipcp_conn_create_generic(void *             data,
         ipc_process_id_t                                ipc_id = 0;
         port_id_t                                       port_id = 0;
         cep_id_t                                        src_cep;
-        flow_id_t                                       fid = flow_id_bad();
+        flow_id_t                                       fid;
 
+        fid      = flow_id_bad();
         attrs    = NULL;
         msg      = NULL;
         hdr      = NULL;
