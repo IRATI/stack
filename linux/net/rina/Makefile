@@ -28,8 +28,8 @@ rina_personality_default-y +=			\
 	 utils-workarounds.o
 endif
 
-obj-$(CONFIG_RINARP)             += rinarp/
-obj-$(CONFIG_RINA_NORMAL_IPCP)   += ipcps/
-obj-$(CONFIG_RINA_SHIM_DUMMY)    += ipcps/
-obj-$(CONFIG_RINA_SHIM_ETH_VLAN) += ipcps/
-obj-$(CONFIG_RINA_SHIM_TCP_UDP)  += ipcps/
+obj-$(CONFIG_RINA) += rinarp/
+obj-$(CONFIG_RINA) += ipcps/
+obj-$(CONFIG_RINA) += ipcps/
+obj-$(CONFIG_RINA) += ipcps/
+obj-$(CONFIG_RINA) += ipcps/
