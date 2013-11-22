@@ -7,4 +7,4 @@
 #             Eduard Grasa <e DOT grasa AT i2cat DOT net>
 #
 
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/irati/lib java -jar /usr/local/irati/share/rinad/ipcprocess/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar $1 $2 $3 $4
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/irati/lib java -jar /root/irati/share/rinad/ipcprocess/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar $1 $2 $3 $4
