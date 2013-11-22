@@ -70,14 +70,14 @@ static int mb_is_filler_ok(const uint8_t * f, size_t length)
                         const uint8_t * h;
 
                         LOG_ERR("Filler corrupted at %pK "
-                                "(pos = %zd, obt = 0x%02x, exp = 0x%02x)",
+                                "(pos = %zd, obt = 0x%02X, exp = 0x%02X)",
                                 g, i, *g, (uint8_t) i % 0xff);
 
                         LOG_ERR("Filler dump begin");
 
                         h = f;
                         for (j = 0; j < length; j++) {
-                                LOG_ERR("  %zd = 0x%02x", j, *h);
+                                LOG_ERR("  0x%pK = 0x%02X", h, *h);
                                 h++;
                         }
 
