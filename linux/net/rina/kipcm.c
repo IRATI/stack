@@ -364,6 +364,9 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      port_id_bad());
         }
 
+        ASSERT(ipc_process->ops);
+        ASSERT(ipc_process->ops->flow_allocate_request);
+
         if (ipc_process->ops->flow_allocate_request(ipc_process->data,
                                                     attrs->source,
                                                     attrs->dest,
@@ -471,6 +474,9 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         if (kipcm_smap_remove(kipcm->messages->egress, info->snd_seq)) {
                 LOG_ERR("Could not destroy egress messages map entry");
         }
+
+        ASSERT(ipc_process->ops);
+        ASSERT(ipc_process->ops->flow_allocate_response);
 
         if (ipc_process->ops->flow_allocate_response(ipc_process->data,
                                                      pid,
@@ -590,6 +596,9 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
                                                        info->snd_portid);
         }
 
+        ASSERT(ipc_process->ops);
+        ASSERT(ipc_process->ops->flow_deallocate);
+
         if (ipc_process->ops->flow_deallocate(ipc_process->data, attrs->id)) {
                 LOG_ERR("Failed deallocate flow request "
                         "for port id: %d", attrs->id);
@@ -668,7 +677,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
         if (!attrs)
                 goto fail;
 
-        dif_info = rkzalloc(sizeof(struct dif_info), GFP_KERNEL);
+        dif_info = rkzalloc(sizeof(*dif_info), GFP_KERNEL);
         if (!dif_info)
                 goto fail;
 
@@ -701,6 +710,9 @@ static int notify_ipcp_assign_dif_request(void *             data,
                 goto fail;
         }
         LOG_DBG("Found IPC Process with id %d", ipc_id);
+
+        ASSERT(ipc_process->ops);
+        ASSERT(ipc_process->ops->assign_to_dif);
 
         if (ipc_process->ops->assign_to_dif(ipc_process->data,
                                             attrs->dif_info)) {
@@ -830,6 +842,9 @@ static int notify_ipcp_update_dif_config_request(void *             data,
                                                         info->snd_portid);
         }
         LOG_DBG("Found IPC Process with id %d", ipc_id);
+
+        ASSERT(ipc_process->ops);
+        ASSERT(ipc_process->ops->update_dif_config);
 
         if (ipc_process->ops->update_dif_config(ipc_process->data,
                                                 attrs->dif_config)) {
@@ -1001,6 +1016,9 @@ static int notify_ipcp_register_app_request(void *             data,
                                                      true);
         }
 
+        ASSERT(ipc_process->ops);
+        ASSERT(ipc_process->ops->application_register);
+
         if (ipc_process->ops->application_register(ipc_process->data,
                                                    attrs->app_name)) {
                 return reg_unreg_resp_free_and_reply(app_name,
@@ -1136,6 +1154,9 @@ static int notify_ipcp_unregister_app_request(void *             data,
                                                      info->snd_portid,
                                                      false);
         }
+
+        ASSERT(ipc_process->ops);
+        ASSERT(ipc_process->ops->application_unregister);
 
         if (ipc_process->ops->application_unregister(ipc_process->data,
                                                      attrs->app_name)) {

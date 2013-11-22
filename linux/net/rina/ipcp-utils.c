@@ -519,6 +519,7 @@ struct ipcp_config * ipcp_config_create(void)
                 return NULL;
 
         tmp->entry = NULL;
+
         INIT_LIST_HEAD(&tmp->next);
 
         return tmp;
@@ -531,7 +532,10 @@ int ipcp_config_destroy(struct ipcp_config * cfg)
 
         if (cfg->entry)
                 if (cfg->entry->name) rkfree(cfg->entry->name);
-        if (cfg->entry->value) rkfree(cfg->entry->value);
+
+        if (cfg->entry->value)
+                rkfree(cfg->entry->value);
+
         rkfree(cfg->entry);
 
         rkfree(cfg);
@@ -561,7 +565,9 @@ struct connection * connection_create(void)
 struct connection *
 connection_dup_from_user(const struct connection __user * conn)
 {
-        struct connection * tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        struct connection * tmp;
+
+        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
@@ -575,7 +581,9 @@ int connection_destroy(struct connection * conn)
 {
         if (!conn)
                 return -1;
+
         rkfree(conn);
+
         return 0;
 }
 
@@ -587,12 +595,11 @@ struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
                 return NULL;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp) {
+        if (!tmp)
                 return NULL;
-        }
 
         /* FIXME: Are these field by field copy really needed ? */
-        /* FIXME: Please use proper indentation */
+#if 0
         tmp->average_bandwidth           = fspec->average_bandwidth;
         tmp->average_sdu_bandwidth       = fspec->average_sdu_bandwidth;
         tmp->delay                       = fspec->delay;
@@ -604,6 +611,9 @@ struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
         tmp->peak_bandwidth_duration     = fspec->peak_bandwidth_duration;
         tmp->peak_sdu_bandwidth_duration = fspec->peak_sdu_bandwidth_duration;
         tmp->undetected_bit_error_rate   = fspec->undetected_bit_error_rate;
+#else
+        *tmp = *fspec;
+#endif
 
         return tmp;
 }
@@ -613,15 +623,13 @@ struct dif_config * dif_config_create(void)
 {
         struct dif_config * tmp;
 
-        tmp = rkzalloc(sizeof(struct dif_config), GFP_KERNEL);
-        if (!tmp) {
-                LOG_DBG("Could not create new dif_config");
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
                 return NULL;
-        }
 
         INIT_LIST_HEAD(&(tmp->ipcp_config_entries));
-        return tmp;
 
+        return tmp;
 }
 EXPORT_SYMBOL(dif_config_create);
 
