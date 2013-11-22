@@ -76,7 +76,6 @@ static int rnl_check_attr_policy(struct nlmsghdr *   nlh,
         int             result;
 
         result = nlmsg_parse(nlh,
-                             /* FIXME: Check if this is correct */
                              sizeof(struct genlmsghdr) +
                              sizeof(struct rina_msg_hdr),
                              attrs,

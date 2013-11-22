@@ -11,6 +11,8 @@ import org.apache.commons.logging.LogFactory;
 
 import eu.irati.librina.ExtendedIPCManagerSingleton;
 import eu.irati.librina.Flow;
+import eu.irati.librina.QueryRIBRequestEvent;
+import eu.irati.librina.RIBObjectList;
 import eu.irati.librina.rina;
 
 import rina.cdap.api.CDAPException;
@@ -715,5 +717,23 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 	@Override
 	public List<RIBObject> getRIBObjects() {
 		return rib.getRIBObjects();
+	}
+	
+	/**
+	 * Process a Query RIB Request from the IPC Manager
+	 * @param event
+	 */
+	public void processQueryRIBRequestEvent(QueryRIBRequestEvent event) {
+		List<RIBObject> ribObjects = getRIBObjects();
+		RIBObjectList list = new RIBObjectList();
+		for(int i=0; i<ribObjects.size(); i++) {
+			list.addLast(ribObjects.get(i).toLibrinaRIBObject());
+		}
+		
+		try {
+			rina.getExtendedIPCManager().queryRIBResponse(event, 0, list);
+		} catch (Exception ex) {
+			log.error("Problems sending Query RIB Response to IPC Manager: " + ex.getMessage());
+		}
 	}
 }

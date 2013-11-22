@@ -1298,11 +1298,12 @@ RIBObject::RIBObject(){
 }
 
 RIBObject::RIBObject(
-		std::string clazz, std::string name, RIBObjectValue value){
+		std::string clazz, std::string name,
+		long long instance, RIBObjectValue value){
 	this->clazz = clazz;
 	this->name = name;
 	this->value = value;
-	instance = generateObjectInstance();
+	this->instance = instance;
 }
 
 bool RIBObject::operator==(const RIBObject &other) const{
@@ -1321,7 +1322,7 @@ bool RIBObject::operator!=(const RIBObject &other) const{
 	return !(*this == other);
 }
 
-long RIBObject::generateObjectInstance(){
+long long RIBObject::generateObjectInstance(){
 	//TODO generate instance properly
 	return 0;
 }
@@ -1334,11 +1335,11 @@ void RIBObject::setClazz(const std::string& clazz) {
 	this->clazz = clazz;
 }
 
-long RIBObject::getInstance() const {
+long long RIBObject::getInstance() const {
 	return instance;
 }
 
-void RIBObject::setInstance(long instance) {
+void RIBObject::setInstance(long long instance) {
 	this->instance = instance;
 }
 
@@ -1357,7 +1358,6 @@ RIBObjectValue RIBObject::getValue() const {
 void RIBObject::setValue(RIBObjectValue value) {
 	this->value = value;
 }
-
 
 bool librinaInitialized = false;
 Lockable librinaInitializationLock;

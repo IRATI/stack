@@ -472,6 +472,17 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
+    } else if ($1->getType() == rina::IPC_PROCESS_QUERY_RIB) {
+    	rina::QueryRIBRequestEvent *flowReqEvent = dynamic_cast<rina::QueryRIBRequestEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/QueryRIBRequestEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::QueryRIBRequestEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
     } else if ($1->getType() == rina::QUERY_RIB_RESPONSE_EVENT) {
     	rina::QueryRIBResponseEvent *flowReqEvent = dynamic_cast<rina::QueryRIBResponseEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/QueryRIBResponseEvent");

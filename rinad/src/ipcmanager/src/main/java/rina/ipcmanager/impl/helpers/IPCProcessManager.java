@@ -557,4 +557,9 @@ public class IPCProcessManager {
 					+ neighborsString);
 		}
 	}
+	
+	public synchronized long requestQueryRIB(long ipcProcessId) throws Exception {
+		IPCProcess ipcProcess = getIPCProcess(ipcProcessId);
+		return ipcProcess.queryRIB("", "", 0, 0, "");
+	}
 }

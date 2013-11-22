@@ -75,6 +75,7 @@ import eu.irati.librina.IPCProcessDIFRegistrationEvent;
 import eu.irati.librina.KernelIPCProcessSingleton;
 import eu.irati.librina.Neighbor;
 import eu.irati.librina.QoSCube;
+import eu.irati.librina.QueryRIBRequestEvent;
 import eu.irati.librina.rina;
 
 public class IPCProcess {
@@ -377,6 +378,9 @@ public class IPCProcess {
 		} else if (event.getType() == IPCEventType.ENROLL_TO_DIF_REQUEST_EVENT) {
 			EnrollToDIFRequestEvent enrEvent = (EnrollToDIFRequestEvent) event;
 			enrollmentTask.processEnrollmentRequestEvent(enrEvent, difInformation);
+		} else if (event.getType() == IPCEventType.IPC_PROCESS_QUERY_RIB) {
+			QueryRIBRequestEvent queryEvent = (QueryRIBRequestEvent) event;
+			ribDaemon.processQueryRIBRequestEvent(queryEvent);
 		}
 	}
 	

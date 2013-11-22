@@ -52,6 +52,14 @@ public abstract class BaseRIBObject implements RIBObject{
 		this.objectClass = objectClass;
 		this.objectInstance = objectInstance;
 	}
+	
+	public eu.irati.librina.RIBObject toLibrinaRIBObject() {
+		eu.irati.librina.RIBObject result = new eu.irati.librina.RIBObject();
+		result.setName(objectName);
+		result.setClazz(objectClass);
+		result.setInstance(objectInstance);
+		return result;
+	}
 
 	public Permissions getPermissions() {
 		return permissions;

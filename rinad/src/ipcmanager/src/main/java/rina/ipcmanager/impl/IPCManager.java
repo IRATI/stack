@@ -25,6 +25,7 @@ import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
 import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
 import eu.irati.librina.NeighborsModifiedNotificationEvent;
 import eu.irati.librina.OSProcessFinalizedEvent;
+import eu.irati.librina.QueryRIBResponseEvent;
 import eu.irati.librina.UpdateDIFConfigurationResponseEvent;
 import eu.irati.librina.rina;
 
@@ -350,6 +351,9 @@ public class IPCManager {
 		} else if (event.getType().equals(IPCEventType.NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT)) {
 			NeighborsModifiedNotificationEvent ipcEvent = (NeighborsModifiedNotificationEvent) event;
 			ipcProcessManager.neighborsModifiedEvent(ipcEvent);
+		} else if (event.getType().equals(IPCEventType.QUERY_RIB_RESPONSE_EVENT)) {
+			QueryRIBResponseEvent ipcEvent = (QueryRIBResponseEvent) event;
+			console.responseArrived(ipcEvent);
 		}
 	}
 	
@@ -457,5 +461,16 @@ public class IPCManager {
 			String supportingDifName, String neighApName, String neighApInstance) throws Exception {
 		return ipcProcessManager.requestEnrollmentToDIF(ipcProcessId, difName, 
 				supportingDifName, neighApName, neighApInstance);
+	}
+	
+	/**
+	 * Query the RIB of an IPC Process. Right now only querying the full RIB is 
+	 * supported
+	 * @param ipcProcessId
+	 * @return
+	 * @throws Exception
+	 */
+	public long requestQueryIPCProcessRIB(long ipcProcessId) throws Exception {
+		return ipcProcessManager.requestQueryRIB(ipcProcessId);
 	}
 }
