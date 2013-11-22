@@ -17,10 +17,10 @@ function dump_help() {
     echo "$ME [OPTIONS...]"
     echo " "
     echo "Options:"
-    echo "  -r, --role [STRING]       set role (default $ROLE)"
-    echo "  -c, --sdusize [NUMBER]    set SDU size (default $SDUSIZE)"
-    echo "  -s, --count [NUMBER]      set count (default $COUNT)"
-    echo "  -h, --help                print this help, then exit"
+    echo "  -r, --role [STRING]         set role (default $ROLE)"
+    echo "  -s, --sdu-size [NUMBER]     set SDU size (default $SDUSIZE)"
+    echo "  -c, --sdu-count [NUMBER]    set SDU count (default $COUNT)"
+    echo "  -h, --help                  print this help, then exit"
 }
 
 function dump_hint() {
@@ -40,29 +40,29 @@ while test $# -gt 0; do
             if test $# -gt 0; then
                 export ROLE=$1
             else
-                dump_hint "no role specified"
+                dump_hint "No role specified"
                 exit 1
             fi
             shift
             ;;
 
-        --sdusize|-s)
+        --sdu-size|-s)
             shift
             if test $# -gt 0; then
                 export SDUSIZE=$1
             else
-                dump_hint "No sdusize specified"
+                dump_hint "No SDU size specified"
                 exit 1
             fi
             shift
             ;;
 
-        --count|-c)
+        --sdu-count|-c)
             shift
             if test $# -gt 0; then
                 export COUNT=$1
             else
-                dump_hint "No count specified"
+                dump_hint "No SDU count specified"
                 exit 1
             fi
             shift
