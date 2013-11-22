@@ -104,47 +104,30 @@ message_handler_cb kipcm_handlers[RINA_C_MAX];
         } while (0)
 
 static void
-alloc_flow_req_free(struct name *                              source_name,
-                    struct name *                              dest_name,
-                    struct flow_spec *                         fspec,
-                    struct name *                              dif_name,
-                    struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
-                    struct rnl_msg *                           msg,
-                    struct rina_msg_hdr *                      hdr)
+alloc_flow_req_free(struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
+                    struct rnl_msg *                           msg)
 {
-        if (source_name) name_destroy(source_name);
-        if (dest_name)   name_destroy(dest_name);
-        if (fspec)       rkfree(fspec);
-        if (dif_name)    name_destroy(dif_name);
         if (attrs) {
-#if 0
-                if (attrs->source)   name_destroy(attrs->source);
-                if (attrs->dest)     name_destroy(attrs->dest);
-                if (attrs->fspec)    rkfree(attrs->fspec);
-                if (attrs->dif_name) name_destroy(attrs->dif_name);
-#endif
-                rkfree(attrs);
+                if (rnl_ipcm_alloc_flow_req_msg_attrs_destroy(attrs))
+                        LOG_WARN("Error destroying rnl_msg_attrs struct");
         }
-        if (msg)         rkfree(msg);
-        if (hdr)         rkfree(hdr);
+
+        if (msg) {
+                if (rnl_msg_destroy(msg))
+                        LOG_WARN("Error destroyin rnl_msg struct");
+        }
 }
 
 static int
-alloc_flow_req_free_and_reply(struct name *         source_name,
-                              struct name *         dest_name,
-                              struct flow_spec *    fspec,
-                              struct name *         dif_name,
-                              struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
+alloc_flow_req_free_and_reply(struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs,
                               struct rnl_msg *      msg,
-                              struct rina_msg_hdr * hdr,
                               ipc_process_id_t      id,
                               uint_t                res,
                               uint_t                seq_num,
                               uint_t                port_id,
                               port_id_t             pid)
 {
-        alloc_flow_req_free(source_name, dest_name, fspec, dif_name,
-                            attrs, msg, hdr);
+        alloc_flow_req_free(attrs, msg);
 
         if (rnl_app_alloc_flow_result_msg(id, res, pid, seq_num, port_id)) {
                 LOG_ERR("Could not send flow_result_msg");
@@ -166,21 +149,10 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         struct rnl_msg *                           msg;
         struct ipcp_instance *                     ipc_process;
         ipc_process_id_t                           ipc_id;
-        struct rina_msg_hdr *                      hdr;
         struct kipcm *                             kipcm;
-        struct name *                              source;
-        struct name *                              dest;
-        struct name *                              dif_name;
-        struct flow_spec *                         fspec;
         port_id_t                                  pid;
 
-        source   = NULL;
-        dest     = NULL;
-        dif_name = NULL;
-        fspec    = NULL;
-        attrs    = NULL;
-        msg      = NULL;
-        hdr      = NULL;
+        msg = NULL;
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -193,15 +165,11 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         }
 
         kipcm = (struct kipcm *) data;
-        attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
+
+        attrs = rnl_ipcm_alloc_flow_req_msg_attrs_create();
         if (!attrs) {
-                return alloc_flow_req_free_and_reply(source,
-                                                     dest,
-                                                     fspec,
-                                                     dif_name,
-                                                     attrs,
+                return alloc_flow_req_free_and_reply(attrs,
                                                      msg,
-                                                     hdr,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
@@ -209,83 +177,10 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      port_id_bad());
         }
 
-        source = name_create();
-        if (!source) {
-                return alloc_flow_req_free_and_reply(source,
-                                                     dest,
-                                                     fspec,
-                                                     dif_name,
-                                                     attrs,
-                                                     msg,
-                                                     hdr,
-                                                     0,
-                                                     -1,
-                                                     info->snd_seq,
-                                                     info->snd_portid,
-                                                     port_id_bad());
-        }
-        attrs->source = source;
-
-        dest = name_create();
-        if (!dest) {
-                return alloc_flow_req_free_and_reply(source,
-                                                     dest,
-                                                     fspec,
-                                                     dif_name,
-                                                     attrs,
-                                                     msg,
-                                                     hdr,
-                                                     0,
-                                                     -1,
-                                                     info->snd_seq,
-                                                     info->snd_portid,
-                                                     port_id_bad());
-        }
-        attrs->dest = dest;
-
-        dif_name = name_create();
-        if (!dif_name) {
-                return alloc_flow_req_free_and_reply(source,
-                                                     dest,
-                                                     fspec,
-                                                     dif_name,
-                                                     attrs,
-                                                     msg,
-                                                     hdr,
-                                                     0,
-                                                     -1,
-                                                     info->snd_seq,
-                                                     info->snd_portid,
-                                                     port_id_bad());
-        }
-        attrs->dif_name = dif_name;
-
-        fspec = rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
-        if (!fspec) {
-                return alloc_flow_req_free_and_reply(source,
-                                                     dest,
-                                                     fspec,
-                                                     dif_name,
-                                                     attrs,
-                                                     msg,
-                                                     hdr,
-                                                     0,
-                                                     -1,
-                                                     info->snd_seq,
-                                                     info->snd_portid,
-                                                     port_id_bad());
-        }
-        attrs->fspec = fspec;
-
-        msg = rkzalloc(sizeof(*msg), GFP_KERNEL);
+        msg = rnl_msg_create();
         if (!msg) {
-                return alloc_flow_req_free_and_reply(source,
-                                                     dest,
-                                                     fspec,
-                                                     dif_name,
-                                                     attrs,
+                return alloc_flow_req_free_and_reply(attrs,
                                                      msg,
-                                                     hdr,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
@@ -294,31 +189,9 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         }
         msg->attrs = attrs;
 
-        hdr = rkzalloc(sizeof(*hdr), GFP_KERNEL);
-        if (!hdr) {
-                return alloc_flow_req_free_and_reply(source,
-                                                     dest,
-                                                     fspec,
-                                                     dif_name,
-                                                     attrs,
-                                                     msg,
-                                                     hdr,
-                                                     0,
-                                                     -1,
-                                                     info->snd_seq,
-                                                     info->snd_portid,
-                                                     port_id_bad());
-        }
-        msg->rina_hdr = hdr;
-
         if (rnl_parse_msg(info, msg)) {
-                return alloc_flow_req_free_and_reply(source,
-                                                     dest,
-                                                     fspec,
-                                                     dif_name,
-                                                     attrs,
+                return alloc_flow_req_free_and_reply(attrs,
                                                      msg,
-                                                     hdr,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
@@ -330,13 +203,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
                 LOG_ERR("IPC process %d not found", ipc_id);
-                return alloc_flow_req_free_and_reply(source,
-                                                     dest,
-                                                     fspec,
-                                                     dif_name,
-                                                     attrs,
+                return alloc_flow_req_free_and_reply(attrs,
                                                      msg,
-                                                     hdr,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
@@ -350,13 +218,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 LOG_ERR("Could not add map [pid, seq_num]: [%d, %d]",
                         pid, info->snd_seq);
                 kfa_flow_deallocate(kipcm->kfa, pid);
-                return alloc_flow_req_free_and_reply(source,
-                                                     dest,
-                                                     fspec,
-                                                     dif_name,
-                                                     attrs,
+                return alloc_flow_req_free_and_reply(attrs,
                                                      msg,
-                                                     hdr,
                                                      0,
                                                      -1,
                                                      info->snd_seq,
@@ -374,13 +237,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                     pid)) {
                 LOG_ERR("Failed allocating flow request");
                 kfa_flow_deallocate(kipcm->kfa, pid);
-                return alloc_flow_req_free_and_reply(source,
-                                                     dest,
-                                                     fspec,
-                                                     dif_name,
-                                                     attrs,
+                return alloc_flow_req_free_and_reply(attrs,
                                                      msg,
-                                                     hdr,
                                                      ipc_id,
                                                      -1,
                                                      info->snd_seq,
@@ -388,7 +246,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      port_id_bad());
         }
 
-        alloc_flow_req_free(source, dest, fspec, dif_name, attrs, msg, hdr);
+        alloc_flow_req_free(attrs, msg);
 
         return 0;
 }

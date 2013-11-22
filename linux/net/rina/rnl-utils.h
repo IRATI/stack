@@ -397,6 +397,10 @@ struct rnl_msg {
 
 struct rnl_msg * rnl_msg_create(void);
 int              rnl_msg_destroy(struct rnl_msg * msg);
+struct rnl_ipcm_alloc_flow_req_msg_attrs *
+        rnl_ipcm_alloc_flow_req_msg_attrs_create(void);
+int rnl_ipcm_alloc_flow_req_msg_attrs_destroy(
+        struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs);
 
 struct rnl_ipcm_assign_to_dif_req_msg_attrs {
         struct dif_info * dif_info;

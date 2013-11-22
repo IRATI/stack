@@ -97,6 +97,63 @@ int rnl_msg_destroy(struct rnl_msg * msg)
         return 0;
 }
 
+struct rnl_ipcm_alloc_flow_req_msg_attrs *
+        rnl_ipcm_alloc_flow_req_msg_attrs_create(void)
+{
+        struct rnl_ipcm_alloc_flow_req_msg_attrs * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->source = name_create();
+        if (!tmp->source) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->dest = name_create();
+        if (!tmp->dest) {
+                name_destroy(tmp->source);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->dif_name = name_create();
+        if (!tmp->dif_name) {
+                name_destroy(tmp->dest);
+                name_destroy(tmp->source);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->fspec = rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
+        if (!tmp->fspec) {
+                name_destroy(tmp->dif_name);
+                name_destroy(tmp->dest);
+                name_destroy(tmp->source);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
+
+int rnl_ipcm_alloc_flow_req_msg_attrs_destroy(
+                struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs)
+{
+        if (!attrs)
+                return -1;
+
+        if (attrs->source) name_destroy(attrs->source);
+        if (attrs->dest) name_destroy(attrs->dest);
+        if (attrs->dif_name) name_destroy(attrs->dif_name);
+        if (attrs->fspec) rkfree(attrs->fspec);
+        rkfree(attrs);
+
+        return 0;
+}
+
 static int parse_flow_spec(struct nlattr * fspec_attr,
                            struct flow_spec * fspec_struct)
 {
