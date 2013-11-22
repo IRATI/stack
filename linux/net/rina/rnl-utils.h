@@ -295,6 +295,12 @@ enum dif_config_attrs_list {
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
 
+enum generic_one_attribute_list {
+        GOA_ATTR_ONE = 1,
+        __GOA_ATTR_MAX
+};
+#define GOA_ATTR_MAX (__GOA_ATTR_MAX - 1)
+
 enum ipcm_assign_to_dif_resp_attrs_list {
         IATDRE_ATTR_RESULT = 1,
         __IATDRE_ATTR_MAX,
@@ -586,18 +592,6 @@ int rnl_format_ipcm_ipcp_dif_reg_noti_msg(const struct name * ipcp_name,
 int rnl_format_ipcm_ipcp_dif_unreg_noti_msg(uint_t           result,
                                             struct sk_buff * skb_out);
 
-int rnl_format_ipcm_enroll_to_dif_req_msg(const struct name * dif_name,
-                                          struct sk_buff *    skb_out);
-
-int rnl_format_ipcm_enroll_to_dif_resp_msg(uint_t           result,
-                                           struct sk_buff * skb_out);
-
-int rnl_format_ipcm_disconn_neighbor_req_msg(const struct name * neighbor_name,
-                                             struct sk_buff *    skb_out);
-
-int rnl_format_ipcm_disconn_neighbor_resp_msg(uint_t           result,
-                                              struct sk_buff * skb_out);
-
 int rnl_format_ipcm_alloc_flow_req_msg(const struct name *      source,
                                        const struct name *      dest,
                                        const struct flow_spec * fspec,
@@ -660,11 +654,6 @@ int rnl_format_ipcm_unreg_app_req_msg(const struct name * app_name,
 
 int rnl_format_ipcm_unreg_app_resp_msg(uint_t           result,
                                        struct sk_buff * skb_out);
-
-int rnl_format_ipcm_query_rib_req_msg(const struct rib_object * obj,
-                                      uint_t                    scope,
-                                      const regex_t *           filter,
-                                      struct sk_buff *          skb_out);
 
 int rnl_format_ipcm_query_rib_resp_msg(uint_t                     result,
                                        uint_t                     count,
