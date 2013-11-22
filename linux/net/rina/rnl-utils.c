@@ -76,26 +76,21 @@ struct rnl_msg * rnl_msg_create(void)
         if (!tmp)
                 return NULL;
 
-        tmp->rina_hdr = rkzalloc(sizeof(*tmp->rina_hdr), GFP_KERNEL);
-        if (!tmp->rina_hdr) {
-                rkfree(tmp);
-                return NULL;
-        }
-
         return tmp;
 }
+EXPORT_SYMBOL(rnl_msg_create);
 
 int rnl_msg_destroy(struct rnl_msg * msg)
 {
         if (!msg)
                 return -1;
 
-        if (msg->rina_hdr) rkfree(msg->rina_hdr);
-        if (msg->attrs)    rkfree(msg->attrs);
+        if (msg->attrs) rkfree(msg->attrs);
         rkfree(msg);
 
         return 0;
 }
+EXPORT_SYMBOL(rnl_msg_destroy);
 
 struct rnl_ipcm_alloc_flow_req_msg_attrs *
         rnl_ipcm_alloc_flow_req_msg_attrs_create(void)
@@ -1273,24 +1268,11 @@ int rnl_parse_msg(struct genl_info * info,
         msg->resp_msg_flag         = 0;
         msg->notification_msg_flag = 0;
 #endif
-        /* FIXME: This is a pigsty workaround */
-        if (!msg->rina_hdr) {
-                msg->rina_hdr = rkmalloc(sizeof(*msg->rina_hdr), GFP_KERNEL);
-                if (!msg->rina_hdr)
-                        return -1;
-        }
-        /* FIXME: And this is even more ugly */
-        *msg->rina_hdr = *((struct rina_msg_hdr *) info->userhdr);
+        msg->header = *((struct rina_msg_hdr *) info->userhdr);
 
-        LOG_DBG("msg is at %pK", msg);
-        LOG_DBG("  msg->rina_hdr is at %pK and size is: %zd",
-                msg->rina_hdr, sizeof(msg->rina_hdr));
-        LOG_DBG("  msg->attrs is at %pK",
-                msg->attrs);
-        LOG_DBG("  msg->rina_hdr->src_ipc_id: %d",
-                (msg->rina_hdr)->src_ipc_id);
-        LOG_DBG("  msg->rina_hdr->dst_ipc_id: %d",
-                (msg->rina_hdr)->dst_ipc_id);
+        LOG_DBG("msg at %pK / msg->attrs at %pK",  msg, msg->attrs);
+        LOG_DBG("  msg->rina_hdr->src_ipc_id: %d", msg->header.src_ipc_id);
+        LOG_DBG("  msg->rina_hdr->dst_ipc_id: %d", msg->header.dst_ipc_id);
 
         switch(info->genlhdr->cmd) {
         case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST:
