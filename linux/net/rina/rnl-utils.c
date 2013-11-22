@@ -71,7 +71,7 @@ char * nla_get_string(struct nlattr * nla)
 struct rnl_msg * rnl_msg_create(void)
 {
         struct rnl_msg * tmp;
-        
+
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;

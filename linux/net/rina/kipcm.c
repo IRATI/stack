@@ -627,7 +627,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
         if (!attrs)
                 goto fail;
         attrs->dif_info = rkzalloc(sizeof(*attrs->dif_info),
-                                        GFP_KERNEL);
+                                   GFP_KERNEL);
         if (!attrs->dif_info)
                 goto fail;
         attrs->dif_info->dif_name = name_create();
