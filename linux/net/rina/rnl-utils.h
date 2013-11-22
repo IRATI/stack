@@ -383,7 +383,7 @@ struct rnl_msg {
         bool                  notification_msg_flag;
 
         /* RINA header containing IPC processes ids */
-        struct rina_msg_hdr * rina_hdr;
+        struct rina_msg_hdr   header;
 
         /* Specific message attributes */
         void *                attrs;
