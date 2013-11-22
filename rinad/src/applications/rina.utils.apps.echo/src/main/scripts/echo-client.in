@@ -7,4 +7,63 @@
 #             Eduard Grasa <e DOT grasa AT i2cat DOT net>
 #
 
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:@libdir@ @JAVA@ -jar @pkgdatadir@/apps/echo/rina.utils.apps.echo-1.0.0-irati-SNAPSHOT.jar -role client -sdusize 100 -count 30
+ROLE="client"
+SDUSIZE="100"
+COUNT="30"
+
+function dump_help() {
+    echo "$me [OPTIONS...]"
+    echo " "
+    echo "Options:"
+    echo "  -r, --role [client]       set role (default $ROLE)"
+    echo "  -c, --sdusize [NUMBER]    set SDU size (default $SDUSIZE)"
+    echo "  -s, --count [NUMBER]      set count (default $COUNT)"
+    echo "  -h, --help                this help"
+}
+
+while test $# -gt 0; do
+    case "$1" in
+        -h|--help)
+            dump_help
+            exit 0
+            ;;
+        --role|-r)
+            shift
+            if test $# -gt 0; then
+                export ROLE=$1
+            else
+                echo "no role specified"
+                exit 1
+            fi
+            shift
+            ;;
+        --sdusize|-s)
+            shift
+            if test $# -gt 0; then
+                export SDUSIZE=$1
+            else
+                echo "no sdusize specified"
+                exit 1
+            fi
+            shift
+            ;;
+        --count|-c)
+            shift
+            if test $# -gt 0; then
+                export COUNT=$1
+            else
+                echo "no count specified"
+                exit 1
+            fi
+            shift
+            ;;
+        *)
+            echo "$me: Got unknown option, bailing out"
+            break
+            ;;
+    esac
+done
+
+dump_help
+
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:@libdir@ @JAVA@ -jar @pkgdatadir@/apps/echo/rina.utils.apps.echo-1.0.0-irati-SNAPSHOT.jar -role $ROLE -sdusize $SDUSIZE -count $COUNT
