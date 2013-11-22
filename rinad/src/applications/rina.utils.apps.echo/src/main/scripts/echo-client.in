@@ -1,24 +1,31 @@
 #!/bin/bash
 
 #
-# app
+# echo-client
 #
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #             Eduard Grasa <e DOT grasa AT i2cat DOT net>
 #
+
+ME="echo-client"
 
 ROLE="client"
 SDUSIZE="100"
 COUNT="30"
 
 function dump_help() {
-    echo "$me [OPTIONS...]"
+    echo "$ME [OPTIONS...]"
     echo " "
     echo "Options:"
     echo "  -r, --role [client]       set role (default $ROLE)"
     echo "  -c, --sdusize [NUMBER]    set SDU size (default $SDUSIZE)"
     echo "  -s, --count [NUMBER]      set count (default $COUNT)"
-    echo "  -h, --help                this help"
+    echo "  -h, --help                print this help, then exit"
+}
+
+function dump_hint() {
+    echo "$ME: $1"
+    echo "Try \`$0 --help' for more information."
 }
 
 while test $# -gt 0; do
@@ -27,6 +34,7 @@ while test $# -gt 0; do
             dump_help
             exit 0
             ;;
+
         --role|-r)
             shift
             if test $# -gt 0; then
@@ -37,33 +45,34 @@ while test $# -gt 0; do
             fi
             shift
             ;;
+
         --sdusize|-s)
             shift
             if test $# -gt 0; then
                 export SDUSIZE=$1
             else
-                echo "no sdusize specified"
+                dump_hint "No sdusize specified"
                 exit 1
             fi
             shift
             ;;
+
         --count|-c)
             shift
             if test $# -gt 0; then
                 export COUNT=$1
             else
-                echo "no count specified"
+                dump_hint "No count specified"
                 exit 1
             fi
             shift
             ;;
+
         *)
-            echo "$me: Got unknown option, bailing out"
-            break
+            dump_hint "Unknown option"
+            exit 1
             ;;
     esac
 done
-
-dump_help
 
 LD_LIBRARY_PATH=$LD_LIBRARY_PATH:@libdir@ @JAVA@ -jar @pkgdatadir@/apps/echo/rina.utils.apps.echo-1.0.0-irati-SNAPSHOT.jar -role $ROLE -sdusize $SDUSIZE -count $COUNT
