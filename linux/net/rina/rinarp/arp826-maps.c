@@ -19,6 +19,7 @@
  */
 
 #include <linux/types.h>
+#include <linux/hashtable.h>
 
 /* FIXME: The following dependencies have to be removed */
 #define RINA_PREFIX "arp826-maps"

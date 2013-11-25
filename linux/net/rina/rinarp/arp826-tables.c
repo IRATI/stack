@@ -26,6 +26,7 @@
  */
 
 #include <linux/types.h>
+#include <linux/netdevice.h>
 
 /* FIXME: The following dependencies have to be removed */
 #define RINA_PREFIX "arp826-tables"
@@ -37,6 +38,7 @@
 
 #include "arp826.h"
 #include "arp826-utils.h"
+#include "arp826-maps.h"
 #include "arp826-tables.h"
 
 struct table_entry {
@@ -450,7 +452,7 @@ int tbl_remove(struct table *             instance,
 static spinlock_t    tables_lock;
 static struct tmap * tables = NULL;
 
-struct table * tbls_find(uint16_t ptype)
+struct table * tbls_find(struct net_device * device, uint16_t ptype)
 {
         struct tmap_entry * e;
         struct table *      tmp;
@@ -470,7 +472,7 @@ struct table * tbls_find(uint16_t ptype)
         return tmp;
 }
 
-int tbls_create(uint16_t ptype, size_t hwlen)
+int tbls_create(struct net_device * device, uint16_t ptype, size_t hwlen)
 {
         struct table *      cl;
         struct tmap_entry * e;
@@ -478,7 +480,7 @@ int tbls_create(uint16_t ptype, size_t hwlen)
         LOG_DBG("Creating table for ptype = 0x%04X, hwlen = %zd",
                 ptype, hwlen);
 
-        cl = tbls_find(ptype);
+        cl = tbls_find(device, ptype);
         if (cl) {
                 LOG_WARN("Table for ptype 0x%04X already created", ptype);
                 return 0;
@@ -518,7 +520,7 @@ int tbls_create(uint16_t ptype, size_t hwlen)
         return 0;
 }
 
-int tbls_destroy(uint16_t ptype)
+int tbls_destroy(struct net_device * device, uint16_t ptype)
 {
         struct tmap_entry * e;
         struct table *      cl;
@@ -584,8 +586,7 @@ void tbls_fini(void)
         tables = NULL;
 }
 
-/* FIXME: Use dev */
-int arp826_add(struct net_device * dev,
+int arp826_add(struct net_device * device,
                uint16_t            ptype,
                const struct gpa *  pa,
                const struct gha *  ha)
@@ -607,7 +608,7 @@ int arp826_add(struct net_device * dev,
 
         LOG_DBG("Adding GPA/GHA couple to the 0x%04x ptype table", ptype);
 
-        cl = tbls_find(ptype);
+        cl = tbls_find(device, ptype);
         if (!cl) {
                 LOG_ERR("Cannot add GPA/GHA couple, "
                         "there is no table for ptype 0x%04x", ptype);
@@ -655,8 +656,7 @@ int arp826_add(struct net_device * dev,
 }
 EXPORT_SYMBOL(arp826_add);
 
-/* FIXME: Use dev */
-int arp826_remove(struct net_device * dev,
+int arp826_remove(struct net_device * device,
                   uint16_t            ptype,
                   const struct gpa *  pa,
                   const struct gha *  ha)
@@ -673,7 +673,7 @@ int arp826_remove(struct net_device * dev,
                 return -1;
         }
 
-        cl = tbls_find(ptype);
+        cl = tbls_find(device, ptype);
         if (!cl)
                 return -1;
 
@@ -690,8 +690,7 @@ int arp826_remove(struct net_device * dev,
 }
 EXPORT_SYMBOL(arp826_remove);
 
-/* FIXME: Use dev */
-const struct gpa * arp826_find_gpa(struct net_device * dev,
+const struct gpa * arp826_find_gpa(struct net_device * device,
                                    uint16_t            ptype,
                                    const struct gha *  ha)
 {
@@ -703,7 +702,7 @@ const struct gpa * arp826_find_gpa(struct net_device * dev,
                 return NULL;
         }
 
-        cl = tbls_find(ptype);
+        cl = tbls_find(device, ptype);
         if (!cl)
                 return NULL;
 

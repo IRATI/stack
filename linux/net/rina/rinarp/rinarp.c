@@ -21,6 +21,7 @@
 
 #include <linux/module.h>
 #include <linux/if_arp.h>
+#include <linux/netdevice.h>
 
 #define RINA_PREFIX "rinarp"
 

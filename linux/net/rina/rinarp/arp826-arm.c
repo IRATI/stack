@@ -19,6 +19,7 @@
  */
 
 #include <linux/list.h>
+#include <linux/netdevice.h>
 
 /* FIXME: The following dependencies have to be removed */
 #define RINA_PREFIX "arp826-arm"
@@ -47,11 +48,12 @@ static spinlock_t       resolutions_lock;
 static struct list_head resolutions_ongoing;
 
 struct resolve_data {
-        uint16_t     ptype;
-        struct gpa * spa;
-        struct gha * sha;
-        struct gpa * tpa;
-        struct gha * tha;
+        struct net_device * dev;
+        uint16_t            ptype;
+        struct gpa *        spa;
+        struct gha *        sha;
+        struct gpa *        tpa;
+        struct gha *        tha;
 };
 
 static bool is_resolve_data_matching(struct resolve_data * a,
@@ -76,6 +78,9 @@ static bool is_resolve_data_matching(struct resolve_data * a,
         gpa_dump(a->spa);
         gpa_dump(b->tpa);
         LOG_DBG("Dumping ptype");
+
+        if (a->dev != b->dev)
+            return false;
 
         if (!(a->ptype == b->ptype)       ||
             !gha_is_equal(a->sha, b->tha) ||
@@ -104,12 +109,13 @@ static void resolve_data_destroy(struct resolve_data * data)
         rkfree(data);
 }
 
-static struct resolve_data * resolve_data_create_gfp(gfp_t        flags,
-                                                     uint16_t     ptype,
-                                                     struct gpa * spa,
-                                                     struct gha * sha,
-                                                     struct gpa * tpa,
-                                                     struct gha * tha)
+static struct resolve_data * resolve_data_create_gfp(gfp_t               flags,
+                                                     struct net_device * dev,
+                                                     uint16_t            ptype,
+                                                     struct gpa *        spa,
+                                                     struct gha *        sha,
+                                                     struct gpa *        tpa,
+                                                     struct gha *        tha)
 {
         struct resolve_data * tmp;
 
@@ -117,6 +123,7 @@ static struct resolve_data * resolve_data_create_gfp(gfp_t        flags,
         if (!tmp)
                 return NULL;
 
+        tmp->dev   = dev;
         tmp->ptype = ptype;
         tmp->spa   = spa;
         tmp->sha   = sha;
@@ -126,12 +133,13 @@ static struct resolve_data * resolve_data_create_gfp(gfp_t        flags,
         return tmp;
 }
 
-static struct resolve_data * resolve_data_create(uint16_t     ptype,
-                                                 struct gpa * spa,
-                                                 struct gha * sha,
-                                                 struct gpa * tpa,
-                                                 struct gha * tha)
-{ return resolve_data_create_gfp(GFP_KERNEL, ptype, spa, sha, tpa, tha); }
+static struct resolve_data * resolve_data_create(struct net_device * dev,
+                                                 uint16_t            ptype,
+                                                 struct gpa *        spa,
+                                                 struct gha *        sha,
+                                                 struct gpa *        tpa,
+                                                 struct gha *        tha)
+{ return resolve_data_create_gfp(GFP_KERNEL, dev, ptype, spa, sha, tpa, tha); }
 
 static int resolver(void * o)
 {
@@ -188,11 +196,12 @@ static int resolver(void * o)
 static struct workqueue_struct * arm_wq = NULL;
 
 /* FIXME: We should have a wq-alike job posting approach ... */
-int arm_resolve(uint16_t     ptype,
-                struct gpa * spa,
-                struct gha * sha,
-                struct gpa * tpa,
-                struct gha * tha)
+int arm_resolve(struct net_device * dev, 
+                uint16_t            ptype,
+                struct gpa *        spa,
+                struct gha *        sha,
+                struct gpa *        tpa,
+                struct gha *        tha)
 {
         struct resolve_data *  tmp;
         struct rwq_work_item * r;
@@ -201,7 +210,9 @@ int arm_resolve(uint16_t     ptype,
             !gpa_is_ok(tpa) || !gha_is_ok(tha))
                 return -1;
 
-        tmp = resolve_data_create_gfp(GFP_ATOMIC, ptype, spa, sha, tpa, tha);
+        tmp = resolve_data_create_gfp(GFP_ATOMIC,
+                                      dev, ptype,
+                                      spa, sha, tpa, tha);
         if (!tmp)
                 return -1;
 
@@ -272,7 +283,7 @@ int arp826_resolve_gpa(struct net_device * dev,
                 return -1;
         }
 
-        resolution->data = resolve_data_create(ptype,
+        resolution->data = resolve_data_create(dev, ptype,
                                                tmp_spa, tmp_sha,
                                                tmp_tpa, NULL);
         if (!resolution->data) {
@@ -286,12 +297,11 @@ int arp826_resolve_gpa(struct net_device * dev,
         resolution->notify = notify;
         resolution->opaque = opaque;
         INIT_LIST_HEAD(&resolution->next);
-        LOG_DBG("Initialised the list_head of this resolution");
 
+        LOG_DBG("Adding new resolution to the ongoing list");
         spin_lock(&resolutions_lock);
         list_add(&resolution->next, &resolutions_ongoing);
         spin_unlock(&resolutions_lock);
-        LOG_DBG("Added it to the list of resolutions");
 
         if (arp_send_request(ptype, spa, sha, tpa)) {
                 LOG_ERR("Cannot send request, cannot resolve GPA");
