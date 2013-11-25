@@ -288,6 +288,65 @@ static bool regression_tests_table(void)
 
         return true;
 }
+
+static bool regression_tests_multi_dev_table(void)
+{
+        struct table *      x;
+        struct net_device * d1;
+        struct net_device * d2;
+
+        d1 = (struct net_device *) 0x1; /* Fake device pointer */
+        d2 = (struct net_device *) 0x2; /* Fake device pointer */
+
+        LOG_DBG("Table regression tests");
+
+        LOG_DBG("Regression test #1");
+        if (tbls_init())
+                return false;
+
+        LOG_DBG("Regression test #2");
+
+        LOG_DBG("Regression test #2.1");
+        if (tbls_create(d1, 10, 3))
+                return false;
+        LOG_DBG("Regression test #2.2");
+        if (tbls_create(d2, 21, 6))
+                return false;
+
+        LOG_DBG("Regression test #3");
+
+        LOG_DBG("Regression test #3.1");
+        x = tbls_find(d1, 10);
+        if (!x)
+                return false;
+        LOG_DBG("Regression test #3.2");
+        x = tbls_find(d1, 21);
+        if (x)
+                return false;
+
+        LOG_DBG("Regression test #3.3");
+        x = tbls_find(d2, 21);
+        if (!x)
+                return false;
+        LOG_DBG("Regression test #3.4");
+        x = tbls_find(d2, 10);
+        if (x)
+                return false;
+
+        LOG_DBG("Regression test #4");
+
+        LOG_DBG("Regression test #4.1");
+        if (tbls_destroy(d1, 10))
+                return false;
+        LOG_DBG("Regression test #4.2");
+        if (tbls_destroy(d1, 21))
+                return false;
+
+        LOG_DBG("Regression test #5");
+        tbls_fini();
+
+        return true;
+}
 #endif
 
 #ifdef CONFIG_ARP826_REGRESSION_TESTS
@@ -302,6 +361,10 @@ static bool regression_tests(void)
                 return false;
         }
         if (!regression_tests_table()) {
+                LOG_ERR("Table regression tests failed, bailing out");
+                return false;
+        }
+        if (!regression_tests_multi_dev_table()) {
                 LOG_ERR("Table regression tests failed, bailing out");
                 return false;
         }
