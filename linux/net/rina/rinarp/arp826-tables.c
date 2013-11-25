@@ -480,7 +480,7 @@ int tbls_create(uint16_t ptype, size_t hwlen)
 
         cl = tbls_find(ptype);
         if (cl) {
-                LOG_WARN("Table for ptype 0x%04X already created",ptype);
+                LOG_WARN("Table for ptype 0x%04X already created", ptype);
                 return 0;
         }
 
