@@ -339,7 +339,7 @@ static bool regression_tests_multi_dev_table(void)
         if (tbls_destroy(d1, 10))
                 return false;
         LOG_DBG("Regression test #4.2");
-        if (tbls_destroy(d1, 21))
+        if (tbls_destroy(d2, 21))
                 return false;
 
         LOG_DBG("Regression test #5");

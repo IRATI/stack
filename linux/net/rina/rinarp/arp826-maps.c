@@ -81,15 +81,14 @@ bool tmap_is_empty(struct tmap * map)
         return list_empty(&map->head);
 }
 
-bool tmap_row_is_ok(struct tmap * row)
-{ return row ? true : false; }
-
 int tmap_destroy(struct tmap * map)
 {
         struct tmap_entry * pos, * nxt;
 
         if (!tmap_is_ok(map))
                 return -1;
+
+        ASSERT(tmap_is_empty(map)); /* To prevent loosing memory */
 
         list_for_each_entry_safe(pos, nxt, &map->head, next) {
                 list_del(&pos->next);
@@ -123,7 +122,7 @@ static int tmap_entry_add_gfp(gfp_t               flags,
         tmp->value      = value;
         INIT_LIST_HEAD(&tmp->next);
 
-        list_add(&map->head, &map->head);
+        list_add(&tmp->next, &map->head);
 
         return 0;
 }
