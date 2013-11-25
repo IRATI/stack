@@ -459,7 +459,7 @@ struct table * tbls_find(struct net_device * device, uint16_t ptype)
 
         spin_lock(&tables_lock);
 
-        e = tmap_entry_find(tables, ptype);
+        e = tmap_entry_find(tables, device, ptype);
         if (!e) {
                 spin_unlock(&tables_lock);
                 return NULL;
@@ -494,7 +494,7 @@ int tbls_create(struct net_device * device, uint16_t ptype, size_t hwlen)
         }
 
         LOG_DBG("Creating new tmap-entry");
-        e = tmap_entry_create(ptype, cl);
+        e = tmap_entry_create(device, ptype, cl);
         if (!e) {
                 LOG_ERR("Cannot create new entry, bailing out");
                 return -1;
@@ -503,7 +503,7 @@ int tbls_create(struct net_device * device, uint16_t ptype, size_t hwlen)
         LOG_DBG("Now adding the new table to the tables map");
 
         spin_lock(&tables_lock);
-        if (tmap_entry_insert(tables, ptype, e)) {
+        if (tmap_entry_insert(tables, device, ptype, e)) {
                 spin_unlock(&tables_lock);
 
                 LOG_ERR("Cannot insert new entry into table for ptype 0x%04X",
@@ -527,7 +527,7 @@ int tbls_destroy(struct net_device * device, uint16_t ptype)
 
         spin_lock(&tables_lock);
 
-        e = tmap_entry_find(tables, ptype);
+        e = tmap_entry_find(tables, device, ptype);
         if (!e) {
                 LOG_ERR("Table for ptype 0x%04X is missing, cannot destroy",
                         ptype);
