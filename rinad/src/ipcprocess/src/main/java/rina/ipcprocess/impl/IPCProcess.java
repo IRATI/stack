@@ -44,13 +44,16 @@ import rina.enrollment.api.EnrollmentInformationRequest;
 import rina.enrollment.api.EnrollmentTask;
 import rina.flowallocator.api.DirectoryForwardingTableEntry;
 import rina.flowallocator.api.Flow;
+import rina.flowallocator.api.FlowAllocator;
 import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
 import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
-import rina.ipcprocess.impl.flowallocator.ribobjects.DirectoryForwardingTableEntrySetRIBObject;
+import rina.ipcprocess.impl.flowallocator.FlowAllocatorImpl;
 import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
+import rina.ipcprocess.impl.registrationmanager.RegistrationManagerImpl;
 import rina.ipcprocess.impl.resourceallocator.ResourceAllocatorImpl;
 import rina.ipcprocess.impl.ribdaemon.RIBDaemonImpl;
 import rina.ipcprocess.impl.ribobjects.WhatevercastNameSetRIBObject;
+import rina.registrationmanager.api.RegistrationManager;
 import rina.resourceallocator.api.ResourceAllocator;
 import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBObject;
@@ -125,6 +128,12 @@ public class IPCProcess {
 	/** The Resource Allocator */
 	private ResourceAllocator resourceAllocator = null;
 	
+	/** The Registration Manager */
+	private RegistrationManager registrationManager = null;
+	
+	/** The Flow Allocator */
+	private FlowAllocator flowAllocator = null;
+	
 	/** Static instance to implement the singleton pattern */
 	private static IPCProcess instance = null;
 	
@@ -170,9 +179,13 @@ public class IPCProcess {
 		ribDaemon = new RIBDaemonImpl();
 		enrollmentTask = new EnrollmentTaskImpl();
 		resourceAllocator = new ResourceAllocatorImpl();
+		registrationManager = new RegistrationManagerImpl();
+		flowAllocator = new FlowAllocatorImpl();
 		((RIBDaemonImpl) ribDaemon).setIPCProcess(this);
 		((EnrollmentTaskImpl) enrollmentTask).setIPCProcess(this);
 		((ResourceAllocatorImpl) resourceAllocator).setIPCProcess(this);
+		((RegistrationManagerImpl) registrationManager).setIPCProcess(this);
+		((FlowAllocatorImpl) flowAllocator).setIPCProcess(this);
 		
 		populateRIB();
 
@@ -289,6 +302,14 @@ public class IPCProcess {
 		return resourceAllocator;
 	}
 	
+	public RegistrationManager getRegistrationManager() {
+		return registrationManager;
+	}
+	
+	public FlowAllocator getFlowAllocator() {
+		return flowAllocator;
+	}
+	
 	private Encoder createEncoder() {
 		  EncoderImpl encoder = new EncoderImpl();
           encoder.addEncoder(DataTransferConstants.class.getName(), new DataTransferConstantsEncoder());
@@ -310,13 +331,9 @@ public class IPCProcess {
 	
 	private void populateRIB(){
 		try {
-			RIBObject ribObject = new QoSCubeSetRIBObject();
-			this.ribDaemon.addRIBObject(ribObject);
-			ribObject = new WhatevercastNameSetRIBObject();
+			RIBObject ribObject = new WhatevercastNameSetRIBObject();
 			this.ribDaemon.addRIBObject(ribObject);
 			ribObject = new DataTransferConstantsRIBObject();
-			this.ribDaemon.addRIBObject(ribObject);
-			ribObject = new DirectoryForwardingTableEntrySetRIBObject();
 			this.ribDaemon.addRIBObject(ribObject);
 		} catch(Exception ex) {
 			log.error("Problems populating RIB: "+ex.getMessage());

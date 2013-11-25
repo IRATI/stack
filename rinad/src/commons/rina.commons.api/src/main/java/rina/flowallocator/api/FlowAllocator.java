@@ -1,6 +1,6 @@
 package rina.flowallocator.api;
 
-import eu.irati.librina.FlowInformation;
+import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCException;
 import rina.cdap.api.message.CDAPMessage;
 
@@ -10,12 +10,6 @@ import rina.cdap.api.message.CDAPMessage;
  */
 public interface FlowAllocator {
 	
-	/**
-	 * Returns the directory
-	 * @return
-	 */
-	public DirectoryForwardingTable getDirectoryForwardingTable();
-
 	/**
 	 * The Flow Allocator is invoked when an Allocate_Request.submit is received.  The source Flow 
 	 * Allocator determines if the request is well formed.  If not well-formed, an Allocate_Response.deliver 
@@ -29,7 +23,7 @@ public interface FlowAllocator {
 	 * @throws IPCException if the request is not well formed or there are not enough resources
 	 * to honour the request
 	 */
-	public int submitAllocateRequest(FlowInformation allocateRequest) throws IPCException;
+	public int submitAllocateRequest(FlowRequestEvent flowRequestEvent) throws IPCException;
 	
 	/**
 	 * Forward the allocate response to the Flow Allocator Instance.
@@ -69,7 +63,7 @@ public interface FlowAllocator {
 	 * @param flowInformation
 	 * @throws IPCException
 	 */
-	public void receivedLocalFlowRequest(FlowInformation flowInformation) throws IPCException;
+	public void receivedLocalFlowRequest(FlowRequestEvent flowRequestEvent) throws IPCException;
 	
 	/**
 	 * Called by the flow allocator instance when a response for a local flow is received
