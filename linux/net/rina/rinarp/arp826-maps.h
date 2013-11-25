@@ -30,7 +30,9 @@ struct tmap;
 struct tmap_entry;
 
 struct tmap *       tmap_create(void);
+struct tmap *       tmap_create_ni(void);
 int                 tmap_destroy(struct tmap * map);
+
 bool                tmap_is_empty(struct tmap * map);
 int                 tmap_entry_add(struct tmap *       map,
                                    struct net_device * key_device,
