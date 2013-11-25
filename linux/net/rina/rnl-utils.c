@@ -2668,15 +2668,12 @@ int rnl_assign_dif_response(ipc_process_id_t id,
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
 
-        result = send_nl_unicast_msg(&init_net,
-                                     out_msg,
-                                     nl_port_id,
-                                     RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE,
-                                     seq_num);
+        return send_nl_unicast_msg(&init_net,
+                                   out_msg,
+                                   nl_port_id,
+                                   RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE,
+                                   seq_num);
 
-        LOG_DBG("NL unicast message sent (result = %d)", result);
-
-        return result;
 }
 EXPORT_SYMBOL(rnl_assign_dif_response);
 
@@ -3032,7 +3029,9 @@ int rnl_ipcp_conn_create_resp_msg(ipc_process_id_t ipc_id,
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
 
+#if 0
         result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
+#endif
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
