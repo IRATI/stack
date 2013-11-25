@@ -48,6 +48,7 @@ struct tmap_entry {
                 uint16_t            ptype;
         } key;
         struct table *   value;
+
         struct list_head next;
 };
 
@@ -85,20 +86,15 @@ bool tmap_row_is_ok(struct tmap * row)
 
 int tmap_destroy(struct tmap * map)
 {
-#if 0
-        struct table_entry * pos, * nxt;
-#endif
+        struct tmap_entry * pos, * nxt;
+
         if (!tmap_is_ok(map))
                 return -1;
 
-#if 1
-        ASSERT(tmap_is_empty(map));
-#else
         list_for_each_entry_safe(pos, nxt, &map->head, next) {
                 list_del(&pos->next);
                 rkfree(pos);
         }
-#endif
 
         rkfree(map);
 
