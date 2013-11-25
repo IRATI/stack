@@ -188,7 +188,8 @@ struct table {
         struct list_head entries;
 };
 
-static struct table * tbl_create(size_t ha_length)
+static struct table * tbl_create_gfp(gfp_t  flags,
+                                     size_t ha_length)
 {
         struct table * instance;
 
@@ -199,7 +200,7 @@ static struct table * tbl_create(size_t ha_length)
                 return NULL;
         }
 
-        instance = rkmalloc(sizeof(*instance), GFP_KERNEL);
+        instance = rkmalloc(sizeof(*instance), flags);
         if (!instance)
                 return NULL;
 
@@ -472,7 +473,10 @@ struct table * tbls_find(struct net_device * device, uint16_t ptype)
         return tmp;
 }
 
-int tbls_create(struct net_device * device, uint16_t ptype, size_t hwlen)
+static int tbls_create_gfp(gfp_t               flags,
+                           struct net_device * device,
+                           uint16_t            ptype,
+                           size_t              hwlen)
 {
         struct table * cl;
         
@@ -485,7 +489,7 @@ int tbls_create(struct net_device * device, uint16_t ptype, size_t hwlen)
                 return 0;
         }
 
-        cl = tbl_create(hwlen);
+        cl = tbl_create_gfp(flags, hwlen);
         if (!cl) {
                 LOG_ERR("Cannot create table for ptype 0x%04X, hwlen %zd",
                         ptype, hwlen);
@@ -510,6 +514,16 @@ int tbls_create(struct net_device * device, uint16_t ptype, size_t hwlen)
 
         return 0;
 }
+
+int tbls_create_ni(struct net_device * device,
+                   uint16_t            ptype,
+                   size_t              hwlen)
+{ return tbls_create_gfp(GFP_ATOMIC, device, ptype, hwlen); }
+
+int tbls_create(struct net_device * device,
+                uint16_t            ptype,
+                size_t              hwlen)
+{ return tbls_create_gfp(GFP_KERNEL, device, ptype, hwlen); }
 
 int tbls_destroy(struct net_device * device, uint16_t ptype)
 {

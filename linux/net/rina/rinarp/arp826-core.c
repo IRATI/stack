@@ -47,20 +47,20 @@ static struct packet_type arp826_packet_type __read_mostly = {
         .func = arp_receive,
 };
 
-static int protocol_add(struct net_device * device,
-                        uint16_t            ptype,
-                        size_t              hlen)
+static int protocol_add_ni(struct net_device * device,
+                           uint16_t            ptype,
+                           size_t              hlen)
 {
         LOG_DBG("Adding protocol (device = %pK, ptype = 0x%04X, hlen = %zd)",
                 device, ptype, hlen);
 
-        if (tbls_create(device, ptype, hlen)) {
+        if (tbls_create_ni(device, ptype, hlen)) {
                 LOG_ERR("Cannot add (device = %pK, pype 0x%04X, hlen = %zd)",
                         device, ptype, hlen);
                 return -1;
         }
 
-        LOG_DBG("Protocol added successfully"
+        LOG_DBG("Protocol added successfully "
                 "(device = %pK, ptype = 0x%04X, hlen = %zd)",
                 device, ptype, hlen);
 
@@ -401,7 +401,7 @@ static int __init mod_init(void)
         read_lock(&dev_base_lock);
         device = first_net_device(&init_net);
         while (device) {
-                if (protocol_add(device, ETH_P_RINA, 6)) {
+                if (protocol_add_ni(device, ETH_P_RINA, 6)) {
                         tbls_fini();
                         arm_fini();
                         read_unlock(&dev_base_lock);
