@@ -579,7 +579,7 @@ void tbls_fini(void)
 
         LOG_DBG("Finalizing");
 
-        ASSERT(tmap_empty(tables));
+        ASSERT(tmap_is_empty(tables));
 
         tmap_destroy(tables);
 
