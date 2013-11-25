@@ -32,7 +32,6 @@
 
 #include "personality.h"
 
-
 typedef enum {
 
         /* Unespecified operation */

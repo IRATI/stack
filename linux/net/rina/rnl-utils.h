@@ -295,6 +295,12 @@ enum dif_config_attrs_list {
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
 
+enum generic_one_attribute_list {
+        GOA_ATTR_ONE = 1,
+        __GOA_ATTR_MAX
+};
+#define GOA_ATTR_MAX (__GOA_ATTR_MAX - 1)
+
 enum ipcm_assign_to_dif_resp_attrs_list {
         IATDRE_ATTR_RESULT = 1,
         __IATDRE_ATTR_MAX,
@@ -356,38 +362,55 @@ struct rina_msg_hdr {
         unsigned short dst_ipc_id;
 };
 
+enum rnl_msg_attr_type {
+        RNL_MSG_ATTRS_ALLOCATE_FLOW_REQUEST,
+        RNL_MSG_ATTRS_ALLOCATE_FLOW_RESPONSE,
+        RNL_MSG_ATTRS_DEALLOCATE_FLOW_REQUEST,
+        RNL_MSG_ATTRS_ASSIGN_TO_DIF_REQUEST,
+        RNL_MSG_ATTRS_UPDATE_DIF_CONFIG_REQUEST,
+        RNL_MSG_ATTRS_REG_UNREG_REQUEST,
+        RNL_MSG_ATTRS_CONN_CREATE_REQUEST,
+        RNL_MSG_ATTRS_CONN_CREATE_ARRIVED,
+        RNL_MSG_ATTRS_CONN_UPDATE_REQUEST,
+        RNL_MSG_ATTRS_CONN_DESTROY_REQUEST
+};
 
 struct rnl_msg {
         /* Generic RINA Netlink family identifier */
-        int                   family;
+        int                    family;
 
         /* source nl port id */
-        unsigned int          src_port;
+        unsigned int           src_port;
 
         /* destination nl port id */
-        unsigned int          dst_port;
+        unsigned int           dst_port;
 
         /* The message sequence number */
-        rnl_sn_t              seq_num;
+        rnl_sn_t               seq_num;
 
         /* The operation code */
-        msg_type_t            op_code;
+        msg_type_t             op_code;
 
         /* True if this is a request message */
-        bool                  req_msg_flag;
+        bool                   req_msg_flag;
 
         /* True if this is a response message */
-        bool                  resp_msg_flag;
+        bool                   resp_msg_flag;
 
         /* True if this is a notification message */
-        bool                  notification_msg_flag;
+        bool                   notification_msg_flag;
 
         /* RINA header containing IPC processes ids */
-        struct rina_msg_hdr * rina_hdr;
+        struct rina_msg_hdr    header;
+
+        enum rnl_msg_attr_type attr_type;
 
         /* Specific message attributes */
-        void *                attrs;
+        void *                 attrs;
 };
+
+struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type);
+int              rnl_msg_destroy(struct rnl_msg * msg);
 
 struct rnl_ipcm_assign_to_dif_req_msg_attrs {
         struct dif_info * dif_info;
@@ -586,18 +609,6 @@ int rnl_format_ipcm_ipcp_dif_reg_noti_msg(const struct name * ipcp_name,
 int rnl_format_ipcm_ipcp_dif_unreg_noti_msg(uint_t           result,
                                             struct sk_buff * skb_out);
 
-int rnl_format_ipcm_enroll_to_dif_req_msg(const struct name * dif_name,
-                                          struct sk_buff *    skb_out);
-
-int rnl_format_ipcm_enroll_to_dif_resp_msg(uint_t           result,
-                                           struct sk_buff * skb_out);
-
-int rnl_format_ipcm_disconn_neighbor_req_msg(const struct name * neighbor_name,
-                                             struct sk_buff *    skb_out);
-
-int rnl_format_ipcm_disconn_neighbor_resp_msg(uint_t           result,
-                                              struct sk_buff * skb_out);
-
 int rnl_format_ipcm_alloc_flow_req_msg(const struct name *      source,
                                        const struct name *      dest,
                                        const struct flow_spec * fspec,
@@ -660,11 +671,6 @@ int rnl_format_ipcm_unreg_app_req_msg(const struct name * app_name,
 
 int rnl_format_ipcm_unreg_app_resp_msg(uint_t           result,
                                        struct sk_buff * skb_out);
-
-int rnl_format_ipcm_query_rib_req_msg(const struct rib_object * obj,
-                                      uint_t                    scope,
-                                      const regex_t *           filter,
-                                      struct sk_buff *          skb_out);
 
 int rnl_format_ipcm_query_rib_resp_msg(uint_t                     result,
                                        uint_t                     count,

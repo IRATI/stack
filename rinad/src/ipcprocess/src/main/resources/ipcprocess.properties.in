@@ -1,0 +1,1 @@
+configFileLocation = @sysconfdir@/ipcmanager.conf

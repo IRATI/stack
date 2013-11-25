@@ -15,16 +15,17 @@ import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCEvent;
 import eu.irati.librina.IPCEventProducerSingleton;
 import eu.irati.librina.IPCEventType;
-import eu.irati.librina.IPCManagerInitializationException;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessDaemonInitializedEvent;
 import eu.irati.librina.IPCProcessFactorySingleton;
+import eu.irati.librina.InitializationException;
 import eu.irati.librina.IpcmAllocateFlowRequestResultEvent;
 import eu.irati.librina.IpcmDeallocateFlowResponseEvent;
 import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
 import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
 import eu.irati.librina.NeighborsModifiedNotificationEvent;
 import eu.irati.librina.OSProcessFinalizedEvent;
+import eu.irati.librina.QueryRIBResponseEvent;
 import eu.irati.librina.UpdateDIFConfigurationResponseEvent;
 import eu.irati.librina.rina;
 
@@ -42,6 +43,7 @@ import org.apache.commons.logging.LogFactory;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import rina.aux.LogHelper;
 import rina.configuration.IPCProcessToCreate;
 import rina.configuration.RINAConfiguration;
 import rina.ipcmanager.impl.console.IPCManagerConsole;
@@ -63,7 +65,6 @@ public class IPCManager {
 	
 	private static final Log log = LogFactory.getLog(IPCManager.class);
 	
-	public static final String CONFIG_FILE_LOCATION = "../conf/ipcmanager.conf"; 
 	public static final long CONFIG_FILE_POLL_PERIOD_IN_MS = 5000;
 	
 	public static final String NORMAL_IPC_PROCESS_TYPE = "normal-ipc";
@@ -91,7 +92,7 @@ public class IPCManager {
 	private FlowManager flowManager = null;
 	
 	public IPCManager(){
-		log.info("Initializing IPCManager console..,");
+		log.info("Initializing IPCManager console...");
 		executorService = Executors.newCachedThreadPool();
 		console = new IPCManagerConsole(this);
 		executorService.execute(console);
@@ -101,11 +102,13 @@ public class IPCManager {
 		try{
 			rina.initializeIPCManager(1, 
 					RINAConfiguration.getInstance().getLocalConfiguration().getInstallationPath(), 
-					RINAConfiguration.getInstance().getLocalConfiguration().getLibraryPath());
-		}catch(IPCManagerInitializationException ex){
+					RINAConfiguration.getInstance().getLocalConfiguration().getLibraryPath(), 
+					LogHelper.getLibrinaLogLevel(), LogHelper.getLibrinaLogFile());
+		}catch(InitializationException ex){
 			log.fatal("Error initializing IPC Manager: "+ex.getMessage() 
 					+ ". Exiting.");
 		}
+		
 		ipcProcessFactory = rina.getIpcProcessFactory();
 		applicationManager = rina.getApplicationManager();
 		ipcEventProducer = rina.getIpcEventProducer();
@@ -127,7 +130,7 @@ public class IPCManager {
 			private RINAConfiguration rinaConfiguration = null;
 
 			public void run(){
-				File file = new File(CONFIG_FILE_LOCATION);
+				File file = new File(System.getProperty("configFileLocation"));
 
 				while(true){
 					if (file.lastModified() > currentLastModified) {
@@ -155,7 +158,8 @@ public class IPCManager {
 		try {
     		ObjectMapper objectMapper = new ObjectMapper();
     		RINAConfiguration rinaConfiguration = (RINAConfiguration) 
-    			objectMapper.readValue(new FileInputStream(CONFIG_FILE_LOCATION), RINAConfiguration.class);
+    			objectMapper.readValue(new FileInputStream(System.getProperty("configFileLocation")), 
+    					RINAConfiguration.class);
     		log.info("Read configuration file");
     		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     		objectMapper.writer(new DefaultPrettyPrinter()).writeValue(outputStream, rinaConfiguration);
@@ -347,6 +351,9 @@ public class IPCManager {
 		} else if (event.getType().equals(IPCEventType.NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT)) {
 			NeighborsModifiedNotificationEvent ipcEvent = (NeighborsModifiedNotificationEvent) event;
 			ipcProcessManager.neighborsModifiedEvent(ipcEvent);
+		} else if (event.getType().equals(IPCEventType.QUERY_RIB_RESPONSE_EVENT)) {
+			QueryRIBResponseEvent ipcEvent = (QueryRIBResponseEvent) event;
+			console.responseArrived(ipcEvent);
 		}
 	}
 	
@@ -454,5 +461,16 @@ public class IPCManager {
 			String supportingDifName, String neighApName, String neighApInstance) throws Exception {
 		return ipcProcessManager.requestEnrollmentToDIF(ipcProcessId, difName, 
 				supportingDifName, neighApName, neighApInstance);
+	}
+	
+	/**
+	 * Query the RIB of an IPC Process. Right now only querying the full RIB is 
+	 * supported
+	 * @param ipcProcessId
+	 * @return
+	 * @throws Exception
+	 */
+	public long requestQueryIPCProcessRIB(long ipcProcessId) throws Exception {
+		return ipcProcessManager.requestQueryRIB(ipcProcessId);
 	}
 }
