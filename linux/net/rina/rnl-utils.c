@@ -1647,8 +1647,8 @@ int rnl_parse_msg(struct genl_info * info,
         msg->header = *((struct rina_msg_hdr *) info->userhdr);
 
         LOG_DBG("msg at %pK / msg->attrs at %pK",  msg, msg->attrs);
-        LOG_DBG("  msg->rina_hdr->src_ipc_id: %d", msg->header.src_ipc_id);
-        LOG_DBG("  msg->rina_hdr->dst_ipc_id: %d", msg->header.dst_ipc_id);
+        LOG_DBG("  src-ipc-id: %d", msg->header.src_ipc_id);
+        LOG_DBG("  dst-ipc-id: %d", msg->header.dst_ipc_id);
 
         switch(info->genlhdr->cmd) {
         case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST:
@@ -2668,12 +2668,12 @@ int rnl_assign_dif_response(ipc_process_id_t id,
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
 
-        LOG_DBG("Gonna send NL unicast message now");
         result = send_nl_unicast_msg(&init_net,
                                      out_msg,
                                      nl_port_id,
                                      RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE,
                                      seq_num);
+
         LOG_DBG("NL unicast message sent (result = %d)", result);
 
         return result;
@@ -2716,8 +2716,8 @@ int rnl_update_dif_config_response(ipc_process_id_t id,
                 nlmsg_free(out_msg);
                 return -1;
         }
-        result = genlmsg_end(out_msg, out_hdr);
 
+        result = genlmsg_end(out_msg, out_hdr);
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
@@ -2771,8 +2771,8 @@ int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
                 nlmsg_free(out_msg);
                 return -1;
         }
-        result = genlmsg_end(out_msg, out_hdr);
 
+        result = genlmsg_end(out_msg, out_hdr);
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
@@ -2828,6 +2828,7 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
                 nlmsg_free(msg);
                 return -1;
         }
+
         result = genlmsg_end(msg, hdr);
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
@@ -2879,7 +2880,6 @@ int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
         }
 
         result = genlmsg_end(out_msg, out_hdr);
-
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
@@ -2929,7 +2929,6 @@ int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
         }
 
         result = genlmsg_end(out_msg, out_hdr);
-
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
@@ -2979,7 +2978,6 @@ int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
         }
 
         result = genlmsg_end(out_msg, out_hdr);
-
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
@@ -3030,10 +3028,10 @@ int rnl_ipcp_conn_create_resp_msg(ipc_process_id_t ipc_id,
         }
 
         result = genlmsg_end(out_msg, out_hdr);
-
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
+
         result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
 
         return send_nl_unicast_msg(&init_net,
@@ -3051,9 +3049,9 @@ int rnl_ipcp_conn_create_result_msg(ipc_process_id_t ipc_id,
                                     rnl_sn_t         seq_num,
                                     u32              nl_port_id)
 {
-        struct sk_buff * out_msg;
+        struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int    result;
+        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -3085,7 +3083,6 @@ int rnl_ipcp_conn_create_result_msg(ipc_process_id_t ipc_id,
         }
 
         result = genlmsg_end(out_msg, out_hdr);
-
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
@@ -3136,7 +3133,6 @@ int rnl_ipcp_conn_update_result_msg(ipc_process_id_t ipc_id,
         }
 
         result = genlmsg_end(out_msg, out_hdr);
-
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
