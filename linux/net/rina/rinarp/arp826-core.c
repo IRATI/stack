@@ -231,10 +231,12 @@ static bool regression_tests_gha(void)
         return true;
 }
 
-#if 0
 static bool regression_tests_table(void)
 {
-        struct table * x;
+        struct table *      x;
+        struct net_device * d;
+
+        d = NULL;
 
         LOG_DBG("Table regression tests");
 
@@ -245,40 +247,40 @@ static bool regression_tests_table(void)
         LOG_DBG("Regression test #2");
 
         LOG_DBG("Regression test #2.1");
-        if (tbls_create(10, 3))
+        if (tbls_create(d, 10, 3))
                 return false;
         LOG_DBG("Regression test #2.2");
-        if (tbls_create(21, 6))
+        if (tbls_create(d, 21, 6))
                 return false;
         LOG_DBG("Regression test #2.3");
-        if (tbls_create(37, 31))
+        if (tbls_create(d, 37, 31))
                 return false;
 
         LOG_DBG("Regression test #3");
 
         LOG_DBG("Regression test #3.1");
-        x = tbls_find(10);
+        x = tbls_find(d, 10);
         if (!x)
                 return false;
         LOG_DBG("Regression test #3.2");
-        x = tbls_find(21);
+        x = tbls_find(d, 21);
         if (!x)
                 return false;
         LOG_DBG("Regression test #3.3");
-        x = tbls_find(37);
+        x = tbls_find(d, 37);
         if (!x)
                 return false;
 
         LOG_DBG("Regression test #4");
 
         LOG_DBG("Regression test #4.1");
-        if (tbls_destroy(10))
+        if (tbls_destroy(d, 10))
                 return false;
         LOG_DBG("Regression test #4.2");
-        if (tbls_destroy(21))
+        if (tbls_destroy(d, 21))
                 return false;
         LOG_DBG("Regression test #4.3");
-        if (tbls_destroy(37))
+        if (tbls_destroy(d, 37))
                 return false;
 
         LOG_DBG("Regression test #5");
@@ -286,7 +288,6 @@ static bool regression_tests_table(void)
 
         return true;
 }
-#endif
 #endif
 
 #ifdef CONFIG_ARP826_REGRESSION_TESTS
@@ -300,12 +301,11 @@ static bool regression_tests(void)
                 LOG_ERR("GHA regression tests failed, bailing out");
                 return false;
         }
-#if 0
         if (!regression_tests_table()) {
                 LOG_ERR("Table regression tests failed, bailing out");
                 return false;
         }
-#endif
+
         return true;
 }
 #endif
