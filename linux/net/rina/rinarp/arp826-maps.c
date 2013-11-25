@@ -121,8 +121,9 @@ int tmap_update(struct tmap *   map,
 }
 #endif
 
-struct tmap_entry * tmap_entry_create(uint16_t       key,
-                                      struct table * value)
+struct tmap_entry * tmap_entry_create(struct net_device * key_device,
+                                      uint16_t            key_ptype,
+                                      struct table *      value)
 {
         struct tmap_entry * tmp;
 
@@ -130,7 +131,7 @@ struct tmap_entry * tmap_entry_create(uint16_t       key,
         if (!tmp)
                 return NULL;
 
-        tmp->key   = key;
+        tmp->key   = key_ptype;
         tmp->value = value;
         INIT_HLIST_NODE(&tmp->hlist);
 
@@ -138,28 +139,30 @@ struct tmap_entry * tmap_entry_create(uint16_t       key,
 }
 
 int tmap_entry_insert(struct tmap *       map,
-                      uint16_t            key,
+                      struct net_device * key_device,
+                      uint16_t            key_ptype,
                       struct tmap_entry * entry)
 {
         ASSERT(map);
         ASSERT(entry);
 
-        hash_add(map->table, &entry->hlist, key);
+        hash_add(map->table, &entry->hlist, key_ptype);
 
         return 0;
 }
 
-struct tmap_entry * tmap_entry_find(struct tmap * map,
-                                    uint16_t      key)
+struct tmap_entry * tmap_entry_find(struct tmap *       map,
+                                    struct net_device * key_device,
+                                    uint16_t            key_ptype)
 {
         struct tmap_entry * entry;
         struct hlist_head * head;
 
         ASSERT(map);
 
-        head = &map->table[tmap_hash(map->table, key)];
+        head = &map->table[tmap_hash(map->table, key_ptype)];
         hlist_for_each_entry(entry, head, hlist) {
-                if (entry->key == key)
+                if (entry->key == key_ptype)
                         return entry;
         }
 
