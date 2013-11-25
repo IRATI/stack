@@ -2626,7 +2626,6 @@ static int send_nl_unicast_msg(struct net *     net,
         LOG_DBG("Unicast NL message sent "
                 "(type = %d, seq-num %u, port = %u)",
                 (int) type, seq_num, portid);
-        nlmsg_free(skb);
 
         return 0;
 }
