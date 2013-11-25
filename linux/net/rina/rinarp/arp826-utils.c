@@ -19,7 +19,6 @@
  */
 
 #include <linux/types.h>
-#include <linux/hashtable.h>
 #include <linux/list.h>
 #include <linux/kernel.h>
 #include <linux/skbuff.h>
