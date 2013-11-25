@@ -94,35 +94,41 @@ int tmap_destroy(struct tmap * map)
 
 #define tmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
-struct tmap_entry * tmap_entry_create(struct net_device * key_device,
-                                      uint16_t            key_ptype,
-                                      struct table *      value)
+static int tmap_entry_add_gfp(gfp_t               flags,
+                              struct tmap *       map,
+                              struct net_device * key_device,
+                              uint16_t            key_ptype,
+                              struct table *      value)
 {
         struct tmap_entry * tmp;
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmap_is_ok(map))
+                return -1;
+
+        tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp)
-                return NULL;
+                return -1;
 
         tmp->key   = key_ptype;
         tmp->value = value;
         INIT_HLIST_NODE(&tmp->hlist);
 
-        return tmp;
-}
-
-int tmap_entry_insert(struct tmap *       map,
-                      struct net_device * key_device,
-                      uint16_t            key_ptype,
-                      struct tmap_entry * entry)
-{
-        ASSERT(map);
-        ASSERT(entry);
-
-        hash_add(map->table, &entry->hlist, key_ptype);
+        hash_add(map->table, &tmp->hlist, key_ptype);
 
         return 0;
 }
+
+int tmap_entry_add(struct tmap *       map,
+                   struct net_device * key_device,
+                   uint16_t            key_ptype,
+                   struct table *      value)
+{ return tmap_entry_add_gfp(GFP_KERNEL, map, key_device, key_ptype, value); }
+
+int tmap_entry_add_ni(struct tmap *       map,
+                      struct net_device * key_device,
+                      uint16_t            key_ptype,
+                      struct table *      value)
+{ return tmap_entry_add_gfp(GFP_ATOMIC, map, key_device, key_ptype, value); }
 
 struct tmap_entry * tmap_entry_find(struct tmap *       map,
                                     struct net_device * key_device,
@@ -131,7 +137,8 @@ struct tmap_entry * tmap_entry_find(struct tmap *       map,
         struct tmap_entry * entry;
         struct hlist_head * head;
 
-        ASSERT(map);
+        if (!tmap_is_ok(map))
+                return NULL;
 
         head = &map->table[tmap_hash(map->table, key_ptype)];
         hlist_for_each_entry(entry, head, hlist) {
@@ -144,7 +151,8 @@ struct tmap_entry * tmap_entry_find(struct tmap *       map,
 
 int tmap_entry_remove(struct tmap_entry * entry)
 {
-        ASSERT(entry);
+        if (!entry)
+                return -1;
 
         hash_del(&entry->hlist);
 
@@ -153,14 +161,16 @@ int tmap_entry_remove(struct tmap_entry * entry)
 
 struct table * tmap_entry_value(struct tmap_entry * entry)
 {
-        ASSERT(entry);
+        if (!entry)
+                return NULL;
 
         return entry->value;
 }
 
 int tmap_entry_destroy(struct tmap_entry * entry)
 {
-        ASSERT(entry);
+        if (!entry)
+                return -1;
 
         rkfree(entry);
 
