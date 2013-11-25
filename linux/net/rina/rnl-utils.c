@@ -2996,11 +2996,11 @@ int rnl_ipcp_conn_create_resp_msg(ipc_process_id_t ipc_id,
                                   rnl_sn_t         seq_num,
                                   u32              nl_port_id)
 {
-        struct sk_buff * out_msg;
+        struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int    result;
+        int                   result;
 
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE, GFP_ATOMIC);
         if (!out_msg) {
                 LOG_ERR("Could not allocate memory for message");
                 return -1;
