@@ -56,6 +56,16 @@ struct tmap * tmap_create(void)
         return tmp;
 }
 
+static bool tmap_is_ok(struct tmap * map)
+{ return (map ? true : false); }
+
+bool tmap_is_empty(struct tmap * map)
+{
+        ASSERT(tmap_is_ok(map));
+
+        return hash_empty(map->table) ? true : false;
+}
+
 int tmap_destroy(struct tmap * map)
 {
 #if 0
@@ -64,8 +74,11 @@ int tmap_destroy(struct tmap * map)
         int                 bucket;
 #endif
 
-        ASSERT(map);
-        ASSERT(hash_empty(map->table));
+        if (!tmap_is_ok(map))
+                return -1;
+
+        if (!tmap_is_empty(map))
+                return -1;
 
 #if 0
         hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
@@ -77,13 +90,6 @@ int tmap_destroy(struct tmap * map)
         rkfree(map);
 
         return 0;
-}
-
-int tmap_empty(struct tmap * map)
-{
-        ASSERT(map);
-
-        return hash_empty(map->table);
 }
 
 #define tmap_hash(T, K) hash_min(K, HASH_BITS(T))

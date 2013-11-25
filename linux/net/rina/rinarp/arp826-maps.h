@@ -31,7 +31,7 @@ struct tmap_entry;
 
 struct tmap *       tmap_create(void);
 int                 tmap_destroy(struct tmap * map);
-int                 tmap_empty(struct tmap * map);
+bool                tmap_is_empty(struct tmap * map);
 
 struct tmap_entry * tmap_entry_create(struct net_device * key_device,
                                       uint16_t            key_ptype,
