@@ -94,39 +94,6 @@ int tmap_destroy(struct tmap * map)
 
 #define tmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
-#if 0
-struct table * tmap_find(struct tmap * map,
-                         uint16_t      key)
-{
-        struct tmap_entry * entry;
-
-        ASSERT(map);
-
-        entry = tmap_entry_find(map, key);
-        if (!entry)
-                return NULL;
-
-        return entry->value;
-}
-
-int tmap_update(struct tmap *   map,
-                uint16_t        key,
-                struct table *  value)
-{
-        struct tmap_entry * cur;
-
-        ASSERT(map);
-
-        cur = tmap_entry_find(map, key);
-        if (!cur)
-                return -1;
-
-        cur->value = value;
-
-        return 0;
-}
-#endif
-
 struct tmap_entry * tmap_entry_create(struct net_device * key_device,
                                       uint16_t            key_ptype,
                                       struct table *      value)

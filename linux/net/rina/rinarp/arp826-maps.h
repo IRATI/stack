@@ -32,7 +32,6 @@ struct tmap_entry;
 struct tmap *       tmap_create(void);
 int                 tmap_destroy(struct tmap * map);
 bool                tmap_is_empty(struct tmap * map);
-
 struct tmap_entry * tmap_entry_create(struct net_device * key_device,
                                       uint16_t            key_ptype,
                                       struct table *      value);
@@ -45,8 +44,6 @@ struct tmap_entry * tmap_entry_find(struct tmap *       map,
                                     uint16_t            key_ptype);
 int                 tmap_entry_remove(struct tmap_entry * entry);
 struct table *      tmap_entry_value(struct tmap_entry * entry);
-int                 tmap_entry_update(struct tmap_entry * entry,
-                                      struct table *      value);
 int                 tmap_entry_destroy(struct tmap_entry * entry);
 
 #endif
