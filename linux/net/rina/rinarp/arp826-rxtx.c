@@ -37,6 +37,7 @@
 #include "rinarp/arp826-utils.h"
 #include "rinarp/arp826-tables.h"
 #include "rinarp/arp826-arm.h"
+#include "rinarp/arp826-rxtx.h"
 
 #if defined(CONFIG_RINARP) || defined(CONFIG_RINARP_MODULE)
 #define HAVE_RINARP 1
@@ -400,7 +401,7 @@ static int process(const struct sk_buff * skb,
                 /* FIXME: Should we add all ARP Requests? */
 
                 /* Do we have it in the cache ? */
-                tbl = tbls_find(ptype);
+                tbl = tbls_find(dev, ptype);
                 if (!tbl) {
                         LOG_ERR("I don't have a table for ptype 0x%04X",
                                 ptype);
@@ -493,7 +494,8 @@ static int process(const struct sk_buff * skb,
                 break;
 
         case ARP_REPLY: {
-                if (arm_resolve(ptype, tmp_spa, tmp_sha, tmp_tpa, tmp_tha)) {
+                if (arm_resolve(dev, ptype,
+                                tmp_spa, tmp_sha, tmp_tpa, tmp_tha)) {
                         LOG_ERR("Cannot resolve with this reply ...");
                         return -1;
                 }
@@ -574,7 +576,7 @@ int arp_receive(struct sk_buff *     skb,
         }
 
         /* FIXME: There's no need to lookup it here ... */
-        cl = tbls_find(ntohs(header->ptype));
+        cl = tbls_find(dev, ntohs(header->ptype));
         if (!cl) {
 #if 0
                 /* This log is too noisy ... but necessary for now :) */

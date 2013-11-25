@@ -15,6 +15,7 @@ import eu.irati.librina.Flow;
 import eu.irati.librina.FlowSpecification;
 import eu.irati.librina.rina;
 
+import rina.aux.LogHelper;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
 import rina.cdap.api.message.ObjectValue;
@@ -116,7 +117,14 @@ public class RINABandClient implements SDUListener, FlowAllocationListener{
 	
 	public RINABandClient(TestInformation testInformation, ApplicationProcessNamingInformation controlApNamingInfo, 
 			ApplicationProcessNamingInformation dataApNamingInfo){
-		rina.initialize();
+		try {
+			rina.initialize(LogHelper.getLibrinaLogLevel(), 
+					LogHelper.getLibrinaLogFile());
+		} catch(Exception ex){
+			log.error("Problems initializing librina, exiting: "+ex.getMessage());
+			System.exit(-1);
+		}
+		
 		this.testInformation = testInformation;
 		this.controlApNamingInfo = controlApNamingInfo;
 		this.dataApNamingInfo = dataApNamingInfo;

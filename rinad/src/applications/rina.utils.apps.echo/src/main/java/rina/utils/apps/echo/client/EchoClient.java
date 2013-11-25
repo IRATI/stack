@@ -8,6 +8,7 @@ import java.util.concurrent.Executors;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import rina.aux.LogHelper;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
 import rina.cdap.api.message.CDAPMessage.Opcode;
@@ -78,7 +79,13 @@ FlowAllocationListener, FlowDeallocationListener {
 	public EchoClient(int numberOfSdus, int sduSize, 
 			ApplicationProcessNamingInformation echoApNamingInfo, 
 			ApplicationProcessNamingInformation clientApNamingInfo){
-		rina.initialize();
+		try {
+			rina.initialize(LogHelper.getLibrinaLogLevel(), 
+					LogHelper.getLibrinaLogFile());
+		} catch(Exception ex){
+			log.error("Problems initializing librina, exiting: "+ex.getMessage());
+			System.exit(-1);
+		}
 		
 		testInformation = new TestInformation();
 		if (numberOfSdus > MAX_NUM_OF_SDUS) {

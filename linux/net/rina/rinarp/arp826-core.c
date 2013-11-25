@@ -47,26 +47,32 @@ static struct packet_type arp826_packet_type __read_mostly = {
         .func = arp_receive,
 };
 
-static int protocol_add(uint16_t ptype,
-                        size_t   hlen)
+static int protocol_add(struct net_device * device,
+                        uint16_t            ptype,
+                        size_t              hlen)
 {
-        LOG_DBG("Adding protocol 0x%04X, hlen = %zd", ptype, hlen);
+        LOG_DBG("Adding protocol (device = %pK, ptype = 0x%04X, hlen = %zd)",
+                device, ptype, hlen);
 
-        if (tbls_create(ptype, hlen)) {
-                LOG_ERR("Cannot add protocol 0x%04X, hlen = %zd", ptype, hlen);
+        if (tbls_create(device, ptype, hlen)) {
+                LOG_ERR("Cannot add (device = %pK, pype 0x%04X, hlen = %zd)",
+                        device, ptype, hlen);
                 return -1;
         }
 
-        LOG_DBG("Protocol type 0x%04X added successfully", ptype);
+        LOG_DBG("Protocol added successfully"
+                "(device = %pK, ptype = 0x%04X, hlen = %zd)",
+                device, ptype, hlen);
 
         return 0;
 }
 
-static void protocol_remove(uint16_t ptype)
+static void protocol_remove(struct net_device * device,
+                            uint16_t            ptype)
 {
         LOG_DBG("Removing protocol 0x%04X", ptype);
 
-        tbls_destroy(ptype);
+        tbls_destroy(device, ptype);
 }
 
 #ifdef CONFIG_ARP826_REGRESSION_TESTS
@@ -225,6 +231,7 @@ static bool regression_tests_gha(void)
         return true;
 }
 
+#if 0
 static bool regression_tests_table(void)
 {
         struct table * x;
@@ -280,6 +287,7 @@ static bool regression_tests_table(void)
         return true;
 }
 #endif
+#endif
 
 #ifdef CONFIG_ARP826_REGRESSION_TESTS
 static bool regression_tests(void)
@@ -292,17 +300,20 @@ static bool regression_tests(void)
                 LOG_ERR("GHA regression tests failed, bailing out");
                 return false;
         }
+#if 0
         if (!regression_tests_table()) {
                 LOG_ERR("Table regression tests failed, bailing out");
                 return false;
         }
-
+#endif
         return true;
 }
 #endif
 
 static int __init mod_init(void)
 {
+        struct net_device * device;
+
 #ifdef CONFIG_ARP826_REGRESSION_TESTS
         LOG_DBG("Starting regression tests");
 
@@ -323,11 +334,20 @@ static int __init mod_init(void)
                 return -1;
         }
 
-        if (protocol_add(ETH_P_RINA, 6)) {
-                tbls_fini();
-                arm_fini();
-                return -1;
+        /* FIXME: Replace with net-devices even-based behavior */
+        read_lock(&dev_base_lock);
+        device = first_net_device(&init_net);
+        while (device) {
+                if (protocol_add(device, ETH_P_RINA, 6)) {
+                        tbls_fini();
+                        arm_fini();
+                        read_unlock(&dev_base_lock);
+                        return -1;
+                }
+
+                device = next_net_device(device);
         }
+        read_unlock(&dev_base_lock);
 
         dev_add_pack(&arp826_packet_type);
 
@@ -338,11 +358,21 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
+        struct net_device * device;
+
         LOG_DBG("Finalizing");
 
         dev_remove_pack(&arp826_packet_type);
 
-        protocol_remove(ETH_P_RINA);
+        /* FIXME: Replace with net-devices even-based behavior */
+        read_lock(&dev_base_lock);
+        device = first_net_device(&init_net);
+        while (device) {
+                protocol_remove(device, ETH_P_RINA);
+                
+                device = next_net_device(device);
+        }
+        read_unlock(&dev_base_lock);
 
         arm_fini();
         tbls_fini();

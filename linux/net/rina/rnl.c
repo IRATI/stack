@@ -208,6 +208,7 @@ int rnl_handler_register(struct rnl_set *   set,
         ASSERT(handler != NULL);
 
         spin_lock(&set->lock);
+
         if (set->handlers[msg_type].cb) {
                 spin_unlock(&set->lock);
                 LOG_ERR("There is a handler for message type %d still "
@@ -218,6 +219,7 @@ int rnl_handler_register(struct rnl_set *   set,
 
         set->handlers[msg_type].cb   = handler;
         set->handlers[msg_type].data = data;
+
         spin_unlock(&set->lock);
 
         LOG_DBG("Handler %pK (data %pK) registered for message type %d",
@@ -323,6 +325,7 @@ int rnl_set_destroy(struct rnl_set * set)
         }
 
         count = 0;
+
         for (i = 0; i < ARRAY_SIZE(set->handlers); i++) {
                 if (set->handlers[i].cb != NULL) {
                         count++;
@@ -345,7 +348,6 @@ EXPORT_SYMBOL(rnl_set_destroy);
 
 rnl_sn_t rnl_get_next_seqn(struct rnl_set * set)
 {
-        /* FIXME: What to do about roll-over? */
         rnl_sn_t tmp;
 
         spin_lock(&set->lock);
@@ -353,6 +355,7 @@ rnl_sn_t rnl_get_next_seqn(struct rnl_set * set)
         tmp = set->sn_counter++;
         if (set->sn_counter == 0) {
                 LOG_WARN("RNL Sequence number rolled-over for set %pK!", set);
+                /* FIXME: What to do about roll-over? */
         }
 
         spin_unlock(&set->lock);

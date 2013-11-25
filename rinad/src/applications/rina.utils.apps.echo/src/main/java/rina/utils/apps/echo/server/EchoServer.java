@@ -8,6 +8,7 @@ import java.util.concurrent.Executors;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import rina.aux.LogHelper;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.impl.CDAPSessionManagerImpl;
 import rina.cdap.impl.googleprotobuf.GoogleProtocolBufWireMessageProviderFactory;
@@ -58,7 +59,14 @@ public class EchoServer implements FlowAcceptor, ApplicationRegistrationListener
 	private CDAPSessionManager cdapSessionManager = null;
 	
 	public EchoServer(ApplicationProcessNamingInformation echoApNamingInfo){
-		rina.initialize();
+		try {
+			rina.initialize(LogHelper.getLibrinaLogLevel(), 
+					LogHelper.getLibrinaLogFile());
+		} catch(Exception ex){
+			log.error("Problems initializing librina, exiting: "+ex.getMessage());
+			System.exit(-1);
+		}
+		
 		this.cdapSessionManager = new CDAPSessionManagerImpl(
 				new GoogleProtocolBufWireMessageProviderFactory());
 		this.echoApNamingInfo = echoApNamingInfo;

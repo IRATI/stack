@@ -25,12 +25,12 @@
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
 #include <linux/skbuff.h>
+#include <linux/types.h>
 #include <net/genetlink.h>
 #include <net/netlink.h>
 #include <net/sock.h>
 
 #include "personality.h"
-
 
 typedef enum {
 
@@ -156,8 +156,8 @@ typedef enum {
         RINA_C_MAX,
 } msg_type_t;
 
-typedef u32 rnl_sn_t;
-typedef u32 rnl_port_t;
+typedef uint32_t rnl_sn_t;
+typedef uint32_t rnl_port_t;
 
 int              rnl_init(void);
 void             rnl_exit(void);

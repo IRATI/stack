@@ -7,3 +7,4 @@ target/
 .project
 echo-client
 echo-server
+src/main/resources/log4j.properties

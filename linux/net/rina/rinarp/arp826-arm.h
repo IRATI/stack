@@ -21,16 +21,19 @@
 #ifndef ARP826_ARM_H
 #define ARP826_ARM_H
 
+#include <linux/netdevice.h>
+
 #include "arp826-utils.h"
 
 int arm_init(void);
 int arm_fini(void);
 
 /* Marks a resolution, takes the ownership of all the passed data */
-int arm_resolve(uint16_t     ptype,
-                struct gpa * spa,
-                struct gha * sha,
-                struct gpa * tpa,
-                struct gha * tha);
+int arm_resolve(struct net_device * device,
+                uint16_t            ptype,
+                struct gpa *        spa,
+                struct gha *        sha,
+                struct gpa *        tpa,
+                struct gha *        tha);
 
 #endif
