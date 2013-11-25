@@ -474,9 +474,8 @@ struct table * tbls_find(struct net_device * device, uint16_t ptype)
 
 int tbls_create(struct net_device * device, uint16_t ptype, size_t hwlen)
 {
-        struct table *      cl;
-        struct tmap_entry * e;
-
+        struct table * cl;
+        
         LOG_DBG("Creating table for ptype = 0x%04X, hwlen = %zd",
                 ptype, hwlen);
 
@@ -493,29 +492,21 @@ int tbls_create(struct net_device * device, uint16_t ptype, size_t hwlen)
                 return -1;
         }
 
-        LOG_DBG("Creating new tmap-entry");
-        e = tmap_entry_create(device, ptype, cl);
-        if (!e) {
-                LOG_ERR("Cannot create new entry, bailing out");
-                return -1;
-        }
-
         LOG_DBG("Now adding the new table to the tables map");
 
         spin_lock(&tables_lock);
-        if (tmap_entry_insert(tables, device, ptype, e)) {
+        if (tmap_entry_add_ni(tables, device, ptype, cl)) {
                 spin_unlock(&tables_lock);
 
-                LOG_ERR("Cannot insert new entry into table for ptype 0x%04X",
-                        ptype);
-                tmap_entry_destroy(e);
                 tbl_destroy(cl);
 
                 return -1;
         }
         spin_unlock(&tables_lock);
 
-        LOG_DBG("Table for ptype 0x%04X created successfully", ptype);
+        LOG_DBG("Table for created successfully "
+                "(device = %pK, ptype = 0x%04X, hwlen = %zd)",
+                device, ptype, hwlen);
 
         return 0;
 }
