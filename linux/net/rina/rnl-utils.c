@@ -2610,6 +2610,10 @@ static int send_nl_unicast_msg(struct net *     net,
                 return -1;
         }
 
+        LOG_DBG("Going to send NL unicast message "
+                "(type = %d, seq-num %u, port = %u)",
+                (int) type, seq_num, portid);
+
         result = genlmsg_unicast(net, skb, portid);
         if (result) {
                 LOG_ERR("Could not send NL message "
@@ -2622,6 +2626,7 @@ static int send_nl_unicast_msg(struct net *     net,
         LOG_DBG("Unicast NL message sent "
                 "(type = %d, seq-num %u, port = %u)",
                 (int) type, seq_num, portid);
+        nlmsg_free(skb);
 
         return 0;
 }
@@ -2894,9 +2899,9 @@ int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
                                   rnl_sn_t         seq_num,
                                   u32              nl_port_id)
 {
-        struct sk_buff * out_msg;
+        struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int result;
+        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
