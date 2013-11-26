@@ -1,4 +1,4 @@
-package rina.ipcprocess.impl.flowallocator.ribobjects;
+package rina.ipcprocess.impl.registrationmanager.ribobjects;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +12,6 @@ import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
 import rina.events.api.Event;
 import rina.events.api.EventListener;
-import rina.flowallocator.api.DirectoryForwardingTable;
 import rina.flowallocator.api.DirectoryForwardingTableEntry;
 import rina.ipcprocess.impl.IPCProcess;
 import rina.ipcprocess.impl.events.ConnectivityToNeighborLostEvent;
@@ -25,14 +24,22 @@ import rina.ribdaemon.api.RIBObjectNames;
 
 public class DirectoryForwardingTableEntrySetRIBObject extends BaseRIBObject implements EventListener{
 	
+	public static final String DIRECTORY_FORWARDING_ENTRY_SET_RIB_OBJECT_NAME = RIBObjectNames.SEPARATOR + 
+			RIBObjectNames.DIF + RIBObjectNames.SEPARATOR + RIBObjectNames.MANAGEMENT + RIBObjectNames.SEPARATOR + 
+			RIBObjectNames.FLOW_ALLOCATOR + RIBObjectNames.SEPARATOR + RIBObjectNames.DIRECTORY_FORWARDING_TABLE_ENTRIES;
+
+	public static final String DIRECTORY_FORWARDING_TABLE_ENTRY_SET_RIB_OBJECT_CLASS = "directoryforwardingtableentry set";
+
+	public static final String DIRECTORY_FORWARDING_TABLE_ENTRY_RIB_OBJECT_CLASS = "directoryforwardingtableentry";
+	
 	private static final Log log = LogFactory.getLog(DirectoryForwardingTableEntrySetRIBObject.class);
 	
 	private IPCProcess ipcProcess = null;
 	
 	public DirectoryForwardingTableEntrySetRIBObject(){
-		super(DirectoryForwardingTable.DIRECTORY_FORWARDING_TABLE_ENTRY_SET_RIB_OBJECT_CLASS, 
+		super(DIRECTORY_FORWARDING_TABLE_ENTRY_SET_RIB_OBJECT_CLASS, 
 				ObjectInstanceGenerator.getObjectInstance(), 
-				DirectoryForwardingTable.DIRECTORY_FORWARDING_ENTRY_SET_RIB_OBJECT_NAME);
+				DIRECTORY_FORWARDING_ENTRY_SET_RIB_OBJECT_NAME);
 		ipcProcess = IPCProcess.getInstance();
 		setRIBDaemon(ipcProcess.getRIBDaemon());
 		setEncoder(ipcProcess.getEncoder());
@@ -95,7 +102,7 @@ public class DirectoryForwardingTableEntrySetRIBObject extends BaseRIBObject imp
 		
 		//Decode the object
 		try{
-			if (cdapMessage.getObjName().equals(DirectoryForwardingTable.DIRECTORY_FORWARDING_ENTRY_SET_RIB_OBJECT_NAME)){
+			if (cdapMessage.getObjName().equals(DIRECTORY_FORWARDING_ENTRY_SET_RIB_OBJECT_NAME)){
 				directoryForwardingTableEntries = (DirectoryForwardingTableEntry[]) 
 					this.getEncoder().decode(cdapMessage.getObjValue().getByteval(), DirectoryForwardingTableEntry[].class);
 			}else{
@@ -131,8 +138,8 @@ public class DirectoryForwardingTableEntrySetRIBObject extends BaseRIBObject imp
 				notificationObject = new NotificationPolicy(new int[]{cdapSessionDescriptor.getPortId()});
 			}
 			
-			this.getRIBDaemon().create(DirectoryForwardingTable.DIRECTORY_FORWARDING_TABLE_ENTRY_SET_RIB_OBJECT_CLASS, 
-					DirectoryForwardingTable.DIRECTORY_FORWARDING_ENTRY_SET_RIB_OBJECT_NAME,
+			this.getRIBDaemon().create(DIRECTORY_FORWARDING_TABLE_ENTRY_SET_RIB_OBJECT_CLASS, 
+					DIRECTORY_FORWARDING_ENTRY_SET_RIB_OBJECT_NAME,
 					entriesToCreateOrUpdate.toArray(new DirectoryForwardingTableEntry[]{}), 
 					notificationObject);
 		}catch(RIBDaemonException ex){
@@ -198,7 +205,7 @@ public class DirectoryForwardingTableEntrySetRIBObject extends BaseRIBObject imp
 		if (cdapMessage.getObjValue().getByteval() != null){
 			//Decode the object
 			try{
-				if (cdapMessage.getObjName().equals(DirectoryForwardingTable.DIRECTORY_FORWARDING_ENTRY_SET_RIB_OBJECT_NAME)){
+				if (cdapMessage.getObjName().equals(DIRECTORY_FORWARDING_ENTRY_SET_RIB_OBJECT_NAME)){
 					directoryForwardingTableEntries = (DirectoryForwardingTableEntry[]) 
 						this.getEncoder().decode(cdapMessage.getObjValue().getByteval(), DirectoryForwardingTableEntry[].class);
 				}else{

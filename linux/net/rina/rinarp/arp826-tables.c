@@ -456,7 +456,6 @@ static struct tmap * tables = NULL;
 struct table * tbls_find(struct net_device * device, uint16_t ptype)
 {
         struct tmap_entry * e;
-        struct table *      tmp;
 
         spin_lock(&tables_lock);
 
@@ -466,11 +465,9 @@ struct table * tbls_find(struct net_device * device, uint16_t ptype)
                 return NULL;
         }
 
-        tmp = tmap_entry_value(e);
-
         spin_unlock(&tables_lock);
 
-        return tmp;
+        return tmap_entry_value(e);
 }
 
 static int tbls_create_gfp(gfp_t               flags,

@@ -508,6 +508,7 @@ bool gha_is_equal(const struct gha * a,
 }
 EXPORT_SYMBOL(gha_is_equal);
 
+#if 0
 struct net_device * gha_to_device(const struct gha * ha)
 {
         struct net_device *     dev;
@@ -531,7 +532,10 @@ struct net_device * gha_to_device(const struct gha * ha)
                 if (dev->addr_len == gha_address_length(ha)) {
                         for_each_dev_addr(dev, hwa) {
                                 if (dev->addr_len == 6) {
-                                        LOG_DBG("HA: %02X:%02X:%02X:%02X:%02X:%02X",
+                                        LOG_DBG("HA: "
+                                                "%02X:%02X:"
+                                                "%02X:%02X:"
+                                                "%02X:%02X",
                                                 hwa->addr[5],
                                                 hwa->addr[4],
                                                 hwa->addr[3],
@@ -555,3 +559,4 @@ struct net_device * gha_to_device(const struct gha * ha)
         return NULL;
 }
 EXPORT_SYMBOL(gha_to_device);
+#endif

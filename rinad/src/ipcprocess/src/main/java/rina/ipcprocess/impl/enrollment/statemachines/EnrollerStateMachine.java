@@ -22,11 +22,11 @@ import rina.configuration.RINAConfiguration;
 import rina.encoding.api.Encoder;
 import rina.enrollment.api.EnrollmentInformationRequest;
 import rina.enrollment.api.EnrollmentTask;
-import rina.flowallocator.api.DirectoryForwardingTable;
 import rina.ipcprocess.impl.IPCProcess;
 import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
 import rina.ipcprocess.impl.enrollment.ribobjects.NeighborSetRIBObject;
 import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
+import rina.ipcprocess.impl.registrationmanager.ribobjects.DirectoryForwardingTableEntrySetRIBObject;
 import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBDaemonException;
 import rina.ribdaemon.api.RIBObject;
@@ -358,8 +358,8 @@ public class EnrollerStateMachine extends BaseEnrollmentStateMachine{
 	 */
 	private void sendDIFDynamicInformation() throws Exception{
 		//Send DirectoryForwardingTableEntries
-		sendCreateInformation(DirectoryForwardingTable.DIRECTORY_FORWARDING_TABLE_ENTRY_SET_RIB_OBJECT_CLASS, 
-				DirectoryForwardingTable.DIRECTORY_FORWARDING_ENTRY_SET_RIB_OBJECT_NAME);
+		sendCreateInformation(DirectoryForwardingTableEntrySetRIBObject.DIRECTORY_FORWARDING_TABLE_ENTRY_SET_RIB_OBJECT_CLASS, 
+				DirectoryForwardingTableEntrySetRIBObject.DIRECTORY_FORWARDING_ENTRY_SET_RIB_OBJECT_NAME);
 		
 		//Send neighbors (including myself)
 		RIBObject neighborSet = ribDaemon.read(

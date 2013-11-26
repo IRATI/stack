@@ -69,9 +69,9 @@ bool is_buffer_ok(const struct buffer * b)
 }
 EXPORT_SYMBOL(is_buffer_ok);
 
-struct buffer * buffer_create_from_gfp(gfp_t  flags,
-                                       void * data,
-                                       size_t size)
+static struct buffer * buffer_create_from_gfp(gfp_t  flags,
+                                              void * data,
+                                              size_t size)
 {
         struct buffer * tmp;
 
@@ -93,15 +93,19 @@ struct buffer * buffer_create_from_gfp(gfp_t  flags,
 
         return tmp;
 }
-EXPORT_SYMBOL(buffer_create_from_gfp);
 
 struct buffer * buffer_create_from(void * data,
                                    size_t size)
 { return buffer_create_from_gfp(GFP_KERNEL, data, size); }
 EXPORT_SYMBOL(buffer_create_from);
 
-struct buffer * buffer_create_gfp(gfp_t  flags,
-                                  size_t size)
+struct buffer * buffer_create_from_ni(void * data,
+                                      size_t size)
+{ return buffer_create_from_gfp(GFP_ATOMIC, data, size); }
+EXPORT_SYMBOL(buffer_create_from_ni);
+
+static struct buffer * buffer_create_gfp(gfp_t  flags,
+                                         size_t size)
 {
         struct buffer * tmp;
 
@@ -124,14 +128,17 @@ struct buffer * buffer_create_gfp(gfp_t  flags,
 
         return tmp;
 }
-EXPORT_SYMBOL(buffer_create_gfp);
 
 struct buffer * buffer_create(size_t size)
 { return buffer_create_gfp(GFP_KERNEL, size); }
 EXPORT_SYMBOL(buffer_create);
 
-struct buffer * buffer_dup_gfp(gfp_t           flags,
-                               struct buffer * b)
+struct buffer * buffer_create_ni(size_t size)
+{ return buffer_create_gfp(GFP_ATOMIC, size); }
+EXPORT_SYMBOL(buffer_create_ni);
+
+static struct buffer * buffer_dup_gfp(gfp_t           flags,
+                                      struct buffer * b)
 {
         struct buffer * tmp;
         void *          m;
@@ -159,11 +166,14 @@ struct buffer * buffer_dup_gfp(gfp_t           flags,
 
         return tmp;
 }
-EXPORT_SYMBOL(buffer_dup_gfp);
 
 struct buffer * buffer_dup(struct buffer * b)
 { return buffer_dup_gfp(GFP_KERNEL, b); }
 EXPORT_SYMBOL(buffer_dup);
+
+struct buffer * buffer_dup_ni(struct buffer * b)
+{ return buffer_dup_gfp(GFP_ATOMIC, b); }
+EXPORT_SYMBOL(buffer_dup_ni);
 
 int buffer_destroy(struct buffer * b)
 {
@@ -197,8 +207,8 @@ void * buffer_data(struct buffer * b)
 }
 EXPORT_SYMBOL(buffer_data);
 
-struct sdu * sdu_create_from_buffer_gfp(gfp_t           flags,
-                                        struct buffer * buffer)
+static struct sdu * sdu_create_from_buffer_gfp(gfp_t           flags,
+                                               struct buffer * buffer)
 {
         struct sdu * tmp;
 
@@ -213,11 +223,14 @@ struct sdu * sdu_create_from_buffer_gfp(gfp_t           flags,
 
         return tmp;
 }
-EXPORT_SYMBOL(sdu_create_from_buffer_gfp);
 
 struct sdu * sdu_create_from_buffer(struct buffer * buffer)
 { return sdu_create_from_buffer_gfp(GFP_KERNEL, buffer); }
 EXPORT_SYMBOL(sdu_create_from_buffer);
+
+struct sdu * sdu_create_from_buffer_ni(struct buffer * buffer)
+{ return sdu_create_from_buffer_gfp(GFP_ATOMIC, buffer); }
+EXPORT_SYMBOL(sdu_create_from_buffer_ni);
 
 int sdu_destroy(struct sdu * s)
 {
@@ -244,8 +257,8 @@ const struct buffer * sdu_buffer(const struct sdu * s)
 }
 EXPORT_SYMBOL(sdu_buffer);
 
-struct sdu * sdu_dup_gfp(gfp_t        flags,
-                         struct sdu * sdu)
+static struct sdu * sdu_dup_gfp(gfp_t        flags,
+                                struct sdu * sdu)
 {
         struct sdu * tmp;
 
@@ -274,11 +287,14 @@ struct sdu * sdu_dup_gfp(gfp_t        flags,
 
         return tmp;
 }
-EXPORT_SYMBOL(sdu_dup_gfp);
 
 struct sdu * sdu_dup(struct sdu * sdu)
 { return sdu_dup_gfp(GFP_KERNEL, sdu); }
 EXPORT_SYMBOL(sdu_dup);
+
+struct sdu * sdu_dup_ni(struct sdu * sdu)
+{ return sdu_dup_gfp(GFP_ATOMIC, sdu); }
+EXPORT_SYMBOL(sdu_dup_ni);
 
 bool is_sdu_ok(const struct sdu * s)
 {
