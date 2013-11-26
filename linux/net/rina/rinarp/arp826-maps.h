@@ -22,6 +22,7 @@
 #define ARP826_MAPS_H
 
 #include <linux/types.h>
+#include <linux/netdevice.h>
 
 struct table;
 
@@ -29,20 +30,24 @@ struct tmap;
 struct tmap_entry;
 
 struct tmap *       tmap_create(void);
+struct tmap *       tmap_create_ni(void);
 int                 tmap_destroy(struct tmap * map);
-int                 tmap_empty(struct tmap * map);
 
-struct tmap_entry * tmap_entry_create(uint16_t       key,
-                                      struct table * value);
-int                 tmap_entry_insert(struct tmap *       map,
-                                      uint16_t            key,
-                                      struct tmap_entry * entry);
-struct tmap_entry * tmap_entry_find(struct tmap * map,
-                                    uint16_t      key);
-int                 tmap_entry_remove(struct tmap_entry * entry);
-struct table *      tmap_entry_value(struct tmap_entry * entry);
-int                 tmap_entry_update(struct tmap_entry * entry,
+bool                tmap_is_empty(struct tmap * map);
+int                 tmap_entry_add(struct tmap *       map,
+                                   struct net_device * key_device,
+                                   uint16_t            key_ptype,
+                                   struct table *      value);
+int                 tmap_entry_add_ni(struct tmap *       map,
+                                      struct net_device * key_device,
+                                      uint16_t            key_ptype,
                                       struct table *      value);
+struct tmap_entry * tmap_entry_find(struct tmap *       map,
+                                    struct net_device * key_device,
+                                    uint16_t            key_ptype);
+int                 tmap_entry_remove(struct tmap_entry * entry);
+
+struct table *      tmap_entry_value(struct tmap_entry * entry);
 int                 tmap_entry_destroy(struct tmap_entry * entry);
 
 #endif

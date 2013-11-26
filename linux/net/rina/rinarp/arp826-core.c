@@ -47,20 +47,20 @@ static struct packet_type arp826_packet_type __read_mostly = {
         .func = arp_receive,
 };
 
-static int protocol_add(struct net_device * device,
-                        uint16_t            ptype,
-                        size_t              hlen)
+static int protocol_add_ni(struct net_device * device,
+                           uint16_t            ptype,
+                           size_t              hlen)
 {
         LOG_DBG("Adding protocol (device = %pK, ptype = 0x%04X, hlen = %zd)",
                 device, ptype, hlen);
 
-        if (tbls_create(device, ptype, hlen)) {
+        if (tbls_create_ni(device, ptype, hlen)) {
                 LOG_ERR("Cannot add (device = %pK, pype 0x%04X, hlen = %zd)",
                         device, ptype, hlen);
                 return -1;
         }
 
-        LOG_DBG("Protocol added successfully"
+        LOG_DBG("Protocol added successfully "
                 "(device = %pK, ptype = 0x%04X, hlen = %zd)",
                 device, ptype, hlen);
 
@@ -231,10 +231,12 @@ static bool regression_tests_gha(void)
         return true;
 }
 
-#if 0
 static bool regression_tests_table(void)
 {
-        struct table * x;
+        struct table *      x;
+        struct net_device * d;
+
+        d = NULL;
 
         LOG_DBG("Table regression tests");
 
@@ -245,40 +247,40 @@ static bool regression_tests_table(void)
         LOG_DBG("Regression test #2");
 
         LOG_DBG("Regression test #2.1");
-        if (tbls_create(10, 3))
+        if (tbls_create(d, 10, 3))
                 return false;
         LOG_DBG("Regression test #2.2");
-        if (tbls_create(21, 6))
+        if (tbls_create(d, 21, 6))
                 return false;
         LOG_DBG("Regression test #2.3");
-        if (tbls_create(37, 31))
+        if (tbls_create(d, 37, 31))
                 return false;
 
         LOG_DBG("Regression test #3");
 
         LOG_DBG("Regression test #3.1");
-        x = tbls_find(10);
+        x = tbls_find(d, 10);
         if (!x)
                 return false;
         LOG_DBG("Regression test #3.2");
-        x = tbls_find(21);
+        x = tbls_find(d, 21);
         if (!x)
                 return false;
         LOG_DBG("Regression test #3.3");
-        x = tbls_find(37);
+        x = tbls_find(d, 37);
         if (!x)
                 return false;
 
         LOG_DBG("Regression test #4");
 
         LOG_DBG("Regression test #4.1");
-        if (tbls_destroy(10))
+        if (tbls_destroy(d, 10))
                 return false;
         LOG_DBG("Regression test #4.2");
-        if (tbls_destroy(21))
+        if (tbls_destroy(d, 21))
                 return false;
         LOG_DBG("Regression test #4.3");
-        if (tbls_destroy(37))
+        if (tbls_destroy(d, 37))
                 return false;
 
         LOG_DBG("Regression test #5");
@@ -286,7 +288,65 @@ static bool regression_tests_table(void)
 
         return true;
 }
-#endif
+
+static bool regression_tests_multi_dev_table(void)
+{
+        struct table *      x;
+        struct net_device * d1;
+        struct net_device * d2;
+
+        d1 = (struct net_device *) 0x1; /* Fake device pointer */
+        d2 = (struct net_device *) 0x2; /* Fake device pointer */
+
+        LOG_DBG("Table regression tests");
+
+        LOG_DBG("Regression test #1");
+        if (tbls_init())
+                return false;
+
+        LOG_DBG("Regression test #2");
+
+        LOG_DBG("Regression test #2.1");
+        if (tbls_create(d1, 10, 3))
+                return false;
+        LOG_DBG("Regression test #2.2");
+        if (tbls_create(d2, 21, 6))
+                return false;
+
+        LOG_DBG("Regression test #3");
+
+        LOG_DBG("Regression test #3.1");
+        x = tbls_find(d1, 10);
+        if (!x)
+                return false;
+        LOG_DBG("Regression test #3.2");
+        x = tbls_find(d1, 21);
+        if (x)
+                return false;
+
+        LOG_DBG("Regression test #3.3");
+        x = tbls_find(d2, 21);
+        if (!x)
+                return false;
+        LOG_DBG("Regression test #3.4");
+        x = tbls_find(d2, 10);
+        if (x)
+                return false;
+
+        LOG_DBG("Regression test #4");
+
+        LOG_DBG("Regression test #4.1");
+        if (tbls_destroy(d1, 10))
+                return false;
+        LOG_DBG("Regression test #4.2");
+        if (tbls_destroy(d2, 21))
+                return false;
+
+        LOG_DBG("Regression test #5");
+        tbls_fini();
+
+        return true;
+}
 #endif
 
 #ifdef CONFIG_ARP826_REGRESSION_TESTS
@@ -300,12 +360,15 @@ static bool regression_tests(void)
                 LOG_ERR("GHA regression tests failed, bailing out");
                 return false;
         }
-#if 0
         if (!regression_tests_table()) {
                 LOG_ERR("Table regression tests failed, bailing out");
                 return false;
         }
-#endif
+        if (!regression_tests_multi_dev_table()) {
+                LOG_ERR("Table regression tests failed, bailing out");
+                return false;
+        }
+
         return true;
 }
 #endif
@@ -338,7 +401,7 @@ static int __init mod_init(void)
         read_lock(&dev_base_lock);
         device = first_net_device(&init_net);
         while (device) {
-                if (protocol_add(device, ETH_P_RINA, 6)) {
+                if (protocol_add_ni(device, ETH_P_RINA, 6)) {
                         tbls_fini();
                         arm_fini();
                         read_unlock(&dev_base_lock);

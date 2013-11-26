@@ -1548,7 +1548,6 @@ int kipcm_flow_commit(struct kipcm *   kipcm,
 
         KIPCM_LOCK(kipcm);
 
-
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
 
         if (!ipc_process) {

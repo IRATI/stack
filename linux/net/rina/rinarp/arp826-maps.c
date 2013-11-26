@@ -31,19 +31,28 @@
 
 #include "arp826-maps.h"
 
-#define TMAP_HASH_BITS 7
+/*
+ * FIXME: This is the ugliest and shittier implementation we could find, but
+ *        ... we had no time to do any better. This code will be replaced
+ *        completely with a better implementation once we'be able to find
+ *        time to breathe again ...
+ */
 
 struct tmap {
-        DECLARE_HASHTABLE(table, TMAP_HASH_BITS);
+        struct list_head head;
 };
 
 struct tmap_entry {
-        uint16_t          key;
-        struct table *    value;
-        struct hlist_node hlist;
+        struct {
+                struct net_device * device;
+                uint16_t            ptype;
+        } key;
+        struct table *   value;
+
+        struct list_head next;
 };
 
-struct tmap * tmap_create(void)
+static struct tmap * tmap_create_gfp(gfp_t flags)
 {
         struct tmap * tmp;
 
@@ -51,140 +60,128 @@ struct tmap * tmap_create(void)
         if (!tmp)
                 return NULL;
 
-        hash_init(tmp->table);
+        INIT_LIST_HEAD(&tmp->head);
 
         return tmp;
 }
 
+struct tmap * tmap_create_ni(void)
+{ return tmap_create_gfp(GFP_ATOMIC); }
+
+struct tmap * tmap_create(void)
+{ return tmap_create_gfp(GFP_KERNEL); }
+
+static bool tmap_is_ok(struct tmap * map)
+{ return map ? true : false; }
+
+bool tmap_is_empty(struct tmap * map)
+{
+        ASSERT(tmap_is_ok(map));
+
+        return list_empty(&map->head);
+}
+
 int tmap_destroy(struct tmap * map)
 {
-#if 0
-        struct tmap_entry * entry;
-        struct hlist_node * tmp;
-        int                 bucket;
-#endif
+        struct tmap_entry * pos, * nxt;
 
-        ASSERT(map);
-        ASSERT(hash_empty(map->table));
+        if (!tmap_is_ok(map))
+                return -1;
 
-#if 0
-        hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
-                hash_del(&entry->hlist);
-                rkfree(entry);
+        ASSERT(tmap_is_empty(map)); /* To prevent loosing memory */
+
+        list_for_each_entry_safe(pos, nxt, &map->head, next) {
+                list_del(&pos->next);
+                rkfree(pos);
         }
-#endif
 
         rkfree(map);
 
         return 0;
 }
 
-int tmap_empty(struct tmap * map)
-{
-        ASSERT(map);
-
-        return hash_empty(map->table);
-}
-
 #define tmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
-#if 0
-struct table * tmap_find(struct tmap * map,
-                         uint16_t      key)
-{
-        struct tmap_entry * entry;
-
-        ASSERT(map);
-
-        entry = tmap_entry_find(map, key);
-        if (!entry)
-                return NULL;
-
-        return entry->value;
-}
-
-int tmap_update(struct tmap *   map,
-                uint16_t        key,
-                struct table *  value)
-{
-        struct tmap_entry * cur;
-
-        ASSERT(map);
-
-        cur = tmap_entry_find(map, key);
-        if (!cur)
-                return -1;
-
-        cur->value = value;
-
-        return 0;
-}
-#endif
-
-struct tmap_entry * tmap_entry_create(uint16_t       key,
-                                      struct table * value)
+static int tmap_entry_add_gfp(gfp_t               flags,
+                              struct tmap *       map,
+                              struct net_device * key_device,
+                              uint16_t            key_ptype,
+                              struct table *      value)
 {
         struct tmap_entry * tmp;
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmap_is_ok(map))
+                return -1;
+
+        tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp)
-                return NULL;
+                return -1;
 
-        tmp->key   = key;
-        tmp->value = value;
-        INIT_HLIST_NODE(&tmp->hlist);
+        tmp->key.device = key_device;
+        tmp->key.ptype  = key_ptype;
+        tmp->value      = value;
+        INIT_LIST_HEAD(&tmp->next);
 
-        return tmp;
-}
-
-int tmap_entry_insert(struct tmap *       map,
-                      uint16_t            key,
-                      struct tmap_entry * entry)
-{
-        ASSERT(map);
-        ASSERT(entry);
-
-        hash_add(map->table, &entry->hlist, key);
+        list_add(&tmp->next, &map->head);
 
         return 0;
 }
 
-struct tmap_entry * tmap_entry_find(struct tmap * map,
-                                    uint16_t      key)
+int tmap_entry_add(struct tmap *       map,
+                   struct net_device * key_device,
+                   uint16_t            key_ptype,
+                   struct table *      value)
+{ return tmap_entry_add_gfp(GFP_KERNEL, map, key_device, key_ptype, value); }
+
+int tmap_entry_add_ni(struct tmap *       map,
+                      struct net_device * key_device,
+                      uint16_t            key_ptype,
+                      struct table *      value)
+{ return tmap_entry_add_gfp(GFP_ATOMIC, map, key_device, key_ptype, value); }
+
+struct tmap_entry * tmap_entry_find(struct tmap *       map,
+                                    struct net_device * key_device,
+                                    uint16_t            key_ptype)
 {
-        struct tmap_entry * entry;
-        struct hlist_head * head;
+        struct tmap_entry * tmp;
 
-        ASSERT(map);
+        if (!tmap_is_ok(map))
+                return NULL;
 
-        head = &map->table[tmap_hash(map->table, key)];
-        hlist_for_each_entry(entry, head, hlist) {
-                if (entry->key == key)
-                        return entry;
+        list_for_each_entry(tmp, &map->head, next) {
+                if ((tmp->key.device == key_device) &&
+                    (tmp->key.ptype  == key_ptype))
+                        return tmp;
         }
 
         return NULL;
 }
 
+static bool tmap_entry_is_ok(struct tmap_entry * entry)
+{ return entry ? true : false; }
+
 int tmap_entry_remove(struct tmap_entry * entry)
 {
-        ASSERT(entry);
+        if (!tmap_entry_is_ok(entry))
+                return -1;
 
-        hash_del(&entry->hlist);
+        list_del(&entry->next);
 
         return 0;
 }
 
 struct table * tmap_entry_value(struct tmap_entry * entry)
 {
-        ASSERT(entry);
+        if (!tmap_entry_is_ok(entry))
+                return NULL;
 
         return entry->value;
 }
 
 int tmap_entry_destroy(struct tmap_entry * entry)
 {
-        ASSERT(entry);
+        if (!tmap_entry_is_ok(entry))
+                return -1;
 
         rkfree(entry);
 
