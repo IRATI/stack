@@ -213,6 +213,13 @@ int dtp_write(struct dtp * instance,
                 return -1;
         }
 
+#if 1
+        LOG_MISSING;
+
+        pdu = NULL;
+        pci = NULL;
+#else
+        /* FIXME: Fix this code with the new DU API */
         pdu = rkzalloc(sizeof(*pdu), GFP_KERNEL);
         if (!pdu) {
                 LOG_ERR("Could not allocate memory for PDU");
@@ -225,30 +232,38 @@ int dtp_write(struct dtp * instance,
         }
 
         /* FIXME : This is ugly as hell (c), must be removed asap */
-        pdu->pci = pci;
-        pci->ceps.dest_id   = instance->state_vector->
-                connection->destination_cep_id;
-        pci->ceps.source_id = instance->state_vector->
-                connection->source_cep_id;
-        pci->destination    = instance->state_vector->
-                connection->destination_address;
-        pci->source = instance->state_vector->connection->source_address;
-        pci->sequence_number = instance->state_vector->next_sequence_to_send;
+        pdu->pci             = pci;
+        pci->ceps.dest_id    =
+                instance->state_vector->connection->destination_cep_id;
+        pci->ceps.source_id  =
+                instance->state_vector->connection->source_cep_id;
+        pci->destination     =
+                instance->state_vector->connection->destination_address;
+        pci->source          =
+                instance->state_vector->connection->source_address;
+        pci->sequence_number =
+                instance->state_vector->next_sequence_to_send;
+
         instance->state_vector->next_sequence_to_send++;
         pci->type = PDU_TYPE_DT;
         pci->qos_id = instance->state_vector->connection->qos_id;
         pdu->buffer = sdu->buffer;
+#endif
+
         /* Give the data to RMT now ! */
         return rmt_send(instance->rmt,
-                        pci->destination,
-                        pci->ceps.dest_id,
+                        pci_destination(pci),
+                        pci_cep_destination(pci),
                         pdu);
 }
 
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
 {
+#if 0
         struct sdu * sdu;
+#endif
+
         LOG_MISSING;
 
         if (!instance) {
@@ -261,7 +276,7 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
-
+#if 0
         sdu = (struct sdu *) pdu;
         sdu->buffer = pdu->buffer;
         if (kfa_sdu_post(instance->kfa,
@@ -274,4 +289,11 @@ int dtp_receive(struct dtp * instance,
         rkfree(pdu->pci);
 
         return 0;
+#else
+        /* FIXME: Please fix with the new DU API */
+
+        LOG_MISSING;
+
+        return -1;
+#endif
 }

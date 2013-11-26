@@ -272,26 +272,37 @@ static struct pci * extract_pci(struct sdu * sdu)
 
 static struct buffer * extract_buffer(struct sdu * sdu)
 {
-        size_t size;
-
+#if 0
+        size_t  pci_l;
+        ssize_t size;
+        
         if (!sdu) {
                 LOG_ERR("Bogus SDU passed");
                 return NULL;
         }
 
-        size = sdu->buffer->size - sizeof(struct pci);
+        pci_l = pci_length(pci);
+        if (pci_l <= 0)
+                return NULL;
+
+        size = sdu->buffer->size - pci_l;
         if (!size)
                 return NULL;
 
-        /* FIXME: Are we going to loose memory, if the function fails ? */
-        return buffer_create_with_ni((sdu->buffer->data) + sizeof(struct pci),
+        return buffer_create_with_ni(sdu->buffer->data + sizeof(struct pci),
                                      size);
+#else
+        LOG_MISSING;
+
+        return NULL;
+#endif
 }
 
 static int rmt_receive_worker(void * o)
 {
         struct receive_data * tmp;
         struct pdu *          pdu;
+        pdu_type_t            pdu_type;
         struct pci *          pci;
         struct buffer *       buffer;
 
@@ -318,7 +329,8 @@ static int rmt_receive_worker(void * o)
                 return -1;
         }
 
-        switch (pci->type) {
+        pdu_type = pci_type(pci);
+        switch (pdu_type) {
         case PDU_TYPE_MGMT: {
                 struct sdu * sdu;
 
@@ -335,7 +347,7 @@ static int rmt_receive_worker(void * o)
                 return 0;
         }
         default:
-                LOG_ERR("Unknown PDU type %d", pci->type);
+                LOG_ERR("Unknown PDU type %d", pdu_type);
                 return -1;
         }
 
@@ -345,13 +357,18 @@ static int rmt_receive_worker(void * o)
                 return -1;
         }
 
+#if 0
+        /* FIXME: Add necessary calls here */
+        LOG_MISSING;
         /* FIXME: Will be removed as soon as we have access functions */
         pdu->buffer = buffer;
         pdu->pci    = pci;
+#endif
+
         ASSERT(pdu_is_ok(pdu));
 
         if (efcp_container_receive(tmp->efcpc,
-                                   pci->ceps.dest_id,
+                                   pci_cep_destination(pci),
                                    pdu)) {
                 receive_data_destroy(tmp);
                 return -1;
