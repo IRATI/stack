@@ -209,11 +209,17 @@ static cep_id_t connection_create_request(struct ipcp_instance_data * data,
 }
 
 static int connection_update_request(struct ipcp_instance_data * data,
+                                     port_id_t                   port_id,
                                      cep_id_t                    src_cep_id,
                                      cep_id_t                    dst_cep_id)
 {
         if (efcp_connection_update(data->efcpc, src_cep_id, dst_cep_id))
                 return -1;
+
+        if (kipcm_flow_commit(default_kipcm, data->id, port_id)) {
+                efcp_connection_destroy(data->efcpc, src_cep_id);
+                return -1;
+        }
 
         return 0;
 }

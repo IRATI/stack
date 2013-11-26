@@ -927,6 +927,7 @@ static int notify_ipcp_conn_update_req(void *             data,
                 goto fail;
 
         if (ipcp->ops->connection_update(ipcp->data,
+                                         port_id,
                                          attrs->src_cep,
                                          attrs->dst_cep))
                 goto fail;
