@@ -29,6 +29,11 @@
 #include "debug.h"
 #include "du.h"
 
+struct buffer {
+        char * data;
+        size_t size;
+};
+
 bool buffer_is_ok(const struct buffer * b)
 { return (b && b->data && b->size) ? true : false; }
 EXPORT_SYMBOL(buffer_is_ok);
@@ -197,14 +202,23 @@ ssize_t buffer_length(const struct buffer * b)
 }
 EXPORT_SYMBOL(buffer_length);
 
-const void * buffer_data(const struct buffer * b)
+const void * buffer_data_ro(const struct buffer * b)
 {
         if (!buffer_is_ok(b))
                 return NULL;
 
         return b->data;
 }
-EXPORT_SYMBOL(buffer_data);
+EXPORT_SYMBOL(buffer_data_ro);
+
+void * buffer_data_rw(struct buffer * b)
+{
+        if (!buffer_is_ok(b))
+                return NULL;
+
+        return b->data;
+}
+EXPORT_SYMBOL(buffer_data_rw);
 
 struct pci {
         address_t  source;
@@ -388,7 +402,7 @@ static struct pdu * pdu_create_with_gfp(gfp_t        flags,
         if (!tmp_pdu)
                 return NULL;
 
-        ptr = (const uint8_t *) buffer_data(tmp_buff);
+        ptr = (const uint8_t *) buffer_data_ro(tmp_buff);
         ASSERT(!ptr);
 
         tmp_pdu->pci    =

@@ -65,10 +65,7 @@ typedef uint seq_num_t;
  * FIXME: This structure will be hidden soon. Do not access its field(s)
  *        directly, prefer the access functions below.
  */
-struct buffer {
-        char * data;
-        size_t size;
-};
+struct buffer;
 
 /* NOTE: Creates a buffer from raw data (takes ownership) */
 struct buffer * buffer_create_with(void * data, size_t size);
@@ -86,7 +83,8 @@ int             buffer_destroy(struct buffer * b);
 ssize_t         buffer_length(const struct buffer * b);
 
 /* NOTE: Returns the raw buffer memory, watch-out ... */
-const void *    buffer_data(const struct buffer * b);
+const void *    buffer_data_ro(const struct buffer * b); /* Read only */
+void *          buffer_data_rw(struct buffer * b);       /* Read/Write */
 
 struct buffer * buffer_dup(const struct buffer * b);
 struct buffer * buffer_dup_ni(const struct buffer * b);
