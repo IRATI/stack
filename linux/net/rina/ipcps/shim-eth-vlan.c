@@ -806,7 +806,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         }
         memcpy_fromio(buff_data, nh, skb->tail - skb->network_header);
 
-        du = sdu_create_from_buffer_ni(buffer);
+        du = sdu_create_with_ni(buffer);
         if (!du) {
                 LOG_ERR("Couldn't create data unit");
                 buffer_destroy(buffer);

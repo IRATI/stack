@@ -115,8 +115,8 @@ struct sdu {
 };
 
 /* NOTE: The following function take the ownership of the buffer passed */
-struct sdu *          sdu_create_from_buffer(struct buffer * buffer);
-struct sdu *          sdu_create_from_buffer_ni(struct buffer * buffer);
+struct sdu *          sdu_create_with(struct buffer * buffer);
+struct sdu *          sdu_create_with_ni(struct buffer * buffer);
 
 int                   sdu_destroy(struct sdu * s);
 

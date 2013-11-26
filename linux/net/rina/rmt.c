@@ -322,7 +322,7 @@ static int rmt_receive_worker(void * o)
         case PDU_TYPE_MGMT: {
                 struct sdu * sdu;
 
-                sdu = sdu_create_from_buffer(buffer);
+                sdu = sdu_create_with(buffer);
                 if (!sdu) {
                         receive_data_destroy(tmp);
                         return -1;

@@ -227,8 +227,8 @@ void * buffer_data(struct buffer * b)
 }
 EXPORT_SYMBOL(buffer_data);
 
-static struct sdu * sdu_create_from_buffer_gfp(gfp_t           flags,
-                                               struct buffer * buffer)
+static struct sdu * sdu_create_with_gfp(gfp_t           flags,
+                                        struct buffer * buffer)
 {
         struct sdu * tmp;
 
@@ -244,13 +244,13 @@ static struct sdu * sdu_create_from_buffer_gfp(gfp_t           flags,
         return tmp;
 }
 
-struct sdu * sdu_create_from_buffer(struct buffer * buffer)
-{ return sdu_create_from_buffer_gfp(GFP_KERNEL, buffer); }
-EXPORT_SYMBOL(sdu_create_from_buffer);
+struct sdu * sdu_create_with(struct buffer * buffer)
+{ return sdu_create_with_gfp(GFP_KERNEL, buffer); }
+EXPORT_SYMBOL(sdu_create_with);
 
-struct sdu * sdu_create_from_buffer_ni(struct buffer * buffer)
-{ return sdu_create_from_buffer_gfp(GFP_ATOMIC, buffer); }
-EXPORT_SYMBOL(sdu_create_from_buffer_ni);
+struct sdu * sdu_create_with_ni(struct buffer * buffer)
+{ return sdu_create_with_gfp(GFP_ATOMIC, buffer); }
+EXPORT_SYMBOL(sdu_create_with_ni);
 
 int sdu_destroy(struct sdu * s)
 {
