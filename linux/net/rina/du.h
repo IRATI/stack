@@ -118,6 +118,11 @@ struct sdu *          sdu_unprotect(struct sdu * sdu);
 struct pci;
 
 /* NOTE: The following function may return -1 */
+struct pci *          pci_create_from(const void * data);
+struct pci *          pci_create_from_ni(const void * data);
+struct pci *          pci_dup(const struct pci * pci);
+struct pci *          pci_dup_ni(const struct pci * pci);
+int                   pci_destroy(struct pci * pci);
 ssize_t               pci_length(const struct pci * pci);
 pdu_type_t            pci_type(const struct pci * pci);
 address_t             pci_source(const struct pci * pci);
@@ -127,8 +132,6 @@ cep_id_t              pci_cep_destination(const struct pci * pci);
 
 struct pdu;
 
-struct pdu *          pdu_create(void);
-struct pdu *          pdu_create_ni(void);
 struct pdu *          pdu_create_with(struct sdu * sdu);
 struct pdu *          pdu_create_with_ni(struct sdu * sdu);
 

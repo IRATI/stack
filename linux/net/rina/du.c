@@ -47,6 +47,73 @@ struct pci {
 static bool pci_is_ok(const struct pci * pci)
 { return pci ? true : false; }
 
+static struct pci * pci_create_from_gfp(gfp_t        flags,
+                                        const void * data)
+{
+        struct pci * tmp;
+
+        if (!data)
+                return NULL;
+
+        tmp = rkmalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        if (!memcpy(tmp, data, sizeof(*tmp))) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        ASSERT(pci_is_ok(tmp));
+
+        return tmp;
+}
+
+struct pci * pci_create_from(const void * data)
+{ return pci_create_from_gfp(GFP_KERNEL, data); }
+EXPORT_SYMBOL(pci_create_from);
+
+struct pci * pci_create_from_ni(const void * data)
+{ return pci_create_from_gfp(GFP_ATOMIC, data); }
+EXPORT_SYMBOL(pci_create_from_ni);
+
+int pci_destroy(struct pci * pci)
+{
+        if (!pci_is_ok(pci))
+                return -1;
+
+        rkfree(pci);
+        return 0;
+}
+EXPORT_SYMBOL(pci_destroy);
+
+static struct pci * pci_dup_gfp(gfp_t              flags,
+                                const struct pci * pci)
+{
+        struct pci * tmp;
+
+        tmp = rkmalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        if (!memcpy(tmp, pci, sizeof(*tmp))) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        ASSERT(pci_is_ok(tmp));
+
+        return tmp;
+}
+
+struct pci * pci_dup(const struct pci * pci)
+{ return pci_dup_gfp(GFP_KERNEL, pci); }
+EXPORT_SYMBOL(pci_dup);
+
+struct pci * pci_dup_ni(const struct pci * pci)
+{ return pci_dup_gfp(GFP_ATOMIC, pci); }
+EXPORT_SYMBOL(pci_dup_ni);
+
 pdu_type_t pci_type(const struct pci * pci)
 {
         ASSERT(pci); /* FIXME: Should not be an ASSERT ... */
@@ -123,23 +190,29 @@ static struct pdu * pdu_create_gfp(gfp_t flags)
         return tmp;
 }
 
-struct pdu * pdu_create(void)
-{ return pdu_create_gfp(GFP_KERNEL); }
-EXPORT_SYMBOL(pdu_create);
-
-struct pdu * pdu_create_ni(void)
-{ return pdu_create_gfp(GFP_ATOMIC); }
-EXPORT_SYMBOL(pdu_create_ni);
-
 static struct pdu * pdu_create_with_gfp(gfp_t        flags,
                                         struct sdu * sdu)
 {
+        struct pci *    tmp_pci;
+        struct buffer * tmp_buffer;
+        struct pdu *    tmp_pdu;
+
         if (!sdu_is_ok(sdu))
                 return NULL;
 
+        tmp_pdu = pdu_create_gfp(flags);
+        if (!tmp_pdu)
+                return NULL;
+
+#if 0
         LOG_MISSING;
 
-        return NULL;
+        tmp_pdu->buffer = buffer_create_from_gfp(flags, );
+#endif
+
+        ASSERT(pdu_is_ok(tmp_pdu));
+
+        return tmp_pdu;
 }
 
 struct pdu * pdu_create_with(struct sdu * sdu)
@@ -268,7 +341,6 @@ static struct buffer * buffer_dup_gfp(gfp_t                 flags,
                 return NULL;
 
         if (!memcpy(m, b->data, b->size)) {
-                LOG_ERR("Cannot copy memory block, cannot duplicate buffer");
                 rkfree(m);
                 return NULL;
         }
@@ -397,7 +469,10 @@ static struct sdu * sdu_dup_gfp(gfp_t              flags,
                 return NULL;
         }
 
-        memcpy(tmp->buffer->data, sdu->buffer->data, sdu->buffer->size);
+        if (!memcpy(tmp->buffer->data, sdu->buffer->data, sdu->buffer->size)) {
+                sdu_destroy(tmp);
+                return NULL;
+        }
         tmp->buffer->size = sdu->buffer->size;
 
         return tmp;
