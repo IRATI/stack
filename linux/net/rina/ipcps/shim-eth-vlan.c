@@ -640,20 +640,21 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                               port_id_t                   id,
                               struct sdu *                sdu)
 {
-        struct shim_eth_flow * flow;
-        struct sk_buff *     skb;
-        const unsigned char *src_hw;
-        struct rinarp_mac_addr *desthw;
-        const unsigned char *dest_hw;
-        unsigned char * sdu_ptr;
-        int hlen, tlen, length;
+        struct shim_eth_flow *   flow;
+        struct sk_buff *         skb;
+        const unsigned char *    src_hw;
+        struct rinarp_mac_addr * desthw;
+        const unsigned char *    dest_hw;
+        unsigned char *          sdu_ptr;
+        int                      hlen, tlen, length;
+
         ASSERT(data);
         ASSERT(sdu);
 
         LOG_DBG("Entered the sdu write");
 
-        hlen = LL_RESERVED_SPACE(data->dev);
-        tlen = data->dev->needed_tailroom;
+        hlen   = LL_RESERVED_SPACE(data->dev);
+        tlen   = data->dev->needed_tailroom;
         length = sdu->buffer->size;
         desthw = 0;
 
