@@ -958,8 +958,8 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
 static void eth_vlan_rcv_worker(struct work_struct *work)
 {
-        struct rcv_struct *  packet, *next;
-        unsigned long flags;
+        struct rcv_struct * packet, * next;
+        unsigned long       flags;
 
         spin_lock_irqsave(&rcv_wq_lock, flags);
         list_for_each_entry_safe(packet, next, &rcv_wq_packets, list) {
