@@ -168,7 +168,7 @@ SYSCALL_DEFINE3(sdu_read,
                 return -EFAULT;
         }
 
-        if (!is_sdu_ok(tmp)) {
+        if (!sdu_is_ok(tmp)) {
                 SYSCALL_DUMP_EXIT;
                 return -EFAULT;
         }
@@ -227,7 +227,7 @@ SYSCALL_DEFINE3(sdu_write,
                 return -EFAULT;
         }
 
-        ASSERT(is_buffer_ok(tmp_buffer));
+        ASSERT(buffer_is_ok(tmp_buffer));
         ASSERT(buffer_data(tmp_buffer));
 
         /* NOTE: We don't handle partial copies */
@@ -244,7 +244,7 @@ SYSCALL_DEFINE3(sdu_write,
                 buffer_destroy(tmp_buffer);
                 return -EFAULT;
         }
-        ASSERT(is_sdu_ok(sdu));
+        ASSERT(sdu_is_ok(sdu));
 
         /* Passing ownership to the internal layers */
         CALL_DEFAULT_PERSONALITY(retval, sdu_write, id, sdu);

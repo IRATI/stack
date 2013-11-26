@@ -290,9 +290,9 @@ static struct buffer * extract_buffer(struct sdu * sdu)
 static int rmt_receive_worker(void * o)
 {
         struct receive_data * tmp;
-        struct pdu * pdu;
-        struct pci * pci;
-        struct buffer * buffer;
+        struct pdu *          pdu;
+        struct pci *          pci;
+        struct buffer *       buffer;
 
         tmp = (struct receive_data *) o;
         if (!tmp) {
@@ -316,9 +316,12 @@ static int rmt_receive_worker(void * o)
                 receive_data_destroy(tmp);
                 return -1;
         }
-        if (pci->type == PDU_TYPE_MGMT) {
+
+        switch (pci->type) {
+        case PDU_TYPE_MGMT: {
                 struct sdu * sdu;
-                sdu = sdu_create_from_buffer_ni(buffer);
+
+                sdu = sdu_create_from_buffer(buffer);
                 if (!sdu) {
                         receive_data_destroy(tmp);
                         return -1;
@@ -327,7 +330,12 @@ static int rmt_receive_worker(void * o)
                         receive_data_destroy(tmp);
                         return -1;
                 }
+                
                 return 0;
+        }
+        default:
+                LOG_ERR("Unknown PDU type %d", pci->type);
+                return -1;
         }
 
         pdu = pdu_create();
@@ -339,6 +347,8 @@ static int rmt_receive_worker(void * o)
         /* FIXME: Will be removed as soon as we have access functions */
         pdu->buffer = buffer;
         pdu->pci    = pci;
+        ASSERT(pdu_is_ok(pdu));
+
         if (efcp_container_receive(tmp->efcpc,
                                    pci->ceps.dest_id,
                                    pdu)) {
