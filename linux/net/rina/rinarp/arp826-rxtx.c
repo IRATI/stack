@@ -433,7 +433,8 @@ static int process(const struct sk_buff * skb,
                         LOG_DBG("Updating old entry %pK into the table",
                                 entry);
 
-                        if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha, GFP_ATOMIC)) {
+                        if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha,
+                                              GFP_ATOMIC)) {
                                 LOG_ERR("Failed to update table");
                                 gpa_destroy(tmp_spa);
                                 gpa_destroy(tmp_tpa);
@@ -467,10 +468,10 @@ static int process(const struct sk_buff * skb,
                 LOG_DBG("Showing the target ha");
                 gha_dump(target_ha);
 
-                if (arp_send_reply(ptype,
+                if (arp_send_reply(dev,
+                                   ptype,
                                    tmp_tpa, target_ha,
-                                   tmp_spa, tmp_sha, dev)) {
-                        /* FIXME: Couldn't send reply ... */
+                                   tmp_spa, tmp_sha)) {
                         LOG_ERR("Couldn't send reply");
                         gpa_destroy(tmp_spa);
                         gpa_destroy(tmp_tpa);
