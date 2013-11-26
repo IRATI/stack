@@ -212,7 +212,8 @@ int arp_send_reply(uint16_t            ptype,
 int arp_send_request(uint16_t            ptype,
                      const struct gpa *  spa,
                      const struct gha *  sha,
-                     const struct gpa *  tpa)
+                     const struct gpa *  tpa,
+                     struct net_device * net)
 {
 #if HAVE_RINARP
         struct gpa *        tmp_spa;
@@ -233,13 +234,6 @@ int arp_send_request(uint16_t            ptype,
         tha = gha_create_unknown(gha_type(sha));
         if (!tha) {
                 LOG_ERR("Cannot create broadcast GHA");
-                return -1;
-        }
-
-        dev = gha_to_device(sha);
-        if (!dev) {
-                LOG_ERR("Cannot get the device for this GHA");
-                gha_destroy(tha);
                 return -1;
         }
 
