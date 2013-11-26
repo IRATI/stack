@@ -86,16 +86,14 @@ struct buffer {
 };
 
 /* NOTE: Creates a buffer from raw data */
-struct buffer * buffer_create_from_gfp(gfp_t  flags,
-                                       void * data,
-                                       size_t size);
 struct buffer * buffer_create_from(void * data,
                                    size_t size);
+struct buffer * buffer_create_from_ni(void * data,
+                                      size_t size);
 
 /* NOTE: Creates an uninitialized buffer (data might be garbage) */
 struct buffer * buffer_create(size_t size);
-struct buffer * buffer_create_gfp(gfp_t  flags,
-                                  size_t size);
+struct buffer * buffer_create_ni(size_t size);
 
 int             buffer_destroy(struct buffer * b);
 
@@ -106,8 +104,7 @@ ssize_t         buffer_length(const struct buffer * b);
 void *          buffer_data(struct buffer * b);
 
 struct buffer * buffer_dup(struct buffer * b);
-struct buffer * buffer_dup_gfp(gfp_t           flags,
-                               struct buffer * b);
+struct buffer * buffer_dup_ni(struct buffer * b);
 
 bool            is_buffer_ok(const struct buffer * b);
 
@@ -121,16 +118,14 @@ struct sdu {
 
 /* NOTE: The following function take the ownership of the buffer passed */
 struct sdu *          sdu_create_from_buffer(struct buffer * buffer);
-struct sdu *          sdu_create_from_buffer_gfp(gfp_t           flags,
-                                                 struct buffer * buffer);
+struct sdu *          sdu_create_from_buffer_ni(struct buffer * buffer);
 
 int                   sdu_destroy(struct sdu * s);
 
 const struct buffer * sdu_buffer(const struct sdu * s);
 
 struct sdu *          sdu_dup(struct sdu * sdu);
-struct sdu *          sdu_dup_gfp(gfp_t        flags,
-                                  struct sdu * sdu);
+struct sdu *          sdu_dup_ni(struct sdu * sdu);
 
 bool                  is_sdu_ok(const struct sdu * sdu);
 
