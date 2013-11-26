@@ -28,11 +28,11 @@
 #include "debug.h"
 #include "du.h"
 
-struct pdu * pdu_create(void)
+static struct pdu * pdu_create_gfp(gfp_t flags)
 {
         struct pdu * tmp;
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
 
@@ -41,16 +41,44 @@ struct pdu * pdu_create(void)
 
         return tmp;
 }
+
+struct pdu * pdu_create(void)
+{ return pdu_create_gfp(GFP_KERNEL); }
 EXPORT_SYMBOL(pdu_create);
+
+struct pdu * pdu_create_ni(void)
+{ return pdu_create_gfp(GFP_ATOMIC); }
+EXPORT_SYMBOL(pdu_create_ni);
+
+bool pdu_is_ok(const struct pdu * p)
+{ return (p && p->pci && p->buffer) ? true : false; }
+EXPORT_SYMBOL(pdu_is_ok);
+
+const struct buffer * pdu_buffer(const struct pdu * pdu)
+{
+        if (!pdu_is_ok(pdu))
+                return NULL;
+
+        return pdu->buffer;
+}
+EXPORT_SYMBOL(pdu_buffer);
+
+const struct pci * pdu_pci(const struct pdu * pdu)
+{
+        if (!pdu_is_ok(pdu))
+                return NULL;
+
+        return pdu->pci;
+}
+EXPORT_SYMBOL(pdu_pci);
 
 int pdu_destroy(struct pdu * p)
 {
-        ASSERT(p);
+        if (p)
+                return -1;
 
-        if (p->pci)
-                rkfree(p->pci);
-
-        buffer_destroy(p->buffer);
+        if (p->pci)    rkfree(p->pci);
+        if (p->buffer) buffer_destroy(p->buffer);
 
         rkfree(p);
 
@@ -58,17 +86,9 @@ int pdu_destroy(struct pdu * p)
 }
 EXPORT_SYMBOL(pdu_destroy);
 
-bool is_buffer_ok(const struct buffer * b)
-{
-        if (!b)
-                return false;
-
-        if (!b->data || !b->size)
-                return false;
-
-        return true;
-}
-EXPORT_SYMBOL(is_buffer_ok);
+bool buffer_is_ok(const struct buffer * b)
+{ return (b && b->data && b->size) ? true : false; }
+EXPORT_SYMBOL(buffer_is_ok);
 
 static struct buffer * buffer_create_from_gfp(gfp_t  flags,
                                               void * data,
@@ -144,7 +164,7 @@ static struct buffer * buffer_dup_gfp(gfp_t           flags,
         struct buffer * tmp;
         void *          m;
 
-        if (!is_buffer_ok(b)) {
+        if (!buffer_is_ok(b)) {
                 LOG_ERR("Cannot duplicate buffer, bad input parameter");
                 return NULL;
         }
@@ -192,7 +212,7 @@ EXPORT_SYMBOL(buffer_destroy);
 
 ssize_t buffer_length(const struct buffer * b)
 {
-        if (!is_buffer_ok(b))
+        if (!buffer_is_ok(b))
                 return -1;
 
         return b->size;
@@ -201,7 +221,7 @@ EXPORT_SYMBOL(buffer_length);
 
 void * buffer_data(struct buffer * b)
 {
-        if (!is_buffer_ok(b))
+        if (!buffer_is_ok(b))
                 return NULL;
 
         return b->data;
@@ -213,7 +233,7 @@ static struct sdu * sdu_create_from_buffer_gfp(gfp_t           flags,
 {
         struct sdu * tmp;
 
-        if (!is_buffer_ok(buffer))
+        if (!buffer_is_ok(buffer))
                 return NULL;
 
         tmp = rkmalloc(sizeof(*tmp), flags);
@@ -251,19 +271,19 @@ EXPORT_SYMBOL(sdu_destroy);
 
 const struct buffer * sdu_buffer(const struct sdu * s)
 {
-        if (!is_sdu_ok(s))
+        if (!sdu_is_ok(s))
                 return NULL;
 
         return s->buffer;
 }
 EXPORT_SYMBOL(sdu_buffer);
 
-static struct sdu * sdu_dup_gfp(gfp_t        flags,
-                                struct sdu * sdu)
+static struct sdu * sdu_dup_gfp(gfp_t              flags,
+                                const struct sdu * sdu)
 {
         struct sdu * tmp;
 
-        if (!is_sdu_ok(sdu))
+        if (!sdu_is_ok(sdu))
                 return NULL;
 
         tmp = rkzalloc(sizeof(*tmp), flags);
@@ -289,15 +309,15 @@ static struct sdu * sdu_dup_gfp(gfp_t        flags,
         return tmp;
 }
 
-struct sdu * sdu_dup(struct sdu * sdu)
+struct sdu * sdu_dup(const struct sdu * sdu)
 { return sdu_dup_gfp(GFP_KERNEL, sdu); }
 EXPORT_SYMBOL(sdu_dup);
 
-struct sdu * sdu_dup_ni(struct sdu * sdu)
+struct sdu * sdu_dup_ni(const struct sdu * sdu)
 { return sdu_dup_gfp(GFP_ATOMIC, sdu); }
 EXPORT_SYMBOL(sdu_dup_ni);
 
-bool is_sdu_ok(const struct sdu * s)
+bool sdu_is_ok(const struct sdu * s)
 {
         if (!s)
                 return false;
@@ -315,7 +335,7 @@ bool is_sdu_ok(const struct sdu * s)
 
         return true;
 }
-EXPORT_SYMBOL(is_sdu_ok);
+EXPORT_SYMBOL(sdu_is_ok);
 
 struct sdu * sdu_protect(struct sdu * s)
 {

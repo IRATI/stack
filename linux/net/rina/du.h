@@ -106,7 +106,7 @@ void *          buffer_data(struct buffer * b);
 struct buffer * buffer_dup(struct buffer * b);
 struct buffer * buffer_dup_ni(struct buffer * b);
 
-bool            is_buffer_ok(const struct buffer * b);
+bool            buffer_is_ok(const struct buffer * b);
 
 /*
  * FIXME: This structure will be hidden soon. Do not access its field(s)
@@ -124,10 +124,10 @@ int                   sdu_destroy(struct sdu * s);
 
 const struct buffer * sdu_buffer(const struct sdu * s);
 
-struct sdu *          sdu_dup(struct sdu * sdu);
-struct sdu *          sdu_dup_ni(struct sdu * sdu);
+struct sdu *          sdu_dup(const struct sdu * sdu);
+struct sdu *          sdu_dup_ni(const struct sdu * sdu);
 
-bool                  is_sdu_ok(const struct sdu * sdu);
+bool                  sdu_is_ok(const struct sdu * sdu);
 
 struct sdu *          sdu_protect(struct sdu * sdu);
 struct sdu *          sdu_unprotect(struct sdu * sdu);
@@ -142,6 +142,10 @@ struct pdu {
 };
 
 struct pdu *          pdu_create(void);
+struct pdu *          pdu_create_ni(void);
+bool                  pdu_is_ok(const struct pdu * pdu);
+const struct buffer * pdu_buffer(const struct pdu * pdu);
+const struct pci *    pdu_pci(const struct pdu * pdu);
 int                   pdu_destroy(struct pdu * pdu);
 
 #endif
