@@ -351,13 +351,16 @@ static int rmt_receive_worker(void * o)
                 return -1;
         }
 
+#if 1
+        LOG_MISSING;
+#else
+
         pdu = pdu_create();
         if (!pdu) {
                 receive_data_destroy(tmp);
                 return -1;
         }
 
-#if 0
         /* FIXME: Add necessary calls here */
         LOG_MISSING;
         /* FIXME: Will be removed as soon as we have access functions */
