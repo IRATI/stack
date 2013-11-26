@@ -506,8 +506,7 @@ int kfa_sdu_post(struct kfa * instance,
                 return -1;
         }
 
-        LOG_DBG("Posting SDU of size %zd to port-id %d ",
-                sdu->buffer->size, id);
+        LOG_DBG("Posting SDU to port-id %d ", id);
 
         spin_lock(&instance->lock);
         flow = kfa_pmap_find(instance->flows, id);

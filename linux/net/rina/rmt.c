@@ -262,12 +262,18 @@ static int receive_data_destroy(struct receive_data * data)
 
 static struct pci * extract_pci(struct sdu * sdu)
 {
+#if 0
         if (!sdu) {
                 LOG_ERR("Bogus SDU passed");
                 return NULL;
         }
 
         return ((struct pci *) sdu->buffer->data);
+#else
+        /* FIXME: This function is obsolete, please avoid it (drop!) */
+        LOG_MISSING;
+#endif
+        return NULL;
 }
 
 static struct buffer * extract_buffer(struct sdu * sdu)
@@ -292,6 +298,7 @@ static struct buffer * extract_buffer(struct sdu * sdu)
         return buffer_create_with_ni(sdu->buffer->data + sizeof(struct pci),
                                      size);
 #else
+        /* FIXME: This function is obsolete, please avoid it (drop!) */
         LOG_MISSING;
 
         return NULL;

@@ -617,6 +617,7 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
 {
         ASSERT(data);
         ASSERT(name);
+
         if (!data->app_name) {
                 LOG_ERR("Shim-eth-vlan has no application registered");
                 return -1;
@@ -655,7 +656,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
         hlen   = LL_RESERVED_SPACE(data->dev);
         tlen   = data->dev->needed_tailroom;
-        length = sdu->buffer->size;
+        length = buffer_length(sdu->buffer);
         desthw = 0;
 
         flow = find_flow(data, id);
@@ -701,10 +702,14 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
         skb_reserve(skb, hlen);
         skb_reset_network_header(skb);
-        sdu_ptr = (unsigned char *) skb_put(skb, sdu->buffer->size);
-        memcpy(sdu_ptr, sdu->buffer->data, sdu->buffer->size);
+        sdu_ptr = (unsigned char *) skb_put(skb, buffer_length(sdu->buffer));
 
-        skb->dev = data->dev;
+        /* FIXME: memcpy might fail */
+        memcpy(sdu_ptr,
+               buffer_data_ro(sdu->buffer),
+               buffer_length(sdu->buffer));
+
+        skb->dev      = data->dev;
         skb->protocol = htons(ETH_P_RINA);
 
         if (dev_hard_header(skb, data->dev, ETH_P_RINA,
@@ -718,6 +723,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
         dev_queue_xmit(skb);
         sdu_destroy(sdu);
+
         return 0;
 }
 
@@ -796,7 +802,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         if (!buffer)
                 return -1;
 
-        buff_data = buffer_data(buffer);
+        buff_data = buffer_data_rw(buffer);
         if (!buff_data) {
                 LOG_ERR("Buffer data is NULL");
                 buffer_destroy(buffer);
