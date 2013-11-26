@@ -91,7 +91,7 @@ bool buffer_is_ok(const struct buffer * b)
 { return (b && b->data && b->size) ? true : false; }
 EXPORT_SYMBOL(buffer_is_ok);
 
-static struct buffer * buffer_create_from_gfp(gfp_t  flags,
+static struct buffer * buffer_create_with_gfp(gfp_t  flags,
                                               void * data,
                                               size_t size)
 {
@@ -116,15 +116,15 @@ static struct buffer * buffer_create_from_gfp(gfp_t  flags,
         return tmp;
 }
 
-struct buffer * buffer_create_from(void * data,
+struct buffer * buffer_create_with(void * data,
                                    size_t size)
-{ return buffer_create_from_gfp(GFP_KERNEL, data, size); }
-EXPORT_SYMBOL(buffer_create_from);
+{ return buffer_create_with_gfp(GFP_KERNEL, data, size); }
+EXPORT_SYMBOL(buffer_create_with);
 
-struct buffer * buffer_create_from_ni(void * data,
+struct buffer * buffer_create_with_ni(void * data,
                                       size_t size)
-{ return buffer_create_from_gfp(GFP_ATOMIC, data, size); }
-EXPORT_SYMBOL(buffer_create_from_ni);
+{ return buffer_create_with_gfp(GFP_ATOMIC, data, size); }
+EXPORT_SYMBOL(buffer_create_with_ni);
 
 static struct buffer * buffer_create_gfp(gfp_t  flags,
                                          size_t size)
@@ -159,16 +159,14 @@ struct buffer * buffer_create_ni(size_t size)
 { return buffer_create_gfp(GFP_ATOMIC, size); }
 EXPORT_SYMBOL(buffer_create_ni);
 
-static struct buffer * buffer_dup_gfp(gfp_t           flags,
-                                      struct buffer * b)
+static struct buffer * buffer_dup_gfp(gfp_t                 flags,
+                                      const struct buffer * b)
 {
         struct buffer * tmp;
         void *          m;
 
-        if (!buffer_is_ok(b)) {
-                LOG_ERR("Cannot duplicate buffer, bad input parameter");
+        if (!buffer_is_ok(b))
                 return NULL;
-        }
 
         m = rkmalloc(b->size, flags);
         if (!m)
@@ -180,7 +178,7 @@ static struct buffer * buffer_dup_gfp(gfp_t           flags,
                 return NULL;
         }
 
-        tmp = buffer_create_from_gfp(flags, m, b->size);
+        tmp = buffer_create_with_gfp(flags, m, b->size);
         if (!tmp) {
                 rkfree(m);
                 return NULL;
@@ -189,11 +187,11 @@ static struct buffer * buffer_dup_gfp(gfp_t           flags,
         return tmp;
 }
 
-struct buffer * buffer_dup(struct buffer * b)
+struct buffer * buffer_dup(const struct buffer * b)
 { return buffer_dup_gfp(GFP_KERNEL, b); }
 EXPORT_SYMBOL(buffer_dup);
 
-struct buffer * buffer_dup_ni(struct buffer * b)
+struct buffer * buffer_dup_ni(const struct buffer * b)
 { return buffer_dup_gfp(GFP_ATOMIC, b); }
 EXPORT_SYMBOL(buffer_dup_ni);
 

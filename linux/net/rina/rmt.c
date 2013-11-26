@@ -283,8 +283,9 @@ static struct buffer * extract_buffer(struct sdu * sdu)
         if (!size)
                 return NULL;
 
-        return buffer_create_from_ni((sdu->buffer->data) + sizeof(struct pci),
-                                      size);
+        /* FIXME: Are we going to loose memory, if the function fails ? */
+        return buffer_create_with_ni((sdu->buffer->data) + sizeof(struct pci),
+                                     size);
 }
 
 static int rmt_receive_worker(void * o)

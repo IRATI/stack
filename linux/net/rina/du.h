@@ -85,11 +85,9 @@ struct buffer {
         size_t size;
 };
 
-/* NOTE: Creates a buffer from raw data */
-struct buffer * buffer_create_from(void * data,
-                                   size_t size);
-struct buffer * buffer_create_from_ni(void * data,
-                                      size_t size);
+/* NOTE: Creates a buffer from raw data (takes ownership) */
+struct buffer * buffer_create_with(void * data, size_t size);
+struct buffer * buffer_create_with_ni(void * data, size_t size);
 
 /* NOTE: Creates an uninitialized buffer (data might be garbage) */
 struct buffer * buffer_create(size_t size);
@@ -103,8 +101,8 @@ ssize_t         buffer_length(const struct buffer * b);
 /* NOTE: Returns the raw buffer memory, watch-out ... */
 void *          buffer_data(struct buffer * b);
 
-struct buffer * buffer_dup(struct buffer * b);
-struct buffer * buffer_dup_ni(struct buffer * b);
+struct buffer * buffer_dup(const struct buffer * b);
+struct buffer * buffer_dup_ni(const struct buffer * b);
 
 bool            buffer_is_ok(const struct buffer * b);
 
