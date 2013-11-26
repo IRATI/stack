@@ -141,6 +141,9 @@ struct pdu {
 
 struct pdu *          pdu_create(void);
 struct pdu *          pdu_create_ni(void);
+struct pdu *          pdu_create_with(struct sdu * sdu);
+struct pdu *          pdu_create_with_ni(struct sdu * sdu);
+
 bool                  pdu_is_ok(const struct pdu * pdu);
 const struct buffer * pdu_buffer(const struct pdu * pdu);
 const struct pci *    pdu_pci(const struct pdu * pdu);
