@@ -21,6 +21,8 @@
 #ifndef ARP826_TABLES_H
 #define ARP826_TABLES_H
 
+#include <linux/netdevice.h>
+
 #include "arp826-utils.h"
 
 struct table_entry;
@@ -74,8 +76,15 @@ struct table_entry * tbl_find_by_gpa(struct table *     instance,
  */
 int                  tbls_init(void);
 void                 tbls_fini(void);
-int                  tbls_create(uint16_t ptype, size_t hwl);
-int                  tbls_destroy(uint16_t ptype);
-struct table *       tbls_find(uint16_t ptype);
+int                  tbls_create(struct net_device * device,
+                                 uint16_t            ptype,
+                                 size_t              hwl);
+int                  tbls_create_ni(struct net_device * device,
+                                    uint16_t            ptype,
+                                    size_t              hwl);
+int                  tbls_destroy(struct net_device * device,
+                                  uint16_t            ptype);
+struct table *       tbls_find(struct net_device * device,
+                               uint16_t            ptype);
 
 #endif

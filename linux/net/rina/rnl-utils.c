@@ -2610,6 +2610,10 @@ static int send_nl_unicast_msg(struct net *     net,
                 return -1;
         }
 
+        LOG_DBG("Going to send NL unicast message "
+                "(type = %d, seq-num %u, port = %u)",
+                (int) type, seq_num, portid);
+
         result = genlmsg_unicast(net, skb, portid);
         if (result) {
                 LOG_ERR("Could not send NL message "
@@ -2668,15 +2672,12 @@ int rnl_assign_dif_response(ipc_process_id_t id,
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
 
-        result = send_nl_unicast_msg(&init_net,
-                                     out_msg,
-                                     nl_port_id,
-                                     RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE,
-                                     seq_num);
+        return send_nl_unicast_msg(&init_net,
+                                   out_msg,
+                                   nl_port_id,
+                                   RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE,
+                                   seq_num);
 
-        LOG_DBG("NL unicast message sent (result = %d)", result);
-
-        return result;
 }
 EXPORT_SYMBOL(rnl_assign_dif_response);
 
@@ -2897,9 +2898,9 @@ int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
                                   rnl_sn_t         seq_num,
                                   u32              nl_port_id)
 {
-        struct sk_buff * out_msg;
+        struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int result;
+        int                   result;
 
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
@@ -2996,11 +2997,11 @@ int rnl_ipcp_conn_create_resp_msg(ipc_process_id_t ipc_id,
                                   rnl_sn_t         seq_num,
                                   u32              nl_port_id)
 {
-        struct sk_buff * out_msg;
+        struct sk_buff *      out_msg;
         struct rina_msg_hdr * out_hdr;
-        int    result;
+        int                   result;
 
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE, GFP_ATOMIC);
         if (!out_msg) {
                 LOG_ERR("Could not allocate memory for message");
                 return -1;
@@ -3032,7 +3033,9 @@ int rnl_ipcp_conn_create_resp_msg(ipc_process_id_t ipc_id,
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
 
+#if 0
         result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
+#endif
 
         return send_nl_unicast_msg(&init_net,
                                    out_msg,

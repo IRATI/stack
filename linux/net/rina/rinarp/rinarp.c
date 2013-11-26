@@ -21,6 +21,7 @@
 
 #include <linux/module.h>
 #include <linux/if_arp.h>
+#include <linux/netdevice.h>
 
 #define RINA_PREFIX "rinarp"
 
@@ -51,9 +52,9 @@ static void handle_destroy(struct rinarp_handle * handle)
         rkfree(handle);
 }
 
-static struct rinarp_handle * handle_create(struct gpa *        pa,
-                                            struct gha *        ha,
-                                            struct net_device * dev)
+static struct rinarp_handle * handle_create(struct net_device * dev,
+                                            struct gpa *        pa,
+                                            struct gha *        ha)
 {
         struct rinarp_handle * handle;
 
@@ -83,17 +84,17 @@ static bool handle_is_ok(struct rinarp_handle * handle)
 { return (handle && gpa_is_ok(handle->pa) &&
           gha_is_ok(handle->ha) && handle->dev); }
 
-struct rinarp_handle * rinarp_add(const struct gpa * pa,
-                                  const struct gha * ha,
-                                  struct net_device * dev)
+struct rinarp_handle * rinarp_add(struct net_device * dev,
+                                  const struct gpa *  pa,
+                                  const struct gha *  ha)
 {
         struct rinarp_handle * handle;
 
-        handle = handle_create(gpa_dup(pa), gha_dup(ha), dev);
+        handle = handle_create(dev, gpa_dup(pa), gha_dup(ha));
         if (!handle)
                 return NULL;
 
-        if (arp826_add(ETH_P_RINA, handle->pa, handle->ha, dev)) {
+        if (arp826_add(dev, ETH_P_RINA, handle->pa, handle->ha)) {
                 handle_destroy(handle);
                 return NULL;
         }
@@ -111,7 +112,7 @@ int rinarp_remove(struct rinarp_handle * handle)
                 return -1;
         }
 
-        arp826_remove(ETH_P_RINA, handle->pa, handle->ha, handle->dev);
+        arp826_remove(handle->dev, ETH_P_RINA, handle->pa, handle->ha);
         handle_destroy(handle);
 
         return 0;
@@ -131,8 +132,8 @@ int rinarp_resolve_gpa(struct rinarp_handle * handle,
                 return -1;
         }
 
-        return arp826_resolve_gpa(ETH_P_RINA,
-                                  handle->pa, handle->ha, tpa, handle->dev,
+        return arp826_resolve_gpa(handle->dev, ETH_P_RINA,
+                                  handle->pa, handle->ha, tpa,
                                   (arp826_notify_t) notify, opaque);
 }
 EXPORT_SYMBOL(rinarp_resolve_gpa);
@@ -145,7 +146,7 @@ const struct gpa * rinarp_find_gpa(struct rinarp_handle * handle,
                 return NULL;
         }
 
-        return arp826_find_gpa(ETH_P_RINA, ha, handle->dev);
+        return arp826_find_gpa(handle->dev, ETH_P_RINA, ha);
 }
 EXPORT_SYMBOL(rinarp_find_gpa);
 
