@@ -209,7 +209,7 @@ int arp_send_reply(struct net_device * dev,
 }
 
 /* Fills the packet fields, sets THA to unkown */
-int arp_send_request(struct net_device * net,
+int arp_send_request(struct net_device * dev,
                      uint16_t            ptype,
                      const struct gpa *  spa,
                      const struct gha *  sha,
@@ -220,7 +220,6 @@ int arp_send_request(struct net_device * net,
         struct gpa *        tmp_tpa;
         size_t              max_len;
 #endif
-        struct net_device * dev;
         struct sk_buff *    skb;
         struct gha *        tha;
 
