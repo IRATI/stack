@@ -152,8 +152,8 @@ struct tmap_entry * tmap_entry_find(struct tmap *       map,
         LOG_DBG("On device %pK", key_device);
 
         list_for_each_entry(tmp, &map->head, next) {
-                LOG_DBG("Ptype is 0x%04x", tmp->key_ptype);
-                LOG_DBG("Device is %pK", tmp->key_device);
+                LOG_DBG("Ptype is 0x%04x", tmp->key.ptype);
+                LOG_DBG("Device is %pK", tmp->key.device);
                 if ((tmp->key.device == key_device) &&
                     (tmp->key.ptype  == key_ptype))
                         return tmp;
