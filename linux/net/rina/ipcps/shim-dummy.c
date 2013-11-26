@@ -516,7 +516,7 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
          * For the shim-dummy the processing consists of sending the new SDU
          * to the sdu_ready kfifo, which will take the ownership of this copy.
          */
-        copy_sdu = sdu_dup_gfp(GFP_ATOMIC, sdu);
+        copy_sdu = sdu_dup_ni(sdu);
         if (!copy_sdu)
                 return -1;
 
