@@ -47,17 +47,17 @@ typedef uint8_t pdu_flags_t;
 
 typedef uint16_t pdu_type_t;
 
-#define is_pdu_type_ok(X)                               \
-        ((X && PDU_TYPE_EFCP)       ? 1 :               \
-         ((X && PDU_TYPE_DT)         ? 1 :              \
-          ((X && PDU_TYPE_CC)         ? 1 :             \
-           ((X && PDU_TYPE_SACK)       ? 1 :            \
-            ((X && PDU_TYPE_NACK)       ? 1 :           \
-             ((X && PDU_TYPE_FC)         ? 1 :          \
-              ((X && PDU_TYPE_ACK)        ? 1 :         \
-               ((X && PDU_TYPE_ACK_AND_FC) ? 1 :        \
-                ((X && PDU_TYPE_MGMT)       ? 1 :       \
-                 0)))))))))
+#define pdu_type_is_ok(X)                               \
+        ((X && PDU_TYPE_EFCP)       ? true :            \
+         ((X && PDU_TYPE_DT)         ? true :           \
+          ((X && PDU_TYPE_CC)         ? true :          \
+           ((X && PDU_TYPE_SACK)       ? true :         \
+            ((X && PDU_TYPE_NACK)       ? true :        \
+             ((X && PDU_TYPE_FC)         ? true :       \
+              ((X && PDU_TYPE_ACK)        ? true :      \
+               ((X && PDU_TYPE_ACK_AND_FC) ? true :     \
+                ((X && PDU_TYPE_MGMT)       ? true :    \
+                 false)))))))))
 
 typedef uint seq_num_t;
 
@@ -73,6 +73,8 @@ struct buffer {
 /* NOTE: Creates a buffer from raw data (takes ownership) */
 struct buffer * buffer_create_with(void * data, size_t size);
 struct buffer * buffer_create_with_ni(void * data, size_t size);
+struct buffer * buffer_create_from(const void * data, size_t size);
+struct buffer * buffer_create_from_ni(const void * data, size_t size);
 
 /* NOTE: Creates an uninitialized buffer (data might be garbage) */
 struct buffer * buffer_create(size_t size);
@@ -84,11 +86,10 @@ int             buffer_destroy(struct buffer * b);
 ssize_t         buffer_length(const struct buffer * b);
 
 /* NOTE: Returns the raw buffer memory, watch-out ... */
-void *          buffer_data(struct buffer * b);
+const void *    buffer_data(const struct buffer * b);
 
 struct buffer * buffer_dup(const struct buffer * b);
 struct buffer * buffer_dup_ni(const struct buffer * b);
-
 bool            buffer_is_ok(const struct buffer * b);
 
 /*
@@ -102,16 +103,11 @@ struct sdu {
 /* NOTE: The following function take the ownership of the buffer passed */
 struct sdu *          sdu_create_with(struct buffer * buffer);
 struct sdu *          sdu_create_with_ni(struct buffer * buffer);
-
 int                   sdu_destroy(struct sdu * s);
-
 const struct buffer * sdu_buffer(const struct sdu * s);
-
 struct sdu *          sdu_dup(const struct sdu * sdu);
 struct sdu *          sdu_dup_ni(const struct sdu * sdu);
-
 bool                  sdu_is_ok(const struct sdu * sdu);
-
 struct sdu *          sdu_protect(struct sdu * sdu);
 struct sdu *          sdu_unprotect(struct sdu * sdu);
 
@@ -134,7 +130,6 @@ struct pdu;
 
 struct pdu *          pdu_create_with(struct sdu * sdu);
 struct pdu *          pdu_create_with_ni(struct sdu * sdu);
-
 bool                  pdu_is_ok(const struct pdu * pdu);
 const struct buffer * pdu_buffer(const struct pdu * pdu);
 const struct pci *    pdu_pci(const struct pdu * pdu);
