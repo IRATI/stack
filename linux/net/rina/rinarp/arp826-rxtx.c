@@ -147,12 +147,12 @@ static struct sk_buff * arp_create(struct net_device * dev,
         return skb;
 }
 
-int arp_send_reply(uint16_t            ptype,
+int arp_send_reply(struct net_device * dev,
+                   uint16_t            ptype,
                    const struct gpa *  spa,
                    const struct gha *  sha,
                    const struct gpa *  tpa,
-                   const struct gha *  tha,
-                   struct net_device * dev)
+                   const struct gha *  tha)
 {
 #if HAVE_RINARP
         struct gpa *        tmp_spa;
@@ -209,11 +209,11 @@ int arp_send_reply(uint16_t            ptype,
 }
 
 /* Fills the packet fields, sets THA to unkown */
-int arp_send_request(uint16_t            ptype,
+int arp_send_request(struct net_device * net,
+                     uint16_t            ptype,
                      const struct gpa *  spa,
                      const struct gha *  sha,
-                     const struct gpa *  tpa,
-                     struct net_device * net)
+                     const struct gpa *  tpa)
 {
 #if HAVE_RINARP
         struct gpa *        tmp_spa;
