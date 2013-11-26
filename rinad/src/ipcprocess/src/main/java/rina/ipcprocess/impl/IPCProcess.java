@@ -61,6 +61,8 @@ import rina.ribdaemon.api.RIBObject;
 import eu.irati.librina.AllocateFlowRequestResultEvent;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistration;
+import eu.irati.librina.ApplicationRegistrationRequestEvent;
+import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.AssignToDIFRequestEvent;
 import eu.irati.librina.AssignToDIFResponseEvent;
 import eu.irati.librina.DIFInformation;
@@ -73,7 +75,6 @@ import eu.irati.librina.FlowInformation;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCEvent;
 import eu.irati.librina.IPCEventProducerSingleton;
-import eu.irati.librina.IPCEventType;
 import eu.irati.librina.IPCProcessDIFRegistrationEvent;
 import eu.irati.librina.KernelIPCProcessSingleton;
 import eu.irati.librina.Neighbor;
@@ -370,34 +371,57 @@ public class IPCProcess {
 	private void processEvent(IPCEvent event) throws Exception{
 		log.info("Got event of type: "+event.getType() 
 				+ " and sequence number: "+event.getSequenceNumber());
-		
-		if (event.getType() == IPCEventType.IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION) {
+
+		switch (event.getType()) {
+		case IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:
 			IPCProcessDIFRegistrationEvent regEvent = (IPCProcessDIFRegistrationEvent) event;
 			resourceAllocator.getNMinus1FlowManager().processRegistrationNotification(regEvent);
-		} else if (event.getType() == IPCEventType.ASSIGN_TO_DIF_REQUEST_EVENT) {
+			break;
+		case ASSIGN_TO_DIF_REQUEST_EVENT:
 			AssignToDIFRequestEvent asEvent = (AssignToDIFRequestEvent) event;
 			processAssignToDIFRequest(asEvent);
-		} else if (event.getType() == IPCEventType.ASSIGN_TO_DIF_RESPONSE_EVENT) {
-			AssignToDIFResponseEvent asEvent = (AssignToDIFResponseEvent) event;
-			processAssignToDIFResponseEvent(asEvent);
-		} else if (event.getType() == IPCEventType.ALLOCATE_FLOW_REQUEST_RESULT_EVENT) {
+			break;
+		case ASSIGN_TO_DIF_RESPONSE_EVENT:
+			AssignToDIFResponseEvent asrEvent = (AssignToDIFResponseEvent) event;
+			processAssignToDIFResponseEvent(asrEvent);
+			break;
+		case ALLOCATE_FLOW_REQUEST_RESULT_EVENT:
 			AllocateFlowRequestResultEvent flowEvent = (AllocateFlowRequestResultEvent) event;
 			resourceAllocator.getNMinus1FlowManager().allocateRequestResult(flowEvent);
-		} else if (event.getType() == IPCEventType.FLOW_ALLOCATION_REQUESTED_EVENT) {
+			break;
+		case FLOW_ALLOCATION_REQUESTED_EVENT:
 			FlowRequestEvent flowRequestEvent = (FlowRequestEvent) event;
 			resourceAllocator.getNMinus1FlowManager().flowAllocationRequested(flowRequestEvent);
-		} else if (event.getType() == IPCEventType.DEALLOCATE_FLOW_RESPONSE_EVENT) {
-			DeallocateFlowResponseEvent flowEvent = (DeallocateFlowResponseEvent) event;
-			resourceAllocator.getNMinus1FlowManager().deallocateFlowResponse(flowEvent);
-		} else if (event.getType() == IPCEventType.FLOW_DEALLOCATED_EVENT) {
-			FlowDeallocatedEvent flowEvent = (FlowDeallocatedEvent) event;
-			resourceAllocator.getNMinus1FlowManager().flowDeallocatedRemotely(flowEvent);
-		} else if (event.getType() == IPCEventType.ENROLL_TO_DIF_REQUEST_EVENT) {
+			break;
+		case DEALLOCATE_FLOW_RESPONSE_EVENT:
+			DeallocateFlowResponseEvent flowDEvent = (DeallocateFlowResponseEvent) event;
+			resourceAllocator.getNMinus1FlowManager().deallocateFlowResponse(flowDEvent);
+			break;
+		case FLOW_DEALLOCATED_EVENT:
+			FlowDeallocatedEvent flowDeaEvent = (FlowDeallocatedEvent) event;
+			resourceAllocator.getNMinus1FlowManager().flowDeallocatedRemotely(flowDeaEvent);
+			break;
+		case ENROLL_TO_DIF_REQUEST_EVENT:
 			EnrollToDIFRequestEvent enrEvent = (EnrollToDIFRequestEvent) event;
 			enrollmentTask.processEnrollmentRequestEvent(enrEvent, difInformation);
-		} else if (event.getType() == IPCEventType.IPC_PROCESS_QUERY_RIB) {
+			break;
+		case IPC_PROCESS_QUERY_RIB:
 			QueryRIBRequestEvent queryEvent = (QueryRIBRequestEvent) event;
 			ribDaemon.processQueryRIBRequestEvent(queryEvent);
+			break;
+		case APPLICATION_REGISTRATION_REQUEST_EVENT:
+			ApplicationRegistrationRequestEvent apRegReqEvent = (ApplicationRegistrationRequestEvent) event;
+			registrationManager.processApplicationRegistrationRequestEvent(apRegReqEvent);
+			break;
+		case APPLICATION_UNREGISTRATION_REQUEST_EVENT:
+			ApplicationUnregistrationRequestEvent apUnregReqEvent = 
+				(ApplicationUnregistrationRequestEvent) event;
+			registrationManager.processApplicationUnregistrationRequestEvent(
+					apUnregReqEvent);
+			break;
+		default:
+			log.warn("Received unsupported event: "+event.getType());
+			break;
 		}
 	}
 	
