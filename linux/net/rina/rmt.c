@@ -272,8 +272,7 @@ static struct pci * extract_pci(struct sdu * sdu)
 
 static struct buffer * extract_buffer(struct sdu * sdu)
 {
-        struct buffer * buffer;
-        size_t          size;
+        size_t size;
 
         if (!sdu) {
                 LOG_ERR("Bogus SDU passed");
@@ -284,14 +283,8 @@ static struct buffer * extract_buffer(struct sdu * sdu)
         if (!size)
                 return NULL;
 
-        buffer = rkzalloc(sizeof(*buffer), GFP_ATOMIC);
-        if (!buffer)
-                return NULL;
-
-        buffer->data = (sdu->buffer->data) + sizeof(struct pci) + 1;
-        buffer->size = size;
-
-        return buffer;
+        return buffer_create_from_ni((sdu->buffer->data) + sizeof(struct pci),
+                                      size);
 }
 
 static int rmt_receive_worker(void * o)
@@ -325,24 +318,27 @@ static int rmt_receive_worker(void * o)
         }
         if (pci->type == PDU_TYPE_MGMT) {
                 struct sdu * sdu;
-                sdu = rkzalloc(sizeof(*sdu), GFP_KERNEL); /* FIXME: Is this right? */
+                sdu = sdu_create_from_buffer_ni(buffer);
                 if (!sdu) {
                         receive_data_destroy(tmp);
                         return -1;
                 }
-                sdu->buffer = buffer;
                 if (kfa_sdu_post_to_user_space(tmp->kfa, sdu, tmp->from)) {
                         receive_data_destroy(tmp);
                         return -1;
                 }
+                return 0;
         }
 
-        pdu = rkzalloc(sizeof(*pdu), GFP_KERNEL);
+        pdu = pdu_create();
         if (!pdu) {
                 receive_data_destroy(tmp);
                 return -1;
         }
 
+        /* FIXME: Will be removed as soon as we have access functions */
+        pdu->buffer = buffer;
+        pdu->pci    = pci;
         if (efcp_container_receive(tmp->efcpc,
                                    pci->ceps.dest_id,
                                    pdu)) {

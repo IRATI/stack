@@ -41,6 +41,7 @@ struct pdu * pdu_create(void)
 
         return tmp;
 }
+EXPORT_SYMBOL(pdu_create);
 
 int pdu_destroy(struct pdu * p)
 {
