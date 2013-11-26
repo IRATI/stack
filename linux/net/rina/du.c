@@ -29,6 +29,84 @@
 #include "debug.h"
 #include "du.h"
 
+struct pci {
+        address_t  source;
+        address_t  destination;
+
+        pdu_type_t type;
+
+        struct {
+                cep_id_t source;
+                cep_id_t destination;
+        } ceps;
+
+        qos_id_t   qos_id;
+        seq_num_t  sequence_number;
+};
+
+static bool pci_is_ok(const struct pci * pci)
+{ return pci ? true : false; }
+
+pdu_type_t pci_type(const struct pci * pci)
+{
+        ASSERT(pci); /* FIXME: Should not be an ASSERT ... */
+
+        return pci->type;
+}
+EXPORT_SYMBOL(pci_type);
+
+ssize_t pci_length(const struct pci * pci)
+{
+        if (!pci_is_ok(pci))
+                return -1;
+
+        return sizeof(*pci);
+}
+EXPORT_SYMBOL(pci_length);
+
+address_t pci_source(const struct pci * pci)
+{
+        ASSERT(pci); /* FIXME: Should not be an ASSERT ... */
+
+        return pci->source;
+}
+EXPORT_SYMBOL(pci_source);
+
+address_t pci_destination(const struct pci * pci)
+{
+        ASSERT(pci); /* FIXME: Should not be an ASSERT ... */
+
+        return pci->destination;
+}
+EXPORT_SYMBOL(pci_destination);
+
+cep_id_t pci_cep_destination(const struct pci * pci)
+{
+        if (!pci)
+                return cep_id_bad();
+
+        return pci->ceps.destination;
+}
+EXPORT_SYMBOL(pci_cep_destination);
+
+cep_id_t pci_cep_source(const struct pci * pci)
+{
+        if (!pci)
+                return cep_id_bad();
+
+        return pci->ceps.source;
+}
+EXPORT_SYMBOL(pci_cep_source);
+
+struct pdu {
+        struct pci *    pci;
+        struct buffer * buffer;
+};
+
+bool pdu_is_ok(const struct pdu * p)
+{ return (p && p->pci && p->buffer) ? true : false; }
+EXPORT_SYMBOL(pdu_is_ok);
+
 static struct pdu * pdu_create_gfp(gfp_t flags)
 {
         struct pdu * tmp;
@@ -40,6 +118,8 @@ static struct pdu * pdu_create_gfp(gfp_t flags)
         tmp->pci    = NULL;
         tmp->buffer = NULL;
 
+        ASSERT(pdu_is_ok(tmp));
+
         return tmp;
 }
 
@@ -50,10 +130,6 @@ EXPORT_SYMBOL(pdu_create);
 struct pdu * pdu_create_ni(void)
 { return pdu_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(pdu_create_ni);
-
-bool pdu_is_ok(const struct pdu * p)
-{ return (p && p->pci && p->buffer) ? true : false; }
-EXPORT_SYMBOL(pdu_is_ok);
 
 static struct pdu * pdu_create_with_gfp(gfp_t        flags,
                                         struct sdu * sdu)
@@ -369,4 +445,4 @@ struct sdu * sdu_unprotect(struct sdu * s)
 
         return NULL;
 }
-EXPORT_SYMBOL(sdu_unprotect);
+ EXPORT_SYMBOL(sdu_unprotect);

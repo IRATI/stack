@@ -61,21 +61,6 @@ typedef uint16_t pdu_type_t;
 
 typedef uint seq_num_t;
 
-struct pci {
-        address_t  source;
-        address_t  destination;
-
-        pdu_type_t type;
-
-        struct {
-                cep_id_t source_id;
-                cep_id_t dest_id;
-        } ceps;
-
-        qos_id_t   qos_id;
-        seq_num_t  sequence_number;
-};
-
 /*
  * FIXME: This structure will be hidden soon. Do not access its field(s)
  *        directly, prefer the access functions below.
@@ -130,14 +115,17 @@ bool                  sdu_is_ok(const struct sdu * sdu);
 struct sdu *          sdu_protect(struct sdu * sdu);
 struct sdu *          sdu_unprotect(struct sdu * sdu);
 
-/*
- * FIXME: This structure will be hidden soon. Do not access its field(s)
- *        directly, prefer the access functions below.
- */
-struct pdu {
-        struct pci *    pci;
-        struct buffer * buffer;
-};
+struct pci;
+
+/* NOTE: The following function may return -1 */
+ssize_t               pci_length(const struct pci * pci);
+pdu_type_t            pci_type(const struct pci * pci);
+address_t             pci_source(const struct pci * pci);
+address_t             pci_destination(const struct pci * pci);
+cep_id_t              pci_cep_source(const struct pci * pci);
+cep_id_t              pci_cep_destination(const struct pci * pci);
+
+struct pdu;
 
 struct pdu *          pdu_create(void);
 struct pdu *          pdu_create_ni(void);
