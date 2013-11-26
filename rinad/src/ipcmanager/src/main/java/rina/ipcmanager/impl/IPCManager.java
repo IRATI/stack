@@ -283,77 +283,102 @@ public class IPCManager {
 	private void processEvent(IPCEvent event) throws Exception{
 		log.info("Got event of type: "+event.getType() 
 				+ " and sequence number: "+event.getSequenceNumber());
-		
-		if (event.getType() == IPCEventType.APPLICATION_REGISTRATION_REQUEST_EVENT) {
+
+		switch(event.getType()) {
+		case APPLICATION_REGISTRATION_REQUEST_EVENT:
 			ApplicationRegistrationRequestEvent appRegReqEvent = (ApplicationRegistrationRequestEvent) event;
 			applicationRegistrationManager.requestApplicationRegistration(appRegReqEvent, NO_IPC_PROCESS_ID);
-		} else if (event.getType() == IPCEventType.IPCM_REGISTER_APP_RESPONSE_EVENT) {
+			break;
+		case IPCM_REGISTER_APP_RESPONSE_EVENT:
 			IpcmRegisterApplicationResponseEvent appRespEvent = (IpcmRegisterApplicationResponseEvent) event;
 			applicationRegistrationManager.registerApplicationResponse(appRespEvent);
-		} else if (event.getType() == IPCEventType.APPLICATION_UNREGISTRATION_REQUEST_EVENT){
+			break;
+		case APPLICATION_UNREGISTRATION_REQUEST_EVENT:
 			ApplicationUnregistrationRequestEvent appUnregReqEvent = (ApplicationUnregistrationRequestEvent) event;
 			applicationRegistrationManager.requestApplicationUnregistration(appUnregReqEvent, IPCManager.NO_IPC_PROCESS_ID);
-		} else if (event.getType() == IPCEventType.IPCM_UNREGISTER_APP_RESPONSE_EVENT) {
-			IpcmUnregisterApplicationResponseEvent appRespEvent = (IpcmUnregisterApplicationResponseEvent) event;
-			applicationRegistrationManager.unregisterApplicationResponse(appRespEvent);
-		} else if (event.getType() == IPCEventType.FLOW_ALLOCATION_REQUESTED_EVENT){
+			break;
+		case IPCM_UNREGISTER_APP_RESPONSE_EVENT:
+			IpcmUnregisterApplicationResponseEvent appUnRespEvent = (IpcmUnregisterApplicationResponseEvent) event;
+			applicationRegistrationManager.unregisterApplicationResponse(appUnRespEvent);
+			break;
+		case FLOW_ALLOCATION_REQUESTED_EVENT:
 			FlowRequestEvent flowReqEvent = (FlowRequestEvent) event;
 			if (flowReqEvent.isLocalRequest()){
 				flowManager.requestAllocateFlowLocal(flowReqEvent);
 			}else{
 				flowManager.allocateFlowRemote(flowReqEvent);
 			}
-		} else if (event.getType() == IPCEventType.IPCM_ALLOCATE_FLOW_REQUEST_RESULT){
+			break;
+		case IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
 			IpcmAllocateFlowRequestResultEvent flowEvent = (IpcmAllocateFlowRequestResultEvent) event;
 			flowManager.allocateFlowRequestResult(flowEvent);
-		} else if (event.getType() == IPCEventType.ALLOCATE_FLOW_RESPONSE_EVENT){
-			AllocateFlowResponseEvent flowEvent = (AllocateFlowResponseEvent) event;
-			flowManager.allocateFlowResponse(flowEvent);
-		} else if (event.getType() == IPCEventType.FLOW_DEALLOCATION_REQUESTED_EVENT){
+			break;
+		case ALLOCATE_FLOW_RESPONSE_EVENT:
+			AllocateFlowResponseEvent flowRespEvent = (AllocateFlowResponseEvent) event;
+			flowManager.allocateFlowResponse(flowRespEvent);
+			break;
+		case FLOW_DEALLOCATION_REQUESTED_EVENT:
 			FlowDeallocateRequestEvent flowDeReqEvent = (FlowDeallocateRequestEvent) event;
 			flowManager.deallocateFlowRequest(flowDeReqEvent);
-		} else if (event.getType() == IPCEventType.IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT){
+			break;
+		case IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT:
 			IpcmDeallocateFlowResponseEvent flowDeEvent = (IpcmDeallocateFlowResponseEvent) event;
 			flowManager.deallocateFlowResponse(flowDeEvent);
-		} else if (event.getType() == IPCEventType.FLOW_DEALLOCATED_EVENT){
-			FlowDeallocatedEvent flowDeEvent = (FlowDeallocatedEvent) event;
-			flowManager.flowDeallocated(flowDeEvent);
-		}else if (event.getType().equals(IPCEventType.GET_DIF_PROPERTIES)){
-			//TODO
-		}else if (event.getType().equals(IPCEventType.OS_PROCESS_FINALIZED)){
+			break;
+		case FLOW_DEALLOCATED_EVENT:
+			FlowDeallocatedEvent flowDeaEvent = (FlowDeallocatedEvent) event;
+			flowManager.flowDeallocated(flowDeaEvent);
+			break;
+		case GET_DIF_PROPERTIES:
+			break;
+		case OS_PROCESS_FINALIZED:
 			OSProcessFinalizedEvent osProcessFinalizedEvent = (OSProcessFinalizedEvent) event;
-			log.info("OS process finalized. Naming info: " 
-					+ osProcessFinalizedEvent.getApplicationName().toString());
-			
-			//Clean up all stuff related to the finalized process (registrations, flows)
-			flowManager.cleanFlows(osProcessFinalizedEvent.getApplicationName());
-			applicationRegistrationManager.cleanApplicationRegistrations(
-					osProcessFinalizedEvent.getApplicationName());
-			
-			if (osProcessFinalizedEvent.getIPCProcessId() != 0){
-				//TODO The process that crashed was an IPC Process in user space
-				//Should we destroy the state in the kernel? Or try to create another
-				//IPC Process in user space to bring it back?
-			}
-		} else if (event.getType().equals(IPCEventType.ASSIGN_TO_DIF_RESPONSE_EVENT)){
+			processOSProcessFinalizedEvent(osProcessFinalizedEvent);
+			break;
+		case ASSIGN_TO_DIF_RESPONSE_EVENT:
 			AssignToDIFResponseEvent atrEvent = (AssignToDIFResponseEvent) event;
 			ipcProcessManager.assignToDIFResponse(atrEvent);
 			console.responseArrived(event);
-		} else if (event.getType().equals(IPCEventType.UPDATE_DIF_CONFIG_RESPONSE_EVENT)){
-			UpdateDIFConfigurationResponseEvent atrEvent = (UpdateDIFConfigurationResponseEvent) event;
-			ipcProcessManager.updateDIFConfigurationResponse(atrEvent);
-		} else if (event.getType().equals(IPCEventType.IPC_PROCESS_DAEMON_INITIALIZED_EVENT)) {
+			break;
+		case UPDATE_DIF_CONFIG_RESPONSE_EVENT:
+			UpdateDIFConfigurationResponseEvent updateConfEvent = (UpdateDIFConfigurationResponseEvent) event;
+			ipcProcessManager.updateDIFConfigurationResponse(updateConfEvent);
+			break;
+		case IPC_PROCESS_DAEMON_INITIALIZED_EVENT:
 			IPCProcessDaemonInitializedEvent ipcEvent = (IPCProcessDaemonInitializedEvent) event;
 			ipcProcessManager.setInitialized(ipcEvent.getIPCProcessId());
-		} else if (event.getType().equals(IPCEventType.ENROLL_TO_DIF_RESPONSE_EVENT)) {
-			EnrollToDIFResponseEvent ipcEvent = (EnrollToDIFResponseEvent) event;
-			ipcProcessManager.enrollToDIFResponse(ipcEvent);
-		} else if (event.getType().equals(IPCEventType.NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT)) {
-			NeighborsModifiedNotificationEvent ipcEvent = (NeighborsModifiedNotificationEvent) event;
-			ipcProcessManager.neighborsModifiedEvent(ipcEvent);
-		} else if (event.getType().equals(IPCEventType.QUERY_RIB_RESPONSE_EVENT)) {
-			QueryRIBResponseEvent ipcEvent = (QueryRIBResponseEvent) event;
-			console.responseArrived(ipcEvent);
+			break;
+		case ENROLL_TO_DIF_RESPONSE_EVENT:
+			EnrollToDIFResponseEvent enrollResponseEvent = (EnrollToDIFResponseEvent) event;
+			ipcProcessManager.enrollToDIFResponse(enrollResponseEvent);
+			break;
+		case NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT:
+			NeighborsModifiedNotificationEvent neighborsEvent = (NeighborsModifiedNotificationEvent) event;
+			ipcProcessManager.neighborsModifiedEvent(neighborsEvent);
+			break;
+		case QUERY_RIB_RESPONSE_EVENT:
+			QueryRIBResponseEvent queryRIBEvent = (QueryRIBResponseEvent) event;
+			console.responseArrived(queryRIBEvent);
+			break;
+		default:
+			log.warn("Got unsupported event type: "+event.getType());
+			break;
+		}
+	}
+	
+	private void processOSProcessFinalizedEvent(OSProcessFinalizedEvent event) {
+		log.info("OS process finalized. Naming info: " 
+				+ event.getApplicationName().toString());
+
+		//Clean up all stuff related to the finalized process (registrations, flows)
+		flowManager.cleanFlows(event.getApplicationName());
+		applicationRegistrationManager.cleanApplicationRegistrations(
+				event.getApplicationName());
+
+		if (event.getIPCProcessId() != 0){
+			//TODO The process that crashed was an IPC Process in user space
+			//Should we destroy the state in the kernel? Or try to create another
+			//IPC Process in user space to bring it back?
 		}
 	}
 	

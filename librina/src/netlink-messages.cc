@@ -748,6 +748,7 @@ IPCEvent* IpcmRegisterApplicationRequestMessage::toIPCEvent(){
 	ApplicationRegistrationInformation information =
 		ApplicationRegistrationInformation(APPLICATION_REGISTRATION_SINGLE_DIF);
 	information.setDIFName(difName);
+	information.setApplicationName(applicationName);
 	ApplicationRegistrationRequestEvent * event =
 			new ApplicationRegistrationRequestEvent(
 					information,
