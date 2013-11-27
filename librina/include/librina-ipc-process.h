@@ -245,6 +245,19 @@ public:
 };
 
 /**
+ * Thrown when there are problems requesting the Kernel to create an EFCP connection
+ */
+class CreateConnectionException: public IPCException {
+public:
+        CreateConnectionException():
+                IPCException("Problems creating an EFCP connection"){
+        }
+        CreateConnectionException(const std::string& description):
+                IPCException(description){
+        }
+};
+
+/**
  * Class used by the IPC Processes to interact with the IPC Manager. Extends
  * the basic IPC Manager in librina-application with IPC Process specific
  * functionality
@@ -444,6 +457,39 @@ public:
 extern Singleton<ExtendedIPCManager> extendedIPCManager;
 
 /**
+ * Represents the data to create an EFCP connection
+ */
+class Connection {
+        /** The port-id to which the connection is bound */
+        int portId;
+
+        /** The address of the IPC Process at the source of the conection */
+        unsigned int sourceAddress;
+
+        /**
+         * The address of the IPC Process at the destination of
+         * the connection
+         */
+        unsigned int destAddress;
+
+        /**
+         * The id of the QoS cube associated to the connection
+         */
+        unsigned int qosId;
+
+public:
+        Connection();
+        unsigned int getDestAddress() const;
+        void setDestAddress(unsigned int destAddress);
+        int getPortId() const;
+        void setPortId(int portId);
+        unsigned int getQosId() const;
+        void setQosId(unsigned int qosId);
+        unsigned int getSourceAddress() const;
+        void setSourceAddress(unsigned int sourceAddress);
+};
+
+/**
  * Abstraction of the data transfer and data transfer control parts of the
  * IPC Process, which are implemented in the Kernel. This class allows the
  * IPC Process Daemon to communicate with its components in the kernel
@@ -470,7 +516,7 @@ public:
                 throw (AssignToDIFException);
 
         /**
-         * Invoked by the IPC Process Deamon to modify the configuration of
+         * Invoked by the IPC Process Daemon to modify the configuration of
          * the kernel components of the IPC Process.
          *
          * @param difConfiguration The configuration of the DIF
@@ -481,6 +527,17 @@ public:
         unsigned int updateDIFConfiguration(
                         const DIFConfiguration& difConfiguration)
         throw (UpdateDIFConfigurationException);
+
+        /**
+         * Invoked by the IPC Process Daemon to request the creation of an
+         * EFCP connection to the kernel components of the IPC Process
+         *
+         * @param connection
+         * @throws CreateConnectionException
+         * @return the handle to the response message
+         */
+        unsigned int createConnection(const Connection& connection)
+        throw (CreateConnectionException);
 };
 
 /**

@@ -55,6 +55,8 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 	/** The enrollment request, issued by the IPC Manager */
 	private EnrollmentRequest enrollmentRequest = null;
 	
+	private boolean wasDIFMemberBeforeEnrollment = false;
+	
 	public EnrolleeStateMachine(RIBDaemon ribDaemon, CDAPSessionManager cdapSessionManager, Encoder encoder, 
 			ApplicationProcessNamingInformation remoteNamingInfo, EnrollmentTask enrollmentTask, long timeout){
 		super(ribDaemon, cdapSessionManager, encoder, remoteNamingInfo, enrollmentTask, timeout);
@@ -135,6 +137,7 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 			EnrollmentInformationRequest eiRequest = new EnrollmentInformationRequest();
 			Long address = ipcProcess.getAddress();
 			if (address != null){
+				wasDIFMemberBeforeEnrollment = true;
 				eiRequest.setAddress(ipcProcess.getAddress());
 			} else {
 				difInformation = new DIFInformation();
@@ -503,6 +506,16 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 		createOrUpdateNeighborInformation(true);
 		
 		enrollmentTask.enrollmentCompleted(remotePeer, true);
+		
+		//Notify the kernel
+		if (!wasDIFMemberBeforeEnrollment) {
+			try {
+				rina.getKernelIPCProcess().assignToDIF(ipcProcess.getDIFInformation());
+			} catch(Exception ex) {
+				log.error("Problems communicating with the Kernel components of the IPC Processs: " 
+						+ ex.getMessage());
+			}
+		}
 
 		//Notify the IPC Manager
 		if (enrollmentRequest != null && enrollmentRequest.getEvent() != null){
