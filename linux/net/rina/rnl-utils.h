@@ -228,6 +228,13 @@ enum ipcm_unreg_app_resp_attrs_list {
  * descriptions strings in US */
 #define UNREG_APP_RESP_ERR_DESC_1 "FAILED"
 
+enum ipcm_ipcp_notify_flow_event_attrs_list {
+        INFE_ATTR_PORTID = 1,
+        INFE_ATTR_ALLOCATED,
+        __INFE_ATTR_MAX,
+};
+#define INFE_ATTR_MAX (__INFE_ATTR_MAX -1)
+
 enum ipcm_query_rib_req_attrs_list {
         IDQR_ATTR_OBJECT = 1,
         IDQR_ATTR_SCOPE,
@@ -372,7 +379,8 @@ enum rnl_msg_attr_type {
         RNL_MSG_ATTRS_CONN_CREATE_REQUEST,
         RNL_MSG_ATTRS_CONN_CREATE_ARRIVED,
         RNL_MSG_ATTRS_CONN_UPDATE_REQUEST,
-        RNL_MSG_ATTRS_CONN_DESTROY_REQUEST
+        RNL_MSG_ATTRS_CONN_DESTROY_REQUEST,
+        RNL_MSG_ATTRS_IPCP_FLOW_NOTIFICATION
 };
 
 struct rnl_msg {
@@ -588,6 +596,10 @@ struct rnl_rmt_dump_ft_reply_msg_attrs {
         int temp;
 };
 
+struct rnl_ipcp_flow_notif_msg_attrs {
+        port_id_t port_id;
+        bool allocated;
+};
 
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg *   msg);
