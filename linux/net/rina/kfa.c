@@ -555,6 +555,22 @@ int kfa_sdu_post_to_user_space(struct kfa * instance,
                                struct sdu * sdu,
                                port_id_t    to)
 {
+        if (!instance) {
+                LOG_ERR("Bogus kfa instance passed, cannot post SDU");
+                return -1;
+        }
+        if (!is_port_id_ok(to)) {
+                LOG_ERR("Bogus port-id, bailing out");
+                return -1;
+        }
+        if (!sdu_is_ok(sdu)) {
+                LOG_ERR("Bogus parameters passed, bailing out");
+                return -1;
+        }
+
+        LOG_DBG("Posting SDU to queue for user space in port-id %d ", to);
+
+        LOG_MISSING;
 
         return 0;
 }

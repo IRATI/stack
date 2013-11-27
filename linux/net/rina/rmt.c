@@ -260,58 +260,11 @@ static int receive_data_destroy(struct receive_data * data)
         return 0;
 }
 
-static struct pci * extract_pci(struct sdu * sdu)
-{
-#if 0
-        if (!sdu) {
-                LOG_ERR("Bogus SDU passed");
-                return NULL;
-        }
-
-        return ((struct pci *) sdu->buffer->data);
-#else
-        /* FIXME: This function is obsolete, please avoid it (drop!) */
-        LOG_MISSING;
-#endif
-        return NULL;
-}
-
-static struct buffer * extract_buffer(struct sdu * sdu)
-{
-#if 0
-        size_t  pci_l;
-        ssize_t size;
-        
-        if (!sdu) {
-                LOG_ERR("Bogus SDU passed");
-                return NULL;
-        }
-
-        pci_l = pci_length(pci);
-        if (pci_l <= 0)
-                return NULL;
-
-        size = sdu->buffer->size - pci_l;
-        if (!size)
-                return NULL;
-
-        return buffer_create_with_ni(sdu->buffer->data + sizeof(struct pci),
-                                     size);
-#else
-        /* FIXME: This function is obsolete, please avoid it (drop!) */
-        LOG_MISSING;
-
-        return NULL;
-#endif
-}
-
 static int rmt_receive_worker(void * o)
 {
         struct receive_data * tmp;
         struct pdu *          pdu;
-        pdu_type_t            pdu_type;
-        struct pci *          pci;
-        struct buffer *       buffer;
+        pdu_type_t            type;
 
         tmp = (struct receive_data *) o;
         if (!tmp) {
@@ -325,22 +278,19 @@ static int rmt_receive_worker(void * o)
                 return -1;
         }
 
-        pci = extract_pci(tmp->sdu);
-        if (!pci) {
-                receive_data_destroy(tmp);
-                return -1;
-        }
-        buffer = extract_buffer(tmp->sdu);
-        if (!buffer) {
+        pdu = pdu_create_with(tmp->sdu);
+        if (!pdu) {
                 receive_data_destroy(tmp);
                 return -1;
         }
 
-        pdu_type = pci_type(pci);
-        switch (pdu_type) {
+        type = pdu_type(pdu);
+        switch (type) {
         case PDU_TYPE_MGMT: {
-                struct sdu * sdu;
+                struct sdu *    sdu;
+                struct buffer * buffer;
 
+                buffer = pdu_buffer(pdu);
                 sdu = sdu_create_with(buffer);
                 if (!sdu) {
                         receive_data_destroy(tmp);
@@ -353,38 +303,20 @@ static int rmt_receive_worker(void * o)
                 
                 return 0;
         }
+        case PDU_TYPE_DT: {
+                if (efcp_container_receive(tmp->efcpc,
+                                           pci_cep_destination(pdu_pci(pdu)),
+                                           pdu)) {
+                        receive_data_destroy(tmp);
+                        return -1;
+                }
+
+                return 0;
+        }
         default:
-                LOG_ERR("Unknown PDU type %d", pdu_type);
+                LOG_ERR("Unknown PDU type %d", type);
                 return -1;
         }
-
-#if 1
-        LOG_MISSING;
-#else
-
-        pdu = pdu_create();
-        if (!pdu) {
-                receive_data_destroy(tmp);
-                return -1;
-        }
-
-        /* FIXME: Add necessary calls here */
-        LOG_MISSING;
-        /* FIXME: Will be removed as soon as we have access functions */
-        pdu->buffer = buffer;
-        pdu->pci    = pci;
-#endif
-
-        ASSERT(pdu_is_ok(pdu));
-
-        if (efcp_container_receive(tmp->efcpc,
-                                   pci_cep_destination(pci),
-                                   pdu)) {
-                receive_data_destroy(tmp);
-                return -1;
-        }
-
-        return 0;
 }
 
 int rmt_receive(struct rmt * instance,

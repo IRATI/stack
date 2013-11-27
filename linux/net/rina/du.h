@@ -129,8 +129,9 @@ struct pdu;
 struct pdu *          pdu_create_with(struct sdu * sdu);
 struct pdu *          pdu_create_with_ni(struct sdu * sdu);
 bool                  pdu_is_ok(const struct pdu * pdu);
-const struct buffer * pdu_buffer(const struct pdu * pdu);
+struct buffer *       pdu_buffer(struct pdu * pdu);
 const struct pci *    pdu_pci(const struct pdu * pdu);
 int                   pdu_destroy(struct pdu * pdu);
+pdu_type_t            pdu_type(const struct pdu * pdu);
 
 #endif
