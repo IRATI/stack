@@ -43,7 +43,7 @@
 #include "arp826-tables.h"
 
 static struct packet_type arp826_packet_type __read_mostly = {
-        .type = cpu_to_be16(ETH_P_BATMAN),
+        .type = cpu_to_be16(RINARP_ETH_PROTO),
         .func = arp_receive,
 };
 

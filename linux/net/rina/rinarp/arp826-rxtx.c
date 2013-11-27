@@ -34,6 +34,7 @@
 #include "utils.h"
 /* FIXME: End of dependencies ... */
 
+#include "rinarp/arp826.h"
 #include "rinarp/arp826-utils.h"
 #include "rinarp/arp826-tables.h"
 #include "rinarp/arp826-arm.h"
@@ -105,11 +106,11 @@ static struct sk_buff * arp_create(struct net_device * dev,
         arp = (struct arp_header *) skb_put(skb, length);
 
         skb->dev      = dev;
-        skb->protocol = htons(ETH_P_BATMAN);
+        skb->protocol = htons(RINARP_ETH_PROTO);
 
         /* Fill the device header for the ARP frame */
         if (dev_hard_header(skb, dev,
-                            ETH_P_BATMAN,
+                            RINARP_ETH_PROTO,
                             gha_address(tha),
                             gha_address(sha),
                             skb->len) < 0) {
