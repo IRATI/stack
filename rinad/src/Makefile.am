@@ -40,8 +40,8 @@ BUILT_SOURCES += ipcmanager/src/main/scripts/ipcmanager
 EXTRA_DIST    += ipcmanager/src/main/scripts/ipcmanager.in
 bin_SCRIPTS   += ipcmanager/src/main/scripts/ipcmanager
 
-ipcmanager/src/main/conf/ipcmanager.conf: \
-	ipcmanager/src/main/conf/ipcmanager.conf.in \
+ipcmanager/src/main/etc/ipcmanager.conf: \
+	ipcmanager/src/main/etc/ipcmanager.conf.in \
 	Makefile
 	rm -f $@ $@.tmp
 	srcdir=''; \
@@ -50,9 +50,24 @@ ipcmanager/src/main/conf/ipcmanager.conf: \
 	chmod a-w $@.tmp
 	mv $@.tmp $@
 
-CLEANFILES    += ipcmanager/src/main/conf/ipcmanager.conf
-BUILT_SOURCES += ipcmanager/src/main/conf/ipcmanager.conf
-EXTRA_DIST    += ipcmanager/src/main/conf/ipcmanager.conf.in
+CLEANFILES    += ipcmanager/src/main/etc/ipcmanager.conf
+BUILT_SOURCES += ipcmanager/src/main/etc/ipcmanager.conf
+EXTRA_DIST    += ipcmanager/src/main/etc/ipcmanager.conf.in
+
+ipcmanager/src/main/resources/log4j.properties: \
+	ipcmanager/src/main/resources/log4j.properties.in \
+	Makefile
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	mv $@.tmp $@
+
+
+CLEANFILES    += ipcmanager/src/main/resources/log4j.properties
+BUILT_SOURCES += ipcmanager/src/main/resources/log4j.properties
+EXTRA_DIST    += ipcmanager/src/main/resources/log4j.properties.in
 
 ipcprocess/src/main/scripts/ipcprocess: \
 	ipcprocess/src/main/scripts/ipcprocess.in \
@@ -69,6 +84,36 @@ CLEANFILES    += ipcprocess/src/main/scripts/ipcprocess
 BUILT_SOURCES += ipcprocess/src/main/scripts/ipcprocess
 EXTRA_DIST    += ipcprocess/src/main/scripts/ipcprocess.in
 bin_SCRIPTS   += ipcprocess/src/main/scripts/ipcprocess
+
+ipcprocess/src/main/resources/log4j.properties: \
+	ipcprocess/src/main/resources/log4j.properties.in \
+	Makefile
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	mv $@.tmp $@
+
+
+CLEANFILES    += ipcprocess/src/main/resources/log4j.properties
+BUILT_SOURCES += ipcprocess/src/main/resources/log4j.properties
+EXTRA_DIST    += ipcprocess/src/main/resources/log4j.properties.in
+
+ipcprocess/src/main/resources/ipcprocess.properties: \
+	ipcprocess/src/main/resources/ipcprocess.properties.in \
+	Makefile
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	mv $@.tmp $@
+
+
+CLEANFILES    += ipcprocess/src/main/resources/ipcprocess.properties
+BUILT_SOURCES += ipcprocess/src/main/resources/ipcprocess.properties
+EXTRA_DIST    += ipcprocess/src/main/resources/ipcprocess.properties.in
 
 applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-server: \
 	applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-server.in \
@@ -102,6 +147,21 @@ BUILT_SOURCES += applications/rina.utils.apps.rinaband/src/main/scripts/rinaband
 EXTRA_DIST    += applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-client.in
 bin_SCRIPTS   += applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-client
 
+applications/rina.utils.apps.rinaband/src/main/resources/log4j.properties: \
+	applications/rina.utils.apps.rinaband/src/main/resources/log4j.properties.in \
+	Makefile
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	mv $@.tmp $@
+
+
+CLEANFILES    += applications/rina.utils.apps.rinaband/src/main/resources/log4j.properties
+BUILT_SOURCES += applications/rina.utils.apps.rinaband/src/main/resources/log4j.properties
+EXTRA_DIST    += applications/rina.utils.apps.rinaband/src/main/resources/log4j.properties.in
+
 applications/rina.utils.apps.echo/src/main/scripts/echo-server: \
 	applications/rina.utils.apps.echo/src/main/scripts/echo-server.in \
 	Makefile
@@ -133,6 +193,20 @@ CLEANFILES    += applications/rina.utils.apps.echo/src/main/scripts/echo-client
 BUILT_SOURCES += applications/rina.utils.apps.echo/src/main/scripts/echo-client
 EXTRA_DIST    += applications/rina.utils.apps.echo/src/main/scripts/echo-client.in
 bin_SCRIPTS   += applications/rina.utils.apps.echo/src/main/scripts/echo-client
+
+applications/rina.utils.apps.echo/src/main/resources/log4j.properties: \
+	applications/rina.utils.apps.echo/src/main/resources/log4j.properties.in \
+	Makefile
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	mv $@.tmp $@
+
+CLEANFILES    += applications/rina.utils.apps.echo/src/main/resources/log4j.properties
+BUILT_SOURCES += applications/rina.utils.apps.echo/src/main/resources/log4j.properties
+EXTRA_DIST    += applications/rina.utils.apps.echo/src/main/resources/log4j.properties.in
 
 pom.xml: pom.xml.in \
 	Makefile

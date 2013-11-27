@@ -11,6 +11,9 @@ import rina.cdap.api.message.CDAPMessage;
  *
  */
 public interface RIBObject{
+	
+	/* Convert to a librina RIBObject */
+	public eu.irati.librina.RIBObject toLibrinaRIBObject();
 
 	/* RIB Object attributes */
 	public String getObjectName();

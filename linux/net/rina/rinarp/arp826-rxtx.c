@@ -37,6 +37,7 @@
 #include "rinarp/arp826-utils.h"
 #include "rinarp/arp826-tables.h"
 #include "rinarp/arp826-arm.h"
+#include "rinarp/arp826-rxtx.h"
 
 #if defined(CONFIG_RINARP) || defined(CONFIG_RINARP_MODULE)
 #define HAVE_RINARP 1
@@ -146,12 +147,12 @@ static struct sk_buff * arp_create(struct net_device * dev,
         return skb;
 }
 
-int arp_send_reply(uint16_t            ptype,
+int arp_send_reply(struct net_device * dev,
+                   uint16_t            ptype,
                    const struct gpa *  spa,
                    const struct gha *  sha,
                    const struct gpa *  tpa,
-                   const struct gha *  tha,
-                   struct net_device * dev)
+                   const struct gha *  tha)
 {
 #if HAVE_RINARP
         struct gpa *        tmp_spa;
@@ -208,7 +209,8 @@ int arp_send_reply(uint16_t            ptype,
 }
 
 /* Fills the packet fields, sets THA to unkown */
-int arp_send_request(uint16_t            ptype,
+int arp_send_request(struct net_device * dev,
+                     uint16_t            ptype,
                      const struct gpa *  spa,
                      const struct gha *  sha,
                      const struct gpa *  tpa)
@@ -218,7 +220,6 @@ int arp_send_request(uint16_t            ptype,
         struct gpa *        tmp_tpa;
         size_t              max_len;
 #endif
-        struct net_device * dev;
         struct sk_buff *    skb;
         struct gha *        tha;
 
@@ -232,13 +233,6 @@ int arp_send_request(uint16_t            ptype,
         tha = gha_create_unknown(gha_type(sha));
         if (!tha) {
                 LOG_ERR("Cannot create broadcast GHA");
-                return -1;
-        }
-
-        dev = gha_to_device(sha);
-        if (!dev) {
-                LOG_ERR("Cannot get the device for this GHA");
-                gha_destroy(tha);
                 return -1;
         }
 
@@ -400,7 +394,7 @@ static int process(const struct sk_buff * skb,
                 /* FIXME: Should we add all ARP Requests? */
 
                 /* Do we have it in the cache ? */
-                tbl = tbls_find(ptype);
+                tbl = tbls_find(dev, ptype);
                 if (!tbl) {
                         LOG_ERR("I don't have a table for ptype 0x%04X",
                                 ptype);
@@ -438,7 +432,8 @@ static int process(const struct sk_buff * skb,
                         LOG_DBG("Updating old entry %pK into the table",
                                 entry);
 
-                        if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha, GFP_ATOMIC)) {
+                        if (tbl_update_by_gpa(tbl, tmp_spa, tmp_sha,
+                                              GFP_ATOMIC)) {
                                 LOG_ERR("Failed to update table");
                                 gpa_destroy(tmp_spa);
                                 gpa_destroy(tmp_tpa);
@@ -472,10 +467,10 @@ static int process(const struct sk_buff * skb,
                 LOG_DBG("Showing the target ha");
                 gha_dump(target_ha);
 
-                if (arp_send_reply(ptype,
+                if (arp_send_reply(dev,
+                                   ptype,
                                    tmp_tpa, target_ha,
-                                   tmp_spa, tmp_sha, dev)) {
-                        /* FIXME: Couldn't send reply ... */
+                                   tmp_spa, tmp_sha)) {
                         LOG_ERR("Couldn't send reply");
                         gpa_destroy(tmp_spa);
                         gpa_destroy(tmp_tpa);
@@ -493,7 +488,8 @@ static int process(const struct sk_buff * skb,
                 break;
 
         case ARP_REPLY: {
-                if (arm_resolve(ptype, tmp_spa, tmp_sha, tmp_tpa, tmp_tha)) {
+                if (arm_resolve(dev, ptype,
+                                tmp_spa, tmp_sha, tmp_tpa, tmp_tha)) {
                         LOG_ERR("Cannot resolve with this reply ...");
                         return -1;
                 }
@@ -574,11 +570,13 @@ int arp_receive(struct sk_buff *     skb,
         }
 
         /* FIXME: There's no need to lookup it here ... */
-        cl = tbls_find(ntohs(header->ptype));
+        cl = tbls_find(dev, ntohs(header->ptype));
         if (!cl) {
+#if 0
                 /* This log is too noisy ... but necessary for now :) */
                 LOG_DBG("I don't have a table to handle this ARP "
                         "(ptype = 0x%04X)", ntohs(header->ptype));
+#endif
                 kfree_skb(skb);
                 return 0;
         }

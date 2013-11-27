@@ -1298,11 +1298,12 @@ RIBObject::RIBObject(){
 }
 
 RIBObject::RIBObject(
-		std::string clazz, std::string name, RIBObjectValue value){
+		std::string clazz, std::string name,
+		long long instance, RIBObjectValue value){
 	this->clazz = clazz;
 	this->name = name;
 	this->value = value;
-	instance = generateObjectInstance();
+	this->instance = instance;
 }
 
 bool RIBObject::operator==(const RIBObject &other) const{
@@ -1321,7 +1322,7 @@ bool RIBObject::operator!=(const RIBObject &other) const{
 	return !(*this == other);
 }
 
-long RIBObject::generateObjectInstance(){
+long long RIBObject::generateObjectInstance(){
 	//TODO generate instance properly
 	return 0;
 }
@@ -1334,11 +1335,11 @@ void RIBObject::setClazz(const std::string& clazz) {
 	this->clazz = clazz;
 }
 
-long RIBObject::getInstance() const {
+long long RIBObject::getInstance() const {
 	return instance;
 }
 
-void RIBObject::setInstance(long instance) {
+void RIBObject::setInstance(long long instance) {
 	this->instance = instance;
 }
 
@@ -1358,13 +1359,49 @@ void RIBObject::setValue(RIBObjectValue value) {
 	this->value = value;
 }
 
-void initialize(unsigned int localPort){
+bool librinaInitialized = false;
+Lockable librinaInitializationLock;
+
+void initialize(unsigned int localPort, const std::string& logLevel,
+                const std::string& pathToLogFile)
+        throw(InitializationException) {
+
+        librinaInitializationLock.lock();
+        if (librinaInitialized) {
+                librinaInitializationLock.unlock();
+                throw InitializationException("Librina already initialized");
+        }
+
 	setNetlinkPortId(localPort);
+	setLogLevel(logLevel);
+	if (setLogFile(pathToLogFile) != 0) {
+	        LOG_WARN("Error setting log file, using stdout only");
+	}
 	rinaManager->getNetlinkManager();
+
+	librinaInitialized = true;
+	librinaInitializationLock.unlock();
 }
 
-void initialize(){
-	rinaManager->getNetlinkManager();
+void initialize(const std::string& logLevel,
+                const std::string& pathToLogFile)
+throw (InitializationException){
+
+        librinaInitializationLock.lock();
+        if (librinaInitialized) {
+                librinaInitializationLock.unlock();
+                throw InitializationException("Librina already initialized");
+        }
+
+        setLogLevel(logLevel);
+        if (setLogFile(pathToLogFile) != 0) {
+                LOG_WARN("Error setting log file, using stdout only");
+        }
+
+        rinaManager->getNetlinkManager();
+
+        librinaInitialized = true;
+        librinaInitializationLock.unlock();
 }
 
 }

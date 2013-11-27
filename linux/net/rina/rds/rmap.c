@@ -28,8 +28,7 @@
 #include "logs.h"
 #include "debug.h"
 #include "rmem.h"
-
-//#include "rmap.h"
+#include "rmap.h"
 
 #define RMAP_HASH_BITS 7
 
@@ -71,8 +70,8 @@ EXPORT_SYMBOL(rmap_create_ni);
 int rmap_destroy(struct rmap * map,
                  void       (* dtor)(struct rmap_entry * e))
 {
-        struct hlist_head * tmp;
         struct rmap_entry * entry;
+        struct hlist_node * tmp;
         int                 bucket;
 
         if (!map) {

@@ -6,4 +6,5 @@ target/
 .project
 
 src/main/scripts/ipcmanager
-src/main/conf/ipcmanager.conf
+src/main/etc/ipcmanager.conf
+src/main/resources/log4j.properties

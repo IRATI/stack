@@ -60,10 +60,6 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 		super(ribDaemon, cdapSessionManager, encoder, remoteNamingInfo, enrollmentTask, timeout);
 		ipcProcess = IPCProcess.getInstance();
 		difInformation = ipcProcess.getDIFInformation();
-		if (difInformation == null) {
-			difInformation = new DIFInformation();
-			ipcProcess.setDIFInformation(difInformation);
-		}
 	}
 	
 	public EnrollmentRequest getEnrollmentRequest() {
@@ -141,13 +137,13 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 			if (address != null){
 				eiRequest.setAddress(ipcProcess.getAddress());
 			} else {
-				DIFInformation difInformation = new DIFInformation();
+				difInformation = new DIFInformation();
 				if (enrollmentRequest.getEvent() != null) {
 					difInformation.setDifName(
 							enrollmentRequest.getEvent().getDifName());
 				}
 				
-				ipcProcess.setDIFInformation(new DIFInformation());
+				ipcProcess.setDIFInformation(difInformation);
 			}
 			ObjectValue objectValue = new ObjectValue();
 			objectValue.setByteval(encoder.encode(eiRequest));
@@ -271,7 +267,7 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 		try{
 			requestMoreInformationOrStart();
 		}catch(Exception ex){
-			log.error(ex);
+			log.error(ex.getMessage());
 			this.abortEnrollment(remotePeer.getName(), portId, UNEXPECTED_ERROR + ex.getMessage(), true, true);
 		}
 	}
@@ -514,7 +510,8 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 				NeighborList list = new NeighborList();
 				list.addFirst(enrollmentRequest.getNeighbor());
 				rina.getExtendedIPCManager().enrollToDIFResponse(
-						enrollmentRequest.getEvent(), 0, list);
+						enrollmentRequest.getEvent(), 0, list, 
+						ipcProcess.getDIFInformation());
 			} catch (Exception ex) {
 				log.error("Problems sending message to IPC Manager: "+ex.getMessage());
 			}

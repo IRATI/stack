@@ -22,7 +22,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-//#include <string>
 #include <stdlib.h>
 #include <cstdio>
 #include <pthread.h>
@@ -38,20 +37,44 @@ FILE * logOutputStream = stdout;
 pthread_rwlock_t outputStreamLock = PTHREAD_RWLOCK_INITIALIZER;
 pthread_rwlock_t logLevelLock = PTHREAD_RWLOCK_INITIALIZER;
 
-void setLogLevel(LOG_LEVEL newLogLevel) {
+void setLogLevel(const std::string& newLogLevel) {
+        LOG_DBG("New log level: %s", newLogLevel.c_str());
+
 	pthread_rwlock_wrlock(&logLevelLock);
-	logLevel = newLogLevel;
+
+	if (LOG_LEVEL_DBG.compare(newLogLevel) == 0) {
+	        logLevel = DBG;
+	} else if (LOG_LEVEL_INFO.compare(newLogLevel) == 0) {
+	        logLevel = INFO;
+	} else if (LOG_LEVEL_NOTE.compare(newLogLevel) == 0) {
+                logLevel = NOTE;
+        } else if (LOG_LEVEL_WARN.compare(newLogLevel) == 0) {
+                logLevel = WARN;
+        } else if (LOG_LEVEL_ERR.compare(newLogLevel) == 0) {
+                logLevel = ERR;
+        } else if (LOG_LEVEL_CRIT.compare(newLogLevel) == 0) {
+                logLevel = CRIT;
+        } else if (LOG_LEVEL_ALERT.compare(newLogLevel) == 0) {
+                logLevel = ALERT;
+        } else if (LOG_LEVEL_EMERG.compare(newLogLevel) == 0) {
+                logLevel = EMERG;
+        }
+
 	pthread_rwlock_unlock(&logLevelLock);
 }
 
-int setOutputStream(FILE * newOutputStream) {
+int setLogFile(const std::string& pathToFile) {
 	int result = 0;
 
 	pthread_rwlock_wrlock(&outputStreamLock);
-	if (logOutputStream == stdout && newOutputStream != NULL) {
-		logOutputStream = newOutputStream;
+	if (logOutputStream != stdout) {
+	        result = -1;
 	} else {
-		result = -1;
+	        logOutputStream = fopen(pathToFile.c_str(), "w");
+	        if (!logOutputStream) {
+	                logOutputStream = stdout;
+	                result = -1;
+	        }
 	}
 	pthread_rwlock_unlock(&outputStreamLock);
 

@@ -291,7 +291,7 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 				
 				try {
 					rina.getExtendedIPCManager().enrollToDIFResponse(
-							event, -1, new NeighborList());
+							event, -1, new NeighborList(), new DIFInformation());
 				} catch(Exception ex){
 					log.error("Problems sending a message to the IPC Manager: "+ex.getMessage());
 				}
@@ -345,7 +345,8 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 			if (request.getEvent() != null) {
 				try {
 					rina.getExtendedIPCManager().enrollToDIFResponse(
-							request.getEvent(), -1, new NeighborList());
+							request.getEvent(), -1, new NeighborList(), 
+							new DIFInformation());
 				} catch(Exception e) {
 					log.error("Could not send a message to the IPC Manager: "+ex.getMessage());
 				}
@@ -541,6 +542,16 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 				log.debug("Notifying the Event Manager about a new event.");
 				log.debug(event2.toString());
 				this.ribDaemon.deliverEvent(event2);
+				
+				//Notify the IPC Manager that we've lost a neighbor
+				try{
+					NeighborList list = new NeighborList();
+					list.addFirst(neighbors.get(i));
+					rina.getExtendedIPCManager().notifyNeighborsModified(false, list);
+				} catch(Exception ex){
+					log.error("Problems communicating with the IPC Manager: "+ex.getMessage());
+				}
+				
 				return;
 			}
 		}
@@ -597,7 +608,8 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 		if (request.getEvent() != null) {
 			try {
 				rina.getExtendedIPCManager().enrollToDIFResponse(
-						request.getEvent(), -1, new NeighborList());
+						request.getEvent(), -1, new NeighborList(), 
+						new DIFInformation());
 			} catch(Exception ex) {
 				log.error("Could not send a message to the IPC Manager: "+ex.getMessage());
 			}
@@ -641,7 +653,8 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 			if (request != null && request.getEvent() != null) {
 				try {
 					rina.getExtendedIPCManager().enrollToDIFResponse(
-							request.getEvent(), -1, new NeighborList());
+							request.getEvent(), -1, new NeighborList(), 
+							new DIFInformation());
 				} catch (Exception ex) {
 					log.error("Problems sending message to IPC Manager: "+ex.getMessage());
 				}

@@ -47,12 +47,13 @@ public class NeighborRIBObject extends BaseRIBObject{
 				enrollmentTask.addNeighbor(neighbor);
 				this.neighbor = (Neighbor) object;
 			} else {
-				this.neighbor.setAddress(this.neighbor.getAddress());
-				this.neighbor.setAverageRttInMs(this.neighbor.getAverageRttInMs());
-				this.neighbor.setLastHeardFromTimeInMs(this.neighbor.getLastHeardFromTimeInMs());
-				this.neighbor.setName(this.neighbor.getName());
-				this.neighbor.setSupportingDifName(this.neighbor.getSupportingDifName());
-				this.neighbor.setUnderlyingPortId(this.neighbor.getUnderlyingPortId());
+				Neighbor newNeighbor = (Neighbor) object;
+				this.neighbor.setAddress(newNeighbor.getAddress());
+				this.neighbor.setAverageRttInMs(newNeighbor.getAverageRttInMs());
+				this.neighbor.setLastHeardFromTimeInMs(newNeighbor.getLastHeardFromTimeInMs());
+				this.neighbor.setName(newNeighbor.getName());
+				this.neighbor.setSupportingDifName(newNeighbor.getSupportingDifName());
+				this.neighbor.setUnderlyingPortId(newNeighbor.getUnderlyingPortId());
 			}
 		}
 	}

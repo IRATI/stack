@@ -1,13 +1,16 @@
-package rina.ipcprocess.impl.flowallocator.ribobjects;
+package rina.ipcprocess.impl.registrationmanager.ribobjects;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import eu.irati.librina.ApplicationProcessNamingInformation;
+
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
-import rina.flowallocator.api.DirectoryForwardingTable;
 import rina.flowallocator.api.DirectoryForwardingTableEntry;
+import rina.flowallocator.api.FlowAllocator;
 import rina.ipcprocess.impl.IPCProcess;
+import rina.registrationmanager.api.RegistrationManager;
 import rina.ribdaemon.api.NotificationPolicy;
 import rina.ribdaemon.api.RIBDaemonException;
 import rina.ribdaemon.api.SimpleSetMemberRIBObject;
@@ -16,19 +19,23 @@ public class DirectoryForwardingTableEntryRIBObject extends SimpleSetMemberRIBOb
 	
 	private static final Log log = LogFactory.getLog(DirectoryForwardingTableEntryRIBObject.class);
 	
-	DirectoryForwardingTableEntry directoryForwardingTableEntry = null;
+	RegistrationManager registrationManager = null;
+	ApplicationProcessNamingInformation apNameEntry = null;
 	
 	public DirectoryForwardingTableEntryRIBObject(String objectName, 
 			DirectoryForwardingTableEntry directoryForwardingTableEntry){
-		super(DirectoryForwardingTable.DIRECTORY_FORWARDING_TABLE_ENTRY_RIB_OBJECT_CLASS, 
+		super(DirectoryForwardingTableEntrySetRIBObject.DIRECTORY_FORWARDING_TABLE_ENTRY_RIB_OBJECT_CLASS, 
 				objectName, directoryForwardingTableEntry);
-		this.directoryForwardingTableEntry = directoryForwardingTableEntry;
 		setRIBDaemon(IPCProcess.getInstance().getRIBDaemon());
+		registrationManager = IPCProcess.getInstance().getRegistrationManager();
+		registrationManager.addDFTEntry(directoryForwardingTableEntry);
+		apNameEntry = directoryForwardingTableEntry.getApNamingInfo();
 	}
 	
 	@Override
 	public void create(CDAPMessage cdapMessage, CDAPSessionDescriptor cdapSessionDescriptor) throws RIBDaemonException{
 		DirectoryForwardingTableEntry entry = null;
+		DirectoryForwardingTableEntry currentEntry = registrationManager.getDFTEntry(apNameEntry);
 		
 		//Decode the object
 		try{
@@ -38,15 +45,16 @@ public class DirectoryForwardingTableEntryRIBObject extends SimpleSetMemberRIBOb
 			throw new RIBDaemonException(RIBDaemonException.PROBLEMS_DECODING_OBJECT, ex.getMessage());
 		}
 		
-		if (!entry.getKey().equals(directoryForwardingTableEntry.getKey())){
-			log.error("This entry cannot be updated by the received value.\n Received value: "
-					+entry.toString() + "\n Current value: " + directoryForwardingTableEntry.toString());
+		if (!entry.getKey().equals(apNameEntry.getEncodedString())){
+			log.error("This entry cannot be updated by the received value.\n Received entry key: "
+					+entry.getKey() + "\n Current entry key: " + apNameEntry.getEncodedString());
 			return;
 		}
 		
 		//See if the entry value actually changes, if so call the ribdaemon causing it to notify
-		if (!directoryForwardingTableEntry.equals(entry)){
+		if (!currentEntry.equals(entry)){
 			try{
+				registrationManager.addDFTEntry(entry);
 				NotificationPolicy notificationObject = new NotificationPolicy(new int[]{cdapSessionDescriptor.getPortId()});
 				this.getRIBDaemon().create(cdapMessage.getObjClass(), cdapMessage.getObjInst(),
 						cdapMessage.getObjName(), entry, notificationObject);
@@ -71,12 +79,13 @@ public class DirectoryForwardingTableEntryRIBObject extends SimpleSetMemberRIBOb
 	
 	@Override
 	public void delete(Object object) throws RIBDaemonException {
+		registrationManager.removeDFTEntry(apNameEntry);
 		this.getParent().removeChild(this.getObjectName());
 		this.getRIBDaemon().removeRIBObject(this);
 	}
 	
 	@Override
 	public synchronized Object getObjectValue() {
-		return directoryForwardingTableEntry;
+		return registrationManager.getDFTEntry(apNameEntry);
 	}
 }

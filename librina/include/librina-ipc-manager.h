@@ -262,28 +262,21 @@ public:
 };
 
 /**
- * Thrown when there are problems initializing the IPC Manager
- */
-class IPCManagerInitializationException: public IPCException {
-public:
-	IPCManagerInitializationException():
-		IPCException("Problems initializing librina-ipcmanager. "){
-	}
-	IPCManagerInitializationException(const std::string& description):
-		IPCException(description){
-	}
-};
-
-/**
  * Initializes the IPC Manager, opening a NL socket
  * to the specified local port, and sending an IPC
  * Manager present message to the kernel
- * @param localPort
+ * @param localPort port of the NL socket
+ * @param installationPath path to the IRATI stack installation
+ * @param libraryPath path to the installation of librina
+ * @param logLevel librina log level
+ * @param pathToLogFile the path to the librina log file
  */
 void initializeIPCManager(unsigned int localPort,
                 const std::string& installationPath,
-                const std::string& libraryPath)
-	throw (IPCManagerInitializationException);
+                const std::string& libraryPath,
+                const std::string& logLevel,
+                const std::string& pathToLogFile)
+	throw (InitializationException);
 
 /**
  * Event informing that an application has requested the
@@ -942,11 +935,15 @@ public:
 class EnrollToDIFResponseEvent: public BaseResponseEvent {
         std::list<Neighbor> neighbors;
 
+        DIFInformation difInformation;
+
 public:
         EnrollToDIFResponseEvent(
                         const std::list<Neighbor> & neighbors,
+                        const DIFInformation& difInformation,
                         int result, unsigned int sequenceNumber);
         const std::list<Neighbor>& getNeighbors() const;
+        const DIFInformation& getDIFInformation() const;
 };
 
 /**

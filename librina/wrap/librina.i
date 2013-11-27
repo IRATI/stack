@@ -16,6 +16,7 @@
 
 %module rina
 
+%include "enums.swg"
 %include <stdint.i>
 %include <stl.i>
 
@@ -266,8 +267,8 @@
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
-%typemap(throws, throws="eu.irati.librina.IPCManagerInitializationException") rina::IPCManagerInitializationException {
-  jclass excep = jenv->FindClass("eu/irati/librina/IPCManagerInitializationException");
+%typemap(throws, throws="eu.irati.librina.InitializationException") rina::InitializationException {
+  jclass excep = jenv->FindClass("eu/irati/librina/InitializationException");
   if (excep)
     jenv->ThrowNew(excep, $1.what());
   return $null;
@@ -469,6 +470,17 @@
             if (mid) {
                 jlong cptr = 0;
                 *(rina::IpcmAllocateFlowRequestResultEvent **)&cptr = flowReqEvent; 
+                $result = jenv->NewObject(clazz, mid, cptr, false);
+            }
+        }
+    } else if ($1->getType() == rina::IPC_PROCESS_QUERY_RIB) {
+    	rina::QueryRIBRequestEvent *flowReqEvent = dynamic_cast<rina::QueryRIBRequestEvent *>($1);
+        jclass clazz = jenv->FindClass("eu/irati/librina/QueryRIBRequestEvent");
+        if (clazz) {
+            jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+            if (mid) {
+                jlong cptr = 0;
+                *(rina::QueryRIBRequestEvent **)&cptr = flowReqEvent; 
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }

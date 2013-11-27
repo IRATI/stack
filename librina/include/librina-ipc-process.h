@@ -330,11 +330,13 @@ public:
 	 * @param event the event that trigerred the operation
 	 * @param result the result of the operation (0 successful)
 	 * @param newNeighbors the new neighbors after the enrollment operation
+	 * @param DIFInforamtion the DIF configuration after enrollment
 	 * @throws EnrollException if there are problems communicating with the
 	 * IPC Manager
 	 */
 	void enrollToDIFResponse(const EnrollToDIFRequestEvent& event,
-	                int result, const std::list<Neighbor> & newNeighbors)
+	                int result, const std::list<Neighbor> & newNeighbors,
+	                const DIFInformation& difInformation)
 	throw (EnrollException);
 
 	/**

@@ -38,9 +38,11 @@ std::string _libraryPath;
 
 void initializeIPCManager(unsigned int localPort,
                 const std::string& installationPath,
-                const std::string& libraryPath)
-	throw (IPCManagerInitializationException){
-	initialize(localPort);
+                const std::string& libraryPath,
+                const std::string& logLevel,
+                const std::string& pathToLogFile)
+	throw (InitializationException){
+	initialize(localPort, logLevel, pathToLogFile);
 
 	_installationPath = installationPath;
 	_libraryPath = libraryPath;
@@ -52,7 +54,7 @@ void initializeIPCManager(unsigned int localPort,
 	try{
 		rinaManager->sendMessage(&message);
 	}catch(NetlinkException &e){
-		throw IPCManagerInitializationException(e.what());
+		throw InitializationException(e.what());
 	}
 }
 
@@ -1201,16 +1203,23 @@ UpdateDIFConfigurationResponseEvent::UpdateDIFConfigurationResponseEvent(
 /* CLASS ENROLL TO DIF RESPONSE EVENT */
 EnrollToDIFResponseEvent::EnrollToDIFResponseEvent(
                 const std::list<Neighbor>& neighbors,
+                const DIFInformation& difInformation,
                 int result, unsigned int sequenceNumber):
                         BaseResponseEvent(result,
                                         ENROLL_TO_DIF_RESPONSE_EVENT,
                                         sequenceNumber) {
         this->neighbors = neighbors;
+        this->difInformation = difInformation;
 }
 
 const std::list<Neighbor>&
 EnrollToDIFResponseEvent::getNeighbors() const {
         return neighbors;
+}
+
+const DIFInformation&
+EnrollToDIFResponseEvent::getDIFInformation() const {
+        return difInformation;
 }
 
 /* CLASS NEIGHBORS MODIFIED NOTIFICATION EVENT */

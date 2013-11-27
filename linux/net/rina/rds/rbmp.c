@@ -27,6 +27,7 @@
 #include "logs.h"
 #include "debug.h"
 #include "rmem.h"
+#include "rbmp.h"
 
 #define BITS_IN_BITMAP ((2 << BITS_PER_BYTE) * sizeof(size_t))
 
@@ -109,7 +110,7 @@ static bool is_id_ok(struct rbmp * b, ssize_t id)
 
         return true;
 }
- 
+
 bool rbmp_is_id_ok(struct rbmp * b, ssize_t id)
 {
         if (!b)
@@ -120,7 +121,7 @@ bool rbmp_is_id_ok(struct rbmp * b, ssize_t id)
 EXPORT_SYMBOL(rbmp_is_id_ok);
 
 int rbmp_release(struct rbmp * b,
-                 size_t        id)
+                 ssize_t       id)
 {
         ssize_t rid;
 

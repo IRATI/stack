@@ -27,8 +27,8 @@
 
 #include "logs.h"
 #include "utils.h"
-#include "personality.h"
 #include "debug.h"
+#include "personality.h"
 
 /* FIXME: Bogus, to be removed ASAP */
 struct personality * default_personality = NULL;
@@ -298,7 +298,7 @@ int rina_personality_unregister(struct personality * pers)
 
         if (default_personality == pers) {
                 LOG_INFO("Re-setting default personality");
-                default_personality = 0;
+                default_personality = NULL;
         }
 
         rkfree(pers); /* FIXME: To be removed */

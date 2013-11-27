@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -17,6 +18,7 @@ import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import rina.applicationprocess.api.WhatevercastName;
+import rina.aux.LogHelper;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.impl.CDAPSessionManagerImpl;
 import rina.cdap.impl.googleprotobuf.GoogleProtocolBufWireMessageProviderFactory;
@@ -42,13 +44,16 @@ import rina.enrollment.api.EnrollmentInformationRequest;
 import rina.enrollment.api.EnrollmentTask;
 import rina.flowallocator.api.DirectoryForwardingTableEntry;
 import rina.flowallocator.api.Flow;
+import rina.flowallocator.api.FlowAllocator;
 import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
 import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
-import rina.ipcprocess.impl.flowallocator.ribobjects.DirectoryForwardingTableEntrySetRIBObject;
+import rina.ipcprocess.impl.flowallocator.FlowAllocatorImpl;
 import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
+import rina.ipcprocess.impl.registrationmanager.RegistrationManagerImpl;
 import rina.ipcprocess.impl.resourceallocator.ResourceAllocatorImpl;
 import rina.ipcprocess.impl.ribdaemon.RIBDaemonImpl;
 import rina.ipcprocess.impl.ribobjects.WhatevercastNameSetRIBObject;
+import rina.registrationmanager.api.RegistrationManager;
 import rina.resourceallocator.api.ResourceAllocator;
 import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBObject;
@@ -56,6 +61,8 @@ import rina.ribdaemon.api.RIBObject;
 import eu.irati.librina.AllocateFlowRequestResultEvent;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistration;
+import eu.irati.librina.ApplicationRegistrationRequestEvent;
+import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.AssignToDIFRequestEvent;
 import eu.irati.librina.AssignToDIFResponseEvent;
 import eu.irati.librina.DIFInformation;
@@ -68,11 +75,11 @@ import eu.irati.librina.FlowInformation;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCEvent;
 import eu.irati.librina.IPCEventProducerSingleton;
-import eu.irati.librina.IPCEventType;
 import eu.irati.librina.IPCProcessDIFRegistrationEvent;
 import eu.irati.librina.KernelIPCProcessSingleton;
 import eu.irati.librina.Neighbor;
 import eu.irati.librina.QoSCube;
+import eu.irati.librina.QueryRIBRequestEvent;
 import eu.irati.librina.rina;
 
 public class IPCProcess {
@@ -80,7 +87,6 @@ public class IPCProcess {
 	public static final String MANAGEMENT_AE = "Management";
     public static final String DATA_TRANSFER_AE = "Data Transfer";
     public static final int DEFAULT_MAX_SDU_SIZE_IN_BYTES = 10000;
-    public static final String CONFIG_FILE_LOCATION = "../conf/ipcmanager.conf"; 
 	public static final long CONFIG_FILE_POLL_PERIOD_IN_MS = 5000;
     
     public enum State {NULL, INITIALIZED, ASSIGN_TO_DIF_IN_PROCESS, ASSIGNED_TO_DIF};
@@ -123,6 +129,12 @@ public class IPCProcess {
 	/** The Resource Allocator */
 	private ResourceAllocator resourceAllocator = null;
 	
+	/** The Registration Manager */
+	private RegistrationManager registrationManager = null;
+	
+	/** The Flow Allocator */
+	private FlowAllocator flowAllocator = null;
+	
 	/** Static instance to implement the singleton pattern */
 	private static IPCProcess instance = null;
 	
@@ -131,6 +143,9 @@ public class IPCProcess {
 	
 	/** The thread pool implementation */
 	private ExecutorService executorService = null;
+	
+	/** The config file location */
+	private String configFileLocation = null;
 	
 	public static IPCProcess getInstance() {
 		if (instance == null) {
@@ -143,12 +158,13 @@ public class IPCProcess {
 	private IPCProcess(){
 	}
 	
-	public void initialize(ApplicationProcessNamingInformation namingInfo, int id, long ipcManagerPort) {
+	public void initialize(
+			ApplicationProcessNamingInformation namingInfo, int id, long ipcManagerPort) throws Exception{
 		log.info("Initializing configuration... ");
 		executorService = Executors.newCachedThreadPool();
 		initializeConfiguration();
 		log.info("Initializing librina...");
-		rina.initialize();
+		rina.initialize(LogHelper.getLibrinaLogLevel(), LogHelper.getLibrinaLogFile());
 		ipcEventProducer = rina.getIpcEventProducer();
 		kernelIPCProcess = rina.getKernelIPCProcess();
 		kernelIPCProcess.setIPCProcessId(id);
@@ -164,9 +180,13 @@ public class IPCProcess {
 		ribDaemon = new RIBDaemonImpl();
 		enrollmentTask = new EnrollmentTaskImpl();
 		resourceAllocator = new ResourceAllocatorImpl();
+		registrationManager = new RegistrationManagerImpl();
+		flowAllocator = new FlowAllocatorImpl();
 		((RIBDaemonImpl) ribDaemon).setIPCProcess(this);
 		((EnrollmentTaskImpl) enrollmentTask).setIPCProcess(this);
 		((ResourceAllocatorImpl) resourceAllocator).setIPCProcess(this);
+		((RegistrationManagerImpl) registrationManager).setIPCProcess(this);
+		((FlowAllocatorImpl) flowAllocator).setIPCProcess(this);
 		
 		populateRIB();
 
@@ -187,6 +207,21 @@ public class IPCProcess {
 	}
 	
 	private void initializeConfiguration(){
+		
+		Properties prop = new Properties(); 
+		try {
+			prop.load(this.getClass().getResourceAsStream("/ipcprocess.properties"));
+			configFileLocation = prop.getProperty("configFileLocation");
+			if (configFileLocation == null) {
+				log.error("Could not find location of config file, exiting");
+				System.exit(-1);
+			}
+		} 
+		catch (Exception ex) {
+			log.error("Could not find IPC Process properties file, exiting: "+ex.getMessage());
+			System.exit(-1);
+		}
+		
 		//Read config file
 		RINAConfiguration rinaConfiguration = readConfigurationFile();
 		RINAConfiguration.setConfiguration(rinaConfiguration);
@@ -197,7 +232,7 @@ public class IPCProcess {
 			private RINAConfiguration rinaConfiguration = null;
 
 			public void run(){
-				File file = new File(CONFIG_FILE_LOCATION);
+				File file = new File(configFileLocation);
 
 				while(true){
 					if (file.lastModified() > currentLastModified) {
@@ -225,7 +260,8 @@ public class IPCProcess {
 		try {
     		ObjectMapper objectMapper = new ObjectMapper();
     		RINAConfiguration rinaConfiguration = (RINAConfiguration) 
-    			objectMapper.readValue(new FileInputStream(CONFIG_FILE_LOCATION), RINAConfiguration.class);
+    			objectMapper.readValue(new FileInputStream(configFileLocation), 
+    					RINAConfiguration.class);
     		log.info("Read configuration file");
     		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     		objectMapper.writer(new DefaultPrettyPrinter()).writeValue(outputStream, rinaConfiguration);
@@ -267,6 +303,14 @@ public class IPCProcess {
 		return resourceAllocator;
 	}
 	
+	public RegistrationManager getRegistrationManager() {
+		return registrationManager;
+	}
+	
+	public FlowAllocator getFlowAllocator() {
+		return flowAllocator;
+	}
+	
 	private Encoder createEncoder() {
 		  EncoderImpl encoder = new EncoderImpl();
           encoder.addEncoder(DataTransferConstants.class.getName(), new DataTransferConstantsEncoder());
@@ -288,13 +332,9 @@ public class IPCProcess {
 	
 	private void populateRIB(){
 		try {
-			RIBObject ribObject = new QoSCubeSetRIBObject();
-			this.ribDaemon.addRIBObject(ribObject);
-			ribObject = new WhatevercastNameSetRIBObject();
+			RIBObject ribObject = new WhatevercastNameSetRIBObject();
 			this.ribDaemon.addRIBObject(ribObject);
 			ribObject = new DataTransferConstantsRIBObject();
-			this.ribDaemon.addRIBObject(ribObject);
-			ribObject = new DirectoryForwardingTableEntrySetRIBObject();
 			this.ribDaemon.addRIBObject(ribObject);
 		} catch(Exception ex) {
 			log.error("Problems populating RIB: "+ex.getMessage());
@@ -331,31 +371,57 @@ public class IPCProcess {
 	private void processEvent(IPCEvent event) throws Exception{
 		log.info("Got event of type: "+event.getType() 
 				+ " and sequence number: "+event.getSequenceNumber());
-		
-		if (event.getType() == IPCEventType.IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION) {
+
+		switch (event.getType()) {
+		case IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:
 			IPCProcessDIFRegistrationEvent regEvent = (IPCProcessDIFRegistrationEvent) event;
 			resourceAllocator.getNMinus1FlowManager().processRegistrationNotification(regEvent);
-		} else if (event.getType() == IPCEventType.ASSIGN_TO_DIF_REQUEST_EVENT) {
+			break;
+		case ASSIGN_TO_DIF_REQUEST_EVENT:
 			AssignToDIFRequestEvent asEvent = (AssignToDIFRequestEvent) event;
 			processAssignToDIFRequest(asEvent);
-		} else if (event.getType() == IPCEventType.ASSIGN_TO_DIF_RESPONSE_EVENT) {
-			AssignToDIFResponseEvent asEvent = (AssignToDIFResponseEvent) event;
-			processAssignToDIFResponseEvent(asEvent);
-		} else if (event.getType() == IPCEventType.ALLOCATE_FLOW_REQUEST_RESULT_EVENT) {
+			break;
+		case ASSIGN_TO_DIF_RESPONSE_EVENT:
+			AssignToDIFResponseEvent asrEvent = (AssignToDIFResponseEvent) event;
+			processAssignToDIFResponseEvent(asrEvent);
+			break;
+		case ALLOCATE_FLOW_REQUEST_RESULT_EVENT:
 			AllocateFlowRequestResultEvent flowEvent = (AllocateFlowRequestResultEvent) event;
 			resourceAllocator.getNMinus1FlowManager().allocateRequestResult(flowEvent);
-		} else if (event.getType() == IPCEventType.FLOW_ALLOCATION_REQUESTED_EVENT) {
+			break;
+		case FLOW_ALLOCATION_REQUESTED_EVENT:
 			FlowRequestEvent flowRequestEvent = (FlowRequestEvent) event;
 			resourceAllocator.getNMinus1FlowManager().flowAllocationRequested(flowRequestEvent);
-		} else if (event.getType() == IPCEventType.DEALLOCATE_FLOW_RESPONSE_EVENT) {
-			DeallocateFlowResponseEvent flowEvent = (DeallocateFlowResponseEvent) event;
-			resourceAllocator.getNMinus1FlowManager().deallocateFlowResponse(flowEvent);
-		} else if (event.getType() == IPCEventType.FLOW_DEALLOCATED_EVENT) {
-			FlowDeallocatedEvent flowEvent = (FlowDeallocatedEvent) event;
-			resourceAllocator.getNMinus1FlowManager().flowDeallocatedRemotely(flowEvent);
-		} else if (event.getType() == IPCEventType.ENROLL_TO_DIF_REQUEST_EVENT) {
+			break;
+		case DEALLOCATE_FLOW_RESPONSE_EVENT:
+			DeallocateFlowResponseEvent flowDEvent = (DeallocateFlowResponseEvent) event;
+			resourceAllocator.getNMinus1FlowManager().deallocateFlowResponse(flowDEvent);
+			break;
+		case FLOW_DEALLOCATED_EVENT:
+			FlowDeallocatedEvent flowDeaEvent = (FlowDeallocatedEvent) event;
+			resourceAllocator.getNMinus1FlowManager().flowDeallocatedRemotely(flowDeaEvent);
+			break;
+		case ENROLL_TO_DIF_REQUEST_EVENT:
 			EnrollToDIFRequestEvent enrEvent = (EnrollToDIFRequestEvent) event;
 			enrollmentTask.processEnrollmentRequestEvent(enrEvent, difInformation);
+			break;
+		case IPC_PROCESS_QUERY_RIB:
+			QueryRIBRequestEvent queryEvent = (QueryRIBRequestEvent) event;
+			ribDaemon.processQueryRIBRequestEvent(queryEvent);
+			break;
+		case APPLICATION_REGISTRATION_REQUEST_EVENT:
+			ApplicationRegistrationRequestEvent apRegReqEvent = (ApplicationRegistrationRequestEvent) event;
+			registrationManager.processApplicationRegistrationRequestEvent(apRegReqEvent);
+			break;
+		case APPLICATION_UNREGISTRATION_REQUEST_EVENT:
+			ApplicationUnregistrationRequestEvent apUnregReqEvent = 
+				(ApplicationUnregistrationRequestEvent) event;
+			registrationManager.processApplicationUnregistrationRequestEvent(
+					apUnregReqEvent);
+			break;
+		default:
+			log.warn("Received unsupported event: "+event.getType());
+			break;
 		}
 	}
 	
@@ -426,15 +492,15 @@ public class IPCProcess {
 		}
 	}
 	
-	public DIFInformation getDIFInformation() {
+	public synchronized DIFInformation getDIFInformation() {
 		return difInformation;
 	}
 	
-	public void setDIFInformation(DIFInformation difInformation) {
+	public synchronized void setDIFInformation(DIFInformation difInformation) {
 		this.difInformation = difInformation;
 	}
 	
-	public Long getAddress() {
+	public synchronized Long getAddress() {
 		if (difInformation == null) {
 			return null;
 		}

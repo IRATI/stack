@@ -134,13 +134,12 @@ static int normal_sdu_write(struct ipcp_instance_data * data,
         return 0;
 }
 
-struct ipcp_factory * normal = NULL;
+static struct ipcp_factory * normal = NULL;
 
 static struct ipcp_instance_data *
 find_instance(struct ipcp_factory_data * data,
               ipc_process_id_t           id)
 {
-
         struct ipcp_instance_data * pos;
 
         list_for_each_entry(pos, &(data->instances), list) {
@@ -159,16 +158,15 @@ static cep_id_t connection_create_request(struct ipcp_instance_data * data,
                                           qos_id_t                    qos_id,
                                           int                         policies)
 {
-        cep_id_t cep_id;
-        struct connection * conn;
-        struct normal_flow * flow;
+        cep_id_t               cep_id;
+        struct connection *    conn;
+        struct normal_flow *   flow;
         struct cep_ids_entry * cep_entry;
 
         conn = rkzalloc(sizeof(*conn), GFP_KERNEL);
-        if (!conn) {
-                LOG_ERR("Failed connection creation");
+        if (!conn)
                 return -1;
-        }
+
         conn->destination_address = dest;
         conn->source_address      = source;
         conn->port_id             = port_id;
@@ -211,11 +209,17 @@ static cep_id_t connection_create_request(struct ipcp_instance_data * data,
 }
 
 static int connection_update_request(struct ipcp_instance_data * data,
+                                     port_id_t                   port_id,
                                      cep_id_t                    src_cep_id,
                                      cep_id_t                    dst_cep_id)
 {
         if (efcp_connection_update(data->efcpc, src_cep_id, dst_cep_id))
                 return -1;
+
+        if (kipcm_flow_commit(default_kipcm, data->id, port_id)) {
+                efcp_connection_destroy(data->efcpc, src_cep_id);
+                return -1;
+        }
 
         return 0;
 }
@@ -334,7 +338,7 @@ connection_create_arrived(struct ipcp_instance_data * data,
         return cep_id;
 }
 
-static int normal_check_dt_cons(struct data_transfer_constants * dt_cons)
+static int normal_check_dt_cons(struct dt_cons * dt_cons)
 {
         /* FIXME: What should we check here? */
         return 0;
@@ -343,10 +347,10 @@ static int normal_check_dt_cons(struct data_transfer_constants * dt_cons)
 static int normal_assign_to_dif(struct ipcp_instance_data * data,
                                 const struct dif_info *     dif_information)
 {
-        struct data_transfer_constants * dt_cons;
+        struct dt_cons * dt_cons;
 
         data->info->dif_name = name_dup(dif_information->dif_name);
-        dt_cons = dif_information->configuration->data_transfer_constants;
+        dt_cons = dif_information->configuration->dt_cons;
 
         if (normal_check_dt_cons(dt_cons)) {
                 LOG_ERR("Configuration constants for the DIF are bogus...");
@@ -396,9 +400,9 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-        instance->ops     = &normal_instance_ops;
-        instance->data    = rkzalloc(sizeof(struct ipcp_instance_data),
-                                     GFP_KERNEL);
+        instance->ops  = &normal_instance_ops;
+        instance->data = rkzalloc(sizeof(struct ipcp_instance_data),
+                                  GFP_KERNEL);
         if (!instance->data) {
                 LOG_ERR("Could not allocate memory for normal ipcp "
                         "internal data");
@@ -406,10 +410,10 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-        instance->data->id = id;
+        instance->data->id      = id;
         instance->data->nl_port = data->nl_port;
-        instance->data->info = rkzalloc(sizeof(struct normal_info *),
-                                        GFP_KERNEL);
+        instance->data->info    = rkzalloc(sizeof(struct normal_info *),
+                                           GFP_KERNEL);
         if (!instance->data->info) {
                 LOG_ERR("Could not allocate momory for normal ipcp info");
                 rkfree(instance->data);
@@ -522,33 +526,20 @@ static struct ipcp_factory_ops normal_ops = {
 
 static int __init mod_init(void)
 {
-        LOG_DBG("RINA IPCP loading");
-
-        if (normal) {
-                LOG_ERR("RINA normal IPCP already initialized, bailing out");
-                return -1;
-        }
-
         normal = kipcm_ipcp_factory_register(default_kipcm,
                                              IPCP_NAME,
                                              &normal_data,
                                              &normal_ops);
-        ASSERT(normal != NULL);
-
         if (!normal) {
-                LOG_CRIT("Could not register %s factory, bailing out",
-                         IPCP_NAME);
+                LOG_CRIT("Cannot register %s factory", IPCP_NAME);
                 return -1;
         }
-
-        LOG_DBG("RINA normal IPCP loaded successfully");
 
         return 0;
 }
 
 static void __exit mod_exit(void)
 {
-
         ASSERT(normal);
 
         if (kipcm_ipcp_factory_unregister(default_kipcm, normal)) {
@@ -556,8 +547,6 @@ static void __exit mod_exit(void)
                          IPCP_NAME);
                 return;
         }
-
-        LOG_DBG("RINA normal IPCP unloaded successfully");
 }
 
 module_init(mod_init);

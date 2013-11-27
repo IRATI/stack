@@ -15,16 +15,17 @@ import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCEvent;
 import eu.irati.librina.IPCEventProducerSingleton;
 import eu.irati.librina.IPCEventType;
-import eu.irati.librina.IPCManagerInitializationException;
 import eu.irati.librina.IPCProcess;
 import eu.irati.librina.IPCProcessDaemonInitializedEvent;
 import eu.irati.librina.IPCProcessFactorySingleton;
+import eu.irati.librina.InitializationException;
 import eu.irati.librina.IpcmAllocateFlowRequestResultEvent;
 import eu.irati.librina.IpcmDeallocateFlowResponseEvent;
 import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
 import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
 import eu.irati.librina.NeighborsModifiedNotificationEvent;
 import eu.irati.librina.OSProcessFinalizedEvent;
+import eu.irati.librina.QueryRIBResponseEvent;
 import eu.irati.librina.UpdateDIFConfigurationResponseEvent;
 import eu.irati.librina.rina;
 
@@ -42,6 +43,7 @@ import org.apache.commons.logging.LogFactory;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import rina.aux.LogHelper;
 import rina.configuration.IPCProcessToCreate;
 import rina.configuration.RINAConfiguration;
 import rina.ipcmanager.impl.console.IPCManagerConsole;
@@ -63,7 +65,6 @@ public class IPCManager {
 	
 	private static final Log log = LogFactory.getLog(IPCManager.class);
 	
-	public static final String CONFIG_FILE_LOCATION = "../conf/ipcmanager.conf"; 
 	public static final long CONFIG_FILE_POLL_PERIOD_IN_MS = 5000;
 	
 	public static final String NORMAL_IPC_PROCESS_TYPE = "normal-ipc";
@@ -91,7 +92,7 @@ public class IPCManager {
 	private FlowManager flowManager = null;
 	
 	public IPCManager(){
-		log.info("Initializing IPCManager console..,");
+		log.info("Initializing IPCManager console...");
 		executorService = Executors.newCachedThreadPool();
 		console = new IPCManagerConsole(this);
 		executorService.execute(console);
@@ -101,11 +102,13 @@ public class IPCManager {
 		try{
 			rina.initializeIPCManager(1, 
 					RINAConfiguration.getInstance().getLocalConfiguration().getInstallationPath(), 
-					RINAConfiguration.getInstance().getLocalConfiguration().getLibraryPath());
-		}catch(IPCManagerInitializationException ex){
+					RINAConfiguration.getInstance().getLocalConfiguration().getLibraryPath(), 
+					LogHelper.getLibrinaLogLevel(), LogHelper.getLibrinaLogFile());
+		}catch(InitializationException ex){
 			log.fatal("Error initializing IPC Manager: "+ex.getMessage() 
 					+ ". Exiting.");
 		}
+		
 		ipcProcessFactory = rina.getIpcProcessFactory();
 		applicationManager = rina.getApplicationManager();
 		ipcEventProducer = rina.getIpcEventProducer();
@@ -127,7 +130,7 @@ public class IPCManager {
 			private RINAConfiguration rinaConfiguration = null;
 
 			public void run(){
-				File file = new File(CONFIG_FILE_LOCATION);
+				File file = new File(System.getProperty("configFileLocation"));
 
 				while(true){
 					if (file.lastModified() > currentLastModified) {
@@ -155,7 +158,8 @@ public class IPCManager {
 		try {
     		ObjectMapper objectMapper = new ObjectMapper();
     		RINAConfiguration rinaConfiguration = (RINAConfiguration) 
-    			objectMapper.readValue(new FileInputStream(CONFIG_FILE_LOCATION), RINAConfiguration.class);
+    			objectMapper.readValue(new FileInputStream(System.getProperty("configFileLocation")), 
+    					RINAConfiguration.class);
     		log.info("Read configuration file");
     		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     		objectMapper.writer(new DefaultPrettyPrinter()).writeValue(outputStream, rinaConfiguration);
@@ -242,7 +246,7 @@ public class IPCManager {
 						event = ipcEventProducer.eventWait();
 						if (event.getType().equals(IPCEventType.IPCM_REGISTER_APP_RESPONSE_EVENT)) {
 							IpcmRegisterApplicationResponseEvent appRespEvent = (IpcmRegisterApplicationResponseEvent) event;
-							ipcProcessManager.registrationToNMinusOneDIFResponse(appRespEvent);
+							applicationRegistrationManager.registerApplicationResponse(appRespEvent);
 						} else {
 							log.error("Problems assigning IPC Process to DIF. Expected event of type " + 
 										"IPCM_REGISTER_APP_RESPONSE_EVENT, but got event of type "+ event.getType());
@@ -279,74 +283,102 @@ public class IPCManager {
 	private void processEvent(IPCEvent event) throws Exception{
 		log.info("Got event of type: "+event.getType() 
 				+ " and sequence number: "+event.getSequenceNumber());
-		
-		if (event.getType() == IPCEventType.APPLICATION_REGISTRATION_REQUEST_EVENT) {
+
+		switch(event.getType()) {
+		case APPLICATION_REGISTRATION_REQUEST_EVENT:
 			ApplicationRegistrationRequestEvent appRegReqEvent = (ApplicationRegistrationRequestEvent) event;
 			applicationRegistrationManager.requestApplicationRegistration(appRegReqEvent, NO_IPC_PROCESS_ID);
-		} else if (event.getType() == IPCEventType.IPCM_REGISTER_APP_RESPONSE_EVENT) {
+			break;
+		case IPCM_REGISTER_APP_RESPONSE_EVENT:
 			IpcmRegisterApplicationResponseEvent appRespEvent = (IpcmRegisterApplicationResponseEvent) event;
 			applicationRegistrationManager.registerApplicationResponse(appRespEvent);
-		} else if (event.getType() == IPCEventType.APPLICATION_UNREGISTRATION_REQUEST_EVENT){
+			break;
+		case APPLICATION_UNREGISTRATION_REQUEST_EVENT:
 			ApplicationUnregistrationRequestEvent appUnregReqEvent = (ApplicationUnregistrationRequestEvent) event;
 			applicationRegistrationManager.requestApplicationUnregistration(appUnregReqEvent, IPCManager.NO_IPC_PROCESS_ID);
-		} else if (event.getType() == IPCEventType.IPCM_UNREGISTER_APP_RESPONSE_EVENT) {
-			IpcmUnregisterApplicationResponseEvent appRespEvent = (IpcmUnregisterApplicationResponseEvent) event;
-			applicationRegistrationManager.unregisterApplicationResponse(appRespEvent);
-		} else if (event.getType() == IPCEventType.FLOW_ALLOCATION_REQUESTED_EVENT){
+			break;
+		case IPCM_UNREGISTER_APP_RESPONSE_EVENT:
+			IpcmUnregisterApplicationResponseEvent appUnRespEvent = (IpcmUnregisterApplicationResponseEvent) event;
+			applicationRegistrationManager.unregisterApplicationResponse(appUnRespEvent);
+			break;
+		case FLOW_ALLOCATION_REQUESTED_EVENT:
 			FlowRequestEvent flowReqEvent = (FlowRequestEvent) event;
 			if (flowReqEvent.isLocalRequest()){
 				flowManager.requestAllocateFlowLocal(flowReqEvent);
 			}else{
 				flowManager.allocateFlowRemote(flowReqEvent);
 			}
-		} else if (event.getType() == IPCEventType.IPCM_ALLOCATE_FLOW_REQUEST_RESULT){
+			break;
+		case IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
 			IpcmAllocateFlowRequestResultEvent flowEvent = (IpcmAllocateFlowRequestResultEvent) event;
 			flowManager.allocateFlowRequestResult(flowEvent);
-		} else if (event.getType() == IPCEventType.ALLOCATE_FLOW_RESPONSE_EVENT){
-			AllocateFlowResponseEvent flowEvent = (AllocateFlowResponseEvent) event;
-			flowManager.allocateFlowResponse(flowEvent);
-		} else if (event.getType() == IPCEventType.FLOW_DEALLOCATION_REQUESTED_EVENT){
+			break;
+		case ALLOCATE_FLOW_RESPONSE_EVENT:
+			AllocateFlowResponseEvent flowRespEvent = (AllocateFlowResponseEvent) event;
+			flowManager.allocateFlowResponse(flowRespEvent);
+			break;
+		case FLOW_DEALLOCATION_REQUESTED_EVENT:
 			FlowDeallocateRequestEvent flowDeReqEvent = (FlowDeallocateRequestEvent) event;
 			flowManager.deallocateFlowRequest(flowDeReqEvent);
-		} else if (event.getType() == IPCEventType.IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT){
+			break;
+		case IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT:
 			IpcmDeallocateFlowResponseEvent flowDeEvent = (IpcmDeallocateFlowResponseEvent) event;
 			flowManager.deallocateFlowResponse(flowDeEvent);
-		} else if (event.getType() == IPCEventType.FLOW_DEALLOCATED_EVENT){
-			FlowDeallocatedEvent flowDeEvent = (FlowDeallocatedEvent) event;
-			flowManager.flowDeallocated(flowDeEvent);
-		}else if (event.getType().equals(IPCEventType.GET_DIF_PROPERTIES)){
-			//TODO
-		}else if (event.getType().equals(IPCEventType.OS_PROCESS_FINALIZED)){
+			break;
+		case FLOW_DEALLOCATED_EVENT:
+			FlowDeallocatedEvent flowDeaEvent = (FlowDeallocatedEvent) event;
+			flowManager.flowDeallocated(flowDeaEvent);
+			break;
+		case GET_DIF_PROPERTIES:
+			break;
+		case OS_PROCESS_FINALIZED:
 			OSProcessFinalizedEvent osProcessFinalizedEvent = (OSProcessFinalizedEvent) event;
-			log.info("OS process finalized. Naming info: " 
-					+ osProcessFinalizedEvent.getApplicationName().toString());
-			
-			//Clean up all stuff related to the finalized process (registrations, flows)
-			flowManager.cleanFlows(osProcessFinalizedEvent.getApplicationName());
-			applicationRegistrationManager.cleanApplicationRegistrations(
-					osProcessFinalizedEvent.getApplicationName());
-			
-			if (osProcessFinalizedEvent.getIPCProcessId() != 0){
-				//TODO The process that crashed was an IPC Process in user space
-				//Should we destroy the state in the kernel? Or try to create another
-				//IPC Process in user space to bring it back?
-			}
-		} else if (event.getType().equals(IPCEventType.ASSIGN_TO_DIF_RESPONSE_EVENT)){
+			processOSProcessFinalizedEvent(osProcessFinalizedEvent);
+			break;
+		case ASSIGN_TO_DIF_RESPONSE_EVENT:
 			AssignToDIFResponseEvent atrEvent = (AssignToDIFResponseEvent) event;
 			ipcProcessManager.assignToDIFResponse(atrEvent);
 			console.responseArrived(event);
-		} else if (event.getType().equals(IPCEventType.UPDATE_DIF_CONFIG_RESPONSE_EVENT)){
-			UpdateDIFConfigurationResponseEvent atrEvent = (UpdateDIFConfigurationResponseEvent) event;
-			ipcProcessManager.updateDIFConfigurationResponse(atrEvent);
-		} else if (event.getType().equals(IPCEventType.IPC_PROCESS_DAEMON_INITIALIZED_EVENT)) {
+			break;
+		case UPDATE_DIF_CONFIG_RESPONSE_EVENT:
+			UpdateDIFConfigurationResponseEvent updateConfEvent = (UpdateDIFConfigurationResponseEvent) event;
+			ipcProcessManager.updateDIFConfigurationResponse(updateConfEvent);
+			break;
+		case IPC_PROCESS_DAEMON_INITIALIZED_EVENT:
 			IPCProcessDaemonInitializedEvent ipcEvent = (IPCProcessDaemonInitializedEvent) event;
 			ipcProcessManager.setInitialized(ipcEvent.getIPCProcessId());
-		} else if (event.getType().equals(IPCEventType.ENROLL_TO_DIF_RESPONSE_EVENT)) {
-			EnrollToDIFResponseEvent ipcEvent = (EnrollToDIFResponseEvent) event;
-			ipcProcessManager.enrollToDIFResponse(ipcEvent);
-		} else if (event.getType().equals(IPCEventType.NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT)) {
-			NeighborsModifiedNotificationEvent ipcEvent = (NeighborsModifiedNotificationEvent) event;
-			ipcProcessManager.neighborsModifiedEvent(ipcEvent);
+			break;
+		case ENROLL_TO_DIF_RESPONSE_EVENT:
+			EnrollToDIFResponseEvent enrollResponseEvent = (EnrollToDIFResponseEvent) event;
+			ipcProcessManager.enrollToDIFResponse(enrollResponseEvent);
+			break;
+		case NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT:
+			NeighborsModifiedNotificationEvent neighborsEvent = (NeighborsModifiedNotificationEvent) event;
+			ipcProcessManager.neighborsModifiedEvent(neighborsEvent);
+			break;
+		case QUERY_RIB_RESPONSE_EVENT:
+			QueryRIBResponseEvent queryRIBEvent = (QueryRIBResponseEvent) event;
+			console.responseArrived(queryRIBEvent);
+			break;
+		default:
+			log.warn("Got unsupported event type: "+event.getType());
+			break;
+		}
+	}
+	
+	private void processOSProcessFinalizedEvent(OSProcessFinalizedEvent event) {
+		log.info("OS process finalized. Naming info: " 
+				+ event.getApplicationName().toString());
+
+		//Clean up all stuff related to the finalized process (registrations, flows)
+		flowManager.cleanFlows(event.getApplicationName());
+		applicationRegistrationManager.cleanApplicationRegistrations(
+				event.getApplicationName());
+
+		if (event.getIPCProcessId() != 0){
+			//TODO The process that crashed was an IPC Process in user space
+			//Should we destroy the state in the kernel? Or try to create another
+			//IPC Process in user space to bring it back?
 		}
 	}
 	
@@ -454,5 +486,16 @@ public class IPCManager {
 			String supportingDifName, String neighApName, String neighApInstance) throws Exception {
 		return ipcProcessManager.requestEnrollmentToDIF(ipcProcessId, difName, 
 				supportingDifName, neighApName, neighApInstance);
+	}
+	
+	/**
+	 * Query the RIB of an IPC Process. Right now only querying the full RIB is 
+	 * supported
+	 * @param ipcProcessId
+	 * @return
+	 * @throws Exception
+	 */
+	public long requestQueryIPCProcessRIB(long ipcProcessId) throws Exception {
+		return ipcProcessManager.requestQueryRIB(ipcProcessId);
 	}
 }

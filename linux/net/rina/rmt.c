@@ -32,7 +32,7 @@
 #include "efcp-utils.h"
 
 struct rmt {
-        struct pft *              pft; /* The PDU Forwarding Table */
+        struct pft *              pft;
         struct kfa *              kfa;
         struct efcp_container *   efcpc;
         struct workqueue_struct * egress_wq;
@@ -40,7 +40,7 @@ struct rmt {
         /* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
 };
 
-struct rmt * rmt_create(struct kfa * kfa,
+struct rmt * rmt_create(struct kfa *            kfa,
                         struct efcp_container * efcpc)
 {
         struct rmt * tmp;
@@ -257,7 +257,6 @@ static int receive_data_destroy(struct receive_data * data)
         }
 
         if (data->pdu->pci) rkfree(data->pdu->pci);
-
         if (data->pdu)      rkfree(data->pdu);
 
         rkfree(data);
@@ -307,9 +306,9 @@ static int rmt_receive_worker(void * o)
         return 0;
 }
 
-int rmt_sdu_receive(struct rmt * instance,
-                    struct sdu * sdu,
-                    port_id_t    from)
+int rmt_receive(struct rmt * instance,
+                struct sdu * sdu,
+                port_id_t    from)
 {
         struct pdu *           pdu;
         struct receive_data *  data;
@@ -351,4 +350,3 @@ int rmt_sdu_receive(struct rmt * instance,
 
         return 0;
 }
-

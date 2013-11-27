@@ -276,6 +276,10 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         return -1;
                 }
         } else {
+                kipcm_notify_flow_alloc_req_result(default_kipcm,
+                                                   data->id,
+                                                   flow->port_id,
+                                                   result);
                 list_del(&flow->list);
                 name_destroy(flow->source);
                 name_destroy(flow->dest);
@@ -430,7 +434,7 @@ struct write_data {
         struct sdu * sdu;
 };
 
-bool is_write_data_complete(const struct write_data * data)
+static bool is_write_data_complete(const struct write_data * data)
 {
         bool ret;
 
@@ -512,7 +516,7 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
          * For the shim-dummy the processing consists of sending the new SDU
          * to the sdu_ready kfifo, which will take the ownership of this copy.
          */
-        copy_sdu = sdu_dup_gfp(GFP_ATOMIC, sdu);
+        copy_sdu = sdu_dup_ni(sdu);
         if (!copy_sdu)
                 return -1;
 
@@ -642,16 +646,19 @@ static int dummy_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if (dif_information->configuration)
+        if (dif_information->configuration) {
+                LOG_DBG("Got DIF configuration, dumping:");
                 list_for_each_entry(pos,
                                     &(dif_information->configuration->
                                       ipcp_config_entries),
                                     next)
-                        LOG_DBG("Configuration entry name: %s; value: %s",
+                        LOG_DBG("  Entry (name = '%s', value '%s')",
                                 pos->entry->name,
                                 pos->entry->value);
+                LOG_DBG("DIF configuration dump complete");
+        }
 
-        LOG_DBG("Assigned IPC Process to DIF %s",
+        LOG_DBG("Assigned IPC Process to DIF '%s'",
                 data->info->dif_name->process_name);
 
         return 0;
@@ -803,7 +810,7 @@ static struct ipcp_factory_ops dummy_ops = {
         .destroy   = dummy_destroy,
 };
 
-struct ipcp_factory * shim = NULL;
+static struct ipcp_factory * shim = NULL;
 
 static int __init mod_init(void)
 {

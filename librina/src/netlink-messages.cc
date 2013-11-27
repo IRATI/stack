@@ -748,6 +748,7 @@ IPCEvent* IpcmRegisterApplicationRequestMessage::toIPCEvent(){
 	ApplicationRegistrationInformation information =
 		ApplicationRegistrationInformation(APPLICATION_REGISTRATION_SINGLE_DIF);
 	information.setDIFName(difName);
+	information.setApplicationName(applicationName);
 	ApplicationRegistrationRequestEvent * event =
 			new ApplicationRegistrationRequestEvent(
 					information,
@@ -960,9 +961,19 @@ void IpcmEnrollToDIFResponseMessage::addNeighbor(
         neighbors.push_back(neighbor);
 }
 
+void IpcmEnrollToDIFResponseMessage::setDIFInformation(
+                const DIFInformation& difInformation) {
+        this->difInformation = difInformation;
+}
+
+const DIFInformation&
+IpcmEnrollToDIFResponseMessage::getDIFInformation() const {
+        return difInformation;
+}
+
 IPCEvent* IpcmEnrollToDIFResponseMessage::toIPCEvent(){
         EnrollToDIFResponseEvent * event =
-                        new EnrollToDIFResponseEvent(neighbors,
+                        new EnrollToDIFResponseEvent(neighbors, difInformation,
                                         getResult(), getSequenceNumber());
         return event;
 }

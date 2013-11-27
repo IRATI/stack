@@ -27,6 +27,7 @@
 #include "logs.h"
 #include "debug.h"
 #include "rmem.h"
+#include "rqueue.h"
 
 struct rqueue_entry {
         struct list_head next;

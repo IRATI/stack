@@ -302,10 +302,10 @@ public class ApplicationRegistrationManager {
 				ipcProcess.getRegisteredApplications().iterator();
 		
 		ApplicationProcessNamingInformation next = null;
-		String encodedAppName = appName.toString();
+		String encodedAppName = appName.getEncodedString();
 		while (iterator.hasNext()){
 			next = iterator.next();
-			if (next.toString().equals(encodedAppName)){
+			if (next.getEncodedString().equals(encodedAppName)){
 				return true;
 			}
 		}

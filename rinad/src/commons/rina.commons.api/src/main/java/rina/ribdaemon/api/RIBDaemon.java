@@ -2,6 +2,8 @@ package rina.ribdaemon.api;
 
 import java.util.List;
 
+import eu.irati.librina.QueryRIBRequestEvent;
+
 import rina.cdap.api.CDAPMessageHandler;
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
@@ -148,6 +150,12 @@ public interface RIBDaemon extends EventManager{
 	public void stop(String objectClass, long objectInstance, String objectName, Object objectValue) throws RIBDaemonException;
 	public void stop(String objectClass, String objectName, Object objectValue) throws RIBDaemonException;
 	public void stop(long objectInstance, Object objectValue) throws RIBDaemonException;
+	
+	/**
+	 * Process a Query RIB Request from the IPC Manager
+	 * @param event
+	 */
+	public void processQueryRIBRequestEvent(QueryRIBRequestEvent event);
 	
 	public List<RIBObject> getRIBObjects();
 }

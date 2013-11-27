@@ -976,23 +976,24 @@ class RIBObject{
 	std::string name;
 
 	/** A synonim for clazz+name (unique within the RIB) */
-	long instance;
+	long long instance;
 
 	/** The value of the object */
 	RIBObjectValue value;
 
 	/** Geneartes a unique object instance */
-	long generateObjectInstance();
+	long long generateObjectInstance();
 
 public:
 	RIBObject();
-	RIBObject(std::string clazz, std::string name, RIBObjectValue value);
+	RIBObject(std::string clazz, std::string name,
+	                long long instance, RIBObjectValue value);
 	bool operator==(const RIBObject &other) const;
 	bool operator!=(const RIBObject &other) const;
 	const std::string& getClazz() const;
 	void setClazz(const std::string& clazz);
-	long getInstance() const;
-	void setInstance(long instance);
+	long long getInstance() const;
+	void setInstance(long long instance);
 	const std::string& getName() const;
 	void setName(const std::string& name);
 	RIBObjectValue getValue() const;
@@ -1028,15 +1029,23 @@ public:
 /**
  * Initialize librina providing the local Netlink port-id where this librina
  * instantiation will be bound
- * @param localPort
+ * @param localPort NL port used by this instantiation of librina
+ * @param logLevel librina log level
+ * @param pathToLogFile the path to the log file
  */
-void initialize(unsigned int localPort);
+void initialize(unsigned int localPort, const std::string& logLevel,
+                const std::string& pathToLogFile)
+        throw (InitializationException);
 
 /**
  * Initialize librina letting the OS choose the Netlink port-id where this
  * librina instantiation will be bound
+ * @param logLevel librina log level
+ * @param pathToLogFile the path to the log file
  */
-void initialize();
+void initialize(const std::string& logLevel,
+                const std::string& pathToLogFile)
+        throw (InitializationException);
 
 }
 #endif
