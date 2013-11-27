@@ -105,11 +105,11 @@ static struct sk_buff * arp_create(struct net_device * dev,
         arp = (struct arp_header *) skb_put(skb, length);
 
         skb->dev      = dev;
-        skb->protocol = htons(ETH_P_ARP);
+        skb->protocol = htons(ETH_P_BATMAN);
 
         /* Fill the device header for the ARP frame */
         if (dev_hard_header(skb, dev,
-                            ETH_P_ARP,
+                            ETH_P_BATMAN,
                             gha_address(tha),
                             gha_address(sha),
                             skb->len) < 0) {
