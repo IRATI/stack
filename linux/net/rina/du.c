@@ -426,14 +426,23 @@ struct pdu * pdu_create_with_ni(struct sdu * sdu)
 { return pdu_create_with_gfp(GFP_ATOMIC, sdu); }
 EXPORT_SYMBOL(pdu_create_with_ni);
 
-struct buffer * pdu_buffer(struct pdu * pdu)
+const struct buffer * pdu_buffer_ro(const struct pdu * pdu)
 {
         if (!pdu_is_ok(pdu))
                 return NULL;
 
         return pdu->buffer;
 }
-EXPORT_SYMBOL(pdu_buffer);
+EXPORT_SYMBOL(pdu_buffer_ro);
+
+struct buffer * pdu_buffer_rw(struct pdu * pdu)
+{
+        if (!pdu_is_ok(pdu))
+                return NULL;
+
+        return pdu->buffer;
+}
+EXPORT_SYMBOL(pdu_buffer_rw);
 
 const struct pci * pdu_pci(const struct pdu * pdu)
 {
@@ -443,14 +452,6 @@ const struct pci * pdu_pci(const struct pdu * pdu)
         return pdu->pci;
 }
 EXPORT_SYMBOL(pdu_pci);
-
-pdu_type_t pdu_type(const struct pdu * pdu)
-{
-        ASSERT(pdu_is_ok(pdu));
-
-        return pci_type(pdu->pci);
-}
-EXPORT_SYMBOL(pdu_type);
 
 int pdu_destroy(struct pdu * p)
 {

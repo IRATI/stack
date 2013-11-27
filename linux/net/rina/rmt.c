@@ -264,7 +264,7 @@ static int rmt_receive_worker(void * o)
 {
         struct receive_data * tmp;
         struct pdu *          pdu;
-        pdu_type_t            type;
+        pdu_type_t            pdu_type;
 
         tmp = (struct receive_data *) o;
         if (!tmp) {
@@ -284,13 +284,13 @@ static int rmt_receive_worker(void * o)
                 return -1;
         }
 
-        type = pdu_type(pdu);
-        switch (type) {
+        pdu_type = pci_type(pdu_pci(pdu));
+        switch (pdu_type) {
         case PDU_TYPE_MGMT: {
                 struct sdu *    sdu;
                 struct buffer * buffer;
 
-                buffer = pdu_buffer(pdu);
+                buffer = pdu_buffer_rw(pdu);
                 sdu = sdu_create_with(buffer);
                 if (!sdu) {
                         receive_data_destroy(tmp);
@@ -314,7 +314,7 @@ static int rmt_receive_worker(void * o)
                 return 0;
         }
         default:
-                LOG_ERR("Unknown PDU type %d", type);
+                LOG_ERR("Unknown PDU type %d", pdu_type);
                 return -1;
         }
 }
