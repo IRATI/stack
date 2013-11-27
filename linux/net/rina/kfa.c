@@ -322,7 +322,7 @@ int kfa_flow_sdu_write(struct kfa * instance,
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
         }
-        if (!is_sdu_ok(sdu)) {
+        if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus port-id, bailing out");
                 return -1;
         }
@@ -501,14 +501,12 @@ int kfa_sdu_post(struct kfa * instance,
                 LOG_ERR("Bogus port-id, bailing out");
                 return -1;
         }
-
-        if (!sdu || !is_sdu_ok(sdu)) {
+        if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus parameters passed, bailing out");
                 return -1;
         }
 
-        LOG_DBG("Posting SDU of size %zd to port-id %d ",
-                sdu->buffer->size, id);
+        LOG_DBG("Posting SDU to port-id %d ", id);
 
         spin_lock(&instance->lock);
         flow = kfa_pmap_find(instance->flows, id);

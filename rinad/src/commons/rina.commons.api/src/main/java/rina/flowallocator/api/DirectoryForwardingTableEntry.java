@@ -62,9 +62,7 @@ public class DirectoryForwardingTableEntry {
 	 * @return
 	 */
 	public String getKey(){
-		return this.apNamingInfo.getProcessNamePlusInstance() +
-				"-" + this.apNamingInfo.getEntityName() + 
-				"-" + this.apNamingInfo.getEntityInstance();
+		return this.apNamingInfo.getEncodedString();
 	}
 	
 	@Override

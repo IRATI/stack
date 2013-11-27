@@ -33,10 +33,10 @@ public class GPBUtils {
 	private static final Log log = LogFactory.getLog(GPBUtils.class);
 	
 	public static ApplicationProcessNamingInformation getApplicationProcessNamingInfo(applicationProcessNamingInfo_t apNamingInfo) {
-		String apName = GPBUtils.getString(apNamingInfo.getApplicationProcessName());
-		String apInstance = GPBUtils.getString(apNamingInfo.getApplicationProcessInstance());
-		String aeName = GPBUtils.getString(apNamingInfo.getApplicationEntityName());
-		String aeInstance = GPBUtils.getString(apNamingInfo.getApplicationEntityInstance());
+		String apName = apNamingInfo.getApplicationProcessName();
+		String apInstance = apNamingInfo.getApplicationProcessInstance();
+		String aeName = apNamingInfo.getApplicationEntityName();
+		String aeInstance = apNamingInfo.getApplicationEntityInstance();
 		
 		ApplicationProcessNamingInformation result = 
 				new ApplicationProcessNamingInformation(apName, apInstance);

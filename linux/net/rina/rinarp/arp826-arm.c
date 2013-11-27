@@ -303,7 +303,7 @@ int arp826_resolve_gpa(struct net_device * dev,
         list_add(&resolution->next, &resolutions_ongoing);
         spin_unlock(&resolutions_lock);
 
-        if (arp_send_request(ptype, spa, sha, tpa)) {
+        if (arp_send_request(dev, ptype, spa, sha, tpa)) {
                 LOG_ERR("Cannot send request, cannot resolve GPA");
 
                 resolve_data_destroy(resolution->data);

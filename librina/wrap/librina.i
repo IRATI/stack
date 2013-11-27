@@ -16,6 +16,7 @@
 
 %module rina
 
+%include "enums.swg"
 %include <stdint.i>
 %include <stl.i>
 

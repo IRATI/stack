@@ -147,6 +147,7 @@ struct ipcp_instance_ops {
                                        int                         policies);
 
         int      (* connection_update)(struct ipcp_instance_data * data,
+                                       port_id_t                   port_id,
                                        cep_id_t                    src_id,
                                        cep_id_t                    dst_id);
 
