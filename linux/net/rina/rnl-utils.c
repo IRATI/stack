@@ -1623,6 +1623,12 @@ static int rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
                              IDQR_ATTR_MAX,
                              attr_policy);
 
+        if (result < 0) {
+                LOG_ERR("Could not validate nl message policy (error = %d)",
+                                result);
+                goto parse_fail;
+        }
+
         if (info->attrs[IDQR_ATTR_OBJECT]) {
                 if (parse_rib_object(info->attrs[IDQR_ATTR_OBJECT],
                                      msg_attrs->rib_obj) < 0)
@@ -1677,6 +1683,12 @@ static int rnl_parse_ipcp_notify_flow_event_msg(struct genl_info * info,
                              attrs,
                              INFE_ATTR_MAX,
                              attr_policy);
+
+        if (result < 0) {
+                LOG_ERR("Could not validate nl message policy (error = %d)",
+                                result);
+                goto parse_fail;
+        }
 
         if (info->attrs[INFE_ATTR_PORTID]) {
                 msg_attrs->port_id = nla_get_u32(

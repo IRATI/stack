@@ -1076,6 +1076,7 @@ static int notify_ipcp_flow_event(void *             data,
                 goto end;
 
         //FIXME call IPCP operation
+        LOG_DBG("Missing code");
  end:
        rnl_msg_destroy(msg);
        return 0;
