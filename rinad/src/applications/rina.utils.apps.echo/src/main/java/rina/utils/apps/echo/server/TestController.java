@@ -169,6 +169,13 @@ public class TestController implements Runnable {
 		if (!stop) {
 			log.info("Requesting reader of flow "+flow.getPortId()+ " to stop");
 			stop = true;
+			
+			if (!testInformation.receivedAllSDUs()) {
+				log.info("Stopping since more than "+ MAX_TIME_WITH_NO_DATA_IN_MS 
+						+ " ms have gone by without receiving SDUs");
+				log.info("Received "+testInformation.getSDUsReceived() 
+						+ " out of " + testInformation.getNumberOfSDUs() + " SDUs");
+			}
 		}
 		
 		terminateReader();
