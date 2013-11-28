@@ -20,7 +20,7 @@ import eu.irati.librina.rina;
  */
 public class FlowReader implements Runnable, FlowDeallocationListener{
 	
-	public static final long MAX_TIME_WITH_NO_DATA_IN_MS = 5*1000;
+	public static final long MAX_TIME_WITH_NO_DATA_IN_MS = 2*1000;
 	public static final long TIMER_PERIOD_IN_MS = 1000;
 	
 	private Flow flow = null;
