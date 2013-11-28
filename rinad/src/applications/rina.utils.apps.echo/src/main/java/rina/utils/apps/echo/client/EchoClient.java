@@ -129,6 +129,8 @@ FlowAllocationListener, FlowDeallocationListener {
 	
 	public void cancelTest(int status) {
 		if (flowReader != null) {
+			log.info("Cancelling test since more than " + FlowReader.MAX_TIME_WITH_NO_DATA_IN_MS + 
+					" have gone bye without receiving an SDU");
 			flowReader.stop();
 		}
 		
