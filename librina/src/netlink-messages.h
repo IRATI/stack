@@ -52,6 +52,14 @@ enum RINANetlinkOperationCode{
 	RINA_C_RMT_DUMP_FT_REPLY, /* TODO RMT (kernel) -> IPC Process (user space) */
 	RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION, /* Kernel (NL layer) -> IPC Manager */
 	RINA_C_IPCM_IPC_MANAGER_PRESENT, /* IPC Manager -> Kernel (NL layer) */
+	RINA_C_IPCP_CONN_CREATE_REQUEST, /* IPC Process Daemon -> EFCP (Kernel) */
+	RINA_C_IPCP_CONN_CREATE_RESPONSE, /* EFCP(Kernel) -> IPC Process Daemon */
+	RINA_C_IPCP_CONN_CREATE_ARRIVED, /* IPC Process Daemon -> EFCP (Kernel) */
+	RINA_C_IPCP_CONN_CREATE_RESULT, /* EFCP(kernel) -> IPC Process daemon */
+	RINA_C_IPCP_CONN_UPDATE_REQUEST, /* IPC Process Daemon -> EFCP (Kernel) */
+	RINA_C_IPCP_CONN_UPDATE_RESULT, /* EFCP(kernel) -> IPC Process daemon */
+	RINA_C_IPCP_CONN_DESTROY_REQUEST, /* IPC Process Daemon -> EFCP (Kernel) */
+	RINA_C_IPCP_CONN_DESTROY_RESULT, /* EFCP(kernel) -> IPC Process daemon */
 	RINA_C_IPCM_IPC_PROCESS_INITIALIZED, /* IPC Process -> IPC Manager */
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST, /* Allocate flow request, Application -> IPC Manager */
 	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* Response to an application allocate flow request, IPC Manager -> Application */
@@ -1036,6 +1044,39 @@ public:
         const ApplicationProcessNamingInformation& getName() const;
         IPCEvent* toIPCEvent();
 };
+
+/**
+ * IPC Process -> IPC Manager. Sent after the IPC Process daemon has initialized
+ * the NL infrastructure and is ready to receive messages.
+ */
+class IpcpConnectionCreateRequestMessage: public BaseNetlinkMessage {
+        
+        /** The port-id where the connection will be bound to */
+        int portId;
+        
+        /** The source address of the connection (the IPC Process address) */
+        unsigned int sourceAddress;
+        
+        /** The connection's destination IPC Process address */
+        unsigned int destAddress;
+        
+        /** The qos-id of the connection */
+        unsigned int qosId;
+        
+public:
+        IpcpConnectionCreateRequestMessage();
+        unsigned int getDestAddress() const;
+        void setDestAddress(unsigned int destAddress);
+        int getPortId() const;
+        void setPortId(int portId);
+        unsigned int getQosId() const;
+        void setQosId(unsigned int qosId);
+        unsigned int getSourceAddress() const;
+        void setSourceAddress(unsigned int sourceAddress);
+        IPCEvent* toIPCEvent();
+};
+
+
 
 }
 

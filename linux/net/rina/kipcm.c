@@ -1032,6 +1032,56 @@ static int notify_ipcp_conn_destroy_req(void *             data,
                                                   info->snd_portid);
 }
 
+static int notify_ipcp_flow_event(void *             data,
+                                  struct sk_buff *   buff,
+                                  struct genl_info * info)
+{
+        struct rnl_ipcp_flow_notif_msg_attrs * attrs;
+        struct rnl_msg *                       msg;
+        struct ipcp_instance *                 ipcp;
+        struct kipcm *                         kipcm;
+        ipc_process_id_t                       ipc_id;
+        port_id_t                              port_id;
+        bool                                   flow_allocated;
+
+        ipc_id = 0;
+        port_id = 0;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        kipcm = (struct kipcm *) data;
+        msg = rnl_msg_create(RNL_MSG_ATTRS_IPCP_FLOW_NOTIFICATION);
+
+        if (!msg)
+                goto end;
+
+        attrs = msg->attrs;
+
+        if (rnl_parse_msg(info, msg))
+                goto end;
+
+        port_id = attrs->port_id;
+        flow_allocated = attrs->allocated;
+        ipc_id  = msg->header.dst_ipc_id;
+        ipcp    = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipcp)
+                goto end;
+
+        //FIXME call IPCP operation
+        LOG_DBG("Missing code");
+ end:
+       rnl_msg_destroy(msg);
+       return 0;
+}
+
 static int notify_ipc_manager_present(void *             data,
                                       struct sk_buff *   buff,
                                       struct genl_info * info)
@@ -1090,6 +1140,8 @@ static int netlink_handlers_register(struct kipcm * kipcm)
                 notify_ipcp_conn_update_req;
         kipcm_handlers[RINA_C_IPCP_CONN_DESTROY_REQUEST]           =
                 notify_ipcp_conn_destroy_req;
+        kipcm_handlers[RINA_C_IPCP_NOTIFY_FLOW_EVENT]              =
+                notify_ipcp_flow_event;
 
         for (i = 1; i < RINA_C_MAX; i++) {
                 if (kipcm_handlers[i] != NULL) {

@@ -285,6 +285,12 @@
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
+%typemap(throws, throws="eu.irati.librina.CreateConnectionException") rina::CreateConnectionException {
+  jclass excep = jenv->FindClass("eu/irati/librina/CreateConnectionException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
 
 
 /* Typemaps to allow eventWait, eventPoll and eventTimedWait to downcast IPCEvent to the correct class */

@@ -1434,5 +1434,52 @@ IPCEvent* IpcmIPCProcessInitializedMessage::toIPCEvent(){
         return event;
 }
 
+/* CLASS IPCM CONNECTION CREATE REQUEST MESSAGE */
+IpcpConnectionCreateRequestMessage::IpcpConnectionCreateRequestMessage():
+                BaseNetlinkMessage(RINA_C_IPCP_CONN_CREATE_REQUEST) {
+        portId = 0;
+        sourceAddress = 0;
+        destAddress = 0;
+        qosId = 0;
+}
+
+unsigned int IpcpConnectionCreateRequestMessage::getDestAddress() const {
+        return destAddress;
+}
+
+void IpcpConnectionCreateRequestMessage::setDestAddress(
+                unsigned int destAddress) {
+        this->destAddress = destAddress;
+}
+
+int IpcpConnectionCreateRequestMessage::getPortId() const {
+        return portId;
+}
+
+void IpcpConnectionCreateRequestMessage::setPortId(int portId) {
+        this->portId = portId;
+}
+
+unsigned int IpcpConnectionCreateRequestMessage::getQosId() const {
+                return qosId;
+}
+
+void IpcpConnectionCreateRequestMessage::setQosId(unsigned int qosId){
+        this->qosId = qosId;
+}
+
+unsigned int IpcpConnectionCreateRequestMessage::getSourceAddress() const {
+        return sourceAddress;
+}
+
+void IpcpConnectionCreateRequestMessage::setSourceAddress(
+                unsigned int sourceAddress) {
+        this->sourceAddress = sourceAddress;
+}
+
+IPCEvent* IpcpConnectionCreateRequestMessage::toIPCEvent() {
+        return 0;
+}
+
 }
 
