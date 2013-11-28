@@ -87,6 +87,8 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 			stop = true;
 			
 			if (!testInformation.receivedAllSDUs()) {
+				log.info("Cancelling test since more than " + MAX_TIME_WITH_NO_DATA_IN_MS + 
+						" ms have gone bye without receiving an SDU");
 				printStats();
 			}
 		}
