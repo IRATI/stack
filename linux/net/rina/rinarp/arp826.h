@@ -22,7 +22,11 @@
 #ifndef ARP826_H
 #define ARP826_H
 
+#include <linux/if_ether.h>
+
 #include "rinarp/arp826-utils.h"
+
+#define RINARP_ETH_PROTO ETH_P_BATMAN
 
 /* FIXME: This API should get the htype also ... */
 
