@@ -20,7 +20,7 @@ import eu.irati.librina.rina;
  */
 public class FlowReader implements Runnable, FlowDeallocationListener{
 	
-	public static final long MAX_TIME_WITH_NO_DATA_IN_MS = 2*1000;
+	public static final long MAX_TIME_WITH_NO_DATA_IN_MS = 5*1000;
 	public static final long TIMER_PERIOD_IN_MS = 1000;
 	
 	private Flow flow = null;
@@ -109,9 +109,8 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 	private void printStats() {
 		if (!testInformation.receivedAllSDUs()) {
 			log.info("Received "+testInformation.getSDUsReceived() + " out of " 
-					+ testInformation.getNumberOfSDUs() + ". " + 
-					((testInformation.getNumberOfSDUs()-testInformation.getSDUsReceived())/testInformation.getNumberOfSDUs())*100 
-					+ "% SDUs lost");
+					+ testInformation.getNumberOfSDUs() + " SDUs. ");
+			testInformation.setLastSDUReceivedTime(getLatestSDUReceivedTime());
 		}
 		
 		long testDuration = testInformation.getLastSDUReceivedTime() 
@@ -123,7 +122,7 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 		log.info("Test completed, sent "+testInformation.getNumberOfSDUs() +" and received " + 
 				testInformation.getSDUsReceived() + " SDUs of " 
 				+ testInformation.getSduSize() + 
-				" in " +testDuration + " ms.");
+				" bytes in " +testDuration + " ms.");
 		
 		long bandwidthInBps = 1000*testInformation.getNumberOfSDUs()*testInformation.getSduSize()/testDuration;
 		log.info("Send and received at " + bandwidthInBps 
