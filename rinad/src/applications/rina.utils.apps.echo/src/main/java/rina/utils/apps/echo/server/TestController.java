@@ -23,7 +23,7 @@ import eu.irati.librina.rina;
  */
 public class TestController implements Runnable {
 	
-	private static final long MAX_TIME_WITH_NO_DATA_IN_MS = 2*1000;
+	private static final long MAX_TIME_WITH_NO_DATA_IN_MS = 5*1000;
 	public static final long TIMER_PERIOD_IN_MS = 1000;
 	
 	private enum State {WAIT_START, EXECUTING, COMPLETED};
@@ -172,9 +172,9 @@ public class TestController implements Runnable {
 			
 			if (!testInformation.receivedAllSDUs()) {
 				log.info("Stopping since more than "+ MAX_TIME_WITH_NO_DATA_IN_MS 
-						+ " have gone by without receiving SDUs");
+						+ " ms have gone by without receiving SDUs");
 				log.info("Received "+testInformation.getSDUsReceived() 
-						+ " out of " + testInformation.getNumberOfSDUs());
+						+ " out of " + testInformation.getNumberOfSDUs() + " SDUs");
 			}
 		}
 		
