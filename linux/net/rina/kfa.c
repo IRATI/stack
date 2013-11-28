@@ -179,10 +179,6 @@ int kfa_flow_bind(struct kfa *           instance,
                 return -1;
         }
         if (!is_port_id_ok(pid)) {
-                LOG_ERR("Bogus flow-id, bailing out");
-                return -1;
-        }
-        if (!is_port_id_ok(pid)) {
                 LOG_ERR("Bogus port-id, bailing out");
                 return -1;
         }

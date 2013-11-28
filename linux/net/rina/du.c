@@ -238,6 +238,20 @@ struct pci {
 static bool pci_is_ok(const struct pci * pci)
 { return pci && pdu_type_is_ok(pci->type) ? true : false; }
 
+struct pci * pci_create(cep_id_t   dst_cep_id,
+                        cep_id_t   src_cep_id,
+                        address_t  dst_address,
+                        address_t  src_address,
+                        seq_num_t  nxt_seq_send,
+                        qos_id_t   qos_id,
+                        pdu_type_t type)
+{
+        LOG_MISSING;
+
+        return NULL;
+}
+EXPORT_SYMBOL(pci_create);
+
 static struct pci * pci_create_from_gfp(gfp_t        flags,
                                         const void * data)
 {
@@ -368,6 +382,14 @@ bool pdu_is_ok(const struct pdu * p)
 { return (p && p->pci && p->buffer) ? true : false; }
 EXPORT_SYMBOL(pdu_is_ok);
 
+struct pdu * pdu_create_from(struct sdu * sdu, struct pci * pci)
+{
+        LOG_MISSING;
+
+        return NULL;
+}
+EXPORT_SYMBOL(pdu_create_from);
+
 static struct pdu * pdu_create_gfp(gfp_t flags)
 {
         struct pdu * tmp;
@@ -453,6 +475,15 @@ const struct pci * pdu_pci(const struct pdu * pdu)
 }
 EXPORT_SYMBOL(pdu_pci);
 
+struct pci * pdu_pci_rw(struct pdu * pdu)
+{
+        if (!pdu_is_ok(pdu))
+                return NULL;
+
+        return pdu->pci;
+}
+EXPORT_SYMBOL(pdu_pci_rw);
+
 int pdu_destroy(struct pdu * p)
 {
         if (p)
@@ -483,6 +514,15 @@ static struct sdu * sdu_create_with_gfp(gfp_t           flags,
 
         return tmp;
 }
+
+struct sdu * sdu_create_from(struct buffer * buffer,
+                             struct pci *    pci)
+{
+        LOG_MISSING;
+
+        return NULL;
+}
+EXPORT_SYMBOL(sdu_create_from);
 
 struct sdu * sdu_create_with(struct buffer * buffer)
 { return sdu_create_with_gfp(GFP_KERNEL, buffer); }
