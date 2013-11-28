@@ -134,6 +134,40 @@ static void mb_poison(void * ptr, size_t size)
 }
 #endif
 
+#if 0
+static size_t mem_stats[] = {
+        0 /* 2 <<  0 */,
+        0 /* 2 <<  1 */,
+        0 /* 2 <<  2 */,
+        0 /* 2 <<  3 */,
+        0 /* 2 <<  4 */,
+        0 /* 2 <<  5 */,
+        0 /* 2 <<  6 */,
+        0 /* 2 <<  7 */,
+        0 /* 2 <<  8 */,
+        0 /* 2 <<  9 */,
+        0 /* 2 << 10 */,
+        0 /* 2 << 11 */,
+        0 /* 2 << 12 */,
+        0 /* 2 << 13 */,
+        0 /* 2 << 14 */,
+        0 /* 2 << 15 */,
+        0 /* 2 << 16 */,
+        0 /* 2 << 17 */,
+        0 /* 2 << 18 */,
+        0 /* 2 << 19 */,
+        0 /* 2 << 20 */,
+};
+
+#define BLOCKS_COUNT ARRAY_SIZE(block_count)
+
+static void stats_inc(size_t size)
+{ }
+
+static void stats_dec(size_t size)
+{ }
+#endif
+
 static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
                             size_t size,
                             gfp_t flags)
@@ -157,6 +191,11 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
 #endif
 
         real_size = size;
+
+#ifdef CONFIG_RINA_MEMORY_STATS
+        real_size += sizeof(size_t);
+#endif
+
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
         real_size += sizeof(*header) + sizeof(*footer);
 #endif
@@ -166,6 +205,11 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
                 LOG_ERR("Cannot allocate %zd bytes", size);
                 return NULL;
         }
+
+#ifdef CONFIG_RINA_MEMORY_STATS
+        *((size_t *) ptr) = size;
+        ptr = ((size_t *) ptr) + 1; 
+#endif
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
 #ifdef CONFIG_RINA_MEMORY_TAMPERING_VERBOSE
@@ -220,6 +264,10 @@ EXPORT_SYMBOL(rkzalloc);
 
 void rkfree(void * ptr)
 {
+#ifdef CONFIG_RINA_MEMORY_STATS
+        size_t                   real_size;
+#endif
+
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
         struct memblock_header * header;
         struct memblock_footer * footer;
@@ -230,6 +278,11 @@ void rkfree(void * ptr)
 #endif
 
         ASSERT(ptr);
+
+#ifdef CONFIG_RINA_MEMORY_STATS
+        real_size = *((size_t *) ptr);
+        ptr = ((size_t *) ptr) - 1;
+#endif
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
         header = (struct memblock_header *)

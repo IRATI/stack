@@ -47,49 +47,31 @@ typedef uint8_t pdu_flags_t;
 
 typedef uint16_t pdu_type_t;
 
-#define is_pdu_type_ok(X)                               \
-        ((X && PDU_TYPE_EFCP)       ? 1 :               \
-         ((X && PDU_TYPE_DT)         ? 1 :              \
-          ((X && PDU_TYPE_CC)         ? 1 :             \
-           ((X && PDU_TYPE_SACK)       ? 1 :            \
-            ((X && PDU_TYPE_NACK)       ? 1 :           \
-             ((X && PDU_TYPE_FC)         ? 1 :          \
-              ((X && PDU_TYPE_ACK)        ? 1 :         \
-               ((X && PDU_TYPE_ACK_AND_FC) ? 1 :        \
-                ((X && PDU_TYPE_MGMT)       ? 1 :       \
-                 0)))))))))
+#define pdu_type_is_ok(X)                               \
+        ((X && PDU_TYPE_EFCP)       ? true :            \
+         ((X && PDU_TYPE_DT)         ? true :           \
+          ((X && PDU_TYPE_CC)         ? true :          \
+           ((X && PDU_TYPE_SACK)       ? true :         \
+            ((X && PDU_TYPE_NACK)       ? true :        \
+             ((X && PDU_TYPE_FC)         ? true :       \
+              ((X && PDU_TYPE_ACK)        ? true :      \
+               ((X && PDU_TYPE_ACK_AND_FC) ? true :     \
+                ((X && PDU_TYPE_MGMT)       ? true :    \
+                 false)))))))))
 
 typedef uint seq_num_t;
-
-struct pci {
-        address_t  source;
-        address_t  destination;
-
-        pdu_type_t type;
-
-        struct {
-                cep_id_t source_id;
-                cep_id_t dest_id;
-        } ceps;
-
-        qos_id_t   qos_id;
-        seq_num_t  sequence_number;
-};
 
 /*
  * FIXME: This structure will be hidden soon. Do not access its field(s)
  *        directly, prefer the access functions below.
  */
-struct buffer {
-        char * data;
-        size_t size;
-};
+struct buffer;
 
-/* NOTE: Creates a buffer from raw data */
-struct buffer * buffer_create_from(void * data,
-                                   size_t size);
-struct buffer * buffer_create_from_ni(void * data,
-                                      size_t size);
+/* NOTE: Creates a buffer from raw data (takes ownership) */
+struct buffer * buffer_create_with(void * data, size_t size);
+struct buffer * buffer_create_with_ni(void * data, size_t size);
+struct buffer * buffer_create_from(const void * data, size_t size);
+struct buffer * buffer_create_from_ni(const void * data, size_t size);
 
 /* NOTE: Creates an uninitialized buffer (data might be garbage) */
 struct buffer * buffer_create(size_t size);
@@ -101,12 +83,12 @@ int             buffer_destroy(struct buffer * b);
 ssize_t         buffer_length(const struct buffer * b);
 
 /* NOTE: Returns the raw buffer memory, watch-out ... */
-void *          buffer_data(struct buffer * b);
+const void *    buffer_data_ro(const struct buffer * b); /* Read only */
+void *          buffer_data_rw(struct buffer * b);       /* Read/Write */
 
-struct buffer * buffer_dup(struct buffer * b);
-struct buffer * buffer_dup_ni(struct buffer * b);
-
-bool            is_buffer_ok(const struct buffer * b);
+struct buffer * buffer_dup(const struct buffer * b);
+struct buffer * buffer_dup_ni(const struct buffer * b);
+bool            buffer_is_ok(const struct buffer * b);
 
 /*
  * FIXME: This structure will be hidden soon. Do not access its field(s)
@@ -117,31 +99,39 @@ struct sdu {
 };
 
 /* NOTE: The following function take the ownership of the buffer passed */
-struct sdu *          sdu_create_from_buffer(struct buffer * buffer);
-struct sdu *          sdu_create_from_buffer_ni(struct buffer * buffer);
-
+struct sdu *          sdu_create_with(struct buffer * buffer);
+struct sdu *          sdu_create_with_ni(struct buffer * buffer);
 int                   sdu_destroy(struct sdu * s);
-
 const struct buffer * sdu_buffer(const struct sdu * s);
-
-struct sdu *          sdu_dup(struct sdu * sdu);
-struct sdu *          sdu_dup_ni(struct sdu * sdu);
-
-bool                  is_sdu_ok(const struct sdu * sdu);
-
+struct sdu *          sdu_dup(const struct sdu * sdu);
+struct sdu *          sdu_dup_ni(const struct sdu * sdu);
+bool                  sdu_is_ok(const struct sdu * sdu);
 struct sdu *          sdu_protect(struct sdu * sdu);
 struct sdu *          sdu_unprotect(struct sdu * sdu);
 
-/*
- * FIXME: This structure will be hidden soon. Do not access its field(s)
- *        directly, prefer the access functions below.
- */
-struct pdu {
-        struct pci *    pci;
-        struct buffer * buffer;
-};
+struct pci;
 
-struct pdu *          pdu_create(void);
+/* NOTE: The following function may return -1 */
+struct pci *          pci_create_from(const void * data);
+struct pci *          pci_create_from_ni(const void * data);
+struct pci *          pci_dup(const struct pci * pci);
+struct pci *          pci_dup_ni(const struct pci * pci);
+int                   pci_destroy(struct pci * pci);
+ssize_t               pci_length(const struct pci * pci);
+pdu_type_t            pci_type(const struct pci * pci);
+address_t             pci_source(const struct pci * pci);
+address_t             pci_destination(const struct pci * pci);
+cep_id_t              pci_cep_source(const struct pci * pci);
+cep_id_t              pci_cep_destination(const struct pci * pci);
+
+struct pdu;
+
+struct pdu *          pdu_create_with(struct sdu * sdu);
+struct pdu *          pdu_create_with_ni(struct sdu * sdu);
+bool                  pdu_is_ok(const struct pdu * pdu);
+const struct buffer * pdu_buffer_ro(const struct pdu * pdu);
+struct buffer *       pdu_buffer_rw(struct pdu * pdu);
+const struct pci *    pdu_pci(const struct pdu * pdu);
 int                   pdu_destroy(struct pdu * pdu);
 
 #endif
