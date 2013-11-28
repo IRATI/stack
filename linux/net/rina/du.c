@@ -1,5 +1,5 @@
 /*
- * K-IPCM (Kernel-IPC Manager)
+ * (S|P) Data Unit
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
