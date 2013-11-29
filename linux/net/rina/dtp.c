@@ -218,37 +218,37 @@ int dtp_write(struct dtp * instance,
                 return -1;
 
         if (pci_cep_destination_set(pci,
-                instance->state_vector->connection->destination_cep_id)) {
+                                    instance->state_vector->connection->destination_cep_id)) {
                 pci_destroy(pci);
                 return -1;
         }
 
         if (pci_cep_source_set(pci,
-                        instance->state_vector->connection->source_cep_id)) {
+                               instance->state_vector->connection->source_cep_id)) {
                 pci_destroy(pci);
                 return -1;
         }
 
         if (pci_destination_set(pci,
-                instance->state_vector->connection->destination_address)) {
+                                instance->state_vector->connection->destination_address)) {
                 pci_destroy(pci);
                 return -1;
         }
 
         if (pci_source_set(pci,
-                        instance->state_vector->connection->source_address)) {
+                           instance->state_vector->connection->source_address)) {
                 pci_destroy(pci);
                 return -1;
         }
 
         if (pci_nxt_seq_send_set(pci,
-                        instance->state_vector->next_sequence_to_send)) {
+                                 instance->state_vector->next_sequence_to_send)) {
                 pci_destroy(pci);
                 return -1;
         }
 
         if (pci_qos_id_set(pci,
-                        instance->state_vector->connection->qos_id)) {
+                           instance->state_vector->connection->qos_id)) {
                 pci_destroy(pci);
                 return -1;
         }

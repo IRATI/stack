@@ -432,7 +432,7 @@ static void __exit mod_exit(void)
         device = first_net_device(&init_net);
         while (device) {
                 protocol_remove(device, ETH_P_RINA);
-                
+
                 device = next_net_device(device);
         }
         read_unlock(&dev_base_lock);

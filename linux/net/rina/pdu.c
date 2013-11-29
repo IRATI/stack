@@ -54,7 +54,7 @@ static struct pci * pci_create_gfp(gfp_t flags)
         tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
-        
+
         return tmp;
 }
 
@@ -74,7 +74,7 @@ int pci_cep_source_set(struct pci * pci,
 
         if (!is_cep_id_ok(src_cep_id))
                 return -1;
-        
+
         pci->ceps.destination = src_cep_id;
         return 0;
 }
@@ -85,12 +85,12 @@ int pci_cep_destination_set(struct pci * pci,
 {
         if (!pci)
                 return -1;
-        
+
         if (!is_cep_id_ok(dst_cep_id))
                 return -1;
-        
+
         pci->ceps.source = dst_cep_id;
-        
+
         return 0;
 }
 EXPORT_SYMBOL(pci_cep_destination_set);
@@ -102,7 +102,7 @@ int pci_destination_set(struct pci * pci,
                 return -1;
 
         pci->destination = dst_address;
-                        
+
         return 0;
 }
 EXPORT_SYMBOL(pci_destination_set);
@@ -124,7 +124,7 @@ int pci_nxt_seq_send_set(struct pci * pci,
 {
         if (!pci)
                 return -1;
-                
+
         pci->sequence_number = nxt_seq_send;
 
         return 0;
@@ -136,7 +136,7 @@ int pci_qos_id_set(struct pci * pci,
 {
         if (!pci)
                 return -1;
-                
+
         pci->qos_id = qos_id;
 
         return 0;
@@ -314,7 +314,7 @@ static struct pdu * pdu_create_with_gfp(gfp_t        flags,
 
         if (buffer_length(tmp_buff) < sizeof(struct pci))
                 return NULL;
-        
+
         tmp_pdu = pdu_create_gfp(flags);
         if (!tmp_pdu)
                 return NULL;
@@ -397,12 +397,12 @@ int pdu_pci_set(struct pdu * pdu, struct pci * pci)
 {
         if (!pdu)
                 return -1;
-        
+
         if (!pci_is_ok(pci))
                 return -1;
-        
+
         pdu->pci = pci;
-        
+
         return 0;
 }
 EXPORT_SYMBOL(pdu_pci_set);

@@ -1125,8 +1125,7 @@ static int rnl_parse_ipcm_ipcp_dif_reg_noti_msg(struct genl_info * info,
         return 0;
 
  parse_fail:
-        LOG_ERR(
-                BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIF"));
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIF"));
         return -1;
 }
 
@@ -1625,7 +1624,7 @@ static int rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
 
         if (result < 0) {
                 LOG_ERR("Could not validate nl message policy (error = %d)",
-                                result);
+                        result);
                 goto parse_fail;
         }
 
@@ -1646,8 +1645,7 @@ static int rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
         return 0;
 
  parse_fail:
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE(
-                                        "RINA_C_IPCM_QUERY_RIB_REQUEST"));
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_QUERY_RIB_REQUEST"));
         return -1;
 }
 
@@ -1686,13 +1684,13 @@ static int rnl_parse_ipcp_notify_flow_event_msg(struct genl_info * info,
 
         if (result < 0) {
                 LOG_ERR("Could not validate nl message policy (error = %d)",
-                                result);
+                        result);
                 goto parse_fail;
         }
 
         if (info->attrs[INFE_ATTR_PORTID]) {
-                msg_attrs->port_id = nla_get_u32(
-                                info->attrs[INFE_ATTR_PORTID]);
+                msg_attrs->port_id =
+                        nla_get_u32(info->attrs[INFE_ATTR_PORTID]);
         }
 
         if (info->attrs[INFE_ATTR_ALLOCATED])
@@ -1703,8 +1701,7 @@ static int rnl_parse_ipcp_notify_flow_event_msg(struct genl_info * info,
         return 0;
 
  parse_fail:
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE(
-                                        "RINA_C_IPCP_NOFIFY_FLOW_EVENT"));
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCP_NOFIFY_FLOW_EVENT"));
         return -1;
 }
 
@@ -1843,7 +1840,7 @@ int rnl_parse_msg(struct genl_info * info,
                 break;
         case RINA_C_IPCP_NOTIFY_FLOW_EVENT:
                 if (rnl_parse_ipcp_notify_flow_event_msg(info,
-                                msg->attrs) < 0)
+                                                         msg->attrs) < 0)
                         goto fail;
                 break;
         default:

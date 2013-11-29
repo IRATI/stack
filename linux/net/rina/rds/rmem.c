@@ -208,7 +208,7 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
 
 #ifdef CONFIG_RINA_MEMORY_STATS
         *((size_t *) ptr) = size;
-        ptr = ((size_t *) ptr) + 1; 
+        ptr = ((size_t *) ptr) + 1;
 #endif
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING

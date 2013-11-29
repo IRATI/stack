@@ -349,7 +349,7 @@ static int rmt_receive_worker(void * o)
                         receive_data_destroy(tmp);
                         return -1;
                 }
-                
+
                 return 0;
         }
         case PDU_TYPE_DT: {

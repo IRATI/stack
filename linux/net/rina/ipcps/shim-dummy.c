@@ -828,7 +828,7 @@ static void __exit mod_exit(void)
 {
         ASSERT(shim);
 
-        kipcm_ipcp_factory_unregister(default_kipcm, shim)
+        kipcm_ipcp_factory_unregister(default_kipcm, shim);
 }
 
 module_init(mod_init);
