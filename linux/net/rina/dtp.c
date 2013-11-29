@@ -213,18 +213,58 @@ int dtp_write(struct dtp * instance,
                 return -1;
         }
 
-        pci = pci_create(instance->state_vector->connection->destination_cep_id,
-                instance->state_vector->connection->source_cep_id,
-                instance->state_vector->connection->destination_address,
-                instance->state_vector->connection->source_address,
-                instance->state_vector->next_sequence_to_send,
-                instance->state_vector->connection->qos_id,
-                PDU_TYPE_DT);
+        pci = pci_create();
         if (!pci)
                 return -1;
 
-        pdu = pdu_create_from(sdu, pci);
+        if (pci_cep_destination_set(pci,
+                instance->state_vector->connection->destination_cep_id)) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (pci_cep_source_set(pci,
+                        instance->state_vector->connection->source_cep_id)) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (pci_destination_set(pci,
+                instance->state_vector->connection->destination_address)) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (pci_source_set(pci,
+                        instance->state_vector->connection->source_address)) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (pci_nxt_seq_send_set(pci,
+                        instance->state_vector->next_sequence_to_send)) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (pci_qos_id_set(pci,
+                        instance->state_vector->connection->qos_id)) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        pdu = pdu_create();
         if (!pdu) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (!pdu_buffer_set(pdu, sdu_buffer_rw(sdu))) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (!pdu_pci_set(pdu, pci)) {
                 pci_destroy(pci);
                 return -1;
         }
@@ -252,7 +292,7 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
-        buffer = pdu_buffer_rw(pdu);
+        buffer = pdu_buffer_get_rw(pdu);
         sdu = sdu_create_with(buffer);
         if (!sdu) {
                 pdu_destroy(pdu);

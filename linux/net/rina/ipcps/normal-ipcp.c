@@ -252,6 +252,17 @@ static int remove_cep_id_from_flow(struct normal_flow * flow,
         return -1;
 }
 
+int ipcp_flow_notification(struct ipcp_instance_data * data,
+                           port_id_t                   pid)
+{
+        LOG_MISSING;
+
+        if (kfa_flow_bind_rmt(data->kfa, pid, data->rmt))
+                return -1;
+
+        return 0;
+}
+
 static int connection_destroy_request(struct ipcp_instance_data * data,
                                       cep_id_t                    src_cep_id)
 {
