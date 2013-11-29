@@ -8,8 +8,9 @@ obj-$(CONFIG_RINA) +=				\
 	utils.o debug.o				\
 	rds/					\
 	core.o personality.o syscalls.o		\
-	rnl-utils.o rnl-workarounds.o rnl.o 	\
-	du.o ipcp-utils.o common.o
+	rnl-utils.o rnl-workarounds.o rnl.o	\
+	buffer.o pdu.o sdu.o du.o		\
+	ipcp-utils.o common.o
 
 obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 	rina_personality_default.o
