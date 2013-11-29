@@ -1562,15 +1562,17 @@ static int __init mod_init(void)
 #endif
 
         rcv_wq = create_workqueue(SHIM_NAME);
+        if (!rcv_wq) {
+                LOG_CRIT("Cannot create workqueue %s", SHIM_NAME);
+                return -1;
+        }
 
         shim =  kipcm_ipcp_factory_register(default_kipcm,
                                             SHIM_NAME,
                                             &eth_vlan_data,
                                             &eth_vlan_ops);
-        if (!shim) {
-                LOG_CRIT("Cannot register %s factory", SHIM_NAME);
+        if (!shim)
                 return -1;
-        }
 
         spin_lock_init(&data_instances_lock);
 
@@ -1592,10 +1594,7 @@ static void __exit mod_exit(void)
                 rkfree(packet);
         }
 
-        if (kipcm_ipcp_factory_unregister(default_kipcm, shim)) {
-                LOG_CRIT("Cannot unregister %s factory", SHIM_NAME);
-                return;
-        }
+        kipcm_ipcp_factory_unregister(default_kipcm, shim);
 }
 
 module_init(mod_init);
