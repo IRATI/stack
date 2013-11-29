@@ -40,17 +40,12 @@ struct sdu {
 struct sdu *          sdu_create_with(struct buffer * buffer);
 struct sdu *          sdu_create_with_ni(struct buffer * buffer);
 int                   sdu_destroy(struct sdu * s);
-const struct buffer * sdu_buffer(const struct sdu * s);
+const struct buffer * sdu_buffer_ro(const struct sdu * s);
+struct buffer *       sdu_buffer_rw(struct sdu * s);
 struct sdu *          sdu_dup(const struct sdu * sdu);
 struct sdu *          sdu_dup_ni(const struct sdu * sdu);
 bool                  sdu_is_ok(const struct sdu * sdu);
 struct sdu *          sdu_protect(struct sdu * sdu);
 struct sdu *          sdu_unprotect(struct sdu * sdu);
-
-struct pci;
-
-/* FIXME : Ugly as hell (c) Francesco. Miq */
-struct sdu *          sdu_create_from(struct buffer * buffer,
-                                      struct pci *    pci);
 
 #endif

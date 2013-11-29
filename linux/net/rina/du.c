@@ -26,4 +26,10 @@
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
+
 #include "du.h"
+
+/*
+ * FIXME: This is a backward compatibility file only. Do not rely on its
+ *        presence, It will be removed soon
+ */

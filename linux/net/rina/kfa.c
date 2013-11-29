@@ -62,6 +62,7 @@ struct ipcp_flow {
         wait_queue_head_t      wait_queue;
         atomic_t               readers;
         atomic_t               writers;
+        struct rmt *           rmt;
 };
 
 struct kfa * kfa_create(void)
@@ -203,7 +204,7 @@ int kfa_flow_bind(struct kfa *           instance,
                 return -1;
         }
 
-        flow->state = PORT_STATE_ALLOCATED;
+        flow->state       = PORT_STATE_ALLOCATED;
         flow->ipc_process = ipc_process;
 
         if (kfifo_alloc(&flow->sdu_ready, PAGE_SIZE, GFP_ATOMIC)) {
@@ -222,6 +223,32 @@ int kfa_flow_bind(struct kfa *           instance,
         return 0;
 }
 EXPORT_SYMBOL(kfa_flow_bind);
+
+int kfa_flow_bind_rmt(struct kfa * kfa,
+                      port_id_t    pid,
+                      struct rmt * rmt)
+{
+        struct ipcp_flow * flow;
+
+        if (!kfa)
+                return -1;
+
+        if (!is_port_id_ok(pid))
+                return -1;
+
+        spin_lock(&kfa->lock);
+        flow = kfa_pmap_find(kfa->flows, pid);
+        if (!flow) {
+                LOG_ERR("The flow with port-id %d does not exist, "
+                        "cannot bind rmt", pid);
+                spin_unlock(&kfa->lock);
+                return -1;
+        }
+        flow->rmt = rmt;
+        spin_unlock(&kfa->lock);
+        return 0;
+}
+EXPORT_SYMBOL(kfa_flow_bind_rmt);
 
 static int kfa_flow_destroy(struct kfa *       instance,
                             struct ipcp_flow * flow,

@@ -64,16 +64,24 @@ typedef uint16_t pdu_type_t;
 
 typedef uint seq_num_t;
 
-struct pci *          pci_create(cep_id_t   dst_cep_id,
-                                 cep_id_t   src_cep_id,
-                                 address_t  dst_address,
-                                 address_t  src_address,
-                                 seq_num_t  nxt_seq_send,
-                                 qos_id_t   qos_id,
-                                 pdu_type_t type);
 /* NOTE: The following function may return -1 */
 struct pci *          pci_create_from(const void * data);
 struct pci *          pci_create_from_ni(const void * data);
+struct pci *          pci_create(void);
+struct pci *          pci_create_ni(void);
+int                   pci_cep_source_set(struct pci * pci,
+                                         cep_id_t     src_cep_id);
+int                   pci_cep_destination_set(struct pci * pci,
+                                              cep_id_t     dst_cep_id);
+int                   pci_destination_set(struct pci * pci,
+                                          address_t    dst_address);
+int                   pci_source_set(struct pci * pci,
+                                     address_t    src_address);
+int                   pci_nxt_seq_send_set(struct pci * pci,
+                                           seq_num_t    nxt_seq_send);
+int                   pci_qos_id_set(struct pci * pci,
+                                     qos_id_t   qos_id);
+
 struct pci *          pci_dup(const struct pci * pci);
 struct pci *          pci_dup_ni(const struct pci * pci);
 int                   pci_destroy(struct pci * pci);
@@ -86,14 +94,21 @@ cep_id_t              pci_cep_destination(const struct pci * pci);
 
 struct pdu;
 
-struct pdu *          pdu_create_from(struct sdu * sdu, struct pci * pci);
+struct pdu *          pdu_create(void);
+struct pdu *          pdu_create_ni(void);
 struct pdu *          pdu_create_with(struct sdu * sdu);
 struct pdu *          pdu_create_with_ni(struct sdu * sdu);
 bool                  pdu_is_ok(const struct pdu * pdu);
-const struct buffer * pdu_buffer_ro(const struct pdu * pdu);
-struct buffer *       pdu_buffer_rw(struct pdu * pdu);
-const struct pci *    pdu_pci(const struct pdu * pdu);
-struct pci *          pdu_pci_rw(struct pdu * pdu);
+const struct buffer * pdu_buffer_get_ro(const struct pdu * pdu);
+struct buffer *       pdu_buffer_get_rw(struct pdu * pdu);
+/* NOTE: Takes ownership of the buffer passed */
+int                   pdu_buffer_set(struct pdu * pdu, struct buffer * buffer);
+
+const struct pci *    pdu_pci_get_ro(const struct pdu * pdu);
+struct pci *          pdu_pci_get_rw(struct pdu * pdu);
+/* NOTE: Takes ownership of the PCI passed */
+int                   pdu_pci_set(struct pdu * pdu, struct pci * pci);
+
 int                   pdu_destroy(struct pdu * pdu);
 
 #endif

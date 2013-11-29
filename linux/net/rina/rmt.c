@@ -27,6 +27,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
+#include "du.h"
 #include "rmt.h"
 #include "pft.h"
 #include "efcp-utils.h"
@@ -142,10 +143,16 @@ static struct send_data * send_data_create(struct rmt * rmt,
 
 static int rmt_send_worker(void * o)
 {
-        struct send_data * tmp;
-        struct sdu *       sdu;
-        struct buffer *    buffer;
-        struct pci * pci;
+        struct send_data *    tmp;
+        struct sdu *          sdu;
+        const struct buffer * buffer;
+        const struct pci *    pci;
+        size_t                size;
+        ssize_t               buffer_size;
+        ssize_t               pci_size;
+        struct buffer *       tmp_buff;
+        char *                data;
+        const uint8_t *       ptr;
 
         tmp = (struct send_data *) o;
         if (!tmp) {
@@ -159,19 +166,45 @@ static int rmt_send_worker(void * o)
                 return -1;
         }
 
-        buffer = pdu_buffer_rw(tmp->pdu);
+        buffer = pdu_buffer_get_ro(tmp->pdu);
         if (!buffer)
                 return -1;
 
-        pci = pdu_pci_rw(tmp->pdu);
-        if (!pci) {
-                buffer_destroy(buffer);
+        pci = pdu_pci_get_ro(tmp->pdu);
+        if (!pci)
+                return -1;
+
+        buffer_size = buffer_length(buffer);
+        if (buffer_size <= 0)
+                return -1;
+
+        pci_size = pci_length(pci);
+        if (buffer_size <= 0)
+                return -1;
+
+        size = pci_size + buffer_size;
+        data = rkmalloc(size, GFP_KERNEL);
+        if (!data)
+                return -1;
+
+        if (!memcpy(data, pci, pci_size)) {
+                rkfree(data);
                 return -1;
         }
-        sdu = sdu_create_from(buffer, pci);
+        ptr = (const uint8_t *) data;
+        ASSERT(!ptr);
+        if (!memcpy((void *) (ptr + pci_size), buffer, buffer_size)) {
+                rkfree(data);
+                return -1;
+        }
+        tmp_buff = buffer_create_with(data, size);
+        if (!tmp_buff) {
+                rkfree(data);
+                return -1;
+        }
+        sdu = sdu_create_with(tmp_buff);
         if (!sdu) {
-                buffer_destroy(buffer);
-                pci_destroy(pci);
+                buffer_destroy(tmp_buff);
                 return -1;
         }
         pdu_destroy(tmp->pdu);
@@ -300,13 +333,13 @@ static int rmt_receive_worker(void * o)
                 return -1;
         }
 
-        pdu_type = pci_type(pdu_pci(pdu));
+        pdu_type = pci_type(pdu_pci_get_rw(pdu));
         switch (pdu_type) {
         case PDU_TYPE_MGMT: {
                 struct sdu *    sdu;
                 struct buffer * buffer;
 
-                buffer = pdu_buffer_rw(pdu);
+                buffer = pdu_buffer_get_rw(pdu);
                 sdu = sdu_create_with(buffer);
                 if (!sdu) {
                         receive_data_destroy(tmp);
@@ -321,7 +354,7 @@ static int rmt_receive_worker(void * o)
         }
         case PDU_TYPE_DT: {
                 if (efcp_container_receive(tmp->efcpc,
-                                           pci_cep_destination(pdu_pci(pdu)),
+                                           pci_cep_destination(pdu_pci_get_ro(pdu)),
                                            pdu)) {
                         receive_data_destroy(tmp);
                         return -1;

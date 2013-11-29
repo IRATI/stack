@@ -46,15 +46,6 @@ static struct sdu * sdu_create_with_gfp(gfp_t           flags,
         return tmp;
 }
 
-struct sdu * sdu_create_from(struct buffer * buffer,
-                             struct pci *    pci)
-{
-        LOG_MISSING;
-
-        return NULL;
-}
-EXPORT_SYMBOL(sdu_create_from);
-
 struct sdu * sdu_create_with(struct buffer * buffer)
 { return sdu_create_with_gfp(GFP_KERNEL, buffer); }
 EXPORT_SYMBOL(sdu_create_with);
@@ -73,14 +64,23 @@ int sdu_destroy(struct sdu * s)
 }
 EXPORT_SYMBOL(sdu_destroy);
 
-const struct buffer * sdu_buffer(const struct sdu * s)
+const struct buffer * sdu_buffer_ro(const struct sdu * s)
 {
         if (!sdu_is_ok(s))
                 return NULL;
 
         return s->buffer;
 }
-EXPORT_SYMBOL(sdu_buffer);
+EXPORT_SYMBOL(sdu_buffer_ro);
+
+struct buffer * sdu_buffer_rw(struct sdu * s)
+{
+        if (!sdu_is_ok(s))
+                return NULL;
+
+        return s->buffer;
+}
+EXPORT_SYMBOL(sdu_buffer_rw);
 
 static struct sdu * sdu_dup_gfp(gfp_t              flags,
                                 const struct sdu * sdu)
