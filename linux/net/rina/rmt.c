@@ -143,6 +143,9 @@ static struct send_data * send_data_create(struct rmt * rmt,
 static int rmt_send_worker(void * o)
 {
         struct send_data * tmp;
+        struct sdu *       sdu;
+        struct buffer *    buffer;
+        struct pci * pci;
 
         tmp = (struct send_data *) o;
         if (!tmp) {
@@ -156,11 +159,24 @@ static int rmt_send_worker(void * o)
                 return -1;
         }
 
-        /*
-         * FIXME : Port id will be retrieved from the pduft, and the cast from
-         * PDU to SDU might be changed for a better solution
-         */
-        if (kfa_flow_sdu_write(tmp->rmt->kfa, -1, (struct sdu *) tmp->pdu)) {
+        buffer = pdu_buffer_rw(tmp->pdu);
+        if (!buffer)
+                return -1;
+
+        pci = pdu_pci_rw(tmp->pdu);
+        if (!pci) {
+                buffer_destroy(buffer);
+                return -1;
+        }
+        sdu = sdu_create_from(buffer, pci);
+        if (!sdu) {
+                buffer_destroy(buffer);
+                pci_destroy(pci);
+                return -1;
+        }
+        pdu_destroy(tmp->pdu);
+        /* FIXME : Port id will be retrieved from the pduft */
+        if (kfa_flow_sdu_write(tmp->rmt->kfa, port_id_bad(), sdu)) {
                 return -1;
         }
 

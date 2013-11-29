@@ -2,6 +2,7 @@
  * (S|P) Data Unit
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -111,6 +112,17 @@ struct sdu *          sdu_unprotect(struct sdu * sdu);
 
 struct pci;
 
+/* FIXME : Ugly as hell (c) Francesco. Miq */
+struct sdu *          sdu_create_from(struct buffer * buffer,
+                                      struct pci *    pci);
+
+struct pci *          pci_create(cep_id_t   dst_cep_id,
+                                 cep_id_t   src_cep_id,
+                                 address_t  dst_address,
+                                 address_t  src_address,
+                                 seq_num_t  nxt_seq_send,
+                                 qos_id_t   qos_id,
+                                 pdu_type_t type);
 /* NOTE: The following function may return -1 */
 struct pci *          pci_create_from(const void * data);
 struct pci *          pci_create_from_ni(const void * data);
@@ -126,12 +138,14 @@ cep_id_t              pci_cep_destination(const struct pci * pci);
 
 struct pdu;
 
+struct pdu *          pdu_create_from(struct sdu * sdu, struct pci * pci);
 struct pdu *          pdu_create_with(struct sdu * sdu);
 struct pdu *          pdu_create_with_ni(struct sdu * sdu);
 bool                  pdu_is_ok(const struct pdu * pdu);
 const struct buffer * pdu_buffer_ro(const struct pdu * pdu);
 struct buffer *       pdu_buffer_rw(struct pdu * pdu);
 const struct pci *    pdu_pci(const struct pdu * pdu);
+struct pci *          pdu_pci_rw(struct pdu * pdu);
 int                   pdu_destroy(struct pdu * pdu);
 
 #endif
