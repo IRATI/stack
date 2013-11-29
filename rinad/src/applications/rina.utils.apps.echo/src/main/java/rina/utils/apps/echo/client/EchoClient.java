@@ -257,6 +257,8 @@ FlowAllocationListener, FlowDeallocationListener {
 						log.error("Error writing SDU "+i+" to port-id "+flow.getPortId());
 					}
 				}
+
+				log.info("Sent " + testInformation.getNumberOfSDUs() + " SDUs");
 			} else {
 				log.error("Problems allocating flow to control AE: " + echoApNamingInfo.toString());
 				
