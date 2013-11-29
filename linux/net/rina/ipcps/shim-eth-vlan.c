@@ -961,8 +961,11 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
 {
         struct rcv_struct * packet, * next;
         unsigned long       flags;
+        int                 num_packets;
 
         spin_lock_irqsave(&rcv_wq_lock, flags);
+        LOG_ERR("Worker waking up");
+        num_packets = 0;
         list_for_each_entry_safe(packet, next, &rcv_wq_packets, list) {
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
 
@@ -970,6 +973,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                 if (eth_vlan_recv_process_packet(packet->skb, packet->dev))
                         LOG_ERR("Failed to process packet");
 
+                num_packets++;
                 spin_lock_irqsave(&rcv_wq_lock, flags);
                 list_del(&packet->list);
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
@@ -977,6 +981,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                 rkfree(packet);
                 spin_lock_irqsave(&rcv_wq_lock, flags);
         }
+        LOG_ERR("Worker finished for now, processed %d", num_packets);
         spin_unlock_irqrestore(&rcv_wq_lock, flags);
 }
 
@@ -1555,7 +1560,10 @@ static int __init mod_init(void)
 
 #endif
 
-        rcv_wq = alloc_workqueue(SHIM_NAME, WQ_MEM_RECLAIM | WQ_HIGHPRI, 1);
+        rcv_wq = alloc_workqueue(
+                        SHIM_NAME,
+                        WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND,
+                        1);
 
         if (!rcv_wq) {
                 LOG_ERR("Cannot create a workqueue for shim %s", SHIM_NAME);
