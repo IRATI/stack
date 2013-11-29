@@ -21,13 +21,13 @@
 #ifndef RINA_DU_H
 #define RINA_DU_H
 
-#include <linux/types.h>
-
-#include "common.h"
-#include "qos.h"
-
 #include "buffer.h"
 #include "sdu.h"
 #include "pdu.h"
+
+/*
+ * FIXME: This is a backward compatibility file only. Do not rely on its
+ *        presence, It will be removed soon
+ */
 
 #endif
