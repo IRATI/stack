@@ -541,10 +541,8 @@ static int __init mod_init(void)
                                              IPCP_NAME,
                                              &normal_data,
                                              &normal_ops);
-        if (!normal) {
-                LOG_CRIT("Cannot register %s factory", IPCP_NAME);
+        if (!normal)
                 return -1;
-        }
 
         return 0;
 }
@@ -553,11 +551,7 @@ static void __exit mod_exit(void)
 {
         ASSERT(normal);
 
-        if (kipcm_ipcp_factory_unregister(default_kipcm, normal)) {
-                LOG_CRIT("Could not unregister %s factory, bailing out",
-                         IPCP_NAME);
-                return;
-        }
+        kipcm_ipcp_factory_unregister(default_kipcm, normal);
 }
 
 module_init(mod_init);
