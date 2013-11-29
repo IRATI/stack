@@ -23,7 +23,7 @@ import eu.irati.librina.rina;
  */
 public class TestController implements Runnable {
 	
-	private static final long MAX_TIME_WITH_NO_DATA_IN_MS = 2*1000;
+	private static final long MAX_TIME_WITH_NO_DATA_IN_MS = 60*1000;
 	public static final long TIMER_PERIOD_IN_MS = 1000;
 	
 	private enum State {WAIT_START, EXECUTING, COMPLETED};
