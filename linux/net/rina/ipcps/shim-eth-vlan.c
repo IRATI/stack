@@ -1555,7 +1555,12 @@ static int __init mod_init(void)
 
 #endif
 
-        rcv_wq = create_workqueue(SHIM_NAME);
+        rcv_wq = alloc_workqueue(SHIM_NAME, WQ_MEM_RECLAIM | WQ_HIGHPRI, 1);
+
+        if (!rcv_wq) {
+                LOG_ERR("Cannot create a workqueue for shim %s", SHIM_NAME);
+                return -1;
+        }
 
         shim =  kipcm_ipcp_factory_register(default_kipcm,
                                             SHIM_NAME,
