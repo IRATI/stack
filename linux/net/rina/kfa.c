@@ -39,13 +39,13 @@
 #include "kfa-utils.h"
 
 struct kfa {
-        spinlock_t    lock;
-        struct pidm * pidm;
+        spinlock_t        lock;
+        struct pidm *     pidm;
         struct kfa_pmap * flows;
 };
 
 enum flow_state {
-        PORT_STATE_NULL = 1,
+        PORT_STATE_NULL        = 1,
         PORT_STATE_PENDING,
         PORT_STATE_ALLOCATED,
         PORT_STATE_DEALLOCATED
