@@ -253,6 +253,11 @@ FlowAllocationListener, FlowDeallocationListener {
 							testInformation.setFirstSDUSentTime(
 									Calendar.getInstance().getTimeInMillis());
 						}
+						
+						try{
+							Thread.sleep(1);
+						} catch(Exception ex){
+						}
 					}catch(Exception ex){
 						log.error("Error writing SDU "+i+" to port-id "+flow.getPortId());
 					}
