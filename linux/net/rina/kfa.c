@@ -554,6 +554,7 @@ int kfa_sdu_post(struct kfa * instance,
         }
 
         wq = &flow->wait_queue;
+        ASSERT(wq);
 
         LOG_DBG("Wait queue %pK, next: %pK, prev: %pK",
                 wq, wq->task_list.next, wq->task_list.prev);
