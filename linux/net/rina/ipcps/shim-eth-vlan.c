@@ -647,7 +647,8 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         const unsigned char *    dest_hw;
         unsigned char *          sdu_ptr;
         int                      hlen, tlen, length;
-
+        int                      result;
+ 
         ASSERT(data);
         ASSERT(sdu);
 
@@ -716,7 +717,13 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
         LOG_DBG("Gonna send it now");
 
-        dev_queue_xmit(skb);
+        result = dev_queue_xmit(skb);
+        if (result) {
+                LOG_ERR("Dev_queue_xmit returned %d", result);
+                sdu_destroy(sdu);
+                return -1;
+        }
+
         sdu_destroy(sdu);
         return 0;
 }
