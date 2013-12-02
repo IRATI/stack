@@ -53,3 +53,21 @@ int kio_destroy(struct kio * instance)
 
         return 0;
 }
+
+struct efcp_container * kio_egress_get(struct kio * instance,
+                                       port_id_t    id)
+{ return NULL; }
+
+int kio_egress_set(struct kio *            instance,
+                   port_id_t               id,
+                   struct efcp_container * container)
+{ return -1; }
+
+struct rmt * kio_ingress_get(struct kio * instance,
+                             port_id_t     id)
+{ return NULL; }
+
+int kio_ingress_set(struct kio * instance,
+                    port_id_t    id,
+                    struct rmt * rmt)
+{ return -1; }

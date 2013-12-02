@@ -2,6 +2,7 @@
  * KIO (Kernel I/O)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,9 +22,24 @@
 #ifndef RINA_KIO_H
 #define RINA_KIO_H
 
+#include "common.h"
+#include "efcp.h"
+#include "rmt.h"
+
 struct kio;
 
-struct kio * kio_create(void);
-int          kio_destroy(struct kio * instance);
+struct kio *            kio_create(void);
+int                     kio_destroy(struct kio * instance);
+
+struct efcp_container * kio_egress_get(struct kio * instance,
+                                       port_id_t    id);
+int                     kio_egress_set(struct kio *            instance,
+                                       port_id_t               id,
+                                       struct efcp_container * container);
+struct rmt *            kio_ingress_get(struct kio * instance,
+                                        port_id_t     id);
+int                     kio_ingress_set(struct kio * instance,
+                                        port_id_t    id,
+                                        struct rmt * rmt);
 
 #endif
