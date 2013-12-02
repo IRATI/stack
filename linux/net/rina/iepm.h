@@ -32,6 +32,7 @@ struct epm;
 struct epm *            epm_create(void);
 int                     epm_destroy(struct epm * instance);
 
+/* NOTE: NULLs are allowed here */
 struct efcp_container * epm_egress_get(struct epm * instance,
                                        port_id_t    id);
 int                     epm_egress_set(struct epm *            instance,
@@ -44,8 +45,9 @@ struct ipm;
 struct ipm *            ipm_create(void);
 int                     ipm_destroy(struct ipm * instance);
 
+/* NOTE: NULLs are allowed here */
 struct rmt *            ipm_ingress_get(struct ipm * instance,
-                                        port_id_t     id);
+                                        port_id_t    id);
 int                     ipm_ingress_set(struct ipm * instance,
                                         port_id_t    id,
                                         struct rmt * rmt);
