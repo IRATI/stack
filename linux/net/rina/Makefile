@@ -20,7 +20,7 @@ rina_personality_default-y :=			\
 	qos.o					\
 	cidm.o dtcp.o dtp.o efcp-utils.o efcp.o	\
 	pft.o rmt.o				\
-	kio.o pidm.o kfa-utils.o kfa.o		\
+	iepm.o pidm.o kfa-utils.o kfa.o		\
 	kipcm-utils.o kipcm.o			\
 	default.o
 

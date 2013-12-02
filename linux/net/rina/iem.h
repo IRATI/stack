@@ -1,5 +1,5 @@
 /*
- * KIO (Kernel I/O)
+ * Ingress/Egress ports mapping
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
@@ -19,8 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_KIO_H
-#define RINA_KIO_H
+#ifndef RINA_IE_H
+#define RINA_IE_H
 
 #include "common.h"
 #include "efcp.h"

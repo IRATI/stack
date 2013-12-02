@@ -1,5 +1,5 @@
 /*
- * KIO (Kernel I/O)
+ * Ingress/Egress ports mapping
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
@@ -21,7 +21,7 @@
 
 #include <linux/export.h>
 
-#define RINA_PREFIX "kio"
+#define RINA_PREFIX "iepm"
 
 #include "logs.h"
 #include "debug.h"
