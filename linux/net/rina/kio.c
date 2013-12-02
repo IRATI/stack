@@ -2,6 +2,7 @@
  * KIO (Kernel I/O)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,47 +28,86 @@
 #include "utils.h"
 #include "kio.h"
 
-struct kio {
+/* Egress Port Mapping */
+struct epm {
         int temp;
 };
 
-struct kio * kio_create(void)
+struct epm * epm_create(void)
 {
-        struct kio * tmp;
+        struct epm * tmp;
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
         return tmp;
 }
 
-int kio_destroy(struct kio * instance)
+int epm_destroy(struct epm * instance)
 {
-        if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
+        if (!instance)
                 return -1;
-        }
 
         rkfree(instance);
-
         return 0;
 }
 
-struct efcp_container * kio_egress_get(struct kio * instance,
+struct efcp_container * epm_egress_get(struct epm * instance,
                                        port_id_t    id)
-{ return NULL; }
+{
+        LOG_MISSING;
 
-int kio_egress_set(struct kio *            instance,
+        return NULL;
+}
+
+int epm_egress_set(struct epm *            instance,
                    port_id_t               id,
                    struct efcp_container * container)
-{ return -1; }
+{
+        LOG_MISSING;
 
-struct rmt * kio_ingress_get(struct kio * instance,
+        return -1;
+}
+
+/* Ingress Port Mapping */
+struct ipm {
+        int temp;
+};
+
+struct ipm * ipm_create(void)
+{
+        struct ipm * tmp;
+
+        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        return tmp;
+}
+
+int ipm_destroy(struct ipm * instance)
+{
+        if (!instance)
+                return -1;
+
+        rkfree(instance);
+        return 0;
+}
+
+struct rmt * ipm_ingress_get(struct ipm * instance,
                              port_id_t     id)
-{ return NULL; }
+{
+        LOG_MISSING;
 
-int kio_ingress_set(struct kio * instance,
+        return NULL;
+}
+
+int ipm_ingress_set(struct ipm * instance,
                     port_id_t    id,
                     struct rmt * rmt)
-{ return -1; }
+{
+        LOG_MISSING;
+
+        return -1;
+}

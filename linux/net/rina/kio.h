@@ -26,19 +26,27 @@
 #include "efcp.h"
 #include "rmt.h"
 
-struct kio;
+/* Egress Port Mapping */
+struct epm;
 
-struct kio *            kio_create(void);
-int                     kio_destroy(struct kio * instance);
+struct epm *            epm_create(void);
+int                     epm_destroy(struct epm * instance);
 
-struct efcp_container * kio_egress_get(struct kio * instance,
+struct efcp_container * epm_egress_get(struct epm * instance,
                                        port_id_t    id);
-int                     kio_egress_set(struct kio *            instance,
+int                     epm_egress_set(struct epm *            instance,
                                        port_id_t               id,
                                        struct efcp_container * container);
-struct rmt *            kio_ingress_get(struct kio * instance,
+
+/* Ingress Port Mapping */
+struct ipm;
+
+struct ipm *            ipm_create(void);
+int                     ipm_destroy(struct ipm * instance);
+
+struct rmt *            ipm_ingress_get(struct ipm * instance,
                                         port_id_t     id);
-int                     kio_ingress_set(struct kio * instance,
+int                     ipm_ingress_set(struct ipm * instance,
                                         port_id_t    id,
                                         struct rmt * rmt);
 
