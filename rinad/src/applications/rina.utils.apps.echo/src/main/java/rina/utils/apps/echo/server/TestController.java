@@ -10,6 +10,7 @@ import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
 import rina.cdap.api.message.ObjectValue;
 import rina.cdap.api.message.CDAPMessage.Opcode;
+import rina.utils.apps.echo.Echo;
 import rina.utils.apps.echo.TestInformation;
 import rina.utils.apps.echo.protobuf.EchoTestMessageEncoder;
 
@@ -23,7 +24,6 @@ import eu.irati.librina.rina;
  */
 public class TestController implements Runnable {
 	
-	private static final long MAX_TIME_WITH_NO_DATA_IN_MS = 2*1000;
 	public static final long TIMER_PERIOD_IN_MS = 1000;
 	
 	private enum State {WAIT_START, EXECUTING, COMPLETED};
@@ -67,6 +67,7 @@ public class TestController implements Runnable {
 		
 		TestDeclaredDeadTimerTask timerTask = new TestDeclaredDeadTimerTask(this, timer);
 		timer.schedule(timerTask, TIMER_PERIOD_IN_MS);
+		setLatestSDUReceivedTime(Calendar.getInstance().getTimeInMillis());
 		
 		while(!isStopped()){
 			try{
@@ -157,7 +158,7 @@ public class TestController implements Runnable {
 	}
 	
 	public boolean shouldStop(){
-		if (getLatestSDUReceivedTime() + MAX_TIME_WITH_NO_DATA_IN_MS < 
+		if (getLatestSDUReceivedTime() + Echo.MAX_TIME_WITH_NO_DATA_IN_MS < 
 				Calendar.getInstance().getTimeInMillis()) {
 			return true;
 		}
@@ -171,7 +172,7 @@ public class TestController implements Runnable {
 			stop = true;
 			
 			if (!testInformation.receivedAllSDUs()) {
-				log.info("Stopping since more than "+ MAX_TIME_WITH_NO_DATA_IN_MS 
+				log.info("Stopping since more than "+ Echo.MAX_TIME_WITH_NO_DATA_IN_MS 
 						+ " ms have gone by without receiving SDUs");
 				log.info("Received "+testInformation.getSDUsReceived() 
 						+ " out of " + testInformation.getNumberOfSDUs() + " SDUs");
