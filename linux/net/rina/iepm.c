@@ -56,15 +56,27 @@ int epm_destroy(struct epm * instance)
 struct efcp_container * epm_egress_get(struct epm * instance,
                                        port_id_t    id)
 {
-        LOG_MISSING;
+        struct efcp_container * tmp;
 
-        return NULL;
+        if (!instance)
+                return NULL;
+        if (!is_port_id_ok(id))
+                return NULL;
+
+        tmp = NULL;
+
+        return tmp;
 }
 
 int epm_egress_set(struct epm *            instance,
                    port_id_t               id,
                    struct efcp_container * container)
 {
+        if (!instance)
+                return -1;
+        if (!is_port_id_ok(id))
+                return -1;
+
         LOG_MISSING;
 
         return -1;
@@ -96,17 +108,29 @@ int ipm_destroy(struct ipm * instance)
 }
 
 struct rmt * ipm_ingress_get(struct ipm * instance,
-                             port_id_t     id)
+                             port_id_t    id)
 {
-        LOG_MISSING;
+        struct rmt * tmp;
 
-        return NULL;
+        if (!instance)
+                return NULL;
+        if (!is_port_id_ok(id))
+                return NULL;
+
+        tmp = NULL;
+
+        return tmp;
 }
 
 int ipm_ingress_set(struct ipm * instance,
                     port_id_t    id,
                     struct rmt * rmt)
 {
+        if (!instance)
+                return -1;
+        if (!is_port_id_ok(id))
+                return -1;
+        
         LOG_MISSING;
 
         return -1;
