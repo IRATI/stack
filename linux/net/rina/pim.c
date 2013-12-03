@@ -28,114 +28,6 @@
 #include "utils.h"
 #include "pim.h"
 
-/* Egress Port/IPCP-Instance Mapping */
-struct epim {
-        int temp;
-};
-
-struct epim * epim_create(void)
-{
-        struct epim * tmp;
-
-        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
-        return tmp;
-}
-
-int epim_destroy(struct epim * instance)
-{
-        if (!instance)
-                return -1;
-
-        rkfree(instance);
-        return 0;
-}
-
-struct efcp_container * epim_egress_get(struct epim * instance,
-                                        port_id_t     id)
-{
-        struct efcp_container * tmp;
-
-        if (!instance)
-                return NULL;
-        if (!is_port_id_ok(id))
-                return NULL;
-
-        tmp = NULL;
-
-        return tmp;
-}
-
-int epim_egress_set(struct epim *           instance,
-                    port_id_t               id,
-                    struct efcp_container * container)
-{
-        if (!instance)
-                return -1;
-        if (!is_port_id_ok(id))
-                return -1;
-
-        LOG_MISSING;
-
-        return -1;
-}
-
-/* Ingress Port/IPCP-Instance Mapping */
-struct ipim {
-        int temp;
-};
-
-struct ipim * ipim_create(void)
-{
-        struct ipim * tmp;
-
-        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
-        return tmp;
-}
-
-int ipim_destroy(struct ipim * instance)
-{
-        if (!instance)
-                return -1;
-
-        rkfree(instance);
-        return 0;
-}
-
-struct rmt * ipim_ingress_get(struct ipim * instance,
-                              port_id_t     id)
-{
-        struct rmt * tmp;
-
-        if (!instance)
-                return NULL;
-        if (!is_port_id_ok(id))
-                return NULL;
-
-        tmp = NULL;
-
-        return tmp;
-}
-
-int ipim_ingress_set(struct ipim * instance,
-                     port_id_t     id,
-                     struct rmt *  rmt)
-{
-        if (!instance)
-                return -1;
-        if (!is_port_id_ok(id))
-                return -1;
-        
-        LOG_MISSING;
-
-        return -1;
-}
-
 struct pim {
         int temp;
 };
@@ -153,10 +45,10 @@ struct pim * pim_create(void)
 
 int pim_destroy(struct pim * pim)
 {
-        if (!instance)
+        if (!pim)
                 return -1;
 
-        rkfree(instance);
+        rkfree(pim);
         return 0;
 }
 
