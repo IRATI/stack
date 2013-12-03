@@ -1,5 +1,5 @@
 /*
- * Ingress/Egress ports mapping
+ * Ingress/Egress port-2-IPCP instance mapping
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
@@ -19,37 +19,37 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_IE_H
-#define RINA_IE_H
+#ifndef RINA_IEPIM_H
+#define RINA_IEPIM_H
 
 #include "common.h"
 #include "efcp.h"
 #include "rmt.h"
 
-/* Egress Port Mapping */
-struct epm;
+/* Egress Port/IPCP-Instance Mapping */
+struct epim;
 
-struct epm *            epm_create(void);
-int                     epm_destroy(struct epm * instance);
-
-/* NOTE: NULLs are allowed here */
-struct efcp_container * epm_egress_get(struct epm * instance,
-                                       port_id_t    id);
-int                     epm_egress_set(struct epm *            instance,
-                                       port_id_t               id,
-                                       struct efcp_container * container);
-
-/* Ingress Port Mapping */
-struct ipm;
-
-struct ipm *            ipm_create(void);
-int                     ipm_destroy(struct ipm * instance);
+struct epim *           epim_create(void);
+int                     epim_destroy(struct epim * instance);
 
 /* NOTE: NULLs are allowed here */
-struct rmt *            ipm_ingress_get(struct ipm * instance,
+struct efcp_container * epim_egress_get(struct epim * instance,
                                         port_id_t    id);
-int                     ipm_ingress_set(struct ipm * instance,
-                                        port_id_t    id,
-                                        struct rmt * rmt);
+int                     epim_egress_set(struct epim *            instance,
+                                        port_id_t               id,
+                                        struct efcp_container * container);
+
+/* Ingress Port/IPCP-Instance Mapping */
+struct ipim;
+
+struct ipim *           ipim_create(void);
+int                     ipim_destroy(struct ipim * instance);
+
+/* NOTE: NULLs are allowed here */
+struct rmt *            ipim_ingress_get(struct ipim * instance,
+                                         port_id_t    id);
+int                     ipim_ingress_set(struct ipim * instance,
+                                         port_id_t    id,
+                                         struct rmt * rmt);
 
 #endif

@@ -1,5 +1,5 @@
 /*
- * Ingress/Egress ports mapping
+ * Ingress/Egress port-2-IPCP instance mapping
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
@@ -21,21 +21,21 @@
 
 #include <linux/export.h>
 
-#define RINA_PREFIX "iepm"
+#define RINA_PREFIX "iepim"
 
 #include "logs.h"
 #include "debug.h"
 #include "utils.h"
 #include "iepm.h"
 
-/* Egress Port Mapping */
-struct epm {
+/* Egress Port/IPCP-Instance Mapping */
+struct epim {
         int temp;
 };
 
-struct epm * epm_create(void)
+struct epim * epim_create(void)
 {
-        struct epm * tmp;
+        struct epim * tmp;
 
         tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
@@ -44,7 +44,7 @@ struct epm * epm_create(void)
         return tmp;
 }
 
-int epm_destroy(struct epm * instance)
+int epim_destroy(struct epim * instance)
 {
         if (!instance)
                 return -1;
@@ -53,8 +53,8 @@ int epm_destroy(struct epm * instance)
         return 0;
 }
 
-struct efcp_container * epm_egress_get(struct epm * instance,
-                                       port_id_t    id)
+struct efcp_container * epim_egress_get(struct epim * instance,
+                                        port_id_t     id)
 {
         struct efcp_container * tmp;
 
@@ -68,9 +68,9 @@ struct efcp_container * epm_egress_get(struct epm * instance,
         return tmp;
 }
 
-int epm_egress_set(struct epm *            instance,
-                   port_id_t               id,
-                   struct efcp_container * container)
+int epim_egress_set(struct epim *           instance,
+                    port_id_t               id,
+                    struct efcp_container * container)
 {
         if (!instance)
                 return -1;
@@ -82,14 +82,14 @@ int epm_egress_set(struct epm *            instance,
         return -1;
 }
 
-/* Ingress Port Mapping */
-struct ipm {
+/* Ingress Port/IPCP-Instance Mapping */
+struct ipim {
         int temp;
 };
 
-struct ipm * ipm_create(void)
+struct ipim * ipim_create(void)
 {
-        struct ipm * tmp;
+        struct ipim * tmp;
 
         tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
@@ -98,7 +98,7 @@ struct ipm * ipm_create(void)
         return tmp;
 }
 
-int ipm_destroy(struct ipm * instance)
+int ipim_destroy(struct ipim * instance)
 {
         if (!instance)
                 return -1;
@@ -107,8 +107,8 @@ int ipm_destroy(struct ipm * instance)
         return 0;
 }
 
-struct rmt * ipm_ingress_get(struct ipm * instance,
-                             port_id_t    id)
+struct rmt * ipim_ingress_get(struct ipim * instance,
+                              port_id_t     id)
 {
         struct rmt * tmp;
 
@@ -122,9 +122,9 @@ struct rmt * ipm_ingress_get(struct ipm * instance,
         return tmp;
 }
 
-int ipm_ingress_set(struct ipm * instance,
-                    port_id_t    id,
-                    struct rmt * rmt)
+int ipim_ingress_set(struct ipim * instance,
+                     port_id_t     id,
+                     struct rmt *  rmt)
 {
         if (!instance)
                 return -1;
