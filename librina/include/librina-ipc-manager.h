@@ -618,10 +618,15 @@ public:
 	 * @param flowRequest
 	 * @param result 0 if the request is accepted, negative number indicating error
 	 * otherwise
+	 * @param notifySource true if the IPC Process has to reply to the source, false
+	 * otherwise
+	 * @param flowAcceptorIpcProcessId the IPC Process id of the Process that accepted
+	 * or rejected the flow (0 if it is an application)
 	 * @throws AllocateFlowException if something goes wrong
 	 */
 	void allocateFlowResponse(const FlowRequestEvent& flowRequest,
-			int result, bool notifySource)
+			int result, bool notifySource,
+			int flowAcceptorIpcProcessId)
 		throw(AllocateFlowException);
 
 	/**

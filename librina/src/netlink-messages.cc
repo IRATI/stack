@@ -210,12 +210,10 @@ void AppAllocateFlowRequestMessage::setDifName(
 
 IPCEvent* AppAllocateFlowRequestMessage::toIPCEvent(){
 	FlowRequestEvent * event =
-			new FlowRequestEvent(
-					this->flowSpecification,
-					true,
-					this->sourceAppName,
-					this->destAppName,
-					this->getSequenceNumber());
+			new FlowRequestEvent( flowSpecification,
+					true, sourceAppName, destAppName,
+					getSourceIpcProcessId(),
+					getSequenceNumber());
 	event->setDIFName(difName);
 	return event;
 }
@@ -332,13 +330,9 @@ void AppAllocateFlowRequestArrivedMessage::setDifName(
 IPCEvent* AppAllocateFlowRequestArrivedMessage::toIPCEvent(){
 	FlowRequestEvent * event =
 			new FlowRequestEvent(
-					this->portId,
-					this->flowSpecification,
-					false,
-					this->destAppName,
-					this->sourceAppName,
-					this->difName,
-					this->getSequenceNumber());
+				portId, flowSpecification, false,
+				destAppName, sourceAppName, difName,
+				getSourceIpcProcessId(), getSequenceNumber());
 	return event;
 }
 
@@ -361,6 +355,7 @@ IPCEvent* AppAllocateFlowResponseMessage::toIPCEvent(){
                         new AllocateFlowResponseEvent(
                                         getResult(),
                                         notifySource,
+                                        getSourceIpcProcessId(),
                                         getSequenceNumber());
         return event;
 }
@@ -1063,8 +1058,10 @@ void IpcmAllocateFlowRequestMessage::setDifName(
 
 IPCEvent* IpcmAllocateFlowRequestMessage::toIPCEvent(){
 	FlowRequestEvent * event =
-			new FlowRequestEvent(-1, flowSpec, true, sourceAppName, destAppName,
-					difName, getSequenceNumber());
+			new FlowRequestEvent(-1, flowSpec, true,
+			                sourceAppName, destAppName,
+					difName, getSourceIpcProcessId(),
+					getSequenceNumber());
 	return event;
 }
 
@@ -1147,14 +1144,10 @@ void IpcmAllocateFlowRequestArrivedMessage::setPortId(int portId){
 
 IPCEvent* IpcmAllocateFlowRequestArrivedMessage::toIPCEvent(){
 	FlowRequestEvent * event =
-			new FlowRequestEvent(
-					this->portId,
-					this->flowSpecification,
-					false,
-					this->destAppName,
-					this->sourceAppName,
-					this->difName,
-					this->getSequenceNumber());
+			new FlowRequestEvent(portId, flowSpecification,
+					false, destAppName, sourceAppName,
+					difName, getSourceIpcProcessId(),
+					getSequenceNumber());
 	return event;
 }
 
@@ -1185,8 +1178,9 @@ IPCEvent* IpcmAllocateFlowResponseMessage::toIPCEvent(){
         AllocateFlowResponseEvent * event =
                         new AllocateFlowResponseEvent(
                                         result,
-                                        this->getSequenceNumber(),
-                                        notifySource);
+                                        notifySource,
+                                        getSourceIpcProcessId(),
+                                        getSequenceNumber());
         return event;
 }
 
