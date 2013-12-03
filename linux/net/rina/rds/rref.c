@@ -39,7 +39,7 @@ static bool rref_is_ok(struct rref * r)
 static struct rref * rref_create_gfp(gfp_t flags, size_t count)
 {
         struct rref * tmp;
-        
+
         tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
