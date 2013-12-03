@@ -771,7 +771,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         }
 
 
-        mh = eth_hdr(skb);
+        mh    = eth_hdr(skb);
         saddr = mh->h_source;
         if (!saddr) {
                 LOG_ERR("Couldn't get source address");
@@ -789,7 +789,11 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
         /* Get the SDU out of the sk_buff */
         nh = skb_network_header(skb);
-        ASSERT(skb->tail - skb->network_header >= 0);
+        if (skb->tail - skb->network_header <= 0) {
+                LOG_ERR("Malformed skb received (size is %zd bytes ...)",
+                        skb->tail - skb->network_header);
+                return -1;
+        }
 
         /*
          * FIXME: We should avoid this extra copy, but then we cannot free the
