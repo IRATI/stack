@@ -41,9 +41,10 @@ struct kfa_pmap {
 
 struct kfa_pmap_entry {
         port_id_t          key;
-        struct ipcp_flow * value;
+        struct ipcp_flow * value_flow;
+        ipc_process_id_t   value_id;
+
         struct hlist_node  hlist;
-        ipc_process_id_t   id;
 };
 
 struct kfa_pmap * kfa_pmap_create(void)
@@ -113,7 +114,7 @@ struct ipcp_flow * kfa_pmap_find(struct kfa_pmap * map,
         if (!entry)
                 return NULL;
 
-        return entry->value;
+        return entry->value_flow;
 }
 
 int kfa_pmap_update(struct kfa_pmap *   map,
@@ -128,7 +129,7 @@ int kfa_pmap_update(struct kfa_pmap *   map,
         if (!cur)
                 return -1;
 
-        cur->value = value;
+        cur->value_flow = value;
 
         return 0;
 }
@@ -136,8 +137,8 @@ int kfa_pmap_update(struct kfa_pmap *   map,
 static int kfa_pmap_add_gfp(gfp_t              flags,
                             struct kfa_pmap *  map,
                             port_id_t          key,
-                            struct ipcp_flow * value,
-                            ipc_process_id_t   id)
+                            struct ipcp_flow * value_flow,
+                            ipc_process_id_t   value_id)
 {
         struct kfa_pmap_entry * tmp;
 
@@ -147,9 +148,9 @@ static int kfa_pmap_add_gfp(gfp_t              flags,
         if (!tmp)
                 return -1;
 
-        tmp->key   = key;
-        tmp->value = value;
-        tmp->id    = id;
+        tmp->key        = key;
+        tmp->value_flow = value_flow;
+        tmp->value_id   = value_id;
         INIT_HLIST_NODE(&tmp->hlist);
 
         hash_add(map->table, &tmp->hlist, key);
@@ -159,15 +160,15 @@ static int kfa_pmap_add_gfp(gfp_t              flags,
 
 int kfa_pmap_add(struct kfa_pmap *  map,
                  port_id_t          key,
-                 struct ipcp_flow * value,
-                 ipc_process_id_t   id)
-{ return kfa_pmap_add_gfp(GFP_KERNEL, map, key, value, id); }
+                 struct ipcp_flow * value_flow,
+                 ipc_process_id_t   value_id)
+{ return kfa_pmap_add_gfp(GFP_KERNEL, map, key, value_flow, value_id); }
 
 int kfa_pmap_add_ni(struct kfa_pmap *  map,
                     port_id_t          key,
-                    struct ipcp_flow * value,
-                    ipc_process_id_t   id)
-{ return kfa_pmap_add_gfp(GFP_ATOMIC, map, key, value, id); }
+                    struct ipcp_flow * value_flow,
+                    ipc_process_id_t   value_id)
+{ return kfa_pmap_add_gfp(GFP_ATOMIC, map, key, value_flow, value_id); }
 
 int kfa_pmap_remove(struct kfa_pmap * map,
                     port_id_t         key)
@@ -196,7 +197,7 @@ int kfa_pmap_remove_all_for_id(struct kfa_pmap * map,
         ASSERT(map);
 
         hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
-                if (entry->id == id) {
+                if (entry->value_id == id) {
                         hash_del(&entry->hlist);
                         rkfree(entry);
                 }

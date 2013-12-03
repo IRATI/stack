@@ -20,6 +20,7 @@
  */
 
 #include <linux/export.h>
+#include <linux/hashtable.h>
 
 #define RINA_PREFIX "pim"
 
@@ -28,116 +29,156 @@
 #include "utils.h"
 #include "pim.h"
 
-/* Egress Port/IPCP-Instance Mapping */
-struct epim {
-        int temp;
+#define PMAP_HASH_BITS 7
+
+struct pmap {
+        DECLARE_HASHTABLE(table, PMAP_HASH_BITS);
 };
 
-struct epim * epim_create(void)
-{
-        struct epim * tmp;
+struct pmap_entry {
+        port_id_t                   key;
+        struct ipcp_instance_data * value;
+        struct hlist_node           hlist;
+};
 
-        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+struct pmap * pmap_create(void)
+{
+        struct pmap * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
+        hash_init(tmp->table);
+
         return tmp;
 }
 
-int epim_destroy(struct epim * instance)
+int pmap_destroy(struct pmap * map)
 {
-        if (!instance)
-                return -1;
+        struct pmap_entry * entry;
+        struct hlist_node * tmp;
+        int                 bucket;
 
-        rkfree(instance);
+        ASSERT(map);
+
+        hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
+                hash_del(&entry->hlist);
+                rkfree(entry);
+        }
+
+        rkfree(map);
+
         return 0;
 }
 
-struct efcp_container * epim_egress_get(struct epim * instance,
-                                        port_id_t     id)
+int pmap_empty(struct pmap * map)
 {
-        struct efcp_container * tmp;
-
-        if (!instance)
-                return NULL;
-        if (!is_port_id_ok(id))
-                return NULL;
-
-        tmp = NULL;
-
-        return tmp;
+        ASSERT(map);
+        return hash_empty(map->table);
 }
 
-int epim_egress_set(struct epim *           instance,
-                    port_id_t               id,
-                    struct efcp_container * container)
+#define pmap_hash(T, K) hash_min(K, HASH_BITS(T))
+
+static struct pmap_entry * pmap_entry_find(struct pmap * map,
+                                           port_id_t     key)
 {
-        if (!instance)
-                return -1;
-        if (!is_port_id_ok(id))
-                return -1;
+        struct pmap_entry * entry;
+        struct hlist_head *     head;
 
-        LOG_MISSING;
+        ASSERT(map);
 
-        return -1;
+        head = &map->table[pmap_hash(map->table, key)];
+        hlist_for_each_entry(entry, head, hlist) {
+                if (entry->key == key)
+                        return entry;
+        }
+
+        return NULL;
 }
 
-/* Ingress Port/IPCP-Instance Mapping */
-struct ipim {
-        int temp;
-};
-
-struct ipim * ipim_create(void)
+struct ipcp_instance_data * pmap_find(struct pmap * map,
+                                      port_id_t     key)
 {
-        struct ipim * tmp;
+        struct pmap_entry * entry;
 
-        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        ASSERT(map);
+
+        entry = pmap_entry_find(map, key);
+        if (!entry)
+                return NULL;
+
+        return entry->value;
+}
+
+int pmap_update(struct pmap *               map,
+                port_id_t                   key,
+                struct ipcp_instance_data * value)
+{
+        struct pmap_entry * cur;
+
+        ASSERT(map);
+
+        cur = pmap_entry_find(map, key);
+        if (!cur)
+                return -1;
+
+        cur->value = value;
+
+        return 0;
+}
+
+static int pmap_add_gfp(gfp_t                       flags,
+                        struct pmap *               map,
+                        port_id_t                   key,
+                        struct ipcp_instance_data * value)
+{
+        struct pmap_entry * tmp;
+
+        ASSERT(map);
+
+        tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp)
-                return NULL;
-
-        return tmp;
-}
-
-int ipim_destroy(struct ipim * instance)
-{
-        if (!instance)
                 return -1;
 
-        rkfree(instance);
+        tmp->key   = key;
+        tmp->value = value;
+        INIT_HLIST_NODE(&tmp->hlist);
+
+        hash_add(map->table, &tmp->hlist, key);
+
         return 0;
 }
 
-struct rmt * ipim_ingress_get(struct ipim * instance,
-                              port_id_t     id)
+int pmap_add(struct pmap *               map,
+             port_id_t                   key,
+             struct ipcp_instance_data * value)
+{ return pmap_add_gfp(GFP_KERNEL, map, key, value); }
+
+int pmap_add_ni(struct pmap *               map,
+                port_id_t                   key,
+                struct ipcp_instance_data * value)
+{ return pmap_add_gfp(GFP_ATOMIC, map, key, value); }
+
+int pmap_remove(struct pmap * map,
+                port_id_t     key)
 {
-        struct rmt * tmp;
+        struct pmap_entry * cur;
 
-        if (!instance)
-                return NULL;
-        if (!is_port_id_ok(id))
-                return NULL;
+        ASSERT(map);
 
-        tmp = NULL;
-
-        return tmp;
-}
-
-int ipim_ingress_set(struct ipim * instance,
-                     port_id_t     id,
-                     struct rmt *  rmt)
-{
-        if (!instance)
+        cur = pmap_entry_find(map, key);
+        if (!cur)
                 return -1;
-        if (!is_port_id_ok(id))
-                return -1;
-        
-        LOG_MISSING;
 
-        return -1;
+        hash_del(&cur->hlist);
+        rkfree(cur);
+
+        return 0;
 }
 
 struct pim {
-        int temp;
+        struct pmap * map;
 };
 
 struct pim * pim_create(void)
@@ -148,43 +189,53 @@ struct pim * pim_create(void)
         if (!tmp)
                 return NULL;
 
+        tmp->map = pmap_create();
+        if (!tmp->map) {
+                rkfree(tmp);
+                return NULL;
+        }
+
         return tmp;
 }
 
 int pim_destroy(struct pim * pim)
 {
-        if (!instance)
+        if (!pim)
                 return -1;
 
-        rkfree(instance);
+        ASSERT(pim->map);
+
+        pmap_destroy(pim->map);
+        rkfree(pim);
+
         return 0;
 }
 
 struct ipcp_instance_data * pim_ingress_get(struct pim * pim,
                                             port_id_t    id)
 {
-        struct ipcp_instance_data * tmp;
-
         if (!pim)
                 return NULL;
         if (!is_port_id_ok(id))
                 return NULL;
 
-        tmp = NULL;
-
-        return tmp;
+        return pmap_find(pim->map, id);
 }
 
 int pim_ingress_set(struct pim *                pim,
                     port_id_t                   id,
                     struct ipcp_instance_data * ipcp)
 {
+        struct ipcp_instance_data * tmp;
+
         if (!pim)
                 return -1;
         if (!is_port_id_ok(id))
                 return -1;
         
-        LOG_MISSING;
+        tmp = pmap_find(pim->map, id);
+        if (tmp)
+                return pmap_update(pim->map, id, ipcp);
 
-        return -1;
+        return pmap_add_gfp(GFP_KERNEL, pim->map, id, ipcp);
 }

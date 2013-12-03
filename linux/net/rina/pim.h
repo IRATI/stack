@@ -23,37 +23,6 @@
 #define RINA_PIM_H
 
 #include "common.h"
-
-#include "efcp.h"
-
-/* Egress Port/IPCP-Instance Mapping */
-struct epim;
-
-struct epim *           epim_create(void);
-int                     epim_destroy(struct epim * instance);
-
-/* NOTE: NULLs are allowed here */
-struct efcp_container * epim_egress_get(struct epim * instance,
-                                        port_id_t    id);
-int                     epim_egress_set(struct epim *            instance,
-                                        port_id_t               id,
-                                        struct efcp_container * container);
-
-#include "rmt.h"
-
-/* Ingress Port/IPCP-Instance Mapping */
-struct ipim;
-
-struct ipim *           ipim_create(void);
-int                     ipim_destroy(struct ipim * instance);
-
-/* NOTE: NULLs are allowed here */
-struct rmt *            ipim_ingress_get(struct ipim * instance,
-                                         port_id_t    id);
-int                     ipim_ingress_set(struct ipim * instance,
-                                         port_id_t    id,
-                                         struct rmt * rmt);
-
 #include "ipcp.h"
 
 /* Port/IPCP-Instance Mapping */
