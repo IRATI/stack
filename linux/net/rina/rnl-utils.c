@@ -258,18 +258,6 @@ rnl_ipcp_conn_destroy_req_msg_attrs_create(void)
         return tmp;
 }
 
-static struct rnl_ipcp_flow_notif_msg_attrs *
-rnl_ipcp_flow_notif_msg_attrs_create(void)
-{
-        struct rnl_ipcp_flow_notif_msg_attrs * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if  (!tmp)
-                return NULL;
-
-        return tmp;
-}
-
 struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
 {
         struct rnl_msg * tmp;
@@ -356,14 +344,6 @@ struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
         case RNL_MSG_ATTRS_CONN_DESTROY_REQUEST:
                 tmp->attrs =
                         rnl_ipcp_conn_destroy_req_msg_attrs_create();
-                if (!tmp->attrs) {
-                        rkfree(tmp);
-                        return NULL;
-                }
-                break;
-        case RNL_MSG_ATTRS_IPCP_FLOW_NOTIFICATION:
-                tmp->attrs =
-                        rnl_ipcp_flow_notif_msg_attrs_create();
                 if (!tmp->attrs) {
                         rkfree(tmp);
                         return NULL;
@@ -499,16 +479,6 @@ rnl_ipcp_conn_destroy_req_msg_attrs_destroy(struct rnl_ipcp_conn_destroy_req_msg
         return 0;
 }
 
-static int
-rnl_ipcp_flow_notif_msg_attrs(struct rnl_ipcp_flow_notif_msg_attrs * attrs)
-{
-        if (!attrs)
-                return -1;
-
-        rkfree(attrs);
-        return 0;
-}
-
 int rnl_msg_destroy(struct rnl_msg * msg)
 {
         if (!msg)
@@ -544,9 +514,6 @@ int rnl_msg_destroy(struct rnl_msg * msg)
                 break;
         case RNL_MSG_ATTRS_CONN_DESTROY_REQUEST:
                 rnl_ipcp_conn_destroy_req_msg_attrs_destroy(msg->attrs);
-                break;
-        case RNL_MSG_ATTRS_IPCP_FLOW_NOTIFICATION:
-                rnl_ipcp_flow_notif_msg_attrs(msg->attrs);
                 break;
         default:
                 break;
@@ -1663,46 +1630,6 @@ static int rnl_parse_rmt_dump_ft_reply_msg(struct genl_info * info,
                                            struct rnl_rmt_dump_ft_reply_msg_attrs * msg_attrs)
 { return 0; }
 
-static int rnl_parse_ipcp_notify_flow_event_msg(struct genl_info * info,
-                                                struct rnl_ipcp_flow_notif_msg_attrs * msg_attrs)
-{
-        struct nla_policy attr_policy[INFE_ATTR_MAX + 1];
-        struct nlattr *attrs[INFE_ATTR_MAX + 1];
-        int result;
-
-        attr_policy[INFE_ATTR_PORTID].type = NLA_U32;
-        attr_policy[INFE_ATTR_ALLOCATED].type  = NLA_FLAG;
-
-        result = nlmsg_parse(info->nlhdr,
-                             sizeof(struct genlmsghdr) +
-                             sizeof(struct rina_msg_hdr),
-                             attrs,
-                             INFE_ATTR_MAX,
-                             attr_policy);
-
-        if (result < 0) {
-                LOG_ERR("Could not validate nl message policy (error = %d)",
-                        result);
-                goto parse_fail;
-        }
-
-        if (info->attrs[INFE_ATTR_PORTID]) {
-                msg_attrs->port_id =
-                        nla_get_u32(info->attrs[INFE_ATTR_PORTID]);
-        }
-
-        if (info->attrs[INFE_ATTR_ALLOCATED])
-                msg_attrs->allocated = true;
-        else
-                msg_attrs->allocated = false;
-
-        return 0;
-
- parse_fail:
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCP_NOFIFY_FLOW_EVENT"));
-        return -1;
-}
-
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg   * msg)
 {
@@ -1834,11 +1761,6 @@ int rnl_parse_msg(struct genl_info * info,
         case RINA_C_RMT_DUMP_FT_REPLY:
                 if (rnl_parse_rmt_dump_ft_reply_msg(info,
                                                     msg->attrs) < 0)
-                        goto fail;
-                break;
-        case RINA_C_IPCP_NOTIFY_FLOW_EVENT:
-                if (rnl_parse_ipcp_notify_flow_event_msg(info,
-                                                         msg->attrs) < 0)
                         goto fail;
                 break;
         default:

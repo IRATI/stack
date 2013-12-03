@@ -414,7 +414,7 @@ public:
 };
 
 /**
- * Event informing about an incoming flow request from a local application
+ * Event informing about an incoming flow request
  */
 class FlowRequestEvent: public IPCEvent {
 	/** The port-id that locally identifies the flow */
@@ -432,6 +432,7 @@ class FlowRequestEvent: public IPCEvent {
 	/** The characteristics of the flow */
 	FlowSpecification flowSpecification;
 
+	/** True if it is a local application, false if it is a remote one */
 	bool localRequest;
 
 public:

@@ -153,9 +153,6 @@ typedef enum {
         /* KIPCM -> IPC Process (user space)*/
         RINA_C_IPCP_CONN_DESTROY_RESULT,
 
-        /* IPC Process Daemon -> KIPCM */
-        RINA_C_IPCP_NOTIFY_FLOW_EVENT,
-
         RINA_C_MAX,
 } msg_type_t;
 
