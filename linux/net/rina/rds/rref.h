@@ -1,5 +1,5 @@
 /*
- * Utilities
+ * RINA References
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,29 +18,19 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_UTILS_H
-#define RINA_UTILS_H
+#ifndef RINA_RREF_H
+#define RINA_RREF_H
 
-#include <linux/kobject.h>
-#define RINA_ATTR_RO(NAME)                              \
-        static struct kobj_attribute NAME##_attr =      \
-                __ATTR_RO(NAME)
+#include <linux/types.h>
 
-#define RINA_ATTR_RW(NAME)                                      \
-        static struct kobj_attribute NAME##_attr =              \
-                __ATTR(NAME, 0644, NAME##show, NAME##store)
+struct rref;
 
-int     is_value_in_range(int value, int min_value, int max_value);
+struct rref * rref_create(ssize_t count);
+struct rref * rref_create_ni(ssize_t count);
+int           rref_destroy(struct rref * r);
 
-/* Syscalls */
-char *  strdup_from_user(const char __user * src);
-
-#include "rds/rmem.h"
-#include "rds/rmap.h"
-#include "rds/rwq.h"
-#include "rds/rbmp.h"
-#include "rds/rqueue.h"
-#include "rds/rfifo.h"
-#include "rds/rref.h"
+ssize_t       rref_inc(struct rref * r);
+ssize_t       rref_dec(struct rref * r);
+ssize_t       rref_value(struct rref * r);
 
 #endif
