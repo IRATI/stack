@@ -232,7 +232,7 @@ int pim_ingress_set(struct pim *                pim,
                 return -1;
         if (!is_port_id_ok(id))
                 return -1;
-        
+
         tmp = pmap_find(pim->map, id);
         if (tmp)
                 return pmap_update(pim->map, id, ipcp);
