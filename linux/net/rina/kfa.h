@@ -73,4 +73,10 @@ int          kfa_sdu_post_to_user_space(struct kfa * instance,
                                         struct sdu * sdu,
                                         port_id_t    to);
 
+struct rmt;
+
+int          kfa_flow_bind_rmt(struct kfa * kfa,
+                               port_id_t    pid,
+                               struct rmt * rmt);
+
 #endif

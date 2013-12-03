@@ -1,7 +1,8 @@
 /*
- * Data Unit
+ * Port-2-IPCP instance mapping
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,16 +19,24 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_DU_H
-#define RINA_DU_H
+#ifndef RINA_PIM_H
+#define RINA_PIM_H
 
-#include "buffer.h"
-#include "sdu.h"
-#include "pdu.h"
+#include "common.h"
+#include "ipcp.h"
 
-/*
- * FIXME: This is a backward compatibility file only. Do not rely on its
- *        presence, It will be removed soon
- */
+/* Port/IPCP-Instance Mapping */
+struct pim;
+
+struct pim *                pim_create(void);
+int                         pim_destroy(struct pim * pim);
+
+/* NOTE: NULLs are allowed here */
+struct ipcp_instance_data * pim_ingress_get(struct pim * pim,
+                                            port_id_t    id);
+int                         pim_ingress_set(struct pim *                pim,
+                                            port_id_t                   id,
+                                            struct ipcp_instance_data * ipcp);
+
 
 #endif

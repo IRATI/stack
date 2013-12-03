@@ -280,101 +280,100 @@ struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
 
         tmp->attr_type = type;
 
-        switch (tmp->attr_type)
-                {
-                case RNL_MSG_ATTRS_ALLOCATE_FLOW_REQUEST:
-                        tmp->attrs =
-                                rnl_ipcm_alloc_flow_req_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_ALLOCATE_FLOW_RESPONSE:
-                        tmp->attrs =
-                                rnl_alloc_flow_resp_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_DEALLOCATE_FLOW_REQUEST:
-                        tmp->attrs =
-                                rnl_ipcm_dealloc_flow_req_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_ASSIGN_TO_DIF_REQUEST:
-                        tmp->attrs =
-                                rnl_ipcm_assign_to_dif_req_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_UPDATE_DIF_CONFIG_REQUEST:
-                        tmp->attrs =
-                                rnl_ipcm_update_dif_config_req_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_REG_UNREG_REQUEST:
-                        tmp->attrs =
-                                rnl_ipcm_reg_app_req_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_CONN_CREATE_REQUEST:
-                        tmp->attrs =
-                                rnl_ipcp_conn_create_req_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_CONN_CREATE_ARRIVED:
-                        tmp->attrs =
-                                rnl_ipcp_conn_create_arrived_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_CONN_UPDATE_REQUEST:
-                        tmp->attrs =
-                                rnl_ipcp_conn_update_req_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_CONN_DESTROY_REQUEST:
-                        tmp->attrs =
-                                rnl_ipcp_conn_destroy_req_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_IPCP_FLOW_NOTIFICATION:
-                        tmp->attrs =
-                                rnl_ipcp_flow_notif_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                default:
-                        LOG_ERR("Unknown attributes type %d", tmp->attr_type);
+        switch (tmp->attr_type) {
+        case RNL_MSG_ATTRS_ALLOCATE_FLOW_REQUEST:
+                tmp->attrs =
+                        rnl_ipcm_alloc_flow_req_msg_attrs_create();
+                if (!tmp->attrs) {
                         rkfree(tmp);
                         return NULL;
                 }
+                break;
+        case RNL_MSG_ATTRS_ALLOCATE_FLOW_RESPONSE:
+                tmp->attrs =
+                        rnl_alloc_flow_resp_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_DEALLOCATE_FLOW_REQUEST:
+                tmp->attrs =
+                        rnl_ipcm_dealloc_flow_req_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_ASSIGN_TO_DIF_REQUEST:
+                tmp->attrs =
+                        rnl_ipcm_assign_to_dif_req_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_UPDATE_DIF_CONFIG_REQUEST:
+                tmp->attrs =
+                        rnl_ipcm_update_dif_config_req_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_REG_UNREG_REQUEST:
+                tmp->attrs =
+                        rnl_ipcm_reg_app_req_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_CONN_CREATE_REQUEST:
+                tmp->attrs =
+                        rnl_ipcp_conn_create_req_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_CONN_CREATE_ARRIVED:
+                tmp->attrs =
+                        rnl_ipcp_conn_create_arrived_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_CONN_UPDATE_REQUEST:
+                tmp->attrs =
+                        rnl_ipcp_conn_update_req_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_CONN_DESTROY_REQUEST:
+                tmp->attrs =
+                        rnl_ipcp_conn_destroy_req_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_IPCP_FLOW_NOTIFICATION:
+                tmp->attrs =
+                        rnl_ipcp_flow_notif_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        default:
+                LOG_ERR("Unknown attributes type %d", tmp->attr_type);
+                rkfree(tmp);
+                return NULL;
+        }
 
         return tmp;
 }
@@ -515,44 +514,43 @@ int rnl_msg_destroy(struct rnl_msg * msg)
         if (!msg)
                 return -1;
 
-        switch(msg->attr_type)
-                {
-                case RNL_MSG_ATTRS_ALLOCATE_FLOW_REQUEST:
-                        rnl_ipcm_alloc_flow_req_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_ALLOCATE_FLOW_RESPONSE:
-                        rnl_alloc_flow_resp_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_DEALLOCATE_FLOW_REQUEST:
-                        rnl_ipcm_dealloc_flow_req_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_ASSIGN_TO_DIF_REQUEST:
-                        rnl_ipcm_assign_to_dif_req_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_UPDATE_DIF_CONFIG_REQUEST:
-                        rnl_ipcm_update_dif_config_req_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_REG_UNREG_REQUEST:
-                        rnl_ipcm_reg_app_req_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_CONN_CREATE_REQUEST:
-                        rnl_ipcp_conn_create_req_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_CONN_CREATE_ARRIVED:
-                        rnl_ipcp_conn_create_arrived_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_CONN_UPDATE_REQUEST:
-                        rnl_ipcp_conn_update_req_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_CONN_DESTROY_REQUEST:
-                        rnl_ipcp_conn_destroy_req_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_IPCP_FLOW_NOTIFICATION:
-                        rnl_ipcp_flow_notif_msg_attrs(msg->attrs);
-                        break;
-                default:
-                        break;
-                }
+        switch(msg->attr_type) {
+        case RNL_MSG_ATTRS_ALLOCATE_FLOW_REQUEST:
+                rnl_ipcm_alloc_flow_req_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_ALLOCATE_FLOW_RESPONSE:
+                rnl_alloc_flow_resp_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_DEALLOCATE_FLOW_REQUEST:
+                rnl_ipcm_dealloc_flow_req_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_ASSIGN_TO_DIF_REQUEST:
+                rnl_ipcm_assign_to_dif_req_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_UPDATE_DIF_CONFIG_REQUEST:
+                rnl_ipcm_update_dif_config_req_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_REG_UNREG_REQUEST:
+                rnl_ipcm_reg_app_req_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_CONN_CREATE_REQUEST:
+                rnl_ipcp_conn_create_req_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_CONN_CREATE_ARRIVED:
+                rnl_ipcp_conn_create_arrived_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_CONN_UPDATE_REQUEST:
+                rnl_ipcp_conn_update_req_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_CONN_DESTROY_REQUEST:
+                rnl_ipcp_conn_destroy_req_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_IPCP_FLOW_NOTIFICATION:
+                rnl_ipcp_flow_notif_msg_attrs(msg->attrs);
+                break;
+        default:
+                break;
+        }
 
         rkfree(msg);
 
@@ -1125,8 +1123,7 @@ static int rnl_parse_ipcm_ipcp_dif_reg_noti_msg(struct genl_info * info,
         return 0;
 
  parse_fail:
-        LOG_ERR(
-                BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIF"));
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIF"));
         return -1;
 }
 
@@ -1625,7 +1622,7 @@ static int rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
 
         if (result < 0) {
                 LOG_ERR("Could not validate nl message policy (error = %d)",
-                                result);
+                        result);
                 goto parse_fail;
         }
 
@@ -1646,8 +1643,7 @@ static int rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
         return 0;
 
  parse_fail:
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE(
-                                        "RINA_C_IPCM_QUERY_RIB_REQUEST"));
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_QUERY_RIB_REQUEST"));
         return -1;
 }
 
@@ -1686,13 +1682,13 @@ static int rnl_parse_ipcp_notify_flow_event_msg(struct genl_info * info,
 
         if (result < 0) {
                 LOG_ERR("Could not validate nl message policy (error = %d)",
-                                result);
+                        result);
                 goto parse_fail;
         }
 
         if (info->attrs[INFE_ATTR_PORTID]) {
-                msg_attrs->port_id = nla_get_u32(
-                                info->attrs[INFE_ATTR_PORTID]);
+                msg_attrs->port_id =
+                        nla_get_u32(info->attrs[INFE_ATTR_PORTID]);
         }
 
         if (info->attrs[INFE_ATTR_ALLOCATED])
@@ -1703,8 +1699,7 @@ static int rnl_parse_ipcp_notify_flow_event_msg(struct genl_info * info,
         return 0;
 
  parse_fail:
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE(
-                                        "RINA_C_IPCP_NOFIFY_FLOW_EVENT"));
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCP_NOFIFY_FLOW_EVENT"));
         return -1;
 }
 
@@ -1843,7 +1838,7 @@ int rnl_parse_msg(struct genl_info * info,
                 break;
         case RINA_C_IPCP_NOTIFY_FLOW_EVENT:
                 if (rnl_parse_ipcp_notify_flow_event_msg(info,
-                                msg->attrs) < 0)
+                                                         msg->attrs) < 0)
                         goto fail;
                 break;
         default:

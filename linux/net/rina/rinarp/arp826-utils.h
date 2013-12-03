@@ -35,7 +35,7 @@ struct gpa *    gpa_create_ni(const uint8_t * address,
                               size_t          length);
 struct gpa *    gpa_create_gfp(gfp_t           flags,
                                const uint8_t * address,
-                              size_t          length);
+                               size_t          length);
 void            gpa_destroy(struct gpa * gpa);
 bool            gpa_is_ok(const struct gpa * gpa);
 struct gpa *    gpa_dup(const struct gpa * gpa);

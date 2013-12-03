@@ -424,6 +424,8 @@ static int notify_ipcp_assign_dif_request(void *             data,
                 goto fail;
         }
 
+        LOG_DBG("Assign to dif operation seems ok, gonna complete it");
+
         return assign_to_dif_free_and_reply(msg,
                                             ipc_id,
                                             0,
@@ -1068,18 +1070,19 @@ static int notify_ipcp_flow_event(void *             data,
         if (rnl_parse_msg(info, msg))
                 goto end;
 
-        port_id = attrs->port_id;
+        port_id        = attrs->port_id;
         flow_allocated = attrs->allocated;
-        ipc_id  = msg->header.dst_ipc_id;
-        ipcp    = ipcp_imap_find(kipcm->instances, ipc_id);
+        ipc_id         = msg->header.dst_ipc_id;
+        ipcp           = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipcp)
                 goto end;
 
-        //FIXME call IPCP operation
-        LOG_DBG("Missing code");
+        /* FIXME call IPCP operation */
+        LOG_MISSING;
+
  end:
-       rnl_msg_destroy(msg);
-       return 0;
+        rnl_msg_destroy(msg);
+        return 0;
 }
 
 static int notify_ipc_manager_present(void *             data,

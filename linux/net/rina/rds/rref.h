@@ -1,5 +1,5 @@
 /*
- * Data Unit
+ * RINA References
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,16 +18,19 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_DU_H
-#define RINA_DU_H
+#ifndef RINA_RREF_H
+#define RINA_RREF_H
 
-#include "buffer.h"
-#include "sdu.h"
-#include "pdu.h"
+#include <linux/types.h>
 
-/*
- * FIXME: This is a backward compatibility file only. Do not rely on its
- *        presence, It will be removed soon
- */
+struct rref;
+
+struct rref * rref_create(ssize_t count);
+struct rref * rref_create_ni(ssize_t count);
+int           rref_destroy(struct rref * r);
+
+ssize_t       rref_inc(struct rref * r);
+ssize_t       rref_dec(struct rref * r);
+ssize_t       rref_value(struct rref * r);
 
 #endif
