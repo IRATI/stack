@@ -1,5 +1,5 @@
 /*
- * Ingress/Egress port-2-IPCP instance mapping
+ * Port-2-IPCP instance mapping
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
@@ -19,12 +19,12 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_IEPIM_H
-#define RINA_IEPIM_H
+#ifndef RINA_PIM_H
+#define RINA_PIM_H
 
 #include "common.h"
+
 #include "efcp.h"
-#include "rmt.h"
 
 /* Egress Port/IPCP-Instance Mapping */
 struct epim;
@@ -39,6 +39,8 @@ int                     epim_egress_set(struct epim *            instance,
                                         port_id_t               id,
                                         struct efcp_container * container);
 
+#include "rmt.h"
+
 /* Ingress Port/IPCP-Instance Mapping */
 struct ipim;
 
@@ -51,5 +53,21 @@ struct rmt *            ipim_ingress_get(struct ipim * instance,
 int                     ipim_ingress_set(struct ipim * instance,
                                          port_id_t    id,
                                          struct rmt * rmt);
+
+#include "ipcp.h"
+
+/* Port/IPCP-Instance Mapping */
+struct pim;
+
+struct pim *                pim_create(void);
+int                         pim_destroy(struct pim * pim);
+
+/* NOTE: NULLs are allowed here */
+struct ipcp_instance_data * pim_ingress_get(struct pim * pim,
+                                            port_id_t    id);
+int                         pim_ingress_set(struct pim *                pim,
+                                            port_id_t                   id,
+                                            struct ipcp_instance_data * ipcp);
+
 
 #endif

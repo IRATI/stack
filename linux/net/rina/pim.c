@@ -1,5 +1,5 @@
 /*
- * Ingress/Egress port-2-IPCP instance mapping
+ * Port-2-IPCP instance mapping
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
@@ -21,12 +21,12 @@
 
 #include <linux/export.h>
 
-#define RINA_PREFIX "iepim"
+#define RINA_PREFIX "pim"
 
 #include "logs.h"
 #include "debug.h"
 #include "utils.h"
-#include "iepm.h"
+#include "pim.h"
 
 /* Egress Port/IPCP-Instance Mapping */
 struct epim {
@@ -127,6 +127,59 @@ int ipim_ingress_set(struct ipim * instance,
                      struct rmt *  rmt)
 {
         if (!instance)
+                return -1;
+        if (!is_port_id_ok(id))
+                return -1;
+        
+        LOG_MISSING;
+
+        return -1;
+}
+
+struct pim {
+        int temp;
+};
+
+struct pim * pim_create(void)
+{
+        struct pim * tmp;
+
+        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        return tmp;
+}
+
+int pim_destroy(struct pim * pim)
+{
+        if (!instance)
+                return -1;
+
+        rkfree(instance);
+        return 0;
+}
+
+struct ipcp_instance_data * pim_ingress_get(struct pim * pim,
+                                            port_id_t    id)
+{
+        struct ipcp_instance_data * tmp;
+
+        if (!pim)
+                return NULL;
+        if (!is_port_id_ok(id))
+                return NULL;
+
+        tmp = NULL;
+
+        return tmp;
+}
+
+int pim_ingress_set(struct pim *                pim,
+                    port_id_t                   id,
+                    struct ipcp_instance_data * ipcp)
+{
+        if (!pim)
                 return -1;
         if (!is_port_id_ok(id))
                 return -1;
