@@ -33,6 +33,9 @@ struct rref {
         ssize_t count;
 };
 
+static bool rref_is_ok(struct rref * r)
+{ return r ? true : false; }
+
 static struct rref * rref_create_gfp(gfp_t flags, size_t count)
 {
         struct rref * tmp;
@@ -56,7 +59,7 @@ EXPORT_SYMBOL(rref_create_ni);
 
 int rref_destroy(struct rref * r)
 {
-        if (!r)
+        if (!rref_is_ok(r))
                 return -1;
 
         rkfree(r);
@@ -66,7 +69,7 @@ int rref_destroy(struct rref * r)
 
 ssize_t rref_inc(struct rref * r)
 {
-        if (!r)
+        if (!rref_is_ok(r))
                 return -1;
 
         return r->count++;
@@ -75,7 +78,7 @@ EXPORT_SYMBOL(rref_inc);
 
 ssize_t rref_dec(struct rref * r)
 {
-        if (!r)
+        if (!rref_is_ok(r))
                 return -1;
 
         return r->count--;
@@ -84,7 +87,7 @@ EXPORT_SYMBOL(rref_dec);
 
 ssize_t rref_value(struct rref * r)
 {
-        if (!r)
+        if (!rref_is_ok(r))
                 return -1;
 
         return r->count;
