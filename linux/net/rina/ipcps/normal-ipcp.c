@@ -318,7 +318,8 @@ connection_create_arrived(struct ipcp_instance_data * data,
                 rkfree(conn);
                 return cep_id_bad();
         }
-        LOG_DBG("Cep_id allocated for the arrived connection request: %d", cep_id);
+        LOG_DBG("Cep_id allocated for the arrived connection request: %d",
+                cep_id);
 
         cep_entry = rkzalloc(sizeof(*cep_entry), GFP_KERNEL);
         if (!cep_entry) {

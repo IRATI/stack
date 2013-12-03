@@ -1070,15 +1070,16 @@ static int notify_ipcp_flow_event(void *             data,
         if (rnl_parse_msg(info, msg))
                 goto end;
 
-        port_id = attrs->port_id;
+        port_id        = attrs->port_id;
         flow_allocated = attrs->allocated;
-        ipc_id  = msg->header.dst_ipc_id;
-        ipcp    = ipcp_imap_find(kipcm->instances, ipc_id);
+        ipc_id         = msg->header.dst_ipc_id;
+        ipcp           = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipcp)
                 goto end;
 
-        //FIXME call IPCP operation
-        LOG_DBG("Missing code");
+        /* FIXME call IPCP operation */
+        LOG_MISSING;
+
  end:
         rnl_msg_destroy(msg);
         return 0;
