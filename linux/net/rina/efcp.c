@@ -278,7 +278,7 @@ int efcp_container_write(struct efcp_container * container,
 {
         struct efcp * efcp;
 
-        if (!container || sdu) {
+        if (!container || !sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus input parameters, cannot write into container");
                 return -1;
         }
