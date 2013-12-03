@@ -162,6 +162,13 @@ struct ipcp_instance_ops {
                                       qos_id_t                    qos_id,
                                       cep_id_t                    dst_cep_id,
                                       int                         policies);
+
+        int      (* flow_binding_ipcp)(struct ipcp_instance_data * data,
+                                       port_id_t                   port_id);
+
+        int      (* sdu_enqueue)(struct ipcp_instance_data * data,
+                                 port_id_t                   id,
+                                 struct sdu *                sdu);
 };
 
 #endif
