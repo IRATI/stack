@@ -19,7 +19,7 @@ public class QueryIPCProcessRIBCommand extends ConsoleCommand{
 	private static final String USAGE = "queryrib <ipcp_id>";
 	
 	private CancelCommandTimerTask cancelCommandTask = null;
-	private long ipcProcessId;
+	private int ipcProcessId;
 	
 	public QueryIPCProcessRIBCommand(IPCManager ipcManager, IPCManagerConsole console){
 		super(ID, ipcManager, console);
@@ -32,7 +32,7 @@ public class QueryIPCProcessRIBCommand extends ConsoleCommand{
 		}
 		
 		try{
-			ipcProcessId = Long.parseLong(splittedCommand[1]);
+			ipcProcessId = Integer.parseInt(splittedCommand[1]);
 		} catch(Exception ex) {
 			return "Could not parse ipcProcessId " + splittedCommand[1];
 		}
