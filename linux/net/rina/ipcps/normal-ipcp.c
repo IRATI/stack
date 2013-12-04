@@ -252,8 +252,8 @@ static int remove_cep_id_from_flow(struct normal_flow * flow,
         return -1;
 }
 
-int ipcp_flow_notification(struct ipcp_instance_data * data,
-                           port_id_t                   pid)
+static int ipcp_flow_notification(struct ipcp_instance_data * data,
+                                  port_id_t                   pid)
 {
         LOG_MISSING;
 
@@ -388,6 +388,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .connection_update         = connection_update_request,
         .connection_destroy        = connection_destroy_request,
         .connection_create_arrived = connection_create_arrived,
+        .flow_binding_ipcp         = ipcp_flow_notification,
 };
 
 static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,

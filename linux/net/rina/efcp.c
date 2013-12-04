@@ -108,6 +108,7 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
                 return NULL;
         }
 
+        /* FIXME: name should be unique, not shared with all the EFCPC's */
         container->egress_wq = rwq_create("efcpc-egress-wq");
         if (!container->egress_wq) {
                 LOG_ERR("Cannot create efcpc egress workqueue");
@@ -115,6 +116,7 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
                 return NULL;
         }
 
+        /* FIXME: name should be unique, not shared with all the EFCPC's */
         container->ingress_wq = rwq_create("efcpc-ingress-wq");
         if (!container->egress_wq) {
                 LOG_ERR("Cannot create efcpc ingress workqueue");
@@ -278,7 +280,7 @@ int efcp_container_write(struct efcp_container * container,
 {
         struct efcp * efcp;
 
-        if (!container || sdu) {
+        if (!container || !sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus input parameters, cannot write into container");
                 return -1;
         }
