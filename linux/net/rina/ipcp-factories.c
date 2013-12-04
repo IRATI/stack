@@ -34,24 +34,15 @@ struct ipcp_factories {
 
 #define to_ipcp(O) container_of(O, struct ipcp_factory, kobj)
 
-static int are_ops_ok(const struct ipcp_factory_ops * ops)
+static bool ops_are_ok(const struct ipcp_factory_ops * ops)
 {
-        LOG_DBG("Checking ops");
+        if (!ops)
+                return false;
 
-        if (!ops) {
-                LOG_ERR("Ops are empty");
-                return 0;
-        }
+        if (!ops->create || !ops->destroy))
+                return false;
 
-        if (!(ops->create    &&
-              ops->destroy)) {
-                LOG_DBG("Ops are bogus");
-                return 0;
-        }
-
-        LOG_DBG("Ops are ok");
-
-        return 1;
+        return true;
 }
 
 static ssize_t factory_show(struct kobject *   kobj,
@@ -113,30 +104,15 @@ int ipcpf_fini(struct ipcp_factories * factories)
         return 0;
 }
 
-static bool is_name_ok(const char * name)
-{
-        LOG_DBG("Checking name");
-
-        if (!name) {
-                LOG_DBG("Name is empty");
-                return false;
-        }
-        if (strlen(name) == 0) {
-                LOG_DBG("Name has 0 length");
-                return false;
-        }
-
-        LOG_DBG("Name '%s' is ok", name);
-
-        return true;
-}
+static bool string_is_ok(const char * name)
+{ return (name && strlen(name) != 0) ? true : false; }
 
 struct ipcp_factory * ipcpf_find(struct ipcp_factories * factories,
                                  const char *            name)
 {
         struct kobject * k;
 
-        if (!factories || !factories->set || !name || !is_name_ok(name))
+        if (!factories || !factories->set || !string_is_ok(name))
                 return NULL;
 
         k = kset_find_obj(factories->set, name);
@@ -157,12 +133,12 @@ struct ipcp_factory * ipcpf_register(struct ipcp_factories *         factories,
 
         LOG_DBG("Registering new factory");
 
-        if (!is_name_ok(name)) {
+        if (!string_is_ok(name)) {
                 LOG_ERR("Name is bogus, cannot register factory");
                 return NULL;
         }
 
-        if (!are_ops_ok(ops)) {
+        if (!ops_are_ok(ops)) {
                 LOG_ERR("Cannot register factory '%s', ops are bogus", name);
                 return NULL;
         }
@@ -227,9 +203,7 @@ int ipcpf_unregister(struct ipcp_factories * factories,
         }
 
         name = kobject_name(&factory->kobj);
-
-        ASSERT(name);
-        ASSERT(is_name_ok(name));
+        ASSERT(string_is_ok(name));
 
         LOG_DBG("Unregistering factory '%s'", name);
 
