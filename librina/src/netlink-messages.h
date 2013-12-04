@@ -1153,6 +1153,51 @@ public:
         IPCEvent* toIPCEvent();
 };
 
+/**
+ * IPC Process Daemon -> Kernel IPC Process. Request the creation of a
+ * connection to the EFCP module in the kernel (receiving side of the
+ * flow allocation process)
+ */
+class IpcpConnectionCreateArrivedMessage: public BaseNetlinkMessage {
+
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /** The source address of the connection (the IPC Process address) */
+        unsigned int sourceAddress;
+
+        /** The connection's destination IPC Process address */
+        unsigned int destAddress;
+
+        /** The qos-id of the connection */
+        unsigned int qosId;
+
+        /** The connection's source CEP-id */
+        int destCepId;
+
+        /**
+         * The id of the IPC Process that will be using the flow
+         * (0 if it is an application)
+         */
+        unsigned short flowUserIpcProcessId;
+
+public:
+        IpcpConnectionCreateArrivedMessage();
+        unsigned int getDestAddress() const;
+        void setDestAddress(unsigned int destAddress);
+        int getPortId() const;
+        void setPortId(int portId);
+        unsigned int getQosId() const;
+        void setQosId(unsigned int qosId);
+        unsigned int getSourceAddress() const;
+        void setSourceAddress(unsigned int sourceAddress);
+        unsigned short getFlowUserIpcProcessId() const;
+        void setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId);
+        int getDestCepId() const;
+        void setDestCepId(int sourceCepId);
+        IPCEvent* toIPCEvent();
+};
+
 }
 
 #endif /* NETLINK_MESSAGES_H_ */

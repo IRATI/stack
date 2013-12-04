@@ -676,6 +676,18 @@ public:
          */
         unsigned int updateConnection(const Connection& connection)
         throw (UpdateConnectionException);
+
+        /**
+         * Invoked by the IPC Process Daemon to request the creation of an
+         * EFCP connection to the kernel components of the IPC Process
+         * (receiving side of the Flow allocation procedure)
+         *
+         * @param connection
+         * @throws CreateConnectionException
+         * @return the handle to the response message
+         */
+        unsigned int createConnectionArrived(const Connection& connection)
+        throw (CreateConnectionException);
 };
 
 /**

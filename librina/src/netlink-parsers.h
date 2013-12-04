@@ -859,6 +859,25 @@ int putIpcpConnectionUpdateResultMessageObject(nl_msg* netlinkMessage,
 IpcpConnectionUpdateResultMessage * parseIpcpConnectionUpdateResultMessage(
                 nlmsghdr *hdr);
 
+/* IpcpConnectionCreateArrivedMessage CLASS*/
+enum IpcpConnectionCreateArrivedMessageAttributes {
+        ICCAM_ATTR_PORT_ID = 1,
+        ICCAM_ATTR_SRC_ADDRESS,
+        ICCAM_ATTR_DEST_ADDRESS,
+        ICCAM_ATTR_DEST_CEP_ID,
+        ICCAM_ATTR_QOS_ID,
+        ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID,
+        __ICCAM_ATTR_MAX,
+};
+
+#define ICCAM_ATTR_MAX (__ICCAM_ATTR_MAX -1)
+
+int putIpcpConnectionCreateArrivedMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionCreateArrivedMessage& object);
+
+IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
+                nlmsghdr *hdr);
+
 }
 
 

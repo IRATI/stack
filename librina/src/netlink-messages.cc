@@ -1574,5 +1574,72 @@ IPCEvent* IpcpConnectionUpdateResultMessage::toIPCEvent() {
         return event;
 }
 
+/* CLASS IPCM CONNECTION CREATE ARRIVED MESSAGE */
+IpcpConnectionCreateArrivedMessage::IpcpConnectionCreateArrivedMessage():
+                BaseNetlinkMessage(RINA_C_IPCP_CONN_CREATE_ARRIVED) {
+        portId = 0;
+        sourceAddress = 0;
+        destAddress = 0;
+        qosId = 0;
+        destCepId = 0;
+        flowUserIpcProcessId = 0;
+}
+
+unsigned int IpcpConnectionCreateArrivedMessage::getDestAddress() const {
+        return destAddress;
+}
+
+void IpcpConnectionCreateArrivedMessage::setDestAddress(
+                unsigned int destAddress) {
+        this->destAddress = destAddress;
+}
+
+int IpcpConnectionCreateArrivedMessage::getPortId() const {
+        return portId;
+}
+
+void IpcpConnectionCreateArrivedMessage::setPortId(int portId) {
+        this->portId = portId;
+}
+
+unsigned int IpcpConnectionCreateArrivedMessage::getQosId() const {
+                return qosId;
+}
+
+void IpcpConnectionCreateArrivedMessage::setQosId(unsigned int qosId){
+        this->qosId = qosId;
+}
+
+unsigned int IpcpConnectionCreateArrivedMessage::getSourceAddress() const {
+        return sourceAddress;
+}
+
+void IpcpConnectionCreateArrivedMessage::setSourceAddress(
+                unsigned int sourceAddress) {
+        this->sourceAddress = sourceAddress;
+}
+
+unsigned short IpcpConnectionCreateArrivedMessage::
+getFlowUserIpcProcessId() const {
+        return flowUserIpcProcessId;
+}
+
+void IpcpConnectionCreateArrivedMessage::
+setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId) {
+        this->flowUserIpcProcessId = flowUserIpcProcessId;
+}
+
+int IpcpConnectionCreateArrivedMessage::getDestCepId() const {
+        return destCepId;
+}
+
+void IpcpConnectionCreateArrivedMessage::setDestCepId(int destCepId) {
+        this->destCepId = destCepId;
+}
+
+IPCEvent* IpcpConnectionCreateArrivedMessage::toIPCEvent() {
+        return 0;
+}
+
 }
 

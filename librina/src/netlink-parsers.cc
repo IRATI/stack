@@ -398,7 +398,15 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 	        }
 	        return 0;
 	}
-
+	case RINA_C_IPCP_CONN_CREATE_ARRIVED: {
+	        IpcpConnectionCreateArrivedMessage * connArrivedMessage =
+	                        dynamic_cast<IpcpConnectionCreateArrivedMessage *>(message);
+	        if (putIpcpConnectionCreateArrivedMessageObject(netlinkMessage,
+	                        *connArrivedMessage) < 0) {
+	                return -1;
+	        }
+	        return 0;
+	}
 	default: {
 		return -1;
 	}
@@ -573,6 +581,10 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCP_CONN_UPDATE_RESULT: {
 	        return parseIpcpConnectionUpdateResultMessage(
+	                        netlinkMessageHeader);
+	}
+	case RINA_C_IPCP_CONN_CREATE_ARRIVED: {
+	        return parseIpcpConnectionCreateArrivedMessage(
 	                        netlinkMessageHeader);
 	}
 	default: {
@@ -2628,6 +2640,26 @@ int putIpcpConnectionUpdateResultMessageObject(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
             "Error building IpcpConnectionUpdateResultMessage Netlink object");
+        return -1;
+}
+
+int putIpcpConnectionCreateArrivedMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionCreateArrivedMessage& object) {
+        NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_PORT_ID, object.getPortId());
+        NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_SRC_ADDRESS,
+                        object.getSourceAddress());
+        NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_DEST_ADDRESS,
+                                object.getDestAddress());
+        NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_QOS_ID, object.getQosId());
+        NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_DEST_CEP_ID,
+                        object.getDestCepId());
+        NLA_PUT_U16(netlinkMessage, ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID,
+                        object.getFlowUserIpcProcessId());
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+            "Error building IpcpConnectionCreateArrivedMessage Netlink object");
         return -1;
 }
 
@@ -5012,6 +5044,69 @@ IpcpConnectionUpdateResultMessage * parseIpcpConnectionUpdateResultMessage(
         if (attrs[ICUREM_ATTR_RESULT]){
                 result->setResult(
                                 nla_get_u32(attrs[ICUREM_ATTR_RESULT]));
+        }
+
+        return result;
+}
+
+IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
+                nlmsghdr *hdr) {
+        struct nla_policy attr_policy[ICCAM_ATTR_MAX + 1];
+        attr_policy[ICCAM_ATTR_PORT_ID].type = NLA_U32;
+        attr_policy[ICCAM_ATTR_PORT_ID].minlen = 4;
+        attr_policy[ICCAM_ATTR_PORT_ID].maxlen = 4;
+        attr_policy[ICCAM_ATTR_SRC_ADDRESS].type = NLA_U32;
+        attr_policy[ICCAM_ATTR_SRC_ADDRESS].minlen = 4;
+        attr_policy[ICCAM_ATTR_SRC_ADDRESS].maxlen = 4;
+        attr_policy[ICCAM_ATTR_DEST_ADDRESS].type = NLA_U32;
+        attr_policy[ICCAM_ATTR_DEST_ADDRESS].minlen = 4;
+        attr_policy[ICCAM_ATTR_DEST_ADDRESS].maxlen = 4;
+        attr_policy[ICCAM_ATTR_QOS_ID].type = NLA_U32;
+        attr_policy[ICCAM_ATTR_QOS_ID].minlen = 4;
+        attr_policy[ICCAM_ATTR_QOS_ID].maxlen = 4;
+        attr_policy[ICCAM_ATTR_DEST_CEP_ID].type = NLA_U32;
+        attr_policy[ICCAM_ATTR_DEST_CEP_ID].minlen = 4;
+        attr_policy[ICCAM_ATTR_DEST_CEP_ID].maxlen = 4;
+        attr_policy[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID].type = NLA_U16;
+        attr_policy[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID].minlen = 2;
+        attr_policy[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID].maxlen = 2;
+        struct nlattr *attrs[ICCAM_ATTR_MAX + 1];
+
+        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+                        ICCAM_ATTR_MAX, attr_policy);
+        if (err < 0) {
+                LOG_ERR("Error parsing IpcpConnectionCreateArrivedMessage information from Netlink message: %d",
+                         err);
+                return 0;
+        }
+
+        IpcpConnectionCreateArrivedMessage * result =
+                        new IpcpConnectionCreateArrivedMessage();
+
+        if (attrs[ICCAM_ATTR_PORT_ID]){
+                result->setPortId(nla_get_u32(attrs[ICCAM_ATTR_PORT_ID]));
+        }
+
+        if (attrs[ICCAM_ATTR_SRC_ADDRESS]){
+                result->setSourceAddress(
+                                nla_get_u32(attrs[ICCAM_ATTR_SRC_ADDRESS]));
+        }
+
+        if (attrs[ICCAM_ATTR_DEST_ADDRESS]){
+                result->setDestAddress(
+                                nla_get_u32(attrs[ICCAM_ATTR_DEST_ADDRESS]));
+        }
+
+        if (attrs[ICCAM_ATTR_QOS_ID]){
+                result->setQosId(nla_get_u32(attrs[ICCAM_ATTR_QOS_ID]));
+        }
+
+        if (attrs[ICCAM_ATTR_DEST_CEP_ID]){
+                result->setDestCepId(nla_get_u32(attrs[ICCAM_ATTR_DEST_CEP_ID]));
+        }
+
+        if (attrs[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID]){
+                result->setFlowUserIpcProcessId(nla_get_u16(attrs[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID]));
         }
 
         return result;
