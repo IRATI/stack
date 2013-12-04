@@ -71,7 +71,7 @@ struct tmap * tmap_create_ni(void)
 struct tmap * tmap_create(void)
 { return tmap_create_gfp(GFP_KERNEL); }
 
-static bool tmap_is_ok(struct tmap * map)
+static bool tmap_is_ok(const struct tmap * map)
 { return map ? true : false; }
 
 bool tmap_is_empty(struct tmap * map)
@@ -157,7 +157,7 @@ struct tmap_entry * tmap_entry_find(struct tmap *       map,
         return NULL;
 }
 
-static bool tmap_entry_is_ok(struct tmap_entry * entry)
+static bool tmap_entry_is_ok(const struct tmap_entry * entry)
 { return entry ? true : false; }
 
 int tmap_entry_remove(struct tmap_entry * entry)

@@ -607,6 +607,7 @@ FlowRequestEvent::FlowRequestEvent(
 		bool localRequest,
 		const ApplicationProcessNamingInformation& localApplicationName,
 		const ApplicationProcessNamingInformation& remoteApplicationName,
+		int flowRequestorIpcProcessId,
 		unsigned int sequenceNumber):
 				IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
 						sequenceNumber) {
@@ -614,6 +615,7 @@ FlowRequestEvent::FlowRequestEvent(
 	this->localRequest = localRequest;
 	this->localApplicationName = localApplicationName;
 	this->remoteApplicationName = remoteApplicationName;
+	this->flowRequestorIpcProcessId = flowRequestorIpcProcessId;
 	this->portId = 0;
 }
 
@@ -623,6 +625,7 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 		const ApplicationProcessNamingInformation& localApplicationName,
 		const ApplicationProcessNamingInformation& destApplicationName,
 		const ApplicationProcessNamingInformation& DIFName,
+		int flowRequestorIpcProcessId,
 		unsigned int sequenceNumber) :
 		IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
 				sequenceNumber) {
@@ -631,6 +634,7 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 	this->localApplicationName = localApplicationName;
 	this->remoteApplicationName = remoteApplicationName;
 	this->DIFName = DIFName;
+	this->flowRequestorIpcProcessId = flowRequestorIpcProcessId;
 	this->portId = portId;
 }
 
@@ -668,6 +672,10 @@ const ApplicationProcessNamingInformation&
 const ApplicationProcessNamingInformation&
 	FlowRequestEvent::getRemoteApplicationName() const {
 	return remoteApplicationName;
+}
+
+int FlowRequestEvent::getFlowRequestorIPCProcessId() const {
+        return flowRequestorIpcProcessId;
 }
 
 /* CLASS FLOW DEALLOCATE REQUEST EVENT */
@@ -860,15 +868,21 @@ UnregisterApplicationResponseEvent::UnregisterApplicationResponseEvent(
 AllocateFlowResponseEvent::AllocateFlowResponseEvent(
                 int result,
                 bool notifysource,
+                int flowAcceptorIpcProcessId,
                 unsigned int sequenceNumber) :
                 BaseResponseEvent(result,
                                  ALLOCATE_FLOW_RESPONSE_EVENT,
                                  sequenceNumber) {
         this->notifySource = notifySource;
+        this->flowAcceptorIpcProcessId = flowAcceptorIpcProcessId;
 }
 
 bool AllocateFlowResponseEvent::isNotifySource() const {
         return notifySource;
+}
+
+int AllocateFlowResponseEvent::getFlowAcceptorIpcProcessId() const {
+        return flowAcceptorIpcProcessId;
 }
 
 /* CLASS OS PROCESS FINALIZED EVENT */
@@ -911,7 +925,8 @@ IPCEvent * getIPCEvent(){
 	FlowSpecification flowSpec;
 
 	FlowRequestEvent * event = new
-			FlowRequestEvent(flowSpec, true, sourceName, destName, 24);
+			FlowRequestEvent(flowSpec, true, sourceName,
+			                destName, 0, 24);
 
 	return event;
 }

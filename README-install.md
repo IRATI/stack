@@ -7,6 +7,7 @@ Requirements:
      - fakeroot 
      - wget 
      - bzip2
+     - bc
   
   To compile the user-space parts:
      - maven 
@@ -16,4 +17,7 @@ Requirements:
      - autoconf2.13
      - openjdk-6-jdk
      - git
-     - Latest SWIG version from http://swig.org
+     - Latest SWIG version from http://swig.org (versions < 2.0.4 or > 2.0.8)
+
+  To use shim-eth-vlan
+     - vlan

@@ -588,7 +588,6 @@ struct rnl_rmt_dump_ft_reply_msg_attrs {
         int temp;
 };
 
-
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg *   msg);
 

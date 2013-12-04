@@ -31,12 +31,15 @@ struct gpa;
 
 struct gpa *    gpa_create(const uint8_t * address,
                            size_t          length);
+struct gpa *    gpa_create_ni(const uint8_t * address,
+                              size_t          length);
 struct gpa *    gpa_create_gfp(gfp_t           flags,
                                const uint8_t * address,
                                size_t          length);
 void            gpa_destroy(struct gpa * gpa);
 bool            gpa_is_ok(const struct gpa * gpa);
 struct gpa *    gpa_dup(const struct gpa * gpa);
+struct gpa *    gpa_dup_ni(const struct gpa * gpa);
 struct gpa *    gpa_dup_gfp(gfp_t              flags,
                             const struct gpa * gpa);
 bool            gpa_is_equal(const struct gpa * a,
@@ -48,6 +51,9 @@ size_t          gpa_address_length(const struct gpa * gpa);
 int             gpa_address_grow(struct gpa * gpa,
                                  size_t       length,
                                  uint8_t      filler);
+int             gpa_address_grow_ni(struct gpa * gpa,
+                                    size_t       length,
+                                    uint8_t      filler);
 int             gpa_address_grow_gfp(gfp_t        flags,
                                      struct gpa * gpa,
                                      size_t       length,
@@ -56,6 +62,8 @@ int             gpa_address_grow_gfp(gfp_t        flags,
 /* Shrinks a GPA removing all the filler symbols (if any) */
 int             gpa_address_shrink(struct gpa * gpa,
                                    uint8_t      filler);
+int             gpa_address_shrink_ni(struct gpa * gpa,
+                                      uint8_t      filler);
 int             gpa_address_shrink_gfp(gfp_t        flags,
                                        struct gpa * gpa,
                                        uint8_t      filler);
@@ -74,18 +82,23 @@ struct gha;
 
 struct gha *        gha_create(gha_type_t      type,
                                const uint8_t * address);
+struct gha *        gha_create_ni(gha_type_t      type,
+                                  const uint8_t * address);
 struct gha *        gha_create_gfp(gfp_t           flags,
                                    gha_type_t      type,
                                    const uint8_t * address);
 struct gha *        gha_create_broadcast(gha_type_t type);
+struct gha *        gha_create_broadcast_ni(gha_type_t type);
 struct gha *        gha_create_broadcast_gfp(gfp_t      flags,
                                              gha_type_t type);
 struct gha *        gha_create_unknown(gha_type_t type);
+struct gha *        gha_create_unknown_ni(gha_type_t type);
 struct gha *        gha_create_unknown_gfp(gfp_t      flags,
                                            gha_type_t type);
 int                 gha_destroy(struct gha * gha);
 bool                gha_is_ok(const struct gha * gha);
 struct gha *        gha_dup(const struct gha * gha);
+struct gha *        gha_dup_ni(const struct gha * gha);
 struct gha *        gha_dup_gfp(gfp_t              flags,
                                 const struct gha * gha);
 const uint8_t *     gha_address(const struct gha * gha);

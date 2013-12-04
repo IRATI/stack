@@ -168,25 +168,25 @@ SYSCALL_DEFINE3(sdu_read,
                 return -EFAULT;
         }
 
-        if (!is_sdu_ok(tmp)) {
+        if (!sdu_is_ok(tmp)) {
                 SYSCALL_DUMP_EXIT;
                 return -EFAULT;
         }
 
         /* NOTE: We don't handle partial copies */
-        if (tmp->buffer->size > size) {
+        if (buffer_length(tmp->buffer) > size) {
                 SYSCALL_DUMP_EXIT;
 
                 LOG_ERR("Partial copies not handled. SDU size: %zd, "
                         "User space buffer size: %zd",
-                        tmp->buffer->size, size);
+                        buffer_length(tmp->buffer), size);
                 sdu_destroy(tmp);
                 return -EFAULT;
         }
 
         if (copy_to_user(buffer,
-                         tmp->buffer->data,
-                         tmp->buffer->size)) {
+                         buffer_data_ro(tmp->buffer),
+                         buffer_length(tmp->buffer))) {
                 SYSCALL_DUMP_EXIT;
 
                 LOG_ERR("Error copying data to user-space");
@@ -194,7 +194,7 @@ SYSCALL_DEFINE3(sdu_read,
                 return -EFAULT;
         }
 
-        retsize = tmp->buffer->size;
+        retsize = buffer_length(tmp->buffer);
         sdu_destroy(tmp);
 
         SYSCALL_DUMP_EXIT;
@@ -218,8 +218,7 @@ SYSCALL_DEFINE3(sdu_write,
                 return -EFAULT;
         }
 
-        LOG_DBG("Syscall write SDU of size %zd called with port-id %d",
-                size, id);
+        LOG_DBG("Syscall write SDU (size = %zd, port-id = %d)", size, id);
 
         tmp_buffer = buffer_create(size);
         if (!tmp_buffer) {
@@ -227,24 +226,24 @@ SYSCALL_DEFINE3(sdu_write,
                 return -EFAULT;
         }
 
-        ASSERT(is_buffer_ok(tmp_buffer));
-        ASSERT(buffer_data(tmp_buffer));
+        ASSERT(buffer_is_ok(tmp_buffer));
+        ASSERT(buffer_data_rw(tmp_buffer));
 
         /* NOTE: We don't handle partial copies */
-        if (copy_from_user(buffer_data(tmp_buffer), buffer, size)) {
+        if (copy_from_user(buffer_data_rw(tmp_buffer), buffer, size)) {
                 SYSCALL_DUMP_EXIT;
                 buffer_destroy(tmp_buffer);
                 return -EFAULT;
         }
 
         /* NOTE: sdu_create takes the ownership of the buffer */
-        sdu = sdu_create_from_buffer(tmp_buffer);
+        sdu = sdu_create_with(tmp_buffer);
         if (!sdu) {
                 SYSCALL_DUMP_EXIT;
                 buffer_destroy(tmp_buffer);
                 return -EFAULT;
         }
-        ASSERT(is_sdu_ok(sdu));
+        ASSERT(sdu_is_ok(sdu));
 
         /* Passing ownership to the internal layers */
         CALL_DEFAULT_PERSONALITY(retval, sdu_write, id, sdu);

@@ -27,6 +27,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
+#include "du.h"
 #include "rmt.h"
 #include "pft.h"
 #include "efcp-utils.h"
@@ -63,7 +64,6 @@ struct rmt * rmt_create(struct kfa *            kfa,
 
         tmp->egress_wq = rwq_create("rmt-egress-wq");
         if (!tmp->egress_wq) {
-                LOG_ERR("Cannot create rmt egress workqueue");
                 rmt_destroy(tmp);
                 return NULL;
         }
@@ -143,7 +143,16 @@ static struct send_data * send_data_create(struct rmt * rmt,
 
 static int rmt_send_worker(void * o)
 {
-        struct send_data * tmp;
+        struct send_data *    tmp;
+        struct sdu *          sdu;
+        const struct buffer * buffer;
+        const struct pci *    pci;
+        size_t                size;
+        ssize_t               buffer_size;
+        ssize_t               pci_size;
+        struct buffer *       tmp_buff;
+        char *                data;
+        const uint8_t *       ptr;
 
         tmp = (struct send_data *) o;
         if (!tmp) {
@@ -157,11 +166,50 @@ static int rmt_send_worker(void * o)
                 return -1;
         }
 
-        /*
-         * FIXME : Port id will be retrieved from the pduft, and the cast from
-         * PDU to SDU might be changed for a better solution
-         */
-        if (kfa_flow_sdu_write(tmp->rmt->kfa, -1, (struct sdu *) tmp->pdu)) {
+        buffer = pdu_buffer_get_ro(tmp->pdu);
+        if (!buffer)
+                return -1;
+
+        pci = pdu_pci_get_ro(tmp->pdu);
+        if (!pci)
+                return -1;
+
+        buffer_size = buffer_length(buffer);
+        if (buffer_size <= 0)
+                return -1;
+
+        pci_size = pci_length(pci);
+        if (buffer_size <= 0)
+                return -1;
+
+        size = pci_size + buffer_size;
+        data = rkmalloc(size, GFP_KERNEL);
+        if (!data)
+                return -1;
+
+        if (!memcpy(data, pci, pci_size)) {
+                rkfree(data);
+                return -1;
+        }
+        ptr = (const uint8_t *) data;
+        ASSERT(!ptr);
+        if (!memcpy((void *) (ptr + pci_size), buffer, buffer_size)) {
+                rkfree(data);
+                return -1;
+        }
+        tmp_buff = buffer_create_with(data, size);
+        if (!tmp_buff) {
+                rkfree(data);
+                return -1;
+        }
+        sdu = sdu_create_with(tmp_buff);
+        if (!sdu) {
+                buffer_destroy(tmp_buff);
+                return -1;
+        }
+        pdu_destroy(tmp->pdu);
+        /* FIXME : Port id will be retrieved from the pduft */
+        if (kfa_flow_sdu_write(tmp->rmt->kfa, port_id_bad(), sdu)) {
                 return -1;
         }
 
@@ -215,27 +263,25 @@ int rmt_send(struct rmt * instance,
 
 struct receive_data {
         port_id_t               from;
-        struct pdu *            pdu;
+        struct sdu *            sdu;
         struct kfa *            kfa;
         struct efcp_container * efcpc;
 };
 
 static struct receive_data *
 receive_data_create(port_id_t               from,
-                    struct pdu *            pdu,
+                    struct sdu *            sdu,
                     struct kfa *            kfa,
                     struct efcp_container * efcpc)
 {
         struct receive_data * tmp;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp) {
-                LOG_ERR("Could not allocate memory for receive data");
+        if (!tmp)
                 return NULL;
-        }
 
         tmp->from  = from;
-        tmp->pdu   = pdu;
+        tmp->sdu   = sdu;
         tmp->kfa   = kfa;
         tmp->efcpc = efcpc;
 
@@ -256,8 +302,7 @@ static int receive_data_destroy(struct receive_data * data)
                 return -1;
         }
 
-        if (data->pdu->pci) rkfree(data->pdu->pci);
-        if (data->pdu)      rkfree(data->pdu);
+        if (data->sdu) sdu_destroy(data->sdu);
 
         rkfree(data);
 
@@ -267,7 +312,8 @@ static int receive_data_destroy(struct receive_data * data)
 static int rmt_receive_worker(void * o)
 {
         struct receive_data * tmp;
-        struct sdu *          sdu;
+        struct pdu *          pdu;
+        pdu_type_t            pdu_type;
 
         tmp = (struct receive_data *) o;
         if (!tmp) {
@@ -281,36 +327,51 @@ static int rmt_receive_worker(void * o)
                 return -1;
         }
 
-
-
-        if (tmp->pdu->pci->type == PDU_TYPE_MGMT) {
-                /* FIXME : Change this for a better solution */
-                sdu = rkzalloc(sizeof(*sdu), GFP_KERNEL);
-                if (!sdu)
-                        return -1;
-
-                sdu->buffer = tmp->pdu->buffer;
-                if (kfa_sdu_post_to_user_space(tmp->kfa, sdu, tmp->from)) {
-                        receive_data_destroy(tmp);
-                        return -1;
-                }
-        }
-
-        if (efcp_container_receive(tmp->efcpc,
-                                   tmp->pdu->pci->ceps.dest_id,
-                                   tmp->pdu)) {
+        pdu = pdu_create_with(tmp->sdu);
+        if (!pdu) {
                 receive_data_destroy(tmp);
                 return -1;
         }
 
-        return 0;
+        pdu_type = pci_type(pdu_pci_get_rw(pdu));
+        switch (pdu_type) {
+        case PDU_TYPE_MGMT: {
+                struct sdu *    sdu;
+                struct buffer * buffer;
+
+                buffer = pdu_buffer_get_rw(pdu);
+                sdu = sdu_create_with(buffer);
+                if (!sdu) {
+                        receive_data_destroy(tmp);
+                        return -1;
+                }
+                if (kfa_sdu_post_to_user_space(tmp->kfa, sdu, tmp->from)) {
+                        receive_data_destroy(tmp);
+                        return -1;
+                }
+
+                return 0;
+        }
+        case PDU_TYPE_DT: {
+                if (efcp_container_receive(tmp->efcpc,
+                                           pci_cep_destination(pdu_pci_get_ro(pdu)),
+                                           pdu)) {
+                        receive_data_destroy(tmp);
+                        return -1;
+                }
+
+                return 0;
+        }
+        default:
+                LOG_ERR("Unknown PDU type %d", pdu_type);
+                return -1;
+        }
 }
 
 int rmt_receive(struct rmt * instance,
                 struct sdu * sdu,
                 port_id_t    from)
 {
-        struct pdu *           pdu;
         struct receive_data *  data;
         struct rwq_work_item * item;
 
@@ -318,32 +379,24 @@ int rmt_receive(struct rmt * instance,
                 LOG_ERR("No RMT passed");
                 return -1;
         }
-        /*
-         * FIXME : Remove this ASAP, we need a proper way to handle PDU <-> SDU
-         * conversions.
-         */
-        pdu = (struct pdu *) sdu;
-        if (!pdu) {
-                LOG_ERR("No PDU received");
+
+        data = receive_data_create(from, sdu, instance->kfa, instance->efcpc);
+        if (!is_receive_data_complete(data)) {
+                if (data)
+                        rkfree(data);
                 return -1;
         }
-
-        data = receive_data_create(from, pdu, instance->kfa, instance->efcpc);
-        if (!is_receive_data_complete(data))
-                return -1;
 
         /* Is this _ni() call really necessary ??? */
         item = rwq_work_create_ni(rmt_receive_worker, data);
         if (!item) {
-                buffer_destroy(data->pdu->buffer);
-                receive_data_destroy(data);
+                rkfree(data);
                 return -1;
         }
 
         ASSERT(instance->ingress_wq);
 
         if (rwq_work_post(instance->ingress_wq, item)) {
-                buffer_destroy(pdu->buffer);
                 receive_data_destroy(data);
                 return -1;
         }

@@ -185,7 +185,7 @@ public class FlowManager {
 			pendingFlowAllocations.put(handle, pendingFlowAllocation);
 		}catch(Exception ex){
 			log.error("Error allocating flow. "+ex.getMessage());
-			ipcProcess.allocateFlowResponse(event, -1, true);
+			ipcProcess.allocateFlowResponse(event, -1, true, 0);
 			return;
 		}
 	}
@@ -211,7 +211,8 @@ public class FlowManager {
 		}
 
 		try {
-			ipcProcess.allocateFlowResponse(flowReqEvent, event.getResult(), event.isNotifySource());
+			ipcProcess.allocateFlowResponse(flowReqEvent, event.getResult(), event.isNotifySource(), 
+					event.getFlowAcceptorIpcProcessId());
 			if (success){
 				log.info("Successfully allocated flow from "+ 
 						flowReqEvent.getLocalApplicationName().toString() + " to remote application "
