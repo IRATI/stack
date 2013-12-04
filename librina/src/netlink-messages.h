@@ -1228,6 +1228,29 @@ public:
         IPCEvent* toIPCEvent();
 };
 
+/**
+ * IPC Process Daemon -> Kernel IPC Process. Request the destruction of a
+ * connection
+ */
+class IpcpConnectionDestroyRequestMessage: public BaseNetlinkMessage {
+
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /**
+         * The identifier of the connection to destroy
+         */
+        int cepId;
+
+public:
+        IpcpConnectionDestroyRequestMessage();
+        int getCepId() const;
+        void setCepId(int cepId);
+        int getPortId() const;
+        void setPortId(int portId);
+        IPCEvent* toIPCEvent();
+};
+
 }
 
 #endif /* NETLINK_MESSAGES_H_ */

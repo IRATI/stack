@@ -797,6 +797,34 @@ throw (CreateConnectionException) {
         return seqNum;
 }
 
+unsigned int KernelIPCProcess::
+destroyConnection(const Connection& connection)
+        throw (DestroyConnectionException) {
+        unsigned int seqNum=0;
+
+#if STUB_API
+        //Do nothing
+#else
+        IpcpConnectionDestroyRequestMessage message;
+        message.setPortId(connection.getPortId());
+        message.setCepId(connection.getSourceCepId());
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                throw DestroyConnectionException(e.what());
+        }
+
+        seqNum = message.getSequenceNumber();
+
+#endif
+        return seqNum;
+}
+
 Singleton<KernelIPCProcess> kernelIPCProcess;
 
 }

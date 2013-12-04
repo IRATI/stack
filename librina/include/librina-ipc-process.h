@@ -342,6 +342,19 @@ public:
 };
 
 /**
+ * Thrown when there are problems requesting the Kernel to destroy an EFCP connection
+ */
+class DestroyConnectionException: public IPCException {
+public:
+        DestroyConnectionException():
+                IPCException("Problems destroying an EFCP connection"){
+        }
+        DestroyConnectionException(const std::string& description):
+                IPCException(description){
+        }
+};
+
+/**
  * Class used by the IPC Processes to interact with the IPC Manager. Extends
  * the basic IPC Manager in librina-application with IPC Process specific
  * functionality
@@ -715,6 +728,17 @@ public:
          */
         unsigned int createConnectionArrived(const Connection& connection)
         throw (CreateConnectionException);
+
+        /**
+         * Invoked by the IPC Process Daemon to request the destruction of an
+         * EFCP connection to the kernel components of the IPC Process
+         *
+         * @param connection
+         * @throws DestroyConnectionException
+         * @return the handle to the response message
+         */
+        unsigned int destroyConnection(const Connection& connection)
+        throw (DestroyConnectionException);
 };
 
 /**
