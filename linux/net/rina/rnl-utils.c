@@ -1386,26 +1386,32 @@ static int rnl_parse_ipcm_conn_create_arrived_msg(struct genl_info * info,
         }
 
         if (attrs[ICCA_ATTR_PORT_ID])
-                msg_attrs-> port_id= nla_get_u32(attrs[ICCA_ATTR_PORT_ID]);
+                msg_attrs->port_id =
+                        nla_get_u32(attrs[ICCA_ATTR_PORT_ID]);
 
         if (attrs[ICCA_ATTR_SOURCE_ADDR])
-                msg_attrs->src_addr = nla_get_u32(attrs[ICCA_ATTR_SOURCE_ADDR]);
+                msg_attrs->src_addr =
+                        nla_get_u32(attrs[ICCA_ATTR_SOURCE_ADDR]);
 
         if (attrs[ICCA_ATTR_DEST_ADDR])
-                msg_attrs->dst_addr = nla_get_u32(attrs[ICCA_ATTR_DEST_ADDR]);
+                msg_attrs->dst_addr =
+                        nla_get_u32(attrs[ICCA_ATTR_DEST_ADDR]);
 
         if (attrs[ICCA_ATTR_DEST_CEP_ID])
-                msg_attrs->dst_cep = nla_get_u32(attrs[ICCA_ATTR_DEST_CEP_ID]);
+                msg_attrs->dst_cep =
+                        nla_get_u32(attrs[ICCA_ATTR_DEST_CEP_ID]);
 
         if (attrs[ICCA_ATTR_QOS_ID])
-                msg_attrs->qos_id = nla_get_u32(attrs[ICCA_ATTR_QOS_ID]);
+                msg_attrs->qos_id =
+                        nla_get_u32(attrs[ICCA_ATTR_QOS_ID]);
 
         if (attrs[ICCA_ATTR_FLOW_USER_IPC_PROCESS_ID])
-                msg_attrs->flow_user_ipc_process_id = nla_get_u16(
-                                attrs[ICCA_ATTR_FLOW_USER_IPC_PROCESS_ID]);
+                msg_attrs->flow_user_ipc_process_id =
+                        nla_get_u16(attrs[ICCA_ATTR_FLOW_USER_IPC_PROCESS_ID]);
 
         if (attrs[ICCA_ATTR_POLICIES])
-                msg_attrs->policies = nla_get_u32(attrs[ICCA_ATTR_POLICIES]);
+                msg_attrs->policies =
+                        nla_get_u32(attrs[ICCA_ATTR_POLICIES]);
 
         return 0;
 
@@ -1421,14 +1427,14 @@ static int rnl_parse_ipcm_conn_update_req_msg(struct genl_info * info,
         struct nlattr *attrs[ICURQ_ATTR_MAX + 1];
         int    result;
 
-        attr_policy[ICURQ_ATTR_PORT_ID].type = NLA_U32;
-        attr_policy[ICURQ_ATTR_PORT_ID].len = 4;
-        attr_policy[ICURQ_ATTR_SOURCE_CEP_ID].type = NLA_U32;
-        attr_policy[ICURQ_ATTR_SOURCE_CEP_ID].len = 4;
-        attr_policy[ICURQ_ATTR_DEST_CEP_ID].type = NLA_U32;
-        attr_policy[ICURQ_ATTR_DEST_CEP_ID].len = 4;
+        attr_policy[ICURQ_ATTR_PORT_ID].type                  = NLA_U32;
+        attr_policy[ICURQ_ATTR_PORT_ID].len                   = 4;
+        attr_policy[ICURQ_ATTR_SOURCE_CEP_ID].type            = NLA_U32;
+        attr_policy[ICURQ_ATTR_SOURCE_CEP_ID].len             = 4;
+        attr_policy[ICURQ_ATTR_DEST_CEP_ID].type              = NLA_U32;
+        attr_policy[ICURQ_ATTR_DEST_CEP_ID].len               = 4;
         attr_policy[ICURQ_ATTR_FLOW_USER_IPC_PROCESS_ID].type = NLA_U16;
-        attr_policy[ICURQ_ATTR_FLOW_USER_IPC_PROCESS_ID].len = 2;
+        attr_policy[ICURQ_ATTR_FLOW_USER_IPC_PROCESS_ID].len  = 2;
 
         result = nlmsg_parse(info->nlhdr,
                              sizeof(struct genlmsghdr) +
@@ -1444,17 +1450,20 @@ static int rnl_parse_ipcm_conn_update_req_msg(struct genl_info * info,
         }
 
         if (attrs[ICURQ_ATTR_PORT_ID])
-                msg_attrs-> port_id= nla_get_u32(attrs[ICURQ_ATTR_PORT_ID]);
+                msg_attrs->port_id =
+                        nla_get_u32(attrs[ICURQ_ATTR_PORT_ID]);
 
         if (attrs[ICURQ_ATTR_SOURCE_CEP_ID])
-                msg_attrs->src_cep = nla_get_u32(attrs[ICURQ_ATTR_SOURCE_CEP_ID]);
+                msg_attrs->src_cep =
+                        nla_get_u32(attrs[ICURQ_ATTR_SOURCE_CEP_ID]);
 
         if (attrs[ICURQ_ATTR_DEST_CEP_ID])
-                msg_attrs->dst_cep = nla_get_u32(attrs[ICURQ_ATTR_DEST_CEP_ID]);
+                msg_attrs->dst_cep =
+                        nla_get_u32(attrs[ICURQ_ATTR_DEST_CEP_ID]);
 
         if (attrs[ICURQ_ATTR_FLOW_USER_IPC_PROCESS_ID])
-                msg_attrs->flow_user_ipc_process_id = nla_get_u16(
-                                attrs[ICURQ_ATTR_FLOW_USER_IPC_PROCESS_ID]);
+                msg_attrs->flow_user_ipc_process_id =
+                        nla_get_u16(attrs[ICURQ_ATTR_FLOW_USER_IPC_PROCESS_ID]);
 
         return 0;
 
@@ -1489,10 +1498,12 @@ static int rnl_parse_ipcm_conn_destroy_req_msg(struct genl_info * info,
         }
 
         if (attrs[ICDR_ATTR_PORT_ID])
-                msg_attrs-> port_id= nla_get_u32(attrs[ICDR_ATTR_PORT_ID]);
+                msg_attrs->port_id =
+                        nla_get_u32(attrs[ICDR_ATTR_PORT_ID]);
 
         if (attrs[ICDR_ATTR_SOURCE_CEP_ID])
-                msg_attrs->src_cep = nla_get_u32(attrs[ICDR_ATTR_SOURCE_CEP_ID]);
+                msg_attrs->src_cep =
+                        nla_get_u32(attrs[ICDR_ATTR_SOURCE_CEP_ID]);
 
         return 0;
 
