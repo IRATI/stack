@@ -83,6 +83,11 @@ struct gpa * gpa_create(const uint8_t * address,
 { return gpa_create_gfp(GFP_KERNEL, address, length); }
 EXPORT_SYMBOL(gpa_create);
 
+struct gpa * gpa_create_ni(const uint8_t * address,
+                           size_t          length)
+{ return gpa_create_gfp(GFP_ATOMIC, address, length); }
+EXPORT_SYMBOL(gpa_create_ni);
+
 bool gpa_is_ok(const struct gpa * gpa)
 { return (!gpa || gpa->address == NULL || gpa->length == 0) ? false : true; }
 EXPORT_SYMBOL(gpa_is_ok);
@@ -100,7 +105,7 @@ void gpa_destroy(struct gpa * gpa)
 EXPORT_SYMBOL(gpa_destroy);
 
 struct gpa * gpa_dup_gfp(gfp_t              flags,
-                         const struct gpa * gpa)
+                                const struct gpa * gpa)
 {
         if (!gpa_is_ok(gpa)) {
                 LOG_ERR("Bogus input parameter, cannot duplicate GPA");
@@ -114,6 +119,10 @@ EXPORT_SYMBOL(gpa_dup_gfp);
 struct gpa * gpa_dup(const struct gpa * gpa)
 { return gpa_dup_gfp(GFP_KERNEL, gpa); }
 EXPORT_SYMBOL(gpa_dup);
+
+struct gpa * gpa_dup_ni(const struct gpa * gpa)
+{ return gpa_dup_gfp(GFP_ATOMIC, gpa); }
+EXPORT_SYMBOL(gpa_dup_ni);
 
 const uint8_t * gpa_address_value(const struct gpa * gpa)
 {
@@ -222,6 +231,9 @@ int gpa_address_shrink(struct gpa * gpa, uint8_t filler)
 { return gpa_address_shrink_gfp(GFP_KERNEL, gpa, filler); }
 EXPORT_SYMBOL(gpa_address_shrink);
 
+int gpa_address_shrink_ni(struct gpa * gpa, uint8_t filler)
+{ return gpa_address_shrink_gfp(GFP_ATOMIC, gpa, filler); }
+EXPORT_SYMBOL(gpa_address_shrink_ni);
 
 int gpa_address_grow_gfp(gfp_t        flags,
                          struct gpa * gpa,
@@ -271,6 +283,10 @@ EXPORT_SYMBOL(gpa_address_grow_gfp);
 int gpa_address_grow(struct gpa * gpa, size_t length, uint8_t filler)
 { return gpa_address_grow_gfp(GFP_KERNEL, gpa, length, filler); }
 EXPORT_SYMBOL(gpa_address_grow);
+
+int gpa_address_grow_ni(struct gpa * gpa, size_t length, uint8_t filler)
+{ return gpa_address_grow_gfp(GFP_ATOMIC, gpa, length, filler); }
+EXPORT_SYMBOL(gpa_address_grow_ni);
 
 bool gpa_is_equal(const struct gpa * a, const struct gpa * b)
 {
@@ -367,6 +383,11 @@ struct gha * gha_create(gha_type_t      type,
 { return gha_create_gfp(GFP_KERNEL, type, address); }
 EXPORT_SYMBOL(gha_create);
 
+struct gha * gha_create_ni(gha_type_t      type,
+                           const uint8_t * address)
+{ return gha_create_gfp(GFP_ATOMIC, type, address); }
+EXPORT_SYMBOL(gha_create_ni);
+
 struct gha * gha_create_broadcast_gfp(gfp_t      flags,
                                       gha_type_t type)
 {
@@ -383,6 +404,10 @@ struct gha * gha_create_broadcast(gha_type_t type)
 { return gha_create_broadcast_gfp(GFP_KERNEL, type); }
 EXPORT_SYMBOL(gha_create_broadcast);
 
+struct gha * gha_create_broadcast_ni(gha_type_t type)
+{ return gha_create_broadcast_gfp(GFP_ATOMIC, type); }
+EXPORT_SYMBOL(gha_create_broadcast_ni);
+
 struct gha * gha_create_unknown_gfp(gfp_t      flags,
                                     gha_type_t type)
 {
@@ -398,6 +423,10 @@ EXPORT_SYMBOL(gha_create_unknown_gfp);
 struct gha * gha_create_unknown(gha_type_t type)
 { return gha_create_broadcast_gfp(GFP_KERNEL, type); }
 EXPORT_SYMBOL(gha_create_unknown);
+
+struct gha * gha_create_unknown_ni(gha_type_t type)
+{ return gha_create_broadcast_gfp(GFP_ATOMIC, type); }
+EXPORT_SYMBOL(gha_create_unknown_ni);
 
 int gha_destroy(struct gha * gha)
 {
@@ -435,6 +464,10 @@ EXPORT_SYMBOL(gha_dup_gfp);
 struct gha * gha_dup(const struct gha * gha)
 { return gha_dup_gfp(GFP_KERNEL, gha); }
 EXPORT_SYMBOL(gha_dup);
+
+struct gha * gha_dup_ni(const struct gha * gha)
+{ return gha_dup_gfp(GFP_ATOMIC, gha); }
+EXPORT_SYMBOL(gha_dup_ni);
 
 size_t gha_address_length(const struct gha * gha)
 {

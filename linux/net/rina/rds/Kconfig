@@ -4,6 +4,13 @@
 # Written by Francesco Salvestrini <f.salvestrini@nextworks.it>
 #
 
+config RINA_MEMORY_STATS
+	bool "Memory allocation/deallocation stats"
+	default n
+        depends on RINA_DEBUG
+	help
+	  No help for the time being
+
 config RINA_MEMORY_CHECKS
 	bool "Memory allocation/deallocation extra checks"
 	default y

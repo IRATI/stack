@@ -80,9 +80,13 @@ static struct rinarp_handle * handle_create(struct net_device * dev,
         return handle;
 }
 
-static bool handle_is_ok(struct rinarp_handle * handle)
-{ return (handle && gpa_is_ok(handle->pa) &&
-          gha_is_ok(handle->ha) && handle->dev); }
+static bool handle_is_ok(const struct rinarp_handle * handle)
+{
+        return (handle                &&
+                gpa_is_ok(handle->pa) &&
+                gha_is_ok(handle->ha) &&
+                handle->dev);
+}
 
 struct rinarp_handle * rinarp_add(struct net_device * dev,
                                   const struct gpa *  pa,

@@ -1583,13 +1583,12 @@ int kipcm_sdu_write(struct kipcm * kipcm,
                 return -1;
         }
 
-        if (!sdu || !is_sdu_ok(sdu)) {
+        if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus SDU received, bailing out");
                 return -1;
         }
 
-        LOG_DBG("Tring to write SDU of size %zd to port_id %d",
-                sdu->buffer->size, port_id);
+        LOG_DBG("Tring to write SDU to port_id %d", port_id);
 
         if (kfa_flow_sdu_write(kipcm->kfa, port_id, sdu))
                 return -1;
@@ -1606,6 +1605,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         IRQ_BARRIER;
 
         /* The SDU is theirs now */
+
         if (kfa_flow_sdu_read(kipcm->kfa, port_id, sdu)) {
                 LOG_DBG("Failed to read sdu");
                 return -1;
@@ -1730,11 +1730,13 @@ static int notify_ipcp_conn_create_generic(void *             data,
         struct ipcp_instance *                          ipcp;
         struct rina_msg_hdr *                           hdr;
         struct kipcm *                                  kipcm;
-        ipc_process_id_t                                ipc_id = 0;
-        port_id_t                                       port_id = 0;
+        ipc_process_id_t                                ipc_id;
+        port_id_t                                       port_id;
         cep_id_t                                        src_cep;
         flow_id_t                                       fid;
 
+        ipc_id   = 0;
+        port_id  = 0;
         fid      = flow_id_bad();
         attrs    = NULL;
         msg      = NULL;

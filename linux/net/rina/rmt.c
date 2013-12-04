@@ -63,7 +63,6 @@ struct rmt * rmt_create(struct kfa *            kfa,
 
         tmp->egress_wq = rwq_create("rmt-egress-wq");
         if (!tmp->egress_wq) {
-                LOG_ERR("Cannot create rmt egress workqueue");
                 rmt_destroy(tmp);
                 return NULL;
         }
@@ -215,27 +214,25 @@ int rmt_send(struct rmt * instance,
 
 struct receive_data {
         port_id_t               from;
-        struct pdu *            pdu;
+        struct sdu *            sdu;
         struct kfa *            kfa;
         struct efcp_container * efcpc;
 };
 
 static struct receive_data *
 receive_data_create(port_id_t               from,
-                    struct pdu *            pdu,
+                    struct sdu *            sdu,
                     struct kfa *            kfa,
                     struct efcp_container * efcpc)
 {
         struct receive_data * tmp;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp) {
-                LOG_ERR("Could not allocate memory for receive data");
+        if (!tmp)
                 return NULL;
-        }
 
         tmp->from  = from;
-        tmp->pdu   = pdu;
+        tmp->sdu   = sdu;
         tmp->kfa   = kfa;
         tmp->efcpc = efcpc;
 
@@ -256,8 +253,7 @@ static int receive_data_destroy(struct receive_data * data)
                 return -1;
         }
 
-        if (data->pdu->pci) rkfree(data->pdu->pci);
-        if (data->pdu)      rkfree(data->pdu);
+        if (data->sdu) sdu_destroy(data->sdu);
 
         rkfree(data);
 
@@ -267,7 +263,8 @@ static int receive_data_destroy(struct receive_data * data)
 static int rmt_receive_worker(void * o)
 {
         struct receive_data * tmp;
-        struct sdu *          sdu;
+        struct pdu *          pdu;
+        pdu_type_t            pdu_type;
 
         tmp = (struct receive_data *) o;
         if (!tmp) {
@@ -281,36 +278,51 @@ static int rmt_receive_worker(void * o)
                 return -1;
         }
 
-
-
-        if (tmp->pdu->pci->type == PDU_TYPE_MGMT) {
-                /* FIXME : Change this for a better solution */
-                sdu = rkzalloc(sizeof(*sdu), GFP_KERNEL);
-                if (!sdu)
-                        return -1;
-
-                sdu->buffer = tmp->pdu->buffer;
-                if (kfa_sdu_post_to_user_space(tmp->kfa, sdu, tmp->from)) {
-                        receive_data_destroy(tmp);
-                        return -1;
-                }
-        }
-
-        if (efcp_container_receive(tmp->efcpc,
-                                   tmp->pdu->pci->ceps.dest_id,
-                                   tmp->pdu)) {
+        pdu = pdu_create_with(tmp->sdu);
+        if (!pdu) {
                 receive_data_destroy(tmp);
                 return -1;
         }
 
-        return 0;
+        pdu_type = pci_type(pdu_pci(pdu));
+        switch (pdu_type) {
+        case PDU_TYPE_MGMT: {
+                struct sdu *    sdu;
+                struct buffer * buffer;
+
+                buffer = pdu_buffer_rw(pdu);
+                sdu = sdu_create_with(buffer);
+                if (!sdu) {
+                        receive_data_destroy(tmp);
+                        return -1;
+                }
+                if (kfa_sdu_post_to_user_space(tmp->kfa, sdu, tmp->from)) {
+                        receive_data_destroy(tmp);
+                        return -1;
+                }
+                
+                return 0;
+        }
+        case PDU_TYPE_DT: {
+                if (efcp_container_receive(tmp->efcpc,
+                                           pci_cep_destination(pdu_pci(pdu)),
+                                           pdu)) {
+                        receive_data_destroy(tmp);
+                        return -1;
+                }
+
+                return 0;
+        }
+        default:
+                LOG_ERR("Unknown PDU type %d", pdu_type);
+                return -1;
+        }
 }
 
 int rmt_receive(struct rmt * instance,
                 struct sdu * sdu,
                 port_id_t    from)
 {
-        struct pdu *           pdu;
         struct receive_data *  data;
         struct rwq_work_item * item;
 
@@ -318,32 +330,24 @@ int rmt_receive(struct rmt * instance,
                 LOG_ERR("No RMT passed");
                 return -1;
         }
-        /*
-         * FIXME : Remove this ASAP, we need a proper way to handle PDU <-> SDU
-         * conversions.
-         */
-        pdu = (struct pdu *) sdu;
-        if (!pdu) {
-                LOG_ERR("No PDU received");
+
+        data = receive_data_create(from, sdu, instance->kfa, instance->efcpc);
+        if (!is_receive_data_complete(data)) {
+                if (data)
+                        rkfree(data);
                 return -1;
         }
-
-        data = receive_data_create(from, pdu, instance->kfa, instance->efcpc);
-        if (!is_receive_data_complete(data))
-                return -1;
 
         /* Is this _ni() call really necessary ??? */
         item = rwq_work_create_ni(rmt_receive_worker, data);
         if (!item) {
-                buffer_destroy(data->pdu->buffer);
-                receive_data_destroy(data);
+                rkfree(data);
                 return -1;
         }
 
         ASSERT(instance->ingress_wq);
 
         if (rwq_work_post(instance->ingress_wq, item)) {
-                buffer_destroy(pdu->buffer);
                 receive_data_destroy(data);
                 return -1;
         }
