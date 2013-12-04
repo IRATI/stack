@@ -239,18 +239,18 @@ public class IPCProcessManager {
 		return ipcProcess;
 	}
 	
-	public synchronized void destroyIPCProcess(long ipcProcessId)
+	public synchronized void destroyIPCProcess(int ipcProcessId)
 			throws Exception{
 		ipcProcessFactory.destroy(ipcProcessId);
 	}
 	
-	public synchronized IPCProcess getIPCProcess(long ipcProcessId) 
+	public synchronized IPCProcess getIPCProcess(int ipcProcessId) 
 			throws Exception{
 		return ipcProcessFactory.getIPCProcess(ipcProcessId);
 	}
 	
 	public synchronized long requestAssignToDIF(
-			long ipcProcessID, String difName) throws Exception{
+			int ipcProcessID, String difName) throws Exception{
 		IPCProcess ipcProcess = getIPCProcess(ipcProcessID);
 		return requestAssignToDIF(ipcProcess, difName);
 	}
@@ -341,7 +341,7 @@ public class IPCProcessManager {
 		}
 	}
 	
-	public synchronized long requestUpdateDIFConfiguration(long ipcProcessID,
+	public synchronized long requestUpdateDIFConfiguration(int ipcProcessID,
 			DIFConfiguration difConfiguration) throws Exception{
 		IPCProcess ipcProcess = this.ipcProcessFactory.getIPCProcess(ipcProcessID);
 		long handle = ipcProcess.updateDIFConfiguration(difConfiguration);
@@ -382,7 +382,7 @@ public class IPCProcessManager {
 		};
 	}
 	
-	public synchronized long requestRegistrationToNMinusOneDIF(long ipcProcessId, String difName) 
+	public synchronized long requestRegistrationToNMinusOneDIF(int ipcProcessId, String difName) 
 			throws Exception{
 		IPCProcess ipcProcess = getIPCProcess(ipcProcessId);
 		IPCProcess nMinusOneIpcProcess = selectIPCProcessOfDIF(difName);
@@ -433,7 +433,7 @@ public class IPCProcessManager {
 		console.responseArrived(event);
 	}
 	
-	public synchronized long requestUnregistrationFromNMinusOneDIF(long ipcProcessId, String difName) 
+	public synchronized long requestUnregistrationFromNMinusOneDIF(int ipcProcessId, String difName) 
 			throws Exception{
 		IPCProcess ipcProcess = getIPCProcess(ipcProcessId);
 		IPCProcess nMinusOneIpcProcess = selectIPCProcessOfDIF(difName);
@@ -481,12 +481,12 @@ public class IPCProcessManager {
 		console.responseArrived(event);
 	}
 	
-	public synchronized void setInitialized(long ipcProcessId) throws Exception {
+	public synchronized void setInitialized(int ipcProcessId) throws Exception {
 		IPCProcess ipcProcess = this.getIPCProcess(ipcProcessId);
 		ipcProcess.setInitialized();
 	}
 	
-	public synchronized long requestEnrollmentToDIF(long ipcProcessId, String difName, 
+	public synchronized long requestEnrollmentToDIF(int ipcProcessId, String difName, 
 			String supportingDifName, String neighApName, String neighApInstance) throws Exception {
 		IPCProcess ipcProcess = getIPCProcess(ipcProcessId);
 		ApplicationProcessNamingInformation difNamingInfo = 
@@ -558,7 +558,7 @@ public class IPCProcessManager {
 		}
 	}
 	
-	public synchronized long requestQueryRIB(long ipcProcessId) throws Exception {
+	public synchronized long requestQueryRIB(int ipcProcessId) throws Exception {
 		IPCProcess ipcProcess = getIPCProcess(ipcProcessId);
 		return ipcProcess.queryRIB("", "", 0, 0, "");
 	}

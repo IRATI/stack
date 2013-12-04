@@ -13,7 +13,7 @@ public class UpdateDIFConfigurationCommand extends ConsoleCommand{
 	public static final String ID = "updatedifconf";
 	private static final String USAGE = "updatedifconf <ipcp_id>";
 	
-	private long ipcProcessId;
+	private int ipcProcessId;
 	
 	public UpdateDIFConfigurationCommand(IPCManager ipcManager, IPCManagerConsole console){
 		super(ID, ipcManager, console);
@@ -26,7 +26,7 @@ public class UpdateDIFConfigurationCommand extends ConsoleCommand{
 		}
 		
 		try{
-			ipcProcessId = Long.parseLong(splittedCommand[1]);
+			ipcProcessId = Integer.parseInt(splittedCommand[1]);
 			getIPCManager().requestUpdateDIFConfiguration(ipcProcessId, 
 					new DIFConfiguration());
 			return "Modified configuraiton of " + ipcProcessId + " successfully";

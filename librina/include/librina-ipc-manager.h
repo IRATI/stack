@@ -380,7 +380,7 @@ public:
 	IPCProcess();
 	IPCProcess(unsigned short id, unsigned int portId, pid_t pid, const std::string& type,
 			const ApplicationProcessNamingInformation& name);
-	unsigned int getId() const;
+	unsigned short getId() const;
 	const std::string& getType() const;
 	const ApplicationProcessNamingInformation& getName() const;
 	unsigned int getPortId() const;

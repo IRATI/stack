@@ -133,7 +133,7 @@ void IPCProcess::setDIFMember(bool difMember){
 	this->difMember = difMember;
 }
 
-unsigned int IPCProcess::getId() const {
+unsigned short IPCProcess::getId() const {
 	return id;
 }
 
