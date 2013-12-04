@@ -432,6 +432,32 @@ int ExtendedIPCManager::allocateFlowRequestArrived(
         return 0;
 }
 
+unsigned int ExtendedIPCManager::requestFlowAllocation(
+                const ApplicationProcessNamingInformation& localAppName,
+                const ApplicationProcessNamingInformation& remoteAppName,
+                const FlowSpecification& flowSpec)
+throw (FlowAllocationException) {
+        return internalRequestFlowAllocation(
+                        localAppName, remoteAppName, flowSpec, ipcProcessId);
+}
+
+unsigned int ExtendedIPCManager::requestFlowAllocationInDIF(
+                const ApplicationProcessNamingInformation& localAppName,
+                const ApplicationProcessNamingInformation& remoteAppName,
+                const ApplicationProcessNamingInformation& difName,
+                const FlowSpecification& flowSpec)
+throw (FlowAllocationException) {
+        return internalRequestFlowAllocationInDIF(localAppName,
+                        remoteAppName, difName, ipcProcessId, flowSpec);
+}
+
+Flow * ExtendedIPCManager::allocateFlowResponse(
+                const FlowRequestEvent& flowRequestEvent, int result,
+                bool notifySource) throw (FlowAllocationException) {
+        return internalAllocateFlowResponse(
+                        flowRequestEvent, result, notifySource, ipcProcessId);
+}
+
 void ExtendedIPCManager::notifyflowDeallocated(
 		const FlowDeallocateRequestEvent flowDeallocateEvent,
 		int result)

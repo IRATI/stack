@@ -435,11 +435,15 @@ class FlowRequestEvent: public IPCEvent {
 	/** True if it is a local application, false if it is a remote one */
 	bool localRequest;
 
+	/** 0 if it is an application, or the ID of the IPC Process otherwise */
+	int flowRequestorIpcProcessId;
+
 public:
 	FlowRequestEvent(const FlowSpecification& flowSpecification,
 			bool localRequest,
 			const ApplicationProcessNamingInformation& localApplicationName,
 			const ApplicationProcessNamingInformation& remoteApplicationName,
+			int flowRequestorIpcProcessId,
 			unsigned int sequenceNumber);
 	FlowRequestEvent(int portId,
 			const FlowSpecification& flowSpecification,
@@ -447,6 +451,7 @@ public:
 			const ApplicationProcessNamingInformation& localApplicationName,
 			const ApplicationProcessNamingInformation& remoteApplicationName,
 			const ApplicationProcessNamingInformation& DIFName,
+			int flowRequestorIpcProcessId,
 			unsigned int sequenceNumber);
 	int getPortId() const;
 	bool isLocalRequest() const;
@@ -456,6 +461,7 @@ public:
 	const ApplicationProcessNamingInformation& getDIFName() const;
 	const ApplicationProcessNamingInformation& getLocalApplicationName() const;
 	const ApplicationProcessNamingInformation& getRemoteApplicationName() const;
+	int getFlowRequestorIPCProcessId() const;
 };
 
 /**
@@ -639,13 +645,18 @@ class AllocateFlowResponseEvent: public BaseResponseEvent {
          */
         bool notifySource;
 
+        /** 0 if it is an application, or the ID of the IPC Process otherwise */
+        int flowAcceptorIpcProcessId;
+
 public:
         AllocateFlowResponseEvent(
                         int result,
                         bool notifysource,
+                        int flowAcceptorIpcProcessId,
                         unsigned int sequenceNumber);
         bool isNotifySource() const;
         int getPortId() const;
+        int getFlowAcceptorIpcProcessId() const;
 };
 
 /**

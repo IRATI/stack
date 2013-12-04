@@ -289,6 +289,27 @@ protected:
 
 	void removeApplicationRegistration(
 	                const ApplicationProcessNamingInformation& key);
+
+	unsigned int internalRequestFlowAllocation(
+	        const ApplicationProcessNamingInformation& localAppName,
+	        const ApplicationProcessNamingInformation& remoteAppName,
+	        const FlowSpecification& flow,
+	        unsigned short sourceIPCProcessId)
+	throw (FlowAllocationException);
+
+	unsigned int internalRequestFlowAllocationInDIF(
+	        const ApplicationProcessNamingInformation& localAppName,
+	        const ApplicationProcessNamingInformation& remoteAppName,
+	        const ApplicationProcessNamingInformation& difName,
+	        unsigned short sourceIPCProcessId,
+	        const FlowSpecification& flow)
+	throw (FlowAllocationException);
+
+	Flow * internalAllocateFlowResponse(
+	        const FlowRequestEvent& flowRequestEvent,
+	        int result, bool notifySource, unsigned short ipcProcessId)
+        throw (FlowAllocationException);
+
 public:
 	IPCManager();
 	~IPCManager() throw();
@@ -393,7 +414,7 @@ public:
 	 * @return A handler to be able to identify the proper response event
 	 * @throws FlowAllocationException if there are problems during the flow allocation
 	 */
-	unsigned int requestFlowAllocation(
+	virtual unsigned int requestFlowAllocation(
 			const ApplicationProcessNamingInformation& localAppName,
 			const ApplicationProcessNamingInformation& remoteAppName,
 			const FlowSpecification& flow) throw (FlowAllocationException);
@@ -407,7 +428,7 @@ public:
          * @return A handler to be able to identify the proper response event
          * @throws FlowAllocationException if there are problems during the flow allocation
 	 */
-	unsigned int requestFlowAllocationInDIF(
+	virtual unsigned int requestFlowAllocationInDIF(
 	                const ApplicationProcessNamingInformation& localAppName,
 	                const ApplicationProcessNamingInformation& remoteAppName,
 	                const ApplicationProcessNamingInformation& difName,
@@ -447,7 +468,7 @@ public:
 	 * @throws FlowAllocationException If there are problems
 	 * confirming/denying the flow
 	 */
-	Flow * allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
+	virtual Flow * allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
 			int result, bool notifySource)
 			throw (FlowAllocationException);
 
