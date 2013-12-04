@@ -20,7 +20,7 @@ import eu.irati.librina.rina;
  */
 public class FlowReader implements Runnable, FlowDeallocationListener{
 	
-	private static final long MAX_TIME_WITH_NO_DATA_IN_MS = 2*1000;
+	public static final long MAX_TIME_WITH_NO_DATA_IN_MS = 2*1000;
 	public static final long TIMER_PERIOD_IN_MS = 1000;
 	
 	private Flow flow = null;
@@ -69,19 +69,7 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 				if (testInformation.receivedAllSDUs()) {
 					testInformation.setLastSDUReceivedTime(
 							Calendar.getInstance().getTimeInMillis());
-					long testDuration = testInformation.getLastSDUReceivedTime() 
-							- testInformation.getFirstSDUSentTime();
-					if (testDuration == 0) {
-						testDuration = 1;
-					}
-					log.info("Test completed, sent and received " + 
-							testInformation.getNumberOfSDUs() + " of " 
-							+ testInformation.getSduSize() + 
-							" in " +testDuration + " ms.");
-					long bandwidthInBps = 1000*testInformation.getNumberOfSDUs()*testInformation.getSduSize()/testDuration;
-					log.info("Send and received at " + bandwidthInBps 
-							+ " Bytes per second ( " +bandwidthInBps*8/1024 + " Kbps)");
-					stop();
+					printStats();
 				}
 			}catch(Exception ex){
 				log.error("Problems reading SDU from flow "+flow.getPortId());
@@ -97,6 +85,12 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 		if (!stop) {
 			log.info("Requesting reader of flow "+flow.getPortId()+ " to stop");
 			stop = true;
+			
+			if (!testInformation.receivedAllSDUs()) {
+				log.info("Cancelling test since more than " + MAX_TIME_WITH_NO_DATA_IN_MS + 
+						" ms have gone bye without receiving an SDU");
+				printStats();
+			}
 		}
 		
 		terminateReader();
@@ -112,6 +106,29 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 		}
 		
 		timer.cancel();
+	}
+	
+	private void printStats() {
+		if (!testInformation.receivedAllSDUs()) {
+			log.info("Received "+testInformation.getSDUsReceived() + " out of " 
+					+ testInformation.getNumberOfSDUs() + " SDUs. ");
+			testInformation.setLastSDUReceivedTime(getLatestSDUReceivedTime());
+		}
+		
+		long testDuration = testInformation.getLastSDUReceivedTime() 
+				- testInformation.getFirstSDUSentTime();
+		if (testDuration == 0) {
+			testDuration = 1;
+		}
+		
+		log.info("Test completed, sent "+testInformation.getNumberOfSDUs() +" and received " + 
+				testInformation.getSDUsReceived() + " SDUs of " 
+				+ testInformation.getSduSize() + 
+				" bytes in " +testDuration + " ms.");
+		
+		long bandwidthInBps = 1000*testInformation.getNumberOfSDUs()*testInformation.getSduSize()/testDuration;
+		log.info("Send and received at " + bandwidthInBps 
+				+ " Bytes per second ( " +bandwidthInBps*8/1024 + " Kbps)");
 	}
 	
 	public synchronized boolean isStopped(){

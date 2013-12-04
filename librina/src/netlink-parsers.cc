@@ -362,6 +362,15 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 	        }
 	        return 0;
 	}
+	case RINA_C_IPCP_CONN_CREATE_REQUEST: {
+	        IpcpConnectionCreateRequestMessage * connCreateMessage =
+	                        dynamic_cast<IpcpConnectionCreateRequestMessage *>(message);
+	        if (putIpcpConnectionCreateRequestMessageObject(netlinkMessage,
+	                        *connCreateMessage) < 0) {
+	                return -1;
+	        }
+	        return 0;
+	}
 
 	default: {
 		return -1;
@@ -376,23 +385,28 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 
 	switch (nlhdr->cmd) {
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST: {
-		return parseAppAllocateFlowRequestMessage(netlinkMessageHeader);
+		return parseAppAllocateFlowRequestMessage(
+		                netlinkMessageHeader);
 	}
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT: {
-		return parseAppAllocateFlowRequestResultMessage(netlinkMessageHeader);
+		return parseAppAllocateFlowRequestResultMessage(
+		                netlinkMessageHeader);
 	}
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED: {
 		return parseAppAllocateFlowRequestArrivedMessage(
 				netlinkMessageHeader);
 	}
 	case RINA_C_APP_ALLOCATE_FLOW_RESPONSE: {
-		return parseAppAllocateFlowResponseMessage(netlinkMessageHeader);
+		return parseAppAllocateFlowResponseMessage(
+		                netlinkMessageHeader);
 	}
 	case RINA_C_APP_DEALLOCATE_FLOW_REQUEST: {
-		return parseAppDeallocateFlowRequestMessage(netlinkMessageHeader);
+		return parseAppDeallocateFlowRequestMessage(
+		                netlinkMessageHeader);
 	}
 	case RINA_C_APP_DEALLOCATE_FLOW_RESPONSE: {
-		return parseAppDeallocateFlowResponseMessage(netlinkMessageHeader);
+		return parseAppDeallocateFlowResponseMessage(
+		                netlinkMessageHeader);
 	}
 	case RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION: {
 		return parseAppFlowDeallocatedNotificationMessage(
@@ -443,43 +457,56 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 						netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST: {
-		return parseIpcmAssignToDIFRequestMessage(netlinkMessageHeader);
+		return parseIpcmAssignToDIFRequestMessage(
+		                netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE: {
-		return parseIpcmAssignToDIFResponseMessage(netlinkMessageHeader);
+		return parseIpcmAssignToDIFResponseMessage(
+		                netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST: {
-	        return parseIpcmUpdateDIFConfigurationRequestMessage(netlinkMessageHeader);
+	        return parseIpcmUpdateDIFConfigurationRequestMessage(
+	                        netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE: {
-	        return parseIpcmUpdateDIFConfigurationResponseMessage(netlinkMessageHeader);
+	        return parseIpcmUpdateDIFConfigurationResponseMessage(
+	                        netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_ENROLL_TO_DIF_REQUEST: {
-	        return parseIpcmEnrollToDIFRequestMessage(netlinkMessageHeader);
+	        return parseIpcmEnrollToDIFRequestMessage(
+	                        netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE: {
-	        return parseIpcmEnrollToDIFResponseMessage(netlinkMessageHeader);
+	        return parseIpcmEnrollToDIFResponseMessage
+	                        (netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION: {
-	        return parseIpcmNotifyNeighborsModifiedMessage(netlinkMessageHeader);
+	        return parseIpcmNotifyNeighborsModifiedMessage(
+	                        netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST: {
-		return parseIpcmAllocateFlowRequestMessage(netlinkMessageHeader);
+		return parseIpcmAllocateFlowRequestMessage(
+		                netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT: {
-		return parseIpcmAllocateFlowRequestResultMessage(netlinkMessageHeader);
+		return parseIpcmAllocateFlowRequestResultMessage(
+		                netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED: {
-		return parseIpcmAllocateFlowRequestArrivedMessage(netlinkMessageHeader);
+		return parseIpcmAllocateFlowRequestArrivedMessage(
+		                netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE: {
-		return parseIpcmAllocateFlowResponseMessage(netlinkMessageHeader);
+		return parseIpcmAllocateFlowResponseMessage(
+		                netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST: {
-		return parseIpcmDeallocateFlowRequestMessage(netlinkMessageHeader);
+		return parseIpcmDeallocateFlowRequestMessage(
+		                netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE: {
-		return parseIpcmDeallocateFlowResponseMessage(netlinkMessageHeader);
+		return parseIpcmDeallocateFlowResponseMessage(
+		                netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION: {
 		return parseIpcmFlowDeallocatedNotificationMessage(
@@ -490,17 +517,24 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 				netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_QUERY_RIB_REQUEST: {
-		return parseIpcmDIFQueryRIBRequestMessage(netlinkMessageHeader);
+		return parseIpcmDIFQueryRIBRequestMessage(
+		                netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_QUERY_RIB_RESPONSE: {
-		return parseIpcmDIFQueryRIBResponseMessage(netlinkMessageHeader);
+		return parseIpcmDIFQueryRIBResponseMessage(
+		                netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION: {
 		return parseIpcmNLSocketClosedNotificationMessage(
 				netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED: {
-	        return parseIpcmIPCProcessInitializedMessage(netlinkMessageHeader);
+	        return parseIpcmIPCProcessInitializedMessage(
+	                        netlinkMessageHeader);
+	}
+	case RINA_C_IPCP_CONN_CREATE_REQUEST: {
+	        return parseIpcpConnectionCreateRequestMessage(
+	                        netlinkMessageHeader);
 	}
 	default: {
 		LOG_ERR(
@@ -2501,6 +2535,22 @@ int putIpcmDIFQueryRIBResponseMessageObject(nl_msg* netlinkMessage,
 	nla_put_failure: LOG_ERR(
 			"Error building RIBObject Netlink object");
 	return -1;
+}
+
+int putIpcpConnectionCreateRequestMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionCreateRequestMessage& object) {
+        NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_PORT_ID, object.getPortId());
+        NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_SRC_ADDRESS,
+                        object.getSourceAddress());
+        NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_DEST_ADDRESS,
+                                object.getDestAddress());
+        NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_QOS_ID, object.getQosId());
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+            "Error building IpcpConnectionCreateRequestMessage Netlink object");
+        return -1;
 }
 
 AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
@@ -4718,6 +4768,55 @@ IpcmIPCProcessInitializedMessage * parseIpcmIPCProcessInitializedMessage(
                         result->setName(*ipcProcessName);
                         delete ipcProcessName;
                 }
+        }
+
+        return result;
+}
+
+IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
+                nlmsghdr *hdr) {
+        struct nla_policy attr_policy[ICCRM_ATTR_MAX + 1];
+        attr_policy[ICCRM_ATTR_PORT_ID].type = NLA_U32;
+        attr_policy[ICCRM_ATTR_PORT_ID].minlen = 4;
+        attr_policy[ICCRM_ATTR_PORT_ID].maxlen = 4;
+        attr_policy[ICCRM_ATTR_SRC_ADDRESS].type = NLA_U32;
+        attr_policy[ICCRM_ATTR_SRC_ADDRESS].minlen = 4;
+        attr_policy[ICCRM_ATTR_SRC_ADDRESS].maxlen = 4;
+        attr_policy[ICCRM_ATTR_DEST_ADDRESS].type = NLA_U32;
+        attr_policy[ICCRM_ATTR_DEST_ADDRESS].minlen = 4;
+        attr_policy[ICCRM_ATTR_DEST_ADDRESS].maxlen = 4;
+        attr_policy[ICCRM_ATTR_QOS_ID].type = NLA_U32;
+        attr_policy[ICCRM_ATTR_QOS_ID].minlen = 4;
+        attr_policy[ICCRM_ATTR_QOS_ID].maxlen = 4;
+        struct nlattr *attrs[ICCRM_ATTR_MAX + 1];
+
+        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+                        ICCRM_ATTR_MAX, attr_policy);
+        if (err < 0) {
+                LOG_ERR("Error parsing IpcpConnectionCreateRequestMessage information from Netlink message: %d",
+                         err);
+                return 0;
+        }
+
+        IpcpConnectionCreateRequestMessage * result =
+                        new IpcpConnectionCreateRequestMessage();
+
+        if (attrs[ICCRM_ATTR_PORT_ID]){
+                result->setPortId(nla_get_u32(attrs[ICCRM_ATTR_PORT_ID]));
+        }
+
+        if (attrs[ICCRM_ATTR_SRC_ADDRESS]){
+                result->setSourceAddress(
+                                nla_get_u32(attrs[ICCRM_ATTR_SRC_ADDRESS]));
+        }
+
+        if (attrs[ICCRM_ATTR_DEST_ADDRESS]){
+                result->setDestAddress(
+                                nla_get_u32(attrs[ICCRM_ATTR_DEST_ADDRESS]));
+        }
+
+        if (attrs[ICCRM_ATTR_QOS_ID]){
+                result->setQosId(nla_get_u32(attrs[ICCRM_ATTR_QOS_ID]));
         }
 
         return result;

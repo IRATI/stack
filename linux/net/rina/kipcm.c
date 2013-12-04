@@ -424,6 +424,8 @@ static int notify_ipcp_assign_dif_request(void *             data,
                 goto fail;
         }
 
+        LOG_DBG("Assign to dif operation seems ok, gonna complete it");
+
         return assign_to_dif_free_and_reply(msg,
                                             ipc_id,
                                             0,

@@ -476,7 +476,7 @@ static int tbls_create_gfp(gfp_t               flags,
                            size_t              hwlen)
 {
         struct table * cl;
-        
+
         LOG_DBG("Creating table for ptype = 0x%04X, hwlen = %zd",
                 ptype, hwlen);
 

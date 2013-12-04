@@ -781,7 +781,7 @@ enum IpcmNLSocketClosedNotificationMessageAttributes {
 IpcmNLSocketClosedNotificationMessage *
 	parseIpcmNLSocketClosedNotificationMessage(nlmsghdr *hdr);
 
-/* AppDeallocateFlowRequestMessage CLASS*/
+/* IpcmIPCProcessInitializedMessage CLASS*/
 enum IpcmIPCProcessInitializedMessageAttributes {
         IIPM_ATTR_NAME = 1,
         __IIPM_ATTR_MAX,
@@ -793,6 +793,23 @@ int putIpcmIPCProcessInitializedMessageObject(nl_msg* netlinkMessage,
                 const IpcmIPCProcessInitializedMessage& object);
 
 IpcmIPCProcessInitializedMessage * parseIpcmIPCProcessInitializedMessage(
+                nlmsghdr *hdr);
+
+/* IpcpConnectionCreateRequestMessage CLASS*/
+enum IpcpConnectionCreateRequestMessageAttributes {
+        ICCRM_ATTR_PORT_ID = 1,
+        ICCRM_ATTR_SRC_ADDRESS,
+        ICCRM_ATTR_DEST_ADDRESS,
+        ICCRM_ATTR_QOS_ID,
+        __ICCRM_ATTR_MAX,
+};
+
+#define ICCRM_ATTR_MAX (__ICCRM_ATTR_MAX -1)
+
+int putIpcpConnectionCreateRequestMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionCreateRequestMessage& object);
+
+IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
                 nlmsghdr *hdr);
 
 }

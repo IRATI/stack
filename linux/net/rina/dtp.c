@@ -213,42 +213,61 @@ int dtp_write(struct dtp * instance,
                 return -1;
         }
 
-#if 1
-        LOG_MISSING;
+        pci = pci_create();
+        if (!pci)
+                return -1;
 
-        pdu = NULL;
-        pci = NULL;
-#else
-        /* FIXME: Fix this code with the new DU API */
-        pdu = rkzalloc(sizeof(*pdu), GFP_KERNEL);
+        if (pci_cep_destination_set(pci,
+                                    instance->state_vector->connection->destination_cep_id)) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (pci_cep_source_set(pci,
+                               instance->state_vector->connection->source_cep_id)) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (pci_destination_set(pci,
+                                instance->state_vector->connection->destination_address)) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (pci_source_set(pci,
+                           instance->state_vector->connection->source_address)) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (pci_nxt_seq_send_set(pci,
+                                 instance->state_vector->next_sequence_to_send)) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (pci_qos_id_set(pci,
+                           instance->state_vector->connection->qos_id)) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        pdu = pdu_create();
         if (!pdu) {
-                LOG_ERR("Could not allocate memory for PDU");
-                return -1;
-        }
-        pci = rkzalloc(sizeof(*pci), GFP_KERNEL);
-        if (!pci) {
-                LOG_ERR("Could not allocate memory for PCI");
+                pci_destroy(pci);
                 return -1;
         }
 
-        /* FIXME : This is ugly as hell (c), must be removed asap */
-        pdu->pci             = pci;
-        pci->ceps.dest_id    =
-                instance->state_vector->connection->destination_cep_id;
-        pci->ceps.source_id  =
-                instance->state_vector->connection->source_cep_id;
-        pci->destination     =
-                instance->state_vector->connection->destination_address;
-        pci->source          =
-                instance->state_vector->connection->source_address;
-        pci->sequence_number =
-                instance->state_vector->next_sequence_to_send;
+        if (!pdu_buffer_set(pdu, sdu_buffer_rw(sdu))) {
+                pci_destroy(pci);
+                return -1;
+        }
 
-        instance->state_vector->next_sequence_to_send++;
-        pci->type = PDU_TYPE_DT;
-        pci->qos_id = instance->state_vector->connection->qos_id;
-        pdu->buffer = sdu->buffer;
-#endif
+        if (!pdu_pci_set(pdu, pci)) {
+                pci_destroy(pci);
+                return -1;
+        }
 
         /* Give the data to RMT now ! */
         return rmt_send(instance->rmt,
@@ -260,25 +279,25 @@ int dtp_write(struct dtp * instance,
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
 {
-#if 0
-        struct sdu * sdu;
-#endif
-
-        LOG_MISSING;
+        struct sdu *    sdu;
+        struct buffer * buffer;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
         }
 
-        if (!pdu) {
+        if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus data, bailing out");
                 return -1;
         }
 
-#if 0
-        sdu = (struct sdu *) pdu;
-        sdu->buffer = pdu->buffer;
+        buffer = pdu_buffer_get_rw(pdu);
+        sdu = sdu_create_with(buffer);
+        if (!sdu) {
+                pdu_destroy(pdu);
+                return -1;
+        }
         if (kfa_sdu_post(instance->kfa,
                          instance->state_vector->connection->port_id,
                          sdu)) {
@@ -286,14 +305,10 @@ int dtp_receive(struct dtp * instance,
                 pdu_destroy(pdu);
                 return -1;
         }
-        rkfree(pdu->pci);
+        /*
+         * FIXME: PDU is now useless, it must be destroyed, but its
+         * buffer is within the passed sdu, so pdu_destroy can't be used.
+         */
 
         return 0;
-#else
-        /* FIXME: Please fix with the new DU API */
-
-        LOG_MISSING;
-
-        return -1;
-#endif
 }

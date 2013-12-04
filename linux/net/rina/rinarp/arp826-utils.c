@@ -105,7 +105,7 @@ void gpa_destroy(struct gpa * gpa)
 EXPORT_SYMBOL(gpa_destroy);
 
 struct gpa * gpa_dup_gfp(gfp_t              flags,
-                                const struct gpa * gpa)
+                         const struct gpa * gpa)
 {
         if (!gpa_is_ok(gpa)) {
                 LOG_ERR("Bogus input parameter, cannot duplicate GPA");

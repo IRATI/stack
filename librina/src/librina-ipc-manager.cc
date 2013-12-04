@@ -564,6 +564,8 @@ throw (AllocateFlowException) {
 	message.setDestAppName(flowRequest.getRemoteApplicationName());
 	message.setFlowSpec(flowRequest.getFlowSpecification());
 	message.setDifName(flowRequest.getDIFName());
+	message.setSourceIpcProcessId(
+	                flowRequest.getFlowRequestorIPCProcessId());
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -612,7 +614,7 @@ void IPCProcess::allocateFlowResult(
 }
 
 void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
-		int result, bool notifySource)
+		int result, bool notifySource, int flowAcceptorIpcProcessId)
 		throw(AllocateFlowException){
 
 	if (result == 0) {
@@ -632,6 +634,7 @@ void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 	IpcmAllocateFlowResponseMessage responseMessage;
 	responseMessage.setResult(result);
 	responseMessage.setNotifySource(notifySource);
+	responseMessage.setSourceIpcProcessId(flowAcceptorIpcProcessId);
 	responseMessage.setDestIpcProcessId(id);
 	responseMessage.setDestPortId(portId);
 	responseMessage.setSequenceNumber(flowRequest.getSequenceNumber());
