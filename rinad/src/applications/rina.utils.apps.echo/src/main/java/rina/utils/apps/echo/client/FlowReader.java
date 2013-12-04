@@ -6,6 +6,7 @@ import java.util.Timer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import rina.utils.apps.echo.Echo;
 import rina.utils.apps.echo.TestInformation;
 import rina.utils.apps.echo.utils.FlowDeallocationListener;
 
@@ -20,7 +21,6 @@ import eu.irati.librina.rina;
  */
 public class FlowReader implements Runnable, FlowDeallocationListener{
 	
-	public static final long MAX_TIME_WITH_NO_DATA_IN_MS = 2*1000;
 	public static final long TIMER_PERIOD_IN_MS = 1000;
 	
 	private Flow flow = null;
@@ -46,7 +46,7 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 	}
 	
 	public boolean shouldStop(){
-		if (getLatestSDUReceivedTime() + MAX_TIME_WITH_NO_DATA_IN_MS < 
+		if (getLatestSDUReceivedTime() + Echo.MAX_TIME_WITH_NO_DATA_IN_MS < 
 				Calendar.getInstance().getTimeInMillis()) {
 			return true;
 		}
@@ -60,6 +60,7 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 		
 		TestDeclaredDeadTimerTask timerTask = new TestDeclaredDeadTimerTask(this, timer);
 		timer.schedule(timerTask, TIMER_PERIOD_IN_MS);
+		setLatestSDUReceivedTime(Calendar.getInstance().getTimeInMillis());
 		
 		while(!isStopped()){
 			try{
@@ -87,7 +88,7 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 			stop = true;
 			
 			if (!testInformation.receivedAllSDUs()) {
-				log.info("Cancelling test since more than " + MAX_TIME_WITH_NO_DATA_IN_MS + 
+				log.info("Cancelling test since more than " + Echo.MAX_TIME_WITH_NO_DATA_IN_MS + 
 						" ms have gone bye without receiving an SDU");
 				printStats();
 			}
@@ -121,7 +122,7 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 			testDuration = 1;
 		}
 		
-		log.info("Test completed, sent "+testInformation.getNumberOfSDUs() +" and received " + 
+		log.info("Test completed, sent "+testInformation.getSdusSent() +" and received " + 
 				testInformation.getSDUsReceived() + " SDUs of " 
 				+ testInformation.getSduSize() + 
 				" bytes in " +testDuration + " ms.");

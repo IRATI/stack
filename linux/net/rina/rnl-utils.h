@@ -152,6 +152,7 @@ enum ipcm_conn_create_arrived_attrs_list {
         ICCA_ATTR_DEST_ADDR,
         ICCA_ATTR_DEST_CEP_ID,
         ICCA_ATTR_QOS_ID,
+        ICCA_ATTR_FLOW_USER_IPC_PROCESS_ID,
         ICCA_ATTR_POLICIES,
         __ICCA_ATTR_MAX,
 };
@@ -169,6 +170,7 @@ enum ipcm_conn_update_req_attrs_list {
         ICURQ_ATTR_PORT_ID = 1,
         ICURQ_ATTR_SOURCE_CEP_ID,
         ICURQ_ATTR_DEST_CEP_ID,
+        ICURQ_ATTR_FLOW_USER_IPC_PROCESS_ID,
         __ICURQ_ATTR_MAX,
 };
 #define ICURQ_ATTR_MAX (__ICURQ_ATTR_MAX - 1)
@@ -507,12 +509,13 @@ struct rnl_ipcp_conn_create_resp_msg_attrs {
 };
 
 struct rnl_ipcp_conn_create_arrived_msg_attrs {
-        port_id_t port_id;
-        address_t src_addr;
-        address_t dst_addr;
-        cep_id_t  dst_cep;
-        qos_id_t  qos_id;
-        int       policies;
+        port_id_t        port_id;
+        address_t        src_addr;
+        address_t        dst_addr;
+        cep_id_t         dst_cep;
+        qos_id_t         qos_id;
+        ipc_process_id_t flow_user_ipc_process_id;
+        int              policies;
 };
 
 struct rnl_ipcp_conn_create_result_msg_attrs {
@@ -522,9 +525,10 @@ struct rnl_ipcp_conn_create_result_msg_attrs {
 };
 
 struct rnl_ipcp_conn_update_req_msg_attrs {
-        port_id_t port_id;
-        cep_id_t  src_cep;
-        cep_id_t  dst_cep;
+        port_id_t        port_id;
+        cep_id_t         src_cep;
+        cep_id_t         dst_cep;
+        ipc_process_id_t flow_user_ipc_process_id;
 };
 
 struct rnl_ipcp_conn_update_result_msg_attrs {
