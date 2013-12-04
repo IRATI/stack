@@ -1706,5 +1706,35 @@ IPCEvent* IpcpConnectionDestroyRequestMessage::toIPCEvent() {
         return 0;
 }
 
+/* CLASS IPCM CONNECTION DESTROY RESULT MESSAGE */
+IpcpConnectionDestroyResultMessage::IpcpConnectionDestroyResultMessage() :
+         BaseNetlinkMessage(RINA_C_IPCP_CONN_DESTROY_RESULT){
+        portId = 0;
+        result = 0;
+}
+
+int IpcpConnectionDestroyResultMessage::getResult() const {
+        return result;
+}
+
+void IpcpConnectionDestroyResultMessage::setResult(int result) {
+        this->result = result;
+}
+
+int IpcpConnectionDestroyResultMessage::getPortId() const {
+        return portId;
+}
+
+void IpcpConnectionDestroyResultMessage::setPortId(int portId) {
+        this->portId = portId;
+}
+
+IPCEvent* IpcpConnectionDestroyResultMessage::toIPCEvent() {
+        IPCEvent * event = new DestroyConnectionResultEvent(portId, result,
+                        getSequenceNumber());
+        return event;
+}
+
+
 }
 

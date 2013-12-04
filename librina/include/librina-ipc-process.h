@@ -216,6 +216,21 @@ public:
         int getPortId() const;
 };
 
+class DestroyConnectionResultEvent: public IPCEvent {
+
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /** The destination cep-id of the connection */
+        int result;
+
+public:
+        DestroyConnectionResultEvent(int portId, int result,
+                        unsigned int sequenceNumber);
+        int getResult() const;
+        int getPortId() const;
+};
+
 /**
  * Thrown when there are problems notifying the IPC Manager about the
  * result of an Assign to DIF operation

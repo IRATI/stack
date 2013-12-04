@@ -909,6 +909,21 @@ int putIpcpConnectionDestroyRequestMessageObject(nl_msg* netlinkMessage,
 IpcpConnectionDestroyRequestMessage * parseIpcpConnectionDestroyRequestMessage(
                 nlmsghdr *hdr);
 
+/* IpcpConnectionDestroyResultMessage CLASS */
+enum IpcpConnectionDestroyResultMessageAttributes {
+        ICDREM_ATTR_PORT_ID = 1,
+        ICDREM_ATTR_RESULT,
+        __ICDREM_ATTR_MAX,
+};
+
+#define ICDREM_ATTR_MAX (__ICDREM_ATTR_MAX -1)
+
+int putIpcpConnectionDestroyResultMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionDestroyResultMessage& object);
+
+IpcpConnectionDestroyResultMessage * parseIpcpConnectionDestroyResultMessage(
+                nlmsghdr *hdr);
+
 }
 
 

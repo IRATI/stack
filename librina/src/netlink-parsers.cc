@@ -425,6 +425,15 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 	        }
 	        return 0;
 	}
+	case RINA_C_IPCP_CONN_DESTROY_RESULT: {
+	        IpcpConnectionDestroyResultMessage * connDestroyMessage =
+	                        dynamic_cast<IpcpConnectionDestroyResultMessage *>(message);
+	        if (putIpcpConnectionDestroyResultMessageObject(netlinkMessage,
+	                        *connDestroyMessage) < 0) {
+	                return -1;
+	        }
+	        return 0;
+	}
 	default: {
 		return -1;
 	}
@@ -611,6 +620,10 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCP_CONN_DESTROY_REQUEST: {
 	        return parseIpcpConnectionDestroyRequestMessage(
+	                        netlinkMessageHeader);
+	}
+	case RINA_C_IPCP_CONN_DESTROY_RESULT: {
+	        return parseIpcpConnectionDestroyResultMessage(
 	                        netlinkMessageHeader);
 	}
 	default: {
@@ -2711,6 +2724,17 @@ int putIpcpConnectionDestroyRequestMessageObject(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
             "Error building IpcpConnectionDestroyRequestMessage Netlink object");
+        return -1;
+}
+
+int putIpcpConnectionDestroyResultMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionDestroyResultMessage& object) {
+        NLA_PUT_U32(netlinkMessage, ICDREM_ATTR_PORT_ID, object.getPortId());
+        NLA_PUT_U32(netlinkMessage, ICDREM_ATTR_RESULT, object.getResult());
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+            "Error building IpcpConnectionDestroyResultMessage Netlink object");
         return -1;
 }
 
@@ -5231,6 +5255,39 @@ IpcpConnectionDestroyRequestMessage * parseIpcpConnectionDestroyRequestMessage(
 
         if (attrs[ICDRM_ATTR_CEP_ID]){
                 result->setCepId(nla_get_u32(attrs[ICDRM_ATTR_CEP_ID]));
+        }
+
+        return result;
+}
+
+IpcpConnectionDestroyResultMessage * parseIpcpConnectionDestroyResultMessage(
+                nlmsghdr *hdr) {
+        struct nla_policy attr_policy[ICDREM_ATTR_MAX + 1];
+        attr_policy[ICDREM_ATTR_PORT_ID].type = NLA_U32;
+        attr_policy[ICDREM_ATTR_PORT_ID].minlen = 4;
+        attr_policy[ICDREM_ATTR_PORT_ID].maxlen = 4;
+        attr_policy[ICDREM_ATTR_RESULT].type = NLA_U32;
+        attr_policy[ICDREM_ATTR_RESULT].minlen = 4;
+        attr_policy[ICDREM_ATTR_RESULT].maxlen = 4;
+        struct nlattr *attrs[ICDREM_ATTR_MAX + 1];
+
+        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+                        ICDREM_ATTR_MAX, attr_policy);
+        if (err < 0) {
+                LOG_ERR("Error parsing IpcpConnectionDestroyResultMessage information from Netlink message: %d",
+                         err);
+                return 0;
+        }
+
+        IpcpConnectionDestroyResultMessage * result =
+                        new IpcpConnectionDestroyResultMessage();
+
+        if (attrs[ICDREM_ATTR_PORT_ID]){
+                result->setPortId(nla_get_u32(attrs[ICDREM_ATTR_PORT_ID]));
+        }
+
+        if (attrs[ICDREM_ATTR_RESULT]){
+                result->setResult(nla_get_u32(attrs[ICDREM_ATTR_RESULT]));
         }
 
         return result;

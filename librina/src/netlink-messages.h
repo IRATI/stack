@@ -1251,6 +1251,29 @@ public:
         IPCEvent* toIPCEvent();
 };
 
+/**
+ * Kernel IPC PRocess -> IPC Process Daemon. Report about the result of
+ * a connection destroy request operation
+ */
+class IpcpConnectionDestroyResultMessage: public BaseNetlinkMessage {
+
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /**
+         * The result of the operaiton
+         */
+        int result;
+
+public:
+        IpcpConnectionDestroyResultMessage();
+        int getResult() const;
+        void setResult(int result);
+        int getPortId() const;
+        void setPortId(int portId);
+        IPCEvent* toIPCEvent();
+};
+
 }
 
 #endif /* NETLINK_MESSAGES_H_ */

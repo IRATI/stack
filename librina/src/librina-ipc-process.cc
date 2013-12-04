@@ -195,6 +195,23 @@ int CreateConnectionResultEvent::getPortId() const {
         return portId;
 }
 
+/* CLASS DESTROY CONNECTION RESULT EVENT */
+DestroyConnectionResultEvent::DestroyConnectionResultEvent(int portId,
+        int result, unsigned int sequenceNumber):
+                IPCEvent(IPC_PROCESS_DESTROY_CONNECTION_RESULT,
+                                sequenceNumber) {
+        this->result = result;
+        this->portId = portId;
+}
+
+int DestroyConnectionResultEvent::getResult() const {
+        return result;
+}
+
+int DestroyConnectionResultEvent::getPortId() const {
+        return portId;
+}
+
 /* CLASS EXTENDED IPC MANAGER */
 const std::string ExtendedIPCManager::error_allocate_flow =
 		"Error allocating flow";

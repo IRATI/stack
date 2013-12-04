@@ -2801,6 +2801,58 @@ int testIpcpDestroyConnectionRequest() {
         return returnValue;
 }
 
+int testIpcpDestroyConnectionResult() {
+        std::cout << "TESTING IPCP DESTROY CONNECTION RESULT MESSAGE\n";
+        int returnValue = 0;
+
+        IpcpConnectionDestroyResultMessage message;
+        message.setPortId(25);
+        message.setResult(234);
+
+        struct nl_msg* netlinkMessage;
+        netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing Ipcp Destroy connection result"
+                                << "message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IpcpConnectionDestroyResultMessage * recoveredMessage =
+                        dynamic_cast<IpcpConnectionDestroyResultMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing Ipcp Destroy Connection result message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.getPortId() != recoveredMessage->getPortId()) {
+                std::cout << "Port id on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getResult()
+                        != recoveredMessage->getResult()) {
+                std::cout << "Result on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IpcpConnectionDestroyResultMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING LIBRINA-NETLINK-PARSERS\n";
 
@@ -3007,6 +3059,11 @@ int main(int argc, char * argv[]) {
 	}
 
 	result = testIpcpDestroyConnectionRequest();
+	if (result < 0) {
+	        return result;
+	}
+
+	result = testIpcpDestroyConnectionResult();
 	if (result < 0) {
 	        return result;
 	}
