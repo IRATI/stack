@@ -246,9 +246,11 @@ FlowAllocationListener, FlowDeallocationListener {
 
 				//3 Send SDUs to server
 				buffer = new byte[testInformation.getSduSize()];
+				int sentSDUs = 0;
 				for(int i=0; i<testInformation.getNumberOfSDUs(); i++){
 					try{
 						flow.writeSDU(buffer, buffer.length);
+						sentSDUs ++;
 						if (i==0) {
 							testInformation.setFirstSDUSentTime(
 									Calendar.getInstance().getTimeInMillis());
@@ -257,6 +259,9 @@ FlowAllocationListener, FlowDeallocationListener {
 						log.error("Error writing SDU "+i+" to port-id "+flow.getPortId());
 					}
 				}
+
+				testInformation.setSdusSent(sentSDUs);
+				log.info("Sent " + sentSDUs + " SDUs");
 			} else {
 				log.error("Problems allocating flow to control AE: " + echoApNamingInfo.toString());
 				

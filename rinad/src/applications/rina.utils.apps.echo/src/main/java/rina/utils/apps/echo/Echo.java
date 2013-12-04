@@ -8,6 +8,7 @@ public class Echo{
 	
 	public static final String DATA = "data";
 	public static final String CONTROL = "control";
+	public static final long MAX_TIME_WITH_NO_DATA_IN_MS = 2*1000;
 	
 	private EchoServer echoServer = null;
 	private EchoClient echoClient = null;
