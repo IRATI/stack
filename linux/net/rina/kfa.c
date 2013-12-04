@@ -207,7 +207,7 @@ int kfa_flow_bind(struct kfa *           instance,
         flow->state       = PORT_STATE_ALLOCATED;
         flow->ipc_process = ipc_process;
 
-        if (kfifo_alloc(&flow->sdu_ready, 10*PAGE_SIZE, GFP_ATOMIC)) {
+        if (kfifo_alloc(&flow->sdu_ready, PAGE_SIZE, GFP_ATOMIC)) {
                 LOG_ERR("Couldn't create the sdu-ready queue for "
                         "flow on port-id %d", pid);
                 rkfree(flow);
