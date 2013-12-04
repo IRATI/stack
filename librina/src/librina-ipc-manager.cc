@@ -133,7 +133,7 @@ void IPCProcess::setDIFMember(bool difMember){
 	this->difMember = difMember;
 }
 
-unsigned int IPCProcess::getId() const {
+unsigned short IPCProcess::getId() const {
 	return id;
 }
 
@@ -564,6 +564,8 @@ throw (AllocateFlowException) {
 	message.setDestAppName(flowRequest.getRemoteApplicationName());
 	message.setFlowSpec(flowRequest.getFlowSpecification());
 	message.setDifName(flowRequest.getDIFName());
+	message.setSourceIpcProcessId(
+	                flowRequest.getFlowRequestorIPCProcessId());
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -612,7 +614,7 @@ void IPCProcess::allocateFlowResult(
 }
 
 void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
-		int result, bool notifySource)
+		int result, bool notifySource, int flowAcceptorIpcProcessId)
 		throw(AllocateFlowException){
 
 	if (result == 0) {
@@ -632,6 +634,7 @@ void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 	IpcmAllocateFlowResponseMessage responseMessage;
 	responseMessage.setResult(result);
 	responseMessage.setNotifySource(notifySource);
+	responseMessage.setSourceIpcProcessId(flowAcceptorIpcProcessId);
 	responseMessage.setDestIpcProcessId(id);
 	responseMessage.setDestPortId(portId);
 	responseMessage.setSequenceNumber(flowRequest.getSequenceNumber());
@@ -794,10 +797,10 @@ IPCProcess * IPCProcessFactory::create(
 		const ApplicationProcessNamingInformation& ipcProcessName,
 		const std::string& difType) throw (CreateIPCProcessException) {
 	lock();
-	int ipcProcessId = 1;
+	unsigned short ipcProcessId = 1;
 	unsigned int portId = 0;
 	pid_t pid=0;
-	for (int i = 1; i < 1000; i++) {
+	for (unsigned short i = 1; i < 1000; i++) {
 		if (ipcProcesses.find(i) == ipcProcesses.end()) {
 			ipcProcessId = i;
 			break;
@@ -877,13 +880,13 @@ IPCProcess * IPCProcessFactory::create(
 	return ipcProcess;
 }
 
-void IPCProcessFactory::destroy(unsigned int ipcProcessId)
+void IPCProcessFactory::destroy(unsigned short ipcProcessId)
 throw (DestroyIPCProcessException) {
 	lock();
 
 	int resultUserSpace = 0;
 	int resultKernel = 0;
-	std::map<int, IPCProcess*>::iterator iterator;
+	std::map<unsigned short, IPCProcess*>::iterator iterator;
 	iterator = ipcProcesses.find(ipcProcessId);
 	if (iterator == ipcProcesses.end())
 	{
@@ -924,7 +927,7 @@ std::vector<IPCProcess *> IPCProcessFactory::listIPCProcesses() {
 	std::vector<IPCProcess *> response;
 
 	lock();
-	for (std::map<int, IPCProcess*>::iterator it = ipcProcesses.begin();
+	for (std::map<unsigned short, IPCProcess*>::iterator it = ipcProcesses.begin();
 			it != ipcProcesses.end(); ++it) {
 		response.push_back(it->second);
 	}
@@ -933,10 +936,10 @@ std::vector<IPCProcess *> IPCProcessFactory::listIPCProcesses() {
 	return response;
 }
 
-IPCProcess * IPCProcessFactory::getIPCProcess(unsigned int ipcProcessId)
+IPCProcess * IPCProcessFactory::getIPCProcess(unsigned short ipcProcessId)
         throw (GetIPCProcessException)
 {
-        std::map<int, IPCProcess*>::iterator iterator;
+        std::map<unsigned short, IPCProcess*>::iterator iterator;
 
         lock();
         iterator = ipcProcesses.find(ipcProcessId);

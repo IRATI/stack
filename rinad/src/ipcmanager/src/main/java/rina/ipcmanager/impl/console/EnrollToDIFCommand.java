@@ -19,7 +19,7 @@ public class EnrollToDIFCommand extends ConsoleCommand{
 	private static final String USAGE = "enrolldif <ipcp_id> <dif_name> <sup_dif_name> <neigh_ap_name> <neigh_ap_instance>";
 	
 	private CancelCommandTimerTask cancelCommandTask = null;
-	private long ipcProcessId;
+	private int ipcProcessId;
 	private String difName;
 	private String supportingDifName;
 	private String neighApName;
@@ -36,7 +36,7 @@ public class EnrollToDIFCommand extends ConsoleCommand{
 		}
 		
 		try{
-			ipcProcessId = Long.parseLong(splittedCommand[1]);
+			ipcProcessId = Integer.parseInt(splittedCommand[1]);
 		} catch(Exception ex) {
 			return "Could not parse ipcProcessId " + splittedCommand[1];
 		}

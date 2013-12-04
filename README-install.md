@@ -17,7 +17,7 @@ Requirements:
      - autoconf2.13
      - openjdk-6-jdk
      - git
-     - Latest SWIG version from http://swig.org ( >2.0.8 required)
+     - Latest SWIG version from http://swig.org (versions < 2.0.4 or > 2.0.8)
 
   To use shim-eth-vlan
      - vlan

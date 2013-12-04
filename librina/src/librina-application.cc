@@ -262,6 +262,111 @@ void IPCManager::removeApplicationRegistration(
         applicationRegistrations.erase(key);
 }
 
+unsigned int IPCManager::internalRequestFlowAllocation(
+                const ApplicationProcessNamingInformation& localAppName,
+                const ApplicationProcessNamingInformation& remoteAppName,
+                const FlowSpecification& flowSpec,
+                unsigned short sourceIPCProcessId) throw (FlowAllocationException) {
+        Flow * flow;
+
+#if STUB_API
+        flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED);
+        pendingFlows[0] = flow;
+        return 0;
+#else
+        AppAllocateFlowRequestMessage message;
+        message.setSourceAppName(localAppName);
+        message.setDestAppName(remoteAppName);
+        message.setSourceIpcProcessId(sourceIPCProcessId);
+        message.setFlowSpecification(flowSpec);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                throw FlowAllocationException(e.what());
+        }
+
+        flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED);
+        lock();
+        pendingFlows[message.getSequenceNumber()] = flow;
+        unlock();
+
+        return message.getSequenceNumber();
+#endif
+}
+
+unsigned int IPCManager::internalRequestFlowAllocationInDIF(
+                const ApplicationProcessNamingInformation& localAppName,
+                const ApplicationProcessNamingInformation& remoteAppName,
+                const ApplicationProcessNamingInformation& difName,
+                unsigned short sourceIPCProcessId,
+                const FlowSpecification& flowSpec)
+throw (FlowAllocationException) {
+        Flow * flow;
+
+#if STUB_API
+        flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED);
+        pendingFlows[0] = flow;
+        return 0;
+#else
+        AppAllocateFlowRequestMessage message;
+        message.setSourceAppName(localAppName);
+        message.setDestAppName(remoteAppName);
+        message.setSourceIpcProcessId(sourceIPCProcessId);
+        message.setFlowSpecification(flowSpec);
+        message.setDifName(difName);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                throw FlowAllocationException(e.what());
+        }
+
+        flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED);
+        lock();
+        pendingFlows[message.getSequenceNumber()] = flow;
+        unlock();
+
+        return message.getSequenceNumber();
+#endif
+}
+
+Flow * IPCManager::internalAllocateFlowResponse(
+                const FlowRequestEvent& flowRequestEvent,
+                int result, bool notifySource, unsigned short ipcProcessId)
+throw (FlowAllocationException) {
+#if STUB_API
+        //Do nothing
+#else
+        AppAllocateFlowResponseMessage responseMessage;
+        responseMessage.setResult(result);
+        responseMessage.setNotifySource(notifySource);
+        responseMessage.setSourceIpcProcessId(ipcProcessId);
+        responseMessage.setSequenceNumber(flowRequestEvent.getSequenceNumber());
+        responseMessage.setResponseMessage(true);
+        try{
+                rinaManager->sendMessage(&responseMessage);
+        }catch(NetlinkException &e){
+                throw FlowAllocationException(e.what());
+        }
+#endif
+        if (result != 0) {
+                LOG_WARN("Flow was not accepted, error code: %d", result);
+                return 0;
+        }
+
+        Flow * flow = new Flow(flowRequestEvent.getLocalApplicationName(),
+                        flowRequestEvent.getRemoteApplicationName(),
+                        flowRequestEvent.getFlowSpecification(), FLOW_ALLOCATED,
+                        flowRequestEvent.getDIFName(), flowRequestEvent.getPortId());
+        lock();
+        allocatedFlows[flowRequestEvent.getPortId()] = flow;
+        unlock();
+        return flow;
+}
+
 unsigned int IPCManager::getDIFProperties(
 		const ApplicationProcessNamingInformation& applicationName,
 		const ApplicationProcessNamingInformation& DIFName)
@@ -467,32 +572,8 @@ unsigned int IPCManager::requestFlowAllocation(
 		const ApplicationProcessNamingInformation& remoteAppName,
 		const FlowSpecification& flowSpec)
 throw (FlowAllocationException) {
-        Flow * flow;
-
-#if STUB_API
-        flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED);
-        pendingFlows[0] = flow;
-	return 0;
-#else
-	AppAllocateFlowRequestMessage message;
-	message.setSourceAppName(localAppName);
-	message.setDestAppName(remoteAppName);
-	message.setFlowSpecification(flowSpec);
-	message.setRequestMessage(true);
-
-	try{
-	        rinaManager->sendMessage(&message);
-	}catch(NetlinkException &e){
-	        throw FlowAllocationException(e.what());
-	}
-
-	flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED);
-	lock();
-	pendingFlows[message.getSequenceNumber()] = flow;
-	unlock();
-
-	return message.getSequenceNumber();
-#endif
+        return internalRequestFlowAllocation(
+                        localAppName, remoteAppName, flowSpec, 0);
 }
 
 unsigned int IPCManager::requestFlowAllocationInDIF(
@@ -501,33 +582,8 @@ unsigned int IPCManager::requestFlowAllocationInDIF(
                 const ApplicationProcessNamingInformation& difName,
                 const FlowSpecification& flowSpec)
 throw (FlowAllocationException) {
-        Flow * flow;
-
-#if STUB_API
-        flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED);
-        pendingFlows[0] = flow;
-        return 0;
-#else
-        AppAllocateFlowRequestMessage message;
-        message.setSourceAppName(localAppName);
-        message.setDestAppName(remoteAppName);
-        message.setFlowSpecification(flowSpec);
-        message.setDifName(difName);
-        message.setRequestMessage(true);
-
-        try{
-                rinaManager->sendMessage(&message);
-        }catch(NetlinkException &e){
-                throw FlowAllocationException(e.what());
-        }
-
-        flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED);
-        lock();
-        pendingFlows[message.getSequenceNumber()] = flow;
-        unlock();
-
-        return message.getSequenceNumber();
-#endif
+        return internalRequestFlowAllocationInDIF(localAppName,
+                        remoteAppName, difName, 0, flowSpec);
 }
 
 Flow * IPCManager::commitPendingFlow(unsigned int sequenceNumber, int portId,
@@ -576,34 +632,8 @@ FlowInformation IPCManager::withdrawPendingFlow(unsigned int sequenceNumber)
 Flow * IPCManager::allocateFlowResponse(
 		const FlowRequestEvent& flowRequestEvent, int result,
 		bool notifySource) throw (FlowAllocationException) {
-
-#if STUB_API
-	//Do nothing
-#else
-	AppAllocateFlowResponseMessage responseMessage;
-	responseMessage.setResult(result);
-	responseMessage.setNotifySource(notifySource);
-	responseMessage.setSequenceNumber(flowRequestEvent.getSequenceNumber());
-	responseMessage.setResponseMessage(true);
-	try{
-		rinaManager->sendMessage(&responseMessage);
-	}catch(NetlinkException &e){
-		throw FlowAllocationException(e.what());
-	}
-#endif
-        if (result != 0) {
-                LOG_WARN("Flow was not accepted, error code: %d", result);
-                return 0;
-        }
-
-	Flow * flow = new Flow(flowRequestEvent.getLocalApplicationName(),
-			flowRequestEvent.getRemoteApplicationName(),
-			flowRequestEvent.getFlowSpecification(), FLOW_ALLOCATED,
-			flowRequestEvent.getDIFName(), flowRequestEvent.getPortId());
-	lock();
-	allocatedFlows[flowRequestEvent.getPortId()] = flow;
-	unlock();
-	return flow;
+        return internalAllocateFlowResponse(
+                        flowRequestEvent, result, notifySource, 0);
 }
 
 unsigned int IPCManager::requestFlowDeallocation(int portId)

@@ -80,7 +80,7 @@ static bool is_resolve_data_matching(struct resolve_data * a,
         LOG_DBG("Dumping ptype");
 
         if (a->dev != b->dev)
-            return false;
+                return false;
 
         if (!(a->ptype == b->ptype)       ||
             !gha_is_equal(a->sha, b->tha) ||
@@ -196,7 +196,7 @@ static int resolver(void * o)
 static struct workqueue_struct * arm_wq = NULL;
 
 /* FIXME: We should have a wq-alike job posting approach ... */
-int arm_resolve(struct net_device * dev, 
+int arm_resolve(struct net_device * dev,
                 uint16_t            ptype,
                 struct gpa *        spa,
                 struct gha *        sha,

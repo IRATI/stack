@@ -424,6 +424,8 @@ static int notify_ipcp_assign_dif_request(void *             data,
                 goto fail;
         }
 
+        LOG_DBG("Assign to dif operation seems ok, gonna complete it");
+
         return assign_to_dif_free_and_reply(msg,
                                             ipc_id,
                                             0,
@@ -796,6 +798,7 @@ static int notify_ipcp_conn_create_arrived(void *             data,
         struct ipcp_instance *                          ipcp;
         struct kipcm *                                  kipcm;
         ipc_process_id_t                                ipc_id;
+        ipc_process_id_t                                user_ipc_id;
         port_id_t                                       port_id;
         cep_id_t                                        src_cep;
 
@@ -824,9 +827,10 @@ static int notify_ipcp_conn_create_arrived(void *             data,
                 goto fail;
         }
 
-        port_id = attrs->port_id;
-        ipc_id  = msg->header.dst_ipc_id;
-        ipcp    = ipcp_imap_find(kipcm->instances, ipc_id);
+        port_id     = attrs->port_id;
+        ipc_id      = msg->header.dst_ipc_id;
+        user_ipc_id = attrs->flow_user_ipc_process_id;
+        ipcp        = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipcp) {
                 goto fail;
         }
@@ -843,6 +847,21 @@ static int notify_ipcp_conn_create_arrived(void *             data,
         if (!is_cep_id_ok(src_cep)) {
                 LOG_ERR("IPC process could not create connection");
                 goto fail;
+        }
+
+        if (user_ipc_id) {
+                struct ipcp_instance * user_ipcp;
+
+                user_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
+                if (!user_ipcp) {
+                        ipcp->ops->connection_destroy(ipcp->data, src_cep);
+                        goto fail;
+                }
+                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                                      port_id)) {
+                        ipcp->ops->connection_destroy(ipcp->data, src_cep);
+                        goto fail;
+                }
         }
 
         return conn_create_result_free_and_reply(msg,
@@ -894,6 +913,7 @@ static int notify_ipcp_conn_update_req(void *             data,
         struct ipcp_instance *                      ipcp;
         struct kipcm *                              kipcm;
         ipc_process_id_t                            ipc_id;
+        ipc_process_id_t                            user_ipc_id;
         port_id_t                                   port_id;
 
         ipc_id = 0;
@@ -920,9 +940,10 @@ static int notify_ipcp_conn_update_req(void *             data,
         if (rnl_parse_msg(info, msg))
                 goto fail;
 
-        port_id = attrs->port_id;
-        ipc_id  = msg->header.dst_ipc_id;
-        ipcp    = ipcp_imap_find(kipcm->instances, ipc_id);
+        port_id     = attrs->port_id;
+        ipc_id      = msg->header.dst_ipc_id;
+        user_ipc_id = attrs->flow_user_ipc_process_id;
+        ipcp        = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipcp)
                 goto fail;
 
@@ -931,6 +952,23 @@ static int notify_ipcp_conn_update_req(void *             data,
                                          attrs->src_cep,
                                          attrs->dst_cep))
                 goto fail;
+
+        if (user_ipc_id) {
+                struct ipcp_instance * user_ipcp;
+
+                user_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
+                if (!user_ipcp) {
+                        ipcp->ops->connection_destroy(ipcp->data,
+                                                      attrs->src_cep);
+                        goto fail;
+                }
+                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                                      port_id)) {
+                        ipcp->ops->connection_destroy(ipcp->data,
+                                                      attrs->src_cep);
+                        goto fail;
+                }
+        }
 
         return conn_update_result_free_and_reply(msg,
                                                  ipc_id,

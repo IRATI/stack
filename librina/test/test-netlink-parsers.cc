@@ -2386,6 +2386,69 @@ int testAppGetDIFPropertiesResponseMessage() {
 	return returnValue;
 }
 
+int testIpcpCreateConnectionRequest() {
+        std::cout << "TESTING IPCP CREATE CONNECTION REQUEST MESSAGE\n";
+        int returnValue = 0;
+
+        IpcpConnectionCreateRequestMessage message;
+        message.setPortId(25);
+        message.setSourceAddress(1);
+        message.setDestAddress(2);
+        message.setQosId(3);
+
+        struct nl_msg* netlinkMessage;
+        netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing Ipcp Create Connection request"
+                                << "message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IpcpConnectionCreateRequestMessage * recoveredMessage =
+                        dynamic_cast<IpcpConnectionCreateRequestMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing Ipcp Create Connection request Message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.getPortId() != recoveredMessage->getPortId()) {
+                std::cout << "Port id on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getSourceAddress()
+                        != recoveredMessage->getSourceAddress()) {
+                std::cout << "Source address  on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getDestAddress() !=
+                        recoveredMessage->getDestAddress()) {
+                std::cout << "Destination address on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getQosId() != recoveredMessage->getQosId()) {
+                std::cout << "QoS id on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IpcpConnectionCreateRequestMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING LIBRINA-NETLINK-PARSERS\n";
 
@@ -2559,5 +2622,10 @@ int main(int argc, char * argv[]) {
 	result = testIpcmQueryRIBResponseMessage();
 	if (result < 0) {
 		return result;
+	}
+
+	result = testIpcpCreateConnectionRequest();
+	if (result < 0) {
+	        return result;
 	}
 }

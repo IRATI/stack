@@ -380,7 +380,7 @@ public:
 	IPCProcess();
 	IPCProcess(unsigned short id, unsigned int portId, pid_t pid, const std::string& type,
 			const ApplicationProcessNamingInformation& name);
-	unsigned int getId() const;
+	unsigned short getId() const;
 	const std::string& getType() const;
 	const ApplicationProcessNamingInformation& getName() const;
 	unsigned int getPortId() const;
@@ -618,10 +618,15 @@ public:
 	 * @param flowRequest
 	 * @param result 0 if the request is accepted, negative number indicating error
 	 * otherwise
+	 * @param notifySource true if the IPC Process has to reply to the source, false
+	 * otherwise
+	 * @param flowAcceptorIpcProcessId the IPC Process id of the Process that accepted
+	 * or rejected the flow (0 if it is an application)
 	 * @throws AllocateFlowException if something goes wrong
 	 */
 	void allocateFlowResponse(const FlowRequestEvent& flowRequest,
-			int result, bool notifySource)
+			int result, bool notifySource,
+			int flowAcceptorIpcProcessId)
 		throw(AllocateFlowException);
 
 	/**
@@ -692,7 +697,7 @@ public:
 class IPCProcessFactory: public Lockable {
 
         /** The current IPC Processes in the system*/
-        std::map<int, IPCProcess*> ipcProcesses;
+        std::map<unsigned short, IPCProcess*> ipcProcesses;
 
 public:
         static const std::string unknown_ipc_process_error;
@@ -734,7 +739,7 @@ public:
          * @param ipcProcessId The identifier of the IPC Process to be destroyed
          * @throws DestroyIPCProcessException if an error happens during the operation execution
          */
-        void destroy(unsigned int ipcProcessId)
+        void destroy(unsigned short ipcProcessId)
         throw (DestroyIPCProcessException);
 
         /**
@@ -752,7 +757,7 @@ public:
          * @throws GetIPCProcessException if no IPC Process with the specified
          * id is found
          */
-        IPCProcess * getIPCProcess(unsigned int ipcProcessId)
+        IPCProcess * getIPCProcess(unsigned short ipcProcessId)
                 throw (GetIPCProcessException);
 };
 

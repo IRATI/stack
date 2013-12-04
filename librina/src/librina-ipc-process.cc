@@ -432,6 +432,32 @@ int ExtendedIPCManager::allocateFlowRequestArrived(
         return 0;
 }
 
+unsigned int ExtendedIPCManager::requestFlowAllocation(
+                const ApplicationProcessNamingInformation& localAppName,
+                const ApplicationProcessNamingInformation& remoteAppName,
+                const FlowSpecification& flowSpec)
+throw (FlowAllocationException) {
+        return internalRequestFlowAllocation(
+                        localAppName, remoteAppName, flowSpec, ipcProcessId);
+}
+
+unsigned int ExtendedIPCManager::requestFlowAllocationInDIF(
+                const ApplicationProcessNamingInformation& localAppName,
+                const ApplicationProcessNamingInformation& remoteAppName,
+                const ApplicationProcessNamingInformation& difName,
+                const FlowSpecification& flowSpec)
+throw (FlowAllocationException) {
+        return internalRequestFlowAllocationInDIF(localAppName,
+                        remoteAppName, difName, ipcProcessId, flowSpec);
+}
+
+Flow * ExtendedIPCManager::allocateFlowResponse(
+                const FlowRequestEvent& flowRequestEvent, int result,
+                bool notifySource) throw (FlowAllocationException) {
+        return internalAllocateFlowResponse(
+                        flowRequestEvent, result, notifySource, ipcProcessId);
+}
+
 void ExtendedIPCManager::notifyflowDeallocated(
 		const FlowDeallocateRequestEvent flowDeallocateEvent,
 		int result)
@@ -496,6 +522,46 @@ void ExtendedIPCManager::queryRIBResponse(
 
 Singleton<ExtendedIPCManager> extendedIPCManager;
 
+/* CLASS CONNECTION */
+Connection::Connection() {
+        portId = 0;
+        sourceAddress = 0;
+        destAddress = 0;
+        qosId = 0;
+}
+
+unsigned int Connection::getDestAddress() const {
+        return destAddress;
+}
+
+void Connection::setDestAddress(unsigned int destAddress) {
+        this->destAddress = destAddress;
+}
+
+int Connection::getPortId() const {
+        return portId;
+}
+
+void Connection::setPortId(int portId) {
+        this->portId = portId;
+}
+
+unsigned int Connection::getQosId() const {
+        return qosId;
+}
+
+void Connection::setQosId(unsigned int qosId) {
+        this->qosId = qosId;
+}
+
+unsigned int Connection::getSourceAddress() const {
+        return sourceAddress;
+}
+
+void Connection::setSourceAddress(unsigned int sourceAddress){
+        this->sourceAddress = sourceAddress;
+}
+
 /* CLASS KERNEL IPC PROCESS */
 void KernelIPCProcess::setIPCProcessId(unsigned short ipcProcessId) {
         this->ipcProcessId = ipcProcessId;
@@ -515,6 +581,7 @@ throw (AssignToDIFException) {
 #else
         IpcmAssignToDIFRequestMessage message;
         message.setDIFInformation(difInformation);
+        message.setSourceIpcProcessId(ipcProcessId);
         message.setDestIpcProcessId(ipcProcessId);
         message.setDestPortId(0);
         message.setRequestMessage(true);
@@ -540,6 +607,7 @@ throw (UpdateDIFConfigurationException) {
 #else
         IpcmUpdateDIFConfigurationRequestMessage message;
         message.setDIFConfiguration(difConfiguration);
+        message.setSourceIpcProcessId(ipcProcessId);
         message.setDestIpcProcessId(ipcProcessId);
         message.setDestPortId(0);
         message.setRequestMessage(true);
@@ -548,6 +616,36 @@ throw (UpdateDIFConfigurationException) {
                 rinaManager->sendMessage(&message);
         }catch(NetlinkException &e){
                 throw UpdateDIFConfigurationException(e.what());
+        }
+
+        seqNum = message.getSequenceNumber();
+
+#endif
+        return seqNum;
+}
+
+unsigned int KernelIPCProcess::createConnection(
+                const Connection& connection)
+        throw (CreateConnectionException) {
+        unsigned int seqNum=0;
+
+#if STUB_API
+        //Do nothing
+#else
+        IpcpConnectionCreateRequestMessage message;
+        message.setPortId(connection.getPortId());
+        message.setSourceAddress(connection.getSourceAddress());
+        message.setDestAddress(connection.getDestAddress());
+        message.setQosId(connection.getQosId());
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                throw CreateConnectionException(e.what());
         }
 
         seqNum = message.getSequenceNumber();

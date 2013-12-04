@@ -445,8 +445,14 @@ public class IPCProcess {
 	}
 	
 	private synchronized void processAssignToDIFResponseEvent(AssignToDIFResponseEvent event) throws Exception{
+		if (getOperationalState() == State.ASSIGNED_TO_DIF ) {
+			log.info("Got reply from the Kernel components regarding DIF assignmnet: " 
+					+ event.getResult());
+			return;
+		}
+		
 		if (getOperationalState() != State.ASSIGN_TO_DIF_IN_PROCESS) {
-			log.error("Got a DIF assignment response while not in ASSIGN_TO_DIF_IN_CPORCES state." 
+			log.error("Got a DIF assignment response while not in ASSIGN_TO_DIF_IN_PROCESS state." 
 						+ " Current state is " + getOperationalState());
 			return;
 		}
@@ -459,7 +465,8 @@ public class IPCProcess {
 		}
 		
 		if (!(ipcEvent instanceof AssignToDIFRequestEvent)){
-			log.error("Expected an Assign To DIF Request Event, but got event of type: " + ipcEvent.getClass().getName());
+			log.error("Expected an Assign To DIF Request Event, but got event of type: " 
+					+ ipcEvent.getClass().getName());
 			return;
 		}
 		

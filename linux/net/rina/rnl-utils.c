@@ -268,93 +268,92 @@ struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
 
         tmp->attr_type = type;
 
-        switch (tmp->attr_type)
-                {
-                case RNL_MSG_ATTRS_ALLOCATE_FLOW_REQUEST:
-                        tmp->attrs =
-                                rnl_ipcm_alloc_flow_req_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_ALLOCATE_FLOW_RESPONSE:
-                        tmp->attrs =
-                                rnl_alloc_flow_resp_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_DEALLOCATE_FLOW_REQUEST:
-                        tmp->attrs =
-                                rnl_ipcm_dealloc_flow_req_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_ASSIGN_TO_DIF_REQUEST:
-                        tmp->attrs =
-                                rnl_ipcm_assign_to_dif_req_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_UPDATE_DIF_CONFIG_REQUEST:
-                        tmp->attrs =
-                                rnl_ipcm_update_dif_config_req_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_REG_UNREG_REQUEST:
-                        tmp->attrs =
-                                rnl_ipcm_reg_app_req_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_CONN_CREATE_REQUEST:
-                        tmp->attrs =
-                                rnl_ipcp_conn_create_req_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_CONN_CREATE_ARRIVED:
-                        tmp->attrs =
-                                rnl_ipcp_conn_create_arrived_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_CONN_UPDATE_REQUEST:
-                        tmp->attrs =
-                                rnl_ipcp_conn_update_req_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                case RNL_MSG_ATTRS_CONN_DESTROY_REQUEST:
-                        tmp->attrs =
-                                rnl_ipcp_conn_destroy_req_msg_attrs_create();
-                        if (!tmp->attrs) {
-                                rkfree(tmp);
-                                return NULL;
-                        }
-                        break;
-                default:
-                        LOG_ERR("Unknown attributes type %d", tmp->attr_type);
+        switch (tmp->attr_type) {
+        case RNL_MSG_ATTRS_ALLOCATE_FLOW_REQUEST:
+                tmp->attrs =
+                        rnl_ipcm_alloc_flow_req_msg_attrs_create();
+                if (!tmp->attrs) {
                         rkfree(tmp);
                         return NULL;
                 }
+                break;
+        case RNL_MSG_ATTRS_ALLOCATE_FLOW_RESPONSE:
+                tmp->attrs =
+                        rnl_alloc_flow_resp_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_DEALLOCATE_FLOW_REQUEST:
+                tmp->attrs =
+                        rnl_ipcm_dealloc_flow_req_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_ASSIGN_TO_DIF_REQUEST:
+                tmp->attrs =
+                        rnl_ipcm_assign_to_dif_req_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_UPDATE_DIF_CONFIG_REQUEST:
+                tmp->attrs =
+                        rnl_ipcm_update_dif_config_req_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_REG_UNREG_REQUEST:
+                tmp->attrs =
+                        rnl_ipcm_reg_app_req_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_CONN_CREATE_REQUEST:
+                tmp->attrs =
+                        rnl_ipcp_conn_create_req_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_CONN_CREATE_ARRIVED:
+                tmp->attrs =
+                        rnl_ipcp_conn_create_arrived_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_CONN_UPDATE_REQUEST:
+                tmp->attrs =
+                        rnl_ipcp_conn_update_req_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_CONN_DESTROY_REQUEST:
+                tmp->attrs =
+                        rnl_ipcp_conn_destroy_req_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        default:
+                LOG_ERR("Unknown attributes type %d", tmp->attr_type);
+                rkfree(tmp);
+                return NULL;
+        }
 
         return tmp;
 }
@@ -485,41 +484,40 @@ int rnl_msg_destroy(struct rnl_msg * msg)
         if (!msg)
                 return -1;
 
-        switch(msg->attr_type)
-                {
-                case RNL_MSG_ATTRS_ALLOCATE_FLOW_REQUEST:
-                        rnl_ipcm_alloc_flow_req_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_ALLOCATE_FLOW_RESPONSE:
-                        rnl_alloc_flow_resp_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_DEALLOCATE_FLOW_REQUEST:
-                        rnl_ipcm_dealloc_flow_req_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_ASSIGN_TO_DIF_REQUEST:
-                        rnl_ipcm_assign_to_dif_req_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_UPDATE_DIF_CONFIG_REQUEST:
-                        rnl_ipcm_update_dif_config_req_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_REG_UNREG_REQUEST:
-                        rnl_ipcm_reg_app_req_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_CONN_CREATE_REQUEST:
-                        rnl_ipcp_conn_create_req_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_CONN_CREATE_ARRIVED:
-                        rnl_ipcp_conn_create_arrived_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_CONN_UPDATE_REQUEST:
-                        rnl_ipcp_conn_update_req_msg_attrs_destroy(msg->attrs);
-                        break;
-                case RNL_MSG_ATTRS_CONN_DESTROY_REQUEST:
-                        rnl_ipcp_conn_destroy_req_msg_attrs_destroy(msg->attrs);
-                        break;
-                default:
-                        break;
-                }
+        switch(msg->attr_type) {
+        case RNL_MSG_ATTRS_ALLOCATE_FLOW_REQUEST:
+                rnl_ipcm_alloc_flow_req_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_ALLOCATE_FLOW_RESPONSE:
+                rnl_alloc_flow_resp_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_DEALLOCATE_FLOW_REQUEST:
+                rnl_ipcm_dealloc_flow_req_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_ASSIGN_TO_DIF_REQUEST:
+                rnl_ipcm_assign_to_dif_req_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_UPDATE_DIF_CONFIG_REQUEST:
+                rnl_ipcm_update_dif_config_req_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_REG_UNREG_REQUEST:
+                rnl_ipcm_reg_app_req_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_CONN_CREATE_REQUEST:
+                rnl_ipcp_conn_create_req_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_CONN_CREATE_ARRIVED:
+                rnl_ipcp_conn_create_arrived_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_CONN_UPDATE_REQUEST:
+                rnl_ipcp_conn_update_req_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_CONN_DESTROY_REQUEST:
+                rnl_ipcp_conn_destroy_req_msg_attrs_destroy(msg->attrs);
+                break;
+        default:
+                break;
+        }
 
         rkfree(msg);
 
@@ -1092,8 +1090,7 @@ static int rnl_parse_ipcm_ipcp_dif_reg_noti_msg(struct genl_info * info,
         return 0;
 
  parse_fail:
-        LOG_ERR(
-                BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIF"));
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIF"));
         return -1;
 }
 
@@ -1308,15 +1305,15 @@ static int rnl_parse_ipcm_conn_create_req_msg(struct genl_info * info,
         int    result;
 
         attr_policy[ICCRQ_ATTR_PORT_ID].type = NLA_U32;
-        attr_policy[ICCRQ_ATTR_PORT_ID].len = 0;
+        attr_policy[ICCRQ_ATTR_PORT_ID].len = 4;
         attr_policy[ICCRQ_ATTR_SOURCE_ADDR].type = NLA_U32;
-        attr_policy[ICCRQ_ATTR_SOURCE_ADDR].len = 0;
+        attr_policy[ICCRQ_ATTR_SOURCE_ADDR].len = 4;
         attr_policy[ICCRQ_ATTR_DEST_ADDR].type = NLA_U32;
-        attr_policy[ICCRQ_ATTR_DEST_ADDR].len = 0;
+        attr_policy[ICCRQ_ATTR_DEST_ADDR].len = 4;
         attr_policy[ICCRQ_ATTR_QOS_ID].type = NLA_U32;
-        attr_policy[ICCRQ_ATTR_QOS_ID].len = 0;
+        attr_policy[ICCRQ_ATTR_QOS_ID].len = 4;
         attr_policy[ICCRQ_ATTR_POLICIES].type = NLA_U32;
-        attr_policy[ICCRQ_ATTR_POLICIES].len = 0;
+        attr_policy[ICCRQ_ATTR_POLICIES].len = 4;
 
         result = nlmsg_parse(info->nlhdr,
                              sizeof(struct genlmsghdr) +
@@ -1361,17 +1358,19 @@ static int rnl_parse_ipcm_conn_create_arrived_msg(struct genl_info * info,
         int    result;
 
         attr_policy[ICCA_ATTR_PORT_ID].type = NLA_U32;
-        attr_policy[ICCA_ATTR_PORT_ID].len = 0;
+        attr_policy[ICCA_ATTR_PORT_ID].len = 4;
         attr_policy[ICCA_ATTR_SOURCE_ADDR].type = NLA_U32;
-        attr_policy[ICCA_ATTR_SOURCE_ADDR].len = 0;
+        attr_policy[ICCA_ATTR_SOURCE_ADDR].len = 4;
         attr_policy[ICCA_ATTR_DEST_ADDR].type = NLA_U32;
-        attr_policy[ICCA_ATTR_DEST_ADDR].len = 0;
+        attr_policy[ICCA_ATTR_DEST_ADDR].len = 4;
         attr_policy[ICCA_ATTR_DEST_CEP_ID].type = NLA_U32;
-        attr_policy[ICCA_ATTR_DEST_CEP_ID].len = 0;
+        attr_policy[ICCA_ATTR_DEST_CEP_ID].len = 4;
         attr_policy[ICCA_ATTR_QOS_ID].type = NLA_U32;
-        attr_policy[ICCA_ATTR_QOS_ID].len = 0;
+        attr_policy[ICCA_ATTR_QOS_ID].len = 4;
+        attr_policy[ICCA_ATTR_FLOW_USER_IPC_PROCESS_ID].type = NLA_U16;
+        attr_policy[ICCA_ATTR_FLOW_USER_IPC_PROCESS_ID].len = 2;
         attr_policy[ICCA_ATTR_POLICIES].type = NLA_U32;
-        attr_policy[ICCA_ATTR_POLICIES].len = 0;
+        attr_policy[ICCA_ATTR_POLICIES].len = 4;
 
         result = nlmsg_parse(info->nlhdr,
                              sizeof(struct genlmsghdr) +
@@ -1387,22 +1386,32 @@ static int rnl_parse_ipcm_conn_create_arrived_msg(struct genl_info * info,
         }
 
         if (attrs[ICCA_ATTR_PORT_ID])
-                msg_attrs-> port_id= nla_get_u32(attrs[ICCA_ATTR_PORT_ID]);
+                msg_attrs->port_id =
+                        nla_get_u32(attrs[ICCA_ATTR_PORT_ID]);
 
         if (attrs[ICCA_ATTR_SOURCE_ADDR])
-                msg_attrs->src_addr = nla_get_u32(attrs[ICCA_ATTR_SOURCE_ADDR]);
+                msg_attrs->src_addr =
+                        nla_get_u32(attrs[ICCA_ATTR_SOURCE_ADDR]);
 
         if (attrs[ICCA_ATTR_DEST_ADDR])
-                msg_attrs->dst_addr = nla_get_u32(attrs[ICCA_ATTR_DEST_ADDR]);
+                msg_attrs->dst_addr =
+                        nla_get_u32(attrs[ICCA_ATTR_DEST_ADDR]);
 
         if (attrs[ICCA_ATTR_DEST_CEP_ID])
-                msg_attrs->dst_cep = nla_get_u32(attrs[ICCA_ATTR_DEST_CEP_ID]);
+                msg_attrs->dst_cep =
+                        nla_get_u32(attrs[ICCA_ATTR_DEST_CEP_ID]);
 
         if (attrs[ICCA_ATTR_QOS_ID])
-                msg_attrs->qos_id = nla_get_u32(attrs[ICCA_ATTR_QOS_ID]);
+                msg_attrs->qos_id =
+                        nla_get_u32(attrs[ICCA_ATTR_QOS_ID]);
+
+        if (attrs[ICCA_ATTR_FLOW_USER_IPC_PROCESS_ID])
+                msg_attrs->flow_user_ipc_process_id =
+                        nla_get_u16(attrs[ICCA_ATTR_FLOW_USER_IPC_PROCESS_ID]);
 
         if (attrs[ICCA_ATTR_POLICIES])
-                msg_attrs->policies = nla_get_u32(attrs[ICCA_ATTR_POLICIES]);
+                msg_attrs->policies =
+                        nla_get_u32(attrs[ICCA_ATTR_POLICIES]);
 
         return 0;
 
@@ -1418,12 +1427,14 @@ static int rnl_parse_ipcm_conn_update_req_msg(struct genl_info * info,
         struct nlattr *attrs[ICURQ_ATTR_MAX + 1];
         int    result;
 
-        attr_policy[ICURQ_ATTR_PORT_ID].type = NLA_U32;
-        attr_policy[ICURQ_ATTR_PORT_ID].len = 0;
-        attr_policy[ICURQ_ATTR_SOURCE_CEP_ID].type = NLA_U32;
-        attr_policy[ICURQ_ATTR_SOURCE_CEP_ID].len = 0;
-        attr_policy[ICURQ_ATTR_DEST_CEP_ID].type = NLA_U32;
-        attr_policy[ICURQ_ATTR_DEST_CEP_ID].len = 0;
+        attr_policy[ICURQ_ATTR_PORT_ID].type                  = NLA_U32;
+        attr_policy[ICURQ_ATTR_PORT_ID].len                   = 4;
+        attr_policy[ICURQ_ATTR_SOURCE_CEP_ID].type            = NLA_U32;
+        attr_policy[ICURQ_ATTR_SOURCE_CEP_ID].len             = 4;
+        attr_policy[ICURQ_ATTR_DEST_CEP_ID].type              = NLA_U32;
+        attr_policy[ICURQ_ATTR_DEST_CEP_ID].len               = 4;
+        attr_policy[ICURQ_ATTR_FLOW_USER_IPC_PROCESS_ID].type = NLA_U16;
+        attr_policy[ICURQ_ATTR_FLOW_USER_IPC_PROCESS_ID].len  = 2;
 
         result = nlmsg_parse(info->nlhdr,
                              sizeof(struct genlmsghdr) +
@@ -1439,13 +1450,20 @@ static int rnl_parse_ipcm_conn_update_req_msg(struct genl_info * info,
         }
 
         if (attrs[ICURQ_ATTR_PORT_ID])
-                msg_attrs-> port_id= nla_get_u32(attrs[ICURQ_ATTR_PORT_ID]);
+                msg_attrs->port_id =
+                        nla_get_u32(attrs[ICURQ_ATTR_PORT_ID]);
 
         if (attrs[ICURQ_ATTR_SOURCE_CEP_ID])
-                msg_attrs->src_cep = nla_get_u32(attrs[ICURQ_ATTR_SOURCE_CEP_ID]);
+                msg_attrs->src_cep =
+                        nla_get_u32(attrs[ICURQ_ATTR_SOURCE_CEP_ID]);
 
         if (attrs[ICURQ_ATTR_DEST_CEP_ID])
-                msg_attrs->dst_cep = nla_get_u32(attrs[ICURQ_ATTR_DEST_CEP_ID]);
+                msg_attrs->dst_cep =
+                        nla_get_u32(attrs[ICURQ_ATTR_DEST_CEP_ID]);
+
+        if (attrs[ICURQ_ATTR_FLOW_USER_IPC_PROCESS_ID])
+                msg_attrs->flow_user_ipc_process_id =
+                        nla_get_u16(attrs[ICURQ_ATTR_FLOW_USER_IPC_PROCESS_ID]);
 
         return 0;
 
@@ -1480,10 +1498,12 @@ static int rnl_parse_ipcm_conn_destroy_req_msg(struct genl_info * info,
         }
 
         if (attrs[ICDR_ATTR_PORT_ID])
-                msg_attrs-> port_id= nla_get_u32(attrs[ICDR_ATTR_PORT_ID]);
+                msg_attrs->port_id =
+                        nla_get_u32(attrs[ICDR_ATTR_PORT_ID]);
 
         if (attrs[ICDR_ATTR_SOURCE_CEP_ID])
-                msg_attrs->src_cep = nla_get_u32(attrs[ICDR_ATTR_SOURCE_CEP_ID]);
+                msg_attrs->src_cep =
+                        nla_get_u32(attrs[ICDR_ATTR_SOURCE_CEP_ID]);
 
         return 0;
 
@@ -1590,6 +1610,12 @@ static int rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
                              IDQR_ATTR_MAX,
                              attr_policy);
 
+        if (result < 0) {
+                LOG_ERR("Could not validate nl message policy (error = %d)",
+                        result);
+                goto parse_fail;
+        }
+
         if (info->attrs[IDQR_ATTR_OBJECT]) {
                 if (parse_rib_object(info->attrs[IDQR_ATTR_OBJECT],
                                      msg_attrs->rib_obj) < 0)
@@ -1607,8 +1633,7 @@ static int rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
         return 0;
 
  parse_fail:
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE(
-                                        "RINA_C_IPCM_QUERY_RIB_REQUEST"));
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_QUERY_RIB_REQUEST"));
         return -1;
 }
 

@@ -22,6 +22,11 @@ public class TestInformation {
 	 */
 	private int sdusReceived = 0;
 	
+	/**
+	 * The number of SDUs actually sent
+	 */
+	private int sdusSent = 0;
+	
 	private long firstSDUSentTime = 0;
 	
 	private long lastSDUReceivedTime = 0;
@@ -75,6 +80,14 @@ public class TestInformation {
 
 	public void setLastSDUReceivedTime(long lastSDUReceivedTime) {
 		this.lastSDUReceivedTime = lastSDUReceivedTime;
+	}
+	
+	public synchronized int getSdusSent() {
+		return sdusSent;
+	}
+
+	public synchronized void setSdusSent(int sdusSent) {
+		this.sdusSent = sdusSent;
 	}
 
 	public String toString(){

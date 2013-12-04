@@ -106,7 +106,7 @@ namespace rina {
         }
 
         int syscallCreateIPCProcess(const ApplicationProcessNamingInformation & ipcProcessName,
-                                    unsigned int                                ipcProcessId,
+                                    unsigned short                              ipcProcessId,
                                     const std::string &                         difType)
         {
                 int result;

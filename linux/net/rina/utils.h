@@ -41,5 +41,6 @@ char *  strdup_from_user(const char __user * src);
 #include "rds/rbmp.h"
 #include "rds/rqueue.h"
 #include "rds/rfifo.h"
+#include "rds/rref.h"
 
 #endif

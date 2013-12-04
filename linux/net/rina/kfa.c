@@ -37,15 +37,16 @@
 #include "pidm.h"
 #include "kfa.h"
 #include "kfa-utils.h"
+#include "rmt.h"
 
 struct kfa {
-        spinlock_t    lock;
-        struct pidm * pidm;
+        spinlock_t        lock;
+        struct pidm *     pidm;
         struct kfa_pmap * flows;
 };
 
 enum flow_state {
-        PORT_STATE_NULL = 1,
+        PORT_STATE_NULL        = 1,
         PORT_STATE_PENDING,
         PORT_STATE_ALLOCATED,
         PORT_STATE_DEALLOCATED
@@ -62,6 +63,7 @@ struct ipcp_flow {
         wait_queue_head_t      wait_queue;
         atomic_t               readers;
         atomic_t               writers;
+        struct rmt *           rmt;
 };
 
 struct kfa * kfa_create(void)
@@ -179,10 +181,6 @@ int kfa_flow_bind(struct kfa *           instance,
                 return -1;
         }
         if (!is_port_id_ok(pid)) {
-                LOG_ERR("Bogus flow-id, bailing out");
-                return -1;
-        }
-        if (!is_port_id_ok(pid)) {
                 LOG_ERR("Bogus port-id, bailing out");
                 return -1;
         }
@@ -207,7 +205,7 @@ int kfa_flow_bind(struct kfa *           instance,
                 return -1;
         }
 
-        flow->state = PORT_STATE_ALLOCATED;
+        flow->state       = PORT_STATE_ALLOCATED;
         flow->ipc_process = ipc_process;
 
         if (kfifo_alloc(&flow->sdu_ready, PAGE_SIZE, GFP_ATOMIC)) {
@@ -226,6 +224,32 @@ int kfa_flow_bind(struct kfa *           instance,
         return 0;
 }
 EXPORT_SYMBOL(kfa_flow_bind);
+
+int kfa_flow_bind_rmt(struct kfa * kfa,
+                      port_id_t    pid,
+                      struct rmt * rmt)
+{
+        struct ipcp_flow * flow;
+
+        if (!kfa)
+                return -1;
+
+        if (!is_port_id_ok(pid))
+                return -1;
+
+        spin_lock(&kfa->lock);
+        flow = kfa_pmap_find(kfa->flows, pid);
+        if (!flow) {
+                LOG_ERR("The flow with port-id %d does not exist, "
+                        "cannot bind rmt", pid);
+                spin_unlock(&kfa->lock);
+                return -1;
+        }
+        flow->rmt = rmt;
+        spin_unlock(&kfa->lock);
+        return 0;
+}
+EXPORT_SYMBOL(kfa_flow_bind_rmt);
 
 static int kfa_flow_destroy(struct kfa *       instance,
                             struct ipcp_flow * flow,
@@ -516,34 +540,45 @@ int kfa_sdu_post(struct kfa * instance,
                 return -1;
         }
 
-        if (kfifo_avail(&flow->sdu_ready) < (sizeof(struct sdu *))) {
-                LOG_ERR("There is no space in the port-id %d fifo", id);
+        if (!flow->rmt) {
+                if (kfifo_avail(&flow->sdu_ready) < (sizeof(struct sdu *))) {
+                        LOG_ERR("There is no space in the port-id %d fifo", id);
+                        spin_unlock(&instance->lock);
+                        return -1;
+                }
+                if (kfifo_in(&flow->sdu_ready,
+                             &sdu,
+                             sizeof(struct sdu *)) != sizeof(struct sdu *)) {
+                        LOG_ERR("Could not write %zd bytes into port-id %d fifo",
+                                sizeof(struct sdu *), id);
+                        spin_unlock(&instance->lock);
+                        return -1;
+                }
+                wq = &flow->wait_queue;
+                ASSERT(wq);
+
+                LOG_DBG("Wait queue %pK, next: %pK, prev: %pK",
+                        wq, wq->task_list.next, wq->task_list.prev);
+
                 spin_unlock(&instance->lock);
-                return -1;
-        }
-        if (kfifo_in(&flow->sdu_ready,
-                     &sdu,
-                     sizeof(struct sdu *)) != sizeof(struct sdu *)) {
-                LOG_ERR("Could not write %zd bytes into port-id %d fifo",
-                        sizeof(struct sdu *), id);
+
+                LOG_DBG("SDU posted");
+
+                wake_up(wq);
+
+                LOG_DBG("Sleeping read syscall should be working now");
+
+                return 0;
+        } else {
+                if (rmt_receive(flow->rmt, sdu, id)) {
+                        LOG_ERR("Could not post SDU into the RMT");
+                        spin_unlock(&instance->lock);
+                        return -1;
+                }
+                LOG_DBG("SDU posted to RMT");
                 spin_unlock(&instance->lock);
-                return -1;
+                return 0;
         }
-
-        wq = &flow->wait_queue;
-
-        LOG_DBG("Wait queue %pK, next: %pK, prev: %pK",
-                wq, wq->task_list.next, wq->task_list.prev);
-
-        spin_unlock(&instance->lock);
-
-        LOG_DBG("SDU posted");
-
-        wake_up(wq);
-
-        LOG_DBG("Sleeping read syscall should be working now");
-
-        return 0;
 }
 EXPORT_SYMBOL(kfa_sdu_post);
 
