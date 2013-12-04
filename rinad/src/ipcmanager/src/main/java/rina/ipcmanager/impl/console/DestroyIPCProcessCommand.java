@@ -12,7 +12,7 @@ public class DestroyIPCProcessCommand extends ConsoleCommand{
 	public static final String ID = "destroyipcp";
 	private static final String USAGE = "destroyipcp <ipcprocessid>";
 	
-	private long ipcProcessId = 0;
+	private int ipcProcessId = 0;
 	
 	public DestroyIPCProcessCommand(IPCManager ipcManager, IPCManagerConsole console){
 		super(ID, ipcManager, console);
@@ -25,7 +25,7 @@ public class DestroyIPCProcessCommand extends ConsoleCommand{
 		}
 		
 		try{
-			ipcProcessId = Long.parseLong(splittedCommand[1]);
+			ipcProcessId = Integer.parseInt(splittedCommand[1]);
 			getIPCManager().destroyIPCProcess(ipcProcessId);
 			return "IPC Process " + ipcProcessId + " destroyed successfully.";
 		}catch(Exception ex){

@@ -412,7 +412,7 @@ public class IPCManager {
 	 * Destroys an IPC Process
 	 * @param ipcProcessId
 	 */
-	public void destroyIPCProcess(long ipcProcessId) throws Exception{
+	public void destroyIPCProcess(int ipcProcessId) throws Exception{
 		//TODO if the IPC Process exists, delete all flows that go through the IPC Process,
 		//and terminate all application registrations.
 		
@@ -428,7 +428,7 @@ public class IPCManager {
 	 * @param difName
 	 * @throws Exception
 	 */
-	public long requestAssignToDIF(long ipcProcessID, String difName) throws Exception{
+	public long requestAssignToDIF(int ipcProcessID, String difName) throws Exception{
 		return ipcProcessManager.requestAssignToDIF(ipcProcessID, difName);
 	}
 	
@@ -439,7 +439,7 @@ public class IPCManager {
 	 * @param difConfiguration
 	 * @throws Exception
 	 */
-	public long requestUpdateDIFConfiguration(long ipcProcessID,
+	public long requestUpdateDIFConfiguration(int ipcProcessID,
 				DIFConfiguration difConfiguration) throws Exception{
 		 return ipcProcessManager.requestUpdateDIFConfiguration(ipcProcessID, difConfiguration);
 	}
@@ -452,7 +452,7 @@ public class IPCManager {
 	 * @param difName
 	 * @throws Exception
 	 */
-	public long requestRegistrationToNMinusOneDIF(long ipcProcessID, 
+	public long requestRegistrationToNMinusOneDIF(int ipcProcessID, 
 			String difName) throws Exception{
 		return ipcProcessManager.requestRegistrationToNMinusOneDIF(ipcProcessID, difName);
 	}
@@ -465,7 +465,7 @@ public class IPCManager {
 	 * @param difName
 	 * @throws Exception
 	 */
-	public long requestUnregistrationFromNMinusOneDIF(long ipcProcessID, 
+	public long requestUnregistrationFromNMinusOneDIF(int ipcProcessID, 
 			String difName) throws Exception{
 		return ipcProcessManager.requestUnregistrationFromNMinusOneDIF(ipcProcessID, difName);
 	}
@@ -482,7 +482,7 @@ public class IPCManager {
 	 * @return
 	 * @throws Exception
 	 */
-	public long requestEnrollmentToDIF(long ipcProcessId, String difName, 
+	public long requestEnrollmentToDIF(int ipcProcessId, String difName, 
 			String supportingDifName, String neighApName, String neighApInstance) throws Exception {
 		return ipcProcessManager.requestEnrollmentToDIF(ipcProcessId, difName, 
 				supportingDifName, neighApName, neighApInstance);
@@ -495,7 +495,7 @@ public class IPCManager {
 	 * @return
 	 * @throws Exception
 	 */
-	public long requestQueryIPCProcessRIB(long ipcProcessId) throws Exception {
+	public long requestQueryIPCProcessRIB(int ipcProcessId) throws Exception {
 		return ipcProcessManager.requestQueryRIB(ipcProcessId);
 	}
 }
