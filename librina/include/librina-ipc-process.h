@@ -190,6 +190,33 @@ public:
 };
 
 /**
+ * The Kernel components of the IPC Process report about the result of a
+ * create EFCP connection arrived operation
+ */
+class CreateConnectionResultEvent: public IPCEvent {
+
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /**
+         * The source connection-endpoint id if the connection was created
+         * successfully, or a negative number indicating an error code in
+         * case of failure
+         */
+        int sourceCepId;
+
+        /** The destination cep-id of the connection */
+        int destCepId;
+
+public:
+        CreateConnectionResultEvent(int portId, int sourceCepId,
+                        int destCepId, unsigned int sequenceNumber);
+        int getSourceCepId() const;
+        int getDestCepId() const;
+        int getPortId() const;
+};
+
+/**
  * Thrown when there are problems notifying the IPC Manager about the
  * result of an Assign to DIF operation
  */

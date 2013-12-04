@@ -407,6 +407,15 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 	        }
 	        return 0;
 	}
+	case RINA_C_IPCP_CONN_CREATE_RESULT: {
+	        IpcpConnectionCreateResultMessage * connArrivedMessage =
+	                        dynamic_cast<IpcpConnectionCreateResultMessage *>(message);
+	        if (putIpcpConnectionCreateResultMessageObject(netlinkMessage,
+	                        *connArrivedMessage) < 0) {
+	                return -1;
+	        }
+	        return 0;
+	}
 	default: {
 		return -1;
 	}
@@ -585,6 +594,10 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCP_CONN_CREATE_ARRIVED: {
 	        return parseIpcpConnectionCreateArrivedMessage(
+	                        netlinkMessageHeader);
+	}
+	case RINA_C_IPCP_CONN_CREATE_RESULT: {
+	        return parseIpcpConnectionCreateResultMessage(
 	                        netlinkMessageHeader);
 	}
 	default: {
@@ -2660,6 +2673,20 @@ int putIpcpConnectionCreateArrivedMessageObject(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
             "Error building IpcpConnectionCreateArrivedMessage Netlink object");
+        return -1;
+}
+
+int putIpcpConnectionCreateResultMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionCreateResultMessage& object) {
+        NLA_PUT_U32(netlinkMessage, ICCRES_ATTR_PORT_ID, object.getPortId());
+        NLA_PUT_U32(netlinkMessage, ICCRES_ATTR_SRC_CEP_ID,
+                        object.getSourceCepId());
+        NLA_PUT_U32(netlinkMessage, ICCRES_ATTR_DEST_CEP_ID,
+                                object.getDestCepId());
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+            "Error building IpcpConnectionCreateResponseMessage Netlink object");
         return -1;
 }
 
@@ -5107,6 +5134,46 @@ IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
 
         if (attrs[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID]){
                 result->setFlowUserIpcProcessId(nla_get_u16(attrs[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID]));
+        }
+
+        return result;
+}
+
+IpcpConnectionCreateResultMessage * parseIpcpConnectionCreateResultMessage(
+                nlmsghdr *hdr) {
+        struct nla_policy attr_policy[ICCRES_ATTR_MAX + 1];
+        attr_policy[ICCRES_ATTR_PORT_ID].type = NLA_U32;
+        attr_policy[ICCRES_ATTR_PORT_ID].minlen = 4;
+        attr_policy[ICCRES_ATTR_PORT_ID].maxlen = 4;
+        attr_policy[ICCRES_ATTR_SRC_CEP_ID].type = NLA_U32;
+        attr_policy[ICCRES_ATTR_SRC_CEP_ID].minlen = 4;
+        attr_policy[ICCRES_ATTR_SRC_CEP_ID].maxlen = 4;
+        attr_policy[ICCRES_ATTR_DEST_CEP_ID].type = NLA_U32;
+        attr_policy[ICCRES_ATTR_DEST_CEP_ID].minlen = 4;
+        attr_policy[ICCRES_ATTR_DEST_CEP_ID].maxlen = 4;
+        struct nlattr *attrs[ICCRES_ATTR_MAX + 1];
+
+        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+                        ICCRES_ATTR_MAX, attr_policy);
+        if (err < 0) {
+                LOG_ERR("Error parsing IpcpConnectionCreateResultMessage information from Netlink message: %d",
+                         err);
+                return 0;
+        }
+
+        IpcpConnectionCreateResultMessage * result =
+                        new IpcpConnectionCreateResultMessage();
+
+        if (attrs[ICCRES_ATTR_PORT_ID]){
+                result->setPortId(nla_get_u32(attrs[ICCRES_ATTR_PORT_ID]));
+        }
+
+        if (attrs[ICCRES_ATTR_SRC_CEP_ID]){
+                result->setSourceCepId(nla_get_u32(attrs[ICCRES_ATTR_SRC_CEP_ID]));
+        }
+
+        if (attrs[ICCRES_ATTR_DEST_CEP_ID]){
+                result->setDestCepId(nla_get_u32(attrs[ICCRES_ATTR_DEST_CEP_ID]));
         }
 
         return result;

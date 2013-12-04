@@ -617,6 +617,17 @@
                  $result = jenv->NewObject(clazz, mid, cptr, false);
           }
        }
+    } else if ($1->getType() == rina::IPC_PROCESS_CREATE_CONNECTION_RESULT) {
+    	 rina::CreateConnectionResultEvent *flowReqEvent = dynamic_cast<rina::CreateConnectionResultEvent *>($1);
+         jclass clazz = jenv->FindClass("eu/irati/librina/CreateConnectionResultEvent");
+         if (clazz) {
+             jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+             if (mid) {
+                 jlong cptr = 0;
+                 *(rina::CreateConnectionResultEvent **)&cptr = flowReqEvent; 
+                 $result = jenv->NewObject(clazz, mid, cptr, false);
+          }
+       }
     }
 } 
 %enddef

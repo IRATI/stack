@@ -1198,6 +1198,36 @@ public:
         IPCEvent* toIPCEvent();
 };
 
+/**
+ * Kernel IPC Process -> IPC Process Daemon. Report about the result of a
+ * connection create arrived operation
+ */
+class IpcpConnectionCreateResultMessage: public BaseNetlinkMessage {
+
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /**
+         * The source connection-endpoint id if the connection was created
+         * successfully, or a negative number indicating an error code in
+         * case of failure
+         */
+        int sourceCepId;
+
+        /** The destination cep-id */
+        int destCepId;
+
+public:
+        IpcpConnectionCreateResultMessage();
+        int getSourceCepId() const;
+        void setSourceCepId(int cepId);
+        int getDestCepId() const;
+        void setDestCepId(int cepId);
+        int getPortId() const;
+        void setPortId(int portId);
+        IPCEvent* toIPCEvent();
+};
+
 }
 
 #endif /* NETLINK_MESSAGES_H_ */

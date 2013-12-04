@@ -878,6 +878,22 @@ int putIpcpConnectionCreateArrivedMessageObject(nl_msg* netlinkMessage,
 IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
                 nlmsghdr *hdr);
 
+/* IpcpConnectionCreateResultMessage CLASS */
+enum IpcpConnectionCreateResultMessageAttributes {
+        ICCRES_ATTR_PORT_ID = 1,
+        ICCRES_ATTR_SRC_CEP_ID,
+        ICCRES_ATTR_DEST_CEP_ID,
+        __ICCRES_ATTR_MAX,
+};
+
+#define ICCRES_ATTR_MAX (__ICCRES_ATTR_MAX -1)
+
+int putIpcpConnectionCreateResultMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionCreateResultMessage& object);
+
+IpcpConnectionCreateResultMessage * parseIpcpConnectionCreateResultMessage(
+                nlmsghdr *hdr);
+
 }
 
 

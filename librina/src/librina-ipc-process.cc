@@ -173,6 +173,28 @@ int UpdateConnectionResponseEvent::getPortId() const {
         return portId;
 }
 
+/* CLASS CREATE CONNECTION RESULT EVENT */
+CreateConnectionResultEvent::CreateConnectionResultEvent(int portId,
+        int sourceCepId, int destCepId, unsigned int sequenceNumber):
+                IPCEvent(IPC_PROCESS_CREATE_CONNECTION_RESULT,
+                                sequenceNumber) {
+        this->sourceCepId = sourceCepId;
+        this->destCepId = destCepId;
+        this->portId = portId;
+}
+
+int CreateConnectionResultEvent::getSourceCepId() const {
+        return sourceCepId;
+}
+
+int CreateConnectionResultEvent::getDestCepId() const {
+        return destCepId;
+}
+
+int CreateConnectionResultEvent::getPortId() const {
+        return portId;
+}
+
 /* CLASS EXTENDED IPC MANAGER */
 const std::string ExtendedIPCManager::error_allocate_flow =
 		"Error allocating flow";

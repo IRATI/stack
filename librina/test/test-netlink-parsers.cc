@@ -2691,6 +2691,64 @@ int testIpcpCreateConnectionArrived() {
         return returnValue;
 }
 
+int testIpcpCreateConnectionResult() {
+        std::cout << "TESTING IPCP CREATE CONNECTION RESULT MESSAGE\n";
+        int returnValue = 0;
+
+        IpcpConnectionCreateResultMessage message;
+        message.setPortId(25);
+        message.setSourceCepId(14);
+        message.setDestCepId(234);
+
+        struct nl_msg* netlinkMessage;
+        netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing Ipcp Create Connection result"
+                                << "message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IpcpConnectionCreateResultMessage * recoveredMessage =
+                        dynamic_cast<IpcpConnectionCreateResultMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing Ipcp Create Connection response result "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.getPortId() != recoveredMessage->getPortId()) {
+                std::cout << "Port id on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getSourceCepId()
+                        != recoveredMessage->getSourceCepId()) {
+                std::cout << "Source cep id  on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getDestCepId()
+                        != recoveredMessage->getDestCepId()) {
+                std::cout << "Dest cep id  on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IpcpConnectionCreateResultMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING LIBRINA-NETLINK-PARSERS\n";
 
@@ -2887,6 +2945,11 @@ int main(int argc, char * argv[]) {
 	}
 
 	result = testIpcpCreateConnectionArrived();
+	if (result < 0) {
+	        return result;
+	}
+
+	result = testIpcpCreateConnectionResult();
 	if (result < 0) {
 	        return result;
 	}
