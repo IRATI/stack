@@ -62,6 +62,7 @@ struct rmt * rmt_create(struct kfa *            kfa,
         tmp->kfa   = kfa;
         tmp->efcpc = efcpc;
 
+        /* FIXME: the name should be unique, not shared with all the RMT's */
         tmp->egress_wq = rwq_create("rmt-egress-wq");
         if (!tmp->egress_wq) {
                 rmt_destroy(tmp);

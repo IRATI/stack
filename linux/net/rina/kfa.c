@@ -37,6 +37,7 @@
 #include "pidm.h"
 #include "kfa.h"
 #include "kfa-utils.h"
+#include "rmt.h"
 
 struct kfa {
         spinlock_t        lock;
@@ -539,35 +540,45 @@ int kfa_sdu_post(struct kfa * instance,
                 return -1;
         }
 
-        if (kfifo_avail(&flow->sdu_ready) < (sizeof(struct sdu *))) {
-                LOG_ERR("There is no space in the port-id %d fifo", id);
+        if (!flow->rmt) {
+                if (kfifo_avail(&flow->sdu_ready) < (sizeof(struct sdu *))) {
+                        LOG_ERR("There is no space in the port-id %d fifo", id);
+                        spin_unlock(&instance->lock);
+                        return -1;
+                }
+                if (kfifo_in(&flow->sdu_ready,
+                             &sdu,
+                             sizeof(struct sdu *)) != sizeof(struct sdu *)) {
+                        LOG_ERR("Could not write %zd bytes into port-id %d fifo",
+                                sizeof(struct sdu *), id);
+                        spin_unlock(&instance->lock);
+                        return -1;
+                }
+                wq = &flow->wait_queue;
+                ASSERT(wq);
+
+                LOG_DBG("Wait queue %pK, next: %pK, prev: %pK",
+                        wq, wq->task_list.next, wq->task_list.prev);
+
                 spin_unlock(&instance->lock);
-                return -1;
-        }
-        if (kfifo_in(&flow->sdu_ready,
-                     &sdu,
-                     sizeof(struct sdu *)) != sizeof(struct sdu *)) {
-                LOG_ERR("Could not write %zd bytes into port-id %d fifo",
-                        sizeof(struct sdu *), id);
+
+                LOG_DBG("SDU posted");
+
+                wake_up(wq);
+
+                LOG_DBG("Sleeping read syscall should be working now");
+
+                return 0;
+        } else {
+                if (rmt_receive(flow->rmt, sdu, id)) {
+                        LOG_ERR("Could not post SDU into the RMT");
+                        spin_unlock(&instance->lock);
+                        return -1;
+                }
+                LOG_DBG("SDU posted to RMT");
                 spin_unlock(&instance->lock);
-                return -1;
+                return 0;
         }
-
-        wq = &flow->wait_queue;
-        ASSERT(wq);
-
-        LOG_DBG("Wait queue %pK, next: %pK, prev: %pK",
-                wq, wq->task_list.next, wq->task_list.prev);
-
-        spin_unlock(&instance->lock);
-
-        LOG_DBG("SDU posted");
-
-        wake_up(wq);
-
-        LOG_DBG("Sleeping read syscall should be working now");
-
-        return 0;
 }
 EXPORT_SYMBOL(kfa_sdu_post);
 
