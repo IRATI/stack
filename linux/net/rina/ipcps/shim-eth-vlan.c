@@ -612,6 +612,10 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
         return 0;
 }
 
+/*
+ * FIXME: This function leaks as hell in error conditions, please
+ *        check 'em all
+ */
 static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
                                            const struct name *         name)
 {
@@ -649,7 +653,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         unsigned char *          sdu_ptr;
         int                      hlen, tlen, length;
         int                      result;
- 
+
         ASSERT(data);
         ASSERT(sdu);
 
@@ -724,7 +728,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
         result = dev_queue_xmit(skb);
         if (result) {
-                LOG_ERR("Dev_queue_xmit returned %d", result);
+                LOG_ERR("Problems in xmit, dev_queue_xmit returned %d", result);
                 sdu_destroy(sdu);
                 return -1;
         }
@@ -797,8 +801,9 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         /* Get the SDU out of the sk_buff */
         nh = skb_network_header(skb);
         if (skb->tail - skb->network_header <= 0) {
-                LOG_ERR("Malformed skb received (size is %zd bytes ...)",
+                LOG_ERR("Malformed skb received (size is %zd bytes)",
                         skb->tail - skb->network_header);
+                kfree_skb(skb);
                 return -1;
         }
 
@@ -810,8 +815,10 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
          *        safe to do so.
          */
         buffer = buffer_create_ni(skb->tail - skb->network_header);
-        if (!buffer)
+        if (!buffer) {
+                kfree_skb(skb);
                 return -1;
+        }
 
         buff_data = buffer_data_rw(buffer);
         if (!buff_data) {
@@ -822,6 +829,11 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 return -1;
         }
         memcpy_fromio(buff_data, nh, skb->tail - skb->network_header);
+
+        /*
+         * FIXME: We're done with the skb from this point on, why don't we
+         *        get rid of it ???
+         */
 
         du = sdu_create_with_ni(buffer);
         if (!du) {
@@ -978,11 +990,12 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
 {
         struct rcv_struct * packet, * next;
         unsigned long       flags;
-        int                 num_packets;
+        int                 num_frames;
 
         spin_lock_irqsave(&rcv_wq_lock, flags);
         LOG_DBG("Worker waking up");
-        num_packets = 0;
+
+        num_frames = 0;
         list_for_each_entry_safe(packet, next, &rcv_wq_packets, list) {
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
 
@@ -990,7 +1003,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                 if (eth_vlan_recv_process_packet(packet->skb, packet->dev))
                         LOG_DBG("Failed to process packet");
 
-                num_packets++;
+                num_frames++;
                 spin_lock_irqsave(&rcv_wq_lock, flags);
                 list_del(&packet->list);
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
@@ -998,7 +1011,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                 rkfree(packet);
                 spin_lock_irqsave(&rcv_wq_lock, flags);
         }
-        LOG_DBG("Worker finished for now, processed %d frames", num_packets);
+        LOG_DBG("Worker finished for now, processed %d frames", num_frames);
         spin_unlock_irqrestore(&rcv_wq_lock, flags);
 }
 
@@ -1577,20 +1590,18 @@ static int __init mod_init(void)
 
 #endif
 
-        rcv_wq = alloc_workqueue(
-                        SHIM_NAME,
-                        WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND,
-                        1);
-
+        rcv_wq = alloc_workqueue(SHIM_NAME,
+                                 WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND,
+                                 1);
         if (!rcv_wq) {
                 LOG_CRIT("Cannot create a workqueue for shim %s", SHIM_NAME);
                 return -1;
         }
 
-        shim =  kipcm_ipcp_factory_register(default_kipcm,
-                                            SHIM_NAME,
-                                            &eth_vlan_data,
-                                            &eth_vlan_ops);
+        shim = kipcm_ipcp_factory_register(default_kipcm,
+                                           SHIM_NAME,
+                                           &eth_vlan_data,
+                                           &eth_vlan_ops);
         if (!shim)
                 return -1;
 
