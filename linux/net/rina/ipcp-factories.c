@@ -36,13 +36,8 @@ struct ipcp_factories {
 
 static bool ops_are_ok(const struct ipcp_factory_ops * ops)
 {
-        if (!ops)
-                return false;
-
-        if (!ops->create || !ops->destroy))
-                return false;
-
-        return true;
+        return (ops && ops->create && ops->destroy && ops->init && ops->fini) ?
+                true : false;
 }
 
 static ssize_t factory_show(struct kobject *   kobj,
