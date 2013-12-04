@@ -1554,5 +1554,25 @@ IPCEvent* IpcpConnectionUpdateRequestMessage::toIPCEvent() {
         return 0;
 }
 
+/* CLASS CONNECTION UPDATE RESULT MESSAGE */
+IpcpConnectionUpdateResultMessage::IpcpConnectionUpdateResultMessage() :
+        BaseNetlinkResponseMessage(RINA_C_IPCP_CONN_UPDATE_RESULT) {
+        this->portId = 0;
+}
+
+int IpcpConnectionUpdateResultMessage::getPortId() const {
+        return portId;
+}
+
+void IpcpConnectionUpdateResultMessage::setPortId(int portId) {
+        this->portId = portId;
+}
+
+IPCEvent* IpcpConnectionUpdateResultMessage::toIPCEvent() {
+        IPCEvent * event = new UpdateConnectionResponseEvent(portId, getResult(),
+                        getSequenceNumber());
+        return event;
+}
+
 }
 

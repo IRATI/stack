@@ -389,6 +389,15 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 	        }
 	        return 0;
 	}
+	case RINA_C_IPCP_CONN_UPDATE_RESULT: {
+	        IpcpConnectionUpdateResultMessage * connUpdateMessage =
+	                        dynamic_cast<IpcpConnectionUpdateResultMessage *>(message);
+	        if (putIpcpConnectionUpdateResultMessageObject(netlinkMessage,
+	                        *connUpdateMessage) < 0) {
+	                return -1;
+	        }
+	        return 0;
+	}
 
 	default: {
 		return -1;
@@ -560,6 +569,10 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCP_CONN_UPDATE_REQUEST: {
 	        return parseIpcpConnectionUpdateRequestMessage(
+	                        netlinkMessageHeader);
+	}
+	case RINA_C_IPCP_CONN_UPDATE_RESULT: {
+	        return parseIpcpConnectionUpdateResultMessage(
 	                        netlinkMessageHeader);
 	}
 	default: {
@@ -2603,6 +2616,18 @@ int putIpcpConnectionUpdateRequestMessageObject(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
             "Error building IpcpConnectionUpdateRequestMessage Netlink object");
+        return -1;
+}
+
+int putIpcpConnectionUpdateResultMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionUpdateResultMessage& object) {
+        NLA_PUT_U32(netlinkMessage, ICUREM_ATTR_PORT_ID, object.getPortId());
+        NLA_PUT_U32(netlinkMessage, ICUREM_ATTR_RESULT, object.getResult());
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+            "Error building IpcpConnectionUpdateResultMessage Netlink object");
         return -1;
 }
 
@@ -4953,6 +4978,40 @@ IpcpConnectionUpdateRequestMessage * parseIpcpConnectionUpdateRequestMessage(
         if (attrs[ICURM_ATTR_FLOW_USER_IPC_PROCESS_ID]){
                 result->setFlowUserIpcProcessId(
                                 nla_get_u16(attrs[ICURM_ATTR_FLOW_USER_IPC_PROCESS_ID]));
+        }
+
+        return result;
+}
+
+IpcpConnectionUpdateResultMessage * parseIpcpConnectionUpdateResultMessage(
+                nlmsghdr *hdr) {
+        struct nla_policy attr_policy[ICUREM_ATTR_MAX + 1];
+        attr_policy[ICUREM_ATTR_PORT_ID].type = NLA_U32;
+        attr_policy[ICUREM_ATTR_PORT_ID].minlen = 4;
+        attr_policy[ICUREM_ATTR_PORT_ID].maxlen = 4;
+        attr_policy[ICUREM_ATTR_RESULT].type = NLA_U32;
+        attr_policy[ICUREM_ATTR_RESULT].minlen = 4;
+        attr_policy[ICUREM_ATTR_RESULT].maxlen = 4;
+        struct nlattr *attrs[ICUREM_ATTR_MAX + 1];
+
+        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+                        ICUREM_ATTR_MAX, attr_policy);
+        if (err < 0) {
+                LOG_ERR("Error parsing IpcpConnectionUpdateResultMessage information from Netlink message: %d",
+                         err);
+                return 0;
+        }
+
+        IpcpConnectionUpdateResultMessage * result =
+                        new IpcpConnectionUpdateResultMessage();
+
+        if (attrs[ICUREM_ATTR_PORT_ID]){
+                result->setPortId(nla_get_u32(attrs[ICUREM_ATTR_PORT_ID]));
+        }
+
+        if (attrs[ICUREM_ATTR_RESULT]){
+                result->setResult(
+                                nla_get_u32(attrs[ICUREM_ATTR_RESULT]));
         }
 
         return result;

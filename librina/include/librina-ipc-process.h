@@ -169,6 +169,27 @@ public:
 };
 
 /**
+ * The Kernel components of the IPC Process report about the result of a
+ * create EFCP connection operation
+ */
+class UpdateConnectionResponseEvent: public IPCEvent {
+
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /**
+         * The result of the operation (0 successful)
+         */
+        int result;
+
+public:
+        UpdateConnectionResponseEvent(int portId, int result,
+                        unsigned int sequenceNumber);
+        int getResult() const;
+        int getPortId() const;
+};
+
+/**
  * Thrown when there are problems notifying the IPC Manager about the
  * result of an Assign to DIF operation
  */

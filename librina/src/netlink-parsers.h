@@ -844,6 +844,21 @@ int putIpcpConnectionUpdateRequestMessageObject(nl_msg* netlinkMessage,
 IpcpConnectionUpdateRequestMessage * parseIpcpConnectionUpdateRequestMessage(
                 nlmsghdr *hdr);
 
+/* IpcpConnectionUpdateResultMessage CLASS */
+enum IpcpConnectionUpdateResultMessageAttributes {
+        ICUREM_ATTR_PORT_ID = 1,
+        ICUREM_ATTR_RESULT,
+        __ICUREM_ATTR_MAX,
+};
+
+#define ICUREM_ATTR_MAX (__ICUREM_ATTR_MAX -1)
+
+int putIpcpConnectionUpdateResultMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionUpdateResultMessage& object);
+
+IpcpConnectionUpdateResultMessage * parseIpcpConnectionUpdateResultMessage(
+                nlmsghdr *hdr);
+
 }
 
 

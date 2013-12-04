@@ -156,6 +156,23 @@ int CreateConnectionResponseEvent::getPortId() const {
         return portId;
 }
 
+/* CLASS UPDATE CONNECTION RESPONSE EVENT */
+UpdateConnectionResponseEvent::UpdateConnectionResponseEvent(int portId,
+        int result, unsigned int sequenceNumber):
+                IPCEvent(IPC_PROCESS_UPDATE_CONNECTION_RESPONSE,
+                                sequenceNumber) {
+        this->result = result;
+        this->portId = portId;
+}
+
+int UpdateConnectionResponseEvent::getResult() const {
+        return result;
+}
+
+int UpdateConnectionResponseEvent::getPortId() const {
+        return portId;
+}
+
 /* CLASS EXTENDED IPC MANAGER */
 const std::string ExtendedIPCManager::error_allocate_flow =
 		"Error allocating flow";

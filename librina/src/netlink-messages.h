@@ -1136,6 +1136,23 @@ public:
         IPCEvent* toIPCEvent();
 };
 
+/**
+ * Kernel IPC Process -> IPC Process Daemon. Report about the result of a
+ * connection update operation
+ */
+class IpcpConnectionUpdateResultMessage:
+                public BaseNetlinkResponseMessage {
+
+        /** The port-id of the flow associated to this connection */
+        int portId;
+
+public:
+        IpcpConnectionUpdateResultMessage();
+        int getPortId() const;
+        void setPortId(int portId);
+        IPCEvent* toIPCEvent();
+};
+
 }
 
 #endif /* NETLINK_MESSAGES_H_ */
