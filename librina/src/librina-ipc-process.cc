@@ -139,6 +139,23 @@ const std::string& QueryRIBRequestEvent::getFilter() const{
 	return filter;
 }
 
+/* CLASS CREATE CONNECTION RESPONSE EVENT */
+CreateConnectionResponseEvent::CreateConnectionResponseEvent(int portId,
+        int cepId, unsigned int sequenceNumber):
+                IPCEvent(IPC_PROCESS_CREATE_CONNECTION_RESPONSE,
+                                sequenceNumber) {
+        this->cepId = cepId;
+        this->portId = portId;
+}
+
+int CreateConnectionResponseEvent::getCepId() const {
+        return cepId;
+}
+
+int CreateConnectionResponseEvent::getPortId() const {
+        return portId;
+}
+
 /* CLASS EXTENDED IPC MANAGER */
 const std::string ExtendedIPCManager::error_allocate_flow =
 		"Error allocating flow";

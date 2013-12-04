@@ -1475,5 +1475,34 @@ IPCEvent* IpcpConnectionCreateRequestMessage::toIPCEvent() {
         return 0;
 }
 
+/* CLASS IPCM CONNECTION CREATE RESPONSE MESSAGE */
+IpcpConnectionCreateResponseMessage::IpcpConnectionCreateResponseMessage() :
+         BaseNetlinkMessage(RINA_C_IPCP_CONN_CREATE_RESPONSE){
+        portId = 0;
+        cepId = 0;
+}
+
+int IpcpConnectionCreateResponseMessage::getCepId() const {
+        return cepId;
+}
+
+void IpcpConnectionCreateResponseMessage::setCepId(int cepId) {
+        this->cepId = cepId;
+}
+
+int IpcpConnectionCreateResponseMessage::getPortId() const {
+        return portId;
+}
+
+void IpcpConnectionCreateResponseMessage::setPortId(int portId) {
+        this->portId = portId;
+}
+
+IPCEvent* IpcpConnectionCreateResponseMessage::toIPCEvent() {
+        IPCEvent * event = new CreateConnectionResponseEvent(portId, cepId,
+                        getSequenceNumber());
+        return event;
+}
+
 }
 

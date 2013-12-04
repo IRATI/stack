@@ -1046,8 +1046,8 @@ public:
 };
 
 /**
- * IPC Process -> IPC Manager. Sent after the IPC Process daemon has initialized
- * the NL infrastructure and is ready to receive messages.
+ * IPC Process Daemon -> Kernel IPC Process. Request the creation of a
+ * connection to the EFCP module in the kernel.
  */
 class IpcpConnectionCreateRequestMessage: public BaseNetlinkMessage {
         
@@ -1076,7 +1076,30 @@ public:
         IPCEvent* toIPCEvent();
 };
 
+/**
+ * Kernel IPC Process -> IPC Process Daemon. Report about the result of a
+ * connection create operation
+ */
+class IpcpConnectionCreateResponseMessage: public BaseNetlinkMessage {
 
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /**
+         * The source connection-endpoint id if the connection was created
+         * successfully, or a negative number indicating an error code in
+         * case of failure
+         */
+        int cepId;
+
+public:
+        IpcpConnectionCreateResponseMessage();
+        int getCepId() const;
+        void setCepId(int cepId);
+        int getPortId() const;
+        void setPortId(int portId);
+        IPCEvent* toIPCEvent();
+};
 
 }
 

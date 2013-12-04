@@ -371,6 +371,15 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 	        }
 	        return 0;
 	}
+	case RINA_C_IPCP_CONN_CREATE_RESPONSE: {
+	        IpcpConnectionCreateResponseMessage * connCreateMessage =
+	                        dynamic_cast<IpcpConnectionCreateResponseMessage *>(message);
+	        if (putIpcpConnectionCreateResponseMessageObject(netlinkMessage,
+	                        *connCreateMessage) < 0) {
+	                return -1;
+	        }
+	        return 0;
+	}
 
 	default: {
 		return -1;
@@ -536,10 +545,13 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	        return parseIpcpConnectionCreateRequestMessage(
 	                        netlinkMessageHeader);
 	}
+	case RINA_C_IPCP_CONN_CREATE_RESPONSE: {
+	        return parseIpcpConnectionCreateResponseMessage(
+	                        netlinkMessageHeader);
+	}
 	default: {
-		LOG_ERR(
-				"Generic Netlink message contains unrecognized command code: %d",
-				nlhdr->cmd);
+		LOG_ERR("Generic Netlink message contains unrecognized command code: %d",
+			         nlhdr->cmd);
 		return NULL;
 	}
 	}
@@ -2550,6 +2562,17 @@ int putIpcpConnectionCreateRequestMessageObject(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
             "Error building IpcpConnectionCreateRequestMessage Netlink object");
+        return -1;
+}
+
+int putIpcpConnectionCreateResponseMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionCreateResponseMessage& object) {
+        NLA_PUT_U32(netlinkMessage, ICCREM_ATTR_PORT_ID, object.getPortId());
+        NLA_PUT_U32(netlinkMessage, ICCREM_ATTR_SRC_CEP_ID, object.getCepId());
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+            "Error building IpcpConnectionCreateResponseMessage Netlink object");
         return -1;
 }
 
@@ -4817,6 +4840,39 @@ IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
 
         if (attrs[ICCRM_ATTR_QOS_ID]){
                 result->setQosId(nla_get_u32(attrs[ICCRM_ATTR_QOS_ID]));
+        }
+
+        return result;
+}
+
+IpcpConnectionCreateResponseMessage * parseIpcpConnectionCreateResponseMessage(
+                nlmsghdr *hdr) {
+        struct nla_policy attr_policy[ICCREM_ATTR_MAX + 1];
+        attr_policy[ICCREM_ATTR_PORT_ID].type = NLA_U32;
+        attr_policy[ICCREM_ATTR_PORT_ID].minlen = 4;
+        attr_policy[ICCREM_ATTR_PORT_ID].maxlen = 4;
+        attr_policy[ICCREM_ATTR_SRC_CEP_ID].type = NLA_U32;
+        attr_policy[ICCREM_ATTR_SRC_CEP_ID].minlen = 4;
+        attr_policy[ICCREM_ATTR_SRC_CEP_ID].maxlen = 4;
+        struct nlattr *attrs[ICCREM_ATTR_MAX + 1];
+
+        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+                        ICCREM_ATTR_MAX, attr_policy);
+        if (err < 0) {
+                LOG_ERR("Error parsing IpcpConnectionCreateResponseMessage information from Netlink message: %d",
+                         err);
+                return 0;
+        }
+
+        IpcpConnectionCreateResponseMessage * result =
+                        new IpcpConnectionCreateResponseMessage();
+
+        if (attrs[ICCREM_ATTR_PORT_ID]){
+                result->setPortId(nla_get_u32(attrs[ICCREM_ATTR_PORT_ID]));
+        }
+
+        if (attrs[ICCREM_ATTR_SRC_CEP_ID]){
+                result->setCepId(nla_get_u32(attrs[ICCREM_ATTR_SRC_CEP_ID]));
         }
 
         return result;
