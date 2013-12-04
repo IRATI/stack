@@ -648,7 +648,8 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         const unsigned char *    dest_hw;
         unsigned char *          sdu_ptr;
         int                      hlen, tlen, length;
-
+        int                      result;
+ 
         ASSERT(data);
         ASSERT(sdu);
 
@@ -721,7 +722,13 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
         LOG_DBG("Gonna send it now");
 
-        dev_queue_xmit(skb);
+        result = dev_queue_xmit(skb);
+        if (result) {
+                LOG_ERR("Dev_queue_xmit returned %d", result);
+                sdu_destroy(sdu);
+                return -1;
+        }
+
         sdu_destroy(sdu);
 
         return 0;
@@ -971,15 +978,19 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
 {
         struct rcv_struct * packet, * next;
         unsigned long       flags;
+        int                 num_packets;
 
         spin_lock_irqsave(&rcv_wq_lock, flags);
+        LOG_DBG("Worker waking up");
+        num_packets = 0;
         list_for_each_entry_safe(packet, next, &rcv_wq_packets, list) {
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
 
                 /* Call eth_vlan_recv_process_packet */
                 if (eth_vlan_recv_process_packet(packet->skb, packet->dev))
-                        LOG_ERR("Failed to process packet");
+                        LOG_DBG("Failed to process packet");
 
+                num_packets++;
                 spin_lock_irqsave(&rcv_wq_lock, flags);
                 list_del(&packet->list);
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
@@ -987,6 +998,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                 rkfree(packet);
                 spin_lock_irqsave(&rcv_wq_lock, flags);
         }
+        LOG_DBG("Worker finished for now, processed %d frames", num_packets);
         spin_unlock_irqrestore(&rcv_wq_lock, flags);
 }
 
@@ -1565,9 +1577,13 @@ static int __init mod_init(void)
 
 #endif
 
-        rcv_wq = create_workqueue(SHIM_NAME);
+        rcv_wq = alloc_workqueue(
+                        SHIM_NAME,
+                        WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND,
+                        1);
+
         if (!rcv_wq) {
-                LOG_CRIT("Cannot create workqueue %s", SHIM_NAME);
+                LOG_CRIT("Cannot create a workqueue for shim %s", SHIM_NAME);
                 return -1;
         }
 
