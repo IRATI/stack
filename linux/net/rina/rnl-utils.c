@@ -1305,15 +1305,15 @@ static int rnl_parse_ipcm_conn_create_req_msg(struct genl_info * info,
         int    result;
 
         attr_policy[ICCRQ_ATTR_PORT_ID].type = NLA_U32;
-        attr_policy[ICCRQ_ATTR_PORT_ID].len = 0;
+        attr_policy[ICCRQ_ATTR_PORT_ID].len = 4;
         attr_policy[ICCRQ_ATTR_SOURCE_ADDR].type = NLA_U32;
-        attr_policy[ICCRQ_ATTR_SOURCE_ADDR].len = 0;
+        attr_policy[ICCRQ_ATTR_SOURCE_ADDR].len = 4;
         attr_policy[ICCRQ_ATTR_DEST_ADDR].type = NLA_U32;
-        attr_policy[ICCRQ_ATTR_DEST_ADDR].len = 0;
+        attr_policy[ICCRQ_ATTR_DEST_ADDR].len = 4;
         attr_policy[ICCRQ_ATTR_QOS_ID].type = NLA_U32;
-        attr_policy[ICCRQ_ATTR_QOS_ID].len = 0;
+        attr_policy[ICCRQ_ATTR_QOS_ID].len = 4;
         attr_policy[ICCRQ_ATTR_POLICIES].type = NLA_U32;
-        attr_policy[ICCRQ_ATTR_POLICIES].len = 0;
+        attr_policy[ICCRQ_ATTR_POLICIES].len = 4;
 
         result = nlmsg_parse(info->nlhdr,
                              sizeof(struct genlmsghdr) +
@@ -1358,17 +1358,19 @@ static int rnl_parse_ipcm_conn_create_arrived_msg(struct genl_info * info,
         int    result;
 
         attr_policy[ICCA_ATTR_PORT_ID].type = NLA_U32;
-        attr_policy[ICCA_ATTR_PORT_ID].len = 0;
+        attr_policy[ICCA_ATTR_PORT_ID].len = 4;
         attr_policy[ICCA_ATTR_SOURCE_ADDR].type = NLA_U32;
-        attr_policy[ICCA_ATTR_SOURCE_ADDR].len = 0;
+        attr_policy[ICCA_ATTR_SOURCE_ADDR].len = 4;
         attr_policy[ICCA_ATTR_DEST_ADDR].type = NLA_U32;
-        attr_policy[ICCA_ATTR_DEST_ADDR].len = 0;
+        attr_policy[ICCA_ATTR_DEST_ADDR].len = 4;
         attr_policy[ICCA_ATTR_DEST_CEP_ID].type = NLA_U32;
-        attr_policy[ICCA_ATTR_DEST_CEP_ID].len = 0;
+        attr_policy[ICCA_ATTR_DEST_CEP_ID].len = 4;
         attr_policy[ICCA_ATTR_QOS_ID].type = NLA_U32;
-        attr_policy[ICCA_ATTR_QOS_ID].len = 0;
+        attr_policy[ICCA_ATTR_QOS_ID].len = 4;
+        attr_policy[ICCA_ATTR_FLOW_USER_IPC_PROCESS_ID].type = NLA_U16;
+        attr_policy[ICCA_ATTR_FLOW_USER_IPC_PROCESS_ID].len = 2;
         attr_policy[ICCA_ATTR_POLICIES].type = NLA_U32;
-        attr_policy[ICCA_ATTR_POLICIES].len = 0;
+        attr_policy[ICCA_ATTR_POLICIES].len = 4;
 
         result = nlmsg_parse(info->nlhdr,
                              sizeof(struct genlmsghdr) +
@@ -1398,6 +1400,10 @@ static int rnl_parse_ipcm_conn_create_arrived_msg(struct genl_info * info,
         if (attrs[ICCA_ATTR_QOS_ID])
                 msg_attrs->qos_id = nla_get_u32(attrs[ICCA_ATTR_QOS_ID]);
 
+        if (attrs[ICCA_ATTR_FLOW_USER_IPC_PROCESS_ID])
+                msg_attrs->flow_user_ipc_process_id = nla_get_u16(
+                                attrs[ICCA_ATTR_FLOW_USER_IPC_PROCESS_ID]);
+
         if (attrs[ICCA_ATTR_POLICIES])
                 msg_attrs->policies = nla_get_u32(attrs[ICCA_ATTR_POLICIES]);
 
@@ -1416,11 +1422,13 @@ static int rnl_parse_ipcm_conn_update_req_msg(struct genl_info * info,
         int    result;
 
         attr_policy[ICURQ_ATTR_PORT_ID].type = NLA_U32;
-        attr_policy[ICURQ_ATTR_PORT_ID].len = 0;
+        attr_policy[ICURQ_ATTR_PORT_ID].len = 4;
         attr_policy[ICURQ_ATTR_SOURCE_CEP_ID].type = NLA_U32;
-        attr_policy[ICURQ_ATTR_SOURCE_CEP_ID].len = 0;
+        attr_policy[ICURQ_ATTR_SOURCE_CEP_ID].len = 4;
         attr_policy[ICURQ_ATTR_DEST_CEP_ID].type = NLA_U32;
-        attr_policy[ICURQ_ATTR_DEST_CEP_ID].len = 0;
+        attr_policy[ICURQ_ATTR_DEST_CEP_ID].len = 4;
+        attr_policy[ICURQ_ATTR_FLOW_USER_IPC_PROCESS_ID].type = NLA_U16;
+        attr_policy[ICURQ_ATTR_FLOW_USER_IPC_PROCESS_ID].len = 2;
 
         result = nlmsg_parse(info->nlhdr,
                              sizeof(struct genlmsghdr) +
@@ -1443,6 +1451,10 @@ static int rnl_parse_ipcm_conn_update_req_msg(struct genl_info * info,
 
         if (attrs[ICURQ_ATTR_DEST_CEP_ID])
                 msg_attrs->dst_cep = nla_get_u32(attrs[ICURQ_ATTR_DEST_CEP_ID]);
+
+        if (attrs[ICURQ_ATTR_FLOW_USER_IPC_PROCESS_ID])
+                msg_attrs->flow_user_ipc_process_id = nla_get_u16(
+                                attrs[ICURQ_ATTR_FLOW_USER_IPC_PROCESS_ID]);
 
         return 0;
 

@@ -697,7 +697,7 @@ public:
 class IPCProcessFactory: public Lockable {
 
         /** The current IPC Processes in the system*/
-        std::map<int, IPCProcess*> ipcProcesses;
+        std::map<unsigned short, IPCProcess*> ipcProcesses;
 
 public:
         static const std::string unknown_ipc_process_error;
@@ -739,7 +739,7 @@ public:
          * @param ipcProcessId The identifier of the IPC Process to be destroyed
          * @throws DestroyIPCProcessException if an error happens during the operation execution
          */
-        void destroy(unsigned int ipcProcessId)
+        void destroy(unsigned short ipcProcessId)
         throw (DestroyIPCProcessException);
 
         /**
@@ -757,7 +757,7 @@ public:
          * @throws GetIPCProcessException if no IPC Process with the specified
          * id is found
          */
-        IPCProcess * getIPCProcess(unsigned int ipcProcessId)
+        IPCProcess * getIPCProcess(unsigned short ipcProcessId)
                 throw (GetIPCProcessException);
 };
 

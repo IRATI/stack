@@ -42,7 +42,7 @@ int      is_cep_id_ok(cep_id_t id);
 /* ALWAYS use this function to get a bad id */
 cep_id_t cep_id_bad(void);
 
-typedef int32_t       ipc_process_id_t;
+typedef uint16_t       ipc_process_id_t;
 typedef unsigned int  ipc_process_address_t;
 
 /* We should get rid of the following definitions */
