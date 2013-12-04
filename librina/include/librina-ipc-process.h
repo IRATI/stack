@@ -281,6 +281,19 @@ public:
 };
 
 /**
+ * Thrown when there are problems requesting the Kernel to update an EFCP connection
+ */
+class UpdateConnectionException: public IPCException {
+public:
+        UpdateConnectionException():
+                IPCException("Problems updating an EFCP connection"){
+        }
+        UpdateConnectionException(const std::string& description):
+                IPCException(description){
+        }
+};
+
+/**
  * Class used by the IPC Processes to interact with the IPC Manager. Extends
  * the basic IPC Manager in librina-application with IPC Process specific
  * functionality
@@ -548,6 +561,22 @@ class Connection {
          */
         unsigned int qosId;
 
+        /**
+         * The source CEP-id
+         */
+        int sourceCepId;
+
+        /**
+         * The destination CEP-id
+         */
+        int destCepId;
+
+        /**
+         * The id of the IPC Process using the flow supported by this
+         * connection (0 if it is an application that is not an IPC Process)
+         */
+        unsigned short flowUserIpcProcessId;
+
 public:
         Connection();
         unsigned int getDestAddress() const;
@@ -558,6 +587,12 @@ public:
         void setQosId(unsigned int qosId);
         unsigned int getSourceAddress() const;
         void setSourceAddress(unsigned int sourceAddress);
+        int getDestCepId() const;
+        void setDestCepId(int destCepId);
+        unsigned short getFlowUserIpcProcessId() const;
+        void setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId);
+        int getSourceCepId() const;
+        void setSourceCepId(int sourceCepId);
 };
 
 /**
@@ -609,6 +644,17 @@ public:
          */
         unsigned int createConnection(const Connection& connection)
         throw (CreateConnectionException);
+
+        /**
+         * Invoked by the IPC Process Daemon to request an update of an
+         * EFCP connection to the kernel components of the IPC Process
+         *
+         * @param connection
+         * @throws UpdateConnectionException
+         * @return the handle to the response message
+         */
+        unsigned int updateConnection(const Connection& connection)
+        throw (UpdateConnectionException);
 };
 
 /**

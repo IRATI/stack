@@ -827,6 +827,23 @@ int putIpcpConnectionCreateResponseMessageObject(nl_msg* netlinkMessage,
 IpcpConnectionCreateResponseMessage * parseIpcpConnectionCreateResponseMessage(
                 nlmsghdr *hdr);
 
+/* IpcpConnectionUpdateRequestMessage CLASS*/
+enum IpcpConnectionUpdateRequestMessageAttributes {
+        ICURM_ATTR_PORT_ID = 1,
+        ICURM_ATTR_SRC_CEP_ID,
+        ICURM_ATTR_DEST_CEP_ID,
+        ICURM_ATTR_FLOW_USER_IPC_PROCESS_ID,
+        __ICURM_ATTR_MAX,
+};
+
+#define ICURM_ATTR_MAX (__ICURM_ATTR_MAX -1)
+
+int putIpcpConnectionUpdateRequestMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionUpdateRequestMessage& object);
+
+IpcpConnectionUpdateRequestMessage * parseIpcpConnectionUpdateRequestMessage(
+                nlmsghdr *hdr);
+
 }
 
 

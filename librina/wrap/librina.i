@@ -291,6 +291,12 @@
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
+%typemap(throws, throws="eu.irati.librina.UpdateConnectionException") rina::UpdateConnectionException {
+  jclass excep = jenv->FindClass("eu/irati/librina/UpdateConnectionException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
 
 
 /* Typemaps to allow eventWait, eventPoll and eventTimedWait to downcast IPCEvent to the correct class */
@@ -586,6 +592,17 @@
              if (mid) {
                  jlong cptr = 0;
                  *(rina::NeighborsModifiedNotificationEvent **)&cptr = flowReqEvent; 
+                 $result = jenv->NewObject(clazz, mid, cptr, false);
+          }
+       }
+    } else if ($1->getType() == rina::IPC_PROCESS_CREATE_CONNECTION_RESPONSE) {
+    	 rina::CreateConnectionResponseEvent *flowReqEvent = dynamic_cast<rina::CreateConnectionResponseEvent *>($1);
+         jclass clazz = jenv->FindClass("eu/irati/librina/CreateConnectionResponseEvent");
+         if (clazz) {
+             jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+             if (mid) {
+                 jlong cptr = 0;
+                 *(rina::CreateConnectionResponseEvent **)&cptr = flowReqEvent; 
                  $result = jenv->NewObject(clazz, mid, cptr, false);
           }
        }

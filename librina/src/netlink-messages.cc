@@ -1504,5 +1504,55 @@ IPCEvent* IpcpConnectionCreateResponseMessage::toIPCEvent() {
         return event;
 }
 
+/* CLASS IPCM CONNECTION UPDATE REQUEST MESSAGE */
+IpcpConnectionUpdateRequestMessage::IpcpConnectionUpdateRequestMessage() :
+         BaseNetlinkMessage(RINA_C_IPCP_CONN_UPDATE_REQUEST){
+        portId = 0;
+        sourceCepId = 0;
+        destinationCepId = 0;
+        flowUserIpcProcessId = 0;
+}
+
+int IpcpConnectionUpdateRequestMessage::getDestinationCepId() const {
+        return destinationCepId;
+}
+
+void IpcpConnectionUpdateRequestMessage::
+setDestinationCepId(int destinationCepId) {
+        this->destinationCepId = destinationCepId;
+}
+
+unsigned short
+IpcpConnectionUpdateRequestMessage::getFlowUserIpcProcessId() const {
+        return flowUserIpcProcessId;
+}
+
+void IpcpConnectionUpdateRequestMessage::
+setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId) {
+        this->flowUserIpcProcessId = flowUserIpcProcessId;
+}
+
+int IpcpConnectionUpdateRequestMessage::getPortId() const {
+        return portId;
+}
+
+void IpcpConnectionUpdateRequestMessage::
+setPortId(int portId) {
+        this->portId = portId;
+}
+
+int IpcpConnectionUpdateRequestMessage::getSourceCepId() const {
+        return sourceCepId;
+}
+
+void IpcpConnectionUpdateRequestMessage::
+setSourceCepId(int sourceCepId) {
+        this->sourceCepId = sourceCepId;
+}
+
+IPCEvent* IpcpConnectionUpdateRequestMessage::toIPCEvent() {
+        return 0;
+}
+
 }
 

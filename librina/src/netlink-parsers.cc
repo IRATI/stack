@@ -380,6 +380,15 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 	        }
 	        return 0;
 	}
+	case RINA_C_IPCP_CONN_UPDATE_REQUEST: {
+	        IpcpConnectionUpdateRequestMessage * connUpdateMessage =
+	                        dynamic_cast<IpcpConnectionUpdateRequestMessage *>(message);
+	        if (putIpcpConnectionUpdateRequestMessageObject(netlinkMessage,
+	                        *connUpdateMessage) < 0) {
+	                return -1;
+	        }
+	        return 0;
+	}
 
 	default: {
 		return -1;
@@ -547,6 +556,10 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCP_CONN_CREATE_RESPONSE: {
 	        return parseIpcpConnectionCreateResponseMessage(
+	                        netlinkMessageHeader);
+	}
+	case RINA_C_IPCP_CONN_UPDATE_REQUEST: {
+	        return parseIpcpConnectionUpdateRequestMessage(
 	                        netlinkMessageHeader);
 	}
 	default: {
@@ -2573,6 +2586,23 @@ int putIpcpConnectionCreateResponseMessageObject(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
             "Error building IpcpConnectionCreateResponseMessage Netlink object");
+        return -1;
+}
+
+int putIpcpConnectionUpdateRequestMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionUpdateRequestMessage& object) {
+        NLA_PUT_U32(netlinkMessage, ICURM_ATTR_PORT_ID, object.getPortId());
+        NLA_PUT_U32(netlinkMessage, ICURM_ATTR_SRC_CEP_ID,
+                        object.getSourceCepId());
+        NLA_PUT_U32(netlinkMessage, ICURM_ATTR_DEST_CEP_ID,
+                                object.getDestinationCepId());
+        NLA_PUT_U16(netlinkMessage, ICURM_ATTR_FLOW_USER_IPC_PROCESS_ID,
+                        object.getFlowUserIpcProcessId());
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+            "Error building IpcpConnectionUpdateRequestMessage Netlink object");
         return -1;
 }
 
@@ -4873,6 +4903,56 @@ IpcpConnectionCreateResponseMessage * parseIpcpConnectionCreateResponseMessage(
 
         if (attrs[ICCREM_ATTR_SRC_CEP_ID]){
                 result->setCepId(nla_get_u32(attrs[ICCREM_ATTR_SRC_CEP_ID]));
+        }
+
+        return result;
+}
+
+IpcpConnectionUpdateRequestMessage * parseIpcpConnectionUpdateRequestMessage(
+                nlmsghdr *hdr) {
+        struct nla_policy attr_policy[ICURM_ATTR_MAX + 1];
+        attr_policy[ICURM_ATTR_PORT_ID].type = NLA_U32;
+        attr_policy[ICURM_ATTR_PORT_ID].minlen = 4;
+        attr_policy[ICURM_ATTR_PORT_ID].maxlen = 4;
+        attr_policy[ICURM_ATTR_SRC_CEP_ID].type = NLA_U32;
+        attr_policy[ICURM_ATTR_SRC_CEP_ID].minlen = 4;
+        attr_policy[ICURM_ATTR_SRC_CEP_ID].maxlen = 4;
+        attr_policy[ICURM_ATTR_DEST_CEP_ID].type = NLA_U32;
+        attr_policy[ICURM_ATTR_DEST_CEP_ID].minlen = 4;
+        attr_policy[ICURM_ATTR_DEST_CEP_ID].maxlen = 4;
+        attr_policy[ICURM_ATTR_FLOW_USER_IPC_PROCESS_ID].type = NLA_U16;
+        attr_policy[ICURM_ATTR_FLOW_USER_IPC_PROCESS_ID].minlen = 2;
+        attr_policy[ICURM_ATTR_FLOW_USER_IPC_PROCESS_ID].maxlen = 2;
+        struct nlattr *attrs[ICURM_ATTR_MAX + 1];
+
+        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+                        ICURM_ATTR_MAX, attr_policy);
+        if (err < 0) {
+                LOG_ERR("Error parsing IpcpConnectionUpdateRequestMessage information from Netlink message: %d",
+                         err);
+                return 0;
+        }
+
+        IpcpConnectionUpdateRequestMessage * result =
+                        new IpcpConnectionUpdateRequestMessage();
+
+        if (attrs[ICURM_ATTR_PORT_ID]){
+                result->setPortId(nla_get_u32(attrs[ICURM_ATTR_PORT_ID]));
+        }
+
+        if (attrs[ICURM_ATTR_SRC_CEP_ID]){
+                result->setSourceCepId(
+                                nla_get_u32(attrs[ICURM_ATTR_SRC_CEP_ID]));
+        }
+
+        if (attrs[ICURM_ATTR_DEST_CEP_ID]){
+                result->setDestinationCepId(
+                                nla_get_u32(attrs[ICURM_ATTR_DEST_CEP_ID]));
+        }
+
+        if (attrs[ICURM_ATTR_FLOW_USER_IPC_PROCESS_ID]){
+                result->setFlowUserIpcProcessId(
+                                nla_get_u16(attrs[ICURM_ATTR_FLOW_USER_IPC_PROCESS_ID]));
         }
 
         return result;

@@ -1101,6 +1101,41 @@ public:
         IPCEvent* toIPCEvent();
 };
 
+/**
+ * IPC Process Daemon -> Kernel IPC Process. Inform the kernel IPC Process
+ * the destination cep-id of a connection, as well as who will be using it
+ * (IPC Process vs. application)
+ */
+class IpcpConnectionUpdateRequestMessage: public BaseNetlinkMessage {
+
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /** The connection's source CEP-id */
+        int sourceCepId;
+
+        /** The connection's destination CEP-ids */
+        int destinationCepId;
+
+        /**
+         * The id of the IPC Process that will be using the flow
+         * (0 if it is an application)
+         */
+        unsigned short flowUserIpcProcessId;
+
+public:
+        IpcpConnectionUpdateRequestMessage();
+        int getDestinationCepId() const;
+        void setDestinationCepId(int destinationCepId);
+        unsigned short getFlowUserIpcProcessId() const;
+        void setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId);
+        int getPortId() const;
+        void setPortId(int portId);
+        int getSourceCepId() const;
+        void setSourceCepId(int sourceCepId);
+        IPCEvent* toIPCEvent();
+};
+
 }
 
 #endif /* NETLINK_MESSAGES_H_ */

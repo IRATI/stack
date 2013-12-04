@@ -545,6 +545,9 @@ Connection::Connection() {
         sourceAddress = 0;
         destAddress = 0;
         qosId = 0;
+        sourceCepId = 0;
+        destCepId = 0;
+        flowUserIpcProcessId = 0;
 }
 
 unsigned int Connection::getDestAddress() const {
@@ -577,6 +580,30 @@ unsigned int Connection::getSourceAddress() const {
 
 void Connection::setSourceAddress(unsigned int sourceAddress){
         this->sourceAddress = sourceAddress;
+}
+
+int Connection::getDestCepId() const {
+        return destCepId;
+}
+
+void Connection::setDestCepId(int destCepId) {
+        this->destCepId = destCepId;
+}
+
+unsigned short Connection::getFlowUserIpcProcessId() const {
+        return flowUserIpcProcessId;
+}
+
+void Connection::setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId) {
+        this->flowUserIpcProcessId = flowUserIpcProcessId;
+}
+
+int Connection::getSourceCepId() const {
+        return sourceCepId;
+}
+
+void Connection::setSourceCepId(int sourceCepId) {
+        this->sourceCepId = sourceCepId;
 }
 
 /* CLASS KERNEL IPC PROCESS */
@@ -641,9 +668,8 @@ throw (UpdateDIFConfigurationException) {
         return seqNum;
 }
 
-unsigned int KernelIPCProcess::createConnection(
-                const Connection& connection)
-        throw (CreateConnectionException) {
+unsigned int KernelIPCProcess::createConnection(const Connection& connection)
+throw (CreateConnectionException) {
         unsigned int seqNum=0;
 
 #if STUB_API
@@ -663,6 +689,35 @@ unsigned int KernelIPCProcess::createConnection(
                 rinaManager->sendMessage(&message);
         }catch(NetlinkException &e){
                 throw CreateConnectionException(e.what());
+        }
+
+        seqNum = message.getSequenceNumber();
+
+#endif
+        return seqNum;
+}
+
+unsigned int KernelIPCProcess::updateConnection(const Connection& connection)
+throw (UpdateConnectionException) {
+        unsigned int seqNum=0;
+
+#if STUB_API
+        //Do nothing
+#else
+        IpcpConnectionUpdateRequestMessage message;
+        message.setPortId(connection.getPortId());
+        message.setSourceCepId(connection.getSourceCepId());
+        message.setDestinationCepId(connection.getDestCepId());
+        message.setFlowUserIpcProcessId(connection.getFlowUserIpcProcessId());
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                throw UpdateConnectionException(e.what());
         }
 
         seqNum = message.getSequenceNumber();
