@@ -29,14 +29,35 @@
 
 /* FIXME: This PDU-FWD-T entry representation has to be rearranged */
 struct pft_entry {
-        address_t          destination;
-        qos_id_t           qos_id;
-        struct list_head * ports;
+        address_t        destination;
+        qos_id_t         qos_id;
+        struct list_head ports;
+        struct list_head next;
 };
+
+static struct pft_entry * pfte_create_gfp(gfp_t flags)
+{
+        LOG_MISSING;
+
+        return NULL;
+}
+
+static struct pft_entry * pfte_create_ni(void)
+{ return pfte_create_gfp(GFP_ATOMIC); }
+
+static struct pft_entry * pfte_create(void)
+{ return pfte_create_gfp(GFP_KERNEL); }
+
+static int pfte_destroy(struct pft_entry * entry)
+{
+        LOG_MISSING;
+
+        return -1;
+}
 
 /* FIXME: This PDU-FWD-T representation is crappy and has to be rearranged */
 struct pft {
-        struct list_head * entries;
+        struct list_head entries;
 };
 
 struct pft * pft_create_gfp(gfp_t flags)
@@ -68,9 +89,22 @@ bool pft_is_empty(struct pft * instance)
 
 int pft_destroy(struct pft * instance)
 {
+        struct pft_entry * pos, * nxt;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
+        }
+
+        list_for_each_entry_safe(pos, nxt, &instance->entries, next) {
+                int ret;
+
+                list_del(&pos->next);
+                ret = pfte_destroy(pos);
+                if (!ret) {
+                        LOG_WARN("Could not destroy PDU-FWD-T entry %pK", pos);
+                        return ret;
+                }
         }
 
         rkfree(instance);
