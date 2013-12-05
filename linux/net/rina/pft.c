@@ -18,6 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/list.h>
+
 #define RINA_PREFIX "pft"
 
 #include "logs.h"
@@ -25,20 +27,34 @@
 #include "debug.h"
 #include "pft.h"
 
-struct pft {
-        int x;
+/* FIXME: This PDU-FWD-T entry representation has to be rearranged */
+struct pft_entry {
+        address_t          destination;
+        qos_id_t           qos_id;
+        struct list_head * ports;
 };
 
-struct pft * pft_create(void)
+/* FIXME: This PDU-FWD-T representation is crappy and has to be rearranged */
+struct pft {
+        struct list_head * entries;
+};
+
+struct pft * pft_create_gfp(gfp_t flags)
 {
         struct pft * tmp;
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
 
         return tmp;
 }
+
+struct pft * pft_create(void)
+{ return pft_create_gfp(GFP_KERNEL); }
+
+struct pft * pft_create_ni(void)
+{ return pft_create_gfp(GFP_ATOMIC); }
 
 int pft_destroy(struct pft * instance)
 {

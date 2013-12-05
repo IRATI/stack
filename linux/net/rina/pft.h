@@ -34,6 +34,7 @@ struct pdu_ft_entry {
 struct pft;
 
 struct pft * pft_create(void);
+struct pft * pft_create_ni(void);
 int          pft_destroy(struct pft * instance);
 
 int          pft_entry_add(struct pft * instance,
