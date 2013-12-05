@@ -30,6 +30,8 @@
 #define SYS_destroyIPCProcess __NR_ipc_destroy
 #define SYS_readSDU           __NR_sdu_read
 #define SYS_writeSDU          __NR_sdu_write
+#define SYS_allocatePortId    __NR_allocate_port
+#define SYS_deallocatePortId  __NR_deallocate_port
 
 #if !defined(__NR_ipc_create)
 #error No ipc_create syscall defined
@@ -42,6 +44,12 @@
 #endif
 #if !defined(__NR_sdu_write)
 #error No sdu_write syscall defined
+#endif
+#if !defined(__NR_allocate_port)
+#error No allocate_port syscall defined
+#endif
+#if !defined(__NR_deallocate_port)
+#error No deallocate_port syscall defined
 #endif
 
 #include <sys/syscall.h>
@@ -91,7 +99,7 @@ namespace rina {
                 return result;
         }
 
-        int syscallDestroyIPCProcess(unsigned int ipcProcessId)
+        int syscallDestroyIPCProcess(unsigned short ipcProcessId)
         {
                 int result;
 
@@ -128,4 +136,44 @@ namespace rina {
                 return result;
         }
 
+        int syscallAllocatePortId(unsigned short ipcProcessId, bool toApp)
+        {
+                int result;
+                int toAppForKernel;
+
+                DUMP_SYSCALL("SYS_allocatePortId", SYS_allocatePortId);
+
+                if (toApp) {
+                        toAppForKernel = 1;
+                } else {
+                        toAppForKernel = 0;
+                }
+
+                result = syscall(SYS_allocatePortId,
+                                ipcProcessId,
+                                toAppForKernel);
+
+                if (result < 0) {
+                        LOG_ERR("Syscall allocate port id failed: %d", result);
+                }
+
+                return result;
+
+        }
+
+        int syscallDeallocatePortId(int portId)
+        {
+                int result;
+
+                DUMP_SYSCALL("SYS_deallocatePortId", SYS_deallocatePortId);
+
+                result = syscall(SYS_deallocatePortId, portId);
+
+                if (result < 0) {
+                        LOG_ERR("Syscall deallocate port id failed: %d", result);
+                }
+
+                return result;
+
+        }
 }

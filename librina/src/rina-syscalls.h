@@ -65,7 +65,26 @@ namespace rina {
          * @return 0 upon success, a negative number indicating an error
          *         otherwise
          */
-        int syscallDestroyIPCProcess(unsigned int ipcProcessId);
+        int syscallDestroyIPCProcess(unsigned short ipcProcessId);
+
+        /**
+         * Wrapper of the allocate port-id system call
+         * @param ipcProcessId The id of the IPC Process that will be using
+         * the flow
+         * @param toApp True if this flow will be used by an application,
+         * false if it will be used by an IPC Process
+         * @return portId to use (>0) if everything was ok, negative number
+         * indicating error otherwise
+         */
+        int syscallAllocatePortId(unsigned short ipcProcessId, bool toApp);
+
+        /**
+         * Wrappert of the deallocate port-is system call
+         * @param portId the port-id to be deallocated
+         * @return 0 if everything was ok, negative number indicating error
+         *         otherwise
+         */
+        int syscallDeallocatePortId(int portId);
 
 }
 

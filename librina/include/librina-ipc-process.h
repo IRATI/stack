@@ -146,6 +146,92 @@ public:
 };
 
 /**
+ * The Kernel components of the IPC Process report about the result of a
+ * create EFCP connection operation
+ */
+class CreateConnectionResponseEvent: public IPCEvent {
+
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /**
+         * The source connection-endpoint id if the connection was created
+         * successfully, or a negative number indicating an error code in
+         * case of failure
+         */
+        int cepId;
+
+public:
+        CreateConnectionResponseEvent(int portId, int cepId,
+                        unsigned int sequenceNumber);
+        int getCepId() const;
+        int getPortId() const;
+};
+
+/**
+ * The Kernel components of the IPC Process report about the result of a
+ * create EFCP connection operation
+ */
+class UpdateConnectionResponseEvent: public IPCEvent {
+
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /**
+         * The result of the operation (0 successful)
+         */
+        int result;
+
+public:
+        UpdateConnectionResponseEvent(int portId, int result,
+                        unsigned int sequenceNumber);
+        int getResult() const;
+        int getPortId() const;
+};
+
+/**
+ * The Kernel components of the IPC Process report about the result of a
+ * create EFCP connection arrived operation
+ */
+class CreateConnectionResultEvent: public IPCEvent {
+
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /**
+         * The source connection-endpoint id if the connection was created
+         * successfully, or a negative number indicating an error code in
+         * case of failure
+         */
+        int sourceCepId;
+
+        /** The destination cep-id of the connection */
+        int destCepId;
+
+public:
+        CreateConnectionResultEvent(int portId, int sourceCepId,
+                        int destCepId, unsigned int sequenceNumber);
+        int getSourceCepId() const;
+        int getDestCepId() const;
+        int getPortId() const;
+};
+
+class DestroyConnectionResultEvent: public IPCEvent {
+
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /** The destination cep-id of the connection */
+        int result;
+
+public:
+        DestroyConnectionResultEvent(int portId, int result,
+                        unsigned int sequenceNumber);
+        int getResult() const;
+        int getPortId() const;
+};
+
+/**
  * Thrown when there are problems notifying the IPC Manager about the
  * result of an Assign to DIF operation
  */
@@ -256,6 +342,47 @@ public:
                 IPCException(description){
         }
 };
+
+/**
+ * Thrown when there are problems requesting the Kernel to update an EFCP connection
+ */
+class UpdateConnectionException: public IPCException {
+public:
+        UpdateConnectionException():
+                IPCException("Problems updating an EFCP connection"){
+        }
+        UpdateConnectionException(const std::string& description):
+                IPCException(description){
+        }
+};
+
+/**
+ * Thrown when there are problems requesting the Kernel to destroy an EFCP connection
+ */
+class DestroyConnectionException: public IPCException {
+public:
+        DestroyConnectionException():
+                IPCException("Problems destroying an EFCP connection"){
+        }
+        DestroyConnectionException(const std::string& description):
+                IPCException(description){
+        }
+};
+
+/**
+ * Thrown when there are problems requesting the Kernel to allocate or deallocate a
+ * port-id
+ */
+class PortAllocationException: public IPCException {
+public:
+        PortAllocationException():
+                IPCException("Problems requesting the allocation/deallocation of a port-id"){
+        }
+        PortAllocationException(const std::string& description):
+                IPCException(description){
+        }
+};
+
 
 /**
  * Class used by the IPC Processes to interact with the IPC Manager. Extends
@@ -405,14 +532,16 @@ public:
 	 * @param localAppName
 	 * @param remoteAppName
 	 * @param flowSpecification
-	 * @returns the portId assigned to the flow
+	 * @param portId the portId for the flow
+	 * @returns a handler to correlate the response
 	 * @throws AllocateFlowRequestArrivedException if there are issues during
 	 * the operation or the application rejects the flow
 	 */
-	int allocateFlowRequestArrived(
+	unsigned int allocateFlowRequestArrived(
 			const ApplicationProcessNamingInformation& localAppName,
 			const ApplicationProcessNamingInformation& remoteAppName,
-			const FlowSpecification& flowSpecification)
+			const FlowSpecification& flowSpecification,
+			int portId)
 		throw (AllocateFlowRequestArrivedException);
 
         /**
@@ -497,6 +626,23 @@ public:
 	void queryRIBResponse(const QueryRIBRequestEvent& event, int result,
 			const std::list<RIBObject>& ribObjects)
 		throw (QueryRIBResponseException);
+
+	/**
+	 * Request an available portId to the kernel
+	 * @param The id of the IPC Process that will be using the flow
+	 * associated to the port-id requested (0 if is an application)
+	 * @return the port-id
+	 * @throws PortAllocationException if something goes wrong
+	 */
+	int allocatePortId(unsigned short ipcProcessId)
+	        throw (PortAllocationException);
+
+	/**
+	 * Request the kernel to free a used port-id
+	 * @param portId the port-id to be freed
+	 * @throws PortAllocationException if something goes wrong
+	 */
+	void deallocatePortId(int portId) throw (PortAllocationException);
 };
 
 /**
@@ -525,6 +671,22 @@ class Connection {
          */
         unsigned int qosId;
 
+        /**
+         * The source CEP-id
+         */
+        int sourceCepId;
+
+        /**
+         * The destination CEP-id
+         */
+        int destCepId;
+
+        /**
+         * The id of the IPC Process using the flow supported by this
+         * connection (0 if it is an application that is not an IPC Process)
+         */
+        unsigned short flowUserIpcProcessId;
+
 public:
         Connection();
         unsigned int getDestAddress() const;
@@ -535,6 +697,12 @@ public:
         void setQosId(unsigned int qosId);
         unsigned int getSourceAddress() const;
         void setSourceAddress(unsigned int sourceAddress);
+        int getDestCepId() const;
+        void setDestCepId(int destCepId);
+        unsigned short getFlowUserIpcProcessId() const;
+        void setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId);
+        int getSourceCepId() const;
+        void setSourceCepId(int sourceCepId);
 };
 
 /**
@@ -586,6 +754,40 @@ public:
          */
         unsigned int createConnection(const Connection& connection)
         throw (CreateConnectionException);
+
+        /**
+         * Invoked by the IPC Process Daemon to request an update of an
+         * EFCP connection to the kernel components of the IPC Process
+         *
+         * @param connection
+         * @throws UpdateConnectionException
+         * @return the handle to the response message
+         */
+        unsigned int updateConnection(const Connection& connection)
+        throw (UpdateConnectionException);
+
+        /**
+         * Invoked by the IPC Process Daemon to request the creation of an
+         * EFCP connection to the kernel components of the IPC Process
+         * (receiving side of the Flow allocation procedure)
+         *
+         * @param connection
+         * @throws CreateConnectionException
+         * @return the handle to the response message
+         */
+        unsigned int createConnectionArrived(const Connection& connection)
+        throw (CreateConnectionException);
+
+        /**
+         * Invoked by the IPC Process Daemon to request the destruction of an
+         * EFCP connection to the kernel components of the IPC Process
+         *
+         * @param connection
+         * @throws DestroyConnectionException
+         * @return the handle to the response message
+         */
+        unsigned int destroyConnection(const Connection& connection)
+        throw (DestroyConnectionException);
 };
 
 /**

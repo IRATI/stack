@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.google.common.primitives.UnsignedLongs;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.Connection;
 import eu.irati.librina.FlowSpecification;
 
 import rina.ribdaemon.api.RIBObjectNames;
@@ -46,13 +47,13 @@ public class Flow {
 	 * The port-id returned to the Application process that requested the flow. This port-id is used for 
 	 * the life of the flow.
 	 */
-	private long sourcePortId = 0;
+	private int sourcePortId = 0;
 	
 	/**
 	 * The port-id returned to the destination Application process. This port-id is used for 
 	 * the life of the flow.
 	 */
-	private long destinationPortId = 0;
+	private int destinationPortId = 0;
 	
 	/**
 	 * The address of the IPC process that is the source of this flow
@@ -65,14 +66,14 @@ public class Flow {
 	private long destinationAddress = 0;
 	
 	/**
-	 * All the possible connectionIds of this flow
+	 * All the possible connections of this flow
 	 */
-	private List<ConnectionId> connectionIds = null;
+	private List<Connection> connections = null;
 	
 	/**
 	 * The index of the connection that is currently Active in this flow
 	 */
-	private int currentConnectionIdIndex = 0;
+	private int currentConnectionIndex = 0;
 	
 	/**
 	 * The status of this flow
@@ -123,7 +124,7 @@ public class Flow {
 	private boolean source = false;
 	
 	public Flow(){
-		this.connectionIds = new ArrayList<ConnectionId>();
+		this.connections = new ArrayList<Connection>();
 		this.policies = new ConcurrentHashMap<String, String>();
 		this.policyParameters = new ConcurrentHashMap<String, String>();
 	}
@@ -153,19 +154,24 @@ public class Flow {
 		this.destinationNamingInfo = destinationNamingInfo;
 	}
 
-	public long getSourcePortId() {
+	public int getSourcePortId() {
 		return sourcePortId;
 	}
 
-	public void setSourcePortId(long sourcePortId) {
+	public void setSourcePortId(int sourcePortId) {
 		this.sourcePortId = sourcePortId;
+		if (connections != null) {
+			for(int i=0; i<connections.size(); i++){
+				connections.get(i).setPortId((int)sourcePortId);
+			}
+		}
 	}
 
-	public long getDestinationPortId() {
+	public int getDestinationPortId() {
 		return destinationPortId;
 	}
 
-	public void setDestinationPortId(long destinationPortId) {
+	public void setDestinationPortId(int destinationPortId) {
 		this.destinationPortId = destinationPortId;
 	}
 
@@ -175,6 +181,11 @@ public class Flow {
 
 	public void setSourceAddress(long sourceAddress) {
 		this.sourceAddress = sourceAddress;
+		if (connections != null) {
+			for(int i=0; i<connections.size(); i++){
+				connections.get(i).setSourceAddress(sourceAddress);
+			}
+		}
 	}
 
 	public long getDestinationAddress() {
@@ -183,22 +194,27 @@ public class Flow {
 
 	public void setDestinationAddress(long destinationAddress) {
 		this.destinationAddress = destinationAddress;
+		if (connections != null) {
+			for(int i=0; i<connections.size(); i++){
+				connections.get(i).setDestAddress(destinationAddress);
+			}
+		}
 	}
 
-	public List<ConnectionId> getConnectionIds() {
-		return this.connectionIds;
+	public List<Connection> getConnections() {
+		return this.connections;
 	}
 
-	public void setConnectionIds(List<ConnectionId> connectionIds) {
-		this.connectionIds = connectionIds;
+	public void setConnections(List<Connection> connections) {
+		this.connections = connections;
 	}
 
-	public int getCurrentConnectionIdIndex() {
-		return currentConnectionIdIndex;
+	public int getCurrentConnectionIndex() {
+		return currentConnectionIndex;
 	}
 
-	public void setCurrentConnectionIdIndex(int currentConnectionIdIndex) {
-		this.currentConnectionIdIndex = currentConnectionIdIndex;
+	public void setCurrentConnectionIndex(int currentConnectionIndex) {
+		this.currentConnectionIndex = currentConnectionIndex;
 	}
 
 	public State getState() {
@@ -277,13 +293,15 @@ public class Flow {
 		result = result + "* Destination AP Naming Info: "+ this.getDestinationNamingInfo();
 		result = result + "* Destination addres: " + UnsignedLongs.toString(this.getDestinationAddress()) + "\n";
 		result = result + "* Destination port id: "+ UnsignedLongs.toString(this.getDestinationPortId()) + "\n";
-		if (connectionIds.size() > 0){
+		if (connections.size() > 0){
 			result = result + "* Connection ids of the connection supporting this flow: +\n";
-			for(int i=0; i<connectionIds.size(); i++){
-				result = result + connectionIds.get(i).toString();
+			for(int i=0; i<connections.size(); i++){
+				result = result + "Src CEP-id " +connections.get(i).getSourceCepId() 
+						+ "; Dest CEP-id " + connections.get(i).getDestCepId() 
+						+ "; Qos-id " + connections.get(i).getQosId() + "\n";
 			}
 		}
-		result = result + "* Index of the current active connection for this flow: "+this.currentConnectionIdIndex +"\n";
+		result = result + "* Index of the current active connection for this flow: "+this.currentConnectionIndex +"\n";
 		if (!this.policies.isEmpty()){
 			result = result + "* Policies: \n";
 			Iterator<Entry<String, String>> iterator = this.policies.entrySet().iterator();

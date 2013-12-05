@@ -19,6 +19,7 @@
 #include "logs.h"
 #include "librina-ipc-process.h"
 #include "core.h"
+#include "rina-syscalls.h"
 
 namespace rina{
 
@@ -137,6 +138,79 @@ int QueryRIBRequestEvent::getScope() const{
 
 const std::string& QueryRIBRequestEvent::getFilter() const{
 	return filter;
+}
+
+/* CLASS CREATE CONNECTION RESPONSE EVENT */
+CreateConnectionResponseEvent::CreateConnectionResponseEvent(int portId,
+        int cepId, unsigned int sequenceNumber):
+                IPCEvent(IPC_PROCESS_CREATE_CONNECTION_RESPONSE,
+                                sequenceNumber) {
+        this->cepId = cepId;
+        this->portId = portId;
+}
+
+int CreateConnectionResponseEvent::getCepId() const {
+        return cepId;
+}
+
+int CreateConnectionResponseEvent::getPortId() const {
+        return portId;
+}
+
+/* CLASS UPDATE CONNECTION RESPONSE EVENT */
+UpdateConnectionResponseEvent::UpdateConnectionResponseEvent(int portId,
+        int result, unsigned int sequenceNumber):
+                IPCEvent(IPC_PROCESS_UPDATE_CONNECTION_RESPONSE,
+                                sequenceNumber) {
+        this->result = result;
+        this->portId = portId;
+}
+
+int UpdateConnectionResponseEvent::getResult() const {
+        return result;
+}
+
+int UpdateConnectionResponseEvent::getPortId() const {
+        return portId;
+}
+
+/* CLASS CREATE CONNECTION RESULT EVENT */
+CreateConnectionResultEvent::CreateConnectionResultEvent(int portId,
+        int sourceCepId, int destCepId, unsigned int sequenceNumber):
+                IPCEvent(IPC_PROCESS_CREATE_CONNECTION_RESULT,
+                                sequenceNumber) {
+        this->sourceCepId = sourceCepId;
+        this->destCepId = destCepId;
+        this->portId = portId;
+}
+
+int CreateConnectionResultEvent::getSourceCepId() const {
+        return sourceCepId;
+}
+
+int CreateConnectionResultEvent::getDestCepId() const {
+        return destCepId;
+}
+
+int CreateConnectionResultEvent::getPortId() const {
+        return portId;
+}
+
+/* CLASS DESTROY CONNECTION RESULT EVENT */
+DestroyConnectionResultEvent::DestroyConnectionResultEvent(int portId,
+        int result, unsigned int sequenceNumber):
+                IPCEvent(IPC_PROCESS_DESTROY_CONNECTION_RESULT,
+                                sequenceNumber) {
+        this->result = result;
+        this->portId = portId;
+}
+
+int DestroyConnectionResultEvent::getResult() const {
+        return result;
+}
+
+int DestroyConnectionResultEvent::getPortId() const {
+        return portId;
 }
 
 /* CLASS EXTENDED IPC MANAGER */
@@ -389,47 +463,32 @@ void ExtendedIPCManager::allocateFlowRequestResult(
 #endif
 }
 
-int ExtendedIPCManager::allocateFlowRequestArrived(
+unsigned int ExtendedIPCManager::allocateFlowRequestArrived(
 			const ApplicationProcessNamingInformation& localAppName,
 			const ApplicationProcessNamingInformation& remoteAppName,
-			const FlowSpecification& flowSpecification)
+			const FlowSpecification& flowSpecification,
+			int portId)
 		throw (AllocateFlowRequestArrivedException){
-        /*
 #if STUP_API
-	return 25;
+	return 0;
 #else
 	IpcmAllocateFlowRequestArrivedMessage message;
 	message.setSourceAppName(remoteAppName);
 	message.setDestAppName(localAppName);
 	message.setFlowSpecification(flowSpecification);
 	message.setDifName(currentDIFInformation.getDifName());
+	message.setPortId(portId);
 	message.setSourceIpcProcessId(ipcProcessId);
 	message.setRequestMessage(true);
 
-	int portId = 0;
-	IpcmAllocateFlowResponseMessage * allocateFlowResponse;
 	try{
-		allocateFlowResponse =
-				dynamic_cast<IpcmAllocateFlowResponseMessage *>(
-						rinaManager->sendRequestAndWaitForResponse(&message,
-								ExtendedIPCManager::error_allocate_flow));
+	        rinaManager->sendMessage(&message);
 	}catch(NetlinkException &e){
-		throw AllocateFlowRequestArrivedException(e.what());
+	        throw AllocateFlowRequestArrivedException(e.what());
 	}
 
-	if (allocateFlowResponse->getResult()<0){
-		delete allocateFlowResponse;
-		throw AllocateFlowRequestArrivedException(
-				ExtendedIPCManager::error_allocate_flow );
-	}
-
-	portId = allocateFlowResponse->getPortId();
-	LOG_DBG("Allocated flow with portId %d", portId);
-	delete allocateFlowResponse;
-
-	return portId;
-#endif*/
-        return 0;
+	return message.getSequenceNumber();
+#endif
 }
 
 unsigned int ExtendedIPCManager::requestFlowAllocation(
@@ -520,6 +579,34 @@ void ExtendedIPCManager::queryRIBResponse(
 #endif
 }
 
+int ExtendedIPCManager::allocatePortId(unsigned short ipcProcessId)
+        throw (PortAllocationException) {
+#if STUB_API
+        //Do nothing
+        return 1;
+#else
+        int result = syscallAllocatePortId(ipcProcessId, ipcProcessId==0);
+        if (result < 0){
+                throw PortAllocationException();
+        }
+
+        return result;
+#endif
+}
+
+void ExtendedIPCManager::deallocatePortId(int portId)
+        throw (PortAllocationException) {
+#if STUB_API
+        //Do nothing
+        return;
+#else
+        int result = syscallDeallocatePortId(portId);
+        if (result < 0){
+                throw PortAllocationException();
+        }
+#endif
+}
+
 Singleton<ExtendedIPCManager> extendedIPCManager;
 
 /* CLASS CONNECTION */
@@ -528,6 +615,9 @@ Connection::Connection() {
         sourceAddress = 0;
         destAddress = 0;
         qosId = 0;
+        sourceCepId = 0;
+        destCepId = 0;
+        flowUserIpcProcessId = 0;
 }
 
 unsigned int Connection::getDestAddress() const {
@@ -560,6 +650,30 @@ unsigned int Connection::getSourceAddress() const {
 
 void Connection::setSourceAddress(unsigned int sourceAddress){
         this->sourceAddress = sourceAddress;
+}
+
+int Connection::getDestCepId() const {
+        return destCepId;
+}
+
+void Connection::setDestCepId(int destCepId) {
+        this->destCepId = destCepId;
+}
+
+unsigned short Connection::getFlowUserIpcProcessId() const {
+        return flowUserIpcProcessId;
+}
+
+void Connection::setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId) {
+        this->flowUserIpcProcessId = flowUserIpcProcessId;
+}
+
+int Connection::getSourceCepId() const {
+        return sourceCepId;
+}
+
+void Connection::setSourceCepId(int sourceCepId) {
+        this->sourceCepId = sourceCepId;
 }
 
 /* CLASS KERNEL IPC PROCESS */
@@ -624,9 +738,8 @@ throw (UpdateDIFConfigurationException) {
         return seqNum;
 }
 
-unsigned int KernelIPCProcess::createConnection(
-                const Connection& connection)
-        throw (CreateConnectionException) {
+unsigned int KernelIPCProcess::createConnection(const Connection& connection)
+throw (CreateConnectionException) {
         unsigned int seqNum=0;
 
 #if STUB_API
@@ -646,6 +759,95 @@ unsigned int KernelIPCProcess::createConnection(
                 rinaManager->sendMessage(&message);
         }catch(NetlinkException &e){
                 throw CreateConnectionException(e.what());
+        }
+
+        seqNum = message.getSequenceNumber();
+
+#endif
+        return seqNum;
+}
+
+unsigned int KernelIPCProcess::updateConnection(const Connection& connection)
+throw (UpdateConnectionException) {
+        unsigned int seqNum=0;
+
+#if STUB_API
+        //Do nothing
+#else
+        IpcpConnectionUpdateRequestMessage message;
+        message.setPortId(connection.getPortId());
+        message.setSourceCepId(connection.getSourceCepId());
+        message.setDestinationCepId(connection.getDestCepId());
+        message.setFlowUserIpcProcessId(connection.getFlowUserIpcProcessId());
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                throw UpdateConnectionException(e.what());
+        }
+
+        seqNum = message.getSequenceNumber();
+
+#endif
+        return seqNum;
+}
+
+unsigned int KernelIPCProcess::
+createConnectionArrived(const Connection& connection)
+throw (CreateConnectionException) {
+        unsigned int seqNum=0;
+
+#if STUB_API
+        //Do nothing
+#else
+        IpcpConnectionCreateArrivedMessage message;
+        message.setPortId(connection.getPortId());
+        message.setSourceAddress(connection.getSourceAddress());
+        message.setDestAddress(connection.getDestAddress());
+        message.setQosId(connection.getQosId());
+        message.setDestCepId(connection.getDestCepId());
+        message.setFlowUserIpcProcessId(connection.getFlowUserIpcProcessId());
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                throw CreateConnectionException(e.what());
+        }
+
+        seqNum = message.getSequenceNumber();
+
+#endif
+        return seqNum;
+}
+
+unsigned int KernelIPCProcess::
+destroyConnection(const Connection& connection)
+        throw (DestroyConnectionException) {
+        unsigned int seqNum=0;
+
+#if STUB_API
+        //Do nothing
+#else
+        IpcpConnectionDestroyRequestMessage message;
+        message.setPortId(connection.getPortId());
+        message.setCepId(connection.getSourceCepId());
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                throw DestroyConnectionException(e.what());
         }
 
         seqNum = message.getSequenceNumber();

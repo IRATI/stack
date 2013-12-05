@@ -1,5 +1,6 @@
 package rina.flowallocator.api;
 
+import eu.irati.librina.CreateConnectionResponseEvent;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCException;
 import rina.cdap.api.message.CDAPMessage;
@@ -19,11 +20,11 @@ public interface FlowAllocator {
 	 * with a status of pending, or whether a response is withheld until an Allocate_Response can be delivered 
 	 * with a status of success or failure.
 	 * @param allocateRequest the characteristics of the flow to be allocated.
-	 * @return the portId
-	 * @throws IPCException if the request is not well formed or there are not enough resources
 	 * to honour the request
 	 */
-	public int submitAllocateRequest(FlowRequestEvent flowRequestEvent) throws IPCException;
+	public void submitAllocateRequest(FlowRequestEvent flowRequestEvent);
+	
+	public void processCreateConnectionResponseEvent(CreateConnectionResponseEvent event);
 	
 	/**
 	 * Forward the allocate response to the Flow Allocator Instance.
@@ -55,30 +56,4 @@ public interface FlowAllocator {
 	 * @param portId
 	 */
 	public void removeFlowAllocatorInstance(int portId);
-	
-	/* Deal with local flows (flows between applications from the same system) */
-	
-	/**
-	 * Called by the flow allocator instance when a request for a local flow is received
-	 * @param flowInformation
-	 * @throws IPCException
-	 */
-	public void receivedLocalFlowRequest(FlowRequestEvent flowRequestEvent) throws IPCException;
-	
-	/**
-	 * Called by the flow allocator instance when a response for a local flow is received
-	 * @param portId
-	 * @param remotePortId
-	 * @param result
-	 * @param resultReason
-	 * @throws IPCException
-	 */
-	public void receivedLocalFlowResponse(int portId, int remotePortId, boolean result, String resultReason) throws IPCException;
-	
-	/**
-	 * Request to deallocate a local flow
-	 * @param portId
-	 * @throws IPCException
-	 */
-	public void receivedDeallocateLocalFlowRequest(int portId) throws IPCException;
 }

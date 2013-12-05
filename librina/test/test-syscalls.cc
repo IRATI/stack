@@ -48,6 +48,8 @@ char * intToCharArray(int i){
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING RINA SYSCALLS\n";
 	int result = 0;
+	int portId1 = 0;
+	int portId2 = 0;
 
 	//Create an IPC Process
 	ApplicationProcessNamingInformation * ipcProcessName =
@@ -76,6 +78,21 @@ int main(int argc, char * argv[]) {
 			<<result<<std::endl;
 
 	delete ipcProcessName;
+
+        //Allocate port-id
+	portId1 = syscallAllocatePortId(5, false);
+	std::cout<<"Allocated port id: "<<portId1<<std::endl;
+	portId2 = syscallAllocatePortId(1, true);
+	std::cout<<"Allocated port id: "<<portId2<<std::endl;
+
+	//Deallocate port-id
+	result = syscallDeallocatePortId(portId1);
+	std::cout<<"Deallocate port id result: "<<result<<std::endl;
+	result = syscallDeallocatePortId(portId2);
+	std::cout<<"Deallocate port id result: "<<result<<std::endl;
+	result = syscallDeallocatePortId(34);
+	std::cout<<"Deallocate port id result: "<<result<<std::endl;
+
 /*
 	char * args[] =
 	{

@@ -266,11 +266,6 @@ SYSCALL_DEFINE2(allocate_port,
 
         SYSCALL_DUMP_ENTER;
 
-        if (!id) {
-                SYSCALL_DUMP_EXIT;
-                return -EFAULT;
-        }
-
         CALL_DEFAULT_PERSONALITY(retval, allocate_port, id,
                                  (to_app != 0) ? true : false);
 

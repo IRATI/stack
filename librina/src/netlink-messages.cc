@@ -1475,5 +1475,266 @@ IPCEvent* IpcpConnectionCreateRequestMessage::toIPCEvent() {
         return 0;
 }
 
+/* CLASS IPCM CONNECTION CREATE RESPONSE MESSAGE */
+IpcpConnectionCreateResponseMessage::IpcpConnectionCreateResponseMessage() :
+         BaseNetlinkMessage(RINA_C_IPCP_CONN_CREATE_RESPONSE){
+        portId = 0;
+        cepId = 0;
+}
+
+int IpcpConnectionCreateResponseMessage::getCepId() const {
+        return cepId;
+}
+
+void IpcpConnectionCreateResponseMessage::setCepId(int cepId) {
+        this->cepId = cepId;
+}
+
+int IpcpConnectionCreateResponseMessage::getPortId() const {
+        return portId;
+}
+
+void IpcpConnectionCreateResponseMessage::setPortId(int portId) {
+        this->portId = portId;
+}
+
+IPCEvent* IpcpConnectionCreateResponseMessage::toIPCEvent() {
+        IPCEvent * event = new CreateConnectionResponseEvent(portId, cepId,
+                        getSequenceNumber());
+        return event;
+}
+
+/* CLASS IPCM CONNECTION UPDATE REQUEST MESSAGE */
+IpcpConnectionUpdateRequestMessage::IpcpConnectionUpdateRequestMessage() :
+         BaseNetlinkMessage(RINA_C_IPCP_CONN_UPDATE_REQUEST){
+        portId = 0;
+        sourceCepId = 0;
+        destinationCepId = 0;
+        flowUserIpcProcessId = 0;
+}
+
+int IpcpConnectionUpdateRequestMessage::getDestinationCepId() const {
+        return destinationCepId;
+}
+
+void IpcpConnectionUpdateRequestMessage::
+setDestinationCepId(int destinationCepId) {
+        this->destinationCepId = destinationCepId;
+}
+
+unsigned short
+IpcpConnectionUpdateRequestMessage::getFlowUserIpcProcessId() const {
+        return flowUserIpcProcessId;
+}
+
+void IpcpConnectionUpdateRequestMessage::
+setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId) {
+        this->flowUserIpcProcessId = flowUserIpcProcessId;
+}
+
+int IpcpConnectionUpdateRequestMessage::getPortId() const {
+        return portId;
+}
+
+void IpcpConnectionUpdateRequestMessage::
+setPortId(int portId) {
+        this->portId = portId;
+}
+
+int IpcpConnectionUpdateRequestMessage::getSourceCepId() const {
+        return sourceCepId;
+}
+
+void IpcpConnectionUpdateRequestMessage::
+setSourceCepId(int sourceCepId) {
+        this->sourceCepId = sourceCepId;
+}
+
+IPCEvent* IpcpConnectionUpdateRequestMessage::toIPCEvent() {
+        return 0;
+}
+
+/* CLASS CONNECTION UPDATE RESULT MESSAGE */
+IpcpConnectionUpdateResultMessage::IpcpConnectionUpdateResultMessage() :
+        BaseNetlinkResponseMessage(RINA_C_IPCP_CONN_UPDATE_RESULT) {
+        this->portId = 0;
+}
+
+int IpcpConnectionUpdateResultMessage::getPortId() const {
+        return portId;
+}
+
+void IpcpConnectionUpdateResultMessage::setPortId(int portId) {
+        this->portId = portId;
+}
+
+IPCEvent* IpcpConnectionUpdateResultMessage::toIPCEvent() {
+        IPCEvent * event = new UpdateConnectionResponseEvent(portId, getResult(),
+                        getSequenceNumber());
+        return event;
+}
+
+/* CLASS IPCM CONNECTION CREATE ARRIVED MESSAGE */
+IpcpConnectionCreateArrivedMessage::IpcpConnectionCreateArrivedMessage():
+                BaseNetlinkMessage(RINA_C_IPCP_CONN_CREATE_ARRIVED) {
+        portId = 0;
+        sourceAddress = 0;
+        destAddress = 0;
+        qosId = 0;
+        destCepId = 0;
+        flowUserIpcProcessId = 0;
+}
+
+unsigned int IpcpConnectionCreateArrivedMessage::getDestAddress() const {
+        return destAddress;
+}
+
+void IpcpConnectionCreateArrivedMessage::setDestAddress(
+                unsigned int destAddress) {
+        this->destAddress = destAddress;
+}
+
+int IpcpConnectionCreateArrivedMessage::getPortId() const {
+        return portId;
+}
+
+void IpcpConnectionCreateArrivedMessage::setPortId(int portId) {
+        this->portId = portId;
+}
+
+unsigned int IpcpConnectionCreateArrivedMessage::getQosId() const {
+                return qosId;
+}
+
+void IpcpConnectionCreateArrivedMessage::setQosId(unsigned int qosId){
+        this->qosId = qosId;
+}
+
+unsigned int IpcpConnectionCreateArrivedMessage::getSourceAddress() const {
+        return sourceAddress;
+}
+
+void IpcpConnectionCreateArrivedMessage::setSourceAddress(
+                unsigned int sourceAddress) {
+        this->sourceAddress = sourceAddress;
+}
+
+unsigned short IpcpConnectionCreateArrivedMessage::
+getFlowUserIpcProcessId() const {
+        return flowUserIpcProcessId;
+}
+
+void IpcpConnectionCreateArrivedMessage::
+setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId) {
+        this->flowUserIpcProcessId = flowUserIpcProcessId;
+}
+
+int IpcpConnectionCreateArrivedMessage::getDestCepId() const {
+        return destCepId;
+}
+
+void IpcpConnectionCreateArrivedMessage::setDestCepId(int destCepId) {
+        this->destCepId = destCepId;
+}
+
+IPCEvent* IpcpConnectionCreateArrivedMessage::toIPCEvent() {
+        return 0;
+}
+
+/* CLASS IPCM CONNECTION CREATE RESULT MESSAGE */
+IpcpConnectionCreateResultMessage::IpcpConnectionCreateResultMessage() :
+         BaseNetlinkMessage(RINA_C_IPCP_CONN_CREATE_RESULT){
+        portId = 0;
+        sourceCepId = 0;
+        destCepId = 0;
+}
+
+int IpcpConnectionCreateResultMessage::getSourceCepId() const {
+        return sourceCepId;
+}
+
+void IpcpConnectionCreateResultMessage::setSourceCepId(int sourceCepId) {
+        this->sourceCepId = sourceCepId;
+}
+
+int IpcpConnectionCreateResultMessage::getDestCepId() const {
+        return destCepId;
+}
+
+void IpcpConnectionCreateResultMessage::setDestCepId(int destCepId) {
+        this->destCepId = destCepId;
+}
+
+int IpcpConnectionCreateResultMessage::getPortId() const {
+        return portId;
+}
+
+void IpcpConnectionCreateResultMessage::setPortId(int portId) {
+        this->portId = portId;
+}
+
+IPCEvent* IpcpConnectionCreateResultMessage::toIPCEvent() {
+        IPCEvent * event = new CreateConnectionResultEvent(portId, sourceCepId,
+                        destCepId, getSequenceNumber());
+        return event;
+}
+
+/* CLASS IPCM CONNECTION DESTROY REQUEST MESSAGE */
+IpcpConnectionDestroyRequestMessage::IpcpConnectionDestroyRequestMessage() :
+         BaseNetlinkMessage(RINA_C_IPCP_CONN_DESTROY_REQUEST){
+        portId = 0;
+        cepId = 0;
+}
+
+int IpcpConnectionDestroyRequestMessage::getCepId() const {
+        return cepId;
+}
+
+void IpcpConnectionDestroyRequestMessage::setCepId(int cepId) {
+        this->cepId = cepId;
+}
+
+int IpcpConnectionDestroyRequestMessage::getPortId() const {
+        return portId;
+}
+
+void IpcpConnectionDestroyRequestMessage::setPortId(int portId) {
+        this->portId = portId;
+}
+
+IPCEvent* IpcpConnectionDestroyRequestMessage::toIPCEvent() {
+        return 0;
+}
+
+/* CLASS IPCM CONNECTION DESTROY RESULT MESSAGE */
+IpcpConnectionDestroyResultMessage::IpcpConnectionDestroyResultMessage() :
+         BaseNetlinkMessage(RINA_C_IPCP_CONN_DESTROY_RESULT){
+        portId = 0;
+        result = 0;
+}
+
+int IpcpConnectionDestroyResultMessage::getResult() const {
+        return result;
+}
+
+void IpcpConnectionDestroyResultMessage::setResult(int result) {
+        this->result = result;
+}
+
+int IpcpConnectionDestroyResultMessage::getPortId() const {
+        return portId;
+}
+
+void IpcpConnectionDestroyResultMessage::setPortId(int portId) {
+        this->portId = portId;
+}
+
+IPCEvent* IpcpConnectionDestroyResultMessage::toIPCEvent() {
+        IPCEvent * event = new DestroyConnectionResultEvent(portId, result,
+                        getSequenceNumber());
+        return event;
+}
+
+
 }
 
