@@ -37,10 +37,11 @@ struct pft * pft_create(void);
 struct pft * pft_create_ni(void);
 int          pft_destroy(struct pft * instance);
 
+bool         pft_is_empty(struct pft * instance);
 int          pft_entry_add(struct pft * instance,
-                           address_t       destination,
-                           qos_id_t        qos_id,
-                           port_id_t       port_id);
+                           address_t    destination,
+                           qos_id_t     qos_id,
+                           port_id_t    port_id);
 int          pft_entry_remove(struct pft * instance,
                               address_t    destination,
                               qos_id_t     qos_id,

@@ -56,6 +56,16 @@ struct pft * pft_create(void)
 struct pft * pft_create_ni(void)
 { return pft_create_gfp(GFP_ATOMIC); }
 
+static bool pft_is_ok(struct pft * instance)
+{ return instance ? true : false; }
+
+bool pft_is_empty(struct pft * instance)
+{
+        if (!pft_is_ok(instance))
+                return false;
+        return list_empty(&instance->entries);
+}
+
 int pft_destroy(struct pft * instance)
 {
         if (!instance) {
