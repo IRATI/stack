@@ -35,6 +35,7 @@ struct pft_entry {
         struct list_head next;
 };
 
+#if 0
 static struct pft_entry * pfte_create_gfp(gfp_t flags)
 {
         LOG_MISSING;
@@ -47,6 +48,7 @@ static struct pft_entry * pfte_create_ni(void)
 
 static struct pft_entry * pfte_create(void)
 { return pfte_create_gfp(GFP_KERNEL); }
+#endif
 
 static int pfte_destroy(struct pft_entry * entry)
 {
@@ -129,3 +131,42 @@ int pft_destroy(struct pft * instance)
 
         return 0;
 }
+
+static struct pft_entry * pft_find(struct pft * instance,
+                                   address_t    destination,
+                                   qos_id_t     qos_id)
+{
+        struct pft_entry * pos;
+
+        ASSERT(pft_is_ok(instance));
+
+        list_for_each_entry(pos, &instance->entries, next) {
+                if ((pos->destination == destination) &&
+                    (pos->qos_id      == qos_id))
+                        return pos;
+        }
+
+        return NULL;
+}
+
+int pft_add(struct pft * instance,
+            address_t    destination,
+            qos_id_t     qos_id,
+            port_id_t    port_id)
+{
+        if (!pft_is_ok(instance))
+                return -1;
+
+        return -1;
+}
+
+int pft_remove(struct pft * instance,
+               address_t    destination,
+               qos_id_t     qos_id,
+               port_id_t    port_id)
+{ return -1; }
+
+port_id_t pft_nhop(struct pft * instance,
+                   address_t    destination,
+                   qos_id_t     qos_id)
+{ return -1; }
