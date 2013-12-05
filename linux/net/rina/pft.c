@@ -154,7 +154,12 @@ int pft_add(struct pft * instance,
             qos_id_t     qos_id,
             port_id_t    port_id)
 {
+        struct pft_entry * tmp;
+
         if (!pft_is_ok(instance))
+                return -1;
+
+        if (pft_find(instance, destination, qos_id))
                 return -1;
 
         return -1;
@@ -164,9 +169,25 @@ int pft_remove(struct pft * instance,
                address_t    destination,
                qos_id_t     qos_id,
                port_id_t    port_id)
-{ return -1; }
+{
+        if (!pft_is_ok(instance))
+                return -1;
+
+        if (pft_find(instance, destination, qos_id))
+                return -1;
+
+        return -1;
+}
 
 port_id_t pft_nhop(struct pft * instance,
                    address_t    destination,
                    qos_id_t     qos_id)
-{ return -1; }
+{
+        if (!pft_is_ok(instance))
+                return port_id_bad();
+
+        if (pft_find(instance, destination, qos_id))
+                return port_id_bad();
+
+        return port_id_bad();
+}
