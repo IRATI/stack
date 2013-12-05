@@ -35,20 +35,27 @@ struct pft_entry {
         struct list_head next;
 };
 
-#if 0
 static struct pft_entry * pfte_create_gfp(gfp_t flags)
 {
-        LOG_MISSING;
+        struct pft_entry * tmp;
 
-        return NULL;
+        tmp = rkzalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        INIT_LIST_HEAD(&tmp->ports);
+        INIT_LIST_HEAD(&tmp->next);
+
+        return tmp;
 }
 
+#if 0
 static struct pft_entry * pfte_create_ni(void)
 { return pfte_create_gfp(GFP_ATOMIC); }
+#endif
 
 static struct pft_entry * pfte_create(void)
 { return pfte_create_gfp(GFP_KERNEL); }
-#endif
 
 static int pfte_destroy(struct pft_entry * entry)
 {
@@ -159,10 +166,18 @@ int pft_add(struct pft * instance,
         if (!pft_is_ok(instance))
                 return -1;
 
-        if (pft_find(instance, destination, qos_id))
+        if (pft_find(instance, destination, qos_id)) {
+                LOG_ERR("Cannot add entry, it is already present");
+                return -1;
+        }
+
+        tmp = pfte_create();
+        if (!tmp)
                 return -1;
 
-        return -1;
+        list_add(&tmp->next, &instance->entries);
+
+        return 0;
 }
 
 int pft_remove(struct pft * instance,
@@ -170,10 +185,13 @@ int pft_remove(struct pft * instance,
                qos_id_t     qos_id,
                port_id_t    port_id)
 {
+        struct pft_entry * tmp;
+
         if (!pft_is_ok(instance))
                 return -1;
 
-        if (pft_find(instance, destination, qos_id))
+        tmp = pft_find(instance, destination, qos_id);
+        if (!tmp)
                 return -1;
 
         return -1;
@@ -183,10 +201,13 @@ port_id_t pft_nhop(struct pft * instance,
                    address_t    destination,
                    qos_id_t     qos_id)
 {
+        struct pft_entry * tmp;
+
         if (!pft_is_ok(instance))
                 return port_id_bad();
 
-        if (pft_find(instance, destination, qos_id))
+        tmp = pft_find(instance, destination, qos_id);
+        if (!tmp)
                 return port_id_bad();
 
         return port_id_bad();
