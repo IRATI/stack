@@ -19,6 +19,7 @@
  */
 
 #include <linux/list.h>
+#include <linux/slab.h>
 
 #define RINA_PREFIX "pft"
 
@@ -27,15 +28,63 @@
 #include "debug.h"
 #include "pft.h"
 
-/* FIXME: This PDU-FWD-T entry representation has to be rearranged */
+/*
+ * FIXME: This representation is crappy and MUST be changed
+ */
+struct pft_port_entry {
+        port_id_t        port_id;
+
+        struct list_head next;
+};
+
+#if 0
+static struct pft_port_entry * pft_pe_create_gfp(gfp_t     flags,
+                                                 port_id_t port_id)
+{
+        struct pft_port_entry * tmp;
+
+        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->port_id = port_id;
+        INIT_LIST_HEAD(&tmp->next);
+
+        return tmp;
+}
+
+static struct pft_port_entry * pft_pe_create_ni(port_id_t port_id)
+{ return pft_pe_create_gfp(GFP_ATOMIC, port_id); }
+
+static struct pft_port_entry * pft_pe_create(port_id_t port_id)
+{ return pft_pe_create_gfp(GFP_KERNEL, port_id); }
+#endif
+
+static bool pft_pe_is_ok(struct pft_port_entry * pe)
+{ return pe ? true : false;  }
+
+int pft_pe_destroy(struct pft_port_entry * pe)
+{
+        if (!pft_pe_is_ok(pe))
+                return -1;
+
+        rkfree(pe);
+
+        return 0;
+}
+
+/*
+ * FIXME: This representation is crappy and MUST be changed
+ */
 struct pft_entry {
         address_t        destination;
         qos_id_t         qos_id;
         struct list_head ports;
+
         struct list_head next;
 };
 
-static struct pft_entry * pfte_create_gfp(gfp_t flags)
+static struct pft_entry * pft_e_create_gfp(gfp_t flags)
 {
         struct pft_entry * tmp;
 
@@ -50,21 +99,47 @@ static struct pft_entry * pfte_create_gfp(gfp_t flags)
 }
 
 #if 0
-static struct pft_entry * pfte_create_ni(void)
-{ return pfte_create_gfp(GFP_ATOMIC); }
+static struct pft_entry * pft_e_create_ni(void)
+{ return pft_e_create_gfp(GFP_ATOMIC); }
 #endif
 
-static struct pft_entry * pfte_create(void)
-{ return pfte_create_gfp(GFP_KERNEL); }
+static struct pft_entry * pft_e_create(void)
+{ return pft_e_create_gfp(GFP_KERNEL); }
 
-static int pfte_destroy(struct pft_entry * entry)
+static bool pft_e_is_ok(struct pft_entry * entry)
+{ return entry ? true : false; }
+
+static int __pft_e_flush(struct pft_entry * entry)
 {
-        LOG_MISSING;
+        struct pft_port_entry * pos, * nxt;
+        int                     ret;
 
-        return -1;
+        ASSERT(pft_e_is_ok(entry));
+
+        list_for_each_entry_safe(pos, nxt, &entry->ports, next) {
+                list_del(&pos->next);
+                ret = pft_pe_destroy(pos);
+                if (!ret) {
+                        LOG_WARN("Could not destroy PDU-FWD-T entry %pK", pos);
+                        return ret;
+                }
+        }
+
+        return 0;
+
 }
 
-/* FIXME: This PDU-FWD-T representation is crappy and has to be rearranged */
+static int pft_e_destroy(struct pft_entry * entry)
+{
+        if (!pft_e_is_ok(entry))
+                return -1;
+
+        return __pft_e_flush(entry);
+}
+
+/*
+ * FIXME: This representation is crappy and MUST be changed
+ */
 struct pft {
         struct list_head entries;
 };
@@ -80,11 +155,11 @@ struct pft * pft_create_gfp(gfp_t flags)
         return tmp;
 }
 
-struct pft * pft_create(void)
-{ return pft_create_gfp(GFP_KERNEL); }
-
 struct pft * pft_create_ni(void)
 { return pft_create_gfp(GFP_ATOMIC); }
+
+struct pft * pft_create(void)
+{ return pft_create_gfp(GFP_KERNEL); }
 
 static bool pft_is_ok(struct pft * instance)
 { return instance ? true : false; }
@@ -105,7 +180,7 @@ static int __pft_flush(struct pft * instance)
 
         list_for_each_entry_safe(pos, nxt, &instance->entries, next) {
                 list_del(&pos->next);
-                ret = pfte_destroy(pos);
+                ret = pft_e_destroy(pos);
                 if (!ret) {
                         LOG_WARN("Could not destroy PDU-FWD-T entry %pK", pos);
                         return ret;
@@ -171,7 +246,7 @@ int pft_add(struct pft * instance,
                 return -1;
         }
 
-        tmp = pfte_create();
+        tmp = pft_e_create();
         if (!tmp)
                 return -1;
 
