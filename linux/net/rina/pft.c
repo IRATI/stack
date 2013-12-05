@@ -37,11 +37,13 @@ struct pft_port_entry {
         struct list_head next;
 };
 
-#if 0
 static struct pft_port_entry * pft_pe_create_gfp(gfp_t     flags,
                                                  port_id_t port_id)
 {
         struct pft_port_entry * tmp;
+
+        if (is_port_id_ok(port_id))
+                return NULL;
 
         tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
@@ -53,17 +55,18 @@ static struct pft_port_entry * pft_pe_create_gfp(gfp_t     flags,
         return tmp;
 }
 
+#if 0
 static struct pft_port_entry * pft_pe_create_ni(port_id_t port_id)
 { return pft_pe_create_gfp(GFP_ATOMIC, port_id); }
+#endif
 
 static struct pft_port_entry * pft_pe_create(port_id_t port_id)
 { return pft_pe_create_gfp(GFP_KERNEL, port_id); }
-#endif
 
 static bool pft_pe_is_ok(struct pft_port_entry * pe)
 { return pe ? true : false;  }
 
-int pft_pe_destroy(struct pft_port_entry * pe)
+static int pft_pe_destroy(struct pft_port_entry * pe)
 {
         if (!pft_pe_is_ok(pe))
                 return -1;
@@ -71,6 +74,14 @@ int pft_pe_destroy(struct pft_port_entry * pe)
         rkfree(pe);
 
         return 0;
+}
+
+static port_id_t pft_pe_port(struct pft_port_entry * pe)
+{
+        if (!pft_pe_is_ok(pe))
+                return port_id_bad();
+
+        return pe->port_id;
 }
 
 /*
@@ -84,14 +95,18 @@ struct pft_entry {
         struct list_head next;
 };
 
-static struct pft_entry * pft_e_create_gfp(gfp_t flags)
+static struct pft_entry * pft_e_create_gfp(gfp_t     flags,
+                                           address_t destination,
+                                           qos_id_t  qos_id)
 {
         struct pft_entry * tmp;
 
-        tmp = rkzalloc(sizeof(*tmp), flags);
+        tmp = rkmalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
 
+        tmp->destination = destination;
+        tmp->qos_id      = qos_id;
         INIT_LIST_HEAD(&tmp->ports);
         INIT_LIST_HEAD(&tmp->next);
 
@@ -99,12 +114,14 @@ static struct pft_entry * pft_e_create_gfp(gfp_t flags)
 }
 
 #if 0
-static struct pft_entry * pft_e_create_ni(void)
-{ return pft_e_create_gfp(GFP_ATOMIC); }
+static struct pft_entry * pft_e_create_ni(address_t destination,
+                                          qos_id_t  qos_id)
+{ return pft_e_create_gfp(GFP_ATOMIC, destination, qos_id); }
 #endif
 
-static struct pft_entry * pft_e_create(void)
-{ return pft_e_create_gfp(GFP_KERNEL); }
+static struct pft_entry * pft_e_create(address_t destination,
+                                       qos_id_t  qos_id)
+{ return pft_e_create_gfp(GFP_KERNEL, destination, qos_id); }
 
 static bool pft_e_is_ok(struct pft_entry * entry)
 { return entry ? true : false; }
@@ -135,6 +152,33 @@ static int pft_e_destroy(struct pft_entry * entry)
                 return -1;
 
         return __pft_e_flush(entry);
+}
+
+static struct pft_port_entry * pft_e_port_find(struct pft_entry * entry,
+                                               port_id_t          id)
+{
+        return NULL;
+}
+
+static int pft_e_port_add(struct pft_entry * entry,
+                          port_id_t          id)
+{
+        struct pft_port_entry * pe;
+
+        if (!pft_e_is_ok(entry))
+                return -1;
+
+        pe = pft_e_port_find(entry, id);
+        if (pe)
+                return 0;
+
+        pe = pft_pe_create(id);
+        if (!pe)
+                return -1;
+
+        list_add(&pe->next, &entry->ports);
+
+        return 0;
 }
 
 /*
@@ -246,9 +290,14 @@ int pft_add(struct pft * instance,
                 return -1;
         }
 
-        tmp = pft_e_create();
+        tmp = pft_e_create(destination, qos_id);
         if (!tmp)
                 return -1;
+
+        if (pft_e_port_add(tmp, port_id)) {
+                pft_e_destroy(tmp);
+                return -1;
+        }
 
         list_add(&tmp->next, &instance->entries);
 
@@ -276,14 +325,18 @@ port_id_t pft_nhop(struct pft * instance,
                    address_t    destination,
                    qos_id_t     qos_id)
 {
-        struct pft_entry * tmp;
+        struct pft_entry *      e;
+        struct pft_port_entry * pe;
 
         if (!pft_is_ok(instance))
                 return port_id_bad();
 
-        tmp = pft_find(instance, destination, qos_id);
-        if (!tmp)
+        e = pft_find(instance, destination, qos_id);
+        if (!e)
                 return port_id_bad();
 
-        return port_id_bad();
+        /* Get the first port */
+        pe = NULL;
+
+        return pft_pe_port(pe);
 }
