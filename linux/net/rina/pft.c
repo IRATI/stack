@@ -87,18 +87,14 @@ bool pft_is_empty(struct pft * instance)
         return list_empty(&instance->entries);
 }
 
-int pft_destroy(struct pft * instance)
+static int __pft_flush(struct pft * instance)
 {
         struct pft_entry * pos, * nxt;
+        int                ret;
 
-        if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
-        }
+        ASSERT(pft_is_ok(instance));
 
         list_for_each_entry_safe(pos, nxt, &instance->entries, next) {
-                int ret;
-
                 list_del(&pos->next);
                 ret = pfte_destroy(pos);
                 if (!ret) {
@@ -106,6 +102,28 @@ int pft_destroy(struct pft * instance)
                         return ret;
                 }
         }
+
+        return 0;
+}
+
+int pft_flush(struct pft * instance)
+{
+        if (!pft_is_ok(instance))
+                return -1;
+
+        return __pft_flush(instance);
+}
+
+int pft_destroy(struct pft * instance)
+{
+        int ret;
+
+        if (!pft_is_ok(instance))
+                return -1;
+
+        ret = __pft_flush(instance);
+        if (ret)
+                return ret;
 
         rkfree(instance);
 
