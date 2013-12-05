@@ -65,6 +65,7 @@ import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.AssignToDIFRequestEvent;
 import eu.irati.librina.AssignToDIFResponseEvent;
+import eu.irati.librina.CreateConnectionResponseEvent;
 import eu.irati.librina.DIFInformation;
 import eu.irati.librina.DataTransferConstants;
 import eu.irati.librina.DeallocateFlowResponseEvent;
@@ -391,7 +392,13 @@ public class IPCProcess {
 			break;
 		case FLOW_ALLOCATION_REQUESTED_EVENT:
 			FlowRequestEvent flowRequestEvent = (FlowRequestEvent) event;
-			resourceAllocator.getNMinus1FlowManager().flowAllocationRequested(flowRequestEvent);
+			if (flowRequestEvent.isLocalRequest()) {
+				//A local application is requesting this IPC Process to allocate a flow
+				flowAllocator.submitAllocateRequest(flowRequestEvent);
+			} else {
+				//A remote IPC process is requesting a flow to this IPC Process
+				resourceAllocator.getNMinus1FlowManager().flowAllocationRequested(flowRequestEvent);
+			}
 			break;
 		case DEALLOCATE_FLOW_RESPONSE_EVENT:
 			DeallocateFlowResponseEvent flowDEvent = (DeallocateFlowResponseEvent) event;
@@ -418,6 +425,10 @@ public class IPCProcess {
 				(ApplicationUnregistrationRequestEvent) event;
 			registrationManager.processApplicationUnregistrationRequestEvent(
 					apUnregReqEvent);
+			break;
+		case IPC_PROCESS_CREATE_CONNECTION_RESPONSE:
+			CreateConnectionResponseEvent createConnRespEvent = (CreateConnectionResponseEvent) event;
+			flowAllocator.processCreateConnectionResponseEvent(createConnRespEvent);
 			break;
 		default:
 			log.warn("Received unsupported event: "+event.getType());

@@ -1,6 +1,8 @@
 package rina.flowallocator.api;
 
+import eu.irati.librina.CreateConnectionResponseEvent;
 import eu.irati.librina.FlowInformation;
+import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCException;
 import rina.cdap.api.message.CDAPMessage;
 
@@ -25,11 +27,13 @@ public interface FlowAllocatorInstance{
 
 	/**
 	 * Called by the FA to forward an Allocate request to a FAI
-	 * @param request
+	 * @param event
 	 * @param applicationCallback the callback to invoke the application for allocateResponse and any other calls
 	 * @throws IPCException
 	 */
-	public void submitAllocateRequest(FlowInformation request) throws IPCException;
+	public void submitAllocateRequest(FlowRequestEvent event) throws IPCException;
+	
+	public void processCreateConnectionResponseEvent(CreateConnectionResponseEvent event);
 	
 	/**
 	 * Called by the Flow Allocator when an M_CREATE CDAP PDU with a Flow object 
@@ -70,29 +74,4 @@ public interface FlowAllocatorInstance{
 	 * deletes the binding between the Application and the local DTP-instance, and sends a Delete_Response indicating the result.
 	 */
 	public void deleteFlowRequestMessageReceived(CDAPMessage requestMessage, int underlyingPortId);
-	
-	/* Deal with local flows (flows between applications from the same system) */
-	
-	/**
-	 * Called when the Flow Allocator receives a request for a local flow
-	 * @param flowInformation
-	 * @param objectName
-	 * @throws IPCException
-	 */
-	public void receivedLocalFlowRequest(FlowInformation flowInformation) throws IPCException;
-	
-	/**
-	 * Called when the Flow Allocator receives a response to a request for a local flow
-	 * @param remotePortId
-	 * @param result
-	 * @param resultReason
-	 * @throws IPCException
-	 */
-	public void receivedLocalFlowResponse(int remotePortId, boolean result, String resultReason) throws IPCException;
-	
-	/**
-	 * Request to deallocate a local flow
-	 * @throws IPCException
-	 */
-	public void receivedDeallocateLocalFlowRequest() throws IPCException;
 }

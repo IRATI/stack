@@ -1,7 +1,7 @@
 package rina.ipcprocess.impl.flowallocator.validation;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
-import eu.irati.librina.FlowInformation;
+import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCException;
 
 /**
@@ -11,9 +11,9 @@ import eu.irati.librina.IPCException;
  */
 public class AllocateRequestValidator {
 	
-	public void validateAllocateRequest(FlowInformation flowInformation) throws IPCException{
-		validateApplicationProcessNamingInfo(flowInformation.getLocalAppName());
-		validateApplicationProcessNamingInfo(flowInformation.getRemoteAppName());
+	public void validateAllocateRequest(FlowRequestEvent event) throws IPCException{
+		validateApplicationProcessNamingInfo(event.getLocalApplicationName());
+		validateApplicationProcessNamingInfo(event.getRemoteApplicationName());
 	}
 	
 	/** 

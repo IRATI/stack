@@ -19,6 +19,7 @@
 #include "logs.h"
 #include "librina-ipc-process.h"
 #include "core.h"
+#include "rina-syscalls.h"
 
 namespace rina{
 
@@ -462,47 +463,32 @@ void ExtendedIPCManager::allocateFlowRequestResult(
 #endif
 }
 
-int ExtendedIPCManager::allocateFlowRequestArrived(
+unsigned int ExtendedIPCManager::allocateFlowRequestArrived(
 			const ApplicationProcessNamingInformation& localAppName,
 			const ApplicationProcessNamingInformation& remoteAppName,
-			const FlowSpecification& flowSpecification)
+			const FlowSpecification& flowSpecification,
+			int portId)
 		throw (AllocateFlowRequestArrivedException){
-        /*
 #if STUP_API
-	return 25;
+	return 0;
 #else
 	IpcmAllocateFlowRequestArrivedMessage message;
 	message.setSourceAppName(remoteAppName);
 	message.setDestAppName(localAppName);
 	message.setFlowSpecification(flowSpecification);
 	message.setDifName(currentDIFInformation.getDifName());
+	message.setPortId(portId);
 	message.setSourceIpcProcessId(ipcProcessId);
 	message.setRequestMessage(true);
 
-	int portId = 0;
-	IpcmAllocateFlowResponseMessage * allocateFlowResponse;
 	try{
-		allocateFlowResponse =
-				dynamic_cast<IpcmAllocateFlowResponseMessage *>(
-						rinaManager->sendRequestAndWaitForResponse(&message,
-								ExtendedIPCManager::error_allocate_flow));
+	        rinaManager->sendMessage(&message);
 	}catch(NetlinkException &e){
-		throw AllocateFlowRequestArrivedException(e.what());
+	        throw AllocateFlowRequestArrivedException(e.what());
 	}
 
-	if (allocateFlowResponse->getResult()<0){
-		delete allocateFlowResponse;
-		throw AllocateFlowRequestArrivedException(
-				ExtendedIPCManager::error_allocate_flow );
-	}
-
-	portId = allocateFlowResponse->getPortId();
-	LOG_DBG("Allocated flow with portId %d", portId);
-	delete allocateFlowResponse;
-
-	return portId;
-#endif*/
-        return 0;
+	return message.getSequenceNumber();
+#endif
 }
 
 unsigned int ExtendedIPCManager::requestFlowAllocation(
@@ -590,6 +576,34 @@ void ExtendedIPCManager::queryRIBResponse(
 	}catch(NetlinkException &e){
 		throw QueryRIBResponseException(e.what());
 	}
+#endif
+}
+
+int ExtendedIPCManager::allocatePortId(unsigned short ipcProcessId)
+        throw (PortAllocationException) {
+#if STUB_API
+        //Do nothing
+        return 1;
+#else
+        int result = syscallAllocatePortId(ipcProcessId, ipcProcessId==0);
+        if (result < 0){
+                throw PortAllocationException();
+        }
+
+        return result;
+#endif
+}
+
+void ExtendedIPCManager::deallocatePortId(int portId)
+        throw (PortAllocationException) {
+#if STUB_API
+        //Do nothing
+        return;
+#else
+        int result = syscallDeallocatePortId(portId);
+        if (result < 0){
+                throw PortAllocationException();
+        }
 #endif
 }
 

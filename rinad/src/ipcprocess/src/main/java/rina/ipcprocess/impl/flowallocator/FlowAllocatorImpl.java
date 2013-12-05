@@ -9,17 +9,24 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.CreateConnectionResponseEvent;
+import eu.irati.librina.ExtendedIPCManagerSingleton;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCException;
+import eu.irati.librina.rina;
 
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
+import rina.cdap.api.message.ObjectValue;
 import rina.encoding.api.Encoder;
+import rina.flowallocator.api.Flow;
 import rina.flowallocator.api.FlowAllocator;
 import rina.flowallocator.api.FlowAllocatorInstance;
 import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.impl.flowallocator.ribobjects.FlowSetRIBObject;
 import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
 import rina.ipcprocess.impl.flowallocator.validation.AllocateRequestValidator;
+import rina.registrationmanager.api.RegistrationManager;
 import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBDaemonException;
 import rina.ribdaemon.api.RIBObject;
@@ -57,6 +64,10 @@ public class FlowAllocatorImpl implements FlowAllocator{
 	
 	private Timer timer = null;
 	
+	private ExtendedIPCManagerSingleton ipcManager = null;
+	
+	private RegistrationManager registrationManager = null;
+	
 	public FlowAllocatorImpl(){
 		allocateRequestValidator = new AllocateRequestValidator();
 		flowAllocatorInstances = new ConcurrentHashMap<Integer, FlowAllocatorInstance>();
@@ -65,9 +76,11 @@ public class FlowAllocatorImpl implements FlowAllocator{
 
 	public void setIPCProcess(IPCProcess ipcProcess){
 		this.ipcProcess = ipcProcess;
+		ipcManager = rina.getExtendedIPCManager();
 		ribDaemon = ipcProcess.getRIBDaemon();
 		encoder = ipcProcess.getEncoder();
 		cdapSessionManager = ipcProcess.getCDAPSessionManager();
+		registrationManager = ipcProcess.getRegistrationManager();
 		populateRIB(ipcProcess);
 	}
 	
@@ -82,9 +95,9 @@ public class FlowAllocatorImpl implements FlowAllocator{
 	
 	private void populateRIB(IPCProcess ipcProcess){
 		try{
-			//RIBObject ribObject = new FlowSetRIBObject(this, ipcProcess);
-			//ribDaemon.addRIBObject(ribObject);
-		    RIBObject ribObject = new QoSCubeSetRIBObject();
+			RIBObject ribObject = new FlowSetRIBObject(this);
+			ribDaemon.addRIBObject(ribObject);
+		    ribObject = new QoSCubeSetRIBObject();
 			ribDaemon.addRIBObject(ribObject);
 		}catch(RIBDaemonException ex){
 			ex.printStackTrace();
@@ -103,8 +116,8 @@ public class FlowAllocatorImpl implements FlowAllocator{
 	 * @param cdapMessage
 	 * @param underlyingPortId
 	 */
-	public void createFlowRequestMessageReceived(CDAPMessage cdapMessage, int underlyingPortId){
-	/*	Flow flow = null;
+	public synchronized void createFlowRequestMessageReceived(CDAPMessage cdapMessage, int underlyingPortId){
+		Flow flow = null;
 		long myAddress = 0;
 		int portId = 0;
 		
@@ -115,29 +128,30 @@ public class FlowAllocatorImpl implements FlowAllocator{
 			return;
 		}
 	
-		long address = directoryForwardingTable.getAddress(flow.getDestinationNamingInfo());
-		myAddress = this.getIPCProcess().getAddress().longValue();
+		long address = registrationManager.getAddress(flow.getDestinationNamingInfo());
+		myAddress = ipcProcess.getAddress().longValue();
 		
 		if (address == 0){
-			//error, the table should have at least returned a default IPC process address to continue looking for the application process
-			log.error("The directory forwarding table returned no entries when looking up " + flow.getDestinationNamingInfo().toString());
+			log.error("The directory forwarding table returned no entries when looking up " 
+						+ flow.getDestinationNamingInfo().toString());
 			return;
 		}
 		
 		if (address == myAddress){
 			//There is an entry and the address is this IPC Process, create a FAI, extract the Flow object from the CDAP message and
 			//call the FAI
-			APService applicationCallback = directoryForwardingTable.getLocalApplicationCallback(flow.getDestinationNamingInfo());
-			if (applicationCallback == null){
-				log.error("Ignoring the flow request because I could not find the callback for application " 
-						+ flow.getDestinationNamingInfo().toString());
+			try {
+				portId = ipcManager.allocatePortId(0);
+			}catch (Exception ex) {
+				log.error("Problems requesting an available port-id: "+ex.getMessage() 
+						+ " Ignoring the Flow allocation request");
 				return;
 			}
 			
-			portId = this.getIPCProcess().getIPCManager().getAvailablePortId();
-			log.debug("The destination application process is reachable through me. Assigning the local portId "+portId+" to the flow allocation.");
-			FlowAllocatorInstance flowAllocatorInstance = new FlowAllocatorInstanceImpl(this.getIPCProcess(), this, cdapSessionManager, portId);
-			flowAllocatorInstance.setApplicationCallback(applicationCallback);
+			log.debug("The destination application process is reachable through me. Assigning the local portId " 
+						+portId+" to the flow allocation.");
+			FlowAllocatorInstance flowAllocatorInstance = 
+					new FlowAllocatorInstanceImpl(ipcProcess, this, cdapSessionManager, portId);
 			flowAllocatorInstances.put(new Integer(new Integer(portId)), flowAllocatorInstance);
 			flowAllocatorInstance.createFlowRequestMessageReceived(flow, cdapMessage, underlyingPortId);
 			return;
@@ -152,8 +166,7 @@ public class FlowAllocatorImpl implements FlowAllocator{
 		}
 
 		try{
-			int destinationPortId = Utils.mapAddressToPortId(address, this.getIPCProcess());
-			RIBDaemon ribDaemon = (RIBDaemon) getIPCProcess().getIPCProcessComponent(BaseRIBDaemon.getComponentName());
+			int destinationPortId = Utils.mapAddressToPortId(address, ipcProcess);
 			ObjectValue objectValue = new ObjectValue();
 			objectValue.setByteval(encoder.encode(flow));
 			cdapMessage.setObjValue(objectValue);
@@ -162,39 +175,14 @@ public class FlowAllocatorImpl implements FlowAllocator{
 			//Error that has to be fixed, we cannot continue, log it and return
 			log.error("Fatal error when serializing a Flow object. " +ex.getMessage());
 			return;
-		}*/
+		}
 	}
 	
-	/**
-	 * Called by the flow allocator instance when a request for a local flow is received
-	 * @param flowService
-	 * @throws IPCException
-	 */
-	public void receivedLocalFlowRequest(FlowRequestEvent flowRequestEvent) throws IPCException{
-		/*int portId = this.getIPCProcess().getIPCManager().getAvailablePortId();
-		FlowAllocatorInstance flowAllocatorInstance = new FlowAllocatorInstanceImpl(this.getIPCProcess(), this, portId);
-		FlowService clonedFlowService = new FlowService();
-		clonedFlowService.setSourceAPNamingInfo(flowService.getSourceAPNamingInfo());
-		clonedFlowService.setDestinationAPNamingInfo(flowService.getDestinationAPNamingInfo());
-		clonedFlowService.setQoSSpecification(flowService.getQoSSpecification());
-		clonedFlowService.setPortId(flowService.getPortId());
-		flowAllocatorInstances.put(new Integer(portId), flowAllocatorInstance);
-		flowAllocatorInstance.receivedLocalFlowRequest(clonedFlowService);*/
-	}
-	
-	/**
-	 * Called by the flow allocator instance when a response for a local flow is received
-	 * @param portId
-	 * @param flowService
-	 * @param result
-	 * @param resultReason
-	 * @throws IPCException
-	 */
-	public void receivedLocalFlowResponse(int portId, int remotePortId, boolean result, String resultReason) throws IPCException{
-		FlowAllocatorInstance flowAllocatorInstance = getFlowAllocatorInstance(portId);
-		flowAllocatorInstance.receivedLocalFlowResponse(remotePortId, result, resultReason);
-		if (!result){
-			flowAllocatorInstances.remove(new Integer(portId));
+	private void replyToIPCManager(FlowRequestEvent event, int result) {
+		try{
+			ipcManager.allocateFlowRequestResult(event, result);
+		} catch(Exception ex) {
+			log.error("Problems communicating with the IPC Manager Daemon: " + ex.getMessage());
 		}
 	}
 	
@@ -204,16 +192,55 @@ public class FlowAllocatorImpl implements FlowAllocator{
 	 * @param applicationCallback the callback to invoke the application for allocateResponse and any other calls
 	 * @throws IPCException
 	 */
-	public int submitAllocateRequest(FlowRequestEvent flowRequestEvent) throws IPCException{
-	/*	log.debug("Local application invoked allocate request: "+flowService.toString());
-		allocateRequestValidator.validateAllocateRequest(flowService);
-		int portId = this.getIPCProcess().getIPCManager().getAvailablePortId();
-		flowService.setPortId(portId);
-		FlowAllocatorInstance flowAllocatorInstance = new FlowAllocatorInstanceImpl(this.getIPCProcess(), this, cdapSessionManager, portId);
-		flowAllocatorInstance.submitAllocateRequest(flowService, applicationCallback);
-		flowAllocatorInstances.put(new Integer(portId), flowAllocatorInstance);
-		return portId;*/
-		return -1;
+	public synchronized void submitAllocateRequest(FlowRequestEvent event) {
+		log.debug("Local application invoked allocate request: "+event.toString());
+		int portId = 0;
+		
+		try{
+			allocateRequestValidator.validateAllocateRequest(event);
+		} catch(Exception ex) {
+			log.error("Problems validating Flow Allocation Request: "+ex.getMessage());
+			replyToIPCManager(event, -1);
+		}
+		
+		try {
+			portId = ipcManager.allocatePortId(event.getFlowRequestorIPCProcessId());
+			log.debug("Got assigned port-id " + portId);
+		} catch (Exception ex) {
+			log.error("Problems requesting an available port-id to the Kernel IPC Maanager: " 
+					+ ex.getMessage());
+			replyToIPCManager(event, -1);
+		}
+		
+		event.setPortId(portId);
+		FlowAllocatorInstance flowAllocatorInstance = 
+				new FlowAllocatorInstanceImpl(ipcProcess, this, cdapSessionManager, portId);
+		flowAllocatorInstances.put(portId, flowAllocatorInstance);
+		
+		try {
+			flowAllocatorInstance.submitAllocateRequest(event);
+		} catch(Exception ex) {
+			flowAllocatorInstances.remove(portId);
+			
+			try {
+				ipcManager.deallocatePortId(portId);
+			} catch (Exception e) {
+				log.error("Problems releasing port-id +portId");
+			}
+			
+			replyToIPCManager(event, -1);
+		}
+	}
+	
+	public synchronized void processCreateConnectionResponseEvent(CreateConnectionResponseEvent event) {
+		FlowAllocatorInstance flowAllocatorInstance = getFlowAllocatorInstance(event.getPortId());
+		if (flowAllocatorInstance == null) {
+			log.error("Received a crete connection response event associated to " +
+						"unknown port-id: "+ event.getPortId());
+			return;
+		}
+		
+		flowAllocatorInstance.processCreateConnectionResponseEvent(event);
 	}
 
 	/**
@@ -246,27 +273,13 @@ public class FlowAllocatorImpl implements FlowAllocator{
 	}
 	
 	/**
-	 * Request to deallocate a local flow
-	 * @param portId
-	 * @throws IPCException
-	 */
-	public void receivedDeallocateLocalFlowRequest(int portId) throws IPCException{
-		FlowAllocatorInstance flowAllocatorInstance = getFlowAllocatorInstance(portId);
-		flowAllocatorInstance.receivedDeallocateLocalFlowRequest();
-	}
-	
-	/**
 	 * Returns the flow allocator instance that manages the flow identified by portId
 	 * @param portId
 	 * @return
-	 * @throws IPCException
 	 */
-	private FlowAllocatorInstance getFlowAllocatorInstance(int portId) throws IPCException{
-		FlowAllocatorInstance flowAllocatorInstance = flowAllocatorInstances.get(new Integer(portId));
-		
-		if (flowAllocatorInstance == null){
-			throw new IPCException("Could not find FAI bound to this port-id");
-		}
+	private FlowAllocatorInstance getFlowAllocatorInstance(int portId) {
+		FlowAllocatorInstance flowAllocatorInstance = 
+				flowAllocatorInstances.get(new Integer(portId));
 		
 		return flowAllocatorInstance;
 	}

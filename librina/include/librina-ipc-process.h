@@ -370,6 +370,21 @@ public:
 };
 
 /**
+ * Thrown when there are problems requesting the Kernel to allocate or deallocate a
+ * port-id
+ */
+class PortAllocationException: public IPCException {
+public:
+        PortAllocationException():
+                IPCException("Problems requesting the allocation/deallocation of a port-id"){
+        }
+        PortAllocationException(const std::string& description):
+                IPCException(description){
+        }
+};
+
+
+/**
  * Class used by the IPC Processes to interact with the IPC Manager. Extends
  * the basic IPC Manager in librina-application with IPC Process specific
  * functionality
@@ -517,14 +532,16 @@ public:
 	 * @param localAppName
 	 * @param remoteAppName
 	 * @param flowSpecification
-	 * @returns the portId assigned to the flow
+	 * @param portId the portId for the flow
+	 * @returns a handler to correlate the response
 	 * @throws AllocateFlowRequestArrivedException if there are issues during
 	 * the operation or the application rejects the flow
 	 */
-	int allocateFlowRequestArrived(
+	unsigned int allocateFlowRequestArrived(
 			const ApplicationProcessNamingInformation& localAppName,
 			const ApplicationProcessNamingInformation& remoteAppName,
-			const FlowSpecification& flowSpecification)
+			const FlowSpecification& flowSpecification,
+			int portId)
 		throw (AllocateFlowRequestArrivedException);
 
         /**
@@ -609,6 +626,23 @@ public:
 	void queryRIBResponse(const QueryRIBRequestEvent& event, int result,
 			const std::list<RIBObject>& ribObjects)
 		throw (QueryRIBResponseException);
+
+	/**
+	 * Request an available portId to the kernel
+	 * @param The id of the IPC Process that will be using the flow
+	 * associated to the port-id requested (0 if is an application)
+	 * @return the port-id
+	 * @throws PortAllocationException if something goes wrong
+	 */
+	int allocatePortId(unsigned short ipcProcessId)
+	        throw (PortAllocationException);
+
+	/**
+	 * Request the kernel to free a used port-id
+	 * @param portId the port-id to be freed
+	 * @throws PortAllocationException if something goes wrong
+	 */
+	void deallocatePortId(int portId) throw (PortAllocationException);
 };
 
 /**
