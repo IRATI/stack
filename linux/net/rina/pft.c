@@ -157,6 +157,15 @@ static int pft_e_destroy(struct pft_entry * entry)
 static struct pft_port_entry * pft_e_port_find(struct pft_entry * entry,
                                                port_id_t          id)
 {
+        struct pft_port_entry * pos;
+
+        ASSERT(pft_e_is_ok(entry));
+
+        list_for_each_entry(pos, &entry->ports, next) {
+                if (pos->port_id == id)
+                        return pos;
+        }
+
         return NULL;
 }
 
@@ -318,6 +327,8 @@ int pft_remove(struct pft * instance,
         if (!tmp)
                 return -1;
 
+        LOG_MISSING;
+
         return -1;
 }
 
@@ -337,6 +348,8 @@ port_id_t pft_nhop(struct pft * instance,
 
         /* Get the first port */
         pe = NULL;
+
+        LOG_MISSING;
 
         return pft_pe_port(pe);
 }
