@@ -5,11 +5,15 @@ import java.util.Timer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import eu.irati.librina.AllocateFlowResponseEvent;
 import eu.irati.librina.CreateConnectionResponseEvent;
+import eu.irati.librina.CreateConnectionResultEvent;
 import eu.irati.librina.ExtendedIPCManagerSingleton;
+import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.KernelIPCProcessSingleton;
+import eu.irati.librina.UpdateConnectionResponseEvent;
 import eu.irati.librina.rina;
 
 import rina.cdap.api.CDAPMessageHandler;
@@ -139,11 +143,6 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 	 */
 	private FlowRequestEvent flowRequestEvent = null;
 	
-	/**
-	 * Object used as a lock to synchronize allocate requests and responses
-	 */
-	private Object allocateLock = null;
-	
 	private long allocateResponseMessageHandle = 0;
 	
 	public FlowAllocatorInstanceImpl(IPCProcess ipcProcess, FlowAllocator flowAllocator, CDAPSessionManager cdapSessionManager, int portId){
@@ -152,7 +151,6 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		this.cdapSessionManager = cdapSessionManager;
 		//TODO initialize the newFlowRequestPolicy
 		this.newFlowRequestPolicy = new NewFlowRequestPolicyImpl();
-		this.allocateLock = new Object();
 		log.debug("Created flow allocator instance to manage the flow identified by portId "+portId);
 	}
 	
@@ -218,7 +216,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		flow.setSourceAddress(sourceAddress);
 		flow.setSourcePortId(portId);
 		String flowName = ""+sourceAddress+"-"+portId;
-		this.objectName = Flow.FLOW_SET_RIB_OBJECT_NAME + RIBObjectNames.SEPARATOR + flowName;
+		objectName = Flow.FLOW_SET_RIB_OBJECT_NAME + RIBObjectNames.SEPARATOR + flowName;
 		if (destinationAddress == sourceAddress){
 			// At the moment we don't support allocation of flows between applications at the 
 			// same processing system
@@ -251,7 +249,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		}
 	}
 	
-	public void processCreateConnectionResponseEvent(CreateConnectionResponseEvent event) {
+	public synchronized void processCreateConnectionResponseEvent(CreateConnectionResponseEvent event) {
 		if (state != FAIState.CONNECTION_CREATE_REQUESTED) {
 			log.error("Received a process Create Connection Response Event while in "
 					+ state + " state. Ignoring it");
@@ -347,100 +345,232 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 	 * The Create_Response is sent to requesting FAI with the necessary information reflecting the existing flow, 
 	 * or an indication as to why the flow was refused.  
 	 * If the response was negative, the FAI does any necessary housekeeping and terminates.
-	 * @param portId
-	 * @param reason
+	 * @param event - the response from the application
 	 * @throws IPCException
 	 */
-	public void submitAllocateResponse(boolean success, String reason) throws IPCException{
-		CDAPMessage cdapMessage = null;
-	/*	this.applicationCallback = applicationCallback;
-		
-		//If the IPC flow is between local applications
-		if (local){
-			if (success){
-				try{
-					this.flow.setSourcePortId(this.remotePortId);
-					this.flow.setDestinationPortId(this.portId);
-					this.flow.setState(State.ALLOCATED);
-					this.ribDaemon.create(Flow.FLOW_RIB_OBJECT_CLASS, this.objectName, this);
-					this.dataTrasferAE.createLocalConnectionAndBindToPortId(this.portId, this.remotePortId, applicationCallback);
-					this.ipcManager.addFlowQueues(
-							portId, 
-							RINAConfiguration.getInstance().getLocalConfiguration().getLengthOfFlowQueues());
-					this.dataTrasferAE.subscribeToFlow(portId);
-				}catch(Exception ex){
-					ex.printStackTrace();
-					log.error(ex);
-				}
-			}
-			this.flowAllocator.receivedLocalFlowResponse(this.remotePortId, this.portId, success, reason);
+	public void submitAllocateResponse(AllocateFlowResponseEvent event) {
+		if (state != FAIState.APP_NOTIFIED_OF_INCOMING_FLOW) {
+			log.error("Received an allocate response event while not in APP_NOTIFIED_OF_INCOMING_FLOW state. " 
+					+ "Current state: " + state );
 			return;
 		}
 		
-		//If the flow is between a local and a remote application
-		if (success){
-			//1 Reserve CEP ids
-			int[] cepIds = this.dataTrasferAE.reserveCEPIds(flow.getConnectionIds().size(), portId);
-			if (cepIds == null){
+		CDAPMessage cdapMessage = null;
+		if (event.getResult() == 0){
+			//1 Request creation of connection
+			try {
+				kernelIPCProcess.createConnectionArrived(flow.getConnections().get(0));
+			} catch (Exception ex) {
+				log.error("Problems requesting the kernel to create a connection: "
+						+ ex.getMessage());
+				
 				//Create CDAP response message
 				try{
-					cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(underlyingPortId, null, requestMessage.getObjClass(), 
-							0, requestMessage.getObjName(), null, -1, IPCException.PROBLEMS_RESERVING_CEP_IDS, requestMessage.getInvokeID());
+					cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(underlyingPortId, null, 
+							requestMessage.getObjClass(), 0, requestMessage.getObjName(), null, -1, 
+							"Problems creating connection; "+ex.getMessage(), requestMessage.getInvokeID());
 					this.ribDaemon.sendMessage(cdapMessage, underlyingPortId, null);
-				}catch(Exception ex){
-					log.error(ex);
-					throw new IPCException(IPCException.PROBLEMS_ALLOCATING_FLOW_CODE, 
-							IPCException.PROBLEMS_ALLOCATING_FLOW + ex.getMessage());
+				}catch(Exception e){
+					log.error("Problems requesting the RIB Daemon to send a CDAP message: "+ex.getMessage());
 				}
 				
-				throw new IPCException(IPCException.PROBLEMS_RESERVING_CEP_IDS_CODE, 
-						IPCException.PROBLEMS_RESERVING_CEP_IDS);
+				releasePortId();
+				
+				flowAllocator.removeFlowAllocatorInstance(portId);
+				
+				try{
+					ipcManager.flowDeallocated(portId);
+				} catch(Exception e) {
+					log.error("Problems communicating with the IPC Manager: " + e.getMessage());
+				}
+				
+				return;
 			}
-			for(int i=0; i<cepIds.length; i++){
-				flow.getConnectionIds().get(i).setDestinationCEPId(cepIds[i]);
-			}
 			
-			//2 Create DTP and DTCP instances, and bind it to the port Id
-			this.dataTrasferAE.createConnectionAndBindToPortId(flow);
-			
-			//3 Update Flow state
-			this.flow.setState(State.ALLOCATED);
-			
-			//4 Add the flow queue
-			this.ipcManager.addFlowQueues(
-					portId, 
-					RINAConfiguration.getInstance().getLocalConfiguration().getLengthOfFlowQueues());
-			this.dataTrasferAE.subscribeToFlow(portId);
-			
-			//5 Create CDAP response message
-			try{
-				ObjectValue objectValue = new ObjectValue();
-				objectValue.setByteval(this.encoder.encode(flow));
-				cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(underlyingPortId, null, requestMessage.getObjClass(), 
-						0, requestMessage.getObjName(), objectValue, 0, null, requestMessage.getInvokeID());
-				this.ribDaemon.sendMessage(cdapMessage, underlyingPortId, null);
-				this.ribDaemon.create(requestMessage.getObjClass(), requestMessage.getObjName(), this);
-			}catch(Exception ex){
-				log.error(ex);
-				this.dataTrasferAE.deleteConnection(flow.getConnectionIds().get(0).getDestinationCEPId());
-				this.dataTrasferAE.freeCEPIds(this.portId);
-				throw new IPCException(IPCException.PROBLEMS_ALLOCATING_FLOW_CODE, 
-						IPCException.PROBLEMS_ALLOCATING_FLOW + ex.getMessage());
-			}
+			//2 Update Flow state
+			state = FAIState.CONNECTION_CREATE_REQUESTED;
 		}else{
+			releasePortId();
+			
+			flowAllocator.removeFlowAllocatorInstance(portId);
+			
 			//Create CDAP response message
 			try{
-				cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(underlyingPortId, null, requestMessage.getObjClass(), 
-						0, requestMessage.getObjName(), null, -1, reason, requestMessage.getInvokeID());
+				cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(underlyingPortId, null, 
+						requestMessage.getObjClass(), 0, requestMessage.getObjName(), null, -1, 
+						"Application rejected the flow: "+event.getResult(), requestMessage.getInvokeID());
 				this.ribDaemon.sendMessage(cdapMessage, underlyingPortId, null);
 			}catch(Exception ex){
-				log.error(ex);
-				throw new IPCException(IPCException.PROBLEMS_ALLOCATING_FLOW_CODE, 
-						IPCException.PROBLEMS_ALLOCATING_FLOW + ex.getMessage());
+				log.error("Problems requesting the RIB Daemon to send a CDAP message: "+ex.getMessage());
 			}
-		}*/
+		}
 	}
+	
+	public synchronized void processCreateConnectionResultEvent(CreateConnectionResultEvent event) {
+		if (state != FAIState.CONNECTION_CREATE_REQUESTED) {
+			log.error("Received an allocate response event while not in APP_NOTIFIED_OF_INCOMING_FLOW state. " 
+					+ "Current state: " + state );
+			return;
+		}
+		
+		CDAPMessage cdapMessage = null;
+		if (event.getSourceCepId() < 0) {
+			log.error("The EFCP component of the IPC Process could not create a " 
+					+  " connection instance: "+event.getSourceCepId());
+			
+			//Create CDAP response message
+			try{
+				cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(underlyingPortId, null, 
+						requestMessage.getObjClass(), 0, requestMessage.getObjName(), null, -1, 
+						"Problems creating connection; "+event.getSourceCepId(), requestMessage.getInvokeID());
+				this.ribDaemon.sendMessage(cdapMessage, underlyingPortId, null);
+			}catch(Exception e){
+				log.error("Problems requesting the RIB Daemon to send a CDAP message: "+e.getMessage());
+			}
+			
+			releasePortId();
+			
+			flowAllocator.removeFlowAllocatorInstance(portId);
+			
+			try{
+				ipcManager.flowDeallocated(portId);
+			} catch(Exception e) {
+				log.error("Problems communicating with the IPC Manager: " + e.getMessage());
+			}
+			
+			return;
+		}
+		
+		//Create CDAP response message
+		try{
+			ObjectValue objectValue = new ObjectValue();
+			objectValue.setByteval(this.encoder.encode(flow));
+			cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(underlyingPortId, null, requestMessage.getObjClass(), 
+					0, requestMessage.getObjName(), objectValue, 0, null, requestMessage.getInvokeID());
+			this.ribDaemon.sendMessage(cdapMessage, underlyingPortId, null);
+			this.ribDaemon.create(requestMessage.getObjClass(), requestMessage.getObjName(), this);
+		}catch(Exception ex){
+			log.error("Problems requesting RIB Daemon to send CDAP Message: "+ex.getMessage());
+			releasePortId();
+			flowAllocator.removeFlowAllocatorInstance(portId);
+			try{
+				ipcManager.flowDeallocated(portId);
+			} catch(Exception e) {
+				log.error("Problems communicating with the IPC Manager: " + e.getMessage());
+			}
+		}
+		
+		try{
+			ribDaemon.create(Flow.FLOW_RIB_OBJECT_CLASS, objectName, this);
+		} catch(Exception ex) {
+			log.warn("Error creating Flow Rib object: "+ex.getMessage());
+		}
+		state = FAIState.FLOW_ALLOCATED;
+	}
+	
+	/**
+	 * If the response to the allocate request is negative 
+	 * the Allocation invokes the AllocateRetryPolicy. If the AllocateRetryPolicy returns a positive result, a new Create_Flow Request 
+	 * is sent and the CreateFlowTimer is reset.  Otherwise, if the AllocateRetryPolicy returns a negative result or the MaxCreateRetries has been exceeded, 
+	 * an Allocate_Request.deliver primitive to notify the Application that the flow could not be created. (If the reason was 
+	 * "Application Not Found", the primitive will be delivered to the Inter-DIF Directory to search elsewhere.The FAI deletes the DTP and DTCP instances 
+	 * it created and does any other housekeeping necessary, before terminating.  If the response is positive, it completes the binding of the DTP-instance 
+	 * with this connection-endpoint-id to the requesting Application and invokes a Allocate_Request.submit primitive to notify the requesting Application 
+	 * that its allocation request has been satisfied.
+	 * @param CDAPMessage
+	 * @param CDAPSessionDescriptor
+	 */
+	public synchronized void createResponse(CDAPMessage cdapMessage, CDAPSessionDescriptor cdapSessionDescriptor) 
+			throws RIBDaemonException {
+		if (state != FAIState.MESSAGE_TO_PEER_FAI_SENT) {
+			log.error("Received CDAP Message while not in MESSAGE_TO_PEER_FAI_SENT state. " 
+					+ "Current state is: " + state );
+			return;
+		}
+		
+		if (!cdapMessage.getObjName().equals(requestMessage.getObjName())){
+			log.error("Expected create flow response message for flow "+requestMessage.getObjName()+
+					", but received create flow response message for flow "+cdapMessage.getObjName());
+			//TODO, what to do?
+			return;
+		}
+		
+		if (cdapMessage.getResult() != 0){
+			log.debug("Unsuccessful create flow response message received for flow "+cdapMessage.getObjName());
+			releasePortId();
+			flowAllocator.removeFlowAllocatorInstance(portId);
+			try {
+				flowRequestEvent.setPortId(-1);
+				ipcManager.allocateFlowRequestResult(flowRequestEvent, cdapMessage.getResult());
+			} catch(Exception ex) {
+				log.error("Problems communicating with the IPC Manager: "+ex.getMessage());
+			}
+			return;
+		}
 
+		//5 Update the EFCP connection with the destination cep-id
+		try {
+			if (cdapMessage.getObjValue() != null){
+				Flow receivedFlow = (Flow) this.encoder.decode(cdapMessage.getObjValue().getByteval(), Flow.class);
+				for(int i=0; i<receivedFlow.getConnections().size(); i++){
+					this.flow.getConnections().get(i).setDestCepId(
+							receivedFlow.getConnections().get(i).getDestCepId());
+				}
+			}
+			kernelIPCProcess.updateConnection(flow.getConnections().get(0));
+		} catch(Exception ex) {
+			log.error("Problems requesting kernel to update connection: "+ex.getMessage());
+			flowAllocator.removeFlowAllocatorInstance(portId);
+			try {
+				flowRequestEvent.setPortId(-1);
+				ipcManager.allocateFlowRequestResult(flowRequestEvent, cdapMessage.getResult());
+			} catch(Exception e) {
+				log.error("Problems communicating with the IPC Manager: "+e.getMessage());
+			}
+			return;
+		}
+
+		//Update flow state
+		this.state = FAIState.CONNECTION_UPDATE_REQUESTED;
+
+		//7 Create the Flow object in the RIB, start a socket reader and deliver the response to the application
+		/*log.debug("Successfull create flow message response received for flow "+cdapMessage.getObjName()+".\n "+this.flow.toString());
+			this.ribDaemon.create(Flow.FLOW_RIB_OBJECT_CLASS, objectName, this);*/
+	}
+	
+	public void processUpdateConnectionResponseEvent(UpdateConnectionResponseEvent event) {
+		if (state != FAIState.CONNECTION_UPDATE_REQUESTED) {
+			log.error("Received CDAP Message while not in MESSAGE_TO_PEER_FAI_SENT state. " 
+					+ "Current state is: " + state );
+			return;
+		}
+		
+		if (event.getResult() != 0) {
+			log.error("The kernel denied the update of a connection: "  + event.getResult());
+			
+			releasePortId();
+			flowAllocator.removeFlowAllocatorInstance(portId);
+			
+			try {
+				flowRequestEvent.setPortId(-1);
+				ipcManager.allocateFlowRequestResult(flowRequestEvent, event.getResult());
+			} catch(Exception ex) {
+				log.error("Problems communicating with the IPC Manager");
+			}
+			
+			return;
+		}
+		
+		log.debug("Successfull create flow message response received for flow "+objectName+".\n "+this.flow.toString());
+		try {
+			ribDaemon.create(Flow.FLOW_RIB_OBJECT_CLASS, objectName, this);
+		} catch(Exception ex) {
+			log.warn("Problems requesting the RIB Daemon to create a RIB object: "+ex.getMessage());
+		}
+		
+		state = FAIState.FLOW_ALLOCATED;
+	}
+	
 	/**
 	 * When a deallocate primitive is invoked, it is passed to the FAI responsible for that port-id.  
 	 * The FAI sends an M_DELETE request CDAP PDU on the Flow object referencing the destination port-id, deletes the local 
@@ -448,7 +578,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 	 * the DTP and DTCP if it exists will be deleted automatically after 2MPL)
 	 * @throws IPCException
 	 */
-	public void submitDeallocate() throws IPCException{
+	public void submitDeallocate(FlowDeallocateRequestEvent event) throws IPCException{
 		/*if (local){
 			//1 Notify the flow allocator
 			this.flowAllocator.receivedDeallocateLocalFlowRequest(this.remotePortId);
@@ -494,106 +624,6 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		//3 Set timer
 		TearDownFlowTimerTask timerTask = new TearDownFlowTimerTask(this, this.objectName, false);
 		timer.schedule(timerTask, TearDownFlowTimerTask.DELAY);*/
-	}
-	
-	/**
-	 * If the response to the allocate request is negative 
-	 * the Allocation invokes the AllocateRetryPolicy. If the AllocateRetryPolicy returns a positive result, a new Create_Flow Request 
-	 * is sent and the CreateFlowTimer is reset.  Otherwise, if the AllocateRetryPolicy returns a negative result or the MaxCreateRetries has been exceeded, 
-	 * an Allocate_Request.deliver primitive to notify the Application that the flow could not be created. (If the reason was 
-	 * "Application Not Found", the primitive will be delivered to the Inter-DIF Directory to search elsewhere.The FAI deletes the DTP and DTCP instances 
-	 * it created and does any other housekeeping necessary, before terminating.  If the response is positive, it completes the binding of the DTP-instance 
-	 * with this connection-endpoint-id to the requesting Application and invokes a Allocate_Request.submit primitive to notify the requesting Application 
-	 * that its allocation request has been satisfied.
-	 * @param CDAPMessage
-	 * @param CDAPSessionDescriptor
-	 */
-	public void createResponse(CDAPMessage cdapMessage, CDAPSessionDescriptor cdapSessionDescriptor) throws RIBDaemonException {
-		//Synchronize here, just in case the allocate response arrived before finishing processing the allocation request
-		/*synchronized(allocateLock){
-			if (!cdapMessage.getObjName().equals(requestMessage.getObjName())){
-				log.error("Expected create flow response message for flow "+requestMessage.getObjName()+
-						", but received create flow response message for flow "+cdapMessage.getObjName());
-				//TODO, what to do?
-				return;
-			}
-		}
-		
-		if (cdapMessage.getResult() != 0){
-			log.debug("Unsuccessful create flow response message received for flow "+cdapMessage.getObjName());
-			destroyFlowAllocatorInstance(objectName, false);
-			this.applicationCallback.deliverAllocateResponse(portId, cdapMessage.getResult(), cdapMessage.getResultReason());
-			return;
-		}
-
-		try{
-			//Update the destination CEP-id of our flow object
-			if (cdapMessage.getObjValue() != null){
-				Flow receivedFlow = (Flow) this.encoder.decode(cdapMessage.getObjValue().getByteval(), Flow.class);
-				for(int i=0; i<receivedFlow.getConnectionIds().size(); i++){
-					this.flow.getConnectionIds().get(i).setDestinationCEPId(
-							receivedFlow.getConnectionIds().get(i).getDestinationCEPId());
-				}
-			}
-			
-			//5 Create an instance of DTP/DTCP and bind it to the port Id
-			this.dataTrasferAE.createConnectionAndBindToPortId(flow);
-			
-			//6 Create the incoming and outgoing data queues
-			this.ipcManager.addFlowQueues(
-					portId, 
-					RINAConfiguration.getInstance().getLocalConfiguration().getLengthOfFlowQueues());
-			this.dataTrasferAE.subscribeToFlow(portId);
-			
-			//Update flow state
-			this.flow.setState(Flow.State.ALLOCATED);
-			
-			//7 Create the Flow object in the RIB, start a socket reader and deliver the response to the application
-			log.debug("Successfull create flow message response received for flow "+cdapMessage.getObjName()+".\n "+this.flow.toString());
-			this.ribDaemon.create(Flow.FLOW_RIB_OBJECT_CLASS, objectName, this);
-			this.applicationCallback.deliverAllocateResponse(portId, 0, null);
-		}catch(Exception ex){
-			ex.printStackTrace();
-		}*/
-	}
-	
-	public void destroyFlowAllocatorInstance(String flowObjectName, boolean requestor){
-		/*//2 Delete the object from the RIB
-		try{
-			this.ribDaemon.delete(Flow.FLOW_RIB_OBJECT_CLASS, flowObjectName);
-		}catch(Exception ex){
-			log.error(ex.getMessage());
-			ex.printStackTrace();
-		}
-
-		//3 Cleanup the remaining state (FAI and EFCP)
-		//1 Cancel any pending timers
-		if (timer != null){
-			timer.cancel();
-		}
-
-		if (!local){
-			//1 Notify application
-			if(!requestor){
-				this.applicationCallback.deliverDeallocate(portId);
-			}
-			
-			//2 Remove the FAI from the Flow Allocator list
-			this.flowAllocator.removeFlowAllocatorInstance(this.portId);
-
-			// 3 Remove the incoming and outgoing flow queues, remove the DTP and DTCP state
-			this.ipcManager.removeFlowQueues(portId);
-			long connectionEndpointId = -1;
-			for(int i=0; i<flow.getConnectionIds().size(); i++){
-				if (flow.isSource()){
-					connectionEndpointId = flow.getConnectionIds().get(i).getSourceCEPId();
-				}else{
-					connectionEndpointId = flow.getConnectionIds().get(i).getDestinationCEPId();
-				}
-				this.dataTrasferAE.deleteConnection(connectionEndpointId);
-			}
-			this.dataTrasferAE.freeCEPIds(this.portId);
-		}*/
 	}
 
 	public void deleteResponse(CDAPMessage cdapMessage, CDAPSessionDescriptor cdapSessionDescriptor) throws RIBDaemonException{
