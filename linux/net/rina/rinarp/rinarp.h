@@ -45,6 +45,7 @@ int                    rinarp_resolve_gpa(struct rinarp_handle * handle,
                                           rinarp_notification_t  notify,
                                           void *                 opaque);
 
+/* FIXME: Should return a copy */
 const struct gpa *     rinarp_find_gpa(struct rinarp_handle * handle,
                                        const struct gha *     tha);
 

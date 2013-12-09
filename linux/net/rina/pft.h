@@ -34,19 +34,22 @@ struct pdu_ft_entry {
 struct pft;
 
 struct pft * pft_create(void);
+struct pft * pft_create_ni(void);
 int          pft_destroy(struct pft * instance);
 
-int          pft_entry_add(struct pft * instance,
-                           address_t       destination,
-                           qos_id_t        qos_id,
-                           port_id_t       port_id);
-int          pft_entry_remove(struct pft * instance,
-                              address_t    destination,
-                              qos_id_t     qos_id,
-                              port_id_t    port_id);
+bool         pft_is_empty(struct pft * instance);
+int          pft_flush(struct pft * instance);
+int          pft_add(struct pft * instance,
+                     address_t    destination,
+                     qos_id_t     qos_id,
+                     port_id_t    port_id);
+int          pft_remove(struct pft * instance,
+                        address_t    destination,
+                        qos_id_t     qos_id,
+                        port_id_t    port_id);
 
-port_id_t    pft_next_hop(struct pft * instance,
-                          address_t    destination,
-                          qos_id_t     qos_id);
+port_id_t    pft_nhop(struct pft * instance,
+                      address_t    destination,
+                      qos_id_t     qos_id);
 
 #endif
