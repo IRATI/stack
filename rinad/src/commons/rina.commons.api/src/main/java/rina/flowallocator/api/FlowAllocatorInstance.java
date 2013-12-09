@@ -74,7 +74,7 @@ public interface FlowAllocatorInstance{
 	 * @param the flow deallocate request event
 	 * @throws IPCException
 	 */
-	public void submitDeallocate(FlowDeallocateRequestEvent event) throws IPCException;
+	public void submitDeallocate(FlowDeallocateRequestEvent event);
 	 
 	/**
 	 * When this PDU is received by the FAI with this port-id, the FAI invokes a Deallocate.deliver to notify the local Application, 

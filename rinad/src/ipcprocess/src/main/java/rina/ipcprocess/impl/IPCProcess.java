@@ -71,6 +71,7 @@ import eu.irati.librina.CreateConnectionResultEvent;
 import eu.irati.librina.DIFInformation;
 import eu.irati.librina.DataTransferConstants;
 import eu.irati.librina.DeallocateFlowResponseEvent;
+import eu.irati.librina.DestroyConnectionResultEvent;
 import eu.irati.librina.EnrollToDIFRequestEvent;
 import eu.irati.librina.ExtendedIPCManagerSingleton;
 import eu.irati.librina.FlowDeallocateRequestEvent;
@@ -449,6 +450,13 @@ public class IPCProcess {
 		case FLOW_DEALLOCATION_REQUESTED_EVENT:
 			FlowDeallocateRequestEvent flowDeaReqEvent = (FlowDeallocateRequestEvent) event;
 			flowAllocator.submitDeallocate(flowDeaReqEvent);
+			break;
+		case IPC_PROCESS_DESTROY_CONNECTION_RESULT:
+			DestroyConnectionResultEvent destroyConEvent = (DestroyConnectionResultEvent) event;
+			if (destroyConEvent.getResult() != 0) {
+				log.warn("Problems destroying connection associated to port-id " + destroyConEvent.getPortId() 
+						+ ": " + destroyConEvent.getResult());
+			}
 			break;
 		default:
 			log.warn("Received unsupported event: "+event.getType());

@@ -9,7 +9,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import eu.irati.librina.AllocateFlowResponseEvent;
-import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.CreateConnectionResponseEvent;
 import eu.irati.librina.CreateConnectionResultEvent;
 import eu.irati.librina.ExtendedIPCManagerSingleton;
@@ -318,7 +317,7 @@ public class FlowAllocatorImpl implements FlowAllocator{
 	 * Forward the deallocate request to the Flow Allocator Instance.
 	 * @param portId
 	 */
-	public void submitDeallocate(FlowDeallocateRequestEvent event) throws IPCException{
+	public void submitDeallocate(FlowDeallocateRequestEvent event){
 		FlowAllocatorInstance flowAllocatorInstance = null;
 
 		try {

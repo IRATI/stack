@@ -46,7 +46,7 @@ public interface FlowAllocator {
 	 * @param the flow deallocate request event
 	 * @throws IPCException
 	 */
-	public void submitDeallocate(FlowDeallocateRequestEvent event) throws IPCException;
+	public void submitDeallocate(FlowDeallocateRequestEvent event);
 	
 	/**
 	 * When an Flow Allocator receives a Create_Request PDU for a Flow object, it consults its local Directory to see if it has an entry.

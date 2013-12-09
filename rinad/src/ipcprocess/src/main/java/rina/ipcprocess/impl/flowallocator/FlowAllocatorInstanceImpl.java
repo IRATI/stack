@@ -21,7 +21,6 @@ import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
 import rina.cdap.api.message.ObjectValue;
-import rina.configuration.RINAConfiguration;
 import rina.encoding.api.Encoder;
 import rina.flowallocator.api.FlowAllocator;
 import rina.flowallocator.api.FlowAllocatorInstance;
@@ -30,6 +29,7 @@ import rina.flowallocator.api.Flow.State;
 import rina.ipcprocess.impl.IPCProcess;
 import rina.ipcprocess.impl.flowallocator.policies.NewFlowRequestPolicy;
 import rina.ipcprocess.impl.flowallocator.policies.NewFlowRequestPolicyImpl;
+import rina.ipcprocess.impl.flowallocator.timertasks.TearDownFlowTimerTask;
 import rina.registrationmanager.api.RegistrationManager;
 import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBDaemonException;
@@ -99,16 +99,6 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 	private IPCProcess ipcProcess = null;
 	
 	/**
-	 * Tells if this flow is local (same system)
-	 */
-	private boolean local = false;
-	
-	/**
-	 * If this flow is local (same system), this is the portId of the other Flow Allocator Instance
-	 */
-	private int remotePortId = 0;
-	
-	/**
 	 * The name of the flow object associated to this FlowAllocatorInstance
 	 */
 	private String objectName = null;
@@ -162,7 +152,6 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 	 */
 	public FlowAllocatorInstanceImpl(IPCProcess ipcProcess, FlowAllocator flowAllocator, int portId){
 		initialize(ipcProcess, flowAllocator, portId);
-		this.local = true;
 		log.debug("Created flow allocator instance to manage the flow identified by portId "+portId);
 	}
 	
@@ -578,37 +567,34 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 	 * the DTP and DTCP if it exists will be deleted automatically after 2MPL)
 	 * @throws IPCException
 	 */
-	public void submitDeallocate(FlowDeallocateRequestEvent event) throws IPCException{
-		/*if (local){
-			//1 Notify the flow allocator
-			this.flowAllocator.receivedDeallocateLocalFlowRequest(this.remotePortId);
-			//2 Housekeeping and remove state from RIB
-			destroyFlowAllocatorInstance(this.objectName, false);
-		}else{
-			try{
-				//1 Send M_DELETE
-				try{
-					ObjectValue objectValue = new ObjectValue();
-					objectValue.setByteval(this.encoder.encode(flow));
-					requestMessage = cdapSessionManager.getDeleteObjectRequestMessage(
-							underlyingPortId, null, null, "flow", 0, requestMessage.getObjName(), null, 0, false); 
-					this.ribDaemon.sendMessage(requestMessage, underlyingPortId, null);
-				}catch(Exception ex){
-					log.error("Problems sending M_DELETE flow request");
-				}
+	public void submitDeallocate(FlowDeallocateRequestEvent event) {
+		if (state != FAIState.FLOW_ALLOCATED) {
+			log.error("Received deallocate request while not in FLOW_ALLOCATED state. " 
+					+ "Current state is: " + state );
+			return;
+		}
 
-				//2 Update flow state
-				this.flow.setState(State.WAITING_2_MPL_BEFORE_TEARING_DOWN);
-				
-				//3 Wait 2*MPL before tearing down the flow
-				TearDownFlowTimerTask timerTask = new TearDownFlowTimerTask(this, this.objectName, true);
-				timer.schedule(timerTask, TearDownFlowTimerTask.DELAY);
+		try{
+			//1 Send M_DELETE
+			try{
+				ObjectValue objectValue = new ObjectValue();
+				objectValue.setByteval(this.encoder.encode(flow));
+				requestMessage = cdapSessionManager.getDeleteObjectRequestMessage(
+						underlyingPortId, null, null, "flow", 0, requestMessage.getObjName(), null, 0, false); 
+				this.ribDaemon.sendMessage(requestMessage, underlyingPortId, null);
 			}catch(Exception ex){
-				log.error(ex);
-				throw new IPCException(IPCException.PROBLEMS_DEALLOCATING_FLOW_CODE, 
-						IPCException.PROBLEMS_DEALLOCATING_FLOW + ex.getMessage());
+				log.error("Problems sending M_DELETE flow request");
 			}
-		}*/
+
+			//2 Update flow state
+			this.flow.setState(State.WAITING_2_MPL_BEFORE_TEARING_DOWN);
+
+			//3 Wait 2*MPL before tearing down the flow
+			TearDownFlowTimerTask timerTask = new TearDownFlowTimerTask(this, this.objectName, true);
+			timer.schedule(timerTask, TearDownFlowTimerTask.DELAY);
+		}catch(Exception ex){
+			log.error("Problems processing flow deallocation request" +ex.getMessage());
+		}
 	}
 
 	/**
@@ -618,12 +604,36 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 	 * @param underlyingPortId
 	 */
 	public void deleteFlowRequestMessageReceived(CDAPMessage cdapMessage, int underlyingPortId){
+		if (state != FAIState.FLOW_ALLOCATED) {
+			log.error("Received deallocate request while not in FLOW_ALLOCATED state. " 
+					+ "Current state is: " + state );
+			return;
+		}
+		
 		//1 Update flow state
-		/*this.flow.setState(State.WAITING_2_MPL_BEFORE_TEARING_DOWN);
+		this.flow.setState(State.WAITING_2_MPL_BEFORE_TEARING_DOWN);
 		
 		//3 Set timer
 		TearDownFlowTimerTask timerTask = new TearDownFlowTimerTask(this, this.objectName, false);
-		timer.schedule(timerTask, TearDownFlowTimerTask.DELAY);*/
+		timer.schedule(timerTask, TearDownFlowTimerTask.DELAY);
+	}
+	
+	public synchronized void destroyFlowAllocatorInstance(String flowObjectName, boolean requestor) {
+		if (flow.getState() != State.WAITING_2_MPL_BEFORE_TEARING_DOWN) {
+			log.error("Invoked destroy flow allocator instance while not in "
+					+ "WAITING_2_MPL_BEFORE_TEARING_DOWN. State: " + flow.getState());
+		}
+		
+		releasePortId();
+		
+		flowAllocator.removeFlowAllocatorInstance(portId);
+		
+		try {
+			kernelIPCProcess.destroyConnection(flow.getConnections().get(0));
+		} catch (Exception ex) {
+			log.error("Problems requesting the kernel to destroy a connection: " 
+					+ ex.getMessage());
+		}
 	}
 
 	public void deleteResponse(CDAPMessage cdapMessage, CDAPSessionDescriptor cdapSessionDescriptor) throws RIBDaemonException{
