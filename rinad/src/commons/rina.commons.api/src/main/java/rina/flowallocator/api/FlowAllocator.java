@@ -62,4 +62,6 @@ public interface FlowAllocator {
 	 * @param portId
 	 */
 	public void removeFlowAllocatorInstance(int portId);
+	
+	public void addFlowWaitingForAllocateResponse(long handle, FlowAllocatorInstance instance); 
 }

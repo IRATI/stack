@@ -659,7 +659,6 @@ public:
                         int flowAcceptorIpcProcessId,
                         unsigned int sequenceNumber);
         bool isNotifySource() const;
-        int getPortId() const;
         int getFlowAcceptorIpcProcessId() const;
 };
 

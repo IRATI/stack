@@ -464,13 +464,11 @@ int kfa_flow_sdu_write(struct kfa * instance,
 
         ipcp = flow->ipc_process;
         if (!ipcp) {
-                spin_unlock(&instance->lock);
                 retval = -1;
                 goto finish;
         }
         if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
                 LOG_ERR("Couldn't write SDU on port-id %d", id);
-                spin_unlock(&instance->lock);
                 retval = -1;
                 goto finish;
         }

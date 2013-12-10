@@ -11,6 +11,7 @@ import eu.irati.librina.CreateConnectionResultEvent;
 import eu.irati.librina.ExtendedIPCManagerSingleton;
 import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowRequestEvent;
+import eu.irati.librina.FlowSpecification;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.KernelIPCProcessSingleton;
 import eu.irati.librina.UpdateConnectionResponseEvent;
@@ -135,10 +136,14 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 	
 	private long allocateResponseMessageHandle = 0;
 	
-	public FlowAllocatorInstanceImpl(IPCProcess ipcProcess, FlowAllocator flowAllocator, CDAPSessionManager cdapSessionManager, int portId){
+	private Object sharedLock = null;
+	
+	public FlowAllocatorInstanceImpl(IPCProcess ipcProcess, FlowAllocator flowAllocator, 
+			CDAPSessionManager cdapSessionManager, Object sharedLock, int portId){
 		initialize(ipcProcess, flowAllocator, portId);
 		this.timer = new Timer();
 		this.cdapSessionManager = cdapSessionManager;
+		this.sharedLock = sharedLock;
 		//TODO initialize the newFlowRequestPolicy
 		this.newFlowRequestPolicy = new NewFlowRequestPolicyImpl();
 		log.debug("Created flow allocator instance to manage the flow identified by portId "+portId);
@@ -150,8 +155,10 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 	 * @param flowAllocator
 	 * @param portId
 	 */
-	public FlowAllocatorInstanceImpl(IPCProcess ipcProcess, FlowAllocator flowAllocator, int portId){
+	public FlowAllocatorInstanceImpl(IPCProcess ipcProcess, FlowAllocator flowAllocator, 
+			Object sharedLock, int portId){
 		initialize(ipcProcess, flowAllocator, portId);
+		this.sharedLock = sharedLock;
 		log.debug("Created flow allocator instance to manage the flow identified by portId "+portId);
 	}
 	
@@ -318,11 +325,13 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		try {
 			state = FAIState.APP_NOTIFIED_OF_INCOMING_FLOW;
 			log.debug("Informing the IPC Manager about an incoming flow allocation request");
-			allocateResponseMessageHandle = ipcManager.allocateFlowRequestArrived(flow.getSourceNamingInfo(), 
-					flow.getDestinationNamingInfo(), flow.getFlowSpecification(), 
-					portId);
+			synchronized(sharedLock) {
+				allocateResponseMessageHandle = ipcManager.allocateFlowRequestArrived(flow.getDestinationNamingInfo(), 
+						flow.getSourceNamingInfo(), flow.getFlowSpecification(), portId);
+				flowAllocator.addFlowWaitingForAllocateResponse(allocateResponseMessageHandle, this);
+			}
 		} catch(Exception ex) {
-			log.error("Problems informing the IPC Manager about an incoming flow allocation request");
+			log.error("Problems informing the IPC Manager about an incoming flow allocation request: "+ex.getMessage());
 			flowAllocator.removeFlowAllocatorInstance(portId);
 			releasePortId();
 		}

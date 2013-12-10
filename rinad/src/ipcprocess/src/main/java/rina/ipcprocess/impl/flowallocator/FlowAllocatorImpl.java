@@ -71,10 +71,16 @@ public class FlowAllocatorImpl implements FlowAllocator{
 	
 	private RegistrationManager registrationManager = null;
 	
+	private Map <Long, FlowAllocatorInstance> flowsWaitingforAllocateResponse = null;
+	
+	private Object sharedLock = null;
+	
 	public FlowAllocatorImpl(){
 		allocateRequestValidator = new AllocateRequestValidator();
 		flowAllocatorInstances = new ConcurrentHashMap<Integer, FlowAllocatorInstance>();
+		flowsWaitingforAllocateResponse = new ConcurrentHashMap<Long, FlowAllocatorInstance>();
 		timer = new Timer();
+		sharedLock = new Object();
 	}
 
 	public void setIPCProcess(IPCProcess ipcProcess){
@@ -85,6 +91,11 @@ public class FlowAllocatorImpl implements FlowAllocator{
 		cdapSessionManager = ipcProcess.getCDAPSessionManager();
 		registrationManager = ipcProcess.getRegistrationManager();
 		populateRIB(ipcProcess);
+	}
+	
+	public void addFlowWaitingForAllocateResponse(long handle, FlowAllocatorInstance instance) {
+		flowsWaitingforAllocateResponse.put(handle, instance);
+		log.debug("Associated FAI to seq num " + handle);
 	}
 	
 	/**
@@ -154,7 +165,7 @@ public class FlowAllocatorImpl implements FlowAllocator{
 			log.debug("The destination application process is reachable through me. Assigning the local portId " 
 						+portId+" to the flow allocation.");
 			FlowAllocatorInstance flowAllocatorInstance = 
-					new FlowAllocatorInstanceImpl(ipcProcess, this, cdapSessionManager, portId);
+					new FlowAllocatorInstanceImpl(ipcProcess, this, cdapSessionManager, sharedLock, portId);
 			flowAllocatorInstances.put(new Integer(new Integer(portId)), flowAllocatorInstance);
 			flowAllocatorInstance.createFlowRequestMessageReceived(flow, cdapMessage, underlyingPortId);
 			return;
@@ -217,7 +228,7 @@ public class FlowAllocatorImpl implements FlowAllocator{
 		
 		event.setPortId(portId);
 		FlowAllocatorInstance flowAllocatorInstance = 
-				new FlowAllocatorInstanceImpl(ipcProcess, this, cdapSessionManager, portId);
+				new FlowAllocatorInstanceImpl(ipcProcess, this, cdapSessionManager, sharedLock, portId);
 		flowAllocatorInstances.put(portId, flowAllocatorInstance);
 		
 		try {
@@ -255,21 +266,17 @@ public class FlowAllocatorImpl implements FlowAllocator{
 	 * @param reason
 	 */
 	public synchronized void submitAllocateResponse(AllocateFlowResponseEvent event) {
-		log.debug("Local application invoked allocate response for portId "
-				+event.getPortId()+" with result "+event.getResult());
+		log.debug("Local application invoked allocate response seq num "
+				+event.getSequenceNumber() +" with result "+event.getResult());
 		FlowAllocatorInstance flowAllocatorInstance = null;
 
-		try {
-			flowAllocatorInstance = getFlowAllocatorInstance(event.getPortId());
-		}catch(Exception ex){
-			log.error("Problems looking for FAI at portId " + event.getPortId() 
-					+ ". "+ ex.getMessage());
-			try{
-				ipcManager.deallocatePortId(event.getPortId());
-			} catch (Exception e) {
-				log.error("Prpblems requesting IPC Manager to deallocate port id "
-						+ event.getPortId() + ". "+e.getMessage());
-			}
+		synchronized (sharedLock) {
+			log.debug("Looking for FAI associated to seq num " + event.getSequenceNumber());
+			flowAllocatorInstance = flowsWaitingforAllocateResponse.remove(event.getSequenceNumber());
+		}
+		if (flowAllocatorInstance == null){
+			log.error("Problems looking for FAI with handle " + event.getSequenceNumber());
+			return;
 		}
 
 		flowAllocatorInstance.submitAllocateResponse(event);

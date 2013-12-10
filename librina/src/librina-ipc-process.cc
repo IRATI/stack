@@ -479,6 +479,7 @@ unsigned int ExtendedIPCManager::allocateFlowRequestArrived(
 	message.setDifName(currentDIFInformation.getDifName());
 	message.setPortId(portId);
 	message.setSourceIpcProcessId(ipcProcessId);
+	message.setDestPortId(ipcManagerPort);
 	message.setRequestMessage(true);
 
 	try{
@@ -528,6 +529,7 @@ void ExtendedIPCManager::notifyflowDeallocated(
 	responseMessage.setResult(result);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setSequenceNumber(flowDeallocateEvent.getSequenceNumber());
+	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try{
 		rinaManager->sendMessage(&responseMessage);
@@ -742,8 +744,6 @@ unsigned int KernelIPCProcess::createConnection(const Connection& connection)
 throw (CreateConnectionException) {
         unsigned int seqNum=0;
 
-        LOG_DBG("Inside create connection...");
-
 #if STUB_API
         //Do nothing
 #else
@@ -758,9 +758,7 @@ throw (CreateConnectionException) {
         message.setRequestMessage(true);
 
         try{
-                LOG_DBG("Sendig message ...");
                 rinaManager->sendMessage(&message);
-                LOG_DBG("Message sent");
         }catch(NetlinkException &e){
                 throw CreateConnectionException(e.what());
         }
