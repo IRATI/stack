@@ -167,6 +167,71 @@ port_id_t kfa_flow_create(struct kfa *     instance,
 }
 EXPORT_SYMBOL(kfa_flow_create);
 
+port_id_t kfa_port_id_reserve(struct kfa *     instance,
+                              ipc_process_id_t id,
+                              bool             to_app)
+{
+        port_id_t pid;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+
+        spin_lock(&instance->lock);
+
+        if (!instance->pidm) {
+                LOG_ERR("This KFA instance doesn't have a PIDM");
+                spin_unlock(&instance->lock);
+                return port_id_bad();
+        }
+
+        pid = pidm_allocate(instance->pidm);
+        if (!is_port_id_ok(pid)) {
+                LOG_ERR("Cannot get a port-id");
+                spin_unlock(&instance->lock);
+                return port_id_bad();
+        }
+
+        spin_unlock(&instance->lock);
+
+        return pid;
+}
+EXPORT_SYMBOL(kfa_port_id_reserve);
+
+port_id_t kfa_port_id_release(struct kfa * instance,
+                              port_id_t    port_id)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+
+        if (!is_port_id_ok(port_id)) {
+                LOG_ERR("Bogus port-id, bailing out");
+                return -1;
+        }
+
+        spin_lock(&instance->lock);
+
+        if (!instance->pidm) {
+                LOG_ERR("This KFA instance doesn't have a PIDM");
+                spin_unlock(&instance->lock);
+                return -1;
+        }
+
+        if (pidm_release(instance->pidm, port_id)) {
+                LOG_ERR("Could not release pid %d from the map", port_id);
+                spin_unlock(&instance->lock);
+                return -1;
+        }
+
+        spin_unlock(&instance->lock);
+
+        return 0;
+}
+EXPORT_SYMBOL(kfa_port_id_release);
+
 int kfa_flow_bind(struct kfa *           instance,
                   port_id_t              pid,
                   struct ipcp_instance * ipc_process,

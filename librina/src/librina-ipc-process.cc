@@ -742,6 +742,8 @@ unsigned int KernelIPCProcess::createConnection(const Connection& connection)
 throw (CreateConnectionException) {
         unsigned int seqNum=0;
 
+        LOG_DBG("Inside create connection...");
+
 #if STUB_API
         //Do nothing
 #else
@@ -756,7 +758,9 @@ throw (CreateConnectionException) {
         message.setRequestMessage(true);
 
         try{
+                LOG_DBG("Sendig message ...");
                 rinaManager->sendMessage(&message);
+                LOG_DBG("Message sent");
         }catch(NetlinkException &e){
                 throw CreateConnectionException(e.what());
         }
