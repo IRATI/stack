@@ -34,125 +34,126 @@
 
 typedef enum {
 
-        /* Unespecified operation */
+        /* 0 Unespecified operation */
         RINA_C_MIN = 0,
 
-        /* IPC Manager -> IPC Process */
+        /* 1 IPC Manager -> IPC Process */
         RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST,
 
-        /* IPC Process -> IPC Manager */
+        /* 2 IPC Process -> IPC Manager */
         RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE,
 
-        /* IPC Manager -> IPC Process */
+        /* 3 IPC Manager -> IPC Process */
         RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST,
 
-        /* IPC Process -> IPC Manager */
+        /* 4 IPC Process -> IPC Manager */
         RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE,
 
-        /* IPC Manager -> IPC Process */
+        /* 5 IPC Manager -> IPC Process */
         RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
 
-        /* IPC Manager -> IPC Process */
+        /* 6 IPC Manager -> IPC Process */
         RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION,
 
-        /* IPC Manager -> IPC Process */
+        /* 7 IPC Manager -> IPC Process */
         RINA_C_IPCM_ENROLL_TO_DIF_REQUEST,
 
-        /* IPC Process -> IPC Manager */
+        /* 8 IPC Process -> IPC Manager */
         RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE,
 
-        /* IPC Manager -> IPC Process */
+        /* 9 IPC Manager -> IPC Process */
         RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST,
 
-        /* IPC Process -> IPC Manager */
+        /* 10 IPC Process -> IPC Manager */
         RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE,
 
-        /* IPC Manager -> IPC Process */
+        /* 11 IPC Manager -> IPC Process */
         RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
 
-        /* Allocate flow request from a remote application */
+        /* 12 Allocate flow request from a remote application */
         /* IPC Process -> IPC Manager */
         RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED,
 
-        /* IPC Process -> IPC Manager */
+        /* 13 IPC Process -> IPC Manager */
         RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
 
-        /* IPC Manager -> IPC Process */
+        /* 14 IPC Manager -> IPC Process */
         RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
 
-        /* IPC Manager -> IPC Process */
+        /* 15 IPC Manager -> IPC Process */
         RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST,
 
-        /* IPC Process -> IPC Manager*/
+        /* 16 IPC Process -> IPC Manager*/
         RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE,
 
-        /*  IPC Process -> IPC Manager, flow deallocated without the */
+        /*  17 IPC Process -> IPC Manager, flow deallocated without the */
         /*  application having requested it */
         RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION,
 
-        /*IPC Manager -> IPC Process */
+        /* 18 IPC Manager -> IPC Process */
         RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,
 
-        /*IPC Process -> IPC Manager */
+        /* 19 IPC Process -> IPC Manager */
         RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE,
 
-        /* IPC Manager -> IPC Process */
+        /* 20 IPC Manager -> IPC Process */
         RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST,
 
-        /* IPC Process -> IPC Manager */
+        /* 21 IPC Process -> IPC Manager */
         RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE,
 
-        /* IPC Manager -> IPC Process */
+        /* 22 IPC Manager -> IPC Process */
         RINA_C_IPCM_QUERY_RIB_REQUEST,
 
-        /* IPC Process -> IPC Manager */
+        /* 23 IPC Process -> IPC Manager */
         RINA_C_IPCM_QUERY_RIB_RESPONSE,
 
-        /* IPC Process (user space) -> RMT (kernel) */
+        /* 24 IPC Process (user space) -> RMT (kernel) */
         RINA_C_RMT_ADD_FTE_REQUEST,
 
-        /* IPC Process (user space) -> RMT (kernel) */
+        /* 25 IPC Process (user space) -> RMT (kernel) */
         RINA_C_RMT_DELETE_FTE_REQUEST,
 
-        /* IPC Process (user space) -> RMT (kernel) */
+        /* 26 IPC Process (user space) -> RMT (kernel) */
         RINA_C_RMT_DUMP_FT_REQUEST,
 
-        /* RMT (kernel) -> IPC Process (user space) */
+        /* 27 RMT (kernel) -> IPC Process (user space) */
         RINA_C_RMT_DUMP_FT_REPLY,
 
-        /* NL layer -> IPC Manager */
+        /* 28 NL layer -> IPC Manager */
         RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION,
 
-        /* IPC Manager -> Kernel (NL Layer) */
+        /* 29 IPC Manager -> Kernel (NL Layer) */
         RINA_C_IPCM_IPC_MANAGER_PRESENT,
 
-        /* FIXME: Need to be logically moved after flow
+        /* 30 FIXME: Need to be logically moved after flow
          * allocation messages. Put here in order to maintain
          * compatibility with MS7 version of user space*/
         /* IPC Process (user space) -> KIPCM*/
         RINA_C_IPCP_CONN_CREATE_REQUEST,
 
-        /* KIPCM -> IPC Process (user space)*/
+        /* 31 KIPCM -> IPC Process (user space)*/
         RINA_C_IPCP_CONN_CREATE_RESPONSE,
 
-        /* IPC Process (user space) -> KIPCM */
+        /* 32 IPC Process (user space) -> KIPCM */
         RINA_C_IPCP_CONN_CREATE_ARRIVED,
 
-        /* KIPCM -> IPC Process (user space)*/
+        /* 33 KIPCM -> IPC Process (user space)*/
         RINA_C_IPCP_CONN_CREATE_RESULT,
 
-        /* IPC Process (user space) -> KIPCM */
+        /* 34 IPC Process (user space) -> KIPCM */
         RINA_C_IPCP_CONN_UPDATE_REQUEST,
 
-        /* KIPCM -> IPC Process (user space)*/
+        /* 35 KIPCM -> IPC Process (user space)*/
         RINA_C_IPCP_CONN_UPDATE_RESULT,
 
-        /* IPC Process (user space) -> KIPCM */
+        /* 36 IPC Process (user space) -> KIPCM */
         RINA_C_IPCP_CONN_DESTROY_REQUEST,
 
-        /* KIPCM -> IPC Process (user space)*/
+        /* 37 KIPCM -> IPC Process (user space)*/
         RINA_C_IPCP_CONN_DESTROY_RESULT,
 
+        /* 38 */
         RINA_C_MAX,
 } msg_type_t;
 

@@ -59,6 +59,7 @@ import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBObject;
 
 import eu.irati.librina.AllocateFlowRequestResultEvent;
+import eu.irati.librina.AllocateFlowResponseEvent;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistration;
 import eu.irati.librina.ApplicationRegistrationRequestEvent;
@@ -66,11 +67,14 @@ import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.AssignToDIFRequestEvent;
 import eu.irati.librina.AssignToDIFResponseEvent;
 import eu.irati.librina.CreateConnectionResponseEvent;
+import eu.irati.librina.CreateConnectionResultEvent;
 import eu.irati.librina.DIFInformation;
 import eu.irati.librina.DataTransferConstants;
 import eu.irati.librina.DeallocateFlowResponseEvent;
+import eu.irati.librina.DestroyConnectionResultEvent;
 import eu.irati.librina.EnrollToDIFRequestEvent;
 import eu.irati.librina.ExtendedIPCManagerSingleton;
+import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowInformation;
 import eu.irati.librina.FlowRequestEvent;
@@ -81,6 +85,7 @@ import eu.irati.librina.KernelIPCProcessSingleton;
 import eu.irati.librina.Neighbor;
 import eu.irati.librina.QoSCube;
 import eu.irati.librina.QueryRIBRequestEvent;
+import eu.irati.librina.UpdateConnectionResponseEvent;
 import eu.irati.librina.rina;
 
 public class IPCProcess {
@@ -429,6 +434,29 @@ public class IPCProcess {
 		case IPC_PROCESS_CREATE_CONNECTION_RESPONSE:
 			CreateConnectionResponseEvent createConnRespEvent = (CreateConnectionResponseEvent) event;
 			flowAllocator.processCreateConnectionResponseEvent(createConnRespEvent);
+			break;
+		case ALLOCATE_FLOW_RESPONSE_EVENT:
+			AllocateFlowResponseEvent allocateFlowRespEvent = (AllocateFlowResponseEvent) event;
+			flowAllocator.submitAllocateResponse(allocateFlowRespEvent);
+			break;
+		case IPC_PROCESS_CREATE_CONNECTION_RESULT:
+			CreateConnectionResultEvent createConnResuEvent = (CreateConnectionResultEvent) event;
+			flowAllocator.processCreateConnectionResultEvent(createConnResuEvent);
+			break;
+		case IPC_PROCESS_UPDATE_CONNECTION_RESPONSE:
+			UpdateConnectionResponseEvent updateConRespEvent = (UpdateConnectionResponseEvent) event;
+			flowAllocator.processUpdateConnectionResponseEvent(updateConRespEvent);
+			break;
+		case FLOW_DEALLOCATION_REQUESTED_EVENT:
+			FlowDeallocateRequestEvent flowDeaReqEvent = (FlowDeallocateRequestEvent) event;
+			flowAllocator.submitDeallocate(flowDeaReqEvent);
+			break;
+		case IPC_PROCESS_DESTROY_CONNECTION_RESULT:
+			DestroyConnectionResultEvent destroyConEvent = (DestroyConnectionResultEvent) event;
+			if (destroyConEvent.getResult() != 0) {
+				log.warn("Problems destroying connection associated to port-id " + destroyConEvent.getPortId() 
+						+ ": " + destroyConEvent.getResult());
+			}
 			break;
 		default:
 			log.warn("Received unsupported event: "+event.getType());

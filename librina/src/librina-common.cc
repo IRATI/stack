@@ -623,7 +623,7 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 		const FlowSpecification& flowSpecification,
 		bool localRequest,
 		const ApplicationProcessNamingInformation& localApplicationName,
-		const ApplicationProcessNamingInformation& destApplicationName,
+		const ApplicationProcessNamingInformation& remoteApplicationName,
 		const ApplicationProcessNamingInformation& DIFName,
 		int flowRequestorIpcProcessId,
 		unsigned int sequenceNumber) :
