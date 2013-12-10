@@ -220,6 +220,8 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 			throw new IPCException("Problems requesting the kernel to create a connection: " 
 					+ ex.getMessage());
 		}
+		
+		log.debug("Requested the creation of a connection to the kernel, for flow with port-id "+ portId);
 	}
 	
 	private void replyToIPCManager(FlowRequestEvent event, int result) {
