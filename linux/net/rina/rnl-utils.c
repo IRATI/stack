@@ -1693,20 +1693,20 @@ static int rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
                 goto parse_fail;
         }
 
-        if (info->attrs[IDQR_ATTR_OBJECT]) {
-                if (parse_rib_object(info->attrs[IDQR_ATTR_OBJECT],
+        if (attrs[IDQR_ATTR_OBJECT]) {
+                if (parse_rib_object(attrs[IDQR_ATTR_OBJECT],
                                      msg_attrs->rib_obj) < 0)
                         goto parse_fail;
         }
 
-        if (info->attrs[IDQR_ATTR_SCOPE])
+        if (attrs[IDQR_ATTR_SCOPE])
                 msg_attrs->scope = \
-                        nla_get_u32(info->attrs[IDQR_ATTR_SCOPE]);
+                        nla_get_u32(attrs[IDQR_ATTR_SCOPE]);
 
-        if (info->attrs[IDQR_ATTR_FILTER])
+        if (attrs[IDQR_ATTR_FILTER])
                 nla_strlcpy(msg_attrs->filter,
-                            info->attrs[IDQR_ATTR_FILTER],
-                            sizeof(info->attrs[IDQR_ATTR_FILTER]));
+                            attrs[IDQR_ATTR_FILTER],
+                            sizeof(attrs[IDQR_ATTR_FILTER]));
         return 0;
 
  parse_fail:
@@ -1799,9 +1799,9 @@ static int rnl_parse_rmt_modify_fte_req_msg(struct genl_info * info,
                         goto parse_fail;
         }
 
-        if (info->attrs[RMPFE_ATTR_MODE])
+        if (attrs[RMPFE_ATTR_MODE])
                 msg_attrs->mode =
-                nla_get_u32(info->attrs[RMPFE_ATTR_MODE]);
+                nla_get_u32(attrs[RMPFE_ATTR_MODE]);
 
         return 0;
 
