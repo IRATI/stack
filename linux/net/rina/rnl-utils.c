@@ -258,6 +258,20 @@ rnl_ipcp_conn_destroy_req_msg_attrs_create(void)
         return tmp;
 }
 
+static struct rnl_rmt_mod_pfte_msg_attrs *
+rnl_rmt_mod_pfte_msg_attrs_create(void)
+{
+        struct rnl_rmt_mod_pfte_msg_attrs * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if  (!tmp)
+                return NULL;
+
+        INIT_LIST_HEAD(&tmp->pft_entries);
+
+        return tmp;
+}
+
 struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
 {
         struct rnl_msg * tmp;
@@ -344,6 +358,14 @@ struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
         case RNL_MSG_ATTRS_CONN_DESTROY_REQUEST:
                 tmp->attrs =
                         rnl_ipcp_conn_destroy_req_msg_attrs_create();
+                if (!tmp->attrs) {
+                        rkfree(tmp);
+                        return NULL;
+                }
+                break;
+        case RNL_MSG_ATTRS_RMT_PFTE_MODIFY_REQUEST:
+                tmp->attrs =
+                        rnl_rmt_mod_pfte_msg_attrs_create();
                 if (!tmp->attrs) {
                         rkfree(tmp);
                         return NULL;
@@ -479,6 +501,25 @@ rnl_ipcp_conn_destroy_req_msg_attrs_destroy(struct rnl_ipcp_conn_destroy_req_msg
         return 0;
 }
 
+static int
+rnl_rmt_mod_pfte_msg_attrs_destroy(struct rnl_rmt_mod_pfte_msg_attrs * attrs)
+{
+        struct pdu_fte_list_entry * pos, * nxt;
+
+        if (!attrs)
+                return -1;
+
+        list_for_each_entry_safe(pos, nxt,
+                        &attrs->pft_entries,
+                        next) {
+                list_del(&pos->next);
+                rkfree(pos);
+        }
+
+        rkfree(attrs);
+        return 0;
+}
+
 int rnl_msg_destroy(struct rnl_msg * msg)
 {
         if (!msg)
@@ -514,6 +555,9 @@ int rnl_msg_destroy(struct rnl_msg * msg)
                 break;
         case RNL_MSG_ATTRS_CONN_DESTROY_REQUEST:
                 rnl_ipcp_conn_destroy_req_msg_attrs_destroy(msg->attrs);
+                break;
+        case RNL_MSG_ATTRS_RMT_PFTE_MODIFY_REQUEST:
+                rnl_rmt_mod_pfte_msg_attrs_destroy(msg->attrs);
                 break;
         default:
                 break;
@@ -606,7 +650,40 @@ static int parse_flow_spec(struct nlattr * fspec_attr,
                         nla_get_u32(attrs[FSPEC_ATTR_MAX_SDU_SIZE]);
 
         return 0;
+}
 
+static int parse_pdu_fte_list_entry(struct nlattr * attr,
+                           struct pdu_fte_list_entry * pfte_struct)
+{
+        struct nla_policy attr_policy[PFTELE_ATTR_MAX + 1];
+        struct nlattr *   attrs[PFTELE_ATTR_MAX + 1];
+
+        attr_policy[PFTELE_ATTR_ADDRESS].type         = NLA_U32;
+        attr_policy[PFTELE_ATTR_ADDRESS].len          = 4;
+        attr_policy[PFTELE_ATTR_QOSID].type           = NLA_U32;
+        attr_policy[PFTELE_ATTR_QOSID].len            = 4;
+        attr_policy[PFTELE_ATTR_PORTID].type          = NLA_U32;
+        attr_policy[PFTELE_ATTR_PORTID].len           = 4;
+
+        if (nla_parse_nested(attrs,
+                             PFTELE_ATTR_MAX,
+                             attr,
+                             attr_policy) < 0)
+                return -1;
+
+        if (attrs[PFTELE_ATTR_ADDRESS])
+                pfte_struct->destination =
+                        nla_get_u32(attrs[PFTELE_ATTR_ADDRESS]);
+
+        if (attrs[PFTELE_ATTR_QOSID])
+                pfte_struct->qos_id =
+                        nla_get_u32(attrs[PFTELE_ATTR_QOSID]);
+
+        if (attrs[PFTELE_ATTR_PORTID])
+                pfte_struct->port_id =
+                        nla_get_u32(attrs[PFTELE_ATTR_PORTID]);
+
+        return 0;
 }
 
 static int parse_app_name_info(struct nlattr * name_attr,
@@ -1637,21 +1714,101 @@ static int rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
         return -1;
 }
 
-static int rnl_parse_rmt_add_fte_req_msg(struct genl_info * info,
-                                         struct rnl_rmt_add_fte_req_msg_attrs * msg_attrs)
-{ return 0; }
+static int parse_list_of_pfte_config_entries(struct nlattr *     nested_attr,
+                                             struct rnl_rmt_mod_pfte_msg_attrs * msg)
+{
+        struct nlattr *            nla;
+        struct pdu_fte_list_entry * entry;
+        int                        rem                   = 0;
+        int                        entries_with_problems = 0;
+        int                        total_entries         = 0;
 
-static int rnl_parse_rmt_del_fte_req_msg(struct genl_info * info,
-                                         struct rnl_rmt_del_fte_req_msg_attrs * msg_attrs)
-{ return 0; }
+        if (!nested_attr) {
+                LOG_ERR("Bogus attribute passed, bailing out");
+                return -1;
+        }
 
-static int rnl_parse_rmt_dump_ft_req_msg(struct genl_info * info,
-                                         struct rnl_rmt_dump_ft_req_msg_attrs * msg_attrs)
-{ return 0; }
+        if (!msg) {
+                LOG_ERR("Bogus msg passed, bailing out");
+                return -1;
+        }
 
-static int rnl_parse_rmt_dump_ft_reply_msg(struct genl_info * info,
-                                           struct rnl_rmt_dump_ft_reply_msg_attrs * msg_attrs)
-{ return 0; }
+        for (nla = (struct nlattr*) nla_data(nested_attr),
+                     rem = nla_len(nested_attr);
+             nla_ok(nla, rem);
+             nla = nla_next(nla, &(rem))) {
+                total_entries++;
+
+                entry = rkzalloc(sizeof(*entry), GFP_KERNEL);
+                if (!entry) {
+                        entries_with_problems++;
+                        continue;
+                }
+                INIT_LIST_HEAD(&entry->next);
+
+                if (parse_pdu_fte_list_entry(nla, entry) < 0) {
+                        rkfree(entry);
+                        entries_with_problems++;
+                        continue;
+                }
+
+                list_add(&entry->next, &msg->pft_entries);
+        }
+
+        if (rem > 0) {
+                LOG_WARN("Missing bits to parse");
+        }
+
+        if (entries_with_problems > 0)
+                LOG_WARN("Problems parsing %d out of %d parameters",
+                         entries_with_problems,
+                         total_entries);
+
+        return 0;
+}
+
+static int rnl_parse_rmt_modify_fte_req_msg(struct genl_info * info,
+                struct rnl_rmt_mod_pfte_msg_attrs * msg_attrs)
+{
+        struct nla_policy attr_policy[RMPFE_ATTR_MAX + 1];
+        struct nlattr *attrs[RMPFE_ATTR_MAX + 1];
+        int result;
+
+        attr_policy[RMPFE_ATTR_ENTRIES].type = NLA_NESTED;
+        attr_policy[RMPFE_ATTR_ENTRIES].len = 0;
+        attr_policy[RMPFE_ATTR_MODE].type = NLA_U32;
+        attr_policy[RMPFE_ATTR_MODE].len = 4;
+
+        result = nlmsg_parse(info->nlhdr,
+                        sizeof(struct genlmsghdr) +
+                        sizeof(struct rina_msg_hdr),
+                        attrs,
+                        RMPFE_ATTR_MAX,
+                        attr_policy);
+
+        if (result < 0) {
+                LOG_ERR("Error %d; could not validate nl message policy",
+                result);
+                goto parse_fail;
+        }
+
+        if (attrs[RMPFE_ATTR_ENTRIES]) {
+                if (parse_list_of_pfte_config_entries(
+                                attrs[RMPFE_ATTR_ENTRIES],
+                                msg_attrs) < 0)
+                        goto parse_fail;
+        }
+
+        if (info->attrs[RMPFE_ATTR_MODE])
+                msg_attrs->mode =
+                nla_get_u32(info->attrs[RMPFE_ATTR_MODE]);
+
+        return 0;
+
+        parse_fail:
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_RMT_MODIFY_FTE_REQ_MSG"));
+        return -1;
+}
 
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg   * msg)
@@ -1766,24 +1923,9 @@ int rnl_parse_msg(struct genl_info * info,
                                                      msg->attrs) < 0)
                         goto fail;
                 break;
-        case RINA_C_RMT_ADD_FTE_REQUEST:
-                if (rnl_parse_rmt_add_fte_req_msg(info,
+        case RINA_C_RMT_MODIFY_FTE_REQUEST:
+                if (rnl_parse_rmt_modify_fte_req_msg(info,
                                                   msg->attrs) < 0)
-                        goto fail;
-                break;
-        case RINA_C_RMT_DELETE_FTE_REQUEST:
-                if (rnl_parse_rmt_del_fte_req_msg(info,
-                                                  msg->attrs) < 0)
-                        goto fail;
-                break;
-        case RINA_C_RMT_DUMP_FT_REQUEST:
-                if (rnl_parse_rmt_dump_ft_req_msg(info,
-                                                  msg->attrs) < 0)
-                        goto fail;
-                break;
-        case RINA_C_RMT_DUMP_FT_REPLY:
-                if (rnl_parse_rmt_dump_ft_reply_msg(info,
-                                                    msg->attrs) < 0)
                         goto fail;
                 break;
         default:
@@ -2602,20 +2744,6 @@ int rnl_format_ipcm_query_rib_resp_msg(uint_t                     result,
         return -1;
 }
 EXPORT_SYMBOL(rnl_format_ipcm_query_rib_resp_msg);
-
-int rnl_format_rmt_add_fte_req_msg(const struct pdu_ft_entry * entry,
-                                   struct sk_buff      * skb_out)
-{
-        return 0;
-}
-EXPORT_SYMBOL(rnl_format_rmt_add_fte_req_msg);
-
-int rnl_format_rmt_del_fte_req_msg(const struct pdu_ft_entry *entry,
-                                   struct sk_buff      * skb_out)
-{
-        return 0;
-}
-EXPORT_SYMBOL(rnl_format_rmt_del_fte_req_msg);
 
 int rnl_format_socket_closed_notification_msg(u32              nl_port,
                                               struct sk_buff * skb_out)

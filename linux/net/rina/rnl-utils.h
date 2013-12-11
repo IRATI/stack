@@ -22,8 +22,6 @@
 #ifndef RINA_RNL_UTILS_H
 #define RINA_RNL_UTILS_H
 
-#include "pft.h"
-
 
 /*
  * FIXME:
@@ -40,6 +38,14 @@ enum app_name_info_attrs_list {
         __APNI_ATTR_MAX,
 };
 #define APNI_ATTR_MAX (__APNI_ATTR_MAX - 1)
+
+enum pdu_fte_list_entry_attrs_list {
+        PFTELE_ATTR_ADDRESS = 1,
+        PFTELE_ATTR_QOSID,
+        PFTELE_ATTR_PORTID,
+        __PFTELE_ATTR_MAX,
+};
+#define PFTELE_ATTR_MAX (__PFTELE_ATTR_MAX - 1)
 
 enum flow_spec_attrs_list {
         FSPEC_ATTR_AVG_BWITH = 1,
@@ -358,6 +364,13 @@ enum socket_closed_notification_msg_attr_list {
 };
 #define ISCN_ATTR_MAX (__ISCN_ATTR_MAX -1)
 
+enum rmt_mod_pdu_fte_entry_req {
+        RMPFE_ATTR_ENTRIES = 1,
+        RMPFE_ATTR_MODE,
+        __RMPFE_ATTR_MAX,
+};
+#define RMPFE_ATTR_MAX (__RMPFE_ATTR_MAX -1)
+
 /* FIXME: Should be hidden by the API !!! */
 struct rina_msg_hdr {
         unsigned short src_ipc_id;
@@ -374,7 +387,8 @@ enum rnl_msg_attr_type {
         RNL_MSG_ATTRS_CONN_CREATE_REQUEST,
         RNL_MSG_ATTRS_CONN_CREATE_ARRIVED,
         RNL_MSG_ATTRS_CONN_UPDATE_REQUEST,
-        RNL_MSG_ATTRS_CONN_DESTROY_REQUEST
+        RNL_MSG_ATTRS_CONN_DESTROY_REQUEST,
+        RNL_MSG_ATTRS_RMT_PFTE_MODIFY_REQUEST
 };
 
 struct rnl_msg {
@@ -576,12 +590,17 @@ struct rnl_ipcm_query_rib_resp_msg_attrs {
         struct rib_object * rib_objs;
 };
 
-struct rnl_rmt_add_fte_req_msg_attrs {
-        int temp;
+struct pdu_fte_list_entry {
+        address_t destination;
+        qos_id_t  qos_id;
+        /* FIXME, has to be list_head ports; */
+        port_id_t port_id;
+        struct list_head next;
 };
 
-struct rnl_rmt_del_fte_req_msg_attrs {
-        int temp;
+struct rnl_rmt_mod_pfte_msg_attrs {
+        int32_t   mode;
+        struct list_head pft_entries;
 };
 
 struct rnl_rmt_dump_ft_req_msg_attrs {
@@ -679,19 +698,6 @@ int rnl_format_ipcm_query_rib_resp_msg(uint_t                     result,
                                        uint_t                     count,
                                        const struct rib_object ** objs,
                                        struct sk_buff *           skb_out);
-
-int rnl_format_rmt_add_fte_req_msg(const struct pdu_ft_entry * entry,
-                                   struct sk_buff *            skb_out);
-
-int rnl_format_rmt_del_fte_req_msg(const struct pdu_ft_entry * entry,
-                                   struct sk_buff *            skb_out);
-
-int rnl_format_rmt_dump_ft_req_msg(struct sk_buff * skb_out);
-
-int rnl_format_rmt_dump_ft_reply_msg(size_t                       count,
-                                     const struct pdu_ft_entry ** entries,
-                                     struct sk_buff *             skb_out);
-
 
 int rnl_assign_dif_response(ipc_process_id_t id,
                             uint_t           res,

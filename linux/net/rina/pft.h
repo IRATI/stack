@@ -24,13 +24,6 @@
 #include "common.h"
 #include "qos.h"
 
-/* FIXME: This definition is bounded to RNL and must be removed from here */
-struct pdu_ft_entry {
-        address_t destination;
-        qos_id_t  qos_id;
-        /* list_head ports; */
-};
-
 struct pft;
 
 struct pft * pft_create(void);

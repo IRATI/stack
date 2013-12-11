@@ -734,6 +734,8 @@ class PDUForwardingTableEntry {
         unsigned int portId;
 public:
         PDUForwardingTableEntry();
+        bool operator==(const PDUForwardingTableEntry &other) const;
+        bool operator!=(const PDUForwardingTableEntry &other) const;
         unsigned int getAddress() const;
         void setAddress(unsigned int address);
         unsigned int getPortId() const;

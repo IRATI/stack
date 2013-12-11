@@ -18,6 +18,9 @@ import eu.irati.librina.FlowSpecification;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.Neighbor;
 import eu.irati.librina.NeighborList;
+import eu.irati.librina.PDUForwardingTableEntry;
+import eu.irati.librina.PDUForwardingTableEntryList;
+import eu.irati.librina.PDUForwardingTableListIterator;
 import eu.irati.librina.rina;
 
 import rina.cdap.api.CDAPSessionDescriptor;
@@ -552,6 +555,19 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 					log.error("Problems communicating with the IPC Manager: "+ex.getMessage());
 				}
 				
+				//4 Remove PDU forwarding table entry
+				 try{
+					 PDUForwardingTableEntryList list = new PDUForwardingTableEntryList();
+					 PDUForwardingTableEntry entry = new PDUForwardingTableEntry();
+					 entry.setAddress(neighbors.get(i).getAddress());
+					 entry.setQosId(1);
+					 entry.setPortId(neighbors.get(i).getUnderlyingPortId());
+					 list.addFirst(entry);
+					 rina.getKernelIPCProcess().modifyPDUForwardingTableEntries(list, 1);
+				 } catch (Exception ex) {
+					 log.error("Problems requesting the Kernel to remove a PDU Forwarding Table entry");
+				 }
+				
 				return;
 			}
 		}
@@ -664,12 +680,12 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 	 
 	 /**
 	  * Called by the enrollment state machine when the enrollment request has been completed successfully
-	  * @param candidate the IPC process we were trying to enroll to
+	  * @param neighbor the IPC process we were trying to enroll to
 	  * @param enrollee true if this IPC process is the one that initiated the 
 	  * enrollment sequence (i.e. it is the application process that wants to 
 	  * join the DIF)
 	  */
-	 public void enrollmentCompleted(Neighbor dafMember, boolean enrollee){
+	 public void enrollmentCompleted(Neighbor neighbor, boolean enrollee){
 		 //TODO check what to do with this now
 		/* if (enrollee){
 			 //request the allocation of N-1 flows to the neighbor's Data Transfer AE
@@ -678,6 +694,18 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 					 RINAConfiguration.getInstance().getDIFConfiguration(this.getIPCProcess().getDIFName()));
 			 timer.schedule(task, 200);
 		 }*/
+		 
+		 try{
+			 PDUForwardingTableEntryList list = new PDUForwardingTableEntryList();
+			 PDUForwardingTableEntry entry = new PDUForwardingTableEntry();
+			 entry.setAddress(neighbor.getAddress());
+			 entry.setQosId(1);
+			 entry.setPortId(neighbor.getUnderlyingPortId());
+			 list.addFirst(entry);
+			 rina.getKernelIPCProcess().modifyPDUForwardingTableEntries(list, 0);
+		 } catch (Exception ex) {
+			 log.error("Problems requesting the Kernel to add a PDU Forwarding Table entry");
+		 }
 	 }
 	
 	/**

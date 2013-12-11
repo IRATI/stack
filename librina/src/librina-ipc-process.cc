@@ -686,6 +686,28 @@ PDUForwardingTableEntry::PDUForwardingTableEntry() {
         portId = 0;
 }
 
+bool PDUForwardingTableEntry::operator==(
+                const PDUForwardingTableEntry &other) const {
+        if (address != other.getAddress()) {
+                return false;
+        }
+
+        if (qosId != other.getQosId()) {
+                return false;
+        }
+
+        if (portId != other.getPortId()) {
+                return false;
+        }
+
+        return true;
+}
+
+bool PDUForwardingTableEntry::operator!=(
+                const PDUForwardingTableEntry &other) const {
+        return !(*this == other);
+}
+
 unsigned int PDUForwardingTableEntry::getAddress() const {
         return address;
 }

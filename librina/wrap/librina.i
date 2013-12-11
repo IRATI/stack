@@ -303,6 +303,12 @@
     jenv->ThrowNew(excep, $1.what());
   return $null;
 }
+%typemap(throws, throws="eu.irati.librina.PDUForwardingTableException") rina::PDUForwardingTableException {
+  jclass excep = jenv->FindClass("eu/irati/librina/PDUForwardingTableException");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
 
 
 /* Typemaps to allow eventWait, eventPoll and eventTimedWait to downcast IPCEvent to the correct class */
@@ -686,6 +692,8 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(differs) rina::FlowInformation::operator!=(const FlowInformation &other) const;
 %rename(equals) rina::Neighbor::operator==(const Neighbor &other) const;
 %rename(differs) rina::Neighbor::operator!=(const Neighbor &other) const;
+%rename(equals) rina::PDUForwardingTableEntry::operator==(const PDUForwardingTableEntry &other) const;
+%rename(differs) rina::PDUForwardingTableEntry::operator!=(const PDUForwardingTableEntry &other) const;
 
 %include "exceptions.h"
 %include "patterns.h"
@@ -750,6 +758,8 @@ MAKE_COLLECTION_ITERABLE(StringListIterator, String, std::list, std::string);
 MAKE_COLLECTION_ITERABLE(FlowInformationListIterator, FlowInformation, std::list, rina::FlowInformation);
 /* Define iterator for Neighbors list */
 MAKE_COLLECTION_ITERABLE(NeighborListIterator, Neighbor, std::list, rina::Neighbor);
+/* Define iterator for PDU Forwarding Table Entry list */
+MAKE_COLLECTION_ITERABLE(PDUForwardingTableListIterator, PDUForwardingTableEntry, std::list, rina::PDUForwardingTableEntry);
 
 %template(DIFPropertiesVector) std::vector<rina::DIFProperties>;
 %template(FlowVector) std::vector<rina::Flow>;
@@ -772,4 +782,5 @@ MAKE_COLLECTION_ITERABLE(NeighborListIterator, Neighbor, std::list, rina::Neighb
 %template(FlowInformationList) std::list<rina::FlowInformation>;
 %template(KernelIPCProcessSingleton) Singleton<rina::KernelIPCProcess>;
 %template(NeighborList) std::list<rina::Neighbor>;
+%template(PDUForwardingTableEntryList) std::list<rina::PDUForwardingTableEntry>;
 
