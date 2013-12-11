@@ -479,6 +479,7 @@ unsigned int ExtendedIPCManager::allocateFlowRequestArrived(
 	message.setDifName(currentDIFInformation.getDifName());
 	message.setPortId(portId);
 	message.setSourceIpcProcessId(ipcProcessId);
+	message.setDestPortId(ipcManagerPort);
 	message.setRequestMessage(true);
 
 	try{
@@ -528,6 +529,7 @@ void ExtendedIPCManager::notifyflowDeallocated(
 	responseMessage.setResult(result);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setSequenceNumber(flowDeallocateEvent.getSequenceNumber());
+	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try{
 		rinaManager->sendMessage(&responseMessage);

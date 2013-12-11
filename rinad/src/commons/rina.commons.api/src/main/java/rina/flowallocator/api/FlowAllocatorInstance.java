@@ -1,9 +1,13 @@
 package rina.flowallocator.api;
 
+import eu.irati.librina.AllocateFlowResponseEvent;
 import eu.irati.librina.CreateConnectionResponseEvent;
+import eu.irati.librina.CreateConnectionResultEvent;
+import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowInformation;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCException;
+import eu.irati.librina.UpdateConnectionResponseEvent;
 import rina.cdap.api.message.CDAPMessage;
 
 /**
@@ -53,21 +57,24 @@ public interface FlowAllocatorInstance{
 	 * The Create_Response is sent to requesting FAI with the necessary information reflecting the existing flow, 
 	 * or an indication as to why the flow was refused.  
 	 * If the response was negative, the FAI does any necessary housekeeping and terminates.
-	 * @param success
-	 * @param reason
+	 * @param AllocateFlowResponseEvent - the reply from the application
 	 * @throws IPCException
 	 */
-	public void submitAllocateResponse(boolean success, String reason) throws IPCException;
+	public void submitAllocateResponse(AllocateFlowResponseEvent event);
+	
+	public void processCreateConnectionResultEvent(CreateConnectionResultEvent event);
+	
+	public void processUpdateConnectionResponseEvent(UpdateConnectionResponseEvent event);
 	
 	/**
 	 * When a deallocate primitive is invoked, it is passed to the FAI responsible for that port-id.  
 	 * The FAI sends an M_DELETE request CDAP PDU on the Flow object referencing the destination port-id, deletes the local 
 	 * binding between the Application and the DTP-instance and waits for a response.  (Note that 
 	 * the DTP and DTCP if it exists will be deleted automatically after 2MPL)
-	 * @param applicationProcess
+	 * @param the flow deallocate request event
 	 * @throws IPCException
 	 */
-	public void submitDeallocate() throws IPCException;
+	public void submitDeallocate(FlowDeallocateRequestEvent event);
 	 
 	/**
 	 * When this PDU is received by the FAI with this port-id, the FAI invokes a Deallocate.deliver to notify the local Application, 

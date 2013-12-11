@@ -1,8 +1,12 @@
 package rina.flowallocator.api;
 
+import eu.irati.librina.AllocateFlowResponseEvent;
 import eu.irati.librina.CreateConnectionResponseEvent;
+import eu.irati.librina.CreateConnectionResultEvent;
+import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCException;
+import eu.irati.librina.UpdateConnectionResponseEvent;
 import rina.cdap.api.message.CDAPMessage;
 
 /**
@@ -29,18 +33,20 @@ public interface FlowAllocator {
 	/**
 	 * Forward the allocate response to the Flow Allocator Instance.
 	 * @param portId the portId associated to the allocate response
-	 * @param success successful or unsucessful allocate request
-	 * @param reasonl
-	 * @throws IPCException
+	 * @param AllocateFlowResponseEvent - the response from the application
 	 */
-	public void submitAllocateResponse(int portId, boolean success, String reason) throws IPCException;
+	public void submitAllocateResponse(AllocateFlowResponseEvent event);
+	
+	public void processCreateConnectionResultEvent(CreateConnectionResultEvent event);
+	
+	public void processUpdateConnectionResponseEvent(UpdateConnectionResponseEvent event);
 	
 	/**
 	 * Forward the deallocate request to the Flow Allocator Instance.
-	 * @param portId
+	 * @param the flow deallocate request event
 	 * @throws IPCException
 	 */
-	public void submitDeallocate(int portId) throws IPCException;
+	public void submitDeallocate(FlowDeallocateRequestEvent event);
 	
 	/**
 	 * When an Flow Allocator receives a Create_Request PDU for a Flow object, it consults its local Directory to see if it has an entry.
@@ -56,4 +62,6 @@ public interface FlowAllocator {
 	 * @param portId
 	 */
 	public void removeFlowAllocatorInstance(int portId);
+	
+	public void addFlowWaitingForAllocateResponse(long handle, FlowAllocatorInstance instance); 
 }

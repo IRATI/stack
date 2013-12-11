@@ -205,6 +205,8 @@ struct pft * pft_create_gfp(gfp_t flags)
         if (!tmp)
                 return NULL;
 
+        INIT_LIST_HEAD(&tmp->entries);
+
         return tmp;
 }
 

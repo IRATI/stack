@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import eu.irati.librina.Connection;
+import eu.irati.librina.FlowSpecification;
 
 import rina.encoding.api.Encoder;
 import rina.encoding.impl.googleprotobuf.GPBUtils;
@@ -42,6 +43,8 @@ public class FlowEncoder implements Encoder{
 		qosSpecification_t qosParams = gpbFlow.getQosParameters();
 		if (!qosParams.equals(qosSpecification_t.getDefaultInstance())){
 			flow.setFlowSpecification(GPBUtils.getFlowSpecification(qosParams));
+		} else {
+			flow.setFlowSpecification(new FlowSpecification());
 		}
 		flow.setSourceAddress(gpbFlow.getSourceAddress());
 		flow.setSourceNamingInfo(GPBUtils.getApplicationProcessNamingInfo(gpbFlow.getSourceNamingInfo()));

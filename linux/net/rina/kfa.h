@@ -32,6 +32,15 @@ struct kfa;
 struct kfa * kfa_create(void);
 int          kfa_destroy(struct kfa * instance);
 
+/* Only requests the pidm to reserve a valid port-id */
+port_id_t kfa_port_id_reserve(struct kfa *     instance,
+                              ipc_process_id_t id,
+                              bool             to_app);
+
+/* Rquest the pidm to release a valid port-id */
+port_id_t kfa_port_id_release(struct kfa * instance,
+                              port_id_t    port_id);
+
 /* Returns a port-id, the flow is uncommitted yet */
 port_id_t    kfa_flow_create(struct kfa *     instance,
                              ipc_process_id_t id,
