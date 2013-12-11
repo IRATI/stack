@@ -63,6 +63,7 @@ public class QoSCubeSetRIBObject extends BaseRIBObject{
 		if (object instanceof QoSCube){
 			SimpleSetMemberRIBObject ribObject = new SimpleSetMemberRIBObject( 
 					QOSCUBE_RIB_OBJECT_CLASS, objectName, (QoSCube) object);
+			ribObject.setRIBDaemon(getRIBDaemon());
 			this.addChild(ribObject);
 			getRIBDaemon().addRIBObject(ribObject);
 			ipcProcess.getDIFInformation().getDifConfiguration().addQoSCube((QoSCube) object);
@@ -75,6 +76,7 @@ public class QoSCubeSetRIBObject extends BaseRIBObject{
 				if (!this.hasChild(candidateObjectName)){
 					SimpleSetMemberRIBObject ribObject = new SimpleSetMemberRIBObject(  
 							QOSCUBE_RIB_OBJECT_CLASS, candidateObjectName, cubes[i]);
+					ribObject.setRIBDaemon(getRIBDaemon());
 					this.addChild(ribObject);
 					getRIBDaemon().addRIBObject(ribObject);
 					ipcProcess.getDIFInformation().getDifConfiguration().addQoSCube(cubes[i]);

@@ -166,10 +166,10 @@ public class FlowManager {
 		long handle = 0;
 		
 		difName = event.getDIFName().getProcessName();
-		ipcProcess = ipcProcessManager.selectIPCProcessOfDIF(difName);
+		ipcProcess = ipcProcessManager.getIPCProcess(event.getIPCProcessId());
 		if (ipcProcess == null){
 			log.error("Received an allocate remote flow request event, but could not " 
-						+ "find a local IPC Process belonging to DIF "+difName);
+						+ "find a local IPC Process with id "+event.getIPCProcessId());
 			return;
 		}
 

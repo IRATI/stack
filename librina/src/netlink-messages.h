@@ -242,7 +242,7 @@ public:
 };
 
 /**
- * Allocate flow request from a remote application, IPC Process -> IPC Manager
+ * Allocate flow request from a remote application, IPC Manager -> Application
  */
 class AppAllocateFlowRequestArrivedMessage: public BaseNetlinkMessage {
 

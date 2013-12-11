@@ -41,6 +41,7 @@ public class FlowSetRIBObject extends BaseRIBObject{
 		}
 		
 		FlowRIBObject ribObject = new FlowRIBObject(objectName, (FlowAllocatorInstance) object);
+		ribObject.setRIBDaemon(getRIBDaemon());
 		this.addChild(ribObject);
 		getRIBDaemon().addRIBObject(ribObject);
 	}

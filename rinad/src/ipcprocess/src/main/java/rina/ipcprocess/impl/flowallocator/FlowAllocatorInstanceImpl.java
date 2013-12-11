@@ -6,12 +6,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import eu.irati.librina.AllocateFlowResponseEvent;
+import eu.irati.librina.Connection;
 import eu.irati.librina.CreateConnectionResponseEvent;
 import eu.irati.librina.CreateConnectionResultEvent;
 import eu.irati.librina.ExtendedIPCManagerSingleton;
 import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowRequestEvent;
-import eu.irati.librina.FlowSpecification;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.KernelIPCProcessSingleton;
 import eu.irati.librina.UpdateConnectionResponseEvent;
@@ -136,14 +136,11 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 	
 	private long allocateResponseMessageHandle = 0;
 	
-	private Object sharedLock = null;
-	
 	public FlowAllocatorInstanceImpl(IPCProcess ipcProcess, FlowAllocator flowAllocator, 
-			CDAPSessionManager cdapSessionManager, Object sharedLock, int portId){
+			CDAPSessionManager cdapSessionManager, int portId){
 		initialize(ipcProcess, flowAllocator, portId);
 		this.timer = new Timer();
 		this.cdapSessionManager = cdapSessionManager;
-		this.sharedLock = sharedLock;
 		//TODO initialize the newFlowRequestPolicy
 		this.newFlowRequestPolicy = new NewFlowRequestPolicyImpl();
 		log.debug("Created flow allocator instance to manage the flow identified by portId "+portId);
@@ -156,9 +153,8 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 	 * @param portId
 	 */
 	public FlowAllocatorInstanceImpl(IPCProcess ipcProcess, FlowAllocator flowAllocator, 
-			Object sharedLock, int portId){
+			int portId){
 		initialize(ipcProcess, flowAllocator, portId);
-		this.sharedLock = sharedLock;
 		log.debug("Created flow allocator instance to manage the flow identified by portId "+portId);
 	}
 	
@@ -183,6 +179,14 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 	
 	public boolean isFinished(){
 		return finished;
+	}
+	
+	public synchronized long getAllocateResponseMessageHandle() {
+		return allocateResponseMessageHandle;
+	}
+	
+	private void setAllocateResponseMessageHandle(long value){
+		allocateResponseMessageHandle = value;
 	}
 
 	/**
@@ -304,7 +308,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 	 * @param invokeId
 	 * @param flowObjectName
 	 */
-	public void createFlowRequestMessageReceived(Flow flow, CDAPMessage requestMessage, int underlyingPortId) {
+	public synchronized void createFlowRequestMessageReceived(Flow flow, CDAPMessage requestMessage, int underlyingPortId) {
 		log.debug("Create flow request received.\n  "+flow.toString());
 		this.flow = flow;
 		if (this.flow.getDestinationAddress() == 0){
@@ -315,21 +319,53 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		this.objectName = requestMessage.getObjName();
 		flow.setDestinationPortId(portId);
 		
-		//1 TODO Check if the source application process has access to the destination application process. If not send negative M_CREATE_R 
+		//1 Reverse connection source/dest addresses and CEP-ids
+		Connection connection = flow.getConnections().remove(0);
+		connection.setPortId(portId);
+		long aux = connection.getSourceAddress();
+		connection.setSourceAddress(connection.getDestAddress());
+		connection.setDestAddress(aux);
+		connection.setDestCepId(connection.getSourceCepId());
+		flow.getConnections().add(connection);
+		
+		//2 TODO Check if the source application process has access to the destination application process. If not send negative M_CREATE_R 
 		//back to the sender IPC process, and housekeeping.
 		//Not done in this version, this decision is left to the application 
-		//2 TODO If it has, determine if the proposed policies for the flow are acceptable (invoke NewFlowREquestPolicy)
+		//3 TODO If it has, determine if the proposed policies for the flow are acceptable (invoke NewFlowREquestPolicy)
 		//Not done in this version, it is assumed that the proposed policies for the flow are acceptable.
-		//3 If they are acceptable, the FAI will invoke the Allocate_Request.deliver operation of the destination application process. To do so it will find the
-		//IPC Manager and pass it the allocation request.
+		
+		//4 Request creation of connection
+		try {
+			state = FAIState.CONNECTION_CREATE_REQUESTED;
+			kernelIPCProcess.createConnectionArrived(flow.getConnections().get(0));
+			log.debug("Requested the creation of a connection to the kernel to support flow with port-id "+portId);
+		} catch (Exception ex) {
+			log.error("Problems requesting a connection to the kernel "+ex.getMessage());
+			flowAllocator.removeFlowAllocatorInstance(portId);
+			releasePortId();
+		}
+	}
+	
+	public synchronized void processCreateConnectionResultEvent(CreateConnectionResultEvent event) {
+		if (state != FAIState.CONNECTION_CREATE_REQUESTED) {
+			log.error("Received an allocate response event while not in APP_NOTIFIED_OF_INCOMING_FLOW state. " 
+					+ "Current state: " + state );
+			return;
+		}
+		
+		if (event.getSourceCepId() < 0) {
+			log.error("Create connection operation was unsuccessful: "+event.getSourceCepId());
+			flowAllocator.removeFlowAllocatorInstance(portId);
+			releasePortId();
+		}
+		
 		try {
 			state = FAIState.APP_NOTIFIED_OF_INCOMING_FLOW;
-			log.debug("Informing the IPC Manager about an incoming flow allocation request");
-			synchronized(sharedLock) {
-				allocateResponseMessageHandle = ipcManager.allocateFlowRequestArrived(flow.getDestinationNamingInfo(), 
-						flow.getSourceNamingInfo(), flow.getFlowSpecification(), portId);
-				flowAllocator.addFlowWaitingForAllocateResponse(allocateResponseMessageHandle, this);
-			}
+			long handle = ipcManager.allocateFlowRequestArrived(flow.getDestinationNamingInfo(), 
+					flow.getSourceNamingInfo(), flow.getFlowSpecification(), portId);
+			setAllocateResponseMessageHandle(handle);
+			log.debug("Informed IPC Manager about incoming flow allocation request, got handle: " 
+					+ getAllocateResponseMessageHandle());
 		} catch(Exception ex) {
 			log.error("Problems informing the IPC Manager about an incoming flow allocation request: "+ex.getMessage());
 			flowAllocator.removeFlowAllocatorInstance(portId);
@@ -357,21 +393,21 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		
 		CDAPMessage cdapMessage = null;
 		if (event.getResult() == 0){
-			//1 Request creation of connection
-			try {
-				kernelIPCProcess.createConnectionArrived(flow.getConnections().get(0));
-			} catch (Exception ex) {
-				log.error("Problems requesting the kernel to create a connection: "
-						+ ex.getMessage());
+			//Create CDAP response message
+			try{
+				ObjectValue objectValue = new ObjectValue();
+				objectValue.setByteval(this.encoder.encode(flow));
+				cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(underlyingPortId, null, requestMessage.getObjClass(), 
+						0, requestMessage.getObjName(), objectValue, 0, null, requestMessage.getInvokeID());
+				this.ribDaemon.sendMessage(cdapMessage, underlyingPortId, null);
+				this.ribDaemon.create(requestMessage.getObjClass(), requestMessage.getObjName(), this);
+			}catch(Exception ex){
+				log.error("Problems requesting RIB Daemon to send CDAP Message: "+ex.getMessage());
 				
-				//Create CDAP response message
 				try{
-					cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(underlyingPortId, null, 
-							requestMessage.getObjClass(), 0, requestMessage.getObjName(), null, -1, 
-							"Problems creating connection; "+ex.getMessage(), requestMessage.getInvokeID());
-					this.ribDaemon.sendMessage(cdapMessage, underlyingPortId, null);
-				}catch(Exception e){
-					log.error("Problems requesting the RIB Daemon to send a CDAP message: "+ex.getMessage());
+					kernelIPCProcess.destroyConnection(flow.getConnections().get(0));
+				} catch(Exception e){
+					log.error("Problems requesting the destruction of EFCP connection " + flow.getConnections().get(0).getSourceCepId());
 				}
 				
 				releasePortId();
@@ -383,13 +419,25 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 				} catch(Exception e) {
 					log.error("Problems communicating with the IPC Manager: " + e.getMessage());
 				}
-				
-				return;
 			}
 			
-			//2 Update Flow state
-			state = FAIState.CONNECTION_CREATE_REQUESTED;
+			try{
+				flow.setState(State.ALLOCATED);
+				ribDaemon.create(Flow.FLOW_RIB_OBJECT_CLASS, objectName, this);
+			} catch(Exception ex) {
+				log.warn("Error creating Flow Rib object: "+ex.getMessage());
+			}
+			
+			state = FAIState.FLOW_ALLOCATED;
+			
 		}else{
+			
+			try{
+				kernelIPCProcess.destroyConnection(flow.getConnections().get(0));
+			} catch(Exception e){
+				log.error("Problems requesting the destruction of EFCP connection " + flow.getConnections().get(0).getSourceCepId());
+			}
+			
 			releasePortId();
 			
 			flowAllocator.removeFlowAllocatorInstance(portId);
@@ -404,68 +452,6 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 				log.error("Problems requesting the RIB Daemon to send a CDAP message: "+ex.getMessage());
 			}
 		}
-	}
-	
-	public synchronized void processCreateConnectionResultEvent(CreateConnectionResultEvent event) {
-		if (state != FAIState.CONNECTION_CREATE_REQUESTED) {
-			log.error("Received an allocate response event while not in APP_NOTIFIED_OF_INCOMING_FLOW state. " 
-					+ "Current state: " + state );
-			return;
-		}
-		
-		CDAPMessage cdapMessage = null;
-		if (event.getSourceCepId() < 0) {
-			log.error("The EFCP component of the IPC Process could not create a " 
-					+  " connection instance: "+event.getSourceCepId());
-			
-			//Create CDAP response message
-			try{
-				cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(underlyingPortId, null, 
-						requestMessage.getObjClass(), 0, requestMessage.getObjName(), null, -1, 
-						"Problems creating connection; "+event.getSourceCepId(), requestMessage.getInvokeID());
-				this.ribDaemon.sendMessage(cdapMessage, underlyingPortId, null);
-			}catch(Exception e){
-				log.error("Problems requesting the RIB Daemon to send a CDAP message: "+e.getMessage());
-			}
-			
-			releasePortId();
-			
-			flowAllocator.removeFlowAllocatorInstance(portId);
-			
-			try{
-				ipcManager.flowDeallocated(portId);
-			} catch(Exception e) {
-				log.error("Problems communicating with the IPC Manager: " + e.getMessage());
-			}
-			
-			return;
-		}
-		
-		//Create CDAP response message
-		try{
-			ObjectValue objectValue = new ObjectValue();
-			objectValue.setByteval(this.encoder.encode(flow));
-			cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(underlyingPortId, null, requestMessage.getObjClass(), 
-					0, requestMessage.getObjName(), objectValue, 0, null, requestMessage.getInvokeID());
-			this.ribDaemon.sendMessage(cdapMessage, underlyingPortId, null);
-			this.ribDaemon.create(requestMessage.getObjClass(), requestMessage.getObjName(), this);
-		}catch(Exception ex){
-			log.error("Problems requesting RIB Daemon to send CDAP Message: "+ex.getMessage());
-			releasePortId();
-			flowAllocator.removeFlowAllocatorInstance(portId);
-			try{
-				ipcManager.flowDeallocated(portId);
-			} catch(Exception e) {
-				log.error("Problems communicating with the IPC Manager: " + e.getMessage());
-			}
-		}
-		
-		try{
-			ribDaemon.create(Flow.FLOW_RIB_OBJECT_CLASS, objectName, this);
-		} catch(Exception ex) {
-			log.warn("Error creating Flow Rib object: "+ex.getMessage());
-		}
-		state = FAIState.FLOW_ALLOCATED;
 	}
 	
 	/**
@@ -512,11 +498,13 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		try {
 			if (cdapMessage.getObjValue() != null){
 				Flow receivedFlow = (Flow) this.encoder.decode(cdapMessage.getObjValue().getByteval(), Flow.class);
+				this.flow.setDestinationPortId(receivedFlow.getDestinationPortId());
 				for(int i=0; i<receivedFlow.getConnections().size(); i++){
 					this.flow.getConnections().get(i).setDestCepId(
 							receivedFlow.getConnections().get(i).getDestCepId());
 				}
 			}
+			this.state = FAIState.CONNECTION_UPDATE_REQUESTED;
 			kernelIPCProcess.updateConnection(flow.getConnections().get(0));
 		} catch(Exception ex) {
 			log.error("Problems requesting kernel to update connection: "+ex.getMessage());
@@ -529,18 +517,11 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 			}
 			return;
 		}
-
-		//Update flow state
-		this.state = FAIState.CONNECTION_UPDATE_REQUESTED;
-
-		//7 Create the Flow object in the RIB, start a socket reader and deliver the response to the application
-		/*log.debug("Successfull create flow message response received for flow "+cdapMessage.getObjName()+".\n "+this.flow.toString());
-			this.ribDaemon.create(Flow.FLOW_RIB_OBJECT_CLASS, objectName, this);*/
 	}
 	
 	public void processUpdateConnectionResponseEvent(UpdateConnectionResponseEvent event) {
 		if (state != FAIState.CONNECTION_UPDATE_REQUESTED) {
-			log.error("Received CDAP Message while not in MESSAGE_TO_PEER_FAI_SENT state. " 
+			log.error("Received CDAP Message while not in CONNECTION_UPDATE_REQUESTED state. " 
 					+ "Current state is: " + state );
 			return;
 		}
@@ -563,12 +544,20 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		
 		log.debug("Successfull create flow message response received for flow "+objectName+".\n "+this.flow.toString());
 		try {
+			flow.setState(State.ALLOCATED);
 			ribDaemon.create(Flow.FLOW_RIB_OBJECT_CLASS, objectName, this);
 		} catch(Exception ex) {
 			log.warn("Problems requesting the RIB Daemon to create a RIB object: "+ex.getMessage());
 		}
 		
 		state = FAIState.FLOW_ALLOCATED;
+		
+		try{
+			flowRequestEvent.setPortId(portId);
+			ipcManager.allocateFlowRequestResult(flowRequestEvent, 0);
+		} catch(Exception ex) {
+			log.error("Problems communicating with the IPC Manager: "+ex.getMessage());
+		}
 	}
 	
 	/**
@@ -634,16 +623,23 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 			log.error("Invoked destroy flow allocator instance while not in "
 					+ "WAITING_2_MPL_BEFORE_TEARING_DOWN. State: " + flow.getState());
 		}
-		
+
 		releasePortId();
-		
+
 		flowAllocator.removeFlowAllocatorInstance(portId);
-		
+
 		try {
 			kernelIPCProcess.destroyConnection(flow.getConnections().get(0));
 		} catch (Exception ex) {
 			log.error("Problems requesting the kernel to destroy a connection: " 
 					+ ex.getMessage());
+		}
+
+		try{
+			this.ribDaemon.delete(Flow.FLOW_RIB_OBJECT_CLASS, flowObjectName);
+		}catch(Exception ex){
+			log.error(ex.getMessage());
+			ex.printStackTrace();
 		}
 	}
 
