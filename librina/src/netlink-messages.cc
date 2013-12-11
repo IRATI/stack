@@ -1735,6 +1735,39 @@ IPCEvent* IpcpConnectionDestroyResultMessage::toIPCEvent() {
         return event;
 }
 
+/* CLASS RmtAddForwardingTableEntriesRequestMessage */
+RmtModifyPDUFTEntriesRequestMessage::
+RmtModifyPDUFTEntriesRequestMessage():
+BaseNetlinkMessage(RINA_C_RMT_MODIFY_FTE_REQUEST){
+        mode = 0;
+}
+
+const std::list<PDUForwardingTableEntry>&
+RmtModifyPDUFTEntriesRequestMessage::getEntries() const {
+        return entries;
+}
+
+void RmtModifyPDUFTEntriesRequestMessage::
+setEntries(const std::list<PDUForwardingTableEntry>& entries) {
+        this->entries = entries;
+}
+
+void RmtModifyPDUFTEntriesRequestMessage::
+addEntry(const PDUForwardingTableEntry& entry) {
+        entries.push_back(entry);
+}
+
+int RmtModifyPDUFTEntriesRequestMessage::getMode() const {
+        return mode;
+}
+
+void RmtModifyPDUFTEntriesRequestMessage::setMode(int mode) {
+        this->mode = mode;
+}
+
+IPCEvent* RmtModifyPDUFTEntriesRequestMessage::toIPCEvent() {
+        return 0;
+}
 
 }
 

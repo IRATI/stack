@@ -924,6 +924,36 @@ int putIpcpConnectionDestroyResultMessageObject(nl_msg* netlinkMessage,
 IpcpConnectionDestroyResultMessage * parseIpcpConnectionDestroyResultMessage(
                 nlmsghdr *hdr);
 
+/* PDUForwardingTableEntry CLASS*/
+enum PDUForwardingTableEntryAttributes {
+        PFTE_ATTR_ADDRESS = 1,
+        PFTE_ATTR_QOS_ID,
+        PFTE_ATTR_PORT_ID,
+        __PFTE_ATTR_MAX,
+};
+
+#define PFTE_ATTR_MAX (__PFTE_ATTR_MAX -1)
+
+int putPDUForwardingTableEntryObject(nl_msg* netlinkMessage,
+                const PDUForwardingTableEntry& object);
+
+PDUForwardingTableEntry * parsePDUForwardingTableEntry(nlattr *nested);
+
+/* RmtModifyPDUFTEntriesRequestMessage CLASS */
+enum RmtModifyPDUFTEntriesRequestMessageAttributes {
+        RMPFTE_ATTR_ENTRIES= 1,
+        RMPFTE_ATTR_MODE,
+        __RMPFTE_ATTR_MAX,
+};
+
+#define RMPFTE_ATTR_MAX (__RMPFTE_ATTR_MAX -1)
+
+int putRmtModifyPDUFTEntriesRequestObject(nl_msg* netlinkMessage,
+                const RmtModifyPDUFTEntriesRequestMessage& object);
+
+RmtModifyPDUFTEntriesRequestMessage * parseRmtModifyPDUFTEntriesRequestMessage(
+                nlmsghdr *hdr);
+
 }
 
 

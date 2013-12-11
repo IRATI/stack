@@ -383,6 +383,21 @@ public:
         }
 };
 
+/**
+ * Thrown when there are problems requesting the Kernel to modify
+ * the PDU Forwarding table
+ * port-id
+ */
+class PDUForwardingTableException: public IPCException {
+public:
+        PDUForwardingTableException():
+                IPCException("Problems requesting modification of PDU Forwarding Table"){
+        }
+        PDUForwardingTableException(const std::string& description):
+                IPCException(description){
+        }
+};
+
 
 /**
  * Class used by the IPC Processes to interact with the IPC Manager. Extends
@@ -706,6 +721,28 @@ public:
 };
 
 /**
+ * Models an entry in the PDU Forwarding Table
+ */
+class PDUForwardingTableEntry {
+        /** The destination address */
+        unsigned int address;
+
+        /** The qos-id */
+        unsigned int qosId;
+
+        /** The N-1 portid */
+        unsigned int portId;
+public:
+        PDUForwardingTableEntry();
+        unsigned int getAddress() const;
+        void setAddress(unsigned int address);
+        unsigned int getPortId() const;
+        void setPortId(unsigned int portId);
+        unsigned int getQosId() const;
+        void setQosId(unsigned int qosId);
+};
+
+/**
  * Abstraction of the data transfer and data transfer control parts of the
  * IPC Process, which are implemented in the Kernel. This class allows the
  * IPC Process Daemon to communicate with its components in the kernel
@@ -788,6 +825,14 @@ public:
          */
         unsigned int destroyConnection(const Connection& connection)
         throw (DestroyConnectionException);
+
+        /**
+         * Modify the entries of the PDU forwarding table
+         * @param entries to be modified
+         * @param mode 0 add, 1 remove, 2 flush and add
+         */
+        void modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry>& entries,
+                        int mode) throw (PDUForwardingTableException);
 };
 
 /**

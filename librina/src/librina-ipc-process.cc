@@ -679,6 +679,37 @@ void Connection::setSourceCepId(int sourceCepId) {
         this->sourceCepId = sourceCepId;
 }
 
+/* CLASS PDU FORWARDING TABLE ENTRY */
+PDUForwardingTableEntry::PDUForwardingTableEntry() {
+        address = 0;
+        qosId = 0;
+        portId = 0;
+}
+
+unsigned int PDUForwardingTableEntry::getAddress() const {
+        return address;
+}
+
+void PDUForwardingTableEntry::setAddress(unsigned int address) {
+        this->address = address;
+}
+
+unsigned int PDUForwardingTableEntry::getPortId() const {
+        return portId;
+}
+
+void PDUForwardingTableEntry::setPortId(unsigned int portId) {
+        this->portId = portId;
+}
+
+unsigned int PDUForwardingTableEntry::getQosId() const {
+        return qosId;
+}
+
+void PDUForwardingTableEntry::setQosId(unsigned int qosId) {
+        this->qosId = qosId;
+}
+
 /* CLASS KERNEL IPC PROCESS */
 void KernelIPCProcess::setIPCProcessId(unsigned short ipcProcessId) {
         this->ipcProcessId = ipcProcessId;
@@ -857,6 +888,28 @@ destroyConnection(const Connection& connection)
 
 #endif
         return seqNum;
+}
+
+void KernelIPCProcess::
+modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry>& entries,
+                        int mode) throw (PDUForwardingTableException) {
+#if STUB_API
+        //Do nothing
+#else
+        RmtModifyPDUFTEntriesRequestMessage message;
+        message.setEntries(entries);
+        message.setMode(mode);
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                throw PDUForwardingTableException(e.what());
+        }
+#endif
 }
 
 Singleton<KernelIPCProcess> kernelIPCProcess;
