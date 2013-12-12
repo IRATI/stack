@@ -719,9 +719,8 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         const struct gpa *              gpaddr;
         struct sdu *                    du;
         struct buffer *                 buffer;
-        char *                          buff_data;
-        unsigned char *                 nh;
         struct name *                   sname;
+        char *                          sk_data;
 
         /* C-c-c-checks */
         mapping = inst_data_mapping_get(dev);
@@ -759,24 +758,21 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         }
 
         /* Get correct flow based on hwaddr */
-        ghaddr = gha_create_gfp(GFP_ATOMIC, MAC_ADDR_802_3, saddr);
+        ghaddr = gha_create_gfp(GFP_KERNEL, MAC_ADDR_802_3, saddr);
         if (!ghaddr) {
                 kfree_skb(skb);
                 return -1;
         }
         ASSERT(gha_is_ok(ghaddr));
 
-        /* FIXME: SDUss have to be obtained properly */ 
         /* Get the SDU out of the sk_buff */
-        nh = skb_network_header(skb);
-        if (skb->tail - skb->network_header <= 0) {
-                LOG_ERR("Malformed skb received (size is %zd bytes)",
-                        skb->tail - skb->network_header);
+        sk_data = rkmalloc(skb->len, GFP_KERNEL);
+        if (!sk_data) {
                 gha_destroy(ghaddr);
                 kfree_skb(skb);
                 return -1;
         }
-
+      
         /*
          * FIXME: We should avoid this extra copy, but then we cannot free the
          *        skb at the end of the eth_vlan_rcv function. To do so we
@@ -784,22 +780,22 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
          *        except for the SDU, or delay freeing the skb until it is
          *        safe to do so.
          */
-        buffer = buffer_create_ni(skb->tail - skb->network_header);
-        if (!buffer) {
-                gha_destroy(ghaddr);
-                kfree_skb(skb);
-                return -1;
-        }
 
-        buff_data = buffer_data_rw(buffer);
-        if (!buff_data) {
-                LOG_ERR("Buffer data is NULL");
-                buffer_destroy(buffer);
+        if (skb_copy_bits(skb, 0, sk_data, skb->len)) {
+                LOG_ERR("Failed to copy data from sk_buff");
+                rkfree(sk_data);
                 gha_destroy(ghaddr);
                 kfree_skb(skb);
                 return -1;
         }
-        memcpy_fromio(buff_data, nh, skb->tail - skb->network_header);
+     
+        buffer = buffer_create_with_ni(sk_data, skb->len);
+        if (!buffer) {
+                rkfree(sk_data);
+                gha_destroy(ghaddr);
+                kfree_skb(skb);
+                return -1;
+        }
 
         /* We're done with the skb from this point on so ... let's get rid */
         kfree_skb(skb);
@@ -817,7 +813,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         if (!flow) {
                 LOG_DBG("Have to create a new flow");
 
-                flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
+                flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
                 if (!flow) {
                         spin_unlock(&data->lock);
                         sdu_destroy(du);
@@ -845,7 +841,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
                 LOG_DBG("Added flow to the list");
 
-                if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_ATOMIC)) {
+                if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
                         LOG_ERR("Couldn't create the sdu queue"
                                 "for a new flow");
                         sdu_destroy(du);
@@ -879,7 +875,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 sname  = NULL;
                 gpaddr = rinarp_find_gpa(data->handle, flow->dest_ha);
                 if (gpaddr && gpa_is_ok(gpaddr)) {
-                        flow->dest_pa = gpa_dup_gfp(GFP_ATOMIC, gpaddr);
+                        flow->dest_pa = gpa_dup_gfp(GFP_KERNEL, gpaddr);
                         if (!flow->dest_pa) {
                                 LOG_ERR("Failed to duplicate gpa");
                                 sdu_destroy(du);
