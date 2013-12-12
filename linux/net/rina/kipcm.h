@@ -59,6 +59,15 @@ int            kipcm_sdu_read(struct kipcm * kipcm,
                               port_id_t      id,
                               struct sdu **  sdu);
 
+/* If successful: takes the ownership of the SDU */
+int            kipcm_management_sdu_write(struct kipcm *   kipcm,
+                                          ipc_process_id_t id,
+                                          struct sdu_wpi * sdu_wpi);
+/* If successful: passes the ownership of the SDU */
+int            kipcm_management_sdu_read(struct kipcm *    kipcm,
+                                         ipc_process_id_t  id,
+                                         struct sdu_wpi ** sdu_wpi);
+
 /*
  * The following functions represent the KIPCM southbound interface
  */

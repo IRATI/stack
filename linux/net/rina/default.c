@@ -126,6 +126,28 @@ static int default_deallocate_port(struct personality_data * data,
         return kfa_flow_deallocate(data->kfa, port_id);
 }
 
+static int default_management_sdu_write(struct personality_data * data,
+                                        ipc_process_id_t          id,
+                                        struct sdu_wpi *          sdu_wpi)
+{
+        if (!is_personality_ok(data)) return -1;
+
+        LOG_DBG("Calling wrapped function");
+
+        return kipcm_management_sdu_write(data->kipcm, id, sdu_wpi);
+}
+
+static int default_management_sdu_read(struct personality_data * data,
+                                       ipc_process_id_t          id,
+                                       struct sdu_wpi **         sdu_wpi)
+{
+        if (!is_personality_ok(data)) return -1;
+
+        LOG_DBG("Calling wrapped function");
+
+        return kipcm_management_sdu_read(data->kipcm, id, sdu_wpi);
+}
+
 /* FIXME: To be removed ABSOLUTELY */
 struct kipcm * default_kipcm = NULL;
 EXPORT_SYMBOL(default_kipcm);
@@ -210,14 +232,16 @@ static int default_init(struct kobject *          parent,
 }
 
 struct personality_ops ops = {
-        .init               = default_init,
-        .fini               = default_fini,
-        .ipc_create         = default_ipc_create,
-        .ipc_destroy        = default_ipc_destroy,
-        .sdu_read           = default_sdu_read,
-        .sdu_write          = default_sdu_write,
-        .allocate_port      = default_allocate_port,
-        .deallocate_port    = default_deallocate_port,
+        .init                 = default_init,
+        .fini                 = default_fini,
+        .ipc_create           = default_ipc_create,
+        .ipc_destroy          = default_ipc_destroy,
+        .sdu_read             = default_sdu_read,
+        .sdu_write            = default_sdu_write,
+        .allocate_port        = default_allocate_port,
+        .deallocate_port      = default_deallocate_port,
+        .management_sdu_read  = default_management_sdu_read,
+        .management_sdu_write = default_management_sdu_write
 };
 
 static struct personality_data data;

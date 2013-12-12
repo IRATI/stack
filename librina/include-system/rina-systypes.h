@@ -37,6 +37,12 @@ struct sdu_t {
 	struct buffer_t * buffer;
 };
 
+/* This structure represents an SDU with a port-id */
+struct sdu_wpi_t {
+        struct sdu_t * sdu;
+        port_id_t port_id;
+};
+
 struct name_t {
 	/*
 	 * The process_name identifies an application process within the

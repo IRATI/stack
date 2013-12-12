@@ -835,6 +835,32 @@ public:
          */
         void modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry>& entries,
                         int mode) throw (PDUForwardingTableException);
+
+        /**
+         * Requests the kernel to write a management SDU to the
+         * portId specified
+         *
+         * @param sdu A buffer that contains the SDU data
+         * @param size The size of the SDU data, in bytes
+         * @param portId The portId of the N-1 flow where the data has to
+         * be written to
+         * @throws WriteSDUException
+         */
+        void writeManagementSDU(void * sdu, int size, int portId)
+                throw (WriteSDUException);
+
+        /**
+         * Requests the kernel to get a management SDU from a peer
+         * IPC Process. This operation will block until there is an SDU available
+         *
+         * @param sdu A buffer to store the SDU data
+         * @param maxBytes The maximum number of bytes to read
+         * @param portId The portId from where the SDU has been read
+         * @return int The number of bytes read
+         * @throws ReadSDUException
+         */
+        int readManagementSDU(void * sdu, int maxBytes, int * portId)
+                throw (ReadSDUException);
 };
 
 /**
