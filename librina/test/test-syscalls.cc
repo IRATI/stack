@@ -50,6 +50,7 @@ int main(int argc, char * argv[]) {
 	int result = 0;
 	int portId1 = 0;
 	int portId2 = 0;
+	char * sdu = new char[50];
 
 	//Create an IPC Process
 	ApplicationProcessNamingInformation * ipcProcessName =
@@ -61,13 +62,17 @@ int main(int argc, char * argv[]) {
 	std::cout<<"Called IPC Process create system call with result "
 			<<result<<std::endl;
 
+	//Write management sdu
+	result = syscallWriteManagementSDU(1, sdu, 12, 50);
+	std::cout<<"Called write management SDU system call with result "
+	                <<result<<std::endl;
+
 	//Destroy an IPC Process
 	result = syscallDestroyIPCProcess(1);
 	std::cout<<"Called IPC Process destroy system call with result "
 			<<result<<std::endl;
 
 	//Write SDU (will fail)
-	char * sdu = new char[50];
 	result = syscallWriteSDU(25, sdu, 50);
 	std::cout<<"Called write SDU system call with result "
 				<<result<<std::endl;
@@ -77,7 +82,15 @@ int main(int argc, char * argv[]) {
 	std::cout<<"Called read SDU system call with result "
 			<<result<<std::endl;
 
-	delete ipcProcessName;
+	//Write management sdu (will fail)
+	result = syscallWriteManagementSDU(1, sdu, 12, 50);
+	std::cout<<"Called write management SDU system call with result "
+	                <<result<<std::endl;
+
+	//Read management sdu (will fail)
+	result = syscallReadManagementSDU(1, sdu, &portId1, 50);
+	std::cout<<"Called read management SDU system call with result "
+	                        <<result<<std::endl;
 
         //Allocate port-id
 	portId1 = syscallAllocatePortId(5, false);
@@ -93,28 +106,6 @@ int main(int argc, char * argv[]) {
 	result = syscallDeallocatePortId(34);
 	std::cout<<"Deallocate port id result: "<<result<<std::endl;
 
-/*
-	char * args[] =
-	{
-			stringToCharArray("/usr/bin/java"),
-			stringToCharArray("-jar"),
-			stringToCharArray("/usr/local/rina/rinad/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar"),
-			stringToCharArray("test"),
-			stringToCharArray("1"),
-			intToCharArray(2),
-			(char*) 0
-	};
-
-	char * envp[] =
-	{
-			stringToCharArray("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"),
-			stringToCharArray("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/rina/lib"),
-			(char*) 0
-	};
-
-	execve(args[0], &args[0], envp);
-	perror ("execve");
-
-	std::cout<<"I shouldn't be here";
-	*/
+	delete sdu;
+        delete ipcProcessName;
 }

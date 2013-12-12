@@ -2853,6 +2853,66 @@ int testIpcpDestroyConnectionResult() {
         return returnValue;
 }
 
+int testRmtModifyPDUFTEntriesRequestMessage() {
+        std::cout << "TESTING RMT MODIFY PDU FTE REQUEST MESSAGE\n";
+        int returnValue = 0;
+
+        RmtModifyPDUFTEntriesRequestMessage message;
+        PDUForwardingTableEntry entry1, entry2;
+        entry1.setAddress(23);
+        entry1.setPortId(34);
+        entry1.setQosId(1);
+        message.addEntry(entry1);
+        entry2.setAddress(20);
+        entry2.setPortId(19);
+        entry2.setQosId(2);
+        message.addEntry(entry2);
+        message.setMode(1);
+
+        struct nl_msg* netlinkMessage;
+        netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing RmtModifyPDUFTEntriesRequest "
+                                << "message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        RmtModifyPDUFTEntriesRequestMessage * recoveredMessage =
+                        dynamic_cast<RmtModifyPDUFTEntriesRequestMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing RmtModifyPDUFTEntriesRequest message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.getMode() != recoveredMessage->getMode()) {
+                std::cout << "Mode on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getEntries().size()
+                        != recoveredMessage->getEntries().size()) {
+                std::cout << "Size of entries in original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "RmtModifyPDUFTEntriesRequestMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
 int main(int argc, char * argv[]) {
 	std::cout << "TESTING LIBRINA-NETLINK-PARSERS\n";
 
@@ -3067,4 +3127,11 @@ int main(int argc, char * argv[]) {
 	if (result < 0) {
 	        return result;
 	}
+
+	result = testRmtModifyPDUFTEntriesRequestMessage();
+	if (result < 0) {
+	        return result;
+	}
+
+	return 0;
 }

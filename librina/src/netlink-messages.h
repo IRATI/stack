@@ -18,6 +18,7 @@
 #define LIBRINA_NETLINK_MESSAGES_H
 
 #include "librina-common.h"
+#include "librina-ipc-process.h"
 
 namespace rina{
 
@@ -46,8 +47,7 @@ enum RINANetlinkOperationCode{
 	RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE, /* IPC Process -> IPC Manager */
 	RINA_C_IPCM_QUERY_RIB_REQUEST, /* IPC Manager -> IPC Process */
 	RINA_C_IPCM_QUERY_RIB_RESPONSE, /* IPC Process -> IPC Manager */
-	RINA_C_RMT_ADD_FTE_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
-	RINA_C_RMT_DELETE_FTE_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
+	RINA_C_RMT_MODIFY_FTE_REQUEST, /* IPC Process (user space) -> Kernel IPC Process (kernel) */
 	RINA_C_RMT_DUMP_FT_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
 	RINA_C_RMT_DUMP_FT_REPLY, /* TODO RMT (kernel) -> IPC Process (user space) */
 	RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION, /* Kernel (NL layer) -> IPC Manager */
@@ -1271,6 +1271,27 @@ public:
         void setResult(int result);
         int getPortId() const;
         void setPortId(int portId);
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * IPC Process -> Kernel IPC Process. Add the following entries to the
+ * PDU Forwarding Table.
+ */
+class RmtModifyPDUFTEntriesRequestMessage: public BaseNetlinkMessage {
+        /** The entries to be added */
+        std::list<PDUForwardingTableEntry> entries;
+
+        /** 0 add, 1 remove, 2 flush and add */
+        int mode;
+
+public:
+        RmtModifyPDUFTEntriesRequestMessage();
+        const std::list<PDUForwardingTableEntry>& getEntries() const;
+        void setEntries(const std::list<PDUForwardingTableEntry>& entries);
+        void addEntry(const PDUForwardingTableEntry& entry);
+        int getMode() const;
+        void setMode(int mode);
         IPCEvent* toIPCEvent();
 };
 

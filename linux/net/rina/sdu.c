@@ -126,3 +126,43 @@ struct sdu * sdu_unprotect(struct sdu * s)
         return NULL;
 }
 EXPORT_SYMBOL(sdu_unprotect);
+
+static struct sdu_wpi * sdu_wpi_create_with_gfp(gfp_t           flags,
+                                                struct buffer * buffer)
+{
+        struct sdu_wpi * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        tmp->sdu = sdu_create_with_gfp(flags, buffer);
+        if (!tmp->sdu) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
+
+struct sdu_wpi * sdu_wpi_create_with(struct buffer * buffer)
+{ return sdu_wpi_create_with_gfp(GFP_KERNEL, buffer); }
+EXPORT_SYMBOL(sdu_wpi_create_with);
+
+struct sdu_wpi * sdu_wpi_create_with_ni(struct buffer * buffer)
+{ return sdu_wpi_create_with_gfp(GFP_ATOMIC, buffer); }
+EXPORT_SYMBOL(sdu_wpi_create_with_ni);
+
+int sdu_wpi_destroy(struct sdu_wpi * s)
+{
+        if (!s) return -1;
+
+        sdu_destroy(s->sdu);
+        rkfree(s);
+        return 0;
+}
+EXPORT_SYMBOL(sdu_wpi_destroy);
+
+bool sdu_wpi_is_ok(const struct sdu_wpi * s)
+{ return (s && sdu_is_ok(s->sdu)) ? true : false; }
+EXPORT_SYMBOL(sdu_wpi_is_ok);

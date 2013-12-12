@@ -1082,6 +1082,59 @@ static int notify_ipc_manager_present(void *             data,
         return 0;
 }
 
+static int notify_ipcp_modify_pdu_fte(void *             data,
+                                      struct sk_buff *   buff,
+                                      struct genl_info * info)
+{
+        struct kipcm *                      kipcm;
+        struct rnl_rmt_mod_pfte_msg_attrs * attrs;
+        struct rnl_msg *                    msg;
+        struct ipcp_instance *              ipc_process;
+        ipc_process_id_t                    ipc_id;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        kipcm = (struct kipcm *) data;
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        ipc_id = 0;
+        msg = rnl_msg_create(RNL_MSG_ATTRS_RMT_PFTE_MODIFY_REQUEST);
+        if (!msg) {
+                rnl_msg_destroy(msg);
+                return -1;
+        }
+
+        attrs = msg->attrs;
+
+        if (rnl_parse_msg(info, msg)) {
+                rnl_msg_destroy(msg);
+                return -1;
+        }
+
+        ipc_id      = msg->header.dst_ipc_id;
+        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipc_process) {
+                LOG_ERR("IPC process %d not found", ipc_id);
+                rnl_msg_destroy(msg);
+                return -1;
+        }
+
+        ASSERT(ipc_process->ops);
+
+        LOG_MISSING;
+
+        rnl_msg_destroy(msg);
+
+        return 0;
+}
+
 
 static int netlink_handlers_unregister(struct rnl_set * rnls)
 {
@@ -1128,6 +1181,8 @@ static int netlink_handlers_register(struct kipcm * kipcm)
                 notify_ipcp_conn_update_req;
         kipcm_handlers[RINA_C_IPCP_CONN_DESTROY_REQUEST]           =
                 notify_ipcp_conn_destroy_req;
+        kipcm_handlers[RINA_C_RMT_MODIFY_FTE_REQUEST]              =
+                notify_ipcp_modify_pdu_fte;
 
         for (i = 1; i < RINA_C_MAX; i++) {
                 if (kipcm_handlers[i] != NULL) {
@@ -1650,6 +1705,77 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         }
 
         return 0;
+}
+
+int kipcm_management_sdu_write(struct kipcm *   kipcm,
+                               ipc_process_id_t id,
+                               struct sdu_wpi * sdu_wpi)
+{
+        struct ipcp_instance * ipcp;
+
+        IRQ_BARRIER;
+
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return -1;
+        }
+
+        if (!sdu_wpi_is_ok(sdu_wpi)) {
+                LOG_ERR("Bogus SDU with port-id received, bailing out");
+                return -1;
+        }
+
+        ipcp = ipcp_imap_find(kipcm->instances, id);
+        if (!ipcp) {
+                LOG_ERR("Could not find IPC Process with id %d", id);
+                return -1;
+        }
+
+        if (!ipcp->ops) {
+                LOG_ERR("Bogus IPCP ops, bailing out");
+                return -1;
+        }
+
+        if (!ipcp->ops->management_sdu_write) {
+                LOG_ERR("The IPC Process %d doesn't support this operation",
+                        id);
+                return -1;
+        }
+
+        return ipcp->ops->management_sdu_write(ipcp->data, sdu_wpi);
+}
+
+int kipcm_management_sdu_read(struct kipcm *    kipcm,
+                              ipc_process_id_t  id,
+                              struct sdu_wpi ** sdu_wpi)
+{
+        struct ipcp_instance * ipcp;
+
+        IRQ_BARRIER;
+
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return -1;
+        }
+
+        ipcp = ipcp_imap_find(kipcm->instances, id);
+        if (!ipcp) {
+                LOG_ERR("Could not find IPC Process with id %d", id);
+                return -1;
+        }
+
+        if (!ipcp->ops) {
+                LOG_ERR("Bogus IPCP ops, bailing out");
+                return -1;
+        }
+
+        if (!ipcp->ops->management_sdu_read) {
+                LOG_ERR("The IPC Process %d doesn't support this operation",
+                        id);
+                return -1;
+        }
+
+        return ipcp->ops->management_sdu_read(ipcp->data, sdu_wpi);
 }
 
 int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,

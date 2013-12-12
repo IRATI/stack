@@ -48,6 +48,30 @@ namespace rina {
         int syscallReadSDU(int portId, void * sdu, int maxBytes);
 
         /**
+         * Wrapper of the managementSDUWrite system call
+         * @param ipcProcessId the ipcProcess that has to write the SDU
+         * @param portid the port-id where the SDU has to be written
+         * @param sdu the data to be written (SDU)
+         * @param size the size of the data to be written
+         * @return 0 if everything was ok, negative number indicating error
+         *         otherwise
+         */
+        int syscallWriteManagementSDU(unsigned short ipcProcessId, void * sdu,
+                        int portId, int size);
+
+        /**
+         * Wrapper of the managementSDURead system call
+         * @param ipcProcessId the ipcProcess where we want to read an SDU from
+         * @param sdu pointer to the memory address of the first byte of data
+         * @param portid The port-id where the SDU has been read from
+         * @param maxBytes Maximum amount of bytes to read
+         * @return number of bytes read if successful, a negative number
+         *         indicating an error otherwise
+         */
+        int syscallReadManagementSDU(int ipcProcessId, void * sdu, int * portId,
+                        int maxBytes);
+
+        /**
          * Wrapper of ipcCreate system call
          * @param ipcProcessName The name of the IPC Process to be created
          * @param ipcProcessId The id of the IPC Process to be created

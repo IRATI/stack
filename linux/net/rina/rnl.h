@@ -109,51 +109,48 @@ typedef enum {
         RINA_C_IPCM_QUERY_RIB_RESPONSE,
 
         /* 24 IPC Process (user space) -> RMT (kernel) */
-        RINA_C_RMT_ADD_FTE_REQUEST,
+        RINA_C_RMT_MODIFY_FTE_REQUEST,
 
         /* 25 IPC Process (user space) -> RMT (kernel) */
-        RINA_C_RMT_DELETE_FTE_REQUEST,
-
-        /* 26 IPC Process (user space) -> RMT (kernel) */
         RINA_C_RMT_DUMP_FT_REQUEST,
 
-        /* 27 RMT (kernel) -> IPC Process (user space) */
+        /* 26 RMT (kernel) -> IPC Process (user space) */
         RINA_C_RMT_DUMP_FT_REPLY,
 
-        /* 28 NL layer -> IPC Manager */
+        /* 27 NL layer -> IPC Manager */
         RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION,
 
-        /* 29 IPC Manager -> Kernel (NL Layer) */
+        /* 28 IPC Manager -> Kernel (NL Layer) */
         RINA_C_IPCM_IPC_MANAGER_PRESENT,
 
-        /* 30 FIXME: Need to be logically moved after flow
+        /* 29 FIXME: Need to be logically moved after flow
          * allocation messages. Put here in order to maintain
          * compatibility with MS7 version of user space*/
         /* IPC Process (user space) -> KIPCM*/
         RINA_C_IPCP_CONN_CREATE_REQUEST,
 
-        /* 31 KIPCM -> IPC Process (user space)*/
+        /* 30 KIPCM -> IPC Process (user space)*/
         RINA_C_IPCP_CONN_CREATE_RESPONSE,
 
-        /* 32 IPC Process (user space) -> KIPCM */
+        /* 31 IPC Process (user space) -> KIPCM */
         RINA_C_IPCP_CONN_CREATE_ARRIVED,
 
-        /* 33 KIPCM -> IPC Process (user space)*/
+        /* 32 KIPCM -> IPC Process (user space)*/
         RINA_C_IPCP_CONN_CREATE_RESULT,
 
-        /* 34 IPC Process (user space) -> KIPCM */
+        /* 33 IPC Process (user space) -> KIPCM */
         RINA_C_IPCP_CONN_UPDATE_REQUEST,
 
-        /* 35 KIPCM -> IPC Process (user space)*/
+        /* 34 KIPCM -> IPC Process (user space)*/
         RINA_C_IPCP_CONN_UPDATE_RESULT,
 
-        /* 36 IPC Process (user space) -> KIPCM */
+        /* 35 IPC Process (user space) -> KIPCM */
         RINA_C_IPCP_CONN_DESTROY_REQUEST,
 
-        /* 37 KIPCM -> IPC Process (user space)*/
+        /* 36 KIPCM -> IPC Process (user space)*/
         RINA_C_IPCP_CONN_DESTROY_RESULT,
 
-        /* 38 */
+        /* 37 */
         RINA_C_MAX,
 } msg_type_t;
 

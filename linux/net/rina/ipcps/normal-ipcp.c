@@ -374,6 +374,23 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         return 0;
 }
 
+static int normal_management_sdu_read(struct ipcp_instance_data * data,
+                                      struct sdu_wpi **            sdu_wpi)
+{
+        LOG_DBG("Trying to read mgmt SDU from IPC Process %d", data->id);
+        LOG_MISSING;
+        return 0;
+}
+
+static int normal_management_sdu_write(struct ipcp_instance_data * data,
+                                       struct sdu_wpi *            sdu_wpi)
+{
+        LOG_DBG("Passing SDU to be written to N-1 port %d to IPC Process %d"
+                , sdu_wpi->port_id, data->id);
+        LOG_MISSING;
+        return 0;
+}
+
 /*  FIXME: register ops */
 static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request     = NULL,
@@ -389,6 +406,8 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .connection_destroy        = connection_destroy_request,
         .connection_create_arrived = connection_create_arrived,
         .flow_binding_ipcp         = ipcp_flow_notification,
+        .management_sdu_read       = normal_management_sdu_read,
+        .management_sdu_write      = normal_management_sdu_write
 };
 
 static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
