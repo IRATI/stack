@@ -105,7 +105,11 @@ static int default_allocate_port(struct personality_data * data,
 
         LOG_DBG("Calling wrapped function");
 
-        return kfa_port_id_reserve(data->kfa, ipc_id, to_app);
+        /*
+         * FIXME this is what should be used later on
+         * return kfa_port_id_reserve(data->kfa, ipc_id, to_app);
+         */
+        return kfa_flow_create(data->kfa, ipc_id, to_app);
 }
 
 static int default_deallocate_port(struct personality_data * data,
@@ -115,7 +119,11 @@ static int default_deallocate_port(struct personality_data * data,
 
         LOG_DBG("Calling wrapped function");
 
-        return kfa_port_id_release(data->kfa, port_id);
+        /*
+         * FIXME this is what should be used later on
+         * return kfa_port_id_release(data->kfa, port_id);
+         */
+        return kfa_flow_deallocate(data->kfa, port_id);
 }
 
 /* FIXME: To be removed ABSOLUTELY */

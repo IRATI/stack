@@ -451,6 +451,7 @@ void ExtendedIPCManager::allocateFlowRequestResult(
 #else
 	IpcmAllocateFlowRequestResultMessage responseMessage;
 	responseMessage.setResult(result);
+	responseMessage.setPortId(event.getPortId());
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setDestPortId(ipcManagerPort);

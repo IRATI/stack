@@ -3205,7 +3205,7 @@ int rnl_ipcp_conn_destroy_result_msg(ipc_process_id_t ipc_id,
                             seq_num,
                             &rnl_nl_family,
                             0,
-                            RINA_C_IPCP_CONN_UPDATE_RESULT);
+                            RINA_C_IPCP_CONN_DESTROY_RESULT);
         if (!out_hdr) {
                 LOG_ERR("Could not use genlmsg_put");
                 nlmsg_free(out_msg);

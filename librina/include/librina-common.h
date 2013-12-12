@@ -442,6 +442,9 @@ class FlowRequestEvent: public IPCEvent {
 	/** 0 if it is an application, or the ID of the IPC Process otherwise */
 	int flowRequestorIpcProcessId;
 
+	/** the ID of the IPC Process that will provide the flow*/
+	unsigned short ipcProcessId;
+
 public:
 	FlowRequestEvent(const FlowSpecification& flowSpecification,
 			bool localRequest,
@@ -455,7 +458,7 @@ public:
 			const ApplicationProcessNamingInformation& localApplicationName,
 			const ApplicationProcessNamingInformation& remoteApplicationName,
 			const ApplicationProcessNamingInformation& DIFName,
-			int flowRequestorIpcProcessId,
+			unsigned short ipcProcessId,
 			unsigned int sequenceNumber);
 	int getPortId() const;
 	bool isLocalRequest() const;
@@ -466,6 +469,7 @@ public:
 	const ApplicationProcessNamingInformation& getLocalApplicationName() const;
 	const ApplicationProcessNamingInformation& getRemoteApplicationName() const;
 	int getFlowRequestorIPCProcessId() const;
+	unsigned short getIPCProcessId() const;
 };
 
 /**

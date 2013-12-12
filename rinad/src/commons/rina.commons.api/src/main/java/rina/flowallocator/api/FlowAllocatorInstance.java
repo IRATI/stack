@@ -81,4 +81,6 @@ public interface FlowAllocatorInstance{
 	 * deletes the binding between the Application and the local DTP-instance, and sends a Delete_Response indicating the result.
 	 */
 	public void deleteFlowRequestMessageReceived(CDAPMessage requestMessage, int underlyingPortId);
+	
+	public long getAllocateResponseMessageHandle();
 }

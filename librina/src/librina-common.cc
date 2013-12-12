@@ -617,6 +617,7 @@ FlowRequestEvent::FlowRequestEvent(
 	this->remoteApplicationName = remoteApplicationName;
 	this->flowRequestorIpcProcessId = flowRequestorIpcProcessId;
 	this->portId = 0;
+	this->ipcProcessId = 0;
 }
 
 FlowRequestEvent::FlowRequestEvent(int portId,
@@ -625,7 +626,7 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 		const ApplicationProcessNamingInformation& localApplicationName,
 		const ApplicationProcessNamingInformation& remoteApplicationName,
 		const ApplicationProcessNamingInformation& DIFName,
-		int flowRequestorIpcProcessId,
+		unsigned short ipcProcessId,
 		unsigned int sequenceNumber) :
 		IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
 				sequenceNumber) {
@@ -634,8 +635,9 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 	this->localApplicationName = localApplicationName;
 	this->remoteApplicationName = remoteApplicationName;
 	this->DIFName = DIFName;
-	this->flowRequestorIpcProcessId = flowRequestorIpcProcessId;
+	this->flowRequestorIpcProcessId = 0;
 	this->portId = portId;
+	this->ipcProcessId = ipcProcessId;
 }
 
 void FlowRequestEvent::setPortId(int portId){
@@ -676,6 +678,10 @@ const ApplicationProcessNamingInformation&
 
 int FlowRequestEvent::getFlowRequestorIPCProcessId() const {
         return flowRequestorIpcProcessId;
+}
+
+unsigned short FlowRequestEvent::getIPCProcessId() const {
+        return ipcProcessId;
 }
 
 /* CLASS FLOW DEALLOCATE REQUEST EVENT */

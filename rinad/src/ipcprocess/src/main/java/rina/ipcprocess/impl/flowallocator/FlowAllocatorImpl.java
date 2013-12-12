@@ -1,6 +1,8 @@
 package rina.ipcprocess.impl.flowallocator;
 
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -71,16 +73,10 @@ public class FlowAllocatorImpl implements FlowAllocator{
 	
 	private RegistrationManager registrationManager = null;
 	
-	private Map <Long, FlowAllocatorInstance> flowsWaitingforAllocateResponse = null;
-	
-	private Object sharedLock = null;
-	
 	public FlowAllocatorImpl(){
 		allocateRequestValidator = new AllocateRequestValidator();
 		flowAllocatorInstances = new ConcurrentHashMap<Integer, FlowAllocatorInstance>();
-		flowsWaitingforAllocateResponse = new ConcurrentHashMap<Long, FlowAllocatorInstance>();
 		timer = new Timer();
-		sharedLock = new Object();
 	}
 
 	public void setIPCProcess(IPCProcess ipcProcess){
@@ -93,11 +89,6 @@ public class FlowAllocatorImpl implements FlowAllocator{
 		populateRIB(ipcProcess);
 	}
 	
-	public void addFlowWaitingForAllocateResponse(long handle, FlowAllocatorInstance instance) {
-		flowsWaitingforAllocateResponse.put(handle, instance);
-		log.debug("Associated FAI to seq num " + handle);
-	}
-	
 	/**
 	 * Called by the flow allocator instance when it finishes to cleanup the state.
 	 * @param portId
@@ -105,7 +96,6 @@ public class FlowAllocatorImpl implements FlowAllocator{
 	public void removeFlowAllocatorInstance(int portId){
 		this.flowAllocatorInstances.remove(new Integer(portId));
 	}
-	
 	
 	private void populateRIB(IPCProcess ipcProcess){
 		try{
@@ -165,7 +155,7 @@ public class FlowAllocatorImpl implements FlowAllocator{
 			log.debug("The destination application process is reachable through me. Assigning the local portId " 
 						+portId+" to the flow allocation.");
 			FlowAllocatorInstance flowAllocatorInstance = 
-					new FlowAllocatorInstanceImpl(ipcProcess, this, cdapSessionManager, sharedLock, portId);
+					new FlowAllocatorInstanceImpl(ipcProcess, this, cdapSessionManager, portId);
 			flowAllocatorInstances.put(new Integer(new Integer(portId)), flowAllocatorInstance);
 			flowAllocatorInstance.createFlowRequestMessageReceived(flow, cdapMessage, underlyingPortId);
 			return;
@@ -228,7 +218,7 @@ public class FlowAllocatorImpl implements FlowAllocator{
 		
 		event.setPortId(portId);
 		FlowAllocatorInstance flowAllocatorInstance = 
-				new FlowAllocatorInstanceImpl(ipcProcess, this, cdapSessionManager, sharedLock, portId);
+				new FlowAllocatorInstanceImpl(ipcProcess, this, cdapSessionManager, portId);
 		flowAllocatorInstances.put(portId, flowAllocatorInstance);
 		
 		try {
@@ -270,10 +260,17 @@ public class FlowAllocatorImpl implements FlowAllocator{
 				+event.getSequenceNumber() +" with result "+event.getResult());
 		FlowAllocatorInstance flowAllocatorInstance = null;
 
-		synchronized (sharedLock) {
-			log.debug("Looking for FAI associated to seq num " + event.getSequenceNumber());
-			flowAllocatorInstance = flowsWaitingforAllocateResponse.remove(event.getSequenceNumber());
+		log.debug("Looking for FAI associated to seq num " + event.getSequenceNumber());
+		Iterator<Entry<Integer, FlowAllocatorInstance>> iterator = flowAllocatorInstances.entrySet().iterator();
+		Entry<Integer, FlowAllocatorInstance> entry = null;
+		while (iterator.hasNext()) {
+			entry = iterator.next();
+			if (entry.getValue().getAllocateResponseMessageHandle() == event.getSequenceNumber()) {
+				flowAllocatorInstance = entry.getValue();
+				break;
+			}
 		}
+		
 		if (flowAllocatorInstance == null){
 			log.error("Problems looking for FAI with handle " + event.getSequenceNumber());
 			return;
@@ -285,17 +282,18 @@ public class FlowAllocatorImpl implements FlowAllocator{
 	public synchronized void processCreateConnectionResultEvent(CreateConnectionResultEvent event) {
 		FlowAllocatorInstance flowAllocatorInstance = null;
 
-		try {
-			flowAllocatorInstance = getFlowAllocatorInstance(event.getPortId());
-		}catch(Exception ex){
-			log.error("Problems looking for FAI at portId " + event.getPortId() 
-					+ ". "+ ex.getMessage());
+		log.debug("Looking for FAI associated to port-id: "+event.getPortId());
+		flowAllocatorInstance = getFlowAllocatorInstance(event.getPortId());
+		if (flowAllocatorInstance == null){
+			log.error("Problems looking for FAI at portId " + event.getPortId());
 			try{
 				ipcManager.deallocatePortId(event.getPortId());
 			} catch (Exception e) {
 				log.error("Prpblems requesting IPC Manager to deallocate port id "
 						+ event.getPortId() + ". "+e.getMessage());
 			}
+			
+			return;
 		}
 
 		flowAllocatorInstance.processCreateConnectionResultEvent(event);
@@ -304,17 +302,17 @@ public class FlowAllocatorImpl implements FlowAllocator{
 	public void processUpdateConnectionResponseEvent(UpdateConnectionResponseEvent event) {
 		FlowAllocatorInstance flowAllocatorInstance = null;
 
-		try {
-			flowAllocatorInstance = getFlowAllocatorInstance(event.getPortId());
-		}catch(Exception ex){
-			log.error("Problems looking for FAI at portId " + event.getPortId() 
-					+ ". "+ ex.getMessage());
+		flowAllocatorInstance = getFlowAllocatorInstance(event.getPortId());
+		if (flowAllocatorInstance == null){
+			log.error("Problems looking for FAI at portId " + event.getPortId());
 			try{
 				ipcManager.deallocatePortId(event.getPortId());
 			} catch (Exception e) {
 				log.error("Prpblems requesting IPC Manager to deallocate port id "
 						+ event.getPortId() + ". "+e.getMessage());
 			}
+			
+			return;
 		}
 
 		flowAllocatorInstance.processUpdateConnectionResponseEvent(event);
@@ -327,17 +325,17 @@ public class FlowAllocatorImpl implements FlowAllocator{
 	public void submitDeallocate(FlowDeallocateRequestEvent event){
 		FlowAllocatorInstance flowAllocatorInstance = null;
 
-		try {
-			flowAllocatorInstance = getFlowAllocatorInstance(event.getPortId());
-		}catch(Exception ex){
-			log.error("Problems looking for FAI at portId " + event.getPortId() 
-					+ ". "+ ex.getMessage());
+		flowAllocatorInstance = getFlowAllocatorInstance(event.getPortId());
+		if (flowAllocatorInstance == null){
+			log.error("Problems looking for FAI at portId " + event.getPortId());
 			try{
 				ipcManager.deallocatePortId(event.getPortId());
 			} catch (Exception e) {
 				log.error("Prpblems requesting IPC Manager to deallocate port id "
 						+ event.getPortId() + ". "+e.getMessage());
 			}
+			
+			return;
 		}
 		
 		flowAllocatorInstance.submitDeallocate(event);
