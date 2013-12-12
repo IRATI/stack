@@ -26,12 +26,14 @@
 //#undef _ASM_X86_UNISTD_64_H
 //#include "/usr/include/linux/include/asm-x86/unistd_64.h"
 
-#define SYS_createIPCProcess  __NR_ipc_create
-#define SYS_destroyIPCProcess __NR_ipc_destroy
-#define SYS_readSDU           __NR_sdu_read
-#define SYS_writeSDU          __NR_sdu_write
-#define SYS_allocatePortId    __NR_allocate_port
-#define SYS_deallocatePortId  __NR_deallocate_port
+#define SYS_createIPCProcess   __NR_ipc_create
+#define SYS_destroyIPCProcess  __NR_ipc_destroy
+#define SYS_readSDU            __NR_sdu_read
+#define SYS_writeSDU           __NR_sdu_write
+#define SYS_allocatePortId     __NR_allocate_port
+#define SYS_deallocatePortId   __NR_deallocate_port
+#define SYS_readManagementSDU  __NR_management_sdu_read
+#define SYS_writeManagementSDU __NR_management_sdu_write
 
 #if !defined(__NR_ipc_create)
 #error No ipc_create syscall defined
@@ -50,6 +52,12 @@
 #endif
 #if !defined(__NR_deallocate_port)
 #error No deallocate_port syscall defined
+#endif
+#if !defined(__NR_management_sdu_read)
+#error No managment_sdu_read syscall defined
+#endif
+#if !defined(__NR_management_sdu_write)
+#error No management_sdu_write syscall defined
 #endif
 
 #include <sys/syscall.h>
@@ -94,6 +102,41 @@ namespace rina {
                 result = syscall(SYS_readSDU, portId, sdu, maxBytes);
                 if (result < 0) {
                         LOG_ERR("Syscall read SDU failed: %d", result);
+                }
+
+                return result;
+        }
+
+        int syscallWriteManagementSDU(unsigned short ipcProcessId, void * sdu,
+                                int portId, int size)
+        {
+                int result;
+
+                DUMP_SYSCALL("SYS_writeManagementSDU", SYS_writeManagementSDU);
+
+                result = syscall(SYS_writeManagementSDU, ipcProcessId, portId,
+                                sdu, size);
+                if (result < 0) {
+                        LOG_ERR("Syscall write SDU failed: %d", result);
+                }
+
+                return result;
+        }
+
+        int syscallReadManagementSDU(int ipcProcessId, void * sdu, int * portId,
+                                int maxBytes)
+        {
+                int result;
+                struct sdu_wpi_t * sdu_wpi = 0;
+
+                DUMP_SYSCALL("SYS_readManagementSDU", SYS_readManagementSDU);
+
+                result = syscall(SYS_readManagementSDU, ipcProcessId, sdu_wpi, maxBytes);
+                if (result < 0) {
+                        LOG_ERR("Syscall read SDU failed: %d", result);
+                } else {
+                        sdu = sdu_wpi->sdu;
+                        *portId = sdu_wpi->port_id;
                 }
 
                 return result;

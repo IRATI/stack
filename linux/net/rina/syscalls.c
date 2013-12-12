@@ -287,3 +287,120 @@ SYSCALL_DEFINE1(deallocate_port,
 
         return retval;
 }
+
+SYSCALL_DEFINE3(management_sdu_read,
+                ipc_process_id_t,     ipcp_id,
+                void __user *,        buffer,
+                size_t,               size)
+{
+        ssize_t          retval;
+        struct sdu_wpi * tmp;
+        size_t           retsize;
+
+        SYSCALL_DUMP_ENTER;
+
+        tmp = NULL;
+
+        CALL_DEFAULT_PERSONALITY(retval, management_sdu_read, ipcp_id, &tmp);
+        /* Taking ownership from the internal layers */
+
+        LOG_DBG("Personality returned value %zd", retval);
+
+        if (retval) {
+                SYSCALL_DUMP_EXIT;
+                return -EFAULT;
+        }
+
+        if (!sdu_wpi_is_ok(tmp)) {
+                SYSCALL_DUMP_EXIT;
+                return -EFAULT;
+        }
+
+        /* NOTE: We don't handle partial copies */
+        if (buffer_length(tmp->sdu->buffer) > size) {
+                SYSCALL_DUMP_EXIT;
+
+                LOG_ERR("Partial copies not handled. SDU size: %zd, "
+                        "User space buffer size: %zd",
+                        buffer_length(tmp->sdu->buffer), size);
+                sdu_wpi_destroy(tmp);
+                return -EFAULT;
+        }
+
+        if (copy_to_user(buffer,
+                         buffer_data_ro(tmp->sdu->buffer),
+                         buffer_length(tmp->sdu->buffer)
+                                 + sizeof(port_id_t))) {
+                SYSCALL_DUMP_EXIT;
+
+                LOG_ERR("Error copying data to user-space");
+                sdu_wpi_destroy(tmp);
+                return -EFAULT;
+        }
+
+        retsize = buffer_length(tmp->sdu->buffer);
+        sdu_wpi_destroy(tmp);
+
+        SYSCALL_DUMP_EXIT;
+
+        return retsize;
+}
+
+SYSCALL_DEFINE4(management_sdu_write,
+                ipc_process_id_t,           id,
+                port_id_t,                  port_id,
+                const void __user *,        buffer,
+                size_t,                     size)
+{
+        ssize_t             retval;
+        struct sdu_wpi *    sdu_wpi;
+        struct buffer *     tmp_buffer;
+
+        SYSCALL_DUMP_ENTER;
+
+        if (!buffer || !size) {
+                SYSCALL_DUMP_EXIT;
+                return -EFAULT;
+        }
+
+        LOG_DBG("Syscall write management SDU (size = %zd, port-id = %d)",
+                        size, id);
+
+        tmp_buffer = buffer_create(size);
+        if (!tmp_buffer) {
+                SYSCALL_DUMP_EXIT;
+                return -EFAULT;
+        }
+
+        ASSERT(buffer_is_ok(tmp_buffer));
+        ASSERT(buffer_data_rw(tmp_buffer));
+
+        /* NOTE: We don't handle partial copies */
+        if (copy_from_user(buffer_data_rw(tmp_buffer), buffer, size)) {
+                SYSCALL_DUMP_EXIT;
+                buffer_destroy(tmp_buffer);
+                return -EFAULT;
+        }
+
+        /* NOTE: sdu_create takes the ownership of the buffer */
+        sdu_wpi = sdu_wpi_create_with(tmp_buffer);
+        if (!sdu_wpi) {
+                SYSCALL_DUMP_EXIT;
+                buffer_destroy(tmp_buffer);
+                return -EFAULT;
+        }
+        sdu_wpi->port_id = port_id;
+        ASSERT(sdu_wpi_is_ok(sdu_wpi));
+
+        /* Passing ownership to the internal layers */
+        CALL_DEFAULT_PERSONALITY(retval, management_sdu_write, id, sdu_wpi);
+        if (retval) {
+                SYSCALL_DUMP_EXIT;
+                sdu_wpi_destroy(sdu_wpi);
+                return -EFAULT;
+        }
+
+        SYSCALL_DUMP_EXIT;
+
+        return size;
+}

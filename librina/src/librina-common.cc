@@ -1380,6 +1380,8 @@ void RIBObject::setValue(RIBObjectValue value) {
 	this->value = value;
 }
 
+/* INITIALIZATION OPERATIONS */
+
 bool librinaInitialized = false;
 Lockable librinaInitializationLock;
 

@@ -934,6 +934,37 @@ modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry>& entrie
 #endif
 }
 
+void KernelIPCProcess::writeManagementSDU(void * sdu, int size, int portId)
+                throw (WriteSDUException) {
+#if STUB_API
+        //Do nothing
+#else
+        int result = syscallWriteManagementSDU(ipcProcessId, sdu, portId,
+                        size);
+        if (result < 0){
+                throw WriteSDUException();
+        }
+#endif
+}
+
+int KernelIPCProcess::readManagementSDU(void * sdu, int maxBytes, int * portId)
+                throw (ReadSDUException) {
+#if STUB_API
+        unsigned char buffer[] = { 0, 23, 43, 32, 45, 23, 78 };
+        sdu = buffer;
+        *portId = 14;
+        return 7;
+#else
+        int result = syscallReadManagementSDU(ipcProcessId, sdu, portId,
+                        maxBytes);
+        if (result < 0){
+                throw ReadSDUException();
+        }
+
+        return result;
+#endif
+}
+
 Singleton<KernelIPCProcess> kernelIPCProcess;
 
 }

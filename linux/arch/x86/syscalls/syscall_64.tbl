@@ -327,6 +327,8 @@
 317	common	sdu_write		sys_sdu_write
 318	common	allocate_port	        sys_allocate_port
 319	common	deallocate_port	        sys_deallocate_port
+320     common  management_sdu_read     sys_management_sdu_read
+321     common  management_sdu_write    sys_management_sdu_write
 
 #
 # x32-specific system call numbers start at 512 to avoid cache impact

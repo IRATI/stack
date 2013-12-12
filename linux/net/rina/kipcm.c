@@ -1707,6 +1707,77 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         return 0;
 }
 
+int kipcm_management_sdu_write(struct kipcm *   kipcm,
+                               ipc_process_id_t id,
+                               struct sdu_wpi * sdu_wpi)
+{
+        struct ipcp_instance * ipcp;
+
+        IRQ_BARRIER;
+
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return -1;
+        }
+
+        if (!sdu_wpi_is_ok(sdu_wpi)) {
+                LOG_ERR("Bogus SDU with port-id received, bailing out");
+                return -1;
+        }
+
+        ipcp = ipcp_imap_find(kipcm->instances, id);
+        if (!ipcp) {
+                LOG_ERR("Could not find IPC Process with id %d", id);
+                return -1;
+        }
+
+        if (!ipcp->ops) {
+                LOG_ERR("Bogus IPCP ops, bailing out");
+                return -1;
+        }
+
+        if (!ipcp->ops->management_sdu_write) {
+                LOG_ERR("The IPC Process %d doesn't support this operation",
+                                id);
+                return -1;
+        }
+
+        return ipcp->ops->management_sdu_write(ipcp->data, sdu_wpi);
+}
+
+int kipcm_management_sdu_read(struct kipcm *    kipcm,
+                              ipc_process_id_t  id,
+                              struct sdu_wpi ** sdu_wpi)
+{
+        struct ipcp_instance * ipcp;
+
+        IRQ_BARRIER;
+
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return -1;
+        }
+
+        ipcp = ipcp_imap_find(kipcm->instances, id);
+        if (!ipcp) {
+                LOG_ERR("Could not find IPC Process with id %d", id);
+                return -1;
+        }
+
+        if (!ipcp->ops) {
+                LOG_ERR("Bogus IPCP ops, bailing out");
+                return -1;
+        }
+
+        if (!ipcp->ops->management_sdu_read) {
+                LOG_ERR("The IPC Process %d doesn't support this operation",
+                                id);
+                return -1;
+        }
+
+        return ipcp->ops->management_sdu_read(ipcp->data, sdu_wpi);
+}
+
 int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
                                        ipc_process_id_t ipc_id,
                                        port_id_t        pid,
