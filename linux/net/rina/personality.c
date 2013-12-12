@@ -143,7 +143,7 @@ static int are_ops_ok(const struct personality_ops * ops)
         }
 
         if (!(ops->management_sdu_read  &&
-                        ops->management_sdu_write)) {
+              ops->management_sdu_write)) {
                 LOG_ERR("Bogus Management SDU related ops");
                 return 0;
         }

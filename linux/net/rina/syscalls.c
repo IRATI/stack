@@ -330,7 +330,7 @@ SYSCALL_DEFINE3(management_sdu_read,
         if (copy_to_user(buffer,
                          buffer_data_ro(tmp->sdu->buffer),
                          buffer_length(tmp->sdu->buffer)
-                                 + sizeof(port_id_t))) {
+                         + sizeof(port_id_t))) {
                 SYSCALL_DUMP_EXIT;
 
                 LOG_ERR("Error copying data to user-space");
@@ -364,7 +364,7 @@ SYSCALL_DEFINE4(management_sdu_write,
         }
 
         LOG_DBG("Syscall write management SDU (size = %zd, port-id = %d)",
-                        size, id);
+                size, id);
 
         tmp_buffer = buffer_create(size);
         if (!tmp_buffer) {

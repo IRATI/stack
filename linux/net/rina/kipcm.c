@@ -1738,7 +1738,7 @@ int kipcm_management_sdu_write(struct kipcm *   kipcm,
 
         if (!ipcp->ops->management_sdu_write) {
                 LOG_ERR("The IPC Process %d doesn't support this operation",
-                                id);
+                        id);
                 return -1;
         }
 
@@ -1771,7 +1771,7 @@ int kipcm_management_sdu_read(struct kipcm *    kipcm,
 
         if (!ipcp->ops->management_sdu_read) {
                 LOG_ERR("The IPC Process %d doesn't support this operation",
-                                id);
+                        id);
                 return -1;
         }
 

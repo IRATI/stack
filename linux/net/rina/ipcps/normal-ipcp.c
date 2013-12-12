@@ -375,7 +375,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 }
 
 static int normal_management_sdu_read(struct ipcp_instance_data * data,
-                                     struct sdu_wpi **            sdu_wpi)
+                                      struct sdu_wpi **            sdu_wpi)
 {
         LOG_DBG("Trying to read mgmt SDU from IPC Process %d", data->id);
         LOG_MISSING;
@@ -386,7 +386,7 @@ static int normal_management_sdu_write(struct ipcp_instance_data * data,
                                        struct sdu_wpi *            sdu_wpi)
 {
         LOG_DBG("Passing SDU to be written to N-1 port %d to IPC Process %d"
-                                , sdu_wpi->port_id, data->id);
+                , sdu_wpi->port_id, data->id);
         LOG_MISSING;
         return 0;
 }

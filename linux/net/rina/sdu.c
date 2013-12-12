@@ -138,8 +138,8 @@ static struct sdu_wpi * sdu_wpi_create_with_gfp(gfp_t           flags,
 
         tmp->sdu = sdu_create_with_gfp(flags, buffer);
         if (!tmp->sdu) {
-               rkfree(tmp);
-               return NULL;
+                rkfree(tmp);
+                return NULL;
         }
 
         return tmp;
