@@ -325,7 +325,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
 
 
 static void deallocate_and_destroy_flow(struct ipcp_instance_data * data,
-                                        struct shim_eth_flow * flow)
+                                        struct shim_eth_flow *      flow)
 {
         if (kfa_flow_deallocate(data->kfa, flow->port_id))
                 LOG_ERR("Failed to destroy KFA flow");
@@ -498,10 +498,10 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                 spin_lock(&data->lock);
                 flow->port_id_state = PORT_STATE_NULL;
                 spin_unlock(&data->lock);
-                /* 
-                 *  If we would destroy the flow, the application 
-                 *  we refused would constantly try to allocate 
-                 *  a flow again. This should only be allowed if 
+                /*
+                 *  If we would destroy the flow, the application
+                 *  we refused would constantly try to allocate
+                 *  a flow again. This should only be allowed if
                  *  the IPC manager deallocates the NULL state flow first.
                  */
                 kfifo_free(&flow->sdu_queue);
@@ -772,7 +772,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 kfree_skb(skb);
                 return -1;
         }
-      
+
         /*
          * FIXME: We should avoid this extra copy, but then we cannot free the
          *        skb at the end of the eth_vlan_rcv function. To do so we
@@ -788,7 +788,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 kfree_skb(skb);
                 return -1;
         }
-     
+
         buffer = buffer_create_with_ni(sk_data, skb->len);
         if (!buffer) {
                 rkfree(sk_data);
@@ -1064,7 +1064,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 LOG_ERR("Bad vlan id specified: %d", info->vlan_id);
                 return -1;
         }
-                
+
         data->dif_name = name_dup(dif_information->dif_name);
         if (!data->dif_name) {
                 LOG_ERR("Error duplicating name, bailing out");
