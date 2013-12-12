@@ -510,8 +510,8 @@ rnl_rmt_mod_pfte_msg_attrs_destroy(struct rnl_rmt_mod_pfte_msg_attrs * attrs)
                 return -1;
 
         list_for_each_entry_safe(pos, nxt,
-                        &attrs->pft_entries,
-                        next) {
+                                 &attrs->pft_entries,
+                                 next) {
                 list_del(&pos->next);
                 rkfree(pos);
         }
@@ -653,7 +653,7 @@ static int parse_flow_spec(struct nlattr * fspec_attr,
 }
 
 static int parse_pdu_fte_list_entry(struct nlattr * attr,
-                           struct pdu_fte_list_entry * pfte_struct)
+                                    struct pdu_fte_list_entry * pfte_struct)
 {
         struct nla_policy attr_policy[PFTELE_ATTR_MAX + 1];
         struct nlattr *   attrs[PFTELE_ATTR_MAX + 1];
@@ -1768,7 +1768,7 @@ static int parse_list_of_pfte_config_entries(struct nlattr *     nested_attr,
 }
 
 static int rnl_parse_rmt_modify_fte_req_msg(struct genl_info * info,
-                struct rnl_rmt_mod_pfte_msg_attrs * msg_attrs)
+                                            struct rnl_rmt_mod_pfte_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[RMPFE_ATTR_MAX + 1];
         struct nlattr *attrs[RMPFE_ATTR_MAX + 1];
@@ -1780,32 +1780,32 @@ static int rnl_parse_rmt_modify_fte_req_msg(struct genl_info * info,
         attr_policy[RMPFE_ATTR_MODE].len = 4;
 
         result = nlmsg_parse(info->nlhdr,
-                        sizeof(struct genlmsghdr) +
-                        sizeof(struct rina_msg_hdr),
-                        attrs,
-                        RMPFE_ATTR_MAX,
-                        attr_policy);
+                             sizeof(struct genlmsghdr) +
+                             sizeof(struct rina_msg_hdr),
+                             attrs,
+                             RMPFE_ATTR_MAX,
+                             attr_policy);
 
         if (result < 0) {
                 LOG_ERR("Error %d; could not validate nl message policy",
-                result);
+                        result);
                 goto parse_fail;
         }
 
         if (attrs[RMPFE_ATTR_ENTRIES]) {
                 if (parse_list_of_pfte_config_entries(
-                                attrs[RMPFE_ATTR_ENTRIES],
-                                msg_attrs) < 0)
+                                                      attrs[RMPFE_ATTR_ENTRIES],
+                                                      msg_attrs) < 0)
                         goto parse_fail;
         }
 
         if (attrs[RMPFE_ATTR_MODE])
                 msg_attrs->mode =
-                nla_get_u32(attrs[RMPFE_ATTR_MODE]);
+                        nla_get_u32(attrs[RMPFE_ATTR_MODE]);
 
         return 0;
 
-        parse_fail:
+ parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_RMT_MODIFY_FTE_REQ_MSG"));
         return -1;
 }
@@ -1925,7 +1925,7 @@ int rnl_parse_msg(struct genl_info * info,
                 break;
         case RINA_C_RMT_MODIFY_FTE_REQUEST:
                 if (rnl_parse_rmt_modify_fte_req_msg(info,
-                                                  msg->attrs) < 0)
+                                                     msg->attrs) < 0)
                         goto fail;
                 break;
         default:
