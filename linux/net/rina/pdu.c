@@ -143,6 +143,17 @@ int pci_qos_id_set(struct pci * pci,
 }
 EXPORT_SYMBOL(pci_qos_id_set);
 
+int pci_type_set(struct pci * pci, pdu_type_t type)
+{
+        if (!pci)
+                return -1;
+
+        pci->type = type;
+
+        return 0;
+}
+EXPORT_SYMBOL(pci_type_set);
+
 static struct pci * pci_create_from_gfp(gfp_t        flags,
                                         const void * data)
 {
@@ -320,7 +331,7 @@ static struct pdu * pdu_create_with_gfp(gfp_t        flags,
                 return NULL;
 
         ptr = (const uint8_t *) buffer_data_ro(tmp_buff);
-        ASSERT(!ptr);
+        ASSERT(ptr);
 
         tmp_pdu->pci    =
                 pci_create_from_gfp(flags, ptr);

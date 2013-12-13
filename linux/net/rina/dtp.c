@@ -253,18 +253,24 @@ int dtp_write(struct dtp * instance,
                 return -1;
         }
 
+        /* FIXME: What about other types of PDU? */
+        if (pci_type_set(pci, PDU_TYPE_DT)) {
+                pci_destroy(pci);
+                return -1;
+        }
+
         pdu = pdu_create();
         if (!pdu) {
                 pci_destroy(pci);
                 return -1;
         }
 
-        if (!pdu_buffer_set(pdu, sdu_buffer_rw(sdu))) {
+        if (pdu_buffer_set(pdu, sdu_buffer_rw(sdu))) {
                 pci_destroy(pci);
                 return -1;
         }
 
-        if (!pdu_pci_set(pdu, pci)) {
+        if (pdu_pci_set(pdu, pci)) {
                 pci_destroy(pci);
                 return -1;
         }

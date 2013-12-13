@@ -68,6 +68,13 @@ struct rmt * rmt_create(struct kfa *            kfa,
                 rmt_destroy(tmp);
                 return NULL;
         }
+        /* FIXME: the name should be unique, not shared with all the RMT's */
+        tmp->ingress_wq = rwq_create("rmt-ingress-wq");
+        if (!tmp->ingress_wq) {
+                rwq_destroy(tmp->egress_wq);
+                rmt_destroy(tmp);
+                return NULL;
+        }
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
         return tmp;
@@ -148,12 +155,12 @@ static int rmt_send_worker(void * o)
         struct sdu *          sdu;
         const struct buffer * buffer;
         const struct pci *    pci;
+        const void *          buffer_data;
         size_t                size;
         ssize_t               buffer_size;
         ssize_t               pci_size;
         struct buffer *       tmp_buff;
         char *                data;
-        const uint8_t *       ptr;
 
         tmp = (struct send_data *) o;
         if (!tmp) {
@@ -171,6 +178,10 @@ static int rmt_send_worker(void * o)
         if (!buffer)
                 return -1;
 
+        buffer_data = buffer_data_ro(buffer);
+        if (!buffer_data)
+                return -1;
+
         pci = pdu_pci_get_ro(tmp->pdu);
         if (!pci)
                 return -1;
@@ -180,7 +191,7 @@ static int rmt_send_worker(void * o)
                 return -1;
 
         pci_size = pci_length(pci);
-        if (buffer_size <= 0)
+        if (pci_size <= 0)
                 return -1;
 
         size = pci_size + buffer_size;
@@ -192,9 +203,7 @@ static int rmt_send_worker(void * o)
                 rkfree(data);
                 return -1;
         }
-        ptr = (const uint8_t *) data;
-        ASSERT(!ptr);
-        if (!memcpy((void *) (ptr + pci_size), buffer, buffer_size)) {
+        if (!memcpy(data + pci_size, buffer_data, buffer_size)) {
                 rkfree(data);
                 return -1;
         }
