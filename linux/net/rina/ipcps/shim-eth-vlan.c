@@ -562,11 +562,13 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
         pa = name_to_gpa(name);
         if (!gpa_is_ok(pa)) {
                 LOG_ERR("Failed to create gpa");
+                name_destroy(data->app_name);
                 return -1;
         }
         ha = gha_create(MAC_ADDR_802_3, data->dev->dev_addr);
         if (!gha_is_ok(ha)) {
                 LOG_ERR("Failed to create gha");
+                name_destroy(data->app_name);
                 gpa_destroy(pa);
                 return -1;
         }
