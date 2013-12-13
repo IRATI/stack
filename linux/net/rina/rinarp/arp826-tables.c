@@ -456,16 +456,17 @@ static struct tmap * tables = NULL;
 struct table * tbls_find(struct net_device * device, uint16_t ptype)
 {
         struct tmap_entry * e;
+        unsigned long flags;
 
-        spin_lock(&tables_lock);
+        spin_lock_irqsave(&tables_lock, flags);
 
         e = tmap_entry_find(tables, device, ptype);
         if (!e) {
-                spin_unlock(&tables_lock);
+                spin_unlock_irqrestore(&tables_lock, flags);
                 return NULL;
         }
 
-        spin_unlock(&tables_lock);
+        spin_unlock_irqrestore(&tables_lock, flags);
 
         return tmap_entry_value(e);
 }
