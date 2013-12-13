@@ -187,7 +187,7 @@ static struct gpa * name_to_gpa(const struct name * name)
                 rkfree(tmp);
                 return NULL;
         }
-        
+
         rkfree(tmp);
 
         return gpa;
