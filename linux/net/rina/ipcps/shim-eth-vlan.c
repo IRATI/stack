@@ -922,8 +922,10 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                                        data->fspec)) {
                         LOG_ERR("Couldn't tell the KIPCM about the flow");
                         deallocate_and_destroy_flow(data, flow);
+                        name_destroy(sname);
                         return -1;
                 }
+                name_destroy(sname);
         } else {
                 gha_destroy(ghaddr);
                 LOG_DBG("Flow exists, queueing or delivering or dropping");
