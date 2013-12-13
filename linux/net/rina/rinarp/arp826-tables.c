@@ -598,7 +598,6 @@ int arp826_add(struct net_device * device,
         struct table_entry * e;
         struct gpa *         tmp_pa;
         struct gha *         tmp_ha;
-        int                  ret;
 
         if (!gpa_is_ok(pa)) {
                 LOG_ERR("Cannot add, bad PA");
@@ -636,25 +635,18 @@ int arp826_add(struct net_device * device,
                 gha_destroy(tmp_ha);
                 return -1;
         }
+        gpa_destroy(tmp_pa);
+        gha_destroy(tmp_ha);
 
         LOG_DBG("Adding the GPA/GHA entry to the 0x%x04 table", ptype);
 
-        ret = tbl_add(cl, e);
-        if (ret) {
+        if (tbl_add(cl, e)) {
                 LOG_ERR("Cannot add to the 0x%04x table, rolling back", ptype);
-                gpa_destroy(tmp_pa);
-                gha_destroy(tmp_ha);
                 tble_destroy(e);
                 return -1;
         }
 
-        /*
-         * NOTE: There are no needs to destroy the duplicated entries, the
-         *       callee took their ownership
-         */
-
         LOG_DBG("GPA/GHA couple for ptype 0x%04x added successfully", ptype);
-
         return 0;
 }
 EXPORT_SYMBOL(arp826_add);
