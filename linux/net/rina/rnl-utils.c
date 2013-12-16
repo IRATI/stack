@@ -2108,7 +2108,6 @@ int rnl_format_ipcm_assign_to_dif_resp_msg(uint_t          result,
                                                 "rnl_ipcm_assign_to_dif_resp_msg",
                                                 skb_out);
 }
-EXPORT_SYMBOL(rnl_format_ipcm_assign_to_dif_resp_msg);
 
 int rnl_format_ipcm_update_dif_config_resp_msg(uint_t          result,
                                                struct sk_buff  * skb_out)
@@ -2118,7 +2117,6 @@ int rnl_format_ipcm_update_dif_config_resp_msg(uint_t          result,
                                                 "rnl_ipcm_update_dif_config_resp_msg",
                                                 skb_out);
 }
-EXPORT_SYMBOL(rnl_format_ipcm_update_dif_config_resp_msg);
 
 int rnl_format_ipcm_ipcp_dif_reg_noti_msg(const struct name * ipcp_name,
                                           const struct name * dif_name,
@@ -2172,7 +2170,6 @@ int rnl_format_ipcm_ipcp_dif_reg_noti_msg(const struct name * ipcp_name,
         return -1;
 
 }
-EXPORT_SYMBOL(rnl_format_ipcm_ipcp_dif_reg_noti_msg);
 
 /*  FIXME: It does not exist in user space */
 int rnl_format_ipcm_ipcp_dif_unreg_noti_msg(uint_t           result,
@@ -2183,7 +2180,6 @@ int rnl_format_ipcm_ipcp_dif_unreg_noti_msg(uint_t           result,
                                                 "rnl_ipcm_ipcp_to_dif_unreg_noti_msg",
                                                 skb_out);
 }
-EXPORT_SYMBOL(rnl_format_ipcm_ipcp_dif_unreg_noti_msg);
 
 int rnl_format_ipcm_alloc_flow_req_msg(const struct name *      source,
                                        const struct name *      dest,
@@ -2252,7 +2248,6 @@ int rnl_format_ipcm_alloc_flow_req_msg(const struct name *      source,
         LOG_ERR("Could not format rnl_ipcm_alloc_flow_req_msg message");
         return -1;
 }
-EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_msg);
 
 int rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name *      source,
                                                const struct name *      dest,
@@ -2329,7 +2324,6 @@ int rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name *      source,
                 "message correctly");
         return -1;
 }
-EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_arrived_msg);
 
 int rnl_format_ipcm_alloc_flow_req_result_msg(uint_t           result,
                                               port_id_t        pid,
@@ -2355,7 +2349,6 @@ int rnl_format_ipcm_alloc_flow_req_result_msg(uint_t           result,
         return -1;
 
 }
-EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_req_result_msg);
 
 int rnl_format_ipcm_alloc_flow_resp_msg(uint_t           result,
                                         bool             notify_src,
@@ -2381,7 +2374,6 @@ int rnl_format_ipcm_alloc_flow_resp_msg(uint_t           result,
                 "message correctly");
         return -1;
 }
-EXPORT_SYMBOL(rnl_format_ipcm_alloc_flow_resp_msg);
 
 int rnl_format_ipcm_dealloc_flow_req_msg(port_id_t        id,
                                          struct sk_buff * skb_out)
@@ -2391,7 +2383,6 @@ int rnl_format_ipcm_dealloc_flow_req_msg(port_id_t        id,
                                                 "rnl_ipcm_dealloc_flow_req_msg",
                                                 skb_out);
 }
-EXPORT_SYMBOL(rnl_format_ipcm_dealloc_flow_req_msg);
 
 int rnl_format_ipcm_dealloc_flow_resp_msg(uint_t           result,
                                           struct sk_buff * skb_out)
@@ -2401,7 +2392,6 @@ int rnl_format_ipcm_dealloc_flow_resp_msg(uint_t           result,
                                                 "rnl_ipcm_dealloc_flow_resp_msg",
                                                 skb_out);
 }
-EXPORT_SYMBOL(rnl_format_ipcm_dealloc_flow_resp_msg);
 
 int rnl_format_ipcm_flow_dealloc_noti_msg(port_id_t        id,
                                           uint_t           code,
@@ -2426,7 +2416,6 @@ int rnl_format_ipcm_flow_dealloc_noti_msg(port_id_t        id,
                 "message correctly");
         return -1;
 }
-EXPORT_SYMBOL(rnl_format_ipcm_flow_dealloc_noti_msg);
 
 int rnl_format_ipcm_conn_create_resp_msg(port_id_t        id,
                                          cep_id_t         src_cep,
@@ -2451,7 +2440,6 @@ int rnl_format_ipcm_conn_create_resp_msg(port_id_t        id,
                 "message correctly");
         return -1;
 }
-EXPORT_SYMBOL(rnl_format_ipcm_conn_create_resp_msg);
 
 int rnl_format_ipcm_conn_create_result_msg(port_id_t        id,
                                            cep_id_t         src_cep,
@@ -2480,7 +2468,6 @@ int rnl_format_ipcm_conn_create_result_msg(port_id_t        id,
                 "message correctly");
         return -1;
 }
-EXPORT_SYMBOL(rnl_format_ipcm_conn_create_result_msg);
 
 int rnl_format_ipcm_conn_update_result_msg(port_id_t        id,
                                            uint_t           result,
@@ -2505,7 +2492,6 @@ int rnl_format_ipcm_conn_update_result_msg(port_id_t        id,
                 "message correctly");
         return -1;
 }
-EXPORT_SYMBOL(rnl_format_ipcm_conn_update_result_msg);
 
 int rnl_format_ipcm_conn_destroy_result_msg(port_id_t        id,
                                             uint_t           result,
@@ -2530,7 +2516,6 @@ int rnl_format_ipcm_conn_destroy_result_msg(port_id_t        id,
                 "message correctly");
         return -1;
 }
-EXPORT_SYMBOL(rnl_format_ipcm_conn_destroy_result_msg);
 
 int rnl_format_ipcm_reg_app_req_msg(const struct name * app_name,
                                     const struct name * dif_name,
@@ -2574,7 +2559,6 @@ int rnl_format_ipcm_reg_app_req_msg(const struct name * app_name,
         return -1;
 
 }
-EXPORT_SYMBOL(rnl_format_ipcm_reg_app_req_msg);
 
 int rnl_format_ipcm_reg_app_resp_msg(uint_t           result,
                                      struct sk_buff * skb_out)
@@ -2595,7 +2579,6 @@ int rnl_format_ipcm_reg_app_resp_msg(uint_t           result,
                 "message correctly");
         return -1;
 }
-EXPORT_SYMBOL(rnl_format_ipcm_reg_app_resp_msg);
 
 int rnl_format_ipcm_unreg_app_req_msg(const struct name * app_name,
                                       const struct name * dif_name,
@@ -2639,7 +2622,6 @@ int rnl_format_ipcm_unreg_app_req_msg(const struct name * app_name,
         return -1;
 
 }
-EXPORT_SYMBOL(rnl_format_ipcm_unreg_app_req_msg);
 
 int rnl_format_ipcm_unreg_app_resp_msg(uint_t          result,
                                        struct sk_buff * skb_out)
@@ -2657,7 +2639,6 @@ int rnl_format_ipcm_unreg_app_resp_msg(uint_t          result,
         }
         return 0;
 }
-EXPORT_SYMBOL(rnl_format_ipcm_unreg_app_resp_msg);
 
 static int format_rib_object(const struct rib_object * obj,
                              struct sk_buff          * msg)
@@ -2743,7 +2724,6 @@ int rnl_format_ipcm_query_rib_resp_msg(uint_t                     result,
                 "message correctly");
         return -1;
 }
-EXPORT_SYMBOL(rnl_format_ipcm_query_rib_resp_msg);
 
 int rnl_format_socket_closed_notification_msg(u32              nl_port,
                                               struct sk_buff * skb_out)
@@ -2753,7 +2733,6 @@ int rnl_format_socket_closed_notification_msg(u32              nl_port,
                                                 "rnl_format_socket_closed_notification_msg",
                                                 skb_out);
 }
-EXPORT_SYMBOL(rnl_format_socket_closed_notification_msg);
 
 static int send_nl_unicast_msg(struct net *     net,
                                struct sk_buff * skb,
