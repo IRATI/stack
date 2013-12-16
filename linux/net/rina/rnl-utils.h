@@ -633,10 +633,6 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
                                        u32                      nl_port_id,
                                        port_id_t                pid);
 
-int rnl_format_socket_closed_notification_msg(u32              nl_port,
-                                              struct sk_buff * skb_out);
-
-
 int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
                                   port_id_t        pid,
