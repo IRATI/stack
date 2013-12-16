@@ -53,8 +53,8 @@ static void handle_destroy(struct rinarp_handle * handle)
 }
 
 static struct rinarp_handle * handle_create(struct net_device * dev,
-                                            struct gpa *        pa,
-                                            struct gha *        ha)
+                                            const struct gpa *  pa,
+                                            const struct gha *  ha)
 {
         struct rinarp_handle * handle;
 
@@ -94,7 +94,7 @@ struct rinarp_handle * rinarp_add(struct net_device * dev,
 {
         struct rinarp_handle * handle;
 
-        handle = handle_create(dev, gpa_dup(pa), gha_dup(ha));
+        handle = handle_create(dev, pa, ha);
         if (!handle)
                 return NULL;
 
