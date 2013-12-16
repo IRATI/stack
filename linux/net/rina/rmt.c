@@ -38,6 +38,7 @@ struct rmt {
         struct efcp_container *   efcpc;
         struct workqueue_struct * egress_wq;
         struct workqueue_struct * ingress_wq;
+        address_t                 address;
         /* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
 };
 
@@ -99,6 +100,18 @@ int rmt_destroy(struct rmt * instance)
         return 0;
 }
 EXPORT_SYMBOL(rmt_destroy);
+
+int rmt_address_set(struct rmt * instance,
+                    address_t    address)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+        instance->address = address;
+
+        return 0;
+}
 
 struct send_data {
         struct rmt * rmt;

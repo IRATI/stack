@@ -46,6 +46,8 @@ struct rmt;
 struct rmt * rmt_create(struct kfa *            kfa,
                         struct efcp_container * efcpc);
 int          rmt_destroy(struct rmt * instance);
+int          rmt_address_set(struct rmt * instance,
+                             address_t    address);
 
 /* FIXME: Please check the following APIs */
 
