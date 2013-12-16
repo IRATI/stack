@@ -188,6 +188,8 @@ static struct gpa * name_to_gpa(const struct name * name)
                 return NULL;
         }
 
+        rkfree(tmp);
+
         return gpa;
 }
 
@@ -562,11 +564,13 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
         pa = name_to_gpa(name);
         if (!gpa_is_ok(pa)) {
                 LOG_ERR("Failed to create gpa");
+                name_destroy(data->app_name);
                 return -1;
         }
         ha = gha_create(MAC_ADDR_802_3, data->dev->dev_addr);
         if (!gha_is_ok(ha)) {
                 LOG_ERR("Failed to create gha");
+                name_destroy(data->app_name);
                 gpa_destroy(pa);
                 return -1;
         }
@@ -918,8 +922,10 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                                        data->fspec)) {
                         LOG_ERR("Couldn't tell the KIPCM about the flow");
                         deallocate_and_destroy_flow(data, flow);
+                        name_destroy(sname);
                         return -1;
                 }
+                name_destroy(sname);
         } else {
                 gha_destroy(ghaddr);
                 LOG_DBG("Flow exists, queueing or delivering or dropping");
