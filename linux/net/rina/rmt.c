@@ -362,8 +362,12 @@ static int rmt_receive_worker(void * o)
 
         if (tmp->rmt->address != pci_destination(pdu_pci_get_ro(pdu))) {
                 /* FIXME : Port id will be retrieved from the pduft */
-                if (kfa_flow_sdu_write(tmp->rmt->kfa, port_id_bad(), tmp->sdu))
+                if (kfa_flow_sdu_write(tmp->rmt->kfa,
+                                       port_id_bad(),
+                                       tmp->sdu)) {
+                        receive_data_destroy(tmp);
                         return -1;
+                }
         }
 
         pdu_type = pci_type(pdu_pci_get_rw(pdu));
