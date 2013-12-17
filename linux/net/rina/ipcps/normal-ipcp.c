@@ -151,6 +151,12 @@ find_instance(struct ipcp_factory_data * data,
         return NULL;
 }
 
+static int connection_create_management(struct ipcp_instance_data * data)
+{
+        struct connection * conn;
+        conn->destination_address = data->address;
+};
+
 static cep_id_t connection_create_request(struct ipcp_instance_data * data,
                                           port_id_t                   port_id,
                                           address_t                   source,
@@ -374,6 +380,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         }
 
         efcp_container_set_dt_cons(dt_cons, data->efcpc);
+        efcp_container_set_management_efcp(data->efcpc);
 
         return 0;
 }

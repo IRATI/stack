@@ -459,6 +459,30 @@ static int is_connection_ok(const struct connection * connection)
         return 1;
 }
 
+int efcp_management_connection_create(struct efcp_container * container)
+{
+        conn = rkzalloc(sizeof(*conn), GFP_KERNEL);
+        if (!conn)
+                return -1;
+        
+        conn->destination_address = 0;
+        conn->source_address      = src_address;
+        conn->port_id             = 0;
+        conn->qos_id              = 0;
+        container->mgmt_efcp->efcpc = container;
+        container->mgmt_efcp->connection = connection;
+        container->mgmt_efcp->dtp_create = dtp_create(container->rmt,
+                                                      container->kfa,
+                                                      connection);
+        if (!container->mgmt_efcp->dtp) {
+                /*FIXME: Delete dtp */
+                LOG_ERR("Could not create mgmt dtp dor mgmt_efcp");
+                return -1;
+        }
+
+        return 0;
+}
+EXPORT_SYMBOL(efcp_management_connection_create);
 cep_id_t efcp_connection_create(struct efcp_container * container,
                                 struct connection *     connection)
 {
