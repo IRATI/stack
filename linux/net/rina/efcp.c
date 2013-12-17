@@ -77,6 +77,7 @@ static int efcp_destroy(struct efcp * instance)
 }
 
 struct efcp_container {
+        struct efcp *             mgmt_efcp;
         struct efcp_imap *        instances;
         struct cidm *             cidm;
         struct dt_cons            dt_cons;
@@ -99,9 +100,11 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
         if (!container)
                 return NULL;
 
+        container->mgmt_efcp   = efcp_create();
         container->instances   = efcp_imap_create();
         container->cidm        = cidm_create();
-        if (!container->instances ||
+        if (!container->mgmt_efcp ||
+            !container->instances ||
             !container->cidm) {
                 LOG_ERR("Failed to create EFCP container instance");
                 efcp_container_destroy(container);
@@ -136,6 +139,8 @@ int efcp_container_destroy(struct efcp_container * container)
                 LOG_ERR("Bogus container passed, bailing out");
                 return -1;
         }
+
+        if (container->mgmt_efcp)  efcp_destroy(container->mgmt_efcp);
 
         if (container->instances)  efcp_imap_destroy(container->instances,
                                                      efcp_destroy);
@@ -273,6 +278,16 @@ static int efcp_write(struct efcp * efcp,
 
         return 0;
 }
+static int efcp_management_write(struct efcp * mgmt_efcp,
+                                 port_id_t     port_id, 
+                                 struct sdu *  sdu)
+{
+        if (dtp_write(mgmt_efcp->dtp, port_id, sdu)) {
+                LOG_ERR("Could not send Management SDU to DTP");
+                return -1;
+        }
+        return 0;
+}
 
 int efcp_container_write(struct efcp_container * container,
                          cep_id_t                cep_id,
@@ -301,6 +316,14 @@ int efcp_container_write(struct efcp_container * container,
         return 0;
 }
 EXPORT_SYMBOL(efcp_container_write);
+
+int efcp_container_management_write(struct efcp_container * container,
+                                    port_id_t               port_id,
+                                    struct sdu *            sdu)
+{
+        return efcp_management_write(container->mgmt_efcp, port_id, sdu);
+}
+EXPORT_SYMBOL(efcp_container_management_write);
 
 struct receive_data {
         struct efcp * efcp;

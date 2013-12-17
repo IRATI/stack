@@ -40,6 +40,9 @@ int          dtp_unbind(struct dtp * instance);
 /* Sends a SDU to the DTP (DTP takes the ownership of the passed SDU) */
 int          dtp_write(struct dtp * instance,
                        struct sdu * sdu);
+int          dtp_management_write(struct rmt * rmt,
+                                  port_id_t    port_id,
+                                  struct sdu * sdu);
 
 /* DTP receives a PDU from RMT */
 int          dtp_receive(struct dtp * instance,
