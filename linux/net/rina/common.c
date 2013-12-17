@@ -44,3 +44,13 @@ EXPORT_SYMBOL(is_cep_id_ok);
 cep_id_t cep_id_bad(void)
 { return CEP_ID_WRONG; }
 EXPORT_SYMBOL(cep_id_bad);
+
+#define ADDRESS_WRONG 0
+
+int is_address_ok(address_t address)
+{ return address > 0 ? 1 : 0; }
+EXPORT_SYMBOL(is_address_ok);
+
+address_t address_bad(void)
+{ return ADDRESS_WRONG; }
+EXPORT_SYMBOL(address_bad);

@@ -52,6 +52,9 @@ typedef uint          uint_t;
 /* FIXME: Is this address_t definition correct ??? */
 typedef uint32_t      address_t;
 
+int       is_address_ok(address_t address);
+address_t address_bad(void);
+
 typedef uint          timeout_t;
 
 struct uint_range {

@@ -76,6 +76,8 @@ struct rmt * rmt_create(struct kfa *            kfa,
                 rmt_destroy(tmp);
                 return NULL;
         }
+
+        tmp->address = address_bad();
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
         return tmp;
@@ -317,7 +319,15 @@ receive_data_create(port_id_t               from,
 
 static bool is_receive_data_complete(const struct receive_data * data)
 {
-        LOG_MISSING;
+        if (!data)
+                return false;
+
+        if (!data->efcpc ||
+            !data->sdu   ||
+            !data->rmt   ||
+            !data->kfa   ||
+            !is_port_id_ok(data->from))
+                return false;
 
         return true;
 }
@@ -341,6 +351,7 @@ static int rmt_receive_worker(void * o)
         struct receive_data * tmp;
         struct pdu *          pdu;
         pdu_type_t            pdu_type;
+        address_t             dest_add;
 
         tmp = (struct receive_data *) o;
         if (!tmp) {
@@ -355,12 +366,18 @@ static int rmt_receive_worker(void * o)
         }
 
         pdu = pdu_create_with(tmp->sdu);
-        if (!pdu) {
+        if (!pdu_is_ok(pdu)) {
                 receive_data_destroy(tmp);
                 return -1;
         }
 
-        if (tmp->rmt->address != pci_destination(pdu_pci_get_ro(pdu))) {
+        dest_add = pci_destination(pdu_pci_get_ro(pdu));
+        if (!is_address_ok(dest_add)) {
+                receive_data_destroy(tmp);
+                return -1;
+        }
+
+        if (tmp->rmt->address != dest_add) {
                 /* FIXME : Port id will be retrieved from the pduft */
                 if (kfa_flow_sdu_write(tmp->rmt->kfa,
                                        port_id_bad(),
@@ -371,6 +388,10 @@ static int rmt_receive_worker(void * o)
         }
 
         pdu_type = pci_type(pdu_pci_get_rw(pdu));
+        if (!pdu_type_is_ok(pdu_type)) {
+                receive_data_destroy(tmp);
+                return -1;
+        }
         switch (pdu_type) {
         case PDU_TYPE_MGMT: {
                 struct sdu *    sdu;
