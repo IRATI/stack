@@ -41,6 +41,7 @@ int          dtp_unbind(struct dtp * instance);
 int          dtp_write(struct dtp * instance,
                        struct sdu * sdu);
 int          dtp_management_write(struct rmt * rmt,
+                                  address_t    src_address,
                                   port_id_t    port_id,
                                   struct sdu * sdu);
 

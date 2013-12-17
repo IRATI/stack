@@ -57,6 +57,7 @@ int                     efcp_container_receive(struct efcp_container * c,
                                                cep_id_t                cep_id,
                                                struct pdu *            pdu);
 int                     efcp_container_management_write(struct efcp_container * container,
+                                                        address_t               src_address,
                                                         port_id_t               port_id,
                                                         struct sdu *            sdu);
 

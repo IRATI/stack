@@ -254,17 +254,19 @@ int dtp_write(struct dtp * instance,
                         pdu);
 }
 
-dtp_management_write(struct dtp * mgmt_dtp,
-                     port_id_t    port_id,   
-                     struct sdu * sdu)
+int dtp_management_write(struct rmt * rmt,
+                         address_t    src_address,
+                         port_id_t    port_id,   
+                         struct sdu * sdu)
 {
         /*DTP should build the PCI header 
          * src and dst cep_ids = 0
          * ask FT for the dst address the N-1 port is connected to 
          * pass to the rmt */
         
-        struct pci *       pci;
-        struct address_t * dst_address;
+        struct pci *  pci;
+        struct pdu *  pdu;
+        address_t     dst_address;
 
         if (!sdu) {
                 LOG_ERR("No data passed, bailing out");
@@ -280,7 +282,7 @@ dtp_management_write(struct dtp * mgmt_dtp,
         if (pci_format(pci,
                        0,
                        0,
-                       mgmt_dtp->state_vector->connection->source_address,
+                       src_address,
                        dst_address,
                        0,
                        0,
