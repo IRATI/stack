@@ -112,6 +112,7 @@ int rmt_address_set(struct rmt * instance,
 
         return 0;
 }
+EXPORT_SYMBOL(rmt_address_set);
 
 struct send_data {
         struct rmt * rmt;
@@ -289,13 +290,15 @@ struct receive_data {
         struct sdu *            sdu;
         struct kfa *            kfa;
         struct efcp_container * efcpc;
+        struct rmt *            rmt;
 };
 
 static struct receive_data *
 receive_data_create(port_id_t               from,
                     struct sdu *            sdu,
                     struct kfa *            kfa,
-                    struct efcp_container * efcpc)
+                    struct efcp_container * efcpc,
+                    struct rmt *            rmt)
 {
         struct receive_data * tmp;
 
@@ -307,6 +310,7 @@ receive_data_create(port_id_t               from,
         tmp->sdu   = sdu;
         tmp->kfa   = kfa;
         tmp->efcpc = efcpc;
+        tmp->rmt   = rmt;
 
         return tmp;
 }
@@ -356,6 +360,12 @@ static int rmt_receive_worker(void * o)
                 return -1;
         }
 
+        if (tmp->rmt->address != pci_destination(pdu_pci_get_ro(pdu))) {
+                /* FIXME : Port id will be retrieved from the pduft */
+                if (kfa_flow_sdu_write(tmp->rmt->kfa, port_id_bad(), tmp->sdu))
+                        return -1;
+        }
+
         pdu_type = pci_type(pdu_pci_get_rw(pdu));
         switch (pdu_type) {
         case PDU_TYPE_MGMT: {
@@ -403,7 +413,11 @@ int rmt_receive(struct rmt * instance,
                 return -1;
         }
 
-        data = receive_data_create(from, sdu, instance->kfa, instance->efcpc);
+        data = receive_data_create(from,
+                                   sdu,
+                                   instance->kfa,
+                                   instance->efcpc,
+                                   instance);
         if (!is_receive_data_complete(data)) {
                 if (data)
                         rkfree(data);
