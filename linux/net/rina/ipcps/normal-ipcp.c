@@ -391,7 +391,14 @@ static int normal_management_sdu_write(struct ipcp_instance_data * data,
 {
         LOG_DBG("Passing SDU to be written to N-1 port %d to IPC Process %d"
                 , sdu_wpi->port_id, data->id);
-        LOG_MISSING;
+
+        /*FIXME LEO: add comprobations and check the result*/
+        if (efcp_container_management_write(data->efcpc, 
+                                            sdu_wpi->port_id,
+                                            sdu_wpi->sdu)) {
+                LOG_ERR("Could not write management SDU");
+                return -1;
+        }
         return 0;
 }
 

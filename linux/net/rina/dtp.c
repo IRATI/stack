@@ -2,6 +2,8 @@
  * DTP (Data Transfer Protocol)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -217,44 +219,14 @@ int dtp_write(struct dtp * instance,
         if (!pci)
                 return -1;
 
-        if (pci_cep_destination_set(pci,
-                                    instance->state_vector->connection->destination_cep_id)) {
-                pci_destroy(pci);
-                return -1;
-        }
-
-        if (pci_cep_source_set(pci,
-                               instance->state_vector->connection->source_cep_id)) {
-                pci_destroy(pci);
-                return -1;
-        }
-
-        if (pci_destination_set(pci,
-                                instance->state_vector->connection->destination_address)) {
-                pci_destroy(pci);
-                return -1;
-        }
-
-        if (pci_source_set(pci,
-                           instance->state_vector->connection->source_address)) {
-                pci_destroy(pci);
-                return -1;
-        }
-
-        if (pci_nxt_seq_send_set(pci,
-                                 instance->state_vector->next_sequence_to_send)) {
-                pci_destroy(pci);
-                return -1;
-        }
-
-        if (pci_qos_id_set(pci,
-                           instance->state_vector->connection->qos_id)) {
-                pci_destroy(pci);
-                return -1;
-        }
-
-        /* FIXME: What about other types of PDU? */
-        if (pci_type_set(pci, PDU_TYPE_DT)) {
+        if (pci_format(pci,
+                       instance->state_vector->connection->source_cep_id,
+                       instance->state_vector->connection->destination_cep_id,
+                       instance->state_vector->connection->source_address,
+                       instance->state_vector->connection->destination_address,
+                       instance->state_vector->next_sequence_to_send,
+                       instance->state_vector->connection->qos_id,
+                       PDU_TYPE_DT)) {
                 pci_destroy(pci);
                 return -1;
         }
@@ -281,6 +253,66 @@ int dtp_write(struct dtp * instance,
                         pci_cep_destination(pci),
                         pdu);
 }
+
+dtp_management_write(struct dtp * mgmt_dtp,
+                     port_id_t    port_id,   
+                     struct sdu * sdu)
+{
+        /*DTP should build the PCI header 
+         * src and dst cep_ids = 0
+         * ask FT for the dst address the N-1 port is connected to 
+         * pass to the rmt */
+        
+        struct pci *       pci;
+        struct address_t * dst_address;
+
+        if (!sdu) {
+                LOG_ERR("No data passed, bailing out");
+                return -1;
+        }
+
+        dst_address = 0; /*GET FROM PFT */
+
+        pci = pci_create();
+        if (!pci)
+                return -1;
+
+        if (pci_format(pci,
+                       0,
+                       0,
+                       mgmt_dtp->state_vector->connection->source_address,
+                       dst_address,
+                       0,
+                       0,
+                       PDU_TYPE_MGMT)) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        pdu = pdu_create();
+        if (!pdu) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (pdu_buffer_set(pdu, sdu_buffer_rw(sdu))) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (pdu_pci_set(pdu, pci)) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        /* Give the data to RMT now ! */
+        return rmt_send(rmt,
+                        pci_destination(pci),
+                        pci_cep_destination(pci),
+                        pdu);
+
+};
+EXPORT_SYMBOL(dtp_management_write);
 
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
