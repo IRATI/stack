@@ -110,6 +110,12 @@ int rmt_address_set(struct rmt * instance,
                 LOG_ERR("Bogus instance passed");
                 return -1;
         }
+
+        if (is_address_ok(instance->address)) {
+                LOG_ERR("The RMT already has an address");
+                return -1;
+        }
+
         instance->address = address;
 
         return 0;
