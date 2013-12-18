@@ -1130,7 +1130,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 complete_interface);
 
         /* Store in list for retrieval later on */
-        mapping = rkmalloc(sizeof(*mapping), GFP_KERNEL);
+        mapping = rkmalloc(sizeof(*mapping), GFP_ATOMIC);
         if (!mapping) {
                 read_unlock(&dev_base_lock);
                 name_destroy(data->dif_name);
