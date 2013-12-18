@@ -292,6 +292,7 @@ int rmt_send(struct rmt * instance,
 
         return 0;
 }
+EXPORT_SYMBOL(rmt_send);
 
 struct receive_data {
         port_id_t               from;
