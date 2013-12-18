@@ -362,6 +362,10 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         struct dt_cons * dt_cons;
 
         data->info->dif_name = name_dup(dif_information->dif_name);
+        data->address = dif_information->configuration->address;
+        if (rmt_address_set(data->rmt, data->address))
+                return -1;
+
         dt_cons = dif_information->configuration->dt_cons;
 
         if (normal_check_dt_cons(dt_cons)) {

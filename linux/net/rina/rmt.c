@@ -38,6 +38,7 @@ struct rmt {
         struct efcp_container *   efcpc;
         struct workqueue_struct * egress_wq;
         struct workqueue_struct * ingress_wq;
+        address_t                 address;
         /* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
 };
 
@@ -75,6 +76,8 @@ struct rmt * rmt_create(struct kfa *            kfa,
                 rmt_destroy(tmp);
                 return NULL;
         }
+
+        tmp->address = address_bad();
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
         return tmp;
@@ -99,6 +102,25 @@ int rmt_destroy(struct rmt * instance)
         return 0;
 }
 EXPORT_SYMBOL(rmt_destroy);
+
+int rmt_address_set(struct rmt * instance,
+                    address_t    address)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (is_address_ok(instance->address)) {
+                LOG_ERR("The RMT already has an address");
+                return -1;
+        }
+
+        instance->address = address;
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_address_set);
 
 struct send_data {
         struct rmt * rmt;
@@ -276,13 +298,15 @@ struct receive_data {
         struct sdu *            sdu;
         struct kfa *            kfa;
         struct efcp_container * efcpc;
+        struct rmt *            rmt;
 };
 
 static struct receive_data *
 receive_data_create(port_id_t               from,
                     struct sdu *            sdu,
                     struct kfa *            kfa,
-                    struct efcp_container * efcpc)
+                    struct efcp_container * efcpc,
+                    struct rmt *            rmt)
 {
         struct receive_data * tmp;
 
@@ -294,13 +318,22 @@ receive_data_create(port_id_t               from,
         tmp->sdu   = sdu;
         tmp->kfa   = kfa;
         tmp->efcpc = efcpc;
+        tmp->rmt   = rmt;
 
         return tmp;
 }
 
 static bool is_receive_data_complete(const struct receive_data * data)
 {
-        LOG_MISSING;
+        if (!data)
+                return false;
+
+        if (!data->efcpc ||
+            !data->sdu   ||
+            !data->rmt   ||
+            !data->kfa   ||
+            !is_port_id_ok(data->from))
+                return false;
 
         return true;
 }
@@ -324,6 +357,7 @@ static int rmt_receive_worker(void * o)
         struct receive_data * tmp;
         struct pdu *          pdu;
         pdu_type_t            pdu_type;
+        address_t             dest_add;
 
         tmp = (struct receive_data *) o;
         if (!tmp) {
@@ -338,12 +372,32 @@ static int rmt_receive_worker(void * o)
         }
 
         pdu = pdu_create_with(tmp->sdu);
-        if (!pdu) {
+        if (!pdu_is_ok(pdu)) {
                 receive_data_destroy(tmp);
                 return -1;
         }
 
+        dest_add = pci_destination(pdu_pci_get_ro(pdu));
+        if (!is_address_ok(dest_add)) {
+                receive_data_destroy(tmp);
+                return -1;
+        }
+
+        if (tmp->rmt->address != dest_add) {
+                /* FIXME : Port id will be retrieved from the pduft */
+                if (kfa_flow_sdu_write(tmp->rmt->kfa,
+                                       port_id_bad(),
+                                       tmp->sdu)) {
+                        receive_data_destroy(tmp);
+                        return -1;
+                }
+        }
+
         pdu_type = pci_type(pdu_pci_get_rw(pdu));
+        if (!pdu_type_is_ok(pdu_type)) {
+                receive_data_destroy(tmp);
+                return -1;
+        }
         switch (pdu_type) {
         case PDU_TYPE_MGMT: {
                 struct sdu *    sdu;
@@ -390,7 +444,11 @@ int rmt_receive(struct rmt * instance,
                 return -1;
         }
 
-        data = receive_data_create(from, sdu, instance->kfa, instance->efcpc);
+        data = receive_data_create(from,
+                                   sdu,
+                                   instance->kfa,
+                                   instance->efcpc,
+                                   instance);
         if (!is_receive_data_complete(data)) {
                 if (data)
                         rkfree(data);

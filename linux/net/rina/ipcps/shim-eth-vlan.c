@@ -679,9 +679,9 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         skb_reset_network_header(skb);
         sdu_ptr = (unsigned char *) skb_put(skb, buffer_length(sdu->buffer));
 
-        if (memcpy(sdu_ptr,
-                   buffer_data_ro(sdu->buffer),
-                   buffer_length(sdu->buffer))) {
+        if (!memcpy(sdu_ptr,
+                    buffer_data_ro(sdu->buffer),
+                    buffer_length(sdu->buffer))) {
                 LOG_ERR("Memcpy failed");
                 kfree_skb(skb);
                 sdu_destroy(sdu);
