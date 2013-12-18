@@ -177,7 +177,7 @@ struct ipcp_instance_ops {
 
         /* Passes the ownership of the sdu */
         int (* management_sdu_read)(struct ipcp_instance_data * data,
-                                    port_id_t                   port_id,
+                                    port_id_t *                 port_id,
                                     struct sdu *                sdu);
 };
 

@@ -386,7 +386,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 }
 
 static int normal_management_sdu_read(struct ipcp_instance_data * data,
-                                      port_id_t                   port_id,
+                                      port_id_t *                 port_id,
                                       struct sdu *                sdu)
 {
 
@@ -398,7 +398,7 @@ static int normal_management_sdu_read(struct ipcp_instance_data * data,
                 return -1;
         }
         
-        port_id = 0; /* MUST BE OBTAINED FROM PFT */
+        * port_id = 0; /* MUST BE OBTAINED FROM PFT */
 
         return 0;
 }
