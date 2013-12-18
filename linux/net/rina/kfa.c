@@ -433,6 +433,7 @@ int kfa_flow_sdu_write(struct kfa * instance,
 
         if (flow->state == PORT_STATE_DEALLOCATED) {
                 LOG_ERR("Flow with port-id %d is already deallocated", id);
+                spin_unlock(&instance->lock);
                 return -1;
         }
         atomic_inc(&flow->writers);
@@ -450,7 +451,6 @@ int kfa_flow_sdu_write(struct kfa * instance,
                 if (retval) {
                         LOG_ERR("Wait-event interrupted, returned error %d",
                                 retval);
-                        goto finish;
                 }
 
                 flow = kfa_pmap_find(instance->flows, id);
@@ -460,6 +460,9 @@ int kfa_flow_sdu_write(struct kfa * instance,
                         spin_unlock(&instance->lock);
                         return -1;
                 }
+
+                if (retval)
+                        goto finish;
         }
 
         ipcp = flow->ipc_process;
@@ -467,6 +470,8 @@ int kfa_flow_sdu_write(struct kfa * instance,
                 retval = -1;
                 goto finish;
         }
+
+        ASSERT(ipcp->ops);
         if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
                 LOG_ERR("Couldn't write SDU on port-id %d", id);
                 retval = -1;
