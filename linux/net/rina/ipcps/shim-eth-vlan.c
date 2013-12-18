@@ -50,7 +50,7 @@
 static struct workqueue_struct * rcv_wq;
 static struct work_struct        rcv_work;
 static struct list_head          rcv_wq_packets;
-static spinlock_t                rcv_wq_lock;
+static DEFINE_SPINLOCK(rcv_wq_lock);
 
 struct rcv_struct {
         struct list_head     list;
@@ -354,7 +354,7 @@ static void rinarp_resolve_handler(void *             opaque,
         spin_lock(&data->lock);
         if (flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
-                flow->dest_ha = gha_dup(dest_ha);
+                flow->dest_ha = gha_dup_ni(dest_ha);
 
                 if (kipcm_flow_commit(default_kipcm,
                                       data->id, flow->port_id)) {
@@ -817,7 +817,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         if (!flow) {
                 LOG_DBG("Have to create a new flow");
 
-                flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+                flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
                 if (!flow) {
                         spin_unlock(&data->lock);
                         sdu_destroy(du);
@@ -845,7 +845,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
                 LOG_DBG("Added flow to the list");
 
-                if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
+                if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_ATOMIC)) {
                         LOG_ERR("Couldn't create the sdu queue"
                                 "for a new flow");
                         sdu_destroy(du);
