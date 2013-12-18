@@ -354,26 +354,29 @@ static void rinarp_resolve_handler(void *             opaque,
         spin_lock(&data->lock);
         if (flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
+                spin_unlock(&data->lock);
+
                 flow->dest_ha = gha_dup_ni(dest_ha);
 
+
                 if (kipcm_flow_commit(default_kipcm,
-                                      data->id, flow->port_id)) {
+                                data->id, flow->port_id)) {
                         LOG_ERR("Cannot add flow");
                         deallocate_and_destroy_flow(data, flow);
-                        spin_unlock(&data->lock);
                         return;
                 }
+
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
-                                                       data->id,
-                                                       flow->port_id,
-                                                       0)) {
+                                data->id,
+                                flow->port_id,
+                                0)) {
                         LOG_ERR("Couldn't tell flow is allocated to KIPCM");
                         deallocate_and_destroy_flow(data, flow);
-                        spin_unlock(&data->lock);
                         return;
                 }
+        } else {
+                spin_unlock(&data->lock);
         }
-        spin_unlock(&data->lock);
 }
 
 static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
@@ -812,7 +815,12 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 return -1;
         }
 
+        LOG_DBG("Aqui 10");
+
         spin_lock(&data->lock);
+
+        LOG_DBG("Aqui 11");
+
         flow = find_flow_by_gha(data, ghaddr);
         if (!flow) {
                 LOG_DBG("Have to create a new flow");
