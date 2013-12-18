@@ -61,7 +61,7 @@ struct ipcp_instance_data {
         struct efcp_container * efcpc;
         struct rmt *            rmt;
         address_t               address;
-        struct rfifo *          mgmt_sdu_ready;
+        struct rfifo *          mgmt_sdu_wpi_ready;
 };
 
 enum normal_flow_state {
@@ -376,9 +376,13 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 
         efcp_container_set_dt_cons(dt_cons, data->efcpc);
 
-        data->mgmt_sdu_ready = rfifo_create();
-        if (!data->mgmt_sdu_ready) {
+        data->mgmt_sdu_wpi_ready = rfifo_create();
+        if (!data->mgmt_sdu_wpi_ready) {
                 LOG_ERR("Could not create MGMT SDUs queue");
+                return -1;
+        }
+        if (rmt_mgmt_sdu_wpi_queue_set(data->rmt, data->mgmt_sdu_wpi_ready)){
+                rfifo_destroy(data->mgmt_sdu_wpi_ready, sdu_wpi_destructor);
                 return -1;
         }
 
@@ -386,19 +390,16 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 }
 
 static int normal_management_sdu_read(struct ipcp_instance_data * data,
-                                      port_id_t *                 port_id,
-                                      struct sdu *                sdu)
+                                      struct sdu_wpi *            sdu_wpi)
 {
 
         LOG_DBG("Trying to read mgmt SDU from IPC Process %d", data->id);
         
-        sdu = rfifo_pop(data->mgmt_sdu_ready);
-        if (!sdu) {
+        sdu_wpi = rfifo_pop(data->mgmt_sdu_wpi_ready);
+        if (!sdu_wpi) {
                 LOG_ERR("There is not enough data in the management queue");
                 return -1;
         }
-        
-        * port_id = 0; /* MUST BE OBTAINED FROM PFT */
 
         return 0;
 }
@@ -614,8 +615,8 @@ static int normal_destroy(struct ipcp_factory_data * data,
         if (tmp->info->name)
                 name_destroy(tmp->info->name);
 
-        if (tmp->mgmt_sdu_ready)
-                rfifo_destroy(tmp->mgmt_sdu_ready, sdu_wpi_destructor);
+        if (tmp->mgmt_sdu_wpi_ready)
+                rfifo_destroy(tmp->mgmt_sdu_wpi_ready, sdu_wpi_destructor);
 
         efcp_container_destroy(tmp->efcpc);
         rmt_destroy(tmp->rmt);
