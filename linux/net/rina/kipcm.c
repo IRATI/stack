@@ -1755,7 +1755,7 @@ int kipcm_management_sdu_read(struct kipcm *    kipcm,
                               struct sdu_wpi ** sdu_wpi)
 {
         struct ipcp_instance * ipcp;
-
+        
         IRQ_BARRIER;
 
         if (!kipcm) {
@@ -1780,7 +1780,7 @@ int kipcm_management_sdu_read(struct kipcm *    kipcm,
                 return -1;
         }
 
-        return ipcp->ops->management_sdu_read(ipcp->data, * sdu_wpi);
+        return ipcp->ops->management_sdu_read(ipcp->data, sdu_wpi);
 }
 
 int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,

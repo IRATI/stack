@@ -177,7 +177,7 @@ struct ipcp_instance_ops {
 
         /* Passes the ownership of the sdu_wpi */
         int (* management_sdu_read)(struct ipcp_instance_data * data,
-                                    struct sdu_wpi *            sdu_wpi);
+                                    struct sdu_wpi **           sdu_wpi);
 };
 
 #endif

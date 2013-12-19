@@ -431,7 +431,7 @@ static int rmt_receive_worker(void * o)
                         return -1;
                 }
                 sdu_wpi->port_id = tmp->from;
-                if (rfifo_push(tmp->rmt->mgmt_sdu_wpi_queue, sdu_wpi)) {
+                if (rfifo_push(tmp->rmt->mgmt_sdu_wpi_queue, &sdu_wpi)) {
                         receive_data_destroy(tmp);
                         return -1;
                 }
