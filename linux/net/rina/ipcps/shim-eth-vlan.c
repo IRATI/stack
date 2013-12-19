@@ -128,7 +128,7 @@ struct interface_data_mapping {
         struct ipcp_instance_data * data;
 };
 
-static spinlock_t       data_instances_lock;
+static DEFINE_SPINLOCK(data_instances_lock);
 static struct list_head data_instances_list;
 
 static struct interface_data_mapping *

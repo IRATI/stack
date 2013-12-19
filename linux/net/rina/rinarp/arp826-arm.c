@@ -44,7 +44,7 @@ struct resolution {
         struct list_head      next;
 };
 
-static spinlock_t       resolutions_lock;
+static DEFINE_SPINLOCK(resolutions_lock);
 static struct list_head resolutions_ongoing;
 
 struct resolve_data {
