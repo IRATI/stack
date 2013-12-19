@@ -60,7 +60,6 @@ struct rcv_struct {
         struct net_device *  orig_dev;
 };
 
-
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
 
@@ -234,7 +233,6 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
         return NULL;
 }
 
-
 static bool vlan_id_is_ok(unsigned int vlan_id)
 {
         if (vlan_id < 0 || vlan_id > 4095 /* 0xFFF */) {
@@ -320,7 +318,6 @@ static int flow_destroy(struct ipcp_instance_data * data,
         return 0;
 }
 
-
 static void deallocate_and_destroy_flow(struct ipcp_instance_data * data,
                                         struct shim_eth_flow *      flow)
 {
@@ -353,18 +350,17 @@ static void rinarp_resolve_handler(void *             opaque,
 
                 flow->dest_ha = gha_dup_ni(dest_ha);
 
-
                 if (kipcm_flow_commit(default_kipcm,
-                                data->id, flow->port_id)) {
+                                      data->id, flow->port_id)) {
                         LOG_ERR("Cannot add flow");
                         deallocate_and_destroy_flow(data, flow);
                         return;
                 }
 
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
-                                data->id,
-                                flow->port_id,
-                                0)) {
+                                                       data->id,
+                                                       flow->port_id,
+                                                       0)) {
                         LOG_ERR("Couldn't tell flow is allocated to KIPCM");
                         deallocate_and_destroy_flow(data, flow);
                         return;
@@ -981,6 +977,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
         int                 num_frames;
 
         spin_lock_irqsave(&rcv_wq_lock, flags);
+
         LOG_DBG("Worker waking up");
 
         num_frames = 0;
