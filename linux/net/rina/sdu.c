@@ -166,3 +166,12 @@ EXPORT_SYMBOL(sdu_wpi_destroy);
 bool sdu_wpi_is_ok(const struct sdu_wpi * s)
 { return (s && sdu_is_ok(s->sdu)) ? true : false; }
 EXPORT_SYMBOL(sdu_wpi_is_ok);
+
+void sdu_wpi_destructor(void * data)
+{
+        struct sdu_wpi * s = data;
+        if (sdu_wpi_destroy(s)) {
+                LOG_ERR("Could not destroy SDU_WPI");
+        }
+}
+EXPORT_SYMBOL(sdu_wpi_destructor);

@@ -39,6 +39,7 @@ struct rmt {
         struct workqueue_struct * egress_wq;
         struct workqueue_struct * ingress_wq;
         address_t                 address;
+        struct rfifo *            mgmt_sdu_wpi_queue;
         /* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
 };
 
@@ -121,6 +122,25 @@ int rmt_address_set(struct rmt * instance,
         return 0;
 }
 EXPORT_SYMBOL(rmt_address_set);
+
+int rmt_mgmt_sdu_wpi_queue_set(struct rmt *   instance,
+                               struct rfifo * queue)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (instance->mgmt_sdu_wpi_queue) {
+                LOG_ERR("The RMT is already bound to the MGMT SDU queue");
+                return -1;
+        }
+
+        instance->mgmt_sdu_wpi_queue = queue;
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_mgmt_sdu_wpi_queue_set);
 
 struct send_data {
         struct rmt * rmt;
@@ -292,6 +312,7 @@ int rmt_send(struct rmt * instance,
 
         return 0;
 }
+EXPORT_SYMBOL(rmt_send);
 
 struct receive_data {
         port_id_t               from;
@@ -400,16 +421,17 @@ static int rmt_receive_worker(void * o)
         }
         switch (pdu_type) {
         case PDU_TYPE_MGMT: {
-                struct sdu *    sdu;
-                struct buffer * buffer;
+                struct buffer  * buffer;
+                struct sdu_wpi * sdu_wpi;
 
                 buffer = pdu_buffer_get_rw(pdu);
-                sdu = sdu_create_with(buffer);
-                if (!sdu) {
+                sdu_wpi = sdu_wpi_create_with(buffer);
+                if (!sdu_wpi) {
                         receive_data_destroy(tmp);
                         return -1;
                 }
-                if (kfa_sdu_post_to_user_space(tmp->kfa, sdu, tmp->from)) {
+                sdu_wpi->port_id = tmp->from;
+                if (rfifo_push(tmp->rmt->mgmt_sdu_wpi_queue, &sdu_wpi)) {
                         receive_data_destroy(tmp);
                         return -1;
                 }

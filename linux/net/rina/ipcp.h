@@ -170,9 +170,10 @@ struct ipcp_instance_ops {
                                  port_id_t                   id,
                                  struct sdu *                sdu);
 
-        /* Takes the ownership of the passed sdu_wpi */
+        /* Takes the ownership of the passed sdu */
         int (* management_sdu_write)(struct ipcp_instance_data * data,
-                                     struct sdu_wpi *            sdu_wpi);
+                                     port_id_t                   port_id,
+                                     struct sdu *                sdu);
 
         /* Passes the ownership of the sdu_wpi */
         int (* management_sdu_read)(struct ipcp_instance_data * data,

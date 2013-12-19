@@ -48,6 +48,8 @@ struct rmt * rmt_create(struct kfa *            kfa,
 int          rmt_destroy(struct rmt * instance);
 int          rmt_address_set(struct rmt * instance,
                              address_t    address);
+int          rmt_mgmt_sdu_wpi_queue_set(struct rmt *   instance,
+                                        struct rfifo * queue);
 
 /* FIXME: Please check the following APIs */
 

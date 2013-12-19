@@ -154,6 +154,30 @@ int pci_type_set(struct pci * pci, pdu_type_t type)
 }
 EXPORT_SYMBOL(pci_type_set);
 
+int pci_format(struct pci * pci,
+               cep_id_t     src_cep_id,
+               cep_id_t     dst_cep_id,
+               address_t    src_address,
+               address_t    dst_address,
+               seq_num_t    nxt_seq_send,
+               qos_id_t     qos_id,
+               pdu_type_t   type)
+{
+        if (pci_cep_destination_set(pci, src_cep_id) || 
+            pci_cep_source_set(pci, dst_cep_id)      ||
+            pci_destination_set(pci, src_address)    ||
+            pci_source_set(pci, dst_address)         ||
+            pci_nxt_seq_send_set(pci, nxt_seq_send)  ||
+            pci_qos_id_set(pci, qos_id)              ||
+            pci_type_set(pci, type)) {
+                return -1;
+        }
+
+        return 0;        
+}
+EXPORT_SYMBOL(pci_format);
+
+
 static struct pci * pci_create_from_gfp(gfp_t        flags,
                                         const void * data)
 {

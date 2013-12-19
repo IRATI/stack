@@ -61,6 +61,7 @@ struct ipcp_instance_data {
         struct efcp_container * efcpc;
         struct rmt *            rmt;
         address_t               address;
+        struct rfifo *          mgmt_sdu_wpi_ready;
 };
 
 enum normal_flow_state {
@@ -375,24 +376,94 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 
         efcp_container_set_dt_cons(dt_cons, data->efcpc);
 
+        data->mgmt_sdu_wpi_ready = rfifo_create();
+        if (!data->mgmt_sdu_wpi_ready) {
+                LOG_ERR("Could not create MGMT SDUs queue");
+                return -1;
+        }
+        if (rmt_mgmt_sdu_wpi_queue_set(data->rmt, data->mgmt_sdu_wpi_ready)){
+                rfifo_destroy(data->mgmt_sdu_wpi_ready, sdu_wpi_destructor);
+                return -1;
+        }
+
         return 0;
 }
 
 static int normal_management_sdu_read(struct ipcp_instance_data * data,
-                                      struct sdu_wpi **            sdu_wpi)
+                                      struct sdu_wpi **           sdu_wpi)
 {
+
         LOG_DBG("Trying to read mgmt SDU from IPC Process %d", data->id);
-        LOG_MISSING;
+        
+        sdu_wpi = rfifo_pop(data->mgmt_sdu_wpi_ready);
+        if (!sdu_wpi) {
+                LOG_ERR("There is not enough data in the management queue");
+                return -1;
+        }
+
         return 0;
 }
 
 static int normal_management_sdu_write(struct ipcp_instance_data * data,
-                                       struct sdu_wpi *            sdu_wpi)
+                                       port_id_t                   port_id,
+                                       struct sdu *                sdu)
 {
+        struct pci *  pci;
+        struct pdu *  pdu;
+        address_t     dst_address;
+
         LOG_DBG("Passing SDU to be written to N-1 port %d to IPC Process %d"
-                , sdu_wpi->port_id, data->id);
-        LOG_MISSING;
+                , port_id, data->id);
+
+        if (!sdu) {
+                LOG_ERR("No data passed, bailing out");
+                return -1;
+        }
+
+        dst_address = 0; /*GET FROM PFT */
+
+        pci = pci_create();
+        if (!pci)
+                return -1;
+
+        if (pci_format(pci,
+                       0,
+                       0,
+                       data->address,
+                       dst_address,
+                       0,
+                       0,
+                       PDU_TYPE_MGMT)) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        pdu = pdu_create();
+        if (!pdu) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (pdu_buffer_set(pdu, sdu_buffer_rw(sdu))) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (pdu_pci_set(pdu, pci)) {
+                pci_destroy(pci);
+                return -1;
+        }
+
+        /* Give the data to RMT now ! */
+        if (rmt_send(data->rmt,
+                     pci_destination(pci),
+                     pci_cep_destination(pci),
+                     pdu)) {
+                LOG_ERR("Could not send to RMT");
+                return -1;
+        }       
         return 0;
+
 }
 
 /*  FIXME: register ops */
@@ -543,6 +614,9 @@ static int normal_destroy(struct ipcp_factory_data * data,
 
         if (tmp->info->name)
                 name_destroy(tmp->info->name);
+
+        if (tmp->mgmt_sdu_wpi_ready)
+                rfifo_destroy(tmp->mgmt_sdu_wpi_ready, sdu_wpi_destructor);
 
         efcp_container_destroy(tmp->efcpc);
         rmt_destroy(tmp->rmt);

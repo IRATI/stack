@@ -82,6 +82,14 @@ int                   pci_nxt_seq_send_set(struct pci * pci,
 int                   pci_qos_id_set(struct pci * pci,
                                      qos_id_t   qos_id);
 int                   pci_type_set(struct pci * pci, pdu_type_t type);
+int                   pci_format(struct pci * pci,
+                                 cep_id_t     src_cep_id,
+                                 cep_id_t     dst_cep_id,
+                                 address_t    src_address,
+                                 address_t    dst_address,
+                                 seq_num_t    nxt_seq_send,
+                                 qos_id_t     qos_id,
+                                 pdu_type_t   type);
 
 struct pci *          pci_dup(const struct pci * pci);
 struct pci *          pci_dup_ni(const struct pci * pci);
