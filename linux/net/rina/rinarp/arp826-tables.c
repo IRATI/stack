@@ -450,7 +450,7 @@ int tbl_remove(struct table *             instance,
         return -1;
 }
 
-static spinlock_t    tables_lock;
+static DEFINE_SPINLOCK(tables_lock);
 static struct tmap * tables = NULL;
 
 struct table * tbls_find(struct net_device * device, uint16_t ptype)

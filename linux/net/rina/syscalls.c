@@ -249,7 +249,7 @@ SYSCALL_DEFINE3(sdu_write,
         CALL_DEFAULT_PERSONALITY(retval, sdu_write, id, sdu);
         if (retval) {
                 SYSCALL_DUMP_EXIT;
-                sdu_destroy(sdu);
+                /* NOTE: Do not destroy SDU, ownership isn't our anymore */
                 return -EFAULT;
         }
 
@@ -352,9 +352,9 @@ SYSCALL_DEFINE4(management_sdu_write,
                 const void __user *,        buffer,
                 size_t,                     size)
 {
-        ssize_t             retval;
-        struct sdu_wpi *    sdu_wpi;
-        struct buffer *     tmp_buffer;
+        ssize_t          retval;
+        struct sdu_wpi * sdu_wpi;
+        struct buffer *  tmp_buffer;
 
         SYSCALL_DUMP_ENTER;
 
@@ -396,7 +396,7 @@ SYSCALL_DEFINE4(management_sdu_write,
         CALL_DEFAULT_PERSONALITY(retval, management_sdu_write, id, sdu_wpi);
         if (retval) {
                 SYSCALL_DUMP_EXIT;
-                sdu_wpi_destroy(sdu_wpi);
+                /* NOTE: Do not destroy SDU, ownership isn't our anymore */
                 return -EFAULT;
         }
 

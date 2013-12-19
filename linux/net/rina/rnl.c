@@ -175,6 +175,7 @@ static struct genl_ops nl_ops[] = {
         DECL_NL_OP(RINA_C_RMT_DUMP_FT_REQUEST),
         DECL_NL_OP(RINA_C_RMT_DUMP_FT_REPLY),
         DECL_NL_OP(RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION),
+        DECL_NL_OP(RINA_C_IPCM_IPC_MANAGER_PRESENT),
         DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_REQUEST),
         DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_RESPONSE),
         DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_ARRIVED),
@@ -391,8 +392,6 @@ static int netlink_notify_callback(struct notifier_block * nb,
 
         port = rnl_get_ipc_manager_port();
         if (port) {
-                LOG_DBG("IPC Manager port: %u", port);
-
                 /* Check if the IPC Manager is the process that died */
                 if (port == notify->portid) {
                         rnl_set_ipc_manager_port(0);

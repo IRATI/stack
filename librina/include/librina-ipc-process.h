@@ -745,6 +745,21 @@ public:
 };
 
 /**
+ * FIXME: Quick hack to get multiple parameters back
+ */
+class ReadManagementSDUResult {
+        int bytesRead;
+        int portId;
+
+public:
+        ReadManagementSDUResult();
+        int getBytesRead() const;
+        void setBytesRead(int bytesRead);
+        int getPortId() const;
+        void setPortId(int portId);
+};
+
+/**
  * Abstraction of the data transfer and data transfer control parts of the
  * IPC Process, which are implemented in the Kernel. This class allows the
  * IPC Process Daemon to communicate with its components in the kernel
@@ -855,11 +870,11 @@ public:
          *
          * @param sdu A buffer to store the SDU data
          * @param maxBytes The maximum number of bytes to read
-         * @param portId The portId from where the SDU has been read
-         * @return int The number of bytes read
+         * @return int The number of bytes read and the portId where they have
+         * been read from
          * @throws ReadSDUException
          */
-        int readManagementSDU(void * sdu, int maxBytes, int * portId)
+        ReadManagementSDUResult readManagementSDU(void * sdu, int maxBytes)
                 throw (ReadSDUException);
 };
 

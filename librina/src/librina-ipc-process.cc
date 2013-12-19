@@ -732,6 +732,29 @@ void PDUForwardingTableEntry::setQosId(unsigned int qosId) {
         this->qosId = qosId;
 }
 
+
+/* CLASS READ MANAGEMENT SDU RESULT */
+ReadManagementSDUResult::ReadManagementSDUResult() {
+        bytesRead = 0;
+        portId = 0;
+}
+
+int ReadManagementSDUResult::getBytesRead() const {
+        return bytesRead;
+}
+
+void ReadManagementSDUResult::setBytesRead(int bytesRead) {
+        this->bytesRead = bytesRead;
+}
+
+int ReadManagementSDUResult::getPortId() const {
+        return portId;
+}
+
+void ReadManagementSDUResult::setPortId(int portId) {
+        this->portId = portId;
+}
+
 /* CLASS KERNEL IPC PROCESS */
 void KernelIPCProcess::setIPCProcessId(unsigned short ipcProcessId) {
         this->ipcProcessId = ipcProcessId;
@@ -947,21 +970,28 @@ void KernelIPCProcess::writeManagementSDU(void * sdu, int size, int portId)
 #endif
 }
 
-int KernelIPCProcess::readManagementSDU(void * sdu, int maxBytes, int * portId)
+ReadManagementSDUResult KernelIPCProcess::readManagementSDU(void * sdu,
+                int maxBytes)
                 throw (ReadSDUException) {
+        ReadManagementSDUResult readResult;
+
 #if STUB_API
         unsigned char buffer[] = { 0, 23, 43, 32, 45, 23, 78 };
         sdu = buffer;
-        *portId = 14;
-        return 7;
+        readResult.setPortId(14);
+        readResult.setBytesRead(7);
+        return readResult;
 #else
-        int result = syscallReadManagementSDU(ipcProcessId, sdu, portId,
+        int portId = 0;
+        int result = syscallReadManagementSDU(ipcProcessId, sdu, &portId,
                         maxBytes);
         if (result < 0){
                 throw ReadSDUException();
         }
 
-        return result;
+        readResult.setPortId(portId);
+        readResult.setBytesRead(result);
+        return readResult;
 #endif
 }
 
