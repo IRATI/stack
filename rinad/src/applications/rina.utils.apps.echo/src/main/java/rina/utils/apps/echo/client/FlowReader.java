@@ -74,12 +74,17 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 					stop();
 				}
 			}catch(Exception ex){
-				log.error("Problems reading SDU from flow "+flow.getPortId());
-				stop();
+				if (!isStopped()) {
+					log.error("Problems reading SDU from flow "+flow.getPortId());
+					stop();
+				}
 			}
 		}
 		
-		terminateReader();
+		if (!isStopped()) {
+			terminateReader();
+		}
+		
 		System.exit(0);
 	}
 	
