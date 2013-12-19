@@ -368,7 +368,11 @@ enum IPCEventType {
 	IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
 	QUERY_RIB_RESPONSE_EVENT,
 	IPC_PROCESS_DAEMON_INITIALIZED_EVENT,
-	TIMER_EXPIRED_EVENT
+	TIMER_EXPIRED_EVENT,
+	IPC_PROCESS_CREATE_CONNECTION_RESPONSE,
+	IPC_PROCESS_UPDATE_CONNECTION_RESPONSE,
+	IPC_PROCESS_CREATE_CONNECTION_RESULT,
+	IPC_PROCESS_DESTROY_CONNECTION_RESULT
 };
 
 /**
@@ -438,6 +442,9 @@ class FlowRequestEvent: public IPCEvent {
 	/** 0 if it is an application, or the ID of the IPC Process otherwise */
 	int flowRequestorIpcProcessId;
 
+	/** the ID of the IPC Process that will provide the flow*/
+	unsigned short ipcProcessId;
+
 public:
 	FlowRequestEvent(const FlowSpecification& flowSpecification,
 			bool localRequest,
@@ -451,7 +458,7 @@ public:
 			const ApplicationProcessNamingInformation& localApplicationName,
 			const ApplicationProcessNamingInformation& remoteApplicationName,
 			const ApplicationProcessNamingInformation& DIFName,
-			int flowRequestorIpcProcessId,
+			unsigned short ipcProcessId,
 			unsigned int sequenceNumber);
 	int getPortId() const;
 	bool isLocalRequest() const;
@@ -462,6 +469,7 @@ public:
 	const ApplicationProcessNamingInformation& getLocalApplicationName() const;
 	const ApplicationProcessNamingInformation& getRemoteApplicationName() const;
 	int getFlowRequestorIPCProcessId() const;
+	unsigned short getIPCProcessId() const;
 };
 
 /**
@@ -655,7 +663,6 @@ public:
                         int flowAcceptorIpcProcessId,
                         unsigned int sequenceNumber);
         bool isNotifySource() const;
-        int getPortId() const;
         int getFlowAcceptorIpcProcessId() const;
 };
 

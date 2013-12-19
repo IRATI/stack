@@ -98,14 +98,18 @@ static int default_sdu_read(struct personality_data * data,
 }
 
 static int default_allocate_port(struct personality_data * data,
-                                 ipc_process_id_t          pid,
+                                 ipc_process_id_t          ipc_id,
                                  bool                      to_app)
 {
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kfa_flow_create(data->kfa, pid, to_app);
+        /*
+         * FIXME this is what should be used later on
+         * return kfa_port_id_reserve(data->kfa, ipc_id, to_app);
+         */
+        return kfa_flow_create(data->kfa, ipc_id, to_app);
 }
 
 static int default_deallocate_port(struct personality_data * data,
@@ -115,7 +119,33 @@ static int default_deallocate_port(struct personality_data * data,
 
         LOG_DBG("Calling wrapped function");
 
+        /*
+         * FIXME this is what should be used later on
+         * return kfa_port_id_release(data->kfa, port_id);
+         */
         return kfa_flow_deallocate(data->kfa, port_id);
+}
+
+static int default_management_sdu_write(struct personality_data * data,
+                                        ipc_process_id_t          id,
+                                        struct sdu_wpi *          sdu_wpi)
+{
+        if (!is_personality_ok(data)) return -1;
+
+        LOG_DBG("Calling wrapped function");
+
+        return kipcm_management_sdu_write(data->kipcm, id, sdu_wpi);
+}
+
+static int default_management_sdu_read(struct personality_data * data,
+                                       ipc_process_id_t          id,
+                                       struct sdu_wpi **         sdu_wpi)
+{
+        if (!is_personality_ok(data)) return -1;
+
+        LOG_DBG("Calling wrapped function");
+
+        return kipcm_management_sdu_read(data->kipcm, id, sdu_wpi);
 }
 
 /* FIXME: To be removed ABSOLUTELY */
@@ -173,15 +203,6 @@ static int default_init(struct kobject *          parent,
 
         LOG_DBG("Initializing default personality");
 
-        LOG_DBG("Initializing KFA");
-        data->kfa = kfa_create();
-        if (!data->kfa) {
-                if (default_fini(data)) {
-                        LOG_CRIT("The system might become unstable ...");
-                        return -1;
-                }
-        }
-
         LOG_DBG("Initializing RNL");
         data->nlset = rnl_set_create(id);
         if (!data->nlset) {
@@ -200,6 +221,8 @@ static int default_init(struct kobject *          parent,
                 }
         }
 
+        data->kfa = kipcm_kfa(data->kipcm);
+
         /* FIXME: To be removed */
         default_kipcm = data->kipcm;
 
@@ -209,14 +232,16 @@ static int default_init(struct kobject *          parent,
 }
 
 struct personality_ops ops = {
-        .init               = default_init,
-        .fini               = default_fini,
-        .ipc_create         = default_ipc_create,
-        .ipc_destroy        = default_ipc_destroy,
-        .sdu_read           = default_sdu_read,
-        .sdu_write          = default_sdu_write,
-        .allocate_port      = default_allocate_port,
-        .deallocate_port    = default_deallocate_port,
+        .init                 = default_init,
+        .fini                 = default_fini,
+        .ipc_create           = default_ipc_create,
+        .ipc_destroy          = default_ipc_destroy,
+        .sdu_read             = default_sdu_read,
+        .sdu_write            = default_sdu_write,
+        .allocate_port        = default_allocate_port,
+        .deallocate_port      = default_deallocate_port,
+        .management_sdu_read  = default_management_sdu_read,
+        .management_sdu_write = default_management_sdu_write
 };
 
 static struct personality_data data;

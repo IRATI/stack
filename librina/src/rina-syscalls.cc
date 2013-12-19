@@ -26,10 +26,14 @@
 //#undef _ASM_X86_UNISTD_64_H
 //#include "/usr/include/linux/include/asm-x86/unistd_64.h"
 
-#define SYS_createIPCProcess  __NR_ipc_create
-#define SYS_destroyIPCProcess __NR_ipc_destroy
-#define SYS_readSDU           __NR_sdu_read
-#define SYS_writeSDU          __NR_sdu_write
+#define SYS_createIPCProcess   __NR_ipc_create
+#define SYS_destroyIPCProcess  __NR_ipc_destroy
+#define SYS_readSDU            __NR_sdu_read
+#define SYS_writeSDU           __NR_sdu_write
+#define SYS_allocatePortId     __NR_allocate_port
+#define SYS_deallocatePortId   __NR_deallocate_port
+#define SYS_readManagementSDU  __NR_management_sdu_read
+#define SYS_writeManagementSDU __NR_management_sdu_write
 
 #if !defined(__NR_ipc_create)
 #error No ipc_create syscall defined
@@ -42,6 +46,18 @@
 #endif
 #if !defined(__NR_sdu_write)
 #error No sdu_write syscall defined
+#endif
+#if !defined(__NR_allocate_port)
+#error No allocate_port syscall defined
+#endif
+#if !defined(__NR_deallocate_port)
+#error No deallocate_port syscall defined
+#endif
+#if !defined(__NR_management_sdu_read)
+#error No managment_sdu_read syscall defined
+#endif
+#if !defined(__NR_management_sdu_write)
+#error No management_sdu_write syscall defined
 #endif
 
 #include <sys/syscall.h>
@@ -91,7 +107,42 @@ namespace rina {
                 return result;
         }
 
-        int syscallDestroyIPCProcess(unsigned int ipcProcessId)
+        int syscallWriteManagementSDU(unsigned short ipcProcessId, void * sdu,
+                                int portId, int size)
+        {
+                int result;
+
+                DUMP_SYSCALL("SYS_writeManagementSDU", SYS_writeManagementSDU);
+
+                result = syscall(SYS_writeManagementSDU, ipcProcessId, portId,
+                                sdu, size);
+                if (result < 0) {
+                        LOG_ERR("Syscall write SDU failed: %d", result);
+                }
+
+                return result;
+        }
+
+        int syscallReadManagementSDU(int ipcProcessId, void * sdu, int * portId,
+                                int maxBytes)
+        {
+                int result;
+                struct sdu_wpi_t * sdu_wpi = 0;
+
+                DUMP_SYSCALL("SYS_readManagementSDU", SYS_readManagementSDU);
+
+                result = syscall(SYS_readManagementSDU, ipcProcessId, sdu_wpi, maxBytes);
+                if (result < 0) {
+                        LOG_ERR("Syscall read SDU failed: %d", result);
+                } else {
+                        sdu = sdu_wpi->sdu;
+                        *portId = sdu_wpi->port_id;
+                }
+
+                return result;
+        }
+
+        int syscallDestroyIPCProcess(unsigned short ipcProcessId)
         {
                 int result;
 
@@ -128,4 +179,44 @@ namespace rina {
                 return result;
         }
 
+        int syscallAllocatePortId(unsigned short ipcProcessId, bool toApp)
+        {
+                int result;
+                int toAppForKernel;
+
+                DUMP_SYSCALL("SYS_allocatePortId", SYS_allocatePortId);
+
+                if (toApp) {
+                        toAppForKernel = 1;
+                } else {
+                        toAppForKernel = 0;
+                }
+
+                result = syscall(SYS_allocatePortId,
+                                ipcProcessId,
+                                toAppForKernel);
+
+                if (result < 0) {
+                        LOG_ERR("Syscall allocate port id failed: %d", result);
+                }
+
+                return result;
+
+        }
+
+        int syscallDeallocatePortId(int portId)
+        {
+                int result;
+
+                DUMP_SYSCALL("SYS_deallocatePortId", SYS_deallocatePortId);
+
+                result = syscall(SYS_deallocatePortId, portId);
+
+                if (result < 0) {
+                        LOG_ERR("Syscall deallocate port id failed: %d", result);
+                }
+
+                return result;
+
+        }
 }

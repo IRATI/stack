@@ -617,15 +617,16 @@ FlowRequestEvent::FlowRequestEvent(
 	this->remoteApplicationName = remoteApplicationName;
 	this->flowRequestorIpcProcessId = flowRequestorIpcProcessId;
 	this->portId = 0;
+	this->ipcProcessId = 0;
 }
 
 FlowRequestEvent::FlowRequestEvent(int portId,
 		const FlowSpecification& flowSpecification,
 		bool localRequest,
 		const ApplicationProcessNamingInformation& localApplicationName,
-		const ApplicationProcessNamingInformation& destApplicationName,
+		const ApplicationProcessNamingInformation& remoteApplicationName,
 		const ApplicationProcessNamingInformation& DIFName,
-		int flowRequestorIpcProcessId,
+		unsigned short ipcProcessId,
 		unsigned int sequenceNumber) :
 		IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
 				sequenceNumber) {
@@ -634,8 +635,9 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 	this->localApplicationName = localApplicationName;
 	this->remoteApplicationName = remoteApplicationName;
 	this->DIFName = DIFName;
-	this->flowRequestorIpcProcessId = flowRequestorIpcProcessId;
+	this->flowRequestorIpcProcessId = 0;
 	this->portId = portId;
+	this->ipcProcessId = ipcProcessId;
 }
 
 void FlowRequestEvent::setPortId(int portId){
@@ -676,6 +678,10 @@ const ApplicationProcessNamingInformation&
 
 int FlowRequestEvent::getFlowRequestorIPCProcessId() const {
         return flowRequestorIpcProcessId;
+}
+
+unsigned short FlowRequestEvent::getIPCProcessId() const {
+        return ipcProcessId;
 }
 
 /* CLASS FLOW DEALLOCATE REQUEST EVENT */
@@ -1373,6 +1379,8 @@ RIBObjectValue RIBObject::getValue() const {
 void RIBObject::setValue(RIBObjectValue value) {
 	this->value = value;
 }
+
+/* INITIALIZATION OPERATIONS */
 
 bool librinaInitialized = false;
 Lockable librinaInitializationLock;

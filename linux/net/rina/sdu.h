@@ -36,7 +36,16 @@ struct sdu {
         struct buffer * buffer;
 };
 
-/* NOTE: The following function take the ownership of the buffer passed */
+/*
+ * Represents and SDU with the port-id the SDU is to be written to
+ * or has been read from
+ */
+struct sdu_wpi {
+        struct sdu * sdu;
+        port_id_t    port_id;
+};
+
+/* NOTE: The following functions take the ownership of the buffer passed */
 struct sdu *          sdu_create_with(struct buffer * buffer);
 struct sdu *          sdu_create_with_ni(struct buffer * buffer);
 int                   sdu_destroy(struct sdu * s);
@@ -47,5 +56,10 @@ struct sdu *          sdu_dup_ni(const struct sdu * sdu);
 bool                  sdu_is_ok(const struct sdu * sdu);
 struct sdu *          sdu_protect(struct sdu * sdu);
 struct sdu *          sdu_unprotect(struct sdu * sdu);
+
+struct sdu_wpi *      sdu_wpi_create_with(struct buffer * buffer);
+struct sdu_wpi *      sdu_wpi_create_with_ni(struct buffer * buffer);
+int                   sdu_wpi_destroy(struct sdu_wpi * s);
+bool                  sdu_wpi_is_ok(const struct sdu_wpi * s);
 
 #endif

@@ -812,6 +812,148 @@ int putIpcpConnectionCreateRequestMessageObject(nl_msg* netlinkMessage,
 IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
                 nlmsghdr *hdr);
 
+/* IpcpConnectionCreateResponseMessage CLASS */
+enum IpcpConnectionCreateResponseMessageAttributes {
+        ICCREM_ATTR_PORT_ID = 1,
+        ICCREM_ATTR_SRC_CEP_ID,
+        __ICCREM_ATTR_MAX,
+};
+
+#define ICCREM_ATTR_MAX (__ICCREM_ATTR_MAX -1)
+
+int putIpcpConnectionCreateResponseMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionCreateResponseMessage& object);
+
+IpcpConnectionCreateResponseMessage * parseIpcpConnectionCreateResponseMessage(
+                nlmsghdr *hdr);
+
+/* IpcpConnectionUpdateRequestMessage CLASS*/
+enum IpcpConnectionUpdateRequestMessageAttributes {
+        ICURM_ATTR_PORT_ID = 1,
+        ICURM_ATTR_SRC_CEP_ID,
+        ICURM_ATTR_DEST_CEP_ID,
+        ICURM_ATTR_FLOW_USER_IPC_PROCESS_ID,
+        __ICURM_ATTR_MAX,
+};
+
+#define ICURM_ATTR_MAX (__ICURM_ATTR_MAX -1)
+
+int putIpcpConnectionUpdateRequestMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionUpdateRequestMessage& object);
+
+IpcpConnectionUpdateRequestMessage * parseIpcpConnectionUpdateRequestMessage(
+                nlmsghdr *hdr);
+
+/* IpcpConnectionUpdateResultMessage CLASS */
+enum IpcpConnectionUpdateResultMessageAttributes {
+        ICUREM_ATTR_PORT_ID = 1,
+        ICUREM_ATTR_RESULT,
+        __ICUREM_ATTR_MAX,
+};
+
+#define ICUREM_ATTR_MAX (__ICUREM_ATTR_MAX -1)
+
+int putIpcpConnectionUpdateResultMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionUpdateResultMessage& object);
+
+IpcpConnectionUpdateResultMessage * parseIpcpConnectionUpdateResultMessage(
+                nlmsghdr *hdr);
+
+/* IpcpConnectionCreateArrivedMessage CLASS*/
+enum IpcpConnectionCreateArrivedMessageAttributes {
+        ICCAM_ATTR_PORT_ID = 1,
+        ICCAM_ATTR_SRC_ADDRESS,
+        ICCAM_ATTR_DEST_ADDRESS,
+        ICCAM_ATTR_DEST_CEP_ID,
+        ICCAM_ATTR_QOS_ID,
+        ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID,
+        __ICCAM_ATTR_MAX,
+};
+
+#define ICCAM_ATTR_MAX (__ICCAM_ATTR_MAX -1)
+
+int putIpcpConnectionCreateArrivedMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionCreateArrivedMessage& object);
+
+IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
+                nlmsghdr *hdr);
+
+/* IpcpConnectionCreateResultMessage CLASS */
+enum IpcpConnectionCreateResultMessageAttributes {
+        ICCRES_ATTR_PORT_ID = 1,
+        ICCRES_ATTR_SRC_CEP_ID,
+        ICCRES_ATTR_DEST_CEP_ID,
+        __ICCRES_ATTR_MAX,
+};
+
+#define ICCRES_ATTR_MAX (__ICCRES_ATTR_MAX -1)
+
+int putIpcpConnectionCreateResultMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionCreateResultMessage& object);
+
+IpcpConnectionCreateResultMessage * parseIpcpConnectionCreateResultMessage(
+                nlmsghdr *hdr);
+
+/* IpcpConnectionDestroyRequestMessage CLASS */
+enum IpcpConnectionDestroyRequestMessageAttributes {
+        ICDRM_ATTR_PORT_ID = 1,
+        ICDRM_ATTR_CEP_ID,
+        __ICDRM_ATTR_MAX,
+};
+
+#define ICDRM_ATTR_MAX (__ICDRM_ATTR_MAX -1)
+
+int putIpcpConnectionDestroyRequestMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionDestroyRequestMessage& object);
+
+IpcpConnectionDestroyRequestMessage * parseIpcpConnectionDestroyRequestMessage(
+                nlmsghdr *hdr);
+
+/* IpcpConnectionDestroyResultMessage CLASS */
+enum IpcpConnectionDestroyResultMessageAttributes {
+        ICDREM_ATTR_PORT_ID = 1,
+        ICDREM_ATTR_RESULT,
+        __ICDREM_ATTR_MAX,
+};
+
+#define ICDREM_ATTR_MAX (__ICDREM_ATTR_MAX -1)
+
+int putIpcpConnectionDestroyResultMessageObject(nl_msg* netlinkMessage,
+                const IpcpConnectionDestroyResultMessage& object);
+
+IpcpConnectionDestroyResultMessage * parseIpcpConnectionDestroyResultMessage(
+                nlmsghdr *hdr);
+
+/* PDUForwardingTableEntry CLASS*/
+enum PDUForwardingTableEntryAttributes {
+        PFTE_ATTR_ADDRESS = 1,
+        PFTE_ATTR_QOS_ID,
+        PFTE_ATTR_PORT_ID,
+        __PFTE_ATTR_MAX,
+};
+
+#define PFTE_ATTR_MAX (__PFTE_ATTR_MAX -1)
+
+int putPDUForwardingTableEntryObject(nl_msg* netlinkMessage,
+                const PDUForwardingTableEntry& object);
+
+PDUForwardingTableEntry * parsePDUForwardingTableEntry(nlattr *nested);
+
+/* RmtModifyPDUFTEntriesRequestMessage CLASS */
+enum RmtModifyPDUFTEntriesRequestMessageAttributes {
+        RMPFTE_ATTR_ENTRIES= 1,
+        RMPFTE_ATTR_MODE,
+        __RMPFTE_ATTR_MAX,
+};
+
+#define RMPFTE_ATTR_MAX (__RMPFTE_ATTR_MAX -1)
+
+int putRmtModifyPDUFTEntriesRequestObject(nl_msg* netlinkMessage,
+                const RmtModifyPDUFTEntriesRequestMessage& object);
+
+RmtModifyPDUFTEntriesRequestMessage * parseRmtModifyPDUFTEntriesRequestMessage(
+                nlmsghdr *hdr);
+
 }
 
 

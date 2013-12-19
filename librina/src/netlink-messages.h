@@ -18,6 +18,7 @@
 #define LIBRINA_NETLINK_MESSAGES_H
 
 #include "librina-common.h"
+#include "librina-ipc-process.h"
 
 namespace rina{
 
@@ -46,8 +47,7 @@ enum RINANetlinkOperationCode{
 	RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE, /* IPC Process -> IPC Manager */
 	RINA_C_IPCM_QUERY_RIB_REQUEST, /* IPC Manager -> IPC Process */
 	RINA_C_IPCM_QUERY_RIB_RESPONSE, /* IPC Process -> IPC Manager */
-	RINA_C_RMT_ADD_FTE_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
-	RINA_C_RMT_DELETE_FTE_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
+	RINA_C_RMT_MODIFY_FTE_REQUEST, /* IPC Process (user space) -> Kernel IPC Process (kernel) */
 	RINA_C_RMT_DUMP_FT_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
 	RINA_C_RMT_DUMP_FT_REPLY, /* TODO RMT (kernel) -> IPC Process (user space) */
 	RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION, /* Kernel (NL layer) -> IPC Manager */
@@ -242,7 +242,7 @@ public:
 };
 
 /**
- * Allocate flow request from a remote application, IPC Process -> IPC Manager
+ * Allocate flow request from a remote application, IPC Manager -> Application
  */
 class AppAllocateFlowRequestArrivedMessage: public BaseNetlinkMessage {
 
@@ -1046,8 +1046,8 @@ public:
 };
 
 /**
- * IPC Process -> IPC Manager. Sent after the IPC Process daemon has initialized
- * the NL infrastructure and is ready to receive messages.
+ * IPC Process Daemon -> Kernel IPC Process. Request the creation of a
+ * connection to the EFCP module in the kernel.
  */
 class IpcpConnectionCreateRequestMessage: public BaseNetlinkMessage {
         
@@ -1076,7 +1076,224 @@ public:
         IPCEvent* toIPCEvent();
 };
 
+/**
+ * Kernel IPC Process -> IPC Process Daemon. Report about the result of a
+ * connection create operation
+ */
+class IpcpConnectionCreateResponseMessage: public BaseNetlinkMessage {
 
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /**
+         * The source connection-endpoint id if the connection was created
+         * successfully, or a negative number indicating an error code in
+         * case of failure
+         */
+        int cepId;
+
+public:
+        IpcpConnectionCreateResponseMessage();
+        int getCepId() const;
+        void setCepId(int cepId);
+        int getPortId() const;
+        void setPortId(int portId);
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * IPC Process Daemon -> Kernel IPC Process. Inform the kernel IPC Process
+ * the destination cep-id of a connection, as well as who will be using it
+ * (IPC Process vs. application)
+ */
+class IpcpConnectionUpdateRequestMessage: public BaseNetlinkMessage {
+
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /** The connection's source CEP-id */
+        int sourceCepId;
+
+        /** The connection's destination CEP-ids */
+        int destinationCepId;
+
+        /**
+         * The id of the IPC Process that will be using the flow
+         * (0 if it is an application)
+         */
+        unsigned short flowUserIpcProcessId;
+
+public:
+        IpcpConnectionUpdateRequestMessage();
+        int getDestinationCepId() const;
+        void setDestinationCepId(int destinationCepId);
+        unsigned short getFlowUserIpcProcessId() const;
+        void setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId);
+        int getPortId() const;
+        void setPortId(int portId);
+        int getSourceCepId() const;
+        void setSourceCepId(int sourceCepId);
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * Kernel IPC Process -> IPC Process Daemon. Report about the result of a
+ * connection update operation
+ */
+class IpcpConnectionUpdateResultMessage:
+                public BaseNetlinkResponseMessage {
+
+        /** The port-id of the flow associated to this connection */
+        int portId;
+
+public:
+        IpcpConnectionUpdateResultMessage();
+        int getPortId() const;
+        void setPortId(int portId);
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * IPC Process Daemon -> Kernel IPC Process. Request the creation of a
+ * connection to the EFCP module in the kernel (receiving side of the
+ * flow allocation process)
+ */
+class IpcpConnectionCreateArrivedMessage: public BaseNetlinkMessage {
+
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /** The source address of the connection (the IPC Process address) */
+        unsigned int sourceAddress;
+
+        /** The connection's destination IPC Process address */
+        unsigned int destAddress;
+
+        /** The qos-id of the connection */
+        unsigned int qosId;
+
+        /** The connection's source CEP-id */
+        int destCepId;
+
+        /**
+         * The id of the IPC Process that will be using the flow
+         * (0 if it is an application)
+         */
+        unsigned short flowUserIpcProcessId;
+
+public:
+        IpcpConnectionCreateArrivedMessage();
+        unsigned int getDestAddress() const;
+        void setDestAddress(unsigned int destAddress);
+        int getPortId() const;
+        void setPortId(int portId);
+        unsigned int getQosId() const;
+        void setQosId(unsigned int qosId);
+        unsigned int getSourceAddress() const;
+        void setSourceAddress(unsigned int sourceAddress);
+        unsigned short getFlowUserIpcProcessId() const;
+        void setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId);
+        int getDestCepId() const;
+        void setDestCepId(int sourceCepId);
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * Kernel IPC Process -> IPC Process Daemon. Report about the result of a
+ * connection create arrived operation
+ */
+class IpcpConnectionCreateResultMessage: public BaseNetlinkMessage {
+
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /**
+         * The source connection-endpoint id if the connection was created
+         * successfully, or a negative number indicating an error code in
+         * case of failure
+         */
+        int sourceCepId;
+
+        /** The destination cep-id */
+        int destCepId;
+
+public:
+        IpcpConnectionCreateResultMessage();
+        int getSourceCepId() const;
+        void setSourceCepId(int cepId);
+        int getDestCepId() const;
+        void setDestCepId(int cepId);
+        int getPortId() const;
+        void setPortId(int portId);
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * IPC Process Daemon -> Kernel IPC Process. Request the destruction of a
+ * connection
+ */
+class IpcpConnectionDestroyRequestMessage: public BaseNetlinkMessage {
+
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /**
+         * The identifier of the connection to destroy
+         */
+        int cepId;
+
+public:
+        IpcpConnectionDestroyRequestMessage();
+        int getCepId() const;
+        void setCepId(int cepId);
+        int getPortId() const;
+        void setPortId(int portId);
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * Kernel IPC PRocess -> IPC Process Daemon. Report about the result of
+ * a connection destroy request operation
+ */
+class IpcpConnectionDestroyResultMessage: public BaseNetlinkMessage {
+
+        /** The port-id where the connection will be bound to */
+        int portId;
+
+        /**
+         * The result of the operaiton
+         */
+        int result;
+
+public:
+        IpcpConnectionDestroyResultMessage();
+        int getResult() const;
+        void setResult(int result);
+        int getPortId() const;
+        void setPortId(int portId);
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * IPC Process -> Kernel IPC Process. Add the following entries to the
+ * PDU Forwarding Table.
+ */
+class RmtModifyPDUFTEntriesRequestMessage: public BaseNetlinkMessage {
+        /** The entries to be added */
+        std::list<PDUForwardingTableEntry> entries;
+
+        /** 0 add, 1 remove, 2 flush and add */
+        int mode;
+
+public:
+        RmtModifyPDUFTEntriesRequestMessage();
+        const std::list<PDUForwardingTableEntry>& getEntries() const;
+        void setEntries(const std::list<PDUForwardingTableEntry>& entries);
+        void addEntry(const PDUForwardingTableEntry& entry);
+        int getMode() const;
+        void setMode(int mode);
+        IPCEvent* toIPCEvent();
+};
 
 }
 

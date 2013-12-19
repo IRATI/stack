@@ -137,6 +137,15 @@ public class IPCProcessManager {
 			}
 		}
 		
+		//TODO, remove this. Dirty hack to be able to test flow allocation using a 
+		//single system
+		for (int i=0; i<ipcProcesses.size(); i++) {
+			ipcProcess = ipcProcesses.get(i);
+			if (ipcProcess.getName().getProcessName().equals(difName)) {
+				return ipcProcess;
+			}
+		}
+		
 		throw new Exception("Could not find IPC Process belonging to DIF "+difName);
 	}
 	

@@ -53,6 +53,7 @@ public class WhatevercastNameSetRIBObject extends BaseRIBObject{
 		if (object instanceof WhatevercastName){
 			SimpleSetMemberRIBObject ribObject = new SimpleSetMemberRIBObject(
 					WhatevercastName.WHATEVERCAST_NAME_RIB_OBJECT_CLASS, objectName, (WhatevercastName) object);
+			ribObject.setRIBDaemon(getRIBDaemon());
 			this.addChild(ribObject);
 			getRIBDaemon().addRIBObject(ribObject);
 		}else if (object instanceof WhatevercastName[]){
@@ -64,6 +65,7 @@ public class WhatevercastNameSetRIBObject extends BaseRIBObject{
 				if (!this.hasChild(candidateObjectName)){
 					SimpleSetMemberRIBObject ribObject = new SimpleSetMemberRIBObject(
 							WhatevercastName.WHATEVERCAST_NAME_RIB_OBJECT_CLASS, candidateObjectName, whatevercastNames[i]);
+					ribObject.setRIBDaemon(getRIBDaemon());
 					this.addChild(ribObject);
 					getRIBDaemon().addRIBObject(ribObject);
 				}

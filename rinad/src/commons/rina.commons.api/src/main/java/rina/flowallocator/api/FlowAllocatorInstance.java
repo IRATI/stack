@@ -1,7 +1,13 @@
 package rina.flowallocator.api;
 
+import eu.irati.librina.AllocateFlowResponseEvent;
+import eu.irati.librina.CreateConnectionResponseEvent;
+import eu.irati.librina.CreateConnectionResultEvent;
+import eu.irati.librina.FlowDeallocateRequestEvent;
 import eu.irati.librina.FlowInformation;
+import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCException;
+import eu.irati.librina.UpdateConnectionResponseEvent;
 import rina.cdap.api.message.CDAPMessage;
 
 /**
@@ -25,11 +31,13 @@ public interface FlowAllocatorInstance{
 
 	/**
 	 * Called by the FA to forward an Allocate request to a FAI
-	 * @param request
+	 * @param event
 	 * @param applicationCallback the callback to invoke the application for allocateResponse and any other calls
 	 * @throws IPCException
 	 */
-	public void submitAllocateRequest(FlowInformation request) throws IPCException;
+	public void submitAllocateRequest(FlowRequestEvent event) throws IPCException;
+	
+	public void processCreateConnectionResponseEvent(CreateConnectionResponseEvent event);
 	
 	/**
 	 * Called by the Flow Allocator when an M_CREATE CDAP PDU with a Flow object 
@@ -49,21 +57,24 @@ public interface FlowAllocatorInstance{
 	 * The Create_Response is sent to requesting FAI with the necessary information reflecting the existing flow, 
 	 * or an indication as to why the flow was refused.  
 	 * If the response was negative, the FAI does any necessary housekeeping and terminates.
-	 * @param success
-	 * @param reason
+	 * @param AllocateFlowResponseEvent - the reply from the application
 	 * @throws IPCException
 	 */
-	public void submitAllocateResponse(boolean success, String reason) throws IPCException;
+	public void submitAllocateResponse(AllocateFlowResponseEvent event);
+	
+	public void processCreateConnectionResultEvent(CreateConnectionResultEvent event);
+	
+	public void processUpdateConnectionResponseEvent(UpdateConnectionResponseEvent event);
 	
 	/**
 	 * When a deallocate primitive is invoked, it is passed to the FAI responsible for that port-id.  
 	 * The FAI sends an M_DELETE request CDAP PDU on the Flow object referencing the destination port-id, deletes the local 
 	 * binding between the Application and the DTP-instance and waits for a response.  (Note that 
 	 * the DTP and DTCP if it exists will be deleted automatically after 2MPL)
-	 * @param applicationProcess
+	 * @param the flow deallocate request event
 	 * @throws IPCException
 	 */
-	public void submitDeallocate() throws IPCException;
+	public void submitDeallocate(FlowDeallocateRequestEvent event);
 	 
 	/**
 	 * When this PDU is received by the FAI with this port-id, the FAI invokes a Deallocate.deliver to notify the local Application, 
@@ -71,28 +82,5 @@ public interface FlowAllocatorInstance{
 	 */
 	public void deleteFlowRequestMessageReceived(CDAPMessage requestMessage, int underlyingPortId);
 	
-	/* Deal with local flows (flows between applications from the same system) */
-	
-	/**
-	 * Called when the Flow Allocator receives a request for a local flow
-	 * @param flowInformation
-	 * @param objectName
-	 * @throws IPCException
-	 */
-	public void receivedLocalFlowRequest(FlowInformation flowInformation) throws IPCException;
-	
-	/**
-	 * Called when the Flow Allocator receives a response to a request for a local flow
-	 * @param remotePortId
-	 * @param result
-	 * @param resultReason
-	 * @throws IPCException
-	 */
-	public void receivedLocalFlowResponse(int remotePortId, boolean result, String resultReason) throws IPCException;
-	
-	/**
-	 * Request to deallocate a local flow
-	 * @throws IPCException
-	 */
-	public void receivedDeallocateLocalFlowRequest() throws IPCException;
+	public long getAllocateResponseMessageHandle();
 }

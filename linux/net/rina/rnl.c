@@ -171,12 +171,19 @@ static struct genl_ops nl_ops[] = {
         DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE),
         DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_REQUEST),
         DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_RESPONSE),
-        DECL_NL_OP(RINA_C_RMT_ADD_FTE_REQUEST),
-        DECL_NL_OP(RINA_C_RMT_DELETE_FTE_REQUEST),
+        DECL_NL_OP(RINA_C_RMT_MODIFY_FTE_REQUEST),
         DECL_NL_OP(RINA_C_RMT_DUMP_FT_REQUEST),
         DECL_NL_OP(RINA_C_RMT_DUMP_FT_REPLY),
         DECL_NL_OP(RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION),
-        DECL_NL_OP(RINA_C_IPCM_IPC_MANAGER_PRESENT)
+        DECL_NL_OP(RINA_C_IPCM_IPC_MANAGER_PRESENT),
+        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_REQUEST),
+        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_ARRIVED),
+        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_RESULT),
+        DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_REQUEST),
+        DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_RESULT),
+        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_REQUEST),
+        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_RESULT)
 };
 
 int rnl_handler_register(struct rnl_set *   set,
@@ -385,8 +392,6 @@ static int netlink_notify_callback(struct notifier_block * nb,
 
         port = rnl_get_ipc_manager_port();
         if (port) {
-                LOG_DBG("IPC Manager port: %u", port);
-
                 /* Check if the IPC Manager is the process that died */
                 if (port == notify->portid) {
                         rnl_set_ipc_manager_port(0);
