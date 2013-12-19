@@ -40,6 +40,7 @@ struct rmt {
         struct workqueue_struct * ingress_wq;
         address_t                 address;
         struct rfifo *            mgmt_sdu_wpi_queue;
+        struct rqueue *           queues;
         /* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
 };
 
@@ -79,6 +80,14 @@ struct rmt * rmt_create(struct kfa *            kfa,
         }
 
         tmp->address = address_bad();
+
+        tmp->queues = rqueue_create();
+        if (!tmp->queues) {
+                rwq_destroy(tmp->egress_wq);
+                rwq_destroy(tmp->ingress_wq);
+                rmt_destroy(tmp);
+                return NULL;
+        }
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
         return tmp;
