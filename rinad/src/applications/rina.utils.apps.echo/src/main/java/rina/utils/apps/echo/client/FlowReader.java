@@ -71,6 +71,7 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 					testInformation.setLastSDUReceivedTime(
 							Calendar.getInstance().getTimeInMillis());
 					printStats();
+					stop();
 				}
 			}catch(Exception ex){
 				log.error("Problems reading SDU from flow "+flow.getPortId());
