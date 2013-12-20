@@ -25,6 +25,7 @@
 #include "du.h"
 #include "efcp.h"
 
+struct mgmt_data;
 struct rmt;
 
 /*
@@ -48,12 +49,12 @@ struct rmt * rmt_create(struct kfa *            kfa,
 int          rmt_destroy(struct rmt * instance);
 int          rmt_address_set(struct rmt * instance,
                              address_t    address);
-int          rmt_mgmt_sdu_wpi_queue_set(struct rmt *   instance,
-                                        struct rfifo * queue);
 
 /* FIXME: Please check the following APIs */
 
 /* NOTE: Takes ownership of the passed PDU */
+int          rmt_management_sdu_read(struct rmt *      instance,
+                                     struct sdu_wpi ** sdu_wpi);
 int          rmt_send(struct rmt * instance,
                       address_t    address,
                       cep_id_t     connection_id,

@@ -61,9 +61,7 @@ struct ipcp_instance_data {
         struct efcp_container * efcpc;
         struct rmt *            rmt;
         address_t               address;
-        struct rfifo *          mgmt_sdu_wpi_ready;
-        wait_queue_head_t       wait_mgmt_sdu_queue;
-        spinlock_t              mgmt_lock;
+        struct normal_mgmt *    mgmt;
 };
 
 enum normal_flow_state {
@@ -384,38 +382,9 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 static int normal_management_sdu_read(struct ipcp_instance_data * data,
                                       struct sdu_wpi **           sdu_wpi)
 {
-
-        int retval;
-
         LOG_DBG("Trying to read mgmt SDU from IPC Process %d", data->id);
-        
-        IRQ_BARRIER;
 
-        spin_lock(&data->mgmt_lock);
-
-        while(rfifo_is_empty(data->mgmt_sdu_wpi_ready)) {
-                LOG_DBG("Mgmt read going to sleep...");
-                spin_unlock(&data->mgmt_lock);
-                retval = wait_event_interruptible(data->wait_mgmt_sdu_queue,
-                                                  !rfifo_is_empty(data->mgmt_sdu_wpi_ready));
-
-                if (retval) {
-                        LOG_ERR("Mgmt queue waken up by interruption, bailing out...");
-                         spin_unlock(&data->mgmt_lock);
-                         return retval;
-                }
-        }
-        
-        spin_lock(&data->mgmt_lock);
-        sdu_wpi = rfifo_pop(data->mgmt_sdu_wpi_ready);
-        spin_unlock(&data->mgmt_lock);
-
-        if (!sdu_wpi) {
-                LOG_ERR("There is not enough data in the management queue");
-                return -1;
-        }
-
-        return 0;
+        return rmt_management_sdu_read(data->rmt, sdu_wpi);
 }
 
 static int normal_management_sdu_write(struct ipcp_instance_data * data,
@@ -536,7 +505,8 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         instance->data->info    = rkzalloc(sizeof(struct normal_info *),
                                            GFP_KERNEL);
         if (!instance->data->info) {
-                LOG_ERR("Could not allocate momory for normal ipcp info");
+                LOG_ERR("Could not allocate memory for normal ipcp info");
+                rkfree(instance->data->mgmt); 
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -546,6 +516,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         if (!instance->data->info->name) {
                 LOG_ERR("Failed creation of ipc name");
                 rkfree(instance->data->info);
+                rkfree(instance->data->mgmt); 
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -558,6 +529,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         if (!instance->data->efcpc) {
                 name_destroy(instance->data->info->name);
                 rkfree(instance->data->info);
+                rkfree(instance->data->mgmt); 
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -569,6 +541,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 efcp_container_destroy(instance->data->efcpc);
                 name_destroy(instance->data->info->name);
                 rkfree(instance->data->info);
+                rkfree(instance->data->mgmt); 
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -580,31 +553,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 efcp_container_destroy(instance->data->efcpc);
                 name_destroy(instance->data->info->name);
                 rkfree(instance->data->info);
-                rkfree(instance->data);
-                rkfree(instance);
-                return NULL;
-        }
-
-
-        instance->data->mgmt_sdu_wpi_ready = rfifo_create();
-        if (!instance->data->mgmt_sdu_wpi_ready) {
-                LOG_ERR("Could not create MGMT SDUs queue");
-                rmt_destroy(instance->data->rmt);
-                efcp_container_destroy(instance->data->efcpc);
-                name_destroy(instance->data->info->name);
-                rkfree(instance->data->info);
-                rkfree(instance->data);
-                rkfree(instance);
-                return NULL;
-        }
-
-        if (rmt_mgmt_sdu_wpi_queue_set(instance->data->rmt,
-                                       instance->data->mgmt_sdu_wpi_ready)) {
-                rfifo_destroy(instance->data->mgmt_sdu_wpi_ready, sdu_wpi_destructor);
-                rmt_destroy(instance->data->rmt);
-                efcp_container_destroy(instance->data->efcpc);
-                name_destroy(instance->data->info->name);
-                rkfree(instance->data->info);
+                rkfree(instance->data->mgmt); 
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -615,7 +564,6 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         INIT_LIST_HEAD(&instance->data->flows);
         INIT_LIST_HEAD(&instance->data->list);
         list_add(&(instance->data->list), &(data->instances));
-        init_waitqueue_head(&instance->data->wait_mgmt_sdu_queue);
         LOG_DBG("Normal IPC process instance created and added to the list");
 
         return instance;
@@ -655,9 +603,6 @@ static int normal_destroy(struct ipcp_factory_data * data,
 
         if (tmp->info->name)
                 name_destroy(tmp->info->name);
-
-        if (tmp->mgmt_sdu_wpi_ready)
-                rfifo_destroy(tmp->mgmt_sdu_wpi_ready, sdu_wpi_destructor);
 
         efcp_container_destroy(tmp->efcpc);
         rmt_destroy(tmp->rmt);

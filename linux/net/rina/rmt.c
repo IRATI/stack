@@ -5,6 +5,12 @@
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
+ * RMT (Relaying and Multiplexing Task)
+ *
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -21,6 +27,8 @@
  */
 
 #include <linux/export.h>
+#include <linux/sched.h>
+#include <linux/wait.h>
 
 #define RINA_PREFIX "rmt"
 
@@ -32,6 +40,12 @@
 #include "pft.h"
 #include "efcp-utils.h"
 
+struct mgmt_data {
+        struct rfifo *    sdu_ready;
+        wait_queue_head_t readers;
+        spinlock_t        lock;
+};
+             
 struct rmt {
         struct pft *              pft;
         struct kfa *              kfa;
@@ -39,9 +53,33 @@ struct rmt {
         struct workqueue_struct * egress_wq;
         struct workqueue_struct * ingress_wq;
         address_t                 address;
-        struct rfifo *            mgmt_sdu_wpi_queue;
+        struct mgmt_data *        mgmt_data;
         /* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
 };
+
+static struct mgmt_data * rmt_mgmt_data_create(void)
+{
+        struct mgmt_data * data;
+
+        data = rkzalloc(sizeof(struct mgmt_data), GFP_KERNEL);
+        if (!data) {
+                LOG_ERR("Could not allocate memory for RMT mgmt struct");
+                return NULL;
+        }
+
+        data->sdu_ready = rfifo_create();
+        if (!data->sdu_ready) {
+                LOG_ERR("Could not create MGMT SDUs queue");
+                rfifo_destroy(data->sdu_ready, sdu_wpi_destructor);
+                rkfree(data);
+                return NULL;
+        }
+
+        init_waitqueue_head(&data->readers);
+
+        return data;
+
+}
 
 struct rmt * rmt_create(struct kfa *            kfa,
                         struct efcp_container * efcpc)
@@ -61,6 +99,12 @@ struct rmt * rmt_create(struct kfa *            kfa,
                 return NULL;
         }
 
+        tmp->mgmt_data = rmt_mgmt_data_create();
+        if (!tmp->mgmt_data){
+                rmt_destroy(tmp);
+                return NULL;
+        }
+
         tmp->kfa   = kfa;
         tmp->efcpc = efcpc;
 
@@ -73,10 +117,10 @@ struct rmt * rmt_create(struct kfa *            kfa,
         /* FIXME: the name should be unique, not shared with all the RMT's */
         tmp->ingress_wq = rwq_create("rmt-ingress-wq");
         if (!tmp->ingress_wq) {
-                rwq_destroy(tmp->egress_wq);
                 rmt_destroy(tmp);
                 return NULL;
         }
+
 
         tmp->address = address_bad();
         LOG_DBG("Instance %pK initialized successfully", tmp);
@@ -94,7 +138,14 @@ int rmt_destroy(struct rmt * instance)
 
         ASSERT(instance->pft);
         pft_destroy(instance->pft);
+        if (instance->mgmt_data){
+                if (instance->mgmt_data)
+                        rfifo_destroy(instance->mgmt_data->sdu_ready, 
+                                      sdu_wpi_destructor);
+                rkfree(instance->mgmt_data);
+        }
         if (instance->egress_wq) rwq_destroy(instance->egress_wq);
+        if (instance->ingress_wq) rwq_destroy(instance->ingress_wq);
         rkfree(instance);
 
         LOG_DBG("Instance %pK finalized successfully", instance);
@@ -122,25 +173,6 @@ int rmt_address_set(struct rmt * instance,
         return 0;
 }
 EXPORT_SYMBOL(rmt_address_set);
-
-int rmt_mgmt_sdu_wpi_queue_set(struct rmt *   instance,
-                               struct rfifo * queue)
-{
-        if (!instance) {
-                LOG_ERR("Bogus instance passed");
-                return -1;
-        }
-
-        if (instance->mgmt_sdu_wpi_queue) {
-                LOG_ERR("The RMT is already bound to the MGMT SDU queue");
-                return -1;
-        }
-
-        instance->mgmt_sdu_wpi_queue = queue;
-
-        return 0;
-}
-EXPORT_SYMBOL(rmt_mgmt_sdu_wpi_queue_set);
 
 struct send_data {
         struct rmt * rmt;
@@ -314,6 +346,41 @@ int rmt_send(struct rmt * instance,
 }
 EXPORT_SYMBOL(rmt_send);
 
+
+int rmt_management_sdu_read(struct rmt *      instance,
+                            struct sdu_wpi ** sdu_wpi)
+{
+
+        int retval;
+
+        IRQ_BARRIER;
+
+        spin_lock(&instance->mgmt_data->lock);
+        while(rfifo_is_empty(instance->mgmt_data->sdu_ready)) {
+                LOG_DBG("Mgmt read going to sleep...");
+                spin_unlock(&instance->mgmt_data->lock);
+                retval = wait_event_interruptible(instance->mgmt_data->readers,
+                                                  !rfifo_is_empty(instance->mgmt_data->sdu_ready));
+
+                if (retval) {
+                        LOG_ERR("Mgmt queue waken up by interruption, bailing out...");
+                         return retval;
+                }
+                spin_lock(&instance->mgmt_data->lock);
+        }
+        
+        sdu_wpi = rfifo_pop(instance->mgmt_data->sdu_ready);
+        spin_unlock(&instance->mgmt_data->lock);
+
+        if (!sdu_wpi) {
+                LOG_ERR("There is not enough data in the management queue");
+                return -1;
+        }
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_management_sdu_read);
+
 struct receive_data {
         port_id_t               from;
         struct sdu *            sdu;
@@ -431,11 +498,13 @@ static int rmt_receive_worker(void * o)
                         return -1;
                 }
                 sdu_wpi->port_id = tmp->from;
-                if (rfifo_push(tmp->rmt->mgmt_sdu_wpi_queue, &sdu_wpi)) {
+                spin_lock(&tmp->rmt->mgmt_data->lock);
+                if (rfifo_push(tmp->rmt->mgmt_data->sdu_ready, &sdu_wpi)) {
                         receive_data_destroy(tmp);
+                        spin_unlock(&tmp->rmt->mgmt_data->lock);
                         return -1;
                 }
-
+                spin_unlock(&tmp->rmt->mgmt_data->lock);
                 return 0;
         }
         case PDU_TYPE_DT: {
