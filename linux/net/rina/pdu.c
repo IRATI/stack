@@ -165,8 +165,8 @@ int pci_format(struct pci * pci,
 {
         if (pci_cep_destination_set(pci, src_cep_id) || 
             pci_cep_source_set(pci, dst_cep_id)      ||
-            pci_destination_set(pci, src_address)    ||
-            pci_source_set(pci, dst_address)         ||
+            pci_destination_set(pci, dst_address)    ||
+            pci_source_set(pci, src_address)         ||
             pci_nxt_seq_send_set(pci, nxt_seq_send)  ||
             pci_qos_id_set(pci, qos_id)              ||
             pci_type_set(pci, type)) {

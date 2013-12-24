@@ -85,6 +85,7 @@ struct rmt * rmt_create(struct kfa *            kfa,
                         struct efcp_container * efcpc)
 {
         struct rmt * tmp;
+        char         string_rmt_id[30];
 
         if (!kfa)
                 return NULL;
@@ -109,13 +110,15 @@ struct rmt * rmt_create(struct kfa *            kfa,
         tmp->efcpc = efcpc;
 
         /* FIXME: the name should be unique, not shared with all the RMT's */
-        tmp->egress_wq = rwq_create("rmt-egress-wq");
+        snprintf(string_rmt_id, 30, "rmt-egress-wq-%pK", tmp);
+        tmp->egress_wq = rwq_create(string_rmt_id);
         if (!tmp->egress_wq) {
                 rmt_destroy(tmp);
                 return NULL;
         }
         /* FIXME: the name should be unique, not shared with all the RMT's */
-        tmp->ingress_wq = rwq_create("rmt-ingress-wq");
+        snprintf(string_rmt_id, 30, "rmt-ingress-wq-%pK", tmp);
+        tmp->ingress_wq = rwq_create(string_rmt_id);
         if (!tmp->ingress_wq) {
                 rmt_destroy(tmp);
                 return NULL;
@@ -292,8 +295,11 @@ static int rmt_send_worker(void * o)
                 return -1;
         }
         pdu_destroy(tmp->pdu);
+
         /* FIXME : Port id will be retrieved from the pduft */
-        if (kfa_flow_sdu_write(tmp->rmt->kfa, port_id_bad(), sdu)) {
+        //if (kfa_flow_sdu_write(tmp->rmt->kfa, port_id_bad(), sdu)) {
+        LOG_DBG("RMT posting in the kfa a mgmt SDU to port %d",  pci_destination(pci) == 16 ? 2 : 1);
+        if (kfa_flow_sdu_write(tmp->rmt->kfa, pci_destination(pci) == 16 ? 2 : 1, sdu)) {
                 return -1;
         }
 

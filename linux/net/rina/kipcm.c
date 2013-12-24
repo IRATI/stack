@@ -132,7 +132,9 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs;
         struct rnl_msg *                           msg;
         struct ipcp_instance *                     ipc_process;
+        struct ipcp_instance *                     usr_ipcp;
         ipc_process_id_t                           ipc_id;
+        ipc_process_id_t                           user_ipc_id;
         struct kipcm *                             kipcm;
         port_id_t                                  pid;
 
@@ -159,6 +161,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 goto fail;
         }
 
+        user_ipc_id  = msg->header.src_ipc_id;
         ipc_id      = msg->header.dst_ipc_id;
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
@@ -188,6 +191,25 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 goto fail;
         }
 
+        if (user_ipc_id) {
+
+                usr_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
+                if (!usr_ipcp) {
+                        LOG_DBG("Could not find the user ipcp of the flow...");
+                        kfa_flow_deallocate(kipcm->kfa, pid);
+                        goto fail;
+                }
+
+                if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data,
+                                                     pid)) {
+                        LOG_DBG("Could not bind the user ipcp' RMT with the flow");
+                        kfa_flow_deallocate(kipcm->kfa, pid);
+                        goto fail;
+                }       
+
+                LOG_DBG("Binding user IPCP %d' RMT to flow in port %d", user_ipc_id, pid);
+        }
+
         rnl_msg_destroy(msg);
 
         return 0;
@@ -209,7 +231,9 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         struct rnl_alloc_flow_resp_msg_attrs * attrs;
         struct rnl_msg *                       msg;
         struct ipcp_instance *                 ipc_process;
+        struct ipcp_instance *                 usr_ipcp;
         ipc_process_id_t                       ipc_id;
+        ipc_process_id_t                       user_ipc_id;
         port_id_t                              pid;
 
         if (!data) {
@@ -238,6 +262,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 return -1;
         }
 
+        user_ipc_id  = msg->header.src_ipc_id;
         ipc_id      = msg->header.dst_ipc_id;
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
@@ -267,6 +292,27 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                         attrs->id);
                 rnl_msg_destroy(msg);
                 return -1;
+        }
+
+        if (user_ipc_id) {
+
+                usr_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
+                if (!usr_ipcp) {
+                        LOG_DBG("(response) Could not find the user ipcp of the flow...");
+                        kfa_flow_deallocate(kipcm->kfa, pid);
+                        rnl_msg_destroy(msg);
+                        return -1;
+                }
+
+                if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data,
+                                                     pid)) {
+                        LOG_DBG("(response) Could not bind the user ipcp' RMT with the flow");
+                        kfa_flow_deallocate(kipcm->kfa, pid);
+                        rnl_msg_destroy(msg);
+                        return -1;
+                }       
+
+                LOG_DBG("(response) Binding user IPCP %d' RMT to flow in port %d", user_ipc_id, pid);
         }
 
         rnl_msg_destroy(msg);
@@ -1844,145 +1890,3 @@ struct kfa * kipcm_kfa(struct kipcm * kipcm)
 }
 EXPORT_SYMBOL(kipcm_kfa);
 
-/*  FIXME: Testng code reutilization regarding connections */
-#if 0
-static int
-conn_generic_free_and_reply(msg_type_t            op_code;
-                            void *                attrs,
-                            struct rnl_msg *      msg,
-                            struct rina_msg_hdr * hdr,
-                            ipc_process_id_t      ipc_id,
-                            port_id_t             pid,
-                            cep_id_t              src_cep,
-                            cep_id_t              dst_cep,
-                            rnl_sn_t              seq_num,
-                            u32                   nl_port_id)
-{
-
-        if (attrs) rkfree(attrs);
-        if (msg)   rkfree(msg);
-        if (hdr)   rkfree(hdr);
-
-        switch(op_code) {
-        case RINA_C_IPCP_CONN_CREATE_REQUEST:
-                if (rnl_ipcp_conn_create_resp_msg(ipc_id,
-                                                  pid,
-                                                  src_cep,
-                                                  seq_num,
-                                                  nl_port_id)) {
-                        LOG_ERR("Could not snd conn_create_resp_msg");
-                        return -1;
-                }
-
-        case RINA_C_IPCP_CONN_CREATE_ARRIVED:
-                if (rnl_ipcp_conn_create_result_msg(ipc_id,
-                                                    pid,
-                                                    src_cep,
-                                                    dst_cep,
-                                                    seq_num,
-                                                    nl_port_id)) {
-                        LOG_ERR("Could not snd conn_create_result_msg");
-                        return -1;
-                }
-
-        }
-
-        return 0;
-}
-
-static int notify_ipcp_conn_create_generic(void *             data,
-                                           struct sk_buff *   buff,
-                                           struct genl_info * info)
-{
-        struct rnl_ipcp_conn_create_arrived_msg_attrs * attrs;
-        struct rnl_msg *                                msg;
-        struct ipcp_instance *                          ipcp;
-        struct rina_msg_hdr *                           hdr;
-        struct kipcm *                                  kipcm;
-        ipc_process_id_t                                ipc_id;
-        port_id_t                                       port_id;
-        cep_id_t                                        src_cep;
-        flow_id_t                                       fid;
-
-        ipc_id   = 0;
-        port_id  = 0;
-        fid      = flow_id_bad();
-        attrs    = NULL;
-        msg      = NULL;
-        hdr      = NULL;
-
-        if (!data) {
-                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
-                return -1;
-        }
-
-        if (!info) {
-                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
-                return -1;
-        }
-
-        kipcm = (struct kipcm *) data;
-        attrs = rkzalloc(sizeof(*attrs), GFP_KERNEL);
-        msg   = rkzalloc(sizeof(*msg), GFP_KERNEL);
-
-        if (!attrs || !msg) {
-                goto process_fail;
-        }
-
-        msg->attrs  = attrs;
-
-        if (rnl_parse_msg(info, msg))
-                goto process_fail;
-
-        port_id = attrs->port_id;
-        ipc_id  = hdr->dst_ipc_id;
-        ipcp    = ipcp_imap_find(kipcm->instances, ipc_id);
-        if (!ipcp)
-                goto process_fail;
-
-        fid = kfa_flow_create(kipcm->kfa);
-        ASSERT(is_flow_id_ok(fid));
-
-        src_cep = ipcp->ops->connection_create_arrived(ipcp->data,
-                                                       attrs->port_id,
-                                                       attrs->src_addr,
-                                                       attrs->dst_addr,
-                                                       attrs->qos_id,
-                                                       attrs->dst_cep,
-                                                       attrs->policies);
-
-        if (!is_cep_id_ok(src_cep)) {
-                LOG_ERR("IPC process could not create connection");
-                goto process_fail;
-        }
-
-        if (kfa_flow_bind(kipcm->kfa, fid, port_id, ipcp, ipc_id)) {
-                LOG_ERR("Cound not bind flow (normal ipcp)");
-                goto process_fail;
-        }
-
-        return conn_create_result_free_and_reply(attrs,
-                                                 msg,
-                                                 hdr,
-                                                 ipc_id,
-                                                 port_id,
-                                                 src_cep,
-                                                 attrs->dst_cep,
-                                                 info->snd_seq,
-                                                 info->snd_portid);
-
- process_fail:
-        if (is_flow_id_ok(fid)) kfa_flow_deallocate(kipcm->kfa, fid);
-        return conn_create_result_free_and_reply(attrs,
-                                                 msg,
-                                                 hdr,
-                                                 ipc_id,
-                                                 port_id,
-                                                 cep_id_bad(),
-                                                 cep_id_bad(),
-                                                 info->snd_seq,
-                                                 info->snd_portid);
-
-
-}
-#endif
