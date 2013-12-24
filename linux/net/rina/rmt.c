@@ -511,6 +511,7 @@ static int rmt_receive_worker(void * o)
                         return -1;
                 }
                 spin_unlock(&tmp->rmt->mgmt_data->lock);
+                wake_up(&tmp->rmt->mgmt_data->readers);
                 return 0;
         }
         case PDU_TYPE_DT: {
