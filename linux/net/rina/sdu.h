@@ -45,7 +45,7 @@ struct sdu_wpi {
         port_id_t    port_id;
 };
 
-/* NOTE: The following function take the ownership of the buffer passed */
+/* NOTE: The following functions take the ownership of the buffer passed */
 struct sdu *          sdu_create_with(struct buffer * buffer);
 struct sdu *          sdu_create_with_ni(struct buffer * buffer);
 int                   sdu_destroy(struct sdu * s);

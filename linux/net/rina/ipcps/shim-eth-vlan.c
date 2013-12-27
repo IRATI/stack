@@ -50,7 +50,7 @@
 static struct workqueue_struct * rcv_wq;
 static struct work_struct        rcv_work;
 static struct list_head          rcv_wq_packets;
-static spinlock_t                rcv_wq_lock;
+static DEFINE_SPINLOCK(rcv_wq_lock);
 
 struct rcv_struct {
         struct list_head     list;
@@ -59,7 +59,6 @@ struct rcv_struct {
         struct packet_type * pt;
         struct net_device *  orig_dev;
 };
-
 
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -129,7 +128,7 @@ struct interface_data_mapping {
         struct ipcp_instance_data * data;
 };
 
-static spinlock_t       data_instances_lock;
+static DEFINE_SPINLOCK(data_instances_lock);
 static struct list_head data_instances_list;
 
 static struct interface_data_mapping *
@@ -202,16 +201,11 @@ find_flow_by_gha(struct ipcp_instance_data * data,
         if (!data || !gha_is_ok(addr))
                 return NULL;
 
-        spin_lock(&data->lock);
-
         list_for_each_entry(flow, &data->flows, list) {
                 if (gha_is_equal(addr, flow->dest_ha)) {
-                        spin_unlock(&data->lock);
                         return flow;
                 }
         }
-
-        spin_unlock(&data->lock);
 
         return NULL;
 }
@@ -238,7 +232,6 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
 
         return NULL;
 }
-
 
 static bool vlan_id_is_ok(unsigned int vlan_id)
 {
@@ -325,7 +318,6 @@ static int flow_destroy(struct ipcp_instance_data * data,
         return 0;
 }
 
-
 static void deallocate_and_destroy_flow(struct ipcp_instance_data * data,
                                         struct shim_eth_flow *      flow)
 {
@@ -354,26 +346,28 @@ static void rinarp_resolve_handler(void *             opaque,
         spin_lock(&data->lock);
         if (flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
-                flow->dest_ha = gha_dup(dest_ha);
+                spin_unlock(&data->lock);
+
+                flow->dest_ha = gha_dup_ni(dest_ha);
 
                 if (kipcm_flow_commit(default_kipcm,
                                       data->id, flow->port_id)) {
                         LOG_ERR("Cannot add flow");
                         deallocate_and_destroy_flow(data, flow);
-                        spin_unlock(&data->lock);
                         return;
                 }
+
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
                                                        flow->port_id,
                                                        0)) {
                         LOG_ERR("Couldn't tell flow is allocated to KIPCM");
                         deallocate_and_destroy_flow(data, flow);
-                        spin_unlock(&data->lock);
                         return;
                 }
+        } else {
+                spin_unlock(&data->lock);
         }
-        spin_unlock(&data->lock);
 }
 
 static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
@@ -813,12 +807,15 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         }
 
         spin_lock(&data->lock);
+
         flow = find_flow_by_gha(data, ghaddr);
+
         if (!flow) {
                 LOG_DBG("Have to create a new flow");
 
-                flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+                flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
                 if (!flow) {
+                        flow->port_id_state = PORT_STATE_NULL;
                         spin_unlock(&data->lock);
                         sdu_destroy(du);
                         gha_destroy(ghaddr);
@@ -826,12 +823,16 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 }
 
                 flow->port_id_state = PORT_STATE_PENDING;
+                INIT_LIST_HEAD(&flow->list);
+                list_add(&flow->list, &data->flows);
                 flow->dest_ha       = ghaddr;
                 flow->port_id       = kfa_flow_create(data->kfa, data->id,
                                                       false);
 
                 if (!is_port_id_ok(flow->port_id)) {
                         LOG_DBG("Port id is not ok");
+                        flow->port_id_state = PORT_STATE_NULL;
+                        spin_unlock(&data->lock);
                         sdu_destroy(du);
                         gha_destroy(ghaddr);
                         if (flow_destroy(data, flow))
@@ -840,17 +841,15 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         return -1;
                 }
 
-                INIT_LIST_HEAD(&flow->list);
-                list_add(&flow->list, &data->flows);
-
                 LOG_DBG("Added flow to the list");
 
-                if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
+                if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_ATOMIC)) {
                         LOG_ERR("Couldn't create the sdu queue"
                                 "for a new flow");
+                        flow->port_id_state = PORT_STATE_NULL;
+                        spin_unlock(&data->lock);
                         sdu_destroy(du);
                         deallocate_and_destroy_flow(data, flow);
-                        spin_unlock(&data->lock);
                         return -1;
                 }
                 LOG_DBG("Created the queue");
@@ -858,19 +857,22 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 /* Store SDU in queue */
                 if (kfifo_avail(&flow->sdu_queue) < (sizeof(struct sdu *))) {
                         LOG_ERR("There is no space in the fifo");
+                        flow->port_id_state = PORT_STATE_NULL;
+                        spin_unlock(&data->lock);
                         sdu_destroy(du);
                         deallocate_and_destroy_flow(data, flow);
-                        spin_unlock(&data->lock);
                         return -1;
                 }
+
                 if (kfifo_in(&flow->sdu_queue,
                              &du,
                              sizeof(struct sdu *)) != sizeof(struct sdu *)) {
                         LOG_ERR("Could not write %zd bytes into the fifo",
                                 sizeof(struct sdu *));
+                        flow->port_id_state = PORT_STATE_NULL;
+                        spin_unlock(&data->lock);
                         sdu_destroy(du);
                         deallocate_and_destroy_flow(data, flow);
-                        spin_unlock(&data->lock);
                         return -1;
                 }
 
@@ -941,10 +943,11 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         if (kfifo_avail(&flow->sdu_queue) <
                             (sizeof(struct sdu *))) {
                                 LOG_ERR("There is no space in the fifo");
-                                sdu_destroy(du);
                                 spin_unlock(&data->lock);
+                                sdu_destroy(du);
                                 return -1;
                         }
+
                         if (kfifo_in(&flow->sdu_queue,
                                      &du,
                                      sizeof(struct sdu *)) !=
@@ -952,8 +955,8 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                                 LOG_ERR("Could not write %zd bytes into the "
                                         "fifo",
                                         sizeof(struct sdu *));
-                                sdu_destroy(du);
                                 spin_unlock(&data->lock);
+                                sdu_destroy(du);
                                 return -1;
                         }
 
@@ -974,6 +977,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
         int                 num_frames;
 
         spin_lock_irqsave(&rcv_wq_lock, flags);
+
         LOG_DBG("Worker waking up");
 
         num_frames = 0;
@@ -1130,7 +1134,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 complete_interface);
 
         /* Store in list for retrieval later on */
-        mapping = rkmalloc(sizeof(*mapping), GFP_KERNEL);
+        mapping = rkmalloc(sizeof(*mapping), GFP_ATOMIC);
         if (!mapping) {
                 read_unlock(&dev_base_lock);
                 name_destroy(data->dif_name);
