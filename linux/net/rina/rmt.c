@@ -21,6 +21,10 @@
  */
 
 #include <linux/export.h>
+#include <linux/types.h>
+#include <linux/hashtable.h>
+#include <linux/list.h>
+#include <linux/kernel.h>
 
 #define RINA_PREFIX "rmt"
 
@@ -32,6 +36,21 @@
 #include "pft.h"
 #include "efcp-utils.h"
 
+struct rmt_queue {
+        DECLARE_HASHTABLE(queues, 7);
+        spinlock_t    lock;
+        int           in_use;
+};
+
+#define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
+
+struct send_queue {
+        struct rqueue *   queue;
+        port_id_t         port_id;
+        struct hlist_node hlist;
+        spinlock_t        lock;
+};
+
 struct rmt {
         struct pft *              pft;
         struct kfa *              kfa;
@@ -40,7 +59,7 @@ struct rmt {
         struct workqueue_struct * ingress_wq;
         address_t                 address;
         struct rfifo *            mgmt_sdu_wpi_queue;
-        struct rqueue *           send_queues;
+        struct rmt_queue *        send_queues;
         /* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
 };
 
@@ -81,13 +100,15 @@ struct rmt * rmt_create(struct kfa *            kfa,
 
         tmp->address = address_bad();
 
-        tmp->send_queues = rqueue_create();
+        tmp->send_queues = rkzalloc(sizeof(struct rmt_queue), GFP_KERNEL);
         if (!tmp->send_queues) {
                 rwq_destroy(tmp->egress_wq);
                 rwq_destroy(tmp->ingress_wq);
                 rmt_destroy(tmp);
                 return NULL;
         }
+        hash_init(tmp->send_queues->queues);
+        spin_lock_init(&tmp->send_queues->lock);
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
         return tmp;
@@ -152,17 +173,39 @@ int rmt_mgmt_sdu_wpi_queue_set(struct rmt *   instance,
 EXPORT_SYMBOL(rmt_mgmt_sdu_wpi_queue_set);
 
 struct send_data {
-        struct rmt * rmt;
-        struct pdu * pdu;
-        address_t    address;
-        cep_id_t     connection_id;
+        struct kfa *       kfa;
+        struct rmt_queue * rmt_q;
 };
+
+static struct send_data * send_data_create(struct kfa *       kfa,
+                                           struct rmt_queue * queues)
+{
+        struct send_data * tmp;
+
+        if (!kfa)
+                return NULL;
+
+        if (!queues)
+                return NULL;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->kfa    = kfa;
+        tmp->rmt_q = queues;
+
+        return tmp;
+}
 
 bool is_send_data_complete(const struct send_data * data)
 {
         bool ret;
 
-        ret = ((!data || !data->rmt || !data->pdu) ? false : true);
+        if (!data)
+                return false;
+
+        ret = ((!data->rmt_q || !data->kfa) ? false : true);
 
         LOG_DBG("Send data complete? %d", ret);
 
@@ -181,28 +224,8 @@ static int send_data_destroy(struct send_data * data)
         return 0;
 }
 
-static struct send_data * send_data_create(struct rmt * rmt,
-                                           struct pdu * pdu,
-                                           address_t    address,
-                                           cep_id_t     connection_id)
+static struct sdu * pdu_process(struct pdu * pdu)
 {
-        struct send_data * tmp;
-
-        tmp = rkmalloc(sizeof(*tmp), GFP_ATOMIC);
-        if (!tmp)
-                return NULL;
-
-        tmp->rmt           = rmt;
-        tmp->pdu           = pdu;
-        tmp->address       = address;
-        tmp->connection_id = connection_id;
-
-        return tmp;
-}
-
-static int rmt_send_worker(void * o)
-{
-        struct send_data *    tmp;
         struct sdu *          sdu;
         const struct buffer * buffer;
         const struct pci *    pci;
@@ -213,64 +236,189 @@ static int rmt_send_worker(void * o)
         struct buffer *       tmp_buff;
         char *                data;
 
+        if (!pdu)
+                return NULL;
+
+        buffer = pdu_buffer_get_ro(pdu);
+        if (!buffer)
+                return NULL;
+
+        buffer_data = buffer_data_ro(buffer);
+        if (!buffer_data)
+                return NULL;
+
+        pci = pdu_pci_get_ro(pdu);
+        if (!pci)
+                return NULL;
+
+        buffer_size = buffer_length(buffer);
+        if (buffer_size <= 0)
+                return NULL;
+
+        pci_size = pci_length(pci);
+        if (pci_size <= 0)
+                return NULL;
+
+        size = pci_size + buffer_size;
+        data = rkmalloc(size, GFP_KERNEL);
+        if (!data)
+                return NULL;
+
+        if (!memcpy(data, pci, pci_size)) {
+                rkfree(data);
+                return NULL;
+        }
+        if (!memcpy(data + pci_size, buffer_data, buffer_size)) {
+                rkfree(data);
+                return NULL;
+        }
+        tmp_buff = buffer_create_with(data, size);
+        if (!tmp_buff) {
+                rkfree(data);
+                return NULL;
+        }
+        sdu = sdu_create_with(tmp_buff);
+        if (!sdu) {
+                buffer_destroy(tmp_buff);
+                return NULL;
+        }
+        pdu_destroy(pdu);
+
+        return sdu;
+}
+
+static int rmt_send_worker(void * o)
+{
+        struct send_data *    tmp;
+        struct send_queue *   entry;
+        struct pdu *          pdu;
+        int                   out;
+
+        struct hlist_node * ntmp;
+        int                 bucket;
+
+        out = 1;
         tmp = (struct send_data *) o;
         if (!tmp) {
                 LOG_ERR("No send data passed");
                 return -1;
         }
 
-        if (!is_send_data_complete(tmp)) {
-                LOG_ERR("Wrong data passed to RMT send worker");
-                send_data_destroy(tmp);
+        while (out) {
+                out = 0;
+                spin_lock(&tmp->rmt_q->lock);
+                hash_for_each_safe(tmp->rmt_q->queues, bucket, ntmp, entry, hlist) {
+                        struct sdu * sdu;
+                        port_id_t port_id;
+                        spin_lock(&entry->lock);
+                        pdu = (struct pdu *) rqueue_head_pop(entry->queue);
+                        port_id = entry->port_id;
+                        spin_unlock(&entry->lock);
+                        spin_unlock(&tmp->rmt_q->lock);
+                        if (!pdu)
+                                break;
+
+                        out = out + 1;
+                        sdu = pdu_process(pdu);
+                        if (!sdu)
+                                break;
+
+                        /* FIXME : Port id will be retrieved from the pduft */
+                        if (kfa_flow_sdu_write(tmp->kfa,
+                                               port_id,
+                                               sdu)) {
+                                LOG_ERR("Couldn't write SDU to KFA");
+                        }
+                }
+
+        }
+
+        return 0;
+}
+
+static struct send_queue * find_queue(struct rmt_queue * rq,
+                                      port_id_t          id)
+{
+        struct send_queue *       entry;
+        const struct hlist_head * head;
+
+        if (!rq) {
+                LOG_ERR("Cannot look-up in a empty map");
+                return NULL;
+        }
+
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Bogus port id");
+                return NULL;
+        }
+
+        head = &rq->queues[rmap_hash(rq->queues, id)];
+        hlist_for_each_entry(entry, head, hlist) {
+                if (entry->port_id == id)
+                        return entry;
+        }
+
+        return NULL;
+}
+
+static int rmt_send_port_id(struct rmt *  instance,
+                            port_id_t     id,
+                            struct pdu *  pdu)
+{
+        struct send_queue *    squeue;
+        struct rwq_work_item * item;
+        struct send_data *     data;
+
+        if (!instance) {
+                LOG_ERR("Bogus RMT passed");
+                return -1;
+        }
+        if (!pdu) {
+                LOG_ERR("Bogus PDU passed");
+                return -1;
+        }
+        spin_lock(&instance->send_queues->lock);
+        squeue = find_queue(instance->send_queues, id);
+        if (!squeue) {
+                spin_unlock(&instance->send_queues->lock);
+                return -1;
+        }
+        spin_lock(&squeue->lock);
+        spin_unlock(&instance->send_queues->lock);
+        if (rqueue_tail_push_ni(squeue->queue, &pdu)) {
+                spin_unlock(&squeue->lock);
+                return -1;
+        }
+        spin_unlock(&squeue->lock);
+
+        spin_lock(&instance->send_queues->lock);
+        if (instance->send_queues->in_use) {
+                LOG_DBG("Work already posted, nothing more to do");
+                spin_unlock(&instance->send_queues->lock);
+                return 0;
+        }
+        instance->send_queues->in_use = 1;
+        spin_unlock(&instance->send_queues->lock);
+
+        data = send_data_create(instance->kfa, instance->send_queues);
+        if (!data) {
+                LOG_ERR("Couldn't create send data");
                 return -1;
         }
 
-        buffer = pdu_buffer_get_ro(tmp->pdu);
-        if (!buffer)
-                return -1;
-
-        buffer_data = buffer_data_ro(buffer);
-        if (!buffer_data)
-                return -1;
-
-        pci = pdu_pci_get_ro(tmp->pdu);
-        if (!pci)
-                return -1;
-
-        buffer_size = buffer_length(buffer);
-        if (buffer_size <= 0)
-                return -1;
-
-        pci_size = pci_length(pci);
-        if (pci_size <= 0)
-                return -1;
-
-        size = pci_size + buffer_size;
-        data = rkmalloc(size, GFP_KERNEL);
-        if (!data)
-                return -1;
-
-        if (!memcpy(data, pci, pci_size)) {
-                rkfree(data);
+        /* Is this _ni() call really necessary ??? */
+        item = rwq_work_create_ni(rmt_send_worker, data);
+        if (!item) {
+                send_data_destroy(data);
+                LOG_ERR("Couldn't create work");
                 return -1;
         }
-        if (!memcpy(data + pci_size, buffer_data, buffer_size)) {
-                rkfree(data);
-                return -1;
-        }
-        tmp_buff = buffer_create_with(data, size);
-        if (!tmp_buff) {
-                rkfree(data);
-                return -1;
-        }
-        sdu = sdu_create_with(tmp_buff);
-        if (!sdu) {
-                buffer_destroy(tmp_buff);
-                return -1;
-        }
-        pdu_destroy(tmp->pdu);
-        /* FIXME : Port id will be retrieved from the pduft */
-        if (kfa_flow_sdu_write(tmp->rmt->kfa, port_id_bad(), sdu)) {
+
+        ASSERT(instance->egress_wq);
+
+        if (rwq_work_post(instance->egress_wq, item)) {
+                send_data_destroy(data);
+                pdu_destroy(pdu);
                 return -1;
         }
 
@@ -282,10 +430,7 @@ int rmt_send(struct rmt * instance,
              cep_id_t     connection_id,
              struct pdu * pdu)
 {
-        struct send_data *     tmp;
-        struct rwq_work_item * item;
-
-        LOG_MISSING;
+        port_id_t id;
 
         if (!instance) {
                 LOG_ERR("Bogus RMT passed");
@@ -299,25 +444,9 @@ int rmt_send(struct rmt * instance,
                 LOG_ERR("Bad cep id");
                 return -1;
         }
-
-        tmp = send_data_create(instance, pdu, address, connection_id);
-        if (!is_send_data_complete(tmp))
+        id = port_id_bad(); /* FIXME: We must call PDU FT */
+        if (rmt_send_port_id(instance, id, pdu))
                 return -1;
-
-        /* Is this _ni() call really necessary ??? */
-        item = rwq_work_create_ni(rmt_send_worker, tmp);
-        if (!item) {
-                send_data_destroy(tmp);
-                return -1;
-        }
-
-        ASSERT(instance->egress_wq);
-
-        if (rwq_work_post(instance->egress_wq, item)) {
-                send_data_destroy(tmp);
-                pdu_destroy(pdu);
-                return -1;
-        }
 
         return 0;
 }
