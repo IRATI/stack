@@ -375,10 +375,11 @@ int rmt_management_sdu_read(struct rmt *      instance,
                 spin_lock(&instance->mgmt_data->lock);
         }
         
-        sdu_wpi = rfifo_pop(instance->mgmt_data->sdu_ready);
+        *sdu_wpi = rfifo_pop(instance->mgmt_data->sdu_ready);
+
         spin_unlock(&instance->mgmt_data->lock);
 
-        if (!sdu_wpi) {
+        if (!sdu_wpi_is_ok(*sdu_wpi)) {
                 LOG_ERR("There is not enough data in the management queue");
                 return -1;
         }
@@ -467,6 +468,7 @@ static int rmt_receive_worker(void * o)
 
         pdu = pdu_create_with(tmp->sdu);
         if (!pdu_is_ok(pdu)) {
+                LOG_ERR("Could not create pdu from sdu");
                 receive_data_destroy(tmp);
                 return -1;
         }
@@ -505,11 +507,12 @@ static int rmt_receive_worker(void * o)
                 }
                 sdu_wpi->port_id = tmp->from;
                 spin_lock(&tmp->rmt->mgmt_data->lock);
-                if (rfifo_push(tmp->rmt->mgmt_data->sdu_ready, &sdu_wpi)) {
+                if (rfifo_push(tmp->rmt->mgmt_data->sdu_ready, sdu_wpi)) {
                         receive_data_destroy(tmp);
                         spin_unlock(&tmp->rmt->mgmt_data->lock);
                         return -1;
                 }
+
                 spin_unlock(&tmp->rmt->mgmt_data->lock);
                 wake_up(&tmp->rmt->mgmt_data->readers);
                 return 0;

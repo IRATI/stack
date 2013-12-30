@@ -311,6 +311,13 @@ SYSCALL_DEFINE3(management_sdu_read,
                 return -EFAULT;
         }
 
+        LOG_DBG("SDU_WPI in syscall\n"
+                "tmp: %pk\n"
+                "tmp->port_id: %d\n"
+                "tmp->sdu: %pk\n"
+                "tmp->sdu->buffer: %pk\n",
+                tmp, tmp->port_id, tmp->sdu, tmp->sdu->buffer);
+
         if (!sdu_wpi_is_ok(tmp)) {
                 SYSCALL_DUMP_EXIT;
                 return -EFAULT;
@@ -329,11 +336,20 @@ SYSCALL_DEFINE3(management_sdu_read,
 
         if (copy_to_user(buffer,
                          buffer_data_ro(tmp->sdu->buffer),
-                         buffer_length(tmp->sdu->buffer)
-                         + sizeof(port_id_t))) {
+                         buffer_length(tmp->sdu->buffer))) {
                 SYSCALL_DUMP_EXIT;
 
-                LOG_ERR("Error copying data to user-space");
+                LOG_ERR("Error copying buffer data to user-space");
+                sdu_wpi_destroy(tmp);
+                return -EFAULT;
+        }
+
+        if (copy_to_user(buffer + buffer_length(tmp->sdu->buffer), 
+                         &tmp->port_id,
+                         sizeof(tmp->port_id))) {
+                SYSCALL_DUMP_EXIT;
+
+                LOG_ERR("Error copying port_id data to user-space");
                 sdu_wpi_destroy(tmp);
                 return -EFAULT;
         }
