@@ -288,9 +288,10 @@ SYSCALL_DEFINE1(deallocate_port,
         return retval;
 }
 
-SYSCALL_DEFINE3(management_sdu_read,
+SYSCALL_DEFINE4(management_sdu_read,
                 ipc_process_id_t,     ipcp_id,
                 void __user *,        buffer,
+                port_id_t __user *,   port_id,
                 size_t,               size)
 {
         ssize_t          retval;
@@ -344,7 +345,7 @@ SYSCALL_DEFINE3(management_sdu_read,
                 return -EFAULT;
         }
 
-        if (copy_to_user(buffer + buffer_length(tmp->sdu->buffer), 
+        if (copy_to_user(port_id, 
                          &tmp->port_id,
                          sizeof(tmp->port_id))) {
                 SYSCALL_DUMP_EXIT;
