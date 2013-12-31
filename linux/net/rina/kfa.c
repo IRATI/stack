@@ -609,6 +609,13 @@ int kfa_sdu_post(struct kfa * instance,
         }
 
         if (!flow->rmt) {
+                
+                const struct pdu * pdu_temp;
+                const struct pci * pci_temp;
+
+                pdu_temp = pdu_create_with(sdu);
+                pci_temp = pdu_pci_get_ro(pdu_temp);
+
                 if (kfifo_avail(&flow->sdu_ready) < (sizeof(struct sdu *))) {
                         LOG_ERR("There is no space in the port-id %d fifo", id);
                         spin_unlock(&instance->lock);

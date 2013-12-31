@@ -61,7 +61,7 @@ struct ipcp_instance_data {
         struct efcp_container * efcpc;
         struct rmt *            rmt;
         address_t               address;
-        struct rfifo *          mgmt_sdu_wpi_ready;
+        struct normal_mgmt *    mgmt;
 };
 
 enum normal_flow_state {
@@ -261,6 +261,12 @@ static int ipcp_flow_notification(struct ipcp_instance_data * data,
         if (kfa_flow_bind_rmt(data->kfa, pid, data->rmt))
                 return -1;
 
+        if (rmt_send_queue_add(data->rmt, pid))
+                return -1;
+
+        if (rmt_rcve_queue_add(data->rmt, pid))
+                return -1;
+
         return 0;
 }
 
@@ -376,32 +382,15 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 
         efcp_container_set_dt_cons(dt_cons, data->efcpc);
 
-        data->mgmt_sdu_wpi_ready = rfifo_create();
-        if (!data->mgmt_sdu_wpi_ready) {
-                LOG_ERR("Could not create MGMT SDUs queue");
-                return -1;
-        }
-        if (rmt_mgmt_sdu_wpi_queue_set(data->rmt, data->mgmt_sdu_wpi_ready)){
-                rfifo_destroy(data->mgmt_sdu_wpi_ready, sdu_wpi_destructor);
-                return -1;
-        }
-
         return 0;
 }
 
 static int normal_management_sdu_read(struct ipcp_instance_data * data,
                                       struct sdu_wpi **           sdu_wpi)
 {
-
         LOG_DBG("Trying to read mgmt SDU from IPC Process %d", data->id);
-        
-        sdu_wpi = rfifo_pop(data->mgmt_sdu_wpi_ready);
-        if (!sdu_wpi) {
-                LOG_ERR("There is not enough data in the management queue");
-                return -1;
-        }
 
-        return 0;
+        return rmt_management_sdu_read(data->rmt, sdu_wpi);
 }
 
 static int normal_management_sdu_write(struct ipcp_instance_data * data,
@@ -412,7 +401,7 @@ static int normal_management_sdu_write(struct ipcp_instance_data * data,
         struct pdu *  pdu;
         address_t     dst_address;
 
-        LOG_DBG("Passing SDU to be written to N-1 port %d to IPC Process %d"
+        LOG_DBG("Passing SDU to be written to N-1 port %d from IPC Process %d"
                 , port_id, data->id);
 
         if (!sdu) {
@@ -420,7 +409,11 @@ static int normal_management_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        dst_address = 0; /*GET FROM PFT */
+        /*FIXME: fake PFT */
+        if (port_id ==1) 
+                dst_address = 17;
+        else
+                dst_address = 16;
 
         pci = pci_create();
         if (!pci)
@@ -453,6 +446,10 @@ static int normal_management_sdu_write(struct ipcp_instance_data * data,
                 pci_destroy(pci);
                 return -1;
         }
+
+        LOG_DBG("Going to send to the RMT:\n"                  \
+                "src_address %d\ndst_address: %d\nport: %d",   \
+                 pci_source(pci), pci_destination(pci), port_id);
 
         /* Give the data to RMT now ! */
         if (rmt_send(data->rmt,
@@ -522,7 +519,8 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         instance->data->info    = rkzalloc(sizeof(struct normal_info *),
                                            GFP_KERNEL);
         if (!instance->data->info) {
-                LOG_ERR("Could not allocate momory for normal ipcp info");
+                LOG_ERR("Could not allocate memory for normal ipcp info");
+                rkfree(instance->data->mgmt); 
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -532,6 +530,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         if (!instance->data->info->name) {
                 LOG_ERR("Failed creation of ipc name");
                 rkfree(instance->data->info);
+                rkfree(instance->data->mgmt); 
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -544,6 +543,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         if (!instance->data->efcpc) {
                 name_destroy(instance->data->info->name);
                 rkfree(instance->data->info);
+                rkfree(instance->data->mgmt); 
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -555,6 +555,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 efcp_container_destroy(instance->data->efcpc);
                 name_destroy(instance->data->info->name);
                 rkfree(instance->data->info);
+                rkfree(instance->data->mgmt); 
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -566,10 +567,12 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 efcp_container_destroy(instance->data->efcpc);
                 name_destroy(instance->data->info->name);
                 rkfree(instance->data->info);
+                rkfree(instance->data->mgmt); 
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
         }
+
 
         /* FIXME: Probably missing normal flow structures creation */
         INIT_LIST_HEAD(&instance->data->flows);
@@ -614,9 +617,6 @@ static int normal_destroy(struct ipcp_factory_data * data,
 
         if (tmp->info->name)
                 name_destroy(tmp->info->name);
-
-        if (tmp->mgmt_sdu_wpi_ready)
-                rfifo_destroy(tmp->mgmt_sdu_wpi_ready, sdu_wpi_destructor);
 
         efcp_container_destroy(tmp->efcpc);
         rmt_destroy(tmp->rmt);

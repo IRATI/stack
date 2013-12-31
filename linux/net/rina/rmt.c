@@ -5,6 +5,12 @@
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
+ * RMT (Relaying and Multiplexing Task)
+ *
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -25,6 +31,8 @@
 #include <linux/hashtable.h>
 #include <linux/list.h>
 #include <linux/kernel.h>
+#include <linux/sched.h>
+#include <linux/wait.h>
 
 #define RINA_PREFIX "rmt"
 
@@ -45,9 +53,22 @@ struct rmt_queue {
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 struct send_queue {
-        struct rqueue *   queue;
+        struct rfifo *    queue;
         port_id_t         port_id;
         struct hlist_node hlist;
+        spinlock_t        lock;
+};
+
+struct rcve_queue {
+        struct rfifo *    queue;
+        port_id_t         port_id;
+        struct hlist_node hlist;
+        spinlock_t        lock;
+};
+
+struct mgmt_data {
+        struct rfifo *    sdu_ready;
+        wait_queue_head_t readers;
         spinlock_t        lock;
 };
 
@@ -60,13 +81,40 @@ struct rmt {
         address_t                 address;
         struct rfifo *            mgmt_sdu_wpi_queue;
         struct rmt_queue *        send_queues;
+        struct rmt_queue *        rcve_queues;
+        struct mgmt_data *        mgmt_data;
         /* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
 };
+
+static struct mgmt_data * rmt_mgmt_data_create(void)
+{
+        struct mgmt_data * data;
+
+        data = rkzalloc(sizeof(struct mgmt_data), GFP_KERNEL);
+        if (!data) {
+                LOG_ERR("Could not allocate memory for RMT mgmt struct");
+                return NULL;
+        }
+
+        data->sdu_ready = rfifo_create();
+        if (!data->sdu_ready) {
+                LOG_ERR("Could not create MGMT SDUs queue");
+                rfifo_destroy(data->sdu_ready, sdu_wpi_destructor);
+                rkfree(data);
+                return NULL;
+        }
+
+        init_waitqueue_head(&data->readers);
+
+        return data;
+
+}
 
 struct rmt * rmt_create(struct kfa *            kfa,
                         struct efcp_container * efcpc)
 {
         struct rmt * tmp;
+        char         string_rmt_id[30];
 
         if (!kfa)
                 return NULL;
@@ -81,22 +129,30 @@ struct rmt * rmt_create(struct kfa *            kfa,
                 return NULL;
         }
 
+        tmp->mgmt_data = rmt_mgmt_data_create();
+        if (!tmp->mgmt_data){
+                rmt_destroy(tmp);
+                return NULL;
+        }
+
         tmp->kfa   = kfa;
         tmp->efcpc = efcpc;
 
         /* FIXME: the name should be unique, not shared with all the RMT's */
-        tmp->egress_wq = rwq_create("rmt-egress-wq");
+        snprintf(string_rmt_id, 30, "rmt-egress-wq-%pK", tmp);
+        tmp->egress_wq = rwq_create(string_rmt_id);
         if (!tmp->egress_wq) {
                 rmt_destroy(tmp);
                 return NULL;
         }
         /* FIXME: the name should be unique, not shared with all the RMT's */
-        tmp->ingress_wq = rwq_create("rmt-ingress-wq");
+        snprintf(string_rmt_id, 30, "rmt-ingress-wq-%pK", tmp);
+        tmp->ingress_wq = rwq_create(string_rmt_id);
         if (!tmp->ingress_wq) {
-                rwq_destroy(tmp->egress_wq);
                 rmt_destroy(tmp);
                 return NULL;
         }
+
 
         tmp->address = address_bad();
 
@@ -115,6 +171,73 @@ struct rmt * rmt_create(struct kfa *            kfa,
 }
 EXPORT_SYMBOL(rmt_create);
 
+static void pdu_dtor(void * e)
+{
+        struct pdu * tmp;
+
+        tmp = (struct pdu *) e;
+
+        pdu_destroy(tmp);
+}
+
+static int send_queue_destroy(struct send_queue * send_q)
+{
+        rfifo_destroy(send_q->queue, pdu_dtor);
+        hash_del(&send_q->hlist);
+        rkfree(send_q);
+
+        return 0;
+}
+
+static int rcve_queue_destroy(struct rcve_queue * rcve_q)
+{
+        rfifo_destroy(rcve_q->queue, pdu_dtor);
+        hash_del(&rcve_q->hlist);
+        rkfree(rcve_q);
+
+        return 0;
+}
+
+static int rmt_egress_queue_destroy(struct rmt_queue * instance)
+{
+        struct send_queue * entry;
+        struct hlist_node * tmp;
+        int                 bucket;
+
+        if (!instance)
+                return -1;
+
+        hash_for_each_safe(instance->queues, bucket, tmp, entry, hlist) {
+                LOG_DBG("Calling dtor for entry %pK", entry);
+                send_queue_destroy(entry);
+        }
+        rkfree(instance);
+
+        LOG_DBG("RMT egress queues destroyed successfully");
+
+        return 0;
+}
+
+static int rmt_ingress_queue_destroy(struct rmt_queue * instance)
+{
+        struct rcve_queue * entry;
+        struct hlist_node * tmp;
+        int                 bucket;
+
+        if (!instance)
+                return -1;
+
+        hash_for_each_safe(instance->queues, bucket, tmp, entry, hlist) {
+                LOG_DBG("Calling dtor for entry %pK", entry);
+                rcve_queue_destroy(entry);
+        }
+        rkfree(instance);
+
+        LOG_DBG("RMT egress queues destroyed successfully");
+
+        return 0;
+}
+
 int rmt_destroy(struct rmt * instance)
 {
         if (!instance) {
@@ -124,7 +247,21 @@ int rmt_destroy(struct rmt * instance)
 
         ASSERT(instance->pft);
         pft_destroy(instance->pft);
-        if (instance->egress_wq) rwq_destroy(instance->egress_wq);
+        if (instance->mgmt_data){
+                if (instance->mgmt_data->sdu_ready)
+                        rfifo_destroy(instance->mgmt_data->sdu_ready, 
+                                      sdu_wpi_destructor);
+                rkfree(instance->mgmt_data);
+        }
+        if (instance->egress_wq)  rwq_destroy(instance->egress_wq);
+        if (instance->ingress_wq) rwq_destroy(instance->ingress_wq);
+
+        if (instance->send_queues)
+                rmt_egress_queue_destroy(instance->send_queues);
+
+        if (instance->rcve_queues)
+                rmt_ingress_queue_destroy(instance->rcve_queues);
+
         rkfree(instance);
 
         LOG_DBG("Instance %pK finalized successfully", instance);
@@ -152,25 +289,6 @@ int rmt_address_set(struct rmt * instance,
         return 0;
 }
 EXPORT_SYMBOL(rmt_address_set);
-
-int rmt_mgmt_sdu_wpi_queue_set(struct rmt *   instance,
-                               struct rfifo * queue)
-{
-        if (!instance) {
-                LOG_ERR("Bogus instance passed");
-                return -1;
-        }
-
-        if (instance->mgmt_sdu_wpi_queue) {
-                LOG_ERR("The RMT is already bound to the MGMT SDU queue");
-                return -1;
-        }
-
-        instance->mgmt_sdu_wpi_queue = queue;
-
-        return 0;
-}
-EXPORT_SYMBOL(rmt_mgmt_sdu_wpi_queue_set);
 
 struct send_data {
         struct kfa *       kfa;
@@ -289,11 +407,10 @@ static struct sdu * pdu_process(struct pdu * pdu)
 
 static int rmt_send_worker(void * o)
 {
-        struct send_data *    tmp;
-        struct send_queue *   entry;
-        struct pdu *          pdu;
-        int                   out;
-
+        struct send_data *  tmp;
+        struct send_queue * entry;
+        struct pdu *        pdu;
+        int                 out;
         struct hlist_node * ntmp;
         int                 bucket;
 
@@ -311,7 +428,7 @@ static int rmt_send_worker(void * o)
                         struct sdu * sdu;
                         port_id_t port_id;
                         spin_lock(&entry->lock);
-                        pdu = (struct pdu *) rqueue_head_pop(entry->queue);
+                        pdu = (struct pdu *) rfifo_pop(entry->queue);
                         port_id = entry->port_id;
                         spin_unlock(&entry->lock);
                         spin_unlock(&tmp->rmt_q->lock);
@@ -336,10 +453,35 @@ static int rmt_send_worker(void * o)
         return 0;
 }
 
-static struct send_queue * find_queue(struct rmt_queue * rq,
-                                      port_id_t          id)
+static struct send_queue * find_send_queue(struct rmt_queue * rq,
+                                           port_id_t          id)
 {
         struct send_queue *       entry;
+        const struct hlist_head * head;
+
+        if (!rq) {
+                LOG_ERR("Cannot look-up in a empty map");
+                return NULL;
+        }
+
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Bogus port id");
+                return NULL;
+        }
+
+        head = &rq->queues[rmap_hash(rq->queues, id)];
+        hlist_for_each_entry(entry, head, hlist) {
+                if (entry->port_id == id)
+                        return entry;
+        }
+
+        return NULL;
+}
+
+static struct rcve_queue * find_rcve_queue(struct rmt_queue * rq,
+                                           port_id_t          id)
+{
+        struct rcve_queue *       entry;
         const struct hlist_head * head;
 
         if (!rq) {
@@ -378,14 +520,14 @@ static int rmt_send_port_id(struct rmt *  instance,
                 return -1;
         }
         spin_lock(&instance->send_queues->lock);
-        squeue = find_queue(instance->send_queues, id);
+        squeue = find_send_queue(instance->send_queues, id);
         if (!squeue) {
                 spin_unlock(&instance->send_queues->lock);
                 return -1;
         }
         spin_lock(&squeue->lock);
         spin_unlock(&instance->send_queues->lock);
-        if (rqueue_tail_push_ni(squeue->queue, &pdu)) {
+        if (rfifo_push_ni(squeue->queue, &pdu)) {
                 spin_unlock(&squeue->lock);
                 return -1;
         }
@@ -444,7 +586,7 @@ int rmt_send(struct rmt * instance,
                 LOG_ERR("Bad cep id");
                 return -1;
         }
-        id = port_id_bad(); /* FIXME: We must call PDU FT */
+        id = (address == 16 ? 2 : 1); /* FIXME: We must call PDU FT */
         if (rmt_send_port_id(instance, id, pdu))
                 return -1;
 
@@ -452,180 +594,270 @@ int rmt_send(struct rmt * instance,
 }
 EXPORT_SYMBOL(rmt_send);
 
-struct receive_data {
-        port_id_t               from;
-        struct sdu *            sdu;
-        struct kfa *            kfa;
-        struct efcp_container * efcpc;
-        struct rmt *            rmt;
-};
-
-static struct receive_data *
-receive_data_create(port_id_t               from,
-                    struct sdu *            sdu,
-                    struct kfa *            kfa,
-                    struct efcp_container * efcpc,
-                    struct rmt *            rmt)
+int rmt_send_queue_add(struct rmt * instance,
+                       port_id_t    id)
 {
-        struct receive_data * tmp;
+        struct send_queue * tmp;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Wrong port id");
+                return -1;
+        }
+
+        if (!instance->send_queues) {
+                LOG_ERR("Invalid RMT");
+                return -1;
+        }
+
+        if (find_send_queue(instance->send_queues, id)) {
+                LOG_ERR("Queue already exists");
+                return -1;
+        }
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
-                return NULL;
+                return -1;
 
-        tmp->from  = from;
-        tmp->sdu   = sdu;
-        tmp->kfa   = kfa;
-        tmp->efcpc = efcpc;
-        tmp->rmt   = rmt;
-
-        return tmp;
-}
-
-static bool is_receive_data_complete(const struct receive_data * data)
-{
-        if (!data)
-                return false;
-
-        if (!data->efcpc ||
-            !data->sdu   ||
-            !data->rmt   ||
-            !data->kfa   ||
-            !is_port_id_ok(data->from))
-                return false;
-
-        return true;
-}
-
-static int receive_data_destroy(struct receive_data * data)
-{
-        if (!data) {
-                LOG_ERR("No receive data passed");
+        tmp->queue = rfifo_create();
+        if (!tmp->queue) {
+                rkfree(tmp);
                 return -1;
         }
+        INIT_HLIST_NODE(&tmp->hlist);
 
-        if (data->sdu) sdu_destroy(data->sdu);
+        hash_add(instance->send_queues->queues, &tmp->hlist, id);
+        return 0;
+}
+EXPORT_SYMBOL(rmt_send_queue_add);
 
-        rkfree(data);
+int rmt_management_sdu_read(struct rmt *      instance,
+                            struct sdu_wpi ** sdu_wpi)
+{
+
+        int retval;
+
+        IRQ_BARRIER;
+
+        spin_lock(&instance->mgmt_data->lock);
+        while(rfifo_is_empty(instance->mgmt_data->sdu_ready)) {
+                LOG_DBG("Mgmt read going to sleep...");
+                spin_unlock(&instance->mgmt_data->lock);
+                retval = wait_event_interruptible(instance->mgmt_data->readers,
+                                                  !rfifo_is_empty(instance->mgmt_data->sdu_ready));
+
+                if (retval) {
+                        LOG_ERR("Mgmt queue waken up by interruption, bailing out...");
+                         return retval;
+                }
+                spin_lock(&instance->mgmt_data->lock);
+        }
+        
+        sdu_wpi = rfifo_pop(instance->mgmt_data->sdu_ready);
+        spin_unlock(&instance->mgmt_data->lock);
+
+        if (!sdu_wpi) {
+                LOG_ERR("There is not enough data in the management queue");
+                return -1;
+        }
 
         return 0;
 }
+EXPORT_SYMBOL(rmt_management_sdu_read);
+
+int rmt_rcve_queue_add(struct rmt * instance,
+                       port_id_t    id)
+{
+        struct rcve_queue * tmp;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Wrong port id");
+                return -1;
+        }
+
+        if (!instance->rcve_queues) {
+                LOG_ERR("Invalid RMT");
+                return -1;
+        }
+
+        if (find_rcve_queue(instance->rcve_queues, id)) {
+                LOG_ERR("Queue already exists");
+                return -1;
+        }
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return -1;
+
+        tmp->queue = rfifo_create();
+        if (!tmp->queue) {
+                rkfree(tmp);
+                return -1;
+        }
+        INIT_HLIST_NODE(&tmp->hlist);
+
+        hash_add(instance->rcve_queues->queues, &tmp->hlist, id);
+        return 0;
+}
+EXPORT_SYMBOL(rmt_rcve_queue_add);
 
 static int rmt_receive_worker(void * o)
 {
-        struct receive_data * tmp;
-        struct pdu *          pdu;
-        pdu_type_t            pdu_type;
-        address_t             dest_add;
+        struct rmt *        tmp;
+        struct pdu *        pdu;
+        pdu_type_t          pdu_type;
+        address_t           dest_add;
+        struct rcve_queue * entry;
+        int                 out;
+        struct hlist_node * ntmp;
+        int                 bucket;
 
-        tmp = (struct receive_data *) o;
+        out = 1;
+        tmp = (struct rmt *) o;
         if (!tmp) {
-                LOG_ERR("No data passed");
+                LOG_ERR("No send data passed");
                 return -1;
         }
 
-        if (!is_receive_data_complete(tmp)) {
-                LOG_ERR("Wrong receive data passed");
-                receive_data_destroy(tmp);
-                return -1;
-        }
+        while (out) {
+                out = 0;
+                spin_lock(&tmp->rcve_queues->lock);
+                hash_for_each_safe(tmp->rcve_queues->queues,
+                                   bucket,
+                                   ntmp,
+                                   entry,
+                                   hlist) {
+                        struct sdu * sdu;
+                        port_id_t port_id;
+                        spin_lock(&entry->lock);
+                        sdu = (struct sdu *) rfifo_pop(entry->queue);
+                        port_id = entry->port_id;
+                        spin_unlock(&entry->lock);
+                        spin_unlock(&tmp->rcve_queues->lock);
+                        if (!sdu)
+                                break;
 
-        pdu = pdu_create_with(tmp->sdu);
-        if (!pdu_is_ok(pdu)) {
-                receive_data_destroy(tmp);
-                return -1;
-        }
+                        out = out + 1;
+                        pdu = pdu_create_with(sdu);
+                        if (!pdu)
+                                break;
 
-        dest_add = pci_destination(pdu_pci_get_ro(pdu));
-        if (!is_address_ok(dest_add)) {
-                receive_data_destroy(tmp);
-                return -1;
-        }
+                        dest_add = pci_destination(pdu_pci_get_ro(pdu));
+                        if (!is_address_ok(dest_add))
+                                break;
 
-        if (tmp->rmt->address != dest_add) {
-                /* FIXME : Port id will be retrieved from the pduft */
-                if (kfa_flow_sdu_write(tmp->rmt->kfa,
-                                       port_id_bad(),
-                                       tmp->sdu)) {
-                        receive_data_destroy(tmp);
-                        return -1;
+                        if (tmp->address != dest_add) {
+                                /* FIXME : Port id will be retrieved from the pduft */
+                                kfa_flow_sdu_write(tmp->kfa,
+                                                   port_id_bad(),
+                                                   sdu);
+                                break;
+                        }
+                        pdu_type = pci_type(pdu_pci_get_rw(pdu));
+                        if (!pdu_type_is_ok(pdu_type)) {
+                                pdu_destroy(pdu);
+                                break;
+                        }
+                        switch (pdu_type) {
+                        case PDU_TYPE_MGMT: {
+                                struct buffer  * buffer;
+                                struct sdu_wpi * sdu_wpi;
+
+                                buffer = pdu_buffer_get_rw(pdu);
+                                sdu_wpi = sdu_wpi_create_with(buffer);
+                                if (!sdu_wpi)
+                                        break;
+
+                                sdu_wpi->port_id = port_id;
+                                spin_lock(&tmp->mgmt_data->lock);
+                                if (rfifo_push(tmp->mgmt_data->sdu_ready, sdu_wpi)) {
+                                        spin_unlock(&tmp->mgmt_data->lock);
+                                        break;
+                                }
+                                spin_unlock(&tmp->mgmt_data->lock);
+                                wake_up(&tmp->mgmt_data->readers);
+                                break;
+                        }
+                        case PDU_TYPE_DT: {
+                                efcp_container_receive(tmp->efcpc,
+                                                       pci_cep_destination(pdu_pci_get_ro(pdu)),
+                                                       pdu);
+                                break;
+                        }
+                        default:
+                                LOG_ERR("Unknown PDU type %d", pdu_type);
+                        }
                 }
+
         }
 
-        pdu_type = pci_type(pdu_pci_get_rw(pdu));
-        if (!pdu_type_is_ok(pdu_type)) {
-                receive_data_destroy(tmp);
-                return -1;
-        }
-        switch (pdu_type) {
-        case PDU_TYPE_MGMT: {
-                struct buffer  * buffer;
-                struct sdu_wpi * sdu_wpi;
-
-                buffer = pdu_buffer_get_rw(pdu);
-                sdu_wpi = sdu_wpi_create_with(buffer);
-                if (!sdu_wpi) {
-                        receive_data_destroy(tmp);
-                        return -1;
-                }
-                sdu_wpi->port_id = tmp->from;
-                if (rfifo_push(tmp->rmt->mgmt_sdu_wpi_queue, &sdu_wpi)) {
-                        receive_data_destroy(tmp);
-                        return -1;
-                }
-
-                return 0;
-        }
-        case PDU_TYPE_DT: {
-                if (efcp_container_receive(tmp->efcpc,
-                                           pci_cep_destination(pdu_pci_get_ro(pdu)),
-                                           pdu)) {
-                        receive_data_destroy(tmp);
-                        return -1;
-                }
-
-                return 0;
-        }
-        default:
-                LOG_ERR("Unknown PDU type %d", pdu_type);
-                return -1;
-        }
+        return 0;
 }
 
 int rmt_receive(struct rmt * instance,
                 struct sdu * sdu,
                 port_id_t    from)
 {
-        struct receive_data *  data;
         struct rwq_work_item * item;
+        struct rcve_queue *    rcv_queue;
 
         if (!instance) {
                 LOG_ERR("No RMT passed");
                 return -1;
         }
 
-        data = receive_data_create(from,
-                                   sdu,
-                                   instance->kfa,
-                                   instance->efcpc,
-                                   instance);
-        if (!is_receive_data_complete(data)) {
-                if (data)
-                        rkfree(data);
+        if (!sdu) {
+                LOG_ERR("Bogus PDU passed");
+                return -1;
+        }
+        if (!is_port_id_ok(from)) {
+                LOG_ERR("Wrong port id");
                 return -1;
         }
 
+        spin_lock(&instance->rcve_queues->lock);
+        rcv_queue = find_rcve_queue(instance->rcve_queues, from);
+        if (!rcv_queue) {
+                spin_unlock(&instance->rcve_queues->lock);
+                return -1;
+        }
+        spin_lock(&rcv_queue->lock);
+        spin_unlock(&instance->rcve_queues->lock);
+        if (rfifo_push_ni(rcv_queue->queue, &sdu)) {
+                spin_unlock(&rcv_queue->lock);
+                return -1;
+        }
+        spin_unlock(&rcv_queue->lock);
+
+        spin_lock(&instance->rcve_queues->lock);
+        if (instance->rcve_queues->in_use) {
+                LOG_DBG("Work already posted, nothing more to do");
+                spin_unlock(&instance->rcve_queues->lock);
+                return 0;
+        }
+        instance->rcve_queues->in_use = 1;
+        spin_unlock(&instance->rcve_queues->lock);
+
         /* Is this _ni() call really necessary ??? */
-        item = rwq_work_create_ni(rmt_receive_worker, data);
+        item = rwq_work_create_ni(rmt_receive_worker, instance);
         if (!item) {
-                rkfree(data);
+                LOG_ERR("Couldn't create rwq work");
                 return -1;
         }
 
         ASSERT(instance->ingress_wq);
 
         if (rwq_work_post(instance->ingress_wq, item)) {
-                receive_data_destroy(data);
+                LOG_ERR("Couldn't put work in the ingress workqueue");
                 return -1;
         }
 
