@@ -493,7 +493,7 @@ static int rmt_send_port_id(struct rmt *  instance,
         }
         spin_lock(&squeue->lock);
         spin_unlock(&instance->send_queues->lock);
-        if (rfifo_push_ni(squeue->queue, &pdu)) {
+        if (rfifo_push_ni(squeue->queue, pdu)) {
                 spin_unlock(&squeue->lock);
                 return -1;
         }
@@ -756,7 +756,8 @@ static int rmt_receive_worker(void * o)
 
                                 sdu_wpi->port_id = port_id;
                                 spin_lock(&tmp->mgmt_data->lock);
-                                if (rfifo_push(tmp->mgmt_data->sdu_ready, sdu_wpi)) {
+                                if (rfifo_push_ni(tmp->mgmt_data->sdu_ready,
+                                                  sdu_wpi)) {
                                         spin_unlock(&tmp->mgmt_data->lock);
                                         break;
                                 }
