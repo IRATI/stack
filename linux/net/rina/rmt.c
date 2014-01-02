@@ -52,14 +52,7 @@ struct rmt_queue {
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
-struct send_queue {
-        struct rfifo *    queue;
-        port_id_t         port_id;
-        struct hlist_node hlist;
-        spinlock_t        lock;
-};
-
-struct rcve_queue {
+struct rs_queue {
         struct rfifo *    queue;
         port_id_t         port_id;
         struct hlist_node hlist;
@@ -187,7 +180,7 @@ static void pdu_dtor(void * e)
         pdu_destroy(tmp);
 }
 
-static int send_queue_destroy(struct send_queue * send_q)
+static int rs_queue_destroy(struct rs_queue * send_q)
 {
         rfifo_destroy(send_q->queue, pdu_dtor);
         hash_del(&send_q->hlist);
@@ -196,18 +189,9 @@ static int send_queue_destroy(struct send_queue * send_q)
         return 0;
 }
 
-static int rcve_queue_destroy(struct rcve_queue * rcve_q)
-{
-        rfifo_destroy(rcve_q->queue, pdu_dtor);
-        hash_del(&rcve_q->hlist);
-        rkfree(rcve_q);
-
-        return 0;
-}
-
 static int rmt_egress_queue_destroy(struct rmt_queue * instance)
 {
-        struct send_queue * entry;
+        struct rs_queue *   entry;
         struct hlist_node * tmp;
         int                 bucket;
 
@@ -216,7 +200,7 @@ static int rmt_egress_queue_destroy(struct rmt_queue * instance)
 
         hash_for_each_safe(instance->queues, bucket, tmp, entry, hlist) {
                 LOG_DBG("Calling dtor for entry %pK", entry);
-                send_queue_destroy(entry);
+                rs_queue_destroy(entry);
         }
         rkfree(instance);
 
@@ -227,7 +211,7 @@ static int rmt_egress_queue_destroy(struct rmt_queue * instance)
 
 static int rmt_ingress_queue_destroy(struct rmt_queue * instance)
 {
-        struct rcve_queue * entry;
+        struct rs_queue *   entry;
         struct hlist_node * tmp;
         int                 bucket;
 
@@ -236,7 +220,7 @@ static int rmt_ingress_queue_destroy(struct rmt_queue * instance)
 
         hash_for_each_safe(instance->queues, bucket, tmp, entry, hlist) {
                 LOG_DBG("Calling dtor for entry %pK", entry);
-                rcve_queue_destroy(entry);
+                rs_queue_destroy(entry);
         }
         rkfree(instance);
 
@@ -415,7 +399,7 @@ static struct sdu * pdu_process(struct pdu * pdu)
 static int rmt_send_worker(void * o)
 {
         struct send_data *  tmp;
-        struct send_queue * entry;
+        struct rs_queue *   entry;
         struct pdu *        pdu;
         int                 out;
         struct hlist_node * ntmp;
@@ -460,35 +444,10 @@ static int rmt_send_worker(void * o)
         return 0;
 }
 
-static struct send_queue * find_send_queue(struct rmt_queue * rq,
-                                           port_id_t          id)
+static struct rs_queue * find_rs_queue(struct rmt_queue * rq,
+                                       port_id_t          id)
 {
-        struct send_queue *       entry;
-        const struct hlist_head * head;
-
-        if (!rq) {
-                LOG_ERR("Cannot look-up in a empty map");
-                return NULL;
-        }
-
-        if (!is_port_id_ok(id)) {
-                LOG_ERR("Bogus port id");
-                return NULL;
-        }
-
-        head = &rq->queues[rmap_hash(rq->queues, id)];
-        hlist_for_each_entry(entry, head, hlist) {
-                if (entry->port_id == id)
-                        return entry;
-        }
-
-        return NULL;
-}
-
-static struct rcve_queue * find_rcve_queue(struct rmt_queue * rq,
-                                           port_id_t          id)
-{
-        struct rcve_queue *       entry;
+        struct rs_queue *       entry;
         const struct hlist_head * head;
 
         if (!rq) {
@@ -514,7 +473,7 @@ static int rmt_send_port_id(struct rmt *  instance,
                             port_id_t     id,
                             struct pdu *  pdu)
 {
-        struct send_queue *    squeue;
+        struct rs_queue *      squeue;
         struct rwq_work_item * item;
         struct send_data *     data;
 
@@ -527,7 +486,7 @@ static int rmt_send_port_id(struct rmt *  instance,
                 return -1;
         }
         spin_lock(&instance->send_queues->lock);
-        squeue = find_send_queue(instance->send_queues, id);
+        squeue = find_rs_queue(instance->send_queues, id);
         if (!squeue) {
                 spin_unlock(&instance->send_queues->lock);
                 return -1;
@@ -604,7 +563,7 @@ EXPORT_SYMBOL(rmt_send);
 int rmt_send_queue_add(struct rmt * instance,
                        port_id_t    id)
 {
-        struct send_queue * tmp;
+        struct rs_queue * tmp;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -621,7 +580,7 @@ int rmt_send_queue_add(struct rmt * instance,
                 return -1;
         }
 
-        if (find_send_queue(instance->send_queues, id)) {
+        if (find_rs_queue(instance->send_queues, id)) {
                 LOG_ERR("Queue already exists");
                 return -1;
         }
@@ -680,7 +639,7 @@ EXPORT_SYMBOL(rmt_management_sdu_read);
 int rmt_rcve_queue_add(struct rmt * instance,
                        port_id_t    id)
 {
-        struct rcve_queue * tmp;
+        struct rs_queue * tmp;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -697,7 +656,7 @@ int rmt_rcve_queue_add(struct rmt * instance,
                 return -1;
         }
 
-        if (find_rcve_queue(instance->rcve_queues, id)) {
+        if (find_rs_queue(instance->rcve_queues, id)) {
                 LOG_ERR("Queue already exists");
                 return -1;
         }
@@ -725,7 +684,7 @@ static int rmt_receive_worker(void * o)
         struct pdu *        pdu;
         pdu_type_t          pdu_type;
         address_t           dest_add;
-        struct rcve_queue * entry;
+        struct rs_queue * entry;
         int                 out;
         struct hlist_node * ntmp;
         int                 bucket;
@@ -817,7 +776,7 @@ int rmt_receive(struct rmt * instance,
                 port_id_t    from)
 {
         struct rwq_work_item * item;
-        struct rcve_queue *    rcv_queue;
+        struct rs_queue *    rcv_queue;
 
         if (!instance) {
                 LOG_ERR("No RMT passed");
@@ -834,7 +793,7 @@ int rmt_receive(struct rmt * instance,
         }
 
         spin_lock(&instance->rcve_queues->lock);
-        rcv_queue = find_rcve_queue(instance->rcve_queues, from);
+        rcv_queue = find_rs_queue(instance->rcve_queues, from);
         if (!rcv_queue) {
                 spin_unlock(&instance->rcve_queues->lock);
                 return -1;
