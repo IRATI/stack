@@ -127,17 +127,13 @@ namespace rina {
                                 int maxBytes)
         {
                 int result;
-                struct sdu_wpi_t * sdu_wpi = 0;
-
+                
                 DUMP_SYSCALL("SYS_readManagementSDU", SYS_readManagementSDU);
 
-                result = syscall(SYS_readManagementSDU, ipcProcessId, sdu_wpi, maxBytes);
+                result = syscall(SYS_readManagementSDU, ipcProcessId, sdu, portId, maxBytes);
                 if (result < 0) {
                         LOG_ERR("Syscall read SDU failed: %d", result);
-                } else {
-                        sdu = sdu_wpi->sdu;
-                        *portId = sdu_wpi->port_id;
-                }
+                } 
 
                 return result;
         }

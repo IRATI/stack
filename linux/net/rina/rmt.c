@@ -623,11 +623,20 @@ int rmt_management_sdu_read(struct rmt *      instance,
                 }
                 spin_lock(&instance->mgmt_data->lock);
         }
-        
-        sdu_wpi = rfifo_pop(instance->mgmt_data->sdu_ready);
+
+        if (rfifo_is_empty(instance->mgmt_data->sdu_ready)) {
+                LOG_DBG("Waken up but mgmt_sdu_ready queue is \
+                empty or does not exist");
+                spin_unlock(&instance->mgmt_data->lock);
+                return -1;
+        }
+        ASSERT(!rfifo_is_empty(instance->mgmt_data->sdu_ready));        
+
+        *sdu_wpi = rfifo_pop(instance->mgmt_data->sdu_ready);
+
         spin_unlock(&instance->mgmt_data->lock);
 
-        if (!sdu_wpi) {
+        if (!sdu_wpi_is_ok(*sdu_wpi)) {
                 LOG_ERR("There is not enough data in the management queue");
                 return -1;
         }
