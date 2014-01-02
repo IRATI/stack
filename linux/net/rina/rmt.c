@@ -401,19 +401,19 @@ static int rmt_send_worker(void * o)
         struct send_data *  tmp;
         struct rs_queue *   entry;
         struct pdu *        pdu;
-        int                 out;
+        bool                out;
         struct hlist_node * ntmp;
         int                 bucket;
 
-        out = 1;
+        out = false;
         tmp = (struct send_data *) o;
         if (!tmp) {
                 LOG_ERR("No send data passed");
                 return -1;
         }
 
-        while (out) {
-                out = 0;
+        while (!out) {
+                out = true;
                 spin_lock(&tmp->rmt_q->lock);
                 hash_for_each_safe(tmp->rmt_q->queues, bucket, ntmp, entry, hlist) {
                         struct sdu * sdu;
@@ -426,7 +426,7 @@ static int rmt_send_worker(void * o)
                         if (!pdu)
                                 break;
 
-                        out = out + 1;
+                        out = false;
                         sdu = pdu_process(pdu);
                         if (!sdu)
                                 break;
@@ -437,8 +437,12 @@ static int rmt_send_worker(void * o)
                                                sdu)) {
                                 LOG_ERR("Couldn't write SDU to KFA");
                         }
+                        spin_lock(&tmp->rmt_q->lock);
                 }
-
+                if (out) {
+                        tmp->rmt_q->in_use = 0;
+                        spin_unlock(&tmp->rmt_q->lock);
+                }
         }
 
         return 0;
@@ -693,20 +697,20 @@ static int rmt_receive_worker(void * o)
         struct pdu *        pdu;
         pdu_type_t          pdu_type;
         address_t           dest_add;
-        struct rs_queue * entry;
-        int                 out;
+        struct rs_queue *   entry;
+        bool                out;
         struct hlist_node * ntmp;
         int                 bucket;
 
-        out = 1;
+        out = false;
         tmp = (struct rmt *) o;
         if (!tmp) {
                 LOG_ERR("No send data passed");
                 return -1;
         }
 
-        while (out) {
-                out = 0;
+        while (!out) {
+                out = true;
                 spin_lock(&tmp->rcve_queues->lock);
                 hash_for_each_safe(tmp->rcve_queues->queues,
                                    bucket,
@@ -720,28 +724,36 @@ static int rmt_receive_worker(void * o)
                         port_id = entry->port_id;
                         spin_unlock(&entry->lock);
                         spin_unlock(&tmp->rcve_queues->lock);
-                        if (!sdu)
+                        if (!sdu) {
+                                spin_lock(&tmp->rcve_queues->lock);
                                 break;
-
-                        out = out + 1;
+                        }
+                        out = false;
                         pdu = pdu_create_with(sdu);
-                        if (!pdu)
+                        if (!pdu) {
+                                spin_lock(&tmp->rcve_queues->lock);
                                 break;
-
+                        }
                         dest_add = pci_destination(pdu_pci_get_ro(pdu));
-                        if (!is_address_ok(dest_add))
+                        if (!is_address_ok(dest_add)) {
+                                spin_lock(&tmp->rcve_queues->lock);
                                 break;
-
+                        }
                         if (tmp->address != dest_add) {
-                                /* FIXME : Port id will be retrieved from the pduft */
+                                /*
+                                 * FIXME : Port id will be retrieved
+                                 * from the pduft
+                                 */
                                 kfa_flow_sdu_write(tmp->kfa,
                                                    port_id_bad(),
                                                    sdu);
+                                spin_lock(&tmp->rcve_queues->lock);
                                 break;
                         }
                         pdu_type = pci_type(pdu_pci_get_rw(pdu));
                         if (!pdu_type_is_ok(pdu_type)) {
                                 pdu_destroy(pdu);
+                                spin_lock(&tmp->rcve_queues->lock);
                                 break;
                         }
                         switch (pdu_type) {
@@ -767,15 +779,19 @@ static int rmt_receive_worker(void * o)
                         }
                         case PDU_TYPE_DT: {
                                 efcp_container_receive(tmp->efcpc,
-                                                       pci_cep_destination(pdu_pci_get_ro(pdu)),
-                                                       pdu);
+                                      pci_cep_destination(pdu_pci_get_ro(pdu)),
+                                      pdu);
                                 break;
                         }
                         default:
                                 LOG_ERR("Unknown PDU type %d", pdu_type);
                         }
+                        spin_lock(&tmp->rcve_queues->lock);
                 }
-
+                if (out) {
+                        tmp->rcve_queues->in_use = 0;
+                        spin_unlock(&tmp->rcve_queues->lock);
+                }
         }
 
         return 0;
@@ -786,7 +802,7 @@ int rmt_receive(struct rmt * instance,
                 port_id_t    from)
 {
         struct rwq_work_item * item;
-        struct rs_queue *    rcv_queue;
+        struct rs_queue *      rcv_queue;
 
         if (!instance) {
                 LOG_ERR("No RMT passed");
