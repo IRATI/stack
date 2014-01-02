@@ -158,13 +158,20 @@ struct rmt * rmt_create(struct kfa *            kfa,
 
         tmp->send_queues = rkzalloc(sizeof(struct rmt_queue), GFP_KERNEL);
         if (!tmp->send_queues) {
-                rwq_destroy(tmp->egress_wq);
-                rwq_destroy(tmp->ingress_wq);
                 rmt_destroy(tmp);
                 return NULL;
         }
         hash_init(tmp->send_queues->queues);
         spin_lock_init(&tmp->send_queues->lock);
+        tmp->send_queues->in_use = 0;
+        tmp->rcve_queues = rkzalloc(sizeof(struct rmt_queue), GFP_KERNEL);
+        if (!tmp->rcve_queues) {
+                rmt_destroy(tmp);
+                return NULL;
+        }
+        hash_init(tmp->rcve_queues->queues);
+        spin_lock_init(&tmp->rcve_queues->lock);
+        tmp->rcve_queues->in_use = 0;
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
         return tmp;
@@ -629,8 +636,9 @@ int rmt_send_queue_add(struct rmt * instance,
                 return -1;
         }
         INIT_HLIST_NODE(&tmp->hlist);
-
         hash_add(instance->send_queues->queues, &tmp->hlist, id);
+        tmp->port_id = id;
+
         return 0;
 }
 EXPORT_SYMBOL(rmt_send_queue_add);
@@ -704,8 +712,9 @@ int rmt_rcve_queue_add(struct rmt * instance,
                 return -1;
         }
         INIT_HLIST_NODE(&tmp->hlist);
-
         hash_add(instance->rcve_queues->queues, &tmp->hlist, id);
+        tmp->port_id = id;
+
         return 0;
 }
 EXPORT_SYMBOL(rmt_rcve_queue_add);
@@ -832,7 +841,7 @@ int rmt_receive(struct rmt * instance,
         }
         spin_lock(&rcv_queue->lock);
         spin_unlock(&instance->rcve_queues->lock);
-        if (rfifo_push_ni(rcv_queue->queue, &sdu)) {
+        if (rfifo_push_ni(rcv_queue->queue, sdu)) {
                 spin_unlock(&rcv_queue->lock);
                 return -1;
         }

@@ -154,10 +154,9 @@ void * rqueue_head_pop(struct rqueue * q)
 
         tmp = list_first_entry(&q->head, struct rqueue_entry, next);
         ASSERT(tmp);
-
-        list_del(&q->head);
-
         ret = tmp->data;
+
+        list_del(&tmp->next);
         entry_destroy(tmp);
 
         return ret;
