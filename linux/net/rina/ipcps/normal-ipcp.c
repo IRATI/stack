@@ -447,9 +447,10 @@ static int normal_management_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        LOG_DBG("Going to send to the RMT:\n"                  \
-                "src_address %d\ndst_address: %d\nport: %d",   \
-                 pci_source(pci), pci_destination(pci), port_id);
+        LOG_DBG("Going to send to the RMT:");
+        LOG_DBG("src_address %d", pci_source(pci));
+        LOG_DBG("dst_address: %d", pci_destination(pci));
+        LOG_DBG("port: %d", port_id);
 
         /* Give the data to RMT now ! */
         if (rmt_send(data->rmt,

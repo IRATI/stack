@@ -72,7 +72,6 @@ struct rmt {
         struct workqueue_struct * egress_wq;
         struct workqueue_struct * ingress_wq;
         address_t                 address;
-        struct rfifo *            mgmt_sdu_wpi_queue;
         struct rmt_queue *        send_queues;
         struct rmt_queue *        rcve_queues;
         struct mgmt_data *        mgmt_data;
@@ -98,6 +97,7 @@ static struct mgmt_data * rmt_mgmt_data_create(void)
         }
 
         init_waitqueue_head(&data->readers);
+        spin_lock_init(&data->lock);
 
         return data;
 
@@ -307,7 +307,7 @@ static struct send_data * send_data_create(struct kfa *       kfa,
         return tmp;
 }
 
-bool is_send_data_complete(const struct send_data * data)
+static bool is_send_data_complete(const struct send_data * data)
 {
         bool ret;
 
@@ -400,7 +400,6 @@ static int rmt_send_worker(void * o)
 {
         struct send_data *  tmp;
         struct rs_queue *   entry;
-        struct pdu *        pdu;
         bool                out;
         struct hlist_node * ntmp;
         int                 bucket;
@@ -412,17 +411,30 @@ static int rmt_send_worker(void * o)
                 return -1;
         }
 
+        if (!tmp->rmt_q) {
+                LOG_ERR("No RMT queues passed");
+                return -1;
+        }
+
+        if (!tmp->kfa) {
+                LOG_ERR("No KFA passed");
+                spin_lock(&tmp->rmt_q->lock);
+                tmp->rmt_q->in_use = 0;
+                spin_unlock(&tmp->rmt_q->lock);
+                return -1;
+        }
+
         while (!out) {
                 out = true;
-                spin_lock(&tmp->rmt_q->lock);
                 hash_for_each_safe(tmp->rmt_q->queues, bucket, ntmp, entry, hlist) {
                         struct sdu * sdu;
+                        struct pdu * pdu;
                         port_id_t port_id;
+
                         spin_lock(&entry->lock);
                         pdu = (struct pdu *) rfifo_pop(entry->queue);
                         port_id = entry->port_id;
                         spin_unlock(&entry->lock);
-                        spin_unlock(&tmp->rmt_q->lock);
                         if (!pdu)
                                 break;
 
@@ -432,18 +444,18 @@ static int rmt_send_worker(void * o)
                                 break;
 
                         /* FIXME : Port id will be retrieved from the pduft */
+                        LOG_DBG("Gonna SEND sdu to port_id %d", port_id);
                         if (kfa_flow_sdu_write(tmp->kfa,
                                                port_id,
                                                sdu)) {
                                 LOG_ERR("Couldn't write SDU to KFA");
                         }
-                        spin_lock(&tmp->rmt_q->lock);
-                }
-                if (out) {
-                        tmp->rmt_q->in_use = 0;
-                        spin_unlock(&tmp->rmt_q->lock);
                 }
         }
+
+        spin_lock(&tmp->rmt_q->lock);
+        tmp->rmt_q->in_use = 0;
+        spin_unlock(&tmp->rmt_q->lock);
 
         return 0;
 }
@@ -513,7 +525,7 @@ static int rmt_send_port_id(struct rmt *  instance,
         spin_unlock(&instance->send_queues->lock);
 
         data = send_data_create(instance->kfa, instance->send_queues);
-        if (!data) {
+        if (!is_send_data_complete(data)) {
                 LOG_ERR("Couldn't create send data");
                 return -1;
         }
@@ -557,6 +569,7 @@ int rmt_send(struct rmt * instance,
                 return -1;
         }
         id = (address == 16 ? 2 : 1); /* FIXME: We must call PDU FT */
+        LOG_DBG("Gonna SEND to port_id: %d", id);
         if (rmt_send_port_id(instance, id, pdu))
                 return -1;
 
@@ -601,6 +614,8 @@ int rmt_send_queue_add(struct rmt * instance,
         INIT_HLIST_NODE(&tmp->hlist);
         hash_add(instance->send_queues->queues, &tmp->hlist, id);
         tmp->port_id = id;
+        spin_lock_init(&tmp->lock);
+        LOG_DBG("Added send queue to rmt %pK for port id %d", instance, id);
 
         return 0;
 }
@@ -629,8 +644,6 @@ int rmt_management_sdu_read(struct rmt *      instance,
         }
 
         if (rfifo_is_empty(instance->mgmt_data->sdu_ready)) {
-                LOG_DBG("Waken up but mgmt_sdu_ready queue is \
-                empty or does not exist");
                 spin_unlock(&instance->mgmt_data->lock);
                 return -1;
         }
@@ -686,6 +699,8 @@ int rmt_rcve_queue_add(struct rmt * instance,
         INIT_HLIST_NODE(&tmp->hlist);
         hash_add(instance->rcve_queues->queues, &tmp->hlist, id);
         tmp->port_id = id;
+        spin_lock_init(&tmp->lock);
+        LOG_DBG("Added rcve queue to rmt %pK for port id %d", instance, id);
 
         return 0;
 }
@@ -694,7 +709,6 @@ EXPORT_SYMBOL(rmt_rcve_queue_add);
 static int rmt_receive_worker(void * o)
 {
         struct rmt *        tmp;
-        struct pdu *        pdu;
         pdu_type_t          pdu_type;
         address_t           dest_add;
         struct rs_queue *   entry;
@@ -702,6 +716,7 @@ static int rmt_receive_worker(void * o)
         struct hlist_node * ntmp;
         int                 bucket;
 
+        LOG_DBG("RMT receive worker called");
         out = false;
         tmp = (struct rmt *) o;
         if (!tmp) {
@@ -711,32 +726,29 @@ static int rmt_receive_worker(void * o)
 
         while (!out) {
                 out = true;
-                spin_lock(&tmp->rcve_queues->lock);
                 hash_for_each_safe(tmp->rcve_queues->queues,
                                    bucket,
                                    ntmp,
                                    entry,
                                    hlist) {
                         struct sdu * sdu;
+                        struct pdu * pdu;
                         port_id_t port_id;
+
                         spin_lock(&entry->lock);
                         sdu = (struct sdu *) rfifo_pop(entry->queue);
                         port_id = entry->port_id;
                         spin_unlock(&entry->lock);
-                        spin_unlock(&tmp->rcve_queues->lock);
                         if (!sdu) {
-                                spin_lock(&tmp->rcve_queues->lock);
                                 break;
                         }
                         out = false;
                         pdu = pdu_create_with(sdu);
                         if (!pdu) {
-                                spin_lock(&tmp->rcve_queues->lock);
                                 break;
                         }
                         dest_add = pci_destination(pdu_pci_get_ro(pdu));
                         if (!is_address_ok(dest_add)) {
-                                spin_lock(&tmp->rcve_queues->lock);
                                 break;
                         }
                         if (tmp->address != dest_add) {
@@ -747,13 +759,11 @@ static int rmt_receive_worker(void * o)
                                 kfa_flow_sdu_write(tmp->kfa,
                                                    port_id_bad(),
                                                    sdu);
-                                spin_lock(&tmp->rcve_queues->lock);
                                 break;
                         }
                         pdu_type = pci_type(pdu_pci_get_rw(pdu));
                         if (!pdu_type_is_ok(pdu_type)) {
                                 pdu_destroy(pdu);
-                                spin_lock(&tmp->rcve_queues->lock);
                                 break;
                         }
                         switch (pdu_type) {
@@ -786,13 +796,11 @@ static int rmt_receive_worker(void * o)
                         default:
                                 LOG_ERR("Unknown PDU type %d", pdu_type);
                         }
-                        spin_lock(&tmp->rcve_queues->lock);
-                }
-                if (out) {
-                        tmp->rcve_queues->in_use = 0;
-                        spin_unlock(&tmp->rcve_queues->lock);
                 }
         }
+        spin_lock(&tmp->rcve_queues->lock);
+        tmp->rcve_queues->in_use = 0;
+        spin_unlock(&tmp->rcve_queues->lock);
 
         return 0;
 }
