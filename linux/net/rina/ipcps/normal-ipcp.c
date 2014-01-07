@@ -264,7 +264,7 @@ static int ipcp_flow_notification(struct ipcp_instance_data * data,
         if (rmt_send_queue_add(data->rmt, pid))
                 return -1;
 
-        if (rmt_rcve_queue_add(data->rmt, pid))
+        if (rmt_recv_queue_add(data->rmt, pid))
                 return -1;
 
         return 0;

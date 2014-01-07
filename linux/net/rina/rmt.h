@@ -52,7 +52,7 @@ int          rmt_address_set(struct rmt * instance,
 
 int          rmt_send_queue_add(struct rmt * instance,
                                 port_id_t    id);
-int          rmt_rcve_queue_add(struct rmt * instance,
+int          rmt_recv_queue_add(struct rmt * instance,
                                 port_id_t    id);
 
 /* FIXME: Please check the following APIs */

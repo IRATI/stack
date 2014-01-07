@@ -38,12 +38,6 @@
 #include "pft.h"
 #include "efcp-utils.h"
 
-struct rmt_queue {
-        DECLARE_HASHTABLE(queues, 7);
-        spinlock_t    lock;
-        int           in_use;
-};
-
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 struct rs_queue {
@@ -52,6 +46,62 @@ struct rs_queue {
         struct hlist_node hlist;
         spinlock_t        lock;
 };
+
+static int rs_queue_destroy(struct rs_queue * send_q)
+{
+        if (!send_q)
+                return -1;
+
+        LOG_DBG("Destroying rs-queue %pK", send_q);
+
+        rfifo_destroy(send_q->queue, (void (*)(void *)) pdu_destroy);
+        hash_del(&send_q->hlist);
+        rkfree(send_q);
+
+        return 0;
+}
+
+struct rmt_queue {
+        DECLARE_HASHTABLE(queues, 7);
+        spinlock_t    lock;
+        int           in_use;
+};
+
+static struct rmt_queue * rmtq_create(void)
+{
+        struct rmt_queue * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        hash_init(tmp->queues);
+        spin_lock_init(&tmp->lock);
+        tmp->in_use = 0;
+
+        return tmp;
+}
+
+static int rmtq_destroy(struct rmt_queue * q)
+{
+        struct rs_queue *   entry;
+        struct hlist_node * tmp;
+        int                 bucket;
+
+        if (!q)
+                return -1;
+
+        hash_for_each_safe(q->queues, bucket, tmp, entry, hlist) {
+                if (rs_queue_destroy(entry)) {
+                        LOG_ERR("Could not destroy entry %pK", entry);
+                        return -1;
+                }
+        }
+
+        rkfree(q);
+
+        return 0;
+}
 
 struct mgmt_data {
         struct rfifo *    sdu_ready;
@@ -67,7 +117,7 @@ struct rmt {
         struct workqueue_struct * ingress_wq;
         address_t                 address;
         struct rmt_queue *        send_queues;
-        struct rmt_queue *        rcve_queues;
+        struct rmt_queue *        recv_queues;
         struct mgmt_data *        mgmt_data;
 };
 
@@ -124,14 +174,13 @@ struct rmt * rmt_create(struct kfa *            kfa,
         tmp->kfa   = kfa;
         tmp->efcpc = efcpc;
 
-        /* FIXME: the name should be unique, not shared with all the RMT's */
         snprintf(string_rmt_id, 30, "rmt-egress-wq-%pK", tmp);
         tmp->egress_wq = rwq_create(string_rmt_id);
         if (!tmp->egress_wq) {
                 rmt_destroy(tmp);
                 return NULL;
         }
-        /* FIXME: the name should be unique, not shared with all the RMT's */
+
         snprintf(string_rmt_id, 30, "rmt-ingress-wq-%pK", tmp);
         tmp->ingress_wq = rwq_create(string_rmt_id);
         if (!tmp->ingress_wq) {
@@ -141,89 +190,23 @@ struct rmt * rmt_create(struct kfa *            kfa,
 
         tmp->address = address_bad();
 
-        /* Create send-queues */
-        tmp->send_queues = rkzalloc(sizeof(struct rmt_queue), GFP_KERNEL);
+        tmp->send_queues = rmtq_create();
         if (!tmp->send_queues) {
                 rmt_destroy(tmp);
                 return NULL;
         }
-        hash_init(tmp->send_queues->queues);
-        spin_lock_init(&tmp->send_queues->lock);
-        tmp->send_queues->in_use = 0;
 
-        /* Create receive-queues */
-        tmp->rcve_queues = rkzalloc(sizeof(struct rmt_queue), GFP_KERNEL);
-        if (!tmp->rcve_queues) {
+        tmp->recv_queues = rmtq_create();
+        if (!tmp->recv_queues) {
                 rmt_destroy(tmp);
                 return NULL;
         }
-        hash_init(tmp->rcve_queues->queues);
-        spin_lock_init(&tmp->rcve_queues->lock);
-        tmp->rcve_queues->in_use = 0;
 
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
         return tmp;
 }
 EXPORT_SYMBOL(rmt_create);
-
-static int rs_queue_destroy(struct rs_queue * send_q)
-{
-        if (!send_q)
-                return -1;
-
-        LOG_DBG("Destroying rs-queue %pK", send_q);
-
-        rfifo_destroy(send_q->queue, (void (*)(void *)) pdu_destroy);
-        hash_del(&send_q->hlist);
-        rkfree(send_q);
-
-        return 0;
-}
-
-static int rmt_egress_queue_destroy(struct rmt_queue * instance)
-{
-        struct rs_queue *   entry;
-        struct hlist_node * tmp;
-        int                 bucket;
-
-        if (!instance)
-                return -1;
-
-        hash_for_each_safe(instance->queues, bucket, tmp, entry, hlist) {
-                if (rs_queue_destroy(entry)) {
-                        LOG_ERR("Could not destroy entry %pK", entry);
-                        return -1;
-                }
-        }
-        rkfree(instance);
-
-        LOG_DBG("RMT egress queues destroyed successfully");
-
-        return 0;
-}
-
-static int rmt_ingress_queue_destroy(struct rmt_queue * instance)
-{
-        struct rs_queue *   entry;
-        struct hlist_node * tmp;
-        int                 bucket;
-
-        if (!instance)
-                return -1;
-
-        hash_for_each_safe(instance->queues, bucket, tmp, entry, hlist) {
-                if (rs_queue_destroy(entry)) {
-                        LOG_ERR("Could not destroy entry %pK", entry);
-                        return -1;
-                }
-        }
-        rkfree(instance);
-
-        LOG_DBG("RMT egress queues destroyed successfully");
-
-        return 0;
-}
 
 int rmt_destroy(struct rmt * instance)
 {
@@ -247,10 +230,10 @@ int rmt_destroy(struct rmt * instance)
         if (instance->ingress_wq) rwq_destroy(instance->ingress_wq);
 
         if (instance->send_queues)
-                rmt_egress_queue_destroy(instance->send_queues);
+                rmtq_destroy(instance->send_queues);
 
-        if (instance->rcve_queues)
-                rmt_ingress_queue_destroy(instance->rcve_queues);
+        if (instance->recv_queues)
+                rmtq_destroy(instance->recv_queues);
 
         rkfree(instance);
 
@@ -269,7 +252,7 @@ int rmt_address_set(struct rmt * instance,
         }
 
         if (is_address_ok(instance->address)) {
-                LOG_ERR("The RMT already configured");
+                LOG_ERR("The RMT is already configured");
                 return -1;
         }
 
@@ -639,7 +622,7 @@ int rmt_management_sdu_read(struct rmt *      instance,
         IRQ_BARRIER;
 
         spin_lock(&instance->mgmt_data->lock);
-        while(rfifo_is_empty(instance->mgmt_data->sdu_ready)) {
+        while (rfifo_is_empty(instance->mgmt_data->sdu_ready)) {
                 LOG_DBG("Mgmt read going to sleep...");
                 spin_unlock(&instance->mgmt_data->lock);
                 retval = wait_event_interruptible(instance->mgmt_data->readers,
@@ -672,7 +655,7 @@ int rmt_management_sdu_read(struct rmt *      instance,
 }
 EXPORT_SYMBOL(rmt_management_sdu_read);
 
-int rmt_rcve_queue_add(struct rmt * instance,
+int rmt_recv_queue_add(struct rmt * instance,
                        port_id_t    id)
 {
         struct rs_queue * tmp;
@@ -687,12 +670,12 @@ int rmt_rcve_queue_add(struct rmt * instance,
                 return -1;
         }
 
-        if (!instance->rcve_queues) {
+        if (!instance->recv_queues) {
                 LOG_ERR("Invalid RMT");
                 return -1;
         }
 
-        if (find_rs_queue(instance->rcve_queues, id)) {
+        if (find_rs_queue(instance->recv_queues, id)) {
                 LOG_ERR("Queue already exists");
                 return -1;
         }
@@ -707,15 +690,15 @@ int rmt_rcve_queue_add(struct rmt * instance,
                 return -1;
         }
         INIT_HLIST_NODE(&tmp->hlist);
-        hash_add(instance->rcve_queues->queues, &tmp->hlist, id);
+        hash_add(instance->recv_queues->queues, &tmp->hlist, id);
         tmp->port_id = id;
         spin_lock_init(&tmp->lock);
 
-        LOG_DBG("Added rcve queue to rmt %pK for port id %d", instance, id);
+        LOG_DBG("Added receive queue to rmt %pK for port id %d", instance, id);
 
         return 0;
 }
-EXPORT_SYMBOL(rmt_rcve_queue_add);
+EXPORT_SYMBOL(rmt_recv_queue_add);
 
 static int rmt_receive_worker(void * o)
 {
@@ -738,7 +721,7 @@ static int rmt_receive_worker(void * o)
 
         while (!out) {
                 out = true;
-                hash_for_each_safe(tmp->rcve_queues->queues,
+                hash_for_each_safe(tmp->recv_queues->queues,
                                    bucket,
                                    ntmp,
                                    entry,
@@ -810,9 +793,9 @@ static int rmt_receive_worker(void * o)
                         }
                 }
         }
-        spin_lock(&tmp->rcve_queues->lock);
-        tmp->rcve_queues->in_use = 0;
-        spin_unlock(&tmp->rcve_queues->lock);
+        spin_lock(&tmp->recv_queues->lock);
+        tmp->recv_queues->in_use = 0;
+        spin_unlock(&tmp->recv_queues->lock);
 
         return 0;
 }
@@ -838,28 +821,28 @@ int rmt_receive(struct rmt * instance,
                 return -1;
         }
 
-        spin_lock(&instance->rcve_queues->lock);
-        rcv_queue = find_rs_queue(instance->rcve_queues, from);
+        spin_lock(&instance->recv_queues->lock);
+        rcv_queue = find_rs_queue(instance->recv_queues, from);
         if (!rcv_queue) {
-                spin_unlock(&instance->rcve_queues->lock);
+                spin_unlock(&instance->recv_queues->lock);
                 return -1;
         }
         spin_lock(&rcv_queue->lock);
-        spin_unlock(&instance->rcve_queues->lock);
+        spin_unlock(&instance->recv_queues->lock);
         if (rfifo_push_ni(rcv_queue->queue, sdu)) {
                 spin_unlock(&rcv_queue->lock);
                 return -1;
         }
         spin_unlock(&rcv_queue->lock);
 
-        spin_lock(&instance->rcve_queues->lock);
-        if (instance->rcve_queues->in_use) {
+        spin_lock(&instance->recv_queues->lock);
+        if (instance->recv_queues->in_use) {
                 LOG_DBG("Work already posted, nothing more to do");
-                spin_unlock(&instance->rcve_queues->lock);
+                spin_unlock(&instance->recv_queues->lock);
                 return 0;
         }
-        instance->rcve_queues->in_use = 1;
-        spin_unlock(&instance->rcve_queues->lock);
+        instance->recv_queues->in_use = 1;
+        spin_unlock(&instance->recv_queues->lock);
 
         /* Is this _ni() call really necessary ??? */
         item = rwq_work_create_ni(rmt_receive_worker, instance);
