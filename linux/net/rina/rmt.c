@@ -557,6 +557,7 @@ int rmt_send(struct rmt * instance,
                 LOG_ERR("Bad cep id");
                 return -1;
         }
+
         id = (address == 16 ? 2 : 1); /* FIXME: We must call PDU FT */
 
         LOG_DBG("Gonna SEND to port_id: %d", id);
@@ -568,11 +569,57 @@ int rmt_send(struct rmt * instance,
 }
 EXPORT_SYMBOL(rmt_send);
 
-int rmt_send_queue_add(struct rmt * instance,
-                       port_id_t    id)
+#if 0
+static struct rs_queue * rsq_create(void)
 {
         struct rs_queue * tmp;
 
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->queue = rfifo_create();
+        if (!tmp->queue) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        INIT_HLIST_NODE(&tmp->hlist);
+        spin_lock_init(&tmp->lock);
+        tmp->port_id = id;
+
+        return tmp;
+}
+#endif
+
+static int __rmt_send_queue_add(struct rmt * instance,
+                                port_id_t    id)
+{
+        struct rs_queue * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return -1;
+
+        tmp->queue = rfifo_create();
+        if (!tmp->queue) {
+                rkfree(tmp);
+                return -1;
+        }
+
+        INIT_HLIST_NODE(&tmp->hlist);
+        hash_add(instance->send_queues->queues, &tmp->hlist, id);
+        tmp->port_id = id;
+        spin_lock_init(&tmp->lock);
+
+        LOG_DBG("Added send queue to rmt %pK for port id %d", instance, id);
+
+        return 0;
+}
+
+int rmt_send_queue_add(struct rmt * instance,
+                       port_id_t    id)
+{
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
                 return -1;
@@ -593,6 +640,15 @@ int rmt_send_queue_add(struct rmt * instance,
                 return -1;
         }
 
+        return __rmt_send_queue_add(instance, id);
+}
+EXPORT_SYMBOL(rmt_send_queue_add);
+
+static int __rmt_recv_queue_add(struct rmt * instance,
+                                port_id_t    id)
+{
+        struct rs_queue * tmp;
+
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return -1;
@@ -602,16 +658,43 @@ int rmt_send_queue_add(struct rmt * instance,
                 rkfree(tmp);
                 return -1;
         }
+
         INIT_HLIST_NODE(&tmp->hlist);
-        hash_add(instance->send_queues->queues, &tmp->hlist, id);
+        hash_add(instance->recv_queues->queues, &tmp->hlist, id);
         tmp->port_id = id;
         spin_lock_init(&tmp->lock);
 
-        LOG_DBG("Added send queue to rmt %pK for port id %d", instance, id);
+        LOG_DBG("Added receive queue to rmt %pK for port id %d", instance, id);
 
         return 0;
 }
-EXPORT_SYMBOL(rmt_send_queue_add);
+
+int rmt_recv_queue_add(struct rmt * instance,
+                       port_id_t    id)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Wrong port id");
+                return -1;
+        }
+
+        if (!instance->recv_queues) {
+                LOG_ERR("Invalid RMT");
+                return -1;
+        }
+
+        if (find_rs_queue(instance->recv_queues, id)) {
+                LOG_ERR("Queue already exists");
+                return -1;
+        }
+
+        return __rmt_recv_queue_add(instance, id);
+}
+EXPORT_SYMBOL(rmt_recv_queue_add);
 
 int rmt_management_sdu_read(struct rmt *      instance,
                             struct sdu_wpi ** sdu_wpi)
@@ -625,6 +708,7 @@ int rmt_management_sdu_read(struct rmt *      instance,
         while (rfifo_is_empty(instance->mgmt_data->sdu_ready)) {
                 LOG_DBG("Mgmt read going to sleep...");
                 spin_unlock(&instance->mgmt_data->lock);
+
                 retval = wait_event_interruptible(instance->mgmt_data->readers,
                                                   !rfifo_is_empty(instance->mgmt_data->sdu_ready));
 
@@ -633,6 +717,7 @@ int rmt_management_sdu_read(struct rmt *      instance,
                                 "bailing out");
                         return retval;
                 }
+
                 spin_lock(&instance->mgmt_data->lock);
         }
 
@@ -654,51 +739,6 @@ int rmt_management_sdu_read(struct rmt *      instance,
         return 0;
 }
 EXPORT_SYMBOL(rmt_management_sdu_read);
-
-int rmt_recv_queue_add(struct rmt * instance,
-                       port_id_t    id)
-{
-        struct rs_queue * tmp;
-
-        if (!instance) {
-                LOG_ERR("Bogus instance passed");
-                return -1;
-        }
-
-        if (!is_port_id_ok(id)) {
-                LOG_ERR("Wrong port id");
-                return -1;
-        }
-
-        if (!instance->recv_queues) {
-                LOG_ERR("Invalid RMT");
-                return -1;
-        }
-
-        if (find_rs_queue(instance->recv_queues, id)) {
-                LOG_ERR("Queue already exists");
-                return -1;
-        }
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return -1;
-
-        tmp->queue = rfifo_create();
-        if (!tmp->queue) {
-                rkfree(tmp);
-                return -1;
-        }
-        INIT_HLIST_NODE(&tmp->hlist);
-        hash_add(instance->recv_queues->queues, &tmp->hlist, id);
-        tmp->port_id = id;
-        spin_lock_init(&tmp->lock);
-
-        LOG_DBG("Added receive queue to rmt %pK for port id %d", instance, id);
-
-        return 0;
-}
-EXPORT_SYMBOL(rmt_recv_queue_add);
 
 static int rmt_receive_worker(void * o)
 {
@@ -731,9 +771,10 @@ static int rmt_receive_worker(void * o)
                         port_id_t port_id;
 
                         spin_lock(&entry->lock);
-                        sdu = (struct sdu *) rfifo_pop(entry->queue);
+                        sdu     = (struct sdu *) rfifo_pop(entry->queue);
                         port_id = entry->port_id;
                         spin_unlock(&entry->lock);
+
                         if (!sdu) {
                                 break;
                         }
@@ -748,7 +789,7 @@ static int rmt_receive_worker(void * o)
                         }
                         if (tmp->address != dest_add) {
                                 /*
-                                 * FIXME : Port id will be retrieved
+                                 * FIXME: Port id will be retrieved
                                  * from the pduft
                                  */
                                 kfa_flow_sdu_write(tmp->kfa,
@@ -793,6 +834,7 @@ static int rmt_receive_worker(void * o)
                         }
                 }
         }
+
         spin_lock(&tmp->recv_queues->lock);
         tmp->recv_queues->in_use = 0;
         spin_unlock(&tmp->recv_queues->lock);
