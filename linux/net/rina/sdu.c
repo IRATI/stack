@@ -60,6 +60,7 @@ int sdu_destroy(struct sdu * s)
 
         buffer_destroy(s->buffer);
         rkfree(s);
+
         return 0;
 }
 EXPORT_SYMBOL(sdu_destroy);
