@@ -75,7 +75,7 @@ static struct mgmt_data * rmt_mgmt_data_create(void)
 {
         struct mgmt_data * data;
 
-        data = rkzalloc(sizeof(struct mgmt_data), GFP_KERNEL);
+        data = rkzalloc(sizeof(*data), GFP_KERNEL);
         if (!data) {
                 LOG_ERR("Could not allocate memory for RMT mgmt struct");
                 return NULL;
@@ -141,6 +141,7 @@ struct rmt * rmt_create(struct kfa *            kfa,
 
         tmp->address = address_bad();
 
+        /* Create send-queues */
         tmp->send_queues = rkzalloc(sizeof(struct rmt_queue), GFP_KERNEL);
         if (!tmp->send_queues) {
                 rmt_destroy(tmp);
@@ -149,6 +150,8 @@ struct rmt * rmt_create(struct kfa *            kfa,
         hash_init(tmp->send_queues->queues);
         spin_lock_init(&tmp->send_queues->lock);
         tmp->send_queues->in_use = 0;
+
+        /* Create receive-queues */
         tmp->rcve_queues = rkzalloc(sizeof(struct rmt_queue), GFP_KERNEL);
         if (!tmp->rcve_queues) {
                 rmt_destroy(tmp);
@@ -164,12 +167,14 @@ struct rmt * rmt_create(struct kfa *            kfa,
 }
 EXPORT_SYMBOL(rmt_create);
 
-static void pdu_dtor(void * e)
-{ pdu_destroy((struct pdu *) e); }
-
 static int rs_queue_destroy(struct rs_queue * send_q)
 {
-        rfifo_destroy(send_q->queue, pdu_dtor);
+        if (!send_q)
+                return -1;
+
+        LOG_DBG("Destroying rs-queue %pK", send_q);
+
+        rfifo_destroy(send_q->queue, (void (*)(void *)) pdu_destroy);
         hash_del(&send_q->hlist);
         rkfree(send_q);
 
@@ -186,8 +191,10 @@ static int rmt_egress_queue_destroy(struct rmt_queue * instance)
                 return -1;
 
         hash_for_each_safe(instance->queues, bucket, tmp, entry, hlist) {
-                LOG_DBG("Calling dtor for entry %pK", entry);
-                rs_queue_destroy(entry);
+                if (rs_queue_destroy(entry)) {
+                        LOG_ERR("Could not destroy entry %pK", entry);
+                        return -1;
+                }
         }
         rkfree(instance);
 
@@ -206,8 +213,10 @@ static int rmt_ingress_queue_destroy(struct rmt_queue * instance)
                 return -1;
 
         hash_for_each_safe(instance->queues, bucket, tmp, entry, hlist) {
-                LOG_DBG("Calling dtor for entry %pK", entry);
-                rs_queue_destroy(entry);
+                if (rs_queue_destroy(entry)) {
+                        LOG_ERR("Could not destroy entry %pK", entry);
+                        return -1;
+                }
         }
         rkfree(instance);
 
