@@ -69,7 +69,6 @@ struct rmt {
         struct rmt_queue *        send_queues;
         struct rmt_queue *        rcve_queues;
         struct mgmt_data *        mgmt_data;
-        /* HASH_TABLE(queues, port_id_t, rmt_queues_t *); */
 };
 
 static struct mgmt_data * rmt_mgmt_data_create(void)
@@ -117,7 +116,7 @@ struct rmt * rmt_create(struct kfa *            kfa,
         }
 
         tmp->mgmt_data = rmt_mgmt_data_create();
-        if (!tmp->mgmt_data){
+        if (!tmp->mgmt_data) {
                 rmt_destroy(tmp);
                 return NULL;
         }
@@ -140,7 +139,6 @@ struct rmt * rmt_create(struct kfa *            kfa,
                 return NULL;
         }
 
-
         tmp->address = address_bad();
 
         tmp->send_queues = rkzalloc(sizeof(struct rmt_queue), GFP_KERNEL);
@@ -159,6 +157,7 @@ struct rmt * rmt_create(struct kfa *            kfa,
         hash_init(tmp->rcve_queues->queues);
         spin_lock_init(&tmp->rcve_queues->lock);
         tmp->rcve_queues->in_use = 0;
+
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
         return tmp;
@@ -166,13 +165,7 @@ struct rmt * rmt_create(struct kfa *            kfa,
 EXPORT_SYMBOL(rmt_create);
 
 static void pdu_dtor(void * e)
-{
-        struct pdu * tmp;
-
-        tmp = (struct pdu *) e;
-
-        pdu_destroy(tmp);
-}
+{ pdu_destroy((struct pdu *) e); }
 
 static int rs_queue_destroy(struct rs_queue * send_q)
 {
@@ -231,13 +224,16 @@ int rmt_destroy(struct rmt * instance)
         }
 
         ASSERT(instance->pft);
+
         pft_destroy(instance->pft);
-        if (instance->mgmt_data){
+
+        if (instance->mgmt_data) {
                 if (instance->mgmt_data->sdu_ready)
                         rfifo_destroy(instance->mgmt_data->sdu_ready,
                                       sdu_wpi_destructor);
                 rkfree(instance->mgmt_data);
         }
+
         if (instance->egress_wq)  rwq_destroy(instance->egress_wq);
         if (instance->ingress_wq) rwq_destroy(instance->ingress_wq);
 
@@ -250,7 +246,6 @@ int rmt_destroy(struct rmt * instance)
         rkfree(instance);
 
         LOG_DBG("Instance %pK finalized successfully", instance);
-
 
         return 0;
 }
@@ -265,7 +260,7 @@ int rmt_address_set(struct rmt * instance,
         }
 
         if (is_address_ok(instance->address)) {
-                LOG_ERR("The RMT already has an address");
+                LOG_ERR("The RMT already configured");
                 return -1;
         }
 
@@ -295,7 +290,7 @@ static struct send_data * send_data_create(struct kfa *       kfa,
         if (!tmp)
                 return NULL;
 
-        tmp->kfa    = kfa;
+        tmp->kfa   = kfa;
         tmp->rmt_q = queues;
 
         return tmp;
@@ -364,14 +359,18 @@ static struct sdu * pdu_process(struct pdu * pdu)
         if (!data)
                 return NULL;
 
+        /* FIXME: Useless check */
         if (!memcpy(data, pci, pci_size)) {
                 rkfree(data);
                 return NULL;
         }
+
+        /* FIXME: Useless check */
         if (!memcpy(data + pci_size, buffer_data, buffer_size)) {
                 rkfree(data);
                 return NULL;
         }
+
         tmp_buff = buffer_create_with(data, size);
         if (!tmp_buff) {
                 rkfree(data);
@@ -382,6 +381,7 @@ static struct sdu * pdu_process(struct pdu * pdu)
                 buffer_destroy(tmp_buff);
                 return NULL;
         }
+
         pdu_destroy(pdu);
 
         return sdu;
@@ -417,15 +417,20 @@ static int rmt_send_worker(void * o)
 
         while (!out) {
                 out = true;
-                hash_for_each_safe(tmp->rmt_q->queues, bucket, ntmp, entry, hlist) {
+                hash_for_each_safe(tmp->rmt_q->queues,
+                                   bucket,
+                                   ntmp,
+                                   entry,
+                                   hlist) {
                         struct sdu * sdu;
                         struct pdu * pdu;
-                        port_id_t port_id;
+                        port_id_t    port_id;
 
                         spin_lock(&entry->lock);
-                        pdu = (struct pdu *) rfifo_pop(entry->queue);
+                        pdu     = (struct pdu *) rfifo_pop(entry->queue);
                         port_id = entry->port_id;
                         spin_unlock(&entry->lock);
+
                         if (!pdu)
                                 break;
 
@@ -454,7 +459,7 @@ static int rmt_send_worker(void * o)
 static struct rs_queue * find_rs_queue(struct rmt_queue * rq,
                                        port_id_t          id)
 {
-        struct rs_queue *       entry;
+        struct rs_queue *         entry;
         const struct hlist_head * head;
 
         if (!rq) {
@@ -498,6 +503,7 @@ static int rmt_send_port_id(struct rmt *  instance,
                 spin_unlock(&instance->send_queues->lock);
                 return -1;
         }
+
         spin_lock(&squeue->lock);
         spin_unlock(&instance->send_queues->lock);
         if (rfifo_push_ni(squeue->queue, pdu)) {
@@ -560,7 +566,9 @@ int rmt_send(struct rmt * instance,
                 return -1;
         }
         id = (address == 16 ? 2 : 1); /* FIXME: We must call PDU FT */
+
         LOG_DBG("Gonna SEND to port_id: %d", id);
+
         if (rmt_send_port_id(instance, id, pdu))
                 return -1;
 
@@ -606,6 +614,7 @@ int rmt_send_queue_add(struct rmt * instance,
         hash_add(instance->send_queues->queues, &tmp->hlist, id);
         tmp->port_id = id;
         spin_lock_init(&tmp->lock);
+
         LOG_DBG("Added send queue to rmt %pK for port id %d", instance, id);
 
         return 0;
@@ -628,7 +637,8 @@ int rmt_management_sdu_read(struct rmt *      instance,
                                                   !rfifo_is_empty(instance->mgmt_data->sdu_ready));
 
                 if (retval) {
-                        LOG_ERR("Mgmt queue waken up by interruption, bailing out...");
+                        LOG_ERR("Mgmt queue waken up by interruption, "
+                                "bailing out");
                         return retval;
                 }
                 spin_lock(&instance->mgmt_data->lock);
@@ -691,6 +701,7 @@ int rmt_rcve_queue_add(struct rmt * instance,
         hash_add(instance->rcve_queues->queues, &tmp->hlist, id);
         tmp->port_id = id;
         spin_lock_init(&tmp->lock);
+
         LOG_DBG("Added rcve queue to rmt %pK for port id %d", instance, id);
 
         return 0;
@@ -709,6 +720,7 @@ static int rmt_receive_worker(void * o)
 
         LOG_DBG("RMT receive worker called");
         out = false;
+
         tmp = (struct rmt *) o;
         if (!tmp) {
                 LOG_ERR("No send data passed");
