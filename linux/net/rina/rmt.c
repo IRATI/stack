@@ -5,12 +5,6 @@
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
- * RMT (Relaying and Multiplexing Task)
- *
- *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
- *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
- *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -635,7 +629,7 @@ int rmt_management_sdu_read(struct rmt *      instance,
 
                 if (retval) {
                         LOG_ERR("Mgmt queue waken up by interruption, bailing out...");
-                         return retval;
+                        return retval;
                 }
                 spin_lock(&instance->mgmt_data->lock);
         }
@@ -786,8 +780,8 @@ static int rmt_receive_worker(void * o)
                         }
                         case PDU_TYPE_DT: {
                                 efcp_container_receive(tmp->efcpc,
-                                      pci_cep_destination(pdu_pci_get_ro(pdu)),
-                                      pdu);
+                                                       pci_cep_destination(pdu_pci_get_ro(pdu)),
+                                                       pdu);
                                 break;
                         }
                         default:
