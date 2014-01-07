@@ -41,8 +41,10 @@ int          pft_remove(struct pft * instance,
                         qos_id_t     qos_id,
                         port_id_t    port_id);
 
-port_id_t    pft_nhop(struct pft * instance,
+size_t       pft_nhop(struct pft * instance,
                       address_t    destination,
-                      qos_id_t     qos_id);
+                      qos_id_t     qos_id,
+                      port_id_t ** port_ids,
+                      size_t       size);
 
 #endif
