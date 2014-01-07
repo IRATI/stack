@@ -401,16 +401,16 @@ static int normal_management_sdu_write(struct ipcp_instance_data * data,
         struct pdu *  pdu;
         address_t     dst_address;
 
-        LOG_DBG("Passing SDU to be written to N-1 port %d from IPC Process %d"
-                , port_id, data->id);
+        LOG_DBG("Passing SDU to be written to N-1 port %d "
+                "from IPC Process %d", port_id, data->id);
 
         if (!sdu) {
                 LOG_ERR("No data passed, bailing out");
                 return -1;
         }
 
-        /*FIXME: fake PFT */
-        if (port_id ==1) 
+        /* FIXME: fake PFT */
+        if (port_id == 1)
                 dst_address = 17;
         else
                 dst_address = 16;
@@ -459,9 +459,9 @@ static int normal_management_sdu_write(struct ipcp_instance_data * data,
                      pdu)) {
                 LOG_ERR("Could not send to RMT");
                 return -1;
-        }       
-        return 0;
+        }
 
+        return 0;
 }
 
 /*  FIXME: register ops */
@@ -521,7 +521,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                                            GFP_KERNEL);
         if (!instance->data->info) {
                 LOG_ERR("Could not allocate memory for normal ipcp info");
-                rkfree(instance->data->mgmt); 
+                rkfree(instance->data->mgmt);
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -531,7 +531,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         if (!instance->data->info->name) {
                 LOG_ERR("Failed creation of ipc name");
                 rkfree(instance->data->info);
-                rkfree(instance->data->mgmt); 
+                rkfree(instance->data->mgmt);
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -544,7 +544,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         if (!instance->data->efcpc) {
                 name_destroy(instance->data->info->name);
                 rkfree(instance->data->info);
-                rkfree(instance->data->mgmt); 
+                rkfree(instance->data->mgmt);
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -556,7 +556,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 efcp_container_destroy(instance->data->efcpc);
                 name_destroy(instance->data->info->name);
                 rkfree(instance->data->info);
-                rkfree(instance->data->mgmt); 
+                rkfree(instance->data->mgmt);
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -568,7 +568,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 efcp_container_destroy(instance->data->efcpc);
                 name_destroy(instance->data->info->name);
                 rkfree(instance->data->info);
-                rkfree(instance->data->mgmt); 
+                rkfree(instance->data->mgmt);
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;

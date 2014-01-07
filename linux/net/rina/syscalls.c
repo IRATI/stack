@@ -345,7 +345,7 @@ SYSCALL_DEFINE4(management_sdu_read,
                 return -EFAULT;
         }
 
-        if (copy_to_user(port_id, 
+        if (copy_to_user(port_id,
                          &tmp->port_id,
                          sizeof(tmp->port_id))) {
                 SYSCALL_DUMP_EXIT;

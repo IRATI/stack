@@ -163,7 +163,7 @@ int pci_format(struct pci * pci,
                qos_id_t     qos_id,
                pdu_type_t   type)
 {
-        if (pci_cep_destination_set(pci, src_cep_id) || 
+        if (pci_cep_destination_set(pci, src_cep_id) ||
             pci_cep_source_set(pci, dst_cep_id)      ||
             pci_destination_set(pci, dst_address)    ||
             pci_source_set(pci, src_address)         ||
@@ -173,7 +173,7 @@ int pci_format(struct pci * pci,
                 return -1;
         }
 
-        return 0;        
+        return 0;
 }
 EXPORT_SYMBOL(pci_format);
 

@@ -234,7 +234,7 @@ int rmt_destroy(struct rmt * instance)
         pft_destroy(instance->pft);
         if (instance->mgmt_data){
                 if (instance->mgmt_data->sdu_ready)
-                        rfifo_destroy(instance->mgmt_data->sdu_ready, 
+                        rfifo_destroy(instance->mgmt_data->sdu_ready,
                                       sdu_wpi_destructor);
                 rkfree(instance->mgmt_data);
         }
@@ -638,7 +638,7 @@ int rmt_management_sdu_read(struct rmt *      instance,
                 spin_unlock(&instance->mgmt_data->lock);
                 return -1;
         }
-        ASSERT(!rfifo_is_empty(instance->mgmt_data->sdu_ready));        
+        ASSERT(!rfifo_is_empty(instance->mgmt_data->sdu_ready));
 
         *sdu_wpi = rfifo_pop(instance->mgmt_data->sdu_ready);
 

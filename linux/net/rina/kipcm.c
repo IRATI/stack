@@ -205,7 +205,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                         LOG_DBG("Could not bind the user ipcp' RMT with the flow");
                         kfa_flow_deallocate(kipcm->kfa, pid);
                         goto fail;
-                }       
+                }
 
                 LOG_DBG("Binding user IPCP %d' RMT to flow in port %d", user_ipc_id, pid);
         }
@@ -310,7 +310,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                         kfa_flow_deallocate(kipcm->kfa, pid);
                         rnl_msg_destroy(msg);
                         return -1;
-                }       
+                }
 
                 LOG_DBG("(response) Binding user IPCP %d' RMT to flow in port %d", user_ipc_id, pid);
         }
@@ -1801,7 +1801,7 @@ int kipcm_management_sdu_read(struct kipcm *    kipcm,
                               struct sdu_wpi ** sdu_wpi)
 {
         struct ipcp_instance * ipcp;
-        
+
         IRQ_BARRIER;
 
         if (!kipcm) {

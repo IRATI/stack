@@ -163,7 +163,6 @@ port_id_t kfa_flow_create(struct kfa *     instance,
         spin_unlock(&instance->lock);
 
         return pid;
-
 }
 EXPORT_SYMBOL(kfa_flow_create);
 
@@ -312,6 +311,7 @@ int kfa_flow_bind_rmt(struct kfa * kfa,
         }
         flow->rmt = rmt;
         spin_unlock(&kfa->lock);
+
         return 0;
 }
 EXPORT_SYMBOL(kfa_flow_bind_rmt);
@@ -609,7 +609,7 @@ int kfa_sdu_post(struct kfa * instance,
         }
 
         if (!flow->rmt) {
-                
+
                 const struct pdu * pdu_temp;
                 const struct pci * pci_temp;
 
@@ -617,14 +617,16 @@ int kfa_sdu_post(struct kfa * instance,
                 pci_temp = pdu_pci_get_ro(pdu_temp);
 
                 if (kfifo_avail(&flow->sdu_ready) < (sizeof(struct sdu *))) {
-                        LOG_ERR("There is no space in the port-id %d fifo", id);
+                        LOG_ERR("There is no space in the port-id %d fifo",
+                                id);
                         spin_unlock(&instance->lock);
                         return -1;
                 }
                 if (kfifo_in(&flow->sdu_ready,
                              &sdu,
                              sizeof(struct sdu *)) != sizeof(struct sdu *)) {
-                        LOG_ERR("Could not write %zd bytes into port-id %d fifo",
+                        LOG_ERR("Could not write %zd bytes into "
+                                "port-id %d fifo",
                                 sizeof(struct sdu *), id);
                         spin_unlock(&instance->lock);
                         return -1;
