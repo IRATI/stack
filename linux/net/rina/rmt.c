@@ -40,6 +40,7 @@
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
+/* FIXME: Rename as rmt_queue */
 struct rs_queue {
         struct rfifo *    queue;
         port_id_t         port_id;
@@ -61,10 +62,11 @@ static int rs_queue_destroy(struct rs_queue * send_q)
         return 0;
 }
 
+/* FIXME: Renamed rmt_queue as rmt_queues/rmt_queues_map (they are rs_queue) */
 struct rmt_queue {
         DECLARE_HASHTABLE(queues, 7);
         spinlock_t    lock;
-        int           in_use;
+        int           in_use; /* FIXME: Use rwq_once and remove in_use */
 };
 
 static struct rmt_queue * rmtq_create(void)
@@ -110,14 +112,21 @@ struct mgmt_data {
 };
 
 struct rmt {
+        address_t                 address;
         struct pft *              pft;
         struct kfa *              kfa;
         struct efcp_container *   efcpc;
-        struct workqueue_struct * egress_wq;
+
+        /* FIXME: Remove _wq suffix */
+        /* FIXME: Remove _queues suffix */
+
         struct workqueue_struct * ingress_wq;
-        address_t                 address;
         struct rmt_queue *        send_queues;
+
+        struct workqueue_struct * egress_wq;
         struct rmt_queue *        recv_queues;
+
+        /* FIXME: Move into the Normal IPC Process */
         struct mgmt_data *        mgmt_data;
 };
 
@@ -174,6 +183,7 @@ struct rmt * rmt_create(struct kfa *            kfa,
         tmp->kfa   = kfa;
         tmp->efcpc = efcpc;
 
+        /* FIXME: This is bogus */
         snprintf(string_rmt_id, 30, "rmt-egress-wq-%pK", tmp);
         tmp->egress_wq = rwq_create(string_rmt_id);
         if (!tmp->egress_wq) {
@@ -181,6 +191,7 @@ struct rmt * rmt_create(struct kfa *            kfa,
                 return NULL;
         }
 
+        /* FIXME: This is bogus */
         snprintf(string_rmt_id, 30, "rmt-ingress-wq-%pK", tmp);
         tmp->ingress_wq = rwq_create(string_rmt_id);
         if (!tmp->ingress_wq) {
@@ -226,14 +237,10 @@ int rmt_destroy(struct rmt * instance)
                 rkfree(instance->mgmt_data);
         }
 
-        if (instance->egress_wq)  rwq_destroy(instance->egress_wq);
-        if (instance->ingress_wq) rwq_destroy(instance->ingress_wq);
-
-        if (instance->send_queues)
-                rmtq_destroy(instance->send_queues);
-
-        if (instance->recv_queues)
-                rmtq_destroy(instance->recv_queues);
+        if (instance->egress_wq)   rwq_destroy(instance->egress_wq);
+        if (instance->ingress_wq)  rwq_destroy(instance->ingress_wq);
+        if (instance->send_queues) rmtq_destroy(instance->send_queues);
+        if (instance->recv_queues) rmtq_destroy(instance->recv_queues);
 
         rkfree(instance);
 
@@ -401,9 +408,11 @@ static int rmt_send_worker(void * o)
 
         if (!tmp->kfa) {
                 LOG_ERR("No KFA passed");
+
                 spin_lock(&tmp->rmt_q->lock);
                 tmp->rmt_q->in_use = 0;
                 spin_unlock(&tmp->rmt_q->lock);
+
                 return -1;
         }
 
@@ -431,7 +440,6 @@ static int rmt_send_worker(void * o)
                         if (!sdu)
                                 break;
 
-                        /* FIXME : Port id will be retrieved from the pduft */
                         LOG_DBG("Gonna SEND sdu to port_id %d", port_id);
                         if (kfa_flow_sdu_write(tmp->kfa,
                                                port_id,
@@ -558,6 +566,12 @@ int rmt_send(struct rmt * instance,
                 return -1;
         }
 
+        /* FIXME: Look-up for port-id in pdu-fwd-t and qos-map */
+
+        /* pdu -> pci-> qos-id | cep_id_t -> connection -> qos-id (former) */
+        /* address + qos-id (pdu-fwd-t) -> port-id */
+
+        /* FIXME: Remove this hardwire */
         id = (address == 16 ? 2 : 1); /* FIXME: We must call PDU FT */
 
         LOG_DBG("Gonna SEND to port_id: %d", id);
@@ -592,7 +606,7 @@ static struct rs_queue * rsq_create(void)
 }
 #endif
 
-static int __rmt_send_queue_add(struct rmt * instance,
+static int __rmt_queue_send_add(struct rmt * instance,
                                 port_id_t    id)
 {
         struct rs_queue * tmp;
@@ -617,7 +631,7 @@ static int __rmt_send_queue_add(struct rmt * instance,
         return 0;
 }
 
-int rmt_send_queue_add(struct rmt * instance,
+int rmt_queue_send_add(struct rmt * instance,
                        port_id_t    id)
 {
         if (!instance) {
@@ -640,11 +654,20 @@ int rmt_send_queue_add(struct rmt * instance,
                 return -1;
         }
 
-        return __rmt_send_queue_add(instance, id);
+        return __rmt_queue_send_add(instance, id);
 }
-EXPORT_SYMBOL(rmt_send_queue_add);
+EXPORT_SYMBOL(rmt_queue_send_add);
 
-static int __rmt_recv_queue_add(struct rmt * instance,
+int rmt_queue_send_delete(struct rmt * instance,
+                          port_id_t    id)
+{
+        LOG_MISSING;
+
+        return -1;
+}
+EXPORT_SYMBOL(rmt_queue_send_delete);
+
+static int __rmt_queue_recv_add(struct rmt * instance,
                                 port_id_t    id)
 {
         struct rs_queue * tmp;
@@ -669,7 +692,7 @@ static int __rmt_recv_queue_add(struct rmt * instance,
         return 0;
 }
 
-int rmt_recv_queue_add(struct rmt * instance,
+int rmt_queue_recv_add(struct rmt * instance,
                        port_id_t    id)
 {
         if (!instance) {
@@ -692,9 +715,18 @@ int rmt_recv_queue_add(struct rmt * instance,
                 return -1;
         }
 
-        return __rmt_recv_queue_add(instance, id);
+        return __rmt_queue_recv_add(instance, id);
 }
-EXPORT_SYMBOL(rmt_recv_queue_add);
+EXPORT_SYMBOL(rmt_queue_recv_add);
+
+int rmt_queue_recv_delete(struct rmt * instance,
+                          port_id_t    id)
+{
+        LOG_MISSING;
+
+        return -1;
+}
+EXPORT_SYMBOL(rmt_queue_recv_delete);
 
 int rmt_management_sdu_read(struct rmt *      instance,
                             struct sdu_wpi ** sdu_wpi)

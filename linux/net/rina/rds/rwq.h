@@ -42,4 +42,7 @@ struct rwq_work_item *    rwq_work_create_ni(int (* worker)(void * data),
 int                       rwq_work_post(struct workqueue_struct * rwq,
                                         struct rwq_work_item *    item);
 
+/* FIXME: Add workqueue equivalent (1 worker for multiple items) */
+/* rwq_once */
+
 #endif

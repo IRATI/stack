@@ -47,13 +47,19 @@ struct rmt;
 struct rmt * rmt_create(struct kfa *            kfa,
                         struct efcp_container * efcpc);
 int          rmt_destroy(struct rmt * instance);
+
 int          rmt_address_set(struct rmt * instance,
                              address_t    address);
 
-int          rmt_send_queue_add(struct rmt * instance,
+int          rmt_queue_send_add(struct rmt * instance,
                                 port_id_t    id);
-int          rmt_recv_queue_add(struct rmt * instance,
+int          rmt_queue_send_delete(struct rmt * instance,
+                                   port_id_t    id);
+
+int          rmt_queue_recv_add(struct rmt * instance,
                                 port_id_t    id);
+int          rmt_queue_recv_delete(struct rmt * instance,
+                                   port_id_t    id);
 
 /* FIXME: Please check the following APIs */
 
