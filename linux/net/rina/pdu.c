@@ -195,7 +195,11 @@ static struct pci * pci_create_from_gfp(gfp_t        flags,
                 return NULL;
         }
 
-        ASSERT(pci_is_ok(tmp));
+        if (!pci_is_ok(tmp)) {
+                LOG_ERR("Cannot create PCI from bad data");
+                rkfree(tmp);
+                return NULL;
+        }
 
         return tmp;
 }
