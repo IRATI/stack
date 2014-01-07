@@ -451,7 +451,7 @@ int pdu_destroy(struct pdu * p)
         if (p)
                 return -1;
 
-        if (p->pci)    rkfree(p->pci);
+        if (p->pci)    pci_destroy(p->pci);
         if (p->buffer) buffer_destroy(p->buffer);
 
         rkfree(p);
