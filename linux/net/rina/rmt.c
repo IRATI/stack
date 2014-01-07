@@ -311,9 +311,6 @@ static bool is_send_data_complete(const struct send_data * data)
 {
         bool ret;
 
-        if ()
-                return false;
-
         ret = ((!data || !data->rmt_q || !data->kfa) ? false : true);
 
         LOG_DBG("Send data complete? %d", ret);
