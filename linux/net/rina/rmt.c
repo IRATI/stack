@@ -63,15 +63,15 @@ static int rs_queue_destroy(struct rs_queue * send_q)
 }
 
 /* FIXME: Renamed rmt_queue as rmt_queues/rmt_queues_map (they are rs_queue) */
-struct rmt_queue {
+struct rmt_qmap {
         DECLARE_HASHTABLE(queues, 7);
         spinlock_t    lock;
         int           in_use; /* FIXME: Use rwq_once and remove in_use */
 };
 
-static struct rmt_queue * rmtq_create(void)
+static struct rmt_qmap * qmap_create(void)
 {
-        struct rmt_queue * tmp;
+        struct rmt_qmap * tmp;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
@@ -84,7 +84,7 @@ static struct rmt_queue * rmtq_create(void)
         return tmp;
 }
 
-static int rmtq_destroy(struct rmt_queue * q)
+static int qmap_destroy(struct rmt_qmap * q)
 {
         struct rs_queue *   entry;
         struct hlist_node * tmp;
@@ -121,10 +121,10 @@ struct rmt {
         /* FIXME: Remove _queues suffix */
 
         struct workqueue_struct * ingress_wq;
-        struct rmt_queue *        send_queues;
+        struct rmt_qmap *         send_queues;
 
         struct workqueue_struct * egress_wq;
-        struct rmt_queue *        recv_queues;
+        struct rmt_qmap *         recv_queues;
 
         /* FIXME: Move into the Normal IPC Process */
         struct mgmt_data *        mgmt_data;
@@ -201,13 +201,13 @@ struct rmt * rmt_create(struct kfa *            kfa,
 
         tmp->address = address_bad();
 
-        tmp->send_queues = rmtq_create();
+        tmp->send_queues = qmap_create();
         if (!tmp->send_queues) {
                 rmt_destroy(tmp);
                 return NULL;
         }
 
-        tmp->recv_queues = rmtq_create();
+        tmp->recv_queues = qmap_create();
         if (!tmp->recv_queues) {
                 rmt_destroy(tmp);
                 return NULL;
@@ -239,8 +239,8 @@ int rmt_destroy(struct rmt * instance)
 
         if (instance->egress_wq)   rwq_destroy(instance->egress_wq);
         if (instance->ingress_wq)  rwq_destroy(instance->ingress_wq);
-        if (instance->send_queues) rmtq_destroy(instance->send_queues);
-        if (instance->recv_queues) rmtq_destroy(instance->recv_queues);
+        if (instance->send_queues) qmap_destroy(instance->send_queues);
+        if (instance->recv_queues) qmap_destroy(instance->recv_queues);
 
         rkfree(instance);
 
@@ -270,12 +270,12 @@ int rmt_address_set(struct rmt * instance,
 EXPORT_SYMBOL(rmt_address_set);
 
 struct send_data {
-        struct kfa *       kfa;
-        struct rmt_queue * rmt_q;
+        struct kfa *      kfa;
+        struct rmt_qmap * rmt_q;
 };
 
-static struct send_data * send_data_create(struct kfa *       kfa,
-                                           struct rmt_queue * queues)
+static struct send_data * send_data_create(struct kfa *      kfa,
+                                           struct rmt_qmap * queues)
 {
         struct send_data * tmp;
 
@@ -456,8 +456,8 @@ static int rmt_send_worker(void * o)
         return 0;
 }
 
-static struct rs_queue * find_rs_queue(struct rmt_queue * rq,
-                                       port_id_t          id)
+static struct rs_queue * find_rs_queue(struct rmt_qmap * rq,
+                                       port_id_t         id)
 {
         struct rs_queue *         entry;
         const struct hlist_head * head;
