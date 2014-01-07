@@ -66,7 +66,7 @@ int rfifo_destroy(struct rfifo * f,
                   void         (* dtor)(void * e))
 {
         if (!f || !dtor) {
-                LOG_ERR("Bogus input parameters, can't destroy fifo %pK", f);
+                LOG_ERR("Bogus input parameters, can't destroy rfifo %pK", f);
                 return -1;
         }
 
@@ -79,7 +79,6 @@ int rfifo_destroy(struct rfifo * f,
         return 0;
 }
 EXPORT_SYMBOL(rfifo_destroy);
-
 
 int rfifo_push(struct rfifo * f, void * e)
 {

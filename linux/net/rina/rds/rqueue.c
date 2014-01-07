@@ -59,19 +59,10 @@ struct rqueue * rqueue_create_ni(void)
 { return rqueue_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(rqueue_create_ni);
 
-int rqueue_destroy(struct rqueue * q,
-                   void         (* dtor)(void * e))
+static int __rqueue_destroy(struct rqueue * q,
+                            void         (* dtor)(void * e))
 {
         struct rqueue_entry * pos, * nxt;
-
-        if (!q) {
-                LOG_ERR("Cannot destroy a NULL queue");
-                return -1;
-        }
-        if (!dtor) {
-                LOG_ERR("Cannot destroy with a NULL dtor");
-                return -1;
-        }
 
         list_for_each_entry_safe(pos, nxt, &q->head, next) {
                 ASSERT(pos);
@@ -83,6 +74,17 @@ int rqueue_destroy(struct rqueue * q,
         rkfree(q);
 
         return 0;
+}
+
+int rqueue_destroy(struct rqueue * q,
+                   void         (* dtor)(void * e))
+{
+        if (!q || !dtor) {
+                LOG_ERR("Bogus input parameters, can't destroy rqueue %pK", q);
+                return -1;
+        }
+
+        return __rqueue_destroy(q, dtor);
 }
 EXPORT_SYMBOL(rqueue_destroy);
 
@@ -157,6 +159,7 @@ void * rqueue_head_pop(struct rqueue * q)
         ret = tmp->data;
 
         list_del(&tmp->next);
+
         entry_destroy(tmp);
 
         return ret;
