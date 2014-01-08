@@ -2,8 +2,8 @@
  * RMT (Relaying and Multiplexing Task)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,29 +40,51 @@
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
-/* FIXME: Rename as rmt_queue */
-struct rs_queue {
+struct rmt_queue {
         struct rfifo *    queue;
         port_id_t         port_id;
         struct hlist_node hlist;
         spinlock_t        lock;
 };
 
-static int rs_queue_destroy(struct rs_queue * send_q)
+
+static struct rmt_queue * rs_queue_create(port_id_t id)
 {
-        if (!send_q)
+        struct rmt_queue * tmp;
+
+        ASSERT(is_port_id_ok(id));
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->queue = rfifo_create();
+        if (!tmp->queue) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        INIT_HLIST_NODE(&tmp->hlist);
+        tmp->port_id = id;
+        spin_lock_init(&tmp->lock);
+
+        return tmp;
+}
+
+static int rs_queue_destroy(struct rmt_queue * q)
+{
+        if (!q)
                 return -1;
 
-        LOG_DBG("Destroying rs-queue %pK", send_q);
+        LOG_DBG("Destroying queue %pK", q);
 
-        rfifo_destroy(send_q->queue, (void (*)(void *)) pdu_destroy);
-        hash_del(&send_q->hlist);
-        rkfree(send_q);
+        rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
+        hash_del(&q->hlist);
+        rkfree(q);
 
         return 0;
 }
 
-/* FIXME: Renamed rmt_queue as rmt_queues/rmt_queues_map (they are rs_queue) */
 struct rmt_qmap {
         DECLARE_HASHTABLE(queues, 7);
         spinlock_t    lock;
@@ -84,23 +106,23 @@ static struct rmt_qmap * qmap_create(void)
         return tmp;
 }
 
-static int qmap_destroy(struct rmt_qmap * q)
+static int qmap_destroy(struct rmt_qmap * m)
 {
-        struct rs_queue *   entry;
+        struct rmt_queue *  entry;
         struct hlist_node * tmp;
         int                 bucket;
 
-        if (!q)
+        if (!m)
                 return -1;
 
-        hash_for_each_safe(q->queues, bucket, tmp, entry, hlist) {
+        hash_for_each_safe(m->queues, bucket, tmp, entry, hlist) {
                 if (rs_queue_destroy(entry)) {
                         LOG_ERR("Could not destroy entry %pK", entry);
                         return -1;
                 }
         }
 
-        rkfree(q);
+        rkfree(m);
 
         return 0;
 }
@@ -389,7 +411,7 @@ static struct sdu * pdu_process(struct pdu * pdu)
 static int rmt_send_worker(void * o)
 {
         struct send_data *  tmp;
-        struct rs_queue *   entry;
+        struct rmt_queue *   entry;
         bool                out;
         struct hlist_node * ntmp;
         int                 bucket;
@@ -456,10 +478,10 @@ static int rmt_send_worker(void * o)
         return 0;
 }
 
-static struct rs_queue * find_rs_queue(struct rmt_qmap * rq,
+static struct rmt_queue * find_rs_queue(struct rmt_qmap * rq,
                                        port_id_t         id)
 {
-        struct rs_queue *         entry;
+        struct rmt_queue *         entry;
         const struct hlist_head * head;
 
         if (!rq) {
@@ -485,7 +507,7 @@ static int rmt_send_port_id(struct rmt *  instance,
                             port_id_t     id,
                             struct pdu *  pdu)
 {
-        struct rs_queue *      squeue;
+        struct rmt_queue *      squeue;
         struct rwq_work_item * item;
         struct send_data *     data;
 
@@ -583,48 +605,16 @@ int rmt_send(struct rmt * instance,
 }
 EXPORT_SYMBOL(rmt_send);
 
-#if 0
-static struct rs_queue * rsq_create(void)
-{
-        struct rs_queue * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
-        tmp->queue = rfifo_create();
-        if (!tmp->queue) {
-                rkfree(tmp);
-                return NULL;
-        }
-
-        INIT_HLIST_NODE(&tmp->hlist);
-        spin_lock_init(&tmp->lock);
-        tmp->port_id = id;
-
-        return tmp;
-}
-#endif
-
 static int __rmt_queue_send_add(struct rmt * instance,
                                 port_id_t    id)
 {
-        struct rs_queue * tmp;
+        struct rmt_queue * tmp;
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rs_queue_create(id);
         if (!tmp)
                 return -1;
 
-        tmp->queue = rfifo_create();
-        if (!tmp->queue) {
-                rkfree(tmp);
-                return -1;
-        }
-
-        INIT_HLIST_NODE(&tmp->hlist);
         hash_add(instance->send_queues->queues, &tmp->hlist, id);
-        tmp->port_id = id;
-        spin_lock_init(&tmp->lock);
 
         LOG_DBG("Added send queue to rmt %pK for port id %d", instance, id);
 
@@ -670,7 +660,7 @@ EXPORT_SYMBOL(rmt_queue_send_delete);
 static int __rmt_queue_recv_add(struct rmt * instance,
                                 port_id_t    id)
 {
-        struct rs_queue * tmp;
+        struct rmt_queue * tmp;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
@@ -777,7 +767,7 @@ static int rmt_receive_worker(void * o)
         struct rmt *        tmp;
         pdu_type_t          pdu_type;
         address_t           dest_add;
-        struct rs_queue *   entry;
+        struct rmt_queue *   entry;
         bool                out;
         struct hlist_node * ntmp;
         int                 bucket;
@@ -879,7 +869,7 @@ int rmt_receive(struct rmt * instance,
                 port_id_t    from)
 {
         struct rwq_work_item * item;
-        struct rs_queue *      rcv_queue;
+        struct rmt_queue *     rcv_queue;
 
         if (!instance) {
                 LOG_ERR("No RMT passed");

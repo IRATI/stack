@@ -25,7 +25,6 @@
 #include "du.h"
 #include "efcp.h"
 
-struct mgmt_data;
 struct rmt;
 
 /*
@@ -66,6 +65,7 @@ int          rmt_queue_recv_delete(struct rmt * instance,
 /* NOTE: Takes ownership of the passed PDU */
 int          rmt_management_sdu_read(struct rmt *      instance,
                                      struct sdu_wpi ** sdu_wpi);
+
 int          rmt_send(struct rmt * instance,
                       address_t    address,
                       cep_id_t     connection_id,
