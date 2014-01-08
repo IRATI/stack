@@ -332,7 +332,7 @@ int pft_remove(struct pft * instance,
 
         /* Remove the port-id here */
         list_for_each_entry_safe(pos, nxt, &tmp->ports, next) {
-                if (pos->port_id == port_id) {
+                if (pft_pe_port(pos) == port_id) {
                         ret = pft_pe_destroy(pos);
                         if (!ret) {
                                 LOG_WARN("Could not destroy PDU-FWD-T"
@@ -360,19 +360,51 @@ int pft_nhop(struct pft * instance,
              size_t *     size)
 {
         struct pft_entry *      e;
-        struct pft_port_entry * pe;
+        struct pft_port_entry * pos, * nxt;
+        int ports_list_size;
+        int i;
 
         if (!pft_is_ok(instance))
-                return port_id_bad();
+                return -1;
 
         e = pft_find(instance, destination, qos_id);
         if (!e)
-                return port_id_bad();
+                return -1;
+        
+        /* Check the length of the list of ports, crappy for now */
+        ports_list_size = 0;
+        list_for_each_entry_safe(pos, nxt, &e->ports, next) {
+                ++ports_list_size;
+        }
+        ASSERT(ports_list_size > 0);
 
-        /* Get the first port */
-        pe = NULL;
+        /* 
+         *  If the table is smaller than the number of port-ids,
+         *  free and malloc 
+         */
+        if (*size < ports_list_size) {
+                for (i = 0; i < *size; i++) {
+                        rkfree(port_ids[i]);
+                }
+                rkfree(port_ids);
+                port_ids = rkzalloc(ports_list_size * sizeof(*port_ids), 
+                                    GFP_KERNEL);
+                if (!port_ids)
+                        return -1;
+                for (i = 0; i < ports_list_size; i++) {
+                        port_ids[i] = rkzalloc(sizeof(**port_ids), GFP_KERNEL);
+                        if (!port_ids[i])
+                                return -1;
+                }
+        }
+        *size = ports_list_size;
 
-        LOG_MISSING;
+        /* Get the first port, and so on, fill in the port_ids */
+        i = 0;
+        list_for_each_entry_safe(pos, nxt, &e->ports, next) {
+                *port_ids[i] = pft_pe_port(pos);
+                ++i;
+        }
 
-        return pft_pe_port(pe);
+        return 0;
 }
