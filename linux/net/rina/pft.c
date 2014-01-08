@@ -91,11 +91,11 @@ static port_id_t pft_pe_port(struct pft_port_entry * pe)
  * FIXME: This representation is crappy and MUST be changed
  */
 struct pft_entry {
-        address_t        destination;
-        qos_id_t         qos_id;
-        struct list_head ports;
-
-        struct list_head next;
+        address_t destination;
+        qos_id_t  qos_id;
+        size_t    ports_size;     
+        struct    list_head ports;
+        struct    list_head next;
 };
 
 static struct pft_entry * pft_e_create_gfp(gfp_t     flags,
@@ -110,6 +110,7 @@ static struct pft_entry * pft_e_create_gfp(gfp_t     flags,
 
         tmp->destination = destination;
         tmp->qos_id      = qos_id;
+        tmp->ports_size  = 0;
         INIT_LIST_HEAD(&tmp->ports);
         INIT_LIST_HEAD(&tmp->next);
 
@@ -129,11 +130,13 @@ static struct pft_entry * pft_e_create(address_t destination,
 static bool pft_e_is_ok(struct pft_entry * entry)
 { return entry ? true : false; }
 
-static int __pft_e_flush(struct pft_entry * entry)
+static int pft_e_destroy(struct pft_entry * entry)
 {
         struct pft_port_entry * pos, * nxt;
         int                     ret;
 
+        if (!pft_e_is_ok(entry))
+                return -1;
         ASSERT(pft_e_is_ok(entry));
 
         list_for_each_entry_safe(pos, nxt, &entry->ports, next) {
@@ -144,16 +147,11 @@ static int __pft_e_flush(struct pft_entry * entry)
                 }
         }
 
+        list_del(&entry->next);
+        rkfree(entry);
+
         return 0;
 
-}
-
-static int pft_e_destroy(struct pft_entry * entry)
-{
-        if (!pft_e_is_ok(entry))
-                return -1;
-
-        return __pft_e_flush(entry);
 }
 
 static struct pft_port_entry * pft_e_port_find(struct pft_entry * entry,
@@ -188,6 +186,7 @@ static int pft_e_port_add(struct pft_entry * entry,
                 return -1;
 
         list_add(&pe->next, &entry->ports);
+        entry->ports_size++;
 
         return 0;
 }
@@ -297,6 +296,7 @@ int pft_add(struct pft * instance,
 
         if (!pft_is_ok(instance))
                 return -1;
+
         tmp = pft_find(instance, destination, qos_id);
         /* Create a new entry? */
         if (!tmp) {
@@ -339,6 +339,7 @@ int pft_remove(struct pft * instance,
                                          "entry %pK", pos);
                                 return ret;
                         }
+                        tmp->ports_size--;
                 }
         }
 
@@ -361,43 +362,24 @@ int pft_nhop(struct pft * instance,
 {
         struct pft_entry *      e;
         struct pft_port_entry * pos, * nxt;
-        int ports_list_size;
         int i;
 
         if (!pft_is_ok(instance))
                 return -1;
 
         e = pft_find(instance, destination, qos_id);
-        if (!e)
+        if (!e) {
+                LOG_ERR("Could not find any PFT entry");
                 return -1;
-        
-        /* Check the length of the list of ports, crappy for now */
-        ports_list_size = 0;
-        list_for_each_entry_safe(pos, nxt, &e->ports, next) {
-                ++ports_list_size;
         }
-        ASSERT(ports_list_size > 0);
 
-        /* 
-         *  If the table is smaller than the number of port-ids,
-         *  free and malloc 
-         */
-        if (*size < ports_list_size) {
-                for (i = 0; i < *size; i++) {
-                        rkfree(port_ids[i]);
-                }
-                rkfree(port_ids);
-                port_ids = rkzalloc(ports_list_size * sizeof(*port_ids), 
-                                    GFP_KERNEL);
-                if (!port_ids)
-                        return -1;
-                for (i = 0; i < ports_list_size; i++) {
-                        port_ids[i] = rkzalloc(sizeof(**port_ids), GFP_KERNEL);
-                        if (!port_ids[i])
-                                return -1;
-                }
+        *size = e->ports_size;
+
+        *port_ids = rkzalloc(*size * sizeof(**port_ids), GFP_KERNEL);
+        if (! *port_ids) {
+                LOG_ERR("Could not allocate memory to return resulting ports");
+                return -1;
         }
-        *size = ports_list_size;
 
         /* Get the first port, and so on, fill in the port_ids */
         i = 0;
