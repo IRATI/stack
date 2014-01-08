@@ -396,19 +396,26 @@ static int normal_management_sdu_read(struct ipcp_instance_data * data,
 }
 
 static int normal_management_sdu_write(struct ipcp_instance_data * data,
-                                       address_t                   dst_addr,
+                                       port_id_t                   port_id,
                                        struct sdu *                sdu)
 {
         struct pci *  pci;
         struct pdu *  pdu;
+        address_t     dst_address;
 
-        LOG_DBG("Passing SDU to be written to address %d "
-                "from IPC Process %d", dst_addr, data->id);
+        LOG_DBG("Passing SDU to be written to N-1 port %d "
+                "from IPC Process %d", port_id, data->id);
 
         if (!sdu) {
                 LOG_ERR("No data passed, bailing out");
                 return -1;
         }
+
+        /* FIXME: fake PFT */
+        if (port_id == 1)
+                dst_address = 17;
+        else
+                dst_address = 16;
 
         pci = pci_create();
         if (!pci)
@@ -418,7 +425,7 @@ static int normal_management_sdu_write(struct ipcp_instance_data * data,
                        0,
                        0,
                        data->address,
-                       dst_addr,
+                       dst_address,
                        0,
                        0,
                        PDU_TYPE_MGMT)) {
@@ -445,6 +452,7 @@ static int normal_management_sdu_write(struct ipcp_instance_data * data,
         LOG_DBG("Going to send to the RMT:");
         LOG_DBG("src_address %d", pci_source(pci));
         LOG_DBG("dst_address: %d", pci_destination(pci));
+        LOG_DBG("port: %d", port_id);
 
         /* Give the data to RMT now ! */
         if (rmt_send(data->rmt,

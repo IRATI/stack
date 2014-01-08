@@ -365,12 +365,12 @@ SYSCALL_DEFINE4(management_sdu_read,
 
 SYSCALL_DEFINE4(management_sdu_write,
                 ipc_process_id_t,           id,
-                address_t,                  dst_addr,
+                port_id_t,                  port_id,
                 const void __user *,        buffer,
                 size_t,                     size)
 {
         ssize_t          retval;
-        struct sdu *     sdu;
+        struct sdu_wpi * sdu_wpi;
         struct buffer *  tmp_buffer;
 
         SYSCALL_DUMP_ENTER;
@@ -381,8 +381,8 @@ SYSCALL_DEFINE4(management_sdu_write,
         }
 
         LOG_DBG("Syscall write management SDU " \
-                "(size = %zd, ipcp-id %d, dst_addr %d)",
-                size, id, dst_addr);
+                "(size = %zd, ipcp-id %d, port-id = %d)",
+                size, id, port_id);
 
         tmp_buffer = buffer_create(size);
         if (!tmp_buffer) {
@@ -401,16 +401,17 @@ SYSCALL_DEFINE4(management_sdu_write,
         }
 
         /* NOTE: sdu_create takes the ownership of the buffer */
-        sdu = sdu_create_with(tmp_buffer);
-        if (!sdu) {
+        sdu_wpi = sdu_wpi_create_with(tmp_buffer);
+        if (!sdu_wpi) {
                 SYSCALL_DUMP_EXIT;
                 buffer_destroy(tmp_buffer);
                 return -EFAULT;
         }
-        ASSERT(sdu_is_ok(sdu));
+        sdu_wpi->port_id = port_id;
+        ASSERT(sdu_wpi_is_ok(sdu_wpi));
 
         /* Passing ownership to the internal layers */
-        CALL_DEFAULT_PERSONALITY(retval, management_sdu_write, id, dst_addr, sdu);
+        CALL_DEFAULT_PERSONALITY(retval, management_sdu_write, id, sdu_wpi);
         if (retval) {
                 SYSCALL_DUMP_EXIT;
                 /* NOTE: Do not destroy SDU, ownership isn't our anymore */

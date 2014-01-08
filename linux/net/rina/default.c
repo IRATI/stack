@@ -128,14 +128,13 @@ static int default_deallocate_port(struct personality_data * data,
 
 static int default_management_sdu_write(struct personality_data * data,
                                         ipc_process_id_t          id,
-                                        address_t                 dst_addr,
-                                        struct sdu *              sdu)
+                                        struct sdu_wpi *          sdu_wpi)
 {
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_management_sdu_write(data->kipcm, id, dst_addr, sdu);
+        return kipcm_management_sdu_write(data->kipcm, id, sdu_wpi);
 }
 
 static int default_management_sdu_read(struct personality_data * data,
