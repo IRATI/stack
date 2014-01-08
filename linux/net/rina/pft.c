@@ -2,6 +2,8 @@
  * PDU-FWD-T (PDU Forwarding Table)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Sander Vrijders <sander.vrijders@intec.ugent.be>
+ *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,6 +73,7 @@ static int pft_pe_destroy(struct pft_port_entry * pe)
         if (!pft_pe_is_ok(pe))
                 return -1;
 
+        list_del(&pe->next);
         rkfree(pe);
 
         return 0;
@@ -134,7 +137,6 @@ static int __pft_e_flush(struct pft_entry * entry)
         ASSERT(pft_e_is_ok(entry));
 
         list_for_each_entry_safe(pos, nxt, &entry->ports, next) {
-                list_del(&pos->next);
                 ret = pft_pe_destroy(pos);
                 if (!ret) {
                         LOG_WARN("Could not destroy PDU-FWD-T entry %pK", pos);
@@ -295,23 +297,20 @@ int pft_add(struct pft * instance,
 
         if (!pft_is_ok(instance))
                 return -1;
-
-        if (pft_find(instance, destination, qos_id)) {
-                LOG_ERR("Cannot add entry, it is already present");
-                return -1;
-        }
-
-        tmp = pft_e_create(destination, qos_id);
-        if (!tmp)
-                return -1;
-
+        tmp = pft_find(instance, destination, qos_id);
+        /* Create a new entry? */
+        if (!tmp) {
+               tmp = pft_e_create(destination, qos_id);
+               if (!tmp)
+                       return -1; 
+               list_add(&tmp->next, &instance->entries);
+        } 
+        
         if (pft_e_port_add(tmp, port_id)) {
                 pft_e_destroy(tmp);
                 return -1;
         }
-
-        list_add(&tmp->next, &instance->entries);
-
+ 
         return 0;
 }
 
@@ -320,7 +319,9 @@ int pft_remove(struct pft * instance,
                qos_id_t     qos_id,
                port_id_t    port_id)
 {
-        struct pft_entry * tmp;
+        struct pft_entry *      tmp;
+        struct pft_port_entry * pos, * nxt;
+        int                     ret;
 
         if (!pft_is_ok(instance))
                 return -1;
@@ -329,9 +330,27 @@ int pft_remove(struct pft * instance,
         if (!tmp)
                 return -1;
 
-        LOG_MISSING;
+        /* Remove the port-id here */
+        list_for_each_entry_safe(pos, nxt, &tmp->ports, next) {
+                if (pos->port_id == port_id) {
+                        ret = pft_pe_destroy(pos);
+                        if (!ret) {
+                                LOG_WARN("Could not destroy PDU-FWD-T"
+                                         "entry %pK", pos);
+                                return ret;
+                        }
+                }
+        }
 
-        return -1;
+        /* If the list of port-ids is empty, remove the entry */
+        if (list_empty(&tmp->ports)) {
+                if (pft_e_destroy(tmp)) {
+                        LOG_ERR("Failed to destroy entry");
+                        return -1;
+                }
+        }
+
+        return 0;
 }
 
 int pft_nhop(struct pft * instance,
