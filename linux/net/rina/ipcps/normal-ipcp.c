@@ -397,9 +397,9 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 static int normal_management_sdu_read(struct ipcp_instance_data * data,
                                       struct sdu_wpi **           sdu_wpi)
 {
-        LOG_DBG("Trying to read mgmt SDU from IPC Process %d", data->id);
-
         int retval;
+
+        LOG_DBG("Trying to read mgmt SDU from IPC Process %d", data->id);
 
         IRQ_BARRIER;
 
