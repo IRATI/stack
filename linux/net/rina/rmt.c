@@ -74,6 +74,7 @@ static struct rmt_queue * rmt_queue_create(port_id_t id)
 static int rmt_queue_destroy(struct rmt_queue * q)
 {
         ASSERT(q);
+        ASSERT(q->queue);
 
         rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
         hash_del(&q->hlist);
@@ -114,6 +115,8 @@ static int qmap_destroy(struct rmt_qmap * m)
         ASSERT(m);
 
         hash_for_each_safe(m->queues, bucket, tmp, entry, hlist) {
+                ASSERT(entry);
+
                 if (rmt_queue_destroy(entry)) {
                         LOG_ERR("Could not destroy entry %pK", entry);
                         return -1;
@@ -133,10 +136,8 @@ static struct rmt_queue * qmap_find(struct rmt_qmap * m,
 
         ASSERT(m);
 
-        if (!is_port_id_ok(id)) {
-                LOG_ERR("Bogus port id");
+        if (!is_port_id_ok(id))
                 return NULL;
-        }
 
         head = &m->queues[rmap_hash(m->queues, id)];
         hlist_for_each_entry(entry, head, hlist) {
@@ -165,12 +166,27 @@ struct rmt {
         } egress;
 };
 
+static const char * create_name(const char *       prefix,
+                                const struct rmt * instance)
+{
+        static char name[64];
+
+        ASSERT(prefix);
+        ASSERT(instance);
+
+        if (snprintf(name, sizeof(name), "%s-%pK", prefix, instance) >=
+            sizeof(name))
+                return NULL;
+
+        return name;
+}
+
 struct rmt * rmt_create(struct ipcp_instance *  parent,
                         struct kfa *            kfa,
                         struct efcp_container * efcpc)
 {
         struct rmt * tmp;
-        char         rmt_id[30];
+        const char * name;
 
         if (!kfa)
                 return NULL;
@@ -194,17 +210,19 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                 return NULL;
         }
 
-        /* FIXME: This is bogus */
-        snprintf(rmt_id, sizeof(rmt_id), "rmt-egress-wq-%pK", tmp);
-        tmp->egress.wq = rwq_create(rmt_id);
+        name = create_name("rmt-egress-wq", tmp);
+        if (!name)
+                return NULL;
+        tmp->egress.wq = rwq_create(name);
         if (!tmp->egress.wq) {
                 rmt_destroy(tmp);
                 return NULL;
         }
 
-        /* FIXME: This is bogus */
-        snprintf(rmt_id, sizeof(rmt_id), "rmt-ingress-wq-%pK", tmp);
-        tmp->ingress.wq = rwq_create(rmt_id);
+        name = create_name("rmt-ingress-wq", tmp);
+        if (!name)
+                return NULL;
+        tmp->ingress.wq = rwq_create(name);
         if (!tmp->ingress.wq) {
                 rmt_destroy(tmp);
                 return NULL;
