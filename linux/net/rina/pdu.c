@@ -30,10 +30,11 @@
 #include "pdu.h"
 
 struct pci {
+        pdu_type_t type;
+
+        /* If type == PDU_TYPE_MGMT, all the following fields are useless */
         address_t  source;
         address_t  destination;
-
-        pdu_type_t type;
 
         struct {
                 cep_id_t source;
