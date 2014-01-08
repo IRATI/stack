@@ -3,7 +3,6 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
- *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,7 +47,7 @@ struct rmt_queue {
 };
 
 
-static struct rmt_queue * rs_queue_create(port_id_t id)
+static struct rmt_queue * rmt_queue_create(port_id_t id)
 {
         struct rmt_queue * tmp;
 
@@ -71,7 +70,7 @@ static struct rmt_queue * rs_queue_create(port_id_t id)
         return tmp;
 }
 
-static int rs_queue_destroy(struct rmt_queue * q)
+static int rmt_queue_destroy(struct rmt_queue * q)
 {
         if (!q)
                 return -1;
@@ -116,7 +115,7 @@ static int qmap_destroy(struct rmt_qmap * m)
                 return -1;
 
         hash_for_each_safe(m->queues, bucket, tmp, entry, hlist) {
-                if (rs_queue_destroy(entry)) {
+                if (rmt_queue_destroy(entry)) {
                         LOG_ERR("Could not destroy entry %pK", entry);
                         return -1;
                 }
@@ -478,7 +477,7 @@ static int rmt_send_worker(void * o)
         return 0;
 }
 
-static struct rmt_queue * find_rs_queue(struct rmt_qmap * rq,
+static struct rmt_queue * find_rmt_queue(struct rmt_qmap * rq,
                                        port_id_t         id)
 {
         struct rmt_queue *         entry;
@@ -520,7 +519,7 @@ static int rmt_send_port_id(struct rmt *  instance,
                 return -1;
         }
         spin_lock(&instance->send_queues->lock);
-        squeue = find_rs_queue(instance->send_queues, id);
+        squeue = find_rmt_queue(instance->send_queues, id);
         if (!squeue) {
                 spin_unlock(&instance->send_queues->lock);
                 return -1;
@@ -610,7 +609,7 @@ static int __rmt_queue_send_add(struct rmt * instance,
 {
         struct rmt_queue * tmp;
 
-        tmp = rs_queue_create(id);
+        tmp = rmt_queue_create(id);
         if (!tmp)
                 return -1;
 
@@ -639,7 +638,7 @@ int rmt_queue_send_add(struct rmt * instance,
                 return -1;
         }
 
-        if (find_rs_queue(instance->send_queues, id)) {
+        if (find_rmt_queue(instance->send_queues, id)) {
                 LOG_ERR("Queue already exists");
                 return -1;
         }
@@ -700,7 +699,7 @@ int rmt_queue_recv_add(struct rmt * instance,
                 return -1;
         }
 
-        if (find_rs_queue(instance->recv_queues, id)) {
+        if (find_rmt_queue(instance->recv_queues, id)) {
                 LOG_ERR("Queue already exists");
                 return -1;
         }
@@ -886,7 +885,7 @@ int rmt_receive(struct rmt * instance,
         }
 
         spin_lock(&instance->recv_queues->lock);
-        rcv_queue = find_rs_queue(instance->recv_queues, from);
+        rcv_queue = find_rmt_queue(instance->recv_queues, from);
         if (!rcv_queue) {
                 spin_unlock(&instance->recv_queues->lock);
                 return -1;
