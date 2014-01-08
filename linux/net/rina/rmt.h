@@ -2,6 +2,7 @@
  * RMT (Relaying and Multiplexing Task)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +25,7 @@
 #include "common.h"
 #include "du.h"
 #include "efcp.h"
+#include "ipcp-factories.h"
 
 struct rmt;
 
@@ -43,7 +45,8 @@ struct rmt;
 
 /* NOTE: There's one RMT for each IPC Process */
 
-struct rmt * rmt_create(struct kfa *            kfa,
+struct rmt * rmt_create(struct ipcp_instance *  parent,
+                        struct kfa *            kfa,
                         struct efcp_container * efcpc);
 int          rmt_destroy(struct rmt * instance);
 
@@ -59,10 +62,6 @@ int          rmt_queue_recv_add(struct rmt * instance,
                                 port_id_t    id);
 int          rmt_queue_recv_delete(struct rmt * instance,
                                    port_id_t    id);
-
-/* FIXME: Obsolete, to be removed */
-int          rmt_management_sdu_read(struct rmt *      instance,
-                                     struct sdu_wpi ** sdu_wpi);
 
 /* FIXME: Please check the following API */
 int          rmt_send(struct rmt * instance,
