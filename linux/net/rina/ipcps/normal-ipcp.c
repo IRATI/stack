@@ -444,7 +444,6 @@ static int normal_management_sdu_write(struct ipcp_instance_data * data,
 {
         struct pci *  pci;
         struct pdu *  pdu;
-        address_t     dst_address;
 
         LOG_DBG("Passing SDU to be written to N-1 port %d "
                 "from IPC Process %d", port_id, data->id);
@@ -454,12 +453,6 @@ static int normal_management_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        /* FIXME: fake PFT */
-        if (port_id == 1)
-                dst_address = 17;
-        else
-                dst_address = 16;
-
         pci = pci_create();
         if (!pci)
                 return -1;
@@ -468,7 +461,7 @@ static int normal_management_sdu_write(struct ipcp_instance_data * data,
                        0,
                        0,
                        data->address,
-                       dst_address,
+                       0,
                        0,
                        0,
                        PDU_TYPE_MGMT)) {
@@ -498,13 +491,46 @@ static int normal_management_sdu_write(struct ipcp_instance_data * data,
         LOG_DBG("port: %d", port_id);
 
         /* Give the data to RMT now ! */
-        if (rmt_send(data->rmt,
-                     pci_destination(pci),
-                     pci_cep_destination(pci),
-                     pdu)) {
+        if (rmt_send_port_id(data->rmt,
+                             port_id,
+                             pdu)) {
                 LOG_ERR("Could not send to RMT");
                 return -1;
         }
+
+        return 0;
+}
+
+static int normal_management_sdu_post(struct ipcp_instance_data * data,
+                                      port_id_t                   port_id,
+                                      struct sdu *                sdu)
+{
+        /* FIXME: We should get rid of sdu_wpi ASAP */
+        struct sdu_wpi * tmp;
+
+        if (!is_port_id_ok(port_id)) {
+                LOG_ERR("Wrong port id");
+                return -1;
+        }
+        if (!sdu_is_ok(sdu)) {
+                LOG_ERR("Bogus management SDU");
+                return -1;
+        }
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return -1;
+
+        tmp->port_id = port_id;
+        tmp->sdu     = sdu;
+        spin_lock(&data->mgmt_data->lock);
+        if (rfifo_push_ni(data->mgmt_data->sdu_ready,
+                          tmp)) {
+                spin_unlock(&data->mgmt_data->lock);
+                return -1;
+        }
+        spin_unlock(&data->mgmt_data->lock);
+        wake_up(&data->mgmt_data->readers);
 
         return 0;
 }
@@ -525,7 +551,8 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .connection_create_arrived = connection_create_arrived,
         .flow_binding_ipcp         = ipcp_flow_notification,
         .management_sdu_read       = normal_management_sdu_read,
-        .management_sdu_write      = normal_management_sdu_write
+        .management_sdu_write      = normal_management_sdu_write,
+        .management_sdu_post       = normal_management_sdu_post
 };
 
 static struct mgmt_data * normal_mgmt_data_create(void)
@@ -550,7 +577,6 @@ static struct mgmt_data * normal_mgmt_data_create(void)
         spin_lock_init(&data->lock);
 
         return data;
-
 }
 
 static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
@@ -576,6 +602,8 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         }
 
         instance->ops  = &normal_instance_ops;
+
+        /* FIXME: Rearrange the mess creating the data */
         instance->data = rkzalloc(sizeof(struct ipcp_instance_data),
                                   GFP_KERNEL);
         if (!instance->data) {
