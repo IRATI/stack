@@ -25,7 +25,6 @@
 #include "du.h"
 #include "efcp.h"
 
-struct mgmt_data;
 struct rmt;
 
 /*
@@ -61,17 +60,21 @@ int          rmt_queue_recv_add(struct rmt * instance,
 int          rmt_queue_recv_delete(struct rmt * instance,
                                    port_id_t    id);
 
-/* FIXME: Please check the following APIs */
-
-/* NOTE: Takes ownership of the passed PDU */
+/* FIXME: Obsolete, to be removed */
 int          rmt_management_sdu_read(struct rmt *      instance,
                                      struct sdu_wpi ** sdu_wpi);
+
+/* FIXME: Please check the following API */
 int          rmt_send(struct rmt * instance,
                       address_t    address,
                       cep_id_t     connection_id,
                       struct pdu * pdu);
 
-/* NOTE: Takes the ownership of the passed SDU */
+int          rmt_send_port_id(struct rmt *  instance,
+                              port_id_t     id,
+                              struct pdu *  pdu);
+
+/* FIXME: Please check the following API */
 int          rmt_receive(struct rmt * instance,
                          struct sdu * sdu,
                          port_id_t    from);
