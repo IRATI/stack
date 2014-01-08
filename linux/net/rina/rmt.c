@@ -47,8 +47,7 @@ struct rmt_queue {
         spinlock_t        lock;
 };
 
-
-static struct rmt_queue * rs_queue_create(port_id_t id)
+static struct rmt_queue * rmt_queue_create(port_id_t id)
 {
         struct rmt_queue * tmp;
 
@@ -68,19 +67,20 @@ static struct rmt_queue * rs_queue_create(port_id_t id)
         tmp->port_id = id;
         spin_lock_init(&tmp->lock);
 
+        LOG_DBG("Queue %pK created successfully", tmp);
+
         return tmp;
 }
 
-static int rs_queue_destroy(struct rmt_queue * q)
+static int rmt_queue_destroy(struct rmt_queue * q)
 {
-        if (!q)
-                return -1;
-
-        LOG_DBG("Destroying queue %pK", q);
+        ASSERT(q);
 
         rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
         hash_del(&q->hlist);
         rkfree(q);
+
+        LOG_DBG("Queue %pK destroyed successfully", q);
 
         return 0;
 }
@@ -112,11 +112,10 @@ static int qmap_destroy(struct rmt_qmap * m)
         struct hlist_node * tmp;
         int                 bucket;
 
-        if (!m)
-                return -1;
+        ASSERT(m);
 
         hash_for_each_safe(m->queues, bucket, tmp, entry, hlist) {
-                if (rs_queue_destroy(entry)) {
+                if (rmt_queue_destroy(entry)) {
                         LOG_ERR("Could not destroy entry %pK", entry);
                         return -1;
                 }
@@ -127,61 +126,52 @@ static int qmap_destroy(struct rmt_qmap * m)
         return 0;
 }
 
-struct mgmt_data {
-        struct rfifo *    sdu_ready;
-        wait_queue_head_t readers;
-        spinlock_t        lock;
-};
+static struct rmt_queue * qmap_find(struct rmt_qmap * m,
+                                    port_id_t         id)
+{
+        struct rmt_queue *        entry;
+        const struct hlist_head * head;
+
+        ASSERT(m);
+
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Bogus port id");
+                return NULL;
+        }
+
+        head = &m->queues[rmap_hash(m->queues, id)];
+        hlist_for_each_entry(entry, head, hlist) {
+                if (entry->port_id == id)
+                        return entry;
+        }
+
+        return NULL;
+}
 
 struct rmt {
-        address_t                 address;
-        struct pft *              pft;
-        struct kfa *              kfa;
-        struct efcp_container *   efcpc;
+        address_t               address;
+        struct pft *            pft;
+        struct kfa *            kfa;
+        struct efcp_container * efcpc;
 
-        /* FIXME: Remove _wq suffix */
-        /* FIXME: Remove _queues suffix */
+        struct {
+                struct workqueue_struct * wq;
+                struct rmt_qmap *         queues;
+        } ingress;
 
-        struct workqueue_struct * ingress_wq;
-        struct rmt_qmap *         send_queues;
+        struct {
+                struct workqueue_struct * wq;
+                struct rmt_qmap *         queues;
+        } egress;
 
-        struct workqueue_struct * egress_wq;
-        struct rmt_qmap *         recv_queues;
-
-        /* FIXME: Move into the Normal IPC Process */
-        struct mgmt_data *        mgmt_data;
+        /* ipcp_instance *         parent; */
 };
-
-static struct mgmt_data * rmt_mgmt_data_create(void)
-{
-        struct mgmt_data * data;
-
-        data = rkzalloc(sizeof(*data), GFP_KERNEL);
-        if (!data) {
-                LOG_ERR("Could not allocate memory for RMT mgmt struct");
-                return NULL;
-        }
-
-        data->sdu_ready = rfifo_create();
-        if (!data->sdu_ready) {
-                LOG_ERR("Could not create MGMT SDUs queue");
-                rfifo_destroy(data->sdu_ready, sdu_wpi_destructor);
-                rkfree(data);
-                return NULL;
-        }
-
-        init_waitqueue_head(&data->readers);
-        spin_lock_init(&data->lock);
-
-        return data;
-
-}
 
 struct rmt * rmt_create(struct kfa *            kfa,
                         struct efcp_container * efcpc)
 {
         struct rmt * tmp;
-        char         string_rmt_id[30];
+        char         rmt_id[30];
 
         if (!kfa)
                 return NULL;
@@ -192,12 +182,6 @@ struct rmt * rmt_create(struct kfa *            kfa,
 
         tmp->pft = pft_create();
         if (!tmp->pft) {
-                rkfree(tmp);
-                return NULL;
-        }
-
-        tmp->mgmt_data = rmt_mgmt_data_create();
-        if (!tmp->mgmt_data) {
                 rmt_destroy(tmp);
                 return NULL;
         }
@@ -206,31 +190,31 @@ struct rmt * rmt_create(struct kfa *            kfa,
         tmp->efcpc = efcpc;
 
         /* FIXME: This is bogus */
-        snprintf(string_rmt_id, 30, "rmt-egress-wq-%pK", tmp);
-        tmp->egress_wq = rwq_create(string_rmt_id);
-        if (!tmp->egress_wq) {
+        snprintf(rmt_id, sizeof(rmt_id), "rmt-egress-wq-%pK", tmp);
+        tmp->egress.wq = rwq_create(rmt_id);
+        if (!tmp->egress.wq) {
                 rmt_destroy(tmp);
                 return NULL;
         }
 
         /* FIXME: This is bogus */
-        snprintf(string_rmt_id, 30, "rmt-ingress-wq-%pK", tmp);
-        tmp->ingress_wq = rwq_create(string_rmt_id);
-        if (!tmp->ingress_wq) {
+        snprintf(rmt_id, sizeof(rmt_id), "rmt-ingress-wq-%pK", tmp);
+        tmp->ingress.wq = rwq_create(rmt_id);
+        if (!tmp->ingress.wq) {
                 rmt_destroy(tmp);
                 return NULL;
         }
 
         tmp->address = address_bad();
 
-        tmp->send_queues = qmap_create();
-        if (!tmp->send_queues) {
+        tmp->ingress.queues = qmap_create();
+        if (!tmp->ingress.queues) {
                 rmt_destroy(tmp);
                 return NULL;
         }
 
-        tmp->recv_queues = qmap_create();
-        if (!tmp->recv_queues) {
+        tmp->egress.queues = qmap_create();
+        if (!tmp->egress.queues) {
                 rmt_destroy(tmp);
                 return NULL;
         }
@@ -248,21 +232,11 @@ int rmt_destroy(struct rmt * instance)
                 return -1;
         }
 
-        ASSERT(instance->pft);
-
-        pft_destroy(instance->pft);
-
-        if (instance->mgmt_data) {
-                if (instance->mgmt_data->sdu_ready)
-                        rfifo_destroy(instance->mgmt_data->sdu_ready,
-                                      sdu_wpi_destructor);
-                rkfree(instance->mgmt_data);
-        }
-
-        if (instance->egress_wq)   rwq_destroy(instance->egress_wq);
-        if (instance->ingress_wq)  rwq_destroy(instance->ingress_wq);
-        if (instance->send_queues) qmap_destroy(instance->send_queues);
-        if (instance->recv_queues) qmap_destroy(instance->recv_queues);
+        if (instance->egress.wq)      rwq_destroy(instance->egress.wq);
+        if (instance->ingress.wq)     rwq_destroy(instance->ingress.wq);
+        if (instance->ingress.queues) qmap_destroy(instance->ingress.queues);
+        if (instance->egress.queues)  qmap_destroy(instance->egress.queues);
+        if (instance->pft)            pft_destroy(instance->pft);
 
         rkfree(instance);
 
@@ -293,7 +267,7 @@ EXPORT_SYMBOL(rmt_address_set);
 
 struct send_data {
         struct kfa *      kfa;
-        struct rmt_qmap * rmt_q;
+        struct rmt_qmap * qmap;
 };
 
 static struct send_data * send_data_create(struct kfa *      kfa,
@@ -312,7 +286,7 @@ static struct send_data * send_data_create(struct kfa *      kfa,
                 return NULL;
 
         tmp->kfa   = kfa;
-        tmp->rmt_q = queues;
+        tmp->qmap = queues;
 
         return tmp;
 }
@@ -321,7 +295,7 @@ static bool is_send_data_complete(const struct send_data * data)
 {
         bool ret;
 
-        ret = ((!data || !data->rmt_q || !data->kfa) ? false : true);
+        ret = ((!data || !data->qmap || !data->kfa) ? false : true);
 
         LOG_DBG("Send data complete? %d", ret);
 
@@ -423,7 +397,7 @@ static int rmt_send_worker(void * o)
                 return -1;
         }
 
-        if (!tmp->rmt_q) {
+        if (!tmp->qmap) {
                 LOG_ERR("No RMT queues passed");
                 return -1;
         }
@@ -431,16 +405,16 @@ static int rmt_send_worker(void * o)
         if (!tmp->kfa) {
                 LOG_ERR("No KFA passed");
 
-                spin_lock(&tmp->rmt_q->lock);
-                tmp->rmt_q->in_use = 0;
-                spin_unlock(&tmp->rmt_q->lock);
+                spin_lock(&tmp->qmap->lock);
+                tmp->qmap->in_use = 0;
+                spin_unlock(&tmp->qmap->lock);
 
                 return -1;
         }
 
         while (!out) {
                 out = true;
-                hash_for_each_safe(tmp->rmt_q->queues,
+                hash_for_each_safe(tmp->qmap->queues,
                                    bucket,
                                    ntmp,
                                    entry,
@@ -463,51 +437,24 @@ static int rmt_send_worker(void * o)
                                 break;
 
                         LOG_DBG("Gonna SEND sdu to port_id %d", port_id);
-                        if (kfa_flow_sdu_write(tmp->kfa,
-                                               port_id,
-                                               sdu)) {
+                        if (kfa_flow_sdu_write(tmp->kfa, port_id, sdu)) {
                                 LOG_ERR("Couldn't write SDU to KFA");
                         }
                 }
         }
 
-        spin_lock(&tmp->rmt_q->lock);
-        tmp->rmt_q->in_use = 0;
-        spin_unlock(&tmp->rmt_q->lock);
+        spin_lock(&tmp->qmap->lock);
+        tmp->qmap->in_use = 0;
+        spin_unlock(&tmp->qmap->lock);
 
         return 0;
 }
 
-static struct rmt_queue * find_rs_queue(struct rmt_qmap * rq,
-                                       port_id_t         id)
+int rmt_send_port_id(struct rmt *  instance,
+                     port_id_t     id,
+                     struct pdu *  pdu)
 {
-        struct rmt_queue *         entry;
-        const struct hlist_head * head;
-
-        if (!rq) {
-                LOG_ERR("Cannot look-up in a empty map");
-                return NULL;
-        }
-
-        if (!is_port_id_ok(id)) {
-                LOG_ERR("Bogus port id");
-                return NULL;
-        }
-
-        head = &rq->queues[rmap_hash(rq->queues, id)];
-        hlist_for_each_entry(entry, head, hlist) {
-                if (entry->port_id == id)
-                        return entry;
-        }
-
-        return NULL;
-}
-
-static int rmt_send_port_id(struct rmt *  instance,
-                            port_id_t     id,
-                            struct pdu *  pdu)
-{
-        struct rmt_queue *      squeue;
+        struct rmt_queue *     squeue;
         struct rwq_work_item * item;
         struct send_data *     data;
 
@@ -519,31 +466,37 @@ static int rmt_send_port_id(struct rmt *  instance,
                 LOG_ERR("Bogus PDU passed");
                 return -1;
         }
-        spin_lock(&instance->send_queues->lock);
-        squeue = find_rs_queue(instance->send_queues, id);
+
+        spin_lock(&instance->ingress.queues->lock);
+        if (!instance->ingress.queues) {
+                spin_unlock(&instance->ingress.queues->lock);
+                return -1;
+        }
+
+        squeue = qmap_find(instance->ingress.queues, id);
         if (!squeue) {
-                spin_unlock(&instance->send_queues->lock);
+                spin_unlock(&instance->ingress.queues->lock);
                 return -1;
         }
 
         spin_lock(&squeue->lock);
-        spin_unlock(&instance->send_queues->lock);
+        spin_unlock(&instance->ingress.queues->lock);
         if (rfifo_push_ni(squeue->queue, pdu)) {
                 spin_unlock(&squeue->lock);
                 return -1;
         }
         spin_unlock(&squeue->lock);
 
-        spin_lock(&instance->send_queues->lock);
-        if (instance->send_queues->in_use) {
+        spin_lock(&instance->ingress.queues->lock);
+        if (instance->ingress.queues->in_use) {
                 LOG_DBG("Work already posted, nothing more to do");
-                spin_unlock(&instance->send_queues->lock);
+                spin_unlock(&instance->ingress.queues->lock);
                 return 0;
         }
-        instance->send_queues->in_use = 1;
-        spin_unlock(&instance->send_queues->lock);
+        instance->ingress.queues->in_use = 1;
+        spin_unlock(&instance->ingress.queues->lock);
 
-        data = send_data_create(instance->kfa, instance->send_queues);
+        data = send_data_create(instance->kfa, instance->ingress.queues);
         if (!is_send_data_complete(data)) {
                 LOG_ERR("Couldn't create send data");
                 return -1;
@@ -557,9 +510,9 @@ static int rmt_send_port_id(struct rmt *  instance,
                 return -1;
         }
 
-        ASSERT(instance->egress_wq);
+        ASSERT(instance->egress.wq);
 
-        if (rwq_work_post(instance->egress_wq, item)) {
+        if (rwq_work_post(instance->egress.wq, item)) {
                 send_data_destroy(data);
                 pdu_destroy(pdu);
                 return -1;
@@ -567,6 +520,7 @@ static int rmt_send_port_id(struct rmt *  instance,
 
         return 0;
 }
+EXPORT_SYMBOL(rmt_send_port_id);
 
 int rmt_send(struct rmt * instance,
              address_t    address,
@@ -610,11 +564,11 @@ static int __rmt_queue_send_add(struct rmt * instance,
 {
         struct rmt_queue * tmp;
 
-        tmp = rs_queue_create(id);
+        tmp = rmt_queue_create(id);
         if (!tmp)
                 return -1;
 
-        hash_add(instance->send_queues->queues, &tmp->hlist, id);
+        hash_add(instance->ingress.queues->queues, &tmp->hlist, id);
 
         LOG_DBG("Added send queue to rmt %pK for port id %d", instance, id);
 
@@ -634,12 +588,12 @@ int rmt_queue_send_add(struct rmt * instance,
                 return -1;
         }
 
-        if (!instance->send_queues) {
+        if (!instance->ingress.queues) {
                 LOG_ERR("Invalid RMT");
                 return -1;
         }
 
-        if (find_rs_queue(instance->send_queues, id)) {
+        if (qmap_find(instance->ingress.queues, id)) {
                 LOG_ERR("Queue already exists");
                 return -1;
         }
@@ -673,7 +627,7 @@ static int __rmt_queue_recv_add(struct rmt * instance,
         }
 
         INIT_HLIST_NODE(&tmp->hlist);
-        hash_add(instance->recv_queues->queues, &tmp->hlist, id);
+        hash_add(instance->egress.queues->queues, &tmp->hlist, id);
         tmp->port_id = id;
         spin_lock_init(&tmp->lock);
 
@@ -695,12 +649,12 @@ int rmt_queue_recv_add(struct rmt * instance,
                 return -1;
         }
 
-        if (!instance->recv_queues) {
+        if (!instance->egress.queues) {
                 LOG_ERR("Invalid RMT");
                 return -1;
         }
 
-        if (find_rs_queue(instance->recv_queues, id)) {
+        if (qmap_find(instance->egress.queues, id)) {
                 LOG_ERR("Queue already exists");
                 return -1;
         }
@@ -718,48 +672,10 @@ int rmt_queue_recv_delete(struct rmt * instance,
 }
 EXPORT_SYMBOL(rmt_queue_recv_delete);
 
+/* FIXME: Obsolete, to be removed */
 int rmt_management_sdu_read(struct rmt *      instance,
                             struct sdu_wpi ** sdu_wpi)
-{
-
-        int retval;
-
-        IRQ_BARRIER;
-
-        spin_lock(&instance->mgmt_data->lock);
-        while (rfifo_is_empty(instance->mgmt_data->sdu_ready)) {
-                LOG_DBG("Mgmt read going to sleep...");
-                spin_unlock(&instance->mgmt_data->lock);
-
-                retval = wait_event_interruptible(instance->mgmt_data->readers,
-                                                  !rfifo_is_empty(instance->mgmt_data->sdu_ready));
-
-                if (retval) {
-                        LOG_ERR("Mgmt queue waken up by interruption, "
-                                "bailing out");
-                        return retval;
-                }
-
-                spin_lock(&instance->mgmt_data->lock);
-        }
-
-        if (rfifo_is_empty(instance->mgmt_data->sdu_ready)) {
-                spin_unlock(&instance->mgmt_data->lock);
-                return -1;
-        }
-        ASSERT(!rfifo_is_empty(instance->mgmt_data->sdu_ready));
-
-        *sdu_wpi = rfifo_pop(instance->mgmt_data->sdu_ready);
-
-        spin_unlock(&instance->mgmt_data->lock);
-
-        if (!sdu_wpi_is_ok(*sdu_wpi)) {
-                LOG_ERR("There is not enough data in the management queue");
-                return -1;
-        }
-
-        return 0;
-}
+{ return -1; }
 EXPORT_SYMBOL(rmt_management_sdu_read);
 
 static int rmt_receive_worker(void * o)
@@ -767,13 +683,12 @@ static int rmt_receive_worker(void * o)
         struct rmt *        tmp;
         pdu_type_t          pdu_type;
         address_t           dest_add;
-        struct rmt_queue *   entry;
+        struct rmt_queue *  entry;
         bool                out;
         struct hlist_node * ntmp;
         int                 bucket;
 
         LOG_DBG("RMT receive worker called");
-        out = false;
 
         tmp = (struct rmt *) o;
         if (!tmp) {
@@ -781,16 +696,17 @@ static int rmt_receive_worker(void * o)
                 return -1;
         }
 
+        out = false;
         while (!out) {
                 out = true;
-                hash_for_each_safe(tmp->recv_queues->queues,
+                hash_for_each_safe(tmp->egress.queues->queues,
                                    bucket,
                                    ntmp,
                                    entry,
                                    hlist) {
                         struct sdu * sdu;
                         struct pdu * pdu;
-                        port_id_t port_id;
+                        port_id_t    port_id;
 
                         spin_lock(&entry->lock);
                         sdu     = (struct sdu *) rfifo_pop(entry->queue);
@@ -798,57 +714,89 @@ static int rmt_receive_worker(void * o)
                         spin_unlock(&entry->lock);
 
                         if (!sdu) {
+                                LOG_ERR("No SDU to work with");
                                 break;
                         }
+
                         out = false;
                         pdu = pdu_create_with(sdu);
                         if (!pdu) {
+                                LOG_ERR("No PDU to work with");
                                 break;
                         }
+
                         dest_add = pci_destination(pdu_pci_get_ro(pdu));
                         if (!is_address_ok(dest_add)) {
+                                LOG_ERR("Wrong destination address");
                                 break;
                         }
+
                         if (tmp->address != dest_add) {
                                 /*
                                  * FIXME: Port id will be retrieved
                                  * from the pduft
                                  */
-                                kfa_flow_sdu_write(tmp->kfa,
-                                                   port_id_bad(),
-                                                   sdu);
+                                if (kfa_flow_sdu_write(tmp->kfa,
+                                                       port_id_bad(),
+                                                       sdu)) {
+                                        LOG_ERR("Cannot write SDU to KFA");
+                                        break;
+                                }
+
                                 break;
                         }
+
                         pdu_type = pci_type(pdu_pci_get_rw(pdu));
                         if (!pdu_type_is_ok(pdu_type)) {
+                                LOG_ERR("Wrong PDU type");
                                 pdu_destroy(pdu);
                                 break;
                         }
+
                         switch (pdu_type) {
                         case PDU_TYPE_MGMT: {
                                 struct buffer  * buffer;
                                 struct sdu_wpi * sdu_wpi;
 
-                                buffer = pdu_buffer_get_rw(pdu);
-                                sdu_wpi = sdu_wpi_create_with(buffer);
-                                if (!sdu_wpi)
-                                        break;
+                                buffer  = pdu_buffer_get_rw(pdu);
+                                if (!buffer) {
+                                        LOG_ERR("PDU has no buffer ???");
+                                        return -1;
+                                }
 
-                                sdu_wpi->port_id = port_id;
-                                spin_lock(&tmp->mgmt_data->lock);
-                                if (rfifo_push_ni(tmp->mgmt_data->sdu_ready,
-                                                  sdu_wpi)) {
-                                        spin_unlock(&tmp->mgmt_data->lock);
+                                sdu_wpi = sdu_wpi_create_with(buffer);
+                                if (!sdu_wpi) {
+                                        LOG_ERR("Cannot create SDU");
                                         break;
                                 }
-                                spin_unlock(&tmp->mgmt_data->lock);
-                                wake_up(&tmp->mgmt_data->readers);
+
+                                sdu_wpi->port_id = port_id;
+
+                                /* FIXME: Send the management SDU */
                                 break;
                         }
                         case PDU_TYPE_DT: {
-                                efcp_container_receive(tmp->efcpc,
-                                                       pci_cep_destination(pdu_pci_get_ro(pdu)),
-                                                       pdu);
+                                const struct pci * p;
+                                cep_id_t           c;
+
+                                p = pdu_pci_get_ro(pdu);
+                                if (!p) {
+                                        LOG_ERR("Cannot get PCI from PDU");
+                                        break;
+                                }
+
+                                c = pci_cep_destination(p);
+                                if (!is_cep_id_ok(c)) {
+                                        LOG_ERR("Wrong CEP-id in PDU");
+                                        break;
+                                }
+
+                                if (efcp_container_receive(tmp->efcpc,
+                                                           c, pdu)) {
+                                        LOG_ERR("EFCP container problems");
+                                        break;
+                                }
+
                                 break;
                         }
                         default:
@@ -857,9 +805,9 @@ static int rmt_receive_worker(void * o)
                 }
         }
 
-        spin_lock(&tmp->recv_queues->lock);
-        tmp->recv_queues->in_use = 0;
-        spin_unlock(&tmp->recv_queues->lock);
+        spin_lock(&tmp->egress.queues->lock);
+        tmp->egress.queues->in_use = 0;
+        spin_unlock(&tmp->egress.queues->lock);
 
         return 0;
 }
@@ -885,28 +833,33 @@ int rmt_receive(struct rmt * instance,
                 return -1;
         }
 
-        spin_lock(&instance->recv_queues->lock);
-        rcv_queue = find_rs_queue(instance->recv_queues, from);
+        spin_lock(&instance->egress.queues->lock);
+        if (!instance->egress.queues) {
+                spin_unlock(&instance->egress.queues->lock);
+                return -1;
+        }
+
+        rcv_queue = qmap_find(instance->egress.queues, from);
         if (!rcv_queue) {
-                spin_unlock(&instance->recv_queues->lock);
+                spin_unlock(&instance->egress.queues->lock);
                 return -1;
         }
         spin_lock(&rcv_queue->lock);
-        spin_unlock(&instance->recv_queues->lock);
+        spin_unlock(&instance->egress.queues->lock);
         if (rfifo_push_ni(rcv_queue->queue, sdu)) {
                 spin_unlock(&rcv_queue->lock);
                 return -1;
         }
         spin_unlock(&rcv_queue->lock);
 
-        spin_lock(&instance->recv_queues->lock);
-        if (instance->recv_queues->in_use) {
+        spin_lock(&instance->egress.queues->lock);
+        if (instance->egress.queues->in_use) {
                 LOG_DBG("Work already posted, nothing more to do");
-                spin_unlock(&instance->recv_queues->lock);
+                spin_unlock(&instance->egress.queues->lock);
                 return 0;
         }
-        instance->recv_queues->in_use = 1;
-        spin_unlock(&instance->recv_queues->lock);
+        instance->egress.queues->in_use = 1;
+        spin_unlock(&instance->egress.queues->lock);
 
         /* Is this _ni() call really necessary ??? */
         item = rwq_work_create_ni(rmt_receive_worker, instance);
@@ -915,9 +868,9 @@ int rmt_receive(struct rmt * instance,
                 return -1;
         }
 
-        ASSERT(instance->ingress_wq);
+        ASSERT(instance->ingress.wq);
 
-        if (rwq_work_post(instance->ingress_wq, item)) {
+        if (rwq_work_post(instance->ingress.wq, item)) {
                 LOG_ERR("Couldn't put work in the ingress workqueue");
                 return -1;
         }
