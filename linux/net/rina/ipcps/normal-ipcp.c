@@ -551,7 +551,8 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 rkfree(instance);
                 return NULL;
         }
-        instance->data->rmt = rmt_create(instance->data->kfa,
+        instance->data->rmt = rmt_create(instance,
+                                         instance->data->kfa,
                                          instance->data->efcpc);
         if (!instance->data->rmt) {
                 LOG_ERR("Failed creation of RMT instance");

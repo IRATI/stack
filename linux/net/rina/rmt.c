@@ -3,7 +3,6 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
- *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -150,6 +149,7 @@ static struct rmt_queue * qmap_find(struct rmt_qmap * m,
 
 struct rmt {
         address_t               address;
+        struct ipcp_instance *  parent;
         struct pft *            pft;
         struct kfa *            kfa;
         struct efcp_container * efcpc;
@@ -163,11 +163,10 @@ struct rmt {
                 struct workqueue_struct * wq;
                 struct rmt_qmap *         queues;
         } egress;
-
-        /* ipcp_instance *         parent; */
 };
 
-struct rmt * rmt_create(struct kfa *            kfa,
+struct rmt * rmt_create(struct ipcp_instance *  parent,
+                        struct kfa *            kfa,
                         struct efcp_container * efcpc)
 {
         struct rmt * tmp;
@@ -180,14 +179,20 @@ struct rmt * rmt_create(struct kfa *            kfa,
         if (!tmp)
                 return NULL;
 
+        if (!parent || !kfa || !efcpc) {
+                LOG_ERR("Bogus input parameters");
+                return NULL;
+        }
+
+        tmp->parent = parent;
+        tmp->kfa    = kfa;
+        tmp->efcpc  = efcpc;
+
         tmp->pft = pft_create();
         if (!tmp->pft) {
                 rmt_destroy(tmp);
                 return NULL;
         }
-
-        tmp->kfa   = kfa;
-        tmp->efcpc = efcpc;
 
         /* FIXME: This is bogus */
         snprintf(rmt_id, sizeof(rmt_id), "rmt-egress-wq-%pK", tmp);
@@ -232,10 +237,12 @@ int rmt_destroy(struct rmt * instance)
                 return -1;
         }
 
-        if (instance->egress.wq)      rwq_destroy(instance->egress.wq);
         if (instance->ingress.wq)     rwq_destroy(instance->ingress.wq);
         if (instance->ingress.queues) qmap_destroy(instance->ingress.queues);
+
+        if (instance->egress.wq)      rwq_destroy(instance->egress.wq);
         if (instance->egress.queues)  qmap_destroy(instance->egress.queues);
+
         if (instance->pft)            pft_destroy(instance->pft);
 
         rkfree(instance);
