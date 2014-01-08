@@ -62,7 +62,8 @@ int            kipcm_sdu_read(struct kipcm * kipcm,
 /* If successful: takes the ownership of the SDU */
 int            kipcm_management_sdu_write(struct kipcm *   kipcm,
                                           ipc_process_id_t id,
-                                          struct sdu_wpi * sdu_wpi);
+                                          address_t        dst_addr,
+                                          struct sdu *     sdu);
 /* If successful: passes the ownership of the SDU */
 int            kipcm_management_sdu_read(struct kipcm *    kipcm,
                                          ipc_process_id_t  id,

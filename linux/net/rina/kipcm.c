@@ -1755,7 +1755,8 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 
 int kipcm_management_sdu_write(struct kipcm *   kipcm,
                                ipc_process_id_t id,
-                               struct sdu_wpi * sdu_wpi)
+                               address_t        dst_addr,
+                               struct sdu *     sdu)
 {
         struct ipcp_instance * ipcp;
 
@@ -1763,37 +1764,37 @@ int kipcm_management_sdu_write(struct kipcm *   kipcm,
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
-                sdu_wpi_destroy(sdu_wpi);
+                sdu_destroy(sdu);
                 return -1;
         }
 
-        if (!sdu_wpi_is_ok(sdu_wpi)) {
-                LOG_ERR("Bogus SDU with port-id received, bailing out");
-                sdu_wpi_destroy(sdu_wpi);
+        if (!sdu_is_ok(sdu)) {
+                LOG_ERR("Bogus SDU received, bailing out");
+                sdu_destroy(sdu);
                 return -1;
         }
 
         ipcp = ipcp_imap_find(kipcm->instances, id);
         if (!ipcp) {
                 LOG_ERR("Could not find IPC Process with id %d", id);
-                sdu_wpi_destroy(sdu_wpi);
+                sdu_destroy(sdu);
                 return -1;
         }
 
         if (!ipcp->ops) {
                 LOG_ERR("Bogus IPCP ops, bailing out");
-                sdu_wpi_destroy(sdu_wpi);
+                sdu_destroy(sdu);
                 return -1;
         }
 
         if (!ipcp->ops->management_sdu_write) {
                 LOG_ERR("The IPC Process %d doesn't support this operation",
                         id);
-                sdu_wpi_destroy(sdu_wpi);
+                sdu_destroy(sdu);
                 return -1;
         }
 
-        return ipcp->ops->management_sdu_write(ipcp->data, sdu_wpi->port_id, sdu_wpi->sdu);
+        return ipcp->ops->management_sdu_write(ipcp->data, dst_addr, sdu);
 }
 
 int kipcm_management_sdu_read(struct kipcm *    kipcm,

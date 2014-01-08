@@ -68,7 +68,8 @@ struct personality_ops {
         /* Takes the ownership of the sdu with port-id */
         int (* management_sdu_write)(struct personality_data * data,
                                      ipc_process_id_t          id,
-                                     struct sdu_wpi *          sdu_wpi);
+                                     address_t                 dst_addr,
+                                     struct sdu *              sdu);
 
         /* Passes the ownership of the sdu with port-id */
         int (* management_sdu_read)(struct personality_data * data,
