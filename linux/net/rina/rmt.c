@@ -697,12 +697,6 @@ int rmt_queue_recv_delete(struct rmt * instance,
 }
 EXPORT_SYMBOL(rmt_queue_recv_delete);
 
-/* FIXME: Obsolete, to be removed */
-int rmt_management_sdu_read(struct rmt *      instance,
-                            struct sdu_wpi ** sdu_wpi)
-{ return -1; }
-EXPORT_SYMBOL(rmt_management_sdu_read);
-
 static int rmt_receive_worker(void * o)
 {
         struct rmt *        tmp;

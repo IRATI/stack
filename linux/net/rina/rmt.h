@@ -63,10 +63,6 @@ int          rmt_queue_recv_add(struct rmt * instance,
 int          rmt_queue_recv_delete(struct rmt * instance,
                                    port_id_t    id);
 
-/* FIXME: Obsolete, to be removed */
-int          rmt_management_sdu_read(struct rmt *      instance,
-                                     struct sdu_wpi ** sdu_wpi);
-
 /* FIXME: Please check the following API */
 int          rmt_send(struct rmt * instance,
                       address_t    address,
