@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,7 +47,6 @@ struct rmt_queue {
         spinlock_t        lock;
 };
 
-
 static struct rmt_queue * rmt_queue_create(port_id_t id)
 {
         struct rmt_queue * tmp;
@@ -72,8 +72,7 @@ static struct rmt_queue * rmt_queue_create(port_id_t id)
 
 static int rmt_queue_destroy(struct rmt_queue * q)
 {
-        if (!q)
-                return -1;
+        ASSERT(q);
 
         LOG_DBG("Destroying queue %pK", q);
 
