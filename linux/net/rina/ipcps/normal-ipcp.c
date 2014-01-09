@@ -535,6 +535,20 @@ static int normal_management_sdu_post(struct ipcp_instance_data * data,
         return 0;
 }
 
+int normal_pdu_fte_add(struct ipcp_instance_data * data,
+                       struct list_head *          pft_entries)
+{
+        LOG_MISSING;
+        return -1;
+}
+
+int normal_pdu_fte_remove(struct ipcp_instance_data * data,
+                          struct list_head *           pft_entries)
+{
+        LOG_MISSING;
+        return -1;
+}
+
 /*  FIXME: register ops */
 static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request     = NULL,
@@ -552,7 +566,9 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .flow_binding_ipcp         = ipcp_flow_notification,
         .management_sdu_read       = normal_management_sdu_read,
         .management_sdu_write      = normal_management_sdu_write,
-        .management_sdu_post       = normal_management_sdu_post
+        .management_sdu_post       = normal_management_sdu_post,
+        .pdu_fte_add               = normal_pdu_fte_add,
+        .pdu_fte_remove            = normal_pdu_fte_remove
 };
 
 static struct mgmt_data * normal_mgmt_data_create(void)
