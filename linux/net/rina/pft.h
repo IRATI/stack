@@ -29,11 +29,11 @@
 struct pft;
 
 struct pft * pft_create(void);
-struct pft * pft_create_ni(void);
 int          pft_destroy(struct pft * instance);
 
 bool         pft_is_empty(struct pft * instance);
 int          pft_flush(struct pft * instance);
+
 int          pft_add(struct pft * instance,
                      address_t    destination,
                      qos_id_t     qos_id,
