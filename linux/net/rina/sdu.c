@@ -54,6 +54,36 @@ struct sdu * sdu_create_with_ni(struct buffer * buffer)
 { return sdu_create_with_gfp(GFP_ATOMIC, buffer); }
 EXPORT_SYMBOL(sdu_create_with_ni);
 
+static struct sdu * sdu_create_pdu_with_gfp(gfp_t        flags,
+                                            struct pdu * pdu)
+{
+        LOG_MISSING;
+
+        return NULL;
+#if 0
+        struct sdu * tmp;
+
+        if (!buffer_is_ok(buffer))
+                return NULL;
+
+        tmp = rkzalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        tmp->buffer = buffer;
+
+        return tmp;
+#endif
+}
+
+struct sdu * sdu_create_pdu_with(struct pdu * pdu)
+{ return sdu_create_pdu_with_gfp(GFP_KERNEL, pdu); }
+EXPORT_SYMBOL(sdu_create_pdu_with);
+
+struct sdu * sdu_create_pdu_with_ni(struct pdu * pdu)
+{ return sdu_create_pdu_with_gfp(GFP_ATOMIC, pdu); }
+EXPORT_SYMBOL(sdu_create_pdu_with_ni);
+
 int sdu_destroy(struct sdu * s)
 {
         if (!s) return -1;
