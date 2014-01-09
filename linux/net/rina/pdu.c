@@ -304,6 +304,16 @@ cep_id_t pci_cep_source(const struct pci * pci)
 }
 EXPORT_SYMBOL(pci_cep_source);
 
+/* FIXME: Add a qos_id_bad in the return for wrong data */
+qos_id_t pci_qos_id(const struct pci * pci)
+{
+        if (!pci)
+                return 0;
+
+        return pci->qos_id;
+}
+EXPORT_SYMBOL(pci_qos_id);
+
 struct pdu {
         struct pci *    pci;
         struct buffer * buffer;

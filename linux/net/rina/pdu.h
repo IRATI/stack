@@ -100,6 +100,7 @@ address_t             pci_source(const struct pci * pci);
 address_t             pci_destination(const struct pci * pci);
 cep_id_t              pci_cep_source(const struct pci * pci);
 cep_id_t              pci_cep_destination(const struct pci * pci);
+qos_id_t              pci_qos_id(const struct pci * pci);
 
 struct pdu;
 

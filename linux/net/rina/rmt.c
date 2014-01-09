@@ -701,7 +701,6 @@ static int rmt_receive_worker(void * o)
 {
         struct rmt *        tmp;
         pdu_type_t          pdu_type;
-        address_t           dest_add;
         struct rmt_queue *  entry;
         bool                out;
         struct hlist_node * ntmp;
@@ -744,27 +743,6 @@ static int rmt_receive_worker(void * o)
                                 break;
                         }
 
-                        dest_add = pci_destination(pdu_pci_get_ro(pdu));
-                        if (!is_address_ok(dest_add)) {
-                                LOG_ERR("Wrong destination address");
-                                break;
-                        }
-
-                        if (tmp->address != dest_add) {
-                                /*
-                                 * FIXME: Port id will be retrieved
-                                 * from the pduft
-                                 */
-                                if (kfa_flow_sdu_write(tmp->kfa,
-                                                       port_id_bad(),
-                                                       sdu)) {
-                                        LOG_ERR("Cannot write SDU to KFA");
-                                        break;
-                                }
-
-                                break;
-                        }
-
                         pdu_type = pci_type(pdu_pci_get_rw(pdu));
                         if (!pdu_type_is_ok(pdu_type)) {
                                 LOG_ERR("Wrong PDU type");
@@ -774,36 +752,70 @@ static int rmt_receive_worker(void * o)
 
                         switch (pdu_type) {
                         case PDU_TYPE_MGMT: {
-                                struct buffer  * buffer;
-                                struct sdu_wpi * sdu_wpi;
+                                struct buffer * buffer;
+                                struct sdu    * sdu;
 
                                 buffer  = pdu_buffer_get_rw(pdu);
-                                if (!buffer) {
+                                if (!buffer_is_ok(buffer)) {
                                         LOG_ERR("PDU has no buffer ???");
                                         return -1;
                                 }
 
-                                sdu_wpi = sdu_wpi_create_with(buffer);
-                                if (!sdu_wpi) {
+                                sdu = sdu_create_with(buffer);
+                                if (!sdu_is_ok(sdu)) {
                                         LOG_ERR("Cannot create SDU");
                                         break;
                                 }
-
-                                sdu_wpi->port_id = port_id;
-
-                                /* FIXME: Send the management SDU */
+                                if (tmp->parent->ops->management_sdu_post(
+                                                tmp->parent->data,
+                                                port_id,
+                                                sdu)) {
+                                        LOG_ERR("Could not post mgmt SDU");
+                                        break;
+                                }
                                 break;
                         }
                         case PDU_TYPE_DT: {
                                 const struct pci * p;
                                 cep_id_t           c;
+                                address_t          dest_add;
 
                                 p = pdu_pci_get_ro(pdu);
                                 if (!p) {
                                         LOG_ERR("Cannot get PCI from PDU");
                                         break;
                                 }
+                                dest_add = pci_destination(p);
+                                if (!is_address_ok(dest_add)) {
+                                        LOG_ERR("Wrong destination address");
+                                        break;
+                                }
 
+                                if (tmp->address != dest_add) {
+                                        size_t *    size = 0;
+                                        port_id_t * pid;
+                                        qos_id_t    qos_id;
+                                        int         i;
+
+                                        qos_id = pci_qos_id(p);
+                                        if (pft_nhop(tmp->pft,
+                                                     dest_add,
+                                                     qos_id,
+                                                     &pid,
+                                                     size)) {
+                                                LOG_ERR("No next hops");
+                                                break;
+                                        }
+                                        for (i = 0; i < *size; ++i) {
+                                                if (kfa_flow_sdu_write(tmp->kfa,
+                                                                       pid[i],
+                                                                       sdu))
+                                                        LOG_ERR("Cannot write" \
+                                                                " SDU to KFA");
+                                        }
+
+                                        break;
+                                }
                                 c = pci_cep_destination(p);
                                 if (!is_cep_id_ok(c)) {
                                         LOG_ERR("Wrong CEP-id in PDU");
