@@ -66,7 +66,7 @@ static struct rmt_queue * rmt_queue_create(port_id_t id)
         tmp->port_id = id;
         spin_lock_init(&tmp->lock);
 
-        LOG_DBG("Queue %pK created successfully", tmp);
+        LOG_DBG("Queue %pK created successfully (port-id = %d)", tmp, id);
 
         return tmp;
 }
@@ -76,11 +76,11 @@ static int rmt_queue_destroy(struct rmt_queue * q)
         ASSERT(q);
         ASSERT(q->queue);
 
+        LOG_DBG("Destroying queue %pK (port-id = %d)", q, q->port_id);
+
         rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
         hash_del(&q->hlist);
         rkfree(q);
-
-        LOG_DBG("Queue %pK destroyed successfully", q);
 
         return 0;
 }
