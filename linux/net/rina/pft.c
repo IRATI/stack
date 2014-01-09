@@ -424,3 +424,241 @@ int pft_nhop(struct pft * instance,
 
         return 0;
 }
+
+
+#ifdef CONFIG_RINA_PFT_REGRESSION_TESTS
+static bool regression_test_pft_nhop(void)
+{
+        struct pft *       tmp;
+        port_id_t *        port_ids;
+        size_t             nr;
+ 
+        tmp = pft_create();
+        if (!tmp) {
+                LOG_DBG("Failed to create pft instance");
+                return false;
+        }
+
+        if (pft_add(tmp, 30, 2, 2)) {
+                LOG_DBG("Failed to add entry");
+                return false;
+        }
+        
+        if (pft_add(tmp, 30, 2, 99)) {
+                LOG_DBG("Failed to add entry");
+                return false;
+        }
+
+        nr = 0;
+        if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
+                LOG_DBG("Failed to get port-ids");
+                return false;
+        }
+
+        if (nr != 2) {
+                LOG_DBG("Wrong number of port-ids returned");
+                return false;
+        }
+
+        if (port_ids[0] != 2) {
+                LOG_DBG("Wrong port-id returned");
+                return false;
+        }
+        
+        if (port_ids[1] != 99) {
+                LOG_DBG("Wrong port-id returned");
+                return false;
+        }
+
+        if (pft_flush(tmp)) {
+                LOG_DBG("Failed to flush table");
+                return false;
+        }
+
+        /* Port-id table is now 2 in size */
+        if (pft_add(tmp, 30, 2, 2)) {
+                LOG_DBG("Failed to add entry");
+                return false;
+        }
+        
+        if (pft_add(tmp, 30, 2, 99)) {
+                LOG_DBG("Failed to add entry");
+                return false;
+        }
+
+        if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
+                LOG_DBG("Failed to get port-ids");
+                return false;
+        }
+
+        if (nr != 2) {
+                LOG_DBG("Wrong number of port-ids returned");
+                return false;
+        }
+
+        if (pft_flush(tmp)) {
+                LOG_DBG("Failed to flush table");
+                return false;
+        }
+
+        /* Trying with 1 port-id */
+
+        if (pft_add(tmp, 30, 2, 2)) {
+                LOG_DBG("Failed to add entry");
+                return false;
+        }        
+        
+        if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
+                LOG_DBG("Failed to get port-ids");
+                return false;
+        }
+
+        if (nr != 1) {
+                LOG_DBG("Wrong number of port-ids returned");
+                return false;
+        }
+
+
+        if (pft_flush(tmp)) {
+                LOG_DBG("Failed to flush table");
+                return false;
+        }
+
+        /* Trying with 3 port-ids */
+
+        if (pft_add(tmp, 30, 2, 2)) {
+                LOG_DBG("Failed to add entry");
+                return false;
+        }
+        
+        if (pft_add(tmp, 30, 2, 99)) {
+                LOG_DBG("Failed to add entry");
+                return false;
+        }
+
+        if (pft_add(tmp, 30, 2, 9)) {
+                LOG_DBG("Failed to add entry");
+                return false;
+        }
+
+
+        if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
+                LOG_DBG("Failed to get port-ids");
+                return false;
+        }
+
+        if (nr != 3) {
+                LOG_DBG("Wrong number of port-ids returned");
+                return false;
+        }
+
+        if (pft_destroy(tmp)) {
+                LOG_DBG("Failed to destroy instance");
+                return false;
+        }
+        
+        return true;
+}
+
+static bool regression_test_add_remove_pft_entries(void)
+{
+        struct pft * tmp;
+        struct pft_entry * e;
+ 
+        tmp = pft_create();
+        if (!tmp) {
+                LOG_DBG("Failed to create pft instance");
+                return false;
+        }
+        
+        if (pft_add(tmp, 16, 1, 1)) {
+                LOG_DBG("Failed to add entry");
+                return false;
+        }
+        
+        e = pft_find(tmp, 16,1);
+        if (!e) {
+                LOG_DBG("Failed to retrieve stored entry");
+                return false;
+        }
+
+
+        if (pft_remove(tmp, 16, 1, 1)) {
+                LOG_DBG("Failed to remove entry");
+                return false;
+        }
+
+        if (!pft_remove(tmp, 16, 1, 1)) {
+                LOG_DBG("Entry should have already been removed");
+                return false;
+        }
+
+        if (!pft_remove(tmp, 35, 4, 6)) {
+                LOG_DBG("No such entry was added");
+                return false;
+        }
+
+        if (pft_add(tmp, 30, 2, 2)) {
+                LOG_DBG("Failed to add entry");
+                return false;
+        }
+        
+        if (pft_add(tmp, 35, 5, 99)) {
+                LOG_DBG("Failed to add entry");
+                return false;
+        }
+
+        if (pft_flush(tmp)) {
+                LOG_DBG("Failed to flush table");
+                return false;
+        }
+
+        if (pft_destroy(tmp)) {
+                LOG_DBG("Failed to destroy instance");
+                return false;
+        }
+
+        return true;
+}
+
+static bool regression_test_create_pft_instance(void) 
+{
+        struct pft * tmp;
+
+        tmp = pft_create();
+        if (!tmp) {
+                LOG_DBG("Failed to create pft instance");
+                return false;
+        }
+        
+        if (pft_destroy(tmp)) {
+                LOG_DBG("Failed to destroy instance");
+                return false;
+        }
+
+        return true;
+}
+
+static bool regression_tests(void)
+{
+        if (!regression_test_create_pft_instance()) {
+                LOG_ERR("Creating of a pft instance test failed, "
+                        "bailing out");
+                return false;
+        }
+
+        if (!regression_test_add_remove_pft_entries()) {
+                LOG_ERR("Adding/removing pft entries test failed, "
+                        "bailing out");
+                return false;
+        }
+
+        if (!regression_test_pft_nhop()) {
+                LOG_ERR("Pft_nhop operation is crap, "
+                        "bailing out");
+                return false;
+        }
+
+        return true;
+}
+#endif
