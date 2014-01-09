@@ -27,6 +27,10 @@
 #include "rmem.h"
 #include "rwq.h"
 
+/*
+ * RWQ
+ */
+
 struct rwq_work_item {
         struct work_struct work; /* KEEP AT TOP AND DO NOT MOVE ! */
         int                (* worker)(void * data);
@@ -151,3 +155,73 @@ int rwq_destroy(struct workqueue_struct * wq)
         return 0;
 }
 EXPORT_SYMBOL(rwq_destroy);
+
+#if 0
+/*
+ * RWQO
+ */
+
+struct workqueue_struct * rwqo_create(const char * name)
+{
+        struct workqueue_struct * wq;
+
+        if (!name) {
+                LOG_ERR("No workqueue name passed, cannot create it");
+                return NULL;
+        }
+
+        wq = create_workqueue(name);
+        if (!wq) {
+                LOG_ERR("Cannot create workqueue '%s'", name);
+                return NULL;
+        }
+
+        LOG_DBG("Workqueue '%s' (%pK) created successfully", name, wq);
+
+        return wq;
+}
+EXPORT_SYMBOL(rwqo_create);
+
+int rwqo_work_post(struct workqueue_struct * wq,
+                   int                    (* worker)(void * data),
+                   void *                    data)
+{
+        if (!wq) {
+                LOG_ERR("No workqueue passed, cannot post work");
+                return -1;
+        }
+        if (!work) {
+                LOG_ERR("No work passed, cannot post it");
+                return -1;
+        }
+
+        if (!queue_work(wq, (struct work_struct *) item)) {
+                /* FIXME: Add workqueue name in the log */
+                LOG_ERR("Cannot post work on workqueue %pK", wq);
+                return -1;
+        }
+
+        LOG_DBG("Work posted on workqueue %pK, please wait ...", wq);
+
+        return 0;
+}
+EXPORT_SYMBOL(rwqo_work_post);
+
+int rwqo_destroy(struct workqueue_struct * wq)
+{
+        if (!wq) {
+                LOG_ERR("The passed workqueue is NULL, cannot destroy");
+                return -1;
+        }
+
+        LOG_DBG("Destroying workqueue %pK", wq);
+
+        flush_workqueue(wq);
+        destroy_workqueue(wq);
+
+        LOG_DBG("Workqueue %pK destroyed successfully", wq);
+
+        return 0;
+}
+EXPORT_SYMBOL(rwqo_destroy);
+#endif
