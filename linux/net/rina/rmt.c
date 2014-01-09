@@ -398,7 +398,7 @@ static struct sdu * pdu_process(struct pdu * pdu)
                 rkfree(data);
                 return NULL;
         }
-        sdu = sdu_create_with(tmp_buff);
+        sdu = sdu_create_buffer_with(tmp_buff);
         if (!sdu) {
                 buffer_destroy(tmp_buff);
                 return NULL;
@@ -716,7 +716,7 @@ static int process_mgmt_pdu(struct rmt * rmt,
                 return -1;
         }
 
-        sdu = sdu_create_with(buffer);
+        sdu = sdu_create_buffer_with(buffer);
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Cannot create SDU");
                 pdu_destroy(pdu);
@@ -734,7 +734,7 @@ static int process_mgmt_pdu(struct rmt * rmt,
         ASSERT(rmt->parent);
         ASSERT(rmt->parent->ops);
         ASSERT(rmt->parent->ops->management_sdu_post);
-        
+
         return (rmt->parent->ops->management_sdu_post(rmt->parent->data,
                                                       port_id,
                                                       sdu) ? -1 : 0);
@@ -781,7 +781,7 @@ static int process_dt_pdu(struct rmt * rmt,
                 }
 
                 /* (FUTURE) Construct a SDU with all the ingress PDUs */
-                
+
                 sdu = sdu_create_pdu_with(pdu);
                 if (!sdu) {
                         pdu_destroy(pdu);
@@ -794,22 +794,22 @@ static int process_dt_pdu(struct rmt * rmt,
                                 LOG_ERR("Cannot write SDU to KFA port-id %d",
                                         pid[i]);
                 }
-                
+
                 return 0;
         }
-        
+
         c = pci_cep_destination(p);
         if (!is_cep_id_ok(c)) {
                 LOG_ERR("Wrong CEP-id in PDU");
                 pdu_destroy(pdu);
                 return -1;
         }
-        
+
         if (efcp_container_receive(rmt->efcpc, c, pdu)) {
                 LOG_ERR("EFCP container problems");
                 return -1;
         }
-        
+
         return 0;
 }
 

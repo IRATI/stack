@@ -365,17 +365,17 @@ int pft_add(struct pft * instance,
         tmp = pft_find(instance, destination, qos_id);
         /* Create a new entry? */
         if (!tmp) {
-               tmp = pft_e_create(destination, qos_id);
-               if (!tmp)
-                       return -1; 
-               list_add(&tmp->next, &instance->entries);
-        } 
-        
+                tmp = pft_e_create(destination, qos_id);
+                if (!tmp)
+                        return -1;
+                list_add(&tmp->next, &instance->entries);
+        }
+
         if (pft_e_port_add(tmp, port_id)) {
                 pft_e_destroy(tmp);
                 return -1;
         }
- 
+
         return 0;
 }
 

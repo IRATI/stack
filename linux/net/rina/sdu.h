@@ -48,8 +48,8 @@ struct sdu_wpi {
 struct pdu;
 
 /* NOTE: The following functions take the ownership of the buffer passed */
-struct sdu *          sdu_create_with(struct buffer * buffer);
-struct sdu *          sdu_create_with_ni(struct buffer * buffer);
+struct sdu *          sdu_create_buffer_with(struct buffer * buffer);
+struct sdu *          sdu_create_buffer_with_ni(struct buffer * buffer);
 
 struct sdu *          sdu_create_pdu_with(struct pdu * pdu);
 struct sdu *          sdu_create_pdu_with_ni(struct pdu * pdu);
