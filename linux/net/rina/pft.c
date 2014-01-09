@@ -428,7 +428,7 @@ int pft_nhop(struct pft * instance,
 
 
 #ifdef CONFIG_RINA_PFT_REGRESSION_TESTS
-static bool regression_tests_pft_nhop(void)
+static bool regression_tests_nhop(void)
 {
         struct pft *       tmp;
         port_id_t *        port_ids;
@@ -561,7 +561,7 @@ static bool regression_tests_pft_nhop(void)
         return true;
 }
 
-static bool regression_tests_add_remove_pft_entries(void)
+static bool regression_tests_entries(void)
 {
         struct pft * tmp;
         struct pft_entry * e;
@@ -622,7 +622,7 @@ static bool regression_tests_add_remove_pft_entries(void)
         return true;
 }
 
-static bool regression_tests_create_pft_instance(void) 
+static bool regression_tests_instance(void) 
 {
         struct pft * tmp;
 
@@ -642,19 +642,19 @@ static bool regression_tests_create_pft_instance(void)
 
 static bool regression_tests(void)
 {
-        if (!regression_tests_create_pft_instance()) {
+        if (!regression_tests_instance()) {
                 LOG_ERR("Creating of a pft instance test failed, "
                         "bailing out");
                 return false;
         }
 
-        if (!regression_tests_add_remove_pft_entries()) {
+        if (!regression_tests_entries()) {
                 LOG_ERR("Adding/removing pft entries test failed, "
                         "bailing out");
                 return false;
         }
 
-        if (!regression_tests_pft_nhop()) {
+        if (!regression_tests_nhop()) {
                 LOG_ERR("Pft_nhop operation is crap, "
                         "bailing out");
                 return false;
