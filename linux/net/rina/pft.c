@@ -240,8 +240,8 @@ static int pft_e_ports(struct pft_entry * entry,
                 if (!*port_ids) {
                         LOG_ERR("Could not allocate memory "
                                 "to return resulting ports");
-                        return -1;
                         *size = 0;
+                        return -1;
                 }
         }
         *size = ports_size;
