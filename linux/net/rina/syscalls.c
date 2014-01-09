@@ -237,7 +237,7 @@ SYSCALL_DEFINE3(sdu_write,
         }
 
         /* NOTE: sdu_create takes the ownership of the buffer */
-        sdu = sdu_create_with(tmp_buffer);
+        sdu = sdu_create_buffer_with(tmp_buffer);
         if (!sdu) {
                 SYSCALL_DUMP_EXIT;
                 buffer_destroy(tmp_buffer);
