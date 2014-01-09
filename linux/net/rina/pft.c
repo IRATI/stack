@@ -44,9 +44,9 @@ static struct pft_port_entry * pft_pe_create_gfp(gfp_t     flags,
 {
         struct pft_port_entry * tmp;
 
-        if (is_port_id_ok(port_id))
-                return NULL;
-
+        ASSERT(is_port_id_ok(port_id));
+        ASSERT(flags);
+              
         tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
@@ -70,9 +70,8 @@ static bool pft_pe_is_ok(struct pft_port_entry * pe)
 
 static int pft_pe_destroy(struct pft_port_entry * pe)
 {
-        if (!pft_pe_is_ok(pe))
-                return -1;
-
+        ASSERT(pft_pe_is_ok(pe));
+               
         list_del(&pe->next);
         rkfree(pe);
 
@@ -81,8 +80,7 @@ static int pft_pe_destroy(struct pft_port_entry * pe)
 
 static port_id_t pft_pe_port(struct pft_port_entry * pe)
 {
-        if (!pft_pe_is_ok(pe))
-                return port_id_bad();
+        ASSERT(pft_pe_is_ok(pe));
 
         return pe->port_id;
 }
@@ -92,8 +90,7 @@ static port_id_t pft_pe_port(struct pft_port_entry * pe)
  */
 struct pft_entry {
         address_t destination;
-        qos_id_t  qos_id;
-        size_t    ports_size;     
+        qos_id_t  qos_id;   
         struct    list_head ports;
         struct    list_head next;
 };
@@ -105,12 +102,10 @@ static struct pft_entry * pft_e_create_gfp(gfp_t     flags,
         struct pft_entry * tmp;
 
         tmp = rkmalloc(sizeof(*tmp), flags);
-        if (!tmp)
-                return NULL;
+        ASSERT(tmp);
 
         tmp->destination = destination;
         tmp->qos_id      = qos_id;
-        tmp->ports_size  = 0;
         INIT_LIST_HEAD(&tmp->ports);
         INIT_LIST_HEAD(&tmp->next);
 
@@ -135,8 +130,6 @@ static int pft_e_destroy(struct pft_entry * entry)
         struct pft_port_entry * pos, * nxt;
         int                     ret;
 
-        if (!pft_e_is_ok(entry))
-                return -1;
         ASSERT(pft_e_is_ok(entry));
 
         list_for_each_entry_safe(pos, nxt, &entry->ports, next) {
@@ -174,8 +167,7 @@ static int pft_e_port_add(struct pft_entry * entry,
 {
         struct pft_port_entry * pe;
 
-        if (!pft_e_is_ok(entry))
-                return -1;
+        ASSERT(pft_e_is_ok(entry));
 
         pe = pft_e_port_find(entry, id);
         if (pe)
@@ -186,7 +178,6 @@ static int pft_e_port_add(struct pft_entry * entry,
                 return -1;
 
         list_add(&pe->next, &entry->ports);
-        entry->ports_size++;
 
         return 0;
 }
@@ -198,6 +189,9 @@ static int pft_e_port_remove(struct pft_entry * entry,
         struct pft_port_entry * pos, * nxt;
         int                     ret;
 
+        ASSERT(pft_e_is_ok(entry));
+        ASSERT(is_port_id_ok(id));
+
         /* Remove the port-id here */
         list_for_each_entry_safe(pos, nxt, &entry->ports, next) {
                 if (pft_pe_port(pos) == id) {
@@ -207,12 +201,11 @@ static int pft_e_port_remove(struct pft_entry * entry,
                                          "entry %pK", pos);
                                 return ret;
                         }
-                        entry->ports_size--;
                 }
         }
 
         /* If the list of port-ids is empty, remove the entry */
-        if (entry->ports_size == 0) {
+        if (list_empty(&entry->ports)) {
                 if(pft_e_destroy(entry)) {
                         LOG_ERR("Failed to cleanup entry");
                         return -1;
@@ -222,6 +215,44 @@ static int pft_e_port_remove(struct pft_entry * entry,
         return 0;
 }
 
+static int pft_e_ports(struct pft_entry * entry,
+                       port_id_t **       port_ids,
+                       size_t *           size)
+{
+        struct pft_port_entry * pos, * nxt;
+        size_t                  ports_size;
+        int                     i;
+
+        ASSERT(pft_e_is_ok(entry));
+        ASSERT(*size);
+        /* Francesco, please review, do we need to assert the array? */
+
+        ports_size = 0;
+        list_for_each_entry_safe(pos, nxt, &entry->ports, next) {
+                ++ports_size;
+        }
+        
+        if (*size < ports_size) {
+                rkfree(*port_ids);
+                *port_ids = 
+                        rkzalloc(ports_size * sizeof(**port_ids), GFP_KERNEL);
+                if (!*port_ids) {
+                        LOG_ERR("Could not allocate memory "
+                                "to return resulting ports");
+                        return -1;
+                }
+        }
+        *size = ports_size;
+
+        /* Get the first port, and so on, fill in the port_ids */
+        i = 0;
+        list_for_each_entry_safe(pos, nxt, &entry->ports, next) {
+                *port_ids[i] = pft_pe_port(pos);
+                ++i;
+        }
+
+        return 0;
+}
 
 /*
  * FIXME: This representation is crappy and MUST be changed
@@ -230,7 +261,7 @@ struct pft {
         struct list_head entries;
 };
 
-struct pft * pft_create_gfp(gfp_t flags)
+static struct pft * pft_create_gfp(gfp_t flags)
 {
         struct pft * tmp;
 
@@ -374,36 +405,21 @@ int pft_nhop(struct pft * instance,
              port_id_t ** port_ids,
              size_t *     size)
 {
-        struct pft_entry *      e;
-        struct pft_port_entry * pos, * nxt;
-        int i;
+        struct pft_entry * tmp;
+
 
         if (!pft_is_ok(instance))
                 return -1;
 
-        e = pft_find(instance, destination, qos_id);
-        if (!e) {
+        tmp = pft_find(instance, destination, qos_id);
+        if (!tmp) {
                 LOG_ERR("Could not find any PFT entry");
                 return -1;
         }
-        
-        if (*size < e->ports_size) {
-                rkfree(*port_ids);
-                *port_ids = 
-                        rkzalloc(e->ports_size * sizeof(**port_ids), GFP_KERNEL);
-                if (!*port_ids) {
-                        LOG_ERR("Could not allocate memory "
-                                "to return resulting ports");
-                        return -1;
-                }
-        }
-        *size = e->ports_size;
 
-        /* Get the first port, and so on, fill in the port_ids */
-        i = 0;
-        list_for_each_entry_safe(pos, nxt, &e->ports, next) {
-                *port_ids[i] = pft_pe_port(pos);
-                ++i;
+        if (pft_e_ports(tmp, port_ids, size)) {
+                LOG_ERR("Failed to get ports");
+                return -1;
         }
 
         return 0;
