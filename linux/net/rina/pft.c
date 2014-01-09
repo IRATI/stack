@@ -102,7 +102,8 @@ static struct pft_entry * pft_e_create_gfp(gfp_t     flags,
         struct pft_entry * tmp;
 
         tmp = rkmalloc(sizeof(*tmp), flags);
-        ASSERT(tmp);
+        if (!tmp)
+                return NULL;
 
         tmp->destination = destination;
         tmp->qos_id      = qos_id;
@@ -225,7 +226,6 @@ static int pft_e_ports(struct pft_entry * entry,
 
         ASSERT(pft_e_is_ok(entry));
         ASSERT(*size);
-        /* Francesco, please review, do we need to assert the array? */
 
         ports_size = 0;
         list_for_each_entry_safe(pos, nxt, &entry->ports, next) {
@@ -233,13 +233,15 @@ static int pft_e_ports(struct pft_entry * entry,
         }
         
         if (*size < ports_size) {
-                rkfree(*port_ids);
+                if (*size > 0)
+                        rkfree(*port_ids);
                 *port_ids = 
                         rkzalloc(ports_size * sizeof(**port_ids), GFP_KERNEL);
                 if (!*port_ids) {
                         LOG_ERR("Could not allocate memory "
                                 "to return resulting ports");
                         return -1;
+                        *size = 0;
                 }
         }
         *size = ports_size;
