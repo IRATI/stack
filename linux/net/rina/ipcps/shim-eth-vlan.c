@@ -798,7 +798,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         /* We're done with the skb from this point on so ... let's get rid */
         kfree_skb(skb);
 
-        du = sdu_create_with_ni(buffer);
+        du = sdu_create_buffer_with_ni(buffer);
         if (!du) {
                 LOG_ERR("Couldn't create data unit");
                 buffer_destroy(buffer);
