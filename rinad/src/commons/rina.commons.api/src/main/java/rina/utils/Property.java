@@ -1,4 +1,4 @@
-package rina.aux;
+package rina.utils;
 
 public class Property {
 	

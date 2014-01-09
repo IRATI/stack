@@ -86,6 +86,7 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 						portId, AuthTypes.AUTH_NONE, null, null, IPCProcess.MANAGEMENT_AE, 
 						remotePeer.getName().getProcessInstance(), remotePeer.getName().getProcessName(), null, 
 						IPCProcess.MANAGEMENT_AE, apNamingInfo.getProcessInstance(), apNamingInfo.getProcessName());
+				
 				ribDaemon.sendMessage(requestMessage, portId, null);
 				this.portId = portId;
 

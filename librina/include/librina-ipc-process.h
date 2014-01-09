@@ -857,8 +857,7 @@ public:
          *
          * @param sdu A buffer that contains the SDU data
          * @param size The size of the SDU data, in bytes
-         * @param portId The portId of the N-1 flow where the data has to
-         * be written to
+         * @param portId The N-1 portId where the data has to be written to
          * @throws WriteSDUException
          */
         void writeManagementSDU(void * sdu, int size, int portId)
