@@ -33,4 +33,4 @@ EXPORT_SYMBOL(qos_id_bad);
 
 int is_qos_id_ok(qos_id_t id)
 { return id != QOS_ID_WRONG ? 1 : 0; }
-EXQOS_SYMBOL(is_qos_id_ok);
+EXPORT_SYMBOL(is_qos_id_ok);
