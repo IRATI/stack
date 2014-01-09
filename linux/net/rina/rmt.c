@@ -354,6 +354,8 @@ static struct sdu * pdu_process(struct pdu * pdu)
         if (!pdu)
                 return NULL;
 
+        /* FIXME: Add pdu_destroy() on each return */
+
         buffer = pdu_buffer_get_ro(pdu);
         if (!buffer)
                 return NULL;
@@ -697,27 +699,138 @@ int rmt_queue_recv_delete(struct rmt * instance,
 }
 EXPORT_SYMBOL(rmt_queue_recv_delete);
 
+static int process_mgmt_pdu(struct rmt * rmt,
+                            port_id_t    port_id,
+                            struct pdu * pdu)
+{
+        struct buffer * buffer;
+        struct sdu    * sdu;
+
+        ASSERT(rmt);
+        ASSERT(is_port_id_ok(port_id));
+        ASSERT(pdu);
+
+        buffer = pdu_buffer_get_rw(pdu);
+        if (!buffer_is_ok(buffer)) {
+                LOG_ERR("PDU has no buffer ???");
+                return -1;
+        }
+
+        sdu = sdu_create_with(buffer);
+        if (!sdu_is_ok(sdu)) {
+                LOG_ERR("Cannot create SDU");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        if (pdu_buffer_set(pdu, NULL)) {
+                pdu_destroy(pdu);
+                /* FIXME: buffer is owned by PDU and SDU, we're leaking sdu */
+                return -1;
+        }
+
+        pdu_destroy(pdu);
+
+        ASSERT(rmt->parent);
+        ASSERT(rmt->parent->ops);
+        ASSERT(rmt->parent->ops->management_sdu_post);
+        
+        return (rmt->parent->ops->management_sdu_post(rmt->parent->data,
+                                                      port_id,
+                                                      sdu) ? -1 : 0);
+}
+
+/* FIXME: (FUTURE) process_dt_pdu should process multiple PDUs at time */
+static int process_dt_pdu(struct rmt * rmt,
+                          port_id_t    port_id,
+                          struct pdu * pdu)
+{
+        const struct pci * p;
+        cep_id_t           c;
+        address_t          dest_add;
+
+        /* (FUTURE) Address and qos-id are the same, do a single match only */
+
+        p = pdu_pci_get_ro(pdu);
+        if (!p) {
+                LOG_ERR("Cannot get PCI from PDU");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        dest_add = pci_destination(p);
+        if (!is_address_ok(dest_add)) {
+                LOG_ERR("Wrong destination address");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        if (rmt->address != dest_add) {
+                size_t *     size;
+                port_id_t *  pid;
+                qos_id_t     qos_id;
+                int          i;
+                struct sdu * sdu;
+
+                size   = 0;
+                qos_id = pci_qos_id(p);
+                if (pft_nhop(rmt->pft, dest_add, qos_id, &pid, size)) {
+                        LOG_ERR("No next hops");
+                        pdu_destroy(pdu);
+                        return -1;
+                }
+
+                /* (FUTURE) Construct a SDU with all the ingress PDUs */
+                
+                sdu = sdu_create_pdu_with(pdu);
+                if (!sdu) {
+                        pdu_destroy(pdu);
+                        return -1;
+                }
+                pdu_destroy(pdu);
+
+                for (i = 0; i < *size; i++) {
+                        if (kfa_flow_sdu_write(rmt->kfa, pid[i], sdu))
+                                LOG_ERR("Cannot write SDU to KFA port-id %d",
+                                        pid[i]);
+                }
+                
+                return 0;
+        }
+        
+        c = pci_cep_destination(p);
+        if (!is_cep_id_ok(c)) {
+                LOG_ERR("Wrong CEP-id in PDU");
+                pdu_destroy(pdu);
+                return -1;
+        }
+        
+        if (efcp_container_receive(rmt->efcpc, c, pdu)) {
+                LOG_ERR("EFCP container problems");
+                return -1;
+        }
+        
+        return 0;
+}
+
 static int rmt_receive_worker(void * o)
 {
-        struct rmt *        tmp;
-        pdu_type_t          pdu_type;
-        address_t           dest_add;
-        struct rmt_queue *  entry;
-        bool                out;
-        struct hlist_node * ntmp;
-        int                 bucket;
+        struct rmt * tmp;
 
         LOG_DBG("RMT receive worker called");
 
         tmp = (struct rmt *) o;
         if (!tmp) {
-                LOG_ERR("No send data passed");
+                LOG_ERR("No instance passed to receive worker!!!");
                 return -1;
         }
 
-        out = false;
-        while (!out) {
-                out = true;
+        for (;;) {
+                pdu_type_t          pdu_type;
+                struct rmt_queue *  entry;
+                int                 bucket;
+                struct hlist_node * ntmp;
+
                 hash_for_each_safe(tmp->egress.queues->queues,
                                    bucket,
                                    ntmp,
@@ -726,6 +839,8 @@ static int rmt_receive_worker(void * o)
                         struct sdu * sdu;
                         struct pdu * pdu;
                         port_id_t    port_id;
+
+                        ASSERT(entry);
 
                         spin_lock(&entry->lock);
                         sdu     = (struct sdu *) rfifo_pop(entry->queue);
@@ -737,31 +852,13 @@ static int rmt_receive_worker(void * o)
                                 break;
                         }
 
-                        out = false;
+                        /* (FUTURE) This SDU could be holding more PDUs ...*/
+
+                        /* (FUTURE) for_each_pdu_in_sdu() ... */
+
                         pdu = pdu_create_with(sdu);
                         if (!pdu) {
                                 LOG_ERR("No PDU to work with");
-                                break;
-                        }
-
-                        dest_add = pci_destination(pdu_pci_get_ro(pdu));
-                        if (!is_address_ok(dest_add)) {
-                                LOG_ERR("Wrong destination address");
-                                break;
-                        }
-
-                        if (tmp->address != dest_add) {
-                                /*
-                                 * FIXME: Port id will be retrieved
-                                 * from the pduft
-                                 */
-                                if (kfa_flow_sdu_write(tmp->kfa,
-                                                       port_id_bad(),
-                                                       sdu)) {
-                                        LOG_ERR("Cannot write SDU to KFA");
-                                        break;
-                                }
-
                                 break;
                         }
 
@@ -772,57 +869,34 @@ static int rmt_receive_worker(void * o)
                                 break;
                         }
 
+                        /* (FUTURE) PDU ownership is going to be passed on */
+
                         switch (pdu_type) {
-                        case PDU_TYPE_MGMT: {
-                                struct buffer  * buffer;
-                                struct sdu_wpi * sdu_wpi;
-
-                                buffer  = pdu_buffer_get_rw(pdu);
-                                if (!buffer) {
-                                        LOG_ERR("PDU has no buffer ???");
-                                        return -1;
-                                }
-
-                                sdu_wpi = sdu_wpi_create_with(buffer);
-                                if (!sdu_wpi) {
-                                        LOG_ERR("Cannot create SDU");
-                                        break;
-                                }
-
-                                sdu_wpi->port_id = port_id;
-
-                                /* FIXME: Send the management SDU */
+                        case PDU_TYPE_MGMT:
+                                process_mgmt_pdu(tmp, port_id, pdu);
                                 break;
-                        }
-                        case PDU_TYPE_DT: {
-                                const struct pci * p;
-                                cep_id_t           c;
-
-                                p = pdu_pci_get_ro(pdu);
-                                if (!p) {
-                                        LOG_ERR("Cannot get PCI from PDU");
-                                        break;
-                                }
-
-                                c = pci_cep_destination(p);
-                                if (!is_cep_id_ok(c)) {
-                                        LOG_ERR("Wrong CEP-id in PDU");
-                                        break;
-                                }
-
-                                if (efcp_container_receive(tmp->efcpc,
-                                                           c, pdu)) {
-                                        LOG_ERR("EFCP container problems");
-                                        break;
-                                }
-
+                        case PDU_TYPE_DT:
+                                /*
+                                 * (FUTURE)
+                                 *
+                                 * enqueue PDU in pdus_dt[dest-addr, qos-id]
+                                 * don't process it now ...
+                                 */
+                                process_dt_pdu(tmp, port_id, pdu);
                                 break;
-                        }
                         default:
                                 LOG_ERR("Unknown PDU type %d", pdu_type);
+                                pdu_destroy(pdu);
+                                break;
                         }
+
+                        /* (FUTURE) foreach_end() */
                 }
+
+                break;
         }
+
+        /* (FUTURE) for-each list in pdus_dt call process_dt_pdus(pdus_dt) */
 
         spin_lock(&tmp->egress.queues->lock);
         tmp->egress.queues->in_use = 0;

@@ -45,9 +45,15 @@ struct sdu_wpi {
         port_id_t    port_id;
 };
 
+struct pdu;
+
 /* NOTE: The following functions take the ownership of the buffer passed */
 struct sdu *          sdu_create_with(struct buffer * buffer);
 struct sdu *          sdu_create_with_ni(struct buffer * buffer);
+
+struct sdu *          sdu_create_pdu_with(struct pdu * pdu);
+struct sdu *          sdu_create_pdu_with_ni(struct pdu * pdu);
+
 int                   sdu_destroy(struct sdu * s);
 const struct buffer * sdu_buffer_ro(const struct sdu * s);
 struct buffer *       sdu_buffer_rw(struct sdu * s);

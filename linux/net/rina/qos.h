@@ -24,4 +24,10 @@
 /* FIXME: The qos_id_t should be defined correctly in the near future */
 typedef uint qos_id_t;
 
+/* ALWAYS use this function to check if the id looks good */
+int      is_qos_id_ok(qos_id_t id);
+
+/* ALWAYS use this function to get a bad id */
+qos_id_t qos_id_bad(void);
+
 #endif

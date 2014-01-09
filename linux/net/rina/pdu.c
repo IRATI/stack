@@ -28,6 +28,7 @@
 #include "utils.h"
 #include "debug.h"
 #include "pdu.h"
+#include "qos.h"
 
 struct pci {
         pdu_type_t type;
@@ -304,6 +305,10 @@ cep_id_t pci_cep_source(const struct pci * pci)
 }
 EXPORT_SYMBOL(pci_cep_source);
 
+qos_id_t pci_qos_id(const struct pci * pci)
+{ return (pci ? pci->qos_id : qos_id_bad()); }
+EXPORT_SYMBOL(pci_qos_id);
+
 struct pdu {
         struct pci *    pci;
         struct buffer * buffer;
@@ -409,6 +414,9 @@ int pdu_buffer_set(struct pdu * pdu, struct buffer * buffer)
         if (!buffer_is_ok(buffer))
                 return -1;
 
+        if (pdu->buffer) {
+                buffer_destroy(pdu->buffer);
+        }
         pdu->buffer = buffer;
 
         return 0;
