@@ -42,7 +42,7 @@ enum app_name_info_attrs_list {
 enum pdu_fte_list_entry_attrs_list {
         PFTELE_ATTR_ADDRESS = 1,
         PFTELE_ATTR_QOSID,
-        PFTELE_ATTR_PORTID,
+        PFTELE_ATTR_PORTIDS,
         __PFTELE_ATTR_MAX,
 };
 #define PFTELE_ATTR_MAX (__PFTELE_ATTR_MAX - 1)
@@ -590,11 +590,15 @@ struct rnl_ipcm_query_rib_resp_msg_attrs {
         struct rib_object * rib_objs;
 };
 
+struct pdu_fte_p_list_entry {
+        port_id_t        port_id;
+        struct list_head next;
+};
+
 struct pdu_fte_list_entry {
         address_t destination;
         qos_id_t  qos_id;
-        /* FIXME, has to be list_head ports; */
-        port_id_t port_id;
+        struct list_head ports;
         struct list_head next;
 };
 

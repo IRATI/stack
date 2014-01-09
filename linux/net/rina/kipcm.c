@@ -1172,13 +1172,26 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
                 return -1;
         }
 
-        ASSERT(ipc_process->ops);
+        if (attrs->mode) {
+                ASSERT(ipc_process->ops->pdu_fte_add);
+                if (ipc_process->ops->pdu_fte_add(ipc_process->data,
+                                                  &attrs->pft_entries))
+                        goto fail;
+        }
+        else {
+                ASSERT(ipc_process->ops->pdu_fte_remove);
+                if (ipc_process->ops->pdu_fte_add(ipc_process->data,
+                                                  &attrs->pft_entries))
+                        goto fail;
+        }
 
-        LOG_MISSING;
-
+        
         rnl_msg_destroy(msg);
-
         return 0;
+
+fail:
+        rnl_msg_destroy(msg);
+        return -1;
 }
 
 

@@ -183,6 +183,13 @@ struct ipcp_instance_ops {
         int (* management_sdu_post)(struct ipcp_instance_data * data,
                                     port_id_t                   port_id,
                                     struct sdu *                sdu);
+
+        int (* pdu_fte_add)(struct ipcp_instance_data * data,
+                            struct list_head *          pft_entries);
+
+        int (* pdu_fte_remove)(struct ipcp_instance_data * data,
+                               struct list_head *          pft_entries);
+
 };
 
 #endif
