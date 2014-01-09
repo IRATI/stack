@@ -88,7 +88,7 @@ static int rmt_queue_destroy(struct rmt_queue * q)
 struct rmt_qmap {
         DECLARE_HASHTABLE(queues, 7);
         spinlock_t    lock;
-        int           in_use; /* FIXME: Use rwq_once and remove in_use */
+        int           in_use; /* FIXME: Use rwqo and remove in_use */
 };
 
 static struct rmt_qmap * qmap_create(void)
