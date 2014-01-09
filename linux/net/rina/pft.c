@@ -232,7 +232,7 @@ static int pft_e_ports(struct pft_entry * entry,
                 ++ports_size;
         }
         
-        if (*size < ports_size) {
+        if (*size != ports_size) {
                 if (*size > 0)
                         rkfree(*port_ids);
                 *port_ids = 
@@ -243,8 +243,8 @@ static int pft_e_ports(struct pft_entry * entry,
                         *size = 0;
                         return -1;
                 }
+                *size = ports_size;
         }
-        *size = ports_size;
 
         /* Get the first port, and so on, fill in the port_ids */
         i = 0;
