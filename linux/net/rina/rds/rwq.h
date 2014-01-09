@@ -23,8 +23,12 @@
 
 #include <linux/workqueue.h>
 
+/*
+ * RWQ allows to post multiple times the same work-item (worker and data)
+ */
+
 struct workqueue_struct * rwq_create(const char * name);
-int                       rwq_destroy(struct workqueue_struct * rwq);
+int                       rwq_destroy(struct workqueue_struct * q);
 
 /*
  * NOTE: The worker is the owner of the data passed (and must dispose it). It
@@ -39,10 +43,17 @@ struct rwq_work_item *    rwq_work_create_ni(int (* worker)(void * data),
  * NOTE: This function will dispose the rwq_work_item on failure. The item
  *       will be disposed automatically upon work completion.
  */
-int                       rwq_work_post(struct workqueue_struct * rwq,
+int                       rwq_work_post(struct workqueue_struct * q,
                                         struct rwq_work_item *    item);
 
-/* FIXME: Add workqueue equivalent (1 worker for multiple items) */
-/* rwq_once */
+/*
+ * RWQO do not allow
+ */
+
+struct workqueue_struct * rwqo_create(const char * name);
+int                       rwqo_destroy(struct workqueue_struct * q);
+int                       rwqo_work_post(struct workqueue_struct * q,
+                                         int (* worker)(void * data),
+                                         void * data);
 
 #endif
