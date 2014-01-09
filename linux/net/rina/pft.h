@@ -2,6 +2,8 @@
  * PDU-FWD-T (PDU Forwarding Table)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Sander Vrijders <sander.vrijders@intec.ugent.be>
+ *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,10 +43,10 @@ int          pft_remove(struct pft * instance,
                         qos_id_t     qos_id,
                         port_id_t    port_id);
 
-size_t       pft_nhop(struct pft * instance,
+int          pft_nhop(struct pft * instance,
                       address_t    destination,
                       qos_id_t     qos_id,
                       port_id_t ** port_ids,
-                      size_t       size);
+                      size_t *     size);
 
 #endif

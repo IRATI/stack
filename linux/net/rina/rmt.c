@@ -3,7 +3,6 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
- *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,7 +66,7 @@ static struct rmt_queue * rmt_queue_create(port_id_t id)
         tmp->port_id = id;
         spin_lock_init(&tmp->lock);
 
-        LOG_DBG("Queue %pK created successfully", tmp);
+        LOG_DBG("Queue %pK created successfully (port-id = %d)", tmp, id);
 
         return tmp;
 }
@@ -75,12 +74,13 @@ static struct rmt_queue * rmt_queue_create(port_id_t id)
 static int rmt_queue_destroy(struct rmt_queue * q)
 {
         ASSERT(q);
+        ASSERT(q->queue);
+
+        LOG_DBG("Destroying queue %pK (port-id = %d)", q, q->port_id);
 
         rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
         hash_del(&q->hlist);
         rkfree(q);
-
-        LOG_DBG("Queue %pK destroyed successfully", q);
 
         return 0;
 }
@@ -115,6 +115,8 @@ static int qmap_destroy(struct rmt_qmap * m)
         ASSERT(m);
 
         hash_for_each_safe(m->queues, bucket, tmp, entry, hlist) {
+                ASSERT(entry);
+
                 if (rmt_queue_destroy(entry)) {
                         LOG_ERR("Could not destroy entry %pK", entry);
                         return -1;
@@ -134,10 +136,8 @@ static struct rmt_queue * qmap_find(struct rmt_qmap * m,
 
         ASSERT(m);
 
-        if (!is_port_id_ok(id)) {
-                LOG_ERR("Bogus port id");
+        if (!is_port_id_ok(id))
                 return NULL;
-        }
 
         head = &m->queues[rmap_hash(m->queues, id)];
         hlist_for_each_entry(entry, head, hlist) {
@@ -150,6 +150,7 @@ static struct rmt_queue * qmap_find(struct rmt_qmap * m,
 
 struct rmt {
         address_t               address;
+        struct ipcp_instance *  parent;
         struct pft *            pft;
         struct kfa *            kfa;
         struct efcp_container * efcpc;
@@ -163,15 +164,29 @@ struct rmt {
                 struct workqueue_struct * wq;
                 struct rmt_qmap *         queues;
         } egress;
-
-        /* ipcp_instance *         parent; */
 };
 
-struct rmt * rmt_create(struct kfa *            kfa,
+static const char * create_name(const char *       prefix,
+                                const struct rmt * instance)
+{
+        static char name[64];
+
+        ASSERT(prefix);
+        ASSERT(instance);
+
+        if (snprintf(name, sizeof(name), "%s-%pK", prefix, instance) >=
+            sizeof(name))
+                return NULL;
+
+        return name;
+}
+
+struct rmt * rmt_create(struct ipcp_instance *  parent,
+                        struct kfa *            kfa,
                         struct efcp_container * efcpc)
 {
         struct rmt * tmp;
-        char         rmt_id[30];
+        const char * name;
 
         if (!kfa)
                 return NULL;
@@ -180,26 +195,34 @@ struct rmt * rmt_create(struct kfa *            kfa,
         if (!tmp)
                 return NULL;
 
+        if (!parent || !kfa || !efcpc) {
+                LOG_ERR("Bogus input parameters");
+                return NULL;
+        }
+
+        tmp->parent = parent;
+        tmp->kfa    = kfa;
+        tmp->efcpc  = efcpc;
+
         tmp->pft = pft_create();
         if (!tmp->pft) {
                 rmt_destroy(tmp);
                 return NULL;
         }
 
-        tmp->kfa   = kfa;
-        tmp->efcpc = efcpc;
-
-        /* FIXME: This is bogus */
-        snprintf(rmt_id, sizeof(rmt_id), "rmt-egress-wq-%pK", tmp);
-        tmp->egress.wq = rwq_create(rmt_id);
+        name = create_name("rmt-egress-wq", tmp);
+        if (!name)
+                return NULL;
+        tmp->egress.wq = rwq_create(name);
         if (!tmp->egress.wq) {
                 rmt_destroy(tmp);
                 return NULL;
         }
 
-        /* FIXME: This is bogus */
-        snprintf(rmt_id, sizeof(rmt_id), "rmt-ingress-wq-%pK", tmp);
-        tmp->ingress.wq = rwq_create(rmt_id);
+        name = create_name("rmt-ingress-wq", tmp);
+        if (!name)
+                return NULL;
+        tmp->ingress.wq = rwq_create(name);
         if (!tmp->ingress.wq) {
                 rmt_destroy(tmp);
                 return NULL;
@@ -232,10 +255,12 @@ int rmt_destroy(struct rmt * instance)
                 return -1;
         }
 
-        if (instance->egress.wq)      rwq_destroy(instance->egress.wq);
         if (instance->ingress.wq)     rwq_destroy(instance->ingress.wq);
         if (instance->ingress.queues) qmap_destroy(instance->ingress.queues);
+
+        if (instance->egress.wq)      rwq_destroy(instance->egress.wq);
         if (instance->egress.queues)  qmap_destroy(instance->egress.queues);
+
         if (instance->pft)            pft_destroy(instance->pft);
 
         rkfree(instance);
@@ -671,12 +696,6 @@ int rmt_queue_recv_delete(struct rmt * instance,
         return -1;
 }
 EXPORT_SYMBOL(rmt_queue_recv_delete);
-
-/* FIXME: Obsolete, to be removed */
-int rmt_management_sdu_read(struct rmt *      instance,
-                            struct sdu_wpi ** sdu_wpi)
-{ return -1; }
-EXPORT_SYMBOL(rmt_management_sdu_read);
 
 static int rmt_receive_worker(void * o)
 {
