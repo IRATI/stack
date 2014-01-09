@@ -510,16 +510,20 @@ static int normal_management_sdu_post(struct ipcp_instance_data * data,
 
         if (!is_port_id_ok(port_id)) {
                 LOG_ERR("Wrong port id");
+                sdu_destroy(sdu);
                 return -1;
         }
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus management SDU");
+                sdu_destroy(sdu);
                 return -1;
         }
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
+        if (!tmp) {
+                sdu_destroy(sdu);
                 return -1;
+        }
 
         tmp->port_id = port_id;
         tmp->sdu     = sdu;
