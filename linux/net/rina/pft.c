@@ -191,6 +191,38 @@ static int pft_e_port_add(struct pft_entry * entry,
         return 0;
 }
 
+
+static int pft_e_port_remove(struct pft_entry * entry,
+                             port_id_t          id)
+{
+        struct pft_port_entry * pos, * nxt;
+        int                     ret;
+
+        /* Remove the port-id here */
+        list_for_each_entry_safe(pos, nxt, &entry->ports, next) {
+                if (pft_pe_port(pos) == id) {
+                        ret = pft_pe_destroy(pos);
+                        if (!ret) {
+                                LOG_WARN("Could not destroy PDU-FWD-T"
+                                         "entry %pK", pos);
+                                return ret;
+                        }
+                        entry->ports_size--;
+                }
+        }
+
+        /* If the list of port-ids is empty, remove the entry */
+        if (entry->ports_size == 0) {
+                if(pft_e_destroy(entry)) {
+                        LOG_ERR("Failed to cleanup entry");
+                        return -1;
+                }
+        }
+
+        return 0;
+}
+
+
 /*
  * FIXME: This representation is crappy and MUST be changed
  */
@@ -320,8 +352,6 @@ int pft_remove(struct pft * instance,
                port_id_t    port_id)
 {
         struct pft_entry *      tmp;
-        struct pft_port_entry * pos, * nxt;
-        int                     ret;
 
         if (!pft_is_ok(instance))
                 return -1;
@@ -330,25 +360,9 @@ int pft_remove(struct pft * instance,
         if (!tmp)
                 return -1;
 
-        /* Remove the port-id here */
-        list_for_each_entry_safe(pos, nxt, &tmp->ports, next) {
-                if (pft_pe_port(pos) == port_id) {
-                        ret = pft_pe_destroy(pos);
-                        if (!ret) {
-                                LOG_WARN("Could not destroy PDU-FWD-T"
-                                         "entry %pK", pos);
-                                return ret;
-                        }
-                        tmp->ports_size--;
-                }
-        }
-
-        /* If the list of port-ids is empty, remove the entry */
-        if (list_empty(&tmp->ports)) {
-                if (pft_e_destroy(tmp)) {
-                        LOG_ERR("Failed to destroy entry");
-                        return -1;
-                }
+        if (pft_e_port_remove(tmp, port_id)) {
+                LOG_ERR("Failed to remove port");
+                return -1;
         }
 
         return 0;
@@ -372,14 +386,18 @@ int pft_nhop(struct pft * instance,
                 LOG_ERR("Could not find any PFT entry");
                 return -1;
         }
-
-        *size = e->ports_size;
-
-        *port_ids = rkzalloc(*size * sizeof(**port_ids), GFP_KERNEL);
-        if (! *port_ids) {
-                LOG_ERR("Could not allocate memory to return resulting ports");
-                return -1;
+        
+        if (*size < e->ports_size) {
+                rkfree(*port_ids);
+                *port_ids = 
+                        rkzalloc(e->ports_size * sizeof(**port_ids), GFP_KERNEL);
+                if (!*port_ids) {
+                        LOG_ERR("Could not allocate memory "
+                                "to return resulting ports");
+                        return -1;
+                }
         }
+        *size = e->ports_size;
 
         /* Get the first port, and so on, fill in the port_ids */
         i = 0;
