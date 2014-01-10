@@ -256,14 +256,14 @@ int dtp_write(struct dtp * instance,
 
 int dtp_management_write(struct rmt * rmt,
                          address_t    src_address,
-                         port_id_t    port_id,   
+                         port_id_t    port_id,
                          struct sdu * sdu)
 {
-        /*DTP should build the PCI header 
+        /*DTP should build the PCI header
          * src and dst cep_ids = 0
-         * ask FT for the dst address the N-1 port is connected to 
+         * ask FT for the dst address the N-1 port is connected to
          * pass to the rmt */
-        
+
         struct pci *  pci;
         struct pdu *  pdu;
         address_t     dst_address;
@@ -333,7 +333,7 @@ int dtp_receive(struct dtp * instance,
         }
 
         buffer = pdu_buffer_get_rw(pdu);
-        sdu = sdu_create_with(buffer);
+        sdu = sdu_create_buffer_with(buffer);
         if (!sdu) {
                 pdu_destroy(pdu);
                 return -1;

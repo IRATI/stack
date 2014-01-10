@@ -237,7 +237,7 @@ SYSCALL_DEFINE3(sdu_write,
         }
 
         /* NOTE: sdu_create takes the ownership of the buffer */
-        sdu = sdu_create_with(tmp_buffer);
+        sdu = sdu_create_buffer_with(tmp_buffer);
         if (!sdu) {
                 SYSCALL_DUMP_EXIT;
                 buffer_destroy(tmp_buffer);
@@ -249,7 +249,7 @@ SYSCALL_DEFINE3(sdu_write,
         CALL_DEFAULT_PERSONALITY(retval, sdu_write, id, sdu);
         if (retval) {
                 SYSCALL_DUMP_EXIT;
-                sdu_destroy(sdu);
+                /* NOTE: Do not destroy SDU, ownership isn't our anymore */
                 return -EFAULT;
         }
 
@@ -288,9 +288,10 @@ SYSCALL_DEFINE1(deallocate_port,
         return retval;
 }
 
-SYSCALL_DEFINE3(management_sdu_read,
+SYSCALL_DEFINE4(management_sdu_read,
                 ipc_process_id_t,     ipcp_id,
                 void __user *,        buffer,
+                port_id_t __user *,   port_id,
                 size_t,               size)
 {
         ssize_t          retval;
@@ -311,6 +312,13 @@ SYSCALL_DEFINE3(management_sdu_read,
                 return -EFAULT;
         }
 
+        LOG_DBG("SDU_WPI in syscall\n"
+                "tmp: %pk\n"
+                "tmp->port_id: %d\n"
+                "tmp->sdu: %pk\n"
+                "tmp->sdu->buffer: %pk\n",
+                tmp, tmp->port_id, tmp->sdu, tmp->sdu->buffer);
+
         if (!sdu_wpi_is_ok(tmp)) {
                 SYSCALL_DUMP_EXIT;
                 return -EFAULT;
@@ -329,11 +337,20 @@ SYSCALL_DEFINE3(management_sdu_read,
 
         if (copy_to_user(buffer,
                          buffer_data_ro(tmp->sdu->buffer),
-                         buffer_length(tmp->sdu->buffer)
-                         + sizeof(port_id_t))) {
+                         buffer_length(tmp->sdu->buffer))) {
                 SYSCALL_DUMP_EXIT;
 
-                LOG_ERR("Error copying data to user-space");
+                LOG_ERR("Error copying buffer data to user-space");
+                sdu_wpi_destroy(tmp);
+                return -EFAULT;
+        }
+
+        if (copy_to_user(port_id,
+                         &tmp->port_id,
+                         sizeof(tmp->port_id))) {
+                SYSCALL_DUMP_EXIT;
+
+                LOG_ERR("Error copying port_id data to user-space");
                 sdu_wpi_destroy(tmp);
                 return -EFAULT;
         }
@@ -352,9 +369,9 @@ SYSCALL_DEFINE4(management_sdu_write,
                 const void __user *,        buffer,
                 size_t,                     size)
 {
-        ssize_t             retval;
-        struct sdu_wpi *    sdu_wpi;
-        struct buffer *     tmp_buffer;
+        ssize_t          retval;
+        struct sdu_wpi * sdu_wpi;
+        struct buffer *  tmp_buffer;
 
         SYSCALL_DUMP_ENTER;
 
@@ -363,8 +380,9 @@ SYSCALL_DEFINE4(management_sdu_write,
                 return -EFAULT;
         }
 
-        LOG_DBG("Syscall write management SDU (size = %zd, port-id = %d)",
-                size, id);
+        LOG_DBG("Syscall write management SDU " \
+                "(size = %zd, ipcp-id %d, port-id = %d)",
+                size, id, port_id);
 
         tmp_buffer = buffer_create(size);
         if (!tmp_buffer) {
@@ -396,7 +414,7 @@ SYSCALL_DEFINE4(management_sdu_write,
         CALL_DEFAULT_PERSONALITY(retval, management_sdu_write, id, sdu_wpi);
         if (retval) {
                 SYSCALL_DUMP_EXIT;
-                sdu_wpi_destroy(sdu_wpi);
+                /* NOTE: Do not destroy SDU, ownership isn't our anymore */
                 return -EFAULT;
         }
 

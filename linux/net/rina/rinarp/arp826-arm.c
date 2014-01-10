@@ -44,7 +44,7 @@ struct resolution {
         struct list_head      next;
 };
 
-static spinlock_t       resolutions_lock;
+static DEFINE_SPINLOCK(resolutions_lock);
 static struct list_head resolutions_ongoing;
 
 struct resolve_data {
@@ -169,6 +169,7 @@ static int resolver(void * o)
                         LOG_DBG("Found an equal resolution");
 
                         ASSERT(pos->notify);
+                        spin_unlock(&resolutions_lock);
 
                         LOG_DBG("Calling the notifier hook");
                         pos->notify(pos->opaque,
@@ -176,6 +177,7 @@ static int resolver(void * o)
                                     tmp->sha);
 
                         LOG_DBG("Notifier called, disposing the leftovers");
+                        spin_lock(&resolutions_lock);
                         list_del(&pos->next);
                         resolve_data_destroy(pos->data);
                         rkfree(pos);

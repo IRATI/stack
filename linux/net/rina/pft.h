@@ -2,6 +2,8 @@
  * PDU-FWD-T (PDU Forwarding Table)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Sander Vrijders <sander.vrijders@intec.ugent.be>
+ *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,22 +29,27 @@
 struct pft;
 
 struct pft * pft_create(void);
-struct pft * pft_create_ni(void);
 int          pft_destroy(struct pft * instance);
 
 bool         pft_is_empty(struct pft * instance);
 int          pft_flush(struct pft * instance);
-int          pft_add(struct pft * instance,
-                     address_t    destination,
-                     qos_id_t     qos_id,
-                     port_id_t    port_id);
-int          pft_remove(struct pft * instance,
-                        address_t    destination,
-                        qos_id_t     qos_id,
-                        port_id_t    port_id);
 
-port_id_t    pft_nhop(struct pft * instance,
+int          pft_add(struct pft *       instance,
+                     address_t          destination,
+                     qos_id_t           qos_id,
+                     const port_id_t  * ports,
+                     size_t             count);
+int          pft_remove(struct pft *       instance,
+                        address_t          destination,
+                        qos_id_t           qos_id,
+                        const port_id_t  * ports,
+                        const size_t       count);
+
+/* NOTE: ports and entries are in-out parms */
+int          pft_nhop(struct pft * instance,
                       address_t    destination,
-                      qos_id_t     qos_id);
+                      qos_id_t     qos_id,
+                      port_id_t ** ports,
+                      size_t *     entries);
 
 #endif

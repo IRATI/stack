@@ -2,6 +2,7 @@
  * RMT (Relaying and Multiplexing Task)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +25,7 @@
 #include "common.h"
 #include "du.h"
 #include "efcp.h"
+#include "ipcp-factories.h"
 
 struct rmt;
 
@@ -43,25 +45,56 @@ struct rmt;
 
 /* NOTE: There's one RMT for each IPC Process */
 
-struct rmt * rmt_create(struct kfa *            kfa,
+struct rmt * rmt_create(struct ipcp_instance *  parent,
+                        struct kfa *            kfa,
                         struct efcp_container * efcpc);
 int          rmt_destroy(struct rmt * instance);
+
 int          rmt_address_set(struct rmt * instance,
                              address_t    address);
-int          rmt_mgmt_sdu_wpi_queue_set(struct rmt *   instance,
-                                        struct rfifo * queue);
 
-/* FIXME: Please check the following APIs */
+int          rmt_queue_send_add(struct rmt * instance,
+                                port_id_t    id);
+int          rmt_queue_send_delete(struct rmt * instance,
+                                   port_id_t    id);
 
-/* NOTE: Takes ownership of the passed PDU */
+int          rmt_queue_recv_add(struct rmt * instance,
+                                port_id_t    id);
+int          rmt_queue_recv_delete(struct rmt * instance,
+                                   port_id_t    id);
+
+int          rmt_pft_flush(struct rmt * instance);
+
+int          rmt_pft_add(struct rmt *       instance,
+                         address_t          destination,
+                         qos_id_t           qos_id,
+                         const port_id_t  * ports,
+                         size_t             count);
+int          rmt_pft_remove(struct rmt *       instance,
+                            address_t          destination,
+                            qos_id_t           qos_id,
+                            const port_id_t  * ports,
+                            const size_t       count);
+
+/* FIXME: Please check the following API */
 int          rmt_send(struct rmt * instance,
                       address_t    address,
                       cep_id_t     connection_id,
                       struct pdu * pdu);
 
-/* NOTE: Takes the ownership of the passed SDU */
+int          rmt_send_port_id(struct rmt *  instance,
+                              port_id_t     id,
+                              struct pdu *  pdu);
+
+/* FIXME: Please check the following API */
 int          rmt_receive(struct rmt * instance,
                          struct sdu * sdu,
                          port_id_t    from);
+
+/*PFT proxy API*/
+int          rmt_pdu_fte_add(struct rmt *       instance,
+                             struct list_head * pft_entries);
+int          rmt_pdu_fte_remove(struct rmt *       instance,
+                                struct list_head * pft_entries);
 
 #endif

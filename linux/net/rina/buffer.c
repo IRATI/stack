@@ -51,6 +51,7 @@ int buffer_destroy(struct buffer * b)
 {
         if (!b)
                 return -1;
+
         return __buffer_destroy(b);
 }
 EXPORT_SYMBOL(buffer_destroy);

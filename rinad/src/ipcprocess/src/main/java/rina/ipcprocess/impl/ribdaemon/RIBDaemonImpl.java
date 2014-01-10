@@ -9,8 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import eu.irati.librina.ExtendedIPCManagerSingleton;
-import eu.irati.librina.Flow;
+import eu.irati.librina.KernelIPCProcessSingleton;
 import eu.irati.librina.QueryRIBRequestEvent;
 import eu.irati.librina.RIBObjectList;
 import eu.irati.librina.rina;
@@ -65,13 +64,9 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 	 */
 	private Object atomicSendLock = null;
 	
-	/**
-	 * Store the readers of the management flows
-	 */
-	private Map<Integer, FlowReader> flowReaders = null;
-	
 	private IPCProcess ipcProcess = null;
-	private ExtendedIPCManagerSingleton ipcManager = null;
+	private KernelIPCProcessSingleton kernelIPCProcess = null;
+	private ManagementSDUReader managementSduReader = null;
 	
 	/**
 	 * The N-1 Flow Manager
@@ -81,9 +76,7 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 	public RIBDaemonImpl(){
 		rib = new RIB();
 		messageHandlersWaitingForReply = new ConcurrentHashMap<String, CDAPMessageHandler>();
-		flowReaders = new ConcurrentHashMap<Integer, FlowReader>();
 		atomicSendLock = new Object();
-		ipcManager = rina.getExtendedIPCManager();
 	}
 	
 	public void setIPCProcess(IPCProcess ipcProcess){
@@ -92,6 +85,10 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 		cdapSessionManager = ipcProcess.getCDAPSessionManager();
 		nMinus1FlowManager = ipcProcess.getResourceAllocator().getNMinus1FlowManager();
 		subscribeToEvents();
+		kernelIPCProcess = rina.getKernelIPCProcess();
+		managementSduReader = new ManagementSDUReader(kernelIPCProcess, this, 
+				IPCProcess.DEFAULT_MAX_SDU_SIZE_IN_BYTES);
+		ipcProcess.execute(managementSduReader);
 	}
 	
 	private void subscribeToEvents(){
@@ -322,24 +319,10 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 	private void nMinusOneFlowDeallocated(int portId) {
 		cdapSessionManager.removeCDAPSession(portId);
 		cleanMessageHandlersWaitingForReply(portId);
-		FlowReader flowReader = flowReaders.remove(portId);
-		if (flowReader != null) {
-			flowReader.stop();
-		}
 	}
 	
 	private void nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent event) {
-		Flow flow = ipcManager.getAllocatedFlow(event.getFlowInformation().getPortId());
-		if (flow == null) {
-			log.error("Received a notification about a new flow having been allocated at "
-					+ event.getFlowInformation().getPortId()+ " but could not find a flow "
-				+ "at this portId");
-			return;
-		}
-		
-		FlowReader flowReader = new FlowReader(flow, this, IPCProcess.DEFAULT_MAX_SDU_SIZE_IN_BYTES);
-		flowReaders.put(event.getFlowInformation().getPortId(), flowReader);
-		ipcProcess.execute(flowReader);
+		//Do nothing
 	}
 	
 	/**
@@ -370,7 +353,7 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 	 * @param cdapMessageHandler the class to be called when the response message is received (if required)
 	 * @throws RIBDaemonException
 	 */
-	public void sendMessage(CDAPMessage cdapMessage, int portId, 
+	public void sendMessage(CDAPMessage cdapMessage, int portId,
 			CDAPMessageHandler cdapMessageHandler) throws RIBDaemonException{
 		if (cdapMessage.getInvokeID() != 0 && !cdapMessage.getOpCode().equals(Opcode.M_CONNECT) 
 				&& !cdapMessage.getOpCode().equals(Opcode.M_RELEASE) 
@@ -390,16 +373,10 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 		synchronized(atomicSendLock){
 			try{
 				this.cdapSessionManager.getCDAPSession(portId).getSessionDescriptor();
-				
-				//FIXME I've removed the DTP encoding of CDAP PDUs.. just to enable initial tests
-				//and figure out how we do it now that EFCP is in the kernel
+			
 				byte[] sdu = cdapSessionManager.encodeNextMessageToBeSent(cdapMessage, portId);
 				
-				Flow flow = ipcManager.getAllocatedFlow(portId);
-				if (flow == null) {
-					throw new RIBDaemonException(-1, "Could not find a flow at portId "+portId);
-				}
-				flow.writeSDU(sdu, sdu.length);
+				kernelIPCProcess.writeManagementSDU(sdu, sdu.length, portId);
 				
 				cdapSessionManager.messageSent(cdapMessage, portId);
 				
