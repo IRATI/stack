@@ -171,6 +171,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
         pid = kfa_flow_create(kipcm->kfa, ipc_id, false);
         ASSERT(is_port_id_ok(pid));
+
         if (kipcm_pmap_add(kipcm->messages->ingress, pid, info->snd_seq)) {
                 LOG_ERR("Could not add map [pid, seq_num]: [%d, %d]",
                         pid, info->snd_seq);
@@ -881,7 +882,6 @@ static int notify_ipcp_conn_create_arrived(void *             data,
                 goto fail;
         }
 
-
         src_cep = ipcp->ops->connection_create_arrived(ipcp->data,
                                                        attrs->port_id,
                                                        attrs->src_addr,
@@ -1030,7 +1030,6 @@ static int notify_ipcp_conn_update_req(void *             data,
                                                  port_id,
                                                  info->snd_seq,
                                                  info->snd_portid);
-
 
 }
 
@@ -1185,15 +1184,13 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
                         goto fail;
         }
 
-        
         rnl_msg_destroy(msg);
         return 0;
 
-fail:
+ fail:
         rnl_msg_destroy(msg);
         return -1;
 }
-
 
 static int netlink_handlers_unregister(struct rnl_set * rnls)
 {
@@ -1323,7 +1320,6 @@ struct kipcm * kipcm_create(struct kobject * parent,
                 rkfree(tmp);
                 return NULL;
         }
-
 
         tmp->kfa = kfa_create();
         if (!tmp->kfa) {
@@ -1806,7 +1802,9 @@ int kipcm_management_sdu_write(struct kipcm *   kipcm,
                 return -1;
         }
 
-        return ipcp->ops->management_sdu_write(ipcp->data, sdu_wpi->port_id, sdu_wpi->sdu);
+        return ipcp->ops->management_sdu_write(ipcp->data,
+                                               sdu_wpi->port_id,
+                                               sdu_wpi->sdu);
 }
 
 int kipcm_management_sdu_read(struct kipcm *    kipcm,
@@ -1853,6 +1851,7 @@ int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
 
         if (!is_port_id_ok(pid)) {
                 LOG_ERR("Flow id is not ok");
+                return -1;
         }
 
         seq_num = kipcm_pmap_find(kipcm->messages->ingress, pid);
@@ -1865,9 +1864,7 @@ int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
                 LOG_ERR("Could not destroy ingress messages map entry");
         }
 
-        /*
-         * FIXME: The rnl_port_id shouldn't be hardcoded as 1.
-         */
+        /* FIXME: The rnl_port_id shouldn't be hardcoded as 1 */
         if (rnl_app_alloc_flow_result_msg(ipc_id, res, pid, seq_num, 1))
                 return -1;
 

@@ -680,7 +680,7 @@ static int parse_pdu_fte_port_list_entries(struct nlattr * nested_attr,
         }
 
         for (nla = (struct nlattr*) nla_data(nested_attr),
-             rem = nla_len(nested_attr);
+                     rem = nla_len(nested_attr);
              nla_ok(nla, rem);
              nla = nla_next(nla, &rem)) {
                 ports_size++;
@@ -698,7 +698,7 @@ static int parse_pdu_fte_port_list_entries(struct nlattr * nested_attr,
                 list_add(&port_entry->next, &entry->ports);
         }
 
-        if (rem) 
+        if (rem)
                 LOG_WARN("Missing bits to pars");
 
         if (problems)
