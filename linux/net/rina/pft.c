@@ -65,15 +65,13 @@ static struct pft_port_entry * pft_pe_create(port_id_t port_id)
 static bool pft_pe_is_ok(struct pft_port_entry * pe)
 { return pe ? true : false;  }
 
-static int pft_pe_destroy(struct pft_port_entry * pe)
+static void pft_pe_destroy(struct pft_port_entry * pe)
 {
         ASSERT(pft_pe_is_ok(pe));
 
         list_del_rcu(&pe->next);
         synchronize_rcu();
         rkfree(pe);
-
-        return 0;
 }
 
 static port_id_t pft_pe_port(struct pft_port_entry * pe)
@@ -122,26 +120,20 @@ static struct pft_entry * pfte_create(address_t destination,
 static bool pfte_is_ok(struct pft_entry * entry)
 { return entry ? true : false; }
 
-static int pfte_destroy(struct pft_entry * entry)
+static void pfte_destroy(struct pft_entry * entry)
 {
         struct pft_port_entry * pos;
-        int                     ret;
 
         ASSERT(pfte_is_ok(entry));
 
         list_for_each_entry_rcu(pos, &entry->ports, next) {
-                ret = pft_pe_destroy(pos);
-                if (!ret) {
-                        LOG_WARN("Could not destroy entry %pK", pos);
-                        return ret;
-                }
+                pft_pe_destroy(pos);                
         }
 
         list_del_rcu(&entry->next);
         synchronize_rcu();
         rkfree(entry);
 
-        return 0;
 
 }
 
@@ -180,11 +172,10 @@ static int pfte_port_add(struct pft_entry * entry,
         return 0;
 }
 
-static int pfte_port_remove(struct pft_entry * entry,
-                            port_id_t          id)
+static void pfte_port_remove(struct pft_entry * entry,
+                             port_id_t          id)
 {
         struct pft_port_entry * pos;
-        int                     ret;
 
         ASSERT(pfte_is_ok(entry));
         ASSERT(is_port_id_ok(id));
@@ -192,23 +183,14 @@ static int pfte_port_remove(struct pft_entry * entry,
         /* Remove the port-id here */
         list_for_each_entry_rcu(pos, &entry->ports, next) {
                 if (pft_pe_port(pos) == id) {
-                        ret = pft_pe_destroy(pos);
-                        if (!ret) {
-                                LOG_WARN("Could not destroy entry %pK", pos);
-                                return ret;
-                        }
+                        pft_pe_destroy(pos);
                 }
         }
 
         /* If the list of port-ids is empty, remove the entry */
         if (list_empty(&entry->ports)) {
-                if(pfte_destroy(entry)) {
-                        LOG_ERR("Failed to cleanup entry");
-                        return -1;
-                }
+                pfte_destroy(entry);
         }
-
-        return 0;
 }
 
 static int pfte_ports_copy(struct pft_entry * entry,
@@ -285,38 +267,34 @@ static bool pft_is_ok(struct pft * instance)
 bool pft_is_empty(struct pft * instance)
 { return (pft_is_ok(instance) ? list_empty(&instance->entries) : false); }
 
-static int __pft_flush(struct pft * instance)
+static void __pft_flush(struct pft * instance)
 {
         struct pft_entry * pos;
-        int                ret;
 
         ASSERT(pft_is_ok(instance));
 
         list_for_each_entry_rcu(pos, &instance->entries, next) {
                 list_del_rcu(&pos->next);
-                ret = pfte_destroy(pos);
-                if (!ret) {
-                        LOG_WARN("Could not destroy entry %pK", pos);
-                        return ret;
-                }
+                pfte_destroy(pos);
         }
-
-        return 0;
 }
 
 int pft_flush(struct pft * instance)
-{ return pft_is_ok(instance) ? __pft_flush(instance) : -1; }
-
-int pft_destroy(struct pft * instance)
-{
-        int ret;
-
+{ 
         if (!pft_is_ok(instance))
                 return -1;
 
-        ret = __pft_flush(instance);
-        if (ret)
+        __pft_flush(instance); 
+        
+        return 0;
+}
+
+int pft_destroy(struct pft * instance)
+{
+        if (!pft_is_ok(instance))
                 return -1;
+
+        __pft_flush(instance);
 
         rkfree(instance);
 
@@ -415,14 +393,7 @@ int pft_remove(struct pft *       instance,
                 return -1;
 
         for (i = 0; i < count; i++) {
-                if (pfte_port_remove(tmp, ports[i])) {
-                        LOG_ERR("Failed to remove port %zd", i);
-                        /*
-                         * FIXME: Should we fall through removing as much
-                         *        as we can ?
-                         */
-                        return -1;
-                }
+                pfte_port_remove(tmp, ports[i]);
         }
 
         return 0;
