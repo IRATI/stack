@@ -1017,7 +1017,7 @@ int rmt_pdu_fte_remove(struct rmt *       instance,
         LOG_MISSING;
         return -1;
 }
-  
+
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 bool regression_tests_rmt(void)
 {
