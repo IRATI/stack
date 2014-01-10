@@ -43,13 +43,13 @@ int          pft_remove(struct pft *       instance,
                         address_t          destination,
                         qos_id_t           qos_id,
                         const port_id_t  * ports,
-                        const size_t       count);
+                        size_t       count);
 
 /* NOTE: ports and entries are in-out parms */
 int          pft_nhop(struct pft * instance,
                       address_t    destination,
                       qos_id_t     qos_id,
                       port_id_t ** ports,
-                      size_t *     entries);
+                      size_t *     count);
 
 #endif
