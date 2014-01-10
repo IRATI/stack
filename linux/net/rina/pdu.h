@@ -119,6 +119,7 @@ int                   pdu_buffer_set(struct pdu *    pdu,
 const struct pci *    pdu_pci_get_ro(const struct pdu * pdu);
 struct pci *          pdu_pci_get_rw(struct pdu * pdu);
 /* NOTE: Takes ownership of the PCI passed */
+int                   pdu_buffer_disown(struct pdu * pdu);
 int                   pdu_pci_set(struct pdu * pdu, struct pci * pci);
 
 int                   pdu_destroy(struct pdu * pdu);

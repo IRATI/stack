@@ -529,7 +529,7 @@ static int normal_management_sdu_post(struct ipcp_instance_data * data,
                 return -1;
         }
         spin_unlock(&data->mgmt_data->lock);
-        wake_up(&data->mgmt_data->readers);
+        wake_up_all(&data->mgmt_data->readers);
 
         return 0;
 }
