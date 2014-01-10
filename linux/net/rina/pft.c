@@ -469,6 +469,8 @@ static bool regression_tests_nhop(void)
         struct pft *       tmp;
         port_id_t *        port_ids;
         size_t             nr;
+        port_id_t *        ports;
+        size_t             entries;
 
         tmp = pft_create();
         if (!tmp) {
@@ -476,120 +478,159 @@ static bool regression_tests_nhop(void)
                 return false;
         }
 
-        if (pft_add(tmp, 30, 2, 2)) {
-                LOG_DBG("Failed to add entry");
+        entries = 1;
+        ports = rkmalloc(sizeof(*ports), GFP_KERNEL);
+        if (!ports) {
+                LOG_DBG("Failed to malloc");
                 return false;
         }
 
-        if (pft_add(tmp, 30, 2, 99)) {
+        ports[0] = 2;
+        if (pft_add(tmp, 30, 2, ports, entries)) {
                 LOG_DBG("Failed to add entry");
+                rkfree(ports);
+                return false;
+        }
+
+        ports[0] = 99;
+        if (pft_add(tmp, 30, 2, ports, entries)) {
+                LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
         }
 
         nr = 0;
         if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
                 LOG_DBG("Failed to get port-ids");
+                rkfree(ports);
                 return false;
         }
 
         if (nr != 2) {
                 LOG_DBG("Wrong number of port-ids returned");
+                rkfree(ports);
                 return false;
         }
 
         if (port_ids[0] != 2) {
                 LOG_DBG("Wrong port-id returned");
+                rkfree(ports);
                 return false;
         }
 
         if (port_ids[1] != 99) {
                 LOG_DBG("Wrong port-id returned");
+                rkfree(ports);
                 return false;
         }
 
         if (pft_flush(tmp)) {
                 LOG_DBG("Failed to flush table");
+                rkfree(ports);
                 return false;
         }
 
         /* Port-id table is now 2 in size */
-        if (pft_add(tmp, 30, 2, 2)) {
+
+        ports[0] = 2;
+        if (pft_add(tmp, 30, 2, ports, entries)) {
                 LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
         }
 
-        if (pft_add(tmp, 30, 2, 99)) {
+        ports[0] = 99;
+        if (pft_add(tmp, 30, 2, ports, entries)) {
                 LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
         }
 
         if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
                 LOG_DBG("Failed to get port-ids");
+                rkfree(ports);
                 return false;
         }
 
         if (nr != 2) {
                 LOG_DBG("Wrong number of port-ids returned");
+                rkfree(ports);
                 return false;
         }
 
         if (pft_flush(tmp)) {
                 LOG_DBG("Failed to flush table");
+                rkfree(ports);
                 return false;
         }
 
         /* Trying with 1 port-id */
-        if (pft_add(tmp, 30, 2, 2)) {
+        ports[0] = 2;
+        if (pft_add(tmp, 30, 2, ports, entries)) {
                 LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
         }
 
         if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
                 LOG_DBG("Failed to get port-ids");
+                rkfree(ports);
                 return false;
         }
 
         if (nr != 1) {
                 LOG_DBG("Wrong number of port-ids returned");
+                rkfree(ports);
                 return false;
         }
 
         if (pft_flush(tmp)) {
                 LOG_DBG("Failed to flush table");
+                rkfree(ports);
                 return false;
         }
 
         /* Trying with 3 port-ids */
-        if (pft_add(tmp, 30, 2, 2)) {
+        ports[0] = 2;
+        if (pft_add(tmp, 30, 2, ports, entries)) {
                 LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
         }
 
-        if (pft_add(tmp, 30, 2, 99)) {
+        ports[0] = 99;
+        if (pft_add(tmp, 30, 2,  ports, entries)) {
                 LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
         }
 
-        if (pft_add(tmp, 30, 2, 9)) {
+        ports[0] = 9;
+        if (pft_add(tmp, 30, 2,  ports, entries)) {
                 LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
         }
 
         if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
                 LOG_DBG("Failed to get port-ids");
+                rkfree(ports);
                 return false;
         }
 
         if (nr != 3) {
                 LOG_DBG("Wrong number of port-ids returned");
+                rkfree(ports);
                 return false;
         }
 
         if (pft_destroy(tmp)) {
                 LOG_DBG("Failed to destroy instance");
+                rkfree(ports);
                 return false;
         }
 
+        rkfree(ports);
         return true;
 }
 
@@ -597,7 +638,7 @@ static bool regression_tests_entries(void)
 {
         struct pft *       tmp;
         struct pft_entry * e;
-        port_id_t * port_ids;
+        port_id_t * ports;
         size_t entries;
 
         tmp = pft_create();
@@ -606,52 +647,72 @@ static bool regression_tests_entries(void)
                 return false;
         }
 
-        if (pft_add(tmp, 16, 1, 1)) {
+        entries = 1;
+        ports = rkmalloc(sizeof(*ports), GFP_KERNEL);
+        if (!ports) {
+                LOG_DBG("Failed to malloc");
+                return false;
+        }
+
+        ports[0] = 1;
+        if (pft_add(tmp, 16, 1, ports, entries)) {
                 LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
         }
 
         e = pft_find(tmp, 16,1);
         if (!e) {
                 LOG_DBG("Failed to retrieve stored entry");
+                rkfree(ports);
                 return false;
         }
 
-        if (pft_remove(tmp, 16, 1, 1)) {
+        if (pft_remove(tmp, 16, 1, ports, entries)) {
                 LOG_DBG("Failed to remove entry");
+                rkfree(ports);
                 return false;
         }
 
-        if (!pft_remove(tmp, 16, 1, 1)) {
+        if (!pft_remove(tmp, 16, 1, ports, entries)) {
                 LOG_DBG("Entry should have already been removed");
+                rkfree(ports);
                 return false;
         }
 
-        if (!pft_remove(tmp, 35, 4, 6)) {
+        if (!pft_remove(tmp, 35, 4, ports, entries)) {
                 LOG_DBG("No such entry was added");
+                rkfree(ports);
                 return false;
         }
 
-        if (pft_add(tmp, 30, 2, 2)) {
+        ports[0] = 2;
+        if (pft_add(tmp, 30, 8, ports, entries)) {
                 LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
         }
-
-        if (pft_add(tmp, 35, 5, 99)) {
+        
+        ports[0] = 99;
+        if (pft_add(tmp, 35, 5, ports, entries)) {
                 LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
         }
 
         if (pft_flush(tmp)) {
                 LOG_DBG("Failed to flush table");
+                rkfree(ports);
                 return false;
         }
 
         if (pft_destroy(tmp)) {
                 LOG_DBG("Failed to destroy instance");
+                rkfree(ports);
                 return false;
         }
 
+        rkfree(ports);
         return true;
 }
 
