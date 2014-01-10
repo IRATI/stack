@@ -973,6 +973,39 @@ int rmt_receive(struct rmt * instance,
         return 0;
 }
 
+/* FIXME: To be rearranged */
+static bool is_rmt_pft_ok(struct rmt * instance)
+{ return (instance && instance->pft) ? true : false; }
+
+int rmt_pft_flush(struct rmt * instance)
+{ return (is_rmt_pft_ok(instance) ? pft_flush(instance->pft) : -1); }
+
+int rmt_pft_add(struct rmt *       instance,
+                address_t          destination,
+                qos_id_t           qos_id,
+                const port_id_t  * ports,
+                size_t             count)
+{
+        return is_rmt_pft_ok(instance) ? pft_add(instance->pft,
+                                                 destination,
+                                                 qos_id,
+                                                 ports,
+                                                 count) : -1;
+}
+
+int rmt_pft_remove(struct rmt *       instance,
+                   address_t          destination,
+                   qos_id_t           qos_id,
+                   const port_id_t  * ports,
+                   const size_t       count)
+{
+        return is_rmt_pft_ok(instance) ? pft_remove(instance->pft,
+                                                    destination,
+                                                    qos_id,
+                                                    ports,
+                                                    count) : -1;
+}
+
 int rmt_pdu_fte_add(struct rmt *       instance,
                     struct list_head * pft_entries)
 {
