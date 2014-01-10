@@ -692,7 +692,7 @@ static bool regression_tests_entries(void)
                 rkfree(ports);
                 return false;
         }
-        
+
         ports[0] = 99;
         if (pft_add(tmp, 35, 5, ports, entries)) {
                 LOG_DBG("Failed to add entry");
