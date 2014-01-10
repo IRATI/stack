@@ -345,11 +345,11 @@ static struct pft_entry * pft_find(struct pft * instance,
         return NULL;
 }
 
-int pft_add(struct pft * instance,
-            address_t    destination,
-            qos_id_t     qos_id,
-            port_id_t  * port_id,
-            size_t       entries)
+int pft_add(struct pft *       instance,
+            address_t          destination,
+            qos_id_t           qos_id,
+            const port_id_t  * port_id,
+            const size_t       entries)
 {
         struct pft_entry * tmp;
         int i;
@@ -376,11 +376,11 @@ int pft_add(struct pft * instance,
         return 0;
 }
 
-int pft_remove(struct pft * instance,
-               address_t    destination,
-               qos_id_t     qos_id,
-               port_id_t  * port_id,
-               size_t       entries)
+int pft_remove(struct pft *       instance,
+               address_t          destination,
+               qos_id_t           qos_id,
+               const port_id_t  * port_id,
+               const size_t       entries)
 {
         struct pft_entry * tmp;
         int i;

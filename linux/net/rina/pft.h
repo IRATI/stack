@@ -34,16 +34,16 @@ int          pft_destroy(struct pft * instance);
 bool         pft_is_empty(struct pft * instance);
 int          pft_flush(struct pft * instance);
 
-int          pft_add(struct pft * instance,
-                     address_t    destination,
-                     qos_id_t     qos_id,
-                     port_id_t  * port_id,
-                     size_t       entries);
-int          pft_remove(struct pft * instance,
-                        address_t    destination,
-                        qos_id_t     qos_id,
-                        port_id_t  * port_id,
-                        size_t       entries);
+int          pft_add(struct pft *       instance,
+                     address_t          destination,
+                     qos_id_t           qos_id,
+                     const port_id_t  * port_id,
+                     const size_t       entries);
+int          pft_remove(struct pft *       instance,
+                        address_t          destination,
+                        qos_id_t           qos_id,
+                        const port_id_t  * port_id,
+                        const size_t       entries);
 
 int          pft_nhop(struct pft * instance,
                       address_t    destination,
