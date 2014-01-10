@@ -23,6 +23,10 @@
 
 struct buffer;
 
+/* FIXME: This function must disappear from the API */
+struct buffer * buffer_create_with_gfp(gfp_t  flags,
+                                       void * data,
+                                       size_t size);
 /* NOTE: Creates a buffer from raw data (takes ownership) */
 struct buffer * buffer_create_with(void * data, size_t size);
 struct buffer * buffer_create_with_ni(void * data, size_t size);

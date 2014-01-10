@@ -250,7 +250,7 @@ int dtp_write(struct dtp * instance,
         /* Give the data to RMT now ! */
         return rmt_send(instance->rmt,
                         pci_destination(pci),
-                        pci_cep_destination(pci),
+                        pci_qos_id(pci),
                         pdu);
 }
 

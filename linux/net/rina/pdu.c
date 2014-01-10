@@ -411,9 +411,6 @@ int pdu_buffer_set(struct pdu * pdu, struct buffer * buffer)
         if (!pdu)
                 return -1;
 
-        if (!buffer_is_ok(buffer))
-                return -1;
-
         if (pdu->buffer) {
                 buffer_destroy(pdu->buffer);
         }

@@ -57,23 +57,88 @@ EXPORT_SYMBOL(sdu_create_buffer_with_ni);
 static struct sdu * sdu_create_pdu_with_gfp(gfp_t        flags,
                                             struct pdu * pdu)
 {
-        LOG_MISSING;
+        struct sdu *          sdu;
+        const struct buffer * buffer;
+        const struct pci *    pci;
+        const void *          buffer_data;
+        size_t                size;
+        ssize_t               buffer_size;
+        ssize_t               pci_size;
+        struct buffer *       tmp_buff;
+        char *                data;
 
-        return NULL;
-#if 0
-        struct sdu * tmp;
-
-        if (!buffer_is_ok(buffer))
+        if (!pdu)
                 return NULL;
 
-        tmp = rkzalloc(sizeof(*tmp), flags);
-        if (!tmp)
+        /* FIXME: Add pdu_destroy() on each return */
+
+        buffer = pdu_buffer_get_ro(pdu);
+        if (!buffer) {
+                pdu_destroy(pdu);
                 return NULL;
+        }
 
-        tmp->buffer = buffer;
+        buffer_data = buffer_data_ro(buffer);
+        if (!buffer_data) {
+                pdu_destroy(pdu);
+                return NULL;
+        }
 
-        return tmp;
-#endif
+        pci = pdu_pci_get_ro(pdu);
+        if (!pci) {
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        buffer_size = buffer_length(buffer);
+        if (buffer_size <= 0) {
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        pci_size = pci_length(pci);
+        if (pci_size <= 0) {
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        size = pci_size + buffer_size;
+        data = rkmalloc(size, flags);
+        if (!data) {
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        /* FIXME: Useless check */
+        if (!memcpy(data, pci, pci_size)) {
+                rkfree(data);
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        /* FIXME: Useless check */
+        if (!memcpy(data + pci_size, buffer_data, buffer_size)) {
+                rkfree(data);
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        tmp_buff = buffer_create_with_gfp(flags, data, size);
+        if (!tmp_buff) {
+                rkfree(data);
+                pdu_destroy(pdu);
+                return NULL;
+        }
+        sdu = sdu_create_buffer_with(tmp_buff);
+        if (!sdu) {
+                pdu_destroy(pdu);
+                buffer_destroy(tmp_buff);
+                return NULL;
+        }
+
+        pdu_destroy(pdu);
+
+        return sdu;
 }
 
 struct sdu * sdu_create_pdu_with(struct pdu * pdu)

@@ -66,7 +66,7 @@ int          rmt_queue_recv_delete(struct rmt * instance,
 /* FIXME: Please check the following API */
 int          rmt_send(struct rmt * instance,
                       address_t    address,
-                      cep_id_t     connection_id,
+                      qos_id_t     qos_id,
                       struct pdu * pdu);
 
 int          rmt_send_port_id(struct rmt *  instance,
