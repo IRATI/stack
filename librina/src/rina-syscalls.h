@@ -50,7 +50,7 @@ namespace rina {
         /**
          * Wrapper of the managementSDUWrite system call
          * @param ipcProcessId the ipcProcess that has to write the SDU
-         * @param portid the port-id where the SDU has to be written
+         * @param portId the N-1 portId where the data has to be written
          * @param sdu the data to be written (SDU)
          * @param size the size of the data to be written
          * @return 0 if everything was ok, negative number indicating error

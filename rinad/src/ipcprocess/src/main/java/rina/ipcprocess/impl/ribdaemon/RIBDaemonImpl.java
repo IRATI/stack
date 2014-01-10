@@ -353,7 +353,7 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 	 * @param cdapMessageHandler the class to be called when the response message is received (if required)
 	 * @throws RIBDaemonException
 	 */
-	public void sendMessage(CDAPMessage cdapMessage, int portId, 
+	public void sendMessage(CDAPMessage cdapMessage, int portId,
 			CDAPMessageHandler cdapMessageHandler) throws RIBDaemonException{
 		if (cdapMessage.getInvokeID() != 0 && !cdapMessage.getOpCode().equals(Opcode.M_CONNECT) 
 				&& !cdapMessage.getOpCode().equals(Opcode.M_RELEASE) 

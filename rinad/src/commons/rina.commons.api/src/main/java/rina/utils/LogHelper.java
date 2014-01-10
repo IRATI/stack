@@ -1,4 +1,4 @@
-package rina.aux;
+package rina.utils;
 
 import org.apache.log4j.Appender;
 import org.apache.log4j.FileAppender;
