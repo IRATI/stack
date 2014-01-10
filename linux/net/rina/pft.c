@@ -132,7 +132,7 @@ static int pfte_destroy(struct pft_entry * entry)
         list_for_each_entry_rcu(pos, &entry->ports, next) {
                 ret = pft_pe_destroy(pos);
                 if (!ret) {
-                        LOG_WARN("Could not destroy PDU-FWD-T entry %pK", pos);
+                        LOG_WARN("Could not destroy entry %pK", pos);
                         return ret;
                 }
         }
@@ -195,8 +195,7 @@ static int pfte_port_remove(struct pft_entry * entry,
                 if (pft_pe_port(pos) == id) {
                         ret = pft_pe_destroy(pos);
                         if (!ret) {
-                                LOG_WARN("Could not destroy PDU-FWD-T"
-                                         "entry %pK", pos);
+                                LOG_WARN("Could not destroy entry %pK", pos);
                                 return ret;
                         }
                 }
@@ -299,7 +298,7 @@ static int __pft_flush(struct pft * instance)
                 list_del_rcu(&pos->next);
                 ret = pfte_destroy(pos);
                 if (!ret) {
-                        LOG_WARN("Could not destroy PDU-FWD-T entry %pK", pos);
+                        LOG_WARN("Could not destroy entry %pK", pos);
                         return ret;
                 }
         }
@@ -333,12 +332,15 @@ static struct pft_entry * pft_find(struct pft * instance,
         struct pft_entry * pos;
 
         ASSERT(pft_is_ok(instance));
+        ASSERT(is_address_ok(destination));
 
         rcu_read_lock();
         list_for_each_entry_rcu(pos, &instance->entries, next) {
                 if ((pos->destination == destination) &&
-                    (pos->qos_id      == qos_id))
+                    (pos->qos_id      == qos_id)) {
+                        rcu_read_unlock();
                         return pos;
+                }
         }
         rcu_read_unlock();
 
@@ -348,14 +350,20 @@ static struct pft_entry * pft_find(struct pft * instance,
 int pft_add(struct pft *       instance,
             address_t          destination,
             qos_id_t           qos_id,
-            const port_id_t  * port_id,
-            const size_t       entries)
+            const port_id_t  * ports,
+            size_t             count)
 {
         struct pft_entry * tmp;
-        int i;
+        int                i;
 
         if (!pft_is_ok(instance))
                 return -1;
+
+        if (!is_address_ok(destination) ||
+            !is_qos_id_ok(qos_id)) {
+                LOG_ERR("Bogus input parameters");
+                return -1;
+        }
 
         tmp = pft_find(instance, destination, qos_id);
         if (!tmp) {
@@ -366,8 +374,8 @@ int pft_add(struct pft *       instance,
                 list_add_rcu(&tmp->next, &instance->entries);
         }
 
-        for (i = 0; i < entries; i++) {
-                if (pfte_port_add(tmp, port_id[i])) {
+        for (i = 0; i < count; i++) {
+                if (pfte_port_add(tmp, ports[i])) {
                         pfte_destroy(tmp);
                         return -1;
                 }
@@ -379,22 +387,32 @@ int pft_add(struct pft *       instance,
 int pft_remove(struct pft *       instance,
                address_t          destination,
                qos_id_t           qos_id,
-               const port_id_t  * port_id,
-               const size_t       entries)
+               const port_id_t  * ports,
+               size_t             count)
 {
         struct pft_entry * tmp;
-        int i;
+        int                i;
 
         if (!pft_is_ok(instance))
                 return -1;
+
+        if (!is_address_ok(destination) ||
+            !is_qos_id_ok(qos_id)) {
+                LOG_ERR("Bogus input parameters");
+                return -1;
+        }
 
         tmp = pft_find(instance, destination, qos_id);
         if (!tmp)
                 return -1;
 
-        for (i = 0; i < entries; i++) {
-                if (pfte_port_remove(tmp, port_id[i])) {
-                        LOG_ERR("Failed to remove port");
+        for (i = 0; i < count; i++) {
+                if (pfte_port_remove(tmp, ports[i])) {
+                        LOG_ERR("Failed to remove port %zd", i);
+                        /*
+                         * FIXME: Should we fall through removing as much
+                         *        as we can ?
+                         */
                         return -1;
                 }
         }
@@ -405,15 +423,21 @@ int pft_remove(struct pft *       instance,
 int pft_nhop(struct pft * instance,
              address_t    destination,
              qos_id_t     qos_id,
-             port_id_t ** port_ids,
-             size_t *     entries)
+             port_id_t ** ports,
+             size_t *     count)
 {
         struct pft_entry * tmp;
 
         if (!pft_is_ok(instance))
                 return -1;
 
-        if (!port_ids || !entries) {
+        if (!is_address_ok(destination) ||
+            !is_qos_id_ok(qos_id)) {
+                LOG_ERR("Bogus input parameters");
+                return -1;
+        }
+
+        if (!ports || !count) {
                 LOG_ERR("Bogus input parameters");
                 return -1;
         }
@@ -431,7 +455,7 @@ int pft_nhop(struct pft * instance,
                 return -1;
         }
 
-        if (pfte_ports_copy(tmp, port_ids, entries)) {
+        if (pfte_ports_copy(tmp, ports, count)) {
                 rcu_read_unlock();
                 return -1;
         }
