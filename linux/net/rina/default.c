@@ -248,6 +248,9 @@ static struct personality_data data;
 
 static struct personality * personality = NULL;
 
+/* FIXME: Remove the following */
+extern bool regression_tests_pft(void);
+
 static int __init mod_init(void)
 {
         LOG_DBG("Rina default personality loading");
@@ -264,6 +267,10 @@ static int __init mod_init(void)
                 return -1;
 
         ASSERT(personality != NULL);
+
+        /* FIXME: This is not the right place, please fix */ 
+        if (!regression_tests_pft())
+                return -1;
 
         LOG_DBG("Rina default personality loaded successfully");
 

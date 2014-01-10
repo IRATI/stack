@@ -43,7 +43,7 @@ static struct pft_port_entry * pft_pe_create_gfp(gfp_t     flags,
         struct pft_port_entry * tmp;
 
         ASSERT(is_port_id_ok(port_id));
-              
+
         tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
@@ -68,7 +68,7 @@ static bool pft_pe_is_ok(struct pft_port_entry * pe)
 static int pft_pe_destroy(struct pft_port_entry * pe)
 {
         ASSERT(pft_pe_is_ok(pe));
-               
+
         list_del_rcu(&pe->next);
         synchronize_rcu();
         rkfree(pe);
@@ -83,12 +83,10 @@ static port_id_t pft_pe_port(struct pft_port_entry * pe)
         return pe->port_id;
 }
 
-/*
- * FIXME: This representation is crappy and MUST be changed
- */
+/* FIXME: This representation is crappy and MUST be changed */
 struct pft_entry {
         address_t destination;
-        qos_id_t  qos_id;   
+        qos_id_t  qos_id;
         struct    list_head ports;
         struct    list_head next;
 };
@@ -296,7 +294,7 @@ static int __pft_flush(struct pft * instance)
         int                ret;
 
         ASSERT(pft_is_ok(instance));
-        
+
         list_for_each_entry_rcu(pos, &instance->entries, next) {
                 list_del_rcu(&pos->next);
                 ret = pfte_destroy(pos);
@@ -310,12 +308,7 @@ static int __pft_flush(struct pft * instance)
 }
 
 int pft_flush(struct pft * instance)
-{
-        if (!pft_is_ok(instance))
-                return -1;
-
-        return __pft_flush(instance);
-}
+{ return pft_is_ok(instance) ? __pft_flush(instance) : -1; }
 
 int pft_destroy(struct pft * instance)
 {
@@ -326,7 +319,7 @@ int pft_destroy(struct pft * instance)
 
         ret = __pft_flush(instance);
         if (ret)
-                return ret;
+                return -1;
 
         rkfree(instance);
 
@@ -340,7 +333,7 @@ static struct pft_entry * pft_find(struct pft * instance,
         struct pft_entry * pos;
 
         ASSERT(pft_is_ok(instance));
-        
+
         rcu_read_lock();
         list_for_each_entry_rcu(pos, &instance->entries, next) {
                 if ((pos->destination == destination) &&
@@ -418,11 +411,9 @@ int pft_nhop(struct pft * instance,
         }
 
         /*
-         * Taking the lock here since
-         * otherwise instance might be
-         * deleted when copying the ports
+         * Taking the lock here since otherwise instance might be deleted when
+         * copying the ports
          */
-
         rcu_read_lock();
 
         tmp = pft_find(instance, destination, qos_id);
@@ -449,7 +440,7 @@ static bool regression_tests_nhop(void)
         struct pft *       tmp;
         port_id_t *        port_ids;
         size_t             nr;
- 
+
         tmp = pft_create();
         if (!tmp) {
                 LOG_DBG("Failed to create pft instance");
@@ -460,7 +451,7 @@ static bool regression_tests_nhop(void)
                 LOG_DBG("Failed to add entry");
                 return false;
         }
-        
+
         if (pft_add(tmp, 30, 2, 99)) {
                 LOG_DBG("Failed to add entry");
                 return false;
@@ -481,7 +472,7 @@ static bool regression_tests_nhop(void)
                 LOG_DBG("Wrong port-id returned");
                 return false;
         }
-        
+
         if (port_ids[1] != 99) {
                 LOG_DBG("Wrong port-id returned");
                 return false;
@@ -497,7 +488,7 @@ static bool regression_tests_nhop(void)
                 LOG_DBG("Failed to add entry");
                 return false;
         }
-        
+
         if (pft_add(tmp, 30, 2, 99)) {
                 LOG_DBG("Failed to add entry");
                 return false;
@@ -519,12 +510,11 @@ static bool regression_tests_nhop(void)
         }
 
         /* Trying with 1 port-id */
-
         if (pft_add(tmp, 30, 2, 2)) {
                 LOG_DBG("Failed to add entry");
                 return false;
-        }        
-        
+        }
+
         if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
                 LOG_DBG("Failed to get port-ids");
                 return false;
@@ -542,12 +532,11 @@ static bool regression_tests_nhop(void)
         }
 
         /* Trying with 3 port-ids */
-
         if (pft_add(tmp, 30, 2, 2)) {
                 LOG_DBG("Failed to add entry");
                 return false;
         }
-        
+
         if (pft_add(tmp, 30, 2, 99)) {
                 LOG_DBG("Failed to add entry");
                 return false;
@@ -572,7 +561,7 @@ static bool regression_tests_nhop(void)
                 LOG_DBG("Failed to destroy instance");
                 return false;
         }
-        
+
         return true;
 }
 
@@ -580,18 +569,18 @@ static bool regression_tests_entries(void)
 {
         struct pft *       tmp;
         struct pft_entry * e;
- 
+
         tmp = pft_create();
         if (!tmp) {
                 LOG_DBG("Failed to create pft instance");
                 return false;
         }
-        
+
         if (pft_add(tmp, 16, 1, 1)) {
                 LOG_DBG("Failed to add entry");
                 return false;
         }
-        
+
         e = pft_find(tmp, 16,1);
         if (!e) {
                 LOG_DBG("Failed to retrieve stored entry");
@@ -618,7 +607,7 @@ static bool regression_tests_entries(void)
                 LOG_DBG("Failed to add entry");
                 return false;
         }
-        
+
         if (pft_add(tmp, 35, 5, 99)) {
                 LOG_DBG("Failed to add entry");
                 return false;
@@ -637,7 +626,7 @@ static bool regression_tests_entries(void)
         return true;
 }
 
-static bool regression_tests_instance(void) 
+static bool regression_tests_instance(void)
 {
         struct pft * tmp;
 
@@ -646,7 +635,7 @@ static bool regression_tests_instance(void)
                 LOG_DBG("Failed to create pft instance");
                 return false;
         }
-        
+
         if (pft_destroy(tmp)) {
                 LOG_DBG("Failed to destroy instance");
                 return false;
@@ -654,9 +643,11 @@ static bool regression_tests_instance(void)
 
         return true;
 }
+#endif
 
 bool regression_tests_pft(void)
 {
+#ifdef CONFIG_RINA_PFT_REGRESSION_TESTS
         if (!regression_tests_instance()) {
                 LOG_ERR("Creating of a pft instance test failed, "
                         "bailing out");
@@ -674,7 +665,7 @@ bool regression_tests_pft(void)
                         "bailing out");
                 return false;
         }
-
+#else
+#endif
         return true;
 }
-#endif
