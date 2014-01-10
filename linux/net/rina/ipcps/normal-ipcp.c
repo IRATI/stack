@@ -36,7 +36,6 @@
 #include "ipcp-factories.h"
 #include "du.h"
 #include "kfa.h"
-#include "rnl-utils.h"
 #include "efcp.h"
 #include "rmt.h"
 #include "efcp-utils.h"
