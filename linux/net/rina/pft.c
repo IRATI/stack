@@ -363,6 +363,11 @@ int pft_add(struct pft *       instance,
                 return -1;
         }
 
+        if (!ports || !count) {
+                LOG_ERR("Bogus input parameters");
+                return -1;
+        }
+
         tmp = pft_find(instance, destination, qos_id);
         if (!tmp) {
                 tmp = pfte_create(destination, qos_id);
@@ -396,6 +401,11 @@ int pft_remove(struct pft *       instance,
 
         if (!is_address_ok(destination) ||
             !is_qos_id_ok(qos_id)) {
+                LOG_ERR("Bogus input parameters");
+                return -1;
+        }
+
+        if (!ports || !count) {
                 LOG_ERR("Bogus input parameters");
                 return -1;
         }
@@ -624,6 +634,31 @@ static bool regression_tests_nhop(void)
                 return false;
         }
 
+        /* Passing bogus parms here */
+        if (!pft_nhop(tmp, 30, 2, NULL, 0)) {
+                LOG_DBG("Bogus array passed");
+                rkfree(ports);
+                return false;
+        }
+
+        if (!pft_nhop(NULL, 30, 2, &port_ids, &nr)) {
+                LOG_DBG("Bogus instance passed");
+                rkfree(ports);
+                return false;
+        }
+
+        if (!pft_nhop(tmp, 30, -99, &port_ids, &nr)) {
+                LOG_DBG("Bogus port-id passed");
+                rkfree(ports);
+                return false;
+        }
+
+        if (!pft_nhop(tmp, -59, 9, &port_ids, &nr)) {
+                LOG_DBG("Bogus address passed");
+                rkfree(ports);
+                return false;
+        }
+
         if (pft_destroy(tmp)) {
                 LOG_DBG("Failed to destroy instance");
                 rkfree(ports);
@@ -702,6 +737,19 @@ static bool regression_tests_entries(void)
 
         if (pft_flush(tmp)) {
                 LOG_DBG("Failed to flush table");
+                rkfree(ports);
+                return false;
+        }
+
+        /* Passing bogus parms here */
+        if (!pft_add(tmp, 35, 5, NULL, 0)) {
+                LOG_DBG("Bogus ports passed");
+                rkfree(ports);
+                return false;
+        }
+
+        if (!pft_remove(tmp, 35, 4, NULL, 0)) {
+                LOG_DBG("Bogus ports passed to remove");
                 rkfree(ports);
                 return false;
         }
