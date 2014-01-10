@@ -180,7 +180,6 @@ static int pfte_port_add(struct pft_entry * entry,
         return 0;
 }
 
-
 static int pfte_port_remove(struct pft_entry * entry,
                             port_id_t          id)
 {
@@ -224,7 +223,6 @@ static int pfte_ports_copy(struct pft_entry * entry,
         ASSERT(*entries);
 
         ports_amount = 0;
-
 
         list_for_each_entry_rcu(pos, &entry->ports, next) {
                 ++ports_amount;
@@ -465,7 +463,6 @@ int pft_nhop(struct pft * instance,
         return 0;
 }
 
-
 #ifdef CONFIG_RINA_PFT_REGRESSION_TESTS
 static bool regression_tests_nhop(void)
 {
@@ -557,7 +554,6 @@ static bool regression_tests_nhop(void)
                 return false;
         }
 
-
         if (pft_flush(tmp)) {
                 LOG_DBG("Failed to flush table");
                 return false;
@@ -620,7 +616,6 @@ static bool regression_tests_entries(void)
                 LOG_DBG("Failed to retrieve stored entry");
                 return false;
         }
-
 
         if (pft_remove(tmp, 16, 1, 1)) {
                 LOG_DBG("Failed to remove entry");
@@ -700,3 +695,4 @@ bool regression_tests_pft(void)
 
         return true;
 }
+#endif
