@@ -215,35 +215,35 @@ static int pfte_port_remove(struct pft_entry * entry,
 
 static int pfte_ports_copy(struct pft_entry * entry,
                            port_id_t **       port_ids,
-                           size_t *           size)
+                           size_t *           entries)
 {
         struct pft_port_entry * pos;
-        size_t                  ports_size;
+        size_t                  ports_amount;
         int                     i;
 
         ASSERT(pfte_is_ok(entry));
-        ASSERT(*size);
+        ASSERT(*entries);
 
-        ports_size = 0;
+        ports_amount = 0;
 
 
         list_for_each_entry_rcu(pos, &entry->ports, next) {
-                ++ports_size;
+                ++ports_amount;
         }
 
-        if (*size != ports_size) {
-                if (*size > 0)
+        if (*entries != ports_amount) {
+                if (*entries > 0)
                         rkfree(*port_ids);
-                *port_ids = rkzalloc(ports_size * sizeof(**port_ids),
+                *port_ids = rkzalloc(ports_amount * sizeof(**port_ids),
                                      GFP_ATOMIC);
                 if (!*port_ids) {
                         LOG_ERR("Could not allocate memory "
                                 "to return resulting ports");
-                        *size = 0;
+                        *entries = 0;
                         return -1;
                 }
 
-                *size = ports_size;
+                *entries = ports_amount;
         }
 
         /* Get the first port, and so on, fill in the port_ids */
@@ -348,9 +348,11 @@ static struct pft_entry * pft_find(struct pft * instance,
 int pft_add(struct pft * instance,
             address_t    destination,
             qos_id_t     qos_id,
-            port_id_t    port_id)
+            port_id_t  * port_id,
+            size_t       entries)
 {
         struct pft_entry * tmp;
+        int i;
 
         if (!pft_is_ok(instance))
                 return -1;
@@ -364,9 +366,11 @@ int pft_add(struct pft * instance,
                 list_add_rcu(&tmp->next, &instance->entries);
         }
 
-        if (pfte_port_add(tmp, port_id)) {
-                pfte_destroy(tmp);
-                return -1;
+        for (i = 0; i < entries; i++) {
+                if (pfte_port_add(tmp, port_id[i])) {
+                        pfte_destroy(tmp);
+                        return -1;
+                }
         }
 
         return 0;
@@ -375,9 +379,11 @@ int pft_add(struct pft * instance,
 int pft_remove(struct pft * instance,
                address_t    destination,
                qos_id_t     qos_id,
-               port_id_t    port_id)
+               port_id_t  * port_id,
+               size_t       entries)
 {
         struct pft_entry * tmp;
+        int i;
 
         if (!pft_is_ok(instance))
                 return -1;
@@ -386,9 +392,11 @@ int pft_remove(struct pft * instance,
         if (!tmp)
                 return -1;
 
-        if (pfte_port_remove(tmp, port_id)) {
-                LOG_ERR("Failed to remove port");
-                return -1;
+        for (i = 0; i < entries; i++) {
+                if (pfte_port_remove(tmp, port_id[i])) {
+                        LOG_ERR("Failed to remove port");
+                        return -1;
+                }
         }
 
         return 0;
@@ -398,14 +406,14 @@ int pft_nhop(struct pft * instance,
              address_t    destination,
              qos_id_t     qos_id,
              port_id_t ** port_ids,
-             size_t *     size)
+             size_t *     entries)
 {
         struct pft_entry * tmp;
 
         if (!pft_is_ok(instance))
                 return -1;
 
-        if (!port_ids || !size) {
+        if (!port_ids || !entries) {
                 LOG_ERR("Bogus input parameters");
                 return -1;
         }
@@ -423,7 +431,7 @@ int pft_nhop(struct pft * instance,
                 return -1;
         }
 
-        if (pfte_ports_copy(tmp, port_ids, size)) {
+        if (pfte_ports_copy(tmp, port_ids, entries)) {
                 rcu_read_unlock();
                 return -1;
         }

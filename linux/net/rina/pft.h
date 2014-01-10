@@ -37,16 +37,18 @@ int          pft_flush(struct pft * instance);
 int          pft_add(struct pft * instance,
                      address_t    destination,
                      qos_id_t     qos_id,
-                     port_id_t    port_id);
+                     port_id_t  * port_id,
+                     size_t       entries);
 int          pft_remove(struct pft * instance,
                         address_t    destination,
                         qos_id_t     qos_id,
-                        port_id_t    port_id);
+                        port_id_t  * port_id,
+                        size_t       entries);
 
 int          pft_nhop(struct pft * instance,
                       address_t    destination,
                       qos_id_t     qos_id,
                       port_id_t ** port_ids,
-                      size_t *     size);
+                      size_t *     entries);
 
 #endif
