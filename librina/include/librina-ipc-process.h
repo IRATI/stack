@@ -731,15 +731,16 @@ class PDUForwardingTableEntry {
         unsigned int qosId;
 
         /** The N-1 portid */
-        unsigned int portId;
+        std::list<unsigned int> portIds;
 public:
         PDUForwardingTableEntry();
         bool operator==(const PDUForwardingTableEntry &other) const;
         bool operator!=(const PDUForwardingTableEntry &other) const;
         unsigned int getAddress() const;
         void setAddress(unsigned int address);
-        unsigned int getPortId() const;
-        void setPortId(unsigned int portId);
+        const std::list<unsigned int> getPortIds() const;
+        void setPortIds(const std::list<unsigned int>& portIds);
+        void addPortId(unsigned int portId);
         unsigned int getQosId() const;
         void setQosId(unsigned int qosId);
 };
