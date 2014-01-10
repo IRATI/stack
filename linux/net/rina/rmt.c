@@ -710,8 +710,6 @@ static int process_mgmt_pdu(struct rmt * rmt,
         ASSERT(is_port_id_ok(port_id));
         ASSERT(pdu);
 
-        LOG_DBG("TEMP Entering process_mgmt_pdu");
-
         buffer = pdu_buffer_get_rw(pdu);
         if (!buffer_is_ok(buffer)) {
                 LOG_ERR("PDU has no buffer ???");
@@ -725,7 +723,7 @@ static int process_mgmt_pdu(struct rmt * rmt,
                 return -1;
         }
 
-        if (pdu_buffer_set(pdu, NULL)) {
+        if (pdu_buffer_disown(pdu)) {
                 pdu_destroy(pdu);
                 /* FIXME: buffer is owned by PDU and SDU, we're leaking sdu */
                 return -1;
@@ -1020,3 +1018,11 @@ int rmt_pdu_fte_remove(struct rmt *       instance,
         return -1;
 }
   
+#ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
+bool regression_tests_rmt(void)
+{
+        LOG_MISSING;
+
+        return true;
+}
+#endif

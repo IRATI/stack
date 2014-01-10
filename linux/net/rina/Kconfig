@@ -49,8 +49,15 @@ config RINA_DEBUG_HEARTBEATS
 	  No help for the time being
 
 config RINA_REGRESSION_TESTS
-	bool "Perform regression tests"
+	bool "Regression tests"
 	default n
+	help
+	  No help for the time being
+
+config RINA_RMT_REGRESSION_TESTS
+	bool "RMT regression tests"
+	default n
+        depends on RINA_REGRESSION_TESTS
 	help
 	  No help for the time being
 
