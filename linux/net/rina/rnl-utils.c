@@ -692,7 +692,7 @@ static int parse_pdu_fte_port_list_entries(struct nlattr * nested_attr,
                 }
                 INIT_LIST_HEAD(&port_entry->next);
 
-                port_entry->port_id = nla_get_u32(nla_data(nla));
+                port_entry->port_id = nla_get_u32(nla);
                 LOG_DBG("TEMP Got port_id in port_entry->port_id: %d",
                         port_entry->port_id);
                 list_add(&port_entry->next, &entry->ports);

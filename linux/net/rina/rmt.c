@@ -975,20 +975,6 @@ int rmt_pft_remove(struct rmt *       instance,
                                                     count) : -1;
 }
 
-int rmt_pdu_fte_add(struct rmt *       instance,
-                    struct list_head * pft_entries)
-{
-        LOG_MISSING;
-        return -1;
-}
-
-int rmt_pdu_fte_remove(struct rmt *       instance,
-                       struct list_head * pft_entries)
-{
-        LOG_MISSING;
-        return -1;
-}
-
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 bool regression_tests_rmt(void)
 {
