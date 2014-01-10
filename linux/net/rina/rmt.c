@@ -710,6 +710,8 @@ static int process_mgmt_pdu(struct rmt * rmt,
         ASSERT(is_port_id_ok(port_id));
         ASSERT(pdu);
 
+        LOG_DBG("TEMP Entering process_mgmt_pdu");
+
         buffer = pdu_buffer_get_rw(pdu);
         if (!buffer_is_ok(buffer)) {
                 LOG_ERR("PDU has no buffer ???");
@@ -970,3 +972,18 @@ int rmt_receive(struct rmt * instance,
 
         return 0;
 }
+
+int rmt_pdu_fte_add(struct rmt *       instance,
+                    struct list_head * pft_entries)
+{
+        LOG_MISSING;
+        return -1;
+}
+
+int rmt_pdu_fte_remove(struct rmt *       instance,
+                       struct list_head * pft_entries)
+{
+        LOG_MISSING;
+        return -1;
+}
+  

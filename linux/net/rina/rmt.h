@@ -78,4 +78,10 @@ int          rmt_receive(struct rmt * instance,
                          struct sdu * sdu,
                          port_id_t    from);
 
+/*PFT proxy API*/
+int          rmt_pdu_fte_add(struct rmt *       instance,
+                             struct list_head * pft_entries);
+int          rmt_pdu_fte_remove(struct rmt *       instance,
+                                struct list_head * pft_entries);
+
 #endif

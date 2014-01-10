@@ -523,7 +523,7 @@ rnl_rmt_mod_pfte_msg_attrs_destroy(struct rnl_rmt_mod_pfte_msg_attrs * attrs)
                 list_del(&pos->next);
                 rkfree(pos);
         }
-
+        LOG_DBG("rnl_rmt_mod_pfte_msg_attrs desrtoy correctly");
         rkfree(attrs);
         return 0;
 }
@@ -693,6 +693,8 @@ static int parse_pdu_fte_port_list_entries(struct nlattr * nested_attr,
                 INIT_LIST_HEAD(&port_entry->next);
 
                 port_entry->port_id = nla_get_u32(nla_data(nla));
+                LOG_DBG("TEMP Got port_id in port_entry->port_id: %d",
+                        port_entry->port_id);
                 list_add(&port_entry->next, &entry->ports);
         }
 
@@ -728,10 +730,14 @@ static int parse_pdu_fte_list_entry(struct nlattr * attr,
         if (attrs[PFTELE_ATTR_ADDRESS])
                 pfte_struct->destination =
                         nla_get_u32(attrs[PFTELE_ATTR_ADDRESS]);
+        LOG_DBG("TEMP address pfte_struct->destination: %d",
+                pfte_struct->destination);
 
         if (attrs[PFTELE_ATTR_QOSID])
                 pfte_struct->qos_id =
                         nla_get_u32(attrs[PFTELE_ATTR_QOSID]);
+        LOG_DBG("TEMP qos_id pfte_struct->qos_id:  %d",
+                pfte_struct->qos_id);
 
         if (attrs[PFTELE_ATTR_PORTIDS]) {
                 if (parse_pdu_fte_port_list_entries(attrs[PFTELE_ATTR_PORTIDS],
