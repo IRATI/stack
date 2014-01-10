@@ -20,7 +20,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/list.h>
+#include <linux/rculist.h>
 #include <linux/slab.h>
 
 #define RINA_PREFIX "pft"
@@ -43,7 +43,7 @@ static struct pft_port_entry * pft_pe_create_gfp(gfp_t     flags,
         struct pft_port_entry * tmp;
 
         ASSERT(is_port_id_ok(port_id));
-              
+
         tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
@@ -68,8 +68,9 @@ static bool pft_pe_is_ok(struct pft_port_entry * pe)
 static int pft_pe_destroy(struct pft_port_entry * pe)
 {
         ASSERT(pft_pe_is_ok(pe));
-               
-        list_del(&pe->next);
+
+        list_del_rcu(&pe->next);
+        synchronize_rcu();
         rkfree(pe);
 
         return 0;
@@ -82,12 +83,10 @@ static port_id_t pft_pe_port(struct pft_port_entry * pe)
         return pe->port_id;
 }
 
-/*
- * FIXME: This representation is crappy and MUST be changed
- */
+/* FIXME: This representation is crappy and MUST be changed */
 struct pft_entry {
         address_t destination;
-        qos_id_t  qos_id;   
+        qos_id_t  qos_id;
         struct    list_head ports;
         struct    list_head next;
 };
@@ -125,20 +124,21 @@ static bool pfte_is_ok(struct pft_entry * entry)
 
 static int pfte_destroy(struct pft_entry * entry)
 {
-        struct pft_port_entry * pos, * nxt;
+        struct pft_port_entry * pos;
         int                     ret;
 
         ASSERT(pfte_is_ok(entry));
 
-        list_for_each_entry_safe(pos, nxt, &entry->ports, next) {
+        list_for_each_entry_rcu(pos, &entry->ports, next) {
                 ret = pft_pe_destroy(pos);
                 if (!ret) {
-                        LOG_WARN("Could not destroy PDU-FWD-T entry %pK", pos);
+                        LOG_WARN("Could not destroy entry %pK", pos);
                         return ret;
                 }
         }
 
-        list_del(&entry->next);
+        list_del_rcu(&entry->next);
+        synchronize_rcu();
         rkfree(entry);
 
         return 0;
@@ -152,7 +152,7 @@ static struct pft_port_entry * pfte_port_find(struct pft_entry * entry,
 
         ASSERT(pfte_is_ok(entry));
 
-        list_for_each_entry(pos, &entry->ports, next) {
+        list_for_each_entry_rcu(pos, &entry->ports, next) {
                 if (pos->port_id == id)
                         return pos;
         }
@@ -175,28 +175,26 @@ static int pfte_port_add(struct pft_entry * entry,
         if (!pe)
                 return -1;
 
-        list_add(&pe->next, &entry->ports);
+        list_add_rcu(&pe->next, &entry->ports);
 
         return 0;
 }
 
-
 static int pfte_port_remove(struct pft_entry * entry,
                             port_id_t          id)
 {
-        struct pft_port_entry * pos, * nxt;
+        struct pft_port_entry * pos;
         int                     ret;
 
         ASSERT(pfte_is_ok(entry));
         ASSERT(is_port_id_ok(id));
 
         /* Remove the port-id here */
-        list_for_each_entry_safe(pos, nxt, &entry->ports, next) {
+        list_for_each_entry_rcu(pos, &entry->ports, next) {
                 if (pft_pe_port(pos) == id) {
                         ret = pft_pe_destroy(pos);
                         if (!ret) {
-                                LOG_WARN("Could not destroy PDU-FWD-T"
-                                         "entry %pK", pos);
+                                LOG_WARN("Could not destroy entry %pK", pos);
                                 return ret;
                         }
                 }
@@ -215,38 +213,39 @@ static int pfte_port_remove(struct pft_entry * entry,
 
 static int pfte_ports_copy(struct pft_entry * entry,
                            port_id_t **       port_ids,
-                           size_t *           size)
+                           size_t *           entries)
 {
-        struct pft_port_entry * pos, * nxt;
-        size_t                  ports_size;
+        struct pft_port_entry * pos;
+        size_t                  ports_amount;
         int                     i;
 
         ASSERT(pfte_is_ok(entry));
-        ASSERT(*size);
+        ASSERT(*entries);
 
-        ports_size = 0;
-        list_for_each_entry_safe(pos, nxt, &entry->ports, next) {
-                ++ports_size;
+        ports_amount = 0;
+
+        list_for_each_entry_rcu(pos, &entry->ports, next) {
+                ++ports_amount;
         }
-        
-        if (*size != ports_size) {
-                if (*size > 0)
+
+        if (*entries != ports_amount) {
+                if (*entries > 0)
                         rkfree(*port_ids);
-                *port_ids = rkzalloc(ports_size * sizeof(**port_ids),
-                                     GFP_KERNEL);
+                *port_ids = rkzalloc(ports_amount * sizeof(**port_ids),
+                                     GFP_ATOMIC);
                 if (!*port_ids) {
                         LOG_ERR("Could not allocate memory "
                                 "to return resulting ports");
-                        *size = 0;
+                        *entries = 0;
                         return -1;
                 }
 
-                *size = ports_size;
+                *entries = ports_amount;
         }
 
         /* Get the first port, and so on, fill in the port_ids */
         i = 0;
-        list_for_each_entry_safe(pos, nxt, &entry->ports, next) {
+        list_for_each_entry_rcu(pos, &entry->ports, next) {
                 *port_ids[i] = pft_pe_port(pos);
                 ++i;
         }
@@ -288,16 +287,16 @@ bool pft_is_empty(struct pft * instance)
 
 static int __pft_flush(struct pft * instance)
 {
-        struct pft_entry * pos, * nxt;
+        struct pft_entry * pos;
         int                ret;
 
         ASSERT(pft_is_ok(instance));
 
-        list_for_each_entry_safe(pos, nxt, &instance->entries, next) {
-                list_del(&pos->next);
+        list_for_each_entry_rcu(pos, &instance->entries, next) {
+                list_del_rcu(&pos->next);
                 ret = pfte_destroy(pos);
                 if (!ret) {
-                        LOG_WARN("Could not destroy PDU-FWD-T entry %pK", pos);
+                        LOG_WARN("Could not destroy entry %pK", pos);
                         return ret;
                 }
         }
@@ -306,12 +305,7 @@ static int __pft_flush(struct pft * instance)
 }
 
 int pft_flush(struct pft * instance)
-{
-        if (!pft_is_ok(instance))
-                return -1;
-
-        return __pft_flush(instance);
-}
+{ return pft_is_ok(instance) ? __pft_flush(instance) : -1; }
 
 int pft_destroy(struct pft * instance)
 {
@@ -322,7 +316,7 @@ int pft_destroy(struct pft * instance)
 
         ret = __pft_flush(instance);
         if (ret)
-                return ret;
+                return -1;
 
         rkfree(instance);
 
@@ -336,25 +330,38 @@ static struct pft_entry * pft_find(struct pft * instance,
         struct pft_entry * pos;
 
         ASSERT(pft_is_ok(instance));
+        ASSERT(is_address_ok(destination));
 
-        list_for_each_entry(pos, &instance->entries, next) {
+        rcu_read_lock();
+        list_for_each_entry_rcu(pos, &instance->entries, next) {
                 if ((pos->destination == destination) &&
-                    (pos->qos_id      == qos_id))
+                    (pos->qos_id      == qos_id)) {
+                        rcu_read_unlock();
                         return pos;
+                }
         }
+        rcu_read_unlock();
 
         return NULL;
 }
 
-int pft_add(struct pft * instance,
-            address_t    destination,
-            qos_id_t     qos_id,
-            port_id_t    port_id)
+int pft_add(struct pft *       instance,
+            address_t          destination,
+            qos_id_t           qos_id,
+            const port_id_t  * ports,
+            size_t             count)
 {
         struct pft_entry * tmp;
+        int                i;
 
         if (!pft_is_ok(instance))
                 return -1;
+
+        if (!is_address_ok(destination) ||
+            !is_qos_id_ok(qos_id)) {
+                LOG_ERR("Bogus input parameters");
+                return -1;
+        }
 
         tmp = pft_find(instance, destination, qos_id);
         if (!tmp) {
@@ -362,34 +369,50 @@ int pft_add(struct pft * instance,
                 if (!tmp)
                         return -1;
 
-                list_add(&tmp->next, &instance->entries);
+                list_add_rcu(&tmp->next, &instance->entries);
         }
 
-        if (pfte_port_add(tmp, port_id)) {
-                pfte_destroy(tmp);
-                return -1;
+        for (i = 0; i < count; i++) {
+                if (pfte_port_add(tmp, ports[i])) {
+                        pfte_destroy(tmp);
+                        return -1;
+                }
         }
 
         return 0;
 }
 
-int pft_remove(struct pft * instance,
-               address_t    destination,
-               qos_id_t     qos_id,
-               port_id_t    port_id)
+int pft_remove(struct pft *       instance,
+               address_t          destination,
+               qos_id_t           qos_id,
+               const port_id_t  * ports,
+               size_t             count)
 {
         struct pft_entry * tmp;
+        int                i;
 
         if (!pft_is_ok(instance))
                 return -1;
+
+        if (!is_address_ok(destination) ||
+            !is_qos_id_ok(qos_id)) {
+                LOG_ERR("Bogus input parameters");
+                return -1;
+        }
 
         tmp = pft_find(instance, destination, qos_id);
         if (!tmp)
                 return -1;
 
-        if (pfte_port_remove(tmp, port_id)) {
-                LOG_ERR("Failed to remove port");
-                return -1;
+        for (i = 0; i < count; i++) {
+                if (pfte_port_remove(tmp, ports[i])) {
+                        LOG_ERR("Failed to remove port %zd", i);
+                        /*
+                         * FIXME: Should we fall through removing as much
+                         *        as we can ?
+                         */
+                        return -1;
+                }
         }
 
         return 0;
@@ -398,31 +421,47 @@ int pft_remove(struct pft * instance,
 int pft_nhop(struct pft * instance,
              address_t    destination,
              qos_id_t     qos_id,
-             port_id_t ** port_ids,
-             size_t *     size)
+             port_id_t ** ports,
+             size_t *     count)
 {
         struct pft_entry * tmp;
 
         if (!pft_is_ok(instance))
                 return -1;
 
-        if (!port_ids || !size) {
+        if (!is_address_ok(destination) ||
+            !is_qos_id_ok(qos_id)) {
                 LOG_ERR("Bogus input parameters");
                 return -1;
         }
 
-        tmp = pft_find(instance, destination, qos_id);
-        if (!tmp) {
-                LOG_ERR("Could not find any entry");
+        if (!ports || !count) {
+                LOG_ERR("Bogus input parameters");
                 return -1;
         }
 
-        if (pfte_ports_copy(tmp, port_ids, size))
+        /*
+         * Taking the lock here since otherwise instance might be deleted when
+         * copying the ports
+         */
+        rcu_read_lock();
+
+        tmp = pft_find(instance, destination, qos_id);
+        if (!tmp) {
+                LOG_ERR("Could not find any entry");
+                rcu_read_unlock();
                 return -1;
+        }
+
+        if (pfte_ports_copy(tmp, ports, count)) {
+                rcu_read_unlock();
+                return -1;
+        }
+
+        rcu_read_unlock();
 
         return 0;
 }
-
 
 #ifdef CONFIG_RINA_PFT_REGRESSION_TESTS
 static bool regression_tests_nhop(void)
@@ -430,130 +469,168 @@ static bool regression_tests_nhop(void)
         struct pft *       tmp;
         port_id_t *        port_ids;
         size_t             nr;
- 
+        port_id_t *        ports;
+        size_t             entries;
+
         tmp = pft_create();
         if (!tmp) {
                 LOG_DBG("Failed to create pft instance");
                 return false;
         }
 
-        if (pft_add(tmp, 30, 2, 2)) {
-                LOG_DBG("Failed to add entry");
+        entries = 1;
+        ports = rkmalloc(sizeof(*ports), GFP_KERNEL);
+        if (!ports) {
+                LOG_DBG("Failed to malloc");
                 return false;
         }
-        
-        if (pft_add(tmp, 30, 2, 99)) {
+
+        ports[0] = 2;
+        if (pft_add(tmp, 30, 2, ports, entries)) {
                 LOG_DBG("Failed to add entry");
+                rkfree(ports);
+                return false;
+        }
+
+        ports[0] = 99;
+        if (pft_add(tmp, 30, 2, ports, entries)) {
+                LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
         }
 
         nr = 0;
         if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
                 LOG_DBG("Failed to get port-ids");
+                rkfree(ports);
                 return false;
         }
 
         if (nr != 2) {
                 LOG_DBG("Wrong number of port-ids returned");
+                rkfree(ports);
                 return false;
         }
 
         if (port_ids[0] != 2) {
                 LOG_DBG("Wrong port-id returned");
+                rkfree(ports);
                 return false;
         }
-        
+
         if (port_ids[1] != 99) {
                 LOG_DBG("Wrong port-id returned");
+                rkfree(ports);
                 return false;
         }
 
         if (pft_flush(tmp)) {
                 LOG_DBG("Failed to flush table");
+                rkfree(ports);
                 return false;
         }
 
         /* Port-id table is now 2 in size */
-        if (pft_add(tmp, 30, 2, 2)) {
+
+        ports[0] = 2;
+        if (pft_add(tmp, 30, 2, ports, entries)) {
                 LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
         }
-        
-        if (pft_add(tmp, 30, 2, 99)) {
+
+        ports[0] = 99;
+        if (pft_add(tmp, 30, 2, ports, entries)) {
                 LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
         }
 
         if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
                 LOG_DBG("Failed to get port-ids");
+                rkfree(ports);
                 return false;
         }
 
         if (nr != 2) {
                 LOG_DBG("Wrong number of port-ids returned");
+                rkfree(ports);
                 return false;
         }
 
         if (pft_flush(tmp)) {
                 LOG_DBG("Failed to flush table");
+                rkfree(ports);
                 return false;
         }
 
         /* Trying with 1 port-id */
-
-        if (pft_add(tmp, 30, 2, 2)) {
+        ports[0] = 2;
+        if (pft_add(tmp, 30, 2, ports, entries)) {
                 LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
-        }        
-        
+        }
+
         if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
                 LOG_DBG("Failed to get port-ids");
+                rkfree(ports);
                 return false;
         }
 
         if (nr != 1) {
                 LOG_DBG("Wrong number of port-ids returned");
+                rkfree(ports);
                 return false;
         }
 
-
         if (pft_flush(tmp)) {
                 LOG_DBG("Failed to flush table");
+                rkfree(ports);
                 return false;
         }
 
         /* Trying with 3 port-ids */
-
-        if (pft_add(tmp, 30, 2, 2)) {
+        ports[0] = 2;
+        if (pft_add(tmp, 30, 2, ports, entries)) {
                 LOG_DBG("Failed to add entry");
-                return false;
-        }
-        
-        if (pft_add(tmp, 30, 2, 99)) {
-                LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
         }
 
-        if (pft_add(tmp, 30, 2, 9)) {
+        ports[0] = 99;
+        if (pft_add(tmp, 30, 2,  ports, entries)) {
                 LOG_DBG("Failed to add entry");
+                rkfree(ports);
+                return false;
+        }
+
+        ports[0] = 9;
+        if (pft_add(tmp, 30, 2,  ports, entries)) {
+                LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
         }
 
         if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
                 LOG_DBG("Failed to get port-ids");
+                rkfree(ports);
                 return false;
         }
 
         if (nr != 3) {
                 LOG_DBG("Wrong number of port-ids returned");
+                rkfree(ports);
                 return false;
         }
 
         if (pft_destroy(tmp)) {
                 LOG_DBG("Failed to destroy instance");
+                rkfree(ports);
                 return false;
         }
-        
+
+        rkfree(ports);
         return true;
 }
 
@@ -561,64 +638,85 @@ static bool regression_tests_entries(void)
 {
         struct pft *       tmp;
         struct pft_entry * e;
- 
+        port_id_t * ports;
+        size_t entries;
+
         tmp = pft_create();
         if (!tmp) {
                 LOG_DBG("Failed to create pft instance");
                 return false;
         }
-        
-        if (pft_add(tmp, 16, 1, 1)) {
-                LOG_DBG("Failed to add entry");
+
+        entries = 1;
+        ports = rkmalloc(sizeof(*ports), GFP_KERNEL);
+        if (!ports) {
+                LOG_DBG("Failed to malloc");
                 return false;
         }
-        
+
+        ports[0] = 1;
+        if (pft_add(tmp, 16, 1, ports, entries)) {
+                LOG_DBG("Failed to add entry");
+                rkfree(ports);
+                return false;
+        }
+
         e = pft_find(tmp, 16,1);
         if (!e) {
                 LOG_DBG("Failed to retrieve stored entry");
+                rkfree(ports);
                 return false;
         }
 
-
-        if (pft_remove(tmp, 16, 1, 1)) {
+        if (pft_remove(tmp, 16, 1, ports, entries)) {
                 LOG_DBG("Failed to remove entry");
+                rkfree(ports);
                 return false;
         }
 
-        if (!pft_remove(tmp, 16, 1, 1)) {
+        if (!pft_remove(tmp, 16, 1, ports, entries)) {
                 LOG_DBG("Entry should have already been removed");
+                rkfree(ports);
                 return false;
         }
 
-        if (!pft_remove(tmp, 35, 4, 6)) {
+        if (!pft_remove(tmp, 35, 4, ports, entries)) {
                 LOG_DBG("No such entry was added");
+                rkfree(ports);
                 return false;
         }
 
-        if (pft_add(tmp, 30, 2, 2)) {
+        ports[0] = 2;
+        if (pft_add(tmp, 30, 8, ports, entries)) {
                 LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
         }
-        
-        if (pft_add(tmp, 35, 5, 99)) {
+
+        ports[0] = 99;
+        if (pft_add(tmp, 35, 5, ports, entries)) {
                 LOG_DBG("Failed to add entry");
+                rkfree(ports);
                 return false;
         }
 
         if (pft_flush(tmp)) {
                 LOG_DBG("Failed to flush table");
+                rkfree(ports);
                 return false;
         }
 
         if (pft_destroy(tmp)) {
                 LOG_DBG("Failed to destroy instance");
+                rkfree(ports);
                 return false;
         }
 
+        rkfree(ports);
         return true;
 }
 
-static bool regression_tests_instance(void) 
+static bool regression_tests_instance(void)
 {
         struct pft * tmp;
 
@@ -627,7 +725,7 @@ static bool regression_tests_instance(void)
                 LOG_DBG("Failed to create pft instance");
                 return false;
         }
-        
+
         if (pft_destroy(tmp)) {
                 LOG_DBG("Failed to destroy instance");
                 return false;

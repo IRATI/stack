@@ -406,6 +406,16 @@ struct buffer * pdu_buffer_get_rw(struct pdu * pdu)
 }
 EXPORT_SYMBOL(pdu_buffer_get_rw);
 
+int pdu_buffer_disown(struct pdu * pdu)
+{
+        if (!pdu)
+                return -1;
+
+        pdu->buffer = NULL;
+        return 0;
+}
+EXPORT_SYMBOL(pdu_buffer_disown);
+
 int pdu_buffer_set(struct pdu * pdu, struct buffer * buffer)
 {
         if (!pdu)

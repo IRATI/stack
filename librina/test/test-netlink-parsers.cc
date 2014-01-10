@@ -2856,15 +2856,20 @@ int testIpcpDestroyConnectionResult() {
 int testRmtModifyPDUFTEntriesRequestMessage() {
         std::cout << "TESTING RMT MODIFY PDU FTE REQUEST MESSAGE\n";
         int returnValue = 0;
+        std::list<PDUForwardingTableEntry>::const_iterator iterator;
 
         RmtModifyPDUFTEntriesRequestMessage message;
         PDUForwardingTableEntry entry1, entry2;
         entry1.setAddress(23);
-        entry1.setPortId(34);
+        entry1.addPortId(34);
+        entry1.addPortId(24);
+        entry1.addPortId(39);
         entry1.setQosId(1);
         message.addEntry(entry1);
         entry2.setAddress(20);
-        entry2.setPortId(19);
+        entry2.addPortId(28);
+        entry2.addPortId(35);
+        entry2.addPortId(54);
         entry2.setQosId(2);
         message.addEntry(entry2);
         message.setMode(1);
@@ -2902,6 +2907,16 @@ int testRmtModifyPDUFTEntriesRequestMessage() {
                 std::cout << "Size of entries in original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
+        }
+
+        for (iterator = recoveredMessage->getEntries().begin();
+                        iterator != recoveredMessage->getEntries().end();
+                        ++iterator) {
+                if (iterator->getPortIds().size() != 3) {
+                        std::cout << "Size of portids in original and recovered messages"
+                                        << " are different\n";
+                        returnValue = -1;
+                }
         }
 
         if (returnValue == 0) {

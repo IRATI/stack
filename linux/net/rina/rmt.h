@@ -63,6 +63,19 @@ int          rmt_queue_recv_add(struct rmt * instance,
 int          rmt_queue_recv_delete(struct rmt * instance,
                                    port_id_t    id);
 
+int          rmt_pft_flush(struct rmt * instance);
+
+int          rmt_pft_add(struct rmt *       instance,
+                         address_t          destination,
+                         qos_id_t           qos_id,
+                         const port_id_t  * ports,
+                         size_t             count);
+int          rmt_pft_remove(struct rmt *       instance,
+                            address_t          destination,
+                            qos_id_t           qos_id,
+                            const port_id_t  * ports,
+                            const size_t       count);
+
 /* FIXME: Please check the following API */
 int          rmt_send(struct rmt * instance,
                       address_t    address,
@@ -77,5 +90,11 @@ int          rmt_send_port_id(struct rmt *  instance,
 int          rmt_receive(struct rmt * instance,
                          struct sdu * sdu,
                          port_id_t    from);
+
+/*PFT proxy API*/
+int          rmt_pdu_fte_add(struct rmt *       instance,
+                             struct list_head * pft_entries);
+int          rmt_pdu_fte_remove(struct rmt *       instance,
+                                struct list_head * pft_entries);
 
 #endif

@@ -48,6 +48,26 @@ config RINA_DEBUG_HEARTBEATS
 	help
 	  No help for the time being
 
+config RINA_REGRESSION_TESTS
+	bool "Regression tests"
+	default n
+	help
+	  No help for the time being
+
+config RINA_RMT_REGRESSION_TESTS
+	bool "RMT regression tests"
+	default n
+        depends on RINA_REGRESSION_TESTS
+	help
+	  No help for the time being
+
+config RINA_PFT_REGRESSION_TESTS
+	bool "PFT regression tests"
+	default n
+        depends on RINA_REGRESSION_TESTS
+	help
+	  No help for the time being
+
 config RINA_ASSERTIONS
 	bool "Embed assertions (slowing down everything)"
 	default y
