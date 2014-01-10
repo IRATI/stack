@@ -248,7 +248,7 @@ static struct personality_data data;
 
 static struct personality * personality = NULL;
 
-#ifdef CONFIG_RINA_REGRESSION_TESTS
+#ifdef CONFIG_RINA_PFT_REGRESSION_TESTS
 /* FIXME: Remove the following */
 extern bool regression_tests_pft(void);
 #endif
@@ -270,8 +270,8 @@ static int __init mod_init(void)
 
         ASSERT(personality != NULL);
 
-#ifdef CONFIG_RINA_REGRESSION_TESTS
-        /* FIXME: This is not the right place, please fix */ 
+        /* FIXME: This is not the right place, please fix */
+#ifdef CONFIG_RINA_PFT_REGRESSION_TESTS
         if (!regression_tests_pft())
                 return -1;
 #endif

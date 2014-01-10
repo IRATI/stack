@@ -677,11 +677,9 @@ static bool regression_tests_instance(void)
 
         return true;
 }
-#endif
 
 bool regression_tests_pft(void)
 {
-#ifdef CONFIG_RINA_PFT_REGRESSION_TESTS
         if (!regression_tests_instance()) {
                 LOG_ERR("Creating of a pft instance test failed, "
                         "bailing out");
@@ -699,7 +697,6 @@ bool regression_tests_pft(void)
                         "bailing out");
                 return false;
         }
-#else
-#endif
+
         return true;
 }
