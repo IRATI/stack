@@ -333,7 +333,7 @@ int dtp_receive(struct dtp * instance,
         }
 
         buffer = pdu_buffer_get_rw(pdu);
-        sdu = sdu_create_with(buffer);
+        sdu = sdu_create_buffer_with(buffer);
         if (!sdu) {
                 pdu_destroy(pdu);
                 return -1;
