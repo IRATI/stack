@@ -601,6 +601,8 @@ static bool regression_tests_entries(void)
 {
         struct pft *       tmp;
         struct pft_entry * e;
+        port_id_t * port_ids;
+        size_t entries;
 
         tmp = pft_create();
         if (!tmp) {
