@@ -1138,6 +1138,7 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
         ipc_process_id_t                    ipc_id;
         struct pdu_fte_list_entry *         entry;
         struct pdu_fte_p_list_entry *       port_entry;
+        int                                 problems = 0;
 
         int (* op)(struct ipcp_instance_data * data,
                    address_t                   address,
@@ -1190,13 +1191,14 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
                                 entry->destination,
                                 entry->qos_id,
                                 port_entry->port_id)) {
-                                 /*FIXME add error counter*/
-                                 LOG_WARN("There were probles");
+                                 problems++;
                                  /* goto fail;*/
                          }
                  }
         }
 
+        if (problems)
+                LOG_WARN("There were %d problematic entries", problems);
         rnl_msg_destroy(msg);
         return 0;
 
