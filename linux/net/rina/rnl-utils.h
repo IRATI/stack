@@ -590,15 +590,11 @@ struct rnl_ipcm_query_rib_resp_msg_attrs {
         struct rib_object * rib_objs;
 };
 
-struct pdu_fte_p_list_entry {
-        port_id_t        port_id;
-        struct list_head next;
-};
-
 struct pdu_fte_list_entry {
         address_t destination;
         qos_id_t  qos_id;
-        struct list_head ports;
+        port_id_t ** ports;
+        size_t ports_size;
         struct list_head next;
 };
 

@@ -1137,13 +1137,13 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
         struct ipcp_instance *              ipc_process;
         ipc_process_id_t                    ipc_id;
         struct pdu_fte_list_entry *         entry;
-        struct pdu_fte_p_list_entry *       port_entry;
         int                                 problems = 0;
 
         int (* op)(struct ipcp_instance_data * data,
                    address_t                   address,
                    qos_id_t                    qos_id,
-                   port_id_t                   port_id);
+                   port_id_t *                 ports,
+                   size_t                      size);
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -1186,14 +1186,12 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
 
         ASSERT(op);
         list_for_each_entry(entry, &attrs->pft_entries, next) {
-                 list_for_each_entry(port_entry, &entry->ports, next) {
-                         if (op(ipc_process->data,
-                                entry->destination,
-                                entry->qos_id,
-                                port_entry->port_id)) {
+                if (op(ipc_process->data,
+                       entry->destination,
+                       entry->qos_id,
+                       *(entry->ports),
+                       entry->ports_size)) {
                                  problems++;
-                                 /* goto fail;*/
-                         }
                  }
         }
 

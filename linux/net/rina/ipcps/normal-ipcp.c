@@ -541,7 +541,8 @@ static int normal_management_sdu_post(struct ipcp_instance_data * data,
 static int normal_pft_add(struct ipcp_instance_data * data,
                           address_t                   address,
                           qos_id_t                    qos_id,
-                          port_id_t                   port_id)
+                          port_id_t *                 ports,
+                          size_t                      size)
 
 {
         LOG_MISSING;
@@ -551,7 +552,8 @@ static int normal_pft_add(struct ipcp_instance_data * data,
 static int normal_pft_remove(struct ipcp_instance_data * data,
                              address_t                   address,
                              qos_id_t                    qos_id,
-                             port_id_t                   port_id)
+                             port_id_t *                 ports,
+                             size_t                      size)
 {
         LOG_MISSING;
         return -1;

@@ -187,12 +187,14 @@ struct ipcp_instance_ops {
         int (* pft_add)(struct ipcp_instance_data * data,
                         address_t                   address,
                         qos_id_t                    qos_id,
-                        port_id_t                   port_id);
+                        port_id_t *                 ports,
+                        size_t                      size);
 
         int (* pft_remove)(struct ipcp_instance_data * data,
                            address_t                   address,
                            qos_id_t                    qos_id,
-                           port_id_t                   port_id);
+                           port_id_t *                 ports,
+                           size_t                      size);
 
 };
 
