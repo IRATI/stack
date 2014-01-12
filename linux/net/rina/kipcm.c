@@ -809,8 +809,10 @@ static int notify_ipcp_conn_create_req(void *             data,
                                                info->snd_portid);
 }
 
-/* FIXME: create_req and create_arrived are almost identicall,
- *  code should be reused */
+/*
+ * FIXME: create_req and create_arrived are almost identical, code should be
+ *        reused
+ */
 
 static int
 conn_create_result_free_and_reply(struct rnl_msg * msg,
@@ -1190,7 +1192,7 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
                                 entry->destination,
                                 entry->qos_id,
                                 port_entry->port_id)) {
-                                 /*FIXME add error counter*/
+                                 /* FIXME add error counter */
                                  LOG_WARN("There were probles");
                                  /* goto fail;*/
                          }

@@ -315,8 +315,8 @@ static int dummy_flow_deallocate(struct ipcp_instance_data * data,
                 dest_port_id = flow->port_id;
 
         /*
-         *FIXME: dummy_flow is not updated after unbinding cause it is going
-         *       to be deleted. Is it really needed to unbind+destroy?
+         * FIXME: dummy_flow is not updated after unbinding cause it is going
+         *        to be deleted. Is it really needed to unbind+destroy?
          */
 
         if (kfa_flow_deallocate(data->kfa, id) ||
