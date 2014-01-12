@@ -1180,23 +1180,23 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
                 return -1;
         }
 
-        if (attrs->mode) 
+        if (attrs->mode)
                 op = ipc_process->ops->pft_add;
         else
                 op = ipc_process->ops->pft_remove;
 
         ASSERT(op);
         list_for_each_entry(entry, &attrs->pft_entries, next) {
-                 list_for_each_entry(port_entry, &entry->ports, next) {
-                         if (op(ipc_process->data,
-                                entry->destination,
-                                entry->qos_id,
-                                port_entry->port_id)) {
-                                 /* FIXME add error counter */
-                                 LOG_WARN("There were probles");
-                                 /* goto fail;*/
-                         }
-                 }
+                list_for_each_entry(port_entry, &entry->ports, next) {
+                        if (op(ipc_process->data,
+                               entry->destination,
+                               entry->qos_id,
+                               port_entry->port_id)) {
+                                /* FIXME add error counter */
+                                LOG_WARN("There were probles");
+                                /* goto fail;*/
+                        }
+                }
         }
 
         rnl_msg_destroy(msg);
