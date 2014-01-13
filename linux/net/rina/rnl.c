@@ -414,19 +414,21 @@ static struct ipcm_rnl_port {
 } ipcm_port;
 
 rnl_port_t rnl_get_ipc_manager_port(void)
-{ 
+{
         rnl_port_t ret;
+
         spin_lock(&ipcm_port.lock);
-        ret = ipcm_port.ipc_manager_port; 
+        ret = ipcm_port.ipc_manager_port;
         spin_unlock(&ipcm_port.lock);
+
         return ret;
 }
 EXPORT_SYMBOL(rnl_get_ipc_manager_port);
 
 void rnl_set_ipc_manager_port(rnl_port_t port)
-{ 
+{
         spin_lock(&ipcm_port.lock);
-        ipcm_port.ipc_manager_port = port; 
+        ipcm_port.ipc_manager_port = port;
         spin_unlock(&ipcm_port.lock);
 }
 EXPORT_SYMBOL(rnl_set_ipc_manager_port);
