@@ -150,6 +150,35 @@ static struct rmt_queue * qmap_find(struct rmt_qmap * m,
         return NULL;
 }
 
+struct pft_cache {
+        port_id_t * pids;  /* Array of port_id_t */
+        size_t      count; /* Entries in the pids array */
+};
+
+static int pft_cache_init(struct pft_cache * c)
+{
+        ASSERT(c);
+
+        c->pids  = NULL;
+        c->count = 0;
+
+        return 0;
+}
+
+static int pft_cache_fini(struct pft_cache * c)
+{ 
+        ASSERT(c);
+
+        if (c->count) {
+                ASSERT(c->pids);
+                rkfree(c->pids);
+        } else {
+                ASSERT(!c->pids);
+        }
+
+        return 0;
+}
+
 struct rmt {
         address_t               address;
         struct ipcp_instance *  parent;
@@ -158,10 +187,7 @@ struct rmt {
         struct efcp_container * efcpc;
 
         /* PFT cache */
-        struct {
-                port_id_t *     pids;  /* NOTE: Array of port_id_t */
-                size_t          count; /* NOTE: Entries in the pids array */
-        } pft_cache; /* FIXME: This caching is bougs, has to be refined */
+        struct pft_cache        cache;
 
         struct {
                 struct workqueue_struct * wq;
@@ -255,8 +281,10 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                 return NULL;
         }
 
-        tmp->pft_cache.pids = NULL;
-        tmp->pft_cache.count = 0;
+        if (pft_cache_init(&tmp->cache)) {
+                rmt_destroy(tmp);
+                return NULL;
+        }
 
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
@@ -279,10 +307,7 @@ int rmt_destroy(struct rmt * instance)
 
         if (instance->pft)            pft_destroy(instance->pft);
 
-        if (instance->pft_cache.pids) {
-                ASSERT(instance->pft_cache.count);
-                rkfree(instance->pft_cache.pids);
-        }
+        pft_cache_fini(&instance->cache);
 
         rkfree(instance);
 
@@ -521,8 +546,8 @@ int rmt_send(struct rmt * instance,
         if (pft_nhop(instance->pft,
                      address,
                      qos_id,
-                     &(instance->pft_cache.pids),
-                     &(instance->pft_cache.count))) {
+                     &(instance->cache.pids),
+                     &(instance->cache.count))) {
                 pdu_destroy(pdu);
                 return -1;
         }
@@ -533,11 +558,11 @@ int rmt_send(struct rmt * instance,
          *   address + qos-id (pdu-fwd-t) -> port-id
          */
         
-        for (i = 0; i < instance->pft_cache.count; i++) {
+        for (i = 0; i < instance->cache.count; i++) {
                 LOG_DBG("Gonna send PDU to port_id: %d",
-                        instance->pft_cache.pids[i]);
+                        instance->cache.pids[i]);
                 if (rmt_send_port_id(instance,
-                                     instance->pft_cache.pids[i],
+                                     instance->cache.pids[i],
                                      pdu))
                         LOG_ERR("Failed to send a PDU");
         }
@@ -736,8 +761,8 @@ static int process_dt_pdu(struct rmt *        rmt,
                 if (pft_nhop(rmt->pft,
                              dest_add,
                              qos_id,
-                             &(rmt->pft_cache.pids),
-                             &(rmt->pft_cache.count))) {
+                             &(rmt->cache.pids),
+                             &(rmt->cache.count))) {
                         pdu_destroy(pdu);
                         return -1;
                 }
@@ -751,12 +776,12 @@ static int process_dt_pdu(struct rmt *        rmt,
                 }
                 pdu_destroy(pdu);
 
-                for (i = 0; i < rmt->pft_cache.count; i++) {
+                for (i = 0; i < rmt->cache.count; i++) {
                         if (kfa_flow_sdu_write(rmt->kfa,
-                                               rmt->pft_cache.pids[i],
+                                               rmt->cache.pids[i],
                                                sdu))
                                 LOG_ERR("Cannot write SDU to KFA port-id %d",
-                                        rmt->pft_cache.pids[i]);
+                                        rmt->cache.pids[i]);
                 }
 
                 return 0;
