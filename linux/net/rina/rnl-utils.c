@@ -505,7 +505,6 @@ static int
 rnl_rmt_mod_pfte_msg_attrs_destroy(struct rnl_rmt_mod_pfte_msg_attrs * attrs)
 {
         struct pdu_fte_list_entry   * pos, * nxt;
-        struct pdu_fte_p_list_entry * pos_port, * nxt_port;
 
         if (!attrs)
                 return -1;
@@ -514,12 +513,8 @@ rnl_rmt_mod_pfte_msg_attrs_destroy(struct rnl_rmt_mod_pfte_msg_attrs * attrs)
                                  &attrs->pft_entries,
                                  next) {
 
-                list_for_each_entry_safe(pos_port, nxt_port,
-                                         &pos->ports,
-                                         next) {
-                        list_del(&pos_port->next);
-                        rkfree(pos_port);
-                }
+                if (*(pos->ports)) rkfree(*(pos->ports));
+
                 list_del(&pos->next);
                 rkfree(pos);
         }
@@ -663,11 +658,10 @@ static int parse_flow_spec(struct nlattr * fspec_attr,
 static int parse_pdu_fte_port_list_entries(struct nlattr * nested_attr,
                                            struct pdu_fte_list_entry * entry)
 {
-        size_t                        ports_size = 0;
-        int                           problems   = 0;
         int                           rem        = 0;
+        int                           i          = 0;
         struct nlattr *               nla;
-        struct pdu_fte_p_list_entry * port_entry;
+        port_id_t *                   ports;
 
         if (!nested_attr) {
                 LOG_ERR("Bogus nested attribute (ports) passed, bailing out");
@@ -679,30 +673,27 @@ static int parse_pdu_fte_port_list_entries(struct nlattr * nested_attr,
                 return -1;
         }
 
+        entry->ports_size = nla_len(nested_attr);
+        ports = rkzalloc(entry->ports_size, GFP_KERNEL);
+        LOG_DBG("Allocated %d bytes in %pk", entry->ports_size, ports);
+
+        if (!ports) {
+                LOG_ERR("Could not allocate memory for ports");
+                return -1;
+        }
+
         for (nla = (struct nlattr*) nla_data(nested_attr),
                      rem = nla_len(nested_attr);
              nla_ok(nla, rem);
              nla = nla_next(nla, &rem)) {
-                ports_size++;
-
-                port_entry = rkzalloc(sizeof(*port_entry), GFP_KERNEL);
-                if (!port_entry) {
-                        problems++;
-                        continue;
-                }
-                INIT_LIST_HEAD(&port_entry->next);
-
-                port_entry->port_id = nla_get_u32(nla);
-                LOG_DBG("TEMP Got port_id in port_entry->port_id: %d",
-                        port_entry->port_id);
-                list_add(&port_entry->next, &entry->ports);
+                ports[i] = nla_get_u32(nla);
+                i++;
         }
+
+        entry->ports = &ports;
 
         if (rem)
                 LOG_WARN("Missing bits to pars");
-
-        if (problems)
-                LOG_WARN("There were %d entries with problems", problems);
 
         return 0;
 
@@ -730,14 +721,10 @@ static int parse_pdu_fte_list_entry(struct nlattr * attr,
         if (attrs[PFTELE_ATTR_ADDRESS])
                 pfte_struct->destination =
                         nla_get_u32(attrs[PFTELE_ATTR_ADDRESS]);
-        LOG_DBG("TEMP address pfte_struct->destination: %d",
-                pfte_struct->destination);
 
         if (attrs[PFTELE_ATTR_QOSID])
                 pfte_struct->qos_id =
                         nla_get_u32(attrs[PFTELE_ATTR_QOSID]);
-        LOG_DBG("TEMP qos_id pfte_struct->qos_id:  %d",
-                pfte_struct->qos_id);
 
         if (attrs[PFTELE_ATTR_PORTIDS]) {
                 if (parse_pdu_fte_port_list_entries(attrs[PFTELE_ATTR_PORTIDS],
@@ -1808,7 +1795,6 @@ static int parse_list_of_pfte_config_entries(struct nlattr *     nested_attr,
                         continue;
                 }
                 INIT_LIST_HEAD(&entry->next);
-                INIT_LIST_HEAD(&entry->ports);
 
                 if (parse_pdu_fte_list_entry(nla, entry) < 0) {
                         rkfree(entry);

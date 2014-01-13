@@ -127,7 +127,7 @@ static void pfte_destroy(struct pft_entry * entry)
         ASSERT(pfte_is_ok(entry));
 
         list_for_each_entry_rcu(pos, &entry->ports, next) {
-                pft_pe_destroy(pos);                
+                pft_pe_destroy(pos);
         }
 
         list_del_rcu(&entry->next);
@@ -277,12 +277,12 @@ static void __pft_flush(struct pft * instance)
 }
 
 int pft_flush(struct pft * instance)
-{ 
+{
         if (!pft_is_ok(instance))
                 return -1;
 
-        __pft_flush(instance); 
-        
+        __pft_flush(instance);
+
         return 0;
 }
 

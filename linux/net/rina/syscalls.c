@@ -302,7 +302,7 @@ SYSCALL_DEFINE4(management_sdu_read,
 
         tmp = NULL;
 
-        CALL_DEFAULT_PERSONALITY(retval, management_sdu_read, ipcp_id, &tmp);
+        CALL_DEFAULT_PERSONALITY(retval, mgmt_sdu_read, ipcp_id, &tmp);
         /* Taking ownership from the internal layers */
 
         LOG_DBG("Personality returned value %zd", retval);
@@ -411,7 +411,7 @@ SYSCALL_DEFINE4(management_sdu_write,
         ASSERT(sdu_wpi_is_ok(sdu_wpi));
 
         /* Passing ownership to the internal layers */
-        CALL_DEFAULT_PERSONALITY(retval, management_sdu_write, id, sdu_wpi);
+        CALL_DEFAULT_PERSONALITY(retval, mgmt_sdu_write, id, sdu_wpi);
         if (retval) {
                 SYSCALL_DUMP_EXIT;
                 /* NOTE: Do not destroy SDU, ownership isn't our anymore */

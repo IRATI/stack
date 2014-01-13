@@ -210,10 +210,9 @@ int dtp_write(struct dtp * instance,
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
         }
-        if (!sdu) {
-                LOG_ERR("No data passed, bailing out");
+
+        if (!sdu_is_ok(sdu))
                 return -1;
-        }
 
         pci = pci_create();
         if (!pci)
@@ -254,15 +253,17 @@ int dtp_write(struct dtp * instance,
                         pdu);
 }
 
-int dtp_management_write(struct rmt * rmt,
-                         address_t    src_address,
-                         port_id_t    port_id,
-                         struct sdu * sdu)
+int dtp_mgmt_write(struct rmt * rmt,
+                   address_t    src_address,
+                   port_id_t    port_id,
+                   struct sdu * sdu)
 {
-        /*DTP should build the PCI header
-         * src and dst cep_ids = 0
-         * ask FT for the dst address the N-1 port is connected to
-         * pass to the rmt */
+        /*
+         * NOTE:
+         *   DTP should build the PCI header src and dst cep_ids = 0
+         *   ask FT for the dst address the N-1 port is connected to
+         *   pass to the rmt
+         */
 
         struct pci *  pci;
         struct pdu *  pdu;
@@ -273,7 +274,7 @@ int dtp_management_write(struct rmt * rmt,
                 return -1;
         }
 
-        dst_address = 0; /*GET FROM PFT */
+        dst_address = 0; /* FIXME: get from PFT */
 
         pci = pci_create();
         if (!pci)
@@ -314,7 +315,7 @@ int dtp_management_write(struct rmt * rmt,
                         pdu);
 
 };
-EXPORT_SYMBOL(dtp_management_write);
+EXPORT_SYMBOL(dtp_mgmt_write);
 
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
@@ -341,10 +342,11 @@ int dtp_receive(struct dtp * instance,
         if (kfa_sdu_post(instance->kfa,
                          instance->state_vector->connection->port_id,
                          sdu)) {
-                LOG_ERR("Could not post SDU into KFA");
+                LOG_ERR("Could not post SDU to KFA");
                 pdu_destroy(pdu);
                 return -1;
         }
+
         /*
          * FIXME: PDU is now useless, it must be destroyed, but its
          * buffer is within the passed sdu, so pdu_destroy can't be used.
