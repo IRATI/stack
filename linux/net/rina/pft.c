@@ -202,8 +202,6 @@ static int pfte_ports_copy(struct pft_entry * entry,
         int                     i;
 
         ASSERT(pfte_is_ok(entry));
-        ASSERT((*port_ids == NULL && *entries == 0) ||
-               (*port_ids != NULL && *entries > 0));
 
         ports_amount = 0;
 
@@ -417,6 +415,14 @@ int pft_nhop(struct pft * instance,
 
         if (!ports || !count) {
                 LOG_ERR("Bogus input parameters");
+                return -1;
+        }
+
+        LOG_DBG("Number of entries: %d", *count);
+        LOG_DBG("Array is %pK", *ports);
+
+        if ((!*count && *ports) || (*count && !*ports)) {
+                LOG_ERR("Bogus input params");
                 return -1;
         }
 
