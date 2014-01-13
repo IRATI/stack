@@ -749,18 +749,18 @@ static int process_dt_sdu(struct rmt *        rmt,
                           struct sdu *        sdu,
                           struct rmt_queue *  entry)
 {
-        struct pdu *       pdu;
-        const struct pci * p;
-        cep_id_t           c;
-        address_t          dest_add;
+        struct pdu * pdu;
+        cep_id_t     c;
+        address_t    dest_add;
 
         /* (FUTURE) Address and qos-id are the same, do a single match only */
-        p = sdu_pci_copy(sdu);
-        if (!p) {
-                LOG_ERR("No PCI to work with");
+        pdu = pdu_create_with(sdu);
+        if (!pdu) {
+                LOG_ERR("Cannot get PDU from SDU");
+                sdu_destroy(sdu);
                 return -1;
         }
-        dest_add = pci_destination(p);
+        dest_add = pci_destination(pdu_pci_get_ro(pdu));
         if (!is_address_ok(dest_add)) {
                 LOG_ERR("Wrong destination address");
                 return -1;
@@ -770,7 +770,7 @@ static int process_dt_sdu(struct rmt *        rmt,
                 qos_id_t     qos_id;
                 int          i;
 
-                qos_id = pci_qos_id(p);
+                qos_id = pci_qos_id(pdu_pci_get_ro(pdu));
                 if (pft_nhop(rmt->pft,
                              dest_add,
                              qos_id,
@@ -790,13 +790,7 @@ static int process_dt_sdu(struct rmt *        rmt,
 
                 return 0;
         }
-        pdu = pdu_create_with(sdu);
-        if (!pdu) {
-                LOG_ERR("Cannot get PDU from SDU");
-                sdu_destroy(sdu);
-                return -1;
-        }
-        c = pci_cep_destination(p);
+        c = pci_cep_destination(pdu_pci_get_ro(pdu));
         if (!is_cep_id_ok(c)) {
                 LOG_ERR("Wrong CEP-id in PDU");
                 pdu_destroy(pdu);
