@@ -79,7 +79,7 @@ int          rmt_pft_remove(struct rmt *       instance,
 /* FIXME: Please check the following API */
 int          rmt_send(struct rmt * instance,
                       address_t    address,
-                      cep_id_t     connection_id,
+                      qos_id_t     qos_id,
                       struct pdu * pdu);
 
 int          rmt_send_port_id(struct rmt *  instance,
@@ -90,11 +90,5 @@ int          rmt_send_port_id(struct rmt *  instance,
 int          rmt_receive(struct rmt * instance,
                          struct sdu * sdu,
                          port_id_t    from);
-
-/*PFT proxy API*/
-int          rmt_pdu_fte_add(struct rmt *       instance,
-                             struct list_head * pft_entries);
-int          rmt_pdu_fte_remove(struct rmt *       instance,
-                                struct list_head * pft_entries);
 
 #endif

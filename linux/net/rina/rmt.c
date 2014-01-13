@@ -44,6 +44,8 @@ struct rmt_queue {
         port_id_t         port_id;
         struct hlist_node hlist;
         spinlock_t        lock;
+        size_t *          size;
+        port_id_t *       pids;
 };
 
 static struct rmt_queue * rmt_queue_create(port_id_t id)
@@ -63,8 +65,22 @@ static struct rmt_queue * rmt_queue_create(port_id_t id)
         }
 
         INIT_HLIST_NODE(&tmp->hlist);
-        tmp->port_id = id;
         spin_lock_init(&tmp->lock);
+        tmp->size = rkzalloc(sizeof(*tmp->size), GFP_KERNEL);
+        if (!tmp->size) {
+                rfifo_destroy(tmp->queue, (void (*)(void *)) pdu_destroy);
+                rkfree(tmp);
+                return NULL;
+        }
+        tmp->pids = rkzalloc(sizeof(*tmp->pids), GFP_KERNEL);
+        if (!tmp->pids) {
+                rfifo_destroy(tmp->queue, (void (*)(void *)) pdu_destroy);
+                rkfree(tmp->size);
+                rkfree(tmp);
+                return NULL;
+        }
+        *tmp->size   = 0;
+        tmp->port_id = id;
 
         LOG_DBG("Queue %pK created successfully (port-id = %d)", tmp, id);
 
@@ -80,6 +96,8 @@ static int rmt_queue_destroy(struct rmt_queue * q)
 
         rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
         hash_del(&q->hlist);
+        rkfree(q->size);
+        rkfree(q->pids);
         rkfree(q);
 
         return 0;
@@ -154,6 +172,8 @@ struct rmt {
         struct pft *            pft;
         struct kfa *            kfa;
         struct efcp_container * efcpc;
+        port_id_t *             pids;
+        size_t *                size;
 
         struct {
                 struct workqueue_struct * wq;
@@ -242,6 +262,21 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                 return NULL;
         }
 
+        tmp->size = rkzalloc(sizeof(*tmp->size), GFP_KERNEL);
+        if (!tmp->size) {
+                rmt_destroy(tmp);
+                rkfree(tmp);
+                return NULL;
+        }
+        tmp->pids = rkzalloc(sizeof(*tmp->pids), GFP_KERNEL);
+        if (!tmp->pids) {
+                rmt_destroy(tmp);
+                rkfree(tmp->size);
+                rkfree(tmp);
+                return NULL;
+        }
+        *tmp->size = 0;
+
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
         return tmp;
@@ -262,6 +297,9 @@ int rmt_destroy(struct rmt * instance)
         if (instance->egress.queues)  qmap_destroy(instance->egress.queues);
 
         if (instance->pft)            pft_destroy(instance->pft);
+
+        if (instance->size)           rkfree(instance->size);
+        if (instance->pids)           rkfree(instance->pids);
 
         rkfree(instance);
 
@@ -339,76 +377,6 @@ static int send_data_destroy(struct send_data * data)
         return 0;
 }
 
-static struct sdu * pdu_process(struct pdu * pdu)
-{
-        struct sdu *          sdu;
-        const struct buffer * buffer;
-        const struct pci *    pci;
-        const void *          buffer_data;
-        size_t                size;
-        ssize_t               buffer_size;
-        ssize_t               pci_size;
-        struct buffer *       tmp_buff;
-        char *                data;
-
-        if (!pdu)
-                return NULL;
-
-        /* FIXME: Add pdu_destroy() on each return */
-
-        buffer = pdu_buffer_get_ro(pdu);
-        if (!buffer)
-                return NULL;
-
-        buffer_data = buffer_data_ro(buffer);
-        if (!buffer_data)
-                return NULL;
-
-        pci = pdu_pci_get_ro(pdu);
-        if (!pci)
-                return NULL;
-
-        buffer_size = buffer_length(buffer);
-        if (buffer_size <= 0)
-                return NULL;
-
-        pci_size = pci_length(pci);
-        if (pci_size <= 0)
-                return NULL;
-
-        size = pci_size + buffer_size;
-        data = rkmalloc(size, GFP_KERNEL);
-        if (!data)
-                return NULL;
-
-        /* FIXME: Useless check */
-        if (!memcpy(data, pci, pci_size)) {
-                rkfree(data);
-                return NULL;
-        }
-
-        /* FIXME: Useless check */
-        if (!memcpy(data + pci_size, buffer_data, buffer_size)) {
-                rkfree(data);
-                return NULL;
-        }
-
-        tmp_buff = buffer_create_with(data, size);
-        if (!tmp_buff) {
-                rkfree(data);
-                return NULL;
-        }
-        sdu = sdu_create_buffer_with(tmp_buff);
-        if (!sdu) {
-                buffer_destroy(tmp_buff);
-                return NULL;
-        }
-
-        pdu_destroy(pdu);
-
-        return sdu;
-}
-
 static int rmt_send_worker(void * o)
 {
         struct send_data *  tmp;
@@ -459,7 +427,7 @@ static int rmt_send_worker(void * o)
                                 break;
 
                         out = false;
-                        sdu = pdu_process(pdu);
+                        sdu = sdu_create_pdu_with(pdu);
                         if (!sdu)
                                 break;
 
@@ -551,10 +519,10 @@ EXPORT_SYMBOL(rmt_send_port_id);
 
 int rmt_send(struct rmt * instance,
              address_t    address,
-             cep_id_t     connection_id,
+             qos_id_t     qos_id,
              struct pdu * pdu)
 {
-        port_id_t id;
+        int i;
 
         if (!instance) {
                 LOG_ERR("Bogus RMT passed");
@@ -564,10 +532,6 @@ int rmt_send(struct rmt * instance,
                 LOG_ERR("Bogus PDU passed");
                 return -1;
         }
-        if (!is_cep_id_ok(connection_id)) {
-                LOG_ERR("Bad cep id");
-                return -1;
-        }
 
         /* FIXME: Look-up for port-id in pdu-fwd-t and qos-map */
 
@@ -575,12 +539,22 @@ int rmt_send(struct rmt * instance,
         /* address + qos-id (pdu-fwd-t) -> port-id */
 
         /* FIXME: Remove this hardwire */
-        id = (address == 16 ? 2 : 1); /* FIXME: We must call PDU FT */
 
-        LOG_DBG("Gonna SEND to port_id: %d", id);
-
-        if (rmt_send_port_id(instance, id, pdu))
+        if (pft_nhop(instance->pft,
+                     address,
+                     qos_id,
+                     &instance->pids,
+                     instance->size)) {
+                LOG_ERR("No next hops");
+                pdu_destroy(pdu);
                 return -1;
+        }
+
+        for (i = 0; i < *instance->size; i++) {
+                LOG_DBG("Gonna SEND to port_id: %d", instance->pids[i]);
+                if (rmt_send_port_id(instance, instance->pids[i], pdu))
+                        LOG_ERR("Failed send PDU");
+        }
 
         return 0;
 }
@@ -740,10 +714,10 @@ static int process_mgmt_pdu(struct rmt * rmt,
                                                       sdu) ? -1 : 0);
 }
 
-/* FIXME: (FUTURE) process_dt_pdu should process multiple PDUs at time */
-static int process_dt_pdu(struct rmt * rmt,
-                          port_id_t    port_id,
-                          struct pdu * pdu)
+static int process_dt_pdu(struct rmt *        rmt,
+                          port_id_t           port_id,
+                          struct pdu *        pdu,
+                          struct rmt_queue *  entry)
 {
         const struct pci * p;
         cep_id_t           c;
@@ -766,15 +740,16 @@ static int process_dt_pdu(struct rmt * rmt,
         }
 
         if (rmt->address != dest_add) {
-                size_t *     size;
-                port_id_t *  pid;
                 qos_id_t     qos_id;
                 int          i;
                 struct sdu * sdu;
 
-                size   = 0;
                 qos_id = pci_qos_id(p);
-                if (pft_nhop(rmt->pft, dest_add, qos_id, &pid, size)) {
+                if (pft_nhop(rmt->pft,
+                             dest_add,
+                             qos_id,
+                             &entry->pids,
+                             entry->size)) {
                         LOG_ERR("No next hops");
                         pdu_destroy(pdu);
                         return -1;
@@ -789,10 +764,10 @@ static int process_dt_pdu(struct rmt * rmt,
                 }
                 pdu_destroy(pdu);
 
-                for (i = 0; i < *size; i++) {
-                        if (kfa_flow_sdu_write(rmt->kfa, pid[i], sdu))
+                for (i = 0; i < *entry->size; i++) {
+                        if (kfa_flow_sdu_write(rmt->kfa, entry->pids[i], sdu))
                                 LOG_ERR("Cannot write SDU to KFA port-id %d",
-                                        pid[i]);
+                                        entry->pids[i]);
                 }
 
                 return 0;
@@ -852,10 +827,6 @@ static int rmt_receive_worker(void * o)
                                 break;
                         }
 
-                        /* (FUTURE) This SDU could be holding more PDUs ...*/
-
-                        /* (FUTURE) for_each_pdu_in_sdu() ... */
-
                         pdu = pdu_create_with(sdu);
                         if (!pdu) {
                                 LOG_ERR("No PDU to work with");
@@ -882,7 +853,7 @@ static int rmt_receive_worker(void * o)
                                  * enqueue PDU in pdus_dt[dest-addr, qos-id]
                                  * don't process it now ...
                                  */
-                                process_dt_pdu(tmp, port_id, pdu);
+                                process_dt_pdu(tmp, port_id, pdu, entry);
                                 break;
                         default:
                                 LOG_ERR("Unknown PDU type %d", pdu_type);
@@ -1002,20 +973,6 @@ int rmt_pft_remove(struct rmt *       instance,
                                                     qos_id,
                                                     ports,
                                                     count) : -1;
-}
-
-int rmt_pdu_fte_add(struct rmt *       instance,
-                    struct list_head * pft_entries)
-{
-        LOG_MISSING;
-        return -1;
-}
-
-int rmt_pdu_fte_remove(struct rmt *       instance,
-                       struct list_head * pft_entries)
-{
-        LOG_MISSING;
-        return -1;
 }
 
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS

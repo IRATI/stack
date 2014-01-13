@@ -184,11 +184,15 @@ struct ipcp_instance_ops {
                                     port_id_t                   port_id,
                                     struct sdu *                sdu);
 
-        int (* pdu_fte_add)(struct ipcp_instance_data * data,
-                            struct list_head *          pft_entries);
+        int (* pft_add)(struct ipcp_instance_data * data,
+                        address_t                   address,
+                        qos_id_t                    qos_id,
+                        port_id_t                   port_id);
 
-        int (* pdu_fte_remove)(struct ipcp_instance_data * data,
-                               struct list_head *          pft_entries);
+        int (* pft_remove)(struct ipcp_instance_data * data,
+                           address_t                   address,
+                           qos_id_t                    qos_id,
+                           port_id_t                   port_id);
 
 };
 

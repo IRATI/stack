@@ -56,9 +56,9 @@ int buffer_destroy(struct buffer * b)
 }
 EXPORT_SYMBOL(buffer_destroy);
 
-static struct buffer * buffer_create_with_gfp(gfp_t  flags,
-                                              void * data,
-                                              size_t size)
+struct buffer * buffer_create_with_gfp(gfp_t  flags,
+                                       void * data,
+                                       size_t size)
 {
         struct buffer * tmp;
 

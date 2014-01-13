@@ -509,16 +509,20 @@ static int normal_management_sdu_post(struct ipcp_instance_data * data,
 
         if (!is_port_id_ok(port_id)) {
                 LOG_ERR("Wrong port id");
+                sdu_destroy(sdu);
                 return -1;
         }
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus management SDU");
+                sdu_destroy(sdu);
                 return -1;
         }
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
+        if (!tmp) {
+                sdu_destroy(sdu);
                 return -1;
+        }
 
         tmp->port_id = port_id;
         tmp->sdu     = sdu;
@@ -534,15 +538,20 @@ static int normal_management_sdu_post(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int normal_pdu_fte_add(struct ipcp_instance_data * data,
-                              struct list_head *          pft_entries)
+static int normal_pft_add(struct ipcp_instance_data * data,
+                          address_t                   address,
+                          qos_id_t                    qos_id,
+                          port_id_t                   port_id)
+
 {
         LOG_MISSING;
         return -1;
 }
 
-static int normal_pdu_fte_remove(struct ipcp_instance_data * data,
-                                 struct list_head *           pft_entries)
+static int normal_pft_remove(struct ipcp_instance_data * data,
+                             address_t                   address,
+                             qos_id_t                    qos_id,
+                             port_id_t                   port_id)
 {
         LOG_MISSING;
         return -1;
@@ -566,9 +575,18 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .management_sdu_read       = normal_management_sdu_read,
         .management_sdu_write      = normal_management_sdu_write,
         .management_sdu_post       = normal_management_sdu_post,
-        .pdu_fte_add               = normal_pdu_fte_add,
-        .pdu_fte_remove            = normal_pdu_fte_remove
+        .pft_add                   = normal_pft_add,
+        .pft_remove                = normal_pft_remove
 };
+
+static void sdu_wpi_destructor(void * data)
+{
+        struct sdu_wpi * s = data;
+
+        if (sdu_wpi_destroy(s)) {
+                LOG_ERR("Could not destroy SDU-WPI");
+        }
+}
 
 static struct mgmt_data * normal_mgmt_data_create(void)
 {
