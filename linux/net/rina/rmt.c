@@ -66,12 +66,14 @@ static struct rmt_queue * rmt_queue_create(port_id_t id)
 
         INIT_HLIST_NODE(&tmp->hlist);
         spin_lock_init(&tmp->lock);
+
         tmp->size = rkzalloc(sizeof(*tmp->size), GFP_KERNEL);
         if (!tmp->size) {
                 rfifo_destroy(tmp->queue, (void (*)(void *)) pdu_destroy);
                 rkfree(tmp);
                 return NULL;
         }
+
         tmp->pids = rkzalloc(sizeof(*tmp->pids), GFP_KERNEL);
         if (!tmp->pids) {
                 rfifo_destroy(tmp->queue, (void (*)(void *)) pdu_destroy);
@@ -79,6 +81,7 @@ static struct rmt_queue * rmt_queue_create(port_id_t id)
                 rkfree(tmp);
                 return NULL;
         }
+
         *tmp->size   = 0;
         tmp->port_id = id;
 
@@ -348,7 +351,7 @@ static struct send_data * send_data_create(struct kfa *      kfa,
         if (!tmp)
                 return NULL;
 
-        tmp->kfa   = kfa;
+        tmp->kfa  = kfa;
         tmp->qmap = queues;
 
         return tmp;
@@ -387,6 +390,7 @@ static int rmt_send_worker(void * o)
 
         out = false;
         tmp = (struct send_data *) o;
+
         if (!tmp) {
                 LOG_ERR("No send data passed");
                 return -1;

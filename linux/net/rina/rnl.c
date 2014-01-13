@@ -414,7 +414,8 @@ int rnl_init(void)
 
         LOG_DBG("Initializing Netlink layer");
 
-        /* FIXME:
+        /*
+         * FIXME:
          *   This is to allow user-space processes to exchange NL messages
          *   without requiring the CAP_NET_ADMIN capability. We should find
          *   a better way to do it since we're modifying an internal NL

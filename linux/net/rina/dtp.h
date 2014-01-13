@@ -24,6 +24,7 @@
 #include "common.h"
 #include "du.h"
 #include "rmt.h"
+#include "kfa.h"
 
 struct dtcp;
 struct dtp;
