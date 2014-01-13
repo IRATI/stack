@@ -1194,11 +1194,16 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
                        *(entry->ports),
                        entry->ports_size)) {
                         problems++;
+                        break;
                 }
         }
 
-        if (problems)
-                LOG_WARN("There were %d problematic entries", problems);
+        if (problems) {
+                LOG_ERR("There were some problematic entries");
+                rnl_msg_destroy(msg);
+                return -1;
+        }
+
         rnl_msg_destroy(msg);
         return 0;
 
