@@ -389,7 +389,7 @@ static int send_data_destroy(struct send_data * data)
 static int send_worker(void * o)
 {
         struct send_data *  tmp;
-        struct rmt_queue *   entry;
+        struct rmt_queue *  entry;
         bool                out;
         struct hlist_node * ntmp;
         int                 bucket;
