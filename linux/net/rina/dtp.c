@@ -254,10 +254,10 @@ int dtp_write(struct dtp * instance,
                         pdu);
 }
 
-int dtp_management_write(struct rmt * rmt,
-                         address_t    src_address,
-                         port_id_t    port_id,
-                         struct sdu * sdu)
+int dtp_mgmt_write(struct rmt * rmt,
+                   address_t    src_address,
+                   port_id_t    port_id,
+                   struct sdu * sdu)
 {
         /*DTP should build the PCI header
          * src and dst cep_ids = 0
@@ -314,7 +314,7 @@ int dtp_management_write(struct rmt * rmt,
                         pdu);
 
 };
-EXPORT_SYMBOL(dtp_management_write);
+EXPORT_SYMBOL(dtp_mgmt_write);
 
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)

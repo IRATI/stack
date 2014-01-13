@@ -393,8 +393,8 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int normal_management_sdu_read(struct ipcp_instance_data * data,
-                                      struct sdu_wpi **           sdu_wpi)
+static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
+                                struct sdu_wpi **           sdu_wpi)
 {
         int retval;
 
@@ -437,9 +437,9 @@ static int normal_management_sdu_read(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int normal_management_sdu_write(struct ipcp_instance_data * data,
-                                       port_id_t                   port_id,
-                                       struct sdu *                sdu)
+static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
+                                 port_id_t                   port_id,
+                                 struct sdu *                sdu)
 {
         struct pci *  pci;
         struct pdu *  pdu;
@@ -500,9 +500,9 @@ static int normal_management_sdu_write(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int normal_management_sdu_post(struct ipcp_instance_data * data,
-                                      port_id_t                   port_id,
-                                      struct sdu *                sdu)
+static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
+                                port_id_t                   port_id,
+                                struct sdu *                sdu)
 {
         /* FIXME: We should get rid of sdu_wpi ASAP */
         struct sdu_wpi * tmp;
@@ -574,9 +574,9 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .connection_destroy        = connection_destroy_request,
         .connection_create_arrived = connection_create_arrived,
         .flow_binding_ipcp         = ipcp_flow_notification,
-        .management_sdu_read       = normal_management_sdu_read,
-        .management_sdu_write      = normal_management_sdu_write,
-        .management_sdu_post       = normal_management_sdu_post,
+        .mgmt_sdu_read             = normal_mgmt_sdu_read,
+        .mgmt_sdu_write            = normal_mgmt_sdu_write,
+        .mgmt_sdu_post             = normal_mgmt_sdu_post,
         .pft_add                   = normal_pft_add,
         .pft_remove                = normal_pft_remove
 };

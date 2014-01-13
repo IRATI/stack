@@ -302,14 +302,14 @@ int efcp_container_write(struct efcp_container * container,
 }
 EXPORT_SYMBOL(efcp_container_write);
 
-int efcp_container_management_write(struct efcp_container * container,
-                                    address_t               src_address,
-                                    port_id_t               port_id,
-                                    struct sdu *            sdu)
+int efcp_container_mgmt_write(struct efcp_container * container,
+                              address_t               src_address,
+                              port_id_t               port_id,
+                              struct sdu *            sdu)
 {
-        return dtp_management_write(container->rmt, src_address, port_id, sdu);
+        return dtp_mgmt_write(container->rmt, src_address, port_id, sdu);
 }
-EXPORT_SYMBOL(efcp_container_management_write);
+EXPORT_SYMBOL(efcp_container_mgmt_write);
 
 struct receive_data {
         struct efcp * efcp;

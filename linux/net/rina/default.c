@@ -126,26 +126,26 @@ static int default_deallocate_port(struct personality_data * data,
         return kfa_flow_deallocate(data->kfa, port_id);
 }
 
-static int default_management_sdu_write(struct personality_data * data,
-                                        ipc_process_id_t          id,
-                                        struct sdu_wpi *          sdu_wpi)
+static int default_mgmt_sdu_write(struct personality_data * data,
+                                  ipc_process_id_t          id,
+                                  struct sdu_wpi *          sdu_wpi)
 {
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_management_sdu_write(data->kipcm, id, sdu_wpi);
+        return kipcm_mgmt_sdu_write(data->kipcm, id, sdu_wpi);
 }
 
-static int default_management_sdu_read(struct personality_data * data,
-                                       ipc_process_id_t          id,
-                                       struct sdu_wpi **         sdu_wpi)
+static int default_mgmt_sdu_read(struct personality_data * data,
+                                 ipc_process_id_t          id,
+                                 struct sdu_wpi **         sdu_wpi)
 {
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_management_sdu_read(data->kipcm, id, sdu_wpi);
+        return kipcm_mgmt_sdu_read(data->kipcm, id, sdu_wpi);
 }
 
 /* FIXME: To be removed ABSOLUTELY */
@@ -240,8 +240,8 @@ struct personality_ops ops = {
         .sdu_write            = default_sdu_write,
         .allocate_port        = default_allocate_port,
         .deallocate_port      = default_deallocate_port,
-        .management_sdu_read  = default_management_sdu_read,
-        .management_sdu_write = default_management_sdu_write
+        .mgmt_sdu_read        = default_mgmt_sdu_read,
+        .mgmt_sdu_write       = default_mgmt_sdu_write
 };
 
 static struct personality_data data;

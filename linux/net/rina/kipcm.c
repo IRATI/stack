@@ -1772,9 +1772,9 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         return 0;
 }
 
-int kipcm_management_sdu_write(struct kipcm *   kipcm,
-                               ipc_process_id_t id,
-                               struct sdu_wpi * sdu_wpi)
+int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
+                         ipc_process_id_t id,
+                         struct sdu_wpi * sdu_wpi)
 {
         struct ipcp_instance * ipcp;
 
@@ -1805,16 +1805,16 @@ int kipcm_management_sdu_write(struct kipcm *   kipcm,
                 return -1;
         }
 
-        if (!ipcp->ops->management_sdu_write) {
+        if (!ipcp->ops->mgmt_sdu_write) {
                 LOG_ERR("The IPC Process %d doesn't support this operation",
                         id);
                 sdu_wpi_destroy(sdu_wpi);
                 return -1;
         }
 
-        if (ipcp->ops->management_sdu_write(ipcp->data,
-                                            sdu_wpi->port_id,
-                                            sdu_wpi->sdu)) {
+        if (ipcp->ops->mgmt_sdu_write(ipcp->data,
+                                      sdu_wpi->port_id,
+                                      sdu_wpi->sdu)) {
                 sdu_wpi_destroy(sdu_wpi);
                 return -1;
         } else {
@@ -1823,9 +1823,9 @@ int kipcm_management_sdu_write(struct kipcm *   kipcm,
         }
 }
 
-int kipcm_management_sdu_read(struct kipcm *    kipcm,
-                              ipc_process_id_t  id,
-                              struct sdu_wpi ** sdu_wpi)
+int kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
+                        ipc_process_id_t  id,
+                        struct sdu_wpi ** sdu_wpi)
 {
         struct ipcp_instance * ipcp;
 
@@ -1847,13 +1847,13 @@ int kipcm_management_sdu_read(struct kipcm *    kipcm,
                 return -1;
         }
 
-        if (!ipcp->ops->management_sdu_read) {
+        if (!ipcp->ops->mgmt_sdu_read) {
                 LOG_ERR("The IPC Process %d doesn't support this operation",
                         id);
                 return -1;
         }
 
-        return ipcp->ops->management_sdu_read(ipcp->data, sdu_wpi);
+        return ipcp->ops->mgmt_sdu_read(ipcp->data, sdu_wpi);
 }
 
 int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,

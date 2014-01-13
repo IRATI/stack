@@ -707,11 +707,11 @@ static int process_mgmt_pdu(struct rmt * rmt,
 
         ASSERT(rmt->parent);
         ASSERT(rmt->parent->ops);
-        ASSERT(rmt->parent->ops->management_sdu_post);
+        ASSERT(rmt->parent->ops->mgmt_sdu_post);
 
-        return (rmt->parent->ops->management_sdu_post(rmt->parent->data,
-                                                      port_id,
-                                                      sdu) ? -1 : 0);
+        return (rmt->parent->ops->mgmt_sdu_post(rmt->parent->data,
+                                                port_id,
+                                                sdu) ? -1 : 0);
 }
 
 static int process_dt_pdu(struct rmt *        rmt,
