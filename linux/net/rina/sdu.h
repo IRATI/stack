@@ -66,7 +66,6 @@ struct sdu *          sdu_unprotect(struct sdu * sdu);
 struct sdu_wpi *      sdu_wpi_create_with(struct buffer * buffer);
 struct sdu_wpi *      sdu_wpi_create_with_ni(struct buffer * buffer);
 int                   sdu_wpi_destroy(struct sdu_wpi * s);
-void                  sdu_wpi_destructor(void * data);
 bool                  sdu_wpi_is_ok(const struct sdu_wpi * s);
 
 #endif

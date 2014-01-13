@@ -29,6 +29,16 @@
 #include "debug.h"
 #include "du.h"
 
+/* FIXME: These externs have to disappear from here */
+struct buffer * buffer_create_with_gfp(gfp_t  flags,
+                                       void * data,
+                                       size_t size);
+struct buffer * buffer_create_from_gfp(gfp_t        flags,
+                                       const void * data,
+                                       size_t       size);
+struct buffer * buffer_dup_gfp(gfp_t                 flags,
+                               const struct buffer * b);
+
 static struct sdu * sdu_create_buffer_with_gfp(gfp_t           flags,
                                                struct buffer * buffer)
 {
@@ -129,6 +139,7 @@ static struct sdu * sdu_create_pdu_with_gfp(gfp_t        flags,
                 pdu_destroy(pdu);
                 return NULL;
         }
+
         sdu = sdu_create_buffer_with(tmp_buff);
         if (!sdu) {
                 pdu_destroy(pdu);
@@ -255,6 +266,7 @@ int sdu_wpi_destroy(struct sdu_wpi * s)
 
         sdu_destroy(s->sdu);
         rkfree(s);
+
         return 0;
 }
 EXPORT_SYMBOL(sdu_wpi_destroy);
@@ -262,12 +274,3 @@ EXPORT_SYMBOL(sdu_wpi_destroy);
 bool sdu_wpi_is_ok(const struct sdu_wpi * s)
 { return (s && sdu_is_ok(s->sdu)) ? true : false; }
 EXPORT_SYMBOL(sdu_wpi_is_ok);
-
-void sdu_wpi_destructor(void * data)
-{
-        struct sdu_wpi * s = data;
-        if (sdu_wpi_destroy(s)) {
-                LOG_ERR("Could not destroy SDU_WPI");
-        }
-}
-EXPORT_SYMBOL(sdu_wpi_destructor);

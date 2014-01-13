@@ -579,6 +579,15 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .pft_remove                = normal_pft_remove
 };
 
+static void sdu_wpi_destructor(void * data)
+{
+        struct sdu_wpi * s = data;
+
+        if (sdu_wpi_destroy(s)) {
+                LOG_ERR("Could not destroy SDU-WPI");
+        }
+}
+
 static struct mgmt_data * normal_mgmt_data_create(void)
 {
         struct mgmt_data * data;

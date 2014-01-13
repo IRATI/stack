@@ -23,18 +23,10 @@
 
 struct buffer;
 
-/* FIXME: This function must disappear from the API */
-struct buffer * buffer_create_with_gfp(gfp_t  flags,
-                                       void * data,
-                                       size_t size);
 /* NOTE: Creates a buffer from raw data (takes ownership) */
 struct buffer * buffer_create_with(void * data, size_t size);
 struct buffer * buffer_create_with_ni(void * data, size_t size);
 
-/* FIXME: This function must disappear from the API */
-struct buffer * buffer_create_from_gfp(gfp_t        flags,
-                                       const void * data,
-                                       size_t       size);
 struct buffer * buffer_create_from(const void * data, size_t size);
 struct buffer * buffer_create_from_ni(const void * data, size_t size);
 
@@ -51,9 +43,6 @@ ssize_t         buffer_length(const struct buffer * b);
 const void *    buffer_data_ro(const struct buffer * b); /* Read only */
 void *          buffer_data_rw(struct buffer * b);       /* Read/Write */
 
-/* FIXME: This function must disappear from the API */
-struct buffer * buffer_dup_gfp(gfp_t                 flags,
-                               const struct buffer * b);
 struct buffer * buffer_dup(const struct buffer * b);
 struct buffer * buffer_dup_ni(const struct buffer * b);
 bool            buffer_is_ok(const struct buffer * b);
