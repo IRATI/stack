@@ -44,11 +44,11 @@ struct rmt_queue {
         port_id_t         port_id;
         struct hlist_node hlist;
         spinlock_t        lock;
-        size_t *          size;
+        size_t *          size; /* FIXME: This is utterly broken */
         port_id_t *       pids;
 };
 
-static struct rmt_queue * rmt_queue_create(port_id_t id)
+static struct rmt_queue * queue_create(port_id_t id)
 {
         struct rmt_queue * tmp;
 
@@ -90,7 +90,7 @@ static struct rmt_queue * rmt_queue_create(port_id_t id)
         return tmp;
 }
 
-static int rmt_queue_destroy(struct rmt_queue * q)
+static int queue_destroy(struct rmt_queue * q)
 {
         ASSERT(q);
         ASSERT(q->queue);
@@ -138,7 +138,7 @@ static int qmap_destroy(struct rmt_qmap * m)
         hash_for_each_safe(m->queues, bucket, tmp, entry, hlist) {
                 ASSERT(entry);
 
-                if (rmt_queue_destroy(entry)) {
+                if (queue_destroy(entry)) {
                         LOG_ERR("Could not destroy entry %pK", entry);
                         return -1;
                 }
@@ -380,7 +380,7 @@ static int send_data_destroy(struct send_data * data)
         return 0;
 }
 
-static int rmt_send_worker(void * o)
+static int send_worker(void * o)
 {
         struct send_data *  tmp;
         struct rmt_queue *   entry;
@@ -502,7 +502,7 @@ int rmt_send_port_id(struct rmt *  instance,
         }
 
         /* Is this _ni() call really necessary ??? */
-        item = rwq_work_create_ni(rmt_send_worker, data);
+        item = rwq_work_create_ni(send_worker, data);
         if (!item) {
                 send_data_destroy(data);
                 LOG_ERR("Couldn't create work");
@@ -564,12 +564,12 @@ int rmt_send(struct rmt * instance,
 }
 EXPORT_SYMBOL(rmt_send);
 
-static int __rmt_queue_send_add(struct rmt * instance,
-                                port_id_t    id)
+static int __queue_send_add(struct rmt * instance,
+                            port_id_t    id)
 {
         struct rmt_queue * tmp;
 
-        tmp = rmt_queue_create(id);
+        tmp = queue_create(id);
         if (!tmp)
                 return -1;
 
@@ -580,8 +580,8 @@ static int __rmt_queue_send_add(struct rmt * instance,
         return 0;
 }
 
-int rmt_queue_send_add(struct rmt * instance,
-                       port_id_t    id)
+int queue_send_add(struct rmt * instance,
+                   port_id_t    id)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -603,21 +603,21 @@ int rmt_queue_send_add(struct rmt * instance,
                 return -1;
         }
 
-        return __rmt_queue_send_add(instance, id);
+        return __queue_send_add(instance, id);
 }
-EXPORT_SYMBOL(rmt_queue_send_add);
+EXPORT_SYMBOL(queue_send_add);
 
-int rmt_queue_send_delete(struct rmt * instance,
-                          port_id_t    id)
+int queue_send_delete(struct rmt * instance,
+                      port_id_t    id)
 {
         LOG_MISSING;
 
         return -1;
 }
-EXPORT_SYMBOL(rmt_queue_send_delete);
+EXPORT_SYMBOL(queue_send_delete);
 
-static int __rmt_queue_recv_add(struct rmt * instance,
-                                port_id_t    id)
+static int __queue_recv_add(struct rmt * instance,
+                            port_id_t    id)
 {
         struct rmt_queue * tmp;
 
@@ -664,7 +664,7 @@ int rmt_queue_recv_add(struct rmt * instance,
                 return -1;
         }
 
-        return __rmt_queue_recv_add(instance, id);
+        return __queue_recv_add(instance, id);
 }
 EXPORT_SYMBOL(rmt_queue_recv_add);
 
@@ -792,7 +792,7 @@ static int process_dt_pdu(struct rmt *        rmt,
         return 0;
 }
 
-static int rmt_receive_worker(void * o)
+static int receive_worker(void * o)
 {
         struct rmt * tmp;
 
@@ -930,7 +930,7 @@ int rmt_receive(struct rmt * instance,
         spin_unlock(&instance->egress.queues->lock);
 
         /* Is this _ni() call really necessary ??? */
-        item = rwq_work_create_ni(rmt_receive_worker, instance);
+        item = rwq_work_create_ni(receive_worker, instance);
         if (!item) {
                 LOG_ERR("Couldn't create rwq work");
                 return -1;
