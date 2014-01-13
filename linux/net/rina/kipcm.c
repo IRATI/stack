@@ -809,8 +809,10 @@ static int notify_ipcp_conn_create_req(void *             data,
                                                info->snd_portid);
 }
 
-/* FIXME: create_req and create_arrived are almost identicall,
- *  code should be reused */
+/*
+ * FIXME: create_req and create_arrived are almost identical, code should be
+ *        reused
+ */
 
 static int
 conn_create_result_free_and_reply(struct rnl_msg * msg,
@@ -1179,7 +1181,7 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
                 return -1;
         }
 
-        if (attrs->mode) 
+        if (attrs->mode)
                 op = ipc_process->ops->pft_add;
         else
                 op = ipc_process->ops->pft_remove;

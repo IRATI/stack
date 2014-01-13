@@ -767,7 +767,7 @@ static int process_dt_pdu(struct rmt *        rmt,
                 for (i = 0; i < *entry->size; i++) {
                         if (kfa_flow_sdu_write(rmt->kfa, entry->pids[i], sdu))
                                 LOG_ERR("Cannot write SDU to KFA port-id %d",
-                                                entry->pids[i]);
+                                        entry->pids[i]);
                 }
 
                 return 0;

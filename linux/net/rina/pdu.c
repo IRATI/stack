@@ -30,6 +30,16 @@
 #include "pdu.h"
 #include "qos.h"
 
+/* FIXME: These externs have to disappear from here */
+struct buffer * buffer_create_with_gfp(gfp_t  flags,
+                                       void * data,
+                                       size_t size);
+struct buffer * buffer_create_from_gfp(gfp_t        flags,
+                                       const void * data,
+                                       size_t       size);
+struct buffer * buffer_dup_gfp(gfp_t                 flags,
+                               const struct buffer * b);
+
 struct pci {
         pdu_type_t type;
 
