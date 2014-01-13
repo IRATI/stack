@@ -421,7 +421,7 @@ int pft_nhop(struct pft * instance,
         LOG_DBG("Number of entries: %d", *count);
         LOG_DBG("Array is %pK", *ports);
 
-        if ((!*count && *ports) || (*count && !*ports)) {
+        if (*count < 0 && !*ports) {
                 LOG_ERR("Bogus input params");
                 return -1;
         }
