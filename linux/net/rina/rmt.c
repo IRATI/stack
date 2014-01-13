@@ -44,8 +44,6 @@ struct rmt_queue {
         port_id_t         port_id;
         struct hlist_node hlist;
         spinlock_t        lock;
-        size_t            size;
-        port_id_t *       pids;
 };
 
 static struct rmt_queue * queue_create(port_id_t id)
@@ -68,8 +66,6 @@ static struct rmt_queue * queue_create(port_id_t id)
         spin_lock_init(&tmp->lock);
 
         tmp->port_id = id;
-        tmp->pids    = NULL;
-        tmp->size    = 0;
 
         LOG_DBG("Queue %pK created successfully (port-id = %d)", tmp, id);
 
@@ -86,7 +82,6 @@ static int queue_destroy(struct rmt_queue * q)
         hash_del(&q->hlist);
 
         if (q->queue) rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
-        if (q->pids)  rkfree(q->pids);
         rkfree(q);
 
         return 0;
@@ -161,8 +156,12 @@ struct rmt {
         struct pft *            pft;
         struct kfa *            kfa;
         struct efcp_container * efcpc;
-        port_id_t *             pids;
-        size_t *                size;
+
+        /* PFT cache */
+        struct {
+                port_id_t *     pids;  /* NOTE: Array of port_id_t */
+                size_t          count; /* NOTE: Entries in the pids array */
+        } pft_cache; /* FIXME: This caching is bougs, has to be refined */
 
         struct {
                 struct workqueue_struct * wq;
@@ -212,16 +211,18 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         tmp->parent = parent;
         tmp->kfa    = kfa;
         tmp->efcpc  = efcpc;
-
-        tmp->pft = pft_create();
+        tmp->pft    = pft_create();
         if (!tmp->pft) {
                 rmt_destroy(tmp);
                 return NULL;
         }
 
         name = create_name("rmt-egress-wq", tmp);
-        if (!name)
+        if (!name) {
+                rmt_destroy(tmp);
                 return NULL;
+        }
+
         tmp->egress.wq = rwq_create(name);
         if (!tmp->egress.wq) {
                 rmt_destroy(tmp);
@@ -229,8 +230,11 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         }
 
         name = create_name("rmt-ingress-wq", tmp);
-        if (!name)
+        if (!name) {
+                rmt_destroy(tmp);
                 return NULL;
+        }
+
         tmp->ingress.wq = rwq_create(name);
         if (!tmp->ingress.wq) {
                 rmt_destroy(tmp);
@@ -251,20 +255,8 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                 return NULL;
         }
 
-        tmp->size = rkzalloc(sizeof(*tmp->size), GFP_KERNEL);
-        if (!tmp->size) {
-                rmt_destroy(tmp);
-                rkfree(tmp);
-                return NULL;
-        }
-        tmp->pids = rkzalloc(sizeof(*tmp->pids), GFP_KERNEL);
-        if (!tmp->pids) {
-                rmt_destroy(tmp);
-                rkfree(tmp->size);
-                rkfree(tmp);
-                return NULL;
-        }
-        *tmp->size = 0;
+        tmp->pft_cache.pids = NULL;
+        tmp->pft_cache.count = 0;
 
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
@@ -287,8 +279,10 @@ int rmt_destroy(struct rmt * instance)
 
         if (instance->pft)            pft_destroy(instance->pft);
 
-        if (instance->size)           rkfree(instance->size);
-        if (instance->pids)           rkfree(instance->pids);
+        if (instance->pft_cache.pids) {
+                ASSERT(instance->pft_cache.count);
+                rkfree(instance->pft_cache.pids);
+        }
 
         rkfree(instance);
 
@@ -317,6 +311,7 @@ int rmt_address_set(struct rmt * instance,
 }
 EXPORT_SYMBOL(rmt_address_set);
 
+/* FIXME: KFA shouldn't change so often ... */
 struct send_data {
         struct kfa *      kfa;
         struct rmt_qmap * qmap;
@@ -523,27 +518,28 @@ int rmt_send(struct rmt * instance,
                 return -1;
         }
 
-        /* FIXME: Look-up for port-id in pdu-fwd-t and qos-map */
-
-        /* pdu -> pci-> qos-id | cep_id_t -> connection -> qos-id (former) */
-        /* address + qos-id (pdu-fwd-t) -> port-id */
-
-        /* FIXME: Remove this hardwire */
-
         if (pft_nhop(instance->pft,
                      address,
                      qos_id,
-                     &instance->pids,
-                     &instance->size)) {
-                LOG_ERR("No next hops");
+                     &(instance->pft_cache.pids),
+                     &(instance->pft_cache.count))) {
                 pdu_destroy(pdu);
                 return -1;
         }
 
-        for (i = 0; i < *instance->size; i++) {
-                LOG_DBG("Gonna SEND to port_id: %d", instance->pids[i]);
-                if (rmt_send_port_id(instance, instance->pids[i], pdu))
-                        LOG_ERR("Failed send PDU");
+        /*
+         * FIXME:
+         *   pdu -> pci-> qos-id | cep_id_t -> connection -> qos-id (former)
+         *   address + qos-id (pdu-fwd-t) -> port-id
+         */
+        
+        for (i = 0; i < instance->pft_cache.count; i++) {
+                LOG_DBG("Gonna send PDU to port_id: %d",
+                        instance->pft_cache.pids[i]);
+                if (rmt_send_port_id(instance,
+                                     instance->pft_cache.pids[i],
+                                     pdu))
+                        LOG_ERR("Failed to send a PDU");
         }
 
         return 0;
@@ -566,8 +562,8 @@ static int __queue_send_add(struct rmt * instance,
         return 0;
 }
 
-int queue_send_add(struct rmt * instance,
-                   port_id_t    id)
+int rmt_queue_send_add(struct rmt * instance,
+                       port_id_t    id)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -591,16 +587,16 @@ int queue_send_add(struct rmt * instance,
 
         return __queue_send_add(instance, id);
 }
-EXPORT_SYMBOL(queue_send_add);
+EXPORT_SYMBOL(rmt_queue_send_add);
 
-int queue_send_delete(struct rmt * instance,
-                      port_id_t    id)
+int rmt_queue_send_delete(struct rmt * instance,
+                          port_id_t    id)
 {
         LOG_MISSING;
 
         return -1;
 }
-EXPORT_SYMBOL(queue_send_delete);
+EXPORT_SYMBOL(rmt_queue_send_delete);
 
 static int __queue_recv_add(struct rmt * instance,
                             port_id_t    id)
@@ -734,13 +730,14 @@ static int process_dt_pdu(struct rmt *        rmt,
                 int          i;
                 struct sdu * sdu;
 
+                
+
                 qos_id = pci_qos_id(p);
                 if (pft_nhop(rmt->pft,
                              dest_add,
                              qos_id,
-                             &entry->pids,
-                             entry->size)) {
-                        LOG_ERR("No next hops");
+                             &(rmt->pft_cache.pids),
+                             &(rmt->pft_cache.count))) {
                         pdu_destroy(pdu);
                         return -1;
                 }
@@ -754,10 +751,12 @@ static int process_dt_pdu(struct rmt *        rmt,
                 }
                 pdu_destroy(pdu);
 
-                for (i = 0; i < *entry->size; i++) {
-                        if (kfa_flow_sdu_write(rmt->kfa, entry->pids[i], sdu))
+                for (i = 0; i < rmt->pft_cache.count; i++) {
+                        if (kfa_flow_sdu_write(rmt->kfa,
+                                               rmt->pft_cache.pids[i],
+                                               sdu))
                                 LOG_ERR("Cannot write SDU to KFA port-id %d",
-                                        entry->pids[i]);
+                                        rmt->pft_cache.pids[i]);
                 }
 
                 return 0;
