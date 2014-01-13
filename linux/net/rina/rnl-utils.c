@@ -675,7 +675,7 @@ static int parse_pdu_fte_port_list_entries(struct nlattr * nested_attr,
 
         entry->ports_size = nla_len(nested_attr);
         ports = rkzalloc(entry->ports_size, GFP_KERNEL);
-        LOG_DBG("TEMP Allocated %d bytes in %pk", entry->ports_size, ports);
+        LOG_DBG("Allocated %d bytes in %pk", entry->ports_size, ports);
 
         if (!ports) {
                 LOG_ERR("Could not allocate memory for ports");
@@ -687,8 +687,6 @@ static int parse_pdu_fte_port_list_entries(struct nlattr * nested_attr,
              nla_ok(nla, rem);
              nla = nla_next(nla, &rem)) {
                 ports[i] = nla_get_u32(nla);
-                LOG_DBG("TEMP Got port_id in ports[%d]: %d",
-                        i, ports[i]);
                 i++;
         }
 
@@ -723,14 +721,10 @@ static int parse_pdu_fte_list_entry(struct nlattr * attr,
         if (attrs[PFTELE_ATTR_ADDRESS])
                 pfte_struct->destination =
                         nla_get_u32(attrs[PFTELE_ATTR_ADDRESS]);
-        LOG_DBG("TEMP address pfte_struct->destination: %d",
-                pfte_struct->destination);
 
         if (attrs[PFTELE_ATTR_QOSID])
                 pfte_struct->qos_id =
                         nla_get_u32(attrs[PFTELE_ATTR_QOSID]);
-        LOG_DBG("TEMP qos_id pfte_struct->qos_id:  %d",
-                pfte_struct->qos_id);
 
         if (attrs[PFTELE_ATTR_PORTIDS]) {
                 if (parse_pdu_fte_port_list_entries(attrs[PFTELE_ATTR_PORTIDS],
