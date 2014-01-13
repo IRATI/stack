@@ -755,8 +755,6 @@ static int process_dt_pdu(struct rmt *        rmt,
                 int          i;
                 struct sdu * sdu;
 
-
-
                 qos_id = pci_qos_id(p);
                 if (pft_nhop(rmt->pft,
                              dest_add,
