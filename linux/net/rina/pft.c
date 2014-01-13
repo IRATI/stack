@@ -274,7 +274,6 @@ static void __pft_flush(struct pft * instance)
         ASSERT(pft_is_ok(instance));
 
         list_for_each_entry_rcu(pos, &instance->entries, next) {
-                list_del_rcu(&pos->next);
                 pfte_destroy(pos);
         }
 }
@@ -760,18 +759,21 @@ bool regression_tests_pft(void)
                         "bailing out");
                 return false;
         }
-
+        LOG_DBG("Creating of a pft instance test succeeded");
+        
         if (!regression_tests_entries()) {
                 LOG_ERR("Adding/removing pft entries test failed, "
                         "bailing out");
                 return false;
         }
+        LOG_DBG("Adding/removing pft entries test succeeded");
 
         if (!regression_tests_nhop()) {
                 LOG_ERR("Pft_nhop operation is crap, "
                         "bailing out");
                 return false;
         }
+        LOG_DBG("Pft_nhop operation is beautiful");
 
         return true;
 }
