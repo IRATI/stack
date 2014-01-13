@@ -43,7 +43,7 @@ struct rmt_queue {
         struct rfifo *    queue;
         port_id_t         port_id;
         struct hlist_node hlist;
-        spinlock_t        lock;
+        spinlock_t        lock; /* FIXME: We probably do not need this lock */
 };
 
 static struct rmt_queue * queue_create(port_id_t id)
@@ -180,13 +180,14 @@ static int pft_cache_fini(struct pft_cache * c)
 }
 
 struct rmt {
+        /* FIXME: We probably need a global instance lock */
+
         address_t               address;
         struct ipcp_instance *  parent;
         struct pft *            pft;
         struct kfa *            kfa;
         struct efcp_container * efcpc;
 
-        /* PFT cache */
         struct pft_cache        cache;
 
         struct {
