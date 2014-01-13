@@ -166,7 +166,7 @@ static int pft_cache_init(struct pft_cache * c)
 }
 
 static int pft_cache_fini(struct pft_cache * c)
-{ 
+{
         ASSERT(c);
 
         if (c->count) {
@@ -557,7 +557,7 @@ int rmt_send(struct rmt * instance,
          *   pdu -> pci-> qos-id | cep_id_t -> connection -> qos-id (former)
          *   address + qos-id (pdu-fwd-t) -> port-id
          */
-        
+
         for (i = 0; i < instance->cache.count; i++) {
                 LOG_DBG("Gonna send PDU to port_id: %d",
                         instance->cache.pids[i]);
@@ -755,7 +755,7 @@ static int process_dt_pdu(struct rmt *        rmt,
                 int          i;
                 struct sdu * sdu;
 
-                
+
 
                 qos_id = pci_qos_id(p);
                 if (pft_nhop(rmt->pft,
