@@ -44,7 +44,7 @@ struct rmt_queue {
         port_id_t         port_id;
         struct hlist_node hlist;
         spinlock_t        lock;
-        size_t *          size; /* FIXME: This is utterly broken */
+        size_t            size;
         port_id_t *       pids;
 };
 
@@ -67,23 +67,9 @@ static struct rmt_queue * queue_create(port_id_t id)
         INIT_HLIST_NODE(&tmp->hlist);
         spin_lock_init(&tmp->lock);
 
-        tmp->size = rkzalloc(sizeof(*tmp->size), GFP_KERNEL);
-        if (!tmp->size) {
-                rfifo_destroy(tmp->queue, (void (*)(void *)) pdu_destroy);
-                rkfree(tmp);
-                return NULL;
-        }
-
-        tmp->pids = rkzalloc(sizeof(*tmp->pids), GFP_KERNEL);
-        if (!tmp->pids) {
-                rfifo_destroy(tmp->queue, (void (*)(void *)) pdu_destroy);
-                rkfree(tmp->size);
-                rkfree(tmp);
-                return NULL;
-        }
-
-        *tmp->size   = 0;
         tmp->port_id = id;
+        tmp->pids    = NULL;
+        tmp->size    = 0;
 
         LOG_DBG("Queue %pK created successfully (port-id = %d)", tmp, id);
 
@@ -97,10 +83,10 @@ static int queue_destroy(struct rmt_queue * q)
 
         LOG_DBG("Destroying queue %pK (port-id = %d)", q, q->port_id);
 
-        rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
         hash_del(&q->hlist);
-        rkfree(q->size);
-        rkfree(q->pids);
+
+        if (q->queue) rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
+        if (q->pids)  rkfree(q->pids);
         rkfree(q);
 
         return 0;
@@ -548,7 +534,7 @@ int rmt_send(struct rmt * instance,
                      address,
                      qos_id,
                      &instance->pids,
-                     instance->size)) {
+                     &instance->size)) {
                 LOG_ERR("No next hops");
                 pdu_destroy(pdu);
                 return -1;
