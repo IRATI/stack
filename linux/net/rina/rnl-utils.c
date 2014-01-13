@@ -512,7 +512,7 @@ rnl_rmt_mod_pfte_msg_attrs_destroy(struct rnl_rmt_mod_pfte_msg_attrs * attrs)
         list_for_each_entry_safe(pos, nxt,
                                  &attrs->pft_entries,
                                  next) {
-                
+
                 if (*(pos->ports)) rkfree(*(pos->ports));
 
                 list_del(&pos->next);

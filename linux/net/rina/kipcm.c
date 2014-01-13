@@ -1193,8 +1193,8 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
                        entry->qos_id,
                        *(entry->ports),
                        entry->ports_size)) {
-                                 problems++;
-                 }
+                        problems++;
+                }
         }
 
         if (problems)
