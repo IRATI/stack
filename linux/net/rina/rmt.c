@@ -684,6 +684,18 @@ int rmt_queue_recv_delete(struct rmt * instance,
 }
 EXPORT_SYMBOL(rmt_queue_recv_delete);
 
+static struct pci * sdu_pci_copy(const struct sdu * sdu)
+{
+        struct pci * tmp;
+
+        if (!sdu_is_ok(sdu))
+                return NULL;
+
+        tmp = pci_create_from(sdu_buffer_ro(sdu));
+
+        return 0;
+}
+
 static int process_mgmt_sdu(struct rmt * rmt,
                             port_id_t    port_id,
                             struct sdu * sdu)
@@ -732,33 +744,25 @@ static int process_mgmt_sdu(struct rmt * rmt,
                                                 sdu) ? -1 : 0);
 }
 
-static int sdu_pci_copy(const struct sdu * sdu, struct pci * pci)
-{
-        if (!memcpy(pci, sdu, sizeof(*pci))) {
-                return -1;
-        }
-        return 0;
-}
-
 static int process_dt_sdu(struct rmt *        rmt,
                           port_id_t           port_id,
                           struct sdu *        sdu,
                           struct rmt_queue *  entry)
 {
         struct pdu *       pdu;
-        const struct pci   p;
+        const struct pci * p;
         cep_id_t           c;
         address_t          dest_add;
 
         /* (FUTURE) Address and qos-id are the same, do a single match only */
-        if (sdu_pci_copy(sdu, &p)) {
+        p = sdu_pci_copy(sdu);
+        if (!p) {
                 LOG_ERR("No PCI to work with");
-                break;
+                return -1;
         }
-        dest_add = pci_destination(&p);
+        dest_add = pci_destination(p);
         if (!is_address_ok(dest_add)) {
                 LOG_ERR("Wrong destination address");
-                pdu_destroy(pdu);
                 return -1;
         }
 
@@ -766,7 +770,7 @@ static int process_dt_sdu(struct rmt *        rmt,
                 qos_id_t     qos_id;
                 int          i;
 
-                qos_id = pci_qos_id(&p);
+                qos_id = pci_qos_id(p);
                 if (pft_nhop(rmt->pft,
                              dest_add,
                              qos_id,
@@ -810,7 +814,7 @@ static int process_dt_sdu(struct rmt *        rmt,
 static int receive_worker(void * o)
 {
         struct rmt * tmp;
-        struct pci   pci;
+        struct pci * pci;
 
         LOG_DBG("RMT receive worker called");
 
@@ -846,7 +850,8 @@ static int receive_worker(void * o)
                                 break;
                         }
 
-                        if (sdu_pci_copy(sdu, &pci)) {
+                        pci = sdu_pci_copy(sdu);
+                        if (!pci) {
                                 LOG_ERR("No PCI to work with");
                                 break;
                         }
