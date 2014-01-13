@@ -89,7 +89,7 @@ static int queue_destroy(struct rmt_queue * q)
 
 struct rmt_qmap {
         DECLARE_HASHTABLE(queues, 7);
-        spinlock_t    lock;
+        spinlock_t    lock;   /* FIXME: Has to be moved in the pipelines */
         int           in_use; /* FIXME: Use rwqo and remove in_use */
 };
 
@@ -180,24 +180,22 @@ static int pft_cache_fini(struct pft_cache * c)
 }
 
 struct rmt {
-        /* FIXME: We probably need a global instance lock */
-
         address_t               address;
         struct ipcp_instance *  parent;
         struct pft *            pft;
         struct kfa *            kfa;
         struct efcp_container * efcpc;
 
-        struct pft_cache        cache;
-
         struct {
                 struct workqueue_struct * wq;
                 struct rmt_qmap *         queues;
+                struct pft_cache          cache;
         } ingress;
 
         struct {
                 struct workqueue_struct * wq;
                 struct rmt_qmap *         queues;
+                struct pft_cache          cache;
         } egress;
 };
 
@@ -235,27 +233,38 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                 return NULL;
         }
 
-        tmp->parent = parent;
-        tmp->kfa    = kfa;
-        tmp->efcpc  = efcpc;
-        tmp->pft    = pft_create();
+        tmp->address = address_bad();
+        tmp->parent  = parent;
+        tmp->kfa     = kfa;
+        tmp->efcpc   = efcpc;
+        tmp->pft     = pft_create();
         if (!tmp->pft) {
                 rmt_destroy(tmp);
                 return NULL;
         }
 
+        /* Egress */
         name = create_name("rmt-egress-wq", tmp);
         if (!name) {
                 rmt_destroy(tmp);
                 return NULL;
         }
-
         tmp->egress.wq = rwq_create(name);
         if (!tmp->egress.wq) {
                 rmt_destroy(tmp);
                 return NULL;
         }
+        tmp->egress.queues = qmap_create();
+        if (!tmp->egress.queues) {
+                rmt_destroy(tmp);
+                return NULL;
+        }
+        if (pft_cache_init(&tmp->egress.cache)) {
+                rmt_destroy(tmp);
+                return NULL;
+        }
 
+        /* Ingress */
         name = create_name("rmt-ingress-wq", tmp);
         if (!name) {
                 rmt_destroy(tmp);
@@ -267,22 +276,12 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                 rmt_destroy(tmp);
                 return NULL;
         }
-
-        tmp->address = address_bad();
-
         tmp->ingress.queues = qmap_create();
         if (!tmp->ingress.queues) {
                 rmt_destroy(tmp);
                 return NULL;
         }
-
-        tmp->egress.queues = qmap_create();
-        if (!tmp->egress.queues) {
-                rmt_destroy(tmp);
-                return NULL;
-        }
-
-        if (pft_cache_init(&tmp->cache)) {
+        if (pft_cache_init(&tmp->ingress.cache)) {
                 rmt_destroy(tmp);
                 return NULL;
         }
@@ -302,13 +301,13 @@ int rmt_destroy(struct rmt * instance)
 
         if (instance->ingress.wq)     rwq_destroy(instance->ingress.wq);
         if (instance->ingress.queues) qmap_destroy(instance->ingress.queues);
+        pft_cache_fini(&instance->ingress.cache);
 
         if (instance->egress.wq)      rwq_destroy(instance->egress.wq);
         if (instance->egress.queues)  qmap_destroy(instance->egress.queues);
+        pft_cache_fini(&instance->egress.cache);
 
         if (instance->pft)            pft_destroy(instance->pft);
-
-        pft_cache_fini(&instance->cache);
 
         rkfree(instance);
 
@@ -547,8 +546,8 @@ int rmt_send(struct rmt * instance,
         if (pft_nhop(instance->pft,
                      address,
                      qos_id,
-                     &(instance->cache.pids),
-                     &(instance->cache.count))) {
+                     &(instance->egress.cache.pids),
+                     &(instance->egress.cache.count))) {
                 pdu_destroy(pdu);
                 return -1;
         }
@@ -559,11 +558,11 @@ int rmt_send(struct rmt * instance,
          *   address + qos-id (pdu-fwd-t) -> port-id
          */
 
-        for (i = 0; i < instance->cache.count; i++) {
+        for (i = 0; i < instance->egress.cache.count; i++) {
                 LOG_DBG("Gonna send PDU to port_id: %d",
-                        instance->cache.pids[i]);
+                        instance->egress.cache.pids[i]);
                 if (rmt_send_port_id(instance,
-                                     instance->cache.pids[i],
+                                     instance->egress.cache.pids[i],
                                      pdu))
                         LOG_ERR("Failed to send a PDU");
         }
@@ -760,8 +759,8 @@ static int process_dt_pdu(struct rmt *        rmt,
                 if (pft_nhop(rmt->pft,
                              dest_add,
                              qos_id,
-                             &(rmt->cache.pids),
-                             &(rmt->cache.count))) {
+                             &(rmt->ingress.cache.pids),
+                             &(rmt->ingress.cache.count))) {
                         pdu_destroy(pdu);
                         return -1;
                 }
@@ -775,12 +774,12 @@ static int process_dt_pdu(struct rmt *        rmt,
                 }
                 pdu_destroy(pdu);
 
-                for (i = 0; i < rmt->cache.count; i++) {
+                for (i = 0; i < rmt->ingress.cache.count; i++) {
                         if (kfa_flow_sdu_write(rmt->kfa,
-                                               rmt->cache.pids[i],
+                                               rmt->ingress.cache.pids[i],
                                                sdu))
                                 LOG_ERR("Cannot write SDU to KFA port-id %d",
-                                        rmt->cache.pids[i]);
+                                        rmt->ingress.cache.pids[i]);
                 }
 
                 return 0;
