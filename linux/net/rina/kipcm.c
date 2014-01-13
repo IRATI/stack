@@ -1812,9 +1812,15 @@ int kipcm_management_sdu_write(struct kipcm *   kipcm,
                 return -1;
         }
 
-        return ipcp->ops->management_sdu_write(ipcp->data,
-                                               sdu_wpi->port_id,
-                                               sdu_wpi->sdu);
+        if (ipcp->ops->management_sdu_write(ipcp->data,
+                                            sdu_wpi->port_id,
+                                            sdu_wpi->sdu)) {
+                sdu_wpi_destroy(sdu_wpi);
+                return -1;
+        } else {
+                rkfree(sdu_wpi);
+                return 0;
+        }
 }
 
 int kipcm_management_sdu_read(struct kipcm *    kipcm,
