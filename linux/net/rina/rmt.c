@@ -455,9 +455,9 @@ static int send_worker(void * o)
         return 0;
 }
 
-int rmt_send_port_id(struct rmt *  instance,
-                     port_id_t     id,
-                     struct pdu *  pdu)
+int rmt_send_port_id(struct rmt * instance,
+                     port_id_t    id,
+                     struct pdu * pdu)
 {
         struct rmt_queue *     squeue;
         struct rwq_work_item * item;
@@ -686,14 +686,10 @@ EXPORT_SYMBOL(rmt_queue_recv_delete);
 
 static struct pci * sdu_pci_copy(const struct sdu * sdu)
 {
-        struct pci * tmp;
-
         if (!sdu_is_ok(sdu))
                 return NULL;
 
-        tmp = pci_create_from(sdu_buffer_ro(sdu));
-
-        return 0;
+        return pci_create_from(sdu_buffer_ro(sdu));
 }
 
 static int process_mgmt_sdu(struct rmt * rmt,
@@ -701,7 +697,7 @@ static int process_mgmt_sdu(struct rmt * rmt,
                             struct sdu * sdu)
 {
         struct buffer * buffer;
-        struct pdu    * pdu;
+        struct pdu *    pdu;
 
         ASSERT(rmt);
         ASSERT(is_port_id_ok(port_id));
