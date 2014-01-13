@@ -1139,7 +1139,6 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
         struct ipcp_instance *              ipc_process;
         ipc_process_id_t                    ipc_id;
         struct pdu_fte_list_entry *         entry;
-        int                                 problems = 0;
 
         int (* op)(struct ipcp_instance_data * data,
                    address_t                   address,
@@ -1193,15 +1192,10 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
                        entry->qos_id,
                        *(entry->ports),
                        entry->ports_size)) {
-                        problems++;
-                        break;
+                        LOG_ERR("There were some problematic entries");
+                        rnl_msg_destroy(msg);
+                        return -1;
                 }
-        }
-
-        if (problems) {
-                LOG_ERR("There were some problematic entries");
-                rnl_msg_destroy(msg);
-                return -1;
         }
 
         rnl_msg_destroy(msg);
