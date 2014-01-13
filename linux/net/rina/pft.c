@@ -204,10 +204,11 @@ static int pfte_ports_copy(struct pft_entry * entry,
         ASSERT(pfte_is_ok(entry));
 
         ports_amount = 0;
-
         list_for_each_entry_rcu(pos, &entry->ports, next) {
                 ports_amount++;
         }
+        
+        LOG_DBG("In the copy function, ports_amount = %d", ports_amount);
 
         if (*entries != ports_amount) {
                 if (*entries > 0)
@@ -220,9 +221,10 @@ static int pfte_ports_copy(struct pft_entry * entry,
                         *entries = 0;
                         return -1;
                 }
-
                 *entries = ports_amount;
         }
+
+        LOG_DBG("Got past re-allocating memory");
 
         /* Get the first port, and so on, fill in the port_ids */
         i = 0;
@@ -425,12 +427,15 @@ int pft_nhop(struct pft * instance,
                 LOG_ERR("Bogus input params");
                 return -1;
         }
+        LOG_DBG("Got passed the checks");
 
         /*
          * Taking the lock here since otherwise instance might be deleted when
          * copying the ports
          */
         rcu_read_lock();
+
+        LOG_DBG("Took the RCU lock");
 
         tmp = pft_find(instance, destination, qos_id);
         if (!tmp) {
@@ -439,12 +444,16 @@ int pft_nhop(struct pft * instance,
                 return -1;
         }
 
+        LOG_DBG("Got the instance, copying ports");
+
         if (pfte_ports_copy(tmp, ports, count)) {
                 rcu_read_unlock();
                 return -1;
         }
 
         rcu_read_unlock();
+
+        LOG_DBG("Leaving this function");
 
         return 0;
 }
