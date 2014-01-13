@@ -52,7 +52,8 @@ public interface RIBDaemon extends EventManager{
 	 * @param cdapMessageHandler the class to be called when the response message is received (if required)
 	 * @throws RIBDaemonException
 	 */
-	public void sendMessage(CDAPMessage cdapMessage, int sessionId, CDAPMessageHandler cdapMessageHandler) throws RIBDaemonException;
+	public void sendMessage(CDAPMessage cdapMessage, int sessionId,
+			CDAPMessageHandler cdapMessageHandler) throws RIBDaemonException;
 	
 	/**
 	 * Reads/writes/created/deletes/starts/stops one or more objects at the RIB, matching the information specified by objectId + objectClass or objectInstance.

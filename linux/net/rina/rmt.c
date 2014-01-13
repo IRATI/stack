@@ -723,7 +723,7 @@ static int process_mgmt_pdu(struct rmt * rmt,
                 return -1;
         }
 
-        if (pdu_buffer_set(pdu, NULL)) {
+        if (pdu_buffer_disown(pdu)) {
                 pdu_destroy(pdu);
                 /* FIXME: buffer is owned by PDU and SDU, we're leaking sdu */
                 return -1;
@@ -1002,6 +1002,20 @@ int rmt_pft_remove(struct rmt *       instance,
                                                     qos_id,
                                                     ports,
                                                     count) : -1;
+}
+
+int rmt_pdu_fte_add(struct rmt *       instance,
+                    struct list_head * pft_entries)
+{
+        LOG_MISSING;
+        return -1;
+}
+
+int rmt_pdu_fte_remove(struct rmt *       instance,
+                       struct list_head * pft_entries)
+{
+        LOG_MISSING;
+        return -1;
 }
 
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
