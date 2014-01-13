@@ -202,18 +202,19 @@ static int pfte_ports_copy(struct pft_entry * entry,
         int                     i;
 
         ASSERT(pfte_is_ok(entry));
-        ASSERT(*entries);
+        ASSERT((*port_ids == NULL && *entries == 0) ||
+               (*port_ids != NULL && *entries > 0));
 
         ports_amount = 0;
 
         list_for_each_entry_rcu(pos, &entry->ports, next) {
-                ++ports_amount;
+                ports_amount++;
         }
 
         if (*entries != ports_amount) {
                 if (*entries > 0)
                         rkfree(*port_ids);
-                *port_ids = rkzalloc(ports_amount * sizeof(**port_ids),
+                *port_ids = rkmalloc(ports_amount * sizeof(**port_ids),
                                      GFP_ATOMIC);
                 if (!*port_ids) {
                         LOG_ERR("Could not allocate memory "
@@ -228,8 +229,7 @@ static int pfte_ports_copy(struct pft_entry * entry,
         /* Get the first port, and so on, fill in the port_ids */
         i = 0;
         list_for_each_entry_rcu(pos, &entry->ports, next) {
-                *port_ids[i] = pft_pe_port(pos);
-                ++i;
+                *port_ids[i++] = pft_pe_port(pos);
         }
 
         return 0;
