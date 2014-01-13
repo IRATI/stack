@@ -973,6 +973,7 @@ int rmt_pft_add(struct rmt *       instance,
                                                  ports,
                                                  count) : -1;
 }
+EXPORT_SYMBOL(rmt_pft_add);
 
 int rmt_pft_remove(struct rmt *       instance,
                    address_t          destination,
@@ -986,6 +987,7 @@ int rmt_pft_remove(struct rmt *       instance,
                                                     ports,
                                                     count) : -1;
 }
+EXPORT_SYMBOL(rmt_pft_remove);
 
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 bool regression_tests_rmt(void)
