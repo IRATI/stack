@@ -1159,7 +1159,7 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
         }
 
         ipc_id = 0;
-        msg = rnl_msg_create(RNL_MSG_ATTRS_RMT_PFTE_MODIFY_REQUEST);
+        msg    = rnl_msg_create(RNL_MSG_ATTRS_RMT_PFTE_MODIFY_REQUEST);
         if (!msg) {
                 rnl_msg_destroy(msg);
                 return -1;
@@ -1180,13 +1180,14 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
                 return -1;
         }
 
-        if (attrs->mode)
-                op = ipc_process->ops->pft_add;
-        else
-                op = ipc_process->ops->pft_remove;
+        op = attrs->mode ?
+                ipc_process->ops->pft_add :
+                ipc_process->ops->pft_remove;
 
         ASSERT(op);
         list_for_each_entry(entry, &attrs->pft_entries, next) {
+                ASSERT(entry);
+
                 if (op(ipc_process->data,
                        entry->destination,
                        entry->qos_id,
@@ -1199,6 +1200,7 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
         }
 
         rnl_msg_destroy(msg);
+
         return 0;
 
 }
