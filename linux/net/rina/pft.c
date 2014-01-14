@@ -133,8 +133,6 @@ static void pfte_destroy(struct pft_entry * entry)
         list_del_rcu(&entry->next);
         synchronize_rcu();
         rkfree(entry);
-
-
 }
 
 static struct pft_port_entry * pfte_port_find(struct pft_entry * entry,
@@ -484,7 +482,7 @@ static bool regression_tests_nhop(void)
         }
 
         LOG_DBG("Trying to retrieve these entries with "
-                "a table that is set to NULL " 
+                "a table that is set to NULL "
                 "and size 0 as in parameter");
         nr       = 0;
         port_ids = NULL;
@@ -681,7 +679,7 @@ static bool regression_tests_entries(void)
                 LOG_DBG("Failed to malloc");
                 return false;
         }
-        
+
         LOG_DBG("Adding an entry");
         ports[0] = 1;
         if (pft_add(tmp, 16, 1, ports, entries)) {
@@ -786,7 +784,7 @@ static bool regression_tests_instance(void)
                 LOG_DBG("Failed to create instance");
                 return false;
         }
-        
+
         LOG_DBG("Destroying an instance");
         if (pft_destroy(tmp)) {
                 LOG_DBG("Failed to destroy instance");
@@ -803,7 +801,7 @@ bool regression_tests_pft(void)
                         "bailing out");
                 return false;
         }
-        
+
         if (!regression_tests_entries()) {
                 LOG_ERR("Adding/removing entries test failed, "
                         "bailing out");
