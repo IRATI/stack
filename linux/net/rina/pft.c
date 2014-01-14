@@ -451,9 +451,10 @@ static bool regression_tests_nhop(void)
         size_t             entries;
         int                i;
 
+        LOG_DBG("Creating a new instance");
         tmp = pft_create();
         if (!tmp) {
-                LOG_DBG("Failed to create pft instance");
+                LOG_DBG("Failed to create instance");
                 return false;
         }
 
@@ -464,6 +465,7 @@ static bool regression_tests_nhop(void)
                 return false;
         }
 
+        LOG_DBG("Adding a new entry");
         ports[0] = 2;
         LOG_DBG("Adding port-id %d", ports[0]);
         if (pft_add(tmp, 30, 2, ports, entries)) {
@@ -472,6 +474,7 @@ static bool regression_tests_nhop(void)
                 return false;
         }
 
+        LOG_DBG("Adding a new entry");
         ports[0] = 99;
         LOG_DBG("Adding port-id %d", ports[0]);
         if (pft_add(tmp, 30, 2, ports, entries)) {
@@ -480,13 +483,18 @@ static bool regression_tests_nhop(void)
                 return false;
         }
 
+        LOG_DBG("Trying to retrieve these entries with"
+                "a table that is set to NULL" 
+                "and size 0 as in parameter");
         nr = 0;
+        port_ids = NULL;
         if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
                 LOG_DBG("Failed to get port-ids");
                 rkfree(ports);
                 return false;
         }
 
+        LOG_DBG("Checking if we got both port-ids");
         if (nr != 2) {
                 LOG_DBG("Wrong number of port-ids returned");
                 rkfree(ports);
@@ -497,6 +505,7 @@ static bool regression_tests_nhop(void)
                 LOG_DBG("Retrieved port-id %d", port_ids[i]);
         }
 
+        LOG_DBG("Flushing table");
         if (pft_flush(tmp)) {
                 LOG_DBG("Failed to flush table");
                 rkfree(ports);
@@ -505,6 +514,7 @@ static bool regression_tests_nhop(void)
 
         /* Port-id table is now 2 in size */
 
+        LOG_DBG("Adding the same entries again");
         ports[0] = 2;
         if (pft_add(tmp, 30, 2, ports, entries)) {
                 LOG_DBG("Failed to add entry");
@@ -519,18 +529,21 @@ static bool regression_tests_nhop(void)
                 return false;
         }
 
+        LOG_DBG("Retrieving with a table of size 2 as in param");
         if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
                 LOG_DBG("Failed to get port-ids");
                 rkfree(ports);
                 return false;
         }
 
+        LOG_DBG("Checking the number of port-ids returned");
         if (nr != 2) {
                 LOG_DBG("Wrong number of port-ids returned");
                 rkfree(ports);
                 return false;
         }
 
+        LOG_DBG("Flushing the table");
         if (pft_flush(tmp)) {
                 LOG_DBG("Failed to flush table");
                 rkfree(ports);
@@ -538,6 +551,8 @@ static bool regression_tests_nhop(void)
         }
 
         /* Trying with 1 port-id */
+        LOG_DBG("Trying with just one port-id now");
+        LOG_DBG("Adding an entry");
         ports[0] = 2;
         if (pft_add(tmp, 30, 2, ports, entries)) {
                 LOG_DBG("Failed to add entry");
@@ -545,18 +560,21 @@ static bool regression_tests_nhop(void)
                 return false;
         }
 
+        LOG_DBG("Retrieving it");
         if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
                 LOG_DBG("Failed to get port-ids");
                 rkfree(ports);
                 return false;
         }
 
+        LOG_DBG("Checking if it is just one port-id");
         if (nr != 1) {
                 LOG_DBG("Wrong number of port-ids returned");
                 rkfree(ports);
                 return false;
         }
 
+        LOG_DBG("Flushing the table");
         if (pft_flush(tmp)) {
                 LOG_DBG("Failed to flush table");
                 rkfree(ports);
@@ -564,6 +582,8 @@ static bool regression_tests_nhop(void)
         }
 
         /* Trying with 3 port-ids */
+        LOG_DBG("Trying with 3 port-ids");
+        LOG_DBG("Adding an entry");
         ports[0] = 2;
         if (pft_add(tmp, 30, 2, ports, entries)) {
                 LOG_DBG("Failed to add entry");
@@ -571,6 +591,7 @@ static bool regression_tests_nhop(void)
                 return false;
         }
 
+        LOG_DBG("Adding an entry");
         ports[0] = 99;
         if (pft_add(tmp, 30, 2,  ports, entries)) {
                 LOG_DBG("Failed to add entry");
@@ -578,6 +599,7 @@ static bool regression_tests_nhop(void)
                 return false;
         }
 
+        LOG_DBG("Adding an entry");
         ports[0] = 9;
         if (pft_add(tmp, 30, 2,  ports, entries)) {
                 LOG_DBG("Failed to add entry");
@@ -585,12 +607,14 @@ static bool regression_tests_nhop(void)
                 return false;
         }
 
+        LOG_DBG("Retrieving it");
         if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
                 LOG_DBG("Failed to get port-ids");
                 rkfree(ports);
                 return false;
         }
 
+        LOG_DBG("Checking if we retrieved 3");
         if (nr != 3) {
                 LOG_DBG("Wrong number of port-ids returned");
                 rkfree(ports);
@@ -598,30 +622,36 @@ static bool regression_tests_nhop(void)
         }
 
         /* Passing bogus parms here */
+        LOG_DBG("Passing bogus parms to nhop");
+        LOG_DBG("Passing bogus array");
         if (!pft_nhop(tmp, 30, 2, NULL, 0)) {
                 LOG_DBG("Bogus array passed");
                 rkfree(ports);
                 return false;
         }
 
+        LOG_DBG("Passing bogus instance");
         if (!pft_nhop(NULL, 30, 2, &port_ids, &nr)) {
                 LOG_DBG("Bogus instance passed");
                 rkfree(ports);
                 return false;
         }
 
+        LOG_DBG("Passing bogus port-id");
         if (!pft_nhop(tmp, 30, -99, &port_ids, &nr)) {
                 LOG_DBG("Bogus port-id passed");
                 rkfree(ports);
                 return false;
         }
 
+        LOG_DBG("Passing bogus address");
         if (!pft_nhop(tmp, -59, 9, &port_ids, &nr)) {
                 LOG_DBG("Bogus address passed");
                 rkfree(ports);
                 return false;
         }
 
+        LOG_DBG("Destroying instance");
         if (pft_destroy(tmp)) {
                 LOG_DBG("Failed to destroy instance");
                 rkfree(ports);
@@ -635,13 +665,13 @@ static bool regression_tests_nhop(void)
 static bool regression_tests_entries(void)
 {
         struct pft *       tmp;
-        struct pft_entry * e;
         port_id_t *        ports;
         size_t             entries;
 
+        LOG_DBG("Creating a new instance");
         tmp = pft_create();
         if (!tmp) {
-                LOG_DBG("Failed to create pft instance");
+                LOG_DBG("Failed to create instance");
                 return false;
         }
 
@@ -651,7 +681,8 @@ static bool regression_tests_entries(void)
                 LOG_DBG("Failed to malloc");
                 return false;
         }
-
+        
+        LOG_DBG("Adding an entry");
         ports[0] = 1;
         if (pft_add(tmp, 16, 1, ports, entries)) {
                 LOG_DBG("Failed to add entry");
@@ -659,31 +690,28 @@ static bool regression_tests_entries(void)
                 return false;
         }
 
-        e = pft_find(tmp, 16,1);
-        if (!e) {
-                LOG_DBG("Failed to retrieve stored entry");
-                rkfree(ports);
-                return false;
-        }
-
+        LOG_DBG("Removing an entry");
         if (pft_remove(tmp, 16, 1, ports, entries)) {
                 LOG_DBG("Failed to remove entry");
                 rkfree(ports);
                 return false;
         }
 
+        LOG_DBG("Removing the previous entry again");
         if (!pft_remove(tmp, 16, 1, ports, entries)) {
                 LOG_DBG("Entry should have already been removed");
                 rkfree(ports);
                 return false;
         }
 
+        LOG_DBG("Removing an entry that's not there");
         if (!pft_remove(tmp, 35, 4, ports, entries)) {
                 LOG_DBG("No such entry was added");
                 rkfree(ports);
                 return false;
         }
 
+        LOG_DBG("Adding an entry");
         ports[0] = 2;
         if (pft_add(tmp, 30, 8, ports, entries)) {
                 LOG_DBG("Failed to add entry");
@@ -691,6 +719,7 @@ static bool regression_tests_entries(void)
                 return false;
         }
 
+        LOG_DBG("Adding an entry");
         ports[0] = 99;
         if (pft_add(tmp, 35, 5, ports, entries)) {
                 LOG_DBG("Failed to add entry");
@@ -698,6 +727,7 @@ static bool regression_tests_entries(void)
                 return false;
         }
 
+        LOG_DBG("Flushing the whole table");
         if (pft_flush(tmp)) {
                 LOG_DBG("Failed to flush table");
                 rkfree(ports);
@@ -705,18 +735,37 @@ static bool regression_tests_entries(void)
         }
 
         /* Passing bogus parms here */
+        LOG_DBG("Trying bogus parameters");
+
+        LOG_DBG("Passing bogus instance");
+        if (!pft_add(NULL, 35, 5, ports, entries)) {
+                LOG_DBG("Bogus instance used");
+                rkfree(ports);
+                return false;
+        }
+
+        LOG_DBG("Adding an entry with an empty table");
         if (!pft_add(tmp, 35, 5, NULL, 0)) {
                 LOG_DBG("Bogus ports passed");
                 rkfree(ports);
                 return false;
         }
 
+        LOG_DBG("Passing bogus instance");
+        if (!pft_remove(NULL, 35, 4, ports, entries)) {
+                LOG_DBG("Bogus instance used");
+                rkfree(ports);
+                return false;
+        }
+
+        LOG_DBG("Removing an entry with an empty table");
         if (!pft_remove(tmp, 35, 4, NULL, 0)) {
                 LOG_DBG("Bogus ports passed to remove");
                 rkfree(ports);
                 return false;
         }
 
+        LOG_DBG("Destroying the instance");
         if (pft_destroy(tmp)) {
                 LOG_DBG("Failed to destroy instance");
                 rkfree(ports);
@@ -731,12 +780,14 @@ static bool regression_tests_instance(void)
 {
         struct pft * tmp;
 
+        LOG_DBG("Creating an instance");
         tmp = pft_create();
         if (!tmp) {
-                LOG_DBG("Failed to create pft instance");
+                LOG_DBG("Failed to create instance");
                 return false;
         }
-
+        
+        LOG_DBG("Destroying an instance");
         if (pft_destroy(tmp)) {
                 LOG_DBG("Failed to destroy instance");
                 return false;
@@ -748,13 +799,13 @@ static bool regression_tests_instance(void)
 bool regression_tests_pft(void)
 {
         if (!regression_tests_instance()) {
-                LOG_ERR("Creating of a pft instance test failed, "
+                LOG_ERR("Creating of an instance test failed, "
                         "bailing out");
                 return false;
         }
         
         if (!regression_tests_entries()) {
-                LOG_ERR("Adding/removing pft entries test failed, "
+                LOG_ERR("Adding/removing entries test failed, "
                         "bailing out");
                 return false;
         }
