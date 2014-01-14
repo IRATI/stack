@@ -1129,9 +1129,9 @@ static int notify_ipc_manager_present(void *             data,
         return 0;
 }
 
-static int notify_ipcp_modify_pdu_fte(void *             data,
-                                      struct sk_buff *   buff,
-                                      struct genl_info * info)
+static int notify_ipcp_modify_pfte(void *             data,
+                                   struct sk_buff *   buff,
+                                   struct genl_info * info)
 {
         struct kipcm *                      kipcm;
         struct rnl_rmt_mod_pfte_msg_attrs * attrs;
@@ -1205,6 +1205,58 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
 
 }
 
+static int notify_ipcp_dump_pft(void *             data,
+                                struct sk_buff *   buff,
+                                struct genl_info * info)
+{
+#if 0        
+        struct kipcm *         kipcm;
+        struct rnl_msg *       msg;
+        struct ipcp_instance * ipc_process;
+        ipc_process_id_t       ipc_id;
+        struct list_head *     entries;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        kipcm = (struct kipcm *) data;
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        ipc_id = 0;
+        msg    = rnl_msg_create(RNL_MSG_ATTRS_RMT_PFT_DUMP_REQUEST);
+        if (!msg) {
+                rnl_msg_destroy(msg);
+                return -1;
+        }
+
+        if (rnl_parse_msg(info, msg)) {
+                rnl_msg_destroy(msg);
+                return -1;
+        }
+
+        ipc_id      = msg->header.dst_ipc_id;
+        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipc_process) {
+                LOG_ERR("IPC process %d not found", ipc_id);
+                rnl_msg_destroy(msg);
+                return -1;
+        }
+
+        if (ipc_process->ops->pft_dump(ipc_process->data,
+                                       entries)) {
+
+        }
+#endif
+        LOG_MISSING;
+        return 0;
+}
+
 static int netlink_handlers_unregister(struct rnl_set * rnls)
 {
         int retval = 0;
@@ -1251,7 +1303,9 @@ static int netlink_handlers_register(struct kipcm * kipcm)
         kipcm_handlers[RINA_C_IPCP_CONN_DESTROY_REQUEST]           =
                 notify_ipcp_conn_destroy_req;
         kipcm_handlers[RINA_C_RMT_MODIFY_FTE_REQUEST]              =
-                notify_ipcp_modify_pdu_fte;
+                notify_ipcp_modify_pfte;
+        kipcm_handlers[RINA_C_RMT_DUMP_FT_REQUEST]                 =
+                notify_ipcp_dump_pft;
 
         for (i = 1; i < RINA_C_MAX; i++) {
                 if (kipcm_handlers[i] != NULL) {

@@ -565,6 +565,13 @@ static int normal_pft_remove(struct ipcp_instance_data * data,
                               size);
 }
 
+static int normal_pft_dump(struct ipcp_instance_data * data,
+                           struct list_head *          entreis)
+{
+        LOG_MISSING;
+        return 0;
+}
+
 /*  FIXME: register ops */
 static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request     = NULL,
@@ -584,7 +591,8 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .mgmt_sdu_write            = normal_mgmt_sdu_write,
         .mgmt_sdu_post             = normal_mgmt_sdu_post,
         .pft_add                   = normal_pft_add,
-        .pft_remove                = normal_pft_remove
+        .pft_remove                = normal_pft_remove,
+        .pft_dump                  = normal_pft_dump
 };
 
 static void sdu_wpi_destructor(void * data)

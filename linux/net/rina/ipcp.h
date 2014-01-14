@@ -196,6 +196,8 @@ struct ipcp_instance_ops {
                            port_id_t *                 ports,
                            size_t                      size);
 
+        int (* pft_dump)(struct ipcp_instance_data * data,
+                         struct list_head *          entries);
 };
 
 #endif
