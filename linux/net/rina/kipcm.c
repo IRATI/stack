@@ -1181,8 +1181,8 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
         }
 
         op = attrs->mode ?
-                ipc_process->ops->pft_add :
-                ipc_process->ops->pft_remove;
+                ipc_process->ops->pft_remove :
+                ipc_process->ops->pft_add ;
 
         ASSERT(op);
         list_for_each_entry(entry, &attrs->pft_entries, next) {
@@ -1191,7 +1191,7 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
                 if (op(ipc_process->data,
                        entry->destination,
                        entry->qos_id,
-                       *(entry->ports),
+                       entry->ports,
                        entry->ports_size)) {
                         LOG_ERR("There were some problematic entries");
                         rnl_msg_destroy(msg);

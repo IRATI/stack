@@ -593,7 +593,7 @@ struct rnl_ipcm_query_rib_resp_msg_attrs {
 struct pdu_fte_list_entry {
         address_t destination;
         qos_id_t  qos_id;
-        port_id_t ** ports;
+        port_id_t * ports;
         size_t ports_size;
         struct list_head next;
 };
