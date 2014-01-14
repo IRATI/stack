@@ -809,12 +809,12 @@ static int receive_worker(void * o)
         }
 
         while (!nothing_to_do) {
-                nothing_to_do = true;
                 pdu_type_t          pdu_type;
                 struct rmt_queue *  entry;
                 int                 bucket;
                 struct hlist_node * ntmp;
 
+                nothing_to_do = true;
                 hash_for_each_safe(tmp->ingress.queues->queues,
                                    bucket,
                                    ntmp,
@@ -874,8 +874,6 @@ static int receive_worker(void * o)
 
                         /* (FUTURE) foreach_end() */
                 }
-
-                break;
         }
 
         /* (FUTURE) for-each list in pdus_dt call process_dt_pdus(pdus_dt) */
