@@ -408,6 +408,31 @@ static struct notifier_block netlink_notifier = {
         .notifier_call = netlink_notify_callback,
 };
 
+static struct ipcm_rnl_port {
+        rnl_port_t ipc_manager_port;
+        spinlock_t lock;
+} ipcm_port;
+
+rnl_port_t rnl_get_ipc_manager_port(void)
+{
+        rnl_port_t ret;
+
+        spin_lock(&ipcm_port.lock);
+        ret = ipcm_port.ipc_manager_port;
+        spin_unlock(&ipcm_port.lock);
+
+        return ret;
+}
+EXPORT_SYMBOL(rnl_get_ipc_manager_port);
+
+void rnl_set_ipc_manager_port(rnl_port_t port)
+{
+        spin_lock(&ipcm_port.lock);
+        ipcm_port.ipc_manager_port = port;
+        spin_unlock(&ipcm_port.lock);
+}
+EXPORT_SYMBOL(rnl_set_ipc_manager_port);
+
 int rnl_init(void)
 {
         int ret;
@@ -445,6 +470,9 @@ int rnl_init(void)
                 return -1;
         }
 
+        ipcm_port.ipc_manager_port = 0;
+        spin_lock_init(&ipcm_port.lock);
+
         LOG_DBG("NetLink layer initialized successfully");
 
         return 0;
@@ -477,13 +505,3 @@ void rnl_exit(void)
 
         LOG_DBG("NetLink layer finalized successfully");
 }
-
-static rnl_port_t ipc_manager_port = 0;
-
-rnl_port_t rnl_get_ipc_manager_port(void)
-{ return ipc_manager_port; }
-EXPORT_SYMBOL(rnl_get_ipc_manager_port);
-
-void rnl_set_ipc_manager_port(rnl_port_t port)
-{ ipc_manager_port = port; }
-EXPORT_SYMBOL(rnl_set_ipc_manager_port);
