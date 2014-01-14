@@ -513,12 +513,12 @@ rnl_rmt_mod_pfte_msg_attrs_destroy(struct rnl_rmt_mod_pfte_msg_attrs * attrs)
                                  &attrs->pft_entries,
                                  next) {
 
-                if (*(pos->ports)) rkfree(*(pos->ports));
+                if (pos->ports) rkfree(pos->ports);
 
                 list_del(&pos->next);
                 rkfree(pos);
         }
-        LOG_DBG("rnl_rmt_mod_pfte_msg_attrs desrtoy correctly");
+        LOG_DBG("rnl_rmt_mod_pfte_msg_attrs destroy correctly");
         rkfree(attrs);
         return 0;
 }
@@ -661,7 +661,6 @@ static int parse_pdu_fte_port_list_entries(struct nlattr * nested_attr,
         int                           rem        = 0;
         int                           i          = 0;
         struct nlattr *               nla;
-        port_id_t *                   ports;
 
         if (!nested_attr) {
                 LOG_ERR("Bogus nested attribute (ports) passed, bailing out");
@@ -674,10 +673,10 @@ static int parse_pdu_fte_port_list_entries(struct nlattr * nested_attr,
         }
 
         entry->ports_size = nla_len(nested_attr);
-        ports = rkzalloc(entry->ports_size, GFP_KERNEL);
-        LOG_DBG("Allocated %d bytes in %pk", entry->ports_size, ports);
+        entry->ports = rkzalloc(entry->ports_size, GFP_KERNEL);
+        LOG_DBG("Allocated %d bytes in %pk", entry->ports_size, entry->ports);
 
-        if (!ports) {
+        if (!entry->ports) {
                 LOG_ERR("Could not allocate memory for ports");
                 return -1;
         }
@@ -686,11 +685,11 @@ static int parse_pdu_fte_port_list_entries(struct nlattr * nested_attr,
                      rem = nla_len(nested_attr);
              nla_ok(nla, rem);
              nla = nla_next(nla, &rem)) {
-                ports[i] = nla_get_u32(nla);
+                entry->ports[i] = nla_get_u32(nla);
                 i++;
         }
 
-        entry->ports = &ports;
+        entry->ports_size = (size_t) i;
 
         if (rem)
                 LOG_WARN("Missing bits to pars");
