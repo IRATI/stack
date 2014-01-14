@@ -200,11 +200,8 @@ static int pfte_ports_copy(struct pft_entry * entry,
         struct pft_port_entry * pos;
         size_t                  ports_amount;
         int                     i;
-        port_id_t *             helper;
 
         ASSERT(pfte_is_ok(entry));
-
-        helper = *port_ids;
 
         ports_amount = 0;
         list_for_each_entry_rcu(pos, &entry->ports, next) {
@@ -216,7 +213,7 @@ static int pfte_ports_copy(struct pft_entry * entry,
         if (*entries != ports_amount) {
                 if (*entries > 0)
                         rkfree(*port_ids);
-                helper = rkmalloc(ports_amount * sizeof(*helper),
+                *port_ids = rkmalloc(ports_amount * sizeof(**port_ids),
                                      GFP_ATOMIC);
                 if (!*port_ids) {
                         LOG_ERR("Could not allocate memory "
@@ -232,7 +229,7 @@ static int pfte_ports_copy(struct pft_entry * entry,
         /* Get the first port, and so on, fill in the port_ids */
         i = 0;
         list_for_each_entry_rcu(pos, &entry->ports, next) {
-                helper[i++] = pft_pe_port(pos);
+                (*port_ids)[i++] = pft_pe_port(pos);
         }
 
         return 0;
@@ -469,6 +466,7 @@ static bool regression_tests_nhop(void)
         size_t             nr;
         port_id_t *        ports;
         size_t             entries;
+        int                i;
 
         tmp = pft_create();
         if (!tmp) {
@@ -484,6 +482,7 @@ static bool regression_tests_nhop(void)
         }
 
         ports[0] = 2;
+        LOG_DBG("Adding port-id %d", ports[0]);
         if (pft_add(tmp, 30, 2, ports, entries)) {
                 LOG_DBG("Failed to add entry");
                 rkfree(ports);
@@ -491,6 +490,7 @@ static bool regression_tests_nhop(void)
         }
 
         ports[0] = 99;
+        LOG_DBG("Adding port-id %d", ports[0]);
         if (pft_add(tmp, 30, 2, ports, entries)) {
                 LOG_DBG("Failed to add entry");
                 rkfree(ports);
@@ -510,16 +510,8 @@ static bool regression_tests_nhop(void)
                 return false;
         }
 
-        if (port_ids[0] != 2) {
-                LOG_DBG("Wrong port-id returned");
-                rkfree(ports);
-                return false;
-        }
-
-        if (port_ids[1] != 99) {
-                LOG_DBG("Wrong port-id returned");
-                rkfree(ports);
-                return false;
+        for (i = 0; i < nr; i++) {
+                LOG_DBG("Retrieved port-id %d", port_ids[i]);
         }
 
         if (pft_flush(tmp)) {
