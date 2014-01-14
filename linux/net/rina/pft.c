@@ -83,10 +83,10 @@ static port_id_t pft_pe_port(struct pft_port_entry * pe)
 
 /* FIXME: This representation is crappy and MUST be changed */
 struct pft_entry {
-        address_t destination;
-        qos_id_t  qos_id;
-        struct    list_head ports;
-        struct    list_head next;
+        address_t        destination;
+        qos_id_t         qos_id;
+        struct list_head ports;
+        struct list_head next;
 };
 
 static struct pft_entry * pfte_create_gfp(gfp_t     flags,
@@ -444,12 +444,12 @@ int pft_nhop(struct pft * instance,
 #ifdef CONFIG_RINA_PFT_REGRESSION_TESTS
 static bool regression_tests_nhop(void)
 {
-        struct pft *       tmp;
-        port_id_t *        port_ids;
-        size_t             nr;
-        port_id_t *        ports;
-        size_t             entries;
-        int                i;
+        struct pft * tmp;
+        port_id_t *  port_ids;
+        size_t       nr;
+        port_id_t *  ports;
+        size_t       entries;
+        int          i;
 
         LOG_DBG("Creating a new instance");
         tmp = pft_create();
@@ -459,7 +459,7 @@ static bool regression_tests_nhop(void)
         }
 
         entries = 1;
-        ports = rkmalloc(sizeof(*ports), GFP_KERNEL);
+        ports   = rkmalloc(sizeof(*ports), GFP_KERNEL);
         if (!ports) {
                 LOG_DBG("Failed to malloc");
                 return false;
@@ -486,7 +486,7 @@ static bool regression_tests_nhop(void)
         LOG_DBG("Trying to retrieve these entries with "
                 "a table that is set to NULL " 
                 "and size 0 as in parameter");
-        nr = 0;
+        nr       = 0;
         port_ids = NULL;
         if (pft_nhop(tmp, 30, 2, &port_ids, &nr)) {
                 LOG_DBG("Failed to get port-ids");
@@ -664,9 +664,9 @@ static bool regression_tests_nhop(void)
 
 static bool regression_tests_entries(void)
 {
-        struct pft *       tmp;
-        port_id_t *        ports;
-        size_t             entries;
+        struct pft * tmp;
+        port_id_t *  ports;
+        size_t       entries;
 
         LOG_DBG("Creating a new instance");
         tmp = pft_create();
