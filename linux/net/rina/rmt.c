@@ -763,8 +763,8 @@ static int process_dt_sdu(struct rmt *        rmt,
         }
 
         if (rmt->address != dest_add) {
-                qos_id_t     qos_id;
-                int          i;
+                qos_id_t qos_id;
+                int      i;
 
                 qos_id = pci_qos_id(pdu_pci_get_ro(pdu));
                 if (pft_nhop(rmt->pft,
@@ -873,6 +873,7 @@ static int receive_worker(void * o)
                                 sdu_destroy(sdu);
                                 break;
                         }
+                        pci_destroy(pci);
 
                         /* (FUTURE) foreach_end() */
                 }
