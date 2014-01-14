@@ -443,7 +443,8 @@ int kfa_flow_sdu_write(struct kfa * instance,
                         &flow->wait_queue);
                 spin_unlock(&instance->lock);
                 retval = wait_event_interruptible(flow->wait_queue,
-                                                  (flow->state != PORT_STATE_PENDING));
+                                                  (flow->state !=
+                                                   PORT_STATE_PENDING));
 
                 spin_lock(&instance->lock);
                 LOG_DBG("Write woken up");
