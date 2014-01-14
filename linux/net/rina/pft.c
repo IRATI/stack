@@ -259,7 +259,7 @@ static bool pft_is_ok(struct pft * instance)
 { return instance ? true : false; }
 
 bool pft_is_empty(struct pft * instance)
-{ return (pft_is_ok(instance) ? list_empty(&instance->entries) : false); }
+{ return pft_is_ok(instance) ? list_empty(&instance->entries) : false;  }
 
 static void __pft_flush(struct pft * instance)
 {
