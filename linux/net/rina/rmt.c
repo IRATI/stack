@@ -581,8 +581,6 @@ static int __queue_send_add(struct rmt * instance,
                 return -1;
 
         hash_add(instance->egress.queues->queues, &tmp->hlist, id);
-        tmp->port_id = id;
-        spin_lock_init(&tmp->lock);
 
         LOG_DBG("Added send queue to rmt %pK for port id %d", instance, id);
 
@@ -630,20 +628,11 @@ static int __queue_recv_add(struct rmt * instance,
 {
         struct rmt_queue * tmp;
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = queue_create(id);
         if (!tmp)
                 return -1;
 
-        tmp->queue = rfifo_create();
-        if (!tmp->queue) {
-                rkfree(tmp);
-                return -1;
-        }
-
-        INIT_HLIST_NODE(&tmp->hlist);
         hash_add(instance->ingress.queues->queues, &tmp->hlist, id);
-        tmp->port_id = id;
-        spin_lock_init(&tmp->lock);
 
         LOG_DBG("Added receive queue to rmt %pK for port id %d", instance, id);
 
@@ -807,8 +796,11 @@ static int receive_worker(void * o)
 {
         struct rmt * tmp;
         struct pci * pci;
+        bool         nothing_to_do;
 
         LOG_DBG("RMT receive worker called");
+
+        nothing_to_do = false;
 
         tmp = (struct rmt *) o;
         if (!tmp) {
@@ -816,12 +808,13 @@ static int receive_worker(void * o)
                 return -1;
         }
 
-        for (;;) {
+        while (!nothing_to_do) {
                 pdu_type_t          pdu_type;
                 struct rmt_queue *  entry;
                 int                 bucket;
                 struct hlist_node * ntmp;
 
+                nothing_to_do = true;
                 hash_for_each_safe(tmp->ingress.queues->queues,
                                    bucket,
                                    ntmp,
@@ -842,6 +835,7 @@ static int receive_worker(void * o)
                                 break;
                         }
 
+                        nothing_to_do = false;
                         pci = sdu_pci_copy(sdu);
                         if (!pci) {
                                 LOG_ERR("No PCI to work with");
@@ -880,8 +874,6 @@ static int receive_worker(void * o)
 
                         /* (FUTURE) foreach_end() */
                 }
-
-                break;
         }
 
         /* (FUTURE) for-each list in pdus_dt call process_dt_pdus(pdus_dt) */
