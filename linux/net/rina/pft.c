@@ -413,7 +413,7 @@ int pft_nhop(struct pft * instance,
                 return -1;
         }
 
-        if (*count < 0 || !*ports) {
+        if (*count < 0) {
                 LOG_ERR("Bogus input params");
                 return -1;
         }
@@ -483,8 +483,8 @@ static bool regression_tests_nhop(void)
                 return false;
         }
 
-        LOG_DBG("Trying to retrieve these entries with"
-                "a table that is set to NULL" 
+        LOG_DBG("Trying to retrieve these entries with "
+                "a table that is set to NULL " 
                 "and size 0 as in parameter");
         nr = 0;
         port_ids = NULL;
