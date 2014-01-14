@@ -198,35 +198,33 @@ static int pfte_ports_copy(struct pft_entry * entry,
                            size_t *           entries)
 {
         struct pft_port_entry * pos;
-        size_t                  ports_amount;
+        size_t                  count;
         int                     i;
 
         ASSERT(pfte_is_ok(entry));
 
-        ports_amount = 0;
-        list_for_each_entry_rcu(pos, &entry->ports, next) {
-                ports_amount++;
-        }
-       
-        if (*entries != ports_amount) {
-                if (*entries > 0)
-                        rkfree(*port_ids);
-                *port_ids = rkmalloc(ports_amount * sizeof(**port_ids),
-                                     GFP_ATOMIC);
+        count = 0;
+        list_for_each_entry_rcu(pos, &entry->ports, next)
+                count++;
+
+        ASSERT(entries);
+
+        if (*entries != count) {
+                if (*entries > 0) rkfree(*port_ids);
+                *port_ids = rkmalloc(count * sizeof(**port_ids), GFP_ATOMIC);
                 if (!*port_ids) {
                         LOG_ERR("Could not allocate memory "
-                                "to return resulting ports");
+                                "to return ports %zd", count);
                         *entries = 0;
                         return -1;
                 }
-                *entries = ports_amount;
+                *entries = count;
         }
 
         /* Get the first port, and so on, fill in the port_ids */
         i = 0;
-        list_for_each_entry_rcu(pos, &entry->ports, next) {
+        list_for_each_entry_rcu(pos, &entry->ports, next)
                 (*port_ids)[i++] = pft_pe_port(pos);
-        }
 
         return 0;
 }
@@ -387,9 +385,8 @@ int pft_remove(struct pft *       instance,
         if (!tmp)
                 return -1;
 
-        for (i = 0; i < count; i++) {
+        for (i = 0; i < count; i++)
                 pfte_port_remove(tmp, ports[i]);
-        }
 
         return 0;
 }
@@ -639,8 +636,8 @@ static bool regression_tests_entries(void)
 {
         struct pft *       tmp;
         struct pft_entry * e;
-        port_id_t * ports;
-        size_t entries;
+        port_id_t *        ports;
+        size_t             entries;
 
         tmp = pft_create();
         if (!tmp) {
@@ -755,21 +752,18 @@ bool regression_tests_pft(void)
                         "bailing out");
                 return false;
         }
-        LOG_DBG("Creating of a pft instance test succeeded");
         
         if (!regression_tests_entries()) {
                 LOG_ERR("Adding/removing pft entries test failed, "
                         "bailing out");
                 return false;
         }
-        LOG_DBG("Adding/removing pft entries test succeeded");
 
         if (!regression_tests_nhop()) {
-                LOG_ERR("Pft_nhop operation is crap, "
+                LOG_ERR("NHOP lookup operation is crap, "
                         "bailing out");
                 return false;
         }
-        LOG_DBG("Pft_nhop operation is beautiful");
 
         return true;
 }
