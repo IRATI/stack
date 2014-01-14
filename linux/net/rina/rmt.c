@@ -849,6 +849,7 @@ static int receive_worker(void * o)
                         pdu_type = pci_type(pci);
                         if (!pdu_type_is_ok(pdu_type)) {
                                 LOG_ERR("Wrong PDU type");
+                                pci_destroy(pci);
                                 sdu_destroy(sdu);
                                 break;
                         }
