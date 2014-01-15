@@ -44,16 +44,16 @@ struct pci {
         pdu_type_t type;
 
         /* If type == PDU_TYPE_MGMT, all the following fields are useless */
-        address_t  source;
-        address_t  destination;
+        address_t source;
+        address_t destination;
 
         struct {
                 cep_id_t source;
                 cep_id_t destination;
-        } ceps;
+        }         ceps;
 
-        qos_id_t   qos_id;
-        seq_num_t  sequence_number;
+        qos_id_t  qos_id;
+        seq_num_t sequence_number;
 };
 
 static bool pci_is_ok(const struct pci * pci)
@@ -144,7 +144,7 @@ int pci_nxt_seq_send_set(struct pci * pci,
 EXPORT_SYMBOL(pci_nxt_seq_send_set);
 
 int pci_qos_id_set(struct pci * pci,
-                   qos_id_t   qos_id)
+                   qos_id_t     qos_id)
 {
         if (!pci)
                 return -1;
@@ -188,7 +188,6 @@ int pci_format(struct pci * pci,
         return 0;
 }
 EXPORT_SYMBOL(pci_format);
-
 
 static struct pci * pci_create_from_gfp(gfp_t        flags,
                                         const void * data)
@@ -316,7 +315,7 @@ cep_id_t pci_cep_source(const struct pci * pci)
 EXPORT_SYMBOL(pci_cep_source);
 
 qos_id_t pci_qos_id(const struct pci * pci)
-{ return (pci ? pci->qos_id : qos_id_bad()); }
+{ return pci ? pci->qos_id : qos_id_bad();  }
 EXPORT_SYMBOL(pci_qos_id);
 
 struct pdu {

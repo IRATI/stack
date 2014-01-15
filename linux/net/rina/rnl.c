@@ -47,8 +47,7 @@ struct rnl_set {
 };
 
 static struct rnl_set * default_set = NULL;
-
-struct genl_family rnl_nl_family = {
+struct genl_family      rnl_nl_family = {
         .id      = GENL_ID_GENERATE,
         /* .hdrsize = 0, */
         .hdrsize = sizeof(struct rina_msg_hdr),
@@ -140,12 +139,12 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         return 0;
 }
 
-#define DECL_NL_OP(X) {                         \
-                .cmd    = X,                    \
-                        .flags  = 0,            \
-                        .doit   = dispatcher,   \
-                        .dumpit = NULL,         \
-                        }
+#define DECL_NL_OP(X) {               \
+                .cmd    = X,          \
+                .flags  = 0,          \
+                .doit   = dispatcher, \
+                .dumpit = NULL,       \
+}
 
 static struct genl_ops nl_ops[] = {
         DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST),
