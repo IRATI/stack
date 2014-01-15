@@ -472,6 +472,8 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         tmp->efcpc                = container;
         connection->source_cep_id = cep_id;
         tmp->connection           = connection;
+
+        /* FIXME: dtp_create() takes ownership of the connection parameter */
         tmp->dtp                  = dtp_create(container->rmt,
                                                container->kfa,
                                                connection);
