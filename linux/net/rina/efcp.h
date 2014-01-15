@@ -26,22 +26,9 @@
 #include "qos.h"
 #include "ipcp.h"
 #include "kfa.h"
+#include "connection.h"
 
 struct rmt;
-
-struct connection {
-        port_id_t port_id;
-
-        address_t source_address;
-        address_t destination_address;
-
-        cep_id_t  source_cep_id;
-        cep_id_t  destination_cep_id;
-
-        qos_id_t  qos_id;
-
-        /* FIXME: Add the list of policies associated with this connection */
-};
 
 /* The container holding all the EFCP instances for an IPC Process */
 struct efcp_container;
@@ -56,9 +43,9 @@ int                     efcp_container_write(struct efcp_container * container,
 int                     efcp_container_receive(struct efcp_container * c,
                                                cep_id_t                cep_id,
                                                struct pdu *            pdu);
-int                     efcp_container_mgmt_write(struct efcp_container * container,
-                                                  address_t               src_address,
-                                                  port_id_t               port_id,
+int                     efcp_container_mgmt_write(struct efcp_container * c,
+                                                  address_t               src,
+                                                  port_id_t               port,
                                                   struct sdu *            sdu);
 
 cep_id_t                efcp_connection_create(struct efcp_container * cont,

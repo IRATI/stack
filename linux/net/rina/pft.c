@@ -202,8 +202,9 @@ static int pfte_ports_copy(struct pft_entry * entry,
         ASSERT(pfte_is_ok(entry));
 
         count = 0;
-        list_for_each_entry_rcu(pos, &entry->ports, next)
+        list_for_each_entry_rcu(pos, &entry->ports, next) {
                 count++;
+        }
 
         ASSERT(entries);
 
@@ -221,8 +222,9 @@ static int pfte_ports_copy(struct pft_entry * entry,
 
         /* Get the first port, and so on, fill in the port_ids */
         i = 0;
-        list_for_each_entry_rcu(pos, &entry->ports, next)
+        list_for_each_entry_rcu(pos, &entry->ports, next) {
                 (*port_ids)[i++] = pft_pe_port(pos);
+        }
 
         return 0;
 }
@@ -257,7 +259,7 @@ static bool pft_is_ok(struct pft * instance)
 { return instance ? true : false; }
 
 bool pft_is_empty(struct pft * instance)
-{ return (pft_is_ok(instance) ? list_empty(&instance->entries) : false); }
+{ return pft_is_ok(instance) ? list_empty(&instance->entries) : false;  }
 
 static void __pft_flush(struct pft * instance)
 {
@@ -314,11 +316,11 @@ static struct pft_entry * pft_find(struct pft * instance,
         return NULL;
 }
 
-int pft_add(struct pft *       instance,
-            address_t          destination,
-            qos_id_t           qos_id,
-            const port_id_t  * ports,
-            size_t             count)
+int pft_add(struct pft *      instance,
+            address_t         destination,
+            qos_id_t          qos_id,
+            const port_id_t * ports,
+            size_t            count)
 {
         struct pft_entry * tmp;
         int                i;
@@ -356,11 +358,11 @@ int pft_add(struct pft *       instance,
         return 0;
 }
 
-int pft_remove(struct pft *       instance,
-               address_t          destination,
-               qos_id_t           qos_id,
-               const port_id_t  * ports,
-               size_t             count)
+int pft_remove(struct pft *      instance,
+               address_t         destination,
+               qos_id_t          qos_id,
+               const port_id_t * ports,
+               size_t            count)
 {
         struct pft_entry * tmp;
         int                i;
@@ -674,7 +676,7 @@ static bool regression_tests_entries(void)
         }
 
         entries = 1;
-        ports = rkmalloc(sizeof(*ports), GFP_KERNEL);
+        ports   = rkmalloc(sizeof(*ports), GFP_KERNEL);
         if (!ports) {
                 LOG_DBG("Failed to malloc");
                 return false;
