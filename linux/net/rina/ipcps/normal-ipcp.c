@@ -262,8 +262,6 @@ static int remove_cep_id_from_flow(struct normal_flow * flow,
 static int ipcp_flow_notification(struct ipcp_instance_data * data,
                                   port_id_t                   pid)
 {
-        LOG_MISSING;
-
         if (kfa_flow_bind_rmt(data->kfa, pid, data->rmt))
                 return -1;
 
@@ -545,8 +543,11 @@ static int normal_pft_add(struct ipcp_instance_data * data,
                           size_t                      size)
 
 {
-        LOG_MISSING;
-        return -1;
+        return rmt_pft_add(data->rmt,
+                           address,
+                           qos_id,
+                           ports,
+                           size);
 }
 
 static int normal_pft_remove(struct ipcp_instance_data * data,
@@ -555,8 +556,11 @@ static int normal_pft_remove(struct ipcp_instance_data * data,
                              port_id_t *                 ports,
                              size_t                      size)
 {
-        LOG_MISSING;
-        return -1;
+        return rmt_pft_remove(data->rmt,
+                              address,
+                              qos_id,
+                              ports,
+                              size);
 }
 
 /*  FIXME: register ops */

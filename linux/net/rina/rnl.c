@@ -2,7 +2,7 @@
  * RNL (RINA NetLink support)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,8 +47,7 @@ struct rnl_set {
 };
 
 static struct rnl_set * default_set = NULL;
-
-struct genl_family rnl_nl_family = {
+struct genl_family      rnl_nl_family = {
         .id      = GENL_ID_GENERATE,
         /* .hdrsize = 0, */
         .hdrsize = sizeof(struct rina_msg_hdr),
@@ -140,12 +139,12 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         return 0;
 }
 
-#define DECL_NL_OP(X) {                         \
-                .cmd    = X,                    \
-                        .flags  = 0,            \
-                        .doit   = dispatcher,   \
-                        .dumpit = NULL,         \
-                        }
+#define DECL_NL_OP(X) {               \
+                .cmd    = X,          \
+                .flags  = 0,          \
+                .doit   = dispatcher, \
+                .dumpit = NULL,       \
+}
 
 static struct genl_ops nl_ops[] = {
         DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST),
@@ -408,6 +407,31 @@ static struct notifier_block netlink_notifier = {
         .notifier_call = netlink_notify_callback,
 };
 
+static struct ipcm_rnl_port {
+        rnl_port_t ipc_manager_port;
+        spinlock_t lock;
+} ipcm_port;
+
+rnl_port_t rnl_get_ipc_manager_port(void)
+{
+        rnl_port_t ret;
+
+        spin_lock(&ipcm_port.lock);
+        ret = ipcm_port.ipc_manager_port;
+        spin_unlock(&ipcm_port.lock);
+
+        return ret;
+}
+EXPORT_SYMBOL(rnl_get_ipc_manager_port);
+
+void rnl_set_ipc_manager_port(rnl_port_t port)
+{
+        spin_lock(&ipcm_port.lock);
+        ipcm_port.ipc_manager_port = port;
+        spin_unlock(&ipcm_port.lock);
+}
+EXPORT_SYMBOL(rnl_set_ipc_manager_port);
+
 int rnl_init(void)
 {
         int ret;
@@ -445,6 +469,9 @@ int rnl_init(void)
                 return -1;
         }
 
+        ipcm_port.ipc_manager_port = 0;
+        spin_lock_init(&ipcm_port.lock);
+
         LOG_DBG("NetLink layer initialized successfully");
 
         return 0;
@@ -477,13 +504,3 @@ void rnl_exit(void)
 
         LOG_DBG("NetLink layer finalized successfully");
 }
-
-static rnl_port_t ipc_manager_port = 0;
-
-rnl_port_t rnl_get_ipc_manager_port(void)
-{ return ipc_manager_port; }
-EXPORT_SYMBOL(rnl_get_ipc_manager_port);
-
-void rnl_set_ipc_manager_port(rnl_port_t port)
-{ ipc_manager_port = port; }
-EXPORT_SYMBOL(rnl_set_ipc_manager_port);

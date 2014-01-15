@@ -2857,6 +2857,9 @@ int testRmtModifyPDUFTEntriesRequestMessage() {
         std::cout << "TESTING RMT MODIFY PDU FTE REQUEST MESSAGE\n";
         int returnValue = 0;
         std::list<PDUForwardingTableEntry>::const_iterator iterator;
+        std::list<PDUForwardingTableEntry> entriesList;
+        std::list<unsigned int>::const_iterator iterator2;
+        std::list<unsigned int> portIdsList;
 
         RmtModifyPDUFTEntriesRequestMessage message;
         PDUForwardingTableEntry entry1, entry2;
@@ -2909,13 +2912,22 @@ int testRmtModifyPDUFTEntriesRequestMessage() {
                 returnValue = -1;
         }
 
-        for (iterator = recoveredMessage->getEntries().begin();
-                        iterator != recoveredMessage->getEntries().end();
+
+        entriesList = recoveredMessage->getEntries();
+        for (iterator = entriesList.begin();
+                        iterator != entriesList.end();
                         ++iterator) {
-                if (iterator->getPortIds().size() != 3) {
+                portIdsList = iterator->getPortIds();
+                if (portIdsList.size() != 3) {
                         std::cout << "Size of portids in original and recovered messages"
                                         << " are different\n";
                         returnValue = -1;
+                }
+
+                for(iterator2 = portIdsList.begin();
+                                iterator2 != portIdsList.end();
+                                ++iterator2) {
+                        std::cout << *iterator2 <<std::endl;
                 }
         }
 

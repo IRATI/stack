@@ -1,0 +1,52 @@
+/*
+ * Connection
+ *
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Sander Vrijders <sander.vrijders@intec.ugent.be>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#ifndef RINA_CONNECTION_H
+#define RINA_CONNECTION_H
+
+#include <linux/uaccess.h>
+
+#include "common.h"
+#include "qos.h"
+
+/* FIXME: Add setters/getters to struct connection*/
+
+/* NOTE: Do not use this struct directly */
+struct connection {
+        port_id_t port_id;
+
+        address_t source_address;
+        address_t destination_address;
+
+        cep_id_t  source_cep_id;
+        cep_id_t  destination_cep_id;
+
+        qos_id_t  qos_id;
+
+        /* FIXME: Add the list of policies associated with this connection */
+};
+
+struct connection * connection_create(void);
+struct connection *
+connection_dup_from_user(const struct connection __user * conn);
+int                 connection_destroy(struct connection * conn);
+
+#endif

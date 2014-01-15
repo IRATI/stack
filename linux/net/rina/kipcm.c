@@ -151,8 +151,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         kipcm = (struct kipcm *) data;
 
         ipc_id = 0;
-        msg = rnl_msg_create(RNL_MSG_ATTRS_ALLOCATE_FLOW_REQUEST);
-        attrs = msg->attrs;
+        msg    = rnl_msg_create(RNL_MSG_ATTRS_ALLOCATE_FLOW_REQUEST);
+        attrs  = msg->attrs;
         if (!msg) {
                 goto fail;
         }
@@ -162,8 +162,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         }
 
         user_ipc_id  = msg->header.src_ipc_id;
-        ipc_id      = msg->header.dst_ipc_id;
-        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+        ipc_id       = msg->header.dst_ipc_id;
+        ipc_process  = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
                 LOG_ERR("IPC process %d not found", ipc_id);
                 goto fail;
@@ -203,12 +203,14 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
                 if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data,
                                                      pid)) {
-                        LOG_DBG("Could not bind the user ipcp' RMT with the flow");
+                        LOG_DBG("Could not bind the user ipcp' RMT "
+                                "with the flow");
                         kfa_flow_deallocate(kipcm->kfa, pid);
                         goto fail;
                 }
 
-                LOG_DBG("Binding user IPCP %d' RMT to flow in port %d", user_ipc_id, pid);
+                LOG_DBG("Binding user IPCP %d' RMT to flow in port %d",
+                        user_ipc_id, pid);
         }
 
         rnl_msg_destroy(msg);
@@ -264,8 +266,8 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         }
 
         user_ipc_id  = msg->header.src_ipc_id;
-        ipc_id      = msg->header.dst_ipc_id;
-        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+        ipc_id       = msg->header.dst_ipc_id;
+        ipc_process  = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
                 LOG_ERR("IPC process %d not found", ipc_id);
                 rnl_msg_destroy(msg);
@@ -299,21 +301,23 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 
                 usr_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
                 if (!usr_ipcp) {
-                        LOG_DBG("(response) Could not find the user ipcp of the flow...");
+                        LOG_DBG("(response) Could not find the user ipcp "
+                                "of the flow...");
                         kfa_flow_deallocate(kipcm->kfa, pid);
                         rnl_msg_destroy(msg);
                         return -1;
                 }
 
-                if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data,
-                                                     pid)) {
-                        LOG_DBG("(response) Could not bind the user ipcp' RMT with the flow");
+                if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data, pid)) {
+                        LOG_DBG("(response) Could not bind the user ipcp' "
+                                "RMT with the flow");
                         kfa_flow_deallocate(kipcm->kfa, pid);
                         rnl_msg_destroy(msg);
                         return -1;
                 }
 
-                LOG_DBG("(response) Binding user IPCP %d' RMT to flow in port %d", user_ipc_id, pid);
+                LOG_DBG("(response) Binding user IPCP %d' RMT "
+                        "to flow in port %d", user_ipc_id, pid);
         }
 
         rnl_msg_destroy(msg);
@@ -322,11 +326,11 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 }
 
 static int
-dealloc_flow_req_free_and_reply(struct rnl_msg *      msg,
-                                ipc_process_id_t      id,
-                                uint_t                res,
-                                uint_t                seq_num,
-                                uint_t                port_id)
+dealloc_flow_req_free_and_reply(struct rnl_msg * msg,
+                                ipc_process_id_t id,
+                                uint_t           res,
+                                uint_t           seq_num,
+                                uint_t           port_id)
 {
         rnl_msg_destroy(msg);
 
@@ -360,16 +364,13 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
                 return -1;
         }
 
-        kipcm = (struct kipcm *) data;
-
+        kipcm  = (struct kipcm *) data;
         ipc_id = 0;
-
-        msg = rnl_msg_create(RNL_MSG_ATTRS_DEALLOCATE_FLOW_REQUEST);
+        msg    = rnl_msg_create(RNL_MSG_ATTRS_DEALLOCATE_FLOW_REQUEST);
         if (!msg)
                 goto fail;
 
         attrs = msg->attrs;
-
         if (rnl_parse_msg(info, msg))
                 goto fail;
 
@@ -548,8 +549,8 @@ static int notify_ipcp_update_dif_config_request(void *             data,
 
         if (ipc_process->ops->update_dif_config(ipc_process->data,
                                                 attrs->dif_config)) {
-                LOG_ERR("Update DIF config operation failed for IPC process %d"
-                        ,ipc_id);
+                LOG_ERR("Update DIF config operation failed for "
+                        "IPC process %d", ipc_id);
                 goto fail;
         }
 
@@ -567,12 +568,12 @@ static int notify_ipcp_update_dif_config_request(void *             data,
 }
 
 static int
-reg_unreg_resp_free_and_reply(struct rnl_msg *  msg,
-                              ipc_process_id_t  id,
-                              uint_t            res,
-                              uint_t            seq_num,
-                              uint_t            port_id,
-                              bool              is_register)
+reg_unreg_resp_free_and_reply(struct rnl_msg * msg,
+                              ipc_process_id_t id,
+                              uint_t           res,
+                              uint_t           seq_num,
+                              uint_t           port_id,
+                              bool             is_register)
 {
         rnl_msg_destroy(msg);
 
@@ -1181,8 +1182,8 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
         }
 
         op = attrs->mode ?
-                ipc_process->ops->pft_add :
-                ipc_process->ops->pft_remove;
+                ipc_process->ops->pft_remove :
+                ipc_process->ops->pft_add;
 
         ASSERT(op);
         list_for_each_entry(entry, &attrs->pft_entries, next) {
@@ -1191,7 +1192,7 @@ static int notify_ipcp_modify_pdu_fte(void *             data,
                 if (op(ipc_process->data,
                        entry->destination,
                        entry->qos_id,
-                       *(entry->ports),
+                       entry->ports,
                        entry->ports_size)) {
                         LOG_ERR("There were some problematic entries");
                         rnl_msg_destroy(msg);
