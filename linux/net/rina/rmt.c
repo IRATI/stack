@@ -79,7 +79,10 @@ static int queue_destroy(struct rmt_queue * q)
 
         LOG_DBG("Destroying queue %pK (port-id = %d)", q, q->port_id);
 
+        spin_lock(&q->lock);
         hash_del(&q->hlist);
+        q->port_id = port_id_bad();
+        spin_unlock(&q->lock);
 
         if (q->queue) rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
         rkfree(q);
@@ -471,13 +474,12 @@ int rmt_send_port_id(struct rmt * instance,
                 LOG_ERR("Bogus PDU passed");
                 return -1;
         }
-
-        spin_lock(&instance->egress.queues->lock);
         if (!instance->egress.queues) {
-                spin_unlock(&instance->egress.queues->lock);
+                LOG_ERR("No queues to push into");
                 return -1;
         }
 
+        spin_lock(&instance->egress.queues->lock);
         squeue = qmap_find(instance->egress.queues, id);
         if (!squeue) {
                 spin_unlock(&instance->egress.queues->lock);
@@ -617,9 +619,25 @@ EXPORT_SYMBOL(rmt_queue_send_add);
 int rmt_queue_send_delete(struct rmt * instance,
                           port_id_t    id)
 {
-        LOG_MISSING;
+        struct rmt_queue * q;
 
-        return -1;
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Wrong port id");
+                return -1;
+        }
+
+        q = qmap_find(instance->egress.queues, id);
+        if (!q) {
+                LOG_ERR("Queue does not exist");
+                return -1;
+        }
+
+        return queue_destroy(q);
 }
 EXPORT_SYMBOL(rmt_queue_send_delete);
 
@@ -669,9 +687,25 @@ EXPORT_SYMBOL(rmt_queue_recv_add);
 int rmt_queue_recv_delete(struct rmt * instance,
                           port_id_t    id)
 {
-        LOG_MISSING;
+        struct rmt_queue * q;
 
-        return -1;
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Wrong port id");
+                return -1;
+        }
+
+        q = qmap_find(instance->ingress.queues, id);
+        if (!q) {
+                LOG_ERR("Queue does not exist");
+                return -1;
+        }
+
+        return queue_destroy(q);
 }
 EXPORT_SYMBOL(rmt_queue_recv_delete);
 

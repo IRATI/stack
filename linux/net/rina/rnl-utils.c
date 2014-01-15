@@ -1,7 +1,7 @@
 /*
  * RNL utilities
  *
- *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
