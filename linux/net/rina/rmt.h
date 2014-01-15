@@ -63,8 +63,6 @@ int          rmt_queue_recv_add(struct rmt * instance,
 int          rmt_queue_recv_delete(struct rmt * instance,
                                    port_id_t    id);
 
-int          rmt_pft_flush(struct rmt * instance);
-
 int          rmt_pft_add(struct rmt *       instance,
                          address_t          destination,
                          qos_id_t           qos_id,
