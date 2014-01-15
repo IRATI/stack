@@ -1017,6 +1017,14 @@ int rmt_pft_remove(struct rmt *       instance,
 }
 EXPORT_SYMBOL(rmt_pft_remove);
 
+int rmt_pft_dump(struct rmt *       instance,
+                 struct list_head * entries)
+{
+        return is_rmt_pft_ok(instance) ? pft_dump(instance->pft,
+                                                  entries) : -1;
+}
+EXPORT_SYMBOL(rmt_pft_dump);
+
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 bool regression_tests_rmt(void)
 {

@@ -52,4 +52,6 @@ int          pft_nhop(struct pft * instance,
                       port_id_t ** ports,
                       size_t *     count);
 
+int          pft_dump(struct pft *       instance,
+                      struct list_head * entries);
 #endif

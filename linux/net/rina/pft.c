@@ -441,6 +441,16 @@ int pft_nhop(struct pft * instance,
         return 0;
 }
 
+int pft_dump(struct pft *       instance,
+             struct list_head * entries)
+{
+        if (!pft_is_ok(instance))
+                return -1;
+
+        entries = &instance->entries; 
+        return 0;
+}
+
 #ifdef CONFIG_RINA_PFT_REGRESSION_TESTS
 static bool regression_tests_nhop(void)
 {

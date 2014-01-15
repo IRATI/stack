@@ -1206,16 +1206,37 @@ static int notify_ipcp_modify_pfte(void *             data,
 
 }
 
+static int ipcp_dump_pft_free_and_reply(struct rnl_msg *   msg,
+                                        ipc_process_id_t   ipc_id,
+                                        uint_t             result,
+                                        struct list_head * entries,
+                                        rnl_sn_t           seq_num,
+                                        u32                nl_port_id)
+{
+        rnl_msg_destroy(msg);
+
+        if (rnl_ipcp_pft_dump_resp_msg(ipc_id,
+                                       result,
+                                       entries,
+                                       seq_num,
+                                       nl_port_id)) {
+                LOG_ERR("Could not snd ipcp_pft_dump_resp_msg");
+                return -1;
+        }
+
+        return 0;
+}
+
 static int notify_ipcp_dump_pft(void *             data,
                                 struct sk_buff *   buff,
                                 struct genl_info * info)
 {
-#if 0        
         struct kipcm *         kipcm;
         struct rnl_msg *       msg;
         struct ipcp_instance * ipc_process;
-        ipc_process_id_t       ipc_id;
-        struct list_head *     entries;
+        ipc_process_id_t       ipc_id = 0;
+        int                    result = -1;
+        struct list_head *     entries = NULL;
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -1231,31 +1252,35 @@ static int notify_ipcp_dump_pft(void *             data,
 
         ipc_id = 0;
         msg    = rnl_msg_create(RNL_MSG_ATTRS_RMT_PFT_DUMP_REQUEST);
-        if (!msg) {
-                rnl_msg_destroy(msg);
-                return -1;
-        }
+        if (!msg) 
+                goto end;
 
-        if (rnl_parse_msg(info, msg)) {
-                rnl_msg_destroy(msg);
-                return -1;
-        }
+        if (rnl_parse_msg(info, msg))
+                goto end;
 
         ipc_id      = msg->header.dst_ipc_id;
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
                 LOG_ERR("IPC process %d not found", ipc_id);
-                rnl_msg_destroy(msg);
-                return -1;
+                goto end;
         }
 
         if (ipc_process->ops->pft_dump(ipc_process->data,
                                        entries)) {
-
+                LOG_ERR("Could not dump PFT");
+                goto end;
         }
-#endif
-        LOG_MISSING;
-        return 0;
+
+        ASSERT(entries);
+        result = 0;
+
+end:
+        return ipcp_dump_pft_free_and_reply(msg,
+                                           ipc_id,
+                                           result,
+                                           entries,
+                                           info->snd_seq,
+                                           info->snd_portid);
 }
 
 static int netlink_handlers_unregister(struct rnl_set * rnls)

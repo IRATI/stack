@@ -543,6 +543,8 @@ static int normal_pft_add(struct ipcp_instance_data * data,
                           size_t                      size)
 
 {
+        ASSERT(data);
+
         return rmt_pft_add(data->rmt,
                            address,
                            qos_id,
@@ -556,6 +558,8 @@ static int normal_pft_remove(struct ipcp_instance_data * data,
                              port_id_t *                 ports,
                              size_t                      size)
 {
+        ASSERT(data);
+
         return rmt_pft_remove(data->rmt,
                               address,
                               qos_id,
@@ -564,10 +568,12 @@ static int normal_pft_remove(struct ipcp_instance_data * data,
 }
 
 static int normal_pft_dump(struct ipcp_instance_data * data,
-                           struct list_head *          entreis)
-{
-        LOG_MISSING;
-        return 0;
+                           struct list_head *          entries)
+{       
+        ASSERT(data);
+
+        return rmt_pft_dump(data->rmt,
+                            entries);
 }
 
 /*  FIXME: register ops */
