@@ -22,6 +22,7 @@
 #include <linux/export.h>
 #include <net/netlink.h>
 #include <net/genetlink.h>
+#include <linux/rculist.h>
 
 #define RINA_PREFIX "rnl-utils"
 
@@ -2413,11 +2414,38 @@ static int send_nl_unicast_msg(struct net *     net,
         return 0;
 }
 
+static int format_pft_entry_port_list(const struct list_head * ports,
+                                      struct sk_buff *         skb_out)
+{
+        struct nlattr * msg_ports;
+        struct pft_port_entry * pos;
+        int i = 0;
+
+        if (!skb_out) {
+                LOG_ERR("Bogus input parameter(s), bailing out");
+                return -1;
+        }
+
+        if (!(msg_ports =
+              nla_nest_start(skb_out, PFTELE_ATTR_PORTIDS))) {
+                nla_nest_cancel(skb_out, msg_ports);
+                return -1;
+        }
+
+        list_for_each_entry_rcu(pos, ports, next) {
+                i++;
+                if (nla_put_u32(skb_out, i, pos->port_id) ))
+                        return -1;
+        }
+
+        nla_nest_end(skb_out, msg_ports);
+                      
+        return 0;
+}
+
 static int format_pft_entries_list(const struct list_head * entries,
                                    struct sk_buff *         skb_out)
 {
-        LOG_MISSING;
-#if 0        
         struct nlattr * msg_entry;
         struct pft_entry * pos;
         int i = 0;
@@ -2432,26 +2460,23 @@ static int format_pft_entries_list(const struct list_head * entries,
                 i++;
                 if (!(msg_entry =
                       nla_nest_start(skb_out, i))) {
-                        nla_nest_cancel(skb_out, msg_entries);
+                        nla_nest_cancel(skb_out, msg_entry);
                         LOG_ERR(BUILD_STRERROR("pft entries list attribute"));
                         return format_fail("rnl_ipcm_pft_dump_resp_msg");
                 }
 
-                if (nla_put_u32(skb_out, PFTELE_ATTR_ADDRESS, result) < 0)
+                if ((nla_put_u32(skb_out, 
+                                 PFTELE_ATTR_ADDRESS,
+                                 pos->destination)                         ||
+                     nla_put_u32(skb_out, PFTELE_ATTR_QOSID, pos->qos_id)) ||
+                     format_pft_entry_port_list(pos->ports, skb_out))
                         return format_fail("rnl_ipcm_pft_dump_resp_msg");
-        
                 
                 nla_nest_end(skb_out, msg_entry);
         }
                       
-                       
-        }
         rcu_read_unlock(); 
 
-        if (format_pft_entries_list(entries, skb_out))
-                return format_fail("rnl_ipcm_pft_dump_resp_msg");
-        nla_nest_end(skb_out, msg_entries);
-#endif
         return 0;
 }
 
