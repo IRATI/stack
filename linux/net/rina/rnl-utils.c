@@ -2171,7 +2171,7 @@ rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name *      source,
 
         if (!skb_out) {
                 LOG_ERR("Bogus input parameter(s), bailing out");
-                format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
+                return format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
         }
 
         /* name-formating might be moved into its own function (and reused) */
@@ -2179,11 +2179,11 @@ rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name *      source,
               nla_nest_start(skb_out, IAFRA_ATTR_SOURCE_APP_NAME))) {
                 nla_nest_cancel(skb_out, msg_src_name);
                 LOG_ERR(BUILD_STRERROR("source application name attribute"));
-                format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
+                return format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
         }
 
         if (format_app_name_info(source, skb_out) < 0)
-                format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
+                return format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
 
         nla_nest_end(skb_out, msg_src_name);
 
@@ -2191,11 +2191,11 @@ rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name *      source,
               nla_nest_start(skb_out, IAFRA_ATTR_DEST_APP_NAME))) {
                 nla_nest_cancel(skb_out, msg_dst_name);
                 LOG_ERR(BUILD_STRERROR("destination app name attribute"));
-                format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
+                return format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
         }
 
         if (format_app_name_info(dest, skb_out) < 0)
-                format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
+                return format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
 
         nla_nest_end(skb_out, msg_dst_name);
 
@@ -2203,11 +2203,11 @@ rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name *      source,
               nla_nest_start(skb_out, IAFRA_ATTR_DIF_NAME))) {
                 nla_nest_cancel(skb_out, msg_dif_name);
                 LOG_ERR(BUILD_STRERROR("DIF name attribute"));
-                format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
+                return format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
         }
 
         if (format_app_name_info(dif_name, skb_out) < 0)
-                format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
+                return format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
 
         nla_nest_end(skb_out, msg_dif_name);
 
@@ -2215,16 +2215,16 @@ rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name *      source,
               nla_nest_start(skb_out, IAFRA_ATTR_FLOW_SPEC))) {
                 nla_nest_cancel(skb_out, msg_fspec);
                 LOG_ERR(BUILD_STRERROR("flow spec attribute"));
-                format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
+                return format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
         }
 
         if (format_flow_spec(fspec, skb_out) < 0)
-                format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
+                return format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
 
         nla_nest_end(skb_out, msg_fspec);
 
         if (nla_put_u32(skb_out, IAFRA_ATTR_PORT_ID, pid))
-                format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
+                return format_fail("rnl_ipcm_alloc_flow_req_arrived_msg");
 
         return 0;
 }
@@ -2239,10 +2239,10 @@ static int rnl_format_ipcm_alloc_flow_req_result_msg(uint_t           result,
         }
 
         if (nla_put_u32(skb_out, IAFRRM_ATTR_PORT_ID, pid))
-                format_fail("rnl_format_ipcm_alloc_req_result_msg");
+                return format_fail("rnl_format_ipcm_alloc_req_result_msg");
 
         if (nla_put_u32(skb_out, IAFRRM_ATTR_RESULT, result))
-                format_fail("rnl_format_ipcm_alloc_req_result_msg");
+                return format_fail("rnl_format_ipcm_alloc_req_result_msg");
 
         return 0;
 }
@@ -2267,10 +2267,10 @@ static int rnl_format_ipcm_flow_dealloc_noti_msg(port_id_t        id,
         }
 
         if (nla_put_u32(skb_out, IFDN_ATTR_PORT_ID, id))
-                format_fail("rnl_ipcm_alloc_flow_resp_msg");
+                return format_fail("rnl_ipcm_alloc_flow_resp_msg");
 
         if (nla_put_u32(skb_out, IFDN_ATTR_CODE, code ))
-                format_fail("rnl_ipcm_alloc_flow_resp_msg");
+                return format_fail("rnl_ipcm_alloc_flow_resp_msg");
 
         return 0;
 }
@@ -2285,10 +2285,10 @@ static int rnl_format_ipcm_conn_create_resp_msg(port_id_t        id,
         }
 
         if (nla_put_u32(skb_out, ICCRE_ATTR_PORT_ID, id))
-                format_fail("rnl_format_ipcm_conn_create_resp_msg");
+                return format_fail("rnl_format_ipcm_conn_create_resp_msg");
 
         if (nla_put_u32(skb_out, ICCRE_ATTR_SOURCE_CEP_ID, src_cep ))
-                format_fail("rnl_format_ipcm_conn_create_resp_msg");
+                return format_fail("rnl_format_ipcm_conn_create_resp_msg");
 
         return 0;
 }
@@ -2304,13 +2304,13 @@ static int rnl_format_ipcm_conn_create_result_msg(port_id_t        id,
         }
 
         if (nla_put_u32(skb_out, ICCRS_ATTR_PORT_ID, id))
-                format_fail("rnl_format_ipcm_conn_create_result_msg");
+                return format_fail("rnl_format_ipcm_conn_create_result_msg");
 
         if (nla_put_u32(skb_out, ICCRS_ATTR_SOURCE_CEP_ID, src_cep ))
-                format_fail("rnl_format_ipcm_conn_create_result_msg");
+                return format_fail("rnl_format_ipcm_conn_create_result_msg");
 
         if (nla_put_u32(skb_out, ICCRS_ATTR_DEST_CEP_ID, dst_cep ))
-                format_fail("rnl_format_ipcm_conn_create_result_msg");
+                return format_fail("rnl_format_ipcm_conn_create_result_msg");
 
         return 0;
 }
@@ -2325,10 +2325,10 @@ static int rnl_format_ipcm_conn_update_result_msg(port_id_t        id,
         }
 
         if (nla_put_u32(skb_out, ICURS_ATTR_PORT_ID, id))
-                format_fail("rnl_format_ipcm_conn_update_result_msg");
+                return format_fail("rnl_format_ipcm_conn_update_result_msg");
 
         if (nla_put_u32(skb_out, ICURS_ATTR_RESULT, result))
-                format_fail("rnl_format_ipcm_conn_update_result_msg");
+                return format_fail("rnl_format_ipcm_conn_update_result_msg");
 
         return 0;
 }
@@ -2343,10 +2343,10 @@ static int rnl_format_ipcm_conn_destroy_result_msg(port_id_t        id,
         }
 
         if (nla_put_u32(skb_out, ICDRS_ATTR_PORT_ID, id))
-                format_fail("rnl_format_ipcm_conn_destroy_result_msg");
+                return format_fail("rnl_format_ipcm_conn_destroy_result_msg");
 
         if (nla_put_u32(skb_out, ICDRS_ATTR_RESULT, result))
-                format_fail("rnl_format_ipcm_conn_destroy_result_msg");
+                return format_fail("rnl_format_ipcm_conn_destroy_result_msg");
 
         return 0;
 }
@@ -2360,7 +2360,7 @@ static int rnl_format_ipcm_reg_app_resp_msg(uint_t           result,
         }
 
         if (nla_put_u32(skb_out, IRARE_ATTR_RESULT, result ))
-                format_fail("rnl_ipcm_reg_app_resp_msg");
+                return format_fail("rnl_ipcm_reg_app_resp_msg");
 
         return 0;
 }
@@ -2434,8 +2434,14 @@ static int format_pft_entries_list(const struct list_head * entries,
                       nla_nest_start(skb_out, i))) {
                         nla_nest_cancel(skb_out, msg_entries);
                         LOG_ERR(BUILD_STRERROR("pft entries list attribute"));
-                        format_fail("rnl_ipcm_pft_dump_resp_msg");
+                        return format_fail("rnl_ipcm_pft_dump_resp_msg");
                 }
+
+                if (nla_put_u32(skb_out, PFTELE_ATTR_ADDRESS, result) < 0)
+                        return format_fail("rnl_ipcm_pft_dump_resp_msg");
+        
+                
+                nla_nest_end(skb_out, msg_entry);
         }
                       
                        
@@ -2443,12 +2449,9 @@ static int format_pft_entries_list(const struct list_head * entries,
         rcu_read_unlock(); 
 
         if (format_pft_entries_list(entries, skb_out))
-                format_fail("rnl_ipcm_pft_dump_resp_msg");
+                return format_fail("rnl_ipcm_pft_dump_resp_msg");
         nla_nest_end(skb_out, msg_entries);
-        if (nla_put_u32(skb_out, RPFD_ATTR_RESULT, result) < 0)
-                format_fail("rnl_ipcm_pft_dump_resp_msg");
-
-#endif                
+#endif
         return 0;
 }
 
@@ -2464,16 +2467,16 @@ static int rnl_format_ipcm_pft_dump_resp_msg(int                      result,
         }
         
         if (nla_put_u32(skb_out, RPFD_ATTR_RESULT, result) < 0)
-                format_fail("rnl_ipcm_pft_dump_resp_msg");
+                return format_fail("rnl_ipcm_pft_dump_resp_msg");
 
         if (!(msg_entries =
               nla_nest_start(skb_out, RPFD_ATTR_ENTRIES))) {
                 nla_nest_cancel(skb_out, msg_entries);
                 LOG_ERR(BUILD_STRERROR("pft entries list attribute"));
-                format_fail("rnl_ipcm_pft_dump_resp_msg");
+                return format_fail("rnl_ipcm_pft_dump_resp_msg");
         }
         if (format_pft_entries_list(entries, skb_out))
-                format_fail("rnl_ipcm_pft_dump_resp_msg");
+                return format_fail("rnl_ipcm_pft_dump_resp_msg");
         nla_nest_end(skb_out, msg_entries);
 
         return 0;
