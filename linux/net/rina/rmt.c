@@ -934,9 +934,106 @@ int rmt_pft_remove(struct rmt *       instance,
 EXPORT_SYMBOL(rmt_pft_remove);
 
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
+static bool regression_tests_egress_queue(void)
+{
+        struct rmt *       rmt;
+        struct rmt_queue * tmp;
+        port_id_t          id;
+        struct buffer *    buffer;
+        struct pdu *       pdu;
+        struct pci *       pci;
+        address_t          address;
+
+        address = 11;
+
+        rmt = rkzalloc(sizeof(*rmt), GFP_KERNEL);
+        if (!rmt) {
+                LOG_DBG("Could not malloc memory for RMT");
+                return false;
+        }
+
+        LOG_DBG("Creating a new qmap instance");
+        rmt->egress.queues = qmap_create();
+        if (!rmt->egress.queues) {
+                LOG_DBG("Failed to create qmap");
+                return false;
+        }
+
+        id = 1;
+        if (rmt_queue_send_add(rmt, id)) {
+                LOG_DBG("Failed to add queue");
+                return false;
+        }
+        LOG_DBG ("Added to qmap");
+
+        tmp = qmap_find(rmt->egress.queues, id);
+        if (!tmp) {
+                LOG_DBG("Failed to retrieve queue");
+                return false;
+        }
+
+        buffer = buffer_create(20);
+        if (!buffer) {
+                LOG_DBG("Failed to create buffer");
+                return false;
+        }
+        pci = pci_create();
+        if (!pci)
+                return false;
+
+        if (pci_format(pci,
+                       0,
+                       0,
+                       address,
+                       0,
+                       0,
+                       0,
+                       PDU_TYPE_MGMT)) {
+                pci_destroy(pci);
+                return false;
+        }
+
+        pdu = pdu_create();
+        if (!pdu) {
+                pci_destroy(pci);
+                return false;
+        }
+
+        if (pdu_buffer_set(pdu, buffer)) {
+                pci_destroy(pci);
+                return false;
+        }
+
+        if (pdu_pci_set(pdu, pci)) {
+                pci_destroy(pci);
+                return false;
+        }
+
+        if (rmt_send_port_id(rmt, id, pdu)) {
+                LOG_DBG("Failed to send PDU mgmt");
+                return false;
+        }
+
+        if (rmt_queue_send_delete(rmt, id)) {
+                LOG_DBG("Failed to destroy queue");
+                return false;
+        }
+
+        if (qmap_destroy(rmt->egress.queues)) {
+                LOG_DBG("Failed to destroy qmap");
+                return false;
+        }
+
+        rkfree(rmt);
+
+        return true;
+}
 bool regression_tests_rmt(void)
 {
-        LOG_MISSING;
+        if (!regression_tests_egress_queue()) {
+                LOG_ERR("Failed regression test on egress queues");
+                return false;
+        }
 
         return true;
 }
