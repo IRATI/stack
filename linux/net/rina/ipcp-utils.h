@@ -2,7 +2,7 @@
  * IPC Processes related utilities
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Sander Vrijders <sander.vrijders@intec.ugent.be>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

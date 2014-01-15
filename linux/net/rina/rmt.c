@@ -905,9 +905,6 @@ int rmt_receive(struct rmt * instance,
 static bool is_rmt_pft_ok(struct rmt * instance)
 { return (instance && instance->pft) ? true : false; }
 
-int rmt_pft_flush(struct rmt * instance)
-{ return (is_rmt_pft_ok(instance) ? pft_flush(instance->pft) : -1); }
-
 int rmt_pft_add(struct rmt *       instance,
                 address_t          destination,
                 qos_id_t           qos_id,
