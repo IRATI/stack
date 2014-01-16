@@ -235,12 +235,12 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
 
 static bool vlan_id_is_ok(unsigned int vlan_id)
 {
-        if (vlan_id < 0 || vlan_id > 4095 /* 0xFFF */) {
+        if (vlan_id > 4095 /* 0xFFF */) {
                 /* Out of bounds */
                 return false;
         }
 
-        ASSERT(vlan_id >= 0 && vlan_id <= 4095);
+        ASSERT(vlan_id <= 4095);
 
         /*
          * Reserved values:

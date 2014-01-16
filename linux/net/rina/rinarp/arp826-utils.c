@@ -207,7 +207,6 @@ int gpa_address_shrink_gfp(gfp_t        flags,
         }
 
         length = position - gpa->address;
-        ASSERT(length >= 0);
 
         LOG_DBG("Shrinking GPA to %zd", length);
 
