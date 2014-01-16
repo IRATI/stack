@@ -22,6 +22,7 @@
 
 #include "logs.h"
 #include "utils.h"
+#include "common.h"
 #include "debug.h"
 #include "qos.h"
 

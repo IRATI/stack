@@ -1139,7 +1139,7 @@ static int notify_ipcp_modify_pfte(void *             data,
         struct rnl_msg *                    msg;
         struct ipcp_instance *              ipc_process;
         ipc_process_id_t                    ipc_id;
-        struct pdu_fte_list_entry *         entry;
+        struct pdu_ft_entry *               entry;
 
         int (* op)(struct ipcp_instance_data * data,
                    address_t                   address,
@@ -1236,7 +1236,7 @@ static int notify_ipcp_dump_pft(void *             data,
         struct ipcp_instance * ipc_process;
         ipc_process_id_t       ipc_id = 0;
         int                    result = -1;
-        struct list_head *     entries = NULL;
+        struct list_head       entries;
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -1264,21 +1264,21 @@ static int notify_ipcp_dump_pft(void *             data,
                 LOG_ERR("IPC process %d not found", ipc_id);
                 goto end;
         }
-
+        
+        INIT_LIST_HEAD(entries.next);
         if (ipc_process->ops->pft_dump(ipc_process->data,
-                                       entries)) {
+                                       &entries)) {
                 LOG_ERR("Could not dump PFT");
                 goto end;
         }
 
-        ASSERT(entries);
         result = 0;
 
 end:
         return ipcp_dump_pft_free_and_reply(msg,
                                            ipc_id,
                                            result,
-                                           entries,
+                                           &entries,
                                            info->snd_seq,
                                            info->snd_portid);
 }

@@ -57,6 +57,9 @@ address_t address_bad(void);
 
 typedef uint          timeout_t;
 
+/* FIXME: The qos_id_t should be defined correctly in the near future */
+typedef uint qos_id_t;
+
 struct uint_range {
         uint_t min;
         uint_t max;
@@ -149,6 +152,14 @@ struct rib_object {
         enum rib_object_class_t rib_obj_class;
         string_t *              rib_obj_name;
         long unsigned int       rib_obj_instance;
+};
+
+struct pdu_ft_entry {
+        address_t destination;
+        qos_id_t  qos_id;
+        port_id_t * ports;
+        size_t ports_size;
+        struct list_head next;
 };
 
 #endif

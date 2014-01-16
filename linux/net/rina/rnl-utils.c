@@ -507,7 +507,7 @@ rnl_ipcp_conn_destroy_req_msg_attrs_destroy(struct rnl_ipcp_conn_destroy_req_msg
 static int
 rnl_rmt_mod_pfte_msg_attrs_destroy(struct rnl_rmt_mod_pfte_msg_attrs * attrs)
 {
-        struct pdu_fte_list_entry   * pos, * nxt;
+        struct pdu_ft_entry * pos, * nxt;
 
         if (!attrs)
                 return -1;
@@ -658,8 +658,8 @@ static int parse_flow_spec(struct nlattr * fspec_attr,
         return 0;
 }
 
-static int parse_pdu_fte_port_list_entries(struct nlattr * nested_attr,
-                                           struct pdu_fte_list_entry * entry)
+static int parse_pdu_fte_port_list_entries(struct nlattr *       nested_attr,
+                                           struct pdu_ft_entry * entry)
 {
         int                           rem        = 0;
         int                           i          = 0;
@@ -701,8 +701,8 @@ static int parse_pdu_fte_port_list_entries(struct nlattr * nested_attr,
 
 }
 
-static int parse_pdu_fte_list_entry(struct nlattr * attr,
-                                    struct pdu_fte_list_entry * pfte_struct)
+static int parse_pdu_fte_list_entry(struct nlattr *       attr,
+                                    struct pdu_ft_entry * pfte_struct)
 {
         struct nla_policy             attr_policy[PFTELE_ATTR_MAX + 1];
         struct nlattr *               attrs[PFTELE_ATTR_MAX + 1];
@@ -1770,11 +1770,11 @@ static int rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
 static int parse_list_of_pfte_config_entries(struct nlattr *     nested_attr,
                                              struct rnl_rmt_mod_pfte_msg_attrs * msg)
 {
-        struct nlattr *            nla;
-        struct pdu_fte_list_entry * entry;
-        int                        rem                   = 0;
-        int                        entries_with_problems = 0;
-        int                        total_entries         = 0;
+        struct nlattr *       nla;
+        struct pdu_ft_entry * entry;
+        int                   rem                   = 0;
+        int                   entries_with_problems = 0;
+        int                   total_entries         = 0;
 
         if (!nested_attr) {
                 LOG_ERR("Bogus attribute passed, bailing out");
@@ -2414,11 +2414,11 @@ static int send_nl_unicast_msg(struct net *     net,
         return 0;
 }
 
-static int format_pft_entry_port_list(const struct list_head * ports,
-                                      struct sk_buff *         skb_out)
+static int format_pft_entry_port_list(port_id_t *      ports,
+                                      size_t           ports_size,
+                                      struct sk_buff * skb_out)
 {
         struct nlattr * msg_ports;
-        struct pft_port_entry * pos;
         int i = 0;
 
         if (!skb_out) {
@@ -2432,22 +2432,20 @@ static int format_pft_entry_port_list(const struct list_head * ports,
                 return -1;
         }
 
-        list_for_each_entry_rcu(pos, ports, next) {
-                i++;
-                if (nla_put_u32(skb_out, i, pos->port_id) ))
+        for (i = 0; i < ports_size; i++) {
+                if (nla_put_u32(skb_out, i, ports[i]))
                         return -1;
         }
 
         nla_nest_end(skb_out, msg_ports);
-                      
         return 0;
 }
 
-static int format_pft_entries_list(const struct list_head * entries,
-                                   struct sk_buff *         skb_out)
+static int format_pft_entries_list(struct list_head * entries,
+                                   struct sk_buff *   skb_out)
 {
         struct nlattr * msg_entry;
-        struct pft_entry * pos;
+        struct pdu_ft_entry * pos, *nxt;
         int i = 0;
 
         if (!skb_out) {
@@ -2455,8 +2453,7 @@ static int format_pft_entries_list(const struct list_head * entries,
                 return -1;
         }
 
-        rcu_read_lock();
-        list_for_each_entry_rcu(pos, entries, next) {
+        list_for_each_entry_safe(pos, nxt, entries, next) {
                 i++;
                 if (!(msg_entry =
                       nla_nest_start(skb_out, i))) {
@@ -2469,20 +2466,23 @@ static int format_pft_entries_list(const struct list_head * entries,
                                  PFTELE_ATTR_ADDRESS,
                                  pos->destination)                         ||
                      nla_put_u32(skb_out, PFTELE_ATTR_QOSID, pos->qos_id)) ||
-                     format_pft_entry_port_list(pos->ports, skb_out))
+                     format_pft_entry_port_list(pos->ports,
+                                                pos->ports_size,
+                                                skb_out))
                         return format_fail("rnl_ipcm_pft_dump_resp_msg");
                 
                 nla_nest_end(skb_out, msg_entry);
+                list_del(&pos->next);
+                rkfree(pos->ports);
+                rkfree(pos);
         }
                       
-        rcu_read_unlock(); 
-
         return 0;
 }
 
-static int rnl_format_ipcm_pft_dump_resp_msg(int                      result,
-                                             const struct list_head * entries,
-                                             struct sk_buff *         skb_out)
+static int rnl_format_ipcm_pft_dump_resp_msg(int                result,
+                                             struct list_head * entries,
+                                             struct sk_buff *   skb_out)
 {
         struct nlattr * msg_entries;
 

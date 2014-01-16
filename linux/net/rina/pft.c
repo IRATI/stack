@@ -444,10 +444,27 @@ int pft_nhop(struct pft * instance,
 int pft_dump(struct pft *       instance,
              struct list_head * entries)
 {
+        struct pft_entry *    pos;
+        struct pdu_ft_entry * entry;
+
         if (!pft_is_ok(instance))
                 return -1;
 
-        entries = &instance->entries; 
+        rcu_read_lock();
+        list_for_each_entry_rcu(pos, &instance->entries, next) {
+                entry = rkmalloc(sizeof(struct pdu_ft_entry), GFP_ATOMIC);
+                if (!entry)
+                        return -1;
+                entry->destination = pos->destination;
+                entry->qos_id      = pos->qos_id;
+                entry->ports_size  = 0;
+                if (pfte_ports_copy(pos, &entry->ports, &entry->ports_size))
+                        return -1;
+
+                list_add_rcu(entries, &entry->next);
+        }
+        rcu_read_unlock();
+                 
         return 0;
 }
 

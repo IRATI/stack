@@ -39,7 +39,7 @@ enum app_name_info_attrs_list {
 };
 #define APNI_ATTR_MAX (__APNI_ATTR_MAX - 1)
 
-enum pdu_fte_list_entry_attrs_list {
+enum pdu_ft_entry_attrs_list {
         PFTELE_ATTR_ADDRESS = 1,
         PFTELE_ATTR_QOSID,
         PFTELE_ATTR_PORTIDS,
@@ -596,14 +596,6 @@ struct rnl_ipcm_query_rib_resp_msg_attrs {
         uint_t            result;
         uint_t            count;
         struct rib_object * rib_objs;
-};
-
-struct pdu_fte_list_entry {
-        address_t destination;
-        qos_id_t  qos_id;
-        port_id_t * ports;
-        size_t ports_size;
-        struct list_head next;
 };
 
 struct rnl_rmt_mod_pfte_msg_attrs {
