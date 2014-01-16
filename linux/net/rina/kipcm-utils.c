@@ -203,7 +203,7 @@ EXPORT_SYMBOL(seq_num_bad);
 
 /* FIXME: We need to change this */
 int is_seq_num_ok(rnl_sn_t sn)
-{ return (sn >= 0 && sn < SNVALUE_WRONG) ? 1 : 0; }
+{ return (sn < SNVALUE_WRONG) ? 1 : 0; }
 EXPORT_SYMBOL(is_seq_num_ok);
 
 struct kipcm_pmap {
