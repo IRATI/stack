@@ -357,6 +357,26 @@ static void rinarp_resolve_handler(void *             opaque,
                         return;
                 }
 
+                while (!kfifo_is_empty(&flow->sdu_queue)) {
+                        struct sdu * tmp = NULL;
+
+                        if (kfifo_out(&flow->sdu_queue,
+                                      &tmp,
+                                      sizeof(struct sdu *)) <
+                            sizeof(struct sdu *)) {
+                                LOG_ERR("There is not enough data in fifo");
+                                return;
+                        }
+
+                        LOG_DBG("Got a new element from the fifo");
+
+                        if (kfa_sdu_post(data->kfa, flow->port_id, tmp)) {
+                                LOG_ERR("Couldn't post SDU to KFA ...");
+                                return;
+                        }
+                }
+                kfifo_free(&flow->sdu_queue);
+
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
                                                        flow->port_id,
@@ -490,6 +510,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                 return -1;
                         }
                 }
+                kfifo_free(&flow->sdu_queue);
         } else {
                 spin_lock(&data->lock);
                 flow->port_id_state = PORT_STATE_NULL;
