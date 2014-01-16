@@ -373,7 +373,8 @@ struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
                 }
                 break;
         case RNL_MSG_ATTRS_RMT_PFT_DUMP_REQUEST:
-                        tmp->attrs = NULL;
+                tmp->attrs = NULL;
+                break;
         default:
                 LOG_ERR("Unknown attributes type %d", tmp->attr_type);
                 rkfree(tmp);
