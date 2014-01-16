@@ -933,7 +933,7 @@ int rmt_pft_remove(struct rmt *       instance,
 }
 EXPORT_SYMBOL(rmt_pft_remove);
 
-#ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
+//#ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 static bool regression_tests_egress_queue(void)
 {
         struct rmt *       rmt;
@@ -943,6 +943,7 @@ static bool regression_tests_egress_queue(void)
         struct pdu *       pdu;
         struct pci *       pci;
         address_t          address;
+        const char *       name;
 
         address = 11;
 
@@ -956,6 +957,18 @@ static bool regression_tests_egress_queue(void)
         rmt->egress.queues = qmap_create();
         if (!rmt->egress.queues) {
                 LOG_DBG("Failed to create qmap");
+                return false;
+        }
+
+        LOG_DBG("Creating rmt-egress-wq");
+        name = create_name("rmt-egress-wq", rmt);
+        if (!name) {
+                rmt_destroy(rmt);
+                return false;
+        }
+        rmt->egress.wq = rwq_create(name);
+        if (!rmt->egress.wq) {
+                rmt_destroy(rmt);
                 return false;
         }
 
@@ -1037,4 +1050,4 @@ bool regression_tests_rmt(void)
 
         return true;
 }
-#endif
+//#endif
