@@ -413,11 +413,6 @@ int pft_nhop(struct pft * instance,
                 return -1;
         }
 
-        if (*count < 0) {
-                LOG_ERR("Bogus input params");
-                return -1;
-        }
-
         /*
          * Taking the lock here since otherwise instance might be deleted when
          * copying the ports
@@ -469,7 +464,7 @@ static bool regression_tests_nhop(void)
         ports[0] = 2;
         LOG_DBG("Adding port-id %d", ports[0]);
         if (pft_add(tmp, 30, 2, ports, entries)) {
-                LOG_DBG("Failed to add entry");
+                LOG_DBG("Failed to add entry in table");
                 rkfree(ports);
                 return false;
         }
