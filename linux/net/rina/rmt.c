@@ -1247,74 +1247,74 @@ static bool regression_tests_ingress_queue(void)
 
         nothing_to_do = false;
         while (!nothing_to_do) {
-                        struct rmt_queue *  entry;
-                        int                 bucket;
-                        struct hlist_node * ntmp;
+                struct rmt_queue *  entry;
+                int                 bucket;
+                struct hlist_node * ntmp;
 
-                        nothing_to_do = true;
-                        hash_for_each_safe(rmt->ingress.queues->queues,
-                                           bucket,
-                                           ntmp,
-                                           entry,
-                                           hlist) {
-                                struct sdu * sdu;
-                                port_id_t    pid;
-                                pdu_type_t   pdu_type;
-                                struct pci * pci;
+                nothing_to_do = true;
+                hash_for_each_safe(rmt->ingress.queues->queues,
+                                   bucket,
+                                   ntmp,
+                                   entry,
+                                   hlist) {
+                        struct sdu * sdu;
+                        port_id_t    pid;
+                        pdu_type_t   pdu_type;
+                        struct pci * pci;
 
-                                ASSERT(entry);
+                        ASSERT(entry);
 
-                                spin_lock(&rmt->ingress.queues->lock);
-                                sdu     = (struct sdu *) rfifo_pop(entry->queue);
-                                pid = entry->port_id;
-                                spin_unlock(&rmt->ingress.queues->lock);
+                        spin_lock(&rmt->ingress.queues->lock);
+                        sdu     = (struct sdu *) rfifo_pop(entry->queue);
+                        pid = entry->port_id;
+                        spin_unlock(&rmt->ingress.queues->lock);
 
-                                if (!sdu) {
-                                        LOG_DBG("No SDU to work with");
-                                        break;
-                                }
-
-                                nothing_to_do = false;
-                                pci = sdu_pci_copy(sdu);
-                                if (!pci) {
-                                        LOG_DBG("No PCI to work with");
-                                        break;
-                                }
-
-                                pdu_type = pci_type(pci);
-                                if (!pdu_type_is_ok(pdu_type)) {
-                                        LOG_ERR("Wrong PDU type");
-                                        pci_destroy(pci);
-                                        sdu_destroy(sdu);
-                                        break;
-                                }
-                                LOG_DBG("PDU type: %d", pdu_type);
-                                switch (pdu_type) {
-                                case PDU_TYPE_MGMT:
-                                        regression_tests_process_mgmt_sdu(rmt,
-                                                                          pid,
-                                                                          sdu);
-                                        break;
-                                case PDU_TYPE_DT:
-                                        /*
-                                         * (FUTURE)
-                                         *
-                                         * enqueue PDU in pdus_dt[dest-addr, qos-id]
-                                         * don't process it now ...
-                                         *
-                                         * process_dt_sdu(rmt, port_id, sdu, entry);
-                                         */
-                                        break;
-                                default:
-                                        LOG_ERR("Unknown PDU type %d", pdu_type);
-                                        sdu_destroy(sdu);
-                                        break;
-                                }
-                                pci_destroy(pci);
-
-                                /* (FUTURE) foreach_end() */
+                        if (!sdu) {
+                                LOG_DBG("No SDU to work with");
+                                break;
                         }
+
+                        nothing_to_do = false;
+                        pci = sdu_pci_copy(sdu);
+                        if (!pci) {
+                                LOG_DBG("No PCI to work with");
+                                break;
+                        }
+
+                        pdu_type = pci_type(pci);
+                        if (!pdu_type_is_ok(pdu_type)) {
+                                LOG_ERR("Wrong PDU type");
+                                pci_destroy(pci);
+                                sdu_destroy(sdu);
+                                break;
+                        }
+                        LOG_DBG("PDU type: %d", pdu_type);
+                        switch (pdu_type) {
+                        case PDU_TYPE_MGMT:
+                                regression_tests_process_mgmt_sdu(rmt,
+                                                                  pid,
+                                                                  sdu);
+                                break;
+                        case PDU_TYPE_DT:
+                                /*
+                                 * (FUTURE)
+                                 *
+                                 * enqueue PDU in pdus_dt[dest-addr, qos-id]
+                                 * don't process it now ...
+                                 *
+                                 * process_dt_sdu(rmt, port_id, sdu, entry);
+                                 */
+                                break;
+                        default:
+                                LOG_ERR("Unknown PDU type %d", pdu_type);
+                                sdu_destroy(sdu);
+                                break;
+                        }
+                        pci_destroy(pci);
+
+                        /* (FUTURE) foreach_end() */
                 }
+        }
 
         if (queue_destroy(tmp)) {
                 LOG_DBG("Failed to destroy queue");
