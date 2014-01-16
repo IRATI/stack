@@ -1,0 +1,7 @@
+package rina.messages;
+option java_package="rina.encoding.impl.googleprotobuf.flowstate";
+import "protofiles/FlowStateObject.proto";
+
+message flowStateObjectGroup_t{  //Contains the information of a flow service
+	repeated flowStateObject_t flow_state_objects; 		// A group of flow state objects 
+}
