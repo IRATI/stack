@@ -5,6 +5,7 @@
 #
 
 ccflags-y += -I$(srctree)/net/rina
+ccflags-y += -Wtype-limits
 
 obj-$(CONFIG_ARP826) += arp826.o
 arp826-y             :=				\
