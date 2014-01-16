@@ -933,7 +933,7 @@ int rmt_pft_remove(struct rmt *       instance,
 }
 EXPORT_SYMBOL(rmt_pft_remove);
 
-//#ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
+#ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 static struct pdu * regression_tests_pdu_create(address_t address)
 {
         struct buffer * buffer;
@@ -1151,7 +1151,7 @@ static bool regression_tests_process_mgmt_sdu(struct rmt * rmt,
 
         pdu_destroy(pdu);
 
-        if (!sdu_destroy(sdu)) {
+        if (sdu_destroy(sdu)) {
                 LOG_DBG("Cannot destroy SDU something bad happened");
                 return false;
         }
