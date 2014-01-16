@@ -933,7 +933,7 @@ int rmt_pft_remove(struct rmt *       instance,
 }
 EXPORT_SYMBOL(rmt_pft_remove);
 
-#ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
+//#ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 static struct pdu * regression_tests_pdu_create(address_t address)
 {
         struct buffer * buffer;
@@ -1098,7 +1098,7 @@ static bool regression_tests_egress_queue(void)
                         }
 
                         LOG_DBG("Gonna send to kfa");
-                        if (!sdu_destroy(sdu)) {
+                        if (sdu_destroy(sdu)) {
                                 LOG_DBG("Failed destruction of SDU");
                                 LOG_DBG("SDU was not ok");
                         }
@@ -1107,12 +1107,6 @@ static bool regression_tests_egress_queue(void)
 
         if (queue_destroy(tmp)) {
                 LOG_DBG("Failed to destroy queue");
-                rmt_destroy(rmt);
-                return false;
-        }
-
-        if (qmap_destroy(rmt->egress.queues)) {
-                LOG_DBG("Failed to destroy qmap");
                 rmt_destroy(rmt);
                 return false;
         }
@@ -1324,12 +1318,6 @@ static bool regression_tests_ingress_queue(void)
 
         if (queue_destroy(tmp)) {
                 LOG_DBG("Failed to destroy queue");
-                rmt_destroy(rmt);
-                return false;
-        }
-
-        if (qmap_destroy(rmt->egress.queues)) {
-                LOG_DBG("Failed to destroy qmap");
                 rmt_destroy(rmt);
                 return false;
         }
