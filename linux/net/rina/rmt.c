@@ -952,7 +952,7 @@ static struct pdu * regression_tests_pdu_create(address_t address)
         struct pci *    pci;
         char *          data = "Hello, world";
 
-        buffer =  buffer_create_from(data, 13);
+        buffer =  buffer_create_from(data, strlen(data) + 1);
         if (!buffer) {
                 LOG_DBG("Failed to create buffer");
                 return NULL;
@@ -1063,10 +1063,14 @@ static bool regression_tests_egress_queue(void)
                 return false;
         }
 
-        LOG_DBG("Data: %s", (char *) buffer_data_ro(pdu_buffer_get_ro(pdu)));
-        LOG_DBG("Length: %d", buffer_length(pdu_buffer_get_ro(pdu)));
-        LOG_DBG("PDU Type: %X", pci_type(pdu_pci_get_ro(pdu)));
-        LOG_DBG("PCI Length: %d", pci_length(pdu_pci_get_ro(pdu)));
+        LOG_DBG("Data:       %s",
+                (char *) buffer_data_ro(pdu_buffer_get_ro(pdu)));
+        LOG_DBG("Length:     %d",
+                buffer_length(pdu_buffer_get_ro(pdu)));
+        LOG_DBG("PDU Type:   %X",
+                pci_type(pdu_pci_get_ro(pdu)));
+        LOG_DBG("PCI Length: %d",
+                pci_length(pdu_pci_get_ro(pdu)));
 
         LOG_DBG("Pushing PDU into queues");
         spin_lock(&rmt->egress.queues->lock);
