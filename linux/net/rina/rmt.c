@@ -197,15 +197,18 @@ struct rmt {
         } egress;
 };
 
+#define MAX_NAME_SIZE 128
+
 static const char * create_name(const char *       prefix,
                                 const struct rmt * instance)
 {
-        static char name[64];
+        static char name[MAX_NAME_SIZE];
 
         ASSERT(prefix);
         ASSERT(instance);
 
-        if (snprintf(name, sizeof(name), "%s-%pK", prefix, instance) >=
+        if (snprintf(name, sizeof(name),
+                     RINA_PREFIX "-%s-%pK", prefix, instance) >=
             sizeof(name))
                 return NULL;
 
@@ -242,7 +245,7 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         }
 
         /* Egress */
-        name = create_name("rmt-egress-wq", tmp);
+        name = create_name("egress-wq", tmp);
         if (!name) {
                 rmt_destroy(tmp);
                 return NULL;
@@ -263,7 +266,7 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         }
 
         /* Ingress */
-        name = create_name("rmt-ingress-wq", tmp);
+        name = create_name("ingress-wq", tmp);
         if (!name) {
                 rmt_destroy(tmp);
                 return NULL;
@@ -1016,7 +1019,7 @@ static bool regression_tests_egress_queue(void)
         }
 
         LOG_DBG("Creating rmt-egress-wq");
-        name = create_name("rmt-egress-wq", rmt);
+        name = create_name("egress-wq", rmt);
         if (!name) {
                 rmt_destroy(rmt);
                 return false;
@@ -1187,7 +1190,7 @@ static bool regression_tests_ingress_queue(void)
         }
 
         LOG_DBG("Creating rmt-ingress-wq");
-        name = create_name("rmt-ingress-wq", rmt);
+        name = create_name("ingress-wq", rmt);
         if (!name) {
                 rmt_destroy(rmt);
                 return false;
