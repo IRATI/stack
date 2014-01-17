@@ -23,8 +23,14 @@
 
 struct rtimer;
 
-struct rtimer * rtimer_create(void);
-struct rtimer * rtimer_create_ni(void);
+struct rtimer * rtimer_create(void (* function)(void * data),
+                              void *  data);
+struct rtimer * rtimer_create_ni(void (* function)(void * data),
+                                 void *  data);
 int             rtimer_destroy(struct rtimer * timer);
+
+int             rtimer_start(struct rtimer * timer,
+                             unsigned int    millisec);
+int             rtimer_stop(struct rtimer * timer);
 
 #endif

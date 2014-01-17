@@ -30,31 +30,83 @@
 #include "rtimer.h"
 
 struct rtimer {
-        int bogus;
+        struct timer_list tl;
+        void (* function)(void * data);
+        void * data;
 };
 
-static struct rtimer * rtimer_create_gfp(gfp_t flags)
+static struct rtimer * rtimer_create_gfp(gfp_t   flags,
+                                         void (* function)(void * data),
+                                         void *  data)
 {
         struct rtimer * tmp;
+
+        if (!data) {
+                LOG_DBG("Bogus input parameter, cannot create timer");
+                return NULL;
+        }
 
         tmp = rkmalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
 
+        tmp->function = function;
+        tmp->data     = data;
+
         return tmp;
 }
 
-struct rtimer * rtimer_create(void)
-{ return rtimer_create_gfp(GFP_KERNEL); }
+struct rtimer * rtimer_create(void (* function)(void * data), void * data)
+{ return rtimer_create_gfp(GFP_KERNEL, function, data); }
 EXPORT_SYMBOL(rtimer_create);
 
-struct rtimer * rtimer_create_ni(void)
-{ return rtimer_create_gfp(GFP_ATOMIC); }
+struct rtimer * rtimer_create_ni(void (* function)(void * data), void * data)
+{ return rtimer_create_gfp(GFP_ATOMIC, function, data); }
 EXPORT_SYMBOL(rtimer_create_ni);
+
+int rtimer_start(struct rtimer * timer,
+                 unsigned int    millisec)
+{
+        if (!timer)
+                return -1;
+
+        init_timer(&timer->tl);
+
+        /* FIXME: Crappy, rearrange */
+        timer->tl.function = (void (*)(unsigned long)) timer->function;
+        timer->tl.data     = (unsigned long)           timer->data;
+        timer->tl.expires  = jiffies + (millisec * HZ) / 1000;
+
+        add_timer(&timer->tl);
+
+        return -1;
+}
+EXPORT_SYMBOL(rtimer_start);
+
+static int _rtimer_stop(struct rtimer * timer)
+{
+        ASSERT(timer);
+
+        del_timer(&timer->tl);
+
+        return 0;
+}
+
+int rtimer_stop(struct rtimer * timer)
+{
+        if (!timer)
+                return -1;
+
+        return _rtimer_stop(timer);
+}
+EXPORT_SYMBOL(rtimer_stop);
 
 int rtimer_destroy(struct rtimer * timer)
 {
         if (!timer)
+                return -1;
+
+        if (_rtimer_stop(timer))
                 return -1;
 
         rkfree(timer);
