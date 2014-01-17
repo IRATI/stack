@@ -211,8 +211,9 @@ static int pfte_ports_copy(struct pft_entry * entry,
         if (*entries != count) {
                 if (*entries > 0)
                         rkfree(*port_ids);
-                if (*count > 0) {
-                        *port_ids = rkmalloc(count * sizeof(**port_ids), GFP_ATOMIC);
+                if (count > 0) {
+                        *port_ids = 
+                                rkmalloc(count * sizeof(**port_ids), GFP_ATOMIC);
                         if (!*port_ids) {
                                 *entries = 0;
                                 return -1;
