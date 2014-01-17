@@ -160,6 +160,8 @@ static int pft_cache_init(struct pft_cache * c)
         c->pids  = NULL;
         c->count = 0;
 
+        LOG_DBG("PFT cache %pK initialized", c);
+
         return 0;
 }
 
@@ -173,6 +175,8 @@ static int pft_cache_fini(struct pft_cache * c)
         } else {
                 ASSERT(!c->pids);
         }
+
+        LOG_DBG("PFT cache %pK destroyed", c);
 
         return 0;
 }
@@ -222,17 +226,14 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         struct rmt * tmp;
         const char * name;
 
-        if (!kfa)
-                return NULL;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
         if (!parent || !kfa || !efcpc) {
                 LOG_ERR("Bogus input parameters");
                 return NULL;
         }
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
 
         tmp->address = address_bad();
         tmp->parent  = parent;
