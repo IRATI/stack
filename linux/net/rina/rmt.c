@@ -160,6 +160,8 @@ static int pft_cache_init(struct pft_cache * c)
         c->pids  = NULL;
         c->count = 0;
 
+        LOG_DBG("PFT cache %pK initialized", c);
+
         return 0;
 }
 
@@ -173,6 +175,8 @@ static int pft_cache_fini(struct pft_cache * c)
         } else {
                 ASSERT(!c->pids);
         }
+
+        LOG_DBG("PFT cache %pK destroyed", c);
 
         return 0;
 }
@@ -197,15 +201,18 @@ struct rmt {
         } egress;
 };
 
+#define MAX_NAME_SIZE 128
+
 static const char * create_name(const char *       prefix,
                                 const struct rmt * instance)
 {
-        static char name[64];
+        static char name[MAX_NAME_SIZE];
 
         ASSERT(prefix);
         ASSERT(instance);
 
-        if (snprintf(name, sizeof(name), "%s-%pK", prefix, instance) >=
+        if (snprintf(name, sizeof(name),
+                     RINA_PREFIX "-%s-%pK", prefix, instance) >=
             sizeof(name))
                 return NULL;
 
@@ -219,17 +226,14 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         struct rmt * tmp;
         const char * name;
 
-        if (!kfa)
-                return NULL;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
         if (!parent || !kfa || !efcpc) {
                 LOG_ERR("Bogus input parameters");
                 return NULL;
         }
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
 
         tmp->address = address_bad();
         tmp->parent  = parent;
@@ -242,7 +246,7 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         }
 
         /* Egress */
-        name = create_name("rmt-egress-wq", tmp);
+        name = create_name("egress-wq", tmp);
         if (!name) {
                 rmt_destroy(tmp);
                 return NULL;
@@ -263,12 +267,11 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         }
 
         /* Ingress */
-        name = create_name("rmt-ingress-wq", tmp);
+        name = create_name("ingress-wq", tmp);
         if (!name) {
                 rmt_destroy(tmp);
                 return NULL;
         }
-
         tmp->ingress.wq = rwq_create(name);
         if (!tmp->ingress.wq) {
                 rmt_destroy(tmp);
@@ -342,14 +345,15 @@ static int send_worker(void * o)
         struct hlist_node * ntmp;
         int                 bucket;
 
-        out = false;
-        tmp = (struct rmt *) o;
+        LOG_DBG("Send worker called");
 
+        tmp = (struct rmt *) o;
         if (!tmp) {
-                LOG_ERR("No RMT passed");
+                LOG_ERR("No instance passed to send worker !!!");
                 return -1;
         }
 
+        out = false;
         while (!out) {
                 out = true;
                 hash_for_each_safe(tmp->egress.queues->queues,
@@ -683,10 +687,10 @@ static int process_mgmt_sdu(struct rmt * rmt,
                                                 sdu) ? -1 : 0);
 }
 
-static int process_dt_sdu(struct rmt *        rmt,
-                          port_id_t           port_id,
-                          struct sdu *        sdu,
-                          struct rmt_queue *  entry)
+static int process_dt_sdu(struct rmt *       rmt,
+                          port_id_t          port_id,
+                          struct sdu *       sdu,
+                          struct rmt_queue * entry)
 {
         struct pdu * pdu;
         cep_id_t     c;
@@ -749,16 +753,15 @@ static int receive_worker(void * o)
         struct rmt * tmp;
         bool         nothing_to_do;
 
-        LOG_DBG("RMT receive worker called");
-
-        nothing_to_do = false;
+        LOG_DBG("Receive worker called");
 
         tmp = (struct rmt *) o;
         if (!tmp) {
-                LOG_ERR("No instance passed to receive worker!!!");
+                LOG_ERR("No instance passed to receive worker !!!");
                 return -1;
         }
 
+        nothing_to_do = false;
         while (!nothing_to_do) {
                 struct rmt_queue *  entry;
                 int                 bucket;
@@ -933,6 +936,14 @@ int rmt_pft_remove(struct rmt *       instance,
 }
 EXPORT_SYMBOL(rmt_pft_remove);
 
+int rmt_pft_dump(struct rmt *       instance,
+                 struct list_head * entries)
+{
+        return is_rmt_pft_ok(instance) ? pft_dump(instance->pft,
+                                                  entries) : -1;
+}
+EXPORT_SYMBOL(rmt_pft_dump);
+
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 /* FIXME: Remove extern as soon as possible */
 struct buffer * buffer_create_from_gfp(gfp_t        flags,
@@ -1021,7 +1032,7 @@ static bool regression_tests_egress_queue(void)
         }
 
         LOG_DBG("Creating rmt-egress-wq");
-        name = create_name("rmt-egress-wq", rmt);
+        name = create_name("egress-wq", rmt);
         if (!name) {
                 rmt_destroy(rmt);
                 return false;
@@ -1195,7 +1206,7 @@ static bool regression_tests_ingress_queue(void)
         }
 
         LOG_DBG("Creating rmt-ingress-wq");
-        name = create_name("rmt-ingress-wq", rmt);
+        name = create_name("ingress-wq", rmt);
         if (!name) {
                 rmt_destroy(rmt);
                 return false;

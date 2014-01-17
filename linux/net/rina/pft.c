@@ -212,11 +212,10 @@ static int pfte_ports_copy(struct pft_entry * entry,
                 if (*entries > 0) rkfree(*port_ids);
                 *port_ids = rkmalloc(count * sizeof(**port_ids), GFP_ATOMIC);
                 if (!*port_ids) {
-                        LOG_ERR("Could not allocate memory "
-                                "to return ports %zd", count);
                         *entries = 0;
                         return -1;
                 }
+
                 *entries = count;
         }
 
@@ -328,14 +327,13 @@ int pft_add(struct pft *      instance,
         if (!pft_is_ok(instance))
                 return -1;
 
-        if (!is_address_ok(destination) ||
-            !is_qos_id_ok(qos_id)) {
+        if (!is_address_ok(destination) || !is_qos_id_ok(qos_id)) {
                 LOG_ERR("Bogus input parameters");
                 return -1;
         }
 
         if (!ports || !count) {
-                LOG_ERR("Bogus input parameters");
+                LOG_ERR("Bogus output parameters");
                 return -1;
         }
 
@@ -370,14 +368,13 @@ int pft_remove(struct pft *      instance,
         if (!pft_is_ok(instance))
                 return -1;
 
-        if (!is_address_ok(destination) ||
-            !is_qos_id_ok(qos_id)) {
+        if (!is_address_ok(destination) || !is_qos_id_ok(qos_id)) {
                 LOG_ERR("Bogus input parameters");
                 return -1;
         }
 
         if (!ports || !count) {
-                LOG_ERR("Bogus input parameters");
+                LOG_ERR("Bogus output parameters");
                 return -1;
         }
 
@@ -433,6 +430,40 @@ int pft_nhop(struct pft * instance,
 
         rcu_read_unlock();
 
+        return 0;
+}
+
+int pft_dump(struct pft *       instance,
+             struct list_head * entries)
+{
+        struct pft_entry *    pos;
+        struct pdu_ft_entry * entry;
+
+        if (!pft_is_ok(instance))
+                return -1;
+
+        rcu_read_lock();
+        list_for_each_entry_rcu(pos, &instance->entries, next) {
+                entry = rkmalloc(sizeof(*entry), GFP_ATOMIC);
+                if (!entry) {
+                        rcu_read_unlock();
+                        return -1;
+                }
+
+                entry->destination = pos->destination;
+                entry->qos_id      = pos->qos_id;
+                entry->ports_size  = 0;
+                entry->ports       = NULL;
+                if (pfte_ports_copy(pos, &entry->ports, &entry->ports_size)) {
+                        rkfree(entry);
+                        rcu_read_unlock();
+                        return -1;
+                }
+
+                list_add_rcu(&entry->next, entries);
+        }
+        rcu_read_unlock();
+                 
         return 0;
 }
 
