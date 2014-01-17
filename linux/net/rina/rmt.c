@@ -636,7 +636,7 @@ static struct pci * sdu_pci_copy(const struct sdu * sdu)
         if (!sdu_is_ok(sdu))
                 return NULL;
 
-        return pci_create_from(sdu_buffer_ro(sdu));
+        return pci_create_from(buffer_data_ro(sdu_buffer_ro(sdu)));
 }
 
 static int process_mgmt_sdu(struct rmt * rmt,
@@ -950,8 +950,9 @@ static struct pdu * regression_tests_pdu_create(address_t address)
         struct buffer * buffer;
         struct pdu *    pdu;
         struct pci *    pci;
+        char *          data = "Hello, world";
 
-        buffer = buffer_create(20);
+        buffer =  buffer_create_from(data, 13);
         if (!buffer) {
                 LOG_DBG("Failed to create buffer");
                 return NULL;
@@ -1062,6 +1063,11 @@ static bool regression_tests_egress_queue(void)
                 return false;
         }
 
+        LOG_DBG("Data: %s", (char *) buffer_data_ro(pdu_buffer_get_ro(pdu)));
+        LOG_DBG("Length: %d", buffer_length(pdu_buffer_get_ro(pdu)));
+        LOG_DBG("PDU Type: %X", pci_type(pdu_pci_get_ro(pdu)));
+        LOG_DBG("PCI Length: %d", pci_length(pdu_pci_get_ro(pdu)));
+
         LOG_DBG("Pushing PDU into queues");
         spin_lock(&rmt->egress.queues->lock);
         tmp = qmap_find(rmt->egress.queues, id);
@@ -1100,7 +1106,6 @@ static bool regression_tests_egress_queue(void)
                                 LOG_DBG("Where is our PDU???");
                                 break;
                         }
-
                         out = false;
                         sdu = sdu_create_pdu_with(pdu);
                         if (!sdu) {
@@ -1108,7 +1113,6 @@ static bool regression_tests_egress_queue(void)
                                 break;
                         }
 
-                        LOG_DBG("Gonna send to kfa");
                         if (sdu_destroy(sdu)) {
                                 LOG_DBG("Failed destruction of SDU");
                                 LOG_DBG("SDU was not ok");
@@ -1299,7 +1303,7 @@ static bool regression_tests_ingress_queue(void)
                                 sdu_destroy(sdu);
                                 break;
                         }
-                        LOG_DBG("PDU type: %d", pdu_type);
+                        LOG_DBG("PDU type: %X", pdu_type);
                         switch (pdu_type) {
                         case PDU_TYPE_MGMT:
                                 regression_tests_process_mgmt_sdu(rmt,
