@@ -445,13 +445,17 @@ int pft_dump(struct pft *       instance,
         rcu_read_lock();
         list_for_each_entry_rcu(pos, &instance->entries, next) {
                 entry = rkmalloc(sizeof(struct pdu_ft_entry), GFP_ATOMIC);
-                if (!entry)
+                if (!entry) {
+                        rcu_read_unlock();
                         return -1;
+                }
                 entry->destination = pos->destination;
                 entry->qos_id      = pos->qos_id;
                 entry->ports_size  = 0;
-                if (pfte_ports_copy(pos, &entry->ports, &entry->ports_size))
+                if (pfte_ports_copy(pos, &entry->ports, &entry->ports_size)) {
+                        rcu_read_unlock();
                         return -1;
+                }
 
                 list_add_rcu(&entry->next, entries);
         }

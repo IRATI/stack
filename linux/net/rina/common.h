@@ -155,10 +155,10 @@ struct rib_object {
 };
 
 struct pdu_ft_entry {
-        address_t destination;
-        qos_id_t  qos_id;
-        port_id_t * ports;
-        size_t ports_size;
+        address_t        destination;
+        qos_id_t         qos_id;
+        port_id_t *      ports;
+        size_t           ports_size;
         struct list_head next;
 };
 
