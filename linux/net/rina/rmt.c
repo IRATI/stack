@@ -945,10 +945,6 @@ int rmt_pft_dump(struct rmt *       instance,
 EXPORT_SYMBOL(rmt_pft_dump);
 
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
-/* FIXME: Remove extern as soon as possible */
-struct buffer * buffer_create_from_gfp(gfp_t        flags,
-                                       const void * data,
-                                       size_t       size);
 static struct pdu * regression_tests_pdu_create(address_t address)
 {
         struct buffer * buffer;
@@ -956,7 +952,7 @@ static struct pdu * regression_tests_pdu_create(address_t address)
         struct pci *    pci;
         char *          data = "Hello, world";
 
-        buffer =  buffer_create_from_gfp(GFP_KERNEL, data, 13);
+        buffer =  buffer_create_from(data, 13);
         if (!buffer) {
                 LOG_DBG("Failed to create buffer");
                 return NULL;
