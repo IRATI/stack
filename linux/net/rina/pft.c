@@ -456,7 +456,7 @@ int pft_dump(struct pft *       instance,
                 if (pfte_ports_copy(pos, &entry->ports, &entry->ports_size))
                         return -1;
 
-                list_add_rcu(entries, &entry->next);
+                list_add_rcu(&entry->next, entries);
         }
         rcu_read_unlock();
                  
