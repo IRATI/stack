@@ -212,11 +212,10 @@ static int pfte_ports_copy(struct pft_entry * entry,
                 if (*entries > 0) rkfree(*port_ids);
                 *port_ids = rkmalloc(count * sizeof(**port_ids), GFP_ATOMIC);
                 if (!*port_ids) {
-                        LOG_ERR("Could not allocate memory "
-                                "to return ports %zd", count);
                         *entries = 0;
                         return -1;
                 }
+
                 *entries = count;
         }
 
@@ -328,14 +327,13 @@ int pft_add(struct pft *      instance,
         if (!pft_is_ok(instance))
                 return -1;
 
-        if (!is_address_ok(destination) ||
-            !is_qos_id_ok(qos_id)) {
+        if (!is_address_ok(destination) || !is_qos_id_ok(qos_id)) {
                 LOG_ERR("Bogus input parameters");
                 return -1;
         }
 
         if (!ports || !count) {
-                LOG_ERR("Bogus input parameters");
+                LOG_ERR("Bogus output parameters");
                 return -1;
         }
 
@@ -370,14 +368,13 @@ int pft_remove(struct pft *      instance,
         if (!pft_is_ok(instance))
                 return -1;
 
-        if (!is_address_ok(destination) ||
-            !is_qos_id_ok(qos_id)) {
+        if (!is_address_ok(destination) || !is_qos_id_ok(qos_id)) {
                 LOG_ERR("Bogus input parameters");
                 return -1;
         }
 
         if (!ports || !count) {
-                LOG_ERR("Bogus input parameters");
+                LOG_ERR("Bogus output parameters");
                 return -1;
         }
 
