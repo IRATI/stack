@@ -959,8 +959,8 @@ static int parse_dt_cons(struct nlattr *  attr,
         return 0;
 }
 
-static int parse_dif_config(struct nlattr * dif_config_attr,
-                            struct dif_config  * dif_config)
+static int parse_dif_config(struct nlattr *     dif_config_attr,
+                            struct dif_config * dif_config)
 {
         struct nla_policy attr_policy[DCONF_ATTR_MAX + 1];
         struct nlattr *   attrs[DCONF_ATTR_MAX + 1];
@@ -1011,8 +1011,8 @@ static int parse_dif_config(struct nlattr * dif_config_attr,
         return -1;
 }
 
-static int parse_dif_info(struct nlattr *    dif_config_attr,
-                          struct dif_info  * dif_info)
+static int parse_dif_info(struct nlattr *   dif_config_attr,
+                          struct dif_info * dif_info)
 {
         struct nla_policy attr_policy[DINFO_ATTR_MAX + 1];
         struct nlattr *   attrs[DINFO_ATTR_MAX + 1];
@@ -1865,7 +1865,7 @@ static int rnl_parse_rmt_modify_fte_req_msg(struct genl_info * info,
 }
 
 int rnl_parse_msg(struct genl_info * info,
-                  struct rnl_msg   * msg)
+                  struct rnl_msg *   msg)
 {
 
         LOG_DBG("RINA Netlink parser started ...");
@@ -1997,7 +1997,10 @@ EXPORT_SYMBOL(rnl_parse_msg);
 /* FORMATTING */
 static int format_fail(char * msg_name)
 {
+        ASSERT(msg_name);
+
         LOG_ERR("Could not format %s message correctly", msg_name);
+
         return -1;
 }
 
@@ -2140,8 +2143,8 @@ static int rnl_format_generic_u32_param_msg(u32              param_var,
         return 0;
 }
 
-static int rnl_format_ipcm_assign_to_dif_resp_msg(uint_t          result,
-                                                  struct sk_buff  * skb_out)
+static int rnl_format_ipcm_assign_to_dif_resp_msg(uint_t           result,
+                                                  struct sk_buff * skb_out)
 {
         return rnl_format_generic_u32_param_msg(result,
                                                 IAFRRM_ATTR_RESULT,
@@ -2150,8 +2153,8 @@ static int rnl_format_ipcm_assign_to_dif_resp_msg(uint_t          result,
                                                 skb_out);
 }
 
-static int rnl_format_ipcm_update_dif_config_resp_msg(uint_t          result,
-                                                      struct sk_buff  * skb_out)
+static int rnl_format_ipcm_update_dif_config_resp_msg(uint_t           result,
+                                                      struct sk_buff * skb_out)
 {
         return rnl_format_generic_u32_param_msg(result,
                                                 IAFRRM_ATTR_RESULT,
