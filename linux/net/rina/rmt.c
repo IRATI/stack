@@ -272,7 +272,6 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                 rmt_destroy(tmp);
                 return NULL;
         }
-
         tmp->ingress.wq = rwq_create(name);
         if (!tmp->ingress.wq) {
                 rmt_destroy(tmp);
@@ -346,14 +345,15 @@ static int send_worker(void * o)
         struct hlist_node * ntmp;
         int                 bucket;
 
-        out = false;
-        tmp = (struct rmt *) o;
+        LOG_DBG("Send worker called");
 
+        tmp = (struct rmt *) o;
         if (!tmp) {
-                LOG_ERR("No RMT passed");
+                LOG_ERR("No instance passed to send worker !!!");
                 return -1;
         }
 
+        out = false;
         while (!out) {
                 out = true;
                 hash_for_each_safe(tmp->egress.queues->queues,
@@ -687,10 +687,10 @@ static int process_mgmt_sdu(struct rmt * rmt,
                                                 sdu) ? -1 : 0);
 }
 
-static int process_dt_sdu(struct rmt *        rmt,
-                          port_id_t           port_id,
-                          struct sdu *        sdu,
-                          struct rmt_queue *  entry)
+static int process_dt_sdu(struct rmt *       rmt,
+                          port_id_t          port_id,
+                          struct sdu *       sdu,
+                          struct rmt_queue * entry)
 {
         struct pdu * pdu;
         cep_id_t     c;
@@ -753,16 +753,15 @@ static int receive_worker(void * o)
         struct rmt * tmp;
         bool         nothing_to_do;
 
-        LOG_DBG("RMT receive worker called");
-
-        nothing_to_do = false;
+        LOG_DBG("Receive worker called");
 
         tmp = (struct rmt *) o;
         if (!tmp) {
-                LOG_ERR("No instance passed to receive worker!!!");
+                LOG_ERR("No instance passed to receive worker !!!");
                 return -1;
         }
 
+        nothing_to_do = false;
         while (!nothing_to_do) {
                 struct rmt_queue *  entry;
                 int                 bucket;
