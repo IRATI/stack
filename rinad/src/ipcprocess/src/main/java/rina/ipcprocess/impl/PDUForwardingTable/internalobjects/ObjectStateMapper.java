@@ -2,9 +2,9 @@ package rina.ipcprocess.impl.PDUForwardingTable.internalobjects;
 
 import java.util.ArrayList;
 
-import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.*;
+import rina.PDUForwardingTable.api.*;
 
-public class ObjectMapper {
+public class ObjectStateMapper {
 	
 	public FlowStateObject FSOMap (FlowStateInternalObject intObj)
 	{

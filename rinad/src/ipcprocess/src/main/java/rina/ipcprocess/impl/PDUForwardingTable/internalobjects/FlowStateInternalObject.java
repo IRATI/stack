@@ -2,7 +2,7 @@ package rina.ipcprocess.impl.PDUForwardingTable.internalobjects;
 
 import java.util.ArrayList;
 
-import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateObject;
+import rina.PDUForwardingTable.api.FlowStateObject;
 
 public class FlowStateInternalObject{
 	
