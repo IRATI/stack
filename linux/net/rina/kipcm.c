@@ -179,19 +179,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 goto fail;
         }
 
-        ASSERT(ipc_process->ops);
-        ASSERT(ipc_process->ops->flow_allocate_request);
-
-        if (ipc_process->ops->flow_allocate_request(ipc_process->data,
-                                                    attrs->source,
-                                                    attrs->dest,
-                                                    attrs->fspec,
-                                                    pid)) {
-                LOG_ERR("Failed allocating flow request");
-                kfa_flow_deallocate(kipcm->kfa, pid);
-                goto fail;
-        }
-
         if (user_ipc_id) {
 
                 usr_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
@@ -200,6 +187,9 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                         kfa_flow_deallocate(kipcm->kfa, pid);
                         goto fail;
                 }
+
+                ASSERT(usr_ipcp->ops);
+                ASSERT(usr_ipcp->ops->flow_binding_ipcp);
 
                 if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data,
                                                      pid)) {
@@ -211,6 +201,19 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
                 LOG_DBG("Binding user IPCP %d' RMT to flow in port %d",
                         user_ipc_id, pid);
+        }
+
+        ASSERT(ipc_process->ops);
+        ASSERT(ipc_process->ops->flow_allocate_request);
+
+        if (ipc_process->ops->flow_allocate_request(ipc_process->data,
+                                                    attrs->source,
+                                                    attrs->dest,
+                                                    attrs->fspec,
+                                                    pid)) {
+                LOG_ERR("Failed allocating flow request");
+                kfa_flow_deallocate(kipcm->kfa, pid);
+                goto fail;
         }
 
         rnl_msg_destroy(msg);
@@ -285,20 +288,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 LOG_ERR("Could not destroy egress messages map entry");
         }
 
-        ASSERT(ipc_process->ops);
-        ASSERT(ipc_process->ops->flow_allocate_response);
-
-        if (ipc_process->ops->flow_allocate_response(ipc_process->data,
-                                                     pid,
-                                                     attrs->result)) {
-                LOG_ERR("Failed allocate flow response for port id: %d",
-                        attrs->id);
-                rnl_msg_destroy(msg);
-                return -1;
-        }
-
         if (user_ipc_id) {
-
                 usr_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
                 if (!usr_ipcp) {
                         LOG_DBG("(response) Could not find the user ipcp "
@@ -307,6 +297,9 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                         rnl_msg_destroy(msg);
                         return -1;
                 }
+
+                ASSERT(usr_ipcp->ops);
+                ASSERT(usr_ipcp->ops->flow_binding_ipcp);
 
                 if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data, pid)) {
                         LOG_DBG("(response) Could not bind the user ipcp' "
@@ -318,6 +311,19 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 
                 LOG_DBG("(response) Binding user IPCP %d' RMT "
                         "to flow in port %d", user_ipc_id, pid);
+        }
+
+        ASSERT(ipc_process->ops);
+        ASSERT(ipc_process->ops->flow_allocate_response);
+
+        if (ipc_process->ops->flow_allocate_response(ipc_process->data,
+                                                     pid,
+                                                     attrs->result)) {
+                LOG_ERR("Failed allocate flow response for port id: %d",
+                        attrs->id);
+                kfa_flow_deallocate(kipcm->kfa, pid);
+                rnl_msg_destroy(msg);
+                return -1;
         }
 
         rnl_msg_destroy(msg);
@@ -885,6 +891,18 @@ static int notify_ipcp_conn_create_arrived(void *             data,
                 goto fail;
         }
 
+        if (user_ipc_id) {
+                struct ipcp_instance * user_ipcp;
+
+                user_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
+                if (!user_ipcp)
+                        goto fail;
+
+                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                                      port_id))
+                        goto fail;
+        }
+
         src_cep = ipcp->ops->connection_create_arrived(ipcp->data,
                                                        attrs->port_id,
                                                        attrs->src_addr,
@@ -896,21 +914,6 @@ static int notify_ipcp_conn_create_arrived(void *             data,
         if (!is_cep_id_ok(src_cep)) {
                 LOG_ERR("IPC process could not create connection");
                 goto fail;
-        }
-
-        if (user_ipc_id) {
-                struct ipcp_instance * user_ipcp;
-
-                user_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
-                if (!user_ipcp) {
-                        ipcp->ops->connection_destroy(ipcp->data, src_cep);
-                        goto fail;
-                }
-                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                                      port_id)) {
-                        ipcp->ops->connection_destroy(ipcp->data, src_cep);
-                        goto fail;
-                }
         }
 
         return conn_create_result_free_and_reply(msg,
@@ -996,11 +999,6 @@ static int notify_ipcp_conn_update_req(void *             data,
         if (!ipcp)
                 goto fail;
 
-        if (ipcp->ops->connection_update(ipcp->data,
-                                         port_id,
-                                         attrs->src_cep,
-                                         attrs->dst_cep))
-                goto fail;
 
         if (user_ipc_id) {
                 struct ipcp_instance * user_ipcp;
@@ -1018,6 +1016,12 @@ static int notify_ipcp_conn_update_req(void *             data,
                         goto fail;
                 }
         }
+
+        if (ipcp->ops->connection_update(ipcp->data,
+                                         port_id,
+                                         attrs->src_cep,
+                                         attrs->dst_cep))
+                goto fail;
 
         return conn_update_result_free_and_reply(msg,
                                                  ipc_id,
@@ -1821,11 +1825,13 @@ int kipcm_sdu_write(struct kipcm * kipcm,
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
+                sdu_destroy(sdu);
                 return -1;
         }
 
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus SDU received, bailing out");
+                sdu_destroy(sdu);
                 return -1;
         }
 

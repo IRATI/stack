@@ -409,10 +409,12 @@ int kfa_flow_sdu_write(struct kfa * instance,
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
+                sdu_destroy(sdu);
                 return -1;
         }
         if (!sdu_is_ok(sdu)) {
-                LOG_ERR("Bogus port-id, bailing out");
+                LOG_ERR("Bogus sdu, bailing out");
+                sdu_destroy(sdu);
                 return -1;
         }
 
@@ -421,6 +423,7 @@ int kfa_flow_sdu_write(struct kfa * instance,
         if (!is_port_id_ok(id)) {
                 LOG_ERR("Bogus port-id, bailing out");
                 spin_unlock(&instance->lock);
+                sdu_destroy(sdu);
                 return -1;
         }
 
@@ -428,12 +431,14 @@ int kfa_flow_sdu_write(struct kfa * instance,
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
                 spin_unlock(&instance->lock);
+                sdu_destroy(sdu);
                 return -1;
         }
 
         if (flow->state == PORT_STATE_DEALLOCATED) {
                 LOG_ERR("Flow with port-id %d is already deallocated", id);
                 spin_unlock(&instance->lock);
+                sdu_destroy(sdu);
                 return -1;
         }
         atomic_inc(&flow->writers);
@@ -459,16 +464,20 @@ int kfa_flow_sdu_write(struct kfa * instance,
                         LOG_ERR("There is no flow bound to port-id %d anymore",
                                 id);
                         spin_unlock(&instance->lock);
+                        sdu_destroy(sdu);
                         return -1;
                 }
 
-                if (retval)
+                if (retval) {
+                        sdu_destroy(sdu);
                         goto finish;
+                }
         }
 
         ipcp = flow->ipc_process;
         if (!ipcp) {
                 retval = -1;
+                sdu_destroy(sdu);
                 goto finish;
         }
 
