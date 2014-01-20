@@ -150,13 +150,12 @@ void * rqueue_head_pop(struct rqueue * q)
                 return NULL;
         }
 
-        if (list_empty(&q->head)) {
-                LOG_ERR("Cannot head-pop from an empty queue");
+        if (list_empty(&q->head))
                 return NULL;
-        }
 
         tmp = list_first_entry(&q->head, struct rqueue_entry, next);
         ASSERT(tmp);
+
         ret = tmp->data;
 
         list_del(&tmp->next);
@@ -206,10 +205,8 @@ void * rqueue_tail_pop(struct rqueue * q)
                 return NULL;
         }
 
-        if (list_empty(&q->head)) {
-                LOG_ERR("Cannot tail-pop from an empty queue");
+        if (list_empty(&q->head))
                 return NULL;
-        }
 
         list_move_tail(&q->head, h);
 
