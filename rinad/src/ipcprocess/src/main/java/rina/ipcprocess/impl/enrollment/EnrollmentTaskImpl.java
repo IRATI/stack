@@ -561,7 +561,7 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 					 PDUForwardingTableEntry entry = new PDUForwardingTableEntry();
 					 entry.setAddress(neighbors.get(i).getAddress());
 					 entry.setQosId(1);
-					 entry.setPortId(neighbors.get(i).getUnderlyingPortId());
+					 entry.addPortId(neighbors.get(i).getUnderlyingPortId());
 					 list.addFirst(entry);
 					 rina.getKernelIPCProcess().modifyPDUForwardingTableEntries(list, 1);
 				 } catch (Exception ex) {
@@ -700,7 +700,7 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 			 PDUForwardingTableEntry entry = new PDUForwardingTableEntry();
 			 entry.setAddress(neighbor.getAddress());
 			 entry.setQosId(1);
-			 entry.setPortId(neighbor.getUnderlyingPortId());
+			 entry.addPortId(neighbor.getUnderlyingPortId());
 			 list.addFirst(entry);
 			 rina.getKernelIPCProcess().modifyPDUForwardingTableEntries(list, 0);
 		 } catch (Exception ex) {

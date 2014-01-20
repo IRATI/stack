@@ -28,20 +28,32 @@
 #include "utils.h"
 #include "debug.h"
 #include "pdu.h"
+#include "qos.h"
+
+/* FIXME: These externs have to disappear from here */
+struct buffer * buffer_create_with_gfp(gfp_t  flags,
+                                       void * data,
+                                       size_t size);
+struct buffer * buffer_create_from_gfp(gfp_t        flags,
+                                       const void * data,
+                                       size_t       size);
+struct buffer * buffer_dup_gfp(gfp_t                 flags,
+                               const struct buffer * b);
 
 struct pci {
-        address_t  source;
-        address_t  destination;
-
         pdu_type_t type;
+
+        /* If type == PDU_TYPE_MGMT, all the following fields are useless */
+        address_t source;
+        address_t destination;
 
         struct {
                 cep_id_t source;
                 cep_id_t destination;
-        } ceps;
+        }         ceps;
 
-        qos_id_t   qos_id;
-        seq_num_t  sequence_number;
+        qos_id_t  qos_id;
+        seq_num_t sequence_number;
 };
 
 static bool pci_is_ok(const struct pci * pci)
@@ -132,7 +144,7 @@ int pci_nxt_seq_send_set(struct pci * pci,
 EXPORT_SYMBOL(pci_nxt_seq_send_set);
 
 int pci_qos_id_set(struct pci * pci,
-                   qos_id_t   qos_id)
+                   qos_id_t     qos_id)
 {
         if (!pci)
                 return -1;
@@ -163,7 +175,7 @@ int pci_format(struct pci * pci,
                qos_id_t     qos_id,
                pdu_type_t   type)
 {
-        if (pci_cep_destination_set(pci, src_cep_id) || 
+        if (pci_cep_destination_set(pci, src_cep_id) ||
             pci_cep_source_set(pci, dst_cep_id)      ||
             pci_destination_set(pci, dst_address)    ||
             pci_source_set(pci, src_address)         ||
@@ -173,10 +185,9 @@ int pci_format(struct pci * pci,
                 return -1;
         }
 
-        return 0;        
+        return 0;
 }
 EXPORT_SYMBOL(pci_format);
-
 
 static struct pci * pci_create_from_gfp(gfp_t        flags,
                                         const void * data)
@@ -195,7 +206,11 @@ static struct pci * pci_create_from_gfp(gfp_t        flags,
                 return NULL;
         }
 
-        ASSERT(pci_is_ok(tmp));
+        if (!pci_is_ok(tmp)) {
+                LOG_ERR("Cannot create PCI from bad data");
+                rkfree(tmp);
+                return NULL;
+        }
 
         return tmp;
 }
@@ -299,6 +314,10 @@ cep_id_t pci_cep_source(const struct pci * pci)
 }
 EXPORT_SYMBOL(pci_cep_source);
 
+qos_id_t pci_qos_id(const struct pci * pci)
+{ return pci ? pci->qos_id : qos_id_bad();  }
+EXPORT_SYMBOL(pci_qos_id);
+
 struct pdu {
         struct pci *    pci;
         struct buffer * buffer;
@@ -396,14 +415,24 @@ struct buffer * pdu_buffer_get_rw(struct pdu * pdu)
 }
 EXPORT_SYMBOL(pdu_buffer_get_rw);
 
+int pdu_buffer_disown(struct pdu * pdu)
+{
+        if (!pdu)
+                return -1;
+
+        pdu->buffer = NULL;
+        return 0;
+}
+EXPORT_SYMBOL(pdu_buffer_disown);
+
 int pdu_buffer_set(struct pdu * pdu, struct buffer * buffer)
 {
         if (!pdu)
                 return -1;
 
-        if (!buffer_is_ok(buffer))
-                return -1;
-
+        if (pdu->buffer) {
+                buffer_destroy(pdu->buffer);
+        }
         pdu->buffer = buffer;
 
         return 0;
@@ -447,7 +476,7 @@ int pdu_destroy(struct pdu * p)
         if (p)
                 return -1;
 
-        if (p->pci)    rkfree(p->pci);
+        if (p->pci)    pci_destroy(p->pci);
         if (p->buffer) buffer_destroy(p->buffer);
 
         rkfree(p);

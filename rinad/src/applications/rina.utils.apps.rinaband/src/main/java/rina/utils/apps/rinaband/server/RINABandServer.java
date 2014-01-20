@@ -19,7 +19,7 @@ import eu.irati.librina.RegisterApplicationResponseEvent;
 import eu.irati.librina.UnregisterApplicationResponseEvent;
 import eu.irati.librina.rina;
 
-import rina.aux.LogHelper;
+import rina.utils.LogHelper;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.impl.CDAPSessionManagerImpl;
 import rina.cdap.impl.googleprotobuf.GoogleProtocolBufWireMessageProviderFactory;

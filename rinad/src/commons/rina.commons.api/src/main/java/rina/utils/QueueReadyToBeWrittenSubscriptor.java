@@ -1,4 +1,4 @@
-package rina.aux;
+package rina.utils;
 
 /**
  * An interface of a class that is subscribed to queue ready to be written events

@@ -171,13 +171,33 @@ struct ipcp_instance_ops {
                                  struct sdu *                sdu);
 
         /* Takes the ownership of the passed sdu */
-        int (* management_sdu_write)(struct ipcp_instance_data * data,
-                                     port_id_t                   port_id,
-                                     struct sdu *                sdu);
+        int (* mgmt_sdu_write)(struct ipcp_instance_data * data,
+                               port_id_t                   port_id,
+                               struct sdu *                sdu);
 
         /* Passes the ownership of the sdu_wpi */
-        int (* management_sdu_read)(struct ipcp_instance_data * data,
-                                    struct sdu_wpi **           sdu_wpi);
+        int (* mgmt_sdu_read)(struct ipcp_instance_data * data,
+                              struct sdu_wpi **           sdu_wpi);
+
+        /* Takes the ownership of the passed sdu */
+        int (* mgmt_sdu_post)(struct ipcp_instance_data * data,
+                              port_id_t                   port_id,
+                              struct sdu *                sdu);
+
+        int (* pft_add)(struct ipcp_instance_data * data,
+                        address_t                   address,
+                        qos_id_t                    qos_id,
+                        port_id_t *                 ports,
+                        size_t                      size);
+
+        int (* pft_remove)(struct ipcp_instance_data * data,
+                           address_t                   address,
+                           qos_id_t                    qos_id,
+                           port_id_t *                 ports,
+                           size_t                      size);
+
+        int (* pft_dump)(struct ipcp_instance_data * data,
+                         struct list_head *          entries);
 };
 
 #endif

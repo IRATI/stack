@@ -683,7 +683,6 @@ void Connection::setSourceCepId(int sourceCepId) {
 PDUForwardingTableEntry::PDUForwardingTableEntry() {
         address = 0;
         qosId = 0;
-        portId = 0;
 }
 
 bool PDUForwardingTableEntry::operator==(
@@ -693,10 +692,6 @@ bool PDUForwardingTableEntry::operator==(
         }
 
         if (qosId != other.getQosId()) {
-                return false;
-        }
-
-        if (portId != other.getPortId()) {
                 return false;
         }
 
@@ -716,12 +711,17 @@ void PDUForwardingTableEntry::setAddress(unsigned int address) {
         this->address = address;
 }
 
-unsigned int PDUForwardingTableEntry::getPortId() const {
-        return portId;
+const std::list<unsigned int> PDUForwardingTableEntry::getPortIds() const {
+        return portIds;
 }
 
-void PDUForwardingTableEntry::setPortId(unsigned int portId) {
-        this->portId = portId;
+void PDUForwardingTableEntry::
+setPortIds(const std::list<unsigned int>& portIds){
+        this->portIds = portIds;
+}
+
+void PDUForwardingTableEntry::addPortId(unsigned int portId) {
+        portIds.push_back(portId);
 }
 
 unsigned int PDUForwardingTableEntry::getQosId() const {

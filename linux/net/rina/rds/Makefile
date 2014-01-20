@@ -5,6 +5,7 @@
 #
 
 ccflags-y += -I$(srctree)/net/rina
+ccflags-y += -Wtype-limits
 
-obj-$(CONFIG_RINA) +=						\
-	 rmem.o rmap.o rwq.o rbmp.o rqueue.o rfifo.o rref.o
+obj-$(CONFIG_RINA) +=							\
+	 rmem.o rmap.o rwq.o rbmp.o rqueue.o rfifo.o rref.o rtimer.o

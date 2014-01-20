@@ -29,8 +29,18 @@
 #include "debug.h"
 #include "du.h"
 
-static struct sdu * sdu_create_with_gfp(gfp_t           flags,
-                                        struct buffer * buffer)
+/* FIXME: These externs have to disappear from here */
+struct buffer * buffer_create_with_gfp(gfp_t  flags,
+                                       void * data,
+                                       size_t size);
+struct buffer * buffer_create_from_gfp(gfp_t        flags,
+                                       const void * data,
+                                       size_t       size);
+struct buffer * buffer_dup_gfp(gfp_t                 flags,
+                               const struct buffer * b);
+
+static struct sdu * sdu_create_buffer_with_gfp(gfp_t           flags,
+                                               struct buffer * buffer)
 {
         struct sdu * tmp;
 
@@ -46,13 +56,109 @@ static struct sdu * sdu_create_with_gfp(gfp_t           flags,
         return tmp;
 }
 
-struct sdu * sdu_create_with(struct buffer * buffer)
-{ return sdu_create_with_gfp(GFP_KERNEL, buffer); }
-EXPORT_SYMBOL(sdu_create_with);
+struct sdu * sdu_create_buffer_with(struct buffer * buffer)
+{ return sdu_create_buffer_with_gfp(GFP_KERNEL, buffer); }
+EXPORT_SYMBOL(sdu_create_buffer_with);
 
-struct sdu * sdu_create_with_ni(struct buffer * buffer)
-{ return sdu_create_with_gfp(GFP_ATOMIC, buffer); }
-EXPORT_SYMBOL(sdu_create_with_ni);
+struct sdu * sdu_create_buffer_with_ni(struct buffer * buffer)
+{ return sdu_create_buffer_with_gfp(GFP_ATOMIC, buffer); }
+EXPORT_SYMBOL(sdu_create_buffer_with_ni);
+
+static struct sdu * sdu_create_pdu_with_gfp(gfp_t        flags,
+                                            struct pdu * pdu)
+{
+        struct sdu *          sdu;
+        const struct buffer * buffer;
+        const struct pci *    pci;
+        const void *          buffer_data;
+        size_t                size;
+        ssize_t               buffer_size;
+        ssize_t               pci_size;
+        struct buffer *       tmp_buff;
+        char *                data;
+
+        if (!pdu)
+                return NULL;
+
+        /* FIXME: Add pdu_destroy() on each return */
+
+        buffer = pdu_buffer_get_ro(pdu);
+        if (!buffer) {
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        buffer_data = buffer_data_ro(buffer);
+        if (!buffer_data) {
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        pci = pdu_pci_get_ro(pdu);
+        if (!pci) {
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        buffer_size = buffer_length(buffer);
+        if (buffer_size <= 0) {
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        pci_size = pci_length(pci);
+        if (pci_size <= 0) {
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        size = pci_size + buffer_size;
+        data = rkmalloc(size, flags);
+        if (!data) {
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        /* FIXME: Useless check */
+        if (!memcpy(data, pci, pci_size)) {
+                rkfree(data);
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        /* FIXME: Useless check */
+        if (!memcpy(data + pci_size, buffer_data, buffer_size)) {
+                rkfree(data);
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        tmp_buff = buffer_create_with_gfp(flags, data, size);
+        if (!tmp_buff) {
+                rkfree(data);
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        sdu = sdu_create_buffer_with(tmp_buff);
+        if (!sdu) {
+                pdu_destroy(pdu);
+                buffer_destroy(tmp_buff);
+                return NULL;
+        }
+
+        pdu_destroy(pdu);
+
+        return sdu;
+}
+
+struct sdu * sdu_create_pdu_with(struct pdu * pdu)
+{ return sdu_create_pdu_with_gfp(GFP_KERNEL, pdu); }
+EXPORT_SYMBOL(sdu_create_pdu_with);
+
+struct sdu * sdu_create_pdu_with_ni(struct pdu * pdu)
+{ return sdu_create_pdu_with_gfp(GFP_ATOMIC, pdu); }
+EXPORT_SYMBOL(sdu_create_pdu_with_ni);
 
 int sdu_destroy(struct sdu * s)
 {
@@ -60,6 +166,7 @@ int sdu_destroy(struct sdu * s)
 
         buffer_destroy(s->buffer);
         rkfree(s);
+
         return 0;
 }
 EXPORT_SYMBOL(sdu_destroy);
@@ -136,7 +243,7 @@ static struct sdu_wpi * sdu_wpi_create_with_gfp(gfp_t           flags,
         if (!tmp)
                 return NULL;
 
-        tmp->sdu = sdu_create_with_gfp(flags, buffer);
+        tmp->sdu = sdu_create_buffer_with_gfp(flags, buffer);
         if (!tmp->sdu) {
                 rkfree(tmp);
                 return NULL;
@@ -159,6 +266,7 @@ int sdu_wpi_destroy(struct sdu_wpi * s)
 
         sdu_destroy(s->sdu);
         rkfree(s);
+
         return 0;
 }
 EXPORT_SYMBOL(sdu_wpi_destroy);
@@ -166,12 +274,3 @@ EXPORT_SYMBOL(sdu_wpi_destroy);
 bool sdu_wpi_is_ok(const struct sdu_wpi * s)
 { return (s && sdu_is_ok(s->sdu)) ? true : false; }
 EXPORT_SYMBOL(sdu_wpi_is_ok);
-
-void sdu_wpi_destructor(void * data)
-{
-        struct sdu_wpi * s = data;
-        if (sdu_wpi_destroy(s)) {
-                LOG_ERR("Could not destroy SDU_WPI");
-        }
-}
-EXPORT_SYMBOL(sdu_wpi_destructor);

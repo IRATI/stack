@@ -928,7 +928,7 @@ IpcpConnectionDestroyResultMessage * parseIpcpConnectionDestroyResultMessage(
 enum PDUForwardingTableEntryAttributes {
         PFTE_ATTR_ADDRESS = 1,
         PFTE_ATTR_QOS_ID,
-        PFTE_ATTR_PORT_ID,
+        PFTE_ATTR_PORT_IDS,
         __PFTE_ATTR_MAX,
 };
 
