@@ -24,24 +24,30 @@
 #include "debug.h"
 #include "rds.h"
 
-#ifdef CONFIG_RINA_RTIMER_REGRESSION_TESTS
-extern bool regression_tests_rtimer(void);
-#endif
 #ifdef CONFIG_RINA_RQUEUE_REGRESSION_TESTS
 extern bool regression_tests_rqueue(void);
 #endif
 #ifdef CONFIG_RINA_RFIFO_REGRESSION_TESTS
 extern bool regression_tests_rfifo(void);
 #endif
+#ifdef CONFIG_RINA_RTIMER_REGRESSION_TESTS
+extern bool regression_tests_rtimer(void);
+#endif
 
 bool regression_tests_rds(void)
 {
+#ifdef CONFIG_RINA_RQUEUE_REGRESSION_TESTS
         if (!regression_tests_rqueue())
                 return false;
+#endif
+#ifdef CONFIG_RINA_RFIFO_REGRESSION_TESTS
         if (!regression_tests_rfifo())
                 return false;
+#endif
+#ifdef CONFIG_RINA_RTIMER_REGRESSION_TESTS
         if (!regression_tests_rtimer())
                 return false;
+#endif
 
         return true;
 }
