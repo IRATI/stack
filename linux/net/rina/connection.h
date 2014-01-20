@@ -1,7 +1,8 @@
 /*
- * QoS
+ * Connection
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Sander Vrijders <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,20 +19,34 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "qos"
+#ifndef RINA_CONNECTION_H
+#define RINA_CONNECTION_H
 
-#include "logs.h"
-#include "utils.h"
+#include <linux/uaccess.h>
+
 #include "common.h"
-#include "debug.h"
 #include "qos.h"
 
-#define QOS_ID_WRONG 0
+/* FIXME: Add setters/getters to struct connection*/
 
-qos_id_t qos_id_bad(void)
-{ return QOS_ID_WRONG; }
-EXPORT_SYMBOL(qos_id_bad);
+/* NOTE: Do not use this struct directly */
+struct connection {
+        port_id_t port_id;
 
-int is_qos_id_ok(qos_id_t id)
-{ return id != QOS_ID_WRONG ? 1 : 0; }
-EXPORT_SYMBOL(is_qos_id_ok);
+        address_t source_address;
+        address_t destination_address;
+
+        cep_id_t  source_cep_id;
+        cep_id_t  destination_cep_id;
+
+        qos_id_t  qos_id;
+
+        /* FIXME: Add the list of policies associated with this connection */
+};
+
+struct connection * connection_create(void);
+struct connection *
+connection_dup_from_user(const struct connection __user * conn);
+int                 connection_destroy(struct connection * conn);
+
+#endif

@@ -235,12 +235,12 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
 
 static bool vlan_id_is_ok(unsigned int vlan_id)
 {
-        if (vlan_id < 0 || vlan_id > 4095 /* 0xFFF */) {
+        if (vlan_id > 4095 /* 0xFFF */) {
                 /* Out of bounds */
                 return false;
         }
 
-        ASSERT(vlan_id >= 0 && vlan_id <= 4095);
+        ASSERT(vlan_id <= 4095);
 
         /*
          * Reserved values:
@@ -356,6 +356,26 @@ static void rinarp_resolve_handler(void *             opaque,
                         deallocate_and_destroy_flow(data, flow);
                         return;
                 }
+
+                while (!kfifo_is_empty(&flow->sdu_queue)) {
+                        struct sdu * tmp = NULL;
+
+                        if (kfifo_out(&flow->sdu_queue,
+                                      &tmp,
+                                      sizeof(struct sdu *)) <
+                            sizeof(struct sdu *)) {
+                                LOG_ERR("There is not enough data in fifo");
+                                return;
+                        }
+
+                        LOG_DBG("Got a new element from the fifo");
+
+                        if (kfa_sdu_post(data->kfa, flow->port_id, tmp)) {
+                                LOG_ERR("Couldn't post SDU to KFA ...");
+                                return;
+                        }
+                }
+                kfifo_free(&flow->sdu_queue);
 
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
@@ -490,6 +510,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                 return -1;
                         }
                 }
+                kfifo_free(&flow->sdu_queue);
         } else {
                 spin_lock(&data->lock);
                 flow->port_id_state = PORT_STATE_NULL;
@@ -798,7 +819,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         /* We're done with the skb from this point on so ... let's get rid */
         kfree_skb(skb);
 
-        du = sdu_create_with_ni(buffer);
+        du = sdu_create_buffer_with_ni(buffer);
         if (!du) {
                 LOG_ERR("Couldn't create data unit");
                 buffer_destroy(buffer);

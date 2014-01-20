@@ -15,7 +15,7 @@ import eu.irati.librina.Flow;
 import eu.irati.librina.FlowSpecification;
 import eu.irati.librina.rina;
 
-import rina.aux.LogHelper;
+import rina.utils.LogHelper;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
 import rina.cdap.api.message.ObjectValue;

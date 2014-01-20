@@ -2,7 +2,7 @@
  * IPC Processes related utilities
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Sander Vrijders <sander.vrijders@intec.ugent.be>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,6 @@
  */
 struct name * name_create(void);
 struct name * name_create_ni(void);
-
 
 /*
  * Initializes a previously dynamically allocated name (i.e. name_create())
@@ -108,18 +107,11 @@ struct name * string_toname_ni(const string_t * s);
 
 struct ipcp_config * ipcp_config_create(void);
 int                  ipcp_config_destroy(struct ipcp_config * cfg);
-struct ipcp_config *
-ipcp_config_dup_from_user(const struct ipcp_config __user * cfg);
 
 struct dif_config *  dif_config_create(void);
 int                  dif_config_destroy(struct dif_config * dif_config);
 int                  dif_info_destroy(struct dif_info * dif_info);
 
-struct connection * connection_create(void);
-struct connection *
-connection_dup_from_user(const struct connection __user * conn);
-int                 connection_destroy(struct connection * conn);
-
-struct flow_spec *  flow_spec_dup(const struct flow_spec * fspec);
+struct flow_spec *   flow_spec_dup(const struct flow_spec * fspec);
 
 #endif

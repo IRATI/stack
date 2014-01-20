@@ -222,7 +222,7 @@ struct dtcp * dtcp_create(void)
         *tmp->state_vector = default_sv;
         /* FIXME: fixups to the state-vector should be placed here */
 
-        *tmp->policies      = default_policies;
+        *tmp->policies     = default_policies;
         /* FIXME: fixups to the policies should be placed here */
 
         tmp->peer          = NULL;
@@ -239,10 +239,8 @@ int dtcp_destroy(struct dtcp * instance)
                 return -1;
         }
 
-        if (instance->state_vector)
-                rkfree(instance->state_vector);
-        if (instance->policies)
-                rkfree(instance->policies);
+        if (instance->state_vector) rkfree(instance->state_vector);
+        if (instance->policies)     rkfree(instance->policies);
         rkfree(instance);
 
         LOG_DBG("Instance %pK destroyed successfully", instance);

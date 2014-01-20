@@ -1,5 +1,5 @@
 /*
- * RINA FIFOs
+ * RINA Timers
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,25 +18,19 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_RFIFO_H
-#define RINA_RFIFO_H
+#ifndef RINA_RTIMER_H
+#define RINA_RTIMER_H
 
-struct rfifo;
+struct rtimer;
 
-struct rfifo * rfifo_create(void);
-struct rfifo * rfifo_create_ni(void);
+struct rtimer * rtimer_create(void (* function)(void * data),
+                              void *  data);
+struct rtimer * rtimer_create_ni(void (* function)(void * data),
+                                 void *  data);
+int             rtimer_destroy(struct rtimer * timer);
 
-/* NOTE: dtor has the ownership of freeing the passed element */
-int            rfifo_destroy(struct rfifo * f,
-                             void        (* dtor)(void * e));
-
-/*
- * NOTE: We allow pushing NULL entries in the fifo but the dtor passed to
- *       rfifo_destroy() has to handle them opportunely
- */
-int            rfifo_push(struct rfifo * f, void * e);
-int            rfifo_push_ni(struct rfifo * f, void * e);
-void *         rfifo_pop(struct rfifo * f);
-bool           rfifo_is_empty(struct rfifo * f);
+int             rtimer_start(struct rtimer * timer,
+                             unsigned int    millisec);
+int             rtimer_stop(struct rtimer * timer);
 
 #endif

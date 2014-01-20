@@ -2,7 +2,7 @@
  * IPC Processes related utilities
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Sander Vrijders <sander.vrijders@intec.ugent.be>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -426,90 +426,6 @@ struct name * string_toname_ni(const string_t * input)
 { return string_toname_gfp(GFP_ATOMIC, input); }
 EXPORT_SYMBOL(string_toname_ni);
 
-#if 0
-static int string_dup_from_user(const string_t __user * src, string_t ** dst)
-{
-        ASSERT(dst);
-
-        /*
-         * An empty source is allowed (ref. the chain of calls) and it must
-         * provoke no consequeunces
-         */
-        if (src) {
-                *dst = strdup_from_user(src);
-                if (!*dst) {
-                        LOG_ERR("Cannot duplicate source string "
-                                "from user-space");
-                        return -1;
-                }
-        } else
-                *dst = NULL;
-
-        return 0;
-}
-
-int name_cpy_from_user(const struct name __user * src,
-                       struct name *              dst)
-{
-        if (!src || !dst)
-                return -1;
-
-        name_fini(dst);
-
-        ASSERT(name_is_initialized(dst));
-
-        if (string_dup_from_user(src->process_name,
-                                 &dst->process_name)) {
-                LOG_ERR("Cannot dup process-name");
-                name_fini(dst);
-                return -1;
-        }
-        if (string_dup_from_user(src->process_instance,
-                                 &dst->process_instance)) {
-                LOG_ERR("Cannot dup process-instance");
-                name_fini(dst);
-                return -1;
-        }
-        if (string_dup_from_user(src->entity_name,
-                                 &dst->entity_name)) {
-                LOG_ERR("Cannot dup entity-name");
-                name_fini(dst);
-                return -1;
-        }
-        if (string_dup_from_user(src->entity_instance,
-                                 &dst->entity_instance)) {
-                LOG_ERR("Cannot dup entity-instance");
-                name_fini(dst);
-                return -1;
-        }
-
-        return 0;
-}
-
-struct name * name_dup_from_user(const struct name __user * src)
-{
-        struct name * tmp;
-
-        LOG_DBG("Name duplication (from user) in progress");
-
-        if (!src)
-                return NULL;
-
-        tmp = name_create();
-        if (!tmp)
-                return NULL;
-
-        if (name_cpy_from_user(src, tmp)) {
-                name_destroy(tmp);
-                return NULL;
-        }
-
-        LOG_DBG("Name duplication (from user) completed successfully");
-
-        return tmp;
-}
-#endif
-
 struct ipcp_config * ipcp_config_create(void)
 {
         struct ipcp_config * tmp;
@@ -543,50 +459,6 @@ int ipcp_config_destroy(struct ipcp_config * cfg)
         return 0;
 }
 
-struct ipcp_config *
-ipcp_config_dup_from_user(const struct ipcp_config __user * cfg)
-{
-        LOG_MISSING;
-
-        return NULL;
-}
-
-struct connection * connection_create(void)
-{
-        struct connection * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
-        return tmp;
-}
-
-struct connection *
-connection_dup_from_user(const struct connection __user * conn)
-{
-        struct connection * tmp;
-
-        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
-        if (copy_from_user(tmp, conn, sizeof(*tmp)))
-                return NULL;
-
-        return tmp;
-}
-
-int connection_destroy(struct connection * conn)
-{
-        if (!conn)
-                return -1;
-
-        rkfree(conn);
-
-        return 0;
-}
-
 struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
 {
         struct flow_spec * tmp;
@@ -598,22 +470,7 @@ struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
         if (!tmp)
                 return NULL;
 
-        /* FIXME: Are these field by field copy really needed ? */
-#if 0
-        tmp->average_bandwidth           = fspec->average_bandwidth;
-        tmp->average_sdu_bandwidth       = fspec->average_sdu_bandwidth;
-        tmp->delay                       = fspec->delay;
-        tmp->jitter                      = fspec->jitter;
-        tmp->max_allowable_gap           = fspec->max_allowable_gap;
-        tmp->max_sdu_size                = fspec->max_sdu_size;
-        tmp->ordered_delivery            = fspec->ordered_delivery;
-        tmp->partial_delivery            = fspec->partial_delivery;
-        tmp->peak_bandwidth_duration     = fspec->peak_bandwidth_duration;
-        tmp->peak_sdu_bandwidth_duration = fspec->peak_sdu_bandwidth_duration;
-        tmp->undetected_bit_error_rate   = fspec->undetected_bit_error_rate;
-#else
         *tmp = *fspec;
-#endif
 
         return tmp;
 }

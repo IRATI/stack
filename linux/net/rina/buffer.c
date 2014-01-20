@@ -51,13 +51,14 @@ int buffer_destroy(struct buffer * b)
 {
         if (!b)
                 return -1;
+
         return __buffer_destroy(b);
 }
 EXPORT_SYMBOL(buffer_destroy);
 
-static struct buffer * buffer_create_with_gfp(gfp_t  flags,
-                                              void * data,
-                                              size_t size)
+struct buffer * buffer_create_with_gfp(gfp_t  flags,
+                                       void * data,
+                                       size_t size)
 {
         struct buffer * tmp;
 
@@ -123,7 +124,14 @@ struct buffer * buffer_create_from_gfp(gfp_t        flags,
 
         return tmp;
 }
-EXPORT_SYMBOL(buffer_create_from_gfp);
+
+struct buffer * buffer_create_from(const void * data, size_t size)
+{ return buffer_create_from_gfp(GFP_KERNEL, data, size); }
+EXPORT_SYMBOL(buffer_create_from);
+
+struct buffer * buffer_create_from_ni(const void * data, size_t size)
+{ return buffer_create_from_gfp(GFP_ATOMIC, data, size); }
+EXPORT_SYMBOL(buffer_create_from_ni);
 
 static struct buffer * buffer_create_gfp(gfp_t  flags,
                                          size_t size)

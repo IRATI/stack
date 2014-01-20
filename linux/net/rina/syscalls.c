@@ -237,7 +237,7 @@ SYSCALL_DEFINE3(sdu_write,
         }
 
         /* NOTE: sdu_create takes the ownership of the buffer */
-        sdu = sdu_create_with(tmp_buffer);
+        sdu = sdu_create_buffer_with(tmp_buffer);
         if (!sdu) {
                 SYSCALL_DUMP_EXIT;
                 buffer_destroy(tmp_buffer);
@@ -302,7 +302,7 @@ SYSCALL_DEFINE4(management_sdu_read,
 
         tmp = NULL;
 
-        CALL_DEFAULT_PERSONALITY(retval, management_sdu_read, ipcp_id, &tmp);
+        CALL_DEFAULT_PERSONALITY(retval, mgmt_sdu_read, ipcp_id, &tmp);
         /* Taking ownership from the internal layers */
 
         LOG_DBG("Personality returned value %zd", retval);
@@ -345,7 +345,7 @@ SYSCALL_DEFINE4(management_sdu_read,
                 return -EFAULT;
         }
 
-        if (copy_to_user(port_id, 
+        if (copy_to_user(port_id,
                          &tmp->port_id,
                          sizeof(tmp->port_id))) {
                 SYSCALL_DUMP_EXIT;
@@ -411,7 +411,7 @@ SYSCALL_DEFINE4(management_sdu_write,
         ASSERT(sdu_wpi_is_ok(sdu_wpi));
 
         /* Passing ownership to the internal layers */
-        CALL_DEFAULT_PERSONALITY(retval, management_sdu_write, id, sdu_wpi);
+        CALL_DEFAULT_PERSONALITY(retval, mgmt_sdu_write, id, sdu_wpi);
         if (retval) {
                 SYSCALL_DUMP_EXIT;
                 /* NOTE: Do not destroy SDU, ownership isn't our anymore */
