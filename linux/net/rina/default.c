@@ -232,16 +232,16 @@ static int default_init(struct kobject *          parent,
 }
 
 struct personality_ops ops = {
-        .init                 = default_init,
-        .fini                 = default_fini,
-        .ipc_create           = default_ipc_create,
-        .ipc_destroy          = default_ipc_destroy,
-        .sdu_read             = default_sdu_read,
-        .sdu_write            = default_sdu_write,
-        .allocate_port        = default_allocate_port,
-        .deallocate_port      = default_deallocate_port,
-        .mgmt_sdu_read        = default_mgmt_sdu_read,
-        .mgmt_sdu_write       = default_mgmt_sdu_write
+        .init            = default_init,
+        .fini            = default_fini,
+        .ipc_create      = default_ipc_create,
+        .ipc_destroy     = default_ipc_destroy,
+        .sdu_read        = default_sdu_read,
+        .sdu_write       = default_sdu_write,
+        .allocate_port   = default_allocate_port,
+        .deallocate_port = default_deallocate_port,
+        .mgmt_sdu_read   = default_mgmt_sdu_read,
+        .mgmt_sdu_write  = default_mgmt_sdu_write
 };
 
 static struct personality_data data;
