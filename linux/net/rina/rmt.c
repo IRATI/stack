@@ -86,9 +86,8 @@ static int queue_destroy(struct rmt_queue * q)
 }
 
 struct rmt_qmap {
+        spinlock_t lock; /* FIXME: Has to be moved in the pipelines */
         DECLARE_HASHTABLE(queues, 7);
-        spinlock_t    lock;   /* FIXME: Has to be moved in the pipelines */
-        int           in_use; /* FIXME: Use rwqo and remove in_use */
 };
 
 static struct rmt_qmap * qmap_create(void)
@@ -101,7 +100,6 @@ static struct rmt_qmap * qmap_create(void)
 
         hash_init(tmp->queues);
         spin_lock_init(&tmp->lock);
-        tmp->in_use = 0;
 
         return tmp;
 }
@@ -385,10 +383,6 @@ static int send_worker(void * o)
                 }
         }
 
-        spin_lock(&tmp->egress.queues->lock);
-        tmp->egress.queues->in_use = 0;
-        spin_unlock(&tmp->egress.queues->lock);
-
         return 0;
 }
 
@@ -432,16 +426,9 @@ int rmt_send_port_id(struct rmt * instance,
                 spin_unlock(&instance->egress.queues->lock);
                 return -1;
         }
-        if (instance->egress.queues->in_use) {
-                spin_unlock(&instance->egress.queues->lock);
-                LOG_DBG("Work already posted, nothing more to do");
-                return 0;
-        }
-        instance->egress.queues->in_use = 1;
         spin_unlock(&instance->egress.queues->lock);
 
         ASSERT(instance->egress.wq);
-
         if (rwq_work_post(instance->egress.wq, item)) {
                 LOG_ERR("Cannot post work (PDU) to egress work-queue");
 
@@ -846,10 +833,6 @@ static int receive_worker(void * o)
 
         /* (FUTURE) for-each list in pdus_dt call process_dt_pdus(pdus_dt) */
 
-        spin_lock(&tmp->ingress.queues->lock);
-        tmp->ingress.queues->in_use = 0;
-        spin_unlock(&tmp->ingress.queues->lock);
-
         return 0;
 }
 
@@ -898,16 +881,9 @@ int rmt_receive(struct rmt * instance,
                 spin_unlock(&instance->ingress.queues->lock);
                 return -1;
         }
-        if (instance->ingress.queues->in_use) {
-                spin_unlock(&instance->ingress.queues->lock);
-                LOG_DBG("Work already posted, nothing more to do");
-                return 0;
-        }
-        instance->ingress.queues->in_use = 1;
         spin_unlock(&instance->ingress.queues->lock);
 
         ASSERT(instance->ingress.wq);
-
         if (rwq_work_post(instance->ingress.wq, item)) {
                 LOG_ERR("Cannot post work (SDU) to ingress work-queue");
 
