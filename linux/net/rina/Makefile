@@ -33,6 +33,3 @@ endif
 
 obj-$(CONFIG_RINA) += rinarp/
 obj-$(CONFIG_RINA) += ipcps/
-obj-$(CONFIG_RINA) += ipcps/
-obj-$(CONFIG_RINA) += ipcps/
-obj-$(CONFIG_RINA) += ipcps/
