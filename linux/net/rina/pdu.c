@@ -398,7 +398,7 @@ struct pdu * pdu_create_with_ni(struct sdu * sdu)
 EXPORT_SYMBOL(pdu_create_with_ni);
 
 static struct pdu * pdu_dup_gfp(gfp_t              flags,
-                                const struct sdu * pdu)
+                                const struct pdu * pdu)
 {
         struct pdu * tmp;
 
@@ -410,7 +410,7 @@ static struct pdu * pdu_dup_gfp(gfp_t              flags,
                 return NULL;
 
         tmp->pci    = pci_dup_gfp(flags, pdu->pci);
-        tmp->buffer = buffer_dup_gfp(flags, sdu->buffer);
+        tmp->buffer = buffer_dup_gfp(flags, pdu->buffer);
 
         if (!pdu_is_ok(tmp)) {
                 pdu_destroy(tmp);
