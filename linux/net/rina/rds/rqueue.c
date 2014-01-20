@@ -235,3 +235,8 @@ bool rqueue_is_empty(struct rqueue * q)
         return list_empty(&q->head) ? true : false;
 }
 EXPORT_SYMBOL(rqueue_is_empty);
+
+#ifdef CONFIG_RINA_RQUEUE_REGRESSION_TESTS
+bool regression_tests_rqueue(void)
+{ return true; }
+#endif
