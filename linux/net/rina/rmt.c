@@ -86,9 +86,8 @@ static int queue_destroy(struct rmt_queue * q)
 }
 
 struct rmt_qmap {
+        spinlock_t lock; /* FIXME: Has to be moved in the pipelines */
         DECLARE_HASHTABLE(queues, 7);
-        spinlock_t    lock;   /* FIXME: Has to be moved in the pipelines */
-        int           in_use; /* FIXME: Use rwqo and remove in_use */
 };
 
 static struct rmt_qmap * qmap_create(void)
@@ -101,7 +100,6 @@ static struct rmt_qmap * qmap_create(void)
 
         hash_init(tmp->queues);
         spin_lock_init(&tmp->lock);
-        tmp->in_use = 0;
 
         return tmp;
 }
@@ -378,16 +376,12 @@ static int send_worker(void * o)
                         if (!sdu)
                                 break;
 
-                        LOG_DBG("Gonna SEND sdu to port_id %d", port_id);
+                        LOG_DBG("Gonna send SDU to port_id %d", port_id);
                         if (kfa_flow_sdu_write(tmp->kfa, port_id, sdu)) {
                                 LOG_ERR("Couldn't write SDU to KFA");
                         }
                 }
         }
-
-        spin_lock(&tmp->egress.queues->lock);
-        tmp->egress.queues->in_use = 0;
-        spin_unlock(&tmp->egress.queues->lock);
 
         return 0;
 }
@@ -396,8 +390,8 @@ int rmt_send_port_id(struct rmt * instance,
                      port_id_t    id,
                      struct pdu * pdu)
 {
-        struct rmt_queue *     squeue;
         struct rwq_work_item * item;
+        struct rmt_queue *     s_queue;
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus PDU passed");
@@ -405,45 +399,58 @@ int rmt_send_port_id(struct rmt * instance,
         }
         if (!instance) {
                 LOG_ERR("Bogus RMT passed");
+
                 pdu_destroy(pdu);
                 return -1;
         }
         if (!instance->egress.queues) {
                 LOG_ERR("No queues to push into");
+
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        /* Is this _ni() call really necessary ??? */
+        item = rwq_work_create_ni(send_worker, instance);
+        if (!item) {
+                LOG_ERR("Cannot send PDU to port-id %d", id);
+
                 pdu_destroy(pdu);
                 return -1;
         }
 
         spin_lock(&instance->egress.queues->lock);
-        squeue = qmap_find(instance->egress.queues, id);
-        if (!squeue) {
+        s_queue = qmap_find(instance->egress.queues, id);
+        if (!s_queue) {
                 spin_unlock(&instance->egress.queues->lock);
+
+                pdu_destroy(pdu);
                 return -1;
         }
 
-        if (rfifo_push_ni(squeue->queue, pdu)) {
+        if (rfifo_push_ni(s_queue->queue, pdu)) {
                 spin_unlock(&instance->egress.queues->lock);
+
+                pdu_destroy(pdu);
                 return -1;
         }
-        if (instance->egress.queues->in_use) {
-                spin_unlock(&instance->egress.queues->lock);
-                LOG_DBG("Work already posted, nothing more to do");
-                return 0;
-        }
-        instance->egress.queues->in_use = 1;
         spin_unlock(&instance->egress.queues->lock);
 
-        /* Is this _ni() call really necessary ??? */
-        item = rwq_work_create_ni(send_worker, instance);
-        if (!item) {
-                LOG_ERR("Couldn't create work");
-                return -1;
-        }
-
         ASSERT(instance->egress.wq);
-
         if (rwq_work_post(instance->egress.wq, item)) {
-                LOG_ERR("Couldn't put work in the ingress workqueue");
+                LOG_ERR("Cannot post work (PDU) to egress work-queue");
+
+                spin_lock(&instance->egress.queues->lock);
+                s_queue = qmap_find(instance->egress.queues, id);
+                if (s_queue) {
+                        struct pdu * tmp;
+                
+                        tmp = rfifo_pop(s_queue->queue);
+                        if (tmp)
+                                pdu_destroy(tmp);
+                }
+                spin_unlock(&instance->egress.queues->lock);
+                
                 return -1;
         }
 
@@ -472,8 +479,17 @@ int rmt_send(struct rmt * instance,
                      qos_id,
                      &(instance->egress.cache.pids),
                      &(instance->egress.cache.count))) {
+                LOG_ERR("Cannot get the NHOP for this PDU");
+
                 pdu_destroy(pdu);
                 return -1;
+        }
+
+        if (instance->egress.cache.count == 0) {
+                LOG_WARN("No NHOP for this PDU ...");
+
+                pdu_destroy(pdu);
+                return 0;
         }
 
         /*
@@ -483,12 +499,19 @@ int rmt_send(struct rmt * instance,
          */
 
         for (i = 0; i < instance->egress.cache.count; i++) {
-                LOG_DBG("Gonna send PDU to port_id: %d",
-                        instance->egress.cache.pids[i]);
-                if (rmt_send_port_id(instance,
-                                     instance->egress.cache.pids[i],
-                                     pdu))
-                        LOG_ERR("Failed to send a PDU");
+                port_id_t    pid;
+                struct pdu * p;
+
+                pid = instance->egress.cache.pids[i];
+
+                if (instance->egress.cache.count > 1)
+                        p = pdu_dup(pdu);
+                else
+                        p = pdu;
+
+                LOG_DBG("Gonna send PDU to port_id: %d", pid);
+                if (rmt_send_port_id(instance, pid, p))
+                        LOG_ERR("Failed to send a PDU to port-id %d", pid);
         }
 
         return 0;
@@ -834,10 +857,6 @@ static int receive_worker(void * o)
 
         /* (FUTURE) for-each list in pdus_dt call process_dt_pdus(pdus_dt) */
 
-        spin_lock(&tmp->ingress.queues->lock);
-        tmp->ingress.queues->in_use = 0;
-        spin_unlock(&tmp->ingress.queues->lock);
-
         return 0;
 }
 
@@ -846,7 +865,7 @@ int rmt_receive(struct rmt * instance,
                 port_id_t    from)
 {
         struct rwq_work_item * item;
-        struct rmt_queue *     rcv_queue;
+        struct rmt_queue *     r_queue;
 
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus SDU passed");
@@ -854,50 +873,65 @@ int rmt_receive(struct rmt * instance,
         }
         if (!instance) {
                 LOG_ERR("No RMT passed");
+
                 sdu_destroy(sdu);
                 return -1;
         }
         if (!is_port_id_ok(from)) {
                 LOG_ERR("Wrong port id");
+
                 sdu_destroy(sdu);
                 return -1;
         }
         if (!instance->ingress.queues) {
                 LOG_ERR("No ingress queues in RMT: %pK", instance);
+
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        /* Is this _ni() call really necessary ??? */
+        item = rwq_work_create_ni(receive_worker, instance);
+        if (!item) {
+                LOG_ERR("Cannot receive SDU from port-id %d", from);
+
                 sdu_destroy(sdu);
                 return -1;
         }
 
         spin_lock(&instance->ingress.queues->lock);
-        rcv_queue = qmap_find(instance->ingress.queues, from);
-        if (!rcv_queue) {
+        r_queue = qmap_find(instance->ingress.queues, from);
+        if (!r_queue) {
                 spin_unlock(&instance->ingress.queues->lock);
+
+                sdu_destroy(sdu);
                 return -1;
         }
 
-        if (rfifo_push_ni(rcv_queue->queue, sdu)) {
+        if (rfifo_push_ni(r_queue->queue, sdu)) {
                 spin_unlock(&instance->ingress.queues->lock);
+
+                sdu_destroy(sdu);
                 return -1;
         }
-        if (instance->ingress.queues->in_use) {
-                spin_unlock(&instance->ingress.queues->lock);
-                LOG_DBG("Work already posted, nothing more to do");
-                return 0;
-        }
-        instance->ingress.queues->in_use = 1;
         spin_unlock(&instance->ingress.queues->lock);
 
-        /* Is this _ni() call really necessary ??? */
-        item = rwq_work_create_ni(receive_worker, instance);
-        if (!item) {
-                LOG_ERR("Couldn't create rwq work");
-                return -1;
-        }
-
         ASSERT(instance->ingress.wq);
-
         if (rwq_work_post(instance->ingress.wq, item)) {
-                LOG_ERR("Couldn't put work in the ingress workqueue");
+                LOG_ERR("Cannot post work (SDU) to ingress work-queue");
+
+                spin_lock(&instance->ingress.queues->lock);
+                r_queue = qmap_find(instance->ingress.queues, from);
+                if (r_queue) {
+                        struct sdu * tmp;
+
+                        tmp = rfifo_pop(r_queue->queue);
+                        if (tmp)
+                                sdu_destroy(tmp);
+                }
+                spin_unlock(&instance->ingress.queues->lock);
+
+                sdu_destroy(sdu);
                 return -1;
         }
 

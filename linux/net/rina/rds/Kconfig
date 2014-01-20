@@ -52,3 +52,31 @@ config RINA_MEMORY_PTRS_DUMP
         depends on RINA_MEMORY_CHECKS
 	help
 	  No help for the time being
+
+config RINA_RDS_REGRESSION_TESTS
+	bool "RDS regression tests"
+	default n
+        depends on RINA_REGRESSION_TESTS
+	help
+	  No help for the time being
+
+config RINA_RTIMER_REGRESSION_TESTS
+	bool "RTimer regression tests"
+	default n
+        depends on RINA_RDS_REGRESSION_TESTS
+	help
+	  No help for the time being
+
+config RINA_RQUEUE_REGRESSION_TESTS
+	bool "RQUEUE regression tests"
+	default n
+        depends on RINA_RDS_REGRESSION_TESTS
+	help
+	  No help for the time being
+
+config RINA_RFIFO_REGRESSION_TESTS
+	bool "RFIFO regression tests"
+	default n
+        depends on RINA_RDS_REGRESSION_TESTS
+	help
+	  No help for the time being
