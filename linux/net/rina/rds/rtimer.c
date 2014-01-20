@@ -114,3 +114,59 @@ int rtimer_destroy(struct rtimer * timer)
         return 0;
 }
 EXPORT_SYMBOL(rtimer_destroy);
+
+#ifdef CONFIG_RINA_RTIMER_REGRESSION_TESTS
+int data1;
+
+static void timer1_function(void * data)
+{
+        int * tmp = (int *)(data);
+
+        *tmp *= 2;
+}
+
+int data2;
+
+static void timer2_function(void * data)
+{
+        int * tmp = (int *)(data);
+
+        *tmp *= 4;
+}
+
+bool regression_tests_rtimer(void)
+{
+        struct rtimer * timer1;
+        struct rtimer * timer2;
+
+        timer1 = rtimer_create(timer1_function, &data1);
+        if (!timer1)
+                return false;
+
+        timer2 = rtimer_create(timer2_function, &data2);
+        if (!timer2) {
+                rtimer_destroy(timer1);
+                return false;
+        }
+
+        data1 = 1;
+        data2 = 1;
+
+        if (rtimer_start(timer1, 1000)) {
+                rtimer_destroy(timer1);
+                rtimer_destroy(timer2);
+                return false;
+        }
+
+        if (rtimer_start(timer2, 100)) {
+                rtimer_destroy(timer1);
+                rtimer_destroy(timer2);
+                return false;
+        }
+
+        rtimer_destroy(timer1);
+        rtimer_destroy(timer2);
+        
+        return true;
+}
+#endif

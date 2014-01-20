@@ -255,6 +255,9 @@ extern bool regression_tests_pft(void);
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 extern bool regression_tests_rmt(void);
 #endif
+#ifdef CONFIG_RINA_RDS_REGRESSION_TESTS
+extern bool regression_tests_rds(void);
+#endif
 
 static int __init mod_init(void)
 {
@@ -280,6 +283,10 @@ static int __init mod_init(void)
 #endif
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
         if (!regression_tests_rmt())
+                return -1;
+#endif
+#ifdef CONFIG_RINA_RDS_REGRESSION_TESTS
+        if (!regression_tests_rds())
                 return -1;
 #endif
 
