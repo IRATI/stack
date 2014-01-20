@@ -18,11 +18,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "rds/rbmp.h"
-#include "rds/rfifo.h"
-#include "rds/rmap.h"
-#include "rds/rmem.h"
-#include "rds/rqueue.h"
-#include "rds/rref.h"
-#include "rds/rtimer.h"
-#include "rds/rwq.h"
+#include "rbmp.h"
+#include "rfifo.h"
+#include "rmap.h"
+#include "rmem.h"
+#include "rqueue.h"
+#include "rref.h"
+#include "rtimer.h"
+#include "rwq.h"
