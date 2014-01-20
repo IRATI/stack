@@ -399,11 +399,13 @@ int rmt_send_port_id(struct rmt * instance,
         }
         if (!instance) {
                 LOG_ERR("Bogus RMT passed");
+
                 pdu_destroy(pdu);
                 return -1;
         }
         if (!instance->egress.queues) {
                 LOG_ERR("No queues to push into");
+
                 pdu_destroy(pdu);
                 return -1;
         }
@@ -412,6 +414,8 @@ int rmt_send_port_id(struct rmt * instance,
         item = rwq_work_create_ni(send_worker, instance);
         if (!item) {
                 LOG_ERR("Cannot send PDU to port-id %d", port_id);
+
+                pdu_destroy(pdu);
                 return -1;
         }
 
@@ -419,11 +423,15 @@ int rmt_send_port_id(struct rmt * instance,
         s_queue = qmap_find(instance->egress.queues, id);
         if (!s_queue) {
                 spin_unlock(&instance->egress.queues->lock);
+
+                pdu_destroy(pdu);
                 return -1;
         }
 
         if (rfifo_push_ni(s_queue->queue, pdu)) {
                 spin_unlock(&instance->egress.queues->lock);
+
+                pdu_destroy(pdu);
                 return -1;
         }
         spin_unlock(&instance->egress.queues->lock);
@@ -471,6 +479,8 @@ int rmt_send(struct rmt * instance,
                      qos_id,
                      &(instance->egress.cache.pids),
                      &(instance->egress.cache.count))) {
+                LOG_ERR("Cannot get the NHOP for this PDU");
+
                 pdu_destroy(pdu);
                 return -1;
         }
@@ -849,16 +859,19 @@ int rmt_receive(struct rmt * instance,
         }
         if (!instance) {
                 LOG_ERR("No RMT passed");
+
                 sdu_destroy(sdu);
                 return -1;
         }
         if (!is_port_id_ok(from)) {
                 LOG_ERR("Wrong port id");
+
                 sdu_destroy(sdu);
                 return -1;
         }
         if (!instance->ingress.queues) {
                 LOG_ERR("No ingress queues in RMT: %pK", instance);
+
                 sdu_destroy(sdu);
                 return -1;
         }
@@ -867,6 +880,8 @@ int rmt_receive(struct rmt * instance,
         item = rwq_work_create_ni(receive_worker, instance);
         if (!item) {
                 LOG_ERR("Cannot receive SDU from port-id %d", port-id)
+
+                sdu_destroy(sdu);
                 return -1;
         }
 
@@ -874,11 +889,15 @@ int rmt_receive(struct rmt * instance,
         r_queue = qmap_find(instance->ingress.queues, from);
         if (!r_queue) {
                 spin_unlock(&instance->ingress.queues->lock);
+
+                sdu_destroy(sdu);
                 return -1;
         }
 
         if (rfifo_push_ni(r_queue->queue, sdu)) {
                 spin_unlock(&instance->ingress.queues->lock);
+
+                sdu_destroy(sdu);
                 return -1;
         }
         spin_unlock(&instance->ingress.queues->lock);
@@ -898,6 +917,7 @@ int rmt_receive(struct rmt * instance,
                 }
                 spin_unlock(&instance->ingress.queues->lock);
 
+                sdu_destroy(sdu);
                 return -1;
         }
 
