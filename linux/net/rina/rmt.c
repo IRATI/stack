@@ -485,6 +485,13 @@ int rmt_send(struct rmt * instance,
                 return -1;
         }
 
+        if (instance->egress.cache.count == 0) {
+                LOG_WARN("No NHOP for this PDU ...");
+
+                pdu_destroy(pdu);
+                return 0;
+        }
+
         /*
          * FIXME:
          *   pdu -> pci-> qos-id | cep_id_t -> connection -> qos-id (former)
