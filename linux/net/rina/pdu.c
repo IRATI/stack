@@ -405,7 +405,7 @@ static struct pdu * pdu_dup_gfp(gfp_t              flags,
         if (!pdu_is_ok(pdu))
                 return NULL;
 
-        tmp = rkzalloc(sizeof(*tmp), flags);
+        tmp = rkmalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
 
