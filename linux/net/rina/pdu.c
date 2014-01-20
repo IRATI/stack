@@ -397,6 +397,37 @@ struct pdu * pdu_create_with_ni(struct sdu * sdu)
 { return pdu_create_with_gfp(GFP_ATOMIC, sdu); }
 EXPORT_SYMBOL(pdu_create_with_ni);
 
+static struct pdu * pdu_dup_gfp(gfp_t              flags,
+                                const struct sdu * pdu)
+{
+        struct pdu * tmp;
+
+        if (!pdu_is_ok(pdu))
+                return NULL;
+
+        tmp = rkzalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        tmp->pci    = pci_dup_gfp(flags, pdu->pci);
+        tmp->buffer = buffer_dup_gfp(flags, sdu->buffer);
+
+        if (!pdu_is_ok(tmp)) {
+                pdu_destroy(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
+
+struct pdu * pdu_dup(const struct pdu * pdu)
+{ return pdu_dup_gfp(GFP_KERNEL, pdu); }
+EXPORT_SYMBOL(pdu_dup);
+
+struct pdu * pdu_dup_ni(const struct pdu * pdu)
+{ return pdu_dup_gfp(GFP_KERNEL, pdu); }
+EXPORT_SYMBOL(pdu_dup_ni);
+
 const struct buffer * pdu_buffer_get_ro(const struct pdu * pdu)
 {
         if (!pdu_is_ok(pdu))
