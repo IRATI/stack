@@ -334,6 +334,11 @@ connection_create_arrived(struct ipcp_instance_data * data,
         LOG_DBG("Cep_id allocated for the arrived connection request: %d",
                 cep_id);
 
+        if (kipcm_flow_commit(default_kipcm, data->id, port_id)) {
+                efcp_connection_destroy(data->efcpc, cep_id);
+                return cep_id_bad();
+        }
+
         cep_entry = rkzalloc(sizeof(*cep_entry), GFP_KERNEL);
         if (!cep_entry) {
                 LOG_ERR("Could not create a cep_id entry, bailing out");
