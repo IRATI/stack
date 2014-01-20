@@ -151,7 +151,7 @@ void * rqueue_head_pop(struct rqueue * q)
         }
 
         if (list_empty(&q->head)) {
-                LOG_WARNG("queue %pK is empty, can't head-pop", q);
+                LOG_WARN("queue %pK is empty, can't head-pop", q);
                 return NULL;
         }
 
@@ -208,7 +208,7 @@ void * rqueue_tail_pop(struct rqueue * q)
         }
 
         if (list_empty(&q->head)) {
-                LOG_WARNG("queue %pK is empty, can't tail-pop", q);
+                LOG_WARN("queue %pK is empty, can't tail-pop", q);
                 return NULL;
         }
 
