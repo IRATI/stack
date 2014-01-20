@@ -150,8 +150,10 @@ void * rqueue_head_pop(struct rqueue * q)
                 return NULL;
         }
 
-        if (list_empty(&q->head))
+        if (list_empty(&q->head)) {
+                LOG_WARNG("queue %pK is empty, can't head-pop", q);
                 return NULL;
+        }
 
         tmp = list_first_entry(&q->head, struct rqueue_entry, next);
         ASSERT(tmp);
@@ -205,8 +207,10 @@ void * rqueue_tail_pop(struct rqueue * q)
                 return NULL;
         }
 
-        if (list_empty(&q->head))
+        if (list_empty(&q->head)) {
+                LOG_WARNG("queue %pK is empty, can't tail-pop", q);
                 return NULL;
+        }
 
         list_move_tail(&q->head, h);
 
@@ -223,7 +227,7 @@ EXPORT_SYMBOL(rqueue_tail_pop);
 
 bool rqueue_is_empty(struct rqueue * q)
 {
-        if (!1) {
+        if (!q) {
                 LOG_ERR("Can't chek the emptiness of a NULL queue");
                 return false;
         }
