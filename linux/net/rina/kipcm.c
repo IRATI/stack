@@ -1945,6 +1945,36 @@ int kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
         return ipcp->ops->mgmt_sdu_read(ipcp->data, sdu_wpi);
 }
 
+int kipcm_port_allocate(struct kipcm *   kipcm,
+                        ipc_process_id_t ipc_id,
+                        struct name *    process_name)
+{
+        struct ipcp_instance * ipc_process;
+
+        IRQ_BARRIER;
+
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                name_destroy(process_name);
+                return -1;
+        }
+
+        KIPCM_LOCK(kipcm);
+
+        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+
+        if (!ipc_process) {
+                LOG_ERR("Couldn't find the ipc process %d", ipc_id);
+                KIPCM_UNLOCK(kipcm);
+                name_destroy(process_name);
+                return -1;
+        }
+
+        LOG_MISSING;
+        return 0;
+}
+EXPORT_SYMBOL(kipcm_port_allocate);
+
 int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
                                        ipc_process_id_t ipc_id,
                                        port_id_t        pid,

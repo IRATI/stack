@@ -104,6 +104,25 @@ static struct ipcp_imap_entry * imap_entry_find(struct ipcp_imap * map,
         return NULL;
 }
 
+static struct ipcp_imap_entry * 
+imap_entry_find_by_name(struct ipcp_imap *  map,
+                        const struct name * name)
+{
+        struct ipcp_imap_entry * entry;
+        struct hlist_node *      tmp;
+        int                      bucket;
+        const struct name *      entry_name;
+
+        ASSERT(map);
+        ASSERT(name->process_name);
+
+        hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
+                entry_name = entry->value->ops->ipcp_name(entry->value->data);
+        }
+
+        return NULL;
+}
+
 struct ipcp_instance * ipcp_imap_find(struct ipcp_imap * map,
                                       ipc_process_id_t   key)
 {
@@ -112,6 +131,21 @@ struct ipcp_instance * ipcp_imap_find(struct ipcp_imap * map,
         ASSERT(map);
 
         entry = imap_entry_find(map, key);
+        if (!entry)
+                return NULL;
+
+        return entry->value;
+}
+
+struct ipcp_instance * ipcp_imap_find_by_name(struct ipcp_imap *  map,
+                                              const struct name * name)
+{
+        struct ipcp_imap_entry * entry;
+
+        ASSERT(map);
+        ASSERT(name);
+
+        entry = imap_entry_find_by_name(map, name);
         if (!entry)
                 return NULL;
 
