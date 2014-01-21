@@ -1945,11 +1945,12 @@ int kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
         return ipcp->ops->mgmt_sdu_read(ipcp->data, sdu_wpi);
 }
 
-int kipcm_port_allocate(struct kipcm *   kipcm,
+int kipcm_allocate_port(struct kipcm *   kipcm,
                         ipc_process_id_t ipc_id,
                         struct name *    process_name)
 {
-        struct ipcp_instance * ipc_process;
+        struct ipcp_instance * ipc_process, * user_ipc_process;
+        port_id_t              pid;
 
         IRQ_BARRIER;
 
@@ -1970,10 +1971,32 @@ int kipcm_port_allocate(struct kipcm *   kipcm,
                 return -1;
         }
 
-        LOG_MISSING;
+        user_ipc_process = ipcp_imap_find_by_name(kipcm->instances, process_name);
+        if (!user_ipc_process) {
+                /*FIXME: Here we should distinguish betweem a flow for an app in
+                 * user-space or an ipc process in the system
+                 */
+                LOG_DBG("This flow should go for an app");
+        }
+
+        pid =  kfa_port_id_reserve(kipcm->kfa, ipc_id);
+        if (!is_port_id_ok(pid)) {
+                KIPCM_UNLOCK(kipcm);
+                name_destroy(process_name);
+                return -1;
+        }
+
+        if (kfa_flow_create(kipcm->kfa, ipc_id, pid)) {
+                LOG_ERR("Could not create flow in the KFA");
+                KIPCM_UNLOCK(kipcm);
+                name_destroy(process_name);
+                return -1;
+        }     
+        
+        name_destroy(process_name);
         return 0;
 }
-EXPORT_SYMBOL(kipcm_port_allocate);
+EXPORT_SYMBOL(kipcm_allocate_port);
 
 int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
                                        ipc_process_id_t ipc_id,

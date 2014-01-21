@@ -109,44 +109,33 @@ int kfa_destroy(struct kfa * instance)
         return 0;
 }
 
-port_id_t kfa_flow_create(struct kfa *     instance,
-                          ipc_process_id_t id,
-                          bool             to_app)
+int kfa_flow_create(struct kfa *     instance,
+                    ipc_process_id_t id,
+                    port_id_t        pid)
 {
         struct ipcp_flow * flow;
-        port_id_t          pid;
 
         IRQ_BARRIER;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return port_id_bad();
+                return -1;
+        }
+
+        if (!is_port_id_ok(pid)) {
+                LOG_ERR("Bogus PID passed, bailing out");
+                return-1;
         }
 
         spin_lock(&instance->lock);
 
-        if (!instance->pidm) {
-                LOG_ERR("This instance doesn't have a PIDM");
-                spin_unlock(&instance->lock);
-                return port_id_bad();
-        }
-
-        pid = pidm_allocate(instance->pidm);
-        if (!is_port_id_ok(pid)) {
-                LOG_ERR("Cannot get a port-id");
-                spin_unlock(&instance->lock);
-                return port_id_bad();
-        }
-
         flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
         if (!flow) {
-                pidm_release(instance->pidm, pid);
                 spin_unlock(&instance->lock);
-                return port_id_bad();
+                return -1;
         }
 
         flow->state  = PORT_STATE_PENDING;
-        flow->to_app = to_app;
         atomic_set(&flow->readers, 0);
         atomic_set(&flow->writers, 0);
 
@@ -154,21 +143,19 @@ port_id_t kfa_flow_create(struct kfa *     instance,
 
         if (kfa_pmap_add_ni(instance->flows, pid, flow, id)) {
                 LOG_ERR("Could not map Flow and Port ID");
-                pidm_release(instance->pidm, pid);
                 rkfree(flow);
                 spin_unlock(&instance->lock);
-                return port_id_bad();
+                return -1;
         }
 
         spin_unlock(&instance->lock);
 
-        return pid;
+        return 0;
 }
 EXPORT_SYMBOL(kfa_flow_create);
 
 port_id_t kfa_port_id_reserve(struct kfa *     instance,
-                              ipc_process_id_t id,
-                              bool             to_app)
+                              ipc_process_id_t id)
 {
         port_id_t pid;
 

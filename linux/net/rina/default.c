@@ -105,7 +105,7 @@ static int default_allocate_port(struct personality_data * data,
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_port_allocate(data->kipcm, ipc_id, name);
+        return kipcm_allocate_port(data->kipcm, ipc_id, name);
 }
 
 static int default_deallocate_port(struct personality_data * data,
@@ -115,10 +115,6 @@ static int default_deallocate_port(struct personality_data * data,
 
         LOG_DBG("Calling wrapped function");
 
-        /*
-         * FIXME this is what should be used later on
-         * return kfa_port_id_release(data->kfa, port_id);
-         */
         return kfa_flow_deallocate(data->kfa, port_id);
 }
 

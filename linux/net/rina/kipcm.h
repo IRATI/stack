@@ -67,7 +67,7 @@ int            kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
 int            kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
                                    ipc_process_id_t  id,
                                    struct sdu_wpi ** sdu_wpi);
-int            kipcm_port_allocate(struct kipcm *   kipcm,
+int            kipcm_allocate_port(struct kipcm *   kipcm,
                                    ipc_process_id_t ipc_id,
                                    struct name *    process_name);
 /*

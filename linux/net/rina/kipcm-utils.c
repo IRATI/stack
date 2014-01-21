@@ -118,6 +118,15 @@ imap_entry_find_by_name(struct ipcp_imap *  map,
 
         hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
                 entry_name = entry->value->ops->ipcp_name(entry->value->data);
+                /*FIXME: Check if we can use the name API */
+                if (!strcmp(entry_name->process_name,
+                            name->process_name)           &&
+                    !strcmp(entry_name->process_instance,
+                            name->process_instance)) {
+                        LOG_DBG("This is an IPC Process");
+                        return entry;
+                }
+                    
         }
 
         return NULL;
