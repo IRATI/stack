@@ -19,8 +19,8 @@
  */
 
 #include <linux/export.h>
-#include <linux/bitmap.h>
 #include <linux/types.h>
+#include <linux/bitmap.h>
 
 #define RINA_PREFIX "rbmp"
 

@@ -1,5 +1,5 @@
 /*
- * QoS
+ * RINA Data Structures
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,20 +18,37 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "qos"
+#define RINA_PREFIX "rds"
 
 #include "logs.h"
-#include "utils.h"
-#include "common.h"
 #include "debug.h"
-#include "qos.h"
+#include "rds.h"
 
-#define QOS_ID_WRONG 0
+#ifdef CONFIG_RINA_RQUEUE_REGRESSION_TESTS
+extern bool regression_tests_rqueue(void);
+#endif
+#ifdef CONFIG_RINA_RFIFO_REGRESSION_TESTS
+extern bool regression_tests_rfifo(void);
+#endif
+#ifdef CONFIG_RINA_RTIMER_REGRESSION_TESTS
+extern bool regression_tests_rtimer(void);
+#endif
 
-qos_id_t qos_id_bad(void)
-{ return QOS_ID_WRONG; }
-EXPORT_SYMBOL(qos_id_bad);
+bool regression_tests_rds(void)
+{
+#ifdef CONFIG_RINA_RQUEUE_REGRESSION_TESTS
+        if (!regression_tests_rqueue())
+                return false;
+#endif
+#ifdef CONFIG_RINA_RFIFO_REGRESSION_TESTS
+        if (!regression_tests_rfifo())
+                return false;
+#endif
+#ifdef CONFIG_RINA_RTIMER_REGRESSION_TESTS
+        if (!regression_tests_rtimer())
+                return false;
+#endif
 
-int is_qos_id_ok(qos_id_t id)
-{ return id != QOS_ID_WRONG ? 1 : 0; }
-EXPORT_SYMBOL(is_qos_id_ok);
+        return true;
+}
+EXPORT_SYMBOL(regression_tests_rds);

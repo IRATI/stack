@@ -39,7 +39,7 @@ enum app_name_info_attrs_list {
 };
 #define APNI_ATTR_MAX (__APNI_ATTR_MAX - 1)
 
-enum pdu_fte_list_entry_attrs_list {
+enum pdu_ft_entry_attrs_list {
         PFTELE_ATTR_ADDRESS = 1,
         PFTELE_ATTR_QOSID,
         PFTELE_ATTR_PORTIDS,
@@ -371,6 +371,13 @@ enum rmt_mod_pdu_fte_entry_req {
 };
 #define RMPFE_ATTR_MAX (__RMPFE_ATTR_MAX -1)
 
+enum rmt_pft_dump_resp {
+        RPFD_ATTR_RESULT = 1,
+        RPFD_ATTR_ENTRIES,
+        __RPFD_ATTR_MAX,
+};
+#define RPFD_ATTR_MAX (__RPFD_ATTR_MAX -1)
+
 /* FIXME: Should be hidden by the API !!! */
 struct rina_msg_hdr {
         unsigned short src_ipc_id;
@@ -388,7 +395,8 @@ enum rnl_msg_attr_type {
         RNL_MSG_ATTRS_CONN_CREATE_ARRIVED,
         RNL_MSG_ATTRS_CONN_UPDATE_REQUEST,
         RNL_MSG_ATTRS_CONN_DESTROY_REQUEST,
-        RNL_MSG_ATTRS_RMT_PFTE_MODIFY_REQUEST
+        RNL_MSG_ATTRS_RMT_PFTE_MODIFY_REQUEST,
+        RNL_MSG_ATTRS_RMT_PFT_DUMP_REQUEST
 };
 
 struct rnl_msg {
@@ -590,25 +598,14 @@ struct rnl_ipcm_query_rib_resp_msg_attrs {
         struct rib_object * rib_objs;
 };
 
-struct pdu_fte_list_entry {
-        address_t destination;
-        qos_id_t  qos_id;
-        port_id_t * ports;
-        size_t ports_size;
-        struct list_head next;
-};
-
 struct rnl_rmt_mod_pfte_msg_attrs {
         int32_t   mode;
         struct list_head pft_entries;
 };
 
-struct rnl_rmt_dump_ft_req_msg_attrs {
-        int temp;
-};
-
 struct rnl_rmt_dump_ft_reply_msg_attrs {
-        int temp;
+        uint_t           result;
+        struct list_head pft_entries;
 };
 
 int rnl_parse_msg(struct genl_info * info,
@@ -684,6 +681,12 @@ int rnl_ipcp_conn_destroy_result_msg(ipc_process_id_t ipc_id,
                                      u32              nl_port_id);
 
 int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port);
+
+int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
+                               int                result,
+                               struct list_head * entries,
+                               rnl_sn_t           seq_num,
+                               u32                nl_port_id);
 
 char * nla_get_string(struct nlattr *nla);
 

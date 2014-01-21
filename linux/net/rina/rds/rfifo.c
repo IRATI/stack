@@ -116,10 +116,15 @@ EXPORT_SYMBOL(rfifo_pop);
 bool rfifo_is_empty(struct rfifo * f)
 {
         if (!f) {
-                LOG_ERR("Can't chek the emptiness of a NULL fifo");
+                LOG_ERR("Can't check the emptiness of a NULL fifo");
                 return false;
         }
 
         return rqueue_is_empty(f->q);
 }
 EXPORT_SYMBOL(rfifo_is_empty);
+
+#ifdef CONFIG_RINA_RFIFO_REGRESSION_TESTS
+bool regression_tests_rfifo(void)
+{ return true; }
+#endif

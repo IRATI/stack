@@ -73,6 +73,8 @@ int          rmt_pft_remove(struct rmt *       instance,
                             qos_id_t           qos_id,
                             const port_id_t  * ports,
                             const size_t       count);
+int          rmt_pft_dump(struct rmt *       instance,
+                          struct list_head * entries);
 
 /* FIXME: Please check the following API */
 int          rmt_send(struct rmt * instance,

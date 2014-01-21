@@ -646,10 +646,12 @@ public:
 	 * Request an available portId to the kernel
 	 * @param The id of the IPC Process that will be using the flow
 	 * associated to the port-id requested (0 if is an application)
+	 * @param appName The name of the application that requested
+	 * the flow (could be an IPC Process or a regular application)
 	 * @return the port-id
 	 * @throws PortAllocationException if something goes wrong
 	 */
-	int allocatePortId(unsigned short ipcProcessId)
+	int allocatePortId(const ApplicationProcessNamingInformation& appName)
 	        throw (PortAllocationException);
 
 	/**
@@ -744,6 +746,27 @@ public:
         unsigned int getQosId() const;
         void setQosId(unsigned int qosId);
 };
+
+/**
+ * Response of the Kernel IPC Process, reporting on the
+ * number of entries in the PDU Forwarding Table for this
+ * IPC Process
+ */
+class DumpFTResponseEvent: public IPCEvent {
+
+        /** The PDU Forwarding Table entries*/
+        std::list<PDUForwardingTableEntry> entries;
+
+        /** Result of the operation, 0 success */
+        int result;
+
+public:
+        DumpFTResponseEvent(const std::list<PDUForwardingTableEntry>& entries,
+                        int result, unsigned int sequenceNumber);
+        const std::list<PDUForwardingTableEntry>& getEntries() const;
+        int getResult() const;
+};
+
 
 /**
  * FIXME: Quick hack to get multiple parameters back
@@ -851,6 +874,14 @@ public:
          */
         void modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry>& entries,
                         int mode) throw (PDUForwardingTableException);
+
+        /**
+         * Request the Kernel IPC Process to provide a list of
+         * all the entries in the PDU Forwarding table
+         * @return a handle to the response event
+         * @throws PDUForwardingTabeException if something goes wrong
+         */
+        unsigned int dumptPDUFT() throw (PDUForwardingTableException);
 
         /**
          * Requests the kernel to write a management SDU to the

@@ -5,6 +5,7 @@
 #
 
 ccflags-y += -I$(srctree)/net/rina
+ccflags-y += -Wtype-limits
 
 obj-$(CONFIG_RINA_NORMAL_IPCP)   += normal-ipcp.o
 obj-$(CONFIG_RINA_SHIM_DUMMY)    += shim-dummy.o

@@ -334,6 +334,11 @@ connection_create_arrived(struct ipcp_instance_data * data,
         LOG_DBG("Cep_id allocated for the arrived connection request: %d",
                 cep_id);
 
+        if (kipcm_flow_commit(default_kipcm, data->id, port_id)) {
+                efcp_connection_destroy(data->efcpc, cep_id);
+                return cep_id_bad();
+        }
+
         cep_entry = rkzalloc(sizeof(*cep_entry), GFP_KERNEL);
         if (!cep_entry) {
                 LOG_ERR("Could not create a cep_id entry, bailing out");
@@ -543,6 +548,8 @@ static int normal_pft_add(struct ipcp_instance_data * data,
                           size_t                      size)
 
 {
+        ASSERT(data);
+
         return rmt_pft_add(data->rmt,
                            address,
                            qos_id,
@@ -556,11 +563,22 @@ static int normal_pft_remove(struct ipcp_instance_data * data,
                              port_id_t *                 ports,
                              size_t                      size)
 {
+        ASSERT(data);
+
         return rmt_pft_remove(data->rmt,
                               address,
                               qos_id,
                               ports,
                               size);
+}
+
+static int normal_pft_dump(struct ipcp_instance_data * data,
+                           struct list_head *          entries)
+{       
+        ASSERT(data);
+
+        return rmt_pft_dump(data->rmt,
+                            entries);
 }
 
 /*  FIXME: register ops */
@@ -582,7 +600,8 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .mgmt_sdu_write            = normal_mgmt_sdu_write,
         .mgmt_sdu_post             = normal_mgmt_sdu_post,
         .pft_add                   = normal_pft_add,
-        .pft_remove                = normal_pft_remove
+        .pft_remove                = normal_pft_remove,
+        .pft_dump                  = normal_pft_dump
 };
 
 static void sdu_wpi_destructor(void * data)

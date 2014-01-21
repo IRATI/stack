@@ -151,12 +151,13 @@ void * rqueue_head_pop(struct rqueue * q)
         }
 
         if (list_empty(&q->head)) {
-                LOG_ERR("Cannot head-pop from an empty queue");
+                LOG_WARN("queue %pK is empty, can't head-pop", q);
                 return NULL;
         }
 
         tmp = list_first_entry(&q->head, struct rqueue_entry, next);
         ASSERT(tmp);
+
         ret = tmp->data;
 
         list_del(&tmp->next);
@@ -207,7 +208,7 @@ void * rqueue_tail_pop(struct rqueue * q)
         }
 
         if (list_empty(&q->head)) {
-                LOG_ERR("Cannot tail-pop from an empty queue");
+                LOG_WARN("queue %pK is empty, can't tail-pop", q);
                 return NULL;
         }
 
@@ -226,7 +227,7 @@ EXPORT_SYMBOL(rqueue_tail_pop);
 
 bool rqueue_is_empty(struct rqueue * q)
 {
-        if (!1) {
+        if (!q) {
                 LOG_ERR("Can't chek the emptiness of a NULL queue");
                 return false;
         }
@@ -234,3 +235,8 @@ bool rqueue_is_empty(struct rqueue * q)
         return list_empty(&q->head) ? true : false;
 }
 EXPORT_SYMBOL(rqueue_is_empty);
+
+#ifdef CONFIG_RINA_RQUEUE_REGRESSION_TESTS
+bool regression_tests_rqueue(void)
+{ return true; }
+#endif
