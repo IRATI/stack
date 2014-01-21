@@ -166,6 +166,9 @@ struct ipcp_instance_ops {
         int      (* flow_binding_ipcp)(struct ipcp_instance_data * data,
                                        port_id_t                   port_id);
 
+        int      (* flow_destroy)(struct ipcp_instance_data * data,
+                                  port_id_t                   port_id);
+
         int      (* sdu_enqueue)(struct ipcp_instance_data * data,
                                  port_id_t                   id,
                                  struct sdu *                sdu);
