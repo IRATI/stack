@@ -646,10 +646,12 @@ public:
 	 * Request an available portId to the kernel
 	 * @param The id of the IPC Process that will be using the flow
 	 * associated to the port-id requested (0 if is an application)
+	 * @param appName The name of the application that requested
+	 * the flow (could be an IPC Process or a regular application)
 	 * @return the port-id
 	 * @throws PortAllocationException if something goes wrong
 	 */
-	int allocatePortId(unsigned short ipcProcessId)
+	int allocatePortId(const ApplicationProcessNamingInformation& appName)
 	        throw (PortAllocationException);
 
 	/**

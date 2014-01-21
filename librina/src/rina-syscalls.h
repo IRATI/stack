@@ -93,14 +93,15 @@ namespace rina {
 
         /**
          * Wrapper of the allocate port-id system call
-         * @param ipcProcessId The id of the IPC Process that will be using
+         * @param ipcProcessId The id of the IPC Process that is providing
          * the flow
-         * @param toApp True if this flow will be used by an application,
-         * false if it will be used by an IPC Process
+         * @param applicationName The AP name and AP instance of the app
+         * that will be using the flow
          * @return portId to use (>0) if everything was ok, negative number
          * indicating error otherwise
          */
-        int syscallAllocatePortId(unsigned short ipcProcessId, bool toApp);
+        int syscallAllocatePortId(unsigned short ipcProcessId,
+                        const ApplicationProcessNamingInformation & applicationName);
 
         /**
          * Wrappert of the deallocate port-is system call
