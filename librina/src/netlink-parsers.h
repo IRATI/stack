@@ -954,6 +954,21 @@ int putRmtModifyPDUFTEntriesRequestObject(nl_msg* netlinkMessage,
 RmtModifyPDUFTEntriesRequestMessage * parseRmtModifyPDUFTEntriesRequestMessage(
                 nlmsghdr *hdr);
 
+/* RmtModifyPDUFTEntriesResponseMessageAttributes CLASS */
+enum RmtDumpPDUFTEntriesResponseMessageAttributes {
+        RDPFTE_ATTR_RESULT = 1,
+        RDPFTE_ATTR_ENTRIES,
+        __RDPFTE_ATTR_MAX,
+};
+
+#define RDPFTE_ATTR_MAX (__RDPFTE_ATTR_MAX -1)
+
+int putRmtDumpPDUFTEntriesResponseObject(nl_msg* netlinkMessage,
+                const RmtDumpPDUFTEntriesResponseMessage& object);
+
+RmtDumpPDUFTEntriesResponseMessage * parseRmtDumpPDUFTEntriesResponseMessage(
+                nlmsghdr *hdr);
+
 }
 
 

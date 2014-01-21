@@ -67,6 +67,13 @@ public interface NMinus1FlowManager {
 	public FlowInformation getNMinus1FlowInformation(int portId) throws IPCException;
 	
 	/**
+	 * Return the information of all the N-1 flows
+	 * @return
+	 * @throws IPCException
+	 */
+	public FlowInformation[] getAllNMinus1FlowsInformation();
+	
+	/**
 	 * The IPC Process has been unregistered from or registered to an N-1 DIF
 	 * @param evet
 	 * @throws IPCException

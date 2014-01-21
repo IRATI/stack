@@ -2857,6 +2857,9 @@ int testRmtModifyPDUFTEntriesRequestMessage() {
         std::cout << "TESTING RMT MODIFY PDU FTE REQUEST MESSAGE\n";
         int returnValue = 0;
         std::list<PDUForwardingTableEntry>::const_iterator iterator;
+        std::list<PDUForwardingTableEntry> entriesList;
+        std::list<unsigned int>::const_iterator iterator2;
+        std::list<unsigned int> portIdsList;
 
         RmtModifyPDUFTEntriesRequestMessage message;
         PDUForwardingTableEntry entry1, entry2;
@@ -2909,18 +2912,114 @@ int testRmtModifyPDUFTEntriesRequestMessage() {
                 returnValue = -1;
         }
 
-        for (iterator = recoveredMessage->getEntries().begin();
-                        iterator != recoveredMessage->getEntries().end();
+
+        entriesList = recoveredMessage->getEntries();
+        for (iterator = entriesList.begin();
+                        iterator != entriesList.end();
                         ++iterator) {
-                if (iterator->getPortIds().size() != 3) {
+                portIdsList = iterator->getPortIds();
+                if (portIdsList.size() != 3) {
                         std::cout << "Size of portids in original and recovered messages"
                                         << " are different\n";
                         returnValue = -1;
+                }
+
+                for(iterator2 = portIdsList.begin();
+                                iterator2 != portIdsList.end();
+                                ++iterator2) {
+                        std::cout << *iterator2 <<std::endl;
                 }
         }
 
         if (returnValue == 0) {
                 std::cout << "RmtModifyPDUFTEntriesRequestMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
+int testRmtDumpPDUFTResponseMessage() {
+        std::cout << "TESTING RMT DUMP PDU FWDING TABLE RESPONSE MESSAGE\n";
+        int returnValue = 0;
+        std::list<PDUForwardingTableEntry>::const_iterator iterator;
+        std::list<PDUForwardingTableEntry> entriesList;
+        std::list<unsigned int>::const_iterator iterator2;
+        std::list<unsigned int> portIdsList;
+
+        RmtDumpPDUFTEntriesResponseMessage message;
+        PDUForwardingTableEntry entry1, entry2;
+        entry1.setAddress(23);
+        entry1.addPortId(34);
+        entry1.addPortId(24);
+        entry1.addPortId(39);
+        entry1.setQosId(1);
+        message.addEntry(entry1);
+        entry2.setAddress(20);
+        entry2.addPortId(28);
+        entry2.addPortId(35);
+        entry2.addPortId(54);
+        entry2.setQosId(2);
+        message.addEntry(entry2);
+        message.setResult(3);
+
+        struct nl_msg* netlinkMessage;
+        netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing RmtDumpPDUFTEntriesResponse "
+                                << "message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        RmtDumpPDUFTEntriesResponseMessage * recoveredMessage =
+                        dynamic_cast<RmtDumpPDUFTEntriesResponseMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing RmtDumpPDUFTEntriesResponseMessage message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.getResult() != recoveredMessage->getResult()) {
+                std::cout << "Mode on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getEntries().size()
+                        != recoveredMessage->getEntries().size()) {
+                std::cout << "Size of entries in original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        }
+
+
+        entriesList = recoveredMessage->getEntries();
+        for (iterator = entriesList.begin();
+                        iterator != entriesList.end();
+                        ++iterator) {
+                portIdsList = iterator->getPortIds();
+                if (portIdsList.size() != 3) {
+                        std::cout << "Size of portids in original and recovered messages"
+                                        << " are different\n";
+                        returnValue = -1;
+                }
+
+                for(iterator2 = portIdsList.begin();
+                                iterator2 != portIdsList.end();
+                                ++iterator2) {
+                        std::cout << *iterator2 <<std::endl;
+                }
+        }
+
+        if (returnValue == 0) {
+                std::cout << "RmtDumpPDUFTEntriesResponseMessage test ok\n";
         }
         nlmsg_free(netlinkMessage);
         delete recoveredMessage;
@@ -3144,6 +3243,11 @@ int main(int argc, char * argv[]) {
 	}
 
 	result = testRmtModifyPDUFTEntriesRequestMessage();
+	if (result < 0) {
+	        return result;
+	}
+
+	result = testRmtDumpPDUFTResponseMessage();
 	if (result < 0) {
 	        return result;
 	}
