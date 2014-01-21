@@ -232,16 +232,16 @@ static int default_init(struct kobject *          parent,
 }
 
 struct personality_ops ops = {
-        .init                 = default_init,
-        .fini                 = default_fini,
-        .ipc_create           = default_ipc_create,
-        .ipc_destroy          = default_ipc_destroy,
-        .sdu_read             = default_sdu_read,
-        .sdu_write            = default_sdu_write,
-        .allocate_port        = default_allocate_port,
-        .deallocate_port      = default_deallocate_port,
-        .mgmt_sdu_read        = default_mgmt_sdu_read,
-        .mgmt_sdu_write       = default_mgmt_sdu_write
+        .init            = default_init,
+        .fini            = default_fini,
+        .ipc_create      = default_ipc_create,
+        .ipc_destroy     = default_ipc_destroy,
+        .sdu_read        = default_sdu_read,
+        .sdu_write       = default_sdu_write,
+        .allocate_port   = default_allocate_port,
+        .deallocate_port = default_deallocate_port,
+        .mgmt_sdu_read   = default_mgmt_sdu_read,
+        .mgmt_sdu_write  = default_mgmt_sdu_write
 };
 
 static struct personality_data data;
@@ -254,6 +254,9 @@ extern bool regression_tests_pft(void);
 #endif
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 extern bool regression_tests_rmt(void);
+#endif
+#ifdef CONFIG_RINA_RDS_REGRESSION_TESTS
+extern bool regression_tests_rds(void);
 #endif
 
 static int __init mod_init(void)
@@ -280,6 +283,10 @@ static int __init mod_init(void)
 #endif
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
         if (!regression_tests_rmt())
+                return -1;
+#endif
+#ifdef CONFIG_RINA_RDS_REGRESSION_TESTS
+        if (!regression_tests_rds())
                 return -1;
 #endif
 

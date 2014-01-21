@@ -28,8 +28,6 @@
 #include "ipcp.h"
 #include "efcp.h"
 
-#define NAME2STRING(N)
-
 /*
  * Allocates a new name, returning the allocated object. In case of an error, a
  * NULL is returned.

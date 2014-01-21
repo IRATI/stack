@@ -108,6 +108,8 @@ struct pdu *          pdu_create(void);
 struct pdu *          pdu_create_ni(void);
 struct pdu *          pdu_create_with(struct sdu * sdu);
 struct pdu *          pdu_create_with_ni(struct sdu * sdu);
+struct pdu *          pdu_dup(const struct pdu * pdu);
+struct pdu *          pdu_dup_ni(const struct pdu * pdu);
 bool                  pdu_is_ok(const struct pdu * pdu);
 const struct buffer * pdu_buffer_get_ro(const struct pdu * pdu);
 struct buffer *       pdu_buffer_get_rw(struct pdu * pdu);

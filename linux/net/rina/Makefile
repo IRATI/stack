@@ -4,6 +4,8 @@
 # Written by Francesco Salvestrini <f.salvestrini@nextworks.it>
 #
 
+ccflags-y += -Wtype-limits
+
 obj-$(CONFIG_RINA) +=				\
 	utils.o debug.o				\
 	rds/					\
@@ -30,7 +32,4 @@ rina_personality_default-y +=			\
 endif
 
 obj-$(CONFIG_RINA) += rinarp/
-obj-$(CONFIG_RINA) += ipcps/
-obj-$(CONFIG_RINA) += ipcps/
-obj-$(CONFIG_RINA) += ipcps/
 obj-$(CONFIG_RINA) += ipcps/
