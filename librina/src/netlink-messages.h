@@ -23,59 +23,59 @@
 namespace rina{
 
 enum RINANetlinkOperationCode{
-	RINA_C_UNSPEC, /* Unespecified operation */
-	RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST, /* IPC Manager -> IPC Process */
-	RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE, /* IPC Process -> IPC Manager */
-        RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST, /* IPC Manager -> IPC Process */
-        RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE, /* IPC Process -> IPC Manager */
-	RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION, /* IPC Manager -> IPC Process */
-	RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION, /* IPC Manager -> IPC Process */
-	RINA_C_IPCM_ENROLL_TO_DIF_REQUEST, /* IPC Manager -> IPC Process */
-	RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE, /* IPC Process -> IPC Manager */
-	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST, /* TODO IPC Manager -> IPC Process */
-	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE, /* TODO IPC Process -> IPC Manager */
-	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST, /* IPC Manager -> IPC Process */
-	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED, /* Allocate flow request from a remote application, IPC Process -> IPC Manager */
-	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT, /* IPC Process -> IPC Manager */
-	RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE, /* IPC Manager -> IPC Process */
-	RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST, /* IPC Manager -> IPC Process */
-	RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE, /* IPC Process -> IPC Manager */
-	RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION, /* IPC Process -> IPC Manager, flow deallocated without the application having requested it */
-	RINA_C_IPCM_REGISTER_APPLICATION_REQUEST, /*IPC Manager -> IPC Process */
-	RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE, /*IPC Process -> IPC Manager */
-	RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST, /* IPC Manager -> IPC Process */
-	RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE, /* IPC Process -> IPC Manager */
-	RINA_C_IPCM_QUERY_RIB_REQUEST, /* IPC Manager -> IPC Process */
-	RINA_C_IPCM_QUERY_RIB_RESPONSE, /* IPC Process -> IPC Manager */
-	RINA_C_RMT_MODIFY_FTE_REQUEST, /* IPC Process (user space) -> Kernel IPC Process (kernel) */
-	RINA_C_RMT_DUMP_FT_REQUEST, /* TODO IPC Process (user space) -> RMT (kernel) */
-	RINA_C_RMT_DUMP_FT_REPLY, /* TODO RMT (kernel) -> IPC Process (user space) */
-	RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION, /* Kernel (NL layer) -> IPC Manager */
-	RINA_C_IPCM_IPC_MANAGER_PRESENT, /* IPC Manager -> Kernel (NL layer) */
-	RINA_C_IPCP_CONN_CREATE_REQUEST, /* IPC Process Daemon -> EFCP (Kernel) */
-	RINA_C_IPCP_CONN_CREATE_RESPONSE, /* EFCP(Kernel) -> IPC Process Daemon */
-	RINA_C_IPCP_CONN_CREATE_ARRIVED, /* IPC Process Daemon -> EFCP (Kernel) */
-	RINA_C_IPCP_CONN_CREATE_RESULT, /* EFCP(kernel) -> IPC Process daemon */
-	RINA_C_IPCP_CONN_UPDATE_REQUEST, /* IPC Process Daemon -> EFCP (Kernel) */
-	RINA_C_IPCP_CONN_UPDATE_RESULT, /* EFCP(kernel) -> IPC Process daemon */
-	RINA_C_IPCP_CONN_DESTROY_REQUEST, /* IPC Process Daemon -> EFCP (Kernel) */
-	RINA_C_IPCP_CONN_DESTROY_RESULT, /* EFCP(kernel) -> IPC Process daemon */
-	RINA_C_IPCM_IPC_PROCESS_INITIALIZED, /* IPC Process -> IPC Manager */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST, /* Allocate flow request, Application -> IPC Manager */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* Response to an application allocate flow request, IPC Manager -> Application */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, /* Allocate flow request from a remote application, IPC Manager -> Application */
-	RINA_C_APP_ALLOCATE_FLOW_RESPONSE, /* Allocate flow response to an allocate request arrived operation, Application -> IPC Manager */
-	RINA_C_APP_DEALLOCATE_FLOW_REQUEST, /* Application -> IPC Manager */
-	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, /* IPC Manager -> Application */
-	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, /* IPC Manager -> Application, flow deallocated without the application having requested it */
-	RINA_C_APP_REGISTER_APPLICATION_REQUEST, /* Application -> IPC Manager */
-	RINA_C_APP_REGISTER_APPLICATION_RESPONSE, /* IPC Manager -> Application */
-	RINA_C_APP_UNREGISTER_APPLICATION_REQUEST, /* Application -> IPC Manager */
-	RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE, /* IPC Manager -> Application */
-	RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION, /* IPC Manager -> Application, application unregistered without the application having requested it */
-	RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* Application -> IPC Manager */
-	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* IPC Manager -> Application */
-	RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION, /* IPC Process -> IPC Manager */
+	RINA_C_UNSPEC, /* 0 Unespecified operation */
+	RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST, /* 1 IPC Manager -> IPC Process */
+	RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE, /* 2 IPC Process -> IPC Manager */
+        RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST, /* 3 IPC Manager -> IPC Process */
+        RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE, /* 4 IPC Process -> IPC Manager */
+	RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION, /* 5 IPC Manager -> IPC Process */
+	RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION, /* 6 IPC Manager -> IPC Process */
+	RINA_C_IPCM_ENROLL_TO_DIF_REQUEST, /* 7 IPC Manager -> IPC Process */
+	RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE, /* 8 IPC Process -> IPC Manager */
+	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST, /* TODO 9 IPC Manager -> IPC Process */
+	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE, /* TODO 10 IPC Process -> IPC Manager */
+	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST, /* 11 IPC Manager -> IPC Process */
+	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED, /* 12 Allocate flow request from a remote application, IPC Process -> IPC Manager */
+	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT, /* 13 IPC Process -> IPC Manager */
+	RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE, /* 14 IPC Manager -> IPC Process */
+	RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST, /* 15 IPC Manager -> IPC Process */
+	RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE, /* 16 IPC Process -> IPC Manager */
+	RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION, /* 17 IPC Process -> IPC Manager, flow deallocated without the application having requested it */
+	RINA_C_IPCM_REGISTER_APPLICATION_REQUEST, /* 18 IPC Manager -> IPC Process */
+	RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE, /* 19 IPC Process -> IPC Manager */
+	RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST, /* 20 IPC Manager -> IPC Process */
+	RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE, /* 21 IPC Process -> IPC Manager */
+	RINA_C_IPCM_QUERY_RIB_REQUEST, /* 22 IPC Manager -> IPC Process */
+	RINA_C_IPCM_QUERY_RIB_RESPONSE, /* 23 IPC Process -> IPC Manager */
+	RINA_C_RMT_MODIFY_FTE_REQUEST, /* 24 IPC Process (user space) -> Kernel IPC Process (kernel) */
+	RINA_C_RMT_DUMP_FT_REQUEST, /* 25 IPC Process (user space) -> RMT (kernel) */
+	RINA_C_RMT_DUMP_FT_REPLY, /* TODO 26 RMT (kernel) -> IPC Process (user space) */
+	RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION, /* 27 Kernel (NL layer) -> IPC Manager */
+	RINA_C_IPCM_IPC_MANAGER_PRESENT, /* 28 IPC Manager -> Kernel (NL layer) */
+	RINA_C_IPCP_CONN_CREATE_REQUEST, /* 29 IPC Process Daemon -> EFCP (Kernel) */
+	RINA_C_IPCP_CONN_CREATE_RESPONSE, /* 30 EFCP(Kernel) -> IPC Process Daemon */
+	RINA_C_IPCP_CONN_CREATE_ARRIVED, /* 31 IPC Process Daemon -> EFCP (Kernel) */
+	RINA_C_IPCP_CONN_CREATE_RESULT, /* 32 EFCP(kernel) -> IPC Process daemon */
+	RINA_C_IPCP_CONN_UPDATE_REQUEST, /* 33 IPC Process Daemon -> EFCP (Kernel) */
+	RINA_C_IPCP_CONN_UPDATE_RESULT, /* 34 EFCP(kernel) -> IPC Process daemon */
+	RINA_C_IPCP_CONN_DESTROY_REQUEST, /* 35 IPC Process Daemon -> EFCP (Kernel) */
+	RINA_C_IPCP_CONN_DESTROY_RESULT, /* 36 EFCP(kernel) -> IPC Process daemon */
+	RINA_C_IPCM_IPC_PROCESS_INITIALIZED, /* 37 IPC Process -> IPC Manager */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST, /* 38 Allocate flow request, Application -> IPC Manager */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* 39 Response to an application allocate flow request, IPC Manager -> Application */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, /* 40 Allocate flow request from a remote application, IPC Manager -> Application */
+	RINA_C_APP_ALLOCATE_FLOW_RESPONSE, /* 41 Allocate flow response to an allocate request arrived operation, Application -> IPC Manager */
+	RINA_C_APP_DEALLOCATE_FLOW_REQUEST, /* 42 Application -> IPC Manager */
+	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, /* 43 IPC Manager -> Application */
+	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, /* 44 IPC Manager -> Application, flow deallocated without the application having requested it */
+	RINA_C_APP_REGISTER_APPLICATION_REQUEST, /* 45 Application -> IPC Manager */
+	RINA_C_APP_REGISTER_APPLICATION_RESPONSE, /* 46 IPC Manager -> Application */
+	RINA_C_APP_UNREGISTER_APPLICATION_REQUEST, /* 47 Application -> IPC Manager */
+	RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE, /* 48 IPC Manager -> Application */
+	RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION, /* 49 IPC Manager -> Application, application unregistered without the application having requested it */
+	RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* 50 Application -> IPC Manager */
+	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* 51 IPC Manager -> Application */
+	RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION, /* 52 IPC Process -> IPC Manager */
 	__RINA_C_MAX,
  };
 
@@ -1292,6 +1292,33 @@ public:
         void addEntry(const PDUForwardingTableEntry& entry);
         int getMode() const;
         void setMode(int mode);
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * IPC Process -> Kernel IPC Process. Request a view on all the entries
+ * in the PDU Forwarding Table.
+ */
+class RmtDumpPDUFTEntriesRequestMessage: public BaseNetlinkMessage {
+
+public:
+        RmtDumpPDUFTEntriesRequestMessage();
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * Kernel IPC Process -> IPC Process. Result of Dump PDU Forwarding Table
+ * Request, lists all the entries in the PDU Forwarding table
+ */
+class RmtDumpPDUFTEntriesResponseMessage: public BaseNetlinkResponseMessage {
+        /** The entries in the table */
+        std::list<PDUForwardingTableEntry> entries;
+
+public:
+        RmtDumpPDUFTEntriesResponseMessage();
+        const std::list<PDUForwardingTableEntry>& getEntries() const;
+        void setEntries(const std::list<PDUForwardingTableEntry>& entries);
+        void addEntry(const PDUForwardingTableEntry& entry);
         IPCEvent* toIPCEvent();
 };
 

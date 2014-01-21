@@ -748,6 +748,27 @@ public:
 };
 
 /**
+ * Response of the Kernel IPC Process, reporting on the
+ * number of entries in the PDU Forwarding Table for this
+ * IPC Process
+ */
+class DumpFTResponseEvent: public IPCEvent {
+
+        /** The PDU Forwarding Table entries*/
+        std::list<PDUForwardingTableEntry> entries;
+
+        /** Result of the operation, 0 success */
+        int result;
+
+public:
+        DumpFTResponseEvent(const std::list<PDUForwardingTableEntry>& entries,
+                        int result, unsigned int sequenceNumber);
+        const std::list<PDUForwardingTableEntry>& getEntries() const;
+        int getResult() const;
+};
+
+
+/**
  * FIXME: Quick hack to get multiple parameters back
  */
 class ReadManagementSDUResult {
@@ -853,6 +874,14 @@ public:
          */
         void modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry>& entries,
                         int mode) throw (PDUForwardingTableException);
+
+        /**
+         * Request the Kernel IPC Process to provide a list of
+         * all the entries in the PDU Forwarding table
+         * @return a handle to the response event
+         * @throws PDUForwardingTabeException if something goes wrong
+         */
+        unsigned int dumptPDUFT() throw (PDUForwardingTableException);
 
         /**
          * Requests the kernel to write a management SDU to the
