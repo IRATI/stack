@@ -672,6 +672,21 @@ static int dummy_update_dif_config(struct ipcp_instance_data * data,
         return -1;
 }
 
+static const struct name * dummy_ipcp_name(struct ipcp_instance_data * data)
+{
+        const struct name * retname;
+
+        ASSERT(data);
+
+        retname = data->info->name;
+        if (!retname){
+                LOG_ERR("Could not retrieve IPCP name");
+                return NULL;
+        }
+
+        return retname; 
+} 
+                
 static struct ipcp_instance_ops dummy_instance_ops = {
         .flow_allocate_request  = dummy_flow_allocate_request,
         .flow_allocate_response = dummy_flow_allocate_response,
@@ -681,6 +696,7 @@ static struct ipcp_instance_ops dummy_instance_ops = {
         .sdu_write              = dummy_sdu_write,
         .assign_to_dif          = dummy_assign_to_dif,
         .update_dif_config      = dummy_update_dif_config,
+        .ipcp_name              = dummy_ipcp_name,
 };
 
 static struct ipcp_instance_data *

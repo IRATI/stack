@@ -1264,6 +1264,21 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         return 0;
 }
 
+static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
+{
+        const struct name * retname;
+
+        ASSERT(data);
+
+        retname = data->name;
+        if (!retname){
+                LOG_ERR("Could not retrieve IPCP name");
+                return NULL;
+        }
+
+        return retname; 
+} 
+
 static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_allocate_request  = eth_vlan_flow_allocate_request,
         .flow_allocate_response = eth_vlan_flow_allocate_response,
@@ -1273,6 +1288,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .sdu_write              = eth_vlan_sdu_write,
         .assign_to_dif          = eth_vlan_assign_to_dif,
         .update_dif_config      = eth_vlan_update_dif_config,
+        .ipcp_name              = eth_vlan_ipcp_name,
 };
 
 static struct ipcp_factory_data {

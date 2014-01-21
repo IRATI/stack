@@ -57,7 +57,6 @@ struct ipcp_flow {
 
         enum flow_state        state;
         struct ipcp_instance * ipc_process;
-        bool                   to_app;
         /* FIXME: To be wiped out */
         struct kfifo           sdu_ready;
         wait_queue_head_t      wait_queue;

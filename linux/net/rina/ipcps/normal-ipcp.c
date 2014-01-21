@@ -614,6 +614,21 @@ static int normal_pft_dump(struct ipcp_instance_data * data,
                             entries);
 }
 
+static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
+{       
+        const struct name * retname;
+
+        ASSERT(data);
+
+        retname = data->info->name;
+        if (!retname){
+                LOG_ERR("Could not retrieve IPCP name");
+                return NULL;
+        }
+
+        return retname; 
+}
+
 /*  FIXME: register ops */
 static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request     = NULL,
@@ -635,7 +650,8 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .mgmt_sdu_post             = normal_mgmt_sdu_post,
         .pft_add                   = normal_pft_add,
         .pft_remove                = normal_pft_remove,
-        .pft_dump                  = normal_pft_dump
+        .pft_dump                  = normal_pft_dump,
+        .ipcp_name                 = normal_ipcp_name
 };
 
 static void sdu_wpi_destructor(void * data)
