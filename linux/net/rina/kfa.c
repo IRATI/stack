@@ -310,11 +310,6 @@ static int kfa_flow_destroy(struct kfa *       instance,
         ASSERT(flow);
 
         ipcp = flow->ipc_process;
-
-        if (ipcp && ipcp->ops && ipcp->ops->flow_destroy) {
-                if (ipcp->ops->flow_destroy(ipcp->data, id))
-                        LOG_ERR("Problems destroying the flow");
-        }
         LOG_DBG("We are destroying a flow");
         kfifo_free(&flow->sdu_ready);
         rkfree(flow);
