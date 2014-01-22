@@ -357,10 +357,13 @@ static void rinarp_resolve_handler(void *             opaque,
                         return;
                 }
 
+                ASSERT(flow->sdu_queue);
+
                 while (!rfifo_is_empty(flow->sdu_queue)) {
                         struct sdu * tmp = NULL;
 
                         tmp = rfifo_pop(flow->sdu_queue);
+                        ASSERT(tmp);
 
                         LOG_DBG("Got a new element from the fifo");
 
@@ -369,7 +372,9 @@ static void rinarp_resolve_handler(void *             opaque,
                                 return;
                         }
                 }
+
                 rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
+                flow->sdu_queue = NULL;
 
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
@@ -487,11 +492,14 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 spin_unlock(&data->lock);
 
+                ASSERT(flow->sdu_queue);
+
                 while (!rfifo_is_empty(flow->sdu_queue)) {
                         struct sdu * tmp = NULL;
                         
                         tmp = rfifo_pop(flow->sdu_queue);
-                        
+                        ASSERT(tmp);
+
                         LOG_DBG("Got a new element from the fifo");
                         
                         if (kfa_sdu_post(data->kfa, flow->port_id, tmp)) {
@@ -499,19 +507,24 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                 return -1;
                         }
                 }
+
                 rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
+                flow->sdu_queue = NULL;
 
         } else {
                 spin_lock(&data->lock);
                 flow->port_id_state = PORT_STATE_NULL;
                 spin_unlock(&data->lock);
+
                 /*
                  *  If we would destroy the flow, the application
                  *  we refused would constantly try to allocate
                  *  a flow again. This should only be allowed if
                  *  the IPC manager deallocates the NULL state flow first.
                  */
+                ASSERT(flow->sdu_queue);
                 rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
+                flow->sdu_queue = NULL;
         }
 
         return 0;
