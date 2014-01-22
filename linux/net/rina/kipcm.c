@@ -1261,7 +1261,7 @@ static int notify_ipcp_dump_pft(void *             data,
 
         ipc_id = 0;
         msg    = rnl_msg_create(RNL_MSG_ATTRS_RMT_PFT_DUMP_REQUEST);
-        if (!msg) 
+        if (!msg)
                 goto end;
 
         if (rnl_parse_msg(info, msg))
@@ -1273,7 +1273,7 @@ static int notify_ipcp_dump_pft(void *             data,
                 LOG_ERR("IPC process %d not found", ipc_id);
                 goto end;
         }
-        
+
         INIT_LIST_HEAD(entries.next);
         if (ipc_process->ops->pft_dump(ipc_process->data,
                                        &entries)) {
@@ -1283,13 +1283,13 @@ static int notify_ipcp_dump_pft(void *             data,
 
         result = 0;
 
-end:
+ end:
         return ipcp_dump_pft_free_and_reply(msg,
-                                           ipc_id,
-                                           result,
-                                           &entries,
-                                           info->snd_seq,
-                                           info->snd_portid);
+                                            ipc_id,
+                                            result,
+                                            &entries,
+                                            info->snd_seq,
+                                            info->snd_portid);
 }
 
 static int netlink_handlers_unregister(struct rnl_set * rnls)
@@ -1998,8 +1998,8 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                 kfa_port_id_release(kipcm->kfa, pid);
                 name_destroy(process_name);
                 return port_id_bad();
-        }     
-        
+        }
+
         name_destroy(process_name);
         return pid;
 }

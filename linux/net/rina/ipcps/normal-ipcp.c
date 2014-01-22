@@ -607,7 +607,7 @@ static int normal_pft_remove(struct ipcp_instance_data * data,
 
 static int normal_pft_dump(struct ipcp_instance_data * data,
                            struct list_head *          entries)
-{       
+{
         ASSERT(data);
 
         return rmt_pft_dump(data->rmt,
@@ -615,7 +615,7 @@ static int normal_pft_dump(struct ipcp_instance_data * data,
 }
 
 static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
-{       
+{
         const struct name * retname;
 
         ASSERT(data);
@@ -626,7 +626,7 @@ static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
                 return NULL;
         }
 
-        return retname; 
+        return retname;
 }
 
 /*  FIXME: register ops */

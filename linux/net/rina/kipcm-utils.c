@@ -104,7 +104,7 @@ static struct ipcp_imap_entry * imap_entry_find(struct ipcp_imap * map,
         return NULL;
 }
 
-static struct ipcp_imap_entry * 
+static struct ipcp_imap_entry *
 imap_entry_find_by_name(struct ipcp_imap *  map,
                         const struct name * name)
 {
@@ -126,7 +126,7 @@ imap_entry_find_by_name(struct ipcp_imap *  map,
                         LOG_DBG("This is an IPC Process");
                         return entry;
                 }
-                    
+
         }
 
         return NULL;

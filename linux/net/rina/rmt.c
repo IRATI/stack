@@ -444,13 +444,13 @@ int rmt_send_port_id(struct rmt * instance,
                 s_queue = qmap_find(instance->egress.queues, id);
                 if (s_queue) {
                         struct pdu * tmp;
-                
+
                         tmp = rfifo_pop(s_queue->queue);
                         if (tmp)
                                 pdu_destroy(tmp);
                 }
                 spin_unlock(&instance->egress.queues->lock);
-                
+
                 return -1;
         }
 

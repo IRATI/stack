@@ -686,9 +686,9 @@ static const struct name * dummy_ipcp_name(struct ipcp_instance_data * data)
                 return NULL;
         }
 
-        return retname; 
-} 
-                
+        return retname;
+}
+
 static struct ipcp_instance_ops dummy_instance_ops = {
         .flow_allocate_request  = dummy_flow_allocate_request,
         .flow_allocate_response = dummy_flow_allocate_response,

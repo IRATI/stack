@@ -311,7 +311,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
 
         if (flow->dest_pa) gpa_destroy(flow->dest_pa);
         if (flow->dest_ha) gha_destroy(flow->dest_ha);
-        if (flow->sdu_queue)  
+        if (flow->sdu_queue)
                 rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
         rkfree(flow);
 
@@ -496,12 +496,12 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
 
                 while (!rfifo_is_empty(flow->sdu_queue)) {
                         struct sdu * tmp = NULL;
-                        
+
                         tmp = rfifo_pop(flow->sdu_queue);
                         ASSERT(tmp);
 
                         LOG_DBG("Got a new element from the fifo");
-                        
+
                         if (kfa_sdu_post(data->kfa, flow->port_id, tmp)) {
                                 LOG_ERR("Couldn't post SDU to KFA ...");
                                 return -1;
@@ -878,7 +878,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 }
 
                 LOG_DBG("Added flow to the list");
-                
+
                 flow->sdu_queue = rfifo_create();
                 if (!flow->sdu_queue) {
                         LOG_ERR("Couldn't create the sdu queue "
@@ -964,7 +964,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
                         LOG_DBG("Queueing frame");
-    
+
                         if (rfifo_push(flow->sdu_queue, du)) {
                                 LOG_ERR("Failed to write %zd bytes"
                                         "into the fifo",
@@ -1269,8 +1269,8 @@ static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
                 return NULL;
         }
 
-        return retname; 
-} 
+        return retname;
+}
 
 static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_allocate_request  = eth_vlan_flow_allocate_request,
