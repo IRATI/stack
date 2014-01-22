@@ -847,12 +847,24 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
                 flow->dest_ha       = ghaddr;
-                flow->port_id       = kfa_flow_create(data->kfa, data->id,
-                                                      false);
+                flow->port_id       = kfa_port_id_reserve(data->kfa, data->id);
 
                 if (!is_port_id_ok(flow->port_id)) {
                         LOG_DBG("Port id is not ok");
                         flow->port_id_state = PORT_STATE_NULL;
+                        spin_unlock(&data->lock);
+                        sdu_destroy(du);
+                        gha_destroy(ghaddr);
+                        if (flow_destroy(data, flow))
+                                LOG_ERR("Problems destroying shim-eth-vlan "
+                                        "flow");
+                        return -1;
+                }
+
+                if (kfa_flow_create(data->kfa, data->id, flow->port_id)){
+                        LOG_DBG("Could not create flow in KFA");
+                        flow->port_id_state = PORT_STATE_NULL;
+                        kfa_port_id_release(data->kfa, flow->port_id);
                         spin_unlock(&data->lock);
                         sdu_destroy(du);
                         gha_destroy(ghaddr);

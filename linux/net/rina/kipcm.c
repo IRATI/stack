@@ -169,8 +169,13 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 goto fail;
         }
 
-        pid = kfa_flow_create(kipcm->kfa, ipc_id, false);
+        pid = kfa_port_id_reserve(kipcm->kfa, ipc_id);
         ASSERT(is_port_id_ok(pid));
+        if (kfa_flow_create(kipcm->kfa, ipc_id, pid)) {
+                LOG_ERR("Could not create flow at KFA");
+                kfa_port_id_release(kipcm->kfa, pid);
+                goto fail;
+        }
 
         if (kipcm_pmap_add(kipcm->messages->ingress, pid, info->snd_seq)) {
                 LOG_ERR("Could not add map [pid, seq_num]: [%d, %d]",
