@@ -256,6 +256,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 if (kipcm_flow_commit(default_kipcm,
                                       data->id, port_id)) {
                         kfa_flow_deallocate(data->kfa, port_id);
+                        kfa_port_id_release(data->kfa, port_id);
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);

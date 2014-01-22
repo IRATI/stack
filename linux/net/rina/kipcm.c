@@ -1977,18 +1977,20 @@ int kipcm_allocate_port(struct kipcm *   kipcm,
                  * user-space or an ipc process in the system
                  */
                 LOG_DBG("This flow should go for an app");
+                LOG_MISSING;
         }
+
+        KIPCM_UNLOCK(kipcm);
 
         pid =  kfa_port_id_reserve(kipcm->kfa, ipc_id);
         if (!is_port_id_ok(pid)) {
-                KIPCM_UNLOCK(kipcm);
                 name_destroy(process_name);
                 return -1;
         }
 
         if (kfa_flow_create(kipcm->kfa, ipc_id, pid)) {
                 LOG_ERR("Could not create flow in the KFA");
-                KIPCM_UNLOCK(kipcm);
+                kfa_port_id_release(kipcm->kfa, pid);
                 name_destroy(process_name);
                 return -1;
         }     

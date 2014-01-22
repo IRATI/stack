@@ -183,9 +183,8 @@ port_id_t kfa_port_id_reserve(struct kfa *     instance,
         return pid;
 }
 EXPORT_SYMBOL(kfa_port_id_reserve);
-
-port_id_t kfa_port_id_release(struct kfa * instance,
-                              port_id_t    port_id)
+int  kfa_port_id_release(struct kfa * instance,
+                         port_id_t    port_id)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");

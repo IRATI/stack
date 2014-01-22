@@ -115,6 +115,8 @@ static int default_deallocate_port(struct personality_data * data,
 
         LOG_DBG("Calling wrapped function");
 
+        /* FIXME: This should call kipcm_deallocate_port to retrieve the ipcp
+         * process once the distributed solution is adopted */
         return kfa_flow_deallocate(data->kfa, port_id);
 }
 
