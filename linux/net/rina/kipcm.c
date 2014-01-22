@@ -1950,9 +1950,9 @@ int kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
         return ipcp->ops->mgmt_sdu_read(ipcp->data, sdu_wpi);
 }
 
-int kipcm_allocate_port(struct kipcm *   kipcm,
-                        ipc_process_id_t ipc_id,
-                        struct name *    process_name)
+port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
+                              ipc_process_id_t ipc_id,
+                              struct name *    process_name)
 {
         struct ipcp_instance * ipc_process, * user_ipc_process;
         port_id_t              pid;
@@ -1962,7 +1962,7 @@ int kipcm_allocate_port(struct kipcm *   kipcm,
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
                 name_destroy(process_name);
-                return -1;
+                return port_id_bad();
         }
 
         KIPCM_LOCK(kipcm);
@@ -1973,7 +1973,7 @@ int kipcm_allocate_port(struct kipcm *   kipcm,
                 LOG_ERR("Couldn't find the ipc process %d", ipc_id);
                 KIPCM_UNLOCK(kipcm);
                 name_destroy(process_name);
-                return -1;
+                return port_id_bad();
         }
 
         user_ipc_process = ipcp_imap_find_by_name(kipcm->instances, process_name);
@@ -1990,18 +1990,18 @@ int kipcm_allocate_port(struct kipcm *   kipcm,
         pid =  kfa_port_id_reserve(kipcm->kfa, ipc_id);
         if (!is_port_id_ok(pid)) {
                 name_destroy(process_name);
-                return -1;
+                return port_id_bad();
         }
 
         if (kfa_flow_create(kipcm->kfa, ipc_id, pid)) {
                 LOG_ERR("Could not create flow in the KFA");
                 kfa_port_id_release(kipcm->kfa, pid);
                 name_destroy(process_name);
-                return -1;
+                return port_id_bad();
         }     
         
         name_destroy(process_name);
-        return 0;
+        return pid;
 }
 EXPORT_SYMBOL(kipcm_allocate_port);
 

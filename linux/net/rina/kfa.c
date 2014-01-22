@@ -160,7 +160,7 @@ port_id_t kfa_port_id_reserve(struct kfa *     instance,
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
+                return port_id_bad();
         }
 
         spin_lock(&instance->lock);

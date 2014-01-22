@@ -41,7 +41,7 @@ int          kfa_port_id_release(struct kfa * instance,
                                  port_id_t    port_id);
 
 /* Returns a port-id, the flow is uncommitted yet */
-port_id_t    kfa_flow_create(struct kfa *     instance,
+int          kfa_flow_create(struct kfa *     instance,
                              ipc_process_id_t id,
                              port_id_t        pid);
 
