@@ -628,13 +628,6 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 
 		flowAllocator.removeFlowAllocatorInstance(portId);
 
-		try {
-			kernelIPCProcess.destroyConnection(flow.getConnections().get(0));
-		} catch (Exception ex) {
-			log.error("Problems requesting the kernel to destroy a connection: " 
-					+ ex.getMessage());
-		}
-
 		try{
 			this.ribDaemon.delete(Flow.FLOW_RIB_OBJECT_CLASS, flowObjectName);
 		}catch(Exception ex){
