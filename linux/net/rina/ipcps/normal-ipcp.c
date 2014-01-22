@@ -368,6 +368,39 @@ connection_create_arrived(struct ipcp_instance_data * data,
         return cep_id;
 }
 
+static int remove_all_cepid(struct ipcp_instance_data * data,
+                            struct normal_flow *        flow)
+{
+        struct cep_ids_entry *pos, *next;
+
+        ASSERT(data);
+
+        list_for_each_entry_safe(pos, next, &flow->cep_ids_list, list){
+                efcp_connection_destroy(data->efcpc, pos->cep_id);
+                list_del(&pos->list);
+                rkfree(pos);
+        }
+
+        return 0;
+}
+
+static int normal_deallocate(struct ipcp_instance_data * data,
+                             port_id_t                   port_id)
+{
+        struct normal_flow * flow;
+        flow = find_flow(data, port_id);
+        if (!flow) {
+                LOG_ERR("Could not find this flow to deallocate");
+                return -1;
+        }
+        if (remove_all_cepid(data, flow))
+                LOG_ERR("Some efcp structures could not be destroyed");
+
+        list_del(&flow->list);
+        rkfree(flow);
+        return 0;
+}
+
 static int normal_check_dt_cons(struct dt_cons * dt_cons)
 {
         /* FIXME: What should we check here? */
@@ -581,6 +614,21 @@ static int normal_pft_dump(struct ipcp_instance_data * data,
                             entries);
 }
 
+static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
+{       
+        const struct name * retname;
+
+        ASSERT(data);
+
+        retname = data->info->name;
+        if (!retname){
+                LOG_ERR("Could not retrieve IPCP name");
+                return NULL;
+        }
+
+        return retname; 
+}
+
 /*  FIXME: register ops */
 static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request     = NULL,
@@ -596,12 +644,14 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .connection_destroy        = connection_destroy_request,
         .connection_create_arrived = connection_create_arrived,
         .flow_binding_ipcp         = ipcp_flow_notification,
+        .flow_destroy              = normal_deallocate,
         .mgmt_sdu_read             = normal_mgmt_sdu_read,
         .mgmt_sdu_write            = normal_mgmt_sdu_write,
         .mgmt_sdu_post             = normal_mgmt_sdu_post,
         .pft_add                   = normal_pft_add,
         .pft_remove                = normal_pft_remove,
-        .pft_dump                  = normal_pft_dump
+        .pft_dump                  = normal_pft_dump,
+        .ipcp_name                 = normal_ipcp_name
 };
 
 static void sdu_wpi_destructor(void * data)

@@ -99,17 +99,13 @@ static int default_sdu_read(struct personality_data * data,
 
 static int default_allocate_port(struct personality_data * data,
                                  ipc_process_id_t          ipc_id,
-                                 bool                      to_app)
+                                 struct name *             name)
 {
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        /*
-         * FIXME this is what should be used later on
-         * return kfa_port_id_reserve(data->kfa, ipc_id, to_app);
-         */
-        return kfa_flow_create(data->kfa, ipc_id, to_app);
+        return kipcm_allocate_port(data->kipcm, ipc_id, name);
 }
 
 static int default_deallocate_port(struct personality_data * data,
@@ -119,10 +115,8 @@ static int default_deallocate_port(struct personality_data * data,
 
         LOG_DBG("Calling wrapped function");
 
-        /*
-         * FIXME this is what should be used later on
-         * return kfa_port_id_release(data->kfa, port_id);
-         */
+        /* FIXME: This should call kipcm_deallocate_port to retrieve the ipcp
+         * process once the distributed solution is adopted */
         return kfa_flow_deallocate(data->kfa, port_id);
 }
 

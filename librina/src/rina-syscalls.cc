@@ -175,29 +175,23 @@ namespace rina {
                 return result;
         }
 
-        int syscallAllocatePortId(unsigned short ipcProcessId, bool toApp)
+        int syscallAllocatePortId(unsigned short ipcProcessId,
+                        const ApplicationProcessNamingInformation & applicationName)
         {
                 int result;
-                int toAppForKernel;
 
                 DUMP_SYSCALL("SYS_allocatePortId", SYS_allocatePortId);
 
-                if (toApp) {
-                        toAppForKernel = 1;
-                } else {
-                        toAppForKernel = 0;
-                }
-
                 result = syscall(SYS_allocatePortId,
                                 ipcProcessId,
-                                toAppForKernel);
+                                applicationName.getProcessName().c_str(),
+                                applicationName.getProcessInstance().c_str());
 
                 if (result < 0) {
                         LOG_ERR("Syscall allocate port id failed: %d", result);
                 }
 
                 return result;
-
         }
 
         int syscallDeallocatePortId(int portId)

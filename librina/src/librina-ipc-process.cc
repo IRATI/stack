@@ -213,6 +213,24 @@ int DestroyConnectionResultEvent::getPortId() const {
         return portId;
 }
 
+/* CLASS DUMP PDU FT RESULT EVENT*/
+DumpFTResponseEvent::DumpFTResponseEvent(const std::list<PDUForwardingTableEntry>& entries,
+                int result, unsigned int sequenceNumber):
+                IPCEvent(IPC_PROCESS_DUMP_FT_RESPONSE,
+                                sequenceNumber) {
+        this->entries = entries;
+        this->result = result;
+}
+
+const std::list<PDUForwardingTableEntry>&
+DumpFTResponseEvent::getEntries() const {
+        return entries;
+}
+
+int DumpFTResponseEvent::getResult() const {
+        return result;
+}
+
 /* CLASS EXTENDED IPC MANAGER */
 const std::string ExtendedIPCManager::error_allocate_flow =
 		"Error allocating flow";
@@ -582,13 +600,13 @@ void ExtendedIPCManager::queryRIBResponse(
 #endif
 }
 
-int ExtendedIPCManager::allocatePortId(unsigned short ipcProcessId)
+int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation& appName)
         throw (PortAllocationException) {
 #if STUB_API
         //Do nothing
         return 1;
 #else
-        int result = syscallAllocatePortId(ipcProcessId, ipcProcessId==0);
+        int result = syscallAllocatePortId(ipcProcessId, appName);
         if (result < 0){
                 throw PortAllocationException();
         }
@@ -955,6 +973,31 @@ modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry>& entrie
                 throw PDUForwardingTableException(e.what());
         }
 #endif
+}
+
+unsigned int KernelIPCProcess::dumptPDUFT()
+        throw (PDUForwardingTableException) {
+        unsigned int seqNum=0;
+
+#if STUB_API
+        //Do nothing
+#else
+        RmtDumpPDUFTEntriesRequestMessage message;
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message);
+        }catch(NetlinkException &e){
+                throw PDUForwardingTableException(e.what());
+        }
+
+        seqNum = message.getSequenceNumber();
+#endif
+
+        return seqNum;
 }
 
 void KernelIPCProcess::writeManagementSDU(void * sdu, int size, int portId)

@@ -72,6 +72,7 @@ import eu.irati.librina.DIFInformation;
 import eu.irati.librina.DataTransferConstants;
 import eu.irati.librina.DeallocateFlowResponseEvent;
 import eu.irati.librina.DestroyConnectionResultEvent;
+import eu.irati.librina.DumpFTResponseEvent;
 import eu.irati.librina.EnrollToDIFRequestEvent;
 import eu.irati.librina.ExtendedIPCManagerSingleton;
 import eu.irati.librina.FlowDeallocateRequestEvent;
@@ -83,6 +84,7 @@ import eu.irati.librina.IPCEventProducerSingleton;
 import eu.irati.librina.IPCProcessDIFRegistrationEvent;
 import eu.irati.librina.KernelIPCProcessSingleton;
 import eu.irati.librina.Neighbor;
+import eu.irati.librina.PDUForwardingTableEntry;
 import eu.irati.librina.QoSCube;
 import eu.irati.librina.QueryRIBRequestEvent;
 import eu.irati.librina.UpdateConnectionResponseEvent;
@@ -420,6 +422,7 @@ public class IPCProcess {
 		case IPC_PROCESS_QUERY_RIB:
 			QueryRIBRequestEvent queryEvent = (QueryRIBRequestEvent) event;
 			ribDaemon.processQueryRIBRequestEvent(queryEvent);
+			requestPDUFTEDump();
 			break;
 		case APPLICATION_REGISTRATION_REQUEST_EVENT:
 			ApplicationRegistrationRequestEvent apRegReqEvent = (ApplicationRegistrationRequestEvent) event;
@@ -457,6 +460,10 @@ public class IPCProcess {
 				log.warn("Problems destroying connection associated to port-id " + destroyConEvent.getPortId() 
 						+ ": " + destroyConEvent.getResult());
 			}
+			break;
+		case IPC_PROCESS_DUMP_FT_RESPONSE:
+			DumpFTResponseEvent dumpFTREvent = (DumpFTResponseEvent) event;
+			logPDUFTE(dumpFTREvent);
 			break;
 		default:
 			log.warn("Received unsupported event: "+event.getType());
@@ -536,6 +543,38 @@ public class IPCProcess {
 			setOperationalState(State.INITIALIZED);
 			log.error("Could not assign IPC Process to DIF " + difInformation.getDifName());
 		}
+	}
+	
+	private void requestPDUFTEDump() {
+		try{
+			kernelIPCProcess.dumptPDUFT();
+		} catch (Exception ex) {
+			log.warn("Error requesting IPC Process to Dump PDU Forwarding Table: "+ ex.getMessage());
+		}
+	}
+	
+	private void logPDUFTE(DumpFTResponseEvent event) {
+		if (event.getResult() != 0) {
+			log.warn("Dump PDU FT operation returned error, error code: " 
+					+ event.getResult());
+			return;
+		}
+		
+		PDUForwardingTableEntry next = null;
+		Iterator<PDUForwardingTableEntry> iterator = event.getEntries().iterator();
+		Iterator<Long> iterator2 = null;
+		String result = "Contents of the PDU Forwarding Table: \n";
+		while (iterator.hasNext()) {
+			next = iterator.next();
+			result = result + "Addresss: " + next.getAddress() 
+					+ "; QoS id: " + next.getQosId() + "; Port-ids: ";
+			iterator2 = next.getPortIds().iterator();
+			while (iterator2.hasNext()) {
+				result = result + iterator2.next()+ "; ";
+			}
+		}
+		
+		log.info(result);
 	}
 	
 	public synchronized DIFInformation getDIFInformation() {

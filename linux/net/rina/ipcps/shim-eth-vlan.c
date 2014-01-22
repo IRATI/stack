@@ -850,12 +850,24 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
                 flow->dest_ha       = ghaddr;
-                flow->port_id       = kfa_flow_create(data->kfa, data->id,
-                                                      false);
+                flow->port_id       = kfa_port_id_reserve(data->kfa, data->id);
 
                 if (!is_port_id_ok(flow->port_id)) {
                         LOG_DBG("Port id is not ok");
                         flow->port_id_state = PORT_STATE_NULL;
+                        spin_unlock(&data->lock);
+                        sdu_destroy(du);
+                        gha_destroy(ghaddr);
+                        if (flow_destroy(data, flow))
+                                LOG_ERR("Problems destroying shim-eth-vlan "
+                                        "flow");
+                        return -1;
+                }
+
+                if (kfa_flow_create(data->kfa, data->id, flow->port_id)){
+                        LOG_DBG("Could not create flow in KFA");
+                        flow->port_id_state = PORT_STATE_NULL;
+                        kfa_port_id_release(data->kfa, flow->port_id);
                         spin_unlock(&data->lock);
                         sdu_destroy(du);
                         gha_destroy(ghaddr);
@@ -1245,6 +1257,21 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         return 0;
 }
 
+static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
+{
+        const struct name * retname;
+
+        ASSERT(data);
+
+        retname = data->name;
+        if (!retname){
+                LOG_ERR("Could not retrieve IPCP name");
+                return NULL;
+        }
+
+        return retname; 
+} 
+
 static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_allocate_request  = eth_vlan_flow_allocate_request,
         .flow_allocate_response = eth_vlan_flow_allocate_response,
@@ -1254,6 +1281,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .sdu_write              = eth_vlan_sdu_write,
         .assign_to_dif          = eth_vlan_assign_to_dif,
         .update_dif_config      = eth_vlan_update_dif_config,
+        .ipcp_name              = eth_vlan_ipcp_name,
 };
 
 static struct ipcp_factory_data {
