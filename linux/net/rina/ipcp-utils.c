@@ -283,7 +283,7 @@ EXPORT_SYMBOL(name_dup);
         ((X->FIELD && Y->FIELD) ? string_cmp(X->FIELD, Y->FIELD) :      \
          ((!X->FIELD && !Y->FIELD) ? 0 : -1))
 
-/* FIXME: This check has to be rearranged */
+/* NOTE: RINA reference model says only process_name is mandatory */
 bool name_is_ok(const struct name * n)
 { return (n && n->process_name); }
 EXPORT_SYMBOL(name_is_ok);
