@@ -55,7 +55,7 @@ struct mgmt_data {
 };
 
 struct ipcp_instance_data {
-        /* FIXME add missing needed attributes */
+        /* FIXME: add missing needed attributes */
         ipc_process_id_t        id;
         u32                     nl_port;
         struct list_head        flows;
