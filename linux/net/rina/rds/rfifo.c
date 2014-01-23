@@ -49,7 +49,7 @@ static struct rfifo * rfifo_create_gfp(gfp_t flags)
                 return NULL;
         }
 
-        LOG_DBG("Fifo %pK created successfully", f);
+        LOG_DBG("FIFO %pK created successfully", f);
 
         return f;
 }
@@ -63,7 +63,7 @@ struct rfifo * rfifo_create_ni(void)
 EXPORT_SYMBOL(rfifo_create_ni);
 
 int rfifo_destroy(struct rfifo * f,
-                  void         (* dtor)(void * e))
+                  void        (* dtor)(void * e))
 {
         if (!f || !dtor) {
                 LOG_ERR("Bogus input parameters, can't destroy rfifo %pK", f);
@@ -74,7 +74,7 @@ int rfifo_destroy(struct rfifo * f,
                 return -1;
         rkfree(f);
 
-        LOG_DBG("Fifo %pK destroyed successfully", f);
+        LOG_DBG("FIFO %pK destroyed successfully", f);
 
         return 0;
 }
