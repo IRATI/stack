@@ -31,6 +31,7 @@
 #include "common.h"
 #include "kipcm-utils.h"
 #include "rnl-utils.h"
+#include "ipcp-utils.h"
 
 /*
  * IMAPs
@@ -118,6 +119,10 @@ imap_entry_find_by_name(struct ipcp_imap *  map,
 
         hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
                 entry_name = entry->value->ops->ipcp_name(entry->value->data);
+                if (!is_name_ok(entry_name)) {
+                        LOG_ERR("Bad name, bailing out");
+                        return NULL;
+                }
                 /*FIXME: Check if we can use the name API */
                 if (!strcmp(entry_name->process_name,
                             name->process_name)           &&

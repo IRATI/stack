@@ -1847,8 +1847,7 @@ static int rnl_parse_rmt_modify_fte_req_msg(struct genl_info * info,
         }
 
         if (attrs[RMPFE_ATTR_ENTRIES]) {
-                if (parse_list_of_pfte_config_entries(
-                                                      attrs[RMPFE_ATTR_ENTRIES],
+                if (parse_list_of_pfte_config_entries(attrs[RMPFE_ATTR_ENTRIES],
                                                       msg_attrs) < 0)
                         goto parse_fail;
         }
@@ -1981,6 +1980,8 @@ int rnl_parse_msg(struct genl_info * info,
                 if (rnl_parse_rmt_modify_fte_req_msg(info,
                                                      msg->attrs) < 0)
                         goto fail;
+                break;
+        case RINA_C_RMT_DUMP_FT_REQUEST:
                 break;
         default:
                 goto fail;

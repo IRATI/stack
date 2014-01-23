@@ -1259,18 +1259,10 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
 
 static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
 {
-        const struct name * retname;
-
         ASSERT(data);
-        ASSERT(data->info);
+        ASSERT(is_name_ok(data->name));
 
-        retname = data->name;
-        if (!retname){
-                LOG_ERR("Could not retrieve IPCP name");
-                return NULL;
-        }
-
-        return retname; 
+        return data->name; 
 } 
 
 static struct ipcp_instance_ops eth_vlan_instance_ops = {
