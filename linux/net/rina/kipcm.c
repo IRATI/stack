@@ -1282,7 +1282,6 @@ static int notify_ipcp_dump_pft(void *             data,
         }
 
         result = 0;
-        LOG_DBG("LEODEBUG TERMINO NOTIFY_IPCP_DUMP_PFT");
 
  end:
         return ipcp_dump_pft_free_and_reply(msg,
