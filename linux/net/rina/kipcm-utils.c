@@ -105,7 +105,7 @@ static struct ipcp_imap_entry * imap_entry_find(struct ipcp_imap * map,
         return NULL;
 }
 
-static struct ipcp_imap_entry * 
+static struct ipcp_imap_entry *
 imap_entry_find_by_name(struct ipcp_imap *  map,
                         const struct name * name)
 {
@@ -119,7 +119,7 @@ imap_entry_find_by_name(struct ipcp_imap *  map,
 
         hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
                 entry_name = entry->value->ops->ipcp_name(entry->value->data);
-                if (!is_name_ok(entry_name)) {
+                if (!name_is_ok(entry_name)) {
                         LOG_ERR("Bad name, bailing out");
                         return NULL;
                 }
@@ -131,7 +131,7 @@ imap_entry_find_by_name(struct ipcp_imap *  map,
                         LOG_DBG("This is an IPC Process");
                         return entry;
                 }
-                    
+
         }
 
         return NULL;

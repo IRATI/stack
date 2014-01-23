@@ -283,11 +283,13 @@ EXPORT_SYMBOL(name_dup);
         ((X->FIELD && Y->FIELD) ? string_cmp(X->FIELD, Y->FIELD) :      \
          ((!X->FIELD && !Y->FIELD) ? 0 : -1))
 
-bool is_name_ok(const struct name * n)
-{ return (!n && n->process_name); }
+/* FIXME: This check has to be rearranged */
+bool name_is_ok(const struct name * n)
+{ return (n && n->process_name); }
+EXPORT_SYMBOL(name_is_ok);
 
-static int name_is_equal_internal(const struct name * a,
-                                  const struct name * b)
+static int __name_is_equal(const struct name * a,
+                           const struct name * b)
 {
         if (a == b)
                 return 0;
@@ -312,7 +314,7 @@ static int name_is_equal_internal(const struct name * a,
 }
 
 bool name_is_equal(const struct name * a, const struct name * b)
-{ return !name_is_equal_internal(a, b) ? true : false; }
+{ return !__name_is_equal(a, b) ? true : false; }
 EXPORT_SYMBOL(name_is_equal);
 
 #define DELIMITER "/"

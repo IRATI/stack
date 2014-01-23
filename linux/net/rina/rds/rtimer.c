@@ -166,7 +166,7 @@ bool regression_tests_rtimer(void)
 
         rtimer_destroy(timer1);
         rtimer_destroy(timer2);
-        
+
         return true;
 }
 #endif

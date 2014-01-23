@@ -1151,7 +1151,7 @@ rnl_parse_ipcm_assign_to_dif_req_msg(struct genl_info * info,
 
 static int rnl_parse_ipcm_update_dif_config_req_msg
 (struct genl_info * info,
-struct rnl_ipcm_update_dif_config_req_msg_attrs * msg_attrs)
+ struct rnl_ipcm_update_dif_config_req_msg_attrs * msg_attrs)
 {
         struct nla_policy attr_policy[IUDCR_ATTR_MAX + 1];
         struct nlattr *attrs[IUDCR_ATTR_MAX + 1];
@@ -2164,7 +2164,7 @@ static int rnl_format_ipcm_update_dif_config_resp_msg(uint_t           result,
                                                 skb_out);
 }
 
-static int 
+static int
 rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name *      source,
                                            const struct name *      dest,
                                            const struct flow_spec * fspec,
@@ -2467,21 +2467,21 @@ static int format_pft_entries_list(struct list_head * entries,
                         return format_fail("rnl_ipcm_pft_dump_resp_msg");
                 }
 
-                if ((nla_put_u32(skb_out, 
+                if ((nla_put_u32(skb_out,
                                  PFTELE_ATTR_ADDRESS,
                                  pos->destination)                         ||
                      nla_put_u32(skb_out, PFTELE_ATTR_QOSID, pos->qos_id)) ||
-                     format_pft_entry_port_list(pos->ports,
-                                                pos->ports_size,
-                                                skb_out))
+                    format_pft_entry_port_list(pos->ports,
+                                               pos->ports_size,
+                                               skb_out))
                         return format_fail("rnl_ipcm_pft_dump_resp_msg");
-                
+
                 nla_nest_end(skb_out, msg_entry);
                 list_del(&pos->next);
                 rkfree(pos->ports);
                 rkfree(pos);
         }
-                      
+
         return 0;
 }
 
@@ -2495,7 +2495,7 @@ static int rnl_format_ipcm_pft_dump_resp_msg(int                result,
                 LOG_ERR("Bogus input parameter(s), bailing out");
                 return -1;
         }
-        
+
         if (nla_put_u32(skb_out, RPFD_ATTR_RESULT, result) < 0)
                 return format_fail("rnl_ipcm_pft_dump_resp_msg");
 
@@ -3130,7 +3130,7 @@ int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port)
 EXPORT_SYMBOL(rnl_ipcm_sock_closed_notif_msg);
 
 int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
-                               int                result, 
+                               int                result,
                                struct list_head * entries,
                                rnl_sn_t           seq_num,
                                u32                nl_port_id)
@@ -3143,39 +3143,39 @@ int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
         if (!out_msg) {
                 LOG_ERR("Could not allocate memory for message");
                 return -1;
-        }    
+        }
 
         out_hdr = (struct rina_msg_hdr *)
                 genlmsg_put(out_msg,
-                            0,   
+                            0,
                             seq_num,
                             &rnl_nl_family,
-                            0,   
+                            0,
                             RINA_C_RMT_DUMP_FT_REPLY);
         if (!out_hdr) {
                 LOG_ERR("Could not use genlmsg_put");
                 nlmsg_free(out_msg);
                 return -1;
-        }    
+        }
 
         out_hdr->src_ipc_id = ipc_id; /* This IPC process */
-        out_hdr->dst_ipc_id = 0; 
+        out_hdr->dst_ipc_id = 0;
 
         if (rnl_format_ipcm_pft_dump_resp_msg(result, entries, out_msg)) {
                 nlmsg_free(out_msg);
                 return -1;
-        }    
+        }
 
         result = genlmsg_end(out_msg, out_hdr);
 
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
-        }    
+        }
         result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
         if (result) {
                 LOG_ERR("Could not send unicast msg: %d", result);
                 return -1;
-        }    
+        }
         return 0;
 }
 EXPORT_SYMBOL(rnl_ipcp_pft_dump_resp_msg);

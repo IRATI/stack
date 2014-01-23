@@ -55,7 +55,7 @@ struct mgmt_data {
 };
 
 struct ipcp_instance_data {
-        /* FIXME add missing needed attributes */
+        /* FIXME: add missing needed attributes */
         ipc_process_id_t        id;
         u32                     nl_port;
         struct list_head        flows;
@@ -607,7 +607,7 @@ static int normal_pft_remove(struct ipcp_instance_data * data,
 
 static int normal_pft_dump(struct ipcp_instance_data * data,
                            struct list_head *          entries)
-{       
+{
         ASSERT(data);
 
         return rmt_pft_dump(data->rmt,
@@ -616,10 +616,9 @@ static int normal_pft_dump(struct ipcp_instance_data * data,
 
 static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
 {       
-
         ASSERT(data);
         ASSERT(data->info);
-        ASSERT(is_name_ok(data->info->name));
+        ASSERT(name_is_ok(data->info->name));
 
         return data->info->name;
 }

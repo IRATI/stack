@@ -678,11 +678,11 @@ static const struct name * dummy_ipcp_name(struct ipcp_instance_data * data)
 {
         ASSERT(data);
         ASSERT(data->info);
-        ASSERT(is_name_ok(data->info->name));
+        ASSERT(name_is_ok(data->info->name));
 
         return data->info->name;
 } 
-                
+
 static struct ipcp_instance_ops dummy_instance_ops = {
         .flow_allocate_request  = dummy_flow_allocate_request,
         .flow_allocate_response = dummy_flow_allocate_response,
