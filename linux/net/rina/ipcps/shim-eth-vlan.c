@@ -1262,6 +1262,7 @@ static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
         const struct name * retname;
 
         ASSERT(data);
+        ASSERT(data->info);
 
         retname = data->name;
         if (!retname){

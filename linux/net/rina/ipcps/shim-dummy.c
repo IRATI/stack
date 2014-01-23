@@ -679,6 +679,7 @@ static const struct name * dummy_ipcp_name(struct ipcp_instance_data * data)
         const struct name * retname;
 
         ASSERT(data);
+        ASSERT(data->info);
 
         retname = data->info->name;
         if (!retname){
