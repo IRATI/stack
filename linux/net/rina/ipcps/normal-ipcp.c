@@ -615,7 +615,7 @@ static int normal_pft_dump(struct ipcp_instance_data * data,
 }
 
 static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
-{       
+{
         ASSERT(data);
         ASSERT(data->info);
         ASSERT(name_is_ok(data->info->name));

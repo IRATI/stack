@@ -1262,8 +1262,8 @@ static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
         ASSERT(data);
         ASSERT(name_is_ok(data->name));
 
-        return data->name; 
-} 
+        return data->name;
+}
 
 static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_allocate_request  = eth_vlan_flow_allocate_request,
