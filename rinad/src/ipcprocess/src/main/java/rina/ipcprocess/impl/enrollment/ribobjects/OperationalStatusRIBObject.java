@@ -6,8 +6,7 @@ import org.apache.commons.logging.LogFactory;
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
-import rina.ipcprocess.impl.IPCProcess;
-import rina.ipcprocess.impl.IPCProcess.State;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
 import rina.ipcprocess.impl.enrollment.statemachines.BaseEnrollmentStateMachine;
 import rina.ipcprocess.impl.enrollment.statemachines.EnrolleeStateMachine;
@@ -27,13 +26,11 @@ public class OperationalStatusRIBObject extends BaseRIBObject{
 
 	private EnrollmentTaskImpl enrollmentTask = null;
 	private CDAPSessionManager cdapSessionManager = null;
-	private IPCProcess ipcProcess = null;
 
-	public OperationalStatusRIBObject(EnrollmentTaskImpl enrollmentTaskImpl){
-		super(RIBObjectNames.OPERATIONAL_STATUS_RIB_OBJECT_CLASS, 
+	public OperationalStatusRIBObject(IPCProcess ipcProcess, EnrollmentTaskImpl enrollmentTaskImpl){
+		super(ipcProcess, RIBObjectNames.OPERATIONAL_STATUS_RIB_OBJECT_CLASS, 
 				ObjectInstanceGenerator.getObjectInstance(), RIBObjectNames.OPERATIONAL_STATUS_RIB_OBJECT_NAME);
 		this.enrollmentTask = enrollmentTaskImpl;
-		this.ipcProcess = IPCProcess.getInstance();
 		this.cdapSessionManager = ipcProcess.getCDAPSessionManager();
 		setRIBDaemon(ipcProcess.getRIBDaemon());
 	}
@@ -54,22 +51,22 @@ public class OperationalStatusRIBObject extends BaseRIBObject{
 			return;
 		}
 		
-		if (ipcProcess.getOperationalState() != State.ASSIGNED_TO_DIF) {
-			ipcProcess.setOperationalState(State.ASSIGNED_TO_DIF);
+		if (getIPCProcess().getOperationalState() != IPCProcess.State.ASSIGNED_TO_DIF) {
+			getIPCProcess().setOperationalState(IPCProcess.State.ASSIGNED_TO_DIF);
 		}
 	}
 	
 	@Override
 	public synchronized void start(Object object) throws RIBDaemonException {
-		if (ipcProcess.getOperationalState() != State.ASSIGNED_TO_DIF) {
-			ipcProcess.setOperationalState(State.ASSIGNED_TO_DIF);
+		if (getIPCProcess().getOperationalState() != IPCProcess.State.ASSIGNED_TO_DIF) {
+			getIPCProcess().setOperationalState(IPCProcess.State.ASSIGNED_TO_DIF);
 		}
 	}
 	
 	@Override
 	public synchronized void stop(Object object) throws RIBDaemonException {
-		if (ipcProcess.getOperationalState() != State.ASSIGNED_TO_DIF) {
-			ipcProcess.setOperationalState(State.INITIALIZED);
+		if (getIPCProcess().getOperationalState() != IPCProcess.State.ASSIGNED_TO_DIF) {
+			getIPCProcess().setOperationalState(IPCProcess.State.INITIALIZED);
 		}
 	}
 	
@@ -91,7 +88,7 @@ public class OperationalStatusRIBObject extends BaseRIBObject{
 	
 	@Override
 	public synchronized Object getObjectValue(){
-		return ipcProcess.getOperationalState();
+		return getIPCProcess().getOperationalState();
 	}
 
 }

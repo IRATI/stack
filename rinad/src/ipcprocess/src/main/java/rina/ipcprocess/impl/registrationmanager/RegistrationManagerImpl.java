@@ -12,7 +12,7 @@ import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.rina;
 
 import rina.flowallocator.api.DirectoryForwardingTableEntry;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.registrationmanager.ribobjects.DirectoryForwardingTableEntrySetRIBObject;
 import rina.registrationmanager.api.RegistrationManager;
 import rina.ribdaemon.api.NotificationPolicy;
@@ -48,7 +48,7 @@ public class RegistrationManagerImpl implements RegistrationManager {
 	
 	private void populateRIB(IPCProcess ipcProcess){
 		try{
-			RIBObject ribObject = new DirectoryForwardingTableEntrySetRIBObject();
+			RIBObject ribObject = new DirectoryForwardingTableEntrySetRIBObject(ipcProcess);
 			ribDaemon.addRIBObject(ribObject);
 		}catch(RIBDaemonException ex){
 			ex.printStackTrace();

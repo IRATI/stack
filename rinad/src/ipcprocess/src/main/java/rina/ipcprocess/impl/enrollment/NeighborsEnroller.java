@@ -7,7 +7,7 @@ import eu.irati.librina.Neighbor;
 import rina.configuration.RINAConfiguration;
 import rina.enrollment.api.EnrollmentRequest;
 import rina.enrollment.api.EnrollmentTask;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 
 /**
  * This class periodically looks for known neighbors we're currently not enrolled to, and tries 
@@ -32,9 +32,9 @@ public class NeighborsEnroller implements Runnable{
 	 */
 	private IPCProcess ipcProcess = null;
 	
-	public NeighborsEnroller(EnrollmentTask enrollmentTask){
+	public NeighborsEnroller(IPCProcess ipcProcess, EnrollmentTask enrollmentTask){
 		this.enrollmentTask = enrollmentTask;
-		ipcProcess = IPCProcess.getInstance();
+		this.ipcProcess = ipcProcess;
 	}
 	
 	public void run() {

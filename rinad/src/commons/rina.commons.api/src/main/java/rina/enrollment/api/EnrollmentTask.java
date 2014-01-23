@@ -9,6 +9,7 @@ import eu.irati.librina.Neighbor;
 
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
+import rina.ipcprocess.api.IPCProcessComponent;
 import rina.ribdaemon.api.RIBObjectNames;
 
 /**
@@ -17,7 +18,7 @@ import rina.ribdaemon.api.RIBObjectNames;
  * @author eduardgrasa
  *
  */
-public interface EnrollmentTask {
+public interface EnrollmentTask extends IPCProcessComponent {
 	
 	public static final String ENROLLMENT_RIB_OBJECT_NAME = RIBObjectNames.SEPARATOR + 
 			RIBObjectNames.DAF + RIBObjectNames.SEPARATOR + RIBObjectNames.MANAGEMENT + 

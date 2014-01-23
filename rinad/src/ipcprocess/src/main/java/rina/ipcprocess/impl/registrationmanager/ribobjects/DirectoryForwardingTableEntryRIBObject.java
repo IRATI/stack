@@ -8,8 +8,7 @@ import eu.irati.librina.ApplicationProcessNamingInformation;
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
 import rina.flowallocator.api.DirectoryForwardingTableEntry;
-import rina.flowallocator.api.FlowAllocator;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.registrationmanager.api.RegistrationManager;
 import rina.ribdaemon.api.NotificationPolicy;
 import rina.ribdaemon.api.RIBDaemonException;
@@ -22,12 +21,12 @@ public class DirectoryForwardingTableEntryRIBObject extends SimpleSetMemberRIBOb
 	RegistrationManager registrationManager = null;
 	ApplicationProcessNamingInformation apNameEntry = null;
 	
-	public DirectoryForwardingTableEntryRIBObject(String objectName, 
+	public DirectoryForwardingTableEntryRIBObject(IPCProcess ipcProcess, String objectName, 
 			DirectoryForwardingTableEntry directoryForwardingTableEntry){
-		super(DirectoryForwardingTableEntrySetRIBObject.DIRECTORY_FORWARDING_TABLE_ENTRY_RIB_OBJECT_CLASS, 
+		super(ipcProcess, DirectoryForwardingTableEntrySetRIBObject.DIRECTORY_FORWARDING_TABLE_ENTRY_RIB_OBJECT_CLASS, 
 				objectName, directoryForwardingTableEntry);
-		setRIBDaemon(IPCProcess.getInstance().getRIBDaemon());
-		registrationManager = IPCProcess.getInstance().getRegistrationManager();
+		setRIBDaemon(ipcProcess.getRIBDaemon());
+		registrationManager = ipcProcess.getRegistrationManager();
 		registrationManager.addDFTEntry(directoryForwardingTableEntry);
 		apNameEntry = directoryForwardingTableEntry.getApNamingInfo();
 	}

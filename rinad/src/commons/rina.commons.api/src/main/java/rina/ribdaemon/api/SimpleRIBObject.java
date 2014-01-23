@@ -1,5 +1,7 @@
 package rina.ribdaemon.api;
 
+import rina.ipcprocess.api.IPCProcess;
+
 /**
  * A simple RIB object that just acts as a wrapper. Represents an object in the RIB that just 
  * can be read or written, and whose read/write operations have no side effects other than 
@@ -12,8 +14,8 @@ public class SimpleRIBObject extends BaseRIBObject{
 
 	private Object objectValue = null;
 	
-	public SimpleRIBObject(String objectClass, String objectName, Object value) {
-		super(objectClass, ObjectInstanceGenerator.getObjectInstance(), objectName);
+	public SimpleRIBObject(IPCProcess ipcProcess, String objectClass, String objectName, Object value) {
+		super(ipcProcess, objectClass, ObjectInstanceGenerator.getObjectInstance(), objectName);
 		this.objectValue = value;
 	}
 	

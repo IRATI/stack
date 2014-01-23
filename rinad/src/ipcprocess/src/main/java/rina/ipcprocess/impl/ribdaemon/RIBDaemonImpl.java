@@ -26,7 +26,7 @@ import rina.encoding.api.Encoder;
 import rina.enrollment.api.EnrollmentTask;
 import rina.events.api.Event;
 import rina.events.api.EventListener;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.events.NMinusOneFlowAllocatedEvent;
 import rina.ipcprocess.impl.events.NMinusOneFlowDeallocatedEvent;
 import rina.ipcprocess.impl.ribdaemon.rib.RIB;

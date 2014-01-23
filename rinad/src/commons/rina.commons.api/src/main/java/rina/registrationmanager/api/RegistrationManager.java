@@ -1,11 +1,12 @@
 package rina.registrationmanager.api;
 
 import rina.flowallocator.api.DirectoryForwardingTableEntry;
+import rina.ipcprocess.api.IPCProcessComponent;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 
-public interface RegistrationManager {
+public interface RegistrationManager extends IPCProcessComponent {
 
 	/**
 	 * Returns the address of the IPC process where the application process is, or 

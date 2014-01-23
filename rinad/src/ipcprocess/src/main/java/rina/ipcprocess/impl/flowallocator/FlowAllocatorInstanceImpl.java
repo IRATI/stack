@@ -27,7 +27,7 @@ import rina.flowallocator.api.FlowAllocator;
 import rina.flowallocator.api.FlowAllocatorInstance;
 import rina.flowallocator.api.Flow;
 import rina.flowallocator.api.Flow.State;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.flowallocator.policies.NewFlowRequestPolicy;
 import rina.ipcprocess.impl.flowallocator.policies.NewFlowRequestPolicyImpl;
 import rina.ipcprocess.impl.flowallocator.timertasks.TearDownFlowTimerTask;

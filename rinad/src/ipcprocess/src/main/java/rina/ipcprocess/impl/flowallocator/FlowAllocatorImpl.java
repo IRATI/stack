@@ -27,7 +27,7 @@ import rina.encoding.api.Encoder;
 import rina.flowallocator.api.Flow;
 import rina.flowallocator.api.FlowAllocator;
 import rina.flowallocator.api.FlowAllocatorInstance;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.flowallocator.ribobjects.FlowSetRIBObject;
 import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
 import rina.ipcprocess.impl.flowallocator.validation.AllocateRequestValidator;
@@ -99,9 +99,9 @@ public class FlowAllocatorImpl implements FlowAllocator{
 	
 	private void populateRIB(IPCProcess ipcProcess){
 		try{
-			RIBObject ribObject = new FlowSetRIBObject(this);
+			RIBObject ribObject = new FlowSetRIBObject(ipcProcess, this);
 			ribDaemon.addRIBObject(ribObject);
-		    ribObject = new QoSCubeSetRIBObject();
+		    ribObject = new QoSCubeSetRIBObject(ipcProcess);
 			ribDaemon.addRIBObject(ribObject);
 		}catch(RIBDaemonException ex){
 			ex.printStackTrace();
