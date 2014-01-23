@@ -25,6 +25,7 @@ import eu.irati.librina.ExtendedIPCManagerSingleton;
 import eu.irati.librina.Flow;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowInformation;
+import eu.irati.librina.FlowPointerVector;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.IPCProcessDIFRegistrationEvent;
@@ -89,6 +90,16 @@ public class NMinus1FlowManagerImpl implements NMinus1FlowManager{
 		}
 		
 		return flow.getFlowInformation();
+	}
+	
+	public FlowInformation[] getAllNMinus1FlowsInformation() {
+		FlowPointerVector allocatedFlows = ipcManager.getAllocatedFlows();
+		FlowInformation[] result = new FlowInformation[(int)allocatedFlows.size()];
+		for(int i=0; i<allocatedFlows.size(); i++){
+			result[i] = allocatedFlows.get(i).getFlowInformation();
+		}
+		
+		return result;
 	}
 	
 	/**

@@ -55,7 +55,7 @@ struct mgmt_data {
 };
 
 struct ipcp_instance_data {
-        /* FIXME add missing needed attributes */
+        /* FIXME: add missing needed attributes */
         ipc_process_id_t        id;
         u32                     nl_port;
         struct list_head        flows;
@@ -607,11 +607,26 @@ static int normal_pft_remove(struct ipcp_instance_data * data,
 
 static int normal_pft_dump(struct ipcp_instance_data * data,
                            struct list_head *          entries)
-{       
+{
         ASSERT(data);
 
         return rmt_pft_dump(data->rmt,
                             entries);
+}
+
+static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
+{
+        const struct name * retname;
+
+        ASSERT(data);
+
+        retname = data->info->name;
+        if (!retname){
+                LOG_ERR("Could not retrieve IPCP name");
+                return NULL;
+        }
+
+        return retname;
 }
 
 /*  FIXME: register ops */
@@ -635,7 +650,8 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .mgmt_sdu_post             = normal_mgmt_sdu_post,
         .pft_add                   = normal_pft_add,
         .pft_remove                = normal_pft_remove,
-        .pft_dump                  = normal_pft_dump
+        .pft_dump                  = normal_pft_dump,
+        .ipcp_name                 = normal_ipcp_name
 };
 
 static void sdu_wpi_destructor(void * data)

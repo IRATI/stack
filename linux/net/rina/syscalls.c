@@ -258,16 +258,33 @@ SYSCALL_DEFINE3(sdu_write,
         return size;
 }
 
-SYSCALL_DEFINE2(allocate_port,
+SYSCALL_DEFINE3(allocate_port,
                 ipc_process_id_t, id,
-                int,              to_app)
+                const char __user *, process_name,
+                const char __user *, process_instance)
 {
-        port_id_t retval;
+        port_id_t     retval;
+        struct name * tname;
 
         SYSCALL_DUMP_ENTER;
 
-        CALL_DEFAULT_PERSONALITY(retval, allocate_port, id,
-                                 (to_app != 0) ? true : false);
+        tname = name_create();
+        if (!tname) {
+                SYSCALL_DUMP_EXIT;
+                return -EFAULT;
+        }
+
+        if (!name_init_with(tname,
+                            string_from_user(process_name),
+                            string_from_user(process_instance),
+                            NULL,
+                            NULL)) {
+                SYSCALL_DUMP_EXIT;
+                name_destroy(tname);
+                return -EFAULT;
+        }
+
+        CALL_DEFAULT_PERSONALITY(retval, allocate_port, id, tname);
 
         SYSCALL_DUMP_EXIT;
 

@@ -466,7 +466,7 @@ int pft_dump(struct pft *       instance,
                 list_add_rcu(&entry->next, entries);
         }
         rcu_read_unlock();
-                 
+
         return 0;
 }
 

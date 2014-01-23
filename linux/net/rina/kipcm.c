@@ -169,8 +169,13 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 goto fail;
         }
 
-        pid = kfa_flow_create(kipcm->kfa, ipc_id, false);
+        pid = kfa_port_id_reserve(kipcm->kfa, ipc_id);
         ASSERT(is_port_id_ok(pid));
+        if (kfa_flow_create(kipcm->kfa, ipc_id, pid)) {
+                LOG_ERR("Could not create flow at KFA");
+                kfa_port_id_release(kipcm->kfa, pid);
+                goto fail;
+        }
 
         if (kipcm_pmap_add(kipcm->messages->ingress, pid, info->snd_seq)) {
                 LOG_ERR("Could not add map [pid, seq_num]: [%d, %d]",
@@ -1256,7 +1261,7 @@ static int notify_ipcp_dump_pft(void *             data,
 
         ipc_id = 0;
         msg    = rnl_msg_create(RNL_MSG_ATTRS_RMT_PFT_DUMP_REQUEST);
-        if (!msg) 
+        if (!msg)
                 goto end;
 
         if (rnl_parse_msg(info, msg))
@@ -1268,7 +1273,7 @@ static int notify_ipcp_dump_pft(void *             data,
                 LOG_ERR("IPC process %d not found", ipc_id);
                 goto end;
         }
-        
+
         INIT_LIST_HEAD(entries.next);
         if (ipc_process->ops->pft_dump(ipc_process->data,
                                        &entries)) {
@@ -1278,13 +1283,13 @@ static int notify_ipcp_dump_pft(void *             data,
 
         result = 0;
 
-end:
+ end:
         return ipcp_dump_pft_free_and_reply(msg,
-                                           ipc_id,
-                                           result,
-                                           &entries,
-                                           info->snd_seq,
-                                           info->snd_portid);
+                                            ipc_id,
+                                            result,
+                                            &entries,
+                                            info->snd_seq,
+                                            info->snd_portid);
 }
 
 static int netlink_handlers_unregister(struct rnl_set * rnls)
@@ -1944,6 +1949,61 @@ int kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
 
         return ipcp->ops->mgmt_sdu_read(ipcp->data, sdu_wpi);
 }
+
+port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
+                              ipc_process_id_t ipc_id,
+                              struct name *    process_name)
+{
+        struct ipcp_instance * ipc_process, * user_ipc_process;
+        port_id_t              pid;
+
+        IRQ_BARRIER;
+
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                name_destroy(process_name);
+                return port_id_bad();
+        }
+
+        KIPCM_LOCK(kipcm);
+
+        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+
+        if (!ipc_process) {
+                LOG_ERR("Couldn't find the ipc process %d", ipc_id);
+                KIPCM_UNLOCK(kipcm);
+                name_destroy(process_name);
+                return port_id_bad();
+        }
+
+        user_ipc_process = ipcp_imap_find_by_name(kipcm->instances, process_name);
+        if (!user_ipc_process) {
+                /*FIXME: Here we should distinguish betweem a flow for an app in
+                 * user-space or an ipc process in the system
+                 */
+                LOG_DBG("This flow should go for an app");
+                LOG_MISSING;
+        }
+
+        KIPCM_UNLOCK(kipcm);
+
+        pid =  kfa_port_id_reserve(kipcm->kfa, ipc_id);
+        if (!is_port_id_ok(pid)) {
+                name_destroy(process_name);
+                return port_id_bad();
+        }
+
+        if (kfa_flow_create(kipcm->kfa, ipc_id, pid)) {
+                LOG_ERR("Could not create flow in the KFA");
+                kfa_port_id_release(kipcm->kfa, pid);
+                name_destroy(process_name);
+                return port_id_bad();
+        }
+
+        name_destroy(process_name);
+        return pid;
+}
+EXPORT_SYMBOL(kipcm_allocate_port);
 
 int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
                                        ipc_process_id_t ipc_id,

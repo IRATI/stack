@@ -443,6 +443,18 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 	        }
 	        return 0;
 	}
+	case RINA_C_RMT_DUMP_FT_REQUEST: {
+	        return 0;
+	}
+	case RINA_C_RMT_DUMP_FT_REPLY: {
+	        RmtDumpPDUFTEntriesResponseMessage * rmtDumReply =
+	                        dynamic_cast<RmtDumpPDUFTEntriesResponseMessage *>(message);
+	        if (putRmtDumpPDUFTEntriesResponseObject(netlinkMessage,
+	                        *rmtDumReply) < 0) {
+	                return -1;
+	        }
+	        return 0;
+	}
 	default: {
 		return -1;
 	}
@@ -637,6 +649,10 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_RMT_MODIFY_FTE_REQUEST: {
 	        return parseRmtModifyPDUFTEntriesRequestMessage(
+	                        netlinkMessageHeader);
+	}
+	case RINA_C_RMT_DUMP_FT_REPLY: {
+	        return parseRmtDumpPDUFTEntriesResponseMessage(
 	                        netlinkMessageHeader);
 	}
 	default: {
@@ -2829,6 +2845,31 @@ int putRmtModifyPDUFTEntriesRequestObject(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
                         "Error building RmtModifyPDUFTEntriesRequestMessage Netlink object");
+        return -1;
+}
+
+int putRmtDumpPDUFTEntriesResponseObject(nl_msg* netlinkMessage,
+                const RmtDumpPDUFTEntriesResponseMessage& object) {
+        struct nlattr *entries;
+
+        NLA_PUT_U32(netlinkMessage, RDPFTE_ATTR_RESULT, object.getResult());
+
+        if (!(entries =
+                        nla_nest_start(netlinkMessage, RDPFTE_ATTR_ENTRIES))) {
+                goto nla_put_failure;
+        }
+
+        if (putListOfPFTEntries(netlinkMessage,
+                        object.getEntries()) < 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, entries);
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building RmtDumpPDUFTEntriesResponseMessage Netlink object");
         return -1;
 }
 
@@ -5498,6 +5539,70 @@ RmtModifyPDUFTEntriesRequestMessage * parseRmtModifyPDUFTEntriesRequestMessage(
         if (attrs[RMPFTE_ATTR_ENTRIES]) {
                 status = parseListOfPDUFTEntries(
                                 attrs[RMPFTE_ATTR_ENTRIES], result);
+                if (status != 0){
+                        delete result;
+                        return 0;
+                }
+        }
+
+        return result;
+}
+
+int parseListOfPDUFTEntries2(nlattr *nested,
+                RmtDumpPDUFTEntriesResponseMessage * message){
+        nlattr * nla;
+        int rem;
+        PDUForwardingTableEntry * pfte;
+
+        for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+                     nla_ok(nla, rem);
+                     nla = nla_next(nla, &(rem))){
+                /* validate & parse attribute */
+                pfte = parsePDUForwardingTableEntry(nla);
+                if (pfte == 0){
+                        return -1;
+                }
+                message->addEntry(*pfte);
+                delete pfte;
+        }
+
+        if (rem > 0){
+                LOG_WARN("Missing bits to parse");
+        }
+
+        return 0;
+}
+
+RmtDumpPDUFTEntriesResponseMessage * parseRmtDumpPDUFTEntriesResponseMessage(
+                nlmsghdr *hdr) {
+        struct nla_policy attr_policy[RDPFTE_ATTR_MAX + 1];
+        attr_policy[RDPFTE_ATTR_RESULT].type = NLA_U32;
+        attr_policy[RDPFTE_ATTR_RESULT].minlen = 4;
+        attr_policy[RDPFTE_ATTR_RESULT].maxlen = 4;
+        attr_policy[RDPFTE_ATTR_ENTRIES].type = NLA_NESTED;
+        attr_policy[RDPFTE_ATTR_ENTRIES].minlen = 0;
+        attr_policy[RDPFTE_ATTR_ENTRIES].maxlen = 0;
+        struct nlattr *attrs[RDPFTE_ATTR_MAX + 1];
+
+        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+                        RDPFTE_ATTR_MAX, attr_policy);
+        if (err < 0) {
+                LOG_ERR("Error parsing RmtDumpPDUFTEntriesResponseMessage information from Netlink message: %d",
+                         err);
+                return 0;
+        }
+
+        RmtDumpPDUFTEntriesResponseMessage * result =
+                        new RmtDumpPDUFTEntriesResponseMessage();
+
+        if (attrs[RDPFTE_ATTR_RESULT]){
+                result->setResult(nla_get_u32(attrs[RDPFTE_ATTR_RESULT]));
+        }
+
+        int status = 0;
+        if (attrs[RDPFTE_ATTR_ENTRIES]) {
+                status = parseListOfPDUFTEntries2(
+                                attrs[RDPFTE_ATTR_ENTRIES], result);
                 if (status != 0){
                         delete result;
                         return 0;

@@ -92,7 +92,7 @@ void rina_personality_exit(void)
         LOG_DBG("Personality layer finalized successfully");
 }
 
-static int is_name_ok(const char * name)
+static int is_string_ok(const char * name)
 {
         LOG_DBG("Checking name");
 
@@ -188,7 +188,7 @@ struct personality * rina_personality_register(const char *              name,
         struct personality * tmp;
         struct personality * pers;
 
-        if (!is_name_ok(name)) {
+        if (!is_string_ok(name)) {
                 LOG_ERR("Name is bogus, cannot register personality");
                 return NULL;
         }
@@ -272,7 +272,7 @@ int rina_personality_unregister(struct personality * pers)
         name = kobject_name(&pers->kobj);
 
         ASSERT(name);
-        ASSERT(is_name_ok(name));
+        ASSERT(is_string_ok(name));
 
         LOG_DBG("Unregistering personality '%s'", name);
 

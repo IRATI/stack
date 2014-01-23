@@ -760,6 +760,8 @@ MAKE_COLLECTION_ITERABLE(FlowInformationListIterator, FlowInformation, std::list
 MAKE_COLLECTION_ITERABLE(NeighborListIterator, Neighbor, std::list, rina::Neighbor);
 /* Define iterator for PDU Forwarding Table Entry list */
 MAKE_COLLECTION_ITERABLE(PDUForwardingTableListIterator, PDUForwardingTableEntry, std::list, rina::PDUForwardingTableEntry);
+/* Define iterator for Unsigned int list */
+MAKE_COLLECTION_ITERABLE(UnsignedIntListIterator, Long, std::list, unsigned int);
 
 %template(DIFPropertiesVector) std::vector<rina::DIFProperties>;
 %template(FlowVector) std::vector<rina::Flow>;
@@ -783,4 +785,5 @@ MAKE_COLLECTION_ITERABLE(PDUForwardingTableListIterator, PDUForwardingTableEntry
 %template(KernelIPCProcessSingleton) Singleton<rina::KernelIPCProcess>;
 %template(NeighborList) std::list<rina::Neighbor>;
 %template(PDUForwardingTableEntryList) std::list<rina::PDUForwardingTableEntry>;
+%template(UnsignedIntList) std::list<unsigned int>;
 

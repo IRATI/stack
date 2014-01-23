@@ -145,7 +145,7 @@ public class FlowAllocatorImpl implements FlowAllocator{
 			//There is an entry and the address is this IPC Process, create a FAI, extract the Flow object from the CDAP message and
 			//call the FAI
 			try {
-				portId = ipcManager.allocatePortId(0);
+				portId = ipcManager.allocatePortId(flow.getDestinationNamingInfo());
 			}catch (Exception ex) {
 				log.error("Problems requesting an available port-id: "+ex.getMessage() 
 						+ " Ignoring the Flow allocation request");
@@ -208,7 +208,7 @@ public class FlowAllocatorImpl implements FlowAllocator{
 		}
 		
 		try {
-			portId = ipcManager.allocatePortId(event.getFlowRequestorIPCProcessId());
+			portId = ipcManager.allocatePortId(event.getLocalApplicationName());
 			log.debug("Got assigned port-id " + portId);
 		} catch (Exception ex) {
 			log.error("Problems requesting an available port-id to the Kernel IPC Maanager: " 

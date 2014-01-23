@@ -92,7 +92,7 @@ int           name_cpy_from_user(const struct name __user * src,
                                  struct name *              dst);
 
 bool          name_is_equal(const struct name * a, const struct name * b);
-bool          is_name_ok(const struct name * n);
+bool          name_is_ok(const struct name * n);
 
 /* Returns a name as a (newly allocated) string */
 char *        name_tostring(const struct name * n);
