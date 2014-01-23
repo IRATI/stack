@@ -1274,7 +1274,7 @@ static int notify_ipcp_dump_pft(void *             data,
                 goto end;
         }
 
-        INIT_LIST_HEAD(entries.next);
+        INIT_LIST_HEAD(&entries);
         if (ipc_process->ops->pft_dump(ipc_process->data,
                                        &entries)) {
                 LOG_ERR("Could not dump PFT");
