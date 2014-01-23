@@ -8,7 +8,7 @@ import eu.irati.librina.Neighbor;
 
 import rina.cdap.api.CDAPException;
 import rina.cdap.api.CDAPSessionManager;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 
 /**
  * Different usefull functions

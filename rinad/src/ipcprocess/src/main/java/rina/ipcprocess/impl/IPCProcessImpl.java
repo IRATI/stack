@@ -45,6 +45,7 @@ import rina.enrollment.api.EnrollmentTask;
 import rina.flowallocator.api.DirectoryForwardingTableEntry;
 import rina.flowallocator.api.Flow;
 import rina.flowallocator.api.FlowAllocator;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
 import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
 import rina.ipcprocess.impl.flowallocator.FlowAllocatorImpl;
@@ -90,16 +91,9 @@ import eu.irati.librina.QueryRIBRequestEvent;
 import eu.irati.librina.UpdateConnectionResponseEvent;
 import eu.irati.librina.rina;
 
-public class IPCProcess {
-	
-	public static final String MANAGEMENT_AE = "Management";
-    public static final String DATA_TRANSFER_AE = "Data Transfer";
-    public static final int DEFAULT_MAX_SDU_SIZE_IN_BYTES = 10000;
-	public static final long CONFIG_FILE_POLL_PERIOD_IN_MS = 5000;
+public class IPCProcessImpl implements IPCProcess {
     
-    public enum State {NULL, INITIALIZED, ASSIGN_TO_DIF_IN_PROCESS, ASSIGNED_TO_DIF};
-	
-	private static final Log log = LogFactory.getLog(IPCProcess.class);
+	private static final Log log = LogFactory.getLog(IPCProcessImpl.class);
 	
 	/** The state */
 	private State operationalState = State.NULL;
@@ -143,9 +137,6 @@ public class IPCProcess {
 	/** The Flow Allocator */
 	private FlowAllocator flowAllocator = null;
 	
-	/** Static instance to implement the singleton pattern */
-	private static IPCProcess instance = null;
-	
 	/** The IPC Process name */
 	private ApplicationProcessNamingInformation name = null;
 	
@@ -155,15 +146,7 @@ public class IPCProcess {
 	/** The config file location */
 	private String configFileLocation = null;
 	
-	public static IPCProcess getInstance() {
-		if (instance == null) {
-			instance = new IPCProcess();
-		}
-		
-		return instance;
-	}
-	
-	private IPCProcess(){
+	public IPCProcessImpl(){
 	}
 	
 	public void initialize(
@@ -190,11 +173,11 @@ public class IPCProcess {
 		resourceAllocator = new ResourceAllocatorImpl();
 		registrationManager = new RegistrationManagerImpl();
 		flowAllocator = new FlowAllocatorImpl();
-		((RIBDaemonImpl) ribDaemon).setIPCProcess(this);
-		((EnrollmentTaskImpl) enrollmentTask).setIPCProcess(this);
-		((ResourceAllocatorImpl) resourceAllocator).setIPCProcess(this);
-		((RegistrationManagerImpl) registrationManager).setIPCProcess(this);
-		((FlowAllocatorImpl) flowAllocator).setIPCProcess(this);
+		ribDaemon.setIPCProcess(this);
+		enrollmentTask.setIPCProcess(this);
+		resourceAllocator.setIPCProcess(this);
+		registrationManager.setIPCProcess(this);
+		flowAllocator.setIPCProcess(this);
 		
 		populateRIB();
 
@@ -340,9 +323,9 @@ public class IPCProcess {
 	
 	private void populateRIB(){
 		try {
-			RIBObject ribObject = new WhatevercastNameSetRIBObject();
+			RIBObject ribObject = new WhatevercastNameSetRIBObject(this);
 			this.ribDaemon.addRIBObject(ribObject);
-			ribObject = new DataTransferConstantsRIBObject();
+			ribObject = new DataTransferConstantsRIBObject(this);
 			this.ribDaemon.addRIBObject(ribObject);
 		} catch(Exception ex) {
 			log.error("Problems populating RIB: "+ex.getMessage());

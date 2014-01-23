@@ -1,5 +1,6 @@
 package rina.resourceallocator.api;
 
+import rina.ipcprocess.api.IPCProcessComponent;
 import eu.irati.librina.AllocateFlowRequestResultEvent;
 import eu.irati.librina.DeallocateFlowResponseEvent;
 import eu.irati.librina.FlowDeallocatedEvent;
@@ -14,7 +15,7 @@ import eu.irati.librina.IPCProcessDIFRegistrationEvent;
  * @author eduardgrasa
  *
  */
-public interface NMinus1FlowManager {
+public interface NMinus1FlowManager extends IPCProcessComponent {
 
 	/**
 	 * Allocate an N-1 Flow with the requested QoS to the destination 

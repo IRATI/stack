@@ -27,7 +27,7 @@ import rina.flowallocator.api.FlowAllocator;
 import rina.flowallocator.api.FlowAllocatorInstance;
 import rina.flowallocator.api.Flow;
 import rina.flowallocator.api.Flow.State;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.flowallocator.policies.NewFlowRequestPolicy;
 import rina.ipcprocess.impl.flowallocator.policies.NewFlowRequestPolicyImpl;
 import rina.ipcprocess.impl.flowallocator.timertasks.TearDownFlowTimerTask;
@@ -50,7 +50,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 	
 	public enum FAIState {NULL, CONNECTION_CREATE_REQUESTED, MESSAGE_TO_PEER_FAI_SENT, 
 		APP_NOTIFIED_OF_INCOMING_FLOW, CONNECTION_UPDATE_REQUESTED, FLOW_ALLOCATED, 
-		CONNECTION_DESTROY_REQUESTED}
+		CONNECTION_DESTROY_REQUESTED, WAITING_2_MPL_BEFORE_TEARING_DOWN}
 	
 	private FAIState state = FAIState.NULL;
 	
@@ -577,6 +577,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		try{
 			//1 Update flow state
 			this.flow.setState(State.WAITING_2_MPL_BEFORE_TEARING_DOWN);
+			this.state = FAIState.WAITING_2_MPL_BEFORE_TEARING_DOWN;
 			
 			//2 Send M_DELETE
 			try{
@@ -612,6 +613,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		
 		//1 Update flow state
 		this.flow.setState(State.WAITING_2_MPL_BEFORE_TEARING_DOWN);
+		this.state = FAIState.WAITING_2_MPL_BEFORE_TEARING_DOWN;
 		
 		//3 Set timer
 		TearDownFlowTimerTask timerTask = new TearDownFlowTimerTask(this, this.objectName, false);

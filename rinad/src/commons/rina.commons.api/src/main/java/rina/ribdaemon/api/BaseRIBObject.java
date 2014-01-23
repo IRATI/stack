@@ -6,6 +6,7 @@ import java.util.List;
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
 import rina.encoding.api.Encoder;
+import rina.ipcprocess.api.IPCProcess;
 
 /**
  * The base RIB Handler that provides a default behaviour for the RIB Handlers. 
@@ -45,12 +46,19 @@ public abstract class BaseRIBObject implements RIBObject{
 	 * The permissions associated to this RIB node
 	 */
 	private Permissions permissions = null;
+	
+	private IPCProcess ipcProcess = null;
 
-	public BaseRIBObject(String objectClass, long objectInstance, String objectName){
+	public BaseRIBObject(IPCProcess ipcProcess, String objectClass, long objectInstance, String objectName) {
+		this.ipcProcess = ipcProcess;
 		children = new ArrayList<RIBObject>();
 		this.objectName = objectName;
 		this.objectClass = objectClass;
 		this.objectInstance = objectInstance;
+	}
+	
+	public IPCProcess getIPCProcess() {
+		return ipcProcess;
 	}
 	
 	public eu.irati.librina.RIBObject toLibrinaRIBObject() {

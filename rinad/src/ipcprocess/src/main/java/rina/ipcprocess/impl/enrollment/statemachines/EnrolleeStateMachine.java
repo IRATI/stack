@@ -21,7 +21,7 @@ import rina.encoding.api.Encoder;
 import rina.enrollment.api.EnrollmentInformationRequest;
 import rina.enrollment.api.EnrollmentRequest;
 import rina.enrollment.api.EnrollmentTask;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
 import rina.ipcprocess.impl.enrollment.ribobjects.AddressRIBObject;
 import rina.ipcprocess.impl.enrollment.ribobjects.NeighborSetRIBObject;
@@ -57,10 +57,11 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 	
 	private boolean wasDIFMemberBeforeEnrollment = false;
 	
-	public EnrolleeStateMachine(RIBDaemon ribDaemon, CDAPSessionManager cdapSessionManager, Encoder encoder, 
-			ApplicationProcessNamingInformation remoteNamingInfo, EnrollmentTask enrollmentTask, long timeout){
-		super(ribDaemon, cdapSessionManager, encoder, remoteNamingInfo, enrollmentTask, timeout);
-		ipcProcess = IPCProcess.getInstance();
+	public EnrolleeStateMachine(IPCProcess ipcProcess, 
+			ApplicationProcessNamingInformation remoteNamingInfo, long timeout){
+		super(ipcProcess.getRIBDaemon(), ipcProcess.getCDAPSessionManager(), ipcProcess.getEncoder(), 
+				remoteNamingInfo, ipcProcess.getEnrollmentTask(), timeout);
+		this.ipcProcess = ipcProcess;
 		difInformation = ipcProcess.getDIFInformation();
 	}
 	
