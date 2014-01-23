@@ -676,17 +676,11 @@ static int dummy_update_dif_config(struct ipcp_instance_data * data,
 
 static const struct name * dummy_ipcp_name(struct ipcp_instance_data * data)
 {
-        const struct name * retname;
-
         ASSERT(data);
+        ASSERT(data->info);
+        ASSERT(name_is_ok(data->info->name));
 
-        retname = data->info->name;
-        if (!retname){
-                LOG_ERR("Could not retrieve IPCP name");
-                return NULL;
-        }
-
-        return retname;
+        return data->info->name;
 }
 
 static struct ipcp_instance_ops dummy_instance_ops = {

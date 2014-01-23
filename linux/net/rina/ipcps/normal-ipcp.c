@@ -616,17 +616,11 @@ static int normal_pft_dump(struct ipcp_instance_data * data,
 
 static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
 {
-        const struct name * retname;
-
         ASSERT(data);
+        ASSERT(data->info);
+        ASSERT(name_is_ok(data->info->name));
 
-        retname = data->info->name;
-        if (!retname){
-                LOG_ERR("Could not retrieve IPCP name");
-                return NULL;
-        }
-
-        return retname;
+        return data->info->name;
 }
 
 /*  FIXME: register ops */

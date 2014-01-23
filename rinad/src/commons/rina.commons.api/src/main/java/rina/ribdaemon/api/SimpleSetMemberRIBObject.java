@@ -1,5 +1,7 @@
 package rina.ribdaemon.api;
 
+import rina.ipcprocess.api.IPCProcess;
+
 /**
  * A Simple RIB object that is a member of a set
  * (for example whatevercast names, qos cubes, ...).
@@ -10,9 +12,9 @@ package rina.ribdaemon.api;
  */
 public class SimpleSetMemberRIBObject extends SimpleRIBObject{
 
-	public SimpleSetMemberRIBObject(String objectClass,
+	public SimpleSetMemberRIBObject(IPCProcess ipcProcess, String objectClass,
 			String objectName, Object value) {
-		super(objectClass, objectName, value);
+		super(ipcProcess, objectClass, objectName, value);
 	}
 
 	@Override

@@ -6,7 +6,7 @@ import org.apache.commons.logging.LogFactory;
 import rina.cdap.api.CDAPSession;
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.CDAPSessionManager;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.events.NMinusOneFlowAllocatedEvent;
 import rina.ipcprocess.impl.events.NMinusOneFlowAllocationFailedEvent;
 import rina.ipcprocess.impl.events.NMinusOneFlowDeallocatedEvent;
@@ -67,9 +67,9 @@ public class NMinus1FlowManagerImpl implements NMinus1FlowManager{
 	
 	private void populateRIB(){
 		try{
-			RIBObject ribObject = new NMinus1FlowSetRIBObject(this);
+			RIBObject ribObject = new NMinus1FlowSetRIBObject(ipcProcess, this);
 			ribDaemon.addRIBObject(ribObject);
-			ribObject = new DIFRegistrationSetRIBObject(this);
+			ribObject = new DIFRegistrationSetRIBObject(ipcProcess, this);
 			ribDaemon.addRIBObject(ribObject);
 		}catch(RIBDaemonException ex){
 			ex.printStackTrace();

@@ -13,7 +13,7 @@ import rina.cdap.api.message.CDAPMessage;
 import rina.events.api.Event;
 import rina.events.api.EventListener;
 import rina.flowallocator.api.DirectoryForwardingTableEntry;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.events.ConnectivityToNeighborLostEvent;
 import rina.ribdaemon.api.BaseRIBObject;
 import rina.ribdaemon.api.NotificationPolicy;
@@ -34,13 +34,10 @@ public class DirectoryForwardingTableEntrySetRIBObject extends BaseRIBObject imp
 	
 	private static final Log log = LogFactory.getLog(DirectoryForwardingTableEntrySetRIBObject.class);
 	
-	private IPCProcess ipcProcess = null;
-	
-	public DirectoryForwardingTableEntrySetRIBObject(){
-		super(DIRECTORY_FORWARDING_TABLE_ENTRY_SET_RIB_OBJECT_CLASS, 
+	public DirectoryForwardingTableEntrySetRIBObject(IPCProcess ipcProcess){
+		super(ipcProcess, DIRECTORY_FORWARDING_TABLE_ENTRY_SET_RIB_OBJECT_CLASS, 
 				ObjectInstanceGenerator.getObjectInstance(), 
 				DIRECTORY_FORWARDING_ENTRY_SET_RIB_OBJECT_NAME);
-		ipcProcess = IPCProcess.getInstance();
 		setRIBDaemon(ipcProcess.getRIBDaemon());
 		setEncoder(ipcProcess.getEncoder());
 		//Subscribe to events
@@ -134,7 +131,7 @@ public class DirectoryForwardingTableEntrySetRIBObject extends BaseRIBObject imp
 			NotificationPolicy notificationObject = null;
 			
 			//Only notify if we're not in the enrollment phase
-			if (ipcProcess.getOperationalState() == IPCProcess.State.ASSIGNED_TO_DIF){
+			if (getIPCProcess().getOperationalState() == IPCProcess.State.ASSIGNED_TO_DIF){
 				notificationObject = new NotificationPolicy(new int[]{cdapSessionDescriptor.getPortId()});
 			}
 			
@@ -174,7 +171,7 @@ public class DirectoryForwardingTableEntrySetRIBObject extends BaseRIBObject imp
 		DirectoryForwardingTableEntry existingEntry = this.getEntry(entry.getKey());
 		if (existingEntry == null){
 			//Create the new object
-			RIBObject ribObject = new DirectoryForwardingTableEntryRIBObject(
+			RIBObject ribObject = new DirectoryForwardingTableEntryRIBObject(getIPCProcess(),
 					this.getObjectName()+RIBObjectNames.SEPARATOR + entry.getKey(), entry);
 
 			//Add it as a child

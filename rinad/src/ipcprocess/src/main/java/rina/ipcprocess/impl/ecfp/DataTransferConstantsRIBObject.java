@@ -7,7 +7,7 @@ import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
 import rina.cdap.api.message.ObjectValue;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ribdaemon.api.BaseRIBObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
 import rina.ribdaemon.api.RIBDaemonException;
@@ -23,13 +23,10 @@ public class DataTransferConstantsRIBObject extends BaseRIBObject{
 
 	public static final String DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS = "datatransfercons";
 
-	private IPCProcess ipcProcess = null;
-
-	public DataTransferConstantsRIBObject() {
-		super(DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS, 
+	public DataTransferConstantsRIBObject(IPCProcess ipcProcess) {
+		super(ipcProcess, DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS, 
 				ObjectInstanceGenerator.getObjectInstance(), 
 				DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME);
-		ipcProcess = IPCProcess.getInstance();
 		setRIBDaemon(ipcProcess.getRIBDaemon());
 		setEncoder(ipcProcess.getEncoder());
 	}
@@ -44,7 +41,7 @@ public class DataTransferConstantsRIBObject extends BaseRIBObject{
 		try{
 			ObjectValue objectValue = new ObjectValue();
 			objectValue.setByteval(this.getEncoder().encode(getObjectValue()));
-			CDAPSessionManager cdapSessionManager = ipcProcess.getCDAPSessionManager();
+			CDAPSessionManager cdapSessionManager = getIPCProcess().getCDAPSessionManager();
 			CDAPMessage responseMessage = cdapSessionManager.getReadObjectResponseMessage(cdapSessionDescriptor.getPortId(), 
 					null, this.getObjectClass(), this.getObjectInstance(), this.getObjectName(), objectValue, 0, null, 
 					cdapMessage.getInvokeID());
@@ -90,7 +87,7 @@ public class DataTransferConstantsRIBObject extends BaseRIBObject{
 		candidate = (DataTransferConstants) value;
 		DataTransferConstants objectValue = null;
 		
-		DIFInformation difInformation = ipcProcess.getDIFInformation();
+		DIFInformation difInformation = getIPCProcess().getDIFInformation();
 		if (difInformation == null){
 			difInformation = new DIFInformation();
 			DIFConfiguration difConfiguration = new DIFConfiguration();
@@ -114,7 +111,7 @@ public class DataTransferConstantsRIBObject extends BaseRIBObject{
 
 	@Override
 	public Object getObjectValue() {
-		DIFInformation difInformation = ipcProcess.getDIFInformation();
+		DIFInformation difInformation = getIPCProcess().getDIFInformation();
 		if (difInformation != null) {
 			return difInformation.getDifConfiguration().getDataTransferConstants();
 		}

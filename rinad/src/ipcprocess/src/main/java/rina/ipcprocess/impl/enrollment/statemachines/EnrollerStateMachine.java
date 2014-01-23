@@ -5,32 +5,27 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import eu.irati.librina.ApplicationProcessNamingInformation;
-import eu.irati.librina.Neighbor;
-import eu.irati.librina.NeighborList;
-import eu.irati.librina.rina;
-
 import rina.applicationprocess.api.WhatevercastName;
 import rina.cdap.api.CDAPException;
 import rina.cdap.api.CDAPSessionDescriptor;
-import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
 import rina.cdap.api.message.ObjectValue;
 import rina.configuration.AddressPrefixConfiguration;
 import rina.configuration.KnownIPCProcessAddress;
 import rina.configuration.RINAConfiguration;
-import rina.encoding.api.Encoder;
 import rina.enrollment.api.EnrollmentInformationRequest;
-import rina.enrollment.api.EnrollmentTask;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
 import rina.ipcprocess.impl.enrollment.ribobjects.NeighborSetRIBObject;
 import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
 import rina.ipcprocess.impl.registrationmanager.ribobjects.DirectoryForwardingTableEntrySetRIBObject;
-import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBDaemonException;
 import rina.ribdaemon.api.RIBObject;
 import rina.ribdaemon.api.RIBObjectNames;
+import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.Neighbor;
+import eu.irati.librina.NeighborList;
+import eu.irati.librina.rina;
 
 /**
  * The state machine of the party that is a member of the DIF
@@ -44,10 +39,11 @@ public class EnrollerStateMachine extends BaseEnrollmentStateMachine{
 	
 	private IPCProcess ipcProcess = null;
 	
-	public EnrollerStateMachine(RIBDaemon ribDaemon, CDAPSessionManager cdapSessionManager, Encoder encoder, 
-			ApplicationProcessNamingInformation remoteNamingInfo, EnrollmentTask enrollmentTask, long timeout){
-		super(ribDaemon, cdapSessionManager, encoder, remoteNamingInfo, enrollmentTask, timeout);
-		ipcProcess = IPCProcess.getInstance();
+	public EnrollerStateMachine(IPCProcess ipcProcess, 
+			ApplicationProcessNamingInformation remoteNamingInfo, long timeout){
+		super(ipcProcess.getRIBDaemon(), ipcProcess.getCDAPSessionManager(), ipcProcess.getEncoder(), 
+				remoteNamingInfo, ipcProcess.getEnrollmentTask(), timeout);
+		this.ipcProcess = ipcProcess;
 	}
 	
 	/**
