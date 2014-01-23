@@ -10,7 +10,7 @@ import eu.irati.librina.Neighbor;
 
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ribdaemon.api.BaseRIBObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
 import rina.ribdaemon.api.RIBDaemonException;
@@ -30,12 +30,10 @@ public class NeighborSetRIBObject extends BaseRIBObject{
     public static final String NEIGHBOR_SET_RIB_OBJECT_CLASS = "neighbor set";
 	
 	private static final Log log = LogFactory.getLog(NeighborSetRIBObject.class);
-	private IPCProcess ipcProcess = null;
 	
-	public NeighborSetRIBObject(){
-		super(NEIGHBOR_SET_RIB_OBJECT_CLASS, 
+	public NeighborSetRIBObject(IPCProcess ipcProcess){
+		super(ipcProcess, NEIGHBOR_SET_RIB_OBJECT_CLASS, 
 				ObjectInstanceGenerator.getObjectInstance(), NEIGHBOR_SET_RIB_OBJECT_NAME);
-		ipcProcess = IPCProcess.getInstance();
 		setRIBDaemon(ipcProcess.getRIBDaemon());
 		setEncoder(ipcProcess.getEncoder());
 	}
@@ -119,14 +117,14 @@ public class NeighborSetRIBObject extends BaseRIBObject{
 	private synchronized void createOrUpdateNeighbor(String objectName, Neighbor neighbor) throws RIBDaemonException{
 		//Avoid creating myself as a neighbor
 		if (neighbor.getName().getProcessName().equals(
-				ipcProcess.getName().getProcessName())){
+				getIPCProcess().getName().getProcessName())){
 			return;
 		}
 		
 		RIBObject child = this.getChild(objectName);
 		if (child == null){
 			//Create the new RIBOBject
-			child = new NeighborRIBObject(objectName, neighbor);
+			child = new NeighborRIBObject(getIPCProcess(), objectName, neighbor);
 			this.addChild(child);
 			child.setParent(this);
 			getRIBDaemon().addRIBObject(child);

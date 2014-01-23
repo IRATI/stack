@@ -27,7 +27,6 @@
 #include <linux/list.h>
 #include <linux/netdevice.h>
 #include <linux/if_packet.h>
-#include <linux/kfifo.h>
 #include <linux/workqueue.h>
 
 #define PROTO_LEN   32
@@ -87,7 +86,7 @@ struct shim_eth_flow {
         enum port_id_state port_id_state;
 
         /* Used when flow is not allocated yet */
-        struct kfifo       sdu_queue;
+        struct rfifo *     sdu_queue;
 };
 
 /*
@@ -312,7 +311,8 @@ static int flow_destroy(struct ipcp_instance_data * data,
 
         if (flow->dest_pa) gpa_destroy(flow->dest_pa);
         if (flow->dest_ha) gha_destroy(flow->dest_ha);
-        kfifo_free(&flow->sdu_queue);
+        if (flow->sdu_queue)  
+                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
         rkfree(flow);
 
         return 0;
@@ -357,16 +357,13 @@ static void rinarp_resolve_handler(void *             opaque,
                         return;
                 }
 
-                while (!kfifo_is_empty(&flow->sdu_queue)) {
+                ASSERT(flow->sdu_queue);
+
+                while (!rfifo_is_empty(flow->sdu_queue)) {
                         struct sdu * tmp = NULL;
 
-                        if (kfifo_out(&flow->sdu_queue,
-                                      &tmp,
-                                      sizeof(struct sdu *)) <
-                            sizeof(struct sdu *)) {
-                                LOG_ERR("There is not enough data in fifo");
-                                return;
-                        }
+                        tmp = rfifo_pop(flow->sdu_queue);
+                        ASSERT(tmp);
 
                         LOG_DBG("Got a new element from the fifo");
 
@@ -375,7 +372,9 @@ static void rinarp_resolve_handler(void *             opaque,
                                 return;
                         }
                 }
-                kfifo_free(&flow->sdu_queue);
+
+                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
+                flow->sdu_queue = NULL;
 
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
@@ -430,7 +429,8 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 list_add(&flow->list, &data->flows);
                 spin_unlock(&data->lock);
 
-                if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_KERNEL)) {
+                flow->sdu_queue = rfifo_create();
+                if (!flow->sdu_queue) {
                         LOG_ERR("Couldn't create the sdu queue "
                                 "for a new flow");
                         deallocate_and_destroy_flow(data, flow);
@@ -492,36 +492,39 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 spin_unlock(&data->lock);
 
-                while (!kfifo_is_empty(&flow->sdu_queue)) {
-                        struct sdu * tmp = NULL;
+                ASSERT(flow->sdu_queue);
 
-                        if (kfifo_out(&flow->sdu_queue,
-                                      &tmp,
-                                      sizeof(struct sdu *)) <
-                            sizeof(struct sdu *)) {
-                                LOG_ERR("There is not enough data in fifo");
-                                return -1;
-                        }
+                while (!rfifo_is_empty(flow->sdu_queue)) {
+                        struct sdu * tmp = NULL;
+                        
+                        tmp = rfifo_pop(flow->sdu_queue);
+                        ASSERT(tmp);
 
                         LOG_DBG("Got a new element from the fifo");
-
+                        
                         if (kfa_sdu_post(data->kfa, flow->port_id, tmp)) {
                                 LOG_ERR("Couldn't post SDU to KFA ...");
                                 return -1;
                         }
                 }
-                kfifo_free(&flow->sdu_queue);
+
+                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
+                flow->sdu_queue = NULL;
+
         } else {
                 spin_lock(&data->lock);
                 flow->port_id_state = PORT_STATE_NULL;
                 spin_unlock(&data->lock);
+
                 /*
                  *  If we would destroy the flow, the application
                  *  we refused would constantly try to allocate
                  *  a flow again. This should only be allowed if
                  *  the IPC manager deallocates the NULL state flow first.
                  */
-                kfifo_free(&flow->sdu_queue);
+                ASSERT(flow->sdu_queue);
+                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
+                flow->sdu_queue = NULL;
         }
 
         return 0;
@@ -847,8 +850,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
                 flow->dest_ha       = ghaddr;
-                flow->port_id       = kfa_flow_create(data->kfa, data->id,
-                                                      false);
+                flow->port_id       = kfa_port_id_reserve(data->kfa, data->id);
 
                 if (!is_port_id_ok(flow->port_id)) {
                         LOG_DBG("Port id is not ok");
@@ -862,35 +864,37 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         return -1;
                 }
 
-                LOG_DBG("Added flow to the list");
-
-                if (kfifo_alloc(&flow->sdu_queue, PAGE_SIZE, GFP_ATOMIC)) {
-                        LOG_ERR("Couldn't create the sdu queue"
-                                "for a new flow");
+                if (kfa_flow_create(data->kfa, data->id, flow->port_id)){
+                        LOG_DBG("Could not create flow in KFA");
                         flow->port_id_state = PORT_STATE_NULL;
+                        kfa_port_id_release(data->kfa, flow->port_id);
+                        spin_unlock(&data->lock);
+                        sdu_destroy(du);
+                        gha_destroy(ghaddr);
+                        if (flow_destroy(data, flow))
+                                LOG_ERR("Problems destroying shim-eth-vlan "
+                                        "flow");
+                        return -1;
+                }
+
+                LOG_DBG("Added flow to the list");
+                
+                flow->sdu_queue = rfifo_create();
+                if (!flow->sdu_queue) {
+                        LOG_ERR("Couldn't create the sdu queue "
+                                "for a new flow");
                         spin_unlock(&data->lock);
                         sdu_destroy(du);
                         deallocate_and_destroy_flow(data, flow);
                         return -1;
                 }
+
                 LOG_DBG("Created the queue");
 
                 /* Store SDU in queue */
-                if (kfifo_avail(&flow->sdu_queue) < (sizeof(struct sdu *))) {
-                        LOG_ERR("There is no space in the fifo");
-                        flow->port_id_state = PORT_STATE_NULL;
-                        spin_unlock(&data->lock);
-                        sdu_destroy(du);
-                        deallocate_and_destroy_flow(data, flow);
-                        return -1;
-                }
-
-                if (kfifo_in(&flow->sdu_queue,
-                             &du,
-                             sizeof(struct sdu *)) != sizeof(struct sdu *)) {
+                if (rfifo_push(flow->sdu_queue, du)) {
                         LOG_ERR("Could not write %zd bytes into the fifo",
                                 sizeof(struct sdu *));
-                        flow->port_id_state = PORT_STATE_NULL;
                         spin_unlock(&data->lock);
                         sdu_destroy(du);
                         deallocate_and_destroy_flow(data, flow);
@@ -960,21 +964,10 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
                         LOG_DBG("Queueing frame");
-
-                        if (kfifo_avail(&flow->sdu_queue) <
-                            (sizeof(struct sdu *))) {
-                                LOG_ERR("There is no space in the fifo");
-                                spin_unlock(&data->lock);
-                                sdu_destroy(du);
-                                return -1;
-                        }
-
-                        if (kfifo_in(&flow->sdu_queue,
-                                     &du,
-                                     sizeof(struct sdu *)) !=
-                            sizeof(struct sdu *)) {
-                                LOG_ERR("Could not write %zd bytes into the "
-                                        "fifo",
+    
+                        if (rfifo_push(flow->sdu_queue, du)) {
+                                LOG_ERR("Failed to write %zd bytes"
+                                        "into the fifo",
                                         sizeof(struct sdu *));
                                 spin_unlock(&data->lock);
                                 sdu_destroy(du);
@@ -1264,6 +1257,21 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         return 0;
 }
 
+static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
+{
+        const struct name * retname;
+
+        ASSERT(data);
+
+        retname = data->name;
+        if (!retname){
+                LOG_ERR("Could not retrieve IPCP name");
+                return NULL;
+        }
+
+        return retname; 
+} 
+
 static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_allocate_request  = eth_vlan_flow_allocate_request,
         .flow_allocate_response = eth_vlan_flow_allocate_response,
@@ -1273,6 +1281,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .sdu_write              = eth_vlan_sdu_write,
         .assign_to_dif          = eth_vlan_assign_to_dif,
         .update_dif_config      = eth_vlan_update_dif_config,
+        .ipcp_name              = eth_vlan_ipcp_name,
 };
 
 static struct ipcp_factory_data {

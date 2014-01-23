@@ -57,7 +57,6 @@ struct ipcp_flow {
 
         enum flow_state        state;
         struct ipcp_instance * ipc_process;
-        bool                   to_app;
         /* FIXME: To be wiped out */
         struct kfifo           sdu_ready;
         wait_queue_head_t      wait_queue;
@@ -109,44 +108,33 @@ int kfa_destroy(struct kfa * instance)
         return 0;
 }
 
-port_id_t kfa_flow_create(struct kfa *     instance,
-                          ipc_process_id_t id,
-                          bool             to_app)
+int kfa_flow_create(struct kfa *     instance,
+                    ipc_process_id_t id,
+                    port_id_t        pid)
 {
         struct ipcp_flow * flow;
-        port_id_t          pid;
 
         IRQ_BARRIER;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return port_id_bad();
+                return -1;
+        }
+
+        if (!is_port_id_ok(pid)) {
+                LOG_ERR("Bogus PID passed, bailing out");
+                return-1;
         }
 
         spin_lock(&instance->lock);
 
-        if (!instance->pidm) {
-                LOG_ERR("This instance doesn't have a PIDM");
-                spin_unlock(&instance->lock);
-                return port_id_bad();
-        }
-
-        pid = pidm_allocate(instance->pidm);
-        if (!is_port_id_ok(pid)) {
-                LOG_ERR("Cannot get a port-id");
-                spin_unlock(&instance->lock);
-                return port_id_bad();
-        }
-
         flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
         if (!flow) {
-                pidm_release(instance->pidm, pid);
                 spin_unlock(&instance->lock);
-                return port_id_bad();
+                return -1;
         }
 
         flow->state  = PORT_STATE_PENDING;
-        flow->to_app = to_app;
         atomic_set(&flow->readers, 0);
         atomic_set(&flow->writers, 0);
 
@@ -154,27 +142,25 @@ port_id_t kfa_flow_create(struct kfa *     instance,
 
         if (kfa_pmap_add_ni(instance->flows, pid, flow, id)) {
                 LOG_ERR("Could not map Flow and Port ID");
-                pidm_release(instance->pidm, pid);
                 rkfree(flow);
                 spin_unlock(&instance->lock);
-                return port_id_bad();
+                return -1;
         }
 
         spin_unlock(&instance->lock);
 
-        return pid;
+        return 0;
 }
 EXPORT_SYMBOL(kfa_flow_create);
 
 port_id_t kfa_port_id_reserve(struct kfa *     instance,
-                              ipc_process_id_t id,
-                              bool             to_app)
+                              ipc_process_id_t id)
 {
         port_id_t pid;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
+                return port_id_bad();
         }
 
         spin_lock(&instance->lock);
@@ -197,9 +183,8 @@ port_id_t kfa_port_id_reserve(struct kfa *     instance,
         return pid;
 }
 EXPORT_SYMBOL(kfa_port_id_reserve);
-
-port_id_t kfa_port_id_release(struct kfa * instance,
-                              port_id_t    port_id)
+int  kfa_port_id_release(struct kfa * instance,
+                         port_id_t    port_id)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
@@ -320,6 +305,11 @@ static int kfa_flow_destroy(struct kfa *       instance,
                             struct ipcp_flow * flow,
                             port_id_t          id)
 {
+        struct ipcp_instance * ipcp;
+
+        ASSERT(flow);
+
+        ipcp = flow->ipc_process;
         LOG_DBG("We are destroying a flow");
         kfifo_free(&flow->sdu_ready);
         rkfree(flow);
@@ -333,6 +323,16 @@ static int kfa_flow_destroy(struct kfa *       instance,
                 LOG_ERR("Could not release pid %d from the map", id);
                 return -1;
         }
+
+        ASSERT(ipcp);
+        ASSERT(ipcp->ops);
+        ASSERT(ipcp->data);
+
+        if (ipcp->ops->flow_destroy)
+                if (ipcp->ops->flow_destroy(ipcp->data, id)) {
+                        LOG_ERR("Problems destroying the flow");
+                        return -1;
+                }
 
         return 0;
 }

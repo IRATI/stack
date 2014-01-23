@@ -1,6 +1,6 @@
 package rina.ipcprocess.impl.resourceallocator;
 
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.resourceallocator.flowmanager.NMinus1FlowManagerImpl;
 import rina.resourceallocator.api.NMinus1FlowManager;
 import rina.resourceallocator.api.PDUForwardingTable;

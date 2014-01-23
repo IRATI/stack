@@ -27,7 +27,7 @@ import rina.flowallocator.api.FlowAllocator;
 import rina.flowallocator.api.FlowAllocatorInstance;
 import rina.flowallocator.api.Flow;
 import rina.flowallocator.api.Flow.State;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.flowallocator.policies.NewFlowRequestPolicy;
 import rina.ipcprocess.impl.flowallocator.policies.NewFlowRequestPolicyImpl;
 import rina.ipcprocess.impl.flowallocator.timertasks.TearDownFlowTimerTask;
@@ -567,7 +567,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 	 * the DTP and DTCP if it exists will be deleted automatically after 2MPL)
 	 * @throws IPCException
 	 */
-	public void submitDeallocate(FlowDeallocateRequestEvent event) {
+	public synchronized void submitDeallocate(FlowDeallocateRequestEvent event) {
 		if (state != FAIState.FLOW_ALLOCATED) {
 			log.error("Received deallocate request while not in FLOW_ALLOCATED state. " 
 					+ "Current state is: " + state );
@@ -575,7 +575,10 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		}
 
 		try{
-			//1 Send M_DELETE
+			//1 Update flow state
+			this.flow.setState(State.WAITING_2_MPL_BEFORE_TEARING_DOWN);
+			
+			//2 Send M_DELETE
 			try{
 				ObjectValue objectValue = new ObjectValue();
 				objectValue.setByteval(this.encoder.encode(flow));
@@ -585,9 +588,6 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 			}catch(Exception ex){
 				log.error("Problems sending M_DELETE flow request");
 			}
-
-			//2 Update flow state
-			this.flow.setState(State.WAITING_2_MPL_BEFORE_TEARING_DOWN);
 
 			//3 Wait 2*MPL before tearing down the flow
 			TearDownFlowTimerTask timerTask = new TearDownFlowTimerTask(this, this.objectName, true);
@@ -603,7 +603,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 	 * @param cdapMessage
 	 * @param underlyingPortId
 	 */
-	public void deleteFlowRequestMessageReceived(CDAPMessage cdapMessage, int underlyingPortId){
+	public synchronized void deleteFlowRequestMessageReceived(CDAPMessage cdapMessage, int underlyingPortId){
 		if (state != FAIState.FLOW_ALLOCATED) {
 			log.error("Received deallocate request while not in FLOW_ALLOCATED state. " 
 					+ "Current state is: " + state );
@@ -627,13 +627,6 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		releasePortId();
 
 		flowAllocator.removeFlowAllocatorInstance(portId);
-
-		try {
-			kernelIPCProcess.destroyConnection(flow.getConnections().get(0));
-		} catch (Exception ex) {
-			log.error("Problems requesting the kernel to destroy a connection: " 
-					+ ex.getMessage());
-		}
 
 		try{
 			this.ribDaemon.delete(Flow.FLOW_RIB_OBJECT_CLASS, flowObjectName);

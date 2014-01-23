@@ -15,7 +15,7 @@ import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
 import rina.configuration.RINAConfiguration;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.events.NeighborDeclaredDeadEvent;
 import rina.ribdaemon.api.BaseRIBObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
@@ -50,15 +50,12 @@ public class WatchdogRIBObject extends BaseRIBObject implements CDAPMessageHandl
 	 */
 	private long declaredDeadIntervalInMs = 0L;
 	
-	private IPCProcess ipcProcess = null;
-	
 	/**
 	 * Schedule the watchdogtimer_task to run every PERIOD_IN_MS milliseconds
 	 * @param ipcProcess
 	 */
-	public WatchdogRIBObject(){
-		super(WATCHDOG_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), WATCHDOG_OBJECT_NAME);
-		ipcProcess = IPCProcess.getInstance();
+	public WatchdogRIBObject(IPCProcess ipcProcess){
+		super(ipcProcess, WATCHDOG_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), WATCHDOG_OBJECT_NAME);
 		this.cdapSessionManager = ipcProcess.getCDAPSessionManager();
 		this.timer = new Timer();
 		timerTask = new WatchdogTimerTask(this);
@@ -67,7 +64,6 @@ public class WatchdogRIBObject extends BaseRIBObject implements CDAPMessageHandl
 		this.declaredDeadIntervalInMs = 
 				RINAConfiguration.getInstance().getLocalConfiguration().getDeclaredDeadIntervalInMs();
 		this.neighborStatistics = new ConcurrentHashMap<String, NeighborStatistics>();
-		ipcProcess = IPCProcess.getInstance();
 		timer.schedule(timerTask, new Double(periodInMs*Math.random()).longValue(), periodInMs);
 		setRIBDaemon(ipcProcess.getRIBDaemon());
 	}
@@ -115,7 +111,7 @@ public class WatchdogRIBObject extends BaseRIBObject implements CDAPMessageHandl
 	protected void sendMessages(){
 		this.neighborStatistics.clear();
 		
-		List<Neighbor> neighbors = ipcProcess.getNeighbors();
+		List<Neighbor> neighbors = getIPCProcess().getNeighbors();
 		
 		CDAPMessage cdapMessage = null;
 		NeighborStatistics neighborStats = null;

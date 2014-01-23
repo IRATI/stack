@@ -9,7 +9,7 @@ import org.apache.commons.logging.LogFactory;
 import rina.applicationprocess.api.WhatevercastName;
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ribdaemon.api.BaseRIBObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
 import rina.ribdaemon.api.RIBDaemonException;
@@ -20,12 +20,10 @@ import rina.ribdaemon.api.SimpleSetMemberRIBObject;
 public class WhatevercastNameSetRIBObject extends BaseRIBObject{
 	
 	private static final Log log = LogFactory.getLog(WhatevercastNameSetRIBObject.class);
-	private IPCProcess ipcProcess = null;
-	
-	public WhatevercastNameSetRIBObject(){
-		super(WhatevercastName.WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), 
+
+	public WhatevercastNameSetRIBObject(IPCProcess ipcProcess){
+		super(ipcProcess, WhatevercastName.WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), 
 				WhatevercastName.WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME);
-		this.ipcProcess = IPCProcess.getInstance();
 		setRIBDaemon(ipcProcess.getRIBDaemon());
 		setEncoder(ipcProcess.getEncoder());
 	}
@@ -51,7 +49,7 @@ public class WhatevercastNameSetRIBObject extends BaseRIBObject{
 	@Override
 	public synchronized void create(String objectClass, long objectInstance, String objectName, Object object) throws RIBDaemonException{
 		if (object instanceof WhatevercastName){
-			SimpleSetMemberRIBObject ribObject = new SimpleSetMemberRIBObject(
+			SimpleSetMemberRIBObject ribObject = new SimpleSetMemberRIBObject(getIPCProcess(),
 					WhatevercastName.WHATEVERCAST_NAME_RIB_OBJECT_CLASS, objectName, (WhatevercastName) object);
 			ribObject.setRIBDaemon(getRIBDaemon());
 			this.addChild(ribObject);
@@ -63,7 +61,7 @@ public class WhatevercastNameSetRIBObject extends BaseRIBObject{
 			for(int i=0; i<whatevercastNames.length; i++){
 				candidateObjectName = this.getObjectName() + RIBObjectNames.SEPARATOR + whatevercastNames[i].getRule();
 				if (!this.hasChild(candidateObjectName)){
-					SimpleSetMemberRIBObject ribObject = new SimpleSetMemberRIBObject(
+					SimpleSetMemberRIBObject ribObject = new SimpleSetMemberRIBObject(getIPCProcess(),
 							WhatevercastName.WHATEVERCAST_NAME_RIB_OBJECT_CLASS, candidateObjectName, whatevercastNames[i]);
 					ribObject.setRIBDaemon(getRIBDaemon());
 					this.addChild(ribObject);

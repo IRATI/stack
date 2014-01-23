@@ -20,7 +20,6 @@ import eu.irati.librina.Neighbor;
 import eu.irati.librina.NeighborList;
 import eu.irati.librina.PDUForwardingTableEntry;
 import eu.irati.librina.PDUForwardingTableEntryList;
-import eu.irati.librina.PDUForwardingTableListIterator;
 import eu.irati.librina.rina;
 
 import rina.cdap.api.CDAPSessionDescriptor;
@@ -28,12 +27,11 @@ import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
 import rina.configuration.KnownIPCProcessAddress;
 import rina.configuration.RINAConfiguration;
-import rina.encoding.api.Encoder;
 import rina.enrollment.api.EnrollmentRequest;
 import rina.enrollment.api.EnrollmentTask;
 import rina.events.api.Event;
 import rina.events.api.EventListener;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.enrollment.ribobjects.AddressRIBObject;
 import rina.ipcprocess.impl.enrollment.ribobjects.EnrollmentRIBObject;
 import rina.ipcprocess.impl.enrollment.ribobjects.NeighborSetRIBObject;
@@ -90,7 +88,6 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 	private RIBDaemon ribDaemon = null;
 	private ResourceAllocator resourceAllocator = null;
 	private CDAPSessionManager cdapSessionManager = null;
-	private Encoder encoder = null;
 	private Map<Long, EnrollmentRequest> portIdsPendingToBeAllocated = null;
 	private IPCProcess ipcProcess = null;
 
@@ -128,10 +125,9 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 		this.ribDaemon = ipcProcess.getRIBDaemon();
 		this.resourceAllocator = ipcProcess.getResourceAllocator();
 		this.cdapSessionManager = ipcProcess.getCDAPSessionManager();
-		this.encoder = ipcProcess.getEncoder();
 		populateRIB();
 		subscribeToEvents();
-		this.neighborsEnroller = new NeighborsEnroller(this);
+		this.neighborsEnroller = new NeighborsEnroller(ipcProcess, this);
 		ipcProcess.execute(this.neighborsEnroller);
 	}
 	
@@ -140,15 +136,15 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 	 */
 	private void populateRIB(){
 		try{
-			RIBObject ribObject = new NeighborSetRIBObject();
+			RIBObject ribObject = new NeighborSetRIBObject(ipcProcess);
 			this.ribDaemon.addRIBObject(ribObject);
-			ribObject = new EnrollmentRIBObject(this);
+			ribObject = new EnrollmentRIBObject(ipcProcess, this);
 			this.ribDaemon.addRIBObject(ribObject);
-			ribObject = new OperationalStatusRIBObject(this);
+			ribObject = new OperationalStatusRIBObject(ipcProcess, this);
 			this.ribDaemon.addRIBObject(ribObject);
-			ribObject = new AddressRIBObject();
+			ribObject = new AddressRIBObject(ipcProcess);
 			this.ribDaemon.addRIBObject(ribObject);
-			ribObject = new WatchdogRIBObject();
+			ribObject = new WatchdogRIBObject(ipcProcess);
 			this.ribDaemon.addRIBObject(ribObject);
 		}catch(Exception ex){
 			log.error("Could not subscribe to RIB Daemon:" +ex.getMessage());
@@ -258,11 +254,11 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 		if (apNamingInfo.getEntityName() == null || apNamingInfo.getEntityName().equals("") ||
 				apNamingInfo.getEntityName().equals(IPCProcess.MANAGEMENT_AE)){
 			if (enrollee){
-				enrollmentStateMachine = new EnrolleeStateMachine(ribDaemon, cdapSessionManager, encoder, 
-						apNamingInfo, this, timeout);
+				enrollmentStateMachine = new EnrolleeStateMachine(ipcProcess, 
+						apNamingInfo, timeout);
 			}else{
-				enrollmentStateMachine = new EnrollerStateMachine(ribDaemon, cdapSessionManager, encoder, 
-						apNamingInfo, this, timeout);
+				enrollmentStateMachine = new EnrollerStateMachine(ipcProcess, 
+						apNamingInfo, timeout);
 			}
 
 			synchronized(this){

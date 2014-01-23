@@ -2,7 +2,7 @@ package rina.ipcprocess.impl.resourceallocator.ribobjects;
 
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.resourceallocator.api.NMinus1FlowManager;
 import rina.ribdaemon.api.RIBDaemonException;
 import rina.ribdaemon.api.SimpleSetMemberRIBObject;
@@ -14,12 +14,12 @@ public class DIFRegistrationRIBObject extends SimpleSetMemberRIBObject{
 	private String difName = null;
 	private NMinus1FlowManager nMinus1FlowManager = null;
 	
-	public DIFRegistrationRIBObject(String objectName, String difName, 
+	public DIFRegistrationRIBObject(IPCProcess ipcProcess, String objectName, String difName, 
 			NMinus1FlowManager nMinus1FlowManager){
-		super(DIF_REGISTRATION_RIB_OBJECT_CLASS, objectName, difName);
+		super(ipcProcess, DIF_REGISTRATION_RIB_OBJECT_CLASS, objectName, difName);
 		this.difName = difName;
 		this.nMinus1FlowManager = nMinus1FlowManager;
-		setRIBDaemon(IPCProcess.getInstance().getRIBDaemon());
+		setRIBDaemon(ipcProcess.getRIBDaemon());
 	}
 	
 	@Override
