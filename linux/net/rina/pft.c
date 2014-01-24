@@ -394,7 +394,7 @@ int pft_remove(struct pft *      instance,
         spin_lock(&instance->write_lock);
         tmp = pft_find(instance, destination, qos_id);
         if (!tmp) {
-                spin_lock(&instance->write_lock);
+                spin_unlock(&instance->write_lock);
                 return -1;
         }
 
