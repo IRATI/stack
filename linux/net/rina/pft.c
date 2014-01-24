@@ -122,11 +122,15 @@ static bool pfte_is_ok(struct pft_entry * entry)
 
 static void pfte_destroy(struct pft_entry * entry)
 {
-        struct pft_port_entry * pos;
+        struct pft_port_entry * pos, * next;
 
         ASSERT(pfte_is_ok(entry));
 
-        list_for_each_entry_rcu(pos, &entry->ports, next) {
+        /*
+         * FIXME: Please, do this in the right way, rcu
+         * traversal APIs are not intended for this.
+         */
+        list_for_each_entry_safe(pos, next, &entry->ports, next) {
                 pft_pe_destroy(pos);
         }
 
@@ -178,16 +182,15 @@ static void pfte_port_remove(struct pft_entry * entry,
         ASSERT(pfte_is_ok(entry));
         ASSERT(is_port_id_ok(id));
 
-        /* Remove the port-id here */
         list_for_each_entry_rcu(pos, &entry->ports, next) {
                 if (pft_pe_port(pos) == id) {
                         pft_pe_destroy(pos);
+                        /* If the list of port-ids is empty, remove the entry */
+                        if (list_empty(&entry->ports)) {
+                                pfte_destroy(entry);
+                        }
+                        return;
                 }
-        }
-
-        /* If the list of port-ids is empty, remove the entry */
-        if (list_empty(&entry->ports)) {
-                pfte_destroy(entry);
         }
 }
 
@@ -265,11 +268,15 @@ bool pft_is_empty(struct pft * instance)
 
 static void __pft_flush(struct pft * instance)
 {
-        struct pft_entry * pos;
+        struct pft_entry * pos, * next;
 
         ASSERT(pft_is_ok(instance));
 
-        list_for_each_entry_rcu(pos, &instance->entries, next) {
+        /*
+         * FIXME: Please, do this in the right way, _rcu
+         * traversal APIs are not intended for this.
+         */
+        list_for_each_entry_safe(pos, next, &instance->entries, next) {
                 pfte_destroy(pos);
         }
 }
