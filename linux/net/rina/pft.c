@@ -33,7 +33,7 @@
 /* FIXME: This representation is crappy and MUST be changed */
 struct pft_port_entry {
         port_id_t        port_id;
-
+        
         struct list_head next;
 };
 
@@ -49,7 +49,7 @@ static struct pft_port_entry * pft_pe_create_gfp(gfp_t     flags,
                 return NULL;
 
         tmp->port_id = port_id;
-        INIT_LIST_HEAD(&tmp->next);
+        INIT_LIST_HEAD_RCU(&tmp->next);
 
         return tmp;
 }
@@ -85,6 +85,7 @@ static port_id_t pft_pe_port(struct pft_port_entry * pe)
 struct pft_entry {
         address_t        destination;
         qos_id_t         qos_id;
+        spinlock_t       write_lock;
         struct list_head ports;
         struct list_head next;
 };
@@ -101,8 +102,8 @@ static struct pft_entry * pfte_create_gfp(gfp_t     flags,
 
         tmp->destination = destination;
         tmp->qos_id      = qos_id;
-        INIT_LIST_HEAD(&tmp->ports);
-        INIT_LIST_HEAD(&tmp->next);
+        INIT_LIST_HEAD_RCU(&tmp->ports);
+        INIT_LIST_HEAD_RCU(&tmp->next);
 
         return tmp;
 }
@@ -126,13 +127,11 @@ static void pfte_destroy(struct pft_entry * entry)
 
         ASSERT(pfte_is_ok(entry));
 
-        /*
-         * FIXME: Please, do this in the right way, rcu
-         * traversal APIs are not intended for this.
-         */
+        spin_lock(&entry->write_lock);
         list_for_each_entry_safe(pos, next, &entry->ports, next) {
                 pft_pe_destroy(pos);
         }
+        spin_unlock(&entry->write_lock);
 
         list_del_rcu(&entry->next);
         synchronize_rcu();
@@ -169,7 +168,9 @@ static int pfte_port_add(struct pft_entry * entry,
         if (!pe)
                 return -1;
 
+        spin_lock(&entry->write_lock);
         list_add_rcu(&pe->next, &entry->ports);
+        spin_unlock(&entry->write_lock);
 
         return 0;
 }
@@ -177,21 +178,20 @@ static int pfte_port_add(struct pft_entry * entry,
 static void pfte_port_remove(struct pft_entry * entry,
                              port_id_t          id)
 {
-        struct pft_port_entry * pos;
+        struct pft_port_entry * pos, * next;
 
         ASSERT(pfte_is_ok(entry));
         ASSERT(is_port_id_ok(id));
 
-        list_for_each_entry_rcu(pos, &entry->ports, next) {
+        spin_lock(&entry->write_lock);
+        list_for_each_entry_safe(pos, next, &entry->ports, next) {
                 if (pft_pe_port(pos) == id) {
                         pft_pe_destroy(pos);
-                        /* If the list of port-ids is empty, remove the entry */
-                        if (list_empty(&entry->ports)) {
-                                pfte_destroy(entry);
-                        }
+                        spin_unlock(&entry->write_lock);
                         return;
                 }
         }
+        spin_unlock(&entry->write_lock);
 }
 
 static int pfte_ports_copy(struct pft_entry * entry,
@@ -236,6 +236,7 @@ static int pfte_ports_copy(struct pft_entry * entry,
 
 /* FIXME: This representation is crappy and MUST be changed */
 struct pft {
+        spinlock_t       write_lock;
         struct list_head entries;
 };
 
@@ -272,10 +273,6 @@ static void __pft_flush(struct pft * instance)
 
         ASSERT(pft_is_ok(instance));
 
-        /*
-         * FIXME: Please, do this in the right way, _rcu
-         * traversal APIs are not intended for this.
-         */
         list_for_each_entry_safe(pos, next, &instance->entries, next) {
                 pfte_destroy(pos);
         }
@@ -312,7 +309,6 @@ static struct pft_entry * pft_find(struct pft * instance,
         ASSERT(pft_is_ok(instance));
         ASSERT(is_address_ok(destination));
 
-        rcu_read_lock();
         list_for_each_entry_rcu(pos, &instance->entries, next) {
                 if ((pos->destination == destination) &&
                     (pos->qos_id      == qos_id)) {
@@ -320,7 +316,6 @@ static struct pft_entry * pft_find(struct pft * instance,
                         return pos;
                 }
         }
-        rcu_read_unlock();
 
         return NULL;
 }
@@ -347,21 +342,26 @@ int pft_add(struct pft *      instance,
                 return -1;
         }
 
+        spin_lock(&instance->write_lock);
         tmp = pft_find(instance, destination, qos_id);
         if (!tmp) {
                 tmp = pfte_create(destination, qos_id);
-                if (!tmp)
+                if (!tmp) {
+                        spin_unlock(&instance->write_lock);
                         return -1;
+                }
 
                 list_add_rcu(&tmp->next, &instance->entries);
         }
-
+        
         for (i = 0; i < count; i++) {
                 if (pfte_port_add(tmp, ports[i])) {
                         pfte_destroy(tmp);
+                        spin_unlock(&instance->write_lock);
                         return -1;
                 }
         }
+        spin_unlock(&instance->write_lock);
 
         return 0;
 }
@@ -388,12 +388,21 @@ int pft_remove(struct pft *      instance,
                 return -1;
         }
 
+        spin_lock(&instance->write_lock);
         tmp = pft_find(instance, destination, qos_id);
-        if (!tmp)
+        if (!tmp) {
+                spin_lock(&instance->write_lock);
                 return -1;
+        }
 
         for (i = 0; i < count; i++)
                 pfte_port_remove(tmp, ports[i]);
+       
+        /* If the list of port-ids is empty, remove the entry */
+        if (list_empty(&entry->ports)) {
+                pfte_destroy(entry);
+        }
+        spin_unlock(&instance->write_lock);
 
         return 0;
 }
@@ -454,6 +463,7 @@ int pft_dump(struct pft *       instance,
 
         rcu_read_lock();
         list_for_each_entry_rcu(pos, &instance->entries, next) {
+                /* FIXME: Use pfte_create_ni */
                 entry = rkmalloc(sizeof(*entry), GFP_ATOMIC);
                 if (!entry) {
                         rcu_read_unlock();
