@@ -651,6 +651,17 @@
                  $result = jenv->NewObject(clazz, mid, cptr, false);
           }
        }
+    } else if ($1->getType() == rina::IPC_PROCESS_DUMP_FT_RESPONSE) {
+    	 rina::DumpFTResponseEvent *flowReqEvent = dynamic_cast<rina::DumpFTResponseEvent *>($1);
+         jclass clazz = jenv->FindClass("eu/irati/librina/DumpFTResponseEvent");
+         if (clazz) {
+             jmethodID mid = jenv->GetMethodID(clazz, "<init>", "(JZ)V");
+             if (mid) {
+                 jlong cptr = 0;
+                 *(rina::DumpFTResponseEvent **)&cptr = flowReqEvent; 
+                 $result = jenv->NewObject(clazz, mid, cptr, false);
+          }
+       }
     }
 } 
 %enddef

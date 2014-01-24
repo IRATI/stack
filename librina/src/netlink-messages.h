@@ -49,7 +49,7 @@ enum RINANetlinkOperationCode{
 	RINA_C_IPCM_QUERY_RIB_RESPONSE, /* 23 IPC Process -> IPC Manager */
 	RINA_C_RMT_MODIFY_FTE_REQUEST, /* 24 IPC Process (user space) -> Kernel IPC Process (kernel) */
 	RINA_C_RMT_DUMP_FT_REQUEST, /* 25 IPC Process (user space) -> RMT (kernel) */
-	RINA_C_RMT_DUMP_FT_REPLY, /* TODO 26 RMT (kernel) -> IPC Process (user space) */
+	RINA_C_RMT_DUMP_FT_REPLY, /* 26 RMT (kernel) -> IPC Process (user space) */
 	RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION, /* 27 Kernel (NL layer) -> IPC Manager */
 	RINA_C_IPCM_IPC_MANAGER_PRESENT, /* 28 IPC Manager -> Kernel (NL layer) */
 	RINA_C_IPCP_CONN_CREATE_REQUEST, /* 29 IPC Process Daemon -> EFCP (Kernel) */
