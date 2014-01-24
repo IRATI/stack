@@ -127,7 +127,7 @@ static void pfte_destroy(struct pft_entry * entry)
         ASSERT(pfte_is_ok(entry));
 
         /*
-         * FIXME: Please, do this in the right way, _rcu
+         * FIXME: Please, do this in the right way, rcu
          * traversal APIs are not intended for this.
          */
         list_for_each_entry_safe(pos, next, &entry->ports, next) {
@@ -182,7 +182,6 @@ static void pfte_port_remove(struct pft_entry * entry,
         ASSERT(pfte_is_ok(entry));
         ASSERT(is_port_id_ok(id));
 
-        /* Remove the port-id here */
         list_for_each_entry_rcu(pos, &entry->ports, next) {
                 if (pft_pe_port(pos) == id) {
                         pft_pe_destroy(pos);
@@ -193,8 +192,6 @@ static void pfte_port_remove(struct pft_entry * entry,
                         return;
                 }
         }
-
-
 }
 
 static int pfte_ports_copy(struct pft_entry * entry,
