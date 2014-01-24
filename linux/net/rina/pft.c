@@ -102,6 +102,7 @@ static struct pft_entry * pfte_create_gfp(gfp_t     flags,
 
         tmp->destination = destination;
         tmp->qos_id      = qos_id;
+        spin_lock_init(&tmp->write_lock);
         INIT_LIST_HEAD(&tmp->ports);
         INIT_LIST_HEAD(&tmp->next);
 
@@ -247,6 +248,8 @@ static struct pft * pft_create_gfp(gfp_t flags)
         tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
+
+        spin_lock_init(&tmp->write_lock);
 
         INIT_LIST_HEAD(&tmp->entries);
 
