@@ -49,7 +49,7 @@ static struct pft_port_entry * pft_pe_create_gfp(gfp_t     flags,
                 return NULL;
 
         tmp->port_id = port_id;
-        INIT_LIST_HEAD_RCU(&tmp->next);
+        INIT_LIST_HEAD(&tmp->next);
 
         return tmp;
 }
@@ -102,8 +102,8 @@ static struct pft_entry * pfte_create_gfp(gfp_t     flags,
 
         tmp->destination = destination;
         tmp->qos_id      = qos_id;
-        INIT_LIST_HEAD_RCU(&tmp->ports);
-        INIT_LIST_HEAD_RCU(&tmp->next);
+        INIT_LIST_HEAD(&tmp->ports);
+        INIT_LIST_HEAD(&tmp->next);
 
         return tmp;
 }
@@ -399,8 +399,8 @@ int pft_remove(struct pft *      instance,
                 pfte_port_remove(tmp, ports[i]);
        
         /* If the list of port-ids is empty, remove the entry */
-        if (list_empty(&entry->ports)) {
-                pfte_destroy(entry);
+        if (list_empty(&tmp->ports)) {
+                pfte_destroy(tmp);
         }
         spin_unlock(&instance->write_lock);
 
