@@ -1769,5 +1769,43 @@ IPCEvent* RmtModifyPDUFTEntriesRequestMessage::toIPCEvent() {
         return 0;
 }
 
+/* CLASS RmtDumpPDUFTEntriesRequestMessage */
+RmtDumpPDUFTEntriesRequestMessage::
+RmtDumpPDUFTEntriesRequestMessage():
+BaseNetlinkMessage(RINA_C_RMT_DUMP_FT_REQUEST){
+}
+
+IPCEvent* RmtDumpPDUFTEntriesRequestMessage::toIPCEvent() {
+        return 0;
+}
+
+/* CLASS RmtDumpPDUFTEntriesResponseMessage */
+RmtDumpPDUFTEntriesResponseMessage::
+RmtDumpPDUFTEntriesResponseMessage():
+BaseNetlinkResponseMessage(RINA_C_RMT_DUMP_FT_REPLY){
+}
+
+const std::list<PDUForwardingTableEntry>&
+RmtDumpPDUFTEntriesResponseMessage::getEntries() const {
+        return entries;
+}
+
+void RmtDumpPDUFTEntriesResponseMessage::
+setEntries(const std::list<PDUForwardingTableEntry>& entries) {
+        this->entries = entries;
+}
+
+void RmtDumpPDUFTEntriesResponseMessage::
+addEntry(const PDUForwardingTableEntry& entry) {
+        entries.push_back(entry);
+}
+
+IPCEvent* RmtDumpPDUFTEntriesResponseMessage::toIPCEvent() {
+        IPCEvent * event = new DumpFTResponseEvent(entries,
+                        getResult(), getSequenceNumber());
+        return event;
+}
+
+
 }
 

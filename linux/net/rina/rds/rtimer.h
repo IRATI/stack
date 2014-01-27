@@ -1,5 +1,5 @@
 /*
- * Utilities
+ * RINA Timers
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,23 +18,19 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_UTILS_H
-#define RINA_UTILS_H
+#ifndef RINA_RTIMER_H
+#define RINA_RTIMER_H
 
-#include <linux/kobject.h>
-#define RINA_ATTR_RO(NAME)                              \
-        static struct kobj_attribute NAME##_attr =      \
-                __ATTR_RO(NAME)
+struct rtimer;
 
-#define RINA_ATTR_RW(NAME)                                      \
-        static struct kobj_attribute NAME##_attr =              \
-                __ATTR(NAME, 0644, NAME##show, NAME##store)
+struct rtimer * rtimer_create(void (* function)(void * data),
+                              void *  data);
+struct rtimer * rtimer_create_ni(void (* function)(void * data),
+                                 void *  data);
+int             rtimer_destroy(struct rtimer * timer);
 
-int     is_value_in_range(int value, int min_value, int max_value);
-
-/* Syscalls */
-char *  strdup_from_user(const char __user * src);
-
-#include "rds/rds.h"
+int             rtimer_start(struct rtimer * timer,
+                             unsigned int    millisec);
+int             rtimer_stop(struct rtimer * timer);
 
 #endif

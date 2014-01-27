@@ -2,7 +2,7 @@ package rina.ipcprocess.impl.resourceallocator.ribobjects;
 
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.resourceallocator.api.NMinus1FlowManager;
 import rina.ribdaemon.api.BaseRIBObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
@@ -19,11 +19,11 @@ public class DIFRegistrationSetRIBObject extends BaseRIBObject{
 	
 	private NMinus1FlowManager nMinus1FlowManager = null;
 	
-	public DIFRegistrationSetRIBObject(NMinus1FlowManager nMinus1FlowManager){
-		super(DIF_REGISTRATION_SET_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), 
+	public DIFRegistrationSetRIBObject(IPCProcess ipcProcess, NMinus1FlowManager nMinus1FlowManager){
+		super(ipcProcess, DIF_REGISTRATION_SET_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), 
 				DIF_REGISTRATION_SET_RIB_OBJECT_NAME);
 		this.nMinus1FlowManager = nMinus1FlowManager;
-		setRIBDaemon(IPCProcess.getInstance().getRIBDaemon());
+		setRIBDaemon(ipcProcess.getRIBDaemon());
 	}
 	
 	/**
@@ -41,7 +41,7 @@ public class DIFRegistrationSetRIBObject extends BaseRIBObject{
 					"Object class ("+object.getClass().getName()+") does not match object name "+objectName);
 		}
 		
-		DIFRegistrationRIBObject ribObject = new DIFRegistrationRIBObject(objectName, 
+		DIFRegistrationRIBObject ribObject = new DIFRegistrationRIBObject(getIPCProcess(), objectName, 
 				(String) object, this.nMinus1FlowManager);
 		this.addChild(ribObject);
 		getRIBDaemon().addRIBObject(ribObject);

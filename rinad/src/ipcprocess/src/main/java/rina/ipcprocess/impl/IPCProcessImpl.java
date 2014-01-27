@@ -45,6 +45,7 @@ import rina.enrollment.api.EnrollmentTask;
 import rina.flowallocator.api.DirectoryForwardingTableEntry;
 import rina.flowallocator.api.Flow;
 import rina.flowallocator.api.FlowAllocator;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
 import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
 import rina.ipcprocess.impl.flowallocator.FlowAllocatorImpl;
@@ -72,6 +73,7 @@ import eu.irati.librina.DIFInformation;
 import eu.irati.librina.DataTransferConstants;
 import eu.irati.librina.DeallocateFlowResponseEvent;
 import eu.irati.librina.DestroyConnectionResultEvent;
+import eu.irati.librina.DumpFTResponseEvent;
 import eu.irati.librina.EnrollToDIFRequestEvent;
 import eu.irati.librina.ExtendedIPCManagerSingleton;
 import eu.irati.librina.FlowDeallocateRequestEvent;
@@ -83,21 +85,15 @@ import eu.irati.librina.IPCEventProducerSingleton;
 import eu.irati.librina.IPCProcessDIFRegistrationEvent;
 import eu.irati.librina.KernelIPCProcessSingleton;
 import eu.irati.librina.Neighbor;
+import eu.irati.librina.PDUForwardingTableEntry;
 import eu.irati.librina.QoSCube;
 import eu.irati.librina.QueryRIBRequestEvent;
 import eu.irati.librina.UpdateConnectionResponseEvent;
 import eu.irati.librina.rina;
 
-public class IPCProcess {
-	
-	public static final String MANAGEMENT_AE = "Management";
-    public static final String DATA_TRANSFER_AE = "Data Transfer";
-    public static final int DEFAULT_MAX_SDU_SIZE_IN_BYTES = 10000;
-	public static final long CONFIG_FILE_POLL_PERIOD_IN_MS = 5000;
+public class IPCProcessImpl implements IPCProcess {
     
-    public enum State {NULL, INITIALIZED, ASSIGN_TO_DIF_IN_PROCESS, ASSIGNED_TO_DIF};
-	
-	private static final Log log = LogFactory.getLog(IPCProcess.class);
+	private static final Log log = LogFactory.getLog(IPCProcessImpl.class);
 	
 	/** The state */
 	private State operationalState = State.NULL;
@@ -141,9 +137,6 @@ public class IPCProcess {
 	/** The Flow Allocator */
 	private FlowAllocator flowAllocator = null;
 	
-	/** Static instance to implement the singleton pattern */
-	private static IPCProcess instance = null;
-	
 	/** The IPC Process name */
 	private ApplicationProcessNamingInformation name = null;
 	
@@ -153,15 +146,7 @@ public class IPCProcess {
 	/** The config file location */
 	private String configFileLocation = null;
 	
-	public static IPCProcess getInstance() {
-		if (instance == null) {
-			instance = new IPCProcess();
-		}
-		
-		return instance;
-	}
-	
-	private IPCProcess(){
+	public IPCProcessImpl(){
 	}
 	
 	public void initialize(
@@ -188,11 +173,11 @@ public class IPCProcess {
 		resourceAllocator = new ResourceAllocatorImpl();
 		registrationManager = new RegistrationManagerImpl();
 		flowAllocator = new FlowAllocatorImpl();
-		((RIBDaemonImpl) ribDaemon).setIPCProcess(this);
-		((EnrollmentTaskImpl) enrollmentTask).setIPCProcess(this);
-		((ResourceAllocatorImpl) resourceAllocator).setIPCProcess(this);
-		((RegistrationManagerImpl) registrationManager).setIPCProcess(this);
-		((FlowAllocatorImpl) flowAllocator).setIPCProcess(this);
+		ribDaemon.setIPCProcess(this);
+		enrollmentTask.setIPCProcess(this);
+		resourceAllocator.setIPCProcess(this);
+		registrationManager.setIPCProcess(this);
+		flowAllocator.setIPCProcess(this);
 		
 		populateRIB();
 
@@ -338,9 +323,9 @@ public class IPCProcess {
 	
 	private void populateRIB(){
 		try {
-			RIBObject ribObject = new WhatevercastNameSetRIBObject();
+			RIBObject ribObject = new WhatevercastNameSetRIBObject(this);
 			this.ribDaemon.addRIBObject(ribObject);
-			ribObject = new DataTransferConstantsRIBObject();
+			ribObject = new DataTransferConstantsRIBObject(this);
 			this.ribDaemon.addRIBObject(ribObject);
 		} catch(Exception ex) {
 			log.error("Problems populating RIB: "+ex.getMessage());
@@ -420,6 +405,7 @@ public class IPCProcess {
 		case IPC_PROCESS_QUERY_RIB:
 			QueryRIBRequestEvent queryEvent = (QueryRIBRequestEvent) event;
 			ribDaemon.processQueryRIBRequestEvent(queryEvent);
+			requestPDUFTEDump();
 			break;
 		case APPLICATION_REGISTRATION_REQUEST_EVENT:
 			ApplicationRegistrationRequestEvent apRegReqEvent = (ApplicationRegistrationRequestEvent) event;
@@ -457,6 +443,10 @@ public class IPCProcess {
 				log.warn("Problems destroying connection associated to port-id " + destroyConEvent.getPortId() 
 						+ ": " + destroyConEvent.getResult());
 			}
+			break;
+		case IPC_PROCESS_DUMP_FT_RESPONSE:
+			DumpFTResponseEvent dumpFTREvent = (DumpFTResponseEvent) event;
+			logPDUFTE(dumpFTREvent);
 			break;
 		default:
 			log.warn("Received unsupported event: "+event.getType());
@@ -536,6 +526,38 @@ public class IPCProcess {
 			setOperationalState(State.INITIALIZED);
 			log.error("Could not assign IPC Process to DIF " + difInformation.getDifName());
 		}
+	}
+	
+	private void requestPDUFTEDump() {
+		try{
+			kernelIPCProcess.dumptPDUFT();
+		} catch (Exception ex) {
+			log.warn("Error requesting IPC Process to Dump PDU Forwarding Table: "+ ex.getMessage());
+		}
+	}
+	
+	private void logPDUFTE(DumpFTResponseEvent event) {
+		if (event.getResult() != 0) {
+			log.warn("Dump PDU FT operation returned error, error code: " 
+					+ event.getResult());
+			return;
+		}
+		
+		PDUForwardingTableEntry next = null;
+		Iterator<PDUForwardingTableEntry> iterator = event.getEntries().iterator();
+		Iterator<Long> iterator2 = null;
+		String result = "Contents of the PDU Forwarding Table: \n";
+		while (iterator.hasNext()) {
+			next = iterator.next();
+			result = result + "Addresss: " + next.getAddress() 
+					+ "; QoS id: " + next.getQosId() + "; Port-ids: ";
+			iterator2 = next.getPortIds().iterator();
+			while (iterator2.hasNext()) {
+				result = result + iterator2.next()+ "; ";
+			}
+		}
+		
+		log.info(result);
 	}
 	
 	public synchronized DIFInformation getDIFInformation() {

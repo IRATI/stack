@@ -8,12 +8,13 @@ import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.UpdateConnectionResponseEvent;
 import rina.cdap.api.message.CDAPMessage;
+import rina.ipcprocess.api.IPCProcessComponent;
 
 /**
  * This interface must be implemented by the class that implements the flow allocator
  * @author eduardgrasa
  */
-public interface FlowAllocator {
+public interface FlowAllocator extends IPCProcessComponent {
 	
 	/**
 	 * The Flow Allocator is invoked when an Allocate_Request.submit is received.  The source Flow 

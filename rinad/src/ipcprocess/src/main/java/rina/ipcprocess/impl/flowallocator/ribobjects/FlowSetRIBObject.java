@@ -5,7 +5,7 @@ import rina.cdap.api.message.CDAPMessage;
 import rina.flowallocator.api.FlowAllocator;
 import rina.flowallocator.api.FlowAllocatorInstance;
 import rina.flowallocator.api.Flow;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ribdaemon.api.BaseRIBObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
 import rina.ribdaemon.api.RIBDaemonException;
@@ -14,13 +14,11 @@ import rina.ribdaemon.api.RIBObject;
 public class FlowSetRIBObject extends BaseRIBObject{
 	
 	private FlowAllocator flowAllocator = null;
-	private IPCProcess ipcProcess = null;
 	
-	public FlowSetRIBObject(FlowAllocator flowAllocator){
-		super(Flow.FLOW_SET_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), 
+	public FlowSetRIBObject(IPCProcess ipcProcess, FlowAllocator flowAllocator){
+		super(ipcProcess, Flow.FLOW_SET_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), 
 				Flow.FLOW_SET_RIB_OBJECT_NAME);
 		this.flowAllocator = flowAllocator;
-		this.ipcProcess = IPCProcess.getInstance();
 		setRIBDaemon(ipcProcess.getRIBDaemon());
 		setEncoder(ipcProcess.getEncoder());
 	}
@@ -40,7 +38,7 @@ public class FlowSetRIBObject extends BaseRIBObject{
 					"Object class ("+object.getClass().getName()+") does not match object name "+objectName);
 		}
 		
-		FlowRIBObject ribObject = new FlowRIBObject(objectName, (FlowAllocatorInstance) object);
+		FlowRIBObject ribObject = new FlowRIBObject(getIPCProcess(), objectName, (FlowAllocatorInstance) object);
 		ribObject.setRIBDaemon(getRIBDaemon());
 		this.addChild(ribObject);
 		getRIBDaemon().addRIBObject(ribObject);

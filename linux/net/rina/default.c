@@ -99,17 +99,13 @@ static int default_sdu_read(struct personality_data * data,
 
 static int default_allocate_port(struct personality_data * data,
                                  ipc_process_id_t          ipc_id,
-                                 bool                      to_app)
+                                 struct name *             name)
 {
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        /*
-         * FIXME this is what should be used later on
-         * return kfa_port_id_reserve(data->kfa, ipc_id, to_app);
-         */
-        return kfa_flow_create(data->kfa, ipc_id, to_app);
+        return kipcm_allocate_port(data->kipcm, ipc_id, name);
 }
 
 static int default_deallocate_port(struct personality_data * data,
@@ -119,33 +115,31 @@ static int default_deallocate_port(struct personality_data * data,
 
         LOG_DBG("Calling wrapped function");
 
-        /*
-         * FIXME this is what should be used later on
-         * return kfa_port_id_release(data->kfa, port_id);
-         */
+        /* FIXME: This should call kipcm_deallocate_port to retrieve the ipcp
+         * process once the distributed solution is adopted */
         return kfa_flow_deallocate(data->kfa, port_id);
 }
 
-static int default_management_sdu_write(struct personality_data * data,
-                                        ipc_process_id_t          id,
-                                        struct sdu_wpi *          sdu_wpi)
+static int default_mgmt_sdu_write(struct personality_data * data,
+                                  ipc_process_id_t          id,
+                                  struct sdu_wpi *          sdu_wpi)
 {
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_management_sdu_write(data->kipcm, id, sdu_wpi);
+        return kipcm_mgmt_sdu_write(data->kipcm, id, sdu_wpi);
 }
 
-static int default_management_sdu_read(struct personality_data * data,
-                                       ipc_process_id_t          id,
-                                       struct sdu_wpi **         sdu_wpi)
+static int default_mgmt_sdu_read(struct personality_data * data,
+                                 ipc_process_id_t          id,
+                                 struct sdu_wpi **         sdu_wpi)
 {
         if (!is_personality_ok(data)) return -1;
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_management_sdu_read(data->kipcm, id, sdu_wpi);
+        return kipcm_mgmt_sdu_read(data->kipcm, id, sdu_wpi);
 }
 
 /* FIXME: To be removed ABSOLUTELY */
@@ -232,16 +226,16 @@ static int default_init(struct kobject *          parent,
 }
 
 struct personality_ops ops = {
-        .init                 = default_init,
-        .fini                 = default_fini,
-        .ipc_create           = default_ipc_create,
-        .ipc_destroy          = default_ipc_destroy,
-        .sdu_read             = default_sdu_read,
-        .sdu_write            = default_sdu_write,
-        .allocate_port        = default_allocate_port,
-        .deallocate_port      = default_deallocate_port,
-        .management_sdu_read  = default_management_sdu_read,
-        .management_sdu_write = default_management_sdu_write
+        .init            = default_init,
+        .fini            = default_fini,
+        .ipc_create      = default_ipc_create,
+        .ipc_destroy     = default_ipc_destroy,
+        .sdu_read        = default_sdu_read,
+        .sdu_write       = default_sdu_write,
+        .allocate_port   = default_allocate_port,
+        .deallocate_port = default_deallocate_port,
+        .mgmt_sdu_read   = default_mgmt_sdu_read,
+        .mgmt_sdu_write  = default_mgmt_sdu_write
 };
 
 static struct personality_data data;
@@ -254,6 +248,9 @@ extern bool regression_tests_pft(void);
 #endif
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 extern bool regression_tests_rmt(void);
+#endif
+#ifdef CONFIG_RINA_RDS_REGRESSION_TESTS
+extern bool regression_tests_rds(void);
 #endif
 
 static int __init mod_init(void)
@@ -280,6 +277,10 @@ static int __init mod_init(void)
 #endif
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
         if (!regression_tests_rmt())
+                return -1;
+#endif
+#ifdef CONFIG_RINA_RDS_REGRESSION_TESTS
+        if (!regression_tests_rds())
                 return -1;
 #endif
 

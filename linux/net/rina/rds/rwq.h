@@ -46,14 +46,4 @@ struct rwq_work_item *    rwq_work_create_ni(int (* worker)(void * data),
 int                       rwq_work_post(struct workqueue_struct * q,
                                         struct rwq_work_item *    item);
 
-/*
- * RWQO do not allow
- */
-
-struct workqueue_struct * rwqo_create(const char * name);
-int                       rwqo_destroy(struct workqueue_struct * q);
-int                       rwqo_work_post(struct workqueue_struct * q,
-                                         int (* worker)(void * data),
-                                         void * data);
-
 #endif

@@ -193,7 +193,8 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         flow->state   = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
         flow->port_id = id;
         flow->fspec   = flow_spec_dup(fspec);
-        flow->dst_port_id = kfa_flow_create(data->kfa, data->id, false);
+        flow->dst_port_id = kfa_port_id_reserve(data->kfa, data->id);
+        kfa_flow_create(data->kfa, data->id, flow->dst_port_id);
         ASSERT(is_port_id_ok(flow->dst_port_id));
 
         INIT_LIST_HEAD(&flow->list);
@@ -256,6 +257,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 if (kipcm_flow_commit(default_kipcm,
                                       data->id, port_id)) {
                         kfa_flow_deallocate(data->kfa, port_id);
+                        kfa_port_id_release(data->kfa, port_id);
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
@@ -315,8 +317,8 @@ static int dummy_flow_deallocate(struct ipcp_instance_data * data,
                 dest_port_id = flow->port_id;
 
         /*
-         *FIXME: dummy_flow is not updated after unbinding cause it is going
-         *       to be deleted. Is it really needed to unbind+destroy?
+         * FIXME: dummy_flow is not updated after unbinding cause it is going
+         *        to be deleted. Is it really needed to unbind+destroy?
          */
 
         if (kfa_flow_deallocate(data->kfa, id) ||
@@ -672,6 +674,15 @@ static int dummy_update_dif_config(struct ipcp_instance_data * data,
         return -1;
 }
 
+static const struct name * dummy_ipcp_name(struct ipcp_instance_data * data)
+{
+        ASSERT(data);
+        ASSERT(data->info);
+        ASSERT(name_is_ok(data->info->name));
+
+        return data->info->name;
+}
+
 static struct ipcp_instance_ops dummy_instance_ops = {
         .flow_allocate_request  = dummy_flow_allocate_request,
         .flow_allocate_response = dummy_flow_allocate_response,
@@ -681,6 +692,7 @@ static struct ipcp_instance_ops dummy_instance_ops = {
         .sdu_write              = dummy_sdu_write,
         .assign_to_dif          = dummy_assign_to_dif,
         .update_dif_config      = dummy_update_dif_config,
+        .ipcp_name              = dummy_ipcp_name,
 };
 
 static struct ipcp_instance_data *

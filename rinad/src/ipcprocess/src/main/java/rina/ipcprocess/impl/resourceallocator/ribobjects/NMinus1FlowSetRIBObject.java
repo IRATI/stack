@@ -3,7 +3,7 @@ package rina.ipcprocess.impl.resourceallocator.ribobjects;
 import eu.irati.librina.FlowInformation;
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.resourceallocator.api.NMinus1FlowManager;
 import rina.ribdaemon.api.BaseRIBObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
@@ -20,11 +20,11 @@ public class NMinus1FlowSetRIBObject extends BaseRIBObject{
 	
 	private NMinus1FlowManager nMinus1FlowManager = null;
 	
-	public NMinus1FlowSetRIBObject(NMinus1FlowManager nMinus1FlowManager){
-		super(N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), 
+	public NMinus1FlowSetRIBObject(IPCProcess ipcProcess, NMinus1FlowManager nMinus1FlowManager){
+		super(ipcProcess, N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), 
 				N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME);
 		this.nMinus1FlowManager = nMinus1FlowManager;
-		setRIBDaemon(IPCProcess.getInstance().getRIBDaemon());
+		setRIBDaemon(ipcProcess.getRIBDaemon());
 	}
 	
 	/**
@@ -42,7 +42,7 @@ public class NMinus1FlowSetRIBObject extends BaseRIBObject{
 					"Object class ("+object.getClass().getName()+") does not match object name "+objectName);
 		}
 		
-		NMinus1FlowRIBObject ribObject = new NMinus1FlowRIBObject(objectName, 
+		NMinus1FlowRIBObject ribObject = new NMinus1FlowRIBObject(getIPCProcess(), objectName, 
 				(FlowInformation) object, this.nMinus1FlowManager);
 		this.addChild(ribObject);
 		getRIBDaemon().addRIBObject(ribObject);

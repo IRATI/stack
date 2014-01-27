@@ -8,12 +8,13 @@ import rina.cdap.api.CDAPMessageHandler;
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
 import rina.events.api.EventManager;
+import rina.ipcprocess.api.IPCProcessComponent;
 
 /**
  * Specifies the interface of the RIB Daemon
  * @author eduardgrasa
  */
-public interface RIBDaemon extends EventManager{
+public interface RIBDaemon extends EventManager, IPCProcessComponent {
 	
 	/**
 	 * Add a RIB object to the RIB

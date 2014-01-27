@@ -27,7 +27,7 @@ import rina.encoding.api.Encoder;
 import rina.flowallocator.api.Flow;
 import rina.flowallocator.api.FlowAllocator;
 import rina.flowallocator.api.FlowAllocatorInstance;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.flowallocator.ribobjects.FlowSetRIBObject;
 import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
 import rina.ipcprocess.impl.flowallocator.validation.AllocateRequestValidator;
@@ -99,9 +99,9 @@ public class FlowAllocatorImpl implements FlowAllocator{
 	
 	private void populateRIB(IPCProcess ipcProcess){
 		try{
-			RIBObject ribObject = new FlowSetRIBObject(this);
+			RIBObject ribObject = new FlowSetRIBObject(ipcProcess, this);
 			ribDaemon.addRIBObject(ribObject);
-		    ribObject = new QoSCubeSetRIBObject();
+		    ribObject = new QoSCubeSetRIBObject(ipcProcess);
 			ribDaemon.addRIBObject(ribObject);
 		}catch(RIBDaemonException ex){
 			ex.printStackTrace();
@@ -145,7 +145,7 @@ public class FlowAllocatorImpl implements FlowAllocator{
 			//There is an entry and the address is this IPC Process, create a FAI, extract the Flow object from the CDAP message and
 			//call the FAI
 			try {
-				portId = ipcManager.allocatePortId(0);
+				portId = ipcManager.allocatePortId(flow.getDestinationNamingInfo());
 			}catch (Exception ex) {
 				log.error("Problems requesting an available port-id: "+ex.getMessage() 
 						+ " Ignoring the Flow allocation request");
@@ -208,7 +208,7 @@ public class FlowAllocatorImpl implements FlowAllocator{
 		}
 		
 		try {
-			portId = ipcManager.allocatePortId(event.getFlowRequestorIPCProcessId());
+			portId = ipcManager.allocatePortId(event.getLocalApplicationName());
 			log.debug("Got assigned port-id " + portId);
 		} catch (Exception ex) {
 			log.error("Problems requesting an available port-id to the Kernel IPC Maanager: " 

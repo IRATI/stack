@@ -167,6 +167,7 @@ const DIFInformation& IPCProcess::getDIFInformation() const{
 
 void IPCProcess::setDIFInformation(const DIFInformation& difInformation){
 	this->difInformation = difInformation;
+	this->difMember = true;
 }
 
 void IPCProcess::setInitialized() {

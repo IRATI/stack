@@ -37,6 +37,8 @@ int                    ipcp_imap_add(struct ipcp_imap *     map,
                                      struct ipcp_instance * value);
 struct ipcp_instance * ipcp_imap_find(struct ipcp_imap * map,
                                       ipc_process_id_t   key);
+struct ipcp_instance * ipcp_imap_find_by_name(struct ipcp_imap *  map,
+                                              const struct name * name);
 int                    ipcp_imap_update(struct ipcp_imap *     map,
                                         ipc_process_id_t       key,
                                         struct ipcp_instance * value);

@@ -2,7 +2,7 @@ package rina.ipcprocess.impl.enrollment.ribobjects;
 
 import eu.irati.librina.Neighbor;
 import rina.enrollment.api.EnrollmentTask;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ribdaemon.api.BaseRIBObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
 import rina.ribdaemon.api.RIBDaemonException;
@@ -15,11 +15,11 @@ public class NeighborRIBObject extends BaseRIBObject{
     private EnrollmentTask enrollmentTask = null;
 	private Neighbor neighbor = null;
 	
-	public NeighborRIBObject(String objectName, Neighbor neighbor) {
-		super(NEIGHBOR_RIB_OBJECT_CLASS, 
+	public NeighborRIBObject(IPCProcess ipcProcess, String objectName, Neighbor neighbor) {
+		super(ipcProcess, NEIGHBOR_RIB_OBJECT_CLASS, 
 				ObjectInstanceGenerator.getObjectInstance(), objectName);
-		setRIBDaemon(IPCProcess.getInstance().getRIBDaemon());
-		enrollmentTask = IPCProcess.getInstance().getEnrollmentTask();
+		setRIBDaemon(ipcProcess.getRIBDaemon());
+		enrollmentTask = ipcProcess.getEnrollmentTask();
 		enrollmentTask.addNeighbor(neighbor);
 		this.neighbor = neighbor;
 	}

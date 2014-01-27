@@ -166,30 +166,42 @@ struct ipcp_instance_ops {
         int      (* flow_binding_ipcp)(struct ipcp_instance_data * data,
                                        port_id_t                   port_id);
 
+        int      (* flow_destroy)(struct ipcp_instance_data * data,
+                                  port_id_t                   port_id);
+
         int      (* sdu_enqueue)(struct ipcp_instance_data * data,
                                  port_id_t                   id,
                                  struct sdu *                sdu);
 
         /* Takes the ownership of the passed sdu */
-        int (* management_sdu_write)(struct ipcp_instance_data * data,
-                                     port_id_t                   port_id,
-                                     struct sdu *                sdu);
+        int (* mgmt_sdu_write)(struct ipcp_instance_data * data,
+                               port_id_t                   port_id,
+                               struct sdu *                sdu);
 
         /* Passes the ownership of the sdu_wpi */
-        int (* management_sdu_read)(struct ipcp_instance_data * data,
-                                    struct sdu_wpi **           sdu_wpi);
+        int (* mgmt_sdu_read)(struct ipcp_instance_data * data,
+                              struct sdu_wpi **           sdu_wpi);
 
         /* Takes the ownership of the passed sdu */
-        int (* management_sdu_post)(struct ipcp_instance_data * data,
-                                    port_id_t                   port_id,
-                                    struct sdu *                sdu);
+        int (* mgmt_sdu_post)(struct ipcp_instance_data * data,
+                              port_id_t                   port_id,
+                              struct sdu *                sdu);
 
-        int (* pdu_fte_add)(struct ipcp_instance_data * data,
-                            struct list_head *          pft_entries);
+        int (* pft_add)(struct ipcp_instance_data * data,
+                        address_t                   address,
+                        qos_id_t                    qos_id,
+                        port_id_t *                 ports,
+                        size_t                      size);
 
-        int (* pdu_fte_remove)(struct ipcp_instance_data * data,
-                               struct list_head *          pft_entries);
+        int (* pft_remove)(struct ipcp_instance_data * data,
+                           address_t                   address,
+                           qos_id_t                    qos_id,
+                           port_id_t *                 ports,
+                           size_t                      size);
 
+        int (* pft_dump)(struct ipcp_instance_data * data,
+                         struct list_head *          entries);
+        const struct name * (* ipcp_name)(struct ipcp_instance_data * data);
 };
 
 #endif

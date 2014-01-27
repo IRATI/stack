@@ -35,12 +35,14 @@ struct dtp_sv {
         uint_t              initial_sequence_number;
         uint_t              seq_number_rollover_threshold;
 
-        /* Variables: Inbound */
-        seq_num_t           last_sequence_delivered;
+        struct {
+                seq_num_t   last_sequence_delivered;
+        } inbound;
 
-        /* Variables: Outbound */
-        seq_num_t           next_sequence_to_send;
-        seq_num_t           right_window_edge;
+        struct {
+                seq_num_t   next_sequence_to_send;
+                seq_num_t   right_window_edge;
+        } outbound;
 };
 
 struct dtp_policies {
@@ -57,14 +59,14 @@ struct dtp {
 };
 
 static struct dtp_sv default_sv = {
-        .connection                    = NULL,
-        .max_flow_sdu                  = 0,
-        .max_flow_pdu_size             = 0,
-        .initial_sequence_number       = 0,
-        .seq_number_rollover_threshold = 0,
-        .last_sequence_delivered       = 0,
-        .next_sequence_to_send         = 0,
-        .right_window_edge             = 0
+        .connection                      = NULL,
+        .max_flow_sdu                    = 0,
+        .max_flow_pdu_size               = 0,
+        .initial_sequence_number         = 0,
+        .seq_number_rollover_threshold   = 0,
+        .inbound.last_sequence_delivered = 0,
+        .outbound.next_sequence_to_send  = 0,
+        .outbound.right_window_edge      = 0
 };
 
 static struct dtp_policies default_policies = {
@@ -78,7 +80,7 @@ struct dtp * dtp_create(struct rmt *        rmt,
         struct dtp * tmp;
 
         if (!rmt) {
-                LOG_ERR("Bogus rmt, bailing out");
+                LOG_ERR("No rmt, bailing out");
                 return NULL;
         }
 
@@ -101,12 +103,12 @@ struct dtp * dtp_create(struct rmt *        rmt,
         /* FIXME: fixups to the state-vector should be placed here */
         tmp->state_vector->connection = connection;
 
-        tmp->policies      = &default_policies;
+        tmp->policies                 = &default_policies;
         /* FIXME: fixups to the policies should be placed here */
 
-        tmp->peer          = NULL;
-        tmp->rmt           = rmt;
-        tmp->kfa           = kfa;
+        tmp->peer                     = NULL;
+        tmp->rmt                      = rmt;
+        tmp->kfa                      = kfa;
 
         LOG_DBG("Instance %pK created successfully", tmp);
 
@@ -177,9 +179,9 @@ int dtp_unbind(struct dtp * instance)
 
 }
 
-/* Closed Window Queue policy */
-int apply_policy_CsldWinQ(struct dtp * dtp,
-                          struct sdu * sdu)
+#if 0
+static int apply_policy_CsldWinQ(struct dtp * dtp,
+                                 struct sdu * sdu)
 {
         ASSERT(dtp);
         ASSERT(sdu);
@@ -189,8 +191,8 @@ int apply_policy_CsldWinQ(struct dtp * dtp,
         return 0;
 }
 
-int apply_policy_RexmsnQ(struct dtp * dtp,
-                         struct sdu * sdu)
+static int apply_policy_RexmsnQ(struct dtp * dtp,
+                                struct sdu * sdu)
 {
         ASSERT(dtp);
         ASSERT(sdu);
@@ -199,33 +201,37 @@ int apply_policy_RexmsnQ(struct dtp * dtp,
 
         return 0;
 }
+#endif
 
 int dtp_write(struct dtp * instance,
               struct sdu * sdu)
 {
-        struct pdu * pdu;
-        struct pci * pci;
+        struct pdu *    pdu;
+        struct pci *    pci;
+        struct dtp_sv * sv;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
         }
-        if (!sdu) {
-                LOG_ERR("No data passed, bailing out");
+
+        if (!sdu_is_ok(sdu))
                 return -1;
-        }
+
+        sv = instance->state_vector;
+        ASSERT(sv); /* State Vector must not be NULL */
 
         pci = pci_create();
         if (!pci)
                 return -1;
 
         if (pci_format(pci,
-                       instance->state_vector->connection->source_cep_id,
-                       instance->state_vector->connection->destination_cep_id,
-                       instance->state_vector->connection->source_address,
-                       instance->state_vector->connection->destination_address,
-                       instance->state_vector->next_sequence_to_send,
-                       instance->state_vector->connection->qos_id,
+                       sv->connection->source_cep_id,
+                       sv->connection->destination_cep_id,
+                       sv->connection->source_address,
+                       sv->connection->destination_address,
+                       sv->outbound.next_sequence_to_send,
+                       sv->connection->qos_id,
                        PDU_TYPE_DT)) {
                 pci_destroy(pci);
                 return -1;
@@ -250,31 +256,37 @@ int dtp_write(struct dtp * instance,
         /* Give the data to RMT now ! */
         return rmt_send(instance->rmt,
                         pci_destination(pci),
-                        pci_cep_destination(pci),
+                        pci_qos_id(pci),
                         pdu);
 }
 
-int dtp_management_write(struct rmt * rmt,
-                         address_t    src_address,
-                         port_id_t    port_id,
-                         struct sdu * sdu)
+int dtp_mgmt_write(struct rmt * rmt,
+                   address_t    src_address,
+                   port_id_t    port_id,
+                   struct sdu * sdu)
 {
-        /*DTP should build the PCI header
-         * src and dst cep_ids = 0
-         * ask FT for the dst address the N-1 port is connected to
-         * pass to the rmt */
+        struct pci * pci;
+        struct pdu * pdu;
+        address_t    dst_address;
 
-        struct pci *  pci;
-        struct pdu *  pdu;
-        address_t     dst_address;
+        /*
+         * NOTE:
+         *   DTP should build the PCI header src and dst cep_ids = 0
+         *   ask FT for the dst address the N-1 port is connected to
+         *   pass to the rmt
+         */
 
         if (!sdu) {
                 LOG_ERR("No data passed, bailing out");
                 return -1;
         }
 
-        dst_address = 0; /*GET FROM PFT */
+        dst_address = 0; /* FIXME: get from PFT */
 
+        /*
+         * FIXME:
+         *   We should avoid to create a PCI only to have its fields to use
+         */
         pci = pci_create();
         if (!pci)
                 return -1;
@@ -299,6 +311,7 @@ int dtp_management_write(struct rmt * rmt,
 
         if (pdu_buffer_set(pdu, sdu_buffer_rw(sdu))) {
                 pci_destroy(pci);
+                pdu_destroy(pdu);
                 return -1;
         }
 
@@ -314,7 +327,7 @@ int dtp_management_write(struct rmt * rmt,
                         pdu);
 
 };
-EXPORT_SYMBOL(dtp_management_write);
+EXPORT_SYMBOL(dtp_mgmt_write);
 
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
@@ -322,7 +335,10 @@ int dtp_receive(struct dtp * instance,
         struct sdu *    sdu;
         struct buffer * buffer;
 
-        if (!instance) {
+        if (!instance                            ||
+            !instance->kfa                       ||
+            !instance->state_vector              ||
+            !instance->state_vector->connection) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
         }
@@ -333,18 +349,20 @@ int dtp_receive(struct dtp * instance,
         }
 
         buffer = pdu_buffer_get_rw(pdu);
-        sdu = sdu_create_buffer_with(buffer);
+        sdu    = sdu_create_buffer_with(buffer);
         if (!sdu) {
                 pdu_destroy(pdu);
                 return -1;
         }
+
         if (kfa_sdu_post(instance->kfa,
                          instance->state_vector->connection->port_id,
                          sdu)) {
-                LOG_ERR("Could not post SDU into KFA");
+                LOG_ERR("Could not post SDU to KFA");
                 pdu_destroy(pdu);
                 return -1;
         }
+
         /*
          * FIXME: PDU is now useless, it must be destroyed, but its
          * buffer is within the passed sdu, so pdu_destroy can't be used.

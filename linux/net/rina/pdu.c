@@ -30,20 +30,30 @@
 #include "pdu.h"
 #include "qos.h"
 
+/* FIXME: These externs have to disappear from here */
+struct buffer * buffer_create_with_gfp(gfp_t  flags,
+                                       void * data,
+                                       size_t size);
+struct buffer * buffer_create_from_gfp(gfp_t        flags,
+                                       const void * data,
+                                       size_t       size);
+struct buffer * buffer_dup_gfp(gfp_t                 flags,
+                               const struct buffer * b);
+
 struct pci {
         pdu_type_t type;
 
         /* If type == PDU_TYPE_MGMT, all the following fields are useless */
-        address_t  source;
-        address_t  destination;
+        address_t source;
+        address_t destination;
 
         struct {
                 cep_id_t source;
                 cep_id_t destination;
-        } ceps;
+        }         ceps;
 
-        qos_id_t   qos_id;
-        seq_num_t  sequence_number;
+        qos_id_t  qos_id;
+        seq_num_t sequence_number;
 };
 
 static bool pci_is_ok(const struct pci * pci)
@@ -134,7 +144,7 @@ int pci_nxt_seq_send_set(struct pci * pci,
 EXPORT_SYMBOL(pci_nxt_seq_send_set);
 
 int pci_qos_id_set(struct pci * pci,
-                   qos_id_t   qos_id)
+                   qos_id_t     qos_id)
 {
         if (!pci)
                 return -1;
@@ -178,7 +188,6 @@ int pci_format(struct pci * pci,
         return 0;
 }
 EXPORT_SYMBOL(pci_format);
-
 
 static struct pci * pci_create_from_gfp(gfp_t        flags,
                                         const void * data)
@@ -306,7 +315,7 @@ cep_id_t pci_cep_source(const struct pci * pci)
 EXPORT_SYMBOL(pci_cep_source);
 
 qos_id_t pci_qos_id(const struct pci * pci)
-{ return (pci ? pci->qos_id : qos_id_bad()); }
+{ return pci ? pci->qos_id : qos_id_bad();  }
 EXPORT_SYMBOL(pci_qos_id);
 
 struct pdu {
@@ -388,6 +397,37 @@ struct pdu * pdu_create_with_ni(struct sdu * sdu)
 { return pdu_create_with_gfp(GFP_ATOMIC, sdu); }
 EXPORT_SYMBOL(pdu_create_with_ni);
 
+static struct pdu * pdu_dup_gfp(gfp_t              flags,
+                                const struct pdu * pdu)
+{
+        struct pdu * tmp;
+
+        if (!pdu_is_ok(pdu))
+                return NULL;
+
+        tmp = rkmalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        tmp->pci    = pci_dup_gfp(flags, pdu->pci);
+        tmp->buffer = buffer_dup_gfp(flags, pdu->buffer);
+
+        if (!pdu_is_ok(tmp)) {
+                pdu_destroy(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
+
+struct pdu * pdu_dup(const struct pdu * pdu)
+{ return pdu_dup_gfp(GFP_KERNEL, pdu); }
+EXPORT_SYMBOL(pdu_dup);
+
+struct pdu * pdu_dup_ni(const struct pdu * pdu)
+{ return pdu_dup_gfp(GFP_KERNEL, pdu); }
+EXPORT_SYMBOL(pdu_dup_ni);
+
 const struct buffer * pdu_buffer_get_ro(const struct pdu * pdu)
 {
         if (!pdu_is_ok(pdu))
@@ -419,9 +459,6 @@ EXPORT_SYMBOL(pdu_buffer_disown);
 int pdu_buffer_set(struct pdu * pdu, struct buffer * buffer)
 {
         if (!pdu)
-                return -1;
-
-        if (!buffer_is_ok(buffer))
                 return -1;
 
         if (pdu->buffer) {

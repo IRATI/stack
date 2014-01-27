@@ -7,7 +7,7 @@ import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
 import rina.enrollment.api.EnrollmentInformationRequest;
-import rina.ipcprocess.impl.IPCProcess;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
 import rina.ipcprocess.impl.enrollment.statemachines.BaseEnrollmentStateMachine;
 import rina.ipcprocess.impl.enrollment.statemachines.EnrolleeStateMachine;
@@ -27,12 +27,10 @@ public class EnrollmentRIBObject extends BaseRIBObject{
 	
 	private EnrollmentTaskImpl enrollmentTask = null;
 	private CDAPSessionManager cdapSessionManager = null;
-	private IPCProcess ipcProcess = null;
 	
-	public EnrollmentRIBObject(EnrollmentTaskImpl enrollmentTaskImpl){
-		super(EnrollmentInformationRequest.ENROLLMENT_INFO_OBJECT_CLASS, 
+	public EnrollmentRIBObject(IPCProcess ipcProcess, EnrollmentTaskImpl enrollmentTaskImpl){
+		super(ipcProcess, EnrollmentInformationRequest.ENROLLMENT_INFO_OBJECT_CLASS, 
 				ObjectInstanceGenerator.getObjectInstance(), EnrollmentInformationRequest.ENROLLMENT_INFO_OBJECT_NAME);
-		ipcProcess = IPCProcess.getInstance();
 		this.enrollmentTask = enrollmentTaskImpl;
 		this.cdapSessionManager = ipcProcess.getCDAPSessionManager();
 		setRIBDaemon(ipcProcess.getRIBDaemon());

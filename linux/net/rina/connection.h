@@ -1,7 +1,8 @@
 /*
- * Utilities
+ * Connection
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Sander Vrijders <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,23 +19,34 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_UTILS_H
-#define RINA_UTILS_H
+#ifndef RINA_CONNECTION_H
+#define RINA_CONNECTION_H
 
-#include <linux/kobject.h>
-#define RINA_ATTR_RO(NAME)                              \
-        static struct kobj_attribute NAME##_attr =      \
-                __ATTR_RO(NAME)
+#include <linux/uaccess.h>
 
-#define RINA_ATTR_RW(NAME)                                      \
-        static struct kobj_attribute NAME##_attr =              \
-                __ATTR(NAME, 0644, NAME##show, NAME##store)
+#include "common.h"
+#include "qos.h"
 
-int     is_value_in_range(int value, int min_value, int max_value);
+/* FIXME: Add setters/getters to struct connection*/
 
-/* Syscalls */
-char *  strdup_from_user(const char __user * src);
+/* NOTE: Do not use this struct directly */
+struct connection {
+        port_id_t port_id;
 
-#include "rds/rds.h"
+        address_t source_address;
+        address_t destination_address;
+
+        cep_id_t  source_cep_id;
+        cep_id_t  destination_cep_id;
+
+        qos_id_t  qos_id;
+
+        /* FIXME: Add the list of policies associated with this connection */
+};
+
+struct connection * connection_create(void);
+struct connection *
+connection_dup_from_user(const struct connection __user * conn);
+int                 connection_destroy(struct connection * conn);
 
 #endif

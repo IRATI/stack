@@ -31,6 +31,7 @@
 #include "common.h"
 #include "kipcm-utils.h"
 #include "rnl-utils.h"
+#include "ipcp-utils.h"
 
 /*
  * IMAPs
@@ -104,6 +105,38 @@ static struct ipcp_imap_entry * imap_entry_find(struct ipcp_imap * map,
         return NULL;
 }
 
+static struct ipcp_imap_entry *
+imap_entry_find_by_name(struct ipcp_imap *  map,
+                        const struct name * name)
+{
+        struct ipcp_imap_entry * entry;
+        struct hlist_node *      tmp;
+        int                      bucket;
+        const struct name *      entry_name;
+
+        ASSERT(map);
+        ASSERT(name->process_name);
+
+        hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
+                entry_name = entry->value->ops->ipcp_name(entry->value->data);
+                if (!name_is_ok(entry_name)) {
+                        LOG_ERR("Bad name, bailing out");
+                        return NULL;
+                }
+                /*FIXME: Check if we can use the name API */
+                if (!strcmp(entry_name->process_name,
+                            name->process_name)           &&
+                    !strcmp(entry_name->process_instance,
+                            name->process_instance)) {
+                        LOG_DBG("This is an IPC Process");
+                        return entry;
+                }
+
+        }
+
+        return NULL;
+}
+
 struct ipcp_instance * ipcp_imap_find(struct ipcp_imap * map,
                                       ipc_process_id_t   key)
 {
@@ -112,6 +145,21 @@ struct ipcp_instance * ipcp_imap_find(struct ipcp_imap * map,
         ASSERT(map);
 
         entry = imap_entry_find(map, key);
+        if (!entry)
+                return NULL;
+
+        return entry->value;
+}
+
+struct ipcp_instance * ipcp_imap_find_by_name(struct ipcp_imap *  map,
+                                              const struct name * name)
+{
+        struct ipcp_imap_entry * entry;
+
+        ASSERT(map);
+        ASSERT(name);
+
+        entry = imap_entry_find_by_name(map, name);
         if (!entry)
                 return NULL;
 
@@ -203,7 +251,7 @@ EXPORT_SYMBOL(seq_num_bad);
 
 /* FIXME: We need to change this */
 int is_seq_num_ok(rnl_sn_t sn)
-{ return (sn >= 0 && sn < SNVALUE_WRONG) ? 1 : 0; }
+{ return (sn < SNVALUE_WRONG) ? 1 : 0; }
 EXPORT_SYMBOL(is_seq_num_ok);
 
 struct kipcm_pmap {

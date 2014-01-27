@@ -258,16 +258,33 @@ SYSCALL_DEFINE3(sdu_write,
         return size;
 }
 
-SYSCALL_DEFINE2(allocate_port,
+SYSCALL_DEFINE3(allocate_port,
                 ipc_process_id_t, id,
-                int,              to_app)
+                const char __user *, process_name,
+                const char __user *, process_instance)
 {
-        port_id_t retval;
+        port_id_t     retval;
+        struct name * tname;
 
         SYSCALL_DUMP_ENTER;
 
-        CALL_DEFAULT_PERSONALITY(retval, allocate_port, id,
-                                 (to_app != 0) ? true : false);
+        tname = name_create();
+        if (!tname) {
+                SYSCALL_DUMP_EXIT;
+                return -EFAULT;
+        }
+
+        if (!name_init_with(tname,
+                            string_from_user(process_name),
+                            string_from_user(process_instance),
+                            NULL,
+                            NULL)) {
+                SYSCALL_DUMP_EXIT;
+                name_destroy(tname);
+                return -EFAULT;
+        }
+
+        CALL_DEFAULT_PERSONALITY(retval, allocate_port, id, tname);
 
         SYSCALL_DUMP_EXIT;
 
@@ -302,7 +319,7 @@ SYSCALL_DEFINE4(management_sdu_read,
 
         tmp = NULL;
 
-        CALL_DEFAULT_PERSONALITY(retval, management_sdu_read, ipcp_id, &tmp);
+        CALL_DEFAULT_PERSONALITY(retval, mgmt_sdu_read, ipcp_id, &tmp);
         /* Taking ownership from the internal layers */
 
         LOG_DBG("Personality returned value %zd", retval);
@@ -411,7 +428,7 @@ SYSCALL_DEFINE4(management_sdu_write,
         ASSERT(sdu_wpi_is_ok(sdu_wpi));
 
         /* Passing ownership to the internal layers */
-        CALL_DEFAULT_PERSONALITY(retval, management_sdu_write, id, sdu_wpi);
+        CALL_DEFAULT_PERSONALITY(retval, mgmt_sdu_write, id, sdu_wpi);
         if (retval) {
                 SYSCALL_DUMP_EXIT;
                 /* NOTE: Do not destroy SDU, ownership isn't our anymore */

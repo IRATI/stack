@@ -32,7 +32,7 @@ public class Main {
 			int ipcProcessId = Integer.parseInt(args[2]);
 			long ipcManagerPort = Long.parseLong(args[3]);
 			
-			IPCProcess ipcProcess = IPCProcess.getInstance();
+			IPCProcessImpl ipcProcess = new IPCProcessImpl();
 			ipcProcess.initialize(namingInfo, ipcProcessId, ipcManagerPort);
 			ipcProcess.executeEventLoop();
 		}catch(Exception ex){

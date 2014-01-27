@@ -2,7 +2,7 @@
  * IPC Processes related utilities
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Sander Vrijders <sander.vrijders@intec.ugent.be>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,15 +28,12 @@
 #include "ipcp.h"
 #include "efcp.h"
 
-#define NAME2STRING(N)
-
 /*
  * Allocates a new name, returning the allocated object. In case of an error, a
  * NULL is returned.
  */
 struct name * name_create(void);
 struct name * name_create_ni(void);
-
 
 /*
  * Initializes a previously dynamically allocated name (i.e. name_create())
@@ -95,7 +92,7 @@ int           name_cpy_from_user(const struct name __user * src,
                                  struct name *              dst);
 
 bool          name_is_equal(const struct name * a, const struct name * b);
-bool          is_name_ok(const struct name * n);
+bool          name_is_ok(const struct name * n);
 
 /* Returns a name as a (newly allocated) string */
 char *        name_tostring(const struct name * n);
@@ -108,18 +105,11 @@ struct name * string_toname_ni(const string_t * s);
 
 struct ipcp_config * ipcp_config_create(void);
 int                  ipcp_config_destroy(struct ipcp_config * cfg);
-struct ipcp_config *
-ipcp_config_dup_from_user(const struct ipcp_config __user * cfg);
 
 struct dif_config *  dif_config_create(void);
 int                  dif_config_destroy(struct dif_config * dif_config);
 int                  dif_info_destroy(struct dif_info * dif_info);
 
-struct connection * connection_create(void);
-struct connection *
-connection_dup_from_user(const struct connection __user * conn);
-int                 connection_destroy(struct connection * conn);
-
-struct flow_spec *  flow_spec_dup(const struct flow_spec * fspec);
+struct flow_spec *   flow_spec_dup(const struct flow_spec * fspec);
 
 #endif

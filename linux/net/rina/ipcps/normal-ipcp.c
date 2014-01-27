@@ -55,7 +55,7 @@ struct mgmt_data {
 };
 
 struct ipcp_instance_data {
-        /* FIXME add missing needed attributes */
+        /* FIXME: add missing needed attributes */
         ipc_process_id_t        id;
         u32                     nl_port;
         struct list_head        flows;
@@ -262,8 +262,6 @@ static int remove_cep_id_from_flow(struct normal_flow * flow,
 static int ipcp_flow_notification(struct ipcp_instance_data * data,
                                   port_id_t                   pid)
 {
-        LOG_MISSING;
-
         if (kfa_flow_bind_rmt(data->kfa, pid, data->rmt))
                 return -1;
 
@@ -336,6 +334,11 @@ connection_create_arrived(struct ipcp_instance_data * data,
         LOG_DBG("Cep_id allocated for the arrived connection request: %d",
                 cep_id);
 
+        if (kipcm_flow_commit(default_kipcm, data->id, port_id)) {
+                efcp_connection_destroy(data->efcpc, cep_id);
+                return cep_id_bad();
+        }
+
         cep_entry = rkzalloc(sizeof(*cep_entry), GFP_KERNEL);
         if (!cep_entry) {
                 LOG_ERR("Could not create a cep_id entry, bailing out");
@@ -363,6 +366,39 @@ connection_create_arrived(struct ipcp_instance_data * data,
         flow->active = cep_id;
 
         return cep_id;
+}
+
+static int remove_all_cepid(struct ipcp_instance_data * data,
+                            struct normal_flow *        flow)
+{
+        struct cep_ids_entry *pos, *next;
+
+        ASSERT(data);
+
+        list_for_each_entry_safe(pos, next, &flow->cep_ids_list, list){
+                efcp_connection_destroy(data->efcpc, pos->cep_id);
+                list_del(&pos->list);
+                rkfree(pos);
+        }
+
+        return 0;
+}
+
+static int normal_deallocate(struct ipcp_instance_data * data,
+                             port_id_t                   port_id)
+{
+        struct normal_flow * flow;
+        flow = find_flow(data, port_id);
+        if (!flow) {
+                LOG_ERR("Could not find this flow to deallocate");
+                return -1;
+        }
+        if (remove_all_cepid(data, flow))
+                LOG_ERR("Some efcp structures could not be destroyed");
+
+        list_del(&flow->list);
+        rkfree(flow);
+        return 0;
 }
 
 static int normal_check_dt_cons(struct dt_cons * dt_cons)
@@ -393,8 +429,8 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int normal_management_sdu_read(struct ipcp_instance_data * data,
-                                      struct sdu_wpi **           sdu_wpi)
+static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
+                                struct sdu_wpi **           sdu_wpi)
 {
         int retval;
 
@@ -437,9 +473,9 @@ static int normal_management_sdu_read(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int normal_management_sdu_write(struct ipcp_instance_data * data,
-                                       port_id_t                   port_id,
-                                       struct sdu *                sdu)
+static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
+                                 port_id_t                   port_id,
+                                 struct sdu *                sdu)
 {
         struct pci *  pci;
         struct pdu *  pdu;
@@ -500,25 +536,29 @@ static int normal_management_sdu_write(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int normal_management_sdu_post(struct ipcp_instance_data * data,
-                                      port_id_t                   port_id,
-                                      struct sdu *                sdu)
+static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
+                                port_id_t                   port_id,
+                                struct sdu *                sdu)
 {
         /* FIXME: We should get rid of sdu_wpi ASAP */
         struct sdu_wpi * tmp;
 
         if (!is_port_id_ok(port_id)) {
                 LOG_ERR("Wrong port id");
+                sdu_destroy(sdu);
                 return -1;
         }
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus management SDU");
+                sdu_destroy(sdu);
                 return -1;
         }
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
+        if (!tmp) {
+                sdu_destroy(sdu);
                 return -1;
+        }
 
         tmp->port_id = port_id;
         tmp->sdu     = sdu;
@@ -534,18 +574,53 @@ static int normal_management_sdu_post(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int normal_pdu_fte_add(struct ipcp_instance_data * data,
-                              struct list_head *          pft_entries)
+static int normal_pft_add(struct ipcp_instance_data * data,
+                          address_t                   address,
+                          qos_id_t                    qos_id,
+                          port_id_t *                 ports,
+                          size_t                      size)
+
 {
-        LOG_MISSING;
-        return -1;
+        ASSERT(data);
+
+        return rmt_pft_add(data->rmt,
+                           address,
+                           qos_id,
+                           ports,
+                           size);
 }
 
-static int normal_pdu_fte_remove(struct ipcp_instance_data * data,
-                                 struct list_head *           pft_entries)
+static int normal_pft_remove(struct ipcp_instance_data * data,
+                             address_t                   address,
+                             qos_id_t                    qos_id,
+                             port_id_t *                 ports,
+                             size_t                      size)
 {
-        LOG_MISSING;
-        return -1;
+        ASSERT(data);
+
+        return rmt_pft_remove(data->rmt,
+                              address,
+                              qos_id,
+                              ports,
+                              size);
+}
+
+static int normal_pft_dump(struct ipcp_instance_data * data,
+                           struct list_head *          entries)
+{
+        ASSERT(data);
+
+        return rmt_pft_dump(data->rmt,
+                            entries);
+}
+
+static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
+{
+        ASSERT(data);
+        ASSERT(data->info);
+        ASSERT(name_is_ok(data->info->name));
+
+        return data->info->name;
 }
 
 /*  FIXME: register ops */
@@ -563,12 +638,24 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .connection_destroy        = connection_destroy_request,
         .connection_create_arrived = connection_create_arrived,
         .flow_binding_ipcp         = ipcp_flow_notification,
-        .management_sdu_read       = normal_management_sdu_read,
-        .management_sdu_write      = normal_management_sdu_write,
-        .management_sdu_post       = normal_management_sdu_post,
-        .pdu_fte_add               = normal_pdu_fte_add,
-        .pdu_fte_remove            = normal_pdu_fte_remove
+        .flow_destroy              = normal_deallocate,
+        .mgmt_sdu_read             = normal_mgmt_sdu_read,
+        .mgmt_sdu_write            = normal_mgmt_sdu_write,
+        .mgmt_sdu_post             = normal_mgmt_sdu_post,
+        .pft_add                   = normal_pft_add,
+        .pft_remove                = normal_pft_remove,
+        .pft_dump                  = normal_pft_dump,
+        .ipcp_name                 = normal_ipcp_name
 };
+
+static void sdu_wpi_destructor(void * data)
+{
+        struct sdu_wpi * s = data;
+
+        if (sdu_wpi_destroy(s)) {
+                LOG_ERR("Could not destroy SDU-WPI");
+        }
+}
 
 static struct mgmt_data * normal_mgmt_data_create(void)
 {

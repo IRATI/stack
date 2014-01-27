@@ -59,35 +59,6 @@ struct rqueue * rqueue_create_ni(void)
 { return rqueue_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(rqueue_create_ni);
 
-static int __rqueue_destroy(struct rqueue * q,
-                            void         (* dtor)(void * e))
-{
-        struct rqueue_entry * pos, * nxt;
-
-        list_for_each_entry_safe(pos, nxt, &q->head, next) {
-                ASSERT(pos);
-
-                list_del(&pos->next);
-                dtor(pos->data);
-        }
-
-        rkfree(q);
-
-        return 0;
-}
-
-int rqueue_destroy(struct rqueue * q,
-                   void         (* dtor)(void * e))
-{
-        if (!q || !dtor) {
-                LOG_ERR("Bogus input parameters, can't destroy rqueue %pK", q);
-                return -1;
-        }
-
-        return __rqueue_destroy(q, dtor);
-}
-EXPORT_SYMBOL(rqueue_destroy);
-
 static struct rqueue_entry * entry_create(gfp_t flags, void * e)
 {
         struct rqueue_entry * tmp;
@@ -110,6 +81,36 @@ static int entry_destroy(struct rqueue_entry * e)
         rkfree(e);
         return 0;
 }
+
+static int __rqueue_destroy(struct rqueue * q,
+                            void         (* dtor)(void * e))
+{
+        struct rqueue_entry * pos, * nxt;
+
+        list_for_each_entry_safe(pos, nxt, &q->head, next) {
+                ASSERT(pos);
+
+                list_del(&pos->next);
+                dtor(pos->data);
+                entry_destroy(pos);
+        }
+
+        rkfree(q);
+
+        return 0;
+}
+
+int rqueue_destroy(struct rqueue * q,
+                   void         (* dtor)(void * e))
+{
+        if (!q || !dtor) {
+                LOG_ERR("Bogus input parameters, can't destroy rqueue %pK", q);
+                return -1;
+        }
+
+        return __rqueue_destroy(q, dtor);
+}
+EXPORT_SYMBOL(rqueue_destroy);
 
 static int rqueue_head_push_gfp(gfp_t flags, struct rqueue * q, void * e)
 {
@@ -150,12 +151,13 @@ void * rqueue_head_pop(struct rqueue * q)
         }
 
         if (list_empty(&q->head)) {
-                LOG_ERR("Cannot head-pop from an empty queue");
+                LOG_WARN("queue %pK is empty, can't head-pop", q);
                 return NULL;
         }
 
         tmp = list_first_entry(&q->head, struct rqueue_entry, next);
         ASSERT(tmp);
+
         ret = tmp->data;
 
         list_del(&tmp->next);
@@ -206,7 +208,7 @@ void * rqueue_tail_pop(struct rqueue * q)
         }
 
         if (list_empty(&q->head)) {
-                LOG_ERR("Cannot tail-pop from an empty queue");
+                LOG_WARN("queue %pK is empty, can't tail-pop", q);
                 return NULL;
         }
 
@@ -225,7 +227,7 @@ EXPORT_SYMBOL(rqueue_tail_pop);
 
 bool rqueue_is_empty(struct rqueue * q)
 {
-        if (!1) {
+        if (!q) {
                 LOG_ERR("Can't chek the emptiness of a NULL queue");
                 return false;
         }
@@ -233,3 +235,8 @@ bool rqueue_is_empty(struct rqueue * q)
         return list_empty(&q->head) ? true : false;
 }
 EXPORT_SYMBOL(rqueue_is_empty);
+
+#ifdef CONFIG_RINA_RQUEUE_REGRESSION_TESTS
+bool regression_tests_rqueue(void)
+{ return true; }
+#endif
