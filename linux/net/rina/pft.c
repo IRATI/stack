@@ -85,7 +85,6 @@ static port_id_t pft_pe_port(struct pft_port_entry * pe)
 struct pft_entry {
         address_t        destination;
         qos_id_t         qos_id;
-        spinlock_t       write_lock;
         struct list_head ports;
         struct list_head next;
 };
@@ -102,7 +101,6 @@ static struct pft_entry * pfte_create_gfp(gfp_t     flags,
 
         tmp->destination = destination;
         tmp->qos_id      = qos_id;
-        spin_lock_init(&tmp->write_lock);
         INIT_LIST_HEAD(&tmp->ports);
         INIT_LIST_HEAD(&tmp->next);
 
@@ -128,11 +126,9 @@ static void pfte_destroy(struct pft_entry * entry)
 
         ASSERT(pfte_is_ok(entry));
 
-        spin_lock(&entry->write_lock);
         list_for_each_entry_safe(pos, next, &entry->ports, next) {
                 pft_pe_destroy(pos);
         }
-        spin_unlock(&entry->write_lock);
 
         list_del_rcu(&entry->next);
         synchronize_rcu();
@@ -169,10 +165,8 @@ static int pfte_port_add(struct pft_entry * entry,
         if (!pe)
                 return -1;
 
-        spin_lock(&entry->write_lock);
         list_add_rcu(&pe->next, &entry->ports);
-        spin_unlock(&entry->write_lock);
-
+        
         return 0;
 }
 
@@ -184,15 +178,13 @@ static void pfte_port_remove(struct pft_entry * entry,
         ASSERT(pfte_is_ok(entry));
         ASSERT(is_port_id_ok(id));
 
-        spin_lock(&entry->write_lock);
         list_for_each_entry_safe(pos, next, &entry->ports, next) {
                 if (pft_pe_port(pos) == id) {
                         pft_pe_destroy(pos);
-                        spin_unlock(&entry->write_lock);
                         return;
                 }
         }
-        spin_unlock(&entry->write_lock);
+
 }
 
 static int pfte_ports_copy(struct pft_entry * entry,
