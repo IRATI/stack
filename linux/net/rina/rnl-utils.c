@@ -1202,21 +1202,21 @@ static int rnl_parse_ipcm_ipcp_dif_reg_noti_msg(struct genl_info * info,
                              IDRN_ATTR_MAX,
                              attr_policy);
 
-        if (info->attrs[IDRN_ATTR_IPC_PROCESS_NAME]) {
-                if (parse_app_name_info(info->attrs[IDRN_ATTR_IPC_PROCESS_NAME],
+        if (attrs[IDRN_ATTR_IPC_PROCESS_NAME]) {
+                if (parse_app_name_info(attrs[IDRN_ATTR_IPC_PROCESS_NAME],
                                         msg_attrs->ipcp_name) < 0)
                         goto parse_fail;
         }
 
-        if (info->attrs[IDRN_ATTR_DIF_NAME]) {
-                if (parse_app_name_info(info->attrs[IDRN_ATTR_DIF_NAME],
+        if (attrs[IDRN_ATTR_DIF_NAME]) {
+                if (parse_app_name_info(attrs[IDRN_ATTR_DIF_NAME],
                                         msg_attrs->dif_name) < 0)
                         goto parse_fail;
         }
 
-        if (info->attrs[IDRN_ATTR_REGISTRATION])
+        if (attrs[IDRN_ATTR_REGISTRATION])
                 msg_attrs->is_registered = \
-                        nla_get_flag(info->attrs[IDRN_ATTR_REGISTRATION]);
+                        nla_get_flag(attrs[IDRN_ATTR_REGISTRATION]);
 
         return 0;
 
